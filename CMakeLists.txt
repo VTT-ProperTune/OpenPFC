@@ -2,10 +2,9 @@ cmake_minimum_required(VERSION 3.15)
 
 project(heFFTe)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_CLANG_TIDY clang-tidy)
 
 option(Heffte_ENABLE_FFTW "Enable the FFTW backend" ON)
 option(Heffte_ENABLE_CUDA "Enable the CUDA and cuFFT backend" OFF)
@@ -20,6 +19,12 @@ option(Heffte_ENABLE_PYTHON "Configure the Python scripts" OFF)
 option(Heffte_ENABLE_FORTRAN "Build the Fortran modules for the selected backends." OFF)
 option(Heffte_ENABLE_SWIG "Rebuild the SWIG bindings." OFF)
 option(Heffte_ENABLE_TRACING "Enable the tracing capabilities" OFF)
+
+option(ENABLE_CLANG_TIDY "Enable clang-tidy static code analysis" OFF)
+
+if (ENABLE_CLANG_TIDY)
+  set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+endif()
 
 include(FetchContent)
 
