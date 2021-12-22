@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(heFFTe)
+project(pfc-heFFTe)
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,11 +31,6 @@ endif()
 include(FetchContent)
 
 FetchContent_Declare(
-  heffte
-  GIT_REPOSITORY "https://bitbucket.org/icl/heffte.git"
-  GIT_TAG "v2.2.0")
-
-FetchContent_Declare(
   json
   GIT_REPOSITORY "https://github.com/nlohmann/json.git"
   GIT_TAG "v3.10.4")
@@ -43,7 +40,25 @@ FetchContent_Declare(
   GIT_REPOSITORY "https://github.com/p-ranav/argparse.git"
   GIT_TAG "v2.2")
 
-FetchContent_MakeAvailable(heffte json argparse)
+FetchContent_Declare(
+  heffte
+  GIT_REPOSITORY "https://bitbucket.org/icl/heffte.git"
+  GIT_TAG "v2.2.0")
+  
+FetchContent_GetProperties(heffte)
+if(NOT heffte_POPULATED)
+  FetchContent_Populate(heffte)
+  include("FindHeffteFFTWLibraries")
+  # Find static libraries instead of shared ones
+  heffte_find_fftw_libraries(
+        PREFIX $ENV{FFTW_ROOT}
+        VAR FFTW_LIBRARIES
+        REQUIRED "libfftw3.a" "libfftw3f.a"
+        OPTIONAL "libfftw3_threads.a" "libfftw3f_threads.a" "libfftw3_omp.a" "libfftw3f_omp.a")
+  add_subdirectory(${heffte_SOURCE_DIR} ${heffte_BINARY_DIR})
+endif()
+
+FetchContent_MakeAvailable(json argparse)
 
 add_executable(pfc-heffte pfc-heffte)
 target_link_libraries(pfc-heffte PRIVATE argparse nlohmann_json Heffte)
