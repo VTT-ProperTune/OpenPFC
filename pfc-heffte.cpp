@@ -116,8 +116,12 @@ void compute_dft(MPI_Comm comm, json settings) {
   // define workspace to improve performance
   std::vector<std::complex<double>> workspace(fft.size_workspace());
 
+  if (me == 0) {
+    std::cout << "Starting simulation\n\n";
+  }
+
   // start iterations
-  for (auto k = 0; k < N; k++) {
+  for (auto k = 1; k <= N; k++) {
     if (me == 0) {
       std::cout << "Iteration " << k << std::endl;
     }
@@ -146,10 +150,38 @@ void compute_dft(MPI_Comm comm, json settings) {
     }
 
     fft.backward(C1.data(), U.data(), workspace.data(), heffte::scale::full);
+    /*
     auto N = nx * ny * nz;
     for (int i = 0; i < U.size(); i++) {
       U[i] = U[i] / N;
     }
+    */
+
+    MPI_Datatype filetype;
+    const int gdims[] = {nx, ny, nz};
+    const auto lx = inbox.high[0] - inbox.low[0];
+    const auto ly = inbox.high[1] - inbox.low[1];
+    const auto lz = inbox.high[2] - inbox.low[2];
+    const int ldims[] = {lx, ly, lz};
+    const auto ox = inbox.low[0];
+    const auto oy = inbox.low[1];
+    const auto oz = inbox.low[2];
+    const int offset[] = {ox, oy, oz};
+    MPI_Type_create_subarray(3, gdims, ldims, offset, MPI_ORDER_C, MPI_DOUBLE,
+                             &filetype);
+    MPI_Type_commit(&filetype);
+    const unsigned int disp = 0;
+
+    MPI_File fh;
+    const std::string filename =
+        std::to_string(k) + "_" + std::to_string(me) + ".bin";
+    MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
+                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    MPI_Offset filesize = 0;
+    MPI_File_set_size(fh, filesize); // force overwriting existing data
+    MPI_File_set_view(fh, disp, MPI_DOUBLE, filetype, "native", MPI_INFO_NULL);
+    MPI_File_write_all(fh, U.data(), U.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);
+    MPI_File_close(&fh);
   }
 }
 
