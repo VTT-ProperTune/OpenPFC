@@ -44,21 +44,17 @@ FetchContent_Declare(
   heffte
   GIT_REPOSITORY "https://bitbucket.org/icl/heffte.git"
   GIT_TAG "v2.2.0")
-  
-FetchContent_GetProperties(heffte)
-if(NOT heffte_POPULATED)
-  FetchContent_Populate(heffte)
-  include("FindHeffteFFTWLibraries")
-  # Find static libraries instead of shared ones
-  heffte_find_fftw_libraries(
-        PREFIX $ENV{FFTW_ROOT}
-        VAR FFTW_LIBRARIES
-        REQUIRED "libfftw3.a" "libfftw3f.a"
-        OPTIONAL "libfftw3_threads.a" "libfftw3f_threads.a" "libfftw3_omp.a" "libfftw3f_omp.a")
-  add_subdirectory(${heffte_SOURCE_DIR} ${heffte_BINARY_DIR})
-endif()
 
-FetchContent_MakeAvailable(json argparse)
+FetchContent_Declare(
+  heffte
+  GIT_REPOSITORY "https://bitbucket.org/icl/heffte.git"
+  GIT_TAG "v2.2.0")
+
+  # Find static libraries instead of shared ones
+set(FFTW_REQUIRED "libfftw3.a" "libfftw3f.a")
+set(FFTW_OPTIONAL "libfftw3_threads.a" "libfftw3f_threads.a" "libfftw3_omp.a" "libfftw3f_omp.a")
+
+FetchContent_MakeAvailable(argparse json heffte)
 
 add_executable(pfc-heffte pfc-heffte)
 target_link_libraries(pfc-heffte PRIVATE argparse nlohmann_json Heffte)
