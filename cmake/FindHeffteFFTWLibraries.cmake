@@ -31,7 +31,7 @@ macro(heffte_find_fftw_libraries)
                 NAMES ${heffte_lib}
             )
         endif()
-        message(STATUS "heffte_fftw_lib: ${heffte_fftw_lib}")
+        message(STATUS "HeFFTe: found FFTW library ${heffte_fftw_lib}")
         if (heffte_fftw_lib)
             list(APPEND ${heffte_fftw_VAR} ${heffte_fftw_lib})
         elseif (${heffte_lib} IN_LIST "${heffte_fftw_REQUIRED}")
