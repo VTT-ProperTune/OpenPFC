@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(BUILD_SHARED_LIBS "Builds shared libraries using CMake conventions" OFF)
+
 option(Heffte_ENABLE_FFTW "Enable the FFTW backend" ON)
 option(Heffte_ENABLE_CUDA "Enable the CUDA and cuFFT backend" OFF)
 option(Heffte_ENABLE_ROCM "Enable the HIP and rocFFT backend" OFF)
@@ -50,9 +52,36 @@ FetchContent_Declare(
   GIT_REPOSITORY "https://bitbucket.org/icl/heffte.git"
   GIT_TAG "v2.2.0")
 
-  # Find static libraries instead of shared ones
-set(FFTW_REQUIRED "libfftw3.a" "libfftw3f.a")
-set(FFTW_OPTIONAL "libfftw3_threads.a" "libfftw3f_threads.a" "libfftw3_omp.a" "libfftw3f_omp.a")
+# https://bitbucket.org/icl/heffte/issues/42/add-option-to-use-static-fftw-libraries
+FetchContent_GetProperties(heffte)
+if(NOT heffte_POPULATED)
+  FetchContent_Populate(heffte)
+  include(FindHeffteFFTWLibraries)
+  if (BUILD_SHARED_LIBS)
+    message(STATUS "HeFFTe: using shared FFTW libraries")
+    if (NOT FFTW_REQUIRED_LIBRARIES)
+      set(FFTW_REQUIRED_LIBRARIES "fftw3" "fftw3f")
+    endif()
+    if (NOT FFTW_OPTIONAL_LIBRARIES)
+      set(FFTW_OPTIONAL_LIBRARIES "fftw3_threads" "fftw3f_threads" "fftw3_omp" "fftw3f_omp")
+    endif()
+  else()
+  message(STATUS "HeFFTe: using static FFTW libraries")
+    # find static libraries instead of shared ones
+    if (NOT FFTW_REQUIRED_LIBRARIES)
+      set(FFTW_REQUIRED_LIBRARIES "libfftw3.a" "libfftw3f.a")
+    endif()
+    if (NOT FFTW_OPTIONAL_LIBRARIES)
+      set(FFTW_OPTIONAL_LIBRARIES "libfftw3_threads.a" "libfftw3f_threads.a" "libfftw3_omp.a" "libfftw3f_omp.a")
+    endif()
+  endif()
+  heffte_find_fftw_libraries(
+        PREFIX $ENV{FFTW_ROOT}
+        VAR FFTW_LIBRARIES
+        REQUIRED ${FFTW_REQUIRED_LIBRARIES}
+        OPTIONAL ${FFTW_OPTIONAL_LIBRARIES})
+  add_subdirectory(${heffte_SOURCE_DIR} ${heffte_BINARY_DIR})
+endif()
 
 FetchContent_MakeAvailable(argparse json heffte)
 
