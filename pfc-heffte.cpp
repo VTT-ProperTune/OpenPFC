@@ -50,6 +50,11 @@ void compute_dft(MPI_Comm comm, json settings) {
   const double tend = settings["tend"];
   const int maxiters = settings["maxiters"];
 
+  const double Bl = settings["Bl"];
+  const double Bx = settings["Bx"];
+  const double p3 = settings["p3"];
+  const double p4 = settings["p4"];
+
   int me; // this process rank within the comm
   MPI_Comm_rank(comm, &me);
 
@@ -138,7 +143,7 @@ void compute_dft(MPI_Comm comm, json settings) {
         auto kx = i < Lx / 2 ? i * fx : (i - Lx) * fx;
         auto ky = j < Ly / 2 ? j * fy : (j - Ly) * fy;
         auto kz = k < Lz / 2 ? k * fz : (k - Lz) * fz;
-        k2[idx] = -(kx * kx + ky * ky + kz * kz);
+        k2[idx] = kx * kx + ky * ky + kz * kz;
         idx += 1;
       }
     }
@@ -146,12 +151,12 @@ void compute_dft(MPI_Comm comm, json settings) {
   write("k2.bin", k2);
 
   if (me == 0) {
-    std::cout << "Generate linear operator" << std::endl;
+    std::cout << "Generate linear operator L" << std::endl;
   }
   std::vector<double> L(fft.size_outbox());
   for (auto i = 0; i < L.size(); i++) {
-    L[i] = 1.0 / (1.0 - dt * k2[i]);
-    // L[i] = exp(dt * k2[i]);
+    auto C = -Bx * (-2 * k2[i] + k2[i] * k2[i]);
+    L[i] = -k2[i] * (Bl - C);
   }
   write("L.bin", L);
 
@@ -159,10 +164,12 @@ void compute_dft(MPI_Comm comm, json settings) {
     std::cout << "Generate initial condition" << std::endl;
   }
   std::vector<double> u(fft.size_inbox());
+
+#ifdef IC_BOX
   idx = 0;
-  for (auto i = inbox.low[0]; i <= inbox.high[0]; i++) {
+  for (auto k = inbox.low[2]; k <= inbox.high[2]; k++) {
     for (auto j = inbox.low[1]; j <= inbox.high[1]; j++) {
-      for (auto k = inbox.low[2]; k <= inbox.high[2]; k++) {
+      for (auto i = inbox.low[0]; i <= inbox.high[0]; i++) {
         auto x = x0 + i * dx;
         auto y = y0 + j * dy;
         auto z = z0 + k * dz;
@@ -174,7 +181,27 @@ void compute_dft(MPI_Comm comm, json settings) {
       }
     }
   }
-  write("u0.bin", u);
+#endif
+
+  idx = 0;
+  for (auto k = inbox.low[2]; k <= inbox.high[2]; k++) {
+    for (auto j = inbox.low[1]; j <= inbox.high[1]; j++) {
+      for (auto i = inbox.low[0]; i <= inbox.high[0]; i++) {
+        auto x = x0 + i * dx;
+        auto y = y0 + j * dy;
+        auto z = z0 + k * dz;
+        auto s1 = sin(1.0 / 16.0 * 2.0 * pi() * x);
+        auto s2 = sin(1.0 / 16.0 * 2.0 * pi() * y);
+        auto s3 = sin(1.0 / 16.0 * 2.0 * pi() * z);
+        auto e1 = exp(-0.01 * x * x);
+        auto e2 = exp(-0.01 * y * y);
+        auto e3 = exp(-0.01 * z * z);
+        u[idx] = pi() * s1 * s2 * s3 * e1 * e2 * e3;
+        idx += 1;
+      }
+    }
+  }
+  write("results/u0.bin", u);
 
   // set the strides for the triple indexes
   int local_plane = outbox.size[0] * outbox.size[1];
@@ -182,7 +209,8 @@ void compute_dft(MPI_Comm comm, json settings) {
 
   // define workspace to improve performance
   std::vector<std::complex<double>> workspace(fft.size_workspace());
-  std::vector<std::complex<double>> U(fft.size_outbox());
+  std::vector<std::complex<double>> UL(fft.size_outbox());
+  std::vector<std::complex<double>> UN(fft.size_outbox());
 
   if (me == 0) {
     std::cout << "Starting simulation\n\n";
@@ -226,18 +254,30 @@ void compute_dft(MPI_Comm comm, json settings) {
     std::cout << n << ";" << t << ";" << u[cidx] << std::endl;
   }
   while (t <= tend) {
-    // fft.forward(u.data(), U.data(), workspace.data());
-    fft.forward(u.data(), U.data());
-    write_complex("C1" + std::to_string(n) + ".bin", U);
-    for (auto i = 0; i < U.size(); i++) {
-      U[i] = L[i] * U[i];
+
+    // Linear part of solution
+    fft.forward(u.data(), UL.data(), workspace.data());
+
+    // Nonlinear part of solution
+    for (auto i = 0; i < u.size(); i++) {
+      u[i] = p3 * u[i] * u[i] + p4 * u[i] * u[i] * u[i];
+    }
+    fft.forward(u.data(), UN.data(), workspace.data());
+
+    // Semi-implicit time integration, store to UL
+    for (auto i = 0; i < UL.size(); i++) {
+      auto k2i = k2[i];
+      auto Ci = -Bx * (-2.0 * k2i + k2i * k2i);
+      auto Li = -k2i * (Bl - Ci);
+      UL[i] = 1.0 / (1.0 - dt * Li) * (UL[i] - k2i * dt * UN[i]);
     };
-    write_complex("C2" + std::to_string(n) + ".bin", U);
-    // fft.backward(U.data(), u.data(), workspace.data(), heffte::scale::full);
-    fft.backward(U.data(), u.data(), heffte::scale::full);
+
+    // Back to real space
+    fft.backward(UL.data(), u.data(), workspace.data(), heffte::scale::full);
+
     n += 1;
     t += dt;
-    write("u" + std::to_string(n) + ".bin", u);
+    write("results/u" + std::to_string(n) + ".bin", u);
     if (me == 0) {
       std::cout << t << ";" << u[cidx] << std::endl;
     }
