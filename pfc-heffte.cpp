@@ -11,14 +11,7 @@
 
 using json = nlohmann::json;
 
-double fRand(double fMin, double fMax) {
-  double f = (double)rand() / RAND_MAX;
-  return fMin + f * (fMax - fMin);
-}
-
-constexpr double pi() {
-  return std::atan(1) * 4;
-}
+const double pi = std::atan(1) * 4;
 
 void write(std::string fn, std::vector<double> &data) {
   std::ofstream file(fn, std::ios::out | std::ios::binary);
@@ -54,6 +47,8 @@ void compute_dft(MPI_Comm comm, json settings) {
   const double Bx = settings["Bx"];
   const double p3 = settings["p3"];
   const double p4 = settings["p4"];
+
+  const std::string results_dir = settings["results_dir"];
 
   int me; // this process rank within the comm
   MPI_Comm_rank(comm, &me);
@@ -134,9 +129,9 @@ void compute_dft(MPI_Comm comm, json settings) {
   }
   std::vector<double> k2(fft.size_outbox());
   auto idx = 0;
-  auto fx = 2 * pi() / (dx * Lx);
-  auto fy = 2 * pi() / (dy * Ly);
-  auto fz = 2 * pi() / (dz * Lz);
+  auto fx = 2 * pi / (dx * Lx);
+  auto fy = 2 * pi / (dy * Ly);
+  auto fz = 2 * pi / (dz * Lz);
   for (auto k = outbox.low[2]; k <= outbox.high[2]; k++) {
     for (auto j = outbox.low[1]; j <= outbox.high[1]; j++) {
       for (auto i = outbox.low[0]; i <= outbox.high[0]; i++) {
@@ -148,17 +143,33 @@ void compute_dft(MPI_Comm comm, json settings) {
       }
     }
   }
-  write("k2.bin", k2);
 
-  if (me == 0) {
-    std::cout << "Generate linear operator L" << std::endl;
+  {
+    MPI_Datatype filetype;
+    const int gdims[] = {Lx_c, Ly, Lz};
+    const auto lx = outbox.high[0] - outbox.low[0] + 1;
+    const auto ly = outbox.high[1] - outbox.low[1] + 1;
+    const auto lz = outbox.high[2] - outbox.low[2] + 1;
+    const int ldims[] = {lx, ly, lz};
+    const auto ox = outbox.low[0];
+    const auto oy = outbox.low[1];
+    const auto oz = outbox.low[2];
+    const int offset[] = {ox, oy, oz};
+    MPI_Type_create_subarray(3, gdims, ldims, offset, MPI_ORDER_FORTRAN,
+                             MPI_DOUBLE, &filetype);
+    MPI_Type_commit(&filetype);
+
+    MPI_File fh;
+    const std::string filename = results_dir + "k2.bin";
+    MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
+                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    MPI_Offset filesize = 0;
+    const unsigned int disp = 0;
+    MPI_File_set_size(fh, filesize); // force overwriting existing data
+    MPI_File_set_view(fh, disp, MPI_DOUBLE, filetype, "native", MPI_INFO_NULL);
+    MPI_File_write_all(fh, k2.data(), k2.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);
+    MPI_File_close(&fh);
   }
-  std::vector<double> L(fft.size_outbox());
-  for (auto i = 0; i < L.size(); i++) {
-    auto C = -Bx * (-2 * k2[i] + k2[i] * k2[i]);
-    L[i] = -k2[i] * (Bl - C);
-  }
-  write("L.bin", L);
 
   if (me == 0) {
     std::cout << "Generate initial condition" << std::endl;
@@ -190,22 +201,17 @@ void compute_dft(MPI_Comm comm, json settings) {
         auto x = x0 + i * dx;
         auto y = y0 + j * dy;
         auto z = z0 + k * dz;
-        auto s1 = sin(1.0 / 16.0 * 2.0 * pi() * x);
-        auto s2 = sin(1.0 / 16.0 * 2.0 * pi() * y);
-        auto s3 = sin(1.0 / 16.0 * 2.0 * pi() * z);
+        auto s1 = sin(1.0 / 16.0 * 2.0 * pi * x);
+        auto s2 = sin(1.0 / 16.0 * 2.0 * pi * y);
+        auto s3 = sin(1.0 / 16.0 * 2.0 * pi * z);
         auto e1 = exp(-0.01 * x * x);
         auto e2 = exp(-0.01 * y * y);
         auto e3 = exp(-0.01 * z * z);
-        u[idx] = pi() * s1 * s2 * s3 * e1 * e2 * e3;
+        u[idx] = pi * s1 * s2 * s3 * e1 * e2 * e3;
         idx += 1;
       }
     }
   }
-  write("results/u0.bin", u);
-
-  // set the strides for the triple indexes
-  int local_plane = outbox.size[0] * outbox.size[1];
-  int local_stride = outbox.size[0];
 
   // define workspace to improve performance
   std::vector<std::complex<double>> workspace(fft.size_workspace());
@@ -216,55 +222,84 @@ void compute_dft(MPI_Comm comm, json settings) {
     std::cout << "Starting simulation\n\n";
   }
 
-  /*
+  {
+    MPI_Datatype filetype;
+    const int gdims[] = {Lx, Ly, Lz};
+    const auto lx = inbox.high[0] - inbox.low[0];
+    const auto ly = inbox.high[1] - inbox.low[1];
+    const auto lz = inbox.high[2] - inbox.low[2];
+    const int ldims[] = {lx + 1, ly + 1, lz + 1};
+    const auto ox = inbox.low[0];
+    const auto oy = inbox.low[1];
+    const auto oz = inbox.low[2];
+    const int offset[] = {ox, oy, oz};
+    MPI_Type_create_subarray(3, gdims, ldims, offset, MPI_ORDER_FORTRAN,
+                             MPI_DOUBLE, &filetype);
+    MPI_Type_commit(&filetype);
+
+    const unsigned int disp = 0;
+    MPI_File fh;
+    const std::string filename = results_dir + "u0.bin";
+    MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
+                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    MPI_Offset filesize = 0;
+    MPI_File_set_size(fh, filesize); // force overwriting existing data
+    MPI_File_set_view(fh, disp, MPI_DOUBLE, filetype, "native", MPI_INFO_NULL);
+    MPI_File_write_all(fh, u.data(), u.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);
+    MPI_File_close(&fh);
+  }
+
+  // start iterations
+  auto n = 0;
+  auto t = tstart;
+  while (t <= tend) {
+
+    n += 1;
+    t += dt;
+
+    // Linear part of solution
+    MPI_Barrier(MPI_COMM_WORLD);
+    fft.forward(u.data(), UL.data(), workspace.data());
+    MPI_Barrier(MPI_COMM_WORLD);
+
     {
       MPI_Datatype filetype;
-      const int gdims[] = {Lx, Ly, Lz};
-      const auto lx = inbox.high[0] - inbox.low[0];
-      const auto ly = inbox.high[1] - inbox.low[1];
-      const auto lz = inbox.high[2] - inbox.low[2];
+      const int gdims[] = {Lx_c, Ly, Lz};
+      const auto lx = outbox.high[0] - outbox.low[0] + 1;
+      const auto ly = outbox.high[1] - outbox.low[1] + 1;
+      const auto lz = outbox.high[2] - outbox.low[2] + 1;
       const int ldims[] = {lx, ly, lz};
-      const auto ox = inbox.low[0];
-      const auto oy = inbox.low[1];
-      const auto oz = inbox.low[2];
+      const auto ox = outbox.low[0];
+      const auto oy = outbox.low[1];
+      const auto oz = outbox.low[2];
       const int offset[] = {ox, oy, oz};
-      MPI_Type_create_subarray(3, gdims, ldims, offset, MPI_ORDER_C, MPI_DOUBLE,
-                               &filetype);
+      MPI_Type_create_subarray(3, gdims, ldims, offset, MPI_ORDER_FORTRAN,
+                               MPI_DOUBLE_COMPLEX, &filetype);
       MPI_Type_commit(&filetype);
-      const unsigned int disp = 0;
 
       MPI_File fh;
-      const std::string filename = "0.bin";
+      const std::string filename =
+          results_dir + "UL_" + std::to_string(n) + ".bin";
       MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
                     MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
       MPI_Offset filesize = 0;
+      const unsigned int disp = 0;
       MPI_File_set_size(fh, filesize); // force overwriting existing data
-      MPI_File_set_view(fh, disp, MPI_DOUBLE, filetype, "native",
-    MPI_INFO_NULL); MPI_File_write_all(fh, u.data(), u.size(), MPI_DOUBLE,
-    MPI_STATUS_IGNORE); MPI_File_close(&fh);
+      MPI_File_set_view(fh, disp, MPI_DOUBLE_COMPLEX, filetype, "native",
+                        MPI_INFO_NULL);
+      MPI_File_write_all(fh, UL.data(), UL.size(), MPI_DOUBLE_COMPLEX,
+                         MPI_STATUS_IGNORE);
+      MPI_File_close(&fh);
     }
-    */
-
-  // start iterations
-  // auto cidx = 1056832; // 64*128^2 + 64*128 + 64 (center point of 128^3 grid)
-  auto cidx = 133152; // 32*64^2 + 32*64 + 32 (center point of 64^3 grid)
-  auto n = 0;
-  auto t = tstart;
-  if (me == 0) {
-    std::cout << n << ";" << t << ";" << u[cidx] << std::endl;
-  }
-  while (t <= tend) {
-
-    // Linear part of solution
-    fft.forward(u.data(), UL.data(), workspace.data());
 
     // Nonlinear part of solution
     for (auto i = 0; i < u.size(); i++) {
-      u[i] = p3 * u[i] * u[i] + p4 * u[i] * u[i] * u[i];
+      auto ui = u[i];
+      u[i] = p3 * ui * ui + p4 * ui * ui * ui;
     }
     fft.forward(u.data(), UN.data(), workspace.data());
 
-    // Semi-implicit time integration, store to UL
+    // Semi-implicit time integration, store results to UL
     for (auto i = 0; i < UL.size(); i++) {
       auto k2i = k2[i];
       auto Ci = -Bx * (-2.0 * k2i + k2i * k2i);
@@ -275,46 +310,47 @@ void compute_dft(MPI_Comm comm, json settings) {
     // Back to real space
     fft.backward(UL.data(), u.data(), workspace.data(), heffte::scale::full);
 
-    n += 1;
-    t += dt;
-    write("results/u" + std::to_string(n) + ".bin", u);
     if (me == 0) {
-      std::cout << t << ";" << u[cidx] << std::endl;
+      std::cout << "Iteration " << n << ", t = " << t << std::endl;
     }
-    if (n == maxiters) {
-      std::cout << "Maximum number of iterations reached, exiting" << std::endl;
-      break;
-    }
-  }
 
-  /*
     {
       MPI_Datatype filetype;
       const int gdims[] = {Lx, Ly, Lz};
       const auto lx = inbox.high[0] - inbox.low[0];
       const auto ly = inbox.high[1] - inbox.low[1];
       const auto lz = inbox.high[2] - inbox.low[2];
-      const int ldims[] = {lx, ly, lz};
+      const int ldims[] = {lx + 1, ly + 1, lz + 1};
       const auto ox = inbox.low[0];
       const auto oy = inbox.low[1];
       const auto oz = inbox.low[2];
       const int offset[] = {ox, oy, oz};
-      MPI_Type_create_subarray(3, gdims, ldims, offset, MPI_ORDER_C, MPI_DOUBLE,
-                               &filetype);
+      MPI_Type_create_subarray(3, gdims, ldims, offset, MPI_ORDER_FORTRAN,
+                               MPI_DOUBLE, &filetype);
       MPI_Type_commit(&filetype);
       const unsigned int disp = 0;
 
       MPI_File fh;
-      const std::string filename = std::to_string(N) + ".bin";
+      const std::string filename =
+          results_dir + "u" + std::to_string(n) + ".bin";
       MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
                     MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
       MPI_Offset filesize = 0;
       MPI_File_set_size(fh, filesize); // force overwriting existing data
       MPI_File_set_view(fh, disp, MPI_DOUBLE, filetype, "native",
-    MPI_INFO_NULL); MPI_File_write_all(fh, U.data(), U.size(), MPI_DOUBLE,
-    MPI_STATUS_IGNORE); MPI_File_close(&fh);
+                        MPI_INFO_NULL);
+      MPI_File_write_all(fh, u.data(), u.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);
+      MPI_File_close(&fh);
     }
-    */
+
+    if (n == maxiters) {
+      if (me == 0) {
+        std::cout << "Maximum number of iterations (" << maxiters
+                  << ") reached, exiting" << std::endl;
+      }
+      break;
+    }
+  }
 }
 
 int main(int argc, char **argv) {
