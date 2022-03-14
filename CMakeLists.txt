@@ -87,3 +87,6 @@ FetchContent_MakeAvailable(argparse json heffte)
 
 add_executable(pfc-heffte pfc-heffte)
 target_link_libraries(pfc-heffte PRIVATE argparse nlohmann_json Heffte)
+
+add_executable(diffusion examples/diffusion)
+target_link_libraries(diffusion PRIVATE argparse nlohmann_json Heffte)
