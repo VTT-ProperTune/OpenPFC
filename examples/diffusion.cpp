@@ -67,6 +67,18 @@ struct Simulation {
     dt = dt_;
   }
 
+  double get_dt() {
+    return dt;
+  }
+
+  void set_dt(double dt_) {
+    dt = dt_;
+  }
+
+  void set_max_iters(unsigned long int nmax) {
+    max_iters = nmax;
+  }
+
   void set_results_dir(std::string path) {
     results_dir = path;
   }
@@ -82,7 +94,8 @@ struct Simulation {
       return true;
     }
     if (t >= t1) {
-      exit_msg = "simulated succesfully to time " + std::to_string(t1);
+      exit_msg = "simulated succesfully to time " + std::to_string(t1) + ", (" +
+                 std::to_string(n) + " iterations)";
       return true;
     }
     return false;
@@ -167,8 +180,8 @@ struct Simulation {
       int me;
       MPI_Comm_rank(MPI_COMM_WORLD, &me);
       if (me == 0) {
-        std::cout << "t = " << t << ", " << ceil(t / t1 * 100.0)
-                  << " percent done" << std::endl;
+        std::cout << "n = " << n << ", t = " << t << ", dt = " << dt << ", "
+                  << ceil(t / t1 * 100.0) << " percent done" << std::endl;
       }
     }
   }
@@ -214,9 +227,9 @@ struct Diffusion : Simulation {
 struct BasicPFC : Simulation {
 
   const std::string description = "A basic phase field crystal model";
-  const double Bx = 1.0;
+  const double Bx = 1.3;
   const double Bl = 1.0;
-  const double p2 = -0.5;
+  const double p2 = -1.0 / 2.0;
   const double p3 = 1.0 / 3.0;
 
   double L(double x, double y, double z) {
@@ -231,10 +244,11 @@ struct BasicPFC : Simulation {
   }
 
   double u0(double x, double y, double z) {
-    const double A = 0.5;
+    const double A = 1.0;
     const double n_os = -0.04;
     const double n_ol = -0.05;
-    if (x * x + y * y + z * z > 20.0 * 20) {
+    auto R = 20.0;
+    if (x * x + y * y + z * z > R * R) {
       return n_ol;
     }
     double cx = cos(x) * dx;
@@ -243,12 +257,19 @@ struct BasicPFC : Simulation {
     return n_os + A * (cx * cy + cy * cz + cz * cx);
   }
 
-  bool writeat(unsigned long int n, double t) {
-    return true;
+  void tune_dt(unsigned long int n, double t) {
+    return;
+    int nmax = max_iters;
+    double tmax = t1;
+    double dt0 = 1.0;
+    double tau = 3.0;
+    double tnext = dt0 * (n + 1.0) +
+                   pow(1.0 * (n + 1.0) / nmax, tau) * (t1 - dt0 * (n + 1.0));
+    set_dt(std::max(dt0, tnext - t));
   }
 
-  virtual void tune_dt(unsigned long int n, double t) {
-    dt = dt * 1.1;
+  bool writeat(unsigned long int n, double t) {
+    return (n <= 100);
   }
 };
 
@@ -277,7 +298,6 @@ void MPI_Solve(Simulation *s) {
   const double x0 = s->x0;
   const double y0 = s->y0;
   const double z0 = s->z0;
-  const double dt = s->dt;
   const double t0 = s->t0;
   const double t1 = s->t1;
   const int max_iters = s->max_iters;
@@ -402,9 +422,9 @@ void MPI_Solve(Simulation *s) {
   MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->u);
 
   while (!s->done(n, t)) {
-
+    s->tune_dt(n, t);
     n += 1;
-    t += dt;
+    t += s->get_dt();
 
     // FFT for linear part, U = fft(u)
     fft.forward(u, U, workspace.data());
@@ -487,9 +507,19 @@ int main(int argc, char *argv[]) {
   */
 
   Simulation *s = new BasicPFC();
-  s->set_domain({-64.0, -64.0, -64.0}, {0.5, 0.5, 0.5}, {256, 256, 256});
-  s->set_time(0.0, 50.0, 0.01);
-  s->set_results_dir("/mnt/c/Temp/pfc/results");
+  int Lx = 256;
+  int Ly = Lx;
+  int Lz = Lx;
+  double dx = 2.0 * pi / 8.0;
+  double dy = dx;
+  double dz = dx;
+  double x0 = -0.5 * Lx * dx;
+  double y0 = -0.5 * Ly * dy;
+  double z0 = -0.5 * Lz * dz;
+  s->set_domain({x0, y0, z0}, {dx, dx, dx}, {Lx, Ly, Lz});
+  s->set_time(0.0, 1000.0, 1.0);
+  s->set_max_iters(1000);
+  s->set_results_dir("./results");
   MPI_Init(&argc, &argv);
   MPI_Solve(s);
   MPI_Finalize();
