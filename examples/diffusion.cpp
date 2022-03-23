@@ -1,5 +1,6 @@
 // heFFTe implementation of pfc code
 
+#include <chrono>
 #include <climits>
 #include <filesystem>
 #include <fstream>
@@ -163,7 +164,7 @@ struct Simulation {
     }
   }
 
-  void calculate_nonlinear_part() {
+  virtual void calculate_nonlinear_part() {
     for (unsigned long int i = 0; i < u.size(); i++) {
       u[i] = f(u[i]);
     }
@@ -176,13 +177,12 @@ struct Simulation {
   }
 
   virtual void finalize_step(unsigned long int n, double t) {
+  }
+
+  virtual void finalize_master_step(unsigned long int n, double t) {
     if (ceil(t / t1 * 100.0) != ceil((t - dt) / t1 * 100.0)) {
-      int me;
-      MPI_Comm_rank(MPI_COMM_WORLD, &me);
-      if (me == 0) {
-        std::cout << "n = " << n << ", t = " << t << ", dt = " << dt << ", "
-                  << ceil(t / t1 * 100.0) << " percent done" << std::endl;
-      }
+      std::cout << "n = " << n << ", t = " << t << ", dt = " << dt << ", "
+                << ceil(t / t1 * 100.0) << " percent done" << std::endl;
     }
   }
 
@@ -240,7 +240,7 @@ struct BasicPFC : Simulation {
   }
 
   double f(double u) {
-    return p2 * pow(u, 2) + p3 * pow(u, 3);
+    return p2 * u * u + p3 * u * u * u;
   }
 
   double u0(double x, double y, double z) {
@@ -269,7 +269,7 @@ struct BasicPFC : Simulation {
   }
 
   bool writeat(unsigned long int n, double t) {
-    return (n <= 100);
+    return true;
   }
 };
 
@@ -332,10 +332,13 @@ void MPI_Solve(Simulation *s) {
 
   // report the indexes
   if (me == 0) {
+    std::cout << "Number of ranks: " << num_ranks << std::endl;
+    std::cout << "Domain size: " << Lx << " x " << Ly << " x " << Lz
+              << std::endl;
     std::cout << "The global input contains " << real_indexes.count()
-              << " real indexes.\n";
+              << " real indexes." << std::endl;
     std::cout << "The global output contains " << complex_indexes.count()
-              << " complex indexes.\n";
+              << " complex indexes." << std::endl;
   }
 
   // create a processor grid with minimum surface (measured in number of
@@ -419,97 +422,120 @@ void MPI_Solve(Simulation *s) {
   std::complex<double> *U = s->U.data();
   std::complex<double> *N = s->N.data();
 
-  MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->u);
+  if (s->writeat(n, t)) {
+    MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->u);
+  }
 
+  auto start = std::chrono::high_resolution_clock::now();
   while (!s->done(n, t)) {
     s->tune_dt(n, t);
     n += 1;
     t += s->get_dt();
 
-    // FFT for linear part, U = fft(u)
+    // FFT for linear part, U = fft(u),  O(n log n)
+    auto t0 = std::chrono::high_resolution_clock::now();
     fft.forward(u, U, workspace.data());
 
-    // calculate nonlinear part, u = f(u) (store in-place)
+    // calculate nonlinear part, u = f(u), O(n) (store in-place)
+    auto t1 = std::chrono::high_resolution_clock::now();
     s->calculate_nonlinear_part();
 
-    // FFT for nonlinear part, N = fft(u)
+    // FFT for nonlinear part, N = fft(u), O(n log n)
+    auto t2 = std::chrono::high_resolution_clock::now();
     fft.forward(u, N, workspace.data());
 
-    // Semi-implicit time integration U = 1 / (1 - dt * L) * (U - k2 * dt * N)
+    // Semi-implicit time integration U = 1 / (1 - dt * L) * (U - k2 * dt * N),
+    // O(n)
+    auto t3 = std::chrono::high_resolution_clock::now();
     s->integrate();
 
-    // Back to real space, u = fft^-1(U)
+    // Back to real space, u = fft^-1(U), O(n log n)
+    auto t4 = std::chrono::high_resolution_clock::now();
     fft.backward(U, u, workspace.data(), heffte::scale::full);
 
-    if (s->writeat(n, t)) {
+    auto t5 = std::chrono::high_resolution_clock::now();
+    if (s->writeat(n, t)) { // O(?)
       MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->u);
     }
 
+    auto t6 = std::chrono::high_resolution_clock::now();
     s->finalize_step(n, t);
-  }
+    if (me == 0) {
+      s->finalize_master_step(n, t);
+    }
 
+    if (me == 0) {
+      std::cout << "Iteration " << n << " (time " << t << ") summary: ";
+      auto dt1 = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0);
+      auto dt2 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+      auto dt3 = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2);
+      auto dt4 = std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3);
+      auto dt5 = std::chrono::duration_cast<std::chrono::milliseconds>(t5 - t4);
+      auto dt6 = std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t5);
+      auto dt7 = std::chrono::duration_cast<std::chrono::milliseconds>(t6 - t0);
+      std::cout << "U=fft(u) " << dt1.count() << " ms, ";
+      std::cout << "n=f(u) " << dt2.count() << " ms, ";
+      std::cout << "N=fft(n) " << dt3.count() << " ms, ";
+      std::cout << "U=L(U, N) " << dt4.count() << " ms, ";
+      std::cout << "u=FFT^-1(U) " << dt5.count() << " ms, ";
+      std::cout << "W(u) " << dt6.count() << " ms, ";
+      std::cout << "T " << dt7.count() << std::endl;
+    }
+  }
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
   if (me == 0) {
-    std::cout << n << ";" << t << ";" << s->u[Lx / 2] << std::endl;
+    std::cout << n << " iterations in " << duration.count() / 1000.0
+              << " seconds (" << duration.count() / n << " ms / iteration)"
+              << std::endl;
   }
 
   if (me == 0) {
     std::cout << "Simulation done. Exit message: " + s->exit_msg << std::endl;
   }
-
-  if (!s->writeat(n, t)) {
-    MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->u);
-  }
 }
 
 int main(int argc, char *argv[]) {
 
-  /*
-    argparse::ArgumentParser program("diffusion");
+  argparse::ArgumentParser program("diffusion");
 
-    program.add_argument("--verbose")
-        .help("increase output verbosity")
-        .default_value(false)
-        .implicit_value(true);
+  program.add_argument("--verbose")
+      .help("increase output verbosity")
+      .default_value(true)
+      .implicit_value(true);
 
-    program.add_argument("--Lx")
-        .help("Number of grid points in x direction")
-        .scan<'i', int>()
-        .default_value(128);
+  program.add_argument("--Lx")
+      .help("Number of grid points in x direction")
+      .scan<'i', int>()
+      .default_value(512);
 
-    program.add_argument("--Ly")
-        .help("Number of grid points in y direction")
-        .scan<'i', int>()
-        .default_value(128);
+  program.add_argument("--Ly")
+      .help("Number of grid points in y direction")
+      .scan<'i', int>()
+      .default_value(512);
 
-    program.add_argument("--Lz")
-        .help("Number of grid points in z direction")
-        .scan<'i', int>()
-        .default_value(128);
+  program.add_argument("--Lz")
+      .help("Number of grid points in z direction")
+      .scan<'i', int>()
+      .default_value(512);
 
-    try {
-      program.parse_args(argc, argv);
-    } catch (const std::runtime_error &err) {
-      std::cerr << err.what() << std::endl;
-      std::cerr << program;
-      std::exit(1);
-    }
+  program.add_argument("--results-dir")
+      .help("Where to write results")
+      .default_value("./results");
 
-    s->Lx = program.get<int>("--Lx");
-    s->Ly = program.get<int>("--Ly");
-    s->Lz = program.get<int>("--Lz");
-    s->x0 = -0.5 * s->dx * s->Lx;
-    s->y0 = -0.5 * s->dy * s->Ly;
-    s->z0 = -0.5 * s->dz * s->Lz;
-    s->t0 = 0.0;
-    s->t1 = 0.75 * s->Lx;
-    s->max_iters = 10000;
-
-  */
+  try {
+    program.parse_args(argc, argv);
+  } catch (const std::runtime_error &err) {
+    std::cerr << err.what() << std::endl;
+    std::cerr << program;
+    std::exit(1);
+  }
 
   Simulation *s = new BasicPFC();
-  int Lx = 256;
-  int Ly = Lx;
-  int Lz = Lx;
+  auto Lx = program.get<int>("--Lx");
+  auto Ly = program.get<int>("--Ly");
+  auto Lz = program.get<int>("--Lz");
   double dx = 2.0 * pi / 8.0;
   double dy = dx;
   double dz = dx;
@@ -517,9 +543,9 @@ int main(int argc, char *argv[]) {
   double y0 = -0.5 * Ly * dy;
   double z0 = -0.5 * Lz * dz;
   s->set_domain({x0, y0, z0}, {dx, dx, dx}, {Lx, Ly, Lz});
-  s->set_time(0.0, 1000.0, 1.0);
-  s->set_max_iters(1000);
-  s->set_results_dir("./results");
+  s->set_time(0.0, 10.0, 1.0);
+  s->set_max_iters(10);
+  s->set_results_dir(program.get<std::string>("--results-dir"));
   MPI_Init(&argc, &argv);
   MPI_Solve(s);
   MPI_Finalize();
