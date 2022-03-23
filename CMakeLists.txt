@@ -85,8 +85,11 @@ endif()
 
 FetchContent_MakeAvailable(argparse json heffte)
 
-add_executable(pfc-heffte pfc-heffte)
+add_executable(pfc-heffte pfc-heffte.cpp)
 target_link_libraries(pfc-heffte PRIVATE argparse nlohmann_json Heffte)
 
-add_executable(diffusion examples/diffusion)
+add_executable(diffusion examples/diffusion.cpp)
 target_link_libraries(diffusion PRIVATE argparse nlohmann_json Heffte)
+
+add_executable(clean_tungsten examples/clean_tungsten.cpp)
+target_link_libraries(clean_tungsten PRIVATE argparse nlohmann_json Heffte)

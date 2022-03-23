@@ -187,9 +187,11 @@ struct Simulation {
   }
 
   virtual void finalize_master_step(unsigned long int n, double t) {
-    if (ceil(t / t1 * 100.0) != ceil((t - dt) / t1 * 100.0)) {
+    int pct1 = floor(t / t1 * 100.0);
+    int pct2 = floor((t - dt) / t1 * 100.0);
+    if (pct1 != pct2) {
       std::cout << "n = " << n << ", t = " << t << ", dt = " << dt << ", "
-                << ceil(t / t1 * 100.0) << " percent done" << std::endl;
+                << pct1 << " percent done" << std::endl;
     }
   }
 
@@ -254,9 +256,9 @@ struct Tungsten : Simulation {
     baseSeed = setNum * 1000;
 
     // width of grid, ideally should be power of 2
-    Lx = 256;
-    Ly = 256;
-    Lz = 256;
+    Lx = 512;
+    Ly = 512;
+    Lz = 512;
     griddim = {Lx, Ly, Lz};
 
     // step parameters. maxStep should be a multiple of outStep.
@@ -271,7 +273,7 @@ struct Tungsten : Simulation {
 
     // Output directory for parameter files and data files
     write_fields = true;
-    output_dir = "/home/juajukka/dev/ppfc/results/clean_tungsten_3D_256";
+    output_dir = "/home/juajukka/dev/ppfc/results/clean_tungsten_3d_512";
 
     // Whether to output the full field at every outstep in hdf5
     fullout_hdf5 = true;
@@ -290,7 +292,9 @@ struct Tungsten : Simulation {
 
     // length and time steps
     dx = a3D / 8;
-    dt = 1;
+    dy = dx;
+    dz = dx;
+    dt = 1.0;
 
     // average density of the metastable fluid
     n0 = -0.4;
@@ -1038,17 +1042,17 @@ int main(int argc, char *argv[]) {
   program.add_argument("--Lx")
       .help("Number of grid points in x direction")
       .scan<'i', int>()
-      .default_value(256);
+      .default_value(512);
 
   program.add_argument("--Ly")
       .help("Number of grid points in y direction")
       .scan<'i', int>()
-      .default_value(256);
+      .default_value(512);
 
   program.add_argument("--Lz")
       .help("Number of grid points in z direction")
       .scan<'i', int>()
-      .default_value(256);
+      .default_value(512);
 
   program.add_argument("--results-dir")
       .help("Where to write results")
@@ -1073,8 +1077,8 @@ int main(int argc, char *argv[]) {
   double y0 = -0.5 * Ly * dy;
   double z0 = -0.5 * Lz * dz;
   s->set_domain({x0, y0, z0}, {dx, dx, dx}, {Lx, Ly, Lz});
-  s->set_time(0.0, 10000.0, 1.0);
-  s->set_max_iters(10000);
+  s->set_time(0.0, 180000.0, 1.0);
+  s->set_max_iters(180000);
   s->set_results_dir(program.get<std::string>("--results-dir"));
   MPI_Init(&argc, &argv);
   MPI_Solve(s);
