@@ -183,18 +183,6 @@ struct Simulation {
     };
   }
 
-  virtual void finalize_step(unsigned long int n, double t) {
-  }
-
-  virtual void finalize_master_step(unsigned long int n, double t) {
-    int pct1 = floor(t / t1 * 100.0);
-    int pct2 = floor((t - dt) / t1 * 100.0);
-    if (pct1 != pct2) {
-      std::cout << "n = " << n << ", t = " << t << ", dt = " << dt << ", "
-                << pct1 << " percent done" << std::endl;
-    }
-  }
-
   virtual void tune_dt(unsigned long int n, double t) {
   }
 
@@ -256,9 +244,9 @@ struct Tungsten : Simulation {
     baseSeed = setNum * 1000;
 
     // width of grid, ideally should be power of 2
-    Lx = 512;
-    Ly = 512;
-    Lz = 512;
+    Lx = 1024;
+    Ly = 1024;
+    Lz = 1024;
     griddim = {Lx, Ly, Lz};
 
     // step parameters. maxStep should be a multiple of outStep.
@@ -726,7 +714,8 @@ struct Tungsten : Simulation {
     std::array<std::array<double, 3>, 6> q = {q1, q2, q3, q4, q5, q6};
 
     unsigned long int idx = 0;
-    double r2 = pow(0.2 * (Lx * dx), 2);
+    // double r2 = pow(0.2 * (Lx * dx), 2);
+    double r2 = pow(64.0, 2);
     double u;
     for (auto k = low[2]; k <= high[2]; k++) {
       for (auto j = low[1]; j <= high[1]; j++) {
@@ -933,9 +922,6 @@ void MPI_Solve(Simulation *s) {
   if (s->writeat(n, t)) {
     MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->psi);
   }
-  if (me == 0) {
-    s->finalize_master_step(n, t);
-  }
 
   /*
   double *u = s->u.data();
@@ -952,9 +938,6 @@ void MPI_Solve(Simulation *s) {
     s->step(n, t, fft);
     if (s->writeat(n, t)) {
       MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->psi);
-    }
-    if (me == 0) {
-      s->finalize_master_step(n, t);
     }
   }
 
@@ -1042,17 +1025,17 @@ int main(int argc, char *argv[]) {
   program.add_argument("--Lx")
       .help("Number of grid points in x direction")
       .scan<'i', int>()
-      .default_value(512);
+      .default_value(1024);
 
   program.add_argument("--Ly")
       .help("Number of grid points in y direction")
       .scan<'i', int>()
-      .default_value(512);
+      .default_value(1024);
 
   program.add_argument("--Lz")
       .help("Number of grid points in z direction")
       .scan<'i', int>()
-      .default_value(512);
+      .default_value(1024);
 
   program.add_argument("--results-dir")
       .help("Where to write results")
