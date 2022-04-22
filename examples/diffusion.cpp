@@ -9,6 +9,7 @@ struct diffusion : pfc::simulation {
   }
 
   void write_results(unsigned long int n, double t, MPI_Datatype) {
+    /*
     int i = rint((x - x0) / dx);
     int j = rint((y - y0) / dy);
     int k = rint((z - z0) / dz);
@@ -21,6 +22,7 @@ struct diffusion : pfc::simulation {
               (i - low[0]);
     std::cout << "n = " << n << ", t = " << t << ", u = " << idx << u[idx]
               << std::endl;
+    */
   }
 };
 

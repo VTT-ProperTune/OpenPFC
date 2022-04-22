@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <climits>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -10,72 +11,77 @@
 
 #include <heffte.h>
 
-namespace pfc {
+namespace PFC {
 
-const double pi = std::atan(1.0) * 4.0;
-
-void hello() {
-  std::cout << "Hello, world!" << std::endl;
+template <typename T> size_t sizeof_vec(std::vector<T> &V) {
+  return V.size() * sizeof(T);
 }
 
-struct simulation {
+#define MPI_TAG_TIMING 3
+#define MPI_TAG_INBOX_LOW 4
+#define MPI_TAG_INBOX_HIGH 5
+#define MPI_TAG_OUTBOX_LOW 6
+#define MPI_TAG_OUTBOX_HIGH 7
 
-  unsigned int Lx;
-  unsigned int Ly;
-  unsigned int Lz;
-  double dx;
-  double dy;
-  double dz;
-  double x0;
-  double y0;
-  double z0;
-  double t0;
-  double t1;
-  double dt;
-  unsigned long int max_iters;
+struct Simulation {
 
-  std::vector<double> k2_;             // "Laplace" operator
-  std::vector<double> L_;              // Linear part
-  std::vector<double> u;               // Field in real space
-  std::vector<std::complex<double>> U; // Field in Fourier space
-  std::vector<std::complex<double>> N; // Nonlinear part of u in Fourier space
-
+  int me = 0;
+  int num_ranks = 1;
+  int Lx = 128;
+  int Ly = 128;
+  int Lz = 128;
+  double dx = 1.0;
+  double dy = 1.0;
+  double dz = 1.0;
+  double x0 = -64.0;
+  double y0 = -64.0;
+  double z0 = -64.0;
+  double t0 = 0.0;
+  double t1 = 10.0;
+  double dt = 1.0;
+  size_t max_iters = ULONG_MAX;
+  std::string status_msg = "Initializing";
+  size_t mem_allocated = 0;
   std::filesystem::path results_dir = ".";
 
-  std::string exit_msg;
+  // Pointer to HeFFTe FFT
+  heffte::fft3d_r2c<heffte::backend::fftw> *fft;
 
-  simulation() {
-    set_domain({-64.0, -64.0, -64.0}, {1.0, 1.0, 1.0}, {128, 128, 128});
-    set_time(0.0, 100.0, 1.0);
-    max_iters = ULONG_MAX;
-    exit_msg = "";
+  // Temporary workspace to make FFT faster
+  std::vector<std::complex<double>> wrk;
+
+  // Data type used for writing subarray
+  MPI_Datatype filetype;
+
+  // This array is used to measure time during stepping
+  std::array<double, 8> timing;
+
+  void set_size(int Lx, int Ly, int Lz) {
+    this->Lx = Lx;
+    this->Ly = Ly;
+    this->Lz = Lz;
   }
 
-  void set_domain(std::array<double, 3> o, std::array<double, 3> h,
-                  std::array<int, 3> d) {
-    x0 = o[0];
-    y0 = o[1];
-    z0 = o[2];
-    dx = h[0];
-    dy = h[1];
-    dz = h[2];
-    Lx = d[0];
-    Ly = d[1];
-    Lz = d[2];
+  void set_origin(double x0, double y0, double z0) {
+    this->x0 = x0;
+    this->y0 = y0;
+    this->z0 = z0;
   }
 
-  void set_time(double t0_, double t1_, double dt_) {
-    t0 = t0_;
-    t1 = t1_;
-    dt = dt_;
+  void set_dxdydz(double dx, double dy, double dz) {
+    this->dx = dx;
+    this->dy = dy;
+    this->dz = dz;
   }
 
-  double get_dt() {
+  void set_time(double t0, double t1, double dt) {
+    this->t0 = t0;
+    this->t1 = t1;
+    this->dt = dt;
+  }
+
+  virtual double get_dt(int n, double t) {
     return dt;
-  }
-
-  void set_dt(double dt_) {
-    dt = dt_;
   }
 
   void set_max_iters(unsigned long int nmax) {
@@ -90,148 +96,90 @@ struct simulation {
     return results_dir;
   }
 
-  virtual bool done(unsigned long int n, double t) {
-    if (n > max_iters) {
-      exit_msg = "maximum number of iterations (" + std::to_string(max_iters) +
-                 ") reached";
+  void set_fft(heffte::fft3d_r2c<heffte::backend::fftw> &fft_) {
+    fft = &fft_;
+  }
+
+  void fft_r2c(std::vector<double> &A, std::vector<std::complex<double>> &B) {
+    fft->forward(A.data(), B.data(), wrk.data());
+  }
+
+  void fft_c2r(std::vector<std::complex<double>> &A, std::vector<double> &B) {
+    fft->backward(A.data(), B.data(), wrk.data(), heffte::scale::full);
+  }
+
+  void MPI_Write_Data(std::string filename, std::vector<double> &u) {
+    MPI_File fh;
+    MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
+                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    MPI_Offset filesize = 0;
+    const unsigned int disp = 0;
+    MPI_File_set_size(fh, filesize); // force overwriting existing data
+    MPI_File_set_view(fh, disp, MPI_DOUBLE, filetype, "native", MPI_INFO_NULL);
+    MPI_File_write_all(fh, u.data(), u.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);
+    MPI_File_close(&fh);
+  }
+
+  virtual bool done(int n, double t) {
+    if (n >= max_iters) {
+      status_msg = "maximum number of iterations (" +
+                   std::to_string(max_iters) + ") reached";
       return true;
     }
     if (t >= t1) {
-      exit_msg = "simulated succesfully to time " + std::to_string(t1) + ", (" +
-                 std::to_string(n) + " iterations)";
+      status_msg = "simulated succesfully to time " + std::to_string(t1) +
+                   ", (" + std::to_string(n) + " iterations)";
       return true;
     }
     return false;
   }
 
-  double k2(double x, double y, double z) {
-    auto fx = 2.0 * pi / (dx * Lx);
-    auto fy = 2.0 * pi / (dy * Ly);
-    auto fz = 2.0 * pi / (dz * Lz);
-    auto kx = x < Lx / 2.0 ? x * fx : (x - Lx) * fx;
-    auto ky = y < Ly / 2.0 ? y * fy : (y - Ly) * fy;
-    auto kz = z < Lz / 2.0 ? z * fz : (z - Lz) * fz;
-    return kx * kx + ky * ky + kz * kz;
-  }
-
-  unsigned long int resize(unsigned long int size_inbox,
-                           unsigned long int size_outbox) {
-    unsigned long int size = 0;
-    k2_.resize(size_outbox);
-    L_.resize(size_outbox);
-    u.resize(size_inbox);
-    U.resize(size_outbox);
-    N.resize(size_outbox);
-    size += sizeof(double) * k2_.size();
-    size += sizeof(double) * L_.size();
-    size += sizeof(double) * u.size();
-    size += sizeof(std::complex<double>) * U.size();
-    size += sizeof(std::complex<double>) * N.size();
-    return size;
-  }
-
-  void fill_k2(std::array<int, 3> low, std::array<int, 3> high) {
-    unsigned long int idx = 0;
-    for (auto z = low[2]; z <= high[2]; z++) {
-      for (auto y = low[1]; y <= high[1]; y++) {
-        for (auto x = low[0]; x <= high[0]; x++) {
-          k2_[idx] = k2(x, y, z);
-          idx += 1;
-        }
-      }
-    }
-  }
-
-  void fill_L(std::array<int, 3> low, std::array<int, 3> high) {
-    unsigned long int idx = 0;
-    for (auto k = low[2]; k <= high[2]; k++) {
-      for (auto j = low[1]; j <= high[1]; j++) {
-        for (auto i = low[0]; i <= high[0]; i++) {
-          L_[idx] = L(i, j, k);
-          idx += 1;
-        }
-      }
-    }
-  }
-
-  void fill_u0(std::array<int, 3> low, std::array<int, 3> high) {
-    unsigned long int idx = 0;
-    for (auto k = low[2]; k <= high[2]; k++) {
-      for (auto j = low[1]; j <= high[1]; j++) {
-        for (auto i = low[0]; i <= high[0]; i++) {
-          u[idx] = u0(x0 + i * dx, y0 + j * dy, z0 + k * dz);
-          idx += 1;
-        }
-      }
-    }
-  }
-
-  virtual void calculate_nonlinear_part() {
-    for (long unsigned int i = 0; i < u.size(); i++) {
-      u[i] = f(u[i]);
-    }
-  }
-
-  void integrate() {
-    for (long unsigned int i = 0; i < U.size(); i++) {
-      U[i] = 1.0 / (1.0 - dt * L_[i]) * (U[i] - k2_[i] * dt * N[i]);
-    };
-  }
-
   // in practice we are interested of replacing the things below with our
   // owns...
 
-  virtual void write_results(unsigned long int, double, MPI_Datatype) {
-  }
+  virtual void allocate(size_t size_inbox, size_t size_outbox) = 0;
 
-  virtual std::filesystem::path get_result_file_name(unsigned long int n,
-                                                     double) {
-    std::filesystem::path filename = "u" + std::to_string(n) + ".bin";
-    return get_results_dir() / filename;
-  }
+  virtual void prepare_operators(std::array<int, 3> low,
+                                 std::array<int, 3> high) = 0;
 
-  virtual double u0(double x, double y, double z) {
-    return exp(-x * x / Lx) * exp(-y * y / Ly) * exp(-z * z / Lz);
-  }
+  virtual void prepare_initial_condition(std::array<int, 3> low,
+                                         std::array<int, 3> high) = 0;
 
-  virtual double L(double x, double y, double z) {
-    return -k2(x, y, z);
-  }
+  virtual void step(int n, double t) = 0;
 
-  virtual double f(double) {
-    return 0.0;
-  }
+  virtual bool writeat(int n, double t) {
+    return false;
+  };
+
+  virtual void write_results(int n, double t) {
+    return;
+  };
 };
 
-void MPI_Write_Data(std::string filename, MPI_Datatype &filetype,
-                    std::vector<double> &u) {
-  MPI_File fh;
-  MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
-                MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
-  MPI_Offset filesize = 0;
-  const unsigned int disp = 0;
-  MPI_File_set_size(fh, filesize); // force overwriting existing data
-  MPI_File_set_view(fh, disp, MPI_DOUBLE, filetype, "native", MPI_INFO_NULL);
-  MPI_File_write_all(fh, u.data(), u.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);
-  MPI_File_close(&fh);
-}
+void MPI_Solve(Simulation *s) {
 
-void MPI_Solve(simulation *s) {
+  std::cout << std::fixed;
+  std::cout.precision(3);
 
   // unpack simulation settings
   const int Lx = s->Lx;
   const int Ly = s->Ly;
   const int Lz = s->Lz;
-  const double t0 = s->t0;
-  const double t1 = s->t1;
 
   MPI_Comm comm = MPI_COMM_WORLD;
 
   int me; // this process rank within the comm
   MPI_Comm_rank(comm, &me);
+  s->me = me;
 
   int num_ranks; // total number of ranks in the comm
   MPI_Comm_size(comm, &num_ranks);
+  s->num_ranks = num_ranks;
+
+  if (me == 0) {
+    std::cout << "***** PFC SIMULATOR USING HEFFTE *****" << std::endl
+              << std::endl;
+  }
 
   /*
   If the input of an FFT transform consists of all real numbers,
@@ -253,24 +201,9 @@ void MPI_Solve(simulation *s) {
   // check if the complex indexes have correct dimension
   assert(real_indexes.r2c(r2c_direction) == complex_indexes);
 
-  // report the indexes
-  if (me == 0) {
-    std::cout << "Number of ranks: " << num_ranks << std::endl;
-    std::cout << "Domain size: " << Lx << " x " << Ly << " x " << Lz
-              << std::endl;
-    std::cout << "The global input contains " << real_indexes.count()
-              << " real indexes." << std::endl;
-    std::cout << "The global output contains " << complex_indexes.count()
-              << " complex indexes." << std::endl;
-  }
-
   // create a processor grid with minimum surface (measured in number of
   // indexes)
   auto proc_grid = heffte::proc_setup_min_surface(real_indexes, num_ranks);
-  if (me == 0) {
-    std::cout << "Minimum surface processor grid: [" << proc_grid[0] << ", "
-              << proc_grid[1] << ", " << proc_grid[2] << "]" << std::endl;
-  }
 
   // split all indexes across the processor grid, defines a set of boxes
   auto real_boxes = heffte::split_world(real_indexes, proc_grid);
@@ -284,21 +217,55 @@ void MPI_Solve(simulation *s) {
   heffte::fft3d_r2c<heffte::backend::fftw> fft(inbox, outbox, r2c_direction,
                                                comm);
 
-  // vectors with the correct sizes to store the input and output data
-  // taking the size of the input and output boxes
-  std::cout << "Rank " << me << " input box: " << fft.size_inbox()
-            << " indexes, indices x = [" << inbox.low[0] << ", "
-            << inbox.high[0] << "], y = [" << inbox.low[1] << ", "
-            << inbox.high[1] << "], "
-            << "z = [" << inbox.low[2] << ", " << inbox.high[2]
-            << "], outbox box: " << fft.size_outbox()
-            << " indexes, indices x = [" << outbox.low[0] << ", "
-            << outbox.high[0] << "], y = [" << outbox.low[1] << ", "
-            << outbox.high[1] << "], "
-            << "z = [" << outbox.low[2] << ", " << outbox.high[2] << "]"
-            << std::endl;
+  s->set_fft(fft);
 
-  // Create and commit new data type
+  // *** Report domain decomposition status ***
+  MPI_Send(&(inbox.low), 3, MPI_INT, 0, MPI_TAG_INBOX_LOW, MPI_COMM_WORLD);
+  MPI_Send(&(inbox.high), 3, MPI_INT, 0, MPI_TAG_INBOX_HIGH, MPI_COMM_WORLD);
+  MPI_Send(&(outbox.low), 3, MPI_INT, 0, MPI_TAG_OUTBOX_LOW, MPI_COMM_WORLD);
+  MPI_Send(&(outbox.high), 3, MPI_INT, 0, MPI_TAG_OUTBOX_HIGH, MPI_COMM_WORLD);
+  if (me == 0) {
+    std::cout << "***** DOMAIN DECOMPOSITION STATUS *****" << std::endl;
+    std::cout << "Contructed Fourier transform from REAL to COMPLEX, using "
+                 "real-to-complex symmetry."
+              << std::endl;
+
+    std::cout << "Grid in real space: [" << Lx << ", " << Ly << ", " << Lz
+              << "] (" << real_indexes.count() << " indexes)" << std::endl;
+    std::cout << "Grid in complex space: [" << Lx_c << ", " << Ly << ", " << Lz
+              << "] (" << complex_indexes.count() << " indexes)" << std::endl;
+    std::cout << "Domain is split into " << num_ranks
+              << " parts, with minimum surface processor grid: ["
+              << proc_grid[0] << ", " << proc_grid[1] << ", " << proc_grid[2]
+              << "]" << std::endl;
+    std::array<int, 3> in_low, in_high, out_low, out_high;
+    for (int i = 0; i < num_ranks; i++) {
+      MPI_Recv(&in_low, 3, MPI_INT, i, MPI_TAG_INBOX_LOW, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+      MPI_Recv(&in_high, 3, MPI_INT, i, MPI_TAG_INBOX_HIGH, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+      MPI_Recv(&out_low, 3, MPI_INT, i, MPI_TAG_OUTBOX_LOW, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+      MPI_Recv(&out_high, 3, MPI_INT, i, MPI_TAG_OUTBOX_HIGH, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+      size_t size_in = (in_high[0] - in_low[0] + 1) *
+                       (in_high[1] - in_low[1] + 1) *
+                       (in_high[2] - in_low[2] + 1);
+      size_t size_out = (out_high[0] - out_low[0] + 1) *
+                        (out_high[1] - out_low[1] + 1) *
+                        (out_high[2] - out_low[2] + 1);
+      std::cout << "MPI Worker " << i << ", [" << in_low[0] << ", "
+                << in_high[0] << "] x [" << in_low[1] << ", " << in_high[1]
+                << "] x [" << in_low[2] << ", " << in_high[2] << "] ("
+                << size_in << " indexes) => [" << out_low[0] << ", "
+                << out_high[0] << "] x [" << out_low[1] << ", " << out_high[1]
+                << "] x [" << out_low[2] << ", " << out_high[2] << "] ("
+                << size_out << " indexes)" << std::endl;
+    }
+  }
+
+  // *** Create and commit new data type ***
+
   MPI_Datatype filetype;
   const int size_array[] = {Lx, Ly, Lz};
   const int subsize_array[] = {inbox.high[0] - inbox.low[0] + 1,
@@ -309,88 +276,181 @@ void MPI_Solve(simulation *s) {
                            MPI_ORDER_FORTRAN, MPI_DOUBLE, &filetype);
   MPI_Type_commit(&filetype);
 
+  s->filetype = filetype;
+
+  // *** Allocate memory for workers. ***
+
+  MPI_Barrier(MPI_COMM_WORLD);
   if (me == 0) {
-    std::cout << "Resize arrays... ";
+    std::cout << std::endl
+              << "***** MEMORY ALLOCATION STATUS *****" << std::endl;
   }
-  auto size = s->resize(fft.size_inbox(), fft.size_outbox());
-  std::vector<std::complex<double>> workspace(fft.size_workspace());
-  size += sizeof(std::complex<double>) * workspace.size();
+  s->allocate(fft.size_inbox(), fft.size_outbox());
+  // internal workspace used by HeFFTe to make FFT faster
+  s->wrk.resize(fft.size_workspace());
+  size_t mem_allocated = s->mem_allocated;
+  size_t mem_allocated_wrk = sizeof_vec(s->wrk);
+  MPI_Send(&mem_allocated, 1, MPI_LONG_INT, 0, 0, MPI_COMM_WORLD);
+  MPI_Send(&mem_allocated_wrk, 1, MPI_LONG_INT, 0, 1, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
   if (me == 0) {
-    double GB = 1.0 / (1024.0 * 1024.0 * 1024.0);
-    std::cout << size * GB << " GB allocated" << std::endl;
+    size_t size = 0;
+    size_t size_wrk = 0;
+    size_t total_size = 0;
+    size_t total_size_wrk = 0;
+    for (int i = 0; i < num_ranks; i++) {
+      MPI_Recv(&size, 1, MPI_LONG_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&size_wrk, 1, MPI_LONG_INT, i, 1, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+      std::cout << "MPI Worker " << i << ", " << (size + size_wrk)
+                << " bytes allocated (" << size << " bytes user data, "
+                << size_wrk << " bytes for fft workspace)" << std::endl;
+      total_size += size;
+      total_size_wrk += size_wrk;
+    }
+    int dim = s->Lx * s->Ly * s->Lz;
+    double size_perdof = 1.0 * total_size / dim;
+    double size_wrk_perdof = 1.0 * total_size_wrk / dim;
+    double size_total_perdof = 1.0 * (total_size + total_size_wrk) / dim;
+    std::cout << "Total " << total_size << " bytes allocated for user data ("
+              << size_perdof << " bytes / dof)" << std::endl;
+    std::cout << "Total " << total_size_wrk
+              << " bytes allocated for workspace (" << size_wrk_perdof
+              << " bytes / dof)" << std::endl;
+    std::cout << "Total " << (total_size + total_size_wrk)
+              << " bytes allocated (" << size_total_perdof << " bytes / dof)"
+              << std::endl;
+    std::cout << std::endl;
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 
   if (me == 0) {
-    std::cout << "Generate Laplace operator k2" << std::endl;
-  }
-  s->fill_k2(outbox.low, outbox.high);
-
-  if (me == 0) {
-    std::cout << "Generate linear operator L" << std::endl;
-  }
-  s->fill_L(outbox.low, outbox.high);
-
-  if (me == 0) {
-    std::cout << "Generate initial condition u0" << std::endl;
-  }
-  s->fill_u0(inbox.low, inbox.high);
-
-  if (me == 0) {
-    std::cout << "Starting simulation" << std::endl;
+    std::cout << "***** INITIALIZE SIMULATION *****" << std::endl;
   }
 
-  unsigned long int n = 0;
-  double t = t0;
-  double *u = s->u.data();
-  double dt;
-  std::complex<double> *U = s->U.data();
-  std::complex<double> *N = s->N.data();
+  {
+    if (me == 0) {
+      std::cout << "Preparing operators ... ";
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t_op = -MPI_Wtime();
+    s->prepare_operators(outbox.low, outbox.high);
+    MPI_Barrier(MPI_COMM_WORLD);
+    t_op += MPI_Wtime();
+    if (me == 0) {
+      std::cout << "done in " << t_op << " seconds" << std::endl;
+    }
+  }
 
-  /*
+  {
+    if (me == 0) {
+      std::cout << "Generating initial condition ... ";
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    double t_init = -MPI_Wtime();
+    s->prepare_initial_condition(inbox.low, inbox.high);
+    MPI_Barrier(MPI_COMM_WORLD);
+    t_init += MPI_Wtime();
+    if (me == 0) {
+      std::cout << "done in " << t_init << " seconds" << std::endl;
+    }
+  }
+  int n = 0;
+  double t = s->t0;
+
+  double Sw = 0.0;
   if (s->writeat(n, t)) {
-    MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->u);
+    Sw = -MPI_Wtime();
+    MPI_Barrier(MPI_COMM_WORLD);
+    s->write_results(n, t);
+    MPI_Barrier(MPI_COMM_WORLD);
+    Sw += MPI_Wtime();
+    if (me == 0) {
+      std::cout << "Results writing time: " << Sw << " seconds" << std::endl;
+    }
   }
-  */
 
-  s->write_results(n, t, filetype);
+  if (me == 0) {
+    std::cout << std::endl
+              << "***** STARTING SIMULATION ***** " << std::endl
+              << std::endl;
+  }
 
   auto start = std::chrono::high_resolution_clock::now();
+
+  // for timing step time
+  const double alpha = 0.5;
+  double S = 0.0;
+  std::array<double, 8> timing;
+
   while (!s->done(n, t)) {
-    dt = s->get_dt();
     n += 1;
-    t += dt;
-
-    // FFT for linear part, U = fft(u),  O(n log n)
-    fft.forward(u, U, workspace.data());
-
-    // calculate nonlinear part, u = f(u), O(n) (store in-place)
-    s->calculate_nonlinear_part();
-
-    // FFT for nonlinear part, N = fft(u), O(n log n)
-    fft.forward(u, N, workspace.data());
-
-    // Semi-implicit time integration U = 1 / (1 - dt * L) * (U - k2 * dt * N),
-    // O(n)
-    s->integrate();
-
-    // Back to real space, u = fft^-1(U), O(n log n)
-    fft.backward(U, u, workspace.data(), heffte::scale::full);
-
-    s->write_results(n, t, filetype);
-    /*
-    if (s->writeat(n, t)) { // O(?)
-      MPI_Write_Data(s->get_result_file_name(n, t), filetype, s->u);
+    t += s->get_dt(n, t);
+    if (me == 0) {
+      std::cout << "***** STARTING STEP # " << n << " *****" << std::endl;
     }
-    */
 
-    int pct1 = floor(t / t1 * 100.0);
-    int pct2 = floor((t - dt) / t1 * 100.0);
-    if (pct1 != pct2) {
-      std::cout << "n = " << n << ", t = " << t << ", dt = " << dt << ", "
-                << pct1 << " percent done" << std::endl;
+    double dt_step = -MPI_Wtime();
+    MPI_Barrier(MPI_COMM_WORLD);
+    s->step(n, t);
+    MPI_Send(&(s->timing), 8, MPI_DOUBLE, 0, MPI_TAG_TIMING, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+    dt_step += MPI_Wtime();
+
+    if (me == 0) {
+
+      std::cout << "Step finished. Timing information:" << std::endl;
+      double total_time = 0.0;
+      double fft_time = 0.0;
+      double other_time = 0.0;
+      for (int i = 0; i < num_ranks; i++) {
+        MPI_Recv(&timing, 8, MPI_DOUBLE, i, MPI_TAG_TIMING, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        std::cout << "MPI Worker " << i << ": FFT " << timing[1] << ", Other "
+                  << timing[2] << ", Total " << timing[0] << std::endl;
+        total_time += timing[0];
+        fft_time += timing[1];
+        other_time += timing[2];
+      }
+      total_time /= num_ranks;
+      fft_time /= num_ranks;
+      other_time /= num_ranks;
+      std::cout << "Average time: FFT " << fft_time << ", Other " << other_time
+                << ", Total " << total_time << std::endl;
+
+      S = (n == 1) ? dt_step : alpha * dt_step + (1.0 - alpha) * S;
+      auto n_left = (s->t1 - t) / s->get_dt(n, t);
+      auto eta = S * n_left;
+      std::cout << "Step execution time: " << dt_step
+                << " seconds. Average step execution time: " << S << " seconds."
+                << std::endl;
+      auto pct_done = 100.0 * n / (n + n_left);
+      std::cout << "Simulation time: " << t << " seconds. " << n
+                << " of estimated " << (n + n_left) << " steps (" << pct_done
+                << " %) done." << std::endl;
+      std::cout << "Simulation is estimated to be ready in " << eta
+                << " seconds." << std::endl;
+    }
+
+    if (s->writeat(n, t)) {
+      double dt_write = -MPI_Wtime();
+      MPI_Barrier(MPI_COMM_WORLD);
+      s->write_results(n, t);
+      MPI_Barrier(MPI_COMM_WORLD);
+      dt_write += MPI_Wtime();
+      if (me == 0) {
+        Sw = alpha * dt_write + (1.0 - alpha) * Sw;
+        std::cout << "Results writing time: " << dt_write
+                  << " seconds (avg: " << Sw << " seconds)" << std::endl;
+      }
+    }
+
+    if (me == 0) {
+      std::cout << "***** FINISHING STEP # " << n << " *****" << std::endl
+                << std::endl;
+      std::cout.flush();
     }
   }
-
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
@@ -399,10 +459,10 @@ void MPI_Solve(simulation *s) {
               << " seconds (" << duration.count() / n << " ms / iteration)"
               << std::endl;
   }
-
   if (me == 0) {
-    std::cout << "Simulation done. Exit message: " + s->exit_msg << std::endl;
+    std::cout << "Simulation done. Status message: " + s->status_msg
+              << std::endl;
   }
 }
 
-} // namespace pfc
+} // namespace PFC
