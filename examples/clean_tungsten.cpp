@@ -71,11 +71,15 @@ struct Tungsten : PFC::Simulation {
 
   // we will allocate these arrays later on
   std::vector<double> filterMF, opL, opN;
+  /*
   std::vector<double> psiMF, psi, psiN;
   std::vector<std::complex<double>> psiMF_F, psi_F, psiN_F;
+  */
+  std::vector<double> psiMF, psi, &psiN = psiMF;
+  std::vector<std::complex<double>> psiMF_F, psi_F, &psiN_F = psiMF_F;
 
   // used to measure execution time of step and write_results
-  std::array<double, 10> timers;
+  const std::array<double, 10> timers = {0};
 
   /*
     This function is ran only one time during the initialization of solver. Used
@@ -105,7 +109,8 @@ struct Tungsten : PFC::Simulation {
     // size_inbox = Lx * Ly * Lz
     // size_outbox = (floor(Lx/2) + 1) * Ly * Lz
 
-    mem_allocated = size_inbox * (8 * 3) + size_outbox * (16 * 3 + 8 * 3);
+    mem_allocated =
+        size_inbox * (8 * (3 - 1)) + size_outbox * (16 * (3 - 1) + 8 * 3);
   }
 
   /*
@@ -178,8 +183,13 @@ struct Tungsten : PFC::Simulation {
     timing[0]   total time used in step
     timing[1]   time used in FFT
     timing[2]   time used in all other things
+
+    size_inbox*8*3     (psi, psiMF, psiN) are double vectors
+    size_outbox*16*3   (psi_F, psiMF_F, psiN_F) are complex vectors
+    size_outbox*8*3    (filterMF, opL, opN) are double vectors
+
   */
-  void step(int n, double t) {
+  void step(int n, double) {
 
     if (n == 1) {
       // First iteration, calculate psi_F = fft(psi)
@@ -194,18 +204,19 @@ struct Tungsten : PFC::Simulation {
 
     // Calculate mean-field density n_mf
     timing[2] -= MPI_Wtime();
-    for (size_t idx = 0; idx < psiMF_F.size(); idx++) {
+    for (long int idx = 0, N = psiMF_F.size(); idx < N; idx++) {
       psiMF_F[idx] = filterMF[idx] * psi_F[idx];
     }
     timing[2] += MPI_Wtime();
 
     timing[1] -= MPI_Wtime();
+    // we don't use psiMF_F after this line (size: size_outbox)
     fft_c2r(psiMF_F, psiMF);
     timing[1] += MPI_Wtime();
 
     // Calculate the nonlinear part of the evolution equation in a real space
     timing[2] -= MPI_Wtime();
-    for (size_t idx = 0; idx < psiN.size(); idx++) {
+    for (long int idx = 0, N = psiN.size(); idx < N; idx++) {
       const double u = psi[idx];
       const double v = psiMF[idx];
       const double u2 = u * u;
@@ -215,11 +226,16 @@ struct Tungsten : PFC::Simulation {
       psiN[idx] = p3_bar * u2 + p4_bar * u3 + q3_bar * v2 + q4_bar * v3;
     }
     timing[2] += MPI_Wtime();
+    // we don't use psiMF after this line (size: size_inbox)
+    // we don't use psiN before this line (size: size_inbox)
+
+    // -> psiMF and psiN can share the same space
+    // -> psiMF_F and psiN_F can share the same space
 
     // Apply stabilization factor if given in parameters
     timing[2] -= MPI_Wtime();
     if (stabP != 0.0) {
-      for (int idx = 0; idx < psiN.size(); idx++) {
+      for (long int idx = 0, N = psiN.size(); idx < N; idx++) {
         psiN[idx] = psiN[idx] - stabP * psi[idx];
       }
     }
@@ -227,12 +243,14 @@ struct Tungsten : PFC::Simulation {
 
     // Fourier transform of the nonlinear part of the evolution equation
     timing[1] -= MPI_Wtime();
+    // we don't use psiN after this line (size: size_inbox)
+    // we don't use psiN_F before this line (size: size_outbox)
     fft_r2c(psiN, psiN_F);
     timing[1] += MPI_Wtime();
 
     // Apply one step of the evolution equation
     timing[2] -= MPI_Wtime();
-    for (size_t idx = 0; idx < psi_F.size(); idx++) {
+    for (long int idx = 0, N = psi_F.size(); idx < N; idx++) {
       psi_F[idx] = opL[idx] * psi_F[idx] + opN[idx] * psiN_F[idx];
     }
     timing[2] += MPI_Wtime();
@@ -270,7 +288,7 @@ struct Tungsten : PFC::Simulation {
     const std::array<double, 3> q6 = {0, s, -s};
     const std::array<std::array<double, 3>, 6> q = {q1, q2, q3, q4, q5, q6};
 
-    int idx = 0;
+    long int idx = 0;
     // double r2 = pow(0.2 * (Lx * dx), 2);
     const double r2 = pow(64.0, 2);
     double u;
@@ -296,14 +314,16 @@ struct Tungsten : PFC::Simulation {
     }
   }
 
+  /*
   bool writeat(int n, double t) {
     return n % 10000 == 0 | t >= t1;
   }
+  */
 
   /*
  Results writing routine
  */
-  void write_results(int n, double t) {
+  void write_results(int n, double) {
     auto filename = results_dir / ("u" + std::to_string(n) + ".bin");
     if (me == 0) {
       std::cout << "Writing results to " << filename << std::endl;
@@ -324,16 +344,16 @@ int main(int argc, char *argv[]) {
 
   PFC::Simulation *s = new Tungsten();
 
-  const int Lx = 128;
-  const int Ly = 128;
-  const int Lz = 128;
+  const int Lx = 8 * 1024;
+  const int Ly = 4 * 1024;
+  const int Lz = 4 * 1024;
   s->set_size(Lx, Ly, Lz);
 
   const double pi = std::atan(1.0) * 4.0;
   // 'lattice' constants for the three ordered phases that exist in 2D/3D PFC
-  const double a1D = 2 * pi;               // stripes
-  const double a2D = 2 * pi * 2 / sqrt(3); // triangular
-  const double a3D = 2 * pi * sqrt(2);     // BCC
+  // const double a1D = 2 * pi;               // stripes
+  // const double a2D = 2 * pi * 2 / sqrt(3); // triangular
+  const double a3D = 2 * pi * sqrt(2); // BCC
   const double dx = a3D / 8.0;
   const double dy = a3D / 8.0;
   const double dz = a3D / 8.0;
