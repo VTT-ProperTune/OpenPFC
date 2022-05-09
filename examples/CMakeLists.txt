@@ -4,5 +4,8 @@ target_link_libraries(mpi_worker PRIVATE pfc)
 add_executable(mpi_worker_inside_class mpi_worker_inside_class.cpp)
 target_link_libraries(mpi_worker_inside_class PRIVATE pfc)
 
+add_executable(mpi_timers mpi_timers.cpp)
+target_link_libraries(mpi_timers PRIVATE pfc)
+
 add_executable(clean_tungsten clean_tungsten.cpp)
 target_link_libraries(clean_tungsten PRIVATE pfc)
