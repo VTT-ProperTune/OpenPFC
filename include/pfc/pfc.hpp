@@ -39,6 +39,7 @@ struct Simulation {
   double t0 = 0.0;
   double t1 = 10.0;
   double dt = 1.0;
+  int n0 = 0;
   int max_iters = INT_MAX;
   std::string status_msg = "Initializing";
   size_t mem_allocated = 0;
@@ -377,11 +378,11 @@ void MPI_Solve(Simulation *s) {
       std::cout << "done in " << t_init << " seconds" << std::endl;
     }
   }
-  int n = 0;
+  int n = s->n0;
   double t = s->t0;
 
   double Sw = 0.0;
-  if (s->writeat(n, t)) {
+  if (n == 0 && s->writeat(n, t)) { // write initial condition
     Sw = -MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
     s->write_results(n, t);
