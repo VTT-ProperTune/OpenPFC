@@ -118,6 +118,15 @@ struct Simulation {
     }
   }
 
+  void MPI_Read_Data(std::string filename, std::vector<double> &u) {
+    MPI_File fh;
+    MPI_File_open(MPI_COMM_WORLD, filename.c_str(), MPI_MODE_RDONLY,
+                  MPI_INFO_NULL, &fh);
+    MPI_File_set_view(fh, 0, MPI_DOUBLE, filetype, "native", MPI_INFO_NULL);
+    MPI_File_read_all(fh, u.data(), u.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);
+    MPI_File_close(&fh);
+  }
+
   void MPI_Write_Data(std::string filename, std::vector<double> &u) {
     MPI_File fh;
     MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
