@@ -2,8 +2,7 @@
 
 #include <pfc/pfc.hpp>
 
-struct Tungsten : PFC::Simulation {
-
+struct params {
   // average density of the metastable fluid
   double n0 = -0.4;
 
@@ -68,6 +67,11 @@ struct Tungsten : PFC::Simulation {
   double q2_bar = q21_bar * tau + q20_bar;
   double q3_bar = q31_bar * tau + q30_bar;
   double q4_bar = q40_bar;
+};
+
+struct Tungsten : PFC::Simulation {
+
+  params p;
 
   // we will allocate these arrays later on
   std::vector<double> filterMF, opL, opN;
@@ -138,21 +142,21 @@ struct Tungsten : PFC::Simulation {
 
           // mean-field filtering operator (chi) make a C2 that's quasi-gaussian
           // on the left, and ken-style on the right
-          const double alpha2 = 2.0 * alpha * alpha;
-          const double lambda2 = 2.0 * lambda * lambda;
+          const double alpha2 = 2.0 * p.alpha * p.alpha;
+          const double lambda2 = 2.0 * p.lambda * p.lambda;
           const double fMF = exp(kLap / lambda2);
           const double k = sqrt(-kLap) - 1.0;
           const double k2 = k * k;
 
           double g1 = 0;
-          if (alpha_highOrd == 0) {
+          if (p.alpha_highOrd == 0) {
             // gaussian peak
             g1 = exp(-k2 / alpha2);
           } else {
             // quasi-gaussian peak with higher order component
             // to make it decay faster towards k=0
-            double rTol = -alpha2 * log(alpha_farTol) - 1.0;
-            g1 = exp(-(k2 + rTol * pow(k, alpha_highOrd)) / alpha2);
+            double rTol = -alpha2 * log(p.alpha_farTol) - 1.0;
+            g1 = exp(-(k2 + rTol * pow(k, p.alpha_highOrd)) / alpha2);
           }
           // taylor expansion of gaussian peak to order 2
           const double g2 = 1.0 - 1.0 / alpha2 * k2;
@@ -161,10 +165,10 @@ struct Tungsten : PFC::Simulation {
 
           // we separate this out because it is needed in the nonlinear
           // calculation when T is not constant in space
-          const double opPeak = -Bx * exp(-T / T0) * gf;
+          const double opPeak = -p.Bx * exp(-p.T / p.T0) * gf;
 
           // includes the lowest order n_mf term since it is a linear term
-          const double opCk = stabP + p2_bar + opPeak + q2_bar * fMF;
+          const double opCk = p.stabP + p.p2_bar + opPeak + p.q2_bar * fMF;
 
           filterMF[idx] = fMF;
           opL[idx] = exp(kLap * opCk * dt);
@@ -223,7 +227,7 @@ struct Tungsten : PFC::Simulation {
       const double u3 = u2 * u;
       const double v2 = v * v;
       const double v3 = v2 * v;
-      psiN[idx] = p3_bar * u2 + p4_bar * u3 + q3_bar * v2 + q4_bar * v3;
+      psiN[idx] = p.p3_bar * u2 + p.p4_bar * u3 + p.q3_bar * v2 + p.q4_bar * v3;
     }
     timing[2] += MPI_Wtime();
     // we don't use psiMF after this line (size: size_inbox)
@@ -234,9 +238,9 @@ struct Tungsten : PFC::Simulation {
 
     // Apply stabilization factor if given in parameters
     timing[2] -= MPI_Wtime();
-    if (stabP != 0.0) {
+    if (p.stabP != 0.0) {
       for (long int idx = 0, N = psiN.size(); idx < N; idx++) {
-        psiN[idx] = psiN[idx] - stabP * psi[idx];
+        psiN[idx] = psiN[idx] - p.stabP * psi[idx];
       }
     }
     timing[2] += MPI_Wtime();
@@ -270,12 +274,12 @@ struct Tungsten : PFC::Simulation {
                                  std::array<int, 3> high) {
     // calculating approx amplitude. This is related to the phase diagram
     // calculations.
-    const double rho_seed = n_sol;
-    const double A_phi = 135.0 * p4_bar;
-    const double B_phi = 16.0 * p3_bar + 48.0 * p4_bar * rho_seed;
-    const double C_phi = -6.0 * (Bx * exp(-T / T0)) + 6.0 * p2_bar +
-                         12.0 * p3_bar * rho_seed +
-                         18.0 * p4_bar * pow(rho_seed, 2);
+    const double rho_seed = p.n_sol;
+    const double A_phi = 135.0 * p.p4_bar;
+    const double B_phi = 16.0 * p.p3_bar + 48.0 * p.p4_bar * rho_seed;
+    const double C_phi = -6.0 * (p.Bx * exp(-p.T / p.T0)) + 6.0 * p.p2_bar +
+                         12.0 * p.p3_bar * rho_seed +
+                         18.0 * p.p4_bar * pow(rho_seed, 2);
     const double d = abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
     const double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
 
@@ -344,9 +348,9 @@ int main(int argc, char *argv[]) {
 
   PFC::Simulation *s = new Tungsten();
 
-  const int Lx = 8 * 1024;
-  const int Ly = 4 * 1024;
-  const int Lz = 4 * 1024;
+  const int Lx = 128;
+  const int Ly = 128;
+  const int Lz = 128;
   s->set_size(Lx, Ly, Lz);
 
   const double pi = std::atan(1.0) * 4.0;
