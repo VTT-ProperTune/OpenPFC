@@ -1,6 +1,6 @@
 AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: None
+AllowShortFunctionsOnASingleLine: InlineOnly
 IndentWidth: 2
 TabWidth: 2
 UseTab: Never
