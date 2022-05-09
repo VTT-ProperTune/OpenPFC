@@ -39,11 +39,13 @@ struct Simulation {
   double t0 = 0.0;
   double t1 = 10.0;
   double dt = 1.0;
-  size_t max_iters = ULONG_MAX;
+  int max_iters = INT_MAX;
   std::string status_msg = "Initializing";
   size_t mem_allocated = 0;
   std::filesystem::path results_dir = ".";
 
+  // use additional workspace to make calculation faster, increase memory usage
+  const bool heffte_use_workspace = true;
   // Pointer to HeFFTe FFT
   heffte::fft3d_r2c<heffte::backend::fftw> *fft;
 
@@ -80,7 +82,7 @@ struct Simulation {
     this->dt = dt;
   }
 
-  virtual double get_dt(int n, double t) {
+  virtual double get_dt(int, double) {
     return dt;
   }
 
@@ -101,11 +103,19 @@ struct Simulation {
   }
 
   void fft_r2c(std::vector<double> &A, std::vector<std::complex<double>> &B) {
-    fft->forward(A.data(), B.data(), wrk.data());
+    if (heffte_use_workspace) {
+      fft->forward(A.data(), B.data(), wrk.data());
+    } else {
+      fft->forward(A.data(), B.data());
+    }
   }
 
   void fft_c2r(std::vector<std::complex<double>> &A, std::vector<double> &B) {
-    fft->backward(A.data(), B.data(), wrk.data(), heffte::scale::full);
+    if (heffte_use_workspace) {
+      fft->backward(A.data(), B.data(), wrk.data(), heffte::scale::full);
+    } else {
+      fft->backward(A.data(), B.data(), heffte::scale::full);
+    }
   }
 
   void MPI_Write_Data(std::string filename, std::vector<double> &u) {
@@ -147,11 +157,11 @@ struct Simulation {
 
   virtual void step(int n, double t) = 0;
 
-  virtual bool writeat(int n, double t) {
+  virtual bool writeat(int, double) {
     return false;
   };
 
-  virtual void write_results(int n, double t) {
+  virtual void write_results(int, double) {
     return;
   };
 };
@@ -286,10 +296,12 @@ void MPI_Solve(Simulation *s) {
               << "***** MEMORY ALLOCATION STATUS *****" << std::endl;
   }
   s->allocate(fft.size_inbox(), fft.size_outbox());
-  // internal workspace used by HeFFTe to make FFT faster
-  s->wrk.resize(fft.size_workspace());
-  size_t mem_allocated = s->mem_allocated;
-  size_t mem_allocated_wrk = sizeof_vec(s->wrk);
+  if (s->heffte_use_workspace) {
+    // internal workspace used by HeFFTe to make FFT faster
+    s->wrk.resize(fft.size_workspace());
+  }
+  const size_t mem_allocated = s->mem_allocated;
+  const size_t mem_allocated_wrk = sizeof_vec(s->wrk);
   MPI_Send(&mem_allocated, 1, MPI_LONG_INT, 0, 0, MPI_COMM_WORLD);
   MPI_Send(&mem_allocated_wrk, 1, MPI_LONG_INT, 0, 1, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
@@ -308,10 +320,11 @@ void MPI_Solve(Simulation *s) {
       total_size += size;
       total_size_wrk += size_wrk;
     }
-    int dim = s->Lx * s->Ly * s->Lz;
-    double size_perdof = 1.0 * total_size / dim;
-    double size_wrk_perdof = 1.0 * total_size_wrk / dim;
-    double size_total_perdof = 1.0 * (total_size + total_size_wrk) / dim;
+    const long int ndofs = s->Lx * s->Ly * s->Lz;
+    const double d = 1.0 / ndofs;
+    const double size_perdof = d * total_size;
+    const double size_wrk_perdof = d * total_size_wrk;
+    const double size_total_perdof = d * (total_size + total_size_wrk);
     std::cout << "Total " << total_size << " bytes allocated for user data ("
               << size_perdof << " bytes / dof)" << std::endl;
     std::cout << "Total " << total_size_wrk
