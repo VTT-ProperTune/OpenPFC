@@ -9,6 +9,7 @@ class seed {
 
 private:
   typedef std::array<double, 3> vec3;
+  typedef std::array<vec3, 3> mat3;
   typedef std::array<vec3, 6> vec36;
   typedef std::array<vec3, 2> vec32;
 
@@ -20,7 +21,47 @@ private:
   const double radius_;
   const double amplitude_;
 
-  vec36 rotate(const vec3 &) {
+  mat3 yaw(double a) {
+    double ca = cos(a);
+    double sa = sin(a);
+    return {vec3({ca, -sa, 0.0}), vec3({sa, ca, 0.0}), vec3({0.0, 0.0, 1.0})};
+  }
+
+  mat3 pitch(double b) {
+    double cb = cos(b);
+    double sb = sin(b);
+    return {vec3({cb, 0.0, sb}), vec3({0.0, 1.0, 0.0}), vec3({-sb, 0.0, cb})};
+  }
+
+  mat3 roll(double c) {
+    double cc = cos(c);
+    double sc = sin(c);
+    return {vec3({1.0, 0.0, 0.0}), vec3({0.0, cc, -sc}), vec3({0.0, sc, cc})};
+  }
+
+  mat3 mult3(const mat3 &A, const mat3 &B) {
+    mat3 C = {0};
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        for (int k = 0; k < 3; k++) {
+          C[i][j] += A[i][k] * B[k][j];
+        }
+      }
+    }
+    return C;
+  }
+
+  vec3 mult3(const mat3 &A, const vec3 &b) {
+    vec3 c = {0};
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        c[i] += A[i][j] * b[j];
+      }
+    }
+    return c;
+  }
+
+  vec36 rotate(const vec3 &orientation) {
     const double s = 1.0 / sqrt(2.0);
     const vec3 q1 = {s, s, 0};
     const vec3 q2 = {s, 0, s};
@@ -28,8 +69,12 @@ private:
     const vec3 q4 = {s, 0, -s};
     const vec3 q5 = {s, -s, 0};
     const vec3 q6 = {0, s, -s};
-    const vec36 q = {q1, q2, q3, q4, q5, q6};
-    // TODO
+    mat3 Ra = yaw(orientation[0]);
+    mat3 Rb = yaw(orientation[1]);
+    mat3 Rc = yaw(orientation[2]);
+    mat3 R = mult3(Ra, mult3(Rb, Rc));
+    const vec36 q = {mult3(R, q1), mult3(R, q2), mult3(R, q3),
+                     mult3(R, q4), mult3(R, q5), mult3(R, q6)};
     return q;
   }
 
@@ -369,7 +414,7 @@ struct Tungsten : PFC::Simulation {
     seeds.push_back(pfc::seed(radius, rho, amplitude).translate(T).rotate(R));
     */
 
-    const int nseeds = 100;
+    const int nseeds = 150;
     const double radius = 20.0;
     const double rho = p.rho_seed;
     const double amplitude = p.amp_eq;
@@ -379,18 +424,23 @@ struct Tungsten : PFC::Simulation {
     const double upper_y = 128.0;
     const double lower_z = -128.0;
     const double upper_z = 128.0;
+    srand(42);
     std::uniform_real_distribution<double> rx(lower_x, upper_x);
     std::uniform_real_distribution<double> ry(lower_y, upper_y);
     std::uniform_real_distribution<double> rz(lower_z, upper_z);
+    std::uniform_real_distribution<double> ro(0.0, 8.0 * atan(1.0));
     std::default_random_engine re;
     typedef std::array<double, 3> vec3;
     auto random_location = [&re, &rx, &ry, &rz]() {
       return vec3({rx(re), ry(re), rz(re)});
     };
+    auto random_orientation = [&re, &ro]() {
+      return vec3({ro(re), ro(re), ro(re)});
+    };
 
     for (int i = 0; i < nseeds; i++) {
       const std::array<double, 3> location = random_location();
-      const std::array<double, 3> orientation = random_location();
+      const std::array<double, 3> orientation = random_orientation();
       const pfc::seed seed(location, orientation, radius, rho, amplitude);
       seeds.push_back(seed);
       printf("Seed %d location: (%f, %f, %f)\n", i, location[0], location[1],
