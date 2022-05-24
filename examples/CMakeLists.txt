@@ -9,3 +9,6 @@ target_link_libraries(mpi_timers PRIVATE pfc)
 
 add_executable(clean_tungsten clean_tungsten.cpp)
 target_link_libraries(clean_tungsten PRIVATE pfc)
+
+add_executable(clean_tungsten_multiple_seeds clean_tungsten_multiple_seeds.cpp)
+target_link_libraries(clean_tungsten_multiple_seeds PRIVATE pfc)
