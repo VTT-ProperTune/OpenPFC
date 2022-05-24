@@ -304,7 +304,7 @@ struct Tungsten : PFC::Simulation {
           const double z = z0 + k * dz;
           const bool seedmask = x * x + y * y + z * z < r2;
           if (!seedmask) {
-            u = n0;
+            u = p.n0;
           } else {
             u = rho_seed;
             for (int i = 0; i < 6; i++) {
@@ -318,11 +318,7 @@ struct Tungsten : PFC::Simulation {
     }
   }
 
-  /*
-  bool writeat(int n, double t) {
-    return n % 10000 == 0 | t >= t1;
-  }
-  */
+  bool writeat(int n, double t) { return (n % 10000 == 0) || (t >= t1); }
 
   /*
  Results writing routine
@@ -332,8 +328,6 @@ struct Tungsten : PFC::Simulation {
     if (me == 0) {
       std::cout << "Writing results to " << filename << std::endl;
     }
-    // Apply inverse fourier transform to density field, psi_F = fft^-1(psi)
-    fft_c2r(psi_F, psi);
     MPI_Write_Data(filename, psi);
   };
 
@@ -348,9 +342,9 @@ int main(int argc, char *argv[]) {
 
   PFC::Simulation *s = new Tungsten();
 
-  const int Lx = 128;
-  const int Ly = 128;
-  const int Lz = 128;
+  const int Lx = 256;
+  const int Ly = 256;
+  const int Lz = 256;
   s->set_size(Lx, Ly, Lz);
 
   const double pi = std::atan(1.0) * 4.0;
@@ -370,13 +364,12 @@ int main(int argc, char *argv[]) {
 
   const double t0 = 0.0;
   // double t1 = 200000.0;
-  const double t1 = 10.0;
+  const double t1 = 1.0;
   const double dt = 1.0;
   s->set_time(t0, t1, dt);
 
   // define where to store results
-  s->set_results_dir(
-      "/home/juajukka/results/pfc-heffte-clean_tungsten_3d_1024x1024x1024");
+  s->set_results_dir("/mnt/c/pfc-results");
 
   MPI_Init(&argc, &argv);
   MPI_Solve(s);
