@@ -83,25 +83,15 @@ struct Simulation {
     this->dt = dt;
   }
 
-  virtual double get_dt(int, double) {
-    return dt;
-  }
+  virtual double get_dt(int, double) { return dt; }
 
-  void set_max_iters(unsigned long int nmax) {
-    max_iters = nmax;
-  }
+  void set_max_iters(unsigned long int nmax) { max_iters = nmax; }
 
-  void set_results_dir(std::string path) {
-    results_dir = path;
-  }
+  void set_results_dir(std::string path) { results_dir = path; }
 
-  std::filesystem::path get_results_dir() {
-    return results_dir;
-  }
+  std::filesystem::path get_results_dir() { return results_dir; }
 
-  void set_fft(heffte::fft3d_r2c<heffte::backend::fftw> &fft_) {
-    fft = &fft_;
-  }
+  void set_fft(heffte::fft3d_r2c<heffte::backend::fftw> &fft_) { fft = &fft_; }
 
   void fft_r2c(std::vector<double> &A, std::vector<std::complex<double>> &B) {
     if (heffte_use_workspace) {
@@ -165,15 +155,13 @@ struct Simulation {
   virtual void prepare_initial_condition(std::array<int, 3> low,
                                          std::array<int, 3> high) = 0;
 
+  virtual void apply_bc(std::array<int, 3>, std::array<int, 3>){};
+
   virtual void step(int n, double t) = 0;
 
-  virtual bool writeat(int, double) {
-    return false;
-  };
+  virtual bool writeat(int, double) { return false; };
 
-  virtual void write_results(int, double) {
-    return;
-  };
+  virtual void write_results(int, double) { return; };
 };
 
 void MPI_Solve(Simulation *s) {
@@ -372,6 +360,7 @@ void MPI_Solve(Simulation *s) {
     MPI_Barrier(MPI_COMM_WORLD);
     double t_init = -MPI_Wtime();
     s->prepare_initial_condition(inbox.low, inbox.high);
+    s->apply_bc(inbox.low, inbox.high);
     MPI_Barrier(MPI_COMM_WORLD);
     t_init += MPI_Wtime();
     if (me == 0) {
@@ -414,6 +403,8 @@ void MPI_Solve(Simulation *s) {
     }
 
     double dt_step = -MPI_Wtime();
+    MPI_Barrier(MPI_COMM_WORLD);
+    s->apply_bc(inbox.low, inbox.high);
     MPI_Barrier(MPI_COMM_WORLD);
     s->step(n, t);
     MPI_Send(&(s->timing), 8, MPI_DOUBLE, 0, MPI_TAG_TIMING, MPI_COMM_WORLD);
