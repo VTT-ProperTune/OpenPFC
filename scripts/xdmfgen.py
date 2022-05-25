@@ -37,9 +37,10 @@ def extract_timestep(f):
 
 
 def main(args):
-    target = args.target
-    assert os.path.isdir(target)
-    files = glob.glob(os.path.join(target, "*.bin"))
+    if args.dir != "" and not os.path.isdir(args.dir):
+        print("Directory %s does not exist!" % args.dir)
+        return
+    files = glob.glob(os.path.join(args.dir, "*.bin"))
     files = sorted(files, key=lambda k: int(extract_timestep(k)))
     data = vars(args)
     data["ntimesteps"] = len(files)
@@ -53,7 +54,7 @@ def main(args):
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument("target", help="target directory")
+    parser.add_argument("--dir", default="", help="data directory (default .)")
     parser.add_argument("--lx", default=256)
     parser.add_argument("--ly", default=256)
     parser.add_argument("--lz", default=256)
