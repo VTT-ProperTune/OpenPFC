@@ -14,10 +14,10 @@ header = """<?xml version="1.0"?>
 <!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
 <Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="2.0">
     <Domain>
-        <Topology name="topo" TopologyType="3DCoRectMesh" Dimensions="{lx} {ly} {lz}"></Topology>
+        <Topology name="topo" TopologyType="3DCoRectMesh" Dimensions="{lz} {ly} {lx}"></Topology>
         <Geometry name="geo" Type="ORIGIN_DXDYDZ">
-            <DataItem Format="XML" Dimensions="3">{x0} {y0} {z0}</DataItem>
-            <DataItem Format="XML" Dimensions="3">{dx} {dy} {dz}</DataItem>
+            <DataItem Format="XML" Dimensions="3">{z0} {y0} {x0}</DataItem>
+            <DataItem Format="XML" Dimensions="3">{dz} {dy} {dx}</DataItem>
         </Geometry>
 
         <Grid Name="TimeSeries" GridType="Collection" CollectionType="Temporal">
@@ -54,7 +54,7 @@ def main(args):
     data["timesteps"] = " ".join(map(extract_timestep, files))
     print(header.format(**data))
     for f in files:
-        item = """            <Grid GridType="Uniform"><Topology Reference="/Xdmf/Domain/Topology[1]" /><Geometry Reference="/Xdmf/Domain/Geometry[1]" /><Attribute Name="u" Center="Node"><DataItem Format="Binary" DataType="Float" Precision="8" Endian="Little" Dimensions="{lx} {ly} {lz}">{f}</DataItem></Attribute></Grid>"""
+        item = """            <Grid GridType="Uniform"><Topology Reference="/Xdmf/Domain/Topology[1]" /><Geometry Reference="/Xdmf/Domain/Geometry[1]" /><Attribute Name="u" Center="Node"><DataItem Format="Binary" DataType="Float" Precision="8" Endian="Little" Dimensions="{lz} {ly} {lx}">{f}</DataItem></Attribute></Grid>"""
         print(item.format(**data, f=f))
     print(footer.format(**data))
 
