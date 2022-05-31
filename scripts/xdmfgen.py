@@ -41,6 +41,9 @@ def main(args):
         print("Directory %s does not exist!" % args.dir)
         return
     files = glob.glob(os.path.join(args.dir, "*.bin"))
+    if len(files) == 0:
+        print("No data files found!")
+        return
     files = sorted(files, key=lambda k: int(extract_timestep(k)))
     data = vars(args)
     data["ntimesteps"] = len(files)
