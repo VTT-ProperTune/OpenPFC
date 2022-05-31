@@ -146,6 +146,8 @@ struct Simulation {
     return false;
   }
 
+  virtual void set_step(int n) { n0 = n; }
+
   // in practice we are interested of replacing the things below with our
   // owns...
 
