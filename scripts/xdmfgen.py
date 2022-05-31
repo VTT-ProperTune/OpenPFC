@@ -55,9 +55,9 @@ def main(args):
 def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", default="", help="data directory (default .)")
-    parser.add_argument("--lx", default=256)
-    parser.add_argument("--ly", default=256)
-    parser.add_argument("--lz", default=256)
+    parser.add_argument("--lx", type=int, default=256)
+    parser.add_argument("--ly", type=int, default=256)
+    parser.add_argument("--lz", type=int, default=256)
     parser.add_argument("--x0", default=-128.0)
     parser.add_argument("--y0", default=-128.0)
     parser.add_argument("--z0", default=-128.0)
