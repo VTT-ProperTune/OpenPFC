@@ -9,12 +9,14 @@ import argparse
 import glob
 import os
 import re
+import json
+
 
 header = """<?xml version="1.0"?>
 <!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
 <Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="2.0">
     <Domain>
-        <Topology name="topo" TopologyType="3DCoRectMesh" Dimensions="{lz} {ly} {lx}"></Topology>
+        <Topology name="topo" TopologyType="3DCoRectMesh" Dimensions="{Lz} {Ly} {Lx}"></Topology>
         <Geometry name="geo" Type="ORIGIN_DXDYDZ">
             <DataItem Format="XML" Dimensions="3">{z0} {y0} {x0}</DataItem>
             <DataItem Format="XML" Dimensions="3">{dz} {dy} {dx}</DataItem>
@@ -37,41 +39,43 @@ def extract_timestep(f):
 
 
 def main(args):
-    if args.dir != "" and not os.path.isdir(args.dir):
-        print("Directory %s does not exist!" % args.dir)
+    if args["json"] is not None and os.path.exists(args["json"]):
+        args.update(json.load(open(args["json"])))
+    if args["results_dir"] != "" and not os.path.isdir(args["results_dir"]):
+        print("Directory %s does not exist!" % args["results_dir"])
         return
-    files = glob.glob(os.path.join(args.dir, "*.bin"))
+    files = glob.glob(os.path.join(args["results_dir"], "*.bin"))
     if len(files) == 0:
         print("No data files found!")
         return
     files = sorted(files, key=lambda k: int(extract_timestep(k)))
-    expected_size = 8 * args.lx * args.ly * args.lz
+    expected_size = 8 * args["Lx"] * args["Ly"] * args["Lz"]
     if os.path.getsize(files[0]) != expected_size:
         print("File size mismatch, check lx, ly, lz!")
         return
-    data = vars(args)
-    data["ntimesteps"] = len(files)
-    data["timesteps"] = " ".join(map(extract_timestep, files))
-    print(header.format(**data))
+    args["ntimesteps"] = len(files)
+    args["timesteps"] = " ".join(map(extract_timestep, files))
+    print(header.format(**args))
     for f in files:
-        item = """            <Grid GridType="Uniform"><Topology Reference="/Xdmf/Domain/Topology[1]" /><Geometry Reference="/Xdmf/Domain/Geometry[1]" /><Attribute Name="u" Center="Node"><DataItem Format="Binary" DataType="Float" Precision="8" Endian="Little" Dimensions="{lz} {ly} {lx}">{f}</DataItem></Attribute></Grid>"""
-        print(item.format(**data, f=f))
-    print(footer.format(**data))
+        item = """            <Grid GridType="Uniform"><Topology Reference="/Xdmf/Domain/Topology[1]" /><Geometry Reference="/Xdmf/Domain/Geometry[1]" /><Attribute Name="u" Center="Node"><DataItem Format="Binary" DataType="Float" Precision="8" Endian="Little" Dimensions="{Lz} {Ly} {Lx}">{f}</DataItem></Attribute></Grid>"""
+        print(item.format(**args, f=f))
+    print(footer.format(**args))
 
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dir", default="", help="data directory (default .)")
-    parser.add_argument("--lx", type=int, default=256)
-    parser.add_argument("--ly", type=int, default=256)
-    parser.add_argument("--lz", type=int, default=256)
-    parser.add_argument("--x0", default=-128.0)
-    parser.add_argument("--y0", default=-128.0)
-    parser.add_argument("--z0", default=-128.0)
-    parser.add_argument("--dx", default=1.0)
-    parser.add_argument("--dy", default=1.0)
-    parser.add_argument("--dz", default=1.0)
-    return parser.parse_args()
+    parser.add_argument("--json", default="input.json", help="read settings from json file (default input.json)")
+    parser.add_argument("--results_dir", default="", help="data directory (default .)")
+    parser.add_argument("--Lx", type=int)
+    parser.add_argument("--Ly", type=int)
+    parser.add_argument("--Lz", type=int)
+    parser.add_argument("--x0", type=float)
+    parser.add_argument("--y0", type=float)
+    parser.add_argument("--z0", type=float)
+    parser.add_argument("--dx", type=float)
+    parser.add_argument("--dy", type=float)
+    parser.add_argument("--dz", type=float)
+    return vars(parser.parse_args())
 
 
 if __name__ == "__main__":
