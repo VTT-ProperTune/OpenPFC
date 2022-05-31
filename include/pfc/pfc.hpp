@@ -83,6 +83,8 @@ struct Simulation {
     this->dt = dt;
   }
 
+  virtual ~Simulation() {}
+
   virtual double get_dt(int, double) { return dt; }
 
   void set_max_iters(unsigned long int nmax) { max_iters = nmax; }
