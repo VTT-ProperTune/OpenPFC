@@ -45,6 +45,10 @@ def main(args):
         print("No data files found!")
         return
     files = sorted(files, key=lambda k: int(extract_timestep(k)))
+    expected_size = 8 * args.lx * args.ly * args.lz
+    if os.path.getsize(files[0]) != expected_size:
+        print("File size mismatch, check lx, ly, lz!")
+        return
     data = vars(args)
     data["ntimesteps"] = len(files)
     data["timesteps"] = " ".join(map(extract_timestep, files))
