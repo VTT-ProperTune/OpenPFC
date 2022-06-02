@@ -489,12 +489,12 @@ int main(int argc, char *argv[]) {
   // Even spaced grid is used, thus we have something like x = x0 + dx*i for
   // spatial coordinate and t = t0 + dt*n for time.
 
-  PFC::Simulation *s = new Tungsten();
+  Tungsten T;
 
   const int Lx = 256;
   const int Ly = 256;
   const int Lz = 256;
-  s->set_size(Lx, Ly, Lz);
+  T.set_size(Lx, Ly, Lz);
 
   const double pi = std::atan(1.0) * 4.0;
   // 'lattice' constants for the three ordered phases that exist in 2D/3D PFC
@@ -504,24 +504,24 @@ int main(int argc, char *argv[]) {
   const double dx = a3D / 8.0;
   const double dy = a3D / 8.0;
   const double dz = a3D / 8.0;
-  s->set_dxdydz(dx, dy, dz);
+  T.set_dxdydz(dx, dy, dz);
 
   const double x0 = -0.5 * Lx * dx;
   const double y0 = -0.5 * Ly * dy;
   const double z0 = -0.5 * Lz * dz;
-  s->set_origin(x0, y0, z0);
+  T.set_origin(x0, y0, z0);
 
   const double t0 = 0.0;
   // double t1 = 200000.0;
   const double t1 = 1.0;
   const double dt = 1.0;
-  s->set_time(t0, t1, dt);
+  T.set_time(t0, t1, dt);
 
   // define where to store results
-  s->set_results_dir("/mnt/c/pfc-results");
+  T.set_results_dir("/mnt/c/pfc-results");
 
   MPI_Init(&argc, &argv);
-  MPI_Solve(s);
+  MPI_Solve(T);
   MPI_Finalize();
 
   return 0;
