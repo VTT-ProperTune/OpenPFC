@@ -272,6 +272,15 @@ struct Tungsten : PFC::Simulation {
   */
   void prepare_initial_condition(std::array<int, 3> low,
                                  std::array<int, 3> high) {
+    if (n0 != 0) {
+      // we are in the middle of the simulation, let's read results from disk
+      auto filename = results_dir / ("u" + std::to_string(n0) + ".bin");
+      if (me == 0) {
+        std::cout << "Reading results from " << filename << std::endl;
+      }
+      MPI_Read_Data(filename, psi);
+    }
+
     // calculating approx amplitude. This is related to the phase diagram
     // calculations.
     const double rho_seed = p.n_sol;
@@ -280,7 +289,7 @@ struct Tungsten : PFC::Simulation {
     const double C_phi = -6.0 * (p.Bx * exp(-p.T / p.T0)) + 6.0 * p.p2_bar +
                          12.0 * p.p3_bar * rho_seed +
                          18.0 * p.p4_bar * pow(rho_seed, 2);
-    const double d = abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
+    const double d = std::abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
     const double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
 
     const double s = 1.0 / sqrt(2.0);
@@ -318,7 +327,7 @@ struct Tungsten : PFC::Simulation {
     }
   }
 
-  bool writeat(int n, double t) { return (n % 10000 == 0) || (t >= t1); }
+  bool writeat(int n, double t) { return (n % 1000 == 0) || (t >= t1); }
 
   /*
  Results writing routine
@@ -335,17 +344,35 @@ struct Tungsten : PFC::Simulation {
 
 int main(int argc, char *argv[]) {
 
+  MPI_Init(&argc, &argv);
+  int me;
+  MPI_Comm_rank(MPI_COMM_WORLD, &me);
+
+  if (argc < 5) {
+    std::cout << "usage: " << argv[0] << " <Lx> <Ly> <Lz> <results-dir>\n";
+    return 1;
+  }
+
+  const int Lx = std::stoi(argv[1]);
+  const int Ly = std::stoi(argv[2]);
+  const int Lz = std::stoi(argv[3]);
+  const std::filesystem::path results_dir(argv[4]);
+  if (me == 0) {
+    if (!std::filesystem::exists(results_dir)) {
+      std::cout << "Results dir " << results_dir
+                << " does not exist, creating\n";
+      std::filesystem::create_directories(results_dir);
+    }
+  }
+
   // Let's define simulation settings, that are kind of standard for all types
   // of simulations. At least we need to define the world size and time.
   // Even spaced grid is used, thus we have something like x = x0 + dx*i for
   // spatial coordinate and t = t0 + dt*n for time.
 
-  PFC::Simulation *s = new Tungsten();
+  Tungsten T;
 
-  const int Lx = 256;
-  const int Ly = 256;
-  const int Lz = 256;
-  s->set_size(Lx, Ly, Lz);
+  T.set_size(Lx, Ly, Lz);
 
   const double pi = std::atan(1.0) * 4.0;
   // 'lattice' constants for the three ordered phases that exist in 2D/3D PFC
@@ -355,25 +382,63 @@ int main(int argc, char *argv[]) {
   const double dx = a3D / 8.0;
   const double dy = a3D / 8.0;
   const double dz = a3D / 8.0;
-  s->set_dxdydz(dx, dy, dz);
+  T.set_dxdydz(dx, dy, dz);
 
   const double x0 = -0.5 * Lx * dx;
   const double y0 = -0.5 * Ly * dy;
   const double z0 = -0.5 * Lz * dz;
-  s->set_origin(x0, y0, z0);
+  T.set_origin(x0, y0, z0);
 
-  const double t0 = 0.0;
-  // double t1 = 200000.0;
-  const double t1 = 1.0;
-  const double dt = 1.0;
-  s->set_time(t0, t1, dt);
+  double t0 = 0.0;
+  double t1 = 200000.0;
+  double dt = 1.0;
+  int n = 0;
+  int nlast = (t1 - t0) / dt;
 
   // define where to store results
-  s->set_results_dir("/mnt/c/pfc-results");
+  T.set_results_dir(results_dir);
 
-  MPI_Init(&argc, &argv);
-  MPI_Solve(s);
+  // we might already have some results in results_dir, let's check that from
+  // the first assumed data file
+  auto first_file = results_dir / ("u" + std::to_string(n) + ".bin");
+  auto last_file = results_dir / ("u" + std::to_string(nlast) + ".bin");
+  if (std::filesystem::exists(first_file)) {
+    if (me == 0)
+      std::cout << "Warning: " << first_file
+                << " found, checking the state of the simulation\n";
+    if (std::filesystem::exists(last_file)) {
+      if (me == 0)
+        std::cout << "Also, assumed last file " << last_file
+                  << " found. This simulation is ready. Exiting.\n";
+      MPI_Finalize();
+      return 0;
+    }
+    while (t0 < t1) {
+      n += 1;
+      t0 += T.get_dt(n, t0);
+      if (T.writeat(n, t0)) {
+        auto file = results_dir / ("u" + std::to_string(n) + ".bin");
+        if (std::filesystem::exists(file)) {
+          if (me == 0)
+            std::cout << "Result file " << file
+                      << " exists, using this as a new starting point for a "
+                         "simulation.\n";
+          T.set_time(t0, t1, dt);
+          nlast = n;
+        }
+      }
+    }
+  }
+  std::cout << T.status_msg << "\n";
+  T.set_step(nlast);
+  if (me == 0) {
+    std::cout << "Starting simulation from time " << T.t0 << " to " << T.t1
+              << " with step size " << T.dt << " and step number " << T.n0
+              << "\n";
+  }
+
+  MPI_Solve(T);
+
   MPI_Finalize();
-
   return 0;
 }
