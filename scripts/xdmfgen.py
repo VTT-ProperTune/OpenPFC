@@ -28,14 +28,18 @@ header = """<?xml version="1.0"?>
             </Time>
 """
 
+content = """            <Grid Name="{name}" GridType="Uniform"><Topology Reference="/Xdmf/Domain/Topology[1]" /><Geometry Reference="/Xdmf/Domain/Geometry[1]" /><Attribute Name="u" Center="Node"><DataItem Format="Binary" DataType="Float" Precision="8" Endian="Little" Dimensions="{Lz} {Ly} {Lx}">{f}</DataItem></Attribute></Grid>"""
+
 footer = """
         </Grid>
     </Domain>
 </Xdmf>"""
 
 
-def extract_timestep(f):
-    return re.findall(r"\d+", f)[-1]
+def extract_number(s):
+    numbers = re.findall(r"\d+", s)
+    assert len(numbers) == 1
+    return int(numbers[0])
 
 
 def main(args):
@@ -48,17 +52,16 @@ def main(args):
     if len(files) == 0:
         print("No data files found!")
         return
-    files = sorted(files, key=lambda k: int(extract_timestep(k)))
+    files = sorted(files, key=lambda f: extract_number(os.path.basename(f)))
     expected_size = 8 * args["Lx"] * args["Ly"] * args["Lz"]
     if os.path.getsize(files[0]) != expected_size:
         print("File size mismatch, check lx, ly, lz!")
         return
     args["ntimesteps"] = len(files)
-    args["timesteps"] = " ".join(map(extract_timestep, files))
+    args["timesteps"] = " ".join("%0.3f" % (i*args["dt"]) for i in range(len(files)))
     print(header.format(**args))
     for f in files:
-        item = """            <Grid GridType="Uniform"><Topology Reference="/Xdmf/Domain/Topology[1]" /><Geometry Reference="/Xdmf/Domain/Geometry[1]" /><Attribute Name="u" Center="Node"><DataItem Format="Binary" DataType="Float" Precision="8" Endian="Little" Dimensions="{Lz} {Ly} {Lx}">{f}</DataItem></Attribute></Grid>"""
-        print(item.format(**args, f=f))
+        print(content.format(**args, name=os.path.splitext(os.path.basename(f))[0], f=os.path.relpath(f)))
     print(footer.format(**args))
 
 
@@ -75,6 +78,7 @@ def cli():
     parser.add_argument("--dx", type=float)
     parser.add_argument("--dy", type=float)
     parser.add_argument("--dz", type=float)
+    parser.add_argument("--dt", type=float)
     return vars(parser.parse_args())
 
 
