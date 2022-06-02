@@ -1,7 +1,10 @@
 // heFFTe implementation of pfc code
 
+#include <nlohmann/json.hpp>
 #include <pfc/pfc.hpp>
 #include <random>
+
+using json = nlohmann::json;
 
 namespace pfc {
 
@@ -213,7 +216,7 @@ struct params {
   const double C_phi = -6.0 * (Bx * exp(-T / T0)) + 6.0 * p2_bar +
                        12.0 * p3_bar * rho_seed +
                        18.0 * p4_bar * pow(rho_seed, 2);
-  const double d = abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
+  const double d = std::abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
   const double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
 
   // for boundary condition
@@ -328,13 +331,16 @@ struct Tungsten : PFC::Simulation {
   }
 
   void apply_bc(std::array<int, 3> low, std::array<int, 3> high) {
+    double xwidth = 50.0;
+    double alpha = 0.3;
+    double xpos = Lx * dx - xwidth;
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
           const double x = x0 + i * dx;
-          if (abs(x - 100.0) < 50.0) {
-            double S = 1.0 / (1.0 + exp(-0.3 * (x - 100.0)));
+          if (std::abs(x - xpos) < xwidth) {
+            double S = 1.0 / (1.0 + exp(-alpha * (x - xpos)));
             psi[idx] = p.rho_low * S + p.rho_high * (1.0 - S);
           }
           idx += 1;
@@ -434,16 +440,24 @@ struct Tungsten : PFC::Simulation {
     seeds.push_back(pfc::seed(radius, rho, amplitude).translate(T).rotate(R));
     */
 
-    const int nseeds = 150;
+    const int nseeds = (int)(dy * Ly * dz * Lz / 300.0);
     const double radius = 20.0;
+
+    int me;
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
+    if (me == 0) {
+      std::cout << "Generating " << nseeds << " random seeds with radius "
+                << radius << "\n";
+    }
+
     const double rho = p.rho_seed;
     const double amplitude = p.amp_eq;
-    const double lower_x = -128.0 + radius;
-    const double upper_x = -128.0 + 3 * radius;
-    const double lower_y = -128.0;
-    const double upper_y = 128.0;
-    const double lower_z = -128.0;
-    const double upper_z = 128.0;
+    const double lower_x = radius;
+    const double upper_x = 4 * radius;
+    const double lower_y = 0.0;
+    const double upper_y = Ly * dy;
+    const double lower_z = 0.0;
+    const double upper_z = Lz * dz;
     srand(42);
     std::uniform_real_distribution<double> rx(lower_x, upper_x);
     std::uniform_real_distribution<double> ry(lower_y, upper_y);
@@ -463,8 +477,6 @@ struct Tungsten : PFC::Simulation {
       const std::array<double, 3> orientation = random_orientation();
       const pfc::seed seed(location, orientation, radius, rho, amplitude);
       seeds.push_back(seed);
-      printf("Seed %d location: (%f, %f, %f)\n", i, location[0], location[1],
-             location[2]);
     }
 
     std::fill(psi.begin(), psi.end(), p.n0);
@@ -488,7 +500,9 @@ struct Tungsten : PFC::Simulation {
     }
   }
 
-  bool writeat(int n, double t) { return (n % 100 == 0) || (t >= t1); }
+  void set_initial_condition(std::string initial_condition) {}
+
+  bool writeat(int n, double t) { return (n % 1000 == 0) || (t >= t1); }
 
   /*
  Results writing routine
@@ -505,45 +519,65 @@ struct Tungsten : PFC::Simulation {
 
 int main(int argc, char *argv[]) {
 
+  MPI_Init(&argc, &argv);
+  int me;
+  MPI_Comm_rank(MPI_COMM_WORLD, &me);
+
+  json settings;
+
+  // read settings from file if given as a program argument, otherwise from
+  // standard input
+  if (argc > 1) {
+    if (me == 0)
+      std::cout << "Reading simulation settings from file " << argv[1]
+                << "\n\n";
+    const std::filesystem::path settings_file(argv[1]);
+    if (!std::filesystem::exists(settings_file)) {
+      if (me == 0)
+        std::cerr << "settings file " << settings_file << " does not exist!\n";
+      return 1;
+    }
+    std::ifstream input_file(settings_file);
+    input_file >> settings;
+  } else {
+    if (me == 0)
+      std::cout << "Reading simulation settings from standard input\n\n";
+    std::cin >> settings;
+  }
+  if (me == 0) {
+    std::cout << "Simulation settings:\n\n";
+    std::cout << settings.dump(4) << "\n\n";
+  }
+
+  const std::string results_dir_ = settings["results_dir"];
+  const std::filesystem::path results_dir(results_dir_);
+  if (me == 0) {
+    if (!std::filesystem::exists(results_dir)) {
+      std::cout << "Results dir " << results_dir
+                << " does not exist, creating\n";
+      std::filesystem::create_directories(results_dir);
+    }
+  }
+
   // Let's define simulation settings, that are kind of standard for all types
   // of simulations. At least we need to define the world size and time.
   // Even spaced grid is used, thus we have something like x = x0 + dx*i for
   // spatial coordinate and t = t0 + dt*n for time.
 
-  PFC::Simulation *s = new Tungsten();
+  Tungsten T;
 
-  const int Lx = 256;
-  const int Ly = 256;
-  const int Lz = 256;
-  s->set_size(Lx, Ly, Lz);
-
-  const double pi = std::atan(1.0) * 4.0;
-  // 'lattice' constants for the three ordered phases that exist in 2D/3D PFC
-  // const double a1D = 2 * pi;               // stripes
-  // const double a2D = 2 * pi * 2 / sqrt(3); // triangular
-  const double a3D = 2 * pi * sqrt(2); // BCC
-  const double dx = a3D / 8.0;
-  const double dy = a3D / 8.0;
-  const double dz = a3D / 8.0;
-  s->set_dxdydz(dx, dy, dz);
-
-  const double x0 = -0.5 * Lx * dx;
-  const double y0 = -0.5 * Ly * dy;
-  const double z0 = -0.5 * Lz * dz;
-  s->set_origin(x0, y0, z0);
-
-  const double t0 = 0.0;
-  // double t1 = 200000.0;
-  const double t1 = 1.0;
-  const double dt = 1.0;
-  s->set_time(t0, t1, dt);
+  T.set_size(settings["Lx"], settings["Ly"], settings["Lz"]);
+  T.set_dxdydz(settings["dx"], settings["dy"], settings["dz"]);
+  T.set_origin(settings["x0"], settings["y0"], settings["z0"]);
+  T.set_time(settings["t0"], settings["t1"], settings["dt"]);
+  T.set_initial_condition(settings["initial_condition"]);
 
   // define where to store results
-  s->set_results_dir("/mnt/c/pfc-results-2");
+  T.set_results_dir(results_dir);
+  T.set_saveat(settings["saveat"]);
 
-  MPI_Init(&argc, &argv);
-  MPI_Solve(s);
+  MPI_Solve(T);
+
   MPI_Finalize();
-
   return 0;
 }
