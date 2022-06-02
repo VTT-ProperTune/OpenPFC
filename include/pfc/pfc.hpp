@@ -11,6 +11,19 @@
 
 #include <heffte.h>
 
+namespace pfc {
+namespace constants {
+
+const double pi = std::atan(1.0) * 4.0;
+
+// 'lattice' constants for the three ordered phases that exist in 2D/3D PFC
+const double a1D = 2 * pi;               // stripes
+const double a2D = 2 * pi * 2 / sqrt(3); // triangular
+const double a3D = 2 * pi * sqrt(2);     // BCC
+
+} // namespace constants
+} // namespace pfc
+
 namespace PFC {
 
 template <typename T> size_t sizeof_vec(std::vector<T> &V) {
