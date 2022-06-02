@@ -58,7 +58,7 @@ def main(args):
         print("File size mismatch, check lx, ly, lz!")
         return
     args["ntimesteps"] = len(files)
-    args["timesteps"] = " ".join("%0.3f" % (i*args["dt"]) for i in range(len(files)))
+    args["timesteps"] = " ".join("%0.3f" % (i*args["saveat"]) for i in range(len(files)))
     print(header.format(**args))
     for f in files:
         print(content.format(**args, name=os.path.splitext(os.path.basename(f))[0], f=os.path.relpath(f)))
