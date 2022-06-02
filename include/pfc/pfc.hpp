@@ -185,25 +185,25 @@ struct Simulation {
   virtual void write_results(int, double) { return; };
 };
 
-void MPI_Solve(Simulation *s) {
+void MPI_Solve(Simulation &s) {
 
   std::cout << std::fixed;
   std::cout.precision(3);
 
   // unpack simulation settings
-  const int Lx = s->Lx;
-  const int Ly = s->Ly;
-  const int Lz = s->Lz;
+  const int Lx = s.Lx;
+  const int Ly = s.Ly;
+  const int Lz = s.Lz;
 
   MPI_Comm comm = MPI_COMM_WORLD;
 
   int me; // this process rank within the comm
   MPI_Comm_rank(comm, &me);
-  s->me = me;
+  s.me = me;
 
   int num_ranks; // total number of ranks in the comm
   MPI_Comm_size(comm, &num_ranks);
-  s->num_ranks = num_ranks;
+  s.num_ranks = num_ranks;
 
   if (me == 0) {
     std::cout << "***** PFC SIMULATOR USING HEFFTE *****" << std::endl
@@ -246,7 +246,7 @@ void MPI_Solve(Simulation *s) {
   heffte::fft3d_r2c<heffte::backend::fftw> fft(inbox, outbox, r2c_direction,
                                                comm);
 
-  s->set_fft(fft);
+  s.set_fft(fft);
 
   // *** Report domain decomposition status ***
   MPI_Send(&(inbox.low), 3, MPI_INT, 0, MPI_TAG_INBOX_LOW, MPI_COMM_WORLD);
@@ -305,7 +305,7 @@ void MPI_Solve(Simulation *s) {
                            MPI_ORDER_FORTRAN, MPI_DOUBLE, &filetype);
   MPI_Type_commit(&filetype);
 
-  s->filetype = filetype;
+  s.filetype = filetype;
 
   // *** Allocate memory for workers. ***
 
@@ -314,13 +314,13 @@ void MPI_Solve(Simulation *s) {
     std::cout << std::endl
               << "***** MEMORY ALLOCATION STATUS *****" << std::endl;
   }
-  s->allocate(fft.size_inbox(), fft.size_outbox());
-  if (s->heffte_use_workspace) {
+  s.allocate(fft.size_inbox(), fft.size_outbox());
+  if (s.heffte_use_workspace) {
     // internal workspace used by HeFFTe to make FFT faster
-    s->wrk.resize(fft.size_workspace());
+    s.wrk.resize(fft.size_workspace());
   }
-  const size_t mem_allocated = s->mem_allocated;
-  const size_t mem_allocated_wrk = sizeof_vec(s->wrk);
+  const size_t mem_allocated = s.mem_allocated;
+  const size_t mem_allocated_wrk = sizeof_vec(s.wrk);
   MPI_Send(&mem_allocated, 1, MPI_LONG_INT, 0, 0, MPI_COMM_WORLD);
   MPI_Send(&mem_allocated_wrk, 1, MPI_LONG_INT, 0, 1, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
@@ -339,7 +339,7 @@ void MPI_Solve(Simulation *s) {
       total_size += size;
       total_size_wrk += size_wrk;
     }
-    const long int ndofs = s->Lx * s->Ly * s->Lz;
+    const long int ndofs = s.Lx * s.Ly * s.Lz;
     const double d = 1.0 / ndofs;
     const double size_perdof = d * total_size;
     const double size_wrk_perdof = d * total_size_wrk;
@@ -366,7 +366,7 @@ void MPI_Solve(Simulation *s) {
     }
     MPI_Barrier(MPI_COMM_WORLD);
     double t_op = -MPI_Wtime();
-    s->prepare_operators(outbox.low, outbox.high);
+    s.prepare_operators(outbox.low, outbox.high);
     MPI_Barrier(MPI_COMM_WORLD);
     t_op += MPI_Wtime();
     if (me == 0) {
@@ -380,22 +380,22 @@ void MPI_Solve(Simulation *s) {
     }
     MPI_Barrier(MPI_COMM_WORLD);
     double t_init = -MPI_Wtime();
-    s->prepare_initial_condition(inbox.low, inbox.high);
-    s->apply_bc(inbox.low, inbox.high);
+    s.prepare_initial_condition(inbox.low, inbox.high);
+    s.apply_bc(inbox.low, inbox.high);
     MPI_Barrier(MPI_COMM_WORLD);
     t_init += MPI_Wtime();
     if (me == 0) {
       std::cout << "done in " << t_init << " seconds" << std::endl;
     }
   }
-  int n = s->n0;
-  double t = s->t0;
+  int n = s.n0;
+  double t = s.t0;
 
   double Sw = 0.0;
   if (n == 0) { // write initial condition
     Sw = -MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
-    s->write_results(n, t);
+    s.write_results(n, t);
     MPI_Barrier(MPI_COMM_WORLD);
     Sw += MPI_Wtime();
     if (me == 0) {
@@ -416,11 +416,11 @@ void MPI_Solve(Simulation *s) {
   double S = 0.0;
   std::array<double, 8> timing;
   int t_saveat_cnt = 1;
-  double t_saveat = s->t0 + t_saveat_cnt * s->get_saveat();
+  double t_saveat = s.t0 + t_saveat_cnt * s.get_saveat();
 
-  while (!s->done(n, t)) {
+  while (!s.done(n, t)) {
     n += 1;
-    t += s->get_dt(n, t);
+    t += s.get_dt(n, t);
     bool write_results = false;
     if (t >= t_saveat) {
       t = t_saveat;
@@ -433,10 +433,10 @@ void MPI_Solve(Simulation *s) {
 
     double dt_step = -MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
-    s->apply_bc(inbox.low, inbox.high);
+    s.apply_bc(inbox.low, inbox.high);
     MPI_Barrier(MPI_COMM_WORLD);
-    s->step(n, t);
-    MPI_Send(&(s->timing), 8, MPI_DOUBLE, 0, MPI_TAG_TIMING, MPI_COMM_WORLD);
+    s.step(n, t);
+    MPI_Send(&(s.timing), 8, MPI_DOUBLE, 0, MPI_TAG_TIMING, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
     dt_step += MPI_Wtime();
 
@@ -464,7 +464,7 @@ void MPI_Solve(Simulation *s) {
                 << ", Total " << total_time << std::endl;
 
       S = (n == 1) ? dt_step : alpha * dt_step + (1.0 - alpha) * S;
-      auto n_left = (s->t1 - t) / s->get_dt(n, t);
+      auto n_left = (s.t1 - t) / s.get_dt(n, t);
       auto eta = S * n_left;
       std::cout << "Step execution time: " << dt_step
                 << " seconds. Average step execution time: " << S << " seconds."
@@ -480,7 +480,7 @@ void MPI_Solve(Simulation *s) {
     if (write_results) {
       double dt_write = -MPI_Wtime();
       MPI_Barrier(MPI_COMM_WORLD);
-      s->write_results(t_saveat_cnt, t);
+      s.write_results(t_saveat_cnt, t);
       MPI_Barrier(MPI_COMM_WORLD);
       dt_write += MPI_Wtime();
       if (me == 0) {
@@ -489,7 +489,7 @@ void MPI_Solve(Simulation *s) {
                   << " seconds (avg: " << Sw << " seconds)" << std::endl;
       }
       t_saveat_cnt += 1;
-      t_saveat = s->t0 + t_saveat_cnt * s->get_saveat();
+      t_saveat = s.t0 + t_saveat_cnt * s.get_saveat();
     }
 
     if (me == 0) {
@@ -507,7 +507,7 @@ void MPI_Solve(Simulation *s) {
               << std::endl;
   }
   if (me == 0) {
-    std::cout << "Simulation done. Status message: " + s->status_msg
+    std::cout << "Simulation done. Status message: " + s.status_msg
               << std::endl;
   }
 }
