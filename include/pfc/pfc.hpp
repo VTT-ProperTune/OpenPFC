@@ -39,6 +39,7 @@ struct Simulation {
   double t0 = 0.0;
   double t1 = 10.0;
   double dt = 1.0;
+  double saveat_ = 1.0;
   int n0 = 0;
   int max_iters = INT_MAX;
   std::string status_msg = "Initializing";
@@ -82,6 +83,9 @@ struct Simulation {
     this->t1 = t1;
     this->dt = dt;
   }
+
+  void set_saveat(const double saveat) { saveat_ = saveat; }
+  double get_saveat() const { return saveat_; }
 
   virtual ~Simulation() {}
 
@@ -375,7 +379,7 @@ void MPI_Solve(Simulation *s) {
   double t = s->t0;
 
   double Sw = 0.0;
-  if (n == 0 && s->writeat(n, t)) { // write initial condition
+  if (n == 0) { // write initial condition
     Sw = -MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
     s->write_results(n, t);
@@ -398,12 +402,20 @@ void MPI_Solve(Simulation *s) {
   const double alpha = 0.5;
   double S = 0.0;
   std::array<double, 8> timing;
+  int t_saveat_cnt = 1;
+  double t_saveat = s->t0 + t_saveat_cnt * s->get_saveat();
 
   while (!s->done(n, t)) {
     n += 1;
     t += s->get_dt(n, t);
+    bool write_results = false;
+    if (t >= t_saveat) {
+      t = t_saveat;
+      write_results = true;
+    }
     if (me == 0) {
-      std::cout << "***** STARTING STEP # " << n << " *****" << std::endl;
+      std::cout << "***** STARTING STEP # " << n << " ***** at time " << t
+                << std::endl;
     }
 
     double dt_step = -MPI_Wtime();
@@ -424,8 +436,10 @@ void MPI_Solve(Simulation *s) {
       for (int i = 0; i < num_ranks; i++) {
         MPI_Recv(&timing, 8, MPI_DOUBLE, i, MPI_TAG_TIMING, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
+#ifdef PFC_SHOW_TIMING_PER_WORKER
         std::cout << "MPI Worker " << i << ": FFT " << timing[1] << ", Other "
                   << timing[2] << ", Total " << timing[0] << std::endl;
+#endif
         total_time += timing[0];
         fft_time += timing[1];
         other_time += timing[2];
@@ -450,10 +464,10 @@ void MPI_Solve(Simulation *s) {
                 << " seconds." << std::endl;
     }
 
-    if (s->writeat(n, t)) {
+    if (write_results) {
       double dt_write = -MPI_Wtime();
       MPI_Barrier(MPI_COMM_WORLD);
-      s->write_results(n, t);
+      s->write_results(t_saveat_cnt, t);
       MPI_Barrier(MPI_COMM_WORLD);
       dt_write += MPI_Wtime();
       if (me == 0) {
@@ -461,6 +475,8 @@ void MPI_Solve(Simulation *s) {
         std::cout << "Results writing time: " << dt_write
                   << " seconds (avg: " << Sw << " seconds)" << std::endl;
       }
+      t_saveat_cnt += 1;
+      t_saveat = s->t0 + t_saveat_cnt * s->get_saveat();
     }
 
     if (me == 0) {
