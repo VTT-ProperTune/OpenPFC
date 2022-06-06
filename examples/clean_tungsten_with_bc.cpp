@@ -224,8 +224,14 @@ struct params {
   double rho_high = n0;
 };
 
-struct Tungsten : PFC::Simulation {
+enum class initial_condition { single_crystal, random_uniform, regular_grid };
 
+class Tungsten : public PFC::Simulation {
+
+private:
+  initial_condition initial_condition_ = initial_condition::regular_grid;
+
+public:
   params p;
 
   // we will allocate these arrays later on
@@ -235,6 +241,24 @@ struct Tungsten : PFC::Simulation {
 
   // used to measure execution time of step and write_results
   const std::array<double, 10> timers = {0};
+
+  void set_initial_condition(std::string initial_condition) {
+    if (initial_condition == "single_crystal") {
+      initial_condition_ = initial_condition::single_crystal;
+    } else if (initial_condition == "random_uniform") {
+      initial_condition_ = initial_condition::random_uniform;
+    } else if (initial_condition == "regular_grid") {
+      initial_condition_ = initial_condition::regular_grid;
+    } else {
+      int me;
+      MPI_Comm_rank(MPI_COMM_WORLD, &me);
+      if (me == 0) {
+        std::cerr << "Unknown initial condition " << initial_condition << "\n";
+      }
+    }
+  }
+
+  initial_condition get_initial_condition() { return initial_condition_; }
 
   /*
     This function is ran only one time during the initialization of solver. Used
@@ -428,11 +452,23 @@ struct Tungsten : PFC::Simulation {
     timing[0] += MPI_Wtime();
   }
 
+  void prepare_initial_condition(std::array<int, 3> low,
+                                 std::array<int, 3> high) {
+    switch (get_initial_condition()) {
+    case initial_condition::random_uniform:
+      prepare_initial_condition_random_uniform(low, high);
+      break;
+    case initial_condition::regular_grid:
+      prepare_initial_condition_regular_grid(low, high);
+      break;
+    }
+  }
+
   /*
   Initial condition is defined here
   */
-  void prepare_initial_condition(std::array<int, 3> low,
-                                 std::array<int, 3> high) {
+  void prepare_initial_condition_random_uniform(std::array<int, 3> low,
+                                                std::array<int, 3> high) {
 
     std::vector<pfc::seed> seeds;
 
@@ -500,7 +536,66 @@ struct Tungsten : PFC::Simulation {
     }
   }
 
-  void set_initial_condition(std::string initial_condition) {}
+  void prepare_initial_condition_regular_grid(std::array<int, 3> low,
+                                              std::array<int, 3> high) {
+    std::vector<pfc::seed> seeds;
+    const int Nx = 1;
+    const int Ny = 6;
+    const int Nz = 6;
+
+    const double radius = 30.0;
+    const double rho = p.rho_seed;
+    const double amplitude = p.amp_eq;
+
+    const double Dy = dy * Ly / Ny;
+    const double Dz = dz * Lz / Nz;
+    const double X0 = 3 * radius;
+    const double Y0 = Dy / 2.0;
+    const double Z0 = Dz / 2.0;
+    const int nseeds = Nx * Ny * Nz;
+
+    int me;
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
+    if (me == 0) {
+      std::cout << "Generating " << nseeds << " regular seeds with radius "
+                << radius << "\n";
+    }
+
+    srand(42);
+    std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
+    std::uniform_real_distribution<double> rr(0.0, 8.0 * atan(1.0));
+    std::default_random_engine re;
+
+    for (int j = 0; j < Ny; j++) {
+      for (int k = 0; k < Nz; k++) {
+        const std::array<double, 3> location = {
+            X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+        const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
+        const pfc::seed seed(location, orientation, radius, rho, amplitude);
+        seeds.push_back(seed);
+      }
+    }
+
+    std::fill(psi.begin(), psi.end(), p.n0);
+    long int idx = 0;
+    for (int k = low[2]; k <= high[2]; k++) {
+      for (int j = low[1]; j <= high[1]; j++) {
+        for (int i = low[0]; i <= high[0]; i++) {
+          const double x = x0 + i * dx;
+          const double y = y0 + j * dy;
+          const double z = z0 + k * dz;
+          const std::array<double, 3> X = {x, y, z};
+          for (const auto &seed : seeds) {
+            if (seed.is_inside(X)) {
+              psi[idx] = seed.get_value(X);
+              break;
+            }
+          }
+          idx += 1;
+        }
+      }
+    }
+  }
 
   bool writeat(int n, double t) { return (n % 1000 == 0) || (t >= t1); }
 
