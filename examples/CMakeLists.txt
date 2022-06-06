@@ -15,3 +15,6 @@ target_link_libraries(clean_tungsten_multiple_seeds PRIVATE pfc)
 
 add_executable(clean_tungsten_with_bc clean_tungsten_with_bc.cpp)
 target_link_libraries(clean_tungsten_with_bc PRIVATE pfc)
+
+add_executable(json_read json_read.cpp)
+target_link_libraries(json_read PRIVATE pfc)
