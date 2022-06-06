@@ -412,7 +412,7 @@ void MPI_Solve(Simulation &s) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // for timing step time
-  const double alpha = 0.5;
+  const double alpha = 0.05;
   double S = 0.0;
   std::array<double, 8> timing;
   int t_saveat_cnt = 1;
@@ -463,7 +463,7 @@ void MPI_Solve(Simulation &s) {
       std::cout << "Average time: FFT " << fft_time << ", Other " << other_time
                 << ", Total " << total_time << std::endl;
 
-      S = (n == 1) ? dt_step : alpha * dt_step + (1.0 - alpha) * S;
+      S = (n < 5) ? dt_step : alpha * dt_step + (1.0 - alpha) * S;
       auto n_left = (s.t1 - t) / s.get_dt(n, t);
       auto eta = S * n_left;
       std::cout << "Step execution time: " << dt_step
