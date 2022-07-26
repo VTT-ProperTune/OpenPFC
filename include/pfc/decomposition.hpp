@@ -43,6 +43,8 @@ public:
   Decomposition(const std::array<int, 3> &dims, MPI_Comm comm = MPI_COMM_WORLD)
       : Decomposition(dims, get_comm_rank(comm), get_comm_size(comm)) {}
 
+  int get_id() const { return id; }
+
   friend std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
     os << "***** DOMAIN DECOMPOSITION STATUS *****\n";
     os << "Real-to-complex symmetry is used (r2c direction = "
