@@ -616,63 +616,66 @@ public:
 int main(int argc, char *argv[]) {
 
   MPI_Init(&argc, &argv);
-  int me;
-  MPI_Comm_rank(MPI_COMM_WORLD, &me);
 
-  json settings;
+  {
+    int me;
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
 
-  // read settings from file if given as a program argument, otherwise from
-  // standard input
-  if (argc > 1) {
-    if (me == 0)
-      std::cout << "Reading simulation settings from file " << argv[1]
-                << "\n\n";
-    const std::filesystem::path settings_file(argv[1]);
-    if (!std::filesystem::exists(settings_file)) {
+    json settings;
+
+    // read settings from file if given as a program argument, otherwise from
+    // standard input
+    if (argc > 1) {
       if (me == 0)
-        std::cerr << "settings file " << settings_file << " does not exist!\n";
-      return 1;
+        std::cout << "Reading simulation settings from file " << argv[1]
+                  << "\n\n";
+      const std::filesystem::path settings_file(argv[1]);
+      if (!std::filesystem::exists(settings_file)) {
+        if (me == 0)
+          std::cerr << "settings file " << settings_file
+                    << " does not exist!\n";
+        return 1;
+      }
+      std::ifstream input_file(settings_file);
+      input_file >> settings;
+    } else {
+      if (me == 0)
+        std::cout << "Reading simulation settings from standard input\n\n";
+      std::cin >> settings;
     }
-    std::ifstream input_file(settings_file);
-    input_file >> settings;
-  } else {
-    if (me == 0)
-      std::cout << "Reading simulation settings from standard input\n\n";
-    std::cin >> settings;
-  }
-  if (me == 0) {
-    std::cout << "Simulation settings:\n\n";
-    std::cout << settings.dump(4) << "\n\n";
-  }
-
-  const std::string results_dir_ = settings["results_dir"];
-  const std::filesystem::path results_dir(results_dir_);
-  if (me == 0) {
-    if (!std::filesystem::exists(results_dir)) {
-      std::cout << "Results dir " << results_dir
-                << " does not exist, creating\n";
-      std::filesystem::create_directories(results_dir);
+    if (me == 0) {
+      std::cout << "Simulation settings:\n\n";
+      std::cout << settings.dump(4) << "\n\n";
     }
+
+    const std::string results_dir_ = settings["results_dir"];
+    const std::filesystem::path results_dir(results_dir_);
+    if (me == 0) {
+      if (!std::filesystem::exists(results_dir)) {
+        std::cout << "Results dir " << results_dir
+                  << " does not exist, creating\n";
+        std::filesystem::create_directories(results_dir);
+      }
+    }
+
+    // Let's define simulation settings, that are kind of standard for all types
+    // of simulations. At least we need to define the world size and time.
+    // Even spaced grid is used, thus we have something like x = x0 + dx*i for
+    // spatial coordinate and t = t0 + dt*n for time.
+
+    Tungsten T({settings["Lx"], settings["Ly"], settings["Lz"]});
+
+    T.set_dxdydz(settings["dx"], settings["dy"], settings["dz"]);
+    T.set_origin(settings["x0"], settings["y0"], settings["z0"]);
+    T.set_time(settings["t0"], settings["t1"], settings["dt"]);
+    T.set_initial_condition(settings["initial_condition"]);
+
+    // define where to store results
+    T.set_results_dir(results_dir);
+    T.set_saveat(settings["saveat"]);
+
+    MPI_Solve(T);
   }
-
-  // Let's define simulation settings, that are kind of standard for all types
-  // of simulations. At least we need to define the world size and time.
-  // Even spaced grid is used, thus we have something like x = x0 + dx*i for
-  // spatial coordinate and t = t0 + dt*n for time.
-
-  Tungsten T;
-
-  T.set_size(settings["Lx"], settings["Ly"], settings["Lz"]);
-  T.set_dxdydz(settings["dx"], settings["dy"], settings["dz"]);
-  T.set_origin(settings["x0"], settings["y0"], settings["z0"]);
-  T.set_time(settings["t0"], settings["t1"], settings["dt"]);
-  T.set_initial_condition(settings["initial_condition"]);
-
-  // define where to store results
-  T.set_results_dir(results_dir);
-  T.set_saveat(settings["saveat"]);
-
-  MPI_Solve(T);
 
   MPI_Finalize();
   return 0;

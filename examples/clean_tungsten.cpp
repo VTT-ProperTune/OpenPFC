@@ -339,60 +339,61 @@ public:
 int main(int argc, char *argv[]) {
 
   MPI_Init(&argc, &argv);
-  int me;
-  MPI_Comm_rank(MPI_COMM_WORLD, &me);
 
-  if (argc < 5) {
-    std::cout << "usage: " << argv[0] << " <Lx> <Ly> <Lz> <results-dir>\n";
-    return 1;
-  }
+  {
+    int me;
+    MPI_Comm_rank(MPI_COMM_WORLD, &me);
 
-  const int Lx = std::stoi(argv[1]);
-  const int Ly = std::stoi(argv[2]);
-  const int Lz = std::stoi(argv[3]);
-  const std::filesystem::path results_dir(argv[4]);
-  if (me == 0) {
-    if (!std::filesystem::exists(results_dir)) {
-      std::cout << "Results dir " << results_dir
-                << " does not exist, creating\n";
-      std::filesystem::create_directories(results_dir);
+    if (argc < 5) {
+      std::cout << "usage: " << argv[0] << " <Lx> <Ly> <Lz> <results-dir>\n";
+      return 1;
     }
+
+    const int Lx = std::stoi(argv[1]);
+    const int Ly = std::stoi(argv[2]);
+    const int Lz = std::stoi(argv[3]);
+    const std::filesystem::path results_dir(argv[4]);
+    if (me == 0) {
+      if (!std::filesystem::exists(results_dir)) {
+        std::cout << "Results dir " << results_dir
+                  << " does not exist, creating\n";
+        std::filesystem::create_directories(results_dir);
+      }
+    }
+
+    // Let's define simulation settings, that are kind of standard for all types
+    // of simulations. At least we need to define the world size and time.
+    // Even spaced grid is used, thus we have something like x = x0 + dx*i for
+    // spatial coordinate and t = t0 + dt*n for time.
+
+    Tungsten T({Lx, Ly, Lz});
+
+    const double pi = std::atan(1.0) * 4.0;
+    // 'lattice' constants for the three ordered phases that exist in 2D/3D PFC
+    // const double a1D = 2 * pi;               // stripes
+    // const double a2D = 2 * pi * 2 / sqrt(3); // triangular
+    const double a3D = 2 * pi * sqrt(2); // BCC
+    const double dx = a3D / 8.0;
+    const double dy = a3D / 8.0;
+    const double dz = a3D / 8.0;
+    T.set_dxdydz(dx, dy, dz);
+
+    const double x0 = -0.5 * Lx * dx;
+    const double y0 = -0.5 * Ly * dy;
+    const double z0 = -0.5 * Lz * dz;
+    T.set_origin(x0, y0, z0);
+
+    double t0 = 0.0;
+    double t1 = 1.0;
+    double dt = 1.0;
+    T.set_time(t0, t1, dt);
+
+    // define where to store results
+    T.set_results_dir(results_dir);
+    T.set_saveat(1.0);
+
+    MPI_Solve(T);
   }
-
-  // Let's define simulation settings, that are kind of standard for all types
-  // of simulations. At least we need to define the world size and time.
-  // Even spaced grid is used, thus we have something like x = x0 + dx*i for
-  // spatial coordinate and t = t0 + dt*n for time.
-
-  Tungsten T;
-
-  T.set_size(Lx, Ly, Lz);
-
-  const double pi = std::atan(1.0) * 4.0;
-  // 'lattice' constants for the three ordered phases that exist in 2D/3D PFC
-  // const double a1D = 2 * pi;               // stripes
-  // const double a2D = 2 * pi * 2 / sqrt(3); // triangular
-  const double a3D = 2 * pi * sqrt(2); // BCC
-  const double dx = a3D / 8.0;
-  const double dy = a3D / 8.0;
-  const double dz = a3D / 8.0;
-  T.set_dxdydz(dx, dy, dz);
-
-  const double x0 = -0.5 * Lx * dx;
-  const double y0 = -0.5 * Ly * dy;
-  const double z0 = -0.5 * Lz * dz;
-  T.set_origin(x0, y0, z0);
-
-  double t0 = 0.0;
-  double t1 = 1.0;
-  double dt = 1.0;
-  T.set_time(t0, t1, dt);
-
-  // define where to store results
-  T.set_results_dir(results_dir);
-  T.set_saveat(1.0);
-
-  MPI_Solve(T);
 
   MPI_Finalize();
   return 0;
