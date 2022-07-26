@@ -355,8 +355,8 @@ public:
   }
 
   void apply_bc(std::array<int, 3> low, std::array<int, 3> high) {
-    double xwidth = 50.0;
-    double alpha = 0.3;
+    double xwidth = 20.0;
+    double alpha = 1.0;
     double xpos = Lx * dx - xwidth;
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
