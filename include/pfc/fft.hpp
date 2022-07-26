@@ -33,6 +33,7 @@ public:
     m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
   };
 
+  int get_id() const { return m_decomp.get_id(); }
   size_t size_inbox() const { return m_fft.size_inbox(); }
   size_t size_outbox() const { return m_fft.size_outbox(); }
   size_t size_workspace() const { return m_fft.size_workspace(); }
