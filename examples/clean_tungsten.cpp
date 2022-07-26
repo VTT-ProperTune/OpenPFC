@@ -272,16 +272,8 @@ struct Tungsten : PFC::Simulation {
   */
   void prepare_initial_condition(std::array<int, 3> low,
                                  std::array<int, 3> high) {
-    if (n0 != 0) {
-      // we are in the middle of the simulation, let's read results from disk
-      auto filename = results_dir / ("u" + std::to_string(n0) + ".bin");
-      if (me == 0) {
-        std::cout << "Reading results from " << filename << std::endl;
-      }
-      MPI_Read_Data(filename, psi);
-    }
 
-    // calculating approx amplitude. This is related to the phase diagram
+    // Calculating approx amplitude. This is related to the phase diagram
     // calculations.
     const double rho_seed = p.n_sol;
     const double A_phi = 135.0 * p.p4_bar;
@@ -390,52 +382,13 @@ int main(int argc, char *argv[]) {
   T.set_origin(x0, y0, z0);
 
   double t0 = 0.0;
-  double t1 = 200000.0;
+  double t1 = 1.0;
   double dt = 1.0;
-  int n = 0;
-  int nlast = (t1 - t0) / dt;
+  T.set_time(t0, t1, dt);
 
   // define where to store results
   T.set_results_dir(results_dir);
-
-  // we might already have some results in results_dir, let's check that from
-  // the first assumed data file
-  auto first_file = results_dir / ("u" + std::to_string(n) + ".bin");
-  auto last_file = results_dir / ("u" + std::to_string(nlast) + ".bin");
-  if (std::filesystem::exists(first_file)) {
-    if (me == 0)
-      std::cout << "Warning: " << first_file
-                << " found, checking the state of the simulation\n";
-    if (std::filesystem::exists(last_file)) {
-      if (me == 0)
-        std::cout << "Also, assumed last file " << last_file
-                  << " found. This simulation is ready. Exiting.\n";
-      MPI_Finalize();
-      return 0;
-    }
-    while (t0 < t1) {
-      n += 1;
-      t0 += T.get_dt(n, t0);
-      if (T.writeat(n, t0)) {
-        auto file = results_dir / ("u" + std::to_string(n) + ".bin");
-        if (std::filesystem::exists(file)) {
-          if (me == 0)
-            std::cout << "Result file " << file
-                      << " exists, using this as a new starting point for a "
-                         "simulation.\n";
-          T.set_time(t0, t1, dt);
-          nlast = n;
-        }
-      }
-    }
-  }
-  std::cout << T.status_msg << "\n";
-  T.set_step(nlast);
-  if (me == 0) {
-    std::cout << "Starting simulation from time " << T.t0 << " to " << T.t1
-              << " with step size " << T.dt << " and step number " << T.n0
-              << "\n";
-  }
+  T.set_saveat(1.0);
 
   MPI_Solve(T);
 
