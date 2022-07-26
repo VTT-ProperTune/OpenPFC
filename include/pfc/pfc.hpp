@@ -11,7 +11,7 @@
 
 #include <heffte.h>
 
-#include "constants.hpp"
+#include "fft.hpp"
 
 namespace PFC {
 
@@ -20,19 +20,15 @@ template <typename T> size_t sizeof_vec(std::vector<T> &V) {
 }
 
 #define MPI_TAG_TIMING 3
-#define MPI_TAG_INBOX_LOW 4
-#define MPI_TAG_INBOX_HIGH 5
-#define MPI_TAG_OUTBOX_LOW 6
-#define MPI_TAG_OUTBOX_HIGH 7
 
 class Simulation {
 
 public:
   int me = 0;
   int num_ranks = 1;
-  int Lx = 128;
-  int Ly = 128;
-  int Lz = 128;
+  const int Lx;
+  const int Ly;
+  const int Lz;
   double dx = 1.0;
   double dy = 1.0;
   double dz = 1.0;
@@ -49,25 +45,13 @@ public:
   size_t mem_allocated = 0;
   std::filesystem::path results_dir = ".";
 
-  // use additional workspace to make calculation faster, increase memory usage
-  const bool heffte_use_workspace = true;
-  // Pointer to HeFFTe FFT
-  heffte::fft3d_r2c<heffte::backend::fftw> *fft;
-
-  // Temporary workspace to make FFT faster
-  std::vector<std::complex<double>> wrk;
+  FFT fft;
 
   // Data type used for writing subarray
   MPI_Datatype filetype;
 
   // This array is used to measure time during stepping
   std::array<double, 8> timing;
-
-  void set_size(int Lx, int Ly, int Lz) {
-    this->Lx = Lx;
-    this->Ly = Ly;
-    this->Lz = Lz;
-  }
 
   void set_origin(double x0, double y0, double z0) {
     this->x0 = x0;
@@ -90,6 +74,9 @@ public:
   void set_saveat(const double saveat) { saveat_ = saveat; }
   double get_saveat() const { return saveat_; }
 
+  Simulation(const std::array<int, 3> &dims, MPI_Comm comm = MPI_COMM_WORLD)
+      : Lx(dims[0]), Ly(dims[1]), Lz(dims[2]), fft(dims, comm) {}
+
   virtual ~Simulation() {}
 
   virtual double get_dt(int, double) { return dt; }
@@ -100,22 +87,12 @@ public:
 
   std::filesystem::path get_results_dir() { return results_dir; }
 
-  void set_fft(heffte::fft3d_r2c<heffte::backend::fftw> &fft_) { fft = &fft_; }
-
   void fft_r2c(std::vector<double> &A, std::vector<std::complex<double>> &B) {
-    if (heffte_use_workspace) {
-      fft->forward(A.data(), B.data(), wrk.data());
-    } else {
-      fft->forward(A.data(), B.data());
-    }
+    fft.forward(A, B);
   }
 
   void fft_c2r(std::vector<std::complex<double>> &A, std::vector<double> &B) {
-    if (heffte_use_workspace) {
-      fft->backward(A.data(), B.data(), wrk.data(), heffte::scale::full);
-    } else {
-      fft->backward(A.data(), B.data(), heffte::scale::full);
-    }
+    fft.backward(A, B);
   }
 
   void MPI_Read_Data(std::string filename, std::vector<double> &u) {
@@ -198,88 +175,10 @@ void MPI_Solve(Simulation &s) {
               << std::endl;
   }
 
-  /*
-  If the input of an FFT transform consists of all real numbers,
-   the output comes in conjugate pairs which can be exploited to reduce
-   both the floating point operations and MPI communications.
-   Given a global set of indexes, HeFFTe can compute the corresponding DFT
-   and exploit the real-to-complex symmetry by selecting a dimension
-   and reducing the indexes by roughly half (the exact formula is floor(n / 2)
-  + 1).
-   */
-  const int Lx_c = floor(Lx / 2) + 1;
-  // the dimension where the data will shrink
-  const int r2c_direction = 0;
-  // define real doman
-  heffte::box3d<> real_indexes({0, 0, 0}, {Lx - 1, Ly - 1, Lz - 1});
-  // define complex domain
-  heffte::box3d<> complex_indexes({0, 0, 0}, {Lx_c - 1, Ly - 1, Lz - 1});
-
-  // check if the complex indexes have correct dimension
-  assert(real_indexes.r2c(r2c_direction) == complex_indexes);
-
-  // create a processor grid with minimum surface (measured in number of
-  // indexes)
-  auto proc_grid = heffte::proc_setup_min_surface(real_indexes, num_ranks);
-
-  // split all indexes across the processor grid, defines a set of boxes
-  auto real_boxes = heffte::split_world(real_indexes, proc_grid);
-  auto complex_boxes = heffte::split_world(complex_indexes, proc_grid);
-
-  // pick the box corresponding to this rank
-  heffte::box3d<> const inbox = real_boxes[me];
-  heffte::box3d<> const outbox = complex_boxes[me];
-
-  // define the heffte class and the input and output geometry
-  heffte::fft3d_r2c<heffte::backend::fftw> fft(inbox, outbox, r2c_direction,
-                                               comm);
-
-  s.set_fft(fft);
-
-  // *** Report domain decomposition status ***
-  MPI_Send(&(inbox.low), 3, MPI_INT, 0, MPI_TAG_INBOX_LOW, MPI_COMM_WORLD);
-  MPI_Send(&(inbox.high), 3, MPI_INT, 0, MPI_TAG_INBOX_HIGH, MPI_COMM_WORLD);
-  MPI_Send(&(outbox.low), 3, MPI_INT, 0, MPI_TAG_OUTBOX_LOW, MPI_COMM_WORLD);
-  MPI_Send(&(outbox.high), 3, MPI_INT, 0, MPI_TAG_OUTBOX_HIGH, MPI_COMM_WORLD);
-  if (me == 0) {
-    std::cout << "***** DOMAIN DECOMPOSITION STATUS *****" << std::endl;
-    std::cout << "Contructed Fourier transform from REAL to COMPLEX, using "
-                 "real-to-complex symmetry."
-              << std::endl;
-
-    std::cout << "Grid in real space: [" << Lx << ", " << Ly << ", " << Lz
-              << "] (" << real_indexes.count() << " indexes)" << std::endl;
-    std::cout << "Grid in complex space: [" << Lx_c << ", " << Ly << ", " << Lz
-              << "] (" << complex_indexes.count() << " indexes)" << std::endl;
-    std::cout << "Domain is split into " << num_ranks
-              << " parts, with minimum surface processor grid: ["
-              << proc_grid[0] << ", " << proc_grid[1] << ", " << proc_grid[2]
-              << "]" << std::endl;
-    std::array<int, 3> in_low, in_high, out_low, out_high;
-    for (int i = 0; i < num_ranks; i++) {
-      MPI_Recv(&in_low, 3, MPI_INT, i, MPI_TAG_INBOX_LOW, MPI_COMM_WORLD,
-               MPI_STATUS_IGNORE);
-      MPI_Recv(&in_high, 3, MPI_INT, i, MPI_TAG_INBOX_HIGH, MPI_COMM_WORLD,
-               MPI_STATUS_IGNORE);
-      MPI_Recv(&out_low, 3, MPI_INT, i, MPI_TAG_OUTBOX_LOW, MPI_COMM_WORLD,
-               MPI_STATUS_IGNORE);
-      MPI_Recv(&out_high, 3, MPI_INT, i, MPI_TAG_OUTBOX_HIGH, MPI_COMM_WORLD,
-               MPI_STATUS_IGNORE);
-      size_t size_in = (in_high[0] - in_low[0] + 1) *
-                       (in_high[1] - in_low[1] + 1) *
-                       (in_high[2] - in_low[2] + 1);
-      size_t size_out = (out_high[0] - out_low[0] + 1) *
-                        (out_high[1] - out_low[1] + 1) *
-                        (out_high[2] - out_low[2] + 1);
-      std::cout << "MPI Worker " << i << ", [" << in_low[0] << ", "
-                << in_high[0] << "] x [" << in_low[1] << ", " << in_high[1]
-                << "] x [" << in_low[2] << ", " << in_high[2] << "] ("
-                << size_in << " indexes) => [" << out_low[0] << ", "
-                << out_high[0] << "] x [" << out_low[1] << ", " << out_high[1]
-                << "] x [" << out_low[2] << ", " << out_high[2] << "] ("
-                << size_out << " indexes)" << std::endl;
-    }
-  }
+  // inbox and outbox for this particular mpi process
+  auto decomp = s.fft.get_decomposition();
+  auto inbox = decomp.inbox;
+  auto outbox = decomp.outbox;
 
   // *** Create and commit new data type ***
 
@@ -302,13 +201,10 @@ void MPI_Solve(Simulation &s) {
     std::cout << std::endl
               << "***** MEMORY ALLOCATION STATUS *****" << std::endl;
   }
-  s.allocate(fft.size_inbox(), fft.size_outbox());
-  if (s.heffte_use_workspace) {
-    // internal workspace used by HeFFTe to make FFT faster
-    s.wrk.resize(fft.size_workspace());
-  }
+  s.allocate(s.fft.size_inbox(), s.fft.size_outbox());
   const size_t mem_allocated = s.mem_allocated;
-  const size_t mem_allocated_wrk = sizeof_vec(s.wrk);
+  const size_t mem_allocated_wrk =
+      sizeof(std::complex<double>) * s.fft.size_workspace();
   MPI_Send(&mem_allocated, 1, MPI_LONG_INT, 0, 0, MPI_COMM_WORLD);
   MPI_Send(&mem_allocated_wrk, 1, MPI_LONG_INT, 0, 1, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
