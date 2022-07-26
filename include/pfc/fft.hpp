@@ -37,7 +37,10 @@ public:
   size_t size_inbox() const { return m_fft.size_inbox(); }
   size_t size_outbox() const { return m_fft.size_outbox(); }
   size_t size_workspace() const { return m_fft.size_workspace(); }
-  Decomposition get_decomposition() const { return decomp; }
+  Vec3<int> get_inbox_low() const { return m_inbox.low; }
+  Vec3<int> get_inbox_high() const { return m_inbox.high; }
+  Vec3<int> get_outbox_low() const { return m_outbox.low; }
+  Vec3<int> get_outbox_high() const { return m_outbox.high; }
 };
 
 } // namespace PFC
