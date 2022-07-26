@@ -1,11 +1,8 @@
 #pragma once
 
-#include <cstdio>
-#include <iostream>
-
-#include <heffte.h>
-
 #include "constants.hpp"
+#include <heffte.h>
+#include <iostream>
 
 namespace PFC {
 
