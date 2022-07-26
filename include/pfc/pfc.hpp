@@ -175,19 +175,16 @@ void MPI_Solve(Simulation &s) {
               << std::endl;
   }
 
-  // inbox and outbox for this particular mpi process
-  auto decomp = s.fft.get_decomposition();
-  auto inbox = decomp.inbox;
-  auto outbox = decomp.outbox;
-
   // *** Create and commit new data type ***
+  auto inbox_low = s.fft.get_inbox_low();
+  auto inbox_high = s.fft.get_inbox_high();
 
   MPI_Datatype filetype;
   const int size_array[] = {Lx, Ly, Lz};
-  const int subsize_array[] = {inbox.high[0] - inbox.low[0] + 1,
-                               inbox.high[1] - inbox.low[1] + 1,
-                               inbox.high[2] - inbox.low[2] + 1};
-  const int start_array[] = {inbox.low[0], inbox.low[1], inbox.low[2]};
+  const int subsize_array[] = {inbox_high[0] - inbox_low[0] + 1,
+                               inbox_high[1] - inbox_low[1] + 1,
+                               inbox_high[2] - inbox_low[2] + 1};
+  const int start_array[] = {inbox_low[0], inbox_low[1], inbox_low[2]};
   MPI_Type_create_subarray(3, size_array, subsize_array, start_array,
                            MPI_ORDER_FORTRAN, MPI_DOUBLE, &filetype);
   MPI_Type_commit(&filetype);
@@ -244,13 +241,16 @@ void MPI_Solve(Simulation &s) {
     std::cout << "***** INITIALIZE SIMULATION *****" << std::endl;
   }
 
+  auto outbox_low = s.fft.get_outbox_low();
+  auto outbox_high = s.fft.get_outbox_high();
+
   {
     if (me == 0) {
       std::cout << "Preparing operators ... ";
     }
     MPI_Barrier(MPI_COMM_WORLD);
     double t_op = -MPI_Wtime();
-    s.prepare_operators(outbox.low, outbox.high);
+    s.prepare_operators(outbox_low, outbox_high);
     MPI_Barrier(MPI_COMM_WORLD);
     t_op += MPI_Wtime();
     if (me == 0) {
@@ -264,8 +264,8 @@ void MPI_Solve(Simulation &s) {
     }
     MPI_Barrier(MPI_COMM_WORLD);
     double t_init = -MPI_Wtime();
-    s.prepare_initial_condition(inbox.low, inbox.high);
-    s.apply_bc(inbox.low, inbox.high);
+    s.prepare_initial_condition(inbox_low, inbox_high);
+    s.apply_bc(inbox_low, inbox_high);
     MPI_Barrier(MPI_COMM_WORLD);
     t_init += MPI_Wtime();
     if (me == 0) {
@@ -317,7 +317,7 @@ void MPI_Solve(Simulation &s) {
 
     double dt_step = -MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
-    s.apply_bc(inbox.low, inbox.high);
+    s.apply_bc(inbox_low, inbox_high);
     MPI_Barrier(MPI_COMM_WORLD);
     s.step(n, t);
     MPI_Barrier(MPI_COMM_WORLD);
