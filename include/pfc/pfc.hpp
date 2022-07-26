@@ -423,6 +423,7 @@ void MPI_Solve(Simulation &s) {
     s.apply_bc(inbox.low, inbox.high);
     MPI_Barrier(MPI_COMM_WORLD);
     s.step(n, t);
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Send(&(s.timing), 8, MPI_DOUBLE, 0, MPI_TAG_TIMING, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
     dt_step += MPI_Wtime();
