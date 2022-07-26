@@ -69,8 +69,10 @@ struct params {
   double q4_bar = q40_bar;
 };
 
-struct Tungsten : PFC::Simulation {
+class Tungsten : public PFC::Simulation {
+  using PFC::Simulation::Simulation;
 
+public:
   params p;
 
   // we will allocate these arrays later on

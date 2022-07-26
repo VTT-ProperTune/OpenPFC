@@ -217,8 +217,10 @@ struct params {
   const double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
 };
 
-struct Tungsten : PFC::Simulation {
+class Tungsten : public PFC::Simulation {
+  using PFC::Simulation::Simulation;
 
+public:
   params p;
 
   // we will allocate these arrays later on

@@ -25,8 +25,9 @@ template <typename T> size_t sizeof_vec(std::vector<T> &V) {
 #define MPI_TAG_OUTBOX_LOW 6
 #define MPI_TAG_OUTBOX_HIGH 7
 
-struct Simulation {
+class Simulation {
 
+public:
   int me = 0;
   int num_ranks = 1;
   int Lx = 128;
