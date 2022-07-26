@@ -16,6 +16,18 @@ private:
   const std::array<int, 3> proc_grid;
   const std::vector<heffte::box3d<int>> real_boxes, complex_boxes;
 
+  static int get_comm_rank(MPI_Comm comm) {
+    int rank;
+    MPI_Comm_rank(comm, &rank);
+    return rank;
+  }
+
+  static int get_comm_size(MPI_Comm comm) {
+    int size;
+    MPI_Comm_size(comm, &size);
+    return size;
+  }
+
 public:
   const heffte::box3d<int> inbox, outbox;
   Decomposition(const std::array<int, 3> &dims, int id, int tot)
@@ -30,6 +42,9 @@ public:
         outbox(heffte::box3d<int>(complex_boxes[id])) {
     assert(real_indexes.r2c(constants::r2c_direction) == complex_indexes);
   };
+
+  Decomposition(const std::array<int, 3> &dims, MPI_Comm comm = MPI_COMM_WORLD)
+      : Decomposition(dims, get_comm_rank(comm), get_comm_size(comm)) {}
 
   friend std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
     os << "***** DOMAIN DECOMPOSITION STATUS *****\n";
