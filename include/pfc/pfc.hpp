@@ -186,12 +186,10 @@ void MPI_Solve(Simulation &s) {
 
   MPI_Comm comm = MPI_COMM_WORLD;
 
-  int me; // this process rank within the comm
+  int me, num_ranks; // this process rank within the comm
   MPI_Comm_rank(comm, &me);
-  s.me = me;
-
-  int num_ranks; // total number of ranks in the comm
   MPI_Comm_size(comm, &num_ranks);
+  s.me = me;
   s.num_ranks = num_ranks;
 
   if (me == 0) {
