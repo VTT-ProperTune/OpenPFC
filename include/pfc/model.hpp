@@ -36,8 +36,10 @@ public:
   size_t size_outbox() const { return m_fft.size_outbox(); }
   Vec3<int> get_inbox_low() const { return m_fft.get_inbox_low(); }
   Vec3<int> get_inbox_high() const { return m_fft.get_inbox_high(); }
+  Vec3<int> get_inbox_size() const { return m_fft.get_inbox_size(); }
   Vec3<int> get_outbox_low() const { return m_fft.get_outbox_low(); }
   Vec3<int> get_outbox_high() const { return m_fft.get_outbox_high(); }
+  Vec3<int> get_outbox_size() const { return m_fft.get_outbox_size(); }
 
 protected:
   virtual void step(double dt) = 0;
