@@ -36,7 +36,7 @@ public:
   Vec3<int> get_outbox_high() const { return m_fft.get_outbox_high(); }
 
 protected:
-  virtual void step() = 0;
+  virtual void step(double dt) = 0;
   virtual void initialize(double dt) = 0;
   virtual std::vector<double> &get_field() = 0;
 };
