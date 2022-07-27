@@ -155,6 +155,13 @@ void run() {
       cout << "n = " << n << ", t = " << t << ", psi[" << idx
            << "] = " << psi[idx] << endl;
   }
+  if (idx != -1) {
+    if (abs(psi[idx] - 0.5) < 0.01) {
+      cout << "Test pass!" << endl;
+    } else {
+      cerr << "Test failed!" << endl;
+    }
+  }
 }
 
 int main(int argc, char *argv[]) {
