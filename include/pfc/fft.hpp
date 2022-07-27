@@ -39,8 +39,10 @@ public:
   size_t size_workspace() const { return m_fft.size_workspace(); }
   Vec3<int> get_inbox_low() const { return m_inbox.low; }
   Vec3<int> get_inbox_high() const { return m_inbox.high; }
+  Vec3<int> get_inbox_size() const { return m_inbox.size; }
   Vec3<int> get_outbox_low() const { return m_outbox.low; }
   Vec3<int> get_outbox_high() const { return m_outbox.high; }
+  Vec3<int> get_outbox_size() const { return m_outbox.size; }
 };
 
 } // namespace pfc
