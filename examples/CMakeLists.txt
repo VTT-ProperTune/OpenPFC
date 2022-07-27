@@ -10,6 +10,9 @@ target_link_libraries(mpi_timers PRIVATE pfc)
 add_executable(world world.cpp)
 target_link_libraries(world PRIVATE pfc)
 
+add_executable(time time.cpp)
+target_link_libraries(time PRIVATE pfc)
+
 add_executable(clean_tungsten clean_tungsten.cpp)
 target_link_libraries(clean_tungsten PRIVATE pfc)
 
