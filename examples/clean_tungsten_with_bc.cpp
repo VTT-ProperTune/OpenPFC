@@ -5,6 +5,7 @@
 #include <random>
 
 using json = nlohmann::json;
+using namespace pfc;
 
 namespace pfc {
 
@@ -226,8 +227,8 @@ struct params {
 
 enum class initial_condition { single_crystal, random_uniform, regular_grid };
 
-class Tungsten : public PFC::Simulation {
-  using PFC::Simulation::Simulation;
+class Tungsten : public Simulation {
+  using Simulation::Simulation;
 
 private:
   initial_condition initial_condition_ = initial_condition::regular_grid;

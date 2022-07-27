@@ -1,7 +1,7 @@
 #pragma once
 #include <array>
 
-namespace PFC {
+namespace pfc {
 
 template <class T> using Vec3 = std::array<T, 3>;
 

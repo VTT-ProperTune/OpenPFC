@@ -6,7 +6,7 @@
 #include <heffte.h>
 #include <iostream>
 
-namespace PFC {
+namespace pfc {
 
 class FFT {
 
@@ -43,4 +43,4 @@ public:
   Vec3<int> get_outbox_high() const { return m_outbox.high; }
 };
 
-} // namespace PFC
+} // namespace pfc

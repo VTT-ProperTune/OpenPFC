@@ -3,7 +3,7 @@
 #include <pfc/decomposition.hpp>
 
 using namespace std;
-using namespace PFC;
+using namespace pfc;
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);

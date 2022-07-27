@@ -3,7 +3,7 @@
 #include "types.hpp"
 #include "world.hpp"
 
-namespace PFC {
+namespace pfc {
 class Model {
 
 private:
@@ -40,4 +40,4 @@ protected:
   virtual void initialize(double dt) = 0;
   virtual std::vector<double> &get_field() = 0;
 };
-} // namespace PFC
+} // namespace pfc

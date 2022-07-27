@@ -1,7 +1,7 @@
 #include <iostream>
 #include <pfc/world.hpp>
 
-using namespace PFC;
+using namespace pfc;
 using namespace std;
 
 int main() {

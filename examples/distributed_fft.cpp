@@ -3,7 +3,7 @@
 #include <vector>
 
 using namespace std;
-using namespace PFC;
+using namespace pfc;
 
 void print_vec(const vector<double> &v) {
   std::cout << "[";

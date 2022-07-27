@@ -3,6 +3,8 @@
 #include <pfc/pfc.hpp>
 #include <random>
 
+using namespace pfc;
+
 namespace pfc {
 
 class seed {
@@ -217,8 +219,8 @@ struct params {
   const double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
 };
 
-class Tungsten : public PFC::Simulation {
-  using PFC::Simulation::Simulation;
+class Tungsten : public Simulation {
+  using Simulation::Simulation;
 
 public:
   params p;

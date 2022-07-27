@@ -13,7 +13,7 @@
 
 #include "fft.hpp"
 
-namespace PFC {
+namespace pfc {
 
 template <typename T> size_t sizeof_vec(std::vector<T> &V) {
   return V.size() * sizeof(T);
@@ -397,4 +397,4 @@ void MPI_Solve(Simulation &s) {
   }
 }
 
-} // namespace PFC
+} // namespace pfc

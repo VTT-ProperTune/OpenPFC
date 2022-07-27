@@ -4,7 +4,7 @@
 #include <heffte.h>
 #include <iostream>
 
-namespace PFC {
+namespace pfc {
 
 class Decomposition {
 private:
@@ -72,4 +72,4 @@ public:
     return os;
   }
 };
-} // namespace PFC
+} // namespace pfc

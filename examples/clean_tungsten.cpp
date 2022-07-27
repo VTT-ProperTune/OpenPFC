@@ -2,6 +2,8 @@
 
 #include <pfc/pfc.hpp>
 
+using namespace pfc;
+
 struct params {
   // average density of the metastable fluid
   double n0 = -0.4;
@@ -69,8 +71,8 @@ struct params {
   double q4_bar = q40_bar;
 };
 
-class Tungsten : public PFC::Simulation {
-  using PFC::Simulation::Simulation;
+class Tungsten : public Simulation {
+  using Simulation::Simulation;
 
 public:
   params p;

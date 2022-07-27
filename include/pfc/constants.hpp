@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace PFC {
+namespace pfc {
 
 namespace constants {
 
@@ -27,4 +27,4 @@ Do not change this.
 const int r2c_direction = 0;
 
 } // namespace constants
-} // namespace PFC
+} // namespace pfc

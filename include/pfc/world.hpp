@@ -3,7 +3,7 @@
 #include <array>
 #include <iostream>
 
-namespace PFC {
+namespace pfc {
 class World {
 private:
 public:
@@ -24,4 +24,4 @@ public:
     return os;
   };
 };
-} // namespace PFC
+} // namespace pfc

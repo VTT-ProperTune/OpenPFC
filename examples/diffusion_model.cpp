@@ -3,7 +3,7 @@
 #include <pfc/world.hpp>
 
 using namespace std;
-using namespace PFC;
+using namespace pfc;
 
 class Diffusion : public Model {
   using Model::Model;
