@@ -28,8 +28,13 @@ target_link_libraries(diffusion_model PRIVATE pfc)
 add_executable(clean_tungsten_multiple_seeds clean_tungsten_multiple_seeds.cpp)
 target_link_libraries(clean_tungsten_multiple_seeds PRIVATE pfc)
 
+# https://github.com/nlohmann/json#cmake
+include(FetchContent)
+FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
+FetchContent_MakeAvailable(json)
+
 add_executable(clean_tungsten_with_bc clean_tungsten_with_bc.cpp)
-target_link_libraries(clean_tungsten_with_bc PRIVATE pfc)
+target_link_libraries(clean_tungsten_with_bc PRIVATE pfc nlohmann_json::nlohmann_json)
 
 add_executable(json_read json_read.cpp)
-target_link_libraries(json_read PRIVATE pfc)
+target_link_libraries(json_read PRIVATE nlohmann_json::nlohmann_json)
