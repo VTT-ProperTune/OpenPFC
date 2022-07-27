@@ -1,5 +1,7 @@
 #include "diffusion_model.hpp"
 #include <iostream>
+#include <memory>
+#include <pfc/results_writer.hpp>
 #include <pfc/simulator.hpp>
 #include <pfc/time.hpp>
 
@@ -52,7 +54,11 @@ void run() {
 
   World world = make_world();
   Time time = make_time();
+  time.set_saveat(1.0);
   Simulator<Diffusion> S(world, time);
+
+  // write results to binary file
+  S.add_results_writer(make_unique<BinaryWriter>("diffusion_%04d.bin"));
 
   print_stats(S);
   while (!(S.done())) {

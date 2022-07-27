@@ -1,8 +1,10 @@
 #pragma once
 
 #include "model.hpp"
+#include "results_writer.hpp"
 #include "time.hpp"
 #include "world.hpp"
+#include <memory>
 
 namespace pfc {
 
@@ -11,6 +13,8 @@ private:
   Model m_model;
   World m_world;
   Time m_time;
+  std::vector<std::unique_ptr<ResultsWriter>> m_result_writers;
+  int m_result_counter = 0;
 
 public:
   Simulator(const World &world, const Time &time)
@@ -22,10 +26,37 @@ public:
   bool done() const { return m_time.done(); }
   int get_increment() const { return m_time.get_increments(); }
   double get_time() const { return m_time.get_current(); }
+  bool is_first_increment() const { return get_increment() == 0; }
+
+  void add_results_writer(std::unique_ptr<ResultsWriter> writer) {
+    writer->set_domain(m_world.get_size(), m_model.get_inbox_size(),
+                       m_model.get_inbox_low());
+    m_result_writers.push_back(std::move(writer));
+  }
+
+  void write_results(int filenum) {
+    Model &m = get_model();
+    std::vector<double> &field = m.get_field();
+    for (const auto &writer : m_result_writers) {
+      writer->write(filenum, field);
+    }
+  }
+
+  void prestep_first_increment() {
+    if (m_time.do_save()) {
+      write_results(m_result_counter++);
+    }
+  }
 
   void step() {
+    if (is_first_increment()) {
+      prestep_first_increment();
+    }
     m_time.next();
     m_model.step(m_time.get_dt());
+    if (m_time.do_save()) {
+      write_results(m_result_counter++);
+    }
     return;
   }
 };
