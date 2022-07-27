@@ -19,6 +19,10 @@ public:
       : m_world(dimensions, origo, discretization), m_fft(dimensions, comm),
         id(m_fft.get_id()), master(id == 0) {}
 
+  Model(const World &world, MPI_Comm comm = MPI_COMM_WORLD)
+      : Model({world.Lx, world.Ly, world.Lz}, {world.x0, world.y0, world.z0},
+              {world.dx, world.dy, world.dz}, comm) {}
+
   void fft_r2c(std::vector<double> &A, std::vector<std::complex<double>> &B) {
     m_fft.forward(A, B);
   }
