@@ -25,6 +25,9 @@ target_link_libraries(decomposition_with_mpi PRIVATE pfc)
 add_executable(distributed_fft distributed_fft.cpp)
 target_link_libraries(distributed_fft PRIVATE pfc)
 
+add_executable(write_results write_results.cpp)
+target_link_libraries(write_results PRIVATE pfc)
+
 add_executable(diffusion_model diffusion_model.cpp)
 target_link_libraries(diffusion_model PRIVATE pfc)
 
