@@ -37,6 +37,9 @@ target_link_libraries(diffusion_model PRIVATE pfc)
 add_executable(diffusion_model_with_simulator diffusion_model_with_simulator.cpp)
 target_link_libraries(diffusion_model_with_simulator PRIVATE pfc)
 
+add_executable(diffusion_model_with_custom_initial_condition diffusion_model_with_custom_initial_condition.cpp)
+target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE pfc)
+
 add_executable(clean_tungsten_multiple_seeds clean_tungsten_multiple_seeds.cpp)
 target_link_libraries(clean_tungsten_multiple_seeds PRIVATE pfc)
 
