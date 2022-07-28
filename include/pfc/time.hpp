@@ -11,9 +11,11 @@ private:
   double m_saveat;
 
 public:
-  Time(const std::array<double, 3> &time)
+  Time(const std::array<double, 3> &time, double saveat)
       : m_t0(time[0]), m_t1(time[1]), m_dt(time[2]), m_increments(0),
-        m_saveat(m_dt) {}
+        m_saveat(saveat) {}
+
+  Time(const std::array<double, 3> &time) : Time(time, time[2]) {}
 
   double get_t0() const { return m_t0; }
   double get_t1() const { return m_t1; }
