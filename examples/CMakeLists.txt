@@ -16,6 +16,9 @@ target_link_libraries(time PRIVATE pfc)
 add_executable(clean_tungsten clean_tungsten.cpp)
 target_link_libraries(clean_tungsten PRIVATE pfc)
 
+add_executable(clean_tungsten_with_simulator clean_tungsten_with_simulator.cpp)
+target_link_libraries(clean_tungsten_with_simulator PRIVATE pfc)
+
 add_executable(decomposition decomposition.cpp)
 target_link_libraries(decomposition PRIVATE pfc)
 
