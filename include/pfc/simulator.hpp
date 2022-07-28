@@ -1,5 +1,6 @@
 #pragma once
 
+#include "field_modifier.hpp"
 #include "model.hpp"
 #include "results_writer.hpp"
 #include "time.hpp"
@@ -9,11 +10,13 @@
 namespace pfc {
 
 template <class Model> class Simulator {
+
 private:
   Model m_model;
   World m_world;
   Time m_time;
   std::vector<std::unique_ptr<ResultsWriter>> m_result_writers;
+  std::vector<std::unique_ptr<FieldModifier>> m_initial_conditions;
   int m_result_counter = 0;
 
 public:
@@ -34,6 +37,10 @@ public:
     m_result_writers.push_back(std::move(writer));
   }
 
+  void add_initial_conditions(std::unique_ptr<FieldModifier> modifier) {
+    m_initial_conditions.push_back(std::move(modifier));
+  }
+
   void write_results(int filenum) {
     Model &m = get_model();
     std::vector<double> &field = m.get_field();
@@ -43,6 +50,9 @@ public:
   }
 
   void prestep_first_increment() {
+    for (const auto &modifier : m_initial_conditions) {
+      modifier->apply(get_model(), get_model().get_field(), get_time());
+    }
     if (m_time.do_save()) {
       write_results(m_result_counter++);
     }
