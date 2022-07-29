@@ -1,6 +1,7 @@
 #pragma once
 
 #include "constants.hpp"
+#include "world.hpp"
 #include <heffte.h>
 #include <iostream>
 
@@ -26,7 +27,9 @@ private:
   }
 
 public:
-  const heffte::box3d<int> inbox, outbox;
+  const heffte::box3d<int> world, inbox, outbox;
+  const int r2c_direction = constants::r2c_direction;
+
   Decomposition(const std::array<int, 3> &dims, int id, int tot)
       : Lx(dims[0]), Lx_c(floor(Lx / 2) + 1), Ly(dims[1]), Ly_c(Ly),
         Lz(dims[2]), Lz_c(Lz), id(id), tot(tot),
@@ -35,13 +38,18 @@ public:
         proc_grid(heffte::proc_setup_min_surface(real_indexes, tot)),
         real_boxes(heffte::split_world(real_indexes, proc_grid)),
         complex_boxes(heffte::split_world(complex_indexes, proc_grid)),
+        world(heffte::box3d<int>({0, 0, 0}, {Lx, Ly, Lz})),
         inbox(heffte::box3d<int>(real_boxes[id])),
         outbox(heffte::box3d<int>(complex_boxes[id])) {
-    assert(real_indexes.r2c(constants::r2c_direction) == complex_indexes);
+    assert(real_indexes.r2c(r2c_direction) == complex_indexes);
   };
 
-  Decomposition(const std::array<int, 3> &dims, MPI_Comm comm = MPI_COMM_WORLD)
-      : Decomposition(dims, get_comm_rank(comm), get_comm_size(comm)) {}
+  Decomposition(const World &world, MPI_Comm comm)
+      : Decomposition(world.get_size(), get_comm_rank(comm),
+                      get_comm_size(comm)) {}
+
+  Decomposition(const Decomposition &) = delete;
+  Decomposition &operator=(Decomposition &) = delete;
 
   int get_id() const { return id; }
 
