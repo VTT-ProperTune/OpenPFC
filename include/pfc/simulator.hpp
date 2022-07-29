@@ -56,10 +56,9 @@ public:
 
   void prestep_first_increment() {
     Model &model = get_model();
-    Field &field = get_field();
     Time &time = get_time();
     for (const auto &modifier : m_initial_conditions) {
-      modifier->apply(model, field, time.get_current());
+      modifier->apply(model, time.get_current());
     }
     if (m_time.do_save()) {
       write_results(m_result_counter++);

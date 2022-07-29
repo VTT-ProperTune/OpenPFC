@@ -40,12 +40,13 @@ private:
 public:
   Gaussian(double D) : m_D(D) {}
 
-  void apply(Model &m, Field &f, double t) override {
+  void apply(Model &m, double t) override {
     if (m.rank0) {
       cout << "Applying custom initial condition at time " << t << endl;
     }
     World &w = m.get_world();
     Decomposition &d = m.get_decomposition();
+    Field &f = m.get_field();
     auto low = d.inbox.low;
     auto high = d.inbox.high;
     long int idx = 0;
