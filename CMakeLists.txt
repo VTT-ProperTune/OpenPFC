@@ -22,7 +22,7 @@ option(BUILD_SHARED_LIBS "Builds shared libraries using CMake conventions" OFF)
 
 option(ENABLE_CLANG_TIDY "Enable clang-tidy static code analysis" OFF)
 
-if (ENABLE_CLANG_TIDY)
+if(ENABLE_CLANG_TIDY)
   set(CMAKE_CXX_CLANG_TIDY clang-tidy)
 endif()
 
@@ -33,4 +33,5 @@ add_library(pfc INTERFACE)
 target_include_directories(pfc INTERFACE include/)
 target_link_libraries(pfc INTERFACE Heffte MPI::MPI_CXX)
 
+add_subdirectory(apps)
 add_subdirectory(examples)
