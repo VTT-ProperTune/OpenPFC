@@ -22,9 +22,6 @@ target_link_libraries(clean_tungsten_with_simulator PRIVATE pfc)
 add_executable(decomposition decomposition.cpp)
 target_link_libraries(decomposition PRIVATE pfc)
 
-add_executable(decomposition_with_mpi decomposition_with_mpi.cpp)
-target_link_libraries(decomposition_with_mpi PRIVATE pfc)
-
 add_executable(distributed_fft distributed_fft.cpp)
 target_link_libraries(distributed_fft PRIVATE pfc)
 
