@@ -27,7 +27,7 @@ public:
         proc_grid(heffte::proc_setup_min_surface(real_indexes, tot)),
         real_boxes(heffte::split_world(real_indexes, proc_grid)),
         complex_boxes(heffte::split_world(complex_indexes, proc_grid)),
-        world(heffte::box3d<int>({0, 0, 0}, {Lx, Ly, Lz})),
+        world(heffte::box3d<int>({0, 0, 0}, {Lx - 1, Ly - 1, Lz - 1})),
         inbox(heffte::box3d<int>(real_boxes[id])),
         outbox(heffte::box3d<int>(complex_boxes[id])) {
     assert(real_indexes.r2c(r2c_direction) == complex_indexes);
