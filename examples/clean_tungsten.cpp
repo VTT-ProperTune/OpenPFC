@@ -1,6 +1,4 @@
-// heFFTe implementation of pfc code
-
-#include <pfc/pfc.hpp>
+#include <pfc/deprecated.hpp>
 
 using namespace pfc;
 

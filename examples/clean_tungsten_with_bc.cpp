@@ -1,7 +1,5 @@
-// heFFTe implementation of pfc code
-
 #include <nlohmann/json.hpp>
-#include <pfc/pfc.hpp>
+#include <pfc/deprecated.hpp>
 #include <random>
 
 using json = nlohmann::json;
