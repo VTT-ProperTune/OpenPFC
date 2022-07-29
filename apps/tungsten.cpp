@@ -198,73 +198,9 @@ public:
     }
   }
 
-  /*
-  Initial condition is defined here
-  */
-  void prepare_initial_condition() {
-
-    World w = get_world();
-    Decomposition &decomp = get_decomposition();
-
-    std::array<int, 3> low = decomp.inbox.low;
-    std::array<int, 3> high = decomp.inbox.high;
-    auto dx = w.dx;
-    auto dy = w.dy;
-    auto dz = w.dz;
-    auto x0 = w.x0;
-    auto y0 = w.y0;
-    auto z0 = w.z0;
-
-    // Calculating approx amplitude. This is related to the phase diagram
-    // calculations.
-    double rho_seed = p.n_sol;
-    double A_phi = 135.0 * p.p4_bar;
-    double B_phi = 16.0 * p.p3_bar + 48.0 * p.p4_bar * rho_seed;
-    double C_phi = -6.0 * (p.Bx * exp(-p.T / p.T0)) + 6.0 * p.p2_bar +
-                   12.0 * p.p3_bar * rho_seed +
-                   18.0 * p.p4_bar * pow(rho_seed, 2);
-    double d = std::abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
-    double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
-
-    double s = 1.0 / sqrt(2.0);
-    std::array<double, 3> q1 = {s, s, 0};
-    std::array<double, 3> q2 = {s, 0, s};
-    std::array<double, 3> q3 = {0, s, s};
-    std::array<double, 3> q4 = {s, 0, -s};
-    std::array<double, 3> q5 = {s, -s, 0};
-    std::array<double, 3> q6 = {0, s, -s};
-    std::array<std::array<double, 3>, 6> q = {q1, q2, q3, q4, q5, q6};
-
-    long int idx = 0;
-    // double r2 = pow(0.2 * (Lx * dx), 2);
-    double r2 = pow(64.0, 2);
-    double u;
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          double x = x0 + i * dx;
-          double y = y0 + j * dy;
-          double z = z0 + k * dz;
-          bool seedmask = x * x + y * y + z * z < r2;
-          if (!seedmask) {
-            u = p.n0;
-          } else {
-            u = rho_seed;
-            for (int i = 0; i < 6; i++) {
-              u += 2.0 * amp_eq * cos(q[i][0] * x + q[i][1] * y + q[i][2] * z);
-            }
-          }
-          psi[idx] = u;
-          idx += 1;
-        }
-      }
-    }
-  }
-
   void initialize(double dt) override {
     allocate();
     prepare_operators(dt);
-    // prepare_initial_condition();
   }
 
   void step(double) override {
