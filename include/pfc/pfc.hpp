@@ -75,7 +75,8 @@ public:
   double get_saveat() const { return saveat_; }
 
   Simulation(const std::array<int, 3> &dims, MPI_Comm comm = MPI_COMM_WORLD)
-      : Lx(dims[0]), Ly(dims[1]), Lz(dims[2]), fft(dims, comm) {}
+      : Lx(dims[0]), Ly(dims[1]), Lz(dims[2]),
+        fft(Decomposition(World(dims), comm), comm) {}
 
   virtual ~Simulation() {}
 
@@ -175,10 +176,11 @@ void MPI_Solve(Simulation &s) {
               << std::endl;
   }
 
-  // *** Create and commit new data type ***
-  auto inbox_low = s.fft.get_inbox_low();
-  auto inbox_high = s.fft.get_inbox_high();
+  const Decomposition &decomp = s.fft.get_decomposition();
+  auto inbox_low = decomp.inbox.low;
+  auto inbox_high = decomp.inbox.high;
 
+  // *** Create and commit new data type ***
   MPI_Datatype filetype;
   const int size_array[] = {Lx, Ly, Lz};
   const int subsize_array[] = {inbox_high[0] - inbox_low[0] + 1,
@@ -241,8 +243,8 @@ void MPI_Solve(Simulation &s) {
     std::cout << "***** INITIALIZE SIMULATION *****" << std::endl;
   }
 
-  auto outbox_low = s.fft.get_outbox_low();
-  auto outbox_high = s.fft.get_outbox_high();
+  auto outbox_low = decomp.outbox.low;
+  auto outbox_high = decomp.outbox.high;
 
   {
     if (me == 0) {
