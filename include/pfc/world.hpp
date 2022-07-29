@@ -17,7 +17,11 @@ public:
         y0(origo[1]), z0(origo[2]), dx(discretization[0]),
         dy(discretization[1]), dz(discretization[2]) {}
 
-  std::array<int, 3> get_size() const { return std::array<int, 3>{Lx, Ly, Lz}; }
+  World(const Vec3<int> &dimensions)
+      : World(dimensions, Vec3<double>{0.0, 0.0, 0.0},
+              Vec3<double>{1.0, 1.0, 1.0}) {}
+
+  Vec3<int> get_size() const { return Vec3<int>{Lx, Ly, Lz}; }
 
   friend std::ostream &operator<<(std::ostream &os, const World &w) {
     os << "(Lx = " << w.Lx << ", Ly = " << w.Ly << ", Lz = " << w.Lz;
