@@ -345,7 +345,7 @@ public:
     timing[0] += MPI_Wtime();
   }
 
-  std::vector<double> &get_field() {
+  Field &get_field() {
     return psi;
   }
 
