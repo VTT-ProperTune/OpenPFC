@@ -22,14 +22,6 @@ public:
 
 protected:
   std::string m_filename;
-
-  static std::string format(const std::string &filename, int increment) {
-    if (filename.find('%') != std::string::npos) {
-      return utils::string_format(filename, increment);
-    } else {
-      return filename;
-    }
-  }
 };
 
 class BinaryWriter : public ResultsWriter {
@@ -50,7 +42,7 @@ public:
 
   MPI_Status write(int increment, const std::vector<double> &data) {
     MPI_File fh;
-    std::string filename2 = format(m_filename, increment);
+    std::string filename2 = utils::format_with_number(m_filename, increment);
     MPI_File_open(MPI_COMM_WORLD, filename2.c_str(),
                   MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
     MPI_Offset filesize = 0;

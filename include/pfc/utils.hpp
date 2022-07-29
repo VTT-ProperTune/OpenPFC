@@ -20,6 +20,14 @@ std::string string_format(const std::string &format, Args... args) {
   return std::string(buf.get(),
                      buf.get() + size - 1); // We don't want the '\0' inside
 }
+
+std::string format_with_number(const std::string &filename, int increment) {
+  if (filename.find('%') != std::string::npos) {
+    return utils::string_format(filename, increment);
+  } else {
+    return filename;
+  }
+}
 } // namespace utils
 
 namespace mpi {
