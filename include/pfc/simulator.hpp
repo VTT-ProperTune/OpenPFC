@@ -9,31 +9,37 @@
 
 namespace pfc {
 
-template <class Model> class Simulator {
+class Simulator {
 
 private:
-  Model m_model;
-  World m_world;
-  Time m_time;
+  World &m_world;
+  Decomposition &m_decomposition;
+  FFT &m_fft;
+  Model &m_model;
+  Time &m_time;
+
   std::vector<std::unique_ptr<ResultsWriter>> m_result_writers;
   std::vector<std::unique_ptr<FieldModifier>> m_initial_conditions;
   int m_result_counter = 0;
 
 public:
-  Simulator(const World &world, const Time &time)
-      : m_model(world), m_world(world), m_time(time) {
+  Simulator(World &world, Decomposition &decomposition, FFT &fft, Model &model,
+            Time &time)
+      : m_world(world), m_decomposition(decomposition), m_fft(fft),
+        m_model(model), m_time(time) {
     m_model.initialize(m_time.get_dt());
   }
 
+  World &get_world() { return m_world; }
+  Decomposition &get_decomposition() { return m_decomposition; }
+  FFT &get_fft() { return m_fft; }
   Model &get_model() { return m_model; }
-  bool done() const { return m_time.done(); }
-  int get_increment() const { return m_time.get_increments(); }
-  double get_time() const { return m_time.get_current(); }
-  bool is_first_increment() const { return get_increment() == 0; }
+  Time &get_time() { return m_time; }
+  Field &get_field() { return get_model().get_field(); }
 
   void add_results_writer(std::unique_ptr<ResultsWriter> writer) {
-    writer->set_domain(m_world.get_size(), m_model.get_inbox_size(),
-                       m_model.get_inbox_low());
+    Decomposition &d = get_decomposition();
+    writer->set_domain(d.world.size, d.inbox.size, d.inbox.low);
     m_result_writers.push_back(std::move(writer));
   }
 
@@ -41,17 +47,19 @@ public:
     m_initial_conditions.push_back(std::move(modifier));
   }
 
-  void write_results(int filenum) {
-    Model &m = get_model();
-    std::vector<double> &field = m.get_field();
+  void write_results(int file_num) {
+    Field &field = get_field();
     for (const auto &writer : m_result_writers) {
-      writer->write(filenum, field);
+      writer->write(file_num, field);
     }
   }
 
   void prestep_first_increment() {
+    Model &model = get_model();
+    Field &field = get_field();
+    Time &time = get_time();
     for (const auto &modifier : m_initial_conditions) {
-      modifier->apply(get_model(), get_model().get_field(), get_time());
+      modifier->apply(model, field, time.get_current());
     }
     if (m_time.do_save()) {
       write_results(m_result_counter++);
@@ -59,15 +67,22 @@ public:
   }
 
   void step() {
-    if (is_first_increment()) {
+    Time &time = get_time();
+    Model &model = get_model();
+    if (time.get_increment() == 0) {
       prestep_first_increment();
     }
-    m_time.next();
-    m_model.step(m_time.get_dt());
-    if (m_time.do_save()) {
+    time.next();
+    model.step(time.get_dt());
+    if (time.do_save()) {
       write_results(m_result_counter++);
     }
     return;
+  }
+
+  bool done() {
+    Time &time = get_time();
+    return time.done();
   }
 };
 
