@@ -26,6 +26,8 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const World &w) {
     os << "(Lx = " << w.Lx << ", Ly = " << w.Ly << ", Lz = " << w.Lz;
     os << ", x0 = " << w.x0 << ", y0 = " << w.y0 << ", z0 = " << w.z0;
+    os << ", x1 = " << w.x0 + w.Lx * w.dx << ", y1 = " << w.y0 + w.Ly * w.dy
+       << ", z0 = " << w.z0 + w.Lz * w.dz;
     os << ", dx = " << w.dx << ", dy = " << w.dy << ", dz = " << w.dz << ")";
     return os;
   };
