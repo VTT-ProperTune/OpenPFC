@@ -12,12 +12,9 @@
 #include <heffte.h>
 
 #include "fft.hpp"
+#include "utils.hpp"
 
 namespace pfc {
-
-template <typename T> size_t sizeof_vec(std::vector<T> &V) {
-  return V.size() * sizeof(T);
-}
 
 #define MPI_TAG_TIMING 3
 

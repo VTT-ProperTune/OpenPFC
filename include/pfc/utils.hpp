@@ -4,6 +4,7 @@
 #include <mpi.h>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace pfc {
 namespace utils {
@@ -28,6 +29,11 @@ std::string format_with_number(const std::string &filename, int increment) {
     return filename;
   }
 }
+
+template <typename T> size_t sizeof_vec(std::vector<T> &V) {
+  return V.size() * sizeof(T);
+}
+
 } // namespace utils
 
 namespace mpi {
