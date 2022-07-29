@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <mpi.h>
 #include <stdexcept>
 #include <string>
 
