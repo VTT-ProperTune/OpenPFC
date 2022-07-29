@@ -20,4 +20,21 @@ std::string string_format(const std::string &format, Args... args) {
                      buf.get() + size - 1); // We don't want the '\0' inside
 }
 } // namespace utils
+
+namespace mpi {
+
+int get_comm_rank(MPI_Comm comm) {
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  return rank;
+}
+
+int get_comm_size(MPI_Comm comm) {
+  int size;
+  MPI_Comm_size(comm, &size);
+  return size;
+}
+
+} // namespace mpi
+
 } // namespace pfc

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "constants.hpp"
+#include "utils.hpp"
 #include "world.hpp"
 #include <heffte.h>
 #include <iostream>
@@ -13,18 +14,6 @@ private:
   const heffte::box3d<int> real_indexes, complex_indexes;
   const std::array<int, 3> proc_grid;
   const std::vector<heffte::box3d<int>> real_boxes, complex_boxes;
-
-  static int get_comm_rank(MPI_Comm comm) {
-    int rank;
-    MPI_Comm_rank(comm, &rank);
-    return rank;
-  }
-
-  static int get_comm_size(MPI_Comm comm) {
-    int size;
-    MPI_Comm_size(comm, &size);
-    return size;
-  }
 
 public:
   const heffte::box3d<int> world, inbox, outbox;
@@ -45,8 +34,8 @@ public:
   };
 
   Decomposition(const World &world, MPI_Comm comm)
-      : Decomposition(world.get_size(), get_comm_rank(comm),
-                      get_comm_size(comm)) {}
+      : Decomposition(world.get_size(), mpi::get_comm_rank(comm),
+                      mpi::get_comm_size(comm)) {}
 
   Decomposition(const Decomposition &) = delete;
   Decomposition &operator=(Decomposition &) = delete;
