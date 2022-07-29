@@ -25,6 +25,6 @@ public:
   /* methods that need to override for concrete implementations */
   virtual void step(double dt) = 0;
   virtual void initialize(double dt) = 0;
-  virtual std::vector<double> &get_field() = 0;
+  virtual Field &get_field() = 0;
 };
 } // namespace pfc
