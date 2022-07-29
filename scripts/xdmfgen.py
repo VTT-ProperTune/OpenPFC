@@ -79,6 +79,7 @@ def cli():
     parser.add_argument("--dy", type=float)
     parser.add_argument("--dz", type=float)
     parser.add_argument("--dt", type=float)
+    parser.add_argument("--saveat", type=float, default=1.0)
     return vars(parser.parse_args())
 
 
