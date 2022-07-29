@@ -11,16 +11,15 @@ namespace pfc {
 class FFT {
 
 private:
-  const Decomposition m_decomp;
-  const heffte::box3d<int> m_inbox, m_outbox;
+  const Decomposition &m_decomposition;
   const heffte::fft3d_r2c<heffte::backend::fftw> m_fft;
   std::vector<std::complex<double>> m_wrk;
 
 public:
-  FFT(const Vec3<int> &dims, MPI_Comm comm = MPI_COMM_WORLD)
-      : m_decomp({dims, comm}), m_inbox(m_decomp.inbox),
-        m_outbox(m_decomp.outbox),
-        m_fft({m_inbox, m_outbox, constants::r2c_direction, comm}),
+  FFT(const Decomposition &decomposition, MPI_Comm comm)
+      : m_decomposition(decomposition),
+        m_fft({m_decomposition.inbox, m_decomposition.outbox,
+               m_decomposition.r2c_direction, comm}),
         m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())){};
 
   void forward(std::vector<double> &in,
@@ -33,16 +32,10 @@ public:
     m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
   };
 
-  int get_id() const { return m_decomp.get_id(); }
+  const Decomposition &get_decomposition() { return m_decomposition; }
   size_t size_inbox() const { return m_fft.size_inbox(); }
   size_t size_outbox() const { return m_fft.size_outbox(); }
   size_t size_workspace() const { return m_fft.size_workspace(); }
-  Vec3<int> get_inbox_low() const { return m_inbox.low; }
-  Vec3<int> get_inbox_high() const { return m_inbox.high; }
-  Vec3<int> get_inbox_size() const { return m_inbox.size; }
-  Vec3<int> get_outbox_low() const { return m_outbox.low; }
-  Vec3<int> get_outbox_high() const { return m_outbox.high; }
-  Vec3<int> get_outbox_size() const { return m_outbox.size; }
 };
 
 } // namespace pfc
