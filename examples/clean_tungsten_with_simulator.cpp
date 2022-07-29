@@ -52,7 +52,11 @@ void run(int Lx, int Ly, int Lz, filesystem::path results_dir) {
   double x0 = -0.5 * Lx * dx;
   double y0 = -0.5 * Ly * dy;
   double z0 = -0.5 * Lz * dz;
+
   World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  Decomposition decomposition(world, MPI_COMM_WORLD);
+  FFT fft(decomposition, MPI_COMM_WORLD);
+  Tungsten model(world, decomposition, fft);
 
   // make time
   double t0 = 0.0;
@@ -62,13 +66,13 @@ void run(int Lx, int Ly, int Lz, filesystem::path results_dir) {
   Time time({t0, t1, dt}, saveat);
 
   // make simulator and add results writer
-  Simulator<Tungsten> S(world, time);
-  S.add_results_writer(
+  Simulator simulator(world, decomposition, fft, model, time);
+  simulator.add_results_writer(
       make_unique<BinaryWriter>(results_dir / "tungsten_%04d.bin"));
 
   // run loops
-  while (!S.done()) {
-    S.step();
+  while (!simulator.done()) {
+    simulator.step();
   }
 }
 

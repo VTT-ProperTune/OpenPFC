@@ -8,38 +8,19 @@
 
 using namespace std;
 
-void print_stats(Simulator<Diffusion> &S) {
+void print_stats(Simulator &simulator) {
   // we can still access the model:
-  auto &M = S.get_model();
-  auto &psi = M.get_field();
-  int idx = M.get_midpoint_idx();
+  auto &model = dynamic_cast<Diffusion &>(simulator.get_model());
+  auto &field = simulator.get_field();
+  auto &time = simulator.get_time();
+  int idx = model.get_midpoint_idx();
   if (idx == -1) return;
-  cout << "n = " << S.get_increment() << ", t = " << S.get_time() << ", psi["
-       << idx << "] = " << psi[idx] << endl;
+  cout << "n = " << time.get_increment() << ", t = " << time.get_current()
+       << ", psi[" << idx << "] = " << field[idx] << endl;
 }
 
-World make_world() {
-  int Lx = 64;
-  int Ly = Lx;
-  int Lz = Lx;
-  double dx = 2.0 * constants::pi / 8.0;
-  double dy = dx;
-  double dz = dx;
-  double x0 = -0.5 * Lx * dx;
-  double y0 = -0.5 * Ly * dy;
-  double z0 = -0.5 * Lz * dz;
-  return World({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
-}
-
-Time make_time() {
-  double t0 = 0.0;
-  double t1 = 0.5874010519681994;
-  double dt = (t1 - t0) / 42;
-  return Time({t0, t1, dt});
-}
-
-void run_test(Simulator<Diffusion> &S) {
-  auto &model = S.get_model();
+void run_test(Simulator &simulator) {
+  auto &model = dynamic_cast<Diffusion &>(simulator.get_model());
   auto idx = model.get_midpoint_idx();
   if (idx != -1) {
     auto &field = model.get_field();
@@ -60,12 +41,13 @@ public:
   Gaussian(double D) : m_D(D) {}
 
   void apply(Model &m, Field &f, double t) override {
-    if (m.id == 0) {
+    if (m.rank0) {
       cout << "Applying custom initial condition at time " << t << endl;
     }
-    auto low = m.get_inbox_low();
-    auto high = m.get_inbox_high();
-    auto w = m.get_world();
+    World &w = m.get_world();
+    Decomposition &d = m.get_decomposition();
+    auto low = d.inbox.low;
+    auto high = d.inbox.high;
     long int idx = 0;
 
     for (int k = low[2]; k <= high[2]; k++) {
@@ -84,18 +66,36 @@ public:
 
 void run() {
 
-  World world = make_world();
-  Time time = make_time();
-  Simulator<Diffusion> S(world, time);
-  S.add_initial_conditions(make_unique<Gaussian>(1.0));
+  int Lx = 64, Ly = Lx, Lz = Lx;
+  double dx = 2.0 * constants::pi / 8.0, dy = dx, dz = dx;
+  double x0 = -0.5 * Lx * dx;
+  double y0 = -0.5 * Ly * dy;
+  double z0 = -0.5 * Lz * dz;
+  Vec3<int> dimensions{Lx, Ly, Lz};
+  Vec3<double> origo{x0, y0, z0};
+  Vec3<double> discretization{dx, dy, dz};
+  World world(dimensions, origo, discretization);
 
-  print_stats(S);
-  while (!(S.done())) {
-    S.step();
-    print_stats(S);
+  double t0 = 0.0;
+  double t1 = 0.5874010519681994;
+  double dt = (t1 - t0) / 42;
+  double saveat = 1.0;
+  Vec3<double> tspan{t0, t1, dt};
+  Time time(tspan, saveat);
+
+  MPI_Comm comm = MPI_COMM_WORLD;
+  Decomposition decomposition(world, comm);
+  FFT fft(decomposition, comm);
+  Diffusion model(world, decomposition, fft);
+  Simulator simulator(world, decomposition, fft, model, time);
+
+  print_stats(simulator);
+  while (!simulator.done()) {
+    simulator.step();
+    print_stats(simulator);
   }
 
-  run_test(S);
+  run_test(simulator);
 }
 
 int main(int argc, char *argv[]) {

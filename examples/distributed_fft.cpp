@@ -46,10 +46,14 @@ int main(int argc, char *argv[]) {
 
   MPI_Init(&argc, &argv);
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
+  int rank, num_procs;
   MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &num_procs);
 
-  FFT fft({8, 1, 1});
+  World world({8, 1, 1});
+  Decomposition decomposition(world, comm);
+  FFT fft(decomposition, comm);
+
   vector<double> in(fft.size_inbox());
   vector<complex<double>> out(fft.size_outbox());
   for (int i = 0, N = in.size(); i < N; i++) {

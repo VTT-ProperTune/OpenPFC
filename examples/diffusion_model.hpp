@@ -16,17 +16,19 @@ private:
 
 public:
   void initialize(double dt) override {
-    psi.resize(size_inbox());
-    psi_F.resize(size_outbox());
-    opL.resize(size_outbox());
 
-    World w = get_world();
-    if (master) cout << "World: " << w << endl;
+    World &w = get_world();
+    FFT &fft = get_fft();
+    Decomposition &decomp = get_decomposition();
 
-    Vec3<int> i_low = get_inbox_low();
-    Vec3<int> i_high = get_inbox_high();
-    Vec3<int> o_low = get_outbox_low();
-    Vec3<int> o_high = get_outbox_high();
+    psi.resize(fft.size_inbox());
+    psi_F.resize(fft.size_outbox());
+    opL.resize(fft.size_outbox());
+
+    Vec3<int> i_low = decomp.inbox.low;
+    Vec3<int> i_high = decomp.inbox.high;
+    Vec3<int> o_low = decomp.outbox.low;
+    Vec3<int> o_high = decomp.outbox.high;
 
     int idx = 0;
     double D = 1.0;
@@ -65,14 +67,15 @@ public:
   }
 
   void step(double) override {
-    fft_r2c(psi, psi_F);
+    FFT &fft = get_fft();
+    fft.forward(psi, psi_F);
     for (int k = 0, N = psi_F.size(); k < N; k++) {
       psi_F[k] = opL[k] * psi_F[k];
     }
-    fft_c2r(psi_F, psi);
+    fft.backward(psi_F, psi);
   }
 
-  vector<double> &get_field() override { return psi; }
+  Field &get_field() override { return psi; }
 
   int get_midpoint_idx() const { return m_midpoint_idx; }
 };

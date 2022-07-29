@@ -124,8 +124,6 @@ public:
   */
   void prepare_operators(double dt) {
 
-    std::array<int, 3> low = get_outbox_low();
-    std::array<int, 3> high = get_outbox_high();
     World w = get_world();
     auto dx = w.dx;
     auto dy = w.dy;
@@ -133,6 +131,10 @@ public:
     auto Lx = w.Lx;
     auto Ly = w.Ly;
     auto Lz = w.Lz;
+
+    Decomposition &decomp = get_decomposition();
+    std::array<int, 3> low = decomp.outbox.low;
+    std::array<int, 3> high = decomp.outbox.high;
 
     // prepare the linear and non-linear operators
 
@@ -197,9 +199,11 @@ public:
   */
   void prepare_initial_condition() {
 
-    std::array<int, 3> low = get_inbox_low();
-    std::array<int, 3> high = get_inbox_high();
     World w = get_world();
+    Decomposition &decomp = get_decomposition();
+
+    std::array<int, 3> low = decomp.inbox.low;
+    std::array<int, 3> high = decomp.inbox.high;
     auto dx = w.dx;
     auto dy = w.dy;
     auto dz = w.dz;
@@ -254,7 +258,8 @@ public:
   }
 
   void initialize(double dt) override {
-    allocate(size_inbox(), size_outbox());
+    FFT &fft = get_fft();
+    allocate(fft.size_inbox(), fft.size_outbox());
     prepare_operators(dt);
     prepare_initial_condition();
   }
@@ -274,9 +279,11 @@ public:
   */
   void step(double) override {
 
+    FFT &fft = get_fft();
+
     if (m_first) { // First iteration, calculate psi_F = fft(psi)
       m_first = false;
-      fft_r2c(psi, psi_F);
+      fft.forward(psi, psi_F);
     }
 
     for (int i = 0; i < 8; i++) {
@@ -293,7 +300,7 @@ public:
     timing[2] += MPI_Wtime();
 
     timing[1] -= MPI_Wtime();
-    fft_c2r(psiMF_F, psiMF);
+    fft.backward(psiMF_F, psiMF);
     timing[1] += MPI_Wtime();
 
     // Calculate the nonlinear part of the evolution equation in a real space
@@ -320,7 +327,7 @@ public:
 
     // Fourier transform of the nonlinear part of the evolution equation
     timing[1] -= MPI_Wtime();
-    fft_r2c(psiN, psiN_F);
+    fft.forward(psiN, psiN_F);
     timing[1] += MPI_Wtime();
 
     // Apply one step of the evolution equation
@@ -332,7 +339,7 @@ public:
 
     // Inverse Fourier transform result back to real space
     timing[1] -= MPI_Wtime();
-    fft_c2r(psi_F, psi);
+    fft.backward(psi_F, psi);
     timing[1] += MPI_Wtime();
 
     timing[0] += MPI_Wtime();
