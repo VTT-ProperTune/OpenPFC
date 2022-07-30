@@ -80,6 +80,16 @@ struct params {
   double q2_bar = q21_bar * tau + q20_bar;
   double q3_bar = q31_bar * tau + q30_bar;
   double q4_bar = q40_bar;
+
+  // calculating approx amplitude. This is related to the phase diagram
+  // calculations.
+  double rho_seed = n_sol;
+  double A_phi = 135.0 * p4_bar;
+  double B_phi = 16.0 * p3_bar + 48.0 * p4_bar * rho_seed;
+  double C_phi = -6.0 * (Bx * exp(-T / T0)) + 6.0 * p2_bar +
+                 12.0 * p3_bar * rho_seed + 18.0 * p4_bar * pow(rho_seed, 2);
+  double d = abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
+  double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
 };
 
 class Tungsten : public Model {
@@ -253,26 +263,14 @@ public:
     World &w = m.get_world();
     Decomposition &decomp = m.get_decomposition();
     Field &f = m.get_field();
-
-    std::array<int, 3> low = decomp.inbox.low;
-    std::array<int, 3> high = decomp.inbox.high;
+    Vec3<int> low = decomp.inbox.low;
+    Vec3<int> high = decomp.inbox.high;
     auto dx = w.dx;
     auto dy = w.dy;
     auto dz = w.dz;
     auto x0 = w.x0;
     auto y0 = w.y0;
     auto z0 = w.z0;
-
-    // Calculating approx amplitude. This is related to the phase diagram
-    // calculations.
-    double rho_seed = p.n_sol;
-    double A_phi = 135.0 * p.p4_bar;
-    double B_phi = 16.0 * p.p3_bar + 48.0 * p.p4_bar * rho_seed;
-    double C_phi = -6.0 * (p.Bx * exp(-p.T / p.T0)) + 6.0 * p.p2_bar +
-                   12.0 * p.p3_bar * rho_seed +
-                   18.0 * p.p4_bar * pow(rho_seed, 2);
-    double d = std::abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
-    double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
 
     double s = 1.0 / sqrt(2.0);
     std::array<double, 3> q1 = {s, s, 0};
@@ -297,9 +295,10 @@ public:
           if (!seedmask) {
             u = p.n0;
           } else {
-            u = rho_seed;
+            u = p.rho_seed;
             for (int i = 0; i < 6; i++) {
-              u += 2.0 * amp_eq * cos(q[i][0] * x + q[i][1] * y + q[i][2] * z);
+              u +=
+                  2.0 * p.amp_eq * cos(q[i][0] * x + q[i][1] * y + q[i][2] * z);
             }
           }
           f[idx] = u;
