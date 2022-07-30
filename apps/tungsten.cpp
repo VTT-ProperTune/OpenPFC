@@ -399,6 +399,25 @@ from_json<unique_ptr<BinaryWriter>>(const json &settings) {
   return make_unique<BinaryWriter>(settings["results"]);
 }
 
+class MPI_Worker {
+  MPI_Comm m_comm;
+  int m_rank, m_num_procs;
+
+public:
+  MPI_Worker(int argc, char *argv[], MPI_Comm comm) : m_comm(comm) {
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(comm, &m_rank);
+    MPI_Comm_size(comm, &m_num_procs);
+    if (m_rank != 0) mute();
+    cout << "MPI_Init(): initialized " << m_num_procs << " processes" << endl;
+  }
+
+  ~MPI_Worker() { MPI_Finalize(); }
+  int get_rank() const { return m_rank; }
+  void mute() { cout.setstate(ios::failbit); }
+  void unmute() { cout.clear(); }
+};
+
 /*
 The main application
 */
