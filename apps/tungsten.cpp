@@ -337,6 +337,25 @@ public:
     return status;
   }
 };
+
+class FileReader : public FieldModifier {
+
+private:
+  std::string m_filename;
+
+public:
+  explicit FileReader(const std::string &filename) : m_filename(filename) {}
+
+  void apply(Model &m, double) override {
+    Decomposition &d = m.get_decomposition();
+    Field &f = m.get_field();
+    cout << "Reading initial condition from file" << m_filename << endl;
+    BinaryReader reader;
+    reader.set_domain(d.world.size, d.inbox.size, d.inbox.low);
+    reader.read(m_filename, f);
+  }
+};
+
 /*
 Helper functions to construct objects from json file
 */
