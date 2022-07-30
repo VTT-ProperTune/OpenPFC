@@ -423,70 +423,92 @@ The main application
 */
 class App {
 private:
-  nlohmann::json m_settings;
+  MPI_Worker m_worker;
   bool rank0;
+  nlohmann::json m_settings;
+  World m_world;
+  Decomposition m_decomp;
+  FFT m_fft;
+  Time m_time;
+  Tungsten m_model;
+  Simulator m_simulator;
+
+  // read settings from file if or standard input
+  json read_settings(int argc, char *argv[]) {
+    json settings;
+    if (argc > 1) {
+      if (rank0) cout << "Reading input from file " << argv[1] << "\n\n";
+      filesystem::path file(argv[1]);
+      if (!filesystem::exists(file)) {
+        if (rank0) cerr << "File " << file << " does not exist!\n";
+        MPI_Abort(MPI_COMM_WORLD, 1);
+      }
+      std::ifstream input_file(file);
+      input_file >> settings;
+    } else {
+      if (rank0) std::cout << "Reading simulation settings from stdin\n\n";
+      std::cin >> settings;
+    }
+    return settings;
+  }
 
 public:
-  App(const json &settings)
-      : m_settings(settings), rank0(mpi::get_comm_rank(MPI_COMM_WORLD) == 0) {}
+  App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
+      : m_worker(MPI_Worker(argc, argv, comm)), rank0(m_worker.get_rank() == 0),
+        m_settings(read_settings(argc, argv)),
+        m_world(from_json<World>(m_settings)),
+        m_decomp(Decomposition(m_world, comm)), m_fft(FFT(m_decomp, comm)),
+        m_time(from_json<Time>(m_settings)),
+        m_model(Tungsten(m_world, m_decomp, m_fft)),
+        m_simulator(Simulator(m_world, m_decomp, m_fft, m_model, m_time)) {}
 
-  void check_results_dir() {
+  bool create_results_dir() {
     filesystem::path results_dir(m_settings["results"].get<string>());
     if (results_dir.has_filename()) results_dir = results_dir.parent_path();
-    if (rank0 && !std::filesystem::exists(results_dir)) {
+    if (!std::filesystem::exists(results_dir)) {
       cout << "Results dir " << results_dir << " does not exist, creating\n";
       filesystem::create_directories(results_dir);
+      return true;
+    } else {
+      cout << "Warning: results dir already exists\n";
+      return false;
     }
   }
 
-  void run() {
-    if (rank0) cout << m_settings.dump(4) << "\n\n";
-    World world = from_json<World>(m_settings);
-    cout << "World: " << world << endl;
-    Decomposition decomposition(world, MPI_COMM_WORLD);
-    FFT fft(decomposition, MPI_COMM_WORLD);
-    Tungsten model(world, decomposition, fft);
-    Time time = from_json<Time>(m_settings);
-    Simulator simulator(world, decomposition, fft, model, time);
+  int main() {
+    cout << m_settings.dump(4) << "\n\n";
+    cout << "World: " << m_world << endl;
+    if (rank0) create_results_dir();
 
-    simulator.add_results_writer(
+    cout << "Adding results writer" << endl;
+    m_simulator.add_results_writer(
         from_json<unique_ptr<BinaryWriter>>(m_settings));
-    if (rank0) check_results_dir();
 
-    simulator.add_initial_conditions(make_unique<SingleSeed>());
-
-    while (!simulator.done()) {
-      simulator.step();
-      cout << "Step " << time.get_increment() << " done" << endl;
+    cout << "Adding initial conditions" << endl;
+    auto ic = m_settings["initial_condition"];
+    if (ic["type"] == "single_seed") {
+      cout << "Adding single seed initial condition" << endl;
+      m_simulator.add_initial_conditions(make_unique<SingleSeed>());
+    } else if (ic["type"] == "from_file") {
+      cout << "Reading initial condition from file" << endl;
+      string filename = ic["filename"];
+      cout << "Reading from file: " << filename << endl;
+      m_simulator.add_initial_conditions(make_unique<FileReader>(filename));
+    } else {
+      cout << "Unknown initial condition. NOT SETTING ANY!" << endl;
     }
+
+    while (!m_simulator.done()) {
+      m_simulator.step();
+      cout << "Step " << m_time.get_increment() << " done" << endl;
+    }
+
+    return 0;
   }
 };
 
 int main(int argc, char *argv[]) {
   cout << std::fixed;
   cout.precision(3);
-  MPI_Init(&argc, &argv);
-
-  // read settings from file if or standard input
-  int me = mpi::get_comm_rank(MPI_COMM_WORLD);
-  json settings;
-  if (argc > 1) {
-    if (me == 0) cout << "Reading input from file " << argv[1] << "\n\n";
-    filesystem::path file(argv[1]);
-    if (!filesystem::exists(file)) {
-      if (me == 0) cerr << "File " << file << " does not exist!\n";
-      return 1;
-    }
-    std::ifstream input_file(file);
-    input_file >> settings;
-  } else {
-    if (me == 0) std::cout << "Reading simulation settings from stdin\n\n";
-    std::cin >> settings;
-  }
-
-  // construct application from settings and run
-  App(settings).run();
-
-  MPI_Finalize();
-  return 0;
+  return App(argc, argv).main();
 }
