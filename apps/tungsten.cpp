@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <random>
 #include <stdexcept>
 
 using namespace pfc;
@@ -770,6 +771,12 @@ public:
     if (ic["type"] == "single_seed") {
       cout << "Adding single seed initial condition" << endl;
       m_simulator.add_initial_conditions(make_unique<SingleSeed>());
+    } else if (ic["type"] == "random_seeds") {
+      cout << "Adding randomized seeds initial condition" << endl;
+      m_simulator.add_initial_conditions(make_unique<RandomSeeds>());
+    } else if (ic["type"] == "seed_grid") {
+      cout << "Adding seed grid initial condition" << endl;
+      m_simulator.add_initial_conditions(make_unique<SeedGrid>());
     } else if (ic["type"] == "from_file") {
       cout << "Reading initial condition from file" << endl;
       string filename = ic["filename"];
