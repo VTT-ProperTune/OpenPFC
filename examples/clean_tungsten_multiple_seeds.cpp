@@ -70,8 +70,8 @@ private:
     const vec3 q5 = {s, -s, 0};
     const vec3 q6 = {0, s, -s};
     mat3 Ra = yaw(orientation[0]);
-    mat3 Rb = yaw(orientation[1]);
-    mat3 Rc = yaw(orientation[2]);
+    mat3 Rb = pitch(orientation[1]);
+    mat3 Rc = roll(orientation[2]);
     mat3 R = mult3(Ra, mult3(Rb, Rc));
     const vec36 q = {mult3(R, q1), mult3(R, q2), mult3(R, q3),
                      mult3(R, q4), mult3(R, q5), mult3(R, q6)};
