@@ -711,12 +711,6 @@ template <> Time from_json<Time>(const json &settings) {
   return time;
 }
 
-template <>
-unique_ptr<BinaryWriter>
-from_json<unique_ptr<BinaryWriter>>(const json &settings) {
-  return make_unique<BinaryWriter>(settings["results"]);
-}
-
 class MPI_Worker {
   MPI_Comm m_comm;
   int m_rank, m_num_procs;
@@ -739,11 +733,12 @@ public:
 /*
 The main application
 */
+
 class App {
 private:
   MPI_Worker m_worker;
   bool rank0;
-  nlohmann::json m_settings;
+  json m_settings;
   World m_world;
   Decomposition m_decomp;
   FFT m_fft;
@@ -800,7 +795,7 @@ public:
 
     cout << "Adding results writer" << endl;
     m_simulator.add_results_writer(
-        from_json<unique_ptr<BinaryWriter>>(m_settings));
+        make_unique<BinaryWriter>(m_settings["results"]));
 
     cout << "Adding initial conditions" << endl;
     auto ic = m_settings["initial_condition"];
@@ -818,12 +813,36 @@ public:
       string filename = ic["filename"];
       cout << "Reading from file: " << filename << endl;
       m_simulator.add_initial_conditions(make_unique<FileReader>(filename));
+      int result_counter = ic["result_counter"];
+      result_counter += 1;
+      m_simulator.set_result_counter(result_counter);
+      m_time.set_increment(ic["increment"]);
     } else {
-      cout << "Unknown initial condition. NOT SETTING ANY!" << endl;
+      cout << "Warning: unknown initial condition " << ic["type"] << endl;
     }
 
-    while (!m_simulator.done()) {
-      m_simulator.step();
+    cout << "Adding boundary conditions" << endl;
+    auto bc = m_settings["boundary_condition"];
+    if (bc["type"] == "fixed") {
+      cout << "Adding fixed bc" << endl;
+      m_simulator.add_boundary_conditions(make_unique<FixedBC>());
+    } else {
+      cout << "Warning: unknown boundary condition " << bc["type"] << endl;
+    }
+
+    m_simulator.apply_initial_conditions();
+    if (m_time.get_increment() == 0) {
+      m_simulator.apply_boundary_conditions();
+      m_simulator.write_results();
+    }
+
+    while (!m_time.done()) {
+      m_time.next(); // increase increment counter by 1
+      m_simulator.apply_boundary_conditions();
+      m_model.step(m_time.get_dt());
+      if (m_time.do_save()) {
+        m_simulator.write_results();
+      }
       cout << "Step " << m_time.get_increment() << " done" << endl;
     }
 
