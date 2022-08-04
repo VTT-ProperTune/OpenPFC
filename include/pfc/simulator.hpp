@@ -47,7 +47,12 @@ public:
     m_initial_conditions.push_back(std::move(modifier));
   }
 
-  void write_results(int file_num) {
+  void set_result_counter(int result_counter) {
+    m_result_counter = result_counter;
+  }
+
+  double get_result_counter() const { return m_result_counter; }
+
     Field &field = get_field();
     for (const auto &writer : m_result_writers) {
       writer->write(file_num, field);
