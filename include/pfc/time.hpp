@@ -24,6 +24,8 @@ public:
   double get_current() const { return m_t0 + m_increment * m_dt; }
   double get_saveat() const { return m_saveat; }
 
+  void set_increment(int increment) { m_increment = increment; }
+
   void set_saveat(double saveat) { m_saveat = saveat; }
 
   bool done() const { return get_current() >= m_t1; }
