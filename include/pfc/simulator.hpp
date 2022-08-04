@@ -53,10 +53,13 @@ public:
 
   double get_result_counter() const { return m_result_counter; }
 
+  void write_results() {
+    int file_num = get_result_counter();
     Field &field = get_field();
     for (const auto &writer : m_result_writers) {
       writer->write(file_num, field);
     }
+    set_result_counter(file_num + 1);
   }
 
   void prestep_first_increment() {
