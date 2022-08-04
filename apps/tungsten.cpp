@@ -747,7 +747,7 @@ private:
   Simulator m_simulator;
   double m_steptime = 0.0;
   double m_avg_steptime = 0.0;
-  double m_alpha = 0.01;
+  double m_alpha = 0.05;
 
   // read settings from file if or standard input
   json read_settings(int argc, char *argv[]) {
@@ -846,7 +846,7 @@ public:
       m_model.step(m_time.get_dt());
       m_steptime += MPI_Wtime();
       m_avg_steptime =
-          (m_time.get_increment() != 0)
+          (m_time.get_increment() == 0)
               ? m_steptime
               : m_alpha * m_steptime + (1.0 - m_alpha) * m_steptime;
       if (m_time.do_save()) {
