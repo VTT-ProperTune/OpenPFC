@@ -91,6 +91,10 @@ struct params {
                  12.0 * p3_bar * rho_seed + 18.0 * p4_bar * pow(rho_seed, 2);
   double d = abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
   double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
+
+  // for boundary condition
+  double rho_low = n_vap;
+  double rho_high = n0;
 };
 
 class Tungsten : public Model {
@@ -635,6 +639,38 @@ public:
     BinaryReader reader;
     reader.set_domain(d.world.size, d.inbox.size, d.inbox.low);
     reader.read(m_filename, f);
+  }
+};
+
+class FixedBC : public FieldModifier {
+
+private:
+  params p;
+
+public:
+  void apply(Model &m, double) override {
+    Decomposition &decomp = m.get_decomposition();
+    Field &field = m.get_field();
+    World &w = m.get_world();
+    Vec3<int> low = decomp.inbox.low;
+    Vec3<int> high = decomp.inbox.high;
+
+    double xwidth = 20.0;
+    double alpha = 1.0;
+    double xpos = w.Lx * w.dx - xwidth;
+    long int idx = 0;
+    for (int k = low[2]; k <= high[2]; k++) {
+      for (int j = low[1]; j <= high[1]; j++) {
+        for (int i = low[0]; i <= high[0]; i++) {
+          double x = w.x0 + i * w.dx;
+          if (std::abs(x - xpos) < xwidth) {
+            double S = 1.0 / (1.0 + exp(-alpha * (x - xpos)));
+            field[idx] = p.rho_low * S + p.rho_high * (1.0 - S);
+          }
+          idx += 1;
+        }
+      }
+    }
   }
 };
 
