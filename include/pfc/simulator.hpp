@@ -62,14 +62,14 @@ public:
     set_result_counter(file_num + 1);
   }
 
-  void prestep_first_increment() {
+  void apply_initial_conditions() {
     Model &model = get_model();
     Time &time = get_time();
-    for (const auto &modifier : m_initial_conditions) {
-      modifier->apply(model, time.get_current());
+    for (const auto &ic : m_initial_conditions) {
+      ic->apply(model, time.get_current());
     }
-    if (m_time.do_save()) {
-      write_results(m_result_counter++);
+  }
+
     }
   }
 
