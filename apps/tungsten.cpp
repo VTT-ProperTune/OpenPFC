@@ -848,7 +848,7 @@ public:
       m_avg_steptime =
           (m_time.get_increment() == 0)
               ? m_steptime
-              : m_alpha * m_steptime + (1.0 - m_alpha) * m_steptime;
+              : m_alpha * m_steptime + (1.0 - m_alpha) * m_avg_steptime;
       if (m_time.do_save()) {
         m_simulator.write_results();
       }
