@@ -745,6 +745,9 @@ private:
   Time m_time;
   Tungsten m_model;
   Simulator m_simulator;
+  double m_steptime = 0.0;
+  double m_avg_steptime = 0.0;
+  double m_alpha = 0.01;
 
   // read settings from file if or standard input
   json read_settings(int argc, char *argv[]) {
@@ -839,11 +842,30 @@ public:
     while (!m_time.done()) {
       m_time.next(); // increase increment counter by 1
       m_simulator.apply_boundary_conditions();
+      m_steptime = -MPI_Wtime();
       m_model.step(m_time.get_dt());
+      m_steptime += MPI_Wtime();
+      m_avg_steptime =
+          (m_time.get_increment() != 0)
+              ? m_steptime
+              : m_alpha * m_steptime + (1.0 - m_alpha) * m_steptime;
       if (m_time.do_save()) {
         m_simulator.write_results();
       }
-      cout << "Step " << m_time.get_increment() << " done" << endl;
+      cout << "Step " << m_time.get_increment() << " done in " << m_steptime
+           << " seconds. Simulation time: " << m_time.get_current() << " / "
+           << m_time.get_t1() << ". ETA: ";
+      double eta_i = (m_time.get_t1() - m_time.get_current()) / m_time.get_dt();
+      double eta_t = eta_i * m_avg_steptime;
+      if (eta_t > 86400.0) {
+        cout << eta_t / 86400 << " days" << endl;
+      } else if (eta_t > 3600) {
+        cout << eta_t / 3600 << " hours " << endl;
+      } else if (eta_t > 60) {
+        cout << eta_t / 60 << " minutes" << endl;
+      } else {
+        cout << eta_t << " seconds" << endl;
+      }
     }
 
     return 0;
