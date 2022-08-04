@@ -20,6 +20,7 @@ private:
 
   std::vector<std::unique_ptr<ResultsWriter>> m_result_writers;
   std::vector<std::unique_ptr<FieldModifier>> m_initial_conditions;
+  std::vector<std::unique_ptr<FieldModifier>> m_boundary_conditions;
   int m_result_counter = 0;
 
 public:
@@ -47,6 +48,10 @@ public:
     m_initial_conditions.push_back(std::move(modifier));
   }
 
+  void add_boundary_conditions(std::unique_ptr<FieldModifier> modifier) {
+    m_boundary_conditions.push_back(std::move(modifier));
+  }
+
   void set_result_counter(int result_counter) {
     m_result_counter = result_counter;
   }
@@ -70,6 +75,11 @@ public:
     }
   }
 
+  void apply_boundary_conditions() {
+    Model &model = get_model();
+    Time &time = get_time();
+    for (const auto &bc : m_boundary_conditions) {
+      bc->apply(model, time.get_current());
     }
   }
 
