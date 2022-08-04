@@ -87,12 +87,17 @@ public:
     Time &time = get_time();
     Model &model = get_model();
     if (time.get_increment() == 0) {
-      prestep_first_increment();
+      apply_initial_conditions();
+      apply_boundary_conditions();
+      if (time.do_save()) {
+        write_results();
+      }
     }
     time.next();
+    apply_boundary_conditions();
     model.step(time.get_dt());
     if (time.do_save()) {
-      write_results(m_result_counter++);
+      write_results();
     }
     return;
   }
