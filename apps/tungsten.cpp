@@ -786,7 +786,7 @@ public:
       filesystem::create_directories(results_dir);
       return true;
     } else {
-      cout << "Warning: results dir already exists\n";
+      cout << "Warning: results dir " << results_dir << "already exists\n";
       return false;
     }
   }
