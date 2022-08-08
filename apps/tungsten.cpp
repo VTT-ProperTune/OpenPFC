@@ -519,8 +519,15 @@ public:
 };
 
 class SeedGrid : public FieldModifier {
+private:
+  int m_Nx, m_Ny, m_Nz;
+  double m_X0, m_radius;
+
 public:
   params p;
+
+  SeedGrid(int Ny, int Nz, double X0, double radius)
+      : m_Nx(1), m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius) {}
 
   void apply(Model &m, double) override {
     World &w = m.get_world();
@@ -529,7 +536,7 @@ public:
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
 
-    auto Lx = w.Lx;
+    // auto Lx = w.Lx;
     auto Ly = w.Ly;
     auto Lz = w.Lz;
     auto dx = w.dx;
@@ -541,17 +548,17 @@ public:
 
     std::vector<Seed> seeds;
 
-    int Nx = 1;
-    int Ny = 6;
-    int Nz = 6;
+    int Nx = m_Nx;
+    int Ny = m_Ny;
+    int Nz = m_Nz;
+    double radius = m_radius;
 
-    double radius = 30.0;
     double rho = p.rho_seed;
     double amplitude = p.amp_eq;
 
     double Dy = dy * Ly / Ny;
     double Dz = dz * Lz / Nz;
-    double X0 = 3 * radius;
+    double X0 = m_X0;
     double Y0 = Dy / 2.0;
     double Z0 = Dz / 2.0;
     int nseeds = Nx * Ny * Nz;
@@ -810,7 +817,14 @@ public:
       m_simulator.add_initial_conditions(make_unique<RandomSeeds>());
     } else if (ic["type"] == "seed_grid") {
       cout << "Adding seed grid initial condition" << endl;
-      m_simulator.add_initial_conditions(make_unique<SeedGrid>());
+      int Ny = ic["Ny"];
+      int Nz = ic["Nz"];
+      double X0 = ic["X0"];
+      double radius = ic["radius"];
+      cout << "Generating " << Ny << " seeds in y dir, " << Nz
+           << " seeds in z dir, seed radius " << radius << endl;
+      m_simulator.add_initial_conditions(
+          make_unique<SeedGrid>(Ny, Nz, X0, radius));
     } else if (ic["type"] == "from_file") {
       cout << "Reading initial condition from file" << endl;
       string filename = ic["filename"];

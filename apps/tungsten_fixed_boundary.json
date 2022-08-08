@@ -13,7 +13,11 @@
     "saveat": 1.0,
     "results": "/data/tungsten/psi_%d.bin",
     "initial_condition": {
-        "type": "seed_grid"
+        "type": "seed_grid",
+        "X0": 90.0,
+        "Ny": 6,
+        "Nz": 6,
+        "radius": 30.0
     },
     "boundary_condition": {
         "type": "fixed"
