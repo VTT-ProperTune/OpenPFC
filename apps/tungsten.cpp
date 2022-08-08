@@ -752,9 +752,11 @@ private:
   Time m_time;
   Tungsten m_model;
   Simulator m_simulator;
+  double m_total_steptime = 0.0;
   double m_steptime = 0.0;
   double m_avg_steptime = 0.0;
   double m_alpha = 0.01;
+  int m_steps_done = 0;
 
   // read settings from file if or standard input
   json read_settings(int argc, char *argv[]) {
@@ -859,8 +861,9 @@ public:
       m_steptime = -MPI_Wtime();
       m_model.step(m_time.get_dt());
       m_steptime += MPI_Wtime();
+      m_total_steptime += m_steptime;
       m_avg_steptime =
-          (m_time.get_increment() <= 5)
+          (m_steps_done < 5)
               ? m_steptime
               : m_alpha * m_steptime + (1.0 - m_alpha) * m_avg_steptime;
       if (m_time.do_save()) {
@@ -880,7 +883,12 @@ public:
       } else {
         cout << eta_t << " seconds" << endl;
       }
+      m_steps_done += 1;
     }
+
+    m_avg_steptime = m_total_steptime / m_steps_done;
+    cout << "Simulated " << m_steps_done << " steps, average step time "
+         << m_avg_steptime << " s / step" << endl;
 
     return 0;
   }
