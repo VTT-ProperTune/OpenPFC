@@ -813,6 +813,16 @@ public:
     if (rank0) create_results_dir();
 
     Params &p = m_model.get_params();
+    if (m_settings.contains("model")) {
+      auto p2 = m_settings["model"]["params"];
+      if (p2.contains("n0")) {
+        double n0 = p2["n0"];
+        cout << "Changing average density of metastable fluid to " << n0
+             << endl;
+        p.n0 = n0;
+      }
+    }
+
     cout << "Adding results writer" << endl;
     m_simulator.add_results_writer(
         make_unique<BinaryWriter>(m_settings["results"]));
