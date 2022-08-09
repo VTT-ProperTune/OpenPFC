@@ -696,9 +696,6 @@ private:
   int rank = mpi::get_comm_rank(comm);
   int size = mpi::get_comm_size(comm);
 
-  void mute() { cout.setstate(ios::failbit); }
-  void unmute() { cout.clear(); }
-
 public:
   MovingBC(double rho_low, double rho_high)
       : m_rho_low(rho_low), m_rho_high(rho_high) {}
@@ -710,14 +707,14 @@ public:
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
 
-    // unmute();
-
     auto Lx = w.Lx;
 
     if (m_first) {
       xline.resize(Lx);
       if (rank == 0) global_xline.resize(Lx);
     }
+
+    fill(xline.begin(), xline.end(), std::numeric_limits<double>::min());
 
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++)
@@ -730,27 +727,21 @@ public:
 
     if (rank == 0) {
       if (m_first) {
-        for (int i = global_xline.size(); i >= 0; i--) {
+        for (int i = global_xline.size() - 1; i >= 0; i--) {
           if (global_xline[i] > 0.1) {
             m_idx = i;
             break;
           }
         }
       } else {
-        while (global_xline[m_idx] > 0.1) {
+        while (global_xline[m_idx % w.Lx] > 0.1) {
           m_idx += 1;
-          if (m_idx == (int)global_xline.size()) {
-            m_idx = 0;
-          }
         }
       }
     }
 
     m_xpos = w.x0 + m_idx * w.dx + m_disp;
-    cout << "Boundary condition position x = " << m_xpos << endl;
     MPI_Bcast(&m_xpos, 1, MPI_DOUBLE, 0, comm);
-
-    // if (rank != 0) mute();
 
     if (m_first) {
       m_first = false;
@@ -765,7 +756,8 @@ public:
     World &w = m.get_world();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
-    double xpos = m_xpos;
+    double l = w.Lx * w.dx;
+    double xpos = fmod(m_xpos, l);
     double xwidth = m_xwidth;
     double alpha = m_alpha;
     long int idx = 0;
@@ -774,8 +766,17 @@ public:
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
           double x = w.x0 + i * w.dx;
-          if (std::abs(x - xpos) < xwidth) {
-            double S = 1.0 / (1.0 + exp(-alpha * (x - xpos)));
+          double dist = x - xpos;
+          if (abs(dist) < xwidth) {
+            double S = 1.0 / (1.0 + exp(-alpha * dist));
+            field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
+          }
+          if (xpos < xwidth && abs(dist - l) < xwidth) {
+            double S = 1.0 / (1.0 + exp(-alpha * (dist - l)));
+            field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
+          }
+          if (xpos > l - xwidth && abs(dist + l) < xwidth) {
+            double S = 1.0 / (1.0 + exp(-alpha * (dist + l)));
             field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
           }
           idx += 1;
@@ -899,7 +900,7 @@ public:
       filesystem::create_directories(results_dir);
       return true;
     } else {
-      cout << "Warning: results dir " << results_dir << "already exists\n";
+      cout << "Warning: results dir " << results_dir << " already exists\n";
       return false;
     }
   }
@@ -975,8 +976,10 @@ public:
       cout << "Warning: unknown boundary condition " << bc["type"] << endl;
     }
 
+    cout << "Apply initial conditions" << endl;
     m_simulator.apply_initial_conditions();
     if (m_time.get_increment() == 0) {
+      cout << "First increment: apply boundary conditions" << endl;
       m_simulator.apply_boundary_conditions();
       m_simulator.write_results();
     }
