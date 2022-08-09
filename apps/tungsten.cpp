@@ -16,7 +16,7 @@ using namespace std;
 /*
 Model parameters
 */
-struct params {
+struct Params {
   // average density of the metastable fluid
   double n0 = -0.4;
 
@@ -91,10 +91,6 @@ struct params {
                  12.0 * p3_bar * rho_seed + 18.0 * p4_bar * pow(rho_seed, 2);
   double d = abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
   double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
-
-  // for boundary condition
-  double rho_low = n_vap;
-  double rho_high = n0;
 };
 
 class Tungsten : public Model {
@@ -113,9 +109,13 @@ private:
   std::array<double, 10> timing = {0};
   size_t mem_allocated = 0;
   bool m_first = true;
-  params p;
+  Params p;
 
 public:
+  Params &get_params() {
+    return p;
+  }
+
   void allocate() {
     FFT &fft = get_fft();
     auto size_inbox = fft.size_inbox();
@@ -392,11 +392,9 @@ public:
 
 class SingleSeed : public FieldModifier {
 
-private:
-  params p;
-
 public:
   void apply(Model &m, double) override {
+    Params &p = dynamic_cast<Tungsten &>(m).get_params();
     World &w = m.get_world();
     Decomposition &decomp = m.get_decomposition();
     Field &f = m.get_field();
@@ -421,6 +419,7 @@ public:
     long int idx = 0;
     // double r2 = pow(0.2 * (Lx * dx), 2);
     double r2 = pow(64.0, 2);
+    double amp_eq = p.amp_eq;
     double u;
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
@@ -434,8 +433,7 @@ public:
           } else {
             u = p.rho_seed;
             for (int i = 0; i < 6; i++) {
-              u +=
-                  2.0 * p.amp_eq * cos(q[i][0] * x + q[i][1] * y + q[i][2] * z);
+              u += 2.0 * amp_eq * cos(q[i][0] * x + q[i][1] * y + q[i][2] * z);
             }
           }
           f[idx] = u;
@@ -447,10 +445,9 @@ public:
 };
 
 class RandomSeeds : public FieldModifier {
-public:
-  params p;
 
   void apply(Model &m, double) override {
+    Params &p = dynamic_cast<Tungsten &>(m).get_params();
     World &w = m.get_world();
     Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
@@ -524,12 +521,11 @@ private:
   double m_X0, m_radius;
 
 public:
-  params p;
-
   SeedGrid(int Ny, int Nz, double X0, double radius)
       : m_Nx(1), m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius) {}
 
   void apply(Model &m, double) override {
+    Params &p = dynamic_cast<Tungsten &>(m).get_params();
     World &w = m.get_world();
     Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
@@ -652,9 +648,15 @@ public:
 class FixedBC : public FieldModifier {
 
 private:
-  params p;
+  const double xwidth = 20.0;
+  const double alpha = 1.0;
+  const double m_xpos = 0;
+  const double m_rho_low, m_rho_high;
 
 public:
+  FixedBC(double rho_low, double rho_high)
+      : m_rho_low(rho_low), m_rho_high(rho_high) {}
+
   void apply(Model &m, double) override {
     Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
@@ -662,8 +664,6 @@ public:
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
 
-    double xwidth = 20.0;
-    double alpha = 1.0;
     double xpos = w.Lx * w.dx - xwidth;
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
@@ -672,7 +672,14 @@ public:
           double x = w.x0 + i * w.dx;
           if (std::abs(x - xpos) < xwidth) {
             double S = 1.0 / (1.0 + exp(-alpha * (x - xpos)));
-            field[idx] = p.rho_low * S + p.rho_high * (1.0 - S);
+            field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
+          }
+          idx += 1;
+        }
+      }
+    }
+  }
+};
           }
           idx += 1;
         }
@@ -805,6 +812,7 @@ public:
     cout << "World: " << m_world << endl;
     if (rank0) create_results_dir();
 
+    Params &p = m_model.get_params();
     cout << "Adding results writer" << endl;
     m_simulator.add_results_writer(
         make_unique<BinaryWriter>(m_settings["results"]));
@@ -842,9 +850,20 @@ public:
 
     cout << "Adding boundary conditions" << endl;
     auto bc = m_settings["boundary_condition"];
-    if (bc["type"] == "fixed") {
+    if (bc["type"] == "none") {
+      cout << "Not using boundary condition" << endl;
+    } else if (bc["type"] == "fixed") {
       cout << "Adding fixed bc" << endl;
-      m_simulator.add_boundary_conditions(make_unique<FixedBC>());
+      double rho_low = p.n_vap;
+      double rho_high = p.n0;
+      m_simulator.add_boundary_conditions(
+          make_unique<FixedBC>(rho_low, rho_high));
+    } else if (bc["type"] == "moving") {
+      cout << "Applying moving boundary condition" << endl;
+      double rho_low = p.n_vap;
+      double rho_high = p.n0;
+      m_simulator.add_boundary_conditions(
+          make_unique<MovingBC>(rho_low, rho_high));
     } else {
       cout << "Warning: unknown boundary condition " << bc["type"] << endl;
     }
