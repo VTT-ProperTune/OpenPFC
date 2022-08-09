@@ -680,6 +680,103 @@ public:
     }
   }
 };
+
+class MovingBC : public FieldModifier {
+
+private:
+  const double m_rho_low, m_rho_high;
+  double m_xwidth = 15.0;
+  double m_alpha = 1.0;
+  double m_xpos = 0;
+  int m_idx = 0;
+  double m_disp = 40.0;
+  bool m_first = true;
+  std::vector<double> xline, global_xline;
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank = mpi::get_comm_rank(comm);
+  int size = mpi::get_comm_size(comm);
+
+  void mute() { cout.setstate(ios::failbit); }
+  void unmute() { cout.clear(); }
+
+public:
+  MovingBC(double rho_low, double rho_high)
+      : m_rho_low(rho_low), m_rho_high(rho_high) {}
+
+  void apply(Model &m, double) override {
+    Decomposition &decomp = m.get_decomposition();
+    Field &field = m.get_field();
+    World &w = m.get_world();
+    Vec3<int> low = decomp.inbox.low;
+    Vec3<int> high = decomp.inbox.high;
+
+    // unmute();
+
+    auto Lx = w.Lx;
+
+    if (m_first) {
+      xline.resize(Lx);
+      if (rank == 0) global_xline.resize(Lx);
+    }
+
+    long int idx = 0;
+    for (int k = low[2]; k <= high[2]; k++)
+      for (int j = low[1]; j <= high[1]; j++)
+        for (int i = low[0]; i <= high[0]; i++)
+          xline[i] = max(xline[i], field[idx++]);
+
+    MPI_Reduce(xline.data(), global_xline.data(), xline.size(), MPI_DOUBLE,
+               MPI_MAX, 0, comm);
+
+    if (rank == 0) {
+      if (m_first) {
+        for (int i = global_xline.size(); i >= 0; i--) {
+          if (global_xline[i] > 0.1) {
+            m_idx = i;
+            break;
+          }
+        }
+      } else {
+        while (global_xline[m_idx] > 0.1) {
+          m_idx += 1;
+          if (m_idx == (int)global_xline.size()) {
+            m_idx = 0;
+          }
+        }
+      }
+    }
+
+    m_xpos = w.x0 + m_idx * w.dx + m_disp;
+    cout << "Boundary condition position x = " << m_xpos << endl;
+    MPI_Bcast(&m_xpos, 1, MPI_DOUBLE, 0, comm);
+
+    // if (rank != 0) mute();
+
+    if (m_first) {
+      m_first = false;
+    }
+
+    fill_bc(m);
+  }
+
+  void fill_bc(Model &m) {
+    Decomposition &decomp = m.get_decomposition();
+    Field &field = m.get_field();
+    World &w = m.get_world();
+    Vec3<int> low = decomp.inbox.low;
+    Vec3<int> high = decomp.inbox.high;
+    double xpos = m_xpos;
+    double xwidth = m_xwidth;
+    double alpha = m_alpha;
+    long int idx = 0;
+
+    for (int k = low[2]; k <= high[2]; k++) {
+      for (int j = low[1]; j <= high[1]; j++) {
+        for (int i = low[0]; i <= high[0]; i++) {
+          double x = w.x0 + i * w.dx;
+          if (std::abs(x - xpos) < xwidth) {
+            double S = 1.0 / (1.0 + exp(-alpha * (x - xpos)));
+            field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
           }
           idx += 1;
         }
