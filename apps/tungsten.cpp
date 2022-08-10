@@ -744,7 +744,10 @@ public:
       }
     }
 
-    m_xpos = w.x0 + m_idx * w.dx + m_disp;
+    double new_xpos = w.x0 + m_idx * w.dx + m_disp;
+    if (new_xpos > m_xpos) {
+      m_xpos = new_xpos;
+    }
     MPI_Bcast(&m_xpos, 1, MPI_DOUBLE, 0, comm);
 
     if (m_first) {
