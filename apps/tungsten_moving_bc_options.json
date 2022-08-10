@@ -1,0 +1,34 @@
+{
+    "model": {
+        "name": "tungsten",
+        "params": {
+            "n0": -0.10
+        }
+    },
+    "Lx": 128,
+    "Ly": 64,
+    "Lz": 64,
+    "dx": 1.1107207345395915,
+    "dy": 1.1107207345395915,
+    "dz": 1.1107207345395915,
+    "origo": "corner",
+    "t0": 0.0,
+    "t1": 20000.0,
+    "dt": 1.0,
+    "saveat": 100.0,
+    "results": "data/u_%04d.bin",
+    "initial_condition": {
+        "type": "seed_grid",
+        "X0": 30.0,
+        "Ny": 2,
+        "Nz": 2,
+        "radius": 25.0
+    },
+    "boundary_condition": {
+        "type": "moving",
+        "initial_position": "end",
+        "width": 3.0,
+        "alpha": 10.0,
+        "disp": 80
+    }
+}
