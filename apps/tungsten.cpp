@@ -687,7 +687,7 @@ private:
   const double m_rho_low, m_rho_high;
   double m_xwidth = 15.0;
   double m_alpha = 1.0;
-  double m_xpos = 0;
+  double m_xpos = 0.0;
   int m_idx = 0;
   double m_disp = 40.0;
   bool m_first = true;
