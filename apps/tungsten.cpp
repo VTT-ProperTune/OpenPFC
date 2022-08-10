@@ -977,8 +977,13 @@ public:
       cout << "Applying moving boundary condition" << endl;
       double rho_low = p.n_vap;
       double rho_high = p.n0;
-      m_simulator.add_boundary_conditions(
-          make_unique<MovingBC>(rho_low, rho_high));
+      unique_ptr<MovingBC> moving_bc = make_unique<MovingBC>(rho_low, rho_high);
+      if (bc.contains("initial_position") && bc["initial_position"] == "end") {
+        double x_pos = m_world.Lx * m_world.dx - moving_bc->get_xwidth();
+        cout << "Setting boundary condition location to " << x_pos << endl;
+        moving_bc->set_xpos(x_pos);
+      }
+      m_simulator.add_boundary_conditions(move(moving_bc));
     } else {
       cout << "Warning: unknown boundary condition " << bc["type"] << endl;
     }
