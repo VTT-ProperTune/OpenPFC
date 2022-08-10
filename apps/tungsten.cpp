@@ -700,6 +700,10 @@ public:
   MovingBC(double rho_low, double rho_high)
       : m_rho_low(rho_low), m_rho_high(rho_high) {}
 
+  void set_xpos(double xpos) { m_xpos = xpos; }
+
+  double get_xwidth() const { return m_xwidth; }
+
   void apply(Model &m, double) override {
     Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
