@@ -702,7 +702,12 @@ public:
 
   void set_xpos(double xpos) { m_xpos = xpos; }
 
+  void set_xwidth(double xwidth) { m_xwidth = xwidth; }
   double get_xwidth() const { return m_xwidth; }
+
+  void set_alpha(double alpha) { m_alpha = alpha; }
+
+  void set_disp(double disp) { m_disp = disp; }
 
   void apply(Model &m, double) override {
     Decomposition &decomp = m.get_decomposition();
