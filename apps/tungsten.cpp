@@ -1008,6 +1008,7 @@ public:
               ? m_steptime
               : m_alpha * m_steptime + (1.0 - m_alpha) * m_avg_steptime;
       if (m_time.do_save()) {
+        m_simulator.apply_boundary_conditions();
         m_simulator.write_results();
       }
       cout << "Step " << m_time.get_increment() << " done in " << m_steptime
