@@ -90,6 +90,7 @@ def main(args):
         print("Creating directory %s" % basepath)
         os.makedirs(basepath)
 
+
     renderView1 = ps.FindViewOrCreate('RenderView1', viewtype='RenderView') # find view
     animationScene1 = ps.GetAnimationScene()
     animationScene1.UpdateAnimationUsingDataTimeSteps()
@@ -97,7 +98,21 @@ def main(args):
     timesteps = timeKeeper1.TimestepValues
     ntimesteps = len(timesteps)
 
-    # ImageResolution=[1920, 1080]
+    if args.scale != 1.0:
+        x, y = renderView1.ViewSize
+        x2, y2 = int(args.scale*x), int(args.scale*y)
+        print("Scaling images by %0.2f, %dx%d -> %dx%d" % (args.scale, x, y, x2, y2))
+        renderView1.ViewSize = [x2, y2]
+        renderView1.Update()
+
+    if args.resolution:
+        xs, ys = args.resolution.split("x")
+        x = int(xs)
+        y = int(ys)
+        print("Set resolution to %dx%d" % (x, y))
+        renderView1.ViewSize = [x, y]
+        renderView1.Update()
+
     for idx in create_range(args.range, end=ntimesteps):
         if idx >= ntimesteps:
             print("idx = %d, ntimesteps = %d, quitting" % (idx, ntimesteps))
@@ -122,6 +137,8 @@ def cli():
     parser.add_argument("state", type=str)
     parser.add_argument("range", type=str, default="0:end")
     parser.add_argument("--format", default="images/frame.%04d.png")
+    parser.add_argument("--scale", type=float, default=1.0)
+    parser.add_argument("--resolution", type=str, default=None)
     return parser.parse_args()
 
 if __name__ == "__main__":
