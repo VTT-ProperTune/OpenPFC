@@ -139,7 +139,7 @@ def cli():
     parser.add_argument("--format", default="images/frame.%04d.png")
     parser.add_argument("--scale", type=float, default=1.0)
     parser.add_argument("--resolution", type=str, default=None)
-    parser.add_argument("--overwrite", type=bool, default=False)
+    parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
 if __name__ == "__main__":
