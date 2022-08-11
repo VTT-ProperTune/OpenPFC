@@ -118,7 +118,7 @@ def main(args):
             print("idx = %d, ntimesteps = %d, quitting" % (idx, ntimesteps))
             break
         imgfile = args.format % idx
-        if os.path.exists(imgfile):
+        if os.path.exists(imgfile) and not args.overwrite:
             print("%s already exists, not rendering" % imgfile)
             continue
         print("Rendering frame %d (time = %0.3f) ... " % (idx, timesteps[idx]), end="")
@@ -139,6 +139,7 @@ def cli():
     parser.add_argument("--format", default="images/frame.%04d.png")
     parser.add_argument("--scale", type=float, default=1.0)
     parser.add_argument("--resolution", type=str, default=None)
+    parser.add_argument("--overwrite", type=bool, default=False)
     return parser.parse_args()
 
 if __name__ == "__main__":
