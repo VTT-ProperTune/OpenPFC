@@ -98,19 +98,19 @@ def main(args):
     timesteps = timeKeeper1.TimestepValues
     ntimesteps = len(timesteps)
 
-    if args.scale != 1.0:
-        x, y = renderView1.ViewSize
-        x2, y2 = int(args.scale*x), int(args.scale*y)
-        print("Scaling images by %0.2f, %dx%d -> %dx%d" % (args.scale, x, y, x2, y2))
-        renderView1.ViewSize = [x2, y2]
-        renderView1.Update()
-
     if args.resolution:
         xs, ys = args.resolution.split("x")
         x = int(xs)
         y = int(ys)
         print("Set resolution to %dx%d" % (x, y))
         renderView1.ViewSize = [x, y]
+        renderView1.Update()
+
+    if args.scale != 1.0:
+        x, y = renderView1.ViewSize
+        x2, y2 = int(args.scale*x), int(args.scale*y)
+        print("Scaling images by %0.2f, %dx%d -> %dx%d" % (args.scale, x, y, x2, y2))
+        renderView1.ViewSize = [x2, y2]
         renderView1.Update()
 
     for idx in create_range(args.range, end=ntimesteps):
