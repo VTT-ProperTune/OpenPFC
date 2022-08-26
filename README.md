@@ -1,10 +1,10 @@
 # OpenPFC
 Open-source solver for phase field crystal type (PFC) type problems.
-# Requirements
+## Requirements
 The solver uses heFFTe (https://github.com/af-ayala/heffte) for efficient FFT calculations.
-# Installation
+## Installation
 Instructions here.
-# Running the code
+## Running the code
 Instructions here.
-# Post-processing
+## Post-processing
 Instructions here.
