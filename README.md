@@ -8,3 +8,4 @@ Instructions here.
 Instructions here.
 ## Post-processing
 Instructions here.
+## License
