@@ -922,6 +922,9 @@ public:
     cout << "World: " << m_world << endl;
     if (rank0) create_results_dir();
 
+    cout << "Initializing model... " << endl;
+    m_model.initialize(m_time.get_dt());
+
     Params &p = m_model.get_params();
     if (m_settings.contains("model")) {
       auto p2 = m_settings["model"]["params"];

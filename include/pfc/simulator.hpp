@@ -27,9 +27,7 @@ public:
   Simulator(World &world, Decomposition &decomposition, FFT &fft, Model &model,
             Time &time)
       : m_world(world), m_decomposition(decomposition), m_fft(fft),
-        m_model(model), m_time(time) {
-    m_model.initialize(m_time.get_dt());
-  }
+        m_model(model), m_time(time) {}
 
   World &get_world() { return m_world; }
   Decomposition &get_decomposition() { return m_decomposition; }
