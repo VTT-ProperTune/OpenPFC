@@ -933,9 +933,14 @@ public:
       }
     }
 
-    cout << "Adding results writer" << endl;
-    m_simulator.add_results_writer(
-        make_unique<BinaryWriter>(m_settings["results"]));
+    if (m_settings.contains("saveat") && m_settings["saveat"] > 0) {
+      cout << "Adding results writer" << endl;
+      m_simulator.add_results_writer(
+          make_unique<BinaryWriter>(m_settings["results"]));
+    } else {
+      cout << "Warning: not writing results to anywhere." << endl;
+      cout << "To write results, add ResultsWriter to model." << endl;
+    }
 
     cout << "Adding initial conditions" << endl;
     auto ic = m_settings["initial_condition"];
