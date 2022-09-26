@@ -218,7 +218,9 @@ public:
     prepare_operators(dt);
   }
 
-  void step(double) override {
+  void step(double t) override {
+
+    (void)t; // suppress compiler warning about unused parameter
 
     FFT &fft = get_fft();
 
@@ -1028,7 +1030,7 @@ public:
       m_time.next(); // increase increment counter by 1
       m_simulator.apply_boundary_conditions();
       m_steptime = -MPI_Wtime();
-      m_model.step(m_time.get_dt());
+      m_model.step(m_time.get_current());
       m_steptime += MPI_Wtime();
       m_total_steptime += m_steptime;
       m_avg_steptime =

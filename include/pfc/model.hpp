@@ -23,7 +23,7 @@ public:
   FFT &get_fft() { return m_fft; }
 
   /* methods that need to override for concrete implementations */
-  virtual void step(double dt) = 0;
+  virtual void step(double t) = 0;
   virtual void initialize(double dt) = 0;
   virtual Field &get_field() = 0;
 };
