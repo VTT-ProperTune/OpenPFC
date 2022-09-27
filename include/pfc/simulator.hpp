@@ -43,7 +43,13 @@ public:
                           std::unique_ptr<ResultsWriter> writer) {
     Decomposition &d = get_decomposition();
     writer->set_domain(d.world.size, d.inbox.size, d.inbox.low);
-    m_result_writers.insert({field_name, std::move(writer)});
+    Model &model = get_model();
+    if (model.has_field(field_name)) {
+      m_result_writers.insert({field_name, std::move(writer)});
+    } else {
+      std::cout << "Warning, tried to add writer for inexistent field "
+                << field_name << ", RESULTS ARE NOT WRITTEN!" << std::endl;
+    }
   }
 
   void add_results_writer(std::unique_ptr<ResultsWriter> writer) {
