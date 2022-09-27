@@ -3,6 +3,7 @@
 #include <array>
 #include <iostream>
 #include <mpi.h>
+#include <pfc/types.hpp>
 #include <pfc/utils.hpp>
 #include <vector>
 
@@ -16,9 +17,13 @@ public:
                           const std::array<int, 3> &arr_local,
                           const std::array<int, 3> &arr_offset) = 0;
 
-  virtual MPI_Status write(int increment, const std::vector<double> &data) = 0;
+  virtual MPI_Status write(int increment, const RealField &data) = 0;
 
-  MPI_Status write(const std::vector<double> &data) { return write(0, data); }
+  virtual MPI_Status write(int increment, const ComplexField &data) = 0;
+
+  template <typename T> MPI_Status write(const std::vector<T> &data) {
+    return write(0, data);
+  }
 
 protected:
   std::string m_filename;
@@ -30,6 +35,9 @@ class BinaryWriter : public ResultsWriter {
 private:
   MPI_Datatype m_filetype;
 
+  static MPI_Datatype get_type(RealField) { return MPI_DOUBLE; }
+  static MPI_Datatype get_type(ComplexField) { return MPI_DOUBLE_COMPLEX; }
+
 public:
   void set_domain(const std::array<int, 3> &arr_global,
                   const std::array<int, 3> &arr_local,
@@ -40,7 +48,16 @@ public:
     MPI_Type_commit(&m_filetype);
   };
 
-  MPI_Status write(int increment, const std::vector<double> &data) {
+  MPI_Status write(int increment, const RealField &data) {
+    return write_(increment, data);
+  }
+
+  MPI_Status write(int increment, const ComplexField &data) {
+    return write_(increment, data);
+  }
+
+  template <typename T>
+  MPI_Status write_(int increment, const std::vector<T> &data) {
     MPI_File fh;
     std::string filename2 = utils::format_with_number(m_filename, increment);
     MPI_File_open(MPI_COMM_WORLD, filename2.c_str(),
@@ -48,10 +65,10 @@ public:
     MPI_Offset filesize = 0;
     MPI_Status status;
     const unsigned int disp = 0;
+    MPI_Datatype type = get_type(data);
     MPI_File_set_size(fh, filesize); // force overwriting existing data
-    MPI_File_set_view(fh, disp, MPI_DOUBLE, m_filetype, "native",
-                      MPI_INFO_NULL);
-    MPI_File_write_all(fh, data.data(), data.size(), MPI_DOUBLE, &status);
+    MPI_File_set_view(fh, disp, type, m_filetype, "native", MPI_INFO_NULL);
+    MPI_File_write_all(fh, data.data(), data.size(), type, &status);
     MPI_File_close(&fh);
     return status;
   }
