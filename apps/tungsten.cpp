@@ -906,8 +906,8 @@ public:
         m_model(Tungsten(m_world, m_decomp, m_fft)),
         m_simulator(Simulator(m_world, m_decomp, m_fft, m_model, m_time)) {}
 
-  bool create_results_dir() {
-    filesystem::path results_dir(m_settings["results"].get<string>());
+  bool create_results_dir(const string &output) {
+    filesystem::path results_dir(output);
     if (results_dir.has_filename()) results_dir = results_dir.parent_path();
     if (!std::filesystem::exists(results_dir)) {
       cout << "Results dir " << results_dir << " does not exist, creating\n";
