@@ -5,7 +5,9 @@
 #include "results_writer.hpp"
 #include "time.hpp"
 #include "world.hpp"
+#include <iostream>
 #include <memory>
+#include <unordered_map>
 
 namespace pfc {
 
@@ -18,7 +20,8 @@ private:
   Model &m_model;
   Time &m_time;
 
-  std::vector<std::unique_ptr<ResultsWriter>> m_result_writers;
+  std::unordered_map<std::string, std::unique_ptr<ResultsWriter>>
+      m_result_writers;
   std::vector<std::unique_ptr<FieldModifier>> m_initial_conditions;
   std::vector<std::unique_ptr<FieldModifier>> m_boundary_conditions;
   int m_result_counter = 0;
@@ -36,10 +39,16 @@ public:
   Time &get_time() { return m_time; }
   Field &get_field() { return get_model().get_field(); }
 
-  void add_results_writer(std::unique_ptr<ResultsWriter> writer) {
+  void add_results_writer(const std::string &field_name,
+                          std::unique_ptr<ResultsWriter> writer) {
     Decomposition &d = get_decomposition();
     writer->set_domain(d.world.size, d.inbox.size, d.inbox.low);
-    m_result_writers.push_back(std::move(writer));
+    m_result_writers.insert({field_name, std::move(writer)});
+  }
+
+  void add_results_writer(std::unique_ptr<ResultsWriter> writer) {
+    std::cout << "Adding result writer to write field 'default'" << std::endl;
+    add_results_writer("default", std::move(writer));
   }
 
   void add_initial_conditions(std::unique_ptr<FieldModifier> modifier) {
@@ -58,9 +67,14 @@ public:
 
   void write_results() {
     int file_num = get_result_counter();
-    Field &field = get_field();
-    for (const auto &writer : m_result_writers) {
-      writer->write(file_num, field);
+    Model &model = get_model();
+    for (const auto &[field_name, writer] : m_result_writers) {
+      if (model.has_real_field(field_name)) {
+        writer->write(file_num, get_model().get_real_field(field_name));
+      }
+      if (model.has_complex_field(field_name)) {
+        writer->write(file_num, get_model().get_complex_field(field_name));
+      }
     }
     set_result_counter(file_num + 1);
   }
