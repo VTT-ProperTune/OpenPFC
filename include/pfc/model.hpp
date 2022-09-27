@@ -53,6 +53,10 @@ public:
     return m_complex_fields.find(name)->second;
   }
 
+  bool has_field(const std::string &field_name) {
+    return has_real_field(field_name) || has_complex_field(field_name);
+  }
+
   virtual Field &get_field() { return get_real_field("default"); };
 };
 } // namespace pfc
