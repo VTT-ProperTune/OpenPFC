@@ -1,4 +1,5 @@
 #pragma once
+
 #include "fft.hpp"
 #include "types.hpp"
 #include "world.hpp"
@@ -10,6 +11,8 @@ private:
   World &m_world;
   Decomposition &m_decomposition;
   FFT &m_fft;
+  RealFieldSet m_real_fields;
+  ComplexFieldSet m_complex_fields;
 
 public:
   const bool rank0;
@@ -25,6 +28,31 @@ public:
   /* methods that need to override for concrete implementations */
   virtual void step(double t) = 0;
   virtual void initialize(double dt) = 0;
-  virtual Field &get_field() = 0;
+
+  bool has_real_field(const std::string &field_name) {
+    return m_real_fields.count(field_name) > 0;
+  }
+
+  void add_real_field(const std::string &name, RealField &field) {
+    m_real_fields.insert({name, field});
+  }
+
+  bool has_complex_field(const std::string &field_name) {
+    return m_complex_fields.count(field_name) > 0;
+  }
+
+  void add_complex_field(const std::string &name, ComplexField &field) {
+    m_complex_fields.insert({name, field});
+  }
+
+  RealField &get_real_field(const std::string &name) {
+    return m_real_fields.find(name)->second;
+  }
+
+  ComplexField &get_complex_field(const std::string &name) {
+    return m_complex_fields.find(name)->second;
+  }
+
+  virtual Field &get_field() { return get_real_field("default"); };
 };
 } // namespace pfc
