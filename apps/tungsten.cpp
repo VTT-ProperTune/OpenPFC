@@ -258,10 +258,6 @@ public:
     fft.backward(psi_F, psi);
   }
 
-  Field &get_field() {
-    return psi;
-  }
-
 }; // end of class
 
 class Seed {
