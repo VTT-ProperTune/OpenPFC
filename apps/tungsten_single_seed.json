@@ -17,7 +17,7 @@
             "data": "/data/pfc/tungsten/psi_%d.bin"
         },
         {
-            "name": "psimf",
+            "name": "psiMF",
             "data": "/data/pfc/tungsten/psimf_%d.bin"
         }
     ],
