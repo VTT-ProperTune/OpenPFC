@@ -108,6 +108,14 @@ public:
     psiMF_F.resize(size_outbox);
     psiN_F.resize(size_outbox);
 
+    // "add/register" fields: add references of fields to a hash table. This
+    // makes it possible to access them easily by name, e.g. get_field("psi");
+    // at the moment, this is expecially needed to that multiple fields can be
+    // written to a files (fields/vectors/etc used only internally when stepping
+    // model, does not need to be added at the moment)
+    add_real_field("psi", psi);
+    add_real_field("psiMF", psiMF);
+
     // At the end, let's calculate how much did we allocate memory, should be
     // size_inbox*8*3     (psi, psiMF, psiN) are double vectors
     // size_outbox*16*3   (psi_F, psiMF_F, psiN_F) are complex vectors
