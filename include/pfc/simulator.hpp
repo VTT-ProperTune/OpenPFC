@@ -93,7 +93,7 @@ public:
     }
     time.next();
     apply_boundary_conditions();
-    model.step(time.get_dt());
+    model.step(time.get_current());
     if (time.do_save()) {
       write_results();
     }
