@@ -919,14 +919,8 @@ public:
     }
   }
 
-  int main() {
-    cout << m_settings.dump(4) << "\n\n";
-    cout << "World: " << m_world << endl;
-    if (rank0) create_results_dir();
-
-    cout << "Initializing model... " << endl;
-    m_model.initialize(m_time.get_dt());
-
+  void read_model_parameters() {
+    cout << "Reading model parameters from json file" << endl;
     Params &p = m_model.get_params();
     if (m_settings.contains("model")) {
       auto p2 = m_settings["model"]["params"];
@@ -937,6 +931,7 @@ public:
         p.n0 = n0;
       }
     }
+  }
 
   void add_result_writers() {
     cout << "Adding results writers" << endl;
@@ -955,6 +950,7 @@ public:
     }
   }
 
+  void add_initial_conditions() {
     cout << "Adding initial conditions" << endl;
     auto ic = m_settings["initial_condition"];
     if (ic["type"] == "single_seed") {
@@ -985,8 +981,11 @@ public:
     } else {
       cout << "Warning: unknown initial condition " << ic["type"] << endl;
     }
+  }
 
+  void add_boundary_conditions() {
     cout << "Adding boundary conditions" << endl;
+    Params &p = m_model.get_params();
     auto bc = m_settings["boundary_condition"];
     if (bc["type"] == "none") {
       cout << "Not using boundary condition" << endl;
@@ -1025,6 +1024,19 @@ public:
     } else {
       cout << "Warning: unknown boundary condition " << bc["type"] << endl;
     }
+  }
+
+  int main() {
+    cout << m_settings.dump(4) << "\n\n";
+    cout << "World: " << m_world << endl;
+
+    cout << "Initializing model... " << endl;
+    m_model.initialize(m_time.get_dt());
+
+    read_model_parameters();
+    add_result_writers();
+    add_initial_conditions();
+    add_boundary_conditions();
 
     cout << "Apply initial conditions" << endl;
     m_simulator.apply_initial_conditions();
