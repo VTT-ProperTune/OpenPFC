@@ -938,14 +938,22 @@ public:
       }
     }
 
-    if (m_settings.contains("saveat") && m_settings["saveat"] > 0) {
-      cout << "Adding results writer" << endl;
-      m_simulator.add_results_writer(
-          make_unique<BinaryWriter>(m_settings["results"]));
+  void add_result_writers() {
+    cout << "Adding results writers" << endl;
+    if (m_settings.contains("saveat") && m_settings.contains("fields") &&
+        m_settings["saveat"] > 0) {
+      for (const auto &field : m_settings["fields"]) {
+        string name = field["name"];
+        string data = field["data"];
+        if (rank0) create_results_dir(data);
+        cout << "Writing field " << name << " to " << data << endl;
+        m_simulator.add_results_writer(name, make_unique<BinaryWriter>(data));
+      }
     } else {
       cout << "Warning: not writing results to anywhere." << endl;
       cout << "To write results, add ResultsWriter to model." << endl;
     }
+  }
 
     cout << "Adding initial conditions" << endl;
     auto ic = m_settings["initial_condition"];
