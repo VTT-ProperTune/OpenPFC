@@ -65,12 +65,21 @@ void run(int Lx, int Ly, int Lz, filesystem::path results_dir) {
   double saveat = 1.0;
   Time time({t0, t1, dt}, saveat);
 
-  // make simulator and add results writer
+  // make simulator
   Simulator simulator(world, decomposition, fft, model, time);
+  // add results writers, one for field psi and another for mean field psi
   simulator.add_results_writer(
-      make_unique<BinaryWriter>(results_dir / "tungsten_%04d.bin"));
+      "psi", make_unique<BinaryWriter>(results_dir / "tungsten_psi_%04d.bin"));
+  simulator.add_results_writer(
+      "psiMF",
+      make_unique<BinaryWriter>(results_dir / "tungsten_psiMF_%04d.bin"));
+
+  // initialize model
+  model.initialize(dt);
 
   // run loops
+  cout << "Running from t0 = " << t0 << " to " << t1
+       << " with step size dt = " << dt << endl;
   while (!simulator.done()) {
     simulator.step();
   }
