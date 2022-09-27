@@ -136,6 +136,10 @@ public:
     psiMF_F.resize(size_outbox);
     psiN_F.resize(size_outbox);
 
+    add_real_field("psi", psi);
+    add_real_field("default", psi); // for backward compatibility
+    add_real_field("psiMF", psiMF);
+
     mem_allocated = 0;
     mem_allocated += utils::sizeof_vec(filterMF);
     mem_allocated += utils::sizeof_vec(opL);
