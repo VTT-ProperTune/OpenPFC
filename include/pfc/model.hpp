@@ -23,7 +23,11 @@ public:
 
   World &get_world() { return m_world; }
   Decomposition &get_decomposition() { return m_decomposition; }
-  FFT &get_fft() { return m_fft; }
+
+  FFT &get_fft() {
+    m_fft.reset_fft_time();
+    return m_fft;
+  }
 
   /* methods that need to override for concrete implementations */
   virtual void step(double t) = 0;
