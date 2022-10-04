@@ -17,10 +17,12 @@ private:
   double m_fft_time = 0.0;
 
 public:
-  FFT(const Decomposition &decomposition, MPI_Comm comm)
+  FFT(const Decomposition &decomposition, MPI_Comm comm,
+      heffte::plan_options plan_options =
+          heffte::default_options<heffte::backend::fftw>())
       : m_decomposition(decomposition),
         m_fft({m_decomposition.inbox, m_decomposition.outbox,
-               m_decomposition.r2c_direction, comm}),
+               m_decomposition.r2c_direction, comm, plan_options}),
         m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())){};
 
   void forward(std::vector<double> &in,
