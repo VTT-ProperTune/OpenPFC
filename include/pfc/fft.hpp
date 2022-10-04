@@ -33,9 +33,9 @@ public:
   };
 
   const Decomposition &get_decomposition() { return m_decomposition; }
-  size_t size_inbox() const { return m_fft.size_inbox(); }
-  size_t size_outbox() const { return m_fft.size_outbox(); }
-  size_t size_workspace() const { return m_fft.size_workspace(); }
+  auto size_inbox() const { return m_fft.size_inbox(); }
+  auto size_outbox() const { return m_fft.size_outbox(); }
+  auto size_workspace() const { return m_fft.size_workspace(); }
 };
 
 } // namespace pfc
