@@ -230,28 +230,28 @@ public:
 
     // Calculate mean-field density n_mf
     fft.forward(psi, psi_F);
-    for (long int idx = 0, N = psiMF_F.size(); idx < N; idx++)
+    for (size_t idx = 0, N = psiMF_F.size(); idx < N; idx++)
       psiMF_F[idx] = filterMF[idx] * psi_F[idx];
     fft.backward(psiMF_F, psiMF);
 
     // Calculate the nonlinear part of the evolution equation in a real space
-    for (long int idx = 0, N = psiN.size(); idx < N; idx++) {
-      double u = psi[idx];
-      double v = psiMF[idx];
-      psiN[idx] = p.p3_bar * u * u + p.p4_bar * u * u * u + p.q3_bar * v * v +
-                  p.q4_bar * v * v * v;
+    for (size_t idx = 0, N = psiN.size(); idx < N; idx++) {
+      double u = psi[idx], v = psiMF[idx];
+      double u2 = u * u, u3 = u * u * u, v2 = v * v, v3 = v * v * v;
+      double p3 = p.p3_bar, p4 = p.p4_bar, q3 = p.q3_bar, q4 = p.q4_bar;
+      psiN[idx] = p3 * u2 + p4 * u3 + q3 * v2 + q4 * v3;
     }
 
     // Apply stabilization factor if given in parameters
     if (p.stabP != 0.0)
-      for (long int idx = 0, N = psiN.size(); idx < N; idx++)
+      for (size_t idx = 0, N = psiN.size(); idx < N; idx++)
         psiN[idx] = psiN[idx] - p.stabP * psi[idx];
 
     // Fourier transform of the nonlinear part of the evolution equation
     fft.forward(psiN, psiN_F);
 
     // Apply one step of the evolution equation
-    for (long int idx = 0, N = psi_F.size(); idx < N; idx++)
+    for (size_t idx = 0, N = psi_F.size(); idx < N; idx++)
       psi_F[idx] = opL[idx] * psi_F[idx] + opN[idx] * psiN_F[idx];
 
     // Inverse Fourier transform result back to real space
