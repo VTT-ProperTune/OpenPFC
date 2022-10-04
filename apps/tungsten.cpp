@@ -3,6 +3,7 @@
 #include <pfc/results_writer.hpp>
 #include <pfc/simulator.hpp>
 #include <pfc/time.hpp>
+#include <pfc/utils/timeleft.hpp>
 
 #include <filesystem>
 #include <iostream>
@@ -11,6 +12,7 @@
 #include <stdexcept>
 
 using namespace pfc;
+using namespace pfc::utils;
 using namespace std;
 
 /*
@@ -872,9 +874,9 @@ private:
   Tungsten m_model;
   Simulator m_simulator;
   double m_total_steptime = 0.0;
+  double m_total_fft_time = 0.0;
   double m_steptime = 0.0;
   double m_avg_steptime = 0.0;
-  double m_alpha = 0.01;
   int m_steps_done = 0;
 
   // read settings from file if or standard input
@@ -1052,35 +1054,43 @@ public:
       m_steptime = -MPI_Wtime();
       m_model.step(m_time.get_current());
       m_steptime += MPI_Wtime();
-      m_total_steptime += m_steptime;
-      m_avg_steptime =
-          (m_steps_done < 5)
-              ? m_steptime
-              : m_alpha * m_steptime + (1.0 - m_alpha) * m_avg_steptime;
       if (m_time.do_save()) {
         m_simulator.apply_boundary_conditions();
         m_simulator.write_results();
       }
-      cout << "Step " << m_time.get_increment() << " done in " << m_steptime
-           << " seconds. Simulation time: " << m_time.get_current() << " / "
-           << m_time.get_t1() << ". ETA: ";
-      double eta_i = (m_time.get_t1() - m_time.get_current()) / m_time.get_dt();
-      double eta_t = eta_i * m_avg_steptime;
-      if (eta_t > 86400.0) {
-        cout << eta_t / 86400 << " days" << endl;
-      } else if (eta_t > 3600) {
-        cout << eta_t / 3600 << " hours " << endl;
-      } else if (eta_t > 60) {
-        cout << eta_t / 60 << " minutes" << endl;
-      } else {
-        cout << eta_t << " seconds" << endl;
+
+      // Calculate eta from average step time.
+      // Use exponential moving average when steps > 3.
+      m_avg_steptime = m_steptime;
+      if (m_steps_done > 3) {
+        m_avg_steptime = 0.01 * m_steptime + 0.99 * m_avg_steptime;
       }
+      int increment = m_time.get_increment();
+      double t = m_time.get_current(), t1 = m_time.get_t1();
+      double eta_i = (t1 - t) / m_time.get_dt();
+      double eta_t = eta_i * m_avg_steptime;
+      double fft_time = m_fft.get_fft_time();
+      double other_time = m_steptime - fft_time;
+      cout << "Step " << increment << " done in " << m_steptime << " s ";
+      cout << "(" << fft_time << " s FFT, " << other_time << " s other). ";
+      cout << "Simulation time: " << t << " / " << t1;
+      cout << " (" << (t / t1 * 100) << " % done). ";
+      cout << "ETA: " << TimeLeft(eta_t) << endl;
+
+      m_total_steptime += m_steptime;
+      m_total_fft_time += fft_time;
       m_steps_done += 1;
     }
 
-    m_avg_steptime = m_total_steptime / m_steps_done;
-    cout << "Simulated " << m_steps_done << " steps, average step time "
-         << m_avg_steptime << " s / step" << endl;
+    double avg_steptime = m_total_steptime / m_steps_done;
+    double avg_fft_time = m_total_fft_time / m_steps_done;
+    double avg_oth_time = avg_steptime - avg_fft_time;
+    double p_fft = avg_fft_time / avg_steptime * 100.0;
+    double p_oth = avg_oth_time / avg_steptime * 100.0;
+    cout << "\nSimulated " << m_steps_done << " steps. Average times:" << endl;
+    cout << "Step time:  " << m_avg_steptime << " s" << endl;
+    cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %" << endl;
+    cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %" << endl;
 
     return 0;
   }
