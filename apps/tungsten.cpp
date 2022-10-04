@@ -862,6 +862,21 @@ public:
 The main application
 */
 
+heffte::plan_options get_plan_options() {
+  heffte::plan_options options =
+      heffte::default_options<heffte::backend::fftw>();
+  /*
+  options.use_reorder = true;
+  options.algorithm = reshape_algorithm::alltoall;
+  options.algorithm = reshape_algorithm::alltoallv;
+  options.algorithm = reshape_algorithm::p2p;
+  options.use_pencils = true;
+  options.use_gpu_aware = true;
+  */
+  options.algorithm = heffte::reshape_algorithm::p2p_plined;
+  return options;
+}
+
 class App {
 private:
   MPI_Worker m_worker;
@@ -903,7 +918,8 @@ public:
       : m_worker(MPI_Worker(argc, argv, comm)), rank0(m_worker.get_rank() == 0),
         m_settings(read_settings(argc, argv)),
         m_world(from_json<World>(m_settings)),
-        m_decomp(Decomposition(m_world, comm)), m_fft(FFT(m_decomp, comm)),
+        m_decomp(Decomposition(m_world, comm)),
+        m_fft(FFT(m_decomp, comm, get_plan_options())),
         m_time(from_json<Time>(m_settings)),
         m_model(Tungsten(m_world, m_decomp, m_fft)),
         m_simulator(Simulator(m_world, m_decomp, m_fft, m_model, m_time)) {}
