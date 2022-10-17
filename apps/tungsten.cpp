@@ -879,6 +879,7 @@ heffte::plan_options get_plan_options() {
 
 class App {
 private:
+  MPI_Comm m_comm;
   MPI_Worker m_worker;
   bool rank0;
   json m_settings;
@@ -891,6 +892,7 @@ private:
   double m_total_steptime = 0.0;
   double m_total_fft_time = 0.0;
   double m_steptime = 0.0;
+  double m_fft_time = 0.0;
   double m_avg_steptime = 0.0;
   int m_steps_done = 0;
 
@@ -915,8 +917,8 @@ private:
 
 public:
   App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
-      : m_worker(MPI_Worker(argc, argv, comm)), rank0(m_worker.get_rank() == 0),
-        m_settings(read_settings(argc, argv)),
+      : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
+        rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)),
         m_world(from_json<World>(m_settings)),
         m_decomp(Decomposition(m_world, comm)),
         m_fft(FFT(m_decomp, comm, get_plan_options())),
@@ -1067,9 +1069,20 @@ public:
     while (!m_time.done()) {
       m_time.next(); // increase increment counter by 1
       m_simulator.apply_boundary_conditions();
-      m_steptime = -MPI_Wtime();
+
+      double l_steptime = 0.0;  // l = local for this mpi process
+      double l_fft_time = 0.0;
+      MPI_Barrier(m_comm);
+      l_steptime = -MPI_Wtime();
       m_model.step(m_time.get_current());
-      m_steptime += MPI_Wtime();
+      MPI_Barrier(m_comm);
+      l_steptime += MPI_Wtime();
+      l_fft_time = m_fft.get_fft_time();
+
+      // max reduction over all mpi processes
+      MPI_Reduce(&l_steptime, &m_steptime, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
+      MPI_Reduce(&l_fft_time, &m_fft_time, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
+
       if (m_time.do_save()) {
         m_simulator.apply_boundary_conditions();
         m_simulator.write_results();
@@ -1085,16 +1098,15 @@ public:
       double t = m_time.get_current(), t1 = m_time.get_t1();
       double eta_i = (t1 - t) / m_time.get_dt();
       double eta_t = eta_i * m_avg_steptime;
-      double fft_time = m_fft.get_fft_time();
-      double other_time = m_steptime - fft_time;
+      double other_time = m_steptime - m_fft_time;
       cout << "Step " << increment << " done in " << m_steptime << " s ";
-      cout << "(" << fft_time << " s FFT, " << other_time << " s other). ";
+      cout << "(" << m_fft_time << " s FFT, " << other_time << " s other). ";
       cout << "Simulation time: " << t << " / " << t1;
       cout << " (" << (t / t1 * 100) << " % done). ";
       cout << "ETA: " << TimeLeft(eta_t) << endl;
 
       m_total_steptime += m_steptime;
-      m_total_fft_time += fft_time;
+      m_total_fft_time += m_fft_time;
       m_steps_done += 1;
     }
 
