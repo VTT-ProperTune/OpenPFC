@@ -1070,7 +1070,7 @@ public:
       m_time.next(); // increase increment counter by 1
       m_simulator.apply_boundary_conditions();
 
-      double l_steptime = 0.0;  // l = local for this mpi process
+      double l_steptime = 0.0; // l = local for this mpi process
       double l_fft_time = 0.0;
       MPI_Barrier(m_comm);
       l_steptime = -MPI_Wtime();
@@ -1116,7 +1116,7 @@ public:
     double p_fft = avg_fft_time / avg_steptime * 100.0;
     double p_oth = avg_oth_time / avg_steptime * 100.0;
     cout << "\nSimulated " << m_steps_done << " steps. Average times:" << endl;
-    cout << "Step time:  " << m_avg_steptime << " s" << endl;
+    cout << "Step time:  " << avg_steptime << " s" << endl;
     cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %" << endl;
     cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %" << endl;
 
