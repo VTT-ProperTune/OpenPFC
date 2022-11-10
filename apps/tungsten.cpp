@@ -854,6 +854,7 @@ public:
 
   ~MPI_Worker() { MPI_Finalize(); }
   int get_rank() const { return m_rank; }
+  int get_num_ranks() const { return m_num_procs; }
   void mute() { cout.setstate(ios::failbit); }
   void unmute() { cout.clear(); }
 };
