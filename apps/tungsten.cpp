@@ -6,6 +6,7 @@
 #include <pfc/utils/timeleft.hpp>
 
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <random>
@@ -897,8 +898,11 @@ private:
   double m_avg_steptime = 0.0;
   int m_steps_done = 0;
 
+  // save detailed timing information for each mpi rank and step?
   bool m_detailed_timing = false;
-  bool m_detailed_timing_ascii = true;
+  bool m_detailed_timing_print = false;
+  bool m_detailed_timing_write = false;
+  string m_detailed_timing_filename = "timing.bin";
 
   // read settings from file if or standard input
   json read_settings(int argc, char *argv[]) {
@@ -954,6 +958,17 @@ public:
              << endl;
         p.n0 = n0;
       }
+    }
+  }
+
+  void read_detailed_timing_configuration() {
+    if (m_settings.contains("detailed_timing")) {
+      auto timing = m_settings["detailed_timing"];
+      if (timing.contains("enabled")) m_detailed_timing = timing["enabled"];
+      if (timing.contains("print")) m_detailed_timing_print = timing["print"];
+      if (timing.contains("write")) m_detailed_timing_write = timing["write"];
+      if (timing.contains("filename"))
+        m_detailed_timing_filename = timing["filename"];
     }
   }
 
@@ -1058,6 +1073,7 @@ public:
     m_model.initialize(m_time.get_dt());
 
     read_model_parameters();
+    read_detailed_timing_configuration();
     add_result_writers();
     add_initial_conditions();
     add_boundary_conditions();
@@ -1086,22 +1102,30 @@ public:
       if (m_detailed_timing) {
         double timing[2] = {l_steptime, l_fft_time};
         MPI_Send(timing, 2, MPI_DOUBLE, 0, 42, m_comm);
-        MPI_Barrier(m_comm);
         if (m_worker.get_rank() == 0) {
-          if (m_detailed_timing_ascii) {
+          int num_ranks = m_worker.get_num_ranks();
+          double timing[num_ranks][2];
+          for (int rank = 0; rank < num_ranks; rank++) {
+            MPI_Recv(timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm,
+                     MPI_STATUS_IGNORE);
+          }
+          auto inc = m_time.get_increment();
+          if (m_detailed_timing_print) {
+            auto old_precision = cout.precision(6);
             cout << "Timing information for all processes:" << endl;
             cout << "step;rank;step_time;fft_time" << endl;
-            auto old_precision = cout.precision(12);
-            for (int rank = 0; rank < m_worker.get_num_ranks(); rank++) {
-              MPI_Recv(timing, 2, MPI_DOUBLE, rank, 42, m_comm,
-                       MPI_STATUS_IGNORE);
-              cout << m_time.get_increment() << ";" << rank << ";" << timing[0]
-                   << ";" << timing[1] << endl;
+            for (int rank = 0; rank < num_ranks; rank++) {
+              cout << inc << ";" << rank << ";" << timing[rank][0] << ";"
+                   << timing[rank][1] << endl;
             }
             cout.precision(old_precision);
-          } else {
-            cout << "Writing to binary file" << endl;
-            // TODO
+          }
+          if (m_detailed_timing_write) {
+            // so we end up to a binary file, and opening with e.g. Python
+            // np.fromfile("timing.bin").reshape(n_steps, n_procs, 2)
+            ofstream outfile(m_detailed_timing_filename, ios::app);
+            outfile.write((const char *)timing, sizeof(double) * 2 * num_ranks);
+            outfile.close();
           }
         }
       }
