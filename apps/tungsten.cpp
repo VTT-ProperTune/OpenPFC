@@ -897,6 +897,9 @@ private:
   double m_avg_steptime = 0.0;
   int m_steps_done = 0;
 
+  bool m_detailed_timing = false;
+  bool m_detailed_timing_ascii = true;
+
   // read settings from file if or standard input
   json read_settings(int argc, char *argv[]) {
     json settings;
@@ -1079,6 +1082,29 @@ public:
       MPI_Barrier(m_comm);
       l_steptime += MPI_Wtime();
       l_fft_time = m_fft.get_fft_time();
+
+      if (m_detailed_timing) {
+        double timing[2] = {l_steptime, l_fft_time};
+        MPI_Send(timing, 2, MPI_DOUBLE, 0, 42, m_comm);
+        MPI_Barrier(m_comm);
+        if (m_worker.get_rank() == 0) {
+          if (m_detailed_timing_ascii) {
+            cout << "Timing information for all processes:" << endl;
+            cout << "step;rank;step_time;fft_time" << endl;
+            auto old_precision = cout.precision(12);
+            for (int rank = 0; rank < m_worker.get_num_ranks(); rank++) {
+              MPI_Recv(timing, 2, MPI_DOUBLE, rank, 42, m_comm,
+                       MPI_STATUS_IGNORE);
+              cout << m_time.get_increment() << ";" << rank << ";" << timing[0]
+                   << ";" << timing[1] << endl;
+            }
+            cout.precision(old_precision);
+          } else {
+            cout << "Writing to binary file" << endl;
+            // TODO
+          }
+        }
+      }
 
       // max reduction over all mpi processes
       MPI_Reduce(&l_steptime, &m_steptime, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
