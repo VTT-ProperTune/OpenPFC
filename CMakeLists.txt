@@ -26,6 +26,19 @@ if(ENABLE_CLANG_TIDY)
   set(CMAKE_CXX_CLANG_TIDY clang-tidy)
 endif()
 
+option(BUILD_DOCUMENTATION "Build documentation" ON)
+
+if(BUILD_DOCUMENTATION)
+  message(STATUS "Building documentation")
+  find_package(Doxygen)
+
+  if(Doxygen_FOUND)
+    add_subdirectory(docs)
+  else()
+    message(STATUS "Doxygen not found, not building documentation")
+  endif()
+endif()
+
 find_package(MPI REQUIRED)
 find_package(Heffte REQUIRED)
 
