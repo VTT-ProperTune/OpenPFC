@@ -29,10 +29,11 @@ endif()
 option(BUILD_DOCUMENTATION "Build documentation" ON)
 
 if(BUILD_DOCUMENTATION)
-  message(STATUS "Building documentation")
+  message(STATUS "Generating sources for documentation (build with target docs)")
   find_package(Doxygen)
 
   if(Doxygen_FOUND)
+    message(STATUS "Using Doxygen ${DOXYGEN_VERSION} found from ${DOXYGEN_EXECUTABLE}")
     add_subdirectory(docs)
   else()
     message(STATUS "Doxygen not found, not building documentation")
