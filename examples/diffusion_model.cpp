@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <pfc/model.hpp>
 #include <pfc/world.hpp>
@@ -26,9 +27,11 @@ private:
   vector<double> opL, psi;
   vector<complex<double>> psi_F;
   const bool verbose = false;
-  int m_midpoint_idx = -1;
+  MPI_Comm comm = MPI_COMM_WORLD;
 
 public:
+  double psi_min, psi_max;
+
   void initialize(double dt) override {
     if (rank0) cout << "Allocate space" << endl;
 
@@ -75,10 +78,6 @@ public:
           double y = w.y0 + j * w.dy;
           double z = w.z0 + k * w.dz;
           psi[idx] = exp(-(x * x + y * y + z * z) / (4.0 * D));
-          if (abs(x) < 1.0e-9 && abs(y) < 1.0e-9 && abs(z) < 1.0e-9) {
-            cout << "Found midpoint from index " << idx << endl;
-            m_midpoint_idx = idx;
-          }
           idx += 1;
         }
       }
@@ -124,11 +123,26 @@ public:
       psi_F[k] = opL[k] * psi_F[k];
     }
     fft.backward(psi_F, psi);
+    // count some values from field, locals for this rank
+    double local_min = std::numeric_limits<double>::max();
+    double local_max = std::numeric_limits<double>::min();
+    auto min_max_finder = [&local_min, &local_max](const double &value) {
+      local_min = std::min(local_min, value);
+      local_max = std::max(local_max, value);
+    };
+    std::for_each(psi.begin(), psi.end(), min_max_finder);
+    // this would print maximum only for local maximum on this part
+    // of domain ...
+    // cout << "max = " << local_max << std::endl;
+    // thus, we need some MPI communication: send values from any rank to rank 0
+    MPI_Send(&local_min, 1, MPI_DOUBLE, 0, 1, comm);
+    MPI_Send(&local_max, 1, MPI_DOUBLE, 0, 2, comm);
+    // use MPI_Reduce to make reductions MPI_MIN and MPI_MAX
+    MPI_Reduce(&local_min, &psi_min, 1, MPI_DOUBLE, MPI_MIN, 0, comm);
+    MPI_Reduce(&local_max, &psi_max, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
   }
 
   vector<double> &get_field() override { return psi; }
-
-  int get_midpoint_idx() const { return m_midpoint_idx; }
 };
 
 void run() {
@@ -157,24 +171,21 @@ void run() {
   int n = 0; // increment counter
 
   D.initialize(dt);
-  vector<double> &psi = D.get_field();
 
-  int idx = D.get_midpoint_idx();
-  if (idx != -1)
-    cout << "n = " << n << ", t = " << t << ", psi[" << idx
-         << "] = " << psi[idx] << endl;
+  if (D.rank0) cout << "n = 0, t = 0, psi_max = 1.0" << endl;
 
   // start loops
   while (t <= t_stop) {
     t += dt;
     n += 1;
     D.step(dt);
-    if (idx != -1)
-      cout << "n = " << n << ", t = " << t << ", psi[" << idx
-           << "] = " << psi[idx] << endl;
+    if (D.rank0)
+      cout << "n = " << n << ", t = " << t << ", psi_min = " << D.psi_min
+           << ", psi_max = " << D.psi_max << endl;
   }
-  if (idx != -1) {
-    if (abs(psi[idx] - 0.5) < 0.01) {
+
+  if (D.rank0) {
+    if (abs(D.psi_max - 0.5) < 0.01) {
       cout << "Test pass!" << endl;
     } else {
       cerr << "Test failed!" << endl;
