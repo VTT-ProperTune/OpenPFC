@@ -131,15 +131,20 @@ public:
       local_max = std::max(local_max, value);
     };
     std::for_each(psi.begin(), psi.end(), min_max_finder);
-    // this would print maximum only for local maximum on this part
-    // of domain ...
+    // This would print maximum only for local maximum on this part
+    // of domain, but usually that is what in wanted:
     // cout << "max = " << local_max << std::endl;
-    // thus, we need some MPI communication: send values from any rank to rank 0
-    MPI_Send(&local_min, 1, MPI_DOUBLE, 0, 1, comm);
-    MPI_Send(&local_max, 1, MPI_DOUBLE, 0, 2, comm);
-    // use MPI_Reduce to make reductions MPI_MIN and MPI_MAX
+
+    // Thus, we need some MPI communication. Use MPI_Reduce to make reductions
+    // and send result to rank 0.
     MPI_Reduce(&local_min, &psi_min, 1, MPI_DOUBLE, MPI_MIN, 0, comm);
     MPI_Reduce(&local_max, &psi_max, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+
+    // If the result is needed in all other ranks also, use MPI_Allreduce
+    /*
+    MPI_Allreduce(&local_min, &psi_min, 1, MPI_DOUBLE, MPI_MIN, comm);
+    MPI_Allreduce(&local_max, &psi_max, 1, MPI_DOUBLE, MPI_MAX, comm);
+    */
   }
 
   vector<double> &get_field() override { return psi; }
@@ -164,6 +169,9 @@ void run() {
   FFT fft(decomp, comm);
   Diffusion D(world, decomp, fft);
 
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+
   // define time
   double t = 0.0;
   double t_stop = 0.5874010519681994;
@@ -172,19 +180,21 @@ void run() {
 
   D.initialize(dt);
 
-  if (D.rank0) cout << "n = 0, t = 0, psi_max = 1.0" << endl;
+  if (rank == 0) cout << "n = 0, t = 0, psi_max = 1.0" << endl;
 
   // start loops
   while (t <= t_stop) {
     t += dt;
     n += 1;
     D.step(dt);
-    if (D.rank0)
+    if (rank == 0)
       cout << "n = " << n << ", t = " << t << ", psi_min = " << D.psi_min
            << ", psi_max = " << D.psi_max << endl;
   }
 
-  if (D.rank0) {
+  cout << "psi_max on rank " << rank << " is " << D.psi_max << endl;
+
+  if (rank == 0) {
     if (abs(D.psi_max - 0.5) < 0.01) {
       cout << "Test pass!" << endl;
     } else {
