@@ -14,10 +14,18 @@ option(Heffte_ENABLE_TRACING "Enable the tracing capabilities" OFF)
 
 include(FetchContent)
 
+if(NOT Heffte_FIND_VERSION)
+  set(Heffte_FIND_VERSION 2.3.0)
+endif()
+
+set(Heffte_DOWNLOAD_URL "https://bitbucket.org/icl/heffte.git")
+
+message(STATUS "Fetching HeFFTe version ${Heffte_FIND_VERSION} from ${Heffte_DOWNLOAD_URL}")
+
 FetchContent_Declare(
   heffte
-  GIT_REPOSITORY "https://bitbucket.org/icl/heffte.git"
-  GIT_TAG "v2.2.0")
+  GIT_REPOSITORY ${Heffte_DOWNLOAD_URL}
+  GIT_TAG "v${Heffte_FIND_VERSION}")
 
 # https://bitbucket.org/icl/heffte/issues/42/add-option-to-use-static-fftw-libraries
 FetchContent_GetProperties(heffte)
