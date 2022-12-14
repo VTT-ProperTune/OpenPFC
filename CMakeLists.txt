@@ -42,6 +42,7 @@ endif()
 
 find_package(MPI REQUIRED)
 find_package(Heffte REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 add_library(pfc INTERFACE)
 target_include_directories(pfc INTERFACE include/)
