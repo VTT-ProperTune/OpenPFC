@@ -32,6 +32,8 @@ bottlenecks, why larger models could not be calculated as well.
 
 ### Using singularity
 
+- Todo
+
 ### Compiling from source
 
 Requirements:
@@ -71,59 +73,73 @@ sudo apt-get install -y gcc openmpi fftw
 Some OpenPFC applications uses json files to provide initial data for
 simulations. In principle, applications can also be built to receive initial
 data in other ways, but as a widely known file format, we recommend to use json.
-The choice for json package is [JSON for Modern C++](https://json.nlohmann.me/),
-which can be installed either system-wide (e.g. `sudo apt-get install -y
-nlohmann-json3-dev`), or by copying the [header
-file](https://json.nlohmann.me/home/releases/) `json.hpp` to some appropriate
-place in system, e.g. `$HOME/.local/include/nlohmann`. As this very likely is not
-installed to system by administrators, a manual installation is needed.
+The choice for json package is [JSON for Modern C++](https://json.nlohmann.me/).
+There exists packages for certain Linux distributions (`nlohmann-json3-dev` for
+Ubuntu, `json-devel` for Centos) for easy install. If the system-wide installation
+is not found, the library is downloaded from GitHub during the configuration.
 
+The last and most important dependency in order to use OpenPFC is
+[HeFFTe](https://icl.utk.edu/fft/), which is our choice for parallel FFT
+implementation. The instructions to install HeFFTe can be found from
+[here](https://mkstoyanov.bitbucket.io/heffte/md_doxygen_installation.html).
+HeFFTe can be downloaded from <https://bitbucket.org/icl/heffte/downloads/>.
 
+If HeFFTe is installed to some non-standard location, it must be given with
+environment variable `HEFFTE_ROOT`, that is, `HEFFTE_ROOT` is the install prefix
+of HeFFTe installation. If `HEFFTE_ROOT` is not set, configuration procedure of
+OpenPFC will download HeFFTe and build it at the same time. In general, this is
+not what wanted. It's better to configure and build HeFFTe as a separate library
+from OpenPFC.
 
-OpenPFC uses [cmake](https://cmake.org/) to automate software building.
-Compiling the software doesn't require a greater knowledge of cmake, but it
-doesn't hurt either. First the source code must be downloaded to some
-appropriate place:
+OpenPFC uses [cmake](https://cmake.org/) to automate software building. First
+the source code must be downloaded to some appropriate place:
 
 ```bash
 git clone https://github.com/ProperTune-VTT/OpenPFC
+cd OpenPFC
 ```
 
 Next step is to configure project. One might consider at least options
-`CMAKE_BUILD_TYPE` and `CMAKE_INSTALL_PREFIX`
+`CMAKE_BUILD_TYPE` and  `HEFFTE_ROOT`, which can be given also as cmake
+variable:
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/OpenPFC -S OpenPFC -B OpenPFC/build
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DHEFFTE_ROOT=/opt/heffte/2.3 \
+      -S . -B build
 ```
 
 Then, building:
 
 ```bash
-cmake --build OpenPFC/build
+cmake --build build
 ```
 
-And installation:
+After that, one should find example codes from `./build/examples` and apps from
+`./build/apps`.
+
+**Note**: another well-known and battle tested way to build cmake projects is
 
 ```bash
-cmake --install OpenPFC/build
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DHEFFTE_ROOT=/opt/heffte/2.3 ..
+make
 ```
 
-After that, one should find example codes from `<build_dir>/examples`.
+Which is equivalent to one described above.
 
-OpenPFC depends from several other packages, where the somewhat standard ones
-(OpenMP, FFTW, cmake) are assumed to be already installed. The uncommon
-dependencies (HeFFTe, json) are downloaded during the configuration of the
-project. 
+## Examples
 
-# Examples
+- Todo
 
-See our great article!
+## Getting started
 
-# Getting started
-
-The basic concepts of the package are demonstrated with a simple diffusion model.
+- Todo
 
 ## Citing
+
+- Todo
 
 ```bibtex
 @article{
