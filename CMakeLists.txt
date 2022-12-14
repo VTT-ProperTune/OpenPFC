@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(OpenPFC VERSION 0.1.0 DESCRIPTION "Phase Field Crystal simulation framework")
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -41,15 +41,22 @@ if(BUILD_DOCUMENTATION)
 endif()
 
 # Prefer "config mode", i.e. system wide installed packages
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 find_package(MPI REQUIRED)
-find_package(Heffte REQUIRED)
+
+set(HEFFTE_ROOT "$ENV{HEFFTE_ROOT}" CACHE STRING "Path to HeFFTe installation")
+if(HEFFTE_ROOT)
+  find_package(Heffte REQUIRED PATHS ${HEFFTE_ROOT})
+else()
+  find_package(Heffte REQUIRED)
+endif()
+
 find_package(nlohmann_json REQUIRED)
 
 add_library(pfc INTERFACE)
 target_include_directories(pfc INTERFACE include/)
-target_link_libraries(pfc INTERFACE Heffte MPI::MPI_CXX)
+target_link_libraries(pfc INTERFACE Heffte::Heffte MPI::MPI_CXX)
 
 add_subdirectory(apps)
 add_subdirectory(examples)
