@@ -40,6 +40,9 @@ if(BUILD_DOCUMENTATION)
   endif()
 endif()
 
+# Prefer "config mode", i.e. system wide installed packages
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+
 find_package(MPI REQUIRED)
 find_package(Heffte REQUIRED)
 find_package(nlohmann_json REQUIRED)
