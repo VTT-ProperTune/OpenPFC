@@ -44,14 +44,7 @@ endif()
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 find_package(MPI REQUIRED)
-
-set(HEFFTE_ROOT "$ENV{HEFFTE_ROOT}" CACHE STRING "Path to HeFFTe installation")
-if(HEFFTE_ROOT)
-  find_package(Heffte REQUIRED PATHS ${HEFFTE_ROOT})
-else()
   find_package(Heffte REQUIRED)
-endif()
-
 find_package(nlohmann_json REQUIRED)
 
 add_library(OpenPFC INTERFACE)

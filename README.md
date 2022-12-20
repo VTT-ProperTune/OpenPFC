@@ -84,12 +84,21 @@ implementation. The instructions to install HeFFTe can be found from
 [here](https://mkstoyanov.bitbucket.io/heffte/md_doxygen_installation.html).
 HeFFTe can be downloaded from <https://bitbucket.org/icl/heffte/downloads/>.
 
-If HeFFTe is installed to some non-standard location, it must be given with
-environment variable `HEFFTE_ROOT`, that is, `HEFFTE_ROOT` is the install prefix
-of HeFFTe installation. If `HEFFTE_ROOT` is not set, configuration procedure of
-OpenPFC will download HeFFTe and build it at the same time. In general, this is
-not what wanted. It's better to configure and build HeFFTe as a separate library
-from OpenPFC.
+If HeFFTe is installed to some non-standard location, cmake is unable to find it
+when configuring OpenPFC. To overcome this problem, the install path of HeFFTe
+can be set into environment variable `CMAKE_PREFIX_PATH`. For example, if HeFFe
+is installed to `/opt/heffte/2.3`, the following is making cmake to find HeFFTe
+succesfully:
+
+```bash
+export CMAKE_PREFIX_PATH=/opt/heffte/2.3:$CMAKE_PREFIX_PATH
+```
+
+During the configuration, OpenPFC prefers system-wide installations, thus if
+HeFFTe is installed and founded, it will be used. For convenience, there is a
+fallback method to fetch HeFFTe sources from internet and build it concurrently
+with OpenPFC. In general, however, it is better to build and install programs
+one at a time.
 
 OpenPFC uses [cmake](https://cmake.org/) to automate software building. First
 the source code must be downloaded to some appropriate place:
@@ -100,13 +109,10 @@ cd OpenPFC
 ```
 
 Next step is to configure project. One might consider at least options
-`CMAKE_BUILD_TYPE` and  `HEFFTE_ROOT`, which can be given also as cmake
-variable:
+`CMAKE_BUILD_TYPE`.
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release \
-      -DHEFFTE_ROOT=/opt/heffte/2.3 \
-      -S . -B build
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
 ```
 
 Then, building:
