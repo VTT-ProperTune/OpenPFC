@@ -1,47 +1,47 @@
 add_executable(mpi_worker mpi_worker.cpp)
-target_link_libraries(mpi_worker PRIVATE pfc)
+target_link_libraries(mpi_worker PRIVATE OpenPFC)
 
 add_executable(mpi_worker_inside_class mpi_worker_inside_class.cpp)
-target_link_libraries(mpi_worker_inside_class PRIVATE pfc)
+target_link_libraries(mpi_worker_inside_class PRIVATE OpenPFC)
 
 add_executable(mpi_timers mpi_timers.cpp)
-target_link_libraries(mpi_timers PRIVATE pfc)
+target_link_libraries(mpi_timers PRIVATE OpenPFC)
 
 add_executable(world world.cpp)
-target_link_libraries(world PRIVATE pfc)
+target_link_libraries(world PRIVATE OpenPFC)
 
 add_executable(time time.cpp)
-target_link_libraries(time PRIVATE pfc)
+target_link_libraries(time PRIVATE OpenPFC)
 
 add_executable(clean_tungsten clean_tungsten.cpp)
-target_link_libraries(clean_tungsten PRIVATE pfc)
+target_link_libraries(clean_tungsten PRIVATE OpenPFC)
 
 add_executable(clean_tungsten_with_simulator clean_tungsten_with_simulator.cpp)
-target_link_libraries(clean_tungsten_with_simulator PRIVATE pfc)
+target_link_libraries(clean_tungsten_with_simulator PRIVATE OpenPFC)
 
 add_executable(decomposition decomposition.cpp)
-target_link_libraries(decomposition PRIVATE pfc)
+target_link_libraries(decomposition PRIVATE OpenPFC)
 
 add_executable(distributed_fft distributed_fft.cpp)
-target_link_libraries(distributed_fft PRIVATE pfc)
+target_link_libraries(distributed_fft PRIVATE OpenPFC)
 
 add_executable(write_results write_results.cpp)
-target_link_libraries(write_results PRIVATE pfc)
+target_link_libraries(write_results PRIVATE OpenPFC)
 
 add_executable(diffusion_model diffusion_model.cpp)
-target_link_libraries(diffusion_model PRIVATE pfc)
+target_link_libraries(diffusion_model PRIVATE OpenPFC)
 
 add_executable(diffusion_model_with_simulator diffusion_model_with_simulator.cpp)
-target_link_libraries(diffusion_model_with_simulator PRIVATE pfc)
+target_link_libraries(diffusion_model_with_simulator PRIVATE OpenPFC)
 
 add_executable(diffusion_model_with_custom_initial_condition diffusion_model_with_custom_initial_condition.cpp)
-target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE pfc)
+target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE OpenPFC)
 
 add_executable(clean_tungsten_multiple_seeds clean_tungsten_multiple_seeds.cpp)
-target_link_libraries(clean_tungsten_multiple_seeds PRIVATE pfc)
+target_link_libraries(clean_tungsten_multiple_seeds PRIVATE OpenPFC)
 
 add_executable(clean_tungsten_with_bc clean_tungsten_with_bc.cpp)
-target_link_libraries(clean_tungsten_with_bc PRIVATE pfc nlohmann_json::nlohmann_json)
+target_link_libraries(clean_tungsten_with_bc PRIVATE OpenPFC nlohmann_json::nlohmann_json)
 
 add_executable(json_read json_read.cpp)
 target_link_libraries(json_read PRIVATE nlohmann_json::nlohmann_json)

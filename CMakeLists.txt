@@ -54,9 +54,9 @@ endif()
 
 find_package(nlohmann_json REQUIRED)
 
-add_library(pfc INTERFACE)
-target_include_directories(pfc INTERFACE include/)
-target_link_libraries(pfc INTERFACE Heffte::Heffte MPI::MPI_CXX)
+add_library(OpenPFC INTERFACE)
+target_include_directories(OpenPFC INTERFACE include/)
+target_link_libraries(OpenPFC INTERFACE Heffte::Heffte MPI::MPI_CXX)
 
 add_subdirectory(apps)
 add_subdirectory(examples)
