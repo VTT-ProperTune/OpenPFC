@@ -26,9 +26,9 @@ if(ENABLE_CLANG_TIDY)
   set(CMAKE_CXX_CLANG_TIDY clang-tidy)
 endif()
 
-option(BUILD_DOCUMENTATION "Build documentation" ON)
+option(OpenPFC_BUILD_DOCUMENTATION "Build documentation" ON)
 
-if(BUILD_DOCUMENTATION)
+if(OpenPFC_BUILD_DOCUMENTATION)
   message(STATUS "Generating sources for documentation (build with target docs)")
   find_package(Doxygen)
 
