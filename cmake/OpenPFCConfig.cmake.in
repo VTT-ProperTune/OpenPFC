@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+
+if (NOT TARGET MPI::MPI_CXX)
+    find_package(MPI REQUIRED)
+endif()
+
+if (NOT TARGET Heffte::Heffte)
+    find_package(Heffte REQUIRED PATHS @Heffte_DIR@)
+endif()
+
+include ( "${CMAKE_CURRENT_LIST_DIR}/OpenPFCTargets.cmake" )
+
+message(STATUS "Found OpenPFC: @CMAKE_INSTALL_PREFIX@ (found version @PROJECT_VERSION@)")
