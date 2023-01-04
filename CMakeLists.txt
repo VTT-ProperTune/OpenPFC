@@ -53,3 +53,5 @@ target_link_libraries(OpenPFC INTERFACE Heffte::Heffte MPI::MPI_CXX)
 
 add_subdirectory(apps)
 add_subdirectory(examples)
+
+install(DIRECTORY include/openpfc DESTINATION include)
