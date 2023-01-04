@@ -26,7 +26,7 @@ bottlenecks, why larger models could not be calculated as well.
 ## Features
 
 - scales up to tens of thousands of cores, demonstrably
-- modern c++17 header only library, easy to use
+- modern c++17 header only framework, easy to use
 
 ## Installing
 
@@ -87,18 +87,19 @@ HeFFTe can be downloaded from <https://bitbucket.org/icl/heffte/downloads/>.
 If HeFFTe is installed to some non-standard location, cmake is unable to find it
 when configuring OpenPFC. To overcome this problem, the install path of HeFFTe
 can be set into environment variable `CMAKE_PREFIX_PATH`. For example, if HeFFe
-is installed to `/opt/heffte/2.3`, the following is making cmake to find HeFFTe
-succesfully:
+is installed to `$HOME/opt/heffte/2.3`, the following is making cmake to find
+HeFFTe succesfully:
 
 ```bash
-export CMAKE_PREFIX_PATH=/opt/heffte/2.3:$CMAKE_PREFIX_PATH
+export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH
 ```
 
-During the configuration, OpenPFC prefers system-wide installations, thus if
-HeFFTe is installed and founded, it will be used. For convenience, there is a
+During the configuration, OpenPFC prefers local installations, thus if HeFFTe is
+already installed and founded, it will be used. For convenience, there is a
 fallback method to fetch HeFFTe sources from internet and build it concurrently
 with OpenPFC. In general, however, it is better to build and install programs
-one at a time.
+one at a time. So, make sure you have HeFFTe installed and working on your
+system before continuing.
 
 OpenPFC uses [cmake](https://cmake.org/) to automate software building. First
 the source code must be downloaded to some appropriate place:
@@ -108,40 +109,79 @@ git clone https://github.com/ProperTune-VTT/OpenPFC
 cd OpenPFC
 ```
 
-Next step is to configure project. One might consider at least options
-`CMAKE_BUILD_TYPE`.
+Next step is to configure project. One might consider at least setting option
+`CMAKE_BUILD_TYPE` to `Debug` or `Release`. For large scale simulations, make
+sure to use `Release` as it turns on compiler optimizations.
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
 ```
 
-Then, building:
+Keep on mind, that configuration will download HeFFTe if the local installation
+is not found. To use local installation instead, add HeFFTe path to environment
+variable `CMAKE_PREFIX_PATH` or add `Heffte_DIR` option to point where HeFFTe
+configuration files are installed. Typical configuration command in cluster
+environment is something like
 
 ```bash
-cmake --build build
+module load gcc openmpi fftw
+CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$HOME/opt/openpfc \
+      -S . -B build
 ```
 
-After that, one should find example codes from `./build/examples` and apps from
-`./build/apps`.
-
-**Note**: another well-known and battle tested way to build cmake projects is
-
-```bash
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DHEFFTE_ROOT=/opt/heffte/2.3 ..
-make
-```
-
-Which is equivalent to one described above.
-
-## Examples
-
-- Todo
+Then, building can be done with command  `cmake --build build`. After build
+finishes, one should find example codes from `./build/examples` and apps from
+`./build/apps`. Installation to path defined by `CMAKE_INSTALL_PREFIX` can be
+done with `cmake --install build`.
 
 ## Getting started
 
-- Todo
+OpenPFC is a [software framework][software framework]. It doesn't give you
+ready-made solutions, but a platform on which you can start building your own
+scalable PFC code. We will familiarize ourselves with the construction of the
+model with the help of a simple diffusion model in a later stage of the
+documentation. However, let's give a tip already at this stage, how to start the
+development work effectively. Our "hello world" code is as follows:
+
+```cpp
+#include <iostream>
+#include <openpfc/openpfc.hpp>
+
+using namespace std;
+using namespace pfc;
+
+int main() {
+  World world({32, 32, 32});
+  cout << world << endl;
+}
+```
+
+To compile, `CMakeLists.txt` is needed. Minimal `CMakeLists.txt` is:
+
+```cmake
+cmake_minimum_required(VERSION 3.15)
+project(helloworld)
+find_package(OpenPFC REQUIRED)
+add_executable(main main.cpp)
+target_link_libraries(main OpenPFC)
+```
+
+With the help of `CMakeLists.txt`, build and compilation of application is
+straightforward:
+
+```bash
+cmake -S . -B build
+cmake --build
+./build/main
+```
+
+[software framework]: Software_framework
+
+## Examples
+
+A bigger application example is Tungsten model. Todo.
 
 ## Citing
 
