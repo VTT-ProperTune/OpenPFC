@@ -51,7 +51,13 @@ add_library(OpenPFC INTERFACE)
 target_include_directories(OpenPFC INTERFACE include/)
 target_link_libraries(OpenPFC INTERFACE Heffte::Heffte MPI::MPI_CXX)
 
+option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
+option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
+if(OpenPFC_BUILD_APPS)
 add_subdirectory(apps)
+endif()
+if(OpenPFC_BUILD_EXAMPLES)
 add_subdirectory(examples)
+endif()
 
 install(DIRECTORY include/openpfc DESTINATION include)
