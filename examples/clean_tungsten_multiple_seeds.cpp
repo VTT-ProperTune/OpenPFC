@@ -1,4 +1,4 @@
-#include <pfc/deprecated.hpp>
+#include <openpfc/deprecated.hpp>
 #include <random>
 
 using namespace pfc;

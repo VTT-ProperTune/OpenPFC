@@ -1,5 +1,5 @@
 #include <nlohmann/json.hpp>
-#include <pfc/deprecated.hpp>
+#include <openpfc/deprecated.hpp>
 #include <random>
 
 using json = nlohmann::json;

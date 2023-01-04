@@ -1,6 +1,6 @@
 #include <array>
 #include <iostream>
-#include <pfc/mpi/timer.hpp>
+#include <openpfc/mpi/timer.hpp>
 #include <unistd.h>
 
 void fft() {

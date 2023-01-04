@@ -1,9 +1,6 @@
 #include <nlohmann/json.hpp>
-#include <pfc/model.hpp>
-#include <pfc/results_writer.hpp>
-#include <pfc/simulator.hpp>
-#include <pfc/time.hpp>
-#include <pfc/utils/timeleft.hpp>
+#include <openpfc/openpfc.hpp>
+#include <openpfc/utils/timeleft.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -115,9 +112,7 @@ private:
   Params p;
 
 public:
-  Params &get_params() {
-    return p;
-  }
+  Params &get_params() { return p; }
 
   void allocate() {
     FFT &fft = get_fft();

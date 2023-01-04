@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <iostream>
-#include <pfc/model.hpp>
-#include <pfc/world.hpp>
+#include <openpfc/model.hpp>
+#include <openpfc/world.hpp>
 
 /*
 This is a "low level" implementation of simple diffusion model. No simulator is

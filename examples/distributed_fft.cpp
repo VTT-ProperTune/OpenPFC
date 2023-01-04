@@ -1,5 +1,5 @@
 #include <iostream>
-#include <pfc/fft.hpp>
+#include <openpfc/fft.hpp>
 #include <vector>
 
 using namespace std;

@@ -1,6 +1,6 @@
 #include <iostream>
-#include <pfc/mpi/communicator.hpp>
-#include <pfc/mpi/environment.hpp>
+#include <openpfc/mpi/communicator.hpp>
+#include <openpfc/mpi/environment.hpp>
 
 int main() {
   pfc::mpi::environment env;

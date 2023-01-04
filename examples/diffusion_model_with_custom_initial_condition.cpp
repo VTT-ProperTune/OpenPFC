@@ -1,10 +1,10 @@
 #include "diffusion_model.hpp"
 #include <iostream>
 #include <memory>
-#include <pfc/field_modifier.hpp>
-#include <pfc/results_writer.hpp>
-#include <pfc/simulator.hpp>
-#include <pfc/time.hpp>
+#include <openpfc/field_modifier.hpp>
+#include <openpfc/results_writer.hpp>
+#include <openpfc/simulator.hpp>
+#include <openpfc/time.hpp>
 
 using namespace std;
 

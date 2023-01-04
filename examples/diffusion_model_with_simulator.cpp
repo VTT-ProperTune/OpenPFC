@@ -1,9 +1,9 @@
 #include "diffusion_model.hpp"
 #include <iostream>
 #include <memory>
-#include <pfc/results_writer.hpp>
-#include <pfc/simulator.hpp>
-#include <pfc/time.hpp>
+#include <openpfc/results_writer.hpp>
+#include <openpfc/simulator.hpp>
+#include <openpfc/time.hpp>
 
 using namespace std;
 

@@ -1,4 +1,4 @@
-#include <pfc/deprecated.hpp>
+#include <openpfc/deprecated.hpp>
 
 using namespace pfc;
 

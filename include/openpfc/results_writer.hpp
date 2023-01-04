@@ -1,10 +1,10 @@
 #pragma once
 
+#include "types.hpp"
+#include "utils.hpp"
 #include <array>
 #include <iostream>
 #include <mpi.h>
-#include <pfc/types.hpp>
-#include <pfc/utils.hpp>
 #include <vector>
 
 namespace pfc {

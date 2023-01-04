@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include <pfc/decomposition.hpp>
-#include <pfc/world.hpp>
+#include <openpfc/decomposition.hpp>
+#include <openpfc/world.hpp>
 
 using namespace std;
 using namespace pfc;

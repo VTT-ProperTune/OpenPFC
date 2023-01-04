@@ -1,5 +1,5 @@
 #include <iostream>
-#include <pfc/mpi.hpp>
+#include <openpfc/mpi.hpp>
 
 namespace mpi = pfc::mpi;
 

@@ -1,6 +1,6 @@
 #include <iostream>
-#include <pfc/model.hpp>
-#include <pfc/world.hpp>
+#include <openpfc/model.hpp>
+#include <openpfc/world.hpp>
 
 using namespace std;
 using namespace pfc;

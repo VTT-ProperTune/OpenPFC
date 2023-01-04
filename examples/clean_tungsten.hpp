@@ -1,4 +1,4 @@
-#include <pfc/model.hpp>
+#include <openpfc/model.hpp>
 
 using namespace pfc;
 
@@ -353,8 +353,6 @@ public:
     timing[0] += MPI_Wtime();
   }
 
-  Field &get_field() {
-    return psi;
-  }
+  Field &get_field() { return psi; }
 
 }; // end of class

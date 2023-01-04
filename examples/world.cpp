@@ -1,5 +1,5 @@
 #include <iostream>
-#include <pfc/world.hpp>
+#include <openpfc/world.hpp>
 
 using namespace pfc;
 using namespace std;
