@@ -177,7 +177,7 @@ cmake --build
 ./build/main
 ```
 
-[software framework]: Software_framework
+[software framework]: https://en.wikipedia.org/wiki/Software_framework
 
 ## Examples
 
