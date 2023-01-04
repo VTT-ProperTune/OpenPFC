@@ -44,20 +44,60 @@ endif()
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 find_package(MPI REQUIRED)
-  find_package(Heffte REQUIRED)
+find_package(Heffte REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 add_library(OpenPFC INTERFACE)
-target_include_directories(OpenPFC INTERFACE include/)
+target_include_directories(OpenPFC
+                           INTERFACE
+                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                            $<INSTALL_INTERFACE:include>
+                          )
 target_link_libraries(OpenPFC INTERFACE Heffte::Heffte MPI::MPI_CXX)
 
 option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
 option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
 if(OpenPFC_BUILD_APPS)
-add_subdirectory(apps)
+  add_subdirectory(apps)
 endif()
 if(OpenPFC_BUILD_EXAMPLES)
-add_subdirectory(examples)
+  add_subdirectory(examples)
 endif()
 
 install(DIRECTORY include/openpfc DESTINATION include)
+
+# generate cmake file containing code to import all targets
+
+install(TARGETS OpenPFC EXPORT OpenPFCTargets DESTINATION include)
+install(EXPORT OpenPFCTargets
+  FILE OpenPFCTargets.cmake
+  DESTINATION lib/cmake/OpenPFC
+)
+
+# generate config and write package config
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenPFCConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfig.cmake"
+  INSTALL_DESTINATION "lib/cmake/OpenPFC"
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfigVersion.cmake"
+  VERSION "${OpenPFC_VERSION_MAJOR}.${OpenPFC_VERSION_MINOR}"
+  COMPATIBILITY AnyNewerVersion
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfigVersion.cmake
+  DESTINATION lib/cmake/OpenPFC
+)
+
+export(EXPORT OpenPFCTargets
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCTargets.cmake"
+)
