@@ -8,8 +8,6 @@ namespace pfc {
 class Model {
 
 private:
-  World &m_world;
-  Decomposition &m_decomposition;
   FFT &m_fft;
   RealFieldSet m_real_fields;
   ComplexFieldSet m_complex_fields;
@@ -17,12 +15,9 @@ private:
 public:
   const bool rank0;
 
-  Model(World &world, Decomposition &decomposition, FFT &fft)
-      : m_world(world), m_decomposition(decomposition), m_fft(fft),
-        rank0(m_decomposition.get_id() == 0) {}
-
-  World &get_world() { return m_world; }
-  Decomposition &get_decomposition() { return m_decomposition; }
+  Model(FFT &fft) : m_fft(fft), rank0(get_decomposition().get_id() == 0) {}
+  const Decomposition &get_decomposition() { return m_fft.get_decomposition(); }
+  const World &get_world() { return get_decomposition().get_world(); }
 
   FFT &get_fft() {
     m_fft.reset_fft_time();
