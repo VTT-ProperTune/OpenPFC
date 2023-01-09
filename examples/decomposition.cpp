@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   // Domain decomposition can be done in a manual manner, just by giving the
   // size of the calculation domain, id number and total number of subdomains:
   int comm_rank = 0, comm_size = 2;
-  Decomposition d1({32, 4, 4}, comm_rank, comm_size);
+  Decomposition d1(World({32, 4, 4}), comm_rank, comm_size);
   cout << d1 << endl;
 
   // In practive, we let MPI communicator to decide the number of subdomains.

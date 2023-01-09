@@ -640,7 +640,7 @@ public:
     Field &f = m.get_field();
     cout << "Reading initial condition from file" << m_filename << endl;
     BinaryReader reader;
-    reader.set_domain(d.world.size, d.inbox.size, d.inbox.low);
+    reader.set_domain(d.get_world().get_size(), d.inbox.size, d.inbox.low);
     reader.read(m_filename, f);
   }
 };
