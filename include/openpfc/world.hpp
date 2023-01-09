@@ -1,6 +1,7 @@
 #pragma once
 #include "types.hpp"
 #include <array>
+#include <heffte.h>
 #include <iostream>
 
 namespace pfc {
@@ -22,6 +23,10 @@ public:
               Vec3<double>{1.0, 1.0, 1.0}) {}
 
   Vec3<int> get_size() const { return Vec3<int>{Lx, Ly, Lz}; }
+
+  operator heffte::box3d<int>() const {
+    return heffte::box3d<int>({0, 0, 0}, {Lx - 1, Ly - 1, Lz - 1});
+  }
 
   friend std::ostream &operator<<(std::ostream &os, const World &w) {
     os << "(Lx = " << w.Lx << ", Ly = " << w.Ly << ", Lz = " << w.Lz;
