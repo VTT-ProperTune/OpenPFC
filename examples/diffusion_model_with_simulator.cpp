@@ -53,7 +53,7 @@ void run() {
   MPI_Comm comm = MPI_COMM_WORLD;
   Decomposition decomposition(world, comm);
   FFT fft(decomposition, comm);
-  Diffusion model(world, decomposition, fft);
+  Diffusion model(fft);
   Simulator simulator(world, decomposition, fft, model, time);
 
   // write results to binary file

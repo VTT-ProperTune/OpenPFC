@@ -17,9 +17,9 @@ private:
 public:
   void initialize(double dt) override {
 
-    World &w = get_world();
+    const World &w = get_world();
     FFT &fft = get_fft();
-    Decomposition &decomp = get_decomposition();
+    const Decomposition &decomp = get_decomposition();
 
     psi.resize(fft.size_inbox());
     psi_F.resize(fft.size_outbox());

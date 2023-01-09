@@ -159,7 +159,7 @@ public:
     auto Ly = w.Ly;
     auto Lz = w.Lz;
 
-    Decomposition &decomp = get_decomposition();
+    const Decomposition &decomp = get_decomposition();
     std::array<int, 3> low = decomp.outbox.low;
     std::array<int, 3> high = decomp.outbox.high;
 
@@ -395,8 +395,8 @@ class SingleSeed : public FieldModifier {
 public:
   void apply(Model &m, double) override {
     Params &p = dynamic_cast<Tungsten &>(m).get_params();
-    World &w = m.get_world();
-    Decomposition &decomp = m.get_decomposition();
+    const World &w = m.get_world();
+    const Decomposition &decomp = m.get_decomposition();
     Field &f = m.get_field();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
@@ -448,8 +448,8 @@ class RandomSeeds : public FieldModifier {
 
   void apply(Model &m, double) override {
     Params &p = dynamic_cast<Tungsten &>(m).get_params();
-    World &w = m.get_world();
-    Decomposition &decomp = m.get_decomposition();
+    const World &w = m.get_world();
+    const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
@@ -526,8 +526,8 @@ public:
 
   void apply(Model &m, double) override {
     Params &p = dynamic_cast<Tungsten &>(m).get_params();
-    World &w = m.get_world();
-    Decomposition &decomp = m.get_decomposition();
+    const World &w = m.get_world();
+    const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
@@ -636,7 +636,7 @@ public:
   explicit FileReader(const std::string &filename) : m_filename(filename) {}
 
   void apply(Model &m, double) override {
-    Decomposition &d = m.get_decomposition();
+    const Decomposition &d = m.get_decomposition();
     Field &f = m.get_field();
     cout << "Reading initial condition from file" << m_filename << endl;
     BinaryReader reader;
@@ -658,9 +658,9 @@ public:
       : m_rho_low(rho_low), m_rho_high(rho_high) {}
 
   void apply(Model &m, double) override {
-    Decomposition &decomp = m.get_decomposition();
+    const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
-    World &w = m.get_world();
+    const World &w = m.get_world();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
 
@@ -710,9 +710,9 @@ public:
   void set_disp(double disp) { m_disp = disp; }
 
   void apply(Model &m, double) override {
-    Decomposition &decomp = m.get_decomposition();
+    const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
-    World &w = m.get_world();
+    const World &w = m.get_world();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
 
@@ -763,9 +763,9 @@ public:
   }
 
   void fill_bc(Model &m) {
-    Decomposition &decomp = m.get_decomposition();
+    const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_field();
-    World &w = m.get_world();
+    const World &w = m.get_world();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
     double l = w.Lx * w.dx;
@@ -925,8 +925,7 @@ public:
         m_world(from_json<World>(m_settings)),
         m_decomp(Decomposition(m_world, comm)),
         m_fft(FFT(m_decomp, comm, get_plan_options())),
-        m_time(from_json<Time>(m_settings)),
-        m_model(Tungsten(m_world, m_decomp, m_fft)),
+        m_time(from_json<Time>(m_settings)), m_model(Tungsten(m_fft)),
         m_simulator(Simulator(m_world, m_decomp, m_fft, m_model, m_time)) {}
 
   bool create_results_dir(const string &output) {

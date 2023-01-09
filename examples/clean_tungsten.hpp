@@ -140,7 +140,7 @@ public:
     auto Ly = w.Ly;
     auto Lz = w.Lz;
 
-    Decomposition &decomp = get_decomposition();
+    const Decomposition &decomp = get_decomposition();
     std::array<int, 3> low = decomp.outbox.low;
     std::array<int, 3> high = decomp.outbox.high;
 
@@ -208,7 +208,7 @@ public:
   void prepare_initial_condition() {
 
     World w = get_world();
-    Decomposition &decomp = get_decomposition();
+    const Decomposition &decomp = get_decomposition();
 
     std::array<int, 3> low = decomp.inbox.low;
     std::array<int, 3> high = decomp.inbox.high;

@@ -56,7 +56,7 @@ void run(int Lx, int Ly, int Lz, filesystem::path results_dir) {
   World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
   Decomposition decomposition(world, MPI_COMM_WORLD);
   FFT fft(decomposition, MPI_COMM_WORLD);
-  Tungsten model(world, decomposition, fft);
+  Tungsten model(fft);
 
   // make time
   double t0 = 0.0;

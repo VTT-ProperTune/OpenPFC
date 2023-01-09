@@ -44,8 +44,8 @@ public:
     if (m.rank0) {
       cout << "Applying custom initial condition at time " << t << endl;
     }
-    World &w = m.get_world();
-    Decomposition &d = m.get_decomposition();
+    const World &w = m.get_world();
+    const Decomposition &d = m.get_decomposition();
     Field &f = m.get_field();
     auto low = d.inbox.low;
     auto high = d.inbox.high;
@@ -87,7 +87,7 @@ void run() {
   MPI_Comm comm = MPI_COMM_WORLD;
   Decomposition decomposition(world, comm);
   FFT fft(decomposition, comm);
-  Diffusion model(world, decomposition, fft);
+  Diffusion model(fft);
   Simulator simulator(world, decomposition, fft, model, time);
 
   print_stats(simulator);

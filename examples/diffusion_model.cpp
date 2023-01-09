@@ -36,9 +36,9 @@ public:
     if (rank0) cout << "Allocate space" << endl;
 
     // reference to world, fft and domain decomposition
-    World &w = get_world();
+    const World &w = get_world();
     FFT &fft = get_fft();
-    Decomposition &decomp = get_decomposition();
+    const Decomposition &decomp = get_decomposition();
 
     // The main variable and it's fourier transform
     psi.resize(fft.size_inbox());
@@ -167,7 +167,7 @@ void run() {
   World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
   Decomposition decomp(world, comm);
   FFT fft(decomp, comm);
-  Diffusion D(world, decomp, fft);
+  Diffusion D(fft);
 
   int rank;
   MPI_Comm_rank(comm, &rank);
