@@ -66,7 +66,7 @@ void run(int Lx, int Ly, int Lz, filesystem::path results_dir) {
   Time time({t0, t1, dt}, saveat);
 
   // make simulator
-  Simulator simulator(world, decomposition, fft, model, time);
+  Simulator simulator(model, time);
   // add results writers, one for field psi and another for mean field psi
   simulator.add_results_writer(
       "psi", make_unique<BinaryWriter>(results_dir / "tungsten_psi_%04d.bin"));

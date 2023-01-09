@@ -88,7 +88,7 @@ void run() {
   Decomposition decomposition(world, comm);
   FFT fft(decomposition, comm);
   Diffusion model(fft);
-  Simulator simulator(world, decomposition, fft, model, time);
+  Simulator simulator(model, time);
 
   print_stats(simulator);
   while (!simulator.done()) {

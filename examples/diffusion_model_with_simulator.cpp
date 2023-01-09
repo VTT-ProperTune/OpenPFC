@@ -54,7 +54,7 @@ void run() {
   Decomposition decomposition(world, comm);
   FFT fft(decomposition, comm);
   Diffusion model(fft);
-  Simulator simulator(world, decomposition, fft, model, time);
+  Simulator simulator(model, time);
 
   // write results to binary file
   simulator.add_results_writer(make_unique<BinaryWriter>("diffusion_%04d.bin"));

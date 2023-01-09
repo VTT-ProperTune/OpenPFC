@@ -14,9 +14,6 @@ namespace pfc {
 class Simulator {
 
 private:
-  World &m_world;
-  Decomposition &m_decomposition;
-  FFT &m_fft;
   Model &m_model;
   Time &m_time;
 
@@ -27,21 +24,20 @@ private:
   int m_result_counter = 0;
 
 public:
-  Simulator(World &world, Decomposition &decomposition, FFT &fft, Model &model,
-            Time &time)
-      : m_world(world), m_decomposition(decomposition), m_fft(fft),
-        m_model(model), m_time(time) {}
+  Simulator(Model &model, Time &time) : m_model(model), m_time(time) {}
 
-  World &get_world() { return m_world; }
-  Decomposition &get_decomposition() { return m_decomposition; }
-  FFT &get_fft() { return m_fft; }
   Model &get_model() { return m_model; }
+  const Decomposition &get_decomposition() {
+    return get_model().get_decomposition();
+  }
+  const World &get_world() { return get_decomposition().get_world(); }
+  FFT &get_fft() { return get_model().get_fft(); }
   Time &get_time() { return m_time; }
   Field &get_field() { return get_model().get_field(); }
 
   void add_results_writer(const std::string &field_name,
                           std::unique_ptr<ResultsWriter> writer) {
-    Decomposition &d = get_decomposition();
+    const Decomposition &d = get_decomposition();
     writer->set_domain(d.get_world().get_size(), d.inbox.size, d.inbox.low);
     Model &model = get_model();
     if (model.has_field(field_name)) {

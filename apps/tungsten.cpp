@@ -926,7 +926,7 @@ public:
         m_decomp(Decomposition(m_world, comm)),
         m_fft(FFT(m_decomp, comm, get_plan_options())),
         m_time(from_json<Time>(m_settings)), m_model(Tungsten(m_fft)),
-        m_simulator(Simulator(m_world, m_decomp, m_fft, m_model, m_time)) {}
+        m_simulator(Simulator(m_model, m_time)) {}
 
   bool create_results_dir(const string &output) {
     filesystem::path results_dir(output);
