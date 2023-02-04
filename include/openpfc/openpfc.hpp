@@ -1,10 +1,12 @@
 #pragma once
 
+#include "binary_reader.hpp"
 #include "boundary_conditions/fixed_bc.hpp"
 #include "constants.hpp"
 #include "decomposition.hpp"
 #include "fft.hpp"
 #include "field_modifier.hpp"
+#include "initial_conditions/file_reader.hpp"
 #include "initial_conditions/seed.hpp"
 #include "model.hpp"
 #include "mpi.hpp"
