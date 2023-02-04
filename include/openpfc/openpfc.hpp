@@ -4,6 +4,7 @@
 #include "decomposition.hpp"
 #include "fft.hpp"
 #include "field_modifier.hpp"
+#include "initial_conditions/seed.hpp"
 #include "model.hpp"
 #include "mpi.hpp"
 #include "results_writer.hpp"
