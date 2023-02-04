@@ -8,6 +8,7 @@
 #include "fft.hpp"
 #include "field_modifier.hpp"
 #include "initial_conditions/file_reader.hpp"
+#include "initial_conditions/random_seeds.hpp"
 #include "initial_conditions/seed.hpp"
 #include "initial_conditions/single_seed.hpp"
 #include "model.hpp"
