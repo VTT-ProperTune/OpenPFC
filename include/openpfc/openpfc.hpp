@@ -9,6 +9,7 @@
 #include "field_modifier.hpp"
 #include "initial_conditions/file_reader.hpp"
 #include "initial_conditions/seed.hpp"
+#include "initial_conditions/single_seed.hpp"
 #include "model.hpp"
 #include "mpi.hpp"
 #include "results_writer.hpp"
