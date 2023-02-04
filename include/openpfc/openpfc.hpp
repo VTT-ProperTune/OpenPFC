@@ -2,6 +2,7 @@
 
 #include "binary_reader.hpp"
 #include "boundary_conditions/fixed_bc.hpp"
+#include "boundary_conditions/moving_bc.hpp"
 #include "constants.hpp"
 #include "decomposition.hpp"
 #include "fft.hpp"
