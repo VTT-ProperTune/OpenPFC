@@ -1,5 +1,6 @@
 #pragma once
 
+#include "boundary_conditions/fixed_bc.hpp"
 #include "constants.hpp"
 #include "decomposition.hpp"
 #include "fft.hpp"
