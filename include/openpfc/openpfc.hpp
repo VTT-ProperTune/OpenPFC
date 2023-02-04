@@ -10,6 +10,7 @@
 #include "initial_conditions/file_reader.hpp"
 #include "initial_conditions/random_seeds.hpp"
 #include "initial_conditions/seed.hpp"
+#include "initial_conditions/seed_grid.hpp"
 #include "initial_conditions/single_seed.hpp"
 #include "model.hpp"
 #include "mpi.hpp"
