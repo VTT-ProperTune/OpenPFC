@@ -3,6 +3,8 @@
 #include "types.hpp"
 #include <mpi.h>
 
+#include <iostream>
+
 namespace pfc {
 
 class BinaryReader {
