@@ -318,18 +318,43 @@ public:
 The main application
 */
 
-heffte::plan_options get_plan_options() {
+/**
+ * @brief Get the plan options object
+ *
+ * @return heffte::plan_options
+ */
+heffte::plan_options get_plan_options(const json &settings) {
   heffte::plan_options options =
       heffte::default_options<heffte::backend::fftw>();
-  /*
-  options.use_reorder = true;
-  options.algorithm = reshape_algorithm::alltoall;
-  options.algorithm = reshape_algorithm::alltoallv;
-  options.algorithm = reshape_algorithm::p2p;
-  options.use_pencils = true;
-  options.use_gpu_aware = true;
-  */
-  options.algorithm = heffte::reshape_algorithm::p2p_plined;
+  // options.algorithm = heffte::reshape_algorithm::p2p_plined;
+  if (!settings.contains("fft_options")) {
+    return options;
+  }
+  const json &fft_options = settings["fft_options"];
+  if (fft_options.contains("use_reorder")) {
+    options.use_reorder = fft_options["use_reorder"];
+  }
+  if (fft_options.contains("reshape_algorithm")) {
+    if (fft_options["reshape_algorithm"] == "alltoall") {
+      options.algorithm = heffte::reshape_algorithm::alltoall;
+    } else if (fft_options["reshape_algorithm"] == "alltoallv") {
+      options.algorithm = heffte::reshape_algorithm::alltoallv;
+    } else if (fft_options["reshape_algorithm"] == "p2p") {
+      options.algorithm = heffte::reshape_algorithm::p2p;
+    } else if (fft_options["reshape_algorithm"] == "p2p_plined") {
+      options.algorithm = heffte::reshape_algorithm::p2p_plined;
+    } else {
+      std::cerr << "Unknown communcation model "
+                << fft_options["reshape_algorithm"] << std::endl;
+    }
+  }
+  if (fft_options.contains("use_pencils")) {
+    options.use_pencils = fft_options["use_pencils"];
+  }
+  if (fft_options.contains("use_gpu_aware")) {
+    options.use_gpu_aware = fft_options["use_gpu_aware"];
+  }
+  std::cout << "backend options: " << options << "\n\n";
   return options;
 }
 
@@ -383,7 +408,7 @@ public:
         rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)),
         m_world(from_json<World>(m_settings)),
         m_decomp(Decomposition(m_world, comm)),
-        m_fft(FFT(m_decomp, comm, get_plan_options())),
+        m_fft(FFT(m_decomp, comm, get_plan_options(m_settings))),
         m_time(from_json<Time>(m_settings)), m_model(Tungsten(m_fft)),
         m_simulator(Simulator(m_model, m_time)) {}
 

@@ -1,8 +1,8 @@
 {
     "name": "tungsten",
-    "Lx": 256,
-    "Ly": 256,
-    "Lz": 256,
+    "Lx": 128,
+    "Ly": 128,
+    "Lz": 128,
     "dx": 1.1107207345395915,
     "dy": 1.1107207345395915,
     "dz": 1.1107207345395915,
@@ -23,5 +23,11 @@
         "print": true,
         "write": true,
         "filename": "timing_256.bin"
+    },
+    "fft_options": {
+        "use_reorder": true,
+        "reshape_algorithm": "p2p_plined",
+        "use_pencils": true,
+        "use_gpu_aware": true
     }
 }
