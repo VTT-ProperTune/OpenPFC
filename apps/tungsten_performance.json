@@ -24,7 +24,7 @@
         "write": true,
         "filename": "timing_256.bin"
     },
-    "fft_options": {
+    "plan_options": {
         "use_reorder": true,
         "reshape_algorithm": "p2p_plined",
         "use_pencils": true,

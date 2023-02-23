@@ -1,6 +1,8 @@
-#include <nlohmann/json.hpp>
 #include <openpfc/openpfc.hpp>
+#include <openpfc/ui.hpp>
 #include <openpfc/utils/timeleft.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -8,6 +10,7 @@
 #include <memory>
 #include <stdexcept>
 
+using json = nlohmann::json;
 using namespace pfc;
 using namespace pfc::utils;
 using namespace std;
@@ -257,43 +260,6 @@ public:
 
 }; // end of class
 
-/*
-Helper functions to construct objects from json file
-*/
-
-using json = nlohmann::json;
-
-template <class T> T from_json(const json &settings);
-
-template <> World from_json<World>(const json &settings) {
-  int Lx = settings["Lx"];
-  int Ly = settings["Ly"];
-  int Lz = settings["Lz"];
-  double dx = settings["dx"];
-  double dy = settings["dy"];
-  double dz = settings["dz"];
-  double x0 = 0.0;
-  double y0 = 0.0;
-  double z0 = 0.0;
-  string origo = settings["origo"];
-  if (origo == "center") {
-    x0 = -0.5 * dx * Lx;
-    y0 = -0.5 * dy * Ly;
-    z0 = -0.5 * dz * Lz;
-  }
-  World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
-  return world;
-}
-
-template <> Time from_json<Time>(const json &settings) {
-  double t0 = settings["t0"];
-  double t1 = settings["t1"];
-  double dt = settings["dt"];
-  double saveat = settings["saveat"];
-  Time time({t0, t1, dt}, saveat);
-  return time;
-}
-
 class MPI_Worker {
   MPI_Comm m_comm;
   int m_rank, m_num_procs;
@@ -317,46 +283,6 @@ public:
 /*
 The main application
 */
-
-/**
- * @brief Get the plan options object
- *
- * @return heffte::plan_options
- */
-heffte::plan_options get_plan_options(const json &settings) {
-  heffte::plan_options options =
-      heffte::default_options<heffte::backend::fftw>();
-  // options.algorithm = heffte::reshape_algorithm::p2p_plined;
-  if (!settings.contains("fft_options")) {
-    return options;
-  }
-  const json &fft_options = settings["fft_options"];
-  if (fft_options.contains("use_reorder")) {
-    options.use_reorder = fft_options["use_reorder"];
-  }
-  if (fft_options.contains("reshape_algorithm")) {
-    if (fft_options["reshape_algorithm"] == "alltoall") {
-      options.algorithm = heffte::reshape_algorithm::alltoall;
-    } else if (fft_options["reshape_algorithm"] == "alltoallv") {
-      options.algorithm = heffte::reshape_algorithm::alltoallv;
-    } else if (fft_options["reshape_algorithm"] == "p2p") {
-      options.algorithm = heffte::reshape_algorithm::p2p;
-    } else if (fft_options["reshape_algorithm"] == "p2p_plined") {
-      options.algorithm = heffte::reshape_algorithm::p2p_plined;
-    } else {
-      std::cerr << "Unknown communcation model "
-                << fft_options["reshape_algorithm"] << std::endl;
-    }
-  }
-  if (fft_options.contains("use_pencils")) {
-    options.use_pencils = fft_options["use_pencils"];
-  }
-  if (fft_options.contains("use_gpu_aware")) {
-    options.use_gpu_aware = fft_options["use_gpu_aware"];
-  }
-  std::cout << "backend options: " << options << "\n\n";
-  return options;
-}
 
 class App {
 private:
@@ -406,10 +332,12 @@ public:
   App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
       : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
         rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)),
-        m_world(from_json<World>(m_settings)),
+        m_world(ui::from_json<World>(m_settings)),
         m_decomp(Decomposition(m_world, comm)),
-        m_fft(FFT(m_decomp, comm, get_plan_options(m_settings))),
-        m_time(from_json<Time>(m_settings)), m_model(Tungsten(m_fft)),
+        m_fft(FFT(
+            m_decomp, comm,
+            ui::from_json<heffte::plan_options>(m_settings["plan_options"]))),
+        m_time(ui::from_json<Time>(m_settings)), m_model(Tungsten(m_fft)),
         m_simulator(Simulator(m_model, m_time)) {}
 
   bool create_results_dir(const string &output) {

@@ -18,6 +18,37 @@ using json = nlohmann::json;
 
 template <class T> T from_json(const json &settings);
 
+template <>
+heffte::plan_options from_json<heffte::plan_options>(const json &j) {
+  heffte::plan_options options =
+      heffte::default_options<heffte::backend::fftw>();
+  if (j.contains("use_reorder")) {
+    options.use_reorder = j["use_reorder"];
+  }
+  if (j.contains("reshape_algorithm")) {
+    if (j["reshape_algorithm"] == "alltoall") {
+      options.algorithm = heffte::reshape_algorithm::alltoall;
+    } else if (j["reshape_algorithm"] == "alltoallv") {
+      options.algorithm = heffte::reshape_algorithm::alltoallv;
+    } else if (j["reshape_algorithm"] == "p2p") {
+      options.algorithm = heffte::reshape_algorithm::p2p;
+    } else if (j["reshape_algorithm"] == "p2p_plined") {
+      options.algorithm = heffte::reshape_algorithm::p2p_plined;
+    } else {
+      std::cerr << "Unknown communcation model " << j["reshape_algorithm"]
+                << std::endl;
+    }
+  }
+  if (j.contains("use_pencils")) {
+    options.use_pencils = j["use_pencils"];
+  }
+  if (j.contains("use_gpu_aware")) {
+    options.use_gpu_aware = j["use_gpu_aware"];
+  }
+  std::cout << "backend options: " << options << "\n\n";
+  return options;
+}
+
 template <> World from_json<World>(const json &settings) {
   int Lx = settings["Lx"];
   int Ly = settings["Ly"];
