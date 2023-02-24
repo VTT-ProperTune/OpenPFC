@@ -1,6 +1,7 @@
 #pragma once
 
 #include "field_modifier.hpp"
+#include "initial_conditions/constant.hpp"
 #include "initial_conditions/single_seed.hpp"
 #include "time.hpp"
 #include "world.hpp"
@@ -236,6 +237,10 @@ template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
   if (type == "single_seed") {
     std::cout << "Creating SingleSeed <: FieldModifier" << std::endl;
     return from_json<SingleSeed_p>(j);
+  }
+  if (type == "constant") {
+    std::cout << "Creating Constant <: FieldModifier" << std::endl;
+    return from_json<Constant_p>(j);
   }
   throw std::invalid_argument("Unknown FieldModifier type: " + type);
 }
