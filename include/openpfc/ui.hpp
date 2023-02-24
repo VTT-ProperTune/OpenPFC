@@ -1,5 +1,7 @@
 #pragma once
 
+#include "field_modifier.hpp"
+#include "initial_conditions/single_seed.hpp"
 #include "time.hpp"
 #include "world.hpp"
 
@@ -76,6 +78,61 @@ template <> Time from_json<Time>(const json &settings) {
   double saveat = settings["saveat"];
   Time time({t0, t1, dt}, saveat);
   return time;
+}
+
+using SingleSeed_p = std::unique_ptr<SingleSeed>;
+
+/**
+ * Convert a JSON object to a unique_ptr to a SingleSeed object.
+ *
+ * This function converts a JSON object to a unique_ptr to a SingleSeed object.
+ * The JSON object must contain the following fields:
+ *   - type: A string with the value "single_seed".
+ *   - amp_eq: A double with the amplitude of the equalizer.
+ *   - rho_seed: A double with the seed value for the Rho function.
+ *
+ * If any of these fields are missing or have an invalid type, this function
+ * throws a std::invalid_argument exception.
+ *
+ * @tparam T The type of the deleter object to use for the unique_ptr.
+ * @param j The JSON object to convert.
+ * @return A unique_ptr to a SingleSeed object.
+ * @throws std::invalid_argument if any required fields are missing or have an
+ * invalid type.
+ */
+template <> SingleSeed_p from_json<SingleSeed_p>(const json &j) {
+
+  if (!j.count("type") || j["type"] != "single_seed") {
+    throw std::invalid_argument(
+        "JSON object does not contain a 'single_seed' type.");
+  }
+
+  if (!j.count("amp_eq")) {
+    throw std::invalid_argument(
+        "JSON object does not contain an 'amp_eq' key.");
+  }
+
+  if (!j.count("rho_seed")) {
+    throw std::invalid_argument(
+        "JSON object does not contain a 'rho_seed' key.");
+  }
+
+  std::unique_ptr<SingleSeed> seed = std::make_unique<SingleSeed>();
+  seed->amp_eq = j["amp_eq"];
+  seed->rho_seed = j["rho_seed"];
+  return seed;
+}
+
+using FieldModifier_p = std::unique_ptr<FieldModifier>;
+
+template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
+  std::cout << "Creating FieldModifier from data " << j << std::endl;
+  std::string type = j["type"];
+  if (type == "single_seed") {
+    std::cout << "Creating SingleSeed <: FieldModifier" << std::endl;
+    return from_json<SingleSeed_p>(j);
+  }
+  throw std::invalid_argument("Unknown FieldModifier type: " + type);
 }
 
 } // namespace ui
