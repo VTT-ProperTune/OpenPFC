@@ -397,23 +397,19 @@ public:
 
   void add_initial_conditions() {
     cout << "Adding initial conditions" << endl;
-    auto ic = m_settings["initial_condition"];
+    json ic = m_settings["initial_condition"];
+    // TODO: add FieldModifier 'constant' to add n0
     if (ic["type"] == "single_seed") {
       cout << "Adding single seed initial condition" << endl;
-      std::unique_ptr<SingleSeed> ic = make_unique<SingleSeed>();
-      // TODO: define amp_eq, n0, rho_seed - how?
-      Params p;
-      ic->amp_eq = p.amp_eq;
-      ic->n0 = p.n0;
-      ic->rho_seed = p.rho_seed;
-      m_simulator.add_initial_conditions(std::move(ic));
+      m_simulator.add_initial_conditions(
+          ui::from_json<ui::FieldModifier_p>(ic));
     } else if (ic["type"] == "random_seeds") {
       cout << "Adding randomized seeds initial condition" << endl;
       std::unique_ptr<RandomSeeds> ic = make_unique<RandomSeeds>();
       // TODO: define amplitude, n0, rho - how?
+      // amp_eq = 0.216
       Params p;
       ic->amplitude = p.amp_eq;
-      ic->n0 = p.n0;
       ic->rho = p.rho_seed;
       m_simulator.add_initial_conditions(std::move(ic));
     } else if (ic["type"] == "seed_grid") {
@@ -426,7 +422,6 @@ public:
       // TODO: define amplitude, n0, rho - how?
       Params p;
       ic->amplitude = p.amp_eq;
-      ic->n0 = p.n0;
       ic->rho = p.rho_seed;
       cout << "Generating " << Ny << " seeds in y dir, " << Nz
            << " seeds in z dir, seed radius " << radius << endl;
