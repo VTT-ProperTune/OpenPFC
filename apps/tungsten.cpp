@@ -397,46 +397,44 @@ public:
 
   void add_initial_conditions() {
     cout << "Adding initial conditions" << endl;
-    json ic = m_settings["initial_condition"];
-    // TODO: add FieldModifier 'constant' to add n0
-    if (ic["type"] == "single_seed") {
-      cout << "Adding single seed initial condition" << endl;
-      m_simulator.add_initial_conditions(
-          ui::from_json<ui::FieldModifier_p>(ic));
-    } else if (ic["type"] == "random_seeds") {
-      cout << "Adding randomized seeds initial condition" << endl;
-      std::unique_ptr<RandomSeeds> ic = make_unique<RandomSeeds>();
-      // TODO: define amplitude, n0, rho - how?
-      // amp_eq = 0.216
-      Params p;
-      ic->amplitude = p.amp_eq;
-      ic->rho = p.rho_seed;
-      m_simulator.add_initial_conditions(std::move(ic));
-    } else if (ic["type"] == "seed_grid") {
-      cout << "Adding seed grid initial condition" << endl;
-      int Ny = ic["Ny"];
-      int Nz = ic["Nz"];
-      double X0 = ic["X0"];
-      double radius = ic["radius"];
-      std::unique_ptr<SeedGrid> ic = make_unique<SeedGrid>(Ny, Nz, X0, radius);
-      // TODO: define amplitude, n0, rho - how?
-      Params p;
-      ic->amplitude = p.amp_eq;
-      ic->rho = p.rho_seed;
-      cout << "Generating " << Ny << " seeds in y dir, " << Nz
-           << " seeds in z dir, seed radius " << radius << endl;
-      m_simulator.add_initial_conditions(std::move(ic));
-    } else if (ic["type"] == "from_file") {
-      cout << "Reading initial condition from file" << endl;
-      string filename = ic["filename"];
-      cout << "Reading from file: " << filename << endl;
-      m_simulator.add_initial_conditions(make_unique<FileReader>(filename));
-      int result_counter = ic["result_counter"];
-      result_counter += 1;
-      m_simulator.set_result_counter(result_counter);
-      m_time.set_increment(ic["increment"]);
-    } else {
-      cout << "Warning: unknown initial condition " << ic["type"] << endl;
+    for (const json &ic : m_settings["initial_conditions"]) {
+      if (ic["type"] == "random_seeds") {
+        cout << "Adding randomized seeds initial condition" << endl;
+        std::unique_ptr<RandomSeeds> ic = make_unique<RandomSeeds>();
+        // TODO: define amplitude, n0, rho - how?
+        // amp_eq = 0.216
+        Params p;
+        ic->amplitude = p.amp_eq;
+        ic->rho = p.rho_seed;
+        m_simulator.add_initial_conditions(std::move(ic));
+      } else if (ic["type"] == "seed_grid") {
+        cout << "Adding seed grid initial condition" << endl;
+        int Ny = ic["Ny"];
+        int Nz = ic["Nz"];
+        double X0 = ic["X0"];
+        double radius = ic["radius"];
+        std::unique_ptr<SeedGrid> ic =
+            make_unique<SeedGrid>(Ny, Nz, X0, radius);
+        // TODO: define amplitude, n0, rho - how?
+        Params p;
+        ic->amplitude = p.amp_eq;
+        ic->rho = p.rho_seed;
+        cout << "Generating " << Ny << " seeds in y dir, " << Nz
+             << " seeds in z dir, seed radius " << radius << endl;
+        m_simulator.add_initial_conditions(std::move(ic));
+      } else if (ic["type"] == "from_file") {
+        cout << "Reading initial condition from file" << endl;
+        string filename = ic["filename"];
+        cout << "Reading from file: " << filename << endl;
+        m_simulator.add_initial_conditions(make_unique<FileReader>(filename));
+        int result_counter = ic["result_counter"];
+        result_counter += 1;
+        m_simulator.set_result_counter(result_counter);
+        m_time.set_increment(ic["increment"]);
+      } else {
+        m_simulator.add_initial_conditions(
+            ui::from_json<ui::FieldModifier_p>(ic));
+      }
     }
   }
 
