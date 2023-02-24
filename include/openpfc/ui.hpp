@@ -80,6 +80,56 @@ template <> Time from_json<Time>(const json &settings) {
   return time;
 }
 
+using Constant_p = std::unique_ptr<Constant>;
+
+/**
+ * A factory function that creates a `std::unique_ptr` to a `Constant` object
+ * from a JSON input.
+ *
+ * The JSON input must have the following format:
+ *
+ * ```
+ * {
+ *   "type": "constant",
+ *   "n0": <double>
+ * }
+ * ```
+ *
+ * where `<double>` is a floating-point number that represents the constant
+ * value to set the field to.
+ *
+ * If the JSON input is invalid or missing required fields, an
+ * `std::invalid_argument` exception is thrown.
+ *
+ * Example usage:
+ *
+ * ```
+ * // Create a constant field modifier with value 1.0 from JSON input
+ * json input = {
+ *   {"type", "constant"},
+ *   {"n0", 1.0}
+ * };
+ * Constant_p c = from_json<Constant_p>(input);
+ * ```
+ */
+template <> Constant_p from_json<Constant_p>(const json &j) {
+
+  // Check that the JSON input has the correct type field
+  if (!j.contains("type") || j["type"] != "constant") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  // Check that the JSON input has the required 'n0' field
+  if (!j.contains("n0") || !j["n0"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'n0' field.");
+  }
+
+  double n0 = j["n0"];
+  return std::make_unique<Constant>(n0);
+}
+
 using SingleSeed_p = std::unique_ptr<SingleSeed>;
 
 /**
