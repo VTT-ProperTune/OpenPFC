@@ -398,16 +398,7 @@ public:
   void add_initial_conditions() {
     cout << "Adding initial conditions" << endl;
     for (const json &ic : m_settings["initial_conditions"]) {
-      if (ic["type"] == "random_seeds") {
-        cout << "Adding randomized seeds initial condition" << endl;
-        std::unique_ptr<RandomSeeds> ic = make_unique<RandomSeeds>();
-        // TODO: define amplitude, n0, rho - how?
-        // amp_eq = 0.216
-        Params p;
-        ic->amplitude = p.amp_eq;
-        ic->rho = p.rho_seed;
-        m_simulator.add_initial_conditions(std::move(ic));
-      } else if (ic["type"] == "seed_grid") {
+      if (ic["type"] == "seed_grid") {
         cout << "Adding seed grid initial condition" << endl;
         int Ny = ic["Ny"];
         int Nz = ic["Nz"];

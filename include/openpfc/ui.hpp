@@ -2,6 +2,7 @@
 
 #include "field_modifier.hpp"
 #include "initial_conditions/constant.hpp"
+#include "initial_conditions/random_seeds.hpp"
 #include "initial_conditions/single_seed.hpp"
 #include "time.hpp"
 #include "world.hpp"
@@ -229,6 +230,34 @@ template <> SingleSeed_p from_json<SingleSeed_p>(const json &j) {
   return seed;
 }
 
+using RandomSeeds_p = std::unique_ptr<RandomSeeds>;
+
+template <> RandomSeeds_p from_json<RandomSeeds_p>(const json &j) {
+
+  // Check that the JSON input has the correct type field
+  if (!j.contains("type") || j["type"] != "random_seeds") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  // Check that the JSON input has the required 'amplitude' field
+  if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'amplitude' field.");
+  }
+
+  // Check that the JSON input has the required 'rho' field
+  if (!j.contains("rho") || !j["rho"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho' field.");
+  }
+
+  RandomSeeds_p ic = std::make_unique<RandomSeeds>();
+  ic->amplitude = j["amplitude"];
+  ic->rho = j["rho"];
+  return ic;
+}
+
 using FieldModifier_p = std::unique_ptr<FieldModifier>;
 
 template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
@@ -241,6 +270,10 @@ template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
   if (type == "constant") {
     std::cout << "Creating Constant <: FieldModifier" << std::endl;
     return from_json<Constant_p>(j);
+  }
+  if (type == "random_seeds") {
+    std::cout << "Creating RandomSeeds <: FieldModifier" << std::endl;
+    return from_json<RandomSeeds_p>(j);
   }
   throw std::invalid_argument("Unknown FieldModifier type: " + type);
 }
