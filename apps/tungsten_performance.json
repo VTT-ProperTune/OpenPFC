@@ -13,7 +13,9 @@
     "saveat": -1.0,
     "results": "/data/pfc/tungsten/psi_%d.bin",
     "initial_condition": {
-        "type": "single_seed"
+        "type": "single_seed",
+        "amp_eq": 0.216,
+        "rho_seed": -0.047
     },
     "boundary_condition": {
         "type": "none"
