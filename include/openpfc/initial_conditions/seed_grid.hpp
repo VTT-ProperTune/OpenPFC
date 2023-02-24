@@ -13,7 +13,7 @@ private:
   double m_X0, m_radius;
 
 public:
-  double rho, amplitude, n0;
+  double rho, amplitude;
 
   SeedGrid(int Ny, int Nz, double X0, double radius)
       : m_Nx(1), m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius) {}
@@ -67,7 +67,6 @@ public:
       }
     }
 
-    std::fill(field.begin(), field.end(), n0);
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {

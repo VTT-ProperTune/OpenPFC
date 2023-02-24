@@ -7,7 +7,7 @@ namespace pfc {
 class SingleSeed : public FieldModifier {
 
 public:
-  double amp_eq, n0, rho_seed;
+  double amp_eq, rho_seed;
 
   void apply(Model &m, double) override {
     const World &w = m.get_world();
@@ -34,23 +34,19 @@ public:
     long int idx = 0;
     // double r2 = pow(0.2 * (Lx * dx), 2);
     double r2 = pow(64.0, 2);
-    double u;
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
           double x = x0 + i * dx;
           double y = y0 + j * dy;
           double z = z0 + k * dz;
-          bool seedmask = x * x + y * y + z * z < r2;
-          if (!seedmask) {
-            u = n0;
-          } else {
-            u = rho_seed;
+          if (x * x + y * y + z * z < r2) {
+            double u = rho_seed;
             for (int i = 0; i < 6; i++) {
               u += 2.0 * amp_eq * cos(q[i][0] * x + q[i][1] * y + q[i][2] * z);
             }
+            f[idx] = u;
           }
-          f[idx] = u;
           idx += 1;
         }
       }

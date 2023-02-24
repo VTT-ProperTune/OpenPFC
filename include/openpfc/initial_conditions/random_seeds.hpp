@@ -10,7 +10,7 @@ namespace pfc {
 class RandomSeeds : public FieldModifier {
 
 public:
-  double rho, amplitude, n0;
+  double rho, amplitude;
 
   void apply(Model &m, double) override {
     const World &w = m.get_world();
@@ -57,7 +57,6 @@ public:
       seeds.push_back(seed);
     }
 
-    std::fill(field.begin(), field.end(), n0);
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
