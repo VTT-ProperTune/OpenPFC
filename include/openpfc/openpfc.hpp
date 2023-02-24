@@ -7,6 +7,7 @@
 #include "decomposition.hpp"
 #include "fft.hpp"
 #include "field_modifier.hpp"
+#include "initial_conditions/constant.hpp"
 #include "initial_conditions/file_reader.hpp"
 #include "initial_conditions/random_seeds.hpp"
 #include "initial_conditions/seed.hpp"
