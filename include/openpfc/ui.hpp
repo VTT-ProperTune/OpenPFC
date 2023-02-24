@@ -51,23 +51,78 @@ heffte::plan_options from_json<heffte::plan_options>(const json &j) {
   return options;
 }
 
-template <> World from_json<World>(const json &settings) {
-  int Lx = settings["Lx"];
-  int Ly = settings["Ly"];
-  int Lz = settings["Lz"];
-  double dx = settings["dx"];
-  double dy = settings["dy"];
-  double dz = settings["dz"];
-  double x0 = 0.0;
-  double y0 = 0.0;
-  double z0 = 0.0;
-  std::string origo = settings["origo"];
+/**
+ * Creates a World object from a JSON input.
+ *
+ * @param j A JSON object containing the following fields:
+ *   - Lx (int): The number of grid points in the x direction.
+ *   - Ly (int): The number of grid points in the y direction.
+ *   - Lz (int): The number of grid points in the z direction.
+ *   - dx (float): The grid spacing in the x direction.
+ *   - dy (float): The grid spacing in the y direction.
+ *   - dz (float): The grid spacing in the z direction.
+ *   - origo (string): The origin of the coordinate system. Must be one of
+ *     "center" or "corner".
+ *
+ * @return A World object.
+ *
+ * @throws std::invalid_argument if any of the required fields are missing
+ *         or have an invalid value.
+ */
+template <> World from_json<World>(const json &j) {
+  int Lx = 0, Ly = 0, Lz = 0;
+  double dx = 0.0, dy = 0.0, dz = 0.0;
+  double x0 = 0.0, y0 = 0.0, z0 = 0.0;
+  std::string origo;
+
+  if (!j.count("Lx") || !j["Lx"].is_number_integer()) {
+    throw std::invalid_argument("Missing or invalid 'Lx' field in JSON input.");
+  }
+  Lx = j["Lx"];
+
+  if (!j.count("Ly") || !j["Ly"].is_number_integer()) {
+    throw std::invalid_argument("Missing or invalid 'Ly' field in JSON input.");
+  }
+  Ly = j["Ly"];
+
+  if (!j.count("Lz") || !j["Lz"].is_number_integer()) {
+    throw std::invalid_argument("Missing or invalid 'Lz' field in JSON input.");
+  }
+  Lz = j["Lz"];
+
+  if (!j.count("dx") || !j["dx"].is_number_float()) {
+    throw std::invalid_argument("Missing or invalid 'dx' field in JSON input.");
+  }
+  dx = j["dx"];
+
+  if (!j.count("dy") || !j["dy"].is_number_float()) {
+    throw std::invalid_argument("Missing or invalid 'dy' field in JSON input.");
+  }
+  dy = j["dy"];
+
+  if (!j.count("dz") || !j["dz"].is_number_float()) {
+    throw std::invalid_argument("Missing or invalid 'dz' field in JSON input.");
+  }
+  dz = j["dz"];
+
+  if (!j.count("origo") || !j["origo"].is_string()) {
+    throw std::invalid_argument(
+        "Missing or invalid 'origo' field in JSON input.");
+  }
+  origo = j["origo"];
+
+  if (origo != "center" && origo != "corner") {
+    throw std::invalid_argument("Invalid 'origo' field in JSON input.");
+  }
+
   if (origo == "center") {
     x0 = -0.5 * dx * Lx;
     y0 = -0.5 * dy * Ly;
     z0 = -0.5 * dz * Lz;
   }
+
   World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+
   return world;
 }
 
