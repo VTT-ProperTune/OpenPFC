@@ -234,6 +234,18 @@ template <> SingleSeed_p from_json<SingleSeed_p>(const json &j) {
 
 using RandomSeeds_p = std::unique_ptr<RandomSeeds>;
 
+/**
+ * Parses a JSON object to create a unique pointer to a `RandomSeeds` object.
+ *
+ * The input JSON object should have the following fields:
+ * - "type": A string indicating the type of initial condition. Must be
+ * "random_seeds".
+ * - "amplitude": A number indicating the amplitude of the random seeds.
+ * - "rho": A number indicating the radius of the random seeds.
+ *
+ * Throws an `invalid_argument` exception if the input JSON object does not have
+ * the required fields or has incorrect data types.
+ */
 template <> RandomSeeds_p from_json<RandomSeeds_p>(const json &j) {
 
   // Check that the JSON input has the correct type field
