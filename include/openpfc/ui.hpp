@@ -3,6 +3,7 @@
 #include "field_modifier.hpp"
 #include "initial_conditions/constant.hpp"
 #include "initial_conditions/random_seeds.hpp"
+#include "initial_conditions/seed_grid.hpp"
 #include "initial_conditions/single_seed.hpp"
 #include "time.hpp"
 #include "world.hpp"
@@ -258,6 +259,55 @@ template <> RandomSeeds_p from_json<RandomSeeds_p>(const json &j) {
   return ic;
 }
 
+using SeedGrid_p = std::unique_ptr<SeedGrid>;
+
+template <> SeedGrid_p from_json<SeedGrid_p>(const json &j) {
+
+  if (!j.contains("type") || j["type"] != "seed_grid") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  if (!j.contains("Ny") || !j["Ny"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'Ny' field.");
+  }
+
+  if (!j.contains("Nz") || !j["Nz"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'Nz' field.");
+  }
+
+  if (!j.contains("X0") || !j["X0"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'X0' field.");
+  }
+
+  if (!j.contains("radius") || !j["radius"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'radius' field.");
+  }
+
+  if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'amplitude' field.");
+  }
+
+  if (!j.contains("rho") || !j["rho"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho' field.");
+  }
+
+  int Ny = j["Ny"];
+  int Nz = j["Nz"];
+  double X0 = j["X0"];
+  double radius = j["radius"];
+  SeedGrid_p ic = std::make_unique<SeedGrid>(Ny, Nz, X0, radius);
+  ic->amplitude = j["amplitude"];
+  ic->rho = j["rho"];
+  return ic;
+}
+
 using FieldModifier_p = std::unique_ptr<FieldModifier>;
 
 template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
@@ -274,6 +324,10 @@ template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
   if (type == "random_seeds") {
     std::cout << "Creating RandomSeeds <: FieldModifier" << std::endl;
     return from_json<RandomSeeds_p>(j);
+  }
+  if (type == "seed_grid") {
+    std::cout << "Creating SeedGrid <: FieldModifier" << std::endl;
+    return from_json<SeedGrid_p>(j);
   }
   throw std::invalid_argument("Unknown FieldModifier type: " + type);
 }
