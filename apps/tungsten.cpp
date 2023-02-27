@@ -398,18 +398,11 @@ public:
   void add_initial_conditions() {
     cout << "Adding initial conditions" << endl;
     for (const json &ic : m_settings["initial_conditions"]) {
+      m_simulator.add_initial_conditions(
+          ui::from_json<ui::FieldModifier_p>(ic));
       if (ic["type"] == "from_file") {
-        cout << "Reading initial condition from file" << endl;
-        string filename = ic["filename"];
-        cout << "Reading from file: " << filename << endl;
-        m_simulator.add_initial_conditions(make_unique<FileReader>(filename));
-        int result_counter = ic["result_counter"];
-        result_counter += 1;
-        m_simulator.set_result_counter(result_counter);
+        m_simulator.set_result_counter((int)ic["result_counter"] + 1);
         m_time.set_increment(ic["increment"]);
-      } else {
-        m_simulator.add_initial_conditions(
-            ui::from_json<ui::FieldModifier_p>(ic));
       }
     }
   }

@@ -2,6 +2,7 @@
 
 #include "field_modifier.hpp"
 #include "initial_conditions/constant.hpp"
+#include "initial_conditions/file_reader.hpp"
 #include "initial_conditions/random_seeds.hpp"
 #include "initial_conditions/seed_grid.hpp"
 #include "initial_conditions/single_seed.hpp"
@@ -308,6 +309,35 @@ template <> SeedGrid_p from_json<SeedGrid_p>(const json &j) {
   return ic;
 }
 
+using FileReader_p = std::unique_ptr<FileReader>;
+
+template <> FileReader_p from_json<FileReader_p>(const json &j) {
+
+  if (!j.contains("type") || j["type"] != "from_file") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  if (!j.contains("filename") || !j["filename"].is_string()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'filename' field.");
+  }
+
+  if (!j.contains("result_counter") || !j["result_counter"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'result_counter' field.");
+  }
+
+  if (!j.contains("increment") || !j["increment"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'increment' field.");
+  }
+
+  std::string filename = j["filename"];
+  FileReader_p ic = std::make_unique<FileReader>(filename);
+  return ic;
+}
+
 using FieldModifier_p = std::unique_ptr<FieldModifier>;
 
 template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
@@ -328,6 +358,10 @@ template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
   if (type == "seed_grid") {
     std::cout << "Creating SeedGrid <: FieldModifier" << std::endl;
     return from_json<SeedGrid_p>(j);
+  }
+  if (type == "from_file") {
+    std::cout << "Creating FileReader <: FieldModifier" << std::endl;
+    return from_json<FileReader_p>(j);
   }
   throw std::invalid_argument("Unknown FieldModifier type: " + type);
 }
