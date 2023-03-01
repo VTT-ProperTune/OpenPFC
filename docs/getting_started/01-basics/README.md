@@ -39,11 +39,13 @@ classes World, Decomposition and FFT. It is the responsibility of the World
 class to define the computational domain and its discretization. We can define
 any point in the calculation area with linear interpolation:
 
-$
-x(i) = x_0 + i \cdot \delta x \qquad i \in [0, L_x] \\
-y(j) = y_0 + j \cdot \delta y \qquad j \in [0, L_y] \\
-z(k) = z_0 + k \cdot \delta z \qquad k \in [0, L_z]
-$
+$$
+\begin{align}
+x(i) &= x_0 + i \cdot \delta x \qquad i \in [0, L_x] \\
+y(j) &= y_0 + j \cdot \delta y \qquad j \in [0, L_y] \\
+z(k) &= z_0 + k \cdot \delta z \qquad k \in [0, L_z]
+\end{align}
+$$
 
 ```mermaid
 classDiagram
