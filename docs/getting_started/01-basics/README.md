@@ -36,7 +36,7 @@ initialization, which usually contains at least memory allocation for all
 necessary data structures and construction of linear and non-linear operators,
 as well as defining model time integration step, which depends on the model
 physics. For example, a simple step for linear diffusion model would be
-$\mathcal{F}^{-1}\left\{ L\cdot\mathcal{F}\left\{ \psi\right\} \right\},$
+$\mathcal{F}^{-1}\lbrace L\cdot\mathcal{F}\lbrace\psi\rbrace\rbrace,$
 where $L$ is precalculated linear operator, and the corresponding step function
 in actual program code would be
 
