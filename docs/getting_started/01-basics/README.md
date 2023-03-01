@@ -36,9 +36,9 @@ initialization, which usually contains at least memory allocation for all
 necessary data structures and construction of linear and non-linear operators,
 as well as defining model time integration step, which depends on the model
 physics. For example, a simple step for linear diffusion model would be
-$\mathcal{F}^{-1}\lbrace L\cdot\mathcal{F}\lbrace\psi\rbrace\rbrace,$
-where $L$ is precalculated linear operator, and the corresponding step function
-in actual program code would be
+$\mathcal{F}^{-1}\lbrace L\cdot\mathcal{F}\lbrace\psi\rbrace\rbrace,$ where $L$
+is precalculated linear operator, and the corresponding step function in actual
+program code would be
 
 ```cpp
 void step(double) override {
@@ -51,10 +51,28 @@ void step(double) override {
 }
 ```
 
+Going to higher level classes, next comes `Simulator`, which main responsibility
+is to put all lower level objects together and control initial conditions and
+boundary conditions as well as writing results to disk on certain time. That is,
+simulator puts together `Model`, `Time`, `FieldModifier` and `ResultsWriter`.
+Here, `FieldModifier` can be seen as an object that modifies the contents of the
+data structures of model. Before the simulation starts, those are recognized as
+initial conditions, and during the simulation, they are applied after each step
+and recognized as boundary conditions. In a coarse level, simulator
+responsibilities are:
+
+1. initialize model
+1. apply initial conditions
+1. while not done:
+    1. increment time
+    1. apply boundary conditions
+    1. perform timestep
+    1. save results to disk
+
 The relations between the classes are of the "has-a" type. On a practical level,
-the object of interest is often the extension of the class "Model" with own
-physics. Boundary conditions and initial conditions can be controlled with the
-"FieldModifier" class.
+the object of interest is often the extension of the class `Model` with own
+physics. Boundary conditions and initial conditions can be implemented with the
+help of `FieldModifier` class.
 
 Let's examine the operation of these classes in smaller entities, starting with
 classes World, Decomposition and FFT. It is the responsibility of the World
