@@ -21,9 +21,17 @@
             "data": "/data/pfc/tungsten/psimf_%d.bin"
         }
     ],
-    "initial_condition": {
-        "type": "single_seed"
+    "initial_conditions": [
+        {
+            "type": "constant",
+            "n0": -0.4
     },
+        {
+            "type": "single_seed",
+            "amp_eq": 0.215936,
+            "rho_seed": -0.047
+        }
+    ],
     "boundary_condition": {
         "type": "none"
     }
