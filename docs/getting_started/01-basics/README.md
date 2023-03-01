@@ -27,7 +27,29 @@ classDiagram
 The framework consists of building blocks that can be stacked on top of each
 other from the bottom up. Starting from the bottom, we first want do define
 calculation domain, decompose it into smaller parts, distribute it between MPI
-processes and set up FFT.
+processes and set up FFT. These operations are the responsibilities of classes
+`World`, `Decomposition` and `FFT`.
+
+The actual physics is introduced in class `Model`, which combines FFT and
+real/complex fields. The responsiblities of `Model` is to perform model
+initialization, which usually contains at least memory allocation for all
+necessary data structures and construction of linear and non-linear operators,
+as well as defining model time integration step, which depends on the model
+physics. For example, a simple step for linear diffusion model would be
+$\mathcal{F}^{-1}\left\{ L\cdot\mathcal{F}\left\{ \psi\right\} \right\},$
+where $L$ is precalculated linear operator, and the corresponding step function
+in actual program code would be
+
+```cpp
+void step(double) override {
+  FFT &fft = get_fft();
+  fft.forward(psi, psi_F);  // Apply FFT
+  for (int k = 0, N = psi_F.size(); k < N; k++) {
+    psi_F[k] = opL[k] * psi_F[k];  // Apply linear operator opL
+  }
+  fft.backward(psi_F, psi);  // Apply inverse FFT
+}
+```
 
 The relations between the classes are of the "has-a" type. On a practical level,
 the object of interest is often the extension of the class "Model" with own
@@ -39,13 +61,13 @@ classes World, Decomposition and FFT. It is the responsibility of the World
 class to define the computational domain and its discretization. We can define
 any point in the calculation area with linear interpolation:
 
-$$
+```math
 \begin{align}
 x(i) &= x_0 + i \cdot \delta x \qquad i \in [0, L_x] \\
 y(j) &= y_0 + j \cdot \delta y \qquad j \in [0, L_y] \\
 z(k) &= z_0 + k \cdot \delta z \qquad k \in [0, L_z]
 \end{align}
-$$
+```
 
 ```mermaid
 classDiagram
