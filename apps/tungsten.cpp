@@ -260,26 +260,6 @@ public:
 
 }; // end of class
 
-class MPI_Worker {
-  MPI_Comm m_comm;
-  int m_rank, m_num_procs;
-
-public:
-  MPI_Worker(int argc, char *argv[], MPI_Comm comm) : m_comm(comm) {
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(comm, &m_rank);
-    MPI_Comm_size(comm, &m_num_procs);
-    if (m_rank != 0) mute();
-    cout << "MPI_Init(): initialized " << m_num_procs << " processes" << endl;
-  }
-
-  ~MPI_Worker() { MPI_Finalize(); }
-  int get_rank() const { return m_rank; }
-  int get_num_ranks() const { return m_num_procs; }
-  void mute() { cout.setstate(ios::failbit); }
-  void unmute() { cout.clear(); }
-};
-
 /*
 The main application
 */
