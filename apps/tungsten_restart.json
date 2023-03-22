@@ -12,13 +12,21 @@
     "dt": 1.0,
     "saveat": 1.0,
     "results": "/data/pfc/tungsten/psi_%d.bin",
-    "initial_condition": {
-        "type": "from_file",
-        "filename": "/data/pfc/tungsten/psi_5.bin",
+    "initial_conditions": [
+        {
+            "type": "from_file",
+            "filename": "/data/pfc/tungsten/psi_5.bin"
+        }
+    ],
+    "boundary_conditions": [
+        {
+            "type": "fixed",
+            "rho_low": -0.464,
+            "rho_high": -0.100
+        }
+    ],
+    "simulator": {
         "result_counter": 5,
         "increment": 5
-    },
-    "boundary_condition": {
-        "type": "fixed"
     }
 }

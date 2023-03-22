@@ -384,10 +384,6 @@ public:
     for (const json &ic : m_settings["initial_conditions"]) {
       m_simulator.add_initial_conditions(
           ui::from_json<ui::FieldModifier_p>(ic));
-      if (ic["type"] == "from_file") {
-        m_simulator.set_result_counter((int)ic["result_counter"] + 1);
-        m_time.set_increment(ic["increment"]);
-      }
     }
   }
 
@@ -415,6 +411,26 @@ public:
     add_result_writers();
     add_initial_conditions();
     add_boundary_conditions();
+
+    if (m_settings.contains("simulator")) {
+      const json &j = m_settings["simulator"];
+      if (j.contains("result_counter")) {
+        if (!j["result_counter"].is_number_integer()) {
+          throw std::invalid_argument(
+              "Invalid JSON input: missing or invalid 'result_counter' field.");
+        }
+        int result_counter = (int)j["result_counter"] + 1;
+        m_simulator.set_result_counter(result_counter);
+      }
+      if (j.contains("increment")) {
+        if (!j["increment"].is_number_integer()) {
+          throw std::invalid_argument(
+              "Invalid JSON input: missing or invalid 'increment' field.");
+        }
+        int increment = j["increment"];
+        m_time.set_increment(increment);
+      }
+    }
 
     cout << "Applying initial conditions" << endl;
     m_simulator.apply_initial_conditions();

@@ -337,16 +337,6 @@ template <> FileReader_p from_json<FileReader_p>(const json &j) {
         "Invalid JSON input: missing or invalid 'filename' field.");
   }
 
-  if (!j.contains("result_counter") || !j["result_counter"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'result_counter' field.");
-  }
-
-  if (!j.contains("increment") || !j["increment"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'increment' field.");
-  }
-
   std::string filename = j["filename"];
   FileReader_p ic = std::make_unique<FileReader>(filename);
   return ic;
