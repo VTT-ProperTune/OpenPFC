@@ -396,7 +396,11 @@ public:
   }
 
   void add_initial_conditions() {
-    cout << "Adding initial conditions" << endl;
+    if (!m_settings.contains("initial_conditions")) {
+      std::cout << "WARNING: no initial conditions are set!" << std::endl;
+      return;
+    }
+    std::cout << "Adding initial conditions" << std::endl;
     for (const json &ic : m_settings["initial_conditions"]) {
       m_simulator.add_initial_conditions(
           ui::from_json<ui::FieldModifier_p>(ic));
@@ -408,18 +412,14 @@ public:
   }
 
   void add_boundary_conditions() {
-    cout << "Adding boundary conditions" << endl;
-    const json bc = m_settings["boundary_condition"];
-    if (bc["type"] == "none") {
-      cout << "Not using boundary condition" << endl;
-    } else if (bc["type"] == "fixed") {
+    if (!m_settings.contains("boundary_conditions")) {
+      std::cout << "WARNING: no boundary conditions are set!" << std::endl;
+      return;
+    }
+    std::cout << "Adding boundary conditions" << std::endl;
+    for (const json &bc : m_settings["boundary_conditions"]) {
       m_simulator.add_boundary_conditions(
           ui::from_json<ui::FieldModifier_p>(bc));
-    } else if (bc["type"] == "moving") {
-      m_simulator.add_boundary_conditions(
-          ui::from_json<ui::FieldModifier_p>(bc));
-    } else {
-      cout << "Warning: unknown boundary condition " << bc["type"] << endl;
     }
   }
 
@@ -436,7 +436,7 @@ public:
     add_initial_conditions();
     add_boundary_conditions();
 
-    cout << "Apply initial conditions" << endl;
+    cout << "Applying initial conditions" << endl;
     m_simulator.apply_initial_conditions();
     if (m_time.get_increment() == 0) {
       cout << "First increment: apply boundary conditions" << endl;

@@ -32,9 +32,11 @@
             "rho": -0.047
         }
     ],
-    "boundary_condition": {
-        "type": "fixed",
-        "rho_low": -0.464,
-        "rho_high": -0.100
-    }
+    "boundary_conditions": [
+        {
+            "type": "fixed",
+            "rho_low": -0.464,
+            "rho_high": -0.100
+        }
+    ]
 }

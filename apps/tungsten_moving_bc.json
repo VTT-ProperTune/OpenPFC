@@ -32,13 +32,15 @@
             "rho": -0.047
         }
     ],
-    "boundary_condition": {
-        "type": "moving",
-        "rho_low": -0.464,
-        "rho_high": -0.10,
-        "width": 15.0,
-        "alpha": 1.0,
-        "disp": 40.0,
-        "xpos": 127.17225402106772
-    }
+    "boundary_conditions": [
+        {
+            "type": "moving",
+            "rho_low": -0.464,
+            "rho_high": -0.10,
+            "width": 15.0,
+            "alpha": 1.0,
+            "disp": 40.0,
+            "xpos": 127.17225402106772
+        }
+    ]
 }
