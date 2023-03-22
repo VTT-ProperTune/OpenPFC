@@ -1,5 +1,6 @@
 #pragma once
 
+#include "boundary_conditions/fixed_bc.hpp"
 #include "field_modifier.hpp"
 #include "initial_conditions/constant.hpp"
 #include "initial_conditions/file_reader.hpp"
@@ -350,11 +351,36 @@ template <> FileReader_p from_json<FileReader_p>(const json &j) {
   return ic;
 }
 
+using FixedBC_p = std::unique_ptr<FixedBC>;
+
+template <> FixedBC_p from_json<FixedBC_p>(const json &j) {
+
+  if (!j.contains("type") || j["type"] != "fixed") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_low' field.");
+  }
+
+  if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_high' field.");
+  }
+
+  double rho_low = j["rho_low"];
+  double rho_high = j["rho_high"];
+  return std::make_unique<FixedBC>(rho_low, rho_high);
+}
+
 using FieldModifier_p = std::unique_ptr<FieldModifier>;
 
 template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
   std::cout << "Creating FieldModifier from data " << j << std::endl;
   std::string type = j["type"];
+  // Initial conditions
   if (type == "single_seed") {
     std::cout << "Creating SingleSeed <: FieldModifier" << std::endl;
     return from_json<SingleSeed_p>(j);
@@ -374,6 +400,11 @@ template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
   if (type == "from_file") {
     std::cout << "Creating FileReader <: FieldModifier" << std::endl;
     return from_json<FileReader_p>(j);
+  }
+  // Boundary conditions
+  if (type == "fixed") {
+    std::cout << "Creating FixedBC <: FieldModifier" << std::endl;
+    return from_json<FixedBC_p>(j);
   }
   throw std::invalid_argument("Unknown FieldModifier type: " + type);
 }

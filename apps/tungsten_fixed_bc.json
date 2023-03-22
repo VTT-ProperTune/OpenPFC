@@ -17,14 +17,24 @@
     "dt": 1.0,
     "saveat": 100.0,
     "results": "data/u_%04d.bin",
-    "initial_condition": {
-        "type": "seed_grid",
-        "X0": 30.0,
-        "Ny": 2,
-        "Nz": 2,
-        "radius": 25.0
-    },
+    "initial_conditions": [
+        {
+            "type": "constant",
+            "n0": -0.10
+        },
+        {
+            "type": "seed_grid",
+            "X0": 30.0,
+            "Ny": 2,
+            "Nz": 2,
+            "radius": 25.0,
+            "amplitude": 0.215936,
+            "rho": -0.047
+        }
+    ],
     "boundary_condition": {
-        "type": "fixed"
+        "type": "fixed",
+        "rho_low": -0.464,
+        "rho_high": -0.100
     }
 }

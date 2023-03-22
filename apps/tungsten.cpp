@@ -410,15 +410,12 @@ public:
   void add_boundary_conditions() {
     cout << "Adding boundary conditions" << endl;
     Params &p = m_model.get_params();
-    auto bc = m_settings["boundary_condition"];
+    const json bc = m_settings["boundary_condition"];
     if (bc["type"] == "none") {
       cout << "Not using boundary condition" << endl;
     } else if (bc["type"] == "fixed") {
-      cout << "Adding fixed bc" << endl;
-      double rho_low = p.n_vap;
-      double rho_high = p.n0;
       m_simulator.add_boundary_conditions(
-          make_unique<FixedBC>(rho_low, rho_high));
+          ui::from_json<ui::FieldModifier_p>(bc));
     } else if (bc["type"] == "moving") {
       cout << "Applying moving boundary condition" << endl;
       double rho_low = p.n_vap;
