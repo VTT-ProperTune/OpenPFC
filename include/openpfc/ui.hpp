@@ -1,6 +1,7 @@
 #pragma once
 
 #include "boundary_conditions/fixed_bc.hpp"
+#include "boundary_conditions/moving_bc.hpp"
 #include "field_modifier.hpp"
 #include "initial_conditions/constant.hpp"
 #include "initial_conditions/file_reader.hpp"
@@ -375,6 +376,59 @@ template <> FixedBC_p from_json<FixedBC_p>(const json &j) {
   return std::make_unique<FixedBC>(rho_low, rho_high);
 }
 
+using MovingBC_p = std::unique_ptr<MovingBC>;
+
+template <> MovingBC_p from_json<MovingBC_p>(const json &j) {
+
+  if (!j.contains("type") || j["type"] != "moving") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_low' field.");
+  }
+
+  if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_high' field.");
+  }
+
+  if (!j.contains("width") || !j["width"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'width' field.");
+  }
+
+  if (!j.contains("alpha") || !j["alpha"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'alpha' field.");
+  }
+
+  if (!j.contains("disp") || !j["disp"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'disp' field.");
+  }
+
+  if (!j.contains("xpos") || !j["xpos"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'xpos' field.");
+  }
+
+  double rho_low = j["rho_low"];
+  double rho_high = j["rho_high"];
+  double width = j["width"];
+  double alpha = j["alpha"];
+  double disp = j["disp"];
+  double xpos = j["xpos"];
+  MovingBC_p bc = std::make_unique<MovingBC>(rho_low, rho_high);
+  bc->set_xwidth(width);
+  bc->set_alpha(alpha);
+  bc->set_disp(disp);
+  bc->set_xpos(xpos);
+  return bc;
+}
+
 using FieldModifier_p = std::unique_ptr<FieldModifier>;
 
 template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
@@ -405,6 +459,10 @@ template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
   if (type == "fixed") {
     std::cout << "Creating FixedBC <: FieldModifier" << std::endl;
     return from_json<FixedBC_p>(j);
+  }
+  if (type == "moving") {
+    std::cout << "Creating MovingBC <: FieldModifier" << std::endl;
+    return from_json<MovingBC_p>(j);
   }
   throw std::invalid_argument("Unknown FieldModifier type: " + type);
 }

@@ -409,7 +409,6 @@ public:
 
   void add_boundary_conditions() {
     cout << "Adding boundary conditions" << endl;
-    Params &p = m_model.get_params();
     const json bc = m_settings["boundary_condition"];
     if (bc["type"] == "none") {
       cout << "Not using boundary condition" << endl;
@@ -417,31 +416,8 @@ public:
       m_simulator.add_boundary_conditions(
           ui::from_json<ui::FieldModifier_p>(bc));
     } else if (bc["type"] == "moving") {
-      cout << "Applying moving boundary condition" << endl;
-      double rho_low = p.n_vap;
-      double rho_high = p.n0;
-      unique_ptr<MovingBC> moving_bc = make_unique<MovingBC>(rho_low, rho_high);
-      if (bc.contains("width")) {
-        double width = bc["width"];
-        cout << "Setting boudary condition (half) width to " << width << endl;
-        moving_bc->set_xwidth(width);
-      }
-      if (bc.contains("alpha")) {
-        double alpha = bc["alpha"];
-        cout << "Setting boundary condition alpha to " << alpha << endl;
-        moving_bc->set_alpha(alpha);
-      }
-      if (bc.contains("disp")) {
-        double disp = bc["disp"];
-        cout << "Settings boundary condition gap to " << disp << endl;
-        moving_bc->set_disp(disp);
-      }
-      if (bc.contains("initial_position") && bc["initial_position"] == "end") {
-        double x_pos = m_world.Lx * m_world.dx - moving_bc->get_xwidth();
-        cout << "Setting boundary condition location to " << x_pos << endl;
-        moving_bc->set_xpos(x_pos);
-      }
-      m_simulator.add_boundary_conditions(move(moving_bc));
+      m_simulator.add_boundary_conditions(
+          ui::from_json<ui::FieldModifier_p>(bc));
     } else {
       cout << "Warning: unknown boundary condition " << bc["type"] << endl;
     }
