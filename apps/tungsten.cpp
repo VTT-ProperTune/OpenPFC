@@ -15,86 +15,6 @@ using namespace pfc;
 using namespace pfc::utils;
 using namespace std;
 
-/*
-Model parameters
-*/
-struct Params {
-  // average density of the metastable fluid
-  double n0 = -0.4;
-
-  // Bulk densities at coexistence, obtained from phase diagram for chosen
-  // temperature
-  double n_sol = -0.047;
-  double n_vap = -0.464;
-
-  // Effective temperature parameters. Temperature in K. Remember to change
-  // n_sol and n_vap according to phase diagram when T is changed.
-  double T = 3300.0;
-  double T0 = 156000.0;
-  double Bx = 0.8582;
-
-  // parameters that affect elastic and interface energies
-
-  // width of C2's peak
-  double alpha = 0.50;
-
-  // how much we allow the k=1 peak to affect the k=0 value of the
-  // correlation, by changing the higher order components of the Gaussian
-  // function
-  double alpha_farTol = 1.0 / 1000.0;
-
-  // power of the higher order component of the gaussian function. Should be a
-  // multiple of 2. Setting this to zero also disables the tolerance setting.
-  int alpha_highOrd = 4;
-
-  // derived dimensionless values used in calculating vapor model parameters
-  double tau = T / T0;
-
-  // Strength of the meanfield filter. Avoid values higher than ~0.28, to
-  // avoid lattice-wavelength variations in the mean field
-  double lambda = 0.22;
-
-  // numerical stability parameter for the exponential integrator method
-  double stabP = 0.2;
-
-  // Vapor-model parameters
-  double shift_u = 0.3341;
-  double shift_s = 0.1898;
-
-  double p2 = 1.0;
-  double p3 = -1.0 / 2.0;
-  double p4 = 1.0 / 3.0;
-  double p2_bar = p2 + 2 * shift_s * p3 + 3 * pow(shift_s, 2) * p4;
-  double p3_bar = shift_u * (p3 + 3 * shift_s * p4);
-  double p4_bar = pow(shift_u, 2) * p4;
-
-  double q20 = -0.0037;
-  double q21 = 1.0;
-  double q30 = -12.4567;
-  double q31 = 20.0;
-  double q40 = 45.0;
-
-  double q20_bar = q20 + 2.0 * shift_s * q30 + 3.0 * pow(shift_s, 2) * q40;
-  double q21_bar = q21 + 2.0 * shift_s * q31;
-  double q30_bar = shift_u * (q30 + 3.0 * shift_s * q40);
-  double q31_bar = shift_u * q31;
-  double q40_bar = pow(shift_u, 2) * q40;
-
-  double q2_bar = q21_bar * tau + q20_bar;
-  double q3_bar = q31_bar * tau + q30_bar;
-  double q4_bar = q40_bar;
-
-  // calculating approx amplitude. This is related to the phase diagram
-  // calculations.
-  double rho_seed = n_sol;
-  double A_phi = 135.0 * p4_bar;
-  double B_phi = 16.0 * p3_bar + 48.0 * p4_bar * rho_seed;
-  double C_phi = -6.0 * (Bx * exp(-T / T0)) + 6.0 * p2_bar +
-                 12.0 * p3_bar * rho_seed + 18.0 * p4_bar * pow(rho_seed, 2);
-  double d = abs(9.0 * pow(B_phi, 2) - 32.0 * A_phi * C_phi);
-  double amp_eq = (-3.0 * B_phi + sqrt(d)) / (8.0 * A_phi);
-};
-
 class Tungsten : public Model {
   using Model::Model;
 
@@ -108,13 +28,45 @@ private:
   std::vector<double> psiMF, psi, psiN;
   std::vector<std::complex<double>> psiMF_F, psi_F, psiN_F;
 #endif
-  std::array<double, 10> timing = {0};
   size_t mem_allocated = 0;
   bool m_first = true;
-  Params p;
 
 public:
-  Params &get_params() { return p; }
+  /**
+   * @brief Model parameters, which can be overridden from json file
+   *
+*/
+  struct {
+  // average density of the metastable fluid
+    double n0;
+  // Bulk densities at coexistence, obtained from phase diagram for chosen
+  // temperature
+    double n_sol, n_vap;
+  // Effective temperature parameters. Temperature in K. Remember to change
+  // n_sol and n_vap according to phase diagram when T is changed.
+    double T, T0, Bx;
+  // width of C2's peak
+    double alpha;
+  // how much we allow the k=1 peak to affect the k=0 value of the
+  // correlation, by changing the higher order components of the Gaussian
+  // function
+    double alpha_farTol;
+  // power of the higher order component of the gaussian function. Should be a
+  // multiple of 2. Setting this to zero also disables the tolerance setting.
+    int alpha_highOrd;
+  // derived dimensionless values used in calculating vapor model parameters
+    double tau;
+  // Strength of the meanfield filter. Avoid values higher than ~0.28, to
+  // avoid lattice-wavelength variations in the mean field
+    double lambda;
+  // numerical stability parameter for the exponential integrator method
+    double stabP;
+  // Vapor-model parameters
+    double shift_u, shift_s;
+    double p2, p3, p4, p2_bar, p3_bar, p4_bar;
+    double q20, q21, q30, q31, q40;
+    double q20_bar, q21_bar, q30_bar, q31_bar, q40_bar, q2_bar, q3_bar, q4_bar;
+  } params;
 
   void allocate() {
     FFT &fft = get_fft();
@@ -183,19 +135,19 @@ public:
 
           // mean-field filtering operator (chi) make a C2 that's quasi-gaussian
           // on the left, and ken-style on the right
-          double alpha2 = 2.0 * p.alpha * p.alpha;
-          double lambda2 = 2.0 * p.lambda * p.lambda;
+          double alpha2 = 2.0 * params.alpha * params.alpha;
+          double lambda2 = 2.0 * params.lambda * params.lambda;
           double fMF = exp(kLap / lambda2);
           double k = sqrt(-kLap) - 1.0;
           double k2 = k * k;
 
-          double rTol = -alpha2 * log(p.alpha_farTol) - 1.0;
+          double rTol = -alpha2 * log(params.alpha_farTol) - 1.0;
           double g1 = 0;
-          if (p.alpha_highOrd == 0) { // gaussian peak
+          if (params.alpha_highOrd == 0) { // gaussian peak
             g1 = exp(-k2 / alpha2);
           } else { // quasi-gaussian peak with higher order component to make it
                    // decay faster towards k=0
-            g1 = exp(-(k2 + rTol * pow(k, p.alpha_highOrd)) / alpha2);
+            g1 = exp(-(k2 + rTol * pow(k, params.alpha_highOrd)) / alpha2);
           }
 
           // taylor expansion of gaussian peak to order 2
@@ -204,9 +156,10 @@ public:
           double gf = (k < 0.0) ? g1 : g2;
           // we separate this out because it is needed in the nonlinear
           // calculation when T is not constant in space
-          double opPeak = -p.Bx * exp(-p.T / p.T0) * gf;
+          double opPeak = -params.Bx * exp(-params.T / params.T0) * gf;
           // includes the lowest order n_mf term since it is a linear term
-          double opCk = p.stabP + p.p2_bar + opPeak + p.q2_bar * fMF;
+          double opCk =
+              params.stabP + params.p2_bar + opPeak + params.q2_bar * fMF;
 
           filterMF[idx] = fMF;
           opL[idx] = exp(kLap * opCk * dt);
@@ -238,14 +191,15 @@ public:
     for (size_t idx = 0, N = psiN.size(); idx < N; idx++) {
       double u = psi[idx], v = psiMF[idx];
       double u2 = u * u, u3 = u * u * u, v2 = v * v, v3 = v * v * v;
-      double p3 = p.p3_bar, p4 = p.p4_bar, q3 = p.q3_bar, q4 = p.q4_bar;
+      double p3 = params.p3_bar, p4 = params.p4_bar;
+      double q3 = params.q3_bar, q4 = params.q4_bar;
       psiN[idx] = p3 * u2 + p4 * u3 + q3 * v2 + q4 * v3;
     }
 
     // Apply stabilization factor if given in parameters
-    if (p.stabP != 0.0)
+    if (params.stabP != 0.0)
       for (size_t idx = 0, N = psiN.size(); idx < N; idx++)
-        psiN[idx] = psiN[idx] - p.stabP * psi[idx];
+        psiN[idx] = psiN[idx] - params.stabP * psi[idx];
 
     // Fourier transform of the nonlinear part of the evolution equation
     fft.forward(psiN, psiN_F);
