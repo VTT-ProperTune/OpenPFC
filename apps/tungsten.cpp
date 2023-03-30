@@ -35,33 +35,33 @@ public:
   /**
    * @brief Model parameters, which can be overridden from json file
    *
-*/
+   */
   struct {
-  // average density of the metastable fluid
+    // average density of the metastable fluid
     double n0;
-  // Bulk densities at coexistence, obtained from phase diagram for chosen
-  // temperature
+    // Bulk densities at coexistence, obtained from phase diagram for chosen
+    // temperature
     double n_sol, n_vap;
-  // Effective temperature parameters. Temperature in K. Remember to change
-  // n_sol and n_vap according to phase diagram when T is changed.
+    // Effective temperature parameters. Temperature in K. Remember to change
+    // n_sol and n_vap according to phase diagram when T is changed.
     double T, T0, Bx;
-  // width of C2's peak
+    // width of C2's peak
     double alpha;
-  // how much we allow the k=1 peak to affect the k=0 value of the
-  // correlation, by changing the higher order components of the Gaussian
-  // function
+    // how much we allow the k=1 peak to affect the k=0 value of the
+    // correlation, by changing the higher order components of the Gaussian
+    // function
     double alpha_farTol;
-  // power of the higher order component of the gaussian function. Should be a
-  // multiple of 2. Setting this to zero also disables the tolerance setting.
+    // power of the higher order component of the gaussian function. Should be a
+    // multiple of 2. Setting this to zero also disables the tolerance setting.
     int alpha_highOrd;
-  // derived dimensionless values used in calculating vapor model parameters
+    // derived dimensionless values used in calculating vapor model parameters
     double tau;
-  // Strength of the meanfield filter. Avoid values higher than ~0.28, to
-  // avoid lattice-wavelength variations in the mean field
+    // Strength of the meanfield filter. Avoid values higher than ~0.28, to
+    // avoid lattice-wavelength variations in the mean field
     double lambda;
-  // numerical stability parameter for the exponential integrator method
+    // numerical stability parameter for the exponential integrator method
     double stabP;
-  // Vapor-model parameters
+    // Vapor-model parameters
     double shift_u, shift_s;
     double p2, p3, p4, p2_bar, p3_bar, p4_bar;
     double q20, q21, q30, q31, q40;
@@ -261,7 +261,7 @@ void from_json(const json &j, Tungsten &m) {
 The main application
 */
 
-class App {
+template <class ConcreteModel> class App {
 private:
   MPI_Comm m_comm;
   MPI_Worker m_worker;
@@ -271,7 +271,7 @@ private:
   Decomposition m_decomp;
   FFT m_fft;
   Time m_time;
-  Tungsten m_model;
+  ConcreteModel m_model;
   Simulator m_simulator;
   double m_total_steptime = 0.0;
   double m_total_fft_time = 0.0;
@@ -518,5 +518,5 @@ public:
 int main(int argc, char *argv[]) {
   cout << std::fixed;
   cout.precision(3);
-  return App(argc, argv).main();
+  return App<Tungsten>(argc, argv).main();
 }
