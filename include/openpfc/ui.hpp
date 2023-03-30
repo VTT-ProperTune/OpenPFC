@@ -9,9 +9,15 @@
 #include "initial_conditions/seed_grid.hpp"
 #include "initial_conditions/single_seed.hpp"
 #include "time.hpp"
+#include "utils/timeleft.hpp"
 #include "world.hpp"
 
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
+
 #include <nlohmann/json.hpp>
 
 namespace pfc {
@@ -456,6 +462,271 @@ template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
   }
   throw std::invalid_argument("Unknown FieldModifier type: " + type);
 }
+
+/**
+ * @brief The main json-based application
+ *
+ */
+template <class ConcreteModel> class App {
+private:
+  MPI_Comm m_comm;
+  MPI_Worker m_worker;
+  bool rank0;
+  json m_settings;
+  World m_world;
+  Decomposition m_decomp;
+  FFT m_fft;
+  Time m_time;
+  ConcreteModel m_model;
+  Simulator m_simulator;
+  double m_total_steptime = 0.0;
+  double m_total_fft_time = 0.0;
+  double m_steptime = 0.0;
+  double m_fft_time = 0.0;
+  double m_avg_steptime = 0.0;
+  int m_steps_done = 0;
+
+  // save detailed timing information for each mpi rank and step?
+  bool m_detailed_timing = false;
+  bool m_detailed_timing_print = false;
+  bool m_detailed_timing_write = false;
+  std::string m_detailed_timing_filename = "timing.bin";
+
+  // read settings from file if or standard input
+  json read_settings(int argc, char *argv[]) {
+    json settings;
+    if (argc > 1) {
+      if (rank0) std::cout << "Reading input from file " << argv[1] << "\n\n";
+      std::filesystem::path file(argv[1]);
+      if (!std::filesystem::exists(file)) {
+        if (rank0) std::cerr << "File " << file << " does not exist!\n";
+        MPI_Abort(MPI_COMM_WORLD, 1);
+      }
+      std::ifstream input_file(file);
+      input_file >> settings;
+    } else {
+      if (rank0) std::cout << "Reading simulation settings from stdin\n\n";
+      std::cin >> settings;
+    }
+    return settings;
+  }
+
+public:
+  App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
+      : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
+        rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)),
+        m_world(ui::from_json<World>(m_settings)),
+        m_decomp(Decomposition(m_world, comm)),
+        m_fft(FFT(
+            m_decomp, comm,
+            ui::from_json<heffte::plan_options>(m_settings["plan_options"]))),
+        m_time(ui::from_json<Time>(m_settings)), m_model(ConcreteModel(m_fft)),
+        m_simulator(Simulator(m_model, m_time)) {}
+
+  bool create_results_dir(const std::string &output) {
+    std::filesystem::path results_dir(output);
+    if (results_dir.has_filename()) results_dir = results_dir.parent_path();
+    if (!std::filesystem::exists(results_dir)) {
+      std::cout << "Results dir " << results_dir
+                << " does not exist, creating\n";
+      std::filesystem::create_directories(results_dir);
+      return true;
+    } else {
+      std::cout << "Warning: results dir " << results_dir
+                << " already exists\n";
+      return false;
+    }
+  }
+
+  void read_detailed_timing_configuration() {
+    if (m_settings.contains("detailed_timing")) {
+      auto timing = m_settings["detailed_timing"];
+      if (timing.contains("enabled")) m_detailed_timing = timing["enabled"];
+      if (timing.contains("print")) m_detailed_timing_print = timing["print"];
+      if (timing.contains("write")) m_detailed_timing_write = timing["write"];
+      if (timing.contains("filename"))
+        m_detailed_timing_filename = timing["filename"];
+    }
+  }
+
+  void add_result_writers() {
+    std::cout << "Adding results writers" << std::endl;
+    if (m_settings.contains("saveat") && m_settings.contains("fields") &&
+        m_settings["saveat"] > 0) {
+      for (const auto &field : m_settings["fields"]) {
+        std::string name = field["name"];
+        std::string data = field["data"];
+        if (rank0) create_results_dir(data);
+        std::cout << "Writing field " << name << " to " << data << std::endl;
+        m_simulator.add_results_writer(name,
+                                       std::make_unique<BinaryWriter>(data));
+      }
+    } else {
+      std::cout << "Warning: not writing results to anywhere." << std::endl;
+      std::cout << "To write results, add ResultsWriter to model." << std::endl;
+    }
+  }
+
+  void add_initial_conditions() {
+    if (!m_settings.contains("initial_conditions")) {
+      std::cout << "WARNING: no initial conditions are set!" << std::endl;
+      return;
+    }
+    std::cout << "Adding initial conditions" << std::endl;
+    for (const json &ic : m_settings["initial_conditions"]) {
+      m_simulator.add_initial_conditions(
+          ui::from_json<ui::FieldModifier_p>(ic));
+    }
+  }
+
+  void add_boundary_conditions() {
+    if (!m_settings.contains("boundary_conditions")) {
+      std::cout << "WARNING: no boundary conditions are set!" << std::endl;
+      return;
+    }
+    std::cout << "Adding boundary conditions" << std::endl;
+    for (const json &bc : m_settings["boundary_conditions"]) {
+      m_simulator.add_boundary_conditions(
+          ui::from_json<ui::FieldModifier_p>(bc));
+    }
+  }
+
+  int main() {
+    std::cout << m_settings.dump(4) << "\n\n";
+    std::cout << "World: " << m_world << std::endl;
+
+    std::cout << "Initializing model... " << std::endl;
+    m_model.initialize(m_time.get_dt());
+
+    if (m_settings.contains("model") &&
+        m_settings["model"].contains("params")) {
+      from_json(m_settings["model"]["params"], m_model);
+    }
+    read_detailed_timing_configuration();
+    add_result_writers();
+    add_initial_conditions();
+    add_boundary_conditions();
+
+    if (m_settings.contains("simulator")) {
+      const json &j = m_settings["simulator"];
+      if (j.contains("result_counter")) {
+        if (!j["result_counter"].is_number_integer()) {
+          throw std::invalid_argument(
+              "Invalid JSON input: missing or invalid 'result_counter' field.");
+        }
+        int result_counter = (int)j["result_counter"] + 1;
+        m_simulator.set_result_counter(result_counter);
+      }
+      if (j.contains("increment")) {
+        if (!j["increment"].is_number_integer()) {
+          throw std::invalid_argument(
+              "Invalid JSON input: missing or invalid 'increment' field.");
+        }
+        int increment = j["increment"];
+        m_time.set_increment(increment);
+      }
+    }
+
+    std::cout << "Applying initial conditions" << std::endl;
+    m_simulator.apply_initial_conditions();
+    if (m_time.get_increment() == 0) {
+      std::cout << "First increment: apply boundary conditions" << std::endl;
+      m_simulator.apply_boundary_conditions();
+      m_simulator.write_results();
+    }
+
+    while (!m_time.done()) {
+      m_time.next(); // increase increment counter by 1
+      m_simulator.apply_boundary_conditions();
+
+      double l_steptime = 0.0; // l = local for this mpi process
+      double l_fft_time = 0.0;
+      MPI_Barrier(m_comm);
+      l_steptime = -MPI_Wtime();
+      m_model.step(m_time.get_current());
+      MPI_Barrier(m_comm);
+      l_steptime += MPI_Wtime();
+      l_fft_time = m_fft.get_fft_time();
+
+      if (m_detailed_timing) {
+        double timing[2] = {l_steptime, l_fft_time};
+        MPI_Send(timing, 2, MPI_DOUBLE, 0, 42, m_comm);
+        if (m_worker.get_rank() == 0) {
+          int num_ranks = m_worker.get_num_ranks();
+          double timing[num_ranks][2];
+          for (int rank = 0; rank < num_ranks; rank++) {
+            MPI_Recv(timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm,
+                     MPI_STATUS_IGNORE);
+          }
+          auto inc = m_time.get_increment();
+          if (m_detailed_timing_print) {
+            auto old_precision = std::cout.precision(6);
+            std::cout << "Timing information for all processes:" << std::endl;
+            std::cout << "step;rank;step_time;fft_time" << std::endl;
+            for (int rank = 0; rank < num_ranks; rank++) {
+              std::cout << inc << ";" << rank << ";" << timing[rank][0] << ";"
+                        << timing[rank][1] << std::endl;
+            }
+            std::cout.precision(old_precision);
+          }
+          if (m_detailed_timing_write) {
+            // so we end up to a binary file, and opening with e.g. Python
+            // np.fromfile("timing.bin").reshape(n_steps, n_procs, 2)
+            std::ofstream outfile(m_detailed_timing_filename, std::ios::app);
+            outfile.write((const char *)timing, sizeof(double) * 2 * num_ranks);
+            outfile.close();
+          }
+        }
+      }
+
+      // max reduction over all mpi processes
+      MPI_Reduce(&l_steptime, &m_steptime, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
+      MPI_Reduce(&l_fft_time, &m_fft_time, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
+
+      if (m_time.do_save()) {
+        m_simulator.apply_boundary_conditions();
+        m_simulator.write_results();
+      }
+
+      // Calculate eta from average step time.
+      // Use exponential moving average when steps > 3.
+      m_avg_steptime = m_steptime;
+      if (m_steps_done > 3) {
+        m_avg_steptime = 0.01 * m_steptime + 0.99 * m_avg_steptime;
+      }
+      int increment = m_time.get_increment();
+      double t = m_time.get_current(), t1 = m_time.get_t1();
+      double eta_i = (t1 - t) / m_time.get_dt();
+      double eta_t = eta_i * m_avg_steptime;
+      double other_time = m_steptime - m_fft_time;
+      std::cout << "Step " << increment << " done in " << m_steptime << " s ";
+      std::cout << "(" << m_fft_time << " s FFT, " << other_time
+                << " s other). ";
+      std::cout << "Simulation time: " << t << " / " << t1;
+      std::cout << " (" << (t / t1 * 100) << " % done). ";
+      std::cout << "ETA: " << pfc::utils::TimeLeft(eta_t) << std::endl;
+
+      m_total_steptime += m_steptime;
+      m_total_fft_time += m_fft_time;
+      m_steps_done += 1;
+    }
+
+    double avg_steptime = m_total_steptime / m_steps_done;
+    double avg_fft_time = m_total_fft_time / m_steps_done;
+    double avg_oth_time = avg_steptime - avg_fft_time;
+    double p_fft = avg_fft_time / avg_steptime * 100.0;
+    double p_oth = avg_oth_time / avg_steptime * 100.0;
+    std::cout << "\nSimulated " << m_steps_done
+              << " steps. Average times:" << std::endl;
+    std::cout << "Step time:  " << avg_steptime << " s" << std::endl;
+    std::cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %"
+              << std::endl;
+    std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %"
+              << std::endl;
+
+    return 0;
+  }
+};
 
 } // namespace ui
 } // namespace pfc
