@@ -11,6 +11,8 @@
 #include "time.hpp"
 #include "utils/timeleft.hpp"
 #include "world.hpp"
+#include "mpi.hpp"
+#include "simulator.hpp"
 
 #include <filesystem>
 #include <fstream>
