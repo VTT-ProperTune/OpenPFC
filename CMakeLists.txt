@@ -4,7 +4,7 @@ project(OpenPFC VERSION 0.1.0 DESCRIPTION "Phase Field Crystal simulation framew
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ standard to use")
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -54,6 +54,7 @@ target_include_directories(OpenPFC
                             $<INSTALL_INTERFACE:include>
                           )
 target_link_libraries(OpenPFC INTERFACE Heffte::Heffte MPI::MPI_CXX)
+target_compile_features(OpenPFC INTERFACE cxx_std_17)
 
 option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
 option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
