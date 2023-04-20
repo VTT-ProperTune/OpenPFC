@@ -8,11 +8,11 @@
 #include "initial_conditions/random_seeds.hpp"
 #include "initial_conditions/seed_grid.hpp"
 #include "initial_conditions/single_seed.hpp"
+#include "mpi.hpp"
+#include "simulator.hpp"
 #include "time.hpp"
 #include "utils/timeleft.hpp"
 #include "world.hpp"
-#include "mpi.hpp"
-#include "simulator.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -475,12 +475,7 @@ private:
   MPI_Worker m_worker;
   bool rank0;
   json m_settings;
-  World m_world;
-  Decomposition m_decomp;
-  FFT m_fft;
-  Time m_time;
-  ConcreteModel m_model;
-  Simulator m_simulator;
+
   double m_total_steptime = 0.0;
   double m_total_fft_time = 0.0;
   double m_steptime = 0.0;
@@ -516,14 +511,8 @@ private:
 public:
   App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
       : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
-        rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)),
-        m_world(ui::from_json<World>(m_settings)),
-        m_decomp(Decomposition(m_world, comm)),
-        m_fft(FFT(
-            m_decomp, comm,
-            ui::from_json<heffte::plan_options>(m_settings["plan_options"]))),
-        m_time(ui::from_json<Time>(m_settings)), m_model(ConcreteModel(m_fft)),
-        m_simulator(Simulator(m_model, m_time)) {}
+        rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)) {
+  }
 
   bool create_results_dir(const std::string &output) {
     std::filesystem::path results_dir(output);
@@ -551,7 +540,7 @@ public:
     }
   }
 
-  void add_result_writers() {
+  void add_result_writers(Simulator &sim) {
     std::cout << "Adding results writers" << std::endl;
     if (m_settings.contains("saveat") && m_settings.contains("fields") &&
         m_settings["saveat"] > 0) {
@@ -560,8 +549,7 @@ public:
         std::string data = field["data"];
         if (rank0) create_results_dir(data);
         std::cout << "Writing field " << name << " to " << data << std::endl;
-        m_simulator.add_results_writer(name,
-                                       std::make_unique<BinaryWriter>(data));
+        sim.add_results_writer(name, std::make_unique<BinaryWriter>(data));
       }
     } else {
       std::cout << "Warning: not writing results to anywhere." << std::endl;
@@ -569,45 +557,53 @@ public:
     }
   }
 
-  void add_initial_conditions() {
+  void add_initial_conditions(Simulator &sim) {
     if (!m_settings.contains("initial_conditions")) {
       std::cout << "WARNING: no initial conditions are set!" << std::endl;
       return;
     }
     std::cout << "Adding initial conditions" << std::endl;
     for (const json &ic : m_settings["initial_conditions"]) {
-      m_simulator.add_initial_conditions(
-          ui::from_json<ui::FieldModifier_p>(ic));
+      sim.add_initial_conditions(ui::from_json<ui::FieldModifier_p>(ic));
     }
   }
 
-  void add_boundary_conditions() {
+  void add_boundary_conditions(Simulator &sim) {
     if (!m_settings.contains("boundary_conditions")) {
       std::cout << "WARNING: no boundary conditions are set!" << std::endl;
       return;
     }
     std::cout << "Adding boundary conditions" << std::endl;
     for (const json &bc : m_settings["boundary_conditions"]) {
-      m_simulator.add_boundary_conditions(
-          ui::from_json<ui::FieldModifier_p>(bc));
+      sim.add_boundary_conditions(ui::from_json<ui::FieldModifier_p>(bc));
     }
   }
 
   int main() {
     std::cout << m_settings.dump(4) << "\n\n";
-    std::cout << "World: " << m_world << std::endl;
+
+    World world(ui::from_json<World>(m_settings));
+    std::cout << "World: " << world << std::endl;
+
+    Decomposition decomp(world, m_comm);
+    auto plan_options =
+        ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
+    FFT fft(decomp, m_comm, plan_options);
+    Time time(ui::from_json<Time>(m_settings));
+    ConcreteModel model(fft);
+    Simulator simulator(model, time);
 
     std::cout << "Initializing model... " << std::endl;
-    m_model.initialize(m_time.get_dt());
+    model.initialize(time.get_dt());
 
     if (m_settings.contains("model") &&
         m_settings["model"].contains("params")) {
-      from_json(m_settings["model"]["params"], m_model);
+      from_json(m_settings["model"]["params"], model);
     }
     read_detailed_timing_configuration();
-    add_result_writers();
-    add_initial_conditions();
-    add_boundary_conditions();
+    add_result_writers(simulator);
+    add_initial_conditions(simulator);
+    add_boundary_conditions(simulator);
 
     if (m_settings.contains("simulator")) {
       const json &j = m_settings["simulator"];
@@ -617,7 +613,7 @@ public:
               "Invalid JSON input: missing or invalid 'result_counter' field.");
         }
         int result_counter = (int)j["result_counter"] + 1;
-        m_simulator.set_result_counter(result_counter);
+        simulator.set_result_counter(result_counter);
       }
       if (j.contains("increment")) {
         if (!j["increment"].is_number_integer()) {
@@ -625,30 +621,30 @@ public:
               "Invalid JSON input: missing or invalid 'increment' field.");
         }
         int increment = j["increment"];
-        m_time.set_increment(increment);
+        time.set_increment(increment);
       }
     }
 
     std::cout << "Applying initial conditions" << std::endl;
-    m_simulator.apply_initial_conditions();
-    if (m_time.get_increment() == 0) {
+    simulator.apply_initial_conditions();
+    if (time.get_increment() == 0) {
       std::cout << "First increment: apply boundary conditions" << std::endl;
-      m_simulator.apply_boundary_conditions();
-      m_simulator.write_results();
+      simulator.apply_boundary_conditions();
+      simulator.write_results();
     }
 
-    while (!m_time.done()) {
-      m_time.next(); // increase increment counter by 1
-      m_simulator.apply_boundary_conditions();
+    while (!time.done()) {
+      time.next(); // increase increment counter by 1
+      simulator.apply_boundary_conditions();
 
       double l_steptime = 0.0; // l = local for this mpi process
       double l_fft_time = 0.0;
       MPI_Barrier(m_comm);
       l_steptime = -MPI_Wtime();
-      m_model.step(m_time.get_current());
+      model.step(time.get_current());
       MPI_Barrier(m_comm);
       l_steptime += MPI_Wtime();
-      l_fft_time = m_fft.get_fft_time();
+      l_fft_time = fft.get_fft_time();
 
       if (m_detailed_timing) {
         double timing[2] = {l_steptime, l_fft_time};
@@ -660,7 +656,7 @@ public:
             MPI_Recv(timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm,
                      MPI_STATUS_IGNORE);
           }
-          auto inc = m_time.get_increment();
+          auto inc = time.get_increment();
           if (m_detailed_timing_print) {
             auto old_precision = std::cout.precision(6);
             std::cout << "Timing information for all processes:" << std::endl;
@@ -685,9 +681,9 @@ public:
       MPI_Reduce(&l_steptime, &m_steptime, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
       MPI_Reduce(&l_fft_time, &m_fft_time, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
 
-      if (m_time.do_save()) {
-        m_simulator.apply_boundary_conditions();
-        m_simulator.write_results();
+      if (time.do_save()) {
+        simulator.apply_boundary_conditions();
+        simulator.write_results();
       }
 
       // Calculate eta from average step time.
@@ -696,9 +692,9 @@ public:
       if (m_steps_done > 3) {
         m_avg_steptime = 0.01 * m_steptime + 0.99 * m_avg_steptime;
       }
-      int increment = m_time.get_increment();
-      double t = m_time.get_current(), t1 = m_time.get_t1();
-      double eta_i = (t1 - t) / m_time.get_dt();
+      int increment = time.get_increment();
+      double t = time.get_current(), t1 = time.get_t1();
+      double eta_i = (t1 - t) / time.get_dt();
       double eta_t = eta_i * m_avg_steptime;
       double other_time = m_steptime - m_fft_time;
       std::cout << "Step " << increment << " done in " << m_steptime << " s ";
