@@ -13,6 +13,7 @@ with.
 
 ```mermaid
 classDiagram
+  App~Model~ --> Simulator
   Simulator --> Model
   Simulator --> Time
   Simulator --> FieldModifier
@@ -44,7 +45,7 @@ program code would be
 void step(double) override {
   FFT &fft = get_fft();
   fft.forward(psi, psi_F);  // Apply FFT
-  for (int k = 0, N = psi_F.size(); k < N; k++) {
+  for (size_t k = 0, N = psi_F.size(); k < N; k++) {
     psi_F[k] = opL[k] * psi_F[k];  // Apply linear operator opL
   }
   fft.backward(psi_F, psi);  // Apply inverse FFT
@@ -73,6 +74,23 @@ The relations between the classes are of the "has-a" type. On a practical level,
 the object of interest is often the extension of the class `Model` with own
 physics. Boundary conditions and initial conditions can be implemented with the
 help of `FieldModifier` class.
+
+The responsibility of designing the user interface lies with the user of the
+software framework. The technical features of the user interface are contingent
+upon the execution environment of the program code. Nonetheless, we have
+presented one feasible rough-level user interface, whereby the program's input
+is read from a JSON file, denominated as `App<Model>`. This methodology is
+appropriate for HPC computing due to several reasons.
+
+Primarily, computing environments on nodes are typically limited and lack
+graphic libraries. Secondly, the simulation initiation process is usually
+non-interactive and is carried out by running the simulation through a queuing
+system (such as slurm) using a separate startup script. This form of program
+execution is better suited to a command line user interface where the simulation
+settings are defined declaratively with a separate configuration file. As the
+simulation settings cannot be modified during the simulation or interactively at
+the beginning of the simulation, the reproducibility of the results is
+guaranteed, which is crucial for research purposes.
 
 Let's examine the operation of these classes in smaller entities, starting with
 classes World, Decomposition and FFT. It is the responsibility of the World
