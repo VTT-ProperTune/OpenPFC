@@ -580,6 +580,7 @@ public:
   }
 
   int main() {
+    std::cout << "Reading configuration from json file:" << std::endl;
     std::cout << m_settings.dump(4) << "\n\n";
 
     World world(ui::from_json<World>(m_settings));
@@ -593,14 +594,15 @@ public:
     ConcreteModel model(fft);
     Simulator simulator(model, time);
 
-    std::cout << "Initializing model... " << std::endl;
-    model.initialize(time.get_dt());
-
     if (m_settings.contains("model") &&
         m_settings["model"].contains("params")) {
       from_json(m_settings["model"]["params"], model);
     }
     read_detailed_timing_configuration();
+
+    std::cout << "Initializing model... " << std::endl;
+    model.initialize(time.get_dt());
+
     add_result_writers(simulator);
     add_initial_conditions(simulator);
     add_boundary_conditions(simulator);
