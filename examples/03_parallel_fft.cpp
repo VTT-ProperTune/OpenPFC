@@ -36,7 +36,7 @@ void dft_forward(const vector<double> x, vector<complex<double>> &X) {
  * algorithm provided by the HeFFTe library, which is widely recognized and proven to be an efficient implementation.
  * With these three fundamental components in place, one can already embark on building programs that involve
  * distributed FFT transformations. The following example demonstrates the power of these components by showcasing a
- * distributed FFT computation
+ * distributed FFT computation.
  *
  * The provided example demonstrates the usage of the parallel Fast Fourier Transform (FFT) implementation in OpenPFC.
  * Here's a description of what the example does:
