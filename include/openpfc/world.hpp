@@ -1,7 +1,6 @@
 #ifndef PFC_WORLD_HPP
 #define PFC_WORLD_HPP
 
-#include "types.hpp"
 #include <array>
 #include <heffte.h>
 #include <iostream>
@@ -9,6 +8,8 @@
 namespace pfc {
 class World {
 private:
+  template <class T> using Vec3 = std::array<T, 3>;
+
 public:
   const int Lx, Ly, Lz;
   const double x0, y0, z0;
