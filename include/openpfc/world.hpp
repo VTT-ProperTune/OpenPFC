@@ -6,6 +6,15 @@
 #include <iostream>
 
 namespace pfc {
+
+/**
+ * @brief Represents a world in the simulation domain.
+ *
+ * The World class encapsulates the dimensions, origin coordinates, and
+ * discretization parameters of a simulation world. It provides accessors to
+ * retrieve the properties of the world and supports conversion to
+ * heffte::box3d<int> for interoperability with the HeFFTe library.
+ */
 class World {
 private:
   template <class T> using Vec3 = std::array<T, 3>;
@@ -22,6 +31,18 @@ public:
   const double dy; ///< Discretization parameter in the y-direction
   const double dz; ///< Discretization parameter in the z-direction
 
+  /**
+   * @brief Constructs a World object with the specified dimensions, origin, and
+   * discretization.
+   *
+   * @param dimensions The dimensions of the world in the form {Lx, Ly, Lz}.
+   * @param origo The origin coordinates of the world in the form {x0, y0, z0}.
+   * @param discretization The discretization parameters of the world in the
+   * form {dx, dy, dz}.
+   *
+   * @throws std::invalid_argument if any of the dimensions or discretization
+   * values are non-positive.
+   */
   World(const Vec3<int> &dimensions, const Vec3<double> &origo,
         const Vec3<double> &discretization)
       : Lx(dimensions[0]), Ly(dimensions[1]), Lz(dimensions[2]), x0(origo[0]),
@@ -41,6 +62,14 @@ public:
     }
   }
 
+  /**
+   * @brief Constructs a World object with the specified dimensions and default
+   * origin and discretization.
+   *
+   * @param dimensions The dimensions of the world in the form {Lx, Ly, Lz}.
+   *
+   * @throws std::invalid_argument if any of the dimensions are non-positive.
+   */
   World(const Vec3<int> &dimensions)
       : World(dimensions, Vec3<double>{0.0, 0.0, 0.0},
               Vec3<double>{1.0, 1.0, 1.0}) {}
@@ -62,10 +91,27 @@ public:
    */
   Vec3<int> get_size() const { return Vec3<int>{Lx, Ly, Lz}; }
 
+  /**
+   * @brief Conversion operator to heffte::box3d<int>.
+   *
+   * Allows implicit conversion of a World object to heffte::box3d<int>.
+   * The resulting box represents the entire world domain.
+   *
+   * @return A heffte::box3d<int> representing the world domain.
+   */
   operator heffte::box3d<int>() const {
     return heffte::box3d<int>({0, 0, 0}, {Lx - 1, Ly - 1, Lz - 1});
   }
 
+  /**
+   * @brief Output stream operator for World objects.
+   *
+   * Allows printing the state of a World object to an output stream.
+   *
+   * @param os The output stream to write to.
+   * @param w The World object to be printed.
+   * @return The updated output stream.
+   */
   friend std::ostream &operator<<(std::ostream &os, const World &w) {
     os << "(Lx = " << w.Lx << ", Ly = " << w.Ly << ", Lz = " << w.Lz;
     os << ", x0 = " << w.x0 << ", y0 = " << w.y0 << ", z0 = " << w.z0;
@@ -75,6 +121,7 @@ public:
     return os;
   };
 };
+
 } // namespace pfc
 
 #endif // PFC_WORLD_HPP
