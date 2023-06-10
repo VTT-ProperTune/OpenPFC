@@ -1,2 +1,3 @@
 add_subdirectory(test_world)
 add_subdirectory(test_decomposition)
+add_subdirectory(test_fft)
