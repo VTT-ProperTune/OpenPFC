@@ -4,3 +4,4 @@ AllowShortFunctionsOnASingleLine: InlineOnly
 IndentWidth: 2
 TabWidth: 2
 UseTab: Never
+ColumnLimit: 120
