@@ -1,6 +1,7 @@
 #include <iostream>
 #include <openpfc/world.hpp>
 
+using namespace std;
 using namespace pfc;
 
 /** \example 01_hello_world.cpp
@@ -31,19 +32,19 @@ int main() {
   World world({10, 20, 30}, {0.0, 0.0, 0.0}, {0.1, 0.1, 0.1});
 
   // Retrieve world properties
-  std::cout << "World properties:" << std::endl;
-  std::cout << "Dimensions: " << world.get_Lx() << " x " << world.get_Ly() << " x " << world.get_Lz() << std::endl;
-  std::cout << "Origin: (" << world.get_x0() << ", " << world.get_y0() << ", " << world.get_z0() << ")" << std::endl;
-  std::cout << "Discretization: dx = " << world.get_dx() << ", dy = " << world.get_dy() << ", dz = " << world.get_dz()
-            << std::endl;
+  cout << "World properties:" << endl;
+  cout << "Dimensions: " << world.get_Lx() << " x " << world.get_Ly() << " x " << world.get_Lz() << endl;
+  cout << "Origin: (" << world.get_x0() << ", " << world.get_y0() << ", " << world.get_z0() << ")" << endl;
+  cout << "Discretization: dx = " << world.get_dx() << ", dy = " << world.get_dy() << ", dz = " << world.get_dz()
+       << endl;
 
   // Simpler way:
-  std::cout << world << std::endl;
+  cout << world << endl;
 
   // If just the size of the doman is defined, it is assumed that x0 = y0 = z0 =
   // 0 and dx = dy = dz = 1
   World world2({64, 64, 64});
-  std::cout << world2 << std::endl;
+  cout << world2 << endl;
 
   return 0;
 }
