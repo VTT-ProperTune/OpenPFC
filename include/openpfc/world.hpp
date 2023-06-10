@@ -43,7 +43,7 @@ public:
    * discretization.
    *
    * @param dimensions The dimensions of the world in the form {Lx, Ly, Lz}.
-   * @param origo The origin coordinates of the world in the form {x0, y0, z0}.
+   * @param origin The origin coordinates of the world in the form {x0, y0, z0}.
    * @param discretization The discretization parameters of the world in the
    * form {dx, dy, dz}.
    *
