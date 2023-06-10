@@ -23,8 +23,8 @@ int main() {
 
   // Convert to heffte::box3d<int>
   heffte::box3d<int> box = static_cast<heffte::box3d<int>>(world);
-  std::cout << "Box dimensions: " << box.size(0) << " x " << box.size(1)
-            << " x " << box.size(2) << std::endl;
+  std::cout << "Box dimensions: " << box.size[0] << " x " << box.size[1]
+            << " x " << box.size[2] << std::endl;
 
   return 0;
 }

@@ -10,6 +10,9 @@ target_link_libraries(mpi_timers PRIVATE OpenPFC)
 add_executable(world world.cpp)
 target_link_libraries(world PRIVATE OpenPFC)
 
+add_executable(world_example world_example.cpp)
+target_link_libraries(world_example PRIVATE OpenPFC)
+
 add_executable(time time.cpp)
 target_link_libraries(time PRIVATE OpenPFC)
 
