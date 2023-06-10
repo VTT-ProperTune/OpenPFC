@@ -11,6 +11,7 @@ private:
   template <class T> using Vec3 = std::array<T, 3>;
 
 public:
+  // TODO: to be moved to private later on
   const int Lx;    ///< Length in the x-direction
   const int Ly;    ///< Length in the y-direction
   const int Lz;    ///< Length in the z-direction
