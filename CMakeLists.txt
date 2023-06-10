@@ -18,6 +18,11 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+# Enable debug macros if build type is Debug
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(NAN_CHECK_ENABLED)
+endif()
+
 option(BUILD_SHARED_LIBS "Builds shared libraries using CMake conventions" OFF)
 
 option(ENABLE_CLANG_TIDY "Enable clang-tidy static code analysis" OFF)
