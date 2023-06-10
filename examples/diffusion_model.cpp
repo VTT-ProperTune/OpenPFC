@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <openpfc/constants.hpp>
 #include <openpfc/model.hpp>
 #include <openpfc/world.hpp>
 
@@ -103,8 +104,8 @@ public:
           double kk = (k <= w.Lz / 2) ? k * fz : (k - w.Lz) * fz;
           double kLap = -(ki * ki + kj * kj + kk * kk);
           if (rank0 && verbose)
-            cout << "idx = " << idx << ", ki = " << ki << ", kj " << kj
-                 << ", kk = " << kk << ", kLap = " << kLap << endl;
+            cout << "idx = " << idx << ", ki = " << ki << ", kj " << kj << ", kk = " << kk << ", kLap = " << kLap
+                 << endl;
           opL[idx++] = 1.0 / (1.0 - dt * kLap);
         }
       }
@@ -188,8 +189,7 @@ void run() {
     n += 1;
     D.step(dt);
     if (rank == 0)
-      cout << "n = " << n << ", t = " << t << ", psi_min = " << D.psi_min
-           << ", psi_max = " << D.psi_max << endl;
+      cout << "n = " << n << ", t = " << t << ", psi_min = " << D.psi_min << ", psi_max = " << D.psi_max << endl;
   }
 
   cout << "psi_max on rank " << rank << " is " << D.psi_max << endl;
