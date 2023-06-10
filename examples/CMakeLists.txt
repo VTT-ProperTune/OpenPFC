@@ -1,6 +1,9 @@
 add_executable(01_hello_world 01_hello_world.cpp)
 target_link_libraries(01_hello_world PRIVATE OpenPFC)
 
+add_executable(02_domain_decomposition 02_domain_decomposition.cpp)
+target_link_libraries(02_domain_decomposition PRIVATE OpenPFC)
+
 add_executable(mpi_worker mpi_worker.cpp)
 target_link_libraries(mpi_worker PRIVATE OpenPFC)
 
@@ -18,9 +21,6 @@ target_link_libraries(clean_tungsten PRIVATE OpenPFC)
 
 add_executable(clean_tungsten_with_simulator clean_tungsten_with_simulator.cpp)
 target_link_libraries(clean_tungsten_with_simulator PRIVATE OpenPFC)
-
-add_executable(decomposition decomposition.cpp)
-target_link_libraries(decomposition PRIVATE OpenPFC)
 
 add_executable(distributed_fft distributed_fft.cpp)
 target_link_libraries(distributed_fft PRIVATE OpenPFC)

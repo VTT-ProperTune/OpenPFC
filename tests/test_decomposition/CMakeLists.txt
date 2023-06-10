@@ -1,1 +1,1 @@
-add_test(NAME decomposition COMMAND decomposition)
+add_test(NAME 02_domain_decomposition COMMAND 02_domain_decomposition)
