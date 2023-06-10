@@ -6,6 +6,11 @@
 using namespace std;
 using namespace pfc;
 
+/** \example decomposition.cpp
+ *
+ * This example demonstrates how to use the World class to create a simulation
+ * world and after that, decompose world to smaller domains.
+ */
 int main(int argc, char *argv[]) {
   // Domain decomposition can be done in a manual manner, just by giving the
   // size of the calculation domain, id number and total number of subdomains:
