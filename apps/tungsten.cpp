@@ -1,5 +1,6 @@
 #include <openpfc/openpfc.hpp>
 #include <openpfc/ui.hpp>
+#include <openpfc/utils/nancheck.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -162,6 +163,9 @@ public:
         }
       }
     }
+
+    CHECK_AND_ABORT_IF_NANS(opL);
+    CHECK_AND_ABORT_IF_NANS(opN);
   }
 
   void initialize(double dt) override {
@@ -204,6 +208,15 @@ public:
 
     // Inverse Fourier transform result back to real space
     fft.backward(psi_F, psi);
+
+    // Check does psi has any NaNs and abort the calculation if NaNs are
+    // detected. This macro is enabled with compile option 'NAN_CHECK_ENABLED',
+    // which is enabled when build type is 'Debug', i.e.
+    // -DCMAKE_BUILD_TYPE=Debug. In normal production mode, use
+    // -DCMAKE_BUILD_TYPE=Release, which turns on all the optimizations and
+    // disables NaN checks and other debug mode checks which may cause any
+    // overhead to the actual simulation.
+    CHECK_AND_ABORT_IF_NANS(psi);
   }
 
 }; // end of class
