@@ -1,4 +1,6 @@
-#pragma once
+#ifndef PFC_WORLD_HPP
+#define PFC_WORLD_HPP
+
 #include "types.hpp"
 #include <array>
 #include <heffte.h>
@@ -38,3 +40,5 @@ public:
   };
 };
 } // namespace pfc
+
+#endif // PFC_WORLD_HPP
