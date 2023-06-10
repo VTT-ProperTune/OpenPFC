@@ -1,3 +1,6 @@
+add_executable(01_hello_world 01_hello_world.cpp)
+target_link_libraries(01_hello_world PRIVATE OpenPFC)
+
 add_executable(mpi_worker mpi_worker.cpp)
 target_link_libraries(mpi_worker PRIVATE OpenPFC)
 
@@ -6,12 +9,6 @@ target_link_libraries(mpi_worker_inside_class PRIVATE OpenPFC)
 
 add_executable(mpi_timers mpi_timers.cpp)
 target_link_libraries(mpi_timers PRIVATE OpenPFC)
-
-add_executable(world world.cpp)
-target_link_libraries(world PRIVATE OpenPFC)
-
-add_executable(world_example world_example.cpp)
-target_link_libraries(world_example PRIVATE OpenPFC)
 
 add_executable(time time.cpp)
 target_link_libraries(time PRIVATE OpenPFC)

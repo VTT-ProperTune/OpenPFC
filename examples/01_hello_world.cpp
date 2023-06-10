@@ -1,15 +1,34 @@
-#include <heffte.h>
 #include <iostream>
 #include <openpfc/world.hpp>
 
-/** \example "01_hello_world"
+using namespace pfc;
+
+/** \example 01_hello_world.cpp
+ *
+ * Hello, World!
+ *
+ * The World class plays a vital role in OpenPFC by defining the parameters of
+ * the calculation area. It sets the size of the area in the x, y, and z
+ * directions and determines the origin's location.
+ *
+ * In OpenPFC, we establish the relationship between voxel indices (i, j, k) and
+ * their corresponding spatial coordinates (x, y, z) with the following mapping:
+ *
+ *      x(i) = x0 + i * dx, where i ranges from 1 to Lx,
+ *      y(j) = y0 + j * dy, where j ranges from 1 to Ly,
+ *      z(k) = z0 + k * dz, where k ranges from 1 to Lz.
+ *
+ * It is important to note that the World class itself does not engage in
+ * extensive computational tasks. Instead, it primarily serves as the
+ * foundational definition of the calculation area. Typically, it represents one
+ * of the initial components required when constructing a simulation model.
  *
  * This example demonstrates how to use the World class to create a simulation
- * world, retrieve its properties, and convert it to a heffte::box3d<int>.
+ * world and retrieve some of its properties.
  */
 int main() {
   // Create a world with custom dimensions and origin
-  pfc::World world({10, 20, 30}, {0.0, 0.0, 0.0}, {0.1, 0.1, 0.1});
+  World world({10, 20, 30}, {0.0, 0.0, 0.0}, {0.1, 0.1, 0.1});
 
   // Retrieve world properties
   std::cout << "World properties:" << std::endl;
@@ -18,9 +37,13 @@ int main() {
   std::cout << "Discretization: dx = " << world.get_dx() << ", dy = " << world.get_dy() << ", dz = " << world.get_dz()
             << std::endl;
 
-  // Convert to heffte::box3d<int>
-  heffte::box3d<int> box = static_cast<heffte::box3d<int>>(world);
-  std::cout << "Box dimensions: " << box.size[0] << " x " << box.size[1] << " x " << box.size[2] << std::endl;
+  // Simpler way:
+  std::cout << world << std::endl;
+
+  // If just the size of the doman is defined, it is assumed that x0 = y0 = z0 =
+  // 0 and dx = dy = dz = 1
+  World world2({64, 64, 64});
+  std::cout << world2 << std::endl;
 
   return 0;
 }
