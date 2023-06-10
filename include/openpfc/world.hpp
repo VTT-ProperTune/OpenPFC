@@ -26,8 +26,6 @@ namespace pfc {
  */
 class World {
 private:
-  template <class T> using Vec3 = std::array<T, 3>;
-
 public:
   // TODO: to be moved to private later on
   const int Lx;    ///< Length in the x-direction
@@ -52,10 +50,11 @@ public:
    * @throws std::invalid_argument if any of the dimensions or discretization
    * values are non-positive.
    */
-  World(const Vec3<int> &dimensions, const Vec3<double> &origo,
-        const Vec3<double> &discretization)
-      : Lx(dimensions[0]), Ly(dimensions[1]), Lz(dimensions[2]), x0(origo[0]),
-        y0(origo[1]), z0(origo[2]), dx(discretization[0]),
+  World(const std::array<int, 3> &dimensions,
+        const std::array<double, 3> &origin,
+        const std::array<double, 3> &discretization)
+      : Lx(dimensions[0]), Ly(dimensions[1]), Lz(dimensions[2]), x0(origin[0]),
+        y0(origin[1]), z0(origin[2]), dx(discretization[0]),
         dy(discretization[1]), dz(discretization[2]) {
 
     // Validate dimensions
@@ -79,9 +78,8 @@ public:
    *
    * @throws std::invalid_argument if any of the dimensions are non-positive.
    */
-  World(const Vec3<int> &dimensions)
-      : World(dimensions, Vec3<double>{0.0, 0.0, 0.0},
-              Vec3<double>{1.0, 1.0, 1.0}) {}
+  World(const std::array<int, 3> &dimensions)
+      : World(dimensions, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}) {}
 
   // Getters for member variables
   int get_Lx() const { return Lx; }
@@ -98,7 +96,7 @@ public:
    * @brief Get the size of the calculation domain.
    * @return The size of the domain: {Lx, Ly, Lz}.
    */
-  Vec3<int> get_size() const { return Vec3<int>{Lx, Ly, Lz}; }
+  std::array<int, 3> get_size() const { return {Lx, Ly, Lz}; }
 
   /**
    * @brief Conversion operator to heffte::box3d<int>.
