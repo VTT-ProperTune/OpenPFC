@@ -14,6 +14,15 @@ namespace pfc {
  * discretization parameters of a simulation world. It provides accessors to
  * retrieve the properties of the world and supports conversion to
  * heffte::box3d<int> for interoperability with the HeFFTe library.
+ *
+ * Example usage:
+ * @code
+ * // Create a world with dimensions (100, 100, 100)
+ * World world({100, 100, 100});
+ *
+ * // Print out some information about world
+ * std::cout << world << std::endl;
+ * @endcode
  */
 class World {
 private:
