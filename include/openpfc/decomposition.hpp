@@ -80,9 +80,10 @@ public:
   /**
    * @brief Construct a new Decomposition object using MPI communicator.
    * @param world Reference to the World object.
-   * @param comm The MPI communicator.
+   * @param comm The MPI communicator (default: MPI_COMM_WORLD).
    */
-  Decomposition(const World &world, MPI_Comm comm) : Decomposition(world, get_comm_rank(comm), get_comm_size(comm)) {}
+  Decomposition(const World &world, MPI_Comm comm = MPI_COMM_WORLD)
+      : Decomposition(world, get_comm_rank(comm), get_comm_size(comm)) {}
 
   /**
    * @brief Deleted copy constructor.
