@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cmath>
+#include <mpi.h>
 
 #include "../field_modifier.hpp"
+#include "../utils.hpp"
 
 namespace pfc {
 
@@ -22,8 +24,7 @@ private:
   int size = mpi::get_comm_size(comm);
 
 public:
-  MovingBC(double rho_low, double rho_high)
-      : m_rho_low(rho_low), m_rho_high(rho_high) {}
+  MovingBC(double rho_low, double rho_high) : m_rho_low(rho_low), m_rho_high(rho_high) {}
 
   void set_xpos(double xpos) { m_xpos = xpos; }
 
@@ -53,11 +54,9 @@ public:
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++)
       for (int j = low[1]; j <= high[1]; j++)
-        for (int i = low[0]; i <= high[0]; i++)
-          xline[i] = std::max(xline[i], field[idx++]);
+        for (int i = low[0]; i <= high[0]; i++) xline[i] = std::max(xline[i], field[idx++]);
 
-    MPI_Reduce(xline.data(), global_xline.data(), xline.size(), MPI_DOUBLE,
-               MPI_MAX, 0, comm);
+    MPI_Reduce(xline.data(), global_xline.data(), xline.size(), MPI_DOUBLE, MPI_MAX, 0, comm);
 
     if (rank == 0) {
       if (m_first) {
