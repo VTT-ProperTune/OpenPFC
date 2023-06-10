@@ -26,7 +26,20 @@ public:
         const Vec3<double> &discretization)
       : Lx(dimensions[0]), Ly(dimensions[1]), Lz(dimensions[2]), x0(origo[0]),
         y0(origo[1]), z0(origo[2]), dx(discretization[0]),
-        dy(discretization[1]), dz(discretization[2]) {}
+        dy(discretization[1]), dz(discretization[2]) {
+
+    // Validate dimensions
+    if (Lx <= 0 || Ly <= 0 || Lz <= 0) {
+      throw std::invalid_argument(
+          "Invalid dimensions. Lengths must be positive.");
+    }
+
+    // Validate discretization
+    if (dx <= 0 || dy <= 0 || dz <= 0) {
+      throw std::invalid_argument(
+          "Invalid discretization. Values must be positive.");
+    }
+  }
 
   World(const Vec3<int> &dimensions)
       : World(dimensions, Vec3<double>{0.0, 0.0, 0.0},
