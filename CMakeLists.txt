@@ -69,6 +69,10 @@ endif()
 if(OpenPFC_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
+if(OpenPFC_BUILD_TESTS)
+  include(CTest)
+  add_subdirectory(tests)
+endif()
 
 install(DIRECTORY include/openpfc DESTINATION include)
 
