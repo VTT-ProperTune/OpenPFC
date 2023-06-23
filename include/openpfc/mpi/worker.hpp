@@ -31,8 +31,8 @@ public:
    */
   MPI_Worker(int argc, char *argv[], MPI_Comm comm) : m_comm(comm) {
     MPI_Init(&argc, &argv);
-    MPI_Comm_rank(comm, &m_rank);
-    MPI_Comm_size(comm, &m_num_procs);
+    MPI_Comm_rank(m_comm, &m_rank);
+    MPI_Comm_size(m_comm, &m_num_procs);
     if (m_rank != 0) {
       mute();
     }
