@@ -10,8 +10,7 @@ namespace pfc {
  *
  */
 class Seed {
-
-private:
+ private:
   using vec3 = std::array<double, 3>;
   using mat3 = std::array<vec3, 3>;
   using vec36 = std::array<vec3, 6>;
@@ -44,7 +43,7 @@ private:
   }
 
   mat3 mult3(const mat3 &A, const mat3 &B) {
-    mat3 C = {0};
+    mat3 C = {vec3{0.0}};
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
         for (int k = 0; k < 3; k++) {
@@ -56,7 +55,7 @@ private:
   }
 
   vec3 mult3(const mat3 &A, const vec3 &b) {
-    vec3 c = {0};
+    vec3 c = {};
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
         c[i] += A[i][j] * b[j];
@@ -105,11 +104,15 @@ private:
   vec36 get_q() const { return q_; }
   vec32 get_bbox() const { return bbox_; }
 
-public:
+ public:
   Seed(const vec3 &location, const vec3 &orientation, const double radius,
        const double rho, const double amplitude)
-      : location_(location), orientation_(orientation), q_(rotate(orientation)),
-        bbox_(bounding_box(location, radius)), rho_(rho), radius_(radius),
+      : location_(location),
+        orientation_(orientation),
+        q_(rotate(orientation_)),
+        bbox_(bounding_box(location, radius)),
+        rho_(rho),
+        radius_(radius),
         amplitude_(amplitude) {}
 
   bool is_inside(const vec3 &X) const {
@@ -140,4 +143,4 @@ public:
     return u;
   }
 };
-} // namespace pfc
+}  // namespace pfc
