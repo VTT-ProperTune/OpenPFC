@@ -12,6 +12,7 @@ namespace pfc {
 class ResultsWriter {
 public:
   ResultsWriter(const std::string &filename) { m_filename = filename; }
+  virtual ~ResultsWriter() = default;
 
   virtual void set_domain(const std::array<int, 3> &arr_global,
                           const std::array<int, 3> &arr_local,
