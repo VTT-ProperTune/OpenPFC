@@ -35,6 +35,8 @@ public:
            (m_increment == 0);
   }
 
+  operator double() const { return get_current(); }
+
   friend std::ostream &operator<<(std::ostream &os, const Time &t) {
     os << "(t0 = " << t.m_t0 << ", t1 = " << t.m_t1 << ", dt = " << t.m_dt;
     os << ", saveat = " << t.m_saveat << ", t_current = " << t.get_current()
