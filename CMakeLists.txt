@@ -25,10 +25,21 @@ endif()
 
 option(BUILD_SHARED_LIBS "Builds shared libraries using CMake conventions" OFF)
 
-option(ENABLE_CLANG_TIDY "Enable clang-tidy static code analysis" OFF)
-
-if(ENABLE_CLANG_TIDY)
-  set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+option(USE_CLANG_TIDY "Enable clang-tidy static code analysis" ON)
+# Enable clang-tidy if USE_CLANG_TIDY is ON
+if(USE_CLANG_TIDY)
+    find_program(CLANG_TIDY_EXECUTABLE NAMES "clang-tidy")
+    if(CLANG_TIDY_EXECUTABLE)
+        message(STATUS "Enabling clang-tidy")
+        # Set default CLANG_TIDY_CHECKS if not defined
+        if(NOT DEFINED CLANG_TIDY_CHECKS)
+            set(CLANG_TIDY_CHECKS "-checks=*,modernize-*")
+        endif()
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}" "${CLANG_TIDY_CHECKS}")
+    else()
+        message(WARNING "clang-tidy executable not found. Please install clang-tidy and ensure it is in your system PATH.")
+        message(WARNING "Refer to the installation instructions at: https://clang.llvm.org/extra/clang-tidy/")
+    endif()
 endif()
 
 option(OpenPFC_BUILD_DOCUMENTATION "Build documentation" ON)
@@ -73,13 +84,6 @@ endif()
 if(OpenPFC_BUILD_TESTS)
   include(CTest)
   add_subdirectory(tests)
-endif()
-
-option(USE_CLANG_TIDY "Use clang-tidy" ON)
-if(USE_CLANG_TIDY)
-  find_program(CLANG_TIDY_EXECUTABLE NAMES "clang-tidy" REQUIRED)
-  set(CLANG_TIDY_CHECKS "-checks=*,modernize-*")
-  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE};${CLANG_TIDY_CHECKS}")
 endif()
 
 install(DIRECTORY include/openpfc DESTINATION include)
