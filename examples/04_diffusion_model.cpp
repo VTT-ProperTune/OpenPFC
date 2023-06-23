@@ -13,18 +13,12 @@ using namespace pfc;
 /** \example 04_diffusion_model.cpp
  *
  * Let's embark on the journey of physics modeling. Together, we will construct
- * a captivating diffusion model and unleash its mysteries using OpenPFC.
- * Picture this: we inherit the noble class of 'Model' and breathe life into it
- * by crafting two enchanting functions: 'initialize' and 'step'. Brace yourself
- * for a wondrous exploration that intertwines the realms of science and
- * imagination.
- *
- * This example implements a simple diffusion model using the OpenPFC library.
- * The diffusion model is solved using a finite difference method with a Fourier
- * spectral method for solving the diffusion equation in three dimensions. The
+ * a captivating diffusion model and unleash its mysteries using OpenPFC. This
+ * example implements a simple diffusion model using the OpenPFC library. The
  * code demonstrates a low-level implementation of the model, where the
  * simulation is manually stepped and the initial conditions are defined inside
- * the model.
+ * the model. It also shows how to perform local and global reductions using MPI
+ * to calculate global properties of the field variable.
  *
  * The Diffusion class is derived from the base class Model provided by the
  * OpenPFC library. It overrides two class methods:
@@ -48,14 +42,6 @@ using namespace pfc;
  * stepped forward in time until a specified stopping time is reached. During
  * each iteration, the current time, the iteration number, and the minimum and
  * maximum values of psi are printed.
- *
- * Finally, the main function initializes the MPI environment, calls the run()
- * function, and cleans up the MPI environment before exiting.
- *
- * The code demonstrates how to implement a diffusion model using the OpenPFC
- * library and manually step the simulation. It also shows how to perform local
- * and global reductions using MPI to calculate global properties of the field
- * variable.
  *
  * Expected output is:
  *
