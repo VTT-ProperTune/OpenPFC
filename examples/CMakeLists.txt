@@ -10,6 +10,9 @@ target_link_libraries(03_parallel_fft PRIVATE OpenPFC)
 add_executable(04_diffusion_model 04_diffusion_model.cpp)
 target_link_libraries(04_diffusion_model PRIVATE OpenPFC)
 
+add_executable(05_simulator 05_simulator.cpp)
+target_link_libraries(05_simulator PRIVATE OpenPFC)
+
 add_executable(mpi_worker mpi_worker.cpp)
 target_link_libraries(mpi_worker PRIVATE OpenPFC)
 
@@ -30,9 +33,6 @@ target_link_libraries(clean_tungsten_with_simulator PRIVATE OpenPFC)
 
 add_executable(write_results write_results.cpp)
 target_link_libraries(write_results PRIVATE OpenPFC)
-
-add_executable(diffusion_model_with_simulator diffusion_model_with_simulator.cpp)
-target_link_libraries(diffusion_model_with_simulator PRIVATE OpenPFC)
 
 add_executable(diffusion_model_with_custom_initial_condition diffusion_model_with_custom_initial_condition.cpp)
 target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE OpenPFC)
