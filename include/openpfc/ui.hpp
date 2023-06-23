@@ -1,5 +1,12 @@
 #pragma once
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <nlohmann/json.hpp>
+#include <stdexcept>
+
 #include "boundary_conditions/fixed_bc.hpp"
 #include "boundary_conditions/moving_bc.hpp"
 #include "field_modifier.hpp"
@@ -14,14 +21,6 @@
 #include "utils/timeleft.hpp"
 #include "world.hpp"
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <stdexcept>
-
-#include <nlohmann/json.hpp>
-
 namespace pfc {
 namespace ui {
 
@@ -32,7 +31,8 @@ Functions and classes to construct objects from json file, and other
 
 using json = nlohmann::json;
 
-template <class T> T from_json(const json &settings);
+template <class T>
+T from_json(const json &settings);
 
 template <>
 heffte::plan_options from_json<heffte::plan_options>(const json &j) {
@@ -83,7 +83,8 @@ heffte::plan_options from_json<heffte::plan_options>(const json &j) {
  * @throws std::invalid_argument if any of the required fields are missing
  *         or have an invalid value.
  */
-template <> World from_json<World>(const json &j) {
+template <>
+World from_json<World>(const json &j) {
   int Lx = 0, Ly = 0, Lz = 0;
   double dx = 0.0, dy = 0.0, dz = 0.0;
   double x0 = 0.0, y0 = 0.0, z0 = 0.0;
@@ -140,13 +141,108 @@ template <> World from_json<World>(const json &j) {
   return world;
 }
 
-template <> Time from_json<Time>(const json &settings) {
+template <>
+Time from_json<Time>(const json &settings) {
   double t0 = settings["t0"];
   double t1 = settings["t1"];
   double dt = settings["dt"];
   double saveat = settings["saveat"];
   Time time({t0, t1, dt}, saveat);
   return time;
+}
+
+using FieldModifier_p = std::unique_ptr<FieldModifier>;
+
+/**
+ * @class FieldModifierRegistry
+ * @brief A registry for field modifiers used in the application.
+ *
+ * The FieldModifierRegistry class provides a centralized registry for field
+ * modifiers. It allows registration of field modifiers along with their
+ * corresponding creator functions, and provides a way to create instances of
+ * field modifiers based on their registered types.
+ */
+class FieldModifierRegistry {
+ public:
+  using CreatorFunction = std::function<FieldModifier_p(const json &)>;
+
+  /**
+   * @brief Get the singleton instance of the FieldModifierRegistry.
+   * @return Reference to the singleton instance of FieldModifierRegistry.
+   */
+  static FieldModifierRegistry &get_instance() {
+    static FieldModifierRegistry instance;
+    return instance;
+  }
+
+  /**
+   * @brief Register a field modifier with its creator function.
+   * @param type The type string associated with the field modifier.
+   * @param creator The creator function that creates an instance of the field
+   * modifier.
+   */
+  void register_modifier(const std::string &type, CreatorFunction creator) {
+    modifiers[type] = creator;
+  }
+
+  /**
+   * @brief Create an instance of a field modifier based on its registered type.
+   * @param type The type string of the field modifier to create.
+   * @param data A json object defining the field modifier parameters.
+   * @return Pointer to the created field modifier instance.
+   * @throw std::invalid_argument if the specified type is not registered.
+   */
+  FieldModifier_p create_modifier(const std::string &type, const json &data) {
+    auto it = modifiers.find(type);
+    if (it != modifiers.end()) {
+      return it->second(data);
+    }
+    throw std::invalid_argument("Unknown FieldModifier type: " + type);
+  }
+
+ private:
+  /**
+   * @brief Private constructor to enforce singleton pattern.
+   */
+  FieldModifierRegistry() {}
+
+  std::unordered_map<std::string, CreatorFunction>
+      modifiers; /**< Map storing the registered field modifiers and their
+                    creator functions. */
+};
+
+/**
+ * @brief Register a field modifier type with the FieldModifierRegistry.
+ * @tparam T The type of the field modifier to register.
+ * @param type The type string associated with the field modifier.
+ *
+ * This function registers a field modifier type with the FieldModifierRegistry.
+ * It associates the specified type string with a creator function that creates
+ * an instance of the field modifier.
+ */
+template <typename T>
+void register_field_modifier(const std::string &type) {
+  FieldModifierRegistry::get_instance().register_modifier(
+      type, [](const json &j) -> std::unique_ptr<T> {
+        return from_json<std::unique_ptr<T>>(j);
+      });
+}
+
+/**
+ * @brief Create an instance of a field modifier based on its type.
+ * @param type The type string of the field modifier to create.
+ * @param params A json object describing the parameters for field modifier.
+ * @return Pointer to the created field modifier instance.
+ * @throw std::invalid_argument if the specified type is not registered.
+ *
+ * This function creates an instance of a field modifier based on its registered
+ * type. It retrieves the registered creator function associated with the
+ * specified type string from the FieldModifierRegistry and uses it to create
+ * the field modifier instance.
+ */
+std::unique_ptr<FieldModifier> create_field_modifier(const std::string &type,
+                                                     const json &params) {
+  return FieldModifierRegistry::get_instance().create_modifier(type, params);
 }
 
 using Constant_p = std::unique_ptr<Constant>;
@@ -181,8 +277,8 @@ using Constant_p = std::unique_ptr<Constant>;
  * Constant_p c = from_json<Constant_p>(input);
  * ```
  */
-template <> Constant_p from_json<Constant_p>(const json &j) {
-
+template <>
+Constant_p from_json<Constant_p>(const json &j) {
   // Check that the JSON input has the correct type field
   if (!j.contains("type") || j["type"] != "constant") {
     throw std::invalid_argument(
@@ -219,8 +315,8 @@ using SingleSeed_p = std::unique_ptr<SingleSeed>;
  * @throws std::invalid_argument if any required fields are missing or have an
  * invalid type.
  */
-template <> SingleSeed_p from_json<SingleSeed_p>(const json &j) {
-
+template <>
+SingleSeed_p from_json<SingleSeed_p>(const json &j) {
   if (!j.count("type") || j["type"] != "single_seed") {
     throw std::invalid_argument(
         "JSON object does not contain a 'single_seed' type.");
@@ -256,8 +352,8 @@ using RandomSeeds_p = std::unique_ptr<RandomSeeds>;
  * Throws an `invalid_argument` exception if the input JSON object does not have
  * the required fields or has incorrect data types.
  */
-template <> RandomSeeds_p from_json<RandomSeeds_p>(const json &j) {
-
+template <>
+RandomSeeds_p from_json<RandomSeeds_p>(const json &j) {
   // Check that the JSON input has the correct type field
   if (!j.contains("type") || j["type"] != "random_seeds") {
     throw std::invalid_argument(
@@ -284,8 +380,8 @@ template <> RandomSeeds_p from_json<RandomSeeds_p>(const json &j) {
 
 using SeedGrid_p = std::unique_ptr<SeedGrid>;
 
-template <> SeedGrid_p from_json<SeedGrid_p>(const json &j) {
-
+template <>
+SeedGrid_p from_json<SeedGrid_p>(const json &j) {
   if (!j.contains("type") || j["type"] != "seed_grid") {
     throw std::invalid_argument(
         "Invalid JSON input: missing or incorrect 'type' field.");
@@ -333,8 +429,8 @@ template <> SeedGrid_p from_json<SeedGrid_p>(const json &j) {
 
 using FileReader_p = std::unique_ptr<FileReader>;
 
-template <> FileReader_p from_json<FileReader_p>(const json &j) {
-
+template <>
+FileReader_p from_json<FileReader_p>(const json &j) {
   if (!j.contains("type") || j["type"] != "from_file") {
     throw std::invalid_argument(
         "Invalid JSON input: missing or incorrect 'type' field.");
@@ -352,8 +448,8 @@ template <> FileReader_p from_json<FileReader_p>(const json &j) {
 
 using FixedBC_p = std::unique_ptr<FixedBC>;
 
-template <> FixedBC_p from_json<FixedBC_p>(const json &j) {
-
+template <>
+FixedBC_p from_json<FixedBC_p>(const json &j) {
   if (!j.contains("type") || j["type"] != "fixed") {
     throw std::invalid_argument(
         "Invalid JSON input: missing or incorrect 'type' field.");
@@ -376,8 +472,8 @@ template <> FixedBC_p from_json<FixedBC_p>(const json &j) {
 
 using MovingBC_p = std::unique_ptr<MovingBC>;
 
-template <> MovingBC_p from_json<MovingBC_p>(const json &j) {
-
+template <>
+MovingBC_p from_json<MovingBC_p>(const json &j) {
   if (!j.contains("type") || j["type"] != "moving") {
     throw std::invalid_argument(
         "Invalid JSON input: missing or incorrect 'type' field.");
@@ -427,50 +523,82 @@ template <> MovingBC_p from_json<MovingBC_p>(const json &j) {
   return bc;
 }
 
-using FieldModifier_p = std::unique_ptr<FieldModifier>;
-
-template <> FieldModifier_p from_json<FieldModifier_p>(const json &j) {
-  std::cout << "Creating FieldModifier from data " << j << std::endl;
-  std::string type = j["type"];
+template <>
+FieldModifier_p from_json<FieldModifier_p>(const json &params) {
+  std::cout << "Creating FieldModifier from data " << params << std::endl;
+  std::string type = params["type"];
   // Initial conditions
   if (type == "single_seed") {
     std::cout << "Creating SingleSeed <: FieldModifier" << std::endl;
-    return from_json<SingleSeed_p>(j);
+    return from_json<SingleSeed_p>(params);
   }
+  /*
   if (type == "constant") {
     std::cout << "Creating Constant <: FieldModifier" << std::endl;
-    return from_json<Constant_p>(j);
+    return from_json<Constant_p>(params);
   }
+  */
   if (type == "random_seeds") {
     std::cout << "Creating RandomSeeds <: FieldModifier" << std::endl;
-    return from_json<RandomSeeds_p>(j);
+    return from_json<RandomSeeds_p>(params);
   }
   if (type == "seed_grid") {
     std::cout << "Creating SeedGrid <: FieldModifier" << std::endl;
-    return from_json<SeedGrid_p>(j);
+    return from_json<SeedGrid_p>(params);
   }
   if (type == "from_file") {
     std::cout << "Creating FileReader <: FieldModifier" << std::endl;
-    return from_json<FileReader_p>(j);
+    return from_json<FileReader_p>(params);
   }
   // Boundary conditions
   if (type == "fixed") {
     std::cout << "Creating FixedBC <: FieldModifier" << std::endl;
-    return from_json<FixedBC_p>(j);
+    return from_json<FixedBC_p>(params);
   }
   if (type == "moving") {
     std::cout << "Creating MovingBC <: FieldModifier" << std::endl;
-    return from_json<MovingBC_p>(j);
+    return from_json<MovingBC_p>(params);
   }
-  throw std::invalid_argument("Unknown FieldModifier type: " + type);
+  // throw std::invalid_argument("Unknown FieldModifier type: " + type);
+  return create_field_modifier(type, params);
 }
+
+/**
+ * @struct FieldModifierInitializer
+ * @brief Helper struct for registering field modifiers during static
+ * initialization.
+ *
+ * The FieldModifierInitializer struct provides a convenient way to register
+ * field modifiers during static initialization by utilizing its constructor.
+ * Inside the constructor, various field modifiers can be registered using the
+ * `register_field_modifier` function.
+ */
+struct FieldModifierInitializer {
+  /**
+   * @brief Constructor for FieldModifierInitializer.
+   *
+   * This constructor is automatically executed during static initialization.
+   * It can be used to register field modifiers by calling the
+   * `register_field_modifier` function for each desired field modifier type.
+   */
+  FieldModifierInitializer() {
+    register_field_modifier<Constant>("constant");
+    // Register other field modifiers here
+  }
+};
+
+static FieldModifierInitializer
+    fieldModifierInitializer; /**< Static instance of FieldModifierInitializer
+                                 to trigger field modifier registration during
+                                 static initialization. */
 
 /**
  * @brief The main json-based application
  *
  */
-template <class ConcreteModel> class App {
-private:
+template <class ConcreteModel>
+class App {
+ private:
   MPI_Comm m_comm;
   MPI_Worker m_worker;
   bool rank0;
@@ -508,11 +636,12 @@ private:
     return settings;
   }
 
-public:
+ public:
   App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
-      : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
-        rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)) {
-  }
+      : m_comm(comm),
+        m_worker(MPI_Worker(argc, argv, comm)),
+        rank0(m_worker.get_rank() == 0),
+        m_settings(read_settings(argc, argv)) {}
 
   bool create_results_dir(const std::string &output) {
     std::filesystem::path results_dir(output);
@@ -636,10 +765,10 @@ public:
     }
 
     while (!time.done()) {
-      time.next(); // increase increment counter by 1
+      time.next();  // increase increment counter by 1
       simulator.apply_boundary_conditions();
 
-      double l_steptime = 0.0; // l = local for this mpi process
+      double l_steptime = 0.0;  // l = local for this mpi process
       double l_fft_time = 0.0;
       MPI_Barrier(m_comm);
       l_steptime = -MPI_Wtime();
@@ -728,5 +857,5 @@ public:
   }
 };
 
-} // namespace ui
-} // namespace pfc
+}  // namespace ui
+}  // namespace pfc
