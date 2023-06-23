@@ -9,7 +9,6 @@ class FixedBC : public FieldModifier {
 private:
   const double xwidth = 20.0;
   const double alpha = 1.0;
-  const double m_xpos = 0;
   const double m_rho_low, m_rho_high;
 
 public:
