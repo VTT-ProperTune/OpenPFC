@@ -527,39 +527,6 @@ template <>
 FieldModifier_p from_json<FieldModifier_p>(const json &params) {
   std::cout << "Creating FieldModifier from data " << params << std::endl;
   std::string type = params["type"];
-  // Initial conditions
-  if (type == "single_seed") {
-    std::cout << "Creating SingleSeed <: FieldModifier" << std::endl;
-    return from_json<SingleSeed_p>(params);
-  }
-  /*
-  if (type == "constant") {
-    std::cout << "Creating Constant <: FieldModifier" << std::endl;
-    return from_json<Constant_p>(params);
-  }
-  */
-  if (type == "random_seeds") {
-    std::cout << "Creating RandomSeeds <: FieldModifier" << std::endl;
-    return from_json<RandomSeeds_p>(params);
-  }
-  if (type == "seed_grid") {
-    std::cout << "Creating SeedGrid <: FieldModifier" << std::endl;
-    return from_json<SeedGrid_p>(params);
-  }
-  if (type == "from_file") {
-    std::cout << "Creating FileReader <: FieldModifier" << std::endl;
-    return from_json<FileReader_p>(params);
-  }
-  // Boundary conditions
-  if (type == "fixed") {
-    std::cout << "Creating FixedBC <: FieldModifier" << std::endl;
-    return from_json<FixedBC_p>(params);
-  }
-  if (type == "moving") {
-    std::cout << "Creating MovingBC <: FieldModifier" << std::endl;
-    return from_json<MovingBC_p>(params);
-  }
-  // throw std::invalid_argument("Unknown FieldModifier type: " + type);
   return create_field_modifier(type, params);
 }
 
@@ -582,8 +549,16 @@ struct FieldModifierInitializer {
    * `register_field_modifier` function for each desired field modifier type.
    */
   FieldModifierInitializer() {
+    // Initial conditions
     register_field_modifier<Constant>("constant");
-    // Register other field modifiers here
+    register_field_modifier<SingleSeed>("single_seed");
+    register_field_modifier<RandomSeeds>("random_seeds");
+    register_field_modifier<SeedGrid>("seed_grid");
+    register_field_modifier<FileReader>("from_file");
+    // Boundary conditions
+    register_field_modifier<FixedBC>("fixed");
+    register_field_modifier<MovingBC>("moving");
+    // Register other field modifiers here ...
   }
 };
 
