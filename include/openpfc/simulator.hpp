@@ -35,6 +35,18 @@ public:
   Time &get_time() { return m_time; }
   Field &get_field() { return get_model().get_field(); }
 
+  void initialize() {
+    get_model().initialize(get_time().get_dt());
+  }
+
+  bool is_rank0() {
+    return get_model().rank0;
+  }
+
+  unsigned int get_increment() {
+    return get_time().get_increment();
+  }
+
   void add_results_writer(const std::string &field_name,
                           std::unique_ptr<ResultsWriter> writer) {
     const Decomposition &d = get_decomposition();
