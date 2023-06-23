@@ -43,6 +43,15 @@ public:
   Model(FFT &fft) : m_fft(fft), rank0(get_decomposition().get_id() == 0) {}
 
   /**
+   * @brief Return boolean flag indicating is this process rank 0.
+   *
+   * @return true/false
+   */
+  bool is_rank0() {
+    return rank0;
+  }
+
+  /**
    * @brief Get the decomposition object associated with the model.
    *
    * @return Reference to the Decomposition object
