@@ -11,7 +11,7 @@ namespace pfc {
 class MovingBC : public FieldModifier {
 
 private:
-  const double m_rho_low, m_rho_high;
+  double m_rho_low, m_rho_high;
   double m_xwidth = 15.0;
   double m_alpha = 1.0;
   double m_xpos = 0.0;
@@ -24,7 +24,11 @@ private:
   int size = mpi::get_comm_size(comm);
 
 public:
+  MovingBC() = default;
   MovingBC(double rho_low, double rho_high) : m_rho_low(rho_low), m_rho_high(rho_high) {}
+
+  void set_rho_low(double rho_low) { m_rho_low = rho_low; }
+  void set_rho_high(double rho_high) { m_rho_high = rho_high; }
 
   void set_xpos(double xpos) { m_xpos = xpos; }
 

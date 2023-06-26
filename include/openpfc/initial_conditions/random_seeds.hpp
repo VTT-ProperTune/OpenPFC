@@ -8,9 +8,14 @@
 namespace pfc {
 
 class RandomSeeds : public FieldModifier {
+  double m_density, m_amplitude;
 
 public:
-  double rho, amplitude;
+
+  void set_amplitude(double amplitude) { m_amplitude = amplitude; }
+  double get_amplitude() const { return m_amplitude; }
+  void set_density(double density) { m_density = density; }
+  double get_density() const { return m_density; }
 
   void apply(Model &m, double) override {
     const World &w = m.get_world();
@@ -36,12 +41,11 @@ public:
     const double upper_y = 128.0;
     const double lower_z = -128.0;
     const double upper_z = 128.0;
-    srand(42);
+    std::mt19937_64 re(42);
     std::uniform_real_distribution<double> rx(lower_x, upper_x);
     std::uniform_real_distribution<double> ry(lower_y, upper_y);
     std::uniform_real_distribution<double> rz(lower_z, upper_z);
     std::uniform_real_distribution<double> ro(0.0, 8.0 * atan(1.0));
-    std::default_random_engine re;
     typedef std::array<double, 3> vec3;
     auto random_location = [&re, &rx, &ry, &rz]() {
       return vec3({rx(re), ry(re), rz(re)});
@@ -53,7 +57,7 @@ public:
     for (int i = 0; i < nseeds; i++) {
       const std::array<double, 3> location = random_location();
       const std::array<double, 3> orientation = random_orientation();
-      const Seed seed(location, orientation, radius, rho, amplitude);
+      const Seed seed(location, orientation, radius, get_density(), get_amplitude());
       seeds.push_back(seed);
     }
 

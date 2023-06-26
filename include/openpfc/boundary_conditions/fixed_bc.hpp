@@ -7,13 +7,18 @@ namespace pfc {
 class FixedBC : public FieldModifier {
 
 private:
-  const double xwidth = 20.0;
-  const double alpha = 1.0;
-  const double m_rho_low, m_rho_high;
+  double xwidth = 20.0;
+  double alpha = 1.0;
+  double m_rho_low, m_rho_high;
 
 public:
+  FixedBC() = default;
+
   FixedBC(double rho_low, double rho_high)
       : m_rho_low(rho_low), m_rho_high(rho_high) {}
+
+  void set_rho_low(double rho_low) { m_rho_low = rho_low; }
+  void set_rho_high(double rho_high) { m_rho_high = rho_high; }
 
   void apply(Model &m, double) override {
     const Decomposition &decomp = m.get_decomposition();
