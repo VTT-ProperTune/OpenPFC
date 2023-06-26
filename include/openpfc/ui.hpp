@@ -151,6 +151,186 @@ Time from_json<Time>(const json &settings) {
   return time;
 }
 
+
+void from_json(const json &j, Constant &ic) {
+  // Check that the JSON input has the correct type field
+  if (!j.contains("type") || j["type"] != "constant") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+  // Check that the JSON input has the required 'n0' field
+  if (!j.contains("n0") || !j["n0"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'n0' field.");
+  }
+  ic.set_density(j["n0"]);
+}
+
+void from_json(const json &j, SingleSeed &seed) {
+  if (!j.count("type") || j["type"] != "single_seed") {
+    throw std::invalid_argument(
+        "JSON object does not contain a 'single_seed' type.");
+  }
+
+  if (!j.count("amp_eq")) {
+    throw std::invalid_argument(
+        "JSON object does not contain an 'amp_eq' key.");
+  }
+
+  if (!j.count("rho_seed")) {
+    throw std::invalid_argument(
+        "JSON object does not contain a 'rho_seed' key.");
+  }
+
+  seed.set_amplitude(j["amp_eq"]);
+  seed.set_density(j["rho_seed"]);
+}
+
+void from_json(const json &j, RandomSeeds &ic) {
+  // Check that the JSON input has the correct type field
+  if (!j.contains("type") || j["type"] != "random_seeds") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  // Check that the JSON input has the required 'amplitude' field
+  if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'amplitude' field.");
+  }
+
+  // Check that the JSON input has the required 'rho' field
+  if (!j.contains("rho") || !j["rho"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho' field.");
+  }
+
+  ic.set_amplitude(j["amplitude"]);
+  ic.set_density(j["rho"]);
+}
+
+void from_json(const json &j, SeedGrid &ic) {
+  if (!j.contains("type") || j["type"] != "seed_grid") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  if (!j.contains("Ny") || !j["Ny"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'Ny' field.");
+  }
+
+  if (!j.contains("Nz") || !j["Nz"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'Nz' field.");
+  }
+
+  if (!j.contains("X0") || !j["X0"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'X0' field.");
+  }
+
+  if (!j.contains("radius") || !j["radius"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'radius' field.");
+  }
+
+  if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'amplitude' field.");
+  }
+
+  if (!j.contains("rho") || !j["rho"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho' field.");
+  }
+
+  ic.set_Ny(j["Ny"]);
+  ic.set_Nz(j["Nz"]);
+  ic.set_X0(j["X0"]);
+  ic.set_radius(j["radius"]);
+  ic.set_amplitude(j["amplitude"]);
+  ic.set_density(j["rho"]);
+}
+
+void from_json(const json &j, FileReader &ic) {
+  if (!j.contains("type") || j["type"] != "from_file") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  if (!j.contains("filename") || !j["filename"].is_string()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'filename' field.");
+  }
+
+  ic.set_filename(j["filename"]);
+}
+
+void from_json(const json &j, FixedBC &bc) {
+  if (!j.contains("type") || j["type"] != "fixed") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_low' field.");
+  }
+
+  if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_high' field.");
+  }
+
+  bc.set_rho_low(j["rho_low"]);
+  bc.set_rho_high(j["rho_high"]);
+}
+
+void from_json(const json &j, MovingBC &bc) {
+  if (!j.contains("type") || j["type"] != "moving") {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
+  }
+
+  if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_low' field.");
+  }
+
+  if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_high' field.");
+  }
+
+  if (!j.contains("width") || !j["width"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'width' field.");
+  }
+
+  if (!j.contains("alpha") || !j["alpha"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'alpha' field.");
+  }
+
+  if (!j.contains("disp") || !j["disp"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'disp' field.");
+  }
+
+  if (!j.contains("xpos") || !j["xpos"].is_number()) {
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'xpos' field.");
+  }
+
+  bc.set_rho_low(j["rho_low"]);
+  bc.set_rho_high(j["rho_high"]);
+  bc.set_xwidth(j["width"]);
+  bc.set_alpha(j["alpha"]);
+  bc.set_disp(j["disp"]);
+  bc.set_xpos(j["xpos"]);
+}
+
 using FieldModifier_p = std::unique_ptr<FieldModifier>;
 
 /**
@@ -211,6 +391,24 @@ class FieldModifierRegistry {
                     creator functions. */
 };
 
+/*
+void from_json(const json &, FieldModifier &) {
+  std::cout
+      << "Warning: This field modifier does not implement reading "
+         "parameters from json file. In order to read parameter from json "
+         "file, one needs to implement 'void from_json(const json &, FieldModifier &)'"
+      << std::endl;
+}
+*/
+
+void from_json(const json &, Model &) {
+  std::cout
+      << "Warning: This model does not implement reading parameters from "
+         "json file. In order to read parameters from json file, one needs to "
+         "implement 'void from_json(const json &, Model &)'"
+      << std::endl;
+}
+
 /**
  * @brief Register a field modifier type with the FieldModifierRegistry.
  * @tparam T The type of the field modifier to register.
@@ -223,8 +421,11 @@ class FieldModifierRegistry {
 template <typename T>
 void register_field_modifier(const std::string &type) {
   FieldModifierRegistry::get_instance().register_modifier(
-      type, [](const json &j) -> std::unique_ptr<T> {
-        return from_json<std::unique_ptr<T>>(j);
+      type, [](const json &params) -> std::unique_ptr<T> {
+        std::unique_ptr<T> modifier = std::make_unique<T>();
+        from_json(params, *modifier);
+        return modifier;
+        // return from_json<std::unique_ptr<T>>(j);
       });
 }
 
@@ -243,291 +444,6 @@ void register_field_modifier(const std::string &type) {
 std::unique_ptr<FieldModifier> create_field_modifier(const std::string &type,
                                                      const json &params) {
   return FieldModifierRegistry::get_instance().create_modifier(type, params);
-}
-
-using Constant_p = std::unique_ptr<Constant>;
-
-/**
- * A factory function that creates a `std::unique_ptr` to a `Constant` object
- * from a JSON input.
- *
- * The JSON input must have the following format:
- *
- * ```
- * {
- *   "type": "constant",
- *   "n0": <double>
- * }
- * ```
- *
- * where `<double>` is a floating-point number that represents the constant
- * value to set the field to.
- *
- * If the JSON input is invalid or missing required fields, an
- * `std::invalid_argument` exception is thrown.
- *
- * Example usage:
- *
- * ```
- * // Create a constant field modifier with value 1.0 from JSON input
- * json input = {
- *   {"type", "constant"},
- *   {"n0", 1.0}
- * };
- * Constant_p c = from_json<Constant_p>(input);
- * ```
- */
-template <>
-Constant_p from_json<Constant_p>(const json &j) {
-  // Check that the JSON input has the correct type field
-  if (!j.contains("type") || j["type"] != "constant") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
-
-  // Check that the JSON input has the required 'n0' field
-  if (!j.contains("n0") || !j["n0"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'n0' field.");
-  }
-
-  double n0 = j["n0"];
-  return std::make_unique<Constant>(n0);
-}
-
-using SingleSeed_p = std::unique_ptr<SingleSeed>;
-
-/**
- * Convert a JSON object to a unique_ptr to a SingleSeed object.
- *
- * This function converts a JSON object to a unique_ptr to a SingleSeed object.
- * The JSON object must contain the following fields:
- *   - type: A string with the value "single_seed".
- *   - amp_eq: A double with the amplitude of the equalizer.
- *   - rho_seed: A double with the seed value for the Rho function.
- *
- * If any of these fields are missing or have an invalid type, this function
- * throws a std::invalid_argument exception.
- *
- * @tparam T The type of the deleter object to use for the unique_ptr.
- * @param j The JSON object to convert.
- * @return A unique_ptr to a SingleSeed object.
- * @throws std::invalid_argument if any required fields are missing or have an
- * invalid type.
- */
-template <>
-SingleSeed_p from_json<SingleSeed_p>(const json &j) {
-  if (!j.count("type") || j["type"] != "single_seed") {
-    throw std::invalid_argument(
-        "JSON object does not contain a 'single_seed' type.");
-  }
-
-  if (!j.count("amp_eq")) {
-    throw std::invalid_argument(
-        "JSON object does not contain an 'amp_eq' key.");
-  }
-
-  if (!j.count("rho_seed")) {
-    throw std::invalid_argument(
-        "JSON object does not contain a 'rho_seed' key.");
-  }
-
-  std::unique_ptr<SingleSeed> seed = std::make_unique<SingleSeed>();
-  seed->amp_eq = j["amp_eq"];
-  seed->rho_seed = j["rho_seed"];
-  return seed;
-}
-
-using RandomSeeds_p = std::unique_ptr<RandomSeeds>;
-
-/**
- * Parses a JSON object to create a unique pointer to a `RandomSeeds` object.
- *
- * The input JSON object should have the following fields:
- * - "type": A string indicating the type of initial condition. Must be
- * "random_seeds".
- * - "amplitude": A number indicating the amplitude of the random seeds.
- * - "rho": A number indicating the radius of the random seeds.
- *
- * Throws an `invalid_argument` exception if the input JSON object does not have
- * the required fields or has incorrect data types.
- */
-template <>
-RandomSeeds_p from_json<RandomSeeds_p>(const json &j) {
-  // Check that the JSON input has the correct type field
-  if (!j.contains("type") || j["type"] != "random_seeds") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
-
-  // Check that the JSON input has the required 'amplitude' field
-  if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'amplitude' field.");
-  }
-
-  // Check that the JSON input has the required 'rho' field
-  if (!j.contains("rho") || !j["rho"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho' field.");
-  }
-
-  RandomSeeds_p ic = std::make_unique<RandomSeeds>();
-  ic->amplitude = j["amplitude"];
-  ic->rho = j["rho"];
-  return ic;
-}
-
-using SeedGrid_p = std::unique_ptr<SeedGrid>;
-
-template <>
-SeedGrid_p from_json<SeedGrid_p>(const json &j) {
-  if (!j.contains("type") || j["type"] != "seed_grid") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
-
-  if (!j.contains("Ny") || !j["Ny"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'Ny' field.");
-  }
-
-  if (!j.contains("Nz") || !j["Nz"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'Nz' field.");
-  }
-
-  if (!j.contains("X0") || !j["X0"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'X0' field.");
-  }
-
-  if (!j.contains("radius") || !j["radius"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'radius' field.");
-  }
-
-  if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'amplitude' field.");
-  }
-
-  if (!j.contains("rho") || !j["rho"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho' field.");
-  }
-
-  int Ny = j["Ny"];
-  int Nz = j["Nz"];
-  double X0 = j["X0"];
-  double radius = j["radius"];
-  SeedGrid_p ic = std::make_unique<SeedGrid>(Ny, Nz, X0, radius);
-  ic->amplitude = j["amplitude"];
-  ic->rho = j["rho"];
-  return ic;
-}
-
-using FileReader_p = std::unique_ptr<FileReader>;
-
-template <>
-FileReader_p from_json<FileReader_p>(const json &j) {
-  if (!j.contains("type") || j["type"] != "from_file") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
-
-  if (!j.contains("filename") || !j["filename"].is_string()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'filename' field.");
-  }
-
-  std::string filename = j["filename"];
-  FileReader_p ic = std::make_unique<FileReader>(filename);
-  return ic;
-}
-
-using FixedBC_p = std::unique_ptr<FixedBC>;
-
-template <>
-FixedBC_p from_json<FixedBC_p>(const json &j) {
-  if (!j.contains("type") || j["type"] != "fixed") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
-
-  if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho_low' field.");
-  }
-
-  if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho_high' field.");
-  }
-
-  double rho_low = j["rho_low"];
-  double rho_high = j["rho_high"];
-  return std::make_unique<FixedBC>(rho_low, rho_high);
-}
-
-using MovingBC_p = std::unique_ptr<MovingBC>;
-
-template <>
-MovingBC_p from_json<MovingBC_p>(const json &j) {
-  if (!j.contains("type") || j["type"] != "moving") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
-
-  if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho_low' field.");
-  }
-
-  if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho_high' field.");
-  }
-
-  if (!j.contains("width") || !j["width"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'width' field.");
-  }
-
-  if (!j.contains("alpha") || !j["alpha"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'alpha' field.");
-  }
-
-  if (!j.contains("disp") || !j["disp"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'disp' field.");
-  }
-
-  if (!j.contains("xpos") || !j["xpos"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'xpos' field.");
-  }
-
-  double rho_low = j["rho_low"];
-  double rho_high = j["rho_high"];
-  double width = j["width"];
-  double alpha = j["alpha"];
-  double disp = j["disp"];
-  double xpos = j["xpos"];
-  MovingBC_p bc = std::make_unique<MovingBC>(rho_low, rho_high);
-  bc->set_xwidth(width);
-  bc->set_alpha(alpha);
-  bc->set_disp(disp);
-  bc->set_xpos(xpos);
-  return bc;
-}
-
-template <>
-FieldModifier_p from_json<FieldModifier_p>(const json &params) {
-  std::cout << "Creating FieldModifier from data " << params << std::endl;
-  std::string type = params["type"];
-  return create_field_modifier(type, params);
 }
 
 /**
@@ -618,6 +534,12 @@ class App {
         rank0(m_worker.get_rank() == 0),
         m_settings(read_settings(argc, argv)) {}
 
+  App(const json &settings, MPI_Comm comm = MPI_COMM_WORLD)
+      : m_comm(comm),
+        m_worker(MPI_Worker(0, nullptr, comm)),
+        rank0(m_worker.get_rank() == 0),
+        m_settings(settings) {}
+
   bool create_results_dir(const std::string &output) {
     std::filesystem::path results_dir(output);
     if (results_dir.has_filename()) results_dir = results_dir.parent_path();
@@ -667,8 +589,10 @@ class App {
       return;
     }
     std::cout << "Adding initial conditions" << std::endl;
-    for (const json &ic : m_settings["initial_conditions"]) {
-      sim.add_initial_conditions(ui::from_json<ui::FieldModifier_p>(ic));
+    for (const json &params : m_settings["initial_conditions"]) {
+      std::cout << "Creating initial condition from data " << params << std::endl;
+      std::string type = params["type"];
+      sim.add_initial_conditions(create_field_modifier(type, params));
     }
   }
 
@@ -678,8 +602,10 @@ class App {
       return;
     }
     std::cout << "Adding boundary conditions" << std::endl;
-    for (const json &bc : m_settings["boundary_conditions"]) {
-      sim.add_boundary_conditions(ui::from_json<ui::FieldModifier_p>(bc));
+    for (const json &params : m_settings["boundary_conditions"]) {
+      std::cout << "Creating boundary condition from data " << params << std::endl;
+      std::string type = params["type"];
+      sim.add_boundary_conditions(create_field_modifier(type, params));
     }
   }
 
@@ -695,7 +621,8 @@ class App {
         ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
     FFT fft(decomp, m_comm, plan_options);
     Time time(ui::from_json<Time>(m_settings));
-    ConcreteModel model(fft);
+    ConcreteModel model;
+    model.set_fft(fft);
     Simulator simulator(model, time);
 
     if (m_settings.contains("model") &&
