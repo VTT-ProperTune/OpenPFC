@@ -28,7 +28,10 @@ private:
   double m_n0;
 
 public:
+  Constant() = default;
   Constant(double n0) : m_n0(n0) {}
+  double get_density() const { return m_n0; }
+  void set_density(double n0) { m_n0 = n0; }
 
   void apply(Model &m, double) override {
     Field &field = m.get_field();
