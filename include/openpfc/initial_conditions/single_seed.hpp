@@ -5,9 +5,15 @@
 namespace pfc {
 
 class SingleSeed : public FieldModifier {
+  double amp_eq, rho_seed;
 
 public:
-  double amp_eq, rho_seed;
+
+  void set_amplitude(double amplitude) { amp_eq = amplitude; }
+  double get_amplitude() const { return amp_eq; }
+
+  void set_density(double density) { rho_seed = density; }
+  double get_density() const { return rho_seed; }
 
   void apply(Model &m, double) override {
     const World &w = m.get_world();
