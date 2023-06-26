@@ -75,14 +75,16 @@ target_compile_features(OpenPFC INTERFACE cxx_std_17)
 option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
 option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
 option(OpenPFC_BUILD_TESTS "Build OpenPFC tests" ON)
+
 if(OpenPFC_BUILD_APPS)
   add_subdirectory(apps)
 endif()
+
 if(OpenPFC_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
+
 if(OpenPFC_BUILD_TESTS)
-  include(CTest)
   add_subdirectory(tests)
 endif()
 
