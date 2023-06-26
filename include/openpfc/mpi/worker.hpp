@@ -1,7 +1,8 @@
 #pragma once
 
-#include <iostream>
 #include <mpi.h>
+
+#include <iostream>
 
 namespace pfc {
 
@@ -13,11 +14,11 @@ namespace pfc {
  * rank and number of processes in the MPI communicator.
  */
 class MPI_Worker {
-  MPI_Comm m_comm; ///< MPI communicator for this worker
-  int m_rank;      ///< Rank of this worker process in the MPI communicator
-  int m_num_procs; ///< Number of processes in the MPI communicator
+  MPI_Comm m_comm;  ///< MPI communicator for this worker
+  int m_rank;       ///< Rank of this worker process in the MPI communicator
+  int m_num_procs;  ///< Number of processes in the MPI communicator
 
-public:
+ public:
   /**
    * @brief Constructs an MPI worker instance and initializes MPI.
    *
@@ -77,4 +78,4 @@ public:
   void unmute() { std::cout.clear(); }
 };
 
-} // namespace pfc
+}  // namespace pfc
