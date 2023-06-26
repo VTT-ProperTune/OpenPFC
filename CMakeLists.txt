@@ -88,6 +88,12 @@ endif()
 
 install(DIRECTORY include/openpfc DESTINATION include)
 
+# Install nlohmann_json headers
+install(
+    DIRECTORY ${nlohmann_json_SOURCE_DIR}/include/nlohmann
+    DESTINATION include
+)
+
 # generate cmake file containing code to import all targets
 
 install(TARGETS OpenPFC EXPORT OpenPFCTargets DESTINATION include)
