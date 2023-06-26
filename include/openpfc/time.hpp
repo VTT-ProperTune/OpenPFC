@@ -4,15 +4,19 @@
 #include <cmath>
 
 namespace pfc {
+
 class Time {
-private:
+ private:
   double m_t0, m_t1, m_dt;
   int m_increment;
   double m_saveat;
 
-public:
+ public:
   Time(const std::array<double, 3> &time, double saveat)
-      : m_t0(time[0]), m_t1(time[1]), m_dt(time[2]), m_increment(0),
+      : m_t0(time[0]),
+        m_t1(time[1]),
+        m_dt(time[2]),
+        m_increment(0),
         m_saveat(saveat) {}
 
   Time(const std::array<double, 3> &time) : Time(time, time[2]) {}
@@ -44,4 +48,5 @@ public:
     return os;
   };
 };
-} // namespace pfc
+
+}  // namespace pfc
