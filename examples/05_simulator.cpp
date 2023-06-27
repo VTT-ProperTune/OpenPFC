@@ -24,6 +24,7 @@
 
 #include <array>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <openpfc/decomposition.hpp>
 #include <openpfc/fft.hpp>
@@ -38,10 +39,10 @@ using namespace pfc;
 const double PI = 3.141592653589793238463;
 
 class GaussianIC : public FieldModifier {
- private:
+private:
   double D = 1.0;
 
- public:
+public:
   void apply(Model &m, double t) override {
     (void)t; // suppress compiler warning about unused parameter
     const World &w = m.get_world();
@@ -69,12 +70,12 @@ class GaussianIC : public FieldModifier {
 class Diffusion : public Model {
   using Model::Model;
 
- private:
+private:
   std::vector<double> opL, psi;
   std::vector<std::complex<double>> psi_F;
   double psi_min = 0.0, psi_max = 1.0;
 
- public:
+public:
   double get_psi_min() const { return psi_min; }
   double get_psi_max() const { return psi_max; }
 
@@ -149,8 +150,7 @@ void print_statline(Simulator &s) {
   Diffusion &diffusion_model = dynamic_cast<Diffusion &>(model);
   double min = diffusion_model.get_psi_min();
   double max = diffusion_model.get_psi_max();
-  std::cout << "n = " << n << ", t = " << t << ", min = " << min
-            << ", max = " << max << std::endl;
+  std::cout << "n = " << n << ", t = " << t << ", min = " << min << ", max = " << max << std::endl;
 }
 
 void run_simulator(Simulator &s) {
@@ -184,7 +184,7 @@ void run() {
   double t0 = 0.0;
   double t1 = 0.5874010519681994;
   double dt = (t1 - t0) / 42;
-  double saveat = dt;  // when to save results
+  double saveat = dt; // when to save results
   std::array<double, 3> tspan{t0, t1, dt};
   Time time(tspan, saveat);
 
@@ -198,7 +198,7 @@ void run() {
 
   // Check the result, we should be very close to 0.5
   if (model.rank0) {
-    if (abs(model.get_psi_max() - 0.5) < 0.01) {
+    if (std::abs(model.get_psi_max() - 0.5) < 0.01) {
       std::cout << "Test pass!" << std::endl;
     } else {
       std::cerr << "Test failed!" << std::endl;
