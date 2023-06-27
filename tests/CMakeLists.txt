@@ -5,7 +5,9 @@ add_executable(OpenPFCTests
                test_world.cpp
                test_decomposition.cpp
                test_fft.cpp
-               test_model.cpp)
+               test_model.cpp
+               test_time.cpp
+               )
 target_link_libraries(OpenPFCTests PRIVATE OpenPFC Catch2::Catch2WithMain)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
