@@ -18,10 +18,22 @@ public:
    *
    * This function is responsible for applying the field modification to the provided model at the given time.
    *
-   * @param m The model to apply the field modification to.
-   * @param t The current time.
+   * @param model The model to apply the field modification to.
+   * @param field_name To which field the modification is done.
+   * @param time The current time.
    */
-  virtual void apply(Model &m, double t) = 0;
+  // TODO: we need a way to modify arbitrary fields, not just default one
+  // virtual void apply(Model &model, const std::string &field_name, double time) = 0;
+
+  /**
+   * @brief Apply the field modification to the model at a specific time.
+   *
+   * This function is responsible for applying the field modification to the provided model at the given time.
+   *
+   * @param model The model to apply the field modification to.
+   * @param time The current time.
+   */
+  virtual void apply(Model &model, double time) = 0;
 
   /**
    * @brief Destructor for the FieldModifier class.
