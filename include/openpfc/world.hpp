@@ -111,6 +111,19 @@ public:
   }
 
   /**
+   * @brief Compare this world to other world.
+   *
+   * @param other world
+   * @return true
+   * @return false
+   */
+  bool operator==(const World& other) const {
+    return Lx == other.Lx &&
+           Ly == other.Ly &&
+           Lz == other.Lz;
+  }
+
+  /**
    * @brief Output stream operator for World objects.
    *
    * Allows printing the state of a World object to an output stream.
