@@ -6,6 +6,7 @@ add_executable(OpenPFCTests
                test_decomposition.cpp
                test_field_modifier.cpp
                test_fft.cpp
+               test_ic_constant.cpp
                test_model.cpp
                test_time.cpp
                )
