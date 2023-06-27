@@ -18,4 +18,5 @@ RUN lcov --extract coverage.info '*/openpfc/include/*' -o filtered_coverage.info
 RUN genhtml filtered_coverage.info --output-directory coverage_report
 
 # Generate documentation
+RUN (cd docs/doxygen-awesome-css && git checkout v2.2.1)
 RUN cmake --build build --target docs
