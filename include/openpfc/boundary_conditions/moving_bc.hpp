@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <limits>
 #include <mpi.h>
 
 #include "../field_modifier.hpp"
@@ -107,15 +108,15 @@ public:
         for (int i = low[0]; i <= high[0]; i++) {
           double x = w.x0 + i * w.dx;
           double dist = x - xpos;
-          if (abs(dist) < xwidth) {
+          if (std::abs(dist) < xwidth) {
             double S = 1.0 / (1.0 + exp(-alpha * dist));
             field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
           }
-          if (xpos < xwidth && abs(dist - l) < xwidth) {
+          if (xpos < xwidth && std::abs(dist - l) < xwidth) {
             double S = 1.0 / (1.0 + exp(-alpha * (dist - l)));
             field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
           }
-          if (xpos > l - xwidth && abs(dist + l) < xwidth) {
+          if (xpos > l - xwidth && std::abs(dist + l) < xwidth) {
             double S = 1.0 / (1.0 + exp(-alpha * (dist + l)));
             field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
           }
