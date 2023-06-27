@@ -195,8 +195,14 @@ class Model {
    *
    * @return Reference to the RealField called "default"
    */
-  virtual Field &get_field() { return get_real_field("default"); };
+  virtual Field &get_field() {
+    if (!has_real_field("default")) {
+      throw std::runtime_error("'default' field is not defined.");
+    }
+    return get_real_field("default");
+    };
 };
+
 }  // namespace pfc
 
 #endif
