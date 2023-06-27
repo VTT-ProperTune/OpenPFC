@@ -13,7 +13,7 @@ RUN cmake --build build
 RUN (cd build/tests && ctest)
 
 # Generate coverage report
-RUN lcov --gcov-tool gcov-12 --capture --directory build/tests --output-file app_test.info
+RUN lcov --gcov-tool gcov-12 --capture --directory build/tests --output-file coverage.info
 RUN lcov --extract coverage.info '*/openpfc/include/*' -o filtered_coverage.info
 RUN genhtml filtered_coverage.info --output-directory coverage_report
 
