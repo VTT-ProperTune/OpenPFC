@@ -75,6 +75,7 @@ target_compile_features(OpenPFC INTERFACE cxx_std_17)
 option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
 option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
 option(OpenPFC_BUILD_TESTS "Build OpenPFC tests" ON)
+option(OpenPFC_ENABLE_CODE_COVERAGE "Enable coverage" ON)
 
 if(OpenPFC_BUILD_APPS)
   add_subdirectory(apps)
@@ -82,6 +83,11 @@ endif()
 
 if(OpenPFC_BUILD_EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+if(OpenPFC_ENABLE_CODE_COVERAGE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
 
 if(OpenPFC_BUILD_TESTS)
