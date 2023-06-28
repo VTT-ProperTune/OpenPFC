@@ -2,6 +2,7 @@
 
 find_package(Catch2 REQUIRED)
 add_executable(OpenPFCTests
+               test_arraynd.cpp
                test_world.cpp
                test_decomposition.cpp
                test_field_modifier.cpp
