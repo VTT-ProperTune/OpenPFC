@@ -7,16 +7,9 @@ using namespace pfc;
 
 // Mock model class for testing
 class ModelWithConstantIC : public Model {
-private:
-  std::vector<double> psi;
-
 public:
-  ModelWithConstantIC() {
-    // TODO: FieldModifier can only modify default field.
-    add_real_field("default", psi);
-  }
   void step(double) override {}
-  void initialize(double) override { psi.resize(8); }
+  void initialize(double) override {}
 };
 
 TEST_CASE("Constant Field Modifier") {
@@ -32,11 +25,12 @@ TEST_CASE("Constant Field Modifier") {
     MPI_Init(0, nullptr);
     World world({8, 1, 1});
     Decomposition decomp(world);
+    std::vector<double> psi(8);
     FFT fft(decomp);
     ModelWithConstantIC m;
+    m.add_real_field("default", psi);
     // TODO: This should be possible without defining fft
     m.set_fft(fft);
-    m.initialize(1.0);
     Constant c(1.0);
     c.apply(m, 0.0);
     const Field &field = m.get_field();
