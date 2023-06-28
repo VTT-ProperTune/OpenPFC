@@ -15,7 +15,7 @@ namespace pfc {
 class FFT {
 
 private:
-  const Decomposition &m_decomposition;                 /**< Reference to the Decomposition object. */
+  const Decomposition m_decomposition;                  /**< The Decomposition object. */
   const heffte::fft3d_r2c<heffte::backend::fftw> m_fft; /**< HeFFTe FFT object. */
   std::vector<std::complex<double>> m_wrk;              /**< Workspace vector for FFT computations. */
   double m_fft_time = 0.0;                              /**< Recorded FFT computation time. */
