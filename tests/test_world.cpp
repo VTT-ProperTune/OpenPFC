@@ -3,6 +3,7 @@
 #include <openpfc/world.hpp>
 
 using namespace Catch::Matchers;
+using namespace pfc;
 
 TEST_CASE("World - Construction and Accessors", "[world]") {
   // Test case for World construction and accessors
@@ -12,7 +13,7 @@ TEST_CASE("World - Construction and Accessors", "[world]") {
     std::array<double, 3> origin = {1.0, 2.0, 3.0};
     std::array<double, 3> discretization = {0.1, 0.2, 0.3};
 
-    pfc::World world(dimensions, origin, discretization);
+    World world(dimensions, origin, discretization);
 
     // Check the dimensions
     REQUIRE(world.get_Lx() == dimensions[0]);
@@ -36,7 +37,7 @@ TEST_CASE("World - Construction and Accessors", "[world]") {
 
   SECTION("Construct World with dimensions (default origin and discretization)") {
     std::array<int, 3> dimensions = {100, 200, 300};
-    pfc::World world(dimensions);
+    World world(dimensions);
 
     // Check the dimensions
     REQUIRE(world.get_Lx() == dimensions[0]);
@@ -63,7 +64,7 @@ TEST_CASE("World - Conversion to heffte::box3d<int>", "[world]") {
   // Test case for World conversion to heffte::box3d<int>
 
   std::array<int, 3> dimensions = {100, 200, 300};
-  pfc::World world(dimensions);
+  World world(dimensions);
 
   SECTION("Conversion to heffte::box3d<int>") {
     heffte::box3d<int> box = world;
@@ -86,6 +87,6 @@ TEST_CASE("World - Invalid Construction", "[world]") {
   SECTION("Construct World with invalid discretization") {
     std::array<int, 3> dimensions = {100, 200, 300};
     std::array<double, 3> discretization = {0.1, 0.2, -0.3};
-    REQUIRE_THROWS_AS(pfc::World(dimensions, {}, discretization), std::invalid_argument);
+    REQUIRE_THROWS_AS(World(dimensions, {}, discretization), std::invalid_argument);
   }
 }
