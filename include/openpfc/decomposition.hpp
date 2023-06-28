@@ -19,7 +19,7 @@ namespace pfc {
  */
 class Decomposition {
 private:
-  const World &m_world;                                            ///< Reference to the World object.
+  const World m_world;                                             ///< The World object.
   const int id, tot;                                               ///< Processor ID and total number of processors.
   const int Lx_c, Ly_c, Lz_c;                                      ///< Dimensions of the complex domain.
   const heffte::box3d<int> real_indexes, complex_indexes;          ///< Index ranges for real and complex domains.
@@ -84,16 +84,6 @@ public:
    */
   Decomposition(const World &world, MPI_Comm comm = MPI_COMM_WORLD)
       : Decomposition(world, get_comm_rank(comm), get_comm_size(comm)) {}
-
-  /**
-   * @brief Deleted copy constructor.
-   */
-  Decomposition(const Decomposition &) = delete;
-
-  /**
-   * @brief Deleted copy assignment operator.
-   */
-  Decomposition &operator=(const Decomposition &) = delete;
 
   /**
    * @brief Get the reference to the World object.
