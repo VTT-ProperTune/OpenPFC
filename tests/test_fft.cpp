@@ -8,12 +8,9 @@ using namespace pfc;
 
 TEST_CASE("FFT forward transformation", "[FFT]") {
   MPI_Init(0, nullptr);
-  // Create a Decomposition object
-  World world({8, 1, 1}); // Assuming the World class is defined
-  Decomposition decomposition(world);
 
   // Create an FFT object
-  FFT fft(decomposition);
+  FFT fft(Decomposition(World({8, 1, 1})));
 
   // Generate input data
   std::vector<double> input = {0.000, 0.785, 1.571, 2.356, 3.142, 3.927, 4.712, 5.498};
@@ -29,12 +26,9 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
 
 TEST_CASE("FFT backward transformation", "[FFT]") {
   MPI_Init(0, nullptr);
-  // Create a Decomposition object
-  World world({2, 1, 1}); // Assuming the World class is defined
-  Decomposition decomposition(world);
 
   // Create an FFT object
-  FFT fft(decomposition);
+  FFT fft(Decomposition(World({2, 1, 1})));
 
   // Generate input data
   std::vector<std::complex<double>> input = {std::complex<double>(1.0, 0.0), std::complex<double>(2.0, 0.0)};
