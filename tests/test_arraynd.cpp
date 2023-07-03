@@ -73,10 +73,12 @@ public:
 
   std::array<int, D> get_offset() const { return offset; }
 
-  void apply(const std::function<T(std::array<int, D>)> &&func) {
+  template <typename Func> void apply(Func &&func) {
+    static_assert(std::is_convertible_v<std::invoke_result_t<Func, std::array<int, D>>, T>,
+                  "Func must be invocable with std::array<int, D> and return a type convertible to T");
     std::array<int, D> indices = offset;
-    for (size_t idx = 0; idx < data.size(); idx++) {
-      data[idx] = std::invoke(std::forward<const std::function<T(std::array<int, D>)>>(func), indices);
+    for (T &element : data) {
+      element = std::invoke(std::forward<Func>(func), indices);
       for (size_t i = 0; i < D; i++) {
         indices[i] += 1;
         if (indices[i] < offset[i] + size[i]) break;
@@ -230,14 +232,16 @@ public:
     return array<T, D>::operator()(indices);
   }
 
-  void apply(const std::function<T(std::array<double, D>)> &&func) {
+  template <typename Func> void apply(Func &&func) {
+    static_assert(std::is_convertible_v<std::invoke_result_t<Func, std::array<double, D>>, T>,
+                  "Func must be invocable with std::array<double, D> and return a type convertible to T");
     std::array<int, D> indices = this->offset;
     std::array<double, D> coordinates = {0};
-    for (size_t idx = 0; idx < this->data.size(); idx++) {
+    for (T &element : this->data) {
       for (size_t i = 0; i < D; ++i) coordinates[i] = origin[i] + indices[i] * discretization[i];
-      this->data[idx] = std::invoke(std::forward<const std::function<T(std::array<double, D>)>>(func), coordinates);
+      element = std::invoke(std::forward<Func>(func), coordinates);
       for (size_t i = 0; i < D; i++) {
-        indices[i] += 1;
+        indices[i]++;
         if (indices[i] < this->offset[i] + this->size[i]) break;
         indices[i] = this->offset[i];
       }
