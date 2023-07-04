@@ -13,6 +13,9 @@ target_link_libraries(04_diffusion_model PRIVATE OpenPFC)
 add_executable(05_simulator 05_simulator.cpp)
 target_link_libraries(05_simulator PRIVATE OpenPFC)
 
+add_executable(06_multi_index 06_multi_index.cpp)
+target_link_libraries(06_multi_index PRIVATE OpenPFC)
+
 add_executable(10_ui_register_ic 10_ui_register_ic.cpp)
 target_link_libraries(10_ui_register_ic PRIVATE OpenPFC nlohmann_json::nlohmann_json)
 

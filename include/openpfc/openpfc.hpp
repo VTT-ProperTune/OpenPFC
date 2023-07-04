@@ -20,4 +20,5 @@
 #include "time.hpp"
 #include "types.hpp"
 #include "utils.hpp"
+#include "utils/multi_index.hpp"
 #include "world.hpp"
