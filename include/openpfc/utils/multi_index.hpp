@@ -71,6 +71,28 @@ public:
   }
 
   /**
+   * @brief Checks whether given indices are in bounds or not.
+   *
+   * @param indices Array of indices.
+   * @return true if in bounds, false otherwise
+   */
+  bool inbounds(const std::array<int, D> &indices) const {
+    for (size_t i = 0; i < D; ++i) {
+      if (indices[i] < m_begin[i] || indices[i] > m_end[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * @brief Get the size of the object.
+   *
+   * @return const std::array<int, D>&
+   */
+  const std::array<int, D> &get_size() const { return m_size; }
+
+  /**
    * @brief Iterator class for iterating over multi-dimensional indices.
    */
   class Iterator {
