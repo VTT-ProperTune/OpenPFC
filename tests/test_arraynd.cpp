@@ -8,7 +8,7 @@ using namespace pfc::utils;
 
 TEST_CASE("array1d") {
   // array with dimension 5, offset 2
-  array<int, 1> arr({5}, {2});
+  Array<int, 1> arr({5}, {2});
 
   SECTION("Test setting and accessing elements using linear indexing") {
     arr[0] = 1;
@@ -52,7 +52,7 @@ TEST_CASE("array1d") {
 }
 
 TEST_CASE("array2d") {
-  array<int, 2> arr({2, 3}, {1, 2});
+  Array<int, 2> arr({2, 3}, {1, 2});
   /**
    *    2  3  4
    * 1  x  x  x
