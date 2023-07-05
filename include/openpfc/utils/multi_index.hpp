@@ -1,3 +1,6 @@
+#ifndef PFC_MULTI_INDEX_HPP
+#define PFC_MULTI_INDEX_HPP
+
 #include <array>
 #include <iostream>
 #include <vector>
@@ -86,11 +89,36 @@ public:
   }
 
   /**
-   * @brief Get the size of the object.
+   * @brief Returns the size of this index.
    *
-   * @return const std::array<int, D>&
+   * @return Array of length D with dimensions.
    */
   const std::array<int, D> &get_size() const { return m_size; }
+
+  /**
+   * @brief Returns the offset of this index.
+   *
+   * @return Array of length D with offset.
+   */
+  const std::array<int, D> &get_offset() const { return m_begin; }
+
+  /**
+   * @brief Outputs the index to the specified output stream.
+   *
+   * @param os The output stream.
+   * @param index The index to output.
+   * @return Reference to the output stream.
+   */
+  friend std::ostream &operator<<(std::ostream &os, const MultiIndex<D> &index) {
+    os << "MultiIndex set with " << D << " dimensions (indices from {";
+    for (size_t i = 0; i < D - 1; i++) os << index.m_begin[i] << ",";
+    os << index.m_begin[D - 1] << "} to {";
+    for (size_t i = 0; i < D - 1; i++) os << index.m_end[i] << ",";
+    os << index.m_end[D - 1] << "}, size {";
+    for (size_t i = 0; i < D - 1; i++) os << index.m_size[i] << ",";
+    os << index.m_size[D - 1] << "}, linear size " << index.m_linear_size << ")";
+    return os;
+  }
 
   /**
    * @brief Iterator class for iterating over multi-dimensional indices.
@@ -276,3 +304,5 @@ public:
 
 } // namespace utils
 } // namespace pfc
+
+#endif
