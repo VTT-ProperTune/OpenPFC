@@ -19,6 +19,8 @@ int main() {
   std::array<int, 3> offset = {1, 1, 1};
   MultiIndex index(size, offset);
 
+  std::cout << index << std::endl;
+
   // Using MultiIndex through iterator:
   for (auto it = index.begin(); it != index.end(); ++it) {
     std::cout << it << ", linear index = " << it.get_linear_index() << std::endl;
