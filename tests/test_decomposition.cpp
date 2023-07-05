@@ -13,7 +13,7 @@ TEST_CASE("Decomposition class tests", "[Decomposition]") {
     Decomposition decomposition(world, 0, 1);
 
     REQUIRE(decomposition.get_world() == world);
-    REQUIRE(decomposition.get_id() == 0);
+    REQUIRE(decomposition.get_rank() == 0);
   }
 
   SECTION("Domain decomposition status") {
