@@ -4,6 +4,7 @@
 #include <openpfc/utils/array.hpp>
 
 using namespace Catch::Matchers;
+using namespace pfc;
 using namespace pfc::utils;
 
 TEST_CASE("array1d") {
