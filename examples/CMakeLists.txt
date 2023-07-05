@@ -19,6 +19,9 @@ target_link_libraries(06_multi_index PRIVATE OpenPFC)
 add_executable(07_array 07_array.cpp)
 target_link_libraries(07_array PRIVATE OpenPFC)
 
+add_executable(08_discrete_fields 08_discrete_fields.cpp)
+target_link_libraries(08_discrete_fields PRIVATE OpenPFC)
+
 add_executable(10_ui_register_ic 10_ui_register_ic.cpp)
 target_link_libraries(10_ui_register_ic PRIVATE OpenPFC nlohmann_json::nlohmann_json)
 
