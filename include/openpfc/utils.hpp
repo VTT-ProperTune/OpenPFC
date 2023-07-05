@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PFC_UTILS_HPP
+#define PFC_UTILS_HPP
 
 #include <memory>
 #include <mpi.h>
@@ -63,3 +64,5 @@ int get_comm_size(MPI_Comm comm) {
 } // namespace mpi
 
 } // namespace pfc
+
+#endif
