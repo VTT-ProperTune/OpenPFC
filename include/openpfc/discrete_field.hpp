@@ -11,8 +11,7 @@
 #include <ostream>
 
 namespace pfc {
-
-using namespace utils;
+namespace utils {
 
 template <typename T, size_t D> class DiscreteField : public Array<T, D> {
 private:
@@ -24,7 +23,7 @@ private:
 public:
   DiscreteField(const std::array<int, D> &dimensions, const std::array<int, D> &offsets,
                 const std::array<double, D> &origin, const std::array<double, D> &discretization)
-      : Array<T, D>(dimensions, offsets), m_origin(origin), m_discretization(discretization) {
+      : utils::Array<T, D>(dimensions, offsets), m_origin(origin), m_discretization(discretization) {
     for (size_t i = 0; i < D; i++) {
       m_coords_low[i] = m_origin[i] + offsets[i] * m_discretization[i];
       m_coords_high[i] = m_origin[i] + (offsets[i] + dimensions[i]) * m_discretization[i];
@@ -62,7 +61,7 @@ public:
     return Array<T, D>::operator[](map_coordinates_to_indices(coordinates));
   }
 
-  using FunctionND = std::function<T(std::array<T, D>)>;
+  using FunctionND = std::function<T(std::array<double, D>)>;
 
   void apply(FunctionND &&func) {
     static_assert(std::is_convertible_v<std::invoke_result_t<FunctionND, std::array<double, D>>, T>,
@@ -122,6 +121,7 @@ public:
   }
 };
 
+} // namespace utils
 } // namespace pfc
 
 #endif
