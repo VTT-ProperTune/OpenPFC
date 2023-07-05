@@ -99,6 +99,20 @@ public:
   std::array<int, 3> get_size() const { return {Lx, Ly, Lz}; }
 
   /**
+   * @brief Get the origin of the coordinate system
+   *
+   * @return std::array<double, 3>
+   */
+  std::array<double, 3> get_origin() const { return {x0, y0, z0}; }
+
+  /**
+   * @brief Get the discretization of the coordinate system
+   *
+   * @return std::array<double, 3>
+   */
+  std::array<double, 3> get_discretization() const { return {dx, dy, dz}; }
+
+  /**
    * @brief Conversion operator to heffte::box3d<int>.
    *
    * Allows implicit conversion of a World object to heffte::box3d<int>.
