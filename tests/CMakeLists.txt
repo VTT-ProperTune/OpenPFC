@@ -5,6 +5,7 @@ add_executable(OpenPFCTests
                test_arraynd.cpp
                test_world.cpp
                test_decomposition.cpp
+               test_discrete_field.cpp
                test_field_modifier.cpp
                test_fft.cpp
                test_ic_constant.cpp
