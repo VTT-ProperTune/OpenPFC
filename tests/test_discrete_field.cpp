@@ -4,8 +4,7 @@
 #include <openpfc/discrete_field.hpp>
 
 using namespace Catch::Matchers;
-// using namespace pfc;
-using namespace pfc::utils;
+using namespace pfc;
 
 TEST_CASE("DiscreteField1D") {
   int Lx = 5;

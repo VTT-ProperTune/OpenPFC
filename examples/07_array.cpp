@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <iostream>
+#include <openpfc/array.hpp>
 #include <openpfc/utils.hpp>
-#include <openpfc/utils/array.hpp>
 #include <openpfc/utils/typename.hpp>
 
 /**
@@ -17,13 +17,13 @@
  * case of domain decomposition, and fill in some values based on indices.
  */
 
-using namespace pfc::utils;
+using namespace pfc;
 
 template <typename T> struct SecondOrderTensor {
   std::array<T, 9> data;
 
   friend std::ostream &operator<<(std::ostream &os, const SecondOrderTensor<T> &tensor) {
-    os << std::string("SecondOrderTensor<") + TypeName<T>::get().data() + ">" << array_to_string(tensor.data);
+    os << std::string("SecondOrderTensor<") + TypeName<T>::get().data() + ">" << utils::array_to_string(tensor.data);
     return os;
   }
 };
@@ -91,7 +91,7 @@ int main() {
   auto data = tensors.get_data();
   auto data_it = data.begin();
   while (index_it != index.end() && data_it != data.end()) {
-    std::cout << array_to_string(*index_it++) << " => " << (*data_it++) << std::endl;
+    std::cout << utils::array_to_string(*index_it++) << " => " << (*data_it++) << std::endl;
   }
 
   return 0;

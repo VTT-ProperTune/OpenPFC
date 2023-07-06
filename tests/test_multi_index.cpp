@@ -1,10 +1,10 @@
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
-#include <openpfc/utils/multi_index.hpp>
+#include <openpfc/multi_index.hpp>
 #include <sstream>
 
-using namespace pfc::utils;
+using namespace pfc;
 
 // Include the MultiIndex implementation and any other necessary headers
 

@@ -2,7 +2,6 @@
 #include <openpfc/decomposition.hpp>
 #include <openpfc/discrete_field.hpp>
 #include <openpfc/utils.hpp>
-#include <openpfc/utils/array.hpp>
 #include <openpfc/world.hpp>
 
 using namespace pfc;

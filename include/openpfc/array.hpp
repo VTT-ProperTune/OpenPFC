@@ -2,7 +2,7 @@
 #define PFC_ARRAY_HPP
 
 #include "multi_index.hpp"
-#include "typename.hpp"
+#include "utils/typename.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -11,9 +11,9 @@
 #include <vector>
 
 namespace pfc {
-namespace utils {
 
 template <typename T, size_t D> class Array {
+
 protected:
   MultiIndex<D> index;
   std::vector<T> data;
@@ -80,7 +80,6 @@ public:
   }
 };
 
-} // namespace utils
 } // namespace pfc
 
 #endif

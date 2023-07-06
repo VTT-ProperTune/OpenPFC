@@ -1,8 +1,8 @@
 #ifndef PFC_DISCRETE_FIELD_HPP
 #define PFC_DISCRETE_FIELD_HPP
 
+#include "array.hpp"
 #include "utils.hpp"
-#include "utils/array.hpp"
 #include "utils/typename.hpp"
 #include <array>
 #include <cmath>
@@ -11,7 +11,6 @@
 #include <ostream>
 
 namespace pfc {
-namespace utils {
 
 template <typename T, size_t D> class DiscreteField : public Array<T, D> {
 private:
@@ -23,7 +22,7 @@ private:
 public:
   DiscreteField(const std::array<int, D> &dimensions, const std::array<int, D> &offsets,
                 const std::array<double, D> &origin, const std::array<double, D> &discretization)
-      : utils::Array<T, D>(dimensions, offsets), m_origin(origin), m_discretization(discretization) {
+      : Array<T, D>(dimensions, offsets), m_origin(origin), m_discretization(discretization) {
     for (size_t i = 0; i < D; i++) {
       m_coords_low[i] = m_origin[i] + offsets[i] * m_discretization[i];
       m_coords_high[i] = m_origin[i] + (offsets[i] + dimensions[i]) * m_discretization[i];
@@ -111,17 +110,16 @@ public:
       end[i] = begin[i] + size[i] - 1;
       linear_size *= size[i];
     }
-    os << "DiscreteField<" << TypeName<T>::get() << "," << D << ">(begin = " << array_to_string(begin)
-       << ", end = " << array_to_string(end) << ", size = " << array_to_string(size)
-       << ", linear_size = " << linear_size << ", origin = " << array_to_string(field.m_origin)
-       << ", discretization = " << array_to_string(field.m_discretization)
-       << ", coords_low = " << array_to_string(field.m_coords_low)
-       << ", coords_high = " << array_to_string(field.m_coords_high);
+    os << "DiscreteField<" << TypeName<T>::get() << "," << D << ">(begin = " << utils::array_to_string(begin)
+       << ", end = " << utils::array_to_string(end) << ", size = " << utils::array_to_string(size)
+       << ", linear_size = " << linear_size << ", origin = " << utils::array_to_string(field.m_origin)
+       << ", discretization = " << utils::array_to_string(field.m_discretization)
+       << ", coords_low = " << utils::array_to_string(field.m_coords_low)
+       << ", coords_high = " << utils::array_to_string(field.m_coords_high);
     return os;
   }
 };
 
-} // namespace utils
 } // namespace pfc
 
 #endif

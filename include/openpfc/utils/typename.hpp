@@ -6,16 +6,10 @@
 #include <typeinfo>
 
 namespace pfc {
-namespace utils {
-
-// Helper function to demangle the type name
-std::string demangle(const char *name) {
-  return name;
-}
 
 // Type trait to retrieve the human-readable type name
 template <typename T> struct TypeName {
-  static std::string get() { return demangle(typeid(T).name()); }
+  static std::string get() { return typeid(T).name(); }
 };
 
 // Specialization for int
@@ -33,7 +27,6 @@ template <> struct TypeName<double> {
   static std::string get() { return "double"; }
 };
 
-} // namespace utils
 } // namespace pfc
 
 #endif

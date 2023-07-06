@@ -6,7 +6,6 @@
 #include <vector>
 
 namespace pfc {
-namespace utils {
 
 /**
  * @brief MultiIndex class for iterating over multi-dimensional indices.
@@ -302,7 +301,6 @@ public:
   Iterator from(size_t from) { return Iterator(from, *this); }
 };
 
-} // namespace utils
 } // namespace pfc
 
 #endif

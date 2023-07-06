@@ -1,11 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <iostream>
-#include <openpfc/utils/array.hpp>
+#include <openpfc/array.hpp>
 
 using namespace Catch::Matchers;
 using namespace pfc;
-using namespace pfc::utils;
 
 TEST_CASE("array1d") {
   // array with dimension 5, offset 2

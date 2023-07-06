@@ -1,7 +1,7 @@
 #include <array>
-#include <openpfc/utils/multi_index.hpp>
+#include <openpfc/multi_index.hpp>
 
-using namespace pfc::utils;
+using namespace pfc;
 
 /**
  * \example 06_multi_index.cpp
