@@ -29,7 +29,10 @@ using namespace pfc;
  */
 int main() {
   // Create a world with custom dimensions and origin
-  World world({10, 20, 30}, {0.0, 0.0, 0.0}, {0.1, 0.1, 0.1});
+  std::array<int, 3> dimensions = {10, 20, 30};
+  std::array<double, 3> origin = {0.0, 0.0, 0.0};
+  std::array<double, 3> discretization = {0.1, 0.1, 0.1};
+  World world(dimensions, origin, discretization);
 
   // Retrieve world properties
   cout << "World properties:" << endl;
