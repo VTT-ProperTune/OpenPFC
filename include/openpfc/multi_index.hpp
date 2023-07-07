@@ -18,12 +18,18 @@ namespace pfc {
  */
 template <size_t D> class MultiIndex {
 private:
-  std::array<int, D> m_begin; ///< The offset of the range in each dimension.
-  std::array<int, D> m_size;  ///< The size of the range in each dimension.
-  std::array<int, D> m_end;   ///< The end index of the range in each dimension.
-  size_t m_linear_begin;      ///< The linear index corresponding to the beginning of the range.
-  size_t m_linear_size;       ///< The total number of elements in the range.
-  size_t m_linear_end;        ///< The linear index corresponding to the end of the range.
+  const std::array<int, D> m_begin; ///< The offset of the range in each dimension.
+  const std::array<int, D> m_size;  ///< The size of the range in each dimension.
+  const std::array<int, D> m_end;   ///< The end index of the range in each dimension.
+  const size_t m_linear_begin;      ///< The linear index corresponding to the beginning of the range.
+  const size_t m_linear_end;        ///< The linear index corresponding to the end of the range.
+  const size_t m_linear_size;       ///< The total number of elements in the range.
+
+  std::array<int, D> calculate_end(std::array<int, D> begin, std::array<int, D> size) {
+    std::array<int, D> end;
+    for (size_t i = 0; i < D; i++) end[i] = begin[i] + size[i] - 1;
+    return end;
+  }
 
 public:
   /**
@@ -32,14 +38,16 @@ public:
    * @param size The size of the range in each dimension.
    * @param offset The offset of the range in each dimension (default: 0)
    */
-  MultiIndex(std::array<int, D> size, std::array<int, D> offset = {0}) : m_begin(offset), m_size(size) {
-    for (size_t i = 0; i < D; i++) {
-      m_end[i] = m_begin[i] + m_size[i] - 1;
-    }
-    m_linear_begin = to_linear(m_begin);
-    m_linear_end = to_linear(m_end);
-    m_linear_size = m_linear_end - m_linear_begin + 1;
-  }
+  MultiIndex(std::array<int, D> size, std::array<int, D> offset = std::array<int, D>())
+      : m_begin(offset), m_size(size), m_end(calculate_end(m_begin, m_size)), m_linear_begin(to_linear(m_begin)),
+        m_linear_end(to_linear(m_end)), m_linear_size(m_linear_end - m_linear_begin + 1) {}
+
+  const std::array<int, D> &get_begin() const { return m_begin; }
+  const std::array<int, D> &get_size() const { return m_size; }
+  const std::array<int, D> &get_end() const { return m_end; }
+  const size_t &get_linear_begin() const { return m_linear_begin; }
+  const size_t &get_linear_size() const { return m_linear_size; }
+  const size_t &get_linear_end() const { return m_linear_end; }
 
   /**
    * @brief Converts a multi-dimensional index to its corresponding linear index.
@@ -86,20 +94,6 @@ public:
     }
     return true;
   }
-
-  /**
-   * @brief Returns the size of this index.
-   *
-   * @return Array of length D with dimensions.
-   */
-  const std::array<int, D> &get_size() const { return m_size; }
-
-  /**
-   * @brief Returns the offset of this index.
-   *
-   * @return Array of length D with offset.
-   */
-  const std::array<int, D> &get_offset() const { return m_begin; }
 
   /**
    * @brief Outputs the index to the specified output stream.
