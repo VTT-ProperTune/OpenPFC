@@ -1,6 +1,7 @@
 #ifndef PFC_TYPENAME_HPP
 #define PFC_TYPENAME_HPP
 
+#include <complex>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
@@ -25,6 +26,11 @@ template <> struct TypeName<float> {
 // Specialization for double
 template <> struct TypeName<double> {
   static std::string get() { return "double"; }
+};
+
+// Specialization for complex<double>
+template <typename T> struct TypeName<std::complex<T>> {
+  static std::string get() { return "complex<" + TypeName<T>::get() + ">"; }
 };
 
 } // namespace pfc
