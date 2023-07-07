@@ -14,8 +14,9 @@ TEST_CASE("DiscreteField1D") {
   DiscreteField<int, 1> field({Lx}, {i0}, {x0}, {dx});
 
   SECTION("Accessing elements using indices") {
-    field({0}) = 1;
-    REQUIRE(field({0}) == 1);
+    std::array<int, 1> idx = {0};
+    field[idx] = 1;
+    REQUIRE(field[idx] == 1);
   }
 
   SECTION("Accessing elements using coordinates") {
