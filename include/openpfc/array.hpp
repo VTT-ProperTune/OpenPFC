@@ -2,6 +2,7 @@
 #define PFC_ARRAY_HPP
 
 #include "multi_index.hpp"
+#include "utils/array_to_string.hpp"
 #include "utils/typename.hpp"
 #include <algorithm>
 #include <array>
@@ -15,7 +16,7 @@ namespace pfc {
 template <typename T, size_t D> class Array {
 
 protected:
-  MultiIndex<D> index;
+  const MultiIndex<D> index;
   std::vector<T> data;
 
 public:
@@ -61,21 +62,10 @@ public:
    * @return Reference to the output stream.
    */
   friend std::ostream &operator<<(std::ostream &os, const Array<T, D> &array) {
-    auto begin = array.get_index().get_offset();
-    auto size = array.get_index().get_size();
-    decltype(begin) end;
-    size_t linear_size = 1;
-    for (size_t i = 0; i < D; i++) {
-      end[i] = begin[i] + size[i] - 1;
-      linear_size *= size[i];
-    }
-    os << "Array with " << D << " dimensions and type " << TypeName<T>::get() << " (indices from {";
-    for (size_t i = 0; i < D - 1; i++) os << begin[i] << ",";
-    os << begin[D - 1] << "} to {";
-    for (size_t i = 0; i < D - 1; i++) os << end[i] << ",";
-    os << end[D - 1] << "}, size {";
-    for (size_t i = 0; i < D - 1; i++) os << size[i] << ",";
-    os << size[D - 1] << "}, linear size " << linear_size << ")";
+    const MultiIndex<D> &index = array.get_index();
+    os << "Array<" << TypeName<T>::get() << "," << D << ">(begin = " << utils::array_to_string(index.get_begin())
+       << ", end = " << utils::array_to_string(index.get_end())
+       << ", size = " << utils::array_to_string(index.get_size()) << ", linear_size = " << index.get_linear_size();
     return os;
   }
 };
