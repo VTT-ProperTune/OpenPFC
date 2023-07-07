@@ -34,17 +34,6 @@ template <typename T> size_t sizeof_vec(std::vector<T> &V) {
   return V.size() * sizeof(T);
 }
 
-template <typename T, std::size_t D> std::string array_to_string(const std::array<T, D> &arr) {
-  std::ostringstream oss;
-  oss << '{';
-  for (std::size_t i = 0; i < D; ++i) {
-    oss << arr[i];
-    if (i != D - 1) oss << ", ";
-  }
-  oss << '}';
-  return oss.str();
-}
-
 } // namespace utils
 
 namespace mpi {
