@@ -59,21 +59,19 @@ public:
       : m_array(dimensions, offsets), m_origin(origin), m_discretization(discretization),
         m_coords_low(calculate_coords_low(offsets)), m_coords_high(calculate_coords_high(offsets, dimensions)) {}
 
+  /**
+   * @brief Constructs a DiscreteField from an Decomposition object.
+   *
+   * @param decomp The Decomposition object.
+   */
+  DiscreteField(const Decomposition &decomp)
+      : DiscreteField(decomp.get_inbox_size(), decomp.get_inbox_offset(), decomp.get_world().get_origin(),
+                      decomp.get_world().get_discretization()) {}
+
   const std::array<double, D> &get_origin() const { return m_origin; }
   const std::array<double, D> &get_discretization() const { return m_discretization; }
   const std::array<double, D> &get_coords_low() const { return m_coords_low; }
   const std::array<double, D> &get_coords_high() const { return m_coords_high; }
-
-  /*
-    DiscreteField(const Decomposition &decomp) {
-      auto dimensions = decomp.get_inbox_size();
-      auto offsets = decomp.get_inbox_offset();
-      auto world = decomp.get_world();
-      auto origin = world.get_origin();
-      auto discretization = world.get_discretization();
-      return DiscreteField<double, 3>(dimensions, offsets, origin, discretization);
-    }
-  */
 
   Array<T, D> &get_array() { return m_array; }
   const Array<T, D> &get_array() const { return m_array; }
