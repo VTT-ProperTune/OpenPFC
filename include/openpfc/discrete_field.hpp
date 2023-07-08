@@ -2,6 +2,7 @@
 #define PFC_DISCRETE_FIELD_HPP
 
 #include "array.hpp"
+#include "utils/show.hpp"
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -248,6 +249,21 @@ public:
     return os;
   }
 };
+
+/**
+ * @brief Apply function to discrete field.
+ *
+ * @param field The discrete field.
+ * @param func The function to apply.
+ *
+ */
+template <typename T, size_t D, typename Function> void apply(DiscreteField<T, D> &field, Function &&func) {
+  field.apply(std::forward<Function>(func));
+}
+
+template <typename T, size_t D> void show(DiscreteField<T, D> &field) {
+  utils::show(field.get_array().get_data(), field.get_index().get_size(), field.get_index().get_begin());
+}
 
 } // namespace pfc
 
