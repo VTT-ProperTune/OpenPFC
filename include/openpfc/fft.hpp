@@ -40,7 +40,7 @@ public:
    * @param in Input vector of real values.
    * @param out Output vector of complex values.
    */
-  void forward(std::vector<double> &in, std::vector<std::complex<double>> &out) {
+  void forward(const std::vector<double> &in, std::vector<std::complex<double>> &out) {
     m_fft_time -= MPI_Wtime();
     m_fft.forward(in.data(), out.data(), m_wrk.data());
     m_fft_time += MPI_Wtime();
@@ -52,7 +52,7 @@ public:
    * @param in Input vector of complex values.
    * @param out Output vector of real values.
    */
-  void backward(std::vector<std::complex<double>> &in, std::vector<double> &out) {
+  void backward(const std::vector<std::complex<double>> &in, std::vector<double> &out) {
     m_fft_time -= MPI_Wtime();
     m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
     m_fft_time += MPI_Wtime();
