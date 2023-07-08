@@ -220,6 +220,14 @@ public:
   }
 
   /**
+   * @brief Convert DiscreteField<T, D> to std::vector<T>
+   *
+   * @return A reference to the underlying data.
+   */
+  operator std::vector<T> &() { return get_data(); }
+  operator std::vector<T> &() const { return get_data(); }
+
+  /**
    * @brief Outputs the discrete field to the specified output stream.
    *
    * @param os The output stream.
