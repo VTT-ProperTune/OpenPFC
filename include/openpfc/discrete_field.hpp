@@ -78,8 +78,21 @@ public:
   const MultiIndex<D> &get_index() { return get_array().get_index(); }
   std::vector<T> &get_data() { return get_array().get_data(); }
 
+  /**
+   * @brief Returns the element at the specified index.
+   *
+   * @param indices multi-dimensional indices
+   * @return T&
+   */
   T &operator[](const std::array<int, D> &indices) { return get_array()[indices]; }
-  T &operator[](int idx) { return get_array()[idx]; }
+
+  /**
+   * @brief Returns the element at the specified index.
+   *
+   * @param idx
+   * @return T&
+   */
+  T &operator[](size_t idx) { return get_array()[idx]; }
 
   /**
    * @brief Maps indices to coordinates in the field.
