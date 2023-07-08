@@ -1,13 +1,17 @@
 #ifndef PFC_ARRAY_HPP
 #define PFC_ARRAY_HPP
 
+#include "decomposition.hpp"
 #include "multi_index.hpp"
 #include "utils/array_to_string.hpp"
+#include "utils/show.hpp"
 #include "utils/typename.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <complex>
 #include <functional>
+#include <type_traits>
 #include <typeinfo>
 #include <vector>
 
@@ -15,16 +19,49 @@ namespace pfc {
 
 template <typename T, size_t D> class Array {
 
-protected:
+private:
   const MultiIndex<D> index;
   std::vector<T> data;
 
+  /**
+   * @brief Construct a new Array object from Decomposition, using outbox, if is_complex<T> = true.
+   *
+   * @param decomp
+   */
+  Array(const Decomposition &decomp, std::true_type) : index(decomp.get_outbox_size(), decomp.get_outbox_offset()) {}
+
+  /**
+   * @brief Construct a new Array object from Decomposition, using inbox, if is_complex<T> = false.
+   *
+   * @param decomp
+   */
+  Array(const Decomposition &decomp, std::false_type) : index(decomp.get_inbox_size(), decomp.get_inbox_offset()) {}
+
+  // Custom type trait to check if a type is complex
+  template <typename U> struct is_complex : std::false_type {};
+  template <typename U> struct is_complex<std::complex<U>> : std::true_type {};
+
 public:
+  /**
+   * @brief Constructs an Array object with the specified dimensions and offsets.
+   *
+   * @param dimensions The dimensions of the array.
+   * @param offsets The offsets of the array.
+   */
   Array(const std::array<int, D> &dimensions, const std::array<int, D> &offsets = {0}) : index(dimensions, offsets) {
-    int totalSize = 1;
-    for (int dim : index.get_size()) totalSize *= dim;
-    data.resize(totalSize);
+    data.resize(index.get_linear_size());
   }
+
+  /**
+   * @brief Constructs an Array object from Decomposition object. Array
+   * dimension and offset depends from the type T of array. If the type of array
+   * is double, i.e. T = double, then inbox_size and inbox_offset is used. If
+   * the type of array is complex, i.e. T = std::complex<double>, then
+   * outbox_size and oubox_offset is used.
+   *
+   * @param decomp The Decomposition object.
+   */
+  Array(const Decomposition &decomp) : Array(decomp, is_complex<T>()) { data.resize(index.get_linear_size()); }
 
   typename std::vector<T>::iterator begin() { return data.begin(); }
   typename std::vector<T>::iterator end() { return data.end(); }
