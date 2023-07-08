@@ -31,8 +31,18 @@ public:
   typename std::vector<T>::const_iterator begin() const { return data.begin(); }
   typename std::vector<T>::const_iterator end() const { return data.end(); }
 
+  /**
+   * @brief Get the index object
+   *
+   * @return const MultiIndex<D>&
+   */
   const MultiIndex<D> &get_index() const { return index; }
 
+  /**
+   * @brief Get the data object
+   *
+   * @return std::vector<T>&
+   */
   std::vector<T> &get_data() { return data; }
 
   T &operator[](const std::array<int, D> &indices) { return operator[](index.to_linear(indices)); }
@@ -41,18 +51,48 @@ public:
 
   T &operator()(const std::array<int, D> &indices) { return operator[](indices); }
 
+  /**
+   * @brief Get the size object
+   *
+   * @return std::array<int, D>
+   */
   std::array<int, D> get_size() const { return index.get_size(); }
 
+  /**
+   * @brief Get the offset object
+   *
+   * @return std::array<int, D>
+   */
   std::array<int, D> get_offset() const { return index.get_offset(); }
 
+  /**
+   * @brief Checks if the specified indices are in bounds.
+   *
+   * @param indices The indices to check.
+   * @return true
+   * @return false
+   */
   bool inbounds(const std::array<int, D> &indices) { return index.inbounds(indices); }
 
+  /**
+   * @brief Applies the specified function to each element of the array.
+   *
+   * @tparam Func
+   * @param func A function that takes std::array<int, D> as an argument and returns a type convertible to T.
+   */
   template <typename Func> void apply(Func &&func) {
     static_assert(std::is_convertible_v<std::invoke_result_t<Func, std::array<int, D>>, T>,
                   "Func must be invocable with std::array<int, D> and return a type convertible to T");
     auto it = index.begin();
     for (T &element : get_data()) element = std::invoke(std::forward<Func>(func), *(it++));
   }
+
+  /**
+   * @brief Convert Array<T, D> to std::vector<T>.
+   *
+   * @return A reference to underlying data.
+   */
+  operator std::vector<T> &() { return data; }
 
   /**
    * @brief Outputs the array to the specified output stream.
