@@ -105,10 +105,15 @@ public:
     const MultiIndex<D> &index = array.get_index();
     os << "Array<" << TypeName<T>::get() << "," << D << ">(begin = " << utils::array_to_string(index.get_begin())
        << ", end = " << utils::array_to_string(index.get_end())
-       << ", size = " << utils::array_to_string(index.get_size()) << ", linear_size = " << index.get_linear_size();
+       << ", size = " << utils::array_to_string(index.get_size()) << ", linear_size = " << index.get_linear_size()
+       << ")";
     return os;
   }
 };
+
+template <typename T, size_t D> void show(Array<T, D> &array) {
+  utils::show(array.get_data(), array.get_index().get_size(), array.get_index().get_begin());
+}
 
 } // namespace pfc
 
