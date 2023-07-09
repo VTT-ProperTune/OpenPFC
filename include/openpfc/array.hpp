@@ -131,6 +131,13 @@ public:
    */
   operator std::vector<T> &() { return data; }
 
+  void set_data(const std::vector<T> &data) {
+    if (data.size() != index.get_linear_size()) {
+      throw std::runtime_error("Dimension mismatch, set_data failed");
+    }
+    this->data = std::move(data);
+  }
+
   /**
    * @brief Outputs the array to the specified output stream.
    *
