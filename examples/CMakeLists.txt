@@ -28,6 +28,9 @@ target_link_libraries(09_parallel_fft_high_level PRIVATE OpenPFC)
 add_executable(10_ui_register_ic 10_ui_register_ic.cpp)
 target_link_libraries(10_ui_register_ic PRIVATE OpenPFC nlohmann_json::nlohmann_json)
 
+add_executable(11_write_results 11_write_results.cpp)
+target_link_libraries(11_write_results PRIVATE OpenPFC)
+
 add_executable(mpi_worker mpi_worker.cpp)
 target_link_libraries(mpi_worker PRIVATE OpenPFC)
 
