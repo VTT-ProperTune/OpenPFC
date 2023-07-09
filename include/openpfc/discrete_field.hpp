@@ -77,6 +77,7 @@ public:
   Array<T, D> &get_array() { return m_array; }
   const Array<T, D> &get_array() const { return m_array; }
   const MultiIndex<D> &get_index() { return get_array().get_index(); }
+  const MultiIndex<D> &get_index() const { return get_array().get_index(); }
   std::vector<T> &get_data() { return get_array().get_data(); }
 
   /**
@@ -227,6 +228,17 @@ public:
    */
   operator std::vector<T> &() { return get_data(); }
   operator std::vector<T> &() const { return get_data(); }
+
+  /**
+   * @brief Get the size of the field.
+   *
+   * @return const std::array<int, D>&
+   */
+  const std::array<int, D> &get_size() const { return get_index().get_size(); }
+
+  const std::array<int, D> &get_offset() const { return get_index().get_begin(); }
+
+  void set_data(const std::vector<T> &data) { get_array().set_data(data); }
 
   /**
    * @brief Outputs the discrete field to the specified output stream.
