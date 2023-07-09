@@ -40,23 +40,11 @@ target_link_libraries(mpi_timers PRIVATE OpenPFC)
 add_executable(time time.cpp)
 target_link_libraries(time PRIVATE OpenPFC)
 
-add_executable(clean_tungsten clean_tungsten.cpp)
-target_link_libraries(clean_tungsten PRIVATE OpenPFC)
-
-add_executable(clean_tungsten_with_simulator clean_tungsten_with_simulator.cpp)
-target_link_libraries(clean_tungsten_with_simulator PRIVATE OpenPFC)
-
 add_executable(write_results write_results.cpp)
 target_link_libraries(write_results PRIVATE OpenPFC)
 
 add_executable(diffusion_model_with_custom_initial_condition diffusion_model_with_custom_initial_condition.cpp)
 target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE OpenPFC)
-
-add_executable(clean_tungsten_multiple_seeds clean_tungsten_multiple_seeds.cpp)
-target_link_libraries(clean_tungsten_multiple_seeds PRIVATE OpenPFC)
-
-add_executable(clean_tungsten_with_bc clean_tungsten_with_bc.cpp)
-target_link_libraries(clean_tungsten_with_bc PRIVATE OpenPFC nlohmann_json::nlohmann_json)
 
 add_executable(json_read json_read.cpp)
 target_link_libraries(json_read PRIVATE nlohmann_json::nlohmann_json)
