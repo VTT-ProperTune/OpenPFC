@@ -25,13 +25,7 @@ public:
     c_NF.resize(fft.size_outbox());
     opL.resize(fft.size_outbox());
     opN.resize(fft.size_outbox());
-
     add_real_field("concentration", c);
-
-    // fill psi with random numbers
-    std::mt19937_64 rng;
-    std::uniform_real_distribution<double> dist(-1.0, 1.0);
-    for (auto &elem : c) elem = dist(rng);
 
     // prepare operators
     World w = get_world();
@@ -112,12 +106,18 @@ int main(int argc, char **argv) {
 
   // Define time
   double t = 0.0;
-  double t_stop = 2.0;
+  double t_stop = 1.0;
   double dt = 1.0e-3;
   int n = 0; // increment counter
 
   // Initialize the model before starting time stepping
   model.initialize(dt);
+
+  // get the concentration field and fill it with random numbers
+  std::vector<double> &field = model.get_real_field("concentration");
+  std::mt19937_64 rng;
+  std::uniform_real_distribution<double> dist(-1.0, 1.0);
+  for (auto &elem : field) elem = dist(rng);
 
   // initialize VtkWriter
   VtkWriter<double> writer;
@@ -129,7 +129,6 @@ int main(int argc, char **argv) {
   writer.set_origin(world.get_origin());
   writer.set_spacing(world.get_discretization());
   writer.initialize();
-  std::vector<double> &field = model.get_real_field("concentration");
   writer.write(field);
 
   // Initialize high-precision clock
