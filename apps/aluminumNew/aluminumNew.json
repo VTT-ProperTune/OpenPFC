@@ -7,13 +7,13 @@
             "n_sol": -0.036,
             "n_vap": -1.297,
             "T_const": 980,
-		"T_min": 780,
-		"T_max": 1280,
+            "T_min": 780,
+            "T_max": 1280,
             "T0": 89285.0,
             "Bx": 0.817900686921996,
-		"G_grid": 0,
-		"V_grid": 0,
-		"x_initial": 130,
+            "G_grid": 0,
+            "V_grid": 0,
+            "x_initial": 130,
             "alpha_farTol": 0.001,
             "alpha_highOrd": 0,
             "lambda": 0.22,
@@ -42,19 +42,19 @@
     "dt": 1.0,
     "saveat": 200.0,
     "results": "./dataNewer/u_%04d.bin",
-	"fields": [
-	{
-		"name": "psi",
-		"data": "./dataNewer/psi_%04d.bin"
-	}
-	],
+    "fields": [
+        {
+            "name": "psi",
+            "data": "./dataNewer/psi_%04d.bin"
+        }
+    ],
     "initial_conditions": [
         {
             "type": "constant",
             "n0": -0.0060
         },
         {
-            "type": "seed_grid",
+            "type": "seed_grid_fcc",
             "X0": 130.0,
             "Ny": 2,
             "Nz": 1,
