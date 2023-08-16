@@ -2,7 +2,7 @@ if(NOT Catch2_FIND_VERSION)
   set(Catch2_FIND_VERSION 3.3.2)
 endif()
 
-message(STATUS "Fetching Catch2 version ${Catch2_FIND_VERSION}")
+message(STATUS "Fetching Catch2 version ${Catch2_FIND_VERSION} from GitHub https://github.com/catchorg/Catch2.git")
 
 include(FetchContent)
 
