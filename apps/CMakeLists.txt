@@ -6,3 +6,5 @@ if(TUNGSTEN_REUSE_ARRAYS)
   message(STATUS "Tungsten: reusing arrays")
   target_compile_definitions(tungsten PUBLIC MAHTI_HACK)
 endif()
+
+add_subdirectory(aluminumNew)
