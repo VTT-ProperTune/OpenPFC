@@ -1,4 +1,5 @@
 #include "11_write_results.hpp"
+#include <cstdarg>
 #include <openpfc/openpfc.hpp>
 #include <openpfc/ui.hpp>
 #include <random>
