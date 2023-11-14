@@ -193,36 +193,16 @@ public:
           double k = sqrt(-kLap) - 1.0;
           double k2 = k * k;
 
-          double kp = sqrt(-kLap) - 2. / sqrt(3.0);
+          double kp = sqrt(-kLap) - 2.0 / sqrt(3.0);
           double kp2 = kp * kp;
-
-          /*
-          double rTol = -alpha2 * log(params.alpha_farTol) - 1.0;
-          double g1 = 0;
-          if (params.alpha_highOrd == 0) { // gaussian peak
-            g1 = exp(-k2 / alpha2);
-          } else { // quasi-gaussian peak with higher order component to make it
-                    // decay faster towards k=0
-            g1 = exp(-(k2 + rTol * pow(k, params.alpha_highOrd)) / alpha2);
-          }
-          */
 
           double g1 = exp(-k2 / alpha2);
           double gp1 = exp(-kp2 / alpha2);
           double peak = (g1 > gp1) ? g1 : gp1;
 
-          P_F[idx] = -params.Bx * exp(-params.tau_const) * peak;
+          P_F[idx] = params.Bx * exp(-params.tau_const) * peak;
 
-          // taylor expansion of gaussian peak to order 2
-          //    double g2 = 1.0 - 1.0 / alpha2 * k2;
-          // splice the two sides of the peak
-          //    double gf = (k < 0.0) ? g1 : g2;
-          // we separate this out because it is needed in the nonlinear
-          // calculation when T is not constant in space
-          //    double opPeak = -params.Bx * exp(-params.T / params.T0) * gf;
-          // includes the lowest order n_mf term since it is a linear term
-
-          double opCk = params.stabP + params.p2_bar + P_F[idx] + params.q2_bar_L * fMF;
+          double opCk = params.stabP + params.p2_bar - P_F[idx] + params.q2_bar_L * fMF;
 
           filterMF[idx] = fMF;
           opL[idx] = exp(kLap * opCk * dt);
@@ -285,9 +265,9 @@ public:
           double q3_bar = params.q31_bar * (params.T_const + T_var) / params.T0 + params.q30_bar;
           double u = psi[idx];
           double v = psiMF[idx];
-          double kernel_term_N = (1.0 - exp(-T_var / params.T0)) * P_star_psi[idx];
+          double kernel_term_N = -(1.0 - exp(-T_var / params.T0)) * P_star_psi[idx];
           psiN[idx] = params.p3_bar * u * u + params.p4_bar * u * u * u + q2_bar_N * v + q3_bar * v * v +
-                      params.q4_bar * v * v * v + kernel_term_N;
+                      params.q4_bar * v * v * v - kernel_term_N;
           local_FE += params.p3_bar * u * u * u / 3. + params.p4_bar * u * u * u * u / 4. + q2_bar_N * u * v / 2. +
                       q3_bar * u * v * v / 3. + params.q4_bar * u * v * v * v / 4. + -u * kernel_term_N * u / 2. +
                       -u * P_star_psi[idx] / 2. + params.p2_bar * u * u / 2. + params.q2_bar * u * v / 2.;
