@@ -150,10 +150,9 @@ public:
           double gf = (k < 0.0) ? g1 : g2;
           // we separate this out because it is needed in the nonlinear
           // calculation when T is not constant in space
-          double opPeak = -params.Bx * exp(-params.T / params.T0) * gf;
+          double opPeak = params.Bx * exp(-params.T / params.T0) * gf;
           // includes the lowest order n_mf term since it is a linear term
-          double opCk =
-              params.stabP + params.p2_bar + opPeak + params.q2_bar * fMF;
+          double opCk = params.stabP + params.p2_bar - opPeak + params.q2_bar * fMF;
 
           filterMF[idx] = fMF;
           opL[idx] = exp(kLap * opCk * dt);
@@ -180,8 +179,9 @@ public:
 
     // Calculate mean-field density n_mf
     fft.forward(psi, psi_F);
-    for (size_t idx = 0, N = psiMF_F.size(); idx < N; idx++)
+    for (size_t idx = 0, N = psiMF_F.size(); idx < N; idx++) {
       psiMF_F[idx] = filterMF[idx] * psi_F[idx];
+    }
     fft.backward(psiMF_F, psiMF);
 
     // Calculate the nonlinear part of the evolution equation in a real space
@@ -195,15 +195,17 @@ public:
 
     // Apply stabilization factor if given in parameters
     if (params.stabP != 0.0)
-      for (size_t idx = 0, N = psiN.size(); idx < N; idx++)
+      for (size_t idx = 0, N = psiN.size(); idx < N; idx++) {
         psiN[idx] = psiN[idx] - params.stabP * psi[idx];
+      }
 
     // Fourier transform of the nonlinear part of the evolution equation
     fft.forward(psiN, psiN_F);
 
     // Apply one step of the evolution equation
-    for (size_t idx = 0, N = psi_F.size(); idx < N; idx++)
+    for (size_t idx = 0, N = psi_F.size(); idx < N; idx++) {
       psi_F[idx] = opL[idx] * psi_F[idx] + opN[idx] * psiN_F[idx];
+    }
 
     // Inverse Fourier transform result back to real space
     fft.backward(psi_F, psi);
