@@ -96,11 +96,16 @@ endif()
 
 install(DIRECTORY include/openpfc DESTINATION include)
 
-# Install nlohmann_json headers
-install(
-    DIRECTORY ${nlohmann_json_SOURCE_DIR}/include/nlohmann
-    DESTINATION include
-)
+# Install nlohmann_json headers, but only if nlohmann_json_SOURCE_DIR is
+# defined, i.e. the package is built from source during the configure step.
+# This is to avoid installing the headers if the package is installed from
+# a system wide package manager.
+if(DEFINED nlohmann_json_SOURCE_DIR)
+  message(STATUS "Installing nlohmann_json headers")
+  install(DIRECTORY ${nlohmann_json_SOURCE_DIR}/include/nlohmann
+          DESTINATION include
+  )
+endif()
 
 # generate cmake file containing code to import all targets
 
