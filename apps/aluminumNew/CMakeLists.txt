@@ -21,5 +21,7 @@ if(TARGET Catch2::Catch2WithMain)
     include(CTest)
     catch_discover_tests(aluminumTest)
 else()
-    message(STATUS "Alunimum: Catch2 not found, not building tests")
+    message(STATUS "Aluminum: Catch2 not found, not building tests")
 endif()
+
+install(TARGETS aluminumNew DESTINATION bin)

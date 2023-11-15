@@ -7,4 +7,6 @@ if(TUNGSTEN_REUSE_ARRAYS)
   target_compile_definitions(tungsten PUBLIC MAHTI_HACK)
 endif()
 
+install(TARGETS tungsten DESTINATION bin)
+
 add_subdirectory(aluminumNew)
