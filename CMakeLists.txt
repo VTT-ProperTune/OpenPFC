@@ -109,6 +109,8 @@ endif()
 
 # generate cmake file containing code to import all targets
 
+set(CMAKE_SKIP_INSTALL_RPATH TRUE)  # don't add install path to rpath
+
 install(TARGETS OpenPFC EXPORT OpenPFCTargets DESTINATION include)
 install(EXPORT OpenPFCTargets
   FILE OpenPFCTargets.cmake
