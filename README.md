@@ -125,7 +125,7 @@ environment is something like
 
 ```bash
 module load gcc openmpi fftw
-CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH
+export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH
 cmake -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=$HOME/opt/openpfc \
       -S . -B build
@@ -173,9 +173,66 @@ straightforward:
 
 ```bash
 cmake -S . -B build
-cmake --build
+cmake --build build
 ./build/main
 ```
+
+## Troubleshooting
+
+During the configuration step (`cmake -S. -B build`), you might end up to the
+following error message:
+
+```text
+CMake Error at CMakeLists.txt:3 (find_package):
+By not providing "FindOpenPFC.cmake" in CMAKE_MODULE_PATH this project has
+asked CMake to find a package configuration file provided by "OpenPFC", but
+CMake did not find one.
+```
+
+The error message is trying to say command in `CMakeLists.txt` (line 3) fails:
+
+```cmake
+find_package(OpenPFC REQUIRED)  # <-- this is failing
+```
+
+The reason why this happens is that cmake is not able to find the package. By
+default, cmake finds packages by looking a file which is called
+`Find<package_name>.cmake` from couple of standard locations. For example, in
+Ubuntu, one of these locations is `/usr/lib/cmake`, where the files are
+installed when doing a global install of some package with root rights. When
+working with supercomputers, users in general doesn't have rights to make global
+installations, thus packages are almost always installed to some non-default
+locations. Thus, one needs to give some hints to cmake where the file could be
+found. This can be done (at least) two different ways.
+
+The first way is to set up an environment variable indicating any extra
+locations for the files. One option is to use `CMAKE_PREFIX_PATH` environment
+variable, like before. For example, if `OpenPFC` is installed to `/opt/OpenPFC`,
+one can give that information before starting configuration:
+
+ ```bash
+ export CMAKE_PREFIX_PATH=/opt/OpenPFC:$CMAKE_PREFIX_PATH
+ cmake -S . -B build
+ # rest of the things ...
+ ```
+
+ Another option is to hard code the choise inside the `CMakeLists.txt` file
+ directly. Just keep in mind, that this option is not very portable as users
+ tends to install software to several different locations and there is no any
+ general rule how it should be done. So, instead of defining `CMAKE_PREFIX_PATH`
+ before doing configuration, the following change in `CMakeLists.txt` is
+ equivalent:
+
+ ```cmake
+cmake_minimum_required(VERSION 3.15)
+project(helloworld)
+# find_package(OpenPFC REQUIRED)                                     #  <-- Replace this command ...
+find_package(OpenPFC REQUIRED PATHS /opt/OpenPFC/lib/cmake/OpenPFC)  #  <-- ... with this one
+add_executable(main main.cpp)
+target_link_libraries(main OpenPFC)
+```
+
+This way, cmake know to search necessary files from the path given above.
 
 [software framework]: https://en.wikipedia.org/wiki/Software_framework
 
