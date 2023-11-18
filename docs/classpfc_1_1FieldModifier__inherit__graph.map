@@ -1,0 +1,21 @@
+<map id="pfc::FieldModifier" name="pfc::FieldModifier">
+<area shape="rect" id="Node000001" title="The FieldModifier class represents a base class for field modifiers in PFC." alt="" coords="5,203,140,228"/>
+<area shape="rect" id="Node000002" href="$classGaussianIC.html" title=" " alt="" coords="212,5,307,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="82,188,121,115,150,75,186,40,210,27,213,31,190,44,154,78,125,118,87,191"/>
+<area shape="rect" id="Node000003" href="$classMyIC.html" title=" " alt="" coords="232,55,287,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="88,190,129,139,156,112,187,89,209,78,231,70,233,75,211,83,189,94,160,116,133,143,92,193"/>
+<area shape="rect" id="Node000004" href="$classpfc_1_1Constant.html" title="A class that represents a constant field modifier for use as an initial condition in a partial differ..." alt="" coords="205,104,313,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="100,192,140,165,187,138,214,127,216,132,189,143,143,169,103,196"/>
+<area shape="rect" id="Node000005" href="$classpfc_1_1FileReader.html" title=" " alt="" coords="200,153,319,179"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="134,197,209,176,211,181,135,202"/>
+<area shape="rect" id="Node000006" href="$classpfc_1_1FixedBC.html" title=" " alt="" coords="208,203,311,228"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="154,213,208,213,208,218,154,218"/>
+<area shape="rect" id="Node000007" href="$classpfc_1_1MovingBC.html" title=" " alt="" coords="201,252,317,277"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="135,229,211,249,209,254,134,234"/>
+<area shape="rect" id="Node000008" href="$classpfc_1_1RandomSeeds.html" title=" " alt="" coords="188,301,331,327"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="104,234,144,260,189,286,219,299,217,304,187,291,141,265,101,238"/>
+<area shape="rect" id="Node000009" href="$classpfc_1_1SeedGrid.html" title=" " alt="" coords="205,351,314,376"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="93,238,134,287,160,313,189,336,214,348,212,353,187,340,157,317,130,291,89,241"/>
+<area shape="rect" id="Node000010" href="$classpfc_1_1SingleSeed.html" title=" " alt="" coords="198,400,321,425"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="87,239,126,312,155,351,190,385,211,398,209,402,186,389,151,355,121,314,82,242"/>
+</map>

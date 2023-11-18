@@ -1,0 +1,411 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('classpfc_1_1MPI__Worker.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="classpfc_1_1MPI__Worker-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">pfc::MPI_Worker Class Reference</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>An MPI worker class that wraps MPI_Init and MPI_Finalize.  
+ <a href="classpfc_1_1MPI__Worker.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="worker_8hpp_source.html">worker.hpp</a>&gt;</code></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a64ea7c54fb46e36555f6d07af0ee10bc"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1MPI__Worker.html#a64ea7c54fb46e36555f6d07af0ee10bc">MPI_Worker</a> (int argc, char *argv[], MPI_Comm comm=MPI_COMM_WORLD)</td></tr>
+<tr class="memdesc:a64ea7c54fb46e36555f6d07af0ee10bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an MPI worker instance and initializes MPI.  <br /></td></tr>
+<tr class="separator:a64ea7c54fb46e36555f6d07af0ee10bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17bb152b0174c3dc546dd2333eed4910"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1MPI__Worker.html#a17bb152b0174c3dc546dd2333eed4910">~MPI_Worker</a> ()</td></tr>
+<tr class="memdesc:a17bb152b0174c3dc546dd2333eed4910"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroys the MPI worker instance and finalizes MPI.  <br /></td></tr>
+<tr class="separator:a17bb152b0174c3dc546dd2333eed4910"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abe69a30766e26815ac9d7fbd0582a658"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1MPI__Worker.html#abe69a30766e26815ac9d7fbd0582a658">get_rank</a> () const</td></tr>
+<tr class="memdesc:abe69a30766e26815ac9d7fbd0582a658"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the rank of this worker process in the MPI communicator.  <br /></td></tr>
+<tr class="separator:abe69a30766e26815ac9d7fbd0582a658"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e227ebfd3825ca080dc6000f9ffe688"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1MPI__Worker.html#a8e227ebfd3825ca080dc6000f9ffe688">get_num_ranks</a> () const</td></tr>
+<tr class="memdesc:a8e227ebfd3825ca080dc6000f9ffe688"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the number of processes in the MPI communicator.  <br /></td></tr>
+<tr class="separator:a8e227ebfd3825ca080dc6000f9ffe688"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a45910002b928f63fb94570851d760d29"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1MPI__Worker.html#a45910002b928f63fb94570851d760d29">mute</a> ()</td></tr>
+<tr class="memdesc:a45910002b928f63fb94570851d760d29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mutes the standard output.  <br /></td></tr>
+<tr class="separator:a45910002b928f63fb94570851d760d29"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a380de17b877c0dfd91d08a1ea6f57236"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1MPI__Worker.html#a380de17b877c0dfd91d08a1ea6f57236">unmute</a> ()</td></tr>
+<tr class="memdesc:a380de17b877c0dfd91d08a1ea6f57236"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unmutes the standard output.  <br /></td></tr>
+<tr class="separator:a380de17b877c0dfd91d08a1ea6f57236"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>An MPI worker class that wraps MPI_Init and MPI_Finalize. </p>
+<p>This class represents a single worker process in a MPI application. It wraps the MPI_Init and MPI_Finalize calls and provides helper functions to get the rank and number of processes in the MPI communicator. </p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a64ea7c54fb46e36555f6d07af0ee10bc" name="a64ea7c54fb46e36555f6d07af0ee10bc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64ea7c54fb46e36555f6d07af0ee10bc">&#9670;&#160;</a></span>MPI_Worker()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pfc::MPI_Worker::MPI_Worker </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>argv</em>[], </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em> = <code>MPI_COMM_WORLD</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Constructs an MPI worker instance and initializes MPI. </p>
+<p>This constructor initializes MPI and retrieves the rank and number of processes in the given MPI communicator. If the rank is not zero, the standard output is muted to avoid duplicate output.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">argc</td><td>Pointer to the number of command-line arguments </td></tr>
+    <tr><td class="paramname">argv</td><td>Pointer to an array of command-line arguments </td></tr>
+    <tr><td class="paramname">comm</td><td>MPI communicator to use </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a17bb152b0174c3dc546dd2333eed4910" name="a17bb152b0174c3dc546dd2333eed4910"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17bb152b0174c3dc546dd2333eed4910">&#9670;&#160;</a></span>~MPI_Worker()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pfc::MPI_Worker::~MPI_Worker </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Destroys the MPI worker instance and finalizes MPI. </p>
+<p>This destructor finalizes MPI. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="a8e227ebfd3825ca080dc6000f9ffe688" name="a8e227ebfd3825ca080dc6000f9ffe688"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8e227ebfd3825ca080dc6000f9ffe688">&#9670;&#160;</a></span>get_num_ranks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int pfc::MPI_Worker::get_num_ranks </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the number of processes in the MPI communicator. </p>
+<dl class="section return"><dt>Returns</dt><dd>The number of processes in the MPI communicator </dd></dl>
+
+</div>
+</div>
+<a id="abe69a30766e26815ac9d7fbd0582a658" name="abe69a30766e26815ac9d7fbd0582a658"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abe69a30766e26815ac9d7fbd0582a658">&#9670;&#160;</a></span>get_rank()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int pfc::MPI_Worker::get_rank </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the rank of this worker process in the MPI communicator. </p>
+<dl class="section return"><dt>Returns</dt><dd>The rank of this worker process </dd></dl>
+
+</div>
+</div>
+<a id="a45910002b928f63fb94570851d760d29" name="a45910002b928f63fb94570851d760d29"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a45910002b928f63fb94570851d760d29">&#9670;&#160;</a></span>mute()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::MPI_Worker::mute </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Mutes the standard output. </p>
+<p>This function sets the failbit of the standard output stream, effectively muting it. </p>
+
+</div>
+</div>
+<a id="a380de17b877c0dfd91d08a1ea6f57236" name="a380de17b877c0dfd91d08a1ea6f57236"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a380de17b877c0dfd91d08a1ea6f57236">&#9670;&#160;</a></span>unmute()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::MPI_Worker::unmute </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Unmutes the standard output. </p>
+<p>This function clears the failbit of the standard output stream, effectively unmuting it. </p>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following file:<ul>
+<li>openpfc/mpi/<a class="el" href="worker_8hpp_source.html">worker.hpp</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="namespacepfc.html">pfc</a></li><li class="navelem"><a class="el" href="classpfc_1_1MPI__Worker.html">MPI_Worker</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('deprecated_8hpp.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Functions</a>  </div>
+  <div class="headertitle"><div class="title">deprecated.hpp File Reference</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><code>#include &lt;chrono&gt;</code><br />
+<code>#include &lt;climits&gt;</code><br />
+<code>#include &lt;cmath&gt;</code><br />
+<code>#include &lt;filesystem&gt;</code><br />
+<code>#include &lt;fstream&gt;</code><br />
+<code>#include &lt;iostream&gt;</code><br />
+<code>#include &lt;string&gt;</code><br />
+<code>#include &lt;vector&gt;</code><br />
+<code>#include &lt;heffte.h&gt;</code><br />
+<code>#include &quot;<a class="el" href="fft_8hpp_source.html">fft.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="utils_8hpp_source.html">utils.hpp</a>&quot;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Include dependency graph for deprecated.hpp:</div>
+<div class="dyncontent">
+<div class="center"><img src="deprecated_8hpp__incl.png" border="0" usemap="#aopenpfc_2deprecated_8hpp" alt=""/></div>
+<map name="aopenpfc_2deprecated_8hpp" id="aopenpfc_2deprecated_8hpp">
+<area shape="rect" title=" " alt="" coords="412,5,591,31"/>
+<area shape="rect" title=" " alt="" coords="5,79,72,104"/>
+<area shape="poly" title=" " alt="" coords="412,32,263,52,86,81,85,76,262,46,411,27"/>
+<area shape="rect" title=" " alt="" coords="96,79,163,104"/>
+<area shape="poly" title=" " alt="" coords="431,33,177,81,176,76,430,28"/>
+<area shape="rect" title=" " alt="" coords="187,79,250,104"/>
+<area shape="poly" title=" " alt="" coords="456,33,264,81,263,76,454,28"/>
+<area shape="rect" title=" " alt="" coords="275,79,365,104"/>
+<area shape="poly" title=" " alt="" coords="473,33,363,76,361,71,471,28"/>
+<area shape="rect" title=" " alt="" coords="390,79,463,104"/>
+<area shape="poly" title=" " alt="" coords="491,33,451,71,447,67,488,29"/>
+<area shape="rect" title=" " alt="" coords="373,299,453,324"/>
+<area shape="poly" title=" " alt="" coords="503,31,495,66,477,106,460,122,444,130,428,138,414,153,402,186,399,222,402,256,408,285,403,286,397,257,394,222,397,185,410,151,425,134,441,125,457,117,472,102,490,64,497,30"/>
+<area shape="rect" title=" " alt="" coords="713,152,772,177"/>
+<area shape="poly" title=" " alt="" coords="526,28,616,76,717,142,714,146,613,81,523,33"/>
+<area shape="rect" title=" " alt="" coords="1061,152,1123,177"/>
+<area shape="poly" title=" " alt="" coords="591,23,739,41,822,56,903,76,990,108,1060,143,1058,148,987,113,902,81,821,61,738,46,591,28"/>
+<area shape="rect" title=" " alt="" coords="640,299,712,324"/>
+<area shape="poly" title=" " alt="" coords="591,21,736,32,902,55,980,72,1049,93,1103,119,1124,134,1138,150,1152,177,1155,201,1149,222,1135,241,1114,256,1087,269,1020,289,942,302,862,309,726,313,726,308,862,304,942,297,1019,284,1085,264,1111,252,1131,237,1144,220,1150,201,1147,179,1134,154,1120,138,1101,123,1047,98,979,77,901,60,735,38,591,26"/>
+<area shape="rect" href="fft_8hpp.html" title=" " alt="" coords="539,79,603,104"/>
+<area shape="poly" title=" " alt="" coords="515,29,552,67,548,71,511,33"/>
+<area shape="rect" href="utils_8hpp.html" title=" " alt="" coords="811,79,890,104"/>
+<area shape="poly" title=" " alt="" coords="558,28,798,77,797,82,557,33"/>
+<area shape="poly" title=" " alt="" coords="539,105,476,127,448,140,431,154,416,185,409,221,408,255,411,285,406,285,403,255,404,220,411,184,427,150,445,136,474,122,537,100"/>
+<area shape="poly" title=" " alt="" coords="594,102,624,121,659,148,692,183,717,224,720,242,717,259,699,289,694,287,712,257,715,242,712,226,688,186,655,152,621,125,591,106"/>
+<area shape="rect" href="decomposition_8hpp.html" title=" " alt="" coords="441,152,588,177"/>
+<area shape="poly" title=" " alt="" coords="564,106,534,143,530,140,559,103"/>
+<area shape="rect" title=" " alt="" coords="644,225,703,251"/>
+<area shape="poly" title=" " alt="" coords="581,103,659,213,655,216,577,106"/>
+<area shape="poly" title=" " alt="" coords="508,179,472,227,430,288,426,285,467,224,503,176"/>
+<area shape="poly" title=" " alt="" coords="530,176,655,288,651,292,526,180"/>
+<area shape="rect" href="world_8hpp.html" title=" " alt="" coords="482,225,569,251"/>
+<area shape="poly" title=" " alt="" coords="519,177,524,211,519,212,514,178"/>
+<area shape="poly" title=" " alt="" coords="541,175,636,217,634,222,539,180"/>
+<area shape="poly" title=" " alt="" coords="509,253,445,293,442,289,506,248"/>
+<area shape="poly" title=" " alt="" coords="551,248,640,290,638,295,548,253"/>
+<area shape="rect" title=" " alt="" coords="497,299,553,324"/>
+<area shape="poly" title=" " alt="" coords="528,251,528,285,523,285,523,251"/>
+<area shape="poly" title=" " alt="" coords="835,106,773,147,770,142,832,102"/>
+<area shape="poly" title=" " alt="" coords="890,101,1048,148,1047,153,889,107"/>
+<area shape="poly" title=" " alt="" coords="846,106,822,141,786,179,751,203,716,222,713,217,748,199,782,175,817,138,842,103"/>
+<area shape="rect" title=" " alt="" coords="959,152,1036,177"/>
+<area shape="poly" title=" " alt="" coords="875,102,962,144,960,148,873,106"/>
+<area shape="rect" title=" " alt="" coords="847,152,934,177"/>
+<area shape="poly" title=" " alt="" coords="860,103,880,139,875,141,855,106"/>
+</map>
+</div>
+</div><div class="textblock"><div class="dynheader">
+This graph shows which files directly or indirectly include this file:</div>
+<div class="dyncontent">
+<div class="center"><img src="deprecated_8hpp__dep__incl.png" border="0" usemap="#aopenpfc_2deprecated_8hppdep" alt=""/></div>
+<map name="aopenpfc_2deprecated_8hppdep" id="aopenpfc_2deprecated_8hppdep">
+<area shape="rect" title=" " alt="" coords="235,5,414,31"/>
+<area shape="rect" href="clean__tungsten_8cpp.html" title=" " alt="" coords="5,79,191,133"/>
+<area shape="poly" title=" " alt="" coords="282,38,168,81,166,76,281,33"/>
+<area shape="rect" href="clean__tungsten__multiple__seeds_8cpp.html" title=" " alt="" coords="215,79,434,133"/>
+<area shape="poly" title=" " alt="" coords="327,44,327,79,322,79,322,44"/>
+<area shape="rect" href="clean__tungsten__with__bc_8cpp.html" title=" " alt="" coords="459,79,644,133"/>
+<area shape="poly" title=" " alt="" coords="369,33,483,76,481,81,367,38"/>
+</map>
+</div>
+</div>
+<p><a href="deprecated_8hpp_source.html">Go to the source code of this file.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html">pfc::Simulation</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacepfc"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacepfc.html">pfc</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a798d92d1c30994837a03fd8fa08b4afb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="deprecated_8hpp.html#a798d92d1c30994837a03fd8fa08b4afb">MPI_TAG_TIMING</a>&#160;&#160;&#160;3</td></tr>
+<tr class="separator:a798d92d1c30994837a03fd8fa08b4afb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a0e69f1b95ee26e616a97bea6071e6261"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacepfc.html#a0e69f1b95ee26e616a97bea6071e6261">pfc::MPI_Solve</a> (<a class="el" href="classpfc_1_1Simulation.html">Simulation</a> &amp;s)</td></tr>
+<tr class="separator:a0e69f1b95ee26e616a97bea6071e6261"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="a798d92d1c30994837a03fd8fa08b4afb" name="a798d92d1c30994837a03fd8fa08b4afb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a798d92d1c30994837a03fd8fa08b4afb">&#9670;&#160;</a></span>MPI_TAG_TIMING</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define MPI_TAG_TIMING&#160;&#160;&#160;3</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_2c145bcb53510c73f45f3661004e5320.html">openpfc</a></li><li class="navelem"><a class="el" href="deprecated_8hpp.html">deprecated.hpp</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

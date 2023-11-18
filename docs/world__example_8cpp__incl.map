@@ -1,0 +1,13 @@
+<map id="/home/juajukka/dev/openpfc/examples/world_example.cpp" name="/home/juajukka/dev/openpfc/examples/world_example.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="47,5,233,60"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,181,77,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="102,62,78,84,58,109,48,138,44,168,39,167,43,137,54,107,74,80,98,58"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="200,181,280,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="181,58,205,80,225,107,237,137,242,167,236,168,232,138,220,109,201,84,177,62"/>
+<area shape="rect" id="Node000004" href="$world_8hpp.html" title=" " alt="" coords="69,108,211,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="143,60,143,94,137,94,137,60"/>
+<area shape="poly" id="edge5_Node000004_Node000002" title=" " alt="" coords="126,136,70,175,67,171,123,131"/>
+<area shape="poly" id="edge6_Node000004_Node000003" title=" " alt="" coords="158,131,214,171,211,175,155,136"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="112,181,168,207"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="143,134,143,168,137,168,137,134"/>
+</map>

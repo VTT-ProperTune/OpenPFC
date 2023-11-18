@@ -1,0 +1,22 @@
+var searchData=
+[
+  ['r2c_5fdirection_0',['r2c_direction',['../namespacepfc_1_1constants.html#a9a330b75a593fa395c82de5d8d44754c',1,'pfc::constants::r2c_direction'],['../classpfc_1_1Decomposition.html#a91772f8bc29c589aa4ee98a5507f7621',1,'pfc::Decomposition::r2c_direction']]],
+  ['random_5fseeds_2ehpp_1',['random_seeds.hpp',['../random__seeds_8hpp.html',1,'']]],
+  ['randomseeds_2',['RandomSeeds',['../classpfc_1_1RandomSeeds.html',1,'pfc']]],
+  ['rank_3',['rank',['../classpfc_1_1mpi_1_1communicator.html#a4e87f9810209ebfa54b55eaefaca7edc',1,'pfc::mpi::communicator']]],
+  ['rank0_4',['rank0',['../classpfc_1_1Model.html#ade57ace089ccbd4a2a07af3a74aa49d7',1,'pfc::Model']]],
+  ['read_5',['read',['../classpfc_1_1BinaryReader.html#ae2b8a6198a2a40ff7e52a5c9d0bf6e0a',1,'pfc::BinaryReader']]],
+  ['read_5fdetailed_5ftiming_5fconfiguration_6',['read_detailed_timing_configuration',['../classpfc_1_1ui_1_1App.html#ac3556ca6e5633c0c25172c5869e3c8a4',1,'pfc::ui::App']]],
+  ['readme_2emd_7',['README.md',['../README_8md.html',1,'']]],
+  ['realfield_8',['RealField',['../namespacepfc.html#aae60a50a832d48e0a18c0d92543964ba',1,'pfc']]],
+  ['realfieldset_9',['RealFieldSet',['../namespacepfc.html#aac6254e3da7590568538fa1feef0dbe8',1,'pfc']]],
+  ['register_5ffield_5fmodifier_10',['register_field_modifier',['../namespacepfc_1_1ui.html#a353c6221a2766441fe98161191eafbca',1,'pfc::ui']]],
+  ['register_5fmodifier_11',['register_modifier',['../classpfc_1_1ui_1_1FieldModifierRegistry.html#a2715f1b2bc61ac1f6c1269b4645248fb',1,'pfc::ui::FieldModifierRegistry']]],
+  ['reset_12',['reset',['../classpfc_1_1mpi_1_1timer.html#a76275573c29d21e3b968817242d3d2bd',1,'pfc::mpi::timer']]],
+  ['reset_5ffft_5ftime_13',['reset_fft_time',['../classpfc_1_1FFT.html#a82e0876e1a90b0351a1755cb9c2c1989',1,'pfc::FFT']]],
+  ['results_5fwriter_2ehpp_14',['results_writer.hpp',['../results__writer_8hpp.html',1,'']]],
+  ['resultswriter_15',['ResultsWriter',['../classpfc_1_1ResultsWriter.html',1,'pfc::ResultsWriter'],['../classpfc_1_1ResultsWriter.html#acdba231f2f9786a6db22141d45d6ec74',1,'pfc::ResultsWriter::ResultsWriter()']]],
+  ['run_16',['run',['../04__diffusion__model_8cpp.html#a13a43e6d814de94978c515cb084873b1',1,'run():&#160;04_diffusion_model.cpp'],['../05__simulator_8cpp.html#a13a43e6d814de94978c515cb084873b1',1,'run():&#160;05_simulator.cpp'],['../diffusion__model__with__custom__initial__condition_8cpp.html#a13a43e6d814de94978c515cb084873b1',1,'run():&#160;diffusion_model_with_custom_initial_condition.cpp']]],
+  ['run_5fsimulator_17',['run_simulator',['../05__simulator_8cpp.html#ac9aa23c972ec106174145e4e3602b629',1,'05_simulator.cpp']]],
+  ['run_5ftest_18',['run_test',['../diffusion__model__with__custom__initial__condition_8cpp.html#af80aca2fd46fb7ef2e74839d31f25de6',1,'diffusion_model_with_custom_initial_condition.cpp']]]
+];

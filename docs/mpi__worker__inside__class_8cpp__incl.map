@@ -1,0 +1,26 @@
+<map id="/home/juajukka/dev/openpfc/examples/mpi_worker_inside_class.cpp" name="/home/juajukka/dev/openpfc/examples/mpi_worker_inside_class.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="23,5,209,60"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,255,85,280"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="95,62,56,115,39,148,25,182,23,197,25,213,35,242,29,243,20,214,18,197,20,181,34,145,52,112,90,59"/>
+<area shape="rect" id="Node000003" href="$mpi_8hpp.html" title=" " alt="" coords="169,108,300,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="154,58,209,98,206,102,151,62"/>
+<area shape="rect" id="Node000004" href="$communicator_8hpp.html" title=" " alt="" coords="507,181,679,207"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="293,131,522,176,521,181,292,136"/>
+<area shape="rect" id="Node000007" href="$environment_8hpp.html" title=" " alt="" coords="320,181,483,207"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="262,131,363,173,361,178,260,136"/>
+<area shape="rect" id="Node000008" href="$timer_8hpp.html" title=" " alt="" coords="35,181,149,207"/>
+<area shape="poly" id="edge8_Node000003_Node000008" title=" " alt="" coords="213,136,129,177,126,173,211,131"/>
+<area shape="rect" id="Node000010" href="$worker_8hpp.html" title=" " alt="" coords="173,181,296,207"/>
+<area shape="poly" id="edge12_Node000003_Node000010" title=" " alt="" coords="237,134,237,168,232,168,232,134"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="555,255,632,280"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="596,207,596,241,591,241,591,207"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="288,255,347,280"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="550,209,361,258,360,252,548,204"/>
+<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="390,209,343,248,340,243,386,205"/>
+<area shape="poly" id="edge9_Node000008_Node000002" title=" " alt="" coords="87,208,63,245,58,242,82,206"/>
+<area shape="poly" id="edge10_Node000008_Node000006" title=" " alt="" coords="129,204,276,250,274,255,127,209"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="109,255,168,280"/>
+<area shape="poly" id="edge11_Node000008_Node000009" title=" " alt="" coords="102,206,126,242,121,245,97,208"/>
+<area shape="poly" id="edge14_Node000010_Node000002" title=" " alt="" coords="205,209,90,252,88,247,203,204"/>
+<area shape="poly" id="edge13_Node000010_Node000006" title=" " alt="" coords="250,205,295,243,292,248,246,209"/>
+</map>

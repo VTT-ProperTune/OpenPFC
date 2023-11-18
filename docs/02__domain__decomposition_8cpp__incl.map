@@ -1,0 +1,20 @@
+<map id="/home/juajukka/dev/openpfc/examples/02_domain_decomposition.cpp" name="/home/juajukka/dev/openpfc/examples/02_domain_decomposition.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="24,5,232,60"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,255,85,280"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="108,62,92,84,78,109,66,144,58,180,50,241,44,240,53,179,61,142,74,107,87,81,103,59"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="284,181,343,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="233,51,277,73,297,88,313,107,320,121,323,137,322,168,317,167,318,138,315,123,308,109,293,92,274,77,231,56"/>
+<area shape="rect" id="Node000004" href="$decomposition_8hpp.html" title=" " alt="" coords="96,108,299,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="151,58,181,95,177,99,147,62"/>
+<area shape="rect" id="Node000005" href="$world_8hpp.html" title=" " alt="" coords="97,181,183,207"/>
+<area shape="poly" id="edge11_Node000001_Node000005" title=" " alt="" coords="106,62,87,96,83,114,87,132,99,153,115,170,111,174,95,156,81,134,78,114,82,94,102,59"/>
+<area shape="poly" id="edge9_Node000004_Node000002" title=" " alt="" coords="163,136,123,155,86,183,67,212,54,242,49,240,62,209,82,180,121,150,161,131"/>
+<area shape="poly" id="edge10_Node000004_Node000003" title=" " alt="" coords="217,131,284,172,281,176,215,136"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="190,135,160,172,156,169,186,132"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="189,255,261,280"/>
+<area shape="poly" id="edge8_Node000004_Node000007" title=" " alt="" coords="202,133,223,240,218,241,197,134"/>
+<area shape="poly" id="edge7_Node000005_Node000002" title=" " alt="" coords="126,209,73,248,70,244,123,205"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="109,255,165,280"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="142,207,141,241,136,241,137,207"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="155,205,203,244,199,248,152,209"/>
+</map>

@@ -1,0 +1,537 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('classpfc_1_1FFT.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="classpfc_1_1FFT-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">pfc::FFT Class Reference</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p><a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> class for performing forward and backward Fast Fourier Transformations.  
+ <a href="classpfc_1_1FFT.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="fft_8hpp_source.html">fft.hpp</a>&gt;</code></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a1eaef8226c2e6ab27cb75245935f8c5b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#a1eaef8226c2e6ab27cb75245935f8c5b">FFT</a> (const <a class="el" href="classpfc_1_1Decomposition.html">Decomposition</a> &amp;decomposition, MPI_Comm comm=MPI_COMM_WORLD, heffte::plan_options plan_options=heffte::default_options&lt; heffte::backend::fftw &gt;())</td></tr>
+<tr class="memdesc:a1eaef8226c2e6ab27cb75245935f8c5b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> object with the given <a class="el" href="classpfc_1_1Decomposition.html" title="Class representing the domain decomposition for parallel Fast Fourier Transform.">Decomposition</a> and MPI communicator.  <br /></td></tr>
+<tr class="separator:a1eaef8226c2e6ab27cb75245935f8c5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad1dbbcf9e1af15ad50c53615440bab7e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#ad1dbbcf9e1af15ad50c53615440bab7e">forward</a> (const std::vector&lt; double &gt; &amp;in, std::vector&lt; std::complex&lt; double &gt; &gt; &amp;out)</td></tr>
+<tr class="memdesc:ad1dbbcf9e1af15ad50c53615440bab7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs the forward <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> transformation.  <br /></td></tr>
+<tr class="separator:ad1dbbcf9e1af15ad50c53615440bab7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa192cea8711b2aa66bb855672c7873ca"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#aa192cea8711b2aa66bb855672c7873ca">backward</a> (const std::vector&lt; std::complex&lt; double &gt; &gt; &amp;in, std::vector&lt; double &gt; &amp;out)</td></tr>
+<tr class="memdesc:aa192cea8711b2aa66bb855672c7873ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Performs the backward (inverse) <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> transformation.  <br /></td></tr>
+<tr class="separator:aa192cea8711b2aa66bb855672c7873ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a82e0876e1a90b0351a1755cb9c2c1989"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#a82e0876e1a90b0351a1755cb9c2c1989">reset_fft_time</a> ()</td></tr>
+<tr class="memdesc:a82e0876e1a90b0351a1755cb9c2c1989"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resets the recorded <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computation time to zero.  <br /></td></tr>
+<tr class="separator:a82e0876e1a90b0351a1755cb9c2c1989"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5608d96e80c2275edc83f125018f006f"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#a5608d96e80c2275edc83f125018f006f">get_fft_time</a> () const</td></tr>
+<tr class="memdesc:a5608d96e80c2275edc83f125018f006f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the recorded <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computation time.  <br /></td></tr>
+<tr class="separator:a5608d96e80c2275edc83f125018f006f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aab2366b6624d4ba3d549e6e952e893e9"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classpfc_1_1Decomposition.html">Decomposition</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#aab2366b6624d4ba3d549e6e952e893e9">get_decomposition</a> ()</td></tr>
+<tr class="memdesc:aab2366b6624d4ba3d549e6e952e893e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the associated <a class="el" href="classpfc_1_1Decomposition.html" title="Class representing the domain decomposition for parallel Fast Fourier Transform.">Decomposition</a> object.  <br /></td></tr>
+<tr class="separator:aab2366b6624d4ba3d549e6e952e893e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a45a00f47ec44ac4e99ddfb1adc541bd5"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#a45a00f47ec44ac4e99ddfb1adc541bd5">size_inbox</a> () const</td></tr>
+<tr class="memdesc:a45a00f47ec44ac4e99ddfb1adc541bd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the size of the inbox used for <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computations.  <br /></td></tr>
+<tr class="separator:a45a00f47ec44ac4e99ddfb1adc541bd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b36b485474df0ae976c86ad8b4c146e"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#a4b36b485474df0ae976c86ad8b4c146e">size_outbox</a> () const</td></tr>
+<tr class="memdesc:a4b36b485474df0ae976c86ad8b4c146e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the size of the outbox used for <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computations.  <br /></td></tr>
+<tr class="separator:a4b36b485474df0ae976c86ad8b4c146e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a37e0a09c0306e95934082f57217ec7db"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1FFT.html#a37e0a09c0306e95934082f57217ec7db">size_workspace</a> () const</td></tr>
+<tr class="memdesc:a37e0a09c0306e95934082f57217ec7db"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the size of the workspace used for <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computations.  <br /></td></tr>
+<tr class="separator:a37e0a09c0306e95934082f57217ec7db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p><a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> class for performing forward and backward Fast Fourier Transformations. </p>
+<dl class="section examples"><dt>Examples</dt><dd><a class="el" href="03_parallel_fft_8cpp-example.html#_a5">03_parallel_fft.cpp</a>, <a class="el" href="04_diffusion_model_8cpp-example.html#_a8">04_diffusion_model.cpp</a>, and <a class="el" href="05_simulator_8cpp-example.html#_a24">05_simulator.cpp</a>.</dd>
+</dl>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a1eaef8226c2e6ab27cb75245935f8c5b" name="a1eaef8226c2e6ab27cb75245935f8c5b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1eaef8226c2e6ab27cb75245935f8c5b">&#9670;&#160;</a></span>FFT()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pfc::FFT::FFT </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classpfc_1_1Decomposition.html">Decomposition</a> &amp;&#160;</td>
+          <td class="paramname"><em>decomposition</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em> = <code>MPI_COMM_WORLD</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">heffte::plan_options&#160;</td>
+          <td class="paramname"><em>plan_options</em> = <code>heffte::default_options&lt;heffte::backend::fftw&gt;()</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Constructs an <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> object with the given <a class="el" href="classpfc_1_1Decomposition.html" title="Class representing the domain decomposition for parallel Fast Fourier Transform.">Decomposition</a> and MPI communicator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">decomposition</td><td>The <a class="el" href="classpfc_1_1Decomposition.html" title="Class representing the domain decomposition for parallel Fast Fourier Transform.">Decomposition</a> object defining the domain decomposition. </td></tr>
+    <tr><td class="paramname">comm</td><td>The MPI communicator for parallel computations (default: MPI_COMM_WORLD). </td></tr>
+    <tr><td class="paramname">plan_options</td><td>Optional plan options for configuring the <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> behavior (default: HeFFTe default options). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="aa192cea8711b2aa66bb855672c7873ca" name="aa192cea8711b2aa66bb855672c7873ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa192cea8711b2aa66bb855672c7873ca">&#9670;&#160;</a></span>backward()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::FFT::backward </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; std::complex&lt; double &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>in</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Performs the backward (inverse) <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> transformation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">in</td><td>Input vector of complex values. </td></tr>
+    <tr><td class="paramname">out</td><td>Output vector of real values. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad1dbbcf9e1af15ad50c53615440bab7e" name="ad1dbbcf9e1af15ad50c53615440bab7e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad1dbbcf9e1af15ad50c53615440bab7e">&#9670;&#160;</a></span>forward()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::FFT::forward </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>in</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; std::complex&lt; double &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Performs the forward <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> transformation. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">in</td><td>Input vector of real values. </td></tr>
+    <tr><td class="paramname">out</td><td>Output vector of complex values. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aab2366b6624d4ba3d549e6e952e893e9" name="aab2366b6624d4ba3d549e6e952e893e9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab2366b6624d4ba3d549e6e952e893e9">&#9670;&#160;</a></span>get_decomposition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="classpfc_1_1Decomposition.html">Decomposition</a> &amp; pfc::FFT::get_decomposition </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the associated <a class="el" href="classpfc_1_1Decomposition.html" title="Class representing the domain decomposition for parallel Fast Fourier Transform.">Decomposition</a> object. </p>
+<dl class="section return"><dt>Returns</dt><dd>Reference to the <a class="el" href="classpfc_1_1Decomposition.html" title="Class representing the domain decomposition for parallel Fast Fourier Transform.">Decomposition</a> object. </dd></dl>
+
+</div>
+</div>
+<a id="a5608d96e80c2275edc83f125018f006f" name="a5608d96e80c2275edc83f125018f006f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5608d96e80c2275edc83f125018f006f">&#9670;&#160;</a></span>get_fft_time()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::FFT::get_fft_time </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the recorded <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computation time. </p>
+<dl class="section return"><dt>Returns</dt><dd>The <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computation time in seconds. </dd></dl>
+
+</div>
+</div>
+<a id="a82e0876e1a90b0351a1755cb9c2c1989" name="a82e0876e1a90b0351a1755cb9c2c1989"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a82e0876e1a90b0351a1755cb9c2c1989">&#9670;&#160;</a></span>reset_fft_time()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::FFT::reset_fft_time </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resets the recorded <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computation time to zero. </p>
+
+</div>
+</div>
+<a id="a45a00f47ec44ac4e99ddfb1adc541bd5" name="a45a00f47ec44ac4e99ddfb1adc541bd5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a45a00f47ec44ac4e99ddfb1adc541bd5">&#9670;&#160;</a></span>size_inbox()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t pfc::FFT::size_inbox </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the size of the inbox used for <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computations. </p>
+<dl class="section return"><dt>Returns</dt><dd>Size of the inbox. </dd></dl>
+
+</div>
+</div>
+<a id="a4b36b485474df0ae976c86ad8b4c146e" name="a4b36b485474df0ae976c86ad8b4c146e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4b36b485474df0ae976c86ad8b4c146e">&#9670;&#160;</a></span>size_outbox()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t pfc::FFT::size_outbox </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the size of the outbox used for <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computations. </p>
+<dl class="section return"><dt>Returns</dt><dd>Size of the outbox. </dd></dl>
+
+</div>
+</div>
+<a id="a37e0a09c0306e95934082f57217ec7db" name="a37e0a09c0306e95934082f57217ec7db"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37e0a09c0306e95934082f57217ec7db">&#9670;&#160;</a></span>size_workspace()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t pfc::FFT::size_workspace </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the size of the workspace used for <a class="el" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations.">FFT</a> computations. </p>
+<dl class="section return"><dt>Returns</dt><dd>Size of the workspace. </dd></dl>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following file:<ul>
+<li>openpfc/<a class="el" href="fft_8hpp_source.html">fft.hpp</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="namespacepfc.html">pfc</a></li><li class="navelem"><a class="el" href="classpfc_1_1FFT.html">FFT</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

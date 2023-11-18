@@ -1,0 +1,9 @@
+<map id="openpfc/world.hpp" name="openpfc/world.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="50,5,193,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,61,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,33,60,72,57,68,106,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="85,79,157,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="124,31,124,65,119,65,119,31"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="181,79,261,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="139,29,195,68,192,73,136,33"/>
+</map>

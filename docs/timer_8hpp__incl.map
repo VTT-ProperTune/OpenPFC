@@ -1,0 +1,9 @@
+<map id="openpfc/mpi/timer.hpp" name="openpfc/mpi/timer.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="54,5,223,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,85,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="125,33,73,72,70,68,122,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="109,79,168,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="141,31,141,65,136,65,136,31"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="192,79,251,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="154,29,199,67,196,72,150,33"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="pfc::Model" name="pfc::Model">
+<area shape="rect" id="Node000001" title="The Model class represents the physics model for simulations in OpenPFC." alt="" coords="127,5,218,31"/>
+<area shape="rect" id="Node000002" href="$classCahnHilliard.html" title=" " alt="" coords="5,79,108,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="144,40,77,81,74,76,141,35"/>
+<area shape="rect" id="Node000003" href="$classDiffusion.html" title=" " alt="" coords="133,79,213,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="175,44,175,79,170,79,170,44"/>
+<area shape="rect" id="Node000004" href="$classMyModel.html" title=" " alt="" coords="237,79,319,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="203,36,262,76,259,81,200,41"/>
+</map>

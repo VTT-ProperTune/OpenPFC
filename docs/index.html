@@ -1,1 +1,287 @@
-placeholder
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('index.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div><div class="header">
+  <div class="headertitle"><div class="title">OpenPFC </div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><p><a class="anchor" id="md__2home_2juajukka_2dev_2openpfc_2README"></a> <a href="https://github.com/VTT-ProperTune/OpenPFC/releases/latest"><img src="https://img.shields.io/github/v/release/VTT-ProperTune/OpenPFC" alt="GitHub release (latest by date)" class="inline"/></a> <a href="https://github.com/VTT-ProperTune/OpenPFC/blob/main/LICENSE"><img src="https://img.shields.io/github/license/VTT-ProperTune/OpenPFC" alt="GitHub" class="inline"/></a> <img src="https://img.shields.io/github/stars/VTT-ProperTune/OpenPFC" alt="GitHub Repo stars" class="inline"/></p>
+<p><img src="docs/img/screenshot.png" alt="Screenshot of OpenPFC simulation result" class="inline"/></p>
+<p>Phase field crystal (PFC) is a semi-atomistic technique, containing atomic resolution information of crystalline structures while operating on diffusive time scales. PFC has an ability to simulate solidification and elastic-plastic material response, coupled to a wide range of phenomena, including formation and co-evolution of microstructural defects such as dislocations and stacking faults, voids, defect formation in epitaxial growth, displacive phase transitions, and electromigration.</p>
+<p>OpenPFC is an open-source framework for high performance 3D phase field crystal simulations. It is designed to scale up from a single laptop to exascale class supercomputers. OpenPFC has succesfully used to simulate domain of size 8192 x 8192 x 4096 on CSC Mahti. 200 computing nodes were used, where each node contains 128 cores, thus total 25600 cores were used. During the simulation, 25 TB of memory was utilized. The central part of the solver is Fast Fourier Transform with time complexity of O(N log N), and there are no known limiting bottlenecks, why larger models could not be calculated as well.</p>
+<h1><a class="anchor" id="autotoc_md1"></a>
+Features</h1>
+<ul>
+<li>scales up to tens of thousands of cores, demonstrably</li>
+<li>modern c++17 header only framework, easy to use</li>
+</ul>
+<h1><a class="anchor" id="autotoc_md2"></a>
+Installing</h1>
+<h2><a class="anchor" id="autotoc_md3"></a>
+Using singularity</h2>
+<ul>
+<li>Todo</li>
+</ul>
+<h2><a class="anchor" id="autotoc_md4"></a>
+Compiling from source</h2>
+<p>Requirements:</p>
+<ul>
+<li>Compiler supporting C++17 standard. C++17 features <a href="https://gcc.gnu.org/projects/cxx-status.html">are available</a> since GCC 5. Check your version number with <code>g++ --version</code>. The default compiler might be relatively old, and more recent version needs to be loaded with <code>module load gcc</code>. Do not try to compile with GCC 4.8.5. It will not work. At least GCC versions 9.4.0 (coming with Ubuntu 20.04) and 11.2 are working.</li>
+<li><a href="https://www.open-mpi.org/">OpenMPI</a>. All recent versions should work. Tested with OpenMPI version 2.1.3. Again, you might need to load proper OpenMPI version with <code>module load openmpi/2.1.3</code>, for instance. Additionally, if cmake is not able to find proper OpenMPI installation, assistance might be needed by setting <code>MPI_ROOT</code>, e.g. <code>export MPI_ROOT=/share/apps/OpenMPI/2.1.3</code>.</li>
+<li>FFTW. Probably all versions will work. Tested with FFTW versions 3.3.2 and 3.3.10. Again, cmake might need some assistance to find the libraries, which can be controlled with environment variable <code>FFTW_ROOT</code>. Depending how FFTW is installed to system, it might be in non-standard location and <code>module load fftw</code> is needed. You can use commands like <code>whereis fftw</code> or <code>ldconfig -p | grep fftw</code> to locate your FFTW installation, if needed.</li>
+</ul>
+<p>Typically in clusters, these are already installed and can be loaded with an on-liner</p>
+<div class="fragment"><div class="line">module load gcc openmpi fftw</div>
+</div><!-- fragment --><p>For local Linux machines (or WSL2), packages usually can be installed from repositories, e.g. in case of Ubuntu, the following should work:</p>
+<div class="fragment"><div class="line">sudo apt-get install -y gcc openmpi fftw</div>
+</div><!-- fragment --><p>Some OpenPFC applications uses json files to provide initial data for simulations. In principle, applications can also be built to receive initial data in other ways, but as a widely known file format, we recommend to use json. The choice for json package is <a href="https://json.nlohmann.me/">JSON for Modern C++</a>. There exists packages for certain Linux distributions (<code>nlohmann-json3-dev</code> for Ubuntu, <code>json-devel</code> for Centos) for easy install. If the system-wide installation is not found, the library is downloaded from GitHub during the configuration.</p>
+<p>The last and most important dependency in order to use OpenPFC is <a href="https://icl.utk.edu/fft/">HeFFTe</a>, which is our choice for parallel FFT implementation. The instructions to install HeFFTe can be found from <a href="https://mkstoyanov.bitbucket.io/heffte/md_doxygen_installation.html">here</a>. HeFFTe can be downloaded from <a href="https://bitbucket.org/icl/heffte/downloads/">https://bitbucket.org/icl/heffte/downloads/</a>.</p>
+<p>If HeFFTe is installed to some non-standard location, cmake is unable to find it when configuring OpenPFC. To overcome this problem, the install path of HeFFTe can be set into environment variable <code>CMAKE_PREFIX_PATH</code>. For example, if HeFFe is installed to <code>$HOME/opt/heffte/2.3</code>, the following is making cmake to find HeFFTe succesfully:</p>
+<div class="fragment"><div class="line">export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH</div>
+</div><!-- fragment --><p>During the configuration, OpenPFC prefers local installations, thus if HeFFTe is already installed and founded, it will be used. For convenience, there is a fallback method to fetch HeFFTe sources from internet and build it concurrently with OpenPFC. In general, however, it is better to build and install programs one at a time. So, make sure you have HeFFTe installed and working on your system before continuing.</p>
+<p>OpenPFC uses <a href="https://cmake.org/">cmake</a> to automate software building. First the source code must be downloaded to some appropriate place. Head to the <a href="https://github.com/VTT-ProperTune/OpenPFC/releases">releases</a> page and pick the newest release and unzip is somewhere. Alternatively, if you are planning to develop the project itself of are just interested about the bleeding edge features, you might be interested to clone the repository to your local machine. GitHub account is needed to clone the project.</p>
+<div class="fragment"><div class="line">git clone https://github.com/VTT-ProperTune/OpenPFC.git</div>
+<div class="line"># git clone git@github.com:VTT-ProperTune/OpenPFC.git  # if you prefer ssh instead</div>
+<div class="line">cd OpenPFC</div>
+</div><!-- fragment --><p>Next step is to configure project. One might consider at least setting option <code>CMAKE_BUILD_TYPE</code> to <code>Debug</code> or <code>Release</code>. For large scale simulations, make sure to use <code>Release</code> as it turns on compiler optimizations.</p>
+<div class="fragment"><div class="line">cmake -DCMAKE_BUILD_TYPE=Release -S . -B build</div>
+</div><!-- fragment --><p>Keep on mind, that configuration will download HeFFTe if the local installation is not found. To use local installation instead, add HeFFTe path to environment variable <code>CMAKE_PREFIX_PATH</code> or add <code>Heffte_DIR</code> option to point where HeFFTe configuration files are installed. Typical configuration command in cluster environment is something like</p>
+<div class="fragment"><div class="line">module load gcc openmpi fftw</div>
+<div class="line">export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH</div>
+<div class="line">cmake -DCMAKE_BUILD_TYPE=Release \</div>
+<div class="line">      -DCMAKE_INSTALL_PREFIX=$HOME/opt/openpfc \</div>
+<div class="line">      -S . -B build</div>
+</div><!-- fragment --><p>Then, building can be done with command <code>cmake --build build</code>. After build finishes, one should find example codes from <code>./build/examples</code> and apps from <code>./build/apps</code>. Installation to path defined by <code>CMAKE_INSTALL_PREFIX</code> can be done with <code>cmake --install build</code>.</p>
+<h1><a class="anchor" id="autotoc_md5"></a>
+Getting started</h1>
+<p>OpenPFC is a <a href="https://en.wikipedia.org/wiki/Software_framework">software framework</a>. It doesn't give you ready-made solutions, but a platform on which you can start building your own scalable PFC code. We will familiarize ourselves with the construction of the model with the help of a simple diffusion model in a later stage of the documentation. However, let's give a tip already at this stage, how to start the development work effectively. Our "hello world" code is as follows:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &lt;iostream&gt;</span></div>
+<div class="line"><span class="preprocessor">#include &lt;<a class="code" href="openpfc_8hpp.html">openpfc/openpfc.hpp</a>&gt;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span>std;</div>
+<div class="line"><span class="keyword">using namespace </span><a class="code hl_namespace" href="namespacepfc.html">pfc</a>;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> <a class="code hl_function" href="01__hello__world_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4">main</a>() {</div>
+<div class="line">  <a class="code hl_class" href="classpfc_1_1World.html">World</a> world({32, 32, 32});</div>
+<div class="line">  cout &lt;&lt; world &lt;&lt; endl;</div>
+<div class="line">}</div>
+<div class="ttc" id="a01__hello__world_8cpp_html_ae66f6b31b5ad750f1fe042a706a4e3d4"><div class="ttname"><a href="01__hello__world_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4">main</a></div><div class="ttdeci">int main()</div><div class="ttdef"><b>Definition</b> 01_hello_world.cpp:30</div></div>
+<div class="ttc" id="aclasspfc_1_1World_html"><div class="ttname"><a href="classpfc_1_1World.html">pfc::World</a></div><div class="ttdoc">Represents a world in the simulation domain.</div><div class="ttdef"><b>Definition</b> world.hpp:27</div></div>
+<div class="ttc" id="anamespacepfc_html"><div class="ttname"><a href="namespacepfc.html">pfc</a></div><div class="ttdef"><b>Definition</b> array.hpp:18</div></div>
+<div class="ttc" id="aopenpfc_8hpp_html"><div class="ttname"><a href="openpfc_8hpp.html">openpfc.hpp</a></div></div>
+</div><!-- fragment --><p>To compile, <code>CMakeLists.txt</code> is needed. Minimal <code>CMakeLists.txt</code> is:</p>
+<div class="fragment"><div class="line">cmake_minimum_required(VERSION 3.15)</div>
+<div class="line">project(helloworld)</div>
+<div class="line">find_package(OpenPFC REQUIRED)</div>
+<div class="line">add_executable(main main.cpp)</div>
+<div class="line">target_link_libraries(main OpenPFC)</div>
+</div><!-- fragment --><p>With the help of <code>CMakeLists.txt</code>, build and compilation of application is straightforward:</p>
+<div class="fragment"><div class="line">cmake -S . -B build</div>
+<div class="line">cmake --build build</div>
+<div class="line">./build/main</div>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md6"></a>
+Troubleshooting</h1>
+<p>During the configuration step (<code>cmake -S. -B build</code>), you might end up to the following error message:</p>
+<div class="fragment"><div class="line">CMake Error at CMakeLists.txt:3 (find_package):</div>
+<div class="line">By not providing &quot;FindOpenPFC.cmake&quot; in CMAKE_MODULE_PATH this project has</div>
+<div class="line">asked CMake to find a package configuration file provided by &quot;OpenPFC&quot;, but</div>
+<div class="line">CMake did not find one.</div>
+</div><!-- fragment --><p>The error message is trying to say command in <code>CMakeLists.txt</code> (line 3) fails:</p>
+<div class="fragment"><div class="line">find_package(OpenPFC REQUIRED)  # &lt;-- this is failing</div>
+</div><!-- fragment --><p>The reason why this happens is that cmake is not able to find the package. By default, cmake finds packages by looking a file which is called <code>Find&lt;package_name&gt;.cmake</code> from couple of standard locations. For example, in Ubuntu, one of these locations is <code>/usr/lib/cmake</code>, where the files are installed when doing a global install of some package with root rights. When working with supercomputers, users in general doesn't have rights to make global installations, thus packages are almost always installed to some non-default locations. Thus, one needs to give some hints to cmake where the file could be found. This can be done (at least) two different ways.</p>
+<p>The first way is to set up an environment variable indicating any extra locations for the files. One option is to use <code>CMAKE_PREFIX_PATH</code> environment variable, like before. For example, if <code>OpenPFC</code> is installed to <code>/opt/OpenPFC</code>, one can give that information before starting configuration:</p>
+<div class="fragment"><div class="line">export CMAKE_PREFIX_PATH=/opt/OpenPFC:$CMAKE_PREFIX_PATH</div>
+<div class="line">cmake -S . -B build</div>
+<div class="line"># rest of the things ...</div>
+</div><!-- fragment --><p>Another option is to hard code the choise inside the <code>CMakeLists.txt</code> file directly. Just keep in mind, that this option is not very portable as users tends to install software to several different locations and there is no any general rule how it should be done. So, instead of defining <code>CMAKE_PREFIX_PATH</code> before doing configuration, the following change in <code>CMakeLists.txt</code> is equivalent:</p>
+<div class="fragment"><div class="line">cmake_minimum_required(VERSION 3.15)</div>
+<div class="line">project(helloworld)</div>
+<div class="line"># find_package(OpenPFC REQUIRED)                                     #  &lt;-- Replace this command ...</div>
+<div class="line">find_package(OpenPFC REQUIRED PATHS /opt/OpenPFC/lib/cmake/OpenPFC)  #  &lt;-- ... with this one</div>
+<div class="line">add_executable(main main.cpp)</div>
+<div class="line">target_link_libraries(main OpenPFC)</div>
+</div><!-- fragment --><p>This way, cmake know to search necessary files from the path given above.</p>
+<h1><a class="anchor" id="autotoc_md7"></a>
+Examples</h1>
+<p>A bigger application example is Tungsten model. Todo.</p>
+<h1><a class="anchor" id="autotoc_md8"></a>
+Citing</h1>
+<ul>
+<li>Todo</li>
+</ul>
+<div class="fragment"><div class="line">@article{</div>
+<div class="line">  blaablaa</div>
+<div class="line">}</div>
+</div><!-- fragment --> </div></div><!-- PageDoc -->
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

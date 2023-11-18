@@ -1,0 +1,278 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('07_array_8cpp-example.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">07_array.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<p>OpenPFC implements a basic multidimensional array to make it easier to work with indices. Implementation makes it possible to give offset for indices. This can help working with discrete fields of data, when the field is decomposed to several different machines using domain decomposition and MPI. Example will follow. Interally, <code>Array&lt;T,D&gt;</code> uses <code>std::vector&lt;T&gt;</code> to hold data of type <code>T</code> and <code>MultiIndex&lt;D&gt;</code> to make index manipulations. In this example, we introduce two arrays, one with offset like it would be in the case of domain decomposition, and fill in some values based on indices.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &lt;algorithm&gt;</span></div>
+<div class="line"><span class="preprocessor">#include &lt;iostream&gt;</span></div>
+<div class="line"><span class="preprocessor">#include &lt;<a class="code" href="array_8hpp.html">openpfc/array.hpp</a>&gt;</span></div>
+<div class="line"><span class="preprocessor">#include &lt;<a class="code" href="utils_8hpp.html">openpfc/utils.hpp</a>&gt;</span></div>
+<div class="line"><span class="preprocessor">#include &lt;<a class="code" href="typename_8hpp.html">openpfc/utils/typename.hpp</a>&gt;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">using namespace </span><a class="code hl_namespace" href="namespacepfc.html">pfc</a>;</div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt; <span class="keyword">struct </span><a id="_a0" name="_a0"></a><a class="code hl_struct" href="structSecondOrderTensor.html">SecondOrderTensor</a> {</div>
+<div class="line">  std::array&lt;T, 9&gt; <a id="a1" name="a1"></a><a class="code hl_variable" href="structSecondOrderTensor.html#a7ad336693d357338a12624da6bfc7b9b">data</a>;</div>
+<div class="line"> </div>
+<div class="line">  <span class="keyword">friend</span> std::ostream &amp;<a id="a2" name="a2"></a><a class="code hl_friend" href="structSecondOrderTensor.html#adb953362d9e72403f45cacd7f5c77db4">operator&lt;&lt;</a>(std::ostream &amp;os, <span class="keyword">const</span> <a class="code hl_struct" href="structSecondOrderTensor.html">SecondOrderTensor&lt;T&gt;</a> &amp;tensor) {</div>
+<div class="line">    os &lt;&lt; std::string(<span class="stringliteral">&quot;SecondOrderTensor&lt;&quot;</span>) + <a id="_a3" name="_a3"></a><a class="code hl_struct" href="structpfc_1_1TypeName.html">TypeName&lt;T&gt;::get</a>().data() + <span class="stringliteral">&quot;&gt;&quot;</span> &lt;&lt; utils::array_to_string(tensor.<a class="code hl_variable" href="structSecondOrderTensor.html#a7ad336693d357338a12624da6bfc7b9b">data</a>);</div>
+<div class="line">    <span class="keywordflow">return</span> os;</div>
+<div class="line">  }</div>
+<div class="line">};</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> <a id="a4" name="a4"></a><a class="code hl_function" href="01__hello__world_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4">main</a>() {</div>
+<div class="line">  <span class="keywordtype">int</span> Lx = 16;</div>
+<div class="line">  <span class="keywordtype">int</span> Ly = 8;</div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// &quot;Process 0&quot; contains the first part of array</span></div>
+<div class="line">  <a id="_a5" name="_a5"></a><a class="code hl_class" href="classpfc_1_1Array.html">Array&lt;double, 2&gt;</a> arr0({Lx / 2, Ly}, {0, 0});</div>
+<div class="line">  <span class="comment">// &quot;Process 1&quot; contains the second part of array</span></div>
+<div class="line">  <a class="code hl_class" href="classpfc_1_1Array.html">Array&lt;double, 2&gt;</a> arr1({Lx / 2, Ly}, {Lx / 2, 0});</div>
+<div class="line"> </div>
+<div class="line">  std::cout &lt;&lt; arr0 &lt;&lt; std::endl;</div>
+<div class="line">  std::cout &lt;&lt; arr1 &lt;&lt; std::endl;</div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// Accessing arrays:</span></div>
+<div class="line">  arr0[{0, 0}] = 1.0;</div>
+<div class="line">  arr1[{8, 0}] = 2.0;</div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;First item of arr0: &quot;</span> &lt;&lt; arr0[{0, 0}] &lt;&lt; std::endl;</div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;First item of arr1: &quot;</span> &lt;&lt; arr1[{8, 0}] &lt;&lt; std::endl;</div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// We can get access to underlying vector with linear index, if needed. As we</span></div>
+<div class="line">  <span class="comment">// have offset of 8 in the second array in x-direction, index {8, 0} is</span></div>
+<div class="line">  <span class="comment">// actually pointing to first index of the array. Thus, the above is equivalent to:</span></div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;First item of arr0: &quot;</span> &lt;&lt; arr0.<a id="a6" name="a6"></a><a class="code hl_function" href="classpfc_1_1Array.html#a9d1f7774367f077b39d1f117c437cbbf">get_data</a>()[0] &lt;&lt; std::endl;</div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;First item of arr1: &quot;</span> &lt;&lt; arr1.<a class="code hl_function" href="classpfc_1_1Array.html#a9d1f7774367f077b39d1f117c437cbbf">get_data</a>()[0] &lt;&lt; std::endl;</div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// In practice, one might want to apply some function f to arrays, where each</span></div>
+<div class="line">  <span class="comment">// array contains different part of domain. This can be done with `apply`.</span></div>
+<div class="line">  <span class="comment">// First, define some coordinate system, transforming from ij to xy:</span></div>
+<div class="line">  <span class="keywordtype">double</span> dx = 1.0;</div>
+<div class="line">  <span class="keywordtype">double</span> dy = 1.0;</div>
+<div class="line">  <span class="keywordtype">double</span> x0 = 0.0;</div>
+<div class="line">  <span class="keywordtype">double</span> y0 = 0.0;</div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// Second, define function of i and j:</span></div>
+<div class="line">  <span class="keyword">auto</span> f = [&amp;](<span class="keyword">auto</span> indices) {</div>
+<div class="line">    <span class="keyword">const</span> <span class="keyword">auto</span> [i, j] = indices;</div>
+<div class="line">    <span class="keywordtype">double</span> x = x0 + i * dx;</div>
+<div class="line">    <span class="keywordtype">double</span> y = y0 + j * dy;</div>
+<div class="line">    <span class="keywordflow">return</span> 1.0 + x + y * y;</div>
+<div class="line">  };</div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// Then we apply:</span></div>
+<div class="line">  arr0.<a id="a7" name="a7"></a><a class="code hl_function" href="classpfc_1_1Array.html#af2809211c611e98c95ce2741e555744f">apply</a>(f);</div>
+<div class="line">  arr1.apply(f);</div>
+<div class="line"> </div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;First item of arr0: &quot;</span> &lt;&lt; arr0.get_data()[0] &lt;&lt; std::endl; <span class="comment">// 1.0 + 0.0 + 0.0 * 0.0 = 1</span></div>
+<div class="line">  std::cout &lt;&lt; <span class="stringliteral">&quot;First item of arr1: &quot;</span> &lt;&lt; arr1.<a class="code hl_function" href="classpfc_1_1Array.html#a9d1f7774367f077b39d1f117c437cbbf">get_data</a>()[0] &lt;&lt; std::endl; <span class="comment">// 1.0 + 8.0 + 0.0 * 0.0 = 9</span></div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// Another way to fill and modify array would be to use STL algorithms:</span></div>
+<div class="line">  std::transform(arr0.get_index().begin(), arr0.get_index().end(), arr0.get_data().begin(), f);</div>
+<div class="line">  std::transform(arr1.get_index().begin(), arr1.get_index().end(), arr1.get_data().begin(), f);</div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// Arrays can also hold more complex objects. Here we have array of tensors:</span></div>
+<div class="line">  <a class="code hl_class" href="classpfc_1_1Array.html">Array&lt;SecondOrderTensor&lt;double&gt;</a>, 2&gt; tensors({2, 2}, {0, 0});</div>
+<div class="line">  std::cout &lt;&lt; tensors &lt;&lt; std::endl;</div>
+<div class="line">  tensors[{1, 1}] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0};</div>
+<div class="line">  <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;t : tensors) std::cout &lt;&lt; t &lt;&lt; std::endl;</div>
+<div class="line"> </div>
+<div class="line">  <span class="comment">// If indices are also needed, one needs to explicitly define iterators</span></div>
+<div class="line">  <span class="keyword">auto</span> index = tensors.<a id="a8" name="a8"></a><a class="code hl_function" href="classpfc_1_1Array.html#a3451a78043c954553368db81e458a11f">get_index</a>();</div>
+<div class="line">  <span class="keyword">auto</span> index_it = index.begin();</div>
+<div class="line">  <span class="keyword">auto</span> data = tensors.get_data();</div>
+<div class="line">  <span class="keyword">auto</span> data_it = data.begin();</div>
+<div class="line">  <span class="keywordflow">while</span> (index_it != index.end() &amp;&amp; data_it != data.end()) {</div>
+<div class="line">    std::cout &lt;&lt; utils::array_to_string(*index_it++) &lt;&lt; <span class="stringliteral">&quot; =&gt; &quot;</span> &lt;&lt; (*data_it++) &lt;&lt; std::endl;</div>
+<div class="line">  }</div>
+<div class="line"> </div>
+<div class="line">  <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+<div class="ttc" id="a01__hello__world_8cpp_html_ae66f6b31b5ad750f1fe042a706a4e3d4"><div class="ttname"><a href="01__hello__world_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4">main</a></div><div class="ttdeci">int main()</div><div class="ttdef"><b>Definition</b> 01_hello_world.cpp:30</div></div>
+<div class="ttc" id="aarray_8hpp_html"><div class="ttname"><a href="array_8hpp.html">array.hpp</a></div></div>
+<div class="ttc" id="aclasspfc_1_1Array_html"><div class="ttname"><a href="classpfc_1_1Array.html">pfc::Array</a></div><div class="ttdef"><b>Definition</b> array.hpp:20</div></div>
+<div class="ttc" id="aclasspfc_1_1Array_html_a3451a78043c954553368db81e458a11f"><div class="ttname"><a href="classpfc_1_1Array.html#a3451a78043c954553368db81e458a11f">pfc::Array::get_index</a></div><div class="ttdeci">const MultiIndex&lt; D &gt; &amp; get_index() const</div><div class="ttdoc">Get the index object.</div><div class="ttdef"><b>Definition</b> array.hpp:76</div></div>
+<div class="ttc" id="aclasspfc_1_1Array_html_a9d1f7774367f077b39d1f117c437cbbf"><div class="ttname"><a href="classpfc_1_1Array.html#a9d1f7774367f077b39d1f117c437cbbf">pfc::Array::get_data</a></div><div class="ttdeci">std::vector&lt; T &gt; &amp; get_data()</div><div class="ttdoc">Get the data object.</div><div class="ttdef"><b>Definition</b> array.hpp:83</div></div>
+<div class="ttc" id="aclasspfc_1_1Array_html_af2809211c611e98c95ce2741e555744f"><div class="ttname"><a href="classpfc_1_1Array.html#af2809211c611e98c95ce2741e555744f">pfc::Array::apply</a></div><div class="ttdeci">void apply(Func &amp;&amp;func)</div><div class="ttdoc">Applies the specified function to each element of the array.</div><div class="ttdef"><b>Definition</b> array.hpp:120</div></div>
+<div class="ttc" id="anamespacepfc_html"><div class="ttname"><a href="namespacepfc.html">pfc</a></div><div class="ttdef"><b>Definition</b> array.hpp:18</div></div>
+<div class="ttc" id="astructSecondOrderTensor_html"><div class="ttname"><a href="structSecondOrderTensor.html">SecondOrderTensor</a></div><div class="ttdef"><b>Definition</b> 07_array.cpp:22</div></div>
+<div class="ttc" id="astructSecondOrderTensor_html_a7ad336693d357338a12624da6bfc7b9b"><div class="ttname"><a href="structSecondOrderTensor.html#a7ad336693d357338a12624da6bfc7b9b">SecondOrderTensor::data</a></div><div class="ttdeci">std::array&lt; T, 9 &gt; data</div><div class="ttdef"><b>Definition</b> 07_array.cpp:23</div></div>
+<div class="ttc" id="astructSecondOrderTensor_html_adb953362d9e72403f45cacd7f5c77db4"><div class="ttname"><a href="structSecondOrderTensor.html#adb953362d9e72403f45cacd7f5c77db4">SecondOrderTensor::operator&lt;&lt;</a></div><div class="ttdeci">friend std::ostream &amp; operator&lt;&lt;(std::ostream &amp;os, const SecondOrderTensor&lt; T &gt; &amp;tensor)</div><div class="ttdef"><b>Definition</b> 07_array.cpp:25</div></div>
+<div class="ttc" id="astructpfc_1_1TypeName_html"><div class="ttname"><a href="structpfc_1_1TypeName.html">pfc::TypeName</a></div><div class="ttdef"><b>Definition</b> typename.hpp:12</div></div>
+<div class="ttc" id="atypename_8hpp_html"><div class="ttname"><a href="typename_8hpp.html">typename.hpp</a></div></div>
+<div class="ttc" id="autils_8hpp_html"><div class="ttname"><a href="utils_8hpp.html">utils.hpp</a></div></div>
+</div><!-- fragment --> </div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

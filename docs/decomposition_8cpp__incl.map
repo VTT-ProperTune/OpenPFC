@@ -1,0 +1,19 @@
+<map id="/home/juajukka/dev/openpfc/examples/decomposition.cpp" name="/home/juajukka/dev/openpfc/examples/decomposition.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,279,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="75,240,155,265"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="142,46,121,227,116,226,137,45"/>
+<area shape="rect" id="Node000003" href="$decomposition_8hpp.html" title=" " alt="" coords="179,93,382,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="177,43,249,84,247,89,174,48"/>
+<area shape="rect" id="Node000004" href="$world_8hpp.html" title=" " alt="" coords="168,167,255,192"/>
+<area shape="poly" id="edge10_Node000001_Node000004" title=" " alt="" coords="148,45,156,79,170,117,194,155,190,158,165,120,151,81,142,46"/>
+<area shape="poly" id="edge8_Node000003_Node000002" title=" " alt="" coords="241,121,197,140,176,153,157,168,137,197,125,227,120,225,133,194,153,165,173,148,195,135,239,116"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="271,121,234,159,230,155,267,117"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="259,240,331,265"/>
+<area shape="poly" id="edge7_Node000003_Node000006" title=" " alt="" coords="285,119,295,226,290,227,279,119"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="330,167,389,192"/>
+<area shape="poly" id="edge9_Node000003_Node000007" title=" " alt="" coords="295,117,338,156,335,159,292,121"/>
+<area shape="poly" id="edge6_Node000004_Node000002" title=" " alt="" coords="197,194,144,234,141,229,194,190"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="179,240,235,265"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="213,192,211,227,206,226,208,192"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="227,190,273,229,269,233,223,194"/>
+</map>

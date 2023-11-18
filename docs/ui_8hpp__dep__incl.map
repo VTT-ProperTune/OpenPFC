@@ -1,0 +1,7 @@
+<map id="openpfc/ui.hpp" name="openpfc/ui.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="124,5,243,31"/>
+<area shape="rect" id="Node000002" href="$10__ui__register__ic_8cpp.html" title=" " alt="" coords="5,79,172,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="162,42,119,81,116,77,159,38"/>
+<area shape="rect" id="Node000003" href="$12__cahn__hilliard_8cpp.html" title=" " alt="" coords="196,79,363,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="208,38,252,77,248,81,205,42"/>
+</map>

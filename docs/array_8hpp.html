@@ -1,0 +1,307 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('array_8hpp.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
+  <div class="headertitle"><div class="title">array.hpp File Reference</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><code>#include &quot;<a class="el" href="decomposition_8hpp_source.html">decomposition.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="multi__index_8hpp_source.html">multi_index.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="array__to__string_8hpp_source.html">utils/array_to_string.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="show_8hpp_source.html">utils/show.hpp</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="typename_8hpp_source.html">utils/typename.hpp</a>&quot;</code><br />
+<code>#include &lt;algorithm&gt;</code><br />
+<code>#include &lt;array&gt;</code><br />
+<code>#include &lt;cmath&gt;</code><br />
+<code>#include &lt;complex&gt;</code><br />
+<code>#include &lt;functional&gt;</code><br />
+<code>#include &lt;type_traits&gt;</code><br />
+<code>#include &lt;typeinfo&gt;</code><br />
+<code>#include &lt;vector&gt;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Include dependency graph for array.hpp:</div>
+<div class="dyncontent">
+<div class="center"><img src="array_8hpp__incl.png" border="0" usemap="#aopenpfc_2array_8hpp" alt=""/></div>
+<map name="aopenpfc_2array_8hpp" id="aopenpfc_2array_8hpp">
+<area shape="rect" title=" " alt="" coords="941,5,1080,31"/>
+<area shape="rect" href="decomposition_8hpp.html" title=" " alt="" coords="109,79,256,104"/>
+<area shape="poly" title=" " alt="" coords="941,28,302,81,270,84,269,79,301,76,941,22"/>
+<area shape="rect" title=" " alt="" coords="527,225,583,251"/>
+<area shape="poly" title=" " alt="" coords="987,33,732,154,680,180,592,222,590,217,678,175,730,150,985,28"/>
+<area shape="rect" href="multi__index_8hpp.html" title=" " alt="" coords="314,79,441,104"/>
+<area shape="poly" title=" " alt="" coords="941,30,455,84,454,79,941,24"/>
+<area shape="rect" title=" " alt="" coords="403,152,466,177"/>
+<area shape="poly" title=" " alt="" coords="941,26,725,45,617,61,574,71,541,81,516,94,494,110,456,144,453,140,490,106,514,89,539,76,572,65,616,56,724,40,941,21"/>
+<area shape="rect" href="array__to__string_8hpp.html" title=" " alt="" coords="742,152,922,177"/>
+<area shape="poly" title=" " alt="" coords="998,33,859,145,855,141,994,29"/>
+<area shape="rect" href="show_8hpp.html" title=" " alt="" coords="552,79,667,104"/>
+<area shape="poly" title=" " alt="" coords="947,33,681,80,680,75,946,28"/>
+<area shape="rect" href="typename_8hpp.html" title=" " alt="" coords="1049,152,1165,177"/>
+<area shape="poly" title=" " alt="" coords="1021,30,1094,139,1089,142,1016,33"/>
+<area shape="rect" title=" " alt="" coords="975,225,1054,251"/>
+<area shape="poly" title=" " alt="" coords="1014,31,1017,211,1012,211,1008,31"/>
+<area shape="rect" title=" " alt="" coords="1089,225,1181,251"/>
+<area shape="poly" title=" " alt="" coords="1038,28,1072,47,1112,73,1150,108,1180,151,1183,169,1179,186,1160,217,1155,214,1174,184,1178,169,1175,153,1146,112,1109,78,1069,51,1035,33"/>
+<area shape="rect" title=" " alt="" coords="1210,225,1286,251"/>
+<area shape="poly" title=" " alt="" coords="1053,28,1101,47,1148,77,1180,109,1206,145,1241,211,1236,214,1202,148,1176,112,1145,81,1098,52,1051,33"/>
+<area shape="rect" title=" " alt="" coords="1291,79,1376,104"/>
+<area shape="poly" title=" " alt="" coords="1063,28,1278,75,1277,80,1062,33"/>
+<area shape="rect" title=" " alt="" coords="1401,79,1463,104"/>
+<area shape="poly" title=" " alt="" coords="1081,26,1218,46,1388,76,1387,81,1218,51,1080,31"/>
+<area shape="rect" title=" " alt="" coords="1487,79,1574,104"/>
+<area shape="poly" title=" " alt="" coords="1081,24,1255,44,1474,76,1473,81,1255,50,1080,29"/>
+<area shape="rect" href="world_8hpp.html" title=" " alt="" coords="139,152,226,177"/>
+<area shape="poly" title=" " alt="" coords="185,104,185,138,180,138,180,104"/>
+<area shape="rect" title=" " alt="" coords="121,225,193,251"/>
+<area shape="poly" title=" " alt="" coords="168,106,146,126,129,153,126,168,129,184,142,213,137,215,124,185,121,168,124,151,142,123,165,102"/>
+<area shape="rect" title=" " alt="" coords="248,225,328,251"/>
+<area shape="poly" title=" " alt="" coords="197,103,239,150,278,212,273,215,235,154,193,106"/>
+<area shape="rect" title=" " alt="" coords="5,152,64,177"/>
+<area shape="poly" title=" " alt="" coords="160,106,72,148,70,144,158,102"/>
+<area shape="poly" title=" " alt="" coords="227,172,514,226,513,231,226,177"/>
+<area shape="poly" title=" " alt="" coords="181,179,168,213,163,212,176,177"/>
+<area shape="poly" title=" " alt="" coords="201,175,261,215,258,220,198,180"/>
+<area shape="poly" title=" " alt="" coords="378,105,379,140,383,159,393,176,419,198,450,214,483,225,513,231,512,236,481,230,448,219,416,203,389,179,378,161,373,140,373,105"/>
+<area shape="poly" title=" " alt="" coords="372,106,304,215,300,212,368,103"/>
+<area shape="poly" title=" " alt="" coords="389,103,419,139,415,143,385,106"/>
+<area shape="poly" title=" " alt="" coords="788,180,597,229,596,223,787,175"/>
+<area shape="rect" title=" " alt="" coords="797,225,867,251"/>
+<area shape="poly" title=" " alt="" coords="835,178,835,212,829,212,829,178"/>
+<area shape="rect" title=" " alt="" coords="697,225,772,251"/>
+<area shape="poly" title=" " alt="" coords="818,180,763,219,760,215,815,175"/>
+<area shape="rect" title=" " alt="" coords="892,225,951,251"/>
+<area shape="poly" title=" " alt="" coords="848,175,898,214,894,219,845,179"/>
+<area shape="poly" title=" " alt="" coords="605,105,582,153,563,213,558,211,578,151,600,103"/>
+<area shape="poly" title=" " alt="" coords="596,106,545,142,478,180,408,207,342,227,341,221,406,202,476,175,542,137,593,102"/>
+<area shape="poly" title=" " alt="" coords="582,106,477,149,475,144,580,102"/>
+<area shape="poly" title=" " alt="" coords="667,98,1035,151,1035,156,666,103"/>
+<area shape="poly" title=" " alt="" coords="667,90,726,94,795,103,867,121,936,150,974,179,1002,212,998,216,970,183,933,154,866,126,794,108,725,99,667,95"/>
+<area shape="rect" title=" " alt="" coords="592,152,667,177"/>
+<area shape="poly" title=" " alt="" coords="615,104,625,138,620,140,610,105"/>
+<area shape="poly" title=" " alt="" coords="1078,180,965,223,963,218,1076,175"/>
+<area shape="poly" title=" " alt="" coords="1094,179,1042,219,1039,215,1090,175"/>
+<area shape="poly" title=" " alt="" coords="1114,177,1128,212,1123,214,1109,179"/>
+<area shape="poly" title=" " alt="" coords="1131,175,1214,217,1212,221,1128,180"/>
+</map>
+</div>
+</div><div class="textblock"><div class="dynheader">
+This graph shows which files directly or indirectly include this file:</div>
+<div class="dyncontent">
+<div class="center"><img src="array_8hpp__dep__incl.png" border="0" usemap="#aopenpfc_2array_8hppdep" alt=""/></div>
+<map name="aopenpfc_2array_8hppdep" id="aopenpfc_2array_8hppdep">
+<area shape="rect" title=" " alt="" coords="223,5,362,31"/>
+<area shape="rect" href="07__array_8cpp.html" title=" " alt="" coords="5,79,172,133"/>
+<area shape="poly" title=" " alt="" coords="254,39,152,81,150,76,252,34"/>
+<area shape="rect" href="discrete__field_8hpp.html" title=" " alt="" coords="196,93,389,119"/>
+<area shape="poly" title=" " alt="" coords="295,45,295,93,290,93,290,45"/>
+<area shape="rect" href="openpfc_8hpp.html" title=" " alt="" coords="348,196,507,221"/>
+<area shape="poly" title=" " alt="" coords="344,34,376,51,403,77,419,108,427,141,431,196,425,196,422,142,414,110,399,80,373,56,342,38"/>
+<area shape="rect" href="08__discrete__fields_8cpp.html" title=" " alt="" coords="157,181,324,236"/>
+<area shape="poly" title=" " alt="" coords="283,132,257,182,252,180,278,129"/>
+<area shape="poly" title=" " alt="" coords="321,125,414,194,410,198,317,129"/>
+<area shape="rect" href="09__parallel__fft__high__level_8cpp.html" title=" " alt="" coords="26,284,226,339"/>
+<area shape="poly" title=" " alt="" coords="380,228,205,286,204,281,379,223"/>
+<area shape="rect" href="10__ui__register__ic_8cpp.html" title=" " alt="" coords="249,284,416,339"/>
+<area shape="poly" title=" " alt="" coords="409,233,359,286,356,282,405,230"/>
+<area shape="rect" href="11__write__results_8cpp.html" title=" " alt="" coords="440,284,607,339"/>
+<area shape="poly" title=" " alt="" coords="450,230,500,282,496,286,446,233"/>
+<area shape="rect" href="12__cahn__hilliard_8cpp.html" title=" " alt="" coords="631,284,797,339"/>
+<area shape="poly" title=" " alt="" coords="474,224,640,281,638,286,472,229"/>
+</map>
+</div>
+</div>
+<p><a href="array_8hpp_source.html">Go to the source code of this file.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Array.html">pfc::Array&lt; T, D &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacepfc"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacepfc.html">pfc</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:ac2e6c74f2ca52054fc93c37361207a87"><td class="memTemplParams" colspan="2">template&lt;typename T , size_t D&gt; </td></tr>
+<tr class="memitem:ac2e6c74f2ca52054fc93c37361207a87"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacepfc.html#ac2e6c74f2ca52054fc93c37361207a87">pfc::show</a> (<a class="el" href="classpfc_1_1Array.html">Array</a>&lt; T, D &gt; &amp;array)</td></tr>
+<tr class="separator:ac2e6c74f2ca52054fc93c37361207a87"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_2c145bcb53510c73f45f3661004e5320.html">openpfc</a></li><li class="navelem"><a class="el" href="array_8hpp.html">array.hpp</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

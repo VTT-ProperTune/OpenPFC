@@ -1,0 +1,5 @@
+<map id="Diffusion" name="Diffusion">
+<area shape="rect" id="Node000001" title=" " alt="" coords="11,79,91,104"/>
+<area shape="rect" id="Node000002" href="$classpfc_1_1Model.html" title="The Model class represents the physics model for simulations in OpenPFC." alt="" coords="5,5,96,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="53,44,53,79,48,79,48,44"/>
+</map>

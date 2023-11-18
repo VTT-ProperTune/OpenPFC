@@ -1,0 +1,1464 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('classpfc_1_1Simulation.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="classpfc_1_1Simulation-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">pfc::Simulation Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div></div>
+</div><!--header-->
+<div class="contents">
+
+<p><code>#include &lt;<a class="el" href="deprecated_8hpp_source.html">deprecated.hpp</a>&gt;</code></p>
+<div class="dynheader">
+Inheritance diagram for pfc::Simulation:</div>
+<div class="dyncontent">
+<div class="center"><img src="classpfc_1_1Simulation__inherit__graph.png" border="0" usemap="#apfc_1_1Simulation_inherit__map" alt="Inheritance graph"/></div>
+<map name="apfc_1_1Simulation_inherit__map" id="apfc_1_1Simulation_inherit__map">
+<area shape="rect" title=" " alt="" coords="5,5,125,31"/>
+<area shape="rect" href="classTungsten.html" title=" " alt="" coords="25,79,105,104"/>
+<area shape="poly" title=" " alt="" coords="68,44,68,79,63,79,63,44"/>
+</map>
+<center><span class="legend">[<a target="top" href="graph_legend.html">legend</a>]</span></center></div>
+<div class="dynheader">
+Collaboration diagram for pfc::Simulation:</div>
+<div class="dyncontent">
+<div class="center"><img src="classpfc_1_1Simulation__coll__graph.png" border="0" usemap="#apfc_1_1Simulation_coll__map" alt="Collaboration graph"/></div>
+<map name="apfc_1_1Simulation_coll__map" id="apfc_1_1Simulation_coll__map">
+<area shape="rect" title=" " alt="" coords="125,183,245,208"/>
+<area shape="rect" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" title=" " alt="" coords="85,132,102,157,121,170,143,180,140,185,118,175,98,161,81,135"/>
+<area shape="rect" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations." alt="" coords="149,95,222,120"/>
+<area shape="poly" title=" " alt="" coords="188,134,188,182,183,182,183,134"/>
+<area shape="rect" title=" " alt="" coords="246,95,421,120"/>
+<area shape="poly" title=" " alt="" coords="303,129,207,185,204,180,300,125"/>
+</map>
+<center><span class="legend">[<a target="top" href="graph_legend.html">legend</a>]</span></center></div>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a9cbb3058cb4334f096ad8dd9ead01a89"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a9cbb3058cb4334f096ad8dd9ead01a89">set_origin</a> (double <a class="el" href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">x0</a>, double <a class="el" href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">y0</a>, double <a class="el" href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">z0</a>)</td></tr>
+<tr class="separator:a9cbb3058cb4334f096ad8dd9ead01a89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea620c7a1f9bf6f096faa3a497dfba8a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aea620c7a1f9bf6f096faa3a497dfba8a">set_dxdydz</a> (double <a class="el" href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">dx</a>, double <a class="el" href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">dy</a>, double <a class="el" href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">dz</a>)</td></tr>
+<tr class="separator:aea620c7a1f9bf6f096faa3a497dfba8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af70a66faf512a636ee048989292716ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#af70a66faf512a636ee048989292716ac">set_time</a> (double <a class="el" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a>, double <a class="el" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a>, double <a class="el" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">dt</a>)</td></tr>
+<tr class="separator:af70a66faf512a636ee048989292716ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aca84cff275059e43e921d5eccc2cd8dd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aca84cff275059e43e921d5eccc2cd8dd">set_saveat</a> (const double saveat)</td></tr>
+<tr class="separator:aca84cff275059e43e921d5eccc2cd8dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af5de69434920bb78c6cf21a345138a3d"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#af5de69434920bb78c6cf21a345138a3d">get_saveat</a> () const</td></tr>
+<tr class="separator:af5de69434920bb78c6cf21a345138a3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abdfe3161c5ffcbed7e9a0562d351b24c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#abdfe3161c5ffcbed7e9a0562d351b24c">Simulation</a> (const std::array&lt; int, 3 &gt; &amp;dims, MPI_Comm comm=MPI_COMM_WORLD)</td></tr>
+<tr class="separator:abdfe3161c5ffcbed7e9a0562d351b24c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38ef3ee471b492b14a7f23abec2bbeb2"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a38ef3ee471b492b14a7f23abec2bbeb2">~Simulation</a> ()</td></tr>
+<tr class="separator:a38ef3ee471b492b14a7f23abec2bbeb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaedee0823eb069ceb2633992a4d016fd"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aaedee0823eb069ceb2633992a4d016fd">get_dt</a> (int, double)</td></tr>
+<tr class="separator:aaedee0823eb069ceb2633992a4d016fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c8ad5fb45692d939d969d6f64725e75"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a1c8ad5fb45692d939d969d6f64725e75">set_max_iters</a> (unsigned long int nmax)</td></tr>
+<tr class="separator:a1c8ad5fb45692d939d969d6f64725e75"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa155fabae99df74bf83e7f84874e2357"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aa155fabae99df74bf83e7f84874e2357">set_results_dir</a> (std::string path)</td></tr>
+<tr class="separator:aa155fabae99df74bf83e7f84874e2357"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8992ccf920214b7f3c9462843b840931"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a8992ccf920214b7f3c9462843b840931">get_results_dir</a> ()</td></tr>
+<tr class="separator:a8992ccf920214b7f3c9462843b840931"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8b826f7730fbc82c08ed4e7324c5c601"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a8b826f7730fbc82c08ed4e7324c5c601">fft_r2c</a> (std::vector&lt; double &gt; &amp;A, std::vector&lt; std::complex&lt; double &gt; &gt; &amp;B)</td></tr>
+<tr class="separator:a8b826f7730fbc82c08ed4e7324c5c601"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac17df2510ed22e2d249a49e4e33446db"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac17df2510ed22e2d249a49e4e33446db">fft_c2r</a> (std::vector&lt; std::complex&lt; double &gt; &gt; &amp;A, std::vector&lt; double &gt; &amp;B)</td></tr>
+<tr class="separator:ac17df2510ed22e2d249a49e4e33446db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac6dbbcb76735a090d0080b064c287234"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac6dbbcb76735a090d0080b064c287234">MPI_Read_Data</a> (std::string filename, std::vector&lt; double &gt; &amp;u)</td></tr>
+<tr class="separator:ac6dbbcb76735a090d0080b064c287234"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6251947b70d20ab48488f91a906879b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#af6251947b70d20ab48488f91a906879b">MPI_Write_Data</a> (std::string filename, std::vector&lt; double &gt; &amp;u)</td></tr>
+<tr class="separator:af6251947b70d20ab48488f91a906879b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c4a892822160f4f9f818ba7d7e121f0"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a9c4a892822160f4f9f818ba7d7e121f0">done</a> (int n, double t)</td></tr>
+<tr class="separator:a9c4a892822160f4f9f818ba7d7e121f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3dbf7f57f15b9b2302561be97620a6d7"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a3dbf7f57f15b9b2302561be97620a6d7">set_step</a> (int n)</td></tr>
+<tr class="separator:a3dbf7f57f15b9b2302561be97620a6d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a996a46667df2e250eb39f3e83c4f8a8c"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">allocate</a> (size_t size_inbox, size_t size_outbox)=0</td></tr>
+<tr class="separator:a996a46667df2e250eb39f3e83c4f8a8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac78b8c1a71ba790d0e4bd3e0007927c1"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">prepare_operators</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)=0</td></tr>
+<tr class="separator:ac78b8c1a71ba790d0e4bd3e0007927c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa8dc66fd849ad62a69fd21381a5aba7"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">prepare_initial_condition</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)=0</td></tr>
+<tr class="separator:aaa8dc66fd849ad62a69fd21381a5aba7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0cc525db04f72b4eec3077c44043ad17"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a0cc525db04f72b4eec3077c44043ad17">apply_bc</a> (std::array&lt; int, 3 &gt;, std::array&lt; int, 3 &gt;)</td></tr>
+<tr class="separator:a0cc525db04f72b4eec3077c44043ad17"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67a3f9aab19af4d8a01e55705c23c41e"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">step</a> (int n, double t)=0</td></tr>
+<tr class="separator:a67a3f9aab19af4d8a01e55705c23c41e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a22a059bf86b12f915c811be549292d86"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a22a059bf86b12f915c811be549292d86">writeat</a> (int, double)</td></tr>
+<tr class="separator:a22a059bf86b12f915c811be549292d86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac6b140cfb527c0a17d8ece37ec337668"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">write_results</a> (int, double)</td></tr>
+<tr class="separator:ac6b140cfb527c0a17d8ece37ec337668"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:a9cf258027fd786c9e6480babea2d8f25"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a9cf258027fd786c9e6480babea2d8f25">me</a> = 0</td></tr>
+<tr class="separator:a9cf258027fd786c9e6480babea2d8f25"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a632481c4dc113db235f6085b36ad6c2e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a632481c4dc113db235f6085b36ad6c2e">num_ranks</a> = 1</td></tr>
+<tr class="separator:a632481c4dc113db235f6085b36ad6c2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f74ae48ef5e053c8359b03a116c22ca"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a8f74ae48ef5e053c8359b03a116c22ca">Lx</a></td></tr>
+<tr class="separator:a8f74ae48ef5e053c8359b03a116c22ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3861fb6656a5cb7d5ab469c6ca392824"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a3861fb6656a5cb7d5ab469c6ca392824">Ly</a></td></tr>
+<tr class="separator:a3861fb6656a5cb7d5ab469c6ca392824"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a538002afad18d8bc682df799031d3cc4"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a538002afad18d8bc682df799031d3cc4">Lz</a></td></tr>
+<tr class="separator:a538002afad18d8bc682df799031d3cc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5cf0d240d469549c276f7f57f0e9dbda"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">dx</a> = 1.0</td></tr>
+<tr class="separator:a5cf0d240d469549c276f7f57f0e9dbda"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad63eecaf19e78a9d3041f09d3785a02c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">dy</a> = 1.0</td></tr>
+<tr class="separator:ad63eecaf19e78a9d3041f09d3785a02c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91767d24c75ca7392ee7ae8e9965c5ce"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">dz</a> = 1.0</td></tr>
+<tr class="separator:a91767d24c75ca7392ee7ae8e9965c5ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a126c3ccad8db7db4a5e24373898ac93a"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">x0</a> = -64.0</td></tr>
+<tr class="separator:a126c3ccad8db7db4a5e24373898ac93a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af4b1aa7cb2cb0821a047317a3e8a4e2a"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">y0</a> = -64.0</td></tr>
+<tr class="separator:af4b1aa7cb2cb0821a047317a3e8a4e2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c269b07caaaf6a9bb3547f110ae0c83"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">z0</a> = -64.0</td></tr>
+<tr class="separator:a7c269b07caaaf6a9bb3547f110ae0c83"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2abd15aabd3e2d30fd76b3541aa2ab57"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a> = 0.0</td></tr>
+<tr class="separator:a2abd15aabd3e2d30fd76b3541aa2ab57"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c47189bb202a14f894107a83ebde5e6"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a> = 10.0</td></tr>
+<tr class="separator:a7c47189bb202a14f894107a83ebde5e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab376323a24c59bdb0e5433bbbd000047"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">dt</a> = 1.0</td></tr>
+<tr class="separator:ab376323a24c59bdb0e5433bbbd000047"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53b70138d62754acca5505de63768638"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a53b70138d62754acca5505de63768638">saveat_</a> = 1.0</td></tr>
+<tr class="separator:a53b70138d62754acca5505de63768638"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a248b44b3935b36d99cebfa458b77b87c"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a248b44b3935b36d99cebfa458b77b87c">n0</a> = 0</td></tr>
+<tr class="separator:a248b44b3935b36d99cebfa458b77b87c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac0da7388482501980ef3035892479d7b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac0da7388482501980ef3035892479d7b">max_iters</a> = INT_MAX</td></tr>
+<tr class="separator:ac0da7388482501980ef3035892479d7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a065fc8ed282cfd58467fe630aa4c5c98"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a065fc8ed282cfd58467fe630aa4c5c98">status_msg</a> = &quot;Initializing&quot;</td></tr>
+<tr class="separator:a065fc8ed282cfd58467fe630aa4c5c98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd6def4c5b784fb0ffa510363e3d477b"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#afd6def4c5b784fb0ffa510363e3d477b">mem_allocated</a> = 0</td></tr>
+<tr class="separator:afd6def4c5b784fb0ffa510363e3d477b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9910f187742eeba74cfbbc5d66f3ccc"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac9910f187742eeba74cfbbc5d66f3ccc">results_dir</a> = &quot;.&quot;</td></tr>
+<tr class="separator:ac9910f187742eeba74cfbbc5d66f3ccc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a8fcd3c7d87c78e6199c0e8e72592b3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classpfc_1_1FFT.html">FFT</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a></td></tr>
+<tr class="separator:a9a8fcd3c7d87c78e6199c0e8e72592b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a52cd38b727b287a3ac2552608eaf6167"><td class="memItemLeft" align="right" valign="top">MPI_Datatype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a52cd38b727b287a3ac2552608eaf6167">filetype</a></td></tr>
+<tr class="separator:a52cd38b727b287a3ac2552608eaf6167"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60b04cf4aadd5514161e71e2c1798845"><td class="memItemLeft" align="right" valign="top">std::array&lt; double, 8 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a60b04cf4aadd5514161e71e2c1798845">timing</a></td></tr>
+<tr class="separator:a60b04cf4aadd5514161e71e2c1798845"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="abdfe3161c5ffcbed7e9a0562d351b24c" name="abdfe3161c5ffcbed7e9a0562d351b24c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abdfe3161c5ffcbed7e9a0562d351b24c">&#9670;&#160;</a></span>Simulation()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">pfc::Simulation::Simulation </td>
+          <td>(</td>
+          <td class="paramtype">const std::array&lt; int, 3 &gt; &amp;&#160;</td>
+          <td class="paramname"><em>dims</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">MPI_Comm&#160;</td>
+          <td class="paramname"><em>comm</em> = <code>MPI_COMM_WORLD</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a38ef3ee471b492b14a7f23abec2bbeb2" name="a38ef3ee471b492b14a7f23abec2bbeb2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a38ef3ee471b492b14a7f23abec2bbeb2">&#9670;&#160;</a></span>~Simulation()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual pfc::Simulation::~Simulation </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="a996a46667df2e250eb39f3e83c4f8a8c" name="a996a46667df2e250eb39f3e83c4f8a8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a996a46667df2e250eb39f3e83c4f8a8c">&#9670;&#160;</a></span>allocate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void pfc::Simulation::allocate </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size_inbox</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size_outbox</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implemented in <a class="el" href="classTungsten.html#a87144e15bd56145e47d0c6cd44b8c0a6">Tungsten</a>, <a class="el" href="classTungsten.html#a87144e15bd56145e47d0c6cd44b8c0a6">Tungsten</a>, and <a class="el" href="classTungsten.html#a87144e15bd56145e47d0c6cd44b8c0a6">Tungsten</a>.</p>
+
+</div>
+</div>
+<a id="a0cc525db04f72b4eec3077c44043ad17" name="a0cc525db04f72b4eec3077c44043ad17"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0cc525db04f72b4eec3077c44043ad17">&#9670;&#160;</a></span>apply_bc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void pfc::Simulation::apply_bc </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented in <a class="el" href="classTungsten.html#a303db76d028c1e53d7828bad326685b8">Tungsten</a>.</p>
+
+</div>
+</div>
+<a id="a9c4a892822160f4f9f818ba7d7e121f0" name="a9c4a892822160f4f9f818ba7d7e121f0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9c4a892822160f4f9f818ba7d7e121f0">&#9670;&#160;</a></span>done()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual bool pfc::Simulation::done </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>t</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac17df2510ed22e2d249a49e4e33446db" name="ac17df2510ed22e2d249a49e4e33446db"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac17df2510ed22e2d249a49e4e33446db">&#9670;&#160;</a></span>fft_c2r()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::fft_c2r </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; std::complex&lt; double &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>A</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>B</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8b826f7730fbc82c08ed4e7324c5c601" name="a8b826f7730fbc82c08ed4e7324c5c601"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b826f7730fbc82c08ed4e7324c5c601">&#9670;&#160;</a></span>fft_r2c()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::fft_r2c </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>A</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; std::complex&lt; double &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>B</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aaedee0823eb069ceb2633992a4d016fd" name="aaedee0823eb069ceb2633992a4d016fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaedee0823eb069ceb2633992a4d016fd">&#9670;&#160;</a></span>get_dt()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual double pfc::Simulation::get_dt </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8992ccf920214b7f3c9462843b840931" name="a8992ccf920214b7f3c9462843b840931"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8992ccf920214b7f3c9462843b840931">&#9670;&#160;</a></span>get_results_dir()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path pfc::Simulation::get_results_dir </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af5de69434920bb78c6cf21a345138a3d" name="af5de69434920bb78c6cf21a345138a3d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af5de69434920bb78c6cf21a345138a3d">&#9670;&#160;</a></span>get_saveat()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::get_saveat </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac6dbbcb76735a090d0080b064c287234" name="ac6dbbcb76735a090d0080b064c287234"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac6dbbcb76735a090d0080b064c287234">&#9670;&#160;</a></span>MPI_Read_Data()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::MPI_Read_Data </td>
+          <td>(</td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>filename</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>u</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af6251947b70d20ab48488f91a906879b" name="af6251947b70d20ab48488f91a906879b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6251947b70d20ab48488f91a906879b">&#9670;&#160;</a></span>MPI_Write_Data()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::MPI_Write_Data </td>
+          <td>(</td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>filename</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
+          <td class="paramname"><em>u</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aaa8dc66fd849ad62a69fd21381a5aba7" name="aaa8dc66fd849ad62a69fd21381a5aba7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaa8dc66fd849ad62a69fd21381a5aba7">&#9670;&#160;</a></span>prepare_initial_condition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void pfc::Simulation::prepare_initial_condition </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implemented in <a class="el" href="classTungsten.html#a73d2c76a7653de4becce8e343092fb90">Tungsten</a>, <a class="el" href="classTungsten.html#a73d2c76a7653de4becce8e343092fb90">Tungsten</a>, and <a class="el" href="classTungsten.html#a73d2c76a7653de4becce8e343092fb90">Tungsten</a>.</p>
+
+</div>
+</div>
+<a id="ac78b8c1a71ba790d0e4bd3e0007927c1" name="ac78b8c1a71ba790d0e4bd3e0007927c1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac78b8c1a71ba790d0e4bd3e0007927c1">&#9670;&#160;</a></span>prepare_operators()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void pfc::Simulation::prepare_operators </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implemented in <a class="el" href="classTungsten.html#a4e5dc24f6aa49fc369e1a3503aba55d8">Tungsten</a>, <a class="el" href="classTungsten.html#a4e5dc24f6aa49fc369e1a3503aba55d8">Tungsten</a>, and <a class="el" href="classTungsten.html#a4e5dc24f6aa49fc369e1a3503aba55d8">Tungsten</a>.</p>
+
+</div>
+</div>
+<a id="aea620c7a1f9bf6f096faa3a497dfba8a" name="aea620c7a1f9bf6f096faa3a497dfba8a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aea620c7a1f9bf6f096faa3a497dfba8a">&#9670;&#160;</a></span>set_dxdydz()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::set_dxdydz </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>dx</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>dy</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>dz</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a1c8ad5fb45692d939d969d6f64725e75" name="a1c8ad5fb45692d939d969d6f64725e75"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1c8ad5fb45692d939d969d6f64725e75">&#9670;&#160;</a></span>set_max_iters()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::set_max_iters </td>
+          <td>(</td>
+          <td class="paramtype">unsigned long int&#160;</td>
+          <td class="paramname"><em>nmax</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9cbb3058cb4334f096ad8dd9ead01a89" name="a9cbb3058cb4334f096ad8dd9ead01a89"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9cbb3058cb4334f096ad8dd9ead01a89">&#9670;&#160;</a></span>set_origin()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::set_origin </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>x0</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>y0</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>z0</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa155fabae99df74bf83e7f84874e2357" name="aa155fabae99df74bf83e7f84874e2357"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa155fabae99df74bf83e7f84874e2357">&#9670;&#160;</a></span>set_results_dir()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::set_results_dir </td>
+          <td>(</td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>path</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aca84cff275059e43e921d5eccc2cd8dd" name="aca84cff275059e43e921d5eccc2cd8dd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aca84cff275059e43e921d5eccc2cd8dd">&#9670;&#160;</a></span>set_saveat()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::set_saveat </td>
+          <td>(</td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>saveat</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3dbf7f57f15b9b2302561be97620a6d7" name="a3dbf7f57f15b9b2302561be97620a6d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3dbf7f57f15b9b2302561be97620a6d7">&#9670;&#160;</a></span>set_step()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void pfc::Simulation::set_step </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af70a66faf512a636ee048989292716ac" name="af70a66faf512a636ee048989292716ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af70a66faf512a636ee048989292716ac">&#9670;&#160;</a></span>set_time()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void pfc::Simulation::set_time </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>t0</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>t1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>dt</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a67a3f9aab19af4d8a01e55705c23c41e" name="a67a3f9aab19af4d8a01e55705c23c41e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a67a3f9aab19af4d8a01e55705c23c41e">&#9670;&#160;</a></span>step()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void pfc::Simulation::step </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>t</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implemented in <a class="el" href="classTungsten.html#abce4295c2ca75c7730588dfe7d53b9d6">Tungsten</a>, <a class="el" href="classTungsten.html#a85352cf009af22672d042e7e5a65305f">Tungsten</a>, and <a class="el" href="classTungsten.html#a85352cf009af22672d042e7e5a65305f">Tungsten</a>.</p>
+
+</div>
+</div>
+<a id="ac6b140cfb527c0a17d8ece37ec337668" name="ac6b140cfb527c0a17d8ece37ec337668"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac6b140cfb527c0a17d8ece37ec337668">&#9670;&#160;</a></span>write_results()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void pfc::Simulation::write_results </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented in <a class="el" href="classTungsten.html#acadcd6f90f6f95454afa86e8e677aa3a">Tungsten</a>, <a class="el" href="classTungsten.html#acadcd6f90f6f95454afa86e8e677aa3a">Tungsten</a>, and <a class="el" href="classTungsten.html#acadcd6f90f6f95454afa86e8e677aa3a">Tungsten</a>.</p>
+
+</div>
+</div>
+<a id="a22a059bf86b12f915c811be549292d86" name="a22a059bf86b12f915c811be549292d86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a22a059bf86b12f915c811be549292d86">&#9670;&#160;</a></span>writeat()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual bool pfc::Simulation::writeat </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented in <a class="el" href="classTungsten.html#aad7884b9d93ee9613c9b854975a03588">Tungsten</a>, <a class="el" href="classTungsten.html#aad7884b9d93ee9613c9b854975a03588">Tungsten</a>, and <a class="el" href="classTungsten.html#aad7884b9d93ee9613c9b854975a03588">Tungsten</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="ab376323a24c59bdb0e5433bbbd000047" name="ab376323a24c59bdb0e5433bbbd000047"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab376323a24c59bdb0e5433bbbd000047">&#9670;&#160;</a></span>dt</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::dt = 1.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5cf0d240d469549c276f7f57f0e9dbda" name="a5cf0d240d469549c276f7f57f0e9dbda"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5cf0d240d469549c276f7f57f0e9dbda">&#9670;&#160;</a></span>dx</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::dx = 1.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad63eecaf19e78a9d3041f09d3785a02c" name="ad63eecaf19e78a9d3041f09d3785a02c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad63eecaf19e78a9d3041f09d3785a02c">&#9670;&#160;</a></span>dy</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::dy = 1.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a91767d24c75ca7392ee7ae8e9965c5ce" name="a91767d24c75ca7392ee7ae8e9965c5ce"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91767d24c75ca7392ee7ae8e9965c5ce">&#9670;&#160;</a></span>dz</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::dz = 1.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9a8fcd3c7d87c78e6199c0e8e72592b3" name="a9a8fcd3c7d87c78e6199c0e8e72592b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9a8fcd3c7d87c78e6199c0e8e72592b3">&#9670;&#160;</a></span>fft</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classpfc_1_1FFT.html">FFT</a> pfc::Simulation::fft</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a52cd38b727b287a3ac2552608eaf6167" name="a52cd38b727b287a3ac2552608eaf6167"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a52cd38b727b287a3ac2552608eaf6167">&#9670;&#160;</a></span>filetype</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">MPI_Datatype pfc::Simulation::filetype</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8f74ae48ef5e053c8359b03a116c22ca" name="a8f74ae48ef5e053c8359b03a116c22ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8f74ae48ef5e053c8359b03a116c22ca">&#9670;&#160;</a></span>Lx</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const int pfc::Simulation::Lx</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3861fb6656a5cb7d5ab469c6ca392824" name="a3861fb6656a5cb7d5ab469c6ca392824"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3861fb6656a5cb7d5ab469c6ca392824">&#9670;&#160;</a></span>Ly</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const int pfc::Simulation::Ly</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a538002afad18d8bc682df799031d3cc4" name="a538002afad18d8bc682df799031d3cc4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a538002afad18d8bc682df799031d3cc4">&#9670;&#160;</a></span>Lz</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const int pfc::Simulation::Lz</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac0da7388482501980ef3035892479d7b" name="ac0da7388482501980ef3035892479d7b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac0da7388482501980ef3035892479d7b">&#9670;&#160;</a></span>max_iters</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int pfc::Simulation::max_iters = INT_MAX</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9cf258027fd786c9e6480babea2d8f25" name="a9cf258027fd786c9e6480babea2d8f25"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9cf258027fd786c9e6480babea2d8f25">&#9670;&#160;</a></span>me</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int pfc::Simulation::me = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="afd6def4c5b784fb0ffa510363e3d477b" name="afd6def4c5b784fb0ffa510363e3d477b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd6def4c5b784fb0ffa510363e3d477b">&#9670;&#160;</a></span>mem_allocated</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t pfc::Simulation::mem_allocated = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a248b44b3935b36d99cebfa458b77b87c" name="a248b44b3935b36d99cebfa458b77b87c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a248b44b3935b36d99cebfa458b77b87c">&#9670;&#160;</a></span>n0</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int pfc::Simulation::n0 = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a632481c4dc113db235f6085b36ad6c2e" name="a632481c4dc113db235f6085b36ad6c2e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a632481c4dc113db235f6085b36ad6c2e">&#9670;&#160;</a></span>num_ranks</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int pfc::Simulation::num_ranks = 1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac9910f187742eeba74cfbbc5d66f3ccc" name="ac9910f187742eeba74cfbbc5d66f3ccc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac9910f187742eeba74cfbbc5d66f3ccc">&#9670;&#160;</a></span>results_dir</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path pfc::Simulation::results_dir = &quot;.&quot;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a53b70138d62754acca5505de63768638" name="a53b70138d62754acca5505de63768638"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a53b70138d62754acca5505de63768638">&#9670;&#160;</a></span>saveat_</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::saveat_ = 1.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a065fc8ed282cfd58467fe630aa4c5c98" name="a065fc8ed282cfd58467fe630aa4c5c98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a065fc8ed282cfd58467fe630aa4c5c98">&#9670;&#160;</a></span>status_msg</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string pfc::Simulation::status_msg = &quot;Initializing&quot;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a2abd15aabd3e2d30fd76b3541aa2ab57" name="a2abd15aabd3e2d30fd76b3541aa2ab57"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2abd15aabd3e2d30fd76b3541aa2ab57">&#9670;&#160;</a></span>t0</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::t0 = 0.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a7c47189bb202a14f894107a83ebde5e6" name="a7c47189bb202a14f894107a83ebde5e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7c47189bb202a14f894107a83ebde5e6">&#9670;&#160;</a></span>t1</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::t1 = 10.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a60b04cf4aadd5514161e71e2c1798845" name="a60b04cf4aadd5514161e71e2c1798845"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a60b04cf4aadd5514161e71e2c1798845">&#9670;&#160;</a></span>timing</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::array&lt;double, 8&gt; pfc::Simulation::timing</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a126c3ccad8db7db4a5e24373898ac93a" name="a126c3ccad8db7db4a5e24373898ac93a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a126c3ccad8db7db4a5e24373898ac93a">&#9670;&#160;</a></span>x0</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::x0 = -64.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af4b1aa7cb2cb0821a047317a3e8a4e2a" name="af4b1aa7cb2cb0821a047317a3e8a4e2a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af4b1aa7cb2cb0821a047317a3e8a4e2a">&#9670;&#160;</a></span>y0</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::y0 = -64.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a7c269b07caaaf6a9bb3547f110ae0c83" name="a7c269b07caaaf6a9bb3547f110ae0c83"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7c269b07caaaf6a9bb3547f110ae0c83">&#9670;&#160;</a></span>z0</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double pfc::Simulation::z0 = -64.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following file:<ul>
+<li>openpfc/<a class="el" href="deprecated_8hpp_source.html">deprecated.hpp</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="namespacepfc.html">pfc</a></li><li class="navelem"><a class="el" href="classpfc_1_1Simulation.html">Simulation</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

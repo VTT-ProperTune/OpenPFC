@@ -1,0 +1,17 @@
+<map id="openpfc/binary_reader.hpp" name="openpfc/binary_reader.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="188,5,383,31"/>
+<area shape="rect" id="Node000002" href="$types_8hpp.html" title=" " alt="" coords="145,79,231,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="271,33,217,72,214,68,268,29"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="256,79,315,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="288,31,288,65,283,65,283,31"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="339,79,419,104"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="302,29,354,68,351,72,299,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,61,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="164,106,72,149,70,144,162,102"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="86,152,165,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="180,106,147,143,143,140,176,103"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="189,152,313,177"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="200,103,233,140,229,143,196,106"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="337,152,399,177"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="218,102,327,144,325,149,216,107"/>
+</map>

@@ -1,0 +1,23 @@
+<map id="openpfc/mpi/timer.hpp" name="openpfc/mpi/timer.hpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="247,5,417,31"/>
+<area shape="rect" id="Node000002" href="$mpi__timers_8cpp.html" title=" " alt="" coords="157,79,331,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="312,42,273,81,269,77,309,38"/>
+<area shape="rect" id="Node000003" href="$mpi_8hpp.html" title=" " alt="" coords="356,93,487,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="356,38,411,91,407,95,352,42"/>
+<area shape="rect" id="Node000004" href="$mpi__worker__inside__class_8cpp.html" title=" " alt="" coords="131,181,317,236"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="388,127,277,184,274,179,385,123"/>
+<area shape="rect" id="Node000005" href="$openpfc_8hpp.html" title=" " alt="" coords="342,196,501,221"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="424,133,424,196,419,196,419,133"/>
+<area shape="rect" id="Node000010" href="$ui_8hpp.html" title=" " alt="" coords="525,196,643,221"/>
+<area shape="poly" id="edge9_Node000003_Node000010" title=" " alt="" coords="453,124,567,194,564,198,450,128"/>
+<area shape="rect" id="Node000006" href="$09__parallel__fft__high__level_8cpp.html" title=" " alt="" coords="5,284,205,339"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="373,228,189,286,187,281,371,223"/>
+<area shape="rect" id="Node000007" href="$10__ui__register__ic_8cpp.html" title=" " alt="" coords="419,284,586,339"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="441,230,483,282,479,285,437,234"/>
+<area shape="rect" id="Node000008" href="$11__write__results_8cpp.html" title=" " alt="" coords="229,284,395,339"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="401,233,343,286,339,282,397,229"/>
+<area shape="rect" id="Node000009" href="$12__cahn__hilliard_8cpp.html" title=" " alt="" coords="610,284,777,339"/>
+<area shape="poly" id="edge8_Node000005_Node000009" title=" " alt="" coords="466,224,623,281,621,286,465,229"/>
+<area shape="poly" id="edge10_Node000010_Node000007" title=" " alt="" coords="568,234,526,285,522,282,564,230"/>
+<area shape="poly" id="edge11_Node000010_Node000009" title=" " alt="" coords="608,229,666,282,663,286,605,233"/>
+</map>

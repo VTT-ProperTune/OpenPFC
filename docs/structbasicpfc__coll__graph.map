@@ -1,0 +1,9 @@
+<map id="basicpfc" name="basicpfc">
+<area shape="rect" id="Node000001" title=" " alt="" coords="69,183,145,208"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,95,124,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="79,131,104,181,99,183,74,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="148,95,235,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="172,132,121,184,117,180,168,128"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="122,5,261,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="194,59,194,94,189,94,189,59"/>
+</map>

@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['m_5ffilename_0',['m_filename',['../classpfc_1_1ResultsWriter.html#ac492d3639563864166777b997c868434',1,'pfc::ResultsWriter']]],
+  ['main_1',['main',['../09__parallel__fft__high__level_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;09_parallel_fft_high_level.cpp'],['../02__domain__decomposition_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;02_domain_decomposition.cpp'],['../01__hello__world_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;01_hello_world.cpp'],['../03__parallel__fft_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;03_parallel_fft.cpp'],['../04__diffusion__model_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;04_diffusion_model.cpp'],['../05__simulator_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;05_simulator.cpp'],['../06__multi__index_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;06_multi_index.cpp'],['../07__array_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;07_array.cpp'],['../08__discrete__fields_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;08_discrete_fields.cpp'],['../classpfc_1_1ui_1_1App.html#a88b69543d91cca302368093fa35acaf4',1,'pfc::ui::App::main()'],['../10__ui__register__ic_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;10_ui_register_ic.cpp'],['../11__write__results_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627',1,'main(int argc, char **argv):&#160;11_write_results.cpp'],['../write__results_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;write_results.cpp'],['../12__cahn__hilliard_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627',1,'main(int argc, char **argv):&#160;12_cahn_hilliard.cpp'],['../diffusion__model__with__custom__initial__condition_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;diffusion_model_with_custom_initial_condition.cpp'],['../world_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;world.cpp'],['../time_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;time.cpp'],['../json__read_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main(int argc, char *argv[]):&#160;json_read.cpp'],['../mpi__timers_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;mpi_timers.cpp'],['../mpi__worker_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;mpi_worker.cpp'],['../mpi__worker__inside__class_8cpp.html#ae66f6b31b5ad750f1fe042a706a4e3d4',1,'main():&#160;mpi_worker_inside_class.cpp']]],
+  ['map_5fcoordinates_5fto_5findices_2',['map_coordinates_to_indices',['../classpfc_1_1DiscreteField.html#a3da4cc71cddc5521f0f11d9924199d69',1,'pfc::DiscreteField']]],
+  ['map_5findices_5fto_5fcoordinates_3',['map_indices_to_coordinates',['../classpfc_1_1DiscreteField.html#ac949f2d107be7dee0189fcaee853309f',1,'pfc::DiscreteField']]],
+  ['model_4',['Model',['../classpfc_1_1Model.html#ac2749ce99089ae5f94da38458af690fc',1,'pfc::Model::Model(FFT &amp;fft)'],['../classpfc_1_1Model.html#a2d39ec327dad8ef5620068815ccf9c8a',1,'pfc::Model::Model()=default'],['../classpfc_1_1Model.html',1,'pfc::Model']]],
+  ['model_2ehpp_5',['model.hpp',['../model_8hpp.html',1,'']]],
+  ['modifier_6',['Modifier',['../classModifier.html',1,'']]],
+  ['moving_5fbc_2ehpp_7',['moving_bc.hpp',['../moving__bc_8hpp.html',1,'']]],
+  ['movingbc_8',['MovingBC',['../classpfc_1_1MovingBC.html#a1983c8b68e40ad1f40912d62b10b769c',1,'pfc::MovingBC::MovingBC(double rho_low, double rho_high)'],['../classpfc_1_1MovingBC.html#a941e69b6bb374033ce91f71f52384c28',1,'pfc::MovingBC::MovingBC()=default'],['../classpfc_1_1MovingBC.html',1,'pfc::MovingBC']]],
+  ['mpi_9',['mpi',['../classsimulation.html#af943475a5f853723dc8b66da749c2c4f',1,'simulation']]],
+  ['mpi_2ehpp_10',['mpi.hpp',['../mpi_8hpp.html',1,'']]],
+  ['mpi_5ftimers_2ecpp_11',['mpi_timers.cpp',['../mpi__timers_8cpp.html',1,'']]],
+  ['mpi_5fworker_12',['MPI_Worker',['../classpfc_1_1MPI__Worker.html#a64ea7c54fb46e36555f6d07af0ee10bc',1,'pfc::MPI_Worker']]],
+  ['mpi_5fworker_13',['mpi_worker',['../structmpi__worker.html',1,'']]],
+  ['mpi_5fworker_14',['MPI_Worker',['../classpfc_1_1MPI__Worker.html',1,'pfc']]],
+  ['mpi_5fworker_2ecpp_15',['mpi_worker.cpp',['../mpi__worker_8cpp.html',1,'']]],
+  ['mpi_5fworker_5finside_5fclass_2ecpp_16',['mpi_worker_inside_class.cpp',['../mpi__worker__inside__class_8cpp.html',1,'']]],
+  ['multi_5findex_2ehpp_17',['multi_index.hpp',['../multi__index_8hpp.html',1,'']]],
+  ['multiindex_18',['MultiIndex',['../classpfc_1_1MultiIndex.html#ae170c106a75b5539a473b4f0fdc17df8',1,'pfc::MultiIndex::MultiIndex()'],['../classpfc_1_1MultiIndex.html',1,'pfc::MultiIndex&lt; D &gt;']]],
+  ['mute_19',['mute',['../classpfc_1_1MPI__Worker.html#a45910002b928f63fb94570851d760d29',1,'pfc::MPI_Worker']]],
+  ['myic_20',['MyIC',['../classMyIC.html',1,'']]],
+  ['mymodel_21',['MyModel',['../classMyModel.html',1,'']]]
+];

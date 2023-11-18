@@ -1,0 +1,323 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('world_8hpp.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a>  </div>
+  <div class="headertitle"><div class="title">world.hpp File Reference</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><code>#include &lt;array&gt;</code><br />
+<code>#include &lt;heffte.h&gt;</code><br />
+<code>#include &lt;iostream&gt;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Include dependency graph for world.hpp:</div>
+<div class="dyncontent">
+<div class="center"><img src="world_8hpp__incl.png" border="0" usemap="#aopenpfc_2world_8hpp" alt=""/></div>
+<map name="aopenpfc_2world_8hpp" id="aopenpfc_2world_8hpp">
+<area shape="rect" title=" " alt="" coords="50,5,193,31"/>
+<area shape="rect" title=" " alt="" coords="5,79,61,104"/>
+<area shape="poly" title=" " alt="" coords="109,33,60,72,57,68,106,29"/>
+<area shape="rect" title=" " alt="" coords="85,79,157,104"/>
+<area shape="poly" title=" " alt="" coords="124,31,124,65,119,65,119,31"/>
+<area shape="rect" title=" " alt="" coords="181,79,261,104"/>
+<area shape="poly" title=" " alt="" coords="139,29,195,68,192,73,136,33"/>
+</map>
+</div>
+</div><div class="textblock"><div class="dynheader">
+This graph shows which files directly or indirectly include this file:</div>
+<div class="dyncontent">
+<div class="center"><img src="world_8hpp__dep__incl.png" border="0" usemap="#aopenpfc_2world_8hppdep" alt=""/></div>
+<map name="aopenpfc_2world_8hppdep" id="aopenpfc_2world_8hppdep">
+<area shape="rect" title=" " alt="" coords="1079,5,1221,31"/>
+<area shape="rect" href="01__hello__world_8cpp.html" title=" " alt="" coords="5,79,172,133"/>
+<area shape="poly" title=" " alt="" coords="1065,22,903,25,685,33,439,51,314,64,192,81,173,85,172,79,191,76,313,59,439,46,685,28,902,19,1065,17"/>
+<area shape="rect" href="02__domain__decomposition_8cpp.html" title=" " alt="" coords="357,181,565,236"/>
+<area shape="poly" title=" " alt="" coords="1077,36,875,81,693,134,538,184,536,179,691,129,873,76,1075,31"/>
+<area shape="rect" href="03__parallel__fft_8cpp.html" title=" " alt="" coords="809,284,976,339"/>
+<area shape="poly" title=" " alt="" coords="1065,27,1034,34,1003,45,974,60,949,81,932,103,918,129,901,185,894,240,894,284,888,284,889,240,896,184,913,127,927,101,945,77,971,56,1001,40,1033,29,1064,22"/>
+<area shape="rect" href="04__diffusion__model_8cpp.html" title=" " alt="" coords="1032,387,1199,441"/>
+<area shape="poly" title=" " alt="" coords="1164,42,1177,78,1196,151,1208,210,1209,239,1206,269,1198,302,1184,340,1169,366,1149,388,1145,385,1165,363,1180,338,1193,301,1201,268,1204,239,1203,211,1191,152,1171,79,1159,44"/>
+<area shape="rect" href="05__simulator_8cpp.html" title=" " alt="" coords="2847,585,3013,639"/>
+<area shape="poly" title=" " alt="" coords="1235,18,1596,23,2090,34,2554,51,2723,62,2822,76,2869,85,2916,91,3000,104,3034,116,3061,135,3078,165,3085,207,3085,415,3082,443,3073,469,3045,517,3008,556,2971,587,2967,583,3004,553,3040,513,3068,467,3076,442,3079,415,3079,208,3073,167,3057,139,3031,121,2998,109,2915,97,2869,91,2822,81,2722,68,2554,56,2090,39,1596,28,1235,23"/>
+<area shape="rect" href="08__discrete__fields_8cpp.html" title=" " alt="" coords="675,387,841,441"/>
+<area shape="poly" title=" " alt="" coords="1065,26,886,39,778,51,668,67,563,88,469,114,395,145,367,163,347,183,321,222,310,261,310,279,315,298,325,317,339,337,360,354,393,368,481,389,581,401,675,408,674,413,581,407,480,394,391,373,357,358,335,341,320,320,310,300,305,280,305,260,316,220,343,180,364,159,392,141,468,109,562,83,667,62,777,46,885,34,1065,21"/>
+<area shape="rect" href="world_8cpp.html" title=" " alt="" coords="3119,86,3333,126"/>
+<area shape="poly" title=" " alt="" coords="1235,17,1613,21,2152,31,2699,49,2928,61,3101,76,3147,83,3146,89,3100,81,2928,66,2699,54,2152,37,1612,27,1235,23"/>
+<area shape="rect" href="decomposition_8hpp.html" title=" " alt="" coords="959,93,1162,119"/>
+<area shape="poly" title=" " alt="" coords="1130,42,1075,95,1071,91,1126,38"/>
+<area shape="rect" href="openpfc_8hpp.html" title=" " alt="" coords="1209,599,1368,625"/>
+<area shape="poly" title=" " alt="" coords="1065,21,834,26,693,35,551,50,420,74,363,89,312,107,271,128,239,151,219,178,213,208,213,415,215,441,220,463,230,479,242,492,258,502,276,508,319,515,426,516,484,518,542,527,728,561,914,584,1081,598,1209,605,1209,610,1080,603,914,589,727,566,542,532,484,524,426,522,319,521,274,514,255,506,239,496,225,482,216,465,209,442,207,415,207,207,215,175,235,147,268,123,310,102,361,84,419,69,551,45,693,30,834,21,1065,16"/>
+<area shape="rect" href="model_8hpp.html" title=" " alt="" coords="1277,299,1423,324"/>
+<area shape="poly" title=" " alt="" coords="1198,34,1230,52,1260,77,1281,105,1299,136,1326,200,1343,258,1351,298,1346,299,1338,259,1321,202,1295,138,1277,108,1256,81,1227,56,1195,39"/>
+<area shape="rect" href="ui_8hpp.html" title=" " alt="" coords="1884,599,2003,625"/>
+<area shape="poly" title=" " alt="" coords="1235,16,1534,17,1944,25,2156,32,2354,42,2524,57,2652,76,2710,84,2768,88,2874,93,2918,104,2953,123,2966,138,2975,157,2981,180,2983,207,2983,313,2980,356,2971,392,2956,422,2935,448,2909,470,2879,491,2804,532,2757,546,2675,559,2446,582,2196,599,2003,610,2003,605,2196,594,2446,576,2674,553,2756,540,2802,527,2876,486,2906,466,2931,444,2951,419,2966,390,2975,355,2978,313,2978,207,2976,181,2970,159,2961,141,2949,128,2916,109,2873,99,2768,93,2709,90,2651,81,2523,62,2353,48,2156,37,1944,30,1534,23,1235,22"/>
+<area shape="rect" href="simulator_8hpp.html" title=" " alt="" coords="2624,497,2791,522"/>
+<area shape="poly" title=" " alt="" coords="1235,17,1639,24,1908,33,2188,49,2451,72,2568,87,2672,105,2758,125,2824,149,2848,162,2867,176,2878,191,2882,207,2882,313,2877,346,2865,377,2846,405,2823,431,2774,472,2731,499,2728,494,2771,467,2820,427,2842,402,2860,374,2872,345,2877,312,2877,208,2873,193,2863,180,2846,166,2822,154,2757,131,2671,110,2568,93,2450,78,2187,54,1908,38,1639,29,1235,22"/>
+<area shape="poly" title=" " alt="" coords="961,123,782,149,577,184,565,186,564,181,576,179,781,144,960,118"/>
+<area shape="poly" title=" " alt="" coords="1036,129,1007,154,977,183,938,236,909,285,904,282,934,233,973,180,1003,150,1032,125"/>
+<area shape="poly" title=" " alt="" coords="1103,123,1138,146,1153,162,1166,180,1176,207,1179,236,1178,265,1172,294,1154,346,1134,388,1129,385,1149,344,1167,292,1173,264,1174,236,1170,209,1161,183,1149,165,1134,150,1100,127"/>
+<area shape="poly" title=" " alt="" coords="1176,106,1461,121,1650,137,1859,162,2081,198,2309,245,2423,274,2535,307,2645,343,2752,384,2847,421,2883,445,2918,488,2929,512,2934,537,2936,584,2930,584,2929,538,2923,513,2913,491,2880,449,2845,425,2750,389,2644,348,2534,312,2421,279,2308,250,2080,203,1858,167,1649,142,1461,126,1175,112"/>
+<area shape="poly" title=" " alt="" coords="1020,126,968,151,909,185,849,231,823,257,800,285,786,310,776,337,764,387,759,386,771,336,781,308,796,283,819,253,846,227,906,181,966,146,1017,122"/>
+<area shape="rect" href="array_8hpp.html" title=" " alt="" coords="589,196,727,221"/>
+<area shape="poly" title=" " alt="" coords="998,124,753,184,699,198,698,193,752,179,997,119"/>
+<area shape="poly" title=" " alt="" coords="1048,132,1022,182,1012,226,1011,262,1008,298,1002,318,991,340,976,357,960,365,944,373,929,388,905,426,889,460,886,477,887,493,892,510,904,528,923,543,953,557,1032,579,1124,594,1210,603,1209,608,1123,599,1031,584,951,562,920,548,900,531,888,512,881,494,880,476,884,459,901,423,925,385,941,369,957,360,972,352,986,337,997,316,1003,297,1006,262,1007,225,1017,180,1043,129"/>
+<area shape="rect" href="fft_8hpp.html" title=" " alt="" coords="1031,196,1151,221"/>
+<area shape="poly" title=" " alt="" coords="1071,131,1090,195,1085,197,1066,133"/>
+<area shape="poly" title=" " alt="" coords="1102,122,1154,147,1209,179,1249,210,1287,243,1341,297,1338,300,1283,247,1246,214,1206,184,1152,152,1100,127"/>
+<area shape="rect" href="07__array_8cpp.html" title=" " alt="" coords="349,284,516,339"/>
+<area shape="poly" title=" " alt="" coords="621,229,492,286,490,281,619,225"/>
+<area shape="rect" href="discrete__field_8hpp.html" title=" " alt="" coords="540,299,733,324"/>
+<area shape="poly" title=" " alt="" coords="655,235,642,299,636,298,650,234"/>
+<area shape="poly" title=" " alt="" coords="613,228,577,239,532,247,484,253,393,264,358,273,335,287,330,296,328,307,331,321,339,337,374,387,410,424,447,450,487,469,581,495,696,527,764,546,835,563,976,586,1105,600,1209,606,1209,611,1105,605,975,591,834,568,763,552,695,532,579,500,486,474,444,455,406,428,370,391,334,340,326,322,323,307,324,294,331,283,356,268,392,258,483,248,531,242,576,233,612,223"/>
+<area shape="poly" title=" " alt="" coords="663,331,728,384,724,388,659,335"/>
+<area shape="poly" title=" " alt="" coords="639,338,645,387,652,415,664,440,687,472,710,494,737,510,774,527,830,548,888,566,1006,590,1117,603,1209,608,1209,613,1117,608,1006,595,887,571,828,554,772,532,734,515,706,498,683,476,660,443,647,416,640,388,634,338"/>
+<area shape="rect" href="09__parallel__fft__high__level_8cpp.html" title=" " alt="" coords="1114,695,1314,749"/>
+<area shape="poly" title=" " alt="" coords="1275,638,1234,696,1230,693,1271,634"/>
+<area shape="rect" href="10__ui__register__ic_8cpp.html" title=" " alt="" coords="1840,695,2007,749"/>
+<area shape="poly" title=" " alt="" coords="1377,624,1789,692,1840,702,1839,707,1788,697,1376,629"/>
+<area shape="rect" href="11__write__results_8cpp.html" title=" " alt="" coords="1337,695,1504,749"/>
+<area shape="poly" title=" " alt="" coords="1315,631,1390,693,1387,697,1312,636"/>
+<area shape="rect" href="12__cahn__hilliard_8cpp.html" title=" " alt="" coords="1609,695,1776,749"/>
+<area shape="poly" title=" " alt="" coords="1345,626,1610,696,1608,701,1344,631"/>
+<area shape="poly" title=" " alt="" coords="1057,230,946,286,943,282,1055,225"/>
+<area shape="poly" title=" " alt="" coords="1097,234,1115,386,1110,387,1092,235"/>
+<area shape="poly" title=" " alt="" coords="1165,208,1412,218,1584,228,1779,244,1989,266,2207,296,2427,335,2640,384,2715,401,2775,415,2802,425,2829,439,2857,460,2887,488,2903,510,2916,536,2929,584,2924,585,2911,537,2899,513,2883,491,2854,464,2826,444,2800,430,2773,420,2714,406,2639,389,2426,340,2207,302,1988,272,1779,249,1584,233,1412,223,1165,214"/>
+<area shape="poly" title=" " alt="" coords="1085,235,1063,284,1035,340,1014,370,988,395,939,439,921,459,912,480,912,502,927,528,944,542,971,556,1045,577,1130,592,1210,602,1209,607,1129,597,1043,582,969,561,942,547,923,531,907,503,906,479,917,456,936,435,985,391,1009,366,1030,337,1059,282,1080,233"/>
+<area shape="poly" title=" " alt="" coords="1135,224,1322,296,1320,301,1133,229"/>
+<area shape="poly" title=" " alt="" coords="1312,332,1178,389,1175,384,1309,327"/>
+<area shape="poly" title=" " alt="" coords="1437,311,1744,318,1945,328,2159,343,2371,366,2566,396,2653,415,2730,436,2795,460,2847,487,2873,508,2893,533,2922,583,2917,586,2889,536,2869,512,2845,492,2793,465,2728,441,2652,420,2565,401,2371,371,2159,349,1945,333,1743,324,1437,316"/>
+<area shape="poly" title=" " alt="" coords="1335,337,1284,391,1250,420,1212,444,1173,458,1135,461,1067,454,1035,451,1005,453,976,465,948,491,938,507,933,520,934,533,940,543,965,563,1004,578,1052,589,1106,597,1209,606,1209,611,1105,603,1051,595,1002,583,962,567,936,547,929,534,928,520,933,504,944,488,974,461,1004,448,1035,445,1068,448,1135,456,1172,452,1210,439,1247,416,1281,388,1331,333"/>
+<area shape="rect" href="field__modifier_8hpp.html" title=" " alt="" coords="1867,401,2062,427"/>
+<area shape="poly" title=" " alt="" coords="1434,324,1895,399,1894,404,1433,329"/>
+<area shape="poly" title=" " alt="" coords="1438,316,1721,342,1898,361,2074,384,2242,411,2407,442,2657,494,2656,499,2406,447,2241,417,2074,389,1897,366,1721,347,1437,322"/>
+<area shape="poly" title=" " alt="" coords="2076,413,2255,418,2467,430,2570,439,2664,451,2744,467,2805,487,2827,502,2855,527,2909,583,2905,587,2851,531,2824,506,2802,492,2743,472,2664,457,2569,444,2466,435,2255,423,2076,419"/>
+<area shape="poly" title=" " alt="" coords="1854,422,1613,433,1327,449,1084,469,1005,480,970,492,960,505,955,517,956,528,961,538,983,557,1018,572,1063,584,1112,593,1210,604,1209,609,1111,598,1061,589,1016,577,980,561,956,542,951,530,950,517,955,502,967,487,1004,475,1084,464,1327,444,1612,428,1853,417"/>
+<area shape="rect" href="diffusion__model__with__custom__initial__condition_8cpp.html" title=" " alt="" coords="2543,577,2749,647"/>
+<area shape="poly" title=" " alt="" coords="2076,418,2197,427,2329,441,2449,460,2497,473,2534,487,2562,505,2588,528,2627,576,2623,579,2584,532,2559,510,2531,492,2496,478,2448,466,2328,446,2196,432,2076,424"/>
+<area shape="rect" href="fixed__bc_8hpp.html" title=" " alt="" coords="1621,489,1834,529"/>
+<area shape="poly" title=" " alt="" coords="1924,434,1776,492,1774,487,1922,429"/>
+<area shape="poly" title=" " alt="" coords="2076,420,2204,431,2339,445,2452,464,2491,475,2512,487,2519,498,2521,510,2512,531,2497,545,2476,557,2423,577,2356,591,2282,601,2129,612,2003,614,2003,609,2129,607,2281,596,2355,586,2421,571,2474,552,2493,540,2508,528,2516,509,2514,500,2508,491,2488,480,2451,470,2339,451,2203,436,2076,425"/>
+<area shape="rect" href="moving__bc_8hpp.html" title=" " alt="" coords="1858,489,2071,529"/>
+<area shape="poly" title=" " alt="" coords="1967,440,1967,489,1962,489,1962,440"/>
+<area shape="rect" href="constant_8hpp.html" title=" " alt="" coords="2095,489,2285,529"/>
+<area shape="poly" title=" " alt="" coords="2006,429,2146,487,2144,492,2004,434"/>
+<area shape="rect" href="file__reader_8hpp.html" title=" " alt="" coords="2309,489,2498,529"/>
+<area shape="poly" title=" " alt="" coords="2032,427,2315,487,2314,492,2031,432"/>
+<area shape="rect" href="random__seeds_8hpp.html" title=" " alt="" coords="981,489,1170,529"/>
+<area shape="poly" title=" " alt="" coords="1854,426,1550,451,1366,470,1182,492,1170,494,1170,488,1182,487,1366,464,1550,446,1853,420"/>
+<area shape="rect" href="seed__grid_8hpp.html" title=" " alt="" coords="1194,489,1383,529"/>
+<area shape="poly" title=" " alt="" coords="1854,431,1642,458,1396,492,1384,494,1383,489,1395,487,1641,452,1854,426"/>
+<area shape="rect" href="single__seed_8hpp.html" title=" " alt="" coords="1407,489,1597,529"/>
+<area shape="poly" title=" " alt="" coords="1895,432,1596,492,1595,487,1894,427"/>
+<area shape="poly" title=" " alt="" coords="2076,423,2319,450,2605,487,2649,494,2648,499,2604,492,2319,455,2076,429"/>
+<area shape="poly" title=" " alt="" coords="1632,535,1339,602,1338,597,1631,530"/>
+<area shape="poly" title=" " alt="" coords="1782,533,1920,597,1917,602,1779,538"/>
+<area shape="poly" title=" " alt="" coords="1941,639,1931,695,1926,694,1936,638"/>
+<area shape="poly" title=" " alt="" coords="1905,633,1754,697,1752,692,1903,628"/>
+<area shape="poly" title=" " alt="" coords="1845,532,1368,602,1368,597,1844,527"/>
+<area shape="poly" title=" " alt="" coords="1960,543,1948,599,1943,598,1955,542"/>
+<area shape="poly" title=" " alt="" coords="2082,532,1877,558,1677,579,1369,607,1368,602,1677,574,1876,552,2081,527"/>
+<area shape="poly" title=" " alt="" coords="2132,537,1972,602,1970,597,2130,532"/>
+<area shape="poly" title=" " alt="" coords="2295,532,2025,562,1763,584,1369,609,1368,604,1763,579,2025,556,2295,527"/>
+<area shape="poly" title=" " alt="" coords="2305,535,1997,602,1995,597,2304,530"/>
+<area shape="poly" title=" " alt="" coords="1129,533,1265,597,1263,602,1127,538"/>
+<area shape="poly" title=" " alt="" coords="1184,527,1389,553,1588,575,1884,603,1884,608,1587,580,1388,558,1183,532"/>
+<area shape="poly" title=" " alt="" coords="1291,543,1291,599,1286,599,1286,543"/>
+<area shape="poly" title=" " alt="" coords="1397,527,1884,600,1883,605,1396,532"/>
+<area shape="poly" title=" " alt="" coords="1451,538,1314,602,1312,597,1448,533"/>
+<area shape="poly" title=" " alt="" coords="1598,530,1893,597,1892,602,1597,535"/>
+<area shape="poly" title=" " alt="" coords="2746,525,2873,582,2871,587,2744,530"/>
+<area shape="poly" title=" " alt="" coords="2611,523,2510,532,1851,579,1368,609,1368,603,1850,574,2510,527,2610,518"/>
+<area shape="poly" title=" " alt="" coords="2695,535,2669,579,2664,576,2691,532"/>
+<area shape="poly" title=" " alt="" coords="2610,526,2003,605,2003,600,2610,521"/>
+</map>
+</div>
+</div>
+<p><a href="world_8hpp_source.html">Go to the source code of this file.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1World.html">pfc::World</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a world in the simulation domain.  <a href="classpfc_1_1World.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacepfc"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacepfc.html">pfc</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_2c145bcb53510c73f45f3661004e5320.html">openpfc</a></li><li class="navelem"><a class="el" href="world_8hpp.html">world.hpp</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

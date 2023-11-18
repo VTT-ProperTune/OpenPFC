@@ -1,0 +1,1431 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('classTungsten.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="classTungsten-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">Tungsten Class Reference</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="dynheader">
+Inheritance diagram for Tungsten:</div>
+<div class="dyncontent">
+<div class="center"><img src="classTungsten__inherit__graph.png" border="0" usemap="#aTungsten_inherit__map" alt="Inheritance graph"/></div>
+<map name="aTungsten_inherit__map" id="aTungsten_inherit__map">
+<area shape="rect" title=" " alt="" coords="25,79,105,104"/>
+<area shape="rect" href="classpfc_1_1Simulation.html" title=" " alt="" coords="5,5,125,31"/>
+<area shape="poly" title=" " alt="" coords="68,44,68,79,63,79,63,44"/>
+</map>
+<center><span class="legend">[<a target="top" href="graph_legend.html">legend</a>]</span></center></div>
+<div class="dynheader">
+Collaboration diagram for Tungsten:</div>
+<div class="dyncontent">
+<div class="center"><img src="classTungsten__coll__graph.png" border="0" usemap="#aTungsten_coll__map" alt="Collaboration graph"/></div>
+<map name="aTungsten_coll__map" id="aTungsten_coll__map">
+<area shape="rect" title=" " alt="" coords="799,230,879,255"/>
+<area shape="rect" href="classpfc_1_1Simulation.html" title=" " alt="" coords="537,62,657,87"/>
+<area shape="poly" title=" " alt="" coords="671,72,725,83,752,93,776,109,802,137,820,171,838,229,833,231,815,173,798,140,773,113,750,98,724,88,670,77"/>
+<area shape="rect" title=" " alt="" coords="240,13,327,38"/>
+<area shape="poly" title=" " alt="" coords="341,32,537,63,536,68,340,37"/>
+<area shape="rect" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" title=" " alt="" coords="158,23,240,23,240,28,158,28"/>
+<area shape="rect" href="classpfc_1_1FFT.html" title="FFT class for performing forward and backward Fast Fourier Transformations." alt="" coords="247,62,320,87"/>
+<area shape="poly" title=" " alt="" coords="334,72,536,72,536,77,334,77"/>
+<area shape="rect" title=" " alt="" coords="196,111,371,137"/>
+<area shape="poly" title=" " alt="" coords="383,107,477,92,536,82,537,87,478,97,384,112"/>
+<area shape="rect" href="structparams.html" title=" " alt="" coords="561,111,632,137"/>
+<area shape="poly" title=" " alt="" coords="646,120,710,126,745,136,776,151,797,168,814,190,835,229,830,231,809,193,793,172,773,156,743,141,709,132,646,125"/>
+<area shape="rect" title=" " alt="" coords="514,230,679,255"/>
+<area shape="poly" title=" " alt="" coords="693,240,798,240,798,245,693,245"/>
+<area shape="rect" title=" " alt="" coords="501,288,692,328"/>
+<area shape="poly" title=" " alt="" coords="705,306,740,300,774,290,802,273,824,254,827,258,805,277,776,294,741,305,706,311"/>
+<area shape="rect" title=" " alt="" coords="193,295,373,321"/>
+<area shape="poly" title=" " alt="" coords="387,305,501,305,501,311,387,311"/>
+<area shape="rect" title=" " alt="" coords="523,352,670,392"/>
+<area shape="poly" title=" " alt="" coords="683,360,729,346,773,324,792,309,807,290,829,254,834,257,812,293,796,312,776,329,731,351,684,365"/>
+</map>
+<center><span class="legend">[<a target="top" href="graph_legend.html">legend</a>]</span></center></div>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a87144e15bd56145e47d0c6cd44b8c0a6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a87144e15bd56145e47d0c6cd44b8c0a6">allocate</a> (size_t size_inbox, size_t size_outbox)</td></tr>
+<tr class="separator:a87144e15bd56145e47d0c6cd44b8c0a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e5dc24f6aa49fc369e1a3503aba55d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a4e5dc24f6aa49fc369e1a3503aba55d8">prepare_operators</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:a4e5dc24f6aa49fc369e1a3503aba55d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abce4295c2ca75c7730588dfe7d53b9d6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#abce4295c2ca75c7730588dfe7d53b9d6">step</a> (int n, double)</td></tr>
+<tr class="separator:abce4295c2ca75c7730588dfe7d53b9d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73d2c76a7653de4becce8e343092fb90"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a73d2c76a7653de4becce8e343092fb90">prepare_initial_condition</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:a73d2c76a7653de4becce8e343092fb90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad7884b9d93ee9613c9b854975a03588"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#aad7884b9d93ee9613c9b854975a03588">writeat</a> (int n, double t)</td></tr>
+<tr class="separator:aad7884b9d93ee9613c9b854975a03588"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acadcd6f90f6f95454afa86e8e677aa3a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#acadcd6f90f6f95454afa86e8e677aa3a">write_results</a> (int n, double)</td></tr>
+<tr class="separator:acadcd6f90f6f95454afa86e8e677aa3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a87144e15bd56145e47d0c6cd44b8c0a6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a87144e15bd56145e47d0c6cd44b8c0a6">allocate</a> (size_t size_inbox, size_t size_outbox)</td></tr>
+<tr class="separator:a87144e15bd56145e47d0c6cd44b8c0a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e5dc24f6aa49fc369e1a3503aba55d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a4e5dc24f6aa49fc369e1a3503aba55d8">prepare_operators</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:a4e5dc24f6aa49fc369e1a3503aba55d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85352cf009af22672d042e7e5a65305f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a85352cf009af22672d042e7e5a65305f">step</a> (int, double)</td></tr>
+<tr class="separator:a85352cf009af22672d042e7e5a65305f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73d2c76a7653de4becce8e343092fb90"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a73d2c76a7653de4becce8e343092fb90">prepare_initial_condition</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:a73d2c76a7653de4becce8e343092fb90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad7884b9d93ee9613c9b854975a03588"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#aad7884b9d93ee9613c9b854975a03588">writeat</a> (int n, double t)</td></tr>
+<tr class="separator:aad7884b9d93ee9613c9b854975a03588"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acadcd6f90f6f95454afa86e8e677aa3a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#acadcd6f90f6f95454afa86e8e677aa3a">write_results</a> (int n, double)</td></tr>
+<tr class="separator:acadcd6f90f6f95454afa86e8e677aa3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad4dd7bca1e8c6cf3c7f60af0aed207e9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#ad4dd7bca1e8c6cf3c7f60af0aed207e9">set_initial_condition</a> (std::string <a class="el" href="clean__tungsten__with__bc_8cpp.html#a50d06433f4a3269cacea3e312aee25d0">initial_condition</a>)</td></tr>
+<tr class="separator:ad4dd7bca1e8c6cf3c7f60af0aed207e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba6e23807e438300783d5eb1721d9654"><td class="memItemLeft" align="right" valign="top"><a class="el" href="clean__tungsten__with__bc_8cpp.html#a50d06433f4a3269cacea3e312aee25d0">initial_condition</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#aba6e23807e438300783d5eb1721d9654">get_initial_condition</a> ()</td></tr>
+<tr class="separator:aba6e23807e438300783d5eb1721d9654"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a87144e15bd56145e47d0c6cd44b8c0a6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a87144e15bd56145e47d0c6cd44b8c0a6">allocate</a> (size_t size_inbox, size_t size_outbox)</td></tr>
+<tr class="separator:a87144e15bd56145e47d0c6cd44b8c0a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e5dc24f6aa49fc369e1a3503aba55d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a4e5dc24f6aa49fc369e1a3503aba55d8">prepare_operators</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:a4e5dc24f6aa49fc369e1a3503aba55d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a303db76d028c1e53d7828bad326685b8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a303db76d028c1e53d7828bad326685b8">apply_bc</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:a303db76d028c1e53d7828bad326685b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85352cf009af22672d042e7e5a65305f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a85352cf009af22672d042e7e5a65305f">step</a> (int, double)</td></tr>
+<tr class="separator:a85352cf009af22672d042e7e5a65305f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73d2c76a7653de4becce8e343092fb90"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a73d2c76a7653de4becce8e343092fb90">prepare_initial_condition</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:a73d2c76a7653de4becce8e343092fb90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a64f8afeddbfc572e77b91e3524ff75f9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a64f8afeddbfc572e77b91e3524ff75f9">prepare_initial_condition_random_uniform</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:a64f8afeddbfc572e77b91e3524ff75f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa834ff01cf7f98ba9977a341ce777b12"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#aa834ff01cf7f98ba9977a341ce777b12">prepare_initial_condition_regular_grid</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)</td></tr>
+<tr class="separator:aa834ff01cf7f98ba9977a341ce777b12"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad7884b9d93ee9613c9b854975a03588"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#aad7884b9d93ee9613c9b854975a03588">writeat</a> (int n, double t)</td></tr>
+<tr class="separator:aad7884b9d93ee9613c9b854975a03588"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acadcd6f90f6f95454afa86e8e677aa3a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#acadcd6f90f6f95454afa86e8e677aa3a">write_results</a> (int n, double)</td></tr>
+<tr class="separator:acadcd6f90f6f95454afa86e8e677aa3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classpfc_1_1Simulation"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classpfc_1_1Simulation')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classpfc_1_1Simulation.html">pfc::Simulation</a></td></tr>
+<tr class="memitem:a9cbb3058cb4334f096ad8dd9ead01a89 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a9cbb3058cb4334f096ad8dd9ead01a89">set_origin</a> (double <a class="el" href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">x0</a>, double <a class="el" href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">y0</a>, double <a class="el" href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">z0</a>)</td></tr>
+<tr class="separator:a9cbb3058cb4334f096ad8dd9ead01a89 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea620c7a1f9bf6f096faa3a497dfba8a inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aea620c7a1f9bf6f096faa3a497dfba8a">set_dxdydz</a> (double <a class="el" href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">dx</a>, double <a class="el" href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">dy</a>, double <a class="el" href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">dz</a>)</td></tr>
+<tr class="separator:aea620c7a1f9bf6f096faa3a497dfba8a inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af70a66faf512a636ee048989292716ac inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#af70a66faf512a636ee048989292716ac">set_time</a> (double <a class="el" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a>, double <a class="el" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a>, double <a class="el" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">dt</a>)</td></tr>
+<tr class="separator:af70a66faf512a636ee048989292716ac inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aca84cff275059e43e921d5eccc2cd8dd inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aca84cff275059e43e921d5eccc2cd8dd">set_saveat</a> (const double saveat)</td></tr>
+<tr class="separator:aca84cff275059e43e921d5eccc2cd8dd inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af5de69434920bb78c6cf21a345138a3d inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#af5de69434920bb78c6cf21a345138a3d">get_saveat</a> () const</td></tr>
+<tr class="separator:af5de69434920bb78c6cf21a345138a3d inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abdfe3161c5ffcbed7e9a0562d351b24c inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#abdfe3161c5ffcbed7e9a0562d351b24c">Simulation</a> (const std::array&lt; int, 3 &gt; &amp;dims, MPI_Comm comm=MPI_COMM_WORLD)</td></tr>
+<tr class="separator:abdfe3161c5ffcbed7e9a0562d351b24c inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38ef3ee471b492b14a7f23abec2bbeb2 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a38ef3ee471b492b14a7f23abec2bbeb2">~Simulation</a> ()</td></tr>
+<tr class="separator:a38ef3ee471b492b14a7f23abec2bbeb2 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaedee0823eb069ceb2633992a4d016fd inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aaedee0823eb069ceb2633992a4d016fd">get_dt</a> (int, double)</td></tr>
+<tr class="separator:aaedee0823eb069ceb2633992a4d016fd inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c8ad5fb45692d939d969d6f64725e75 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a1c8ad5fb45692d939d969d6f64725e75">set_max_iters</a> (unsigned long int nmax)</td></tr>
+<tr class="separator:a1c8ad5fb45692d939d969d6f64725e75 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa155fabae99df74bf83e7f84874e2357 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aa155fabae99df74bf83e7f84874e2357">set_results_dir</a> (std::string path)</td></tr>
+<tr class="separator:aa155fabae99df74bf83e7f84874e2357 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8992ccf920214b7f3c9462843b840931 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a8992ccf920214b7f3c9462843b840931">get_results_dir</a> ()</td></tr>
+<tr class="separator:a8992ccf920214b7f3c9462843b840931 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8b826f7730fbc82c08ed4e7324c5c601 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a8b826f7730fbc82c08ed4e7324c5c601">fft_r2c</a> (std::vector&lt; double &gt; &amp;A, std::vector&lt; std::complex&lt; double &gt; &gt; &amp;B)</td></tr>
+<tr class="separator:a8b826f7730fbc82c08ed4e7324c5c601 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac17df2510ed22e2d249a49e4e33446db inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac17df2510ed22e2d249a49e4e33446db">fft_c2r</a> (std::vector&lt; std::complex&lt; double &gt; &gt; &amp;A, std::vector&lt; double &gt; &amp;B)</td></tr>
+<tr class="separator:ac17df2510ed22e2d249a49e4e33446db inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac6dbbcb76735a090d0080b064c287234 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac6dbbcb76735a090d0080b064c287234">MPI_Read_Data</a> (std::string filename, std::vector&lt; double &gt; &amp;u)</td></tr>
+<tr class="separator:ac6dbbcb76735a090d0080b064c287234 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6251947b70d20ab48488f91a906879b inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#af6251947b70d20ab48488f91a906879b">MPI_Write_Data</a> (std::string filename, std::vector&lt; double &gt; &amp;u)</td></tr>
+<tr class="separator:af6251947b70d20ab48488f91a906879b inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c4a892822160f4f9f818ba7d7e121f0 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a9c4a892822160f4f9f818ba7d7e121f0">done</a> (int n, double t)</td></tr>
+<tr class="separator:a9c4a892822160f4f9f818ba7d7e121f0 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3dbf7f57f15b9b2302561be97620a6d7 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a3dbf7f57f15b9b2302561be97620a6d7">set_step</a> (int n)</td></tr>
+<tr class="separator:a3dbf7f57f15b9b2302561be97620a6d7 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a996a46667df2e250eb39f3e83c4f8a8c inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">allocate</a> (size_t size_inbox, size_t size_outbox)=0</td></tr>
+<tr class="separator:a996a46667df2e250eb39f3e83c4f8a8c inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac78b8c1a71ba790d0e4bd3e0007927c1 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">prepare_operators</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)=0</td></tr>
+<tr class="separator:ac78b8c1a71ba790d0e4bd3e0007927c1 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa8dc66fd849ad62a69fd21381a5aba7 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">prepare_initial_condition</a> (std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)=0</td></tr>
+<tr class="separator:aaa8dc66fd849ad62a69fd21381a5aba7 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0cc525db04f72b4eec3077c44043ad17 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a0cc525db04f72b4eec3077c44043ad17">apply_bc</a> (std::array&lt; int, 3 &gt;, std::array&lt; int, 3 &gt;)</td></tr>
+<tr class="separator:a0cc525db04f72b4eec3077c44043ad17 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67a3f9aab19af4d8a01e55705c23c41e inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">step</a> (int n, double t)=0</td></tr>
+<tr class="separator:a67a3f9aab19af4d8a01e55705c23c41e inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a22a059bf86b12f915c811be549292d86 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a22a059bf86b12f915c811be549292d86">writeat</a> (int, double)</td></tr>
+<tr class="separator:a22a059bf86b12f915c811be549292d86 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac6b140cfb527c0a17d8ece37ec337668 inherit pub_methods_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">write_results</a> (int, double)</td></tr>
+<tr class="separator:ac6b140cfb527c0a17d8ece37ec337668 inherit pub_methods_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:ae5827ff5928077cc4a1e819dc175b6ec"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structparams.html">params</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#ae5827ff5928077cc4a1e819dc175b6ec">p</a></td></tr>
+<tr class="separator:ae5827ff5928077cc4a1e819dc175b6ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aab95a82be1c6d64a931705cb95d6df55"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#aab95a82be1c6d64a931705cb95d6df55">filterMF</a></td></tr>
+<tr class="separator:aab95a82be1c6d64a931705cb95d6df55"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8b308148df2eb37b75cf7456c6f9b9a5"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a8b308148df2eb37b75cf7456c6f9b9a5">opL</a></td></tr>
+<tr class="separator:a8b308148df2eb37b75cf7456c6f9b9a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa545cc6057275eb6235bc33863ec045f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#aa545cc6057275eb6235bc33863ec045f">opN</a></td></tr>
+<tr class="separator:aa545cc6057275eb6235bc33863ec045f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85887613be09530d3d4840d3ec2552f6"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a85887613be09530d3d4840d3ec2552f6">psiMF</a></td></tr>
+<tr class="separator:a85887613be09530d3d4840d3ec2552f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c775445e996c9565ad4949da367c49a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a5c775445e996c9565ad4949da367c49a">psi</a></td></tr>
+<tr class="separator:a5c775445e996c9565ad4949da367c49a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeefa04383d69c66bcf44a53e86fa7eff"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#aeefa04383d69c66bcf44a53e86fa7eff">psiN</a> = <a class="el" href="classTungsten.html#a85887613be09530d3d4840d3ec2552f6">psiMF</a></td></tr>
+<tr class="separator:aeefa04383d69c66bcf44a53e86fa7eff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a64a9967da1cd57cd9f0f6c251dd85a05"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::complex&lt; double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a64a9967da1cd57cd9f0f6c251dd85a05">psiMF_F</a></td></tr>
+<tr class="separator:a64a9967da1cd57cd9f0f6c251dd85a05"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d6c13ff0b09ec2a621cd8c074832a49"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::complex&lt; double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a9d6c13ff0b09ec2a621cd8c074832a49">psi_F</a></td></tr>
+<tr class="separator:a9d6c13ff0b09ec2a621cd8c074832a49"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acff3c28bd2ca2f03f341448c4e5bd7c1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::complex&lt; double &gt; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#acff3c28bd2ca2f03f341448c4e5bd7c1">psiN_F</a> = <a class="el" href="classTungsten.html#a64a9967da1cd57cd9f0f6c251dd85a05">psiMF_F</a></td></tr>
+<tr class="separator:acff3c28bd2ca2f03f341448c4e5bd7c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8115395b0dd666343d0755aa8f95bf8c"><td class="memItemLeft" align="right" valign="top">const std::array&lt; double, 10 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a8115395b0dd666343d0755aa8f95bf8c">timers</a> = {0}</td></tr>
+<tr class="separator:a8115395b0dd666343d0755aa8f95bf8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a944c9a3ff6b38b422195d888b3c720fa"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#a944c9a3ff6b38b422195d888b3c720fa">psiN</a></td></tr>
+<tr class="separator:a944c9a3ff6b38b422195d888b3c720fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae7e4274f89ca245e1ae189508bf06376"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::complex&lt; double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTungsten.html#ae7e4274f89ca245e1ae189508bf06376">psiN_F</a></td></tr>
+<tr class="separator:ae7e4274f89ca245e1ae189508bf06376"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_attribs_classpfc_1_1Simulation"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classpfc_1_1Simulation')"><img src="closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="classpfc_1_1Simulation.html">pfc::Simulation</a></td></tr>
+<tr class="memitem:a9cf258027fd786c9e6480babea2d8f25 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a9cf258027fd786c9e6480babea2d8f25">me</a> = 0</td></tr>
+<tr class="separator:a9cf258027fd786c9e6480babea2d8f25 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a632481c4dc113db235f6085b36ad6c2e inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a632481c4dc113db235f6085b36ad6c2e">num_ranks</a> = 1</td></tr>
+<tr class="separator:a632481c4dc113db235f6085b36ad6c2e inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f74ae48ef5e053c8359b03a116c22ca inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a8f74ae48ef5e053c8359b03a116c22ca">Lx</a></td></tr>
+<tr class="separator:a8f74ae48ef5e053c8359b03a116c22ca inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3861fb6656a5cb7d5ab469c6ca392824 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a3861fb6656a5cb7d5ab469c6ca392824">Ly</a></td></tr>
+<tr class="separator:a3861fb6656a5cb7d5ab469c6ca392824 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a538002afad18d8bc682df799031d3cc4 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a538002afad18d8bc682df799031d3cc4">Lz</a></td></tr>
+<tr class="separator:a538002afad18d8bc682df799031d3cc4 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5cf0d240d469549c276f7f57f0e9dbda inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">dx</a> = 1.0</td></tr>
+<tr class="separator:a5cf0d240d469549c276f7f57f0e9dbda inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad63eecaf19e78a9d3041f09d3785a02c inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">dy</a> = 1.0</td></tr>
+<tr class="separator:ad63eecaf19e78a9d3041f09d3785a02c inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91767d24c75ca7392ee7ae8e9965c5ce inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">dz</a> = 1.0</td></tr>
+<tr class="separator:a91767d24c75ca7392ee7ae8e9965c5ce inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a126c3ccad8db7db4a5e24373898ac93a inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">x0</a> = -64.0</td></tr>
+<tr class="separator:a126c3ccad8db7db4a5e24373898ac93a inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af4b1aa7cb2cb0821a047317a3e8a4e2a inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">y0</a> = -64.0</td></tr>
+<tr class="separator:af4b1aa7cb2cb0821a047317a3e8a4e2a inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c269b07caaaf6a9bb3547f110ae0c83 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">z0</a> = -64.0</td></tr>
+<tr class="separator:a7c269b07caaaf6a9bb3547f110ae0c83 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2abd15aabd3e2d30fd76b3541aa2ab57 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a> = 0.0</td></tr>
+<tr class="separator:a2abd15aabd3e2d30fd76b3541aa2ab57 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c47189bb202a14f894107a83ebde5e6 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a> = 10.0</td></tr>
+<tr class="separator:a7c47189bb202a14f894107a83ebde5e6 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab376323a24c59bdb0e5433bbbd000047 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">dt</a> = 1.0</td></tr>
+<tr class="separator:ab376323a24c59bdb0e5433bbbd000047 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53b70138d62754acca5505de63768638 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a53b70138d62754acca5505de63768638">saveat_</a> = 1.0</td></tr>
+<tr class="separator:a53b70138d62754acca5505de63768638 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a248b44b3935b36d99cebfa458b77b87c inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a248b44b3935b36d99cebfa458b77b87c">n0</a> = 0</td></tr>
+<tr class="separator:a248b44b3935b36d99cebfa458b77b87c inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac0da7388482501980ef3035892479d7b inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac0da7388482501980ef3035892479d7b">max_iters</a> = INT_MAX</td></tr>
+<tr class="separator:ac0da7388482501980ef3035892479d7b inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a065fc8ed282cfd58467fe630aa4c5c98 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a065fc8ed282cfd58467fe630aa4c5c98">status_msg</a> = &quot;Initializing&quot;</td></tr>
+<tr class="separator:a065fc8ed282cfd58467fe630aa4c5c98 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd6def4c5b784fb0ffa510363e3d477b inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#afd6def4c5b784fb0ffa510363e3d477b">mem_allocated</a> = 0</td></tr>
+<tr class="separator:afd6def4c5b784fb0ffa510363e3d477b inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9910f187742eeba74cfbbc5d66f3ccc inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#ac9910f187742eeba74cfbbc5d66f3ccc">results_dir</a> = &quot;.&quot;</td></tr>
+<tr class="separator:ac9910f187742eeba74cfbbc5d66f3ccc inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a8fcd3c7d87c78e6199c0e8e72592b3 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classpfc_1_1FFT.html">FFT</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a></td></tr>
+<tr class="separator:a9a8fcd3c7d87c78e6199c0e8e72592b3 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a52cd38b727b287a3ac2552608eaf6167 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">MPI_Datatype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a52cd38b727b287a3ac2552608eaf6167">filetype</a></td></tr>
+<tr class="separator:a52cd38b727b287a3ac2552608eaf6167 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60b04cf4aadd5514161e71e2c1798845 inherit pub_attribs_classpfc_1_1Simulation"><td class="memItemLeft" align="right" valign="top">std::array&lt; double, 8 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpfc_1_1Simulation.html#a60b04cf4aadd5514161e71e2c1798845">timing</a></td></tr>
+<tr class="separator:a60b04cf4aadd5514161e71e2c1798845 inherit pub_attribs_classpfc_1_1Simulation"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="a87144e15bd56145e47d0c6cd44b8c0a6" name="a87144e15bd56145e47d0c6cd44b8c0a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a87144e15bd56145e47d0c6cd44b8c0a6">&#9670;&#160;</a></span>allocate() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::allocate </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size_inbox</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size_outbox</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a87144e15bd56145e47d0c6cd44b8c0a6" name="a87144e15bd56145e47d0c6cd44b8c0a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a87144e15bd56145e47d0c6cd44b8c0a6">&#9670;&#160;</a></span>allocate() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::allocate </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size_inbox</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size_outbox</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a87144e15bd56145e47d0c6cd44b8c0a6" name="a87144e15bd56145e47d0c6cd44b8c0a6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a87144e15bd56145e47d0c6cd44b8c0a6">&#9670;&#160;</a></span>allocate() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::allocate </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size_inbox</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>size_outbox</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a303db76d028c1e53d7828bad326685b8" name="a303db76d028c1e53d7828bad326685b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a303db76d028c1e53d7828bad326685b8">&#9670;&#160;</a></span>apply_bc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::apply_bc </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classpfc_1_1Simulation.html#a0cc525db04f72b4eec3077c44043ad17">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="aba6e23807e438300783d5eb1721d9654" name="aba6e23807e438300783d5eb1721d9654"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba6e23807e438300783d5eb1721d9654">&#9670;&#160;</a></span>get_initial_condition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="clean__tungsten__with__bc_8cpp.html#a50d06433f4a3269cacea3e312aee25d0">initial_condition</a> Tungsten::get_initial_condition </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a73d2c76a7653de4becce8e343092fb90" name="a73d2c76a7653de4becce8e343092fb90"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a73d2c76a7653de4becce8e343092fb90">&#9670;&#160;</a></span>prepare_initial_condition() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::prepare_initial_condition </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a73d2c76a7653de4becce8e343092fb90" name="a73d2c76a7653de4becce8e343092fb90"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a73d2c76a7653de4becce8e343092fb90">&#9670;&#160;</a></span>prepare_initial_condition() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::prepare_initial_condition </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a73d2c76a7653de4becce8e343092fb90" name="a73d2c76a7653de4becce8e343092fb90"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a73d2c76a7653de4becce8e343092fb90">&#9670;&#160;</a></span>prepare_initial_condition() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::prepare_initial_condition </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a64f8afeddbfc572e77b91e3524ff75f9" name="a64f8afeddbfc572e77b91e3524ff75f9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64f8afeddbfc572e77b91e3524ff75f9">&#9670;&#160;</a></span>prepare_initial_condition_random_uniform()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::prepare_initial_condition_random_uniform </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa834ff01cf7f98ba9977a341ce777b12" name="aa834ff01cf7f98ba9977a341ce777b12"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa834ff01cf7f98ba9977a341ce777b12">&#9670;&#160;</a></span>prepare_initial_condition_regular_grid()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::prepare_initial_condition_regular_grid </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a4e5dc24f6aa49fc369e1a3503aba55d8" name="a4e5dc24f6aa49fc369e1a3503aba55d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e5dc24f6aa49fc369e1a3503aba55d8">&#9670;&#160;</a></span>prepare_operators() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::prepare_operators </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a4e5dc24f6aa49fc369e1a3503aba55d8" name="a4e5dc24f6aa49fc369e1a3503aba55d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e5dc24f6aa49fc369e1a3503aba55d8">&#9670;&#160;</a></span>prepare_operators() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::prepare_operators </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a4e5dc24f6aa49fc369e1a3503aba55d8" name="a4e5dc24f6aa49fc369e1a3503aba55d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e5dc24f6aa49fc369e1a3503aba55d8">&#9670;&#160;</a></span>prepare_operators() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::prepare_operators </td>
+          <td>(</td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>low</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::array&lt; int, 3 &gt;&#160;</td>
+          <td class="paramname"><em>high</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="ad4dd7bca1e8c6cf3c7f60af0aed207e9" name="ad4dd7bca1e8c6cf3c7f60af0aed207e9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad4dd7bca1e8c6cf3c7f60af0aed207e9">&#9670;&#160;</a></span>set_initial_condition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::set_initial_condition </td>
+          <td>(</td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>initial_condition</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="abce4295c2ca75c7730588dfe7d53b9d6" name="abce4295c2ca75c7730588dfe7d53b9d6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abce4295c2ca75c7730588dfe7d53b9d6">&#9670;&#160;</a></span>step() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::step </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a85352cf009af22672d042e7e5a65305f" name="a85352cf009af22672d042e7e5a65305f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85352cf009af22672d042e7e5a65305f">&#9670;&#160;</a></span>step() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::step </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="a85352cf009af22672d042e7e5a65305f" name="a85352cf009af22672d042e7e5a65305f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85352cf009af22672d042e7e5a65305f">&#9670;&#160;</a></span>step() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::step </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Implements <a class="el" href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="acadcd6f90f6f95454afa86e8e677aa3a" name="acadcd6f90f6f95454afa86e8e677aa3a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acadcd6f90f6f95454afa86e8e677aa3a">&#9670;&#160;</a></span>write_results() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::write_results </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="acadcd6f90f6f95454afa86e8e677aa3a" name="acadcd6f90f6f95454afa86e8e677aa3a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acadcd6f90f6f95454afa86e8e677aa3a">&#9670;&#160;</a></span>write_results() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::write_results </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="acadcd6f90f6f95454afa86e8e677aa3a" name="acadcd6f90f6f95454afa86e8e677aa3a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acadcd6f90f6f95454afa86e8e677aa3a">&#9670;&#160;</a></span>write_results() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Tungsten::write_results </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="aad7884b9d93ee9613c9b854975a03588" name="aad7884b9d93ee9613c9b854975a03588"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad7884b9d93ee9613c9b854975a03588">&#9670;&#160;</a></span>writeat() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Tungsten::writeat </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>t</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classpfc_1_1Simulation.html#a22a059bf86b12f915c811be549292d86">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="aad7884b9d93ee9613c9b854975a03588" name="aad7884b9d93ee9613c9b854975a03588"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad7884b9d93ee9613c9b854975a03588">&#9670;&#160;</a></span>writeat() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Tungsten::writeat </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>t</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classpfc_1_1Simulation.html#a22a059bf86b12f915c811be549292d86">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<a id="aad7884b9d93ee9613c9b854975a03588" name="aad7884b9d93ee9613c9b854975a03588"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad7884b9d93ee9613c9b854975a03588">&#9670;&#160;</a></span>writeat() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Tungsten::writeat </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>t</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classpfc_1_1Simulation.html#a22a059bf86b12f915c811be549292d86">pfc::Simulation</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="aab95a82be1c6d64a931705cb95d6df55" name="aab95a82be1c6d64a931705cb95d6df55"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab95a82be1c6d64a931705cb95d6df55">&#9670;&#160;</a></span>filterMF</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; double &gt; Tungsten::filterMF</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8b308148df2eb37b75cf7456c6f9b9a5" name="a8b308148df2eb37b75cf7456c6f9b9a5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b308148df2eb37b75cf7456c6f9b9a5">&#9670;&#160;</a></span>opL</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; double &gt; Tungsten::opL</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa545cc6057275eb6235bc33863ec045f" name="aa545cc6057275eb6235bc33863ec045f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa545cc6057275eb6235bc33863ec045f">&#9670;&#160;</a></span>opN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; double &gt; Tungsten::opN</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae5827ff5928077cc4a1e819dc175b6ec" name="ae5827ff5928077cc4a1e819dc175b6ec"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae5827ff5928077cc4a1e819dc175b6ec">&#9670;&#160;</a></span>p</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structparams.html">params</a> Tungsten::p</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5c775445e996c9565ad4949da367c49a" name="a5c775445e996c9565ad4949da367c49a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c775445e996c9565ad4949da367c49a">&#9670;&#160;</a></span>psi</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; double &gt; Tungsten::psi</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9d6c13ff0b09ec2a621cd8c074832a49" name="a9d6c13ff0b09ec2a621cd8c074832a49"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9d6c13ff0b09ec2a621cd8c074832a49">&#9670;&#160;</a></span>psi_F</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::complex&lt; double &gt; &gt; Tungsten::psi_F</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a85887613be09530d3d4840d3ec2552f6" name="a85887613be09530d3d4840d3ec2552f6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85887613be09530d3d4840d3ec2552f6">&#9670;&#160;</a></span>psiMF</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; double &gt; Tungsten::psiMF</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a64a9967da1cd57cd9f0f6c251dd85a05" name="a64a9967da1cd57cd9f0f6c251dd85a05"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64a9967da1cd57cd9f0f6c251dd85a05">&#9670;&#160;</a></span>psiMF_F</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::complex&lt; double &gt; &gt; Tungsten::psiMF_F</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aeefa04383d69c66bcf44a53e86fa7eff" name="aeefa04383d69c66bcf44a53e86fa7eff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeefa04383d69c66bcf44a53e86fa7eff">&#9670;&#160;</a></span>psiN <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; double &gt; Tungsten::psiN = <a class="el" href="classTungsten.html#a85887613be09530d3d4840d3ec2552f6">psiMF</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a944c9a3ff6b38b422195d888b3c720fa" name="a944c9a3ff6b38b422195d888b3c720fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a944c9a3ff6b38b422195d888b3c720fa">&#9670;&#160;</a></span>psiN <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;double&gt; Tungsten::psiN</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="acff3c28bd2ca2f03f341448c4e5bd7c1" name="acff3c28bd2ca2f03f341448c4e5bd7c1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acff3c28bd2ca2f03f341448c4e5bd7c1">&#9670;&#160;</a></span>psiN_F <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::complex&lt; double &gt; &gt; Tungsten::psiN_F = <a class="el" href="classTungsten.html#a64a9967da1cd57cd9f0f6c251dd85a05">psiMF_F</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae7e4274f89ca245e1ae189508bf06376" name="ae7e4274f89ca245e1ae189508bf06376"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae7e4274f89ca245e1ae189508bf06376">&#9670;&#160;</a></span>psiN_F <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::complex&lt;double&gt; &gt; Tungsten::psiN_F</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8115395b0dd666343d0755aa8f95bf8c" name="a8115395b0dd666343d0755aa8f95bf8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8115395b0dd666343d0755aa8f95bf8c">&#9670;&#160;</a></span>timers</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::array&lt; double, 10 &gt; Tungsten::timers = {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
+<li>/home/juajukka/dev/openpfc/examples/<a class="el" href="clean__tungsten_8cpp.html">clean_tungsten.cpp</a></li>
+<li>/home/juajukka/dev/openpfc/examples/<a class="el" href="clean__tungsten__multiple__seeds_8cpp.html">clean_tungsten_multiple_seeds.cpp</a></li>
+<li>/home/juajukka/dev/openpfc/examples/<a class="el" href="clean__tungsten__with__bc_8cpp.html">clean_tungsten_with_bc.cpp</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="classTungsten.html">Tungsten</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

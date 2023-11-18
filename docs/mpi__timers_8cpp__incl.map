@@ -1,0 +1,16 @@
+<map id="/home/juajukka/dev/openpfc/examples/mpi_timers.cpp" name="/home/juajukka/dev/openpfc/examples/mpi_timers.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="73,5,247,60"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,108,61,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="123,62,63,102,60,98,120,58"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="73,181,153,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="147,61,127,109,117,168,112,167,121,107,142,59"/>
+<area shape="rect" id="Node000004" href="$timer_8hpp.html" title=" " alt="" coords="137,108,306,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="181,59,207,95,203,98,177,62"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="331,108,405,133"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="225,58,328,100,326,105,223,63"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="205,136,144,176,141,171,203,131"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="184,181,243,207"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="223,134,219,168,213,168,217,133"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="267,181,325,207"/>
+<area shape="poly" id="edge6_Node000004_Node000006" title=" " alt="" coords="235,131,276,170,272,174,231,135"/>
+</map>

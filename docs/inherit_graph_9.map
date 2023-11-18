@@ -1,0 +1,9 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classpfc_1_1Model.html" title="The Model class represents the physics model for simulations in OpenPFC." alt="" coords="5,55,96,80"/>
+<area shape="rect" id="Node000001" href="$classCahnHilliard.html" title=" " alt="" coords="144,5,247,31"/>
+<area shape="poly" id="edge11_Node000000_Node000001" title=" " alt="" coords="101,48,156,28,158,33,102,53"/>
+<area shape="rect" id="Node000002" href="$classDiffusion.html" title=" " alt="" coords="155,55,235,80"/>
+<area shape="poly" id="edge12_Node000000_Node000002" title=" " alt="" coords="110,65,155,65,155,70,110,70"/>
+<area shape="rect" id="Node000003" href="$classMyModel.html" title=" " alt="" coords="154,104,237,129"/>
+<area shape="poly" id="edge13_Node000000_Node000003" title=" " alt="" coords="102,82,158,101,156,106,101,87"/>
+</map>

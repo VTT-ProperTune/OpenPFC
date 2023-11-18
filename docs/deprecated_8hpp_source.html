@@ -1,0 +1,643 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('deprecated_8hpp_source.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">deprecated.hpp</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="deprecated_8hpp.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#pragma once</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#include &lt;chrono&gt;</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &lt;climits&gt;</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;cmath&gt;</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;filesystem&gt;</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;fstream&gt;</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;iostream&gt;</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;string&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &lt;heffte.h&gt;</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &quot;<a class="code" href="fft_8hpp.html">fft.hpp</a>&quot;</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &quot;<a class="code" href="utils_8hpp.html">utils.hpp</a>&quot;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespacepfc.html">pfc</a> {</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno"><a class="line" href="deprecated_8hpp.html#a798d92d1c30994837a03fd8fa08b4afb">   19</a></span><span class="preprocessor">#define MPI_TAG_TIMING 3</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html">   21</a></span><span class="keyword">class </span><a class="code hl_class" href="classpfc_1_1Simulation.html">Simulation</a> {</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a9cf258027fd786c9e6480babea2d8f25">   24</a></span>  <span class="keywordtype">int</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a9cf258027fd786c9e6480babea2d8f25">me</a> = 0;</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a632481c4dc113db235f6085b36ad6c2e">   25</a></span>  <span class="keywordtype">int</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a632481c4dc113db235f6085b36ad6c2e">num_ranks</a> = 1;</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a8f74ae48ef5e053c8359b03a116c22ca">   26</a></span>  <span class="keyword">const</span> <span class="keywordtype">int</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a8f74ae48ef5e053c8359b03a116c22ca">Lx</a>;</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a3861fb6656a5cb7d5ab469c6ca392824">   27</a></span>  <span class="keyword">const</span> <span class="keywordtype">int</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a3861fb6656a5cb7d5ab469c6ca392824">Ly</a>;</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a538002afad18d8bc682df799031d3cc4">   28</a></span>  <span class="keyword">const</span> <span class="keywordtype">int</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a538002afad18d8bc682df799031d3cc4">Lz</a>;</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">   29</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">dx</a> = 1.0;</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">   30</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">dy</a> = 1.0;</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">   31</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">dz</a> = 1.0;</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">   32</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">x0</a> = -64.0;</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">   33</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">y0</a> = -64.0;</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">   34</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">z0</a> = -64.0;</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">   35</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a> = 0.0;</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">   36</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a> = 10.0;</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">   37</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">dt</a> = 1.0;</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a53b70138d62754acca5505de63768638">   38</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a53b70138d62754acca5505de63768638">saveat_</a> = 1.0;</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a248b44b3935b36d99cebfa458b77b87c">   39</a></span>  <span class="keywordtype">int</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a248b44b3935b36d99cebfa458b77b87c">n0</a> = 0;</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#ac0da7388482501980ef3035892479d7b">   40</a></span>  <span class="keywordtype">int</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#ac0da7388482501980ef3035892479d7b">max_iters</a> = INT_MAX;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a065fc8ed282cfd58467fe630aa4c5c98">   41</a></span>  std::string <a class="code hl_variable" href="classpfc_1_1Simulation.html#a065fc8ed282cfd58467fe630aa4c5c98">status_msg</a> = <span class="stringliteral">&quot;Initializing&quot;</span>;</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#afd6def4c5b784fb0ffa510363e3d477b">   42</a></span>  <span class="keywordtype">size_t</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#afd6def4c5b784fb0ffa510363e3d477b">mem_allocated</a> = 0;</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#ac9910f187742eeba74cfbbc5d66f3ccc">   43</a></span>  std::filesystem::path <a class="code hl_variable" href="classpfc_1_1Simulation.html#ac9910f187742eeba74cfbbc5d66f3ccc">results_dir</a> = <span class="stringliteral">&quot;.&quot;</span>;</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">   45</a></span>  <a class="code hl_class" href="classpfc_1_1FFT.html">FFT</a> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a>;</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  <span class="comment">// Data type used for writing subarray</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a52cd38b727b287a3ac2552608eaf6167">   48</a></span>  MPI_Datatype <a class="code hl_variable" href="classpfc_1_1Simulation.html#a52cd38b727b287a3ac2552608eaf6167">filetype</a>;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  <span class="comment">// This array is used to measure time during stepping</span></div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a60b04cf4aadd5514161e71e2c1798845">   51</a></span>  std::array&lt;double, 8&gt; <a class="code hl_variable" href="classpfc_1_1Simulation.html#a60b04cf4aadd5514161e71e2c1798845">timing</a>;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a9cbb3058cb4334f096ad8dd9ead01a89">   53</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a9cbb3058cb4334f096ad8dd9ead01a89">set_origin</a>(<span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">x0</a>, <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">y0</a>, <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">z0</a>) {</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    this-&gt;x0 = <a class="code hl_variable" href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">x0</a>;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    this-&gt;y0 = <a class="code hl_variable" href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">y0</a>;</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    this-&gt;z0 = <a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">z0</a>;</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>  }</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#aea620c7a1f9bf6f096faa3a497dfba8a">   59</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#aea620c7a1f9bf6f096faa3a497dfba8a">set_dxdydz</a>(<span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">dx</a>, <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">dy</a>, <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">dz</a>) {</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    this-&gt;dx = <a class="code hl_variable" href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">dx</a>;</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    this-&gt;dy = <a class="code hl_variable" href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">dy</a>;</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    this-&gt;dz = <a class="code hl_variable" href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">dz</a>;</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>  }</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#af70a66faf512a636ee048989292716ac">   65</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#af70a66faf512a636ee048989292716ac">set_time</a>(<span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a>, <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a>, <span class="keywordtype">double</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">dt</a>) {</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    this-&gt;t0 = <a class="code hl_variable" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a>;</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    this-&gt;t1 = <a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a>;</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    this-&gt;dt = <a class="code hl_variable" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">dt</a>;</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>  }</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#aca84cff275059e43e921d5eccc2cd8dd">   71</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#aca84cff275059e43e921d5eccc2cd8dd">set_saveat</a>(<span class="keyword">const</span> <span class="keywordtype">double</span> saveat) { <a class="code hl_variable" href="classpfc_1_1Simulation.html#a53b70138d62754acca5505de63768638">saveat_</a> = saveat; }</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#af5de69434920bb78c6cf21a345138a3d">   72</a></span>  <span class="keywordtype">double</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#af5de69434920bb78c6cf21a345138a3d">get_saveat</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#a53b70138d62754acca5505de63768638">saveat_</a>; }</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span> </div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#abdfe3161c5ffcbed7e9a0562d351b24c">   74</a></span>  <a class="code hl_function" href="classpfc_1_1Simulation.html#abdfe3161c5ffcbed7e9a0562d351b24c">Simulation</a>(<span class="keyword">const</span> std::array&lt;int, 3&gt; &amp;dims, MPI_Comm comm = MPI_COMM_WORLD)</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>      : <a class="code hl_variable" href="classpfc_1_1Simulation.html#a8f74ae48ef5e053c8359b03a116c22ca">Lx</a>(dims[0]), <a class="code hl_variable" href="classpfc_1_1Simulation.html#a3861fb6656a5cb7d5ab469c6ca392824">Ly</a>(dims[1]), <a class="code hl_variable" href="classpfc_1_1Simulation.html#a538002afad18d8bc682df799031d3cc4">Lz</a>(dims[2]),</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>        <a class="code hl_variable" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a>(<a class="code hl_class" href="classpfc_1_1Decomposition.html">Decomposition</a>(<a class="code hl_class" href="classpfc_1_1World.html">World</a>(dims), comm), comm) {}</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a38ef3ee471b492b14a7f23abec2bbeb2">   78</a></span>  <span class="keyword">virtual</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a38ef3ee471b492b14a7f23abec2bbeb2">~Simulation</a>() {}</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#aaedee0823eb069ceb2633992a4d016fd">   80</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">double</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#aaedee0823eb069ceb2633992a4d016fd">get_dt</a>(<span class="keywordtype">int</span>, <span class="keywordtype">double</span>) { <span class="keywordflow">return</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">dt</a>; }</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span> </div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a1c8ad5fb45692d939d969d6f64725e75">   82</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a1c8ad5fb45692d939d969d6f64725e75">set_max_iters</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> <span class="keywordtype">int</span> nmax) { <a class="code hl_variable" href="classpfc_1_1Simulation.html#ac0da7388482501980ef3035892479d7b">max_iters</a> = nmax; }</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#aa155fabae99df74bf83e7f84874e2357">   84</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#aa155fabae99df74bf83e7f84874e2357">set_results_dir</a>(std::string path) { <a class="code hl_variable" href="classpfc_1_1Simulation.html#ac9910f187742eeba74cfbbc5d66f3ccc">results_dir</a> = path; }</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a8992ccf920214b7f3c9462843b840931">   86</a></span>  std::filesystem::path <a class="code hl_function" href="classpfc_1_1Simulation.html#a8992ccf920214b7f3c9462843b840931">get_results_dir</a>() { <span class="keywordflow">return</span> <a class="code hl_variable" href="classpfc_1_1Simulation.html#ac9910f187742eeba74cfbbc5d66f3ccc">results_dir</a>; }</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span> </div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a8b826f7730fbc82c08ed4e7324c5c601">   88</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a8b826f7730fbc82c08ed4e7324c5c601">fft_r2c</a>(std::vector&lt;double&gt; &amp;A, std::vector&lt;std::complex&lt;double&gt;&gt; &amp;B) {</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <a class="code hl_variable" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a>.<a class="code hl_function" href="classpfc_1_1FFT.html#ab900e24afe9e7e4fd4ae9a8e788983d9">forward</a>(A, B);</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>  }</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#ac17df2510ed22e2d249a49e4e33446db">   92</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#ac17df2510ed22e2d249a49e4e33446db">fft_c2r</a>(std::vector&lt;std::complex&lt;double&gt;&gt; &amp;A, std::vector&lt;double&gt; &amp;B) {</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    <a class="code hl_variable" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a>.<a class="code hl_function" href="classpfc_1_1FFT.html#ab072a7ab70335a2ddabbbc2338e4d6f1">backward</a>(A, B);</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>  }</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span> </div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#ac6dbbcb76735a090d0080b064c287234">   96</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#ac6dbbcb76735a090d0080b064c287234">MPI_Read_Data</a>(std::string filename, std::vector&lt;double&gt; &amp;u) {</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    MPI_File fh;</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    MPI_File_open(MPI_COMM_WORLD, filename.c_str(), MPI_MODE_RDONLY,</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                  MPI_INFO_NULL, &amp;fh);</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    MPI_File_set_view(fh, 0, MPI_DOUBLE, <a class="code hl_variable" href="classpfc_1_1Simulation.html#a52cd38b727b287a3ac2552608eaf6167">filetype</a>, <span class="stringliteral">&quot;native&quot;</span>, MPI_INFO_NULL);</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    MPI_File_read_all(fh, u.data(), u.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    MPI_File_close(&amp;fh);</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>  }</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span> </div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#af6251947b70d20ab48488f91a906879b">  105</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#af6251947b70d20ab48488f91a906879b">MPI_Write_Data</a>(std::string filename, std::vector&lt;double&gt; &amp;u) {</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    MPI_File fh;</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    MPI_File_open(MPI_COMM_WORLD, filename.c_str(),</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &amp;fh);</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    MPI_Offset filesize = 0;</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="keyword">const</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> disp = 0;</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    MPI_File_set_size(fh, filesize); <span class="comment">// force overwriting existing data</span></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    MPI_File_set_view(fh, disp, MPI_DOUBLE, <a class="code hl_variable" href="classpfc_1_1Simulation.html#a52cd38b727b287a3ac2552608eaf6167">filetype</a>, <span class="stringliteral">&quot;native&quot;</span>, MPI_INFO_NULL);</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    MPI_File_write_all(fh, u.data(), u.size(), MPI_DOUBLE, MPI_STATUS_IGNORE);</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    MPI_File_close(&amp;fh);</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>  }</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span> </div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a9c4a892822160f4f9f818ba7d7e121f0">  117</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">bool</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a9c4a892822160f4f9f818ba7d7e121f0">done</a>(<span class="keywordtype">int</span> n, <span class="keywordtype">double</span> t) {</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    <span class="keywordflow">if</span> (n &gt;= <a class="code hl_variable" href="classpfc_1_1Simulation.html#ac0da7388482501980ef3035892479d7b">max_iters</a>) {</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>      <a class="code hl_variable" href="classpfc_1_1Simulation.html#a065fc8ed282cfd58467fe630aa4c5c98">status_msg</a> = <span class="stringliteral">&quot;maximum number of iterations (&quot;</span> +</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>                   std::to_string(<a class="code hl_variable" href="classpfc_1_1Simulation.html#ac0da7388482501980ef3035892479d7b">max_iters</a>) + <span class="stringliteral">&quot;) reached&quot;</span>;</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>      <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    }</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <span class="keywordflow">if</span> (t &gt;= <a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a>) {</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>      <a class="code hl_variable" href="classpfc_1_1Simulation.html#a065fc8ed282cfd58467fe630aa4c5c98">status_msg</a> = <span class="stringliteral">&quot;simulated succesfully to time &quot;</span> + std::to_string(<a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a>) +</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>                   <span class="stringliteral">&quot;, (&quot;</span> + std::to_string(n) + <span class="stringliteral">&quot; iterations)&quot;</span>;</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>      <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    }</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>  }</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span> </div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a3dbf7f57f15b9b2302561be97620a6d7">  131</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a3dbf7f57f15b9b2302561be97620a6d7">set_step</a>(<span class="keywordtype">int</span> n) { <a class="code hl_variable" href="classpfc_1_1Simulation.html#a248b44b3935b36d99cebfa458b77b87c">n0</a> = n; }</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span> </div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>  <span class="comment">// in practice we are interested of replacing the things below with our</span></div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>  <span class="comment">// owns...</span></div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span> </div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">  136</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">allocate</a>(<span class="keywordtype">size_t</span> size_inbox, <span class="keywordtype">size_t</span> size_outbox) = 0;</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span> </div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">  138</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">prepare_operators</a>(std::array&lt;int, 3&gt; low,</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>                                 std::array&lt;int, 3&gt; high) = 0;</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span> </div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">  141</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">prepare_initial_condition</a>(std::array&lt;int, 3&gt; low,</div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>                                         std::array&lt;int, 3&gt; high) = 0;</div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span> </div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a0cc525db04f72b4eec3077c44043ad17">  144</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a0cc525db04f72b4eec3077c44043ad17">apply_bc</a>(std::array&lt;int, 3&gt;, std::array&lt;int, 3&gt;){};</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span> </div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">  146</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">step</a>(<span class="keywordtype">int</span> n, <span class="keywordtype">double</span> t) = 0;</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span> </div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#a22a059bf86b12f915c811be549292d86">  148</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">bool</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#a22a059bf86b12f915c811be549292d86">writeat</a>(<span class="keywordtype">int</span>, <span class="keywordtype">double</span>) { <span class="keywordflow">return</span> <span class="keyword">false</span>; };</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span> </div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno"><a class="line" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">  150</a></span>  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">write_results</a>(<span class="keywordtype">int</span>, <span class="keywordtype">double</span>) { <span class="keywordflow">return</span>; };</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>};</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span> </div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno"><a class="line" href="namespacepfc.html#a0e69f1b95ee26e616a97bea6071e6261">  153</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="namespacepfc.html#a0e69f1b95ee26e616a97bea6071e6261">MPI_Solve</a>(<a class="code hl_class" href="classpfc_1_1Simulation.html">Simulation</a> &amp;s) {</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span> </div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>  std::cout &lt;&lt; std::fixed;</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>  std::cout.precision(3);</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>  <span class="comment">// unpack simulation settings</span></div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>  <span class="keyword">const</span> <span class="keywordtype">int</span> Lx = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a8f74ae48ef5e053c8359b03a116c22ca">Lx</a>;</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>  <span class="keyword">const</span> <span class="keywordtype">int</span> Ly = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a3861fb6656a5cb7d5ab469c6ca392824">Ly</a>;</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>  <span class="keyword">const</span> <span class="keywordtype">int</span> Lz = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a538002afad18d8bc682df799031d3cc4">Lz</a>;</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span> </div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>  MPI_Comm comm = MPI_COMM_WORLD;</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span> </div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>  <span class="keywordtype">int</span> me, num_ranks; <span class="comment">// this process rank within the comm</span></div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>  MPI_Comm_rank(comm, &amp;me);</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>  MPI_Comm_size(comm, &amp;num_ranks);</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>  s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a9cf258027fd786c9e6480babea2d8f25">me</a> = me;</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>  s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a632481c4dc113db235f6085b36ad6c2e">num_ranks</a> = num_ranks;</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span> </div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>  <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;***** PFC SIMULATOR USING HEFFTE *****&quot;</span> &lt;&lt; std::endl</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>              &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>  }</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span> </div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>  <span class="keyword">const</span> <a class="code hl_class" href="classpfc_1_1Decomposition.html">Decomposition</a> &amp;decomp = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a>.<a class="code hl_function" href="classpfc_1_1FFT.html#aab2366b6624d4ba3d549e6e952e893e9">get_decomposition</a>();</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>  <span class="keyword">auto</span> inbox_low = decomp.<a class="code hl_variable" href="classpfc_1_1Decomposition.html#a78a2cd4304a8a69665c3b24503ff8c73">inbox</a>.low;</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>  <span class="keyword">auto</span> inbox_high = decomp.<a class="code hl_variable" href="classpfc_1_1Decomposition.html#a78a2cd4304a8a69665c3b24503ff8c73">inbox</a>.high;</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>  <span class="comment">// *** Create and commit new data type ***</span></div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>  MPI_Datatype filetype;</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>  <span class="keyword">const</span> <span class="keywordtype">int</span> size_array[] = {Lx, Ly, Lz};</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>  <span class="keyword">const</span> <span class="keywordtype">int</span> subsize_array[] = {inbox_high[0] - inbox_low[0] + 1,</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>                               inbox_high[1] - inbox_low[1] + 1,</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>                               inbox_high[2] - inbox_low[2] + 1};</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>  <span class="keyword">const</span> <span class="keywordtype">int</span> start_array[] = {inbox_low[0], inbox_low[1], inbox_low[2]};</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>  MPI_Type_create_subarray(3, size_array, subsize_array, start_array,</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>                           MPI_ORDER_FORTRAN, MPI_DOUBLE, &amp;filetype);</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>  MPI_Type_commit(&amp;filetype);</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span> </div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>  s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a52cd38b727b287a3ac2552608eaf6167">filetype</a> = filetype;</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span> </div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>  <span class="comment">// *** Allocate memory for workers. ***</span></div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span> </div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>  MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>  <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    std::cout &lt;&lt; std::endl</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>              &lt;&lt; <span class="stringliteral">&quot;***** MEMORY ALLOCATION STATUS *****&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>  }</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>  s.<a class="code hl_function" href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">allocate</a>(s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a>.<a class="code hl_function" href="classpfc_1_1FFT.html#a45a00f47ec44ac4e99ddfb1adc541bd5">size_inbox</a>(), s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a>.<a class="code hl_function" href="classpfc_1_1FFT.html#a4b36b485474df0ae976c86ad8b4c146e">size_outbox</a>());</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>  <span class="keyword">const</span> <span class="keywordtype">size_t</span> mem_allocated = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#afd6def4c5b784fb0ffa510363e3d477b">mem_allocated</a>;</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>  <span class="keyword">const</span> <span class="keywordtype">size_t</span> mem_allocated_wrk =</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>      <span class="keyword">sizeof</span>(std::complex&lt;double&gt;) * s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">fft</a>.<a class="code hl_function" href="classpfc_1_1FFT.html#a37e0a09c0306e95934082f57217ec7db">size_workspace</a>();</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>  MPI_Send(&amp;mem_allocated, 1, MPI_LONG_INT, 0, 0, MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>  MPI_Send(&amp;mem_allocated_wrk, 1, MPI_LONG_INT, 0, 1, MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>  MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>  <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    <span class="keywordtype">size_t</span> size = 0;</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    <span class="keywordtype">size_t</span> size_wrk = 0;</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    <span class="keywordtype">size_t</span> total_size = 0;</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    <span class="keywordtype">size_t</span> total_size_wrk = 0;</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num_ranks; i++) {</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>      MPI_Recv(&amp;size, 1, MPI_LONG_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>      MPI_Recv(&amp;size_wrk, 1, MPI_LONG_INT, i, 1, MPI_COMM_WORLD,</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>               MPI_STATUS_IGNORE);</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;MPI Worker &quot;</span> &lt;&lt; i &lt;&lt; <span class="stringliteral">&quot;, &quot;</span> &lt;&lt; (size + size_wrk)</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>                &lt;&lt; <span class="stringliteral">&quot; bytes allocated (&quot;</span> &lt;&lt; size &lt;&lt; <span class="stringliteral">&quot; bytes user data, &quot;</span></div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>                &lt;&lt; size_wrk &lt;&lt; <span class="stringliteral">&quot; bytes for fft workspace)&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>      total_size += size;</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>      total_size_wrk += size_wrk;</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    }</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    <span class="keyword">const</span> <span class="keywordtype">long</span> <span class="keywordtype">int</span> ndofs = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a8f74ae48ef5e053c8359b03a116c22ca">Lx</a> * s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a3861fb6656a5cb7d5ab469c6ca392824">Ly</a> * s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a538002afad18d8bc682df799031d3cc4">Lz</a>;</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    <span class="keyword">const</span> <span class="keywordtype">double</span> d = 1.0 / ndofs;</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    <span class="keyword">const</span> <span class="keywordtype">double</span> size_perdof = d * total_size;</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    <span class="keyword">const</span> <span class="keywordtype">double</span> size_wrk_perdof = d * total_size_wrk;</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    <span class="keyword">const</span> <span class="keywordtype">double</span> size_total_perdof = d * (total_size + total_size_wrk);</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;Total &quot;</span> &lt;&lt; total_size &lt;&lt; <span class="stringliteral">&quot; bytes allocated for user data (&quot;</span></div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>              &lt;&lt; size_perdof &lt;&lt; <span class="stringliteral">&quot; bytes / dof)&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;Total &quot;</span> &lt;&lt; total_size_wrk</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>              &lt;&lt; <span class="stringliteral">&quot; bytes allocated for workspace (&quot;</span> &lt;&lt; size_wrk_perdof</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>              &lt;&lt; <span class="stringliteral">&quot; bytes / dof)&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;Total &quot;</span> &lt;&lt; (total_size + total_size_wrk)</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>              &lt;&lt; <span class="stringliteral">&quot; bytes allocated (&quot;</span> &lt;&lt; size_total_perdof &lt;&lt; <span class="stringliteral">&quot; bytes / dof)&quot;</span></div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>              &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    std::cout &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>  }</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>  MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span> </div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>  <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;***** INITIALIZE SIMULATION *****&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>  }</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span> </div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>  <span class="keyword">auto</span> outbox_low = decomp.<a class="code hl_variable" href="classpfc_1_1Decomposition.html#a04df6a82361a68e5ac36808259997f5d">outbox</a>.low;</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>  <span class="keyword">auto</span> outbox_high = decomp.<a class="code hl_variable" href="classpfc_1_1Decomposition.html#a04df6a82361a68e5ac36808259997f5d">outbox</a>.high;</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span> </div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>  {</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;Preparing operators ... &quot;</span>;</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    }</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    <span class="keywordtype">double</span> t_op = -MPI_Wtime();</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    s.<a class="code hl_function" href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">prepare_operators</a>(outbox_low, outbox_high);</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    t_op += MPI_Wtime();</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;done in &quot;</span> &lt;&lt; t_op &lt;&lt; <span class="stringliteral">&quot; seconds&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    }</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>  }</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span> </div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>  {</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;Generating initial condition ... &quot;</span>;</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    }</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    <span class="keywordtype">double</span> t_init = -MPI_Wtime();</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    s.<a class="code hl_function" href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">prepare_initial_condition</a>(inbox_low, inbox_high);</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    s.<a class="code hl_function" href="classpfc_1_1Simulation.html#a0cc525db04f72b4eec3077c44043ad17">apply_bc</a>(inbox_low, inbox_high);</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    t_init += MPI_Wtime();</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;done in &quot;</span> &lt;&lt; t_init &lt;&lt; <span class="stringliteral">&quot; seconds&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    }</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>  }</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>  <span class="keywordtype">int</span> n = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a248b44b3935b36d99cebfa458b77b87c">n0</a>;</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>  <span class="keywordtype">double</span> t = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a>;</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span> </div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>  <span class="keywordtype">double</span> Sw = 0.0;</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>  <span class="keywordflow">if</span> (n == 0) { <span class="comment">// write initial condition</span></div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    Sw = -MPI_Wtime();</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    s.<a class="code hl_function" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">write_results</a>(n, t);</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    Sw += MPI_Wtime();</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;Results writing time: &quot;</span> &lt;&lt; Sw &lt;&lt; <span class="stringliteral">&quot; seconds&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>    }</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>  }</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span> </div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>  <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    std::cout &lt;&lt; std::endl</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>              &lt;&lt; <span class="stringliteral">&quot;***** STARTING SIMULATION ***** &quot;</span> &lt;&lt; std::endl</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>              &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>  }</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span> </div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>  <span class="keyword">auto</span> start = std::chrono::high_resolution_clock::now();</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span> </div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>  <span class="comment">// for timing step time</span></div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>  <span class="keyword">const</span> <span class="keywordtype">double</span> alpha = 0.05;</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>  <span class="keywordtype">double</span> S = 0.0;</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>  std::array&lt;double, 8&gt; timing;</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>  <span class="keywordtype">int</span> t_saveat_cnt = 1;</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>  <span class="keywordtype">double</span> t_saveat = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a> + t_saveat_cnt * s.<a class="code hl_function" href="classpfc_1_1Simulation.html#af5de69434920bb78c6cf21a345138a3d">get_saveat</a>();</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span> </div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>  <span class="keywordflow">while</span> (!s.<a class="code hl_function" href="classpfc_1_1Simulation.html#a9c4a892822160f4f9f818ba7d7e121f0">done</a>(n, t)) {</div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>    n += 1;</div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>    t += s.<a class="code hl_function" href="classpfc_1_1Simulation.html#aaedee0823eb069ceb2633992a4d016fd">get_dt</a>(n, t);</div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>    <span class="keywordtype">bool</span> write_results = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    <span class="keywordflow">if</span> (t &gt;= t_saveat) {</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>      t = t_saveat;</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>      write_results = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    }</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>    <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;***** STARTING STEP # &quot;</span> &lt;&lt; n &lt;&lt; <span class="stringliteral">&quot; ***** at time &quot;</span> &lt;&lt; t</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>                &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    }</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span> </div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    <span class="keywordtype">double</span> dt_step = -MPI_Wtime();</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    s.<a class="code hl_function" href="classpfc_1_1Simulation.html#a0cc525db04f72b4eec3077c44043ad17">apply_bc</a>(inbox_low, inbox_high);</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    s.<a class="code hl_function" href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">step</a>(n, t);</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    MPI_Send(&amp;(s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a60b04cf4aadd5514161e71e2c1798845">timing</a>), 8, MPI_DOUBLE, 0, <a class="code hl_define" href="deprecated_8hpp.html#a798d92d1c30994837a03fd8fa08b4afb">MPI_TAG_TIMING</a>, MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    dt_step += MPI_Wtime();</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span> </div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>    <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span> </div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;Step finished. Timing information:&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>      <span class="keywordtype">double</span> total_time = 0.0;</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>      <span class="keywordtype">double</span> fft_time = 0.0;</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>      <span class="keywordtype">double</span> other_time = 0.0;</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>      <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num_ranks; i++) {</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>        MPI_Recv(&amp;timing, 8, MPI_DOUBLE, i, <a class="code hl_define" href="deprecated_8hpp.html#a798d92d1c30994837a03fd8fa08b4afb">MPI_TAG_TIMING</a>, MPI_COMM_WORLD,</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>                 MPI_STATUS_IGNORE);</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span><span class="preprocessor">#ifdef PFC_SHOW_TIMING_PER_WORKER</span></div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;MPI Worker &quot;</span> &lt;&lt; i &lt;&lt; <span class="stringliteral">&quot;: FFT &quot;</span> &lt;&lt; timing[1] &lt;&lt; <span class="stringliteral">&quot;, Other &quot;</span></div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>                  &lt;&lt; timing[2] &lt;&lt; <span class="stringliteral">&quot;, Total &quot;</span> &lt;&lt; timing[0] &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>        total_time += timing[0];</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>        fft_time += timing[1];</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>        other_time += timing[2];</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>      }</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>      total_time /= num_ranks;</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>      fft_time /= num_ranks;</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>      other_time /= num_ranks;</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;Average time: FFT &quot;</span> &lt;&lt; fft_time &lt;&lt; <span class="stringliteral">&quot;, Other &quot;</span> &lt;&lt; other_time</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>                &lt;&lt; <span class="stringliteral">&quot;, Total &quot;</span> &lt;&lt; total_time &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span> </div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>      S = (n &lt; 5) ? dt_step : alpha * dt_step + (1.0 - alpha) * S;</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>      <span class="keyword">auto</span> n_left = (s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">t1</a> - t) / s.<a class="code hl_function" href="classpfc_1_1Simulation.html#aaedee0823eb069ceb2633992a4d016fd">get_dt</a>(n, t);</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>      <span class="keyword">auto</span> eta = S * n_left;</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;Step execution time: &quot;</span> &lt;&lt; dt_step</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>                &lt;&lt; <span class="stringliteral">&quot; seconds. Average step execution time: &quot;</span> &lt;&lt; S &lt;&lt; <span class="stringliteral">&quot; seconds.&quot;</span></div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>                &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>      <span class="keyword">auto</span> pct_done = 100.0 * n / (n + n_left);</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;Simulation time: &quot;</span> &lt;&lt; t &lt;&lt; <span class="stringliteral">&quot; seconds. &quot;</span> &lt;&lt; n</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>                &lt;&lt; <span class="stringliteral">&quot; of estimated &quot;</span> &lt;&lt; (n + n_left) &lt;&lt; <span class="stringliteral">&quot; steps (&quot;</span> &lt;&lt; pct_done</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>                &lt;&lt; <span class="stringliteral">&quot; %) done.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;Simulation is estimated to be ready in &quot;</span> &lt;&lt; eta</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>                &lt;&lt; <span class="stringliteral">&quot; seconds.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>    }</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span> </div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>    <span class="keywordflow">if</span> (write_results) {</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>      <span class="keywordtype">double</span> dt_write = -MPI_Wtime();</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>      MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>      s.<a class="code hl_function" href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">write_results</a>(t_saveat_cnt, t);</div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>      MPI_Barrier(MPI_COMM_WORLD);</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>      dt_write += MPI_Wtime();</div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>      <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>        Sw = alpha * dt_write + (1.0 - alpha) * Sw;</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;Results writing time: &quot;</span> &lt;&lt; dt_write</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>                  &lt;&lt; <span class="stringliteral">&quot; seconds (avg: &quot;</span> &lt;&lt; Sw &lt;&lt; <span class="stringliteral">&quot; seconds)&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>      }</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>      t_saveat_cnt += 1;</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>      t_saveat = s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">t0</a> + t_saveat_cnt * s.<a class="code hl_function" href="classpfc_1_1Simulation.html#af5de69434920bb78c6cf21a345138a3d">get_saveat</a>();</div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>    }</div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span> </div>
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>    <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>      std::cout &lt;&lt; <span class="stringliteral">&quot;***** FINISHING STEP # &quot;</span> &lt;&lt; n &lt;&lt; <span class="stringliteral">&quot; *****&quot;</span> &lt;&lt; std::endl</div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>                &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>      std::cout.flush();</div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>    }</div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>  }</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>  <span class="keyword">auto</span> stop = std::chrono::high_resolution_clock::now();</div>
+<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>  <span class="keyword">auto</span> duration =</div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>      std::chrono::duration_cast&lt;std::chrono::milliseconds&gt;(stop - start);</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>  <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>    std::cout &lt;&lt; n &lt;&lt; <span class="stringliteral">&quot; iterations in &quot;</span> &lt;&lt; duration.count() / 1000.0</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>              &lt;&lt; <span class="stringliteral">&quot; seconds (&quot;</span> &lt;&lt; duration.count() / n &lt;&lt; <span class="stringliteral">&quot; ms / iteration)&quot;</span></div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>              &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>  }</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>  <span class="keywordflow">if</span> (me == 0) {</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;Simulation done. Status message: &quot;</span> + s.<a class="code hl_variable" href="classpfc_1_1Simulation.html#a065fc8ed282cfd58467fe630aa4c5c98">status_msg</a></div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>              &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>  }</div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>}</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span> </div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>} <span class="comment">// namespace pfc</span></div>
+<div class="ttc" id="aclasspfc_1_1Decomposition_html"><div class="ttname"><a href="classpfc_1_1Decomposition.html">pfc::Decomposition</a></div><div class="ttdoc">Class representing the domain decomposition for parallel Fast Fourier Transform.</div><div class="ttdef"><b>Definition</b> decomposition.hpp:20</div></div>
+<div class="ttc" id="aclasspfc_1_1Decomposition_html_a04df6a82361a68e5ac36808259997f5d"><div class="ttname"><a href="classpfc_1_1Decomposition.html#a04df6a82361a68e5ac36808259997f5d">pfc::Decomposition::outbox</a></div><div class="ttdeci">const heffte::box3d&lt; int &gt; outbox</div><div class="ttdoc">Local communication boxes.</div><div class="ttdef"><b>Definition</b> decomposition.hpp:52</div></div>
+<div class="ttc" id="aclasspfc_1_1Decomposition_html_a78a2cd4304a8a69665c3b24503ff8c73"><div class="ttname"><a href="classpfc_1_1Decomposition.html#a78a2cd4304a8a69665c3b24503ff8c73">pfc::Decomposition::inbox</a></div><div class="ttdeci">const heffte::box3d&lt; int &gt; inbox</div><div class="ttdef"><b>Definition</b> decomposition.hpp:52</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html"><div class="ttname"><a href="classpfc_1_1FFT.html">pfc::FFT</a></div><div class="ttdoc">FFT class for performing forward and backward Fast Fourier Transformations.</div><div class="ttdef"><b>Definition</b> fft.hpp:15</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a37e0a09c0306e95934082f57217ec7db"><div class="ttname"><a href="classpfc_1_1FFT.html#a37e0a09c0306e95934082f57217ec7db">pfc::FFT::size_workspace</a></div><div class="ttdeci">size_t size_workspace() const</div><div class="ttdoc">Returns the size of the workspace used for FFT computations.</div><div class="ttdef"><b>Definition</b> fft.hpp:99</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a45a00f47ec44ac4e99ddfb1adc541bd5"><div class="ttname"><a href="classpfc_1_1FFT.html#a45a00f47ec44ac4e99ddfb1adc541bd5">pfc::FFT::size_inbox</a></div><div class="ttdeci">size_t size_inbox() const</div><div class="ttdoc">Returns the size of the inbox used for FFT computations.</div><div class="ttdef"><b>Definition</b> fft.hpp:85</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a4b36b485474df0ae976c86ad8b4c146e"><div class="ttname"><a href="classpfc_1_1FFT.html#a4b36b485474df0ae976c86ad8b4c146e">pfc::FFT::size_outbox</a></div><div class="ttdeci">size_t size_outbox() const</div><div class="ttdoc">Returns the size of the outbox used for FFT computations.</div><div class="ttdef"><b>Definition</b> fft.hpp:92</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_aab2366b6624d4ba3d549e6e952e893e9"><div class="ttname"><a href="classpfc_1_1FFT.html#aab2366b6624d4ba3d549e6e952e893e9">pfc::FFT::get_decomposition</a></div><div class="ttdeci">const Decomposition &amp; get_decomposition()</div><div class="ttdoc">Returns the associated Decomposition object.</div><div class="ttdef"><b>Definition</b> fft.hpp:78</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_ab072a7ab70335a2ddabbbc2338e4d6f1"><div class="ttname"><a href="classpfc_1_1FFT.html#ab072a7ab70335a2ddabbbc2338e4d6f1">pfc::FFT::backward</a></div><div class="ttdeci">void backward(std::vector&lt; std::complex&lt; double &gt; &gt; &amp;in, std::vector&lt; double &gt; &amp;out)</div><div class="ttdoc">Performs the backward (inverse) FFT transformation.</div><div class="ttdef"><b>Definition</b> fft.hpp:55</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_ab900e24afe9e7e4fd4ae9a8e788983d9"><div class="ttname"><a href="classpfc_1_1FFT.html#ab900e24afe9e7e4fd4ae9a8e788983d9">pfc::FFT::forward</a></div><div class="ttdeci">void forward(std::vector&lt; double &gt; &amp;in, std::vector&lt; std::complex&lt; double &gt; &gt; &amp;out)</div><div class="ttdoc">Performs the forward FFT transformation.</div><div class="ttdef"><b>Definition</b> fft.hpp:43</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html"><div class="ttname"><a href="classpfc_1_1Simulation.html">pfc::Simulation</a></div><div class="ttdef"><b>Definition</b> deprecated.hpp:21</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a065fc8ed282cfd58467fe630aa4c5c98"><div class="ttname"><a href="classpfc_1_1Simulation.html#a065fc8ed282cfd58467fe630aa4c5c98">pfc::Simulation::status_msg</a></div><div class="ttdeci">std::string status_msg</div><div class="ttdef"><b>Definition</b> deprecated.hpp:41</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a0cc525db04f72b4eec3077c44043ad17"><div class="ttname"><a href="classpfc_1_1Simulation.html#a0cc525db04f72b4eec3077c44043ad17">pfc::Simulation::apply_bc</a></div><div class="ttdeci">virtual void apply_bc(std::array&lt; int, 3 &gt;, std::array&lt; int, 3 &gt;)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:144</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a126c3ccad8db7db4a5e24373898ac93a"><div class="ttname"><a href="classpfc_1_1Simulation.html#a126c3ccad8db7db4a5e24373898ac93a">pfc::Simulation::x0</a></div><div class="ttdeci">double x0</div><div class="ttdef"><b>Definition</b> deprecated.hpp:32</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a1c8ad5fb45692d939d969d6f64725e75"><div class="ttname"><a href="classpfc_1_1Simulation.html#a1c8ad5fb45692d939d969d6f64725e75">pfc::Simulation::set_max_iters</a></div><div class="ttdeci">void set_max_iters(unsigned long int nmax)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:82</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a22a059bf86b12f915c811be549292d86"><div class="ttname"><a href="classpfc_1_1Simulation.html#a22a059bf86b12f915c811be549292d86">pfc::Simulation::writeat</a></div><div class="ttdeci">virtual bool writeat(int, double)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:148</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a248b44b3935b36d99cebfa458b77b87c"><div class="ttname"><a href="classpfc_1_1Simulation.html#a248b44b3935b36d99cebfa458b77b87c">pfc::Simulation::n0</a></div><div class="ttdeci">int n0</div><div class="ttdef"><b>Definition</b> deprecated.hpp:39</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a2abd15aabd3e2d30fd76b3541aa2ab57"><div class="ttname"><a href="classpfc_1_1Simulation.html#a2abd15aabd3e2d30fd76b3541aa2ab57">pfc::Simulation::t0</a></div><div class="ttdeci">double t0</div><div class="ttdef"><b>Definition</b> deprecated.hpp:35</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a3861fb6656a5cb7d5ab469c6ca392824"><div class="ttname"><a href="classpfc_1_1Simulation.html#a3861fb6656a5cb7d5ab469c6ca392824">pfc::Simulation::Ly</a></div><div class="ttdeci">const int Ly</div><div class="ttdef"><b>Definition</b> deprecated.hpp:27</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a38ef3ee471b492b14a7f23abec2bbeb2"><div class="ttname"><a href="classpfc_1_1Simulation.html#a38ef3ee471b492b14a7f23abec2bbeb2">pfc::Simulation::~Simulation</a></div><div class="ttdeci">virtual ~Simulation()</div><div class="ttdef"><b>Definition</b> deprecated.hpp:78</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a3dbf7f57f15b9b2302561be97620a6d7"><div class="ttname"><a href="classpfc_1_1Simulation.html#a3dbf7f57f15b9b2302561be97620a6d7">pfc::Simulation::set_step</a></div><div class="ttdeci">virtual void set_step(int n)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:131</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a52cd38b727b287a3ac2552608eaf6167"><div class="ttname"><a href="classpfc_1_1Simulation.html#a52cd38b727b287a3ac2552608eaf6167">pfc::Simulation::filetype</a></div><div class="ttdeci">MPI_Datatype filetype</div><div class="ttdef"><b>Definition</b> deprecated.hpp:48</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a538002afad18d8bc682df799031d3cc4"><div class="ttname"><a href="classpfc_1_1Simulation.html#a538002afad18d8bc682df799031d3cc4">pfc::Simulation::Lz</a></div><div class="ttdeci">const int Lz</div><div class="ttdef"><b>Definition</b> deprecated.hpp:28</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a53b70138d62754acca5505de63768638"><div class="ttname"><a href="classpfc_1_1Simulation.html#a53b70138d62754acca5505de63768638">pfc::Simulation::saveat_</a></div><div class="ttdeci">double saveat_</div><div class="ttdef"><b>Definition</b> deprecated.hpp:38</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a5cf0d240d469549c276f7f57f0e9dbda"><div class="ttname"><a href="classpfc_1_1Simulation.html#a5cf0d240d469549c276f7f57f0e9dbda">pfc::Simulation::dx</a></div><div class="ttdeci">double dx</div><div class="ttdef"><b>Definition</b> deprecated.hpp:29</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a60b04cf4aadd5514161e71e2c1798845"><div class="ttname"><a href="classpfc_1_1Simulation.html#a60b04cf4aadd5514161e71e2c1798845">pfc::Simulation::timing</a></div><div class="ttdeci">std::array&lt; double, 8 &gt; timing</div><div class="ttdef"><b>Definition</b> deprecated.hpp:51</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a632481c4dc113db235f6085b36ad6c2e"><div class="ttname"><a href="classpfc_1_1Simulation.html#a632481c4dc113db235f6085b36ad6c2e">pfc::Simulation::num_ranks</a></div><div class="ttdeci">int num_ranks</div><div class="ttdef"><b>Definition</b> deprecated.hpp:25</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a67a3f9aab19af4d8a01e55705c23c41e"><div class="ttname"><a href="classpfc_1_1Simulation.html#a67a3f9aab19af4d8a01e55705c23c41e">pfc::Simulation::step</a></div><div class="ttdeci">virtual void step(int n, double t)=0</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a7c269b07caaaf6a9bb3547f110ae0c83"><div class="ttname"><a href="classpfc_1_1Simulation.html#a7c269b07caaaf6a9bb3547f110ae0c83">pfc::Simulation::z0</a></div><div class="ttdeci">double z0</div><div class="ttdef"><b>Definition</b> deprecated.hpp:34</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a7c47189bb202a14f894107a83ebde5e6"><div class="ttname"><a href="classpfc_1_1Simulation.html#a7c47189bb202a14f894107a83ebde5e6">pfc::Simulation::t1</a></div><div class="ttdeci">double t1</div><div class="ttdef"><b>Definition</b> deprecated.hpp:36</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a8992ccf920214b7f3c9462843b840931"><div class="ttname"><a href="classpfc_1_1Simulation.html#a8992ccf920214b7f3c9462843b840931">pfc::Simulation::get_results_dir</a></div><div class="ttdeci">std::filesystem::path get_results_dir()</div><div class="ttdef"><b>Definition</b> deprecated.hpp:86</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a8b826f7730fbc82c08ed4e7324c5c601"><div class="ttname"><a href="classpfc_1_1Simulation.html#a8b826f7730fbc82c08ed4e7324c5c601">pfc::Simulation::fft_r2c</a></div><div class="ttdeci">void fft_r2c(std::vector&lt; double &gt; &amp;A, std::vector&lt; std::complex&lt; double &gt; &gt; &amp;B)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:88</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a8f74ae48ef5e053c8359b03a116c22ca"><div class="ttname"><a href="classpfc_1_1Simulation.html#a8f74ae48ef5e053c8359b03a116c22ca">pfc::Simulation::Lx</a></div><div class="ttdeci">const int Lx</div><div class="ttdef"><b>Definition</b> deprecated.hpp:26</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a91767d24c75ca7392ee7ae8e9965c5ce"><div class="ttname"><a href="classpfc_1_1Simulation.html#a91767d24c75ca7392ee7ae8e9965c5ce">pfc::Simulation::dz</a></div><div class="ttdeci">double dz</div><div class="ttdef"><b>Definition</b> deprecated.hpp:31</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a996a46667df2e250eb39f3e83c4f8a8c"><div class="ttname"><a href="classpfc_1_1Simulation.html#a996a46667df2e250eb39f3e83c4f8a8c">pfc::Simulation::allocate</a></div><div class="ttdeci">virtual void allocate(size_t size_inbox, size_t size_outbox)=0</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a9a8fcd3c7d87c78e6199c0e8e72592b3"><div class="ttname"><a href="classpfc_1_1Simulation.html#a9a8fcd3c7d87c78e6199c0e8e72592b3">pfc::Simulation::fft</a></div><div class="ttdeci">FFT fft</div><div class="ttdef"><b>Definition</b> deprecated.hpp:45</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a9c4a892822160f4f9f818ba7d7e121f0"><div class="ttname"><a href="classpfc_1_1Simulation.html#a9c4a892822160f4f9f818ba7d7e121f0">pfc::Simulation::done</a></div><div class="ttdeci">virtual bool done(int n, double t)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:117</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a9cbb3058cb4334f096ad8dd9ead01a89"><div class="ttname"><a href="classpfc_1_1Simulation.html#a9cbb3058cb4334f096ad8dd9ead01a89">pfc::Simulation::set_origin</a></div><div class="ttdeci">void set_origin(double x0, double y0, double z0)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:53</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_a9cf258027fd786c9e6480babea2d8f25"><div class="ttname"><a href="classpfc_1_1Simulation.html#a9cf258027fd786c9e6480babea2d8f25">pfc::Simulation::me</a></div><div class="ttdeci">int me</div><div class="ttdef"><b>Definition</b> deprecated.hpp:24</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_aa155fabae99df74bf83e7f84874e2357"><div class="ttname"><a href="classpfc_1_1Simulation.html#aa155fabae99df74bf83e7f84874e2357">pfc::Simulation::set_results_dir</a></div><div class="ttdeci">void set_results_dir(std::string path)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:84</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_aaa8dc66fd849ad62a69fd21381a5aba7"><div class="ttname"><a href="classpfc_1_1Simulation.html#aaa8dc66fd849ad62a69fd21381a5aba7">pfc::Simulation::prepare_initial_condition</a></div><div class="ttdeci">virtual void prepare_initial_condition(std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)=0</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_aaedee0823eb069ceb2633992a4d016fd"><div class="ttname"><a href="classpfc_1_1Simulation.html#aaedee0823eb069ceb2633992a4d016fd">pfc::Simulation::get_dt</a></div><div class="ttdeci">virtual double get_dt(int, double)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:80</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_ab376323a24c59bdb0e5433bbbd000047"><div class="ttname"><a href="classpfc_1_1Simulation.html#ab376323a24c59bdb0e5433bbbd000047">pfc::Simulation::dt</a></div><div class="ttdeci">double dt</div><div class="ttdef"><b>Definition</b> deprecated.hpp:37</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_abdfe3161c5ffcbed7e9a0562d351b24c"><div class="ttname"><a href="classpfc_1_1Simulation.html#abdfe3161c5ffcbed7e9a0562d351b24c">pfc::Simulation::Simulation</a></div><div class="ttdeci">Simulation(const std::array&lt; int, 3 &gt; &amp;dims, MPI_Comm comm=MPI_COMM_WORLD)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:74</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_ac0da7388482501980ef3035892479d7b"><div class="ttname"><a href="classpfc_1_1Simulation.html#ac0da7388482501980ef3035892479d7b">pfc::Simulation::max_iters</a></div><div class="ttdeci">int max_iters</div><div class="ttdef"><b>Definition</b> deprecated.hpp:40</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_ac17df2510ed22e2d249a49e4e33446db"><div class="ttname"><a href="classpfc_1_1Simulation.html#ac17df2510ed22e2d249a49e4e33446db">pfc::Simulation::fft_c2r</a></div><div class="ttdeci">void fft_c2r(std::vector&lt; std::complex&lt; double &gt; &gt; &amp;A, std::vector&lt; double &gt; &amp;B)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:92</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_ac6b140cfb527c0a17d8ece37ec337668"><div class="ttname"><a href="classpfc_1_1Simulation.html#ac6b140cfb527c0a17d8ece37ec337668">pfc::Simulation::write_results</a></div><div class="ttdeci">virtual void write_results(int, double)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:150</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_ac6dbbcb76735a090d0080b064c287234"><div class="ttname"><a href="classpfc_1_1Simulation.html#ac6dbbcb76735a090d0080b064c287234">pfc::Simulation::MPI_Read_Data</a></div><div class="ttdeci">void MPI_Read_Data(std::string filename, std::vector&lt; double &gt; &amp;u)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:96</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_ac78b8c1a71ba790d0e4bd3e0007927c1"><div class="ttname"><a href="classpfc_1_1Simulation.html#ac78b8c1a71ba790d0e4bd3e0007927c1">pfc::Simulation::prepare_operators</a></div><div class="ttdeci">virtual void prepare_operators(std::array&lt; int, 3 &gt; low, std::array&lt; int, 3 &gt; high)=0</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_ac9910f187742eeba74cfbbc5d66f3ccc"><div class="ttname"><a href="classpfc_1_1Simulation.html#ac9910f187742eeba74cfbbc5d66f3ccc">pfc::Simulation::results_dir</a></div><div class="ttdeci">std::filesystem::path results_dir</div><div class="ttdef"><b>Definition</b> deprecated.hpp:43</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_aca84cff275059e43e921d5eccc2cd8dd"><div class="ttname"><a href="classpfc_1_1Simulation.html#aca84cff275059e43e921d5eccc2cd8dd">pfc::Simulation::set_saveat</a></div><div class="ttdeci">void set_saveat(const double saveat)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:71</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_ad63eecaf19e78a9d3041f09d3785a02c"><div class="ttname"><a href="classpfc_1_1Simulation.html#ad63eecaf19e78a9d3041f09d3785a02c">pfc::Simulation::dy</a></div><div class="ttdeci">double dy</div><div class="ttdef"><b>Definition</b> deprecated.hpp:30</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_aea620c7a1f9bf6f096faa3a497dfba8a"><div class="ttname"><a href="classpfc_1_1Simulation.html#aea620c7a1f9bf6f096faa3a497dfba8a">pfc::Simulation::set_dxdydz</a></div><div class="ttdeci">void set_dxdydz(double dx, double dy, double dz)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:59</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_af4b1aa7cb2cb0821a047317a3e8a4e2a"><div class="ttname"><a href="classpfc_1_1Simulation.html#af4b1aa7cb2cb0821a047317a3e8a4e2a">pfc::Simulation::y0</a></div><div class="ttdeci">double y0</div><div class="ttdef"><b>Definition</b> deprecated.hpp:33</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_af5de69434920bb78c6cf21a345138a3d"><div class="ttname"><a href="classpfc_1_1Simulation.html#af5de69434920bb78c6cf21a345138a3d">pfc::Simulation::get_saveat</a></div><div class="ttdeci">double get_saveat() const</div><div class="ttdef"><b>Definition</b> deprecated.hpp:72</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_af6251947b70d20ab48488f91a906879b"><div class="ttname"><a href="classpfc_1_1Simulation.html#af6251947b70d20ab48488f91a906879b">pfc::Simulation::MPI_Write_Data</a></div><div class="ttdeci">void MPI_Write_Data(std::string filename, std::vector&lt; double &gt; &amp;u)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:105</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_af70a66faf512a636ee048989292716ac"><div class="ttname"><a href="classpfc_1_1Simulation.html#af70a66faf512a636ee048989292716ac">pfc::Simulation::set_time</a></div><div class="ttdeci">void set_time(double t0, double t1, double dt)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:65</div></div>
+<div class="ttc" id="aclasspfc_1_1Simulation_html_afd6def4c5b784fb0ffa510363e3d477b"><div class="ttname"><a href="classpfc_1_1Simulation.html#afd6def4c5b784fb0ffa510363e3d477b">pfc::Simulation::mem_allocated</a></div><div class="ttdeci">size_t mem_allocated</div><div class="ttdef"><b>Definition</b> deprecated.hpp:42</div></div>
+<div class="ttc" id="aclasspfc_1_1World_html"><div class="ttname"><a href="classpfc_1_1World.html">pfc::World</a></div><div class="ttdoc">Represents a world in the simulation domain.</div><div class="ttdef"><b>Definition</b> world.hpp:27</div></div>
+<div class="ttc" id="adeprecated_8hpp_html_a798d92d1c30994837a03fd8fa08b4afb"><div class="ttname"><a href="deprecated_8hpp.html#a798d92d1c30994837a03fd8fa08b4afb">MPI_TAG_TIMING</a></div><div class="ttdeci">#define MPI_TAG_TIMING</div><div class="ttdef"><b>Definition</b> deprecated.hpp:19</div></div>
+<div class="ttc" id="afft_8hpp_html"><div class="ttname"><a href="fft_8hpp.html">fft.hpp</a></div></div>
+<div class="ttc" id="anamespacepfc_html"><div class="ttname"><a href="namespacepfc.html">pfc</a></div><div class="ttdef"><b>Definition</b> binary_reader.hpp:8</div></div>
+<div class="ttc" id="anamespacepfc_html_a0e69f1b95ee26e616a97bea6071e6261"><div class="ttname"><a href="namespacepfc.html#a0e69f1b95ee26e616a97bea6071e6261">pfc::MPI_Solve</a></div><div class="ttdeci">void MPI_Solve(Simulation &amp;s)</div><div class="ttdef"><b>Definition</b> deprecated.hpp:153</div></div>
+<div class="ttc" id="autils_8hpp_html"><div class="ttname"><a href="utils_8hpp.html">utils.hpp</a></div></div>
+</div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_2c145bcb53510c73f45f3661004e5320.html">openpfc</a></li><li class="navelem"><a class="el" href="deprecated_8hpp.html">deprecated.hpp</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>

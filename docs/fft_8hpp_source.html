@@ -1,0 +1,249 @@
+<!-- HTML header for doxygen 1.9.5-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+  <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=11" />
+  <meta name="generator" content="Doxygen 1.9.7" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenPFC: an open source framework for high performance 3D phase field crystal simulations</title>
+  <link href="tabs.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="dynsections.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-darkmode-toggle.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-fragment-copy-button.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-paragraph-link.js"></script>
+  <script type="text/javascript" src="doxygen-awesome-interactive-toc.js"></script>
+  <script type="text/javascript">
+    DoxygenAwesomeFragmentCopyButton.init()
+    DoxygenAwesomeDarkModeToggle.init()
+    DoxygenAwesomeParagraphLink.init()
+    DoxygenAwesomeInteractiveToc.init()
+  </script>
+  <link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+  <link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+  <link href="doxygen.css" rel="stylesheet" type="text/css" />
+  <link href="custom.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome-sidebar-only-darkmode-toggle.css" rel="stylesheet" type="text/css"/>
+  <style>
+    .github-corner svg {
+      fill: var(--primary-light-color);
+      color: var(--page-background-color);
+      width: 72px;
+      height: 72px;
+    }
+    .github-corner:hover .octo-arm {
+      animation: octocat-wave 560ms ease-in-out
+    }
+    @keyframes octocat-wave {
+      0%,
+      100% {
+        transform: rotate(0)
+      }
+      20%,
+      60% {
+        transform: rotate(-25deg)
+      }
+      40%,
+      80% {
+        transform: rotate(10deg)
+      }
+    }
+    @media (max-width:500px) {
+      .github-corner:hover .octo-arm {
+        animation: none
+      }
+      .github-corner .octo-arm {
+        animation: octocat-wave 560ms ease-in-out
+      }
+    }
+    @media screen and (max-width: 767px) {
+      .github-corner svg {
+        width: 50px;
+        height: 50px;
+      }
+      #projectnumber {
+        margin-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- https://tholman.com/github-corners/ -->
+  <a href="https://github.com/VTT-ProperTune/OpenPFC" class="github-corner" title="View source on GitHub"
+    target="_blank">
+    <svg viewBox="0 0 250 250" width="40" height="40"
+      style="position: absolute; top: 0; border: 0; right: 0; z-index: 99;" aria-hidden="true">
+      <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+      <path
+        d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+        fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+      <path
+        d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+        fill="currentColor" class="octo-body"></path>
+    </svg></a>
+    <div id="top">
+      <!-- do not remove this div, it is closed by doxygen! -->
+      <div id="titlearea">
+        <table cellspacing="0" cellpadding="0">
+          <tbody>
+            <tr id="projectrow">
+              <td id="projectlogo"><img alt="Logo" src="logo.png" /></td>
+              <td id="projectalign">
+                <div id="projectname">OpenPFC
+                  <span id="projectnumber">&#160;0.1.0</span>
+                </div>
+                <div id="projectbrief">Phase Field Crystal simulation framework</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- end header part -->
+<!-- Generated by Doxygen 1.9.7 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Search');
+  $(document).ready(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(document).ready(function(){initNavTree('fft_8hpp_source.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">fft.hpp</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="fft_8hpp.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#ifndef PFC_FFT_HPP</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#define PFC_FFT_HPP</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;<a class="code" href="decomposition_8hpp.html">decomposition.hpp</a>&quot;</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;heffte.h&gt;</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;iostream&gt;</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;mpi.h&gt;</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespacepfc.html">pfc</a> {</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html">   15</a></span><span class="keyword">class </span><a class="code hl_class" href="classpfc_1_1FFT.html">FFT</a> {</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>  <span class="keyword">const</span> <a class="code hl_class" href="classpfc_1_1Decomposition.html">Decomposition</a> m_decomposition;                  </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>  <span class="keyword">const</span> heffte::fft3d_r2c&lt;heffte::backend::fftw&gt; m_fft; </div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>  std::vector&lt;std::complex&lt;double&gt;&gt; m_wrk;              </div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>  <span class="keywordtype">double</span> m_fft_time = 0.0;                              </div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#a1eaef8226c2e6ab27cb75245935f8c5b">   31</a></span>  <a class="code hl_function" href="classpfc_1_1FFT.html#a1eaef8226c2e6ab27cb75245935f8c5b">FFT</a>(<span class="keyword">const</span> <a class="code hl_class" href="classpfc_1_1Decomposition.html">Decomposition</a> &amp;decomposition, MPI_Comm comm = MPI_COMM_WORLD,</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>      heffte::plan_options plan_options = heffte::default_options&lt;heffte::backend::fftw&gt;())</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>      : m_decomposition(decomposition),</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>        m_fft({m_decomposition.<a class="code hl_variable" href="classpfc_1_1Decomposition.html#a78a2cd4304a8a69665c3b24503ff8c73">inbox</a>, m_decomposition.<a class="code hl_variable" href="classpfc_1_1Decomposition.html#a04df6a82361a68e5ac36808259997f5d">outbox</a>, m_decomposition.<a class="code hl_variable" href="classpfc_1_1Decomposition.html#a91772f8bc29c589aa4ee98a5507f7621">r2c_direction</a>, comm, plan_options}),</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        m_wrk(std::vector&lt;std::complex&lt;double&gt;&gt;(m_fft.size_workspace())){};</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#ad1dbbcf9e1af15ad50c53615440bab7e">   43</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1FFT.html#ad1dbbcf9e1af15ad50c53615440bab7e">forward</a>(<span class="keyword">const</span> std::vector&lt;double&gt; &amp;in, std::vector&lt;std::complex&lt;double&gt;&gt; &amp;out) {</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    m_fft_time -= MPI_Wtime();</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    m_fft.forward(in.data(), out.data(), m_wrk.data());</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    m_fft_time += MPI_Wtime();</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  };</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#aa192cea8711b2aa66bb855672c7873ca">   55</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1FFT.html#aa192cea8711b2aa66bb855672c7873ca">backward</a>(<span class="keyword">const</span> std::vector&lt;std::complex&lt;double&gt;&gt; &amp;in, std::vector&lt;double&gt; &amp;out) {</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    m_fft_time -= MPI_Wtime();</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    m_fft_time += MPI_Wtime();</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>  };</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#a82e0876e1a90b0351a1755cb9c2c1989">   64</a></span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classpfc_1_1FFT.html#a82e0876e1a90b0351a1755cb9c2c1989">reset_fft_time</a>() { m_fft_time = 0.0; }</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#a5608d96e80c2275edc83f125018f006f">   71</a></span>  <span class="keywordtype">double</span> <a class="code hl_function" href="classpfc_1_1FFT.html#a5608d96e80c2275edc83f125018f006f">get_fft_time</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_fft_time; }</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#aab2366b6624d4ba3d549e6e952e893e9">   78</a></span>  <span class="keyword">const</span> <a class="code hl_class" href="classpfc_1_1Decomposition.html">Decomposition</a> &amp;<a class="code hl_function" href="classpfc_1_1FFT.html#aab2366b6624d4ba3d549e6e952e893e9">get_decomposition</a>() { <span class="keywordflow">return</span> m_decomposition; }</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#a45a00f47ec44ac4e99ddfb1adc541bd5">   85</a></span>  <span class="keywordtype">size_t</span> <a class="code hl_function" href="classpfc_1_1FFT.html#a45a00f47ec44ac4e99ddfb1adc541bd5">size_inbox</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_fft.size_inbox(); }</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#a4b36b485474df0ae976c86ad8b4c146e">   92</a></span>  <span class="keywordtype">size_t</span> <a class="code hl_function" href="classpfc_1_1FFT.html#a4b36b485474df0ae976c86ad8b4c146e">size_outbox</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_fft.size_outbox(); }</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span> </div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno"><a class="line" href="classpfc_1_1FFT.html#a37e0a09c0306e95934082f57217ec7db">   99</a></span>  <span class="keywordtype">size_t</span> <a class="code hl_function" href="classpfc_1_1FFT.html#a37e0a09c0306e95934082f57217ec7db">size_workspace</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_fft.size_workspace(); }</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>};</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>} <span class="comment">// namespace pfc</span></div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span><span class="preprocessor">#endif</span></div>
+<div class="ttc" id="aclasspfc_1_1Decomposition_html"><div class="ttname"><a href="classpfc_1_1Decomposition.html">pfc::Decomposition</a></div><div class="ttdoc">Class representing the domain decomposition for parallel Fast Fourier Transform.</div><div class="ttdef"><b>Definition</b> decomposition.hpp:20</div></div>
+<div class="ttc" id="aclasspfc_1_1Decomposition_html_a04df6a82361a68e5ac36808259997f5d"><div class="ttname"><a href="classpfc_1_1Decomposition.html#a04df6a82361a68e5ac36808259997f5d">pfc::Decomposition::outbox</a></div><div class="ttdeci">const heffte::box3d&lt; int &gt; outbox</div><div class="ttdoc">Local communication boxes.</div><div class="ttdef"><b>Definition</b> decomposition.hpp:52</div></div>
+<div class="ttc" id="aclasspfc_1_1Decomposition_html_a78a2cd4304a8a69665c3b24503ff8c73"><div class="ttname"><a href="classpfc_1_1Decomposition.html#a78a2cd4304a8a69665c3b24503ff8c73">pfc::Decomposition::inbox</a></div><div class="ttdeci">const heffte::box3d&lt; int &gt; inbox</div><div class="ttdef"><b>Definition</b> decomposition.hpp:52</div></div>
+<div class="ttc" id="aclasspfc_1_1Decomposition_html_a91772f8bc29c589aa4ee98a5507f7621"><div class="ttname"><a href="classpfc_1_1Decomposition.html#a91772f8bc29c589aa4ee98a5507f7621">pfc::Decomposition::r2c_direction</a></div><div class="ttdeci">const int r2c_direction</div><div class="ttdoc">Real-to-complex symmetry direction.</div><div class="ttdef"><b>Definition</b> decomposition.hpp:53</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html"><div class="ttname"><a href="classpfc_1_1FFT.html">pfc::FFT</a></div><div class="ttdoc">FFT class for performing forward and backward Fast Fourier Transformations.</div><div class="ttdef"><b>Definition</b> fft.hpp:15</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a1eaef8226c2e6ab27cb75245935f8c5b"><div class="ttname"><a href="classpfc_1_1FFT.html#a1eaef8226c2e6ab27cb75245935f8c5b">pfc::FFT::FFT</a></div><div class="ttdeci">FFT(const Decomposition &amp;decomposition, MPI_Comm comm=MPI_COMM_WORLD, heffte::plan_options plan_options=heffte::default_options&lt; heffte::backend::fftw &gt;())</div><div class="ttdoc">Constructs an FFT object with the given Decomposition and MPI communicator.</div><div class="ttdef"><b>Definition</b> fft.hpp:31</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a37e0a09c0306e95934082f57217ec7db"><div class="ttname"><a href="classpfc_1_1FFT.html#a37e0a09c0306e95934082f57217ec7db">pfc::FFT::size_workspace</a></div><div class="ttdeci">size_t size_workspace() const</div><div class="ttdoc">Returns the size of the workspace used for FFT computations.</div><div class="ttdef"><b>Definition</b> fft.hpp:99</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a45a00f47ec44ac4e99ddfb1adc541bd5"><div class="ttname"><a href="classpfc_1_1FFT.html#a45a00f47ec44ac4e99ddfb1adc541bd5">pfc::FFT::size_inbox</a></div><div class="ttdeci">size_t size_inbox() const</div><div class="ttdoc">Returns the size of the inbox used for FFT computations.</div><div class="ttdef"><b>Definition</b> fft.hpp:85</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a4b36b485474df0ae976c86ad8b4c146e"><div class="ttname"><a href="classpfc_1_1FFT.html#a4b36b485474df0ae976c86ad8b4c146e">pfc::FFT::size_outbox</a></div><div class="ttdeci">size_t size_outbox() const</div><div class="ttdoc">Returns the size of the outbox used for FFT computations.</div><div class="ttdef"><b>Definition</b> fft.hpp:92</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a5608d96e80c2275edc83f125018f006f"><div class="ttname"><a href="classpfc_1_1FFT.html#a5608d96e80c2275edc83f125018f006f">pfc::FFT::get_fft_time</a></div><div class="ttdeci">double get_fft_time() const</div><div class="ttdoc">Returns the recorded FFT computation time.</div><div class="ttdef"><b>Definition</b> fft.hpp:71</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_a82e0876e1a90b0351a1755cb9c2c1989"><div class="ttname"><a href="classpfc_1_1FFT.html#a82e0876e1a90b0351a1755cb9c2c1989">pfc::FFT::reset_fft_time</a></div><div class="ttdeci">void reset_fft_time()</div><div class="ttdoc">Resets the recorded FFT computation time to zero.</div><div class="ttdef"><b>Definition</b> fft.hpp:64</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_aa192cea8711b2aa66bb855672c7873ca"><div class="ttname"><a href="classpfc_1_1FFT.html#aa192cea8711b2aa66bb855672c7873ca">pfc::FFT::backward</a></div><div class="ttdeci">void backward(const std::vector&lt; std::complex&lt; double &gt; &gt; &amp;in, std::vector&lt; double &gt; &amp;out)</div><div class="ttdoc">Performs the backward (inverse) FFT transformation.</div><div class="ttdef"><b>Definition</b> fft.hpp:55</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_aab2366b6624d4ba3d549e6e952e893e9"><div class="ttname"><a href="classpfc_1_1FFT.html#aab2366b6624d4ba3d549e6e952e893e9">pfc::FFT::get_decomposition</a></div><div class="ttdeci">const Decomposition &amp; get_decomposition()</div><div class="ttdoc">Returns the associated Decomposition object.</div><div class="ttdef"><b>Definition</b> fft.hpp:78</div></div>
+<div class="ttc" id="aclasspfc_1_1FFT_html_ad1dbbcf9e1af15ad50c53615440bab7e"><div class="ttname"><a href="classpfc_1_1FFT.html#ad1dbbcf9e1af15ad50c53615440bab7e">pfc::FFT::forward</a></div><div class="ttdeci">void forward(const std::vector&lt; double &gt; &amp;in, std::vector&lt; std::complex&lt; double &gt; &gt; &amp;out)</div><div class="ttdoc">Performs the forward FFT transformation.</div><div class="ttdef"><b>Definition</b> fft.hpp:43</div></div>
+<div class="ttc" id="adecomposition_8hpp_html"><div class="ttname"><a href="decomposition_8hpp.html">decomposition.hpp</a></div></div>
+<div class="ttc" id="anamespacepfc_html"><div class="ttname"><a href="namespacepfc.html">pfc</a></div><div class="ttdef"><b>Definition</b> array.hpp:18</div></div>
+</div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_2c145bcb53510c73f45f3661004e5320.html">openpfc</a></li><li class="navelem"><a class="el" href="fft_8hpp.html">fft.hpp</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.7 </li>
+  </ul>
+</div>
+</body>
+</html>
