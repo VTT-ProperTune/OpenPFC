@@ -251,7 +251,9 @@ public:
     fft.backward(P_psi_F, P_star_psi);
 
     double l = Lx * dx;
-    double xpos = fmod(params.m_xpos, l);
+    // double xpos = fmod(params.m_xpos, l);
+	double fullruns = floor(params.m_xpos / l) * l;
+	double steppoint = fmod(params.m_xpos, l);
     double local_FE = 0;
 
     size_t idx = 0;
@@ -259,7 +261,8 @@ public:
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
           double x = x0 + i * dx;
-          double T_var = params.G_grid * (x - params.x_initial - params.V_grid * t);
+		double dist = x + fullruns - (x > steppoint)*l;
+          double T_var = params.G_grid * (dist - params.x_initial - params.V_grid * t);
           temperature[idx] = T_var;
           double q2_bar_N = params.q21_bar * T_var / params.T0;
           double q3_bar = params.q31_bar * (params.T_const + T_var) / params.T0 + params.q30_bar;
