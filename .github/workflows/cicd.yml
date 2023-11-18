@@ -11,13 +11,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
     - name: Build project
-      run: docker build -t openpfc-builder -f containers/cicd/Dockerfile.build .
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: containers/cicd/Dockerfile.build
+        tags: openpfc-builder
+        outputs: type=docker,dest=/tmp/openpfc-builder.tar
 
     - name: Run unit tests
-      run: docker build -t openpfc-tester -f containers/cicd/Dockerfile.test .
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: containers/cicd/Dockerfile.test
+        tags: openpfc-tester
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: openpfc-builder
+        path: /tmp/openpfc-builder.tar
 
   generate_docs:
     runs-on: ubuntu-latest
@@ -25,5 +44,24 @@ jobs:
     needs: build_and_test
 
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: openpfc-builder
+        path: /tmp/openpfc-builder.tar
+
+    - name: Load Docker image
+      run: docker load -i /tmp/openpfc-builder.tar
+
     - name: Generate documentation
-      run: docker build -t openpfc-docs -f containers/cicd/Dockerfile.docs .
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: containers/cicd/Dockerfile.docs
+        tags: openpfc-docs
