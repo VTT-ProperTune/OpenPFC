@@ -187,6 +187,9 @@ cmake --build build
 ./build/main
 ```
 
+There is also some examples in [examples][examples-url] directory, which can be
+used as a base for your own codes.
+
 ## Troubleshooting
 
 During the configuration step (`cmake -S. -B build`), you might end up to the
@@ -268,3 +271,4 @@ A bigger application example is Tungsten model. Todo.
 [license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/LICENSE
 [GHA-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg
 [GHA-url]: https://github.com/VTT-ProperTune/OpenPFC/actions?query=workflows/CI
+[examples-url]: https://github.com/VTT-ProperTune/OpenPFC/tree/master/examples
