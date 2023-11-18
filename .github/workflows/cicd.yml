@@ -51,7 +51,7 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: openpfc-builder
-        path: /tmp/openpfc-builder.tar
+        path: /tmp
 
     - name: Load Docker image
       run: docker load -i /tmp/openpfc-builder.tar
@@ -82,7 +82,7 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: openpfc-builder
-        path: /tmp/openpfc-builder.tar
+        path: /tmp
 
     - name: Load Docker image
       run: docker load -i /tmp/openpfc-builder.tar
