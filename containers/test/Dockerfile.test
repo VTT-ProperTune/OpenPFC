@@ -1,0 +1,4 @@
+FROM openpfc-builder as tester
+
+# Test project
+RUN (cd build/Debug/tests && ctest)

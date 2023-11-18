@@ -1,0 +1,6 @@
+FROM openpfc-builder as docgenerator
+
+# Generate documentation
+RUN git submodule update --init --recursive
+RUN (cd docs/doxygen-awesome-css && git checkout v2.2.1)
+RUN cmake --build build/Debug --target docs
