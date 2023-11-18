@@ -1,8 +1,9 @@
 # OpenPFC
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/VTT-ProperTune/OpenPFC)](https://github.com/VTT-ProperTune/OpenPFC/releases/latest)
-[![GitHub](https://img.shields.io/github/license/VTT-ProperTune/OpenPFC)](https://github.com/VTT-ProperTune/OpenPFC/blob/main/LICENSE)
-![GitHub Repo stars](https://img.shields.io/github/stars/VTT-ProperTune/OpenPFC)
+[![][docs-dev-img]][docs-dev-url]
+[![][releases-img]][releases-url]
+[![][GHA-img]][GHA-url]
+[![][license-img]][license-url]
 
 ![Screenshot of OpenPFC simulation result](docs/img/screenshot.png)
 
@@ -22,6 +23,9 @@ contains 128 cores, thus total 25600 cores were used. During the simulation, 25
 TB of memory was utilized. The central part of the solver is Fast Fourier
 Transform with time complexity of O(N log N), and there are no known limiting
 bottlenecks, why larger models could not be calculated as well.
+
+The project documentation can be found from
+<https://vtt-propertune.github.io/OpenPFC/dev/>.
 
 ## Features
 
@@ -255,3 +259,12 @@ A bigger application example is Tungsten model. Todo.
   blaablaa
 }
 ```
+
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://vtt-propertune.github.io/OpenPFC/dev/
+[releases-img]: https://img.shields.io/github/v/release/VTT-ProperTune/OpenPFC
+[releases-url]: https://github.com/VTT-ProperTune/OpenPFC/releases/latest
+[license-img]: https://img.shields.io/github/license/VTT-ProperTune/OpenPFC
+[license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/main/LICENSE
+[GHA-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg
+[GHA-url]: https://github.com/VTT-ProperTune/OpenPFC/actions?query=workflows/CI
