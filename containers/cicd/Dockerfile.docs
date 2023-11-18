@@ -1,5 +1,8 @@
 FROM ahojukka5/openpfc:base as builder
 
+WORKDIR /usr/src/openpfc
+COPY . .
+
 # Generate documentation
 RUN git submodule update --init --recursive
 RUN (cd docs/doxygen-awesome-css && git checkout v2.2.1)
