@@ -1,9 +1,19 @@
 FROM ahojukka5/openpfc:base as builder
 
+# Generate documentation
+
 WORKDIR /usr/src/openpfc
 COPY . .
 
-# Generate documentation
+# Set environment variables (optional)
+ENV CC=/usr/bin/gcc-12
+ENV CXX=/usr/bin/g++-12
+
+# Configure project
+RUN ldconfig
+RUN cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DUSE_CLANG_TIDY=OFF
+
+# Build project (target: docs)
 RUN git submodule update --init --recursive
 RUN (cd docs/doxygen-awesome-css && git checkout v2.2.1)
 RUN cmake --build build/Debug --target docs
