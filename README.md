@@ -265,6 +265,6 @@ A bigger application example is Tungsten model. Todo.
 [releases-img]: https://img.shields.io/github/v/release/VTT-ProperTune/OpenPFC
 [releases-url]: https://github.com/VTT-ProperTune/OpenPFC/releases/latest
 [license-img]: https://img.shields.io/github/license/VTT-ProperTune/OpenPFC
-[license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/main/LICENSE
+[license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/LICENSE
 [GHA-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg
 [GHA-url]: https://github.com/VTT-ProperTune/OpenPFC/actions?query=workflows/CI
