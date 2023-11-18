@@ -7,11 +7,23 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build:
+  build_and_test:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
 
-    - name: Build and test application
-      run: docker build -t openpfc/test -f containers/test/Dockerfile .
+    - name: Build project
+      run: docker build -t openpfc-builder -f containers/cicd/Dockerfile.build .
+
+    - name: Run unit tests
+      run: docker build -t openpfc-tester -f containers/cicd/Dockerfile.test .
+
+  generate_docs:
+    runs-on: ubuntu-latest
+
+    needs: build_and_test
+
+    steps:
+    - name: Generate documentation
+      run: docker build -t openpfc-docs -f containers/cicd/Dockerfile.docs .
