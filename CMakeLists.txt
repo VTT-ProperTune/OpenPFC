@@ -23,6 +23,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(NAN_CHECK_ENABLED)
 endif()
 
+# To preserve RPATH when installing
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 option(BUILD_SHARED_LIBS "Builds shared libraries using CMake conventions" OFF)
 
 option(USE_CLANG_TIDY "Enable clang-tidy static code analysis" ON)
@@ -108,8 +111,6 @@ if(DEFINED nlohmann_json_SOURCE_DIR)
 endif()
 
 # generate cmake file containing code to import all targets
-
-set(CMAKE_SKIP_INSTALL_RPATH TRUE)  # don't add install path to rpath
 
 install(TARGETS OpenPFC EXPORT OpenPFCTargets DESTINATION include)
 install(EXPORT OpenPFCTargets
