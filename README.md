@@ -102,10 +102,16 @@ one at a time. So, make sure you have HeFFTe installed and working on your
 system before continuing.
 
 OpenPFC uses [cmake](https://cmake.org/) to automate software building. First
-the source code must be downloaded to some appropriate place:
+the source code must be downloaded to some appropriate place. Head to the
+[releases](https://github.com/VTT-ProperTune/OpenPFC/releases) page and pick the
+newest release and unzip is somewhere. Alternatively, if you are planning to
+develop the project itself of are just interested about the bleeding edge
+features, you might be interested to clone the repository to your local machine.
+GitHub account is needed to clone the project.
 
 ```bash
-git clone https://github.com/ProperTune-VTT/OpenPFC
+git clone https://github.com/VTT-ProperTune/OpenPFC.git
+# git clone git@github.com:VTT-ProperTune/OpenPFC.git  # if you prefer ssh instead
 cd OpenPFC
 ```
 
