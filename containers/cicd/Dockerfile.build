@@ -1,0 +1,13 @@
+FROM ahojukka5/openpfc:base as builder
+
+WORKDIR /usr/src/openpfc
+COPY . .
+
+# Set environment variables (optional)
+ENV CC=/usr/bin/gcc-12
+ENV CXX=/usr/bin/g++-12
+
+# Build project
+RUN ldconfig
+RUN cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DUSE_CLANG_TIDY=OFF
+RUN cmake --build build/Debug
