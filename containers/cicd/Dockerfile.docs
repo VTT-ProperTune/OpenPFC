@@ -1,4 +1,4 @@
-FROM openpfc-builder as docgenerator
+FROM ahojukka5/openpfc:base as builder
 
 # Generate documentation
 RUN git submodule update --init --recursive
