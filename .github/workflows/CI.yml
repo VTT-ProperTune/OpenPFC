@@ -1,4 +1,4 @@
-name: OpenPFC CI/CD
+name: CI
 
 on:
   push:
