@@ -190,7 +190,11 @@ cmake --build build
 There is also some examples in [examples][examples-url] directory, which can be
 used as a base for your own codes.
 
-## Troubleshooting
+## Troubleshooting and debugging
+
+Here's some common problems and their solutions.
+
+### FindOpenPFC.cmake not found
 
 During the configuration step (`cmake -S. -B build`), you might end up to the
 following error message:
@@ -247,7 +251,57 @@ target_link_libraries(main OpenPFC)
 
 This way, cmake know to search necessary files from the path given above.
 
-[software framework]: https://en.wikipedia.org/wiki/Software_framework
+### NaNs in the simulation
+
+There might be various reasons why the simulation returns NaNs. Despite the
+reason, it usually makes sense to stop simulation as it doesn't do anything
+useful. OpenPFC does not currently have json validator, which would check that
+simulation parameters are valid. Thus, it is possible to give invalid parameters
+to the simulation, which might lead to NaNs. If some model parameters which
+should be defined are undefined and thus zero, there might be zero division
+problem.
+
+OpenPFC implements NaN check, which is enabled by default when compiling with a
+debug build type:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
+```
+
+Another way to enable NaN check is to use compile option `NAN_CHECK_ENABLED`. In `CMakeLists.txt`, add the following line:
+
+```cmake
+add_compile_definitions(NAN_CHECK_ENABLED)
+```
+
+Or, when configuring project with cmake, the following is equivalent:
+
+```bash
+cmake -DNAN_CHECK_ENABLED=ON -S . -B build
+```
+
+Or another, quick and dirty solution might be to simply add the following to the
+source file:
+
+```cpp
+#define NAN_CHECK_ENABLED
+```
+
+Then, in code level, there's a macro `CHECK_AND_ABORT_IF_NANS`, which can be
+used to check if there's any NaNs in the simulation. The macro is defined in
+`openpfc/utils/nancheck.hpp`. This is a zero overhead when compiling with
+release build type. At the moment, user must explicitly call the macro, but in
+the future it might be called automatically in some situations. Example usage is
+(see also [this][tungsten-nan-check] example):
+
+```cpp
+std::vector<double> psi = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+CHECK_AND_ABORT_IF_NANS(psi);
+psi[0] = std::numeric_limits<double>::quiet_NaN();
+CHECK_AND_ABORT_IF_NANS(psi);
+```
+
+[tungsten-nan-check]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/apps/tungsten.cpp#L220
 
 ## Examples
 
@@ -272,3 +326,4 @@ A bigger application example is Tungsten model. Todo.
 [GHA-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg
 [GHA-url]: https://github.com/VTT-ProperTune/OpenPFC/actions?query=workflows/CI
 [examples-url]: https://github.com/VTT-ProperTune/OpenPFC/tree/master/examples
+[software framework]: https://en.wikipedia.org/wiki/Software_framework
