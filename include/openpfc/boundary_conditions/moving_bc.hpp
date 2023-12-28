@@ -42,7 +42,7 @@ public:
 
   void apply(Model &m, double) override {
     const Decomposition &decomp = m.get_decomposition();
-    Field &field = m.get_field();
+    Field &field = m.get_real_field(get_field_name());
     const World &w = m.get_world();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
@@ -93,7 +93,7 @@ public:
 
   void fill_bc(Model &m) {
     const Decomposition &decomp = m.get_decomposition();
-    Field &field = m.get_field();
+    Field &field = m.get_real_field(get_field_name());
     const World &w = m.get_world();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;

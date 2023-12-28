@@ -14,7 +14,7 @@ public:
 class MockIC : public FieldModifier {
 public:
   void apply(Model &m, double) override {
-    Field &field = m.get_real_field(get_field_name());
+    std::vector<double> &field = m.get_real_field(get_field_name());
     std::fill(field.begin(), field.end(), 1.0);
   }
 };

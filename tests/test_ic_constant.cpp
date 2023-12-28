@@ -33,7 +33,7 @@ TEST_CASE("Constant Field Modifier") {
     m.set_fft(fft);
     Constant c(1.0);
     c.apply(m, 0.0);
-    const Field &field = m.get_field();
+    const Field &field = m.get_real_field("default");
     for (const auto &value : field) {
       REQUIRE(value == 1.0);
     }

@@ -48,7 +48,7 @@ public:
    * @param t The current time (unused in this implementation).
    */
   void apply(Model &m, double) override {
-    Field &field = m.get_field();
+    Field &field = m.get_real_field(get_field_name());
     std::fill(field.begin(), field.end(), m_n0);
   }
 };

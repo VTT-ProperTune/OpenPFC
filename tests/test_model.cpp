@@ -48,10 +48,6 @@ TEST_CASE("Model functionality", "[Model]") {
     REQUIRE(&retrieved_field == &field);
   }
 
-  SECTION("Try to access 'default' field without being defined") {
-    REQUIRE_THROWS_AS(model.get_field(), std::runtime_error);
-  }
-
   SECTION("Complex field operations") {
     // Create a complex field
     ComplexField field;
