@@ -538,21 +538,45 @@ public:
     std::cout << "Adding initial conditions" << std::endl;
     for (const json &params : m_settings["initial_conditions"]) {
       std::cout << "Creating initial condition from data " << params << std::endl;
+      if (!params.contains("type")) {
+        std::cout << "Warning: no type is set for initial condition!" << std::endl;
+        continue;
+      }
       std::string type = params["type"];
-      sim.add_initial_conditions(create_field_modifier(type, params));
+      auto field_modifier = create_field_modifier(type, params);
+      if (!params.contains("target")) {
+        std::cout << "Warning: no target is set for initial condition! Using target 'default'" << std::endl;
+      } else {
+        std::string target = params["target"];
+        std::cout << "Setting initial condition target to " << target << std::endl;
+        field_modifier->set_field_name(target);
+      }
+      sim.add_initial_conditions(std::move(field_modifier));
     }
   }
 
   void add_boundary_conditions(Simulator &sim) {
     if (!m_settings.contains("boundary_conditions")) {
-      std::cout << "WARNING: no boundary conditions are set!" << std::endl;
+      std::cout << "Warning: no boundary conditions are set!" << std::endl;
       return;
     }
     std::cout << "Adding boundary conditions" << std::endl;
     for (const json &params : m_settings["boundary_conditions"]) {
       std::cout << "Creating boundary condition from data " << params << std::endl;
+      if (!params.contains("type")) {
+        std::cout << "Warning: no type is set for initial condition!" << std::endl;
+        continue;
+      }
       std::string type = params["type"];
-      sim.add_boundary_conditions(create_field_modifier(type, params));
+      auto field_modifier = create_field_modifier(type, params);
+      if (!params.contains("target")) {
+        std::cout << "Warning: no target is set for boundary condition! Using target 'default'" << std::endl;
+      } else {
+        std::string target = params["target"];
+        std::cout << "Setting boundary condition target to " << target << std::endl;
+        field_modifier->set_field_name(target);
+      }
+      sim.add_boundary_conditions(std::move(field_modifier));
     }
   }
 
