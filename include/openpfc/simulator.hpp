@@ -11,6 +11,10 @@
 
 namespace pfc {
 
+/**
+ * @brief The Simulator class is responsible for running the simulation of the
+ * model.
+ */
 class Simulator {
 
 private:
@@ -31,11 +35,46 @@ public:
    */
   Simulator(Model &model, Time &time) : m_model(model), m_time(time) {}
 
+  /**
+   * @brief Get the model object
+   *
+   * @return Model&
+   */
   Model &get_model() { return m_model; }
+
+  /**
+   * @brief Get the decomposition object
+   *
+   * @return const Decomposition&
+   */
   const Decomposition &get_decomposition() { return get_model().get_decomposition(); }
+
+  /**
+   * @brief Get the world object
+   *
+   * @return const World&
+   */
   const World &get_world() { return get_decomposition().get_world(); }
+
+  /**
+   * @brief Get the FFT object
+   *
+   * @return FFT&
+   */
   FFT &get_fft() { return get_model().get_fft(); }
+
+  /**
+   * @brief Get the time object
+   *
+   * @return Time&
+   */
   Time &get_time() { return m_time; }
+
+  /**
+   * @brief Get the default field object
+   *
+   * @return Field&
+   */
   Field &get_field() { return get_model().get_field(); }
 
   void initialize() { get_model().initialize(get_time().get_dt()); }
@@ -52,14 +91,14 @@ public:
       m_result_writers.insert({field_name, std::move(writer)});
       return true;
     } else {
-      std::cout << "Warning, tried to add writer for inexistent field " << field_name << ", RESULTS ARE NOT WRITTEN!"
+      std::cout << "Warning: tried to add writer for inexistent field " << field_name << ", RESULTS ARE NOT WRITTEN!"
                 << std::endl;
       return false;
     }
   }
 
   bool add_results_writer(std::unique_ptr<ResultsWriter> writer) {
-    std::cout << "Adding result writer to write field 'default'" << std::endl;
+    std::cout << "Warning: adding result writer to write field 'default'" << std::endl;
     return add_results_writer("default", std::move(writer));
   }
 
