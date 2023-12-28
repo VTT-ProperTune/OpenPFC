@@ -1,136 +1,16 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "http://openpfc.github.io/apps/tungsten.schema.json",
-    "title": "Tungsten",
-    "description": "Tungsten application",
+    "$id": "http://openpfc.github.io/schema.json",
+    "title": "Application schema",
+    "description": "Application schema",
     "type": "object",
     "properties": {
         "model": {
             "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "model name",
-                    "enum": [
-                        "tungsten"
-                    ],
-                    "default": "tungsten"
-                },
-                "params": {
-                    "type": "object",
-                    "properties": {
-                        "n0": {
-                            "type": "number",
-                            "description": "average density of the metastable fluid"
-                        },
-                        "alpha": {
-                            "type": "number",
-                            "description": "width of C2's peak"
-                        },
-                        "n_sol": {
-                            "type": "number",
-                            "description": "density of the solid"
-                        },
-                        "n_vap": {
-                            "type": "number",
-                            "description": "density of the vapor"
-                        },
-                        "T": {
-                            "type": "number",
-                            "description": "temperature of the metastable fluid (in K)"
-                        },
-                        "T0": {
-                            "type": "number",
-                            "description": "temperature of the solid (in K)"
-                        },
-                        "Bx": {
-                            "type": "number"
-                        },
-                        "alpha_farTol": {
-                            "type": "number",
-                            "description": "how much we allow the k=1 peak to affect the k=0 value of the correlation, by changing the higher order components of the Gaussian function"
-                        },
-                        "alpha_highOrd": {
-                            "type": "integer",
-                            "description": "power of the higher order component of the gaussian function. Should be a multiple of 2. Setting this to zero also disables the tolerance setting."
-                        },
-                        "lambda": {
-                            "type": "number",
-                            "description": "strength of the meanfield filter"
-                        },
-                        "stabP": {
-                            "type": "number",
-                            "description": "numerical stability parameter for the exponential integrator method"
-                        },
-                        "shift_u": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "shift_s": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "p2": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "p3": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "p4": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "q20": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "q21": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "q30": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "q31": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        },
-                        "q40": {
-                            "type": "number",
-                            "description": "vapor-model parameter"
-                        }
-                    },
-                    "required": [
-                        "n0",
-                        "alpha",
-                        "n_sol",
-                        "n_vap",
-                        "T",
-                        "T0",
-                        "Bx",
-                        "alpha_farTol",
-                        "alpha_highOrd",
-                        "lambda",
-                        "stabP",
-                        "shift_u",
-                        "shift_s",
-                        "p2",
-                        "p3",
-                        "p4",
-                        "q20",
-                        "q21",
-                        "q30",
-                        "q31",
-                        "q40"
-                    ]
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/models/tungsten"
                 }
-            },
-            "required": [
-                "name",
-                "params"
             ]
         },
         "Lx": {
@@ -191,51 +71,23 @@
         "initial_conditions": {
             "type": "array",
             "items": {
-                "type": "object",
-                "properties": {
-                    "target": {
-                        "type": "string"
+                "oneOf": [
+                    {
+                        "$ref": "#/definitions/initial_conditions/constant"
                     },
-                    "type": {
-                        "type": "string"
-                    },
-                    "n0": {
-                        "type": "number"
-                    },
-                    "amp_eq": {
-                        "type": "number"
-                    },
-                    "rho_seed": {
-                        "type": "number"
+                    {
+                        "$ref": "#/definitions/initial_conditions/single_seed"
                     }
-                },
-                "required": [
-                    "target",
-                    "type"
                 ]
             }
         },
         "boundary_conditions": {
             "type": "array",
             "items": {
-                "type": "object",
-                "properties": {
-                    "target": {
-                        "type": "string"
-                    },
-                    "type": {
-                        "type": "string"
-                    },
-                    "rho_low": {
-                        "type": "number"
-                    },
-                    "rho_high": {
-                        "type": "number"
+                "oneOf": [
+                    {
+                        "$ref": "#/definitions/boundary_conditions/fixed"
                     }
-                },
-                "required": [
-                    "target",
-                    "type"
                 ]
             }
         }
@@ -256,5 +108,216 @@
         "fields",
         "initial_conditions",
         "boundary_conditions"
-    ]
+    ],
+    "definitions": {
+        "models": {
+            "tungsten": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "model name",
+                        "enum": [
+                            "tungsten"
+                        ]
+                    },
+                    "params": {
+                        "type": "object",
+                        "properties": {
+                            "n0": {
+                                "type": "number",
+                                "description": "average density of the metastable fluid"
+                            },
+                            "alpha": {
+                                "type": "number",
+                                "description": "width of C2's peak"
+                            },
+                            "n_sol": {
+                                "type": "number",
+                                "description": "density of the solid"
+                            },
+                            "n_vap": {
+                                "type": "number",
+                                "description": "density of the vapor"
+                            },
+                            "T": {
+                                "type": "number",
+                                "description": "temperature of the metastable fluid (in K)"
+                            },
+                            "T0": {
+                                "type": "number",
+                                "description": "temperature of the solid (in K)"
+                            },
+                            "Bx": {
+                                "type": "number"
+                            },
+                            "alpha_farTol": {
+                                "type": "number",
+                                "description": "how much we allow the k=1 peak to affect the k=0 value of the correlation, by changing the higher order components of the Gaussian function"
+                            },
+                            "alpha_highOrd": {
+                                "type": "integer",
+                                "description": "power of the higher order component of the gaussian function. Should be a multiple of 2. Setting this to zero also disables the tolerance setting."
+                            },
+                            "lambda": {
+                                "type": "number",
+                                "description": "strength of the meanfield filter"
+                            },
+                            "stabP": {
+                                "type": "number",
+                                "description": "numerical stability parameter for the exponential integrator method"
+                            },
+                            "shift_u": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "shift_s": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "p2": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "p3": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "p4": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "q20": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "q21": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "q30": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "q31": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            },
+                            "q40": {
+                                "type": "number",
+                                "description": "vapor-model parameter"
+                            }
+                        },
+                        "required": [
+                            "n0",
+                            "alpha",
+                            "n_sol",
+                            "n_vap",
+                            "T",
+                            "T0",
+                            "Bx",
+                            "alpha_farTol",
+                            "alpha_highOrd",
+                            "lambda",
+                            "stabP",
+                            "shift_u",
+                            "shift_s",
+                            "p2",
+                            "p3",
+                            "p4",
+                            "q20",
+                            "q21",
+                            "q30",
+                            "q31",
+                            "q40"
+                        ]
+                    }
+                },
+                "required": [
+                    "name",
+                    "params"
+                ]
+            }
+        },
+        "initial_conditions": {
+            "constant": {
+                "type": "object",
+                "description": "constant initial condition",
+                "properties": {
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "constant"
+                        ]
+                    },
+                    "n0": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "target",
+                    "type",
+                    "n0"
+                ]
+            },
+            "single_seed": {
+                "type": "object",
+                "description": "single seed",
+                "properties": {
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "single_seed"
+                        ]
+                    },
+                    "amp_eq": {
+                        "type": "number"
+                    },
+                    "rho_seed": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "target",
+                    "type",
+                    "amp_eq",
+                    "rho_seed"
+                ]
+            }
+        },
+        "boundary_conditions": {
+            "fixed": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "fixed"
+                        ]
+                    },
+                    "rho_low": {
+                        "type": "number"
+                    },
+                    "rho_high": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "target",
+                    "type",
+                    "rho_low",
+                    "rho_high"
+                ]
+            }
+        }
+    }
 }
