@@ -15,6 +15,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - name: Check code formatting using clang-format
+      uses: DoozyX/clang-format-lint-action@v0.17
+      with:
+        source: './apps ./include ./examples ./tests ./docs'
+        exclude: './third_party ./external ./.git ./build'
+        clangFormatVersion: 17
+
     - name: Build project
       uses: docker/build-push-action@v5
       with:
