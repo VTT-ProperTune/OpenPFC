@@ -8,10 +8,10 @@
 namespace pfc {
 
 class FileReader : public FieldModifier {
- private:
+private:
   std::string m_filename;
 
- public:
+public:
   FileReader() = default;
 
   void set_filename(std::string filename) { m_filename = filename; }
@@ -22,12 +22,11 @@ class FileReader : public FieldModifier {
   void apply(Model &m, double) override {
     const Decomposition &d = m.get_decomposition();
     Field &f = m.get_field();
-    std::cout << "Reading initial condition from file" << get_filename()
-              << std::endl;
+    std::cout << "Reading initial condition from file" << get_filename() << std::endl;
     BinaryReader reader;
     reader.set_domain(d.get_world().get_size(), d.inbox.size, d.inbox.low);
     reader.read(get_filename(), f);
   }
 };
 
-}  // namespace pfc
+} // namespace pfc

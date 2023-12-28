@@ -10,7 +10,7 @@ namespace pfc {
  *
  */
 class Seed {
- private:
+private:
   using vec3 = std::array<double, 3>;
   using mat3 = std::array<vec3, 3>;
   using vec36 = std::array<vec3, 6>;
@@ -76,25 +76,21 @@ class Seed {
     mat3 Rb = pitch(orientation[1]);
     mat3 Rc = roll(orientation[2]);
     mat3 R = mult3(Ra, mult3(Rb, Rc));
-    const vec36 q = {mult3(R, q1), mult3(R, q2), mult3(R, q3),
-                     mult3(R, q4), mult3(R, q5), mult3(R, q6)};
+    const vec36 q = {mult3(R, q1), mult3(R, q2), mult3(R, q3), mult3(R, q4), mult3(R, q5), mult3(R, q6)};
     return q;
   }
 
   vec32 bounding_box(const vec3 &location, double radius) {
-    const vec3 low = {location[0] - radius, location[1] - radius,
-                      location[2] - radius};
-    const vec3 high = {location[0] + radius, location[1] + radius,
-                       location[2] + radius};
+    const vec3 low = {location[0] - radius, location[1] - radius, location[2] - radius};
+    const vec3 high = {location[0] + radius, location[1] + radius, location[2] + radius};
     const vec32 bbox = {low, high};
     return bbox;
   }
 
   inline bool is_inside_bbox(const vec3 &location) const {
     const vec32 bbox = get_bbox();
-    return (location[0] > bbox[0][0]) && (location[0] < bbox[1][0]) &&
-           (location[1] > bbox[0][1]) && (location[1] < bbox[1][1]) &&
-           (location[2] > bbox[0][2]) && (location[2] < bbox[1][2]);
+    return (location[0] > bbox[0][0]) && (location[0] < bbox[1][0]) && (location[1] > bbox[0][1]) &&
+           (location[1] < bbox[1][1]) && (location[2] > bbox[0][2]) && (location[2] < bbox[1][2]);
   }
 
   double get_radius() const { return radius_; }
@@ -104,16 +100,10 @@ class Seed {
   vec36 get_q() const { return q_; }
   vec32 get_bbox() const { return bbox_; }
 
- public:
-  Seed(const vec3 &location, const vec3 &orientation, const double radius,
-       const double rho, const double amplitude)
-      : location_(location),
-        orientation_(orientation),
-        q_(rotate(orientation_)),
-        bbox_(bounding_box(location, radius)),
-        rho_(rho),
-        radius_(radius),
-        amplitude_(amplitude) {}
+public:
+  Seed(const vec3 &location, const vec3 &orientation, const double radius, const double rho, const double amplitude)
+      : location_(location), orientation_(orientation), q_(rotate(orientation_)), bbox_(bounding_box(location, radius)),
+        rho_(rho), radius_(radius), amplitude_(amplitude) {}
 
   bool is_inside(const vec3 &X) const {
     /*
@@ -143,4 +133,4 @@ class Seed {
     return u;
   }
 };
-}  // namespace pfc
+} // namespace pfc

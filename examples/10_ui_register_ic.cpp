@@ -15,31 +15,28 @@ link that also!
 
 // Define custom initial condition
 class MyIC : public FieldModifier {
- private:
+private:
   double m_value = 1.0;
 
- public:
+public:
   void set_value(double value) { m_value = value; }
   double get_value() const { return m_value; }
 
-  void apply(Model &, double) override {
-    std::cout << "Applying MyIC with value " << get_value() << std::endl;
-  }
+  void apply(Model &, double) override { std::cout << "Applying MyIC with value " << get_value() << std::endl; }
 };
 
 // Parse initial condition data from json file
 void from_json(const json &params, MyIC &ic) {
   std::cout << "Parsing MyIC from json" << std::endl;
   if (!params.contains("value") || !params["value"].is_number()) {
-    throw std::invalid_argument(
-        "Reading MyIC failed: missing or invalid 'value' field.");
+    throw std::invalid_argument("Reading MyIC failed: missing or invalid 'value' field.");
   }
   ic.set_value(params["value"]);
 }
 
 // Define model
 class MyModel : public Model {
- public:
+public:
   void initialize(double) override { std::cout << "initialize()" << std::endl; }
   void step(double) override { std::cout << "MyModel.step()" << std::endl; }
 };
