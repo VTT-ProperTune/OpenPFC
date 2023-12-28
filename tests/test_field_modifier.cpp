@@ -42,3 +42,22 @@ TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
 
   delete modifier;
 }
+
+TEST_CASE("FieldModifier can be moved", "[FieldModifier]") {
+  MockModel model;
+  MockFieldModifier modifier;
+
+  double current_time = 0.0;
+  MockFieldModifier moved_modifier = std::move(modifier);
+  moved_modifier.apply(model, current_time);
+
+  REQUIRE(model.is_modified);
+}
+
+TEST_CASE("Field name can be set and retrieved", "[FieldModifier]") {
+  MockFieldModifier modifier;
+  // default field name is "default"
+  REQUIRE(modifier.get_field_name() == "default");
+  modifier.set_field_name("phi");
+  REQUIRE(modifier.get_field_name() == "phi");
+}

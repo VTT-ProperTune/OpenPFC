@@ -14,11 +14,15 @@ namespace pfc {
  */
 class FieldModifier {
 
+private:
+  std::string m_field_name = "default";
+
 public:
   /**
    * @brief Apply the field modification to the model at a specific time.
    *
-   * This function is responsible for applying the field modification to the provided model at the given time.
+   * This function is responsible for applying the field modification to the
+   * provided model at the given time.
    *
    * @param model The model to apply the field modification to.
    * @param field_name To which field the modification is done.
@@ -28,9 +32,30 @@ public:
   // virtual void apply(Model &model, const std::string &field_name, double time) = 0;
 
   /**
+   * @brief Set the field name for the field modifier.
+   *
+   * This function is responsible for setting the field name for the field
+   * modifier.
+   *
+   * @param field_name The field name to set.
+   */
+  void set_field_name(const std::string &field_name) { m_field_name = field_name; }
+
+  /**
+   * @brief Get the field name for the field modifier.
+   *
+   * This function is responsible for getting the field name for the field
+   * modifier.
+   *
+   * @return The field name.
+   */
+  const std::string &get_field_name() const { return m_field_name; }
+
+  /**
    * @brief Apply the field modification to the model at a specific time.
    *
-   * This function is responsible for applying the field modification to the provided model at the given time.
+   * This function is responsible for applying the field modification to the
+   * provided model at the given time.
    *
    * @param model The model to apply the field modification to.
    * @param time The current time.
@@ -40,7 +65,8 @@ public:
   /**
    * @brief Destructor for the FieldModifier class.
    *
-   * The destructor is declared as default, allowing proper destruction of derived classes.
+   * The destructor is declared as default, allowing proper destruction of
+   * derived classes.
    */
   virtual ~FieldModifier() = default;
 };
