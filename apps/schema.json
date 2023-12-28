@@ -77,6 +77,12 @@
                     },
                     {
                         "$ref": "#/definitions/initial_conditions/single_seed"
+                    },
+                    {
+                        "$ref": "#/definitions/initial_conditions/seed_grid"
+                    },
+                    {
+                        "$ref": "#/definitions/initial_conditions/from_file"
                     }
                 ]
             }
@@ -87,6 +93,12 @@
                 "oneOf": [
                     {
                         "$ref": "#/definitions/boundary_conditions/fixed"
+                    },
+                    {
+                        "$ref": "#/definitions/boundary_conditions/moving"
+                    },
+                    {
+                        "$ref": "#/definitions/boundary_conditions/none"
                     }
                 ]
             }
@@ -289,6 +301,72 @@
                     "amp_eq",
                     "rho_seed"
                 ]
+            },
+            "seed_grid": {
+                "type": "object",
+                "description": "seed grid",
+                "properties": {
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "seed_grid"
+                        ]
+                    },
+                    "amplitude": {
+                        "type": "number"
+                    },
+                    "rho": {
+                        "type": "number"
+                    },
+                    "radius": {
+                        "type": "number"
+                    },
+                    "X0": {
+                        "type": "number"
+                    },
+                    "Ny": {
+                        "type": "integer"
+                    },
+                    "Nz": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "target",
+                    "type",
+                    "amplitude",
+                    "rho",
+                    "radius",
+                    "X0",
+                    "Ny",
+                    "Nz"
+                ]
+            },
+            "from_file": {
+                "type": "object",
+                "description": "read initial condition from file",
+                "properties": {
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "from_file"
+                        ]
+                    },
+                    "filename": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "target",
+                    "type",
+                    "filename"
+                ]
             }
         },
         "boundary_conditions": {
@@ -316,6 +394,67 @@
                     "type",
                     "rho_low",
                     "rho_high"
+                ]
+            },
+            "moving": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "moving"
+                        ]
+                    },
+                    "rho_low": {
+                        "type": "number"
+                    },
+                    "rho_high": {
+                        "type": "number"
+                    },
+                    "width": {
+                        "type": "number"
+                    },
+                    "alpha": {
+                        "type": "number"
+                    },
+                    "disp": {
+                        "type": "number"
+                    },
+                    "xpos": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "target",
+                    "type",
+                    "rho_low",
+                    "rho_high",
+                    "width",
+                    "alpha",
+                    "disp"
+                ]
+            },
+            "none": {
+                "type": "object",
+                "description": "no boundary condition (which is the same as periodic boundary condition)",
+                "properties": {
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "periodic"
+                        ]
+                    }
+                },
+                "required": [
+                    "target",
+                    "type"
                 ]
             }
         }
