@@ -36,7 +36,6 @@
     "t1": 20000.0,
     "dt": 1.0,
     "saveat": 100.0,
-    "results": "data/u_%04d.bin",
     "fields": [
         {
             "name": "psi",
@@ -45,10 +44,12 @@
     ],
     "initial_conditions": [
         {
+            "target": "psi",
             "type": "constant",
             "n0": -0.10
         },
         {
+            "target": "psi",
             "type": "seed_grid",
             "X0": 30.0,
             "Ny": 2,
@@ -60,6 +61,7 @@
     ],
     "boundary_conditions": [
         {
+            "target": "psi",
             "type": "fixed",
             "rho_low": -0.464,
             "rho_high": -0.100

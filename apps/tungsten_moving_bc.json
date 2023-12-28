@@ -2,7 +2,27 @@
     "model": {
         "name": "tungsten",
         "params": {
-            "n0": -0.10
+            "n0": -0.10,
+            "alpha": 0.50,
+            "n_sol": -0.047,
+            "n_vap": -0.464,
+            "T": 3300.0,
+            "T0": 156000.0,
+            "Bx": 0.8582,
+            "alpha_farTol": 0.001,
+            "alpha_highOrd": 4,
+            "lambda": 0.22,
+            "stabP": 0.2,
+            "shift_u": 0.3341,
+            "shift_s": 0.1898,
+            "p2": 1.0,
+            "p3": -0.5,
+            "p4": 0.333333333,
+            "q20": -0.0037,
+            "q21": 1.0,
+            "q30": -12.4567,
+            "q31": 20.0,
+            "q40": 45.0
         }
     },
     "Lx": 128,
@@ -16,13 +36,20 @@
     "t1": 20000.0,
     "dt": 1.0,
     "saveat": 100.0,
-    "results": "data/u_%04d.bin",
+    "fields": [
+        {
+            "name": "psi",
+            "data": "./data/u_%04d.bin"
+        }
+    ],
     "initial_conditions": [
         {
+            "target": "psi",
             "type": "constant",
             "n0": -0.10
         },
         {
+            "target": "psi",
             "type": "seed_grid",
             "X0": 30.0,
             "Ny": 2,
@@ -34,6 +61,7 @@
     ],
     "boundary_conditions": [
         {
+            "target": "psi",
             "type": "moving",
             "rho_low": -0.464,
             "rho_high": -0.10,
