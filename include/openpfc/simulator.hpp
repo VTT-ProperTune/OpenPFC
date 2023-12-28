@@ -23,6 +23,12 @@ private:
   int m_result_counter = 0;
 
 public:
+  /**
+   * @brief Construct a new Simulator object
+   *
+   * @param model The model to simulate.
+   * @param time The time object to use for simulation.
+   */
   Simulator(Model &model, Time &time) : m_model(model), m_time(time) {}
 
   Model &get_model() { return m_model; }
