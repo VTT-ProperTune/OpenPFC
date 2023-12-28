@@ -166,6 +166,22 @@ public:
   ComplexField &get_complex_field(const std::string &name) { return m_complex_fields.find(name)->second; }
 
   /**
+   * @brief Add a field to the model.
+   *
+   * @param name Name of the field
+   * @param field Reference to the RealField object representing the field
+   */
+  void add_field(const std::string &name, RealField &field) { add_real_field(name, field); }
+
+  /**
+   * @brief Add a field to the model.
+   *
+   * @param name Name of the field
+   * @param field Reference to the ComplexField object representing the field
+   */
+  void add_field(const std::string &name, ComplexField &field) { add_complex_field(name, field); }
+
+  /**
    * @brief Check if the model has a field with the given name (real or
    * complex).
    *
