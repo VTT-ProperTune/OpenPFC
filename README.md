@@ -255,11 +255,18 @@ This way, cmake know to search necessary files from the path given above.
 
 There might be various reasons why the simulation returns NaNs. Despite the
 reason, it usually makes sense to stop simulation as it doesn't do anything
-useful. OpenPFC does not currently have json validator, which would check that
-simulation parameters are valid. Thus, it is possible to give invalid parameters
-to the simulation, which might lead to NaNs. If some model parameters which
-should be defined are undefined and thus zero, there might be zero division
-problem.
+useful. OpenPFC does not currently have built-in json validator, which would
+check that simulation parameters are valid. Thus, it is possible to give invalid
+parameters to the simulation, which might lead to NaNs. If some model parameters
+which should be defined are undefined and thus zero, there might be zero
+division problem.
+
+There is schema file for the input file, which can be used to validate the json
+file using external validator like `check-jsonchema`:
+
+ ```bash
+ check-jsonschema --schemafile apps/schema.json input.json
+ ```
 
 OpenPFC implements NaN check, which is enabled by default when compiling with a
 debug build type:

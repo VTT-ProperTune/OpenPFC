@@ -11,6 +11,7 @@
 - Start using clang-format in the project (ci pipeline).
 - Add possibility to add initial and boundary conditions to fields with other
   name than "default".
+- Add schema file for the input file.
 
 ## [0.1.0] - 2023-08-17
 
