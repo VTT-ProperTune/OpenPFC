@@ -63,12 +63,36 @@ public:
     return add_results_writer("default", std::move(writer));
   }
 
-  void add_initial_conditions(std::unique_ptr<FieldModifier> modifier) {
-    m_initial_conditions.push_back(std::move(modifier));
+  bool add_initial_conditions(std::unique_ptr<FieldModifier> modifier) {
+    Model &model = get_model();
+    std::string field_name = modifier->get_field_name();
+    if (field_name == "default") {
+      std::cout << "Warning: adding initial condition to modify field 'default'" << std::endl;
+    }
+    if (model.has_field(field_name)) {
+      m_initial_conditions.push_back(std::move(modifier));
+      return true;
+    } else {
+      std::cout << "Warning: tried to add initial condition for inexistent field " << field_name
+                << ", INITIAL CONDITIONS ARE NOT APPLIED!" << std::endl;
+      return false;
+    }
   }
 
-  void add_boundary_conditions(std::unique_ptr<FieldModifier> modifier) {
-    m_boundary_conditions.push_back(std::move(modifier));
+  bool add_boundary_conditions(std::unique_ptr<FieldModifier> modifier) {
+    Model &model = get_model();
+    std::string field_name = modifier->get_field_name();
+    if (field_name == "default") {
+      std::cout << "Warning: adding boundary condition to modify field 'default'" << std::endl;
+    }
+    if (model.has_field(field_name)) {
+      m_boundary_conditions.push_back(std::move(modifier));
+      return true;
+    } else {
+      std::cout << "Warning: tried to add boundary condition for inexistent field " << field_name
+                << ", BOUNDARY CONDITIONS ARE NOT APPLIED!" << std::endl;
+      return false;
+    }
   }
 
   void set_result_counter(int result_counter) { m_result_counter = result_counter; }
