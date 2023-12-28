@@ -8,6 +8,9 @@
 - Bug fixes and changes in CMakeLists.txt: conditionally install nlohmann_json
   headers (issue #16), do not add RPATH to binaries when installing them,
   (commit 6c91de3) and also install binaries to INSTALL_PREFIX/bin (issue #14).
+- Start using clang-format in the project (ci pipeline).
+- Add possibility to add initial and boundary conditions to fields with other
+  name than "default".
 
 ## [0.1.0] - 2023-08-17
 
