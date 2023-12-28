@@ -8,7 +8,6 @@ class SingleSeed : public FieldModifier {
   double amp_eq, rho_seed;
 
 public:
-
   void set_amplitude(double amplitude) { amp_eq = amplitude; }
   double get_amplitude() const { return amp_eq; }
 

@@ -11,7 +11,6 @@ class RandomSeeds : public FieldModifier {
   double m_density, m_amplitude;
 
 public:
-
   void set_amplitude(double amplitude) { m_amplitude = amplitude; }
   double get_amplitude() const { return m_amplitude; }
   void set_density(double density) { m_density = density; }
@@ -47,12 +46,8 @@ public:
     std::uniform_real_distribution<double> rz(lower_z, upper_z);
     std::uniform_real_distribution<double> ro(0.0, 8.0 * atan(1.0));
     typedef std::array<double, 3> vec3;
-    auto random_location = [&re, &rx, &ry, &rz]() {
-      return vec3({rx(re), ry(re), rz(re)});
-    };
-    auto random_orientation = [&re, &ro]() {
-      return vec3({ro(re), ro(re), ro(re)});
-    };
+    auto random_location = [&re, &rx, &ry, &rz]() { return vec3({rx(re), ry(re), rz(re)}); };
+    auto random_orientation = [&re, &ro]() { return vec3({ro(re), ro(re), ro(re)}); };
 
     for (int i = 0; i < nseeds; i++) {
       const std::array<double, 3> location = random_location();

@@ -18,8 +18,7 @@ int main() {
   Time time({0.0, 10.0, 1.0});
   time.set_saveat(2.0);
   cout << time << endl;
-  cout << "Starting simulation at time " << time.get_t0() << ", with timesteps "
-       << time.get_dt() << endl;
+  cout << "Starting simulation at time " << time.get_t0() << ", with timesteps " << time.get_dt() << endl;
   print_status(time);
   while (!time.done()) {
     time.next();

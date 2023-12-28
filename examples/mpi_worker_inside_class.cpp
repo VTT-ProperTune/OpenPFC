@@ -15,7 +15,6 @@ public:
 
 int main() {
   simulation s;
-  std::cout << "I am process " << s.mpi.comm.rank() << " of "
-            << s.mpi.comm.size() << "." << std::endl;
+  std::cout << "I am process " << s.mpi.comm.rank() << " of " << s.mpi.comm.size() << "." << std::endl;
   return 0;
 }

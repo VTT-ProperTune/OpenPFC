@@ -23,16 +23,20 @@
     ],
     "initial_conditions": [
         {
+            "target": "psi",
             "type": "constant",
             "n0": -0.4
-    },
+        },
         {
+            "target": "psi",
             "type": "single_seed",
             "amp_eq": 0.215936,
             "rho_seed": -0.047
         }
     ],
-    "boundary_condition": {
-        "type": "none"
-    }
+    "boundary_conditions": [
+        {
+            "type": "none"
+        }
+    ]
 }

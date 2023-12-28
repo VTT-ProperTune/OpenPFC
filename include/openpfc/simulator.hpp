@@ -17,8 +17,7 @@ private:
   Model &m_model;
   Time &m_time;
 
-  std::unordered_map<std::string, std::unique_ptr<ResultsWriter>>
-      m_result_writers;
+  std::unordered_map<std::string, std::unique_ptr<ResultsWriter>> m_result_writers;
   std::vector<std::unique_ptr<FieldModifier>> m_initial_conditions;
   std::vector<std::unique_ptr<FieldModifier>> m_boundary_conditions;
   int m_result_counter = 0;
@@ -27,36 +26,27 @@ public:
   Simulator(Model &model, Time &time) : m_model(model), m_time(time) {}
 
   Model &get_model() { return m_model; }
-  const Decomposition &get_decomposition() {
-    return get_model().get_decomposition();
-  }
+  const Decomposition &get_decomposition() { return get_model().get_decomposition(); }
   const World &get_world() { return get_decomposition().get_world(); }
   FFT &get_fft() { return get_model().get_fft(); }
   Time &get_time() { return m_time; }
   Field &get_field() { return get_model().get_field(); }
 
-  void initialize() {
-    get_model().initialize(get_time().get_dt());
-  }
+  void initialize() { get_model().initialize(get_time().get_dt()); }
 
-  bool is_rank0() {
-    return get_model().rank0;
-  }
+  bool is_rank0() { return get_model().rank0; }
 
-  unsigned int get_increment() {
-    return get_time().get_increment();
-  }
+  unsigned int get_increment() { return get_time().get_increment(); }
 
-  void add_results_writer(const std::string &field_name,
-                          std::unique_ptr<ResultsWriter> writer) {
+  void add_results_writer(const std::string &field_name, std::unique_ptr<ResultsWriter> writer) {
     const Decomposition &d = get_decomposition();
     writer->set_domain(d.get_world().get_size(), d.inbox.size, d.inbox.low);
     Model &model = get_model();
     if (model.has_field(field_name)) {
       m_result_writers.insert({field_name, std::move(writer)});
     } else {
-      std::cout << "Warning, tried to add writer for inexistent field "
-                << field_name << ", RESULTS ARE NOT WRITTEN!" << std::endl;
+      std::cout << "Warning, tried to add writer for inexistent field " << field_name << ", RESULTS ARE NOT WRITTEN!"
+                << std::endl;
     }
   }
 
@@ -73,9 +63,7 @@ public:
     m_boundary_conditions.push_back(std::move(modifier));
   }
 
-  void set_result_counter(int result_counter) {
-    m_result_counter = result_counter;
-  }
+  void set_result_counter(int result_counter) { m_result_counter = result_counter; }
 
   double get_result_counter() const { return m_result_counter; }
 

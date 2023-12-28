@@ -5,10 +5,12 @@
 namespace pfc {
 
 /**
- * @brief The FieldModifier class represents a base class for field modifiers in PFC.
+ * @brief The FieldModifier class represents a base class for field modifiers in
+ * PFC.
  *
- * Field modifiers are used to apply modifications to the fields in a PFC model at specific times.
- * Users can derive from this class and implement the `apply` function to define their own field modification logic.
+ * Field modifiers are used to apply modifications to the fields in a PFC model
+ * at specific times. Users can derive from this class and implement the `apply`
+ * function to define their own field modification logic.
  */
 class FieldModifier {
 
