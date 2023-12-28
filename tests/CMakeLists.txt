@@ -11,6 +11,7 @@ add_executable(OpenPFCTests
                test_ic_constant.cpp
                test_model.cpp
                test_multi_index.cpp
+               test_simulator.cpp
                test_time.cpp
                )
 target_link_libraries(OpenPFCTests PRIVATE OpenPFC Catch2::Catch2WithMain)
