@@ -77,23 +77,34 @@ The project documentation can be found from
 
 Requirements:
 
-- Compiler supporting C++17 standard. C++17 features [are
+- **Compiler supporting C++17 standard**: C++17 features [are
   available](https://gcc.gnu.org/projects/cxx-status.html) since GCC 5. Check
   your version number with `g++ --version`. The default compiler might be
   relatively old, and a more recent version needs to be loaded with `module load
   gcc`. Do not try to compile with GCC 4.8.5. It will not work. At least GCC
   versions 9.4.0 (coming with Ubuntu 20.04) and 11.2 are working.
-- [OpenMPI](https://www.open-mpi.org/). All recent versions should work. Tested
-  with OpenMPI version 2.1.3. Again, you might need to load the proper OpenMPI
-  version with `module load openmpi/2.1.3`, for instance. Additionally, if CMake
-  is not able to find proper OpenMPI installation, assistance might be needed by
-  setting `MPI_ROOT`, e.g. `export MPI_ROOT=/share/apps/OpenMPI/2.1.3`.
-- FFTW. Probably all versions will work. Tested with FFTW versions 3.3.2 and
-  3.3.10. Again, CMake might need some assistance to find the libraries, which
-  can be controlled with the environment variable `FFTW_ROOT`. Depending on how
-  FFTW is installed in the system, it might be in a non-standard location, and
-  `module load fftw` is needed. You can use commands like `whereis fftw` or
-  `ldconfig -p | grep fftw` to locate your FFTW installation, if needed.
+- **[CMake](https://cmake.org/)**: Version 3.15 or later should be used. Your
+  system may already contain CMake, but if not, it can most likely be installed
+  with the package manager.
+- **[OpenMPI](https://www.open-mpi.org/)**: All recent versions should work.
+  Tested with OpenMPI version 2.1.3. Again, you might need to load proper
+  OpenMPI version with `module load openmpi/2.1.3`, for instance. Additionally,
+  if CMake is not able to find proper OpenMPI installation, assistance might be
+  needed by setting `MPI_ROOT`, e.g. `export
+  MPI_ROOT=/share/apps/OpenMPI/2.1.3`.
+- **[FFTW](https://www.fftw.org/)**: Probably all versions will work. Tested
+  with FFTW versions 3.3.2 and 3.3.10. Again, CMake might need some assistance
+  to find the libraries, which can be controlled with environment variable
+  `FFTW_ROOT`. Depending how FFTW is installed to system, it might be in
+  non-standard location and `module load fftw` is needed. You can use commands
+  like `whereis fftw` or `ldconfig -p | grep fftw` to locate your FFTW
+  installation, if needed.
+- **[Niels Lohmann's JSON for Modern C++
+  library](https://github.com/nlohmann/json)**: All recent versions should work.
+  Tested with version 3.11.2. If you do not have the JSON library installed,
+  CMake for OpenPFC will download the library for you.
+- **[HeFFTe](https://github.com/icl-utk-edu/heffte)**: All recent versions
+  should work. Tested with version 2.3.0. 
 
 Typically in clusters, these are already installed and can be loaded with an
 on-liner
