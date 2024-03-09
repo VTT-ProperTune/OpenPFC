@@ -1,6 +1,6 @@
 # OpenPFC
 
-[![][doi-badge-img]][doi-badge]
+[![][doi-badge-img]][doi-badge-url]
 [![][docs-dev-img]][docs-dev-url]
 [![][releases-img]][releases-url]
 [![][GHA-img]][GHA-url]
