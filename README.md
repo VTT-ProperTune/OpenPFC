@@ -1,5 +1,6 @@
 # OpenPFC
 
+[![][doi-badge-img]][doi-badge]
 [![][docs-dev-img]][docs-dev-url]
 [![][releases-img]][releases-url]
 [![][GHA-img]][GHA-url]
@@ -332,5 +333,7 @@ A bigger application example is Tungsten model. Todo.
 [license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/LICENSE
 [GHA-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg
 [GHA-url]: https://github.com/VTT-ProperTune/OpenPFC/actions?query=workflows/CI
+[doi-badge-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10799936.svg
+[doi-badge-url]: https://zenodo.org/doi/10.5281/zenodo.10799935
 [examples-url]: https://github.com/VTT-ProperTune/OpenPFC/tree/master/examples
 [software framework]: https://en.wikipedia.org/wiki/Software_framework
