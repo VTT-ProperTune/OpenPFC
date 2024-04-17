@@ -317,11 +317,12 @@ A bigger application example is Tungsten model. Todo.
 
 ## Citing
 
-- Todo
-
 ```bibtex
-@article{
-  blaablaa
+@article{pinomaa2024openpfc,
+  title={OpenPFC: an open-source framework for high performance 3D phase field crystal simulations},
+  author={Pinomaa, Tatu and Aho, Jukka and Suviranta, Jaarli and Jreidini, Paul and Provatas, Nikolaos and Laukkanen, Anssi},
+  journal={Modelling and Simulation in Materials Science and Engineering},
+  year={2024}
 }
 ```
 
