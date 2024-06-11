@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_OPENPFC_HPP
+#define PFC_OPENPFC_HPP
 
 #include "array.hpp"
 #include "binary_reader.hpp"
@@ -45,3 +46,5 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 #include "utils.hpp"
 #include "utils/show.hpp"
 #include "world.hpp"
+
+#endif // PFC_OPENPFC_HPP

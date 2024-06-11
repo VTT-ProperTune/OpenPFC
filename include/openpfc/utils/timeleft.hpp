@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_UTILS_TIMELEFT_HPP
+#define PFC_UTILS_TIMELEFT_HPP
 
 #include <iostream>
 
@@ -61,3 +62,5 @@ public:
 };
 } // namespace utils
 } // namespace pfc
+
+#endif // PFC_UTILS_TIMELEFT_HPP

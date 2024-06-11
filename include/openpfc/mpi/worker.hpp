@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_MPI_WORKER_HPP
+#define PFC_MPI_WORKER_HPP
 
 #include <mpi.h>
 
@@ -98,3 +99,5 @@ public:
 };
 
 } // namespace pfc
+
+#endif // PFC_MPI_WORKER_HPP

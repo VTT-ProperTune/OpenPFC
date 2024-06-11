@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_UI_HPP
+#define PFC_UI_HPP
 
 #include <filesystem>
 #include <fstream>
@@ -742,3 +743,5 @@ public:
 
 } // namespace ui
 } // namespace pfc
+
+#endif // PFC_UI_HPP

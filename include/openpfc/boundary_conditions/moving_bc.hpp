@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP
+#define PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP
 
 #include <cmath>
 #include <limits>
@@ -148,3 +149,5 @@ public:
 };
 
 } // namespace pfc
+
+#endif // PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP

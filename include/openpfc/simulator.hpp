@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_SIMULATOR_HPP
+#define PFC_SIMULATOR_HPP
 
 #include "field_modifier.hpp"
 #include "model.hpp"
@@ -270,3 +271,5 @@ public:
 };
 
 } // namespace pfc
+
+#endif // PFC_SIMULATOR_HPP

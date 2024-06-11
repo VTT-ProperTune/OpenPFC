@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_RESULTS_WRITER_HPP
+#define PFC_RESULTS_WRITER_HPP
 
 #include "types.hpp"
 #include "utils.hpp"
@@ -84,3 +85,5 @@ public:
   }
 };
 } // namespace pfc
+
+#endif // PFC_RESULTS_WRITER_HPP

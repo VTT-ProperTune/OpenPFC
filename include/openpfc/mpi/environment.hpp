@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_MPI_ENVIRONMENT_HPP
+#define PFC_MPI_ENVIRONMENT_HPP
 
 #include <mpi.h>
 
@@ -63,3 +64,5 @@ bool environment::finalized() {
 
 } // namespace mpi
 } // namespace pfc
+
+#endif // PFC_MPI_ENVIRONMENT_HPP

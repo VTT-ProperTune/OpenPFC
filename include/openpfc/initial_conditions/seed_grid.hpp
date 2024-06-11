@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
+#define PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
 
 #include <random>
 
@@ -124,3 +125,5 @@ public:
 };
 
 } // namespace pfc
+
+#endif // PFC_INITIAL_CONDITIONS_SEED_GRID_HPP

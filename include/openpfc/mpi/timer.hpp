@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_MPI_TIMER_HPP
+#define PFC_MPI_TIMER_HPP
 
 #include <iostream>
 #include <mpi.h>
@@ -77,3 +78,5 @@ std::ostream &operator<<(std::ostream &os, const timer &t) {
 
 } // namespace mpi
 } // namespace pfc
+
+#endif // PFC_MPI_TIMER_HPP

@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP
+#define PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP
 
 #include "../field_modifier.hpp"
 
@@ -80,3 +81,5 @@ public:
 };
 
 } // namespace pfc
+
+#endif // PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP

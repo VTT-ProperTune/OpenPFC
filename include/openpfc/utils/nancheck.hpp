@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_UTILS_NANCHECK_HPP
+#define PFC_UTILS_NANCHECK_HPP
 
 #include <cmath>
 #include <iostream>
@@ -125,3 +126,5 @@ template <typename T> void abortIfNaNs(const std::vector<T> &vec, const char *fi
 
 } // namespace utils
 } // namespace pfc
+
+#endif // PFC_UTILS_NANCHECK_HPP
