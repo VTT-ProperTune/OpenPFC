@@ -83,11 +83,20 @@ There exists packages for certain Linux distributions (`nlohmann-json3-dev` for
 Ubuntu, `json-devel` for Centos) for easy install. If the system-wide installation
 is not found, the library is downloaded from GitHub during the configuration.
 
-The last and most important dependency in order to use OpenPFC is
+The last and most important dependency to use OpenPFC is
 [HeFFTe](https://icl.utk.edu/fft/), which is our choice for parallel FFT
 implementation. The instructions to install HeFFTe can be found from
-[here](https://mkstoyanov.bitbucket.io/heffte/md_doxygen_installation.html).
-HeFFTe can be downloaded from <https://github.com/icl-utk-edu/heffte>.
+[here](https://icl-utk-edu.github.io/heffte/md_doxygen_installation.html).
+HeFFTe can be downloaded from <https://github.com/icl-utk-edu/heffte>. Your
+typical workflow to install HeFFTe would be something like this:
+
+```bash
+cmake -S heffte-2.4.0-src -B heffte-2.4.0-build \
+    -DCMAKE_INSTALL_PREFIX=/opt/heffte/2.4.0 \
+    -DCMAKE_BUILD_TYPE=Release -D Heffte_ENABLE_FFTW=ON
+cmake --build heffte-2.4.0-build
+cmake --install heffte-2.4.0-build
+```
 
 If HeFFTe is installed to some non-standard location, cmake is unable to find it
 when configuring OpenPFC. To overcome this problem, the install path of HeFFTe
