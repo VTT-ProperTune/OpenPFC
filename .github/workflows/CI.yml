@@ -15,6 +15,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - name: Check license headers
+      uses: viperproject/check-license-header@v2
+      with:
+        path: ./
+        config: ./.github/license-check/license-config.json
+        strict: false
+
     - name: Check code formatting using clang-format
       uses: DoozyX/clang-format-lint-action@v0.17
       with:
