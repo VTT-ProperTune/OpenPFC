@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_MPI_COMMUNICATOR_HPP
+#define PFC_MPI_COMMUNICATOR_HPP
 
 #include <memory>
 #include <mpi.h>
@@ -63,3 +64,5 @@ int communicator::rank() const {
 
 } // namespace mpi
 } // namespace pfc
+
+#endif // PFC_MPI_COMMUNICATOR_HPP

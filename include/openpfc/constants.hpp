@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_CONSTANTS_HPP
+#define PFC_CONSTANTS_HPP
 
 #include <cmath>
 
@@ -48,3 +49,5 @@ const int r2c_direction = 0;
 
 } // namespace constants
 } // namespace pfc
+
+#endif // PFC_CONSTANTS_HPP

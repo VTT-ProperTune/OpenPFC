@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP
+#define PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP
 
 #include "../field_modifier.hpp"
 
@@ -64,3 +65,5 @@ public:
 };
 
 } // namespace pfc
+
+#endif // PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP

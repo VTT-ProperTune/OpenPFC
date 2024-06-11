@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_BINARY_READER_HPP
+#define PFC_BINARY_READER_HPP
 
 #include "types.hpp"
 #include <mpi.h>
@@ -53,3 +54,5 @@ public:
 };
 
 } // namespace pfc
+
+#endif // PFC_BINARY_READER_HPP

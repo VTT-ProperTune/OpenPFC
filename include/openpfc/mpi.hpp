@@ -18,9 +18,12 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#pragma once
+#ifndef PFC_MPI_HPP
+#define PFC_MPI_HPP
 
 #include "mpi/communicator.hpp"
 #include "mpi/environment.hpp"
 #include "mpi/timer.hpp"
 #include "mpi/worker.hpp"
+
+#endif // PFC_MPI_HPP
