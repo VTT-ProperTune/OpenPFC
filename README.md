@@ -87,7 +87,7 @@ The last and most important dependency in order to use OpenPFC is
 [HeFFTe](https://icl.utk.edu/fft/), which is our choice for parallel FFT
 implementation. The instructions to install HeFFTe can be found from
 [here](https://mkstoyanov.bitbucket.io/heffte/md_doxygen_installation.html).
-HeFFTe can be downloaded from <https://bitbucket.org/icl/heffte/downloads/>.
+HeFFTe can be downloaded from <https://github.com/icl-utk-edu/heffte>.
 
 If HeFFTe is installed to some non-standard location, cmake is unable to find it
 when configuring OpenPFC. To overcome this problem, the install path of HeFFTe
