@@ -6,7 +6,7 @@
 [![][GHA-img]][GHA-url]
 [![][license-img]][license-url]
 
-![Screenshot of OpenPFC simulation result](docs/img/screenshot.png)
+![Screenshot of OpenPFC simulation result](docs/img/simulation.png)
 
 Phase field crystal (PFC) is a semi-atomistic technique, containing atomic
 resolution information of crystalline structures while operating on diffusive
