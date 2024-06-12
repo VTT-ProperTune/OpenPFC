@@ -16,6 +16,15 @@ co-evolution of microstructural defects such as dislocations and stacking
 faults, voids, defect formation in epitaxial growth, displacive phase
 transitions, and electromigration.
 
+The image above shows a simulation of a rapidly solidifying tungsten block
+approximately 50 x 100 x 200 nm in size, using MovingBC boundary conditions. The
+rightmost section depicts the pure atomic structure of the tungsten, the middle
+section highlights the surface of the entire object, and the leftmost section
+provides a transparent view of the surface, revealing the lattice defects that
+formed during the simulation. This visualization aids in understanding the
+atomic arrangement, surface features, and internal defects of the tungsten
+block.
+
 OpenPFC is an open-source framework for high performance 3D phase field crystal
 simulations. It is designed to scale up from a single laptop to exascale class
 supercomputers. OpenPFC has succesfully used to simulate domain of size 8192 x
