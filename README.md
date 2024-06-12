@@ -165,6 +165,64 @@ finishes, one should find example codes from `./build/examples` and apps from
 `./build/apps`. Installation to path defined by `CMAKE_INSTALL_PREFIX` can be
 done with `cmake --install build`.
 
+## Structure of the application
+
+```mermaid
+classDiagram
+  App~Model~ --> Simulator
+  Simulator --> Model
+  Simulator --> Time
+  Simulator --> FieldModifier
+  Simulator --> ResultsWriter
+  Model --> FFT
+  Model --> RealField
+  Model --> ComplexField
+  FFT --> Decomposition
+  Decomposition --> World
+```
+
+The OpenPFC framework aims to simplify the development of highly scalable
+applications for solving partial differential equations using spectral methods.
+It provides a modular application structure that users can customize by
+inheriting and overriding specific classes. When examining the class diagram
+from bottom to top, we first encounter classes such as `World`, `Decomposition`,
+and `FFT`. These classes form a low-level layer responsible for domain
+decomposition and performing FFT using the HeFFTe library. These details might
+not be of general interest from an implementation perspective, except for the
+framework developers themselves.
+
+Next, we have classes such as `Model`, `FieldModifier`, and `ResultsWriter`. The
+`Model` class is of particular interest as it describes the physics of the
+model, including the partial differential equation (PDE) itself. Inside the
+`Model` class, there is a function called `step` which needs to be overridden.
+Currently, users are free to choose whichever time integration method they are
+comfortable with. However, in the future, we may abstract the time integration
+method away from the model and create a separate class to approach the problem
+using "The Method of Lines" view. The `Model` class consists of one or several
+different "fields" which can be real or complex-valued. These fields are updated
+during time stepping. The `FieldModifier` class does exactly what the name
+implies – it modifies these fields. In more detail, initial and boundary
+conditions serve as field modifiers and are often also of interest, although
+some already implemented ones exist. Lastly, we should mention the
+`ResultsWriter`, which implements a way to store results during certain periods
+of time. We have some existing implementations such as raw binary format and vti
+format, but nothing is preventing us from implementing, for example, the storage
+of results in hdf5 format, which is currently under planning.
+
+In the third level, we have the `Simulator`, which assembles and runs the actual
+simulation. It's a simple container-like class that calls lower-level objects in
+a stepper to ensure that everything is called in time. Typically, there should
+be no need to override this, but it is still possible to do so.
+
+The top level is `App`, which handles the user interface. Since the simulations
+are usually run on supercomputers, we don't have anything fancy like a graphical
+user interface or interactive control of the simulation. Instead, we input user
+parameters in an input file, preferably in JSON format. After reading the model
+parameters, the simulator starts. This type of user interface is very basic, but
+it works well in high-performance computing (HPC) environments where there are
+no displays available. Typically, a batch script (e.g. Slurm) is created to run
+the application in the chosen HPC environment's queue.
+
 ## Getting started
 
 OpenPFC is a [software framework][software framework]. It doesn't give you
