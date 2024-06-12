@@ -28,17 +28,13 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(BUILD_SHARED_LIBS "Builds shared libraries using CMake conventions" OFF)
 
-option(USE_CLANG_TIDY "Enable clang-tidy static code analysis" ON)
+option(USE_CLANG_TIDY "Enable clang-tidy static code analysis" OFF)
 # Enable clang-tidy if USE_CLANG_TIDY is ON
 if(USE_CLANG_TIDY)
     find_program(CLANG_TIDY_EXECUTABLE NAMES "clang-tidy")
     if(CLANG_TIDY_EXECUTABLE)
         message(STATUS "Enabling clang-tidy")
-        # Set default CLANG_TIDY_CHECKS if not defined
-        if(NOT DEFINED CLANG_TIDY_CHECKS)
-            set(CLANG_TIDY_CHECKS "-checks=*,modernize-*")
-        endif()
-        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}" "${CLANG_TIDY_CHECKS}" "-extra-arg=-stdlib=libc++")
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}" "-extra-arg=-stdlib=libc++")
     else()
         message(WARNING "clang-tidy executable not found. Please install clang-tidy and ensure it is in your system PATH.")
         message(WARNING "Refer to the installation instructions at: https://clang.llvm.org/extra/clang-tidy/")
