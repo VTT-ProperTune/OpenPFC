@@ -25,6 +25,8 @@ formed during the simulation. This visualization aids in understanding the
 atomic arrangement, surface features, and internal defects of the tungsten
 block.
 
+## Scalability and Performance
+
 OpenPFC is an open-source framework for high performance 3D phase field crystal
 simulations. It is designed to scale up from a single laptop to exascale class
 supercomputers. OpenPFC has succesfully used to simulate domain of size 8192 x
@@ -33,6 +35,29 @@ contains 128 cores, thus total 25600 cores were used. During the simulation, 25
 TB of memory was utilized. The central part of the solver is Fast Fourier
 Transform with time complexity of O(N log N), and there are no known limiting
 bottlenecks, why larger models could not be calculated as well.
+
+![OpenPFC scalability](docs/img/scalability.png)
+
+The graph above demonstrates the remarkable scalability and performance of the
+simulation framework. In the strong scaling analysis (panel a), the step time
+significantly decreases as the number of cores increases for various grid sizes,
+from 256³ to 8192³. This indicates efficient parallelization, though the rate of
+decrease diminishes at higher core counts.
+
+In the weak scaling analysis (panel b), the step time remains relatively
+constant as the grid size increases while maintaining a fixed number of voxels
+per core. This stability illustrates excellent weak scaling performance,
+highlighting the framework's capability to efficiently manage larger problems by
+proportionally increasing computational resources. The right Y-axis projects the
+number of time steps calculable in a week, emphasizing the framework's
+suitability for extensive simulations on supercomputers. Notably, these
+simulations were conducted using the LUMI supercomputer, further showcasing the
+framework's capability to leverage top-tier computational resources for
+high-performance simulations.
+
+T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *“OpenPFC: an open-source framework for high performance 3D phase field crystal simulations”*, Modelling Simul. Mater. Sci. Eng., Feb. 2024, doi: 10.1088/1361-651X/ad269e. [(link)](https://iopscience.iop.org/article/10.1088/1361-651X/ad269e)
+
+## Documentation
 
 The project documentation can be found from
 <https://vtt-propertune.github.io/OpenPFC/dev/>.
