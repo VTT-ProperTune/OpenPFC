@@ -375,17 +375,14 @@ $$
 
 ### Linear and Non-Linear Operators
 
-The linear and non-linear operators can be defined as:
+The linear and non-linear operators can be defined as follows:
 
-- **Linear Operator ($ \text{opL} $)**:
-  $$
-  \text{opL} = \exp(D (k^2 + \gamma k^4) \Delta t)
-  $$
-
-- **Non-Linear Operator ($ \text{opN} $)**:
-  $$
-  \text{opN} = \frac{\exp(D (k^2 + \gamma k^4) \Delta t) - 1}{k^2 + \gamma k^4} k^2
-  $$
+$$
+\begin{align}
+\text{opL} &= \exp(D (k^2 + \gamma k^4) \Delta t) \\
+\text{opN} &= \frac{\exp(D (k^2 + \gamma k^4) \Delta t) - 1}{k^2 + \gamma k^4} k^2
+\end{align}
+$$
 
 These operators are used to update the concentration field $c$ in the
 Fourier domain efficiently, leveraging the FFT for computational efficiency.
