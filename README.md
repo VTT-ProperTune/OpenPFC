@@ -292,6 +292,174 @@ cmake --build build
 There is also some examples in [examples][examples-url] directory, which can be
 used as a base for your own codes.
 
+## Example: Cahill-Hilliard equation
+
+The Cahn-Hilliard equation is a fundamental model in materials science used to
+describe the phase separation process in binary mixtures. It models how the
+concentration field evolves over time to minimize the free energy of the system.
+The equation is particularly useful in understanding the dynamics of spinodal
+decomposition and coarsening processes.
+
+Spectral methods, combined with the Fast Fourier Transform (FFT), are highly
+efficient for solving partial differential equations (PDEs) like the
+Cahn-Hilliard equation. The FFT allows us to transform differential operators
+into algebraic ones in the frequency domain, significantly simplifying the
+computation. This approach is particularly advantageous for problems involving
+periodic boundary conditions and large-scale simulations, where the efficiency
+and accuracy of the FFT are paramount.
+
+Exponential time integration is well-suited for stiff PDEs like the
+Cahn-Hilliard equation. Traditional explicit methods require very small time
+steps to maintain stability, which can be computationally expensive. Exponential
+integrators, however, handle the stiff linear part of the equation exactly,
+allowing for larger time steps without sacrificing stability. This makes the
+integration process more efficient and stable, especially for long-term
+simulations.
+
+Starting with the Cahn-Hilliard equation:
+
+$$
+\frac{\partial c}{\partial t} = D \nabla^{2} \left( c^{3} - c - \gamma \nabla^{2} c \right)
+$$
+
+### Fourier Transform
+
+Applying the Fourier transform to the equation converts the spatial differential
+operators into algebraic forms:
+
+$$
+\frac{\partial \hat{c}}{\partial t} = D \left[ -k^2 \left( \hat{c^3} - \hat{c} - \gamma (-k^2 \hat{c}) \right) \right]
+$$
+
+Simplifying the right-hand side:
+
+$$
+\frac{\partial \hat{c}}{\partial t} = D \left[ -k^2 \hat{c^3} + k^2 \hat{c} + \gamma k^4 \hat{c} \right]
+$$
+
+$$
+\frac{\partial \hat{c}}{\partial t} = D \left[ -k^2 \hat{c^3} + (k^2 + \gamma k^4) \hat{c} \right]
+$$
+
+### Discretization in Time
+
+Using an exponential integrator, we handle the linear part exactly and integrate
+the non-linear part explicitly:
+
+$$
+\hat{c}(t + \Delta t) = \exp(DL \Delta t) \hat{c}(t) + \int_t^{t + \Delta t} \exp(DL (t + \Delta t - s)) (-Dk^2 \hat{c^3}(s)) \, \mathrm{d}s
+$$
+
+Here, $L = k^2 + \gamma k^4$.
+
+Assuming $\hat{c}$ is approximately constant over the small interval $\Delta t$,
+we approximate the integral:
+
+$$
+\hat{c}(t + \Delta t) \approx \exp(D (k^2 + \gamma k^4) \Delta t) \hat{c}(t) + \left( \frac{ \exp(D (k^2 + \gamma k^4) \Delta t) - 1 }{D (k^2 + \gamma k^4)} \right) (-Dk^2 \hat{c^3}(t))
+$$
+
+### Final Time-Stepping Formula
+
+Combining the terms, we obtain the discrete update rule for $\hat{c}$:
+
+$$
+\hat{c}_{n+1} = \exp(D (k^2 + \gamma k^4) \Delta t) \hat{c}_n + \frac{\exp(D (k^2 + \gamma k^4) \Delta t) - 1}{D (k^2 + \gamma k^4)} (-Dk^2 \hat{c^3}_n)
+$$
+
+Simplify the coefficient for the non-linear term:
+
+$$
+\hat{c}_{n+1} = \exp(D (k^2 + \gamma k^4) \Delta t) \hat{c}_n - \frac{\exp(D (k^2 + \gamma k^4) \Delta t) - 1}{k^2 + \gamma k^4} k^2 \hat{c^3}_n
+$$
+
+### Linear and Non-Linear Operators
+
+The linear and non-linear operators can be defined as:
+
+- **Linear Operator ($ \text{opL} $)**:
+  $$
+  \text{opL} = \exp(D (k^2 + \gamma k^4) \Delta t)
+  $$
+
+- **Non-Linear Operator ($ \text{opN} $)**:
+  $$
+  \text{opN} = \frac{\exp(D (k^2 + \gamma k^4) \Delta t) - 1}{k^2 + \gamma k^4} k^2
+  $$
+
+These operators are used to update the concentration field $c$ in the
+Fourier domain efficiently, leveraging the FFT for computational efficiency.
+This method allows for stable and accurate integration of the Cahn-Hilliard
+equation over time, making it suitable for large-scale simulations of phase
+separation processes.
+
+Below is the code snippet for the Cahn-Hilliard model in OpenPFC:
+
+```cpp
+class CahnHilliard : public Model {
+private:
+  std::vector<double> opL, opN, c;             // Define operators and field c
+  std::vector<std::complex<double>> c_F, c_NF; // Define (complex) psi
+  double gamma = 1.0e-2;                       // Surface tension
+  double D = 1.0;                              // Diffusion coefficient
+
+public:
+  void initialize(double dt) override {
+    FFT &fft = get_fft();
+    const Decomposition &decomp = get_decomposition();
+
+    // Allocate space for the main variable and it's fourier transform
+    c.resize(fft.size_inbox());
+    c_F.resize(fft.size_outbox());
+    c_NF.resize(fft.size_outbox());
+    opL.resize(fft.size_outbox());
+    opN.resize(fft.size_outbox());
+    add_real_field("concentration", c);
+
+    // prepare operators
+    World w = get_world();
+    std::array<int, 3> o_low = decomp.outbox.low;
+    std::array<int, 3> o_high = decomp.outbox.high;
+    size_t idx = 0;
+    double pi = std::atan(1.0) * 4.0;
+    double fx = 2.0 * pi / (w.dx * w.Lx);
+    double fy = 2.0 * pi / (w.dy * w.Ly);
+    double fz = 2.0 * pi / (w.dz * w.Lz);
+    for (int k = o_low[2]; k <= o_high[2]; k++) {
+      for (int j = o_low[1]; j <= o_high[1]; j++) {
+        for (int i = o_low[0]; i <= o_high[0]; i++) {
+          // Laplacian operator -k^2
+          double ki = (i <= w.Lx / 2) ? i * fx : (i - w.Lx) * fx;
+          double kj = (j <= w.Ly / 2) ? j * fy : (j - w.Ly) * fy;
+          double kk = (k <= w.Lz / 2) ? k * fz : (k - w.Lz) * fz;
+          double kLap = -(ki * ki + kj * kj + kk * kk);
+          double L = kLap * (-D - D * gamma * kLap);
+          opL[idx] = std::exp(L * dt);
+          opN[idx] = (L != 0.0) ? (opL[idx] - 1.0) / L * kLap : 0.0;
+          idx++;
+        }
+      }
+    }
+  }
+
+  void step(double) override {
+    // Calculate cₙ₊₁ = opL * cₙ + opN * cₙ³
+    FFT &fft = get_fft();
+    fft.forward(c, c_F);
+    for (auto &elem : c) elem = D * elem * elem * elem;
+    fft.forward(c, c_NF);
+    for (size_t i = 0; i < c_F.size(); i++) {
+      c_F[i] = opL[i] * c_F[i] + opN[i] * c_NF[i];
+    }
+    fft.backward(c_F, c);
+  }
+};
+```
+
+![Cahn-Hilliard simulation](docs/img/cahn_hilliard.gif)
+
+The full code can be found from [examples](/examples/12_cahn_hilliard.cpp).
+
 ## Troubleshooting and debugging
 
 Here's some common problems and their solutions.
@@ -411,10 +579,6 @@ CHECK_AND_ABORT_IF_NANS(psi);
 ```
 
 [tungsten-nan-check]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/apps/tungsten.cpp#L220
-
-## Examples
-
-A bigger application example is Tungsten model. Todo.
 
 ## Citing
 
