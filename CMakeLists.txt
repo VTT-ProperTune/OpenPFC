@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(OpenPFC VERSION 0.1.0 DESCRIPTION "Phase Field Crystal simulation framework")
+project(OpenPFC VERSION 0.1.1 DESCRIPTION "Phase Field Crystal simulation framework")
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
