@@ -56,10 +56,6 @@
         }
     ],
     "boundary_conditions": [
-        {
-            "target": "psi",
-            "type": "none"
-        }
     ],
     "detailed_timing": {
         "enabled": true,
