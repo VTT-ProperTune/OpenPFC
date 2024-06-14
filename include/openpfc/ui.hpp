@@ -54,31 +54,50 @@ using json = nlohmann::json;
 
 template <class T> T from_json(const json &settings);
 
+/**
+ * @brief Converts a JSON object to heffte::plan_options.
+ *
+ * This function parses the provided JSON object and constructs a
+ * heffte::plan_options object based on the values found in the JSON. The
+ * function prints debug information to the console regarding the options being
+ * parsed.
+ *
+ * @param j The JSON object to parse.
+ * @return The heffte::plan_options object constructed from the JSON.
+ */
 template <> heffte::plan_options from_json<heffte::plan_options>(const json &j) {
+  std::cout << "\nParsing backend options ...\n";
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (j.contains("use_reorder")) {
+    std::cout << "Using strided 1d fft operations" << std::endl;
     options.use_reorder = j["use_reorder"];
   }
   if (j.contains("reshape_algorithm")) {
     if (j["reshape_algorithm"] == "alltoall") {
+      std::cout << "Using alltoall reshape algorithm" << std::endl;
       options.algorithm = heffte::reshape_algorithm::alltoall;
     } else if (j["reshape_algorithm"] == "alltoallv") {
+      std::cout << "Using alltoallv reshape algorithm" << std::endl;
       options.algorithm = heffte::reshape_algorithm::alltoallv;
     } else if (j["reshape_algorithm"] == "p2p") {
+      std::cout << "Using p2p reshape algorithm" << std::endl;
       options.algorithm = heffte::reshape_algorithm::p2p;
     } else if (j["reshape_algorithm"] == "p2p_plined") {
+      std::cout << "Using p2p_plined reshape algorithm" << std::endl;
       options.algorithm = heffte::reshape_algorithm::p2p_plined;
     } else {
-      std::cerr << "Unknown communcation model " << j["reshape_algorithm"] << std::endl;
+      std::cerr << "Unknown reshape algorithm " << j["reshape_algorithm"] << std::endl;
     }
   }
   if (j.contains("use_pencils")) {
+    std::cout << "Using pencil decomposition" << std::endl;
     options.use_pencils = j["use_pencils"];
   }
   if (j.contains("use_gpu_aware")) {
+    std::cout << "Using gpu aware fft" << std::endl;
     options.use_gpu_aware = j["use_gpu_aware"];
   }
-  std::cout << "backend options: " << options << "\n\n";
+  std::cout << "Backend options: " << options << "\n\n";
   return options;
 }
 
