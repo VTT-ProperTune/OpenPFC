@@ -1,18 +1,37 @@
 # Contributing
 
-The OpenPFC software framework is provided as an open-source software to support the open science principle. The framework is mainly developed in publicly funded research projects, but some maintenance and software development is done as voluntary work. We appreciate all the contributions to the software framework, whether they are to the code itself or to, e.g., the documentation or examples. To keep the framework package in shape, we have to follow certain strict practices, such as the contributions are always evaluated by the OpenPFC main developers and the copyright of the contribution is transferred to [VTT Technical Research Centre of Finland Ltd](https://www.vttresearch.com/en), the copyright holder of OpenPFC (see the details below).
+The OpenPFC software framework is provided as an open-source software to support
+the open science principle. The framework is mainly developed in publicly funded
+research projects, but some maintenance and software development is done as
+voluntary work. We appreciate all the contributions to the software framework,
+whether they are to the code itself or to, e.g., the documentation or examples.
+To keep the framework package in shape, we have to follow certain strict
+practices, such as the contributions are always evaluated by the OpenPFC main
+developers and the copyright of the contribution is transferred to [VTT
+Technical Research Centre of Finland Ltd](https://www.vttresearch.com/en), the
+copyright holder of OpenPFC (see the details below).
 
 ## How to contribute
 
 The general steps for contributing to OpenPFC software framework are:
-1. Read at least the files [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), [LICENSE.md](LICENSE.md), and the documentation in the [docs](docs) directory.
-2. If the contribution is small, e.g., a small fault in the documentation, you can point it out by making an issue.
-3. For larger contributions, you should make your local fork of the OpenPFC repository, make the modifications and/or additions to it, and then make a *pull request*.
-4. To avoid unnecessary work, keep high quality in your coding and document writing, check your text and test your code carefully before your contribution.
+1. Read at least the files [README.md](README.md),
+   [CONTRIBUTING.md](CONTRIBUTING.md), [LICENSE.md](LICENSE.md), and the
+   documentation in the [docs](docs) directory.
+2. If the contribution is small, e.g., a small fault in the documentation, you
+   can point it out by making an issue.
+3. For larger contributions, you should make your local fork of the OpenPFC
+   repository, make the modifications and/or additions to it, and then make a
+   *pull request*.
+4. To avoid unnecessary work, keep high quality in your coding and document
+   writing, check your text and test your code carefully before your
+   contribution.
 
 ## Copyright Transfer
 
-VTT Technical Research Centre of Finland Ltd (VTT) is the sole Copyright Holder of *VTT properTune*, including all its parts and modules, e.g., allowing VTT to do further sublicensing of (parts of) *VTT properTune* to any party. To make this possible, VTT also needs to be the Copyright Holder of new contributions.
+VTT Technical Research Centre of Finland Ltd (VTT) is the sole Copyright Holder
+of *VTT properTune*, including all its parts and modules, e.g., allowing VTT to
+do further sublicensing of (parts of) *VTT properTune* to any party. To make
+this possible, VTT also needs to be the Copyright Holder of new contributions.
 
 Any party making a Contribution to *VTT properTune* also transfers the Copyright
 of the Contribution to VTT. Contributor(s) making a Contribution to *VTT
