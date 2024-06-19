@@ -681,7 +681,7 @@ public:
       double l_fft_time = 0.0;
       MPI_Barrier(m_comm);
       l_steptime = -MPI_Wtime();
-      model.step(time.get_current());
+      step(simulator, model);
       MPI_Barrier(m_comm);
       l_steptime += MPI_Wtime();
       l_fft_time = fft.get_fft_time();

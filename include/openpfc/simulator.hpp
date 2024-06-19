@@ -32,6 +32,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 namespace pfc {
 
+void step(class Simulator &s, Model &m);
+
 /**
  * @brief The Simulator class is responsible for running the simulation of the
  * model.
@@ -269,6 +271,10 @@ public:
     return time.done();
   }
 };
+
+void step(Simulator &s, Model &m) {
+  m.step(s.get_time().get_current());
+}
 
 } // namespace pfc
 
