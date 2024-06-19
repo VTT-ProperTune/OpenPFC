@@ -285,6 +285,22 @@ void from_json(const json &j, Tungsten &m) {
   p.q4_bar = p.q40_bar;
 }
 
+/*
+Sometimes, one need to get access to the simulator during stepping. This can be
+done by overriding the following function. The default implementation just runs
+m.step(t) so if there's no need to access the simulator, it's not necessary to
+override this function.
+*/
+void step(Simulator &s, Tungsten &m) {
+#ifdef TUNGSTEN_DEBUG
+  if (m.rank0) cout << "Performing Tungsten step" << endl;
+#endif
+  double t = s.get_time().get_current();
+  m.step(t);
+  // perform some extra logic after the step, which can access both simulator
+  // and model
+}
+
 int main(int argc, char *argv[]) {
   cout << std::fixed;
   cout.precision(3);
