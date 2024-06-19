@@ -461,4 +461,29 @@ void from_json(const json &j, Aluminum &m) {
   p.q4_bar = p.q40_bar;
 }
 
+/*
+Sometimes, one need to get access to the simulator during stepping. This can be
+done by overriding the following function. The default implementation just runs
+m.step(t) so if there's no need to access the simulator, it's not necessary to
+override this function.
+*/
+
+void step(Simulator &s, Aluminum &m) {
+#ifdef ALUMINUM_DEBUG
+  if (m.rank0) cout << "Performing Aluminum step" << endl;
+#endif
+
+  for (auto const &bc: s.get_boundary_conditions()) {
+  	if (bc->get_name() == :MovingBC) {
+  		m.set_m_xpos(dynamic_cast<MovingBC &>(bc)->get_xpos());
+  		if (m.ranko0) cout << "Updated xpos to " << m.params.m_xpos << endl;
+  	}
+  }
+  
+  double t = s.get_time().get_current();
+  m.step(t);
+  // perform some extra logic after the step, which can access both simulator
+  // and model
+}
+
 #endif // ALUMINUM_HPP
