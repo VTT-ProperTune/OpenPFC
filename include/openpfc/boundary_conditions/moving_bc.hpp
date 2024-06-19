@@ -1,25 +1,4 @@
-/*
-
-OpenPFC, a simulation software for the phase field crystal method.
-Copyright (C) 2024 VTT Technical Research Centre of Finland Ltd.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see https://www.gnu.org/licenses/.
-
-*/
-
-#ifndef PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP
-#define PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP
+#pragma once
 
 #include <cmath>
 #include <limits>
@@ -37,6 +16,7 @@ private:
   double m_xwidth = 15.0;
   double m_alpha = 1.0;
   double m_xpos = 0.0;
+  double m_threshold = 0.1;
   int m_idx = 0;
   double m_disp = 40.0;
   bool m_first = true;
@@ -44,6 +24,7 @@ private:
   MPI_Comm comm = MPI_COMM_WORLD;
   int rank = mpi::get_comm_rank(comm);
   int size = mpi::get_comm_size(comm);
+  std::string m_name = "MovingBC";
 
 public:
   MovingBC() = default;
@@ -53,6 +34,7 @@ public:
   void set_rho_high(double rho_high) { m_rho_high = rho_high; }
 
   void set_xpos(double xpos) { m_xpos = xpos; }
+  double get_xpos() const { return m_xpos; }
 
   void set_xwidth(double xwidth) { m_xwidth = xwidth; }
   double get_xwidth() const { return m_xwidth; }
@@ -60,6 +42,11 @@ public:
   void set_alpha(double alpha) { m_alpha = alpha; }
 
   void set_disp(double disp) { m_disp = disp; }
+
+  void set_threshold(double threshold) { m_threshold = threshold; }
+  double get_threshold() const { return m_threshold; }
+
+  std::string get_modifier_name() const override { return m_name; }
 
   void apply(Model &m, double) override {
     const Decomposition &decomp = m.get_decomposition();
@@ -87,13 +74,13 @@ public:
     if (rank == 0) {
       if (m_first) {
         for (int i = global_xline.size() - 1; i >= 0; i--) {
-          if (global_xline[i] > 0.1) {
+          if (global_xline[i] > m_threshold) {
             m_idx = i;
             break;
           }
         }
       } else {
-        while (global_xline[m_idx % w.Lx] > 0.1) {
+        while (global_xline[m_idx % w.Lx] > m_threshold) {
           m_idx += 1;
         }
       }
@@ -108,6 +95,8 @@ public:
     if (m_first) {
       m_first = false;
     }
+
+    std::cout << "Boundary position: " << m_xpos << std::endl;
 
     fill_bc(m);
   }
@@ -149,5 +138,3 @@ public:
 };
 
 } // namespace pfc
-
-#endif // PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP

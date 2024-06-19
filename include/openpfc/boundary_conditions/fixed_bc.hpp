@@ -1,25 +1,4 @@
-/*
-
-OpenPFC, a simulation software for the phase field crystal method.
-Copyright (C) 2024 VTT Technical Research Centre of Finland Ltd.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see https://www.gnu.org/licenses/.
-
-*/
-
-#ifndef PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP
-#define PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP
+#pragma once
 
 #include "../field_modifier.hpp"
 
@@ -31,6 +10,7 @@ private:
   double xwidth = 20.0;
   double alpha = 1.0;
   double m_rho_low, m_rho_high;
+  std::string m_name = "FixedBC";
 
 public:
   FixedBC() = default;
@@ -39,6 +19,8 @@ public:
 
   void set_rho_low(double rho_low) { m_rho_low = rho_low; }
   void set_rho_high(double rho_high) { m_rho_high = rho_high; }
+
+  std::string get_modifier_name() const override { return m_name; }
 
   void apply(Model &m, double) override {
     const Decomposition &decomp = m.get_decomposition();
@@ -65,5 +47,3 @@ public:
 };
 
 } // namespace pfc
-
-#endif // PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP
