@@ -10,8 +10,8 @@
 
 Phase field crystal (PFC) is a semi-atomistic technique, containing atomic
 resolution information of crystalline structures while operating on diffusive
-time scales. PFC has an ability to simulate solidification and elastic-plastic
-material response, coupled to a wide range of phenomena, including formation and
+time scales. PFC can simulate solidification and elastic-plastic material
+response, coupled with a wide range of phenomena, including formation and
 co-evolution of microstructural defects such as dislocations and stacking
 faults, voids, defect formation in epitaxial growth, displacive phase
 transitions, and electromigration.
@@ -19,7 +19,7 @@ transitions, and electromigration.
 The image above shows a simulation of a rapidly solidifying tungsten block
 approximately 50 x 100 x 200 nm in size, using MovingBC boundary conditions. The
 rightmost section depicts the pure atomic structure of the tungsten, the middle
-section highlights the surface of the entire object, and the leftmost section
+section highlights the surface of the entire object and the leftmost section
 provides a transparent view of the surface, revealing the lattice defects that
 formed during the simulation. This visualization aids in understanding the
 atomic arrangement, surface features, and internal defects of the tungsten
@@ -27,12 +27,12 @@ block.
 
 ## Scalability and Performance
 
-OpenPFC is an open-source framework for high performance 3D phase field crystal
+OpenPFC is an open-source framework for high-performance 3D phase field crystal
 simulations. It is designed to scale up from a single laptop to exascale class
-supercomputers. OpenPFC has succesfully used to simulate domain of size 8192 x
-8192 x 4096 on CSC Mahti. 200 computing nodes were used, where each node
-contains 128 cores, thus total 25600 cores were used. During the simulation, 25
-TB of memory was utilized. The central part of the solver is Fast Fourier
+supercomputers. OpenPFC has successfully been used to simulate a domain of size
+8192 x 8192 x 4096 on CSC Mahti. 200 computing nodes were used, where each node
+contained 128 cores, thus total of 25600 cores were used. During the simulation,
+25 TB of memory was utilized. The central part of the solver is the Fast Fourier
 Transform with time complexity of O(N log N), and there are no known limiting
 bottlenecks, why larger models could not be calculated as well.
 
@@ -65,7 +65,7 @@ The project documentation can be found from
 ## Features
 
 - scales up to tens of thousands of cores, demonstrably
-- modern c++17 header only framework, easy to use
+- modern c++17 header-only framework, easy to use
 
 ## Installing
 
@@ -77,23 +77,34 @@ The project documentation can be found from
 
 Requirements:
 
-- Compiler supporting C++17 standard. C++17 features [are
+- **Compiler supporting C++17 standard**: C++17 features [are
   available](https://gcc.gnu.org/projects/cxx-status.html) since GCC 5. Check
   your version number with `g++ --version`. The default compiler might be
-  relatively old, and more recent version needs to be loaded with `module load
+  relatively old, and a more recent version needs to be loaded with `module load
   gcc`. Do not try to compile with GCC 4.8.5. It will not work. At least GCC
   versions 9.4.0 (coming with Ubuntu 20.04) and 11.2 are working.
-- [OpenMPI](https://www.open-mpi.org/). All recent versions should work. Tested
-  with OpenMPI version 2.1.3. Again, you might need to load proper OpenMPI
-  version with `module load openmpi/2.1.3`, for instance. Additionally, if cmake
-  is not able to find proper OpenMPI installation, assistance might be needed by
-  setting `MPI_ROOT`, e.g. `export MPI_ROOT=/share/apps/OpenMPI/2.1.3`.
-- FFTW. Probably all versions will work. Tested with FFTW versions 3.3.2 and
-  3.3.10. Again, cmake might need some assistance to find the libraries, which
-  can be controlled with environment variable `FFTW_ROOT`. Depending how FFTW is
-  installed to system, it might be in non-standard location and `module load
-  fftw` is needed. You can use commands like `whereis fftw` or `ldconfig -p |
-  grep fftw` to locate your FFTW installation, if needed.
+- **[CMake](https://cmake.org/)**: Version 3.15 or later should be used. Your
+  system may already contain CMake, but if not, it can most likely be installed
+  with the package manager.
+- **[OpenMPI](https://www.open-mpi.org/)**: All recent versions should work.
+  Tested with OpenMPI version 2.1.3. Again, you might need to load proper
+  OpenMPI version with `module load openmpi/2.1.3`, for instance. Additionally,
+  if CMake is not able to find proper OpenMPI installation, assistance might be
+  needed by setting `MPI_ROOT`, e.g. `export
+  MPI_ROOT=/share/apps/OpenMPI/2.1.3`.
+- **[FFTW](https://www.fftw.org/)**: Probably all versions will work. Tested
+  with FFTW versions 3.3.2 and 3.3.10. Again, CMake might need some assistance
+  to find the libraries, which can be controlled with environment variable
+  `FFTW_ROOT`. Depending how FFTW is installed to system, it might be in
+  non-standard location and `module load fftw` is needed. You can use commands
+  like `whereis fftw` or `ldconfig -p | grep fftw` to locate your FFTW
+  installation, if needed.
+- **[Niels Lohmann's JSON for Modern C++
+  library](https://github.com/nlohmann/json)**: All recent versions should work.
+  Tested with version 3.11.2. If you do not have the JSON library installed,
+  CMake for OpenPFC will download the library for you.
+- **[HeFFTe](https://github.com/icl-utk-edu/heffte)**: All recent versions
+  should work. Tested with version 2.3.0. 
 
 Typically in clusters, these are already installed and can be loaded with an
 on-liner
@@ -103,18 +114,18 @@ module load gcc openmpi fftw
 ```
 
 For local Linux machines (or WSL2), packages usually can be installed from
-repositories, e.g. in case of Ubuntu, the following should work:
+repositories, e.g. in the case of Ubuntu, the following should work:
 
 ```bash
 sudo apt-get install -y gcc openmpi fftw
 ```
 
-Some OpenPFC applications uses json files to provide initial data for
+Some OpenPFC applications use JSON files to provide initial data for
 simulations. In principle, applications can also be built to receive initial
-data in other ways, but as a widely known file format, we recommend to use json.
-The choice for json package is [JSON for Modern C++](https://json.nlohmann.me/).
-There exists packages for certain Linux distributions (`nlohmann-json3-dev` for
-Ubuntu, `json-devel` for Centos) for easy install. If the system-wide installation
+data in other ways, but as a widely known file format, we recommend using JSON.
+The choice for the JSON package is [JSON for Modern C++](https://json.nlohmann.me/).
+There exist packages for certain Linux distributions (`nlohmann-json3-dev` for
+Ubuntu, `json-devel` for Centos) for easy installation. If the system-wide installation
 is not found, the library is downloaded from GitHub during the configuration.
 
 The last and most important dependency to use OpenPFC is
@@ -132,30 +143,30 @@ cmake --build heffte-2.4.0-build
 cmake --install heffte-2.4.0-build
 ```
 
-If HeFFTe is installed to some non-standard location, cmake is unable to find it
+If HeFFTe is installed in some non-standard location, CMake is unable to find it
 when configuring OpenPFC. To overcome this problem, the install path of HeFFTe
-can be set into environment variable `CMAKE_PREFIX_PATH`. For example, if HeFFe
-is installed to `$HOME/opt/heffte/2.3`, the following is making cmake to find
-HeFFTe succesfully:
+can be set into the environment variable `CMAKE_PREFIX_PATH`. For example, if HeFFe
+is installed to `$HOME/opt/heffte/2.3`, the following is making CMake to find
+HeFFTe successfully:
 
 ```bash
 export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH
 ```
 
 During the configuration, OpenPFC prefers local installations, thus if HeFFTe is
-already installed and founded, it will be used. For convenience, there is a
-fallback method to fetch HeFFTe sources from internet and build it concurrently
+already installed and found, it will be used. For convenience, there is a
+fallback method to fetch HeFFTe sources from the internet and build it concurrently
 with OpenPFC. In general, however, it is better to build and install programs
 one at a time. So, make sure you have HeFFTe installed and working on your
 system before continuing.
 
-OpenPFC uses [cmake](https://cmake.org/) to automate software building. First
+OpenPFC uses [cmake](https://cmake.org/) to automate software building. First,
 the source code must be downloaded to some appropriate place. Head to the
 [releases](https://github.com/VTT-ProperTune/OpenPFC/releases) page and pick the
-newest release and unzip is somewhere. Alternatively, if you are planning to
-develop the project itself of are just interested about the bleeding edge
-features, you might be interested to clone the repository to your local machine.
-GitHub account is needed to clone the project.
+newest release and unzip it somewhere. Alternatively, if you are planning to
+develop the project itself or are just interested in the bleeding-edge
+features, you might be interested in cloning the repository to your local machine.
+A GitHub account is needed to clone the project.
 
 ```bash
 git clone https://github.com/VTT-ProperTune/OpenPFC.git
@@ -163,18 +174,18 @@ git clone https://github.com/VTT-ProperTune/OpenPFC.git
 cd OpenPFC
 ```
 
-Next step is to configure project. One might consider at least setting option
-`CMAKE_BUILD_TYPE` to `Debug` or `Release`. For large scale simulations, make
+The next step is to configure the project. One might consider at least setting an option
+`CMAKE_BUILD_TYPE` to `Debug` or `Release`. For large-scale simulations, make
 sure to use `Release` as it turns on compiler optimizations.
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
 ```
 
-Keep on mind, that configuration will download HeFFTe if the local installation
-is not found. To use local installation instead, add HeFFTe path to environment
+Keep in mind, that the configuration will download HeFFTe if the local installation
+is not found. To use local installation instead, add HeFFTe path to the environment
 variable `CMAKE_PREFIX_PATH` or add `Heffte_DIR` option to point where HeFFTe
-configuration files are installed. Typical configuration command in cluster
+configuration files are installed. A typical configuration command in a cluster
 environment is something like
 
 ```bash
@@ -185,9 +196,9 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -S . -B build
 ```
 
-Then, building can be done with command  `cmake --build build`. After build
+Then, building can be done with the command  `cmake --build build`. After the build
 finishes, one should find example codes from `./build/examples` and apps from
-`./build/apps`. Installation to path defined by `CMAKE_INSTALL_PREFIX` can be
+`./build/apps`. Installation to a path defined by `CMAKE_INSTALL_PREFIX` can be
 done with `cmake --install build`.
 
 ## Structure of the application
@@ -219,7 +230,7 @@ framework developers themselves.
 Next, we have classes such as `Model`, `FieldModifier`, and `ResultsWriter`. The
 `Model` class is of particular interest as it describes the physics of the
 model, including the partial differential equation (PDE) itself. Inside the
-`Model` class, there is a function called `step` which needs to be overridden.
+`Model` class, there is a function called `step` that needs to be overridden.
 Currently, users are free to choose whichever time integration method they are
 comfortable with. However, in the future, we may abstract the time integration
 method away from the model and create a separate class to approach the problem
@@ -229,8 +240,8 @@ during time stepping. The `FieldModifier` class does exactly what the name
 implies – it modifies these fields. In more detail, initial and boundary
 conditions serve as field modifiers and are often also of interest, although
 some already implemented ones exist. Lastly, we should mention the
-`ResultsWriter`, which implements a way to store results during certain periods
-of time. We have some existing implementations such as raw binary format and vti
+`ResultsWriter`, which implements a way to store results during certain periods.
+We have some existing implementations such as raw binary format and vti
 format, but nothing is preventing us from implementing, for example, the storage
 of results in hdf5 format, which is currently under planning.
 
@@ -280,7 +291,7 @@ add_executable(main main.cpp)
 target_link_libraries(main OpenPFC)
 ```
 
-With the help of `CMakeLists.txt`, build and compilation of application is
+With the help of `CMakeLists.txt`, build and compilation of the application is
 straightforward:
 
 ```bash
@@ -289,8 +300,8 @@ cmake --build build
 ./build/main
 ```
 
-There is also some examples in [examples][examples-url] directory, which can be
-used as a base for your own codes.
+There are also some examples in [examples][examples-url] directory, which can be
+used as a base for your codes.
 
 ## Example: Cahill-Hilliard equation
 
@@ -459,11 +470,11 @@ The full code can be found from [examples](/examples/12_cahn_hilliard.cpp).
 
 ## Troubleshooting and debugging
 
-Here's some common problems and their solutions.
+Here are some common problems and their solutions.
 
 ### FindOpenPFC.cmake not found
 
-During the configuration step (`cmake -S. -B build`), you might end up to the
+During the configuration step (`cmake -S. -B build`), you might end up with the
 following error message:
 
 ```text
@@ -473,26 +484,26 @@ asked CMake to find a package configuration file provided by "OpenPFC", but
 CMake did not find one.
 ```
 
-The error message is trying to say command in `CMakeLists.txt` (line 3) fails:
+The error message is trying to say the command in `CMakeLists.txt` (line 3) fails:
 
 ```cmake
 find_package(OpenPFC REQUIRED)  # <-- this is failing
 ```
 
-The reason why this happens is that cmake is not able to find the package. By
-default, cmake finds packages by looking a file which is called
-`Find<package_name>.cmake` from couple of standard locations. For example, in
+The reason why this happens is that CMake is not able to find the package. By
+default, CMake finds packages by looking at a file which is called
+`Find<package_name>.cmake` from a couple of standard locations. For example, in
 Ubuntu, one of these locations is `/usr/lib/cmake`, where the files are
 installed when doing a global install of some package with root rights. When
-working with supercomputers, users in general doesn't have rights to make global
+working with supercomputers, users, in general, don't have rights to make global
 installations, thus packages are almost always installed to some non-default
-locations. Thus, one needs to give some hints to cmake where the file could be
-found. This can be done (at least) two different ways.
+locations. Thus, one needs to give some hints to CMake where the file could be
+found. This can be done (at least) in two different ways.
 
 The first way is to set up an environment variable indicating any extra
 locations for the files. One option is to use `CMAKE_PREFIX_PATH` environment
 variable, like before. For example, if `OpenPFC` is installed to `/opt/OpenPFC`,
-one can give that information before starting configuration:
+one can give that information before starting the configuration:
 
  ```bash
  export CMAKE_PREFIX_PATH=/opt/OpenPFC:$CMAKE_PREFIX_PATH
@@ -500,10 +511,10 @@ one can give that information before starting configuration:
  # rest of the things ...
  ```
 
- Another option is to hard code the choise inside the `CMakeLists.txt` file
+ Another option is to hardcode the choice inside the `CMakeLists.txt` file
  directly. Just keep in mind, that this option is not very portable as users
  tends to install software to several different locations and there is no any
- general rule how it should be done. So, instead of defining `CMAKE_PREFIX_PATH`
+ general rule on how it should be done. So, instead of defining `CMAKE_PREFIX_PATH`
  before doing configuration, the following change in `CMakeLists.txt` is
  equivalent:
 
@@ -516,20 +527,20 @@ add_executable(main main.cpp)
 target_link_libraries(main OpenPFC)
 ```
 
-This way, cmake know to search necessary files from the path given above.
+This way, CMake knows to search for necessary files from the path given above.
 
 ### NaNs in the simulation
 
 There might be various reasons why the simulation returns NaNs. Despite the
 reason, it usually makes sense to stop simulation as it doesn't do anything
-useful. OpenPFC does not currently have built-in json validator, which would
+useful. OpenPFC does not currently have a built-in JSON validator, which would
 check that simulation parameters are valid. Thus, it is possible to give invalid
 parameters to the simulation, which might lead to NaNs. If some model parameters
-which should be defined are undefined and thus zero, there might be zero
+that should be defined are undefined and thus zero, there might be a zero
 division problem.
 
-There is schema file for the input file, which can be used to validate the json
-file using external validator like `check-jsonchema`:
+There is a schema file for the input file, which can be used to validate the JSON
+file using an external validator like `check-jsonchema`:
 
  ```bash
  check-jsonschema --schemafile apps/schema.json input.json
@@ -548,7 +559,7 @@ Another way to enable NaN check is to use compile option `NAN_CHECK_ENABLED`. In
 add_compile_definitions(NAN_CHECK_ENABLED)
 ```
 
-Or, when configuring project with cmake, the following is equivalent:
+Or, when configuring a project with CMake, the following is equivalent:
 
 ```bash
 cmake -DNAN_CHECK_ENABLED=ON -S . -B build
@@ -561,11 +572,11 @@ source file:
 #define NAN_CHECK_ENABLED
 ```
 
-Then, in code level, there's a macro `CHECK_AND_ABORT_IF_NANS`, which can be
-used to check if there's any NaNs in the simulation. The macro is defined in
+Then, at the code level, there's a macro `CHECK_AND_ABORT_IF_NANS`, which can be
+used to check if there are any NaNs in the simulation. The macro is defined in
 `openpfc/utils/nancheck.hpp`. This is a zero overhead when compiling with
-release build type. At the moment, user must explicitly call the macro, but in
-the future it might be called automatically in some situations. Example usage is
+release build type. At the moment, a user must explicitly call the macro, but in
+the future, it might be called automatically in some situations. Example usage is
 (see also [this][tungsten-nan-check] example):
 
 ```cpp
