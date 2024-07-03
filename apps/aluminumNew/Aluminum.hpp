@@ -474,9 +474,12 @@ void step(Simulator &s, Aluminum &m) {
 #endif
 
   for (auto const &bc: s.get_boundary_conditions()) {
-  	if (bc->get_name() == :MovingBC) {
-  		m.set_m_xpos(dynamic_cast<MovingBC &>(bc)->get_xpos());
-  		if (m.ranko0) cout << "Updated xpos to " << m.params.m_xpos << endl;
+  	if (bc->get_modifier_name() == "MovingBC") {
+  		m.set_m_xpos(dynamic_cast< MovingBC& >(*bc).get_xpos());
+  		// auto moving = dynamic_cast< MovingBC& >(*bc);
+  		// double newxpos = moving.get_xpos();
+  		// m.set_m_xpos(newxpos);
+  		// if (m.rank0) std::cout << "Updated xpos to " << m.params.m_xpos << std::endl;
   	}
   }
   

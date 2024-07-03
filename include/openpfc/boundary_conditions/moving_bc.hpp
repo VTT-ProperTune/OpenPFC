@@ -46,7 +46,7 @@ public:
   void set_threshold(double threshold) { m_threshold = threshold; }
   double get_threshold() const { return m_threshold; }
 
-  std::string get_modifier_name() const override { return m_name; }
+  const std::string &get_modifier_name() const override { return m_name; }
 
   void apply(Model &m, double) override {
     const Decomposition &decomp = m.get_decomposition();
