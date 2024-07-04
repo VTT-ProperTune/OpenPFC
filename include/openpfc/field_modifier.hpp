@@ -37,6 +37,7 @@ class FieldModifier {
 
 private:
   std::string m_field_name = "default";
+  std::string m_default_name = "default";
 
 public:
   /**
@@ -71,6 +72,16 @@ public:
    * @return The field name.
    */
   const std::string &get_field_name() const { return m_field_name; }
+
+  /**
+   * @brief Get the name of the field modifier.
+   *
+   * This function is responsible for getting the name of the field modifier.
+   *
+   * @return The modifier name.
+   */
+
+  virtual const std::string &get_modifier_name() const { return m_default_name; }
 
   /**
    * @brief Apply the field modification to the model at a specific time.

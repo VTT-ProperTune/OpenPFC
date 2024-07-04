@@ -37,6 +37,7 @@ private:
   double m_xwidth = 15.0;
   double m_alpha = 1.0;
   double m_xpos = 0.0;
+  double m_threshold = 0.1;
   int m_idx = 0;
   double m_disp = 40.0;
   bool m_first = true;
@@ -44,6 +45,7 @@ private:
   MPI_Comm comm = MPI_COMM_WORLD;
   int rank = mpi::get_comm_rank(comm);
   int size = mpi::get_comm_size(comm);
+  std::string m_name = "MovingBC";
 
 public:
   MovingBC() = default;
@@ -53,6 +55,7 @@ public:
   void set_rho_high(double rho_high) { m_rho_high = rho_high; }
 
   void set_xpos(double xpos) { m_xpos = xpos; }
+  double get_xpos() const { return m_xpos; }
 
   void set_xwidth(double xwidth) { m_xwidth = xwidth; }
   double get_xwidth() const { return m_xwidth; }
@@ -60,6 +63,11 @@ public:
   void set_alpha(double alpha) { m_alpha = alpha; }
 
   void set_disp(double disp) { m_disp = disp; }
+
+  void set_threshold(double threshold) { m_threshold = threshold; }
+  double get_threshold() const { return m_threshold; }
+
+  const std::string &get_modifier_name() const override { return m_name; }
 
   void apply(Model &m, double) override {
     const Decomposition &decomp = m.get_decomposition();
@@ -87,13 +95,13 @@ public:
     if (rank == 0) {
       if (m_first) {
         for (int i = global_xline.size() - 1; i >= 0; i--) {
-          if (global_xline[i] > 0.1) {
+          if (global_xline[i] > m_threshold) {
             m_idx = i;
             break;
           }
         }
       } else {
-        while (global_xline[m_idx % w.Lx] > 0.1) {
+        while (global_xline[m_idx % w.Lx] > m_threshold) {
           m_idx += 1;
         }
       }
@@ -108,6 +116,8 @@ public:
     if (m_first) {
       m_first = false;
     }
+
+    std::cout << "Boundary position: " << m_xpos << std::endl;
 
     fill_bc(m);
   }

@@ -31,6 +31,7 @@ private:
   double xwidth = 20.0;
   double alpha = 1.0;
   double m_rho_low, m_rho_high;
+  std::string m_name = "FixedBC";
 
 public:
   FixedBC() = default;
@@ -39,6 +40,8 @@ public:
 
   void set_rho_low(double rho_low) { m_rho_low = rho_low; }
   void set_rho_high(double rho_high) { m_rho_high = rho_high; }
+
+  const std::string &get_modifier_name() const override { return m_name; }
 
   void apply(Model &m, double) override {
     const Decomposition &decomp = m.get_decomposition();
