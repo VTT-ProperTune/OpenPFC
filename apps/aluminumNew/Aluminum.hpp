@@ -473,16 +473,16 @@ void step(Simulator &s, Aluminum &m) {
   if (m.rank0) cout << "Performing Aluminum step" << endl;
 #endif
 
-  for (auto const &bc: s.get_boundary_conditions()) {
-  	if (bc->get_modifier_name() == "MovingBC") {
-  		m.set_m_xpos(dynamic_cast< MovingBC& >(*bc).get_xpos());
-  		// auto moving = dynamic_cast< MovingBC& >(*bc);
-  		// double newxpos = moving.get_xpos();
-  		// m.set_m_xpos(newxpos);
-  		// if (m.rank0) std::cout << "Updated xpos to " << m.params.m_xpos << std::endl;
-  	}
+  for (auto const &bc : s.get_boundary_conditions()) {
+    if (bc->get_modifier_name() == "MovingBC") {
+      m.set_m_xpos(dynamic_cast<MovingBC &>(*bc).get_xpos());
+      // auto moving = dynamic_cast< MovingBC& >(*bc);
+      // double newxpos = moving.get_xpos();
+      // m.set_m_xpos(newxpos);
+      // if (m.rank0) std::cout << "Updated xpos to " << m.params.m_xpos << std::endl;
+    }
   }
-  
+
   double t = s.get_time().get_current();
   m.step(t);
   // perform some extra logic after the step, which can access both simulator
