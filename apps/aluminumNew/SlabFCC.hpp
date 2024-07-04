@@ -45,13 +45,15 @@ private:
   double m_rho;
   double m_rseed;
   bool randomized = true;
-  std::vector<std::array<double, 3> > m_orientations;
+  std::vector<std::array<double, 3>> m_orientations;
 
 public:
   SlabFCC() = default;
 
-  SlabFCC(int Ny, int Nz, double X0, double amplitude, double fluctuation, double rho, double rseed, std::vector<std::array<double, 3> > orientations = {})
-      : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_amplitude(amplitude), m_fluctuation(fluctuation), m_rho(rho), m_rseed(rseed), m_orientations(orientations) {}
+  SlabFCC(int Ny, int Nz, double X0, double amplitude, double fluctuation, double rho, double rseed,
+          std::vector<std::array<double, 3>> orientations = {})
+      : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_amplitude(amplitude), m_fluctuation(fluctuation), m_rho(rho), m_rseed(rseed),
+        m_orientations(orientations) {}
 
   // getters
   int get_Ny() const { return m_Ny; }
@@ -71,7 +73,7 @@ public:
   void set_fluctuation(double fluctuation) { m_fluctuation = fluctuation; }
   void set_rho(double rho) { m_rho = rho; }
   void set_rseed(double rseed) { m_rseed = rseed; }
-  void set_orientations(std::vector<std::array<double, 3> > orientations) { m_orientations = orientations; }
+  void set_orientations(std::vector<std::array<double, 3>> orientations) { m_orientations = orientations; }
 
   /**
    * @brief Apply the initial condition to the model.
@@ -114,7 +116,7 @@ public:
 
     double radius = 1.;
 
-    std::vector<std::array<double, 3> > orientations = m_orientations;
+    std::vector<std::array<double, 3>> orientations = m_orientations;
 
     randomized = (orientations.empty());
 
@@ -123,30 +125,30 @@ public:
     std::uniform_real_distribution<double> rr(0.0, 8.0 * atan(1.0));
     std::uniform_real_distribution<double> ra(-fluctuation, fluctuation);
 
-    if(randomized) {
+    if (randomized) {
 
-	    std::cout << "Generating " << nseeds << " random seeds up to distance " << X0  << "\n";
+      std::cout << "Generating " << nseeds << " random seeds up to distance " << X0 << "\n";
 
-	    for (int j = 0; j < Ny; j++) {
-	      for (int k = 0; k < Nz; k++) {
-	        const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
-	        const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
-	        const SeedFCC seed(location, orientation, radius, rho, amplitude);
-	        seeds.push_back(seed);
-	      }
-	    }
+      for (int j = 0; j < Ny; j++) {
+        for (int k = 0; k < Nz; k++) {
+          const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+          const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
+          const SeedFCC seed(location, orientation, radius, rho, amplitude);
+          seeds.push_back(seed);
+        }
+      }
 
     } else {
-    	std::cout << "Generating " << nseeds << " seeds from orientation list up to distance " << X0  << "\n";
+      std::cout << "Generating " << nseeds << " seeds from orientation list up to distance " << X0 << "\n";
 
-	    for (int j = 0; j < Ny; j++) {
-	      for (int k = 0; k < Nz; k++) {
-	        const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
-	        const std::array<double, 3> orientation = orientations[j*Nz+k];
-	        const SeedFCC seed(location, orientation, radius, rho, amplitude);
-	        seeds.push_back(seed);
-	      }
-	    }
+      for (int j = 0; j < Ny; j++) {
+        for (int k = 0; k < Nz; k++) {
+          const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+          const std::array<double, 3> orientation = orientations[j * Nz + k];
+          const SeedFCC seed(location, orientation, radius, rho, amplitude);
+          seeds.push_back(seed);
+        }
+      }
     }
 
     long int idx = 0;
@@ -157,8 +159,8 @@ public:
           const double y = y0 + j * dy;
           const double z = z0 + k * dz;
           const std::array<double, 3> X = {x, y, z};
-          if (x < (X0 + ra(re) ) ) {
-	      	const int ns = floor(y / Dy) * Nz + floor(z / Dz);
+          if (x < (X0 + ra(re))) {
+            const int ns = floor(y / Dy) * Nz + floor(z / Dz);
             field[idx] = seeds[ns].get_value(X);
           }
           idx += 1;
@@ -177,7 +179,7 @@ public:
  *
  * Example json configuration:
  *
- * { "type": "slab_fcc", "X0": 130.0, "Ny": 2, "Nz": 1, 
+ * { "type": "slab_fcc", "X0": 130.0, "Ny": 2, "Nz": 1,
  * "amplitude": 0.2, "fluctuation": 10.0, "rho": -0.036, "rseed": 42 }
  *
  * The "type" field is required and must be "seed_grid_fcc". The "rseed" field is
@@ -215,16 +217,16 @@ void from_json(const json &params, SlabFCC &ic) {
     std::cout << "No valid random seed detected, using default value 0." << std::endl;
   }
   if (!params.contains("orientations") || !params["orientations"].is_array()) {
-  	std::cout << "No valid orientation vector detected, randomizing." << std::endl;
+    std::cout << "No valid orientation vector detected, randomizing." << std::endl;
   }
   int Nz = params["Nz"];
   int Ny = params["Ny"];
 
-  std::vector<std::array<double, 3> > m_orientations;
+  std::vector<std::array<double, 3>> m_orientations;
   auto orientations = params.value("orientations", m_orientations);
   // auto orientations = params["orientations"];
   if (!orientations.empty() && orientations.size() != (Nz * Ny)) {
-  	throw std::invalid_argument("Orientation vector and seed grid sizes do not match.");
+    throw std::invalid_argument("Orientation vector and seed grid sizes do not match.");
   }
 
   ic.set_Ny(params["Ny"]);
@@ -234,7 +236,8 @@ void from_json(const json &params, SlabFCC &ic) {
   ic.set_fluctuation(params["fluctuation"]);
   ic.set_rho(params["rho"]);
   if (params.contains("rseed") && params["rseed"].is_number()) ic.set_rseed(params["rseed"]);
-  // if (params.contains("orientations") && params["orientations"].is_array()) ic.set_orientations(params["orientations"]);
+  // if (params.contains("orientations") && params["orientations"].is_array())
+  // ic.set_orientations(params["orientations"]);
   ic.set_orientations(orientations);
 }
 
