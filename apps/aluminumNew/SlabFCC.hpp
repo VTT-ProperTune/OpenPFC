@@ -1,5 +1,5 @@
-#ifndef SLABFCC_HPP
-#define SLABFCC_HPP
+#ifndef PFC_INITIAL_CONDITIONS_SLABFCC_HPP
+#define PFC_INITIAL_CONDITIONS_SLABFCC_HPP
 
 #include "SeedFCC.hpp"
 #include <array>
@@ -218,4 +218,4 @@ void from_json(const json &params, SlabFCC &ic) {
   ic.set_orientations(orientations);
 }
 
-#endif // SLABBCC_HPP
+#endif // PFC_INITIAL_CONDITIONS_SLABFCC_HPP
