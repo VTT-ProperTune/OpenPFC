@@ -34,17 +34,43 @@ respective `master` branch and OpenPFC is built from the local source, run:
 nix develop
 ```
 
-This will create a shell environment with the latest source code for both projects.
+This will create a shell environment with the latest source code for both
+projects. Inside the shell, you can build the project using the following
+commands:
+
+```bash
+cmake -S . -B build
+cmake --build build
+```
 
 ### Building Specific Releases
 
-To build a specific release of `OpenPFC` with a specific version of `HeFFTe`, use the `nix build` command with arguments. For example:
+To build a specific release of `OpenPFC` with a specific version of `HeFFTe`,
+use the `nix build` command. There are two main build targets:
+
+- `#openpfc-dev`: The default target, which can also be invoked with `nix
+  build`. This builds the development version of `OpenPFC`.
+- `#openpfc`: Builds the release version of `OpenPFC`.
+
+For example:
 
 ```bash
-nix build .#default --arg version "0.1.1" --arg heffteVersion "0.2.1"
+nix build #openpfc
 ```
 
-This command will build `OpenPFC` version `0.1.1` with `HeFFTe` version `0.2.1`.
+or equivalently for the development version:
+
+```bash
+nix build #openpfc-dev
+```
+
+When building, tagged versions are used, which are defined in the following files:
+
+- `nix/openpfc/versions`
+- `nix/heffte/versions`
+
+This approach allows constructing immutable builds for all versions simply by
+changing the version numbers in these files.
 
 ### Why Use Nix?
 
