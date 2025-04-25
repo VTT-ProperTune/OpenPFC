@@ -8,8 +8,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Default to Debug build type if not set
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
+  message(STATUS "No build type selected, defaulting to Debug.")
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
@@ -44,14 +46,14 @@ endif()
 option(OpenPFC_BUILD_DOCUMENTATION "Build documentation" ON)
 
 if(OpenPFC_BUILD_DOCUMENTATION)
-  message(STATUS "Generating sources for documentation (build with target docs)")
+  message(STATUS "📚 Generating sources for documentation (build with target docs)")
   find_package(Doxygen)
 
   if(Doxygen_FOUND)
-    message(STATUS "Using Doxygen ${DOXYGEN_VERSION} found from ${DOXYGEN_EXECUTABLE}")
+    message(STATUS "✅ Doxygen v${DOXYGEN_VERSION} found at ${DOXYGEN_EXECUTABLE}")
     add_subdirectory(docs)
   else()
-    message(STATUS "Doxygen not found, not building documentation")
+    message(WARNING "⚠️  Doxygen not found, skipping documentation generation.")
   endif()
 endif()
 
@@ -59,7 +61,20 @@ endif()
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 find_package(MPI REQUIRED)
-find_package(Heffte REQUIRED)
+
+# Try to find HeFFTe installed on the system (e.g., installed by Nix)
+find_package(Heffte CONFIG QUIET)
+# If not found, fallback to downloading via FetchContent
+if (Heffte_FOUND)
+  message(STATUS "✅ HeFFTe v${Heffte_VERSION} found at ${Heffte_DIR}")
+else()
+  message(WARNING "⚠️ Heffte not found via find_package(), falling back to FetchContent.")
+  include(cmake/FindHeffte.cmake)
+  if (NOT Heffte_FOUND)
+    message(FATAL_ERROR "HeFFTe not found. Please install HeFFTe or set the Heffte_DIR variable to the location of HeffteConfig.cmake.")
+  endif()
+endif()
+
 find_package(nlohmann_json REQUIRED)
 
 add_library(OpenPFC INTERFACE)
@@ -77,18 +92,29 @@ option(OpenPFC_BUILD_TESTS "Build OpenPFC tests" ON)
 option(OpenPFC_ENABLE_CODE_COVERAGE "Enable coverage" ON)
 
 if(OpenPFC_BUILD_TESTS)
-  add_subdirectory(tests)
+  message(STATUS "🔍 Building tests")
+  find_package(Catch2 REQUIRED)
+  if(Catch2_FOUND)
+    message(STATUS "✅ Catch2 v${Catch2_VERSION} found at ${Catch2_DIR}")
+    add_subdirectory(tests)
+  else()
+    message(WARNING "⚠️  Catch2 not found, skipping tests.")
+    message(WARNING "⚠️  Please install Catch2 or set the CATCH2_DIR variable to the location of Catch2Config.cmake.")
+  endif()
 endif()
 
 if(OpenPFC_BUILD_APPS)
+  message(STATUS "📦 Building applications")
   add_subdirectory(apps)
 endif()
 
 if(OpenPFC_BUILD_EXAMPLES)
+  message(STATUS "📚 Building examples")
   add_subdirectory(examples)
 endif()
 
 if(OpenPFC_ENABLE_CODE_COVERAGE)
+  message(STATUS "📊 Enabling code coverage")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
@@ -141,3 +167,51 @@ install(FILES
 export(EXPORT OpenPFCTargets
   FILE "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCTargets.cmake"
 )
+
+# -----------------------------------------------------------------------------------
+# Final Build Summary
+# -----------------------------------------------------------------------------------
+
+message(STATUS "-------------------------------------------------------------")
+message(STATUS " ✅ OpenPFC Build Configuration Summary")
+message(STATUS "-------------------------------------------------------------")
+
+message(STATUS " CMake Version          : ${CMAKE_VERSION}")
+message(STATUS " C++ Compiler           : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS " C++ Standard           : ${CMAKE_CXX_STANDARD}")
+message(STATUS " Build Type             : ${CMAKE_BUILD_TYPE}")
+message(STATUS " Install RPATH          : ${CMAKE_INSTALL_RPATH_USE_LINK_PATH}")
+
+message(STATUS "-------------------------------------------------------------")
+message(STATUS " 📦 Third-Party Packages:")
+message(STATUS " MPI                    : ${MPI_CXX_COMPILER}")
+message(STATUS " Heffte_DIR             : ${Heffte_DIR}")
+message(STATUS " nlohmann_json          : ${nlohmann_json_DIR}")
+if(Doxygen_FOUND)
+  message(STATUS " Doxygen                : ${DOXYGEN_EXECUTABLE} (version ${DOXYGEN_VERSION})")
+else()
+  message(STATUS " Doxygen                : NOT FOUND")
+endif()
+if(Catch2_FOUND)
+  message(STATUS " Catch2                 : ${Catch2_DIR} (version ${Catch2_VERSION})")
+else()
+  message(STATUS " Catch2                 : NOT FOUND")
+endif()
+
+message(STATUS "-------------------------------------------------------------")
+message(STATUS " 🛠 Build Options:")
+message(STATUS " OpenPFC_BUILD_APPS               = ${OpenPFC_BUILD_APPS}")
+message(STATUS " OpenPFC_BUILD_EXAMPLES           = ${OpenPFC_BUILD_EXAMPLES}")
+message(STATUS " OpenPFC_BUILD_TESTS              = ${OpenPFC_BUILD_TESTS}")
+message(STATUS " OpenPFC_BUILD_DOCUMENTATION      = ${OpenPFC_BUILD_DOCUMENTATION}")
+message(STATUS " OpenPFC_ENABLE_CODE_COVERAGE     = ${OpenPFC_ENABLE_CODE_COVERAGE}")
+message(STATUS " USE_CLANG_TIDY                   = ${USE_CLANG_TIDY}")
+message(STATUS "-------------------------------------------------------------")
+message(STATUS " 📂 Install prefix       : ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "-------------------------------------------------------------")
+message(STATUS " 🎉 Ready to build OpenPFC!")
+message(STATUS "-------------------------------------------------------------")
+message(STATUS "To build OpenPFC, run:")
+message(STATUS "  cmake --build build")
+message(STATUS "-------------------------------------------------------------")
+
