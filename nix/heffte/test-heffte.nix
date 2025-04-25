@@ -2,7 +2,7 @@
 let
   pkgs = import <nixpkgs> {};
 
-  heffte = pkgs.callPackage ./pkgs/heffte.nix {
+  heffte = pkgs.callPackage ./default.nix {
     cmake = pkgs.cmake;
     fftw = pkgs.fftw;
     fftwFloat = pkgs.fftwFloat;

@@ -1,7 +1,8 @@
+# nix/openpfc/default.nix
+
 { lib
 , stdenv
 , cmake
-, git
 , mpi
 , heffte
 , nlohmann_json
@@ -12,17 +13,33 @@
 , enableExamples ? true
 , enableApps ? true
 , fetchFromGitHub
-, version ? "dev"
-, src ? ./
-}:
+, versions
+, version ? "0.1.1"
+, src ? null }:
 
-stdenv.mkDerivation rec {
+let
+  inherit (versions.openpfc.${version}) rev sha256;
+
+  realSrc = if src != null then src else fetchFromGitHub {
+    owner = "VTT-ProperTune";
+    repo = "OpenPFC";
+    inherit (versions.openpfc.${version}) rev sha256;
+  };
+in
+
+stdenv.mkDerivation {
   pname = "openpfc";
   inherit version;
+   src = realSrc;
 
-  inherit src;
+  meta = {
+    description = "Phase Field Crystal simulation framework";
+    license = lib.licenses.agpl3;
+    platforms = lib.platforms.linux;
+  };
 
-  nativeBuildInputs = [ cmake git ];
+  nativeBuildInputs = [ cmake ];
+
   buildInputs = [ mpi heffte nlohmann_json ]
     ++ lib.optional enableDocs doxygen
     ++ lib.optional enableTests catch2_3;
@@ -36,12 +53,4 @@ stdenv.mkDerivation rec {
     "-DHeffte_DIR=${heffte}/lib/cmake/Heffte"
   ];
 
-  doCheck = enableTests;
-
-  meta = {
-    description = "Phase Field Crystal simulation framework";
-    homepage = "https://github.com/VTT-ProperTune/OpenPFC";
-    license = lib.licenses.agpl3;
-    platforms = lib.platforms.linux;
-  };
 }

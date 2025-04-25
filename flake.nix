@@ -1,57 +1,72 @@
+# flake.nix
+
 {
-  description = "OpenPFC built with Nix";
+  description = "OpenPFC and HeFFTe builder";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
+
         pkgs = import nixpkgs { inherit system; };
+        versions = import ./nix/versions.nix;
+        hefftePath = ./nix/heffte/default.nix;
+        openpfcPath = ./nix/openpfc/default.nix;
 
-        # HeFFTe for development (master branch)
-        heffteDev = pkgs.stdenv.mkDerivation {
-          pname = "heffte";
-          version = "dev";
-          src = pkgs.fetchFromGitHub {
-            owner = "icl-utk-edu";
-            repo = "heffte";
-            rev = "master";
-            sha256 = null; # Allow Nix to compute the hash dynamically
+      in
+      {
+
+        packages = {
+          # HeFFTe version 2.4.1 from GitHub
+          heffte = pkgs.callPackage hefftePath {
+            inherit versions;
+            version = "2.4.1";
           };
-          nativeBuildInputs = [ pkgs.cmake pkgs.openmpi pkgs.fftw pkgs.fftwFloat ];
+
+          # OpenPFC versioned release (e.g., 0.1.1)
+          openpfc = pkgs.callPackage openpfcPath {
+            inherit versions;
+            version = "0.1.1";
+            heffte = self.packages.${system}.heffte;
+          };
+
+          # OpenPFC from local checkout (your dev version)
+          openpfc-dev = pkgs.callPackage openpfcPath {
+            inherit versions;
+            version = "dev";
+            src = ./.;
+            heffte = self.packages.${system}.heffte;
+          };
         };
 
-        # HeFFTe for releases (specific versions)
-        heffteRelease = pkgs.callPackage ./nix/heffte.nix {
-          fftw = pkgs.fftw;
-          fftwFloat = pkgs.fftwFloat;
-          openmpi = pkgs.openmpi;
-          fetchFromGitHub = pkgs.fetchFromGitHub;
-          cmake = pkgs.cmake;
-        };
+        default = self.packages.${system}.openpfc-dev;
 
-      in {
-        # Development environment
         devShells.default = pkgs.mkShell {
-          nativeBuildInputs = [
-            pkgs.cmake
-            pkgs.openmpi
-            pkgs.gcc
-            pkgs.fftw
-            pkgs.fftwFloat
-            pkgs.nlohmann_json
-            heffteDev
-          ];
-          src = ./; # Use the local source for OpenPFC during development
-        };
 
-        # Release builds
-        packages.default = pkgs.callPackage ./nix/default.nix {
-          heffte = heffteRelease;
-          enableDocs = true;
-          enableTests = true;
-          catch2_3 = pkgs.catch2_3;
+          packages = [
+            pkgs.cmake
+            pkgs.git
+            pkgs.openmpi
+            pkgs.nlohmann_json
+            pkgs.doxygen
+            pkgs.catch2_3
+          ];
+
+          inputsFrom = [
+            self.packages.${system}.heffte
+            self.packages.${system}.openpfc-dev
+          ];
+
+          shellHook = ''
+            export Heffte_DIR=${self.packages.${system}.heffte}/lib/cmake/Heffte
+            echo "🎉 Welcome to the OpenPFC development shell!"
+            echo "👉 To configure the project, run: cmake -S . -B build"
+            echo "👉 To build the project, run: cmake --build build"
+          '';
+
         };
-      });
+      }
+    );
 }
