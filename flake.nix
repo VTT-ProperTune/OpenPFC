@@ -18,7 +18,7 @@
       in
       {
 
-        packages = {
+        packages = rec {
           # HeFFTe version 2.4.1 from GitHub
           heffte = pkgs.callPackage hefftePath {
             inherit versions;
@@ -39,9 +39,10 @@
             src = ./.;
             heffte = self.packages.${system}.heffte;
           };
-        };
 
-        default = self.packages.${system}.openpfc-dev;
+        default = openpfc-dev;
+
+        };
 
         devShells.default = pkgs.mkShell {
 
