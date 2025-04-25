@@ -1,24 +1,24 @@
 # nix/heffte/default.nix
 
-{ lib, stdenv, cmake, fftw, fftwFloat, openmpi, fetchFromGitHub, versions, version ? "2.4.1" }:
+{ lib
+  , stdenv
+  , cmake
+  , fftw
+  , fftwFloat
+  , openmpi
+  , fetchFromGitHub
+  , version
+  , src
+}:
 
-let
-  inherit (versions.heffte.${version}) rev sha256;
-in
 stdenv.mkDerivation {
   pname = "heffte";
-  inherit version;
+  inherit src version;
 
   meta = {
     description = "Highly Efficient FFT for Exascale";
     license = lib.licenses.bsd3;
     platforms = lib.platforms.linux;
-  };
-
-  src = fetchFromGitHub {
-    owner = "icl-utk-edu";
-    repo = "heffte";
-    inherit rev sha256;
   };
 
   nativeBuildInputs = [ cmake ];

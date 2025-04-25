@@ -11,36 +11,49 @@
       let
 
         pkgs = import nixpkgs { inherit system; };
-        versions = import ./nix/versions.nix;
+
         hefftePath = ./nix/heffte/default.nix;
+        heffteVersions = builtins.fromJSON (builtins.readFile ./nix/heffte/versions.json);
+        heffteVersion = heffteVersions.current;
+
         openpfcPath = ./nix/openpfc/default.nix;
+        openpfcVersions = builtins.fromJSON (builtins.readFile ./nix/openpfc/versions.json);
+        openpfcVersion = openpfcVersions.current;
 
       in
+
       {
 
         packages = rec {
-          # HeFFTe version 2.4.1 from GitHub
+
           heffte = pkgs.callPackage hefftePath {
-            inherit versions;
-            version = "2.4.1";
+            version = heffteVersion;
+            src = pkgs.fetchFromGitHub {
+              owner = "icl-utk-edu";
+              repo = "heffte";
+              inherit (heffteVersions.versions.${heffteVersion}) rev sha256;
+            };
           };
 
-          # OpenPFC versioned release (e.g., 0.1.1)
+          # OpenPFC versioned release
           openpfc = pkgs.callPackage openpfcPath {
-            inherit versions;
-            version = "0.1.1";
+            version = openpfcVersion;
+            src = pkgs.fetchFromGitHub {
+              owner = "VTT-ProperTune";
+              repo = "OpenPFC";
+              inherit (openpfcVersions.versions.${openpfcVersion}) rev sha256;
+            };
             heffte = self.packages.${system}.heffte;
           };
 
           # OpenPFC from local checkout (your dev version)
           openpfc-dev = pkgs.callPackage openpfcPath {
-            inherit versions;
             version = "dev";
             src = ./.;
             heffte = self.packages.${system}.heffte;
           };
 
-        default = openpfc-dev;
+          default = openpfc-dev;
 
         };
 

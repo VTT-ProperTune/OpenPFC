@@ -13,24 +13,13 @@
 , enableExamples ? true
 , enableApps ? true
 , fetchFromGitHub
-, versions
-, version ? "0.1.1"
-, src ? null }:
-
-let
-  inherit (versions.openpfc.${version}) rev sha256;
-
-  realSrc = if src != null then src else fetchFromGitHub {
-    owner = "VTT-ProperTune";
-    repo = "OpenPFC";
-    inherit (versions.openpfc.${version}) rev sha256;
-  };
-in
+, version
+, src
+}:
 
 stdenv.mkDerivation {
   pname = "openpfc";
-  inherit version;
-   src = realSrc;
+  inherit src version;
 
   meta = {
     description = "Phase Field Crystal simulation framework";
