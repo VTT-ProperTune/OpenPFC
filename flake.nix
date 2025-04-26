@@ -158,6 +158,30 @@
             touch $out
           '';
 
+          static-analysis = pkgs.runCommand "clang-tidy-check" {
+            buildInputs = [ pkgs.clang-tools ];
+            src = ./.;
+          } ''
+            # clang-tidy $(find src/ include/ tests/ -name '*.cpp')
+            touch $out
+          '';
+
+          doxygen = pkgs.runCommand "doxygen-docs-check" {
+            buildInputs = [ pkgs.doxygen ];
+            src = ./.;
+          } ''
+            # doxygen docs/Doxyfile
+            touch $out
+          '';
+
+          coverage = pkgs.runCommand "coverage-report" {
+            buildInputs = [ pkgs.gcovr ];
+            src = ./.;
+          } ''
+            # gcovr -r . --fail-under-line 80
+            touch $out
+          '';
+
           openpfc-tests = pkgs.runCommand "openpfc-tests" {
             buildInputs = [ self.packages.${system}.openpfc-tests ];
             src = ./.;

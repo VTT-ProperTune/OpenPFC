@@ -12,9 +12,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v22
-      - name: Run nix flake check
-        run: nix flake check
-      - name: Run tests
-        run: |
-          nix build .#openpfc-tests
-          ./result/bin/openpfc-tests
+      - run: nix flake check
