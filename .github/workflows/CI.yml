@@ -7,58 +7,14 @@ on:
     branches: [ "master" ]
 
 jobs:
-
-  build_and_test:
+  check:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Check license headers
-      uses: viperproject/check-license-header@v2
-      with:
-        path: ./
-        config: ./.github/license-check/license-config.json
-        strict: false
-
-    - name: Check code formatting using clang-format
-      uses: DoozyX/clang-format-lint-action@v0.17
-      with:
-        source: './apps ./include ./examples ./tests ./docs'
-        exclude: './third_party ./external ./.git ./build'
-        clangFormatVersion: 17
-
-    - name: Build project
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        load: true
-        file: containers/cicd/Dockerfile.build
-        tags: openpfc-builder
-
-    - name: Run unit tests
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        load: true
-        file: containers/cicd/Dockerfile.test
-        tags: openpfc-tester
-
-  generate_docs:
-    runs-on: ubuntu-latest
-
-    needs:
-      - build_and_test
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Generate documentation
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        load: true
-        file: containers/cicd/Dockerfile.docs
-        tags: openpfc-docs
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v22
+      - name: Run nix flake check
+        run: nix flake check
+      - name: Run tests
+        run: |
+          nix build .#openpfc-tests
+          ./result/bin/openpfc-tests
