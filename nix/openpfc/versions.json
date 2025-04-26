@@ -1,17 +1,13 @@
 {
-  "current": "v0.1.1",
+  "current": "0.1.1",
   "versions": {
-    "v0.1.0": {
+    "0.1.0": {
       "rev": "v0.1.0",
-      "sha256": ""
+      "sha256": "1k8z5j9v8z5j9v8z5j9v8z5j9v8z5j9v8z5j9v8z5j9v8z5j9v8z5j9v8z5j9v8="
     },
-    "v0.1.1": {
+    "0.1.1": {
       "rev": "v0.1.1",
       "sha256": "oNTEQJtBzvv5uW0G6WcDaMMFZOa3o7SYJks8H6Ot0+M="
-    },
-    "v0.2.0": {
-      "rev": "v0.2.0",
-      "sha256": ""
     }
   }
 }

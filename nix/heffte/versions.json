@@ -1,11 +1,11 @@
 {
-  "current": "v2.4.1",
+  "current": "2.4.1",
   "versions": {
-    "v2.3.0": {
+    "2.3.0": {
       "rev": "v2.3.0",
       "sha256": ""
     },
-    "v2.4.1": {
+    "2.4.1": {
       "rev": "v2.4.1",
       "sha256": "3qCF3nsxjjj3OOks8f4Uu1L3+budRPX1i+iwXy8hLhE="
     }

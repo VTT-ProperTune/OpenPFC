@@ -1,21 +1,8 @@
 # nix/openpfc/default.nix
 
-{ lib
-, stdenv
-, cmake
-, mpi
-, heffte
-, nlohmann_json
-, catch2_3 ? null
-, doxygen ? null
-, enableDocs ? false
-, enableTests ? true
-, enableExamples ? true
-, enableApps ? true
-, fetchFromGitHub
-, version
-, src
-}:
+{ lib, stdenv, cmake, mpi, heffte, nlohmann_json, catch2_3 ? null
+, doxygen ? null, version, src, buildType ? "Release", enableDocs ? true
+, enableTests ? true, enableExamples ? true, enableApps ? true }:
 
 stdenv.mkDerivation {
   pname = "openpfc";
@@ -29,17 +16,15 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [ cmake ];
 
-  buildInputs = [ mpi heffte nlohmann_json ]
-    ++ lib.optional enableDocs doxygen
+  buildInputs = [ mpi heffte nlohmann_json ] ++ lib.optional enableDocs doxygen
     ++ lib.optional enableTests catch2_3;
 
   cmakeFlags = [
-    "-DCMAKE_BUILD_TYPE=Release"
+    "-DCMAKE_BUILD_TYPE=${buildType}"
     "-DOpenPFC_BUILD_TESTS=${if enableTests then "ON" else "OFF"}"
     "-DOpenPFC_BUILD_EXAMPLES=${if enableExamples then "ON" else "OFF"}"
     "-DOpenPFC_BUILD_APPS=${if enableApps then "ON" else "OFF"}"
     "-DOpenPFC_BUILD_DOCUMENTATION=${if enableDocs then "ON" else "OFF"}"
     "-DHeffte_DIR=${heffte}/lib/cmake/Heffte"
   ];
-
 }

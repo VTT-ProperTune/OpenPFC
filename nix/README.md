@@ -43,34 +43,114 @@ cmake -S . -B build
 cmake --build build
 ```
 
-### Building Specific Releases
+### Building OpenPFC
 
-To build a specific release of `OpenPFC` with a specific version of `HeFFTe`,
-use the `nix build` command. There are two main build targets:
+The build targets follow the pattern:
 
-- `#openpfc-dev`: The default target, which can also be invoked with `nix
-  build`. This builds the development version of `OpenPFC`.
-- `#openpfc`: Builds the release version of `OpenPFC`.
+```
+#openpfc-<what>-<version>
+```
+
+- `<what>` can be one of the following:
+  - Empty: Builds the full release version.
+  - `apps`: Builds only the apps.
+  - `docs`: Builds only the documentation.
+  - `tests`: Builds only the tests.
+  - `examples`: Builds only the examples.
+- `<version>` specifies the version number without the `v` prefix. Special values:
+  - `dev`: Builds from the local source directory (defaults to `Debug` build type).
+  - `master`: Builds the bleeding-edge version from the GitHub repository (defaults to `Release` build type).
+
+### Overriding the Build Type
+
+By default:
+- `dev` builds use the `Debug` build type.
+- All other builds use the `Release` build type.
+
+You can override this behavior by passing the `--arg buildType <type>` argument, where `<type>` can be `Debug` or `Release`.
 
 For example:
-
 ```bash
-nix build #openpfc
+nix build .#openpfc --arg buildType '"Debug"'
 ```
 
-or equivalently for the development version:
+### Examples
 
-```bash
-nix build #openpfc-dev
+Here are some examples of how to use the build targets:
+
+- **Build the default release version**:
+  ```bash
+  nix build .#openpfc
+  ```
+
+- **Build the development version from the source directory**:
+  ```bash
+  nix build .#openpfc-dev
+  ```
+
+- **Build a specific version (e.g., 0.1.1)**:
+  ```bash
+  nix build .#openpfc-0.1.1
+  ```
+
+- **Build tests for a specific version (e.g., 0.1.0)**:
+  ```bash
+  nix build .#openpfc-tests-0.1.0
+  ```
+
+- **Build documentation for a specific version (e.g., 0.1.1)**:
+  ```bash
+  nix build .#openpfc-docs-0.1.1
+  ```
+
+- **Build documentation for the bleeding-edge version**:
+  ```bash
+  nix build .#openpfc-docs-master
+  ```
+
+- **Build tests for the development version**:
+  ```bash
+  nix build .#openpfc-tests-dev
+  ```
+
+- **Override the build type to Debug for a release version**:
+  ```bash
+  nix build .#openpfc-0.1.1 --arg buildType '"Debug"'
+  ```
+
+These are all the build targets available in this project so far:
+
 ```
+nix build .#openpfc
+nix build .#openpfc-0.1.0
+nix build .#openpfc-0.1.1
+nix build .#openpfc-master
+nix build .#openpfc-dev
 
-When building, tagged versions are used, which are defined in the following files:
+nix build .#openpfc-tests
+nix build .#openpfc-tests-0.1.0
+nix build .#openpfc-tests-0.1.1
+nix build .#openpfc-tests-master
+nix build .#openpfc-tests-dev
 
-- `nix/openpfc/versions`
-- `nix/heffte/versions`
+nix build .#openpfc-docs
+nix build .#openpfc-docs-0.1.0
+nix build .#openpfc-docs-0.1.1
+nix build .#openpfc-docs-master
+nix build .#openpfc-docs-dev
 
-This approach allows constructing immutable builds for all versions simply by
-changing the version numbers in these files.
+nix build .#openpfc-apps
+nix build .#openpfc-apps-0.1.0
+nix build .#openpfc-apps-0.1.1
+nix build .#openpfc-apps-master
+nix build .#openpfc-apps-dev
+
+nix build .#openpfc-examples
+nix build .#openpfc-examples-0.1.0
+nix build .#openpfc-examples-0.1.1
+nix build .#openpfc-examples-master
+nix build .#openpfc-examples-dev
+```
 
 ### Why Use Nix?
 
