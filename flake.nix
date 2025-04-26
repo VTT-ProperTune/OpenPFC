@@ -30,47 +30,58 @@
           builtins.fromJSON (builtins.readFile ./nix/openpfc/versions.json);
         openpfcVersion = openpfcVersions.current;
 
-        # Debugging: Print the versions being processed.
-        # builtins.trace ("Processing versions: ")
-        # + builtins.concatStringsSep ", " (builtins.attrNames openpfcVersions.versions);
-
-        # versionedPackages: Dynamically generates OpenPFC packages for specific versions.
-        versionedPackages = builtins.listToAttrs (map (version: {
-          name = "openpfc-${version}";
-          value = pkgs.callPackage ./nix/openpfc/default.nix {
-            version = version;
-            buildType = if version == "dev" then "Debug" else "Release";
-            src = if version == "dev" then
-              ./.
-            else if version == "master" then
-              builtins.fetchGit {
-                url = "https://github.com/VTT-ProperTune/OpenPFC.git";
-                ref = "master";
-              }
-            else
-              pkgs.fetchFromGitHub {
-                owner = "VTT-ProperTune";
-                repo = "OpenPFC";
-                inherit (openpfcVersions.versions.${version}) rev sha256;
-              };
-            enableTests = true;
-            enableExamples = true;
-            enableApps = true;
-            enableDocs = true;
-            heffte = pkgs.callPackage ./nix/heffte/default.nix {
-              version = heffteVersion;
-              src = pkgs.fetchFromGitHub {
-                owner = "icl-utk-edu";
-                repo = "heffte";
-                inherit (heffteVersions.versions.${heffteVersion}) rev sha256;
-              };
-            };
+        heffte = pkgs.callPackage hefftePath {
+          version = heffteVersion;
+          src = pkgs.fetchFromGitHub {
+            owner = "icl-utk-edu";
+            repo = "heffte";
+            inherit (heffteVersions.versions.${heffteVersion}) rev sha256;
           };
-        }) ([ "dev" "master" ] ++ builtins.attrNames openpfcVersions.versions));
+        };
 
       in {
         # Combine dynamically generated OpenPFC packages with their dependencies.
-        packages = versionedPackages;
+        packages = {
+          # openpfc: Fetches the current version of OpenPFC.
+          openpfc = pkgs.callPackage openpfcPath {
+            version = openpfcVersion;
+            buildType = "Release";
+            src = pkgs.fetchFromGitHub {
+              owner = "VTT-ProperTune";
+              repo = "OpenPFC";
+              inherit (openpfcVersions.versions.${openpfcVersion}) rev sha256;
+            };
+            enableTests = true;
+            enableDocs = true;
+            enableExamples = true;
+            enableApps = true;
+            heffte = heffte;
+          };
+
+          # openpfc-dev: Uses the local source directory (./).
+          openpfc-dev = pkgs.callPackage openpfcPath {
+            version = "dev";
+            buildType = "Debug";
+            src = ./.;
+            enableTests = true;
+            enableDocs = true;
+            enableExamples = true;
+            enableApps = true;
+            heffte = heffte;
+          };
+
+          # openpfc-tests: Uses the local source directory (./).
+          openpfc-tests = pkgs.callPackage openpfcPath {
+            version = "dev";
+            buildType = "Debug";
+            src = ./.;
+            enableTests = true;
+            enableDocs = false;
+            enableExamples = false;
+            enableApps = false;
+            heffte = heffte;
+          };
+        };
 
         # Development shell configuration.
         devShells.default = pkgs.mkShell {
