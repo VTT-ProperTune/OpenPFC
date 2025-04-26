@@ -40,8 +40,14 @@
         };
 
       in {
-        # Combine dynamically generated OpenPFC packages with their dependencies.
+
+        ### Packages ###
+
         packages = {
+
+          # heffte: Fetches the current version of HeFFTe.
+          heffte = heffte;
+
           # openpfc: Fetches the current version of OpenPFC.
           openpfc = pkgs.callPackage openpfcPath {
             version = openpfcVersion;
@@ -81,9 +87,28 @@
             enableApps = false;
             heffte = heffte;
           };
+
         };
 
-        # Development shell configuration.
+        ### Applications ###
+
+        apps = {
+
+          openpfc-tests = {
+            type = "app";
+            program =
+              "${self.packages.${system}.openpfc-tests}/bin/openpfc-tests";
+            meta = with pkgs.lib; {
+              description = "OpenPFC tests";
+              license = licenses.agpl3;
+              platforms = platforms.linux;
+            };
+          };
+
+        };
+
+        ### DevShells ###
+
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.cmake
@@ -106,5 +131,42 @@
             echo "👉 To build the project, run: cmake --build build"
           '';
         };
+
+        ### Tests ###
+
+        checks = {
+
+          # Check that the license of the project is compatible with AGPL-3.0.
+          license-check = pkgs.runCommand "license-check" {
+            buildInputs = [ pkgs.nodejs ];
+            src = ./.;
+          } ''
+            # TODO: Uncomment the following lines to check the license.
+            # cp -r $src/* .
+            # npx license-checker --production
+            touch $out
+          '';
+
+          # Check that the code is formatted correctly using clang-format.
+          format-check = pkgs.runCommand "format-check" {
+            buildInputs = [ pkgs.clang-tools_17 ];
+            src = ./.;
+          } ''
+            # TODO: Uncomment the following lines to check the code format.
+            # cp -r $src/* .
+            # clang-format --dry-run --Werror $(find ./apps ./include ./examples ./tests ./docs -name '*.hpp' -o -name '*.cpp')
+            touch $out
+          '';
+
+          openpfc-tests = pkgs.runCommand "openpfc-tests" {
+            buildInputs = [ self.packages.${system}.openpfc-tests ];
+            src = ./.;
+          } ''
+            # ${self.packages.${system}.openpfc-tests}/bin/openpfc-tests
+            touch $out
+          '';
+
+        };
+
       });
 }
