@@ -1,4 +1,17 @@
 # SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-Checks: '*,modernize-*'
+Checks: >
+  -*,
+  clang-analyzer-*,
+  bugprone-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -readability-identifier-length  # 👈 Disable ONLY identifier length check
+
+WarningsAsErrors: clang-analyzer-*,bugprone-*,modernize-*
+
+CheckOptions:
+  - key: readability-identifier-length.AllowedShortNames
+    value: dy,dx,dz,i,j,k,x,y,z,t

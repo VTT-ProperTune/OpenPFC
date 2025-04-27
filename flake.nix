@@ -48,7 +48,7 @@
           heffte = heffte;
 
           # openpfc: Fetches the current version of OpenPFC.
-          openpfc = pkgs.callPackage openpfcPath {
+          openpfc = pkgs.callPackage ./nix/openpfc/default.nix {
             version = openpfcVersion;
             buildType = "Release";
             src = pkgs.fetchFromGitHub {
@@ -64,7 +64,7 @@
           };
 
           # openpfc-dev: Uses the local source directory (./).
-          openpfc-dev = pkgs.callPackage openpfcPath {
+          openpfc-dev = pkgs.callPackage ./nix/openpfc/default.nix {
             version = "dev";
             buildType = "Debug";
             src = ./.;
@@ -116,6 +116,11 @@
             pkgs.nlohmann_json
             pkgs.doxygen
             pkgs.catch2_3
+
+            # 🆕 Add these for better code hygiene
+            pkgs.clang-tools_17 # Provides clang-tidy, clang-format, etc.
+            pkgs.reuse # License checking
+            pkgs.coreutils # Needed for realpath and other shell utilities
           ];
 
           inputsFrom = [
@@ -125,9 +130,15 @@
 
           shellHook = ''
             export Heffte_DIR=${self.packages.${system}.heffte}/lib/cmake/Heffte
+
+            echo ""
             echo "🎉 Welcome to the OpenPFC development shell!"
-            echo "👉 To configure the project, run: cmake -S . -B build"
-            echo "👉 To build the project, run: cmake --build build"
+            echo "👉 To configure the project:  cmake -S . -B build"
+            echo "👉 To build the project:      cmake --build build"
+            echo "👉 To format code:            clang-format --dry-run --Werror $(find apps include examples tests docs -name '*.cpp' -o -name '*.hpp')"
+            echo "👉 To run static analysis:    clang-tidy apps/<file>.cpp --quiet"
+            echo "👉 To check licenses:         reuse lint"
+            echo ""
           '';
         };
 
@@ -160,13 +171,27 @@
             touch $out
           '';
 
-          static-analysis = pkgs.runCommand "clang-tidy-check" {
-            buildInputs = [ pkgs.clang-tools ];
-            src = ./.;
-          } ''
-            # clang-tidy $(find src/ include/ tests/ -name '*.cpp')
-            touch $out
-          '';
+#         static-analysis = pkgs.runCommand "clang-tidy-check" {
+#           nativeBuildInputs =
+#             [ pkgs.cmake pkgs.clang-tools_17 pkgs.coreutils ];
+#           src = ./.;
+#         } ''
+#           cp -r $src/. .
+#
+#           # Generate compile_commands.json
+#           cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+#           ln -s build/compile_commands.json compile_commands.json
+#
+#           # Find all source files
+#           files=$(find ./apps ./include ./examples ./tests ./docs \( -name '*.cpp' \))
+#
+#           # Run clang-tidy
+#           for file in $files; do
+#             clang-tidy $(realpath --relative-to=. "$file") --quiet || exit 1
+#           done
+#
+#           touch $out
+#         '';
 
           doxygen = pkgs.runCommand "doxygen-docs-check" {
             buildInputs = [ pkgs.doxygen ];
