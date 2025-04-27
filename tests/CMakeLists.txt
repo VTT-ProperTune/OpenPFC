@@ -1,22 +1,26 @@
 # https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#top
 
 find_package(Catch2 REQUIRED)
+include_directories(${Catch2_INCLUDE_DIRS})  # Add Catch2 include directories
+
 add_executable(openpfc-tests
-               test_arraynd.cpp
+               runtests.cpp
                test_world.cpp
                test_decomposition.cpp
-               #test_discrete_field.cpp
-               #test_field_modifier.cpp
-               #test_fft.cpp
-               #test_ic_constant.cpp
-               #test_model.cpp
-               #test_multi_index.cpp
-               #test_simulator.cpp
-               test_time.cpp
-               )
-target_link_libraries(openpfc-tests PRIVATE OpenPFC Catch2::Catch2WithMain)
+               test_fft.cpp
+               test_arraynd.cpp
+               test_discrete_field.cpp
+               test_field_modifier.cpp
+               test_ic_constant.cpp
+               test_model.cpp
+               test_multi_index.cpp
+               test_simulator.cpp
+               test_time.cpp)
+target_link_libraries(openpfc-tests PRIVATE OpenPFC Catch2::Catch2)
 
-list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
-include(CTest)
-include(Catch)
-catch_discover_tests(openpfc-tests)
+# Disable automatic test discovery during the build
+# Comment out or remove the following line:
+# catch_discover_tests(openpfc-tests)
+
+# Optionally, add a custom target to run tests manually
+add_custom_target(run-tests COMMAND openpfc-tests)

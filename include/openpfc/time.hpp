@@ -44,14 +44,25 @@ private:
   double m_saveat; ///< Time interval for saving data
 
 public:
-  /**
-   * @brief Construct a new Time object with the specified time interval and save interval.
-   *
-   * @param time An array containing the start time, end time, and time step in that order
-   * @param saveat The time interval for saving data
-   */
   Time(const std::array<double, 3> &time, double saveat)
-      : m_t0(time[0]), m_t1(time[1]), m_dt(time[2]), m_increment(0), m_saveat(saveat) {}
+      : m_t0(time[0]), m_t1(time[1]), m_dt(time[2]), m_increment(0), m_saveat(saveat) {
+    if (m_t0 < 0) {
+      throw std::invalid_argument("Start time cannot be negative: " + std::to_string(m_t0));
+    }
+    if (m_dt <= 0) {
+      throw std::invalid_argument("Time step (dt) must be greater than zero: " + std::to_string(m_dt));
+    }
+    if (m_dt < 1e-9) {
+      throw std::invalid_argument("Time step (dt) is too small: " + std::to_string(m_dt));
+    }
+    if (std::abs(m_t0 - m_t1) < 1e-9) {
+      throw std::invalid_argument("Start time cannot equal end time: t0 == t1");
+    }
+    if (m_saveat > m_t1) {
+      throw std::invalid_argument("Save interval cannot exceed end time: " + std::to_string(m_saveat) + " > " +
+                                  std::to_string(m_t1));
+    }
+  }
 
   /**
    * @brief Construct a new Time object with the specified time interval and default save interval.
@@ -95,7 +106,10 @@ public:
    *
    * @return The current time
    */
-  double get_current() const { return m_t0 + m_increment * m_dt; }
+  double get_current() const {
+    double current_time = m_t0 + m_increment * m_dt;
+    return (current_time > m_t1) ? m_t1 : current_time; // Clamp to m_t1 if it exceeds
+  }
 
   /**
    * @brief Get the time interval for saving data.
@@ -123,7 +137,9 @@ public:
    *
    * @return True if the current time is greater than or equal to the end time, False otherwise
    */
-  bool done() const { return get_current() >= m_t1; }
+  bool done() const {
+    return (get_current() >= m_t1 - 1e-9); // Adjust for floating-point precision
+  }
 
   /**
    * @brief Move to the next time increment.
@@ -138,7 +154,12 @@ public:
    *
    * @return True if data should be saved, False otherwise
    */
-  bool do_save() const { return (std::fmod(get_current() + 1.0e-9, m_saveat) < 1.e-6) || done() || (m_increment == 0); }
+  bool do_save() const {
+    if (m_saveat <= 0) {
+      return false; // Save interval of 0 means no saving
+    }
+    return (std::fmod(get_current() + 1.0e-9, m_saveat) < 1.e-6) || done() || (m_increment == 0);
+  }
 
   /**
    * @brief Conversion operator to retrieve the current time as a double value.

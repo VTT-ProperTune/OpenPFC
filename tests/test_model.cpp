@@ -39,7 +39,7 @@ TEST_CASE("Model functionality", "[Model]") {
   }
 
   SECTION("Set and get FFT") {
-    MPI_Init(0, nullptr);
+    // MPI_Init(0, nullptr);
     // Create a Decomposition object
     World world({8, 1, 1}); // Assuming the World class is defined
     Decomposition decomposition(world);
@@ -48,7 +48,7 @@ TEST_CASE("Model functionality", "[Model]") {
     model.set_fft(fft);
     REQUIRE(&model.get_fft() == &fft);
     REQUIRE(model.is_rank0());
-    MPI_Finalize();
+    // MPI_Finalize();
   }
 
   SECTION("Real field operations") {

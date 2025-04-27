@@ -18,7 +18,8 @@ along with this program.  If not, see https://www.gnu.org/licenses/.
 
 */
 
-#include <catch2/catch_test_macros.hpp>
+#define CATCH_CONFIG_RUNNER
+#include <catch2/catch_test_macros.hpp> // Updated include for Catch2 v3
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <openpfc/fft.hpp>
 #include <vector>
@@ -27,10 +28,8 @@ using namespace Catch::Matchers;
 using namespace pfc;
 
 TEST_CASE("FFT forward transformation", "[FFT]") {
-  MPI_Init(0, nullptr);
-
-  // Create an FFT object
-  FFT fft(Decomposition(World({8, 1, 1})));
+  // Create an FFT object with a fixed decomposition
+  FFT fft(Decomposition(World({8, 1, 1}), 0, 1));
 
   // Generate input data
   std::vector<double> input = {0.000, 0.785, 1.571, 2.356, 3.142, 3.927, 4.712, 5.498};
@@ -41,14 +40,11 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
   fft.forward(input, output);
 
   REQUIRE_THAT(std::real(output[0]), WithinAbs(21.991, 0.01));
-  MPI_Finalize();
 }
 
 TEST_CASE("FFT backward transformation", "[FFT]") {
-  MPI_Init(0, nullptr);
-
-  // Create an FFT object
-  FFT fft(Decomposition(World({2, 1, 1})));
+  // Create an FFT object with a fixed decomposition
+  FFT fft(Decomposition(World({2, 1, 1}), 0, 1));
 
   // Generate input data
   std::vector<std::complex<double>> input = {std::complex<double>(1.0, 0.0), std::complex<double>(2.0, 0.0)};
@@ -61,5 +57,4 @@ TEST_CASE("FFT backward transformation", "[FFT]") {
   REQUIRE(output.size() == fft.size_inbox());
   REQUIRE_THAT(output[0], WithinAbs(1.5, 0.01));
   // Add more assertions as needed
-  MPI_Finalize();
 }

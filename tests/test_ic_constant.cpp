@@ -42,7 +42,7 @@ TEST_CASE("Constant Field Modifier") {
   }
 
   SECTION("Apply field modifier") {
-    MPI_Init(0, nullptr);
+    // MPI_Init(0, nullptr);
     World world({8, 1, 1});
     Decomposition decomp(world);
     std::vector<double> psi(8);
@@ -57,6 +57,6 @@ TEST_CASE("Constant Field Modifier") {
     for (const auto &value : field) {
       REQUIRE(value == 1.0);
     }
-    MPI_Finalize();
+    // MPI_Finalize();
   }
 }

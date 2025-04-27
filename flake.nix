@@ -76,7 +76,7 @@
             heffte = heffte;
           };
 
-          # openpfc-tests: Uses the local source directory (./).
+          # openpfc-tests: compile only the tests.
           openpfc-tests = pkgs.callPackage openpfcPath {
             version = "dev";
             buildType = "Debug";
@@ -94,7 +94,7 @@
 
         apps = {
 
-          openpfc-tests = {
+          test = {
             type = "app";
             program =
               "${self.packages.${system}.openpfc-tests}/bin/openpfc-tests";
@@ -179,14 +179,6 @@
             src = ./.;
           } ''
             # gcovr -r . --fail-under-line 80
-            touch $out
-          '';
-
-          openpfc-tests = pkgs.runCommand "openpfc-tests" {
-            buildInputs = [ self.packages.${system}.openpfc-tests ];
-            src = ./.;
-          } ''
-            # ${self.packages.${system}.openpfc-tests}/bin/openpfc-tests
             touch $out
           '';
 
