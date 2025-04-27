@@ -54,20 +54,7 @@ public:
    * values are non-positive.
    */
   World(const std::array<int, 3> &dimensions, const std::array<double, 3> &origin,
-        const std::array<double, 3> &discretization)
-      : Lx(dimensions[0]), Ly(dimensions[1]), Lz(dimensions[2]), x0(origin[0]), y0(origin[1]), z0(origin[2]),
-        dx(discretization[0]), dy(discretization[1]), dz(discretization[2]) {
-
-    // Validate dimensions
-    if (Lx <= 0 || Ly <= 0 || Lz <= 0) {
-      throw std::invalid_argument("Invalid dimensions. Lengths must be positive.");
-    }
-
-    // Validate discretization
-    if (dx <= 0 || dy <= 0 || dz <= 0) {
-      throw std::invalid_argument("Invalid discretization. Values must be positive.");
-    }
-  }
+        const std::array<double, 3> &discretization);
 
   /**
    * @brief Constructs a World object with the specified dimensions and default
@@ -77,38 +64,38 @@ public:
    *
    * @throws std::invalid_argument if any of the dimensions are non-positive.
    */
-  World(const std::array<int, 3> &dimensions) : World(dimensions, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}) {}
+  World(const std::array<int, 3> &dimensions);
 
   // Getters for member variables
-  int get_Lx() const { return Lx; }
-  int get_Ly() const { return Ly; }
-  int get_Lz() const { return Lz; }
-  double get_x0() const { return x0; }
-  double get_y0() const { return y0; }
-  double get_z0() const { return z0; }
-  double get_dx() const { return dx; }
-  double get_dy() const { return dy; }
-  double get_dz() const { return dz; }
+  int get_Lx() const;
+  int get_Ly() const;
+  int get_Lz() const;
+  double get_x0() const;
+  double get_y0() const;
+  double get_z0() const;
+  double get_dx() const;
+  double get_dy() const;
+  double get_dz() const;
 
   /**
    * @brief Get the size of the calculation domain.
    * @return The size of the domain: {Lx, Ly, Lz}.
    */
-  std::array<int, 3> get_size() const { return {Lx, Ly, Lz}; }
+  std::array<int, 3> get_size() const;
 
   /**
    * @brief Get the origin of the coordinate system
    *
    * @return std::array<double, 3>
    */
-  std::array<double, 3> get_origin() const { return {x0, y0, z0}; }
+  std::array<double, 3> get_origin() const;
 
   /**
    * @brief Get the discretization of the coordinate system
    *
    * @return std::array<double, 3>
    */
-  std::array<double, 3> get_discretization() const { return {dx, dy, dz}; }
+  std::array<double, 3> get_discretization() const;
 
   /**
    * @brief Conversion operator to heffte::box3d<int>.
@@ -118,7 +105,7 @@ public:
    *
    * @return A heffte::box3d<int> representing the world domain.
    */
-  operator heffte::box3d<int>() const { return heffte::box3d<int>({0, 0, 0}, {Lx - 1, Ly - 1, Lz - 1}); }
+  operator heffte::box3d<int>() const;
 
   /**
    * @brief Compare this world to other world.
@@ -127,7 +114,7 @@ public:
    * @return true
    * @return false
    */
-  bool operator==(const World &other) const { return Lx == other.Lx && Ly == other.Ly && Lz == other.Lz; }
+  bool operator==(const World &other) const;
 
   /**
    * @brief Output stream operator for World objects.
@@ -138,13 +125,7 @@ public:
    * @param w The World object to be printed.
    * @return The updated output stream.
    */
-  friend std::ostream &operator<<(std::ostream &os, const World &w) {
-    os << "(Lx = " << w.Lx << ", Ly = " << w.Ly << ", Lz = " << w.Lz;
-    os << ", x0 = " << w.x0 << ", y0 = " << w.y0 << ", z0 = " << w.z0;
-    os << ", x1 = " << w.x0 + w.Lx * w.dx << ", y1 = " << w.y0 + w.Ly * w.dy << ", z0 = " << w.z0 + w.Lz * w.dz;
-    os << ", dx = " << w.dx << ", dy = " << w.dy << ", dz = " << w.dz << ")";
-    return os;
-  };
+  friend std::ostream &operator<<(std::ostream &os, const World &w);
 };
 
 } // namespace pfc
