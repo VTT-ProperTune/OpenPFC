@@ -1,4 +1,5 @@
-# nix/openpfc/default.nix
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
 
 { lib, stdenv, cmake, mpi, heffte, nlohmann_json, catch2_3 ? null
 , doxygen ? null, version, src, buildType ? "Release", enableDocs ? true

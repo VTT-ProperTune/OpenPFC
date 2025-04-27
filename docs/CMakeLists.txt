@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 set(DOXYGEN_EXTRACT_ALL YES)
 set(DOXYGEN_BUILTIN_STL_SUPPORT YES)
 set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)

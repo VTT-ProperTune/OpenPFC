@@ -1,6 +1,8 @@
-# test-heffte.nix
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 let
-  pkgs = import <nixpkgs> {};
+  pkgs = import <nixpkgs> { };
 
   heffte = pkgs.callPackage ./default.nix {
     cmake = pkgs.cmake;
@@ -9,5 +11,4 @@ let
     openmpi = pkgs.openmpi;
     fetchFromGitHub = pkgs.fetchFromGitHub;
   };
-in
-heffte
+in heffte

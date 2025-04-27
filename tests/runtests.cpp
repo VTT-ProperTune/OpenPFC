@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch_session.hpp> // Include for Catch::Session
 #include <catch2/catch_test_macros.hpp>

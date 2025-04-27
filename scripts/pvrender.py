@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 import argparse
 import sys
 import os

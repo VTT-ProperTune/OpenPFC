@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Basics: world, domain decomposition and FFT
 
 Hello, and welcome to the first part of the getting started tutorial of OpenPFC

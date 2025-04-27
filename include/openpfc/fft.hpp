@@ -1,22 +1,5 @@
-/*
-
-OpenPFC, a simulation software for the phase field crystal method.
-Copyright (C) 2024 VTT Technical Research Centre of Finland Ltd.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see https://www.gnu.org/licenses/.
-
-*/
+// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 #ifndef PFC_FFT_HPP
 #define PFC_FFT_HPP
@@ -52,7 +35,7 @@ public:
       heffte::plan_options plan_options = heffte::default_options<heffte::backend::fftw>())
       : m_decomposition(decomposition),
         m_fft({m_decomposition.inbox, m_decomposition.outbox, m_decomposition.r2c_direction, comm, plan_options}),
-        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())){};
+        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())) {};
 
   /**
    * @brief Performs the forward FFT transformation.

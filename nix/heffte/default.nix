@@ -1,15 +1,7 @@
-# nix/heffte/default.nix
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
 
-{ lib
-  , stdenv
-  , cmake
-  , fftw
-  , fftwFloat
-  , openmpi
-  , fetchFromGitHub
-  , version
-  , src
-}:
+{ lib, stdenv, cmake, fftw, fftwFloat, openmpi, fetchFromGitHub, version, src }:
 
 stdenv.mkDerivation {
   pname = "heffte";

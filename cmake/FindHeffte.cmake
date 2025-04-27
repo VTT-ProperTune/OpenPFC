@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 option(Heffte_ENABLE_FFTW "Enable the FFTW backend" ON)
 option(Heffte_ENABLE_CUDA "Enable the CUDA and cuFFT backend" OFF)
 option(Heffte_ENABLE_ROCM "Enable the HIP and rocFFT backend" OFF)

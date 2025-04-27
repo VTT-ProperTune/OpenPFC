@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 macro(heffte_find_fftw_libraries)
 # Usage:
 #   heffte_find_fftw_libraries(PREFIX <fftw-root>

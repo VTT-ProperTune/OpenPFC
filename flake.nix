@@ -1,6 +1,5 @@
-# flake.nix
-# To list all variations, use the following command:
-# nix flake show | grep "openpfcVariations"
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
 
 {
   description = "OpenPFC and HeFFTe builder";
@@ -138,12 +137,10 @@
 
           # Check that the license of the project is compatible with AGPL-3.0.
           license-check = pkgs.runCommand "license-check" {
-            buildInputs = [ pkgs.nodejs ];
+            nativeBuildInputs = [ pkgs.reuse ];
             src = ./.;
           } ''
-            # TODO: Uncomment the following lines to check the license.
-            # cp -r $src/* .
-            # npx license-checker --production
+            reuse --root $src lint
             touch $out
           '';
 

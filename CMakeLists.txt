@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 cmake_minimum_required(VERSION 3.15)
 
 project(OpenPFC VERSION 0.1.1 DESCRIPTION "Phase Field Crystal simulation framework")

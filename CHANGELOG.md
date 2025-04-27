@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Changelog
 
 ## [0.1.1] - 2024-06-13

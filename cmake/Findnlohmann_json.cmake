@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 if(NOT nlohmann_json_FIND_VERSION)
   set(nlohmann_json_FIND_VERSION 3.11.2)
 endif()
