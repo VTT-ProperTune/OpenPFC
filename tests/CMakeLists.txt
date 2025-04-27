@@ -19,7 +19,13 @@ add_executable(openpfc-tests
                test_multi_index.cpp
                test_simulator.cpp
                test_time.cpp)
+
 target_link_libraries(openpfc-tests PRIVATE OpenPFC Catch2::Catch2)
+
+if(OpenPFC_ENABLE_CODE_COVERAGE)
+  target_compile_options(openpfc-tests PUBLIC --coverage)
+  target_link_options(openpfc-tests PUBLIC --coverage)
+endif()
 
 # Disable automatic test discovery during the build
 # Comment out or remove the following line:

@@ -26,6 +26,7 @@ stdenv.mkDerivation {
     "-DOpenPFC_BUILD_EXAMPLES=${if enableExamples then "ON" else "OFF"}"
     "-DOpenPFC_BUILD_APPS=${if enableApps then "ON" else "OFF"}"
     "-DOpenPFC_BUILD_DOCUMENTATION=${if enableDocs then "ON" else "OFF"}"
+    "-DOpenPFC_ENABLE_CODE_COVERAGE=OFF"
     "-DHeffte_DIR=${heffte}/lib/cmake/Heffte"
   ];
 }

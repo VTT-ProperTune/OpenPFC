@@ -31,8 +31,6 @@ endif()
 # To preserve RPATH when installing
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-option(BUILD_SHARED_LIBS "Builds shared libraries using CMake conventions" OFF)
-
 option(USE_CLANG_TIDY "Enable clang-tidy static code analysis" OFF)
 # Enable clang-tidy if USE_CLANG_TIDY is ON
 if(USE_CLANG_TIDY)
@@ -80,14 +78,41 @@ endif()
 
 find_package(nlohmann_json REQUIRED)
 
-add_library(OpenPFC INTERFACE)
+option(BUILD_SHARED_LIBS "Build OpenPFC as a shared library" OFF)
+
+# Create library
+add_library(OpenPFC
+    src/openpfc/world.cpp
+    # src/openpfc/core/decomposition.cpp
+    # src/openpfc/core/fft.cpp
+    # Add more .cpp files as you go
+)
+
+# Public API (headers)
 target_include_directories(OpenPFC
-                           INTERFACE
-                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                            $<INSTALL_INTERFACE:include>
-                          )
-target_link_libraries(OpenPFC INTERFACE Heffte::Heffte MPI::MPI_CXX)
-target_compile_features(OpenPFC INTERFACE cxx_std_17)
+    PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+# Options
+option(OpenPFC_ENABLE_MPI "Enable MPI support" ON)
+option(OpenPFC_ENABLE_HEFFTE "Enable HeFFTe FFT support" ON)
+
+# Conditionally find MPI
+if(OpenPFC_ENABLE_MPI)
+    find_package(MPI REQUIRED)
+    target_link_libraries(OpenPFC PUBLIC MPI::MPI_CXX)
+endif()
+
+# Conditionally find HeFFTe
+if(OpenPFC_ENABLE_HEFFTE)
+    find_package(Heffte REQUIRED)
+    target_link_libraries(OpenPFC PUBLIC Heffte::Heffte)
+endif()
+
+# Require C++17
+target_compile_features(OpenPFC PUBLIC cxx_std_17)
 
 option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
 option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
@@ -120,11 +145,9 @@ endif()
 
 if(OpenPFC_ENABLE_CODE_COVERAGE)
   message(STATUS "📊 Enabling code coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+  target_compile_options(OpenPFC PUBLIC --coverage)
+  target_link_options(OpenPFC PUBLIC --coverage)
 endif()
-
-install(DIRECTORY include/openpfc DESTINATION include)
 
 # Install nlohmann_json headers, but only if nlohmann_json_SOURCE_DIR is
 # defined, i.e. the package is built from source during the configure step.
@@ -139,10 +162,22 @@ endif()
 
 # generate cmake file containing code to import all targets
 
-install(TARGETS OpenPFC EXPORT OpenPFCTargets DESTINATION include)
+# Install headers
+install(DIRECTORY include/openpfc DESTINATION include)
+
+# Install library binary
+install(TARGETS OpenPFC
+    EXPORT OpenPFCTargets
+    ARCHIVE DESTINATION lib   # .a files
+    LIBRARY DESTINATION lib   # .so files
+    RUNTIME DESTINATION bin   # executable files (not needed now but future proof)
+)
+
+# Install CMake config file
 install(EXPORT OpenPFCTargets
-  FILE OpenPFCTargets.cmake
-  DESTINATION lib/cmake/OpenPFC
+    FILE OpenPFCTargets.cmake
+    NAMESPACE OpenPFC::
+    DESTINATION lib/cmake/OpenPFC
 )
 
 # generate config and write package config
