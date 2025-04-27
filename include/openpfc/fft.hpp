@@ -35,7 +35,7 @@ public:
       heffte::plan_options plan_options = heffte::default_options<heffte::backend::fftw>())
       : m_decomposition(decomposition),
         m_fft({m_decomposition.inbox, m_decomposition.outbox, m_decomposition.r2c_direction, comm, plan_options}),
-        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())) {};
+        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())){};
 
   /**
    * @brief Performs the forward FFT transformation.

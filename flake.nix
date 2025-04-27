@@ -149,9 +149,14 @@
             buildInputs = [ pkgs.clang-tools_17 ];
             src = ./.;
           } ''
-            # TODO: Uncomment the following lines to check the code format.
-            # cp -r $src/* .
-            # clang-format --dry-run --Werror $(find ./apps ./include ./examples ./tests ./docs -name '*.hpp' -o -name '*.cpp')
+            cp -r $src/. .
+
+            # Find only real source files (*.cpp, *.hpp) in apps, include, examples, and tests
+            files=$(find ./apps ./include ./examples ./tests ./docs \( -name '*.hpp' -o -name '*.cpp' \))
+
+            # Run clang-format check
+            clang-format --dry-run --Werror $files
+
             touch $out
           '';
 
