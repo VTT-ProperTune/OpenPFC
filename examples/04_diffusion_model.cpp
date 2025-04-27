@@ -5,10 +5,10 @@
 #include <iostream>
 #include <limits>
 
+#include <openpfc/core/world.hpp>
 #include <openpfc/decomposition.hpp>
 #include <openpfc/fft.hpp>
 #include <openpfc/model.hpp>
-#include <openpfc/world.hpp>
 
 using namespace std;
 using namespace pfc;

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include "openpfc/world.hpp"
+#include "openpfc/core/world.hpp"
 #include <stdexcept>
 
 namespace pfc {

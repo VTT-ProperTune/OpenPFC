@@ -9,6 +9,7 @@
 #include "boundary_conditions/fixed_bc.hpp"
 #include "boundary_conditions/moving_bc.hpp"
 #include "constants.hpp"
+#include "core/world.hpp"
 #include "decomposition.hpp"
 #include "discrete_field.hpp"
 #include "fft.hpp"
@@ -28,6 +29,5 @@
 #include "types.hpp"
 #include "utils.hpp"
 #include "utils/show.hpp"
-#include "world.hpp"
 
 #endif // PFC_OPENPFC_HPP

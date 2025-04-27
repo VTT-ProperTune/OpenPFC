@@ -4,7 +4,7 @@
 #ifndef PFC_DECOMPOSITION_HPP
 #define PFC_DECOMPOSITION_HPP
 
-#include "world.hpp"
+#include "core/world.hpp"
 #include <heffte.h>
 #include <iostream>
 #include <mpi.h>

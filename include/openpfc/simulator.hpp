@@ -4,11 +4,11 @@
 #ifndef PFC_SIMULATOR_HPP
 #define PFC_SIMULATOR_HPP
 
+#include "core/world.hpp"
 #include "field_modifier.hpp"
 #include "model.hpp"
 #include "results_writer.hpp"
 #include "time.hpp"
-#include "world.hpp"
 #include <iostream>
 #include <memory>
 #include <unordered_map>

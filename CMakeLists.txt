@@ -82,7 +82,7 @@ option(BUILD_SHARED_LIBS "Build OpenPFC as a shared library" OFF)
 
 # Create library
 add_library(OpenPFC
-    src/openpfc/world.cpp
+    src/openpfc/core/world.cpp
     # src/openpfc/core/decomposition.cpp
     # src/openpfc/core/fft.cpp
     # Add more .cpp files as you go
@@ -91,7 +91,7 @@ add_library(OpenPFC
 # Public API (headers)
 target_include_directories(OpenPFC
     PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
 

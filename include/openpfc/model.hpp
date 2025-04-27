@@ -6,10 +6,10 @@
 
 #include <memory>
 
+#include "core/world.hpp"
 #include "decomposition.hpp"
 #include "fft.hpp"
 #include "types.hpp"
-#include "world.hpp"
 
 namespace pfc {
 

@@ -5,12 +5,12 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <openpfc/core/world.hpp>
 #include <openpfc/decomposition.hpp>
 #include <openpfc/fft.hpp>
 #include <openpfc/field_modifier.hpp>
 #include <openpfc/model.hpp>
 #include <openpfc/simulator.hpp>
-#include <openpfc/world.hpp>
 #include <vector>
 
 /**

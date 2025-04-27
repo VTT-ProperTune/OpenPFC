@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
+#include <openpfc/core/world.hpp>
 #include <openpfc/decomposition.hpp>
 #include <openpfc/discrete_field.hpp>
 #include <openpfc/utils.hpp>
-#include <openpfc/world.hpp>
 
 using namespace pfc;
 using namespace pfc::utils;

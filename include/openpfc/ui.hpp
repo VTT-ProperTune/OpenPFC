@@ -13,6 +13,7 @@
 
 #include "boundary_conditions/fixed_bc.hpp"
 #include "boundary_conditions/moving_bc.hpp"
+#include "core/world.hpp"
 #include "field_modifier.hpp"
 #include "initial_conditions/constant.hpp"
 #include "initial_conditions/file_reader.hpp"
@@ -23,7 +24,6 @@
 #include "simulator.hpp"
 #include "time.hpp"
 #include "utils/timeleft.hpp"
-#include "world.hpp"
 
 namespace pfc {
 namespace ui {
