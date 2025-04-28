@@ -58,9 +58,11 @@ public:
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
-          double x = w.x0 + i * w.dx;
-          double y = w.y0 + j * w.dy;
-          double z = w.z0 + k * w.dz;
+          auto origin = w.origin();
+          auto spacing = w.spacing();
+          double x = origin[0] + i * spacing[0];
+          double y = origin[1] + j * spacing[1];
+          double z = origin[2] + k * spacing[2];
           f[idx] = exp(-(x * x + y * y + z * z) / (4.0 * m_D));
           idx += 1;
         }
@@ -90,8 +92,9 @@ void run() {
 
   MPI_Comm comm = MPI_COMM_WORLD;
   Decomposition decomposition(world, comm);
-  FFT fft(decomposition, comm);
-  Diffusion model(fft);
+  auto plan_options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomposition, comm, plan_options, world);
+  Diffusion model(world);
   Simulator simulator(model, time);
 
   print_stats(simulator);
