@@ -76,30 +76,30 @@ public:
   /**
    * @brief Get the size of the inbox.
    *
-   * @return Size of the inbox as a container (const struct std::array<int, 3UL>&).
+   * @return Size of the inbox as a container (const std::array<int, 3>&).
    */
-  const auto &get_inbox_size() const;
+  const std::array<int, 3> &get_inbox_size() const;
 
   /**
    * @brief Get the offset of the inbox (a.k.a lower limit of the box).
    *
-   * @return Offset of the inbox as a container (const struct std::array<int, 3UL>&).
+   * @return Offset of the inbox as a container (const std::array<int, 3>&).
    */
-  const auto &get_inbox_offset() const;
+  const std::array<int, 3> &get_inbox_offset() const;
 
   /**
    * @brief Get the size of the outbox.
    *
-   * @return Size of the outbox as a container (const struct std::array<int, 3UL>&).
+   * @return Size of the outbox as a container (const std::array<int, 3>&).
    */
-  const auto &get_outbox_size() const;
+  const std::array<int, 3> &get_outbox_size() const;
 
   /**
    * @brief Get the offset of the outbox (a.k.a lower limit of the box).
    *
-   * @return Offset of the outbox as a container (const struct std::array<int, 3UL>&).
+   * @return Offset of the outbox as a container (const std::array<int, 3>&).
    */
-  const auto &get_outbox_offset() const;
+  const std::array<int, 3> &get_outbox_offset() const;
 
   /**
    * @brief Get the reference to the World object.

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "openpfc/core/decomposition.hpp"
+#include "openpfc/backends/heffte_adapter.hpp"
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
@@ -38,18 +39,22 @@ Decomposition::Decomposition(const World &world, MPI_Comm comm)
     : Decomposition(world, get_comm_rank(comm), get_comm_size(comm)) {
 }
 
-const auto &Decomposition::get_inbox_size() const {
+const std::array<int, 3> &Decomposition::get_inbox_size() const {
   return inbox.size;
 }
-const auto &Decomposition::get_inbox_offset() const {
+
+const std::array<int, 3> &Decomposition::get_inbox_offset() const {
   return inbox.low;
 }
-const auto &Decomposition::get_outbox_size() const {
+
+const std::array<int, 3> &Decomposition::get_outbox_size() const {
   return outbox.size;
 }
-const auto &Decomposition::get_outbox_offset() const {
+
+const std::array<int, 3> &Decomposition::get_outbox_offset() const {
   return outbox.low;
 }
+
 const World &Decomposition::get_world() const {
   return m_world;
 }
