@@ -71,14 +71,14 @@ public:
     Vec3<int> high = decomp.inbox.high;
 
     // auto Lx = w.Lx;
-    auto Ly = w.Ly;
-    auto Lz = w.Lz;
-    auto dx = w.dx;
-    auto dy = w.dy;
-    auto dz = w.dz;
-    auto x0 = w.x0;
-    auto y0 = w.y0;
-    auto z0 = w.z0;
+    auto Ly = w.get_size()[1];
+    auto Lz = w.get_size()[2];
+    auto dx = w.get_spacing()[0];
+    auto dy = w.get_spacing()[1];
+    auto dz = w.get_spacing()[2];
+    auto x0 = w.get_origin()[0];
+    auto y0 = w.get_origin()[1];
+    auto z0 = w.get_origin()[2];
 
     std::vector<SeedFCC> seeds;
 
