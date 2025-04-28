@@ -103,12 +103,14 @@ public:
 
   void prepare_operators(double dt) {
     World w = get_world();
-    auto dx = w.dx;
-    auto dy = w.dy;
-    auto dz = w.dz;
-    auto Lx = w.Lx;
-    auto Ly = w.Ly;
-    auto Lz = w.Lz;
+    auto spacing = w.spacing();
+    auto size = w.size();
+    auto dx = spacing[0];
+    auto dy = spacing[1];
+    auto dz = spacing[2];
+    auto Lx = size[0];
+    auto Ly = size[1];
+    auto Lz = size[2];
 
     const Decomposition &decomp = get_decomposition();
     std::array<int, 3> low = decomp.outbox.low;
