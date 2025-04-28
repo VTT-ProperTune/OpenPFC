@@ -14,7 +14,7 @@ using namespace pfc;
 int main(int argc, char **argv) {
   MPI_Worker worker(argc, argv);
   World world({4, 3, 2});
-  Decomposition decomp(world);
+  Decomposition decomp = make_decomposition(world);
   DiscreteField<double, 3> field(decomp);
 
   std::vector<double> arr(2 * 3 * 4);

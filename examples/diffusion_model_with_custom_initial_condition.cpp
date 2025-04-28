@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <openpfc/constants.hpp>
+#include <openpfc/factory/decomposition_factory.hpp>
 #include <openpfc/field_modifier.hpp>
 #include <openpfc/results_writer.hpp>
 #include <openpfc/simulator.hpp>
@@ -91,7 +92,7 @@ void run() {
   Time time(tspan, saveat);
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  Decomposition decomposition(world, comm);
+  Decomposition decomposition = make_decomposition(world, comm);
   auto plan_options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomposition, comm, plan_options, world);
   Diffusion model(world);

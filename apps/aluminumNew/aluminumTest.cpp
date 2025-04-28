@@ -45,7 +45,7 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
   SECTION("Step model and calculate norm of the result") {
     MPI_Worker worker(0, nullptr);
     World world({32, 32, 32});
-    Decomposition decomp(world);
+    Decomposition decomp = make_decomposition(world);
     auto plan_options = heffte::default_options<heffte::backend::fftw>();
     FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
 

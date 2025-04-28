@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   // Create MPI session, World and Decomposition
   MPI_Worker worker(argc, argv);
   World world({4, 3, 2});
-  Decomposition decomp(world);
+  Decomposition decomp = make_decomposition(world);
 
   // Create input field
   DiscreteField<double, 3> input(decomp);

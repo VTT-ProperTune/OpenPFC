@@ -21,6 +21,7 @@
 #include "initial_conditions/seed_grid.hpp"
 #include "initial_conditions/single_seed.hpp"
 #include "mpi.hpp"
+#include "openpfc.hpp"
 #include "simulator.hpp"
 #include "time.hpp"
 #include "utils/timeleft.hpp"
@@ -610,7 +611,7 @@ public:
     World world(ui::from_json<World>(m_settings));
     std::cout << "World: " << world << std::endl;
 
-    Decomposition decomp(world, m_comm);
+    Decomposition decomp = make_decomposition(world, m_comm);
     auto plan_options = ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
     FFT fft(decomp, m_comm, plan_options, world);
     Time time(ui::from_json<Time>(m_settings));

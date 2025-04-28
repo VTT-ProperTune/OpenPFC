@@ -5,6 +5,7 @@
 #include <mpi.h>
 #include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
+#include <openpfc/factory/decomposition_factory.hpp>
 
 using namespace std;
 using namespace pfc;
@@ -39,11 +40,11 @@ int main(int argc, char *argv[]) {
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm, &comm_rank);
   World world2({32, 4, 4});
-  Decomposition decomp2(world2, comm);
+  Decomposition decomp2 = make_decomposition(world2, comm);
   if (comm_rank == 0) cout << decomp2 << endl;
 
   // By default, MPI_COMM_WORLD is used, so the above example can be simplified:
-  cout << Decomposition(world2) << endl;
+  cout << make_decomposition(world2) << endl;
 
   MPI_Finalize();
   return 0;

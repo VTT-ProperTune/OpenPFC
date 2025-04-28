@@ -12,6 +12,7 @@
 #include "core/decomposition.hpp"
 #include "core/world.hpp"
 #include "discrete_field.hpp"
+#include "factory/decomposition_factory.hpp"
 #include "fft.hpp"
 #include "field_modifier.hpp"
 #include "initial_conditions/constant.hpp"

@@ -7,6 +7,7 @@
 
 #include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
+#include <openpfc/factory/decomposition_factory.hpp>
 #include <openpfc/fft.hpp>
 #include <openpfc/model.hpp>
 
@@ -229,7 +230,7 @@ void run() {
 
   // Construct world, decomposition, fft and model
   World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
-  Decomposition decomp(world);
+  Decomposition decomp = make_decomposition(world);
   auto plan_options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
   Diffusion model(world);

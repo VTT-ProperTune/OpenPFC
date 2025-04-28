@@ -6,6 +6,7 @@
 
 #include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
+#include <openpfc/factory/decomposition_factory.hpp>
 #include <openpfc/fft.hpp>
 
 using namespace std;
@@ -112,7 +113,7 @@ int main(int argc, char *argv[]) {
 
   // Construct world, decomposition and fft
   World world({8, 1, 1});
-  Decomposition decomposition(world, comm);
+  Decomposition decomposition = make_decomposition(world, comm);
   auto plan_options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomposition, comm, plan_options, world);
 
