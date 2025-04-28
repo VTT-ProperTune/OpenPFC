@@ -3,7 +3,24 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-project(OpenPFC VERSION 0.1.1 DESCRIPTION "Phase Field Crystal simulation framework")
+project(OpenPFC VERSION 0.2.0 DESCRIPTION "Phase Field Crystal simulation framework")
+
+# Define an option for development mode
+option(OpenPFC_DEVELOPMENT "Enable development build settings" OFF)
+
+if(CMake_DEVELOPMENT)
+  message(STATUS "Development version detected, enabling compile_commands.json export")
+  set(OpenPFC_VERSION_SUFFIX "-dev")
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+else()
+    set(OpenPFC_VERSION_SUFFIX "")
+endif()
+
+# Configure a header file to pass the version number
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/version.h
+)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
@@ -239,6 +256,7 @@ endif()
 
 message(STATUS "-------------------------------------------------------------")
 message(STATUS " 🛠 Build Options:")
+message(STATUS " OpenPFC_DEVELOPMENT              = ${OpenPFC_DEVELOPMENT}")
 message(STATUS " OpenPFC_BUILD_APPS               = ${OpenPFC_BUILD_APPS}")
 message(STATUS " OpenPFC_BUILD_EXAMPLES           = ${OpenPFC_BUILD_EXAMPLES}")
 message(STATUS " OpenPFC_BUILD_TESTS              = ${OpenPFC_BUILD_TESTS}")
