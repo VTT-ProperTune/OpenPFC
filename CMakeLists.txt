@@ -83,8 +83,7 @@ option(BUILD_SHARED_LIBS "Build OpenPFC as a shared library" OFF)
 # Create library
 add_library(OpenPFC
     src/openpfc/core/world.cpp
-    # src/openpfc/core/decomposition.cpp
-    # src/openpfc/core/fft.cpp
+    src/openpfc/core/decomposition.cpp
     # Add more .cpp files as you go
 )
 

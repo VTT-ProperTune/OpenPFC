@@ -4,11 +4,13 @@
 #ifndef PFC_DECOMPOSITION_HPP
 #define PFC_DECOMPOSITION_HPP
 
-#include "openpfc/backends/heffte_adapter.hpp"
 #include "openpfc/core/world.hpp"
+#include <array>
 #include <heffte.h>
-#include <iostream>
 #include <mpi.h>
+#include <ostream>
+#include <stdexcept>
+#include <vector>
 
 namespace pfc {
 
@@ -36,28 +38,19 @@ private:
    * @param comm The MPI communicator.
    * @return The rank of the current process.
    */
-  int get_comm_rank(MPI_Comm comm) {
-    int rank;
-    MPI_Comm_rank(comm, &rank);
-    return rank;
-  }
+  int get_comm_rank(MPI_Comm comm);
 
   /**
    * @brief Get the size of the current MPI communicator.
    * @param comm The MPI communicator.
    * @return The size of the communicator (total number of processes).
    */
-  int get_comm_size(MPI_Comm comm) {
-    int size;
-    MPI_Comm_size(comm, &size);
-    return size;
-  }
+  int get_comm_size(MPI_Comm comm);
 
 public:
   const heffte::box3d<int> inbox, outbox; ///< Local communication boxes.
   const int r2c_direction = 0;            ///< Real-to-complex symmetry direction.
 
-  // clang-format off
   /**
    * @brief Construct a new Decomposition object.
    *
@@ -69,23 +62,7 @@ public:
    * needs to be decomposed into four parts, those would be 0/4, 1/4, 2/4, 3/4
    * and NOT 1/4, 2/4, 3/4, 4/4.
    */
-  Decomposition(const World &world, int rank, int num_domains)
-      : m_world(world),
-        m_rank(rank < num_domains ? rank : throw std::logic_error("Cannot construct domain decomposition: !(rank < nprocs)")),
-        m_num_domains(num_domains),
-        Lx_c(floor(m_world.size()[0] / 2) + 1),
-        Ly_c(m_world.size()[1]),
-        Lz_c(m_world.size()[2]),
-        real_indexes(to_heffte_box(world)), // Use to_heffte_box
-        complex_indexes({0, 0, 0}, {Lx_c - 1, Ly_c - 1, Lz_c - 1}),
-        proc_grid(heffte::proc_setup_min_surface(real_indexes, num_domains)),
-        real_boxes(heffte::split_world(real_indexes, proc_grid)),
-        complex_boxes(heffte::split_world(complex_indexes, proc_grid)),
-        inbox(real_boxes[rank]),
-        outbox(complex_boxes[rank]) {
-    assert(real_indexes.r2c(r2c_direction) == complex_indexes);
-  };
-  // clang-format on
+  Decomposition(const World &world, int rank, int num_domains);
 
   /**
    * @brief Construct a new Decomposition object using MPI communicator. In this
@@ -94,81 +71,69 @@ public:
    * @param world Reference to the World object.
    * @param comm The MPI communicator (default: MPI_COMM_WORLD).
    */
-  Decomposition(const World &world, MPI_Comm comm = MPI_COMM_WORLD)
-      : Decomposition(world, get_comm_rank(comm), get_comm_size(comm)) {}
+  Decomposition(const World &world, MPI_Comm comm = MPI_COMM_WORLD);
 
   /**
    * @brief Get the size of the inbox.
    *
    * @return Size of the inbox as a container (const struct std::array<int, 3UL>&).
    */
-  const auto &get_inbox_size() const { return inbox.size; }
+  const auto &get_inbox_size() const;
 
   /**
    * @brief Get the offset of the inbox (a.k.a lower limit of the box).
    *
    * @return Offset of the inbox as a container (const struct std::array<int, 3UL>&).
    */
-  const auto &get_inbox_offset() const { return inbox.low; }
+  const auto &get_inbox_offset() const;
 
   /**
    * @brief Get the size of the outbox.
    *
    * @return Size of the outbox as a container (const struct std::array<int, 3UL>&).
    */
-  const auto &get_outbox_size() const { return outbox.size; }
+  const auto &get_outbox_size() const;
 
   /**
    * @brief Get the offset of the outbox (a.k.a lower limit of the box).
    *
    * @return Offset of the outbox as a container (const struct std::array<int, 3UL>&).
    */
-  const auto &get_outbox_offset() const { return outbox.low; }
+  const auto &get_outbox_offset() const;
 
   /**
    * @brief Get the reference to the World object.
    *
    * @return Reference to the World object.
    */
-  const World &get_world() const { return m_world; }
+  const World &get_world() const;
 
   /**
    * @brief Get the rank of the current process.
    *
    * @return The rank of the current process.
    */
-  int get_rank() const { return m_rank; }
+  int get_rank() const;
 
   /**
    * @brief Get the total number of sub-domains.
    *
    * @return int
    */
-  int get_num_domains() const { return m_num_domains; }
+  int get_num_domains() const;
 
-  friend std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
-    const World &w = d.get_world();
-    os << "***** DOMAIN DECOMPOSITION STATUS *****\n";
-    os << "Real-to-complex symmetry is used (r2c direction = " << (char)('x' + d.r2c_direction) << ")\n";
-    os << "Domain is split into " << d.get_num_domains() << " parts ";
-    os << "(minimum surface processor grid: [" << d.proc_grid[0] << ", " << d.proc_grid[1] << ", " << d.proc_grid[2]
-       << "])\n";
-    os << "Domain in real space: [" << w.size()[0] << ", " << w.size()[1] << ", " << w.size()[2] << "] ("
-       << d.real_indexes.count() << " indexes)\n";
-    os << "Domain in complex space: [" << d.Lx_c << ", " << d.Ly_c << ", " << d.Lz_c << "] ("
-       << d.complex_indexes.count() << " indexes)\n";
-    for (int i = 0; i < d.get_num_domains(); i++) {
-      const auto &in = d.real_boxes[i];
-      const auto &out = d.complex_boxes[i];
-      os << "Domain " << i + 1 << "/" << d.get_num_domains() << ": ";
-      os << "[" << in.low[0] << ", " << in.low[1] << ", " << in.low[2] << "] x ";
-      os << "[" << in.high[0] << ", " << in.high[1] << ", " << in.high[2] << "] (" << in.count() << " indexes) => ";
-      os << "[" << out.low[0] << ", " << out.low[1] << ", " << out.low[2] << "] x ";
-      os << "[" << out.high[0] << ", " << out.high[1] << ", " << out.high[2] << "] (" << out.count() << " indexes)\n";
-    }
-    return os;
-  }
+  /**
+   * @brief Output stream operator for Decomposition objects.
+   *
+   * Allows printing the state of a Decomposition object to an output stream.
+   *
+   * @param os The output stream to write to.
+   * @param d The Decomposition object to be printed.
+   * @return The updated output stream.
+   */
+  friend std::ostream &operator<<(std::ostream &os, const Decomposition &d);
 };
+
 } // namespace pfc
 
-#endif
+#endif // PFC_DECOMPOSITION_HPP
