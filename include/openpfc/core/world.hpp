@@ -4,7 +4,6 @@
 #ifndef PFC_WORLD_HPP
 #define PFC_WORLD_HPP
 
-#include "openpfc/core/decomposition.hpp"
 #include <array>
 #include <ostream>
 #include <stdexcept>
