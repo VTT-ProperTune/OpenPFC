@@ -73,49 +73,49 @@ public:
    *
    * @return const Box3D& The inbox box.
    */
-  const Box3D &get_inbox() const;
+  const Box3D &get_inbox() const noexcept;
 
   /**
    * @brief Get the outbox box.
    *
    * @return const Box3D& The outbox box.
    */
-  const Box3D &get_outbox() const;
+  const Box3D &get_outbox() const noexcept;
 
   /**
    * @brief Get the size of the inbox.
    *
    * @return Size of the inbox as a container (const std::array<int, 3>&).
    */
-  const Int3 &get_inbox_size() const;
+  const Int3 &get_inbox_size() const noexcept;
 
   /**
    * @brief Get the offset of the inbox (a.k.a lower limit of the box).
    *
    * @return Offset of the inbox as a container (const std::array<int, 3>&).
    */
-  const Int3 &get_inbox_offset() const;
+  const Int3 &get_inbox_offset() const noexcept;
 
   /**
    * @brief Get the size of the outbox.
    *
    * @return Size of the outbox as a container (const std::array<int, 3>&).
    */
-  const Int3 &get_outbox_size() const;
+  const Int3 &get_outbox_size() const noexcept;
 
   /**
    * @brief Get the offset of the outbox (a.k.a lower limit of the box).
    *
    * @return Offset of the outbox as a container (const std::array<int, 3>&).
    */
-  const Int3 &get_outbox_offset() const;
+  const Int3 &get_outbox_offset() const noexcept;
 
   /**
    * @brief Get the reference to the World object.
    *
    * @return Reference to the World object.
    */
-  const World &get_world() const;
+  const World &get_world() const noexcept;
 
   /**
    * @brief Get the rank of the current process.

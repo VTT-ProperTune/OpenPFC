@@ -13,31 +13,31 @@ Decomposition::Decomposition(const World &world, const heffte::box3d<int> &inbox
     : m_world(world), m_inbox(inbox), m_outbox(outbox) {
 }
 
-const Decomposition::Box3D &Decomposition::get_inbox() const {
+const Decomposition::Box3D &Decomposition::get_inbox() const noexcept {
   return m_inbox;
 }
 
-const Decomposition::Box3D &Decomposition::get_outbox() const {
+const Decomposition::Box3D &Decomposition::get_outbox() const noexcept {
   return m_outbox;
 }
 
-const Decomposition::Int3 &Decomposition::get_inbox_size() const {
+const Decomposition::Int3 &Decomposition::get_inbox_size() const noexcept {
   return get_inbox().size;
 }
 
-const Decomposition::Int3 &Decomposition::get_inbox_offset() const {
+const Decomposition::Int3 &Decomposition::get_inbox_offset() const noexcept {
   return get_inbox().low;
 }
 
-const Decomposition::Int3 &Decomposition::get_outbox_size() const {
+const Decomposition::Int3 &Decomposition::get_outbox_size() const noexcept {
   return get_outbox().size;
 }
 
-const Decomposition::Int3 &Decomposition::get_outbox_offset() const {
+const Decomposition::Int3 &Decomposition::get_outbox_offset() const noexcept {
   return get_outbox().low;
 }
 
-const World &Decomposition::get_world() const {
+const World &Decomposition::get_world() const noexcept {
   return m_world;
 }
 
