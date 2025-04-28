@@ -110,6 +110,7 @@
 
         devShells.default = pkgs.mkShell {
           packages = [
+            pkgs.ninja
             pkgs.cmake
             pkgs.git
             pkgs.openmpi
