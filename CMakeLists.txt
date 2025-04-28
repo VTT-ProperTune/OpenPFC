@@ -102,6 +102,7 @@ add_library(OpenPFC
     src/openpfc/core/world.cpp
     src/openpfc/core/box3d.cpp
     src/openpfc/core/decomposition.cpp
+    src/openpfc/factory/decomposition_factory.cpp
     # Add more .cpp files as you go
 )
 

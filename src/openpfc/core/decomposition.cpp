@@ -9,18 +9,6 @@
 
 namespace pfc {
 
-int Decomposition::get_comm_rank(MPI_Comm comm) {
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-  return rank;
-}
-
-int Decomposition::get_comm_size(MPI_Comm comm) {
-  int size;
-  MPI_Comm_size(comm, &size);
-  return size;
-}
-
 Decomposition::Decomposition(const World &world, int rank, int num_domains)
     : m_world(world),
       m_rank(rank < num_domains ? rank
@@ -33,10 +21,6 @@ Decomposition::Decomposition(const World &world, int rank, int num_domains)
       complex_boxes(heffte::split_world(complex_indexes, proc_grid)), inbox(real_boxes[rank]),
       outbox(complex_boxes[rank]) {
   assert(real_indexes.r2c(r2c_direction) == complex_indexes);
-}
-
-Decomposition::Decomposition(const World &world, MPI_Comm comm)
-    : Decomposition(world, get_comm_rank(comm), get_comm_size(comm)) {
 }
 
 const std::array<int, 3> &Decomposition::get_inbox_size() const {

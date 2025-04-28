@@ -7,7 +7,6 @@
 #include "openpfc/core/world.hpp"
 #include <array>
 #include <heffte.h>
-#include <mpi.h>
 #include <ostream>
 #include <stdexcept>
 #include <vector>
@@ -15,13 +14,34 @@
 namespace pfc {
 
 /**
- * @brief Class representing the domain decomposition for parallel Fast Fourier
- * Transform.
+ * @brief Represents a partitioning of the global simulation domain into local
+ * subdomains.
  *
- * The Decomposition class defines the domain decomposition for parallel FFT. It
- * splits the domain into multiple parts based on the number of processors and
- * the grid setup. It provides information about the local domain and
- * communication patterns.
+ * The Decomposition class describes how the World is split among multiple
+ * processes. Each instance provides access to the local subdomain owned by the
+ * current process, including size, offset, and basic mappings between global
+ * and local indices.
+ *
+ *
+ * ## Responsibilities
+ *
+ * - Split the World into non-overlapping local boxes.
+ * - Provide access to local box information.
+ * - Support global-local coordinate mapping.
+ *
+ *
+ * ## Design Justification
+ *
+ * - Keeps World (global domain) and local process view separate.
+ * - Decouples decomposition logic from communication (MPI, FFT backends).
+ * - Enables different decomposition strategies if needed (block, slab, pencil).
+ *
+ *
+ * ## Relations to Other Components
+ *
+ * - Used by Fields and Arrays to allocate local data.
+ * - Used by Communication components to know where data lives.
+ * - Passed to FFT backends as a description of local domains.
  */
 class Decomposition {
 private:
@@ -32,20 +52,6 @@ private:
   const heffte::box3d<int> complex_indexes;                        ///< Index ranges for complex domain.
   const std::array<int, 3> proc_grid;                              ///< Processor grid dimensions.
   const std::vector<heffte::box3d<int>> real_boxes, complex_boxes; ///< Local domain boxes.
-
-  /**
-   * @brief Get the rank of the current MPI communicator.
-   * @param comm The MPI communicator.
-   * @return The rank of the current process.
-   */
-  int get_comm_rank(MPI_Comm comm);
-
-  /**
-   * @brief Get the size of the current MPI communicator.
-   * @param comm The MPI communicator.
-   * @return The size of the communicator (total number of processes).
-   */
-  int get_comm_size(MPI_Comm comm);
 
 public:
   const heffte::box3d<int> inbox, outbox; ///< Local communication boxes.
@@ -63,15 +69,6 @@ public:
    * and NOT 1/4, 2/4, 3/4, 4/4.
    */
   Decomposition(const World &world, int rank, int num_domains);
-
-  /**
-   * @brief Construct a new Decomposition object using MPI communicator. In this
-   * case, the total number of domains equals the communicator size.
-   *
-   * @param world Reference to the World object.
-   * @param comm The MPI communicator (default: MPI_COMM_WORLD).
-   */
-  Decomposition(const World &world, MPI_Comm comm = MPI_COMM_WORLD);
 
   /**
    * @brief Get the size of the inbox.
