@@ -70,7 +70,7 @@ public:
    */
   DiscreteField(const Decomposition &decomp)
       : DiscreteField(decomp.get_inbox_size(), decomp.get_inbox_offset(), decomp.get_world().get_origin(),
-                      decomp.get_world().get_discretization()) {}
+                      decomp.get_world().get_spacing()) {}
 
   const std::array<double, D> &get_origin() const { return m_origin; }
   const std::array<double, D> &get_discretization() const { return m_discretization; }

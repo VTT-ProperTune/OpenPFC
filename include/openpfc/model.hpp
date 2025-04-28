@@ -4,12 +4,13 @@
 #ifndef PFC_MODEL_HPP
 #define PFC_MODEL_HPP
 
-#include <memory>
-
 #include "core/world.hpp"
 #include "decomposition.hpp"
 #include "fft.hpp"
+#include "openpfc/backends/heffte_adapter.hpp"
 #include "types.hpp"
+#include <iostream>
+#include <memory>
 
 namespace pfc {
 
@@ -37,6 +38,8 @@ private:
                                     ///< with the model
   ComplexFieldSet m_complex_fields; ///< Collection of complex-valued fields
                                     ///< associated with the model
+  const World &m_world;             ///< Reference to the World object
+  heffte::box3d<int> domain;        ///< Domain dimensions
 
 public:
   bool rank0 = false; ///< Flag indicating if the current MPI rank is 0 (useful
@@ -44,15 +47,35 @@ public:
 
   /**
    * @brief Construct a new Model object.
+   *
+   * @param world Reference to the World object
    */
-  Model() = default;
+  Model(const World &world) : m_world(world), domain(to_heffte_box(world)) {}
+
+  /**
+   * @brief Destroy the Model object.
+   */
+  ~Model() {}
 
   /**
    * @brief Construct a new Model object.
    *
    * @param fft Reference to the FFT object used by the model
+   * @param world Reference to the World object
    */
-  Model(FFT &fft) : m_fft(&fft), rank0(get_decomposition().get_rank() == 0) {}
+  Model(FFT &fft, const World &world)
+      : m_fft(&fft), m_world(world), domain(to_heffte_box(world)), // Use to_heffte_box
+        rank0(get_decomposition().get_rank() == 0) {}
+
+  /**
+   * @brief Disable copy constructor.
+   */
+  Model(const Model &) = delete;
+
+  /**
+   * @brief Disable copy assignment operator.
+   */
+  Model &operator=(const Model &) = delete;
 
   /**
    * @brief Return boolean flag indicating is this process rank 0.
@@ -73,12 +96,12 @@ public:
    *
    * @return Reference to the World object
    */
-  const World &get_world() { return get_decomposition().get_world(); }
+  const World &get_world() { return m_world; }
 
   /**
-   * @brief Set the fft object
+   * @brief Set the FFT object for the model.
    *
-   * @param fft
+   * @param fft Reference to the FFT object.
    */
   void set_fft(FFT &fft) {
     m_fft = &fft;
@@ -88,13 +111,14 @@ public:
   /**
    * @brief Get the FFT object associated with the model.
    *
-   * @return Reference to the FFT object
+   * @return Reference to the FFT object.
+   * @throws std::runtime_error if the FFT object has not been set.
    */
   FFT &get_fft() {
     if (m_fft == nullptr) {
+      std::cerr << "get_fft called on Model instance: " << this << ". FFT object is not set!" << std::endl;
       throw std::runtime_error("FFT object has not been set.");
     }
-    m_fft->reset_fft_time();
     return *m_fft;
   }
 

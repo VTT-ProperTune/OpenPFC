@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include "openpfc/core/world.hpp"
+#include "openpfc/model.hpp"
 #include <catch2/catch_test_macros.hpp>
+#include <iostream>
 #include <openpfc/simulator.hpp>
 
 using namespace pfc;
@@ -9,8 +12,10 @@ using namespace pfc;
 // Define a mock implementation of the Model class for testing
 class MockModel : public Model {
 public:
-  void step(double) override {}
-  void initialize(double) override {}
+  MockModel(const pfc::World &world) : pfc::Model(world) {}
+
+  void step(double /*t*/) override {}        // Suppress unused parameter warning
+  void initialize(double /*dt*/) override {} // Suppress unused parameter warning
 };
 
 // Define a mock implementation of the FieldModifier class for testing
@@ -22,11 +27,21 @@ public:
   }
 };
 
-TEST_CASE("Simulator functionality", "[Simulator]") {
+TEST_CASE("Simulator functionality", "[simulator]") {
+  World world({8, 8, 8});
+  Decomposition decomp(world, 0, 1);
+  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
+  MockModel model(world);
+
+  model.set_fft(fft);
+
+  // Ensure FFT object is set before proceeding
+  REQUIRE_NOTHROW(model.get_fft());
+
+  // Add and apply initial conditions
   SECTION("Add and apply initial conditions") {
     // Create an instance of the Simulator
     Time time({0.0, 10.0, 1.0}, 1.0);
-    MockModel model;
     Simulator simulator(model, time);
 
     // Add a field called "phi" to the model and fill it with zeros
@@ -52,10 +67,10 @@ TEST_CASE("Simulator functionality", "[Simulator]") {
     REQUIRE(model.get_real_field("phi")[0] == 1.0);
   }
 
+  // Add and apply boundary conditions
   SECTION("Add and apply boundary conditions") {
     // Create an instance of the Simulator
     Time time({0.0, 10.0, 1.0}, 1.0);
-    MockModel model;
     Simulator simulator(model, time);
 
     // Add a field called "phi" to the model and fill it with zeros
@@ -80,4 +95,18 @@ TEST_CASE("Simulator functionality", "[Simulator]") {
     simulator.apply_boundary_conditions();
     REQUIRE(model.get_real_field("phi")[0] == 1.0);
   }
+}
+
+TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
+  World world({8, 8, 8});
+  Decomposition decomp(world, 0, 1);
+  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
+  MockModel model(world);
+
+  model.set_fft(fft);
+
+  // Ensure FFT object is set before proceeding
+  REQUIRE_NOTHROW(model.get_fft());
+
+  REQUIRE(model.get_world().get_size() == World::Int3{8, 8, 8});
 }

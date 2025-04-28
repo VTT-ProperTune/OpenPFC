@@ -5,8 +5,8 @@
 #define PFC_WORLD_HPP
 
 #include <array>
-#include <heffte.h>
-#include <iostream>
+#include <ostream>
+#include <stdexcept>
 
 namespace pfc {
 
@@ -14,98 +14,128 @@ namespace pfc {
  * @brief Represents a world in the simulation domain.
  *
  * The World class encapsulates the dimensions, origin coordinates, and
- * discretization parameters of a simulation world. It provides accessors to
- * retrieve the properties of the world and supports conversion to
- * heffte::box3d<int> for interoperability with the HeFFTe library.
+ * spacing parameters of a simulation world. It provides accessors to
+ * retrieve the properties of the world and utility methods for coordinate
+ * transformations.
  *
  * Example usage:
  * @code
- * // Create a world with dimensions (100, 100, 100)
- * World world({100, 100, 100});
+ * #include "openpfc/core/world.hpp"
+ * #include <iostream>
  *
- * // Print out some information about world
- * std::cout << world << std::endl;
+ * int main() {
+ *     // Create a world with dimensions (100, 100, 100), origin (0.0, 0.0, 0.0), and spacing (1.0, 1.0, 1.0)
+ *     pfc::World::Int3 dimensions = {100, 100, 100};
+ *     pfc::World::Real3 origin = {0.0, 0.0, 0.0};
+ *     pfc::World::Real3 spacing = {1.0, 1.0, 1.0};
+ *     pfc::World world(dimensions, origin, spacing);
+ *
+ *     // Print world properties
+ *     std::cout << world << std::endl;
+ *
+ *     // Get physical coordinates of grid indices {10, 20, 30}
+ *     pfc::World::Real3 coords = world.physical_coordinates({10, 20, 30});
+ *     std::cout << "Physical coordinates: {" << coords[0] << ", " << coords[1] << ", " << coords[2] << "}" <<
+ * std::endl;
+ *
+ *     // Get grid indices for physical coordinates {10.0, 20.0, 30.0}
+ *     pfc::World::Int3 indices = world.grid_indices({10.0, 20.0, 30.0});
+ *     std::cout << "Grid indices: {" << indices[0] << ", " << indices[1] << ", " << indices[2] << "}" << std::endl;
+ *
+ *     return 0;
+ * }
  * @endcode
  */
 class World {
-private:
 public:
-  // TODO: to be moved to private later on
-  const int Lx;    ///< Length in the x-direction
-  const int Ly;    ///< Length in the y-direction
-  const int Lz;    ///< Length in the z-direction
-  const double x0; ///< Origin coordinate in the x-direction
-  const double y0; ///< Origin coordinate in the y-direction
-  const double z0; ///< Origin coordinate in the z-direction
-  const double dx; ///< Discretization parameter in the x-direction
-  const double dy; ///< Discretization parameter in the y-direction
-  const double dz; ///< Discretization parameter in the z-direction
+  /// Type aliases for clarity
+  using Int3 = std::array<int, 3>;
+  using Real3 = std::array<double, 3>;
 
+private:
+  Int3 m_size;     ///< Dimensions of the world: {Lx, Ly, Lz}
+  Real3 m_origin;  ///< Origin coordinates: {x0, y0, z0}
+  Real3 m_spacing; ///< Spacing parameters: {dx, dy, dz}
+
+public:
   /**
    * @brief Constructs a World object with the specified dimensions, origin, and
-   * discretization.
+   * spacing.
    *
    * @param dimensions The dimensions of the world in the form {Lx, Ly, Lz}.
    * @param origin The origin coordinates of the world in the form {x0, y0, z0}.
-   * @param discretization The discretization parameters of the world in the
-   * form {dx, dy, dz}.
+   * @param spacing The spacing parameters of the world in the form {dx, dy, dz}.
    *
-   * @throws std::invalid_argument if any of the dimensions or discretization
+   * @throws std::invalid_argument if any of the dimensions or spacing
    * values are non-positive.
    */
-  World(const std::array<int, 3> &dimensions, const std::array<double, 3> &origin,
-        const std::array<double, 3> &discretization);
+  World(const Int3 &dimensions, const Real3 &origin, const Real3 &spacing);
 
   /**
    * @brief Constructs a World object with the specified dimensions and default
-   * origin and discretization.
+   * origin and spacing.
+   *
+   * Default origin is {0.0, 0.0, 0.0}, and default spacing is {1.0, 1.0, 1.0}.
    *
    * @param dimensions The dimensions of the world in the form {Lx, Ly, Lz}.
    *
    * @throws std::invalid_argument if any of the dimensions are non-positive.
    */
-  World(const std::array<int, 3> &dimensions);
+  World(const Int3 &dimensions);
 
   // Getters for member variables
-  int get_Lx() const;
-  int get_Ly() const;
-  int get_Lz() const;
-  double get_x0() const;
-  double get_y0() const;
-  double get_z0() const;
-  double get_dx() const;
-  double get_dy() const;
-  double get_dz() const;
+  Int3 get_size() const noexcept;
+  Real3 get_origin() const noexcept;
+  Real3 get_spacing() const noexcept;
 
   /**
    * @brief Get the size of the calculation domain.
    * @return The size of the domain: {Lx, Ly, Lz}.
    */
-  std::array<int, 3> get_size() const;
+  Int3 size() const noexcept;
 
   /**
    * @brief Get the origin of the coordinate system
    *
-   * @return std::array<double, 3>
+   * @return Real3
    */
-  std::array<double, 3> get_origin() const;
+  Real3 origin() const noexcept;
 
   /**
-   * @brief Get the discretization of the coordinate system
+   * @brief Get the spacing of the coordinate system
    *
-   * @return std::array<double, 3>
+   * @return Real3
    */
-  std::array<double, 3> get_discretization() const;
+  Real3 spacing() const noexcept;
 
   /**
-   * @brief Conversion operator to heffte::box3d<int>.
+   * @brief Get the number of grid points in each dimension.
    *
-   * Allows implicit conversion of a World object to heffte::box3d<int>.
-   * The resulting box represents the entire world domain.
-   *
-   * @return A heffte::box3d<int> representing the world domain.
+   * @return The number of grid points in each dimension: {Nx, Ny, Nz}.
    */
-  operator heffte::box3d<int>() const;
+  int total_size() const noexcept;
+
+  /**
+   * @brief Computes the physical coordinate corresponding to grid indices {i,j,k}.
+   *
+   * This method calculates the physical coordinates in the simulation domain
+   * based on the grid indices and spacing.
+   *
+   * @param indices The grid indices {i, j, k}.
+   * @return The physical coordinate {x, y, z}.
+   */
+  Real3 physical_coordinates(const Int3 &indices) const noexcept;
+
+  /**
+   * @brief Computes the grid indices corresponding to physical coordinates {x,y,z}.
+   *
+   * This method calculates the grid indices in the simulation domain
+   * based on the physical coordinates and spacing.
+   *
+   * @param coordinates The physical coordinates {x, y, z}.
+   * @return The grid indices {i, j, k}.
+   */
+  Int3 grid_indices(const Real3 &coordinates) const noexcept;
 
   /**
    * @brief Compare this world to other world.
@@ -114,7 +144,16 @@ public:
    * @return true
    * @return false
    */
-  bool operator==(const World &other) const;
+  bool operator==(const World &other) const noexcept;
+
+  /**
+   * @brief Compare this world to other world.
+   *
+   * @param other world
+   * @return true
+   * @return false
+   */
+  bool operator!=(const World &other) const noexcept;
 
   /**
    * @brief Output stream operator for World objects.
@@ -125,7 +164,7 @@ public:
    * @param w The World object to be printed.
    * @return The updated output stream.
    */
-  friend std::ostream &operator<<(std::ostream &os, const World &w);
+  friend std::ostream &operator<<(std::ostream &os, const World &w) noexcept;
 };
 
 } // namespace pfc

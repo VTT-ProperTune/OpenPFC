@@ -5,6 +5,8 @@
 #define PFC_FFT_HPP
 
 #include "decomposition.hpp"
+#include "openpfc/backends/heffte_adapter.hpp" // Ensure this is included for the conversion operator
+#include "openpfc/core/world.hpp"
 
 #include <heffte.h>
 #include <iostream>
@@ -22,20 +24,26 @@ private:
   const heffte::fft3d_r2c<heffte::backend::fftw> m_fft; /**< HeFFTe FFT object. */
   std::vector<std::complex<double>> m_wrk;              /**< Workspace vector for FFT computations. */
   double m_fft_time = 0.0;                              /**< Recorded FFT computation time. */
+  const World &m_world;                                 /**< Reference to the World object. */
+  heffte::box3d<int> domain;                            /**< Domain converted from World object. */
 
 public:
   /**
    * @brief Constructs an FFT object with the given Decomposition and MPI communicator.
    *
    * @param decomposition The Decomposition object defining the domain decomposition.
-   * @param comm The MPI communicator for parallel computations (default: MPI_COMM_WORLD).
-   * @param plan_options Optional plan options for configuring the FFT behavior (default: HeFFTe default options).
+   * @param comm The MPI communicator for parallel computations.
+   * @param plan_options Optional plan options for configuring the FFT behavior.
+   * @param world The World object providing the domain size information.
    */
-  FFT(const Decomposition &decomposition, MPI_Comm comm = MPI_COMM_WORLD,
-      heffte::plan_options plan_options = heffte::default_options<heffte::backend::fftw>())
+  FFT(const Decomposition &decomposition, MPI_Comm comm, heffte::plan_options plan_options, const World &world)
       : m_decomposition(decomposition),
         m_fft({m_decomposition.inbox, m_decomposition.outbox, m_decomposition.r2c_direction, comm, plan_options}),
-        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())){};
+        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())), m_world(world),
+        domain(to_heffte_box(world)){
+            // Use to_heffte_box for conversion
+            // Explicit conversion
+        };
 
   /**
    * @brief Performs the forward FFT transformation.

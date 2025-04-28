@@ -11,6 +11,7 @@ add_executable(openpfc-tests
                test_world.cpp
                test_decomposition.cpp
                test_fft.cpp
+               test_fft_setting.cpp
                test_arraynd.cpp
                test_discrete_field.cpp
                test_field_modifier.cpp

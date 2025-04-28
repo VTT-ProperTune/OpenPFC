@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define CATCH_CONFIG_RUNNER
+#include "openpfc/core/world.hpp"
+#include "openpfc/decomposition.hpp"
+#include "openpfc/fft.hpp"
 #include <catch2/catch_test_macros.hpp> // Updated include for Catch2 v3
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <openpfc/fft.hpp>
@@ -10,9 +13,20 @@
 using namespace Catch::Matchers;
 using namespace pfc;
 
+TEST_CASE("FFT - Basic Functionality", "[fft]") {
+  World world({8, 1, 1});
+  Decomposition decomp(world, 0, 1);
+  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world); // Provide all parameters
+
+  REQUIRE(fft.size_inbox() > 0);
+  REQUIRE(fft.size_outbox() > 0);
+  REQUIRE(fft.size_workspace() > 0);
+}
+
 TEST_CASE("FFT forward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
-  FFT fft(Decomposition(World({8, 1, 1}), 0, 1));
+  FFT fft(Decomposition(World({8, 1, 1}), 0, 1), MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
+          World({8, 1, 1}));
 
   // Generate input data
   std::vector<double> input = {0.000, 0.785, 1.571, 2.356, 3.142, 3.927, 4.712, 5.498};
@@ -27,7 +41,8 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
 
 TEST_CASE("FFT backward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
-  FFT fft(Decomposition(World({2, 1, 1}), 0, 1));
+  FFT fft(Decomposition(World({2, 1, 1}), 0, 1), MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
+          World({2, 1, 1}));
 
   // Generate input data
   std::vector<std::complex<double>> input = {std::complex<double>(1.0, 0.0), std::complex<double>(2.0, 0.0)};

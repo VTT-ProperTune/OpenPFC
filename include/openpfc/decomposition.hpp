@@ -4,7 +4,8 @@
 #ifndef PFC_DECOMPOSITION_HPP
 #define PFC_DECOMPOSITION_HPP
 
-#include "core/world.hpp"
+#include "openpfc/backends/heffte_adapter.hpp"
+#include "openpfc/core/world.hpp"
 #include <heffte.h>
 #include <iostream>
 #include <mpi.h>
@@ -22,10 +23,11 @@ namespace pfc {
  */
 class Decomposition {
 private:
-  const World m_world;                                             ///< The World object.
+  const World &m_world;                                            ///< The World object.
   const int m_rank, m_num_domains;                                 ///< Processor ID and total number of processors.
   const int Lx_c, Ly_c, Lz_c;                                      ///< Dimensions of the complex domain.
-  const heffte::box3d<int> real_indexes, complex_indexes;          ///< Index ranges for real and complex domains.
+  heffte::box3d<int> real_indexes;                                 ///< Index ranges for real domain.
+  const heffte::box3d<int> complex_indexes;                        ///< Index ranges for complex domain.
   const std::array<int, 3> proc_grid;                              ///< Processor grid dimensions.
   const std::vector<heffte::box3d<int>> real_boxes, complex_boxes; ///< Local domain boxes.
 
@@ -64,17 +66,17 @@ public:
    * @param num_procs The total number of domains.
    *
    * Numbering ranks starts from 0 (MPI convention). For example, if the domain
-   * needs to be decomposed into four parts, thouse would be 0/4, 1/4, 2/4, 3/4
+   * needs to be decomposed into four parts, those would be 0/4, 1/4, 2/4, 3/4
    * and NOT 1/4, 2/4, 3/4, 4/4.
    */
   Decomposition(const World &world, int rank, int num_domains)
       : m_world(world),
         m_rank(rank < num_domains ? rank : throw std::logic_error("Cannot construct domain decomposition: !(rank < nprocs)")),
         m_num_domains(num_domains),
-        Lx_c(floor(m_world.Lx / 2) + 1),
-        Ly_c(m_world.Ly),
-        Lz_c(m_world.Lz),
-        real_indexes(m_world),
+        Lx_c(floor(m_world.size()[0] / 2) + 1),
+        Ly_c(m_world.size()[1]),
+        Lz_c(m_world.size()[2]),
+        real_indexes(to_heffte_box(world)), // Use to_heffte_box
         complex_indexes({0, 0, 0}, {Lx_c - 1, Ly_c - 1, Lz_c - 1}),
         proc_grid(heffte::proc_setup_min_surface(real_indexes, num_domains)),
         real_boxes(heffte::split_world(real_indexes, proc_grid)),
@@ -87,7 +89,7 @@ public:
 
   /**
    * @brief Construct a new Decomposition object using MPI communicator. In this
-   * case, the total number of domains equals to the communicator size.
+   * case, the total number of domains equals the communicator size.
    *
    * @param world Reference to the World object.
    * @param comm The MPI communicator (default: MPI_COMM_WORLD).
@@ -151,8 +153,8 @@ public:
     os << "Domain is split into " << d.get_num_domains() << " parts ";
     os << "(minimum surface processor grid: [" << d.proc_grid[0] << ", " << d.proc_grid[1] << ", " << d.proc_grid[2]
        << "])\n";
-    os << "Domain in real space: [" << w.Lx << ", " << w.Ly << ", " << w.Lz << "] (" << d.real_indexes.count()
-       << " indexes)\n";
+    os << "Domain in real space: [" << w.size()[0] << ", " << w.size()[1] << ", " << w.size()[2] << "] ("
+       << d.real_indexes.count() << " indexes)\n";
     os << "Domain in complex space: [" << d.Lx_c << ", " << d.Ly_c << ", " << d.Lz_c << "] ("
        << d.complex_indexes.count() << " indexes)\n";
     for (int i = 0; i < d.get_num_domains(); i++) {

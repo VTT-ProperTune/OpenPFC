@@ -3,6 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <sstream> // Include this for std::ostringstream
 
 #include "openpfc/core/world.hpp"
 
@@ -10,87 +11,108 @@ using namespace Catch::Matchers;
 using namespace pfc;
 
 TEST_CASE("World - Construction and Accessors", "[world]") {
-  // Test case for World construction and accessors
+  SECTION("Construct World with valid dimensions, origin, and spacing") {
+    World::Int3 dimensions = {100, 200, 300};
+    World::Real3 origin = {1.0, 2.0, 3.0};
+    World::Real3 spacing = {0.1, 0.2, 0.3};
 
-  SECTION("Construct World with dimensions, origin, and discretization") {
-    std::array<int, 3> dimensions = {100, 200, 300};
-    std::array<double, 3> origin = {1.0, 2.0, 3.0};
-    std::array<double, 3> discretization = {0.1, 0.2, 0.3};
+    World world(dimensions, origin, spacing);
 
-    World world(dimensions, origin, discretization);
-
-    // Check the dimensions
-    REQUIRE(world.get_Lx() == dimensions[0]);
-    REQUIRE(world.get_Ly() == dimensions[1]);
-    REQUIRE(world.get_Lz() == dimensions[2]);
-
-    // Check the origin coordinates
-    REQUIRE(world.get_x0() == origin[0]);
-    REQUIRE(world.get_y0() == origin[1]);
-    REQUIRE(world.get_z0() == origin[2]);
-
-    // Check the discretization parameters
-    REQUIRE(world.get_dx() == discretization[0]);
-    REQUIRE(world.get_dy() == discretization[1]);
-    REQUIRE(world.get_dz() == discretization[2]);
-
-    // Check the size
-    std::array<int, 3> size = world.get_size();
-    REQUIRE(size == dimensions);
+    REQUIRE(world.get_size() == dimensions);
+    REQUIRE(world.get_origin() == origin);
+    REQUIRE(world.get_spacing() == spacing);
   }
 
-  SECTION("Construct World with dimensions (default origin and discretization)") {
-    std::array<int, 3> dimensions = {100, 200, 300};
+  SECTION("Construct World with default origin and spacing") {
+    World::Int3 dimensions = {100, 200, 300};
     World world(dimensions);
 
-    // Check the dimensions
-    REQUIRE(world.get_Lx() == dimensions[0]);
-    REQUIRE(world.get_Ly() == dimensions[1]);
-    REQUIRE(world.get_Lz() == dimensions[2]);
+    REQUIRE(world.get_size() == dimensions);
+    REQUIRE(world.get_origin() == World::Real3{0.0, 0.0, 0.0});
+    REQUIRE(world.get_spacing() == World::Real3{1.0, 1.0, 1.0});
+  }
 
-    // Check the default origin coordinates (0.0, 0.0, 0.0)
-    REQUIRE_THAT(world.get_x0(), WithinAbs(0.0, 0.00001));
-    REQUIRE_THAT(world.get_y0(), WithinAbs(0.0, 0.00001));
-    REQUIRE_THAT(world.get_z0(), WithinAbs(0.0, 0.00001));
+  SECTION("Invalid dimensions throw exception") {
+    REQUIRE_THROWS_AS(World({-1, 100, 100}), std::invalid_argument);
+    REQUIRE_THROWS_AS(World({0, 100, 100}), std::invalid_argument);
+  }
 
-    // Check the default discretization parameters (1.0, 1.0, 1.0)
-    REQUIRE_THAT(world.get_dx(), WithinAbs(1.0, 0.00001));
-    REQUIRE_THAT(world.get_dy(), WithinAbs(1.0, 0.00001));
-    REQUIRE_THAT(world.get_dz(), WithinAbs(1.0, 0.00001));
-
-    // Check the size
-    std::array<int, 3> size = world.get_size();
-    REQUIRE(size == dimensions);
+  SECTION("Invalid spacing throws exception") {
+    REQUIRE_THROWS_AS(World({100, 100, 100}, {0.0, 0.0, 0.0}, {-1.0, 1.0, 1.0}), std::invalid_argument);
+    REQUIRE_THROWS_AS(World({100, 100, 100}, {0.0, 0.0, 0.0}, {0.0, 1.0, 1.0}), std::invalid_argument);
   }
 }
 
-TEST_CASE("World - Conversion to heffte::box3d<int>", "[world]") {
-  // Test case for World conversion to heffte::box3d<int>
+TEST_CASE("World - Coordinate Transformations", "[world]") {
+  World::Int3 dimensions = {100, 100, 100};
+  World::Real3 origin = {0.0, 0.0, 0.0};
+  World::Real3 spacing = {1.0, 1.0, 1.0};
+  World world(dimensions, origin, spacing);
 
-  std::array<int, 3> dimensions = {100, 200, 300};
-  World world(dimensions);
+  SECTION("Physical coordinates from grid indices") {
+    World::Int3 indices = {10, 20, 30};
+    World::Real3 expected_coords = {10.0, 20.0, 30.0};
+    REQUIRE(world.physical_coordinates(indices) == expected_coords);
+  }
 
-  SECTION("Conversion to heffte::box3d<int>") {
-    heffte::box3d<int> box = world;
+  SECTION("Grid indices from physical coordinates") {
+    World::Real3 coords = {10.0, 20.0, 30.0};
+    World::Int3 expected_indices = {10, 20, 30};
+    REQUIRE(world.grid_indices(coords) == expected_indices);
+  }
 
-    // Check the box dimensions
-    REQUIRE(box.size[0] == dimensions[0]);
-    REQUIRE(box.size[1] == dimensions[1]);
-    REQUIRE(box.size[2] == dimensions[2]);
+  SECTION("Out-of-bounds physical coordinates") {
+    World::Real3 coords = {-1.0, -1.0, -1.0};
+    World::Int3 indices = world.grid_indices(coords);
+    REQUIRE(indices[0] < 0);
+    REQUIRE(indices[1] < 0);
+    REQUIRE(indices[2] < 0);
+  }
+
+  SECTION("Non-integer grid indices") {
+    World::Real3 coords = {10.5, 20.5, 30.5};
+    World::Int3 indices = world.grid_indices(coords);
+    REQUIRE(indices == World::Int3{10, 20, 30});
   }
 }
 
-TEST_CASE("World - Invalid Construction", "[world]") {
-  // Test case for invalid World construction
+TEST_CASE("World - Total Size", "[world]") {
+  SECTION("Correct total size calculation") {
+    World::Int3 dimensions = {10, 20, 30};
+    World world(dimensions);
+    REQUIRE(world.total_size() == 10 * 20 * 30);
+  }
+}
 
-  SECTION("Construct World with invalid dimensions") {
-    std::array<int, 3> dimensions = {-100, 200, 300};
-    REQUIRE_THROWS_AS(pfc::World(dimensions), std::invalid_argument);
+TEST_CASE("World - Equality and Inequality Operators", "[world]") {
+  World::Int3 dimensions = {100, 100, 100};
+  World::Real3 origin = {0.0, 0.0, 0.0};
+  World::Real3 spacing = {1.0, 1.0, 1.0};
+
+  World world1(dimensions, origin, spacing);
+  World world2(dimensions, origin, spacing);
+  World world3({200, 100, 100}, origin, spacing);
+
+  SECTION("Equality operator") {
+    REQUIRE(world1 == world2);
+    REQUIRE_FALSE(world1 == world3);
   }
 
-  SECTION("Construct World with invalid discretization") {
-    std::array<int, 3> dimensions = {100, 200, 300};
-    std::array<double, 3> discretization = {0.1, 0.2, -0.3};
-    REQUIRE_THROWS_AS(World(dimensions, {}, discretization), std::invalid_argument);
+  SECTION("Inequality operator") {
+    REQUIRE(world1 != world3);
+    REQUIRE_FALSE(world1 != world2);
   }
+}
+
+TEST_CASE("World - Output Stream", "[world]") {
+  World::Int3 dimensions = {100, 200, 300};
+  World::Real3 origin = {1.0, 2.0, 3.0};
+  World::Real3 spacing = {0.1, 0.2, 0.3};
+  World world(dimensions, origin, spacing);
+
+  std::ostringstream oss;
+  oss << world;
+
+  std::string expected_output = "(size = {100, 200, 300}, origin = {1.00, 2.00, 3.00}, spacing = {0.10, 0.20, 0.30})";
+  REQUIRE(oss.str() == expected_output);
 }
