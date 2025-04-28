@@ -39,10 +39,12 @@ int main() {
 
   // Retrieve world properties
   cout << "World properties:" << endl;
-  cout << "Dimensions: " << world.get_Lx() << " x " << world.get_Ly() << " x " << world.get_Lz() << endl;
-  cout << "Origin: (" << world.get_x0() << ", " << world.get_y0() << ", " << world.get_z0() << ")" << endl;
-  cout << "Discretization: dx = " << world.get_dx() << ", dy = " << world.get_dy() << ", dz = " << world.get_dz()
-       << endl;
+  auto size = world.size();
+  cout << "Dimensions: " << size[0] << " x " << size[1] << " x " << size[2] << endl;
+  auto world_origin = world.origin();
+  cout << "Origin: (" << world_origin[0] << ", " << world_origin[1] << ", " << world_origin[2] << ")" << endl;
+  auto spacing = world.spacing();
+  cout << "Spacing: dx = " << spacing[0] << ", dy = " << spacing[1] << ", dz = " << spacing[2] << endl;
 
   // Simpler way:
   cout << world << endl;

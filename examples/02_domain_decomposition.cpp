@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <mpi.h>
+#include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
-#include <openpfc/decomposition.hpp>
 
 using namespace std;
 using namespace pfc;

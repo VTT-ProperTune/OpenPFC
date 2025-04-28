@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   writer.set_field_name("density");
   writer.set_domain(world.get_size(), field.get_size(), field.get_offset());
   writer.set_origin(world.get_origin());
-  writer.set_spacing(world.get_discretization());
+  writer.set_spacing(world.spacing());
   std::cout << "Writing results to file: " << writer.get_uri() << "\n";
   writer.initialize();
   writer.write(field.get_array().get_data());

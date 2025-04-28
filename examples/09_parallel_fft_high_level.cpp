@@ -35,8 +35,9 @@ int main(int argc, char *argv[]) {
   // Array<double, 3> output2(decomp);
   // std::cout << output2 << std::endl; // this is {4, 3, 2}
 
-  // Create FFT object and perform parallel FFT
-  FFT fft(decomp);
+  auto plan_options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
+
   fft.forward(input, output);
 
   // Display results

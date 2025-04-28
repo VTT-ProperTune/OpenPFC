@@ -5,8 +5,8 @@
 #include <iostream>
 #include <limits>
 
+#include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
-#include <openpfc/decomposition.hpp>
 #include <openpfc/fft.hpp>
 #include <openpfc/model.hpp>
 
@@ -125,9 +125,11 @@ public:
     for (int k = i_low[2]; k <= i_high[2]; k++) {
       for (int j = i_low[1]; j <= i_high[1]; j++) {
         for (int i = i_low[0]; i <= i_high[0]; i++) {
-          double x = w.x0 + i * w.dx;
-          double y = w.y0 + j * w.dy;
-          double z = w.z0 + k * w.dz;
+          auto origin = w.origin();
+          auto spacing = w.spacing();
+          double x = origin[0] + i * spacing[0];
+          double y = origin[1] + j * spacing[1];
+          double z = origin[2] + k * spacing[2];
           psi[idx] = exp(-(x * x + y * y + z * z) / (4.0 * D));
           idx += 1;
         }
@@ -141,16 +143,17 @@ public:
     if (rank0) cout << "Prepare operators" << endl;
     idx = 0;
     double pi = std::atan(1.0) * 4.0;
-    double fx = 2.0 * pi / (w.dx * w.Lx);
-    double fy = 2.0 * pi / (w.dy * w.Ly);
-    double fz = 2.0 * pi / (w.dz * w.Lz);
+    auto spacing = w.spacing();
+    auto size = w.size();
+    double fx = 2.0 * pi / (spacing[0] * size[0]);
+    double fy = 2.0 * pi / (spacing[1] * size[1]);
+    double fz = 2.0 * pi / (spacing[2] * size[2]);
     for (int k = o_low[2]; k <= o_high[2]; k++) {
       for (int j = o_low[1]; j <= o_high[1]; j++) {
         for (int i = o_low[0]; i <= o_high[0]; i++) {
-          // Laplacian operator -k^2
-          double ki = (i <= w.Lx / 2) ? i * fx : (i - w.Lx) * fx;
-          double kj = (j <= w.Ly / 2) ? j * fy : (j - w.Ly) * fy;
-          double kk = (k <= w.Lz / 2) ? k * fz : (k - w.Lz) * fz;
+          double ki = (i <= size[0] / 2) ? i * fx : (i - size[0]) * fx;
+          double kj = (j <= size[1] / 2) ? j * fy : (j - size[1]) * fy;
+          double kk = (k <= size[2] / 2) ? k * fz : (k - size[2]) * fz;
           double kLap = -(ki * ki + kj * kj + kk * kk);
           opL[idx++] = 1.0 / (1.0 - dt * kLap);
         }
@@ -227,8 +230,9 @@ void run() {
   // Construct world, decomposition, fft and model
   World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
   Decomposition decomp(world);
-  FFT fft(decomp);
-  Diffusion model(fft);
+  auto plan_options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
+  Diffusion model(world);
 
   // Define time
   double t = 0.0;

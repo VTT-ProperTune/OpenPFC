@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
+#include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
-#include <openpfc/decomposition.hpp>
 #include <openpfc/discrete_field.hpp>
 #include <openpfc/utils.hpp>
 
@@ -48,14 +48,21 @@ int main() {
   Decomposition decomp3(world, 2, 4);
   Decomposition decomp4(world, 3, 4);
   std::cout << decomp1 << std::endl;
-  DiscreteField<double, 3> field1(decomp1.get_inbox_size(), decomp1.get_inbox_offset(), world.get_origin(),
-                                  world.get_discretization());
-  DiscreteField<double, 3> field2(decomp2.get_inbox_size(), decomp2.get_inbox_offset(), world.get_origin(),
-                                  world.get_discretization());
-  DiscreteField<double, 3> field3(decomp3.get_inbox_size(), decomp3.get_inbox_offset(), world.get_origin(),
-                                  world.get_discretization());
-  DiscreteField<double, 3> field4(decomp4.get_inbox_size(), decomp4.get_inbox_offset(), world.get_origin(),
-                                  world.get_discretization());
+  const std::array<int, 3> &inbox_size1 = decomp1.get_inbox_size();
+  const std::array<int, 3> &inbox_offset1 = decomp1.get_inbox_offset();
+  DiscreteField<double, 3> field1(inbox_size1, inbox_offset1, world.origin(), world.spacing());
+
+  const std::array<int, 3> &inbox_size2 = decomp2.get_inbox_size();
+  const std::array<int, 3> &inbox_offset2 = decomp2.get_inbox_offset();
+  DiscreteField<double, 3> field2(inbox_size2, inbox_offset2, world.origin(), world.spacing());
+
+  const std::array<int, 3> &inbox_size3 = decomp3.get_inbox_size();
+  const std::array<int, 3> &inbox_offset3 = decomp3.get_inbox_offset();
+  DiscreteField<double, 3> field3(inbox_size3, inbox_offset3, world.origin(), world.spacing());
+
+  const std::array<int, 3> &inbox_size4 = decomp4.get_inbox_size();
+  const std::array<int, 3> &inbox_offset4 = decomp4.get_inbox_offset();
+  DiscreteField<double, 3> field4(inbox_size4, inbox_offset4, world.origin(), world.spacing());
   std::cout << field1 << std::endl;
   std::cout << field2 << std::endl;
   std::cout << field3 << std::endl;

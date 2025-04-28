@@ -19,6 +19,15 @@ private:
   double D = 1.0;                              // Diffusion coefficient
 
 public:
+  /**
+   * @brief Constructs a CahnHilliard instance with the given World object.
+   *
+   * @param world The World object to initialize the model.
+   */
+  explicit CahnHilliard(const World &world) : Model(world) {
+    // Additional initialization if needed
+  }
+
   void initialize(double dt) override {
     FFT &fft = get_fft();
     const Decomposition &decomp = get_decomposition();
@@ -37,16 +46,17 @@ public:
     std::array<int, 3> o_high = decomp.outbox.high;
     size_t idx = 0;
     double pi = std::atan(1.0) * 4.0;
-    double fx = 2.0 * pi / (w.dx * w.Lx);
-    double fy = 2.0 * pi / (w.dy * w.Ly);
-    double fz = 2.0 * pi / (w.dz * w.Lz);
+    auto spacing = w.spacing();
+    auto size = w.size();
+    double fx = 2.0 * pi / (spacing[0] * size[0]);
+    double fy = 2.0 * pi / (spacing[1] * size[1]);
+    double fz = 2.0 * pi / (spacing[2] * size[2]);
     for (int k = o_low[2]; k <= o_high[2]; k++) {
       for (int j = o_low[1]; j <= o_high[1]; j++) {
         for (int i = o_low[0]; i <= o_high[0]; i++) {
-          // Laplacian operator -k^2
-          double ki = (i <= w.Lx / 2) ? i * fx : (i - w.Lx) * fx;
-          double kj = (j <= w.Ly / 2) ? j * fy : (j - w.Ly) * fy;
-          double kk = (k <= w.Lz / 2) ? k * fz : (k - w.Lz) * fz;
+          double ki = (i <= size[0] / 2) ? i * fx : (i - size[0]) * fx;
+          double kj = (j <= size[1] / 2) ? j * fy : (j - size[1]) * fy;
+          double kk = (k <= size[2] / 2) ? k * fz : (k - size[2]) * fz;
           double kLap = -(ki * ki + kj * kj + kk * kk);
           double L = kLap * (-D - D * gamma * kLap);
           opL[idx] = std::exp(L * dt);
@@ -104,8 +114,9 @@ int main(int argc, char **argv) {
   // Construct world, decomposition, fft and model
   World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
   Decomposition decomp(world);
-  FFT fft(decomp);
-  CahnHilliard model;
+  auto plan_options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
+  CahnHilliard model(world);
   model.set_fft(fft);
 
   // Define time
@@ -129,9 +140,9 @@ int main(int argc, char **argv) {
   // set uri as format cahn_hilliard_%04i.vti, where %04i is replaced by file_count
   writer.set_uri(sprintf("cahn_hilliard_%04i.vti", file_count));
   writer.set_field_name("concentration");
-  writer.set_domain(world.get_size(), decomp.get_inbox_size(), decomp.get_inbox_offset());
-  writer.set_origin(world.get_origin());
-  writer.set_spacing(world.get_discretization());
+  writer.set_domain(world.size(), decomp.get_inbox_size(), decomp.get_inbox_offset());
+  writer.set_origin(world.origin());
+  writer.set_spacing(world.spacing());
   writer.initialize();
   writer.write(field);
 

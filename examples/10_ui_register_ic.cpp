@@ -40,6 +40,15 @@ void from_json(const json &params, MyIC &ic) {
 // Define model
 class MyModel : public Model {
 public:
+  /**
+   * @brief Constructs a MyModel instance with the given World object.
+   *
+   * @param world The World object to initialize the model.
+   */
+  explicit MyModel(const World &world) : Model(world) {
+    // Additional initialization if needed
+  }
+
   void initialize(double) override { std::cout << "initialize()" << std::endl; }
   void step(double) override { std::cout << "MyModel.step()" << std::endl; }
 };

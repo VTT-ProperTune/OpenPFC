@@ -4,8 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
-#include <openpfc/decomposition.hpp>
 #include <openpfc/fft.hpp>
 
 using namespace std;
@@ -113,7 +113,8 @@ int main(int argc, char *argv[]) {
   // Construct world, decomposition and fft
   World world({8, 1, 1});
   Decomposition decomposition(world, comm);
-  FFT fft(decomposition, comm);
+  auto plan_options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomposition, comm, plan_options, world);
 
   // Create two vectors; in contains input data and results are stored to out
   vector<double> in(fft.size_inbox());
