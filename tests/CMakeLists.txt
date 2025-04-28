@@ -8,6 +8,7 @@ find_package(Catch2 REQUIRED)
 add_executable(openpfc-tests
                runtests.cpp
                test_world.cpp
+               test_box3d.cpp
                test_decomposition.cpp
                test_fft.cpp
                test_fft_setting.cpp
