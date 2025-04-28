@@ -11,38 +11,53 @@
 namespace pfc {
 
 /**
- * @brief Represents a world in the simulation domain.
+ * @brief Represents the global simulation domain (the "world").
  *
- * The World class encapsulates the dimensions, origin coordinates, and
- * spacing parameters of a simulation world. It provides accessors to
- * retrieve the properties of the world and utility methods for coordinate
- * transformations.
+ * The World class defines the *size*, *origin*, and *grid spacing* of the
+ * global simulation domain. It provides an abstraction for physical (x, y, z)
+ * space and the corresponding (i, j, k) grid indices.
  *
- * Example usage:
+ *
+ * ## Responsibilities
+ *
+ * - Encapsulates the *geometric* description of the global domain.
+ * - Provides basic *coordinate transformations* between grid indices and
+ *   physical coordinates.
+ * - Ensures that domain sizes and spacings are valid (positive, consistent).
+ *
+ *
+ * ## Design Justification
+ *
+ * - Decouples physical space information from other components (fields,
+ *   solvers, decomposition).
+ * - Allows flexible handling of different domain sizes, resolutions, and
+ *   coordinate systems.
+ * - Keeps simulation setup and post-processing simpler by clearly defining the
+ *   world geometry.
+ *
+ *
+ * ## Relations to Other Components
+ *
+ * - Used by Decomposition to partition the domain across processes.
+ * - Used by ArrayND to associate data with physical coordinates.
+ *
+ *
+ * ## Example usage
+ *
  * @code
  * #include "openpfc/core/world.hpp"
  * #include <iostream>
  *
  * int main() {
- *     // Create a world with dimensions (100, 100, 100), origin (0.0, 0.0, 0.0), and spacing (1.0, 1.0, 1.0)
  *     pfc::World::Int3 dimensions = {100, 100, 100};
  *     pfc::World::Real3 origin = {0.0, 0.0, 0.0};
  *     pfc::World::Real3 spacing = {1.0, 1.0, 1.0};
  *     pfc::World world(dimensions, origin, spacing);
  *
- *     // Print world properties
+ *     auto coords = world.physical_coordinates({10, 20, 30});
+ *     auto indices = world.grid_indices({10.0, 20.0, 30.0});
+ *
  *     std::cout << world << std::endl;
- *
- *     // Get physical coordinates of grid indices {10, 20, 30}
- *     pfc::World::Real3 coords = world.physical_coordinates({10, 20, 30});
- *     std::cout << "Physical coordinates: {" << coords[0] << ", " << coords[1] << ", " << coords[2] << "}" <<
- * std::endl;
- *
- *     // Get grid indices for physical coordinates {10.0, 20.0, 30.0}
- *     pfc::World::Int3 indices = world.grid_indices({10.0, 20.0, 30.0});
- *     std::cout << "Grid indices: {" << indices[0] << ", " << indices[1] << ", " << indices[2] << "}" << std::endl;
- *
- *     return 0;
  * }
  * @endcode
  */
