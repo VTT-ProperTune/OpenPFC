@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include "openpfc/core/decomposition.hpp"
 #include "openpfc/core/world.hpp"
-#include "openpfc/decomposition.hpp"
 #include "openpfc/fft.hpp"
 #include "openpfc/model.hpp"
+// #include "openpfc/openpfc.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <iostream> // For debugging output
 
