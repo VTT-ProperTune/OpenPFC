@@ -161,12 +161,14 @@ public:
 
   void prepare_operators(double dt) {
     World w = get_world();
-    auto dx = w.dx;
-    auto dy = w.dy;
-    auto dz = w.dz;
-    auto Lx = w.Lx;
-    auto Ly = w.Ly;
-    auto Lz = w.Lz;
+    auto spacing = w.spacing();
+    auto size = w.size();
+    auto dx = spacing[0];
+    auto dy = spacing[1];
+    auto dz = spacing[2];
+    auto Lx = size[0];
+    auto Ly = size[1];
+    auto Lz = size[2];
 
     const Decomposition &decomp = get_decomposition();
     std::array<int, 3> low = decomp.outbox.low;
@@ -234,9 +236,9 @@ public:
 
     FFT &fft = get_fft();
     World w = get_world();
-    double dx = w.dx;
-    double x0 = w.x0;
-    int Lx = w.Lx;
+    double dx = w.spacing()[0];
+    double x0 = w.origin()[0];
+    int Lx = w.size()[0];
     const Decomposition &decomp = get_decomposition();
     std::array<int, 3> low = decomp.inbox.low;
     std::array<int, 3> high = decomp.inbox.high;
@@ -299,6 +301,15 @@ public:
 
     // Inverse Fourier transform result back to real space
     fft.backward(psi_F, psi);
+  }
+
+  /**
+   * @brief Constructs an Aluminum model with the given World object.
+   *
+   * @param world The World object to initialize the model.
+   */
+  explicit Aluminum(const World &world) : Model(world) {
+    // Additional initialization if needed
   }
 
 }; // end of class
