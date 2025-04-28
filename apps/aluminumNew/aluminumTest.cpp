@@ -46,9 +46,10 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
     MPI_Worker worker(0, nullptr);
     World world({32, 32, 32});
     Decomposition decomp(world);
-    FFT fft(decomp);
+    auto plan_options = heffte::default_options<heffte::backend::fftw>();
+    FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
 
-    Aluminum aluminum;
+    Aluminum aluminum(world);
     aluminum.set_n0(-0.0060);
     aluminum.set_alpha(0.20);
     aluminum.set_n_sol(-0.036);
