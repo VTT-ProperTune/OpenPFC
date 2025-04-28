@@ -33,12 +33,16 @@ public:
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
 
-    double xpos = w.Lx * w.dx - xwidth;
+    double Lx = w.size()[0];
+    double dx = w.spacing()[0];
+    double x0 = w.origin()[0];
+
+    double xpos = Lx * dx - xwidth;
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
-          double x = w.x0 + i * w.dx;
+          double x = x0 + i * dx;
           if (std::abs(x - xpos) < xwidth) {
             double S = 1.0 / (1.0 + exp(-alpha * (x - xpos)));
             field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);

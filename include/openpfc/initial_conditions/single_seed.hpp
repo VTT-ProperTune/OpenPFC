@@ -24,12 +24,16 @@ public:
     Field &f = m.get_real_field(get_field_name());
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
-    auto dx = w.dx;
-    auto dy = w.dy;
-    auto dz = w.dz;
-    auto x0 = w.x0;
-    auto y0 = w.y0;
-    auto z0 = w.z0;
+
+    // Use the new World API to get spacing and origin
+    auto spacing = w.spacing();
+    auto origin = w.origin();
+    auto dx = spacing[0];
+    auto dy = spacing[1];
+    auto dz = spacing[2];
+    auto x0 = origin[0];
+    auto y0 = origin[1];
+    auto z0 = origin[2];
 
     double s = 1.0 / sqrt(2.0);
     std::array<double, 3> q1 = {s, s, 0};
@@ -41,7 +45,6 @@ public:
     std::array<std::array<double, 3>, 6> q = {q1, q2, q3, q4, q5, q6};
 
     long int idx = 0;
-    // double r2 = pow(0.2 * (Lx * dx), 2);
     double r2 = pow(64.0, 2);
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {

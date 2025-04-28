@@ -59,7 +59,9 @@ public:
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
 
-    auto Lx = w.Lx;
+    auto Lx = w.size()[0];
+    auto dx = w.spacing()[0];
+    auto x0 = w.origin()[0];
 
     if (m_first) {
       xline.resize(Lx);
@@ -84,13 +86,13 @@ public:
           }
         }
       } else {
-        while (global_xline[m_idx % w.Lx] > m_threshold) {
+        while (global_xline[m_idx % Lx] > m_threshold) {
           m_idx += 1;
         }
       }
     }
 
-    double new_xpos = w.x0 + m_idx * w.dx + m_disp;
+    double new_xpos = x0 + m_idx * dx + m_disp;
     if (new_xpos > m_xpos) {
       m_xpos = new_xpos;
     }
@@ -111,7 +113,13 @@ public:
     const World &w = m.get_world();
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
-    double l = w.Lx * w.dx;
+
+    // Use the new World API to get size, spacing, and origin
+    auto Lx = w.size()[0];
+    auto dx = w.spacing()[0];
+    auto x0 = w.origin()[0];
+
+    double l = Lx * dx;
     double xpos = fmod(m_xpos, l);
     double xwidth = m_xwidth;
     double alpha = m_alpha;
@@ -120,7 +128,7 @@ public:
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
-          double x = w.x0 + i * w.dx;
+          double x = x0 + i * dx;
           double dist = x - xpos;
           if (std::abs(dist) < xwidth) {
             double S = 1.0 / (1.0 + exp(-alpha * dist));

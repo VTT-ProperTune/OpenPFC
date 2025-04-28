@@ -47,15 +47,18 @@ public:
     Vec3<int> low = decomp.inbox.low;
     Vec3<int> high = decomp.inbox.high;
 
-    // auto Lx = w.Lx;
-    auto Ly = w.Ly;
-    auto Lz = w.Lz;
-    auto dx = w.dx;
-    auto dy = w.dy;
-    auto dz = w.dz;
-    auto x0 = w.x0;
-    auto y0 = w.y0;
-    auto z0 = w.z0;
+    // Use the new World API to get size, spacing, and origin
+    auto size = w.size();
+    auto spacing = w.spacing();
+    auto origin = w.origin();
+    auto Ly = size[1];
+    auto Lz = size[2];
+    auto dx = spacing[0];
+    auto dy = spacing[1];
+    auto dz = spacing[2];
+    auto x0 = origin[0];
+    auto y0 = origin[1];
+    auto z0 = origin[2];
 
     std::vector<Seed> seeds;
 
