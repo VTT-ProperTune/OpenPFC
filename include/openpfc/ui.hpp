@@ -612,9 +612,9 @@ public:
 
     Decomposition decomp(world, m_comm);
     auto plan_options = ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
-    FFT fft(decomp, m_comm, plan_options);
+    FFT fft(decomp, m_comm, plan_options, world);
     Time time(ui::from_json<Time>(m_settings));
-    ConcreteModel model;
+    ConcreteModel model(world);
     model.set_fft(fft);
     Simulator simulator(model, time);
 
