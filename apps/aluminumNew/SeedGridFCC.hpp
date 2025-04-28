@@ -61,8 +61,8 @@ public:
     const World &w = m.get_world();
     const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_real_field("psi");
-    Vec3<int> low = decomp.inbox.low;
-    Vec3<int> high = decomp.inbox.high;
+    Vec3<int> low = decomp.get_inbox().low;
+    Vec3<int> high = decomp.get_inbox().high;
 
     // Use the new World API to get size, spacing, and origin
     auto size = w.size();

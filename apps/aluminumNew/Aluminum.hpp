@@ -171,8 +171,8 @@ public:
     auto Lz = size[2];
 
     const Decomposition &decomp = get_decomposition();
-    std::array<int, 3> low = decomp.outbox.low;
-    std::array<int, 3> high = decomp.outbox.high;
+    std::array<int, 3> low = decomp.get_outbox().low;
+    std::array<int, 3> high = decomp.get_outbox().high;
 
     int idx = 0;
     const double pi = std::atan(1.0) * 4.0;
@@ -240,8 +240,8 @@ public:
     double x0 = w.origin()[0];
     int Lx = w.size()[0];
     const Decomposition &decomp = get_decomposition();
-    std::array<int, 3> low = decomp.inbox.low;
-    std::array<int, 3> high = decomp.inbox.high;
+    std::array<int, 3> low = decomp.get_inbox().low;
+    std::array<int, 3> high = decomp.get_inbox().high;
 
     // Calculate mean-field density n_mf
     fft.forward(psi, psi_F);

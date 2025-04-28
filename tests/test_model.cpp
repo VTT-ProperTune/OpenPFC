@@ -3,6 +3,7 @@
 
 #include "openpfc/core/decomposition.hpp"
 #include "openpfc/core/world.hpp"
+#include "openpfc/factory/decomposition_factory.hpp"
 #include "openpfc/fft.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
@@ -28,16 +29,14 @@ TEST_CASE("Model functionality", "[Model]") {
 
   SECTION("Default construction") {
     // Ensure FFT object is set before proceeding
-    Decomposition decomposition(world, 0, 1);
+    Decomposition decomposition = make_decomposition(world, 0, 1);
     FFT fft(decomposition, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
     model.set_fft(fft);
-
-    REQUIRE(model.is_rank0() == (decomposition.get_rank() == 0));
   }
 
   SECTION("Set and get FFT") {
     // Create a Decomposition object
-    Decomposition decomposition(world, 0, 1);
+    Decomposition decomposition = make_decomposition(world, 0, 1);
     // Create an FFT object
     FFT fft(decomposition, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
             world); // Provide all parameters
@@ -49,7 +48,7 @@ TEST_CASE("Model functionality", "[Model]") {
 
   SECTION("Real field operations") {
     // Ensure FFT object is set before proceeding
-    Decomposition decomposition(world, 0, 1);
+    Decomposition decomposition = make_decomposition(world, 0, 1);
     FFT fft(decomposition, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
     model.set_fft(fft);
 
@@ -89,7 +88,7 @@ TEST_CASE("Model functionality", "[Model]") {
 
 TEST_CASE("Model - FFT Integration", "[model]") {
   World world({8, 8, 8});
-  Decomposition decomposition(world, 0, 1);
+  Decomposition decomposition = make_decomposition(world, 0, 1);
   FFT fft(decomposition, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
           world); // Provide all parameters
 

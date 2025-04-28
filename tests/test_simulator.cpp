@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "openpfc/core/world.hpp"
+#include "openpfc/factory/decomposition_factory.hpp"
 #include "openpfc/model.hpp"
+#include "openpfc/simulator.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
-#include <openpfc/simulator.hpp>
 
 using namespace pfc;
 
@@ -29,7 +30,7 @@ public:
 
 TEST_CASE("Simulator functionality", "[simulator]") {
   World world({8, 8, 8});
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
   MockModel model(world);
 
@@ -99,7 +100,7 @@ TEST_CASE("Simulator functionality", "[simulator]") {
 
 TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
   World world({8, 8, 8});
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
   MockModel model(world);
 

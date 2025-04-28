@@ -42,8 +42,8 @@ public:
 
     // prepare operators
     World w = get_world();
-    std::array<int, 3> o_low = decomp.outbox.low;
-    std::array<int, 3> o_high = decomp.outbox.high;
+    std::array<int, 3> o_low = decomp.get_outbox().low;
+    std::array<int, 3> o_high = decomp.get_outbox().high;
     size_t idx = 0;
     double pi = std::atan(1.0) * 4.0;
     auto spacing = w.spacing();

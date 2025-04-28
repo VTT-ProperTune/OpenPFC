@@ -8,5 +8,24 @@
 #include "mpi/environment.hpp"
 #include "mpi/timer.hpp"
 #include "mpi/worker.hpp"
+#include <mpi.h>
+
+namespace pfc {
+namespace mpi {
+
+inline int get_rank() {
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  return rank;
+}
+
+inline int get_size() {
+  int size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  return size;
+}
+
+} // namespace mpi
+} // namespace pfc
 
 #endif // PFC_MPI_HPP

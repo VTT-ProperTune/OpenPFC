@@ -7,6 +7,7 @@
 #include "core/decomposition.hpp"
 #include "core/world.hpp"
 #include "fft.hpp"
+#include "mpi.hpp"
 #include "openpfc/backends/heffte_adapter.hpp"
 #include "types.hpp"
 #include <iostream>
@@ -65,7 +66,7 @@ public:
    */
   Model(FFT &fft, const World &world)
       : m_fft(&fft), m_world(world), domain(to_heffte_box(world)), // Use to_heffte_box
-        rank0(get_decomposition().get_rank() == 0) {}
+        rank0(mpi::get_rank() == 0) {}
 
   /**
    * @brief Disable copy constructor.
@@ -105,7 +106,7 @@ public:
    */
   void set_fft(FFT &fft) {
     m_fft = &fft;
-    rank0 = (get_decomposition().get_rank() == 0);
+    rank0 = (mpi::get_rank() == 0);
   }
 
   /**

@@ -22,24 +22,24 @@ protected:
   std::shared_ptr<MPI_Comm> comm_ptr;
 };
 
-communicator::communicator() {
+inline communicator::communicator() {
   comm_ptr.reset(new MPI_Comm(MPI_COMM_WORLD));
 }
 
-int communicator::size() const {
-  int size_;
-  MPI_Comm_size(MPI_Comm(*this), &size_);
-  return size_;
-}
-
-communicator::operator MPI_Comm() const {
+inline communicator::operator MPI_Comm() const {
   if (comm_ptr)
     return *comm_ptr;
   else
     return MPI_COMM_NULL;
 }
 
-int communicator::rank() const {
+inline int communicator::size() const {
+  int size_;
+  MPI_Comm_size(MPI_Comm(*this), &size_);
+  return size_;
+}
+
+inline int communicator::rank() const {
   int rank_;
   MPI_Comm_rank(MPI_Comm(*this), &rank_);
   return rank_;

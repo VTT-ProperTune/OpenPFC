@@ -52,8 +52,8 @@ public:
     const World &w = m.get_world();
     const Decomposition &decomp = m.get_decomposition();
     std::vector<double> &field = m.get_real_field("psi");
-    std::array<int, 3> low = decomp.inbox.low;
-    std::array<int, 3> high = decomp.inbox.high;
+    std::array<int, 3> low = decomp.get_inbox().low;
+    std::array<int, 3> high = decomp.get_inbox().high;
 
     if (m.is_rank0()) std::cout << "Create initial condition" << std::endl;
     size_t idx = 0;
@@ -100,8 +100,8 @@ public:
   void prepare_operators(double dt) {
     const World &w = get_world();
     const Decomposition &decomp = get_decomposition();
-    std::array<int, 3> low = decomp.outbox.low;
-    std::array<int, 3> high = decomp.outbox.high;
+    std::array<int, 3> low = decomp.get_outbox().low;
+    std::array<int, 3> high = decomp.get_outbox().high;
 
     if (is_rank0()) std::cout << "Prepare operators" << std::endl;
     size_t idx = 0;

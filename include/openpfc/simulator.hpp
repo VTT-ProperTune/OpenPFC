@@ -91,7 +91,7 @@ public:
 
   bool add_results_writer(const std::string &field_name, std::unique_ptr<ResultsWriter> writer) {
     const Decomposition &d = get_decomposition();
-    writer->set_domain(d.get_world().get_size(), d.inbox.size, d.inbox.low);
+    writer->set_domain(d.get_world().get_size(), d.get_inbox().size, d.get_inbox().low);
     Model &model = get_model();
     if (model.has_field(field_name)) {
       m_result_writers.insert({field_name, std::move(writer)});

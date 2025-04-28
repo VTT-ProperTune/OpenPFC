@@ -110,10 +110,10 @@ public:
     Upper and lower limits for this particular MPI rank, in both inbox and
     outbox, are given by domain decomposition object
     */
-    Vec3<int> i_low = decomp.inbox.low;
-    Vec3<int> i_high = decomp.inbox.high;
-    Vec3<int> o_low = decomp.outbox.low;
-    Vec3<int> o_high = decomp.outbox.high;
+    Vec3<int> i_low = decomp.get_inbox().low;
+    Vec3<int> i_high = decomp.get_inbox().high;
+    Vec3<int> o_low = decomp.get_outbox().low;
+    Vec3<int> o_high = decomp.get_outbox().high;
 
     /*
     Typically initial conditions are constructed elsewhere. However, to keep

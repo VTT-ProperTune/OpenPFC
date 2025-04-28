@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "openpfc/core/world.hpp"
+#include "openpfc/factory/decomposition_factory.hpp"
+#include "openpfc/field_modifier.hpp"
 #include "openpfc/model.hpp"
 #include <catch2/catch_test_macros.hpp>
-#include <iostream> // Include for debugging output
-#include <openpfc/field_modifier.hpp>
+#include <iostream>
 
 using namespace pfc;
 
@@ -30,7 +31,7 @@ public:
 
 TEST_CASE("FieldModifier applies field modification to the model", "[FieldModifier]") {
   World world({8, 8, 8});
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
   MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set
@@ -49,7 +50,7 @@ TEST_CASE("FieldModifier applies field modification to the model", "[FieldModifi
 TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
   FieldModifier *modifier = new MockFieldModifier();
   World world({8, 8, 8});
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
   MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set
@@ -67,7 +68,7 @@ TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
 
 TEST_CASE("FieldModifier can be moved", "[FieldModifier]") {
   World world({8, 8, 8});
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
   MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set
@@ -95,7 +96,7 @@ TEST_CASE("Field name can be set and retrieved", "[FieldModifier]") {
 
 TEST_CASE("Field Modifier - MockModel Integration", "[field_modifier]") {
   World world({8, 8, 8});
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
   MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set

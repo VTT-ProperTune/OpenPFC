@@ -3,6 +3,7 @@
 
 #include "openpfc/core/decomposition.hpp"
 #include "openpfc/core/world.hpp"
+#include "openpfc/factory/decomposition_factory.hpp"
 #include "openpfc/fft.hpp"
 #include "openpfc/model.hpp"
 // #include "openpfc/openpfc.hpp"
@@ -20,7 +21,7 @@ public:
 
 TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
   World world({8, 8, 8});
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
 
   MockModel model(world);

@@ -3,11 +3,12 @@
 
 #include "openpfc/core/decomposition.hpp"
 #include "openpfc/core/world.hpp"
+#include "openpfc/factory/decomposition_factory.hpp"
 #include "openpfc/fft.hpp"
+#include "openpfc/initial_conditions/constant.hpp"
+#include "openpfc/model.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
-#include <openpfc/initial_conditions/constant.hpp>
-#include <openpfc/model.hpp>
 #include <vector>
 
 using namespace pfc;
@@ -32,7 +33,7 @@ TEST_CASE("Constant Field Modifier") {
 
   SECTION("Apply field modifier") {
     World world({8, 1, 1});
-    Decomposition decomp(world, 0, 1);
+    Decomposition decomp = make_decomposition(world, 0, 1);
     FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
     ModelWithConstantIC m(world);
     m.set_fft(fft); // Ensure FFT object is set
@@ -50,7 +51,7 @@ TEST_CASE("Constant Field Modifier") {
 
 TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
   World world({8, 8, 8});
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world); // Provide all parameters
 
   REQUIRE(fft.size_inbox() > 0);
@@ -62,7 +63,7 @@ TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
   World world({8, 8, 8});
   ModelWithConstantIC model(world); // Provide the required World parameter
 
-  Decomposition decomp(world, 0, 1);
+  Decomposition decomp = make_decomposition(world, 0, 1);
   // Ensure FFT object is set before proceeding
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
   model.set_fft(fft);

@@ -39,8 +39,8 @@ struct TestCase {
 TEST_CASE("Time initialization", "[Time]") {
   // Fix expected_t1 value in test cases to match the actual behavior.
   std::vector<TestCase> test_cases = {
-      {{0.0, 10.0, 1.0}, 2.0, 0.0, 10.0, 1.0, 2.0, 0.0}, // Adjusted expected_t1 from 11.0 to 10.0
-      {{0.0, 5.0, 0.5}, -1.0, 0.0, 5.0, 0.5, 0.5, 0.0},
+      {{0.0, 10.0, 1.0}, 2.0, 0.0, 10.0, 1.0, 2.0, 0.0, 0}, // Added expected_increment = 0
+      {{0.0, 5.0, 0.5}, -1.0, 0.0, 5.0, 0.5, 0.5, 0.0, 0},  // Added expected_increment = 0
   };
 
   for (const auto &tc : test_cases) {

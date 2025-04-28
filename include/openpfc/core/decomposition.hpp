@@ -44,59 +44,71 @@ namespace pfc {
  * - Passed to FFT backends as a description of local domains.
  */
 class Decomposition {
+public:
+  // Type aliases for clarity
+  using Int3 = std::array<int, 3>;  ///< Type alias for 3D integer array.
+  using Box3D = heffte::box3d<int>; ///< Type alias for 3D integer box.
+
 private:
-  const World &m_world;                                            ///< The World object.
-  const int m_rank, m_num_domains;                                 ///< Processor ID and total number of processors.
-  const int Lx_c, Ly_c, Lz_c;                                      ///< Dimensions of the complex domain.
-  heffte::box3d<int> real_indexes;                                 ///< Index ranges for real domain.
-  const heffte::box3d<int> complex_indexes;                        ///< Index ranges for complex domain.
-  const std::array<int, 3> proc_grid;                              ///< Processor grid dimensions.
-  const std::vector<heffte::box3d<int>> real_boxes, complex_boxes; ///< Local domain boxes.
+  const World &m_world;          ///< The World object.
+  const Box3D m_inbox, m_outbox; ///< Local communication boxes.
+  const int m_r2c_direction = 0; ///< Real-to-complex symmetry direction.
 
 public:
-  const heffte::box3d<int> inbox, outbox; ///< Local communication boxes.
-  const int r2c_direction = 0;            ///< Real-to-complex symmetry direction.
-
   /**
    * @brief Construct a new Decomposition object.
    *
    * @param world Reference to the World object.
-   * @param id The id (rank) of the current process.
-   * @param num_procs The total number of domains.
+   * @param inbox The local inbox (real space) box.
+   * @param outbox The local outbox (complex space) box.
    *
    * Numbering ranks starts from 0 (MPI convention). For example, if the domain
    * needs to be decomposed into four parts, those would be 0/4, 1/4, 2/4, 3/4
    * and NOT 1/4, 2/4, 3/4, 4/4.
    */
-  Decomposition(const World &world, int rank, int num_domains);
+  Decomposition(const World &world, const Box3D &inbox, const Box3D &outbox);
+
+  /**
+   * @brief Get the inbox box.
+   *
+   * @return const Box3D& The inbox box.
+   */
+  const Box3D &get_inbox() const;
+
+  /**
+   * @brief Get the outbox box.
+   *
+   * @return const Box3D& The outbox box.
+   */
+  const Box3D &get_outbox() const;
 
   /**
    * @brief Get the size of the inbox.
    *
    * @return Size of the inbox as a container (const std::array<int, 3>&).
    */
-  const std::array<int, 3> &get_inbox_size() const;
+  const Int3 &get_inbox_size() const;
 
   /**
    * @brief Get the offset of the inbox (a.k.a lower limit of the box).
    *
    * @return Offset of the inbox as a container (const std::array<int, 3>&).
    */
-  const std::array<int, 3> &get_inbox_offset() const;
+  const Int3 &get_inbox_offset() const;
 
   /**
    * @brief Get the size of the outbox.
    *
    * @return Size of the outbox as a container (const std::array<int, 3>&).
    */
-  const std::array<int, 3> &get_outbox_size() const;
+  const Int3 &get_outbox_size() const;
 
   /**
    * @brief Get the offset of the outbox (a.k.a lower limit of the box).
    *
    * @return Offset of the outbox as a container (const std::array<int, 3>&).
    */
-  const std::array<int, 3> &get_outbox_offset() const;
+  const Int3 &get_outbox_offset() const;
 
   /**
    * @brief Get the reference to the World object.
@@ -110,14 +122,14 @@ public:
    *
    * @return The rank of the current process.
    */
-  int get_rank() const;
+  // int get_rank() const;
 
   /**
    * @brief Get the total number of sub-domains.
    *
    * @return int
    */
-  int get_num_domains() const;
+  // int get_num_domains() const;
 
   /**
    * @brief Output stream operator for Decomposition objects.

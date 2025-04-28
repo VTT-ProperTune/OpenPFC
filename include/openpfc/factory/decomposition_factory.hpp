@@ -11,6 +11,16 @@
 namespace pfc {
 
 /**
+ * @brief Factory function to create a Decomposition object.
+ *
+ * @param world The World object.
+ * @param rank The rank of the current process (defaults to 0).
+ * @param num_domains The total number of domains (defaults to 1).
+ * @return Decomposition
+ */
+Decomposition make_decomposition(const World &world, int rank, int num_domains);
+
+/**
  * @brief Factory function to create a Decomposition from MPI communicator.
  *
  * @param world The World object.

@@ -32,10 +32,10 @@ int main(int argc, char *argv[]) {
   // size of the calculation domain, id number and total number of subdomains:
   int comm_rank = 0, comm_size = 2;
   World world1({32, 4, 4});
-  Decomposition decomp1(world1, comm_rank, comm_size);
+  Decomposition decomp1 = make_decomposition(world1, comm_rank, comm_size);
   cout << decomp1 << endl;
 
-  // In practive, we let MPI communicator to decide the number of subdomains.
+  // In practice, we let MPI communicator to decide the number of subdomains.
   MPI_Init(&argc, &argv);
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm, &comm_rank);

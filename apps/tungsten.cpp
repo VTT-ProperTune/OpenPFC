@@ -113,8 +113,8 @@ public:
     auto Lz = size[2];
 
     const Decomposition &decomp = get_decomposition();
-    std::array<int, 3> low = decomp.outbox.low;
-    std::array<int, 3> high = decomp.outbox.high;
+    std::array<int, 3> low = decomp.get_outbox().low;
+    std::array<int, 3> high = decomp.get_outbox().high;
 
     int idx = 0;
     const double pi = std::atan(1.0) * 4.0;

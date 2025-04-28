@@ -14,6 +14,14 @@
 
 namespace pfc {
 
+inline heffte::fft3d_r2c<heffte::backend::fftw> make_fft(const Decomposition &decomposition, MPI_Comm comm,
+                                                         heffte::plan_options plan_options) {
+  const Decomposition::Box3D &inbox = decomposition.get_inbox();
+  const Decomposition::Box3D &outbox = decomposition.get_outbox();
+  int r2c_direction = 0; // TODO: make this dynamic
+  return heffte::fft3d_r2c<heffte::backend::fftw>(inbox, outbox, r2c_direction, comm, plan_options);
+}
+
 /**
  * @brief FFT class for performing forward and backward Fast Fourier Transformations.
  */
@@ -25,7 +33,7 @@ private:
   std::vector<std::complex<double>> m_wrk;              /**< Workspace vector for FFT computations. */
   double m_fft_time = 0.0;                              /**< Recorded FFT computation time. */
   const World &m_world;                                 /**< Reference to the World object. */
-  heffte::box3d<int> domain;                            /**< Domain converted from World object. */
+  Decomposition::Box3D domain;                          /**< Domain converted from World object. */
 
 public:
   /**
@@ -37,8 +45,7 @@ public:
    * @param world The World object providing the domain size information.
    */
   FFT(const Decomposition &decomposition, MPI_Comm comm, heffte::plan_options plan_options, const World &world)
-      : m_decomposition(decomposition),
-        m_fft({m_decomposition.inbox, m_decomposition.outbox, m_decomposition.r2c_direction, comm, plan_options}),
+      : m_decomposition(decomposition), m_fft(make_fft(decomposition, comm, plan_options)),
         m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())), m_world(world),
         domain(to_heffte_box(world)){
             // Use to_heffte_box for conversion

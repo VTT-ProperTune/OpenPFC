@@ -30,8 +30,8 @@ public:
     const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_real_field(get_field_name());
     const World &w = m.get_world();
-    Vec3<int> low = decomp.inbox.low;
-    Vec3<int> high = decomp.inbox.high;
+    Vec3<int> low = decomp.get_inbox().low;
+    Vec3<int> high = decomp.get_inbox().high;
 
     double Lx = w.size()[0];
     double dx = w.spacing()[0];

@@ -5,6 +5,7 @@
 #include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
 #include <openpfc/discrete_field.hpp>
+#include <openpfc/factory/decomposition_factory.hpp>
 #include <openpfc/utils.hpp>
 
 using namespace pfc;
@@ -43,10 +44,11 @@ public:
 int main() {
   World world({16, 8, 1});
   std::cout << world << std::endl;
-  Decomposition decomp1(world, 0, 4);
-  Decomposition decomp2(world, 1, 4);
-  Decomposition decomp3(world, 2, 4);
-  Decomposition decomp4(world, 3, 4);
+  Decomposition decomp1 = make_decomposition(world, 0, 4);
+  Decomposition decomp2 = make_decomposition(world, 1, 4);
+  Decomposition decomp3 = make_decomposition(world, 2, 4);
+  Decomposition decomp4 = make_decomposition(world, 3, 4);
+
   std::cout << decomp1 << std::endl;
   const std::array<int, 3> &inbox_size1 = decomp1.get_inbox_size();
   const std::array<int, 3> &inbox_offset1 = decomp1.get_inbox_offset();
