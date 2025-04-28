@@ -8,7 +8,7 @@ project(OpenPFC VERSION 0.2.0 DESCRIPTION "Phase Field Crystal simulation framew
 # Define an option for development mode
 option(OpenPFC_DEVELOPMENT "Enable development build settings" OFF)
 
-if(CMake_DEVELOPMENT)
+if(OpenPFC_DEVELOPMENT)
   message(STATUS "Development version detected, enabling compile_commands.json export")
   set(OpenPFC_VERSION_SUFFIX "-dev")
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -232,11 +232,39 @@ message(STATUS "-------------------------------------------------------------")
 message(STATUS " ✅ OpenPFC Build Configuration Summary")
 message(STATUS "-------------------------------------------------------------")
 
-message(STATUS " CMake Version          : ${CMAKE_VERSION}")
-message(STATUS " C++ Compiler           : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
-message(STATUS " C++ Standard           : ${CMAKE_CXX_STANDARD}")
-message(STATUS " Build Type             : ${CMAKE_BUILD_TYPE}")
-message(STATUS " Install RPATH          : ${CMAKE_INSTALL_RPATH_USE_LINK_PATH}")
+message(STATUS " CMake Version                : ${CMAKE_VERSION}")
+message(STATUS " C++ Compiler                 : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS " C++ Standard                 : ${CMAKE_CXX_STANDARD}")
+message(STATUS " Build Type                   : ${CMAKE_BUILD_TYPE}")
+message(STATUS " Install RPATH                : ${CMAKE_INSTALL_RPATH_USE_LINK_PATH}")
+
+# development mode or not?
+if(OpenPFC_DEVELOPMENT)
+  message(STATUS " Development mode             : ON")
+else()
+  message(STATUS " Development mode             : OFF")
+endif()
+
+# shared or static library?
+if(BUILD_SHARED_LIBS)
+  message(STATUS " Build type                   : SHARED")
+else()
+  message(STATUS " Build type                   : STATIC")
+endif()
+
+# build system: ninja or make?
+if(CMAKE_GENERATOR MATCHES "Ninja")
+  message(STATUS " Build system                 : Ninja")
+else()
+  message(STATUS " Build system                 : Make")
+endif()
+
+# export compile_commands.json or not?
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+  message(STATUS " Export compile_commands.json : YES")
+else()
+  message(STATUS " Export compile_commands.json : NO")
+endif()
 
 message(STATUS "-------------------------------------------------------------")
 message(STATUS " 📦 Third-Party Packages:")
