@@ -4,8 +4,8 @@
 #ifndef PFC_MODEL_HPP
 #define PFC_MODEL_HPP
 
+#include "core/decomposition.hpp"
 #include "core/world.hpp"
-#include "decomposition.hpp"
 #include "fft.hpp"
 #include "openpfc/backends/heffte_adapter.hpp"
 #include "types.hpp"

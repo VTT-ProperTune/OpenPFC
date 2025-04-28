@@ -4,7 +4,7 @@
 #ifndef PFC_ARRAY_HPP
 #define PFC_ARRAY_HPP
 
-#include "decomposition.hpp"
+#include "core/decomposition.hpp"
 #include "multi_index.hpp"
 #include "utils/array_to_string.hpp"
 #include "utils/show.hpp"

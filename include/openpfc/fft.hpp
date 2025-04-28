@@ -4,7 +4,7 @@
 #ifndef PFC_FFT_HPP
 #define PFC_FFT_HPP
 
-#include "decomposition.hpp"
+#include "core/decomposition.hpp"
 #include "openpfc/backends/heffte_adapter.hpp" // Ensure this is included for the conversion operator
 #include "openpfc/core/world.hpp"
 
