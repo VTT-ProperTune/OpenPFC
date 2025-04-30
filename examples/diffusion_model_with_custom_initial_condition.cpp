@@ -59,8 +59,8 @@ public:
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
-          auto origin = w.origin();
-          auto spacing = w.spacing();
+          auto origin = get_origin(w);
+          auto spacing = get_spacing(w);
           double x = origin[0] + i * spacing[0];
           double y = origin[1] + j * spacing[1];
           double z = origin[2] + k * spacing[2];
@@ -82,7 +82,7 @@ void run() {
   Vec3<int> dimensions{Lx, Ly, Lz};
   Vec3<double> origo{x0, y0, z0};
   Vec3<double> discretization{dx, dy, dz};
-  World world(dimensions, origo, discretization);
+  World world = create_world(dimensions, origo, discretization);
 
   double t0 = 0.0;
   double t1 = 0.5874010519681994;

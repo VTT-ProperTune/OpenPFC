@@ -1,20 +1,28 @@
 # SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-AllowShortIfStatementsOnASingleLine: WithoutElse
-AllowShortLoopsOnASingleLine: true
-# AllowShortFunctionsOnASingleLine: InlineOnly
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
+# Basic settings
+
 IndentWidth: 2
 TabWidth: 2
 UseTab: Never
-ColumnLimit: 120
-BreakConstructorInitializers: BeforeColon # ensures that : is placed on a new line
-ConstructorInitializerAllOnOneLineOrOnePerLine: true # puts each initializer on its own line
-AllowAllConstructorInitializersOnNextLine: false # disables grouping on the next line
-BinPackParameters: false # prevents squeezing multiple parameters into one line
-AlignAfterOpenBracket: Align # keeps nice vertical alignment
-# ColumnLimit: 120
+ColumnLimit: 100
+
+# Allow things on a single line
+
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortLambdasOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
-# AllowShortFunctionsOnASingleLine: Inline
+
+# Constructor formatting
+
+# ensures that : is placed on a new line
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerAllOnOneLineOrOnePerLine: false # puts each initializer on its own line
+AllowAllConstructorInitializersOnNextLine: false # disables grouping on the next line
+BinPackParameters: false # prevents squeezing multiple parameters into one line
+AlignAfterOpenBracket: Align # keeps nice vertical alignment

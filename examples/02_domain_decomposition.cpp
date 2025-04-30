@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   // Domain decomposition can be done in a manual manner, just by giving the
   // size of the calculation domain, id number and total number of subdomains:
   int comm_rank = 0, comm_size = 2;
-  World world1({32, 4, 4});
+  World world1 = create_world({32, 4, 4});
   Decomposition decomp1 = make_decomposition(world1, comm_rank, comm_size);
   cout << decomp1 << endl;
 
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm, &comm_rank);
-  World world2({32, 4, 4});
+  World world2 = create_world({32, 4, 4});
   Decomposition decomp2 = make_decomposition(world2, comm);
   if (comm_rank == 0) cout << decomp2 << endl;
 

@@ -59,9 +59,9 @@ public:
     Vec3<int> low = decomp.get_inbox().low;
     Vec3<int> high = decomp.get_inbox().high;
 
-    auto Lx = w.size()[0];
-    auto dx = w.spacing()[0];
-    auto x0 = w.origin()[0];
+    auto Lx = get_size(w, 0);
+    auto dx = get_spacing(w, 0);
+    auto x0 = get_origin(w, 0);
 
     if (m_first) {
       xline.resize(Lx);
@@ -114,10 +114,9 @@ public:
     Vec3<int> low = decomp.get_inbox().low;
     Vec3<int> high = decomp.get_inbox().high;
 
-    // Use the new World API to get size, spacing, and origin
-    auto Lx = w.size()[0];
-    auto dx = w.spacing()[0];
-    auto x0 = w.origin()[0];
+    auto Lx = get_size(w, 0);
+    auto dx = get_spacing(w, 0);
+    auto x0 = get_origin(w, 0);
 
     double l = Lx * dx;
     double xpos = fmod(m_xpos, l);

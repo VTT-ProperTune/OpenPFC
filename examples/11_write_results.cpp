@@ -13,7 +13,7 @@ using namespace pfc;
 // In this example, we will write the results of a simulation to a file.
 int main(int argc, char **argv) {
   MPI_Worker worker(argc, argv);
-  World world({4, 3, 2});
+  World world = create_world({4, 3, 2});
   Decomposition decomp = make_decomposition(world);
   DiscreteField<double, 3> field(decomp);
 
@@ -24,9 +24,9 @@ int main(int argc, char **argv) {
   VtkWriter<double> writer;
   writer.set_uri("results.vti");
   writer.set_field_name("density");
-  writer.set_domain(world.get_size(), field.get_size(), field.get_offset());
-  writer.set_origin(world.get_origin());
-  writer.set_spacing(world.spacing());
+  writer.set_domain(get_size(world), field.get_size(), field.get_offset());
+  writer.set_origin(get_origin(world));
+  writer.set_spacing(get_spacing(world));
   std::cout << "Writing results to file: " << writer.get_uri() << "\n";
   writer.initialize();
   writer.write(field.get_array().get_data());
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
 /*
 TEST_CASE("VtkWriter", "[VtkWriter]") {
-  World world({8, 2, 2});
+  World world = create_world({8, 2, 2});
   Decomposition decomp(world);
   DiscreteField<double, 3> field(decomp);
   field.apply([](auto x, auto y, auto z) { return x + y + z; });

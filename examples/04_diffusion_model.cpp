@@ -126,8 +126,8 @@ public:
     for (int k = i_low[2]; k <= i_high[2]; k++) {
       for (int j = i_low[1]; j <= i_high[1]; j++) {
         for (int i = i_low[0]; i <= i_high[0]; i++) {
-          auto origin = w.origin();
-          auto spacing = w.spacing();
+          auto origin = get_origin(w);
+          auto spacing = get_spacing(w);
           double x = origin[0] + i * spacing[0];
           double y = origin[1] + j * spacing[1];
           double z = origin[2] + k * spacing[2];
@@ -144,8 +144,8 @@ public:
     if (rank0) cout << "Prepare operators" << endl;
     idx = 0;
     double pi = std::atan(1.0) * 4.0;
-    auto spacing = w.spacing();
-    auto size = w.size();
+    auto spacing = get_spacing(w);
+    auto size = get_size(w);
     double fx = 2.0 * pi / (spacing[0] * size[0]);
     double fy = 2.0 * pi / (spacing[1] * size[1]);
     double fz = 2.0 * pi / (spacing[2] * size[2]);
@@ -229,7 +229,7 @@ void run() {
   double z0 = -0.5 * Lz * dz;
 
   // Construct world, decomposition, fft and model
-  World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  World world = create_world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
   Decomposition decomp = make_decomposition(world);
   auto plan_options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);

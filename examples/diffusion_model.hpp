@@ -33,8 +33,8 @@ public:
     Vec3<int> o_low = decomp.get_outbox().low;
     Vec3<int> o_high = decomp.get_outbox().high;
 
-    auto origin = w.origin();
-    auto spacing = w.spacing();
+    auto origin = get_origin(w);
+    auto spacing = get_spacing(w);
 
     int idx = 0;
     double D = 1.0;
@@ -56,15 +56,15 @@ public:
 
     idx = 0;
     const double pi = std::atan(1.0) * 4.0;
-    const double fx = 2.0 * pi / (spacing[0] * w.size()[0]);
-    const double fy = 2.0 * pi / (spacing[1] * w.size()[1]);
-    const double fz = 2.0 * pi / (spacing[2] * w.size()[2]);
+    const double fx = 2.0 * pi / (spacing[0] * get_size(w, 0));
+    const double fy = 2.0 * pi / (spacing[1] * get_size(w, 1));
+    const double fz = 2.0 * pi / (spacing[2] * get_size(w, 2));
     for (int k = o_low[2]; k <= o_high[2]; k++) {
       for (int j = o_low[1]; j <= o_high[1]; j++) {
         for (int i = o_low[0]; i <= o_high[0]; i++) {
-          const double ki = (i <= w.size()[0] / 2) ? i * fx : (i - w.size()[0]) * fx;
-          const double kj = (j <= w.size()[1] / 2) ? j * fy : (j - w.size()[1]) * fy;
-          const double kk = (k <= w.size()[2] / 2) ? k * fz : (k - w.size()[2]) * fz;
+          const double ki = (i <= get_size(w, 0) / 2) ? i * fx : (i - get_size(w, 0)) * fx;
+          const double kj = (j <= get_size(w, 1) / 2) ? j * fy : (j - get_size(w, 1)) * fy;
+          const double kk = (k <= get_size(w, 2) / 2) ? k * fz : (k - get_size(w, 2)) * fz;
           const double kLap = -(ki * ki + kj * kj + kk * kk);
           opL[idx++] = 1.0 / (1.0 - dt * kLap);
         }

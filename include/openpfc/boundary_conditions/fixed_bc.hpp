@@ -33,9 +33,9 @@ public:
     Vec3<int> low = decomp.get_inbox().low;
     Vec3<int> high = decomp.get_inbox().high;
 
-    double Lx = w.size()[0];
-    double dx = w.spacing()[0];
-    double x0 = w.origin()[0];
+    double Lx = get_size(w, 0);
+    double dx = get_spacing(w, 0);
+    double x0 = get_origin(w, 0);
 
     double xpos = Lx * dx - xwidth;
     long int idx = 0;

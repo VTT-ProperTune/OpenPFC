@@ -11,7 +11,7 @@ using namespace pfc;
 
 TEST_CASE("Decomposition class tests", "[Decomposition]") {
   // Create a dummy World object for testing
-  const World world({128, 128, 128});
+  const World world = create_world({128, 128, 128});
 
   SECTION("Construction and getters") {
     Decomposition decomposition = make_decomposition(world, 0, 1);

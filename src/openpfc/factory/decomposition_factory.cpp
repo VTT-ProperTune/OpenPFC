@@ -13,12 +13,12 @@ Decomposition make_decomposition(const World &world, int rank, int num_domains) 
   if (num_domains <= 0) {
     throw std::logic_error("Cannot construct domain decomposition: !(nprocs > 0)");
   }
-  int Lx = world.size()[0];
-  int Ly = world.size()[1];
-  int Lz = world.size()[2];
-  int Lx_c = floor(world.size()[0] / 2) + 1;
-  int Ly_c = world.size()[1];
-  int Lz_c = world.size()[2];
+  int Lx = get_size(world, 0);
+  int Ly = get_size(world, 1);
+  int Lz = get_size(world, 2);
+  int Lx_c = floor(Lx / 2) + 1;
+  int Ly_c = Ly;
+  int Lz_c = Lz;
   const Box3D real_indexes({0, 0, 0}, {Lx - 1, Ly - 1, Lz - 1});
   const Box3D complex_indexes({0, 0, 0}, {Lx_c - 1, Ly_c - 1, Lz_c - 1});
   const std::array<int, 3> proc_grid = heffte::proc_setup_min_surface(real_indexes, num_domains);

@@ -26,8 +26,8 @@ public:
     Vec3<int> high = decomp.get_inbox().high;
 
     // Use the new World API to get spacing and origin
-    auto spacing = w.spacing();
-    auto origin = w.origin();
+    auto spacing = get_spacing(w);
+    auto origin = get_origin(w);
     auto dx = spacing[0];
     auto dy = spacing[1];
     auto dz = spacing[2];

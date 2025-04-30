@@ -16,7 +16,7 @@ TEST_CASE("World - Construction and Accessors", "[world]") {
     World::Real3 origin = {1.0, 2.0, 3.0};
     World::Real3 spacing = {0.1, 0.2, 0.3};
 
-    World world(dimensions, origin, spacing);
+    World world = create_world(dimensions, origin, spacing);
 
     REQUIRE(world.get_size() == dimensions);
     REQUIRE(world.get_origin() == origin);
@@ -25,7 +25,7 @@ TEST_CASE("World - Construction and Accessors", "[world]") {
 
   SECTION("Construct World with default origin and spacing") {
     World::Int3 dimensions = {100, 200, 300};
-    World world(dimensions);
+    World world = create_world(dimensions);
 
     REQUIRE(world.get_size() == dimensions);
     REQUIRE(world.get_origin() == World::Real3{0.0, 0.0, 0.0});
@@ -33,13 +33,13 @@ TEST_CASE("World - Construction and Accessors", "[world]") {
   }
 
   SECTION("Invalid dimensions throw exception") {
-    REQUIRE_THROWS_AS(World({-1, 100, 100}), std::invalid_argument);
-    REQUIRE_THROWS_AS(World({0, 100, 100}), std::invalid_argument);
+    REQUIRE_THROWS_AS(create_world({-1, 100, 100}), std::invalid_argument);
+    REQUIRE_THROWS_AS(create_world({0, 100, 100}), std::invalid_argument);
   }
 
   SECTION("Invalid spacing throws exception") {
-    REQUIRE_THROWS_AS(World({100, 100, 100}, {0.0, 0.0, 0.0}, {-1.0, 1.0, 1.0}), std::invalid_argument);
-    REQUIRE_THROWS_AS(World({100, 100, 100}, {0.0, 0.0, 0.0}, {0.0, 1.0, 1.0}), std::invalid_argument);
+    REQUIRE_THROWS_AS(create_world({100, 100, 100}, {0.0, 0.0, 0.0}, {-1.0, 1.0, 1.0}), std::invalid_argument);
+    REQUIRE_THROWS_AS(create_world({100, 100, 100}, {0.0, 0.0, 0.0}, {0.0, 1.0, 1.0}), std::invalid_argument);
   }
 }
 
@@ -47,7 +47,7 @@ TEST_CASE("World - Coordinate Transformations", "[world]") {
   World::Int3 dimensions = {100, 100, 100};
   World::Real3 origin = {0.0, 0.0, 0.0};
   World::Real3 spacing = {1.0, 1.0, 1.0};
-  World world(dimensions, origin, spacing);
+  World world = create_world(dimensions, origin, spacing);
 
   SECTION("Physical coordinates from grid indices") {
     World::Int3 indices = {10, 20, 30};
@@ -79,7 +79,7 @@ TEST_CASE("World - Coordinate Transformations", "[world]") {
 TEST_CASE("World - Total Size", "[world]") {
   SECTION("Correct total size calculation") {
     World::Int3 dimensions = {10, 20, 30};
-    World world(dimensions);
+    World world = create_world(dimensions);
     REQUIRE(world.total_size() == 10 * 20 * 30);
   }
 }
@@ -89,9 +89,9 @@ TEST_CASE("World - Equality and Inequality Operators", "[world]") {
   World::Real3 origin = {0.0, 0.0, 0.0};
   World::Real3 spacing = {1.0, 1.0, 1.0};
 
-  World world1(dimensions, origin, spacing);
-  World world2(dimensions, origin, spacing);
-  World world3({200, 100, 100}, origin, spacing);
+  World world1 = create_world(dimensions, origin, spacing);
+  World world2 = create_world(dimensions, origin, spacing);
+  World world3 = create_world({200, 100, 100}, origin, spacing);
 
   SECTION("Equality operator") {
     REQUIRE(world1 == world2);
@@ -108,7 +108,7 @@ TEST_CASE("World - Output Stream", "[world]") {
   World::Int3 dimensions = {100, 200, 300};
   World::Real3 origin = {1.0, 2.0, 3.0};
   World::Real3 spacing = {0.1, 0.2, 0.3};
-  World world(dimensions, origin, spacing);
+  World world = create_world(dimensions, origin, spacing);
 
   std::ostringstream oss;
   oss << world;

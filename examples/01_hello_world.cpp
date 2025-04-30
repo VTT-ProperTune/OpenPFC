@@ -35,15 +35,15 @@ int main() {
   std::array<int, 3> dimensions = {10, 20, 30};
   std::array<double, 3> origin = {0.0, 0.0, 0.0};
   std::array<double, 3> discretization = {0.1, 0.1, 0.1};
-  World world(dimensions, origin, discretization);
+  World world = create_world(dimensions, origin, discretization);
 
   // Retrieve world properties
   cout << "World properties:" << endl;
-  auto size = world.size();
+  auto size = get_size(world);
   cout << "Dimensions: " << size[0] << " x " << size[1] << " x " << size[2] << endl;
-  auto world_origin = world.origin();
+  auto world_origin = get_origin(world);
   cout << "Origin: (" << world_origin[0] << ", " << world_origin[1] << ", " << world_origin[2] << ")" << endl;
-  auto spacing = world.spacing();
+  auto spacing = get_spacing(world);
   cout << "Spacing: dx = " << spacing[0] << ", dy = " << spacing[1] << ", dz = " << spacing[2] << endl;
 
   // Simpler way:
@@ -51,7 +51,7 @@ int main() {
 
   // If just the size of the doman is defined, it is assumed that x0 = y0 = z0 =
   // 0 and dx = dy = dz = 1
-  World world2({64, 64, 64});
+  World world2 = create_world({64, 64, 64});
   cout << world2 << endl;
 
   return 0;

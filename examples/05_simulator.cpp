@@ -60,8 +60,8 @@ public:
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
-          auto origin = w.origin();
-          auto spacing = w.spacing();
+          auto origin = get_origin(w);
+          auto spacing = get_spacing(w);
           double x = origin[0] + i * spacing[0];
           double y = origin[1] + j * spacing[1];
           double z = origin[2] + k * spacing[2];
@@ -105,8 +105,8 @@ public:
 
     if (is_rank0()) std::cout << "Prepare operators" << std::endl;
     size_t idx = 0;
-    auto spacing = w.spacing();
-    auto size = w.size();
+    auto spacing = get_spacing(w);
+    auto size = get_size(w);
     double fx = 2.0 * PI / (spacing[0] * size[0]);
     double fy = 2.0 * PI / (spacing[1] * size[1]);
     double fz = 2.0 * PI / (spacing[2] * size[2]);
@@ -181,7 +181,7 @@ void run() {
   std::array<int, 3> dimensions = {L, L, L};
   std::array<double, 3> discretization = {h, h, h};
   std::array<double, 3> origin = {o, o, o};
-  World world(dimensions, origin, discretization);
+  World world = create_world(dimensions, origin, discretization);
 
   Decomposition decomp = make_decomposition(world);
   auto plan_options = heffte::default_options<heffte::backend::fftw>();

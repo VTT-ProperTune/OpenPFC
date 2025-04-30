@@ -10,36 +10,23 @@
 namespace pfc {
 
 Decomposition::Decomposition(const World &world, const heffte::box3d<int> &inbox, const heffte::box3d<int> &outbox)
-    : m_world(world), m_inbox(inbox), m_outbox(outbox) {
-}
+    : m_world(world),
+      m_inbox(inbox),
+      m_outbox(outbox) {}
 
-const Decomposition::Box3D &Decomposition::get_inbox() const noexcept {
-  return m_inbox;
-}
+const Decomposition::Box3D &Decomposition::get_inbox() const noexcept { return m_inbox; }
 
-const Decomposition::Box3D &Decomposition::get_outbox() const noexcept {
-  return m_outbox;
-}
+const Decomposition::Box3D &Decomposition::get_outbox() const noexcept { return m_outbox; }
 
-const Decomposition::Int3 &Decomposition::get_inbox_size() const noexcept {
-  return get_inbox().size;
-}
+const Decomposition::Int3 &Decomposition::get_inbox_size() const noexcept { return get_inbox().size; }
 
-const Decomposition::Int3 &Decomposition::get_inbox_offset() const noexcept {
-  return get_inbox().low;
-}
+const Decomposition::Int3 &Decomposition::get_inbox_offset() const noexcept { return get_inbox().low; }
 
-const Decomposition::Int3 &Decomposition::get_outbox_size() const noexcept {
-  return get_outbox().size;
-}
+const Decomposition::Int3 &Decomposition::get_outbox_size() const noexcept { return get_outbox().size; }
 
-const Decomposition::Int3 &Decomposition::get_outbox_offset() const noexcept {
-  return get_outbox().low;
-}
+const Decomposition::Int3 &Decomposition::get_outbox_offset() const noexcept { return get_outbox().low; }
 
-const World &Decomposition::get_world() const noexcept {
-  return m_world;
-}
+const World &Decomposition::get_world() const noexcept { return m_world; }
 
 /*
 int Decomposition::get_rank() const {
@@ -51,8 +38,8 @@ int Decomposition::get_num_domains() const {
 }
 */
 
-std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
-  const World &w = d.get_world();
+std::ostream &operator<<(std::ostream &os, const Decomposition &) {
+  // const World &w = d.get_world();
   os << "***** DOMAIN DECOMPOSITION STATUS *****\n";
   int r2c_direction = 0; // TODO: make this dynamic
   os << "Real-to-complex symmetry is used (r2c direction = " << (char)('x' + r2c_direction) << ")\n";

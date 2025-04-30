@@ -46,8 +46,8 @@ public:
     std::array<int, 3> o_high = decomp.get_outbox().high;
     size_t idx = 0;
     double pi = std::atan(1.0) * 4.0;
-    auto spacing = w.spacing();
-    auto size = w.size();
+    auto spacing = get_spacing(w);
+    auto size = get_size(w);
     double fx = 2.0 * pi / (spacing[0] * size[0]);
     double fy = 2.0 * pi / (spacing[1] * size[1]);
     double fz = 2.0 * pi / (spacing[2] * size[2]);
@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
   double z0 = 0.0;
 
   // Construct world, decomposition, fft and model
-  World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  World world = create_world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
   Decomposition decomp = make_decomposition(world);
   auto plan_options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
@@ -140,9 +140,9 @@ int main(int argc, char **argv) {
   // set uri as format cahn_hilliard_%04i.vti, where %04i is replaced by file_count
   writer.set_uri(sprintf("cahn_hilliard_%04i.vti", file_count));
   writer.set_field_name("concentration");
-  writer.set_domain(world.size(), decomp.get_inbox_size(), decomp.get_inbox_offset());
-  writer.set_origin(world.origin());
-  writer.set_spacing(world.spacing());
+  writer.set_domain(get_size(world), decomp.get_inbox_size(), decomp.get_inbox_offset());
+  writer.set_origin(get_origin(world));
+  writer.set_spacing(get_spacing(world));
   writer.initialize();
   writer.write(field);
 

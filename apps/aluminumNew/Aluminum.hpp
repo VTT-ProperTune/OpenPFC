@@ -161,8 +161,8 @@ public:
 
   void prepare_operators(double dt) {
     World w = get_world();
-    auto spacing = w.spacing();
-    auto size = w.size();
+    auto spacing = get_spacing(w);
+    auto size = get_size(w);
     auto dx = spacing[0];
     auto dy = spacing[1];
     auto dz = spacing[2];
@@ -236,9 +236,9 @@ public:
 
     FFT &fft = get_fft();
     World w = get_world();
-    double dx = w.spacing()[0];
-    double x0 = w.origin()[0];
-    int Lx = w.size()[0];
+    double dx = get_spacing(w, 0);
+    double x0 = get_origin(w, 0);
+    int Lx = get_size(w, 0);
     const Decomposition &decomp = get_decomposition();
     std::array<int, 3> low = decomp.get_inbox().low;
     std::array<int, 3> high = decomp.get_inbox().high;

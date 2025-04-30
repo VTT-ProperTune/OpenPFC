@@ -103,8 +103,8 @@ public:
 
   void prepare_operators(double dt) {
     World w = get_world();
-    auto spacing = w.spacing();
-    auto size = w.size();
+    auto spacing = get_spacing(w);
+    auto size = get_size(w);
     auto dx = spacing[0];
     auto dy = spacing[1];
     auto dz = spacing[2];

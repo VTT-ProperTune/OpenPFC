@@ -14,7 +14,7 @@ using namespace Catch::Matchers;
 using namespace pfc;
 
 TEST_CASE("FFT - Basic Functionality", "[fft]") {
-  World world({8, 1, 1});
+  World world = create_world({8, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world); // Provide all parameters
 
@@ -25,7 +25,7 @@ TEST_CASE("FFT - Basic Functionality", "[fft]") {
 
 TEST_CASE("FFT forward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
-  World world({8, 1, 1});
+  World world = create_world({8, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
 
@@ -42,7 +42,7 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
 
 TEST_CASE("FFT backward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
-  World world({2, 1, 1});
+  World world = create_world({2, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
 
