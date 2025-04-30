@@ -28,8 +28,8 @@ void dft_forward(const vector<double> x, vector<complex<double>> &X) {
   fill(X.begin(), X.end(), 0.0);
   for (int n = 0, N = x.size(); n < N; n++) {
     for (int k = 0; k < N / 2 + 1; k++) {
-      X[k] += x[n] * complex<double>(cos(2 * pi / N * k * n),
-                                     -sin(2 * pi / N * k * n));
+      X[k] +=
+          x[n] * complex<double>(cos(2 * pi / N * k * n), -sin(2 * pi / N * k * n));
     }
   }
 }

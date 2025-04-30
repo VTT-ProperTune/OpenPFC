@@ -102,8 +102,8 @@ void abortIfNaNs(const std::vector<T> &vec, const char *filename, int line) {
   if (hasNaNs(vec)) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    std::cerr << "NaNs detected on process " << rank << " at " << filename
-              << ":" << line << ". Aborting MPI application." << std::endl;
+    std::cerr << "NaNs detected on process " << rank << " at " << filename << ":"
+              << line << ". Aborting MPI application." << std::endl;
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 }

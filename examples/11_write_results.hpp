@@ -131,9 +131,7 @@ public:
    *
    * @param origin
    */
-  virtual void set_origin(const std::array<double, 3> &origin) {
-    m_origin = origin;
-  }
+  virtual void set_origin(const std::array<double, 3> &origin) { m_origin = origin; }
 
   /**
    * @brief Get the origin of the local domain.
@@ -180,8 +178,7 @@ public:
    * @return size_t
    */
   size_t get_data_size() const {
-    return m_global_dimensions[0] * m_global_dimensions[1] *
-           m_global_dimensions[2];
+    return m_global_dimensions[0] * m_global_dimensions[1] * m_global_dimensions[2];
   }
 
   std::string get_data_type() const { return get_data_type_name<T>(); }
@@ -257,9 +254,7 @@ public:
    *
    * @param spacing
    */
-  void set_spacing(const std::array<double, 3> &spacing) {
-    m_spacing = spacing;
-  }
+  void set_spacing(const std::array<double, 3> &spacing) { m_spacing = spacing; }
 
   /**
    * @brief Set the extent of the piece.
@@ -289,8 +284,8 @@ public:
    */
   std::string get_whole_extent() const {
     std::stringstream ss;
-    ss << "0 " << m_whole_extent[0] - 1 << " 0 " << m_whole_extent[1] - 1
-       << " 0 " << m_whole_extent[2] - 1;
+    ss << "0 " << m_whole_extent[0] - 1 << " 0 " << m_whole_extent[1] - 1 << " 0 "
+       << m_whole_extent[2] - 1;
     return ss.str();
   }
 
@@ -343,17 +338,15 @@ public:
     ss << R"(<?xml version="1.0" encoding="utf-8"?>)" << std::endl;
     ss << R"(<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian" header_type="UInt64">)"
        << std::endl;
-    ss << R"(  <ImageData WholeExtent=")" << get_whole_extent()
-       << R"(" Origin=")" << get_origin() << R"("
+    ss << R"(  <ImageData WholeExtent=")" << get_whole_extent() << R"(" Origin=")"
+       << get_origin() << R"("
       Spacing=")"
        << get_spacing() << R"(">)" << std::endl;
-    ss << R"(    <Piece Extent=")" << get_whole_extent() << R"(">)"
-       << std::endl;
+    ss << R"(    <Piece Extent=")" << get_whole_extent() << R"(">)" << std::endl;
     ss << R"(      <PointData>)" << std::endl;
     ss << R"(        <DataArray type=")" << get_data_type() << R"(" Name=")"
        << get_field_name()
-       << R"(" NumberOfComponents="1" format="appended" offset="0"/>)"
-       << std::endl;
+       << R"(" NumberOfComponents="1" format="appended" offset="0"/>)" << std::endl;
     ss << R"(      </PointData>)" << std::endl;
     ss << R"(    </Piece>)" << std::endl;
     ss << R"(  </ImageData>)" << std::endl;
@@ -412,8 +405,7 @@ public:
    */
   void write(std::string &filename) {
     // Open the file in binary mode
-    std::fstream file(filename,
-                      std::ios::in | std::ios::out | std::ios::binary);
+    std::fstream file(filename, std::ios::in | std::ios::out | std::ios::binary);
     if (!file) {
       std::cerr << "Failed to open the file: " << filename << std::endl;
       return;
@@ -497,8 +489,8 @@ public:
     int order = MPI_ORDER_FORTRAN;
     MPI_Datatype oldtype = get_mpi_datatype();
     MPI_Datatype *newtype = &m_filetype;
-    MPI_Type_create_subarray(ndims, size_array, subsize_array, start_array,
-                             order, oldtype, newtype);
+    MPI_Type_create_subarray(ndims, size_array, subsize_array, start_array, order,
+                             oldtype, newtype);
     MPI_Type_commit(&m_filetype);
   }
 
@@ -521,13 +513,12 @@ public:
     MPI_File fh;
     MPI_Status status;
     int amode = MPI_MODE_CREATE | MPI_MODE_WRONLY;
-    MPI_File_open(m_comm, IWriter<T>::get_uri().c_str(), amode, MPI_INFO_NULL,
-                  &fh);
+    MPI_File_open(m_comm, IWriter<T>::get_uri().c_str(), amode, MPI_INFO_NULL, &fh);
     MPI_File_set_size(fh, 0);
     MPI_File_set_view(fh, header.get_header_offset(), get_mpi_datatype(),
                       get_filetype(), "native", MPI_INFO_NULL);
-    int ret = MPI_File_write_all(fh, data.data(), data.size(),
-                                 get_mpi_datatype(), &status);
+    int ret = MPI_File_write_all(fh, data.data(), data.size(), get_mpi_datatype(),
+                                 &status);
     if (ret != MPI_SUCCESS) {
       std::cerr << "Error writing to file: " << ret << std::endl;
       MPI_Abort(m_comm, ret);

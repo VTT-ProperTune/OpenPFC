@@ -18,9 +18,8 @@ class ModelWithConstantIC : public Model {
 public:
   ModelWithConstantIC(const pfc::World &world) : pfc::Model(world) {}
 
-  void step(double /*t*/) override {} // Suppress unused parameter warning
-  void initialize(double /*dt*/) override {
-  } // Suppress unused parameter warning
+  void step(double /*t*/) override {}        // Suppress unused parameter warning
+  void initialize(double /*dt*/) override {} // Suppress unused parameter warning
 };
 
 TEST_CASE("Constant Field Modifier") {
@@ -72,5 +71,5 @@ TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
   FFT fft(decomp, MPI_COMM_WORLD, options, world);
   model.set_fft(fft);
 
-  REQUIRE(model.get_world().get_size() == World::Int3{8, 8, 8});
+  REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});
 }

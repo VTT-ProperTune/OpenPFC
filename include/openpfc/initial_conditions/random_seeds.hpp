@@ -63,8 +63,7 @@ public:
     for (int i = 0; i < nseeds; i++) {
       const std::array<double, 3> location = random_location();
       const std::array<double, 3> orientation = random_orientation();
-      const Seed seed(location, orientation, radius, get_density(),
-                      get_amplitude());
+      const Seed seed(location, orientation, radius, get_density(), get_amplitude());
       seeds.push_back(seed);
     }
 

@@ -5,6 +5,7 @@
 #define PFC_DISCRETE_FIELD_HPP
 
 #include "array.hpp"
+#include "openpfc/core/world.hpp"
 #include "utils/show.hpp"
 #include <array>
 #include <cmath>
@@ -25,11 +26,9 @@ private:
   Array<T, D> m_array; /**< Multidimensional array containing data. */
   const std::array<double, D> m_origin; /**< The origin of the field. */
   const std::array<double, D>
-      m_discretization; /**< The discretization of the field. */
-  const std::array<double, D>
-      m_coords_low; /**< The lower bound of coordinates. */
-  const std::array<double, D>
-      m_coords_high; /**< The upper bound of coordinates. */
+      m_discretization;                      /**< The discretization of the field. */
+  const std::array<double, D> m_coords_low;  /**< The lower bound of coordinates. */
+  const std::array<double, D> m_coords_high; /**< The upper bound of coordinates. */
 
   /**
    * @brief Calculate lower bounding box of this field.
@@ -50,8 +49,7 @@ private:
                                               const std::array<int, D> &size) {
     std::array<double, D> coords_high;
     for (size_t i = 0; i < D; i++)
-      coords_high[i] =
-          m_origin[i] + (offset[i] + size[i]) * m_discretization[i];
+      coords_high[i] = m_origin[i] + (offset[i] + size[i]) * m_discretization[i];
     return coords_high;
   }
 
@@ -79,10 +77,12 @@ public:
    *
    * @param decomp The Decomposition object.
    */
-  DiscreteField(const Decomposition &decomp)
-      : DiscreteField(decomp.get_inbox_size(), decomp.get_inbox_offset(),
-                      decomp.get_world().get_origin(),
-                      decomp.get_world().get_spacing()) {}
+  /* TODO: Make free function for this
+ DiscreteField(const Decomposition &decomp)
+     : DiscreteField(decomp.get_inbox_size(), decomp.get_inbox_offset(),
+                     get_origin(decomp.get_world()),
+                     get_spacing(decomp.get_world())) {}
+ */
 
   const std::array<double, D> &get_origin() const { return m_origin; }
   const std::array<double, D> &get_discretization() const {
@@ -103,9 +103,7 @@ public:
    * @param indices multi-dimensional indices
    * @return T&
    */
-  T &operator[](const std::array<int, D> &indices) {
-    return get_array()[indices];
-  }
+  T &operator[](const std::array<int, D> &indices) { return get_array()[indices]; }
 
   /**
    * @brief Returns the element at the specified index.
@@ -154,8 +152,7 @@ public:
    */
   bool inbounds(const std::array<double, D> &coords) {
     for (size_t i = 0; i < D; i++) {
-      if (m_coords_low[i] > coords[i] || coords[i] >= m_coords_high[i])
-        return false;
+      if (m_coords_low[i] > coords[i] || coords[i] >= m_coords_high[i]) return false;
     }
     return true;
   }
@@ -268,9 +265,7 @@ public:
    */
   const std::array<int, D> &get_size() const { return get_index().get_size(); }
 
-  const std::array<int, D> &get_offset() const {
-    return get_index().get_begin();
-  }
+  const std::array<int, D> &get_offset() const { return get_index().get_begin(); }
 
   void set_data(const std::vector<T> &data) { get_array().set_data(data); }
 
@@ -291,8 +286,7 @@ public:
        << ", size = " << utils::array_to_string(index.get_size())
        << ", linear_size = " << index.get_linear_size()
        << ", origin = " << utils::array_to_string(field.get_origin())
-       << ", discretization = "
-       << utils::array_to_string(field.get_discretization())
+       << ", discretization = " << utils::array_to_string(field.get_discretization())
        << ", coords_low = " << utils::array_to_string(field.get_coords_low())
        << ", coords_high = " << utils::array_to_string(field.get_coords_high());
     return os;

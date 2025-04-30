@@ -130,8 +130,7 @@ public:
    * False otherwise
    */
   bool done() const {
-    return (get_current() >=
-            m_t1 - 1e-9); // Adjust for floating-point precision
+    return (get_current() >= m_t1 - 1e-9); // Adjust for floating-point precision
   }
 
   /**

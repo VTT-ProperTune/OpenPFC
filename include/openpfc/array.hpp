@@ -100,9 +100,7 @@ public:
 
   T &operator[](int idx) { return data.operator[](idx); }
 
-  T &operator()(const std::array<int, D> &indices) {
-    return operator[](indices);
-  }
+  T &operator()(const std::array<int, D> &indices) { return operator[](indices); }
 
   /**
    * @brief Get the size object
@@ -138,8 +136,7 @@ public:
    */
   template <typename Func> void apply(Func &&func) {
     static_assert(
-        std::is_convertible_v<std::invoke_result_t<Func, std::array<int, D>>,
-                              T>,
+        std::is_convertible_v<std::invoke_result_t<Func, std::array<int, D>>, T>,
         "Func must be invocable with std::array<int, D> and return a type "
         "convertible to T");
     auto it = index.begin();

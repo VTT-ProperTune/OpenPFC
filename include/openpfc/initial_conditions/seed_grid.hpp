@@ -75,8 +75,8 @@ public:
     double Z0 = Dz / 2.0;
     int nseeds = Nx * Ny * Nz;
 
-    std::cout << "Generating " << nseeds << " regular seeds with radius "
-              << radius << "\n";
+    std::cout << "Generating " << nseeds << " regular seeds with radius " << radius
+              << "\n";
 
     std::mt19937_64 re(42);
     std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
@@ -84,8 +84,8 @@ public:
 
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nz; k++) {
-        const std::array<double, 3> location = {
-            X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+        const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re),
+                                                Z0 + Dz * k + rt(re)};
         const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
         const Seed seed(location, orientation, get_radius(), get_density(),
                         get_amplitude());

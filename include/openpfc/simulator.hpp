@@ -27,8 +27,7 @@ private:
   Model &m_model;
   Time &m_time;
 
-  std::unordered_map<std::string, std::unique_ptr<ResultsWriter>>
-      m_result_writers;
+  std::unordered_map<std::string, std::unique_ptr<ResultsWriter>> m_result_writers;
   std::vector<std::unique_ptr<FieldModifier>> m_initial_conditions;
   std::vector<std::unique_ptr<FieldModifier>> m_boundary_conditions;
   int m_result_counter = 0;
@@ -95,15 +94,15 @@ public:
   bool add_results_writer(const std::string &field_name,
                           std::unique_ptr<ResultsWriter> writer) {
     const Decomposition &d = get_decomposition();
-    writer->set_domain(d.get_world().get_size(), d.get_inbox().size,
+    writer->set_domain(get_size(d.get_world()), d.get_inbox().size,
                        d.get_inbox().low);
     Model &model = get_model();
     if (model.has_field(field_name)) {
       m_result_writers.insert({field_name, std::move(writer)});
       return true;
     } else {
-      std::cout << "Warning: tried to add writer for inexistent field "
-                << field_name << ", RESULTS ARE NOT WRITTEN!" << std::endl;
+      std::cout << "Warning: tried to add writer for inexistent field " << field_name
+                << ", RESULTS ARE NOT WRITTEN!" << std::endl;
       return false;
     }
   }
@@ -141,9 +140,9 @@ public:
       m_initial_conditions.push_back(std::move(modifier));
       return true;
     } else {
-      std::cout
-          << "Warning: tried to add initial condition for inexistent field "
-          << field_name << ", INITIAL CONDITIONS ARE NOT APPLIED!" << std::endl;
+      std::cout << "Warning: tried to add initial condition for inexistent field "
+                << field_name << ", INITIAL CONDITIONS ARE NOT APPLIED!"
+                << std::endl;
       return false;
     }
   }
@@ -158,8 +157,7 @@ public:
    * @return A const reference to the vector of unique pointers to FieldModifier
    * objects.
    */
-  const std::vector<std::unique_ptr<FieldModifier>> &
-  get_initial_conditions() const {
+  const std::vector<std::unique_ptr<FieldModifier>> &get_initial_conditions() const {
     return m_initial_conditions;
   }
 
@@ -183,18 +181,16 @@ public:
     Model &model = get_model();
     std::string field_name = modifier->get_field_name();
     if (field_name == "default") {
-      std::cout
-          << "Warning: adding boundary condition to modify field 'default'"
-          << std::endl;
+      std::cout << "Warning: adding boundary condition to modify field 'default'"
+                << std::endl;
     }
     if (model.has_field(field_name)) {
       m_boundary_conditions.push_back(std::move(modifier));
       return true;
     } else {
-      std::cout
-          << "Warning: tried to add boundary condition for inexistent field "
-          << field_name << ", BOUNDARY CONDITIONS ARE NOT APPLIED!"
-          << std::endl;
+      std::cout << "Warning: tried to add boundary condition for inexistent field "
+                << field_name << ", BOUNDARY CONDITIONS ARE NOT APPLIED!"
+                << std::endl;
       return false;
     }
   }
@@ -214,9 +210,7 @@ public:
     return m_boundary_conditions;
   }
 
-  void set_result_counter(int result_counter) {
-    m_result_counter = result_counter;
-  }
+  void set_result_counter(int result_counter) { m_result_counter = result_counter; }
 
   double get_result_counter() const { return m_result_counter; }
 

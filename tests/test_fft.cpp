@@ -16,8 +16,7 @@ using namespace pfc;
 TEST_CASE("FFT - Basic Functionality", "[fft]") {
   World world = create_world({8, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD,
-          heffte::default_options<heffte::backend::fftw>(),
+  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
           world); // Provide all parameters
 
   REQUIRE(fft.size_inbox() > 0);
@@ -29,8 +28,8 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
   World world = create_world({8, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD,
-          heffte::default_options<heffte::backend::fftw>(), world);
+  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
+          world);
 
   // Generate input data
   std::vector<double> input = {0.000, 0.785, 1.571, 2.356,
@@ -48,8 +47,8 @@ TEST_CASE("FFT backward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
   World world = create_world({2, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD,
-          heffte::default_options<heffte::backend::fftw>(), world);
+  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
+          world);
 
   // Generate input data
   std::vector<std::complex<double>> input = {std::complex<double>(1.0, 0.0),

@@ -15,9 +15,8 @@ class MockModel : public Model {
 public:
   MockModel(const pfc::World &world) : pfc::Model(world) {}
 
-  void step(double /*t*/) override {} // Suppress unused parameter warning
-  void initialize(double /*dt*/) override {
-  } // Suppress unused parameter warning
+  void step(double /*t*/) override {}        // Suppress unused parameter warning
+  void initialize(double /*dt*/) override {} // Suppress unused parameter warning
 };
 
 // Define a mock implementation of the FieldModifier class for testing
@@ -32,8 +31,8 @@ public:
 TEST_CASE("Simulator functionality", "[simulator]") {
   World world = create_world({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD,
-          heffte::default_options<heffte::backend::fftw>(), world);
+  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
+          world);
   MockModel model(world);
 
   model.set_fft(fft);
@@ -112,5 +111,5 @@ TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
   // Ensure FFT object is set before proceeding
   REQUIRE_NOTHROW(model.get_fft());
 
-  REQUIRE(model.get_world().get_size() == World::Int3{8, 8, 8});
+  REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});
 }

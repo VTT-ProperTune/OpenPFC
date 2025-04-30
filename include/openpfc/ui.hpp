@@ -49,11 +49,9 @@ template <class T> T from_json(const json &settings);
  * @param j The JSON object to parse.
  * @return The heffte::plan_options object constructed from the JSON.
  */
-template <>
-heffte::plan_options from_json<heffte::plan_options>(const json &j) {
+template <> heffte::plan_options from_json<heffte::plan_options>(const json &j) {
   std::cout << "\nParsing backend options ...\n";
-  heffte::plan_options options =
-      heffte::default_options<heffte::backend::fftw>();
+  heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (j.contains("use_reorder")) {
     std::cout << "Using strided 1d fft operations" << std::endl;
     options.use_reorder = j["use_reorder"];
@@ -143,8 +141,7 @@ template <> World from_json<World>(const json &j) {
   dz = j["dz"];
 
   if (!j.count("origo") || !j["origo"].is_string()) {
-    throw std::invalid_argument(
-        "Missing or invalid 'origo' field in JSON input.");
+    throw std::invalid_argument("Missing or invalid 'origo' field in JSON input.");
   }
   origo = j["origo"];
 
@@ -158,7 +155,7 @@ template <> World from_json<World>(const json &j) {
     z0 = -0.5 * dz * Lz;
   }
 
-  World world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  World world = create_world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
 
   return world;
 }
@@ -193,13 +190,11 @@ void from_json(const json &j, SingleSeed &seed) {
   }
 
   if (!j.count("amp_eq")) {
-    throw std::invalid_argument(
-        "JSON object does not contain an 'amp_eq' key.");
+    throw std::invalid_argument("JSON object does not contain an 'amp_eq' key.");
   }
 
   if (!j.count("rho_seed")) {
-    throw std::invalid_argument(
-        "JSON object does not contain a 'rho_seed' key.");
+    throw std::invalid_argument("JSON object does not contain a 'rho_seed' key.");
   }
 
   seed.set_amplitude(j["amp_eq"]);
@@ -423,11 +418,10 @@ FieldModifier &)'"
 */
 
 void from_json(const json &, Model &) {
-  std::cout
-      << "Warning: This model does not implement reading parameters from "
-         "json file. In order to read parameters from json file, one needs to "
-         "implement 'void from_json(const json &, Model &)'"
-      << std::endl;
+  std::cout << "Warning: This model does not implement reading parameters from "
+               "json file. In order to read parameters from json file, one needs to "
+               "implement 'void from_json(const json &, Model &)'"
+            << std::endl;
 }
 
 /**
@@ -549,8 +543,7 @@ private:
 public:
   App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
       : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
-        rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)) {
-  }
+        rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)) {}
 
   App(const json &settings, MPI_Comm comm = MPI_COMM_WORLD)
       : m_comm(comm), m_worker(MPI_Worker(0, nullptr, comm)),
@@ -560,13 +553,11 @@ public:
     std::filesystem::path results_dir(output);
     if (results_dir.has_filename()) results_dir = results_dir.parent_path();
     if (!std::filesystem::exists(results_dir)) {
-      std::cout << "Results dir " << results_dir
-                << " does not exist, creating\n";
+      std::cout << "Results dir " << results_dir << " does not exist, creating\n";
       std::filesystem::create_directories(results_dir);
       return true;
     } else {
-      std::cout << "Warning: results dir " << results_dir
-                << " already exists\n";
+      std::cout << "Warning: results dir " << results_dir << " already exists\n";
       return false;
     }
   }
@@ -606,11 +597,9 @@ public:
     }
     std::cout << "Adding initial conditions" << std::endl;
     for (const json &params : m_settings["initial_conditions"]) {
-      std::cout << "Creating initial condition from data " << params
-                << std::endl;
+      std::cout << "Creating initial condition from data " << params << std::endl;
       if (!params.contains("type")) {
-        std::cout << "Warning: no type is set for initial condition!"
-                  << std::endl;
+        std::cout << "Warning: no type is set for initial condition!" << std::endl;
         continue;
       }
       std::string type = params["type"];
@@ -621,8 +610,7 @@ public:
                   << std::endl;
       } else {
         std::string target = params["target"];
-        std::cout << "Setting initial condition target to " << target
-                  << std::endl;
+        std::cout << "Setting initial condition target to " << target << std::endl;
         field_modifier->set_field_name(target);
       }
       sim.add_initial_conditions(std::move(field_modifier));
@@ -636,11 +624,9 @@ public:
     }
     std::cout << "Adding boundary conditions" << std::endl;
     for (const json &params : m_settings["boundary_conditions"]) {
-      std::cout << "Creating boundary condition from data " << params
-                << std::endl;
+      std::cout << "Creating boundary condition from data " << params << std::endl;
       if (!params.contains("type")) {
-        std::cout << "Warning: no type is set for initial condition!"
-                  << std::endl;
+        std::cout << "Warning: no type is set for initial condition!" << std::endl;
         continue;
       }
       std::string type = params["type"];
@@ -651,8 +637,7 @@ public:
                   << std::endl;
       } else {
         std::string target = params["target"];
-        std::cout << "Setting boundary condition target to " << target
-                  << std::endl;
+        std::cout << "Setting boundary condition target to " << target << std::endl;
         field_modifier->set_field_name(target);
       }
       sim.add_boundary_conditions(std::move(field_modifier));
@@ -675,8 +660,7 @@ public:
     model.set_fft(fft);
     Simulator simulator(model, time);
 
-    if (m_settings.contains("model") &&
-        m_settings["model"].contains("params")) {
+    if (m_settings.contains("model") && m_settings["model"].contains("params")) {
       from_json(m_settings["model"]["params"], model);
     }
     read_detailed_timing_configuration();
@@ -781,8 +765,7 @@ public:
       double eta_t = eta_i * m_avg_steptime;
       double other_time = m_steptime - m_fft_time;
       std::cout << "Step " << increment << " done in " << m_steptime << " s ";
-      std::cout << "(" << m_fft_time << " s FFT, " << other_time
-                << " s other). ";
+      std::cout << "(" << m_fft_time << " s FFT, " << other_time << " s other). ";
       std::cout << "Simulation time: " << t << " / " << t1;
       std::cout << " (" << (t / t1 * 100) << " % done). ";
       std::cout << "ETA: " << pfc::utils::TimeLeft(eta_t) << std::endl;

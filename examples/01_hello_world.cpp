@@ -40,8 +40,7 @@ int main() {
   // Retrieve world properties
   cout << "World properties:" << endl;
   auto size = get_size(world);
-  cout << "Dimensions: " << size[0] << " x " << size[1] << " x " << size[2]
-       << endl;
+  cout << "Dimensions: " << size[0] << " x " << size[1] << " x " << size[2] << endl;
   auto world_origin = get_origin(world);
   cout << "Origin: (" << world_origin[0] << ", " << world_origin[1] << ", "
        << world_origin[2] << ")" << endl;

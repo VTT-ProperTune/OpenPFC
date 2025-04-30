@@ -22,9 +22,7 @@ protected:
   std::shared_ptr<MPI_Comm> comm_ptr;
 };
 
-inline communicator::communicator() {
-  comm_ptr.reset(new MPI_Comm(MPI_COMM_WORLD));
-}
+inline communicator::communicator() { comm_ptr.reset(new MPI_Comm(MPI_COMM_WORLD)); }
 
 inline communicator::operator MPI_Comm() const {
   if (comm_ptr)

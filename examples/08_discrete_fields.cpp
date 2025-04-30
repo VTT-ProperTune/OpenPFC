@@ -98,16 +98,14 @@ int main() {
   field1.apply(func1);
   field2.apply(func2);
   field3.apply(func3);
-  field4.apply(
-      [](auto x, auto y, auto z) { return 1.0 + x + y * y + 0.0 * z; });
+  field4.apply([](auto x, auto y, auto z) { return 1.0 + x + y * y + 0.0 * z; });
 
   // Keep on mind, that in general, one would define only one decomposition and
   // thus one "field" for each MPI process. Thus it's hard to say, given some
   // spesific coordinate (x, y, z), in which MPI process it stays, and some
   // extra work to find it needs to be done, potentially involving MPI traffic.
   auto probe = [&](double x, double y) {
-    std::array<DiscreteField<double, 3>, 4> fields{field1, field2, field3,
-                                                   field4};
+    std::array<DiscreteField<double, 3>, 4> fields{field1, field2, field3, field4};
     const std::array<double, 3> coords = {x, y, 0.0};
     int field_num = 0;
     for (auto &field : fields) {

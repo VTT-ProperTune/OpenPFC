@@ -15,7 +15,14 @@ int main(int argc, char *argv[]) {
   Decomposition decomp = make_decomposition(world);
 
   // Create input field
-  DiscreteField<double, 3> input(decomp);
+  // DiscreteField<double, 3> input(decomp);
+
+  auto dimensions = decomp.get_inbox_size();
+  auto offsets = decomp.get_inbox_offset();
+  auto origin = get_origin(world);
+  auto discretization = get_spacing(world);
+  DiscreteField<double, 3> input(dimensions, offsets, origin, discretization);
+
   // Create a random number generator
   std::random_device rd;
   std::mt19937 gen(rd());

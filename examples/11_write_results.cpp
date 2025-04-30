@@ -15,7 +15,12 @@ int main(int argc, char **argv) {
   MPI_Worker worker(argc, argv);
   World world = create_world({4, 3, 2});
   Decomposition decomp = make_decomposition(world);
-  DiscreteField<double, 3> field(decomp);
+  // DiscreteField<double, 3> field(decomp);
+  auto dimensions = decomp.get_inbox_size();
+  auto offsets = decomp.get_inbox_offset();
+  auto origin = get_origin(world);
+  auto discretization = get_spacing(world);
+  DiscreteField<double, 3> field(dimensions, offsets, origin, discretization);
 
   std::vector<double> arr(2 * 3 * 4);
   for (unsigned int i = 0; i < arr.size(); i++) arr[i] = static_cast<double>(i);

@@ -19,7 +19,7 @@ namespace pfc {
  * @return A heffte::box3d<int> representing the world domain.
  */
 inline heffte::box3d<int> to_heffte_box(const World &world) {
-  const auto &size = world.get_size();
+  const auto &size = get_size(world);
   return heffte::box3d<int>({0, 0, 0}, {size[0] - 1, size[1] - 1, size[2] - 1});
 }
 

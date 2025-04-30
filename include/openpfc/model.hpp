@@ -34,7 +34,7 @@ namespace pfc {
  */
 class Model {
 private:
-  FFT *m_fft = nullptr; ///< Raw pointer to the FFT object used by the model
+  FFT *m_fft = nullptr;       ///< Raw pointer to the FFT object used by the model
   RealFieldSet m_real_fields; ///< Collection of real-valued fields associated
                               ///< with the model
   ComplexFieldSet m_complex_fields; ///< Collection of complex-valued fields
@@ -91,9 +91,7 @@ public:
    *
    * @return Reference to the Decomposition object
    */
-  const Decomposition &get_decomposition() {
-    return get_fft().get_decomposition();
-  }
+  const Decomposition &get_decomposition() { return get_fft().get_decomposition(); }
 
   /**
    * @brief Get the world object associated with the model.

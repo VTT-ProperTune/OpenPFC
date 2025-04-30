@@ -21,6 +21,59 @@
 #include <stdexcept>
 namespace pfc {
 
+/// Type aliases for clarity
+using Int3 = std::array<int, 3>;
+using Real3 = std::array<double, 3>;
+using Bool3 = std::array<bool, 3>;
+
+/// Coordinate system tag.
+enum class CoordinateSystemTag {
+  Line,        ///< 1D Cartesian
+  Plane,       ///< 2D Cartesian
+  Cartesian,   ///< 3D Cartesian
+  Polar,       ///< 2D Polar
+  Cylindrical, ///< 3D Cylindrical
+  Spherical    ///< 3D Spherical
+};
+
+/// Strong typedefs for constructor clarity
+struct Size3 {
+  std::array<int, 3> value;
+  explicit Size3(const std::array<int, 3> &v) : value(v) {
+    for (int dim : value) {
+      if (dim <= 0) {
+        throw std::invalid_argument("Size values must be positive.");
+      }
+    }
+  }
+};
+
+struct LowerBounds3 {
+  std::array<double, 3> value;
+  explicit LowerBounds3(const std::array<double, 3> &v) : value(v) {}
+};
+
+struct UpperBounds3 {
+  std::array<double, 3> value;
+  explicit UpperBounds3(const std::array<double, 3> &v) : value(v) {}
+};
+
+struct Spacing3 {
+  std::array<double, 3> value;
+  explicit Spacing3(const std::array<double, 3> &v) : value(v) {
+    for (double dim : value) {
+      if (dim <= 0.0) {
+        throw std::invalid_argument("Spacing values must be positive.");
+      }
+    }
+  }
+};
+
+struct Periodic3 {
+  std::array<bool, 3> value;
+  explicit Periodic3(const std::array<bool, 3> &v) : value(v) {}
+};
+
 /**
  * @brief Represents the global simulation domain (the "world").
  *
@@ -72,84 +125,24 @@ namespace pfc {
  * }
  * @endcode
  */
-class World {
-public:
-  /// Type aliases for clarity
-  using Int3 = std::array<int, 3>;
-  using Real3 = std::array<double, 3>;
+struct World final {
+  const Int3 m_size;      ///< Dimensions of the world: {Lx, Ly, Lz}
+  const Real3 m_lower;    ///< Lower coordinates: {x0, y0, z0}
+  const Real3 m_upper;    ///< Upper coordinates: {x1, y1, z1}
+  const Real3 m_spacing;  ///< Spacing parameters: {dx, dy, dz}
+  const Bool3 m_periodic; ///< Periodicity flags: {px, py, pz}
+  const CoordinateSystemTag m_coordinate_system; ///< Coordinate system type
 
-private:
-  const Int3 m_size;     ///< Dimensions of the world: {Lx, Ly, Lz}
-  const Real3 m_origin;  ///< Origin coordinates: {x0, y0, z0}
-  const Real3 m_spacing; ///< Spacing parameters: {dx, dy, dz}
+  // constructor
+  explicit World(const Int3 &dimensions, const Real3 &lower, const Real3 &upper,
+                 const Real3 &spacing, const Bool3 &periodic,
+                 CoordinateSystemTag coordinate_system);
 
-public:
-  World(const Int3 &dimensions, const Real3 &origin, const Real3 &spacing)
-      : m_size(dimensions), m_origin(origin), m_spacing(spacing) {}
-
-  // Getters for member variables
-  Int3 get_size() const noexcept { return m_size; }
-  Real3 get_origin() const noexcept { return m_origin; }
-  Real3 get_spacing() const noexcept { return m_spacing; }
-
-  /**
-   * @brief Get the number of grid points in each dimension.
-   *
-   * @return The number of grid points in each dimension: {Nx, Ny, Nz}.
-   */
-  int total_size() const noexcept;
-
-  /**
-   * @brief Computes the physical coordinate corresponding to grid indices
-   * {i,j,k}.
-   *
-   * This method calculates the physical coordinates in the simulation domain
-   * based on the grid indices and spacing.
-   *
-   * @param indices The grid indices {i, j, k}.
-   * @return The physical coordinate {x, y, z}.
-   */
-  Real3 physical_coordinates(const Int3 &indices) const noexcept;
-
-  /**
-   * @brief Computes the grid indices corresponding to physical coordinates
-   * {x,y,z}.
-   *
-   * This method calculates the grid indices in the simulation domain
-   * based on the physical coordinates and spacing.
-   *
-   * @param coordinates The physical coordinates {x, y, z}.
-   * @return The grid indices {i, j, k}.
-   */
-  Int3 grid_indices(const Real3 &coordinates) const noexcept;
-
-  /**
-   * @brief Compare this world to other world.
-   *
-   * @param other world
-   * @return true
-   * @return false
-   */
+  // comparison operators
   bool operator==(const World &other) const noexcept;
-
-  /**
-   * @brief Compare this world to other world.
-   *
-   * @param other world
-   * @return true
-   * @return false
-   */
   bool operator!=(const World &other) const noexcept;
 
-  /**
-   * @brief Output stream operator for World objects.
-   *
-   * Allows printing the state of a World object to an output stream.
-   *
-   * @param os The output stream to write to.
-   * @param w The World object to be printed.
-   * @return The updated output stream.
-   */
+  // stream output operator
   friend std::ostream &operator<<(std::ostream &os, const World &w) noexcept;
 };
 
@@ -157,8 +150,8 @@ public:
  * @brief Create a World object with the specified dimensions, origin, and
  * spacing.
  */
-World create_world(const World::Int3 &dimensions, const World::Real3 &origin,
-                   const World::Real3 &spacing);
+World create_world(const Int3 &dimensions, const Real3 &origin,
+                   const Real3 &spacing);
 
 /**
  * @brief Create a World object with the specified dimensions and default
@@ -166,13 +159,68 @@ World create_world(const World::Int3 &dimensions, const World::Real3 &origin,
  *
  * Default origin is {0.0, 0.0, 0.0}, and default spacing is {1.0, 1.0, 1.0}.
  */
-World create_world(const World::Int3 &dimensions);
+World create_world(const Int3 &dimensions);
 
-World::Int3 get_size(const World &world) noexcept;
-size_t get_size(const World &world, int dim) noexcept;
-World::Real3 get_origin(const World &world) noexcept;
-double get_origin(const World &world, int idx) noexcept;
-World::Real3 get_spacing(const World &world) noexcept;
-double get_spacing(const World &world, int idx) noexcept;
+Int3 get_size(const World &w) noexcept;
+size_t get_size(const World &w, int i) noexcept;
+
+Real3 get_origin(const World &w) noexcept;
+double get_origin(const World &w, int i) noexcept;
+
+Real3 get_lower(const World &w) noexcept;
+double get_lower(const World &w, int i) noexcept;
+
+Real3 get_upper(const World &w) noexcept;
+double get_upper(const World &w, int i) noexcept;
+
+Real3 get_spacing(const World &w) noexcept;
+double get_spacing(const World &w, int i) noexcept;
+
+/**
+ * @brief Get the number of grid points in each dimension.
+ *
+ * @return The number of grid points in each dimension: {Nx, Ny, Nz}.
+ */
+int total_size(const World &w) noexcept;
+
+/**
+ * @brief Computes the physical coordinate corresponding to grid indices
+ * {i,j,k}.
+ *
+ * This method calculates the physical coordinates in the simulation domain
+ * based on the grid indices and spacing.
+ *
+ * @param indices The grid indices {i, j, k}.
+ * @return The physical coordinate {x, y, z}.
+ */
+Real3 to_coords(const World &w, const Int3 &indices) noexcept;
+
+/**
+ * @brief Computes the grid indices corresponding to physical coordinates
+ * {x,y,z}.
+ *
+ * This method calculates the grid indices in the simulation domain
+ * based on the physical coordinates and spacing.
+ *
+ * @param coordinates The physical coordinates {x, y, z}.
+ * @return The grid indices {i, j, k}.
+ */
+Int3 to_indices(const World &w, const Real3 &coordinates) noexcept;
+
+// Free function API for coordinate system and periodicity
+CoordinateSystemTag get_coordinate_system(const World &w) noexcept;
+
+const Bool3 &get_periodicity(const World &w) noexcept;
+
+const bool &is_periodic(const World &w, int i) noexcept;
+
+// Free function variations for creating a World object
+World create_world(const Size3 &size, const LowerBounds3 &lower,
+                   const UpperBounds3 &upper);
+
+World create_world(const Size3 &size, const UpperBounds3 &upper);
+
+World create_world(const Size3 &size, const LowerBounds3 &lower,
+                   const Spacing3 &spacing);
 
 } // namespace pfc

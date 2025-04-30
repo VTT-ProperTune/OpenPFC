@@ -62,8 +62,7 @@ TEST_CASE("array2d") {
    * 2  x  x  x
    */
 
-  SECTION(
-      "Test setting and accessing elements using custom / linear indexing") {
+  SECTION("Test setting and accessing elements using custom / linear indexing") {
     arr({1, 2}) = 1;
     arr({2, 2}) = 2;
     arr({1, 3}) = 3;

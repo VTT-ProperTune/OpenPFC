@@ -45,9 +45,7 @@ public:
    *
    * @param field_name The field name to set.
    */
-  void set_field_name(const std::string &field_name) {
-    m_field_name = field_name;
-  }
+  void set_field_name(const std::string &field_name) { m_field_name = field_name; }
 
   /**
    * @brief Get the field name for the field modifier.
@@ -67,9 +65,7 @@ public:
    * @return The modifier name.
    */
 
-  virtual const std::string &get_modifier_name() const {
-    return m_default_name;
-  }
+  virtual const std::string &get_modifier_name() const { return m_default_name; }
 
   /**
    * @brief Apply the field modification to the model at a specific time.

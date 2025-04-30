@@ -27,8 +27,7 @@ Decomposition make_decomposition(const World &world, int rank, int num_domains);
  * @param comm The MPI communicator (defaults to MPI_COMM_WORLD).
  * @return Decomposition
  */
-Decomposition make_decomposition(const World &world,
-                                 MPI_Comm comm = MPI_COMM_WORLD);
+Decomposition make_decomposition(const World &world, MPI_Comm comm = MPI_COMM_WORLD);
 
 } // namespace pfc
 

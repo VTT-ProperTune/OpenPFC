@@ -78,14 +78,10 @@ public:
     Vec3<int> high = decomp.get_inbox().high;
 
     // auto Lx = w.Lx;
-    auto Ly = w.get_size()[1];
-    auto Lz = w.get_size()[2];
-    auto dx = w.get_spacing()[0];
-    auto dy = w.get_spacing()[1];
-    auto dz = w.get_spacing()[2];
-    auto x0 = w.get_origin()[0];
-    auto y0 = w.get_origin()[1];
-    auto z0 = w.get_origin()[2];
+    auto Ly = get_size(w, 1);
+    auto Lz = get_size(w, 2);
+    auto [dx, dy, dz] = get_spacing(w);
+    auto [x0, y0, z0] = get_origin(w);
 
     std::vector<SeedFCC> seeds;
 
@@ -117,13 +113,13 @@ public:
 
     if (randomized) {
 
-      std::cout << "Generating " << nseeds << " random seeds up to distance "
-                << X0 << "\n";
+      std::cout << "Generating " << nseeds << " random seeds up to distance " << X0
+                << "\n";
 
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
-          const std::array<double, 3> location = {
-              X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+          const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re),
+                                                  Z0 + Dz * k + rt(re)};
           const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
           const SeedFCC seed(location, orientation, radius, rho, amplitude);
           seeds.push_back(seed);
@@ -136,8 +132,8 @@ public:
 
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
-          const std::array<double, 3> location = {
-              X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+          const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re),
+                                                  Z0 + Dz * k + rt(re)};
           const std::array<double, 3> orientation = orientations[j * Nz + k];
           const SeedFCC seed(location, orientation, radius, rho, amplitude);
           seeds.push_back(seed);
@@ -218,8 +214,7 @@ void from_json(const json &params, SlabFCC &ic) {
               << std::endl;
   }
   if (!params.contains("orientations") || !params["orientations"].is_array()) {
-    std::cout << "No valid orientation vector detected, randomizing."
-              << std::endl;
+    std::cout << "No valid orientation vector detected, randomizing." << std::endl;
   }
   int Nz = params["Nz"];
   int Ny = params["Ny"];

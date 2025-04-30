@@ -24,9 +24,8 @@ Time create_time_instance(const std::array<double, 3> &time_config,
 }
 
 // Forward declaration of the helper function
-void verify_time_instance(const Time &time_instance, double t0, double t1,
-                          double dt, double saveat, double current,
-                          int increment = 0);
+void verify_time_instance(const Time &time_instance, double t0, double t1, double dt,
+                          double saveat, double current, int increment = 0);
 
 // Define the TestCase struct for parameterized tests
 struct TestCase {
@@ -43,22 +42,10 @@ struct TestCase {
 TEST_CASE("Time initialization", "[Time]") {
   // Fix expected_t1 value in test cases to match the actual behavior.
   std::vector<TestCase> test_cases = {
-      {{0.0, 10.0, 1.0},
-       2.0,
-       0.0,
-       10.0,
-       1.0,
-       2.0,
-       0.0,
-       0}, // Added expected_increment = 0
-      {{0.0, 5.0, 0.5},
-       -1.0,
-       0.0,
-       5.0,
-       0.5,
-       0.5,
-       0.0,
-       0}, // Added expected_increment = 0
+      {{0.0, 10.0, 1.0}, 2.0, 0.0, 10.0, 1.0, 2.0, 0.0, 0}, // Added
+                                                            // expected_increment = 0
+      {{0.0, 5.0, 0.5}, -1.0, 0.0, 5.0, 0.5, 0.5, 0.0, 0},  // Added
+                                                            // expected_increment = 0
   };
 
   for (const auto &tc : test_cases) {
@@ -67,8 +54,7 @@ TEST_CASE("Time initialization", "[Time]") {
 
       // Use helper function to verify initialization
       verify_time_instance(time_instance, tc.expected_t0, tc.expected_t1,
-                           tc.expected_dt, tc.expected_saveat,
-                           tc.expected_current);
+                           tc.expected_dt, tc.expected_saveat, tc.expected_current);
     }
   }
 }
@@ -116,15 +102,13 @@ TEST_CASE("Time increment overflow", "[Time]") {
   SECTION("Increment beyond the end time and verify completion") {
     t.set_increment(1e6 + 1);
     REQUIRE(t.done());
-    REQUIRE_THAT(t.get_current(),
-                 WithinAbs(1e6, TOLERANCE)); // Should not exceed t1
+    REQUIRE_THAT(t.get_current(), WithinAbs(1e6, TOLERANCE)); // Should not exceed t1
   }
 }
 
 // Enhanced helper function to verify Time instance initialization
-void verify_time_instance(const Time &time_instance, double t0, double t1,
-                          double dt, double saveat, double current,
-                          int increment) {
+void verify_time_instance(const Time &time_instance, double t0, double t1, double dt,
+                          double saveat, double current, int increment) {
   REQUIRE_THAT(time_instance.get_t0(), WithinAbs(t0, TOLERANCE));
   REQUIRE_THAT(time_instance.get_t1(), WithinAbs(t1, TOLERANCE));
   REQUIRE_THAT(time_instance.get_dt(), WithinAbs(dt, TOLERANCE));
@@ -174,8 +158,7 @@ TEST_CASE("Time save condition", "[Time]") {
       REQUIRE(t.do_save());
     }
 
-    SECTION(
-        "Do not save when the current time does not match the save interval") {
+    SECTION("Do not save when the current time does not match the save interval") {
       t.set_increment(6);
       REQUIRE_FALSE(t.do_save());
     }
@@ -191,8 +174,7 @@ TEST_CASE("Time save condition", "[Time]") {
   }
 
   // Additional edge cases for save condition
-  SECTION(
-      "Verify that the Time instance does not save when save interval is 0.0") {
+  SECTION("Verify that the Time instance does not save when save interval is 0.0") {
     t.set_saveat(0.0);
     REQUIRE_FALSE(t.do_save());
   }

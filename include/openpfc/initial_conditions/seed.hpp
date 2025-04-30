@@ -111,9 +111,9 @@ private:
 public:
   Seed(const vec3 &location, const vec3 &orientation, const double radius,
        const double rho, const double amplitude)
-      : location_(location), orientation_(orientation),
-        q_(rotate(orientation_)), bbox_(bounding_box(location, radius)),
-        rho_(rho), radius_(radius), amplitude_(amplitude) {}
+      : location_(location), orientation_(orientation), q_(rotate(orientation_)),
+        bbox_(bounding_box(location, radius)), rho_(rho), radius_(radius),
+        amplitude_(amplitude) {}
 
   bool is_inside(const vec3 &X) const {
     /*

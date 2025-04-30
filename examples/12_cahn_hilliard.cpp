@@ -169,8 +169,7 @@ int main(int argc, char **argv) {
   auto t_end = std::chrono::high_resolution_clock::now();
   // Compute the time difference
   auto duration =
-      std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start)
-          .count();
+      std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count();
   // Print the time difference
   if (worker.get_rank() == 0)
     std::cout << "Solution time: " << duration << " ms" << std::endl;

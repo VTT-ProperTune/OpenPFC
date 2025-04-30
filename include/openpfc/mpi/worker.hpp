@@ -34,8 +34,7 @@ public:
    * @param argv Pointer to an array of command-line arguments
    * @param comm MPI communicator to use
    */
-  MPI_Worker(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
-      : m_comm(comm) {
+  MPI_Worker(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD) : m_comm(comm) {
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(m_comm, &m_rank);
     MPI_Comm_size(m_comm, &m_num_procs);

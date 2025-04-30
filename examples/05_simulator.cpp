@@ -157,8 +157,8 @@ void print_statline(Simulator &s) {
   Diffusion &diffusion_model = dynamic_cast<Diffusion &>(model);
   double min = diffusion_model.get_psi_min();
   double max = diffusion_model.get_psi_max();
-  std::cout << "n = " << n << ", t = " << t << ", min = " << min
-            << ", max = " << max << std::endl;
+  std::cout << "n = " << n << ", t = " << t << ", min = " << min << ", max = " << max
+            << std::endl;
 }
 
 void run_simulator(Simulator &s) {

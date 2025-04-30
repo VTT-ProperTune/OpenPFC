@@ -25,13 +25,13 @@ TEST_CASE("Model functionality", "[Model]") {
   World world = create_world({8, 1, 1});
   MockModel model(world);
 
-  REQUIRE(model.get_world().get_size() == World::Int3{8, 1, 1});
+  REQUIRE(get_size(model.get_world()) == Int3{8, 1, 1});
 
   SECTION("Default construction") {
     // Ensure FFT object is set before proceeding
     Decomposition decomposition = make_decomposition(world, 0, 1);
-    FFT fft(decomposition, MPI_COMM_WORLD,
-            heffte::default_options<heffte::backend::fftw>(), world);
+    auto options = heffte::default_options<heffte::backend::fftw>();
+    FFT fft(decomposition, MPI_COMM_WORLD, options, world);
     model.set_fft(fft);
   }
 
@@ -39,9 +39,8 @@ TEST_CASE("Model functionality", "[Model]") {
     // Create a Decomposition object
     Decomposition decomposition = make_decomposition(world, 0, 1);
     // Create an FFT object
-    FFT fft(decomposition, MPI_COMM_WORLD,
-            heffte::default_options<heffte::backend::fftw>(),
-            world); // Provide all parameters
+    auto options = heffte::default_options<heffte::backend::fftw>();
+    FFT fft(decomposition, MPI_COMM_WORLD, options, world);
     model.set_fft(fft);
 
     REQUIRE(&model.get_fft() == &fft);
@@ -51,8 +50,8 @@ TEST_CASE("Model functionality", "[Model]") {
   SECTION("Real field operations") {
     // Ensure FFT object is set before proceeding
     Decomposition decomposition = make_decomposition(world, 0, 1);
-    FFT fft(decomposition, MPI_COMM_WORLD,
-            heffte::default_options<heffte::backend::fftw>(), world);
+    auto options = heffte::default_options<heffte::backend::fftw>();
+    FFT fft(decomposition, MPI_COMM_WORLD, options, world);
     model.set_fft(fft);
 
     // Create a real field
@@ -92,9 +91,8 @@ TEST_CASE("Model functionality", "[Model]") {
 TEST_CASE("Model - FFT Integration", "[model]") {
   World world = create_world({8, 8, 8});
   Decomposition decomposition = make_decomposition(world, 0, 1);
-  FFT fft(decomposition, MPI_COMM_WORLD,
-          heffte::default_options<heffte::backend::fftw>(),
-          world); // Provide all parameters
+  auto options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomposition, MPI_COMM_WORLD, options, world);
 
   REQUIRE(fft.size_inbox() > 0);
   REQUIRE(fft.size_outbox() > 0);

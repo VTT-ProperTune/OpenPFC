@@ -22,13 +22,11 @@ namespace pfc {
  */
 template <size_t D> class MultiIndex {
 private:
-  const std::array<int, D>
-      m_begin; ///< The offset of the range in each dimension.
-  const std::array<int, D> m_size; ///< The size of the range in each dimension.
-  const std::array<int, D>
-      m_end; ///< The end index of the range in each dimension.
-  const size_t m_linear_begin; ///< The linear index corresponding to the
-                               ///< beginning of the range.
+  const std::array<int, D> m_begin; ///< The offset of the range in each dimension.
+  const std::array<int, D> m_size;  ///< The size of the range in each dimension.
+  const std::array<int, D> m_end; ///< The end index of the range in each dimension.
+  const size_t m_linear_begin;    ///< The linear index corresponding to the
+                                  ///< beginning of the range.
   const size_t
       m_linear_end; ///< The linear index corresponding to the end of the range.
   const size_t m_linear_size; ///< The total number of elements in the range.
@@ -117,16 +115,14 @@ public:
    * @param index The index to output.
    * @return Reference to the output stream.
    */
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const MultiIndex<D> &index) {
+  friend std::ostream &operator<<(std::ostream &os, const MultiIndex<D> &index) {
     os << "MultiIndex set with " << D << " dimensions (indices from {";
     for (size_t i = 0; i < D - 1; i++) os << index.m_begin[i] << ",";
     os << index.m_begin[D - 1] << "} to {";
     for (size_t i = 0; i < D - 1; i++) os << index.m_end[i] << ",";
     os << index.m_end[D - 1] << "}, size {";
     for (size_t i = 0; i < D - 1; i++) os << index.m_size[i] << ",";
-    os << index.m_size[D - 1] << "}, linear size " << index.m_linear_size
-       << ")";
+    os << index.m_size[D - 1] << "}, linear size " << index.m_linear_size << ")";
     return os;
   }
 

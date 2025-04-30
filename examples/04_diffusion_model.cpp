@@ -64,7 +64,7 @@ class Diffusion : public Model {
   using Model::Model; // "Inherit" the default constructor of base class
 
 private:
-  vector<double> opL, psi; // Define linear operator opL and unknown (real) psi
+  vector<double> opL, psi;       // Define linear operator opL and unknown (real) psi
   vector<complex<double>> psi_F; // Define (complex) psi
 
 public:

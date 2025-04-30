@@ -30,8 +30,8 @@ private:
 public:
   SeedGridFCC() = default;
 
-  SeedGridFCC(int Ny, int Nz, double X0, double radius, double amplitude,
-              double rho, double rseed)
+  SeedGridFCC(int Ny, int Nz, double X0, double radius, double amplitude, double rho,
+              double rseed)
       : m_Nx(1), m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius),
         m_amplitude(amplitude), m_rho(rho), m_rseed(rseed) {}
 
@@ -98,8 +98,8 @@ public:
     double Z0 = Dz / 2.0;
     int nseeds = Nx * Ny * Nz;
 
-    std::cout << "Generating " << nseeds << " regular seeds with radius "
-              << radius << "\n";
+    std::cout << "Generating " << nseeds << " regular seeds with radius " << radius
+              << "\n";
 
     std::mt19937_64 re(rseed);
     std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
@@ -107,8 +107,8 @@ public:
 
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nz; k++) {
-        const std::array<double, 3> location = {
-            X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+        const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re),
+                                                Z0 + Dz * k + rt(re)};
         const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
         const SeedFCC seed(location, orientation, radius, rho, amplitude);
         seeds.push_back(seed);
