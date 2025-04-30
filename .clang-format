@@ -3,8 +3,18 @@
 
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: InlineOnly
+# AllowShortFunctionsOnASingleLine: InlineOnly
 IndentWidth: 2
 TabWidth: 2
 UseTab: Never
 ColumnLimit: 120
+BreakConstructorInitializers: BeforeColon # ensures that : is placed on a new line
+ConstructorInitializerAllOnOneLineOrOnePerLine: true # puts each initializer on its own line
+AllowAllConstructorInitializersOnNextLine: false # disables grouping on the next line
+BinPackParameters: false # prevents squeezing multiple parameters into one line
+AlignAfterOpenBracket: Align # keeps nice vertical alignment
+# ColumnLimit: 120
+AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+# AllowShortFunctionsOnASingleLine: Inline
