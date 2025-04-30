@@ -87,6 +87,29 @@
             heffte = heffte;
           };
 
+          # openpfc-docs: compile only the docs.
+          openpfc-docs = pkgs.callPackage openpfcPath {
+            version = "dev";
+            buildType = "Debug";
+            src = ./.;
+            enableTests = false;
+            enableDocs = true;
+            enableExamples = false;
+            enableApps = false;
+            heffte = heffte;
+          };
+
+          # default: build dev version of OpenPFC.
+          default = pkgs.callPackage openpfcPath {
+            version = "dev";
+            buildType = "Debug";
+            src = ./.;
+            enableTests = true;
+            enableDocs = true;
+            enableExamples = true;
+            enableApps = true;
+            heffte = heffte;
+          };
         };
 
         ### Applications ###

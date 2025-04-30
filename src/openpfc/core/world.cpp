@@ -164,10 +164,35 @@ World create_world(const Size3 &size, const LowerBounds3 &lower,
 World create_world(const Size3 &size, const UpperBounds3 &upper) {
   LowerBounds3 lower{{0.0, 0.0, 0.0}};
   CoordinateSystemTag coordinate_system = CoordinateSystemTag::Cartesian;
-  Periodic3 periodic = Periodic3(get_cs_periodicity(coordinate_system));
+  Bool3 periodic_bool = get_cs_periodicity(coordinate_system);
+  Periodic3 periodic(periodic_bool);
   Spacing3 spacing = compute_spacing(size, lower, upper, periodic);
   return create_world(size, lower, upper, spacing, periodic, coordinate_system);
 }
+
+// Strong typedefs for constructor clarity
+
+Size3::Size3(const std::array<int, 3> &v) : value(v) {
+  for (int dim : value) {
+    if (dim <= 0) {
+      throw std::invalid_argument("Size values must be positive.");
+    }
+  }
+}
+
+LowerBounds3::LowerBounds3(const std::array<double, 3> &v) : value(v) {}
+
+UpperBounds3::UpperBounds3(const std::array<double, 3> &v) : value(v) {}
+
+Spacing3::Spacing3(const std::array<double, 3> &v) : value(v) {
+  for (double dim : value) {
+    if (dim <= 0.0) {
+      throw std::invalid_argument("Spacing values must be positive.");
+    }
+  }
+}
+
+Periodic3::Periodic3(const std::array<bool, 3> &v) : value(v) {}
 
 // Operators
 
@@ -214,7 +239,7 @@ Real3 get_spacing(const World &w) noexcept { return w.m_spacing; }
 double get_spacing(const World &w, int i) noexcept { return w.m_spacing[i]; }
 
 const Bool3 &get_periodicity(const World &w) noexcept { return w.m_periodic; }
-const bool &is_periodic(const World &w, int i) noexcept { return w.m_periodic[i]; }
+bool is_periodic(const World &w, int i) noexcept { return w.m_periodic[i]; }
 const bool &get_periodicity(const World &w, int i) noexcept {
   return is_periodic(w, i);
 }
