@@ -19,7 +19,8 @@ private:
 public:
   FixedBC() = default;
 
-  FixedBC(double rho_low, double rho_high) : m_rho_low(rho_low), m_rho_high(rho_high) {}
+  FixedBC(double rho_low, double rho_high)
+      : m_rho_low(rho_low), m_rho_high(rho_high) {}
 
   void set_rho_low(double rho_low) { m_rho_low = rho_low; }
   void set_rho_high(double rho_high) { m_rho_high = rho_high; }

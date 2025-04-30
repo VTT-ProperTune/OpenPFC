@@ -49,9 +49,11 @@ template <class T> T from_json(const json &settings);
  * @param j The JSON object to parse.
  * @return The heffte::plan_options object constructed from the JSON.
  */
-template <> heffte::plan_options from_json<heffte::plan_options>(const json &j) {
+template <>
+heffte::plan_options from_json<heffte::plan_options>(const json &j) {
   std::cout << "\nParsing backend options ...\n";
-  heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
+  heffte::plan_options options =
+      heffte::default_options<heffte::backend::fftw>();
   if (j.contains("use_reorder")) {
     std::cout << "Using strided 1d fft operations" << std::endl;
     options.use_reorder = j["use_reorder"];
@@ -70,7 +72,8 @@ template <> heffte::plan_options from_json<heffte::plan_options>(const json &j) 
       std::cout << "Using p2p_plined reshape algorithm" << std::endl;
       options.algorithm = heffte::reshape_algorithm::p2p_plined;
     } else {
-      std::cerr << "Unknown reshape algorithm " << j["reshape_algorithm"] << std::endl;
+      std::cerr << "Unknown reshape algorithm " << j["reshape_algorithm"]
+                << std::endl;
     }
   }
   if (j.contains("use_pencils")) {
@@ -140,7 +143,8 @@ template <> World from_json<World>(const json &j) {
   dz = j["dz"];
 
   if (!j.count("origo") || !j["origo"].is_string()) {
-    throw std::invalid_argument("Missing or invalid 'origo' field in JSON input.");
+    throw std::invalid_argument(
+        "Missing or invalid 'origo' field in JSON input.");
   }
   origo = j["origo"];
 
@@ -171,26 +175,31 @@ template <> Time from_json<Time>(const json &settings) {
 void from_json(const json &j, Constant &ic) {
   // Check that the JSON input has the correct type field
   if (!j.contains("type") || j["type"] != "constant") {
-    throw std::invalid_argument("Invalid JSON input: missing or incorrect 'type' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
   }
   // Check that the JSON input has the required 'n0' field
   if (!j.contains("n0") || !j["n0"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'n0' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'n0' field.");
   }
   ic.set_density(j["n0"]);
 }
 
 void from_json(const json &j, SingleSeed &seed) {
   if (!j.count("type") || j["type"] != "single_seed") {
-    throw std::invalid_argument("JSON object does not contain a 'single_seed' type.");
+    throw std::invalid_argument(
+        "JSON object does not contain a 'single_seed' type.");
   }
 
   if (!j.count("amp_eq")) {
-    throw std::invalid_argument("JSON object does not contain an 'amp_eq' key.");
+    throw std::invalid_argument(
+        "JSON object does not contain an 'amp_eq' key.");
   }
 
   if (!j.count("rho_seed")) {
-    throw std::invalid_argument("JSON object does not contain a 'rho_seed' key.");
+    throw std::invalid_argument(
+        "JSON object does not contain a 'rho_seed' key.");
   }
 
   seed.set_amplitude(j["amp_eq"]);
@@ -200,17 +209,20 @@ void from_json(const json &j, SingleSeed &seed) {
 void from_json(const json &j, RandomSeeds &ic) {
   // Check that the JSON input has the correct type field
   if (!j.contains("type") || j["type"] != "random_seeds") {
-    throw std::invalid_argument("Invalid JSON input: missing or incorrect 'type' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
   }
 
   // Check that the JSON input has the required 'amplitude' field
   if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'amplitude' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'amplitude' field.");
   }
 
   // Check that the JSON input has the required 'rho' field
   if (!j.contains("rho") || !j["rho"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'rho' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho' field.");
   }
 
   ic.set_amplitude(j["amplitude"]);
@@ -219,31 +231,38 @@ void from_json(const json &j, RandomSeeds &ic) {
 
 void from_json(const json &j, SeedGrid &ic) {
   if (!j.contains("type") || j["type"] != "seed_grid") {
-    throw std::invalid_argument("Invalid JSON input: missing or incorrect 'type' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
   }
 
   if (!j.contains("Ny") || !j["Ny"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'Ny' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'Ny' field.");
   }
 
   if (!j.contains("Nz") || !j["Nz"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'Nz' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'Nz' field.");
   }
 
   if (!j.contains("X0") || !j["X0"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'X0' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'X0' field.");
   }
 
   if (!j.contains("radius") || !j["radius"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'radius' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'radius' field.");
   }
 
   if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'amplitude' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'amplitude' field.");
   }
 
   if (!j.contains("rho") || !j["rho"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'rho' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho' field.");
   }
 
   ic.set_Ny(j["Ny"]);
@@ -256,11 +275,13 @@ void from_json(const json &j, SeedGrid &ic) {
 
 void from_json(const json &j, FileReader &ic) {
   if (!j.contains("type") || j["type"] != "from_file") {
-    throw std::invalid_argument("Invalid JSON input: missing or incorrect 'type' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
   }
 
   if (!j.contains("filename") || !j["filename"].is_string()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'filename' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'filename' field.");
   }
 
   ic.set_filename(j["filename"]);
@@ -268,15 +289,18 @@ void from_json(const json &j, FileReader &ic) {
 
 void from_json(const json &j, FixedBC &bc) {
   if (!j.contains("type") || j["type"] != "fixed") {
-    throw std::invalid_argument("Invalid JSON input: missing or incorrect 'type' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
   }
 
   if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'rho_low' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_low' field.");
   }
 
   if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'rho_high' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_high' field.");
   }
 
   bc.set_rho_low(j["rho_low"]);
@@ -285,31 +309,38 @@ void from_json(const json &j, FixedBC &bc) {
 
 void from_json(const json &j, MovingBC &bc) {
   if (!j.contains("type") || j["type"] != "moving") {
-    throw std::invalid_argument("Invalid JSON input: missing or incorrect 'type' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or incorrect 'type' field.");
   }
 
   if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'rho_low' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_low' field.");
   }
 
   if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'rho_high' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'rho_high' field.");
   }
 
   if (!j.contains("width") || !j["width"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'width' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'width' field.");
   }
 
   if (!j.contains("alpha") || !j["alpha"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'alpha' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'alpha' field.");
   }
 
   if (!j.contains("disp") || !j["disp"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'disp' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'disp' field.");
   }
 
   if (!j.contains("xpos") || !j["xpos"].is_number()) {
-    throw std::invalid_argument("Invalid JSON input: missing or invalid 'xpos' field.");
+    throw std::invalid_argument(
+        "Invalid JSON input: missing or invalid 'xpos' field.");
   }
 
   bc.set_rho_low(j["rho_low"]);
@@ -350,7 +381,9 @@ public:
    * @param creator The creator function that creates an instance of the field
    * modifier.
    */
-  void register_modifier(const std::string &type, CreatorFunction creator) { modifiers[type] = creator; }
+  void register_modifier(const std::string &type, CreatorFunction creator) {
+    modifiers[type] = creator;
+  }
 
   /**
    * @brief Create an instance of a field modifier based on its registered type.
@@ -373,8 +406,9 @@ private:
    */
   FieldModifierRegistry() {}
 
-  std::unordered_map<std::string, CreatorFunction> modifiers; /**< Map storing the registered field modifiers and their
-                                                                 creator functions. */
+  std::unordered_map<std::string, CreatorFunction>
+      modifiers; /**< Map storing the registered field modifiers and their
+                    creator functions. */
 };
 
 /*
@@ -382,16 +416,18 @@ void from_json(const json &, FieldModifier &) {
   std::cout
       << "Warning: This field modifier does not implement reading "
          "parameters from json file. In order to read parameter from json "
-         "file, one needs to implement 'void from_json(const json &, FieldModifier &)'"
+         "file, one needs to implement 'void from_json(const json &,
+FieldModifier &)'"
       << std::endl;
 }
 */
 
 void from_json(const json &, Model &) {
-  std::cout << "Warning: This model does not implement reading parameters from "
-               "json file. In order to read parameters from json file, one needs to "
-               "implement 'void from_json(const json &, Model &)'"
-            << std::endl;
+  std::cout
+      << "Warning: This model does not implement reading parameters from "
+         "json file. In order to read parameters from json file, one needs to "
+         "implement 'void from_json(const json &, Model &)'"
+      << std::endl;
 }
 
 /**
@@ -404,12 +440,13 @@ void from_json(const json &, Model &) {
  * an instance of the field modifier.
  */
 template <typename T> void register_field_modifier(const std::string &type) {
-  FieldModifierRegistry::get_instance().register_modifier(type, [](const json &params) -> std::unique_ptr<T> {
-    std::unique_ptr<T> modifier = std::make_unique<T>();
-    from_json(params, *modifier);
-    return modifier;
-    // return from_json<std::unique_ptr<T>>(j);
-  });
+  FieldModifierRegistry::get_instance().register_modifier(
+      type, [](const json &params) -> std::unique_ptr<T> {
+        std::unique_ptr<T> modifier = std::make_unique<T>();
+        from_json(params, *modifier);
+        return modifier;
+        // return from_json<std::unique_ptr<T>>(j);
+      });
 }
 
 /**
@@ -424,7 +461,8 @@ template <typename T> void register_field_modifier(const std::string &type) {
  * specified type string from the FieldModifierRegistry and uses it to create
  * the field modifier instance.
  */
-std::unique_ptr<FieldModifier> create_field_modifier(const std::string &type, const json &params) {
+std::unique_ptr<FieldModifier> create_field_modifier(const std::string &type,
+                                                     const json &params) {
   return FieldModifierRegistry::get_instance().create_modifier(type, params);
 }
 
@@ -460,9 +498,10 @@ struct FieldModifierInitializer {
   }
 };
 
-static FieldModifierInitializer fieldModifierInitializer; /**< Static instance of FieldModifierInitializer
-                                                             to trigger field modifier registration during
-                                                             static initialization. */
+static FieldModifierInitializer
+    fieldModifierInitializer; /**< Static instance of FieldModifierInitializer
+                                 to trigger field modifier registration during
+                                 static initialization. */
 
 /**
  * @brief The main json-based application
@@ -509,21 +548,25 @@ private:
 
 public:
   App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
-      : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)), rank0(m_worker.get_rank() == 0),
-        m_settings(read_settings(argc, argv)) {}
+      : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
+        rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)) {
+  }
 
   App(const json &settings, MPI_Comm comm = MPI_COMM_WORLD)
-      : m_comm(comm), m_worker(MPI_Worker(0, nullptr, comm)), rank0(m_worker.get_rank() == 0), m_settings(settings) {}
+      : m_comm(comm), m_worker(MPI_Worker(0, nullptr, comm)),
+        rank0(m_worker.get_rank() == 0), m_settings(settings) {}
 
   bool create_results_dir(const std::string &output) {
     std::filesystem::path results_dir(output);
     if (results_dir.has_filename()) results_dir = results_dir.parent_path();
     if (!std::filesystem::exists(results_dir)) {
-      std::cout << "Results dir " << results_dir << " does not exist, creating\n";
+      std::cout << "Results dir " << results_dir
+                << " does not exist, creating\n";
       std::filesystem::create_directories(results_dir);
       return true;
     } else {
-      std::cout << "Warning: results dir " << results_dir << " already exists\n";
+      std::cout << "Warning: results dir " << results_dir
+                << " already exists\n";
       return false;
     }
   }
@@ -534,13 +577,15 @@ public:
       if (timing.contains("enabled")) m_detailed_timing = timing["enabled"];
       if (timing.contains("print")) m_detailed_timing_print = timing["print"];
       if (timing.contains("write")) m_detailed_timing_write = timing["write"];
-      if (timing.contains("filename")) m_detailed_timing_filename = timing["filename"];
+      if (timing.contains("filename"))
+        m_detailed_timing_filename = timing["filename"];
     }
   }
 
   void add_result_writers(Simulator &sim) {
     std::cout << "Adding results writers" << std::endl;
-    if (m_settings.contains("saveat") && m_settings.contains("fields") && m_settings["saveat"] > 0) {
+    if (m_settings.contains("saveat") && m_settings.contains("fields") &&
+        m_settings["saveat"] > 0) {
       for (const auto &field : m_settings["fields"]) {
         std::string name = field["name"];
         std::string data = field["data"];
@@ -561,18 +606,23 @@ public:
     }
     std::cout << "Adding initial conditions" << std::endl;
     for (const json &params : m_settings["initial_conditions"]) {
-      std::cout << "Creating initial condition from data " << params << std::endl;
+      std::cout << "Creating initial condition from data " << params
+                << std::endl;
       if (!params.contains("type")) {
-        std::cout << "Warning: no type is set for initial condition!" << std::endl;
+        std::cout << "Warning: no type is set for initial condition!"
+                  << std::endl;
         continue;
       }
       std::string type = params["type"];
       auto field_modifier = create_field_modifier(type, params);
       if (!params.contains("target")) {
-        std::cout << "Warning: no target is set for initial condition! Using target 'default'" << std::endl;
+        std::cout << "Warning: no target is set for initial condition! Using "
+                     "target 'default'"
+                  << std::endl;
       } else {
         std::string target = params["target"];
-        std::cout << "Setting initial condition target to " << target << std::endl;
+        std::cout << "Setting initial condition target to " << target
+                  << std::endl;
         field_modifier->set_field_name(target);
       }
       sim.add_initial_conditions(std::move(field_modifier));
@@ -586,18 +636,23 @@ public:
     }
     std::cout << "Adding boundary conditions" << std::endl;
     for (const json &params : m_settings["boundary_conditions"]) {
-      std::cout << "Creating boundary condition from data " << params << std::endl;
+      std::cout << "Creating boundary condition from data " << params
+                << std::endl;
       if (!params.contains("type")) {
-        std::cout << "Warning: no type is set for initial condition!" << std::endl;
+        std::cout << "Warning: no type is set for initial condition!"
+                  << std::endl;
         continue;
       }
       std::string type = params["type"];
       auto field_modifier = create_field_modifier(type, params);
       if (!params.contains("target")) {
-        std::cout << "Warning: no target is set for boundary condition! Using target 'default'" << std::endl;
+        std::cout << "Warning: no target is set for boundary condition! Using "
+                     "target 'default'"
+                  << std::endl;
       } else {
         std::string target = params["target"];
-        std::cout << "Setting boundary condition target to " << target << std::endl;
+        std::cout << "Setting boundary condition target to " << target
+                  << std::endl;
         field_modifier->set_field_name(target);
       }
       sim.add_boundary_conditions(std::move(field_modifier));
@@ -612,14 +667,16 @@ public:
     std::cout << "World: " << world << std::endl;
 
     Decomposition decomp = make_decomposition(world, m_comm);
-    auto plan_options = ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
+    auto plan_options =
+        ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
     FFT fft(decomp, m_comm, plan_options, world);
     Time time(ui::from_json<Time>(m_settings));
     ConcreteModel model(world);
     model.set_fft(fft);
     Simulator simulator(model, time);
 
-    if (m_settings.contains("model") && m_settings["model"].contains("params")) {
+    if (m_settings.contains("model") &&
+        m_settings["model"].contains("params")) {
       from_json(m_settings["model"]["params"], model);
     }
     read_detailed_timing_configuration();
@@ -635,14 +692,16 @@ public:
       const json &j = m_settings["simulator"];
       if (j.contains("result_counter")) {
         if (!j["result_counter"].is_number_integer()) {
-          throw std::invalid_argument("Invalid JSON input: missing or invalid 'result_counter' field.");
+          throw std::invalid_argument(
+              "Invalid JSON input: missing or invalid 'result_counter' field.");
         }
         int result_counter = (int)j["result_counter"] + 1;
         simulator.set_result_counter(result_counter);
       }
       if (j.contains("increment")) {
         if (!j["increment"].is_number_integer()) {
-          throw std::invalid_argument("Invalid JSON input: missing or invalid 'increment' field.");
+          throw std::invalid_argument(
+              "Invalid JSON input: missing or invalid 'increment' field.");
         }
         int increment = j["increment"];
         time.set_increment(increment);
@@ -677,7 +736,8 @@ public:
           int num_ranks = m_worker.get_num_ranks();
           double timing[num_ranks][2];
           for (int rank = 0; rank < num_ranks; rank++) {
-            MPI_Recv(timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm, MPI_STATUS_IGNORE);
+            MPI_Recv(timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm,
+                     MPI_STATUS_IGNORE);
           }
           auto inc = time.get_increment();
           if (m_detailed_timing_print) {
@@ -685,7 +745,8 @@ public:
             std::cout << "Timing information for all processes:" << std::endl;
             std::cout << "step;rank;step_time;fft_time" << std::endl;
             for (int rank = 0; rank < num_ranks; rank++) {
-              std::cout << inc << ";" << rank << ";" << timing[rank][0] << ";" << timing[rank][1] << std::endl;
+              std::cout << inc << ";" << rank << ";" << timing[rank][0] << ";"
+                        << timing[rank][1] << std::endl;
             }
             std::cout.precision(old_precision);
           }
@@ -720,7 +781,8 @@ public:
       double eta_t = eta_i * m_avg_steptime;
       double other_time = m_steptime - m_fft_time;
       std::cout << "Step " << increment << " done in " << m_steptime << " s ";
-      std::cout << "(" << m_fft_time << " s FFT, " << other_time << " s other). ";
+      std::cout << "(" << m_fft_time << " s FFT, " << other_time
+                << " s other). ";
       std::cout << "Simulation time: " << t << " / " << t1;
       std::cout << " (" << (t / t1 * 100) << " % done). ";
       std::cout << "ETA: " << pfc::utils::TimeLeft(eta_t) << std::endl;
@@ -735,10 +797,13 @@ public:
     double avg_oth_time = avg_steptime - avg_fft_time;
     double p_fft = avg_fft_time / avg_steptime * 100.0;
     double p_oth = avg_oth_time / avg_steptime * 100.0;
-    std::cout << "\nSimulated " << m_steps_done << " steps. Average times:" << std::endl;
+    std::cout << "\nSimulated " << m_steps_done
+              << " steps. Average times:" << std::endl;
     std::cout << "Step time:  " << avg_steptime << " s" << std::endl;
-    std::cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %" << std::endl;
-    std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %" << std::endl;
+    std::cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %"
+              << std::endl;
+    std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %"
+              << std::endl;
 
     return 0;
   }

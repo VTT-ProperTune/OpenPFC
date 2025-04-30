@@ -27,18 +27,22 @@ private:
   std::vector<T> data;
 
   /**
-   * @brief Construct a new Array object from Decomposition, using outbox, if is_complex<T> = true.
+   * @brief Construct a new Array object from Decomposition, using outbox, if
+   * is_complex<T> = true.
    *
    * @param decomp
    */
-  Array(const Decomposition &decomp, std::true_type) : index(decomp.get_outbox_size(), decomp.get_outbox_offset()) {}
+  Array(const Decomposition &decomp, std::true_type)
+      : index(decomp.get_outbox_size(), decomp.get_outbox_offset()) {}
 
   /**
-   * @brief Construct a new Array object from Decomposition, using inbox, if is_complex<T> = false.
+   * @brief Construct a new Array object from Decomposition, using inbox, if
+   * is_complex<T> = false.
    *
    * @param decomp
    */
-  Array(const Decomposition &decomp, std::false_type) : index(decomp.get_inbox_size(), decomp.get_inbox_offset()) {}
+  Array(const Decomposition &decomp, std::false_type)
+      : index(decomp.get_inbox_size(), decomp.get_inbox_offset()) {}
 
   // Custom type trait to check if a type is complex
   template <typename U> struct is_complex : std::false_type {};
@@ -46,12 +50,15 @@ private:
 
 public:
   /**
-   * @brief Constructs an Array object with the specified dimensions and offsets.
+   * @brief Constructs an Array object with the specified dimensions and
+   * offsets.
    *
    * @param dimensions The dimensions of the array.
    * @param offsets The offsets of the array.
    */
-  Array(const std::array<int, D> &dimensions, const std::array<int, D> &offsets = {0}) : index(dimensions, offsets) {
+  Array(const std::array<int, D> &dimensions,
+        const std::array<int, D> &offsets = {0})
+      : index(dimensions, offsets) {
     data.resize(index.get_linear_size());
   }
 
@@ -64,7 +71,9 @@ public:
    *
    * @param decomp The Decomposition object.
    */
-  Array(const Decomposition &decomp) : Array(decomp, is_complex<T>()) { data.resize(index.get_linear_size()); }
+  Array(const Decomposition &decomp) : Array(decomp, is_complex<T>()) {
+    data.resize(index.get_linear_size());
+  }
 
   typename std::vector<T>::iterator begin() { return data.begin(); }
   typename std::vector<T>::iterator end() { return data.end(); }
@@ -85,11 +94,15 @@ public:
    */
   std::vector<T> &get_data() { return data; }
 
-  T &operator[](const std::array<int, D> &indices) { return operator[](index.to_linear(indices)); }
+  T &operator[](const std::array<int, D> &indices) {
+    return operator[](index.to_linear(indices));
+  }
 
   T &operator[](int idx) { return data.operator[](idx); }
 
-  T &operator()(const std::array<int, D> &indices) { return operator[](indices); }
+  T &operator()(const std::array<int, D> &indices) {
+    return operator[](indices);
+  }
 
   /**
    * @brief Get the size object
@@ -112,19 +125,26 @@ public:
    * @return true
    * @return false
    */
-  bool inbounds(const std::array<int, D> &indices) { return index.inbounds(indices); }
+  bool inbounds(const std::array<int, D> &indices) {
+    return index.inbounds(indices);
+  }
 
   /**
    * @brief Applies the specified function to each element of the array.
    *
    * @tparam Func
-   * @param func A function that takes std::array<int, D> as an argument and returns a type convertible to T.
+   * @param func A function that takes std::array<int, D> as an argument and
+   * returns a type convertible to T.
    */
   template <typename Func> void apply(Func &&func) {
-    static_assert(std::is_convertible_v<std::invoke_result_t<Func, std::array<int, D>>, T>,
-                  "Func must be invocable with std::array<int, D> and return a type convertible to T");
+    static_assert(
+        std::is_convertible_v<std::invoke_result_t<Func, std::array<int, D>>,
+                              T>,
+        "Func must be invocable with std::array<int, D> and return a type "
+        "convertible to T");
     auto it = index.begin();
-    for (T &element : get_data()) element = std::invoke(std::forward<Func>(func), *(it++));
+    for (T &element : get_data())
+      element = std::invoke(std::forward<Func>(func), *(it++));
   }
 
   /**
@@ -150,16 +170,18 @@ public:
    */
   friend std::ostream &operator<<(std::ostream &os, const Array<T, D> &array) {
     const MultiIndex<D> &index = array.get_index();
-    os << "Array<" << TypeName<T>::get() << "," << D << ">(begin = " << utils::array_to_string(index.get_begin())
+    os << "Array<" << TypeName<T>::get() << "," << D
+       << ">(begin = " << utils::array_to_string(index.get_begin())
        << ", end = " << utils::array_to_string(index.get_end())
-       << ", size = " << utils::array_to_string(index.get_size()) << ", linear_size = " << index.get_linear_size()
-       << ")";
+       << ", size = " << utils::array_to_string(index.get_size())
+       << ", linear_size = " << index.get_linear_size() << ")";
     return os;
   }
 };
 
 template <typename T, size_t D> void show(Array<T, D> &array) {
-  utils::show(array.get_data(), array.get_index().get_size(), array.get_index().get_begin());
+  utils::show(array.get_data(), array.get_index().get_size(),
+              array.get_index().get_begin());
 }
 
 } // namespace pfc

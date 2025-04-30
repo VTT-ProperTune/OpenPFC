@@ -16,7 +16,9 @@ using namespace pfc;
 TEST_CASE("FFT - Basic Functionality", "[fft]") {
   World world = create_world({8, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world); // Provide all parameters
+  FFT fft(decomp, MPI_COMM_WORLD,
+          heffte::default_options<heffte::backend::fftw>(),
+          world); // Provide all parameters
 
   REQUIRE(fft.size_inbox() > 0);
   REQUIRE(fft.size_outbox() > 0);
@@ -27,10 +29,12 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
   World world = create_world({8, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
+  FFT fft(decomp, MPI_COMM_WORLD,
+          heffte::default_options<heffte::backend::fftw>(), world);
 
   // Generate input data
-  std::vector<double> input = {0.000, 0.785, 1.571, 2.356, 3.142, 3.927, 4.712, 5.498};
+  std::vector<double> input = {0.000, 0.785, 1.571, 2.356,
+                               3.142, 3.927, 4.712, 5.498};
   REQUIRE(input.size() == fft.size_inbox());
 
   // Perform the forward transformation
@@ -44,10 +48,12 @@ TEST_CASE("FFT backward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
   World world = create_world({2, 1, 1});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
+  FFT fft(decomp, MPI_COMM_WORLD,
+          heffte::default_options<heffte::backend::fftw>(), world);
 
   // Generate input data
-  std::vector<std::complex<double>> input = {std::complex<double>(1.0, 0.0), std::complex<double>(2.0, 0.0)};
+  std::vector<std::complex<double>> input = {std::complex<double>(1.0, 0.0),
+                                             std::complex<double>(2.0, 0.0)};
 
   // Perform the backward transformation
   std::vector<double> output(fft.size_inbox());

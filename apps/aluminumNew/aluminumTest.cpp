@@ -94,7 +94,8 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
     std::fill(psi.begin(), psi.end(), -0.0060);
     ic.apply(aluminum, 0.0);
 
-    std::array<double, 5> expected_norms{1297.08, 1250.21, 1209.28, 1173.19, 1141.09};
+    std::array<double, 5> expected_norms{1297.08, 1250.21, 1209.28, 1173.19,
+                                         1141.09};
     for (int i = 0; i < 5; ++i) {
       double norm2 = 0.0;
       for (auto &x : psi) norm2 += x * x;

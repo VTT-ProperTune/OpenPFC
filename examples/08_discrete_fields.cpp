@@ -38,7 +38,9 @@ private:
   double constant = 1.0;
 
 public:
-  double operator()(double x, double y, double z) const { return constant + x + y * y + 0.0 * z; }
+  double operator()(double x, double y, double z) const {
+    return constant + x + y * y + 0.0 * z;
+  }
 };
 
 int main() {
@@ -52,19 +54,23 @@ int main() {
   std::cout << decomp1 << std::endl;
   const std::array<int, 3> &inbox_size1 = decomp1.get_inbox_size();
   const std::array<int, 3> &inbox_offset1 = decomp1.get_inbox_offset();
-  DiscreteField<double, 3> field1(inbox_size1, inbox_offset1, get_origin(world), get_spacing(world));
+  DiscreteField<double, 3> field1(inbox_size1, inbox_offset1, get_origin(world),
+                                  get_spacing(world));
 
   const std::array<int, 3> &inbox_size2 = decomp2.get_inbox_size();
   const std::array<int, 3> &inbox_offset2 = decomp2.get_inbox_offset();
-  DiscreteField<double, 3> field2(inbox_size2, inbox_offset2, get_origin(world), get_spacing(world));
+  DiscreteField<double, 3> field2(inbox_size2, inbox_offset2, get_origin(world),
+                                  get_spacing(world));
 
   const std::array<int, 3> &inbox_size3 = decomp3.get_inbox_size();
   const std::array<int, 3> &inbox_offset3 = decomp3.get_inbox_offset();
-  DiscreteField<double, 3> field3(inbox_size3, inbox_offset3, get_origin(world), get_spacing(world));
+  DiscreteField<double, 3> field3(inbox_size3, inbox_offset3, get_origin(world),
+                                  get_spacing(world));
 
   const std::array<int, 3> &inbox_size4 = decomp4.get_inbox_size();
   const std::array<int, 3> &inbox_offset4 = decomp4.get_inbox_offset();
-  DiscreteField<double, 3> field4(inbox_size4, inbox_offset4, get_origin(world), get_spacing(world));
+  DiscreteField<double, 3> field4(inbox_size4, inbox_offset4, get_origin(world),
+                                  get_spacing(world));
   std::cout << field1 << std::endl;
   std::cout << field2 << std::endl;
   std::cout << field3 << std::endl;
@@ -92,26 +98,32 @@ int main() {
   field1.apply(func1);
   field2.apply(func2);
   field3.apply(func3);
-  field4.apply([](auto x, auto y, auto z) { return 1.0 + x + y * y + 0.0 * z; });
+  field4.apply(
+      [](auto x, auto y, auto z) { return 1.0 + x + y * y + 0.0 * z; });
 
   // Keep on mind, that in general, one would define only one decomposition and
   // thus one "field" for each MPI process. Thus it's hard to say, given some
   // spesific coordinate (x, y, z), in which MPI process it stays, and some
   // extra work to find it needs to be done, potentially involving MPI traffic.
   auto probe = [&](double x, double y) {
-    std::array<DiscreteField<double, 3>, 4> fields{field1, field2, field3, field4};
+    std::array<DiscreteField<double, 3>, 4> fields{field1, field2, field3,
+                                                   field4};
     const std::array<double, 3> coords = {x, y, 0.0};
     int field_num = 0;
     for (auto &field : fields) {
       if (field.inbounds(coords)) {
-        std::cout << "Coordinate " << array_to_string(coords) << " found from sub-domain #" << field_num << std::endl;
-        std::cout << "Value at " << array_to_string(coords) << " is " << field.interpolate(coords) << std::endl;
+        std::cout << "Coordinate " << array_to_string(coords)
+                  << " found from sub-domain #" << field_num << std::endl;
+        std::cout << "Value at " << array_to_string(coords) << " is "
+                  << field.interpolate(coords) << std::endl;
       }
       field_num++;
     }
   };
-  probe(4.0, 2.0);  // gives 9, since 1 + 4 + 2 * 2 = 9, found from first sub-domain
-  probe(12.0, 6.0); // gives 49, since 1 + 12 + 6 * 6 = 49, found from last sub-domain
+  probe(4.0,
+        2.0); // gives 9, since 1 + 4 + 2 * 2 = 9, found from first sub-domain
+  probe(12.0,
+        6.0); // gives 49, since 1 + 12 + 6 * 6 = 49, found from last sub-domain
   std::cout << func3(4.0, 2.0, 0.0) << std::endl;
   std::cout << func3(12.0, 6.0, 0.0) << std::endl;
 

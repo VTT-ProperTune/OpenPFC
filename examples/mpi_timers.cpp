@@ -6,9 +6,7 @@
 #include <openpfc/mpi/timer.hpp>
 #include <unistd.h>
 
-void fft() {
-  sleep(1);
-}
+void fft() { sleep(1); }
 
 enum { Total = 0, FFT = 1 };
 

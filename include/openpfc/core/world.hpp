@@ -85,9 +85,7 @@ private:
 
 public:
   World(const Int3 &dimensions, const Real3 &origin, const Real3 &spacing)
-      : m_size(dimensions),
-        m_origin(origin),
-        m_spacing(spacing) {}
+      : m_size(dimensions), m_origin(origin), m_spacing(spacing) {}
 
   // Getters for member variables
   Int3 get_size() const noexcept { return m_size; }
@@ -102,7 +100,8 @@ public:
   int total_size() const noexcept;
 
   /**
-   * @brief Computes the physical coordinate corresponding to grid indices {i,j,k}.
+   * @brief Computes the physical coordinate corresponding to grid indices
+   * {i,j,k}.
    *
    * This method calculates the physical coordinates in the simulation domain
    * based on the grid indices and spacing.
@@ -113,7 +112,8 @@ public:
   Real3 physical_coordinates(const Int3 &indices) const noexcept;
 
   /**
-   * @brief Computes the grid indices corresponding to physical coordinates {x,y,z}.
+   * @brief Computes the grid indices corresponding to physical coordinates
+   * {x,y,z}.
    *
    * This method calculates the grid indices in the simulation domain
    * based on the physical coordinates and spacing.
@@ -157,7 +157,8 @@ public:
  * @brief Create a World object with the specified dimensions, origin, and
  * spacing.
  */
-World create_world(const World::Int3 &dimensions, const World::Real3 &origin, const World::Real3 &spacing);
+World create_world(const World::Int3 &dimensions, const World::Real3 &origin,
+                   const World::Real3 &spacing);
 
 /**
  * @brief Create a World object with the specified dimensions and default

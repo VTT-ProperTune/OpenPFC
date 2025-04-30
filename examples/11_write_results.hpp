@@ -7,7 +7,8 @@
 /**
  * @file 11_write_results.hpp
  * @author Jukka Aho (jukka.aho@vtt.fi)
- * @brief An standalone implementation how to write results to a file using VTK format.
+ * @brief An standalone implementation how to write results to a file using VTK
+ * format.
  * @version 0.1
  * @date 2023-08-01
  *
@@ -71,7 +72,8 @@ private:
 
 public:
   /**
-   * @brief Set the URI. Depending on implementation, this can be file name, a database URI, etc.
+   * @brief Set the URI. Depending on implementation, this can be file name, a
+   * database URI, etc.
    *
    * @param uri
    */
@@ -91,7 +93,8 @@ public:
    * @param local_dimensions can be obtained from the field object.
    * @param offset can be obtained from the field object.
    */
-  virtual void set_domain(const std::array<int, 3> &global_dimensions, const std::array<int, 3> &local_dimensions,
+  virtual void set_domain(const std::array<int, 3> &global_dimensions,
+                          const std::array<int, 3> &local_dimensions,
                           const std::array<int, 3> &offset) {
     m_global_dimensions = global_dimensions;
     m_local_dimensions = local_dimensions;
@@ -103,14 +106,18 @@ public:
    *
    * @return const std::array<int, 3>&
    */
-  const std::array<int, 3> &get_global_dimensions() const { return m_global_dimensions; }
+  const std::array<int, 3> &get_global_dimensions() const {
+    return m_global_dimensions;
+  }
 
   /**
    * @brief Get the local dimensions of the field.
    *
    * @return const std::array<int, 3>&
    */
-  const std::array<int, 3> &get_local_dimensions() const { return m_local_dimensions; }
+  const std::array<int, 3> &get_local_dimensions() const {
+    return m_local_dimensions;
+  }
 
   /**
    * @brief Get the offset of the local domain.
@@ -124,7 +131,9 @@ public:
    *
    * @param origin
    */
-  virtual void set_origin(const std::array<double, 3> &origin) { m_origin = origin; }
+  virtual void set_origin(const std::array<double, 3> &origin) {
+    m_origin = origin;
+  }
 
   /**
    * @brief Get the origin of the local domain.
@@ -138,7 +147,9 @@ public:
    *
    * @param spacing
    */
-  virtual void set_spacing(const std::array<double, 3> &spacing) { m_spacing = spacing; }
+  virtual void set_spacing(const std::array<double, 3> &spacing) {
+    m_spacing = spacing;
+  }
 
   /**
    * @brief Get the spacing of the local domain.
@@ -152,7 +163,9 @@ public:
    *
    * @param field_name
    */
-  virtual void set_field_name(const std::string &field_name) { m_field_name = field_name; }
+  virtual void set_field_name(const std::string &field_name) {
+    m_field_name = field_name;
+  }
 
   /**
    * @brief Get the name of the field.
@@ -166,7 +179,10 @@ public:
    *
    * @return size_t
    */
-  size_t get_data_size() const { return m_global_dimensions[0] * m_global_dimensions[1] * m_global_dimensions[2]; }
+  size_t get_data_size() const {
+    return m_global_dimensions[0] * m_global_dimensions[1] *
+           m_global_dimensions[2];
+  }
 
   std::string get_data_type() const { return get_data_type_name<T>(); }
 
@@ -216,14 +232,18 @@ public:
    *
    * @param data_type_size
    */
-  void set_data_type_size(unsigned short int data_type_size) { m_data_type_size = data_type_size; }
+  void set_data_type_size(unsigned short int data_type_size) {
+    m_data_type_size = data_type_size;
+  }
 
   /**
    * @brief Set the whole extent of the field.
    *
    * @param whole_extent
    */
-  void set_whole_extent(const std::array<int, 3> &whole_extent) { m_whole_extent = whole_extent; }
+  void set_whole_extent(const std::array<int, 3> &whole_extent) {
+    m_whole_extent = whole_extent;
+  }
 
   /**
    * @brief Set the origin of the field.
@@ -237,14 +257,18 @@ public:
    *
    * @param spacing
    */
-  void set_spacing(const std::array<double, 3> &spacing) { m_spacing = spacing; }
+  void set_spacing(const std::array<double, 3> &spacing) {
+    m_spacing = spacing;
+  }
 
   /**
    * @brief Set the extent of the piece.
    *
    * @param piece_extent
    */
-  void set_piece_extent(const std::array<int, 3> &piece_extent) { m_piece_extent = piece_extent; }
+  void set_piece_extent(const std::array<int, 3> &piece_extent) {
+    m_piece_extent = piece_extent;
+  }
 
   /**
    * @brief Get the data type of the field.
@@ -259,12 +283,14 @@ public:
   size_t get_header_size() const { return m_header_size; }
 
   /**
-   * @brief Get the whole extend as a string in a format x_low x_high y_low y_high z_low z_high.
+   * @brief Get the whole extend as a string in a format x_low x_high y_low
+   * y_high z_low z_high.
    *
    */
   std::string get_whole_extent() const {
     std::stringstream ss;
-    ss << "0 " << m_whole_extent[0] - 1 << " 0 " << m_whole_extent[1] - 1 << " 0 " << m_whole_extent[2] - 1;
+    ss << "0 " << m_whole_extent[0] - 1 << " 0 " << m_whole_extent[1] - 1
+       << " 0 " << m_whole_extent[2] - 1;
     return ss.str();
   }
 
@@ -315,14 +341,19 @@ public:
   const std::stringstream get_header_start() {
     std::stringstream ss;
     ss << R"(<?xml version="1.0" encoding="utf-8"?>)" << std::endl;
-    ss << R"(<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian" header_type="UInt64">)" << std::endl;
-    ss << R"(  <ImageData WholeExtent=")" << get_whole_extent() << R"(" Origin=")" << get_origin() << R"("
+    ss << R"(<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian" header_type="UInt64">)"
+       << std::endl;
+    ss << R"(  <ImageData WholeExtent=")" << get_whole_extent()
+       << R"(" Origin=")" << get_origin() << R"("
       Spacing=")"
        << get_spacing() << R"(">)" << std::endl;
-    ss << R"(    <Piece Extent=")" << get_whole_extent() << R"(">)" << std::endl;
+    ss << R"(    <Piece Extent=")" << get_whole_extent() << R"(">)"
+       << std::endl;
     ss << R"(      <PointData>)" << std::endl;
-    ss << R"(        <DataArray type=")" << get_data_type() << R"(" Name=")" << get_field_name()
-       << R"(" NumberOfComponents="1" format="appended" offset="0"/>)" << std::endl;
+    ss << R"(        <DataArray type=")" << get_data_type() << R"(" Name=")"
+       << get_field_name()
+       << R"(" NumberOfComponents="1" format="appended" offset="0"/>)"
+       << std::endl;
     ss << R"(      </PointData>)" << std::endl;
     ss << R"(    </Piece>)" << std::endl;
     ss << R"(  </ImageData>)" << std::endl;
@@ -345,7 +376,8 @@ public:
   }
 
   /**
-   * @brief Get the header end object as a string stream. This returns the end of the header appended after data.
+   * @brief Get the header end object as a string stream. This returns the end
+   * of the header appended after data.
    *
    * @return const std::stringstream
    */
@@ -357,14 +389,15 @@ public:
   }
 
   /**
-   * @brief Write the header to the file. It should be called only by the rank 0. Typical output is:
+   * @brief Write the header to the file. It should be called only by the rank
+   * 0. Typical output is:
    *
    *    <?xml version="1.0" encoding="utf-8"?>
-   *    <VTKFile type="ImageData" version="1.0" byte_order="LittleEndian" header_type="UInt64">
-   *      <ImageData WholeExtent="0 3 0 2 0 1" Origin="1 1 1" Spacing="1 1 1">
-   *        <Piece Extent="0 3 0 2 0 1">
-   *          <PointData>
-   *            <DataArray type="Float64" Name="density" NumberOfComponents="1" format="appended" offset="0"/>
+   *    <VTKFile type="ImageData" version="1.0" byte_order="LittleEndian"
+   * header_type="UInt64"> <ImageData WholeExtent="0 3 0 2 0 1" Origin="1 1 1"
+   * Spacing="1 1 1"> <Piece Extent="0 3 0 2 0 1"> <PointData> <DataArray
+   * type="Float64" Name="density" NumberOfComponents="1" format="appended"
+   * offset="0"/>
    *          </PointData>
    *        </Piece>
    *      </ImageData>
@@ -373,12 +406,14 @@ public:
    *      </AppendedData>
    *    </VTKFile>
    *
-   * Description of _[DATA]_: The data is written in binary format. The first byte is `_` and then the first 8
-   * bytes are the size of the data in bytes (size_t). The rest of the data is the actual data.
+   * Description of _[DATA]_: The data is written in binary format. The first
+   * byte is `_` and then the first 8 bytes are the size of the data in bytes
+   * (size_t). The rest of the data is the actual data.
    */
   void write(std::string &filename) {
     // Open the file in binary mode
-    std::fstream file(filename, std::ios::in | std::ios::out | std::ios::binary);
+    std::fstream file(filename,
+                      std::ios::in | std::ios::out | std::ios::binary);
     if (!file) {
       std::cerr << "Failed to open the file: " << filename << std::endl;
       return;
@@ -392,7 +427,8 @@ public:
 };
 
 /**
- * @brief Writes results to a VTK file. This implementation is using `MPI_File_write_all`.
+ * @brief Writes results to a VTK file. This implementation is using
+ * `MPI_File_write_all`.
  *
  */
 template <typename T> class VtkWriter : public IWriter<T> {
@@ -449,7 +485,8 @@ public:
   }
 
   /**
-   * @brief Initialize the writer. This will create the MPI datatype for the file and commit it.
+   * @brief Initialize the writer. This will create the MPI datatype for the
+   * file and commit it.
    *
    */
   void initialize() override {
@@ -460,7 +497,8 @@ public:
     int order = MPI_ORDER_FORTRAN;
     MPI_Datatype oldtype = get_mpi_datatype();
     MPI_Datatype *newtype = &m_filetype;
-    MPI_Type_create_subarray(ndims, size_array, subsize_array, start_array, order, oldtype, newtype);
+    MPI_Type_create_subarray(ndims, size_array, subsize_array, start_array,
+                             order, oldtype, newtype);
     MPI_Type_commit(&m_filetype);
   }
 
@@ -483,10 +521,13 @@ public:
     MPI_File fh;
     MPI_Status status;
     int amode = MPI_MODE_CREATE | MPI_MODE_WRONLY;
-    MPI_File_open(m_comm, IWriter<T>::get_uri().c_str(), amode, MPI_INFO_NULL, &fh);
+    MPI_File_open(m_comm, IWriter<T>::get_uri().c_str(), amode, MPI_INFO_NULL,
+                  &fh);
     MPI_File_set_size(fh, 0);
-    MPI_File_set_view(fh, header.get_header_offset(), get_mpi_datatype(), get_filetype(), "native", MPI_INFO_NULL);
-    int ret = MPI_File_write_all(fh, data.data(), data.size(), get_mpi_datatype(), &status);
+    MPI_File_set_view(fh, header.get_header_offset(), get_mpi_datatype(),
+                      get_filetype(), "native", MPI_INFO_NULL);
+    int ret = MPI_File_write_all(fh, data.data(), data.size(),
+                                 get_mpi_datatype(), &status);
     if (ret != MPI_SUCCESS) {
       std::cerr << "Error writing to file: " << ret << std::endl;
       MPI_Abort(m_comm, ret);

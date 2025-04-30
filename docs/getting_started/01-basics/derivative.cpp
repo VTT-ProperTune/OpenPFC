@@ -76,7 +76,8 @@ int main(int argc, char *argv[]) {
   for (int i = ilow[0]; i <= ihigh[0]; i++) {
     double x = x0 + i * dx;
     double diff = abs(dy[i] - cos(x));
-    printf("i=%2d, x(i)=%5.2f, dy(x)=%5.2f, |dy(x)-dy_true(x)|=%0.5f\n", i, x, dy[i], diff);
+    printf("i=%2d, x(i)=%5.2f, dy(x)=%5.2f, |dy(x)-dy_true(x)|=%0.5f\n", i, x,
+           dy[i], diff);
     idx += 1;
   }
 

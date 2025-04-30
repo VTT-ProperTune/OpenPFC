@@ -157,7 +157,8 @@ public:
           // calculation when T is not constant in space
           double opPeak = params.Bx * exp(-params.T / params.T0) * gf;
           // includes the lowest order n_mf term since it is a linear term
-          double opCk = params.stabP + params.p2_bar - opPeak + params.q2_bar * fMF;
+          double opCk =
+              params.stabP + params.p2_bar - opPeak + params.q2_bar * fMF;
 
           filterMF[idx] = fMF;
           opL[idx] = exp(kLap * opCk * dt);

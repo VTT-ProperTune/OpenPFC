@@ -12,8 +12,8 @@ namespace pfc {
 /**
  * @brief Converts a World object to heffte::box3d<int>.
  *
- * This function allows explicit conversion of a World object to heffte::box3d<int>.
- * The resulting box represents the entire world domain.
+ * This function allows explicit conversion of a World object to
+ * heffte::box3d<int>. The resulting box represents the entire world domain.
  *
  * @param world The World object to convert.
  * @return A heffte::box3d<int> representing the world domain.

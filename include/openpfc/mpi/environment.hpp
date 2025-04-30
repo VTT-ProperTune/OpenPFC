@@ -18,13 +18,9 @@ public:
   inline bool finalized();
 };
 
-inline environment::environment() {
-  MPI_Init(NULL, NULL);
-}
+inline environment::environment() { MPI_Init(NULL, NULL); }
 
-inline environment::~environment() {
-  MPI_Finalize();
-}
+inline environment::~environment() { MPI_Finalize(); }
 
 inline std::string environment::processor_name() {
   char name[MPI_MAX_PROCESSOR_NAME];

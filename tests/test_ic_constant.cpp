@@ -18,8 +18,9 @@ class ModelWithConstantIC : public Model {
 public:
   ModelWithConstantIC(const pfc::World &world) : pfc::Model(world) {}
 
-  void step(double /*t*/) override {}        // Suppress unused parameter warning
-  void initialize(double /*dt*/) override {} // Suppress unused parameter warning
+  void step(double /*t*/) override {} // Suppress unused parameter warning
+  void initialize(double /*dt*/) override {
+  } // Suppress unused parameter warning
 };
 
 TEST_CASE("Constant Field Modifier") {
@@ -34,7 +35,8 @@ TEST_CASE("Constant Field Modifier") {
   SECTION("Apply field modifier") {
     World world = create_world({8, 1, 1});
     Decomposition decomp = make_decomposition(world, 0, 1);
-    FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
+    auto options = heffte::default_options<heffte::backend::fftw>();
+    FFT fft(decomp, MPI_COMM_WORLD, options, world);
     ModelWithConstantIC m(world);
     m.set_fft(fft); // Ensure FFT object is set
     std::vector<double> psi(8);
@@ -52,7 +54,8 @@ TEST_CASE("Constant Field Modifier") {
 TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
   World world = create_world({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world); // Provide all parameters
+  auto options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomp, MPI_COMM_WORLD, options, world);
 
   REQUIRE(fft.size_inbox() > 0);
   REQUIRE(fft.size_outbox() > 0);
@@ -65,7 +68,8 @@ TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
 
   Decomposition decomp = make_decomposition(world, 0, 1);
   // Ensure FFT object is set before proceeding
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
+  auto options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomp, MPI_COMM_WORLD, options, world);
   model.set_fft(fft);
 
   REQUIRE(model.get_world().get_size() == World::Int3{8, 8, 8});

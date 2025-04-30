@@ -18,23 +18,4 @@ TEST_CASE("Decomposition class tests", "[Decomposition]") {
 
     REQUIRE(decomposition.get_world() == world);
   }
-
-  /*
-  SECTION("Domain decomposition status") {
-    Decomposition decomposition = make_decomposition(world, 0, 1);
-
-    std::ostringstream oss;
-    oss << decomposition;
-
-    std::string expectedOutput = R"EXPECTED(***** DOMAIN DECOMPOSITION STATUS *****
-Real-to-complex symmetry is used (r2c direction = x)
-Domain is split into 1 parts (minimum surface processor grid: [1, 1, 1])
-Domain in real space: [128, 128, 128] (2097152 indexes)
-Domain in complex space: [65, 128, 128] (1064960 indexes)
-Domain 1/1: [0, 0, 0] x [127, 127, 127] (2097152 indexes) => [0, 0, 0] x [64, 127, 127] (1064960 indexes)
-)EXPECTED";
-
-    REQUIRE(oss.str() == expectedOutput);
-  }
-  */
 }

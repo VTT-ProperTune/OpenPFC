@@ -38,8 +38,12 @@ TEST_CASE("World - Construction and Accessors", "[world]") {
   }
 
   SECTION("Invalid spacing throws exception") {
-    REQUIRE_THROWS_AS(create_world({100, 100, 100}, {0.0, 0.0, 0.0}, {-1.0, 1.0, 1.0}), std::invalid_argument);
-    REQUIRE_THROWS_AS(create_world({100, 100, 100}, {0.0, 0.0, 0.0}, {0.0, 1.0, 1.0}), std::invalid_argument);
+    REQUIRE_THROWS_AS(
+        create_world({100, 100, 100}, {0.0, 0.0, 0.0}, {-1.0, 1.0, 1.0}),
+        std::invalid_argument);
+    REQUIRE_THROWS_AS(
+        create_world({100, 100, 100}, {0.0, 0.0, 0.0}, {0.0, 1.0, 1.0}),
+        std::invalid_argument);
   }
 }
 
@@ -113,6 +117,8 @@ TEST_CASE("World - Output Stream", "[world]") {
   std::ostringstream oss;
   oss << world;
 
-  std::string expected_output = "(size = {100, 200, 300}, origin = {1.00, 2.00, 3.00}, spacing = {0.10, 0.20, 0.30})";
+  std::string expected_output = "(size = {100, 200, 300},"
+                                " origin = {1.00, 2.00, 3.00},"
+                                " spacing = {0.10, 0.20, 0.30})";
   REQUIRE(oss.str() == expected_output);
 }

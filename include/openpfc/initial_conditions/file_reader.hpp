@@ -26,9 +26,11 @@ public:
   void apply(Model &m, double) override {
     const Decomposition &d = m.get_decomposition();
     Field &f = m.get_real_field(get_field_name());
-    std::cout << "Reading initial condition from file" << get_filename() << std::endl;
+    std::cout << "Reading initial condition from file" << get_filename()
+              << std::endl;
     BinaryReader reader;
-    reader.set_domain(d.get_world().get_size(), d.get_inbox().size, d.get_inbox().low);
+    reader.set_domain(d.get_world().get_size(), d.get_inbox().size,
+                      d.get_inbox().low);
     reader.read(get_filename(), f);
   }
 };

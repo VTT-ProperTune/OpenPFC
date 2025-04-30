@@ -27,13 +27,9 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const timer &t);
 };
 
-inline void timer::reset() {
-  duration_ = 0.0;
-}
+inline void timer::reset() { duration_ = 0.0; }
 
-inline std::string timer::description() const {
-  return description_;
-}
+inline std::string timer::description() const { return description_; }
 
 inline void timer::description(const std::string &description) {
   description_ = description;
@@ -44,9 +40,7 @@ inline std::ostream &operator<<(std::ostream &os, const timer &t) {
   return os;
 }
 
-inline void timer::tic() {
-  tic_ = MPI_Wtime();
-}
+inline void timer::tic() { tic_ = MPI_Wtime(); }
 
 inline double timer::toc() {
   toc_ = MPI_Wtime();

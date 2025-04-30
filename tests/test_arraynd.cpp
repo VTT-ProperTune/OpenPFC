@@ -39,12 +39,12 @@ TEST_CASE("array1d") {
     REQUIRE_FALSE(arr.inbounds({7}));
   }
 
-  SECTION("Test get_size()") {
-    REQUIRE(arr.get_size()[0] == 5);
-  }
+  SECTION("Test get_size()") { REQUIRE(arr.get_size()[0] == 5); }
 
   SECTION("Test apply()") {
-    auto func = [](const std::array<int, 1> &indices) -> int { return 2 * indices[0]; };
+    auto func = [](const std::array<int, 1> &indices) -> int {
+      return 2 * indices[0];
+    };
     arr.apply(func);
     REQUIRE(arr[0] == 4);
     REQUIRE(arr[1] == 6);
@@ -62,7 +62,8 @@ TEST_CASE("array2d") {
    * 2  x  x  x
    */
 
-  SECTION("Test setting and accessing elements using custom / linear indexing") {
+  SECTION(
+      "Test setting and accessing elements using custom / linear indexing") {
     arr({1, 2}) = 1;
     arr({2, 2}) = 2;
     arr({1, 3}) = 3;
@@ -73,7 +74,9 @@ TEST_CASE("array2d") {
   }
 
   SECTION("Test apply()") {
-    auto func = [](const std::array<int, 2> &indices) -> int { return indices[0] + indices[1]; };
+    auto func = [](const std::array<int, 2> &indices) -> int {
+      return indices[0] + indices[1];
+    };
     arr.apply(func);
     REQUIRE(arr[0] == 1 + 2);
     REQUIRE(arr[1] == 2 + 2);
@@ -84,7 +87,9 @@ TEST_CASE("array2d") {
   }
 
   SECTION("Test use of std::transform") {
-    auto func = [](const std::array<int, 2> &indices) -> int { return indices[0] + indices[1]; };
+    auto func = [](const std::array<int, 2> &indices) -> int {
+      return indices[0] + indices[1];
+    };
     auto index = arr.get_index();
     auto data = arr.get_data();
     std::transform(index.begin(), index.end(), data.begin(), func);

@@ -64,7 +64,7 @@ class Diffusion : public Model {
   using Model::Model; // "Inherit" the default constructor of base class
 
 private:
-  vector<double> opL, psi;       // Define linear operator opL and unknown (real) psi
+  vector<double> opL, psi; // Define linear operator opL and unknown (real) psi
   vector<complex<double>> psi_F; // Define (complex) psi
 
 public:
@@ -204,7 +204,8 @@ public:
     // MAX reductions and send results to rank 0.
     MPI_Reduce(&local_min, &psi_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
     MPI_Reduce(&local_max, &psi_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    //                               ^ size                  ^ rank where to send
+    //                               ^ size                  ^ rank where to
+    //                               send
 
     // If the result is needed in all other ranks also, we can use MPI_Allreduce
     // to do that:
@@ -251,7 +252,8 @@ void run() {
     n += 1;
     model.step(dt);
     if (model.rank0)
-      cout << "n = " << n << ", t = " << t << ", min = " << model.psi_min << ", max = " << model.psi_max << endl;
+      cout << "n = " << n << ", t = " << t << ", min = " << model.psi_min
+           << ", max = " << model.psi_max << endl;
   }
 
   // Check the result, we should be very close to 0.5

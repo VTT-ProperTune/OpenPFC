@@ -30,7 +30,9 @@ TEST_CASE("DiscreteField1D") {
   }
 
   SECTION("Test apply()") {
-    auto func = [](const std::array<double, 1> &coords) -> int { return static_cast<int>(coords[0]); };
+    auto func = [](const std::array<double, 1> &coords) -> int {
+      return static_cast<int>(coords[0]);
+    };
     field.apply(func);
     for (int i = 0; i < Lx; i++) REQUIRE(field[i] == -3 + 2 * i);
   }

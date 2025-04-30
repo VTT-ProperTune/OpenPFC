@@ -53,13 +53,18 @@ public:
     std::uniform_real_distribution<double> rz(lower_z, upper_z);
     std::uniform_real_distribution<double> ro(0.0, 8.0 * atan(1.0));
     typedef std::array<double, 3> vec3;
-    auto random_location = [&re, &rx, &ry, &rz]() { return vec3({rx(re), ry(re), rz(re)}); };
-    auto random_orientation = [&re, &ro]() { return vec3({ro(re), ro(re), ro(re)}); };
+    auto random_location = [&re, &rx, &ry, &rz]() {
+      return vec3({rx(re), ry(re), rz(re)});
+    };
+    auto random_orientation = [&re, &ro]() {
+      return vec3({ro(re), ro(re), ro(re)});
+    };
 
     for (int i = 0; i < nseeds; i++) {
       const std::array<double, 3> location = random_location();
       const std::array<double, 3> orientation = random_orientation();
-      const Seed seed(location, orientation, radius, get_density(), get_amplitude());
+      const Seed seed(location, orientation, radius, get_density(),
+                      get_amplitude());
       seeds.push_back(seed);
     }
 

@@ -45,11 +45,11 @@ TEST_CASE("VtkWriter", "[VtkWriter]") {
   writer.set_domain(world.get_size(), field.get_size(), field.get_offset());
   writer.write(field.get_array().get_data());
   std::string expectedOutput = R"EXPECTED(<?xml version="1.0" encoding="utf-8"?>
-<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian" header_type="UInt64">
-  <ImageData WholeExtent="0 3 0 2 0 1" Origin="1 1 1" Spacing="1 1 1">
-    <Piece Extent="0 3 0 2 0 1">
-      <PointData>
-        <DataArray type="Float64" Name="density" NumberOfComponents="1" format="appended" offset="0"/>
+<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian"
+header_type="UInt64"> <ImageData WholeExtent="0 3 0 2 0 1" Origin="1 1 1"
+Spacing="1 1 1"> <Piece Extent="0 3 0 2 0 1"> <PointData> <DataArray
+type="Float64" Name="density" NumberOfComponents="1" format="appended"
+offset="0"/>
       </PointData>
     </Piece>
   </ImageData>

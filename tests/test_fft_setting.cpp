@@ -22,7 +22,8 @@ public:
 TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
   World world = create_world({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(), world);
+  auto options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomp, MPI_COMM_WORLD, options, world);
 
   MockModel model(world);
 
@@ -34,7 +35,8 @@ TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
   SECTION("Retrieve FFT object") {
     FFT &retrieved_fft = model.get_fft();
 
-    REQUIRE(&retrieved_fft == &fft); // Ensure the retrieved FFT object matches the original
+    // Ensure the retrieved FFT object matches the original
+    REQUIRE(&retrieved_fft == &fft);
   }
 
   SECTION("Ensure FFT object is not null") {

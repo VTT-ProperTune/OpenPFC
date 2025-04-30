@@ -12,16 +12,20 @@ using namespace pfc;
 constexpr double TOLERANCE = 0.00001;
 
 // Helper function to create a Time instance.
-// This function simplifies the creation of Time objects with or without a save interval.
-// Parameters:
-// - time_config: An array containing the start time (t0), end time (t1), and time step (dt).
-// - saveat: Optional parameter specifying the save interval. Defaults to -1.0 (no save interval).
-Time create_time_instance(const std::array<double, 3> &time_config, double saveat = -1.0) {
+// This function simplifies the creation of Time objects with or without a save
+// interval. Parameters:
+// - time_config: An array containing the start time (t0), end time (t1), and
+// time step (dt).
+// - saveat: Optional parameter specifying the save interval. Defaults to -1.0
+// (no save interval).
+Time create_time_instance(const std::array<double, 3> &time_config,
+                          double saveat = -1.0) {
   return (saveat >= 0.0) ? Time(time_config, saveat) : Time(time_config);
 }
 
 // Forward declaration of the helper function
-void verify_time_instance(const Time &time_instance, double t0, double t1, double dt, double saveat, double current,
+void verify_time_instance(const Time &time_instance, double t0, double t1,
+                          double dt, double saveat, double current,
                           int increment = 0);
 
 // Define the TestCase struct for parameterized tests
@@ -39,8 +43,22 @@ struct TestCase {
 TEST_CASE("Time initialization", "[Time]") {
   // Fix expected_t1 value in test cases to match the actual behavior.
   std::vector<TestCase> test_cases = {
-      {{0.0, 10.0, 1.0}, 2.0, 0.0, 10.0, 1.0, 2.0, 0.0, 0}, // Added expected_increment = 0
-      {{0.0, 5.0, 0.5}, -1.0, 0.0, 5.0, 0.5, 0.5, 0.0, 0},  // Added expected_increment = 0
+      {{0.0, 10.0, 1.0},
+       2.0,
+       0.0,
+       10.0,
+       1.0,
+       2.0,
+       0.0,
+       0}, // Added expected_increment = 0
+      {{0.0, 5.0, 0.5},
+       -1.0,
+       0.0,
+       5.0,
+       0.5,
+       0.5,
+       0.0,
+       0}, // Added expected_increment = 0
   };
 
   for (const auto &tc : test_cases) {
@@ -48,7 +66,8 @@ TEST_CASE("Time initialization", "[Time]") {
       Time time_instance = create_time_instance(tc.time_config, tc.saveat);
 
       // Use helper function to verify initialization
-      verify_time_instance(time_instance, tc.expected_t0, tc.expected_t1, tc.expected_dt, tc.expected_saveat,
+      verify_time_instance(time_instance, tc.expected_t0, tc.expected_t1,
+                           tc.expected_dt, tc.expected_saveat,
                            tc.expected_current);
     }
   }
@@ -57,45 +76,54 @@ TEST_CASE("Time initialization", "[Time]") {
 TEST_CASE("Time edge cases", "[Time]") {
   SECTION("Throw an exception when the start time is negative") {
     std::array<double, 3> time_config = {-1.0, 10.0, 1.0};
-    REQUIRE_THROWS_WITH(create_time_instance(time_config), "Start time cannot be negative: -1.000000");
+    REQUIRE_THROWS_WITH(create_time_instance(time_config),
+                        "Start time cannot be negative: -1.000000");
   }
 
   SECTION("Throw an exception when the time step (dt) is zero") {
     std::array<double, 3> time_config = {0.0, 10.0, 0.0};
-    REQUIRE_THROWS_WITH(create_time_instance(time_config), "Time step (dt) must be greater than zero: 0.000000");
+    REQUIRE_THROWS_WITH(create_time_instance(time_config),
+                        "Time step (dt) must be greater than zero: 0.000000");
   }
 
-  SECTION("Throw an exception when the save interval is greater than the end time") {
+  SECTION("Throw an exception when the save interval is greater than the end "
+          "time") {
     std::array<double, 3> time_config = {0.0, 10.0, 1.0};
-    REQUIRE_THROWS_WITH(create_time_instance(time_config, 15.0),
-                        "Save interval cannot exceed end time: 15.000000 > 10.000000");
+    REQUIRE_THROWS_WITH(
+        create_time_instance(time_config, 15.0),
+        "Save interval cannot exceed end time: 15.000000 > 10.000000");
   }
 
   SECTION("Throw an exception when the time step (dt) is extremely small") {
     std::array<double, 3> time_config = {0.0, 10.0, 1e-10};
-    REQUIRE_THROWS_WITH(create_time_instance(time_config), "Time step (dt) is too small: 0.000000");
+    REQUIRE_THROWS_WITH(create_time_instance(time_config),
+                        "Time step (dt) is too small: 0.000000");
   }
 
   SECTION("Throw an exception when start time equals end time") {
     std::array<double, 3> time_config = {5.0, 5.0, 1.0};
-    REQUIRE_THROWS_WITH(create_time_instance(time_config), "Start time cannot equal end time: t0 == t1");
+    REQUIRE_THROWS_WITH(create_time_instance(time_config),
+                        "Start time cannot equal end time: t0 == t1");
   }
 }
 
 TEST_CASE("Time increment overflow", "[Time]") {
-  // Adjust the test to account for floating-point precision in the final comparison.
+  // Adjust the test to account for floating-point precision in the final
+  // comparison.
   std::array<double, 3> time = {0.0, 1e6, 1.0};
   Time t(time);
 
   SECTION("Increment beyond the end time and verify completion") {
     t.set_increment(1e6 + 1);
     REQUIRE(t.done());
-    REQUIRE_THAT(t.get_current(), WithinAbs(1e6, TOLERANCE)); // Should not exceed t1
+    REQUIRE_THAT(t.get_current(),
+                 WithinAbs(1e6, TOLERANCE)); // Should not exceed t1
   }
 }
 
 // Enhanced helper function to verify Time instance initialization
-void verify_time_instance(const Time &time_instance, double t0, double t1, double dt, double saveat, double current,
+void verify_time_instance(const Time &time_instance, double t0, double t1,
+                          double dt, double saveat, double current,
                           int increment) {
   REQUIRE_THAT(time_instance.get_t0(), WithinAbs(t0, TOLERANCE));
   REQUIRE_THAT(time_instance.get_t1(), WithinAbs(t1, TOLERANCE));
@@ -112,12 +140,15 @@ TEST_CASE("Time completion", "[Time]") {
 
   REQUIRE_FALSE(t.done());
 
-  SECTION("Mark the Time instance as complete by setting the increment to the maximum value") {
+  SECTION("Mark the Time instance as complete by setting the increment to the "
+          "maximum value") {
     t.set_increment(10);
     REQUIRE(t.done());
   }
 
-  SECTION("Verify the Time instance is not complete when the increment is less than the maximum value") {
+  SECTION("Verify the Time instance is not complete when the increment is less "
+          "than the maximum "
+          "value") {
     t.set_increment(5);
     REQUIRE_FALSE(t.done());
   }
@@ -128,12 +159,14 @@ TEST_CASE("Time save condition", "[Time]") {
   std::array<double, 3> time = {0.0, 10.0, 1.0};
   Time t(time);
 
-  SECTION("Verify that the Time instance saves at every time step when save interval is 1.0") {
+  SECTION("Verify that the Time instance saves at every time step when save "
+          "interval is 1.0") {
     t.set_saveat(1.0);
     REQUIRE(t.do_save());
   }
 
-  SECTION("Verify that the Time instance saves only at specific intervals when save interval is 2.5") {
+  SECTION("Verify that the Time instance saves only at specific intervals when "
+          "save interval is 2.5") {
     t.set_saveat(2.5);
 
     SECTION("Save when the current time matches the save interval") {
@@ -141,7 +174,8 @@ TEST_CASE("Time save condition", "[Time]") {
       REQUIRE(t.do_save());
     }
 
-    SECTION("Do not save when the current time does not match the save interval") {
+    SECTION(
+        "Do not save when the current time does not match the save interval") {
       t.set_increment(6);
       REQUIRE_FALSE(t.do_save());
     }
@@ -157,12 +191,14 @@ TEST_CASE("Time save condition", "[Time]") {
   }
 
   // Additional edge cases for save condition
-  SECTION("Verify that the Time instance does not save when save interval is 0.0") {
+  SECTION(
+      "Verify that the Time instance does not save when save interval is 0.0") {
     t.set_saveat(0.0);
     REQUIRE_FALSE(t.do_save());
   }
 
-  SECTION("Verify that the Time instance does not save when save interval is non-aligned with dt") {
+  SECTION("Verify that the Time instance does not save when save interval is "
+          "non-aligned with dt") {
     t.set_saveat(1.3);  // Non-aligned with dt = 1.0
     t.set_increment(3); // Current time = 3.0
     REQUIRE_FALSE(t.do_save());

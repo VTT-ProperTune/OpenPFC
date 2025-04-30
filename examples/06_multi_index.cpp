@@ -26,7 +26,8 @@ int main() {
 
   // Using MultiIndex through iterator:
   for (auto it = index.begin(); it != index.end(); ++it) {
-    std::cout << it << ", linear index = " << it.get_linear_index() << std::endl;
+    std::cout << it << ", linear index = " << it.get_linear_index()
+              << std::endl;
   }
   // Result is
   /*
@@ -42,7 +43,8 @@ int main() {
 
   // Alternatively, using convenient range-based for loop:
   for (const auto &indices : index) {
-    std::cout << "{" << indices[0] << ", " << indices[1] << ", " << indices[2] << "}" << std::endl;
+    std::cout << "{" << indices[0] << ", " << indices[1] << ", " << indices[2]
+              << "}" << std::endl;
   }
 
   // Filling vector using MultiIndex:
@@ -53,10 +55,12 @@ int main() {
   }
 
   std::cout << "data = [";
-  for (const auto &v : data) std::cout << v << ((&v != &data.back()) ? ", " : "]\n");
+  for (const auto &v : data)
+    std::cout << v << ((&v != &data.back()) ? ", " : "]\n");
 
   // Iterator can be started from custom position
-  std::cout << "Linear index of {2, 1, 2} = " << (int)index.from({2, 1, 2}) << std::endl;
+  std::cout << "Linear index of {2, 1, 2} = " << (int)index.from({2, 1, 2})
+            << std::endl;
 
   // Filling two-dimensional data, "matrix"
   std::array<int, 25> arr{};

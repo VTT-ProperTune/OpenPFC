@@ -34,9 +34,9 @@ namespace pfc {
  */
 class Model {
 private:
-  FFT *m_fft = nullptr;             ///< Raw pointer to the FFT object used by the model
-  RealFieldSet m_real_fields;       ///< Collection of real-valued fields associated
-                                    ///< with the model
+  FFT *m_fft = nullptr; ///< Raw pointer to the FFT object used by the model
+  RealFieldSet m_real_fields; ///< Collection of real-valued fields associated
+                              ///< with the model
   ComplexFieldSet m_complex_fields; ///< Collection of complex-valued fields
                                     ///< associated with the model
   const World &m_world;             ///< Reference to the World object
@@ -65,7 +65,8 @@ public:
    * @param world Reference to the World object
    */
   Model(FFT &fft, const World &world)
-      : m_fft(&fft), m_world(world), domain(to_heffte_box(world)), // Use to_heffte_box
+      : m_fft(&fft), m_world(world),
+        domain(to_heffte_box(world)), // Use to_heffte_box
         rank0(mpi::get_rank() == 0) {}
 
   /**
@@ -90,7 +91,9 @@ public:
    *
    * @return Reference to the Decomposition object
    */
-  const Decomposition &get_decomposition() { return get_fft().get_decomposition(); }
+  const Decomposition &get_decomposition() {
+    return get_fft().get_decomposition();
+  }
 
   /**
    * @brief Get the world object associated with the model.
@@ -117,7 +120,8 @@ public:
    */
   FFT &get_fft() {
     if (m_fft == nullptr) {
-      std::cerr << "get_fft called on Model instance: " << this << ". FFT object is not set!" << std::endl;
+      std::cerr << "get_fft called on Model instance: " << this
+                << ". FFT object is not set!" << std::endl;
       throw std::runtime_error("FFT object has not been set.");
     }
     return *m_fft;
@@ -151,7 +155,9 @@ public:
    * @param field_name Name of the field to check
    * @return True if the field exists, False otherwise
    */
-  bool has_real_field(const std::string &field_name) { return m_real_fields.count(field_name) > 0; }
+  bool has_real_field(const std::string &field_name) {
+    return m_real_fields.count(field_name) > 0;
+  }
 
   /**
    * @brief Add a real-valued field to the model.
@@ -159,7 +165,9 @@ public:
    * @param name Name of the field
    * @param field Reference to the RealField object representing the field
    */
-  void add_real_field(const std::string &name, RealField &field) { m_real_fields.insert({name, field}); }
+  void add_real_field(const std::string &name, RealField &field) {
+    m_real_fields.insert({name, field});
+  }
 
   /**
    * @brief Check if the model has a complex-valued field with the given name.
@@ -167,7 +175,9 @@ public:
    * @param field_name Name of the field to check
    * @return True if the field exists, False otherwise
    */
-  bool has_complex_field(const std::string &field_name) { return m_complex_fields.count(field_name) > 0; }
+  bool has_complex_field(const std::string &field_name) {
+    return m_complex_fields.count(field_name) > 0;
+  }
 
   /**
    * @brief Add a complex-valued field to the model.
@@ -175,7 +185,9 @@ public:
    * @param name Name of the field
    * @param field Reference to the ComplexField object representing the field
    */
-  void add_complex_field(const std::string &name, ComplexField &field) { m_complex_fields.insert({name, field}); }
+  void add_complex_field(const std::string &name, ComplexField &field) {
+    m_complex_fields.insert({name, field});
+  }
 
   /**
    * @brief Get a reference to the real-valued field with the given name.
@@ -183,7 +195,9 @@ public:
    * @param name Name of the field
    * @return Reference to the RealField object
    */
-  RealField &get_real_field(const std::string &name) { return m_real_fields.find(name)->second; }
+  RealField &get_real_field(const std::string &name) {
+    return m_real_fields.find(name)->second;
+  }
 
   /**
    * @brief Get a reference to the complex-valued field with the given name.
@@ -191,7 +205,9 @@ public:
    * @param name Name of the field
    * @return Reference to the ComplexField object
    */
-  ComplexField &get_complex_field(const std::string &name) { return m_complex_fields.find(name)->second; }
+  ComplexField &get_complex_field(const std::string &name) {
+    return m_complex_fields.find(name)->second;
+  }
 
   /**
    * @brief Add a field to the model.
@@ -199,7 +215,9 @@ public:
    * @param name Name of the field
    * @param field Reference to the RealField object representing the field
    */
-  void add_field(const std::string &name, RealField &field) { add_real_field(name, field); }
+  void add_field(const std::string &name, RealField &field) {
+    add_real_field(name, field);
+  }
 
   /**
    * @brief Add a field to the model.
@@ -207,7 +225,9 @@ public:
    * @param name Name of the field
    * @param field Reference to the ComplexField object representing the field
    */
-  void add_field(const std::string &name, ComplexField &field) { add_complex_field(name, field); }
+  void add_field(const std::string &name, ComplexField &field) {
+    add_complex_field(name, field);
+  }
 
   /**
    * @brief Check if the model has a field with the given name (real or
@@ -216,7 +236,9 @@ public:
    * @param field_name Name of the field to check
    * @return True if the field exists, False otherwise
    */
-  bool has_field(const std::string &field_name) { return has_real_field(field_name) || has_complex_field(field_name); }
+  bool has_field(const std::string &field_name) {
+    return has_real_field(field_name) || has_complex_field(field_name);
+  }
 
   /**
    * @brief Get a reference to the default primary unknown field.

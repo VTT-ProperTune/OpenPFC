@@ -15,7 +15,8 @@ using json = nlohmann::json;
 using namespace pfc;
 
 /**
- * @brief SlabFCC is a FieldModifier that seeds the model with a slab of FCC seeds.
+ * @brief SlabFCC is a FieldModifier that seeds the model with a slab of FCC
+ * seeds.
  *
  */
 class SlabFCC : public FieldModifier {
@@ -33,9 +34,11 @@ private:
 public:
   SlabFCC() = default;
 
-  SlabFCC(int Ny, int Nz, double X0, double amplitude, double fluctuation, double rho, double rseed,
+  SlabFCC(int Ny, int Nz, double X0, double amplitude, double fluctuation,
+          double rho, double rseed,
           std::vector<std::array<double, 3>> orientations = {})
-      : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_amplitude(amplitude), m_fluctuation(fluctuation), m_rho(rho), m_rseed(rseed),
+      : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_amplitude(amplitude),
+        m_fluctuation(fluctuation), m_rho(rho), m_rseed(rseed),
         m_orientations(orientations) {}
 
   // getters
@@ -46,7 +49,9 @@ public:
   double get_fluctuation() const { return m_fluctuation; }
   double get_rho() const { return m_rho; }
   double get_rseed() const { return m_rseed; }
-  std::vector<std::array<double, 3>> get_orientations() const { return m_orientations; }
+  std::vector<std::array<double, 3>> get_orientations() const {
+    return m_orientations;
+  }
 
   // setters
   void set_Ny(int Ny) { m_Ny = Ny; }
@@ -56,7 +61,9 @@ public:
   void set_fluctuation(double fluctuation) { m_fluctuation = fluctuation; }
   void set_rho(double rho) { m_rho = rho; }
   void set_rseed(double rseed) { m_rseed = rseed; }
-  void set_orientations(std::vector<std::array<double, 3>> orientations) { m_orientations = orientations; }
+  void set_orientations(std::vector<std::array<double, 3>> orientations) {
+    m_orientations = orientations;
+  }
 
   /**
    * @brief Apply the initial condition to the model.
@@ -110,11 +117,13 @@ public:
 
     if (randomized) {
 
-      std::cout << "Generating " << nseeds << " random seeds up to distance " << X0 << "\n";
+      std::cout << "Generating " << nseeds << " random seeds up to distance "
+                << X0 << "\n";
 
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
-          const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+          const std::array<double, 3> location = {
+              X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
           const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
           const SeedFCC seed(location, orientation, radius, rho, amplitude);
           seeds.push_back(seed);
@@ -122,11 +131,13 @@ public:
       }
 
     } else {
-      std::cout << "Generating " << nseeds << " seeds from orientation list up to distance " << X0 << "\n";
+      std::cout << "Generating " << nseeds
+                << " seeds from orientation list up to distance " << X0 << "\n";
 
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
-          const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+          const std::array<double, 3> location = {
+              X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
           const std::array<double, 3> orientation = orientations[j * Nz + k];
           const SeedFCC seed(location, orientation, radius, rho, amplitude);
           seeds.push_back(seed);
@@ -165,13 +176,13 @@ public:
  * { "type": "slab_fcc", "X0": 130.0, "Ny": 2, "Nz": 1,
  * "amplitude": 0.2, "fluctuation": 10.0, "rho": -0.036, "rseed": 42 }
  *
- * The "type" field is required and must be "seed_grid_fcc". The "rseed" field is
- * optional and defaults to 0. All other fields are required. The "Ny" and "Nz"
- * fields are the number of seeds in the y and z directions, respectively. The
- * "X0" field is the x-coordinate of the center of the first seed. The "radius"
- * field is the radius of the seeds. The "amplitude" field is the amplitude of
- * the seed. The "rho" field is the background density. The "rseed" field is the
- * random seed.
+ * The "type" field is required and must be "seed_grid_fcc". The "rseed" field
+ * is optional and defaults to 0. All other fields are required. The "Ny" and
+ * "Nz" fields are the number of seeds in the y and z directions, respectively.
+ * The "X0" field is the x-coordinate of the center of the first seed. The
+ * "radius" field is the radius of the seeds. The "amplitude" field is the
+ * amplitude of the seed. The "rho" field is the background density. The "rseed"
+ * field is the random seed.
  *
  */
 void from_json(const json &params, SlabFCC &ic) {
@@ -179,28 +190,36 @@ void from_json(const json &params, SlabFCC &ic) {
 
   // check for required fields
   if (!params.contains("amplitude") || !params["amplitude"].is_number()) {
-    throw std::invalid_argument("Reading SlabFCC failed: missing or invalid 'amplitude' field.");
+    throw std::invalid_argument(
+        "Reading SlabFCC failed: missing or invalid 'amplitude' field.");
   }
   if (!params.contains("fluctuation") || !params["fluctuation"].is_number()) {
-    throw std::invalid_argument("Reading SlabFCC failed: missing or invalid 'amplitude' field.");
+    throw std::invalid_argument(
+        "Reading SlabFCC failed: missing or invalid 'amplitude' field.");
   }
   if (!params.contains("rho") || !params["rho"].is_number()) {
-    throw std::invalid_argument("Reading SlabFCC failed: missing or invalid 'rho' field.");
+    throw std::invalid_argument(
+        "Reading SlabFCC failed: missing or invalid 'rho' field.");
   }
   if (!params.contains("Ny") || !params["Ny"].is_number()) {
-    throw std::invalid_argument("Reading SlabFCC failed: missing or invalid 'Ny' field.");
+    throw std::invalid_argument(
+        "Reading SlabFCC failed: missing or invalid 'Ny' field.");
   }
   if (!params.contains("Nz") || !params["Nz"].is_number()) {
-    throw std::invalid_argument("Reading SlabFCC failed: missing or invalid 'Nz' field.");
+    throw std::invalid_argument(
+        "Reading SlabFCC failed: missing or invalid 'Nz' field.");
   }
   if (!params.contains("X0") || !params["X0"].is_number()) {
-    throw std::invalid_argument("Reading SlabFCC failed: missing or invalid 'X0' field.");
+    throw std::invalid_argument(
+        "Reading SlabFCC failed: missing or invalid 'X0' field.");
   }
   if (!params.contains("rseed") || !params["rseed"].is_number()) {
-    std::cout << "No valid random seed detected, using default value 0." << std::endl;
+    std::cout << "No valid random seed detected, using default value 0."
+              << std::endl;
   }
   if (!params.contains("orientations") || !params["orientations"].is_array()) {
-    std::cout << "No valid orientation vector detected, randomizing." << std::endl;
+    std::cout << "No valid orientation vector detected, randomizing."
+              << std::endl;
   }
   int Nz = params["Nz"];
   int Ny = params["Ny"];
@@ -209,7 +228,8 @@ void from_json(const json &params, SlabFCC &ic) {
   auto orientations = params.value("orientations", m_orientations);
   // auto orientations = params["orientations"];
   if (!orientations.empty() && orientations.size() != (Nz * Ny)) {
-    throw std::invalid_argument("Orientation vector and seed grid sizes do not match.");
+    throw std::invalid_argument(
+        "Orientation vector and seed grid sizes do not match.");
   }
 
   ic.set_Ny(params["Ny"]);
@@ -218,7 +238,8 @@ void from_json(const json &params, SlabFCC &ic) {
   ic.set_amplitude(params["amplitude"]);
   ic.set_fluctuation(params["fluctuation"]);
   ic.set_rho(params["rho"]);
-  if (params.contains("rseed") && params["rseed"].is_number()) ic.set_rseed(params["rseed"]);
+  if (params.contains("rseed") && params["rseed"].is_number())
+    ic.set_rseed(params["rseed"]);
   // if (params.contains("orientations") && params["orientations"].is_array())
   // ic.set_orientations(params["orientations"]);
   ic.set_orientations(orientations);

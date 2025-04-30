@@ -13,7 +13,8 @@ const double PI = 3.141592653589793238463;
 
 class CahnHilliard : public Model {
 private:
-  std::vector<double> opL, opN, c;             // Define linear operator opL and unknown (real) psi
+  std::vector<double> opL, opN,
+      c; // Define linear operator opL and unknown (real) psi
   std::vector<std::complex<double>> c_F, c_NF; // Define (complex) psi
   double gamma = 1.0e-2;                       // Surface tension
   double D = 1.0;                              // Diffusion coefficient
@@ -72,7 +73,8 @@ public:
     fft.forward(c, c_F);
     for (auto &elem : c) elem = D * elem * elem * elem;
     fft.forward(c, c_NF);
-    for (size_t i = 0; i < c_F.size(); i++) c_F[i] = opL[i] * c_F[i] + opN[i] * c_NF[i];
+    for (size_t i = 0; i < c_F.size(); i++)
+      c_F[i] = opL[i] * c_F[i] + opN[i] * c_NF[i];
     fft.backward(c_F, c);
   }
 };
@@ -137,10 +139,12 @@ int main(int argc, char **argv) {
   // initialize VtkWriter
   VtkWriter<double> writer;
   int file_count = 0;
-  // set uri as format cahn_hilliard_%04i.vti, where %04i is replaced by file_count
+  // set uri as format cahn_hilliard_%04i.vti, where %04i is replaced by
+  // file_count
   writer.set_uri(sprintf("cahn_hilliard_%04i.vti", file_count));
   writer.set_field_name("concentration");
-  writer.set_domain(get_size(world), decomp.get_inbox_size(), decomp.get_inbox_offset());
+  writer.set_domain(get_size(world), decomp.get_inbox_size(),
+                    decomp.get_inbox_offset());
   writer.set_origin(get_origin(world));
   writer.set_spacing(get_spacing(world));
   writer.initialize();
@@ -164,9 +168,12 @@ int main(int argc, char **argv) {
   // Stop the clock
   auto t_end = std::chrono::high_resolution_clock::now();
   // Compute the time difference
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start)
+          .count();
   // Print the time difference
-  if (worker.get_rank() == 0) std::cout << "Solution time: " << duration << " ms" << std::endl;
+  if (worker.get_rank() == 0)
+    std::cout << "Solution time: " << duration << " ms" << std::endl;
 
   return 0;
 }

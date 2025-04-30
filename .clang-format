@@ -8,7 +8,7 @@
 IndentWidth: 2
 TabWidth: 2
 UseTab: Never
-ColumnLimit: 100
+ColumnLimit: 80
 
 # Allow things on a single line
 
@@ -18,11 +18,14 @@ AllowShortFunctionsOnASingleLine: All
 AllowShortLambdasOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 
+# List styles: { a, b, c } or {a, b, c} ?
+# Cpp11BracedListStyle: false
+
 # Constructor formatting
 
 # ensures that : is placed on a new line
 BreakConstructorInitializers: BeforeColon
 ConstructorInitializerAllOnOneLineOrOnePerLine: false # puts each initializer on its own line
 AllowAllConstructorInitializersOnNextLine: false # disables grouping on the next line
-BinPackParameters: false # prevents squeezing multiple parameters into one line
+BinPackParameters: true # prevents squeezing multiple parameters into one line
 AlignAfterOpenBracket: Align # keeps nice vertical alignment

@@ -26,7 +26,8 @@ public:
   Constant() = default;
 
   /**
-   * @brief Constructor for the Constant class that sets the initial density value.
+   * @brief Constructor for the Constant class that sets the initial density
+   * value.
    * @param n0 The constant value to set for the field.
    */
   Constant(double n0) : m_n0(n0) {}

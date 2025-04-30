@@ -84,8 +84,8 @@ template <typename T> void abortIfNaN(T value, const char *filename, int line) {
   if (std::isnan(value)) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    std::cerr << "NaN detected on process " << rank << " at " << filename << ":" << line
-              << ". Aborting MPI application." << std::endl;
+    std::cerr << "NaN detected on process " << rank << " at " << filename << ":"
+              << line << ". Aborting MPI application." << std::endl;
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 }
@@ -97,12 +97,13 @@ template <typename T> void abortIfNaN(T value, const char *filename, int line) {
  *
  * @param vec The vector of floats to check.
  */
-template <typename T> void abortIfNaNs(const std::vector<T> &vec, const char *filename, int line) {
+template <typename T>
+void abortIfNaNs(const std::vector<T> &vec, const char *filename, int line) {
   if (hasNaNs(vec)) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    std::cerr << "NaNs detected on process " << rank << " at " << filename << ":" << line
-              << ". Aborting MPI application." << std::endl;
+    std::cerr << "NaNs detected on process " << rank << " at " << filename
+              << ":" << line << ". Aborting MPI application." << std::endl;
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 }

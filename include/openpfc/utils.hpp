@@ -14,8 +14,10 @@
 namespace pfc {
 namespace utils {
 
-template <typename... Args> std::string string_format(const std::string &format, Args... args) {
-  size_t size = snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
+template <typename... Args>
+std::string string_format(const std::string &format, Args... args) {
+  size_t size =
+      snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
   if (size <= 0) {
     throw std::runtime_error("Error during formatting.");
   }

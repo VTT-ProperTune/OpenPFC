@@ -15,7 +15,8 @@ using json = nlohmann::json;
 using namespace pfc;
 
 /**
- * @brief SeedGridFCC is a FieldModifier that seeds the model with a grid of FCC seeds.
+ * @brief SeedGridFCC is a FieldModifier that seeds the model with a grid of FCC
+ * seeds.
  *
  */
 class SeedGridFCC : public FieldModifier {
@@ -29,15 +30,10 @@ private:
 public:
   SeedGridFCC() = default;
 
-  SeedGridFCC(int Ny, int Nz, double X0, double radius, double amplitude, double rho, double rseed)
-      : m_Nx(1),
-        m_Ny(Ny),
-        m_Nz(Nz),
-        m_X0(X0),
-        m_radius(radius),
-        m_amplitude(amplitude),
-        m_rho(rho),
-        m_rseed(rseed) {}
+  SeedGridFCC(int Ny, int Nz, double X0, double radius, double amplitude,
+              double rho, double rseed)
+      : m_Nx(1), m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius),
+        m_amplitude(amplitude), m_rho(rho), m_rseed(rseed) {}
 
   // getters
   int get_Nx() const { return m_Nx; }
@@ -102,7 +98,8 @@ public:
     double Z0 = Dz / 2.0;
     int nseeds = Nx * Ny * Nz;
 
-    std::cout << "Generating " << nseeds << " regular seeds with radius " << radius << "\n";
+    std::cout << "Generating " << nseeds << " regular seeds with radius "
+              << radius << "\n";
 
     std::mt19937_64 re(rseed);
     std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
@@ -110,7 +107,8 @@ public:
 
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nz; k++) {
-        const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
+        const std::array<double, 3> location = {
+            X0 + rt(re), Y0 + Dy * j + rt(re), Z0 + Dz * k + rt(re)};
         const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
         const SeedFCC seed(location, orientation, radius, rho, amplitude);
         seeds.push_back(seed);
@@ -150,13 +148,13 @@ public:
  * { "type": "seed_grid_fcc", "X0": 130.0, "Ny": 2, "Nz": 1, "radius": 120,
  * "amplitude": 0.4, "rho": -0.036, "rseed": 42 }
  *
- * The "type" field is required and must be "seed_grid_fcc". The "rseed" field is
- * optional and defaults to 0. All other fields are required. The "Ny" and "Nz"
- * fields are the number of seeds in the y and z directions, respectively. The
- * "X0" field is the x-coordinate of the center of the first seed. The "radius"
- * field is the radius of the seeds. The "amplitude" field is the amplitude of
- * the seed. The "rho" field is the background density. The "rseed" field is the
- * random seed.
+ * The "type" field is required and must be "seed_grid_fcc". The "rseed" field
+ * is optional and defaults to 0. All other fields are required. The "Ny" and
+ * "Nz" fields are the number of seeds in the y and z directions, respectively.
+ * The "X0" field is the x-coordinate of the center of the first seed. The
+ * "radius" field is the radius of the seeds. The "amplitude" field is the
+ * amplitude of the seed. The "rho" field is the background density. The "rseed"
+ * field is the random seed.
  *
  */
 void from_json(const json &params, SeedGridFCC &ic) {
@@ -164,25 +162,32 @@ void from_json(const json &params, SeedGridFCC &ic) {
 
   // check for required fields
   if (!params.contains("amplitude") || !params["amplitude"].is_number()) {
-    throw std::invalid_argument("Reading SeedGridFCC failed: missing or invalid 'amplitude' field.");
+    throw std::invalid_argument(
+        "Reading SeedGridFCC failed: missing or invalid 'amplitude' field.");
   }
   if (!params.contains("radius") || !params["radius"].is_number()) {
-    throw std::invalid_argument("Reading SeedGridFCC failed: missing or invalid 'radius' field.");
+    throw std::invalid_argument(
+        "Reading SeedGridFCC failed: missing or invalid 'radius' field.");
   }
   if (!params.contains("rho") || !params["rho"].is_number()) {
-    throw std::invalid_argument("Reading SeedGridFCC failed: missing or invalid 'rho' field.");
+    throw std::invalid_argument(
+        "Reading SeedGridFCC failed: missing or invalid 'rho' field.");
   }
   if (!params.contains("Ny") || !params["Ny"].is_number()) {
-    throw std::invalid_argument("Reading SeedGridFCC failed: missing or invalid 'Ny' field.");
+    throw std::invalid_argument(
+        "Reading SeedGridFCC failed: missing or invalid 'Ny' field.");
   }
   if (!params.contains("Nz") || !params["Nz"].is_number()) {
-    throw std::invalid_argument("Reading SeedGridFCC failed: missing or invalid 'Nz' field.");
+    throw std::invalid_argument(
+        "Reading SeedGridFCC failed: missing or invalid 'Nz' field.");
   }
   if (!params.contains("X0") || !params["X0"].is_number()) {
-    throw std::invalid_argument("Reading SeedGridFCC failed: missing or invalid 'X0' field.");
+    throw std::invalid_argument(
+        "Reading SeedGridFCC failed: missing or invalid 'X0' field.");
   }
   if (!params.contains("rseed") || !params["rseed"].is_number()) {
-    std::cout << "No valid random seed detected, using default value 0." << std::endl;
+    std::cout << "No valid random seed detected, using default value 0."
+              << std::endl;
   }
 
   ic.set_Ny(params["Ny"]);
@@ -191,7 +196,8 @@ void from_json(const json &params, SeedGridFCC &ic) {
   ic.set_radius(params["radius"]);
   ic.set_amplitude(params["amplitude"]);
   ic.set_rho(params["rho"]);
-  if (params.contains("rseed") && params["rseed"].is_number()) ic.set_rseed(params["rseed"]);
+  if (params.contains("rseed") && params["rseed"].is_number())
+    ic.set_rseed(params["rseed"]);
 }
 
 #endif // SEEDGRIDFCC_HPP

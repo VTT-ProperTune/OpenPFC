@@ -13,7 +13,8 @@ Remember: openpfc/ui.hpp uses nlohmann_json, thus when linking target, one must
 link that also!
 
   add_executable(10_ui_register_ic 10_ui_register_ic.cpp)
-  target_link_libraries(10_ui_register_ic PRIVATE OpenPFC nlohmann_json::nlohmann_json)
+  target_link_libraries(10_ui_register_ic PRIVATE OpenPFC
+nlohmann_json::nlohmann_json)
 */
 
 // Define custom initial condition
@@ -25,14 +26,17 @@ public:
   void set_value(double value) { m_value = value; }
   double get_value() const { return m_value; }
 
-  void apply(Model &, double) override { std::cout << "Applying MyIC with value " << get_value() << std::endl; }
+  void apply(Model &, double) override {
+    std::cout << "Applying MyIC with value " << get_value() << std::endl;
+  }
 };
 
 // Parse initial condition data from json file
 void from_json(const json &params, MyIC &ic) {
   std::cout << "Parsing MyIC from json" << std::endl;
   if (!params.contains("value") || !params["value"].is_number()) {
-    throw std::invalid_argument("Reading MyIC failed: missing or invalid 'value' field.");
+    throw std::invalid_argument(
+        "Reading MyIC failed: missing or invalid 'value' field.");
   }
   ic.set_value(params["value"]);
 }

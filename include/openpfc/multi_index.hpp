@@ -13,22 +13,28 @@ namespace pfc {
 /**
  * @brief MultiIndex class for iterating over multi-dimensional indices.
  *
- * The MultiIndex class provides a convenient way to iterate over multi-dimensional indices.
- * It supports iterating over a range defined by an offset and size in each dimension.
- * The class also provides conversion functions between linear and multi-dimensional indices.
+ * The MultiIndex class provides a convenient way to iterate over
+ * multi-dimensional indices. It supports iterating over a range defined by an
+ * offset and size in each dimension. The class also provides conversion
+ * functions between linear and multi-dimensional indices.
  *
  * @tparam D The number of dimensions.
  */
 template <size_t D> class MultiIndex {
 private:
-  const std::array<int, D> m_begin; ///< The offset of the range in each dimension.
-  const std::array<int, D> m_size;  ///< The size of the range in each dimension.
-  const std::array<int, D> m_end;   ///< The end index of the range in each dimension.
-  const size_t m_linear_begin;      ///< The linear index corresponding to the beginning of the range.
-  const size_t m_linear_end;        ///< The linear index corresponding to the end of the range.
-  const size_t m_linear_size;       ///< The total number of elements in the range.
+  const std::array<int, D>
+      m_begin; ///< The offset of the range in each dimension.
+  const std::array<int, D> m_size; ///< The size of the range in each dimension.
+  const std::array<int, D>
+      m_end; ///< The end index of the range in each dimension.
+  const size_t m_linear_begin; ///< The linear index corresponding to the
+                               ///< beginning of the range.
+  const size_t
+      m_linear_end; ///< The linear index corresponding to the end of the range.
+  const size_t m_linear_size; ///< The total number of elements in the range.
 
-  std::array<int, D> calculate_end(std::array<int, D> begin, std::array<int, D> size) {
+  std::array<int, D> calculate_end(std::array<int, D> begin,
+                                   std::array<int, D> size) {
     std::array<int, D> end;
     for (size_t i = 0; i < D; i++) end[i] = begin[i] + size[i] - 1;
     return end;
@@ -36,14 +42,17 @@ private:
 
 public:
   /**
-   * @brief Constructs a MultiIndex object with the specified offset and size in each dimension.
+   * @brief Constructs a MultiIndex object with the specified offset and size in
+   * each dimension.
    *
    * @param size The size of the range in each dimension.
    * @param offset The offset of the range in each dimension (default: 0)
    */
-  MultiIndex(std::array<int, D> size, std::array<int, D> offset = std::array<int, D>())
-      : m_begin(offset), m_size(size), m_end(calculate_end(m_begin, m_size)), m_linear_begin(to_linear(m_begin)),
-        m_linear_end(to_linear(m_end)), m_linear_size(m_linear_end - m_linear_begin + 1) {}
+  MultiIndex(std::array<int, D> size,
+             std::array<int, D> offset = std::array<int, D>())
+      : m_begin(offset), m_size(size), m_end(calculate_end(m_begin, m_size)),
+        m_linear_begin(to_linear(m_begin)), m_linear_end(to_linear(m_end)),
+        m_linear_size(m_linear_end - m_linear_begin + 1) {}
 
   const std::array<int, D> &get_begin() const { return m_begin; }
   const std::array<int, D> &get_size() const { return m_size; }
@@ -53,7 +62,8 @@ public:
   const size_t &get_linear_end() const { return m_linear_end; }
 
   /**
-   * @brief Converts a multi-dimensional index to its corresponding linear index.
+   * @brief Converts a multi-dimensional index to its corresponding linear
+   * index.
    *
    * @param indices The multi-dimensional indices.
    * @return The linear index corresponding to the given indices.
@@ -69,10 +79,12 @@ public:
   }
 
   /**
-   * @brief Converts a linear index to its corresponding multi-dimensional indices.
+   * @brief Converts a linear index to its corresponding multi-dimensional
+   * indices.
    *
    * @param idx The linear index.
-   * @return The multi-dimensional indices corresponding to the given linear index.
+   * @return The multi-dimensional indices corresponding to the given linear
+   * index.
    */
   std::array<int, D> to_multi(size_t idx) const {
     std::array<int, D> indices;
@@ -105,14 +117,16 @@ public:
    * @param index The index to output.
    * @return Reference to the output stream.
    */
-  friend std::ostream &operator<<(std::ostream &os, const MultiIndex<D> &index) {
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const MultiIndex<D> &index) {
     os << "MultiIndex set with " << D << " dimensions (indices from {";
     for (size_t i = 0; i < D - 1; i++) os << index.m_begin[i] << ",";
     os << index.m_begin[D - 1] << "} to {";
     for (size_t i = 0; i < D - 1; i++) os << index.m_end[i] << ",";
     os << index.m_end[D - 1] << "}, size {";
     for (size_t i = 0; i < D - 1; i++) os << index.m_size[i] << ",";
-    os << index.m_size[D - 1] << "}, linear size " << index.m_linear_size << ")";
+    os << index.m_size[D - 1] << "}, linear size " << index.m_linear_size
+       << ")";
     return os;
   }
 
@@ -127,7 +141,8 @@ public:
 
   public:
     /**
-     * @brief Constructs an Iterator object with the specified indices and MultiIndex object.
+     * @brief Constructs an Iterator object with the specified indices and
+     * MultiIndex object.
      *
      * @param indices The initial multi-dimensional indices.
      * @param multi_index Reference to the MultiIndex object.
@@ -138,7 +153,8 @@ public:
     }
 
     /**
-     * @brief Constructs an Iterator object with the specified linear index and MultiIndex object.
+     * @brief Constructs an Iterator object with the specified linear index and
+     * MultiIndex object.
      *
      * @param linear_index The initial linear index.
      * @param multi_index Reference to the MultiIndex object.
@@ -149,7 +165,8 @@ public:
     }
 
     /**
-     * @brief Dereferences the iterator to obtain the current multi-dimensional indices.
+     * @brief Dereferences the iterator to obtain the current multi-dimensional
+     * indices.
      *
      * @return A reference to the current multi-dimensional indices.
      */
@@ -187,13 +204,18 @@ public:
     /**
      * @brief Subtraction operator for the Iterator class.
      *
-     * This operator subtracts the specified number of positions from the current iterator position.
-     * It returns a new iterator pointing to the element at the updated position.
+     * This operator subtracts the specified number of positions from the
+     * current iterator position. It returns a new iterator pointing to the
+     * element at the updated position.
      *
-     * @param n The number of positions to subtract from the current iterator position.
-     * @return A new Iterator object pointing to the element at the updated position.
+     * @param n The number of positions to subtract from the current iterator
+     * position.
+     * @return A new Iterator object pointing to the element at the updated
+     * position.
      */
-    Iterator operator-(int n) const { return Iterator(m_linear_index - n, m_multi_index); }
+    Iterator operator-(int n) const {
+      return Iterator(m_linear_index - n, m_multi_index);
+    }
 
     /**
      * @brief Compares two iterators for inequality.
@@ -201,7 +223,9 @@ public:
      * @param other The iterator to compare.
      * @return True if the iterators are not equal, false otherwise.
      */
-    bool operator!=(const Iterator &other) const { return m_linear_index != other.m_linear_index; }
+    bool operator!=(const Iterator &other) const {
+      return m_linear_index != other.m_linear_index;
+    }
 
     /**
      * @brief Compares two iterators for equality.
@@ -209,7 +233,9 @@ public:
      * @param other The iterator to compare.
      * @return True if the iterators are equal, false otherwise.
      */
-    bool operator==(const Iterator &other) const { return m_linear_index == other.m_linear_index; }
+    bool operator==(const Iterator &other) const {
+      return m_linear_index == other.m_linear_index;
+    }
 
     /**
      * @brief Conversion operator to obtain the current linear index.
@@ -219,7 +245,8 @@ public:
     operator size_t() const { return m_linear_index; }
 
     /**
-     * @brief Conversion operator to obtain the current multi-dimensional indices.
+     * @brief Conversion operator to obtain the current multi-dimensional
+     * indices.
      *
      * @return The current multi-dimensional indices.
      */
@@ -233,7 +260,8 @@ public:
     size_t get_linear_index() const { return m_linear_index; }
 
     /**
-     * @brief Outputs the current multi-dimensional indices to the specified output stream.
+     * @brief Outputs the current multi-dimensional indices to the specified
+     * output stream.
      *
      * @param os The output stream.
      * @param it The iterator to output.
@@ -278,7 +306,8 @@ public:
   Iterator end() const { return Iterator(m_linear_end + 1, *this); }
 
   /**
-   * @brief Returns an iterator starting from the specified multi-dimensional indices.
+   * @brief Returns an iterator starting from the specified multi-dimensional
+   * indices.
    *
    * @param from The multi-dimensional indices to start from.
    * @return An iterator starting from the specified multi-dimensional indices.
@@ -288,9 +317,10 @@ public:
   /**
    * @brief Returns an iterator starting from the specified linear index.
    *
-   * This function creates an iterator starting from the specified linear index. The linear index
-   * is converted to the corresponding multi-dimensional indices, and the iterator is constructed
-   * using these indices and the current MultiIndex object.
+   * This function creates an iterator starting from the specified linear index.
+   * The linear index is converted to the corresponding multi-dimensional
+   * indices, and the iterator is constructed using these indices and the
+   * current MultiIndex object.
    *
    * @param from The linear index to start from.
    * @return An iterator starting from the specified linear index.

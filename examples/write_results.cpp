@@ -26,7 +26,8 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  if (me == 0) cout << "Writing results with two separate mpi processes" << endl;
+  if (me == 0)
+    cout << "Writing results with two separate mpi processes" << endl;
   {
     ResultsWriter *writer = new BinaryWriter("test_%04d.bin");
     if (me == 0) {

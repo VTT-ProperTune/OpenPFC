@@ -14,43 +14,52 @@
 
 namespace pfc {
 
-inline heffte::fft3d_r2c<heffte::backend::fftw> make_fft(const Decomposition &decomposition, MPI_Comm comm,
-                                                         heffte::plan_options plan_options) {
+inline heffte::fft3d_r2c<heffte::backend::fftw>
+make_fft(const Decomposition &decomposition, MPI_Comm comm,
+         heffte::plan_options plan_options) {
   const Decomposition::Box3D &inbox = decomposition.get_inbox();
   const Decomposition::Box3D &outbox = decomposition.get_outbox();
   int r2c_direction = 0; // TODO: make this dynamic
-  return heffte::fft3d_r2c<heffte::backend::fftw>(inbox, outbox, r2c_direction, comm, plan_options);
+  return heffte::fft3d_r2c<heffte::backend::fftw>(inbox, outbox, r2c_direction,
+                                                  comm, plan_options);
 }
 
 /**
- * @brief FFT class for performing forward and backward Fast Fourier Transformations.
+ * @brief FFT class for performing forward and backward Fast Fourier
+ * Transformations.
  */
 class FFT {
 
 private:
-  const Decomposition m_decomposition;                  /**< The Decomposition object. */
-  const heffte::fft3d_r2c<heffte::backend::fftw> m_fft; /**< HeFFTe FFT object. */
-  std::vector<std::complex<double>> m_wrk;              /**< Workspace vector for FFT computations. */
-  double m_fft_time = 0.0;                              /**< Recorded FFT computation time. */
-  const World &m_world;                                 /**< Reference to the World object. */
-  Decomposition::Box3D domain;                          /**< Domain converted from World object. */
+  const Decomposition m_decomposition; /**< The Decomposition object. */
+  const heffte::fft3d_r2c<heffte::backend::fftw>
+      m_fft; /**< HeFFTe FFT object. */
+  std::vector<std::complex<double>>
+      m_wrk;                   /**< Workspace vector for FFT computations. */
+  double m_fft_time = 0.0;     /**< Recorded FFT computation time. */
+  const World &m_world;        /**< Reference to the World object. */
+  Decomposition::Box3D domain; /**< Domain converted from World object. */
 
 public:
   /**
-   * @brief Constructs an FFT object with the given Decomposition and MPI communicator.
+   * @brief Constructs an FFT object with the given Decomposition and MPI
+   * communicator.
    *
-   * @param decomposition The Decomposition object defining the domain decomposition.
+   * @param decomposition The Decomposition object defining the domain
+   * decomposition.
    * @param comm The MPI communicator for parallel computations.
    * @param plan_options Optional plan options for configuring the FFT behavior.
    * @param world The World object providing the domain size information.
    */
-  FFT(const Decomposition &decomposition, MPI_Comm comm, heffte::plan_options plan_options, const World &world)
-      : m_decomposition(decomposition), m_fft(make_fft(decomposition, comm, plan_options)),
-        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())), m_world(world),
-        domain(to_heffte_box(world)){
-            // Use to_heffte_box for conversion
-            // Explicit conversion
-        };
+  FFT(const Decomposition &decomposition, MPI_Comm comm,
+      heffte::plan_options plan_options, const World &world)
+      : m_decomposition(decomposition),
+        m_fft(make_fft(decomposition, comm, plan_options)),
+        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())),
+        m_world(world), domain(to_heffte_box(world)){
+                            // Use to_heffte_box for conversion
+                            // Explicit conversion
+                        };
 
   /**
    * @brief Performs the forward FFT transformation.
@@ -58,7 +67,8 @@ public:
    * @param in Input vector of real values.
    * @param out Output vector of complex values.
    */
-  void forward(const std::vector<double> &in, std::vector<std::complex<double>> &out) {
+  void forward(const std::vector<double> &in,
+               std::vector<std::complex<double>> &out) {
     m_fft_time -= MPI_Wtime();
     m_fft.forward(in.data(), out.data(), m_wrk.data());
     m_fft_time += MPI_Wtime();
@@ -70,7 +80,8 @@ public:
    * @param in Input vector of complex values.
    * @param out Output vector of real values.
    */
-  void backward(const std::vector<std::complex<double>> &in, std::vector<double> &out) {
+  void backward(const std::vector<std::complex<double>> &in,
+                std::vector<double> &out) {
     m_fft_time -= MPI_Wtime();
     m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
     m_fft_time += MPI_Wtime();

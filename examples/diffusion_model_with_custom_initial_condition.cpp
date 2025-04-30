@@ -20,8 +20,8 @@ void print_stats(Simulator &simulator) {
   auto &time = simulator.get_time();
   int idx = model.get_midpoint_idx();
   if (idx == -1) return;
-  cout << "n = " << time.get_increment() << ", t = " << time.get_current() << ", psi[" << idx << "] = " << field[idx]
-       << endl;
+  cout << "n = " << time.get_increment() << ", t = " << time.get_current()
+       << ", psi[" << idx << "] = " << field[idx] << endl;
 }
 
 void run_test(Simulator &simulator) {

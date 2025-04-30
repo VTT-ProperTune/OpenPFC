@@ -12,7 +12,8 @@
 namespace pfc {
 namespace utils {
 
-template <typename T, std::size_t D> std::string array_to_string(const std::array<T, D> &arr) {
+template <typename T, std::size_t D>
+std::string array_to_string(const std::array<T, D> &arr) {
   std::ostringstream oss;
   oss << '{';
   for (std::size_t i = 0; i < D; ++i) {

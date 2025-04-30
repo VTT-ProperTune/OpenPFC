@@ -11,7 +11,8 @@ using namespace pfc;
 using namespace pfc::ui;
 
 /**
- * @brief Aluminum model class for OpenPFC. This class is used to define the model.
+ * @brief Aluminum model class for OpenPFC. This class is used to define the
+ * model.
  *
  */
 class Aluminum : public Model {
@@ -19,7 +20,8 @@ class Aluminum : public Model {
 private:
   std::vector<double> filterMF, opL, opN, opEps, P_F;
   std::vector<double> psiMF, psi, psiN, P_star_psi, temperature, stress;
-  std::vector<std::complex<double>> psiMF_F, psi_F, psiN_F, P_psi_F, temperature_F, stress_F;
+  std::vector<std::complex<double>> psiMF_F, psi_F, psiN_F, P_psi_F,
+      temperature_F, stress_F;
   size_t mem_allocated = 0;
   bool m_first = true;
 
@@ -78,8 +80,12 @@ public:
   void set_x_initial(double x_initial) { params.x_initial = x_initial; }
   void set_m_xpos(double m_xpos) { params.m_xpos = m_xpos; }
   void set_alpha(double alpha) { params.alpha = alpha; }
-  void set_alpha_farTol(double alpha_farTol) { params.alpha_farTol = alpha_farTol; }
-  void set_alpha_highOrd(int alpha_highOrd) { params.alpha_highOrd = alpha_highOrd; }
+  void set_alpha_farTol(double alpha_farTol) {
+    params.alpha_farTol = alpha_farTol;
+  }
+  void set_alpha_highOrd(int alpha_highOrd) {
+    params.alpha_highOrd = alpha_highOrd;
+  }
   void set_tau_const(double tau_const) { params.tau_const = tau_const; }
   void set_lambda(double lambda) { params.lambda = lambda; }
   void set_stabP(double stabP) { params.stabP = stabP; }
@@ -207,7 +213,8 @@ public:
 
           P_F[idx] = params.Bx * exp(-params.tau_const) * peak;
 
-          double opCk = params.stabP + params.p2_bar - P_F[idx] + params.q2_bar_L * fMF;
+          double opCk =
+              params.stabP + params.p2_bar - P_F[idx] + params.q2_bar_L * fMF;
 
           filterMF[idx] = fMF;
           opL[idx] = exp(kLap * opCk * dt);
@@ -267,18 +274,26 @@ public:
         for (int i = low[0]; i <= high[0]; i++) {
           double x = x0 + i * dx;
           double dist = x + fullruns - (x > steppoint) * l;
-          double T_var = params.G_grid * (dist - params.x_initial - params.V_grid * t);
+          double T_var =
+              params.G_grid * (dist - params.x_initial - params.V_grid * t);
           temperature[idx] = T_var;
           double q2_bar_N = params.q21_bar * T_var / params.T0;
-          double q3_bar = params.q31_bar * (params.T_const + T_var) / params.T0 + params.q30_bar;
+          double q3_bar =
+              params.q31_bar * (params.T_const + T_var) / params.T0 +
+              params.q30_bar;
           double u = psi[idx];
           double v = psiMF[idx];
-          double kernel_term_N = -(1.0 - exp(-T_var / params.T0)) * P_star_psi[idx];
-          psiN[idx] = params.p3_bar * u * u + params.p4_bar * u * u * u + q2_bar_N * v + q3_bar * v * v +
+          double kernel_term_N =
+              -(1.0 - exp(-T_var / params.T0)) * P_star_psi[idx];
+          psiN[idx] = params.p3_bar * u * u + params.p4_bar * u * u * u +
+                      q2_bar_N * v + q3_bar * v * v +
                       params.q4_bar * v * v * v - kernel_term_N;
-          local_FE += params.p3_bar * u * u * u / 3. + params.p4_bar * u * u * u * u / 4. + q2_bar_N * u * v / 2. +
-                      q3_bar * u * v * v / 3. + params.q4_bar * u * v * v * v / 4. + -u * kernel_term_N * u / 2. +
-                      -u * P_star_psi[idx] / 2. + params.p2_bar * u * u / 2. + params.q2_bar * u * v / 2.;
+          local_FE += params.p3_bar * u * u * u / 3. +
+                      params.p4_bar * u * u * u * u / 4. +
+                      q2_bar_N * u * v / 2. + q3_bar * u * v * v / 3. +
+                      params.q4_bar * u * v * v * v / 4. +
+                      -u * kernel_term_N * u / 2. + -u * P_star_psi[idx] / 2. +
+                      params.p2_bar * u * u / 2. + params.q2_bar * u * v / 2.;
           idx++;
         }
       }
@@ -443,11 +458,10 @@ void from_json(const json &j, Aluminum &m) {
   j.at("q31_bar").get_to(p.q31_bar);
   j.at("q40_bar").get_to(p.q40_bar);
   /*
-    p.q20_bar = p.q20 + 2.0 * p.shift_s * p.q30 + 3.0 * pow(p.shift_s, 2) * p.q40;
-    p.q21_bar = p.q21 + 2.0 * p.shift_s * p.q31;
-    p.q30_bar = p.shift_u * (p.q30 + 3.0 * p.shift_s * p.q40);
-    p.q31_bar = p.shift_u * p.q31;
-    p.q40_bar = pow(p.shift_u, 2) * p.q40;
+    p.q20_bar = p.q20 + 2.0 * p.shift_s * p.q30 + 3.0 * pow(p.shift_s, 2) *
+    p.q40; p.q21_bar = p.q21 + 2.0 * p.shift_s * p.q31; p.q30_bar = p.shift_u *
+    (p.q30 + 3.0 * p.shift_s * p.q40); p.q31_bar = p.shift_u * p.q31; p.q40_bar
+    = pow(p.shift_u, 2) * p.q40;
   */
   p.q2_bar = p.q21_bar * p.tau_const + p.q20_bar;
   p.q2_bar_L = p.q2_bar;
@@ -473,7 +487,8 @@ void step(Simulator &s, Aluminum &m) {
       // auto moving = dynamic_cast< MovingBC& >(*bc);
       // double newxpos = moving.get_xpos();
       // m.set_m_xpos(newxpos);
-      // if (m.rank0) std::cout << "Updated xpos to " << m.params.m_xpos << std::endl;
+      // if (m.rank0) std::cout << "Updated xpos to " << m.params.m_xpos <<
+      // std::endl;
     }
   }
 
