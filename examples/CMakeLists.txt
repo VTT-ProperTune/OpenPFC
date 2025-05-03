@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-add_executable(01_hello_world 01_hello_world.cpp)
-target_link_libraries(01_hello_world PRIVATE OpenPFC)
+# add_executable(01_hello_world 01_hello_world.cpp)
+# target_link_libraries(01_hello_world PRIVATE OpenPFC)
 
 add_executable(02_domain_decomposition 02_domain_decomposition.cpp)
 target_link_libraries(02_domain_decomposition PRIVATE OpenPFC)

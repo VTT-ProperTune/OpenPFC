@@ -222,7 +222,8 @@ void from_json(const json &params, SlabFCC &ic) {
   std::vector<std::array<double, 3>> m_orientations;
   auto orientations = params.value("orientations", m_orientations);
   // auto orientations = params["orientations"];
-  if (!orientations.empty() && orientations.size() != (Nz * Ny)) {
+  if (!orientations.empty() &&
+      orientations.size() != static_cast<unsigned int>(Nz * Ny)) {
     throw std::invalid_argument(
         "Orientation vector and seed grid sizes do not match.");
   }

@@ -1,107 +1,102 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
 /**
  * @file world.hpp
  * @brief World class definition and interface
  *
  * @details
- * The `World` class defines the **global simulation domain** \( \Omega \)
- * in OpenPFC's computational physics framework. It provides a unified
- * abstraction for describing a discretized space in which physical fields
- * are defined and evolved.
+ * The `World<CoordTag>` class defines the **global simulation domain** \(
+ * \Omega \) in OpenPFC's computational physics framework. It provides a unified
+ * abstraction for describing a discretized physical space in which fields are
+ * defined, evolved, and coupled to solvers.
  *
  * The World object encapsulates:
- * - the grid resolution (number of cells in each direction),
- * - physical coordinate bounds (lower and upper bounds per dimension),
- * - grid spacing (computed from bounds and resolution),
- * - periodicity flags (per dimension), and
- * - the chosen coordinate system (e.g., Cartesian, Polar, Cylindrical).
  *
- * This abstraction is intentionally **immutable**: once constructed, a World
- * object cannot be modified. This design follows the principle of **functional
- * programming**, where data structures are fixed and behavior is implemented
- * externally via free functions. This enhances correctness, thread safety,
- * testability, and reproducibility.
+ * - the grid resolution (number of cells per dimension),
+ * - a coordinate system specialization (e.g., Cartesian, Polar),
+ * - periodicity information (optional),
+ * - and generic support for coordinate transformations.
+ *
+ * Coordinate transformations are handled via `CoordinateSystem<CoordTag>`,
+ * which maps discrete index space to physical space and vice versa. This
+ * structure is **open and extensible**: users may define their own coordinate
+ * systems and inject them into the simulation without modifying OpenPFC
+ * internals.
  *
  * ---
  *
  * ## Roles and Responsibilities of World
  *
- * 1. **Defines the discrete domain**: The World represents a *regular grid*
- *    in a physical domain \( \Omega \subset \mathbb{R}^d \). It tells us
- *    *where* our fields live and how to convert between grid indices and
- *    physical coordinates.
+ * 1. **Defines the discrete computational domain**: A World instance defines a
+ *    *regular structured grid* of size \( L_x \times L_y \times L_z \),
+ *    anchored to a user-defined coordinate system.
  *
- * 2. **Separates geometry from data**: Fields, solvers, and boundary
- *    conditions operate on data, but the World defines the geometry.
- *    This separation of concerns makes simulation code cleaner and more modular.
+ * 2. **Separates geometry from data**: Fields and solvers operate on raw data,
+ *    while World encapsulates the geometry and layout of the simulation space.
+ *    This separation improves clarity, composability, and reuse.
  *
- * 3. **Handles coordinate transformations**: World supports converting
- *    between discrete indices (i,j,k) and continuous physical positions (x,y,z),
- *    in the *native coordinate system* of the simulation. Transformations
- *    to/from Cartesian space can be handled in higher layers if needed.
+ * 3. **Performs index ↔ physical coordinate transforms**: Coordinate systems
+ *    define mappings like:
+ *    @code
+ *      Real3 x = to_coords(world, {i, j, k});
+ *      Int3  ijk = to_indices(world, x);
+ *    @endcode
+ *    These are **zero-overhead**, inline computations using the coordinate
+ * system definition.
  *
- * 4. **Supports arbitrary coordinate systems**: Coordinate systems are
- *    expressed via a `CoordinateSystemTag` enum and include:
- *      - Cartesian in 1D, 2D, 3D (Line, Plane, Cartesian),
- *      - Polar (2D),
- *      - Cylindrical and Spherical (3D).
- *    The World object is agnostic to the math of these systems; it only
- *    carries the tag and interprets its meaning via helper functions.
+ * 4. **Supports extensible coordinate systems**: Instead of hardcoding known
+ *    systems, OpenPFC uses a template-based model:
+ *      - `CoordinateSystem<CartesianTag>`
+ *      - `CoordinateSystem<PolarTag>`
+ *      - or any user-defined `MyCustomTag`
  *
- * 5. **Supports periodic and non-periodic domains**: For each dimension,
- *    the periodicity can be explicitly set. This allows modeling cylinders,
- *    slabs, tubes, or open domains with consistent spacing logic. When
- *    periodicity is enabled, spacing is defined as:
- *        spacing = (upper - lower) / size
- *    Otherwise:
- *        spacing = (upper - lower) / (size - 1)
+ *    Users may specialize traits like `CoordinateSystemDefaults<MyCustomTag>`
+ *    to define defaults (e.g., spacing, offset, periodicity) and overload
+ *    `to_coords()` as needed.
  *
- * 6. **Supports multiple construction styles**: Users may define domains by:
- *      - Lower + upper bounds + size
- *      - Lower bounds + spacing + size
- *      - Only size (defaults to lower = 0, spacing = 1)
- *    These overloads make simulation code ergonomic and consistent.
- *    Strong typedefs (`Size3`, `LowerBounds3`, etc.) are used to
- *    disambiguate arguments and validate input semantics (e.g., spacing > 0).
+ * 5. **Supports periodic and non-periodic boundaries**: The periodicity of each
+ *    dimension is stored in the coordinate system and respected by
+ *    index-to-physical transforms. Grid spacing logic follows:
+ *    @code
+ *      spacing = (upper - lower) / (periodic ? size : size - 1)
+ *    @endcode
  *
- * 7. **Provides a functional interface**: Rather than methods, we use
- *    free functions in the `pfc::world` namespace to operate on World.
- *    For example:
- *        World w = world::create(...);
- *        Real3 x = world::to_coords(w, {i,j,k});
- *    This design enables:
- *      - Cleaner documentation and separation of logic
- *      - ADL-based extensibility by user-defined types
- *      - Easier testing and functional reasoning
+ * 6. **Allows multiple construction styles**: World creation is done through
+ *    overloaded factory functions using:
+ *      - Size + spacing + offset
+ *      - Size + lower + upper
+ *      - User-defined coordinate system instance
+ *      - Defaults via traits for built-in tags
  *
- * 8. **Is extensible and composable**: Advanced users can define new overloads
- *    of `world::create()` that construct a `World` from domain-specific objects,
- *    without modifying OpenPFC internals. For example:
- *        namespace pfc::world {
- *          World create(const MyDomainSetup& setup);
- *        }
+ * 7. **Offers a functional API**: World is an immutable value-type. Operations
+ *    like `to_coords()` and `get_spacing()` are implemented as free functions
+ *    in the `pfc::world` namespace. This:
+ *      - avoids mutation and inheritance
+ *      - supports ADL-based extension
+ *      - encourages clean, composable simulation code
  *
- * 9. **Stays minimal and explicit**: The `World` class itself is a `struct`
- *    with five `const` members and one enum. There are no virtual methods,
- *    inheritance hierarchies, or hidden states. Its clarity is its strength.
+ * 8. **Stays minimal and explicit**: `World<CoordTag>` is a lightweight value
+ *    class with minimal members:
+ *      - `m_size`: grid dimensions
+ *      - `m_cs`: coordinate system instance
+ *
+ *    There are no virtual methods, hidden ownership, or runtime polymorphism.
  *
  * ---
  *
  * ## Philosophical Note
  *
- * OpenPFC treats scientific code as a **laboratory**, not a fortress.
- * The World is one of the most fundamental objects in this lab. Its job
- * is to cleanly and rigorously define the shape and structure of the space
- * in which physics occurs. By designing World to be:
+ * OpenPFC is built as a **laboratory**, not a fortress. The `World` class plays
+ * a central role in this lab — it defines the geometric stage on which physics
+ * unfolds. Its design emphasizes:
  *
- * - *purely functional* (no mutation),
- * - *geometrically grounded* (spacing, bounds, coordinates),
- * - *mathematically honest* (validated spacing logic),
- * - *open for extension but closed for modification* (via ADL),
+ * - *Purity*: `World` is immutable and functional
+ * - *Precision*: Spacing, bounds, and coordinates are rigorously defined
+ * - *Openness*: Users can define new coordinate systems and behaviors
+ * - *Clarity*: No hidden magic, just explicit composition
  *
- * we ensure that simulation domains are *safe*, *composable*, and *expressive*.
+ * This structure ensures that simulation domains are *safe*, *predictable*, and
+ * *easy to reason about*.
  *
  * ---
  *
@@ -109,13 +104,14 @@
  *
  * @code
  * using namespace pfc;
- * World w = world::create({100, 200, 300}, {0.0, 0.0, 0.0}, {1.0, 2.0, 3.0});
  *
- * Real3 x = world::to_coords(w, {10, 20, 30});
- * Int3  i = world::to_indices(w, {10.0, 40.0, 90.0});
- * double dx = world::get_spacing(w, 0);
+ * // Default Cartesian world with unit spacing and offset at (0,0,0)
+ * World<CartesianTag> w = world::create({100, 100, 100});
+ *
+ * Real3 x = to_coords(w, {10, 20, 30});
+ * Int3 i  = to_indices(w, {10.0, 20.0, 30.0});
+ * double dx = get_spacing(w, 0);
  * @endcode
- *
  */
 
 #pragma once
@@ -133,19 +129,16 @@ using Bool3 = std::array<bool, 3>;
 
 namespace world {
 
-/**
- * @brief Coordinate system tag.
- */
-enum class CoordinateSystemTag {
-  Line,        ///< 1D Cartesian
-  Plane,       ///< 2D Cartesian
-  Cartesian,   ///< 3D Cartesian
-  Polar,       ///< 2D Polar
-  Cylindrical, ///< 3D Cylindrical
-  Spherical    ///< 3D Spherical
-};
+/*
+Strong typedefs for constructor clarity. The idea of strong typedefs is to wrap
+some base class to provide a more meaningful name and to prevent implicit
+conversions. This is a common C++ idiom to improve code readability and
+maintainability. Strong typedefs are often used in scientific computing
+libraries to represent physical quantities with units, or in simulation
+frameworks to represent simulation parameters with specific meanings. They can
+also include e.g. bounds checking, etc.
+*/
 
-// Strong typedefs for constructor clarity
 /**
  * @brief Represents the size of the simulation domain.
  */
@@ -187,32 +180,262 @@ struct Periodic3 {
 };
 
 /**
+ * @brief Primary template for defining coordinate systems by tag.
+ *
+ * @details
+ * The `CoordinateSystem<Tag>` template provides a mechanism to define coordinate
+ * systems in a modular and extensible way, where each `Tag` corresponds to a
+ * specific geometry (e.g., Cartesian, Polar, Cylindrical).
+ *
+ * Specializations of this template should define:
+ * - The internal parameters of the coordinate system (e.g., offset, spacing)
+ * - Methods to map between index space and physical space:
+ *   - `to_physical(const Int3&) -> Real3`
+ *   - `to_index(const Real3&) -> Int3`
+ *
+ * This design decouples geometry from logic and enables user-defined coordinate
+ * systems to integrate cleanly with the simulation framework. It also avoids
+ * inheritance or runtime polymorphism, favoring compile-time specialization and
+ * inlining for performance-critical transformations.
+ *
+ * Example usage:
+ * @code
+ * struct CartesianTag {};
+ *
+ * template <>
+ * struct CoordinateSystem<CartesianTag> {
+ *   Real3 offset;
+ *   Real3 spacing;
+ *
+ *   Real3 to_physical(const Int3& idx) const noexcept;
+ *   Int3 to_index(const Real3& pos) const noexcept;
+ * };
+ * @endcode
+ *
+ * Coordinate systems are used by the `World<Tag>` class and related infrastructure
+ * to define how grid indices map to real-world physical coordinates.
+ *
+ * @tparam Tag A user-defined type that uniquely identifies the coordinate system.
+ */
+template <typename Tag> struct CoordinateSystem;
+
+/**
+ * @brief Trait class for providing default parameters for coordinate systems.
+ *
+ * @details
+ * This traits template defines default values (e.g., offset, spacing, periodicity)
+ * for coordinate systems identified by their tag type `CoordTag`.
+ *
+ * The primary template is left undefined, and users are expected to specialize
+ * this trait for their own coordinate system tags to provide meaningful defaults.
+ *
+ * This mechanism allows external extension of coordinate system behavior
+ * without modifying the core library, enabling user-defined systems to
+ * seamlessly integrate with generic `World` construction and other infrastructure.
+ *
+ * Example specialization:
+ * @code
+ * struct MyCoordTag {};
+ *
+ * template <>
+ * struct CoordinateSystemDefaults<MyCoordTag> {
+ *   static constexpr Real3 offset = {0.0, 0.0, 0.0};
+ *   static constexpr Real3 spacing = {1.0, 1.0, 1.0};
+ *   static constexpr Bool3 periodicity = {true, false, false};
+ * };
+ * @endcode
+ */
+template <typename CoordTag>
+struct CoordinateSystemDefaults; // intentionally left undefined
+
+// Coordinate system tags.
+// struct LineTag {};
+// struct PlaneTag {};
+// struct PolarTag {};
+// struct CylindricalTag {};
+// struct SphericalTag {};
+// struct Polar2DTag {};
+// struct Toroidal2DTag {};
+// struct LogPolar3DTag {};
+
+/**
+ * @brief Tag type for the 3D Cartesian coordinate system.
+ *
+ * @details
+ * This tag represents a standard right-handed Cartesian coordinate system in 3D,
+ * which is the default and most commonly used geometry in OpenPFC simulations.
+ *
+ * The associated coordinate system maps discrete grid indices (i, j, k) to
+ * continuous physical space using a uniform, axis-aligned grid defined by:
+ * - `offset`: the physical position corresponding to index (0, 0, 0)
+ * - `spacing`: the distance between adjacent grid points along each axis
+ *
+ * This coordinate system assumes:
+ * - The grid is regular (uniform spacing)
+ * - Axes are orthogonal and aligned with the simulation dimensions
+ *
+ * It provides a simple and efficient mapping suitable for a wide range of
+ * physical simulations where a Euclidean space is appropriate.
+ */
+struct CartesianTag {};
+
+/**
+ * @brief Default parameters for the 3D Cartesian coordinate system.
+ *
+ * @details
+ * This specialization of `CoordinateSystemDefaults` provides the default values
+ * used when constructing a 3D Cartesian coordinate system (`CartesianTag`)
+ * without explicitly specifying offset, spacing, or periodicity.
+ *
+ * These defaults are consistent with standard simulation conventions:
+ * - `offset = {0.0, 0.0, 0.0}` places the (0, 0, 0) index at the physical origin.
+ * - `spacing = {1.0, 1.0, 1.0}` defines unit grid spacing in all dimensions.
+ * - `periodicity = {true, true, true}` models a fully periodic domain.
+ *
+ * These values are used by factory functions and world constructors when
+ * coordinate system parameters are not explicitly provided by the user.
+ */
+template <> struct CoordinateSystemDefaults<CartesianTag> {
+  static constexpr Real3 offset = {0.0, 0.0, 0.0};
+  static constexpr Real3 spacing = {1.0, 1.0, 1.0};
+  static constexpr Bool3 periodic = {true, true, true};
+  std::size_t dimensions = 3; ///< Number of dimensions in the coordinate system
+};
+
+/**
+ * @brief Specialization of the coordinate system for 3D Cartesian space.
+ *
+ * @details
+ * This structure defines a uniform, axis-aligned Cartesian coordinate system
+ * in three dimensions. It maps discrete grid indices (i, j, k) to continuous
+ * physical coordinates using a regular grid geometry.
+ *
+ * The coordinate system is defined by three key parameters:
+ * - `m_offset`: the physical position corresponding to the grid index (0, 0, 0)
+ * - `m_spacing`: the uniform distance between adjacent grid points in each dimension
+ * - `m_periodic`: flags indicating periodicity along each axis
+ *
+ * This specialization is used internally by the `World<CartesianTag>` type
+ * and can be constructed directly or via factory methods. It is designed to
+ * support fast, inlined coordinate transformations for performance-critical
+ * simulation kernels.
+ *
+ * @constructor
+ * Constructs a Cartesian coordinate system with the specified offset, spacing,
+ * and periodicity. Throws `std::invalid_argument` if any spacing component
+ * is non-positive.
+ *
+ * @param offset     Physical position of the index (0, 0, 0)
+ * @param spacing    Grid spacing in each dimension (must be > 0)
+ * @param periodic   Periodicity flags for {x, y, z}
+ */
+template <> struct CoordinateSystem<CartesianTag> {
+  const Real3 m_offset;   ///< Physical coordinate of grid index (0, 0, 0)
+  const Real3 m_spacing;  ///< Physical spacing between grid points
+  const Bool3 m_periodic; ///< Periodicity flags for each dimension
+
+  /// Constructs a 3D Cartesian coordinate system
+  CoordinateSystem(
+      const Real3 &offset = CoordinateSystemDefaults<CartesianTag>::offset,
+      const Real3 &spacing = CoordinateSystemDefaults<CartesianTag>::spacing,
+      const Bool3 &periodic = CoordinateSystemDefaults<CartesianTag>::periodic);
+};
+
+using CartesianCS = CoordinateSystem<CartesianTag>;
+
+/**
+ * @brief Get the offset of the coordinate system.
+ * @param cs Coordinate system object.
+ * @return The offset of the coordinate system.
+ */
+const Real3 &get_offset(const CartesianCS &cs) noexcept;
+
+/**
+ * @brief Get the offset of the coordinate system in a specific dimension.
+ * @param cs Coordinate system object.
+ * @param i Dimension index.
+ * @return The offset in the specified dimension.
+ * @throws std::out_of_range if i is not in [0, 2].
+ */
+double get_offset(const CartesianCS &cs, int i);
+
+/**
+ * @brief Get the spacing of the coordinate system.
+ * @param cs Coordinate system object.
+ * @return The spacing of the coordinate system.
+ */
+const Real3 &get_spacing(const CartesianCS &cs) noexcept;
+
+/**
+ * @brief Get the spacing of the coordinate system in a specific dimension.
+ * @param cs Coordinate system object.
+ * @param i Dimension index.
+ * @return The spacing in the specified dimension.
+ * @throws std::out_of_range if i is not in [0, 2].
+ */
+double get_spacing(const CartesianCS &cs, int i);
+
+/**
+ * @brief Get the periodicity of the coordinate system.
+ * @param cs Coordinate system object.
+ * @return The periodicity flags.
+ */
+const Bool3 &get_periodicity(const CartesianCS &cs) noexcept;
+
+/**
+ * @brief Check if the coordinate system is periodic in a specific dimension.
+ * @param cs Coordinate system object.
+ * @param i Dimension index.
+ * @return True if periodic, false otherwise.
+ * @throws std::out_of_range if i is not in [0, 2].
+ */
+bool is_periodic(const CartesianCS &cs, int i);
+
+/**
+ * @brief Convert grid indices to physical coordinates.
+ * @param cs Coordinate system object.
+ * @param idx Grid indices.
+ * @return The physical coordinates.
+ */
+const Real3 to_coords(const CartesianCS &cs, const Int3 &idx) noexcept;
+
+/**
+ * @brief Convert physical coordinates to grid indices.
+ * @param cs Coordinate system object.
+ * @param xyz Physical coordinates.
+ * @return The grid indices.
+ */
+const Int3 to_index(const CartesianCS &cs, const Real3 &xyz) noexcept;
+
+/**
  * @brief Represents the global simulation domain (the "world").
  *
- * The World class defines the *size*, *origin*, and *grid spacing* of the
- * global simulation domain. It provides an abstraction for physical (x, y, z)
- * space and the corresponding (i, j, k) grid indices.
+ * The World class defines the *size*of the global simulation domain and
+ * coordinate system. It is a *purely functional* object, meaning it has no
+ * mutable state and is immutable once constructed. This design follows the
+ * principles of functional programming, where data structures are fixed and
+ * behavior is implemented externally via free functions. This enhances
+ * correctness, thread safety, testability, and reproducibility.
+ *
+ * Coordinate system is defined via a tag-based programming approach. This
+ * allows us to define different coordinate systems (e.g., Cartesian, Polar,
+ * Cylindrical) without creating a separate class for each. We default to 3D
+ * Cartesian coordinate system as it's the most common in scientific computing.
  */
-struct World final {
-  const Int3 m_size;      ///< Dimensions of the world: {Lx, Ly, Lz}
-  const Real3 m_lower;    ///< Lower coordinates: {x0, y0, z0}
-  const Real3 m_upper;    ///< Upper coordinates: {x1, y1, z1}
-  const Real3 m_spacing;  ///< Spacing parameters: {dx, dy, dz}
-  const Bool3 m_periodic; ///< Periodicity flags: {px, py, pz}
-  const CoordinateSystemTag m_coordinate_system; ///< Coordinate system type
+template <typename CoordTag> struct World final {
+  const Int3 m_lower;                    ///< Lower bounds of the world
+  const Int3 m_upper;                    ///< Upper bounds of the world
+  const Int3 m_size;                     ///< Dimensions of the world: {L1, L2, L3}
+  const CoordinateSystem<CoordTag> m_cs; ///< Coordinate system
 
   /**
    * @brief Constructs a World object.
-   * @param dimensions Dimensions of the world.
-   * @param lower Lower bounds of the world.
-   * @param upper Upper bounds of the world.
-   * @param spacing Spacing of the grid.
-   * @param periodic Periodicity flags.
-   * @param coordinate_system Coordinate system type.
+   * @param lower Lower index bounds of the world.
+   * @param upper Upper index bounds of the world.
+   * @param cs Coordinate system.
    */
-  explicit World(const Int3 &dimensions, const Real3 &lower, const Real3 &upper,
-                 const Real3 &spacing, const Bool3 &periodic,
-                 CoordinateSystemTag coordinate_system);
+  explicit World(const Int3 &lower, const Int3 &upper,
+                 const CoordinateSystem<CoordTag> &cs);
 
   /**
    * @brief Equality operator.
@@ -234,31 +457,35 @@ struct World final {
    * @param w World object.
    * @return Reference to the output stream.
    */
-  friend std::ostream &operator<<(std::ostream &os, const World &w) noexcept;
+  template <typename CS>
+  friend std::ostream &operator<<(std::ostream &os, const World<CS> &w) noexcept;
 };
 
-// Free function API for creating World objects
+// Free function API for creating (Cartesian 3D) World objects
+
+using CartesianWorld = World<CartesianTag>;
 
 /**
- * @brief Create a World object with the specified dimensions, origin, and spacing.
+ * @brief Create a World object with the specified size and default offset
+ * and spacing.
  * @param dimensions Dimensions of the world.
- * @param origin Origin of the world.
- * @param spacing Spacing of the grid.
  * @return A World object.
  */
-World create(const Int3 &dimensions, const Real3 &origin, const Real3 &spacing);
+CartesianWorld create(const Int3 &size);
 
 /**
- * @brief Create a World object with the specified dimensions and default origin and
+ * @brief Create a World object with the specified dimensions, offset, and
  * spacing.
  * @param dimensions Dimensions of the world.
+ * @param offset Offset of the world.
+ * @param spacing Spacing of the grid.
  * @return A World object.
  */
-World create(const Int3 &dimensions);
+CartesianWorld create(const Int3 &size, const Real3 &offset, const Real3 &spacing);
 
 /**
- * @brief Create a World object with the specified size, lower bounds, upper bounds,
- * spacing, and periodicity.
+ * @brief Create a World object with the specified size, lower bounds, upper
+ * bounds, spacing, and periodicity.
  * @param size Size of the world.
  * @param lower Lower bounds of the world.
  * @param upper Upper bounds of the world.
@@ -267,13 +494,15 @@ World create(const Int3 &dimensions);
  * @param cs Coordinate system type.
  * @return A World object.
  */
-World create(const Size3 &size, const LowerBounds3 &lower, const UpperBounds3 &upper,
-             const Spacing3 &spacing, const Periodic3 &periodic,
-             const CoordinateSystemTag &cs);
+/*
+ CartesianWorld create(const Size3 &size, const LowerBounds3 &lower,
+                      const UpperBounds3 &upper, const Spacing3 &spacing,
+                      const Periodic3 &periodic);
+*/
 
 /**
- * @brief Create a World object with the specified size, lower bounds, upper bounds,
- * periodicity, and coordinate system.
+ * @brief Create a World object with the specified size, lower bounds, upper
+ * bounds, periodicity, and coordinate system.
  * @param size Size of the world.
  * @param lower Lower bounds of the world.
  * @param upper Upper bounds of the world.
@@ -281,8 +510,10 @@ World create(const Size3 &size, const LowerBounds3 &lower, const UpperBounds3 &u
  * @param cs Coordinate system type.
  * @return A World object.
  */
-World create(const Size3 &size, const LowerBounds3 &lower, const UpperBounds3 &upper,
-             const Periodic3 &periodic, const CoordinateSystemTag &cs);
+/*
+CartesianWorld create(const Size3 &size, const LowerBounds3 &lower,
+                      const UpperBounds3 &upper, const Periodic3 &periodic);
+*/
 
 /**
  * @brief Create a World object with the specified size, lower bounds, spacing,
@@ -294,8 +525,10 @@ World create(const Size3 &size, const LowerBounds3 &lower, const UpperBounds3 &u
  * @param cs Coordinate system type.
  * @return A World object.
  */
-World create(const Size3 &size, const LowerBounds3 &lower, const Spacing3 &spacing,
-             const Periodic3 &periodic, const CoordinateSystemTag &cs);
+/*
+CartesianWorld create(const Size3 &size, const LowerBounds3 &lower,
+                      const Spacing3 &spacing, const Periodic3 &periodic);
+*/
 
 /**
  * @brief Create a World object with the specified size and upper bounds.
@@ -303,7 +536,9 @@ World create(const Size3 &size, const LowerBounds3 &lower, const Spacing3 &spaci
  * @param upper Upper bounds of the world.
  * @return A World object.
  */
-World create(const Size3 &size, const UpperBounds3 &upper);
+/*
+CartesianWorld create(const Size3 &size, const UpperBounds3 &upper);
+*/
 
 // Free function API for querying World properties
 
@@ -312,7 +547,9 @@ World create(const Size3 &size, const UpperBounds3 &upper);
  * @param w World object.
  * @return The size of the world.
  */
-Int3 get_size(const World &w) noexcept;
+template <typename CoordTag> Int3 get_size(const World<CoordTag> &w) noexcept {
+  return w.m_size;
+}
 
 /**
  * @brief Get the size of the world in a specific dimension.
@@ -320,29 +557,25 @@ Int3 get_size(const World &w) noexcept;
  * @param i Dimension index.
  * @return The size in the specified dimension.
  */
-size_t get_size(const World &w, int i) noexcept;
+template <typename CoordTag> int get_size(const World<CoordTag> &w, int i) noexcept {
+  return get_size(w)[i];
+}
 
 /**
- * @brief Get the origin of the world.
+ * @brief Get the total number of grid points in the world.
  * @param w World object.
- * @return The origin of the world.
+ * @return The total number of grid points.
  */
-Real3 get_origin(const World &w) noexcept;
+template <typename CoordTag> int total_size(const World<CoordTag> &w) noexcept {
+  return get_size(w, 0) * get_size(w, 1) * get_size(w, 2);
+}
 
 /**
- * @brief Get the origin of the world in a specific dimension.
- * @param w World object.
- * @param i Dimension index.
- * @return The origin in the specified dimension.
- */
-double get_origin(const World &w, int i) noexcept;
-
-/**
- * @brief Get the lower bounds of the world.
+ * @brief Get the lower bounds of the world in a specific dimension.
  * @param w World object.
  * @return The lower bounds of the world.
  */
-Real3 get_lower(const World &w) noexcept;
+Real3 get_lower(const CartesianWorld &w) noexcept;
 
 /**
  * @brief Get the lower bounds of the world in a specific dimension.
@@ -350,14 +583,14 @@ Real3 get_lower(const World &w) noexcept;
  * @param i Dimension index.
  * @return The lower bound in the specified dimension.
  */
-double get_lower(const World &w, int i) noexcept;
+double get_lower(const CartesianWorld &w, int i) noexcept;
 
 /**
- * @brief Get the upper bounds of the world.
+ * @brief Get the upper bounds of the world in a specific dimension.
  * @param w World object.
  * @return The upper bounds of the world.
  */
-Real3 get_upper(const World &w) noexcept;
+Real3 get_upper(const CartesianWorld &w) noexcept;
 
 /**
  * @brief Get the upper bounds of the world in a specific dimension.
@@ -365,29 +598,7 @@ Real3 get_upper(const World &w) noexcept;
  * @param i Dimension index.
  * @return The upper bound in the specified dimension.
  */
-double get_upper(const World &w, int i) noexcept;
-
-/**
- * @brief Get the spacing of the world.
- * @param w World object.
- * @return The spacing of the world.
- */
-Real3 get_spacing(const World &w) noexcept;
-
-/**
- * @brief Get the spacing of the world in a specific dimension.
- * @param w World object.
- * @param i Dimension index.
- * @return The spacing in the specified dimension.
- */
-double get_spacing(const World &w, int i) noexcept;
-
-/**
- * @brief Get the total number of grid points in the world.
- * @param w World object.
- * @return The total number of grid points.
- */
-int total_size(const World &w) noexcept;
+double get_upper(const CartesianWorld &w, int i) noexcept;
 
 /**
  * @brief Compute the physical coordinates corresponding to grid indices.
@@ -395,7 +606,10 @@ int total_size(const World &w) noexcept;
  * @param indices Grid indices.
  * @return The physical coordinates.
  */
-Real3 to_coords(const World &w, const Int3 &indices) noexcept;
+template <typename CoordTag>
+Real3 to_coords(const World<CoordTag> &w, const Int3 &indices) noexcept {
+  return to_coords(get_coordinate_system(w), indices);
+}
 
 /**
  * @brief Compute the grid indices corresponding to physical coordinates.
@@ -403,35 +617,45 @@ Real3 to_coords(const World &w, const Int3 &indices) noexcept;
  * @param coordinates Physical coordinates.
  * @return The grid indices.
  */
-Int3 to_indices(const World &w, const Real3 &coordinates) noexcept;
+template <typename CoordTag>
+Int3 to_indices(const World<CoordTag> &w, const Real3 &coordinates) noexcept {
+  return to_index(get_coordinate_system(w), coordinates);
+}
 
 // Free function API for coordinate system and periodicity
+
 /**
  * @brief Get the coordinate system of the world.
  * @param w World object.
- * @return The coordinate system tag.
+ * @return The coordinate system of the world.
  */
-CoordinateSystemTag get_coordinate_system(const World &w) noexcept;
+template <typename CoordTag>
+CoordinateSystem<CoordTag> get_coordinate_system(const World<CoordTag> &w) noexcept {
+  return w.m_cs;
+}
 
-/**
- * @brief Get the periodicity of the world.
- * @param w World object.
- * @return The periodicity flags.
- */
-const Bool3 &get_periodicity(const World &w) noexcept;
+// For backward compatibility, might be removed in the future
 
-/**
- * @brief Check if the world is periodic in a specific dimension.
- * @param w World object.
- * @param i Dimension index.
- * @return True if periodic, false otherwise.
- */
-bool is_periodic(const World &w, int i) noexcept;
+inline const Real3 &get_spacing(const CartesianWorld &w) noexcept {
+  return get_spacing(get_coordinate_system(w));
+}
+
+inline double get_spacing(const CartesianWorld &w, int i) noexcept {
+  return get_spacing(get_coordinate_system(w), i);
+}
+
+inline const Real3 &get_origin(const CartesianWorld &w) noexcept {
+  return get_offset(get_coordinate_system(w));
+}
+
+inline double get_origin(const CartesianWorld &w, int i) noexcept {
+  return get_offset(get_coordinate_system(w), i);
+}
 
 } // namespace world
 
 // export World class to the pfc namespace, so we hopefully don't have to write
 // `world::World world = world::create_world(...)` kind of things :D
-using World = world::World;
+using World = world::World<world::CartesianTag>;
 
 } // namespace pfc

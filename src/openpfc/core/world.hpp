@@ -3,12 +3,15 @@
 
 #pragma once
 
+#include "openpfc/core/world.hpp"
 #include <array>
 #include <ostream>
 #include <stdexcept>
 
 namespace pfc {
 namespace world {
+
+// Private helper functions
 
 Spacing3 compute_spacing(const Size3 &size, const LowerBounds3 &lower,
                          const UpperBounds3 &upper, const Periodic3 &periodic);
