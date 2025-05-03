@@ -32,7 +32,7 @@ TEST_CASE("Constant Field Modifier") {
   }
 
   SECTION("Apply field modifier") {
-    World world = create_world({8, 1, 1});
+    World world = world::create({8, 1, 1});
     Decomposition decomp = make_decomposition(world, 0, 1);
     auto options = heffte::default_options<heffte::backend::fftw>();
     FFT fft(decomp, MPI_COMM_WORLD, options, world);
@@ -51,7 +51,7 @@ TEST_CASE("Constant Field Modifier") {
 }
 
 TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
   auto options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomp, MPI_COMM_WORLD, options, world);
@@ -62,7 +62,7 @@ TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
 }
 
 TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   ModelWithConstantIC model(world); // Provide the required World parameter
 
   Decomposition decomp = make_decomposition(world, 0, 1);

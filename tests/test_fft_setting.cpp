@@ -20,7 +20,7 @@ public:
 };
 
 TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
   auto options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomp, MPI_COMM_WORLD, options, world);

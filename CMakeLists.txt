@@ -98,7 +98,7 @@ find_package(nlohmann_json REQUIRED)
 option(BUILD_SHARED_LIBS "Build OpenPFC as a shared library" OFF)
 
 # Create library
-add_library(OpenPFC
+add_library(openpfc
     src/openpfc/core/world.cpp
     src/openpfc/core/box3d.cpp
     src/openpfc/core/decomposition.cpp
@@ -106,8 +106,21 @@ add_library(OpenPFC
     # Add more .cpp files as you go
 )
 
+add_library(OpenPFC ALIAS openpfc)
+
+# Set the library version
+set_target_properties(openpfc PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    OUTPUT_NAME "openpfc"  # ensures the filename is lowercase
+)
+
+#set_target_properties(openpfc PROPERTIES
+#    PUBLIC_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/version.h"
+#)
+
 # Public API (headers)
-target_include_directories(OpenPFC
+target_include_directories(openpfc
     PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
@@ -120,17 +133,17 @@ option(OpenPFC_ENABLE_HEFFTE "Enable HeFFTe FFT support" ON)
 # Conditionally find MPI
 if(OpenPFC_ENABLE_MPI)
     find_package(MPI REQUIRED)
-    target_link_libraries(OpenPFC PUBLIC MPI::MPI_CXX)
+    target_link_libraries(openpfc PUBLIC MPI::MPI_CXX)
 endif()
 
 # Conditionally find HeFFTe
 if(OpenPFC_ENABLE_HEFFTE)
     find_package(Heffte REQUIRED)
-    target_link_libraries(OpenPFC PUBLIC Heffte::Heffte)
+    target_link_libraries(openpfc PUBLIC Heffte::Heffte)
 endif()
 
 # Require C++17
-target_compile_features(OpenPFC PUBLIC cxx_std_17)
+target_compile_features(openpfc PUBLIC cxx_std_17)
 
 option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
 option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
@@ -163,8 +176,8 @@ endif()
 
 if(OpenPFC_ENABLE_CODE_COVERAGE)
   message(STATUS "📊 Enabling code coverage")
-  target_compile_options(OpenPFC PUBLIC --coverage)
-  target_link_options(OpenPFC PUBLIC --coverage)
+  target_compile_options(openpfc PUBLIC --coverage)
+  target_link_options(openpfc PUBLIC --coverage)
 endif()
 
 # Install nlohmann_json headers, but only if nlohmann_json_SOURCE_DIR is
@@ -184,7 +197,7 @@ endif()
 install(DIRECTORY include/openpfc DESTINATION include)
 
 # Install library binary
-install(TARGETS OpenPFC
+install(TARGETS openpfc
     EXPORT OpenPFCTargets
     ARCHIVE DESTINATION lib   # .a files
     LIBRARY DESTINATION lib   # .so files

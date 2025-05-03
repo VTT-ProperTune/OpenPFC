@@ -44,7 +44,7 @@ public:
 };
 
 int main() {
-  World world = create_world({16, 8, 1});
+  World world = world::create({16, 8, 1});
   std::cout << world << std::endl;
   Decomposition decomp1 = make_decomposition(world, 0, 4);
   Decomposition decomp2 = make_decomposition(world, 1, 4);

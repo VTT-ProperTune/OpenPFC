@@ -7,6 +7,7 @@
 #include <stdexcept>
 
 namespace pfc {
+namespace world {
 
 // Constructor helpers
 
@@ -98,7 +99,7 @@ World::World(const Int3 &dimensions, const Real3 &lower, const Real3 &upper,
 // calculated or assumed. These are a bit hazardous as the user must know the order
 // of the arguments and the meaning of the parameters. The preferred way is to use
 // the strong typedef constructors, which are more explicit and less error-prone.
-World create_world(const Int3 &size, const Real3 &lower, const Real3 &spacing) {
+World create(const Int3 &size, const Real3 &lower, const Real3 &spacing) {
 
   if (size[0] <= 0 || size[1] <= 0 || size[2] <= 0) {
     throw std::invalid_argument("Invalid dimensions. Lengths must be positive.");
@@ -127,47 +128,45 @@ World create_world(const Int3 &size, const Real3 &lower, const Real3 &spacing) {
 // old compatibility constructor taking only size, and default lower bounds and
 // spacing and assuming pretty much everything else this is the most common use
 // case
-World create_world(const Int3 &size) {
-  return create_world(size, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+World create(const Int3 &size) {
+  return create(size, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
 }
 
 // Strong typedef constructors
 
 // These are the preferred way to create a world to minimize the risk of confusion of
 // the order of the parameters
-World create_world(const Size3 &size, const LowerBounds3 &lower,
-                   const UpperBounds3 &upper, const Spacing3 &spacing,
-                   const Periodic3 &periodic, const CoordinateSystemTag &cs) {
+World create(const Size3 &size, const LowerBounds3 &lower, const UpperBounds3 &upper,
+             const Spacing3 &spacing, const Periodic3 &periodic,
+             const CoordinateSystemTag &cs) {
   return World(size.value, lower.value, upper.value, spacing.value, periodic.value,
                cs);
 }
 
 // We don't have to manually define the values for both upper bounds and spacing as
 // we can calulcate one from another
-World create_world(const Size3 &size, const LowerBounds3 &lower,
-                   const UpperBounds3 &upper, const Periodic3 &periodic,
-                   const CoordinateSystemTag &cs) {
+World create(const Size3 &size, const LowerBounds3 &lower, const UpperBounds3 &upper,
+             const Periodic3 &periodic, const CoordinateSystemTag &cs) {
   Spacing3 spacing = compute_spacing(size, lower, upper, periodic);
-  return create_world(size, lower, upper, spacing, periodic, cs);
+  return create(size, lower, upper, spacing, periodic, cs);
 }
 
-World create_world(const Size3 &size, const LowerBounds3 &lower,
-                   const Spacing3 &spacing, const Periodic3 &periodic,
-                   const CoordinateSystemTag &cs) {
+World create(const Size3 &size, const LowerBounds3 &lower, const Spacing3 &spacing,
+             const Periodic3 &periodic, const CoordinateSystemTag &cs) {
   UpperBounds3 upper = compute_upper(size, lower, spacing, periodic);
-  return create_world(size, lower, upper, spacing, periodic, cs);
+  return create(size, lower, upper, spacing, periodic, cs);
 }
 
 // This is the most common use case, where we assume the lower bounds are {0,0,0} and
 // we have cartesian coordinate system with periodic boundaries and spacing is
 // calculated from the size and lower bounds
-World create_world(const Size3 &size, const UpperBounds3 &upper) {
+World create(const Size3 &size, const UpperBounds3 &upper) {
   LowerBounds3 lower{{0.0, 0.0, 0.0}};
   CoordinateSystemTag coordinate_system = CoordinateSystemTag::Cartesian;
   Bool3 periodic_bool = get_cs_periodicity(coordinate_system);
   Periodic3 periodic(periodic_bool);
   Spacing3 spacing = compute_spacing(size, lower, upper, periodic);
-  return create_world(size, lower, upper, spacing, periodic, coordinate_system);
+  return create(size, lower, upper, spacing, periodic, coordinate_system);
 }
 
 // Strong typedefs for constructor clarity
@@ -276,4 +275,5 @@ Int3 to_indices(const World &w, const Real3 &coordinates) noexcept {
   return indices;
 }
 
+} // namespace world
 } // namespace pfc

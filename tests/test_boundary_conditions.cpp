@@ -30,7 +30,7 @@ public:
 
 TEST_CASE("FixedBC apply method triggers error", "[BoundaryConditions]") {
   // Create a dummy World object
-  const World world = create_world({128, 128, 128});
+  const World world = world::create({128, 128, 128});
 
   // Create a MockModel object
   MockModel model(world);

@@ -22,7 +22,7 @@ public:
 
 TEST_CASE("Model functionality", "[Model]") {
   // Create an instance of the Model
-  World world = create_world({8, 1, 1});
+  World world = world::create({8, 1, 1});
   MockModel model(world);
 
   REQUIRE(get_size(model.get_world()) == Int3{8, 1, 1});
@@ -89,7 +89,7 @@ TEST_CASE("Model functionality", "[Model]") {
 }
 
 TEST_CASE("Model - FFT Integration", "[model]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomposition = make_decomposition(world, 0, 1);
   auto options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomposition, MPI_COMM_WORLD, options, world);

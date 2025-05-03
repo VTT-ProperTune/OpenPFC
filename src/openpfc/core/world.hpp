@@ -8,6 +8,7 @@
 #include <stdexcept>
 
 namespace pfc {
+namespace world {
 
 Spacing3 compute_spacing(const Size3 &size, const LowerBounds3 &lower,
                          const UpperBounds3 &upper, const Periodic3 &periodic);
@@ -15,4 +16,5 @@ Spacing3 compute_spacing(const Size3 &size, const LowerBounds3 &lower,
 UpperBounds3 compute_upper(const LowerBounds3 &lower, const Spacing3 &spacing,
                            const Size3 &size, const Periodic3 &periodic);
 
+} // namespace world
 } // namespace pfc

@@ -3,18 +3,119 @@
 
 /**
  * @file world.hpp
- * @brief World class definition
- * @details This file contains the definition of the World class, which
- * represents the global simulation domain in a computational physics
- * framework. The World class encapsulates the size, origin, and grid spacing
- * of the simulation domain, and provides methods for coordinate transformations
- * between grid indices and physical coordinates.
+ * @brief World class definition and interface
  *
- * The World class is designed to be used in conjunction with various
- * coordinate systems (Cartesian, Polar, Cylindrical, Spherical) and supports
- * periodic boundary conditions. It provides a clear and consistent interface
- * for working with simulation domains, making it easier to manage and
- * manipulate the underlying data structures.
+ * @details
+ * The `World` class defines the **global simulation domain** \( \Omega \)
+ * in OpenPFC's computational physics framework. It provides a unified
+ * abstraction for describing a discretized space in which physical fields
+ * are defined and evolved.
+ *
+ * The World object encapsulates:
+ * - the grid resolution (number of cells in each direction),
+ * - physical coordinate bounds (lower and upper bounds per dimension),
+ * - grid spacing (computed from bounds and resolution),
+ * - periodicity flags (per dimension), and
+ * - the chosen coordinate system (e.g., Cartesian, Polar, Cylindrical).
+ *
+ * This abstraction is intentionally **immutable**: once constructed, a World
+ * object cannot be modified. This design follows the principle of **functional
+ * programming**, where data structures are fixed and behavior is implemented
+ * externally via free functions. This enhances correctness, thread safety,
+ * testability, and reproducibility.
+ *
+ * ---
+ *
+ * ## Roles and Responsibilities of World
+ *
+ * 1. **Defines the discrete domain**: The World represents a *regular grid*
+ *    in a physical domain \( \Omega \subset \mathbb{R}^d \). It tells us
+ *    *where* our fields live and how to convert between grid indices and
+ *    physical coordinates.
+ *
+ * 2. **Separates geometry from data**: Fields, solvers, and boundary
+ *    conditions operate on data, but the World defines the geometry.
+ *    This separation of concerns makes simulation code cleaner and more modular.
+ *
+ * 3. **Handles coordinate transformations**: World supports converting
+ *    between discrete indices (i,j,k) and continuous physical positions (x,y,z),
+ *    in the *native coordinate system* of the simulation. Transformations
+ *    to/from Cartesian space can be handled in higher layers if needed.
+ *
+ * 4. **Supports arbitrary coordinate systems**: Coordinate systems are
+ *    expressed via a `CoordinateSystemTag` enum and include:
+ *      - Cartesian in 1D, 2D, 3D (Line, Plane, Cartesian),
+ *      - Polar (2D),
+ *      - Cylindrical and Spherical (3D).
+ *    The World object is agnostic to the math of these systems; it only
+ *    carries the tag and interprets its meaning via helper functions.
+ *
+ * 5. **Supports periodic and non-periodic domains**: For each dimension,
+ *    the periodicity can be explicitly set. This allows modeling cylinders,
+ *    slabs, tubes, or open domains with consistent spacing logic. When
+ *    periodicity is enabled, spacing is defined as:
+ *        spacing = (upper - lower) / size
+ *    Otherwise:
+ *        spacing = (upper - lower) / (size - 1)
+ *
+ * 6. **Supports multiple construction styles**: Users may define domains by:
+ *      - Lower + upper bounds + size
+ *      - Lower bounds + spacing + size
+ *      - Only size (defaults to lower = 0, spacing = 1)
+ *    These overloads make simulation code ergonomic and consistent.
+ *    Strong typedefs (`Size3`, `LowerBounds3`, etc.) are used to
+ *    disambiguate arguments and validate input semantics (e.g., spacing > 0).
+ *
+ * 7. **Provides a functional interface**: Rather than methods, we use
+ *    free functions in the `pfc::world` namespace to operate on World.
+ *    For example:
+ *        World w = world::create(...);
+ *        Real3 x = world::to_coords(w, {i,j,k});
+ *    This design enables:
+ *      - Cleaner documentation and separation of logic
+ *      - ADL-based extensibility by user-defined types
+ *      - Easier testing and functional reasoning
+ *
+ * 8. **Is extensible and composable**: Advanced users can define new overloads
+ *    of `world::create()` that construct a `World` from domain-specific objects,
+ *    without modifying OpenPFC internals. For example:
+ *        namespace pfc::world {
+ *          World create(const MyDomainSetup& setup);
+ *        }
+ *
+ * 9. **Stays minimal and explicit**: The `World` class itself is a `struct`
+ *    with five `const` members and one enum. There are no virtual methods,
+ *    inheritance hierarchies, or hidden states. Its clarity is its strength.
+ *
+ * ---
+ *
+ * ## Philosophical Note
+ *
+ * OpenPFC treats scientific code as a **laboratory**, not a fortress.
+ * The World is one of the most fundamental objects in this lab. Its job
+ * is to cleanly and rigorously define the shape and structure of the space
+ * in which physics occurs. By designing World to be:
+ *
+ * - *purely functional* (no mutation),
+ * - *geometrically grounded* (spacing, bounds, coordinates),
+ * - *mathematically honest* (validated spacing logic),
+ * - *open for extension but closed for modification* (via ADL),
+ *
+ * we ensure that simulation domains are *safe*, *composable*, and *expressive*.
+ *
+ * ---
+ *
+ * ## Usage Example
+ *
+ * @code
+ * using namespace pfc;
+ * World w = world::create({100, 200, 300}, {0.0, 0.0, 0.0}, {1.0, 2.0, 3.0});
+ *
+ * Real3 x = world::to_coords(w, {10, 20, 30});
+ * Int3  i = world::to_indices(w, {10.0, 40.0, 90.0});
+ * double dx = world::get_spacing(w, 0);
+ * @endcode
+ *
  */
 
 #pragma once
@@ -29,6 +130,8 @@ namespace pfc {
 using Int3 = std::array<int, 3>;
 using Real3 = std::array<double, 3>;
 using Bool3 = std::array<bool, 3>;
+
+namespace world {
 
 /**
  * @brief Coordinate system tag.
@@ -143,8 +246,7 @@ struct World final {
  * @param spacing Spacing of the grid.
  * @return A World object.
  */
-World create_world(const Int3 &dimensions, const Real3 &origin,
-                   const Real3 &spacing);
+World create(const Int3 &dimensions, const Real3 &origin, const Real3 &spacing);
 
 /**
  * @brief Create a World object with the specified dimensions and default origin and
@@ -152,7 +254,7 @@ World create_world(const Int3 &dimensions, const Real3 &origin,
  * @param dimensions Dimensions of the world.
  * @return A World object.
  */
-World create_world(const Int3 &dimensions);
+World create(const Int3 &dimensions);
 
 /**
  * @brief Create a World object with the specified size, lower bounds, upper bounds,
@@ -165,9 +267,9 @@ World create_world(const Int3 &dimensions);
  * @param cs Coordinate system type.
  * @return A World object.
  */
-World create_world(const Size3 &size, const LowerBounds3 &lower,
-                   const UpperBounds3 &upper, const Spacing3 &spacing,
-                   const Periodic3 &periodic, const CoordinateSystemTag &cs);
+World create(const Size3 &size, const LowerBounds3 &lower, const UpperBounds3 &upper,
+             const Spacing3 &spacing, const Periodic3 &periodic,
+             const CoordinateSystemTag &cs);
 
 /**
  * @brief Create a World object with the specified size, lower bounds, upper bounds,
@@ -179,9 +281,8 @@ World create_world(const Size3 &size, const LowerBounds3 &lower,
  * @param cs Coordinate system type.
  * @return A World object.
  */
-World create_world(const Size3 &size, const LowerBounds3 &lower,
-                   const UpperBounds3 &upper, const Periodic3 &periodic,
-                   const CoordinateSystemTag &cs);
+World create(const Size3 &size, const LowerBounds3 &lower, const UpperBounds3 &upper,
+             const Periodic3 &periodic, const CoordinateSystemTag &cs);
 
 /**
  * @brief Create a World object with the specified size, lower bounds, spacing,
@@ -193,9 +294,8 @@ World create_world(const Size3 &size, const LowerBounds3 &lower,
  * @param cs Coordinate system type.
  * @return A World object.
  */
-World create_world(const Size3 &size, const LowerBounds3 &lower,
-                   const Spacing3 &spacing, const Periodic3 &periodic,
-                   const CoordinateSystemTag &cs);
+World create(const Size3 &size, const LowerBounds3 &lower, const Spacing3 &spacing,
+             const Periodic3 &periodic, const CoordinateSystemTag &cs);
 
 /**
  * @brief Create a World object with the specified size and upper bounds.
@@ -203,7 +303,7 @@ World create_world(const Size3 &size, const LowerBounds3 &lower,
  * @param upper Upper bounds of the world.
  * @return A World object.
  */
-World create_world(const Size3 &size, const UpperBounds3 &upper);
+World create(const Size3 &size, const UpperBounds3 &upper);
 
 // Free function API for querying World properties
 
@@ -327,5 +427,11 @@ const Bool3 &get_periodicity(const World &w) noexcept;
  * @return True if periodic, false otherwise.
  */
 bool is_periodic(const World &w, int i) noexcept;
+
+} // namespace world
+
+// export World class to the pfc namespace, so we hopefully don't have to write
+// `world::World world = world::create_world(...)` kind of things :D
+using World = world::World;
 
 } // namespace pfc

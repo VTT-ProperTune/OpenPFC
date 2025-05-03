@@ -35,7 +35,7 @@ int main() {
   std::array<int, 3> dimensions = {10, 20, 30};
   std::array<double, 3> origin = {0.0, 0.0, 0.0};
   std::array<double, 3> discretization = {0.1, 0.1, 0.1};
-  World world = create_world(dimensions, origin, discretization);
+  World world = world::create(dimensions, origin, discretization);
 
   // Retrieve world properties
   cout << "World properties:" << endl;
@@ -53,7 +53,7 @@ int main() {
 
   // If just the size of the doman is defined, it is assumed that x0 = y0 = z0 =
   // 0 and dx = dy = dz = 1
-  World world2 = create_world({64, 64, 64});
+  World world2 = world::create({64, 64, 64});
   cout << world2 << endl;
 
   return 0;

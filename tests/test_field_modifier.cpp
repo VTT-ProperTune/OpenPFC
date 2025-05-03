@@ -32,7 +32,7 @@ public:
 
 TEST_CASE("FieldModifier applies field modification to the model",
           "[FieldModifier]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
           world);
@@ -52,7 +52,7 @@ TEST_CASE("FieldModifier applies field modification to the model",
 
 TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
   FieldModifier *modifier = new MockFieldModifier();
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
           world);
@@ -71,7 +71,7 @@ TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
 }
 
 TEST_CASE("FieldModifier can be moved", "[FieldModifier]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
           world);
@@ -100,7 +100,7 @@ TEST_CASE("Field name can be set and retrieved", "[FieldModifier]") {
 }
 
 TEST_CASE("Field Modifier - MockModel Integration", "[field_modifier]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
   auto options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomp, MPI_COMM_WORLD, options, world);

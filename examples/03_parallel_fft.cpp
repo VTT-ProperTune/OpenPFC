@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(comm, &num_procs);
 
   // Construct world, decomposition and fft
-  World world = create_world({8, 1, 1});
+  World world = world::create({8, 1, 1});
   Decomposition decomposition = make_decomposition(world, comm);
   auto plan_options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomposition, comm, plan_options, world);

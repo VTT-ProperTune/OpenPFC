@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 
   // Create MPI session, World and Decomposition
   MPI_Worker worker(argc, argv);
-  World world = create_world({4, 3, 2});
+  World world = world::create({4, 3, 2});
   Decomposition decomp = make_decomposition(world);
 
   // Create input field

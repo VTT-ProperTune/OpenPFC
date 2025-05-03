@@ -157,11 +157,11 @@
 
             echo ""
             echo "🎉 Welcome to the OpenPFC development shell!"
-            echo "👉 To configure the project:  cmake -S . -B build"
+            echo "👉 To configure the project:  cmake -S . -B build -DOpenPFC_DEVELOPMENT=yes"
             echo "👉 To build the project:      cmake --build build"
-            echo "👉 To format code:            clang-format --dry-run --Werror $(find apps include examples tests docs -name '*.cpp' -o -name '*.hpp')"
-            echo "👉 To run static analysis:    clang-tidy apps/<file>.cpp --quiet"
-            echo "👉 To check licenses:         reuse lint"
+            echo "👉 To format code:            nix run .#clang-format"
+            echo "👉 To run static analysis:    nix run .#clang-tidy"
+            echo "👉 To check licenses:         nix run .#reuse"
             echo ""
           '';
         };
@@ -194,28 +194,6 @@
 
             touch $out
           '';
-
-#         static-analysis = pkgs.runCommand "clang-tidy-check" {
-#           nativeBuildInputs =
-#             [ pkgs.cmake pkgs.clang-tools_17 pkgs.coreutils ];
-#           src = ./.;
-#         } ''
-#           cp -r $src/. .
-#
-#           # Generate compile_commands.json
-#           cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-#           ln -s build/compile_commands.json compile_commands.json
-#
-#           # Find all source files
-#           files=$(find ./apps ./include ./examples ./tests ./docs \( -name '*.cpp' \))
-#
-#           # Run clang-tidy
-#           for file in $files; do
-#             clang-tidy $(realpath --relative-to=. "$file") --quiet || exit 1
-#           done
-#
-#           touch $out
-#         '';
 
           doxygen = pkgs.runCommand "doxygen-docs-check" {
             buildInputs = [ pkgs.doxygen ];

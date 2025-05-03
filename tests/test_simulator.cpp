@@ -29,7 +29,7 @@ public:
 };
 
 TEST_CASE("Simulator functionality", "[simulator]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
   FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
           world);
@@ -100,7 +100,7 @@ TEST_CASE("Simulator functionality", "[simulator]") {
 }
 
 TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
-  World world = create_world({8, 8, 8});
+  World world = world::create({8, 8, 8});
   Decomposition decomp = make_decomposition(world, 0, 1);
   auto options = heffte::default_options<heffte::backend::fftw>();
   FFT fft(decomp, MPI_COMM_WORLD, options, world);

@@ -155,7 +155,7 @@ template <> World from_json<World>(const json &j) {
     z0 = -0.5 * dz * Lz;
   }
 
-  World world = create_world({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  World world = world::create({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
 
   return world;
 }
