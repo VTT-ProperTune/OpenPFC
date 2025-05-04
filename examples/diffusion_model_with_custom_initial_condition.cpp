@@ -52,8 +52,8 @@ public:
     const World &w = m.get_world();
     const Decomposition &d = m.get_decomposition();
     Field &f = m.get_field();
-    auto low = d.get_inbox().low;
-    auto high = d.get_inbox().high;
+    auto low = get_inbox(d).low;
+    auto high = get_inbox(d).high;
     long int idx = 0;
 
     for (int k = low[2]; k <= high[2]; k++) {

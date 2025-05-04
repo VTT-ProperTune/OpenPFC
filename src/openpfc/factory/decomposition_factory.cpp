@@ -5,16 +5,14 @@
 
 namespace pfc {
 
-Decomposition make_decomposition(const World &world, int rank,
-                                 int num_domains) {
-  using Box3D = Decomposition::Box3D;
+Decomposition make_decomposition(const World &world, int rank, int num_domains) {
+  using Box3D = decomposition::Box3D;
   if (rank < 0 || rank >= num_domains) {
     throw std::logic_error(
         "Cannot construct domain decomposition: !(rank < nprocs)");
   }
   if (num_domains <= 0) {
-    throw std::logic_error(
-        "Cannot construct domain decomposition: !(nprocs > 0)");
+    throw std::logic_error("Cannot construct domain decomposition: !(nprocs > 0)");
   }
   int Lx = get_size(world, 0);
   int Ly = get_size(world, 1);
@@ -26,8 +24,7 @@ Decomposition make_decomposition(const World &world, int rank,
   const Box3D complex_indexes({0, 0, 0}, {Lx_c - 1, Ly_c - 1, Lz_c - 1});
   const std::array<int, 3> proc_grid =
       heffte::proc_setup_min_surface(real_indexes, num_domains);
-  const std::vector<Box3D> real_boxes =
-      heffte::split_world(real_indexes, proc_grid);
+  const std::vector<Box3D> real_boxes = heffte::split_world(real_indexes, proc_grid);
   const std::vector<Box3D> complex_boxes =
       heffte::split_world(complex_indexes, proc_grid);
   const Box3D inbox = real_boxes[rank];

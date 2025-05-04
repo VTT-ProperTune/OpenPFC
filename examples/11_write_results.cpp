@@ -16,8 +16,8 @@ int main(int argc, char **argv) {
   World world = world::create({4, 3, 2});
   Decomposition decomp = make_decomposition(world);
   // DiscreteField<double, 3> field(decomp);
-  auto dimensions = decomp.get_inbox_size();
-  auto offsets = decomp.get_inbox_offset();
+  auto dimensions = get_inbox_size(decomp);
+  auto offsets = get_inbox_offset(decomp);
   auto origin = get_origin(world);
   auto discretization = get_spacing(world);
   DiscreteField<double, 3> field(dimensions, offsets, origin, discretization);

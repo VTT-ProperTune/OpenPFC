@@ -52,23 +52,23 @@ int main() {
   Decomposition decomp4 = make_decomposition(world, 3, 4);
 
   std::cout << decomp1 << std::endl;
-  const std::array<int, 3> &inbox_size1 = decomp1.get_inbox_size();
-  const std::array<int, 3> &inbox_offset1 = decomp1.get_inbox_offset();
+  const std::array<int, 3> &inbox_size1 = get_inbox_size(decomp1);
+  const std::array<int, 3> &inbox_offset1 = get_inbox_offset(decomp1);
   DiscreteField<double, 3> field1(inbox_size1, inbox_offset1, get_origin(world),
                                   get_spacing(world));
 
-  const std::array<int, 3> &inbox_size2 = decomp2.get_inbox_size();
-  const std::array<int, 3> &inbox_offset2 = decomp2.get_inbox_offset();
+  const std::array<int, 3> &inbox_size2 = get_inbox_size(decomp2);
+  const std::array<int, 3> &inbox_offset2 = get_inbox_offset(decomp2);
   DiscreteField<double, 3> field2(inbox_size2, inbox_offset2, get_origin(world),
                                   get_spacing(world));
 
-  const std::array<int, 3> &inbox_size3 = decomp3.get_inbox_size();
-  const std::array<int, 3> &inbox_offset3 = decomp3.get_inbox_offset();
+  const std::array<int, 3> &inbox_size3 = get_inbox_size(decomp3);
+  const std::array<int, 3> &inbox_offset3 = get_inbox_offset(decomp3);
   DiscreteField<double, 3> field3(inbox_size3, inbox_offset3, get_origin(world),
                                   get_spacing(world));
 
-  const std::array<int, 3> &inbox_size4 = decomp4.get_inbox_size();
-  const std::array<int, 3> &inbox_offset4 = decomp4.get_inbox_offset();
+  const std::array<int, 3> &inbox_size4 = get_inbox_size(decomp4);
+  const std::array<int, 3> &inbox_offset4 = get_inbox_offset(decomp4);
   DiscreteField<double, 3> field4(inbox_size4, inbox_offset4, get_origin(world),
                                   get_spacing(world));
   std::cout << field1 << std::endl;

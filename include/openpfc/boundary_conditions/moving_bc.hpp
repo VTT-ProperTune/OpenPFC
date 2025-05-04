@@ -57,8 +57,8 @@ public:
     const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_real_field(get_field_name());
     const World &w = m.get_world();
-    Vec3<int> low = decomp.get_inbox().low;
-    Vec3<int> high = decomp.get_inbox().high;
+    Vec3<int> low = get_inbox(decomp).low;
+    Vec3<int> high = get_inbox(decomp).high;
 
     auto Lx = get_size(w, 0);
     auto dx = get_spacing(w, 0);
@@ -114,8 +114,8 @@ public:
     const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_real_field(get_field_name());
     const World &w = m.get_world();
-    Vec3<int> low = decomp.get_inbox().low;
-    Vec3<int> high = decomp.get_inbox().high;
+    Vec3<int> low = get_inbox(decomp).low;
+    Vec3<int> high = get_inbox(decomp).high;
 
     auto Lx = get_size(w, 0);
     auto dx = get_spacing(w, 0);

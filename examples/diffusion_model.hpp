@@ -28,10 +28,10 @@ public:
     psi_F.resize(fft.size_outbox());
     opL.resize(fft.size_outbox());
 
-    Vec3<int> i_low = decomp.get_inbox().low;
-    Vec3<int> i_high = decomp.get_inbox().high;
-    Vec3<int> o_low = decomp.get_outbox().low;
-    Vec3<int> o_high = decomp.get_outbox().high;
+    Vec3<int> i_low = get_inbox(decomp).low;
+    Vec3<int> i_high = get_inbox(decomp).high;
+    Vec3<int> o_low = get_outbox(decomp).low;
+    Vec3<int> o_high = get_outbox(decomp).high;
 
     auto origin = get_origin(w);
     auto spacing = get_spacing(w);

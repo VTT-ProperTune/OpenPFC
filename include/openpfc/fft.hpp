@@ -17,8 +17,8 @@ namespace pfc {
 inline heffte::fft3d_r2c<heffte::backend::fftw>
 make_fft(const Decomposition &decomposition, MPI_Comm comm,
          heffte::plan_options plan_options) {
-  const Decomposition::Box3D &inbox = decomposition.get_inbox();
-  const Decomposition::Box3D &outbox = decomposition.get_outbox();
+  const decomposition::Box3D &inbox = get_inbox(decomposition);
+  const decomposition::Box3D &outbox = get_outbox(decomposition);
   int r2c_direction = 0; // TODO: make this dynamic
   return heffte::fft3d_r2c<heffte::backend::fftw>(inbox, outbox, r2c_direction, comm,
                                                   plan_options);
@@ -34,10 +34,10 @@ private:
   const Decomposition m_decomposition; /**< The Decomposition object. */
   const heffte::fft3d_r2c<heffte::backend::fftw> m_fft; /**< HeFFTe FFT object. */
   std::vector<std::complex<double>>
-      m_wrk;                   /**< Workspace vector for FFT computations. */
-  double m_fft_time = 0.0;     /**< Recorded FFT computation time. */
-  const World &m_world;        /**< Reference to the World object. */
-  Decomposition::Box3D domain; /**< Domain converted from World object. */
+      m_wrk;                 /**< Workspace vector for FFT computations. */
+  double m_fft_time = 0.0;   /**< Recorded FFT computation time. */
+  const World &m_world;      /**< Reference to the World object. */
+  heffte::box3d<int> domain; /**< Domain converted from World object. */
 
 public:
   /**

@@ -16,6 +16,6 @@ TEST_CASE("Decomposition class tests", "[Decomposition]") {
   SECTION("Construction and getters") {
     Decomposition decomposition = make_decomposition(world, 0, 1);
 
-    REQUIRE(decomposition.get_world() == world);
+    REQUIRE(get_world(decomposition) == world);
   }
 }

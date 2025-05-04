@@ -83,9 +83,9 @@ public:
     if (rank0) cout << "Allocate space" << endl;
 
     // Get references to world, fft and domain decomposition
-    const World &w = get_world();
-    FFT &fft = get_fft();
     const Decomposition &decomp = get_decomposition();
+    const World &w = decomposition::get_world(decomp);
+    FFT &fft = get_fft();
 
     // Allocate space for the main variable and it's fourier transform
     psi.resize(fft.size_inbox());
@@ -110,10 +110,10 @@ public:
     Upper and lower limits for this particular MPI rank, in both inbox and
     outbox, are given by domain decomposition object
     */
-    Vec3<int> i_low = decomp.get_inbox().low;
-    Vec3<int> i_high = decomp.get_inbox().high;
-    Vec3<int> o_low = decomp.get_outbox().low;
-    Vec3<int> o_high = decomp.get_outbox().high;
+    Int3 i_low = get_inbox(decomp).low;
+    Int3 i_high = get_inbox(decomp).high;
+    Int3 o_low = get_outbox(decomp).low;
+    Int3 o_high = get_outbox(decomp).high;
 
     /*
     Typically initial conditions are constructed elsewhere. However, to keep

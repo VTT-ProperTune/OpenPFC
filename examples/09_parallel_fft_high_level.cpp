@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
   // Create input field
   // DiscreteField<double, 3> input(decomp);
 
-  auto dimensions = decomp.get_inbox_size();
-  auto offsets = decomp.get_inbox_offset();
+  auto dimensions = get_inbox_size(decomp);
+  auto offsets = get_inbox_offset(decomp);
   auto origin = get_origin(world);
   auto discretization = get_spacing(world);
   DiscreteField<double, 3> input(dimensions, offsets, origin, discretization);

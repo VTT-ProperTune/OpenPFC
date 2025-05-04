@@ -33,7 +33,7 @@ private:
    * @param decomp
    */
   Array(const Decomposition &decomp, std::true_type)
-      : index(decomp.get_outbox_size(), decomp.get_outbox_offset()) {}
+      : index(get_outbox_size(decomp), get_outbox_offset(decomp)) {}
 
   /**
    * @brief Construct a new Array object from Decomposition, using inbox, if
@@ -42,7 +42,7 @@ private:
    * @param decomp
    */
   Array(const Decomposition &decomp, std::false_type)
-      : index(decomp.get_inbox_size(), decomp.get_inbox_offset()) {}
+      : index(get_inbox_size(decomp), get_inbox_offset(decomp)) {}
 
   // Custom type trait to check if a type is complex
   template <typename U> struct is_complex : std::false_type {};

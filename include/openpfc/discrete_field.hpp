@@ -79,7 +79,7 @@ public:
    */
   /* TODO: Make free function for this
  DiscreteField(const Decomposition &decomp)
-     : DiscreteField(decomp.get_inbox_size(), decomp.get_inbox_offset(),
+     : DiscreteField(get_inbox_size(decomp), get_inbox_offset(decomp),
                      get_origin(decomp.get_world()),
                      get_spacing(decomp.get_world())) {}
  */

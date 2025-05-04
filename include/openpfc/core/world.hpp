@@ -656,6 +656,6 @@ inline double get_origin(const CartesianWorld &w, int i) noexcept {
 
 // export World class to the pfc namespace, so we hopefully don't have to write
 // `world::World world = world::create_world(...)` kind of things :D
-using World = world::World<world::CartesianTag>;
+using World = world::CartesianWorld;
 
 } // namespace pfc

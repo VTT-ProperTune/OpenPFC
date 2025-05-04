@@ -24,8 +24,8 @@ public:
     const World &w = m.get_world();
     const Decomposition &decomp = m.get_decomposition();
     Field &field = m.get_real_field(get_field_name());
-    Vec3<int> low = decomp.get_inbox().low;
-    Vec3<int> high = decomp.get_inbox().high;
+    Int3 low = decomp.m_inbox.low;
+    Vec3<int> high = decomp.m_inbox.high;
 
     // Use the new World API to get spacing and origin
     auto spacing = get_spacing(w);

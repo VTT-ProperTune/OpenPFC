@@ -102,7 +102,8 @@ public:
   }
 
   void prepare_operators(double dt) {
-    World w = get_world();
+    const Decomposition &decomp = get_decomposition();
+    World w = decomposition::get_world(decomp);
     auto spacing = get_spacing(w);
     auto size = get_size(w);
     auto dx = spacing[0];
@@ -112,9 +113,8 @@ public:
     auto Ly = size[1];
     auto Lz = size[2];
 
-    const Decomposition &decomp = get_decomposition();
-    std::array<int, 3> low = decomp.get_outbox().low;
-    std::array<int, 3> high = decomp.get_outbox().high;
+    std::array<int, 3> low = get_outbox(decomp).low;
+    std::array<int, 3> high = get_outbox(decomp).high;
 
     int idx = 0;
     const double pi = std::atan(1.0) * 4.0;

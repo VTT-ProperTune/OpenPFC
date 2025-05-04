@@ -62,7 +62,7 @@ public:
    *
    * @return const World&
    */
-  const World &get_world() { return get_decomposition().get_world(); }
+  const World &get_world() { return decomposition::get_world(get_decomposition()); }
 
   /**
    * @brief Get the FFT object
@@ -94,8 +94,8 @@ public:
   bool add_results_writer(const std::string &field_name,
                           std::unique_ptr<ResultsWriter> writer) {
     const Decomposition &d = get_decomposition();
-    writer->set_domain(get_size(d.get_world()), d.get_inbox().size,
-                       d.get_inbox().low);
+    writer->set_domain(get_size(decomposition::get_world(d)), d.m_inbox.size,
+                       d.m_inbox.low);
     Model &model = get_model();
     if (model.has_field(field_name)) {
       m_result_writers.insert({field_name, std::move(writer)});

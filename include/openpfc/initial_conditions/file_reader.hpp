@@ -29,8 +29,7 @@ public:
     std::cout << "Reading initial condition from file" << get_filename()
               << std::endl;
     BinaryReader reader;
-    reader.set_domain(get_size(d.get_world()), d.get_inbox().size,
-                      d.get_inbox().low);
+    reader.set_domain(get_size(get_world(d)), get_inbox(d).size, get_inbox(d).low);
     reader.read(get_filename(), f);
   }
 };
