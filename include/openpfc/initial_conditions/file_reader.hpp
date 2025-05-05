@@ -24,12 +24,18 @@ public:
   explicit FileReader(const std::string &filename) : m_filename(filename) {}
 
   void apply(Model &m, double) override {
-    const Decomposition &d = m.get_decomposition();
+    const FFT &fft = m.get_fft();
+    const Decomposition &decomp = m.get_decomposition();
+    const auto &world = decomposition::get_world(decomp);
+    auto world_size = get_size(world);
+    auto inbox_size = get_inbox(fft).size;
+    auto inbox_offset = get_inbox(fft).low;
+
     Field &f = m.get_real_field(get_field_name());
     std::cout << "Reading initial condition from file" << get_filename()
               << std::endl;
     BinaryReader reader;
-    reader.set_domain(get_size(get_world(d)), get_inbox(d).size, get_inbox(d).low);
+    reader.set_domain(world_size, inbox_size, inbox_offset);
     reader.read(get_filename(), f);
   }
 };

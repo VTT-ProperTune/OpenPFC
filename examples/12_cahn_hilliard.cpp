@@ -31,7 +31,6 @@ public:
 
   void initialize(double dt) override {
     FFT &fft = get_fft();
-    const Decomposition &decomp = get_decomposition();
 
     // Allocate space for the main variable and it's fourier transform
     c.resize(fft.size_inbox());
@@ -43,8 +42,8 @@ public:
 
     // prepare operators
     World w = get_world();
-    std::array<int, 3> o_low = get_outbox(decomp).low;
-    std::array<int, 3> o_high = get_outbox(decomp).high;
+    std::array<int, 3> o_low = get_outbox(fft).low;
+    std::array<int, 3> o_high = get_outbox(fft).high;
     size_t idx = 0;
     double pi = std::atan(1.0) * 4.0;
     auto spacing = get_spacing(w);
@@ -143,8 +142,7 @@ int main(int argc, char **argv) {
   // file_count
   writer.set_uri(sprintf("cahn_hilliard_%04i.vti", file_count));
   writer.set_field_name("concentration");
-  writer.set_domain(get_size(world), get_inbox_size(decomp),
-                    get_inbox_offset(decomp));
+  writer.set_domain(get_size(world), get_inbox_size(fft), get_inbox_offset(fft));
   writer.set_origin(get_origin(world));
   writer.set_spacing(get_spacing(world));
   writer.initialize();

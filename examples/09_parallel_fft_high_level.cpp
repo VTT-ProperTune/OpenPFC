@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
   // Create input field
   // DiscreteField<double, 3> input(decomp);
 
-  auto dimensions = get_inbox_size(decomp);
-  auto offsets = get_inbox_offset(decomp);
+  auto dimensions = decomp.m_inbox.size;
+  auto offsets = decomp.m_inbox.low;
   auto origin = get_origin(world);
   auto discretization = get_spacing(world);
   DiscreteField<double, 3> input(dimensions, offsets, origin, discretization);
@@ -30,20 +30,20 @@ int main(int argc, char *argv[]) {
   // Fill input field with random numbers
   apply(input, [&](auto, auto, auto) { return dis(gen); });
 
+  auto plan_options = heffte::default_options<heffte::backend::fftw>();
+  FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
+
   // Create output array to store FFT results. If requested array is of type T =
   // complex<double>, then array will be constructed using complex indices so
   // that it matches the Fourier-space, i.e. first dimension is floor(Lx/2) + 1.
-  Array<complex<double>, 3> output(decomp);
+  Array<complex<double>, 3> output(get_outbox_size(fft));
 
   std::cout << "input: " << input << std::endl;   // this is {4, 3, 2}
   std::cout << "output: " << output << std::endl; // this is {3, 3, 2}
 
   // This would construct an array of type T = <double> with different indices
-  // Array<double, 3> output2(decomp);
+  // Array<double, 3> output2(fft);
   // std::cout << output2 << std::endl; // this is {4, 3, 2}
-
-  auto plan_options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
 
   fft.forward(input, output);
 

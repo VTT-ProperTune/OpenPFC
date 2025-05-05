@@ -110,10 +110,10 @@ public:
     Upper and lower limits for this particular MPI rank, in both inbox and
     outbox, are given by domain decomposition object
     */
-    Int3 i_low = get_inbox(decomp).low;
-    Int3 i_high = get_inbox(decomp).high;
-    Int3 o_low = get_outbox(decomp).low;
-    Int3 o_high = get_outbox(decomp).high;
+    Int3 i_low = get_inbox(fft).low;
+    Int3 i_high = get_inbox(fft).high;
+    Int3 o_low = get_outbox(fft).low;
+    Int3 o_high = get_outbox(fft).high;
 
     /*
     Typically initial conditions are constructed elsewhere. However, to keep

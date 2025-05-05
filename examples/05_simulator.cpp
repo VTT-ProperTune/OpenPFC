@@ -50,10 +50,10 @@ public:
   void apply(Model &m, double t) override {
     (void)t; // suppress compiler warning about unused parameter
     const World &w = m.get_world();
-    const Decomposition &decomp = m.get_decomposition();
+    const FFT &fft = m.get_fft();
     std::vector<double> &field = m.get_real_field("psi");
-    Int3 low = get_inbox(decomp).low;
-    Int3 high = get_inbox(decomp).high;
+    Int3 low = get_inbox(fft).low;
+    Int3 high = get_inbox(fft).high;
 
     if (m.is_rank0()) std::cout << "Create initial condition" << std::endl;
     size_t idx = 0;
@@ -100,8 +100,9 @@ public:
   void prepare_operators(double dt) {
     const Decomposition &decomp = get_decomposition();
     const World &w = decomposition::get_world(decomp);
-    std::array<int, 3> low = get_outbox(decomp).low;
-    std::array<int, 3> high = get_outbox(decomp).high;
+    FFT &fft = get_fft();
+    std::array<int, 3> low = get_outbox(fft).low;
+    std::array<int, 3> high = get_outbox(fft).high;
 
     if (is_rank0()) std::cout << "Prepare operators" << std::endl;
     size_t idx = 0;

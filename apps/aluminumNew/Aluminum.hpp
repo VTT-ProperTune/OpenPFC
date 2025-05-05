@@ -163,6 +163,7 @@ public:
 
   void prepare_operators(double dt) {
     const Decomposition &decomp = get_decomposition();
+    const FFT &fft = get_fft();
     World w = decomposition::get_world(decomp);
     auto spacing = get_spacing(w);
     auto size = get_size(w);
@@ -173,8 +174,8 @@ public:
     auto Ly = size[1];
     auto Lz = size[2];
 
-    std::array<int, 3> low = get_outbox(decomp).low;
-    std::array<int, 3> high = get_outbox(decomp).high;
+    std::array<int, 3> low = get_outbox(fft).low;
+    std::array<int, 3> high = get_outbox(fft).high;
 
     int idx = 0;
     const double pi = std::atan(1.0) * 4.0;
@@ -242,9 +243,8 @@ public:
     double dx = get_spacing(w, 0);
     double x0 = get_origin(w, 0);
     int Lx = get_size(w, 0);
-    const Decomposition &decomp = get_decomposition();
-    Int3 low = get_inbox(decomp).low;
-    Int3 high = get_inbox(decomp).high;
+    Int3 low = get_inbox(fft).low;
+    Int3 high = get_inbox(fft).high;
 
     // Calculate mean-field density n_mf
     fft.forward(psi, psi_F);

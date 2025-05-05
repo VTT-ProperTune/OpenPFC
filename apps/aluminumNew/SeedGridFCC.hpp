@@ -62,10 +62,10 @@ public:
    */
   void apply(Model &m, double) override {
     const World &w = m.get_world();
-    const Decomposition &decomp = m.get_decomposition();
+    const FFT &fft = m.get_fft();
     Field &field = m.get_real_field("psi");
-    Int3 low = get_inbox(decomp).low;
-    Int3 high = get_inbox(decomp).high;
+    Int3 low = get_inbox(fft).low;
+    Int3 high = get_inbox(fft).high;
 
     // Use the new World API to get size, spacing, and origin
     auto size = get_size(w);

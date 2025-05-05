@@ -28,11 +28,11 @@ public:
   const std::string &get_modifier_name() const override { return m_name; }
 
   void apply(Model &m, double) override {
-    const Decomposition &decomp = m.get_decomposition();
+    const FFT &fft = m.get_fft();
     Field &field = m.get_real_field(get_field_name());
     const World &w = m.get_world();
-    Vec3<int> low = get_inbox(decomp).low;
-    Vec3<int> high = get_inbox(decomp).high;
+    Int3 low = get_inbox(fft).low;
+    Int3 high = get_inbox(fft).high;
 
     double Lx = get_size(w, 0);
     double dx = get_spacing(w, 0);

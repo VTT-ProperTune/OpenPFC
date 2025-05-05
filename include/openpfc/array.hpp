@@ -5,6 +5,7 @@
 #define PFC_ARRAY_HPP
 
 #include "core/decomposition.hpp"
+#include "fft.hpp"
 #include "multi_index.hpp"
 #include "utils/array_to_string.hpp"
 #include "utils/show.hpp"
@@ -27,22 +28,22 @@ private:
   std::vector<T> data;
 
   /**
-   * @brief Construct a new Array object from Decomposition, using outbox, if
+   * @brief Construct a new Array object from FFT, using outbox, if
    * is_complex<T> = true.
    *
-   * @param decomp
+   * @param fft
    */
-  Array(const Decomposition &decomp, std::true_type)
-      : index(get_outbox_size(decomp), get_outbox_offset(decomp)) {}
+  Array(const FFT &fft, std::true_type)
+      : index(get_outbox_size(fft), get_outbox_offset(fft)) {}
 
   /**
-   * @brief Construct a new Array object from Decomposition, using inbox, if
+   * @brief Construct a new Array object from FFT, using inbox, if
    * is_complex<T> = false.
    *
    * @param decomp
    */
-  Array(const Decomposition &decomp, std::false_type)
-      : index(get_inbox_size(decomp), get_inbox_offset(decomp)) {}
+  Array(const FFT &fft, std::false_type)
+      : index(get_inbox_size(fft), get_inbox_offset(fft)) {}
 
   // Custom type trait to check if a type is complex
   template <typename U> struct is_complex : std::false_type {};

@@ -22,16 +22,15 @@ public:
 
     const World &w = get_world();
     FFT &fft = get_fft();
-    const Decomposition &decomp = get_decomposition();
 
     psi.resize(fft.size_inbox());
     psi_F.resize(fft.size_outbox());
     opL.resize(fft.size_outbox());
 
-    Vec3<int> i_low = get_inbox(decomp).low;
-    Vec3<int> i_high = get_inbox(decomp).high;
-    Vec3<int> o_low = get_outbox(decomp).low;
-    Vec3<int> o_high = get_outbox(decomp).high;
+    Vec3<int> i_low = get_inbox(fft).low;
+    Vec3<int> i_high = get_inbox(fft).high;
+    Vec3<int> o_low = get_outbox(fft).low;
+    Vec3<int> o_high = get_outbox(fft).high;
 
     auto origin = get_origin(w);
     auto spacing = get_spacing(w);

@@ -66,37 +66,16 @@ template <typename CoordinateSystemTag> struct Decomposition {
    */
   Decomposition(const World &world, const Box3D &inbox, const Box3D &outbox)
       : m_world(world), m_inbox(inbox), m_outbox(outbox) {}
+
+  template <typename T>
+  friend std::ostream &operator<<(std::ostream &os, const Decomposition<T> &d) {
+    os << "Decomposition:\n";
+    os << "  World: " << d.m_world << "\n";
+    os << "  Inbox: " << d.m_inbox << "\n";
+    os << "  Outbox: " << d.m_outbox << "\n";
+    return os;
+  }
 };
-
-template <typename CoordinateSystemTag>
-const Box3D &get_inbox(const Decomposition<CoordinateSystemTag> &d) noexcept {
-  return d.m_inbox;
-}
-
-template <typename CoordinateSystemTag>
-const Box3D &get_outbox(const Decomposition<CoordinateSystemTag> &d) noexcept {
-  return d.m_outbox;
-}
-
-template <typename CoordinateSystemTag>
-const Int3 &get_inbox_size(const Decomposition<CoordinateSystemTag> &d) noexcept {
-  return d.m_inbox.size;
-}
-
-template <typename CoordinateSystemTag>
-const Int3 &get_inbox_offset(const Decomposition<CoordinateSystemTag> &d) noexcept {
-  return d.m_inbox.low;
-}
-
-template <typename CoordinateSystemTag>
-const Int3 &get_outbox_size(const Decomposition<CoordinateSystemTag> &d) noexcept {
-  return d.m_outbox.size;
-}
-
-template <typename CoordinateSystemTag>
-const Int3 &get_outbox_offset(const Decomposition<CoordinateSystemTag> &d) noexcept {
-  return d.m_outbox.low;
-}
 
 template <typename CoordinateSystemTag>
 const World &get_world(const Decomposition<CoordinateSystemTag> &d) noexcept {
@@ -104,10 +83,8 @@ const World &get_world(const Decomposition<CoordinateSystemTag> &d) noexcept {
 }
 
 template <typename CoordinateSystemTag>
-std::ostream &operator<<(std::ostream &os,
-                         const Decomposition<CoordinateSystemTag> &d) {
-  os << "Decomposition: " << get_inbox(d) << " " << get_outbox(d);
-  return os;
+const Box3D &get_inbox(const Decomposition<CoordinateSystemTag> &d) noexcept {
+  return d.m_inbox;
 }
 
 } // namespace decomposition

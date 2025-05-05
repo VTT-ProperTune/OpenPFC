@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
   int comm_rank = 0, comm_size = 2;
   World world1 = world::create({32, 4, 4});
   Decomposition decomp1 = make_decomposition(world1, comm_rank, comm_size);
-  cout << decomp1 << endl;
+  // cout << decomp1 << endl;
 
   // In practice, we let MPI communicator to decide the number of subdomains.
   MPI_Init(&argc, &argv);
@@ -41,10 +41,10 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(comm, &comm_rank);
   World world2 = world::create({32, 4, 4});
   Decomposition decomp2 = make_decomposition(world2, comm);
-  if (comm_rank == 0) cout << decomp2 << endl;
+  // if (comm_rank == 0) cout << decomp2 << endl;
 
   // By default, MPI_COMM_WORLD is used, so the above example can be simplified:
-  cout << make_decomposition(world2) << endl;
+  // cout << make_decomposition(world2) << endl;
 
   MPI_Finalize();
   return 0;

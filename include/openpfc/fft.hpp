@@ -14,12 +14,11 @@
 
 namespace pfc {
 
+using Box3D = heffte::box3d<int>; ///< Type alias for 3D integer box.
+
 inline heffte::fft3d_r2c<heffte::backend::fftw>
-make_fft(const Decomposition &decomposition, MPI_Comm comm,
-         heffte::plan_options plan_options) {
-  const decomposition::Box3D &inbox = get_inbox(decomposition);
-  const decomposition::Box3D &outbox = get_outbox(decomposition);
-  int r2c_direction = 0; // TODO: make this dynamic
+make_fft(const Box3D &inbox, const Box3D &outbox, const int &r2c_direction,
+         MPI_Comm comm, heffte::plan_options plan_options) {
   return heffte::fft3d_r2c<heffte::backend::fftw>(inbox, outbox, r2c_direction, comm,
                                                   plan_options);
 }
@@ -28,18 +27,19 @@ make_fft(const Decomposition &decomposition, MPI_Comm comm,
  * @brief FFT class for performing forward and backward Fast Fourier
  * Transformations.
  */
-class FFT {
+struct FFT {
 
-private:
-  const Decomposition m_decomposition; /**< The Decomposition object. */
+  using ComplexVector = std::vector<std::complex<double>>;
+
+  const Decomposition m_decomposition;        /**< The Decomposition object. */
+  const heffte::box3d<int> m_inbox, m_outbox; /**< Local inbox and outbox boxes. */
+  const int m_r2c_direction; /**< Real-to-complex symmetry direction. */
   const heffte::fft3d_r2c<heffte::backend::fftw> m_fft; /**< HeFFTe FFT object. */
-  std::vector<std::complex<double>>
-      m_wrk;                 /**< Workspace vector for FFT computations. */
+  ComplexVector m_wrk;       /**< Workspace vector for FFT computations. */
   double m_fft_time = 0.0;   /**< Recorded FFT computation time. */
   const World &m_world;      /**< Reference to the World object. */
   heffte::box3d<int> domain; /**< Domain converted from World object. */
 
-public:
   /**
    * @brief Constructs an FFT object with the given Decomposition and MPI
    * communicator.
@@ -52,8 +52,9 @@ public:
    */
   FFT(const Decomposition &decomposition, MPI_Comm comm,
       heffte::plan_options plan_options, const World &world)
-      : m_decomposition(decomposition),
-        m_fft(make_fft(decomposition, comm, plan_options)),
+      : m_decomposition(decomposition), m_inbox(decomposition.m_inbox),
+        m_outbox(decomposition.m_outbox), m_r2c_direction(0),
+        m_fft(make_fft(m_inbox, m_outbox, m_r2c_direction, comm, plan_options)),
         m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())),
         m_world(world), domain(to_heffte_box(world)){
                             // Use to_heffte_box for conversion
@@ -126,6 +127,21 @@ public:
    */
   size_t size_workspace() const { return m_fft.size_workspace(); }
 };
+
+inline const Box3D &get_inbox(const FFT &fft) noexcept { return fft.m_inbox; }
+inline const Box3D &get_outbox(const FFT &fft) noexcept { return fft.m_outbox; }
+inline const Int3 &get_inbox_size(const FFT &fft) noexcept {
+  return get_inbox(fft).size;
+}
+inline const Int3 &get_inbox_offset(const FFT &fft) noexcept {
+  return get_inbox(fft).low;
+}
+inline const Int3 &get_outbox_size(const FFT &fft) noexcept {
+  return get_outbox(fft).size;
+}
+inline const Int3 &get_outbox_offset(const FFT &fft) noexcept {
+  return get_outbox(fft).low;
+}
 
 } // namespace pfc
 

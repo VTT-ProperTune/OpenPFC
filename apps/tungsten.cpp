@@ -102,6 +102,7 @@ public:
   }
 
   void prepare_operators(double dt) {
+    const FFT &fft = get_fft();
     const Decomposition &decomp = get_decomposition();
     World w = decomposition::get_world(decomp);
     auto spacing = get_spacing(w);
@@ -113,8 +114,8 @@ public:
     auto Ly = size[1];
     auto Lz = size[2];
 
-    std::array<int, 3> low = get_outbox(decomp).low;
-    std::array<int, 3> high = get_outbox(decomp).high;
+    std::array<int, 3> low = get_outbox(fft).low;
+    std::array<int, 3> high = get_outbox(fft).high;
 
     int idx = 0;
     const double pi = std::atan(1.0) * 4.0;
