@@ -35,13 +35,37 @@ const FFTLayout create(const Decomposition &decomposition, int r2c_direction,
 
 } // namespace layout
 
+auto get_comm() { return MPI_COMM_WORLD; }
+
+int get_mpi_rank(MPI_Comm comm) {
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  return rank;
+}
+
+int get_mpi_size(MPI_Comm comm) {
+  int size;
+  MPI_Comm_size(comm, &size);
+  return size;
+}
+
 FFT create(const Decomposition &decomposition, MPI_Comm comm,
            heffte::plan_options options) {
-  return FFT(decomposition, comm, options);
+  int rank = get_mpi_rank(comm);
+  int mpi_num_ranks = get_mpi_size(comm);
+  if (mpi_num_ranks <= 0) {
+    throw std::logic_error("Cannot construct domain decomposition: !(nprocs > 0)");
+  }
+  auto r2c_dir = 0;
+  auto fft_layout = fft::layout::create(decomposition, r2c_dir, mpi_num_ranks);
+  auto inbox = get_real_box(fft_layout, rank);
+  auto outbox = get_complex_box(fft_layout, rank);
+  using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
+  return FFT(fft_r2c(inbox, outbox, r2c_dir, comm, options));
 }
 
 FFT create(const Decomposition &decomposition) {
-  MPI_Comm comm = MPI_COMM_WORLD;
+  auto comm = get_comm();
   auto options = heffte::default_options<heffte::backend::fftw>();
   return create(decomposition, comm, options);
 }

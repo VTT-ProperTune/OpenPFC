@@ -53,16 +53,18 @@ public:
    *
    * @return const Decomposition&
    */
+  /*
   const Decomposition &get_decomposition() {
     return get_model().get_decomposition();
   }
+  */
 
   /**
    * @brief Get the world object
    *
    * @return const World&
    */
-  const World &get_world() { return decomposition::get_world(get_decomposition()); }
+  const World &get_world() { return get_model().get_world(); }
 
   /**
    * @brief Get the FFT object
@@ -93,9 +95,10 @@ public:
 
   bool add_results_writer(const std::string &field_name,
                           std::unique_ptr<ResultsWriter> writer) {
-    const Decomposition &d = get_decomposition();
-    writer->set_domain(get_size(decomposition::get_world(d)), d.m_inbox.size,
-                       d.m_inbox.low);
+    auto inbox = get_inbox(get_fft());
+    auto world = get_world();
+    writer->set_domain(get_size(world), inbox.size, inbox.low);
+
     Model &model = get_model();
     if (model.has_field(field_name)) {
       m_result_writers.insert({field_name, std::move(writer)});

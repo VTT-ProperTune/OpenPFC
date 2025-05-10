@@ -22,20 +22,11 @@ public:
 
   void apply(Model &m, double) override {
     const World &w = m.get_world();
-    const Decomposition &decomp = m.get_decomposition();
-    Field &field = m.get_real_field(get_field_name());
-    Int3 low = decomp.m_inbox.low;
-    Vec3<int> high = decomp.m_inbox.high;
-
-    // Use the new World API to get spacing and origin
-    auto spacing = get_spacing(w);
-    auto origin = get_origin(w);
-    auto dx = spacing[0];
-    auto dy = spacing[1];
-    auto dz = spacing[2];
-    auto x0 = origin[0];
-    auto y0 = origin[1];
-    auto z0 = origin[2];
+    auto &field = m.get_real_field(get_field_name());
+    auto low = get_inbox(m.get_fft()).low;
+    auto high = get_inbox(m.get_fft()).high;
+    auto [dx, dy, dz] = get_spacing(w);
+    auto [x0, y0, z0] = get_origin(w);
 
     std::vector<Seed> seeds;
 

@@ -49,22 +49,23 @@ public:
     if (m.rank0) {
       cout << "Applying custom initial condition at time " << t << endl;
     }
-    const World &w = m.get_world();
-    const Decomposition &d = m.get_decomposition();
-    Field &f = m.get_field();
-    auto low = get_inbox(d).low;
-    auto high = get_inbox(d).high;
+    auto &world = m.get_world();
+    auto &field = m.get_field();
+    auto &fft = m.get_fft();
+    auto origin = get_origin(world);
+    auto spacing = get_spacing(world);
+
+    auto low = get_inbox(fft).low;
+    auto high = get_inbox(fft).high;
     long int idx = 0;
 
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
-          auto origin = get_origin(w);
-          auto spacing = get_spacing(w);
           double x = origin[0] + i * spacing[0];
           double y = origin[1] + j * spacing[1];
           double z = origin[2] + k * spacing[2];
-          f[idx] = exp(-(x * x + y * y + z * z) / (4.0 * m_D));
+          field[idx] = exp(-(x * x + y * y + z * z) / (4.0 * m_D));
           idx += 1;
         }
       }

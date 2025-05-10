@@ -102,20 +102,13 @@ public:
   }
 
   void prepare_operators(double dt) {
-    const FFT &fft = get_fft();
-    const Decomposition &decomp = get_decomposition();
-    World w = decomposition::get_world(decomp);
-    auto spacing = get_spacing(w);
-    auto size = get_size(w);
-    auto dx = spacing[0];
-    auto dy = spacing[1];
-    auto dz = spacing[2];
-    auto Lx = size[0];
-    auto Ly = size[1];
-    auto Lz = size[2];
+    auto &fft = get_fft();
+    auto &world = get_world();
+    auto [dx, dy, dz] = get_spacing(world);
+    auto [Lx, Ly, Lz] = get_size(world);
 
-    std::array<int, 3> low = get_outbox(fft).low;
-    std::array<int, 3> high = get_outbox(fft).high;
+    auto low = get_outbox(fft).low;
+    auto high = get_outbox(fft).high;
 
     int idx = 0;
     const double pi = std::atan(1.0) * 4.0;

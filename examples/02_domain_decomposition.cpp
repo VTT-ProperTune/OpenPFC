@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
   int comm_rank = 0, comm_size = 2;
   auto world1 = world::create({32, 4, 4});
   auto decomp1 = make_decomposition(world1, comm_rank, comm_size);
-  // cout << decomp1 << endl;
+  cout << decomp1 << endl;
 
   // In practice, we let MPI communicator to decide the number of subdomains.
   MPI_Init(&argc, &argv);

@@ -46,20 +46,23 @@ struct FFTLayout {
 const FFTLayout create(const Decomposition &decomposition, int r2c_direction,
                        int num_domains);
 
+inline auto get_real_box(const FFTLayout &layout, int i) {
+  return layout.m_real_boxes.at(i);
+}
+
+inline auto get_complex_box(const FFTLayout &layout, int i) {
+  return layout.m_complex_boxes.at(i);
+}
+
 } // namespace layout
 
-using heffte::box3d;
-using pfc::types::Bool3;
 using pfc::types::Int3;
 using pfc::types::Real3;
-using Box3D = heffte::box3d<int>; ///< Type alias for 3D integer box.
 
-inline heffte::fft3d_r2c<heffte::backend::fftw>
-make_fft(const Box3D &inbox, const Box3D &outbox, const int &r2c_direction,
-         MPI_Comm comm, heffte::plan_options plan_options) {
-  return heffte::fft3d_r2c<heffte::backend::fftw>(inbox, outbox, r2c_direction, comm,
-                                                  plan_options);
-}
+using Decomposition = pfc::decomposition::Decomposition<pfc::csys::CartesianTag>;
+using ComplexVector = std::vector<std::complex<double>>;
+using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
+using box3di = heffte::box3d<int>; ///< Type alias for 3D integer box.
 
 /**
  * @brief FFT class for performing forward and backward Fast Fourier
@@ -67,12 +70,10 @@ make_fft(const Box3D &inbox, const Box3D &outbox, const int &r2c_direction,
  */
 struct FFT {
 
-  using ComplexVector = std::vector<std::complex<double>>;
+  // const Decomposition m_decomposition; /**< The Decomposition object. */
+  // const box3di m_inbox, m_outbox;      /**< Local inbox and outbox boxes. */
 
-  const Decomposition m_decomposition;        /**< The Decomposition object. */
-  const heffte::box3d<int> m_inbox, m_outbox; /**< Local inbox and outbox boxes. */
-  const int m_r2c_direction; /**< Real-to-complex symmetry direction. */
-  const heffte::fft3d_r2c<heffte::backend::fftw> m_fft; /**< HeFFTe FFT object. */
+  const fft_r2c m_fft;     /**< HeFFTe FFT object. */
   ComplexVector m_wrk;     /**< Workspace vector for FFT computations. */
   double m_fft_time = 0.0; /**< Recorded FFT computation time. */
 
@@ -86,12 +87,7 @@ struct FFT {
    * @param plan_options Optional plan options for configuring the FFT behavior.
    * @param world The World object providing the domain size information.
    */
-  FFT(const Decomposition &decomposition, MPI_Comm comm,
-      heffte::plan_options plan_options)
-      : m_decomposition(decomposition), m_inbox(decomposition.m_inbox),
-        m_outbox(decomposition.m_outbox), m_r2c_direction(0),
-        m_fft(make_fft(m_inbox, m_outbox, m_r2c_direction, comm, plan_options)),
-        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())){};
+  FFT(fft_r2c fft) : m_fft(std::move(fft)), m_wrk(m_fft.size_workspace()) {}
 
   /**
    * @brief Performs the forward FFT transformation.
@@ -99,8 +95,7 @@ struct FFT {
    * @param in Input vector of real values.
    * @param out Output vector of complex values.
    */
-  void forward(const std::vector<double> &in,
-               std::vector<std::complex<double>> &out) {
+  void forward(const std::vector<double> &in, ComplexVector &out) {
     m_fft_time -= MPI_Wtime();
     m_fft.forward(in.data(), out.data(), m_wrk.data());
     m_fft_time += MPI_Wtime();
@@ -112,8 +107,7 @@ struct FFT {
    * @param in Input vector of complex values.
    * @param out Output vector of real values.
    */
-  void backward(const std::vector<std::complex<double>> &in,
-                std::vector<double> &out) {
+  void backward(const ComplexVector &in, std::vector<double> &out) {
     m_fft_time -= MPI_Wtime();
     m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
     m_fft_time += MPI_Wtime();
@@ -136,7 +130,7 @@ struct FFT {
    *
    * @return Reference to the Decomposition object.
    */
-  const Decomposition &get_decomposition() { return m_decomposition; }
+  // const Decomposition &get_decomposition() { return m_decomposition; }
 
   /**
    * @brief Returns the size of the inbox used for FFT computations.
@@ -160,24 +154,36 @@ struct FFT {
   size_t size_workspace() const { return m_fft.size_workspace(); }
 };
 
-inline const Box3D &get_inbox(const FFT &fft) noexcept { return fft.m_inbox; }
-inline const Box3D &get_outbox(const FFT &fft) noexcept { return fft.m_outbox; }
-inline const Int3 &get_inbox_size(const FFT &fft) noexcept {
-  return get_inbox(fft).size;
-}
-inline const Int3 &get_inbox_offset(const FFT &fft) noexcept {
-  return get_inbox(fft).low;
-}
-inline const Int3 &get_outbox_size(const FFT &fft) noexcept {
-  return get_outbox(fft).size;
-}
-inline const Int3 &get_outbox_offset(const FFT &fft) noexcept {
-  return get_outbox(fft).low;
+inline const auto &get_fft_object(const FFT &fft) noexcept { return fft.m_fft; }
+
+inline const auto get_inbox(const FFT &fft) noexcept {
+  return get_fft_object(fft).inbox();
 }
 
-FFT create(const Decomposition &decomposition);
+inline const auto get_outbox(const FFT &fft) noexcept {
+  return get_fft_object(fft).outbox();
+}
+
+/**
+ * @brief Creates an FFT object based on the given decomposition and MPI
+ * communicator.
+ *
+ * @param decomposition The Decomposition object defining the domain
+ * decomposition.
+ * @param comm The MPI communicator for parallel computations.
+ * @param options Optional plan options for configuring the FFT behavior.
+ * @return An FFT object containing the FFT configuration and data.
+ */
 FFT create(const Decomposition &decomposition, MPI_Comm comm,
            heffte::plan_options options);
+/**
+ * @brief Creates an FFT object based on the given decomposition.
+ *
+ * @param decomposition The Decomposition object defining the domain
+ * decomposition.
+ * @return An FFT object containing the FFT configuration and data.
+ */
+FFT create(const Decomposition &decomposition);
 
 } // namespace fft
 

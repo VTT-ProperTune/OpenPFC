@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
   // file_count
   writer.set_uri(sprintf("cahn_hilliard_%04i.vti", file_count));
   writer.set_field_name("concentration");
-  writer.set_domain(get_size(world), get_inbox_size(fft), get_inbox_offset(fft));
+  writer.set_domain(get_size(world), get_inbox(fft).size, get_inbox(fft).low);
   writer.set_origin(get_origin(world));
   writer.set_spacing(get_spacing(world));
   writer.initialize();

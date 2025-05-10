@@ -34,7 +34,7 @@ private:
    * @param fft
    */
   Array(const FFT &fft, std::true_type)
-      : index(get_outbox_size(fft), get_outbox_offset(fft)) {}
+      : index(get_outbox(fft).size, get_outbox(fft).low) {}
 
   /**
    * @brief Construct a new Array object from FFT, using inbox, if
@@ -43,7 +43,7 @@ private:
    * @param decomp
    */
   Array(const FFT &fft, std::false_type)
-      : index(get_inbox_size(fft), get_inbox_offset(fft)) {}
+      : index(get_inbox(fft).size, get_inbox(fft).low) {}
 
   // Custom type trait to check if a type is complex
   template <typename U> struct is_complex : std::false_type {};

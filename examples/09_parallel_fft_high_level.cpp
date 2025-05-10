@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   // Create output array to store FFT results. If requested array is of type T =
   // complex<double>, then array will be constructed using complex indices so
   // that it matches the Fourier-space, i.e. first dimension is floor(Lx/2) + 1.
-  Array<complex<double>, 3> output(get_outbox_size(fft));
+  Array<complex<double>, 3> output(get_outbox(fft).size);
 
   std::cout << "input: " << input << std::endl;   // this is {4, 3, 2}
   std::cout << "output: " << output << std::endl; // this is {3, 3, 2}

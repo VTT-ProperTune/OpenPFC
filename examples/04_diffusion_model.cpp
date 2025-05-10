@@ -83,9 +83,8 @@ public:
     if (rank0) cout << "Allocate space" << endl;
 
     // Get references to world, fft and domain decomposition
-    const Decomposition &decomp = get_decomposition();
-    const World &w = decomposition::get_world(decomp);
-    FFT &fft = get_fft();
+    auto &world = get_world();
+    auto &fft = get_fft();
 
     // Allocate space for the main variable and it's fourier transform
     psi.resize(fft.size_inbox());
@@ -104,16 +103,16 @@ public:
     World is defining the global dimensions of the problem as well as origin and
     chosen discretization parameters.
     */
-    if (rank0) cout << "World: " << w << endl;
+    if (rank0) cout << "World: " << world << endl;
 
     /*
     Upper and lower limits for this particular MPI rank, in both inbox and
-    outbox, are given by domain decomposition object
+    outbox, are given by fft object
     */
-    Int3 i_low = get_inbox(fft).low;
-    Int3 i_high = get_inbox(fft).high;
-    Int3 o_low = get_outbox(fft).low;
-    Int3 o_high = get_outbox(fft).high;
+    auto i_low = get_inbox(fft).low;
+    auto i_high = get_inbox(fft).high;
+    auto o_low = get_outbox(fft).low;
+    auto o_high = get_outbox(fft).high;
 
     /*
     Typically initial conditions are constructed elsewhere. However, to keep
@@ -121,13 +120,16 @@ public:
     here.
     */
     if (rank0) cout << "Create initial condition" << endl;
+
+    auto size = get_size(world);
+    auto origin = get_origin(world);
+    auto spacing = get_spacing(world);
+
     int idx = 0;
     double D = 1.0;
     for (int k = i_low[2]; k <= i_high[2]; k++) {
       for (int j = i_low[1]; j <= i_high[1]; j++) {
         for (int i = i_low[0]; i <= i_high[0]; i++) {
-          auto origin = get_origin(w);
-          auto spacing = get_spacing(w);
           double x = origin[0] + i * spacing[0];
           double y = origin[1] + j * spacing[1];
           double z = origin[2] + k * spacing[2];
@@ -144,8 +146,6 @@ public:
     if (rank0) cout << "Prepare operators" << endl;
     idx = 0;
     double pi = std::atan(1.0) * 4.0;
-    auto spacing = get_spacing(w);
-    auto size = get_size(w);
     double fx = 2.0 * pi / (spacing[0] * size[0]);
     double fy = 2.0 * pi / (spacing[1] * size[1]);
     double fz = 2.0 * pi / (spacing[2] * size[2]);

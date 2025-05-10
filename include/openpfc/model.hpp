@@ -91,7 +91,9 @@ public:
    *
    * @return Reference to the Decomposition object
    */
+  /*
   const Decomposition &get_decomposition() { return get_fft().get_decomposition(); }
+  */
 
   /**
    * @brief Get the world object associated with the model.

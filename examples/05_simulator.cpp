@@ -98,9 +98,8 @@ public:
   }
 
   void prepare_operators(double dt) {
-    const Decomposition &decomp = get_decomposition();
-    const World &w = decomposition::get_world(decomp);
-    FFT &fft = get_fft();
+    auto &w = get_world();
+    auto &fft = get_fft();
     std::array<int, 3> low = get_outbox(fft).low;
     std::array<int, 3> high = get_outbox(fft).high;
 
