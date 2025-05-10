@@ -9,6 +9,7 @@
 
 using namespace Catch::Matchers;
 using namespace pfc;
+using namespace pfc::types;
 
 TEST_CASE("World - Construction and Accessors", "[world]") {
   SECTION("Construct World with valid dimensions, origin, and spacing") {

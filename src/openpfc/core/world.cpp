@@ -6,100 +6,12 @@
 #include <stdexcept>
 
 namespace pfc {
+
 namespace world {
 
-// Constructor helpers
-
-// compute the spacing based on size, lower bounds and upper bounds
-Spacing3 compute_spacing(const Size3 &size, const LowerBounds3 &lower,
-                         const UpperBounds3 &upper, const Periodic3 &periodic) {
-  std::array<double, 3> spacing;
-  for (std::size_t i = 0; i < 3; ++i) {
-    int divisor = periodic.value[i] ? size.value[i] : size.value[i] - 1;
-    if (divisor <= 0) {
-      throw std::invalid_argument("Invalid size vs periodicity.");
-    }
-    spacing[i] = (upper.value[i] - lower.value[i]) / divisor;
-    if (spacing[i] <= 0.0) {
-      throw std::invalid_argument("Spacing must be positive.");
-    }
-  }
-  return Spacing3{spacing};
-}
-
-// compute the upper bounds based on size, lower bounds and spacing
-UpperBounds3 compute_upper(const Size3 &size, const LowerBounds3 &lower,
-                           const Spacing3 &spacing, const Periodic3 &periodic) {
-  std::array<double, 3> upper;
-  for (std::size_t i = 0; i < 3; ++i) {
-    int n = periodic.value[i] ? size.value[i] : size.value[i] - 1;
-    upper[i] = lower.value[i] + spacing.value[i] * n;
-  }
-  return UpperBounds3{upper};
-}
-
-// Coordinate systems
-
-// Default 3D Cartesian coordinate system
-
-CartesianCS::CoordinateSystem(const Real3 &offset, const Real3 &spacing,
-                              const Bool3 &periodic)
-    : m_offset(offset), m_spacing(spacing), m_periodic(periodic) {
-  for (std::size_t i = 0; i < 3; ++i) {
-    if (spacing[i] <= 0.0) {
-      throw std::invalid_argument("Spacing must be positive.");
-    }
-  }
-}
-
-void check_index3(int i) {
-  if (i < 0 || i >= 3) {
-    throw std::out_of_range("Index out of range.");
-  }
-}
-
-const Real3 &get_offset(const CartesianCS &cs) noexcept { return cs.m_offset; }
-
-double get_offset(const CartesianCS &cs, int i) {
-  check_index3(i);
-  return cs.m_offset[i];
-}
-
-const Real3 &get_spacing(const CartesianCS &cs) noexcept { return cs.m_spacing; }
-
-double get_spacing(const CartesianCS &cs, int i) {
-  check_index3(i);
-  return cs.m_spacing[i];
-}
-
-const Bool3 &get_periodicity(const CartesianCS &cs) noexcept {
-  return cs.m_periodic;
-}
-
-bool get_periodicity(const CartesianCS &cs, int i) {
-  check_index3(i);
-  return cs.m_periodic[i];
-}
-
-const Real3 to_coords(const CartesianCS &cs, const Int3 &idx) noexcept {
-  Real3 xyz;
-  const auto &offset = get_offset(cs);
-  const auto &spacing = get_spacing(cs);
-  for (int i = 0; i < 3; ++i) {
-    xyz[i] = offset[i] + idx[i] * spacing[i];
-  }
-  return xyz;
-}
-
-const Int3 to_index(const CartesianCS &cs, const Real3 &xyz) noexcept {
-  Int3 idx;
-  const auto &offset = get_offset(cs);
-  const auto &spacing = get_spacing(cs);
-  for (int i = 0; i < 3; ++i) {
-    idx[i] = static_cast<int>((xyz[i] - offset[i]) / spacing[i]);
-  }
-  return idx;
-}
+using pfc::csys::CartesianTag;
+using pfc::csys::CoordinateSystem;
+using CartesianCS = CoordinateSystem<CartesianTag>;
 
 // Constructors
 
@@ -182,30 +94,6 @@ CartesianWorld create(const Size3 &size, const UpperBounds3 &upper) {
   return World(size.value, cs);
 }
 */
-
-// Strong typedefs for constructor clarity
-
-Size3::Size3(const std::array<int, 3> &v) : value(v) {
-  for (int dim : value) {
-    if (dim <= 0) {
-      throw std::invalid_argument("Size values must be positive.");
-    }
-  }
-}
-
-LowerBounds3::LowerBounds3(const std::array<double, 3> &v) : value(v) {}
-
-UpperBounds3::UpperBounds3(const std::array<double, 3> &v) : value(v) {}
-
-Spacing3::Spacing3(const std::array<double, 3> &v) : value(v) {
-  for (double dim : value) {
-    if (dim <= 0.0) {
-      throw std::invalid_argument("Spacing values must be positive.");
-    }
-  }
-}
-
-Periodic3::Periodic3(const std::array<bool, 3> &v) : value(v) {}
 
 // Operators
 

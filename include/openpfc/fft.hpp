@@ -14,6 +14,10 @@
 
 namespace pfc {
 
+using heffte::box3d;
+using pfc::types::Bool3;
+using pfc::types::Int3;
+using pfc::types::Real3;
 using Box3D = heffte::box3d<int>; ///< Type alias for 3D integer box.
 
 inline heffte::fft3d_r2c<heffte::backend::fftw>

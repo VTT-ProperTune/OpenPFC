@@ -13,43 +13,111 @@
 namespace pfc {
 namespace decomposition {
 
-// Type aliases for clarity
+using heffte::box3d;
+using pfc::types::Bool3;
+using pfc::types::Int3;
+using pfc::types::Real3;
 using Box3D = heffte::box3d<int>; ///< Type alias for 3D integer box.
 
 /**
- * @brief Represents a partitioning of the global simulation domain into local
- * subdomains.
+ * @brief Describes a static, pure partitioning of the global simulation domain
+ * into local subdomains.
  *
- * The Decomposition class describes how the World is split among multiple
- * processes. Each instance provides access to the local subdomain owned by the
- * current process, including size, offset, and basic mappings between global
- * and local indices.
+ * The Decomposition struct encapsulates how the global World domain is split
+ * across compute units, such as MPI processes, OpenMP threads, or GPU tiles. It
+ * represents the *ownership* layout, not how communication is performed.
+ *
+ * Each Decomposition instance defines the local subdomain assigned to the
+ * current compute entity, including bounding box, size, and global offset. It
+ * provides a consistent, backend-independent view of how the World is
+ * subdivided.
  *
  *
  * ## Responsibilities
  *
- * - Split the World into non-overlapping local boxes.
- * - Provide access to local box information.
- * - Support global-local coordinate mapping.
+ * - Partition the World into non-overlapping subdomains.
+ * - Store the local bounding box for the current process/thread/tile.
+ * - Provide basic global-to-local coordinate mappings.
+ * - Support communication planning and field allocation.
  *
  *
- * ## Design Justification
+ * ## Design Principles
  *
- * - Keeps World (global domain) and local process view separate.
- * - Decouples decomposition logic from communication (MPI, FFT backends).
- * - Enables different decomposition strategies if needed (block, slab, pencil).
+ * - **Immutable**: All members are set at construction; no mutation after
+ *   creation.
+ * - **Pure**: No behavior; only data. All logic is implemented via free
+ *   functions in the `pfc::decomposition` namespace.
+ * - **Backend-agnostic**: The decomposition itself contains no knowledge of
+ *   MPI, GPU, or FFT specifics.
+ * - **Strategy-based construction**: Backends (DifferentialOperators) define
+ *   their requirements using a `DecompositionRequest`, and decomposition is
+ *   created to satisfy that request.
+ * - **Composable and inspectable**: Designed to be shared and reused across
+ *   modules.
  *
  *
- * ## Relations to Other Components
+ * ## Integration with Backends
  *
- * - Used by Fields and Arrays to allocate local data.
- * - Used by Communication components to know where data lives.
- * - Passed to FFT backends as a description of local domains.
+ * Decomposition supports an inversion of control model where
+ * *DifferentialOperator* (or any backend) declares its layout requirements via
+ * a `DecompositionRequest`:
+ *
+ * ```cpp
+ * struct FiniteDifferenceBackend {
+ *   DecompositionRequest decomposition_request() const;
+ * };
+ * ```
+ *
+ * This request is passed to the decomposition builder:
+ *
+ * ```cpp
+ * Decomposition decomp = pfc::decomposition::create(world, rank, size,
+ * backend.decomposition_request());
+ * ```
+ *
+ * This design allows:
+ * - Clean separation of concerns between numerical kernels and layout logic.
+ * - Support for specialized strategies (e.g., slab vs pencil, real vs complex).
+ * - Reuse of decompositions across multiple algorithmic backends.
+ *
+ *
+ * ## Usage Context
+ *
+ * - Used during startup to allocate Fields with correct local shape.
+ * - Passed to communication planning logic to derive what needs to be
+ *   exchanged.
+ * - Required by FFT, finite difference, or hybrid backends to define their
+ *   working layout.
+ *
+ *
+ * ## Extensibility
+ *
+ * The decomposition system is extensible by:
+ * - Adding new strategy types (`SplitStrategy`) or request properties.
+ * - Supporting templated decomposition traits (e.g., GPU-aware or NUMA-aware
+ *   partitions).
+ * - Implementing high-level abstractions over common layouts (e.g., block,
+ *   slab, tile).
+ *
+ *
+ * ## Limitations
+ *
+ * - Assumes a structured, rectangular global World domain.
+ * - Does not encode or perform communication (that's a separate layer).
+ * - Does not (yet) support dynamic repartitioning or adaptive remeshing.
  */
+template <typename T> struct Decomposition {
 
-template <typename CoordinateSystemTag> struct Decomposition {
+  const pfc::world::World<T> &m_world; ///< The World object.
 
-  const pfc::world::World<CoordinateSystemTag> &m_world; ///< The World object.
+  // const World<CoordTag>& m_global_world;
+  // const std::vector<World<CoordTag>> m_sub_worlds;
+  // const std::array<int, 3> m_parts;
+  // const std::vector<std::array<int, 3>> m_rank_coords;
+
+  // const std::vector<int> m_rank_to_index;
+  // const std::vector<int> m_index_to_rank;
+
   const heffte::box3d<int> m_inbox, m_outbox; ///< Local communication boxes.
   const int m_r2c_direction = 0; ///< Real-to-complex symmetry direction.
 
@@ -67,7 +135,7 @@ template <typename CoordinateSystemTag> struct Decomposition {
   Decomposition(const World &world, const Box3D &inbox, const Box3D &outbox)
       : m_world(world), m_inbox(inbox), m_outbox(outbox) {}
 
-  template <typename T>
+  // template <typename T>
   friend std::ostream &operator<<(std::ostream &os, const Decomposition<T> &d) {
     os << "Decomposition:\n";
     os << "  World: " << d.m_world << "\n";
@@ -77,13 +145,11 @@ template <typename CoordinateSystemTag> struct Decomposition {
   }
 };
 
-template <typename CoordinateSystemTag>
-const World &get_world(const Decomposition<CoordinateSystemTag> &d) noexcept {
+template <typename T> const World &get_world(const Decomposition<T> &d) noexcept {
   return d.m_world;
 }
 
-template <typename CoordinateSystemTag>
-const Box3D &get_inbox(const Decomposition<CoordinateSystemTag> &d) noexcept {
+template <typename T> const Box3D &get_inbox(const Decomposition<T> &d) noexcept {
   return d.m_inbox;
 }
 
