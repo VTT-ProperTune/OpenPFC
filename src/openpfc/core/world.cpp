@@ -97,23 +97,7 @@ CartesianWorld create(const Size3 &size, const UpperBounds3 &upper) {
 
 // Operators
 
-// Equality operator
-template <>
-bool World<CartesianTag>::operator==(
-    const World<CartesianTag> &other) const noexcept {
-  return m_size == other.m_size && m_cs.m_offset == other.m_cs.m_offset &&
-         m_cs.m_spacing == other.m_cs.m_spacing &&
-         m_cs.m_periodic == other.m_cs.m_periodic;
-}
-
-// Inequality operator
-template <typename CoordTag>
-bool World<CoordTag>::operator!=(const World<CoordTag> &other) const noexcept {
-  return !(*this == other);
-}
-
 inline const char *name_of(CartesianTag) { return "Cartesian"; }
-// Add more as needed...
 
 template <typename CoordTag>
 std::ostream &operator<<(std::ostream &os, const World<CoordTag> &w) noexcept {
@@ -146,37 +130,32 @@ operator<< <CartesianTag>(std::ostream &os, const World<CartesianTag> &w) noexce
 
 // Conversion between physical coordinates and grid indices
 
-template <typename CoordTag>
-const Real3 to_coords(const World<CoordTag> &w, const Int3 &indices) noexcept {
-  return to_coords(w.m_coordinate_system, indices);
+template <typename T>
+const Real3 to_coords(const World<T> &world, const Int3 &indices) noexcept {
+  return to_coords(get_coordinate_system(world), indices);
 }
 
-template <typename CoordTag>
-const Int3 to_indices(const World<CoordTag> &w, const Real3 &coordinates) noexcept {
-  return to_index(w.m_coordinate_system, coordinates);
+template <typename T>
+const Int3 to_indices(const World<T> &world, const Real3 &coordinates) noexcept {
+  return to_index(get_coordinate_system(world), coordinates);
 }
 
-Real3 get_lower(const CartesianWorld &w) noexcept {
+Real3 get_lower_limits(const CartesianWorld &world) noexcept {
   Int3 zero = {0, 0, 0};
-  return to_coords(w.m_cs, zero);
+  return to_coords(get_coordinate_system(world), zero);
 }
 
-Real3 get_upper(const CartesianWorld &w) noexcept {
-  return to_coords(w.m_cs, get_size(w));
+Real3 get_upper_limits(const CartesianWorld &world) noexcept {
+  return to_coords(get_coordinate_system(world), get_size(world));
 }
 
-double get_lower(const CartesianWorld &w, int i) noexcept { return get_lower(w)[i]; }
+double get_lower_limits(const CartesianWorld &world, int index) noexcept {
+  return get_lower(world).at(index);
+}
 
-double get_upper(const CartesianWorld &w, int i) noexcept { return get_upper(w)[i]; }
-
-// Explicit instantiations for CartesianTag
-template int total_size<CartesianTag>(const World<CartesianTag> &w) noexcept;
-template Real3 to_coords<CartesianTag>(const World<CartesianTag> &w,
-                                       const Int3 &indices) noexcept;
-template Int3 to_indices<CartesianTag>(const World<CartesianTag> &w,
-                                       const Real3 &coordinates) noexcept;
-template bool
-World<CartesianTag>::operator!=(const World<CartesianTag> &other) const noexcept;
+double get_upper_limits(const CartesianWorld &world, int index) noexcept {
+  return get_upper(world).at(index);
+}
 
 } // namespace world
 } // namespace pfc

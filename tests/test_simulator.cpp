@@ -31,7 +31,7 @@ public:
 
 TEST_CASE("Simulator functionality", "[simulator]") {
   auto world = world::create({8, 8, 8});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
   MockModel model(world);
@@ -101,7 +101,7 @@ TEST_CASE("Simulator functionality", "[simulator]") {
 
 TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
   auto world = world::create({8, 8, 8});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
   MockModel model(world);

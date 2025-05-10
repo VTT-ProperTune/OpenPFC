@@ -231,7 +231,7 @@ void run() {
 
   // Construct world, decomposition, fft and model
   auto world = world::create({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
-  auto decomp = make_decomposition(world);
+  auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
   Diffusion model(world);
 

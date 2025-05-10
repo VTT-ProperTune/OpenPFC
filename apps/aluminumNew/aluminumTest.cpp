@@ -45,7 +45,7 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
   SECTION("Step model and calculate norm of the result") {
     MPI_Worker worker(0, nullptr);
     auto world = world::create({32, 32, 32});
-    auto decomp = make_decomposition(world);
+    auto decomp = decomposition::create(world, 1);
     auto fft = fft::create(decomp);
 
     Aluminum aluminum(world);

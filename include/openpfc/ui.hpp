@@ -651,7 +651,8 @@ public:
     World world(ui::from_json<World>(m_settings));
     std::cout << "World: " << world << std::endl;
 
-    auto decomp = make_decomposition(world, m_comm);
+    int num_ranks = m_worker.get_num_ranks();
+    auto decomp = decomposition::create(world, num_ranks);
     auto plan_options =
         ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
     auto fft = fft::create(decomp, m_comm, plan_options);

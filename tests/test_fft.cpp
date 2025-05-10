@@ -15,7 +15,7 @@ using namespace pfc;
 
 TEST_CASE("FFT - Basic Functionality", "[fft]") {
   auto world = world::create({8, 1, 1});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   REQUIRE(fft.size_inbox() > 0);
   REQUIRE(fft.size_outbox() > 0);
@@ -25,7 +25,7 @@ TEST_CASE("FFT - Basic Functionality", "[fft]") {
 TEST_CASE("FFT forward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
   auto world = world::create({8, 1, 1});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
   // Generate input data
@@ -43,7 +43,7 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
 TEST_CASE("FFT backward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
   auto world = world::create({2, 1, 1});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
   // Generate input data

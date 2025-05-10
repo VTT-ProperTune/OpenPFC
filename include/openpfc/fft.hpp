@@ -17,7 +17,7 @@ namespace fft {
 namespace layout {
 
 using box3di = heffte::box3d<int>;
-using Decomposition = pfc::decomposition::Decomposition<pfc::csys::CartesianTag>;
+using Decomposition = pfc::decomposition::Decomposition;
 using pfc::types::Int3;
 
 /**
@@ -59,7 +59,7 @@ inline auto get_complex_box(const FFTLayout &layout, int i) {
 using pfc::types::Int3;
 using pfc::types::Real3;
 
-using Decomposition = pfc::decomposition::Decomposition<pfc::csys::CartesianTag>;
+using Decomposition = pfc::decomposition::Decomposition;
 using ComplexVector = std::vector<std::complex<double>>;
 using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 using box3di = heffte::box3d<int>; ///< Type alias for 3D integer box.

@@ -33,7 +33,7 @@ public:
 TEST_CASE("FieldModifier applies field modification to the model",
           "[FieldModifier]") {
   auto world = world::create({8, 8, 8});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set
@@ -52,7 +52,7 @@ TEST_CASE("FieldModifier applies field modification to the model",
 TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
   FieldModifier *modifier = new MockFieldModifier();
   auto world = world::create({8, 8, 8});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set
@@ -70,7 +70,7 @@ TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
 
 TEST_CASE("FieldModifier can be moved", "[FieldModifier]") {
   auto world = world::create({8, 8, 8});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set
@@ -98,7 +98,7 @@ TEST_CASE("Field name can be set and retrieved", "[FieldModifier]") {
 
 TEST_CASE("Field Modifier - MockModel Integration", "[field_modifier]") {
   auto world = world::create({8, 8, 8});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set

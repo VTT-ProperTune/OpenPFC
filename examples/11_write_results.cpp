@@ -13,11 +13,11 @@ using namespace pfc;
 // In this example, we will write the results of a simulation to a file.
 int main(int argc, char **argv) {
   MPI_Worker worker(argc, argv);
-  World world = world::create({4, 3, 2});
-  Decomposition decomp = make_decomposition(world);
+  auto world = world::create({4, 3, 2});
+  auto decomposition = decomposition::create(world, 1);
   // DiscreteField<double, 3> field(decomp);
-  auto dimensions = decomp.m_inbox.size;
-  auto offsets = decomp.m_inbox.low;
+  auto dimensions = get_size(get_subworld(decomposition, 0));
+  auto offsets = get_lower(get_subworld(decomposition, 0));
   auto origin = get_origin(world);
   auto discretization = get_spacing(world);
   DiscreteField<double, 3> field(dimensions, offsets, origin, discretization);

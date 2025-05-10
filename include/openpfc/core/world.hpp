@@ -148,11 +148,11 @@ using pfc::types::Real3;
  * Cylindrical) without creating a separate class for each. We default to 3D
  * Cartesian coordinate system as it's the most common in scientific computing.
  */
-template <typename CoordTag> struct World final {
-  const Int3 m_lower;                    ///< Lower bounds of the world
-  const Int3 m_upper;                    ///< Upper bounds of the world
-  const Int3 m_size;                     ///< Dimensions of the world: {L1, L2, L3}
-  const CoordinateSystem<CoordTag> m_cs; ///< Coordinate system
+template <typename T> struct World final {
+  const Int3 m_lower;             ///< Lower bounds of the world
+  const Int3 m_upper;             ///< Upper bounds of the world
+  const Int3 m_size;              ///< Dimensions of the world: {L1, L2, L3}
+  const CoordinateSystem<T> m_cs; ///< Coordinate system
 
   /**
    * @brief Constructs a World object.
@@ -161,21 +161,24 @@ template <typename CoordTag> struct World final {
    * @param cs Coordinate system.
    */
   explicit World(const Int3 &lower, const Int3 &upper,
-                 const CoordinateSystem<CoordTag> &cs);
+                 const CoordinateSystem<T> &cs);
 
   /**
    * @brief Equality operator.
    * @param other Another World object.
    * @return True if equal, false otherwise.
    */
-  bool operator==(const World &other) const noexcept;
+  bool operator==(const World &other) const noexcept {
+    return m_lower == other.m_lower && m_upper == other.m_upper &&
+           m_size == other.m_size && m_cs == other.m_cs;
+  }
 
   /**
    * @brief Inequality operator.
    * @param other Another World object.
    * @return True if not equal, false otherwise.
    */
-  bool operator!=(const World &other) const noexcept;
+  bool operator!=(const World &other) const noexcept { return !(*this == other); }
 
   /**
    * @brief Stream output operator.
@@ -183,8 +186,8 @@ template <typename CoordTag> struct World final {
    * @param w World object.
    * @return Reference to the output stream.
    */
-  template <typename CS>
-  friend std::ostream &operator<<(std::ostream &os, const World<CS> &w) noexcept;
+  template <typename T_>
+  friend std::ostream &operator<<(std::ostream &os, const World<T_> &w) noexcept;
 };
 
 // Free function API for creating (Cartesian 3D) World objects
@@ -273,8 +276,8 @@ CartesianWorld create(const Size3 &size, const UpperBounds3 &upper);
  * @param w World object.
  * @return The size of the world.
  */
-template <typename CoordTag> Int3 get_size(const World<CoordTag> &w) noexcept {
-  return w.m_size;
+template <typename T> Int3 get_size(const World<T> &world) noexcept {
+  return world.m_size;
 }
 
 /**
@@ -283,8 +286,8 @@ template <typename CoordTag> Int3 get_size(const World<CoordTag> &w) noexcept {
  * @param i Dimension index.
  * @return The size in the specified dimension.
  */
-template <typename CoordTag> int get_size(const World<CoordTag> &w, int i) noexcept {
-  return get_size(w)[i];
+template <typename T> int get_size(const World<T> &world, int index) {
+  return get_size(world).at(index);
 }
 
 /**
@@ -292,16 +295,18 @@ template <typename CoordTag> int get_size(const World<CoordTag> &w, int i) noexc
  * @param w World object.
  * @return The total number of grid points.
  */
-template <typename CoordTag> int total_size(const World<CoordTag> &w) noexcept {
-  return get_size(w, 0) * get_size(w, 1) * get_size(w, 2);
+template <typename T> int total_size(const World<T> &world) noexcept {
+  return get_size(world, 0) * get_size(world, 1) * get_size(world, 2);
 }
 
 /**
- * @brief Get the lower bounds of the world in a specific dimension.
+ * @brief Get the lower bounds of the world
  * @param w World object.
  * @return The lower bounds of the world.
  */
-Real3 get_lower(const CartesianWorld &w) noexcept;
+inline const auto &get_lower(const CartesianWorld &world) noexcept {
+  return world.m_lower;
+}
 
 /**
  * @brief Get the lower bounds of the world in a specific dimension.
@@ -309,14 +314,18 @@ Real3 get_lower(const CartesianWorld &w) noexcept;
  * @param i Dimension index.
  * @return The lower bound in the specified dimension.
  */
-double get_lower(const CartesianWorld &w, int i) noexcept;
+inline const auto &get_lower(const CartesianWorld &world, int index) {
+  return get_lower(world).at(index);
+}
 
 /**
  * @brief Get the upper bounds of the world in a specific dimension.
  * @param w World object.
  * @return The upper bounds of the world.
  */
-Real3 get_upper(const CartesianWorld &w) noexcept;
+inline const auto &get_upper(const CartesianWorld &world) noexcept {
+  return world.m_upper;
+}
 
 /**
  * @brief Get the upper bounds of the world in a specific dimension.
@@ -324,7 +333,9 @@ Real3 get_upper(const CartesianWorld &w) noexcept;
  * @param i Dimension index.
  * @return The upper bound in the specified dimension.
  */
-double get_upper(const CartesianWorld &w, int i) noexcept;
+inline const auto get_upper(const CartesianWorld &world, int index) {
+  return get_upper(world).at(index);
+}
 
 /**
  * @brief Compute the physical coordinates corresponding to grid indices.
@@ -332,9 +343,9 @@ double get_upper(const CartesianWorld &w, int i) noexcept;
  * @param indices Grid indices.
  * @return The physical coordinates.
  */
-template <typename CoordTag>
-Real3 to_coords(const World<CoordTag> &w, const Int3 &indices) noexcept {
-  return to_coords(get_coordinate_system(w), indices);
+template <typename T>
+inline const auto to_coords(const World<T> &world, const Int3 &indices) noexcept {
+  return to_coords(get_coordinate_system(world), indices);
 }
 
 /**
@@ -343,9 +354,9 @@ Real3 to_coords(const World<CoordTag> &w, const Int3 &indices) noexcept {
  * @param coordinates Physical coordinates.
  * @return The grid indices.
  */
-template <typename CoordTag>
-Int3 to_indices(const World<CoordTag> &w, const Real3 &coordinates) noexcept {
-  return to_index(get_coordinate_system(w), coordinates);
+template <typename T>
+inline const auto to_indices(const World<T> &world, const Real3 &coords) noexcept {
+  return to_index(get_coordinate_system(world), coords);
 }
 
 // Free function API for coordinate system and periodicity
@@ -356,26 +367,26 @@ Int3 to_indices(const World<CoordTag> &w, const Real3 &coordinates) noexcept {
  * @return The coordinate system of the world.
  */
 template <typename T>
-const CoordinateSystem<T> &get_coordinate_system(const World<T> &w) noexcept {
-  return w.m_cs;
+inline const auto &get_coordinate_system(const World<T> &world) noexcept {
+  return world.m_cs;
 }
 
 // For backward compatibility, might be removed in the future
 
-inline const Real3 &get_spacing(const CartesianWorld &w) noexcept {
-  return get_spacing(get_coordinate_system(w));
+inline const Real3 &get_spacing(const CartesianWorld &world) noexcept {
+  return get_spacing(get_coordinate_system(world));
 }
 
-inline double get_spacing(const CartesianWorld &w, int i) noexcept {
-  return get_spacing(get_coordinate_system(w), i);
+inline double get_spacing(const CartesianWorld &world, int index) noexcept {
+  return get_spacing(get_coordinate_system(world), index);
 }
 
-inline const Real3 &get_origin(const CartesianWorld &w) noexcept {
-  return get_offset(get_coordinate_system(w));
+inline const Real3 &get_origin(const CartesianWorld &world) noexcept {
+  return get_offset(get_coordinate_system(world));
 }
 
-inline double get_origin(const CartesianWorld &w, int i) noexcept {
-  return get_offset(get_coordinate_system(w), i);
+inline double get_origin(const CartesianWorld &world, int index) noexcept {
+  return get_offset(get_coordinate_system(world), index);
 }
 
 } // namespace world

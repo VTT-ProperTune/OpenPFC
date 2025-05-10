@@ -30,14 +30,14 @@ TEST_CASE("Model functionality", "[Model]") {
 
   SECTION("Default construction") {
     // Ensure FFT object is set before proceeding
-    auto decomposition = make_decomposition(world, 0, 1);
+    auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
     model.set_fft(fft);
   }
 
   SECTION("Set and get FFT") {
     // Create a Decomposition object
-    auto decomposition = make_decomposition(world, 0, 1);
+    auto decomposition = decomposition::create(world, 1);
     // Create an FFT object
     auto fft = fft::create(decomposition);
     model.set_fft(fft);
@@ -48,7 +48,7 @@ TEST_CASE("Model functionality", "[Model]") {
 
   SECTION("Real field operations") {
     // Ensure FFT object is set before proceeding
-    auto decomposition = make_decomposition(world, 0, 1);
+    auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
     model.set_fft(fft);
 
@@ -88,7 +88,7 @@ TEST_CASE("Model functionality", "[Model]") {
 
 TEST_CASE("Model - FFT Integration", "[model]") {
   auto world = world::create({8, 8, 8});
-  auto decomposition = make_decomposition(world, 0, 1);
+  auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
   REQUIRE(fft.size_inbox() > 0);

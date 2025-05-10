@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 
   // Construct world, decomposition and fft
   auto world = world::create({8, 1, 1});
-  auto decomposition = make_decomposition(world, comm);
+  auto decomposition = decomposition::create(world, num_procs);
   auto fft = fft::create(decomposition);
 
   // Create two vectors; in contains input data and results are stored to out

@@ -12,13 +12,13 @@ int main(int argc, char *argv[]) {
   // Create MPI session, World and Decomposition
   MPI_Worker worker(argc, argv);
   auto world = world::create({4, 3, 2});
-  auto decomp = make_decomposition(world);
+  auto decomp = decomposition::create(world, 1);
 
   // Create input field
   // DiscreteField<double, 3> input(decomp);
 
-  auto dimensions = decomp.m_inbox.size;
-  auto offsets = decomp.m_inbox.low;
+  auto dimensions = get_size(get_subworld(decomp, 0));
+  auto offsets = get_lower(get_subworld(decomp, 0));
   auto origin = get_origin(world);
   auto discretization = get_spacing(world);
   DiscreteField<double, 3> input(dimensions, offsets, origin, discretization);

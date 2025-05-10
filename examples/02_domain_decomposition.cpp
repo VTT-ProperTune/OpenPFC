@@ -28,23 +28,13 @@ using namespace pfc;
  * class.
  */
 int main(int argc, char *argv[]) {
+  MPI_Init(&argc, &argv);
   // Domain decomposition can be done in a manual manner, just by giving the
   // size of the calculation domain, id number and total number of subdomains:
   int comm_rank = 0, comm_size = 2;
   auto world1 = world::create({32, 4, 4});
-  auto decomp1 = make_decomposition(world1, comm_rank, comm_size);
+  auto decomp1 = decomposition::create(world1, comm_size);
   cout << decomp1 << endl;
-
-  // In practice, we let MPI communicator to decide the number of subdomains.
-  MPI_Init(&argc, &argv);
-  MPI_Comm comm = MPI_COMM_WORLD;
-  MPI_Comm_rank(comm, &comm_rank);
-  auto world2 = world::create({32, 4, 4});
-  auto decomp2 = make_decomposition(world2, comm);
-  if (comm_rank == 0) cout << decomp2 << endl;
-
-  // By default, MPI_COMM_WORLD is used, so the above example can be simplified:
-  cout << make_decomposition(world2) << endl;
 
   MPI_Finalize();
   return 0;

@@ -179,6 +179,15 @@ template <> struct CoordinateSystem<CartesianTag> {
       }
     };
   };
+
+  bool operator==(const CoordinateSystem<CartesianTag> &other) const {
+    return m_offset == other.m_offset && m_spacing == other.m_spacing &&
+           m_periodic == other.m_periodic;
+  };
+
+  bool operator!=(const CoordinateSystem<CartesianTag> &other) const {
+    return !(*this == other);
+  };
 };
 
 using CartesianCS = CoordinateSystem<CartesianTag>;

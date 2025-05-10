@@ -184,7 +184,7 @@ void run() {
   std::array<double, 3> origin = {o, o, o};
   auto world = world::create(dimensions, origin, discretization);
 
-  auto decomp = make_decomposition(world);
+  auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
   Diffusion model(world);
 

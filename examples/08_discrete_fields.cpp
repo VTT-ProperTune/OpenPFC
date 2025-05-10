@@ -43,34 +43,26 @@ public:
   }
 };
 
+auto create_field(const pfc::Decomposition &decomp, int field_num) {
+  auto subworld = get_subworld(decomp, field_num);
+  auto size = get_size(subworld);
+  auto lower = get_lower(subworld);
+  auto origin = get_origin(subworld);
+  auto spacing = get_spacing(subworld);
+  return DiscreteField<double, 3>(size, lower, origin, spacing);
+}
+
 int main() {
-  World world = world::create({16, 8, 1});
+  auto world = world::create({16, 8, 1});
   std::cout << world << std::endl;
-  Decomposition decomp1 = make_decomposition(world, 0, 4);
-  Decomposition decomp2 = make_decomposition(world, 1, 4);
-  Decomposition decomp3 = make_decomposition(world, 2, 4);
-  Decomposition decomp4 = make_decomposition(world, 3, 4);
+  auto decomposition = decomposition::create(world, 4);
 
-  std::cout << decomp1 << std::endl;
-  const std::array<int, 3> &inbox_size1 = get_inbox(decomp1).size;
-  const std::array<int, 3> &inbox_offset1 = get_inbox(decomp1).low;
-  DiscreteField<double, 3> field1(inbox_size1, inbox_offset1, get_origin(world),
-                                  get_spacing(world));
+  std::cout << decomposition << std::endl;
 
-  const std::array<int, 3> &inbox_size2 = get_inbox(decomp2).size;
-  const std::array<int, 3> &inbox_offset2 = get_inbox(decomp2).low;
-  DiscreteField<double, 3> field2(inbox_size2, inbox_offset2, get_origin(world),
-                                  get_spacing(world));
-
-  const std::array<int, 3> &inbox_size3 = get_inbox(decomp3).size;
-  const std::array<int, 3> &inbox_offset3 = get_inbox(decomp3).low;
-  DiscreteField<double, 3> field3(inbox_size3, inbox_offset3, get_origin(world),
-                                  get_spacing(world));
-
-  const std::array<int, 3> &inbox_size4 = get_inbox(decomp4).size;
-  const std::array<int, 3> &inbox_offset4 = get_inbox(decomp4).low;
-  DiscreteField<double, 3> field4(inbox_size4, inbox_offset4, get_origin(world),
-                                  get_spacing(world));
+  auto field1 = create_field(decomposition, 0);
+  auto field2 = create_field(decomposition, 1);
+  auto field3 = create_field(decomposition, 2);
+  auto field4 = create_field(decomposition, 3);
   std::cout << field1 << std::endl;
   std::cout << field2 << std::endl;
   std::cout << field3 << std::endl;

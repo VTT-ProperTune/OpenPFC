@@ -11,10 +11,10 @@ using namespace pfc;
 
 TEST_CASE("Decomposition class tests", "[Decomposition]") {
   // Create a dummy World object for testing
-  const World world = world::create({128, 128, 128});
+  auto world = world::create({128, 128, 128});
 
   SECTION("Construction and getters") {
-    Decomposition decomposition = make_decomposition(world, 0, 1);
+    auto decomposition = decomposition::create(world, 1);
 
     REQUIRE(get_world(decomposition) == world);
   }

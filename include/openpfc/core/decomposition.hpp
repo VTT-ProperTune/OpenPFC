@@ -15,13 +15,43 @@ namespace pfc {
 /**
  * @brief Namespace for decomposition-related classes and functions.
  */
+
+namespace world {
+
+/**
+ * @brief Construct a new World object from an existing one and a box.
+ */
+template <typename T>
+inline auto create(const World<T> &world, const heffte::box3d<int> &box) {
+  return World(box.low, box.high, get_coordinate_system(world));
+}
+
+template <typename T> inline auto to_indices(const World<T> &world) {
+  std::array<int, 3> lower = get_lower(world);
+  std::array<int, 3> upper = get_upper(world);
+  return heffte::box3d<int>(lower, upper);
+}
+
+template <typename T>
+inline auto split_world(const World<T> &world, const Int3 &grid) {
+  std::vector<World<T>> sub_worlds;
+  for (const auto &box : heffte::split_world(to_indices(world), grid)) {
+    sub_worlds.push_back(create(world, box));
+  }
+  return sub_worlds;
+}
+
+} // namespace world
+
 namespace decomposition {
 
-using heffte::box3d;
+using pfc::csys::CartesianTag;
 using pfc::types::Bool3;
 using pfc::types::Int3;
 using pfc::types::Real3;
-using Box3D = heffte::box3d<int>; ///< Type alias for 3D integer box.
+
+using World = pfc::world::World<CartesianTag>;
+using Int3 = pfc::types::Int3;
 
 /**
  * @brief Describes a static, pure partitioning of the global simulation domain
@@ -110,56 +140,58 @@ using Box3D = heffte::box3d<int>; ///< Type alias for 3D integer box.
  * - Does not encode or perform communication (that's a separate layer).
  * - Does not (yet) support dynamic repartitioning or adaptive remeshing.
  */
-template <typename T> struct Decomposition {
+struct Decomposition {
 
-  const pfc::world::World<T> &m_world; ///< The World object.
+  const pfc::World &m_global_world; ///< The World object.
+  const std::array<int, 3> &m_grid; ///< The number of parts in each dimension.
+  const std::vector<pfc::World> m_subworlds; ///< The sub-worlds for each part.
 
-  // const World<CoordTag>& m_global_world;
-  // const std::vector<World<CoordTag>> m_sub_worlds;
-  // const std::array<int, 3> m_parts;
-  // const std::vector<std::array<int, 3>> m_rank_coords;
+  Decomposition(const World &world, const Int3 grid)
+      : m_global_world(world), m_grid(grid), m_subworlds(split_world(world, grid)) {}
 
-  // const std::vector<int> m_rank_to_index;
-  // const std::vector<int> m_index_to_rank;
-
-  const heffte::box3d<int> m_inbox, m_outbox; ///< Local communication boxes.
-  const int m_r2c_direction = 0; ///< Real-to-complex symmetry direction.
-
-  /**
-   * @brief Construct a new Decomposition object.
-   *
-   * @param world Reference to the World object.
-   * @param inbox The local inbox (real space) box.
-   * @param outbox The local outbox (complex space) box.
-   *
-   * Numbering ranks starts from 0 (MPI convention). For example, if the domain
-   * needs to be decomposed into four parts, those would be 0/4, 1/4, 2/4, 3/4
-   * and NOT 1/4, 2/4, 3/4, 4/4.
-   */
-  Decomposition(const World &world, const Box3D &inbox, const Box3D &outbox)
-      : m_world(world), m_inbox(inbox), m_outbox(outbox) {}
-
-  // template <typename T>
-  friend std::ostream &operator<<(std::ostream &os, const Decomposition<T> &d) {
+  friend std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
     os << "Decomposition:\n";
-    os << "  World: " << d.m_world << "\n";
-    os << "  Inbox: " << d.m_inbox << "\n";
-    os << "  Outbox: " << d.m_outbox << "\n";
+    os << "  Global World: " << d.m_global_world << "\n";
+    os << "  Grid: [" << d.m_grid.at(0) << ", " << d.m_grid.at(1) << ", "
+       << d.m_grid.at(2) << "]\n";
+    os << "  Sub-worlds:\n";
+    for (size_t i = 0; i < d.m_subworlds.size(); ++i) {
+      os << "    Sub-world " << i << ": " << d.m_subworlds[i] << "\n";
+    }
     return os;
   }
 };
 
-template <typename T> const World &get_world(const Decomposition<T> &d) noexcept {
-  return d.m_world;
+inline const auto &get_global_world(const Decomposition &decomposition) noexcept {
+  return decomposition.m_global_world;
 }
 
-template <typename T> const Box3D &get_inbox(const Decomposition<T> &d) noexcept {
-  return d.m_inbox;
+inline const auto &get_world(const Decomposition &decomposition) noexcept {
+  return get_global_world(decomposition);
+}
+
+inline const auto &get_grid(const Decomposition &decomposition) noexcept {
+  return decomposition.m_grid;
+}
+
+inline const auto &get_subworlds(const Decomposition &decomposition) noexcept {
+  return decomposition.m_subworlds;
+}
+
+inline const auto &get_subworld(const Decomposition &decomposition, int i) {
+  return get_subworlds(decomposition).at(i);
+}
+
+inline const auto create(const World &world, const Int3 &grid) noexcept {
+  return Decomposition(world, grid);
+};
+
+inline const auto create(const World &world, const int &nparts) noexcept {
+  return create(world, heffte::proc_setup_min_surface(to_indices(world), nparts));
 }
 
 } // namespace decomposition
 
-using Decomposition = decomposition::Decomposition<pfc::world::CartesianTag>;
-using Box3D = decomposition::Box3D;
+using Decomposition = decomposition::Decomposition;
 
 } // namespace pfc
