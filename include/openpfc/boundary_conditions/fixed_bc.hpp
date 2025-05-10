@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#ifndef PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP
-#define PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP
+#pragma once
 
-#include "../field_modifier.hpp"
+#include "openpfc/core/types.hpp"
+#include "openpfc/field_modifier.hpp"
 
 namespace pfc {
+
+using pfc::types::Int3;
 
 class FixedBC : public FieldModifier {
 
@@ -56,5 +58,3 @@ public:
 };
 
 } // namespace pfc
-
-#endif // PFC_BOUNDARY_CONDITIONS_FIXED_BC_HPP

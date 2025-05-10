@@ -10,6 +10,7 @@
 #include <openpfc/model.hpp>
 
 using namespace pfc;
+using pfc::types::Int3;
 
 // Define a mock implementation of the Model class for testing
 class MockModel : public Model {
@@ -29,18 +30,16 @@ TEST_CASE("Model functionality", "[Model]") {
 
   SECTION("Default construction") {
     // Ensure FFT object is set before proceeding
-    Decomposition decomposition = make_decomposition(world, 0, 1);
-    auto options = heffte::default_options<heffte::backend::fftw>();
-    FFT fft(decomposition, MPI_COMM_WORLD, options, world);
+    auto decomposition = make_decomposition(world, 0, 1);
+    auto fft = fft::create(decomposition);
     model.set_fft(fft);
   }
 
   SECTION("Set and get FFT") {
     // Create a Decomposition object
-    Decomposition decomposition = make_decomposition(world, 0, 1);
+    auto decomposition = make_decomposition(world, 0, 1);
     // Create an FFT object
-    auto options = heffte::default_options<heffte::backend::fftw>();
-    FFT fft(decomposition, MPI_COMM_WORLD, options, world);
+    auto fft = fft::create(decomposition);
     model.set_fft(fft);
 
     REQUIRE(&model.get_fft() == &fft);
@@ -49,9 +48,8 @@ TEST_CASE("Model functionality", "[Model]") {
 
   SECTION("Real field operations") {
     // Ensure FFT object is set before proceeding
-    Decomposition decomposition = make_decomposition(world, 0, 1);
-    auto options = heffte::default_options<heffte::backend::fftw>();
-    FFT fft(decomposition, MPI_COMM_WORLD, options, world);
+    auto decomposition = make_decomposition(world, 0, 1);
+    auto fft = fft::create(decomposition);
     model.set_fft(fft);
 
     // Create a real field
@@ -89,10 +87,9 @@ TEST_CASE("Model functionality", "[Model]") {
 }
 
 TEST_CASE("Model - FFT Integration", "[model]") {
-  World world = world::create({8, 8, 8});
-  Decomposition decomposition = make_decomposition(world, 0, 1);
-  auto options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomposition, MPI_COMM_WORLD, options, world);
+  auto world = world::create({8, 8, 8});
+  auto decomposition = make_decomposition(world, 0, 1);
+  auto fft = fft::create(decomposition);
 
   REQUIRE(fft.size_inbox() > 0);
   REQUIRE(fft.size_outbox() > 0);

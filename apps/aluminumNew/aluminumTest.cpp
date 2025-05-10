@@ -44,10 +44,9 @@ using namespace Catch::Matchers;
 TEST_CASE("Aluminum functionality", "[Aluminum]") {
   SECTION("Step model and calculate norm of the result") {
     MPI_Worker worker(0, nullptr);
-    World world = world::create({32, 32, 32});
-    Decomposition decomp = make_decomposition(world);
-    auto plan_options = heffte::default_options<heffte::backend::fftw>();
-    FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
+    auto world = world::create({32, 32, 32});
+    auto decomp = make_decomposition(world);
+    auto fft = fft::create(decomp);
 
     Aluminum aluminum(world);
     aluminum.set_n0(-0.0060);

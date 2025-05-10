@@ -14,11 +14,9 @@ using namespace Catch::Matchers;
 using namespace pfc;
 
 TEST_CASE("FFT - Basic Functionality", "[fft]") {
-  World world = world::create({8, 1, 1});
-  Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
-          world); // Provide all parameters
-
+  auto world = world::create({8, 1, 1});
+  auto decomposition = make_decomposition(world, 0, 1);
+  auto fft = fft::create(decomposition);
   REQUIRE(fft.size_inbox() > 0);
   REQUIRE(fft.size_outbox() > 0);
   REQUIRE(fft.size_workspace() > 0);
@@ -26,10 +24,9 @@ TEST_CASE("FFT - Basic Functionality", "[fft]") {
 
 TEST_CASE("FFT forward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
-  World world = world::create({8, 1, 1});
-  Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
-          world);
+  auto world = world::create({8, 1, 1});
+  auto decomposition = make_decomposition(world, 0, 1);
+  auto fft = fft::create(decomposition);
 
   // Generate input data
   std::vector<double> input = {0.000, 0.785, 1.571, 2.356,
@@ -45,14 +42,13 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
 
 TEST_CASE("FFT backward transformation", "[FFT]") {
   // Create an FFT object with a fixed decomposition
-  World world = world::create({2, 1, 1});
-  Decomposition decomp = make_decomposition(world, 0, 1);
-  FFT fft(decomp, MPI_COMM_WORLD, heffte::default_options<heffte::backend::fftw>(),
-          world);
+  auto world = world::create({2, 1, 1});
+  auto decomposition = make_decomposition(world, 0, 1);
+  auto fft = fft::create(decomposition);
 
   // Generate input data
-  std::vector<std::complex<double>> input = {std::complex<double>(1.0, 0.0),
-                                             std::complex<double>(2.0, 0.0)};
+  using complex = std::complex<double>;
+  std::vector<complex> input = {complex(1.0, 0.0), complex(2.0, 0.0)};
 
   // Perform the backward transformation
   std::vector<double> output(fft.size_inbox());

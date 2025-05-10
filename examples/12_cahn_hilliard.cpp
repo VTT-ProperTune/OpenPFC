@@ -113,10 +113,9 @@ int main(int argc, char **argv) {
   double z0 = 0.0;
 
   // Construct world, decomposition, fft and model
-  World world = world::create({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
-  Decomposition decomp = make_decomposition(world);
-  auto plan_options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
+  auto world = world::create({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  auto decomposition = make_decomposition(world);
+  auto fft = fft::create(decomposition);
   CahnHilliard model(world);
   model.set_fft(fft);
 

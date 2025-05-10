@@ -11,6 +11,10 @@
 #include <vector>
 
 namespace pfc {
+
+/**
+ * @brief Namespace for decomposition-related classes and functions.
+ */
 namespace decomposition {
 
 using heffte::box3d;

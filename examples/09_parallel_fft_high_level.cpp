@@ -11,8 +11,8 @@ int main(int argc, char *argv[]) {
 
   // Create MPI session, World and Decomposition
   MPI_Worker worker(argc, argv);
-  World world = world::create({4, 3, 2});
-  Decomposition decomp = make_decomposition(world);
+  auto world = world::create({4, 3, 2});
+  auto decomp = make_decomposition(world);
 
   // Create input field
   // DiscreteField<double, 3> input(decomp);
@@ -30,8 +30,7 @@ int main(int argc, char *argv[]) {
   // Fill input field with random numbers
   apply(input, [&](auto, auto, auto) { return dis(gen); });
 
-  auto plan_options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
+  auto fft = fft::create(decomp);
 
   // Create output array to store FFT results. If requested array is of type T =
   // complex<double>, then array will be constructed using complex indices so

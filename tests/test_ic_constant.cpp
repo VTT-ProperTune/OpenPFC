@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "openpfc/core/decomposition.hpp"
+#include "openpfc/core/types.hpp"
 #include "openpfc/core/world.hpp"
 #include "openpfc/factory/decomposition_factory.hpp"
 #include "openpfc/fft.hpp"
@@ -12,6 +13,7 @@
 #include <vector>
 
 using namespace pfc;
+using pfc::types::Int3;
 
 // Mock model class for testing
 class ModelWithConstantIC : public Model {
@@ -32,10 +34,9 @@ TEST_CASE("Constant Field Modifier") {
   }
 
   SECTION("Apply field modifier") {
-    World world = world::create({8, 1, 1});
-    Decomposition decomp = make_decomposition(world, 0, 1);
-    auto options = heffte::default_options<heffte::backend::fftw>();
-    FFT fft(decomp, MPI_COMM_WORLD, options, world);
+    auto world = world::create({8, 1, 1});
+    auto decomposition = make_decomposition(world, 0, 1);
+    auto fft = fft::create(decomposition);
     ModelWithConstantIC m(world);
     m.set_fft(fft); // Ensure FFT object is set
     std::vector<double> psi(8);
@@ -51,10 +52,9 @@ TEST_CASE("Constant Field Modifier") {
 }
 
 TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
-  World world = world::create({8, 8, 8});
-  Decomposition decomp = make_decomposition(world, 0, 1);
-  auto options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomp, MPI_COMM_WORLD, options, world);
+  auto world = world::create({8, 8, 8});
+  auto decomposition = make_decomposition(world, 0, 1);
+  auto fft = fft::create(decomposition);
 
   REQUIRE(fft.size_inbox() > 0);
   REQUIRE(fft.size_outbox() > 0);
@@ -62,13 +62,10 @@ TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
 }
 
 TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
-  World world = world::create({8, 8, 8});
-  ModelWithConstantIC model(world); // Provide the required World parameter
-
-  Decomposition decomp = make_decomposition(world, 0, 1);
-  // Ensure FFT object is set before proceeding
-  auto options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomp, MPI_COMM_WORLD, options, world);
+  auto world = world::create({8, 8, 8});
+  auto decomposition = make_decomposition(world, 0, 1);
+  auto fft = fft::create(decomposition);
+  ModelWithConstantIC model(world);
   model.set_fft(fft);
 
   REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});

@@ -92,9 +92,8 @@ void run() {
   Time time(tspan, saveat);
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  Decomposition decomposition = make_decomposition(world, comm);
-  auto plan_options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomposition, comm, plan_options, world);
+  auto decomposition = make_decomposition(world, comm);
+  auto fft = fft::create(decomposition);
   Diffusion model(world);
   Simulator simulator(model, time);
 

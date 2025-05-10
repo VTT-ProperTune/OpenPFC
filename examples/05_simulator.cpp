@@ -183,11 +183,10 @@ void run() {
   std::array<int, 3> dimensions = {L, L, L};
   std::array<double, 3> discretization = {h, h, h};
   std::array<double, 3> origin = {o, o, o};
-  World world = world::create(dimensions, origin, discretization);
+  auto world = world::create(dimensions, origin, discretization);
 
-  Decomposition decomp = make_decomposition(world);
-  auto plan_options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomp, MPI_COMM_WORLD, plan_options, world);
+  auto decomp = make_decomposition(world);
+  auto fft = fft::create(decomp);
   Diffusion model(world);
 
   // Define time

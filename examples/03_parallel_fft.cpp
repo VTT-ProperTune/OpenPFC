@@ -126,10 +126,9 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(comm, &num_procs);
 
   // Construct world, decomposition and fft
-  World world = world::create({8, 1, 1});
-  Decomposition decomposition = make_decomposition(world, comm);
-  auto plan_options = heffte::default_options<heffte::backend::fftw>();
-  FFT fft(decomposition, comm, plan_options, world);
+  auto world = world::create({8, 1, 1});
+  auto decomposition = make_decomposition(world, comm);
+  auto fft = fft::create(decomposition);
 
   // Create two vectors; in contains input data and results are stored to out
   vector<double> in(fft.size_inbox());

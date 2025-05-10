@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#ifndef PFC_FFT_HPP
-#define PFC_FFT_HPP
+#pragma once
 
 #include "core/decomposition.hpp"
 #include "openpfc/backends/heffte_adapter.hpp" // Ensure this is included for the conversion operator
@@ -13,6 +12,41 @@
 #include <mpi.h>
 
 namespace pfc {
+namespace fft {
+
+namespace layout {
+
+using box3di = heffte::box3d<int>;
+using Decomposition = pfc::decomposition::Decomposition<pfc::csys::CartesianTag>;
+using pfc::types::Int3;
+
+/**
+ * @brief Structure to hold the layout of FFT data.
+ *
+ * This structure contains the decomposition object, the direction of
+ * real-to-complex symmetry, and the boxes for real and complex FFT data.
+ */
+struct FFTLayout {
+  const Decomposition m_decomposition;       ///< The Decomposition object.
+  const int m_r2c_direction = 0;             ///< Real-to-complex symmetry direction.
+  const std::vector<box3di> m_real_boxes;    ///< Real boxes for FFT.
+  const std::vector<box3di> m_complex_boxes; ///< Complex boxes for FFT.
+};
+
+/**
+ * @brief Creates an FFTLayout object based on the given decomposition and
+ * parameters.
+ *
+ * @param decomposition The Decomposition object defining the domain
+ * decomposition.
+ * @param r2c_direction The direction of real-to-complex symmetry.
+ * @param num_domains The number of domains for the FFT layout.
+ * @return An FFTLayout object containing the layout information.
+ */
+const FFTLayout create(const Decomposition &decomposition, int r2c_direction,
+                       int num_domains);
+
+} // namespace layout
 
 using heffte::box3d;
 using pfc::types::Bool3;
@@ -39,10 +73,8 @@ struct FFT {
   const heffte::box3d<int> m_inbox, m_outbox; /**< Local inbox and outbox boxes. */
   const int m_r2c_direction; /**< Real-to-complex symmetry direction. */
   const heffte::fft3d_r2c<heffte::backend::fftw> m_fft; /**< HeFFTe FFT object. */
-  ComplexVector m_wrk;       /**< Workspace vector for FFT computations. */
-  double m_fft_time = 0.0;   /**< Recorded FFT computation time. */
-  const World &m_world;      /**< Reference to the World object. */
-  heffte::box3d<int> domain; /**< Domain converted from World object. */
+  ComplexVector m_wrk;     /**< Workspace vector for FFT computations. */
+  double m_fft_time = 0.0; /**< Recorded FFT computation time. */
 
   /**
    * @brief Constructs an FFT object with the given Decomposition and MPI
@@ -55,15 +87,11 @@ struct FFT {
    * @param world The World object providing the domain size information.
    */
   FFT(const Decomposition &decomposition, MPI_Comm comm,
-      heffte::plan_options plan_options, const World &world)
+      heffte::plan_options plan_options)
       : m_decomposition(decomposition), m_inbox(decomposition.m_inbox),
         m_outbox(decomposition.m_outbox), m_r2c_direction(0),
         m_fft(make_fft(m_inbox, m_outbox, m_r2c_direction, comm, plan_options)),
-        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())),
-        m_world(world), domain(to_heffte_box(world)){
-                            // Use to_heffte_box for conversion
-                            // Explicit conversion
-                        };
+        m_wrk(std::vector<std::complex<double>>(m_fft.size_workspace())){};
 
   /**
    * @brief Performs the forward FFT transformation.
@@ -147,6 +175,13 @@ inline const Int3 &get_outbox_offset(const FFT &fft) noexcept {
   return get_outbox(fft).low;
 }
 
-} // namespace pfc
+FFT create(const Decomposition &decomposition);
+FFT create(const Decomposition &decomposition, MPI_Comm comm,
+           heffte::plan_options options);
 
-#endif
+} // namespace fft
+
+using FFT = fft::FFT;                     ///< Type alias for FFT class.
+using FFTLayout = fft::layout::FFTLayout; ///< Type alias for FFTLayout class.
+
+} // namespace pfc

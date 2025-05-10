@@ -4,6 +4,7 @@
 #pragma once
 
 #include <array>
+#include <stdexcept>
 
 namespace pfc {
 
@@ -131,4 +132,9 @@ struct Spacing3 {
 };
 
 } // namespace types
+
+using Int3 = types::Int3;
+using Real3 = types::Real3;
+using Bool3 = types::Bool3;
+
 } // namespace pfc

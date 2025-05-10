@@ -651,10 +651,10 @@ public:
     World world(ui::from_json<World>(m_settings));
     std::cout << "World: " << world << std::endl;
 
-    Decomposition decomp = make_decomposition(world, m_comm);
+    auto decomp = make_decomposition(world, m_comm);
     auto plan_options =
         ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
-    FFT fft(decomp, m_comm, plan_options, world);
+    auto fft = fft::create(decomp, m_comm, plan_options);
     Time time(ui::from_json<Time>(m_settings));
     ConcreteModel model(world);
     model.set_fft(fft);
