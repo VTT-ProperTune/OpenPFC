@@ -40,18 +40,20 @@ struct FFTLayout {
  * @param decomposition The Decomposition object defining the domain
  * decomposition.
  * @param r2c_direction The direction of real-to-complex symmetry.
- * @param num_domains The number of domains for the FFT layout.
  * @return An FFTLayout object containing the layout information.
  */
-const FFTLayout create(const Decomposition &decomposition, int r2c_direction,
-                       int num_domains);
+const FFTLayout create(const Decomposition &decomposition, int r2c_direction);
 
-inline auto get_real_box(const FFTLayout &layout, int i) {
+inline const auto &get_real_box(const FFTLayout &layout, int i) {
   return layout.m_real_boxes.at(i);
 }
 
-inline auto get_complex_box(const FFTLayout &layout, int i) {
+inline const auto &get_complex_box(const FFTLayout &layout, int i) {
   return layout.m_complex_boxes.at(i);
+}
+
+inline auto get_r2c_direction(const FFTLayout &layout) {
+  return layout.m_r2c_direction;
 }
 
 } // namespace layout
@@ -164,24 +166,36 @@ inline const auto get_outbox(const FFT &fft) noexcept {
   return get_fft_object(fft).outbox();
 }
 
+using heffte::plan_options;
+using layout::FFTLayout;
+
 /**
- * @brief Creates an FFT object based on the given decomposition and MPI
- * communicator.
+ * @brief Creates an FFT object based on the given FFTLayout and rank ID.
+ *
+ * @param fft_layout The FFTLayout object defining the FFT configuration.
+ * @param rank_id The rank ID of the current process in the MPI communicator.
+ * @param options Plan options for configuring the FFT behavior.
+ * @return An FFT object containing the FFT configuration and data.
+ */
+FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options);
+
+/**
+ * @brief Creates an FFT object based on the given decomposition and rank ID.
  *
  * @param decomposition The Decomposition object defining the domain
  * decomposition.
- * @param comm The MPI communicator for parallel computations.
- * @param options Optional plan options for configuring the FFT behavior.
+ * @param rank_id The rank ID of the current process in the MPI communicator.
  * @return An FFT object containing the FFT configuration and data.
  */
-FFT create(const Decomposition &decomposition, MPI_Comm comm,
-           heffte::plan_options options);
+FFT create(const Decomposition &decomposition, int rank_id);
+
 /**
  * @brief Creates an FFT object based on the given decomposition.
  *
  * @param decomposition The Decomposition object defining the domain
  * decomposition.
  * @return An FFT object containing the FFT configuration and data.
+ * @throws std::logic_error, if decomposition size and rank size do not match.
  */
 FFT create(const Decomposition &decomposition);
 

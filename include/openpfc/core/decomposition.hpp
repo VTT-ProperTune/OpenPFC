@@ -143,7 +143,7 @@ using Int3 = pfc::types::Int3;
 struct Decomposition {
 
   const pfc::World &m_global_world; ///< The World object.
-  const std::array<int, 3> &m_grid; ///< The number of parts in each dimension.
+  const std::array<int, 3> m_grid;  ///< The number of parts in each dimension.
   const std::vector<pfc::World> m_subworlds; ///< The sub-worlds for each part.
 
   Decomposition(const World &world, const Int3 grid)
@@ -187,7 +187,13 @@ inline const auto create(const World &world, const Int3 &grid) noexcept {
 };
 
 inline const auto create(const World &world, const int &nparts) noexcept {
-  return create(world, heffte::proc_setup_min_surface(to_indices(world), nparts));
+  auto indices = to_indices(world);
+  auto grid = heffte::proc_setup_min_surface(indices, nparts);
+  return create(world, grid);
+}
+
+inline const auto get_num_domains(const Decomposition &decomposition) noexcept {
+  return get_subworlds(decomposition).size();
 }
 
 } // namespace decomposition

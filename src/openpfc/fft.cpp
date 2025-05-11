@@ -7,29 +7,53 @@ namespace pfc {
 namespace fft {
 namespace layout {
 
-const FFTLayout create(const Decomposition &decomposition, int r2c_direction,
-                       int num_domains) {
-  if (num_domains <= 0) {
-    throw std::logic_error("Cannot construct domain decomposition: !(nprocs > 0)");
+#include <array>
+#include <iostream>
+#include <sstream>
+
+// Helper function to print std::array
+template <typename T, std::size_t N>
+std::ostream &operator<<(std::ostream &os, const std::array<T, N> &arr) {
+  os << "{";
+  for (std::size_t i = 0; i < N; ++i) {
+    os << arr[i];
+    if (i < N - 1) {
+      os << ", ";
+    }
   }
-  auto world = get_world(decomposition);
-  auto [N1r, N2r, N3r] = get_size(world); // real size
-  auto [N1c, N2c, N3c] = get_size(world); // complex size
+  os << "}";
+  return os;
+}
+
+using heffte::split_world;
+
+const auto get_real_indices(const Decomposition &decomposition) {
+  auto world = get_global_world(decomposition);
+  auto [N1, N2, N3] = get_size(world);
+  return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 - 1, N3 - 1});
+}
+
+const auto get_complex_indices(const Decomposition &decomposition,
+                               int r2c_direction) {
+  auto [N1, N2, N3] = get_size(get_global_world(decomposition));
   if (r2c_direction == 0) {
-    N1c = N1c / 2 + 1;
+    return heffte::box3d<int>({0, 0, 0}, {N1 / 2, N2 - 1, N3 - 1});
   } else if (r2c_direction == 1) {
-    N2c = N2c / 2 + 1;
+    return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 / 2, N3 - 1});
   } else if (r2c_direction == 2) {
-    N3c = N3c / 2 + 1;
+    return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 - 1, N3 / 2});
   } else {
     throw std::logic_error("Invalid r2c_direction: " +
                            std::to_string(r2c_direction));
   }
-  box3di real_indices({0, 0, 0}, {N1r - 1, N2r - 1, N3r - 1});
-  box3di complex_indices({0, 0, 0}, {N1c - 1, N2c - 1, N3c - 1});
-  Int3 grid = heffte::proc_setup_min_surface(real_indices, num_domains);
-  std::vector<box3di> real_boxes = heffte::split_world(real_indices, grid);
-  std::vector<box3di> complex_boxes = heffte::split_world(complex_indices, grid);
+}
+
+const FFTLayout create(const Decomposition &decomposition, int r2c_direction) {
+  auto real_indices = get_real_indices(decomposition);
+  auto complex_indices = get_complex_indices(decomposition, r2c_direction);
+  auto grid = get_grid(decomposition);
+  auto real_boxes = split_world(real_indices, grid);
+  auto complex_boxes = split_world(complex_indices, grid);
   return FFTLayout{decomposition, r2c_direction, real_boxes, complex_boxes};
 }
 
@@ -49,25 +73,42 @@ int get_mpi_size(MPI_Comm comm) {
   return size;
 }
 
-FFT create(const Decomposition &decomposition, MPI_Comm comm,
-           heffte::plan_options options) {
-  int rank = get_mpi_rank(comm);
-  int mpi_num_ranks = get_mpi_size(comm);
-  if (mpi_num_ranks <= 0) {
-    throw std::logic_error("Cannot construct domain decomposition: !(nprocs > 0)");
-  }
-  auto r2c_dir = 0;
-  auto fft_layout = fft::layout::create(decomposition, r2c_dir, mpi_num_ranks);
-  auto inbox = get_real_box(fft_layout, rank);
-  auto outbox = get_complex_box(fft_layout, rank);
-  using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
+using heffte::plan_options;
+using layout::FFTLayout;
+using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
+
+FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options) {
+  auto inbox = get_real_box(fft_layout, rank_id);
+  auto outbox = get_complex_box(fft_layout, rank_id);
+  auto r2c_dir = get_r2c_direction(fft_layout);
+  auto comm = get_comm();
   return FFT(fft_r2c(inbox, outbox, r2c_dir, comm, options));
+}
+
+FFT create(const Decomposition &decomposition, int rank_id) {
+  auto options = heffte::default_options<heffte::backend::fftw>();
+  auto r2c_dir = 0;
+  auto fft_layout = layout::create(decomposition, r2c_dir);
+  return create(fft_layout, rank_id, options);
 }
 
 FFT create(const Decomposition &decomposition) {
   auto comm = get_comm();
-  auto options = heffte::default_options<heffte::backend::fftw>();
-  return create(decomposition, comm, options);
+  auto mpi_comm_size = get_mpi_size(comm);
+  auto rank_id = get_mpi_rank(comm);
+  auto decomposition_size = get_num_domains(decomposition);
+  if (mpi_comm_size != decomposition_size) {
+    throw std::logic_error(
+        "Mismatch between MPI communicator size and domain decomposition size: " +
+        std::to_string(mpi_comm_size) + " != " + std::to_string(decomposition_size) +
+        ". This indicates that the number of MPI ranks does not match the number of "
+        "domains in the decomposition. To resolve this issue, you can manually "
+        "specify the rank by calling fft::create(decomposition, rank_id) instead.");
+  }
+  // if mpi communicator size matches decomposition size, we can safely assume
+  // that the intention is to decompose the whole communicator into the
+  // decomposition
+  return create(decomposition, rank_id);
 }
 
 } // namespace fft

@@ -652,10 +652,11 @@ public:
     std::cout << "World: " << world << std::endl;
 
     int num_ranks = m_worker.get_num_ranks();
+    int rank_id = m_worker.get_rank();
     auto decomp = decomposition::create(world, num_ranks);
-    auto plan_options =
-        ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
-    auto fft = fft::create(decomp, m_comm, plan_options);
+    auto options = ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
+    auto fft_layout = fft::layout::create(decomp, 0);
+    auto fft = fft::create(fft_layout, rank_id, options);
     Time time(ui::from_json<Time>(m_settings));
     ConcreteModel model(world);
     model.set_fft(fft);
