@@ -295,7 +295,7 @@ template <typename T> int get_size(const World<T> &world, int index) {
  * @param w World object.
  * @return The total number of grid points.
  */
-template <typename T> int total_size(const World<T> &world) noexcept {
+template <typename T> size_t get_total_size(const World<T> &world) noexcept {
   return get_size(world, 0) * get_size(world, 1) * get_size(world, 2);
 }
 

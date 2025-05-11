@@ -53,6 +53,8 @@ using pfc::types::Real3;
 using World = pfc::world::World<CartesianTag>;
 using Int3 = pfc::types::Int3;
 
+using heffte::proc_setup_min_surface;
+
 /**
  * @brief Describes a static, pure partitioning of the global simulation domain
  * into local subdomains.
@@ -188,11 +190,11 @@ inline const auto create(const World &world, const Int3 &grid) noexcept {
 
 inline const auto create(const World &world, const int &nparts) noexcept {
   auto indices = to_indices(world);
-  auto grid = heffte::proc_setup_min_surface(indices, nparts);
+  auto grid = proc_setup_min_surface(indices, nparts);
   return create(world, grid);
 }
 
-inline const auto get_num_domains(const Decomposition &decomposition) noexcept {
+inline int get_num_domains(const Decomposition &decomposition) noexcept {
   return get_subworlds(decomposition).size();
 }
 

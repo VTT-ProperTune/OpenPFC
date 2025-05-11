@@ -85,7 +85,7 @@ TEST_CASE("World - Total Size", "[world]") {
   SECTION("Correct total size calculation") {
     Int3 dimensions = {10, 20, 30};
     World world = world::create(dimensions);
-    REQUIRE(total_size(world) == 10 * 20 * 30);
+    REQUIRE(get_total_size(world) == 10 * 20 * 30);
   }
 }
 

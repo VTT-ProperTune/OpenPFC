@@ -27,10 +27,10 @@ using pfc::types::Int3;
  * real-to-complex symmetry, and the boxes for real and complex FFT data.
  */
 struct FFTLayout {
-  const Decomposition m_decomposition;       ///< The Decomposition object.
-  const int m_r2c_direction = 0;             ///< Real-to-complex symmetry direction.
-  const std::vector<box3di> m_real_boxes;    ///< Real boxes for FFT.
-  const std::vector<box3di> m_complex_boxes; ///< Complex boxes for FFT.
+  const Decomposition m_decomposition; ///< The Decomposition object.
+  const int m_r2c_direction = 0;       ///< Real-to-complex symmetry direction.
+  const std::vector<heffte::box3d<int>> m_real_boxes;    ///< Real boxes for FFT.
+  const std::vector<heffte::box3d<int>> m_complex_boxes; ///< Complex boxes for FFT.
 };
 
 /**
@@ -62,15 +62,43 @@ using pfc::types::Int3;
 using pfc::types::Real3;
 
 using Decomposition = pfc::decomposition::Decomposition;
+using RealVector = std::vector<double>;
 using ComplexVector = std::vector<std::complex<double>>;
 using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 using box3di = heffte::box3d<int>; ///< Type alias for 3D integer box.
+
+struct IFFT {
+  virtual ~IFFT() = default;
+
+  /**
+   * @brief Performs the forward FFT transformation.
+   *
+   * @param in Input vector of real values.
+   * @param out Output vector of complex values.
+   */
+  virtual void forward(const RealVector &in, ComplexVector &out) = 0;
+
+  /**
+   * @brief Performs the backward (inverse) FFT transformation.
+   *
+   * @param in Input vector of complex values.
+   * @param out Output vector of real values.
+   */
+  virtual void backward(const ComplexVector &in, RealVector &out) = 0;
+
+  virtual void reset_fft_time() = 0;
+  virtual double get_fft_time() const = 0;
+
+  virtual size_t size_inbox() const = 0;
+  virtual size_t size_outbox() const = 0;
+  virtual size_t size_workspace() const = 0;
+};
 
 /**
  * @brief FFT class for performing forward and backward Fast Fourier
  * Transformations.
  */
-struct FFT {
+struct FFT : IFFT {
 
   // const Decomposition m_decomposition; /**< The Decomposition object. */
   // const box3di m_inbox, m_outbox;      /**< Local inbox and outbox boxes. */
