@@ -74,9 +74,15 @@ template <typename T> struct Field {
 
   Field(Field &&) = default;
   Field &operator=(Field &&) = delete;
+
+  T &operator[](size_t i) { return m_data[i]; }
+
+  const T &operator[](size_t i) const { return m_data[i]; }
 };
 
-template <typename T> Field<T> create(const World &world) { return Field<T>(world); }
+template <typename T> inline Field<T> create(const World &world) {
+  return Field<T>(world);
+}
 
 template <typename T> inline const auto &get_data(const Field<T> &field) {
   return field.m_data;
@@ -86,6 +92,74 @@ template <typename T> inline auto &get_data(Field<T> &field) { return field.m_da
 
 template <typename T> inline const auto &get_world(const Field<T> &field) {
   return field.m_world;
+}
+
+template <typename T> Field<T> create(const World &world, std::vector<T> &&data) {
+  Field<T> f(world);
+  if (data.size() != get_total_size(world)) {
+    throw std::runtime_error("Moved-in data size mismatch.");
+  }
+  f.m_data = std::move(data);
+  return f;
+}
+
+template <typename T>
+Field<T> create(const World &world, const std::vector<T> &data) {
+  Field<T> f(world);
+  if (data.size() != get_total_size(world)) {
+    throw std::runtime_error("Copied-in data size mismatch.");
+  }
+  std::copy(data.begin(), data.end(), f.m_data.begin());
+  return f;
+}
+
+template <typename T, typename Func,
+          typename = std::enable_if_t<std::is_invocable_v<Func, Real3>>>
+Field<T> create(const World &world, Func &&func) {
+  Field<T> f(world);
+  apply(f, std::forward<Func>(func));
+  return f;
+}
+
+template <typename T, typename Func> void apply(Field<T> &f, Func &&func) {
+
+  // Static assertion to ensure func is callable with (double, double, double)
+  static_assert(std::is_invocable_v<Func, Real3>,
+                "Func must be callable with (Real3 = std::array<double, 3>)");
+
+  auto &data = get_data(f);
+  const auto &world = get_world(f);
+  const auto &cs = get_coordinate_system(world);
+
+  Int3 low = get_lower(world);
+  Int3 high = get_upper(world);
+
+  size_t idx = 0;
+  for (int k = low[2]; k <= high[2]; ++k) {
+    for (int j = low[1]; j <= high[1]; ++j) {
+      for (int i = low[0]; i <= high[0]; ++i) {
+        data[idx++] = std::invoke(func, to_coords(cs, {i, j, k}));
+      }
+    }
+  }
+}
+
+template <typename T> auto indices(const Field<T> &f) {
+  struct IndexRange {
+    size_t size;
+    struct Iterator {
+      size_t i;
+      bool operator!=(const Iterator &other) const { return i != other.i; }
+      size_t operator*() const { return i; }
+      Iterator &operator++() {
+        ++i;
+        return *this;
+      }
+    };
+    Iterator begin() const { return {0}; }
+    Iterator end() const { return {size}; }
+  };
+  return IndexRange{get_data(f).size()};
 }
 
 } // namespace field
