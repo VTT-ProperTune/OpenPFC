@@ -102,9 +102,9 @@ TEST_CASE("Field", "[field]") {
 
   SECTION("Field can be accessed using operator[]") {
     /*
-    auto gf = [](double x, double, double) { return x; };
+    auto gf = [](Real3 r) { return r[0]; };
     auto g = field::create<double>(world, gf);
-    auto df = [](double, double y, double) { return y; };
+    auto df = [](Real3 r) { return r[1]; };
     auto d = field::create<double>(world, df);
     */
 
