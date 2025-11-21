@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-11-21
+
 ### Added
 
 - **Core**: World construction helper functions in `include/openpfc/core/world.hpp`
