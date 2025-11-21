@@ -1,6 +1,48 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file fft.hpp
+ * @brief Fast Fourier Transform interface for spectral methods
+ *
+ * @details
+ * This file defines the FFT class and related utilities for performing distributed
+ * parallel FFT operations using HeFFTe. OpenPFC uses spectral methods where
+ * derivatives and other spatial operations are efficiently computed in Fourier
+ * space.
+ *
+ * The FFT class provides:
+ * - Distributed-memory parallel 3D real-to-complex and complex-to-real transforms
+ * - Integration with HeFFTe backend (supports FFTW, cuFFT, rocFFT)
+ * - FFTLayout for managing real/complex data decomposition
+ * - Helper functions for k-space operations (wavenumbers, Laplacian operators)
+ *
+ * Typical usage:
+ * @code
+ * // Create FFT for decomposed domain
+ * pfc::decomposition::Decomposition decomp(world, MPI_COMM_WORLD);
+ * pfc::FFT fft(decomp, pfc::fft::FFTBackend::Default);
+ *
+ * // Transform to Fourier space
+ * std::vector<double> real_data = ...;
+ * std::vector<std::complex<double>> fourier_data = fft.forward(real_data);
+ *
+ * // Compute derivatives in k-space, then transform back
+ * // ... modify fourier_data ...
+ * std::vector<double> result = fft.backward(fourier_data);
+ * @endcode
+ *
+ * This file is part of the Core Infrastructure module, providing the foundation
+ * for spectral method computations in phase-field simulations.
+ *
+ * @see core/decomposition.hpp for domain decomposition
+ * @see model.hpp for FFT usage in physics models
+ * @see backends/heffte_adapter.hpp for HeFFTe integration
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #pragma once
 
 #include "core/decomposition.hpp"

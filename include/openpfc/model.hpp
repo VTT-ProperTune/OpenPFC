@@ -1,6 +1,65 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file model.hpp
+ * @brief Physics model abstraction for phase-field simulations
+ *
+ * @details
+ * This file defines the Model class, which represents the physics model in OpenPFC
+ * phase-field simulations. The Model class serves as the base class for implementing
+ * specific physics models such as:
+ * - Phase Field Crystal (PFC) models
+ * - Cahn-Hilliard equation
+ * - Allen-Cahn equation
+ * - Coupled multi-field models (temperature, concentration, etc.)
+ *
+ * The Model class manages:
+ * - Registration and storage of real and complex fields
+ * - Access to FFT operations for spectral methods
+ * - Virtual interface for physics-specific initialization and time stepping
+ *
+ * Users implement custom models by:
+ * 1. Deriving from Model
+ * 2. Overriding `initialize()` to set up initial conditions and operators
+ * 3. Overriding `step(dt)` to define time evolution equations
+ * 4. Registering fields via register_real_field() and register_complex_field()
+ *
+ * Example:
+ * @code
+ * class MyPhysicsModel : public pfc::Model {
+ * public:
+ *     MyPhysicsModel(pfc::FFT& fft, const pfc::World& world)
+ *         : Model(fft, world) {}
+ *
+ *     void initialize() override {
+ *         // Register fields
+ *         register_real_field("density");
+ *         register_complex_field("density_fourier");
+ *
+ *         // Set initial conditions
+ *         // Precompute operators
+ *     }
+ *
+ *     void step(double dt) override {
+ *         // Implement time evolution equations
+ *         // Use FFT for spectral derivatives
+ *     }
+ * };
+ * @endcode
+ *
+ * This file is part of the Physics Models module, providing the core abstraction
+ * for describing material behavior and evolution equations.
+ *
+ * @see simulator.hpp for how models are executed in time integration
+ * @see fft.hpp for spectral operations interface
+ * @see core/world.hpp for computational domain
+ * @see field_modifier.hpp for initial/boundary conditions
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_MODEL_HPP
 #define PFC_MODEL_HPP
 

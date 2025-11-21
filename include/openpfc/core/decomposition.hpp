@@ -1,6 +1,46 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file decomposition.hpp
+ * @brief Domain decomposition for parallel MPI simulations
+ *
+ * @details
+ * This file defines the Decomposition class and related utilities for distributing
+ * a simulation domain across multiple MPI processes. Domain decomposition is
+ * essential for parallel spectral method simulations, enabling efficient FFT
+ * operations and field storage across distributed memory systems.
+ *
+ * The Decomposition class handles:
+ * - Splitting the global World into local subdomains (one per MPI rank)
+ * - Managing inbox/outbox regions for FFT pencil decomposition
+ * - Coordinate transformations between global and local index spaces
+ * - Integration with HeFFTe for distributed FFT operations
+ *
+ * Typical usage:
+ * @code
+ * pfc::World global_world = pfc::world::create({128, 128, 128});
+ * pfc::decomposition::Decomposition decomp(global_world, MPI_COMM_WORLD);
+ *
+ * // Access local subdomain
+ * pfc::World local_world = decomp.get_world();
+ *
+ * // Get FFT inbox/outbox for spectral operations
+ * auto inbox = decomp.get_inbox();
+ * auto outbox = decomp.get_outbox();
+ * @endcode
+ *
+ * This file is part of the Core Infrastructure module, providing parallel
+ * decomposition capabilities for distributed-memory HPC systems.
+ *
+ * @see core/world.hpp for global domain definition
+ * @see fft.hpp for FFT operations using decomposition
+ * @see factory/decomposition_factory.hpp for construction helpers
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #pragma once
 
 #include "openpfc/core/world.hpp"
