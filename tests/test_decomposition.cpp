@@ -9,7 +9,7 @@
 using namespace Catch::Matchers;
 using namespace pfc;
 
-TEST_CASE("Decomposition class tests", "[Decomposition]") {
+TEST_CASE("Decomposition - basic functionality", "[decomposition][unit]") {
   // Create a dummy World object for testing
   auto world = world::create({128, 128, 128});
 
