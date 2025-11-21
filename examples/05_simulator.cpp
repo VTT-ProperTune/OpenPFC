@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <openpfc/constants.hpp>
 #include <openpfc/core/decomposition.hpp>
 #include <openpfc/core/world.hpp>
 #include <openpfc/factory/decomposition_factory.hpp>
@@ -39,8 +40,6 @@
  */
 
 using namespace pfc;
-
-const double PI = 3.141592653589793238463;
 
 class GaussianIC : public FieldModifier {
 private:
@@ -107,9 +106,9 @@ public:
     size_t idx = 0;
     auto spacing = get_spacing(w);
     auto size = get_size(w);
-    double fx = 2.0 * PI / (spacing[0] * size[0]);
-    double fy = 2.0 * PI / (spacing[1] * size[1]);
-    double fz = 2.0 * PI / (spacing[2] * size[2]);
+    double fx = 2.0 * constants::pi / (spacing[0] * size[0]);
+    double fy = 2.0 * constants::pi / (spacing[1] * size[1]);
+    double fz = 2.0 * constants::pi / (spacing[2] * size[2]);
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
@@ -177,7 +176,7 @@ void run_simulator(Simulator &s) {
 void run() {
   // Construct world, decomposition, fft and model
   int L = 64;
-  double h = 2.0 * PI / 8.0;
+  double h = 2.0 * constants::pi / 8.0;
   double o = -0.5 * L * h;
   std::array<int, 3> dimensions = {L, L, L};
   std::array<double, 3> discretization = {h, h, h};
