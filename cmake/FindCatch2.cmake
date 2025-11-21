@@ -16,3 +16,8 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(Catch2)
+
+# Set variables to indicate Catch2 was found (without PARENT_SCOPE in Find modules)
+set(Catch2_FOUND TRUE)
+set(Catch2_VERSION ${Catch2_FIND_VERSION})
+set(Catch2_DIR "${catch2_BINARY_DIR}")
