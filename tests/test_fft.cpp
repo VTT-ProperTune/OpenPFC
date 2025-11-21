@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#define CATCH_CONFIG_RUNNER
 #include "openpfc/core/decomposition.hpp"
 #include "openpfc/core/world.hpp"
 #include "openpfc/factory/decomposition_factory.hpp"
@@ -13,7 +12,7 @@
 using namespace Catch::Matchers;
 using namespace pfc;
 
-TEST_CASE("FFT - Basic Functionality", "[fft]") {
+TEST_CASE("FFT - basic functionality", "[fft][unit]") {
   auto world = world::create({8, 1, 1});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -22,7 +21,7 @@ TEST_CASE("FFT - Basic Functionality", "[fft]") {
   REQUIRE(fft.size_workspace() > 0);
 }
 
-TEST_CASE("FFT forward transformation", "[FFT]") {
+TEST_CASE("FFT - forward transformation", "[fft][unit]") {
   // Create an FFT object with a fixed decomposition
   auto world = world::create({8, 1, 1});
   auto decomposition = decomposition::create(world, 1);
@@ -40,7 +39,7 @@ TEST_CASE("FFT forward transformation", "[FFT]") {
   REQUIRE_THAT(std::real(output[0]), WithinAbs(21.991, 0.01));
 }
 
-TEST_CASE("FFT backward transformation", "[FFT]") {
+TEST_CASE("FFT - backward transformation", "[fft][unit]") {
   // Create an FFT object with a fixed decomposition
   auto world = world::create({2, 1, 1});
   auto decomposition = decomposition::create(world, 1);
