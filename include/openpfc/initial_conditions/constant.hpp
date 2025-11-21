@@ -1,6 +1,31 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file constant.hpp
+ * @brief Constant value initial condition
+ *
+ * @details
+ * This file defines the Constant class, which sets all field values to a
+ * uniform constant value. This is the simplest initial condition, useful for:
+ * - Homogeneous starting states
+ * - Testing and validation
+ * - Baseline conditions before perturbations
+ *
+ * Usage:
+ * @code
+ * auto ic = std::make_unique<pfc::Constant>(0.5);
+ * ic->set_field_name("density");
+ * simulator.add_initial_condition(std::move(ic));
+ * @endcode
+ *
+ * @see field_modifier.hpp for base class
+ * @see simulator.hpp for how initial conditions are applied
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_INITIAL_CONDITIONS_CONSTANT_HPP
 #define PFC_INITIAL_CONDITIONS_CONSTANT_HPP
 

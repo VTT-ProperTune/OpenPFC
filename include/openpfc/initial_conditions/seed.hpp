@@ -1,6 +1,29 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file seed.hpp
+ * @brief Helper class for constructing spherical seed initial conditions
+ *
+ * @details
+ * This file defines the Seed class, a helper for creating spherical crystalline
+ * seeds with specific orientations. The Seed class:
+ * - Generates density profiles for spherical regions
+ * - Supports crystallographic orientations (BCC, FCC, etc.)
+ * - Handles coordinate transformations (yaw, pitch, roll)
+ * - Used by SingleSeed, SeedGrid, and RandomSeeds classes
+ *
+ * The Seed class is a building block for various seeding strategies in
+ * solidification simulations.
+ *
+ * @see single_seed.hpp for single seed placement
+ * @see seed_grid.hpp for regular grid of seeds
+ * @see random_seeds.hpp for random seed distribution
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_INITIAL_CONDITIONS_SEED_HPP
 #define PFC_INITIAL_CONDITIONS_SEED_HPP
 

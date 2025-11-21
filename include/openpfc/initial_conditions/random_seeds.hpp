@@ -1,6 +1,35 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file random_seeds.hpp
+ * @brief Random distribution of crystalline seeds initial condition
+ *
+ * @details
+ * This file defines the RandomSeeds class, which places spherical crystalline
+ * seeds at random locations throughout the domain. Useful for:
+ * - Realistic polycrystalline microstructures
+ * - Statistical studies of grain growth
+ * - Homogeneous nucleation simulations
+ *
+ * The number and properties of seeds are configurable. Seeds are randomly
+ * positioned using the Mersenne Twister random number generator.
+ *
+ * Usage:
+ * @code
+ * auto ic = std::make_unique<pfc::RandomSeeds>();
+ * ic->set_amplitude(0.2);
+ * ic->set_density(0.5);
+ * simulator.add_initial_condition(std::move(ic));
+ * @endcode
+ *
+ * @see seed.hpp for seed construction helper
+ * @see field_modifier.hpp for base class
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_INITIAL_CONDITIONS_RANDOM_SEEDS_HPP
 #define PFC_INITIAL_CONDITIONS_RANDOM_SEEDS_HPP
 

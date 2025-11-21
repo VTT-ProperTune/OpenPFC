@@ -1,6 +1,34 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file file_reader.hpp
+ * @brief Read initial conditions from binary file
+ *
+ * @details
+ * This file defines the FileReader class, which reads field values from a
+ * binary file to initialize simulation state. Useful for:
+ * - Restarting simulations from checkpoints
+ * - Loading pre-computed initial conditions
+ * - Continuing interrupted simulations
+ *
+ * The binary file format must match the expected field layout (domain size,
+ * decomposition, data type).
+ *
+ * Usage:
+ * @code
+ * auto ic = std::make_unique<pfc::FileReader>("checkpoint.bin");
+ * ic->set_field_name("density");
+ * simulator.add_initial_condition(std::move(ic));
+ * @endcode
+ *
+ * @see binary_reader.hpp for binary I/O operations
+ * @see field_modifier.hpp for base class
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_INITIAL_CONDITIONS_FILE_READER_HPP
 #define PFC_INITIAL_CONDITIONS_FILE_READER_HPP
 

@@ -1,6 +1,36 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file seed_grid.hpp
+ * @brief Regular grid of crystalline seeds initial condition
+ *
+ * @details
+ * This file defines the SeedGrid class, which places spherical crystalline seeds
+ * in a regular 3D grid pattern. Useful for:
+ * - Studying grain growth with controlled initial microstructure
+ * - Investigating grain boundary interactions
+ * - Polycrystalline solidification simulations
+ *
+ * The grid spacing and seed properties (size, density, amplitude) are configurable.
+ *
+ * Usage:
+ * @code
+ * auto ic = std::make_unique<pfc::SeedGrid>();
+ * ic->set_Nx(4);  // 4x4x4 grid
+ * ic->set_Ny(4);
+ * ic->set_Nz(4);
+ * ic->set_radius(5.0);
+ * simulator.add_initial_condition(std::move(ic));
+ * @endcode
+ *
+ * @see seed.hpp for underlying seed construction
+ * @see field_modifier.hpp for base class
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
 #define PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
 

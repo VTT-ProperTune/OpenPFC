@@ -1,6 +1,34 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file single_seed.hpp
+ * @brief Single spherical crystalline seed initial condition
+ *
+ * @details
+ * This file defines the SingleSeed class, which places a single spherical
+ * crystalline seed at a specified location. Useful for:
+ * - Single crystal growth simulations
+ * - Dendritic solidification studies
+ * - Validation against analytical solutions
+ *
+ * The seed's location, size, density, and amplitude are configurable.
+ *
+ * Usage:
+ * @code
+ * auto ic = std::make_unique<pfc::SingleSeed>();
+ * ic->set_amplitude(0.2);
+ * ic->set_density(0.5);
+ * simulator.add_initial_condition(std::move(ic));
+ * @endcode
+ *
+ * @see seed.hpp for seed construction helper
+ * @see field_modifier.hpp for base class
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP
 #define PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP
 
