@@ -61,7 +61,7 @@ TEST_CASE("FFT - backward transformation", "[fft][unit]") {
 
   // Verify output size
   REQUIRE(output.size() == fft.size_inbox());
-  
+
   // Average value should be (1.0 + 2.0) / 2 = 1.5
   REQUIRE_THAT(output[0], WithinAbs(1.5, 0.01));
 }

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Pre-commit hook to check code formatting with clang-format
+
+set -e
+
+# Get list of C++ files staged for commit
+files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|h|cc|cxx)$' || true)
+
+if [ -z "$files" ]; then
+    # No C++ files to check
+    exit 0
+fi
+
+echo "🔍 Checking code formatting with clang-format..."
+
+# Check if clang-format is available
+if ! command -v clang-format &> /dev/null; then
+    echo "❌ clang-format not found!"
+    echo "Please install clang-format (version 17+) to check code formatting."
+    exit 1
+fi
+
+# Check formatting
+if ! clang-format --dry-run --Werror $files 2>&1; then
+    echo "❌ Code formatting check failed!"
+    echo ""
+    echo "Files that need formatting:"
+    for file in $files; do
+        echo "  - $file"
+    done
+    echo ""
+    echo "To fix formatting issues, run:"
+    echo "  clang-format -i $files"
+    exit 1
+fi
+
+echo "✅ Code formatting check passed!"
+exit 0
