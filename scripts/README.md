@@ -22,12 +22,14 @@ chmod +x .git/hooks/pre-commit
 ```
 
 **What it does**:
+
 - Runs automatically before each `git commit`
 - Checks C++ files (`.cpp`, `.hpp`, `.h`, `.cc`, `.cxx`) for formatting issues
 - Uses `clang-format` to verify code style compliance
 - Blocks commits if formatting issues are found
 
 **Requirements**:
+
 - `clang-format` (version 17+ recommended, minimum version 9.0)
 - On Rocky Linux 8: `dnf install clang` (provides clang-format 19+)
 
