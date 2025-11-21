@@ -57,3 +57,6 @@ target_link_libraries(diffusion_model_with_custom_initial_condition PRIVATE Open
 
 add_executable(json_read json_read.cpp)
 target_link_libraries(json_read PRIVATE nlohmann_json::nlohmann_json)
+
+add_executable(world_helpers_example world_helpers_example.cpp)
+target_link_libraries(world_helpers_example PRIVATE OpenPFC)
