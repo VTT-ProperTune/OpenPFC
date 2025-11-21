@@ -81,3 +81,40 @@ TEST_CASE("Model - basic functionality", "[model][unit]") {
     REQUIRE(retrieved_field.size() == field.size());
   }
 }
+
+TEST_CASE("Model::is_rank0() returns correct rank status", "[model][unit][rank]") {
+  World world = world::create({10, 10, 10});
+  pfc::testing::MockModel model(world);
+
+  // Initialize FFT (required for is_rank0 to be set)
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+  model.set_fft(fft);
+
+  int rank = mpi::get_rank();
+
+  if (rank == 0) {
+    REQUIRE(model.is_rank0() == true);
+  } else {
+    REQUIRE(model.is_rank0() == false);
+  }
+}
+
+TEST_CASE("Model::is_rank0() is const-correct", "[model][unit][rank]") {
+  World world = world::create({10, 10, 10});
+
+  // Create model and set FFT to ensure m_rank0 is set
+  pfc::testing::MockModel model(world);
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+  model.set_fft(fft);
+
+  // Create const reference to test const-correctness
+  const pfc::testing::MockModel &const_model = model;
+
+  // Should compile (is_rank0() is const)
+  bool result = const_model.is_rank0();
+
+  // Valid boolean value
+  REQUIRE((result == true || result == false));
+}
