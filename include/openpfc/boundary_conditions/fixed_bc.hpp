@@ -1,6 +1,36 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file fixed_bc.hpp
+ * @brief Fixed boundary condition with smooth transition
+ *
+ * @details
+ * This file defines the FixedBC class, which enforces fixed values at domain
+ * boundaries with a smooth transition region. The boundary condition:
+ * - Sets field values to specified low/high values at domain edges
+ * - Uses smooth exponential transition to avoid sharp discontinuities
+ * - Configurable transition width and strength
+ *
+ * Useful for:
+ * - Dirichlet boundary conditions
+ * - Fixed-wall simulations
+ * - Controlled boundary reservoirs
+ *
+ * Usage:
+ * @code
+ * auto bc = std::make_unique<pfc::FixedBC>(0.0, 1.0);  // low, high values
+ * bc->set_field_name("density");
+ * simulator.add_boundary_condition(std::move(bc));
+ * @endcode
+ *
+ * @see field_modifier.hpp for base class
+ * @see moving_bc.hpp for time-dependent boundary condition
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #pragma once
 
 #include "openpfc/core/types.hpp"

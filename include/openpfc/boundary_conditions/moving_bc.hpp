@@ -1,6 +1,38 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file moving_bc.hpp
+ * @brief Moving boundary condition that tracks solidification front
+ *
+ * @details
+ * This file defines the MovingBC class, which enforces a boundary condition
+ * that moves based on the solidification front position. The boundary:
+ * - Automatically detects the solid-liquid interface
+ * - Moves the boundary region to follow the interface
+ * - Maintains fixed values ahead of and behind the front
+ *
+ * Useful for:
+ * - Directional solidification simulations
+ * - Moving frame of reference
+ * - Efficient domain usage (only simulate near interface)
+ *
+ * Usage:
+ * @code
+ * auto bc = std::make_unique<pfc::MovingBC>();
+ * bc->set_rho_low(0.0);
+ * bc->set_rho_high(1.0);
+ * bc->set_field_name("density");
+ * simulator.add_boundary_condition(std::move(bc));
+ * @endcode
+ *
+ * @see field_modifier.hpp for base class
+ * @see fixed_bc.hpp for stationary boundary condition
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP
 #define PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP
 
