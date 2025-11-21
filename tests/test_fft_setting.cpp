@@ -10,21 +10,16 @@
 #include <catch2/catch_test_macros.hpp>
 #include <iostream> // For debugging output
 
-using namespace pfc;
+#include "fixtures/mock_model.hpp"
 
-class MockModel : public Model {
-public:
-  MockModel(const World &world) : Model(world) {}
-  void step(double /*t*/) override {}
-  void initialize(double /*dt*/) override {}
-};
+using namespace pfc;
 
 TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
   auto world = world::create({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  MockModel model(world);
+  pfc::testing::MockModel model(world);
 
   model.set_fft(fft);
 
