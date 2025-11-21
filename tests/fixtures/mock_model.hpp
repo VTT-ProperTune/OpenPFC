@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include <openpfc/model.hpp>
+#include "openpfc/model.hpp"
 
 namespace pfc {
 namespace testing {
