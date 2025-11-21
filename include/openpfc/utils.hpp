@@ -27,7 +27,7 @@ std::string string_format(const std::string &format, Args... args) {
                      buf.get() + size - 1); // We don't want the '\0' inside
 }
 
-std::string format_with_number(const std::string &filename, int increment) {
+inline std::string format_with_number(const std::string &filename, int increment) {
   if (filename.find('%') != std::string::npos) {
     return utils::string_format(filename, increment);
   } else {
@@ -43,13 +43,13 @@ template <typename T> size_t sizeof_vec(std::vector<T> &V) {
 
 namespace mpi {
 
-int get_comm_rank(MPI_Comm comm) {
+inline int get_comm_rank(MPI_Comm comm) {
   int rank;
   MPI_Comm_rank(comm, &rank);
   return rank;
 }
 
-int get_comm_size(MPI_Comm comm) {
+inline int get_comm_size(MPI_Comm comm) {
   int size;
   MPI_Comm_size(comm, &size);
   return size;
