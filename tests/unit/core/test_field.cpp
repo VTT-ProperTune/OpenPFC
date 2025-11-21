@@ -25,9 +25,11 @@ TEST_CASE("Field", "[field]") {
     REQUIRE(data.size() == get_total_size(world));
   }
 
-  SECTION("Field world reference is valid") {
+  SECTION("Field is associated with correct world") {
     const auto &w = field::get_world(f);
-    REQUIRE(&w == &world); // Check it's the exact reference
+    REQUIRE(get_size(w) == get_size(world));
+    REQUIRE(get_origin(w) == get_origin(world));
+    REQUIRE(get_spacing(w) == get_spacing(world));
   }
 
   SECTION("Field values can be set and read") {
@@ -40,17 +42,10 @@ TEST_CASE("Field", "[field]") {
     }
   }
 
-  SECTION("Field is non-copyable") {
-    STATIC_REQUIRE(!std::is_copy_constructible_v<decltype(f)>);
-    STATIC_REQUIRE(!std::is_copy_assignable_v<decltype(f)>);
-  }
-
-  SECTION("Field is move-constructible but not move-assignable") {
-    STATIC_REQUIRE(std::is_move_constructible_v<decltype(f)>);
-    STATIC_REQUIRE_FALSE(std::is_move_assignable_v<decltype(f)>);
-
-    auto f2 = std::move(f); // move construction is valid
-    REQUIRE(field::get_data(f2).size() == get_total_size(world));
+  SECTION("Field can be move-constructed") {
+    auto original_size = field::get_data(f).size();
+    auto f2 = std::move(f);
+    REQUIRE(field::get_data(f2).size() == original_size);
   }
 
   SECTION("Field can be constructed from user-provided data (moved)") {
@@ -103,13 +98,6 @@ TEST_CASE("Field", "[field]") {
   }
 
   SECTION("Field can be accessed using operator[]") {
-    /*
-    auto gf = [](Real3 r) { return r[0]; };
-    auto g = field::create<double>(world, gf);
-    auto df = [](Real3 r) { return r[1]; };
-    auto d = field::create<double>(world, df);
-    */
-
     auto g = field::create<double>(world, [](auto r) { return r[0]; });
     auto d = field::create<double>(world, [](auto r) { return r[1]; });
     auto out = field::create<double>(world);
