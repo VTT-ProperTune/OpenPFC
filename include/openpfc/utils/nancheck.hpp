@@ -1,6 +1,36 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file nancheck.hpp
+ * @brief NaN detection and debugging utilities
+ *
+ * @details
+ * This header provides macros and functions for detecting NaN (Not-a-Number)
+ * values in floating-point computations, useful for debugging numerical issues.
+ *
+ * Key features:
+ * - CHECK_AND_ABORT_IF_NAN(value): Macro to check single values
+ * - CHECK_AND_ABORT_IF_VECTOR_HAS_NAN(vector): Macro to check entire vectors
+ * - Enabled with NAN_CHECK_ENABLED preprocessor flag
+ * - MPI-aware: Reports rank where NaN was detected
+ *
+ * NaN checks are disabled by default for performance. Enable with:
+ * cmake -DNAN_CHECK_ENABLED=ON
+ *
+ * @code
+ * #include <openpfc/utils/nancheck.hpp>
+ *
+ * double result = compute_something();
+ * CHECK_AND_ABORT_IF_NAN(result);  // Aborts if NaN detected
+ * @endcode
+ *
+ * @see utils.hpp for other utility functions
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_UTILS_NANCHECK_HPP
 #define PFC_UTILS_NANCHECK_HPP
 

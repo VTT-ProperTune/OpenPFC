@@ -1,6 +1,38 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file show.hpp
+ * @brief Pretty-print 3D arrays to console
+ *
+ * @details
+ * This header provides the show() template function for pretty-printing
+ * 3D arrays stored in std::vector with size and offset information.
+ *
+ * The function displays:
+ * - Array dimensions and type
+ * - Slice-by-slice output ([:, :, k] format)
+ * - Formatted values with fixed precision
+ * - Optional offset information for distributed arrays
+ *
+ * This is particularly useful for debugging field data and visualization
+ * of small computational domains.
+ *
+ * @code
+ * #include <openpfc/utils/show.hpp>
+ *
+ * std::vector<double> data(4*4*4, 1.0);
+ * pfc::utils::show(data, {4, 4, 4}, {0, 0, 0});
+ * // Prints formatted 3D array slices
+ * @endcode
+ *
+ * @see utils/array_to_string.hpp for simple array formatting
+ * @see utils/typename.hpp for type name display
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_UTILS_SHOW
 #define PFC_UTILS_SHOW
 

@@ -1,6 +1,33 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file timeleft.hpp
+ * @brief Estimated time remaining display
+ *
+ * @details
+ * This header provides the TimeLeft class for converting elapsed time
+ * in seconds to a human-readable format (days, hours, minutes, seconds).
+ *
+ * The class automatically breaks down time into appropriate units and
+ * provides formatted output for displaying estimated time remaining
+ * in long-running simulations.
+ *
+ * @code
+ * #include <openpfc/utils/timeleft.hpp>
+ *
+ * double seconds_remaining = 3665.0;
+ * pfc::utils::TimeLeft time(seconds_remaining);
+ * std::cout << time << std::endl;  // Prints "1h 1m 5s"
+ * @endcode
+ *
+ * @see mpi/timer.hpp for MPI-based timing
+ * @see utils.hpp for other utility functions
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_UTILS_TIMELEFT_HPP
 #define PFC_UTILS_TIMELEFT_HPP
 

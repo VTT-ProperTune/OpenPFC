@@ -1,6 +1,32 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file array_to_string.hpp
+ * @brief Convert std::array to string representation
+ *
+ * @details
+ * This header provides the array_to_string() template function for
+ * converting std::array<T, D> to a formatted string representation.
+ *
+ * The function produces output in the format: {value1, value2, value3}
+ * which is useful for debugging, logging, and displaying array contents.
+ *
+ * @code
+ * #include <openpfc/utils/array_to_string.hpp>
+ *
+ * std::array<int, 3> size = {64, 64, 64};
+ * std::string str = pfc::utils::array_to_string(size);
+ * // str is "{64, 64, 64}"
+ * @endcode
+ *
+ * @see utils/show.hpp for formatted array display
+ * @see utils.hpp for other utility functions
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_UTILS_ARRAY_TO_STRING_HPP
 #define PFC_UTILS_ARRAY_TO_STRING_HPP
 
