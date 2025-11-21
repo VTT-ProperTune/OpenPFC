@@ -1,6 +1,42 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file ui.hpp
+ * @brief JSON-based configuration interface
+ *
+ * @details
+ * This header provides the JSON configuration interface for setting up
+ * OpenPFC simulations declaratively. It allows users to configure:
+ * - World parameters (domain size, spacing, periodicity)
+ * - Initial conditions (constants, seeds, grids, file input)
+ * - Boundary conditions (fixed, moving)
+ * - Time stepping parameters
+ * - Simulation options
+ *
+ * The UI layer translates JSON configuration into OpenPFC objects,
+ * enabling declarative simulation setup without writing C++ code.
+ *
+ * @code
+ * // Example JSON configuration:
+ * {
+ *   "world": {"size": [64, 64, 64], "spacing": [1.0, 1.0, 1.0]},
+ *   "initial_condition": {"type": "constant", "value": 0.5},
+ *   "time": {"t0": 0.0, "t1": 100.0, "dt": 0.1}
+ * }
+ *
+ * // Load and run simulation
+ * auto config = pfc::ui::load_config("config.json");
+ * pfc::ui::run_simulation(config);
+ * @endcode
+ *
+ * @see examples/10_ui_register_ic.cpp for registering custom ICs
+ * @see apps/tungsten.cpp for complete application example
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_UI_HPP
 #define PFC_UI_HPP
 

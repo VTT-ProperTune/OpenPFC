@@ -1,6 +1,35 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file utils.hpp
+ * @brief General utility functions
+ *
+ * @details
+ * This header provides general utility functions used throughout OpenPFC,
+ * including string formatting, file operations, and helper functions.
+ *
+ * Key utilities:
+ * - string_format(): Printf-style string formatting in C++
+ * - File I/O helpers
+ * - String manipulation utilities
+ * - MPI-safe operations
+ *
+ * @code
+ * #include <openpfc/utils.hpp>
+ *
+ * // Format strings safely
+ * std::string msg = pfc::utils::string_format("Step %d, time = %.3f", step, time);
+ * @endcode
+ *
+ * @see utils/array_to_string.hpp for array formatting
+ * @see utils/show.hpp for debug printing
+ * @see utils/typename.hpp for type introspection
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_UTILS_HPP
 #define PFC_UTILS_HPP
 
