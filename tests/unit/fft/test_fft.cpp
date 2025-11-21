@@ -29,7 +29,8 @@ TEST_CASE("FFT - forward transformation", "[fft][unit]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  // Generate input data
+  // Generate input data: sine wave samples at 8 equally spaced points
+  // Input represents: sin(k*x) where x = [0, π/4, π/2, 3π/4, π, 5π/4, 3π/2, 7π/4]
   std::vector<double> input = {0.000, 0.785, 1.571, 2.356,
                                3.142, 3.927, 4.712, 5.498};
   REQUIRE(input.size() == fft.size_inbox());
@@ -38,6 +39,8 @@ TEST_CASE("FFT - forward transformation", "[fft][unit]") {
   std::vector<std::complex<double>> output(fft.size_outbox());
   fft.forward(input, output);
 
+  // Sum of input values should appear in DC component (k=0)
+  // Expected: sum(input) ≈ 21.991
   REQUIRE_THAT(std::real(output[0]), WithinAbs(21.991, 0.01));
 }
 
@@ -47,16 +50,18 @@ TEST_CASE("FFT - backward transformation", "[fft][unit]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  // Generate input data
+  // Generate input data in frequency space
+  // Two frequency components: DC=1.0 and first harmonic=2.0
   using complex = std::complex<double>;
   std::vector<complex> input = {complex(1.0, 0.0), complex(2.0, 0.0)};
 
-  // Perform the backward transformation
+  // Perform the backward transformation to real space
   std::vector<double> output(fft.size_inbox());
   fft.backward(input, output);
 
-  // Perform assertions on the output
+  // Verify output size
   REQUIRE(output.size() == fft.size_inbox());
+  
+  // Average value should be (1.0 + 2.0) / 2 = 1.5
   REQUIRE_THAT(output[0], WithinAbs(1.5, 0.01));
-  // Add more assertions as needed
 }
