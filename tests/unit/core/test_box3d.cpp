@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include "openpfc/core/box3d.hpp"
 #include <catch2/catch_test_macros.hpp>
+
+#include "openpfc/core/box3d.hpp"
 
 using namespace pfc;
 

@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <vector>
+
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+
 #include "openpfc/core/decomposition.hpp"
 #include "openpfc/core/world.hpp"
 #include "openpfc/factory/decomposition_factory.hpp"
 #include "openpfc/fft.hpp"
-#include <catch2/catch_test_macros.hpp> // Updated include for Catch2 v3
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <vector>
 
 using namespace Catch::Matchers;
 using namespace pfc;

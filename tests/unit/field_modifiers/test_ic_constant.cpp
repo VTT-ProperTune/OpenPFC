@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <iostream>
+#include <vector>
+
+#include <catch2/catch_test_macros.hpp>
+
 #include "openpfc/core/decomposition.hpp"
 #include "openpfc/core/types.hpp"
 #include "openpfc/core/world.hpp"
@@ -8,9 +13,6 @@
 #include "openpfc/fft.hpp"
 #include "openpfc/initial_conditions/constant.hpp"
 #include "openpfc/model.hpp"
-#include <catch2/catch_test_macros.hpp>
-#include <iostream>
-#include <vector>
 
 using namespace pfc;
 using pfc::types::Int3;

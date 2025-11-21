@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <array>
-#include <catch2/catch_test_macros.hpp>
 #include <iostream>
-#include <openpfc/multi_index.hpp>
 #include <sstream>
+
+#include <catch2/catch_test_macros.hpp>
+
+#include "openpfc/multi_index.hpp"
 
 using namespace pfc;
 

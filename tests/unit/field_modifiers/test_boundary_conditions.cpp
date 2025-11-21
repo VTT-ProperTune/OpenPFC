@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <catch2/catch_test_macros.hpp>
+
 #include "openpfc/boundary_conditions/fixed_bc.hpp"
 #include "openpfc/core/world.hpp"
 #include "openpfc/model.hpp"
-#include <catch2/catch_test_macros.hpp>
 
 #include "fixtures/mock_model.hpp"
 
