@@ -1,6 +1,49 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file field_modifier.hpp
+ * @brief Base class for initial conditions and boundary conditions
+ *
+ * @details
+ * This file defines the FieldModifier abstract base class, which provides a
+ * unified interface for modifying field values in simulations. FieldModifiers
+ * are used for:
+ * - Initial conditions (applied once before time integration)
+ * - Boundary conditions (applied every time step or at intervals)
+ * - Field perturbations and custom modifications
+ *
+ * Concrete implementations include:
+ * - Initial conditions: Constant, Seed, SeedGrid, RandomSeeds, FileReader
+ * - Boundary conditions: FixedBC, MovingBC
+ *
+ * Typical usage:
+ * @code
+ * // Define initial condition
+ * class MyInitialCondition : public pfc::FieldModifier {
+ * public:
+ *     void apply(pfc::Model& model, double time) override {
+ *         auto& field = model.get_real_field(get_field_name());
+ *         // Modify field values
+ *     }
+ * };
+ *
+ * // Use in simulator
+ * simulator.add_initial_condition(std::make_unique<MyInitialCondition>());
+ * @endcode
+ *
+ * This file is part of the Field Operations module, providing mechanisms
+ * for setting initial states and enforcing boundary constraints.
+ *
+ * @see model.hpp for field access methods
+ * @see simulator.hpp for modifier application orchestration
+ * @see initial_conditions/ for IC implementations
+ * @see boundary_conditions/ for BC implementations
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_FIELD_MODIFIER_HPP
 #define PFC_FIELD_MODIFIER_HPP
 

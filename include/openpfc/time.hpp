@@ -1,6 +1,50 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file time.hpp
+ * @brief Time state management for simulation time integration
+ *
+ * @details
+ * This file defines the Time class, which manages the temporal state of
+ * simulations in OpenPFC. The Time class tracks:
+ * - Start time (t0), end time (t1), and time step (dt)
+ * - Current simulation time and increment counter
+ * - Save interval (saveat) for output scheduling
+ *
+ * The Time class provides queries for:
+ * - Current time: get_time()
+ * - Time step: get_dt()
+ * - Completion status: is_done()
+ * - Save scheduling: is_save_step()
+ *
+ * Typical usage:
+ * @code
+ * // Define simulation time parameters
+ * pfc::Time time({0.0, 100.0, 0.1}, 1.0);  // t0=0, t1=100, dt=0.1, saveat=1.0
+ *
+ * // Time integration loop
+ * while (!time.is_done()) {
+ *     model.step(time.get_dt());
+ *
+ *     if (time.is_save_step()) {
+ *         write_results(time.get_time());
+ *     }
+ *
+ *     time.increment();  // Advances time by dt
+ * }
+ * @endcode
+ *
+ * This file is part of the Simulation Control module, managing temporal
+ * aspects of time-dependent simulations.
+ *
+ * @see simulator.hpp for time integration loop
+ * @see model.hpp for physics model receiving dt
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_TIME_HPP
 #define PFC_TIME_HPP
 

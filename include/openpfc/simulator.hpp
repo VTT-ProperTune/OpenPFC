@@ -1,6 +1,48 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file simulator.hpp
+ * @brief Simulation orchestration and time integration loop
+ *
+ * @details
+ * This file defines the Simulator class, which orchestrates the execution of
+ * phase-field simulations in OpenPFC. The Simulator manages:
+ * - Time integration loop (calling Model::step repeatedly)
+ * - Initial condition application via FieldModifiers
+ * - Boundary condition enforcement
+ * - Results output scheduling via ResultsWriters
+ * - Simulation checkpointing and restart
+ *
+ * The Simulator acts as the "main loop" that coordinates all simulation components:
+ * @code
+ * // Typical simulation setup
+ * MyPhysicsModel model(fft, world);
+ * pfc::Time time({0.0, 100.0, 0.1}, 1.0);  // t0, t1, dt, saveat
+ * pfc::Simulator sim(model, time);
+ *
+ * // Add initial conditions
+ * sim.add_initial_condition(std::make_unique<pfc::Constant>(0.5));
+ *
+ * // Add results writer
+ * sim.add_results_writer("output", std::make_unique<pfc::BinaryWriter>("data.bin"));
+ *
+ * // Run simulation
+ * sim.run();
+ * @endcode
+ *
+ * This file is part of the Simulation Control module, providing the main
+ * execution framework for time-dependent simulations.
+ *
+ * @see model.hpp for physics model implementation
+ * @see time.hpp for time state management
+ * @see field_modifier.hpp for initial/boundary conditions
+ * @see results_writer.hpp for output handling
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_SIMULATOR_HPP
 #define PFC_SIMULATOR_HPP
 

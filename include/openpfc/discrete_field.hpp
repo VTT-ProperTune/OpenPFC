@@ -1,6 +1,53 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file discrete_field.hpp
+ * @brief Discrete field representation with physical coordinate mapping
+ *
+ * @details
+ * This file defines the DiscreteField template class, which represents a
+ * discretized field with:
+ * - N-dimensional array storage (via Array<T, D>)
+ * - Physical coordinate system (origin, discretization, bounds)
+ * - Interpolation capabilities (nearest-neighbor)
+ * - Coordinate ↔ index transformations
+ * - Field operations (apply functions to all points)
+ *
+ * DiscreteField bridges the gap between:
+ * - Discrete grid indices (integer coordinates)
+ * - Physical space coordinates (real-valued positions)
+ *
+ * Typical usage:
+ * @code
+ * // Create 3D field with 64³ points
+ * pfc::DiscreteField<double, 3> field(
+ *     {64, 64, 64},           // dimensions
+ *     {0, 0, 0},              // offset
+ *     {0.0, 0.0, 0.0},        // origin
+ *     {1.0, 1.0, 1.0}         // discretization (spacing)
+ * );
+ *
+ * // Apply function to all points
+ * field.apply([](double x, double y, double z) {
+ *     return std::sin(x) * std::cos(y);
+ * });
+ *
+ * // Interpolate at physical coordinates
+ * double value = field.interpolate({0.5, 1.2, 0.8});
+ * @endcode
+ *
+ * This file is part of the Utilities module, providing convenient field
+ * manipulation for initial conditions, post-processing, and analysis.
+ *
+ * @see array.hpp for underlying storage implementation
+ * @see core/world.hpp for coordinate system abstraction
+ * @see initial_conditions/ for usage examples in ICs
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_DISCRETE_FIELD_HPP
 #define PFC_DISCRETE_FIELD_HPP
 

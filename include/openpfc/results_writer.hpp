@@ -1,6 +1,48 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file results_writer.hpp
+ * @brief Base interface for simulation output and I/O operations
+ *
+ * @details
+ * This file defines the ResultsWriter abstract base class, which provides
+ * a unified interface for writing simulation results to various output formats.
+ * OpenPFC currently supports:
+ * - Binary format (BinaryWriter) for checkpointing and restart
+ * - Future: VTK format for visualization (User Story #0025)
+ *
+ * The ResultsWriter interface supports:
+ * - Parallel I/O via MPI (distributed data from decomposed domains)
+ * - Writing real and complex fields
+ * - Timestep-indexed output (increment parameter)
+ * - Domain configuration (global/local sizes, offsets)
+ *
+ * Typical usage:
+ * @code
+ * // Create writer
+ * auto writer = std::make_unique<pfc::BinaryWriter>("output.bin");
+ *
+ * // Configure domain (once)
+ * writer->set_domain(global_size, local_size, local_offset);
+ *
+ * // Write data at each save step
+ * for (int step = 0; step < num_steps; ++step) {
+ *     writer->write(step, field_data);
+ * }
+ * @endcode
+ *
+ * This file is part of the I/O module, providing output capabilities for
+ * simulation results and checkpointing.
+ *
+ * @see simulator.hpp for I/O orchestration
+ * @see types.hpp for RealField and ComplexField definitions
+ * @see binary_reader.hpp for input counterpart
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_RESULTS_WRITER_HPP
 #define PFC_RESULTS_WRITER_HPP
 
