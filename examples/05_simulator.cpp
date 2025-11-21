@@ -204,7 +204,7 @@ void run() {
   run_simulator(simulator);
 
   // Check the result, we should be very close to 0.5
-  if (model.rank0) {
+  if (model.is_rank0()) {
     if (std::abs(model.get_psi_max() - 0.5) < 0.01) {
       std::cout << "Test pass!" << std::endl;
     } else {
