@@ -46,7 +46,7 @@ public:
   Gaussian(double D) : m_D(D) {}
 
   void apply(Model &m, double t) override {
-    if (m.rank0) {
+    if (m.is_rank0()) {
       cout << "Applying custom initial condition at time " << t << endl;
     }
     auto &world = m.get_world();
