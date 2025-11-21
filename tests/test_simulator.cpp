@@ -8,17 +8,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
 
+#include "fixtures/mock_model.hpp"
+
 using namespace pfc;
 using namespace pfc::types;
-
-// Define a mock implementation of the Model class for testing
-class MockModel : public Model {
-public:
-  MockModel(const pfc::World &world) : pfc::Model(world) {}
-
-  void step(double /*t*/) override {}        // Suppress unused parameter warning
-  void initialize(double /*dt*/) override {} // Suppress unused parameter warning
-};
 
 // Define a mock implementation of the FieldModifier class for testing
 class MockIC : public FieldModifier {
@@ -34,7 +27,7 @@ TEST_CASE("Simulator functionality", "[simulator]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  MockModel model(world);
+  pfc::testing::MockModel model(world);
   model.set_fft(fft);
 
   // Ensure FFT object is set before proceeding
@@ -104,7 +97,7 @@ TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  MockModel model(world);
+  pfc::testing::MockModel model(world);
   model.set_fft(fft);
 
   REQUIRE_NOTHROW(model.get_fft());
