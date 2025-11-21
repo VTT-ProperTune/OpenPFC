@@ -1,6 +1,35 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file array.hpp
+ * @brief Multi-dimensional array container for field data
+ *
+ * @details
+ * This file defines the Array template class, a multi-dimensional array container
+ * used throughout OpenPFC for storing field data. The Array class provides:
+ * - Efficient storage using std::vector
+ * - Multi-dimensional indexing via MultiIndex
+ * - Construction from FFT inbox/outbox
+ * - Element-wise operations and transformations
+ * - Integration with decomposed domains
+ *
+ * Usage:
+ * @code
+ * // Create 3D array matching FFT outbox
+ * pfc::Array<double, 3> field(fft, pfc::ArrayType::Outbox);
+ *
+ * // Access elements
+ * field[{i, j, k}] = value;
+ * @endcode
+ *
+ * @see multi_index.hpp for indexing utilities
+ * @see fft.hpp for FFT integration
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_ARRAY_HPP
 #define PFC_ARRAY_HPP
 

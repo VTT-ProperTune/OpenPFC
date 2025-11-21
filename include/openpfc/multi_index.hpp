@@ -1,6 +1,34 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file multi_index.hpp
+ * @brief Multi-dimensional indexing utilities
+ *
+ * @details
+ * This file defines the MultiIndex template class for converting between
+ * multi-dimensional and linear indices. Essential for:
+ * - Iterating over multi-dimensional arrays
+ * - Converting between (i,j,k) and flat array indices
+ * - Managing index ranges and offsets
+ * - Domain decomposition support
+ *
+ * The MultiIndex class handles the mapping between N-dimensional integer
+ * coordinates and 1D vector storage.
+ *
+ * Usage:
+ * @code
+ * pfc::MultiIndex<3> idx({0, 0, 0}, {64, 64, 64});
+ * size_t linear = idx.to_linear({10, 20, 30});
+ * auto multi = idx.from_linear(linear);
+ * @endcode
+ *
+ * @see array.hpp for array container using MultiIndex
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_MULTI_INDEX_HPP
 #define PFC_MULTI_INDEX_HPP
 

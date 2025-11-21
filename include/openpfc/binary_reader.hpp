@@ -1,6 +1,34 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file binary_reader.hpp
+ * @brief Read field data from binary files
+ *
+ * @details
+ * This file defines the BinaryReader class for reading field data from binary
+ * files using MPI-IO. Used for:
+ * - Loading checkpoints
+ * - Reading initial conditions from files
+ * - Restarting simulations
+ *
+ * The reader handles parallel I/O with proper domain decomposition, allowing
+ * each MPI rank to read only its local portion of the data.
+ *
+ * Usage:
+ * @code
+ * pfc::BinaryReader reader;
+ * reader.set_domain(global_size, local_size, local_offset);
+ * reader.read("checkpoint.bin", field_data);
+ * @endcode
+ *
+ * @see results_writer.hpp for writing binary files
+ * @see initial_conditions/file_reader.hpp for using this in initial conditions
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
 #ifndef PFC_BINARY_READER_HPP
 #define PFC_BINARY_READER_HPP
 
