@@ -463,7 +463,7 @@ override this function.
 
 void step(Simulator &s, Aluminum &m) {
 #ifdef ALUMINUM_DEBUG
-  if (m.rank0) cout << "Performing Aluminum step" << endl;
+  if (m.is_rank0()) cout << "Performing Aluminum step" << endl;
 #endif
 
   for (auto const &bc : s.get_boundary_conditions()) {
