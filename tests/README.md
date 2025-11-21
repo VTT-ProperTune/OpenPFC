@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # OpenPFC Test Suite
 
 This directory contains the comprehensive test suite for OpenPFC, organized to support different testing strategies and use cases.

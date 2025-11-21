@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Test Fixtures
 
 This directory contains **shared test utilities** used across the test suite. Fixtures eliminate code duplication and provide consistent test infrastructure.

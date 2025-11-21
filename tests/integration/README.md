@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Integration Tests
 
 This directory contains **integration tests** that verify multiple OpenPFC components working together. Integration tests validate component interactions and end-to-end workflows.
