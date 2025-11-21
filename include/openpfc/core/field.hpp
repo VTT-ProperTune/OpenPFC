@@ -4,7 +4,7 @@
 #pragma once
 
 /**
- * @file fields.hpp
+ * @file field.hpp
  * @brief Defines the Field<T> structure and related free functions for data storage
  * in OpenPFC.
  *

@@ -1,6 +1,37 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file types.hpp
+ * @brief Core type definitions for World parameters
+ *
+ * @details
+ * This header defines the fundamental types used to construct World objects:
+ * - Int3, Real3, Bool3: Array aliases for 3D data
+ * - Size3: Grid dimensions
+ * - Periodic3: Periodicity flags per dimension
+ * - LowerBounds3, UpperBounds3: Physical domain bounds
+ * - Spacing3: Grid spacing per dimension
+ *
+ * These types provide strong typing to prevent confusion between different
+ * 3-element arrays (size vs spacing vs bounds), improving code clarity
+ * and catching errors at compile time.
+ *
+ * @code
+ * #include <openpfc/core/types.hpp>
+ *
+ * pfc::types::Size3 size{64, 64, 64};
+ * pfc::types::Spacing3 spacing{1.0, 1.0, 1.0};
+ * pfc::types::Periodic3 periodic{true, true, false};  // Periodic in x, y only
+ * @endcode
+ *
+ * @see core/world.hpp for usage in World construction
+ * @see core/csys.hpp for coordinate system integration
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #pragma once
 
 #include <array>

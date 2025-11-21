@@ -1,6 +1,40 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file csys.hpp
+ * @brief Extensible coordinate system framework
+ *
+ * @details
+ * This header defines the CoordinateSystem template framework for defining
+ * custom coordinate systems (Cartesian, Polar, Cylindrical, etc.) via
+ * compile-time specialization.
+ *
+ * Each coordinate system specialization provides:
+ * - to_physical(Int3) -> Real3: Convert grid indices to physical coordinates
+ * - to_index(Real3) -> Int3: Convert physical coordinates to grid indices
+ * - Internal parameters (offset, spacing, etc.)
+ *
+ * The design uses template specialization rather than inheritance, enabling
+ * zero-cost abstractions and user-defined coordinate systems without modifying
+ * OpenPFC source code.
+ *
+ * @code
+ * #include <openpfc/core/csys.hpp>
+ *
+ * // Use Cartesian coordinate system
+ * using Cartesian = pfc::csys::CoordinateSystem<pfc::csys::CartesianTag>;
+ * Cartesian cs({0, 0, 0}, {1.0, 1.0, 1.0});
+ * auto pos = cs.to_physical({10, 20, 30});  // Physical coordinates
+ * @endcode
+ *
+ * @see core/types.hpp for Int3, Real3 definitions
+ * @see core/world.hpp for coordinate system integration
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #pragma once
 
 #include "types.hpp"

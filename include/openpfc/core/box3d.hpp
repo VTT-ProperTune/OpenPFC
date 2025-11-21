@@ -1,6 +1,34 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file box3d.hpp
+ * @brief 3D integer bounding box for grid index space
+ *
+ * @details
+ * Defines the Box3D class which represents a discrete 3D rectangular region
+ * in grid index space. This is used to describe local computational domains
+ * in parallel simulations.
+ *
+ * Box3D operates purely in index space and is independent of physical
+ * coordinates, spacing, or origin. It is typically paired with World
+ * for coordinate transformations.
+ *
+ * @code
+ * #include <openpfc/core/box3d.hpp>
+ *
+ * // Create a box from (0,0,0) to (63,63,63)
+ * pfc::Box3D box({0, 0, 0}, {64, 64, 64});
+ * auto size = box.size();  // Returns {64, 64, 64}
+ * @endcode
+ *
+ * @see core/world.hpp for physical coordinate mapping
+ * @see core/decomposition.hpp for domain decomposition using Box3D
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_BOX3D_HPP
 #define PFC_BOX3D_HPP
 
