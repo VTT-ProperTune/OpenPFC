@@ -6,40 +6,39 @@
 #include "openpfc/model.hpp"
 #include <catch2/catch_test_macros.hpp>
 
+#include "fixtures/mock_model.hpp"
+
 using namespace pfc;
 
-/*
-
-class MockModel : public Model {
-public:
-  MockModel(const World &world) : Model(world) {}
-
-  // Implement abstract methods with mock behavior
-  Field &get_field() override {
-    static RealField dummyField;
-    return dummyField;
+TEST_CASE("FixedBC - Basic functionality", "[boundary_conditions][unit]") {
+  SECTION("FixedBC can be constructed with default values") {
+    FixedBC fixedBC;
+    REQUIRE_NOTHROW(fixedBC);
   }
 
-  const Decomposition &get_decomposition() const {
-    static Decomposition dummyDecomp;
-    return dummyDecomp;
+  SECTION("FixedBC can be constructed with parameters") {
+    FixedBC fixedBC(-0.5, 0.5);
+    REQUIRE_NOTHROW(fixedBC);
   }
 
-  const World &get_world() const { return Model::get_world(); }
-};
+  SECTION("FixedBC field name can be set and retrieved") {
+    FixedBC fixedBC;
+    fixedBC.set_field_name("psi");
+    REQUIRE(fixedBC.get_field_name() == "psi");
+  }
 
-TEST_CASE("FixedBC apply method triggers error", "[BoundaryConditions]") {
-  // Create a dummy World object
-  const World world = world::create({128, 128, 128});
+  SECTION("FixedBC rho values can be set") {
+    FixedBC fixedBC;
+    fixedBC.set_rho_low(-0.5);
+    fixedBC.set_rho_high(0.5);
+    REQUIRE_NOTHROW(fixedBC);
+  }
 
-  // Create a MockModel object
-  MockModel model(world);
+  SECTION("FixedBC has correct modifier name") {
+    FixedBC fixedBC;
+    REQUIRE(fixedBC.get_modifier_name() == "FixedBC");
+  }
 
-  // Create a FixedBC object
-  FixedBC fixedBC;
-
-  // Call the apply method to trigger the error
-  double time = 0.0;
-  fixedBC.apply(model, time);
+  // TODO: Test actual apply() behavior requires integration test with real Model
+  // that implements get_real_field(). See user story for FieldModifier redesign.
 }
-*/
