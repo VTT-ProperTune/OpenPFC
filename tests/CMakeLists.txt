@@ -5,23 +5,16 @@
 
 find_package(Catch2 REQUIRED)
 
-add_executable(openpfc-tests
-               runtests.cpp
-               test_world.cpp
-               test_box3d.cpp
-               test_decomposition.cpp
-               test_field.cpp
-               test_fft.cpp
-               test_fft_setting.cpp
-               test_arraynd.cpp
-               test_discrete_field.cpp
-               test_field_modifier.cpp
-               test_ic_constant.cpp
-               test_boundary_conditions.cpp
-               test_model.cpp
-               test_multi_index.cpp
-               test_simulator.cpp
-               test_time.cpp)
+# Create test executable with just the runner initially
+add_executable(openpfc-tests runtests.cpp)
+
+# Add tests/ directory to include path so fixtures/ can be found
+target_include_directories(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Add test subdirectories (they will add their sources via target_sources)
+add_subdirectory(unit)
+# add_subdirectory(integration)  # When integration tests are added
+# add_subdirectory(benchmarks)   # When benchmarks are added
 
 # Link against OpenPFC and Catch2
 target_link_libraries(openpfc-tests PRIVATE OpenPFC Catch2::Catch2)
