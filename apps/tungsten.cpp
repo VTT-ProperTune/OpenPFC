@@ -272,7 +272,7 @@ override this function.
 */
 void step(Simulator &s, Tungsten &m) {
 #ifdef TUNGSTEN_DEBUG
-  if (m.rank0) cout << "Performing Tungsten step" << endl;
+  if (m.is_rank0()) cout << "Performing Tungsten step" << endl;
 #endif
   double t = s.get_time().get_current();
   m.step(t);
