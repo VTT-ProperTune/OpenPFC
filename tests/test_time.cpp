@@ -39,7 +39,7 @@ struct TestCase {
   int expected_increment;            // Expected increment (default to 0)
 };
 
-TEST_CASE("Time initialization", "[Time]") {
+TEST_CASE("Time - initialization", "[time][unit]") {
   // Fix expected_t1 value in test cases to match the actual behavior.
   std::vector<TestCase> test_cases = {
       {{0.0, 10.0, 1.0}, 2.0, 0.0, 10.0, 1.0, 2.0, 0.0, 0}, // Added
@@ -59,7 +59,7 @@ TEST_CASE("Time initialization", "[Time]") {
   }
 }
 
-TEST_CASE("Time edge cases", "[Time]") {
+TEST_CASE("Time - edge cases", "[time][unit]") {
   SECTION("Throw an exception when the start time is negative") {
     std::array<double, 3> time_config = {-1.0, 10.0, 1.0};
     REQUIRE_THROWS_WITH(create_time_instance(time_config),
@@ -93,7 +93,7 @@ TEST_CASE("Time edge cases", "[Time]") {
   }
 }
 
-TEST_CASE("Time increment overflow", "[Time]") {
+TEST_CASE("Time - increment overflow", "[time][unit]") {
   // Adjust the test to account for floating-point precision in the final
   // comparison.
   std::array<double, 3> time = {0.0, 1e6, 1.0};
@@ -117,7 +117,7 @@ void verify_time_instance(const Time &time_instance, double t0, double t1, doubl
   REQUIRE(time_instance.get_increment() == increment);
 }
 
-TEST_CASE("Time completion", "[Time]") {
+TEST_CASE("Time - completion detection", "[time][unit]") {
   // Test the completion status of the Time class.
   std::array<double, 3> time = {0.0, 10.0, 1.0};
   Time t(time);
@@ -138,7 +138,7 @@ TEST_CASE("Time completion", "[Time]") {
   }
 }
 
-TEST_CASE("Time save condition", "[Time]") {
+TEST_CASE("Time - save condition check", "[time][unit]") {
   // Test the save condition functionality of the Time class.
   std::array<double, 3> time = {0.0, 10.0, 1.0};
   Time t(time);
