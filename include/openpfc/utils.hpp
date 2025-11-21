@@ -14,8 +14,11 @@
 namespace pfc {
 namespace utils {
 
+// Overload for no format arguments - just return the string as-is
+inline std::string string_format(const std::string &str) { return str; }
+
 template <typename... Args>
-std::string string_format(const std::string &format, Args... args) {
+inline std::string string_format(const std::string &format, Args... args) {
   size_t size =
       snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
   if (size <= 0) {
