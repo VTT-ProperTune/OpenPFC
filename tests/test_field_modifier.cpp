@@ -8,16 +8,15 @@
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
 
+#include "fixtures/mock_model.hpp"
+
 using namespace pfc;
 
-// Mock model class for testing
-class MockModel : public Model {
+// Extended mock model for testing field modifications
+class MockModelWithModificationFlag : public pfc::testing::MockModel {
 public:
-  bool is_modified = false; // Add this member to track modifications
-
-  MockModel(const pfc::World &world) : pfc::Model(world) {}
-  void step(double /*t*/) override {}        // Suppress unused parameter warning
-  void initialize(double /*dt*/) override {} // Suppress unused parameter warning
+  using pfc::testing::MockModel::MockModel;
+  bool is_modified = false; // Track whether apply() was called
 };
 
 // Mock field modifier class for testing
@@ -25,17 +24,18 @@ class MockFieldModifier : public FieldModifier {
 public:
   void apply(Model &m,
              double /*time*/) override { // Suppress unused parameter warning
-    MockModel &mockModel = dynamic_cast<MockModel &>(m);
+    MockModelWithModificationFlag &mockModel =
+        dynamic_cast<MockModelWithModificationFlag &>(m);
     mockModel.is_modified = true;
   };
 };
 
-TEST_CASE("FieldModifier applies field modification to the model",
-          "[FieldModifier]") {
+TEST_CASE("FieldModifier - applies field modification to model",
+          "[field_modifier][unit]") {
   auto world = world::create({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  MockModel model(world);
+  MockModelWithModificationFlag model(world);
   model.set_fft(fft); // Ensure FFT object is set
 
   // Ensure FFT object is set before proceeding
@@ -49,12 +49,12 @@ TEST_CASE("FieldModifier applies field modification to the model",
   REQUIRE(model.is_modified);
 }
 
-TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
+TEST_CASE("FieldModifier - polymorphic usage", "[field_modifier][unit]") {
   FieldModifier *modifier = new MockFieldModifier();
   auto world = world::create({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  MockModel model(world);
+  MockModelWithModificationFlag model(world);
   model.set_fft(fft); // Ensure FFT object is set
 
   // Ensure FFT object is set before proceeding
@@ -68,11 +68,11 @@ TEST_CASE("FieldModifier can be used polymorphically", "[FieldModifier]") {
   delete modifier;
 }
 
-TEST_CASE("FieldModifier can be moved", "[FieldModifier]") {
+TEST_CASE("FieldModifier - move semantics", "[field_modifier][unit]") {
   auto world = world::create({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  MockModel model(world);
+  MockModelWithModificationFlag model(world);
   model.set_fft(fft); // Ensure FFT object is set
 
   // Ensure FFT object is set before proceeding
@@ -87,7 +87,7 @@ TEST_CASE("FieldModifier can be moved", "[FieldModifier]") {
   REQUIRE(model.is_modified);
 }
 
-TEST_CASE("Field name can be set and retrieved", "[FieldModifier]") {
+TEST_CASE("FieldModifier - field name getter and setter", "[field_modifier][unit]") {
   MockFieldModifier modifier;
   // default field name is "default"
   REQUIRE(modifier.get_field_name() == "default");
@@ -96,11 +96,11 @@ TEST_CASE("Field name can be set and retrieved", "[FieldModifier]") {
   REQUIRE(modifier.get_field_name() == "phi");
 }
 
-TEST_CASE("Field Modifier - MockModel Integration", "[field_modifier]") {
+TEST_CASE("FieldModifier - MockModel integration", "[field_modifier][unit]") {
   auto world = world::create({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  MockModel model(world);
+  pfc::testing::MockModel model(world);
   model.set_fft(fft); // Ensure FFT object is set
 
   // Ensure FFT object is set before proceeding
