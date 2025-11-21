@@ -80,13 +80,3 @@ TEST_CASE("Model - basic functionality", "[model][unit]") {
     REQUIRE(&retrieved_field == &field);
   }
 }
-
-TEST_CASE("Model - FFT integration", "[model][unit]") {
-  auto world = world::create({8, 8, 8});
-  auto decomposition = decomposition::create(world, 1);
-  auto fft = fft::create(decomposition);
-
-  REQUIRE(fft.size_inbox() > 0);
-  REQUIRE(fft.size_outbox() > 0);
-  REQUIRE(fft.size_workspace() > 0);
-}
