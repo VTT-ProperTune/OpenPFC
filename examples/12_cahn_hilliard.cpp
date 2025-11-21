@@ -9,8 +9,6 @@
 
 using namespace pfc;
 
-const double PI = 3.141592653589793238463;
-
 class CahnHilliard : public Model {
 private:
   std::vector<double> opL, opN,
@@ -45,12 +43,11 @@ public:
     std::array<int, 3> o_low = get_outbox(fft).low;
     std::array<int, 3> o_high = get_outbox(fft).high;
     size_t idx = 0;
-    double pi = std::atan(1.0) * 4.0;
     auto spacing = get_spacing(w);
     auto size = get_size(w);
-    double fx = 2.0 * pi / (spacing[0] * size[0]);
-    double fy = 2.0 * pi / (spacing[1] * size[1]);
-    double fz = 2.0 * pi / (spacing[2] * size[2]);
+    double fx = 2.0 * constants::pi / (spacing[0] * size[0]);
+    double fy = 2.0 * constants::pi / (spacing[1] * size[1]);
+    double fz = 2.0 * constants::pi / (spacing[2] * size[2]);
     for (int k = o_low[2]; k <= o_high[2]; k++) {
       for (int j = o_low[1]; j <= o_high[1]; j++) {
         for (int i = o_low[0]; i <= o_high[0]; i++) {
