@@ -100,17 +100,17 @@ private:
                                     ///< associated with the model
   const World &m_world;             ///< Reference to the World object
   heffte::box3d<int> domain;        ///< Domain dimensions
+  bool m_rank0 = false;             ///< Flag indicating if the current MPI rank is 0
 
 public:
-  bool rank0 = false; ///< Flag indicating if the current MPI rank is 0 (useful
-                      ///< for rank-specific operations)
-
   /**
    * @brief Construct a new Model object.
    *
    * @param world Reference to the World object
    */
-  Model(const World &world) : m_world(world), domain(to_heffte_box(world)) {}
+  Model(const World &world)
+      : m_world(world), domain(to_heffte_box(world)), m_rank0(mpi::get_rank() == 0) {
+  }
 
   /**
    * @brief Destroy the Model object.
@@ -126,7 +126,7 @@ public:
   Model(FFT &fft, const World &world)
       : m_fft(&fft), m_world(world),
         domain(to_heffte_box(world)), // Use to_heffte_box
-        rank0(mpi::get_rank() == 0) {}
+        m_rank0(mpi::get_rank() == 0) {}
 
   /**
    * @brief Disable copy constructor.
@@ -139,11 +139,21 @@ public:
   Model &operator=(const Model &) = delete;
 
   /**
-   * @brief Return boolean flag indicating is this process rank 0.
+   * @brief Check if current MPI rank is 0
    *
-   * @return true/false
+   * Useful for conditional output (only rank 0 prints).
+   *
+   * @return true if rank is 0, false otherwise
+   *
+   * @note This function is thread-safe and has zero overhead (inline)
+   *
+   * @code
+   * if (model.is_rank0()) {
+   *     std::cout << "Status message\n";
+   * }
+   * @endcode
    */
-  bool is_rank0() { return rank0; }
+  inline bool is_rank0() const { return m_rank0; }
 
   /**
    * @brief Get the decomposition object associated with the model.
@@ -168,7 +178,7 @@ public:
    */
   void set_fft(FFT &fft) {
     m_fft = &fft;
-    rank0 = (mpi::get_rank() == 0);
+    m_rank0 = (mpi::get_rank() == 0);
   }
 
   /**
