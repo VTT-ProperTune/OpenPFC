@@ -80,7 +80,7 @@ public:
    * @param dt Time step interval
    */
   void initialize(double dt) override {
-    if (rank0) cout << "Allocate space" << endl;
+    if (is_rank0()) cout << "Allocate space" << endl;
 
     // Get references to world, fft and domain decomposition
     auto &world = get_world();
@@ -103,7 +103,7 @@ public:
     World is defining the global dimensions of the problem as well as origin and
     chosen discretization parameters.
     */
-    if (rank0) cout << "World: " << world << endl;
+    if (is_rank0()) cout << "World: " << world << endl;
 
     /*
     Upper and lower limits for this particular MPI rank, in both inbox and
@@ -119,7 +119,7 @@ public:
     things as simple as possible, the initial condition can be also constructed
     here.
     */
-    if (rank0) cout << "Create initial condition" << endl;
+    if (is_rank0()) cout << "Create initial condition" << endl;
 
     auto size = get_size(world);
     auto origin = get_origin(world);
@@ -143,7 +143,7 @@ public:
     The main thing along with allocating workspace for simulation is to prepare
     operators, thus making the actual time stepping as fast as possible.
     */
-    if (rank0) cout << "Prepare operators" << endl;
+    if (is_rank0()) cout << "Prepare operators" << endl;
     idx = 0;
     double pi = std::atan(1.0) * 4.0;
     double fx = 2.0 * pi / (spacing[0] * size[0]);
@@ -245,18 +245,18 @@ void run() {
   model.initialize(dt);
 
   // Loop until we are in t_stop
-  if (model.rank0) cout << "n = 0, t = 0, min = 0.0, max = 1.0" << endl;
+  if (model.is_rank0()) cout << "n = 0, t = 0, min = 0.0, max = 1.0" << endl;
   while (t <= t_stop) {
     t += dt;
     n += 1;
     model.step(dt);
-    if (model.rank0)
+    if (model.is_rank0())
       cout << "n = " << n << ", t = " << t << ", min = " << model.psi_min
            << ", max = " << model.psi_max << endl;
   }
 
   // Check the result, we should be very close to 0.5
-  if (model.rank0) {
+  if (model.is_rank0()) {
     if (abs(model.psi_max - 0.5) < 0.01) {
       cout << "Test pass!" << endl;
     } else {
