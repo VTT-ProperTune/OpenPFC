@@ -1,6 +1,39 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file timer.hpp
+ * @brief MPI-based wall-clock timer
+ *
+ * @details
+ * This header provides the timer class for measuring wall-clock time
+ * using MPI_Wtime(), which provides consistent timing across MPI ranks.
+ *
+ * The timer class provides:
+ * - tic(): Start timing
+ * - toc(): Stop timing and return elapsed time
+ * - duration(): Get total accumulated duration
+ * - reset(): Reset accumulated duration
+ * - description(): Set/get timer description for logging
+ *
+ * @code
+ * #include <openpfc/mpi/timer.hpp>
+ *
+ * pfc::mpi::timer t;
+ * t.description("FFT computation");
+ * t.tic();
+ * // ... perform FFT ...
+ * double elapsed = t.toc();
+ * std::cout << t << std::endl;  // Print timer with description
+ * @endcode
+ *
+ * @see mpi/environment.hpp for MPI initialization
+ * @see mpi.hpp for top-level MPI utilities
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_MPI_TIMER_HPP
 #define PFC_MPI_TIMER_HPP
 

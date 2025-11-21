@@ -1,6 +1,39 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file environment.hpp
+ * @brief RAII wrapper for MPI initialization and finalization
+ *
+ * @details
+ * This header provides the environment class, which manages MPI
+ * initialization (MPI_Init) and finalization (MPI_Finalize) using
+ * RAII (Resource Acquisition Is Initialization) pattern.
+ *
+ * The environment class ensures:
+ * - MPI_Init is called on construction
+ * - MPI_Finalize is called on destruction
+ * - Query MPI state (initialized(), finalized())
+ * - Get processor name
+ *
+ * @code
+ * #include <openpfc/mpi/environment.hpp>
+ *
+ * int main(int argc, char** argv) {
+ *     pfc::mpi::environment env;
+ *     std::cout << "Running on: " << env.processor_name() << std::endl;
+ *     // MPI_Finalize called automatically when env goes out of scope
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @see mpi/communicator.hpp for communicator wrapper
+ * @see mpi.hpp for top-level MPI utilities
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_MPI_ENVIRONMENT_HPP
 #define PFC_MPI_ENVIRONMENT_HPP
 

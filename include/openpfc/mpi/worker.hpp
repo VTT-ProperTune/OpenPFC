@@ -1,6 +1,41 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file worker.hpp
+ * @brief MPI worker process management
+ *
+ * @details
+ * This header provides the MPI_Worker class for managing individual MPI
+ * worker processes with automatic initialization and output management.
+ *
+ * The MPI_Worker class:
+ * - Automatically initializes and finalizes MPI
+ * - Mutes stdout on non-root ranks to avoid duplicate output
+ * - Provides rank and process count queries
+ * - Manages MPI communicator
+ *
+ * This is particularly useful for applications where only rank 0 should
+ * produce console output.
+ *
+ * @code
+ * #include <openpfc/mpi/worker.hpp>
+ *
+ * int main(int argc, char** argv) {
+ *     pfc::MPI_Worker worker(argc, argv, MPI_COMM_WORLD);
+ *     // Only rank 0 prints to stdout
+ *     std::cout << "Rank: " << worker.rank() << std::endl;
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @see mpi/environment.hpp for alternative RAII MPI management
+ * @see mpi/communicator.hpp for communicator wrapper
+ *
+ * @author OpenPFC Development Team
+ * @date 2025
+ */
+
 #ifndef PFC_MPI_WORKER_HPP
 #define PFC_MPI_WORKER_HPP
 
