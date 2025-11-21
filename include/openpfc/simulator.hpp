@@ -131,7 +131,7 @@ public:
 
   void initialize() { get_model().initialize(get_time().get_dt()); }
 
-  bool is_rank0() { return get_model().rank0; }
+  bool is_rank0() { return get_model().is_rank0(); }
 
   unsigned int get_increment() { return get_time().get_increment(); }
 
