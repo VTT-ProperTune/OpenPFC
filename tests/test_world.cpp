@@ -11,7 +11,7 @@ using namespace Catch::Matchers;
 using namespace pfc;
 using namespace pfc::types;
 
-TEST_CASE("World - Construction and Accessors", "[world]") {
+TEST_CASE("World - construction and accessors", "[world][unit]") {
   SECTION("Construct World with valid dimensions, origin, and spacing") {
     Int3 dimensions = {100, 200, 300};
     Real3 origin = {1.0, 2.0, 3.0};
@@ -48,7 +48,7 @@ TEST_CASE("World - Construction and Accessors", "[world]") {
   }
 }
 
-TEST_CASE("World - Coordinate Transformations", "[world]") {
+TEST_CASE("World - coordinate transformations", "[world][unit]") {
   Int3 dimensions = {100, 100, 100};
   Real3 origin = {0.0, 0.0, 0.0};
   Real3 spacing = {1.0, 1.0, 1.0};
@@ -81,7 +81,7 @@ TEST_CASE("World - Coordinate Transformations", "[world]") {
   }
 }
 
-TEST_CASE("World - Total Size", "[world]") {
+TEST_CASE("World - total size calculation", "[world][unit]") {
   SECTION("Correct total size calculation") {
     Int3 dimensions = {10, 20, 30};
     World world = world::create(dimensions);
@@ -89,7 +89,7 @@ TEST_CASE("World - Total Size", "[world]") {
   }
 }
 
-TEST_CASE("World - Equality and Inequality Operators", "[world]") {
+TEST_CASE("World - equality and inequality operators", "[world][unit]") {
   Int3 dimensions = {100, 100, 100};
   Real3 origin = {0.0, 0.0, 0.0};
   Real3 spacing = {1.0, 1.0, 1.0};
