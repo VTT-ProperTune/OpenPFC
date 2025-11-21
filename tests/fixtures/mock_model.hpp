@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "openpfc/field_modifier.hpp"
 #include "openpfc/model.hpp"
 
 namespace pfc {
@@ -100,6 +101,79 @@ public:
 
   /// Last dt value passed to initialize()
   double last_init_dt = 0.0;
+};
+
+/**
+ * @brief Mock Model with modification flag for FieldModifier testing
+ *
+ * Extended mock that tracks whether a FieldModifier's apply() method
+ * was called. Use this to test FieldModifier implementations.
+ *
+ * @code
+ * pfc::testing::MockModelWithModificationFlag model(world);
+ * MockFieldModifier modifier;
+ * modifier.apply(model, 0.0);
+ * REQUIRE(model.is_modified);
+ * @endcode
+ */
+class MockModelWithModificationFlag : public MockModel {
+public:
+  using MockModel::MockModel;
+
+  /// Flag indicating whether a field modifier was applied
+  bool is_modified = false;
+};
+
+/**
+ * @brief Mock FieldModifier for testing
+ *
+ * Simple FieldModifier that sets the modification flag on
+ * MockModelWithModificationFlag when applied.
+ *
+ * @code
+ * pfc::testing::MockFieldModifier modifier;
+ * pfc::testing::MockModelWithModificationFlag model(world);
+ * modifier.apply(model, 0.0);
+ * REQUIRE(model.is_modified);
+ * @endcode
+ */
+class MockFieldModifier : public FieldModifier {
+public:
+  /**
+   * @brief Apply mock modification (sets is_modified flag)
+   * @param m Model to modify (must be MockModelWithModificationFlag)
+   * @param time Current simulation time (unused)
+   */
+  void apply(Model &m, double /*time*/) override {
+    auto &mock_model = dynamic_cast<MockModelWithModificationFlag &>(m);
+    mock_model.is_modified = true;
+  }
+};
+
+/**
+ * @brief Mock initial condition that fills a field with a constant value
+ *
+ * Simple FieldModifier for testing initial conditions. Sets all values
+ * in the target field to 1.0.
+ *
+ * @code
+ * pfc::testing::MockIC ic;
+ * ic.set_field_name("phi");
+ * ic.apply(model, 0.0);
+ * // model's "phi" field is now filled with 1.0
+ * @endcode
+ */
+class MockIC : public FieldModifier {
+public:
+  /**
+   * @brief Fill target field with 1.0
+   * @param m Model containing the field
+   * @param time Current simulation time (unused)
+   */
+  void apply(Model &m, double /*time*/) override {
+    std::vector<double> &field = m.get_real_field(get_field_name());
+    std::fill(field.begin(), field.end(), 1.0);
+  }
 };
 
 } // namespace testing
