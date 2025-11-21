@@ -9,6 +9,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Core**: World construction helper functions in `include/openpfc/core/world.hpp`
+  providing ergonomic, zero-cost abstractions for common grid creation patterns.
+  Added 5 inline helper functions: `uniform(int)` and `uniform(int, double)` for
+  N³ grids, `from_bounds(...)` for automatic spacing computation from physical
+  bounds (periodic/non-periodic aware), `with_spacing(...)` for custom spacing
+  with default origin, and `with_origin(...)` for custom origin with unit spacing.
+  All helpers include input validation with clear error messages. Reduces
+  boilerplate from `world::create({64,64,64}, {0,0,0}, {1,1,1})` to
+  `world::uniform(64)`. Backward compatible - existing `create()` API unchanged.
+  Comprehensive test coverage (32 new assertions). Example program added in
+  `examples/world_helpers_example.cpp`. (User Story #0030)
 - **Core**: Mathematical constants in `include/openpfc/constants.hpp` for
   compile-time evaluation with zero runtime overhead. Added 12 constants: π,
   2π, π/2, π/4, 1/π, √π, √2, √3, e, ln(2), ln(10), and φ (golden ratio).
