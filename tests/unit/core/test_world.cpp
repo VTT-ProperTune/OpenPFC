@@ -109,3 +109,48 @@ TEST_CASE("World - equality and inequality operators", "[world][unit]") {
     REQUIRE_FALSE(world1 != world2);
   }
 }
+
+TEST_CASE("World - streaming output", "[world][unit]") {
+  SECTION("World can be streamed to output") {
+    Int3 dimensions = {10, 20, 30};
+    Real3 origin = {1.0, 2.0, 3.0};
+    Real3 spacing = {0.5, 0.5, 0.5};
+    World world = world::create(dimensions, origin, spacing);
+
+    std::ostringstream oss;
+    REQUIRE_NOTHROW(oss << world);
+
+    std::string output = oss.str();
+    REQUIRE(output.find("World Summary") != std::string::npos);
+    REQUIRE(output.find("Size") != std::string::npos);
+    REQUIRE(output.find("10") != std::string::npos);
+    REQUIRE(output.find("20") != std::string::npos);
+    REQUIRE(output.find("30") != std::string::npos);
+  }
+
+  SECTION("World output includes coordinate system info") {
+    World world = world::create({5, 5, 5}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+    std::ostringstream oss;
+    oss << world;
+
+    std::string output = oss.str();
+    REQUIRE(output.find("Coordinate Sys") != std::string::npos);
+    REQUIRE(output.find("Cartesian") != std::string::npos);
+    REQUIRE(output.find("Offset") != std::string::npos);
+    REQUIRE(output.find("Spacing") != std::string::npos);
+  }
+
+  SECTION("World output with non-default values") {
+    Real3 origin = {1.5, 2.5, 3.5};
+    Real3 spacing = {0.1, 0.2, 0.3};
+    World world = world::create({8, 16, 32}, origin, spacing);
+
+    std::ostringstream oss;
+    oss << world;
+    std::string output = oss.str();
+
+    // Verify output contains key values (formatted with 2 decimal places)
+    REQUIRE(output.find("1.50") != std::string::npos); // origin x
+    REQUIRE(output.find("0.10") != std::string::npos); // spacing x
+  }
+}
