@@ -11,7 +11,7 @@
 
 using namespace pfc;
 
-TEST_CASE("Differentiate in all directions", "[SpectralDifferentiator]") {
+TEST_CASE("DiffOp - differentiate in all directions", "[diffop][unit]") {
   // Setup
   auto lo{-M_PI, -M_PI, -M_PI};
   auto hi{M_PI, M_PI, M_PI};
