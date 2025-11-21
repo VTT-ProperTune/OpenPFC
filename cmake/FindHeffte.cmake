@@ -62,3 +62,6 @@ if(NOT heffte_POPULATED)
 endif()
 
 FetchContent_MakeAvailable(heffte)
+
+# Set Heffte_FOUND to indicate success
+set(Heffte_FOUND TRUE)
