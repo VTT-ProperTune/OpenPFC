@@ -11,10 +11,8 @@
 
 using namespace pfc;
 
-// Include the MultiIndex implementation and any other necessary headers
-
-TEST_CASE("MultiIndex Example Test") {
-  SECTION("Iterating through MultiIndex") {
+TEST_CASE("MultiIndex - iteration over 3D grid", "[multi_index][unit]") {
+  SECTION("Produces correct indices and linear indices") {
     std::stringstream output;
     std::array<int, 3> size = {2, 2, 2};
     std::array<int, 3> offset = {1, 1, 1};
@@ -39,7 +37,7 @@ TEST_CASE("MultiIndex Example Test") {
     REQUIRE(output.str() == expectedOutput);
   }
 
-  SECTION("Filling vector using MultiIndex") {
+  SECTION("Can be used to fill vector with computed values") {
     std::array<int, 8> data{};
     std::array<int, 3> size = {2, 2, 2};
     std::array<int, 3> offset = {1, 1, 1};
@@ -53,8 +51,10 @@ TEST_CASE("MultiIndex Example Test") {
     std::array<int, 8> expectedData = {6, 8, 7, 9, 9, 11, 10, 12};
     REQUIRE(data == expectedData);
   }
+}
 
-  SECTION("Filling two-dimensional data") {
+TEST_CASE("MultiIndex - 2D grid operations", "[multi_index][unit]") {
+  SECTION("Can fill 2D array with selective region") {
     std::array<int, 25> arr{};
     std::array<int, 2> size = {5, 5};
     std::array<int, 2> offset = {3, 3};
