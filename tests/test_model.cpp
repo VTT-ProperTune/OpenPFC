@@ -9,22 +9,15 @@
 #include <iostream>
 #include <openpfc/model.hpp>
 
+#include "fixtures/mock_model.hpp"
+
 using namespace pfc;
 using pfc::types::Int3;
 
-// Define a mock implementation of the Model class for testing
-class MockModel : public Model {
-public:
-  MockModel(const World &world) : Model(world) {}
-
-  void step(double) override {}
-  void initialize(double) override {}
-};
-
-TEST_CASE("Model functionality", "[Model]") {
+TEST_CASE("Model - basic functionality", "[model][unit]") {
   // Create an instance of the Model
   World world = world::create({8, 1, 1});
-  MockModel model(world);
+  pfc::testing::MockModel model(world);
 
   REQUIRE(get_size(model.get_world()) == Int3{8, 1, 1});
 
@@ -86,7 +79,7 @@ TEST_CASE("Model functionality", "[Model]") {
   }
 }
 
-TEST_CASE("Model - FFT Integration", "[model]") {
+TEST_CASE("Model - FFT integration", "[model][unit]") {
   auto world = world::create({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
