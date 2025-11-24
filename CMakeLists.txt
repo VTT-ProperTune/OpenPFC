@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-project(OpenPFC VERSION 0.2.0 DESCRIPTION "Phase Field Crystal simulation framework")
+project(OpenPFC VERSION 0.1.3 DESCRIPTION "Phase Field Crystal simulation framework")
 
 # Define an option for development mode
 option(OpenPFC_DEVELOPMENT "Enable development build settings" OFF)
