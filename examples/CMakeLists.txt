@@ -66,3 +66,6 @@ target_link_libraries(world_helpers_example PRIVATE OpenPFC)
 
 add_executable(16_strong_types_demo 16_strong_types_demo.cpp)
 target_link_libraries(16_strong_types_demo PRIVATE OpenPFC)
+
+add_executable(17_custom_coordinate_system 17_custom_coordinate_system.cpp)
+target_link_libraries(17_custom_coordinate_system PRIVATE OpenPFC)
