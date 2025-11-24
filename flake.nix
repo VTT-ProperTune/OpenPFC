@@ -142,7 +142,7 @@
             pkgs.catch2_3
 
             # 🆕 Add these for better code hygiene
-            pkgs.clang-tools_17 # Provides clang-tidy, clang-format, etc.
+            pkgs.clang-tools # Provides clang-tidy, clang-format, etc. (latest version)
             pkgs.reuse # License checking
             pkgs.coreutils # Needed for realpath and other shell utilities
           ];
@@ -181,7 +181,7 @@
 
           # Check that the code is formatted correctly using clang-format.
           format-check = pkgs.runCommand "format-check" {
-            buildInputs = [ pkgs.clang-tools_17 ];
+            buildInputs = [ pkgs.clang-tools ];
             src = ./.;
           } ''
             cp -r $src/. .
