@@ -33,6 +33,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   code as manual implementation (zero runtime overhead). Comprehensive test
   coverage (177 assertions in 6 test cases). Example program added in
   `examples/fft_kspace_helpers_example.cpp` demonstrating before/after comparison.
+- **DiscreteField**: Converted `interpolate()` from member function to free function
+  `pfc::interpolate(field, coords)` aligning with OpenPFC's "structs + free functions"
+  design philosophy. Added both mutable and const overloads for type safety. Member
+  function deprecated with `[[deprecated]]` attribute for v1.x backward compatibility
+  (will be removed in v2.0). Free function enables ADL-based extension allowing users
+  to provide custom interpolation schemes without modifying OpenPFC. Updated all
+  11 call sites across tests, examples, and documentation to use new API. Added
+  comprehensive test coverage (95+ new test lines) including mutable/const overloads,
+  ADL lookup verification, and nearest-neighbor rounding behavior tests. All 222
+  assertions pass. Zero runtime overhead maintained (inline functions). (User Story #0033)
 
 ## [0.1.2] - 2025-11-21
 
