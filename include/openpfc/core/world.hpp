@@ -23,8 +23,6 @@
  * systems and inject them into the simulation without modifying OpenPFC
  * internals.
  *
- * ---
- *
  * ## Roles and Responsibilities of World
  *
  * 1. **Defines the discrete computational domain**: A World instance defines a
@@ -81,24 +79,6 @@
  *      - `m_cs`: coordinate system instance
  *
  *    There are no virtual methods, hidden ownership, or runtime polymorphism.
- *
- * ---
- *
- * ## Philosophical Note
- *
- * OpenPFC is built as a **laboratory**, not a fortress. The `World` class plays
- * a central role in this lab — it defines the geometric stage on which physics
- * unfolds. Its design emphasizes:
- *
- * - *Purity*: `World` is immutable and functional
- * - *Precision*: Spacing, bounds, and coordinates are rigorously defined
- * - *Openness*: Users can define new coordinate systems and behaviors
- * - *Clarity*: No hidden magic, just explicit composition
- *
- * This structure ensures that simulation domains are *safe*, *predictable*, and
- * *easy to reason about*.
- *
- * ---
  *
  * ## Usage Example
  *
@@ -387,6 +367,164 @@ inline const Real3 &get_origin(const CartesianWorld &world) noexcept {
 
 inline double get_origin(const CartesianWorld &world, int index) noexcept {
   return get_offset(get_coordinate_system(world), index);
+}
+
+// ============================================================================
+// World Convenience Query Functions
+// ============================================================================
+
+/**
+ * @brief Compute physical volume of domain
+ *
+ * Returns the total physical volume (or area in 2D, length in 1D) of the
+ * simulation domain.
+ *
+ * @param world World instance
+ * @return Physical volume V = Lx * Ly * Lz where L = spacing * size
+ *
+ * @note For Cartesian coordinates, this is the product of all physical dimensions
+ * @note Works correctly for 1D, 2D, and 3D domains
+ *
+ * @code
+ * auto world = world::create({100, 100, 100}, {0, 0, 0}, {0.1, 0.1, 0.1});
+ * double vol = world::physical_volume(world);  // Returns 1000.0
+ * @endcode
+ *
+ * Time complexity: O(1)
+ * Space complexity: O(1)
+ */
+template <typename T> inline double physical_volume(const World<T> &world) noexcept {
+  const auto spacing = get_spacing(world);
+  const auto size = get_size(world);
+  return spacing[0] * spacing[1] * spacing[2] * size[0] * size[1] * size[2];
+}
+
+/**
+ * @brief Check if domain is 1D (only x-direction has > 1 point)
+ *
+ * A domain is considered 1D if only the first dimension has more than
+ * one grid point.
+ *
+ * @param world World instance
+ * @return true if only x-direction is active (nx > 1, ny = 1, nz = 1)
+ *
+ * @code
+ * auto world1d = world::create({100, 1, 1});
+ * bool is_1d = world::is_1d(world1d);  // Returns true
+ * @endcode
+ *
+ * Time complexity: O(1)
+ */
+template <typename T> inline bool is_1d(const World<T> &world) noexcept {
+  const auto size = get_size(world);
+  return (size[0] > 1) && (size[1] == 1) && (size[2] == 1);
+}
+
+/**
+ * @brief Check if domain is 2D (x and y have > 1 point, z has 1)
+ *
+ * A domain is considered 2D if the first two dimensions have more than
+ * one grid point and the third has exactly one.
+ *
+ * @param world World instance
+ * @return true if x and y directions are active (nx > 1, ny > 1, nz = 1)
+ *
+ * @code
+ * auto world2d = world::create({64, 64, 1});
+ * bool is_2d = world::is_2d(world2d);  // Returns true
+ * @endcode
+ *
+ * Time complexity: O(1)
+ */
+template <typename T> inline bool is_2d(const World<T> &world) noexcept {
+  const auto size = get_size(world);
+  return (size[0] > 1) && (size[1] > 1) && (size[2] == 1);
+}
+
+/**
+ * @brief Check if domain is 3D (all dimensions have > 1 point)
+ *
+ * A domain is considered 3D if all three dimensions have more than
+ * one grid point.
+ *
+ * @param world World instance
+ * @return true if all three directions are active (nx > 1, ny > 1, nz > 1)
+ *
+ * @code
+ * auto world3d = world::create({32, 32, 32});
+ * bool is_3d = world::is_3d(world3d);  // Returns true
+ * @endcode
+ *
+ * Time complexity: O(1)
+ */
+template <typename T> inline bool is_3d(const World<T> &world) noexcept {
+  const auto size = get_size(world);
+  return (size[0] > 1) && (size[1] > 1) && (size[2] > 1);
+}
+
+/**
+ * @brief Get dimensionality as integer
+ *
+ * Returns 1, 2, or 3 based on how many dimensions have more than one
+ * grid point. Returns 0 for degenerate case where all dimensions have
+ * size 1.
+ *
+ * @param world World instance
+ * @return 1, 2, 3, or 0 (degenerate) based on active dimensions
+ *
+ * @code
+ * auto world2d = world::create({64, 64, 1});
+ * int dim = world::dimensionality(world2d);  // Returns 2
+ * @endcode
+ *
+ * Time complexity: O(1)
+ */
+template <typename T> inline int dimensionality(const World<T> &world) noexcept {
+  if (is_3d(world)) return 3;
+  if (is_2d(world)) return 2;
+  if (is_1d(world)) return 1;
+  return 0; // Degenerate case (all dimensions size 1)
+}
+
+/**
+ * @brief Get physical lower bounds (origin corner)
+ *
+ * Returns the physical coordinates of the grid point at index (0, 0, 0).
+ * This is the lower corner of the domain.
+ *
+ * @param world World instance
+ * @return Physical coordinates of (0, 0, 0) grid point
+ *
+ * @code
+ * auto world = world::create({100, 100, 100}, {-5, -5, 0}, {0.1, 0.1, 0.1});
+ * Real3 lower = world::get_lower_bounds(world);  // Returns {-5, -5, 0}
+ * @endcode
+ *
+ * Time complexity: O(1)
+ */
+template <typename T> inline Real3 get_lower_bounds(const World<T> &world) noexcept {
+  return to_coords(world, {0, 0, 0});
+}
+
+/**
+ * @brief Get physical upper bounds (far corner)
+ *
+ * Returns the physical coordinates of the grid point at the maximum indices
+ * (nx-1, ny-1, nz-1). This is the upper corner of the domain.
+ *
+ * @param world World instance
+ * @return Physical coordinates of (nx-1, ny-1, nz-1) grid point
+ *
+ * @code
+ * auto world = world::create({100, 100, 100}, {0, 0, 0}, {0.1, 0.1, 0.1});
+ * Real3 upper = world::get_upper_bounds(world);  // Returns {9.9, 9.9, 9.9}
+ * @endcode
+ *
+ * Time complexity: O(1)
+ */
+template <typename T> inline Real3 get_upper_bounds(const World<T> &world) noexcept {
+  const auto size = get_size(world);
+  return to_coords(world, {size[0] - 1, size[1] - 1, size[2] - 1});
 }
 
 // ============================================================================
