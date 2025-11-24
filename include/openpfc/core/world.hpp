@@ -252,28 +252,97 @@ CartesianWorld create(const Size3 &size, const UpperBounds3 &upper);
 // Free function API for querying World properties
 
 /**
- * @brief Get the size of the world.
- * @param w World object.
- * @return The size of the world.
+ * @brief Get the grid dimensions of the simulation domain
+ *
+ * Returns the number of grid points in each direction [nx, ny, nz].
+ * This defines the discrete resolution of the computational domain.
+ *
+ * @tparam T Coordinate system tag (e.g., CartesianTag)
+ * @param world World object to query
+ * @return Grid dimensions as Int3 array [nx, ny, nz]
+ *
+ * @note This is the total global size before domain decomposition
+ * @note For efficient FFT, dimensions should be powers of 2 or have small prime
+ * factors
+ *
+ * @example
+ * ```cpp
+ * auto world = world::create({256, 128, 64});
+ * Int3 size = get_size(world);
+ * // size = {256, 128, 64}
+ * std::cout << "Grid: " << size[0] << "×" << size[1] << "×" << size[2] << "\n";
+ * ```
+ *
+ * Time complexity: O(1)
+ * Space complexity: O(1)
+ *
+ * @see get_total_size() to get the product nx*ny*nz
+ * @see get_size(world, index) to get size in specific dimension
  */
 template <typename T> Int3 get_size(const World<T> &world) noexcept {
   return world.m_size;
 }
 
 /**
- * @brief Get the size of the world in a specific dimension.
- * @param w World object.
- * @param i Dimension index.
- * @return The size in the specified dimension.
+ * @brief Get the grid size in a specific dimension
+ *
+ * Returns the number of grid points in the specified dimension.
+ * Convenience function equivalent to get_size(world)[index].
+ *
+ * @tparam T Coordinate system tag
+ * @param world World object to query
+ * @param index Dimension index (0=x, 1=y, 2=z)
+ * @return Number of grid points in dimension 'index'
+ *
+ * @throws std::out_of_range if index is not 0, 1, or 2
+ *
+ * @note Index 0 corresponds to x-direction, 1 to y, 2 to z
+ *
+ * @example
+ * ```cpp
+ * auto world = world::create({100, 200, 300});
+ * int nx = get_size(world, 0);  // Returns 100
+ * int ny = get_size(world, 1);  // Returns 200
+ * int nz = get_size(world, 2);  // Returns 300
+ * ```
+ *
+ * Time complexity: O(1)
+ *
+ * @see get_size(world) to get all dimensions at once
  */
 template <typename T> int get_size(const World<T> &world, int index) {
   return get_size(world).at(index);
 }
 
 /**
- * @brief Get the total number of grid points in the world.
- * @param w World object.
- * @return The total number of grid points.
+ * @brief Get the total number of grid points in the domain
+ *
+ * Computes the product nx × ny × nz, which is the total number of
+ * discrete grid points in the computational domain.
+ *
+ * @tparam T Coordinate system tag
+ * @param world World object to query
+ * @return Total grid points (nx * ny * nz)
+ *
+ * @note This is the memory footprint for storing one scalar field
+ * @note For parallel simulations, each MPI rank stores only a subset
+ *
+ * @example
+ * ```cpp
+ * auto world = world::create({128, 128, 128});
+ * size_t total = get_total_size(world);
+ * // total = 2,097,152 (128³)
+ *
+ * // Memory for double precision field:
+ * size_t bytes = total * sizeof(double);
+ * std::cout << "Field requires " << bytes / (1024*1024) << " MB\n";
+ * ```
+ *
+ * Time complexity: O(1)
+ * Space complexity: O(1)
+ *
+ * @see get_size() for individual dimensions
+ * @see physical_volume() for physical domain size (not grid points)
  */
 template <typename T> size_t get_total_size(const World<T> &world) noexcept {
   return get_size(world, 0) * get_size(world, 1) * get_size(world, 2);
@@ -318,10 +387,44 @@ inline const auto get_upper(const CartesianWorld &world, int index) {
 }
 
 /**
- * @brief Compute the physical coordinates corresponding to grid indices.
- * @param w World object.
- * @param indices Grid indices.
- * @return The physical coordinates.
+ * @brief Convert grid indices to physical coordinates
+ *
+ * Transforms discrete grid indices (i, j, k) to continuous physical
+ * coordinates (x, y, z) based on the world's coordinate system.
+ *
+ * For Cartesian coordinates: x = origin[d] + i * spacing[d]
+ *
+ * @tparam T Coordinate system tag
+ * @param world World object defining the coordinate system
+ * @param indices Grid indices [i, j, k] where 0 ≤ i < nx, etc.
+ * @return Physical coordinates [x, y, z]
+ *
+ * @note This is a zero-cost inline function (no overhead)
+ * @note Indices are not bounds-checked for performance; ensure valid indices
+ * @note For periodic domains, periodicity is handled by the coordinate system
+ *
+ * @warning Passing out-of-bounds indices results in undefined physical coordinates
+ *
+ * @example
+ * ```cpp
+ * // Create 100³ grid with 0.1 spacing starting at origin
+ * auto world = world::create({100, 100, 100}, {0, 0, 0}, {0.1, 0.1, 0.1});
+ *
+ * // Grid point at center
+ * Real3 center = to_coords(world, {50, 50, 50});
+ * // center = {5.0, 5.0, 5.0}
+ *
+ * // Corner points
+ * Real3 origin = to_coords(world, {0, 0, 0});     // {0.0, 0.0, 0.0}
+ * Real3 far = to_coords(world, {99, 99, 99});     // {9.9, 9.9, 9.9}
+ * ```
+ *
+ * Time complexity: O(1)
+ * Space complexity: O(1)
+ *
+ * @see to_indices() for inverse transformation (physical → grid)
+ * @see get_spacing() to understand coordinate scaling
+ * @see get_origin() for coordinate system offset
  */
 template <typename T>
 inline const auto to_coords(const World<T> &world, const Int3 &indices) noexcept {
@@ -329,10 +432,54 @@ inline const auto to_coords(const World<T> &world, const Int3 &indices) noexcept
 }
 
 /**
- * @brief Compute the grid indices corresponding to physical coordinates.
- * @param w World object.
- * @param coordinates Physical coordinates.
- * @return The grid indices.
+ * @brief Convert physical coordinates to grid indices
+ *
+ * Transforms continuous physical coordinates (x, y, z) to discrete grid
+ * indices (i, j, k) based on the world's coordinate system.
+ *
+ * For Cartesian coordinates: i = round((x - origin[d]) / spacing[d])
+ *
+ * @tparam T Coordinate system tag
+ * @param world World object defining the coordinate system
+ * @param coords Physical coordinates [x, y, z]
+ * @return Grid indices [i, j, k] (nearest grid point)
+ *
+ * @note Uses nearest-neighbor rounding (no interpolation)
+ * @note For periodic domains, coordinates outside bounds wrap around
+ * @note Returned indices may be outside [0, size) for non-periodic boundaries
+ *
+ * @warning For non-periodic domains, caller must check bounds validity
+ *
+ * @example
+ * ```cpp
+ * auto world = world::create({100, 100, 100}, {0, 0, 0}, {0.1, 0.1, 0.1});
+ *
+ * // Find grid point nearest to physical location
+ * Real3 pos = {2.53, 4.78, 7.21};
+ * Int3 idx = to_indices(world, pos);
+ * // idx = {25, 48, 72} (nearest grid points)
+ *
+ * // Inverse transformation
+ * Real3 exact = to_coords(world, idx);
+ * // exact = {2.5, 4.8, 7.2} (snapped to grid)
+ * ```
+ *
+ * @example
+ * ```cpp
+ * // Common usage: sample field at arbitrary position
+ * auto world = world::create({64, 64, 64});
+ * Field<double> density(world);
+ *
+ * Real3 sample_point = {31.5, 31.5, 31.5};
+ * Int3 idx = to_indices(world, sample_point);
+ * double value = density[idx];
+ * ```
+ *
+ * Time complexity: O(1)
+ * Space complexity: O(1)
+ *
+ * @see to_coords() for inverse transformation (grid → physical)
+ * @see DiscreteField::interpolate() for higher-order interpolation
  */
 template <typename T>
 inline const auto to_indices(const World<T> &world, const Real3 &coords) noexcept {
@@ -351,20 +498,127 @@ inline const auto &get_coordinate_system(const World<T> &world) noexcept {
   return world.m_cs;
 }
 
-// For backward compatibility, might be removed in the future
-
+/**
+ * @brief Get the grid spacing in all dimensions
+ *
+ * Returns the physical distance between adjacent grid points in each
+ * direction. For periodic boundaries, spacing is (upper - lower) / size.
+ * For non-periodic, spacing is (upper - lower) / (size - 1).
+ *
+ * @param world World object to query
+ * @return Grid spacing [dx, dy, dz]
+ *
+ * @note Spacing determines the resolution of spectral derivatives
+ * @note Smaller spacing = higher resolution but smaller time steps for stability
+ * @note For FFT efficiency, uniform spacing is recommended
+ *
+ * @example
+ * ```cpp
+ * // Uniform spacing
+ * auto world1 = world::create({100, 100, 100}, {0, 0, 0}, {0.1, 0.1, 0.1});
+ * Real3 dx1 = get_spacing(world1);  // {0.1, 0.1, 0.1}
+ *
+ * // Non-uniform spacing (e.g., refined in one direction)
+ * auto world2 = world::create({100, 100, 200}, {0, 0, 0}, {0.1, 0.1, 0.05});
+ * Real3 dx2 = get_spacing(world2);  // {0.1, 0.1, 0.05}
+ * ```
+ *
+ * Time complexity: O(1)
+ * Space complexity: O(1)
+ *
+ * @see get_origin() for coordinate system offset
+ * @see to_coords() which uses spacing for coordinate transforms
+ */
 inline const Real3 &get_spacing(const CartesianWorld &world) noexcept {
   return get_spacing(get_coordinate_system(world));
 }
 
+/**
+ * @brief Get the grid spacing in a specific dimension
+ *
+ * Returns the physical distance between adjacent grid points in the
+ * specified dimension.
+ *
+ * @param world World object to query
+ * @param index Dimension index (0=x, 1=y, 2=z)
+ * @return Grid spacing in dimension 'index'
+ *
+ * @throws std::out_of_range if index is not 0, 1, or 2
+ *
+ * @example
+ * ```cpp
+ * auto world = world::create({100, 100, 100}, {0, 0, 0}, {0.1, 0.2, 0.3});
+ * double dx = get_spacing(world, 0);  // Returns 0.1
+ * double dy = get_spacing(world, 1);  // Returns 0.2
+ * double dz = get_spacing(world, 2);  // Returns 0.3
+ * ```
+ *
+ * Time complexity: O(1)
+ *
+ * @see get_spacing(world) to get all spacings at once
+ */
 inline double get_spacing(const CartesianWorld &world, int index) noexcept {
   return get_spacing(get_coordinate_system(world), index);
 }
 
+/**
+ * @brief Get the physical coordinates of the grid origin
+ *
+ * Returns the physical coordinates of the grid point at index (0, 0, 0).
+ * This defines the offset of the coordinate system.
+ *
+ * @param world World object to query
+ * @return Physical coordinates of origin [x0, y0, z0]
+ *
+ * @note The origin can be any value; common choices are (0, 0, 0) or domain center
+ * @note Changing origin shifts all physical coordinates but doesn't affect
+ * computation
+ *
+ * @example
+ * ```cpp
+ * // Origin at (0, 0, 0) - most common
+ * auto world1 = world::create({100, 100, 100}, {0, 0, 0}, {0.1, 0.1, 0.1});
+ * Real3 origin1 = get_origin(world1);  // {0, 0, 0}
+ *
+ * // Centered domain: origin at negative coordinates
+ * auto world2 = world::create({100, 100, 100}, {-5, -5, -5}, {0.1, 0.1, 0.1});
+ * Real3 origin2 = get_origin(world2);  // {-5, -5, -5}
+ * // Domain spans [-5, 4.9] in each direction
+ * ```
+ *
+ * Time complexity: O(1)
+ * Space complexity: O(1)
+ *
+ * @see get_lower_bounds() for equivalent function
+ * @see to_coords() which uses origin for coordinate transforms
+ */
 inline const Real3 &get_origin(const CartesianWorld &world) noexcept {
   return get_offset(get_coordinate_system(world));
 }
 
+/**
+ * @brief Get the origin coordinate in a specific dimension
+ *
+ * Returns the physical coordinate of the grid origin in the specified dimension.
+ *
+ * @param world World object to query
+ * @param index Dimension index (0=x, 1=y, 2=z)
+ * @return Origin coordinate in dimension 'index'
+ *
+ * @throws std::out_of_range if index is not 0, 1, or 2
+ *
+ * @example
+ * ```cpp
+ * auto world = world::create({100, 100, 100}, {-1, 0, 5}, {0.1, 0.1, 0.1});
+ * double x0 = get_origin(world, 0);  // Returns -1.0
+ * double y0 = get_origin(world, 1);  // Returns 0.0
+ * double z0 = get_origin(world, 2);  // Returns 5.0
+ * ```
+ *
+ * Time complexity: O(1)
+ *
+ * @see get_origin(world) to get all origin coordinates
+ */
 inline double get_origin(const CartesianWorld &world, int index) noexcept {
   return get_offset(get_coordinate_system(world), index);
 }
