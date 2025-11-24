@@ -39,9 +39,6 @@
  * @see simulator.hpp for modifier application orchestration
  * @see initial_conditions/ for IC implementations
  * @see boundary_conditions/ for BC implementations
- *
- * @author OpenPFC Contributors
- * @date 2025
  */
 
 #ifndef PFC_FIELD_MODIFIER_HPP

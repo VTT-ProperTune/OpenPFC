@@ -38,9 +38,6 @@
  * @see time.hpp for time state management
  * @see field_modifier.hpp for initial/boundary conditions
  * @see results_writer.hpp for output handling
- *
- * @author OpenPFC Contributors
- * @date 2025
  */
 
 #ifndef PFC_SIMULATOR_HPP
