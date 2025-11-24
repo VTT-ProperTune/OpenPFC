@@ -63,10 +63,194 @@
 namespace pfc {
 
 /**
- * @brief A class representing a discrete field.
+ * @brief Discrete field with physical coordinate mapping and interpolation
  *
- * @tparam T The type of elements in the field.
- * @tparam D The dimensionality of the field.
+ * DiscreteField provides a N-dimensional array with physical coordinate system
+ * awareness, bridging discrete grid indices and continuous physical space. It
+ * supports coordinate transformations, interpolation, and functional operations.
+ *
+ * **Core Concept:**
+ * - Storage: N-dimensional array (via Array<T, D>)
+ * - Geometry: Origin, discretization (spacing), bounding box
+ * - Transformations: Indices ↔ physical coordinates
+ * - Operations: Apply functions, interpolate, access by index/coordinate
+ *
+ * **Design Philosophy:**
+ * - Immutable geometry (const origin, discretization, bounds)
+ * - Direct data access (operator[], get_data())
+ * - Functional operations (apply lambda to all points)
+ * - Simple nearest-neighbor interpolation
+ *
+ * @tparam T Element type (typically double or std::complex<double>)
+ * @tparam D Dimensionality (typically 3)
+ *
+ * @example Creating and initializing a field
+ * @code
+ * // 3D field: 32³ points, spacing 0.5 in each direction
+ * pfc::DiscreteField<double, 3> field(
+ *     {32, 32, 32},           // dimensions
+ *     {0, 0, 0},              // offset (for subdomains)
+ *     {0.0, 0.0, 0.0},        // origin
+ *     {0.5, 0.5, 0.5}         // discretization (spacing)
+ * );
+ *
+ * // Initialize with mathematical function
+ * field.apply([](double x, double y, double z) {
+ *     return std::sin(x) * std::cos(y) * std::exp(-z/10.0);
+ * });
+ * @endcode
+ *
+ * @example Array-style indexing
+ * @code
+ * pfc::DiscreteField<double, 3> field({64, 64, 64}, {0,0,0},
+ *                                      {0.0,0.0,0.0}, {1.0,1.0,1.0});
+ *
+ * // Access by 3D index
+ * field[{10, 20, 30}] = 1.0;
+ *
+ * // Access by linear index
+ * field[0] = 0.5;  // First element
+ *
+ * // Iterate over all elements
+ * for (size_t i = 0; i < field.get_data().size(); i++) {
+ *     field[i] *= 2.0;
+ * }
+ * @endcode
+ *
+ * @example Coordinate-space operations
+ * @code
+ * pfc::DiscreteField<double, 3> field({32, 32, 32}, {0,0,0},
+ *                                      {0.0,0.0,0.0}, {0.5,0.5,0.5});
+ *
+ * // Map index to physical coordinate
+ * auto coords = field.map_indices_to_coordinates({10, 10, 10});
+ * // coords = {5.0, 5.0, 5.0}  (10 * 0.5 spacing)
+ *
+ * // Map coordinate to nearest index
+ * auto indices = field.map_coordinates_to_indices({7.3, 8.1, 9.8});
+ * // indices = {15, 16, 20}  (rounded to nearest)
+ *
+ * // Check if coordinate is in bounds
+ * bool valid = field.inbounds({12.0, 8.0, 4.0});
+ * @endcode
+ *
+ * @example Interpolation (nearest-neighbor)
+ * @code
+ * pfc::DiscreteField<double, 3> field({64, 64, 64}, {0,0,0},
+ *                                      {0.0,0.0,0.0}, {1.0,1.0,1.0});
+ * field.apply([](double x, double y, double z) {
+ *     return x*x + y*y + z*z;
+ * });
+ *
+ * // Interpolate at arbitrary physical coordinate
+ * double value = field.interpolate({5.3, 10.7, 20.2});
+ * // Returns field value at nearest grid point
+ *
+ * // Note: Currently only nearest-neighbor (no higher-order interpolation)
+ * @endcode
+ *
+ * @example Functional initialization (multiple overloads)
+ * @code
+ * pfc::DiscreteField<double, 3> field({64, 64, 64}, {0,0,0},
+ *                                      {0.0,0.0,0.0}, {1.0,1.0,1.0});
+ *
+ * // 3D function: f(x, y, z)
+ * field.apply([](double x, double y, double z) {
+ *     return std::sin(x) * std::cos(y);
+ * });
+ *
+ * // 2D function (for 2D fields): f(x, y)
+ * pfc::DiscreteField<double, 2> field2d({64, 64}, {0,0},
+ *                                        {0.0,0.0}, {1.0,1.0});
+ * field2d.apply([](double x, double y) {
+ *     return std::exp(-(x*x + y*y)/100.0);
+ * });
+ *
+ * // 1D function: f(x) - uses first coordinate only
+ * field.apply([](double x) {
+ *     return std::tanh(x - 32.0);
+ * });
+ *
+ * // N-D function: f(std::array<double, D>)
+ * field.apply([](std::array<double, 3> coords) {
+ *     return coords[0] + 2.0*coords[1] + 3.0*coords[2];
+ * });
+ * @endcode
+ *
+ * @example Integration with Model fields
+ * @code
+ * // Model stores fields as std::vector<T> (Field = std::vector<double>)
+ * pfc::Model model(world, std::move(fft));
+ * model.add_real_field("density");
+ *
+ * // Get field data
+ * auto& field_data = model.get_real_field("density");
+ *
+ * // Create DiscreteField wrapper for coordinate-aware operations
+ * auto inbox = pfc::fft::get_inbox(model.get_fft());
+ * pfc::DiscreteField<double, 3> discrete_field(
+ *     {inbox.high[0] - inbox.low[0] + 1,
+ *      inbox.high[1] - inbox.low[1] + 1,
+ *      inbox.high[2] - inbox.low[2] + 1},
+ *     {inbox.low[0], inbox.low[1], inbox.low[2]},
+ *     pfc::world::get_origin(world),
+ *     pfc::world::get_spacing(world)
+ * );
+ *
+ * // Initialize using DiscreteField's apply()
+ * discrete_field.apply([](double x, double y, double z) {
+ *     return std::sin(x);
+ * });
+ *
+ * // Copy data back to Model
+ * field_data = discrete_field.get_data();
+ * @endcode
+ *
+ * @example Complex fields (for FFT operations)
+ * @code
+ * using Complex = std::complex<double>;
+ * pfc::DiscreteField<Complex, 3> kspace_field(
+ *     {64, 64, 33},  // FFT size (nz/2+1 for real-to-complex)
+ *     {0, 0, 0},
+ *     {0.0, 0.0, 0.0},
+ *     {1.0, 1.0, 1.0}
+ * );
+ *
+ * // Initialize complex field
+ * kspace_field.apply([](double kx, double ky, double kz) {
+ *     double k2 = kx*kx + ky*ky + kz*kz;
+ *     return Complex(std::exp(-k2/10.0), 0.0);
+ * });
+ * @endcode
+ *
+ * **Performance Considerations:**
+ * - Direct data access via get_data() for maximum performance
+ * - apply() has iterator overhead but ensures coordinate correctness
+ * - Nearest-neighbor interpolation is O(1)
+ * - Coordinate transformations are cheap (simple arithmetic)
+ *
+ * **Memory Layout:**
+ * - Underlying storage is std::vector<T> (contiguous, cache-friendly)
+ * - Row-major order (last index varies fastest)
+ * - Compatible with MPI subdomain data
+ *
+ * **Common Use Cases:**
+ * - Initial condition setup with coordinate-space functions
+ * - Post-processing and analysis with interpolation
+ * - Coordinate-aware field manipulation
+ * - Testing and validation (analytical comparisons)
+ *
+ * @note Geometry (origin, discretization, bounds) is immutable after construction
+ * @note Only nearest-neighbor interpolation supported (no linear/cubic)
+ * @note For MPI subdomains, use offset parameter to specify global position
+ *
+ * @warning interpolate() returns reference - ensure coordinate is in bounds!
+ *          Use inbounds() first if uncertain
+ *
+ * @see Array<T,D> for underlying storage
+ * @see MultiIndex<D> for index iteration
+ * @see world.hpp for coordinate system abstraction
+ * @see Model::get_real_field() for integration with simulation fields
  */
 template <typename T, size_t D> class DiscreteField {
 private:
@@ -102,13 +286,43 @@ private:
 
 public:
   /**
-   * @brief Constructs a DiscreteField object with the specified dimensions,
-   * offsets, origin, and discretization.
+   * @brief Construct discrete field with specified geometry
    *
-   * @param dimensions The dimensions of the field.
-   * @param offsets The offsets of the field.
-   * @param origin The origin of the field.
-   * @param discretization The discretization of the field.
+   * Creates a field with N-dimensional array storage and physical coordinate
+   * system mapping. The geometry (origin, discretization, bounds) is immutable
+   * after construction.
+   *
+   * @param dimensions Size in each dimension [nx, ny, nz]
+   * @param offsets Global offset for subdomains (typically {0,0,0} for full domain)
+   * @param origin Physical coordinates of the first grid point
+   * @param discretization Spacing between grid points in each direction
+   *
+   * @example Full domain field
+   * @code
+   * // 64³ domain, unit spacing, origin at (0,0,0)
+   * pfc::DiscreteField<double, 3> field(
+   *     {64, 64, 64},           // dimensions
+   *     {0, 0, 0},              // no offset (full domain)
+   *     {0.0, 0.0, 0.0},        // origin
+   *     {1.0, 1.0, 1.0}         // unit spacing
+   * );
+   * // Physical domain: [0, 64) x [0, 64) x [0, 64)
+   * @endcode
+   *
+   * @example MPI subdomain with offset
+   * @code
+   * // Subdomain starting at global index (10, 20, 0)
+   * pfc::DiscreteField<double, 3> subdomain(
+   *     {32, 32, 64},           // local size
+   *     {10, 20, 0},            // global offset
+   *     {0.0, 0.0, 0.0},        // global origin
+   *     {0.5, 0.5, 0.5}         // spacing
+   * );
+   * // Physical subdomain: [5,21) x [10,26) x [0,32)
+   * @endcode
+   *
+   * @note Bounds are calculated as: [origin + offset*dx, origin + (offset+size)*dx)
+   * @note Use consistent origin/discretization across all subdomains for correctness
    */
   DiscreteField(const std::array<int, D> &dimensions,
                 const std::array<int, D> &offsets,
@@ -205,11 +419,42 @@ public:
   }
 
   /**
-   * @brief Performs nearest neighbor interpolation at the specified coordinates
-   * in the field.
+   * @brief Interpolate field value at physical coordinates (nearest-neighbor)
    *
-   * @param coordinates The coordinates for interpolation.
-   * @return A reference to the interpolated element.
+   * Returns the field value at the grid point nearest to the given physical
+   * coordinates. This uses simple rounding (not linear or higher-order).
+   *
+   * @param coordinates Physical coordinates [x, y, z] to interpolate at
+   * @return Reference to the field value at the nearest grid point
+   *
+   * @example Basic interpolation
+   * @code
+   * pfc::DiscreteField<double, 3> field({64,64,64}, {0,0,0},
+   *                                      {0.0,0.0,0.0}, {1.0,1.0,1.0});
+   * field.apply([](double x, double y, double z) { return x + y + z; });
+   *
+   * // Query at arbitrary coordinate
+   * double val = field.interpolate({5.7, 10.2, 20.8});
+   * // Returns field value at grid point (6, 10, 21) - nearest neighbor
+   * @endcode
+   *
+   * @example Safe interpolation with bounds checking
+   * @code
+   * std::array<double, 3> query_point = {15.3, 22.1, 8.9};
+   * if (field.inbounds(query_point)) {
+   *     double value = field.interpolate(query_point);
+   * } else {
+   *     // Handle out-of-bounds case
+   * }
+   * @endcode
+   *
+   * @warning Returns reference - coordinate must be in bounds!
+   *          Use inbounds() first if uncertain. Out-of-bounds access is undefined.
+   * @note Nearest-neighbor only (no linear/cubic interpolation)
+   * @note Coordinates are rounded (not truncated) to nearest index
+   *
+   * @see map_coordinates_to_indices() for the index computation
+   * @see inbounds() for bounds checking
    */
   T &interpolate(const std::array<double, D> &coordinates) {
     return get_array()[(map_coordinates_to_indices(coordinates))];
@@ -280,13 +525,51 @@ public:
   }
 
   /**
-   * @brief Applies the given 3D function to each element of the field.
+   * @brief Apply 3D function f(x,y,z) to all field points
    *
-   * The function must be invocable with (double, double, double) and return a
-   * type convertible to T.
+   * Evaluates the function at each grid point's physical coordinates and
+   * assigns the result to that point. This is the most common way to initialize
+   * fields with analytical functions.
    *
-   * @tparam Function3D The type of the 3D function.
-   * @param func The 3D function to apply.
+   * @tparam Function3D Function type callable with (double, double, double)
+   * @param func Function to apply, must return type convertible to T
+   *
+   * @example Simple mathematical functions
+   * @code
+   * pfc::DiscreteField<double, 3> field({64,64,64}, {0,0,0},
+   *                                      {0.0,0.0,0.0}, {1.0,1.0,1.0});
+   *
+   * // Sine wave in x, constant in y,z
+   * field.apply([](double x, double y, double z) {
+   *     return std::sin(2.0 * M_PI * x / 64.0);
+   * });
+   *
+   * // Radial Gaussian
+   * field.apply([](double x, double y, double z) {
+   *     double r2 = (x-32)*(x-32) + (y-32)*(y-32) + (z-32)*(z-32);
+   *     return std::exp(-r2 / 100.0);
+   * });
+   * @endcode
+   *
+   * @example Coordinate-dependent initialization
+   * @code
+   * // Different behavior in different regions
+   * field.apply([](double x, double y, double z) {
+   *     if (x < 32.0) {
+   *         return 0.3;  // Left half: low density
+   *     } else {
+   *         return 0.7;  // Right half: high density
+   *     }
+   * });
+   * @endcode
+   *
+   * @note Function is called once per grid point with physical coordinates
+   * @note For large fields, this may be expensive - avoid in hot loops
+   * @note Structured bindings used: auto [x, y, z] = coords;
+   *
+   * @see apply(Function1D) for 1D functions
+   * @see apply(Function2D) for 2D functions
+   * @see apply(FunctionND) for general N-D functions
    */
   void apply(Function3D &&func) {
     auto index_iterator = get_index().begin();
