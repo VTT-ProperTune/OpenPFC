@@ -63,3 +63,6 @@ target_link_libraries(json_read PRIVATE nlohmann_json::nlohmann_json)
 
 add_executable(world_helpers_example world_helpers_example.cpp)
 target_link_libraries(world_helpers_example PRIVATE OpenPFC)
+
+add_executable(16_strong_types_demo 16_strong_types_demo.cpp)
+target_link_libraries(16_strong_types_demo PRIVATE OpenPFC)
