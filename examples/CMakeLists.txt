@@ -37,6 +37,9 @@ target_link_libraries(11_write_results PRIVATE OpenPFC)
 add_executable(12_cahn_hilliard 12_cahn_hilliard.cpp)
 target_link_libraries(12_cahn_hilliard PRIVATE OpenPFC nlohmann_json::nlohmann_json)
 
+add_executable(fft_kspace_helpers_example fft_kspace_helpers_example.cpp)
+target_link_libraries(fft_kspace_helpers_example PRIVATE OpenPFC)
+
 add_executable(mpi_worker mpi_worker.cpp)
 target_link_libraries(mpi_worker PRIVATE OpenPFC)
 
