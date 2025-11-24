@@ -38,9 +38,6 @@
  * @see core/decomposition.hpp for domain decomposition
  * @see model.hpp for FFT usage in physics models
  * @see backends/heffte_adapter.hpp for HeFFTe integration
- *
- * @author OpenPFC Contributors
- * @date 2025
  */
 
 #pragma once
@@ -48,6 +45,7 @@
 #include "core/decomposition.hpp"
 #include "openpfc/backends/heffte_adapter.hpp" // Ensure this is included for the conversion operator
 #include "openpfc/core/world.hpp"
+#include "openpfc/fft/kspace.hpp"
 
 #include <heffte.h>
 #include <iostream>
