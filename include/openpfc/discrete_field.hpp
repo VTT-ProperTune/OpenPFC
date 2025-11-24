@@ -440,8 +440,8 @@ public:
    *
    * @see pfc::interpolate(DiscreteField&, const std::array<double,D>&)
    */
-  [[deprecated("Use pfc::interpolate(field, coords) free function instead")]]
-  T &interpolate(const std::array<double, D> &coordinates) {
+  [[deprecated("Use pfc::interpolate(field, coords) free function instead")]] T &
+  interpolate(const std::array<double, D> &coordinates) {
     // Keep original implementation (can't call free function yet - not declared)
     return get_array()[(map_coordinates_to_indices(coordinates))];
   }
