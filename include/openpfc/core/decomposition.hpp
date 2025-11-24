@@ -36,9 +36,6 @@
  * @see core/world.hpp for global domain definition
  * @see fft.hpp for FFT operations using decomposition
  * @see factory/decomposition_factory.hpp for construction helpers
- *
- * @author OpenPFC Contributors
- * @date 2025
  */
 
 #pragma once
