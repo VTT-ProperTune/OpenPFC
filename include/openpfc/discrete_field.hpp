@@ -33,8 +33,8 @@
  *     return std::sin(x) * std::cos(y);
  * });
  *
- * // Interpolate at physical coordinates
- * double value = field.interpolate({0.5, 1.2, 0.8});
+ * // Interpolate at physical coordinates (using free function - preferred)
+ * double value = pfc::interpolate(field, {0.5, 1.2, 0.8});
  * @endcode
  *
  * This file is part of the Utilities module, providing convenient field
@@ -142,8 +142,8 @@ namespace pfc {
  *     return x*x + y*y + z*z;
  * });
  *
- * // Interpolate at arbitrary physical coordinate
- * double value = field.interpolate({5.3, 10.7, 20.2});
+ * // Interpolate at arbitrary physical coordinate (free function - preferred)
+ * double value = pfc::interpolate(field, {5.3, 10.7, 20.2});
  * // Returns field value at nearest grid point
  *
  * // Note: Currently only nearest-neighbor (no higher-order interpolation)
@@ -421,42 +421,28 @@ public:
   /**
    * @brief Interpolate field value at physical coordinates (nearest-neighbor)
    *
-   * Returns the field value at the grid point nearest to the given physical
-   * coordinates. This uses simple rounding (not linear or higher-order).
+   * @deprecated Use pfc::interpolate(field, coords) free function instead.
+   *             This member function is deprecated and will be removed in v2.0.
+   *             The free function version provides better consistency with
+   *             OpenPFC's design philosophy and enables ADL-based extension.
+   *
+   * **Migration:**
+   * @code
+   * // Old (deprecated):
+   * double value = field.interpolate({x, y, z});
+   *
+   * // New (preferred):
+   * double value = pfc::interpolate(field, {x, y, z});
+   * @endcode
    *
    * @param coordinates Physical coordinates [x, y, z] to interpolate at
    * @return Reference to the field value at the nearest grid point
    *
-   * @example Basic interpolation
-   * @code
-   * pfc::DiscreteField<double, 3> field({64,64,64}, {0,0,0},
-   *                                      {0.0,0.0,0.0}, {1.0,1.0,1.0});
-   * field.apply([](double x, double y, double z) { return x + y + z; });
-   *
-   * // Query at arbitrary coordinate
-   * double val = field.interpolate({5.7, 10.2, 20.8});
-   * // Returns field value at grid point (6, 10, 21) - nearest neighbor
-   * @endcode
-   *
-   * @example Safe interpolation with bounds checking
-   * @code
-   * std::array<double, 3> query_point = {15.3, 22.1, 8.9};
-   * if (field.inbounds(query_point)) {
-   *     double value = field.interpolate(query_point);
-   * } else {
-   *     // Handle out-of-bounds case
-   * }
-   * @endcode
-   *
-   * @warning Returns reference - coordinate must be in bounds!
-   *          Use inbounds() first if uncertain. Out-of-bounds access is undefined.
-   * @note Nearest-neighbor only (no linear/cubic interpolation)
-   * @note Coordinates are rounded (not truncated) to nearest index
-   *
-   * @see map_coordinates_to_indices() for the index computation
-   * @see inbounds() for bounds checking
+   * @see pfc::interpolate(DiscreteField&, const std::array<double,D>&)
    */
+  [[deprecated("Use pfc::interpolate(field, coords) free function instead")]]
   T &interpolate(const std::array<double, D> &coordinates) {
+    // Keep original implementation (can't call free function yet - not declared)
     return get_array()[(map_coordinates_to_indices(coordinates))];
   }
 
@@ -622,6 +608,111 @@ public:
     return os;
   }
 };
+
+// ============================================================================
+// Free Functions for DiscreteField
+// ============================================================================
+
+/**
+ * @brief Interpolate field value at physical coordinates (nearest-neighbor)
+ *
+ * Returns the field value at the grid point nearest to the given physical
+ * coordinates. This uses simple rounding (not linear or higher-order).
+ * This is the preferred way to interpolate - free function instead of member.
+ *
+ * **Design Philosophy:** Free functions enable extension via ADL and align
+ * with OpenPFC's "laboratory, not fortress" philosophy. Users can provide
+ * custom interpolation schemes without modifying DiscreteField.
+ *
+ * @tparam T Field value type (double, complex, etc.)
+ * @tparam D Dimensionality (1, 2, or 3)
+ * @param field The discrete field to interpolate
+ * @param coordinates Physical coordinates [x, y, z] to interpolate at
+ * @return Reference to the field value at the nearest grid point (mutable)
+ *
+ * @example Basic usage
+ * @code
+ * pfc::DiscreteField<double, 3> field({64,64,64}, {0,0,0},
+ *                                      {0.0,0.0,0.0}, {1.0,1.0,1.0});
+ * field.apply([](double x, double y, double z) { return x + y + z; });
+ *
+ * // Interpolate at arbitrary coordinate (free function - preferred)
+ * double& value = pfc::interpolate(field, {5.7, 10.2, 20.8});
+ * value = 42.0;  // Can modify through reference
+ * @endcode
+ *
+ * @example Using ADL (no namespace prefix needed)
+ * @code
+ * using pfc::DiscreteField;
+ * DiscreteField<double, 3> field({32,32,32}, {0,0,0},
+ *                                 {0.0,0.0,0.0}, {1.0,1.0,1.0});
+ *
+ * // ADL finds pfc::interpolate automatically
+ * double& val = interpolate(field, {10.5, 15.3, 8.2});
+ * @endcode
+ *
+ * @example Safe interpolation with bounds check
+ * @code
+ * std::array<double, 3> query = {15.3, 22.1, 8.9};
+ * if (field.inbounds(query)) {
+ *     double value = pfc::interpolate(field, query);
+ *     // Use value...
+ * }
+ * @endcode
+ *
+ * @warning Returns reference - coordinate must be in bounds!
+ *          Use inbounds() first if uncertain.
+ * @note Nearest-neighbor only (no linear/cubic interpolation)
+ * @note Coordinates are rounded (not truncated) to nearest index
+ *
+ * **Time complexity:** O(D) for coordinate mapping
+ * **Space complexity:** O(1)
+ *
+ * @see interpolate(const DiscreteField&, const std::array<double,D>&) const version
+ * @see DiscreteField::map_coordinates_to_indices() for index computation
+ * @see DiscreteField::inbounds() for bounds checking
+ */
+template <typename T, size_t D>
+inline T &interpolate(DiscreteField<T, D> &field,
+                      const std::array<double, D> &coordinates) {
+  return field.get_array()[field.map_coordinates_to_indices(coordinates)];
+}
+
+/**
+ * @brief Interpolate field value at physical coordinates (const overload)
+ *
+ * Const version of interpolate(). Returns a const reference to the field value.
+ * Use this when you don't need to modify the field value.
+ *
+ * @tparam T Field value type
+ * @tparam D Dimensionality
+ * @param field The discrete field to interpolate (const)
+ * @param coordinates Physical coordinates to interpolate at
+ * @return Const reference to the field value at the nearest grid point
+ *
+ * @example Reading from const field
+ * @code
+ * const pfc::DiscreteField<double, 3> field = create_field();
+ *
+ * // Can read but not modify
+ * const double& value = pfc::interpolate(field, {10.0, 20.0, 30.0});
+ * std::cout << "Value: " << value << std::endl;
+ * // value = 42.0;  // ❌ Won't compile (const)
+ * @endcode
+ *
+ * @note This overload is selected when field is const
+ * @note All other behavior identical to mutable version
+ *
+ * @see interpolate(DiscreteField&, const std::array<double,D>&) mutable version
+ */
+template <typename T, size_t D>
+inline const T &interpolate(const DiscreteField<T, D> &field,
+                            const std::array<double, D> &coordinates) {
+  // Note: const_cast needed because Array doesn't have const operator[]
+  // This is safe because we return const T&
+  return const_cast<DiscreteField<T, D> &>(field)
+      .get_array()[field.map_coordinates_to_indices(coordinates)];
+}
 
 /**
  * @brief Apply function to discrete field.
