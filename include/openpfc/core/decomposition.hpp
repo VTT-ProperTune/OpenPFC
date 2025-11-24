@@ -201,36 +201,295 @@ struct Decomposition {
   }
 };
 
+/**
+ * @brief Get the global World that this decomposition partitions
+ *
+ * Returns a reference to the complete, unpartitioned computational domain.
+ * This is the World that was split into subdomains.
+ *
+ * @param[in] decomposition The decomposition to query
+ * @return Reference to the global World object
+ *
+ * @example
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, {2, 2, 1});
+ *
+ * auto global = decomposition::get_global_world(decomp);
+ * std::cout << "Global domain: " << world::get_size(global) << "\n";  // [256, 256,
+ * 256]
+ * ```
+ *
+ * @see get_world() - alias for this function
+ * @see get_subworld() - get a specific subdomain
+ */
 inline const auto &get_global_world(const Decomposition &decomposition) noexcept {
   return decomposition.m_global_world;
 }
 
+/**
+ * @brief Alias for get_global_world()
+ *
+ * @param[in] decomposition The decomposition to query
+ * @return Reference to the global World object
+ *
+ * @see get_global_world() - the function this aliases
+ */
 inline const auto &get_world(const Decomposition &decomposition) noexcept {
   return get_global_world(decomposition);
 }
 
+/**
+ * @brief Get the decomposition grid pattern
+ *
+ * Returns the 3D grid layout showing how many subdomains exist in each
+ * dimension. For example, [2, 2, 1] means a 2×2×1 grid = 4 total subdomains.
+ *
+ * @param[in] decomposition The decomposition to query
+ * @return Array [nx, ny, nz] where total subdomains = nx * ny * nz
+ *
+ * @example
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create({128, 128, 128}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, {4, 2, 1});
+ *
+ * auto grid = decomposition::get_grid(decomp);
+ * std::cout << "Grid: " << grid[0] << "×" << grid[1] << "×" << grid[2] << "\n";  //
+ * 4×2×1 std::cout << "Total domains: " << (grid[0] * grid[1] * grid[2]) << "\n";  //
+ * 8
+ * ```
+ *
+ * @note The grid pattern affects communication overhead. Minimize surface area
+ *       for better performance (use proc_setup_min_surface for automatic selection).
+ *
+ * @see get_num_domains() - total number of subdomains
+ * @see create() - specify or automatically determine grid
+ */
 inline const auto &get_grid(const Decomposition &decomposition) noexcept {
   return decomposition.m_grid;
 }
 
+/**
+ * @brief Get all subdomains (local World instances)
+ *
+ * Returns a vector containing all partitioned subdomains. Each subdomain is a
+ * World representing a rank-local portion of the global domain.
+ *
+ * @param[in] decomposition The decomposition to query
+ * @return Vector of World objects, one per subdomain (size = nx*ny*nz)
+ *
+ * @example
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create({100, 100, 100}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, {2, 2, 1});  // 4 subdomains
+ *
+ * auto subworlds = decomposition::get_subworlds(decomp);
+ * for (int i = 0; i < subworlds.size(); ++i) {
+ *     auto size = world::get_size(subworlds[i]);
+ *     std::cout << "Rank " << i << ": " << size << "\n";  // Each is 50×50×100
+ * }
+ * ```
+ *
+ * @note Subdomains are ordered consistently with MPI rank assignment (in most
+ * cases).
+ * @note All subdomains are non-overlapping and collectively cover the global World.
+ *
+ * @see get_subworld() - get a single subdomain by index
+ * @see get_num_domains() - number of subdomains
+ */
 inline const auto &get_subworlds(const Decomposition &decomposition) noexcept {
   return decomposition.m_subworlds;
 }
 
+/**
+ * @brief Get a specific subdomain by index
+ *
+ * Returns the subdomain (local World) assigned to the specified index. In MPI
+ * contexts, the index typically corresponds to the MPI rank.
+ *
+ * @param[in] decomposition The decomposition to query
+ * @param[in] i Index of the subdomain to retrieve (0 to num_domains-1)
+ * @return Reference to the World representing subdomain i
+ *
+ * @throws std::out_of_range If i >= num_domains
+ *
+ * @example
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create({200, 200, 200}, {0.5, 0.5, 0.5});
+ * auto decomp = decomposition::create(world, 4);  // 4 subdomains (auto grid)
+ *
+ * int rank;
+ * MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+ *
+ * // Get this rank's local subdomain
+ * auto local_world = decomposition::get_subworld(decomp, rank);
+ * auto local_size = world::get_size(local_world);
+ * std::cout << "Rank " << rank << " owns: " << local_size << "\n";
+ * ```
+ *
+ * @note In MPI applications, typically each rank accesses get_subworld(decomp,
+ * rank).
+ * @note Bounds checking is performed; invalid indices throw std::out_of_range.
+ *
+ * @see get_subworlds() - get all subdomains
+ * @see get_num_domains() - valid range for index i
+ */
 inline const auto &get_subworld(const Decomposition &decomposition, int i) {
   return get_subworlds(decomposition).at(i);
 }
 
+/**
+ * @brief Create decomposition with explicit grid pattern
+ *
+ * Partitions the global World into subdomains according to the specified grid
+ * layout [nx, ny, nz]. Total subdomains = nx * ny * nz.
+ *
+ * @param[in] world The global computational domain to partition
+ * @param[in] grid Decomposition pattern [nx, ny, nz] in each dimension
+ * @return Decomposition object containing all subdomains
+ *
+ * @example
+ * **2×2×1 Decomposition (4 MPI ranks)**
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create({128, 128, 128}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, {2, 2, 1});
+ *
+ * // Each rank gets 64×64×128 subdomain
+ * auto grid = decomposition::get_grid(decomp);
+ * std::cout << "Grid: [" << grid[0] << ", " << grid[1] << ", " << grid[2] << "]\n";
+ * ```
+ *
+ * @example
+ * **Slab Decomposition (1D splitting)**
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, {1, 1, 8});  // Split only in Z
+ *
+ * // Each rank gets 256×256×32 slab
+ * ```
+ *
+ * @note Choose grid to minimize communication (minimize surface area between ranks).
+ * @note For automatic grid selection, use create(world, nparts) instead.
+ * @note Grid dimensions must evenly divide World dimensions for optimal load
+ * balance.
+ *
+ * @see create(world, nparts) - automatic grid selection
+ * @see proc_setup_min_surface() - algorithm for optimal grid
+ */
 inline const auto create(const World &world, const Int3 &grid) noexcept {
   return Decomposition(world, grid);
 };
 
+/**
+ * @brief Create decomposition with automatic grid selection
+ *
+ * Partitions the global World into the specified number of subdomains,
+ * automatically choosing a grid pattern that minimizes communication surface
+ * area (uses HeFFTe's proc_setup_min_surface algorithm).
+ *
+ * @param[in] world The global computational domain to partition
+ * @param[in] nparts Number of subdomains (typically MPI size)
+ * @return Decomposition with optimally chosen grid pattern
+ *
+ * @example
+ * **Automatic Grid for 16 MPI Ranks**
+ * ```cpp
+ * using namespace pfc;
+ *
+ * int size;
+ * MPI_Comm_size(MPI_COMM_WORLD, &size);  // e.g., size = 16
+ *
+ * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, size);
+ *
+ * auto grid = decomposition::get_grid(decomp);
+ * // Likely chooses 4×4×1 or 4×2×2 (minimizes surface area)
+ * std::cout << "Auto-selected grid: [" << grid[0] << ", "
+ *           << grid[1] << ", " << grid[2] << "]\n";
+ * ```
+ *
+ * @example
+ * **Query Selected Grid**
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create({200, 100, 50}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, 8);
+ *
+ * auto grid = decomposition::get_grid(decomp);
+ * std::cout << "For 8 ranks with domain [200, 100, 50]:\n";
+ * std::cout << "  Chose grid [" << grid[0] << ", " << grid[1] << ", " << grid[2] <<
+ * "]\n";
+ * // Adapts to domain aspect ratio
+ * ```
+ *
+ * @note This is the **recommended** method for most applications - let the
+ *       algorithm choose the optimal grid.
+ * @note The algorithm considers domain dimensions and communication patterns.
+ * @note For manual control, use create(world, grid) instead.
+ *
+ * @see create(world, grid) - manual grid specification
+ * @see proc_setup_min_surface() - HeFFTe's grid selection algorithm
+ */
 inline const auto create(const World &world, const int &nparts) noexcept {
   auto indices = to_indices(world);
   auto grid = proc_setup_min_surface(indices, nparts);
   return create(world, grid);
 }
 
+/**
+ * @brief Get the total number of subdomains
+ *
+ * Returns the count of subdomains in this decomposition. Equals the product
+ * of grid dimensions: num_domains = grid[0] * grid[1] * grid[2].
+ *
+ * @param[in] decomposition The decomposition to query
+ * @return Total number of subdomains (typically equals MPI size)
+ *
+ * @example
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create({128, 128, 128}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, {2, 2, 1});
+ *
+ * int num = decomposition::get_num_domains(decomp);
+ * std::cout << "Total subdomains: " << num << "\n";  // 4
+ *
+ * auto grid = decomposition::get_grid(decomp);
+ * assert(num == grid[0] * grid[1] * grid[2]);  // Always true
+ * ```
+ *
+ * @example
+ * **Validate MPI Size**
+ * ```cpp
+ * using namespace pfc;
+ *
+ * int mpi_size;
+ * MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+ *
+ * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+ * auto decomp = decomposition::create(world, mpi_size);
+ *
+ * int num_domains = decomposition::get_num_domains(decomp);
+ * assert(num_domains == mpi_size);  // Should match
+ * ```
+ *
+ * @see get_grid() - decomposition pattern
+ * @see get_subworlds() - access all subdomains
+ */
 inline int get_num_domains(const Decomposition &decomposition) noexcept {
   return get_subworlds(decomposition).size();
 }
