@@ -275,3 +275,211 @@ TEST_CASE("World - Helpers produce same result as create()",
     REQUIRE(world::get_spacing(w1) == world::get_spacing(w2));
   }
 }
+
+TEST_CASE("World - physical_volume() calculates correctly",
+          "[world][convenience][unit]") {
+  SECTION("3D domain with unit spacing") {
+    auto world = world::create({10, 10, 10}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+    REQUIRE_THAT(world::physical_volume(world), WithinAbs(1000.0, 1e-10));
+  }
+
+  SECTION("3D domain with custom spacing") {
+    auto world = world::create({10, 10, 10}, {0.0, 0.0, 0.0}, {0.1, 0.1, 0.1});
+    REQUIRE_THAT(world::physical_volume(world), WithinAbs(1.0, 1e-10));
+  }
+
+  SECTION("2D domain (nz = 1)") {
+    auto world = world::create({100, 100, 1}, {0.0, 0.0, 0.0}, {0.01, 0.01, 1.0});
+    // Volume = 100 * 0.01 * 100 * 0.01 * 1 * 1.0 = 1.0
+    REQUIRE_THAT(world::physical_volume(world), WithinAbs(1.0, 1e-10));
+  }
+
+  SECTION("1D domain (ny = nz = 1)") {
+    auto world = world::create({100, 1, 1}, {0.0, 0.0, 0.0}, {0.1, 1.0, 1.0});
+    // Volume = 100 * 0.1 * 1 * 1.0 * 1 * 1.0 = 10.0
+    REQUIRE_THAT(world::physical_volume(world), WithinAbs(10.0, 1e-10));
+  }
+
+  SECTION("Non-cubic domain") {
+    auto world = world::create({128, 128, 32}, {0.0, 0.0, 0.0}, {0.01, 0.01, 0.05});
+    // Volume = 128 * 0.01 * 128 * 0.01 * 32 * 0.05 = 2.62144
+    REQUIRE_THAT(world::physical_volume(world), WithinAbs(2.62144, 1e-10));
+  }
+}
+
+TEST_CASE("World - dimensionality checks work correctly",
+          "[world][convenience][unit]") {
+  SECTION("1D domain (nx > 1, ny = 1, nz = 1)") {
+    auto world1d = world::create({100, 1, 1});
+
+    REQUIRE(world::is_1d(world1d));
+    REQUIRE_FALSE(world::is_2d(world1d));
+    REQUIRE_FALSE(world::is_3d(world1d));
+    REQUIRE(world::dimensionality(world1d) == 1);
+  }
+
+  SECTION("2D domain (nx > 1, ny > 1, nz = 1)") {
+    auto world2d = world::create({64, 64, 1});
+
+    REQUIRE_FALSE(world::is_1d(world2d));
+    REQUIRE(world::is_2d(world2d));
+    REQUIRE_FALSE(world::is_3d(world2d));
+    REQUIRE(world::dimensionality(world2d) == 2);
+  }
+
+  SECTION("3D domain (nx > 1, ny > 1, nz > 1)") {
+    auto world3d = world::create({32, 32, 32});
+
+    REQUIRE_FALSE(world::is_1d(world3d));
+    REQUIRE_FALSE(world::is_2d(world3d));
+    REQUIRE(world::is_3d(world3d));
+    REQUIRE(world::dimensionality(world3d) == 3);
+  }
+
+  SECTION("Degenerate case (nx = 1, ny = 1, nz = 1)") {
+    auto world_degenerate = world::create({1, 1, 1});
+
+    REQUIRE_FALSE(world::is_1d(world_degenerate));
+    REQUIRE_FALSE(world::is_2d(world_degenerate));
+    REQUIRE_FALSE(world::is_3d(world_degenerate));
+    REQUIRE(world::dimensionality(world_degenerate) == 0);
+  }
+
+  SECTION("Non-standard 2D (nx = 1, ny > 1, nz > 1)") {
+    // This is NOT considered 2D by our definition
+    auto world_yz = world::create({1, 64, 64});
+
+    REQUIRE_FALSE(world::is_1d(world_yz));
+    REQUIRE_FALSE(world::is_2d(world_yz)); // Only x-y plane is 2D
+    REQUIRE_FALSE(world::is_3d(world_yz));
+    REQUIRE(world::dimensionality(world_yz) == 0); // Degenerate by our definition
+  }
+}
+
+TEST_CASE("World - bounds accessors return correct values",
+          "[world][convenience][unit]") {
+  SECTION("Unit spacing at origin") {
+    auto world = world::create({10, 10, 10}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+
+    auto lower = world::get_lower_bounds(world);
+    REQUIRE_THAT(lower[0], WithinAbs(0.0, 1e-10));
+    REQUIRE_THAT(lower[1], WithinAbs(0.0, 1e-10));
+    REQUIRE_THAT(lower[2], WithinAbs(0.0, 1e-10));
+
+    auto upper = world::get_upper_bounds(world);
+    REQUIRE_THAT(upper[0], WithinAbs(9.0, 1e-10)); // (10-1) * 1.0
+    REQUIRE_THAT(upper[1], WithinAbs(9.0, 1e-10));
+    REQUIRE_THAT(upper[2], WithinAbs(9.0, 1e-10));
+  }
+
+  SECTION("Custom spacing and origin") {
+    auto world = world::create({100, 100, 100}, {-5.0, -5.0, 0.0}, {0.1, 0.1, 0.1});
+
+    auto lower = world::get_lower_bounds(world);
+    REQUIRE_THAT(lower[0], WithinAbs(-5.0, 1e-10));
+    REQUIRE_THAT(lower[1], WithinAbs(-5.0, 1e-10));
+    REQUIRE_THAT(lower[2], WithinAbs(0.0, 1e-10));
+
+    auto upper = world::get_upper_bounds(world);
+    REQUIRE_THAT(upper[0], WithinAbs(-5.0 + 99 * 0.1, 1e-10)); // -5.0 + 9.9 = 4.9
+    REQUIRE_THAT(upper[1], WithinAbs(-5.0 + 99 * 0.1, 1e-10));
+    REQUIRE_THAT(upper[2], WithinAbs(0.0 + 99 * 0.1, 1e-10)); // 9.9
+  }
+
+  SECTION("2D domain") {
+    auto world = world::create({128, 128, 1}, {0.0, 0.0, 0.0}, {0.01, 0.01, 1.0});
+
+    auto lower = world::get_lower_bounds(world);
+    REQUIRE_THAT(lower[0], WithinAbs(0.0, 1e-10));
+    REQUIRE_THAT(lower[1], WithinAbs(0.0, 1e-10));
+    REQUIRE_THAT(lower[2], WithinAbs(0.0, 1e-10));
+
+    auto upper = world::get_upper_bounds(world);
+    REQUIRE_THAT(upper[0], WithinAbs(127 * 0.01, 1e-10)); // 1.27
+    REQUIRE_THAT(upper[1], WithinAbs(127 * 0.01, 1e-10));
+    REQUIRE_THAT(upper[2], WithinAbs(0.0, 1e-10)); // (1-1) * 1.0 = 0
+  }
+
+  SECTION("Bounds span equals expected physical size") {
+    auto world = world::create({50, 50, 50}, {0.0, 0.0, 0.0}, {0.2, 0.2, 0.2});
+
+    auto lower = world::get_lower_bounds(world);
+    auto upper = world::get_upper_bounds(world);
+
+    // Physical extent should be (size - 1) * spacing
+    double extent_x = upper[0] - lower[0];
+    double extent_y = upper[1] - lower[1];
+    double extent_z = upper[2] - lower[2];
+
+    REQUIRE_THAT(extent_x, WithinAbs(49 * 0.2, 1e-10)); // 9.8
+    REQUIRE_THAT(extent_y, WithinAbs(49 * 0.2, 1e-10));
+    REQUIRE_THAT(extent_z, WithinAbs(49 * 0.2, 1e-10));
+  }
+}
+
+TEST_CASE("World - convenience functions work via ADL",
+          "[world][convenience][adl][unit]") {
+  using namespace world;
+
+  SECTION("Functions accessible without world:: prefix") {
+    auto w = create({64, 64, 64});
+
+    // All these should work via ADL (no world:: prefix needed)
+    auto vol = physical_volume(w);
+    bool threed = is_3d(w);
+    int dim = dimensionality(w);
+    auto lower = get_lower_bounds(w);
+    auto upper = get_upper_bounds(w);
+
+    REQUIRE(vol > 0.0);
+    REQUIRE(threed);
+    REQUIRE(dim == 3);
+    REQUIRE(lower[0] == 0.0);
+    REQUIRE(upper[0] > 0.0);
+  }
+}
+
+TEST_CASE("World - convenience functions integrate with existing API",
+          "[world][convenience][integration][unit]") {
+  SECTION("Physical volume matches manual calculation") {
+    auto world = world::create({100, 100, 100}, {0.0, 0.0, 0.0}, {0.1, 0.1, 0.1});
+
+    // Manual calculation
+    auto spacing = world::get_spacing(world);
+    auto size = world::get_size(world);
+    double manual_vol =
+        spacing[0] * spacing[1] * spacing[2] * size[0] * size[1] * size[2];
+
+    // Using convenience function
+    double conv_vol = world::physical_volume(world);
+
+    REQUIRE_THAT(conv_vol, WithinAbs(manual_vol, 1e-10));
+  }
+
+  SECTION("Bounds match coordinate transformation results") {
+    auto world = world::create({64, 64, 64}, {1.0, 2.0, 3.0}, {0.5, 0.5, 0.5});
+
+    // Using convenience functions
+    auto lower_conv = world::get_lower_bounds(world);
+    auto upper_conv = world::get_upper_bounds(world);
+
+    // Using existing coordinate transformation
+    auto lower_manual = world::to_coords(world, {0, 0, 0});
+    auto size = world::get_size(world);
+    auto upper_manual =
+        world::to_coords(world, {size[0] - 1, size[1] - 1, size[2] - 1});
+
+    REQUIRE(lower_conv == lower_manual);
+    REQUIRE(upper_conv == upper_manual);
+  }
+
+  SECTION("Dimensionality checks consistent with size queries") {
+    auto world2d = world::create({128, 128, 1});
+
+    REQUIRE(world::is_2d(world2d));
+    REQUIRE(world::get_size(world2d, 0) > 1);
+    REQUIRE(world::get_size(world2d, 1) > 1);
+    REQUIRE(world::get_size(world2d, 2) == 1);
+    REQUIRE(world::dimensionality(world2d) == 2);
+  }
+}
