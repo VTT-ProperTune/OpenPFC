@@ -9,6 +9,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Examples**: Custom coordinate system example in `examples/17_custom_coordinate_system.cpp`
+  demonstrating OpenPFC's extensibility via ADL (Argument-Dependent Lookup). Implements
+  complete polar (2D: r, θ) and spherical (3D: r, θ, φ) coordinate systems with coordinate
+  transformations (`polar_to_coords()`, `polar_to_indices()`, `spherical_to_coords()`,
+  `spherical_to_indices()`). Includes comprehensive Doxygen documentation (615 lines),
+  round-trip transformation verification, and 4-step recipe showing users how to add
+  custom coordinate systems without modifying OpenPFC source code. Embodies "Laboratory,
+  Not Fortress" philosophy - users can extend with cylindrical, spherical, or custom
+  geometries through tag-based dispatch and free functions. Example compiles cleanly
+  with zero warnings and demonstrates working coordinate conversions with correct output.
 - **Documentation**: Comprehensive API documentation for top 10 most-used public
   APIs with detailed @example blocks and usage patterns. Enhanced documentation
   covers World (domain creation and coordinate transforms), Model (physics
