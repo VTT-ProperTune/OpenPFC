@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+## [0.1.3] - 2025-11-25
+
 ### Added
 
 - **Examples**: Custom coordinate system example in `examples/17_custom_coordinate_system.cpp`
