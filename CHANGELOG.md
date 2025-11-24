@@ -7,6 +7,22 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Added
+
+- **FFT**: K-space helper functions in `include/openpfc/fft/kspace.hpp` providing
+  zero-cost abstractions for wave vector calculations in spectral methods.
+  Added 4 inline helper functions: `k_frequency_scaling(world)` for computing
+  frequency scaling factors (2π/L), `k_component(index, size, freq_scale)` for
+  wave vector components with Nyquist folding, `k_laplacian_value(ki, kj, kk)`
+  for computing -k² Laplacian operator, and `k_squared_value(ki, kj, kk)` for
+  magnitude squared. Eliminates 120+ lines of duplicated k-space calculation
+  code across examples (04_diffusion_model.cpp, 12_cahn_hilliard.cpp, tungsten.cpp,
+  etc.). All functions are inline, noexcept, and compile to identical machine
+  code as manual implementation (zero runtime overhead). Comprehensive test
+  coverage (177 assertions in 6 test cases). Example program added in
+  `examples/fft_kspace_helpers_example.cpp` demonstrating before/after comparison.
+  (User Story #0048)
+
 ## [0.1.2] - 2025-11-21
 
 ### Added
