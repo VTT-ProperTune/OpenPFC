@@ -33,17 +33,25 @@ set(DOXYGEN_TOC_INCLUDE_HEADINGS 5)
 
 set(DOXYGEN_HTML_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-custom/header.html)
 
-set(DOXYGEN_EXAMPLE_PATH "${PROJECT_SOURCE_DIR}/examples")
+set(DOXYGEN_EXAMPLE_PATH 
+  "${PROJECT_SOURCE_DIR}/examples"
+  "${CMAKE_CURRENT_SOURCE_DIR}/api/examples"
+)
+
+# Include API examples subdirectory
+add_subdirectory(api/examples)
 
 # to make img in front page to show up also in documentation
 file(COPY img DESTINATION html/docs)
 
 file(GLOB_RECURSE HEADER_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
 file(GLOB_RECURSE EXAMPLE_FILES "${PROJECT_SOURCE_DIR}/examples/*.cpp")
+file(GLOB_RECURSE API_EXAMPLE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/api/examples/*.cpp")
 
 doxygen_add_docs(docs
   "${PROJECT_SOURCE_DIR}/README.md"
   "${CMAKE_CURRENT_SOURCE_DIR}/tutorial.md"
   "${HEADER_FILES}"
   "${EXAMPLE_FILES}"
+  "${API_EXAMPLE_FILES}"
   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/include")
