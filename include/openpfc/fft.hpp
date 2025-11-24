@@ -135,8 +135,66 @@ struct IFFT {
 };
 
 /**
- * @brief FFT class for performing forward and backward Fast Fourier
- * Transformations.
+ * @brief FFT class for distributed-memory parallel Fourier transforms
+ *
+ * Provides real-to-complex (R2C) and complex-to-real (C2R) 3D FFT operations
+ * using HeFFTe backend. This is the core computational engine for spectral
+ * methods in OpenPFC, enabling efficient calculation of derivatives and
+ * convolutions in Fourier space.
+ *
+ * ## Key Features
+ * - Distributed-memory parallelism via MPI
+ * - Real-to-complex symmetry exploitation (half-space representation)
+ * - Multiple backend support (FFTW, cuFFT, rocFFT)
+ * - Automatic workspace management
+ * - Performance timing capabilities
+ *
+ * ## Memory Layout
+ * - Real data: Full 3D grid (N_x × N_y × N_z)
+ * - Complex data: Half-space (N_x × N_y × (N_z/2+1)) due to conjugate symmetry
+ * - Both use distributed decomposition across MPI ranks
+ *
+ * ## Normalization Convention
+ * - Forward transform: No normalization
+ * - Backward transform: Divides by total grid points (1/N)
+ * - Round-trip: x → forward → backward → x (exact)
+ *
+ * ## Usage Pattern
+ * @code
+ * // Setup
+ * auto world = world::create({256, 256, 256});
+ * auto decomp = Decomposition(world, MPI_COMM_WORLD);
+ * auto fft = fft::create(decomp);
+ *
+ * // Allocate fields
+ * RealVector real_field(fft.size_inbox());
+ * ComplexVector fourier_field(fft.size_outbox());
+ *
+ * // Forward: real space → k-space
+ * fft.forward(real_field, fourier_field);
+ *
+ * // Apply operators in k-space
+ * for (size_t k = 0; k < fourier_field.size(); ++k) {
+ *     fourier_field[k] *= laplacian_operator[k];
+ * }
+ *
+ * // Backward: k-space → real space (normalized)
+ * fft.backward(fourier_field, real_field);
+ * @endcode
+ *
+ * ## Performance Notes
+ * - FFT is O(N log N) operation
+ * - MPI communication overhead scales with domain decomposition
+ * - Use reset_fft_time() and get_fft_time() to measure performance
+ * - Powers of 2 for grid dimensions yield fastest transforms
+ *
+ * @note FFT stores a reference/pointer to Decomposition - ensure lifetime
+ * @warning Forward and backward are NOT inverses without normalization
+ * @warning Complex array is half the size of real array (conjugate symmetry)
+ *
+ * @see fft::create() for construction
+ * @see Decomposition for domain decomposition
+ * @see kspace.hpp for wavenumber and operator helpers
  */
 struct FFT : IFFT {
 
@@ -160,10 +218,39 @@ struct FFT : IFFT {
   FFT(fft_r2c fft) : m_fft(std::move(fft)), m_wrk(m_fft.size_workspace()) {}
 
   /**
-   * @brief Performs the forward FFT transformation.
+   * @brief Perform forward real-to-complex FFT transform
    *
-   * @param in Input vector of real values.
-   * @param out Output vector of complex values.
+   * Transforms real-space data to Fourier-space (k-space) using a distributed
+   * 3D FFT. The output exploits conjugate symmetry (half-space representation).
+   *
+   * @param in Input vector of real values (size = size_inbox())
+   * @param out Output vector of complex values (size = size_outbox())
+   *
+   * @pre in.size() must equal size_inbox()
+   * @pre out.size() must equal size_outbox()
+   *
+   * @note No normalization applied (use 1/N if needed)
+   * @note Output is half-complex due to conjugate symmetry
+   * @note MPI collective operation - all ranks must call
+   *
+   * @warning Modifies internal workspace (not thread-safe)
+   *
+   * @example
+   * ```cpp
+   * auto fft = fft::create(decomp);
+   * RealVector density(fft.size_inbox(), 0.5);  // Uniform field
+   * ComplexVector density_k(fft.size_outbox());
+   *
+   * fft.forward(density, density_k);
+   * // density_k now contains Fourier coefficients
+   * // density_k[0] = N * 0.5 (DC component, no normalization)
+   * ```
+   *
+   * Time complexity: O(N log N) locally + MPI communication
+   *
+   * @see backward() for inverse transform
+   * @see size_inbox() for input size
+   * @see size_outbox() for output size
    */
   void forward(const std::vector<double> &in, ComplexVector &out) {
     m_fft_time -= MPI_Wtime();
@@ -172,10 +259,46 @@ struct FFT : IFFT {
   };
 
   /**
-   * @brief Performs the backward (inverse) FFT transformation.
+   * @brief Perform backward complex-to-real inverse FFT transform
    *
-   * @param in Input vector of complex values.
-   * @param out Output vector of real values.
+   * Transforms Fourier-space (k-space) data back to real space. Applies full
+   * normalization (divides by total grid points N) so round-trip transforms
+   * are exact: x → forward → backward → x.
+   *
+   * @param in Input vector of complex values (size = size_outbox())
+   * @param out Output vector of real values (size = size_inbox())
+   *
+   * @pre in.size() must equal size_outbox()
+   * @pre out.size() must equal size_inbox()
+   *
+   * @note Applies full normalization: output = IFFT(input) / N
+   * @note Input uses half-complex representation
+   * @note MPI collective operation - all ranks must call
+   *
+   * @warning Modifies internal workspace (not thread-safe)
+   * @warning Input must satisfy conjugate symmetry for real output
+   *
+   * @example
+   * ```cpp
+   * ComplexVector field_k(fft.size_outbox());
+   * RealVector field(fft.size_inbox());
+   *
+   * // Apply Laplacian in k-space: \u0302f(k) → -k²\u0302f(k)
+   * for (size_t idx = 0; idx < field_k.size(); ++idx) {
+   *     double k2 = kx[idx]*kx[idx] + ky[idx]*ky[idx] + kz[idx]*kz[idx];
+   *     field_k[idx] *= -k2;
+   * }
+   *
+   * // Transform back (normalized)
+   * fft.backward(field_k, field);
+   * // field now contains ∇²f in real space
+   * ```
+   *
+   * Time complexity: O(N log N) locally + MPI communication
+   *
+   * @see forward() for forward transform
+   * @see size_inbox() for output size
+   * @see size_outbox() for input size
    */
   void backward(const ComplexVector &in, std::vector<double> &out) {
     m_fft_time -= MPI_Wtime();
