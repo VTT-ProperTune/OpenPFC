@@ -105,7 +105,8 @@ int main() {
         std::cout << "Coordinate " << array_to_string(coords)
                   << " found from sub-domain #" << field_num << std::endl;
         std::cout << "Value at " << array_to_string(coords) << " is "
-                  << field.interpolate(coords) << std::endl;
+                  << pfc::interpolate(field, coords)
+                  << std::endl; // Using free function
       }
       field_num++;
     }
