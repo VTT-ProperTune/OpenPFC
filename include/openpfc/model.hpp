@@ -55,9 +55,6 @@
  * @see fft.hpp for spectral operations interface
  * @see core/world.hpp for computational domain
  * @see field_modifier.hpp for initial/boundary conditions
- *
- * @author OpenPFC Contributors
- * @date 2025
  */
 
 #ifndef PFC_MODEL_HPP
