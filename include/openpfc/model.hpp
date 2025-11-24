@@ -169,9 +169,36 @@ public:
   const World &get_world() { return m_world; }
 
   /**
-   * @brief Set the FFT object for the model.
+   * @brief Set the FFT object for the model
    *
-   * @param fft Reference to the FFT object.
+   * Associates an FFT instance with this model, enabling spectral operations.
+   * This is typically called during model setup before initialization.
+   *
+   * @param fft Reference to the FFT object to use for transforms
+   *
+   * @note The FFT object must outlive the Model (Model stores a pointer)
+   * @note Calling set_fft() after initialization may invalidate precomputed
+   * operators
+   * @note This also updates the m_rank0 flag for MPI rank checking
+   *
+   * @warning The Model stores a raw pointer - ensure FFT lifetime exceeds Model
+   * lifetime
+   * @warning Changing FFT after initialize() may cause undefined behavior
+   *
+   * @example
+   * ```cpp
+   * // Typical usage pattern
+   * auto world = world::create({256, 256, 256});
+   * auto decomp = Decomposition(world, MPI_COMM_WORLD);
+   * auto fft = FFT(decomp);
+   *
+   * MyModel model(world);  // Construct without FFT
+   * model.set_fft(fft);    // Set FFT before initialization
+   * model.initialize(0.01);
+   * ```
+   *
+   * @see get_fft() to access the FFT object
+   * @see Model(FFT&, const World&) constructor that sets FFT at construction
    */
   void set_fft(FFT &fft) {
     m_fft = &fft;
@@ -179,10 +206,44 @@ public:
   }
 
   /**
-   * @brief Get the FFT object associated with the model.
+   * @brief Get the FFT object associated with the model
    *
-   * @return Reference to the FFT object.
-   * @throws std::runtime_error if the FFT object has not been set.
+   * Returns a reference to the FFT instance used for spectral operations
+   * (forward and backward Fourier transforms). Use this to perform transforms
+   * during time stepping.
+   *
+   * @return Reference to the FFT object
+   *
+   * @throws std::runtime_error if the FFT object has not been set
+   *
+   * @note FFT must be set via constructor or set_fft() before calling this
+   * @note The returned reference is valid as long as the FFT object exists
+   *
+   * @warning Calling this before set_fft() or appropriate constructor throws
+   *
+   * @example
+   * ```cpp
+   * void step(double t) override {
+   *     auto& density = get_real_field("density");
+   *     auto& density_k = get_complex_field("density_k");
+   *     auto& fft = get_fft();
+   *
+   *     // Real → Complex transform
+   *     fft.forward(density.data(), density_k.data());
+   *
+   *     // Apply operators in k-space
+   *     for (size_t k = 0; k < density_k.size(); ++k) {
+   *         density_k[k] = operator_k[k] * density_k[k];
+   *     }
+   *
+   *     // Complex → Real transform
+   *     fft.backward(density_k.data(), density.data());
+   * }
+   * ```
+   *
+   * @see set_fft() to associate FFT with model
+   * @see FFT::forward() for real-to-complex transforms
+   * @see FFT::backward() for complex-to-real transforms
    */
   FFT &get_fft() {
     if (m_fft == nullptr) {
@@ -194,24 +255,103 @@ public:
   }
 
   /**
-   * @brief Pure virtual function to be overridden by concrete implementations.
+   * @brief Advance the model by one time step
    *
-   * The `step` function is responsible for performing the time integration step
-   * for the model. Users should override this function to implement their own
-   * time integration scheme and update the model state accordingly.
+   * This pure virtual function must be implemented by derived classes to
+   * update the model's fields for one time step. This is where the physics
+   * of your model is implemented.
+   *
+   * OpenPFC uses semi-implicit spectral methods:
+   * - Linear terms: solved implicitly in Fourier space
+   * - Nonlinear terms: evaluated explicitly in real space
    *
    * @param t Current simulation time
+   *
+   * @note This function is called repeatedly during time integration
+   * @note For explicit schemes, dt is typically member variable
+   * @note Access fields via get_real_field() and get_complex_field()
+   *
+   * @example
+   * ```cpp
+   * // Example: Phase Field Crystal
+   * // ∂n/∂t = ∇²[(1 + ∇²)² n + n³]
+   * void step(double t) override {
+   *     auto& n = get_real_field("density");
+   *     auto& n_k = get_complex_field("density_k");
+   *     auto& fft = get_fft();
+   *
+   *     // Compute n³ in real space
+   *     for (size_t i = 0; i < n.size(); ++i) {
+   *         nonlinear[i] = n[i] * n[i] * n[i];
+   *     }
+   *
+   *     // FFT to k-space and solve
+   *     fft.forward(nonlinear.data(), nonlinear_k.data());
+   *     for (size_t k = 0; k < n_k.size(); ++k) {
+   *         n_k[k] = propagator[k] * (laplacian_op[k] * n_k[k] + nonlinear_k[k]);
+   *     }
+   *     fft.backward(n_k.data(), n.data());
+   * }
+   * ```
+   *
+   * Time complexity: O(N log N) for FFT operations
+   *
+   * @see initialize() for precomputing operators
+   * @see get_fft() for FFT operations
    */
   virtual void step(double t) = 0;
 
   /**
-   * @brief Pure virtual function to be overridden by concrete implementations.
+   * @brief Initialize the model before time integration begins
    *
-   * The `initialize` function is called at the beginning of the simulation and
-   * is used to perform any necessary initialization tasks, such as allocating
-   * arrays and pre-calculating operators used in time integration.
+   * This pure virtual function must be implemented by derived classes to
+   * set up the model's state before the simulation starts. Typical tasks include:
+   * - Registering and allocating field storage
+   * - Precomputing spectral operators (k-space derivatives, propagators)
+   * - Setting up time integration coefficients
+   * - Initializing auxiliary fields
+   *
+   * This function is called once before the first time step.
    *
    * @param dt Time step size for the simulation
+   *
+   * @note dt can be used to precompute time-step-dependent operators
+   * @note For adaptive time stepping, this receives the initial dt
+   *
+   * @example
+   * ```cpp
+   * class MyPFCModel : public pfc::Model {
+   * public:
+   *     MyPFCModel(pfc::FFT& fft, const pfc::World& world)
+   *         : Model(fft, world) {}
+   *
+   *     void initialize(double dt) override {
+   *         // Register fields
+   *         add_real_field("density", density_field);
+   *         add_complex_field("density_k", density_k_field);
+   *
+   *         // Precompute spectral operators
+   *         auto world = get_world();
+   *         for (int k = 0; k < kspace_size; ++k) {
+   *             double k2 = kx[k]*kx[k] + ky[k]*ky[k] + kz[k]*kz[k];
+   *             laplacian_op[k] = -k2;
+   *
+   *             // Semi-implicit operator: (1 + dt*L)^-1
+   *             propagator[k] = 1.0 / (1.0 + dt * (1 + k2)*(1 + k2));
+   *         }
+   *
+   *         if (is_rank0()) {
+   *             std::cout << "Model initialized with dt = " << dt << "\n";
+   *         }
+   *     }
+   *
+   *     // ... step() implementation ...
+   * };
+   * ```
+   *
+   * @see step() for time integration implementation
+   * @see add_real_field() to register fields
+   * @see get_fft() to access FFT operations
    */
   virtual void initialize(double dt) = 0;
 
@@ -226,50 +366,164 @@ public:
   }
 
   /**
-   * @brief Add a real-valued field to the model.
+   * @brief Register a real-valued field with the model
    *
-   * @param name Name of the field
-   * @param field Reference to the RealField object representing the field
+   * Adds a named real-valued field to the model's field registry.
+   *
+   * @param name Unique identifier for the field
+   * @param field Reference to the RealField object
+   *
+   * @note Field names must be unique
+   * @note Common names: "density", "temperature", "concentration"
+   *
+   * @example
+   * ```cpp
+   * void initialize(double dt) override {
+   *     add_real_field("density", m_density);
+   *     add_real_field("temperature", m_temperature);
+   * }
+   * ```
+   *
+   * @see get_real_field() to retrieve registered fields
    */
   void add_real_field(const std::string &name, RealField &field) {
     m_real_fields.insert({name, field});
   }
 
   /**
-   * @brief Check if the model has a complex-valued field with the given name.
+   * @brief Check if the model has a complex-valued field with the given name
+   *
+   * Checks whether a complex field (typically in Fourier space) has been
+   * registered with the model. Use this before accessing fields to avoid
+   * runtime errors.
    *
    * @param field_name Name of the field to check
    * @return True if the field exists, False otherwise
+   *
+   * @note Complex fields are typically used for Fourier-space representations
+   * @note Field names are case-sensitive
+   *
+   * @example
+   * ```cpp
+   * if (has_complex_field("density_k")) {
+   *     auto& n_k = get_complex_field("density_k");
+   *     // Perform k-space operations...
+   * } else {
+   *     std::cerr << "Field not registered!\n";
+   * }
+   * ```
+   *
+   * @see add_complex_field() to register fields
+   * @see get_complex_field() to access registered fields
    */
   bool has_complex_field(const std::string &field_name) {
     return m_complex_fields.count(field_name) > 0;
   }
 
   /**
-   * @brief Add a complex-valued field to the model.
+   * @brief Register a complex-valued field with the model
    *
-   * @param name Name of the field
-   * @param field Reference to the ComplexField object representing the field
+   * Adds a named complex-valued field (typically for Fourier-space data) to
+   * the model's field registry. Complex fields store FFT-transformed data and
+   * are used for spectral operations.
+   *
+   * @param name Unique identifier for the field
+   * @param field Reference to the ComplexField object
+   *
+   * @note Field names must be unique across all field types
+   * @note Complex fields have roughly half the size of real fields (N/2+1 in FFT
+   * convention)
+   * @note Common naming: append "_k" or "_fourier" to indicate k-space
+   *
+   * @example
+   * ```cpp
+   * void initialize(double dt) override {
+   *     // Real space field
+   *     add_real_field("density", m_density);
+   *
+   *     // Corresponding k-space field
+   *     add_complex_field("density_k", m_density_k);
+   *
+   *     // Temperature field and its transform
+   *     add_real_field("temperature", m_temp);
+   *     add_complex_field("temperature_k", m_temp_k);
+   * }
+   * ```
+   *
+   * @see get_complex_field() to retrieve registered fields
+   * @see has_complex_field() to check existence
+   * @see add_real_field() for real-valued fields
    */
   void add_complex_field(const std::string &name, ComplexField &field) {
     m_complex_fields.insert({name, field});
   }
 
   /**
-   * @brief Get a reference to the real-valued field with the given name.
+   * @brief Retrieve a registered real-valued field by name
    *
-   * @param name Name of the field
+   * Returns a reference to a previously registered field for reading or
+   * modification.
+   *
+   * @param name Name of the field to retrieve
    * @return Reference to the RealField object
+   *
+   * @throws std::out_of_range if field name not registered
+   *
+   * @warning Accessing non-existent fields causes runtime error
+   *
+   * @example
+   * ```cpp
+   * void step(double t) override {
+   *     auto& density = get_real_field("density");
+   *     // Modify field...
+   * }
+   * ```
+   *
+   * @see add_real_field() to register fields
+   * @see has_real_field() to check existence
    */
   RealField &get_real_field(const std::string &name) {
     return m_real_fields.find(name)->second;
   }
 
   /**
-   * @brief Get a reference to the complex-valued field with the given name.
+   * @brief Retrieve a registered complex-valued field by name
    *
-   * @param name Name of the field
+   * Returns a reference to a previously registered complex field (typically
+   * Fourier-space data) for reading or modification during time stepping.
+   *
+   * @param name Name of the field to retrieve
    * @return Reference to the ComplexField object
+   *
+   * @throws std::out_of_range if field name not registered
+   *
+   * @warning Accessing non-existent fields causes runtime error
+   * @note Complex fields contain FFT-transformed data (k-space representation)
+   * @note Modifications to complex fields are typically followed by inverse FFT
+   *
+   * @example
+   * ```cpp
+   * void step(double t) override {
+   *     auto& n = get_real_field("density");
+   *     auto& n_k = get_complex_field("density_k");
+   *     auto& fft = get_fft();
+   *
+   *     // Transform to k-space
+   *     fft.forward(n.data(), n_k.data());
+   *
+   *     // Apply spectral operator
+   *     for (size_t k = 0; k < n_k.size(); ++k) {
+   *         n_k[k] *= propagator[k];
+   *     }
+   *
+   *     // Transform back to real space
+   *     fft.backward(n_k.data(), n.data());
+   * }
+   * ```
+   *
+   * @see add_complex_field() to register fields
+   * @see has_complex_field() to check existence
+   * @see get_fft() to access FFT operations
    */
   ComplexField &get_complex_field(const std::string &name) {
     return m_complex_fields.find(name)->second;
@@ -296,11 +550,37 @@ public:
   }
 
   /**
-   * @brief Check if the model has a field with the given name (real or
-   * complex).
+   * @brief Check if the model has a field with the given name (real or complex)
+   *
+   * Convenience function that checks both real and complex field registries.
+   * Useful when you don't know or care about the field type.
    *
    * @param field_name Name of the field to check
-   * @return True if the field exists, False otherwise
+   * @return True if the field exists in either registry, False otherwise
+   *
+   * @note Checks both real-valued and complex-valued field registries
+   * @note Field names are case-sensitive
+   *
+   * @example
+   * ```cpp
+   * void some_operation(const std::string& field_name) {
+   *     if (!has_field(field_name)) {
+   *         throw std::runtime_error("Field not found: " + field_name);
+   *     }
+   *
+   *     // Determine type and access accordingly
+   *     if (has_real_field(field_name)) {
+   *         auto& field = get_real_field(field_name);
+   *         // Process real field...
+   *     } else {
+   *         auto& field = get_complex_field(field_name);
+   *         // Process complex field...
+   *     }
+   * }
+   * ```
+   *
+   * @see has_real_field() to check only real fields
+   * @see has_complex_field() to check only complex fields
    */
   bool has_field(const std::string &field_name) {
     return has_real_field(field_name) || has_complex_field(field_name);
