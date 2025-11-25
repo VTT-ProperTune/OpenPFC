@@ -10,7 +10,7 @@
  * a unified interface for writing simulation results to various output formats.
  * OpenPFC currently supports:
  * - Binary format (BinaryWriter) for checkpointing and restart
- * - Future: VTK format for visualization (User Story #0025)
+ * - Future: VTK format for visualization
  *
  * The ResultsWriter interface supports:
  * - Parallel I/O via MPI (distributed data from decomposed domains)
@@ -351,7 +351,7 @@ protected:
  * @note Binary files are not portable across different architectures (endianness).
  * @note No metadata is stored - you must track time, step number, domain size
  * separately.
- * @note For visualization, use VTKWriter instead (User Story #0025).
+ * @note For visualization, use VTKWriter instead.
  *
  * @see ResultsWriter - base class interface
  * @see BinaryReader - read binary files for restart

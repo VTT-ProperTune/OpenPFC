@@ -6,7 +6,7 @@
  * @brief Demonstrates k-space helper functions eliminating code duplication
  *
  * This example shows the before-and-after comparison of using the new k-space
- * helper functions introduced in User Story #0048. The same ~30 lines of
+ * helper functions. The same ~30 lines of
  * k-space calculation code was duplicated across 4+ examples
  * (04_diffusion_model.cpp, 12_cahn_hilliard.cpp, etc.), totaling 120+ lines of
  * duplicated code.
@@ -211,7 +211,7 @@ int main() {
   std::cout << "\n";
   std::cout
       << "╔════════════════════════════════════════════════════════════════╗\n";
-  std::cout << "║  FFT K-Space Helper Functions Example (User Story #0048)      ║\n";
+  std::cout << "║  FFT K-Space Helper Functions Example                         ║\n";
   std::cout << "║  Demonstrating elimination of 120+ lines of duplicated code   ║\n";
   std::cout
       << "╚════════════════════════════════════════════════════════════════╝\n";
