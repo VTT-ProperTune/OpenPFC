@@ -121,7 +121,19 @@
             program =
               "${self.packages.${system}.openpfc-tests}/bin/openpfc-tests";
             meta = with pkgs.lib; {
-              description = "OpenPFC tests";
+              description = "OpenPFC tests (excluding benchmarks)";
+              license = licenses.agpl3;
+              platforms = platforms.linux;
+            };
+          };
+
+          benchmark = {
+            type = "app";
+            program = "${pkgs.writeShellScript "run-benchmarks" ''
+              exec ${self.packages.${system}.openpfc-tests}/bin/openpfc-tests "[benchmark]" "$@"
+            ''}";
+            meta = with pkgs.lib; {
+              description = "OpenPFC performance benchmarks";
               license = licenses.agpl3;
               platforms = platforms.linux;
             };
@@ -159,6 +171,8 @@
             echo "🎉 Welcome to the OpenPFC development shell!"
             echo "👉 To configure the project:  cmake -S . -B build -DOpenPFC_DEVELOPMENT=yes"
             echo "👉 To build the project:      cmake --build build"
+            echo "👉 To run tests:              nix run .#test"
+            echo "👉 To run benchmarks:         nix run .#benchmark"
             echo "👉 To format code:            nix run .#clang-format"
             echo "👉 To run static analysis:    nix run .#clang-tidy"
             echo "👉 To check licenses:         nix run .#reuse"
