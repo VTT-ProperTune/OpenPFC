@@ -60,6 +60,7 @@
 #include "openpfc.hpp"
 #include "simulator.hpp"
 #include "time.hpp"
+#include "ui_errors.hpp"
 #include "utils/timeleft.hpp"
 
 namespace pfc {
@@ -147,42 +148,59 @@ template <> World from_json<World>(const json &j) {
   std::string origo;
 
   if (!j.count("Lx") || !j["Lx"].is_number_integer()) {
-    throw std::invalid_argument("Missing or invalid 'Lx' field in JSON input.");
+    throw std::invalid_argument(format_config_error(
+        "Lx", "number of grid points in X direction", "positive integer",
+        get_json_value_string(j, "Lx"), {}, "\"Lx\": 256"));
   }
   Lx = j["Lx"];
 
   if (!j.count("Ly") || !j["Ly"].is_number_integer()) {
-    throw std::invalid_argument("Missing or invalid 'Ly' field in JSON input.");
+    throw std::invalid_argument(format_config_error(
+        "Ly", "number of grid points in Y direction", "positive integer",
+        get_json_value_string(j, "Ly"), {}, "\"Ly\": 256"));
   }
   Ly = j["Ly"];
 
   if (!j.count("Lz") || !j["Lz"].is_number_integer()) {
-    throw std::invalid_argument("Missing or invalid 'Lz' field in JSON input.");
+    throw std::invalid_argument(format_config_error(
+        "Lz", "number of grid points in Z direction", "positive integer",
+        get_json_value_string(j, "Lz"), {}, "\"Lz\": 256"));
   }
   Lz = j["Lz"];
 
   if (!j.count("dx") || !j["dx"].is_number_float()) {
-    throw std::invalid_argument("Missing or invalid 'dx' field in JSON input.");
+    throw std::invalid_argument(
+        format_config_error("dx", "grid spacing in X direction", "positive float",
+                            get_json_value_string(j, "dx"), {}, "\"dx\": 1.0"));
   }
   dx = j["dx"];
 
   if (!j.count("dy") || !j["dy"].is_number_float()) {
-    throw std::invalid_argument("Missing or invalid 'dy' field in JSON input.");
+    throw std::invalid_argument(
+        format_config_error("dy", "grid spacing in Y direction", "positive float",
+                            get_json_value_string(j, "dy"), {}, "\"dy\": 1.0"));
   }
   dy = j["dy"];
 
   if (!j.count("dz") || !j["dz"].is_number_float()) {
-    throw std::invalid_argument("Missing or invalid 'dz' field in JSON input.");
+    throw std::invalid_argument(
+        format_config_error("dz", "grid spacing in Z direction", "positive float",
+                            get_json_value_string(j, "dz"), {}, "\"dz\": 1.0"));
   }
   dz = j["dz"];
 
   if (!j.count("origo") || !j["origo"].is_string()) {
-    throw std::invalid_argument("Missing or invalid 'origo' field in JSON input.");
+    throw std::invalid_argument(format_config_error(
+        "origo", "coordinate system origin", "string ('center' or 'corner')",
+        get_json_value_string(j, "origo"), {"center", "corner"},
+        "\"origo\": \"center\""));
   }
   origo = j["origo"];
 
   if (origo != "center" && origo != "corner") {
-    throw std::invalid_argument("Invalid 'origo' field in JSON input.");
+    throw std::invalid_argument(format_config_error(
+        "origo", "coordinate system origin", "string ('center' or 'corner')",
+        "\"" + origo + "\"", {"center", "corner"}, "\"origo\": \"center\""));
   }
 
   if (origo == "center") {
@@ -428,7 +446,7 @@ public:
     if (it != modifiers.end()) {
       return it->second(data);
     }
-    throw std::invalid_argument("Unknown FieldModifier type: " + type);
+    throw std::invalid_argument(format_unknown_modifier_error(type));
   }
 
 private:
