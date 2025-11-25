@@ -16,4 +16,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v22
       - run: nix flake check --print-build-logs
-      - run: nix run .#test
+      # Run all tests except benchmarks (they're too slow for CI)
+      # The '~[benchmark]' filter excludes any test tagged with [benchmark]
+      - run: nix run .#test -- '~[benchmark]'
