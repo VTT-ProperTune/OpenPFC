@@ -7,6 +7,23 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Added
+
+- **World API**: Type-safe World construction using strong types from `strong_types.hpp`.
+  Added new `create(GridSize, PhysicalOrigin, GridSpacing)` overload that prevents
+  parameter confusion at compile time. Strong types (GridSize, PhysicalOrigin, GridSpacing)
+  make function signatures self-documenting and catch argument order mistakes. Old
+  `create(Int3, Real3, Real3)` API marked as deprecated with migration guide in
+  documentation. Zero overhead - strong types compile away completely (verified with
+  static_assert and performance tests). Updated all World helper functions (uniform(),
+  from_bounds(), with_spacing(), with_origin()) to use new type-safe API internally.
+  Updated production examples (`02_domain_decomposition.cpp`, `04_diffusion_model.cpp`,
+  `12_cahn_hilliard.cpp`) to demonstrate the new API and migration path. Also fixed
+  missing `set_fft()` call in `04_diffusion_model.cpp` that was causing runtime errors.
+  Comprehensive test suite added in `tests/unit/core/test_world_strong_types.cpp`
+  with 71 assertions covering type safety, zero overhead, backward compatibility,
+  and coordinate transformations. All 195 World-related test assertions pass.
+
 ## [0.1.3] - 2025-11-25
 
 ### Added
@@ -54,7 +71,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   11 call sites across tests, examples, and documentation to use new API. Added
   comprehensive test coverage (95+ new test lines) including mutable/const overloads,
   ADL lookup verification, and nearest-neighbor rounding behavior tests. All 222
-  assertions pass. Zero runtime overhead maintained (inline functions). (User Story #0033)
+  assertions pass. Zero runtime overhead maintained (inline functions).
 
 ## [0.1.2] - 2025-11-21
 
@@ -70,24 +87,24 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   boilerplate from `world::create({64,64,64}, {0,0,0}, {1,1,1})` to
   `world::uniform(64)`. Backward compatible - existing `create()` API unchanged.
   Comprehensive test coverage (32 new assertions). Example program added in
-  `examples/world_helpers_example.cpp`. (User Story #0030)
+  `examples/world_helpers_example.cpp`.
 - **Core**: Mathematical constants in `include/openpfc/constants.hpp` for
   compile-time evaluation with zero runtime overhead. Added 12 constants: π,
   2π, π/2, π/4, 1/π, √π, √2, √3, e, ln(2), ln(10), and φ (golden ratio).
   All constants are `constexpr double` with 16+ decimal digits precision.
   Comprehensive Doxygen documentation included. Constants accessible via both
   `pfc::constants::pi` and `pfc::pi` namespaces. API matches C++20
-  `std::numbers` for future migration. (User Story #0049)
+  `std::numbers` for future migration.
 - **Testing**: Comprehensive test suite for mathematical constants in
   `tests/unit/core/test_constants.cpp` with 13 test cases and 41 assertions
   covering precision verification, derived constants, compile-time evaluation,
-  and integration scenarios (FFT wave numbers, crystal geometry). (User Story #0049)
+  and integration scenarios (FFT wave numbers, crystal geometry).
 - **Testing**: Pre-commit hook for automatic clang-format checking to prevent
   formatting issues before pushing to CI. Hook available in `scripts/pre-commit-hook`
   with installation instructions in `scripts/README.md`.
 - **Testing**: Comprehensive test coverage improvements achieving 90.7% line
   coverage and 94.8% function coverage. Added tests for `utils.hpp`,
-  `world.cpp`, and `fixed_bc.hpp`. (User Story #0044)
+  `world.cpp`, and `fixed_bc.hpp`.
 - **Build system**: Added `-Werror=format-security` compiler flag to catch
   format string vulnerabilities locally before CI, matching CI behavior.
 - **Documentation**: Added SPDX license headers to test README files
@@ -98,14 +115,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   now includes brief description, detailed explanation, practical usage examples,
   and cross-references to related components. Reduced Doxygen @file warnings
   from 47 to 0. Improves API discoverability for new users and enables better
-  IDE/LLM assistance. (User Story #0010)
+  IDE/LLM assistance.
 
 ### Fixed
 
 - **Examples**: Replaced runtime pi calculation (`std::atan(1.0) * 4.0`) with
   compile-time `pfc::constants::pi` in `diffusion_model.hpp`,
   `12_cahn_hilliard.cpp`, and `05_simulator.cpp` for zero runtime overhead in
-  FFT wave number calculations. Removed unused global PI constants. (User Story #0049)
+  FFT wave number calculations. Removed unused global PI constants.
 - **CMake build system**: Fixed Catch2 detection in `FindCatch2.cmake` by
   explicitly setting `Catch2_FOUND` variable after `FetchContent_MakeAvailable`.
   This enables the test suite to build when `OpenPFC_BUILD_TESTS=ON`.
