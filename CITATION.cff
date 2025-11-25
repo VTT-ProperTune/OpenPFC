@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "OpenPFC: an open-source framework for high performance 3D phase field crystal simulations"
+authors:
+  - family-names: Pinomaa
+    given-names: Tatu
+    affiliation: VTT Technical Research Centre of Finland Ltd
+  - family-names: Aho
+    given-names: Jukka
+    affiliation: VTT Technical Research Centre of Finland Ltd
+    orcid: "https://orcid.org/0000-0002-2171-8383"
+  - family-names: Suviranta
+    given-names: Jaarli
+    affiliation: VTT Technical Research Centre of Finland Ltd
+  - family-names: Jreidini
+    given-names: Paul
+    affiliation: "McGill University"
+  - family-names: Provatas
+    given-names: Nikolaos
+    affiliation: "McGill University"
+  - family-names: Laukkanen
+    given-names: Anssi
+    affiliation: VTT Technical Research Centre of Finland Ltd
+repository-code: "https://github.com/VTT-ProperTune/OpenPFC"
+url: "https://vtt-propertune.github.io/OpenPFC/dev/"
+license: AGPL-3.0-or-later
+keywords:
+  - phase-field-crystal
+  - spectral-methods
+  - high-performance-computing
+  - materials-science
+  - solidification
+  - FFT
+  - MPI
+  - C++17
+preferred-citation:
+  type: article
+  title: "OpenPFC: an open-source framework for high performance 3D phase field crystal simulations"
+  authors:
+    - family-names: Pinomaa
+      given-names: Tatu
+      affiliation: VTT Technical Research Centre of Finland Ltd
+    - family-names: Aho
+      given-names: Jukka
+      affiliation: VTT Technical Research Centre of Finland Ltd
+      orcid: "https://orcid.org/0000-0002-2171-8383"
+    - family-names: Suviranta
+      given-names: Jaarli
+      affiliation: VTT Technical Research Centre of Finland Ltd
+    - family-names: Jreidini
+      given-names: Paul
+      affiliation: "McGill University"
+    - family-names: Provatas
+      given-names: Nikolaos
+      affiliation: "McGill University"
+    - family-names: Laukkanen
+      given-names: Anssi
+      affiliation: VTT Technical Research Centre of Finland Ltd
+  doi: "10.1088/1361-651X/ad269e"
+  journal: "Modelling and Simulation in Materials Science and Engineering"
+  month: 2
+  year: 2024
+  url: "https://iopscience.iop.org/article/10.1088/1361-651X/ad269e"
+identifiers:
+  - type: doi
+    value: "10.1088/1361-651X/ad269e"
+    description: "Journal article DOI"
+  - type: doi
+    value: "10.5281/zenodo.10799935"
+    description: "Zenodo concept DOI (all versions)"
