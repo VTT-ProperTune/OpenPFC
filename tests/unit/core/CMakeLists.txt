@@ -4,6 +4,7 @@
 # Core unit tests
 target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_world.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_world_strong_types.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_box3d.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_decomposition.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_field.cpp

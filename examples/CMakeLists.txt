@@ -64,8 +64,14 @@ target_link_libraries(json_read PRIVATE nlohmann_json::nlohmann_json)
 add_executable(world_helpers_example world_helpers_example.cpp)
 target_link_libraries(world_helpers_example PRIVATE OpenPFC)
 
+add_executable(14_custom_field_initializer 14_custom_field_initializer.cpp)
+target_link_libraries(14_custom_field_initializer PRIVATE OpenPFC)
+
 add_executable(16_strong_types_demo 16_strong_types_demo.cpp)
 target_link_libraries(16_strong_types_demo PRIVATE OpenPFC)
 
 add_executable(17_custom_coordinate_system 17_custom_coordinate_system.cpp)
 target_link_libraries(17_custom_coordinate_system PRIVATE OpenPFC)
+
+add_executable(world_strong_types_example world_strong_types_example.cpp)
+target_link_libraries(world_strong_types_example PRIVATE OpenPFC)
