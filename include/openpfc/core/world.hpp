@@ -92,6 +92,83 @@
  * Int3 i  = to_indices(w, {10.0, 20.0, 30.0});
  * double dx = get_spacing(w, 0);
  * @endcode
+ *
+ * ## Extending World with Custom Coordinate Systems
+ *
+ * World is designed to work with **any coordinate system** you define. You can
+ * add custom coordinate systems (cylindrical, spherical, curvilinear, etc.)
+ * without modifying OpenPFC source code. This is OpenPFC's "Laboratory, Not
+ * Fortress" philosophy in action.
+ *
+ * ### Requirements
+ *
+ * Your coordinate system must provide:
+ *
+ * 1. A **tag type** (empty struct) for template specialization
+ * 2. A **CoordinateSystem<YourTag>** specialization with coordinate parameters
+ * 3. **ADL-findable free functions** for coordinate transformations:
+ *    - `Real3 to_coords(const CoordinateSystem<YourTag>&, const Int3& indices)`
+ *    - `Int3 to_indices(const CoordinateSystem<YourTag>&, const Real3& coords)`
+ *
+ * ### Extension Pattern
+ *
+ * @code
+ * // Step 1: Define your tag in your own namespace
+ * namespace my_project {
+ *     struct CylindricalTag {};
+ * }
+ *
+ * // Step 2: Specialize CoordinateSystem in pfc::csys namespace
+ * namespace pfc::csys {
+ *     template<>
+ *     struct CoordinateSystem<my_project::CylindricalTag> {
+ *         const double m_r_min, m_r_max;
+ *         const double m_theta_min, m_theta_max;
+ *         const double m_z_min, m_z_max;
+ *
+ *         CoordinateSystem(double r0, double r1, double th0, double th1,
+ *                          double z0, double z1)
+ *             : m_r_min(r0), m_r_max(r1)
+ *             , m_theta_min(th0), m_theta_max(th1)
+ *             , m_z_min(z0), m_z_max(z1)
+ *         {}
+ *     };
+ *
+ *     // Step 3: Implement coordinate transformations (ADL extension point)
+ *     inline Real3 cylindrical_to_coords(
+ *         const CoordinateSystem<my_project::CylindricalTag>& cs,
+ *         const Int3& indices
+ *     ) {
+ *         // Your cylindrical → Cartesian transformation
+ *         double r = cs.m_r_min + ...;
+ *         double theta = cs.m_theta_min + ...;
+ *         double z = cs.m_z_min + ...;
+ *         return {r * cos(theta), r * sin(theta), z};
+ *     }
+ * }
+ *
+ * // Step 4: Use with World - ADL automatically finds your functions!
+ * using CylindricalWorld = pfc::World<my_project::CylindricalTag>;
+ * CylindricalWorld world(cs, {64, 128, 32});  // Works seamlessly!
+ * @endcode
+ *
+ * ### Key Benefits
+ *
+ * - **No source modifications**: Your extensions live in your code
+ * - **Type-safe**: Compile-time checking catches errors
+ * - **Zero overhead**: ADL resolution is at compile-time
+ * - **Composable**: Mix and match coordinate systems easily
+ *
+ * ### Examples
+ *
+ * - **Complete working example**: `examples/17_custom_coordinate_system.cpp`
+ * - **Comprehensive guide**: `docs/extending_openpfc/adl_extension_patterns.md`
+ *
+ * ### Learn More
+ *
+ * See the [ADL Extension Patterns
+ * Guide](../../docs/extending_openpfc/adl_extension_patterns.md) for comprehensive
+ * documentation on extending OpenPFC with custom components.
  */
 
 #pragma once
@@ -101,6 +178,7 @@
 #include <stdexcept>
 
 #include "csys.hpp"
+#include "strong_types.hpp"
 #include "types.hpp"
 
 namespace pfc {
@@ -183,13 +261,66 @@ using CartesianWorld = World<CartesianTag>;
 CartesianWorld create(const Int3 &size);
 
 /**
- * @brief Create a World object with the specified dimensions, offset, and
- * spacing.
- * @param dimensions Dimensions of the world.
- * @param offset Offset of the world.
- * @param spacing Spacing of the grid.
- * @return A World object.
+ * @brief Create a World object with strong types for type safety
+ *
+ * This is the **preferred** API for creating World objects. Strong types
+ * (GridSize, PhysicalOrigin, GridSpacing) make the API self-documenting
+ * and prevent parameter confusion at compile time.
+ *
+ * @param size Grid dimensions (number of points per dimension)
+ * @param origin Physical origin of the coordinate system
+ * @param spacing Physical spacing between grid points
+ * @return A World object with the specified geometry
+ *
+ * @note Zero overhead - strong types compile away completely
+ * @note Type-safe - compiler catches parameter order mistakes
+ *
+ * @code
+ * // Clear and type-safe
+ * GridSize size({256, 256, 256});
+ * PhysicalOrigin origin({-128.0, -128.0, -128.0});
+ * GridSpacing spacing({1.0, 1.0, 1.0});
+ * auto world = world::create(size, origin, spacing);
+ *
+ * // Won't compile if parameters are swapped
+ * // auto bad = world::create(spacing, size, origin);  // Compile error!
+ * @endcode
+ *
+ * @see GridSize, PhysicalOrigin, GridSpacing in strong_types.hpp
+ * @see create(Int3, Real3, Real3) for legacy API (deprecated)
  */
+CartesianWorld create(const GridSize &size, const PhysicalOrigin &origin,
+                      const GridSpacing &spacing);
+
+/**
+ * @brief Create a World object with raw arrays (DEPRECATED)
+ *
+ * @deprecated Use create(GridSize, PhysicalOrigin, GridSpacing) for type safety.
+ * This overload is ambiguous - it's unclear which Real3 is offset vs spacing.
+ * The strong-type API prevents parameter confusion at compile time.
+ *
+ * @param size Grid dimensions
+ * @param offset Physical offset (origin) of coordinate system
+ * @param spacing Physical spacing between grid points
+ * @return A World object
+ *
+ * **Migration guide:**
+ * @code
+ * // Old (ambiguous):
+ * auto world = world::create({256, 256, 256}, {0, 0, 0}, {1, 1, 1});
+ *
+ * // New (type-safe):
+ * auto world = world::create(
+ *     GridSize({256, 256, 256}),
+ *     PhysicalOrigin({0, 0, 0}),
+ *     GridSpacing({1, 1, 1})
+ * );
+ * @endcode
+ *
+ * @see create(GridSize, PhysicalOrigin, GridSpacing) for new API
+ */
+[[deprecated("Use create(GridSize, PhysicalOrigin, GridSpacing) for type safety. "
+             "See migration guide in documentation.")]]
 CartesianWorld create(const Int3 &size, const Real3 &offset, const Real3 &spacing);
 
 /**
@@ -804,7 +935,8 @@ inline CartesianWorld uniform(int size) {
     throw std::invalid_argument("Grid size must be positive, got: " +
                                 std::to_string(size));
   }
-  return create({size, size, size}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  return create(GridSize({size, size, size}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                GridSpacing({1.0, 1.0, 1.0}));
 }
 
 /**
@@ -830,7 +962,8 @@ inline CartesianWorld uniform(int size, double spacing) {
     throw std::invalid_argument("Spacing must be positive, got: " +
                                 std::to_string(spacing));
   }
-  return create({size, size, size}, {0.0, 0.0, 0.0}, {spacing, spacing, spacing});
+  return create(GridSize({size, size, size}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                GridSpacing({spacing, spacing, spacing}));
 }
 
 /**
@@ -879,7 +1012,7 @@ inline CartesianWorld from_bounds(Int3 size, Real3 lower, Real3 upper,
     }
   }
 
-  return create(size, lower, spacing);
+  return create(GridSize(size), PhysicalOrigin(lower), GridSpacing(spacing));
 }
 
 /**
@@ -907,7 +1040,8 @@ inline CartesianWorld with_spacing(Int3 size, Real3 spacing) {
     }
   }
 
-  return create(size, {0.0, 0.0, 0.0}, spacing);
+  return create(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
+                GridSpacing(spacing));
 }
 
 /**
@@ -931,7 +1065,8 @@ inline CartesianWorld with_origin(Int3 size, Real3 origin) {
     }
   }
 
-  return create(size, origin, {1.0, 1.0, 1.0});
+  return create(GridSize(size), PhysicalOrigin(origin),
+                GridSpacing({1.0, 1.0, 1.0}));
 }
 
 } // namespace world

@@ -3,6 +3,7 @@
 
 #include "world.hpp"
 #include <iomanip>
+#include <openpfc/core/strong_types.hpp>
 #include <stdexcept>
 
 namespace pfc {
@@ -41,10 +42,26 @@ World<CoordTag>::World(const Int3 &lower, const Int3 &upper,
   }
 }
 
+// Strong-type API (PREFERRED) - type-safe World construction
+// Uses GridSize, PhysicalOrigin, GridSpacing from strong_types.hpp
+CartesianWorld create(const GridSize &size, const PhysicalOrigin &origin,
+                      const GridSpacing &spacing) {
+  // Extract raw values (zero-cost - just references)
+  const Int3 &raw_size = size.get();
+  const Real3 &raw_origin = origin.get();
+  const Real3 &raw_spacing = spacing.get();
+
+  // Create world with extracted values
+  Int3 lower{0, 0, 0};
+  Int3 upper{raw_size[0] - 1, raw_size[1] - 1, raw_size[2] - 1};
+  return World(lower, upper, CartesianCS(raw_origin, raw_spacing));
+}
+
 // Old compatibility constructor taking size, offset and spacing, the rest is
 // calculated or assumed. These are a bit hazardous as the user must know the order
 // of the arguments and the meaning of the parameters. The preferred way is to use
 // the strong typedef constructors, which are more explicit and less error-prone.
+// DEPRECATED: Use create(GridSize, PhysicalOrigin, GridSpacing) instead.
 CartesianWorld create(const Int3 &size, const Real3 &offset, const Real3 &spacing) {
   Int3 lower{0, 0, 0};                               // default lower bounds
   Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1}; // default upper bounds
