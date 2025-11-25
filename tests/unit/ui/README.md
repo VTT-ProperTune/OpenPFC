@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 OpenPFC Development Team
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # UI Layer Unit Tests
 
 This directory contains unit tests for the OpenPFC user interface layer, which handles JSON configuration parsing, validation, and error reporting.
