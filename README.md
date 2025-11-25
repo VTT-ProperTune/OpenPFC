@@ -71,6 +71,18 @@ The project documentation can be found from
 
 - scales up to tens of thousands of cores, demonstrably
 - modern c++17 header-only framework, easy to use
+- extensible architecture - add custom components without modifying source code
+
+## Extending OpenPFC
+
+OpenPFC is designed as an **open laboratory** where you can extend functionality without modifying the library source code. Using C++'s Argument-Dependent Lookup (ADL), you can add:
+
+- **Custom coordinate systems** (cylindrical, spherical, curvilinear)
+- **Custom field initializers** (vortices, patterns, complex ICs)
+- **Custom physics models** (user-defined PDEs, multi-physics)
+- **Custom I/O formats** (HDF5, VTK, custom binary)
+
+**Get started:** See the [Extension Guide](docs/extending_openpfc/README.md) and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
 
 ## Installing
 
