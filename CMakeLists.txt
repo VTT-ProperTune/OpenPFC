@@ -36,13 +36,30 @@ endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+# Base compiler flags for all build types
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wfatal-errors -Werror=format-security")
+
+# Build-type specific flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-# Enable debug macros if build type is Debug
+# Enable debug macros and stricter warnings for Debug builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(NAN_CHECK_ENABLED)
+    # Additional warning flags for Debug mode to catch more issues
+    # Note: We enable useful warnings but avoid overly pedantic ones
+    add_compile_options(
+        -Wunused                # Warn on unused entities (variables, functions, etc.)
+        -Wshadow                # Warn on variable shadowing
+        # Disabled overly pedantic warnings:
+        # -Wconversion          # Too many false positives with int/size_t conversions
+        # -Wsign-conversion     # Too pedantic for array indexing with int
+        # -Wmissing-braces      # C++ aggregate initialization is fine without double braces
+        # -Wpedantic            # Enforces strict ISO C++, sometimes too restrictive
+        # -Wfloat-equal         # Sometimes we do need exact floating point comparisons
+        # Future consideration:
+        # -Werror               # Treat all warnings as errors (good for CI/CD)
+    )
 endif()
 
 # To preserve RPATH when installing
@@ -150,6 +167,7 @@ target_compile_features(openpfc PUBLIC cxx_std_17)
 option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
 option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
 option(OpenPFC_BUILD_TESTS "Build OpenPFC tests" ON)
+option(OpenPFC_BUILD_BENCHMARKS "Build performance benchmarks (slow tests)" OFF)
 option(OpenPFC_ENABLE_CODE_COVERAGE "Enable coverage" ON)
 
 if(OpenPFC_BUILD_TESTS)
@@ -391,6 +409,7 @@ message(STATUS " OpenPFC_DEVELOPMENT              = ${OpenPFC_DEVELOPMENT}")
 message(STATUS " OpenPFC_BUILD_APPS               = ${OpenPFC_BUILD_APPS}")
 message(STATUS " OpenPFC_BUILD_EXAMPLES           = ${OpenPFC_BUILD_EXAMPLES}")
 message(STATUS " OpenPFC_BUILD_TESTS              = ${OpenPFC_BUILD_TESTS}")
+message(STATUS " OpenPFC_BUILD_BENCHMARKS         = ${OpenPFC_BUILD_BENCHMARKS}")
 message(STATUS " OpenPFC_BUILD_DOCUMENTATION      = ${OpenPFC_BUILD_DOCUMENTATION}")
 message(STATUS " OpenPFC_ENABLE_CODE_COVERAGE     = ${OpenPFC_ENABLE_CODE_COVERAGE}")
 message(STATUS " USE_CLANG_TIDY                   = ${USE_CLANG_TIDY}")
