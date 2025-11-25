@@ -6,7 +6,7 @@
 
   # Inputs define external dependencies for this flake.
   inputs.nixpkgs.url =
-    "github:NixOS/nixpkgs/nixos-23.11"; # Nixpkgs repository for system packages.
+    "github:NixOS/nixpkgs/nixos-24.05"; # Nixpkgs repository for system packages.
   inputs.flake-utils.url =
     "github:numtide/flake-utils"; # Utility library for flakes.
 
