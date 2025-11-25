@@ -67,7 +67,7 @@ void show(const std::vector<T> &data, const std::array<int, 3> &size,
 
 template <typename T>
 void show(const std::vector<T> &data, const std::array<int, 2> &size,
-          const std::array<int, 2> &offsets) {
+          [[maybe_unused]] const std::array<int, 2> &offsets) {
   std::cout << size[0] << "×" << size[1] << " Array<2, " << pfc::TypeName<T>::get()
             << ">:" << std::endl;
   for (int i = 0; i < size[0]; ++i) {
