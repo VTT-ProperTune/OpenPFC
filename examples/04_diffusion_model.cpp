@@ -6,6 +6,7 @@
 #include <limits>
 
 #include <openpfc/core/decomposition.hpp>
+#include <openpfc/core/strong_types.hpp>
 #include <openpfc/core/world.hpp>
 #include <openpfc/factory/decomposition_factory.hpp>
 #include <openpfc/fft.hpp>
@@ -230,10 +231,13 @@ void run() {
   double z0 = -0.5 * Lz * dz;
 
   // Construct world, decomposition, fft and model
-  auto world = world::create({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  // Using strong types for clarity and type safety
+  auto world = world::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
+                             GridSpacing{{dx, dy, dz}});
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
   Diffusion model(world);
+  model.set_fft(fft);
 
   // Define time
   double t = 0.0;

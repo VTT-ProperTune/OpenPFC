@@ -4,6 +4,7 @@
 #include <iostream>
 #include <mpi.h>
 #include <openpfc/core/decomposition.hpp>
+#include <openpfc/core/strong_types.hpp>
 #include <openpfc/core/world.hpp>
 #include <openpfc/factory/decomposition_factory.hpp>
 

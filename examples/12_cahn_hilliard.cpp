@@ -110,7 +110,9 @@ int main(int argc, char **argv) {
   double z0 = 0.0;
 
   // Construct world, decomposition, fft and model
-  auto world = world::create({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  // Using strong types for type-safe World construction
+  auto world = world::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
+                             GridSpacing{{dx, dy, dz}});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   CahnHilliard model(world);
