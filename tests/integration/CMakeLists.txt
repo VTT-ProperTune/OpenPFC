@@ -4,4 +4,5 @@
 # Integration tests
 target_sources(openpfc-tests PRIVATE
   test_ui_validation.cpp
+  test_diffusion_integration.cpp
 )
