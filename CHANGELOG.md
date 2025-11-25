@@ -9,6 +9,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Added
 
+- **Testing**: First integration test suite for diffusion model in
+  `tests/integration/test_diffusion_integration.cpp` validating complete
+  simulation pipeline (World → Decomposition → FFT → Model → Time Integration)
+  against analytical solutions. Includes 4 test cases with 331 assertions:
+  1D sinusoidal diffusion with convergence validation, 3D Gaussian diffusion
+  with spherical symmetry preservation, and MPI consistency verification.
+  Test helper model in `tests/fixtures/diffusion_model.hpp` demonstrates
+  "Laboratory, Not Fortress" philosophy with public `m_` prefixed fields.
+  All tests execute in <2 seconds validating spectral method accuracy
+  (max error <1e-4, RMS <5e-5). Establishes pattern for future physics
+  validation tests and enables safe refactoring of core components.
 - **World API**: Type-safe World construction using strong types from `strong_types.hpp`.
   Added new `create(GridSize, PhysicalOrigin, GridSpacing)` overload that prevents
   parameter confusion at compile time. Strong types (GridSize, PhysicalOrigin, GridSpacing)
