@@ -493,7 +493,7 @@ public:
   }
 };
 
-void step(Simulator &s, Model &m) { m.step(s.get_time().get_current()); }
+inline void step(Simulator &s, Model &m) { m.step(s.get_time().get_current()); }
 
 } // namespace pfc
 
