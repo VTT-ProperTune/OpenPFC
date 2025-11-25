@@ -14,7 +14,14 @@ target_include_directories(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 # Add test subdirectories (they will add their sources via target_sources)
 add_subdirectory(unit)
 add_subdirectory(integration)
-add_subdirectory(benchmarks)
+
+# Benchmarks are optional (can be slow)
+if(OpenPFC_BUILD_BENCHMARKS)
+  message(STATUS "⏱️  Including performance benchmarks in test suite")
+  add_subdirectory(benchmarks)
+else()
+  message(STATUS "⏭️  Skipping performance benchmarks (enable with -DOpenPFC_BUILD_BENCHMARKS=ON)")
+endif()
 
 # Link against OpenPFC and Catch2
 target_link_libraries(openpfc-tests PRIVATE OpenPFC Catch2::Catch2)
