@@ -23,7 +23,6 @@ private:
   std::vector<std::complex<double>> psiMF_F, psi_F, psiN_F, P_psi_F, temperature_F,
       stress_F;
   size_t mem_allocated = 0;
-  bool m_first = true;
 
 public:
   /**
