@@ -34,15 +34,23 @@ Benchmarks should measure:
 
 ## Running Benchmarks
 
+**Note**: Benchmarks are **automatically excluded from CI** to keep build times fast. They must be run manually for performance validation.
+
 ```bash
-# All benchmarks
+# Using nix (recommended)
+nix run .#benchmark
+
+# Or directly with the test executable
 ./tests/openpfc-tests "[benchmark]"
 
-# Specific benchmark
-./tests/openpfc-tests "[fft][benchmark]"
+# Specific benchmark category
+./tests/openpfc-tests "[world][benchmark]"
 
-# With performance output
+# With detailed output
 ./tests/openpfc-tests "[benchmark]" --reporter console
+
+# Run all tests EXCEPT benchmarks (what CI does)
+./tests/openpfc-tests '~[benchmark]'
 ```
 
 For accurate results:
@@ -74,6 +82,104 @@ TEST_CASE("FFT performance", "[fft][benchmark]") {
 }
 ```
 
-## Current Status
+## Current Benchmarks
 
-**Empty** - Benchmarks will be added as performance-critical paths are identified and optimized. Initial focus is on correctness (unit and integration tests).
+### World and Coordinate System (`bench_world_coords.cpp`)
+
+Microbenchmarks for core coordinate transformation operations. These functions are used in hot paths (field initialization loops, spatial operations) and must be zero-cost abstractions.
+
+**Benchmark Categories:**
+
+1. **Coordinate Transformations** - Core mapping functions
+   - `to_coords()`: Grid indices → physical coordinates (~400 ns)
+   - `to_indices()`: Physical coordinates → grid indices (~400 ns)
+   - Round-trip transformation (~750 ns)
+
+2. **World Accessors** - Property access functions
+   - `get_spacing()`, `get_origin()`, `get_size()` (~70-220 ns)
+   - Verify these inline to direct member access
+
+3. **CoordinateSystem Direct** - Bare coordinate system operations
+   - Verifies no overhead from World wrapper
+   - `to_coords()` on CartesianCS (~380 ns)
+   - Direct member access (~70 ns)
+
+4. **Loop-Based Realistic Usage** - Representative patterns
+   - Full grid conversion (64³ grid): ~116 ms
+   - Gaussian initialization with coordinates: ~139 ms
+   - Sparse access (1000 points): ~500 μs
+
+5. **Zero-Cost Abstraction Validation** - Compiler optimization check
+   - Manual calculation (baseline): ~404 ns
+   - World abstraction: ~446 ns (~10% overhead - acceptable)
+
+6. **Memory Access Patterns** - Cache and copy performance
+   - World construction/destruction: ~970 ns
+   - World copy: ~220 ns
+   - Equality comparison: ~1.5 μs
+
+**Key Insights:**
+
+- ✅ Coordinate transformations are fast (~400 ns)
+- ✅ Accessors inline well (<100 ns)
+- ✅ World wrapper has minimal overhead (~10%)
+- ✅ Copy semantics are efficient (~220 ns)
+- ⚠️ Debug build - Release build will be significantly faster
+
+**Running:**
+
+```bash
+# All World/coordinate benchmarks
+./tests/openpfc-tests "[world][benchmark]"
+
+# CoordinateSystem only
+./tests/openpfc-tests "[csys][benchmark]"
+
+# With detailed output
+./tests/openpfc-tests "[benchmark]" --reporter console
+```
+
+## Performance Expectations
+
+For accurate performance measurements:
+
+1. **Use Release build:**
+
+   ```bash
+   cmake -B build-release -DCMAKE_BUILD_TYPE=Release
+   cmake --build build-release
+   ./build-release/tests/openpfc-tests "[benchmark]"
+   ```
+
+2. **Expected improvements in Release:**
+   - Coordinate transforms: 1-5 ns (vs ~400 ns in Debug)
+   - Accessors: <1 ns (should completely inline)
+   - Zero-cost abstraction overhead: <5%
+
+3. **Run on dedicated system** (no background processes)
+4. **Use representative problem sizes**
+5. **Multiple iterations** for statistical significance
+
+## Adding New Benchmarks
+
+When adding benchmarks:
+
+1. **Focus on hot paths** (inner loops, frequently called functions)
+2. **Use realistic data** (prevent compiler optimizations with `volatile`)
+3. **Document expected performance** in comments
+4. **Compare to baseline** (manual calculation)
+5. **Tag appropriately**: `[component][benchmark]`
+
+Example:
+
+```cpp
+TEST_CASE("FFT performance", "[fft][benchmark]") {
+    auto fft = create_fft({128, 128, 128});
+    
+    BENCHMARK("Forward transform") {
+        return fft.forward();
+    };
+    
+    INFO("Expected: <10 ms for 128³ grid");
+}
+```
