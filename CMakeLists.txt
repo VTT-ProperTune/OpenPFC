@@ -104,6 +104,7 @@ add_library(openpfc
     src/openpfc/core/decomposition.cpp
     src/openpfc/factory/decomposition_factory.cpp
     src/openpfc/fft.cpp
+    src/openpfc/ui_errors.cpp
     # Add more .cpp files as you go
 )
 
