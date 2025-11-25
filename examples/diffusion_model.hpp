@@ -15,7 +15,6 @@ class Diffusion : public Model {
 private:
   vector<double> opL, psi;
   vector<complex<double>> psi_F;
-  const bool verbose = false;
   int m_midpoint_idx = -1;
 
 public:
