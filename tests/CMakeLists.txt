@@ -13,7 +13,7 @@ target_include_directories(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Add test subdirectories (they will add their sources via target_sources)
 add_subdirectory(unit)
-# add_subdirectory(integration)  # When integration tests are added
+add_subdirectory(integration)
 # add_subdirectory(benchmarks)   # When benchmarks are added
 
 # Link against OpenPFC and Catch2
