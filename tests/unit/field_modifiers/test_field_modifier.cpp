@@ -71,6 +71,32 @@ TEST_CASE("FieldModifier - field name getter and setter", "[field_modifier][unit
   REQUIRE(modifier.get_field_name() == "phi");
 }
 
+TEST_CASE("FieldModifier - input validation", "[field_modifier][unit][error]") {
+  pfc::testing::MockFieldModifier modifier;
+
+  SECTION("Empty field name throws std::invalid_argument") {
+    REQUIRE_THROWS_AS(modifier.set_field_name(""), std::invalid_argument);
+
+    try {
+      modifier.set_field_name("");
+      FAIL("Should have thrown");
+    } catch (const std::invalid_argument &e) {
+      std::string msg = e.what();
+      bool has_empty = msg.find("cannot be empty") != std::string::npos ||
+                       msg.find("empty") != std::string::npos;
+      REQUIRE(has_empty);
+    }
+  }
+
+  SECTION("Valid field name is accepted") {
+    REQUIRE_NOTHROW(modifier.set_field_name("density"));
+    REQUIRE(modifier.get_field_name() == "density");
+
+    REQUIRE_NOTHROW(modifier.set_field_name("temperature"));
+    REQUIRE(modifier.get_field_name() == "temperature");
+  }
+}
+
 TEST_CASE("FieldModifier - works with MockModel", "[field_modifier][unit]") {
   auto world = world::create({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
