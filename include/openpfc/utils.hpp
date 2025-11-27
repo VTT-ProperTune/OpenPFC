@@ -25,6 +25,7 @@
  * @see utils/array_to_string.hpp for array formatting
  * @see utils/show.hpp for debug printing
  * @see utils/typename.hpp for type introspection
+ * @see utils/field_iteration.hpp for inbox iteration helpers
  *
  * @author OpenPFC Development Team
  * @date 2025
