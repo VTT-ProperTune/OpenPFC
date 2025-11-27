@@ -44,6 +44,7 @@
 #ifndef PFC_FIELD_MODIFIER_HPP
 #define PFC_FIELD_MODIFIER_HPP
 
+#include "constants.hpp"
 #include "model.hpp"
 
 namespace pfc {
@@ -150,7 +151,7 @@ namespace pfc {
  *     auto inbox = pfc::fft::get_inbox(fft);
  *
  *     // Time-varying amplitude
- *     double amplitude = std::sin(2.0 * M_PI * m_frequency * time);
+ *     double amplitude = std::sin(pfc::two_pi * m_frequency * time);
  *
  *     double dx = pfc::world::get_spacing(world, 0);
  *     int idx = 0;
@@ -252,10 +253,14 @@ public:
    * @param model The model to apply the field modification to.
    * @param field_name To which field the modification is done.
    * @param time The current time.
+   *
+   * @note This is a future enhancement. Currently, modifiers operate on a single
+   *       field specified via set_field_name(). To modify multiple fields,
+   *       create separate modifier instances, one per field.
    */
-  // TODO: we need a way to modify arbitrary fields, not just default one
-  // virtual void apply(Model &model, const std::string &field_name, double
-  // time) = 0;
+  // Future enhancement: Support modifying multiple fields in one modifier
+  // virtual void apply(Model &model, const std::string &field_name, double time) =
+  // 0;
 
   /**
    * @brief Set the field name this modifier should operate on
@@ -265,6 +270,8 @@ public:
    * the same modifier implementation to be reused for different fields.
    *
    * @param field_name Name of the field to modify (e.g., "density", "temperature")
+   *
+   * @throws std::invalid_argument if field_name is empty
    *
    * @example Basic usage
    * @code
@@ -293,7 +300,12 @@ public:
    * @see get_field_name()
    * @see Model::get_real_field()
    */
-  void set_field_name(const std::string &field_name) { m_field_name = field_name; }
+  void set_field_name(const std::string &field_name) {
+    if (field_name.empty()) {
+      throw std::invalid_argument("Field name cannot be empty");
+    }
+    m_field_name = field_name;
+  }
 
   /**
    * @brief Get the name of the field this modifier operates on
@@ -371,6 +383,9 @@ public:
    *
    * @param model Mutable reference to the Model containing fields to modify
    * @param time Current simulation time (useful for time-dependent BCs)
+   *
+   * @pre Model must have the field specified by get_field_name() registered
+   * @post Field values are modified according to modifier's logic
    *
    * @note For initial conditions, `time` is typically 0.0
    * @note For boundary conditions, `time` reflects current simulation time
