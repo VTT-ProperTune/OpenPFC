@@ -52,6 +52,7 @@
 #define PFC_DISCRETE_FIELD_HPP
 
 #include "array.hpp"
+#include "constants.hpp"
 #include "openpfc/core/world.hpp"
 #include "utils/show.hpp"
 #include <array>
@@ -338,12 +339,26 @@ public:
    *
    * @param decomp The Decomposition object.
    */
-  /* TODO: Make free function for this
- DiscreteField(const Decomposition &decomp)
-     : DiscreteField(get_inbox_size(decomp), get_inbox_offset(decomp),
-                     get_origin(decomp.get_world()),
-                     get_spacing(decomp.get_world())) {}
- */
+  /* Note: Free function alternative for construction from Decomposition
+   *
+   * This constructor was considered but deferred in favor of explicit construction
+   * to maintain clarity about what data is being used. Users can construct
+   * DiscreteField directly with the required parameters.
+   *
+   * If needed in the future, a free function could be added:
+   *
+   * namespace pfc {
+   *   template<int D>
+   *   DiscreteField<D> make_discrete_field(const Decomposition& decomp) {
+   *     return DiscreteField<D>(
+   *       get_inbox_size(decomp),
+   *       get_inbox_offset(decomp),
+   *       get_origin(decomp.get_world()),
+   *       get_spacing(decomp.get_world())
+   *     );
+   *   }
+   * }
+   */
 
   const std::array<double, D> &get_origin() const { return m_origin; }
   const std::array<double, D> &get_discretization() const {
@@ -527,7 +542,7 @@ public:
    *
    * // Sine wave in x, constant in y,z
    * field.apply([](double x, double y, double z) {
-   *     return std::sin(2.0 * M_PI * x / 64.0);
+   *     return std::sin(pfc::two_pi * x / 64.0);
    * });
    *
    * // Radial Gaussian
