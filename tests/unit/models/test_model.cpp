@@ -115,6 +115,96 @@ TEST_CASE("Model::is_rank0() is const-correct", "[model][unit][rank]") {
   // Should compile (is_rank0() is const)
   bool result = const_model.is_rank0();
 
-  // Valid boolean value
-  REQUIRE((result == true || result == false));
+  // Valid boolean value (must be either true or false)
+  bool is_valid = (result == true || result == false);
+  REQUIRE(is_valid);
+}
+
+TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error]") {
+  World world = world::create({8, 8, 8});
+  pfc::testing::MockModel model(world);
+
+  // Ensure FFT is set
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+  model.set_fft(fft);
+
+  SECTION("Accessing non-existent real field throws std::out_of_range") {
+    REQUIRE_THROWS_AS(model.get_real_field("nonexistent"), std::out_of_range);
+
+    // Error message should be helpful
+    try {
+      model.get_real_field("nonexistent");
+      FAIL("Should have thrown");
+    } catch (const std::out_of_range &e) {
+      std::string msg = e.what();
+      bool has_name = msg.find("nonexistent") != std::string::npos;
+      bool has_not_found = msg.find("not found") != std::string::npos;
+      REQUIRE(has_name);
+      REQUIRE(has_not_found);
+    }
+  }
+
+  SECTION("Accessing non-existent complex field throws std::out_of_range") {
+    REQUIRE_THROWS_AS(model.get_complex_field("nonexistent"), std::out_of_range);
+
+    // Error message should be helpful
+    try {
+      model.get_complex_field("nonexistent");
+      FAIL("Should have thrown");
+    } catch (const std::out_of_range &e) {
+      std::string msg = e.what();
+      bool has_name = msg.find("nonexistent") != std::string::npos;
+      bool has_not_found = msg.find("not found") != std::string::npos;
+      REQUIRE(has_name);
+      REQUIRE(has_not_found);
+    }
+  }
+
+  SECTION("Error message lists available fields") {
+    // Add some fields
+    RealField field1, field2;
+    field1.resize(10);
+    field2.resize(10);
+    model.add_real_field("density", field1);
+    model.add_real_field("temperature", field2);
+
+    try {
+      model.get_real_field("nonexistent");
+      FAIL("Should have thrown");
+    } catch (const std::out_of_range &e) {
+      std::string msg = e.what();
+      // Should mention available fields
+      REQUIRE(msg.find("Available fields") != std::string::npos);
+    }
+  }
+
+  SECTION("Const version also throws for non-existent fields") {
+    const pfc::testing::MockModel &const_model = model;
+    REQUIRE_THROWS_AS(const_model.get_real_field("nonexistent"), std::out_of_range);
+    REQUIRE_THROWS_AS(const_model.get_complex_field("nonexistent"),
+                      std::out_of_range);
+  }
+}
+
+TEST_CASE("Model - error handling for FFT access", "[model][unit][error]") {
+  World world = world::create({8, 8, 8});
+  pfc::testing::MockModel model(world);
+
+  SECTION("Accessing FFT before it's set throws std::runtime_error") {
+    REQUIRE_THROWS_AS(model.get_fft(), std::runtime_error);
+
+    // Error message should be helpful
+    try {
+      model.get_fft();
+      FAIL("Should have thrown");
+    } catch (const std::runtime_error &e) {
+      std::string msg = e.what();
+      REQUIRE(msg.find("FFT object has not been set") != std::string::npos);
+      bool has_set_fft = msg.find("set_fft") != std::string::npos;
+      bool has_constructor = msg.find("constructor") != std::string::npos;
+      bool has_helpful_info = has_set_fft || has_constructor;
+      REQUIRE(has_helpful_info);
+    }
+  }
 }
