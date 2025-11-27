@@ -66,8 +66,12 @@
 #include "mpi.hpp"
 #include "openpfc/backends/heffte_adapter.hpp"
 #include "types.hpp"
+#include <algorithm>
 #include <iostream>
 #include <memory>
+#include <numeric>
+#include <string_view>
+#include <vector>
 
 namespace pfc {
 
@@ -90,9 +94,20 @@ namespace pfc {
  */
 class Model {
 private:
-  FFT *m_fft = nullptr;       ///< Raw pointer to the FFT object used by the model
-  RealFieldSet m_real_fields; ///< Collection of real-valued fields associated
-                              ///< with the model
+  /// @brief Raw pointer to the FFT object used by the model
+  ///
+  /// @note **Ownership**: Model does NOT own the FFT object. The FFT must outlive
+  ///       the Model instance. The FFT is passed by reference in constructors
+  ///       and set_fft(), and Model stores a pointer for access.
+  ///
+  /// @warning **Lifetime**: Ensure the FFT object exists for the entire lifetime
+  ///          of the Model. Do not destroy the FFT while Model is still in use.
+  ///
+  /// @see get_fft() for access
+  /// @see set_fft() to associate FFT with model
+  FFT *m_fft = nullptr;
+  RealFieldSet m_real_fields;       ///< Collection of real-valued fields associated
+                                    ///< with the model
   ComplexFieldSet m_complex_fields; ///< Collection of complex-valued fields
                                     ///< associated with the model
   const World &m_world;             ///< Reference to the World object
@@ -150,7 +165,7 @@ public:
    * }
    * @endcode
    */
-  inline bool is_rank0() const { return m_rank0; }
+  inline bool is_rank0() const noexcept { return m_rank0; }
 
   /**
    * @brief Get the decomposition object associated with the model.
@@ -166,7 +181,7 @@ public:
    *
    * @return Reference to the World object
    */
-  const World &get_world() { return m_world; }
+  const World &get_world() const noexcept { return m_world; }
 
   /**
    * @brief Set the FFT object for the model
@@ -212,11 +227,12 @@ public:
    * (forward and backward Fourier transforms). Use this to perform transforms
    * during time stepping.
    *
+   * @pre FFT must be set via constructor or set_fft() before calling this
+   * @post Returns valid reference to FFT object
    * @return Reference to the FFT object
    *
    * @throws std::runtime_error if the FFT object has not been set
    *
-   * @note FFT must be set via constructor or set_fft() before calling this
    * @note The returned reference is valid as long as the FFT object exists
    *
    * @warning Calling this before set_fft() or appropriate constructor throws
@@ -245,11 +261,14 @@ public:
    * @see FFT::forward() for real-to-complex transforms
    * @see FFT::backward() for complex-to-real transforms
    */
-  FFT &get_fft() {
+  [[nodiscard]] FFT &get_fft() {
     if (m_fft == nullptr) {
-      std::cerr << "get_fft called on Model instance: " << this
-                << ". FFT object is not set!" << std::endl;
-      throw std::runtime_error("FFT object has not been set.");
+      std::string msg =
+          "FFT object has not been set for Model instance at " +
+          std::to_string(reinterpret_cast<uintptr_t>(this)) +
+          ". "
+          "Call set_fft() or use Model(FFT&, const World&) constructor.";
+      throw std::runtime_error(msg);
     }
     return *m_fft;
   }
@@ -361,8 +380,8 @@ public:
    * @param field_name Name of the field to check
    * @return True if the field exists, False otherwise
    */
-  bool has_real_field(const std::string &field_name) {
-    return m_real_fields.count(field_name) > 0;
+  [[nodiscard]] bool has_real_field(std::string_view field_name) const noexcept {
+    return m_real_fields.count(std::string(field_name)) > 0;
   }
 
   /**
@@ -386,8 +405,8 @@ public:
    *
    * @see get_real_field() to retrieve registered fields
    */
-  void add_real_field(const std::string &name, RealField &field) {
-    m_real_fields.insert({name, field});
+  void add_real_field(std::string_view name, RealField &field) {
+    m_real_fields.emplace(std::string(name), field);
   }
 
   /**
@@ -416,8 +435,8 @@ public:
    * @see add_complex_field() to register fields
    * @see get_complex_field() to access registered fields
    */
-  bool has_complex_field(const std::string &field_name) {
-    return m_complex_fields.count(field_name) > 0;
+  [[nodiscard]] bool has_complex_field(std::string_view field_name) const noexcept {
+    return m_complex_fields.count(std::string(field_name)) > 0;
   }
 
   /**
@@ -454,8 +473,8 @@ public:
    * @see has_complex_field() to check existence
    * @see add_real_field() for real-valued fields
    */
-  void add_complex_field(const std::string &name, ComplexField &field) {
-    m_complex_fields.insert({name, field});
+  void add_complex_field(std::string_view name, ComplexField &field) {
+    m_complex_fields.emplace(std::string(name), field);
   }
 
   /**
@@ -482,8 +501,38 @@ public:
    * @see add_real_field() to register fields
    * @see has_real_field() to check existence
    */
-  RealField &get_real_field(const std::string &name) {
-    return m_real_fields.find(name)->second;
+  [[nodiscard]] RealField &get_real_field(std::string_view name) {
+    auto it = m_real_fields.find(std::string(name));
+    if (it == m_real_fields.end()) {
+      throw std::out_of_range("Real field '" + std::string(name) +
+                              "' not found. "
+                              "Available fields: " +
+                              list_field_names());
+    }
+    return it->second;
+  }
+
+  /**
+   * @brief Retrieve a registered real-valued field by name (const version)
+   *
+   * Returns a const reference to a previously registered field for reading.
+   *
+   * @param name Name of the field to retrieve
+   * @return Const reference to the RealField object
+   *
+   * @throws std::out_of_range if field name not registered
+   *
+   * @see get_real_field() for non-const version
+   */
+  [[nodiscard]] const RealField &get_real_field(std::string_view name) const {
+    auto it = m_real_fields.find(std::string(name));
+    if (it == m_real_fields.end()) {
+      throw std::out_of_range("Real field '" + std::string(name) +
+                              "' not found. "
+                              "Available fields: " +
+                              list_field_names());
+    }
+    return it->second;
   }
 
   /**
@@ -525,8 +574,38 @@ public:
    * @see has_complex_field() to check existence
    * @see get_fft() to access FFT operations
    */
-  ComplexField &get_complex_field(const std::string &name) {
-    return m_complex_fields.find(name)->second;
+  [[nodiscard]] ComplexField &get_complex_field(std::string_view name) {
+    auto it = m_complex_fields.find(std::string(name));
+    if (it == m_complex_fields.end()) {
+      throw std::out_of_range("Complex field '" + std::string(name) +
+                              "' not found. "
+                              "Available fields: " +
+                              list_field_names());
+    }
+    return it->second;
+  }
+
+  /**
+   * @brief Retrieve a registered complex-valued field by name (const version)
+   *
+   * Returns a const reference to a previously registered complex field for reading.
+   *
+   * @param name Name of the field to retrieve
+   * @return Const reference to the ComplexField object
+   *
+   * @throws std::out_of_range if field name not registered
+   *
+   * @see get_complex_field() for non-const version
+   */
+  [[nodiscard]] const ComplexField &get_complex_field(std::string_view name) const {
+    auto it = m_complex_fields.find(std::string(name));
+    if (it == m_complex_fields.end()) {
+      throw std::out_of_range("Complex field '" + std::string(name) +
+                              "' not found. "
+                              "Available fields: " +
+                              list_field_names());
+    }
+    return it->second;
   }
 
   /**
@@ -582,7 +661,7 @@ public:
    * @see has_real_field() to check only real fields
    * @see has_complex_field() to check only complex fields
    */
-  bool has_field(const std::string &field_name) {
+  [[nodiscard]] bool has_field(std::string_view field_name) const noexcept {
     return has_real_field(field_name) || has_complex_field(field_name);
   }
 
@@ -599,6 +678,31 @@ public:
     }
     return get_real_field("default");
   };
+
+private:
+  /**
+   * @brief List all registered field names (real and complex)
+   *
+   * Helper method to generate helpful error messages when fields are not found.
+   *
+   * @return Comma-separated string of all registered field names, or "(none)" if
+   * empty
+   */
+  std::string list_field_names() const {
+    std::vector<std::string> names;
+    for (const auto &[name, _] : m_real_fields) {
+      names.push_back(name);
+    }
+    for (const auto &[name, _] : m_complex_fields) {
+      names.push_back(name);
+    }
+    if (names.empty()) {
+      return "(none)";
+    }
+    return std::accumulate(
+        std::next(names.begin()), names.end(), names[0],
+        [](const std::string &a, const std::string &b) { return a + ", " + b; });
+  }
 };
 
 } // namespace pfc
