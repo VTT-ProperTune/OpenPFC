@@ -39,6 +39,16 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 # Base compiler flags for all build types
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wfatal-errors -Werror=format-security")
 
+# Additional warnings for better code quality
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options(
+    -Wnull-dereference    # Warn about potential null pointer dereferences
+    -Wduplicated-cond     # Warn about duplicated conditions
+    -Wduplicated-branches # Warn about duplicated branches
+    -Wlogical-op          # Warn about logical operator issues
+  )
+endif()
+
 # Build-type specific flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
