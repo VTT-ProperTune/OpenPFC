@@ -122,6 +122,9 @@ endif()
 
 find_package(nlohmann_json REQUIRED)
 
+# Add toml++ for TOML file support
+include(cmake/FindTomlPlusPlus.cmake)
+
 option(BUILD_SHARED_LIBS "Build OpenPFC as a shared library" OFF)
 
 # Create library
@@ -169,6 +172,25 @@ endif()
 if(OpenPFC_ENABLE_HEFFTE)
     find_package(Heffte REQUIRED)
     target_link_libraries(openpfc PUBLIC Heffte::Heffte)
+endif()
+
+# Add tomlplusplus include directory (header-only library)
+# Since it's header-only and from FetchContent, we just need the include path
+# Use $<BUILD_INTERFACE:...> to avoid export issues with build directory paths
+if(DEFINED TOMLPLUSPLUS_SOURCE_DIR)
+  target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${TOMLPLUSPLUS_SOURCE_DIR}/include>)
+elseif(DEFINED tomlplusplus_SOURCE_DIR)
+  target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${tomlplusplus_SOURCE_DIR}/include>)
+elseif(TARGET tomlplusplus::tomlplusplus)
+  get_target_property(TOML_INCLUDE_DIR tomlplusplus::tomlplusplus INTERFACE_INCLUDE_DIRECTORIES)
+  if(TOML_INCLUDE_DIR)
+    target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${TOML_INCLUDE_DIR}>)
+  endif()
+elseif(TARGET tomlplusplus_tomlplusplus)
+  get_target_property(TOML_INCLUDE_DIR tomlplusplus_tomlplusplus INTERFACE_INCLUDE_DIRECTORIES)
+  if(TOML_INCLUDE_DIR)
+    target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${TOML_INCLUDE_DIR}>)
+  endif()
 endif()
 
 # Require C++17
