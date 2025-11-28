@@ -10,45 +10,73 @@
             "oneOf": [
                 {
                     "$ref": "#/definitions/models/tungsten"
+                },
+                {
+                    "$ref": "#/definitions/models/aluminum"
                 }
             ]
         },
-        "Lx": {
-            "type": "integer"
-        },
-        "Ly": {
-            "type": "integer"
-        },
-        "Lz": {
-            "type": "integer"
-        },
-        "dx": {
-            "type": "number"
-        },
-        "dy": {
-            "type": "number"
-        },
-        "dz": {
-            "type": "number"
-        },
-        "origo": {
-            "type": "string",
-            "enum": [
-                "center",
-                "corner"
+        "domain": {
+            "type": "object",
+            "properties": {
+                "Lx": {
+                    "type": "integer"
+                },
+                "Ly": {
+                    "type": "integer"
+                },
+                "Lz": {
+                    "type": "integer"
+                },
+                "dx": {
+                    "type": "number"
+                },
+                "dy": {
+                    "type": "number"
+                },
+                "dz": {
+                    "type": "number"
+                },
+                "origin": {
+                    "type": "string",
+                    "enum": [
+                        "center",
+                        "corner"
+                    ]
+                }
+            },
+            "required": [
+                "Lx",
+                "Ly",
+                "Lz",
+                "dx",
+                "dy",
+                "dz",
+                "origin"
             ]
         },
-        "t0": {
-            "type": "number"
-        },
-        "t1": {
-            "type": "number"
-        },
-        "dt": {
-            "type": "number"
-        },
-        "saveat": {
-            "type": "number"
+        "timestepping": {
+            "type": "object",
+            "properties": {
+                "t0": {
+                    "type": "number"
+                },
+                "t1": {
+                    "type": "number"
+                },
+                "dt": {
+                    "type": "number"
+                },
+                "saveat": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "t0",
+                "t1",
+                "dt",
+                "saveat"
+            ]
         },
         "fields": {
             "type": "array",
@@ -83,6 +111,9 @@
                     },
                     {
                         "$ref": "#/definitions/initial_conditions/from_file"
+                    },
+                    {
+                        "$ref": "#/definitions/initial_conditions/seed_grid_fcc"
                     }
                 ]
             }
@@ -102,21 +133,63 @@
                     }
                 ]
             }
+        },
+        "detailed_timing": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "print": {
+                    "type": "boolean"
+                },
+                "write": {
+                    "type": "boolean"
+                },
+                "filename": {
+                    "type": "string"
+                }
+            }
+        },
+        "plan_options": {
+            "type": "object",
+            "properties": {
+                "use_reorder": {
+                    "type": "boolean"
+                },
+                "reshape_algorithm": {
+                    "type": "string",
+                    "enum": [
+                        "alltoall",
+                        "alltoallv",
+                        "p2p",
+                        "p2p_plined"
+                    ]
+                },
+                "use_pencils": {
+                    "type": "boolean"
+                },
+                "use_gpu_aware": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "simulator": {
+            "type": "object",
+            "properties": {
+                "result_counter": {
+                    "type": "integer"
+                },
+                "increment": {
+                    "type": "integer"
+                }
+            }
         }
     },
     "required": [
         "model",
-        "Lx",
-        "Ly",
-        "Lz",
-        "dx",
-        "dy",
-        "dz",
-        "origo",
-        "t0",
-        "t1",
-        "dt",
-        "saveat",
+        "domain",
+        "timestepping",
         "fields",
         "initial_conditions",
         "boundary_conditions"
@@ -249,6 +322,113 @@
                     "name",
                     "params"
                 ]
+            },
+            "aluminum": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "model name",
+                        "enum": [
+                            "aluminum"
+                        ]
+                    },
+                    "params": {
+                        "type": "object",
+                        "properties": {
+                            "n0": {
+                                "type": "number",
+                                "description": "average density"
+                            },
+                            "alpha": {
+                                "type": "number",
+                                "description": "width of C2's peak"
+                            },
+                            "n_sol": {
+                                "type": "number",
+                                "description": "density of the solid"
+                            },
+                            "n_vap": {
+                                "type": "number",
+                                "description": "density of the vapor"
+                            },
+                            "T_const": {
+                                "type": "number",
+                                "description": "constant temperature"
+                            },
+                            "T_min": {
+                                "type": "number",
+                                "description": "minimum temperature"
+                            },
+                            "T_max": {
+                                "type": "number",
+                                "description": "maximum temperature"
+                            },
+                            "T0": {
+                                "type": "number",
+                                "description": "reference temperature"
+                            },
+                            "Bx": {
+                                "type": "number"
+                            },
+                            "G_grid": {
+                                "type": "number"
+                            },
+                            "V_grid": {
+                                "type": "number"
+                            },
+                            "x_initial": {
+                                "type": "number"
+                            },
+                            "alpha_farTol": {
+                                "type": "number"
+                            },
+                            "alpha_highOrd": {
+                                "type": "integer"
+                            },
+                            "lambda": {
+                                "type": "number"
+                            },
+                            "stabP": {
+                                "type": "number"
+                            },
+                            "shift_u": {
+                                "type": "number"
+                            },
+                            "shift_s": {
+                                "type": "number"
+                            },
+                            "p2_bar": {
+                                "type": "number"
+                            },
+                            "p3_bar": {
+                                "type": "number"
+                            },
+                            "p4_bar": {
+                                "type": "number"
+                            },
+                            "q20_bar": {
+                                "type": "number"
+                            },
+                            "q21_bar": {
+                                "type": "number"
+                            },
+                            "q30_bar": {
+                                "type": "number"
+                            },
+                            "q31_bar": {
+                                "type": "number"
+                            },
+                            "q40_bar": {
+                                "type": "number"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "name",
+                    "params"
+                ]
             }
         },
         "initial_conditions": {
@@ -367,6 +547,49 @@
                     "type",
                     "filename"
                 ]
+            },
+            "seed_grid_fcc": {
+                "type": "object",
+                "description": "FCC seed grid initial condition",
+                "properties": {
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "seed_grid_fcc"
+                        ]
+                    },
+                    "amplitude": {
+                        "type": "number"
+                    },
+                    "rho": {
+                        "type": "number"
+                    },
+                    "radius": {
+                        "type": "number"
+                    },
+                    "X0": {
+                        "type": "number"
+                    },
+                    "Ny": {
+                        "type": "integer"
+                    },
+                    "Nz": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "target",
+                    "type",
+                    "amplitude",
+                    "rho",
+                    "radius",
+                    "X0",
+                    "Ny",
+                    "Nz"
+                ]
             }
         },
         "boundary_conditions": {
@@ -406,6 +629,12 @@
                         "type": "string",
                         "enum": [
                             "moving"
+                        ]
+                    },
+                    "initial_position": {
+                        "type": "string",
+                        "enum": [
+                            "end"
                         ]
                     },
                     "rho_low": {
