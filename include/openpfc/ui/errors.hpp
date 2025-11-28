@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ui_errors.hpp
+ * @file ui/errors.hpp
  * @brief Helpful error message formatting for JSON configuration validation
  *
  * @details
@@ -40,7 +40,7 @@
  * //   Example: "Lx": 256
  * @endcode
  *
- * @see ui.hpp for JSON configuration interface
+ * @see ui/ui.hpp for JSON configuration interface
  *
  * @author OpenPFC Development Team
  * @date 2025-11-25
@@ -102,11 +102,11 @@ namespace ui {
  *
  * // Example: Invalid enum value
  * auto msg = format_config_error(
- *     "origo", "coordinate system origin", "string",
- *     "\"centre\"", {"center", "corner"}, "\"origo\": \"center\""
+ *     "origin", "coordinate system origin", "string",
+ *     "\"centre\"", {"center", "corner"}, "\"origin\": \"center\""
  * );
  * // Output:
- * // Invalid configuration: Field 'origo' has invalid value.
+ * // Invalid configuration: Field 'origin' has invalid value.
  * //   Description: coordinate system origin
  * //   Expected: string
  * //   Got: "centre"
@@ -175,12 +175,12 @@ format_config_error(const std::string &field_name, const std::string &descriptio
  * Time complexity: O(n) where n = size of JSON value when dumping
  *
  * @code
- * json j = {{"Lx", 256.5}, {"origo", "center"}};
+ * json j = {{"Lx", 256.5}, {"origin", "center"}};
  *
  * auto lx = get_json_value_string(j, "Lx");
  * // Returns: "256.5 (type: float)"
  *
- * auto origo = get_json_value_string(j, "origo");
+ * auto origin = get_json_value_string(j, "origin");
  * // Returns: "\"center\" (type: string)"
  *
  * auto missing = get_json_value_string(j, "nonexistent");
@@ -305,3 +305,4 @@ format_unknown_modifier_error(const std::string &invalid_type,
 } // namespace pfc
 
 #endif // PFC_UI_ERRORS_HPP
+
