@@ -215,6 +215,34 @@ if(OpenPFC_ENABLE_HEFFTE)
     target_link_libraries(openpfc PUBLIC Heffte::Heffte)
 endif()
 
+# GPU kernel library (only when CUDA is enabled)
+if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
+    add_library(openpfc_gpu_kernels
+        include/openpfc/gpu/kernels_simple.cu
+    )
+    
+    target_include_directories(openpfc_gpu_kernels
+        PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    
+    target_link_libraries(openpfc_gpu_kernels
+        PUBLIC
+        CUDA::cudart
+    )
+    
+    set_target_properties(openpfc_gpu_kernels PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+    )
+    
+    # Link GPU kernels to main library (private - implementation detail)
+    # Users can still use the kernels via headers, but don't need to link the library
+    target_link_libraries(openpfc PRIVATE openpfc_gpu_kernels)
+    
+    message(STATUS "✅ GPU kernel library enabled")
+endif()
+
 # Add tomlplusplus include directory (header-only library)
 # Since it's header-only and from FetchContent, we just need the include path
 # Use $<BUILD_INTERFACE:...> to avoid export issues with build directory paths
@@ -382,6 +410,15 @@ install(TARGETS openpfc
     LIBRARY DESTINATION lib   # .so files
     RUNTIME DESTINATION bin   # executable files (not needed now but future proof)
 )
+
+# Install GPU kernel library if CUDA is enabled
+if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
+    install(TARGETS openpfc_gpu_kernels
+        EXPORT OpenPFCTargets
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+    )
+endif()
 
 # Install CMake config file
 install(EXPORT OpenPFCTargets
