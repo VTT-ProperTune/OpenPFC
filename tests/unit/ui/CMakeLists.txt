@@ -4,4 +4,5 @@
 # UI layer tests
 target_sources(openpfc-tests PRIVATE
   test_ui_errors.cpp
+  test_toml_to_json.cpp
 )
