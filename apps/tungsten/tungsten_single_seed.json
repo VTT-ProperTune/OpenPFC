@@ -25,9 +25,9 @@
             "q40": 45.0
         }
     },
-    "Lx": 256,
-    "Ly": 256,
-    "Lz": 256,
+    "Lx": 32,
+    "Ly": 32,
+    "Lz": 32,
     "dx": 1.1107207345395915,
     "dy": 1.1107207345395915,
     "dz": 1.1107207345395915,
@@ -39,11 +39,11 @@
     "fields": [
         {
             "name": "psi",
-            "data": "/data/pfc/tungsten/psi_%d.bin"
+            "data": "/task/juajukka/openpfc/tungsten/psi_%d.bin"
         },
         {
             "name": "psiMF",
-            "data": "/data/pfc/tungsten/psimf_%d.bin"
+            "data": "/task/juajukka/openpfc/tungsten/psimf_%d.bin"
         }
     ],
     "initial_conditions": [

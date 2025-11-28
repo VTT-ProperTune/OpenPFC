@@ -1,17 +1,5 @@
 # SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-add_executable(tungsten tungsten.cpp)
-find_package(Heffte REQUIRED)
-target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
-
-option(TUNGSTEN_REUSE_ARRAYS "Reuse some arrays" OFF)
-
-if(TUNGSTEN_REUSE_ARRAYS)
-  message(STATUS "Tungsten: reusing arrays")
-  target_compile_definitions(tungsten PUBLIC MAHTI_HACK)
-endif()
-
-install(TARGETS tungsten DESTINATION bin)
-
+add_subdirectory(tungsten)
 add_subdirectory(aluminumNew)
