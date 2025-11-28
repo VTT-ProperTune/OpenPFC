@@ -76,6 +76,37 @@ endif()
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(USE_CLANG_TIDY "Enable clang-tidy static code analysis" OFF)
+
+# CUDA support (optional - must not fail if CUDA is not installed)
+option(OPENPFC_ENABLE_CUDA "Enable CUDA support" OFF)
+
+set(OPENPFC_CUDA_AVAILABLE FALSE)
+
+if(OPENPFC_ENABLE_CUDA)
+    # Try to find CUDA, but don't fail if not found
+    enable_language(CUDA OPTIONAL)
+    find_package(CUDAToolkit QUIET)
+    
+    if(CUDAToolkit_FOUND)
+        set(OPENPFC_CUDA_AVAILABLE TRUE)
+        add_compile_definitions(OPENPFC_ENABLE_CUDA)
+        
+        # Set CUDA architectures (required by CMake policy CMP0104)
+        if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+            set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90" CACHE STRING "CUDA architectures to compile for" FORCE)
+        endif()
+        
+        message(STATUS "✅ CUDA enabled (found CUDAToolkit)")
+        message(STATUS "   CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
+    else()
+        message(WARNING "⚠️  OPENPFC_ENABLE_CUDA=ON but CUDAToolkit not found. CUDA support disabled.")
+        message(WARNING "   Install CUDA toolkit or set CUDAToolkit_ROOT to enable CUDA.")
+        set(OPENPFC_ENABLE_CUDA OFF)  # Disable if not found
+    endif()
+else()
+    message(STATUS "CUDA disabled (use -DOPENPFC_ENABLE_CUDA=ON to enable)")
+endif()
+
 # Enable clang-tidy if USE_CLANG_TIDY is ON
 if(USE_CLANG_TIDY)
     find_program(CLANG_TIDY_EXECUTABLE NAMES "clang-tidy")
@@ -112,6 +143,16 @@ find_package(Heffte CONFIG QUIET)
 # If not found, fallback to downloading via FetchContent
 if (Heffte_FOUND)
   message(STATUS "✅ HeFFTe v${Heffte_VERSION} found at ${Heffte_DIR}")
+  
+  # Verify CUDA backend if CUDA is enabled
+  if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
+      if(NOT Heffte_CUDA_FOUND)
+          message(WARNING "⚠️  CUDA-enabled HeFFTe not found. HeFFTe at ${Heffte_DIR} may not have CUDA support.")
+          message(WARNING "   For CUDA builds, use: -DHeffte_DIR=$HOME/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte")
+      else()
+          message(STATUS "✅ HeFFTe CUDA backend is available")
+      endif()
+  endif()
 else()
   message(WARNING "⚠️ Heffte not found via find_package(), falling back to FetchContent.")
   include(cmake/FindHeffte.cmake)
@@ -445,6 +486,13 @@ message(STATUS " OpenPFC_BUILD_BENCHMARKS         = ${OpenPFC_BUILD_BENCHMARKS}"
 message(STATUS " OpenPFC_BUILD_DOCUMENTATION      = ${OpenPFC_BUILD_DOCUMENTATION}")
 message(STATUS " OpenPFC_ENABLE_CODE_COVERAGE     = ${OpenPFC_ENABLE_CODE_COVERAGE}")
 message(STATUS " USE_CLANG_TIDY                   = ${USE_CLANG_TIDY}")
+if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
+  message(STATUS " OPENPFC_ENABLE_CUDA             = ON (✅ CUDA available)")
+elseif(OPENPFC_ENABLE_CUDA)
+  message(STATUS " OPENPFC_ENABLE_CUDA             = ON (⚠️  CUDA not found)")
+else()
+  message(STATUS " OPENPFC_ENABLE_CUDA             = OFF")
+endif()
 message(STATUS "-------------------------------------------------------------")
 message(STATUS " 📂 Install prefix       : ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "-------------------------------------------------------------")
