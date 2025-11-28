@@ -41,6 +41,27 @@ if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
     )
     add_test(NAME GPU_Vector COMMAND test_gpu_vector)
     
+    # Test 3: GPU Kernels
+    add_executable(test_gpu_kernels
+        test_kernels_simple.cpp
+    )
+    
+    target_include_directories(test_gpu_kernels PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    
+    target_link_libraries(test_gpu_kernels PRIVATE
+        Catch2::Catch2
+        openpfc_gpu_kernels
+    )
+    
+    target_link_libraries(test_gpu_kernels PRIVATE
+        CUDA::cudart
+    )
+    
+    add_test(NAME GPU_Kernels COMMAND test_gpu_kernels)
+    
     message(STATUS "✅ GPU tests enabled")
 elseif(OPENPFC_ENABLE_CUDA)
     message(STATUS "⚠️  GPU tests disabled (CUDA not found)")
