@@ -56,35 +56,53 @@ class MPI_Worker {
   MPI_Comm m_comm; ///< MPI communicator for this worker
   int m_rank;      ///< Rank of this worker process in the MPI communicator
   int m_num_procs; ///< Number of processes in the MPI communicator
+  bool m_owns_mpi; ///< Whether this worker initialized MPI (and should finalize it)
 
 public:
   /**
-   * @brief Constructs an MPI worker instance and initializes MPI.
+   * @brief Constructs an MPI worker instance and initializes MPI if needed.
    *
-   * This constructor initializes MPI and retrieves the rank and number of
-   * processes in the given MPI communicator. If the rank is not zero, the
-   * standard output is muted to avoid duplicate output.
+   * This constructor initializes MPI (if not already initialized) and retrieves
+   * the rank and number of processes in the given MPI communicator. If the rank
+   * is not zero, the standard output is muted to avoid duplicate output.
    *
    * @param argc Pointer to the number of command-line arguments
    * @param argv Pointer to an array of command-line arguments
    * @param comm MPI communicator to use
    */
   MPI_Worker(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD) : m_comm(comm) {
-    MPI_Init(&argc, &argv);
+    int initialized = 0;
+    MPI_Initialized(&initialized);
+    if (!initialized) {
+      MPI_Init(&argc, &argv);
+      m_owns_mpi = true;
+    } else {
+      m_owns_mpi = false;
+    }
     MPI_Comm_rank(m_comm, &m_rank);
     MPI_Comm_size(m_comm, &m_num_procs);
+    if (m_owns_mpi) {
+      std::cout << "MPI_Init(): initialized " << m_num_procs << " processes"
+                << std::endl;
+    }
     if (m_rank != 0) {
       mute();
     }
-    std::cout << "MPI_Init(): initialized " << m_num_procs << " processes"
-              << std::endl;
   }
   /**
-   * @brief Destroys the MPI worker instance and finalizes MPI.
+   * @brief Destroys the MPI worker instance and finalizes MPI if it owns it.
    *
-   * This destructor finalizes MPI.
+   * This destructor finalizes MPI only if this worker initialized it.
    */
-  ~MPI_Worker() { MPI_Finalize(); }
+  ~MPI_Worker() {
+    if (m_owns_mpi) {
+      int finalized = 0;
+      MPI_Finalized(&finalized);
+      if (!finalized) {
+        MPI_Finalize();
+      }
+    }
+  }
 
   /**
    * @brief Returns the rank of this worker process in the MPI communicator.

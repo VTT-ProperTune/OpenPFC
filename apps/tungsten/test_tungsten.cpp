@@ -1,11 +1,14 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include "Tungsten.hpp"
+#define CATCH_CONFIG_RUNNER
+#include "tungsten.hpp"
+#include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
 #include <iomanip>
+#include <mpi.h>
 #include <openpfc/core/world.hpp>
 #include <openpfc/fft.hpp>
 #include <openpfc/openpfc.hpp>
@@ -367,4 +370,19 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     std::vector<double> &psi = tungsten.get_real_field("psi");
     REQUIRE(psi.size() > 0);
   }
+}
+
+int main(int argc, char *argv[]) {
+  // Initialize MPI once for all tests
+  if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
+    std::cerr << "MPI initialization failed" << std::endl;
+    return 1;
+  }
+
+  // Run Catch2 tests
+  int result = Catch::Session().run(argc, argv);
+
+  // Finalize MPI
+  MPI_Finalize();
+  return result;
 }
