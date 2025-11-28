@@ -15,6 +15,12 @@ target_include_directories(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(unit)
 add_subdirectory(integration)
 
+# Add GPU tests if CUDA is enabled AND available
+# This will be skipped on AMD systems or systems without CUDA
+if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
+    add_subdirectory(unit/gpu)
+endif()
+
 # Benchmarks are optional (can be slow)
 if(OpenPFC_BUILD_BENCHMARKS)
   message(STATUS "⏱️  Including performance benchmarks in test suite")
