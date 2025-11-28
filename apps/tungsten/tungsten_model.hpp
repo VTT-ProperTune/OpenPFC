@@ -4,12 +4,12 @@
 #ifndef TUNGSTEN_MODEL_HPP
 #define TUNGSTEN_MODEL_HPP
 
+#include "tungsten_params.hpp"
 #include <openpfc/openpfc.hpp>
 #include <openpfc/utils/nancheck.hpp>
 
 namespace pfc {
-namespace utils {
-} // namespace utils
+namespace utils {} // namespace utils
 } // namespace pfc
 
 using namespace pfc;
@@ -39,172 +39,10 @@ public:
   /**
    * @brief Model parameters, which can be overridden from json file
    *
+   * Access parameters using getters: params.get_n0(), params.get_T(), etc.
+   * Set parameters using setters: params.set_n0(value), params.set_T(value), etc.
    */
-  struct {
-    // average density of the metastable fluid
-    double n0;
-    // Bulk densities at coexistence, obtained from phase diagram for chosen
-    // temperature
-    double n_sol, n_vap;
-    // Effective temperature parameters. Temperature in K. Remember to change
-    // n_sol and n_vap according to phase diagram when T is changed.
-    double T, T0, Bx;
-    // width of C2's peak
-    double alpha;
-    // how much we allow the k=1 peak to affect the k=0 value of the
-    // correlation, by changing the higher order components of the Gaussian
-    // function
-    double alpha_farTol;
-    // power of the higher order component of the gaussian function. Should be a
-    // multiple of 2. Setting this to zero also disables the tolerance setting.
-    int alpha_highOrd;
-    // derived dimensionless values used in calculating vapor model parameters
-    double tau;
-    // Strength of the meanfield filter. Avoid values higher than ~0.28, to
-    // avoid lattice-wavelength variations in the mean field
-    double lambda;
-    // numerical stability parameter for the exponential integrator method
-    double stabP;
-    // Vapor-model parameters
-    double shift_u, shift_s;
-    double p2, p3, p4, p2_bar, p3_bar, p4_bar;
-    double q20, q21, q30, q31, q40;
-    double q20_bar, q21_bar, q30_bar, q31_bar, q40_bar, q2_bar, q3_bar, q4_bar;
-  } params;
-
-  // Setters for parameters (useful for testing)
-  void set_n0(double n0) { params.n0 = n0; }
-  void set_n_sol(double n_sol) { params.n_sol = n_sol; }
-  void set_n_vap(double n_vap) { params.n_vap = n_vap; }
-  void set_T(double T) {
-    params.T = T;
-    params.tau = params.T / params.T0;
-    // Recalculate derived parameters
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-  }
-  void set_T0(double T0) {
-    params.T0 = T0;
-    params.tau = params.T / params.T0;
-    // Recalculate derived parameters
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-  }
-  void set_Bx(double Bx) { params.Bx = Bx; }
-  void set_alpha(double alpha) { params.alpha = alpha; }
-  void set_alpha_farTol(double alpha_farTol) { params.alpha_farTol = alpha_farTol; }
-  void set_alpha_highOrd(int alpha_highOrd) { params.alpha_highOrd = alpha_highOrd; }
-  void set_lambda(double lambda) { params.lambda = lambda; }
-  void set_stabP(double stabP) { params.stabP = stabP; }
-  void set_shift_u(double shift_u) {
-    params.shift_u = shift_u;
-    // Recalculate derived parameters
-    params.p3_bar = params.shift_u * (params.p3 + 3 * params.shift_s * params.p4);
-    params.p4_bar = pow(params.shift_u, 2) * params.p4;
-    params.q30_bar =
-        params.shift_u * (params.q30 + 3.0 * params.shift_s * params.q40);
-    params.q31_bar = params.shift_u * params.q31;
-    params.q40_bar = pow(params.shift_u, 2) * params.q40;
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-    params.q4_bar = params.q40_bar;
-  }
-  void set_shift_s(double shift_s) {
-    params.shift_s = shift_s;
-    // Recalculate derived parameters
-    params.p2_bar = params.p2 + 2 * params.shift_s * params.p3 +
-                    3 * pow(params.shift_s, 2) * params.p4;
-    params.p3_bar = params.shift_u * (params.p3 + 3 * params.shift_s * params.p4);
-    params.q20_bar = params.q20 + 2.0 * params.shift_s * params.q30 +
-                     3.0 * pow(params.shift_s, 2) * params.q40;
-    params.q21_bar = params.q21 + 2.0 * params.shift_s * params.q31;
-    params.q30_bar =
-        params.shift_u * (params.q30 + 3.0 * params.shift_s * params.q40);
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-  }
-  void set_p2(double p2) {
-    params.p2 = p2;
-    params.p2_bar = params.p2 + 2 * params.shift_s * params.p3 +
-                    3 * pow(params.shift_s, 2) * params.p4;
-  }
-  void set_p3(double p3) {
-    params.p3 = p3;
-    params.p2_bar = params.p2 + 2 * params.shift_s * params.p3 +
-                    3 * pow(params.shift_s, 2) * params.p4;
-    params.p3_bar = params.shift_u * (params.p3 + 3 * params.shift_s * params.p4);
-  }
-  void set_p4(double p4) {
-    params.p4 = p4;
-    params.p2_bar = params.p2 + 2 * params.shift_s * params.p3 +
-                    3 * pow(params.shift_s, 2) * params.p4;
-    params.p3_bar = params.shift_u * (params.p3 + 3 * params.shift_s * params.p4);
-    params.p4_bar = pow(params.shift_u, 2) * params.p4;
-  }
-  void set_q20(double q20) {
-    params.q20 = q20;
-    params.q20_bar = params.q20 + 2.0 * params.shift_s * params.q30 +
-                     3.0 * pow(params.shift_s, 2) * params.q40;
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-  }
-  void set_q21(double q21) {
-    params.q21 = q21;
-    params.q21_bar = params.q21 + 2.0 * params.shift_s * params.q31;
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-  }
-  void set_q30(double q30) {
-    params.q30 = q30;
-    params.q20_bar = params.q20 + 2.0 * params.shift_s * params.q30 +
-                     3.0 * pow(params.shift_s, 2) * params.q40;
-    params.q30_bar =
-        params.shift_u * (params.q30 + 3.0 * params.shift_s * params.q40);
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-  }
-  void set_q31(double q31) {
-    params.q31 = q31;
-    params.q21_bar = params.q21 + 2.0 * params.shift_s * params.q31;
-    params.q31_bar = params.shift_u * params.q31;
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-  }
-  void set_q40(double q40) {
-    params.q40 = q40;
-    params.q20_bar = params.q20 + 2.0 * params.shift_s * params.q30 +
-                     3.0 * pow(params.shift_s, 2) * params.q40;
-    params.q30_bar =
-        params.shift_u * (params.q30 + 3.0 * params.shift_s * params.q40);
-    params.q40_bar = pow(params.shift_u, 2) * params.q40;
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-    params.q4_bar = params.q40_bar;
-  }
-  // Setters for derived parameters (for direct testing)
-  void set_p2_bar(double p2_bar) { params.p2_bar = p2_bar; }
-  void set_p3_bar(double p3_bar) { params.p3_bar = p3_bar; }
-  void set_p4_bar(double p4_bar) { params.p4_bar = p4_bar; }
-  void set_q20_bar(double q20_bar) {
-    params.q20_bar = q20_bar;
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-  }
-  void set_q21_bar(double q21_bar) {
-    params.q21_bar = q21_bar;
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-  }
-  void set_q30_bar(double q30_bar) {
-    params.q30_bar = q30_bar;
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-  }
-  void set_q31_bar(double q31_bar) {
-    params.q31_bar = q31_bar;
-    params.q2_bar = params.q21_bar * params.tau + params.q20_bar;
-    params.q3_bar = params.q31_bar * params.tau + params.q30_bar;
-  }
-  void set_q40_bar(double q40_bar) {
-    params.q40_bar = q40_bar;
-    params.q4_bar = params.q40_bar;
-  }
-  void set_q2_bar(double q2_bar) { params.q2_bar = q2_bar; }
-  void set_q3_bar(double q3_bar) { params.q3_bar = q3_bar; }
-  void set_q4_bar(double q4_bar) { params.q4_bar = q4_bar; }
+  TungstenParams params;
 
   void allocate() {
     FFT &fft = get_fft();
@@ -269,19 +107,23 @@ public:
 
           // mean-field filtering operator (chi) make a C2 that's quasi-gaussian
           // on the left, and ken-style on the right
-          double alpha2 = 2.0 * params.alpha * params.alpha;
-          double lambda2 = 2.0 * params.lambda * params.lambda;
+          double alpha = params.get_alpha();
+          double alpha2 = 2.0 * alpha * alpha;
+          double lambda = params.get_lambda();
+          double lambda2 = 2.0 * lambda * lambda;
           double fMF = exp(kLap / lambda2);
           double k_val = sqrt(-kLap) - 1.0;
           double k2 = k_val * k_val;
 
-          double rTol = -alpha2 * log(params.alpha_farTol) - 1.0;
+          double alpha_farTol = params.get_alpha_farTol();
+          double rTol = -alpha2 * log(alpha_farTol) - 1.0;
           double g1 = 0;
-          if (params.alpha_highOrd == 0) { // gaussian peak
+          int alpha_highOrd = params.get_alpha_highOrd();
+          if (alpha_highOrd == 0) { // gaussian peak
             g1 = exp(-k2 / alpha2);
           } else { // quasi-gaussian peak with higher order component to make it
                    // decay faster towards k=0
-            g1 = exp(-(k2 + rTol * pow(k_val, params.alpha_highOrd)) / alpha2);
+            g1 = exp(-(k2 + rTol * pow(k_val, alpha_highOrd)) / alpha2);
           }
 
           // taylor expansion of gaussian peak to order 2
@@ -290,9 +132,15 @@ public:
           double gf = (k_val < 0.0) ? g1 : g2;
           // we separate this out because it is needed in the nonlinear
           // calculation when T is not constant in space
-          double opPeak = params.Bx * exp(-params.T / params.T0) * gf;
+          double Bx = params.get_Bx();
+          double T = params.get_T();
+          double T0 = params.get_T0();
+          double opPeak = Bx * exp(-T / T0) * gf;
           // includes the lowest order n_mf term since it is a linear term
-          double opCk = params.stabP + params.p2_bar - opPeak + params.q2_bar * fMF;
+          double stabP = params.get_stabP();
+          double p2_bar = params.get_p2_bar();
+          double q2_bar = params.get_q2_bar();
+          double opCk = stabP + p2_bar - opPeak + q2_bar * fMF;
 
           filterMF[idx] = fMF;
           opL[idx] = exp(kLap * opCk * dt);
@@ -325,18 +173,21 @@ public:
     fft.backward(psiMF_F, psiMF);
 
     // Calculate the nonlinear part of the evolution equation in a real space
+    double p3_bar = params.get_p3_bar();
+    double p4_bar = params.get_p4_bar();
+    double q3_bar = params.get_q3_bar();
+    double q4_bar = params.get_q4_bar();
     for (size_t idx = 0, N = psiN.size(); idx < N; idx++) {
       double u = psi[idx], v = psiMF[idx];
       double u2 = u * u, u3 = u * u * u, v2 = v * v, v3 = v * v * v;
-      double p3 = params.p3_bar, p4 = params.p4_bar;
-      double q3 = params.q3_bar, q4 = params.q4_bar;
-      psiN[idx] = p3 * u2 + p4 * u3 + q3 * v2 + q4 * v3;
+      psiN[idx] = p3_bar * u2 + p4_bar * u3 + q3_bar * v2 + q4_bar * v3;
     }
 
     // Apply stabilization factor if given in parameters
-    if (params.stabP != 0.0)
+    double stabP = params.get_stabP();
+    if (stabP != 0.0)
       for (size_t idx = 0, N = psiN.size(); idx < N; idx++) {
-        psiN[idx] = psiN[idx] - params.stabP * psi[idx];
+        psiN[idx] = psiN[idx] - stabP * psi[idx];
       }
 
     // Fourier transform of the nonlinear part of the evolution equation
@@ -372,4 +223,3 @@ public:
 }; // end of class
 
 #endif // TUNGSTEN_MODEL_HPP
-

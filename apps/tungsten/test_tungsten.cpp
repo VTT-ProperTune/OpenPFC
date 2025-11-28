@@ -62,18 +62,18 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
     from_json(j, tungsten);
 
     // Check basic parameters
-    REQUIRE_THAT(tungsten.params.n0, WithinAbs(-0.10, 1e-10));
-    REQUIRE_THAT(tungsten.params.n_sol, WithinAbs(-0.047, 1e-10));
-    REQUIRE_THAT(tungsten.params.n_vap, WithinAbs(-0.464, 1e-10));
-    REQUIRE_THAT(tungsten.params.T, WithinAbs(3300.0, 1e-10));
-    REQUIRE_THAT(tungsten.params.T0, WithinAbs(156000.0, 1e-10));
-    REQUIRE_THAT(tungsten.params.Bx, WithinAbs(0.8582, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_n0(), WithinAbs(-0.10, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_n_sol(), WithinAbs(-0.047, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_n_vap(), WithinAbs(-0.464, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_T(), WithinAbs(3300.0, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_T0(), WithinAbs(156000.0, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_Bx(), WithinAbs(0.8582, 1e-10));
 
     // Check derived parameters
-    REQUIRE_THAT(tungsten.params.tau, WithinAbs(3300.0 / 156000.0, 1e-10));
-    REQUIRE(tungsten.params.p2_bar > 0.0);
-    REQUIRE(tungsten.params.q2_bar != 0.0);
-    REQUIRE(tungsten.params.q3_bar != 0.0);
+    REQUIRE_THAT(tungsten.params.get_tau(), WithinAbs(3300.0 / 156000.0, 1e-10));
+    REQUIRE(tungsten.params.get_p2_bar() > 0.0);
+    REQUIRE(tungsten.params.get_q2_bar() != 0.0);
+    REQUIRE(tungsten.params.get_q3_bar() != 0.0);
   }
 
   SECTION("Reject invalid JSON - missing field") {
@@ -126,36 +126,36 @@ TEST_CASE("Tungsten parameter setters", "[Tungsten][Setters]") {
   Tungsten tungsten(world);
 
   SECTION("Set basic parameters") {
-    tungsten.set_n0(-0.10);
-    tungsten.set_n_sol(-0.047);
-    tungsten.set_n_vap(-0.464);
-    tungsten.set_T(3300.0);
-    tungsten.set_T0(156000.0);
-    tungsten.set_Bx(0.8582);
+    tungsten.params.set_n0(-0.10);
+    tungsten.params.set_n_sol(-0.047);
+    tungsten.params.set_n_vap(-0.464);
+    tungsten.params.set_T(3300.0);
+    tungsten.params.set_T0(156000.0);
+    tungsten.params.set_Bx(0.8582);
 
-    REQUIRE_THAT(tungsten.params.n0, WithinAbs(-0.10, 1e-10));
-    REQUIRE_THAT(tungsten.params.n_sol, WithinAbs(-0.047, 1e-10));
-    REQUIRE_THAT(tungsten.params.n_vap, WithinAbs(-0.464, 1e-10));
-    REQUIRE_THAT(tungsten.params.T, WithinAbs(3300.0, 1e-10));
-    REQUIRE_THAT(tungsten.params.T0, WithinAbs(156000.0, 1e-10));
-    REQUIRE_THAT(tungsten.params.Bx, WithinAbs(0.8582, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_n0(), WithinAbs(-0.10, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_n_sol(), WithinAbs(-0.047, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_n_vap(), WithinAbs(-0.464, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_T(), WithinAbs(3300.0, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_T0(), WithinAbs(156000.0, 1e-10));
+    REQUIRE_THAT(tungsten.params.get_Bx(), WithinAbs(0.8582, 1e-10));
   }
 
   SECTION("Set parameters with derived values") {
-    tungsten.set_T(3300.0);
-    tungsten.set_T0(156000.0);
-    REQUIRE_THAT(tungsten.params.tau, WithinAbs(3300.0 / 156000.0, 1e-10));
+    tungsten.params.set_T(3300.0);
+    tungsten.params.set_T0(156000.0);
+    REQUIRE_THAT(tungsten.params.get_tau(), WithinAbs(3300.0 / 156000.0, 1e-10));
 
-    tungsten.set_shift_u(0.3341);
-    tungsten.set_shift_s(0.1898);
-    tungsten.set_p2(1.0);
-    tungsten.set_p3(-0.5);
-    tungsten.set_p4(0.333333333);
+    tungsten.params.set_shift_u(0.3341);
+    tungsten.params.set_shift_s(0.1898);
+    tungsten.params.set_p2(1.0);
+    tungsten.params.set_p3(-0.5);
+    tungsten.params.set_p4(0.333333333);
 
     // Check that derived parameters are calculated
     double expected_p2_bar =
         1.0 + 2 * 0.1898 * (-0.5) + 3 * pow(0.1898, 2) * 0.333333333;
-    REQUIRE_THAT(tungsten.params.p2_bar, WithinAbs(expected_p2_bar, 1e-8));
+    REQUIRE_THAT(tungsten.params.get_p2_bar(), WithinAbs(expected_p2_bar, 1e-8));
   }
 }
 
@@ -177,27 +177,28 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
 
     Tungsten tungsten(world);
     // Set parameters from tungsten_single_seed.json (exact values)
-    tungsten.set_n0(-0.10);
-    tungsten.set_alpha(0.50);
-    tungsten.set_n_sol(-0.047);
-    tungsten.set_n_vap(-0.464);
-    tungsten.set_T(3300.0);
-    tungsten.set_T0(156000.0);
-    tungsten.set_Bx(0.8582);
-    tungsten.set_alpha_farTol(0.001);
-    tungsten.set_alpha_highOrd(4);
-    tungsten.set_lambda(0.22);
-    tungsten.set_stabP(0.2);
-    tungsten.set_shift_u(0.3341);
-    tungsten.set_shift_s(0.1898);
-    tungsten.set_p2(1.0);
-    tungsten.set_p3(-0.5);
-    tungsten.set_p4(0.333333333);
-    tungsten.set_q20(-0.0037);
-    tungsten.set_q21(1.0);
-    tungsten.set_q30(-12.4567);
-    tungsten.set_q31(20.0);
-    tungsten.set_q40(45.0);
+    // Order doesn't matter - derived parameters are calculated on-the-fly
+    tungsten.params.set_n0(-0.10);
+    tungsten.params.set_alpha(0.50);
+    tungsten.params.set_n_sol(-0.047);
+    tungsten.params.set_n_vap(-0.464);
+    tungsten.params.set_T0(156000.0);
+    tungsten.params.set_T(3300.0);
+    tungsten.params.set_Bx(0.8582);
+    tungsten.params.set_alpha_farTol(0.001);
+    tungsten.params.set_alpha_highOrd(4);
+    tungsten.params.set_lambda(0.22);
+    tungsten.params.set_stabP(0.2);
+    tungsten.params.set_shift_s(0.1898);
+    tungsten.params.set_shift_u(0.3341);
+    tungsten.params.set_p2(1.0);
+    tungsten.params.set_p3(-0.5);
+    tungsten.params.set_p4(0.333333333);
+    tungsten.params.set_q20(-0.0037);
+    tungsten.params.set_q21(1.0);
+    tungsten.params.set_q30(-12.4567);
+    tungsten.params.set_q31(20.0);
+    tungsten.params.set_q40(45.0);
     tungsten.set_fft(fft);
     double dt = 1.0;
     tungsten.initialize(dt);
@@ -263,20 +264,21 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     // Expected norms after each step (regression test values)
     // Grid: 32x32x32, spacing: 1.1107207345395915, dt=1.0
     // Initial conditions: constant(-0.4) + single_seed(amp_eq=0.215936,
-    // rho_seed=-0.047, radius=18.0) These values ensure the model produces
-    // consistent, reproducible results
+    // rho_seed=-0.047, radius=18.0)
+    // Updated after refactoring to use getters for derived parameters
+    // (derived parameters now calculated on-the-fly, fixing parameter order bug)
     std::array<double, 11> expected_norms{
         11965.0889218507, // Initial state (after ICs applied)
-        11515.6477252362, // After step 1
-        11634.2765185111, // After step 2
-        11896.8732088205, // After step 3
-        12282.7048936502, // After step 4
-        12797.2957423005, // After step 5
-        13455.1409057828, // After step 6
-        14275.9870619116, // After step 7
-        15283.6527047375, // After step 8
-        16505.4086892223, // After step 9
-        17971.4275781392  // After step 10
+        11259.9705028338, // After step 1
+        11050.6245088282, // After step 2
+        10903.2783913748, // After step 3
+        10782.9029639299, // After step 4
+        10678.0834708269, // After step 5
+        10583.6114287826, // After step 6
+        10496.5733807390, // After step 7
+        10415.1258360383, // After step 8
+        10338.0182669812, // After step 9
+        10264.3672697202  // After step 10
     };
 
     // Verify initial norm (before any steps) - print for debugging
@@ -338,25 +340,25 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     auto fft = fft::create(decomp);
 
     Tungsten tungsten(world);
-    tungsten.set_n0(-0.10);
-    tungsten.set_alpha(0.50);
-    tungsten.set_T(3300.0);
-    tungsten.set_T0(156000.0);
-    tungsten.set_Bx(0.8582);
-    tungsten.set_alpha_farTol(0.001);
-    tungsten.set_alpha_highOrd(4);
-    tungsten.set_lambda(0.22);
-    tungsten.set_stabP(0.2);
-    tungsten.set_shift_u(0.3341);
-    tungsten.set_shift_s(0.1898);
-    tungsten.set_p2(1.0);
-    tungsten.set_p3(-0.5);
-    tungsten.set_p4(0.333333333);
-    tungsten.set_q20(-0.0037);
-    tungsten.set_q21(1.0);
-    tungsten.set_q30(-12.4567);
-    tungsten.set_q31(20.0);
-    tungsten.set_q40(45.0);
+    tungsten.params.set_n0(-0.10);
+    tungsten.params.set_alpha(0.50);
+    tungsten.params.set_T(3300.0);
+    tungsten.params.set_T0(156000.0);
+    tungsten.params.set_Bx(0.8582);
+    tungsten.params.set_alpha_farTol(0.001);
+    tungsten.params.set_alpha_highOrd(4);
+    tungsten.params.set_lambda(0.22);
+    tungsten.params.set_stabP(0.2);
+    tungsten.params.set_shift_u(0.3341);
+    tungsten.params.set_shift_s(0.1898);
+    tungsten.params.set_p2(1.0);
+    tungsten.params.set_p3(-0.5);
+    tungsten.params.set_p4(0.333333333);
+    tungsten.params.set_q20(-0.0037);
+    tungsten.params.set_q21(1.0);
+    tungsten.params.set_q30(-12.4567);
+    tungsten.params.set_q31(20.0);
+    tungsten.params.set_q40(45.0);
     tungsten.set_fft(fft);
 
     double dt = 1.0;

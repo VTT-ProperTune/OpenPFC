@@ -5,6 +5,7 @@
 #define TUNGSTEN_INPUT_HPP
 
 #include "tungsten_model.hpp"
+#include "tungsten_params.hpp"
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -89,39 +90,51 @@ void validate(const json &j) {
 void from_json(const json &j, Tungsten &m) {
   validate(j);
   auto &p = m.params;
-  j.at("n0").get_to(p.n0);
-  j.at("n_sol").get_to(p.n_sol);
-  j.at("n_vap").get_to(p.n_vap);
-  j.at("T").get_to(p.T);
-  j.at("T0").get_to(p.T0);
-  j.at("Bx").get_to(p.Bx);
-  j.at("alpha").get_to(p.alpha);
-  j.at("alpha_farTol").get_to(p.alpha_farTol);
-  j.at("alpha_highOrd").get_to(p.alpha_highOrd);
-  p.tau = p.T / p.T0;
-  j.at("lambda").get_to(p.lambda);
-  j.at("stabP").get_to(p.stabP);
-  j.at("shift_u").get_to(p.shift_u);
-  j.at("shift_s").get_to(p.shift_s);
-  j.at("p2").get_to(p.p2);
-  j.at("p3").get_to(p.p3);
-  j.at("p4").get_to(p.p4);
-  p.p2_bar = p.p2 + 2 * p.shift_s * p.p3 + 3 * pow(p.shift_s, 2) * p.p4;
-  p.p3_bar = p.shift_u * (p.p3 + 3 * p.shift_s * p.p4);
-  p.p4_bar = pow(p.shift_u, 2) * p.p4;
-  j.at("q20").get_to(p.q20);
-  j.at("q21").get_to(p.q21);
-  j.at("q30").get_to(p.q30);
-  j.at("q31").get_to(p.q31);
-  j.at("q40").get_to(p.q40);
-  p.q20_bar = p.q20 + 2.0 * p.shift_s * p.q30 + 3.0 * pow(p.shift_s, 2) * p.q40;
-  p.q21_bar = p.q21 + 2.0 * p.shift_s * p.q31;
-  p.q30_bar = p.shift_u * (p.q30 + 3.0 * p.shift_s * p.q40);
-  p.q31_bar = p.shift_u * p.q31;
-  p.q40_bar = pow(p.shift_u, 2) * p.q40;
-  p.q2_bar = p.q21_bar * p.tau + p.q20_bar;
-  p.q3_bar = p.q31_bar * p.tau + p.q30_bar;
-  p.q4_bar = p.q40_bar;
+  double value;
+  j.at("n0").get_to(value);
+  p.set_n0(value);
+  j.at("n_sol").get_to(value);
+  p.set_n_sol(value);
+  j.at("n_vap").get_to(value);
+  p.set_n_vap(value);
+  j.at("T").get_to(value);
+  p.set_T(value);
+  j.at("T0").get_to(value);
+  p.set_T0(value);
+  j.at("Bx").get_to(value);
+  p.set_Bx(value);
+  j.at("alpha").get_to(value);
+  p.set_alpha(value);
+  j.at("alpha_farTol").get_to(value);
+  p.set_alpha_farTol(value);
+  int int_value;
+  j.at("alpha_highOrd").get_to(int_value);
+  p.set_alpha_highOrd(int_value);
+  j.at("lambda").get_to(value);
+  p.set_lambda(value);
+  j.at("stabP").get_to(value);
+  p.set_stabP(value);
+  j.at("shift_u").get_to(value);
+  p.set_shift_u(value);
+  j.at("shift_s").get_to(value);
+  p.set_shift_s(value);
+  j.at("p2").get_to(value);
+  p.set_p2(value);
+  j.at("p3").get_to(value);
+  p.set_p3(value);
+  j.at("p4").get_to(value);
+  p.set_p4(value);
+  j.at("q20").get_to(value);
+  p.set_q20(value);
+  j.at("q21").get_to(value);
+  p.set_q21(value);
+  j.at("q30").get_to(value);
+  p.set_q30(value);
+  j.at("q31").get_to(value);
+  p.set_q31(value);
+  j.at("q40").get_to(value);
+  p.set_q40(value);
+  // Derived parameters are automatically calculated when accessed via getters
 }
 
 #endif // TUNGSTEN_INPUT_HPP
