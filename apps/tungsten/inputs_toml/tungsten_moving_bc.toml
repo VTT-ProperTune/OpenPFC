@@ -1,0 +1,72 @@
+# Tungsten PFC Model - Moving Boundary Conditions
+# Crystal growth with moving boundary conditions
+
+[model]
+name = "tungsten"
+
+[model.params]
+n0 = -0.10
+alpha = 0.50
+n_sol = -0.047
+n_vap = -0.464
+T = 3300.0
+T0 = 156000.0
+Bx = 0.8582
+alpha_farTol = 0.001
+alpha_highOrd = 4
+lambda = 0.22
+stabP = 0.2
+shift_u = 0.3341
+shift_s = 0.1898
+p2 = 1.0
+p3 = -0.5
+p4 = 0.333333333
+q20 = -0.0037
+q21 = 1.0
+q30 = -12.4567
+q31 = 20.0
+q40 = 45.0
+
+[domain]
+Lx = 128
+Ly = 64
+Lz = 64
+dx = 1.1107207345395915
+dy = 1.1107207345395915
+dz = 1.1107207345395915
+origin = "corner"
+
+[timestepping]
+t0 = 0.0
+t1 = 20000.0
+dt = 1.0
+saveat = 100.0
+
+[[fields]]
+name = "psi"
+data = "./data/u_%04d.bin"
+
+[[initial_conditions]]
+target = "psi"
+type = "constant"
+n0 = -0.10
+
+[[initial_conditions]]
+target = "psi"
+type = "seed_grid"
+X0 = 30.0
+Ny = 2
+Nz = 2
+radius = 25.0
+amplitude = 0.215936
+rho = -0.047
+
+[[boundary_conditions]]
+target = "psi"
+type = "moving"
+rho_low = -0.464
+rho_high = -0.10
+width = 15.0
+alpha = 1.0
+disp = 40.0
+xpos = 127.17225402106772

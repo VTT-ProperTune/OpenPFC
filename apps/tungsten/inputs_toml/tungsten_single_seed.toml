@@ -1,0 +1,219 @@
+# Tungsten Phase Field Crystal (PFC) Model Configuration
+# Single seed initial condition example
+#
+# This configuration simulates crystal growth from a single nucleation seed
+# in a tungsten system. The model uses mean-field filtering and quasi-Gaussian
+# correlation functions to capture the crystal structure.
+
+# ============================================================================
+# Model Configuration
+# ============================================================================
+
+[model]
+name = "tungsten"
+
+[model.params]
+# ============================================================================
+# Density Parameters
+# ============================================================================
+
+# Average density of the metastable fluid phase
+# This is the reference density around which the system evolves
+n0 = -0.10
+
+# Bulk density at solid coexistence (solid phase density)
+# Should be updated according to phase diagram when temperature T is changed
+n_sol = -0.047
+
+# Bulk density at vapor coexistence (vapor phase density)
+# Should be updated according to phase diagram when temperature T is changed
+n_vap = -0.464
+
+# ============================================================================
+# Temperature Parameters
+# ============================================================================
+
+# Effective temperature in Kelvin
+# Controls the driving force for phase transitions
+# Remember to update n_sol and n_vap according to phase diagram when changed
+T = 3300.0
+
+# Reference temperature in Kelvin
+# Used in the temperature-dependent peak function: B_x * exp(-T/T0)
+T0 = 156000.0
+
+# Temperature-dependent coefficient
+# Multiplies the exponential temperature factor in the linear operator
+Bx = 0.8582
+
+# ============================================================================
+# Correlation Function Parameters (C2 peak)
+# ============================================================================
+
+# Width of the C2 correlation function peak
+# Controls the spread of the quasi-Gaussian peak in k-space
+# Larger values give broader peaks
+alpha = 0.50
+
+# Tolerance for allowing k=1 peak to affect k=0 value
+# Controls how much the higher-order Gaussian components affect the correlation
+# at k=0. Smaller values give tighter control
+alpha_farTol = 0.001
+
+# Power of the higher-order component of the Gaussian function
+# Should be a multiple of 2 (e.g., 2, 4, 6, ...)
+# Setting this to zero disables the tolerance setting and uses pure Gaussian
+# Higher values make the peak decay faster towards k=0
+alpha_highOrd = 4
+
+# ============================================================================
+# Mean-Field Filtering Parameters
+# ============================================================================
+
+# Strength of the mean-field filter
+# Controls the width of the mean-field filtering operator: χ(k) = exp(-k²/(2λ²))
+# Avoid values higher than ~0.28 to prevent lattice-wavelength variations
+# in the mean field
+lambda = 0.22
+
+# ============================================================================
+# Numerical Stability Parameters
+# ============================================================================
+
+# Numerical stability parameter for the exponential integrator method
+# Adds a small stabilizing term to the linear operator
+# Set to 0.0 to disable stabilization
+stabP = 0.2
+
+# ============================================================================
+# Vapor-Model Parameters
+# ============================================================================
+# These parameters define the vapor model used in the nonlinear terms
+# They are related through derived parameters (p2_bar, p3_bar, p4_bar, etc.)
+
+# Vapor-model shift parameter u
+# Used in calculating derived parameters p3_bar, p4_bar, q30_bar, q31_bar, q40_bar
+shift_u = 0.3341
+
+# Vapor-model shift parameter s
+# Used in calculating derived parameters p2_bar, p3_bar, q20_bar, q21_bar, q30_bar
+shift_s = 0.1898
+
+# Vapor-model polynomial coefficients for density field ψ
+# These define the nonlinear terms: p2_bar*ψ + p3_bar*ψ² + p4_bar*ψ³
+p2 = 1.0
+p3 = -0.5
+p4 = 0.333333333
+
+# Vapor-model coefficients for mean-field filtered density ψ_MF
+# These define the nonlinear terms: q2_bar*ψ_MF + q3_bar*ψ_MF² + q4_bar*ψ_MF³
+# Note: q2_bar, q3_bar, q4_bar are derived from these base parameters
+q20 = -0.0037
+q21 = 1.0
+q30 = -12.4567
+q31 = 20.0
+q40 = 45.0
+
+# ============================================================================
+# Domain Configuration
+# ============================================================================
+
+[domain]
+# Grid size in each dimension (number of grid points)
+Lx = 32
+Ly = 32
+Lz = 32
+
+# Grid spacing in each dimension (physical units)
+# Determines the resolution of the simulation
+dx = 1.1107207345395915
+dy = 1.1107207345395915
+dz = 1.1107207345395915
+
+# Origin position
+# "center" places the origin at the center of the domain
+# Alternative: specify explicit coordinates [x0, y0, z0]
+origin = "center"
+
+# ============================================================================
+# Time Stepping Configuration
+# ============================================================================
+
+[timestepping]
+# Initial time
+t0 = 0.0
+
+# Final time
+t1 = 10.0
+
+# Time step size
+# Controls the temporal resolution of the simulation
+dt = 1.0
+
+# Save interval
+# Output fields are saved every saveat time units
+saveat = 1.0
+
+# ============================================================================
+# Field Output Configuration
+# ============================================================================
+
+# Fields to save during simulation
+# Each field entry specifies:
+# - name: Field name (must match a field registered in the model)
+# - data: Output file path pattern (%d is replaced with time step number)
+#
+# The [[fields]] syntax creates an array of tables, allowing multiple field
+# definitions
+
+[[fields]]
+name = "psi"
+# Density field - main order parameter
+data = "/task/juajukka/openpfc/tungsten/psi_%d.bin"
+
+[[fields]]
+name = "psiMF"
+# Mean-field filtered density field
+data = "/task/juajukka/openpfc/tungsten/psimf_%d.bin"
+
+# ============================================================================
+# Initial Conditions
+# ============================================================================
+
+# Initial conditions are applied in the order listed
+# Multiple conditions can be applied to the same field
+#
+# The [[initial_conditions]] syntax creates an array of tables, allowing
+# multiple initial condition definitions
+
+[[initial_conditions]]
+target = "psi"
+type = "constant"
+# Constant initial condition: fills entire field with this value
+n0 = -0.4
+
+[[initial_conditions]]
+target = "psi"
+type = "single_seed"
+# Single seed initial condition: creates a crystal seed at the center
+# - amp_eq: Amplitude of the equilibrium crystal structure
+# - rho_seed: Base density of the seed
+# The seed is applied within a radius (default: 64.0) from the center
+amp_eq = 0.215936
+rho_seed = -0.047
+
+# ============================================================================
+# Boundary Conditions
+# ============================================================================
+
+# The [[boundary_conditions]] syntax creates an array of tables, allowing
+# multiple boundary condition definitions
+
+[[boundary_conditions]]
+target = "psi"
+type = "fixed"
+# Fixed boundary condition: maintains field values at domain boundaries
+# - rho_low: Lower boundary value (vapor density)
+# - rho_high: Upper boundary value (metastable fluid density)
+rho_low = -0.464
+rho_high = -0.100

@@ -1,0 +1,90 @@
+# Aluminum PFC Model Configuration
+# Large-scale aluminum solidification simulation with temperature gradient
+
+[model]
+name = "aluminum"
+
+[model.params]
+# Average density
+n0 = -0.0060
+
+# Correlation function width
+alpha = 0.20
+
+# Phase coexistence densities
+n_sol = -0.036
+n_vap = -1.297
+
+# Temperature parameters
+T_const = 980
+T_min = 780
+T_max = 1280
+T0 = 89285.0
+Bx = 0.817900686921996
+
+# Temperature gradient parameters
+G_grid = 0
+V_grid = 0
+x_initial = 130
+
+# Correlation function parameters
+alpha_farTol = 0.001
+alpha_highOrd = 0
+
+# Mean-field filtering
+lambda = 0.22
+
+# Numerical stability
+stabP = 0.0
+
+# Vapor model parameters
+shift_u = 1.0
+shift_s = 0.0
+p2_bar = 0.8286531831
+p3_bar = -0.04204863
+p4_bar = 0.007533
+q20_bar = 0.016531729105214
+q21_bar = 5.467
+q30_bar = 1.7152418049986
+q31_bar = 0.45
+q40_bar = 0.787482
+
+[domain]
+Lx = 1024
+Ly = 2048
+Lz = 256
+dx = 1.3603495232
+dy = 1.3603495232
+dz = 1.3603495232
+origin = "corner"
+
+[timestepping]
+t0 = 0.0
+t1 = 2000.0
+dt = 1.0
+saveat = 200.0
+
+# Legacy results path (deprecated, use fields instead)
+results = "./dataNewer/u_%04d.bin"
+
+[[fields]]
+name = "psi"
+data = "./dataNewer/psi_%04d.bin"
+
+[[initial_conditions]]
+type = "constant"
+n0 = -0.0060
+
+[[initial_conditions]]
+type = "seed_grid_fcc"
+X0 = 130.0
+Ny = 2
+Nz = 1
+radius = 120.0
+amplitude = 0.4
+rho = -0.036
+
+[[boundary_conditions]]
+type = "fixed"
+rho_low = -1.297
+rho_high = -0.0060

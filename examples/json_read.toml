@@ -1,0 +1,16 @@
+# Example: Basic TOML Parsing Demo
+# Shows various TOML data types
+
+pi = 3.141
+happy = true
+name = "Niels"
+# Note: TOML doesn't have null, use empty string or omit the key
+
+[answer]
+everything = 42
+
+list = [1, 0, 2]
+
+[object]
+currency = "USD"
+value = 42.99
