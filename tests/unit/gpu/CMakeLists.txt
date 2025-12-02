@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # GPU unit tests - only build if CUDA is enabled AND found
-if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     # Test 1: Device detection
     add_executable(test_gpu_device
         test_device.cpp
@@ -62,9 +62,30 @@ if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
     
     add_test(NAME GPU_Kernels COMMAND test_gpu_kernels)
     
+    # Test 4: GPU FFT
+    add_executable(test_gpu_fft test_fft_cuda.cpp)
+    
+    target_include_directories(test_gpu_fft PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    
+    target_link_libraries(test_gpu_fft PRIVATE
+        Catch2::Catch2
+        openpfc
+        CUDA::cudart
+    )
+    
+    # Link MPI for FFT tests
+    target_link_libraries(test_gpu_fft PRIVATE
+        MPI::MPI_CXX
+    )
+    
+    add_test(NAME GPU_FFT COMMAND test_gpu_fft)
+    
     message(STATUS "✅ GPU tests enabled")
-elseif(OPENPFC_ENABLE_CUDA)
+elseif(OpenPFC_ENABLE_CUDA)
     message(STATUS "⚠️  GPU tests disabled (CUDA not found)")
 else()
-    message(STATUS "ℹ️  GPU tests disabled (OPENPFC_ENABLE_CUDA=OFF)")
+    message(STATUS "ℹ️  GPU tests disabled (OpenPFC_ENABLE_CUDA=OFF)")
 endif()
