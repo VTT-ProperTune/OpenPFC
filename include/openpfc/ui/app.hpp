@@ -296,9 +296,9 @@ public:
         MPI_Send(timing, 2, MPI_DOUBLE, 0, 42, m_comm);
         if (m_worker.get_rank() == 0) {
           int num_ranks = m_worker.get_num_ranks();
-          double timing[num_ranks][2];
+          double all_timing[num_ranks][2];
           for (int rank = 0; rank < num_ranks; rank++) {
-            MPI_Recv(timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm,
+            MPI_Recv(all_timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm,
                      MPI_STATUS_IGNORE);
           }
           auto inc = time.get_increment();
@@ -307,8 +307,8 @@ public:
             std::cout << "Timing information for all processes:" << std::endl;
             std::cout << "step;rank;step_time;fft_time" << std::endl;
             for (int rank = 0; rank < num_ranks; rank++) {
-              std::cout << inc << ";" << rank << ";" << timing[rank][0] << ";"
-                        << timing[rank][1] << std::endl;
+              std::cout << inc << ";" << rank << ";" << all_timing[rank][0] << ";"
+                        << all_timing[rank][1] << std::endl;
             }
             std::cout.precision(old_precision);
           }
