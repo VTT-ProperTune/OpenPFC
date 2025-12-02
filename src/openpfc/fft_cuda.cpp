@@ -38,10 +38,6 @@ static int get_mpi_size(MPI_Comm comm) {
   return size;
 }
 
-// CUDA FFT type alias
-using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
-using FFT_CUDA = FFT_Impl<heffte::backend::cufft>;
-
 FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id) {
   auto options = heffte::default_options<heffte::backend::cufft>();
   auto r2c_dir = 0;
@@ -52,7 +48,9 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id) {
   auto r2c_direction = get_r2c_direction(fft_layout);
   auto comm = get_comm();
 
-  // Create cuFFT-based FFT
+  // Create cuFFT-based FFT (precision determined by data types in forward/backward
+  // calls)
+  using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
   fft_r2c_cuda fft_cuda(inbox, outbox, r2c_direction, comm, options);
 
   // Return GPU FFT object

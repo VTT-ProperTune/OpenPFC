@@ -69,6 +69,8 @@ using FFT_CUDA = FFT_Impl<heffte::backend::cufft>;
  *
  * @note Only available when OpenPFC_ENABLE_CUDA is defined
  * @note Requires CUDA-capable GPU and GPU-aware MPI for multi-GPU setups
+ * @note Precision (float/double) is determined by data types passed to
+ * forward/backward methods
  */
 FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id);
 
@@ -84,6 +86,8 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id);
  * @throws std::runtime_error if CUDA is not available or FFT creation fails
  *
  * @note Only available when OpenPFC_ENABLE_CUDA is defined
+ * @note Precision (float/double) is determined by data types passed to
+ * forward/backward methods
  */
 FFT_CUDA create_cuda(const Decomposition &decomposition);
 #endif // OpenPFC_ENABLE_CUDA
