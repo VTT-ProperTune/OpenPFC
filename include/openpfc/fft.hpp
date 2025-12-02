@@ -44,6 +44,8 @@
 
 #include "core/decomposition.hpp"
 #include "openpfc/backends/heffte_adapter.hpp" // Ensure this is included for the conversion operator
+#include "openpfc/core/backend_tags.hpp"
+#include "openpfc/core/databuffer.hpp"
 #include "openpfc/core/world.hpp"
 #include "openpfc/fft/kspace.hpp"
 
@@ -104,8 +106,35 @@ using pfc::types::Real3;
 using Decomposition = pfc::decomposition::Decomposition;
 using RealVector = std::vector<double>;
 using ComplexVector = std::vector<std::complex<double>>;
-using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 using box3di = heffte::box3d<int>; ///< Type alias for 3D integer box.
+
+// Backend-aware DataBuffer type aliases
+using RealDataBuffer = core::DataBuffer<backend::CpuTag, double>;
+using ComplexDataBuffer = core::DataBuffer<backend::CpuTag, std::complex<double>>;
+#if defined(OpenPFC_ENABLE_CUDA)
+using RealDataBufferCUDA = core::DataBuffer<backend::CudaTag, double>;
+using ComplexDataBufferCUDA =
+    core::DataBuffer<backend::CudaTag, std::complex<double>>;
+#endif
+
+/**
+ * @brief FFT backend selection
+ *
+ * Specifies which FFT library backend to use for computations.
+ * - FFTW: CPU-based FFT (default, always available)
+ * - CUDA: GPU-based FFT using cuFFT (requires CUDA and OpenPFC_ENABLE_CUDA)
+ */
+enum class Backend {
+  FFTW, ///< CPU-based FFT using FFTW (default)
+  CUDA  ///< GPU-based FFT using cuFFT (requires CUDA support)
+};
+
+// Type aliases for different FFT backends
+using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>; ///< FFTW backend (CPU)
+#if defined(OpenPFC_ENABLE_CUDA)
+using fft_r2c_cuda =
+    heffte::fft3d_r2c<heffte::backend::cufft>; ///< cuFFT backend (GPU)
+#endif
 
 struct IFFT {
   virtual ~IFFT() = default;
@@ -196,26 +225,31 @@ struct IFFT {
  * @see Decomposition for domain decomposition
  * @see kspace.hpp for wavenumber and operator helpers
  */
-struct FFT : IFFT {
+/**
+ * @brief FFT class template for distributed-memory parallel Fourier transforms
+ *
+ * @tparam BackendTag HeFFTe backend tag (heffte::backend::fftw or
+ * heffte::backend::cufft)
+ */
+template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
 
   // const Decomposition m_decomposition; /**< The Decomposition object. */
   // const box3di m_inbox, m_outbox;      /**< Local inbox and outbox boxes. */
 
-  const fft_r2c m_fft;     /**< HeFFTe FFT object. */
-  ComplexVector m_wrk;     /**< Workspace vector for FFT computations. */
+  using fft_type = heffte::fft3d_r2c<BackendTag>;
+  const fft_type m_fft;    /**< HeFFTe FFT object. */
   double m_fft_time = 0.0; /**< Recorded FFT computation time. */
 
+  // Backend-aware workspace - use HeFFTe's buffer_container
+  using workspace_type = typename fft_type::buffer_container<std::complex<double>>;
+  workspace_type m_wrk; /**< Workspace vector for FFT computations. */
+
   /**
-   * @brief Constructs an FFT object with the given Decomposition and MPI
-   * communicator.
+   * @brief Constructs an FFT object with the given HeFFTe FFT object
    *
-   * @param decomposition The Decomposition object defining the domain
-   * decomposition.
-   * @param comm The MPI communicator for parallel computations.
-   * @param plan_options Optional plan options for configuring the FFT behavior.
-   * @param world The World object providing the domain size information.
+   * @param fft HeFFTe FFT object (already configured)
    */
-  FFT(fft_r2c fft) : m_fft(std::move(fft)), m_wrk(m_fft.size_workspace()) {}
+  FFT_Impl(fft_type fft) : m_fft(std::move(fft)), m_wrk(m_fft.size_workspace()) {}
 
   /**
    * @brief Perform forward real-to-complex FFT transform
@@ -252,11 +286,36 @@ struct FFT : IFFT {
    * @see size_inbox() for input size
    * @see size_outbox() for output size
    */
-  void forward(const std::vector<double> &in, ComplexVector &out) {
+  // Forward method using DataBuffer (backend-aware)
+  template <typename RealBackendTag, typename ComplexBackendTag>
+  void forward(const core::DataBuffer<RealBackendTag, double> &in,
+               core::DataBuffer<ComplexBackendTag, std::complex<double>> &out) {
+    static_assert(std::is_same_v<RealBackendTag, ComplexBackendTag>,
+                  "Input and output must use the same backend");
     m_fft_time -= MPI_Wtime();
+    // HeFFTe's forward method accepts raw pointers for both CPU and GPU backends
     m_fft.forward(in.data(), out.data(), m_wrk.data());
     m_fft_time += MPI_Wtime();
-  };
+  }
+
+  // Forward method using std::vector (implements IFFT interface)
+  // For CPU backend: works directly
+  // For GPU backend: throws error (must use DataBuffer overload)
+  void forward(const RealVector &in, ComplexVector &out) override {
+    if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
+      // CPU backend: use DataBuffer internally
+      core::DataBuffer<backend::CpuTag, double> in_buf(in.size());
+      std::copy(in.begin(), in.end(), in_buf.data());
+      core::DataBuffer<backend::CpuTag, std::complex<double>> out_buf(out.size());
+      forward(in_buf, out_buf);
+      std::copy(out_buf.to_host().begin(), out_buf.to_host().end(), out.begin());
+    } else {
+      // GPU backend: must use DataBuffer
+      throw std::runtime_error(
+          "GPU FFT requires DataBuffer, not std::vector. Use forward(DataBuffer, "
+          "DataBuffer) instead.");
+    }
+  }
 
   /**
    * @brief Perform backward complex-to-real inverse FFT transform
@@ -300,11 +359,36 @@ struct FFT : IFFT {
    * @see size_inbox() for output size
    * @see size_outbox() for input size
    */
-  void backward(const ComplexVector &in, std::vector<double> &out) {
+  // Backward method using DataBuffer (backend-aware)
+  template <typename ComplexBackendTag, typename RealBackendTag>
+  void backward(const core::DataBuffer<ComplexBackendTag, std::complex<double>> &in,
+                core::DataBuffer<RealBackendTag, double> &out) {
+    static_assert(std::is_same_v<ComplexBackendTag, RealBackendTag>,
+                  "Input and output must use the same backend");
     m_fft_time -= MPI_Wtime();
+    // HeFFTe's backward method accepts raw pointers for both CPU and GPU backends
     m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
     m_fft_time += MPI_Wtime();
-  };
+  }
+
+  // Backward method using std::vector (implements IFFT interface)
+  // For CPU backend: works directly
+  // For GPU backend: throws error (must use DataBuffer overload)
+  void backward(const ComplexVector &in, RealVector &out) override {
+    if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
+      // CPU backend: use DataBuffer internally
+      core::DataBuffer<backend::CpuTag, std::complex<double>> in_buf(in.size());
+      std::copy(in.begin(), in.end(), in_buf.data());
+      core::DataBuffer<backend::CpuTag, double> out_buf(out.size());
+      backward(in_buf, out_buf);
+      std::copy(out_buf.to_host().begin(), out_buf.to_host().end(), out.begin());
+    } else {
+      // GPU backend: must use DataBuffer
+      throw std::runtime_error(
+          "GPU FFT requires DataBuffer, not std::vector. Use backward(DataBuffer, "
+          "DataBuffer) instead.");
+    }
+  }
 
   /**
    * @brief Resets the recorded FFT computation time to zero.
@@ -347,13 +431,22 @@ struct FFT : IFFT {
   size_t size_workspace() const { return m_fft.size_workspace(); }
 };
 
-inline const auto &get_fft_object(const FFT &fft) noexcept { return fft.m_fft; }
+// Type alias for backward compatibility (defaults to FFTW backend)
+using FFT = FFT_Impl<heffte::backend::fftw>;
 
-inline const auto get_inbox(const FFT &fft) noexcept {
+// Helper functions
+template <typename BackendTag>
+inline const auto &get_fft_object(const FFT_Impl<BackendTag> &fft) noexcept {
+  return fft.m_fft;
+}
+
+template <typename BackendTag>
+inline const auto get_inbox(const FFT_Impl<BackendTag> &fft) noexcept {
   return get_fft_object(fft).inbox();
 }
 
-inline const auto get_outbox(const FFT &fft) noexcept {
+template <typename BackendTag>
+inline const auto get_outbox(const FFT_Impl<BackendTag> &fft) noexcept {
   return get_fft_object(fft).outbox();
 }
 
