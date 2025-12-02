@@ -82,8 +82,9 @@ public:
           double z = z0 + k * dz;
           if (x * x + y * y + z * z < r2) {
             double u = rho_seed;
-            for (int i = 0; i < 6; i++) {
-              u += 2.0 * amp_eq * cos(q[i][0] * x + q[i][1] * y + q[i][2] * z);
+            for (int q_idx = 0; q_idx < 6; q_idx++) {
+              u += 2.0 * amp_eq *
+                   cos(q[q_idx][0] * x + q[q_idx][1] * y + q[q_idx][2] * z);
             }
             f[idx] = u;
           }
