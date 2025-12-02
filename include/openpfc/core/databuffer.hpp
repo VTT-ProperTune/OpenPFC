@@ -153,6 +153,26 @@ public:
   const T &operator[](size_t i) const { return m_data[i]; }
 
   /**
+   * @brief Get underlying std::vector reference (for Model compatibility)
+   *
+   * This method allows DataBuffer<CpuTag, T> to be used with Model's
+   * add_real_field() and add_complex_field() methods which expect
+   * std::vector<T>& references.
+   *
+   * @return Reference to underlying std::vector
+   *
+   * @note Only available for CpuTag specialization
+   * @note For GPU backends, this method is not available
+   */
+  std::vector<T> &as_vector() { return m_data; }
+
+  /**
+   * @brief Get underlying std::vector const reference (for Model compatibility)
+   * @return Const reference to underlying std::vector
+   */
+  const std::vector<T> &as_vector() const { return m_data; }
+
+  /**
    * @brief Copy data from host vector
    * @param src Source vector (must have same size)
    * @throws std::runtime_error if sizes don't match
