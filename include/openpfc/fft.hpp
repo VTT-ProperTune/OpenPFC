@@ -241,7 +241,8 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   double m_fft_time = 0.0; /**< Recorded FFT computation time. */
 
   // Backend-aware workspace - use HeFFTe's buffer_container
-  using workspace_type = typename fft_type::buffer_container<std::complex<double>>;
+  using workspace_type = typename heffte::fft3d_r2c<
+      BackendTag>::template buffer_container<std::complex<double>>;
   workspace_type m_wrk; /**< Workspace vector for FFT computations. */
 
   /**
@@ -299,16 +300,14 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   }
 
   // Forward method using std::vector (implements IFFT interface)
-  // For CPU backend: works directly
+  // For CPU backend: works directly with std::vector
   // For GPU backend: throws error (must use DataBuffer overload)
   void forward(const RealVector &in, ComplexVector &out) override {
     if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
-      // CPU backend: use DataBuffer internally
-      core::DataBuffer<backend::CpuTag, double> in_buf(in.size());
-      std::copy(in.begin(), in.end(), in_buf.data());
-      core::DataBuffer<backend::CpuTag, std::complex<double>> out_buf(out.size());
-      forward(in_buf, out_buf);
-      std::copy(out_buf.to_host().begin(), out_buf.to_host().end(), out.begin());
+      // CPU backend: call HeFFTe directly (no conversion needed)
+      m_fft_time -= MPI_Wtime();
+      m_fft.forward(in.data(), out.data(), m_wrk.data());
+      m_fft_time += MPI_Wtime();
     } else {
       // GPU backend: must use DataBuffer
       throw std::runtime_error(
@@ -372,16 +371,14 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   }
 
   // Backward method using std::vector (implements IFFT interface)
-  // For CPU backend: works directly
+  // For CPU backend: works directly with std::vector
   // For GPU backend: throws error (must use DataBuffer overload)
   void backward(const ComplexVector &in, RealVector &out) override {
     if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
-      // CPU backend: use DataBuffer internally
-      core::DataBuffer<backend::CpuTag, std::complex<double>> in_buf(in.size());
-      std::copy(in.begin(), in.end(), in_buf.data());
-      core::DataBuffer<backend::CpuTag, double> out_buf(out.size());
-      backward(in_buf, out_buf);
-      std::copy(out_buf.to_host().begin(), out_buf.to_host().end(), out.begin());
+      // CPU backend: call HeFFTe directly (no conversion needed)
+      m_fft_time -= MPI_Wtime();
+      m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
+      m_fft_time += MPI_Wtime();
     } else {
       // GPU backend: must use DataBuffer
       throw std::runtime_error(
