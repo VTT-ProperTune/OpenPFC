@@ -8,7 +8,7 @@
  * This file contains CUDA kernel code. It is only compiled when CUDA is enabled.
  */
 
-#if defined(OPENPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA)
 
 #include <cuda_runtime.h>
 #include <openpfc/gpu/kernels_simple.hpp>
@@ -89,4 +89,4 @@ void multiply_scalar(GPUVector<double> &vec, double value) {
 } // namespace gpu
 } // namespace pfc
 
-#endif // OPENPFC_ENABLE_CUDA
+#endif // OpenPFC_ENABLE_CUDA

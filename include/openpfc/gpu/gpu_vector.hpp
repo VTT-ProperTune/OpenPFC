@@ -18,10 +18,10 @@
  * - Copy semantics disabled (would require deep copy)
  *
  * This header must compile on systems without CUDA (e.g., AMD systems).
- * CUDA-specific code is guarded with #ifdef OPENPFC_ENABLE_CUDA.
+ * CUDA-specific code is guarded with #ifdef OpenPFC_ENABLE_CUDA.
  *
  * @code
- * #ifdef OPENPFC_ENABLE_CUDA
+ * #ifdef OpenPFC_ENABLE_CUDA
  *     pfc::gpu::GPUVector<double> vec(100);
  *     std::vector<double> host_data(100, 1.0);
  *     vec.copy_from_host(host_data);
@@ -45,7 +45,7 @@
 #include <vector>
 
 // Only include CUDA headers if CUDA is enabled
-#if defined(OPENPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
 #define PFC_GPU_CUDA_AVAILABLE 1
 #else
@@ -68,7 +68,7 @@ namespace gpu {
  *       at runtime (or compile-time if properly guarded).
  *
  * @warning Do not use this class directly on systems without CUDA.
- *          Always check OPENPFC_ENABLE_CUDA before using.
+ *          Always check OpenPFC_ENABLE_CUDA before using.
  */
 template <typename T> class GPUVector {
 private:
@@ -89,7 +89,7 @@ public:
    * @throws std::runtime_error if GPU memory allocation fails
    *
    * @note On systems without CUDA, this will throw at runtime.
-   *       Always guard usage with #ifdef OPENPFC_ENABLE_CUDA.
+   *       Always guard usage with #ifdef OpenPFC_ENABLE_CUDA.
    */
   explicit GPUVector(size_t size) : m_size(size) {
 #if PFC_GPU_CUDA_AVAILABLE

@@ -17,7 +17,7 @@ add_subdirectory(integration)
 
 # Add GPU tests if CUDA is enabled AND available
 # This will be skipped on AMD systems or systems without CUDA
-if(OPENPFC_ENABLE_CUDA AND OPENPFC_CUDA_AVAILABLE)
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_subdirectory(unit/gpu)
 endif()
 

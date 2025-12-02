@@ -6,9 +6,9 @@
 
 // Only include CUDA headers if CUDA is enabled at compile time
 // Note: This header must compile on AMD systems (no CUDA headers available)
-// On AMD systems, OPENPFC_ENABLE_CUDA will not be defined, so this is safe
-#if defined(OPENPFC_ENABLE_CUDA)
-// CMake only defines OPENPFC_ENABLE_CUDA if CUDA was actually found
+// On AMD systems, OpenPFC_ENABLE_CUDA will not be defined, so this is safe
+#if defined(OpenPFC_ENABLE_CUDA)
+// CMake only defines OpenPFC_ENABLE_CUDA if CUDA was actually found
 // So if we're here, CUDA headers should be available
 #include <cuda_runtime.h>
 #define PFC_GPU_CUDA_HEADERS_AVAILABLE 1
@@ -25,7 +25,7 @@ namespace test {
  * @brief Check if CUDA is available at runtime
  *
  * Returns true only if:
- * 1. CUDA was enabled at compile time (OPENPFC_ENABLE_CUDA defined)
+ * 1. CUDA was enabled at compile time (OpenPFC_ENABLE_CUDA defined)
  * 2. CUDA runtime is available
  * 3. At least one CUDA device is present
  *

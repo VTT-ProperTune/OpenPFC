@@ -13,7 +13,7 @@
  * On systems without CUDA, these functions will not be compiled.
  *
  * @code
- * #ifdef OPENPFC_ENABLE_CUDA
+ * #ifdef OpenPFC_ENABLE_CUDA
  *     pfc::gpu::GPUVector<double> vec(1000);
  *     // ... initialize vec ...
  *     pfc::gpu::add_scalar(vec, 10.0);  // Add 10.0 to each element
@@ -42,7 +42,7 @@ namespace gpu {
  *
  * @throws std::runtime_error if CUDA kernel launch fails
  *
- * @note Only available when OPENPFC_ENABLE_CUDA is defined.
+ * @note Only available when OpenPFC_ENABLE_CUDA is defined.
  *       On systems without CUDA, this function will not be compiled.
  */
 void add_scalar(GPUVector<double> &vec, double value);
@@ -57,7 +57,7 @@ void add_scalar(GPUVector<double> &vec, double value);
  *
  * @throws std::runtime_error if CUDA kernel launch fails
  *
- * @note Only available when OPENPFC_ENABLE_CUDA is defined.
+ * @note Only available when OpenPFC_ENABLE_CUDA is defined.
  */
 void multiply_scalar(GPUVector<double> &vec, double value);
 

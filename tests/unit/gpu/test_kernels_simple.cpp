@@ -13,7 +13,7 @@
 
 using Catch::Approx;
 
-#if defined(OPENPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
 #endif
 

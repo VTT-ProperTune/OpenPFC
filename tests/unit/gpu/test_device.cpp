@@ -15,8 +15,8 @@ TEST_CASE("GPU device detection", "[gpu][device]") {
 }
 
 // Only compile CUDA-specific tests if CUDA is enabled
-// CMake only defines OPENPFC_ENABLE_CUDA if CUDA was found
-#if defined(OPENPFC_ENABLE_CUDA)
+// CMake only defines OpenPFC_ENABLE_CUDA if CUDA was found
+#if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
 
 TEST_CASE("GPU memory allocation", "[gpu][memory]") {
