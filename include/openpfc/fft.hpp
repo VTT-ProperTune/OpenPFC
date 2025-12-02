@@ -230,6 +230,10 @@ struct IFFT {
  *
  * @tparam BackendTag HeFFTe backend tag (heffte::backend::fftw or
  * heffte::backend::cufft)
+ *
+ * @note Precision (float/double) is determined by the data types passed to
+ *       forward() and backward() methods, not by template parameters.
+ *       HeFFTe automatically handles precision based on input/output types.
  */
 template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
 
@@ -240,10 +244,12 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   const fft_type m_fft;    /**< HeFFTe FFT object. */
   double m_fft_time = 0.0; /**< Recorded FFT computation time. */
 
-  // Backend-aware workspace - use HeFFTe's buffer_container
+  // Backend-aware workspace - precision determined by data types in forward/backward
+  // calls Default to double precision workspace (can be overridden per call)
   using workspace_type = typename heffte::fft3d_r2c<
       BackendTag>::template buffer_container<std::complex<double>>;
-  workspace_type m_wrk; /**< Workspace vector for FFT computations. */
+  workspace_type
+      m_wrk; /**< Workspace vector for FFT computations (double precision). */
 
   /**
    * @brief Constructs an FFT object with the given HeFFTe FFT object
@@ -287,15 +293,18 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
    * @see size_inbox() for input size
    * @see size_outbox() for output size
    */
-  // Forward method using DataBuffer (backend-aware)
-  template <typename RealBackendTag, typename ComplexBackendTag>
-  void forward(const core::DataBuffer<RealBackendTag, double> &in,
-               core::DataBuffer<ComplexBackendTag, std::complex<double>> &out) {
+  // Forward method using DataBuffer (backend-aware, precision-aware via template)
+  template <typename RealBackendTag, typename ComplexBackendTag, typename RealType>
+  void forward(const core::DataBuffer<RealBackendTag, RealType> &in,
+               core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &out) {
     static_assert(std::is_same_v<RealBackendTag, ComplexBackendTag>,
                   "Input and output must use the same backend");
     m_fft_time -= MPI_Wtime();
-    // HeFFTe's forward method accepts raw pointers for both CPU and GPU backends
-    m_fft.forward(in.data(), out.data(), m_wrk.data());
+    // HeFFTe's forward method is templated on input/output types and handles
+    // precision automatically Create workspace with matching precision
+    auto wrk = typename heffte::fft3d_r2c<BackendTag>::template buffer_container<
+        std::complex<RealType>>(m_fft.size_workspace());
+    m_fft.forward(in.data(), out.data(), wrk.data());
     m_fft_time += MPI_Wtime();
   }
 
@@ -358,15 +367,19 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
    * @see size_inbox() for output size
    * @see size_outbox() for input size
    */
-  // Backward method using DataBuffer (backend-aware)
-  template <typename ComplexBackendTag, typename RealBackendTag>
-  void backward(const core::DataBuffer<ComplexBackendTag, std::complex<double>> &in,
-                core::DataBuffer<RealBackendTag, double> &out) {
+  // Backward method using DataBuffer (backend-aware, precision-aware via template)
+  template <typename ComplexBackendTag, typename RealBackendTag, typename RealType>
+  void
+  backward(const core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &in,
+           core::DataBuffer<RealBackendTag, RealType> &out) {
     static_assert(std::is_same_v<ComplexBackendTag, RealBackendTag>,
                   "Input and output must use the same backend");
     m_fft_time -= MPI_Wtime();
-    // HeFFTe's backward method accepts raw pointers for both CPU and GPU backends
-    m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
+    // HeFFTe's backward method is templated on input/output types and handles
+    // precision automatically Create workspace with matching precision
+    auto wrk = typename heffte::fft3d_r2c<BackendTag>::template buffer_container<
+        std::complex<RealType>>(m_fft.size_workspace());
+    m_fft.backward(in.data(), out.data(), wrk.data(), heffte::scale::full);
     m_fft_time += MPI_Wtime();
   }
 
@@ -428,7 +441,8 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   size_t size_workspace() const { return m_fft.size_workspace(); }
 };
 
-// Type alias for backward compatibility (defaults to FFTW backend)
+// Type aliases for backward compatibility (defaults to FFTW backend)
+// Precision is handled by data types, not template parameters
 using FFT = FFT_Impl<heffte::backend::fftw>;
 
 // Helper functions
@@ -457,6 +471,9 @@ using layout::FFTLayout;
  * @param rank_id The rank ID of the current process in the MPI communicator.
  * @param options Plan options for configuring the FFT behavior.
  * @return An FFT object containing the FFT configuration and data.
+ *
+ * @note Precision (float/double) is determined by data types passed to
+ * forward/backward methods.
  */
 FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options);
 
@@ -467,6 +484,9 @@ FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options);
  * decomposition.
  * @param rank_id The rank ID of the current process in the MPI communicator.
  * @return An FFT object containing the FFT configuration and data.
+ *
+ * @note Precision (float/double) is determined by data types passed to
+ * forward/backward methods.
  */
 FFT create(const Decomposition &decomposition, int rank_id);
 
@@ -477,6 +497,9 @@ FFT create(const Decomposition &decomposition, int rank_id);
  * decomposition.
  * @return An FFT object containing the FFT configuration and data.
  * @throws std::logic_error, if decomposition size and rank size do not match.
+ *
+ * @note Precision (float/double) is determined by data types passed to
+ * forward/backward methods.
  */
 FFT create(const Decomposition &decomposition);
 
