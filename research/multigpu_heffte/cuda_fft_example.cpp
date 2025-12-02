@@ -90,8 +90,27 @@ int main(int argc, char **argv) {
   if (heffte::gpu::device_count() > 0) {
     int device_id = my_rank % heffte::gpu::device_count();
     heffte::gpu::device_set(device_id);
+
+    // Verify we're on the correct device and get device properties
+    int current_device;
+    cudaGetDevice(&current_device);
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, current_device);
+
+    // Format UUID
+    char uuid_str[64];
+    snprintf(uuid_str, sizeof(uuid_str),
+             "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+             prop.uuid.bytes[0], prop.uuid.bytes[1], prop.uuid.bytes[2],
+             prop.uuid.bytes[3], prop.uuid.bytes[4], prop.uuid.bytes[5],
+             prop.uuid.bytes[6], prop.uuid.bytes[7], prop.uuid.bytes[8],
+             prop.uuid.bytes[9], prop.uuid.bytes[10], prop.uuid.bytes[11],
+             prop.uuid.bytes[12], prop.uuid.bytes[13], prop.uuid.bytes[14],
+             prop.uuid.bytes[15]);
+
     std::cout << "Rank " << my_rank << " using GPU device " << device_id
-              << std::endl;
+              << " (verified: " << current_device << ")"
+              << " - " << prop.name << " [UUID: " << uuid_str << "]" << std::endl;
   } else {
     if (my_rank == 0) {
       std::cerr << "ERROR: No CUDA devices found!" << std::endl;
@@ -153,8 +172,26 @@ int main(int argc, char **argv) {
   }
 
   // Transfer input to GPU
+  // Verify GPU memory allocation on correct device
+  int device_before;
+  cudaGetDevice(&device_before);
+  size_t free_mem_before, total_mem_before;
+  cudaMemGetInfo(&free_mem_before, &total_mem_before);
+
   heffte::gpu::vector<std::complex<double>> gpu_input =
       heffte::gpu::transfer().load(input);
+
+  // Verify memory was allocated on correct device
+  int device_after;
+  cudaGetDevice(&device_after);
+  size_t free_mem_after, total_mem_after;
+  cudaMemGetInfo(&free_mem_after, &total_mem_after);
+  size_t mem_used = free_mem_before - free_mem_after;
+
+  std::cout << "Rank " << my_rank << " GPU " << device_after << " memory: used "
+            << mem_used / (1024 * 1024) << " MB"
+            << " (free: " << free_mem_after / (1024 * 1024) << " MB / "
+            << total_mem_after / (1024 * 1024) << " MB total)" << std::endl;
 
   // Allocate GPU memory for FFT output
   heffte::gpu::vector<std::complex<double>> gpu_output(fft.size_outbox());

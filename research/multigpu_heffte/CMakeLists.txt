@@ -10,8 +10,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(MPI REQUIRED)
 
 # Find HeFFTe from our custom installation
-# The HeffteConfig.cmake is located at ~/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte/
-set(Heffte_DIR "$ENV{HOME}/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte")
+# Option to use version without GPU-aware MPI for testing
+# Set environment variable: export HEFFTE_NO_GPU_AWARE=1
+if(DEFINED ENV{HEFFTE_NO_GPU_AWARE} AND $ENV{HEFFTE_NO_GPU_AWARE} EQUAL 1)
+    set(Heffte_DIR "$ENV{HOME}/opt/heffte/2.4.1-cuda-no-gpuaware/lib64/cmake/Heffte")
+    message(STATUS "Using HeFFTe WITHOUT GPU-aware MPI (for testing)")
+else()
+    set(Heffte_DIR "$ENV{HOME}/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte")
+    message(STATUS "Using HeFFTe WITH GPU-aware MPI (default)")
+endif()
 find_package(Heffte 2.4.1 REQUIRED PATHS ${Heffte_DIR})
 
 # Print information about found HeFFTe

@@ -105,7 +105,10 @@ mpirun -np 2 ./cuda_fft_example
 
 **Note:** 
 - **Single GPU (1 MPI rank) works fine** - verified locally ✓
-- **Multi-GPU (2+ MPI ranks) fails** - requires GPU-aware MPI support which is not available in the current OpenMPI installation
+- **Multi-GPU (2+ MPI ranks) works** - verified on cluster with GPU-aware MPI disabled ✓
+  - Without GPU-aware MPI: HeFFTe automatically transfers data to CPU for MPI communication, then back to GPU
+  - This works but is slower than GPU-aware MPI
+  - To use this mode, rebuild with `HEFFTE_NO_GPU_AWARE=1` (see instructions below)
 
 ### Implementation Details
 
@@ -228,8 +231,72 @@ grep -i "GPU_AWARE" ~/dev/heffte/build_2.4.1_cuda/configured/summary.txt
    - This causes segmentation faults in multi-GPU scenarios when HeFFTe tries to use GPU-aware MPI for inter-GPU communication
    - Single GPU operations work fine, but multi-GPU requires GPU-aware MPI support
 
+### Testing Multi-GPU Without GPU-Aware MPI
+
+**Status: ✓ CONFIRMED - Multi-GPU works without GPU-aware MPI!**
+
+We successfully tested HeFFTe with 2 GPUs on the cluster. Without GPU-aware MPI, HeFFTe automatically transfers data to CPU for MPI communication, then back to GPU. This works but is slower than GPU-aware MPI.
+
+**To test multi-GPU (already done, but here's how to repeat):**
+
+1. **Rebuild HeFFTe without GPU-aware MPI** (if not already done):
+   ```bash
+   cd ~/dev/heffte
+   mkdir -p build_2.4.1_cuda_no_gpuaware
+   cd build_2.4.1_cuda_no_gpuaware
+   module load cuda
+   cmake .. \
+     -DCMAKE_INSTALL_PREFIX=~/opt/heffte/2.4.1-cuda-no-gpuaware \
+     -DHeffte_ENABLE_FFTW=ON \
+     -DHeffte_ENABLE_CUDA=ON \
+     -DHeffte_ENABLE_GPU_AWARE_MPI=OFF \
+     -DCMAKE_BUILD_TYPE=Release
+   make -j$(nproc)
+   make install
+   ```
+
+2. **Rebuild the example with the non-GPU-aware version:**
+   ```bash
+   cd research/multigpu_heffte/build
+   export HEFFTE_NO_GPU_AWARE=1
+   cmake ..
+   make
+   ```
+
+3. **Submit job for 2 GPU test:**
+   ```bash
+   cd research/multigpu_heffte
+   sbatch run_2gpu_test.sh
+   ```
+
+**Test Results:**
+- ✓ Job completed successfully (ExitCode: 0:0)
+- ✓ 2 MPI ranks running on 2 different GPUs (GPU 0 and GPU 1)
+- ✓ Domain decomposition working: Rank 0 handles z=[0,31], Rank 1 handles z=[32,63]
+- ✓ Forward FFT completed
+- ✓ Laplacian operator applied in Fourier domain
+- ✓ No segmentation faults
+
+**Performance Note:** Without GPU-aware MPI, data is transferred CPU↔GPU for MPI communication, which adds overhead. For production use, GPU-aware MPI would be preferred for better performance.
+
+### Checking GPU-Aware MPI Status
+
+**Check OpenMPI GPU-aware support:**
+```bash
+ompi_info --parsable --all | grep mpi_built_with_cuda_support:value
+```
+
+**Check HeFFTe GPU-aware MPI configuration:**
+```bash
+# Current build (with GPU-aware MPI)
+grep -i "GPU_AWARE" ~/dev/heffte/build_2.4.1_cuda/CMakeCache.txt
+
+# Test build (without GPU-aware MPI)
+grep -i "GPU_AWARE" ~/dev/heffte/build_2.4.1_cuda_no_gpuaware/CMakeCache.txt
+```
+
 ### Next Steps
 
 - Create a more complex demo that uses multiple GPU cards
 - Reference examples from `~/dev/heffte/examples/` to understand how to implement multi-GPU usage in practice
-- Verify GPU-aware MPI support before attempting multi-GPU runs
+- Test multi-GPU performance with and without GPU-aware MPI
