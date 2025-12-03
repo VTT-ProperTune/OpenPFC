@@ -1,0 +1,70 @@
+{
+    "model": {
+        "name": "tungsten",
+        "params": {
+            "n0": -0.10,
+            "alpha": 0.50,
+            "n_sol": -0.047,
+            "n_vap": -0.464,
+            "T": 3300.0,
+            "T0": 156000.0,
+            "Bx": 0.8582,
+            "alpha_farTol": 0.001,
+            "alpha_highOrd": 4,
+            "lambda": 0.22,
+            "stabP": 0.2,
+            "shift_u": 0.3341,
+            "shift_s": 0.1898,
+            "p2": 1.0,
+            "p3": -0.5,
+            "p4": 0.333333333,
+            "q20": -0.0037,
+            "q21": 1.0,
+            "q30": -12.4567,
+            "q31": 20.0,
+            "q40": 45.0
+        }
+    },
+    "domain": {
+        "Lx": 256,
+        "Ly": 256,
+        "Lz": 256,
+        "dx": 1.1107207345395915,
+        "dy": 1.1107207345395915,
+        "dz": 1.1107207345395915,
+        "origin": "center"
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 100.0,
+        "dt": 1.0,
+        "saveat": 10.0
+    },
+    "fields": [
+        {
+            "name": "psi",
+            "data": "./results/psi_%04d.vti"
+        }
+    ],
+    "initial_conditions": [
+        {
+            "target": "psi",
+            "type": "constant",
+            "n0": -0.4
+        },
+        {
+            "target": "psi",
+            "type": "single_seed",
+            "amp_eq": 0.215936,
+            "rho_seed": -0.047
+        }
+    ],
+    "boundary_conditions": [
+        {
+            "target": "psi",
+            "type": "fixed",
+            "rho_low": -0.464,
+            "rho_high": -0.100
+        }
+    ]
+}
