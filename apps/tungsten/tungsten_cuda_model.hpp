@@ -30,6 +30,8 @@
 
 #include "tungsten_ops.hpp"
 #include "tungsten_params.hpp"
+#include <cuda.h> // For CUDA events
+#include <cuda_runtime.h>
 #include <memory>
 #include <openpfc/constants.hpp>
 #include <openpfc/core/backend_tags.hpp>
@@ -91,6 +93,15 @@ private:
   core::DataBuffer<backend::CudaTag, std::complex<RealType>>
       psiN_F;               ///< Nonlinear term in Fourier space
   size_t mem_allocated = 0; ///< Memory allocated (for debugging)
+
+  // CPU-side buffers for FieldModifiers and VTKWriter
+  // These mirror GPU data and are synchronized when needed
+  RealField m_psi_cpu;     ///< CPU copy of psi for FieldModifiers/VTKWriter
+  bool m_cpu_buffer_valid; ///< Whether CPU buffer is up-to-date
+
+  // CUDA events for non-blocking synchronization
+  cudaEvent_t kernel_done_event; ///< Event to track kernel completion
+  cudaEvent_t fft_ready_event;   ///< Event to track FFT readiness
 
 public:
   /**
@@ -174,8 +185,7 @@ public:
    * @brief Allocate memory for fields and operators
    *
    * Resizes all field arrays based on FFT inbox/outbox sizes.
-   * Note: GPU version does not register fields with Model base class
-   * (Model expects std::vector references).
+   * Also allocates CPU-side buffers for FieldModifiers and VTKWriter.
    */
   void allocate() {
     auto &fft = get_cuda_fft();
@@ -198,6 +208,14 @@ public:
         core::DataBuffer<backend::CudaTag, std::complex<RealType>>(size_outbox);
     psiN_F = core::DataBuffer<backend::CudaTag, std::complex<RealType>>(size_outbox);
 
+    // Allocate CPU-side buffer for FieldModifiers and VTKWriter
+    m_psi_cpu.resize(size_inbox);
+    m_cpu_buffer_valid = false;
+
+    // Register CPU buffer with Model base class for FieldModifier access
+    // FieldModifiers will modify m_psi_cpu, then we sync back to GPU
+    Model::add_field("psi", m_psi_cpu);
+
     // Track memory usage
     mem_allocated = 0;
     mem_allocated += filterMF.size() * sizeof(RealType);
@@ -212,6 +230,30 @@ public:
   }
 
   /**
+   * @brief Sync GPU data to CPU buffer
+   *
+   * Copies psi from GPU to CPU buffer. Used before applying FieldModifiers
+   * or writing VTK output.
+   */
+  void sync_gpu_to_cpu() {
+    if (!m_cpu_buffer_valid) {
+      m_psi_cpu = psi.to_host();
+      m_cpu_buffer_valid = true;
+    }
+  }
+
+  /**
+   * @brief Sync CPU buffer to GPU
+   *
+   * Copies modified CPU buffer back to GPU. Called after FieldModifiers
+   * have modified the CPU buffer.
+   */
+  void sync_cpu_to_gpu() {
+    psi.copy_from_host(m_psi_cpu);
+    m_cpu_buffer_valid = false; // GPU is now the source of truth
+  }
+
+  /**
    * @brief Precompute time integration operators in k-space
    *
    * Computes operators on CPU and transfers to GPU.
@@ -222,7 +264,6 @@ public:
   void prepare_operators(double dt) {
     auto &fft = get_cuda_fft();
     auto &world = get_world();
-    auto [dx, dy, dz] = get_spacing(world);
     auto [Lx, Ly, Lz] = get_size(world);
 
     auto outbox = get_outbox(fft);
@@ -349,14 +390,20 @@ public:
 
     // Step 1: Calculate mean-field density n_MF
     // Forward FFT: ψ → ψ̂
+    // Wait for any previous operations using event (non-blocking if possible)
+    cudaEventSynchronize(kernel_done_event);
     fft.forward(psi, psi_F);
 
     // Apply mean-field filter in Fourier space: ψ̂_MF = χ(k) · ψ̂
-    // Uses GPU kernel via backend-agnostic operation
+    // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
     tungsten::ops::multiply_complex_real<backend::CudaTag, RealType>(psi_F, filterMF,
                                                                      psiMF_F);
+    // Record event after kernel launch (kernels run on default stream)
+    cudaEventRecord(kernel_done_event, 0);
 
     // Inverse FFT: ψ̂_MF → ψ_MF
+    // Wait for kernel to complete using event
+    cudaEventSynchronize(kernel_done_event);
     fft.backward(psiMF_F, psiMF);
 
     // Step 2: Calculate nonlinear part in real space
@@ -366,28 +413,36 @@ public:
     double q3_bar = params.get_q3_bar();
     double q4_bar = params.get_q4_bar();
 
-    // Uses GPU kernel via backend-agnostic operation
+    // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
     tungsten::ops::compute_nonlinear<backend::CudaTag, RealType>(
         psi, psiMF, p3_bar, p4_bar, q3_bar, q4_bar, psiN);
 
     // Step 3: Apply stabilization factor if given
     double stabP = params.get_stabP();
     if (stabP != 0.0) {
-      // Uses GPU kernel via backend-agnostic operation
+      // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
       tungsten::ops::apply_stabilization<backend::CudaTag, RealType>(psiN, psi,
                                                                      stabP, psiN);
     }
+    // Record event after all kernels in this sequence complete
+    cudaEventRecord(kernel_done_event, 0);
 
     // Step 4: Transform nonlinear term to Fourier space
+    // Wait for kernels to complete using event
+    cudaEventSynchronize(kernel_done_event);
     fft.forward(psiN, psiN_F);
 
     // Step 5: Apply exponential time integration in Fourier space
     // ψ̂(t+Δt) = L(k)·ψ̂(t) + N(k)·N̂[ψ, ψ_MF]
-    // Uses GPU kernel via backend-agnostic operation
+    // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
     tungsten::ops::apply_time_integration<backend::CudaTag, RealType>(
         psi_F, psiN_F, opL, opN, psi_F);
+    // Record event after kernel launch
+    cudaEventRecord(kernel_done_event, 0);
 
     // Step 6: Transform back to real space
+    // Wait for kernel to complete using event
+    cudaEventSynchronize(kernel_done_event);
     fft.backward(psi_F, psi);
 
     // Note: NaN checking for GPU would require transferring data to CPU
@@ -399,13 +454,51 @@ public:
    *
    * @param world The World object defining the simulation domain
    */
-  explicit TungstenCUDA(const World &world) : Model(world) {
-    // Additional initialization if needed
+  explicit TungstenCUDA(const World &world)
+      : Model(world), m_cpu_buffer_valid(false) {
+    // Create CUDA events for non-blocking synchronization
+    cudaEventCreate(&kernel_done_event);
+    cudaEventCreate(&fft_ready_event);
+  }
+
+  /**
+   * @brief Destructor - cleans up CUDA events
+   */
+  ~TungstenCUDA() {
+    cudaEventDestroy(kernel_done_event);
+    cudaEventDestroy(fft_ready_event);
   }
 
   // Accessors for fields (for testing/debugging)
   core::DataBuffer<backend::CudaTag, RealType> &get_psi() { return psi; }
   core::DataBuffer<backend::CudaTag, RealType> &get_psiMF() { return psiMF; }
+
+  /**
+   * @brief Prepare for FieldModifier application
+   *
+   * Syncs GPU data to CPU buffer so FieldModifiers can access it.
+   * Call this before applying initial/boundary conditions.
+   */
+  void prepare_for_field_modifiers() { sync_gpu_to_cpu(); }
+
+  /**
+   * @brief Finalize after FieldModifier application
+   *
+   * Syncs modified CPU buffer back to GPU.
+   * Call this after applying initial/boundary conditions.
+   */
+  void finalize_after_field_modifiers() { sync_cpu_to_gpu(); }
+
+  /**
+   * @brief Get CPU copy of psi field for VTKWriter
+   *
+   * Syncs GPU to CPU and returns reference to CPU buffer.
+   * Used by VTKWriter to write results.
+   */
+  RealField &get_psi_for_writer() {
+    sync_gpu_to_cpu();
+    return m_psi_cpu;
+  }
 };
 
 // Type aliases for convenience
