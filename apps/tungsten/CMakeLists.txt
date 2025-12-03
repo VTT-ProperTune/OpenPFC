@@ -41,6 +41,24 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   
   install(TARGETS tungsten_cuda DESTINATION bin)
   message(STATUS "Tungsten CUDA version enabled")
+  
+  # Test program for CUDA with VTK output
+  add_executable(test_tungsten_cuda_vtk 
+    test_tungsten_cuda_vtk.cpp
+    tungsten_ops_kernels.cu
+  )
+  target_link_libraries(test_tungsten_cuda_vtk PRIVATE 
+    OpenPFC 
+    nlohmann_json::nlohmann_json 
+    Heffte::Heffte 
+    CUDA::cudart
+  )
+  set_target_properties(test_tungsten_cuda_vtk PROPERTIES
+    CUDA_STANDARD 17
+    CUDA_STANDARD_REQUIRED ON
+    CUDA_SEPARABLE_COMPILATION ON
+  )
+  message(STATUS "Tungsten CUDA VTK test program enabled")
 endif()
 
 option(TUNGSTEN_ENABLE_TESTS "Enable building Tungsten tests" ON)
