@@ -13,6 +13,7 @@ add_library(openpfc
     src/openpfc/factory/decomposition_factory.cpp
     src/openpfc/fft.cpp
     src/openpfc/ui_errors.cpp
+    src/openpfc/results_writers/vtk_writer.cpp
     $<$<BOOL:${OpenPFC_ENABLE_CUDA}>:src/openpfc/fft_cuda.cpp>
     # Add more .cpp files as you go
 )
