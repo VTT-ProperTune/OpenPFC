@@ -50,8 +50,8 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id) {
 
   // Create cuFFT-based FFT (precision determined by data types in forward/backward
   // calls)
-  using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
-  fft_r2c_cuda fft_cuda(inbox, outbox, r2c_direction, comm, options);
+  using fft_r2c_cuda_type = heffte::fft3d_r2c<heffte::backend::cufft>;
+  fft_r2c_cuda_type fft_cuda(inbox, outbox, r2c_direction, comm, options);
 
   // Return GPU FFT object
   return FFT_CUDA(std::move(fft_cuda));
