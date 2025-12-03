@@ -189,8 +189,8 @@ public:
           double alpha2 = 2.0 * params.alpha * params.alpha;
           double lambda2 = 2.0 * params.lambda * params.lambda;
           double fMF = exp(kLap / lambda2);
-          double k = sqrt(-kLap) - 1.0;
-          double k2 = k * k;
+          double k_wave = sqrt(-kLap) - 1.0;
+          double k2 = k_wave * k_wave;
 
           double kp = sqrt(-kLap) - 2.0 / sqrt(3.0);
           double kp2 = kp * kp;
@@ -285,8 +285,8 @@ public:
 
     // Apply stabilization factor if given in parameters
     if (params.stabP != 0.0) {
-      for (size_t idx = 0, N = psiN.size(); idx < N; idx++) {
-        psiN[idx] = psiN[idx] - params.stabP * psi[idx];
+      for (size_t i = 0, N = psiN.size(); i < N; i++) {
+        psiN[i] = psiN[i] - params.stabP * psi[i];
       }
     }
 
@@ -294,8 +294,8 @@ public:
     fft.forward(psiN, psiN_F);
 
     // Apply one step of the evolution equation
-    for (size_t idx = 0, N = psi_F.size(); idx < N; idx++) {
-      psi_F[idx] = opL[idx] * psi_F[idx] + opN[idx] * psiN_F[idx];
+    for (size_t i = 0, N = psi_F.size(); i < N; i++) {
+      psi_F[i] = opL[i] * psi_F[i] + opN[i] * psiN_F[i];
     }
 
     // Inverse Fourier transform result back to real space
