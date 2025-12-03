@@ -66,6 +66,61 @@ git commit -m "test"
 git commit --no-verify -m "emergency fix"
 ```
 
+## Build Scripts
+
+### build_cuda.sh
+
+**Purpose**: Automated build script for OpenPFC with optional CUDA support.
+
+**Usage**:
+```bash
+# Build with CUDA support (default)
+./scripts/build_cuda.sh
+
+# Build without CUDA
+./scripts/build_cuda.sh --no-cuda
+
+# Build Release with custom job count
+./scripts/build_cuda.sh --build-type Release --jobs 16
+
+# Build without cleaning first
+./scripts/build_cuda.sh --no-clean
+```
+
+**What it does**:
+- Automatically loads required modules (`cuda`, `openmpi/4.1.1`)
+- Sets correct compiler paths (GCC 11.2.0)
+- Selects appropriate HeFFTe version (2.4.1 for CPU, 2.4.1-cuda for GPU)
+- Configures CMake with correct options
+- Builds with specified number of parallel jobs
+- Provides clear status messages and error handling
+
+**Key Features**:
+- ✅ Handles module loading automatically
+- ✅ Correctly sets compiler paths (fixes CMake auto-detection issues)
+- ✅ Selects HeFFTe version based on CUDA enablement
+- ✅ Cleans build directory by default (use `--no-clean` to skip)
+- ✅ Works on both AMD (no CUDA) and NVIDIA (with CUDA) systems
+
+**Options**:
+- `--build-type TYPE`: Debug or Release (default: Debug)
+- `--cuda` / `--no-cuda`: Enable/disable CUDA (default: enabled)
+- `--jobs N, -j N`: Number of parallel build jobs (default: 8)
+- `--no-clean`: Don't clean build directory before building
+- `--help, -h`: Show help message
+
+**Examples**:
+```bash
+# Standard CUDA build
+./scripts/build_cuda.sh
+
+# CPU-only build
+./scripts/build_cuda.sh --no-cuda
+
+# Release build with 16 jobs
+./scripts/build_cuda.sh --build-type Release -j 16
+```
+
 ## Other Scripts
 
 ### xdmfgen.py
