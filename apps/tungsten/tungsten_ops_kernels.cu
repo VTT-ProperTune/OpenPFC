@@ -135,8 +135,11 @@ template __global__ void apply_time_integration_kernel_impl<float>(
     cuFloatComplex *, size_t);
 
 // Helper function to launch kernels with appropriate grid/block sizes
+// Optimized for modern GPUs (H100): use larger block size for better occupancy
 inline void launch_kernel(size_t n, int &blocks, int &threads_per_block) {
-  threads_per_block = 256;
+  // Use 512 threads per block for better GPU utilization on H100
+  // This improves occupancy and memory bandwidth utilization
+  threads_per_block = 512;
   blocks = (static_cast<int>(n) + threads_per_block - 1) / threads_per_block;
 }
 
@@ -172,17 +175,14 @@ void TungstenOps<pfc::backend::CudaTag, double>::multiply_complex_real_impl(
   detail::multiply_complex_real_kernel_impl<double>
       <<<blocks, threads_per_block>>>(a_ptr, b_ptr, out_ptr, N);
 
+  // Only check for launch errors, don't synchronize
+  // Synchronization will happen implicitly when needed (e.g., before FFT or MPI)
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
     throw std::runtime_error("CUDA kernel launch failed (multiply_complex_real): " +
                              std::string(cudaGetErrorString(err)));
   }
-
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA kernel execution failed (multiply_complex_real): " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, double>::compute_nonlinear_impl(
@@ -209,12 +209,7 @@ void TungstenOps<pfc::backend::CudaTag, double>::compute_nonlinear_impl(
     throw std::runtime_error("CUDA kernel launch failed (compute_nonlinear): " +
                              std::string(cudaGetErrorString(err)));
   }
-
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA kernel execution failed (compute_nonlinear): " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, double>::apply_stabilization_impl(
@@ -241,12 +236,7 @@ void TungstenOps<pfc::backend::CudaTag, double>::apply_stabilization_impl(
     throw std::runtime_error("CUDA kernel launch failed (apply_stabilization): " +
                              std::string(cudaGetErrorString(err)));
   }
-
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA kernel execution failed (apply_stabilization): " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, double>::apply_time_integration_impl(
@@ -283,12 +273,7 @@ void TungstenOps<pfc::backend::CudaTag, double>::apply_time_integration_impl(
     throw std::runtime_error("CUDA kernel launch failed (apply_time_integration): " +
                              std::string(cudaGetErrorString(err)));
   }
-
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA kernel execution failed (apply_time_integration): " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
 }
 
 // CUDA specialization for float precision - implement methods
@@ -319,12 +304,7 @@ void TungstenOps<pfc::backend::CudaTag, float>::multiply_complex_real_impl(
     throw std::runtime_error("CUDA kernel launch failed (multiply_complex_real): " +
                              std::string(cudaGetErrorString(err)));
   }
-
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA kernel execution failed (multiply_complex_real): " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, float>::compute_nonlinear_impl(
@@ -351,12 +331,7 @@ void TungstenOps<pfc::backend::CudaTag, float>::compute_nonlinear_impl(
     throw std::runtime_error("CUDA kernel launch failed (compute_nonlinear): " +
                              std::string(cudaGetErrorString(err)));
   }
-
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA kernel execution failed (compute_nonlinear): " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, float>::apply_stabilization_impl(
@@ -383,12 +358,7 @@ void TungstenOps<pfc::backend::CudaTag, float>::apply_stabilization_impl(
     throw std::runtime_error("CUDA kernel launch failed (apply_stabilization): " +
                              std::string(cudaGetErrorString(err)));
   }
-
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA kernel execution failed (apply_stabilization): " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, float>::apply_time_integration_impl(
@@ -425,12 +395,7 @@ void TungstenOps<pfc::backend::CudaTag, float>::apply_time_integration_impl(
     throw std::runtime_error("CUDA kernel launch failed (apply_time_integration): " +
                              std::string(cudaGetErrorString(err)));
   }
-
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA kernel execution failed (apply_time_integration): " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
 }
 
 } // namespace detail
