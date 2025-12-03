@@ -15,4 +15,9 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_constants.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_strong_types.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_databuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_sparse_vector.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_sparse_vector_comprehensive.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_sparse_vector_exchange.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_sparse_vector_neighbor_exchange.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_pattern.cpp
 )
