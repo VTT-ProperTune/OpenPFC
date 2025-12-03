@@ -295,7 +295,7 @@ public:
         double timing[2] = {l_steptime, l_fft_time};
         MPI_Send(timing, 2, MPI_DOUBLE, 0, 42, m_comm);
         if (m_worker.get_rank() == 0) {
-          int num_ranks = m_worker.get_num_ranks();
+          // Use the num_ranks from outer scope (line 230) to avoid shadowing
           double all_timing[num_ranks][2];
           for (int rank = 0; rank < num_ranks; rank++) {
             MPI_Recv(all_timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm,
