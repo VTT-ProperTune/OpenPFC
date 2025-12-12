@@ -8,7 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 [![][doi-badge-img]][doi-badge-url]
 [![][docs-dev-img]][docs-dev-url]
 [![][releases-img]][releases-url]
-[![][GHA-img]][GHA-url]
+[![CI][ci-badge-img]][ci-badge-url]
+[![Documentation][docs-badge-img]][docs-badge-url]
+[![Coverage][coverage-badge-img]][coverage-badge-url]
 [![][license-img]][license-url]
 
 ![Screenshot of OpenPFC simulation result](docs/img/simulation.png)
@@ -620,10 +622,14 @@ CHECK_AND_ABORT_IF_NANS(psi);
 [docs-dev-url]: https://vtt-propertune.github.io/OpenPFC/dev/
 [releases-img]: https://img.shields.io/github/v/release/VTT-ProperTune/OpenPFC
 [releases-url]: https://github.com/VTT-ProperTune/OpenPFC/releases/latest
+[ci-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg
+[ci-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml
+[docs-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/Documentation/badge.svg
+[docs-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml
+[coverage-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/Coverage/badge.svg
+[coverage-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/coverage.yml
 [license-img]: https://img.shields.io/github/license/VTT-ProperTune/OpenPFC
 [license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/LICENSE
-[GHA-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg
-[GHA-url]: https://github.com/VTT-ProperTune/OpenPFC/actions?query=workflows/CI
 [doi-badge-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10799936.svg
 [doi-badge-url]: https://zenodo.org/doi/10.5281/zenodo.10799935
 [examples-url]: https://github.com/VTT-ProperTune/OpenPFC/tree/master/examples
