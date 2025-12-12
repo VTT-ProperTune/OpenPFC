@@ -16,10 +16,11 @@ endif()
 add_executable(aluminumNew aluminumNew.cpp)
 target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json)
 
+# Only build tests if tests are enabled for the parent project
 option(ALUMINUM_ENABLE_TESTS "Enable building Aluminum tests" ON)
 
-if(ALUMINUM_ENABLE_TESTS)
-    find_package(Catch2 REQUIRED)
+if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
+    find_package(Catch2 QUIET)
     if(TARGET Catch2::Catch2WithMain)
         add_executable(aluminumTest aluminumTest.cpp)
         target_link_libraries(aluminumTest OpenPFC nlohmann_json::nlohmann_json Catch2::Catch2WithMain)
@@ -27,7 +28,7 @@ if(ALUMINUM_ENABLE_TESTS)
         include(Catch)
         catch_discover_tests(aluminumTest)
     else()
-        message(WARNING "Aluminum: Catch2 not found, not building tests")
+        message(STATUS "Aluminum: Catch2 not found, not building tests")
     endif()
 endif()
 
