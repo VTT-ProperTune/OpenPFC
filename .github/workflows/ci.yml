@@ -1,0 +1,205 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: CI
+
+on:
+  push:
+    branches: [ "master", "main", "develop" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+# Cancel in-progress runs when a new workflow with the same group name starts
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Code Quality Checks
+  # ============================================================================
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check code formatting (clang-format)
+        uses: jidicula/clang-format-action@v4.11.0
+        with:
+          clang-format-version: '16'
+          check-path: '.'
+          exclude-regex: '(build|\.cache|extern|third[-_]party|doxygen-awesome-css)'
+
+      - name: Check REUSE compliance
+        uses: fsfe/reuse-action@v2
+
+  # ============================================================================
+  # Nix Build and Test
+  # ============================================================================
+  nix-check:
+    name: Nix Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v26
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Setup Cachix (optional, speeds up builds)
+        uses: cachix/cachix-action@v14
+        with:
+          name: openpfc
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          skipPush: ${{ github.event_name == 'pull_request' }}
+        continue-on-error: true
+
+      - name: Run Nix flake checks
+        run: nix flake check --print-build-logs
+
+      - name: Run tests (excluding benchmarks)
+        run: nix run .#test -- '~[benchmark]'
+
+  # ============================================================================
+  # CMake Build Matrix
+  # ============================================================================
+  build-and-test:
+    name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-20.04]
+        compiler: [gcc-11, gcc-13, clang-14, clang-16]
+        build_type: [Debug, Release]
+        exclude:
+          # Reduce matrix size - skip some combinations
+          - os: ubuntu-20.04
+            compiler: clang-16
+          - os: ubuntu-20.04
+            compiler: gcc-13
+          - build_type: Debug
+            compiler: clang-14
+        include:
+          # Add specific compiler versions for each
+          - compiler: gcc-11
+            cc: gcc-11
+            cxx: g++-11
+          - compiler: gcc-13
+            cc: gcc-13
+            cxx: g++-13
+          - compiler: clang-14
+            cc: clang-14
+            cxx: clang++-14
+          - compiler: clang-16
+            cc: clang-16
+            cxx: clang++-16
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ${{ matrix.cc }} \
+            ${{ matrix.cxx }} \
+            cmake \
+            ninja-build \
+            libopenmpi-dev \
+            openmpi-bin \
+            libfftw3-dev \
+            libfftw3-mpi-dev \
+            nlohmann-json3-dev
+
+      - name: Cache HeFFTe
+        id: cache-heffte
+        uses: actions/cache@v4
+        with:
+          path: ~/opt/heffte
+          key: heffte-2.4.0-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+
+      - name: Build and Install HeFFTe
+        if: steps.cache-heffte.outputs.cache-hit != 'true'
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          # Download HeFFTe
+          wget -q https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.0.tar.gz
+          tar xzf v2.4.0.tar.gz
+          
+          # Build HeFFTe
+          cmake -S heffte-2.4.0 -B heffte-build \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte \
+            -DHeffte_ENABLE_FFTW=ON \
+            -DBUILD_SHARED_LIBS=ON
+          
+          cmake --build heffte-build -j2
+          cmake --install heffte-build
+
+      - name: Configure OpenPFC
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          CMAKE_PREFIX_PATH: ${{ github.workspace }}/~/opt/heffte
+        run: |
+          cmake -S . -B build \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte \
+            -DOpenPFC_BUILD_TESTS=ON \
+            -DOpenPFC_BUILD_EXAMPLES=ON \
+            -DOpenPFC_BUILD_APPS=ON \
+            -DOpenPFC_BUILD_DOCUMENTATION=OFF
+
+      - name: Build OpenPFC
+        run: cmake --build build -j2
+
+      - name: Run Tests
+        working-directory: build
+        run: |
+          # Run tests with verbose output on failure
+          ctest --output-on-failure -j2 \
+            --exclude-regex "benchmark" \
+            --timeout 300
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+          path: build/Testing/Temporary/LastTest.log
+
+  # ============================================================================
+  # Status Check (required for merge)
+  # ============================================================================
+  ci-status:
+    name: CI Status
+    if: always()
+    needs: [code-quality, nix-check, build-and-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs status
+        run: |
+          if [[ "${{ needs.code-quality.result }}" != "success" ]]; then
+            echo "❌ Code quality checks failed"
+            exit 1
+          fi
+          if [[ "${{ needs.nix-check.result }}" != "success" ]]; then
+            echo "❌ Nix checks failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build-and-test.result }}" != "success" ]]; then
+            echo "❌ Build and test failed"
+            exit 1
+          fi
+          echo "✅ All CI checks passed"
