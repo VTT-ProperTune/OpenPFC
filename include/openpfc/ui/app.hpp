@@ -230,7 +230,13 @@ public:
     int num_ranks = m_worker.get_num_ranks();
     int rank_id = m_worker.get_rank();
     auto decomp = decomposition::create(world, num_ranks);
-    auto options = ui::from_json<heffte::plan_options>(m_settings["plan_options"]);
+    
+    // Create FFT with default FFTW backend for now
+    // Note: Runtime backend selection via create_with_backend() can be added when needed
+    auto options = m_settings.contains("plan_options") 
+                   ? ui::from_json<heffte::plan_options>(m_settings["plan_options"])
+                   : heffte::default_options<heffte::backend::fftw>();
+    
     auto fft_layout = fft::layout::create(decomp, 0);
     auto fft = fft::create(fft_layout, rank_id, options);
     Time time(ui::from_json<Time>(m_settings));
