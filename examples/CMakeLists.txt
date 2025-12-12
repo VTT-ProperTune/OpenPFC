@@ -1,6 +1,13 @@
 # SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+# FFT Backend Benchmark (requires MPI)
+add_executable(fft_backend_benchmark fft_backend_benchmark.cpp)
+target_link_libraries(fft_backend_benchmark PRIVATE OpenPFC)
+if(OpenPFC_ENABLE_CUDA)
+  target_compile_definitions(fft_backend_benchmark PRIVATE OpenPFC_ENABLE_CUDA)
+endif()
+
 # add_executable(01_hello_world 01_hello_world.cpp)
 # target_link_libraries(01_hello_world PRIVATE OpenPFC)
 
