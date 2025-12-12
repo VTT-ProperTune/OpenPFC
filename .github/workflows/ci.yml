@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Check code formatting (clang-format)
         uses: jidicula/clang-format-action@v4.11.0
@@ -44,6 +46,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Install Nix
         uses: cachix/install-nix-action@v26
@@ -103,6 +107,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Install dependencies (Ubuntu)
         run: |
