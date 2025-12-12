@@ -69,6 +69,9 @@ write = true
 filename = "timing_256.bin"
 
 [plan_options]
+# FFT backend selection: "fftw" (CPU) or "cuda" (GPU)
+# Default: "fftw"
+backend = "fftw"
 use_reorder = true
 reshape_algorithm = "p2p_plined"
 use_pencils = true
