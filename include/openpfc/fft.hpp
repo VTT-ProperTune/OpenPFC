@@ -51,6 +51,7 @@
 
 #include <heffte.h>
 #include <iostream>
+#include <memory>
 #include <mpi.h>
 
 namespace pfc {
@@ -502,6 +503,37 @@ FFT create(const Decomposition &decomposition, int rank_id);
  * forward/backward methods.
  */
 FFT create(const Decomposition &decomposition);
+
+/**
+ * @brief Creates an FFT object with runtime backend selection
+ *
+ * @param fft_layout The FFTLayout object defining the FFT configuration.
+ * @param rank_id The rank ID of the current process in the MPI communicator.
+ * @param options Plan options for configuring the FFT behavior.
+ * @param backend The FFT backend to use (FFTW, CUDA, etc.)
+ * @return A unique_ptr to IFFT interface for the selected backend
+ * @throws std::runtime_error if backend is not supported or not compiled in
+ *
+ * @note This function provides runtime polymorphism via the IFFT interface.
+ *       For compile-time selection with zero overhead, use create() directly.
+ */
+std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, 
+                                           int rank_id, 
+                                           plan_options options, 
+                                           Backend backend);
+
+/**
+ * @brief Creates an FFT object with runtime backend selection
+ *
+ * @param decomposition The Decomposition object defining the domain decomposition.
+ * @param rank_id The rank ID of the current process in the MPI communicator.
+ * @param backend The FFT backend to use (FFTW, CUDA, etc.)
+ * @return A unique_ptr to IFFT interface for the selected backend
+ * @throws std::runtime_error if backend is not supported or not compiled in
+ */
+std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition, 
+                                           int rank_id, 
+                                           Backend backend);
 
 } // namespace fft
 
