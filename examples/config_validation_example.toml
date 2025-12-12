@@ -1,0 +1,151 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Configuration Validation Example
+# 
+# This example demonstrates OpenPFC's comprehensive parameter validation system.
+# The validation system prevents silent failures by catching missing or invalid
+# parameters before the simulation starts.
+#
+# Try running with different configurations to see validation in action:
+# 1. Valid configuration (all parameters present and in range)
+# 2. Missing required parameter (e.g., comment out 'lambda')
+# 3. Out-of-range parameter (e.g., set stabP = 2.0)
+# 4. Wrong type (e.g., set T = "3300" as string)
+
+[model]
+name = "tungsten"
+
+# ============================================================================
+# Model Parameters - All 21 parameters are validated
+# ============================================================================
+[model.params]
+
+# --- Thermodynamic Parameters ---
+# These parameters define the phase diagram and thermodynamic state
+
+n0 = -0.10          # Average density of metastable fluid [-1.0, 0.0]
+n_sol = -0.047      # Bulk density at solid coexistence [-1.0, 0.0]
+n_vap = -0.464      # Bulk density at vapor coexistence [-1.0, 0.0]
+T = 3300.0          # Effective temperature [0.0, 10000.0] K
+T0 = 156000.0       # Reference temperature [1.0, 1000000.0] K
+Bx = 0.8582         # Temperature-dependent coefficient [0.0, 2.0]
+
+# --- Correlation Function Parameters ---
+# These parameters control the two-point correlation function shape
+
+alpha = 0.50        # Width of C2's peak [0.0, 2.0]
+alpha_farTol = 0.001  # Tolerance for k=1 peak effect on k=0 [0.0, 0.1]
+alpha_highOrd = 4   # Power of higher-order Gaussian (0, 2, 4, 6, ...) [0, 10]
+
+# --- Numerical Parameters ---
+# These parameters affect numerical stability and accuracy
+
+lambda = 0.22       # Meanfield filter strength [0.0, 0.5] (avoid >0.28)
+stabP = 0.2         # Stability parameter for exponential integrator [0.0, 1.0]
+
+# --- Vapor Model Parameters ---
+# These parameters define the vapor-phase free energy model
+
+shift_u = 0.3341    # Vapor-model shift parameter u
+shift_s = 0.1898    # Vapor-model shift parameter s
+
+# Polynomial coefficients
+p2 = 1.0            # Polynomial coefficient p2
+p3 = -0.5           # Polynomial coefficient p3
+p4 = 0.333333333    # Polynomial coefficient p4
+
+# Temperature-dependent coefficients
+q20 = -0.0037       # Coefficient q20
+q21 = 1.0           # Coefficient q21
+q30 = -12.4567      # Coefficient q30
+q31 = 20.0          # Coefficient q31
+q40 = 45.0          # Coefficient q40
+
+# ============================================================================
+# Domain Configuration
+# ============================================================================
+[domain]
+Lx = 64
+Ly = 64
+Lz = 64
+dx = 1.1107207345395915
+dy = 1.1107207345395915
+dz = 1.1107207345395915
+origin = "corner"
+
+# ============================================================================
+# Time Stepping
+# ============================================================================
+[timestepping]
+t0 = 0.0
+t1 = 1000.0
+dt = 1.0
+saveat = 100.0
+
+# ============================================================================
+# Fields
+# ============================================================================
+[[fields]]
+name = "psi"
+data = "./data/validation_example_%04d.bin"
+
+# ============================================================================
+# Initial Conditions
+# ============================================================================
+[[initial_conditions]]
+target = "psi"
+type = "constant"
+n0 = -0.10
+
+# ============================================================================
+# Validation Examples
+# ============================================================================
+
+# Example 1: Missing Required Parameter
+# Uncomment the line below and comment out 'lambda' above to see validation error:
+# # lambda is missing!
+
+# Example 2: Out of Range Parameter
+# Uncomment to see validation error for stabP > 1.0:
+# stabP = 2.5  # ERROR: exceeds maximum 1.0
+
+# Example 3: Wrong Type
+# Uncomment to see type validation error:
+# T = "3300"  # ERROR: expected number, got string
+
+# Example 4: Negative Temperature
+# Uncomment to see range validation error:
+# T = -100.0  # ERROR: below minimum 0.0
+
+# ============================================================================
+# Expected Validation Output (when all parameters are valid)
+# ============================================================================
+#
+# ================================================================================
+# Configuration Validation Summary - Tungsten PFC Model
+# ================================================================================
+# Validated 21 parameter(s):
+# --------------------------------------------------------------------------------
+#   n0              = -0.1  [range: -1, 0]
+#   n_sol           = -0.047  [range: -1, 0]
+#   n_vap           = -0.464  [range: -1, 0]
+#   T               = 3300  [range: 0, 10000]
+#   T0              = 156000  [range: 1, 1e+06]
+#   Bx              = 0.8582  [range: 0, 2]
+#   alpha           = 0.5  [range: 0, 2]
+#   alpha_farTol    = 0.001  [range: 0, 0.1]
+#   alpha_highOrd   = 4  [range: 0, 10]
+#   lambda          = 0.22  [range: 0, 0.5]
+#   stabP           = 0.2  [range: 0, 1]
+#   shift_u         = 0.3341
+#   shift_s         = 0.1898
+#   p2              = 1
+#   p3              = -0.5
+#   p4              = 0.333333
+#   q20             = -0.0037
+#   q21             = 1
+#   q30             = -12.4567
+#   q31             = 20
+#   q40             = 45
+# ================================================================================
