@@ -1,6 +1,9 @@
 # Example: Custom Initial Condition Registration
 # Demonstrates how to register and use custom initial conditions
 
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 [model]
 name = "mymodel"
 

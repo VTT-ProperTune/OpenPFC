@@ -4,6 +4,9 @@
 #include <cuComplex.h>
 #include <cuda_runtime.h>
 #include <iomanip>
+// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 #include <iostream>
 #include <vector>
 

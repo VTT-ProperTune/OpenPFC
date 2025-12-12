@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # CMake Module Structure
 
 This directory contains modular CMake configuration files that organize the build system into logical components. The root `CMakeLists.txt` includes these modules in the correct order.
