@@ -1,0 +1,168 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Coverage
+
+on:
+  push:
+    branches: [ "master", "main", "develop" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  schedule:
+    # Run coverage weekly on Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  # ============================================================================
+  # Code Coverage Analysis
+  # ============================================================================
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-11 \
+            g++-11 \
+            cmake \
+            ninja-build \
+            libopenmpi-dev \
+            openmpi-bin \
+            libfftw3-dev \
+            libfftw3-mpi-dev \
+            nlohmann-json3-dev \
+            lcov
+
+      - name: Cache HeFFTe
+        id: cache-heffte
+        uses: actions/cache@v4
+        with:
+          path: ~/opt/heffte
+          key: heffte-2.4.0-ubuntu-22.04-coverage
+
+      - name: Build HeFFTe (if not cached)
+        if: steps.cache-heffte.outputs.cache-hit != 'true'
+        env:
+          CC: gcc-11
+          CXX: g++-11
+        run: |
+          wget -q https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.0.tar.gz
+          tar xzf v2.4.0.tar.gz
+          cmake -S heffte-2.4.0 -B heffte-build \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte \
+            -DHeffte_ENABLE_FFTW=ON \
+            -DBUILD_SHARED_LIBS=ON
+          cmake --build heffte-build -j2
+          cmake --install heffte-build
+
+      - name: Configure OpenPFC with Coverage
+        env:
+          CC: gcc-11
+          CXX: g++-11
+          CMAKE_PREFIX_PATH: ${{ github.workspace }}/~/opt/heffte
+        run: |
+          cmake -S . -B build \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte \
+            -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+            -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DOpenPFC_BUILD_TESTS=ON \
+            -DOpenPFC_BUILD_EXAMPLES=OFF \
+            -DOpenPFC_BUILD_APPS=OFF \
+            -DOpenPFC_BUILD_DOCUMENTATION=OFF
+
+      - name: Build OpenPFC
+        run: cmake --build build -j2
+
+      - name: Run Tests
+        working-directory: build
+        run: |
+          ctest --output-on-failure -j2 \
+            --exclude-regex "benchmark" \
+            --timeout 600
+
+      - name: Generate coverage report
+        working-directory: build
+        run: |
+          # Capture coverage data
+          lcov --directory . --capture --output-file coverage.info
+          
+          # Remove external dependencies and test files from coverage
+          lcov --remove coverage.info \
+            '/usr/*' \
+            '*/tests/*' \
+            '*/examples/*' \
+            '*/extern/*' \
+            '*/build/*' \
+            '*/_deps/*' \
+            --output-file coverage.info
+          
+          # Generate HTML report
+          genhtml coverage.info --output-directory coverage-html
+          
+          # Generate summary
+          lcov --list coverage.info > coverage-summary.txt
+
+      - name: Display coverage summary
+        working-directory: build
+        run: |
+          echo "=== Coverage Summary ==="
+          cat coverage-summary.txt
+          
+          # Extract overall coverage percentage
+          COVERAGE=$(lcov --summary coverage.info 2>&1 | grep "lines" | awk '{print $2}')
+          echo "Overall line coverage: $COVERAGE"
+          
+          # Check if coverage meets threshold (90%)
+          COVERAGE_NUM=$(echo $COVERAGE | sed 's/%//')
+          if (( $(echo "$COVERAGE_NUM < 90.0" | bc -l) )); then
+            echo "⚠️  Warning: Coverage $COVERAGE is below 90% threshold"
+          else
+            echo "✅ Coverage $COVERAGE meets 90% threshold"
+          fi
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./build/coverage.info
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/coverage-html
+          retention-days: 30
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('build/coverage-summary.txt', 'utf8');
+            const lines = summary.split('\n');
+            const coverageLine = lines.find(line => line.includes('Total:'));
+            
+            if (coverageLine) {
+              const comment = `## 📊 Code Coverage Report\n\n\`\`\`\n${coverageLine}\n\`\`\`\n\n[View detailed report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
