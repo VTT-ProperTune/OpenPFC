@@ -1,0 +1,136 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Example: FFT Backend Selection
+# 
+# This example demonstrates how to select different FFT backends at runtime.
+# OpenPFC supports multiple FFT backends through HeFFTe:
+# - FFTW: CPU-based FFT (default, always available)
+# - CUDA: GPU-based FFT using cuFFT (requires OpenPFC_ENABLE_CUDA)
+#
+# The backend choice affects:
+# - Performance characteristics (CPU vs GPU)
+# - Memory location (host vs device)
+# - Available plan options (some options are backend-specific)
+
+# ============================================================================
+# Domain Configuration
+# ============================================================================
+
+[domain]
+Lx = 256
+Ly = 256
+Lz = 256
+dx = 1.0
+dy = 1.0
+dz = 1.0
+origin = "center"
+
+# ============================================================================
+# FFT Backend and Plan Options
+# ============================================================================
+
+[plan_options]
+# Backend selection: "fftw" (CPU) or "cuda" (GPU)
+# Default: "fftw"
+backend = "fftw"
+
+# HeFFTe plan options (backend-independent)
+# These options control how the FFT is performed
+
+# use_reorder: Use strided 1D FFT operations instead of reordering data
+# Default: true
+# Setting to false can improve performance on some architectures
+use_reorder = true
+
+# reshape_algorithm: Algorithm for data redistribution between MPI ranks
+# Options: "alltoall", "alltoallv", "p2p", "p2p_plined"
+# - alltoall: MPI_Alltoall (fastest for uniform data)
+# - alltoallv: MPI_Alltoallv (handles non-uniform data)
+# - p2p: Point-to-point communication
+# - p2p_plined: Pipelined point-to-point (best for large messages)
+# Default: "alltoall"
+reshape_algorithm = "alltoall"
+
+# use_pencils: Use pencil decomposition (1D slabs) instead of 2D slabs
+# Default: false
+# Pencil decomposition can improve scaling for large processor counts
+use_pencils = false
+
+# use_gpu_aware: Use GPU-aware MPI (requires MPI compiled with GPU support)
+# Default: false
+# Only relevant for CUDA backend
+# Enables direct GPU-to-GPU communication without staging through host memory
+use_gpu_aware = false
+
+# ============================================================================
+# Example Backend Configurations
+# ============================================================================
+
+# Example 1: FFTW (CPU) with default options
+# [plan_options]
+# backend = "fftw"
+
+# Example 2: CUDA (GPU) with GPU-aware MPI
+# [plan_options]
+# backend = "cuda"
+# use_gpu_aware = true
+# reshape_algorithm = "alltoall"
+
+# Example 3: FFTW with pencil decomposition for large-scale runs
+# [plan_options]
+# backend = "fftw"
+# use_pencils = true
+# reshape_algorithm = "p2p_plined"
+
+# ============================================================================
+# Performance Notes
+# ============================================================================
+#
+# FFTW Backend (CPU):
+# - Best for: CPU-only systems, small to medium problems
+# - Memory: Host memory (RAM)
+# - Pros: Always available, well-optimized, portable
+# - Cons: Limited by CPU performance
+#
+# CUDA Backend (GPU):
+# - Best for: GPU-accelerated systems, large problems
+# - Memory: Device memory (GPU VRAM)
+# - Pros: Much faster for large FFTs, high memory bandwidth
+# - Cons: Requires CUDA-capable GPU, limited by GPU memory
+# - Note: Requires OpenPFC compiled with -DOpenPFC_ENABLE_CUDA=ON
+#
+# GPU-Aware MPI:
+# - Requires: MPI library compiled with CUDA support (e.g., OpenMPI with --with-cuda)
+# - Benefit: Eliminates host staging, reduces latency
+# - Check: Run `ompi_info --parsable --all | grep mpi_built_with_cuda_support`
+#
+# Reshape Algorithms:
+# - alltoall: Best for uniform data distribution, lowest latency
+# - alltoallv: Handles non-uniform distributions (different box sizes)
+# - p2p_plined: Best for very large messages, overlaps communication
+#
+# Pencil Decomposition:
+# - Improves scaling beyond ~1000 MPI ranks
+# - More communication steps but smaller messages
+# - Trade-off: More overhead for small problems
+
+# ============================================================================
+# Time Stepping Configuration
+# ============================================================================
+
+[timestepping]
+t0 = 0.0
+t1 = 1.0
+dt = 0.1
+saveat = 0.5
+
+# ============================================================================
+# Model Configuration (Minimal Example)
+# ============================================================================
+
+[model]
+name = "example"
+
+[model.params]
+# Model-specific parameters would go here
