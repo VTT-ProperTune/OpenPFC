@@ -75,6 +75,105 @@ The project documentation can be found from
 - modern c++17 header-only framework, easy to use
 - extensible architecture - add custom components without modifying source code
 - runtime-switchable FFT backends (CPU/GPU) for optimal performance
+- comprehensive configuration validation with helpful error messages
+
+## Configuration Validation
+
+OpenPFC provides **comprehensive parameter validation** to prevent silent failures from missing or invalid configuration parameters. This "fail-fast" approach catches errors immediately at startup rather than hours into a simulation.
+
+### The Problem
+
+Missing or invalid parameters can cause:
+- ❌ Silent failures with incorrect physics
+- ❌ Hours/days wasted debugging
+- ❌ Uninitialized values causing unpredictable behavior
+
+**Example of a dangerous configuration:**
+```toml
+[model.params]
+n0 = -0.10
+alpha = 0.50
+# Forgot to add lambda!  ← Simulation will run with wrong/uninitialized value
+```
+
+### The Solution
+
+OpenPFC validates **all parameters before simulation starts**:
+
+```
+================================================================================
+Configuration Validation Summary - Tungsten PFC Model
+================================================================================
+Validated 21 parameter(s):
+--------------------------------------------------------------------------------
+  n0            = -0.1  [range: -1, 0]
+  n_sol         = -0.047  [range: -1, 0]
+  n_vap         = -0.464  [range: -1, 0]
+  T             = 3300  [range: 0, 10000]
+  T0            = 156000  [range: 1, 1e+06]
+  ... (all 21 parameters validated)
+================================================================================
+```
+
+If validation fails, you get a **clear, actionable error message**:
+
+```
+================================================================================
+CONFIGURATION VALIDATION FAILED
+================================================================================
+Found 2 error(s):
+
+1. Required parameter 'lambda' is missing
+  Parameter: lambda
+  Description: Strength of meanfield filter (avoid >0.28)
+  Valid range: [0, 0.5]
+  Typical value: 0.22
+  Required: yes
+
+2. Parameter 'stabP' = 2.5 exceeds maximum 1.0
+  Parameter: stabP
+  Description: Numerical stability parameter for exponential integrator
+  Valid range: [0, 1]
+  Typical value: 0.2
+
+ABORTING: Fix configuration errors before running simulation.
+================================================================================
+```
+
+### Benefits
+
+- ⭐ **Prevents wasted time** - Catch errors immediately, not after hours of simulation
+- ⭐ **Self-documenting** - Parameter summary shows exactly what was run (reproducibility)
+- ⭐ **Helpful errors** - Clear messages with valid ranges and typical values
+- ⭐ **Type safety** - Validates parameter types and bounds
+
+### For Model Developers
+
+Add validation to your custom models using the parameter metadata system:
+
+```cpp
+#include "openpfc/ui/parameter_validator.hpp"
+
+ParameterValidator validator;
+validator.add_metadata(
+  ParameterMetadata<double>::builder()
+    .name("temperature")
+    .description("Effective temperature")
+    .required(true)
+    .range(0.0, 10000.0)
+    .typical(3300.0)
+    .units("K")
+    .build()
+);
+
+auto result = validator.validate(config);
+if (!result.is_valid()) {
+  std::cerr << result.format_errors() << std::endl;
+  throw std::invalid_argument("Validation failed");
+}
+```
+
+See `apps/tungsten/tungsten_input.hpp` for a complete example with 21 validated parameters.
 
 ## Extending OpenPFC
 
