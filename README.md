@@ -74,6 +74,7 @@ The project documentation can be found from
 - scales up to tens of thousands of cores, demonstrably
 - modern c++17 header-only framework, easy to use
 - extensible architecture - add custom components without modifying source code
+- runtime-switchable FFT backends (CPU/GPU) for optimal performance
 
 ## Extending OpenPFC
 
@@ -85,6 +86,51 @@ OpenPFC is designed as an **open laboratory** where you can extend functionality
 - **Custom I/O formats** (HDF5, VTK, custom binary)
 
 **Get started:** See the [Extension Guide](docs/extending_openpfc/README.md) and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
+
+## FFT Backend Selection
+
+OpenPFC supports multiple FFT backends through [HeFFTe](https://github.com/icl-utk-edu/heffte), allowing you to choose the optimal implementation for your hardware:
+
+- **FFTW** (CPU): Default backend, always available. Optimized for CPU-based systems.
+- **cuFFT** (NVIDIA GPU): GPU-accelerated FFT for CUDA-capable devices. Requires OpenPFC compiled with `-DOpenPFC_ENABLE_CUDA=ON`.
+- **rocFFT** (AMD GPU): GPU-accelerated FFT for ROCm-capable devices (future support).
+
+### Configuration
+
+Select the FFT backend in your configuration file (TOML or JSON):
+
+```toml
+[plan_options]
+backend = "fftw"  # Options: "fftw", "cuda"
+
+# Additional HeFFTe options
+use_reorder = true
+reshape_algorithm = "alltoall"  # Options: "alltoall", "alltoallv", "p2p", "p2p_plined"
+use_pencils = false
+use_gpu_aware = false  # Enable for GPU-aware MPI (CUDA backend only)
+```
+
+**Example:** See `examples/fft_backend_selection.toml` for a complete configuration example with detailed documentation.
+
+### Performance Considerations
+
+- **FFTW (CPU)**: Best for CPU-only systems, small to medium problems. Always available and portable.
+- **cuFFT (GPU)**: Significantly faster for large FFTs. Requires CUDA-capable GPU and sufficient GPU memory.
+- **GPU-Aware MPI**: When using CUDA backend with multiple GPUs, enable `use_gpu_aware = true` if your MPI implementation supports it (e.g., OpenMPI with `--with-cuda`). This eliminates host staging and reduces communication latency.
+
+### Building with CUDA Support
+
+To enable CUDA backend:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DOpenPFC_ENABLE_CUDA=ON \
+      -DCMAKE_CUDA_ARCHITECTURES=80 \
+      -S . -B build
+cmake --build build
+```
+
+Replace `80` with your GPU's compute capability (e.g., `70` for V100, `80` for A100, `89` for RTX 4090).
 
 ## Installing
 
