@@ -27,6 +27,7 @@
 #include "openpfc/boundary_conditions/fixed_bc.hpp"
 #include "openpfc/boundary_conditions/moving_bc.hpp"
 #include "openpfc/core/world.hpp"
+#include "openpfc/fft.hpp"
 #include "openpfc/field_modifier.hpp"
 #include "openpfc/initial_conditions/constant.hpp"
 #include "openpfc/initial_conditions/file_reader.hpp"
@@ -35,6 +36,8 @@
 #include "openpfc/initial_conditions/single_seed.hpp"
 #include "openpfc/model.hpp"
 #include "openpfc/time.hpp"
+#include <algorithm>
+#include <cctype>
 #include <heffte.h>
 #include <stdexcept>
 
@@ -42,6 +45,46 @@ namespace pfc {
 namespace ui {
 
 template <class T> T from_json(const json &settings);
+
+/**
+ * @brief Converts a JSON string to fft::Backend enum
+ *
+ * Parses backend selection from configuration. Supported values:
+ * - "fftw" or "FFTW": CPU-based FFT (always available)
+ * - "cuda" or "CUDA": GPU-based FFT using cuFFT (requires OpenPFC_ENABLE_CUDA)
+ *
+ * @param j The JSON object to parse (looks for "backend" field)
+ * @return The fft::Backend enum value
+ * @throws std::runtime_error if backend is not supported or not compiled in
+ */
+template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
+  if (!j.contains("backend") || !j["backend"].is_string()) {
+    // Default to FFTW if not specified
+    std::cout << "No FFT backend specified, defaulting to FFTW\n";
+    return fft::Backend::FFTW;
+  }
+  
+  std::string backend_str = j["backend"];
+  std::transform(backend_str.begin(), backend_str.end(), backend_str.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  
+  std::cout << "Selected FFT backend: " << backend_str << std::endl;
+  
+  if (backend_str == "fftw") {
+    return fft::Backend::FFTW;
+  } else if (backend_str == "cuda") {
+#if defined(OpenPFC_ENABLE_CUDA)
+    return fft::Backend::CUDA;
+#else
+    throw std::runtime_error(
+        "CUDA backend requested but OpenPFC was not compiled with CUDA support. "
+        "Rebuild with -DOpenPFC_ENABLE_CUDA=ON");
+#endif
+  } else {
+    throw std::runtime_error("Unknown FFT backend: " + j["backend"].get<std::string>() +
+                             ". Supported: fftw, cuda");
+  }
+}
 
 /**
  * @brief Converts a JSON object to heffte::plan_options.
@@ -54,8 +97,8 @@ template <class T> T from_json(const json &settings);
  * @param j The JSON object to parse.
  * @return The heffte::plan_options object constructed from the JSON.
  */
-template <> heffte::plan_options from_json<heffte::plan_options>(const json &j) {
-  std::cout << "\nParsing backend options ...\n";
+template <> inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
+  std::cout << "\nParsing HeFFTe plan options ...\n";
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (j.contains("use_reorder")) {
     std::cout << "Using strided 1d fft operations" << std::endl;
@@ -109,7 +152,7 @@ template <> heffte::plan_options from_json<heffte::plan_options>(const json &j) 
  * @throws std::invalid_argument if any of the required fields are missing
  *         or have an invalid value.
  */
-template <> World from_json<World>(const json &j) {
+template <> inline World from_json<World>(const json &j) {
   int Lx = 0, Ly = 0, Lz = 0;
   double dx = 0.0, dy = 0.0, dz = 0.0;
   double x0 = 0.0, y0 = 0.0, z0 = 0.0;
@@ -207,7 +250,7 @@ template <> World from_json<World>(const json &j) {
   return world;
 }
 
-template <> Time from_json<Time>(const json &settings) {
+template <> inline Time from_json<Time>(const json &settings) {
   // Support both flat and nested structures
   auto t0_val = get_json_value(settings, "t0", "timestepping");
   auto t1_val = get_json_value(settings, "t1", "timestepping");
@@ -228,7 +271,7 @@ template <> Time from_json<Time>(const json &settings) {
   return time;
 }
 
-void from_json(const json &j, Constant &ic) {
+inline void from_json(const json &j, Constant &ic) {
   // Check that the JSON input has the correct type field
   if (!j.contains("type") || j["type"] != "constant") {
     throw std::invalid_argument(
@@ -242,7 +285,7 @@ void from_json(const json &j, Constant &ic) {
   ic.set_density(j["n0"]);
 }
 
-void from_json(const json &j, SingleSeed &seed) {
+inline void from_json(const json &j, SingleSeed &seed) {
   if (!j.count("type") || j["type"] != "single_seed") {
     throw std::invalid_argument(
         "JSON object does not contain a 'single_seed' type.");
@@ -260,7 +303,7 @@ void from_json(const json &j, SingleSeed &seed) {
   seed.set_density(j["rho_seed"]);
 }
 
-void from_json(const json &j, RandomSeeds &ic) {
+inline void from_json(const json &j, RandomSeeds &ic) {
   // Check that the JSON input has the correct type field
   if (!j.contains("type") || j["type"] != "random_seeds") {
     throw std::invalid_argument(
@@ -283,7 +326,7 @@ void from_json(const json &j, RandomSeeds &ic) {
   ic.set_density(j["rho"]);
 }
 
-void from_json(const json &j, SeedGrid &ic) {
+inline void from_json(const json &j, SeedGrid &ic) {
   if (!j.contains("type") || j["type"] != "seed_grid") {
     throw std::invalid_argument(
         "Invalid JSON input: missing or incorrect 'type' field.");
@@ -327,7 +370,7 @@ void from_json(const json &j, SeedGrid &ic) {
   ic.set_density(j["rho"]);
 }
 
-void from_json(const json &j, FileReader &ic) {
+inline void from_json(const json &j, FileReader &ic) {
   if (!j.contains("type") || j["type"] != "from_file") {
     throw std::invalid_argument(
         "Invalid JSON input: missing or incorrect 'type' field.");
@@ -341,7 +384,7 @@ void from_json(const json &j, FileReader &ic) {
   ic.set_filename(j["filename"]);
 }
 
-void from_json(const json &j, FixedBC &bc) {
+inline void from_json(const json &j, FixedBC &bc) {
   if (!j.contains("type") || j["type"] != "fixed") {
     throw std::invalid_argument(
         "Invalid JSON input: missing or incorrect 'type' field.");
@@ -361,7 +404,7 @@ void from_json(const json &j, FixedBC &bc) {
   bc.set_rho_high(j["rho_high"]);
 }
 
-void from_json(const json &j, MovingBC &bc) {
+inline void from_json(const json &j, MovingBC &bc) {
   if (!j.contains("type") || j["type"] != "moving") {
     throw std::invalid_argument(
         "Invalid JSON input: missing or incorrect 'type' field.");
@@ -405,7 +448,7 @@ void from_json(const json &j, MovingBC &bc) {
   bc.set_xpos(j["xpos"]);
 }
 
-void from_json(const json &, Model &) {
+inline void from_json(const json &, Model &) {
   std::cout << "Warning: This model does not implement reading parameters from "
                "json file. In order to read parameters from json file, one needs to "
                "implement 'void from_json(const json &, Model &)'"
