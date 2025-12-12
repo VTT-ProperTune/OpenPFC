@@ -1,0 +1,145 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Documentation
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+    paths:
+      - 'docs/**'
+      - 'include/**/*.hpp'
+      - 'README.md'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Build Documentation
+  # ============================================================================
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            doxygen \
+            graphviz \
+            texlive-latex-base \
+            texlive-latex-extra \
+            cmake \
+            ninja-build \
+            libopenmpi-dev \
+            libfftw3-dev \
+            nlohmann-json3-dev
+
+      - name: Cache HeFFTe
+        id: cache-heffte
+        uses: actions/cache@v4
+        with:
+          path: ~/opt/heffte
+          key: heffte-2.4.0-ubuntu-22.04-docs
+
+      - name: Build HeFFTe (if not cached)
+        if: steps.cache-heffte.outputs.cache-hit != 'true'
+        run: |
+          wget -q https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.0.tar.gz
+          tar xzf v2.4.0.tar.gz
+          cmake -S heffte-2.4.0 -B heffte-build \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte \
+            -DHeffte_ENABLE_FFTW=ON
+          cmake --build heffte-build -j2
+          cmake --install heffte-build
+
+      - name: Configure OpenPFC
+        env:
+          CMAKE_PREFIX_PATH: ${{ github.workspace }}/~/opt/heffte
+        run: |
+          cmake -S . -B build \
+            -GNinja \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte \
+            -DOpenPFC_BUILD_DOCUMENTATION=ON \
+            -DOpenPFC_BUILD_TESTS=OFF
+
+      - name: Build documentation
+        run: cmake --build build --target docs
+
+      - name: Check for documentation warnings
+        run: |
+          if grep -q "warning:" build/docs/doxygen.log 2>/dev/null; then
+            echo "⚠️  Doxygen warnings found:"
+            grep "warning:" build/docs/doxygen.log
+            exit 1
+          else
+            echo "✅ No Doxygen warnings"
+          fi
+
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-html
+          path: build/docs/html
+          retention-days: 7
+
+  # ============================================================================
+  # Deploy to GitHub Pages (only on push to master)
+  # ============================================================================
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: build-docs
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download documentation artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation-html
+          path: ./docs
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Comment on commit (success)
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `📚 Documentation deployed: ${{ steps.deployment.outputs.page_url }}`
+            })
