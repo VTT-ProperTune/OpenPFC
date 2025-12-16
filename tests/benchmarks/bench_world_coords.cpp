@@ -284,7 +284,8 @@ TEST_CASE("World zero-cost abstraction validation",
 TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]") {
   SECTION("Sequential world creation and destruction") {
     BENCHMARK("Create and destroy World (stack)") {
-      auto world = world::create(GridSize({128), PhysicalOrigin(128), GridSpacing(128}));
+      auto world =
+          world::create(GridSize({128}), PhysicalOrigin({128}), GridSpacing({128}));
       return get_total_size(world);
     };
 
@@ -293,7 +294,8 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
   }
 
   SECTION("World copy performance") {
-    const auto world1 = world::create(GridSize({128), PhysicalOrigin(128), GridSpacing(128}));
+    const auto world1 =
+        world::create(GridSize({128}), PhysicalOrigin({128}), GridSpacing({128}));
 
     BENCHMARK("Copy World object") {
       auto world2 = world1; // Copy constructor
