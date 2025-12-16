@@ -308,11 +308,11 @@ TEST_CASE("Neighbor exchange - 2D grid pattern (4 processes)",
   int v_neighbor = vertical_neighbors[rank];
 
   // Create data for each direction
-  std::vector<size_t> h_indices = {rank * 10};
+  std::vector<size_t> h_indices = {static_cast<size_t>(rank * 10)};
   std::vector<double> h_data = {static_cast<double>(rank * 100)};
   auto sparse_h = sparsevector::create<double>(h_indices, h_data);
 
-  std::vector<size_t> v_indices = {rank * 20};
+  std::vector<size_t> v_indices = {static_cast<size_t>(rank * 20)};
   std::vector<double> v_data = {static_cast<double>(rank * 200)};
   auto sparse_v = sparsevector::create<double>(v_indices, v_data);
 
