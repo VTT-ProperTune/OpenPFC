@@ -79,7 +79,15 @@ jobs:
         run: nix flake check --print-build-logs
 
       - name: Run tests (excluding benchmarks)
-        run: nix run .#test -- '~[benchmark]'
+        run: |
+          # Run tests with verbose output
+          nix run .#test -- '~[benchmark]' --reporter compact || {
+            echo "❌ Tests failed. Checking test binary..."
+            nix build .#openpfc-tests --print-build-logs
+            echo "Test binary location:"
+            nix path-info .#openpfc-tests
+            exit 1
+          }
 
   # ============================================================================
   # CMake Build Matrix
