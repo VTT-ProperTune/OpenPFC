@@ -333,7 +333,7 @@ TEST_CASE("World - physical_volume() calculates correctly",
 TEST_CASE("World - dimensionality checks work correctly",
           "[world][convenience][unit]") {
   SECTION("1D domain (nx > 1, ny = 1, nz = 1)") {
-    auto world1d = world::create(GridSize({100), PhysicalOrigin(1), GridSpacing(1}));
+    auto world1d = world::create(GridSize({100, 1, 1}));
 
     REQUIRE(world::is_1d(world1d));
     REQUIRE_FALSE(world::is_2d(world1d));
@@ -342,7 +342,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("2D domain (nx > 1, ny > 1, nz = 1)") {
-    auto world2d = world::create(GridSize({64), PhysicalOrigin(64), GridSpacing(1}));
+    auto world2d = world::create(GridSize({64, 64, 1}));
 
     REQUIRE_FALSE(world::is_1d(world2d));
     REQUIRE(world::is_2d(world2d));
@@ -351,7 +351,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("3D domain (nx > 1, ny > 1, nz > 1)") {
-    auto world3d = world::create(GridSize({32), PhysicalOrigin(32), GridSpacing(32}));
+    auto world3d = world::create(GridSize({32, 32, 32}));
 
     REQUIRE_FALSE(world::is_1d(world3d));
     REQUIRE_FALSE(world::is_2d(world3d));
@@ -360,7 +360,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("Degenerate case (nx = 1, ny = 1, nz = 1)") {
-    auto world_degenerate = world::create(GridSize({1), PhysicalOrigin(1), GridSpacing(1}));
+    auto world_degenerate = world::create(GridSize({1, 1, 1}));
 
     REQUIRE_FALSE(world::is_1d(world_degenerate));
     REQUIRE_FALSE(world::is_2d(world_degenerate));
@@ -370,7 +370,7 @@ TEST_CASE("World - dimensionality checks work correctly",
 
   SECTION("Non-standard 2D (nx = 1, ny > 1, nz > 1)") {
     // This is NOT considered 2D by our definition
-    auto world_yz = world::create(GridSize({1), PhysicalOrigin(64), GridSpacing(64}));
+    auto world_yz = world::create(GridSize({1, 64, 64}));
 
     REQUIRE_FALSE(world::is_1d(world_yz));
     REQUIRE_FALSE(world::is_2d(world_yz)); // Only x-y plane is 2D
@@ -509,7 +509,7 @@ TEST_CASE("World - convenience functions integrate with existing API",
   }
 
   SECTION("Dimensionality checks consistent with size queries") {
-    auto world2d = world::create(GridSize({128), PhysicalOrigin(128), GridSpacing(1}));
+    auto world2d = world::create(GridSize({128, 128, 1}));
 
     REQUIRE(world::is_2d(world2d));
     REQUIRE(world::get_size(world2d, 0) > 1);

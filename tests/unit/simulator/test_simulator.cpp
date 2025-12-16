@@ -16,7 +16,7 @@ using namespace pfc;
 using namespace pfc::types;
 
 TEST_CASE("Simulator functionality", "[simulator][unit]") {
-  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
+  auto world = world::create(GridSize({8, 8, 8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
@@ -79,7 +79,7 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
 }
 
 TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
-  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
+  auto world = world::create(GridSize({8, 8, 8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
