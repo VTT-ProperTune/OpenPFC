@@ -245,12 +245,14 @@ TEST_CASE("Neighbor exchange - Multiple neighbors simultaneously",
   int right_neighbor = (rank + 1) % size;
 
   // Create data for each direction
-  std::vector<size_t> left_indices = {rank * 100, rank * 100 + 1};
+  std::vector<size_t> left_indices = {static_cast<size_t>(rank * 100),
+                                      static_cast<size_t>(rank * 100 + 1)};
   std::vector<double> left_data = {static_cast<double>(rank * 1000),
                                    static_cast<double>(rank * 1000 + 100)};
   auto sparse_left = sparsevector::create<double>(left_indices, left_data);
 
-  std::vector<size_t> right_indices = {rank * 200, rank * 200 + 1};
+  std::vector<size_t> right_indices = {static_cast<size_t>(rank * 200),
+                                       static_cast<size_t>(rank * 200 + 1)};
   std::vector<double> right_data = {static_cast<double>(rank * 2000),
                                     static_cast<double>(rank * 2000 + 200)};
   auto sparse_right = sparsevector::create<double>(right_indices, right_data);
