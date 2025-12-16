@@ -83,7 +83,8 @@ void run() {
   Vec3<int> dimensions{Lx, Ly, Lz};
   Vec3<double> origo{x0, y0, z0};
   Vec3<double> discretization{dx, dy, dz};
-  World world = world::create(dimensions, origo, discretization);
+  World world = world::create(GridSize(dimensions), PhysicalOrigin(origo),
+                              GridSpacing(discretization));
 
   double t0 = 0.0;
   double t1 = 0.5874010519681994;
