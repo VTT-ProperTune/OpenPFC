@@ -170,8 +170,9 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     double x0 = -0.5 * grid_spacing * Lx;
     double y0 = -0.5 * grid_spacing * Ly;
     double z0 = -0.5 * grid_spacing * Lz;
-    auto world = world::create({Lx, Ly, Lz}, {x0, y0, z0},
-                               {grid_spacing, grid_spacing, grid_spacing});
+    auto world =
+        world::create(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
+                      GridSpacing({grid_spacing, grid_spacing, grid_spacing}));
     auto decomp = decomposition::create(world, 1);
     auto fft = fft::create(decomp);
 
