@@ -44,6 +44,9 @@ jobs:
           echo "Please run 'clang-format -i' on modified files locally."
           echo "This is a warning only and will not block the build."
 
+      - name: Clean up clang-format artifacts
+        run: rm -f failing-files.txt
+
       - name: Check REUSE compliance
         uses: fsfe/reuse-action@v2
 
