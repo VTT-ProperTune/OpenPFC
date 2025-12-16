@@ -9,6 +9,7 @@
  * the same results (within floating-point precision tolerance).
  */
 
+#define CATCH_CONFIG_RUNNER
 #if !defined(OpenPFC_ENABLE_CUDA)
 #error "This test requires CUDA support. Enable with -DOpenPFC_ENABLE_CUDA=ON"
 #endif
@@ -29,7 +30,8 @@ using namespace Catch::Matchers;
 
 TEST_CASE("Tungsten CPU vs CUDA: Same results", "[Tungsten][CPU][CUDA]") {
   // Create world
-  auto world = world::create({32, 32, 32}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -101,4 +103,15 @@ TEST_CASE("Tungsten CPU vs CUDA: Same results", "[Tungsten][CPU][CUDA]") {
   // but should be very close
   REQUIRE(num_differences == 0);
   REQUIRE(max_diff < tolerance);
+}
+
+// MPI-aware main function for Catch2
+#define CATCH_CONFIG_RUNNER
+#include <catch2/catch_session.hpp>
+
+int main(int argc, char *argv[]) {
+  MPI_Init(&argc, &argv);
+  int result = Catch::Session().run(argc, argv);
+  MPI_Finalize();
+  return result;
 }
