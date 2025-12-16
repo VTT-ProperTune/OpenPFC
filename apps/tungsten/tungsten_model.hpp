@@ -216,7 +216,7 @@ public:
   void prepare_operators(double dt) {
     auto &fft = get_fft();
     auto &world = get_world();
-    auto [dx, dy, dz] = get_spacing(world);
+    [[maybe_unused]] auto [dx, dy, dz] = get_spacing(world);
     auto [Lx, Ly, Lz] = get_size(world);
 
     auto outbox = get_outbox(fft);
