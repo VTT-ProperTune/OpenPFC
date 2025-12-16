@@ -12,7 +12,7 @@ using namespace pfc;
 
 TEST_CASE("Decomposition - basic functionality", "[decomposition][unit]") {
   // Create a dummy World object for testing
-  auto world = world::create({128, 128, 128});
+  auto world = world::create(GridSize({128), PhysicalOrigin(128), GridSpacing(128}));
 
   SECTION("Construction and getters") {
     auto decomposition = decomposition::create(world, 1);

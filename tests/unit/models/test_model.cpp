@@ -18,7 +18,7 @@ using pfc::types::Int3;
 
 TEST_CASE("Model - basic functionality", "[model][unit]") {
   // Create an instance of the Model
-  World world = world::create({8, 1, 1});
+  World world = world::create(GridSize({8), PhysicalOrigin(1), GridSpacing(1}));
   pfc::testing::MockModel model(world);
 
   REQUIRE(get_size(model.get_world()) == Int3{8, 1, 1});
@@ -83,7 +83,7 @@ TEST_CASE("Model - basic functionality", "[model][unit]") {
 }
 
 TEST_CASE("Model::is_rank0() returns correct rank status", "[model][unit][rank]") {
-  World world = world::create({10, 10, 10});
+  World world = world::create(GridSize({10), PhysicalOrigin(10), GridSpacing(10}));
   pfc::testing::MockModel model(world);
 
   // Initialize FFT (required for is_rank0 to be set)
@@ -101,7 +101,7 @@ TEST_CASE("Model::is_rank0() returns correct rank status", "[model][unit][rank]"
 }
 
 TEST_CASE("Model::is_rank0() is const-correct", "[model][unit][rank]") {
-  World world = world::create({10, 10, 10});
+  World world = world::create(GridSize({10), PhysicalOrigin(10), GridSpacing(10}));
 
   // Create model and set FFT to ensure m_rank0 is set
   pfc::testing::MockModel model(world);
@@ -121,7 +121,7 @@ TEST_CASE("Model::is_rank0() is const-correct", "[model][unit][rank]") {
 }
 
 TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error]") {
-  World world = world::create({8, 8, 8});
+  World world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
   pfc::testing::MockModel model(world);
 
   // Ensure FFT is set
@@ -188,7 +188,7 @@ TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error
 }
 
 TEST_CASE("Model - error handling for FFT access", "[model][unit][error]") {
-  World world = world::create({8, 8, 8});
+  World world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
   pfc::testing::MockModel model(world);
 
   SECTION("Accessing FFT before it's set throws std::runtime_error") {

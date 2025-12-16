@@ -16,7 +16,7 @@ TEST_CASE("DiffOp - differentiate in all directions", "[diffop][unit]") {
   auto lo{-M_PI, -M_PI, -M_PI};
   auto hi{M_PI, M_PI, M_PI};
   auto size{128, 128, 128};
-  auto world = world::create(lo, hi, size);
+  auto world = world::create(GridSize(lo), PhysicalOrigin(hi), GridSpacing(size));
   auto fft = fft::create(world);
   auto diff = diffop::create(world, fft); // Creates spectral differentiator
 

@@ -16,7 +16,7 @@ using namespace pfc;
 
 TEST_CASE("FieldModifier - applies field modification to model",
           "[field_modifier][unit]") {
-  auto world = world::create({8, 8, 8});
+  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModelWithModificationFlag model(world);
@@ -31,7 +31,7 @@ TEST_CASE("FieldModifier - applies field modification to model",
 }
 
 TEST_CASE("FieldModifier - polymorphic usage", "[field_modifier][unit]") {
-  auto world = world::create({8, 8, 8});
+  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModelWithModificationFlag model(world);
@@ -47,7 +47,7 @@ TEST_CASE("FieldModifier - polymorphic usage", "[field_modifier][unit]") {
 }
 
 TEST_CASE("FieldModifier - move semantics", "[field_modifier][unit]") {
-  auto world = world::create({8, 8, 8});
+  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModelWithModificationFlag model(world);
@@ -98,7 +98,7 @@ TEST_CASE("FieldModifier - input validation", "[field_modifier][unit][error]") {
 }
 
 TEST_CASE("FieldModifier - works with MockModel", "[field_modifier][unit]") {
-  auto world = world::create({8, 8, 8});
+  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(world);

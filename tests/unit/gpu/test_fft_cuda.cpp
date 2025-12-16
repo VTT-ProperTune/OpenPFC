@@ -36,7 +36,9 @@ TEST_CASE("GPU FFT: Forward transform", "[gpu][fft]") {
   }
 
   // Create a simple world and decomposition
-  auto world = pfc::world::create({64, 64, 64}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  auto world =
+      pfc::world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                         GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
   auto decomp = pfc::decomposition::create(world, mpi_size);
@@ -85,7 +87,9 @@ TEST_CASE("GPU FFT: Backward transform", "[gpu][fft]") {
   }
 
   // Create a simple world and decomposition
-  auto world = pfc::world::create({64, 64, 64}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  auto world =
+      pfc::world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                         GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
   auto decomp = pfc::decomposition::create(world, mpi_size);
@@ -137,7 +141,9 @@ TEST_CASE("GPU FFT: Round-trip (forward then backward)", "[gpu][fft]") {
   }
 
   // Create a simple world and decomposition
-  auto world = pfc::world::create({32, 32, 32}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  auto world =
+      pfc::world::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                         GridSpacing({1.0, 1.0, 1.0}));
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
   auto decomp = pfc::decomposition::create(world, mpi_size);

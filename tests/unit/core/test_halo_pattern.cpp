@@ -16,7 +16,7 @@
 using namespace pfc;
 
 TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
-  auto world = world::create({64, 64, 64});
+  auto world = world::create(GridSize({64), PhysicalOrigin(64), GridSpacing(64}));
   auto decomp = decomposition::create(world, {2, 2, 1}); // 2×2×1 = 4 ranks
 
   int rank = 0;
@@ -46,7 +46,7 @@ TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
 }
 
 TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
-  auto world = world::create({64, 64, 64});
+  auto world = world::create(GridSize({64), PhysicalOrigin(64), GridSpacing(64}));
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   int rank = 0;
@@ -76,7 +76,7 @@ TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
 }
 
 TEST_CASE("Send and recv halo have same size", "[halo][pattern]") {
-  auto world = world::create({64, 64, 64});
+  auto world = world::create(GridSize({64), PhysicalOrigin(64), GridSpacing(64}));
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   int rank = 0;
@@ -93,7 +93,7 @@ TEST_CASE("Send and recv halo have same size", "[halo][pattern]") {
 }
 
 TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
-  auto world = world::create({64, 64, 64});
+  auto world = world::create(GridSize({64), PhysicalOrigin(64), GridSpacing(64}));
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   int rank = 0;
@@ -116,7 +116,7 @@ TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
 }
 
 TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
-  auto world = world::create({64, 64, 64});
+  auto world = world::create(GridSize({64), PhysicalOrigin(64), GridSpacing(64}));
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   int rank = 0;

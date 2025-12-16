@@ -97,7 +97,9 @@ TEST_CASE("Neighbor exchange - Ring topology",
   int left_neighbor = (rank - 1 + size) % size;
 
   // Create data to send
-  std::vector<size_t> send_indices = {rank * 10, rank * 10 + 1, rank * 10 + 2};
+  std::vector<size_t> send_indices = {static_cast<size_t>(rank * 10),
+                                      static_cast<size_t>(rank * 10 + 1),
+                                      static_cast<size_t>(rank * 10 + 2)};
   std::vector<double> send_data = {static_cast<double>(rank * 100),
                                    static_cast<double>(rank * 100 + 10),
                                    static_cast<double>(rank * 100 + 20)};

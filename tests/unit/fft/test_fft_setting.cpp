@@ -16,7 +16,7 @@
 using namespace pfc;
 
 TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
-  auto world = world::create({8, 8, 8});
+  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
