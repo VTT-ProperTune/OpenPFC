@@ -197,8 +197,9 @@ core::SparseVector<BackendTag, size_t>
 create_recv_halo(const decomposition::Decomposition &decomp, int rank,
                  const Int3 &direction, int halo_width) {
   const auto &local_world = decomposition::get_subworld(decomp, rank);
-  const auto &global_world = decomposition::get_global_world(decomp);
-  const auto &grid = decomposition::get_grid(decomp);
+  [[maybe_unused]] const auto &global_world =
+      decomposition::get_global_world(decomp);
+  [[maybe_unused]] const auto &grid = decomposition::get_grid(decomp);
 
   auto local_size = world::get_size(local_world);
   auto local_lower = world::get_lower(local_world);
