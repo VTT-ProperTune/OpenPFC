@@ -63,13 +63,13 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
     std::cout << "No FFT backend specified, defaulting to FFTW\n";
     return fft::Backend::FFTW;
   }
-  
+
   std::string backend_str = j["backend"];
   std::transform(backend_str.begin(), backend_str.end(), backend_str.begin(),
                  [](unsigned char c) { return std::tolower(c); });
-  
+
   std::cout << "Selected FFT backend: " << backend_str << std::endl;
-  
+
   if (backend_str == "fftw") {
     return fft::Backend::FFTW;
   } else if (backend_str == "cuda") {
@@ -81,8 +81,9 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
         "Rebuild with -DOpenPFC_ENABLE_CUDA=ON");
 #endif
   } else {
-    throw std::runtime_error("Unknown FFT backend: " + j["backend"].get<std::string>() +
-                             ". Supported: fftw, cuda");
+    throw std::runtime_error(
+        "Unknown FFT backend: " + j["backend"].get<std::string>() +
+        ". Supported: fftw, cuda");
   }
 }
 
@@ -97,7 +98,8 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
  * @param j The JSON object to parse.
  * @return The heffte::plan_options object constructed from the JSON.
  */
-template <> inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
+template <>
+inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
   std::cout << "\nParsing HeFFTe plan options ...\n";
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (j.contains("use_reorder")) {
@@ -245,7 +247,8 @@ template <> inline World from_json<World>(const json &j) {
     z0 = -0.5 * dz * Lz;
   }
 
-  World world = world::create({Lx, Ly, Lz}, {x0, y0, z0}, {dx, dy, dz});
+  World world = world::create(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
+                              GridSpacing({dx, dy, dz}));
 
   return world;
 }
