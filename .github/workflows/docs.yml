@@ -68,8 +68,6 @@ jobs:
           cmake --install heffte-build
 
       - name: Configure OpenPFC
-        env:
-          CMAKE_PREFIX_PATH: ${{ github.workspace }}/~/opt/heffte
         run: |
           cmake -S . -B build \
             -GNinja \

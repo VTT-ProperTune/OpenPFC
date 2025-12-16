@@ -126,6 +126,18 @@ jobs:
       - name: Install dependencies (Ubuntu)
         run: |
           sudo apt-get update
+          # Add LLVM repository for clang-16
+          if [[ "${{ matrix.compiler }}" == "clang-16" ]]; then
+            wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc
+            echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+            sudo apt-get update
+          fi
+          # Add toolchain PPA for gcc-13 if needed (Ubuntu 22.04 may not have it by default)
+          if [[ "${{ matrix.compiler }}" == "gcc-13" ]]; then
+            sudo apt-get install -y software-properties-common
+            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            sudo apt-get update
+          fi
           sudo apt-get install -y \
             ${{ matrix.cc }} \
             ${{ matrix.cxx }} \
@@ -169,7 +181,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          CMAKE_PREFIX_PATH: ${{ github.workspace }}/~/opt/heffte
         run: |
           cmake -S . -B build \
             -GNinja \
