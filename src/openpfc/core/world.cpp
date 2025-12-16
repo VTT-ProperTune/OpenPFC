@@ -144,6 +144,9 @@ std::ostream &operator<<(std::ostream &os, const World<CoordTag> &w) noexcept {
 // Explicit instantiation of operator<< for CartesianTag
 template std::ostream &
 operator<< <CartesianTag>(std::ostream &os, const World<CartesianTag> &w) noexcept;
+// Explicit instantiation of World constructor for CartesianTag
+template World<CartesianTag>::World(const Int3 &lower, const Int3 &upper,
+                                    const CoordinateSystem<CartesianTag> &cs);
 
 // Conversion between physical coordinates and grid indices
 
