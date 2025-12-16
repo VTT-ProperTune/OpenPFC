@@ -25,7 +25,7 @@ using namespace pfc;
 using json = nlohmann::json;
 
 TEST_CASE("FFT Backend - FFTW backend selection", "[fft][backend][unit]") {
-  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
+  auto world = world::create(GridSize({8}), PhysicalOrigin({8}), GridSpacing({8}));
   auto decomposition = decomposition::create(world, 1);
 
   // Create FFT with FFTW backend explicitly
@@ -38,7 +38,7 @@ TEST_CASE("FFT Backend - FFTW backend selection", "[fft][backend][unit]") {
 }
 
 TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]") {
-  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
+  auto world = world::create(GridSize({8}), PhysicalOrigin({8}), GridSpacing({8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
@@ -65,7 +65,7 @@ TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]
 
 #if defined(OpenPFC_ENABLE_CUDA)
 TEST_CASE("FFT Backend - CUDA backend selection", "[fft][backend][cuda][unit]") {
-  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
+  auto world = world::create(GridSize({8}), PhysicalOrigin({8}), GridSpacing({8}));
   auto decomposition = decomposition::create(world, 1);
 
   // Create FFT with CUDA backend explicitly
@@ -78,7 +78,7 @@ TEST_CASE("FFT Backend - CUDA backend selection", "[fft][backend][cuda][unit]") 
 }
 
 TEST_CASE("FFT Backend - CUDA requires DataBuffer", "[fft][backend][cuda][unit]") {
-  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
+  auto world = world::create(GridSize({8}), PhysicalOrigin({8}), GridSpacing({8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::CUDA);
 
@@ -142,7 +142,7 @@ TEST_CASE("FFT Backend - CUDA backend throws if not compiled",
 #endif
 
 TEST_CASE("FFT Backend - timing functions work", "[fft][backend][unit]") {
-  auto world = world::create(GridSize({8), PhysicalOrigin(8), GridSpacing(8}));
+  auto world = world::create(GridSize({8}), PhysicalOrigin({8}), GridSpacing({8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
@@ -168,7 +168,8 @@ TEST_CASE("FFT Backend - timing functions work", "[fft][backend][unit]") {
 
 TEST_CASE("FFT Backend - size queries work through interface",
           "[fft][backend][unit]") {
-  auto world = world::create(GridSize({16), PhysicalOrigin(16), GridSpacing(16}));
+  auto world =
+      world::create(GridSize({16}), PhysicalOrigin({16}), GridSpacing({16}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
