@@ -116,7 +116,7 @@ TEST_CASE("pfc::interpolate() free function works correctly",
 
     // Initialize: field[i] = i
     for (int i = 0; i < 5; i++) {
-      field[{i}] = i;
+      field[{static_cast<size_t>(i)}] = i;
     }
 
     // Test rounding to nearest (std::round behavior)

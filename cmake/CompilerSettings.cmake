@@ -14,6 +14,12 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wfatal-errors -Werror=format-security")
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   add_compile_options(
     -Wnull-dereference    # Warn about potential null pointer dereferences
+  )
+endif()
+
+# GCC-specific warnings (not supported by Clang)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  add_compile_options(
     -Wduplicated-cond     # Warn about duplicated conditions
     -Wduplicated-branches # Warn about duplicated branches
     -Wlogical-op          # Warn about logical operator issues
