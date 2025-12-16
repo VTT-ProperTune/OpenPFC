@@ -75,8 +75,9 @@ public:
 
     try {
       // Create world and decomposition
-      auto world =
-          world::create({size_x, size_y, size_z}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+      auto world = world::create(GridSize({size_x, size_y, size_z}),
+                                 PhysicalOrigin({0.0, 0.0, 0.0}),
+                                 GridSpacing({1.0, 1.0, 1.0}));
       auto decomp = decomposition::create(world, size);
       auto fft = fft::create(decomp, rank);
 
@@ -183,8 +184,9 @@ public:
 
     try {
       // Create world and decomposition
-      auto world =
-          world::create({size_x, size_y, size_z}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+      auto world = world::create(GridSize({size_x, size_y, size_z}),
+                                 PhysicalOrigin({0.0, 0.0, 0.0}),
+                                 GridSpacing({1.0, 1.0, 1.0}));
       auto decomp = decomposition::create(world, size);
 
       // Create model with specified precision
