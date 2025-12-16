@@ -35,7 +35,8 @@ std::string VTKWriter::generate_filename(int increment, int rank) const {
   return base;
 }
 
-void VTKWriter::write_vti_header(std::ofstream &file, int increment) const {
+void VTKWriter::write_vti_header(std::ofstream &file,
+                                 [[maybe_unused]] int increment) const {
   file << R"(<?xml version="1.0" encoding="utf-8"?>)" << std::endl;
   file
       << R"(<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian" header_type="UInt64">)"

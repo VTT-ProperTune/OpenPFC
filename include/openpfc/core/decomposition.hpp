@@ -388,7 +388,7 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
  * @see create(world, nparts) - automatic grid selection
  * @see proc_setup_min_surface() - algorithm for optimal grid
  */
-inline const auto create(const World &world, const Int3 &grid) noexcept {
+inline auto create(const World &world, const Int3 &grid) noexcept {
   return Decomposition(world, grid);
 };
 
@@ -443,7 +443,7 @@ inline const auto create(const World &world, const Int3 &grid) noexcept {
  * @see create(world, grid) - manual grid specification
  * @see proc_setup_min_surface() - HeFFTe's grid selection algorithm
  */
-inline const auto create(const World &world, const int &nparts) noexcept {
+inline auto create(const World &world, const int &nparts) noexcept {
   auto indices = to_indices(world);
   auto grid = proc_setup_min_surface(indices, nparts);
   return create(world, grid);

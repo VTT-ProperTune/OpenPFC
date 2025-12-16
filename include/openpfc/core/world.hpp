@@ -320,8 +320,8 @@ CartesianWorld create(const GridSize &size, const PhysicalOrigin &origin,
  * @see create(GridSize, PhysicalOrigin, GridSpacing) for new API
  */
 [[deprecated("Use create(GridSize, PhysicalOrigin, GridSpacing) for type safety. "
-             "See migration guide in documentation.")]]
-CartesianWorld create(const Int3 &size, const Real3 &offset, const Real3 &spacing);
+             "See migration guide in documentation.")]] CartesianWorld
+create(const Int3 &size, const Real3 &offset, const Real3 &spacing);
 
 /**
  * @brief Create a World object with the specified size, lower bounds, upper
@@ -513,7 +513,7 @@ inline const auto &get_upper(const CartesianWorld &world) noexcept {
  * @param i Dimension index.
  * @return The upper bound in the specified dimension.
  */
-inline const auto get_upper(const CartesianWorld &world, int index) {
+inline auto get_upper(const CartesianWorld &world, int index) {
   return get_upper(world).at(index);
 }
 
@@ -558,7 +558,7 @@ inline const auto get_upper(const CartesianWorld &world, int index) {
  * @see get_origin() for coordinate system offset
  */
 template <typename T>
-inline const auto to_coords(const World<T> &world, const Int3 &indices) noexcept {
+inline auto to_coords(const World<T> &world, const Int3 &indices) noexcept {
   return to_coords(get_coordinate_system(world), indices);
 }
 
@@ -613,7 +613,7 @@ inline const auto to_coords(const World<T> &world, const Int3 &indices) noexcept
  * @see DiscreteField::interpolate() for higher-order interpolation
  */
 template <typename T>
-inline const auto to_indices(const World<T> &world, const Real3 &coords) noexcept {
+inline auto to_indices(const World<T> &world, const Real3 &coords) noexcept {
   return to_index(get_coordinate_system(world), coords);
 }
 

@@ -27,14 +27,13 @@ std::ostream &operator<<(std::ostream &os, const std::array<T, N> &arr) {
 
 using heffte::split_world;
 
-const auto get_real_indices(const Decomposition &decomposition) {
+auto get_real_indices(const Decomposition &decomposition) {
   auto world = get_global_world(decomposition);
   auto [N1, N2, N3] = get_size(world);
   return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 - 1, N3 - 1});
 }
 
-const auto get_complex_indices(const Decomposition &decomposition,
-                               int r2c_direction) {
+auto get_complex_indices(const Decomposition &decomposition, int r2c_direction) {
   auto [N1, N2, N3] = get_size(get_global_world(decomposition));
   if (r2c_direction == 0) {
     return heffte::box3d<int>({0, 0, 0}, {N1 / 2, N2 - 1, N3 - 1});
@@ -93,50 +92,48 @@ FFT create(const Decomposition &decomposition, int rank_id) {
 }
 
 // Runtime backend selection - returns IFFT interface
-std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_id, 
-                                           plan_options options, Backend backend) {
+std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_id,
+                                          plan_options options, Backend backend) {
   auto inbox = get_real_box(fft_layout, rank_id);
   auto outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
   auto comm = get_comm();
-  
+
   switch (backend) {
-    case Backend::FFTW: {
-      using fft_type = heffte::fft3d_r2c<heffte::backend::fftw>;
-      return std::make_unique<FFT_Impl<heffte::backend::fftw>>(
-          fft_type(inbox, outbox, r2c_dir, comm, options));
-    }
+  case Backend::FFTW: {
+    using fft_type = heffte::fft3d_r2c<heffte::backend::fftw>;
+    return std::make_unique<FFT_Impl<heffte::backend::fftw>>(
+        fft_type(inbox, outbox, r2c_dir, comm, options));
+  }
 #if defined(OpenPFC_ENABLE_CUDA)
-    case Backend::CUDA: {
-      using fft_type = heffte::fft3d_r2c<heffte::backend::cufft>;
-      return std::make_unique<FFT_Impl<heffte::backend::cufft>>(
-          fft_type(inbox, outbox, r2c_dir, comm, options));
-    }
+  case Backend::CUDA: {
+    using fft_type = heffte::fft3d_r2c<heffte::backend::cufft>;
+    return std::make_unique<FFT_Impl<heffte::backend::cufft>>(
+        fft_type(inbox, outbox, r2c_dir, comm, options));
+  }
 #endif
-    default:
-      throw std::runtime_error("Unsupported FFT backend requested");
+  default: throw std::runtime_error("Unsupported FFT backend requested");
   }
 }
 
-std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition, 
-                                           int rank_id, Backend backend) {
+std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition,
+                                          int rank_id, Backend backend) {
   auto r2c_dir = 0;
   auto fft_layout = layout::create(decomposition, r2c_dir);
-  
+
   // Get default options for the selected backend
   switch (backend) {
-    case Backend::FFTW: {
-      auto options = heffte::default_options<heffte::backend::fftw>();
-      return create_with_backend(fft_layout, rank_id, options, backend);
-    }
+  case Backend::FFTW: {
+    auto options = heffte::default_options<heffte::backend::fftw>();
+    return create_with_backend(fft_layout, rank_id, options, backend);
+  }
 #if defined(OpenPFC_ENABLE_CUDA)
-    case Backend::CUDA: {
-      auto options = heffte::default_options<heffte::backend::cufft>();
-      return create_with_backend(fft_layout, rank_id, options, backend);
-    }
+  case Backend::CUDA: {
+    auto options = heffte::default_options<heffte::backend::cufft>();
+    return create_with_backend(fft_layout, rank_id, options, backend);
+  }
 #endif
-    default:
-      throw std::runtime_error("Unsupported FFT backend requested");
+  default: throw std::runtime_error("Unsupported FFT backend requested");
   }
 }
 

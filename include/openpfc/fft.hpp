@@ -404,14 +404,14 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   /**
    * @brief Resets the recorded FFT computation time to zero.
    */
-  void reset_fft_time() { m_fft_time = 0.0; }
+  void reset_fft_time() override { m_fft_time = 0.0; }
 
   /**
    * @brief Returns the recorded FFT computation time.
    *
    * @return The FFT computation time in seconds.
    */
-  double get_fft_time() const { return m_fft_time; }
+  double get_fft_time() const override { return m_fft_time; }
 
   /**
    * @brief Returns the associated Decomposition object.
@@ -425,21 +425,21 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
    *
    * @return Size of the inbox.
    */
-  size_t size_inbox() const { return m_fft.size_inbox(); }
+  size_t size_inbox() const override { return m_fft.size_inbox(); }
 
   /**
    * @brief Returns the size of the outbox used for FFT computations.
    *
    * @return Size of the outbox.
    */
-  size_t size_outbox() const { return m_fft.size_outbox(); }
+  size_t size_outbox() const override { return m_fft.size_outbox(); }
 
   /**
    * @brief Returns the size of the workspace used for FFT computations.
    *
    * @return Size of the workspace.
    */
-  size_t size_workspace() const { return m_fft.size_workspace(); }
+  size_t size_workspace() const override { return m_fft.size_workspace(); }
 };
 
 // Type aliases for backward compatibility (defaults to FFTW backend)
@@ -453,12 +453,12 @@ inline const auto &get_fft_object(const FFT_Impl<BackendTag> &fft) noexcept {
 }
 
 template <typename BackendTag>
-inline const auto get_inbox(const FFT_Impl<BackendTag> &fft) noexcept {
+inline auto get_inbox(const FFT_Impl<BackendTag> &fft) noexcept {
   return get_fft_object(fft).inbox();
 }
 
 template <typename BackendTag>
-inline const auto get_outbox(const FFT_Impl<BackendTag> &fft) noexcept {
+inline auto get_outbox(const FFT_Impl<BackendTag> &fft) noexcept {
   return get_fft_object(fft).outbox();
 }
 
@@ -517,10 +517,8 @@ FFT create(const Decomposition &decomposition);
  * @note This function provides runtime polymorphism via the IFFT interface.
  *       For compile-time selection with zero overhead, use create() directly.
  */
-std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, 
-                                           int rank_id, 
-                                           plan_options options, 
-                                           Backend backend);
+std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_id,
+                                          plan_options options, Backend backend);
 
 /**
  * @brief Creates an FFT object with runtime backend selection
@@ -531,9 +529,8 @@ std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout,
  * @return A unique_ptr to IFFT interface for the selected backend
  * @throws std::runtime_error if backend is not supported or not compiled in
  */
-std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition, 
-                                           int rank_id, 
-                                           Backend backend);
+std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition,
+                                          int rank_id, Backend backend);
 
 } // namespace fft
 
