@@ -131,7 +131,9 @@ int main() {
   std::cout << "--------------------------------------\n";
 
   // Traditional way (still works!)
-  auto traditional = world::create({64, 64, 64}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  auto traditional =
+      world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({1.0, 1.0, 1.0}));
 
   // New helper way (cleaner!)
   auto helper = world::uniform(64);
