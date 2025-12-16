@@ -15,7 +15,7 @@ TEST_CASE("World validation with wrong type for Lx",
             {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
 
   try {
-    auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<World>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -37,7 +37,7 @@ TEST_CASE("World validation with invalid origo value",
   };
 
   try {
-    auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<World>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -60,7 +60,7 @@ TEST_CASE("World validation with missing Ly field",
             {"origo", "center"}};
 
   try {
-    auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<World>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -77,7 +77,7 @@ TEST_CASE("World validation with wrong type for dx",
             {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
 
   try {
-    auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<World>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
@@ -113,7 +113,7 @@ TEST_CASE("Error messages are concise", "[ui][integration][validation]") {
             {"dy", 1.0},   {"dz", 1.0}, {"origo", "center"}};
 
   try {
-    auto world = ui::from_json<World>(j);
+    [[maybe_unused]] auto world = ui::from_json<World>(j);
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
