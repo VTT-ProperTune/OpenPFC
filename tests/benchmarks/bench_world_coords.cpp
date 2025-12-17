@@ -284,8 +284,9 @@ TEST_CASE("World zero-cost abstraction validation",
 TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]") {
   SECTION("Sequential world creation and destruction") {
     BENCHMARK("Create and destroy World (stack)") {
-      auto world =
-          world::create(GridSize({128}), PhysicalOrigin({128}), GridSpacing({128}));
+      auto world = world::create(GridSize({128, 128, 128}),
+                                 PhysicalOrigin({128.0, 128.0, 128.0}),
+                                 GridSpacing({128.0, 128.0, 128.0}));
       return get_total_size(world);
     };
 
