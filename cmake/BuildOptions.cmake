@@ -10,6 +10,7 @@ option(OpenPFC_BUILD_BENCHMARKS "Build performance benchmarks (slow tests)" OFF)
 
 if(OpenPFC_BUILD_TESTS)
   message(STATUS "🔍 Building tests")
+  enable_testing()
   find_package(Catch2 REQUIRED)
   if(Catch2_FOUND)
     message(STATUS "✅ Catch2 v${Catch2_VERSION} found at ${Catch2_DIR}")
