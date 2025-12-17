@@ -86,7 +86,7 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
     auto world = world::create({32, 32, 32});
     Tungsten tungsten(world);
 
-    REQUIRE_THROWS_AS(from_json(j, tungsten), std::runtime_error);
+    REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
   }
 
   SECTION("Reject invalid JSON - wrong type") {
@@ -116,7 +116,7 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
     auto world = world::create({32, 32, 32});
     Tungsten tungsten(world);
 
-    REQUIRE_THROWS_AS(from_json(j, tungsten), std::runtime_error);
+    REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
   }
 }
 
