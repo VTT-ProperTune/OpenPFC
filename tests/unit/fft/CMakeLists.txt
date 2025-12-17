@@ -4,6 +4,7 @@
 # FFT unit tests
 target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fft.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_comprehensive.cpp  # TODO: Fix incomplete test
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_setting.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_backend_selection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_kspace.cpp

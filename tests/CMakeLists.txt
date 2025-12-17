@@ -47,9 +47,44 @@ if(OpenPFC_ENABLE_CODE_COVERAGE)
   target_link_options(openpfc-tests PRIVATE --coverage)
 endif()
 
-# Disable automatic test discovery during the build
-# Comment out or remove the following line:
-# catch_discover_tests(openpfc-tests)
+# Enable automatic test discovery for CTest (exclude MPI-tagged tests here)
+include(Catch)
+catch_discover_tests(openpfc-tests
+  TEST_PREFIX "openpfc:"
+  TEST_SPEC "~[MPI]"
+  PROPERTIES 
+    ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+  DISCOVERY_MODE PRE_TEST
+)
+
+# Register MPI tests explicitly with mpiexec wrappers
+option(OpenPFC_RUN_MPI_SUITES "Enable explicit MPI multi-rank test suites" OFF)
+find_package(MPI REQUIRED)
+if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
+  # 2-process MPI suite: runs MPI tests suitable for 2 ranks
+  add_test(NAME mpi_2procs_all
+       COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+           $<TARGET_FILE:openpfc-tests>
+           "[MPI]~[grid]~[ring]~[multiple]"
+  )
+  set_tests_properties(mpi_2procs_all PROPERTIES TIMEOUT 120)
+
+  # 3-process ring topology
+  add_test(NAME mpi_3procs_ring
+       COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 3
+           $<TARGET_FILE:openpfc-tests>
+           "[MPI][ring]"
+  )
+  set_tests_properties(mpi_3procs_ring PROPERTIES TIMEOUT 120)
+
+  # 4-process tests: grid (requires exactly 4) and multiple neighbors (>=4)
+  add_test(NAME mpi_4procs_grid_multiple
+       COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+           $<TARGET_FILE:openpfc-tests>
+           "[MPI][grid],[MPI][multiple]"
+  )
+  set_tests_properties(mpi_4procs_grid_multiple PROPERTIES TIMEOUT 180)
+endif()
 
 # Optionally, add a custom target to run tests manually
 add_custom_target(run-tests COMMAND openpfc-tests)

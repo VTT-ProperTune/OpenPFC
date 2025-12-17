@@ -5,9 +5,12 @@
 target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_world.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_world_strong_types.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/test_world_comprehensive.cpp  # TODO: Fix incomplete test
     ${CMAKE_CURRENT_SOURCE_DIR}/test_box3d.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_decomposition.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/test_decomposition_comprehensive.cpp  # TODO: Fix incomplete test
     ${CMAKE_CURRENT_SOURCE_DIR}/test_field.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_field_comprehensive.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_arraynd.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_discrete_field.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_multi_index.cpp
