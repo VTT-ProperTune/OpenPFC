@@ -10,7 +10,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_decomposition.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test_decomposition_comprehensive.cpp  # TODO: Fix incomplete test
     ${CMAKE_CURRENT_SOURCE_DIR}/test_field.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_field_comprehensive.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/test_field_comprehensive.cpp  # Missing file, temporarily disabled to allow build
     ${CMAKE_CURRENT_SOURCE_DIR}/test_arraynd.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_discrete_field.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_multi_index.cpp
