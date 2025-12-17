@@ -8,13 +8,13 @@
 #include <openpfc/mpi/worker.hpp>
 
 int main(int argc, char *argv[]) {
-  // Initialize MPI using MPI_Worker (handles case where MPI is already initialized)
-  // verbose=false to avoid test discovery issues with Catch2
-  pfc::MPI_Worker worker(argc, argv, MPI_COMM_WORLD, false);
+  // Initialize MPI once as a static variable (singleton pattern).
+  // This keeps MPI initialized across all Catch2 test runs, avoiding
+  // per-test MPI_Init/Finalize overhead that causes 1+ sec delay per test.
+  // MPI_Worker already checks MPI_Initialized() internally.
+  static pfc::MPI_Worker worker(argc, argv, MPI_COMM_WORLD, false);
 
   // Run Catch2 tests
-  int result = Catch::Session().run(argc, argv); // Use Catch::Session
-
-  // MPI_Worker destructor will handle MPI_Finalize if needed
+  int result = Catch::Session().run(argc, argv);
   return result;
 }
