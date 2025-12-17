@@ -69,8 +69,8 @@ if(TUNGSTEN_ENABLE_TESTS)
         add_executable(test_tungsten test_tungsten.cpp)
         target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2)
         include(CTest)
-        include(Catch)
-        catch_discover_tests(test_tungsten)
+        # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
+        add_test(NAME tungsten-all-tests COMMAND test_tungsten)
         
         # CPU vs CUDA comparison test (only if CUDA is enabled)
         if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
@@ -91,8 +91,8 @@ if(TUNGSTEN_ENABLE_TESTS)
                 CUDA_SEPARABLE_COMPILATION ON
             )
             include(CTest)
-            include(Catch)
-            catch_discover_tests(test_tungsten_cpu_vs_cuda)
+            # Run all CPU vs CUDA tests in a single invocation
+            add_test(NAME tungsten-cpu-vs-cuda-tests COMMAND test_tungsten_cpu_vs_cuda)
             message(STATUS "Tungsten CPU vs CUDA comparison test enabled")
         endif()
     else()
