@@ -69,8 +69,11 @@ public:
    * @param argc Pointer to the number of command-line arguments
    * @param argv Pointer to an array of command-line arguments
    * @param comm MPI communicator to use
+   * @param verbose Print initialization message if true (default: true)
    */
-  MPI_Worker(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD) : m_comm(comm) {
+  MPI_Worker(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD,
+             bool verbose = true)
+      : m_comm(comm) {
     int initialized = 0;
     MPI_Initialized(&initialized);
     if (!initialized) {
@@ -81,7 +84,7 @@ public:
     }
     MPI_Comm_rank(m_comm, &m_rank);
     MPI_Comm_size(m_comm, &m_num_procs);
-    if (m_owns_mpi) {
+    if (m_owns_mpi && verbose) {
       std::cout << "MPI_Init(): initialized " << m_num_procs << " processes"
                 << std::endl;
     }
