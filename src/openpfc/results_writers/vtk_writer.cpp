@@ -75,7 +75,12 @@ void VTKWriter::write_vti_data(std::ofstream &file, const RealField &data) const
 }
 
 void VTKWriter::write_pvti_file(int increment) const {
-  if (m_rank != 0) return; // Only rank 0 writes master file
+  // Only true rank 0 writes master file
+  int current_rank = 0;
+  int current_size = 1;
+  MPI_Comm_rank(m_comm, &current_rank);
+  MPI_Comm_size(m_comm, &current_size);
+  if (current_rank != 0) return;
 
   // Format filename with increment number
   std::string pvti_filename = utils::format_with_number(m_filename, increment);
@@ -108,8 +113,15 @@ void VTKWriter::write_pvti_file(int increment) const {
   file << R"(    </PPointData>)" << std::endl;
 
   // List all piece files
-  for (int r = 0; r < m_num_ranks; ++r) {
-    std::string piece_filename = generate_filename(increment, r);
+  for (int r = 0; r < current_size; ++r) {
+    // Build piece filename deterministically to avoid relying on cached m_num_ranks
+    std::string base = utils::format_with_number(m_filename, increment);
+    size_t ext_pos = base.find_last_of('.');
+    std::string name =
+        (ext_pos != std::string::npos) ? base.substr(0, ext_pos) : base;
+    std::string ext =
+        (ext_pos != std::string::npos) ? base.substr(ext_pos) : std::string();
+    std::string piece_filename = name + "_" + std::to_string(r) + ext;
     file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << std::endl;
   }
 
@@ -146,7 +158,9 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
   MPI_Barrier(m_comm);
 
   // Write parallel master file (rank 0 only)
-  if (m_num_ranks > 1) {
+  int current_size = 1;
+  MPI_Comm_size(m_comm, &current_size);
+  if (current_size > 1) {
     write_pvti_file(increment);
   }
 
