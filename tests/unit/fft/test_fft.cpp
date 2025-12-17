@@ -15,7 +15,8 @@ using namespace Catch::Matchers;
 using namespace pfc;
 
 TEST_CASE("FFT - basic functionality", "[fft][unit]") {
-  auto world = world::create(GridSize({8}), PhysicalOrigin({1}), GridSpacing({1}));
+  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   REQUIRE(fft.size_inbox() > 0);
@@ -25,7 +26,8 @@ TEST_CASE("FFT - basic functionality", "[fft][unit]") {
 
 TEST_CASE("FFT - forward transformation", "[fft][unit]") {
   // Create an FFT object with a fixed decomposition
-  auto world = world::create(GridSize({8}), PhysicalOrigin({1}), GridSpacing({1}));
+  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
@@ -46,7 +48,8 @@ TEST_CASE("FFT - forward transformation", "[fft][unit]") {
 
 TEST_CASE("FFT - backward transformation", "[fft][unit]") {
   // Create an FFT object with a fixed decomposition
-  auto world = world::create(GridSize({2}), PhysicalOrigin({1}), GridSpacing({1}));
+  auto world = world::create(GridSize({2, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
