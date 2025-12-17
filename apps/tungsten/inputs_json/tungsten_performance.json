@@ -25,17 +25,21 @@
             "q40": 45.0
         }
     },
-    "Lx": 128,
-    "Ly": 128,
-    "Lz": 128,
-    "dx": 1.1107207345395915,
-    "dy": 1.1107207345395915,
-    "dz": 1.1107207345395915,
-    "origin": "center",
-    "t0": 0.0,
-    "t1": 10.0,
-    "dt": 1.0,
-    "saveat": -1.0,
+    "domain": {
+        "Lx": 128,
+        "Ly": 128,
+        "Lz": 128,
+        "dx": 1.1107207345395915,
+        "dy": 1.1107207345395915,
+        "dz": 1.1107207345395915,
+        "origin": "center"
+    },
+    "timestepping": {
+        "t0": 0.0,
+        "t1": 10.0,
+        "dt": 1.0,
+        "saveat": -1.0
+    },
     "fields": [
         {
             "name": "psi",
@@ -55,8 +59,6 @@
             "rho_seed": -0.047
         }
     ],
-    "boundary_conditions": [
-    ],
     "detailed_timing": {
         "enabled": true,
         "print": true,
@@ -64,6 +66,7 @@
         "filename": "timing_256.bin"
     },
     "plan_options": {
+        "backend": "fftw",
         "use_reorder": true,
         "reshape_algorithm": "p2p_plined",
         "use_pencils": true,
