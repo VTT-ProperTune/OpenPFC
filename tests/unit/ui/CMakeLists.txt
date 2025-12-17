@@ -5,5 +5,7 @@
 target_sources(openpfc-tests PRIVATE
   test_ui_errors.cpp
   test_toml_to_json.cpp
-  test_parameter_validation.cpp
+  test_parameter_metadata.cpp
+  test_parameter_validator.cpp
+  test_validation_result.cpp
 )
