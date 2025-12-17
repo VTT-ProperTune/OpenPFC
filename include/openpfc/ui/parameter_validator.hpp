@@ -43,12 +43,14 @@
 #define PFC_UI_PARAMETER_VALIDATOR_HPP
 
 #include "parameter_metadata.hpp"
-#include <nlohmann/json.hpp>
-#include <map>
-#include <sstream>
-#include <vector>
 #include <algorithm>
+#include <cmath>
 #include <iomanip>
+#include <map>
+#include <nlohmann/json.hpp>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace pfc {
 namespace ui {
@@ -97,7 +99,7 @@ struct ValidationResult {
   /**
    * @brief Format parameter summary
    */
-  std::string format_summary(const std::string& model_name = "Model") const {
+  std::string format_summary(const std::string &model_name = "Model") const {
     std::ostringstream msg;
     msg << "\n" << std::string(80, '=') << "\n";
     msg << "Configuration Validation Summary - " << model_name << "\n";
@@ -111,13 +113,13 @@ struct ValidationResult {
 
       // Find max key length for formatting
       size_t max_key_len = 0;
-      for (const auto& [key, _] : validated_params) {
+      for (const auto &[key, _] : validated_params) {
         max_key_len = std::max(max_key_len, key.length());
       }
 
-      for (const auto& [key, value] : validated_params) {
-        msg << "  " << std::left << std::setw(max_key_len + 2) << key 
-            << " = " << value << "\n";
+      for (const auto &[key, value] : validated_params) {
+        msg << "  " << std::left << std::setw(max_key_len + 2) << key << " = "
+            << value << "\n";
       }
     }
 
@@ -142,21 +144,19 @@ public:
   /**
    * @brief Set model name for reporting
    */
-  void set_model_name(const std::string& name) {
-    model_name_ = name;
-  }
+  void set_model_name(const std::string &name) { model_name_ = name; }
 
   /**
    * @brief Add parameter metadata for validation
    */
-  void add_metadata(const ParameterMetadata<double>& meta) {
+  void add_metadata(const ParameterMetadata<double> &meta) {
     double_params_.push_back(meta);
   }
 
   /**
    * @brief Add integer parameter metadata for validation
    */
-  void add_metadata(const ParameterMetadata<int>& meta) {
+  void add_metadata(const ParameterMetadata<int> &meta) {
     int_params_.push_back(meta);
   }
 
@@ -169,16 +169,16 @@ public:
    * @param config JSON configuration object
    * @return ValidationResult with errors and validated values
    */
-  ValidationResult validate(const json& config) const {
+  ValidationResult validate(const json &config) const {
     ValidationResult result;
 
     // Validate double parameters
-    for (const auto& meta : double_params_) {
+    for (const auto &meta : double_params_) {
       validate_parameter(config, meta, result);
     }
 
     // Validate int parameters
-    for (const auto& meta : int_params_) {
+    for (const auto &meta : int_params_) {
       validate_parameter(config, meta, result);
     }
 
@@ -187,14 +187,64 @@ public:
   }
 
 private:
+  // Retrieve a JSON value by dot-separated path (e.g., "outer.inner.param").
+  // Falls back to direct key lookup if path has no dots.
+  static json get_by_path(const json &j, const std::string &path) {
+    if (path.find('.') == std::string::npos) {
+      return j.contains(path) ? j.at(path) : json(nullptr);
+    }
+    const json *current = &j;
+    size_t start = 0;
+    while (start < path.size()) {
+      size_t dot = path.find('.', start);
+      std::string key = (dot == std::string::npos) ? path.substr(start)
+                                                   : path.substr(start, dot - start);
+      if (!current->is_object() || !current->contains(key)) {
+        return json(nullptr);
+      }
+      current = &current->at(key);
+      if (dot == std::string::npos) break;
+      start = dot + 1;
+    }
+    return *current;
+  }
+
+  static bool has_by_path(const json &j, const std::string &path) {
+    if (path.find('.') == std::string::npos) {
+      return j.contains(path);
+    }
+    const json *current = &j;
+    size_t start = 0;
+    while (start < path.size()) {
+      size_t dot = path.find('.', start);
+      std::string key = (dot == std::string::npos) ? path.substr(start)
+                                                   : path.substr(start, dot - start);
+      if (!current->is_object() || !current->contains(key)) {
+        return false;
+      }
+      current = &current->at(key);
+      if (dot == std::string::npos) break;
+      start = dot + 1;
+    }
+    return true;
+  }
+
+  static bool is_finite_number(const json &v) {
+    if (!v.is_number()) return false;
+    double x = v.get<double>();
+    return std::isfinite(x);
+  }
+
   /**
    * @brief Validate a single double parameter
    */
-  void validate_parameter(const json& config, 
-                         const ParameterMetadata<double>& meta,
-                         ValidationResult& result) const {
+  void validate_parameter(const json &config, const ParameterMetadata<double> &meta,
+                          ValidationResult &result) const {
+    // Resolve value by path (supports nested keys like "a.b.c")
+    bool exists = has_by_path(config, meta.name);
+    json val = exists ? get_by_path(config, meta.name) : json(nullptr);
     // Check if parameter exists
-    if (!config.contains(meta.name)) {
+    if (!exists) {
       if (meta.required && !meta.default_value) {
         std::ostringstream err;
         err << "Required parameter '" << meta.name << "' is missing\n"
@@ -214,19 +264,26 @@ private:
     }
 
     // Check type
-    if (!config[meta.name].is_number()) {
+    if (!val.is_number()) {
       std::ostringstream err;
       err << "Parameter '" << meta.name << "' has wrong type\n"
           << "  Expected: number\n"
-          << "  Got: " << config[meta.name].type_name() << "\n"
-          << "  Value: " << config[meta.name].dump() << "\n"
+          << "  Got: " << val.type_name() << "\n"
+          << "  Value: " << val.dump() << "\n"
           << "  " << meta.format_info();
       result.errors.push_back(err.str());
       return;
     }
 
-    // Get value and validate bounds
-    double value = config[meta.name].get<double>();
+    // Get value and validate bounds (reject NaN/Inf)
+    double value = val.get<double>();
+    if (!std::isfinite(value)) {
+      std::ostringstream err;
+      err << "Parameter '" << meta.name << "' is not finite (NaN/Inf)\n"
+          << "  " << meta.format_info();
+      result.errors.push_back(err.str());
+      return;
+    }
     if (auto error = meta.validate(value)) {
       std::ostringstream err;
       err << *error << "\n"
@@ -246,11 +303,13 @@ private:
   /**
    * @brief Validate a single int parameter
    */
-  void validate_parameter(const json& config, 
-                         const ParameterMetadata<int>& meta,
-                         ValidationResult& result) const {
+  void validate_parameter(const json &config, const ParameterMetadata<int> &meta,
+                          ValidationResult &result) const {
+    // Resolve value by path (supports nested keys like "a.b.c")
+    bool exists = has_by_path(config, meta.name);
+    json val = exists ? get_by_path(config, meta.name) : json(nullptr);
     // Check if parameter exists
-    if (!config.contains(meta.name)) {
+    if (!exists) {
       if (meta.required && !meta.default_value) {
         std::ostringstream err;
         err << "Required parameter '" << meta.name << "' is missing\n"
@@ -270,19 +329,19 @@ private:
     }
 
     // Check type
-    if (!config[meta.name].is_number_integer()) {
+    if (!val.is_number_integer()) {
       std::ostringstream err;
       err << "Parameter '" << meta.name << "' has wrong type\n"
           << "  Expected: integer\n"
-          << "  Got: " << config[meta.name].type_name() << "\n"
-          << "  Value: " << config[meta.name].dump() << "\n"
+          << "  Got: " << val.type_name() << "\n"
+          << "  Value: " << val.dump() << "\n"
           << "  " << meta.format_info();
       result.errors.push_back(err.str());
       return;
     }
 
     // Get value and validate bounds
-    int value = config[meta.name].get<int>();
+    int value = val.get<int>();
     if (auto error = meta.validate(value)) {
       std::ostringstream err;
       err << *error << "\n"
