@@ -99,15 +99,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04]
+        os: [ubuntu-22.04]
         compiler: [gcc-11, gcc-13, clang-14, clang-16]
         build_type: [Debug, Release]
         exclude:
           # Reduce matrix size - skip some combinations
-          - os: ubuntu-20.04
-            compiler: clang-16
-          - os: ubuntu-20.04
-            compiler: gcc-13
           - build_type: Debug
             compiler: clang-14
         include:
