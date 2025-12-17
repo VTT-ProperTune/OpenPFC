@@ -204,7 +204,7 @@
             files=$(find ./apps ./include ./examples ./tests ./docs \( -name '*.hpp' -o -name '*.cpp' \))
 
             # Run clang-format check (warning only, don't fail)
-            if ! clang-format --dry-run --Werror $files 2>&1; then
+            if ! clang-format --dry-run $files 2>&1; then
               echo "⚠️  Warning: Some files are not formatted according to clang-format style"
               echo "    This is not a failure, just a reminder to format your code"
               echo "    Run: clang-format -i <file> to fix formatting"
