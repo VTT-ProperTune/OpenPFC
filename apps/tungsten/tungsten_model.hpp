@@ -387,7 +387,7 @@ public:
    *
    * @param world The World object defining the simulation domain
    */
-  explicit Tungsten(const World &world) : Model(world) {
+  explicit Tungsten(FFT &fft, const World &world) : Model(fft, world) {
     // Additional initialization if needed
   }
 };
