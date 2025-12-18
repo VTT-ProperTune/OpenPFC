@@ -19,8 +19,7 @@ TEST_CASE("FieldModifier - applies field modification to model",
   auto world = world::create(GridSize({8, 8, 8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModelWithModificationFlag model(world);
-  model.set_fft(fft);
+  pfc::testing::MockModelWithModificationFlag model(fft, world);
 
   pfc::testing::MockFieldModifier modifier;
 
@@ -34,8 +33,7 @@ TEST_CASE("FieldModifier - polymorphic usage", "[field_modifier][unit]") {
   auto world = world::create(GridSize({8, 8, 8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModelWithModificationFlag model(world);
-  model.set_fft(fft);
+  pfc::testing::MockModelWithModificationFlag model(fft, world);
 
   std::unique_ptr<FieldModifier> modifier =
       std::make_unique<pfc::testing::MockFieldModifier>();
@@ -50,8 +48,7 @@ TEST_CASE("FieldModifier - move semantics", "[field_modifier][unit]") {
   auto world = world::create(GridSize({8, 8, 8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModelWithModificationFlag model(world);
-  model.set_fft(fft);
+  pfc::testing::MockModelWithModificationFlag model(fft, world);
 
   pfc::testing::MockFieldModifier modifier;
 
@@ -101,8 +98,7 @@ TEST_CASE("FieldModifier - works with MockModel", "[field_modifier][unit]") {
   auto world = world::create(GridSize({8, 8, 8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModel model(world);
-  model.set_fft(fft);
+  pfc::testing::MockModel model(fft, world);
 
   REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});
 }
