@@ -149,24 +149,22 @@ public:
   }
 
   /**
-   * @brief Override set_fft to set up CUDA FFT instead
+   * @brief Construct TungstenCUDA and set up CUDA FFT
    *
-   * When App class calls set_fft() with a CPU FFT, we ignore it and set up
-   * CUDA FFT using the world and MPI rank. This allows the CUDA model to work
-   * with the existing App infrastructure.
-   *
-   * @param fft CPU FFT (ignored, but kept for interface compatibility)
+   * @param fft CPU FFT reference (used by base Model)
+   * @param world Simulation domain
    */
-  void set_fft(fft::FFT &fft) {
-    (void)fft; // Ignore CPU FFT
-    // Get MPI rank and create decomposition from world
+  explicit TungstenCUDA(FFT &fft, const World &world)
+      : Model(fft, world), m_cpu_buffer_valid(false) {
+    // Create CUDA events for non-blocking synchronization
+    cudaEventCreate(&kernel_done_event);
+    cudaEventCreate(&fft_ready_event);
+    // Initialize CUDA FFT based on world and MPI rank
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     auto decomp = decomposition::create(get_world(), size);
     set_cuda_fft(decomp, rank);
-    // Also call base class to set m_rank0 flag
-    Model::set_fft(fft);
   }
 
   /**
@@ -454,11 +452,17 @@ public:
    *
    * @param world The World object defining the simulation domain
    */
-  explicit TungstenCUDA(const World &world)
-      : Model(world), m_cpu_buffer_valid(false) {
+  explicit TungstenCUDA(FFT &fft, const World &world)
+      : Model(fft, world), m_cpu_buffer_valid(false) {
     // Create CUDA events for non-blocking synchronization
     cudaEventCreate(&kernel_done_event);
     cudaEventCreate(&fft_ready_event);
+    // Initialize CUDA FFT based on world and MPI rank
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    auto decomp = decomposition::create(get_world(), size);
+    set_cuda_fft(decomp, rank);
   }
 
   /**
