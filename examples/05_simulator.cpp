@@ -185,7 +185,7 @@ void run() {
 
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
-  Diffusion model(world);
+  Diffusion model(fft, world);
 
   // Define time
   double t0 = 0.0;
