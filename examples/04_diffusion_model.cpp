@@ -236,8 +236,7 @@ void run() {
                              GridSpacing{{dx, dy, dz}});
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
-  Diffusion model(world);
-  model.set_fft(fft);
+  Diffusion model(fft, world);
 
   // Define time
   double t = 0.0;
