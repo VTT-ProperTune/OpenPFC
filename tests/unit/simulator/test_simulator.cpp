@@ -20,8 +20,7 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::MockModel model(world);
-  model.set_fft(fft);
+  pfc::testing::MockModel model(fft, world);
 
   SECTION("Add and apply initial conditions") {
     Time time({0.0, 10.0, 1.0}, 1.0);
@@ -83,8 +82,7 @@ TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::MockModel model(world);
-  model.set_fft(fft);
+  pfc::testing::MockModel model(fft, world);
 
   REQUIRE_NOTHROW(model.get_fft());
   REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});
