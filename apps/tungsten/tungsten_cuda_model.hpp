@@ -447,23 +447,7 @@ public:
     // Skipped for performance - can be enabled in debug builds if needed
   }
 
-  /**
-   * @brief Constructs a TungstenCUDA model with the given World object
-   *
-   * @param world The World object defining the simulation domain
-   */
-  explicit TungstenCUDA(FFT &fft, const World &world)
-      : Model(fft, world), m_cpu_buffer_valid(false) {
-    // Create CUDA events for non-blocking synchronization
-    cudaEventCreate(&kernel_done_event);
-    cudaEventCreate(&fft_ready_event);
-    // Initialize CUDA FFT based on world and MPI rank
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    auto decomp = decomposition::create(get_world(), size);
-    set_cuda_fft(decomp, rank);
-  }
+  // Note: Constructor defined earlier; avoid duplicate definitions.
 
   /**
    * @brief Destructor - cleans up CUDA events
