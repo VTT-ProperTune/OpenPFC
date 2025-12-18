@@ -80,12 +80,8 @@ int main(int argc, char *argv[]) {
   auto fft_layout = fft::layout::create(decomp, 0);
 
   // Create CUDA model
-  TungstenCUDA<double> model(world);
-
-  // Set CUDA FFT (this creates the CUDA FFT internally)
-  // We need to pass a dummy CPU FFT for interface compatibility
   auto dummy_fft = fft::create(fft_layout, rank, options);
-  model.set_fft(dummy_fft);
+  TungstenCUDA<double> model(dummy_fft, world);
 
   // Load model parameters
   if (settings.contains("model") && settings["model"].contains("params")) {
