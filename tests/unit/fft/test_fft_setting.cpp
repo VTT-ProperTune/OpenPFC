@@ -21,9 +21,7 @@ TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::MockModel model(world);
-
-  model.set_fft(fft);
+  pfc::testing::MockModel model(fft, world);
 
   // Ensure FFT object is set before proceeding
   REQUIRE_NOTHROW(model.get_fft());
@@ -35,7 +33,5 @@ TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
     REQUIRE(&retrieved_fft == &fft);
   }
 
-  SECTION("Ensure FFT object is not null") {
-    REQUIRE_NOTHROW(model.get_fft()); // Ensure no exception is thrown
-  }
+  SECTION("Ensure FFT object is always valid") { REQUIRE_NOTHROW(model.get_fft()); }
 }
