@@ -94,18 +94,16 @@ namespace pfc {
  */
 class Model {
 private:
-  /// @brief Raw pointer to the FFT object used by the model
+  /// @brief Reference to the FFT object used by the model
   ///
   /// @note **Ownership**: Model does NOT own the FFT object. The FFT must outlive
-  ///       the Model instance. The FFT is passed by reference in constructors
-  ///       and set_fft(), and Model stores a pointer for access.
+  ///       the Model instance. The FFT is passed by reference in the constructor.
   ///
   /// @warning **Lifetime**: Ensure the FFT object exists for the entire lifetime
   ///          of the Model. Do not destroy the FFT while Model is still in use.
   ///
   /// @see get_fft() for access
-  /// @see set_fft() to associate FFT with model
-  FFT *m_fft = nullptr;
+  FFT &m_fft;
   RealFieldSet m_real_fields;       ///< Collection of real-valued fields associated
                                     ///< with the model
   ComplexFieldSet m_complex_fields; ///< Collection of complex-valued fields
@@ -116,27 +114,36 @@ private:
 
 public:
   /**
-   * @brief Construct a new Model object.
-   *
-   * @param world Reference to the World object
-   */
-  Model(const World &world)
-      : m_world(world), domain(to_heffte_box(world)), m_rank0(mpi::get_rank() == 0) {
-  }
-
-  /**
    * @brief Destroy the Model object.
    */
   ~Model() {}
 
   /**
-   * @brief Construct a new Model object.
+   * @brief Construct a new Model object
+   *
+   * Constructs a Model with the given FFT backend and simulation domain.
+   * The FFT object must outlive the Model instance.
    *
    * @param fft Reference to the FFT object used by the model
    * @param world Reference to the World object
+   *
+   * @note FFT is required at construction and cannot be changed later (immutable)
+   * @note FFT object must outlive Model (reference semantics)
+   *
+   * @example
+   * ```cpp
+   * auto world = world::create({256, 256, 256});
+   * auto decomp = decomposition::create(world, MPI_COMM_WORLD);
+   * auto fft = fft::create(decomp);
+   *
+   * MyModel model(fft, world);  // FFT required at construction
+   * model.initialize(0.01);
+   * ```
+   *
+   * @since v2.0 (breaking change - FFT now required)
    */
   Model(FFT &fft, const World &world)
-      : m_fft(&fft), m_world(world),
+      : m_fft(fft), m_world(world),
         domain(to_heffte_box(world)), // Use to_heffte_box
         m_rank0(mpi::get_rank() == 0) {}
 
@@ -184,58 +191,19 @@ public:
   const World &get_world() const noexcept { return m_world; }
 
   /**
-   * @brief Set the FFT object for the model
-   *
-   * Associates an FFT instance with this model, enabling spectral operations.
-   * This is typically called during model setup before initialization.
-   *
-   * @param fft Reference to the FFT object to use for transforms
-   *
-   * @note The FFT object must outlive the Model (Model stores a pointer)
-   * @note Calling set_fft() after initialization may invalidate precomputed
-   * operators
-   * @note This also updates the m_rank0 flag for MPI rank checking
-   *
-   * @warning The Model stores a raw pointer - ensure FFT lifetime exceeds Model
-   * lifetime
-   * @warning Changing FFT after initialize() may cause undefined behavior
-   *
-   * @example
-   * ```cpp
-   * // Typical usage pattern
-   * auto world = world::create({256, 256, 256});
-   * auto decomp = Decomposition(world, MPI_COMM_WORLD);
-   * auto fft = FFT(decomp);
-   *
-   * MyModel model(world);  // Construct without FFT
-   * model.set_fft(fft);    // Set FFT before initialization
-   * model.initialize(0.01);
-   * ```
-   *
-   * @see get_fft() to access the FFT object
-   * @see Model(FFT&, const World&) constructor that sets FFT at construction
-   */
-  void set_fft(FFT &fft) {
-    m_fft = &fft;
-    m_rank0 = (mpi::get_rank() == 0);
-  }
-
-  /**
    * @brief Get the FFT object associated with the model
    *
    * Returns a reference to the FFT instance used for spectral operations
    * (forward and backward Fourier transforms). Use this to perform transforms
    * during time stepping.
    *
-   * @pre FFT must be set via constructor or set_fft() before calling this
+   * @pre FFT was provided at construction
    * @post Returns valid reference to FFT object
    * @return Reference to the FFT object
    *
-   * @throws std::runtime_error if the FFT object has not been set
-   *
    * @note The returned reference is valid as long as the FFT object exists
+   * @note Since v2.0, FFT is always valid (no null checks needed)
    *
-   * @warning Calling this before set_fft() or appropriate constructor throws
    *
    * @example
    * ```cpp
@@ -257,21 +225,12 @@ public:
    * }
    * ```
    *
-   * @see set_fft() to associate FFT with model
    * @see FFT::forward() for real-to-complex transforms
    * @see FFT::backward() for complex-to-real transforms
+   *
+   * @since v2.0 - no longer throws (FFT always valid)
    */
-  [[nodiscard]] FFT &get_fft() {
-    if (m_fft == nullptr) {
-      std::string msg =
-          "FFT object has not been set for Model instance at " +
-          std::to_string(reinterpret_cast<uintptr_t>(this)) +
-          ". "
-          "Call set_fft() or use Model(FFT&, const World&) constructor.";
-      throw std::runtime_error(msg);
-    }
-    return *m_fft;
-  }
+  [[nodiscard]] FFT &get_fft() noexcept { return m_fft; }
 
   /**
    * @brief Advance the model by one time step
