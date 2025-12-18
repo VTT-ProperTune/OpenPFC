@@ -48,7 +48,7 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
     auto decomp = decomposition::create(world, 1);
     auto fft = fft::create(decomp);
 
-    Aluminum aluminum(world);
+    Aluminum aluminum(fft, world);
     aluminum.set_n0(-0.0060);
     aluminum.set_alpha(0.20);
     aluminum.set_n_sol(-0.036);
@@ -75,7 +75,6 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
     aluminum.set_q30_bar(1.7152418049986);
     aluminum.set_q31_bar(0.45);
     aluminum.set_q40_bar(0.787482);
-    aluminum.set_fft(fft);
     double dt = 1.0e-2;
     aluminum.initialize(dt);
 
