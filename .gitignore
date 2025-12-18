@@ -5,3 +5,10 @@
 build
 result
 results
+*.out
+*.log
+*.err
+*.tmp
+*.sbatch
+.trash
+.temp
