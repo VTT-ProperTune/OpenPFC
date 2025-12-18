@@ -49,7 +49,7 @@ public:
    *
    * @param world The World object to initialize the model.
    */
-  explicit MyModel(const World &world) : Model(world) {
+  explicit MyModel(FFT &fft, const World &world) : Model(fft, world) {
     // Additional initialization if needed
   }
 
