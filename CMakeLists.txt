@@ -5,7 +5,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Project definition (must be literal in root file to avoid CMake warnings)
-project(OpenPFC VERSION 0.1.3 DESCRIPTION "Phase Field Crystal simulation framework")
+project(OpenPFC VERSION 0.1.4 DESCRIPTION "Phase Field Crystal simulation framework")
 
 # ============================================================================
 # OpenPFC CMake Build System

@@ -7,33 +7,119 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+## [0.1.4] - 2025-12-18
+
 ### Added
 
-- **Testing**: First integration test suite for diffusion model in
-  `tests/integration/test_diffusion_integration.cpp` validating complete
-  simulation pipeline (World → Decomposition → FFT → Model → Time Integration)
-  against analytical solutions. Includes 4 test cases with 331 assertions:
-  1D sinusoidal diffusion with convergence validation, 3D Gaussian diffusion
-  with spherical symmetry preservation, and MPI consistency verification.
-  Test helper model in `tests/fixtures/diffusion_model.hpp` demonstrates
-  "Laboratory, Not Fortress" philosophy with public `m_` prefixed fields.
-  All tests execute in <2 seconds validating spectral method accuracy
-  (max error <1e-4, RMS <5e-5). Establishes pattern for future physics
-  validation tests and enables safe refactoring of core components.
+- **GPU/CUDA Support**: Complete CUDA implementation enabling GPU-accelerated PFC simulations.
+  Added `DataBuffer` for backend-agnostic memory management with CPU/GPU memory traits,
+  CUDA FFT integration via HeFFTe, GPU kernels for element-wise operations, and `GPUVector`
+  RAII container. Implemented full Tungsten model on GPU with optimized kernel launches and
+  CPU-GPU synchronization for FieldModifiers and VTK output. Runtime backend selection API
+  allows choosing between CPU and CUDA FFT backends via configuration. Comprehensive test
+  coverage includes GPU device detection, memory allocation, FFT operations, and CPU vs CUDA
+  result comparison. Build system supports optional `OpenPFC_ENABLE_CUDA` flag.
+- **VTK Output**: New VTK ImageData writer in `include/openpfc/results/vtk_writer.hpp` and
+  `src/results/vtk_writer.cpp` for parallel visualization output. Generates `.vti` files
+  for each rank and `.pvti` parallel metadata files for ParaView/VisIt. Includes comprehensive
+  test suite with MPI-aware tests and single-invocation test model to prevent cleanup races.
+- **TOML Configuration**: Added TOML config file support alongside JSON. New
+  `feat(utils): Add TOML to JSON conversion utility` enables `.toml` input files with
+  automatic conversion. Integrated tomlplusplus library via CMake find module. All example
+  configurations converted to TOML format. Unit tests validate conversion accuracy.
+- **Modular CMake Architecture**: Refactored monolithic CMakeLists.txt into 12 focused modules
+  in `cmake/` directory: ProjectSetup, CompilerSettings, CudaSupport, Dependencies,
+  LibraryConfiguration, BuildOptions, CodeCoverage, Installation, PackageConfig, BuildSummary.
+  Improves maintainability and reusability. Documented in `cmake/README.md`.
+- **CI/CD Pipelines**: Comprehensive GitHub Actions workflows for build matrix (GCC/Clang,
+  multiple OS), documentation deployment, code coverage analysis with Codecov integration,
+  and REUSE license compliance. Status badges added to README. Documentation includes
+  workflow descriptions and troubleshooting guides.
+- **Parameter Validation System**: New UI subsystem for configuration validation with
+  `ParameterMetadata`, `ParameterValidator`, and `ValidationResult` classes. Supports nested
+  path validation, finite checks, type validation, and helpful error messages. Integrated
+  into Tungsten app with comprehensive test coverage (300+ assertions).
+- **FFT Backend Selection**: Runtime FFT backend selection API allowing users to choose
+  between available HeFFTe backends (FFTW, MKL, cuFFT) via configuration. New
+  `examples/fft_backend_benchmark.cpp` demonstrates performance comparison. Backend field
+  added to config schema with parsing and validation.
+- **SparseVector & MPI Exchange**: New `SparseVector` container with halo exchange patterns
+  for domain decomposition. Includes gather/scatter operations, neighbor exchange with MPI,
+  and halo pattern creation utilities. Comprehensive test suite validates exchange correctness.
+- **Testing Infrastructure**: First integration test suite for diffusion model validating
+  complete simulation pipeline against analytical solutions (4 test cases, 331 assertions).
+  Added benchmark subdirectory with microbenchmarks for World coordinate operations.
+  Comprehensive unit tests for UI validation (300+ assertions), VTK writer (MPI-aware),
+  DataBuffer, GPUVector, and SparseVector. Switched to single-invocation test model to
+  prevent MPI initialization issues. Test coverage improvements across all modules.
 - **World API**: Type-safe World construction using strong types from `strong_types.hpp`.
-  Added new `create(GridSize, PhysicalOrigin, GridSpacing)` overload that prevents
-  parameter confusion at compile time. Strong types (GridSize, PhysicalOrigin, GridSpacing)
-  make function signatures self-documenting and catch argument order mistakes. Old
-  `create(Int3, Real3, Real3)` API marked as deprecated with migration guide in
-  documentation. Zero overhead - strong types compile away completely (verified with
-  static_assert and performance tests). Updated all World helper functions (uniform(),
-  from_bounds(), with_spacing(), with_origin()) to use new type-safe API internally.
-  Updated production examples (`02_domain_decomposition.cpp`, `04_diffusion_model.cpp`,
-  `12_cahn_hilliard.cpp`) to demonstrate the new API and migration path. Also fixed
-  missing `set_fft()` call in `04_diffusion_model.cpp` that was causing runtime errors.
-  Comprehensive test suite added in `tests/unit/core/test_world_strong_types.cpp`
-  with 71 assertions covering type safety, zero overhead, backward compatibility,
-  and coordinate transformations. All 195 World-related test assertions pass.
+  Added new `create(GridSize, PhysicalOrigin, GridSpacing)` overload preventing parameter
+  confusion at compile time. Old `create(Int3, Real3, Real3)` API deprecated. Zero overhead -
+  strong types compile away completely. Updated all examples and helper functions. Test suite
+  with 71 assertions covering type safety, zero overhead, and backward compatibility.
+- **Documentation**: Added 10 comprehensive API examples (World, FFT, Simulator, Time,
+  Decomposition, ResultsWriter, FieldModifier, DiscreteField, Model, custom field initializer).
+  Added CITATION.cff for standardized citations. Improved Doxygen configuration. README
+  sections on configuration validation, FFT backend selection, and extending OpenPFC.
+- **Research Tools**: Added power consumption benchmarks for FFT operations (CPU and GPU),
+  multi-GPU HeFFTe examples, and scalability testing applications for Tungsten model.
+
+### Changed
+
+- **CMake Structure**: Root `project()` moved to top-level CMakeLists.txt. Build options
+  reorganized into logical modules. Test discovery switched to single-invocation model.
+  Benchmark compilation now optional via `OpenPFC_BUILD_BENCHMARKS`.
+- **Tungsten Structure**: Split monolithic tungsten code into modular headers and separate
+  JSON inputs into `inputs_json/` subdirectory. Restructured JSON schema to nested format.
+  Renamed 'origo' field to 'origin' for consistency.
+- **UI Module**: Split monolithic `ui.hpp` into modular components. Made `plan_options`
+  optional in app config. Added error formatting utilities for better user messages.
+- **World Module**: Split `world.hpp` into modular headers. Added query helper examples.
+  Updated coordinate benchmark documentation.
+- **Test Organization**: Split monolithic parameter validation tests. Serialize VTK writer
+  tests to prevent cleanup races. Make `MPI_Worker` static to persist MPI per process.
+  Normalize test commands under single-invocation model.
+- **Build Warnings**: Enabled additional compiler warnings for code quality in Debug builds.
+  Added `-Werror=format-security`. Made GCC-specific warnings conditional. Format check
+  warns instead of fails in Nix builds.
+- **Dependencies**: Updated nixpkgs from 23.11 to 24.05. Added git and tomlplusplus to
+  Nix build dependencies. Integrated Catch2 test discovery.
+
+### Fixed
+
+- **Build System**: Fixed CMake warnings by moving `project()` to root. Fixed Catch2 test
+  discovery and optional MPI suites. Made documentation comment posting optional in CI.
+  Cleaned up clang-format artifacts before REUSE checks. Improved error reporting in Nix tests.
+- **Test Fixes**: Fixed narrowing conversions in sparse vector tests. Fixed GridSpacing
+  initializers in FFT tests. Fixed syntax errors in world benchmark and CUDA tests. Added
+  missing `pfc` namespace qualifiers. Suppressed unused variable/parameter warnings with
+  `[[maybe_unused]]`. Fixed incorrectly converted `world::create` calls.
+- **Application Fixes**: Fixed missing `set_fft()` call in diffusion example causing runtime
+  errors. Removed unused fields (verbose in Diffusion, m_first in Aluminum). Fixed array
+  initialization in SeedFCC. Added MPI-aware main to tungsten CPU vs CUDA test.
+- **MPI Fixes**: Fixed `MPI_Worker` to be safe for test frameworks. Query current MPI
+  rank/size when generating PVTI instead of using stale values. Synchronize ranks before
+  cleanup in VTK writer test to prevent races.
+- **Memory Safety**: Initialize all params struct members in aluminum to prevent undefined
+  behavior. Add explicit template instantiation for World constructor. Fix CPU FFT
+  `std::vector` interface to call HeFFTe directly.
+- **Code Quality**: Removed redundant const qualifiers. Added missing override keywords.
+  Fixed variable shadowing in multiple files. Removed variable shadowing in timing collection.
+  Fixed clang-format violations across codebase.
+- **CI/CD**: Removed ubuntu-20.04 from test matrix. Removed Cachix binary cache step.
+  Initialized git submodules in all workflows. Made clang-format check warning instead of
+  error. Used forked clang-format-action with fail-on-error option.
+- **Documentation**: Removed internal tracking references from code. Added SPDX headers for
+  REUSE compliance to all test READMEs. Fixed Doxygen file headers for better doc generation.
+
+### Deprecated
+
+- **World API**: Old `world::create(Int3, Real3, Real3)` deprecated in favor of type-safe
+  `create(GridSize, PhysicalOrigin, GridSpacing)`. Migration guide in documentation.
+
+### Breaking Changes
+
+None - all deprecated APIs remain functional with warnings.
 
 ## [0.1.3] - 2025-11-25
 
