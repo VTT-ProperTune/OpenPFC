@@ -65,3 +65,11 @@ FetchContent_MakeAvailable(heffte)
 
 # Set Heffte_FOUND to indicate success
 set(Heffte_FOUND TRUE)
+
+# Provide alias target for consumers linking to Heffte::Heffte
+# when HeFFTe is brought in via FetchContent and not installed yet.
+if (NOT TARGET Heffte::Heffte)
+  if (TARGET heffte)
+    add_library(Heffte::Heffte ALIAS heffte)
+  endif()
+endif()
