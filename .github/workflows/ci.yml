@@ -56,7 +56,16 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang-tidy-16 clang-tools-16
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            clang-tidy-16 \
+            clang-tools-16 \
+            libopenmpi-dev \
+            openmpi-bin \
+            libfftw3-dev \
+            libfftw3-mpi-dev \
+            nlohmann-json3-dev
 
       - name: Configure (Debug with compile_commands)
         run: cmake -S . -B build-tidy -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
