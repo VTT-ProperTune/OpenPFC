@@ -161,6 +161,12 @@ public:
    * @brief Clean up all test files created during testing
    */
   void cleanup_test_files() {
+    // Synchronize all ranks before cleanup to avoid race conditions
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Only rank 0 performs cleanup to avoid race conditions
+    if (m_rank != 0) return;
+
     // Pattern: test_*.vti, test_*.pvti
     for (const auto &entry : std::filesystem::directory_iterator(".")) {
       if (entry.is_regular_file()) {
