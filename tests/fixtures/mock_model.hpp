@@ -26,17 +26,22 @@ namespace testing {
  *
  * @code
  * auto world = world::create({8, 8, 8});
- * pfc::testing::MockModel model(world);
+ * auto decomposition = decomposition::create(world, 1);
+ * auto fft = fft::create(decomposition);
+ * pfc::testing::MockModel model(fft, world);
  * // Use model in your test...
  * @endcode
  */
 class MockModel : public Model {
 public:
   /**
-   * @brief Construct a MockModel with the given world
+   * @brief Construct a MockModel with FFT and world
+   * @param fft Reference to the FFT object
    * @param world The World object defining the simulation domain
+   *
+   * @note v2.0: FFT is now required at construction
    */
-  explicit MockModel(const World &world) : Model(world) {}
+  explicit MockModel(FFT &fft, const World &world) : Model(fft, world) {}
 
   /**
    * @brief Mock step() implementation (does nothing)
@@ -59,7 +64,9 @@ public:
  *
  * @code
  * auto world = world::create({8, 8, 8});
- * pfc::testing::InstrumentedMockModel model(world);
+ * auto decomposition = decomposition::create(world, 1);
+ * auto fft = fft::create(decomposition);
+ * pfc::testing::InstrumentedMockModel model(fft, world);
  *
  * model.step(1.0);
  * model.step(2.0);
@@ -110,7 +117,10 @@ public:
  * was called. Use this to test FieldModifier implementations.
  *
  * @code
- * pfc::testing::MockModelWithModificationFlag model(world);
+ * auto world = world::create({8, 8, 8});
+ * auto decomposition = decomposition::create(world, 1);
+ * auto fft = fft::create(decomposition);
+ * pfc::testing::MockModelWithModificationFlag model(fft, world);
  * MockFieldModifier modifier;
  * modifier.apply(model, 0.0);
  * REQUIRE(model.is_modified);
