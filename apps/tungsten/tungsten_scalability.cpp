@@ -82,8 +82,7 @@ public:
       auto fft = fft::create(decomp, rank);
 
       // Create model
-      Tungsten model(world);
-      model.set_fft(fft);
+      Tungsten model(fft, world);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
 
@@ -190,8 +189,7 @@ public:
       auto decomp = decomposition::create(world, size);
 
       // Create model with specified precision
-      TungstenCUDA<RealType> model(world);
-      model.set_cuda_fft(decomp, rank);
+      TungstenCUDA<RealType> model(fft::create(decomp, rank), world);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
 
