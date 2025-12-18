@@ -42,6 +42,36 @@ jobs:
         uses: fsfe/reuse-action@v2
 
   # ============================================================================
+  # Clang-Tidy Static Analysis
+  # ============================================================================
+  clang-tidy:
+    name: Clang-Tidy Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang-tidy-16 clang-tools-16
+
+      - name: Configure (Debug with compile_commands)
+        run: cmake -S . -B build-tidy -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy (run-clang-tidy-16 if available)
+        run: |
+          if command -v run-clang-tidy-16 >/dev/null 2>&1; then
+            run-clang-tidy-16 -p build-tidy -quiet || exit 1
+          else
+            echo "run-clang-tidy-16 not found; falling back to per-file analysis"
+            set -e
+            find src -name "*.cpp" -print0 | xargs -0 -n1 clang-tidy-16 -p build-tidy --quiet
+          fi
+
+  # ============================================================================
   # Nix Build and Test
   # ============================================================================
   nix-check:
