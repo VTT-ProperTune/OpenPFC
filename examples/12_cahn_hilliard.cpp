@@ -23,7 +23,7 @@ public:
    *
    * @param world The World object to initialize the model.
    */
-  explicit CahnHilliard(const World &world) : Model(world) {
+  explicit CahnHilliard(FFT &fft, const World &world) : Model(fft, world) {
     // Additional initialization if needed
   }
 
@@ -115,8 +115,7 @@ int main(int argc, char **argv) {
                              GridSpacing{{dx, dy, dz}});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  CahnHilliard model(world);
-  model.set_fft(fft);
+  CahnHilliard model(fft, world);
 
   // Define time
   double t = 0.0;
