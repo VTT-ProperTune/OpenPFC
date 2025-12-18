@@ -21,7 +21,7 @@ if(NOT Heffte_FIND_VERSION)
   set(Heffte_FIND_VERSION 2.4.1)
 endif()
 
-set(Heffte_DOWNLOAD_URL "https://bitbucket.org/icl/heffte.git")
+set(Heffte_DOWNLOAD_URL "https://github.com/icl-utk-edu/heffte.git")
 
 message(STATUS "Fetching HeFFTe version ${Heffte_FIND_VERSION} from ${Heffte_DOWNLOAD_URL}")
 
