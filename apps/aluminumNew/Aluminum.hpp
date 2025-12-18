@@ -331,7 +331,7 @@ public:
    *
    * @param world The World object to initialize the model.
    */
-  explicit Aluminum(const World &world) : Model(world) {
+  explicit Aluminum(FFT &fft, const World &world) : Model(fft, world) {
     // Additional initialization if needed
   }
 
