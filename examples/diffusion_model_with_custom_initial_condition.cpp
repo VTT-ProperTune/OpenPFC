@@ -96,7 +96,7 @@ void run() {
   MPI_Comm comm = MPI_COMM_WORLD;
   auto decomposition = make_decomposition(world, comm);
   auto fft = fft::create(decomposition);
-  Diffusion model(world);
+  Diffusion model(fft, world);
   Simulator simulator(model, time);
 
   print_stats(simulator);
