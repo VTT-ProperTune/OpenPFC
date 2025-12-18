@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Tungsten PFC Model - JSON Input Files
 
 This directory contains JSON input files for the Tungsten PFC model. These files follow the same structure as the TOML files in the `inputs_toml` directory, with the following sections:
