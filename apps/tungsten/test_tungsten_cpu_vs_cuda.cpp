@@ -39,11 +39,8 @@ TEST_CASE("Tungsten CPU vs CUDA: Same results", "[Tungsten][CPU][CUDA]") {
   auto fft_cpu = fft::create(decomp, rank);
 
   // Create models (CUDA uses double precision for comparison)
-  Tungsten model_cpu(world);
-  TungstenCUDA<double> model_cuda(world);
-
-  model_cpu.set_fft(fft_cpu);
-  model_cuda.set_cuda_fft(decomp, rank);
+  Tungsten model_cpu(fft_cpu, world);
+  TungstenCUDA<double> model_cuda(fft_cpu, world);
 
   // Set same parameters
   model_cpu.params.set_n0(-0.4);
