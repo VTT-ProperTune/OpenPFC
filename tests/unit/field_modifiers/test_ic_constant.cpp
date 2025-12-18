@@ -20,7 +20,7 @@ using pfc::types::Int3;
 // Mock model class for testing
 class ModelWithConstantIC : public Model {
 public:
-  ModelWithConstantIC(const pfc::World &world) : pfc::Model(world) {}
+  ModelWithConstantIC(FFT &fft, const pfc::World &world) : pfc::Model(fft, world) {}
 
   void step(double /*t*/) override {}        // Suppress unused parameter warning
   void initialize(double /*dt*/) override {} // Suppress unused parameter warning
@@ -39,8 +39,7 @@ TEST_CASE("Constant Field Modifier") {
     auto world = world::create(GridSize({8, 1, 1}));
     auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
-    ModelWithConstantIC m(world);
-    m.set_fft(fft); // Ensure FFT object is set
+    ModelWithConstantIC m(fft, world);
     std::vector<double> psi(8);
     m.add_real_field("default", psi);
 
@@ -67,8 +66,7 @@ TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
   auto world = world::create(GridSize({8, 8, 8}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  ModelWithConstantIC model(world);
-  model.set_fft(fft);
+  ModelWithConstantIC model(fft, world);
 
   REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});
 }
