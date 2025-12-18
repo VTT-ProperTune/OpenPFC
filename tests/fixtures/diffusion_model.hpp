@@ -71,6 +71,9 @@ public:
     m_psi_F.resize(fft.size_outbox());
     m_opL.resize(fft.size_outbox());
 
+    // Register primary real field for test integrations
+    add_real_field("density", m_psi);
+
     // Get local domain bounds
     // LLM: Each MPI rank has subset of domain (inbox = real space, outbox = k-space)
     Vec3<int> i_low = get_inbox(fft).low;
