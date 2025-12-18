@@ -48,8 +48,7 @@ TEST_CASE("FixedBC - apply method", "[boundary_conditions][unit]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::MockModel model(world);
-  model.set_fft(fft);
+  pfc::testing::MockModel model(fft, world);
 
   // Create and add a field
   std::vector<double> field_data(get_total_size(world), 0.0);
