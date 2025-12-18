@@ -106,8 +106,7 @@ TEST_CASE("Diffusion model - 1D analytical validation", "[integration][diffusion
 
     // Create diffusion model
     // LLM: Uses test fixture from fixtures/ - no mocking needed
-    DiffusionModel model(world);
-    model.set_fft(fft);
+    DiffusionModel model(fft, world);
     model.set_diffusion_coefficient(D);
 
     // Initialize model (computes operators, but also sets Gaussian IC)
@@ -182,8 +181,7 @@ TEST_CASE("Diffusion model - 1D analytical validation", "[integration][diffusion
       auto decomp = decomposition::create(world, 1);
       auto fft = fft::create(decomp);
 
-      DiffusionModel model(world);
-      model.set_fft(fft);
+      DiffusionModel model(fft, world);
       model.set_diffusion_coefficient(D);
 
       // Initialize model (computes operators)
@@ -251,8 +249,7 @@ TEST_CASE("Diffusion model - 3D spherical symmetry",
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
-  DiffusionModel model(world);
-  model.set_fft(fft);
+  DiffusionModel model(fft, world);
   model.set_diffusion_coefficient(D);
   model.initialize(dt);
 
@@ -309,8 +306,7 @@ TEST_CASE("Diffusion model - MPI consistency", "[integration][diffusion][mpi]") 
   auto decomp = decomposition::create(world, MPI_COMM_WORLD);
   auto fft = fft::create(decomp);
 
-  DiffusionModel model(world);
-  model.set_fft(fft);
+  DiffusionModel model(fft, world);
   model.set_diffusion_coefficient(D);
 
   // Initialize model (computes operators)
