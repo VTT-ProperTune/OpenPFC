@@ -13,3 +13,9 @@ add_test(NAME vtk_writer_parallel COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPRO
 
 # Prevent concurrent execution to avoid cross-test file cleanup races
 set_tests_properties(vtk_writer vtk_writer_parallel PROPERTIES RUN_SERIAL TRUE)
+
+# Logging tests (non-MPI)
+add_executable(test_logging test_logging.cpp)
+target_link_libraries(test_logging PRIVATE openpfc Catch2::Catch2WithMain)
+add_test(NAME logging COMMAND $<TARGET_FILE:test_logging>)
+set_tests_properties(logging PROPERTIES RUN_SERIAL TRUE)
