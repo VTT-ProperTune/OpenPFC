@@ -58,7 +58,9 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
 
     MPI_Worker worker(0, nullptr);
     auto world = world::create({32, 32, 32});
-    Tungsten tungsten(world);
+    auto decomp = decomposition::create(world, 1);
+    auto fft = fft::create(decomp);
+    Tungsten tungsten(fft, world);
     from_json(j, tungsten);
 
     // Check basic parameters
@@ -84,7 +86,9 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
 
     MPI_Worker worker(0, nullptr);
     auto world = world::create({32, 32, 32});
-    Tungsten tungsten(world);
+    auto decomp = decomposition::create(world, 1);
+    auto fft = fft::create(decomp);
+    Tungsten tungsten(fft, world);
 
     REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
   }
@@ -114,7 +118,9 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
 
     MPI_Worker worker(0, nullptr);
     auto world = world::create({32, 32, 32});
-    Tungsten tungsten(world);
+    auto decomp = decomposition::create(world, 1);
+    auto fft = fft::create(decomp);
+    Tungsten tungsten(fft, world);
 
     REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
   }
@@ -123,7 +129,9 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
 TEST_CASE("Tungsten parameter setters", "[Tungsten][Setters]") {
   MPI_Worker worker(0, nullptr);
   auto world = world::create({32, 32, 32});
-  Tungsten tungsten(world);
+  auto decomp = decomposition::create(world, 1);
+  auto fft = fft::create(decomp);
+  Tungsten tungsten(fft, world);
 
   SECTION("Set basic parameters") {
     tungsten.params.set_n0(-0.10);
@@ -176,7 +184,7 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     auto decomp = decomposition::create(world, 1);
     auto fft = fft::create(decomp);
 
-    Tungsten tungsten(world);
+    Tungsten tungsten(fft, world);
     // Set parameters from tungsten_single_seed.json (exact values)
     // Order doesn't matter - derived parameters are calculated on-the-fly
     tungsten.params.set_n0(-0.10);
@@ -200,7 +208,6 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     tungsten.params.set_q30(-12.4567);
     tungsten.params.set_q31(20.0);
     tungsten.params.set_q40(45.0);
-    tungsten.set_fft(fft);
     double dt = 1.0;
     tungsten.initialize(dt);
 
@@ -340,7 +347,7 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     auto decomp = decomposition::create(world, 1);
     auto fft = fft::create(decomp);
 
-    Tungsten tungsten(world);
+    Tungsten tungsten(fft, world);
     tungsten.params.set_n0(-0.10);
     tungsten.params.set_alpha(0.50);
     tungsten.params.set_T(3300.0);
@@ -360,7 +367,6 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     tungsten.params.set_q30(-12.4567);
     tungsten.params.set_q31(20.0);
     tungsten.params.set_q40(45.0);
-    tungsten.set_fft(fft);
 
     double dt = 1.0;
     tungsten.initialize(dt);
