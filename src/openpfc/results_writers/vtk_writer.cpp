@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "openpfc/results_writers/vtk_writer.hpp"
+#include "openpfc/logging.hpp"
 #include "openpfc/utils.hpp"
 #include <algorithm>
 #include <cmath>
@@ -95,7 +96,8 @@ void VTKWriter::write_pvti_file(int increment) const {
 
   std::ofstream file(pvti_filename);
   if (!file) {
-    std::cerr << "Failed to open PVTI file: " << pvti_filename << std::endl;
+    const Logger lg{LogLevel::Warning, /*rank*/ 0};
+    log_error(lg, std::string("Failed to open PVTI file: ") + pvti_filename);
     return;
   }
 
@@ -137,8 +139,8 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
   std::string filename = generate_filename(increment, m_rank);
   std::ofstream file(filename, std::ios::binary);
   if (!file) {
-    std::cerr << "Rank " << m_rank << ": Failed to open VTK file: " << filename
-              << std::endl;
+    const Logger lg{LogLevel::Error, m_rank};
+    log_error(lg, std::string("Failed to open VTK file: ") + filename);
     MPI_Abort(m_comm, 1);
   }
 
