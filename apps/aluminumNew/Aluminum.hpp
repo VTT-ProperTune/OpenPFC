@@ -30,38 +30,62 @@ public:
    */
   struct {
     // average density of the metastable fluid
-    double n0;
+    double n0 = 0.0;
     // Bulk densities at coexistence, obtained from phase diagram for chosen
     // temperature
-    double n_sol, n_vap;
+    double n_sol = 0.0;
+    double n_vap = 0.0;
     // Effective temperature parameters. Temperature in K. Remember to change
     // n_sol and n_vap according to phase diagram when T is changed.
-    double T, T0, Bx;
-    double T_const, T_max, T_min;
-    double G_grid, V_grid, x_initial;
-    double m_xpos;
+    double T = 0.0;
+    double T0 = 1.0; // Never zero to avoid division by zero
+    double Bx = 0.0;
+    double T_const = 0.0;
+    double T_max = 0.0;
+    double T_min = 0.0;
+    double G_grid = 0.0;
+    double V_grid = 0.0;
+    double x_initial = 0.0;
+    double m_xpos = 0.0;
     // width of C2's peak
-    double alpha;
+    double alpha = 0.0;
     // how much we allow the k=1 peak to affect the k=0 value of the
     // correlation, by changing the higher order components of the Gaussian
     // function
-    double alpha_farTol;
+    double alpha_farTol = 0.0;
     // power of the higher order component of the gaussian function. Should be a
     // multiple of 2. Setting this to zero also disables the tolerance setting.
-    int alpha_highOrd;
+    int alpha_highOrd = 0;
     // derived dimensionless values used in calculating vapor model parameters
-    double tau_const;
+    double tau_const = 0.0;
     // Strength of the meanfield filter. Avoid values higher than ~0.28, to
     // avoid lattice-wavelength variations in the mean field
-    double lambda;
+    double lambda = 0.0;
     // numerical stability parameter for the exponential integrator method
-    double stabP;
+    double stabP = 0.0;
     // Vapor-model parameters
-    double shift_u, shift_s;
-    double p2, p3, p4, p2_bar, p3_bar, p4_bar;
-    double q20, q21, q30, q31, q40;
-    double q20_bar, q21_bar, q30_bar, q31_bar, q40_bar, q2_bar, q3_bar, q4_bar;
-    double q2_bar_L;
+    double shift_u = 0.0;
+    double shift_s = 0.0;
+    double p2 = 0.0;
+    double p3 = 0.0;
+    double p4 = 0.0;
+    double p2_bar = 0.0;
+    double p3_bar = 0.0;
+    double p4_bar = 0.0;
+    double q20 = 0.0;
+    double q21 = 0.0;
+    double q30 = 0.0;
+    double q31 = 0.0;
+    double q40 = 0.0;
+    double q20_bar = 0.0;
+    double q21_bar = 0.0;
+    double q30_bar = 0.0;
+    double q31_bar = 0.0;
+    double q40_bar = 0.0;
+    double q2_bar = 0.0;
+    double q3_bar = 0.0;
+    double q4_bar = 0.0;
+    double q2_bar_L = 0.0;
   } params;
 
   // setters
