@@ -28,21 +28,12 @@ jobs:
           submodules: true
 
       - name: Check code formatting (clang-format)
-        id: clang-format
-        uses: jidicula/clang-format-action@v4.11.0
+        uses: ahojukka5/clang-format-action@main
         with:
           clang-format-version: '16'
           check-path: '.'
           exclude-regex: '(build|\.cache|extern|third[-_]party|doxygen-awesome-css)'
-        continue-on-error: true
-
-      - name: Warn on formatting issues
-        if: steps.clang-format.outcome == 'failure'
-        run: |
-          echo "⚠️  WARNING: Code formatting check failed"
-          echo "Different clang-format versions may format code differently."
-          echo "Please run 'clang-format -i' on modified files locally."
-          echo "This is a warning only and will not block the build."
+          fail-on-error: 'false'
 
       - name: Clean up clang-format artifacts
         run: rm -f failing-files.txt

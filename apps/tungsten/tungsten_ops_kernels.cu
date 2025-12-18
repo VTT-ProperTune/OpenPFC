@@ -5,14 +5,15 @@
  * @file tungsten_ops_kernels.cu
  * @brief CUDA kernel implementations for Tungsten-specific operations
  *
- * This file contains CUDA kernel code for Tungsten operations. It is only compiled when CUDA is enabled.
+ * This file contains CUDA kernel code for Tungsten operations. It is only compiled
+ * when CUDA is enabled.
  */
 
 #if defined(OpenPFC_ENABLE_CUDA)
 
 #include "tungsten_ops.hpp"
-#include <cuda_runtime.h>
 #include <cuComplex.h>
+#include <cuda_runtime.h>
 #include <type_traits>
 
 namespace tungsten {
@@ -23,10 +24,10 @@ namespace detail {
 template <typename RealType>
 __global__ void multiply_complex_real_kernel_impl(
     const typename std::conditional<std::is_same<RealType, double>::value,
-                                     cuDoubleComplex, cuFloatComplex>::type *a,
+                                    cuDoubleComplex, cuFloatComplex>::type *a,
     const RealType *b,
-    typename std::conditional<std::is_same<RealType, double>::value,
-                               cuDoubleComplex, cuFloatComplex>::type *out,
+    typename std::conditional<std::is_same<RealType, double>::value, cuDoubleComplex,
+                              cuFloatComplex>::type *out,
     size_t n) {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < n) {
@@ -43,16 +44,18 @@ __global__ void multiply_complex_real_kernel_impl(
 }
 
 // Explicit instantiations for float and double (required for CUDA template kernels)
-template __global__ void multiply_complex_real_kernel_impl<double>(
-    const cuDoubleComplex *, const double *, cuDoubleComplex *, size_t);
-template __global__ void multiply_complex_real_kernel_impl<float>(
-    const cuFloatComplex *, const float *, cuFloatComplex *, size_t);
+template __global__ void
+multiply_complex_real_kernel_impl<double>(const cuDoubleComplex *, const double *,
+                                          cuDoubleComplex *, size_t);
+template __global__ void
+multiply_complex_real_kernel_impl<float>(const cuFloatComplex *, const float *,
+                                         cuFloatComplex *, size_t);
 
 // CUDA kernel: Compute nonlinear term (template-based for precision)
 template <typename RealType>
-__global__ void compute_nonlinear_kernel(
-    const RealType *u, const RealType *v, RealType p3, RealType p4, RealType q3,
-    RealType q4, RealType *out, size_t n) {
+__global__ void compute_nonlinear_kernel(const RealType *u, const RealType *v,
+                                         RealType p3, RealType p4, RealType q3,
+                                         RealType q4, RealType *out, size_t n) {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < n) {
     RealType u_val = u[idx];
@@ -66,17 +69,19 @@ __global__ void compute_nonlinear_kernel(
 }
 
 // Explicit instantiations for float and double
-template __global__ void compute_nonlinear_kernel<double>(
-    const double *, const double *, double, double, double, double, double *,
-    size_t);
-template __global__ void compute_nonlinear_kernel<float>(
-    const float *, const float *, float, float, float, float, float *, size_t);
+template __global__ void compute_nonlinear_kernel<double>(const double *,
+                                                          const double *, double,
+                                                          double, double, double,
+                                                          double *, size_t);
+template __global__ void compute_nonlinear_kernel<float>(const float *,
+                                                         const float *, float, float,
+                                                         float, float, float *,
+                                                         size_t);
 
 // CUDA kernel: Apply stabilization (template-based for precision)
 template <typename RealType>
-__global__ void apply_stabilization_kernel(
-    const RealType *in, const RealType *field, RealType stabP, RealType *out,
-    size_t n) {
+__global__ void apply_stabilization_kernel(const RealType *in, const RealType *field,
+                                           RealType stabP, RealType *out, size_t n) {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < n) {
     out[idx] = in[idx] - stabP * field[idx];
@@ -84,21 +89,23 @@ __global__ void apply_stabilization_kernel(
 }
 
 // Explicit instantiations for float and double
-template __global__ void apply_stabilization_kernel<double>(
-    const double *, const double *, double, double *, size_t);
-template __global__ void apply_stabilization_kernel<float>(
-    const float *, const float *, float, float *, size_t);
+template __global__ void apply_stabilization_kernel<double>(const double *,
+                                                            const double *, double,
+                                                            double *, size_t);
+template __global__ void apply_stabilization_kernel<float>(const float *,
+                                                           const float *, float,
+                                                           float *, size_t);
 
 // CUDA kernel: Apply time integration (template-based for precision)
 template <typename RealType>
 __global__ void apply_time_integration_kernel_impl(
     const typename std::conditional<std::is_same<RealType, double>::value,
-                                     cuDoubleComplex, cuFloatComplex>::type *psi_F,
+                                    cuDoubleComplex, cuFloatComplex>::type *psi_F,
     const typename std::conditional<std::is_same<RealType, double>::value,
-                                     cuDoubleComplex, cuFloatComplex>::type *psiN_F,
+                                    cuDoubleComplex, cuFloatComplex>::type *psiN_F,
     const RealType *opL, const RealType *opN,
-    typename std::conditional<std::is_same<RealType, double>::value,
-                               cuDoubleComplex, cuFloatComplex>::type *out,
+    typename std::conditional<std::is_same<RealType, double>::value, cuDoubleComplex,
+                              cuFloatComplex>::type *out,
     size_t n) {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < n) {
@@ -107,7 +114,7 @@ __global__ void apply_time_integration_kernel_impl(
       cuDoubleComplex psiN_F_val = psiN_F[idx];
       double opL_val = opL[idx];
       double opN_val = opN[idx];
-      
+
       // out = opL * psi_F + opN * psiN_F
       cuDoubleComplex term1 = cuCmul(cuDoubleComplex{opL_val, 0.0}, psi_F_val);
       cuDoubleComplex term2 = cuCmul(cuDoubleComplex{opN_val, 0.0}, psiN_F_val);
@@ -117,7 +124,7 @@ __global__ void apply_time_integration_kernel_impl(
       cuFloatComplex psiN_F_val = psiN_F[idx];
       float opL_val = opL[idx];
       float opN_val = opN[idx];
-      
+
       // out = opL * psi_F + opN * psiN_F
       cuFloatComplex term1 = cuCmulf(cuFloatComplex{opL_val, 0.0f}, psi_F_val);
       cuFloatComplex term2 = cuCmulf(cuFloatComplex{opN_val, 0.0f}, psiN_F_val);
@@ -130,9 +137,10 @@ __global__ void apply_time_integration_kernel_impl(
 template __global__ void apply_time_integration_kernel_impl<double>(
     const cuDoubleComplex *, const cuDoubleComplex *, const double *, const double *,
     cuDoubleComplex *, size_t);
-template __global__ void apply_time_integration_kernel_impl<float>(
-    const cuFloatComplex *, const cuFloatComplex *, const float *, const float *,
-    cuFloatComplex *, size_t);
+template __global__ void
+apply_time_integration_kernel_impl<float>(const cuFloatComplex *,
+                                          const cuFloatComplex *, const float *,
+                                          const float *, cuFloatComplex *, size_t);
 
 // Helper function to launch kernels with appropriate grid/block sizes
 // Optimized for modern GPUs (H100): use larger block size for better occupancy
@@ -182,13 +190,14 @@ void TungstenOps<pfc::backend::CudaTag, double>::multiply_complex_real_impl(
     throw std::runtime_error("CUDA kernel launch failed (multiply_complex_real): " +
                              std::string(cudaGetErrorString(err)));
   }
-  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU
+  // utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, double>::compute_nonlinear_impl(
     const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &u,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &v,
-    double p3, double p4, double q3, double q4,
+    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &v, double p3,
+    double p4, double q3, double q4,
     pfc::core::DataBuffer<pfc::backend::CudaTag, double> &out) {
   const size_t N = u.size();
   if (v.size() != N || out.size() != N) {
@@ -209,13 +218,13 @@ void TungstenOps<pfc::backend::CudaTag, double>::compute_nonlinear_impl(
     throw std::runtime_error("CUDA kernel launch failed (compute_nonlinear): " +
                              std::string(cudaGetErrorString(err)));
   }
-  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU
+  // utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, double>::apply_stabilization_impl(
     const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &in,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &field,
-    double stabP,
+    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &field, double stabP,
     pfc::core::DataBuffer<pfc::backend::CudaTag, double> &out) {
   const size_t N = in.size();
   if (field.size() != N || out.size() != N) {
@@ -228,15 +237,16 @@ void TungstenOps<pfc::backend::CudaTag, double>::apply_stabilization_impl(
   int blocks, threads_per_block;
   launch_kernel(N, blocks, threads_per_block);
 
-  detail::apply_stabilization_kernel<double><<<blocks, threads_per_block>>>(
-      in.data(), field.data(), stabP, out.data(), N);
+  detail::apply_stabilization_kernel<double>
+      <<<blocks, threads_per_block>>>(in.data(), field.data(), stabP, out.data(), N);
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
     throw std::runtime_error("CUDA kernel launch failed (apply_stabilization): " +
                              std::string(cudaGetErrorString(err)));
   }
-  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU
+  // utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, double>::apply_time_integration_impl(
@@ -264,16 +274,16 @@ void TungstenOps<pfc::backend::CudaTag, double>::apply_time_integration_impl(
   const double *opN_ptr = opN.data();
   cuDoubleComplex *out_ptr = reinterpret_cast<cuDoubleComplex *>(out.data());
 
-  apply_time_integration_kernel_impl<double>
-      <<<blocks, threads_per_block>>>(psi_F_ptr, psiN_F_ptr, opL_ptr, opN_ptr,
-                                        out_ptr, N);
+  apply_time_integration_kernel_impl<double><<<blocks, threads_per_block>>>(
+      psi_F_ptr, psiN_F_ptr, opL_ptr, opN_ptr, out_ptr, N);
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
     throw std::runtime_error("CUDA kernel launch failed (apply_time_integration): " +
                              std::string(cudaGetErrorString(err)));
   }
-  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU
+  // utilization
 }
 
 // CUDA specialization for float precision - implement methods
@@ -304,14 +314,14 @@ void TungstenOps<pfc::backend::CudaTag, float>::multiply_complex_real_impl(
     throw std::runtime_error("CUDA kernel launch failed (multiply_complex_real): " +
                              std::string(cudaGetErrorString(err)));
   }
-  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU
+  // utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, float>::compute_nonlinear_impl(
     const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &u,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &v,
-    float p3, float p4, float q3, float q4,
-    pfc::core::DataBuffer<pfc::backend::CudaTag, float> &out) {
+    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &v, float p3, float p4,
+    float q3, float q4, pfc::core::DataBuffer<pfc::backend::CudaTag, float> &out) {
   const size_t N = u.size();
   if (v.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in compute_nonlinear");
@@ -331,13 +341,13 @@ void TungstenOps<pfc::backend::CudaTag, float>::compute_nonlinear_impl(
     throw std::runtime_error("CUDA kernel launch failed (compute_nonlinear): " +
                              std::string(cudaGetErrorString(err)));
   }
-  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU
+  // utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, float>::apply_stabilization_impl(
     const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &in,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &field,
-    float stabP,
+    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &field, float stabP,
     pfc::core::DataBuffer<pfc::backend::CudaTag, float> &out) {
   const size_t N = in.size();
   if (field.size() != N || out.size() != N) {
@@ -350,15 +360,16 @@ void TungstenOps<pfc::backend::CudaTag, float>::apply_stabilization_impl(
   int blocks, threads_per_block;
   launch_kernel(N, blocks, threads_per_block);
 
-  detail::apply_stabilization_kernel<float><<<blocks, threads_per_block>>>(
-      in.data(), field.data(), stabP, out.data(), N);
+  detail::apply_stabilization_kernel<float>
+      <<<blocks, threads_per_block>>>(in.data(), field.data(), stabP, out.data(), N);
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
     throw std::runtime_error("CUDA kernel launch failed (apply_stabilization): " +
                              std::string(cudaGetErrorString(err)));
   }
-  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU
+  // utilization
 }
 
 void TungstenOps<pfc::backend::CudaTag, float>::apply_time_integration_impl(
@@ -386,16 +397,16 @@ void TungstenOps<pfc::backend::CudaTag, float>::apply_time_integration_impl(
   const float *opN_ptr = opN.data();
   cuFloatComplex *out_ptr = reinterpret_cast<cuFloatComplex *>(out.data());
 
-  detail::apply_time_integration_kernel_impl<float>
-      <<<blocks, threads_per_block>>>(psi_F_ptr, psiN_F_ptr, opL_ptr, opN_ptr,
-                                      out_ptr, N);
+  detail::apply_time_integration_kernel_impl<float><<<blocks, threads_per_block>>>(
+      psi_F_ptr, psiN_F_ptr, opL_ptr, opN_ptr, out_ptr, N);
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
     throw std::runtime_error("CUDA kernel launch failed (apply_time_integration): " +
                              std::string(cudaGetErrorString(err)));
   }
-  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU utilization
+  // Removed cudaDeviceSynchronize() - allows kernel overlap and better GPU
+  // utilization
 }
 
 } // namespace detail
