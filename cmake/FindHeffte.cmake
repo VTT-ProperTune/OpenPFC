@@ -18,7 +18,7 @@ option(Heffte_ENABLE_TRACING "Enable the tracing capabilities" OFF)
 include(FetchContent)
 
 if(NOT Heffte_FIND_VERSION)
-  set(Heffte_FIND_VERSION 2.3.0)
+  set(Heffte_FIND_VERSION 2.4.1)
 endif()
 
 set(Heffte_DOWNLOAD_URL "https://bitbucket.org/icl/heffte.git")
