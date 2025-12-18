@@ -16,38 +16,21 @@
 using namespace pfc;
 using pfc::types::Int3;
 
-TEST_CASE("Model - basic functionality", "[model][unit]") {
-  // Create an instance of the Model
+TEST_CASE("Model - basic functionality (v2.0)", "[model][unit]") {
   World world = world::create(GridSize({8, 1, 1}));
-  pfc::testing::MockModel model(world);
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+  pfc::testing::MockModel model(fft, world);
 
   REQUIRE(get_size(model.get_world()) == Int3{8, 1, 1});
 
-  SECTION("Default construction") {
-    // Ensure FFT object is set before proceeding
-    auto decomposition = decomposition::create(world, 1);
-    auto fft = fft::create(decomposition);
-    model.set_fft(fft);
-  }
-
-  SECTION("Set and get FFT") {
-    // Create a Decomposition object
-    auto decomposition = decomposition::create(world, 1);
-    // Create an FFT object
-    auto fft = fft::create(decomposition);
-    model.set_fft(fft);
-
+  SECTION("FFT is available after construction") {
     REQUIRE(model.get_fft().size_inbox() == fft.size_inbox());
     REQUIRE(model.get_fft().size_outbox() == fft.size_outbox());
-    REQUIRE(model.is_rank0());
+    REQUIRE(model.is_rank0() == (mpi::get_rank() == 0));
   }
 
   SECTION("Real field operations") {
-    // Ensure FFT object is set before proceeding
-    auto decomposition = decomposition::create(world, 1);
-    auto fft = fft::create(decomposition);
-    model.set_fft(fft);
-
     // Create a real field
     RealField field;
     field.resize(10);
@@ -82,17 +65,14 @@ TEST_CASE("Model - basic functionality", "[model][unit]") {
   }
 }
 
-TEST_CASE("Model::is_rank0() returns correct rank status", "[model][unit][rank]") {
+TEST_CASE("Model::is_rank0() returns correct rank status (v2.0)",
+          "[model][unit][rank]") {
   World world = world::create(GridSize({10, 10, 10}));
-  pfc::testing::MockModel model(world);
-
-  // Initialize FFT (required for is_rank0 to be set)
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  model.set_fft(fft);
+  pfc::testing::MockModel model(fft, world);
 
   int rank = mpi::get_rank();
-
   if (rank == 0) {
     REQUIRE(model.is_rank0() == true);
   } else {
@@ -100,14 +80,11 @@ TEST_CASE("Model::is_rank0() returns correct rank status", "[model][unit][rank]"
   }
 }
 
-TEST_CASE("Model::is_rank0() is const-correct", "[model][unit][rank]") {
+TEST_CASE("Model::is_rank0() is const-correct (v2.0)", "[model][unit][rank]") {
   World world = world::create(GridSize({10, 10, 10}));
-
-  // Create model and set FFT to ensure m_rank0 is set
-  pfc::testing::MockModel model(world);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  model.set_fft(fft);
+  pfc::testing::MockModel model(fft, world);
 
   // Create const reference to test const-correctness
   const pfc::testing::MockModel &const_model = model;
@@ -122,12 +99,9 @@ TEST_CASE("Model::is_rank0() is const-correct", "[model][unit][rank]") {
 
 TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error]") {
   World world = world::create(GridSize({8, 8, 8}));
-  pfc::testing::MockModel model(world);
-
-  // Ensure FFT is set
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
-  model.set_fft(fft);
+  pfc::testing::MockModel model(fft, world);
 
   SECTION("Accessing non-existent real field throws std::out_of_range") {
     REQUIRE_THROWS_AS(model.get_real_field("nonexistent"), std::out_of_range);
@@ -184,27 +158,5 @@ TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error
     REQUIRE_THROWS_AS(const_model.get_real_field("nonexistent"), std::out_of_range);
     REQUIRE_THROWS_AS(const_model.get_complex_field("nonexistent"),
                       std::out_of_range);
-  }
-}
-
-TEST_CASE("Model - error handling for FFT access", "[model][unit][error]") {
-  World world = world::create(GridSize({8, 8, 8}));
-  pfc::testing::MockModel model(world);
-
-  SECTION("Accessing FFT before it's set throws std::runtime_error") {
-    REQUIRE_THROWS_AS(model.get_fft(), std::runtime_error);
-
-    // Error message should be helpful
-    try {
-      model.get_fft();
-      FAIL("Should have thrown");
-    } catch (const std::runtime_error &e) {
-      std::string msg = e.what();
-      REQUIRE(msg.find("FFT object has not been set") != std::string::npos);
-      bool has_set_fft = msg.find("set_fft") != std::string::npos;
-      bool has_constructor = msg.find("constructor") != std::string::npos;
-      bool has_helpful_info = has_set_fft || has_constructor;
-      REQUIRE(has_helpful_info);
-    }
   }
 }
