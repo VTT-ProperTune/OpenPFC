@@ -69,7 +69,10 @@ set(Heffte_FOUND TRUE)
 # Provide alias target for consumers linking to Heffte::Heffte
 # when HeFFTe is brought in via FetchContent and not installed yet.
 if (NOT TARGET Heffte::Heffte)
-  if (TARGET heffte)
+  if (TARGET Heffte)
+    add_library(Heffte::Heffte ALIAS Heffte)
+  elseif(TARGET heffte)
+    # Older or differently named builds may expose lowercase target
     add_library(Heffte::Heffte ALIAS heffte)
   endif()
 endif()
