@@ -42,6 +42,7 @@
 
 #include "../field_modifier.hpp"
 #include "../utils.hpp"
+#include "openpfc/field/operations.hpp"
 
 namespace pfc {
 
@@ -143,43 +144,34 @@ public:
   }
 
   void fill_bc(Model &m) {
-    const FFT &fft = m.get_fft();
-    Field &field = m.get_real_field(get_field_name());
     const World &w = m.get_world();
-    Int3 low = get_inbox(fft).low;
-    Int3 high = get_inbox(fft).high;
+    const double Lx = get_size(w, 0);
+    const double dx = get_spacing(w, 0);
+    const double l = Lx * dx;
+    const double xpos = std::fmod(m_xpos, l);
+    const double xwidth = m_xwidth;
+    const double alpha = m_alpha;
 
-    auto Lx = get_size(w, 0);
-    auto dx = get_spacing(w, 0);
-    auto x0 = get_origin(w, 0);
+    pfc::field::apply_inplace(
+        m, get_field_name(), [=](const pfc::Real3 &X, double current) {
+          const double x = X[0];
+          const double dist = x - xpos;
+          auto blend = [&](double d) {
+            const double S = 1.0 / (1.0 + std::exp(-alpha * d));
+            return m_rho_low * S + m_rho_high * (1.0 - S);
+          };
 
-    double l = Lx * dx;
-    double xpos = fmod(m_xpos, l);
-    double xwidth = m_xwidth;
-    double alpha = m_alpha;
-    long int idx = 0;
-
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          double x = x0 + i * dx;
-          double dist = x - xpos;
           if (std::abs(dist) < xwidth) {
-            double S = 1.0 / (1.0 + exp(-alpha * dist));
-            field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
+            return blend(dist);
           }
           if (xpos < xwidth && std::abs(dist - l) < xwidth) {
-            double S = 1.0 / (1.0 + exp(-alpha * (dist - l)));
-            field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
+            return blend(dist - l);
           }
           if (xpos > l - xwidth && std::abs(dist + l) < xwidth) {
-            double S = 1.0 / (1.0 + exp(-alpha * (dist + l)));
-            field[idx] = m_rho_low * S + m_rho_high * (1.0 - S);
+            return blend(dist + l);
           }
-          idx += 1;
-        }
-      }
-    }
+          return current; // outside transition bands, keep value
+        });
   }
 };
 
