@@ -47,8 +47,22 @@ endif()
 
 # Conditionally find HeFFTe
 if(OpenPFC_ENABLE_HEFFTE)
+  # Prefer already-fetched target; fall back to find_package if needed
+  if(TARGET Heffte::Heffte)
+    target_link_libraries(openpfc PRIVATE Heffte::Heffte)
+    get_target_property(_heffte_inc Heffte::Heffte INTERFACE_INCLUDE_DIRECTORIES)
+  elseif(TARGET heffte)
+    target_link_libraries(openpfc PRIVATE heffte)
+    get_target_property(_heffte_inc heffte INTERFACE_INCLUDE_DIRECTORIES)
+  else()
     find_package(Heffte REQUIRED)
-    target_link_libraries(openpfc PUBLIC Heffte::Heffte)
+    target_link_libraries(openpfc PRIVATE Heffte::Heffte)
+    get_target_property(_heffte_inc Heffte::Heffte INTERFACE_INCLUDE_DIRECTORIES)
+  endif()
+  if(_heffte_inc)
+    # Propagate HeFFTe headers since our public API includes <heffte.h>
+    target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${_heffte_inc}>)
+  endif()
 endif()
 
 # GPU kernel library (only when CUDA is enabled)
