@@ -29,8 +29,15 @@ else()
   message(STATUS "⏭️  Skipping performance benchmarks (enable with -DOpenPFC_BUILD_BENCHMARKS=ON)")
 endif()
 
-# Link against OpenPFC and Catch2
+# Link against OpenPFC and Catch2, and add HeFFTe if available
 target_link_libraries(openpfc-tests PRIVATE OpenPFC Catch2::Catch2)
+if(TARGET Heffte::Heffte)
+  target_link_libraries(openpfc-tests PRIVATE Heffte::Heffte)
+elseif(TARGET Heffte)
+  target_link_libraries(openpfc-tests PRIVATE Heffte)
+elseif(TARGET heffte)
+  target_link_libraries(openpfc-tests PRIVATE heffte)
+endif()
 
 # Attach Catch2 include dirs manually for compile_commands.json
 get_target_property(_catch2_include_dirs Catch2::Catch2 INTERFACE_INCLUDE_DIRECTORIES)
