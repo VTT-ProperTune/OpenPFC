@@ -383,6 +383,13 @@ public:
   }
 
   /**
+   * @brief Calculate memory allocated by the Tungsten model
+   *
+   * @return Total allocated memory in bytes for all model fields and operators
+   */
+  size_t get_allocated_memory_bytes() const override { return mem_allocated; }
+
+  /**
    * @brief Constructs a Tungsten model with the given World object
    *
    * @param world The World object defining the simulation domain
