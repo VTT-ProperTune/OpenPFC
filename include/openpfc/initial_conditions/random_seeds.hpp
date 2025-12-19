@@ -36,6 +36,7 @@
 #include <random>
 
 #include "../field_modifier.hpp"
+#include "openpfc/field/operations.hpp"
 #include "seed.hpp"
 
 namespace pfc {
@@ -50,15 +51,8 @@ public:
   double get_density() const { return m_density; }
 
   void apply(Model &m, double) override {
-    const World &w = m.get_world();
-    auto &field = m.get_real_field(get_field_name());
-    auto low = get_inbox(m.get_fft()).low;
-    auto high = get_inbox(m.get_fft()).high;
-    auto [dx, dy, dz] = get_spacing(w);
-    auto [x0, y0, z0] = get_origin(w);
-
+    // Functional coordinate-space implementation using field::apply
     std::vector<Seed> seeds;
-
     const int nseeds = 150;
     const double radius = 20.0;
     const double lower_x = -128.0 + radius;
@@ -67,12 +61,13 @@ public:
     const double upper_y = 128.0;
     const double lower_z = -128.0;
     const double upper_z = 128.0;
+
     std::mt19937_64 re(42);
     std::uniform_real_distribution<double> rx(lower_x, upper_x);
     std::uniform_real_distribution<double> ry(lower_y, upper_y);
     std::uniform_real_distribution<double> rz(lower_z, upper_z);
     std::uniform_real_distribution<double> ro(0.0, 8.0 * atan(1.0));
-    typedef std::array<double, 3> vec3;
+    using vec3 = std::array<double, 3>;
     auto random_location = [&re, &rx, &ry, &rz]() {
       return vec3({rx(re), ry(re), rz(re)});
     };
@@ -87,23 +82,14 @@ public:
       seeds.push_back(seed);
     }
 
-    long int idx = 0;
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          const double x = x0 + i * dx;
-          const double y = y0 + j * dy;
-          const double z = z0 + k * dz;
-          const std::array<double, 3> X = {x, y, z};
-          for (const auto &seed : seeds) {
-            if (seed.is_inside(X)) {
-              field[idx] = seed.get_value(X);
-            }
-          }
-          idx += 1;
+    pfc::field::apply(m, get_field_name(), [seeds](const pfc::Real3 &X) {
+      for (const auto &seed : seeds) {
+        if (seed.is_inside(X)) {
+          return seed.get_value(X);
         }
       }
-    }
+      return 0.0; // Outside seeds
+    });
   }
 };
 
