@@ -30,6 +30,7 @@
 #define PFC_INITIAL_CONDITIONS_CONSTANT_HPP
 
 #include "../field_modifier.hpp"
+#include "openpfc/field/operations.hpp"
 
 namespace pfc {
 
@@ -77,9 +78,12 @@ public:
    * @param m The model to apply the field modifier to.
    * @param t The current time (unused in this implementation).
    */
-  void apply(Model &m, double) override {
-    Field &field = m.get_real_field(get_field_name());
-    std::fill(field.begin(), field.end(), m_n0);
+  void apply(Model &m, double t_unused) override {
+    (void)t_unused; // Silence unused parameter warning
+    // Apply constant in coordinate space over the local inbox
+    // Preserves distributed behavior and keeps API consistent with new ops
+    pfc::field::apply(m, get_field_name(),
+                      [n0 = m_n0](const pfc::Real3 &) { return n0; });
   }
 };
 
