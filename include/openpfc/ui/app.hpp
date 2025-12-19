@@ -26,6 +26,7 @@
 #include "from_json.hpp"
 #include "json_helpers.hpp"
 #include "openpfc/openpfc.hpp"
+#include "openpfc/utils/memory_reporter.hpp"
 #include "openpfc/utils/timeleft.hpp"
 #include "openpfc/utils/toml_to_json.hpp"
 #include <filesystem>
@@ -252,6 +253,15 @@ public:
 
     std::cout << "Initializing model... " << std::endl;
     model.initialize(time.get_dt());
+
+    // Report memory usage
+    {
+      size_t model_mem = model.get_allocated_memory_bytes();
+      size_t fft_mem = fft.get_allocated_memory_bytes();
+      pfc::utils::MemoryUsage usage{model_mem, fft_mem};
+      pfc::Logger logger{pfc::LogLevel::Info, rank_id};
+      pfc::utils::report_memory_usage(usage, world, logger, m_comm);
+    }
 
     add_result_writers(simulator);
     add_initial_conditions(simulator);
