@@ -33,6 +33,12 @@ install(FILES
   DESTINATION lib/cmake/OpenPFC
 )
 
-export(EXPORT OpenPFCTargets
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCTargets.cmake"
-)
+# Avoid export errors in local/dev builds where HeFFTe is fetched via
+# FetchContent and not part of any install/export set.
+if(DEFINED Heffte_DIR AND NOT Heffte_DIR STREQUAL "Heffte_DIR-NOTFOUND")
+  export(EXPORT OpenPFCTargets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCTargets.cmake"
+  )
+else()
+  message(STATUS "Skipping export of OpenPFCTargets (Heffte not installed via config)")
+endif()
