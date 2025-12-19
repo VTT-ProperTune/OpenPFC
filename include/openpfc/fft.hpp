@@ -162,6 +162,15 @@ struct IFFT {
   virtual size_t size_inbox() const = 0;
   virtual size_t size_outbox() const = 0;
   virtual size_t size_workspace() const = 0;
+
+  /**
+   * @brief Returns the total memory allocated by HeFFTe in bytes
+   *
+   * Includes workspace memory used by HeFFTe for FFT operations.
+   *
+   * @return Total allocated memory in bytes
+   */
+  virtual size_t get_allocated_memory_bytes() const = 0;
 };
 
 /**
@@ -440,6 +449,17 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
    * @return Size of the workspace.
    */
   size_t size_workspace() const override { return m_fft.size_workspace(); }
+
+  /**
+   * @brief Returns the total memory allocated by HeFFTe in bytes
+   *
+   * Calculates memory for workspace buffer used by HeFFTe.
+   *
+   * @return Total allocated memory in bytes
+   */
+  size_t get_allocated_memory_bytes() const override {
+    return m_wrk.size() * sizeof(typename workspace_type::value_type);
+  }
 };
 
 // Type aliases for backward compatibility (defaults to FFTW backend)
