@@ -334,6 +334,34 @@ public:
   virtual void initialize(double dt) = 0;
 
   /**
+   * @brief Calculate memory allocated by the model
+   *
+   * Returns the total memory in bytes allocated by this model instance for
+   * fields, operators, and auxiliary data structures. Override this method in
+   * derived classes to report accurate memory usage.
+   *
+   * @return Total allocated memory in bytes
+   *
+   * @note Does not include FFT workspace (query separately via get_fft())
+   * @note Default implementation returns 0 (models should override)
+   *
+   * @example
+   * ```cpp
+   * size_t get_allocated_memory_bytes() const override {
+   *     size_t total = 0;
+   *     total += density.size() * sizeof(double);
+   *     total += density_k.size() * sizeof(std::complex<double>);
+   *     total += operators.size() * sizeof(double);
+   *     return total;
+   * }
+   * ```
+   *
+   * @see utils::sizeof_vec() helper for vector memory calculation
+   * @see get_fft() to access FFT memory separately
+   */
+  virtual size_t get_allocated_memory_bytes() const { return 0; }
+
+  /**
    * @brief Check if the model has a real-valued field with the given name.
    *
    * @param field_name Name of the field to check
