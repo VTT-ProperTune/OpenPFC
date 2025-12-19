@@ -37,6 +37,7 @@
 #include <random>
 
 #include "../field_modifier.hpp"
+#include "openpfc/field/operations.hpp"
 #include "seed.hpp"
 
 namespace pfc {
@@ -72,38 +73,23 @@ public:
       : m_Nx(1), m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius) {}
 
   void apply(Model &m, double) override {
+    // Functional coordinate-space implementation using field::apply
     const World &w = m.get_world();
-    const FFT &fft = m.get_fft();
-    Field &field = m.get_real_field(get_field_name());
-    Int3 low = get_inbox(fft).low;
-    Int3 high = get_inbox(fft).high;
-
-    // Use the new World API to get size, spacing, and origin
-    auto size = get_size(w);
-    auto spacing = get_spacing(w);
-    auto origin = get_origin(w);
-    auto Ly = size[1];
-    auto Lz = size[2];
-    auto dx = spacing[0];
-    auto dy = spacing[1];
-    auto dz = spacing[2];
-    auto x0 = origin[0];
-    auto y0 = origin[1];
-    auto z0 = origin[2];
+    const auto size = get_size(w);
+    const auto spacing = get_spacing(w);
 
     std::vector<Seed> seeds;
+    const int Nx = m_Nx;
+    const int Ny = m_Ny;
+    const int Nz = m_Nz;
+    const double radius = get_radius();
 
-    int Nx = m_Nx;
-    int Ny = m_Ny;
-    int Nz = m_Nz;
-    double radius = get_radius();
-
-    double Dy = dy * Ly / Ny;
-    double Dz = dz * Lz / Nz;
-    double X0 = m_X0;
-    double Y0 = Dy / 2.0;
-    double Z0 = Dz / 2.0;
-    int nseeds = Nx * Ny * Nz;
+    const double Dy = spacing[1] * size[1] / Ny;
+    const double Dz = spacing[2] * size[2] / Nz;
+    const double X0 = m_X0;
+    const double Y0 = Dy / 2.0;
+    const double Z0 = Dz / 2.0;
+    const int nseeds = Nx * Ny * Nz;
 
     std::cout << "Generating " << nseeds << " regular seeds with radius " << radius
               << "\n";
@@ -123,24 +109,14 @@ public:
       }
     }
 
-    long int idx = 0;
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          const double x = x0 + i * dx;
-          const double y = y0 + j * dy;
-          const double z = z0 + k * dz;
-          const std::array<double, 3> X = {x, y, z};
-          for (const auto &seed : seeds) {
-            if (seed.is_inside(X)) {
-              field[idx] = seed.get_value(X);
-              break;
-            }
-          }
-          idx += 1;
+    pfc::field::apply(m, get_field_name(), [seeds](const pfc::Real3 &X) {
+      for (const auto &seed : seeds) {
+        if (seed.is_inside(X)) {
+          return seed.get_value(X);
         }
       }
-    }
+      return 0.0; // Outside all seeds
+    });
   }
 };
 
