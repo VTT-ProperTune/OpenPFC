@@ -12,3 +12,4 @@ results
 *.sbatch
 .trash
 .temp
+docs/Doxyfile.docs
