@@ -2,8 +2,15 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 add_executable(tungsten tungsten.cpp)
-find_package(Heffte REQUIRED)
-target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
+# Link HeFFTe if available; fallback to find_package
+if(TARGET Heffte::Heffte)
+  target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
+elseif(TARGET heffte)
+  target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json heffte)
+else()
+  find_package(Heffte REQUIRED)
+  target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
+endif()
 
 option(TUNGSTEN_REUSE_ARRAYS "Reuse some arrays" OFF)
 
@@ -24,7 +31,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_link_libraries(tungsten_cuda PRIVATE 
     OpenPFC 
     nlohmann_json::nlohmann_json 
-    Heffte::Heffte 
+    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte> 
     CUDA::cudart
   )
   
@@ -50,7 +57,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_link_libraries(test_tungsten_cuda_vtk PRIVATE 
     OpenPFC 
     nlohmann_json::nlohmann_json 
-    Heffte::Heffte 
+    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte> 
     CUDA::cudart
   )
   set_target_properties(test_tungsten_cuda_vtk PROPERTIES
@@ -67,7 +74,14 @@ if(TUNGSTEN_ENABLE_TESTS)
     find_package(Catch2 REQUIRED)
     if(TARGET Catch2::Catch2)
         add_executable(test_tungsten test_tungsten.cpp)
-        target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2)
+        if(TARGET Heffte::Heffte)
+          target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2)
+        elseif(TARGET heffte)
+          target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json heffte Catch2::Catch2)
+        else()
+          find_package(Heffte REQUIRED)
+          target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2)
+        endif()
         include(CTest)
         # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME tungsten-all-tests COMMAND test_tungsten)
@@ -76,11 +90,11 @@ if(TUNGSTEN_ENABLE_TESTS)
         if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
             add_executable(test_tungsten_cpu_vs_cuda test_tungsten_cpu_vs_cuda.cpp)
             target_link_libraries(test_tungsten_cpu_vs_cuda PRIVATE 
-                OpenPFC 
-                nlohmann_json::nlohmann_json 
-                Heffte::Heffte 
-                Catch2::Catch2
-                CUDA::cudart
+              OpenPFC 
+              nlohmann_json::nlohmann_json 
+              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte> 
+              Catch2::Catch2
+              CUDA::cudart
             )
             target_sources(test_tungsten_cpu_vs_cuda PRIVATE
                 tungsten_ops_kernels.cu
@@ -103,10 +117,10 @@ endif()
 # Scalability study application
 add_executable(tungsten_scalability tungsten_scalability.cpp)
 target_link_libraries(tungsten_scalability PRIVATE 
-    OpenPFC 
-    nlohmann_json::nlohmann_json 
-    Heffte::Heffte
-    MPI::MPI_CXX
+  OpenPFC 
+  nlohmann_json::nlohmann_json 
+  $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
+  MPI::MPI_CXX
 )
 
 # Add CUDA support to scalability app if available
