@@ -1,4 +1,7 @@
-#Functional Field Operations(IC / BC)
+<!-- SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+# Functional Field Operations (IC / BC)
 
 This page shows how to use the new coordinate-space functional API to set initial and boundary conditions without writing manual nested loops.
 
@@ -16,19 +19,19 @@ using namespace pfc;
 field::apply(model, "psi", [](const Real3 &) { return 0.5; });
 ```
 
-    ## #Gaussian pulse
+## Gaussian pulse
 
-```cpp field::apply(model, "psi", [](const Real3 &x) {
-      const double r2 = x[0] * x[0] + x[1] * x[1] + x[2] * x[2];
-      return std::exp(-r2 / 2.0);
-    });
+```cpp
+field::apply(model, "psi", [](const Real3 &x) {
+  const double r2 = x[0] * x[0] + x[1] * x[1] + x[2] * x[2];
+  return std::exp(-r2 / 2.0);
+});
 ```
 
-    ## #Time -
-    varying boundary -
-    like pattern
+## Time-varying boundary-like pattern
 
-```cpp const double freq = 1.0;
+```cpp
+const double freq = 1.0;
 field::apply_with_time(model, "psi", t, [freq](const Real3 &x, double tt) {
   return std::sin(2.0 * M_PI * freq * tt) * (x[0] > 10.0 ? 1.0 : 0.0);
 });
