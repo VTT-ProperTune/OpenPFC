@@ -34,8 +34,8 @@
 #ifndef PFC_UTILS_FIELD_ITERATION_HPP
 #define PFC_UTILS_FIELD_ITERATION_HPP
 
-#include "core/box3d.hpp"
-#include "multi_index.hpp"
+#include "openpfc/core/box3d.hpp"
+#include "openpfc/multi_index.hpp"
 #include <functional>
 
 namespace pfc {
