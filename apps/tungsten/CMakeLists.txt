@@ -73,6 +73,52 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   message(STATUS "Tungsten CUDA VTK test program enabled")
 endif()
 
+# HIP version (only if HIP is enabled)
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  add_executable(tungsten_hip
+    src/hip/tungsten.cpp
+    src/hip/tungsten_ops_kernels.hip
+  )
+  target_include_directories(tungsten_hip PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+
+  target_link_libraries(tungsten_hip PRIVATE
+    OpenPFC
+    nlohmann_json::nlohmann_json
+    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
+    hip::host
+  )
+
+  set_target_properties(tungsten_hip PROPERTIES
+    HIP_STANDARD 17
+    HIP_STANDARD_REQUIRED ON
+  )
+
+  if(TUNGSTEN_REUSE_ARRAYS)
+    target_compile_definitions(tungsten_hip PUBLIC MAHTI_HACK)
+  endif()
+
+  install(TARGETS tungsten_hip DESTINATION bin)
+  message(STATUS "Tungsten HIP version enabled")
+
+  # Test program for HIP with VTK output
+  add_executable(test_tungsten_hip_vtk
+    tests/test_tungsten_hip_vtk.cpp
+    src/hip/tungsten_ops_kernels.hip
+  )
+  target_include_directories(test_tungsten_hip_vtk PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+  target_link_libraries(test_tungsten_hip_vtk PRIVATE
+    OpenPFC
+    nlohmann_json::nlohmann_json
+    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
+    hip::host
+  )
+  set_target_properties(test_tungsten_hip_vtk PROPERTIES
+    HIP_STANDARD 17
+    HIP_STANDARD_REQUIRED ON
+  )
+  message(STATUS "Tungsten HIP VTK test program enabled")
+endif()
+
 option(TUNGSTEN_ENABLE_TESTS "Enable building Tungsten tests" ON)
 
 if(TUNGSTEN_ENABLE_TESTS)
@@ -116,6 +162,29 @@ if(TUNGSTEN_ENABLE_TESTS)
             add_test(NAME tungsten-cpu-vs-cuda-tests COMMAND test_tungsten_cpu_vs_cuda)
             message(STATUS "Tungsten CPU vs CUDA comparison test enabled")
         endif()
+
+        # CPU vs HIP comparison test (only if HIP is enabled)
+        if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+            add_executable(test_tungsten_cpu_vs_hip tests/test_tungsten_cpu_vs_hip.cpp)
+            target_include_directories(test_tungsten_cpu_vs_hip PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+            target_link_libraries(test_tungsten_cpu_vs_hip PRIVATE
+              OpenPFC
+              nlohmann_json::nlohmann_json
+              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
+              Catch2::Catch2
+              hip::host
+            )
+            target_sources(test_tungsten_cpu_vs_hip PRIVATE
+                src/hip/tungsten_ops_kernels.hip
+            )
+            set_target_properties(test_tungsten_cpu_vs_hip PROPERTIES
+                HIP_STANDARD 17
+                HIP_STANDARD_REQUIRED ON
+            )
+            include(CTest)
+            add_test(NAME tungsten-cpu-vs-hip-tests COMMAND test_tungsten_cpu_vs_hip)
+            message(STATUS "Tungsten CPU vs HIP comparison test enabled")
+        endif()
     else()
         message(WARNING "Tungsten: Catch2 not found, not building tests")
     endif()
@@ -141,6 +210,18 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         CUDA_STANDARD 17
         CUDA_STANDARD_REQUIRED ON
         CUDA_SEPARABLE_COMPILATION ON
+    )
+endif()
+
+# Add HIP support to scalability app if available
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    target_link_libraries(tungsten_scalability PRIVATE hip::host)
+    target_sources(tungsten_scalability PRIVATE
+        src/hip/tungsten_ops_kernels.hip
+    )
+    set_target_properties(tungsten_scalability PROPERTIES
+        HIP_STANDARD 17
+        HIP_STANDARD_REQUIRED ON
     )
 endif()
 
