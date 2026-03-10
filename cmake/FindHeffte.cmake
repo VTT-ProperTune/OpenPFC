@@ -15,6 +15,12 @@ option(Heffte_ENABLE_FORTRAN "Build the Fortran modules for the selected backend
 option(Heffte_ENABLE_SWIG "Rebuild the SWIG bindings." OFF)
 option(Heffte_ENABLE_TRACING "Enable the tracing capabilities" OFF)
 
+# When OpenPFC is built with HIP, build HeFFTe with ROCm/rocFFT
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  set(Heffte_ENABLE_ROCM ON)
+  message(STATUS "HeFFTe: enabling ROCm/rocFFT backend for OpenPFC HIP build")
+endif()
+
 include(FetchContent)
 
 if(NOT Heffte_FIND_VERSION)
