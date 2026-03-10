@@ -1,7 +1,10 @@
 # SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-add_executable(tungsten tungsten.cpp)
+set(TUNGSTEN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_executable(tungsten src/cpu/tungsten.cpp)
+target_include_directories(tungsten PRIVATE ${TUNGSTEN_INCLUDE_DIR})
 # Link HeFFTe if available; fallback to find_package
 if(TARGET Heffte::Heffte)
   target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
@@ -23,41 +26,43 @@ install(TARGETS tungsten DESTINATION bin)
 
 # CUDA version (only if CUDA is enabled)
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
-  add_executable(tungsten_cuda 
-    tungsten_cuda.cpp
-    tungsten_ops_kernels.cu
+  add_executable(tungsten_cuda
+    src/cuda/tungsten.cpp
+    src/cuda/tungsten_ops_kernels.cu
   )
-  
-  target_link_libraries(tungsten_cuda PRIVATE 
-    OpenPFC 
-    nlohmann_json::nlohmann_json 
-    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte> 
+  target_include_directories(tungsten_cuda PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+
+  target_link_libraries(tungsten_cuda PRIVATE
+    OpenPFC
+    nlohmann_json::nlohmann_json
+    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
     CUDA::cudart
   )
-  
+
   # Set CUDA properties
   set_target_properties(tungsten_cuda PROPERTIES
     CUDA_STANDARD 17
     CUDA_STANDARD_REQUIRED ON
     CUDA_SEPARABLE_COMPILATION ON
   )
-  
+
   if(TUNGSTEN_REUSE_ARRAYS)
     target_compile_definitions(tungsten_cuda PUBLIC MAHTI_HACK)
   endif()
-  
+
   install(TARGETS tungsten_cuda DESTINATION bin)
   message(STATUS "Tungsten CUDA version enabled")
-  
+
   # Test program for CUDA with VTK output
-  add_executable(test_tungsten_cuda_vtk 
-    test_tungsten_cuda_vtk.cpp
-    tungsten_ops_kernels.cu
+  add_executable(test_tungsten_cuda_vtk
+    tests/test_tungsten_cuda_vtk.cpp
+    src/cuda/tungsten_ops_kernels.cu
   )
-  target_link_libraries(test_tungsten_cuda_vtk PRIVATE 
-    OpenPFC 
-    nlohmann_json::nlohmann_json 
-    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte> 
+  target_include_directories(test_tungsten_cuda_vtk PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+  target_link_libraries(test_tungsten_cuda_vtk PRIVATE
+    OpenPFC
+    nlohmann_json::nlohmann_json
+    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
     CUDA::cudart
   )
   set_target_properties(test_tungsten_cuda_vtk PROPERTIES
@@ -73,7 +78,8 @@ option(TUNGSTEN_ENABLE_TESTS "Enable building Tungsten tests" ON)
 if(TUNGSTEN_ENABLE_TESTS)
     find_package(Catch2 REQUIRED)
     if(TARGET Catch2::Catch2)
-        add_executable(test_tungsten test_tungsten.cpp)
+        add_executable(test_tungsten tests/test_tungsten.cpp)
+        target_include_directories(test_tungsten PRIVATE ${TUNGSTEN_INCLUDE_DIR})
         if(TARGET Heffte::Heffte)
           target_link_libraries(test_tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2)
         elseif(TARGET heffte)
@@ -85,19 +91,20 @@ if(TUNGSTEN_ENABLE_TESTS)
         include(CTest)
         # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME tungsten-all-tests COMMAND test_tungsten)
-        
+
         # CPU vs CUDA comparison test (only if CUDA is enabled)
         if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
-            add_executable(test_tungsten_cpu_vs_cuda test_tungsten_cpu_vs_cuda.cpp)
-            target_link_libraries(test_tungsten_cpu_vs_cuda PRIVATE 
-              OpenPFC 
-              nlohmann_json::nlohmann_json 
-              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte> 
+            add_executable(test_tungsten_cpu_vs_cuda tests/test_tungsten_cpu_vs_cuda.cpp)
+            target_include_directories(test_tungsten_cpu_vs_cuda PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+            target_link_libraries(test_tungsten_cpu_vs_cuda PRIVATE
+              OpenPFC
+              nlohmann_json::nlohmann_json
+              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
               Catch2::Catch2
               CUDA::cudart
             )
             target_sources(test_tungsten_cpu_vs_cuda PRIVATE
-                tungsten_ops_kernels.cu
+                src/cuda/tungsten_ops_kernels.cu
             )
             set_target_properties(test_tungsten_cpu_vs_cuda PROPERTIES
                 CUDA_STANDARD 17
@@ -115,10 +122,11 @@ if(TUNGSTEN_ENABLE_TESTS)
 endif()
 
 # Scalability study application
-add_executable(tungsten_scalability tungsten_scalability.cpp)
-target_link_libraries(tungsten_scalability PRIVATE 
-  OpenPFC 
-  nlohmann_json::nlohmann_json 
+add_executable(tungsten_scalability src/tungsten_scalability.cpp)
+target_include_directories(tungsten_scalability PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+target_link_libraries(tungsten_scalability PRIVATE
+  OpenPFC
+  nlohmann_json::nlohmann_json
   $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
   MPI::MPI_CXX
 )
@@ -127,7 +135,7 @@ target_link_libraries(tungsten_scalability PRIVATE
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_link_libraries(tungsten_scalability PRIVATE CUDA::cudart)
     target_sources(tungsten_scalability PRIVATE
-        tungsten_ops_kernels.cu
+        src/cuda/tungsten_ops_kernels.cu
     )
     set_target_properties(tungsten_scalability PROPERTIES
         CUDA_STANDARD 17
