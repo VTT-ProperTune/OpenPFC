@@ -18,18 +18,18 @@
 #include <sstream>
 #include <vector>
 
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/fft.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)
-#include <openpfc/fft_cuda.hpp>
+#include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <tungsten/cuda/tungsten_model.hpp>
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
-#include <openpfc/fft_hip.hpp>
+#include <openpfc/runtime/hip/fft_hip.hpp>
 #include <tungsten/hip/tungsten_model.hpp>
 #endif
 

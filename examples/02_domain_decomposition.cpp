@@ -3,10 +3,10 @@
 
 #include <iostream>
 #include <mpi.h>
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/strong_types.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/factory/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
 using namespace std;
 using namespace pfc;

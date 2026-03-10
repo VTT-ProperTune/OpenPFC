@@ -30,8 +30,8 @@
 
 #include <iomanip>
 #include <iostream>
-#include <openpfc/core/strong_types.hpp>
-#include <openpfc/core/world.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/data/world.hpp>
 
 int main() {
   using namespace pfc;

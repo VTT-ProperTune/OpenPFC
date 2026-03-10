@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <openpfc/model.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 #include <vector>
 
 namespace pfc {

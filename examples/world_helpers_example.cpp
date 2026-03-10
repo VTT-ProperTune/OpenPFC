@@ -11,7 +11,7 @@
 
 #include <iomanip>
 #include <iostream>
-#include <openpfc/core/world.hpp>
+#include <openpfc/kernel/data/world.hpp>
 
 using namespace pfc;
 

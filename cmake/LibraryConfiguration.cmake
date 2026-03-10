@@ -7,17 +7,16 @@ option(BUILD_SHARED_LIBS "Build OpenPFC as a shared library" OFF)
 
 # Create library
 add_library(openpfc
-    src/openpfc/core/world.cpp
-    src/openpfc/core/box3d.cpp
-    src/openpfc/core/decomposition.cpp
-    src/openpfc/factory/decomposition_factory.cpp
-    src/openpfc/fft.cpp
-    src/openpfc/logging.cpp
-    src/openpfc/ui_errors.cpp
-    src/openpfc/results_writers/vtk_writer.cpp
-    $<$<BOOL:${OpenPFC_ENABLE_CUDA}>:src/openpfc/fft_cuda.cpp>
-    $<$<BOOL:${OpenPFC_ENABLE_HIP}>:src/openpfc/fft_hip.cpp>
-    # Add more .cpp files as you go
+    src/openpfc/kernel/data/world.cpp
+    src/openpfc/kernel/data/box3d.cpp
+    src/openpfc/kernel/decomposition/decomposition.cpp
+    src/openpfc/kernel/decomposition/decomposition_factory.cpp
+    src/openpfc/runtime/cpu/fft.cpp
+    src/openpfc/frontend/utils/logging.cpp
+    src/openpfc/frontend/ui/ui_errors.cpp
+    src/openpfc/frontend/io/vtk_writer.cpp
+    $<$<BOOL:${OpenPFC_ENABLE_CUDA}>:src/openpfc/runtime/cuda/fft_cuda.cpp>
+    $<$<BOOL:${OpenPFC_ENABLE_HIP}>:src/openpfc/runtime/hip/fft_hip.cpp>
 )
 
 add_library(OpenPFC ALIAS openpfc)
@@ -69,7 +68,7 @@ endif()
 # GPU kernel library (only when CUDA is enabled)
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_library(openpfc_gpu_kernels
-        include/openpfc/gpu/kernels_simple.cu
+        include/openpfc/runtime/cuda/kernels_simple.cu
     )
     
     target_include_directories(openpfc_gpu_kernels

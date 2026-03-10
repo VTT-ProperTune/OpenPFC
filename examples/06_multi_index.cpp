@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <array>
-#include <openpfc/multi_index.hpp>
+#include <openpfc/kernel/data/multi_index.hpp>
 
 using namespace pfc;
 

@@ -5,7 +5,7 @@
 #define TUNGSTEN_INPUT_HPP
 
 #include <nlohmann/json.hpp>
-#include <openpfc/ui/parameter_validator.hpp>
+#include <openpfc/frontend/ui/parameter_validator.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
 

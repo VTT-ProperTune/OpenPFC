@@ -102,10 +102,10 @@
 #ifndef TUNGSTEN_MODEL_HPP
 #define TUNGSTEN_MODEL_HPP
 
-#include <openpfc/constants.hpp>
-#include <openpfc/fft/kspace.hpp>
+#include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/openpfc.hpp>
-#include <openpfc/utils/nancheck.hpp>
+#include <openpfc/frontend/utils/nancheck.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 
 using namespace pfc;

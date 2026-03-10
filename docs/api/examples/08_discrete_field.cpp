@@ -23,8 +23,8 @@
 #include <complex>
 #include <iostream>
 #include <numeric>
-#include <openpfc/array.hpp>
-#include <openpfc/discrete_field.hpp>
+#include <openpfc/kernel/data/array.hpp>
+#include <openpfc/kernel/data/discrete_field.hpp>
 
 using namespace pfc;
 

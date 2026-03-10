@@ -9,7 +9,7 @@
     "tungsten/hip/tungsten.hpp requires HIP support. Enable with -DOpenPFC_ENABLE_HIP=ON"
 #endif
 
-#include <openpfc/ui.hpp>
+#include <openpfc/frontend/ui/ui.hpp>
 #include <tungsten/common/tungsten_input.hpp>
 #include <tungsten/hip/tungsten_model.hpp>
 

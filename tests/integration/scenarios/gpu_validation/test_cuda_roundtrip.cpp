@@ -8,14 +8,14 @@
 #include <complex>
 #include <vector>
 
-#include <openpfc/core/databuffer.hpp>
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/fft.hpp>
+#include <openpfc/kernel/execution/databuffer.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)
-#include <openpfc/core/backend_tags.hpp>
-#include <openpfc/fft_cuda.hpp>
+#include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/runtime/cuda/fft_cuda.hpp>
 #endif
 
 using namespace pfc;

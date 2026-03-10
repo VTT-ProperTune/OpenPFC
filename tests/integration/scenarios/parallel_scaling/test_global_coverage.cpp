@@ -3,8 +3,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/world.hpp>
 
 using namespace pfc;
 

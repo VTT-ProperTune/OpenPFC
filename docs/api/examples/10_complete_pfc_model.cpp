@@ -32,9 +32,9 @@
 #include <iostream>
 #include <memory>
 #include <mpi.h>
-#include <openpfc/boundary_conditions/fixed_bc.hpp>
-#include <openpfc/initial_conditions/constant.hpp>
-#include <openpfc/initial_conditions/single_seed.hpp>
+#include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
 #include <openpfc/openpfc.hpp>
 
 using namespace pfc;

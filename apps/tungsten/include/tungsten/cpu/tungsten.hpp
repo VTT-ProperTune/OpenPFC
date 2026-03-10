@@ -4,7 +4,7 @@
 #ifndef TUNGSTEN_HPP
 #define TUNGSTEN_HPP
 
-#include <openpfc/ui.hpp>
+#include <openpfc/frontend/ui/ui.hpp>
 #include <tungsten/common/tungsten_input.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
 

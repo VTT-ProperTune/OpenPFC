@@ -4,9 +4,9 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <fixtures/diffusion_model.hpp>
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/fft.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
 
 using namespace pfc;
 using namespace pfc::test;

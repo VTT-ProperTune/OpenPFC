@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
-#include <openpfc/ui.hpp>
+#include <openpfc/frontend/ui/ui.hpp>
 
 using json = nlohmann::json;
 using namespace pfc;

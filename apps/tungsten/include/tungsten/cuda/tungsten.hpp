@@ -9,7 +9,7 @@
     "tungsten/cuda/tungsten.hpp requires CUDA support. Enable with -DOpenPFC_ENABLE_CUDA=ON"
 #endif
 
-#include <openpfc/ui.hpp>
+#include <openpfc/frontend/ui/ui.hpp>
 #include <tungsten/common/tungsten_input.hpp>
 #include <tungsten/cuda/tungsten_model.hpp>
 

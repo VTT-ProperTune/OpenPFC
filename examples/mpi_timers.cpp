@@ -3,7 +3,7 @@
 
 #include <array>
 #include <iostream>
-#include <openpfc/mpi/timer.hpp>
+#include <openpfc/kernel/mpi/timer.hpp>
 #include <unistd.h>
 
 void fft() { sleep(1); }

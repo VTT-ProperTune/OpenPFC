@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
-#include <openpfc/constants.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/model.hpp>
+#include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 using namespace std;
 using namespace pfc;

@@ -22,13 +22,13 @@
 #include <iostream>
 #include <memory>
 #include <mpi.h>
-#include <openpfc/initial_conditions/constant.hpp>
-#include <openpfc/initial_conditions/file_reader.hpp>
-#include <openpfc/initial_conditions/random_seeds.hpp>
-#include <openpfc/initial_conditions/seed_grid.hpp>
-#include <openpfc/initial_conditions/single_seed.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/random_seeds.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
 #include <openpfc/openpfc.hpp>
-#include <openpfc/results_writer.hpp>
+#include <openpfc/kernel/simulation/results_writer.hpp>
 
 using namespace pfc;
 

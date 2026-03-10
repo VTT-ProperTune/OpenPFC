@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
-#include <openpfc/core/exchange.hpp>
-#include <openpfc/core/sparse_vector.hpp>
-#include <openpfc/core/sparse_vector_ops.hpp>
+#include <openpfc/kernel/decomposition/exchange.hpp>
+#include <openpfc/kernel/decomposition/sparse_vector.hpp>
+#include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <vector>
 
 using namespace pfc;

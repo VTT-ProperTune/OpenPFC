@@ -3,13 +3,13 @@
 
 #include <memory>
 #include <openpfc/openpfc.hpp>
-#include <openpfc/ui.hpp>
+#include <openpfc/frontend/ui/ui.hpp>
 
 using namespace pfc;
 using namespace pfc::ui;
 
 /*
-Remember: openpfc/ui.hpp uses nlohmann_json, thus when linking target, one must
+Remember: openpfc/frontend/ui/ui.hpp uses nlohmann_json, thus when linking target, one must
 link that also!
 
   add_executable(10_ui_register_ic 10_ui_register_ic.cpp)

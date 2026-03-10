@@ -8,8 +8,8 @@
 #include <cmath>
 #include <iomanip>
 #include <mpi.h>
-#include <openpfc/core/world.hpp>
-#include <openpfc/fft.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/openpfc.hpp>
 #include <tungsten/cpu/tungsten.hpp>
 

@@ -21,9 +21,9 @@
 #define OPENPFC_TESTS_DIFFUSION_MODEL_HPP
 
 #include <complex>
-#include <openpfc/constants.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/model.hpp>
+#include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 #include <vector>
 
 namespace pfc {

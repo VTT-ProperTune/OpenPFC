@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
-#include <openpfc/mpi/communicator.hpp>
-#include <openpfc/mpi/environment.hpp>
+#include <openpfc/kernel/mpi/communicator.hpp>
+#include <openpfc/kernel/mpi/environment.hpp>
 
 int main() {
   pfc::mpi::environment env;

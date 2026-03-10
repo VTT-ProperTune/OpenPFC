@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
-#include <openpfc/time.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 using namespace std;
 using namespace pfc;

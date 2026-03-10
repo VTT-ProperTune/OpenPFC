@@ -1,12 +1,8 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# Unit tests organized by component
-add_subdirectory(core)
-add_subdirectory(fft)
-add_subdirectory(models)
-add_subdirectory(field_modifiers)
-add_subdirectory(field_ops)
-add_subdirectory(simulator)
-add_subdirectory(ui)
-add_subdirectory(io)
+# Unit tests organized by kernel / runtime / frontend
+add_subdirectory(kernel)
+add_subdirectory(frontend)
+add_subdirectory(runtime)
+# add_subdirectory(operators)  # Requires diffop API (pfc/diffop.hpp)

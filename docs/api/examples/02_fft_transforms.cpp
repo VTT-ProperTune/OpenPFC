@@ -24,10 +24,10 @@
 #include <complex>
 #include <iomanip>
 #include <iostream>
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/fft.hpp>
-#include <openpfc/mpi.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/mpi/mpi.hpp>
 
 using namespace pfc;
 
@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
       std::cout << "  ✓ Complex arrays are ~50% smaller (conjugate symmetry)\n";
       std::cout << "  ✓ Spectral derivatives: multiply by ik in k-space\n";
       std::cout << "  ✓ Round-trip accuracy: < 1e-10\n";
-      std::cout << "\nSee include/openpfc/fft.hpp for complete API.\n";
+      std::cout << "\nSee include/openpfc/kernel/fft/fft.hpp for complete API.\n";
     }
 
   } catch (const std::exception &e) {

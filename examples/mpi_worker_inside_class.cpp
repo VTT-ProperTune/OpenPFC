@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
-#include <openpfc/mpi.hpp>
+#include <openpfc/kernel/mpi/mpi.hpp>
 
 namespace mpi = pfc::mpi;
 

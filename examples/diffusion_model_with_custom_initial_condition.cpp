@@ -4,12 +4,12 @@
 #include "diffusion_model.hpp"
 #include <iostream>
 #include <memory>
-#include <openpfc/constants.hpp>
-#include <openpfc/factory/decomposition_factory.hpp>
-#include <openpfc/field_modifier.hpp>
-#include <openpfc/results_writer.hpp>
-#include <openpfc/simulator.hpp>
-#include <openpfc/time.hpp>
+#include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 using namespace std;
 

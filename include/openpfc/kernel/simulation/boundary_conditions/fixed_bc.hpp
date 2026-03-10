@@ -1,0 +1,81 @@
+// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file fixed_bc.hpp
+ * @brief Fixed boundary condition with smooth transition
+ *
+ * @details
+ * This file defines the FixedBC class, which enforces fixed values at domain
+ * boundaries with a smooth transition region. The boundary condition:
+ * - Sets field values to specified low/high values at domain edges
+ * - Uses smooth exponential transition to avoid sharp discontinuities
+ * - Configurable transition width and strength
+ *
+ * Useful for:
+ * - Dirichlet boundary conditions
+ * - Fixed-wall simulations
+ * - Controlled boundary reservoirs
+ *
+ * Usage:
+ * @code
+ * auto bc = std::make_unique<pfc::FixedBC>(0.0, 1.0);  // low, high values
+ * bc->set_field_name("density");
+ * simulator.add_boundary_condition(std::move(bc));
+ * @endcode
+ *
+ * @see field_modifier.hpp for base class
+ * @see moving_bc.hpp for time-dependent boundary condition
+ *
+ * @author OpenPFC Contributors
+ * @date 2025
+ */
+
+#pragma once
+
+#include "openpfc/kernel/data/world_types.hpp"
+#include "openpfc/kernel/field/operations.hpp"
+#include "openpfc/kernel/simulation/field_modifier.hpp"
+
+namespace pfc {
+
+using pfc::types::Int3;
+
+class FixedBC : public FieldModifier {
+
+private:
+  double xwidth = 20.0;
+  double alpha = 1.0;
+  double m_rho_low, m_rho_high;
+  std::string m_name = "FixedBC";
+
+public:
+  FixedBC() = default;
+
+  FixedBC(double rho_low, double rho_high)
+      : m_rho_low(rho_low), m_rho_high(rho_high) {}
+
+  void set_rho_low(double rho_low) { m_rho_low = rho_low; }
+  void set_rho_high(double rho_high) { m_rho_high = rho_high; }
+
+  const std::string &get_modifier_name() const override { return m_name; }
+
+  void apply(Model &m, double) override {
+    const World &w = m.get_world();
+    const double Lx = get_size(w, 0);
+    const double dx = get_spacing(w, 0);
+    const double xpos = Lx * dx - xwidth;
+
+    pfc::field::apply_inplace(
+        m, get_field_name(), [=](const pfc::Real3 &X, double current) {
+          const double x = X[0];
+          if (std::abs(x - xpos) < xwidth) {
+            const double S = 1.0 / (1.0 + std::exp(-alpha * (x - xpos)));
+            return m_rho_low * S + m_rho_high * (1.0 - S);
+          }
+          return current; // outside transition band, keep value
+        });
+  }
+};
+
+} // namespace pfc

@@ -8,7 +8,7 @@
 #include <array>
 #include <iostream>
 #include <openpfc/openpfc.hpp>
-#include <openpfc/ui.hpp>
+#include <openpfc/frontend/ui/ui.hpp>
 #include <random>
 
 using json = nlohmann::json;

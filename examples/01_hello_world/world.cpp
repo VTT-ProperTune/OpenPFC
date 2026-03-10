@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
-#include <openpfc/core/world.hpp>
+#include <openpfc/kernel/data/world.hpp>
 
 /** \example world.cpp
  *

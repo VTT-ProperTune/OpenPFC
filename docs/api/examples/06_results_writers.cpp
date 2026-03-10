@@ -21,9 +21,9 @@
 #include <iostream>
 #include <mpi.h>
 #include <numeric>
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/results_writer.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/simulation/results_writer.hpp>
 
 using namespace pfc;
 

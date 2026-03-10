@@ -22,7 +22,7 @@
 
 #include <iomanip>
 #include <iostream>
-#include <openpfc/core/world.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <vector>
 
 using namespace pfc;
@@ -237,7 +237,7 @@ int main() {
     std::cout << "  ✓ to_coords() and to_indices() for coordinate transforms\n";
     std::cout << "  ✓ Powers of 2 are optimal for FFT performance\n";
     std::cout << "  ✓ Works seamlessly with 1D, 2D, and 3D domains\n";
-    std::cout << "\nSee include/openpfc/core/world.hpp for complete API.\n";
+    std::cout << "\nSee include/openpfc/kernel/data/world.hpp for complete API.\n";
 
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << "\n";

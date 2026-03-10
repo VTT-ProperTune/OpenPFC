@@ -24,8 +24,8 @@
 #pragma once
 
 #include <complex>
-#include <openpfc/core/backend_tags.hpp>
-#include <openpfc/core/databuffer.hpp>
+#include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/kernel/execution/databuffer.hpp>
 
 namespace tungsten {
 namespace ops {

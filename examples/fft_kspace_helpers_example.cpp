@@ -17,9 +17,9 @@
 
 #include <cmath>
 #include <iostream>
-#include <openpfc/constants.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/fft/kspace.hpp>
+#include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/kspace.hpp>
 #include <vector>
 
 using namespace pfc;

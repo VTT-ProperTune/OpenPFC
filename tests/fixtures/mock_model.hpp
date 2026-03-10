@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "openpfc/field_modifier.hpp"
-#include "openpfc/model.hpp"
+#include "openpfc/kernel/simulation/field_modifier.hpp"
+#include "openpfc/kernel/simulation/model.hpp"
 
 namespace pfc {
 namespace testing {

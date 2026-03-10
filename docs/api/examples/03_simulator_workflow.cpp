@@ -23,13 +23,13 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/world.hpp>
-#include <openpfc/fft.hpp>
-#include <openpfc/model.hpp>
-#include <openpfc/mpi.hpp>
-#include <openpfc/simulator.hpp>
-#include <openpfc/time.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
+#include <openpfc/kernel/mpi/mpi.hpp>
+#include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 using namespace pfc;
 

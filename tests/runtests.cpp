@@ -5,7 +5,7 @@
 #include <catch2/catch_session.hpp> // Include for Catch::Session
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
-#include <openpfc/mpi/worker.hpp>
+#include <openpfc/kernel/mpi/worker.hpp>
 
 int main(int argc, char *argv[]) {
   // Initialize MPI once as a static variable (singleton pattern).

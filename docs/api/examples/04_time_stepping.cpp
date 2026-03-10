@@ -19,7 +19,7 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
-#include <openpfc/time.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 #include <vector>
 
 using namespace pfc;

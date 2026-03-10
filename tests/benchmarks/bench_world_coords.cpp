@@ -26,7 +26,7 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/core/world.hpp"
+#include "openpfc/kernel/data/world.hpp"
 
 using namespace pfc;
 using namespace pfc::types;

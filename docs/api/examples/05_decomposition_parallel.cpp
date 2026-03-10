@@ -31,8 +31,8 @@
 #include <iomanip>
 #include <iostream>
 #include <mpi.h>
-#include <openpfc/core/decomposition.hpp>
-#include <openpfc/core/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <sstream>
 
 using namespace pfc;
