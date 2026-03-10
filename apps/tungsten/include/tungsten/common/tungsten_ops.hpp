@@ -310,6 +310,61 @@ template <> struct TungstenOps<pfc::backend::CudaTag, float> {
 };
 #endif // OpenPFC_ENABLE_CUDA
 
+#if defined(OpenPFC_ENABLE_HIP)
+// HIP specialization (forward declarations - implementations in
+// tungsten_ops_kernels.hip)
+template <> struct TungstenOps<pfc::backend::HipTag, double> {
+  static void multiply_complex_real_impl(
+      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &a,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &b,
+      pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &out);
+
+  static void compute_nonlinear_impl(
+      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &u,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &v, double p3,
+      double p4, double q3, double q4,
+      pfc::core::DataBuffer<pfc::backend::HipTag, double> &out);
+
+  static void apply_stabilization_impl(
+      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &in,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &field, double stabP,
+      pfc::core::DataBuffer<pfc::backend::HipTag, double> &out);
+
+  static void apply_time_integration_impl(
+      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &psi_F,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>>
+          &psiN_F,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &opL,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &opN,
+      pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &out);
+};
+
+template <> struct TungstenOps<pfc::backend::HipTag, float> {
+  static void multiply_complex_real_impl(
+      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &a,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &b,
+      pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &out);
+
+  static void
+  compute_nonlinear_impl(const pfc::core::DataBuffer<pfc::backend::HipTag, float> &u,
+                         const pfc::core::DataBuffer<pfc::backend::HipTag, float> &v,
+                         float p3, float p4, float q3, float q4,
+                         pfc::core::DataBuffer<pfc::backend::HipTag, float> &out);
+
+  static void apply_stabilization_impl(
+      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &in,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &field, float stabP,
+      pfc::core::DataBuffer<pfc::backend::HipTag, float> &out);
+
+  static void apply_time_integration_impl(
+      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &psi_F,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &psiN_F,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &opL,
+      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &opN,
+      pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &out);
+};
+#endif // OpenPFC_ENABLE_HIP
+
 } // namespace detail
 
 // Template function implementations that dispatch to helper structs
