@@ -187,6 +187,34 @@ public:
   }
 
   /**
+   * @brief Copy data from host pointer
+   * @param ptr Source pointer (must have at least size() elements)
+   * @param n Number of elements (must equal size())
+   */
+  void copy_from_host(const T *ptr, size_t n) {
+    if (n != m_data.size()) {
+      throw std::runtime_error("Size mismatch in copy_from_host: expected " +
+                               std::to_string(m_data.size()) + ", got " +
+                               std::to_string(n));
+    }
+    std::copy(ptr, ptr + n, m_data.begin());
+  }
+
+  /**
+   * @brief Copy data to host pointer
+   * @param ptr Destination pointer (must have space for size() elements)
+   * @param n Number of elements (must equal size())
+   */
+  void copy_to_host(T *ptr, size_t n) const {
+    if (n != m_data.size()) {
+      throw std::runtime_error("Size mismatch in copy_to_host: expected " +
+                               std::to_string(m_data.size()) + ", got " +
+                               std::to_string(n));
+    }
+    std::copy(m_data.begin(), m_data.end(), ptr);
+  }
+
+  /**
    * @brief Copy data to host vector
    * @return Vector containing buffer data
    */
@@ -316,6 +344,48 @@ public:
     if (m_size > 0) {
       cudaError_t err = cudaMemcpy(m_device_ptr, src.data(), m_size * sizeof(T),
                                    cudaMemcpyHostToDevice);
+      if (err != cudaSuccess) {
+        throw std::runtime_error("CUDA copy failed: " +
+                                 std::string(cudaGetErrorString(err)));
+      }
+    }
+  }
+
+  /**
+   * @brief Copy data from host pointer to device
+   * @param ptr Source pointer (must have at least n elements)
+   * @param n Number of elements (must equal size())
+   */
+  void copy_from_host(const T *ptr, size_t n) {
+    if (n != m_size) {
+      throw std::runtime_error("Size mismatch in copy_from_host: expected " +
+                               std::to_string(m_size) + ", got " +
+                               std::to_string(n));
+    }
+    if (m_size > 0) {
+      cudaError_t err =
+          cudaMemcpy(m_device_ptr, ptr, m_size * sizeof(T), cudaMemcpyHostToDevice);
+      if (err != cudaSuccess) {
+        throw std::runtime_error("CUDA copy failed: " +
+                                 std::string(cudaGetErrorString(err)));
+      }
+    }
+  }
+
+  /**
+   * @brief Copy data from device to host pointer
+   * @param ptr Destination pointer (must have space for n elements)
+   * @param n Number of elements (must equal size())
+   */
+  void copy_to_host(T *ptr, size_t n) const {
+    if (n != m_size) {
+      throw std::runtime_error("Size mismatch in copy_to_host: expected " +
+                               std::to_string(m_size) + ", got " +
+                               std::to_string(n));
+    }
+    if (m_size > 0) {
+      cudaError_t err =
+          cudaMemcpy(ptr, m_device_ptr, m_size * sizeof(T), cudaMemcpyDeviceToHost);
       if (err != cudaSuccess) {
         throw std::runtime_error("CUDA copy failed: " +
                                  std::string(cudaGetErrorString(err)));
@@ -480,6 +550,48 @@ public:
     if (m_size > 0) {
       hipError_t err = hipMemcpy(m_device_ptr, src.data(), m_size * sizeof(T),
                                  hipMemcpyHostToDevice);
+      if (err != hipSuccess) {
+        throw std::runtime_error("HIP copy failed: " +
+                                 std::string(hipGetErrorString(err)));
+      }
+    }
+  }
+
+  /**
+   * @brief Copy data from host pointer to device
+   * @param ptr Source pointer (must have at least n elements)
+   * @param n Number of elements (must equal size())
+   */
+  void copy_from_host(const T *ptr, size_t n) {
+    if (n != m_size) {
+      throw std::runtime_error("Size mismatch in copy_from_host: expected " +
+                               std::to_string(m_size) + ", got " +
+                               std::to_string(n));
+    }
+    if (m_size > 0) {
+      hipError_t err =
+          hipMemcpy(m_device_ptr, ptr, m_size * sizeof(T), hipMemcpyHostToDevice);
+      if (err != hipSuccess) {
+        throw std::runtime_error("HIP copy failed: " +
+                                 std::string(hipGetErrorString(err)));
+      }
+    }
+  }
+
+  /**
+   * @brief Copy data from device to host pointer
+   * @param ptr Destination pointer (must have space for n elements)
+   * @param n Number of elements (must equal size())
+   */
+  void copy_to_host(T *ptr, size_t n) const {
+    if (n != m_size) {
+      throw std::runtime_error("Size mismatch in copy_to_host: expected " +
+                               std::to_string(m_size) + ", got " +
+                               std::to_string(n));
+    }
+    if (m_size > 0) {
+      hipError_t err =
+          hipMemcpy(ptr, m_device_ptr, m_size * sizeof(T), hipMemcpyDeviceToHost);
       if (err != hipSuccess) {
         throw std::runtime_error("HIP copy failed: " +
                                  std::string(hipGetErrorString(err)));
