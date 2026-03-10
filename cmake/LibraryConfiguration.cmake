@@ -16,6 +16,7 @@ add_library(openpfc
     src/openpfc/ui_errors.cpp
     src/openpfc/results_writers/vtk_writer.cpp
     $<$<BOOL:${OpenPFC_ENABLE_CUDA}>:src/openpfc/fft_cuda.cpp>
+    $<$<BOOL:${OpenPFC_ENABLE_HIP}>:src/openpfc/fft_hip.cpp>
     # Add more .cpp files as you go
 )
 
