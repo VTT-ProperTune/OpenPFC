@@ -36,44 +36,50 @@ include(cmake/CompilerSettings.cmake)
 include(cmake/CudaSupport.cmake)
 
 # ----------------------------------------------------------------------------
-# 4. Dependencies
+# 4. HIP Support
+# ----------------------------------------------------------------------------
+# HIP (ROCm) detection and configuration
+include(cmake/HipSupport.cmake)
+
+# ----------------------------------------------------------------------------
+# 5. Dependencies
 # ----------------------------------------------------------------------------
 # Find and configure all third-party dependencies (MPI, HeFFTe, nlohmann_json,
 # toml++, Doxygen, Catch2)
 include(cmake/Dependencies.cmake)
 
 # ----------------------------------------------------------------------------
-# 5. Library Configuration
+# 6. Library Configuration
 # ----------------------------------------------------------------------------
 # Create the main library target, configure its properties, and link dependencies
 include(cmake/LibraryConfiguration.cmake)
 
 # ----------------------------------------------------------------------------
-# 6. Build Options
+# 7. Build Options
 # ----------------------------------------------------------------------------
 # Configure what gets built (apps, examples, tests, benchmarks)
 include(cmake/BuildOptions.cmake)
 
 # ----------------------------------------------------------------------------
-# 7. Code Coverage
+# 8. Code Coverage
 # ----------------------------------------------------------------------------
 # Code coverage configuration and custom targets
 include(cmake/CodeCoverage.cmake)
 
 # ----------------------------------------------------------------------------
-# 8. Installation Rules
+# 9. Installation Rules
 # ----------------------------------------------------------------------------
 # Installation rules for headers, libraries, and binaries
 include(cmake/Installation.cmake)
 
 # ----------------------------------------------------------------------------
-# 9. Package Configuration
+# 10. Package Configuration
 # ----------------------------------------------------------------------------
 # Generate CMake package configuration files for downstream projects
 include(cmake/PackageConfig.cmake)
 
 # ----------------------------------------------------------------------------
-# 10. Build Summary
+# 11. Build Summary
 # ----------------------------------------------------------------------------
 # Print final build configuration summary
 include(cmake/BuildSummary.cmake)
