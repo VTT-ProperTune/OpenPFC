@@ -33,10 +33,10 @@
  * exchange::receive_data(recv_halo, neighbor, rank, MPI_COMM_WORLD);
  * @endcode
  *
- * @see core/decomposition.hpp for Decomposition class
- * @see core/decomposition_neighbors.hpp for neighbor finding
- * @see core/sparse_vector.hpp for SparseVector
- * @see core/exchange.hpp for exchange operations
+ * @see kernel/decomposition/decomposition.hpp for Decomposition class
+ * @see kernel/decomposition/decomposition_neighbors.hpp for neighbor finding
+ * @see kernel/decomposition/sparse_vector.hpp for SparseVector
+ * @see kernel/decomposition/exchange.hpp for exchange operations
  *
  * @author OpenPFC Development Team
  * @date 2025

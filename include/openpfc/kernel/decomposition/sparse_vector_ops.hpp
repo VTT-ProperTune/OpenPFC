@@ -27,7 +27,7 @@
  * // dest now contains {1.0, 0.0, 3.0, 0.0, 5.0}
  * @endcode
  *
- * @see core/sparse_vector.hpp for SparseVector definition
+ * @see kernel/decomposition/sparse_vector.hpp for SparseVector definition
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -40,13 +40,13 @@
 
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
-
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <cuda_runtime.h>
-#endif
+#include <stdexcept>
 
 namespace pfc {
 namespace core {
+
+template <typename>
+inline constexpr bool dependent_false = false;
 
 /**
  * @brief Gather: Collect values from dense array into SparseVector
@@ -78,14 +78,10 @@ void gather(SparseVector<BackendTag, T> &sparse_vector, const T *source,
       }
       data[i] = source[idx];
     }
+  } else {
+    static_assert(dependent_false<BackendTag>,
+                  "CudaTag requires #include <openpfc/runtime/cuda/sparse_vector_ops.hpp>");
   }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-    // CUDA: Use kernel for indexed gather
-    // TODO: Implement CUDA kernel
-    throw std::runtime_error("CUDA gather not yet implemented");
-  }
-#endif
 }
 
 /**
@@ -137,14 +133,10 @@ void scatter(const SparseVector<BackendTag, T> &sparse_vector, T *dest,
       }
       dest[idx] = data[i];
     }
+  } else {
+    static_assert(dependent_false<BackendTag>,
+                  "CudaTag requires #include <openpfc/runtime/cuda/sparse_vector_ops.hpp>");
   }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-    // CUDA: Use kernel for indexed scatter
-    // TODO: Implement CUDA kernel
-    throw std::runtime_error("CUDA scatter not yet implemented");
-  }
-#endif
 }
 
 /**

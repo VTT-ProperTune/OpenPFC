@@ -24,8 +24,8 @@
  * auto decomp = pfc::make_decomposition(world, MPI_COMM_WORLD);
  * @endcode
  *
- * @see core/decomposition.hpp for Decomposition class
- * @see core/world.hpp for World definition
+ * @see kernel/decomposition/decomposition.hpp for Decomposition class
+ * @see kernel/data/world.hpp for World definition
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -34,8 +34,8 @@
 #ifndef PFC_DECOMPOSITION_FACTORY_HPP
 #define PFC_DECOMPOSITION_FACTORY_HPP
 
-#include "openpfc/kernel/decomposition/decomposition.hpp"
 #include "openpfc/kernel/data/world.hpp"
+#include "openpfc/kernel/decomposition/decomposition.hpp"
 #include <mpi.h>
 
 namespace pfc {

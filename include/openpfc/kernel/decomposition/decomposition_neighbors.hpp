@@ -22,8 +22,8 @@
  * // Returns map: direction -> neighbor_rank (always 6 entries)
  * @endcode
  *
- * @see core/decomposition.hpp for Decomposition class
- * @see core/exchange.hpp for SparseVector exchange operations
+ * @see kernel/decomposition/decomposition.hpp for Decomposition class
+ * @see kernel/decomposition/exchange.hpp for SparseVector exchange operations
  *
  * @author OpenPFC Development Team
  * @date 2025

@@ -32,8 +32,8 @@
  * scatter(sparse, dest.data(), dest.size());
  * @endcode
  *
- * @see core/databuffer.hpp for underlying memory management
- * @see core/exchange.hpp for MPI communication
+ * @see kernel/execution/databuffer.hpp for underlying memory management
+ * @see kernel/decomposition/exchange.hpp for MPI communication
  *
  * @author OpenPFC Development Team
  * @date 2025
