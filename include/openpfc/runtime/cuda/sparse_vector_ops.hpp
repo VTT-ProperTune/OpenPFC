@@ -15,6 +15,7 @@
 #if defined(OpenPFC_ENABLE_CUDA)
 
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
+#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
 #include <openpfc/runtime/cuda/sparse_vector_ops_cuda.hpp>
 #include <stdexcept>
 
