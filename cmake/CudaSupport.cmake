@@ -15,6 +15,12 @@ if(OpenPFC_ENABLE_CUDA)
     if(CUDAToolkit_FOUND)
         set(OpenPFC_CUDA_AVAILABLE TRUE)
         add_compile_definitions(OpenPFC_ENABLE_CUDA)
+
+        option(OpenPFC_MPI_CUDA_AWARE "Use GPU-aware MPI (device pointers in MPI_Send/Recv)" OFF)
+        if(OpenPFC_MPI_CUDA_AWARE)
+            add_compile_definitions(OpenPFC_MPI_CUDA_AWARE)
+            message(STATUS "   OpenPFC_MPI_CUDA_AWARE=ON (MPI uses device pointers)")
+        endif()
         
         # Set CUDA architectures (required by CMake policy CMP0104)
         if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
