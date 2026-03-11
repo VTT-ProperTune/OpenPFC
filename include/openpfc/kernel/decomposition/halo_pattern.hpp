@@ -45,12 +45,12 @@
 #pragma once
 
 #include <map>
-#include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/world_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/execution/backend_tags.hpp>
 #include <vector>
 
 namespace pfc {
