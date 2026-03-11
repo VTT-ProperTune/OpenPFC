@@ -5,4 +5,4 @@
 add_subdirectory(kernel)
 add_subdirectory(frontend)
 add_subdirectory(runtime)
-# add_subdirectory(operators)  # Requires diffop API (pfc/diffop.hpp)
+add_subdirectory(operators)
