@@ -50,7 +50,7 @@
  * All functions are inline, noexcept, and zero-cost abstractions that compile
  * to identical machine code as the manual implementation.
  *
- * @see core/world.hpp for World coordinate system
+ * @see kernel/data/world.hpp for World coordinate system
  * @see fft.hpp for FFT interface
  * @see constants.hpp for mathematical constants (two_pi)
  *

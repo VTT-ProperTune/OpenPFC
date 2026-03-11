@@ -35,18 +35,18 @@
  * This file is part of the Core Infrastructure module, providing the foundation
  * for spectral method computations in phase-field simulations.
  *
- * @see core/decomposition.hpp for domain decomposition
+ * @see kernel/decomposition/decomposition.hpp for domain decomposition
  * @see model.hpp for FFT usage in physics models
- * @see backends/heffte_adapter.hpp for HeFFTe integration
+ * @see runtime/common/heffte_adapter.hpp for HeFFTe conversion (runtime/frontend
+ * only)
  */
 
 #pragma once
 
+#include "openpfc/kernel/data/world.hpp"
 #include "openpfc/kernel/decomposition/decomposition.hpp"
-#include "openpfc/runtime/common/heffte_adapter.hpp" // Ensure this is included for the conversion operator
 #include "openpfc/kernel/execution/backend_tags.hpp"
 #include "openpfc/kernel/execution/databuffer.hpp"
-#include "openpfc/kernel/data/world.hpp"
 #include "openpfc/kernel/fft/kspace.hpp"
 
 #include <heffte.h>

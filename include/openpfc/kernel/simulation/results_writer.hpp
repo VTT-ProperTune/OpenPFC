@@ -8,7 +8,7 @@
  * @details
  * This file defines the ResultsWriter abstract base class, which provides
  * a unified interface for writing simulation results to various output formats.
- * OpenPFC currently supports:
+ * Implementations live in frontend/io (e.g. BinaryWriter in binary_writer.hpp).
  * - Binary format (BinaryWriter) for checkpointing and restart
  * - Future: VTK format for visualization
  *
@@ -20,7 +20,7 @@
  *
  * Typical usage:
  * @code
- * // Create writer
+ * // Create writer (include openpfc/frontend/io/binary_writer.hpp for BinaryWriter)
  * auto writer = std::make_unique<pfc::BinaryWriter>("output.bin");
  *
  * // Configure domain (once)
@@ -47,10 +47,10 @@
 #define PFC_RESULTS_WRITER_HPP
 
 #include "openpfc/kernel/data/model_types.hpp"
-#include "openpfc/frontend/utils/utils.hpp"
 #include <array>
 #include <iostream>
 #include <mpi.h>
+#include <string>
 #include <vector>
 
 namespace pfc {
@@ -176,7 +176,7 @@ namespace pfc {
  * @warning Subclasses must implement set_domain() and both write() overloads.
  * @warning File format must support parallel I/O for MPI efficiency.
  *
- * @see BinaryWriter - binary format implementation
+ * @see frontend/io/binary_writer.hpp - BinaryWriter implementation
  * @see Simulator::add_results_writer() - integrate with simulation loop
  */
 class ResultsWriter {
@@ -292,114 +292,6 @@ protected:
   std::string m_filename;
 };
 
-/**
- * @brief Binary format writer for raw field data output
- *
- * BinaryWriter implements ResultsWriter for raw binary output format. This
- * format is optimal for:
- * - Checkpointing and restart (exact data preservation)
- * - Large-scale simulations (minimal storage overhead)
- * - Fast I/O performance (no parsing or conversion)
- *
- * The binary format stores double or complex<double> values directly in native
- * byte order (platform-dependent). Files can be read back using BinaryReader
- * for simulation restart.
- *
- * ## File Format
- *
- * - Extension: `.bin` (by convention)
- * - Data type: double (8 bytes) or complex<double> (16 bytes)
- * - Byte order: Native (platform-dependent)
- * - Structure: Raw array, no header/metadata
- *
- * ## Parallel I/O
- *
- * Uses MPI-IO for collective parallel writes. Each rank writes its local
- * subdomain to the correct position in a single shared file.
- *
- * @example
- * **Basic Binary Output**
- * ```cpp
- * using namespace pfc;
- *
- * auto writer = std::make_unique<BinaryWriter>(\"field_%04d.bin\");
- * writer->set_domain(global_size, local_size, offset);
- *
- * writer->write(0, field);  // Creates field_0000.bin
- * writer->write(1, field);  // Creates field_0001.bin
- * ```
- *
- * @example
- * **Checkpoint for Restart**
- * ```cpp
- * using namespace pfc;
- *
- * // Save checkpoint every 1000 steps\n * auto checkpoint =
- * std::make_unique<BinaryWriter>(\"checkpoint_%04d.bin\");
- * checkpoint->set_domain(global_size, local_size, offset);
- *
- * for (int step = 0; step < 10000; ++step) {
- *     // ... simulation ...
- *
- *     if (step % 1000 == 0) {
- *         checkpoint->write(step, field);
- *         // Also save metadata: time, step, parameters
- *     }
- * }
- * ```
- *
- * @note Binary files are not portable across different architectures (endianness).
- * @note No metadata is stored - you must track time, step number, domain size
- * separately.
- * @note For visualization, use VTKWriter instead.
- *
- * @see ResultsWriter - base class interface
- * @see BinaryReader - read binary files for restart
- */
-class BinaryWriter : public ResultsWriter {
-  using ResultsWriter::ResultsWriter;
-
-private:
-  MPI_Datatype m_filetype;
-
-  static MPI_Datatype get_type(RealField) { return MPI_DOUBLE; }
-  static MPI_Datatype get_type(ComplexField) { return MPI_DOUBLE_COMPLEX; }
-
-public:
-  void set_domain(const std::array<int, 3> &arr_global,
-                  const std::array<int, 3> &arr_local,
-                  const std::array<int, 3> &arr_offset) {
-    MPI_Type_create_subarray(3, arr_global.data(), arr_local.data(),
-                             arr_offset.data(), MPI_ORDER_FORTRAN, MPI_DOUBLE,
-                             &m_filetype);
-    MPI_Type_commit(&m_filetype);
-  };
-
-  MPI_Status write(int increment, const RealField &data) {
-    return write_(increment, data);
-  }
-
-  MPI_Status write(int increment, const ComplexField &data) {
-    return write_(increment, data);
-  }
-
-  template <typename T>
-  MPI_Status write_(int increment, const std::vector<T> &data) {
-    MPI_File fh;
-    std::string filename2 = utils::format_with_number(m_filename, increment);
-    MPI_File_open(MPI_COMM_WORLD, filename2.c_str(),
-                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
-    MPI_Offset filesize = 0;
-    MPI_Status status;
-    const unsigned int disp = 0;
-    MPI_Datatype type = get_type(data);
-    MPI_File_set_size(fh, filesize); // force overwriting existing data
-    MPI_File_set_view(fh, disp, type, m_filetype, "native", MPI_INFO_NULL);
-    MPI_File_write_all(fh, data.data(), data.size(), type, &status);
-    MPI_File_close(&fh);
-    return status;
-  }
-};
 } // namespace pfc
 
 #endif // PFC_RESULTS_WRITER_HPP

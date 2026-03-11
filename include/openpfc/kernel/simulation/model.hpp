@@ -53,7 +53,7 @@
  *
  * @see simulator.hpp for how models are executed in time integration
  * @see fft.hpp for spectral operations interface
- * @see core/world.hpp for computational domain
+ * @see kernel/data/world.hpp for computational domain
  * @see field_modifier.hpp for initial/boundary conditions
  */
 
@@ -64,7 +64,6 @@
 #include "openpfc/kernel/data/world.hpp"
 #include "openpfc/kernel/fft/fft.hpp"
 #include "openpfc/kernel/mpi/mpi.hpp"
-#include "openpfc/runtime/common/heffte_adapter.hpp"
 #include "openpfc/kernel/data/model_types.hpp"
 #include <algorithm>
 #include <iostream>
@@ -144,7 +143,7 @@ public:
    */
   Model(FFT &fft, const World &world)
       : m_fft(fft), m_world(world),
-        domain(to_heffte_box(world)), // Use to_heffte_box
+        domain(world::to_indices(world)),
         m_rank0(mpi::get_rank() == 0) {}
 
   /**
