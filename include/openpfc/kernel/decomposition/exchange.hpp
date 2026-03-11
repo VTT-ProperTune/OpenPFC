@@ -35,7 +35,7 @@
  * }
  * @endcode
  *
- * @see core/sparse_vector.hpp for SparseVector definition
+ * @see kernel/decomposition/sparse_vector.hpp for SparseVector definition
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -46,8 +46,8 @@
 #include <mpi.h>
 #include <vector>
 
-#include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
+#include <openpfc/kernel/execution/backend_tags.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
@@ -73,6 +73,53 @@ template <> inline MPI_Datatype get_mpi_type<size_t>() {
 }
 
 } // namespace detail
+
+/**
+ * @brief Zero-copy face exchange: send one face, receive one face (blocking)
+ *
+ * Uses MPI derived types so MPI reads/writes directly from buf. No gather/scatter.
+ * @param buf Base pointer of field (row-major [nx,ny,nz])
+ * @param send_type MPI_Datatype for send face (from halo::create_face_type)
+ * @param recv_type MPI_Datatype for recv face
+ * @param send_to_rank Destination rank for send
+ * @param recv_from_rank Source rank for recv
+ * @param comm MPI communicator
+ * @param tag Message tag
+ */
+inline void sendrecv_face(void *buf, MPI_Datatype send_type, MPI_Datatype recv_type,
+                          int send_to_rank, int recv_from_rank, MPI_Comm comm,
+                          int tag = 0) {
+  MPI_Sendrecv(buf, 1, send_type, send_to_rank, tag, buf, 1, recv_type,
+               recv_from_rank, tag, comm, MPI_STATUS_IGNORE);
+}
+
+/**
+ * @brief Zero-copy non-blocking send face (post Isend)
+ */
+inline void isend_face(void *buf, MPI_Datatype send_type, int send_to_rank,
+                       MPI_Comm comm, MPI_Request *request, int tag = 0) {
+  int my_rank;
+  MPI_Comm_rank(comm, &my_rank);
+  if (my_rank != send_to_rank) {
+    *request = MPI_REQUEST_NULL;
+    return;
+  }
+  MPI_Isend(buf, 1, send_type, send_to_rank, tag, comm, request);
+}
+
+/**
+ * @brief Zero-copy non-blocking receive face (post Irecv)
+ */
+inline void irecv_face(void *buf, MPI_Datatype recv_type, int recv_from_rank,
+                       MPI_Comm comm, MPI_Request *request, int tag = 0) {
+  int my_rank;
+  MPI_Comm_rank(comm, &my_rank);
+  if (my_rank != recv_from_rank) {
+    *request = MPI_REQUEST_NULL;
+    return;
+  }
+  MPI_Irecv(buf, 1, recv_type, recv_from_rank, tag, comm, request);
+}
 
 /**
  * @brief Send SparseVector (both indices and data) - setup phase
@@ -215,27 +262,24 @@ void send_data(const core::SparseVector<BackendTag, T> &sparse_vector,
     return;
   }
 
-  // Get data (may need to copy from device for CUDA)
-  std::vector<T> data;
+  MPI_Datatype mpi_type = detail::get_mpi_type<T>();
+  int count = static_cast<int>(size);
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-    // CPU: Direct access
-    data.resize(size);
-    std::copy(sparse_vector.data().data(), sparse_vector.data().data() + size,
-              data.begin());
+    MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm);
   }
 #if defined(OpenPFC_ENABLE_CUDA)
   else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-    // CUDA: Copy to host first
-    data.resize(size);
+#if defined(OpenPFC_MPI_CUDA_AWARE)
+    MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm);
+#else
+    std::vector<T> data(size);
     cudaMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
                cudaMemcpyDeviceToHost);
+    MPI_Send(data.data(), count, mpi_type, receiver_rank, tag, comm);
+#endif
   }
 #endif
-
-  // Send data only
-  MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  MPI_Send(data.data(), static_cast<int>(size), mpi_type, receiver_rank, tag, comm);
 }
 
 /**
@@ -266,25 +310,163 @@ void receive_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_r
     return;
   }
 
-  // Receive data
-  std::vector<T> data(size);
-
   MPI_Datatype mpi_type = exchange::detail::get_mpi_type<T>();
   int count = static_cast<int>(size);
-  MPI_Recv(data.data(), count, mpi_type, sender_rank, tag, comm, MPI_STATUS_IGNORE);
 
-  // Copy to device if needed
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-    // CPU: Direct copy
-    std::copy(data.begin(), data.end(), sparse_vector.data().data());
+    MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
+             MPI_STATUS_IGNORE);
   }
 #if defined(OpenPFC_ENABLE_CUDA)
   else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-    // CUDA: Copy to device
+#if defined(OpenPFC_MPI_CUDA_AWARE)
+    MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
+             MPI_STATUS_IGNORE);
+#else
+    std::vector<T> data(size);
+    MPI_Recv(data.data(), count, mpi_type, sender_rank, tag, comm,
+             MPI_STATUS_IGNORE);
     cudaMemcpy(sparse_vector.data().data(), data.data(), size * sizeof(T),
                cudaMemcpyHostToDevice);
+#endif
   }
 #endif
+}
+
+/**
+ * @brief Non-blocking send of data only - runtime phase
+ *
+ * Posts MPI_Isend; buffer must remain valid until wait_all() is called.
+ * Callers should post all Irecv first, then all Isend, then wait_all (see
+ * docs/halo_exchange.md).
+ *
+ * @param sparse_vector SparseVector to send data from (buffer must stay valid)
+ * @param sender_rank MPI rank of sender
+ * @param receiver_rank MPI rank of receiver
+ * @param comm MPI communicator
+ * @param request Output: MPI_Request (must be passed to wait_all later)
+ * @param tag MPI message tag (default: 0)
+ */
+template <typename BackendTag, typename T>
+void isend_data(const core::SparseVector<BackendTag, T> &sparse_vector,
+                int sender_rank, int receiver_rank, MPI_Comm comm,
+                MPI_Request *request, int tag = 0) {
+  int my_rank;
+  MPI_Comm_rank(comm, &my_rank);
+
+  if (my_rank != sender_rank) {
+    *request = MPI_REQUEST_NULL;
+    return;
+  }
+
+  size_t size = sparse_vector.size();
+  if (size == 0) {
+    *request = MPI_REQUEST_NULL;
+    return;
+  }
+
+  MPI_Datatype mpi_type = detail::get_mpi_type<T>();
+  int count = static_cast<int>(size);
+
+  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+    MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm,
+              request);
+  }
+#if defined(OpenPFC_ENABLE_CUDA)
+  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
+#if defined(OpenPFC_MPI_CUDA_AWARE)
+    MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm,
+              request);
+#else
+    (void)sparse_vector;
+    (void)receiver_rank;
+    (void)tag;
+    (void)comm;
+    *request = MPI_REQUEST_NULL;
+#endif
+  }
+#endif
+}
+
+/**
+ * @brief Non-blocking receive of data only - runtime phase
+ *
+ * Posts MPI_Irecv into sparse_vector.data(); buffer must remain valid until
+ * wait_all() is called.
+ *
+ * @param sparse_vector SparseVector to receive into (buffer must stay valid)
+ * @param sender_rank MPI rank of sender
+ * @param receiver_rank MPI rank of receiver
+ * @param comm MPI communicator
+ * @param request Output: MPI_Request (must be passed to wait_all later)
+ * @param tag MPI message tag (default: 0)
+ */
+template <typename BackendTag, typename T>
+void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_rank,
+                int receiver_rank, MPI_Comm comm, MPI_Request *request,
+                int tag = 0) {
+  int my_rank;
+  MPI_Comm_rank(comm, &my_rank);
+
+  if (my_rank != receiver_rank) {
+    *request = MPI_REQUEST_NULL;
+    return;
+  }
+
+  size_t size = sparse_vector.size();
+  if (size == 0) {
+    *request = MPI_REQUEST_NULL;
+    return;
+  }
+
+  MPI_Datatype mpi_type = detail::get_mpi_type<T>();
+  int count = static_cast<int>(size);
+
+  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+    MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
+              request);
+  }
+#if defined(OpenPFC_ENABLE_CUDA)
+  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
+#if defined(OpenPFC_MPI_CUDA_AWARE)
+    MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
+              request);
+#else
+    (void)sparse_vector;
+    (void)sender_rank;
+    (void)tag;
+    (void)comm;
+    *request = MPI_REQUEST_NULL;
+#endif
+  }
+#endif
+}
+
+/**
+ * @brief Wait for all non-blocking requests to complete
+ *
+ * Call after posting all Irecv then all Isend. Frees the requests (MPI standard).
+ *
+ * @param requests Array of MPI_Request (may contain MPI_REQUEST_NULL)
+ * @param count Number of requests
+ */
+inline void wait_all(MPI_Request *requests, int count) {
+  std::vector<MPI_Request> non_null;
+  non_null.reserve(static_cast<size_t>(count));
+  for (int i = 0; i < count; ++i) {
+    if (requests[i] != MPI_REQUEST_NULL) {
+      non_null.push_back(requests[i]);
+    }
+  }
+  if (!non_null.empty()) {
+    MPI_Waitall(static_cast<int>(non_null.size()), non_null.data(),
+                MPI_STATUSES_IGNORE);
+  }
+}
+
+/** @brief Overload for vector of requests */
+inline void wait_all(std::vector<MPI_Request> &requests) {
+  wait_all(requests.data(), static_cast<int>(requests.size()));
 }
 
 } // namespace exchange
