@@ -32,8 +32,8 @@
 #pragma once
 
 #include <map>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <optional>
 
 namespace pfc {
