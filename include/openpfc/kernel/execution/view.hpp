@@ -48,14 +48,10 @@ std::array<std::size_t, sizeof...(Args)> indices_to_array(Args... args) {
 }
 
 // Execution space associated with a memory space (for Kokkos compatibility)
+// CudaSpace/HipSpace mappings in runtime/cuda/view_cuda.hpp and
+// runtime/hip/view_hip.hpp
 template <typename MemorySpace> struct memory_space_execution_space;
 template <> struct memory_space_execution_space<HostSpace> { using type = Serial; };
-#if defined(OpenPFC_ENABLE_CUDA)
-template <> struct memory_space_execution_space<CudaSpace> { using type = Cuda; };
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-template <> struct memory_space_execution_space<HipSpace> { using type = HIP; };
-#endif
 template <typename MS>
 using memory_space_execution_space_t =
     typename memory_space_execution_space<MS>::type;
