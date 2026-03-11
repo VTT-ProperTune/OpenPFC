@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -21,16 +21,14 @@
  *
  * @code
  * // CPU memory (always available)
- * pfc::core::DataBuffer<pfc::backend::CpuTag, double> cpu_buf(1000);
+ * pfc::DataBuffer<pfc::backend::CpuTag, double> cpu_buf(1000);
  * cpu_buf[0] = 1.0;  // Works - CPU has operator[]
  *
- * #if defined(OpenPFC_ENABLE_CUDA)
- * // GPU memory (only when CUDA enabled)
+ * // GPU memory: include openpfc/runtime/cuda/databuffer_cuda.hpp
+ * // (and backend_tags_cuda.hpp as needed)
  * pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_buf(1000);
- * // gpu_buf[0] = 1.0;  // ERROR - can't dereference device pointer!
  * std::vector<double> host_data(1000, 1.0);
  * gpu_buf.copy_from_host(host_data);
- * #endif
  * @endcode
  *
  * @see kernel/execution/backend_tags.hpp for backend tag definitions
@@ -48,21 +46,19 @@
 
 #include <openpfc/kernel/execution/backend_tags.hpp>
 
-// CUDA headers (only when CUDA is enabled)
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <cuda_runtime.h>
-#endif
-
 namespace pfc {
 namespace core {
+
+template <typename T> constexpr bool dependent_false_databuffer = false;
 
 /**
  * @brief Backend-agnostic memory buffer
  *
  * Template class that provides unified interface for memory management
- * across different backends. Specialized for each backend tag.
+ * across different backends. Kernel defines CpuTag only; include
+ * runtime/cuda or runtime/hip headers for GPU backends.
  *
- * @tparam BackendTag Backend tag (CpuTag, CudaTag, HipTag)
+ * @tparam BackendTag Backend tag (CpuTag in kernel; CudaTag/HipTag in runtime)
  * @tparam T Element type (must be trivially copyable for GPU backends)
  */
 template <typename BackendTag, typename T> struct DataBuffer;
@@ -227,417 +223,17 @@ public:
   void resize(size_t new_size) { m_data.resize(new_size); }
 };
 
-#if defined(OpenPFC_ENABLE_CUDA)
 /**
- * @brief CUDA specialization of DataBuffer
+ * @brief Unsupported backend: include openpfc/runtime/cuda or runtime/hip for GPU
  *
- * Uses CUDA memory allocation (cudaMalloc/cudaFree).
- * Does not provide operator[] (can't dereference device pointer on host).
+ * Kernel only provides DataBuffer<CpuTag,T>. For CudaTag or HipTag, include
+ * the corresponding runtime header.
  */
-template <typename T> struct DataBuffer<backend::CudaTag, T> {
-private:
-  T *m_device_ptr = nullptr;
-  size_t m_size = 0;
-
-public:
-  /**
-   * @brief Constructs a CUDA buffer with the given size
-   * @param size Number of elements
-   * @throws std::runtime_error if CUDA allocation fails
-   */
-  explicit DataBuffer(size_t size) : m_size(size) {
-    if (size > 0) {
-      cudaError_t err = cudaMalloc(&m_device_ptr, size * sizeof(T));
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA allocation failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-  }
-
-  /**
-   * @brief Default constructor (empty buffer)
-   */
-  DataBuffer() = default;
-
-  /**
-   * @brief Destructor (frees CUDA memory)
-   */
-  ~DataBuffer() {
-    if (m_device_ptr != nullptr) {
-      cudaFree(m_device_ptr);
-    }
-  }
-
-  /**
-   * @brief Copy constructor is deleted (would require deep copy)
-   */
-  DataBuffer(const DataBuffer &) = delete;
-
-  /**
-   * @brief Copy assignment is deleted (would require deep copy)
-   */
-  DataBuffer &operator=(const DataBuffer &) = delete;
-
-  /**
-   * @brief Move constructor
-   */
-  DataBuffer(DataBuffer &&other) noexcept
-      : m_device_ptr(other.m_device_ptr), m_size(other.m_size) {
-    other.m_device_ptr = nullptr;
-    other.m_size = 0;
-  }
-
-  /**
-   * @brief Move assignment
-   */
-  DataBuffer &operator=(DataBuffer &&other) noexcept {
-    if (this != &other) {
-      if (m_device_ptr != nullptr) {
-        cudaFree(m_device_ptr);
-      }
-      m_device_ptr = other.m_device_ptr;
-      m_size = other.m_size;
-      other.m_device_ptr = nullptr;
-      other.m_size = 0;
-    }
-    return *this;
-  }
-
-  /**
-   * @brief Returns pointer to underlying data (device memory)
-   * @return Pointer to data (device memory)
-   */
-  T *data() { return m_device_ptr; }
-
-  /**
-   * @brief Returns const pointer to underlying data (device memory)
-   * @return Const pointer to data (device memory)
-   */
-  const T *data() const { return m_device_ptr; }
-
-  /**
-   * @brief Returns the number of elements
-   * @return Size of buffer
-   */
-  size_t size() const { return m_size; }
-
-  /**
-   * @brief Returns true if buffer is empty
-   * @return True if size() == 0
-   */
-  bool empty() const { return m_size == 0; }
-
-  // Note: No operator[] - can't dereference device pointer on host!
-
-  /**
-   * @brief Copy data from host vector to device
-   * @param src Source vector (must have same size)
-   * @throws std::runtime_error if sizes don't match or copy fails
-   */
-  void copy_from_host(const std::vector<T> &src) {
-    if (src.size() != m_size) {
-      throw std::runtime_error("Size mismatch in copy_from_host: expected " +
-                               std::to_string(m_size) + ", got " +
-                               std::to_string(src.size()));
-    }
-    if (m_size > 0) {
-      cudaError_t err = cudaMemcpy(m_device_ptr, src.data(), m_size * sizeof(T),
-                                   cudaMemcpyHostToDevice);
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA copy failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-  }
-
-  /**
-   * @brief Copy data from host pointer to device
-   * @param ptr Source pointer (must have at least n elements)
-   * @param n Number of elements (must equal size())
-   */
-  void copy_from_host(const T *ptr, size_t n) {
-    if (n != m_size) {
-      throw std::runtime_error("Size mismatch in copy_from_host: expected " +
-                               std::to_string(m_size) + ", got " +
-                               std::to_string(n));
-    }
-    if (m_size > 0) {
-      cudaError_t err =
-          cudaMemcpy(m_device_ptr, ptr, m_size * sizeof(T), cudaMemcpyHostToDevice);
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA copy failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-  }
-
-  /**
-   * @brief Copy data from device to host pointer
-   * @param ptr Destination pointer (must have space for n elements)
-   * @param n Number of elements (must equal size())
-   */
-  void copy_to_host(T *ptr, size_t n) const {
-    if (n != m_size) {
-      throw std::runtime_error("Size mismatch in copy_to_host: expected " +
-                               std::to_string(m_size) + ", got " +
-                               std::to_string(n));
-    }
-    if (m_size > 0) {
-      cudaError_t err =
-          cudaMemcpy(ptr, m_device_ptr, m_size * sizeof(T), cudaMemcpyDeviceToHost);
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA copy failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-  }
-
-  /**
-   * @brief Copy data from device to host vector
-   * @return Vector containing buffer data
-   * @throws std::runtime_error if copy fails
-   */
-  std::vector<T> to_host() const {
-    std::vector<T> result(m_size);
-    if (m_size > 0) {
-      cudaError_t err = cudaMemcpy(result.data(), m_device_ptr, m_size * sizeof(T),
-                                   cudaMemcpyDeviceToHost);
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA copy failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-    return result;
-  }
-
-  /**
-   * @brief Resize the buffer (reallocates memory)
-   * @param new_size New size
-   * @throws std::runtime_error if CUDA allocation fails
-   */
-  void resize(size_t new_size) {
-    if (m_device_ptr != nullptr) {
-      cudaFree(m_device_ptr);
-      m_device_ptr = nullptr;
-    }
-    m_size = new_size;
-    if (new_size > 0) {
-      cudaError_t err = cudaMalloc(&m_device_ptr, new_size * sizeof(T));
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA allocation failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-  }
+template <typename BackendTag, typename T> struct DataBuffer {
+  static_assert(dependent_false_databuffer<BackendTag>,
+                "DataBuffer: include openpfc/runtime/cuda or openpfc/runtime/hip "
+                "for GPU backends");
 };
-#endif // OpenPFC_ENABLE_CUDA
-
-#if defined(OpenPFC_ENABLE_HIP)
-/**
- * @brief HIP specialization of DataBuffer
- *
- * Uses HIP memory allocation (hipMalloc/hipFree).
- * Similar interface to CUDA version but uses HIP runtime.
- */
-template <typename T> struct DataBuffer<backend::HipTag, T> {
-private:
-  T *m_device_ptr = nullptr;
-  size_t m_size = 0;
-
-public:
-  /**
-   * @brief Constructs a HIP buffer with the given size
-   * @param size Number of elements
-   * @throws std::runtime_error if HIP allocation fails
-   */
-  explicit DataBuffer(size_t size) : m_size(size) {
-    if (size > 0) {
-      hipError_t err = hipMalloc(&m_device_ptr, size * sizeof(T));
-      if (err != hipSuccess) {
-        throw std::runtime_error("HIP allocation failed: " +
-                                 std::string(hipGetErrorString(err)));
-      }
-    }
-  }
-
-  /**
-   * @brief Default constructor (empty buffer)
-   */
-  DataBuffer() = default;
-
-  /**
-   * @brief Destructor (frees HIP memory)
-   */
-  ~DataBuffer() {
-    if (m_device_ptr != nullptr) {
-      hipFree(m_device_ptr);
-    }
-  }
-
-  /**
-   * @brief Copy constructor is deleted (would require deep copy)
-   */
-  DataBuffer(const DataBuffer &) = delete;
-
-  /**
-   * @brief Copy assignment is deleted (would require deep copy)
-   */
-  DataBuffer &operator=(const DataBuffer &) = delete;
-
-  /**
-   * @brief Move constructor
-   */
-  DataBuffer(DataBuffer &&other) noexcept
-      : m_device_ptr(other.m_device_ptr), m_size(other.m_size) {
-    other.m_device_ptr = nullptr;
-    other.m_size = 0;
-  }
-
-  /**
-   * @brief Move assignment
-   */
-  DataBuffer &operator=(DataBuffer &&other) noexcept {
-    if (this != &other) {
-      if (m_device_ptr != nullptr) {
-        hipFree(m_device_ptr);
-      }
-      m_device_ptr = other.m_device_ptr;
-      m_size = other.m_size;
-      other.m_device_ptr = nullptr;
-      other.m_size = 0;
-    }
-    return *this;
-  }
-
-  /**
-   * @brief Returns pointer to underlying data (device memory)
-   * @return Pointer to data (device memory)
-   */
-  T *data() { return m_device_ptr; }
-
-  /**
-   * @brief Returns const pointer to underlying data (device memory)
-   * @return Const pointer to data (device memory)
-   */
-  const T *data() const { return m_device_ptr; }
-
-  /**
-   * @brief Returns the number of elements
-   * @return Size of buffer
-   */
-  size_t size() const { return m_size; }
-
-  /**
-   * @brief Returns true if buffer is empty
-   * @return True if size() == 0
-   */
-  bool empty() const { return m_size == 0; }
-
-  // Note: No operator[] - can't dereference device pointer on host!
-
-  /**
-   * @brief Copy data from host vector to device
-   * @param src Source vector (must have same size)
-   * @throws std::runtime_error if sizes don't match or copy fails
-   */
-  void copy_from_host(const std::vector<T> &src) {
-    if (src.size() != m_size) {
-      throw std::runtime_error("Size mismatch in copy_from_host: expected " +
-                               std::to_string(m_size) + ", got " +
-                               std::to_string(src.size()));
-    }
-    if (m_size > 0) {
-      hipError_t err = hipMemcpy(m_device_ptr, src.data(), m_size * sizeof(T),
-                                 hipMemcpyHostToDevice);
-      if (err != hipSuccess) {
-        throw std::runtime_error("HIP copy failed: " +
-                                 std::string(hipGetErrorString(err)));
-      }
-    }
-  }
-
-  /**
-   * @brief Copy data from host pointer to device
-   * @param ptr Source pointer (must have at least n elements)
-   * @param n Number of elements (must equal size())
-   */
-  void copy_from_host(const T *ptr, size_t n) {
-    if (n != m_size) {
-      throw std::runtime_error("Size mismatch in copy_from_host: expected " +
-                               std::to_string(m_size) + ", got " +
-                               std::to_string(n));
-    }
-    if (m_size > 0) {
-      hipError_t err =
-          hipMemcpy(m_device_ptr, ptr, m_size * sizeof(T), hipMemcpyHostToDevice);
-      if (err != hipSuccess) {
-        throw std::runtime_error("HIP copy failed: " +
-                                 std::string(hipGetErrorString(err)));
-      }
-    }
-  }
-
-  /**
-   * @brief Copy data from device to host pointer
-   * @param ptr Destination pointer (must have space for n elements)
-   * @param n Number of elements (must equal size())
-   */
-  void copy_to_host(T *ptr, size_t n) const {
-    if (n != m_size) {
-      throw std::runtime_error("Size mismatch in copy_to_host: expected " +
-                               std::to_string(m_size) + ", got " +
-                               std::to_string(n));
-    }
-    if (m_size > 0) {
-      hipError_t err =
-          hipMemcpy(ptr, m_device_ptr, m_size * sizeof(T), hipMemcpyDeviceToHost);
-      if (err != hipSuccess) {
-        throw std::runtime_error("HIP copy failed: " +
-                                 std::string(hipGetErrorString(err)));
-      }
-    }
-  }
-
-  /**
-   * @brief Copy data from device to host vector
-   * @return Vector containing buffer data
-   * @throws std::runtime_error if copy fails
-   */
-  std::vector<T> to_host() const {
-    std::vector<T> result(m_size);
-    if (m_size > 0) {
-      hipError_t err = hipMemcpy(result.data(), m_device_ptr, m_size * sizeof(T),
-                                 hipMemcpyDeviceToHost);
-      if (err != hipSuccess) {
-        throw std::runtime_error("HIP copy failed: " +
-                                 std::string(hipGetErrorString(err)));
-      }
-    }
-    return result;
-  }
-
-  /**
-   * @brief Resize the buffer (reallocates memory)
-   * @param new_size New size
-   * @throws std::runtime_error if HIP allocation fails
-   */
-  void resize(size_t new_size) {
-    if (m_device_ptr != nullptr) {
-      hipFree(m_device_ptr);
-      m_device_ptr = nullptr;
-    }
-    m_size = new_size;
-    if (new_size > 0) {
-      hipError_t err = hipMalloc(&m_device_ptr, new_size * sizeof(T));
-      if (err != hipSuccess) {
-        throw std::runtime_error("HIP allocation failed: " +
-                                 std::string(hipGetErrorString(err)));
-      }
-    }
-  }
-};
-#endif // OpenPFC_ENABLE_HIP
 
 } // namespace core
 } // namespace pfc
