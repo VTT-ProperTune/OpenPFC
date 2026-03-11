@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include "world.hpp"
+#include "openpfc/kernel/data/world.hpp"
 #include <iomanip>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <stdexcept>
