@@ -29,12 +29,6 @@
 #include <openpfc/kernel/execution/policy.hpp>
 #include <string>
 
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <cuda_runtime.h>
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-#include <hip/hip_runtime.h>
-#endif
 #if defined(_OPENMP)
 #include <omp.h>
 #endif
@@ -68,29 +62,6 @@ void parallel_for_impl_omp(const RangePolicy<OpenMP, IndexType> &policy,
                            const Functor &functor) {
   parallel_for_impl_serial(
       RangePolicy<Serial, IndexType>(policy.begin(), policy.end()), functor);
-}
-#endif
-
-// RangePolicy + Cuda/HIP: fallback to host execution (device kernel TBD)
-#if defined(OpenPFC_ENABLE_CUDA)
-template <typename Functor, typename IndexType>
-void parallel_for_impl_cuda(const RangePolicy<Cuda, IndexType> &policy,
-                            const Functor &functor) {
-  (void)policy;
-  (void)functor;
-  // TODO: launch CUDA kernel with functor; for now run on host
-  for (IndexType i = policy.begin(); i != policy.end(); ++i) {
-    functor(i);
-  }
-}
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-template <typename Functor, typename IndexType>
-void parallel_for_impl_hip(const RangePolicy<HIP, IndexType> &policy,
-                           const Functor &functor) {
-  for (IndexType i = policy.begin(); i != policy.end(); ++i) {
-    functor(i);
-  }
 }
 #endif
 
@@ -134,33 +105,6 @@ void parallel_for_impl_omp(const MDRangePolicy<OpenMP, Rank<3>, IndexType> &poli
 }
 #endif
 
-#if defined(OpenPFC_ENABLE_CUDA)
-template <typename Functor, typename IndexType>
-void parallel_for_impl_cuda(const MDRangePolicy<Cuda, Rank<3>, IndexType> &policy,
-                            const Functor &functor) {
-  for (IndexType i = policy.start(0); i != policy.end(0); ++i) {
-    for (IndexType j = policy.start(1); j != policy.end(1); ++j) {
-      for (IndexType k = policy.start(2); k != policy.end(2); ++k) {
-        functor(i, j, k);
-      }
-    }
-  }
-}
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-template <typename Functor, typename IndexType>
-void parallel_for_impl_hip(const MDRangePolicy<HIP, Rank<3>, IndexType> &policy,
-                           const Functor &functor) {
-  for (IndexType i = policy.start(0); i != policy.end(0); ++i) {
-    for (IndexType j = policy.start(1); j != policy.end(1); ++j) {
-      for (IndexType k = policy.start(2); k != policy.end(2); ++k) {
-        functor(i, j, k);
-      }
-    }
-  }
-}
-#endif
-
 } // namespace detail
 
 /**
@@ -177,19 +121,11 @@ void parallel_for(const RangePolicy<ExecutionSpace, IndexType> &policy,
     detail::parallel_for_impl_serial(policy, functor);
   } else if constexpr (std::is_same_v<ExecutionSpace, OpenMP>) {
     detail::parallel_for_impl_omp(policy, functor);
-  }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<ExecutionSpace, Cuda>) {
-    detail::parallel_for_impl_cuda(policy, functor);
-  }
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-  else if constexpr (std::is_same_v<ExecutionSpace, HIP>) {
-    detail::parallel_for_impl_hip(policy, functor);
-  }
-#endif
-  else {
-    static_assert(sizeof(ExecutionSpace) == 0, "Unknown execution space");
+  } else {
+    static_assert(sizeof(ExecutionSpace) == 0,
+                  "Unknown execution space; for Cuda/HIP include "
+                  "openpfc/runtime/cuda/parallel_cuda.hpp or "
+                  "openpfc/runtime/hip/parallel_hip.hpp");
   }
 }
 
@@ -210,19 +146,11 @@ void parallel_for(const MDRangePolicy<ExecutionSpace, Rank<3>, IndexType> &polic
     detail::parallel_for_impl_serial(policy, functor);
   } else if constexpr (std::is_same_v<ExecutionSpace, OpenMP>) {
     detail::parallel_for_impl_omp(policy, functor);
-  }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<ExecutionSpace, Cuda>) {
-    detail::parallel_for_impl_cuda(policy, functor);
-  }
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-  else if constexpr (std::is_same_v<ExecutionSpace, HIP>) {
-    detail::parallel_for_impl_hip(policy, functor);
-  }
-#endif
-  else {
-    static_assert(sizeof(ExecutionSpace) == 0, "Unknown execution space");
+  } else {
+    static_assert(sizeof(ExecutionSpace) == 0,
+                  "Unknown execution space; for Cuda/HIP include "
+                  "openpfc/runtime/cuda/parallel_cuda.hpp or "
+                  "openpfc/runtime/hip/parallel_hip.hpp");
   }
 }
 
@@ -236,37 +164,25 @@ void parallel_for(const std::string &name,
 
 /**
  * @brief Fence: block until all outstanding work on the default space completes
- * (Kokkos-compatible). Serial: no-op; Cuda: cudaDeviceSynchronize; HIP:
- * hipDeviceSynchronize.
+ * (Kokkos-compatible). Kernel: no-op. For Cuda/HIP include the corresponding
+ * runtime header for device synchronize.
  */
-inline void fence() {
-#if defined(OpenPFC_ENABLE_CUDA)
-  cudaDeviceSynchronize();
-#elif defined(OpenPFC_ENABLE_HIP)
-  hipDeviceSynchronize();
-#endif
-  (void)0;
-}
+inline void fence() { (void)0; }
 
 /**
- * @brief Fence for a specific execution space instance
+ * @brief Fence for a specific execution space instance. Kernel: no-op for
+ * Serial and OpenMP. For Cuda/HIP include openpfc/runtime/cuda/parallel_cuda.hpp
+ * or openpfc/runtime/hip/parallel_hip.hpp.
  */
 template <typename ExecutionSpace> void fence(const ExecutionSpace &) {
   if constexpr (std::is_same_v<ExecutionSpace, Serial>) {
     (void)0;
-  }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<ExecutionSpace, Cuda>) {
-    cudaDeviceSynchronize();
-  }
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-  else if constexpr (std::is_same_v<ExecutionSpace, HIP>) {
-    hipDeviceSynchronize();
-  }
-#endif
-  else {
+  } else if constexpr (std::is_same_v<ExecutionSpace, OpenMP>) {
     (void)0;
+  } else {
+    static_assert(sizeof(ExecutionSpace) == 0,
+                  "Unknown execution space; for Cuda/HIP include runtime "
+                  "parallel_cuda.hpp or parallel_hip.hpp");
   }
 }
 
