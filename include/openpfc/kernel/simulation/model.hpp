@@ -60,11 +60,11 @@
 #ifndef PFC_MODEL_HPP
 #define PFC_MODEL_HPP
 
-#include "openpfc/kernel/decomposition/decomposition.hpp"
+#include "openpfc/kernel/data/model_types.hpp"
 #include "openpfc/kernel/data/world.hpp"
+#include "openpfc/kernel/decomposition/decomposition.hpp"
 #include "openpfc/kernel/fft/fft.hpp"
 #include "openpfc/kernel/mpi/mpi.hpp"
-#include "openpfc/kernel/data/model_types.hpp"
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -142,8 +142,7 @@ public:
    * @since v2.0 (breaking change - FFT now required)
    */
   Model(FFT &fft, const World &world)
-      : m_fft(fft), m_world(world),
-        domain(world::to_indices(world)),
+      : m_fft(fft), m_world(world), domain(world::to_indices(world)),
         m_rank0(mpi::get_rank() == 0) {}
 
   /**
