@@ -1,25 +1,16 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * @file memory_space.hpp
- * @brief Kokkos-compatible memory space tags and backend mapping
+ * @brief Kokkos-compatible memory space tags (kernel: HostSpace only)
  *
- * @details
- * Memory spaces define where data is stored. Names match Kokkos.
- * Each memory space maps to an internal backend tag (CpuTag, CudaTag, HipTag)
- * used by DataBuffer and other core types.
+ * Kernel defines HostSpace only. CudaSpace and HipSpace are in
+ * runtime/cuda/memory_space_cuda.hpp and runtime/hip/memory_space_hip.hpp.
  *
- * - HostSpace: host (CPU) memory (always available)
- * - CudaSpace: GPU memory via CUDA (when OpenPFC_ENABLE_CUDA)
- * - HipSpace: GPU memory via HIP (when OpenPFC_ENABLE_HIP)
- *
- * @see kernel/execution/backend_tags.hpp for backend tags
+ * @see runtime/cuda/memory_space_cuda.hpp for CudaSpace
+ * @see runtime/hip/memory_space_hip.hpp for HipSpace
  * @see kernel/execution/databuffer.hpp for buffer implementation
- * @see execution_space.hpp for execution spaces
- *
- * @author OpenPFC Development Team
- * @date 2025
  */
 
 #pragma once
@@ -35,53 +26,22 @@ namespace pfc {
  */
 struct HostSpace {};
 
-#if defined(OpenPFC_ENABLE_CUDA)
 /**
- * @brief CUDA device memory space
- *
- * Data lives in GPU memory. Only when OpenPFC_ENABLE_CUDA.
- */
-struct CudaSpace {};
-#endif
-
-#if defined(OpenPFC_ENABLE_HIP)
-/**
- * @brief HIP device memory space
- *
- * Data lives in GPU memory via HIP/ROCm. Only when OpenPFC_ENABLE_HIP.
- */
-struct HipSpace {};
-#endif
-
-/**
- * @brief Default memory space for the current build
- *
- * HostSpace for CPU-only; matches Kokkos::DefaultExecutionSpace::memory_space.
+ * @brief Default memory space for the current build (kernel: always HostSpace)
  */
 using DefaultMemorySpace = HostSpace;
 
 /**
  * @brief Maps a memory space tag to the corresponding backend tag
  *
- * Used internally by View and deep_copy to dispatch to DataBuffer<BackendTag,T>.
+ * Used internally by View and deep_copy. CudaSpace and HipSpace mappings
+ * are in runtime headers.
  */
 template <typename MemorySpace> struct memory_space_to_backend;
 
 template <> struct memory_space_to_backend<HostSpace> {
   using type = backend::CpuTag;
 };
-
-#if defined(OpenPFC_ENABLE_CUDA)
-template <> struct memory_space_to_backend<CudaSpace> {
-  using type = backend::CudaTag;
-};
-#endif
-
-#if defined(OpenPFC_ENABLE_HIP)
-template <> struct memory_space_to_backend<HipSpace> {
-  using type = backend::HipTag;
-};
-#endif
 
 template <typename MemorySpace>
 using memory_space_to_backend_t =
