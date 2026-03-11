@@ -18,12 +18,24 @@
 
 #include "openpfc/kernel/decomposition/decomposition.hpp"
 #include "openpfc/kernel/fft/fft.hpp"
+#include "openpfc/runtime/cuda/backend_tags_cuda.hpp"
+#include "openpfc/runtime/cuda/databuffer_cuda.hpp"
 
 #include <heffte.h>
 #include <mpi.h>
 
 namespace pfc {
 namespace fft {
+
+#if defined(OpenPFC_ENABLE_CUDA)
+
+// CUDA DataBuffer type aliases (moved from kernel/fft/fft.hpp)
+using RealDataBufferCUDA = core::DataBuffer<backend::CudaTag, double>;
+using ComplexDataBufferCUDA =
+    core::DataBuffer<backend::CudaTag, std::complex<double>>;
+
+// cuFFT backend type alias
+using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
 
 /**
  * @brief Creates an FFT object using cuFFT backend for GPU acceleration
@@ -50,7 +62,6 @@ namespace fft {
  * #endif
  * @endcode
  */
-#if defined(OpenPFC_ENABLE_CUDA)
 // GPU FFT type alias
 using FFT_CUDA = FFT_Impl<heffte::backend::cufft>;
 
@@ -90,6 +101,7 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id);
  * forward/backward methods
  */
 FFT_CUDA create_cuda(const Decomposition &decomposition);
+
 #endif // OpenPFC_ENABLE_CUDA
 
 } // namespace fft
