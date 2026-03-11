@@ -33,7 +33,7 @@ flowchart TB
 
 - **Frontend** depends on kernel and runtime (optional for minimal applications).
 - **Runtime** depends only on kernel.
-- **Kernel** has no dependency on runtime or frontend (when CUDA is disabled). When built with CUDA, `kernel/decomposition/halo_exchange.hpp` may include `runtime/cuda/sparse_vector_ops.hpp` so that gather/scatter work for `SparseVector<CudaTag, T>`; the kernel itself contains no `#ifdef OpenPFC_ENABLE_CUDA` or CUDA-specific code.
+- **Kernel** has no dependency on runtime or frontend. Backend tags (CpuTag only), execution spaces (Serial, OpenMP only), DataBuffer&lt;CpuTag,T&gt;, memory space/traits for host, view, parallel_for, and deep_copy are in kernel; GPU specializations of these and all CUDA/HIP code live in **runtime/cuda** and **runtime/hip**. No `#ifdef OpenPFC_ENABLE_CUDA/HIP` in kernel or frontend; backend choice is via templates and including the corresponding runtime headers.
 
 Minimal applications can depend only on kernel + runtime and omit frontend (no UI, logging, or extra I/O helpers).
 
@@ -41,13 +41,13 @@ Minimal applications can depend only on kernel + runtime and omit frontend (no U
 
 ### Kernel (backend-agnostic)
 
-Code that defines data structures, execution abstraction, and simulation logic without backend-specific implementations. No `#ifdef OpenPFC_ENABLE_CUDA` for implementation details; only tags or policy types as needed. **Backend-agnostic** here means no CPU/CUDA/HIP conditionals in kernel code; the chosen FFT abstraction is HeFFTe, and kernel types (e.g. in `kernel/fft`, `kernel/decomposition`) may use HeFFTe types (e.g. `heffte::box3d<int>`) where that is the agreed interface.
+Code that defines data structures, execution abstraction, and simulation logic. **Backend-agnostic**: kernel defines only **CpuTag**, **Serial**, **OpenMP**, **HostSpace**, and CPU implementations (e.g. `DataBuffer<CpuTag,T>`, host memory traits). CUDA and HIP tags, execution spaces, memory spaces, and GPU implementations live in **runtime/cuda** and **runtime/hip**; use templating to choose the backend. The chosen FFT abstraction is HeFFTe; kernel types may use HeFFTe types (e.g. `heffte::box3d<int>`) where that is the agreed interface.
 
 | Directory | Contents |
 |-----------|----------|
 | **kernel/data** | World, Field, Box3D, coordinate system, types (world_types, model_types), strong types, multi-index, array, constants, discrete field; world_helpers, world_queries, world_factory. |
 | **kernel/decomposition** | Decomposition, decomposition_neighbors, sparse_vector, exchange, halo_pattern; decomposition_factory. |
-| **kernel/execution** | Execution/memory abstraction: execution_space, memory_space, policy, parallel_for, view, layout, backend_tags, memory_traits, databuffer; create_mirror, deep_copy. |
+| **kernel/execution** | Execution/memory abstraction: execution_space, memory_space, policy, parallel_for, view, layout, backend_tags, memory_traits, databuffer; create_mirror, deep_copy. CPU/host only; GPU specializations (CudaTag, HipTag, CudaSpace, HipSpace, parallel_for/fence/deep_copy for device) live in **runtime/cuda** and **runtime/hip**. |
 | **kernel/field** | Field operations and adapters (operations.hpp, legacy_adapter.hpp). |
 | **kernel/fft** | FFT interface and k-space helpers (fft.hpp, kspace.hpp). No backend-specific FFT code. |
 | **kernel/simulation** | Model, Simulator, Time, FieldModifier, ResultsWriter interface, boundary_conditions, initial_conditions, binary_reader. |
@@ -59,10 +59,10 @@ Backend-specific implementations: CPU/OpenMP/CUDA/HIP execution and FFT, and GPU
 
 | Directory | Contents |
 |-----------|----------|
-| **runtime/common** | Code shared by runtime backends (e.g. heffte_adapter.hpp for HeFFTe box conversion). |
+| **runtime/common** | Code shared by runtime backends: heffte_adapter.hpp (HeFFTe box conversion), backend_from_string.hpp (FFT backend name → enum for UI). |
 | **runtime/cpu** | CPU FFT implementation (fft.cpp), serial/OpenMP execution if split. |
-| **runtime/cuda** | CUDA FFT (fft_cuda.cpp), gpu_vector, kernels_simple. |
-| **runtime/hip** | HIP FFT (fft_hip.cpp, fft_hip.hpp). |
+| **runtime/cuda** | CUDA backend: backend_tags_cuda, execution_space_cuda, databuffer_cuda, memory_space_cuda, memory_traits_cuda; exchange_cuda, view_cuda, parallel_cuda, deep_copy_cuda; sparse_vector_ops, sparse_vector_cuda; FFT (fft_cuda.hpp, fft_cuda.cpp); gpu_vector, kernels_simple. |
+| **runtime/hip** | HIP backend: backend_tags_hip, execution_space_hip, databuffer_hip, memory_space_hip, memory_traits_hip; exchange_hip, view_hip, parallel_hip, deep_copy_hip; sparse_vector_hip; FFT (fft_hip.hpp, fft_hip.cpp). |
 
 ### Frontend (optional app features)
 
@@ -83,7 +83,16 @@ After refactoring, public headers live under `include/openpfc/` with the structu
 - `#include <openpfc/runtime/common/heffte_adapter.hpp>`
 - `#include <openpfc/frontend/utils/logging.hpp>`
 
-The convenience header `#include <openpfc/openpfc.hpp>` pulls in kernel, runtime, and frontend (full API). For **minimal applications** (kernel + runtime only), use `#include <openpfc/openpfc_minimal.hpp>` instead, or include only the headers you need (e.g. `kernel/...`, `runtime/...`). For faster compilation in general, prefer including specific headers over the convenience headers.
+The convenience header `#include <openpfc/openpfc.hpp>` pulls in kernel and frontend (full API). For **minimal applications** (kernel + minimal runtime, no frontend), use `#include <openpfc/openpfc_minimal.hpp>`; it includes the kernel and a minimal runtime set (e.g. `runtime/common/heffte_adapter.hpp` for HeFFTe conversion used by FFT and decomposition). For CUDA/HIP, include the corresponding runtime headers in addition. For faster compilation in general, prefer including specific headers over the convenience headers.
+
+### Minimal app and runtime inclusion
+
+Applications that use **FFT** or **decomposition** (e.g. `pfc::decomposition::Decomposition`, `pfc::FFT`) must include the minimal runtime so that HeFFTe box conversion and related types are available. Either:
+
+- Use `#include <openpfc/openpfc_minimal.hpp>` (recommended for minimal apps), which already pulls in `runtime/common/heffte_adapter.hpp`, or  
+- Include the needed runtime headers explicitly (e.g. `#include <openpfc/runtime/common/heffte_adapter.hpp>`).
+
+For CPU-only FFT there is no need to include `runtime/cpu/fft.hpp`; the CPU FFT implementation is linked via the build and used through the kernel FFT interface. For CUDA or HIP FFT, include `openpfc/runtime/cuda/fft_cuda.hpp` or `openpfc/runtime/hip/fft_hip.hpp` as appropriate.
 
 ## Naming policy
 
