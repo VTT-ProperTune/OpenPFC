@@ -28,7 +28,7 @@
  * @endcode
  *
  * @see field_modifier.hpp for usage in modifiers
- * @see core/box3d.hpp for Box3D definition
+ * @see kernel/data/box3d.hpp for Box3D definition
  */
 
 #ifndef PFC_UTILS_FIELD_ITERATION_HPP
