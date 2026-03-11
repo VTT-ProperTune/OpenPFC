@@ -33,10 +33,6 @@
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <openpfc/runtime/cuda/sparse_vector_ops.hpp>
-#endif
-
 namespace pfc {
 
 /**
