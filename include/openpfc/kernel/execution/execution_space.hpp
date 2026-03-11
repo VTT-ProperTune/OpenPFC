@@ -1,25 +1,22 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
  * @file execution_space.hpp
- * @brief Kokkos-compatible execution space tags
+ * @brief Kokkos-compatible execution space tags (kernel: Serial, OpenMP only)
  *
  * @details
- * Execution spaces define where parallel work runs. Names and semantics
- * match Kokkos so that switching to Kokkos later requires minimal changes.
+ * Execution spaces define where parallel work runs. Kernel defines only
+ * Serial and OpenMP; Cuda and HIP are in runtime/cuda and runtime/hip.
  *
- * - Serial: single-threaded execution (always available)
- * - OpenMP: multi-threaded via OpenMP (optional)
- * - Cuda: GPU execution via CUDA (when OpenPFC_ENABLE_CUDA)
- * - HIP: GPU execution via HIP/ROCm (when OpenPFC_ENABLE_HIP)
+ * - Serial, OpenMP: defined here (always available)
+ * - Cuda: include <openpfc/runtime/cuda/execution_space_cuda.hpp>
+ * - HIP: include <openpfc/runtime/hip/execution_space_hip.hpp>
  *
+ * @see runtime/cuda/execution_space_cuda.hpp for Cuda
+ * @see runtime/hip/execution_space_hip.hpp for HIP
  * @see memory_space.hpp for where data lives
- * @see policy.hpp for RangePolicy, MDRangePolicy
  * @see parallel.hpp for parallel_for, fence
- *
- * @author OpenPFC Development Team
- * @date 2025
  */
 
 #pragma once
@@ -40,29 +37,8 @@ struct Serial {};
  */
 struct OpenMP {};
 
-#if defined(OpenPFC_ENABLE_CUDA)
 /**
- * @brief CUDA execution space
- *
- * Work runs on GPU via CUDA kernels. Only available when OpenPFC_ENABLE_CUDA.
- */
-struct Cuda {};
-#endif
-
-#if defined(OpenPFC_ENABLE_HIP)
-/**
- * @brief HIP execution space
- *
- * Work runs on GPU via HIP/ROCm. Only available when OpenPFC_ENABLE_HIP.
- */
-struct HIP {};
-#endif
-
-/**
- * @brief Default execution space for the current build
- *
- * Serial for CPU-only builds; Cuda or HIP when exactly one GPU backend
- * is enabled. Matches Kokkos::DefaultExecutionSpace semantics.
+ * @brief Default execution space for the current build (kernel: always Serial)
  */
 using DefaultExecutionSpace = Serial;
 
