@@ -51,6 +51,38 @@
 namespace pfc {
 namespace core {
 
+namespace detail {
+
+template <typename> inline constexpr bool dependent_false_sparse_vector = false;
+
+template <typename BackendTag>
+void copy_indices_to_device_impl(DataBuffer<BackendTag, size_t> &buf, size_t n,
+                                 const std::vector<size_t> &host_indices) {
+  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+    std::copy(host_indices.begin(), host_indices.begin() + n, buf.data());
+  } else {
+    static_assert(
+        dependent_false_sparse_vector<BackendTag>,
+        "CudaTag/HipTag: include openpfc/runtime/cuda/sparse_vector_cuda.hpp "
+        "or openpfc/runtime/hip/sparse_vector_hip.hpp");
+  }
+}
+
+template <typename BackendTag, typename T>
+void copy_data_to_device_impl(DataBuffer<BackendTag, T> &buf, size_t n,
+                              const std::vector<T> &host_data) {
+  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+    std::copy(host_data.begin(), host_data.begin() + n, buf.data());
+  } else {
+    static_assert(
+        dependent_false_sparse_vector<BackendTag>,
+        "CudaTag/HipTag: include openpfc/runtime/cuda/sparse_vector_cuda.hpp "
+        "or openpfc/runtime/hip/sparse_vector_hip.hpp");
+  }
+}
+
+} // namespace detail
+
 // Alias for backward compatibility
 using HostTag = backend::CpuTag;
 
@@ -70,25 +102,9 @@ private:
   size_t m_size;
   bool m_indices_sorted;
 
-  /**
-   * @brief Copy sorted indices to device
-   */
   void copy_indices_to_device(const std::vector<size_t> &sorted_indices) {
-    if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-      // CPU: Direct copy
-      std::copy(sorted_indices.begin(), sorted_indices.end(), m_indices.data());
-    }
-#if defined(OpenPFC_ENABLE_CUDA)
-    else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-      // CUDA: Use cudaMemcpy
-      cudaError_t err = cudaMemcpy(m_indices.data(), sorted_indices.data(),
-                                   m_size * sizeof(size_t), cudaMemcpyHostToDevice);
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA copy failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-#endif
+    detail::copy_indices_to_device_impl<BackendTag>(m_indices, m_size,
+                                                    sorted_indices);
   }
 
 public:
@@ -198,25 +214,8 @@ public:
   bool is_sorted() const { return m_indices_sorted; }
 
 private:
-  /**
-   * @brief Copy data to device
-   */
   void copy_data_to_device(const std::vector<T> &host_data) {
-    if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-      // CPU: Direct copy
-      std::copy(host_data.begin(), host_data.end(), m_data.data());
-    }
-#if defined(OpenPFC_ENABLE_CUDA)
-    else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-      // CUDA: Use cudaMemcpy
-      cudaError_t err = cudaMemcpy(m_data.data(), host_data.data(),
-                                   m_size * sizeof(T), cudaMemcpyHostToDevice);
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA copy failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-#endif
+    detail::copy_data_to_device_impl<BackendTag, T>(m_data, m_size, host_data);
   }
 };
 
