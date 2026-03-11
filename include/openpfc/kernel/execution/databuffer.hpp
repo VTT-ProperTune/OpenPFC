@@ -33,8 +33,8 @@
  * #endif
  * @endcode
  *
- * @see core/backend_tags.hpp for backend tag definitions
- * @see core/memory_traits.hpp for backend metadata
+ * @see kernel/execution/backend_tags.hpp for backend tag definitions
+ * @see kernel/execution/memory_traits.hpp for backend metadata
  *
  * @author OpenPFC Development Team
  * @date 2025

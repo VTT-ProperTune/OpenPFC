@@ -29,8 +29,8 @@
  * #endif
  * @endcode
  *
- * @see core/databuffer.hpp for usage in memory management
- * @see core/memory_traits.hpp for backend metadata
+ * @see kernel/execution/databuffer.hpp for usage in memory management
+ * @see kernel/execution/memory_traits.hpp for backend metadata
  *
  * @author OpenPFC Development Team
  * @date 2025

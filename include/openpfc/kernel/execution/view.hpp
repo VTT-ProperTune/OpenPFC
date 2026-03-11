@@ -13,7 +13,7 @@
  *
  * @see layout.hpp for LayoutRight, LayoutLeft
  * @see memory_space.hpp for HostSpace, CudaSpace
- * @see core/databuffer.hpp for underlying storage
+ * @see kernel/execution/databuffer.hpp for underlying storage
  *
  * @author OpenPFC Development Team
  * @date 2025

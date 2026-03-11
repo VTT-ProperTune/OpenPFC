@@ -14,8 +14,8 @@
  * - CudaSpace: GPU memory via CUDA (when OpenPFC_ENABLE_CUDA)
  * - HipSpace: GPU memory via HIP (when OpenPFC_ENABLE_HIP)
  *
- * @see core/backend_tags.hpp for backend tags
- * @see core/databuffer.hpp for buffer implementation
+ * @see kernel/execution/backend_tags.hpp for backend tags
+ * @see kernel/execution/databuffer.hpp for buffer implementation
  * @see execution_space.hpp for execution spaces
  *
  * @author OpenPFC Development Team
