@@ -25,7 +25,7 @@
  * @endcode
  *
  * @see fft.hpp for FFT interface
- * @see core/world.hpp for World definition
+ * @see kernel/data/world.hpp for World definition
  *
  * @author OpenPFC Development Team
  * @date 2025
