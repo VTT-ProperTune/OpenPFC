@@ -32,6 +32,7 @@
 #include <iostream>
 #include <memory>
 #include <mpi.h>
+#include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
