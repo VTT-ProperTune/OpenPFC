@@ -25,13 +25,6 @@
 #include <stdexcept>
 #include <vector>
 
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <cuda_runtime.h>
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-#include <hip/hip_runtime.h>
-#endif
-
 namespace pfc {
 
 namespace detail {
@@ -80,50 +73,17 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, M1> &dst,
     return;
   }
 
-  // Both device (same or different space)
-#if defined(OpenPFC_ENABLE_CUDA)
-  if constexpr (std::is_same_v<M1, CudaSpace> && std::is_same_v<M2, CudaSpace>) {
-    cudaError_t err =
-        cudaMemcpy(dst_ptr, src_ptr, n * sizeof(T), cudaMemcpyDeviceToDevice);
-    if (err != cudaSuccess) {
-      throw std::runtime_error("deep_copy: CUDA device-to-device failed");
-    }
-    return;
-  }
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-  if constexpr (std::is_same_v<M1, HipSpace> && std::is_same_v<M2, HipSpace>) {
-    hipError_t err =
-        hipMemcpy(dst_ptr, src_ptr, n * sizeof(T), hipMemcpyDeviceToDevice);
-    if (err != hipSuccess) {
-      throw std::runtime_error("deep_copy: HIP device-to-device failed");
-    }
-    return;
-  }
-#endif
-
-  // Unsupported combination (e.g. Cuda to HIP)
-  constexpr bool both_host =
-      std::is_same_v<M1, HostSpace> && std::is_same_v<M2, HostSpace>;
-  constexpr bool dst_dev_src_host =
-      !std::is_same_v<M1, HostSpace> && std::is_same_v<M2, HostSpace>;
-  constexpr bool dst_host_src_dev =
-      std::is_same_v<M1, HostSpace> && !std::is_same_v<M2, HostSpace>;
-#if defined(OpenPFC_ENABLE_CUDA)
-  constexpr bool both_cuda =
-      std::is_same_v<M1, CudaSpace> && std::is_same_v<M2, CudaSpace>;
-#else
-  constexpr bool both_cuda = false;
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-  constexpr bool both_hip =
-      std::is_same_v<M1, HipSpace> && std::is_same_v<M2, HipSpace>;
-#else
-  constexpr bool both_hip = false;
-#endif
-  constexpr bool handled =
-      both_host || dst_dev_src_host || dst_host_src_dev || both_cuda || both_hip;
-  static_assert(handled, "deep_copy: unsupported space combination");
+  // Both device: provided by runtime (include deep_copy_cuda.hpp /
+  // deep_copy_hip.hpp)
+  constexpr bool both_device =
+      !std::is_same_v<M1, HostSpace> && !std::is_same_v<M2, HostSpace>;
+  static_assert(
+      !both_device,
+      "deep_copy device-to-device: include openpfc/runtime/cuda/deep_copy_cuda.hpp "
+      "or openpfc/runtime/hip/deep_copy_hip.hpp");
+  (void)dst_ptr;
+  (void)src_ptr;
+  (void)n;
 }
 
 } // namespace detail
