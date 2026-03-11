@@ -33,7 +33,7 @@
  * This file is part of the Core Infrastructure module, providing parallel
  * decomposition capabilities for distributed-memory HPC systems.
  *
- * @see core/world.hpp for global domain definition
+ * @see kernel/data/world.hpp for global domain definition
  * @see fft.hpp for FFT operations using decomposition
  * @see factory/decomposition_factory.hpp for construction helpers
  */
