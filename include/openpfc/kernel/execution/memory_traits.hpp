@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -66,38 +66,6 @@ template <> struct backend_traits<backend::CpuTag> {
   /// No transfers needed (memory is already on host)
   static constexpr bool requires_transfer = false;
 };
-
-#if defined(OpenPFC_ENABLE_CUDA)
-/**
- * @brief CUDA backend traits
- *
- * CUDA backend has device access, requires transfers, no host access.
- */
-template <> struct backend_traits<backend::CudaTag> {
-  /// CUDA memory cannot be accessed directly from host
-  static constexpr bool has_host_access = false;
-  /// CUDA memory lives on device
-  static constexpr bool has_device_access = true;
-  /// Requires explicit CPU-GPU transfers
-  static constexpr bool requires_transfer = true;
-};
-#endif
-
-#if defined(OpenPFC_ENABLE_HIP)
-/**
- * @brief HIP backend traits
- *
- * HIP backend has device access, requires transfers, no host access.
- */
-template <> struct backend_traits<backend::HipTag> {
-  /// HIP memory cannot be accessed directly from host
-  static constexpr bool has_host_access = false;
-  /// HIP memory lives on device
-  static constexpr bool has_device_access = true;
-  /// Requires explicit CPU-GPU transfers
-  static constexpr bool requires_transfer = true;
-};
-#endif
 
 } // namespace core
 } // namespace pfc
