@@ -49,12 +49,11 @@
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <cuda_runtime.h>
-#endif
-
 namespace pfc {
 namespace exchange {
+
+template <typename T> constexpr bool dependent_false_exchange = false;
+
 namespace detail {
 
 /**
@@ -164,18 +163,12 @@ void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
               indices.begin());
     std::copy(sparse_vector.data().data(), sparse_vector.data().data() + size,
               data.begin());
+  } else {
+    static_assert(
+        dependent_false_exchange<BackendTag>,
+        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
+        "openpfc/runtime/hip/exchange_hip.hpp");
   }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-    // CUDA: Copy to host first
-    indices.resize(size);
-    data.resize(size);
-    cudaMemcpy(indices.data(), sparse_vector.indices().data(), size * sizeof(size_t),
-               cudaMemcpyDeviceToHost);
-    cudaMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
-               cudaMemcpyDeviceToHost);
-  }
-#endif
 
   // Send indices
   MPI_Send(indices.data(), static_cast<int>(size), MPI_UNSIGNED_LONG_LONG,
@@ -267,19 +260,12 @@ void send_data(const core::SparseVector<BackendTag, T> &sparse_vector,
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
     MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm);
+  } else {
+    static_assert(
+        dependent_false_exchange<BackendTag>,
+        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
+        "openpfc/runtime/hip/exchange_hip.hpp");
   }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-#if defined(OpenPFC_MPI_CUDA_AWARE)
-    MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm);
-#else
-    std::vector<T> data(size);
-    cudaMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
-               cudaMemcpyDeviceToHost);
-    MPI_Send(data.data(), count, mpi_type, receiver_rank, tag, comm);
-#endif
-  }
-#endif
 }
 
 /**
@@ -316,21 +302,12 @@ void receive_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_r
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
     MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
              MPI_STATUS_IGNORE);
+  } else {
+    static_assert(
+        dependent_false_exchange<BackendTag>,
+        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
+        "openpfc/runtime/hip/exchange_hip.hpp");
   }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-#if defined(OpenPFC_MPI_CUDA_AWARE)
-    MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
-             MPI_STATUS_IGNORE);
-#else
-    std::vector<T> data(size);
-    MPI_Recv(data.data(), count, mpi_type, sender_rank, tag, comm,
-             MPI_STATUS_IGNORE);
-    cudaMemcpy(sparse_vector.data().data(), data.data(), size * sizeof(T),
-               cudaMemcpyHostToDevice);
-#endif
-  }
-#endif
 }
 
 /**
@@ -371,21 +348,12 @@ void isend_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
     MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm,
               request);
+  } else {
+    static_assert(
+        dependent_false_exchange<BackendTag>,
+        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
+        "openpfc/runtime/hip/exchange_hip.hpp");
   }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-#if defined(OpenPFC_MPI_CUDA_AWARE)
-    MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm,
-              request);
-#else
-    (void)sparse_vector;
-    (void)receiver_rank;
-    (void)tag;
-    (void)comm;
-    *request = MPI_REQUEST_NULL;
-#endif
-  }
-#endif
 }
 
 /**
@@ -425,21 +393,12 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
     MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
               request);
+  } else {
+    static_assert(
+        dependent_false_exchange<BackendTag>,
+        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
+        "openpfc/runtime/hip/exchange_hip.hpp");
   }
-#if defined(OpenPFC_ENABLE_CUDA)
-  else if constexpr (std::is_same_v<BackendTag, backend::CudaTag>) {
-#if defined(OpenPFC_MPI_CUDA_AWARE)
-    MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
-              request);
-#else
-    (void)sparse_vector;
-    (void)sender_rank;
-    (void)tag;
-    (void)comm;
-    *request = MPI_REQUEST_NULL;
-#endif
-  }
-#endif
 }
 
 /**
