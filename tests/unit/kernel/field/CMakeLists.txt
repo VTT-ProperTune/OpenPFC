@@ -4,4 +4,5 @@
 # Kernel field operations unit tests
 target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_field_operations.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_field_comprehensive.cpp
 )
