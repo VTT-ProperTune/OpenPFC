@@ -109,33 +109,23 @@ using RealVector = std::vector<double>;
 using ComplexVector = std::vector<std::complex<double>>;
 using box3di = heffte::box3d<int>; ///< Type alias for 3D integer box.
 
-// Backend-aware DataBuffer type aliases
+// Backend-aware DataBuffer type aliases (kernel: CPU only; CUDA in runtime/cuda)
 using RealDataBuffer = core::DataBuffer<backend::CpuTag, double>;
 using ComplexDataBuffer = core::DataBuffer<backend::CpuTag, std::complex<double>>;
-#if defined(OpenPFC_ENABLE_CUDA)
-using RealDataBufferCUDA = core::DataBuffer<backend::CudaTag, double>;
-using ComplexDataBufferCUDA =
-    core::DataBuffer<backend::CudaTag, std::complex<double>>;
-#endif
 
 /**
  * @brief FFT backend selection
  *
- * Specifies which FFT library backend to use for computations.
- * - FFTW: CPU-based FFT (default, always available)
- * - CUDA: GPU-based FFT using cuFFT (requires CUDA and OpenPFC_ENABLE_CUDA)
+ * FFTW is in kernel; CUDA backend is selected via runtime (include
+ * openpfc/runtime/cuda/fft_cuda.hpp for RealDataBufferCUDA, create_cuda, etc.)
  */
 enum class Backend {
-  FFTW, ///< CPU-based FFT using FFTW (default)
-  CUDA  ///< GPU-based FFT using cuFFT (requires CUDA support)
+  FFTW, ///< CPU-based FFT using FFTW (default, always available)
+  CUDA  ///< GPU-based FFT using cuFFT (include runtime/cuda/fft_cuda.hpp)
 };
 
-// Type aliases for different FFT backends
-using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>; ///< FFTW backend (CPU)
-#if defined(OpenPFC_ENABLE_CUDA)
-using fft_r2c_cuda =
-    heffte::fft3d_r2c<heffte::backend::cufft>; ///< cuFFT backend (GPU)
-#endif
+// Type alias for FFTW backend (CPU); fft_r2c_cuda in runtime/cuda/fft_cuda.hpp
+using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 
 struct IFFT {
   virtual ~IFFT() = default;
