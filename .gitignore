@@ -13,4 +13,6 @@ results
 .trash
 .temp
 docs/Doxyfile.docs
+docs/html
+docs/latex
 scripts/
