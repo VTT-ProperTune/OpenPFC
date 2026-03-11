@@ -24,10 +24,10 @@
 
 #include "errors.hpp"
 #include "json_helpers.hpp"
-#include "openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp"
-#include "openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp"
 #include "openpfc/kernel/data/world.hpp"
 #include "openpfc/kernel/fft/fft.hpp"
+#include "openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp"
+#include "openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp"
 #include "openpfc/kernel/simulation/field_modifier.hpp"
 #include "openpfc/kernel/simulation/initial_conditions/constant.hpp"
 #include "openpfc/kernel/simulation/initial_conditions/file_reader.hpp"
@@ -36,6 +36,7 @@
 #include "openpfc/kernel/simulation/initial_conditions/single_seed.hpp"
 #include "openpfc/kernel/simulation/model.hpp"
 #include "openpfc/kernel/simulation/time.hpp"
+#include "openpfc/runtime/common/backend_from_string.hpp"
 #include <algorithm>
 #include <cctype>
 #include <heffte.h>
@@ -70,21 +71,18 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
 
   std::cout << "Selected FFT backend: " << backend_str << std::endl;
 
-  if (backend_str == "fftw") {
-    return fft::Backend::FFTW;
-  } else if (backend_str == "cuda") {
-#if defined(OpenPFC_ENABLE_CUDA)
-    return fft::Backend::CUDA;
-#else
+  std::optional<fft::Backend> backend = runtime::backend_from_string(backend_str);
+  if (backend) {
+    return *backend;
+  }
+  if (backend_str == "cuda") {
     throw std::runtime_error(
         "CUDA backend requested but OpenPFC was not compiled with CUDA support. "
         "Rebuild with -DOpenPFC_ENABLE_CUDA=ON");
-#endif
-  } else {
-    throw std::runtime_error(
-        "Unknown FFT backend: " + j["backend"].get<std::string>() +
-        ". Supported: fftw, cuda");
   }
+  throw std::runtime_error(
+      "Unknown FFT backend: " + j["backend"].get<std::string>() +
+      ". Supported: fftw, cuda");
 }
 
 /**
