@@ -9,6 +9,8 @@
 #include <thrust/device_vector.h>
 #include <vector>
 
+#include <openpfc/runtime/cuda/sparse_vector_ops.hpp>
+
 using namespace pfc;
 
 TEST_CASE("Construct empty SparseVector", "[SparseVector (CUDA)]") {

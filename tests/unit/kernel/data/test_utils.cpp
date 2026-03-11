@@ -6,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "openpfc/frontend/utils/utils.hpp"
+#include "openpfc/kernel/mpi/mpi.hpp"
 
 using namespace pfc;
 
