@@ -21,10 +21,11 @@
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
-#include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/io/vtk_writer.hpp>
-#include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/frontend/ui/ui.hpp>
+#include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/kernel/simulation/simulator.hpp>
 #include <tungsten/common/tungsten_input.hpp>
 #include <tungsten/hip/tungsten_model.hpp>
 
