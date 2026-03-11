@@ -17,14 +17,16 @@ This directory contains **unit tests** for OpenPFC components. Unit tests verify
 
 ## Organization
 
-Tests are organized by component:
+Tests mirror the library layout (kernel, runtime, frontend). Under `unit/`:
 
-- **`core/`** - Core data structures (World, Field, Box3D, MultiIndex, ArrayND, etc.)
-- **`fft/`** - FFT functionality and settings
-- **`models/`** - Model base classes and interfaces
-- **`field_modifiers/`** - Initial conditions and boundary conditions
-- **`simulator/`** - Simulation orchestration and time stepping
-- **`operators/`** - Mathematical operators (not yet in build system)
+- **`kernel/data/`** - World, Field, Box3D, MultiIndex, ArrayND, etc.
+- **`kernel/decomposition/`** - Domain decomposition
+- **`kernel/fft/`** - FFT functionality and settings
+- **`kernel/simulation/`** - Model, Simulator, Time
+- **`kernel/field/`** - Field operations
+- **`frontend/field_modifiers/`** - Initial conditions and boundary conditions
+- **`frontend/io/`**, **`frontend/ui/`** - I/O and UI components
+- **`runtime/gpu/`** - GPU runtime tests
 
 ## Running Unit Tests
 
@@ -33,7 +35,7 @@ Tests are organized by component:
 ./tests/openpfc-tests "[unit]"
 
 # Specific component
-./tests/openpfc-tests "[core]"
+./tests/openpfc-tests "[world]"
 ./tests/openpfc-tests "[fft]"
 ```
 
