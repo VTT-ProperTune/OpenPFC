@@ -121,7 +121,7 @@ So: the **two-phase** (indices once, data every step) and **pattern-from-decompo
 - **Orchestration:** `HaloExchanger` provides single-call `exchange_halos()` for 6 face neighbors with non-blocking MPI and (when 6 faces) zero-copy via MPI derived types. Pack path used when fewer than 6 directions.
 - **Overlap:** `HaloExchanger` exposes `start_halo_exchange(field_ptr, size)` and `finish_halo_exchange()` so callers can post exchange, compute interior, then wait and scatter (see §4.3). `exchange_halos()` is equivalent to start + finish.
 - **Gather/scatter on GPU:** CUDA gather and scatter for `double` are implemented in `sparse_vector_ops.cu`; other types throw. Pack path can run on device when CUDA is enabled.
-- **GPU-aware MPI:** When `OpenPFC_MPI_CUDA_AWARE` is defined (CMake option `-DOpenPFC_MPI_CUDA_AWARE=ON` with CUDA enabled), exchange uses device pointers in MPI_Send/Recv and Isend/Irecv; otherwise CUDA path copies to host first.
+- **GPU-aware MPI:** When `OpenPFC_MPI_CUDA_AWARE` is defined (CMake option `-DOpenPFC_MPI_CUDA_AWARE=ON` with CUDA enabled), exchange uses device pointers in MPI_Send/Recv and Isend/Irecv; otherwise the CUDA path copies to host first. Similarly, with HIP enabled, `-DOpenPFC_MPI_HIP_AWARE=ON` enables device pointers for the HIP exchange path.
 - **Recv layout:** Recv halo indices assume the same local layout as the send side (boundary layers in the same array). No explicit halo-padded layout or offset documented in the API.
 - **No FD or field integration:** No Laplacian/stencil or field type that uses halos; no example application (heat equation example still to do).
 
