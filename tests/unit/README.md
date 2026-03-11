@@ -17,7 +17,7 @@ This directory contains **unit tests** for OpenPFC components. Unit tests verify
 
 ## Organization
 
-Tests mirror the library layout (kernel, runtime, frontend). Under `unit/`:
+Tests mirror the library layout (kernel, runtime, frontend) plus operators. Under `unit/`:
 
 - **`kernel/data/`** - World, Field, Box3D, MultiIndex, ArrayND, etc.
 - **`kernel/decomposition/`** - Domain decomposition
@@ -27,6 +27,7 @@ Tests mirror the library layout (kernel, runtime, frontend). Under `unit/`:
 - **`frontend/field_modifiers/`** - Initial conditions and boundary conditions
 - **`frontend/io/`**, **`frontend/ui/`** - I/O and UI components
 - **`runtime/gpu/`** - GPU runtime tests
+- **`operators/`** - Sparse vector and operator tests. **test_diffop** is intentionally excluded until a diffop API exists and is tracked in the backlog.
 
 ## Running Unit Tests
 
