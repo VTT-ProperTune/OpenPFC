@@ -74,21 +74,9 @@ template <typename T> size_t sizeof_vec(std::vector<T> &V) {
 
 } // namespace utils
 
-namespace mpi {
-
-inline int get_comm_rank(MPI_Comm comm) {
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-  return rank;
-}
-
-inline int get_comm_size(MPI_Comm comm) {
-  int size;
-  MPI_Comm_size(comm, &size);
-  return size;
-}
-
-} // namespace mpi
+// pfc::mpi::get_comm_rank and get_comm_size are in kernel/mpi/mpi.hpp.
+// Include it when you need MPI rank/size with a specific communicator.
+// Frontend code may use: #include "openpfc/kernel/mpi/mpi.hpp"
 
 } // namespace pfc
 
