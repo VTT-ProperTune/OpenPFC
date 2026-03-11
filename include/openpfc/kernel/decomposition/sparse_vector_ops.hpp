@@ -38,15 +38,14 @@
 #include <initializer_list>
 #include <vector>
 
-#include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
+#include <openpfc/kernel/execution/backend_tags.hpp>
 #include <stdexcept>
 
 namespace pfc {
 namespace core {
 
-template <typename>
-inline constexpr bool dependent_false = false;
+template <typename> inline constexpr bool dependent_false = false;
 
 /**
  * @brief Gather: Collect values from dense array into SparseVector
@@ -79,8 +78,9 @@ void gather(SparseVector<BackendTag, T> &sparse_vector, const T *source,
       data[i] = source[idx];
     }
   } else {
-    static_assert(dependent_false<BackendTag>,
-                  "CudaTag requires #include <openpfc/runtime/cuda/sparse_vector_ops.hpp>");
+    static_assert(
+        dependent_false<BackendTag>,
+        "CudaTag requires #include <openpfc/runtime/cuda/sparse_vector_ops.hpp>");
   }
 }
 
@@ -134,8 +134,9 @@ void scatter(const SparseVector<BackendTag, T> &sparse_vector, T *dest,
       dest[idx] = data[i];
     }
   } else {
-    static_assert(dependent_false<BackendTag>,
-                  "CudaTag requires #include <openpfc/runtime/cuda/sparse_vector_ops.hpp>");
+    static_assert(
+        dependent_false<BackendTag>,
+        "CudaTag requires #include <openpfc/runtime/cuda/sparse_vector_ops.hpp>");
   }
 }
 
