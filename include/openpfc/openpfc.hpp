@@ -12,7 +12,8 @@
  * - Runtime: MPI, backends (via kernel interfaces)
  * - Frontend: utils, UI (when included)
  *
- * For faster compilation times, include specific headers from kernel/, runtime/, or frontend/.
+ * For faster compilation times, include specific headers from kernel/, runtime/, or
+ * frontend/.
  *
  * @see docs/architecture.md for package structure (kernel / runtime / frontend)
  * @see kernel/data/world.hpp for computational domain setup
@@ -26,6 +27,9 @@
 #ifndef PFC_OPENPFC_HPP
 #define PFC_OPENPFC_HPP
 
+#include "frontend/io/binary_writer.hpp"
+#include "frontend/utils/show.hpp"
+#include "frontend/utils/utils.hpp"
 #include "kernel/data/array.hpp"
 #include "kernel/data/constants.hpp"
 #include "kernel/data/discrete_field.hpp"
@@ -37,20 +41,18 @@
 #include "kernel/fft/fft.hpp"
 #include "kernel/mpi/mpi.hpp"
 #include "kernel/simulation/binary_reader.hpp"
-#include "kernel/simulation/field_modifier.hpp"
-#include "kernel/simulation/model.hpp"
-#include "kernel/simulation/results_writer.hpp"
-#include "kernel/simulation/simulator.hpp"
-#include "kernel/simulation/time.hpp"
 #include "kernel/simulation/boundary_conditions/fixed_bc.hpp"
 #include "kernel/simulation/boundary_conditions/moving_bc.hpp"
+#include "kernel/simulation/field_modifier.hpp"
 #include "kernel/simulation/initial_conditions/constant.hpp"
 #include "kernel/simulation/initial_conditions/file_reader.hpp"
 #include "kernel/simulation/initial_conditions/random_seeds.hpp"
 #include "kernel/simulation/initial_conditions/seed.hpp"
 #include "kernel/simulation/initial_conditions/seed_grid.hpp"
 #include "kernel/simulation/initial_conditions/single_seed.hpp"
-#include "frontend/utils/utils.hpp"
-#include "frontend/utils/show.hpp"
+#include "kernel/simulation/model.hpp"
+#include "kernel/simulation/results_writer.hpp"
+#include "kernel/simulation/simulator.hpp"
+#include "kernel/simulation/time.hpp"
 
 #endif // PFC_OPENPFC_HPP
