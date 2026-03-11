@@ -15,6 +15,12 @@ if(OpenPFC_ENABLE_HIP)
     set(OpenPFC_HIP_AVAILABLE TRUE)
     add_compile_definitions(OpenPFC_ENABLE_HIP)
 
+    option(OpenPFC_MPI_HIP_AWARE "Use GPU-aware MPI with HIP (device pointers in MPI_Send/Recv)" OFF)
+    if(OpenPFC_MPI_HIP_AWARE)
+      add_compile_definitions(OpenPFC_MPI_HIP_AWARE)
+      message(STATUS "   OpenPFC_MPI_HIP_AWARE=ON (MPI uses device pointers)")
+    endif()
+
     # Enable HIP language for .hip sources (CMake 3.21+)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
       enable_language(HIP)
