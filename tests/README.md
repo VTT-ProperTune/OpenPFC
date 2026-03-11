@@ -21,13 +21,10 @@ OpenPFC follows a rigorous testing approach with these goals:
 
 ```text
 tests/
-├── unit/                    # Fast, isolated unit tests
-│   ├── core/               # Core data structures (World, Field, etc.)
-│   ├── fft/                # FFT functionality
-│   ├── models/             # Model base classes
-│   ├── field_modifiers/    # Initial/boundary conditions
-│   ├── simulator/          # Simulation orchestration
-│   └── operators/          # Mathematical operators (not yet active)
+├── unit/                    # Fast, isolated unit tests (mirrors kernel/runtime/frontend)
+│   ├── kernel/             # kernel/data, kernel/fft, kernel/simulation, etc.
+│   ├── frontend/            # frontend/io, frontend/ui, frontend/field_modifiers
+│   └── runtime/             # runtime/gpu, etc.
 │
 ├── integration/            # Multi-component integration tests
 ├── benchmarks/             # Performance benchmarks
