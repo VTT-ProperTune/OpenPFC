@@ -34,12 +34,25 @@ inline void copy_indices_to_device_impl<backend::HipTag>(
   }
 }
 
-template <typename T>
-inline void copy_data_to_device_impl<backend::HipTag, T>(
-    DataBuffer<backend::HipTag, T> &buf, size_t n, const std::vector<T> &host_data) {
+template <>
+inline void copy_data_to_device_impl<backend::HipTag, double>(
+    DataBuffer<backend::HipTag, double> &buf, size_t n,
+    const std::vector<double> &host_data) {
   if (n == 0) return;
-  hipError_t err =
-      hipMemcpy(buf.data(), host_data.data(), n * sizeof(T), hipMemcpyHostToDevice);
+  hipError_t err = hipMemcpy(buf.data(), host_data.data(), n * sizeof(double),
+                             hipMemcpyHostToDevice);
+  if (err != hipSuccess) {
+    throw std::runtime_error("HIP copy failed");
+  }
+}
+
+template <>
+inline void copy_data_to_device_impl<backend::HipTag, float>(
+    DataBuffer<backend::HipTag, float> &buf, size_t n,
+    const std::vector<float> &host_data) {
+  if (n == 0) return;
+  hipError_t err = hipMemcpy(buf.data(), host_data.data(), n * sizeof(float),
+                             hipMemcpyHostToDevice);
   if (err != hipSuccess) {
     throw std::runtime_error("HIP copy failed");
   }
