@@ -35,13 +35,26 @@ inline void copy_indices_to_device_impl<backend::CudaTag>(
   }
 }
 
-template <typename T>
-inline void
-copy_data_to_device_impl<backend::CudaTag, T>(DataBuffer<backend::CudaTag, T> &buf,
-                                              size_t n,
-                                              const std::vector<T> &host_data) {
+template <>
+inline void copy_data_to_device_impl<backend::CudaTag, double>(
+    DataBuffer<backend::CudaTag, double> &buf, size_t n,
+    const std::vector<double> &host_data) {
   if (n == 0) return;
-  cudaError_t err = cudaMemcpy(buf.data(), host_data.data(), n * sizeof(T),
+  cudaError_t err =
+      cudaMemcpy(buf.data(), host_data.data(), n * sizeof(double),
+                 cudaMemcpyHostToDevice);
+  if (err != cudaSuccess) {
+    throw std::runtime_error("CUDA copy failed: " +
+                             std::string(cudaGetErrorString(err)));
+  }
+}
+
+template <>
+inline void copy_data_to_device_impl<backend::CudaTag, float>(
+    DataBuffer<backend::CudaTag, float> &buf, size_t n,
+    const std::vector<float> &host_data) {
+  if (n == 0) return;
+  cudaError_t err = cudaMemcpy(buf.data(), host_data.data(), n * sizeof(float),
                                cudaMemcpyHostToDevice);
   if (err != cudaSuccess) {
     throw std::runtime_error("CUDA copy failed: " +
