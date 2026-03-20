@@ -29,6 +29,10 @@
 #include "openpfc/kernel/decomposition/decomposition.hpp"
 #include "openpfc/kernel/execution/databuffer.hpp"
 #include "openpfc/kernel/fft/fft.hpp"
+#if defined(OpenPFC_ENABLE_CUDA)
+#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
+#endif
 
 using namespace pfc;
 
