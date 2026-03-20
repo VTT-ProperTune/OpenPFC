@@ -6,8 +6,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "openpfc/kernel/mpi/mpi.hpp"
 #include "openpfc/frontend/io/vtk_writer.hpp"
+#include "openpfc/kernel/mpi/mpi.hpp"
 
 #include <algorithm>
 #include <cmath>

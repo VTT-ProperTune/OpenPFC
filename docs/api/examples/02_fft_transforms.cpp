@@ -24,8 +24,8 @@
 #include <complex>
 #include <iomanip>
 #include <iostream>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 

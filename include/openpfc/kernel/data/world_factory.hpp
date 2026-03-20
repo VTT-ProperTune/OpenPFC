@@ -25,8 +25,8 @@
 
 #include "csys.hpp"
 #include "strong_types.hpp"
-#include "world_types.hpp"
 #include "world.hpp"
+#include "world_types.hpp"
 
 namespace pfc {
 namespace world {

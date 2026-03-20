@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Halo Exchange: Status and Roadmap
 
 This document consolidates the current state of halo (ghost cell) exchange in OpenPFC, the design decisions in place, and the path to a **working multi-rank finite difference example** (e.g. heat equation). It is the single place under `docs/` for halo exchange strategy and status.

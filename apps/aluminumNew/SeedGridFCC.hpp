@@ -7,8 +7,8 @@
 #include "SeedFCC.hpp"
 #include <array>
 #include <iostream>
-#include <openpfc/openpfc.hpp>
 #include <openpfc/frontend/ui/ui.hpp>
+#include <openpfc/openpfc.hpp>
 #include <random>
 
 using json = nlohmann::json;

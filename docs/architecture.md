@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # OpenPFC Package Architecture
 
 This document describes the logical structure of the OpenPFC library. The codebase is organized into three layers: **kernel**, **runtime**, and **frontend**. There is no directory or layer named "core"; the former "core" responsibilities are split into kernel subdirectories by responsibility.

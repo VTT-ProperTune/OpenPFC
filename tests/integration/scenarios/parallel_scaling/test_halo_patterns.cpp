@@ -3,9 +3,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
-#include <openpfc/kernel/data/world.hpp>
 
 using namespace pfc;
 

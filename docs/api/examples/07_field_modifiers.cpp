@@ -504,9 +504,11 @@ int main(int argc, char **argv) {
                    "     ║\n";
       std::cout << "║                                                               "
                    "     ║\n";
-      std::cout << "║  See include/openpfc/kernel/simulation/initial_conditions/ for built-in ICs     "
+      std::cout << "║  See include/openpfc/kernel/simulation/initial_conditions/ "
+                   "for built-in ICs     "
                    "     ║\n";
-      std::cout << "║  See include/openpfc/kernel/simulation/boundary_conditions/ for built-in BCs    "
+      std::cout << "║  See include/openpfc/kernel/simulation/boundary_conditions/ "
+                   "for built-in BCs    "
                    "     ║\n";
       std::cout << "╚═══════════════════════════════════════════════════════════════"
                    "═════╝\n";

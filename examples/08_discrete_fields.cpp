@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/discrete_field.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/kernel/data/discrete_field.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
 using namespace pfc;
 using namespace pfc::utils;

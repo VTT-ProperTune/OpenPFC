@@ -31,13 +31,13 @@
 #include <cuda.h> // For CUDA events
 #include <cuda_runtime.h>
 #include <memory>
+#include <openpfc/frontend/utils/nancheck.hpp>
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
-#include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <openpfc/openpfc.hpp>
-#include <openpfc/frontend/utils/nancheck.hpp>
+#include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 

@@ -48,8 +48,8 @@
  */
 
 #include "openpfc/kernel/data/csys.hpp"
-#include "openpfc/kernel/data/world_types.hpp"
 #include "openpfc/kernel/data/world.hpp"
+#include "openpfc/kernel/data/world_types.hpp"
 #include <array>
 #include <cassert>
 #include <functional>

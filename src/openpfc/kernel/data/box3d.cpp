@@ -7,8 +7,7 @@
 namespace pfc {
 
 // Constructor
-Box3D::Box3D(const Int3 &lower, const Int3 &upper)
-    : m_lower(lower), m_upper(upper) {
+Box3D::Box3D(const Int3 &lower, const Int3 &upper) : m_lower(lower), m_upper(upper) {
   for (int i = 0; i < 3; ++i) {
     if (m_lower[i] > m_upper[i]) {
       throw std::invalid_argument(

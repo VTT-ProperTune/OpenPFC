@@ -51,8 +51,8 @@
 #include <cmath>
 #include <fixtures/diffusion_model.hpp>
 #include <openpfc/kernel/data/constants.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <vector>
 

@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <memory>
-#include <openpfc/openpfc.hpp>
 #include <openpfc/frontend/ui/ui.hpp>
+#include <openpfc/openpfc.hpp>
 
 using namespace pfc;
 using namespace pfc::ui;
 
 /*
-Remember: openpfc/frontend/ui/ui.hpp uses nlohmann_json, thus when linking target, one must
-link that also!
+Remember: openpfc/frontend/ui/ui.hpp uses nlohmann_json, thus when linking target,
+one must link that also!
 
   add_executable(10_ui_register_ic 10_ui_register_ic.cpp)
   target_link_libraries(10_ui_register_ic PRIVATE OpenPFC

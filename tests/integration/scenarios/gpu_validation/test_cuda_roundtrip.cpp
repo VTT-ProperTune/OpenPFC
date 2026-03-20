@@ -8,9 +8,9 @@
 #include <complex>
 #include <vector>
 
-#include <openpfc/kernel/execution/databuffer.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)

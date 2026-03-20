@@ -3,8 +3,8 @@
 
 #include "11_write_results.hpp"
 #include <cstdarg>
-#include <openpfc/openpfc.hpp>
 #include <openpfc/frontend/ui/ui.hpp>
+#include <openpfc/openpfc.hpp>
 #include <random>
 
 using namespace pfc;

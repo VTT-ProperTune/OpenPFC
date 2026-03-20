@@ -305,4 +305,3 @@ format_unknown_modifier_error(const std::string &invalid_type,
 } // namespace pfc
 
 #endif // PFC_UI_ERRORS_HPP
-

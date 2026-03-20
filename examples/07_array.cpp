@@ -3,9 +3,9 @@
 
 #include <algorithm>
 #include <iostream>
-#include <openpfc/kernel/data/array.hpp>
-#include <openpfc/frontend/utils/utils.hpp>
 #include <openpfc/frontend/utils/typename.hpp>
+#include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/kernel/data/array.hpp>
 
 /**
  * \example 07_array.cpp

@@ -43,9 +43,9 @@
 #ifndef PFC_SIMULATOR_HPP
 #define PFC_SIMULATOR_HPP
 
-#include "openpfc/kernel/data/world.hpp"
 #include "field_modifier.hpp"
 #include "model.hpp"
+#include "openpfc/kernel/data/world.hpp"
 #include "results_writer.hpp"
 #include "time.hpp"
 #include <iostream>

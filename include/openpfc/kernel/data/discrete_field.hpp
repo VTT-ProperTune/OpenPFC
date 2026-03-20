@@ -53,8 +53,8 @@
 
 #include "array.hpp"
 #include "constants.hpp"
-#include "openpfc/kernel/data/world.hpp"
 #include "openpfc/frontend/utils/show.hpp"
+#include "openpfc/kernel/data/world.hpp"
 #include <array>
 #include <cmath>
 #include <cstddef>

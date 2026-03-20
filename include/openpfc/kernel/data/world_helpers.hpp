@@ -25,9 +25,9 @@
 #pragma once
 
 #include "strong_types.hpp"
-#include "world_types.hpp"
 #include "world.hpp"
 #include "world_factory.hpp"
+#include "world_types.hpp"
 #include <stdexcept>
 #include <string>
 

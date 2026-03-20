@@ -44,11 +44,11 @@
 #ifndef PFC_UI_PARAMETER_METADATA_HPP
 #define PFC_UI_PARAMETER_METADATA_HPP
 
+#include <limits>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <type_traits>
-#include <limits>
 
 namespace pfc {
 namespace ui {
@@ -61,17 +61,16 @@ namespace ui {
  *
  * @tparam T Parameter type (double, int, etc.)
  */
-template <typename T>
-struct ParameterMetadata {
-  std::string name;                        ///< Parameter name (as in config file)
-  std::string description;                 ///< Human-readable description
-  bool required = false;                   ///< Must be present in config?
-  std::optional<T> min_value;             ///< Minimum valid value (inclusive)
-  std::optional<T> max_value;             ///< Maximum valid value (inclusive)
-  std::optional<T> typical_value;         ///< Typical/recommended value
-  std::optional<T> default_value;         ///< Default if not specified
-  std::string physical_units;              ///< Physical units (e.g., "K", "m/s")
-  std::string category;                    ///< Parameter category (e.g., "Thermodynamics")
+template <typename T> struct ParameterMetadata {
+  std::string name;               ///< Parameter name (as in config file)
+  std::string description;        ///< Human-readable description
+  bool required = false;          ///< Must be present in config?
+  std::optional<T> min_value;     ///< Minimum valid value (inclusive)
+  std::optional<T> max_value;     ///< Maximum valid value (inclusive)
+  std::optional<T> typical_value; ///< Typical/recommended value
+  std::optional<T> default_value; ///< Default if not specified
+  std::string physical_units;     ///< Physical units (e.g., "K", "m/s")
+  std::string category;           ///< Parameter category (e.g., "Thermodynamics")
 
   /**
    * @brief Validate a parameter value against constraints
@@ -84,8 +83,8 @@ struct ParameterMetadata {
   std::optional<std::string> validate(T value) const {
     if (min_value && value < *min_value) {
       std::ostringstream msg;
-      msg << "Parameter '" << name << "' = " << value 
-          << " is below minimum " << *min_value;
+      msg << "Parameter '" << name << "' = " << value << " is below minimum "
+          << *min_value;
       if (min_value && max_value) {
         msg << " (valid range: [" << *min_value << ", " << *max_value << "])";
       }
@@ -94,15 +93,15 @@ struct ParameterMetadata {
 
     if (max_value && value > *max_value) {
       std::ostringstream msg;
-      msg << "Parameter '" << name << "' = " << value 
-          << " exceeds maximum " << *max_value;
+      msg << "Parameter '" << name << "' = " << value << " exceeds maximum "
+          << *max_value;
       if (min_value && max_value) {
         msg << " (valid range: [" << *min_value << ", " << *max_value << "])";
       }
       return msg.str();
     }
 
-    return std::nullopt;  // Valid
+    return std::nullopt; // Valid
   }
 
   /**
@@ -118,7 +117,7 @@ struct ParameterMetadata {
       info << " (" << physical_units << ")";
     }
     info << "\n";
-    
+
     if (min_value || max_value) {
       info << "  Valid range: [";
       if (min_value) {
@@ -134,17 +133,17 @@ struct ParameterMetadata {
       }
       info << "]\n";
     }
-    
+
     if (typical_value) {
       info << "  Typical value: " << *typical_value << "\n";
     }
-    
+
     if (default_value) {
       info << "  Default value: " << *default_value << "\n";
     }
-    
+
     info << "  Required: " << (required ? "yes" : "no");
-    
+
     return info.str();
   }
 
@@ -156,73 +155,69 @@ struct ParameterMetadata {
     ParameterMetadata<T> param_;
 
   public:
-    Builder& name(const std::string& n) {
+    Builder &name(const std::string &n) {
       param_.name = n;
       return *this;
     }
 
-    Builder& description(const std::string& desc) {
+    Builder &description(const std::string &desc) {
       param_.description = desc;
       return *this;
     }
 
-    Builder& required(bool req = true) {
+    Builder &required(bool req = true) {
       param_.required = req;
       return *this;
     }
 
-    Builder& optional(bool opt = true) {
+    Builder &optional(bool opt = true) {
       param_.required = !opt;
       return *this;
     }
 
-    Builder& min(T min_val) {
+    Builder &min(T min_val) {
       param_.min_value = min_val;
       return *this;
     }
 
-    Builder& max(T max_val) {
+    Builder &max(T max_val) {
       param_.max_value = max_val;
       return *this;
     }
 
-    Builder& range(T min_val, T max_val) {
+    Builder &range(T min_val, T max_val) {
       param_.min_value = min_val;
       param_.max_value = max_val;
       return *this;
     }
 
-    Builder& typical(T typ_val) {
+    Builder &typical(T typ_val) {
       param_.typical_value = typ_val;
       return *this;
     }
 
-    Builder& default_val(T def_val) {
+    Builder &default_val(T def_val) {
       param_.default_value = def_val;
       return *this;
     }
 
-    Builder& units(const std::string& u) {
+    Builder &units(const std::string &u) {
       param_.physical_units = u;
       return *this;
     }
 
-    Builder& category(const std::string& cat) {
+    Builder &category(const std::string &cat) {
       param_.category = cat;
       return *this;
     }
 
-    ParameterMetadata<T> build() const {
-      return param_;
-    }
+    ParameterMetadata<T> build() const { return param_; }
   };
 
   /**
    * @brief Start building parameter metadata
    */
-  static Builder builder() {
-    return Builder();
-  }
+  static Builder builder() { return Builder(); }
 };
 
 } // namespace ui

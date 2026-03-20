@@ -18,8 +18,8 @@
 #include <sstream>
 #include <vector>
 
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
 

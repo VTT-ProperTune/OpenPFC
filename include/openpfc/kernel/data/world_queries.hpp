@@ -29,8 +29,8 @@
 #pragma once
 
 #include "csys.hpp"
-#include "world_types.hpp"
 #include "world.hpp"
+#include "world_types.hpp"
 #include <vector>
 
 namespace pfc {

@@ -32,7 +32,9 @@ namespace pfc {
  * @brief Rank tag for MDRangePolicy (Kokkos-compatible)
  * @tparam N Number of dimensions
  */
-template <std::size_t N> struct Rank { static constexpr std::size_t value = N; };
+template <std::size_t N> struct Rank {
+  static constexpr std::size_t value = N;
+};
 
 /**
  * @brief 1D range policy (Kokkos-compatible)

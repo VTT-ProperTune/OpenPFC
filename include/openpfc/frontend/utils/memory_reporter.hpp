@@ -40,11 +40,11 @@
 
 #pragma once
 
+#include "openpfc/frontend/utils/logging.hpp"
+#include "openpfc/frontend/utils/utils.hpp"
 #include "openpfc/kernel/data/world.hpp"
 #include "openpfc/kernel/data/world_queries.hpp"
-#include "openpfc/frontend/utils/logging.hpp"
 #include "openpfc/kernel/mpi/mpi.hpp"
-#include "openpfc/frontend/utils/utils.hpp"
 #include <cstddef>
 #include <fstream>
 #include <iomanip>

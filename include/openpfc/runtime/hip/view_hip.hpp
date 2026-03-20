@@ -22,7 +22,9 @@
 namespace pfc {
 namespace detail {
 
-template <> struct memory_space_execution_space<HipSpace> { using type = HIP; };
+template <> struct memory_space_execution_space<HipSpace> {
+  using type = HIP;
+};
 
 } // namespace detail
 } // namespace pfc

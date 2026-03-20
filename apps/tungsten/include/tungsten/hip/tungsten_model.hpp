@@ -24,13 +24,13 @@
 
 #include <hip/hip_runtime.h>
 #include <memory>
+#include <openpfc/frontend/utils/nancheck.hpp>
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
-#include <openpfc/runtime/hip/fft_hip.hpp>
 #include <openpfc/openpfc.hpp>
-#include <openpfc/frontend/utils/nancheck.hpp>
+#include <openpfc/runtime/hip/fft_hip.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 

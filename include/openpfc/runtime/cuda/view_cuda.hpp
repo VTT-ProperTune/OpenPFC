@@ -22,7 +22,9 @@
 namespace pfc {
 namespace detail {
 
-template <> struct memory_space_execution_space<CudaSpace> { using type = Cuda; };
+template <> struct memory_space_execution_space<CudaSpace> {
+  using type = Cuda;
+};
 
 } // namespace detail
 } // namespace pfc

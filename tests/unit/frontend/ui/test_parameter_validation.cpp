@@ -148,8 +148,7 @@ TEST_CASE("ParameterValidator with required parameters",
 
   SECTION("Missing required parameter") {
     json config = {
-        {"temperature", 3300.0}
-        // density is missing
+        {"temperature", 3300.0} // density is missing
     };
 
     auto result = validator.validate(config);
@@ -211,8 +210,7 @@ TEST_CASE("ParameterValidator with optional parameters",
 
   SECTION("Optional parameter not provided is OK") {
     json config = {
-        {"temperature", 300.0}
-        // optional_param not provided
+        {"temperature", 300.0} // optional_param not provided
     };
 
     auto result = validator.validate(config);

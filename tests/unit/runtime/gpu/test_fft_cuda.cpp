@@ -8,10 +8,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <complex>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <vector>

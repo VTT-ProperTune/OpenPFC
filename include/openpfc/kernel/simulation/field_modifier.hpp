@@ -44,8 +44,8 @@
 #ifndef PFC_FIELD_MODIFIER_HPP
 #define PFC_FIELD_MODIFIER_HPP
 
-#include "openpfc/kernel/data/constants.hpp"
 #include "model.hpp"
+#include "openpfc/kernel/data/constants.hpp"
 
 namespace pfc {
 
