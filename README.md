@@ -69,6 +69,8 @@ T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *â
 The project documentation can be found from
 <https://vtt-propertune.github.io/OpenPFC/dev/>.
 
+**Build and install from source:** see [INSTALL.md](INSTALL.md).
+
 ## Features
 
 - scales up to tens of thousands of cores, demonstrably
@@ -217,153 +219,11 @@ use_gpu_aware = false  # Enable for GPU-aware MPI (CUDA backend only)
 - **cuFFT (GPU)**: Significantly faster for large FFTs. Requires CUDA-capable GPU and sufficient GPU memory.
 - **GPU-Aware MPI**: When using CUDA backend with multiple GPUs, enable `use_gpu_aware = true` if your MPI implementation supports it (e.g., OpenMPI with `--with-cuda`). This eliminates host staging and reduces communication latency.
 
-### Building with CUDA Support
-
-To enable CUDA backend:
-
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release \
-      -DOpenPFC_ENABLE_CUDA=ON \
-      -DCMAKE_CUDA_ARCHITECTURES=80 \
-      -S . -B build
-cmake --build build
-```
-
-Replace `80` with your GPU's compute capability (e.g., `70` for V100, `80` for A100, `89` for RTX 4090).
+Build-time setup (HeFFTe, modules, CUDA, and CMake options) is documented in **[INSTALL.md](INSTALL.md)**.
 
 ## Installing
 
-### Using singularity
-
-- Todo
-
-### Compiling from source
-
-Requirements:
-
-- **Compiler supporting C++17 standard**: C++17 features [are
-  available](https://gcc.gnu.org/projects/cxx-status.html) since GCC 5. Check
-  your version number with `g++ --version`. The default compiler might be
-  relatively old, and a more recent version needs to be loaded with `module load
-  gcc`. Do not try to compile with GCC 4.8.5. It will not work. At least GCC
-  versions 9.4.0 (coming with Ubuntu 20.04) and 11.2 are working.
-- **[CMake](https://cmake.org/)**: Version 3.15 or later should be used. Your
-  system may already contain CMake, but if not, it can most likely be installed
-  with the package manager.
-- **[OpenMPI](https://www.open-mpi.org/)**: All recent versions should work.
-  Tested with OpenMPI version 2.1.3. Again, you might need to load proper
-  OpenMPI version with `module load openmpi/2.1.3`, for instance. Additionally,
-  if CMake is not able to find proper OpenMPI installation, assistance might be
-  needed by setting `MPI_ROOT`, e.g. `export
-  MPI_ROOT=/share/apps/OpenMPI/2.1.3`.
-- **[FFTW](https://www.fftw.org/)**: Probably all versions will work. Tested
-  with FFTW versions 3.3.2 and 3.3.10. Again, CMake might need some assistance
-  to find the libraries, which can be controlled with environment variable
-  `FFTW_ROOT`. Depending how FFTW is installed to system, it might be in
-  non-standard location and `module load fftw` is needed. You can use commands
-  like `whereis fftw` or `ldconfig -p | grep fftw` to locate your FFTW
-  installation, if needed.
-- **[Niels Lohmann's JSON for Modern C++
-  library](https://github.com/nlohmann/json)**: All recent versions should work.
-  Tested with version 3.11.2. If you do not have the JSON library installed,
-  CMake for OpenPFC will download the library for you.
-- **[HeFFTe](https://github.com/icl-utk-edu/heffte)**: All recent versions
-  should work. Tested with version 2.3.0. 
-
-Typically in clusters, these are already installed and can be loaded with an
-on-liner
-
-```bash
-module load gcc openmpi fftw
-```
-
-For local Linux machines (or WSL2), packages usually can be installed from
-repositories, e.g. in the case of Ubuntu, the following should work:
-
-```bash
-sudo apt-get install -y gcc openmpi fftw
-```
-
-Some OpenPFC applications use JSON files to provide initial data for
-simulations. In principle, applications can also be built to receive initial
-data in other ways, but as a widely known file format, we recommend using JSON.
-The choice for the JSON package is [JSON for Modern C++](https://json.nlohmann.me/).
-There exist packages for certain Linux distributions (`nlohmann-json3-dev` for
-Ubuntu, `json-devel` for Centos) for easy installation. If the system-wide installation
-is not found, the library is downloaded from GitHub during the configuration.
-
-The last and most important dependency to use OpenPFC is
-[HeFFTe](https://icl.utk.edu/fft/), which is our choice for parallel FFT
-implementation. The instructions to install HeFFTe can be found from
-[here](https://icl-utk-edu.github.io/heffte/md_doxygen_installation.html).
-HeFFTe can be downloaded from <https://github.com/icl-utk-edu/heffte>. Your
-typical workflow to install HeFFTe would be something like this:
-
-```bash
-cmake -S heffte-2.4.0-src -B heffte-2.4.0-build \
-    -DCMAKE_INSTALL_PREFIX=/opt/heffte/2.4.0 \
-    -DCMAKE_BUILD_TYPE=Release -D Heffte_ENABLE_FFTW=ON
-cmake --build heffte-2.4.0-build
-cmake --install heffte-2.4.0-build
-```
-
-If HeFFTe is installed in some non-standard location, CMake is unable to find it
-when configuring OpenPFC. To overcome this problem, the install path of HeFFTe
-can be set into the environment variable `CMAKE_PREFIX_PATH`. For example, if HeFFe
-is installed to `$HOME/opt/heffte/2.3`, the following is making CMake to find
-HeFFTe successfully:
-
-```bash
-export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH
-```
-
-During the configuration, OpenPFC prefers local installations, thus if HeFFTe is
-already installed and found, it will be used. For convenience, there is a
-fallback method to fetch HeFFTe sources from the internet and build it concurrently
-with OpenPFC. In general, however, it is better to build and install programs
-one at a time. So, make sure you have HeFFTe installed and working on your
-system before continuing.
-
-OpenPFC uses [cmake](https://cmake.org/) to automate software building. First,
-the source code must be downloaded to some appropriate place. Head to the
-[releases](https://github.com/VTT-ProperTune/OpenPFC/releases) page and pick the
-newest release and unzip it somewhere. Alternatively, if you are planning to
-develop the project itself or are just interested in the bleeding-edge
-features, you might be interested in cloning the repository to your local machine.
-A GitHub account is needed to clone the project.
-
-```bash
-git clone https://github.com/VTT-ProperTune/OpenPFC.git
-# git clone git@github.com:VTT-ProperTune/OpenPFC.git  # if you prefer ssh instead
-cd OpenPFC
-```
-
-The next step is to configure the project. One might consider at least setting an option
-`CMAKE_BUILD_TYPE` to `Debug` or `Release`. For large-scale simulations, make
-sure to use `Release` as it turns on compiler optimizations.
-
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
-```
-
-Keep in mind, that the configuration will download HeFFTe if the local installation
-is not found. To use local installation instead, add HeFFTe path to the environment
-variable `CMAKE_PREFIX_PATH` or add `Heffte_DIR` option to point where HeFFTe
-configuration files are installed. A typical configuration command in a cluster
-environment is something like
-
-```bash
-module load gcc openmpi fftw
-export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.3:$CMAKE_PREFIX_PATH
-cmake -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_INSTALL_PREFIX=$HOME/opt/openpfc \
-      -S . -B build
-```
-
-Then, building can be done with the command  `cmake --build build`. After the build
-finishes, one should find example codes from `./build/examples` and apps from
-`./build/apps`. Installation to a path defined by `CMAKE_INSTALL_PREFIX` can be
-done with `cmake --install build`.
+See **[INSTALL.md](INSTALL.md)** for supported compilers, environment modules, building and installing HeFFTe, and OpenPFC configuration (CPU and CUDA). A Singularity/apptainer workflow is not documented yet.
 
 ## Structure of the application
 
