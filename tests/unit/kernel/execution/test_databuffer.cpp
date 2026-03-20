@@ -125,7 +125,10 @@ TEST_CASE("DataBuffer CPU backend traits", "[core][databuffer][cpu]") {
 }
 
 #if defined(OpenPFC_ENABLE_CUDA)
-#include "unit/gpu/test_helpers.hpp"
+#include "unit/runtime/gpu/test_helpers.hpp"
+#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
+#include <openpfc/runtime/cuda/memory_traits_cuda.hpp>
 
 TEST_CASE("DataBuffer CUDA construction", "[core][databuffer][cuda]") {
   if (!pfc::gpu::test::is_cuda_available()) {
