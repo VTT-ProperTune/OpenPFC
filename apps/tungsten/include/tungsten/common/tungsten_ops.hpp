@@ -26,6 +26,10 @@
 #include <complex>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
+#if defined(OpenPFC_ENABLE_CUDA)
+#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
+#endif
 
 namespace tungsten {
 namespace ops {
