@@ -11,6 +11,12 @@
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <vector>
 
+#if defined(OpenPFC_ENABLE_CUDA)
+#include "unit/runtime/gpu/test_helpers.hpp"
+#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <openpfc/runtime/cuda/sparse_vector_cuda.hpp>
+#endif
+
 using namespace pfc;
 
 TEST_CASE("SparseVector construction with indices", "[SparseVector][core]") {
@@ -118,6 +124,9 @@ TEST_CASE("SparseVector on_host check", "[SparseVector][core]") {
   REQUIRE(core::on_host(sparse_cpu) == true);
 
 #if defined(OpenPFC_ENABLE_CUDA)
+  if (!pfc::gpu::test::is_cuda_available()) {
+    SKIP("CUDA not available");
+  }
   auto sparse_cuda = core::SparseVector<backend::CudaTag, double>({1, 2, 3});
   REQUIRE(core::on_host(sparse_cuda) == false);
 #endif
