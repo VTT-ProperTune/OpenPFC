@@ -30,6 +30,10 @@
 #include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
 #include <openpfc/runtime/cuda/databuffer_cuda.hpp>
 #endif
+#if defined(OpenPFC_ENABLE_HIP)
+#include <openpfc/runtime/hip/backend_tags_hip.hpp>
+#include <openpfc/runtime/hip/databuffer_hip.hpp>
+#endif
 
 namespace tungsten {
 namespace ops {
