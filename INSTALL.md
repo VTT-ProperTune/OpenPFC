@@ -191,7 +191,94 @@ For a reproducible environment (including HeFFTe), see [nix/README.md](nix/READM
 
 ## 9. AMD GPU (HIP)
 
-For ROCm / HIP builds, install HeFFTe with **`-DHeffte_ENABLE_ROCM=ON`** (see the [HeFFTe installation guide](https://icl-utk-edu.github.io/heffte/md_doxygen_installation.html)). Configure OpenPFC with **`-DOpenPFC_ENABLE_HIP=ON`** (and a suitable ROCm environment). CMake will warn if HeFFTe lacks ROCm support when HIP is enabled.
+For ROCm / HIP builds, load a recent GCC, OpenMPI, and **ROCm** before configuring anything (see §1 for compiler notes). Many clusters provide a ROCm module:
+
+```bash
+module load gcc/11.2.0
+module load openmpi          # e.g. openmpi/4.1.1
+module load rocm/6.4.0       # for GPU — run `module avail rocm` and pick a version
+```
+
+If ROCm is not in a module, ensure its bin directory is on `PATH` (e.g. `export PATH=/opt/rocm-6.4.0/bin:$PATH`).
+
+Verify:
+
+```bash
+g++ --version
+mpicc --version
+hipcc --version   # after loading ROCm or setting PATH
+rocm-smi          # optional: list AMD GPUs
+```
+
+**CMAKE_PREFIX_PATH for ROCm:** CMake finds HIP via `find_package(HIP)`. If HIP is not found, set `CMAKE_PREFIX_PATH` to your ROCm installation (e.g. `-DCMAKE_PREFIX_PATH=/opt/rocm` or `/opt/rocm-6.4.0`) so that `HIPConfig.cmake` is found.
+
+### 9.1. Build and install HeFFTe with ROCm
+
+OpenPFC GPU (HIP) needs HeFFTe built with **`-DHeffte_ENABLE_ROCM=ON`**. Use the same host compilers as for OpenPFC (§1). Example: install with **FFTW + ROCm** under `$HOME/opt/heffte/2.4.1-rocm`. Ensure ROCm is on `PATH` and, if needed, set `CMAKE_PREFIX_PATH` so HeFFTe can find rocFFT/HIP.
+
+```bash
+export VER=2.4.1
+export CC=$(which gcc)
+export CXX=$(which g++)
+# Ensure ROCm is on PATH; optionally:
+export CMAKE_PREFIX_PATH=/opt/rocm-6.4.0:$CMAKE_PREFIX_PATH
+wget -q https://github.com/icl-utk-edu/heffte/archive/refs/tags/v${VER}.tar.gz -O v${VER}.tar.gz
+tar xf v${VER}.tar.gz
+cmake -S heffte-${VER} -B heffte-${VER}-build-rocm \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER="$CC" \
+  -DCMAKE_CXX_COMPILER="$CXX" \
+  -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/${VER}-rocm \
+  -DHeffte_ENABLE_FFTW=ON \
+  -DHeffte_ENABLE_ROCM=ON
+cmake --build heffte-${VER}-build-rocm -j"$(nproc)"
+cmake --install heffte-${VER}-build-rocm
+```
+
+Optionally set **`-DCMAKE_HIP_ARCHITECTURES=<arch>`** to match your GPU (e.g. `gfx90a` for MI210, `gfx1100` for some RDNA3). Use `rocm-smi` or your vendor docs to get the architecture code.
+
+Point CMake at this installation when building OpenPFC (see §3 for `lib` vs `lib64`):
+
+```bash
+export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-rocm:$CMAKE_PREFIX_PATH
+```
+
+### 9.2. Configure and build OpenPFC (HIP)
+
+Load the **ROCm** module (or set `PATH`) so `hipcc` and HIP are available. Set **`CMAKE_PREFIX_PATH`** to include both the HeFFTe ROCm install and your ROCm installation, so OpenPFC can find HeFFTe and `find_package(HIP)` succeeds:
+
+```bash
+export CC=$(which gcc)
+export CXX=$(which g++)
+export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-rocm:/opt/rocm-6.4.0:$CMAKE_PREFIX_PATH
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER="$CC" \
+      -DCMAKE_CXX_COMPILER="$CXX" \
+      -DOpenPFC_ENABLE_HIP=ON \
+      -S . -B build-hip
+cmake --build build-hip -j"$(nproc)"
+```
+
+Adjust the ROCm path in `CMAKE_PREFIX_PATH` if your install is elsewhere (e.g. `/opt/rocm`). Optionally add **`-DCMAKE_HIP_ARCHITECTURES=<arch>`** to match your AMD GPU.
+
+**Minimal configure (optional):** To disable code coverage and documentation (avoids gcov link issues with the HIP toolchain):
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
+      -DOpenPFC_ENABLE_HIP=ON \
+      -DOpenPFC_ENABLE_CODE_COVERAGE=OFF \
+      -DOpenPFC_BUILD_DOCUMENTATION=OFF \
+      -S . -B build-hip
+```
+
+**If HIP is not found:** If you pass `-DOpenPFC_ENABLE_HIP=ON` but CMake does not find HIP, configuration can still succeed with a **warning** and HIP will be disabled. Check the configuration summary and ensure `CMAKE_PREFIX_PATH` includes the ROCm installation so that `HIPConfig.cmake` is found. Then reconfigure from a clean build directory if needed.
+
+CMake will warn if HeFFTe was built without ROCm support when HIP is enabled; use the HeFFTe install from §9.1.
+
+**Code coverage:** If the HIP build fails at link with undefined `__gcov_*` symbols, disable code coverage (e.g. `-DOpenPFC_ENABLE_CODE_COVERAGE=OFF`); coverage is not always compatible with the HIP/Clang toolchain.
+
+**toml++ and ROCm headers:** If you see a preprocessor error in toml++ about `__has_attribute` requiring an identifier, it is due to ROCm headers defining the `__noinline__` macro. As a workaround, ensure translation units that use both OpenPFC (with HIP) and toml++ include the toml-based headers before any OpenPFC or HIP includes, or try a different ROCm version.
 
 ## Compiler notes
 
