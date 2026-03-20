@@ -95,7 +95,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
 endif()
 
 # Add tomlplusplus include directory (header-only library)
-# Since it's header-only and from FetchContent, we just need the include path
+# Since it's header-only (often from FetchContent), we just need the include path
 # Use $<BUILD_INTERFACE:...> to avoid export issues with build directory paths
 if(DEFINED TOMLPLUSPLUS_SOURCE_DIR)
   target_include_directories(openpfc PUBLIC $<BUILD_INTERFACE:${TOMLPLUSPLUS_SOURCE_DIR}/include>)
@@ -115,3 +115,8 @@ endif()
 
 # Require C++17
 target_compile_features(openpfc PUBLIC cxx_std_17)
+
+# GCC 8.x: std::filesystem is in libstdc++fs and must be linked explicitly
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9.0")
+  target_link_libraries(openpfc PUBLIC stdc++fs)
+endif()
