@@ -16,7 +16,20 @@
 #define PFC_TOML_TO_JSON_HPP
 
 #include <nlohmann/json.hpp>
+
+// ROCm host_defines.h defines __noinline__ as a macro, which breaks toml++'s
+// TOML_HAS_ATTR(__noinline__) (it becomes __has_attribute(__attribute__(...))).
+// Undef it before including toml++, then restore so HIP code in the same TU still works.
+#if defined(__noinline__)
+#define OPENPFC_SAVED_NOINLINE __noinline__
+#undef __noinline__
+#endif
 #include <toml++/toml.hpp>
+#if defined(OPENPFC_SAVED_NOINLINE)
+#define __noinline__ OPENPFC_SAVED_NOINLINE
+#undef OPENPFC_SAVED_NOINLINE
+#endif
+
 
 namespace pfc {
 namespace utils {
