@@ -208,6 +208,13 @@ jobs:
             libfftw3-dev \
             libfftw3-mpi-dev \
             nlohmann-json3-dev
+          # OpenMP runtime for Clang (required by HeFFTe's FindOpenMP)
+          if [[ "${{ matrix.compiler }}" == "clang-14" ]]; then
+            sudo apt-get install -y libomp-14-dev
+          fi
+          if [[ "${{ matrix.compiler }}" == "clang-16" ]]; then
+            sudo apt-get install -y libomp-16-dev
+          fi
 
       - name: Cache HeFFTe
         id: cache-heffte
