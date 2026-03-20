@@ -127,8 +127,8 @@ When adding new build configuration:
 Additional Find modules for dependencies are also in this directory:
 - `FindArgparse.cmake`
 - `FindCatch2.cmake`
-- `FindHeffte.cmake`
-- `FindHeffteFFTWLibraries.cmake`
+- `FindHeffte.cmake` (deprecated stub — do not include; HeFFTe is required via `find_package` after install)
+- `FindHeffteFFTWLibraries.cmake` (legacy helper; unused by default)
 - `FindJson.cmake`
 - `Findnlohmann_json.cmake`
 - `FindTomlPlusPlus.cmake`
