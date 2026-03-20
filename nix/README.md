@@ -30,6 +30,8 @@ both development and specific versions of the project. This ensures that all
 contributors and users can work with the same setup, regardless of their
 operating system or local configurations.
 
+For a conventional module + CMake workflow (GCC 11.2, system HeFFTe, CUDA), see **[INSTALL.md](../INSTALL.md)** in the repository root.
+
 ### Developing OpenPFC
 
 To set up the development environment, where `HeFFTe` is built from its
