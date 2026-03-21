@@ -42,6 +42,14 @@ flowchart TB
 
 Minimal applications can depend only on kernel + runtime and omit frontend (no UI, logging, or extra I/O helpers).
 
+## Spectral vs finite-difference workflows
+
+- **Spectral (FFT / k-space)** is the primary, end-to-end path today: models, FFT via HeFFTe, and k-space helpers are wired through the kernel and runtimes (CPU, CUDA, HIP). See **kernel/fft** and application examples that use the simulator stack. **FFT buffers must remain pure subdomain samples** (`fft::get_inbox` / `decomposition::get_subworld` extents): do not run HeFFTe on an array that has had **in-place** ghost data written into its boundary slabs for multi-rank periodic FD unless you have a domain-specific guarantee.
+- **Finite differences** use the same **decomposition** and halo machinery. Two layouts are supported (see **`docs/halo_exchange.md`** — *Halo policies*):
+  - **InPlace (traditional):** `HaloExchanger` + `field::fd::laplacian_7point_interior` — ghosts live in the boundary layers of the same `nx×ny×nz` array; fast for FD-only use.
+  - **Separated (FFT-safe):** `SeparatedFaceHaloExchanger` + `field::fd::laplacian_7point_interior_separated` — core stays contiguous for FFT; ghosts in separate face buffers.
+- The flagship multi-rank heat example is **`examples/15_finite_difference_heat.cpp`** (separated halos + explicit heat equation). For halo design, policies, overlap, and persistent MPI options, see **`docs/halo_exchange.md`**.
+
 ## Layer descriptions
 
 ### Kernel (backend-agnostic)
@@ -51,11 +59,11 @@ Code that defines data structures, execution abstraction, and simulation logic. 
 | Directory | Contents |
 |-----------|----------|
 | **kernel/data** | World, Field, Box3D, coordinate system, types (world_types, model_types), strong types, multi-index, array, constants, discrete field; world_helpers, world_queries, world_factory. |
-| **kernel/decomposition** | Decomposition, decomposition_neighbors, sparse_vector, exchange, halo_pattern; decomposition_factory. |
+| **kernel/decomposition** | Decomposition, decomposition_neighbors, sparse_vector, exchange, halo_pattern, halo_mpi_types, **halo_policy.hpp**, **halo_face_layout.hpp**, **halo_exchange.hpp** (`HaloExchanger`), **separated_halo_exchange.hpp** (`SeparatedFaceHaloExchanger`), **halo_persistent.hpp** (`PersistentHaloExchanger`); decomposition_factory. |
 | **kernel/execution** | Execution/memory abstraction: execution_space, memory_space, policy, parallel_for, view, layout, backend_tags, memory_traits, databuffer; create_mirror, deep_copy. CPU/host only; GPU specializations (CudaTag, HipTag, CudaSpace, HipSpace, parallel_for/fence/deep_copy for device) live in **runtime/cuda** and **runtime/hip**. |
-| **kernel/field** | Field operations and adapters (operations.hpp, legacy_adapter.hpp). |
-| **kernel/fft** | FFT interface and k-space helpers (fft.hpp, kspace.hpp). No backend-specific FFT code. |
-| **kernel/simulation** | Model, Simulator, Time, FieldModifier, ResultsWriter interface, boundary_conditions, initial_conditions, binary_reader. |
+| **kernel/field** | Field operations and adapters (operations.hpp, legacy_adapter.hpp); **finite_difference.hpp** (minimal FD Laplacian on local halos). |
+| **kernel/fft** | FFT interface and k-space helpers (fft.hpp, fft_layout.hpp, kspace.hpp). No backend-specific FFT code. |
+| **kernel/simulation** | Model, Simulator, Time, FieldModifier, ResultsWriter interface, boundary_conditions, initial_conditions, binary_reader. Optional forward declarations: simulation_fwd.hpp. |
 | **kernel/mpi** | MPI abstraction: communicator, environment, timer, worker, mpi.hpp. |
 
 ### Runtime (backend-specific)
