@@ -40,9 +40,9 @@
 
 #pragma once
 
-#include "openpfc/kernel/data/world.hpp"
 #include <array>
 #include <heffte.h>
+#include <openpfc/kernel/data/world.hpp>
 #include <ostream>
 #include <stdexcept>
 #include <vector>
