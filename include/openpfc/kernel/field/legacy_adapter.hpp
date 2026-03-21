@@ -12,8 +12,8 @@
 #include <string>
 #include <utility>
 
-#include "openpfc/kernel/field/operations.hpp"
-#include "openpfc/kernel/simulation/field_modifier.hpp"
+#include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
 
 namespace pfc {
 namespace field {
