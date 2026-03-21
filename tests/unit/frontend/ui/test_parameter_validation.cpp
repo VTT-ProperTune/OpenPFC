@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include "openpfc/frontend/ui/parameter_metadata.hpp"
-#include "openpfc/frontend/ui/parameter_validator.hpp"
 #include <catch2/catch_all.hpp>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/parameter_metadata.hpp>
+#include <openpfc/frontend/ui/parameter_validator.hpp>
 
 using json = nlohmann::json;
 using namespace pfc::ui;
