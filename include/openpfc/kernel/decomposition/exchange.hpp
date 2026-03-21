@@ -97,12 +97,6 @@ inline void sendrecv_face(void *buf, MPI_Datatype send_type, MPI_Datatype recv_t
  */
 inline void isend_face(void *buf, MPI_Datatype send_type, int send_to_rank,
                        MPI_Comm comm, MPI_Request *request, int tag = 0) {
-  int my_rank;
-  MPI_Comm_rank(comm, &my_rank);
-  if (my_rank != send_to_rank) {
-    *request = MPI_REQUEST_NULL;
-    return;
-  }
   MPI_Isend(buf, 1, send_type, send_to_rank, tag, comm, request);
 }
 
@@ -111,13 +105,16 @@ inline void isend_face(void *buf, MPI_Datatype send_type, int send_to_rank,
  */
 inline void irecv_face(void *buf, MPI_Datatype recv_type, int recv_from_rank,
                        MPI_Comm comm, MPI_Request *request, int tag = 0) {
-  int my_rank;
-  MPI_Comm_rank(comm, &my_rank);
-  if (my_rank != recv_from_rank) {
-    *request = MPI_REQUEST_NULL;
-    return;
-  }
   MPI_Irecv(buf, 1, recv_type, recv_from_rank, tag, comm, request);
+}
+
+/**
+ * @brief Non-blocking receive of contiguous elements (e.g. separated face halo)
+ */
+template <typename T>
+inline void irecv_dense(T *buf, int count, int recv_from_rank, MPI_Comm comm,
+                        MPI_Request *request, int tag = 0) {
+  MPI_Irecv(buf, count, detail::get_mpi_type<T>(), recv_from_rank, tag, comm, request);
 }
 
 /**
