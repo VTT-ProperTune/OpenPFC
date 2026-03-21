@@ -52,27 +52,29 @@ jobs:
         id: cache-heffte
         uses: actions/cache@v4
         with:
-          path: ~/opt/heffte
-          key: heffte-2.4.1-ubuntu-22.04-docs
+          path: ~/opt/heffte/2.4.1-cpu
+          key: heffte-2.4.1-cpu-ubuntu-22.04-docs
 
       - name: Build HeFFTe (if not cached)
         if: steps.cache-heffte.outputs.cache-hit != 'true'
         run: |
-          wget -q https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
-          tar xzf v2.4.1.tar.gz
-          cmake -S heffte-2.4.1 -B heffte-build \
+          set -euo pipefail
+          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
+          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
+          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-docs \
             -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte \
+            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
             -DHeffte_ENABLE_FFTW=ON
-          cmake --build heffte-build -j2
-          cmake --install heffte-build
+          cmake --build /tmp/heffte-build-docs -j2
+          cmake --install /tmp/heffte-build-docs
+          rm -rf /tmp/heffte-build-docs /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
 
       - name: Configure OpenPFC
         run: |
           cmake -S . -B build \
             -GNinja \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
             -DOpenPFC_BUILD_DOCUMENTATION=ON \
             -DOpenPFC_BUILD_TESTS=OFF
 
