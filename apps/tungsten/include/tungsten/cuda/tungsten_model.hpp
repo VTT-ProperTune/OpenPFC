@@ -40,10 +40,7 @@
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
-
-using namespace pfc;
-using namespace pfc::fft::kspace;
-using namespace pfc::utils;
+#include <tungsten/common/tungsten_spectral.hpp>
 
 /**
  * @brief Tungsten Phase Field Crystal model (CUDA version)
@@ -68,35 +65,35 @@ using namespace pfc::utils;
  * TungstenCUDA<float> model(world);
  * @endcode
  */
-template <typename RealType = double> class TungstenCUDA : public Model {
-  using Model::Model;
+template <typename RealType = double> class TungstenCUDA : public pfc::Model {
+  using pfc::Model::Model;
 
 private:
   // CUDA FFT (precision determined by data types, not template parameter)
   // Stored as unique_ptr, but FFT_Impl cannot be moved due to const members
   // So we construct it in place via set_cuda_fft(decomp, rank)
-  std::unique_ptr<fft::FFT_CUDA> m_cuda_fft;
+  std::unique_ptr<pfc::fft::FFT_CUDA> m_cuda_fft;
 
-  core::DataBuffer<backend::CudaTag, RealType>
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       filterMF; ///< Mean-field filter in Fourier space
-  core::DataBuffer<backend::CudaTag, RealType> opL; ///< Linear operator: exp(L·dt)
-  core::DataBuffer<backend::CudaTag, RealType>
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> opL; ///< Linear operator: exp(L·dt)
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       opN; ///< Nonlinear operator: (exp(L·dt) - 1) / L
-  core::DataBuffer<backend::CudaTag, RealType>
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       psiMF;                                         ///< Mean-field filtered density
-  core::DataBuffer<backend::CudaTag, RealType> psi;  ///< Density field
-  core::DataBuffer<backend::CudaTag, RealType> psiN; ///< Nonlinear term
-  core::DataBuffer<backend::CudaTag, std::complex<RealType>>
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> psi;  ///< Density field
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> psiN; ///< Nonlinear term
+  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>
       psiMF_F; ///< Mean-field in Fourier space
-  core::DataBuffer<backend::CudaTag, std::complex<RealType>>
+  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>
       psi_F; ///< Density in Fourier space
-  core::DataBuffer<backend::CudaTag, std::complex<RealType>>
+  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>
       psiN_F;               ///< Nonlinear term in Fourier space
   size_t mem_allocated = 0; ///< Memory allocated (for debugging)
 
   // CPU-side buffers for FieldModifiers and VTKWriter
   // These mirror GPU data and are synchronized when needed
-  RealField m_psi_cpu;     ///< CPU copy of psi for FieldModifiers/VTKWriter
+  pfc::RealField m_psi_cpu;     ///< CPU copy of psi for FieldModifiers/VTKWriter
   bool m_cpu_buffer_valid; ///< Whether CPU buffer is up-to-date
 
   // CUDA events for non-blocking synchronization
@@ -123,7 +120,7 @@ public:
    * @param decomp Decomposition object
    * @param rank MPI rank
    */
-  void set_cuda_fft(const Decomposition &decomp, int rank) {
+  void set_cuda_fft(const pfc::Decomposition &decomp, int rank) {
     // FFT_Impl cannot be moved/copied due to const members
     // We need to construct it in place. Since create_cuda returns by value
     // and we can't move it, we'll reconstruct the FFT directly from the
@@ -131,11 +128,11 @@ public:
     // does)
     auto options = heffte::default_options<heffte::backend::cufft>();
     auto r2c_dir = 0;
-    auto fft_layout = fft::layout::create(decomp, r2c_dir);
+    auto fft_layout = pfc::fft::layout::create(decomp, r2c_dir);
 
-    auto inbox = fft::layout::get_real_box(fft_layout, rank);
-    auto outbox = fft::layout::get_complex_box(fft_layout, rank);
-    auto r2c_direction = fft::layout::get_r2c_direction(fft_layout);
+    auto inbox = pfc::fft::layout::get_real_box(fft_layout, rank);
+    auto outbox = pfc::fft::layout::get_complex_box(fft_layout, rank);
+    auto r2c_direction = pfc::fft::layout::get_r2c_direction(fft_layout);
     auto comm = MPI_COMM_WORLD;
 
     // Create cuFFT-based FFT directly
@@ -145,7 +142,7 @@ public:
     // Construct FFT_CUDA in place - FFT_Impl constructor takes fft_type by value and
     // moves it to the const member in the initializer list, which should work
     m_cuda_fft =
-        std::unique_ptr<fft::FFT_CUDA>(new fft::FFT_CUDA(std::move(fft_cuda)));
+        std::unique_ptr<pfc::fft::FFT_CUDA>(new pfc::fft::FFT_CUDA(std::move(fft_cuda)));
   }
 
   /**
@@ -154,8 +151,8 @@ public:
    * @param fft CPU FFT reference (used by base Model)
    * @param world Simulation domain
    */
-  explicit TungstenCUDA(FFT &fft, const World &world)
-      : Model(fft, world), m_cpu_buffer_valid(false) {
+  explicit TungstenCUDA(pfc::FFT &fft, const pfc::World &world)
+      : pfc::Model(fft, world), m_cpu_buffer_valid(false) {
     // Create CUDA events for non-blocking synchronization
     cudaEventCreate(&kernel_done_event);
     cudaEventCreate(&fft_ready_event);
@@ -163,7 +160,7 @@ public:
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    auto decomp = decomposition::create(get_world(), size);
+    auto decomp = pfc::decomposition::create(get_world(), size);
     set_cuda_fft(decomp, rank);
   }
 
@@ -172,7 +169,7 @@ public:
    *
    * @return Reference to the CUDA FFT object
    */
-  fft::FFT_CUDA &get_cuda_fft() {
+  pfc::fft::FFT_CUDA &get_cuda_fft() {
     if (!m_cuda_fft) {
       throw std::runtime_error("CUDA FFT not set. Call set_cuda_fft() first.");
     }
@@ -191,20 +188,20 @@ public:
     auto size_outbox = fft.size_outbox();
 
     // Operators are only half size due to the symmetry of Fourier space
-    filterMF = core::DataBuffer<backend::CudaTag, RealType>(size_outbox);
-    opL = core::DataBuffer<backend::CudaTag, RealType>(size_outbox);
-    opN = core::DataBuffer<backend::CudaTag, RealType>(size_outbox);
+    filterMF = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_outbox);
+    opL = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_outbox);
+    opN = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_outbox);
 
     // Real-space fields
-    psi = core::DataBuffer<backend::CudaTag, RealType>(size_inbox);
-    psiMF = core::DataBuffer<backend::CudaTag, RealType>(size_inbox);
-    psiN = core::DataBuffer<backend::CudaTag, RealType>(size_inbox);
+    psi = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_inbox);
+    psiMF = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_inbox);
+    psiN = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_inbox);
 
     // Fourier-space fields (suffix F means in Fourier space)
-    psi_F = core::DataBuffer<backend::CudaTag, std::complex<RealType>>(size_outbox);
+    psi_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(size_outbox);
     psiMF_F =
-        core::DataBuffer<backend::CudaTag, std::complex<RealType>>(size_outbox);
-    psiN_F = core::DataBuffer<backend::CudaTag, std::complex<RealType>>(size_outbox);
+        pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(size_outbox);
+    psiN_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(size_outbox);
 
     // Allocate CPU-side buffer for FieldModifiers and VTKWriter
     m_psi_cpu.resize(size_inbox);
@@ -212,7 +209,7 @@ public:
 
     // Register CPU buffer with Model base class for FieldModifier access
     // FieldModifiers will modify m_psi_cpu, then we sync back to GPU
-    Model::add_field("psi", m_psi_cpu);
+    pfc::Model::add_field("psi", m_psi_cpu);
 
     // Track memory usage
     mem_allocated = 0;
@@ -262,36 +259,24 @@ public:
   void prepare_operators(double dt) {
     auto &fft = get_cuda_fft();
     auto &world = get_world();
-    auto [Lx, Ly, Lz] = get_size(world);
+    auto [Lx, Ly, Lz] = pfc::world::get_size(world);
 
-    auto outbox = get_outbox(fft);
+    auto outbox = pfc::fft::get_outbox(fft);
     auto low = outbox.low;
     auto high = outbox.high;
 
     // Get frequency scaling factors using helper function
-    auto [fx, fy, fz] = k_frequency_scaling(world);
+    auto [fx, fy, fz] = pfc::fft::kspace::k_frequency_scaling(world);
 
-    // Get model parameters
-    double alpha = params.get_alpha();
-    double alpha2 = 2.0 * alpha * alpha;
-    double lambda = params.get_lambda();
-    double lambda2 = 2.0 * lambda * lambda;
-    double alpha_farTol = params.get_alpha_farTol();
-    int alpha_highOrd = params.get_alpha_highOrd();
-    double Bx = params.get_Bx();
-    double T = params.get_T();
-    double T0 = params.get_T0();
-    double stabP = params.get_stabP();
-    double p2_bar = params.get_p2_bar();
-    double q2_bar = params.get_q2_bar();
+    const auto op_params = tungsten::spectral::make_operator_params(params);
 
     // Get FFT sizes
     auto size_outbox = fft.size_outbox();
 
     // Compute operators on CPU first
-    core::DataBuffer<backend::CpuTag, RealType> filterMF_cpu(size_outbox);
-    core::DataBuffer<backend::CpuTag, RealType> opL_cpu(size_outbox);
-    core::DataBuffer<backend::CpuTag, RealType> opN_cpu(size_outbox);
+    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> filterMF_cpu(size_outbox);
+    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> opL_cpu(size_outbox);
+    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> opN_cpu(size_outbox);
 
     int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
@@ -299,48 +284,17 @@ public:
         for (int i = low[0]; i <= high[0]; i++) {
 
           // Compute wave vector components using helper function
-          double ki = k_component(i, Lx, fx);
-          double kj = k_component(j, Ly, fy);
-          double kk = k_component(k, Lz, fz);
+          double ki = pfc::fft::kspace::k_component(i, Lx, fx);
+          double kj = pfc::fft::kspace::k_component(j, Ly, fy);
+          double kk = pfc::fft::kspace::k_component(k, Lz, fz);
 
           // Compute Laplacian operator -k² using helper function
-          double kLap = k_laplacian_value(ki, kj, kk);
+          double kLap = pfc::fft::kspace::k_laplacian_value(ki, kj, kk);
 
-          // Mean-field filtering operator: χ(k) = exp(-k²/(2λ²))
-          double fMF = exp(kLap / lambda2);
-          filterMF_cpu[idx] = fMF;
-
-          // Compute quasi-Gaussian peak function g_f(k)
-          double k_val = sqrt(-kLap) - 1.0;
-          double k2 = k_val * k_val;
-
-          // Tolerance parameter for higher-order component
-          double rTol = -alpha2 * log(alpha_farTol) - 1.0;
-
-          double g1 = 0.0;
-          if (alpha_highOrd == 0) {
-            // Pure Gaussian peak
-            g1 = exp(-k2 / alpha2);
-          } else {
-            // Quasi-Gaussian peak with higher-order component
-            g1 = exp(-(k2 + rTol * pow(k_val, alpha_highOrd)) / alpha2);
-          }
-
-          // Taylor expansion of Gaussian peak to order 2 (for k ≥ 0)
-          double g2 = 1.0 - 1.0 / alpha2 * k2;
-
-          // Splice the two sides of the peak
-          double gf = (k_val < 0.0) ? g1 : g2;
-
-          // Temperature-dependent peak contribution
-          double opPeak = Bx * exp(-T / T0) * gf;
-
-          // Linear operator: L(k) = stabP + p2_bar - opPeak + q2_bar * χ(k)
-          double opCk = stabP + p2_bar - opPeak + q2_bar * fMF;
-
-          // Exponential time integration operators
-          opL_cpu[idx] = exp(kLap * opCk * dt);
-          opN_cpu[idx] = (opCk == 0.0) ? kLap * dt : (opL_cpu[idx] - 1.0) / opCk;
+          auto m = tungsten::spectral::operators_for_mode(kLap, dt, op_params);
+          filterMF_cpu[idx] = static_cast<RealType>(m.filterMF);
+          opL_cpu[idx] = static_cast<RealType>(m.opL);
+          opN_cpu[idx] = static_cast<RealType>(m.opN);
 
           idx += 1;
         }
@@ -394,7 +348,7 @@ public:
 
     // Apply mean-field filter in Fourier space: ψ̂_MF = χ(k) · ψ̂
     // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-    tungsten::ops::multiply_complex_real<backend::CudaTag, RealType>(psi_F, filterMF,
+    tungsten::ops::multiply_complex_real<pfc::backend::CudaTag, RealType>(psi_F, filterMF,
                                                                      psiMF_F);
     // Record event after kernel launch (kernels run on default stream)
     cudaEventRecord(kernel_done_event, 0);
@@ -412,14 +366,14 @@ public:
     double q4_bar = params.get_q4_bar();
 
     // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-    tungsten::ops::compute_nonlinear<backend::CudaTag, RealType>(
+    tungsten::ops::compute_nonlinear<pfc::backend::CudaTag, RealType>(
         psi, psiMF, p3_bar, p4_bar, q3_bar, q4_bar, psiN);
 
     // Step 3: Apply stabilization factor if given
     double stabP = params.get_stabP();
     if (stabP != 0.0) {
       // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-      tungsten::ops::apply_stabilization<backend::CudaTag, RealType>(psiN, psi,
+      tungsten::ops::apply_stabilization<pfc::backend::CudaTag, RealType>(psiN, psi,
                                                                      stabP, psiN);
     }
     // Record event after all kernels in this sequence complete
@@ -433,7 +387,7 @@ public:
     // Step 5: Apply exponential time integration in Fourier space
     // ψ̂(t+Δt) = L(k)·ψ̂(t) + N(k)·N̂[ψ, ψ_MF]
     // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-    tungsten::ops::apply_time_integration<backend::CudaTag, RealType>(
+    tungsten::ops::apply_time_integration<pfc::backend::CudaTag, RealType>(
         psi_F, psiN_F, opL, opN, psi_F);
     // Record event after kernel launch
     cudaEventRecord(kernel_done_event, 0);
@@ -458,8 +412,8 @@ public:
   }
 
   // Accessors for fields (for testing/debugging)
-  core::DataBuffer<backend::CudaTag, RealType> &get_psi() { return psi; }
-  core::DataBuffer<backend::CudaTag, RealType> &get_psiMF() { return psiMF; }
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &get_psi() { return psi; }
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &get_psiMF() { return psiMF; }
 
   /**
    * @brief Prepare for FieldModifier application
@@ -483,7 +437,7 @@ public:
    * Syncs GPU to CPU and returns reference to CPU buffer.
    * Used by VTKWriter to write results.
    */
-  RealField &get_psi_for_writer() {
+  pfc::RealField &get_psi_for_writer() {
     sync_gpu_to_cpu();
     return m_psi_cpu;
   }
