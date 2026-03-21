@@ -47,12 +47,12 @@
  * FFTs, and models without ever exposing internal logic unnecessarily.
  */
 
-#include "openpfc/kernel/data/csys.hpp"
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/data/world_types.hpp"
 #include <array>
 #include <cassert>
 #include <functional>
+#include <openpfc/kernel/data/csys.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/world_types.hpp>
 #include <vector>
 
 namespace pfc {
