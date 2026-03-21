@@ -12,14 +12,13 @@
 #include <random>
 
 using json = nlohmann::json;
-using namespace pfc;
 
 /**
  * @brief SlabFCC is a FieldModifier that seeds the model with a slab of FCC
  * seeds.
  *
  */
-class SlabFCC : public FieldModifier {
+class SlabFCC : public pfc::FieldModifier {
 private:
   int m_Ny = 2;
   int m_Nz = 1;
@@ -70,18 +69,18 @@ public:
    *
    * @param m is the model to apply the initial condition to.
    */
-  void apply(Model &m, double) override {
-    const World &w = m.get_world();
-    const FFT &fft = m.get_fft();
-    Field &field = m.get_real_field("psi");
-    Int3 low = get_inbox(fft).low;
-    Int3 high = get_inbox(fft).high;
+  void apply(pfc::Model &m, double) override {
+    const pfc::World &w = m.get_world();
+    const pfc::FFT &fft = m.get_fft();
+    pfc::Field &field = m.get_real_field("psi");
+    pfc::Int3 low = pfc::fft::get_inbox(fft).low;
+    pfc::Int3 high = pfc::fft::get_inbox(fft).high;
 
     // auto Lx = w.Lx;
-    auto Ly = get_size(w, 1);
-    auto Lz = get_size(w, 2);
-    auto [dx, dy, dz] = get_spacing(w);
-    auto [x0, y0, z0] = get_origin(w);
+    auto Ly = pfc::world::get_size(w, 1);
+    auto Lz = pfc::world::get_size(w, 2);
+    auto [dx, dy, dz] = pfc::world::get_spacing(w);
+    auto [x0, y0, z0] = pfc::world::get_origin(w);
 
     std::vector<SeedFCC> seeds;
 
