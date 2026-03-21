@@ -7,7 +7,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/kernel/data/multi_index.hpp"
+#include <openpfc/kernel/data/multi_index.hpp>
 
 using namespace pfc;
 
