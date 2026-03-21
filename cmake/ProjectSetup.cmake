@@ -5,6 +5,10 @@
 # Note: project() is called in root CMakeLists.txt to avoid CMake warnings
 # This file only handles version suffix and development mode settings
 
+# MPI must be resolved before Dependencies.cmake (HeFFTe, tests, summary).
+option(OpenPFC_ENABLE_MPI
+       "Enable MPI (required for supported builds; OFF is unsupported — see INSTALL.md)" ON)
+
 # Define an option for development mode
 option(OpenPFC_DEVELOPMENT "Enable development build settings" OFF)
 
