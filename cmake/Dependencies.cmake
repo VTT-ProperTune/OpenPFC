@@ -3,11 +3,33 @@
 #
 # Find and configure all project dependencies
 
-# MPI (required)
+# MPI — required for all supported configurations (HeFFTe + distributed FFT).
+if(NOT OpenPFC_ENABLE_MPI)
+  message(FATAL_ERROR
+    "OpenPFC_ENABLE_MPI=OFF is not supported. OpenPFC is built around MPI "
+    "(and HeFFTe uses MPI). Install MPI development packages, e.g.\n"
+    "  Debian/Ubuntu: sudo apt install libopenmpi-dev openmpi-bin\n"
+    "  RHEL/Fedora:   sudo dnf install openmpi-devel\n"
+    "Then reconfigure with the default OpenPFC_ENABLE_MPI=ON (see INSTALL.md §2).")
+endif()
 find_package(MPI REQUIRED)
 
-# HeFFTe (required): must be installed separately — OpenPFC does not download it.
+# HeFFTe (required). Prefer an installed package; optionally fetch when missing.
+option(OpenPFC_FETCH_HEFFTE
+  "If no HeFFTe is found, download and build v2.4.1 with FetchContent (needs FFTW)"
+  OFF)
+
 find_package(Heffte CONFIG QUIET)
+
+if(NOT Heffte_FOUND AND NOT TARGET Heffte::Heffte AND NOT TARGET Heffte AND NOT TARGET heffte)
+  if(OpenPFC_FETCH_HEFFTE)
+    message(STATUS "📥 HeFFTe not found; fetching and building with FetchContent")
+    include(cmake/FetchHeffte.cmake)
+  endif()
+endif()
+
+find_package(Heffte CONFIG QUIET)
+
 if(Heffte_FOUND)
   message(STATUS "✅ HeFFTe v${Heffte_VERSION} found at ${Heffte_DIR}")
 
@@ -29,20 +51,28 @@ if(Heffte_FOUND)
       message(STATUS "✅ HeFFTe ROCm backend is available")
     endif()
   endif()
+elseif(TARGET Heffte::Heffte OR TARGET Heffte OR TARGET heffte)
+  message(STATUS "✅ HeFFTe targets available (FetchContent or add_subdirectory)")
 else()
   message(FATAL_ERROR
     "HeFFTe was not found (CMake package 'Heffte').\n"
     "\n"
-    "OpenPFC does not download or build HeFFTe automatically. Install HeFFTe first, then point CMake at it.\n"
+    "This is expected until HeFFTe is installed and CMake can see it. OpenPFC does not "
+    "vendor HeFFTe in the source tree.\n"
     "\n"
-    "  → See INSTALL.md in the repository root for step-by-step instructions (recommended layout: ~/opt/heffte/2.4.1).\n"
+    "Do this (see INSTALL.md §3 and §5.1):\n"
+    "  • Build/install HeFFTe outside the repo, e.g. prefix $HOME/opt/heffte/2.4.1-cpu\n"
+    "  • Then: export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu:$CMAKE_PREFIX_PATH\n"
+    "    or: cmake ... -DHeffte_DIR=$HOME/opt/heffte/2.4.1-cpu/lib64/cmake/Heffte\n"
+    "    (use the directory that contains HeffteConfig.cmake; some sites use lib/cmake/Heffte)\n"
     "\n"
-    "Quick hints:\n"
-    "  • Releases: https://github.com/icl-utk-edu/heffte/releases (e.g. v2.4.1)\n"
-    "  • Upstream build guide: https://icl-utk-edu.github.io/heffte/md_doxygen_installation.html\n"
-    "  • After install: export CMAKE_PREFIX_PATH=<heffte-prefix>:$CMAKE_PREFIX_PATH\n"
-    "    or: cmake ... -DHeffte_DIR=<heffte-prefix>/lib64/cmake/Heffte\n"
-    "    (some installs use lib/cmake/Heffte — use the directory that contains HeffteConfig.cmake)\n"
+    "Also ensure MPI is OpenMPI from your modules (INSTALL.md §1): module load gcc/... && "
+    "module load openmpi, then CC/CXX from that environment.\n"
+    "\n"
+    "Optional fallback: -DOpenPFC_FETCH_HEFFTE=ON (FFTW + MPI still required; FetchContent "
+    "uses build/_deps only, not the OpenPFC source tree).\n"
+    "\n"
+    "  → INSTALL.md §5.1 lists common configure failures (HeFFTe missing, mpi.h missing, stale cache).\n"
   )
 endif()
 
