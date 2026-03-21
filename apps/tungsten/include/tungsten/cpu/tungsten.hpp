@@ -6,10 +6,8 @@
 
 #include <openpfc/frontend/ui/ui.hpp>
 #include <tungsten/common/tungsten_input.hpp>
+#include <iostream>
 #include <tungsten/cpu/tungsten_model.hpp>
-
-using namespace pfc::ui;
-using namespace std;
 
 /*
 Sometimes, one need to get access to the simulator during stepping. This can be
@@ -17,9 +15,10 @@ done by overriding the following function. The default implementation just runs
 m.step(t) so if there's no need to access the simulator, it's not necessary to
 override this function.
 */
-void step(Simulator &s, Tungsten &m) {
+void step(pfc::Simulator &s, Tungsten &m) {
 #ifdef TUNGSTEN_DEBUG
-  if (m.is_rank0()) cout << "Performing Tungsten step" << endl;
+  if (m.is_rank0())
+    std::cout << "Performing Tungsten step" << std::endl;
 #endif
   double t = s.get_time().get_current();
   m.step(t);
