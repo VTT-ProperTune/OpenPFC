@@ -16,10 +16,10 @@
 
 #pragma once
 
-#include "openpfc/kernel/decomposition/decomposition.hpp"
-#include "openpfc/kernel/fft/fft.hpp"
-#include "openpfc/runtime/cuda/backend_tags_cuda.hpp"
-#include "openpfc/runtime/cuda/databuffer_cuda.hpp"
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
 
 #include <heffte.h>
 #include <mpi.h>
