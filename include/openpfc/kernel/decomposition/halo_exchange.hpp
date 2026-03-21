@@ -8,7 +8,8 @@
  * @details
  * Builds halo patterns for all 6 face neighbors and runs exchange in a
  * deadlock-free way: post all Irecv, then all Isend, then Waitall.
- * Uses the pack path (gather / scatter) with non-blocking MPI.
+ * With six face neighbors, uses zero-copy MPI derived types and non-blocking
+ * Irecv/Isend; otherwise falls back to the pack path (gather/scatter).
  *
  * @see docs/halo_exchange.md for strategy and best practices
  * @see exchange.hpp for isend_data, irecv_data, wait_all
@@ -18,7 +19,6 @@
 #pragma once
 
 #include <array>
-#include <map>
 #include <mpi.h>
 #include <vector>
 
@@ -36,10 +36,11 @@
 namespace pfc {
 
 /**
- * @brief Orchestrates halo exchange for all 6 face neighbors (CPU, pack path).
+ * @brief Orchestrates halo exchange for all face neighbors (CPU).
  *
- * Builds patterns once; each exchange_halos() does gather, non-blocking
- * Irecv/Isend, wait_all, scatter. Order: all Irecv first, then all Isend.
+ * Builds patterns once; each exchange_halos() posts all Irecv, then all Isend,
+ * then wait_all. Six-face periodic bricks use zero-copy derived types; fewer
+ * directions use gather/scatter buffers.
  */
 template <typename T = double> class HaloExchanger {
 public:
@@ -150,6 +151,9 @@ public:
     m_pending_size = 0;
   }
 
+  /** @brief Number of active face directions (0--6) */
+  size_t num_directions() const { return m_directions.size(); }
+
 private:
   void start_halo_exchange_pack(T *field_ptr, size_t field_size) {
     const size_t n = m_directions.size();
@@ -194,9 +198,6 @@ private:
       core::scatter(m_recv_values[i], field_ptr, field_size);
     }
   }
-
-  /** @brief Number of face directions (0--6) */
-  size_t num_directions() const { return m_directions.size(); }
 
 private:
   const decomposition::Decomposition &m_decomp;
