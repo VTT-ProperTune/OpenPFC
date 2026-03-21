@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/kernel/data/box3d.hpp"
+#include <openpfc/kernel/data/box3d.hpp>
 
 using namespace pfc;
 
