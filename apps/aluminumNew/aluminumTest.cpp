@@ -7,7 +7,6 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <openpfc/openpfc.hpp>
 
-using namespace pfc;
 using namespace Catch::Matchers;
 
 /* Parameters from aluminumNew.json:
@@ -43,10 +42,10 @@ using namespace Catch::Matchers;
 
 TEST_CASE("Aluminum functionality", "[Aluminum]") {
   SECTION("Step model and calculate norm of the result") {
-    MPI_Worker worker(0, nullptr);
-    auto world = world::create({32, 32, 32});
-    auto decomp = decomposition::create(world, 1);
-    auto fft = fft::create(decomp);
+    pfc::MPI_Worker worker(0, nullptr);
+    auto world = pfc::world::create({32, 32, 32});
+    auto decomp = pfc::decomposition::create(world, 1);
+    auto fft = pfc::fft::create(decomp);
 
     Aluminum aluminum(fft, world);
     aluminum.set_n0(-0.0060);
