@@ -5,11 +5,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/decomposition/decomposition.hpp"
-#include "openpfc/kernel/decomposition/decomposition_factory.hpp"
-#include "openpfc/kernel/fft/fft.hpp"
-#include "openpfc/kernel/simulation/model.hpp"
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 #include "fixtures/mock_model.hpp"
 
