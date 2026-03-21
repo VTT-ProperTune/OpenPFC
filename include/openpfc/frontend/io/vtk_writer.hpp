@@ -39,11 +39,11 @@
 #ifndef PFC_VTK_WRITER_HPP
 #define PFC_VTK_WRITER_HPP
 
-#include "openpfc/kernel/simulation/results_writer.hpp"
 #include <array>
 #include <fstream>
 #include <iomanip>
 #include <mpi.h>
+#include <openpfc/kernel/simulation/results_writer.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
