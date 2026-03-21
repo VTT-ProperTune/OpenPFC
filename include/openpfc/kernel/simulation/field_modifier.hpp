@@ -44,10 +44,15 @@
 #ifndef PFC_FIELD_MODIFIER_HPP
 #define PFC_FIELD_MODIFIER_HPP
 
-#include "model.hpp"
-#include "openpfc/kernel/data/constants.hpp"
+#include <openpfc/kernel/data/constants.hpp>
+
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace pfc {
+
+class Model;
 
 /**
  * @brief Abstract base class for field modifiers in OpenPFC
@@ -219,8 +224,6 @@ namespace pfc {
  * - Use direct indexing (avoid coordinate transformations when possible)
  *
  * **Known Limitations:**
- * - Currently designed for single-field access via `get_field_name()`
- * - TODO: Support modifying multiple fields in one modifier (see TODO comment)
  * - No built-in support for parallel reduction operations
  *
  * @note The `time` parameter allows implementing time-dependent boundary
@@ -240,27 +243,27 @@ namespace pfc {
 class FieldModifier {
 
 private:
-  std::string m_field_name = "default";
-  std::string m_default_name = "default";
+  std::vector<std::string> m_field_names{"default"};
+
+  static void validate_field_names(const std::vector<std::string> &names) {
+    if (names.empty()) {
+      throw std::invalid_argument("FieldModifier target field list cannot be empty");
+    }
+    for (const auto &n : names) {
+      if (n.empty()) {
+        throw std::invalid_argument("Field name in target list cannot be empty");
+      }
+    }
+  }
 
 public:
   /**
-   * @brief Apply the field modification to the model at a specific time.
-   *
-   * This function is responsible for applying the field modification to the
-   * provided model at the given time.
-   *
-   * @param model The model to apply the field modification to.
-   * @param field_name To which field the modification is done.
-   * @param time The current time.
-   *
-   * @note This is a future enhancement. Currently, modifiers operate on a single
-   *       field specified via set_field_name(). To modify multiple fields,
-   *       create separate modifier instances, one per field.
+   * @brief Declare every field this modifier may write (for Simulator checks).
    */
-  // Future enhancement: Support modifying multiple fields in one modifier
-  // virtual void apply(Model &model, const std::string &field_name, double time) =
-  // 0;
+  void set_field_names(std::vector<std::string> names) {
+    validate_field_names(names);
+    m_field_names = std::move(names);
+  }
 
   /**
    * @brief Set the field name this modifier should operate on
@@ -304,8 +307,10 @@ public:
     if (field_name.empty()) {
       throw std::invalid_argument("Field name cannot be empty");
     }
-    m_field_name = field_name;
+    m_field_names = {field_name};
   }
+
+  const std::vector<std::string> &get_field_names() const { return m_field_names; }
 
   /**
    * @brief Get the name of the field this modifier operates on
@@ -331,17 +336,12 @@ public:
    *
    * @see set_field_name()
    */
-  const std::string &get_field_name() const { return m_field_name; }
+  const std::string &get_field_name() const { return m_field_names.front(); }
 
-  /**
-   * @brief Get the name of the field modifier.
-   *
-   * This function is responsible for getting the name of the field modifier.
-   *
-   * @return The modifier name.
-   */
-
-  virtual const std::string &get_modifier_name() const { return m_default_name; }
+  virtual const std::string &get_modifier_name() const {
+    static const std::string k{"FieldModifier"};
+    return k;
+  }
 
   /**
    * @brief Apply the field modification to the model (pure virtual)
