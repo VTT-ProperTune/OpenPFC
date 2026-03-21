@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include "openpfc/frontend/io/vtk_writer.hpp"
-#include "openpfc/frontend/utils/logging.hpp"
-#include "openpfc/frontend/utils/utils.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <iomanip>
+#include <openpfc/frontend/io/vtk_writer.hpp>
+#include <openpfc/frontend/utils/logging.hpp>
+#include <openpfc/frontend/utils/utils.hpp>
 #include <sstream>
 
 namespace pfc {
