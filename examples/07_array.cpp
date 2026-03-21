@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <openpfc/frontend/utils/array_to_string.hpp>
 #include <openpfc/frontend/utils/typename.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
 #include <openpfc/kernel/data/array.hpp>
