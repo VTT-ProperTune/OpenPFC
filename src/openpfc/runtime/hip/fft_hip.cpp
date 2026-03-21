@@ -3,9 +3,9 @@
 
 #if defined(OpenPFC_ENABLE_HIP)
 
-#include "openpfc/runtime/hip/fft_hip.hpp"
-#include "openpfc/kernel/decomposition/decomposition.hpp"
-#include "openpfc/kernel/fft/fft.hpp"
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/runtime/hip/fft_hip.hpp>
 
 #include <heffte.h>
 #include <mpi.h>
