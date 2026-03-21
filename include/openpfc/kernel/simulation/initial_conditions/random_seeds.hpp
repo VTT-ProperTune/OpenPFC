@@ -36,8 +36,8 @@
 #include <random>
 
 #include "../field_modifier.hpp"
-#include "openpfc/kernel/field/operations.hpp"
 #include "seed.hpp"
+#include <openpfc/kernel/field/operations.hpp>
 
 namespace pfc {
 
