@@ -52,7 +52,7 @@ namespace pfc {
  *
  * Example usage:
  * @code
- * #include "openpfc/kernel/data/box3d.hpp"
+ * #include <openpfc/kernel/data/box3d.hpp>
  * #include <iostream>
  *
  * int main() {
