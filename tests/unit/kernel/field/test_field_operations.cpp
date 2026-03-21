@@ -7,12 +7,12 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/decomposition/decomposition_factory.hpp"
-#include "openpfc/kernel/fft/fft.hpp"
-#include "openpfc/kernel/field/legacy_adapter.hpp"
-#include "openpfc/kernel/field/operations.hpp"
-#include "openpfc/kernel/simulation/model.hpp"
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/field/legacy_adapter.hpp>
+#include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 using namespace pfc;
 using Catch::Approx;
