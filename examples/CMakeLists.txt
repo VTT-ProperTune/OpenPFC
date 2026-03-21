@@ -83,6 +83,9 @@ target_link_libraries(world_helpers_example PRIVATE OpenPFC ${_heffte_tgt})
 add_executable(14_custom_field_initializer 14_custom_field_initializer.cpp)
 target_link_libraries(14_custom_field_initializer PRIVATE OpenPFC ${_heffte_tgt})
 
+add_executable(15_finite_difference_heat 15_finite_difference_heat.cpp)
+target_link_libraries(15_finite_difference_heat PRIVATE OpenPFC ${_heffte_tgt})
+
 add_executable(16_strong_types_demo 16_strong_types_demo.cpp)
 target_link_libraries(16_strong_types_demo PRIVATE OpenPFC ${_heffte_tgt})
 
