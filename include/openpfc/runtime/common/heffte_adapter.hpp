@@ -34,8 +34,8 @@
 #ifndef PFC_HEFFTE_ADAPTER_HPP
 #define PFC_HEFFTE_ADAPTER_HPP
 
-#include "openpfc/kernel/data/world.hpp"
 #include <heffte.h>
+#include <openpfc/kernel/data/world.hpp>
 
 namespace pfc {
 
