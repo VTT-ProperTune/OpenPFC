@@ -49,7 +49,7 @@
 #include <iostream>
 
 // OpenPFC includes
-#include "openpfc/openpfc.hpp"
+#include <openpfc/openpfc.hpp>
 
 using namespace pfc;
 
