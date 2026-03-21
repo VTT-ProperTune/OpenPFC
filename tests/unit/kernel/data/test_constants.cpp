@@ -7,7 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "openpfc/kernel/data/constants.hpp"
+#include <openpfc/kernel/data/constants.hpp>
 
 using namespace pfc;
 using Catch::Matchers::WithinAbs;
