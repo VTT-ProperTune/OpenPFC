@@ -3,9 +3,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp"
-#include "openpfc/kernel/simulation/model.hpp"
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 #include "fixtures/mock_model.hpp"
 
