@@ -34,16 +34,16 @@
 #define PFC_ARRAY_HPP
 
 #include "multi_index.hpp"
-#include "openpfc/frontend/utils/array_to_string.hpp"
-#include "openpfc/frontend/utils/show.hpp"
-#include "openpfc/frontend/utils/typename.hpp"
-#include "openpfc/kernel/decomposition/decomposition.hpp"
-#include "openpfc/kernel/fft/fft.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <complex>
 #include <functional>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/detail/array_format.hpp>
+#include <openpfc/kernel/detail/typename.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <ostream>
 #include <type_traits>
 #include <typeinfo>
 #include <vector>
@@ -198,17 +198,17 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const Array<T, D> &array) {
     const MultiIndex<D> &index = array.get_index();
     os << "Array<" << TypeName<T>::get() << "," << D
-       << ">(begin = " << utils::array_to_string(index.get_begin())
-       << ", end = " << utils::array_to_string(index.get_end())
-       << ", size = " << utils::array_to_string(index.get_size())
+       << ">(begin = " << detail::array_to_string(index.get_begin())
+       << ", end = " << detail::array_to_string(index.get_end())
+       << ", size = " << detail::array_to_string(index.get_size())
        << ", linear_size = " << index.get_linear_size() << ")";
     return os;
   }
 };
 
 template <typename T, size_t D> void show(Array<T, D> &array) {
-  utils::show(array.get_data(), array.get_index().get_size(),
-              array.get_index().get_begin());
+  detail::show(array.get_data(), array.get_index().get_size(),
+               array.get_index().get_begin());
 }
 
 } // namespace pfc
