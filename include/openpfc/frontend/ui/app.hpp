@@ -25,15 +25,17 @@
 #include "field_modifier_registry.hpp"
 #include "from_json.hpp"
 #include "json_helpers.hpp"
-#include "openpfc/frontend/utils/memory_reporter.hpp"
-#include "openpfc/frontend/utils/timeleft.hpp"
-#include "openpfc/frontend/utils/toml_to_json.hpp"
-#include "openpfc/openpfc.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/io/binary_writer.hpp>
+#include <openpfc/frontend/utils/memory_reporter.hpp>
+#include <openpfc/frontend/utils/timeleft.hpp>
+#include <openpfc/frontend/utils/toml_to_json.hpp>
+#include <openpfc/openpfc_minimal.hpp>
 #include <toml++/toml.hpp>
+#include <vector>
 
 namespace pfc {
 namespace ui {
@@ -186,9 +188,21 @@ public:
                      "target 'default'"
                   << std::endl;
       } else {
-        std::string target = params["target"];
-        std::cout << "Setting initial condition target to " << target << std::endl;
-        field_modifier->set_field_name(target);
+        const auto &target = params["target"];
+        if (target.is_array()) {
+          std::vector<std::string> names;
+          names.reserve(target.size());
+          for (const auto &el : target) {
+            names.push_back(el.get<std::string>());
+          }
+          field_modifier->set_field_names(std::move(names));
+          std::cout << "Setting initial condition targets (multi-field)"
+                    << std::endl;
+        } else {
+          std::string t = target.get<std::string>();
+          std::cout << "Setting initial condition target to " << t << std::endl;
+          field_modifier->set_field_name(t);
+        }
       }
       sim.add_initial_conditions(std::move(field_modifier));
     }
@@ -213,9 +227,21 @@ public:
                      "target 'default'"
                   << std::endl;
       } else {
-        std::string target = params["target"];
-        std::cout << "Setting boundary condition target to " << target << std::endl;
-        field_modifier->set_field_name(target);
+        const auto &target = params["target"];
+        if (target.is_array()) {
+          std::vector<std::string> names;
+          names.reserve(target.size());
+          for (const auto &el : target) {
+            names.push_back(el.get<std::string>());
+          }
+          field_modifier->set_field_names(std::move(names));
+          std::cout << "Setting boundary condition targets (multi-field)"
+                    << std::endl;
+        } else {
+          std::string t = target.get<std::string>();
+          std::cout << "Setting boundary condition target to " << t << std::endl;
+          field_modifier->set_field_name(t);
+        }
       }
       sim.add_boundary_conditions(std::move(field_modifier));
     }
