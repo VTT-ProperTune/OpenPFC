@@ -40,9 +40,8 @@ inline void copy_data_to_device_impl<backend::CudaTag, double>(
     DataBuffer<backend::CudaTag, double> &buf, size_t n,
     const std::vector<double> &host_data) {
   if (n == 0) return;
-  cudaError_t err =
-      cudaMemcpy(buf.data(), host_data.data(), n * sizeof(double),
-                 cudaMemcpyHostToDevice);
+  cudaError_t err = cudaMemcpy(buf.data(), host_data.data(), n * sizeof(double),
+                               cudaMemcpyHostToDevice);
   if (err != cudaSuccess) {
     throw std::runtime_error("CUDA copy failed: " +
                              std::string(cudaGetErrorString(err)));
