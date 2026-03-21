@@ -5,10 +5,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/decomposition/decomposition_factory.hpp"
-#include "openpfc/kernel/simulation/model.hpp"
-#include "openpfc/kernel/simulation/simulator.hpp"
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
+#include <openpfc/kernel/simulation/simulator.hpp>
 
 #include "fixtures/mock_model.hpp"
 
@@ -47,6 +47,22 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     REQUIRE(model.get_real_field("phi")[0] == 0.0);
     simulator.apply_initial_conditions();
     REQUIRE(model.get_real_field("phi")[0] == 1.0);
+  }
+
+  SECTION("Multi-field initial condition registration") {
+    Time time({0.0, 10.0, 1.0}, 1.0);
+    Simulator simulator(model, time);
+
+    std::vector<double> a(1, 0.0), b(1, 0.0);
+    model.add_field("a", a);
+    model.add_field("b", b);
+
+    auto ic = std::make_unique<pfc::testing::MockICMulti>();
+    ic->set_field_names({"a", "b"});
+    REQUIRE(simulator.add_initial_conditions(std::move(ic)));
+    simulator.apply_initial_conditions();
+    REQUIRE(model.get_real_field("a")[0] == 2.0);
+    REQUIRE(model.get_real_field("b")[0] == 2.0);
   }
 
   SECTION("Add and apply boundary conditions") {
