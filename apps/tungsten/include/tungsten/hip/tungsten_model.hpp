@@ -33,10 +33,7 @@
 #include <openpfc/runtime/hip/fft_hip.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
-
-using namespace pfc;
-using namespace pfc::fft::kspace;
-using namespace pfc::utils;
+#include <tungsten/common/tungsten_spectral.hpp>
 
 /**
  * @brief Tungsten Phase Field Crystal model (HIP version)
@@ -46,24 +43,24 @@ using namespace pfc::utils;
  *
  * @tparam RealType Real number type (float or double). Defaults to double.
  */
-template <typename RealType = double> class TungstenHIP : public Model {
-  using Model::Model;
+template <typename RealType = double> class TungstenHIP : public pfc::Model {
+  using pfc::Model::Model;
 
 private:
-  std::unique_ptr<fft::FFT_HIP> m_hip_fft;
+  std::unique_ptr<pfc::fft::FFT_HIP> m_hip_fft;
 
-  core::DataBuffer<backend::HipTag, RealType> filterMF;
-  core::DataBuffer<backend::HipTag, RealType> opL;
-  core::DataBuffer<backend::HipTag, RealType> opN;
-  core::DataBuffer<backend::HipTag, RealType> psiMF;
-  core::DataBuffer<backend::HipTag, RealType> psi;
-  core::DataBuffer<backend::HipTag, RealType> psiN;
-  core::DataBuffer<backend::HipTag, std::complex<RealType>> psiMF_F;
-  core::DataBuffer<backend::HipTag, std::complex<RealType>> psi_F;
-  core::DataBuffer<backend::HipTag, std::complex<RealType>> psiN_F;
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> filterMF;
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> opL;
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> opN;
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psiMF;
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psi;
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psiN;
+  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>> psiMF_F;
+  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>> psi_F;
+  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>> psiN_F;
   size_t mem_allocated = 0;
 
-  RealField m_psi_cpu;
+  pfc::RealField m_psi_cpu;
   bool m_cpu_buffer_valid;
 
   hipEvent_t kernel_done_event;
@@ -72,34 +69,34 @@ private:
 public:
   TungstenParams params;
 
-  void set_hip_fft(const Decomposition &decomp, int rank) {
+  void set_hip_fft(const pfc::Decomposition &decomp, int rank) {
     auto options = heffte::default_options<heffte::backend::rocfft>();
     auto r2c_dir = 0;
-    auto fft_layout = fft::layout::create(decomp, r2c_dir);
+    auto fft_layout = pfc::fft::layout::create(decomp, r2c_dir);
 
-    auto inbox = fft::layout::get_real_box(fft_layout, rank);
-    auto outbox = fft::layout::get_complex_box(fft_layout, rank);
-    auto r2c_direction = fft::layout::get_r2c_direction(fft_layout);
+    auto inbox = pfc::fft::layout::get_real_box(fft_layout, rank);
+    auto outbox = pfc::fft::layout::get_complex_box(fft_layout, rank);
+    auto r2c_direction = pfc::fft::layout::get_r2c_direction(fft_layout);
     auto comm = MPI_COMM_WORLD;
 
     using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
     fft_r2c_hip fft_hip(inbox, outbox, r2c_direction, comm, options);
 
-    m_hip_fft = std::unique_ptr<fft::FFT_HIP>(new fft::FFT_HIP(std::move(fft_hip)));
+    m_hip_fft = std::unique_ptr<pfc::fft::FFT_HIP>(new pfc::fft::FFT_HIP(std::move(fft_hip)));
   }
 
-  explicit TungstenHIP(FFT &fft, const World &world)
-      : Model(fft, world), m_cpu_buffer_valid(false) {
+  explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world)
+      : pfc::Model(fft, world), m_cpu_buffer_valid(false) {
     hipEventCreate(&kernel_done_event);
     hipEventCreate(&fft_ready_event);
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    auto decomp = decomposition::create(get_world(), size);
+    auto decomp = pfc::decomposition::create(get_world(), size);
     set_hip_fft(decomp, rank);
   }
 
-  fft::FFT_HIP &get_hip_fft() {
+  pfc::fft::FFT_HIP &get_hip_fft() {
     if (!m_hip_fft) {
       throw std::runtime_error("HIP FFT not set. Call set_hip_fft() first.");
     }
@@ -111,22 +108,22 @@ public:
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
-    filterMF = core::DataBuffer<backend::HipTag, RealType>(size_outbox);
-    opL = core::DataBuffer<backend::HipTag, RealType>(size_outbox);
-    opN = core::DataBuffer<backend::HipTag, RealType>(size_outbox);
+    filterMF = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_outbox);
+    opL = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_outbox);
+    opN = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_outbox);
 
-    psi = core::DataBuffer<backend::HipTag, RealType>(size_inbox);
-    psiMF = core::DataBuffer<backend::HipTag, RealType>(size_inbox);
-    psiN = core::DataBuffer<backend::HipTag, RealType>(size_inbox);
+    psi = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
+    psiMF = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
+    psiN = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
 
-    psi_F = core::DataBuffer<backend::HipTag, std::complex<RealType>>(size_outbox);
-    psiMF_F = core::DataBuffer<backend::HipTag, std::complex<RealType>>(size_outbox);
-    psiN_F = core::DataBuffer<backend::HipTag, std::complex<RealType>>(size_outbox);
+    psi_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(size_outbox);
+    psiMF_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(size_outbox);
+    psiN_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(size_outbox);
 
     m_psi_cpu.resize(size_inbox);
     m_cpu_buffer_valid = false;
 
-    Model::add_field("psi", m_psi_cpu);
+    pfc::Model::add_field("psi", m_psi_cpu);
 
     mem_allocated = 0;
     mem_allocated += filterMF.size() * sizeof(RealType);
@@ -155,66 +152,37 @@ public:
   void prepare_operators(double dt) {
     auto &fft = get_hip_fft();
     auto &world = get_world();
-    auto [Lx, Ly, Lz] = get_size(world);
+    auto [Lx, Ly, Lz] = pfc::world::get_size(world);
 
-    auto outbox = get_outbox(fft);
+    auto outbox = pfc::fft::get_outbox(fft);
     auto low = outbox.low;
     auto high = outbox.high;
 
-    auto [fx, fy, fz] = k_frequency_scaling(world);
+    auto [fx, fy, fz] = pfc::fft::kspace::k_frequency_scaling(world);
 
-    double alpha = params.get_alpha();
-    double alpha2 = 2.0 * alpha * alpha;
-    double lambda = params.get_lambda();
-    double lambda2 = 2.0 * lambda * lambda;
-    double alpha_farTol = params.get_alpha_farTol();
-    int alpha_highOrd = params.get_alpha_highOrd();
-    double Bx = params.get_Bx();
-    double T = params.get_T();
-    double T0 = params.get_T0();
-    double stabP = params.get_stabP();
-    double p2_bar = params.get_p2_bar();
-    double q2_bar = params.get_q2_bar();
+    const auto op_params = tungsten::spectral::make_operator_params(params);
 
     auto size_outbox = fft.size_outbox();
 
-    core::DataBuffer<backend::CpuTag, RealType> filterMF_cpu(size_outbox);
-    core::DataBuffer<backend::CpuTag, RealType> opL_cpu(size_outbox);
-    core::DataBuffer<backend::CpuTag, RealType> opN_cpu(size_outbox);
+    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> filterMF_cpu(size_outbox);
+    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> opL_cpu(size_outbox);
+    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> opN_cpu(size_outbox);
 
     int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
 
-          double ki = k_component(i, Lx, fx);
-          double kj = k_component(j, Ly, fy);
-          double kk = k_component(k, Lz, fz);
+          double ki = pfc::fft::kspace::k_component(i, Lx, fx);
+          double kj = pfc::fft::kspace::k_component(j, Ly, fy);
+          double kk = pfc::fft::kspace::k_component(k, Lz, fz);
 
-          double kLap = k_laplacian_value(ki, kj, kk);
+          double kLap = pfc::fft::kspace::k_laplacian_value(ki, kj, kk);
 
-          double fMF = exp(kLap / lambda2);
-          filterMF_cpu[idx] = fMF;
-
-          double k_val = sqrt(-kLap) - 1.0;
-          double k2 = k_val * k_val;
-
-          double rTol = -alpha2 * log(alpha_farTol) - 1.0;
-
-          double g1 = 0.0;
-          if (alpha_highOrd == 0) {
-            g1 = exp(-k2 / alpha2);
-          } else {
-            g1 = exp(-(k2 + rTol * pow(k_val, alpha_highOrd)) / alpha2);
-          }
-
-          double g2 = 1.0 - 1.0 / alpha2 * k2;
-          double gf = (k_val < 0.0) ? g1 : g2;
-          double opPeak = Bx * exp(-T / T0) * gf;
-          double opCk = stabP + p2_bar - opPeak + q2_bar * fMF;
-
-          opL_cpu[idx] = exp(kLap * opCk * dt);
-          opN_cpu[idx] = (opCk == 0.0) ? kLap * dt : (opL_cpu[idx] - 1.0) / opCk;
+          auto m = tungsten::spectral::operators_for_mode(kLap, dt, op_params);
+          filterMF_cpu[idx] = static_cast<RealType>(m.filterMF);
+          opL_cpu[idx] = static_cast<RealType>(m.opL);
+          opN_cpu[idx] = static_cast<RealType>(m.opN);
 
           idx += 1;
         }
@@ -242,7 +210,7 @@ public:
     hipEventSynchronize(kernel_done_event);
     fft.forward(psi, psi_F);
 
-    tungsten::ops::multiply_complex_real<backend::HipTag, RealType>(psi_F, filterMF,
+    tungsten::ops::multiply_complex_real<pfc::backend::HipTag, RealType>(psi_F, filterMF,
                                                                     psiMF_F);
     hipEventRecord(kernel_done_event, 0);
 
@@ -254,12 +222,12 @@ public:
     double q3_bar = params.get_q3_bar();
     double q4_bar = params.get_q4_bar();
 
-    tungsten::ops::compute_nonlinear<backend::HipTag, RealType>(
+    tungsten::ops::compute_nonlinear<pfc::backend::HipTag, RealType>(
         psi, psiMF, p3_bar, p4_bar, q3_bar, q4_bar, psiN);
 
     double stabP = params.get_stabP();
     if (stabP != 0.0) {
-      tungsten::ops::apply_stabilization<backend::HipTag, RealType>(psiN, psi, stabP,
+      tungsten::ops::apply_stabilization<pfc::backend::HipTag, RealType>(psiN, psi, stabP,
                                                                     psiN);
     }
     hipEventRecord(kernel_done_event, 0);
@@ -267,7 +235,7 @@ public:
     hipEventSynchronize(kernel_done_event);
     fft.forward(psiN, psiN_F);
 
-    tungsten::ops::apply_time_integration<backend::HipTag, RealType>(
+    tungsten::ops::apply_time_integration<pfc::backend::HipTag, RealType>(
         psi_F, psiN_F, opL, opN, psi_F);
     hipEventRecord(kernel_done_event, 0);
 
@@ -280,14 +248,14 @@ public:
     hipEventDestroy(fft_ready_event);
   }
 
-  core::DataBuffer<backend::HipTag, RealType> &get_psi() { return psi; }
-  core::DataBuffer<backend::HipTag, RealType> &get_psiMF() { return psiMF; }
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psi() { return psi; }
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psiMF() { return psiMF; }
 
   void prepare_for_field_modifiers() { sync_gpu_to_cpu(); }
 
   void finalize_after_field_modifiers() { sync_cpu_to_gpu(); }
 
-  RealField &get_psi_for_writer() {
+  pfc::RealField &get_psi_for_writer() {
     sync_gpu_to_cpu();
     return m_psi_cpu;
   }
