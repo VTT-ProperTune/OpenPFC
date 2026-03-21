@@ -37,10 +37,10 @@
 
 #include <type_traits>
 
-#include "openpfc/kernel/data/model_types.hpp"
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/fft/fft.hpp"
-#include "openpfc/kernel/simulation/model.hpp"
+#include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 // Local iteration implemented inline to work with HeFFTe inbox type
 
 namespace pfc {
