@@ -11,6 +11,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/parallel_scaling/test_global_coverage.cpp
   scenarios/parallel_scaling/test_halo_patterns.cpp
   scenarios/parallel_scaling/test_halo_exchange_driver.cpp
+  scenarios/parallel_scaling/test_fd_heat_mpi.cpp
   scenarios/io_workflows/test_vtk_roundtrip.cpp
   scenarios/field_operations/test_field_modifiers_integration.cpp
   scenarios/gpu_validation/test_cuda_vs_cpu.cpp
