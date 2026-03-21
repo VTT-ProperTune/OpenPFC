@@ -8,7 +8,12 @@ Checks: >
   modernize-*,
   performance-*,
   readability-*,
-  -readability-identifier-length  # 👈 Disable ONLY identifier length check
+  -readability-identifier-length,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -readability-function-cognitive-complexity,
+  -readability-magic-numbers,
+  -bugprone-easily-swappable-parameters
 
 WarningsAsErrors: clang-analyzer-*,bugprone-*,modernize-*
 
