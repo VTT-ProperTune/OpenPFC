@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
+#include <openpfc/frontend/utils/array_to_string.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
 #include <openpfc/kernel/data/discrete_field.hpp>
 #include <openpfc/kernel/data/world.hpp>
