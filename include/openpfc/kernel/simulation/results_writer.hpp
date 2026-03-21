@@ -46,10 +46,10 @@
 #ifndef PFC_RESULTS_WRITER_HPP
 #define PFC_RESULTS_WRITER_HPP
 
-#include "openpfc/kernel/data/model_types.hpp"
 #include <array>
 #include <iostream>
 #include <mpi.h>
+#include <openpfc/kernel/data/model_types.hpp>
 #include <string>
 #include <vector>
 
