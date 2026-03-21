@@ -25,18 +25,18 @@
 #include <tungsten/cuda/tungsten_model.hpp>
 #include <vector>
 
-using namespace pfc;
 using namespace Catch::Matchers;
 
 TEST_CASE("Tungsten CPU vs CUDA: Same results", "[Tungsten][CPU][CUDA]") {
   // Create world
-  auto world = world::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto world = pfc::world::create(pfc::GridSize({32, 32, 32}),
+                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  auto decomp = decomposition::create(world, size);
-  auto fft_cpu = fft::create(decomp, rank);
+  auto decomp = pfc::decomposition::create(world, size);
+  auto fft_cpu = pfc::fft::create(decomp, rank);
 
   // Create models (CUDA uses double precision for comparison)
   Tungsten model_cpu(fft_cpu, world);
