@@ -43,11 +43,12 @@
 
 #pragma once
 
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/decomposition/decomposition.hpp"
-#include "openpfc/kernel/execution/backend_tags.hpp"
-#include "openpfc/kernel/execution/databuffer.hpp"
-#include "openpfc/kernel/fft/kspace.hpp"
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/kernel/execution/databuffer.hpp>
+#include <openpfc/kernel/fft/fft_layout.hpp>
+#include <openpfc/kernel/fft/kspace.hpp>
 
 #include <heffte.h>
 #include <iostream>
@@ -56,50 +57,6 @@
 
 namespace pfc {
 namespace fft {
-
-namespace layout {
-
-using box3di = heffte::box3d<int>;
-using Decomposition = pfc::decomposition::Decomposition;
-using pfc::types::Int3;
-
-/**
- * @brief Structure to hold the layout of FFT data.
- *
- * This structure contains the decomposition object, the direction of
- * real-to-complex symmetry, and the boxes for real and complex FFT data.
- */
-struct FFTLayout {
-  const Decomposition m_decomposition; ///< The Decomposition object.
-  const int m_r2c_direction = 0;       ///< Real-to-complex symmetry direction.
-  const std::vector<heffte::box3d<int>> m_real_boxes;    ///< Real boxes for FFT.
-  const std::vector<heffte::box3d<int>> m_complex_boxes; ///< Complex boxes for FFT.
-};
-
-/**
- * @brief Creates an FFTLayout object based on the given decomposition and
- * parameters.
- *
- * @param decomposition The Decomposition object defining the domain
- * decomposition.
- * @param r2c_direction The direction of real-to-complex symmetry.
- * @return An FFTLayout object containing the layout information.
- */
-const FFTLayout create(const Decomposition &decomposition, int r2c_direction);
-
-inline const auto &get_real_box(const FFTLayout &layout, int i) {
-  return layout.m_real_boxes.at(i);
-}
-
-inline const auto &get_complex_box(const FFTLayout &layout, int i) {
-  return layout.m_complex_boxes.at(i);
-}
-
-inline auto get_r2c_direction(const FFTLayout &layout) {
-  return layout.m_r2c_direction;
-}
-
-} // namespace layout
 
 using pfc::types::Int3;
 using pfc::types::Real3;
