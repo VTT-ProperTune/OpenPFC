@@ -24,22 +24,22 @@
 
 #include "errors.hpp"
 #include "json_helpers.hpp"
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/fft/fft.hpp"
-#include "openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp"
-#include "openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp"
-#include "openpfc/kernel/simulation/field_modifier.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/constant.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/file_reader.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/random_seeds.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/seed_grid.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/single_seed.hpp"
-#include "openpfc/kernel/simulation/model.hpp"
-#include "openpfc/kernel/simulation/time.hpp"
-#include "openpfc/runtime/common/backend_from_string.hpp"
 #include <algorithm>
 #include <cctype>
 #include <heffte.h>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
+#include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/random_seeds.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
+#include <openpfc/kernel/simulation/simulation_fwd.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
+#include <openpfc/runtime/common/backend_from_string.hpp>
 #include <stdexcept>
 
 namespace pfc {
