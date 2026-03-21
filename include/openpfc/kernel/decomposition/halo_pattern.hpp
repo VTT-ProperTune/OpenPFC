@@ -189,8 +189,10 @@ create_send_halo(const decomposition::Decomposition &decomp, int rank,
  * @return SparseVector with local indices of receive halo region
  *
  * @note For periodic boundaries, this will wrap around to the opposite side
- * @note These indices point into the halo zone of the local field (which should
- *       be allocated with extra space for halos)
+ * @note These indices target **in-place** storage: boundary slabs of the same
+ *       `nx×ny×nz` core array (`HaloExchanger`). For **separated** face buffers,
+ *       use `SeparatedFaceHaloExchanger` / `halo_face_layout.hpp` instead of
+ *       scattering into these indices.
  */
 template <typename BackendTag = backend::CpuTag>
 core::SparseVector<BackendTag, size_t>
