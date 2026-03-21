@@ -12,8 +12,11 @@
 
 #pragma once
 
-#include "openpfc/kernel/simulation/field_modifier.hpp"
-#include "openpfc/kernel/simulation/model.hpp"
+#include <algorithm>
+#include <string>
+
+#include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 namespace testing {
@@ -183,6 +186,17 @@ public:
   void apply(Model &m, double /*time*/) override {
     std::vector<double> &field = m.get_real_field(get_field_name());
     std::fill(field.begin(), field.end(), 1.0);
+  }
+};
+
+/** Fills every field listed in get_field_names() with 2.0 (multi-field tests). */
+class MockICMulti : public FieldModifier {
+public:
+  void apply(Model &m, double /*time*/) override {
+    for (const std::string &n : get_field_names()) {
+      std::vector<double> &field = m.get_real_field(n);
+      std::fill(field.begin(), field.end(), 2.0);
+    }
   }
 };
 
