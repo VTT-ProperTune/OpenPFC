@@ -5,10 +5,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/decomposition/decomposition_factory.hpp"
-#include "openpfc/kernel/simulation/field_modifier.hpp"
-#include "openpfc/kernel/simulation/model.hpp"
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 #include "fixtures/mock_model.hpp"
 
@@ -91,6 +91,16 @@ TEST_CASE("FieldModifier - input validation", "[field_modifier][unit][error]") {
 
     REQUIRE_NOTHROW(modifier.set_field_name("temperature"));
     REQUIRE(modifier.get_field_name() == "temperature");
+  }
+
+  SECTION("Empty field name list throws") {
+    REQUIRE_THROWS_AS(modifier.set_field_names({}), std::invalid_argument);
+  }
+
+  SECTION("Multi-field names") {
+    modifier.set_field_names({"a", "b"});
+    REQUIRE(modifier.get_field_names().size() == 2);
+    REQUIRE(modifier.get_field_name() == "a");
   }
 }
 
