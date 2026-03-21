@@ -13,7 +13,6 @@
 #include <openpfc/openpfc.hpp>
 #include <tungsten/cpu/tungsten.hpp>
 
-using namespace pfc;
 using namespace Catch::Matchers;
 
 /* Parameters from tungsten_single_seed.json:
@@ -56,10 +55,10 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"q30", -12.4567},    {"q31", 20.0},
               {"q40", 45.0}};
 
-    MPI_Worker worker(0, nullptr);
-    auto world = world::create({32, 32, 32});
-    auto decomp = decomposition::create(world, 1);
-    auto fft = fft::create(decomp);
+    pfc::MPI_Worker worker(0, nullptr);
+    auto world = pfc::world::create({32, 32, 32});
+    auto decomp = pfc::decomposition::create(world, 1);
+    auto fft = pfc::fft::create(decomp);
     Tungsten tungsten(fft, world);
     from_json(j, tungsten);
 
@@ -84,10 +83,10 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               // Missing n_vap
               {"T", 3300.0}};
 
-    MPI_Worker worker(0, nullptr);
-    auto world = world::create({32, 32, 32});
-    auto decomp = decomposition::create(world, 1);
-    auto fft = fft::create(decomp);
+    pfc::MPI_Worker worker(0, nullptr);
+    auto world = pfc::world::create({32, 32, 32});
+    auto decomp = pfc::decomposition::create(world, 1);
+    auto fft = pfc::fft::create(decomp);
     Tungsten tungsten(fft, world);
 
     REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
@@ -116,10 +115,10 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"q31", 20.0},
               {"q40", 45.0}};
 
-    MPI_Worker worker(0, nullptr);
-    auto world = world::create({32, 32, 32});
-    auto decomp = decomposition::create(world, 1);
-    auto fft = fft::create(decomp);
+    pfc::MPI_Worker worker(0, nullptr);
+    auto world = pfc::world::create({32, 32, 32});
+    auto decomp = pfc::decomposition::create(world, 1);
+    auto fft = pfc::fft::create(decomp);
     Tungsten tungsten(fft, world);
 
     REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
@@ -127,10 +126,10 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
 }
 
 TEST_CASE("Tungsten parameter setters", "[Tungsten][Setters]") {
-  MPI_Worker worker(0, nullptr);
-  auto world = world::create({32, 32, 32});
-  auto decomp = decomposition::create(world, 1);
-  auto fft = fft::create(decomp);
+  pfc::MPI_Worker worker(0, nullptr);
+  auto world = pfc::world::create({32, 32, 32});
+  auto decomp = pfc::decomposition::create(world, 1);
+  auto fft = pfc::fft::create(decomp);
   Tungsten tungsten(fft, world);
 
   SECTION("Set basic parameters") {
@@ -169,7 +168,7 @@ TEST_CASE("Tungsten parameter setters", "[Tungsten][Setters]") {
 
 TEST_CASE("Tungsten functionality", "[Tungsten]") {
   SECTION("Step model and calculate norm of the result") {
-    MPI_Worker worker(0, nullptr);
+    pfc::MPI_Worker worker(0, nullptr);
     // Create world with exact parameters from tungsten_single_seed.json
     // Grid: 32x32x32, spacing: 1.1107207345395915, origin: center
     // When origo="center", origin is at -0.5 * dx * Lx
@@ -179,10 +178,10 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     double y0 = -0.5 * grid_spacing * Ly;
     double z0 = -0.5 * grid_spacing * Lz;
     auto world =
-        world::create(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
-                      GridSpacing({grid_spacing, grid_spacing, grid_spacing}));
-    auto decomp = decomposition::create(world, 1);
-    auto fft = fft::create(decomp);
+        pfc::world::create(pfc::GridSize({Lx, Ly, Lz}), pfc::PhysicalOrigin({x0, y0, z0}),
+                      pfc::GridSpacing({grid_spacing, grid_spacing, grid_spacing}));
+    auto decomp = pfc::decomposition::create(world, 1);
+    auto fft = pfc::fft::create(decomp);
 
     Tungsten tungsten(fft, world);
     // Set parameters from tungsten_single_seed.json (exact values)
@@ -214,19 +213,19 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     // Manually replicate the initial condition logic from the UI
     // This matches exactly what happens when initial conditions are applied
     std::vector<double> &psi = tungsten.get_real_field("psi");
-    const World &w = tungsten.get_world();
-    const FFT &fft_ref = tungsten.get_fft();
+    const pfc::World &w = tungsten.get_world();
+    const pfc::FFT &fft_ref = tungsten.get_fft();
 
     // 1. Constant initial condition: fill entire field with -0.4
     std::fill(psi.begin(), psi.end(), -0.4);
 
     // 2. Single seed initial condition: apply seed formula to points within
     // radius 64.0 Replicate the exact logic from SingleSeed::apply()
-    types::Int3 low = fft::get_inbox(fft_ref).low;
-    types::Int3 high = fft::get_inbox(fft_ref).high;
+    pfc::types::Int3 low = pfc::fft::get_inbox(fft_ref).low;
+    pfc::types::Int3 high = pfc::fft::get_inbox(fft_ref).high;
 
-    auto spacing = world::get_spacing(w);
-    auto origin = world::get_origin(w);
+    auto spacing = pfc::world::get_spacing(w);
+    auto origin = pfc::world::get_origin(w);
     double dx_ic = spacing[0];
     double dy_ic = spacing[1];
     double dz_ic = spacing[2];
@@ -342,10 +341,10 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
   }
 
   SECTION("Model initialization and allocation") {
-    MPI_Worker worker(0, nullptr);
-    auto world = world::create({32, 32, 32});
-    auto decomp = decomposition::create(world, 1);
-    auto fft = fft::create(decomp);
+    pfc::MPI_Worker worker(0, nullptr);
+    auto world = pfc::world::create({32, 32, 32});
+    auto decomp = pfc::decomposition::create(world, 1);
+    auto fft = pfc::fft::create(decomp);
 
     Tungsten tungsten(fft, world);
     tungsten.params.set_n0(-0.10);
