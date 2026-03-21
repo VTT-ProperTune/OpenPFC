@@ -45,8 +45,8 @@ jobs:
         id: cache-heffte
         uses: actions/cache@v4
         with:
-          path: ~/opt/heffte
-          key: heffte-2.4.1-ubuntu-22.04-coverage
+          path: ~/opt/heffte/2.4.1-cpu
+          key: heffte-2.4.1-cpu-ubuntu-22.04-coverage
 
       - name: Build HeFFTe (if not cached)
         if: steps.cache-heffte.outputs.cache-hit != 'true'
@@ -54,27 +54,28 @@ jobs:
           CC: gcc-11
           CXX: g++-11
         run: |
-          wget -q https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
-          tar xzf v2.4.1.tar.gz
-          cmake -S heffte-2.4.1 -B heffte-build \
+          set -euo pipefail
+          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
+          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
+          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-coverage \
             -GNinja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte \
+            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
             -DHeffte_ENABLE_FFTW=ON \
             -DBUILD_SHARED_LIBS=ON
-          cmake --build heffte-build -j2
-          cmake --install heffte-build
+          cmake --build /tmp/heffte-build-coverage -j2
+          cmake --install /tmp/heffte-build-coverage
+          rm -rf /tmp/heffte-build-coverage /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
 
       - name: Configure OpenPFC with Coverage
         env:
           CC: gcc-11
           CXX: g++-11
-          CMAKE_PREFIX_PATH: ${{ github.workspace }}/~/opt/heffte
         run: |
           cmake -S . -B build \
             -GNinja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
             -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
             -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
             -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
