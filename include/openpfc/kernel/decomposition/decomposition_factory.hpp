@@ -34,9 +34,9 @@
 #ifndef PFC_DECOMPOSITION_FACTORY_HPP
 #define PFC_DECOMPOSITION_FACTORY_HPP
 
-#include "openpfc/kernel/data/world.hpp"
-#include "openpfc/kernel/decomposition/decomposition.hpp"
 #include <mpi.h>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 
 namespace pfc {
 
