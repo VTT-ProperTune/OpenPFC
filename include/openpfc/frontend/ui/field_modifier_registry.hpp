@@ -19,16 +19,16 @@
 
 #include "errors.hpp"
 #include "from_json.hpp"
-#include "openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp"
-#include "openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp"
-#include "openpfc/kernel/simulation/field_modifier.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/constant.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/file_reader.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/random_seeds.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/seed_grid.hpp"
-#include "openpfc/kernel/simulation/initial_conditions/single_seed.hpp"
 #include <functional>
 #include <memory>
+#include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
+#include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/random_seeds.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
+#include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
 #include <string>
 #include <unordered_map>
 
