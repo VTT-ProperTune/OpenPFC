@@ -33,8 +33,6 @@
 #include <tungsten/hip/tungsten_model.hpp>
 #endif
 
-using namespace pfc;
-
 struct ScalabilityResult {
   std::string backend;   // "CPU" or "CUDA"
   std::string precision; // "float" or "double"
@@ -80,11 +78,11 @@ public:
 
     try {
       // Create world and decomposition
-      auto world = world::create(GridSize({size_x, size_y, size_z}),
-                                 PhysicalOrigin({0.0, 0.0, 0.0}),
-                                 GridSpacing({1.0, 1.0, 1.0}));
-      auto decomp = decomposition::create(world, size);
-      auto fft = fft::create(decomp, rank);
+      auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
+                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
+      auto decomp = pfc::decomposition::create(world, size);
+      auto fft = pfc::fft::create(decomp, rank);
 
       // Create model
       Tungsten model(fft, world);
@@ -188,13 +186,13 @@ public:
 
     try {
       // Create world and decomposition
-      auto world = world::create(GridSize({size_x, size_y, size_z}),
-                                 PhysicalOrigin({0.0, 0.0, 0.0}),
-                                 GridSpacing({1.0, 1.0, 1.0}));
-      auto decomp = decomposition::create(world, size);
+      auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
+                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
+      auto decomp = pfc::decomposition::create(world, size);
 
       // Create model with specified precision
-      auto fft = fft::create(decomp, rank);
+      auto fft = pfc::fft::create(decomp, rank);
       TungstenCUDA<RealType> model(fft, world);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
@@ -310,12 +308,12 @@ public:
     }
 
     try {
-      auto world = world::create(GridSize({size_x, size_y, size_z}),
-                                 PhysicalOrigin({0.0, 0.0, 0.0}),
-                                 GridSpacing({1.0, 1.0, 1.0}));
-      auto decomp = decomposition::create(world, size);
+      auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
+                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
+      auto decomp = pfc::decomposition::create(world, size);
 
-      auto fft = fft::create(decomp, rank);
+      auto fft = pfc::fft::create(decomp, rank);
       TungstenHIP<RealType> model(fft, world);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
