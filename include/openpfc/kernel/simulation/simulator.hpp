@@ -45,11 +45,11 @@
 
 #include "field_modifier.hpp"
 #include "model.hpp"
-#include "openpfc/kernel/data/world.hpp"
 #include "results_writer.hpp"
 #include "time.hpp"
 #include <iostream>
 #include <memory>
+#include <openpfc/kernel/data/world.hpp>
 #include <unordered_map>
 
 namespace pfc {
@@ -244,20 +244,20 @@ public:
    */
   bool add_initial_conditions(std::unique_ptr<FieldModifier> modifier) {
     Model &model = get_model();
-    std::string field_name = modifier->get_field_name();
-    if (field_name == "default") {
-      std::cout << "Warning: adding initial condition to modify field 'default'"
-                << std::endl;
+    for (const std::string &field_name : modifier->get_field_names()) {
+      if (field_name == "default") {
+        std::cout << "Warning: adding initial condition to modify field 'default'"
+                  << std::endl;
+      }
+      if (!model.has_field(field_name)) {
+        std::cout << "Warning: tried to add initial condition for inexistent field "
+                  << field_name << ", INITIAL CONDITIONS ARE NOT APPLIED!"
+                  << std::endl;
+        return false;
+      }
     }
-    if (model.has_field(field_name)) {
-      m_initial_conditions.push_back(std::move(modifier));
-      return true;
-    } else {
-      std::cout << "Warning: tried to add initial condition for inexistent field "
-                << field_name << ", INITIAL CONDITIONS ARE NOT APPLIED!"
-                << std::endl;
-      return false;
-    }
+    m_initial_conditions.push_back(std::move(modifier));
+    return true;
   }
 
   /**
@@ -323,20 +323,20 @@ public:
    */
   bool add_boundary_conditions(std::unique_ptr<FieldModifier> modifier) {
     Model &model = get_model();
-    std::string field_name = modifier->get_field_name();
-    if (field_name == "default") {
-      std::cout << "Warning: adding boundary condition to modify field 'default'"
-                << std::endl;
+    for (const std::string &field_name : modifier->get_field_names()) {
+      if (field_name == "default") {
+        std::cout << "Warning: adding boundary condition to modify field 'default'"
+                  << std::endl;
+      }
+      if (!model.has_field(field_name)) {
+        std::cout << "Warning: tried to add boundary condition for inexistent field "
+                  << field_name << ", BOUNDARY CONDITIONS ARE NOT APPLIED!"
+                  << std::endl;
+        return false;
+      }
     }
-    if (model.has_field(field_name)) {
-      m_boundary_conditions.push_back(std::move(modifier));
-      return true;
-    } else {
-      std::cout << "Warning: tried to add boundary condition for inexistent field "
-                << field_name << ", BOUNDARY CONDITIONS ARE NOT APPLIED!"
-                << std::endl;
-      return false;
-    }
+    m_boundary_conditions.push_back(std::move(modifier));
+    return true;
   }
 
   /**
