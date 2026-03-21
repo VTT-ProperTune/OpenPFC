@@ -6,7 +6,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "openpfc/frontend/utils/logging.hpp"
+#include <openpfc/frontend/utils/logging.hpp>
 
 using namespace pfc;
 
