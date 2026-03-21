@@ -41,11 +41,11 @@
 #ifndef PFC_MPI_HPP
 #define PFC_MPI_HPP
 
-#include "openpfc/kernel/mpi/communicator.hpp"
-#include "openpfc/kernel/mpi/environment.hpp"
-#include "openpfc/kernel/mpi/timer.hpp"
-#include "openpfc/kernel/mpi/worker.hpp"
 #include <mpi.h>
+#include <openpfc/kernel/mpi/communicator.hpp>
+#include <openpfc/kernel/mpi/environment.hpp>
+#include <openpfc/kernel/mpi/timer.hpp>
+#include <openpfc/kernel/mpi/worker.hpp>
 
 namespace pfc {
 namespace mpi {
