@@ -4,8 +4,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "openpfc/kernel/decomposition/decomposition.hpp"
-#include "openpfc/kernel/decomposition/decomposition_factory.hpp"
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
 using namespace Catch::Matchers;
 using namespace pfc;
