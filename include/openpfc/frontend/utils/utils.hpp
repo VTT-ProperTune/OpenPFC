@@ -76,7 +76,7 @@ template <typename T> size_t sizeof_vec(std::vector<T> &V) {
 
 // pfc::mpi::get_comm_rank and get_comm_size are in kernel/mpi/mpi.hpp.
 // Include it when you need MPI rank/size with a specific communicator.
-// Frontend code may use: #include "openpfc/kernel/mpi/mpi.hpp"
+// Frontend code may use: #include <openpfc/kernel/mpi/mpi.hpp>
 
 } // namespace pfc
 
