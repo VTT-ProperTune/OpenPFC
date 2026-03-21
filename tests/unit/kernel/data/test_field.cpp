@@ -6,8 +6,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "openpfc/kernel/data/field.hpp"
-#include "openpfc/kernel/data/world.hpp"
+#include <openpfc/kernel/data/field.hpp>
+#include <openpfc/kernel/data/world.hpp>
 
 using namespace pfc;
 
