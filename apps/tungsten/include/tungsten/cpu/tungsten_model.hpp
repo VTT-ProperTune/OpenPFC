@@ -107,10 +107,7 @@
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/openpfc.hpp>
 #include <tungsten/common/tungsten_params.hpp>
-
-using namespace pfc;
-using namespace pfc::fft::kspace;
-using namespace pfc::utils;
+#include <tungsten/common/tungsten_spectral.hpp>
 
 /**
  * @brief Tungsten Phase Field Crystal model
@@ -122,8 +119,8 @@ using namespace pfc::utils;
  * @note All parameters are accessed via `params.get_*()` getters
  * @note Parameters are set via `params.set_*()` setters
  */
-class Tungsten : public Model {
-  using Model::Model;
+class Tungsten : public pfc::Model {
+  using pfc::Model::Model;
 
 private:
   std::vector<double> filterMF; ///< Mean-field filter in Fourier space
@@ -160,7 +157,7 @@ public:
    * fields with the Model base class.
    */
   void allocate() {
-    FFT &fft = get_fft();
+    pfc::FFT &fft = get_fft();
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
@@ -186,15 +183,15 @@ public:
 
     // Track memory usage
     mem_allocated = 0;
-    mem_allocated += utils::sizeof_vec(filterMF);
-    mem_allocated += utils::sizeof_vec(opL);
-    mem_allocated += utils::sizeof_vec(opN);
-    mem_allocated += utils::sizeof_vec(psi);
-    mem_allocated += utils::sizeof_vec(psiMF);
-    mem_allocated += utils::sizeof_vec(psiN);
-    mem_allocated += utils::sizeof_vec(psi_F);
-    mem_allocated += utils::sizeof_vec(psiMF_F);
-    mem_allocated += utils::sizeof_vec(psiN_F);
+    mem_allocated += pfc::utils::sizeof_vec(filterMF);
+    mem_allocated += pfc::utils::sizeof_vec(opL);
+    mem_allocated += pfc::utils::sizeof_vec(opN);
+    mem_allocated += pfc::utils::sizeof_vec(psi);
+    mem_allocated += pfc::utils::sizeof_vec(psiMF);
+    mem_allocated += pfc::utils::sizeof_vec(psiN);
+    mem_allocated += pfc::utils::sizeof_vec(psi_F);
+    mem_allocated += pfc::utils::sizeof_vec(psiMF_F);
+    mem_allocated += pfc::utils::sizeof_vec(psiN_F);
   }
 
   /**
@@ -216,29 +213,17 @@ public:
   void prepare_operators(double dt) {
     auto &fft = get_fft();
     auto &world = get_world();
-    [[maybe_unused]] auto [dx, dy, dz] = get_spacing(world);
-    auto [Lx, Ly, Lz] = get_size(world);
+    [[maybe_unused]] auto [dx, dy, dz] = pfc::world::get_spacing(world);
+    auto [Lx, Ly, Lz] = pfc::world::get_size(world);
 
-    auto outbox = get_outbox(fft);
+    auto outbox = pfc::fft::get_outbox(fft);
     auto low = outbox.low;
     auto high = outbox.high;
 
     // Get frequency scaling factors using helper function
-    auto [fx, fy, fz] = k_frequency_scaling(world);
+    auto [fx, fy, fz] = pfc::fft::kspace::k_frequency_scaling(world);
 
-    // Get model parameters
-    double alpha = params.get_alpha();
-    double alpha2 = 2.0 * alpha * alpha;
-    double lambda = params.get_lambda();
-    double lambda2 = 2.0 * lambda * lambda;
-    double alpha_farTol = params.get_alpha_farTol();
-    int alpha_highOrd = params.get_alpha_highOrd();
-    double Bx = params.get_Bx();
-    double T = params.get_T();
-    double T0 = params.get_T0();
-    double stabP = params.get_stabP();
-    double p2_bar = params.get_p2_bar();
-    double q2_bar = params.get_q2_bar();
+    const auto op_params = tungsten::spectral::make_operator_params(params);
 
     int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
@@ -246,49 +231,17 @@ public:
         for (int i = low[0]; i <= high[0]; i++) {
 
           // Compute wave vector components using helper function
-          double ki = k_component(i, Lx, fx);
-          double kj = k_component(j, Ly, fy);
-          double kk = k_component(k, Lz, fz);
+          double ki = pfc::fft::kspace::k_component(i, Lx, fx);
+          double kj = pfc::fft::kspace::k_component(j, Ly, fy);
+          double kk = pfc::fft::kspace::k_component(k, Lz, fz);
 
           // Compute Laplacian operator -k² using helper function
-          double kLap = k_laplacian_value(ki, kj, kk);
+          double kLap = pfc::fft::kspace::k_laplacian_value(ki, kj, kk);
 
-          // Mean-field filtering operator: χ(k) = exp(-k²/(2λ²))
-          double fMF = exp(kLap / lambda2);
-          filterMF[idx] = fMF;
-
-          // Compute quasi-Gaussian peak function g_f(k)
-          double k_val = sqrt(-kLap) - 1.0;
-          double k2 = k_val * k_val;
-
-          // Tolerance parameter for higher-order component
-          double rTol = -alpha2 * log(alpha_farTol) - 1.0;
-
-          double g1 = 0.0;
-          if (alpha_highOrd == 0) {
-            // Pure Gaussian peak
-            g1 = exp(-k2 / alpha2);
-          } else {
-            // Quasi-Gaussian peak with higher-order component to make it decay
-            // faster towards k=0
-            g1 = exp(-(k2 + rTol * pow(k_val, alpha_highOrd)) / alpha2);
-          }
-
-          // Taylor expansion of Gaussian peak to order 2 (for k ≥ 0)
-          double g2 = 1.0 - 1.0 / alpha2 * k2;
-
-          // Splice the two sides of the peak
-          double gf = (k_val < 0.0) ? g1 : g2;
-
-          // Temperature-dependent peak contribution
-          double opPeak = Bx * exp(-T / T0) * gf;
-
-          // Linear operator: L(k) = stabP + p2_bar - opPeak + q2_bar * χ(k)
-          double opCk = stabP + p2_bar - opPeak + q2_bar * fMF;
-
-          // Exponential time integration operators
-          opL[idx] = exp(kLap * opCk * dt);
-          opN[idx] = (opCk == 0.0) ? kLap * dt : (opL[idx] - 1.0) / opCk;
+          auto m = tungsten::spectral::operators_for_mode(kLap, dt, op_params);
+          filterMF[idx] = m.filterMF;
+          opL[idx] = m.opL;
+          opN[idx] = m.opN;
 
           idx += 1;
         }
@@ -327,7 +280,7 @@ public:
   void step(double t) override {
     (void)t; // suppress compiler warning about unused parameter
 
-    FFT &fft = get_fft();
+    pfc::FFT &fft = get_fft();
 
     // Step 1: Calculate mean-field density n_MF
     // Forward FFT: ψ → ψ̂
@@ -394,7 +347,7 @@ public:
    *
    * @param world The World object defining the simulation domain
    */
-  explicit Tungsten(FFT &fft, const World &world) : Model(fft, world) {
+  explicit Tungsten(pfc::FFT &fft, const pfc::World &world) : pfc::Model(fft, world) {
     // Additional initialization if needed
   }
 };
