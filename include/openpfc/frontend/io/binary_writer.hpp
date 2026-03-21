@@ -18,9 +18,9 @@
 #ifndef PFC_BINARY_WRITER_HPP
 #define PFC_BINARY_WRITER_HPP
 
-#include "openpfc/frontend/utils/utils.hpp"
-#include "openpfc/kernel/simulation/results_writer.hpp"
 #include <mpi.h>
+#include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/kernel/simulation/results_writer.hpp>
 
 namespace pfc {
 
