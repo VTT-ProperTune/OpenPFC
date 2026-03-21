@@ -53,12 +53,13 @@
 
 #include "array.hpp"
 #include "constants.hpp"
-#include "openpfc/frontend/utils/show.hpp"
-#include "openpfc/kernel/data/world.hpp"
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/detail/array_format.hpp>
+#include <openpfc/kernel/detail/typename.hpp>
 #include <ostream>
 
 namespace pfc {
@@ -612,14 +613,15 @@ public:
     const Array<T, D> &array = field.get_array();
     const MultiIndex<D> &index = array.get_index();
     os << "DiscreteField<" << TypeName<T>::get() << "," << D
-       << ">(begin = " << utils::array_to_string(index.get_begin())
-       << ", end = " << utils::array_to_string(index.get_end())
-       << ", size = " << utils::array_to_string(index.get_size())
+       << ">(begin = " << detail::array_to_string(index.get_begin())
+       << ", end = " << detail::array_to_string(index.get_end())
+       << ", size = " << detail::array_to_string(index.get_size())
        << ", linear_size = " << index.get_linear_size()
-       << ", origin = " << utils::array_to_string(field.get_origin())
-       << ", discretization = " << utils::array_to_string(field.get_discretization())
-       << ", coords_low = " << utils::array_to_string(field.get_coords_low())
-       << ", coords_high = " << utils::array_to_string(field.get_coords_high());
+       << ", origin = " << detail::array_to_string(field.get_origin())
+       << ", discretization = "
+       << detail::array_to_string(field.get_discretization())
+       << ", coords_low = " << detail::array_to_string(field.get_coords_low())
+       << ", coords_high = " << detail::array_to_string(field.get_coords_high());
     return os;
   }
 };
@@ -742,8 +744,8 @@ void apply(DiscreteField<T, D> &field, Function &&func) {
 }
 
 template <typename T, size_t D> void show(DiscreteField<T, D> &field) {
-  utils::show(field.get_array().get_data(), field.get_index().get_size(),
-              field.get_index().get_begin());
+  detail::show(field.get_array().get_data(), field.get_index().get_size(),
+               field.get_index().get_begin());
 }
 
 } // namespace pfc
