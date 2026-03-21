@@ -33,7 +33,7 @@ jobs:
           clang-format-version: '16'
           check-path: '.'
           exclude-regex: '(build|\.cache|extern|third[-_]party|doxygen-awesome-css)'
-          fail-on-error: 'false'
+          fail-on-error: 'true'
 
       - name: Clean up clang-format artifacts
         run: rm -f failing-files.txt
@@ -47,7 +47,6 @@ jobs:
   clang-tidy:
     name: Clang-Tidy Analysis
     runs-on: ubuntu-latest
-    continue-on-error: true  # Make non-blocking - informative only
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -72,46 +71,50 @@ jobs:
         id: cache-heffte-tidy
         uses: actions/cache@v4
         with:
-          path: ~/opt/heffte
-          key: heffte-2.4.1-ubuntu-tidy-clang-tidy
+          path: ~/opt/heffte/2.4.1-cpu
+          key: heffte-2.4.1-cpu-ubuntu-tidy-clang-tidy
 
       - name: Build and install HeFFTe (clang-tidy)
         if: steps.cache-heffte-tidy.outputs.cache-hit != 'true'
         run: |
-          wget -q https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
-          tar xzf v2.4.1.tar.gz
-          cmake -S heffte-2.4.1 -B heffte-build \
+          set -euo pipefail
+          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
+          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
+          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-tidy \
             -GNinja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte \
+            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
             -DHeffte_ENABLE_FFTW=ON \
             -DBUILD_SHARED_LIBS=ON
-          cmake --build heffte-build -j2
-          cmake --install heffte-build
+          cmake --build /tmp/heffte-build-tidy -j2
+          cmake --install /tmp/heffte-build-tidy
+          rm -rf /tmp/heffte-build-tidy /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
 
       - name: Configure (Debug with compile_commands)
         run: |
           cmake -S . -B build-tidy -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu
 
       - name: Run clang-tidy (run-clang-tidy-16 if available)
         run: |
+          set -euo pipefail
           if command -v run-clang-tidy-16 >/dev/null 2>&1; then
-              # Exclude third-party code from analysis
               run-clang-tidy-16 -p build-tidy -quiet \
                 -header-filter='include/openpfc/.*' \
                 'src/.*\.cpp$' \
                 'apps/.*\.cpp$' \
-                'tests/.*\.cpp$' || echo "⚠️  Clang-tidy found issues (non-blocking)"
+                'tests/.*\.cpp$'
           else
             echo "run-clang-tidy-16 not found; falling back to per-file analysis"
-              find src apps tests -name "*.cpp" | while read -r file; do
-                clang-tidy-16 -p build-tidy --quiet \
-                  -header-filter='include/openpfc/.*' \
-                  "$file" || echo "⚠️  Issues in $file"
-              done
+            failed=0
+            while IFS= read -r file; do
+              clang-tidy-16 -p build-tidy --quiet \
+                -header-filter='include/openpfc/.*' \
+                "$file" || failed=1
+            done < <(find src apps tests -name "*.cpp")
+            exit $failed
           fi
 
   # ============================================================================
@@ -220,8 +223,8 @@ jobs:
         id: cache-heffte
         uses: actions/cache@v4
         with:
-          path: ~/opt/heffte
-          key: heffte-2.4.1-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+          path: ~/opt/heffte/2.4.1-cpu
+          key: heffte-2.4.1-cpu-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
 
       - name: Build and Install HeFFTe
         if: steps.cache-heffte.outputs.cache-hit != 'true'
@@ -229,20 +232,18 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: |
-          # Download HeFFTe
-          wget -q https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
-          tar xzf v2.4.1.tar.gz
-          
-          # Build HeFFTe
-          cmake -S heffte-2.4.1 -B heffte-build \
+          set -euo pipefail
+          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
+          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
+          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-openpfc-ci \
             -GNinja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte \
+            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
             -DHeffte_ENABLE_FFTW=ON \
             -DBUILD_SHARED_LIBS=ON
-          
-          cmake --build heffte-build -j2
-          cmake --install heffte-build
+          cmake --build /tmp/heffte-build-openpfc-ci -j2
+          cmake --install /tmp/heffte-build-openpfc-ci
+          rm -rf /tmp/heffte-build-openpfc-ci /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
 
       - name: Configure OpenPFC
         env:
@@ -252,11 +253,12 @@ jobs:
           cmake -S . -B build \
             -GNinja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
             -DOpenPFC_BUILD_TESTS=ON \
             -DOpenPFC_BUILD_EXAMPLES=ON \
             -DOpenPFC_BUILD_APPS=ON \
-            -DOpenPFC_BUILD_DOCUMENTATION=OFF
+            -DOpenPFC_BUILD_DOCUMENTATION=OFF \
+            -DOpenPFC_RUN_MPI_SUITES=ON
 
       - name: Build OpenPFC
         run: cmake --build build -j2
@@ -282,13 +284,17 @@ jobs:
   ci-status:
     name: CI Status
     if: always()
-    needs: [code-quality, nix-check, build-and-test]
+    needs: [code-quality, clang-tidy, nix-check, build-and-test]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs status
         run: |
           if [[ "${{ needs.code-quality.result }}" != "success" ]]; then
             echo "❌ Code quality checks failed"
+            exit 1
+          fi
+          if [[ "${{ needs.clang-tidy.result }}" != "success" ]]; then
+            echo "❌ Clang-tidy failed"
             exit 1
           fi
           if [[ "${{ needs.nix-check.result }}" != "success" ]]; then
