@@ -32,8 +32,8 @@
 #ifndef PFC_BINARY_READER_HPP
 #define PFC_BINARY_READER_HPP
 
-#include "openpfc/kernel/data/model_types.hpp"
 #include <mpi.h>
+#include <openpfc/kernel/data/model_types.hpp>
 
 #include <iostream>
 
