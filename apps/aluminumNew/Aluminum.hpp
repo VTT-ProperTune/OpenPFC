@@ -5,17 +5,15 @@
 #define ALUMINUM_HPP
 
 #include "SeedGridFCC.hpp"
+#include <iostream>
 #include <openpfc/openpfc.hpp>
-
-using namespace pfc;
-using namespace pfc::ui;
 
 /**
  * @brief Aluminum model class for OpenPFC. This class is used to define the
  * model.
  *
  */
-class Aluminum : public Model {
+class Aluminum : public pfc::Model {
 
 private:
   std::vector<double> filterMF, opL, opN, opEps, P_F;
@@ -132,7 +130,7 @@ public:
   void set_q2_bar_L(double q2_bar_L) { params.q2_bar_L = q2_bar_L; }
 
   void allocate() {
-    FFT &fft = get_fft();
+    pfc::FFT &fft = get_fft();
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
@@ -167,30 +165,30 @@ public:
     add_real_field("stress", stress);
 
     mem_allocated = 0;
-    mem_allocated += utils::sizeof_vec(filterMF);
-    mem_allocated += utils::sizeof_vec(opL);
-    mem_allocated += utils::sizeof_vec(opN);
-    mem_allocated += utils::sizeof_vec(psi);
-    mem_allocated += utils::sizeof_vec(psiMF);
-    mem_allocated += utils::sizeof_vec(psiN);
-    mem_allocated += utils::sizeof_vec(psi_F);
-    mem_allocated += utils::sizeof_vec(psiMF_F);
-    mem_allocated += utils::sizeof_vec(psiN_F);
-    mem_allocated += utils::sizeof_vec(P_F);
-    mem_allocated += utils::sizeof_vec(P_psi_F);
-    mem_allocated += utils::sizeof_vec(P_star_psi);
-    mem_allocated += utils::sizeof_vec(temperature);
-    mem_allocated += utils::sizeof_vec(stress);
-    mem_allocated += utils::sizeof_vec(stress_F);
+    mem_allocated += pfc::utils::sizeof_vec(filterMF);
+    mem_allocated += pfc::utils::sizeof_vec(opL);
+    mem_allocated += pfc::utils::sizeof_vec(opN);
+    mem_allocated += pfc::utils::sizeof_vec(psi);
+    mem_allocated += pfc::utils::sizeof_vec(psiMF);
+    mem_allocated += pfc::utils::sizeof_vec(psiN);
+    mem_allocated += pfc::utils::sizeof_vec(psi_F);
+    mem_allocated += pfc::utils::sizeof_vec(psiMF_F);
+    mem_allocated += pfc::utils::sizeof_vec(psiN_F);
+    mem_allocated += pfc::utils::sizeof_vec(P_F);
+    mem_allocated += pfc::utils::sizeof_vec(P_psi_F);
+    mem_allocated += pfc::utils::sizeof_vec(P_star_psi);
+    mem_allocated += pfc::utils::sizeof_vec(temperature);
+    mem_allocated += pfc::utils::sizeof_vec(stress);
+    mem_allocated += pfc::utils::sizeof_vec(stress_F);
   }
 
   void prepare_operators(double dt) {
     auto &fft = get_fft();
     auto world = get_world();
-    auto [dx, dy, dz] = get_spacing(world);
-    auto [Lx, Ly, Lz] = get_size(world);
-    auto low = get_outbox(fft).low;
-    auto high = get_outbox(fft).high;
+    auto [dx, dy, dz] = pfc::world::get_spacing(world);
+    auto [Lx, Ly, Lz] = pfc::world::get_size(world);
+    auto low = pfc::fft::get_outbox(fft).low;
+    auto high = pfc::fft::get_outbox(fft).high;
 
     int idx = 0;
     double pi = std::atan(1.0) * 4.0;
@@ -253,13 +251,13 @@ public:
 
   void step(double t) override {
 
-    FFT &fft = get_fft();
-    World w = get_world();
-    double dx = get_spacing(w, 0);
-    double x0 = get_origin(w, 0);
-    int Lx = get_size(w, 0);
-    Int3 low = get_inbox(fft).low;
-    Int3 high = get_inbox(fft).high;
+    pfc::FFT &fft = get_fft();
+    pfc::World w = get_world();
+    double dx = pfc::world::get_spacing(w, 0);
+    double x0 = pfc::world::get_origin(w, 0);
+    int Lx = pfc::world::get_size(w, 0);
+    pfc::Int3 low = pfc::fft::get_inbox(fft).low;
+    pfc::Int3 high = pfc::fft::get_inbox(fft).high;
 
     // Calculate mean-field density n_mf
     fft.forward(psi, psi_F);
@@ -338,7 +336,7 @@ public:
    *
    * @param world The World object to initialize the model.
    */
-  explicit Aluminum(FFT &fft, const World &world) : Model(fft, world) {
+  explicit Aluminum(pfc::FFT &fft, const pfc::World &world) : pfc::Model(fft, world) {
     // Additional initialization if needed
   }
 
@@ -491,14 +489,15 @@ m.step(t) so if there's no need to access the simulator, it's not necessary to
 override this function.
 */
 
-void step(Simulator &s, Aluminum &m) {
+void step(pfc::Simulator &s, Aluminum &m) {
 #ifdef ALUMINUM_DEBUG
-  if (m.is_rank0()) cout << "Performing Aluminum step" << endl;
+  if (m.is_rank0())
+    std::cout << "Performing Aluminum step" << std::endl;
 #endif
 
   for (auto const &bc : s.get_boundary_conditions()) {
     if (bc->get_modifier_name() == "MovingBC") {
-      m.set_m_xpos(dynamic_cast<MovingBC &>(*bc).get_xpos());
+      m.set_m_xpos(dynamic_cast<pfc::MovingBC &>(*bc).get_xpos());
       // auto moving = dynamic_cast< MovingBC& >(*bc);
       // double newxpos = moving.get_xpos();
       // m.set_m_xpos(newxpos);
