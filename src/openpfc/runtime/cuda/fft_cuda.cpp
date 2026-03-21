@@ -3,9 +3,9 @@
 
 #if defined(OpenPFC_ENABLE_CUDA)
 
-#include "openpfc/runtime/cuda/fft_cuda.hpp"
-#include "openpfc/kernel/decomposition/decomposition.hpp"
-#include "openpfc/kernel/fft/fft.hpp"
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/runtime/cuda/fft_cuda.hpp>
 
 #include <heffte.h>
 #include <mpi.h>
