@@ -30,7 +30,7 @@
 #define PFC_INITIAL_CONDITIONS_CONSTANT_HPP
 
 #include "../field_modifier.hpp"
-#include "openpfc/kernel/field/operations.hpp"
+#include <openpfc/kernel/field/operations.hpp>
 
 namespace pfc {
 
