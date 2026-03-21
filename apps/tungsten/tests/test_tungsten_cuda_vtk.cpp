@@ -29,12 +29,10 @@
 #include <tungsten/common/tungsten_input.hpp>
 #include <tungsten/cuda/tungsten_model.hpp>
 
-using namespace pfc;
-using namespace pfc::ui;
 using json = nlohmann::json;
 
 int main(int argc, char *argv[]) {
-  MPI_Worker worker(argc, argv);
+  pfc::MPI_Worker worker(argc, argv);
   int rank = worker.get_rank();
   int num_ranks = worker.get_num_ranks();
   bool rank0 = (rank == 0);
@@ -67,21 +65,21 @@ int main(int argc, char *argv[]) {
   }
 
   // Create world from configuration
-  World world(ui::from_json<World>(settings));
+  pfc::World world(pfc::ui::from_json<pfc::World>(settings));
   if (rank0) {
     std::cout << "World: " << world << std::endl;
   }
 
   // Create decomposition and FFT layout
-  auto decomp = decomposition::create(world, num_ranks);
+  auto decomp = pfc::decomposition::create(world, num_ranks);
   heffte::plan_options options = heffte::default_options<heffte::backend::cufft>();
   if (settings.contains("plan_options")) {
-    options = ui::from_json<heffte::plan_options>(settings["plan_options"]);
+    options = pfc::ui::from_json<heffte::plan_options>(settings["plan_options"]);
   }
-  auto fft_layout = fft::layout::create(decomp, 0);
+  auto fft_layout = pfc::fft::layout::create(decomp, 0);
 
   // Create CUDA model
-  auto dummy_fft = fft::create(fft_layout, rank, options);
+  auto dummy_fft = pfc::fft::create(fft_layout, rank, options);
   TungstenCUDA<double> model(dummy_fft, world);
 
   // Load model parameters
@@ -90,21 +88,21 @@ int main(int argc, char *argv[]) {
   }
 
   // Create time stepper
-  Time time(ui::from_json<Time>(settings));
+  pfc::Time time(pfc::ui::from_json<pfc::Time>(settings));
 
   // Initialize model (allocates GPU memory, precomputes operators)
   if (rank0) std::cout << "Initializing model..." << std::endl;
   model.initialize(time.get_dt());
 
   // Create simulator
-  Simulator simulator(model, time);
+  pfc::Simulator simulator(model, time);
 
   // Add initial conditions
   if (rank0) std::cout << "Adding initial conditions..." << std::endl;
   if (settings.contains("initial_conditions")) {
     for (const json &params : settings["initial_conditions"]) {
       std::string type = params["type"];
-      auto field_modifier = create_field_modifier(type, params);
+      auto field_modifier = pfc::ui::create_field_modifier(type, params);
       if (params.contains("target")) {
         field_modifier->set_field_name(params["target"]);
       }
@@ -117,7 +115,7 @@ int main(int argc, char *argv[]) {
   if (settings.contains("boundary_conditions")) {
     for (const json &params : settings["boundary_conditions"]) {
       std::string type = params["type"];
-      auto field_modifier = create_field_modifier(type, params);
+      auto field_modifier = pfc::ui::create_field_modifier(type, params);
       if (params.contains("target")) {
         field_modifier->set_field_name(params["target"]);
       }
@@ -146,21 +144,21 @@ int main(int argc, char *argv[]) {
           }
         }
 
-        auto vtk_writer = std::make_unique<VTKWriter>(data);
+        auto vtk_writer = std::make_unique<pfc::VTKWriter>(data);
 
         // Get inbox from CUDA FFT using helper function
         auto &cuda_fft = model.get_cuda_fft();
-        auto inbox = fft::get_inbox(cuda_fft);
+        auto inbox = pfc::fft::get_inbox(cuda_fft);
 
-        auto [Lx, Ly, Lz] = get_size(world);
+        auto [Lx, Ly, Lz] = pfc::world::get_size(world);
         std::array<int, 3> global_size = {Lx, Ly, Lz};
         std::array<int, 3> local_size = {inbox.high[0] - inbox.low[0] + 1,
                                          inbox.high[1] - inbox.low[1] + 1,
                                          inbox.high[2] - inbox.low[2] + 1};
         std::array<int, 3> local_offset = {inbox.low[0], inbox.low[1], inbox.low[2]};
 
-        auto [ox, oy, oz] = get_origin(world);
-        auto [dx, dy, dz] = get_spacing(world);
+        auto [ox, oy, oz] = pfc::world::get_origin(world);
+        auto [dx, dy, dz] = pfc::world::get_spacing(world);
         vtk_writer->set_domain(global_size, local_size, local_offset);
         vtk_writer->set_origin({ox, oy, oz});
         vtk_writer->set_spacing({dx, dy, dz});
@@ -172,7 +170,7 @@ int main(int argc, char *argv[]) {
         if (rank0)
           std::cout << "Creating binary writer for field '" << name << "' -> "
                     << data << std::endl;
-        auto binary_writer = std::make_unique<BinaryWriter>(data);
+        auto binary_writer = std::make_unique<pfc::BinaryWriter>(data);
         simulator.add_results_writer(name, std::move(binary_writer));
       }
     }
