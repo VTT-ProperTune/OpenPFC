@@ -71,10 +71,20 @@ The project documentation can be found from
 
 **Build and install from source:** see [INSTALL.md](INSTALL.md).
 
+**CPU vs GPU build trees:** short overview in [docs/build_cpu_gpu.md](docs/build_cpu_gpu.md).
+
+**C++ includes:** link your target to CMake’s `OpenPFC` (or `openpfc`) target.
+For faster builds, include specific headers (e.g. `<openpfc/kernel/data/world.hpp>`)
+rather than the umbrella `<openpfc/openpfc.hpp>`. Minimal simulations without the
+JSON/TOML frontend can start from `<openpfc/openpfc_minimal.hpp>`; see
+[docs/architecture.md](docs/architecture.md).
+
 ## Features
 
 - scales up to tens of thousands of cores, demonstrably
-- modern c++17 header-only framework, easy to use
+- modern C++17 API: compile and link against the `openpfc` library, with most
+  of the simulation stack available as headers under `include/openpfc/` (see
+  [INSTALL.md](INSTALL.md))
 - extensible architecture - add custom components without modifying source code
 - runtime-switchable FFT backends (CPU/GPU) for optimal performance
 - comprehensive configuration validation with helpful error messages
