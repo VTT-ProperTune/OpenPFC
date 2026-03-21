@@ -36,6 +36,7 @@
 
 #include "../binary_reader.hpp"
 #include "../field_modifier.hpp"
+#include "../model.hpp"
 
 namespace pfc {
 
