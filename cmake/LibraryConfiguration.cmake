@@ -35,14 +35,11 @@ target_include_directories(openpfc
     $<INSTALL_INTERFACE:include>
 )
 
-# Options
-option(OpenPFC_ENABLE_MPI "Enable MPI support" ON)
+# Options (MPI option is declared in ProjectSetup.cmake before Dependencies.cmake)
 option(OpenPFC_ENABLE_HEFFTE "Enable HeFFTe FFT support" ON)
 
-# Conditionally find MPI
 if(OpenPFC_ENABLE_MPI)
-    find_package(MPI REQUIRED)
-    target_link_libraries(openpfc PUBLIC MPI::MPI_CXX)
+  target_link_libraries(openpfc PUBLIC MPI::MPI_CXX)
 endif()
 
 # Conditionally find HeFFTe
@@ -51,6 +48,9 @@ if(OpenPFC_ENABLE_HEFFTE)
   if(TARGET Heffte::Heffte)
     target_link_libraries(openpfc PRIVATE Heffte::Heffte)
     get_target_property(_heffte_inc Heffte::Heffte INTERFACE_INCLUDE_DIRECTORIES)
+  elseif(TARGET Heffte)
+    target_link_libraries(openpfc PRIVATE Heffte)
+    get_target_property(_heffte_inc Heffte INTERFACE_INCLUDE_DIRECTORIES)
   elseif(TARGET heffte)
     target_link_libraries(openpfc PRIVATE heffte)
     get_target_property(_heffte_inc heffte INTERFACE_INCLUDE_DIRECTORIES)
