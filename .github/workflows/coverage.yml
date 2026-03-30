@@ -90,8 +90,10 @@ jobs:
       - name: Run Tests
         working-directory: build
         run: |
-          # Run Catch2 tests directly (ctest doesn't discover them)
-          ./tests/openpfc-tests --reporter compact
+          # Same CTest invocation as ci.yml (add_test targets, e.g. openpfc-all-tests)
+          ctest --output-on-failure -j2 \
+            --exclude-regex "benchmark" \
+            --timeout 300
 
       - name: Generate coverage report
         working-directory: build
