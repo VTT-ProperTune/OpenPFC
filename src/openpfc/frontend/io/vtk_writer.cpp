@@ -129,6 +129,7 @@ void VTKWriter::write_pvti_file(int increment) const {
 
   file << R"(  </PImageData>)" << std::endl;
   file << R"(</VTKFile>)" << std::endl;
+  file.close();
   if (!file.good()) {
     const Logger lg{LogLevel::Error, /*rank*/ 0};
     log_error(lg, std::string("Failed writing PVTI file: ") + pvti_filename);
