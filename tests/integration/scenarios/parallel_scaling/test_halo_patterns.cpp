@@ -20,8 +20,6 @@ TEST_CASE("Halo send/recv sizes match expected face areas",
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
-  auto local_lower = world::get_lower(local_world);
-  auto local_upper = world::get_upper(local_world);
 
   const int halo_width = 1;
   auto patterns = halo::create_halo_patterns(decomp, rank, halo::Connectivity::Faces,
@@ -33,11 +31,11 @@ TEST_CASE("Halo send/recv sizes match expected face areas",
     const auto &send = send_recv.first;
     const auto &recv = send_recv.second;
 
-    // Expected indices count based on direction
-    // Compute lengths directly from bounds used by halo implementation
-    const long long nx = static_cast<long long>(local_upper[0] - local_lower[0]);
-    const long long ny = static_cast<long long>(local_upper[1] - local_lower[1]);
-    const long long nz = static_cast<long long>(local_upper[2] - local_lower[2]);
+    // Expected indices count based on direction (match world::get_size: inclusive
+    // upper bounds → nx = upper - lower + 1)
+    const long long nx = static_cast<long long>(local_size[0]);
+    const long long ny = static_cast<long long>(local_size[1]);
+    const long long nz = static_cast<long long>(local_size[2]);
 
     long long expected = 0;
     if (dir[0] != 0) {

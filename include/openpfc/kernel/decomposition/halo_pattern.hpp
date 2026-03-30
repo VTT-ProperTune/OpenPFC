@@ -109,39 +109,43 @@ create_send_halo(const decomposition::Decomposition &decomp, int rank,
   Int3 send_upper = local_upper;
 
   // Adjust boundaries based on direction
-  // For +X direction: send rightmost face (last halo_width rows in X)
+  // Loops use exclusive end: coord in [lo, hi_excl). World::get_upper() is
+  // inclusive, so hi_excl for the owned box is local_upper + 1. For a positive
+  // face (e.g. +X), the last halo_width owned cells are
+  // [local_upper - halo_width + 1, local_upper] inclusive →
+  // [local_upper - halo_width + 1, local_upper + 1) exclusive.
   if (direction[0] > 0) {
-    send_lower[0] = local_upper[0] - halo_width;
-    send_upper[0] = local_upper[0];
+    send_lower[0] = local_upper[0] - halo_width + 1;
+    send_upper[0] = local_upper[0] + 1;
   } else if (direction[0] < 0) {
     send_lower[0] = local_lower[0];
     send_upper[0] = local_lower[0] + halo_width;
   } else {
     // direction[0] == 0: not sending in X direction, use full range
     send_lower[0] = local_lower[0];
-    send_upper[0] = local_upper[0];
+    send_upper[0] = local_upper[0] + 1;
   }
 
   if (direction[1] > 0) {
-    send_lower[1] = local_upper[1] - halo_width;
-    send_upper[1] = local_upper[1];
+    send_lower[1] = local_upper[1] - halo_width + 1;
+    send_upper[1] = local_upper[1] + 1;
   } else if (direction[1] < 0) {
     send_lower[1] = local_lower[1];
     send_upper[1] = local_lower[1] + halo_width;
   } else {
     send_lower[1] = local_lower[1];
-    send_upper[1] = local_upper[1];
+    send_upper[1] = local_upper[1] + 1;
   }
 
   if (direction[2] > 0) {
-    send_lower[2] = local_upper[2] - halo_width;
-    send_upper[2] = local_upper[2];
+    send_lower[2] = local_upper[2] - halo_width + 1;
+    send_upper[2] = local_upper[2] + 1;
   } else if (direction[2] < 0) {
     send_lower[2] = local_lower[2];
     send_upper[2] = local_lower[2] + halo_width;
   } else {
     send_lower[2] = local_lower[2];
-    send_upper[2] = local_upper[2];
+    send_upper[2] = local_upper[2] + 1;
   }
 
   // Extract indices in local coordinate space
@@ -221,34 +225,34 @@ create_recv_halo(const decomposition::Decomposition &decomp, int rank,
     recv_lower[0] = local_lower[0];
     recv_upper[0] = local_lower[0] + halo_width;
   } else if (direction[0] < 0) {
-    recv_lower[0] = local_upper[0] - halo_width;
-    recv_upper[0] = local_upper[0];
+    recv_lower[0] = local_upper[0] - halo_width + 1;
+    recv_upper[0] = local_upper[0] + 1;
   } else {
     // direction[0] == 0: not receiving in X direction, use full range
     recv_lower[0] = local_lower[0];
-    recv_upper[0] = local_upper[0];
+    recv_upper[0] = local_upper[0] + 1;
   }
 
   if (direction[1] > 0) {
     recv_lower[1] = local_lower[1];
     recv_upper[1] = local_lower[1] + halo_width;
   } else if (direction[1] < 0) {
-    recv_lower[1] = local_upper[1] - halo_width;
-    recv_upper[1] = local_upper[1];
+    recv_lower[1] = local_upper[1] - halo_width + 1;
+    recv_upper[1] = local_upper[1] + 1;
   } else {
     recv_lower[1] = local_lower[1];
-    recv_upper[1] = local_upper[1];
+    recv_upper[1] = local_upper[1] + 1;
   }
 
   if (direction[2] > 0) {
     recv_lower[2] = local_lower[2];
     recv_upper[2] = local_lower[2] + halo_width;
   } else if (direction[2] < 0) {
-    recv_lower[2] = local_upper[2] - halo_width;
-    recv_upper[2] = local_upper[2];
+    recv_lower[2] = local_upper[2] - halo_width + 1;
+    recv_upper[2] = local_upper[2] + 1;
   } else {
     recv_lower[2] = local_lower[2];
-    recv_upper[2] = local_upper[2];
+    recv_upper[2] = local_upper[2] + 1;
   }
 
   // Extract indices in local coordinate space
