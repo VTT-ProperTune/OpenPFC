@@ -67,6 +67,7 @@ When adding a feature, choose the **lowest** layer that can express it without b
 - **Namespaces:** top-level **`pfc`**, with **nested namespaces** for areas (`pfc::world`, `pfc::decomposition`, …) matching headers and responsibility. Prefer narrow namespaces over dumping everything into `pfc`.
 - **Classes / structs / enums:** **`PascalCase`** (e.g. `HaloExchanger`, `Decomposition`).
 - **Functions and variables:** **`snake_case`** for most APIs; follow the style of the file you are editing.
+- **Non-static data members:** **`m_` prefix** plus **`snake_case`** (e.g. `m_tic`, `m_lap_started`, `m_min_level`). Prefer this for new code and when editing a type for other reasons. Avoid trailing underscores on members (`tic_`, `duration_`) in new or heavily touched types—some older headers still use suffix style; migrate opportunistically rather than mass-renaming unrelated files.
 - **Macros / compile-time flags:** **`OPENPFC_*`** or existing macro families (e.g. profiling macros in `kernel/profiling`); avoid introducing generic unprefixed macros.
 
 ### CMake
@@ -110,7 +111,7 @@ After structural changes, update or add **Doxygen** on public types and function
 ## Summary checklist for a typical change
 
 1. Correct **layer** (kernel vs runtime vs frontend) and **no upward dependencies**.
-2. **`snake_case` files**, **`PascalCase` types**, **`pfc::` namespaces** consistent with neighbors.
+2. **`snake_case` files**, **`PascalCase` types**, **`m_` data members**, **`pfc::` namespaces** consistent with neighbors.
 3. **SPDX header** on new files.
 4. **`LibraryConfiguration.cmake`** updated for new `.cpp` files.
 5. **Unit tests** where behavior is non-trivial or regression-prone.

@@ -50,11 +50,11 @@ namespace pfc {
 namespace mpi {
 
 class timer {
-  double tic_ = 0.0;
-  double toc_ = 0.0;
-  double duration_ = 0.0;
-  std::string description_;
-  bool lap_started_ = false;
+  double m_tic = 0.0;
+  double m_toc = 0.0;
+  double m_duration = 0.0;
+  std::string m_description;
+  bool m_lap_started = false;
 
 public:
   void tic();
@@ -67,14 +67,16 @@ public:
 };
 
 inline void timer::reset() {
-  duration_ = 0.0;
-  lap_started_ = false;
+  m_duration = 0.0;
+  m_lap_started = false;
 }
 
-inline std::string timer::description() const { return description_; }
+inline double timer::duration() const { return m_duration; }
+
+inline std::string timer::description() const { return m_description; }
 
 inline void timer::description(const std::string &description) {
-  description_ = description;
+  m_description = description;
 }
 
 inline std::ostream &operator<<(std::ostream &os, const timer &t) {
@@ -83,19 +85,19 @@ inline std::ostream &operator<<(std::ostream &os, const timer &t) {
 }
 
 inline void timer::tic() {
-  tic_ = MPI_Wtime();
-  lap_started_ = true;
+  m_tic = MPI_Wtime();
+  m_lap_started = true;
 }
 
 inline double timer::toc() {
-  if (!lap_started_) {
+  if (!m_lap_started) {
     throw std::logic_error(
         "pfc::mpi::timer::toc() called without a matching tic()");
   }
-  toc_ = MPI_Wtime();
-  const double delta = toc_ - tic_;
-  duration_ += delta;
-  lap_started_ = false;
+  m_toc = MPI_Wtime();
+  const double delta = m_toc - m_tic;
+  m_duration += delta;
+  m_lap_started = false;
   return delta;
 }
 
