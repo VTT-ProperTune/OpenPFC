@@ -95,9 +95,10 @@ inline size_t get_system_memory_bytes() noexcept {
       // Format: "MemTotal:       16384000 kB"
       std::istringstream iss(line);
       std::string label;
-      size_t mem_kb;
-      iss >> label >> mem_kb;
-      return mem_kb * 1024; // Convert kB to bytes
+      size_t mem_kb = 0;
+      if (iss >> label >> mem_kb) {
+        return mem_kb * 1024; // Convert kB to bytes
+      }
     }
   }
   return 0;
