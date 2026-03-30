@@ -190,7 +190,7 @@ inline void apply_inplace_with_time(RealField &field, const World &world,
  */
 template <typename Fn>
 inline void apply_inplace(Model &model, std::string_view field_name, Fn &&fn) {
-  auto &f = model.get_real_field(field_name);
+  auto &f = pfc::get_real_field(model, field_name);
   apply_inplace(f, pfc::get_world(model), pfc::get_fft(model),
                 std::forward<Fn>(fn));
 }
@@ -201,7 +201,7 @@ inline void apply_inplace(Model &model, std::string_view field_name, Fn &&fn) {
 template <typename Fn>
 inline void apply_inplace_with_time(Model &model, std::string_view field_name,
                                     double t, Fn &&fn) {
-  auto &f = model.get_real_field(field_name);
+  auto &f = pfc::get_real_field(model, field_name);
   apply_inplace_with_time(f, pfc::get_world(model), pfc::get_fft(model), t,
                           std::forward<Fn>(fn));
 }
@@ -213,7 +213,7 @@ inline void apply_inplace_with_time(Model &model, std::string_view field_name,
  */
 template <typename Fn>
 inline void apply(Model &model, std::string_view field_name, Fn &&fn) {
-  auto &f = model.get_real_field(field_name);
+  auto &f = pfc::get_real_field(model, field_name);
   apply(f, pfc::get_world(model), pfc::get_fft(model), std::forward<Fn>(fn));
 }
 
@@ -223,7 +223,7 @@ inline void apply(Model &model, std::string_view field_name, Fn &&fn) {
 template <typename Fn>
 inline void apply_with_time(Model &model, std::string_view field_name, double t,
                             Fn &&fn) {
-  auto &f = model.get_real_field(field_name);
+  auto &f = pfc::get_real_field(model, field_name);
   apply_with_time(f, pfc::get_world(model), pfc::get_fft(model), t,
                   std::forward<Fn>(fn));
 }

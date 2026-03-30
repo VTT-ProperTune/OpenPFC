@@ -44,9 +44,9 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     REQUIRE(simulator.get_initial_conditions().size() == 1);
 
     // Apply initial conditions to the model
-    REQUIRE(model.get_real_field("phi")[0] == 0.0);
+    REQUIRE(get_real_field(model, "phi")[0] == 0.0);
     simulator.apply_initial_conditions();
-    REQUIRE(model.get_real_field("phi")[0] == 1.0);
+    REQUIRE(get_real_field(model, "phi")[0] == 1.0);
   }
 
   SECTION("Multi-field initial condition registration") {
@@ -61,8 +61,8 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     ic->set_field_names({"a", "b"});
     REQUIRE(simulator.add_initial_conditions(std::move(ic)));
     simulator.apply_initial_conditions();
-    REQUIRE(model.get_real_field("a")[0] == 2.0);
-    REQUIRE(model.get_real_field("b")[0] == 2.0);
+    REQUIRE(get_real_field(model, "a")[0] == 2.0);
+    REQUIRE(get_real_field(model, "b")[0] == 2.0);
   }
 
   SECTION("Add and apply boundary conditions") {
@@ -87,9 +87,9 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     REQUIRE(simulator.get_boundary_conditions().size() == 1);
 
     // Apply boundary conditions to the model
-    REQUIRE(model.get_real_field("phi")[0] == 0.0);
+    REQUIRE(get_real_field(model, "phi")[0] == 0.0);
     simulator.apply_boundary_conditions();
-    REQUIRE(model.get_real_field("phi")[0] == 1.0);
+    REQUIRE(get_real_field(model, "phi")[0] == 1.0);
   }
 }
 

@@ -54,7 +54,7 @@ public:
     Int3 low = get_inbox(fft).low;
     Int3 high = get_inbox(fft).high;
 
-    if (m.is_rank0()) std::cout << "Create initial condition" << std::endl;
+    if (pfc::is_rank0(m)) std::cout << "Create initial condition" << std::endl;
     size_t idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
@@ -85,7 +85,7 @@ public:
   double get_psi_max() const { return psi_max; }
 
   void allocate() {
-    if (is_rank0()) std::cout << "Allocate space" << std::endl;
+    if (pfc::is_rank0(*this)) std::cout << "Allocate space" << std::endl;
     FFT &fft = pfc::get_fft(*this);
     psi.resize(fft.size_inbox());
     psi_F.resize(fft.size_outbox());
@@ -102,7 +102,7 @@ public:
     std::array<int, 3> low = get_outbox(fft).low;
     std::array<int, 3> high = get_outbox(fft).high;
 
-    if (is_rank0()) std::cout << "Prepare operators" << std::endl;
+    if (pfc::is_rank0(*this)) std::cout << "Prepare operators" << std::endl;
     size_t idx = 0;
     auto spacing = get_spacing(w);
     auto size = get_size(w);
@@ -149,7 +149,7 @@ public:
 };
 
 void print_statline(Simulator &s) {
-  if (!s.is_rank0()) return;
+  if (!pfc::is_rank0(s)) return;
   int n = s.get_increment();
   double t = s.get_time();
   Model &model = pfc::get_model(s);

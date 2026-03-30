@@ -699,6 +699,52 @@ private:
  */
 [[nodiscard]] inline FFT &get_fft(Model &model) noexcept { return model.get_fft(); }
 
+[[nodiscard]] inline bool is_rank0(const Model &model) noexcept {
+  return model.is_rank0();
+}
+
+[[nodiscard]] inline bool has_field(const Model &model,
+                                    std::string_view field_name) noexcept {
+  return model.has_field(field_name);
+}
+
+[[nodiscard]] inline bool has_real_field(const Model &model,
+                                          std::string_view field_name) noexcept {
+  return model.has_real_field(field_name);
+}
+
+[[nodiscard]] inline bool has_complex_field(const Model &model,
+                                              std::string_view field_name) noexcept {
+  return model.has_complex_field(field_name);
+}
+
+[[nodiscard]] inline RealField &get_real_field(Model &model,
+                                               std::string_view name) {
+  return model.get_real_field(name);
+}
+
+[[nodiscard]] inline const RealField &get_real_field(const Model &model,
+                                                      std::string_view name) {
+  return model.get_real_field(name);
+}
+
+[[nodiscard]] inline ComplexField &get_complex_field(Model &model,
+                                                     std::string_view name) {
+  return model.get_complex_field(name);
+}
+
+[[nodiscard]] inline const ComplexField &get_complex_field(
+    const Model &model, std::string_view name) {
+  return model.get_complex_field(name);
+}
+
+/** @brief Default real field named `"default"` (see Model::get_field()). */
+[[nodiscard]] inline Field &get_field(Model &model) { return model.get_field(); }
+
+inline void initialize(Model &model, double dt) { model.initialize(dt); }
+
+inline void step(Model &model, double t) { model.step(t); }
+
 } // namespace pfc
 
 #endif

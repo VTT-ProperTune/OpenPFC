@@ -67,7 +67,7 @@ public:
 
   void apply(Model &model, double time) override {
     // 1. Get the field to modify
-    auto &field = model.get_real_field(get_field_name());
+    auto &field = get_real_field(model, get_field_name());
 
     // 2. Get geometry information
     const auto &world = get_world(model);
@@ -126,7 +126,7 @@ void demo_custom_initial_condition() {
   gaussian_ic.apply(model, 0.0); // Apply at t=0
 
   // Verify field values at a few points
-  const auto &field = model.get_real_field("density");
+  const auto &field = get_real_field(model, "density");
   auto inbox = fft::get_inbox(get_fft(model));
 
   if (rank == 0) {
@@ -173,7 +173,7 @@ public:
   const std::string &get_modifier_name() const override { return m_name; }
 
   void apply(Model &model, double time) override {
-    auto &field = model.get_real_field(get_field_name());
+    auto &field = get_real_field(model, get_field_name());
     const auto &world = get_world(model);
     const auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
@@ -218,7 +218,7 @@ void demo_boundary_condition() {
   model.add_real_field("density");
 
   // Initialize with constant value
-  auto &field = model.get_real_field("density");
+  auto &field = get_real_field(model, "density");
   std::fill(field.begin(), field.end(), 0.5);
 
   if (rank == 0) {
@@ -286,7 +286,7 @@ public:
   const std::string &get_modifier_name() const override { return m_name; }
 
   void apply(Model &model, double time) override {
-    auto &field = model.get_real_field(get_field_name());
+    auto &field = get_real_field(model, get_field_name());
     const auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
 
@@ -323,7 +323,7 @@ void demo_space_time_bc() {
   model.add_real_field("density");
 
   // Initialize field
-  auto &field = model.get_real_field("density");
+  auto &field = get_real_field(model, "density");
   std::fill(field.begin(), field.end(), 0.5);
 
   // Create oscillating BC
@@ -428,7 +428,7 @@ void demo_composition() {
   bc_right.apply(model, 0.0);
 
   // Analyze resulting field
-  const auto &field = model.get_real_field("density");
+  const auto &field = get_real_field(model, "density");
   double min_val = *std::min_element(field.begin(), field.end());
   double max_val = *std::max_element(field.begin(), field.end());
   double sum = std::accumulate(field.begin(), field.end(), 0.0);

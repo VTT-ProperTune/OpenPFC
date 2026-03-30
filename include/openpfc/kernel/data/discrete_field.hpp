@@ -186,7 +186,7 @@ namespace pfc {
  * model.add_real_field("density");
  *
  * // Get field data
- * auto& field_data = model.get_real_field("density");
+ * auto& field_data = get_real_field(model, "density");
  *
  * // Create DiscreteField wrapper for coordinate-aware operations
  * auto inbox = pfc::fft::get_inbox(pfc::get_fft(model));

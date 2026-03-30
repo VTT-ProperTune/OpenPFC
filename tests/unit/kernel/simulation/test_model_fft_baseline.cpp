@@ -77,7 +77,7 @@ TEST_CASE("Model-FFT Baseline: Typical usage patterns",
     auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
     pfc::testing::MockModel model(fft, world);
-    model.initialize(0.1);
+    initialize(model, 0.1);
 
     // Model can use FFT in initialize() and step()
     REQUIRE_NOTHROW(get_fft(model));
@@ -102,7 +102,7 @@ TEST_CASE("Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]"
     auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
     pfc::testing::InstrumentedMockModel model(fft, world);
-    model.initialize(0.1);
+    initialize(model, 0.1);
 
     REQUIRE(model.initialize_call_count == 1);
     REQUIRE(model.last_init_dt == 0.1);
@@ -123,10 +123,10 @@ TEST_CASE("Model-FFT Baseline: Field operations with FFT",
     field.resize(fft.size_inbox());
 
     model.add_real_field("phi", field);
-    REQUIRE(model.has_real_field("phi"));
+    REQUIRE(has_real_field(model, "phi"));
 
     // Field size should match FFT inbox
-    RealField &phi = model.get_real_field("phi");
+    RealField &phi = get_real_field(model, "phi");
     REQUIRE(phi.size() == fft.size_inbox());
   }
 
@@ -140,10 +140,10 @@ TEST_CASE("Model-FFT Baseline: Field operations with FFT",
     field.resize(fft.size_outbox());
 
     model.add_complex_field("phi_k", field);
-    REQUIRE(model.has_complex_field("phi_k"));
+    REQUIRE(has_complex_field(model, "phi_k"));
 
     // Field size should match FFT outbox
-    ComplexField &phi_k = model.get_complex_field("phi_k");
+    ComplexField &phi_k = get_complex_field(model, "phi_k");
     REQUIRE(phi_k.size() == fft.size_outbox());
   }
 }

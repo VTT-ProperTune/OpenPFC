@@ -114,7 +114,7 @@ void demo_constant_ic() {
   }
 
   // Verify uniformity
-  const auto &field = model.get_real_field("density");
+  const auto &field = get_real_field(model, "density");
   print_field_stats(field, "Field after Constant IC", MPI_COMM_WORLD);
 
   // Demonstrate setter methods
@@ -170,7 +170,7 @@ void demo_single_seed() {
     std::cout << "  Seed radius: 64.0 (hardcoded)\n\n";
   }
 
-  const auto &field = model.get_real_field("density");
+  const auto &field = get_real_field(model, "density");
   print_field_stats(field, "Field with single seed", MPI_COMM_WORLD);
 
   if (rank == 0) {
@@ -235,7 +235,7 @@ void demo_seed_grid() {
         << "  Random orientation: each seed has unique crystal orientation\n\n";
   }
 
-  const auto &field = model.get_real_field("density");
+  const auto &field = get_real_field(model, "density");
   print_field_stats(field, "Field with seed grid", MPI_COMM_WORLD);
 
   if (rank == 0) {
@@ -299,7 +299,7 @@ void demo_random_seeds() {
     std::cout << "  RNG seed: 42 (reproducible)\n\n";
   }
 
-  const auto &field = model.get_real_field("density");
+  const auto &field = get_real_field(model, "density");
   print_field_stats(field, "Field with random seeds", MPI_COMM_WORLD);
 
   if (rank == 0) {
@@ -356,14 +356,14 @@ void demo_file_reader() {
   BinaryWriter writer(checkpoint_file);
   writer.set_domain(world::get_size(world), fft::get_inbox(get_fft(model)).size,
                     fft::get_inbox(get_fft(model)).low);
-  writer.write(0, model.get_real_field("density"));
+  writer.write(0, get_real_field(model, "density"));
 
   if (rank == 0) {
     std::cout << "  Saved checkpoint to: " << checkpoint_file << "\n\n";
   }
 
   // Compute stats before clearing
-  const auto &field_before = model.get_real_field("density");
+  const auto &field_before = get_real_field(model, "density");
   double sum_before = 0.0;
   for (const auto &val : field_before) sum_before += val;
 
@@ -371,7 +371,7 @@ void demo_file_reader() {
   if (rank == 0) {
     std::cout << "Step 2: Clearing field (simulating restart)...\n";
   }
-  auto &field = model.get_real_field("density");
+  auto &field = get_real_field(model, "density");
   std::fill(field.begin(), field.end(), 0.0);
 
   if (rank == 0) {
@@ -392,7 +392,7 @@ void demo_file_reader() {
   }
 
   // Verify restoration
-  const auto &field_after = model.get_real_field("density");
+  const auto &field_after = get_real_field(model, "density");
   double sum_after = 0.0;
   for (const auto &val : field_after) sum_after += val;
 
@@ -450,7 +450,7 @@ void demo_composition() {
   Constant background(0.285);
   background.set_field_name("density");
   background.apply(model, 0.0);
-  print_field_stats(model.get_real_field("density"), "  After background",
+  print_field_stats(get_real_field(model, "density"), "  After background",
                     MPI_COMM_WORLD);
 
   // Step 2: Add single seed at center
@@ -462,7 +462,7 @@ void demo_composition() {
   central_seed.set_density(0.285);
   central_seed.set_amplitude(0.15);
   central_seed.apply(model, 0.0);
-  print_field_stats(model.get_real_field("density"), "  After central seed",
+  print_field_stats(get_real_field(model, "density"), "  After central seed",
                     MPI_COMM_WORLD);
 
   // Step 3: Add smaller grid of seeds around it
@@ -480,7 +480,7 @@ void demo_composition() {
   secondary_grid.set_density(0.285);
   secondary_grid.set_amplitude(0.12); // Slightly different amplitude
   secondary_grid.apply(model, 0.0);
-  print_field_stats(model.get_real_field("density"), "  After secondary grid",
+  print_field_stats(get_real_field(model, "density"), "  After secondary grid",
                     MPI_COMM_WORLD);
 
   if (rank == 0) {

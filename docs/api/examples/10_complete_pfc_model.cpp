@@ -312,7 +312,7 @@ int main(int argc, char **argv) {
     PFCModel model(world, std::move(fft), epsilon);
 
     double dt = 0.5; // Time step
-    model.initialize(dt);
+    initialize(model, dt);
 
     if (rank == 0) {
       std::cout << "    Model: Phase Field Crystal (single-mode)\n";
@@ -428,7 +428,7 @@ int main(int argc, char **argv) {
     }
 
     // Write initial state
-    writer.write(0, model.get_real_field("density"));
+    writer.write(0, get_real_field(model, "density"));
     if (rank == 0) {
       std::cout << "    Saved initial state: pfc_output_000000.bin\n";
     }
@@ -464,7 +464,7 @@ int main(int argc, char **argv) {
       std::cout << "\n[Post-processing] Computing final statistics...\n";
     }
 
-    const auto &density = model.get_real_field("density");
+    const auto &density = get_real_field(model, "density");
 
     // Local statistics
     double local_min = *std::min_element(density.begin(), density.end());

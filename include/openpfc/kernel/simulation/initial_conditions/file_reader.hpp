@@ -59,7 +59,7 @@ public:
     const auto inbox_size = get_inbox(fft).size;
     const auto inbox_offset = get_inbox(fft).low;
 
-    Field &f = m.get_real_field(get_field_name());
+    Field &f = get_real_field(m, get_field_name());
     std::cout << "Reading initial condition from file" << get_filename()
               << std::endl;
     BinaryReader reader;

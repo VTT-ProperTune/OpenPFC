@@ -124,11 +124,11 @@ public:
    *
    * @return Field&
    */
-  Field &get_field() { return get_model().get_field(); }
+  Field &get_field() { return pfc::get_field(m_model); }
 
-  void initialize() { get_model().initialize(get_time().get_dt()); }
+  void initialize() { pfc::initialize(m_model, m_time.get_dt()); }
 
-  bool is_rank0() { return get_model().is_rank0(); }
+  bool is_rank0() { return pfc::is_rank0(m_model); }
 
   unsigned int get_increment() { return get_time().get_increment(); }
 
@@ -180,7 +180,7 @@ public:
     writer->set_domain(get_size(world), inbox.size, inbox.low);
 
     Model &model = get_model();
-    if (model.has_field(field_name)) {
+    if (pfc::has_field(model, field_name)) {
       m_result_writers.insert({field_name, std::move(writer)});
       return true;
     } else {
@@ -249,7 +249,7 @@ public:
         std::cout << "Warning: adding initial condition to modify field 'default'"
                   << std::endl;
       }
-      if (!model.has_field(field_name)) {
+      if (!pfc::has_field(model, field_name)) {
         std::cout << "Warning: tried to add initial condition for inexistent field "
                   << field_name << ", INITIAL CONDITIONS ARE NOT APPLIED!"
                   << std::endl;
@@ -328,7 +328,7 @@ public:
         std::cout << "Warning: adding boundary condition to modify field 'default'"
                   << std::endl;
       }
-      if (!model.has_field(field_name)) {
+      if (!pfc::has_field(model, field_name)) {
         std::cout << "Warning: tried to add boundary condition for inexistent field "
                   << field_name << ", BOUNDARY CONDITIONS ARE NOT APPLIED!"
                   << std::endl;
@@ -362,11 +362,11 @@ public:
     int file_num = get_result_counter();
     Model &model = get_model();
     for (const auto &[field_name, writer] : m_result_writers) {
-      if (model.has_real_field(field_name)) {
-        writer->write(file_num, get_model().get_real_field(field_name));
+      if (pfc::has_real_field(model, field_name)) {
+        writer->write(file_num, pfc::get_real_field(model, field_name));
       }
-      if (model.has_complex_field(field_name)) {
-        writer->write(file_num, get_model().get_complex_field(field_name));
+      if (pfc::has_complex_field(model, field_name)) {
+        writer->write(file_num, pfc::get_complex_field(model, field_name));
       }
     }
     set_result_counter(file_num + 1);
@@ -451,7 +451,7 @@ public:
     }
     time.next();
     apply_boundary_conditions();
-    model.step(time.get_current());
+    pfc::step(model, time.get_current());
     if (time.do_save()) {
       write_results();
     }
@@ -509,8 +509,16 @@ public:
   return pfc::get_fft(get_model(sim));
 }
 
+[[nodiscard]] inline Field &get_field(Simulator &sim) {
+  return pfc::get_field(get_model(sim));
+}
+
+[[nodiscard]] inline bool is_rank0(Simulator &sim) noexcept {
+  return pfc::is_rank0(get_model(sim));
+}
+
 inline void step(Simulator &s, Model &m) {
-  m.step(get_time(s).get_current());
+  pfc::step(m, get_time(s).get_current());
 }
 
 } // namespace pfc

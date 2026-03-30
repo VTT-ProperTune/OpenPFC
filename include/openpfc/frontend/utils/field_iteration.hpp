@@ -15,7 +15,7 @@
  * #include <openpfc/frontend/utils/field_iteration.hpp>
  *
  * void apply(pfc::Model& model, double time) override {
- *   auto& field = model.get_real_field(get_field_name());
+ *   auto& field = get_real_field(model, get_field_name());
  *   const auto& fft = pfc::get_fft(model);
  *   auto inbox = pfc::fft::get_inbox(fft);
  *

@@ -23,7 +23,7 @@
  * class MyInitialCondition : public pfc::FieldModifier {
  * public:
  *     void apply(pfc::Model& model, double time) override {
- *         auto& field = model.get_real_field(get_field_name());
+ *         auto& field = get_real_field(model, get_field_name());
  *         // Modify field values
  *     }
  * };
@@ -84,7 +84,7 @@ class Model;
  *     : m_center(center), m_amplitude(amp), m_width(width) {}
  *
  *   void apply(pfc::Model& model, double time) override {
- *     auto& field = model.get_real_field(get_field_name());
+ *     auto& field = get_real_field(model, get_field_name());
  *     const auto& world = pfc::get_world(model);
  *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
@@ -116,7 +116,7 @@ class Model;
  *     : m_value(value), m_width(width) {}
  *
  *   void apply(pfc::Model& model, double time) override {
- *     auto& field = model.get_real_field(get_field_name());
+ *     auto& field = get_real_field(model, get_field_name());
  *     const auto& world = pfc::get_world(model);
  *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
@@ -150,7 +150,7 @@ class Model;
  *   TimeVaryingBC(double freq) : m_frequency(freq) {}
  *
  *   void apply(pfc::Model& model, double time) override {
- *     auto& field = model.get_real_field(get_field_name());
+ *     auto& field = get_real_field(model, get_field_name());
  *     const auto& world = pfc::get_world(model);
  *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
@@ -199,10 +199,10 @@ class Model;
  * public:
  *   void apply(pfc::Model& model, double time) override {
  *     // Current: single field via get_field_name()
- *     auto& density = model.get_real_field(get_field_name());
+ *     auto& density = get_real_field(model, get_field_name());
  *
  *     // Future: access multiple fields
- *     // auto& temperature = model.get_real_field("temperature");
+ *     // auto& temperature = get_real_field(model, "temperature");
  *
  *     // Set coupled initial state
  *     std::fill(density.begin(), density.end(), 0.5);
@@ -326,7 +326,7 @@ public:
    * public:
    *   void apply(pfc::Model& model, double time) override {
    *     // Retrieve the field this modifier should act on
-   *     auto& field = model.get_real_field(get_field_name());
+   *     auto& field = get_real_field(model, get_field_name());
    *     // Modify field...
    *   }
    * };
@@ -351,7 +351,7 @@ public:
    * to the Model and current simulation time, allowing arbitrary modifications.
    *
    * **Implementation Responsibilities:**
-   * - Retrieve field(s) via `model.get_real_field()` or `model.get_complex_field()`
+   * - Retrieve field(s) via `get_real_field(model, name)` or `get_complex_field(model, name)`
    * - Access geometry via `pfc::get_world(model)` and `pfc::get_fft(model)`
    * - Modify field values according to modifier's purpose
    * - Handle MPI parallelism (operate on local subdomain)
@@ -360,7 +360,7 @@ public:
    * @code
    * void apply(pfc::Model& model, double time) override {
    *   // 1. Get field to modify
-   *   auto& field = model.get_real_field(get_field_name());
+   *   auto& field = get_real_field(model, get_field_name());
    *
    *   // 2. Get geometry information
    *   const auto& world = pfc::get_world(model);

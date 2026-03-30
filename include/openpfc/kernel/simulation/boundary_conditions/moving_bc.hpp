@@ -88,7 +88,7 @@ public:
 
   void apply(Model &m, double) override {
     const FFT &fft = get_fft(m);
-    Field &field = m.get_real_field(get_field_name());
+    Field &field = get_real_field(m, get_field_name());
     const World &w = get_world(m);
     Int3 low = get_inbox(fft).low;
     Int3 high = get_inbox(fft).high;

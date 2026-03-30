@@ -136,7 +136,7 @@ public:
   std::string get_field_name() const override { return m_field_name; }
 
   void apply(Model &model, double t) override {
-    auto &field = model.get_real_field(m_field_name);
+    auto &field = get_real_field(model, m_field_name);
     auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
     auto world = get_world(model);
@@ -249,7 +249,7 @@ void example_complete_simulation() {
 
   // 5. Create simulator
   Simulator sim(model, time);
-  sim.initialize(); // Calls model.initialize()
+  sim.initialize(); // Calls pfc::initialize(model, dt) on the wrapped Model
 
   if (mpi::get_rank() == 0) {
     std::cout << "Step 5: Created simulator\n\n";
