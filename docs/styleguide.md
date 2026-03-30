@@ -36,7 +36,7 @@ This document summarizes **how we organize code and name things** in OpenPFC so 
 | [`examples/`](../examples/) | **Small, teaching executables** — prefer clear names; many tutorials use numeric prefixes (`01_…`, `02_…`). |
 | [`tests/unit/`](../tests/unit/) | **Unit tests** (Catch2), grouped under `kernel/`, `runtime/`, `frontend/`, etc., mirroring library structure. |
 | [`tests/integration/`](../tests/integration/) | **Integration tests** — multi-component or heavier scenarios. |
-| [`tests/benchmarks/`](../tests/benchmarks/) | **Benchmarks**. |
+| [`tests/benchmarks/`](../tests/benchmarks/) | **Benchmarks** (optional). Sources are compiled only when **`OpenPFC_BUILD_BENCHMARKS=ON`**; see [tests/benchmarks/README.md](../tests/benchmarks/README.md). |
 | [`cmake/`](../cmake/) | **Build logic** included from the root `CMakeLists.txt` — prefer adding options and target wiring here rather than inflating the root file. |
 | [`docs/`](../docs/) | **Human-readable documentation** (architecture, guides, Doxygen-related assets). |
 
