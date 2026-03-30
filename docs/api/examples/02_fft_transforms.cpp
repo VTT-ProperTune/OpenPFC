@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -46,7 +46,7 @@ void example_basic_setup() {
   auto world = world::create({64, 64, 64});
 
   // Set up domain decomposition for MPI
-  auto decomp = decomposition::create(world, MPI_COMM_WORLD);
+  auto decomp = decomposition::create(world, mpi::get_size());
 
   // Create FFT object
   auto fft = fft::create(decomp);
@@ -68,7 +68,7 @@ void example_round_trip() {
   print_section("Example 2: Round-Trip Transform (Normalization Check)");
 
   auto world = world::create({32, 32, 32});
-  auto decomp = decomposition::create(world, MPI_COMM_WORLD);
+  auto decomp = decomposition::create(world, mpi::get_size());
   auto fft = fft::create(decomp);
 
   // Create test field: cos(2πx/L)
@@ -126,8 +126,9 @@ void example_round_trip() {
 void example_laplacian() {
   print_section("Example 3: Computing Laplacian in K-Space");
 
-  auto world = world::create({32, 32, 32}, {0, 0, 0}, {0.1, 0.1, 0.1});
-  auto decomp = decomposition::create(world, MPI_COMM_WORLD);
+  auto world = world::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({0.1, 0.1, 0.1}));
+  auto decomp = decomposition::create(world, mpi::get_size());
   auto fft = fft::create(decomp);
 
   // Create test function: f(x,y,z) = sin(2πx/L)
@@ -226,7 +227,7 @@ void example_performance() {
   print_section("Example 4: Performance Timing");
 
   auto world = world::create({128, 128, 128});
-  auto decomp = decomposition::create(world, MPI_COMM_WORLD);
+  auto decomp = decomposition::create(world, mpi::get_size());
   auto fft = fft::create(decomp);
 
   std::vector<double> real_data(fft.size_inbox(), 1.0);

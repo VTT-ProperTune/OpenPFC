@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -56,7 +56,8 @@ void example_custom_spacing() {
   // Create domain with specific spacing and offset
   Real3 origin = {0.0, 0.0, 0.0};
   Real3 spacing = {0.1, 0.1, 0.1};
-  auto world = world::create({256, 256, 256}, origin, spacing);
+  auto world =
+      world::create(GridSize({256, 256, 256}), PhysicalOrigin(origin), GridSpacing(spacing));
 
   std::cout << "Created 256³ grid:\n";
   std::cout << "  Spacing: " << std::fixed << std::setprecision(3);
@@ -82,7 +83,8 @@ void example_custom_spacing() {
 void example_coordinate_transforms() {
   print_section("Example 3: Coordinate Transformations");
 
-  auto world = world::create({100, 100, 100}, {0, 0, 0}, {0.1, 0.1, 0.1});
+  auto world = world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({0.1, 0.1, 0.1}));
 
   std::cout << "Grid: 100³ with spacing 0.1\n\n";
 
@@ -151,7 +153,9 @@ void example_centered_domain() {
   double dx = L / n;
   double offset = -L / 2.0;
 
-  auto world = world::create({n, n, n}, {offset, offset, offset}, {dx, dx, dx});
+  auto world =
+      world::create(GridSize({n, n, n}), PhysicalOrigin({offset, offset, offset}),
+                    GridSpacing({dx, dx, dx}));
 
   std::cout << "100³ grid centered at origin:\n";
   auto lower = world::get_lower_bounds(world);
@@ -190,8 +194,9 @@ void example_anisotropic_grid() {
 
   // Different resolution in each direction
   // Example: thin film with fine z-resolution
-  auto world = world::create({128, 128, 512},              // More points in z
-                             {0, 0, 0}, {1.0, 1.0, 0.25}); // Finer spacing in z
+  auto world = world::create(GridSize({128, 128, 512}), // More points in z
+                             PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 0.25})); // Finer spacing in z
 
   std::cout << "Thin film geometry (128 × 128 × 512):\n";
   auto size = world::get_size(world);

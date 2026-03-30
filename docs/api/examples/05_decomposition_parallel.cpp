@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -70,7 +70,8 @@ void scenario_manual_grid() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create global domain
-  auto world = world::create({128, 128, 128}, {1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
 
   if (rank == 0) {
     auto global_size = world::get_size(world);
@@ -142,7 +143,8 @@ void scenario_automatic_grid() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create global domain
-  auto world = world::create({256, 256, 256}, {0.5, 0.5, 0.5});
+  auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({0.5, 0.5, 0.5}));
 
   // Let algorithm choose optimal grid pattern
   auto decomp = decomposition::create(world, size);
@@ -205,7 +207,9 @@ void scenario_coordinate_mapping() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create decomposition
-  auto global_world = world::create({100, 100, 100}, {1.0, 1.0, 1.0});
+  auto global_world = world::create(GridSize({100, 100, 100}),
+                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_world, size);
   auto local_world = decomposition::get_subworld(decomp, rank);
 
@@ -250,7 +254,8 @@ void scenario_properties() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create various decompositions
-  auto world = world::create({200, 200, 100}, {0.5, 0.5, 1.0});
+  auto world = world::create(GridSize({200, 200, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({0.5, 0.5, 1.0}));
 
   if (rank == 0) {
     std::cout << "Global domain: 200×200×100, spacing: [0.5, 0.5, 1.0]\n\n";
@@ -320,7 +325,8 @@ void scenario_load_balance() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create decomposition
-  auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, size);
   auto local = decomposition::get_subworld(decomp, rank);
 
@@ -388,7 +394,8 @@ void scenario_aspect_ratios() {
                                  {{1024, 256, 64}, "Thin film (16:4:1)"}};
 
   for (const auto &test : cases) {
-    auto world = world::create(test.size, {1.0, 1.0, 1.0});
+    auto world = world::create(GridSize(test.size), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
     auto decomp = decomposition::create(world, size);
     auto grid = decomposition::get_grid(decomp);
 

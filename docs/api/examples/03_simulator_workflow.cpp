@@ -20,9 +20,11 @@
  * Time to run: < 5 seconds
  */
 
+#include <array>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
@@ -54,7 +56,7 @@ public:
     }
 
     // Register fields
-    auto &fft = get_fft();
+    auto &fft = pfc::get_fft(*this);
     m_real_field.resize(fft.size_inbox(), 0.0);
     m_complex_field.resize(fft.size_outbox());
 
@@ -63,9 +65,9 @@ public:
 
     // Precompute propagator in k-space
     auto outbox = fft::get_outbox(fft);
-    auto world = get_world();
-    auto size = world::get_size(world);
-    auto spacing = world::get_spacing(world);
+    const auto &w = pfc::get_world(*this);
+    auto size = world::get_size(w);
+    auto spacing = world::get_spacing(w);
 
     m_propagator.resize(fft.size_outbox());
 
@@ -95,10 +97,10 @@ public:
     }
   }
 
-  void step(double t) override {
-    auto &u = get_real_field("concentration");
-    auto &u_k = get_complex_field("concentration_k");
-    auto &fft = get_fft();
+  void step(double /*t*/) override {
+    auto &u = pfc::get_real_field(*this, "concentration");
+    auto &u_k = pfc::get_complex_field(*this, "concentration_k");
+    auto &fft = pfc::get_fft(*this);
 
     // Transform to k-space
     fft.forward(u, u_k);
@@ -122,7 +124,6 @@ private:
  */
 class GaussianIC : public FieldModifier {
 private:
-  std::string m_field_name;
   types::Real3 m_center;
   double m_amplitude;
   double m_sigma;
@@ -130,17 +131,16 @@ private:
 public:
   GaussianIC(const std::string &field_name, const types::Real3 &center,
              double amplitude = 1.0, double sigma = 1.0)
-      : m_field_name(field_name), m_center(center), m_amplitude(amplitude),
-        m_sigma(sigma) {}
+      : m_center(center), m_amplitude(amplitude), m_sigma(sigma) {
+    set_field_name(field_name);
+  }
 
-  std::string get_field_name() const override { return m_field_name; }
-
-  void apply(Model &model, double t) override {
-    auto &field = get_real_field(model, m_field_name);
+  void apply(Model &model, double /*t*/) override {
+    auto &field = get_real_field(model, get_field_name());
     auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
-    auto world = get_world(model);
-    auto spacing = world::get_spacing(world);
+    const auto &w = get_world(model);
+    auto spacing = world::get_spacing(w);
 
     for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
       for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
@@ -169,7 +169,13 @@ public:
  */
 class StatsWriter : public ResultsWriter {
 public:
-  void write(int iteration, const RealField &field) override {
+  StatsWriter() : ResultsWriter("(stdout)") {}
+
+  void set_domain(const std::array<int, 3> & /*arr_global*/,
+                  const std::array<int, 3> & /*arr_local*/,
+                  const std::array<int, 3> & /*arr_offset*/) override {}
+
+  MPI_Status write(int iteration, const RealField &field) override {
     // Compute statistics
     double sum = 0.0, sum2 = 0.0;
     double min_val = std::numeric_limits<double>::max();
@@ -200,10 +206,13 @@ public:
                 << ", std=" << stddev << ", range=[" << global_min << ", "
                 << global_max << "]\n";
     }
+    MPI_Status st{};
+    return st;
   }
 
-  void write(int iteration, const ComplexField &field) override {
-    // Not implemented for this example
+  MPI_Status write(int /*iteration*/, const ComplexField & /*field*/) override {
+    MPI_Status st{};
+    return st;
   }
 };
 
@@ -213,7 +222,8 @@ void example_complete_simulation() {
   std::cout << std::string(60, '=') << "\n\n";
 
   // 1. Create computational domain
-  auto world = world::create({64, 64, 64}, {0, 0, 0}, {0.1, 0.1, 0.1});
+  auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({0.1, 0.1, 0.1}));
 
   if (mpi::get_rank() == 0) {
     std::cout << "Step 1: Created 64³ computational domain\n";
@@ -221,7 +231,7 @@ void example_complete_simulation() {
   }
 
   // 2. Set up FFT
-  auto decomp = decomposition::create(world, MPI_COMM_WORLD);
+  auto decomp = decomposition::create(world, mpi::get_size());
   auto fft = fft::create(decomp);
 
   if (mpi::get_rank() == 0) {
@@ -242,7 +252,7 @@ void example_complete_simulation() {
 
   if (mpi::get_rank() == 0) {
     std::cout << "Step 4: Configured time integration\n";
-    std::cout << "  Duration: " << time.get_tspan()[1] << " time units\n";
+    std::cout << "  Duration: " << time.get_t1() << " time units\n";
     std::cout << "  Time step: " << time.get_dt() << "\n";
     std::cout << "  Save interval: " << time.get_saveat() << "\n\n";
   }

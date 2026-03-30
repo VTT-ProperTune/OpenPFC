@@ -79,12 +79,12 @@ private:
 public:
   /**
    * @brief Construct PFC model with specified domain
+   * @param fft FFT engine for spectral transforms (must outlive the model)
    * @param world Physical domain geometry
-   * @param fft FFT engine for spectral transforms
    * @param epsilon Dimensionless temperature (ε < 0 for undercooling)
    */
-  PFCModel(const World &world, std::unique_ptr<FFT> fft, double epsilon)
-      : Model(world, std::move(fft)), m_epsilon(epsilon), m_dt(0.0) {}
+  PFCModel(FFT &fft, const World &world, double epsilon)
+      : Model(fft, world), m_epsilon(epsilon), m_dt(0.0) {}
 
   /**
    * @brief Initialize model: allocate fields and precompute operators
@@ -95,16 +95,16 @@ public:
     FFT &fft = get_fft();
 
     // Allocate real-space fields
-    m_density.resize(fft::size_inbox(fft));
-    m_nonlinear.resize(fft::size_inbox(fft));
+    m_density.resize(fft.size_inbox());
+    m_nonlinear.resize(fft.size_inbox());
 
     // Allocate k-space fields
-    m_density_k.resize(fft::size_outbox(fft));
-    m_nonlinear_k.resize(fft::size_outbox(fft));
+    m_density_k.resize(fft.size_outbox());
+    m_nonlinear_k.resize(fft.size_outbox());
 
     // Allocate operator storage
-    m_operator_L.resize(fft::size_outbox(fft));
-    m_operator_N.resize(fft::size_outbox(fft));
+    m_operator_L.resize(fft.size_outbox());
+    m_operator_N.resize(fft.size_outbox());
 
     // Register field with Model for external access (ICs, BCs, output)
     pfc::add_real_field(*this, "density", m_density);
@@ -117,11 +117,11 @@ public:
    * @brief Single time step: advance ψ(t) → ψ(t+dt)
    * @param time Current simulation time (unused in this model)
    */
-  void step(double time) override {
+  void step(double /*time*/) override {
     FFT &fft = get_fft();
 
     // 1. Transform density to k-space
-    fft::forward(fft, m_density, m_density_k);
+    fft.forward(m_density, m_density_k);
 
     // 2. Compute nonlinear term: N(ψ) = ψ³
     for (size_t i = 0; i < m_density.size(); i++) {
@@ -129,7 +129,7 @@ public:
     }
 
     // 3. Transform nonlinear term to k-space
-    fft::forward(fft, m_nonlinear, m_nonlinear_k);
+    fft.forward(m_nonlinear, m_nonlinear_k);
 
     // 4. Apply semi-implicit time integration in k-space:
     //    ψ(t+dt) = exp(L·dt)·ψ(t) + [(exp(L·dt)-1)/L]·∇²N(ψ)
@@ -139,7 +139,7 @@ public:
     }
 
     // 5. Transform back to real space
-    fft::backward(fft, m_density_k, m_density);
+    fft.backward(m_density_k, m_density);
   }
 
   /**
@@ -164,12 +164,12 @@ private:
    */
   void precompute_operators() {
     const FFT &fft = get_fft();
-    const World &world = get_world();
+    const World &w = pfc::get_world(*this);
     auto outbox = fft::get_outbox(fft);
 
     // Wave vector scaling factors
-    auto spacing = world::get_spacing(world);
-    auto size = world::get_size(world);
+    auto spacing = world::get_spacing(w);
+    auto size = world::get_size(w);
     double kx_scale = 2.0 * M_PI / (spacing[0] * size[0]);
     double ky_scale = 2.0 * M_PI / (spacing[1] * size[1]);
     double kz_scale = 2.0 * M_PI / (spacing[2] * size[2]);
@@ -247,9 +247,8 @@ int main(int argc, char **argv) {
     }
 
     // Create 128³ computational domain with unit spacing
-    auto world = world::create(Int3{128, 128, 128}, // Grid dimensions
-                               Real3{1.0, 1.0, 1.0} // Physical spacing
-    );
+    auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
 
     if (rank == 0) {
       std::cout << "    Domain: " << world::get_size(world, 0) << " x "
@@ -293,12 +292,11 @@ int main(int argc, char **argv) {
       std::cout << "\n[3] Initializing FFT (HeFFTe backend)...\n";
     }
 
-    auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
+    auto fft = fft::create(decomp);
 
     if (rank == 0) {
-      std::cout << "    Input box (real): " << fft::size_inbox(*fft) << " points\n";
-      std::cout << "    Output box (complex): " << fft::size_outbox(*fft)
-                << " points\n";
+      std::cout << "    Input box (real): " << fft.size_inbox() << " points\n";
+      std::cout << "    Output box (complex): " << fft.size_outbox() << " points\n";
     }
 
     //======================================================================
@@ -309,7 +307,7 @@ int main(int argc, char **argv) {
     }
 
     double epsilon = -0.25; // Undercooling parameter (ε < 0 favors solid)
-    PFCModel model(world, std::move(fft), epsilon);
+    PFCModel model(fft, world, epsilon);
 
     double dt = 0.5; // Time step
     initialize(model, dt);
@@ -374,15 +372,19 @@ int main(int argc, char **argv) {
 
     double t_start = 0.0;
     double t_end = 100.0;
-    int save_interval = 10; // Save every 10 steps
+    int save_interval = 10; // Save every 10 steps (mapped to saveat in time units)
+    const double saveat = static_cast<double>(save_interval) * dt;
+    Time time({t_start, t_end, dt}, saveat);
 
-    Time time(t_start, t_end, dt, save_interval);
+    const int total_steps_approx =
+        static_cast<int>(std::ceil((t_end - t_start) / dt));
 
     if (rank == 0) {
       std::cout << "    Time span: [" << t_start << ", " << t_end << "]\n";
       std::cout << "    Time step: " << dt << "\n";
-      std::cout << "    Total steps: " << time.get_nsteps() << "\n";
-      std::cout << "    Save interval: " << save_interval << " steps\n";
+      std::cout << "    Approx. steps: " << total_steps_approx << "\n";
+      std::cout << "    Save interval: " << save_interval << " steps (saveat = " << saveat
+                << " time units)\n";
     }
 
     //======================================================================
@@ -390,14 +392,6 @@ int main(int argc, char **argv) {
     //======================================================================
     if (rank == 0) {
       std::cout << "\n[8] Setting up output writers...\n";
-    }
-
-    BinaryWriter writer("pfc_output_{:06d}.bin");
-    writer.set_domain(world::get_size(get_world(model)),
-                      fft::get_inbox(get_fft(model)).size,
-                      fft::get_inbox(get_fft(model)).low);
-
-    if (rank == 0) {
       std::cout << "    Output format: Binary (MPI-IO)\n";
       std::cout << "    Output pattern: pfc_output_NNNNNN.bin\n";
     }
@@ -410,9 +404,8 @@ int main(int argc, char **argv) {
     }
 
     Simulator simulator(model, time);
-
-    // Register output writer
-    simulator.add_results_writer(writer, "density");
+    simulator.add_results_writer("density",
+                                 std::make_unique<BinaryWriter>("pfc_output_{:06d}.bin"));
 
     if (rank == 0) {
       std::cout << "    Simulator configured with model and time stepper\n";
@@ -427,29 +420,13 @@ int main(int argc, char **argv) {
       std::cout << std::string(70, '-') << "\n";
     }
 
-    // Write initial state
-    writer.write(0, get_real_field(model, "density"));
-    if (rank == 0) {
-      std::cout << "    Saved initial state: pfc_output_000000.bin\n";
-    }
-
-    // Time integration loop
-    int step = 0;
-    while (!time.done()) {
-      // Advance one time step
+    while (!simulator.done()) {
       simulator.step();
-
-      // Output progress
-      if (time.do_save()) {
-        if (rank == 0) {
-          printf("    Step %4d / %4d  |  t = %6.2f  |  Saving output...\n",
-                 time.get_increment(), time.get_nsteps(), time.get_current());
-        }
+      Time &clock = simulator.get_time();
+      if (rank == 0 && clock.do_save()) {
+        printf("    Step %4d / ~%4d  |  t = %6.2f  |  Saving output...\n",
+               clock.get_increment(), total_steps_approx, clock.get_current());
       }
-
-      // Advance time
-      time.next();
-      step++;
     }
 
     if (rank == 0) {
@@ -518,7 +495,7 @@ int main(int argc, char **argv) {
                    "     ║\n";
       std::cout << "║  ✓ Simulator orchestrated time loop                           "
                    "     ║\n";
-      std::cout << "║  ✓ " << time.get_nsteps()
+      std::cout << "║  ✓ " << simulator.get_time().get_increment()
                 << " time steps completed                                   ║\n";
       std::cout << "║                                                               "
                    "     ║\n";

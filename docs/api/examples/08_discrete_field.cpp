@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -77,7 +77,7 @@ void demo_creation_and_initialization() {
 
   // Initialize with mathematical function - Method 1: 3D lambda
   std::cout << "Method 1: Initialize with 3D function f(x,y,z)\n";
-  field.apply([](double x, double y, double z) {
+  field.apply([](double x, double y, double /*z*/) {
     return std::sin(2.0 * M_PI * x / 16.0) * std::cos(2.0 * M_PI * y / 16.0);
   });
 
@@ -330,7 +330,7 @@ void demo_complex_fields() {
 
   // Initialize real field with sine wave
   real_field.apply(
-      [](double x, double y, double z) { return std::sin(2.0 * M_PI * x / 64.0); });
+      [](double x, double /*y*/, double /*z*/) { return std::sin(2.0 * M_PI * x / 64.0); });
 
   // Simulate k-space operation: low-pass filter
   kspace_field.apply([](double kx, double ky, double kz) {

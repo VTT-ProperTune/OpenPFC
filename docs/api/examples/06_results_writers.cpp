@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -46,9 +46,9 @@ RealField create_test_field(const World &world, double time) {
         double y = origin[1] + j * spacing[1];
         double z = origin[2] + k * spacing[2];
 
-        // Sine wave pattern that evolves with time
-        field[idx] =
-            std::sin(2.0 * M_PI * x) * std::cos(2.0 * M_PI * y) * std::sin(time);
+        // Sine wave pattern that evolves with time (uses x, y, z)
+        field[idx] = std::sin(2.0 * M_PI * x) * std::cos(2.0 * M_PI * y) *
+                     std::cos(2.0 * M_PI * z) * std::sin(time);
       }
     }
   }
@@ -126,7 +126,8 @@ void scenario_basic_binary() {
   }
 
   // Create domain
-  auto world = world::create({64, 64, 64}, {1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, size);
   auto local_world = decomposition::get_subworld(decomp, rank);
 
@@ -181,7 +182,8 @@ void scenario_multiple_writers() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create domain
-  auto world = world::create({128, 128, 128}, {1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, size);
   auto local_world = decomposition::get_subworld(decomp, rank);
 
@@ -249,7 +251,8 @@ void scenario_checkpoint_restart() {
   }
 
   // Create domain
-  auto world = world::create({64, 64, 64}, {1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, size);
   auto local_world = decomposition::get_subworld(decomp, rank);
 

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <algorithm>
@@ -121,11 +121,11 @@ void VTKWriter::write_pvti_file(int increment) const {
   for (int r = 0; r < current_size; ++r) {
     // Build piece filename deterministically to avoid relying on cached m_num_ranks
     std::string base = utils::format_with_number(m_filename, increment);
-    size_t ext_pos = base.find_last_of('.');
+    size_t base_ext_pos = base.find_last_of('.');
     std::string name =
-        (ext_pos != std::string::npos) ? base.substr(0, ext_pos) : base;
+        (base_ext_pos != std::string::npos) ? base.substr(0, base_ext_pos) : base;
     std::string ext =
-        (ext_pos != std::string::npos) ? base.substr(ext_pos) : std::string();
+        (base_ext_pos != std::string::npos) ? base.substr(base_ext_pos) : std::string();
     std::string piece_filename = name + "_" + std::to_string(r) + ext;
     file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << std::endl;
   }
