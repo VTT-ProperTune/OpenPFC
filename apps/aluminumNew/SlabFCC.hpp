@@ -190,7 +190,7 @@ void from_json(const json &params, SlabFCC &ic) {
   }
   if (!params.contains("fluctuation") || !params["fluctuation"].is_number()) {
     throw std::invalid_argument(
-        "Reading SlabFCC failed: missing or invalid 'amplitude' field.");
+        "Reading SlabFCC failed: missing or invalid 'fluctuation' field.");
   }
   if (!params.contains("rho") || !params["rho"].is_number()) {
     throw std::invalid_argument(
