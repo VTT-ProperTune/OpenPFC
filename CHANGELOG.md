@@ -29,6 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - **Decomposition**: Halo loops aligned with **inclusive** `World` bounds so face exchanges match the intended domain.
 - **MPI timer**: `pfc::mpi::timer::toc()` no longer reads uninitialized state when called before `tic()`; misuse now throws `std::logic_error`, and `reset()` clears an in-progress lap.
+- **Logging**: If `gmtime_r` / `gmtime_s` fails, log lines use a `<time-unavailable>` placeholder instead of formatting an uninitialized `tm`.
 
 ### Removed
 

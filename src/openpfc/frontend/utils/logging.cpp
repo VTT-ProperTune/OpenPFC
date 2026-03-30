@@ -29,14 +29,19 @@ void log(const Logger &logger, LogLevel level, std::string_view message) {
   std::time_t t = std::chrono::system_clock::to_time_t(now);
   std::tm tm{};
 #if defined(_WIN32)
-  gmtime_s(&tm, &t);
+  const bool utc_ok = (gmtime_s(&tm, &t) == 0);
 #else
-  gmtime_r(&t, &tm);
+  const bool utc_ok = (gmtime_r(&t, &tm) != nullptr);
 #endif
 
   std::ostringstream oss;
-  oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ") << " [" << to_string(level)
-      << "] ";
+  if (utc_ok) {
+    oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+  } else {
+    // gmtime_s / gmtime_r can fail for unrepresentable instants
+    oss << "<time-unavailable>";
+  }
+  oss << " [" << to_string(level) << "] ";
   if (logger.m_rank >= 0) {
     oss << "rank " << logger.m_rank << ": ";
   }
