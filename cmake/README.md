@@ -51,9 +51,9 @@ This directory contains modular CMake configuration files that organize the buil
    - toml++ include directory setup
 
 6. **BuildOptions.cmake**
-   - Build options for apps, examples, tests, benchmarks
-   - Catch2 finding and test setup
-   - Subdirectory inclusion (apps, examples, tests)
+   - Options **`OpenPFC_BUILD_APPS`**, **`OpenPFC_BUILD_EXAMPLES`**, **`OpenPFC_BUILD_TESTS`** (and related); **`add_subdirectory`** for **apps**, **examples**, and **tests** when enabled
+   - **`OpenPFC_BUILD_BENCHMARKS`** (default **OFF**) is defined here but only affects sources under **`tests/benchmarks/`** via **`tests/CMakeLists.txt`** (see **`tests/benchmarks/README.md`**)
+   - Catch2 finding and **`enable_testing()`** when tests are built
 
 7. **CodeCoverage.cmake**
    - Coverage tool detection (lcov, genhtml, gcov)
