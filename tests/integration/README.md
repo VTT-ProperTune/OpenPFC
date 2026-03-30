@@ -19,7 +19,7 @@ This directory contains integration tests for OpenPFC, focused on validating end
 - **convergence_studies**: Heuristic convergence checks for temporal resolution.
 
 ## Tags
-All tests are tagged with `[integration]` and a category-specific tag (e.g., `[complete]`, `[io]`, `[mpi]`, `[gpu]`, `[convergence]`). CI may skip tests with `[MPI]` or backend-specific tags.
+All tests are tagged with `[integration]` and a category-specific tag (e.g., `[complete]`, `[io]`, `[mpi]`, `[gpu]`, `[convergence]`). Multi-rank MPI suites are registered as separate CTest targets when **`OpenPFC_RUN_MPI_SUITES=ON`** at configure time (as in **`.github/workflows/ci.yml`**). GPU/CUDA cases require **`OpenPFC_ENABLE_CUDA=ON`** at build time.
 
 ## Running
 Build and run the test suite:
@@ -27,7 +27,9 @@ Build and run the test suite:
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
 cmake --build build
-cd build && ctest --output-on-failure
+cd build && ctest --output-on-failure -j2 \
+  --exclude-regex "benchmark" \
+  --timeout 300
 ```
 
 Run only integration tests:
