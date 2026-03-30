@@ -129,6 +129,11 @@ void VTKWriter::write_pvti_file(int increment) const {
 
   file << R"(  </PImageData>)" << std::endl;
   file << R"(</VTKFile>)" << std::endl;
+  if (!file.good()) {
+    const Logger lg{LogLevel::Error, /*rank*/ 0};
+    log_error(lg, std::string("Failed writing PVTI file: ") + pvti_filename);
+    MPI_Abort(m_comm, 1);
+  }
 }
 
 MPI_Status VTKWriter::write(int increment, const RealField &data) {
@@ -155,6 +160,11 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
   file << R"(  </AppendedData>)" << std::endl;
   file << R"(</VTKFile>)" << std::endl;
   file.close();
+  if (!file.good()) {
+    const Logger lg{LogLevel::Error, m_rank};
+    log_error(lg, std::string("Failed writing VTK file: ") + filename);
+    MPI_Abort(m_comm, 1);
+  }
 
   // Synchronize all ranks before writing master file
   MPI_Barrier(m_comm);
