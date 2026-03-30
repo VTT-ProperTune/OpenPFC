@@ -20,7 +20,7 @@ jobs:
   # ============================================================================
   code-quality:
     name: Code Quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
   # ============================================================================
   clang-tidy:
     name: Clang-Tidy Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,6 +55,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
           sudo apt-get install -y \
             cmake \
@@ -72,7 +75,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/opt/heffte/2.4.1-cpu
-          key: heffte-2.4.1-cpu-ubuntu-tidy-clang-tidy
+          key: heffte-2.4.1-cpu-ubuntu-24.04-tidy-clang-tidy
 
       - name: Build and install HeFFTe (clang-tidy)
         if: steps.cache-heffte-tidy.outputs.cache-hit != 'true'
@@ -127,7 +130,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
+        os: [ubuntu-24.04]
         compiler: [gcc-11, gcc-13, clang-14, clang-16]
         build_type: [Debug, Release]
         exclude:
@@ -158,16 +161,17 @@ jobs:
       - name: Install dependencies (Ubuntu)
         run: |
           sudo apt-get update
-          # Add LLVM repository for clang-16
-          if [[ "${{ matrix.compiler }}" == "clang-16" ]]; then
+          # LLVM apt (noble): Clang 14/16 are not the default toolchain on 24.04
+          if [[ "${{ matrix.compiler }}" == "clang-14" || "${{ matrix.compiler }}" == "clang-16" ]]; then
             wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc
-            echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-            sudo apt-get update
           fi
-          # Add toolchain PPA for gcc-13 if needed (Ubuntu 22.04 may not have it by default)
-          if [[ "${{ matrix.compiler }}" == "gcc-13" ]]; then
-            sudo apt-get install -y software-properties-common
-            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          if [[ "${{ matrix.compiler }}" == "clang-14" ]]; then
+            echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-14 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          fi
+          if [[ "${{ matrix.compiler }}" == "clang-16" ]]; then
+            echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          fi
+          if [[ "${{ matrix.compiler }}" == "clang-14" || "${{ matrix.compiler }}" == "clang-16" ]]; then
             sudo apt-get update
           fi
           sudo apt-get install -y \
@@ -254,7 +258,7 @@ jobs:
     name: CI Status
     if: always()
     needs: [code-quality, clang-tidy, build-and-test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check all jobs status
         run: |

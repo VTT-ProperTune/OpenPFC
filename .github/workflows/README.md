@@ -25,7 +25,7 @@ This directory contains CI/CD workflows for the OpenPFC project.
    - Static analysis with `run-clang-tidy` (or per-file fallback)
 
 3. **CMake Build Matrix**
-   - **OS:** Ubuntu 22.04, Ubuntu 20.04
+   - **OS:** Ubuntu 24.04 LTS
    - **Compilers:** GCC 11, GCC 13, Clang 14, Clang 16
    - **Build Types:** Debug, Release
    - Caches HeFFTe installation
@@ -178,7 +178,7 @@ act push
 act -j build-and-test
 
 # Run with specific matrix combination
-act -j build-and-test --matrix os:ubuntu-22.04 --matrix compiler:gcc-11
+act -j build-and-test --matrix os:ubuntu-24.04 --matrix compiler:gcc-11
 ```
 
 ---

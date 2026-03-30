@@ -27,7 +27,7 @@ jobs:
   # ============================================================================
   build-docs:
     name: Build Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/opt/heffte/2.4.1-cpu
-          key: heffte-2.4.1-cpu-ubuntu-22.04-docs
+          key: heffte-2.4.1-cpu-ubuntu-24.04-docs
 
       - name: Build HeFFTe (if not cached)
         if: steps.cache-heffte.outputs.cache-hit != 'true'
@@ -105,8 +105,8 @@ jobs:
     name: Deploy to GitHub Pages
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: build-docs
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-24.04
+
     permissions:
       contents: read
       pages: write

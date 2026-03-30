@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Changed
+
+- **CI**: GitHub Actions runners pinned to **Ubuntu 24.04 LTS** (main matrix, coverage, docs, clang-tidy, code quality). LLVM apt repos use **noble** for Clang 14/16; removed the gcc-13 toolchain PPA (not needed on 24.04).
+
 ### Removed
 
 - **Nix / flake support**: Removed `flake.nix`, `flake.lock`, and the `nix/` packaging tree; dropped the Nix job from CI. Use CMake and `INSTALL.md` for builds.
