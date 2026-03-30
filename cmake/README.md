@@ -30,9 +30,13 @@ This directory contains modular CMake configuration files that organize the buil
    - CUDA architecture settings
    - CUDA availability checks
 
+4. **HipSupport.cmake**
+   - HIP (ROCm) detection and configuration
+   - HIP availability checks (pairs with CUDA for optional GPU backends)
+
 ### Dependency Management
 
-4. **Dependencies.cmake**
+5. **Dependencies.cmake**
    - MPI (required)
    - HeFFTe (with CUDA backend verification); **`OpenPFCHeffteHints.cmake`** probes common install prefixes (`$HOME/opt/heffte`, `/opt`, `/share/apps`, Spack `EBROOTHEFFTE`, …) before failing
    - nlohmann_json (required)
@@ -42,7 +46,7 @@ This directory contains modular CMake configuration files that organize the buil
 
 ### Library and Build Configuration
 
-5. **LibraryConfiguration.cmake**
+6. **LibraryConfiguration.cmake**
    - Main `openpfc` library target creation
    - Library properties and versioning
    - Include directories
@@ -50,32 +54,32 @@ This directory contains modular CMake configuration files that organize the buil
    - GPU kernel library (when CUDA is enabled)
    - toml++ include directory setup
 
-6. **BuildOptions.cmake**
+7. **BuildOptions.cmake**
    - Options **`OpenPFC_BUILD_APPS`**, **`OpenPFC_BUILD_EXAMPLES`**, **`OpenPFC_BUILD_TESTS`** (and related); **`add_subdirectory`** for **apps**, **examples**, and **tests** when enabled
    - **`OpenPFC_BUILD_BENCHMARKS`** (default **OFF**) is defined here but only affects sources under **`tests/benchmarks/`** via **`tests/CMakeLists.txt`** (see **`tests/benchmarks/README.md`**)
    - Catch2 finding and **`enable_testing()`** when tests are built
 
-7. **CodeCoverage.cmake**
+8. **CodeCoverage.cmake**
    - Coverage tool detection (lcov, genhtml, gcov)
    - Coverage flags for the library
    - Custom targets: `coverage` and `coverage-clean`
 
 ### Installation and Packaging
 
-8. **Installation.cmake**
+9. **Installation.cmake**
    - Header installation
    - Library installation
    - GPU kernel library installation (if enabled)
    - nlohmann_json header installation (when built from source)
 
-9. **PackageConfig.cmake**
+10. **PackageConfig.cmake**
    - CMake package configuration file generation
    - Export target configuration
    - Version file generation
 
 ### Build Summary
 
-10. **BuildSummary.cmake**
+11. **BuildSummary.cmake**
     - Final build configuration summary
     - Displays all options, dependencies, and settings
 
@@ -90,7 +94,9 @@ CompilerSettings.cmake
   ↓
 CudaSupport.cmake
   ↓
-Dependencies.cmake (may check CUDA availability)
+HipSupport.cmake
+  ↓
+Dependencies.cmake (may check CUDA/HIP availability)
   ↓
 LibraryConfiguration.cmake (creates openpfc target)
   ↓
@@ -108,7 +114,7 @@ BuildSummary.cmake
 ## Benefits of This Structure
 
 1. **Maintainability**: Each module has a single, clear responsibility
-2. **Readability**: The root CMakeLists.txt is now ~75 lines instead of 542
+2. **Readability**: The root CMakeLists.txt is now ~90 lines instead of 542
 3. **Modularity**: Easy to modify specific aspects without touching other parts
 4. **Testability**: Individual modules can be tested in isolation
 5. **Documentation**: Each module is self-contained and easier to document
