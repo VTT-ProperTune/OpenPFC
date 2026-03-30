@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -19,17 +19,15 @@
  *
  * Typical usage:
  * @code
- * // Create FFT for decomposed domain
- * pfc::decomposition::Decomposition decomp(world, MPI_COMM_WORLD);
- * pfc::FFT fft(decomp, pfc::fft::FFTBackend::Default);
+ * pfc::World world = pfc::world::create({128, 128, 128});
+ * auto decomp = pfc::decomposition::create(world, pfc::mpi::get_size());
+ * pfc::FFT fft = pfc::fft::create(decomp);
  *
- * // Transform to Fourier space
- * std::vector<double> real_data = ...;
- * std::vector<std::complex<double>> fourier_data = fft.forward(real_data);
- *
- * // Compute derivatives in k-space, then transform back
+ * std::vector<double> real_data(fft.size_inbox());
+ * std::vector<std::complex<double>> fourier_data(fft.size_outbox());
+ * fft.forward(real_data, fourier_data);
  * // ... modify fourier_data ...
- * std::vector<double> result = fft.backward(fourier_data);
+ * fft.backward(fourier_data, real_data);
  * @endcode
  *
  * This file is part of the Core Infrastructure module, providing the foundation
@@ -149,7 +147,7 @@ struct IFFT {
  * @code
  * // Setup
  * auto world = world::create({256, 256, 256});
- * auto decomp = Decomposition(world, MPI_COMM_WORLD);
+ * auto decomp = decomposition::create(world, mpi::get_size());
  * auto fft = fft::create(decomp);
  *
  * // Allocate fields

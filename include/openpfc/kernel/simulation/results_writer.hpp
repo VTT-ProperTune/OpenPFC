@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -109,8 +109,9 @@ namespace pfc {
  * using namespace pfc;
  *
  * // Create decomposed domain
- * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
- * auto decomp = decomposition::create(world, mpi_size);
+ * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
+ * auto decomp = decomposition::create(world, mpi::get_size());
  * auto local_world = decomposition::get_subworld(decomp, mpi_rank);
  *
  * // Create field and writer

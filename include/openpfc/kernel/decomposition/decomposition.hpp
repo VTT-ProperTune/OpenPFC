@@ -20,14 +20,9 @@
  * Typical usage:
  * @code
  * pfc::World global_world = pfc::world::create({128, 128, 128});
- * pfc::decomposition::Decomposition decomp(global_world, MPI_COMM_WORLD);
- *
- * // Access local subdomain
- * pfc::World local_world = pfc::get_world(decomp);
- *
- * // Get FFT inbox/outbox for spectral operations
- * auto inbox = decomp.get_inbox();
- * auto outbox = decomp.get_outbox();
+ * auto decomp = pfc::decomposition::create(global_world, pfc::mpi::get_size());
+ * const pfc::World &local_world =
+ *     pfc::decomposition::get_subworld(decomp, pfc::mpi::get_rank());
  * @endcode
  *
  * This file is part of the Core Infrastructure module, providing parallel
@@ -214,7 +209,8 @@ struct Decomposition {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, {2, 2, 1});
  *
  * auto global = decomposition::get_global_world(decomp);
@@ -254,13 +250,13 @@ inline const auto &get_world(const Decomposition &decomposition) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create({128, 128, 128}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, {4, 2, 1});
  *
  * auto grid = decomposition::get_grid(decomp);
- * std::cout << "Grid: " << grid[0] << "×" << grid[1] << "×" << grid[2] << "\n";  //
- * 4×2×1 std::cout << "Total domains: " << (grid[0] * grid[1] * grid[2]) << "\n";  //
- * 8
+ * std::cout << "Grid: " << grid[0] << "×" << grid[1] << "×" << grid[2] << "\n";
+ * std::cout << "Total domains: " << (grid[0] * grid[1] * grid[2]) << "\n";
  * ```
  *
  * @note The grid pattern affects communication overhead. Minimize surface area
@@ -286,7 +282,8 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create({100, 100, 100}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, {2, 2, 1});  // 4 subdomains
  *
  * auto subworlds = decomposition::get_subworlds(decomp);
@@ -323,7 +320,8 @@ inline const auto &get_subworlds(const Decomposition &decomposition) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create({200, 200, 200}, {0.5, 0.5, 0.5});
+ * auto world = world::create(GridSize({200, 200, 200}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({0.5, 0.5, 0.5}));
  * auto decomp = decomposition::create(world, 4);  // 4 subdomains (auto grid)
  *
  * int rank;
@@ -361,7 +359,8 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create({128, 128, 128}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, {2, 2, 1});
  *
  * // Each rank gets 64×64×128 subdomain
@@ -374,7 +373,8 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, {1, 1, 8});  // Split only in Z
  *
  * // Each rank gets 256×256×32 slab
@@ -411,7 +411,8 @@ inline auto create(const World &world, const Int3 &grid) noexcept {
  * int size;
  * MPI_Comm_size(MPI_COMM_WORLD, &size);  // e.g., size = 16
  *
- * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, size);
  *
  * auto grid = decomposition::get_grid(decomp);
@@ -425,7 +426,8 @@ inline auto create(const World &world, const Int3 &grid) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create({200, 100, 50}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({200, 100, 50}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, 8);
  *
  * auto grid = decomposition::get_grid(decomp);
@@ -462,7 +464,8 @@ inline auto create(const World &world, const int &nparts) noexcept {
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create({128, 128, 128}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, {2, 2, 1});
  *
  * int num = decomposition::get_num_domains(decomp);
@@ -480,7 +483,8 @@ inline auto create(const World &world, const int &nparts) noexcept {
  * int mpi_size;
  * MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
  *
- * auto world = world::create({256, 256, 256}, {1.0, 1.0, 1.0});
+ * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, mpi_size);
  *
  * int num_domains = decomposition::get_num_domains(decomp);

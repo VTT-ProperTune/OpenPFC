@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -54,6 +54,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/mpi/mpi.hpp>
 #include <vector>
 
 using namespace pfc;
@@ -303,7 +304,7 @@ TEST_CASE("Diffusion model - MPI consistency", "[integration][diffusion][mpi]") 
   // LLM: Uses MPI_COMM_WORLD so decomposition depends on number of processes
   auto world = world::create(GridSize({Nx, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
                              GridSpacing({dx, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, MPI_COMM_WORLD);
+  auto decomp = decomposition::create(world, mpi::get_size());
   auto fft = fft::create(decomp);
 
   DiffusionModel model(fft, world);

@@ -130,7 +130,7 @@ public:
    * @example
    * ```cpp
    * auto world = world::create({256, 256, 256});
-   * auto decomp = decomposition::create(world, MPI_COMM_WORLD);
+   * auto decomp = decomposition::create(world, mpi::get_size());
    * auto fft = fft::create(decomp);
    *
    * MyModel model(fft, world);  // FFT required at construction
