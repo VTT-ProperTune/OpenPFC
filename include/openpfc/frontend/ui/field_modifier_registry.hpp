@@ -142,8 +142,8 @@ template <typename T> void register_field_modifier(const std::string &type) {
  * specified type string from the FieldModifierRegistry and uses it to create
  * the field modifier instance.
  */
-std::unique_ptr<FieldModifier> create_field_modifier(const std::string &type,
-                                                     const json &params) {
+inline std::unique_ptr<FieldModifier>
+create_field_modifier(const std::string &type, const json &params) {
   return FieldModifierRegistry::get_instance().create_modifier(type, params);
 }
 
