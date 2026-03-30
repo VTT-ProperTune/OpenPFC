@@ -134,20 +134,40 @@
                 ]
             }
         },
-        "detailed_timing": {
+        "profiling": {
             "type": "object",
             "properties": {
                 "enabled": {
                     "type": "boolean"
                 },
-                "print": {
+                "format": {
+                    "type": "string",
+                    "enum": [
+                        "json",
+                        "hdf5",
+                        "csv",
+                        "both",
+                        "csv_hdf5",
+                        "csv+hdf5"
+                    ]
+                },
+                "output": {
+                    "type": "string",
+                    "description": "Base path without extension; extensions depend on format (schema v2 profiling export)"
+                },
+                "memory_samples": {
                     "type": "boolean"
                 },
-                "write": {
-                    "type": "boolean"
+                "print_report": {
+                    "type": "boolean",
+                    "description": "If true, rank 0 prints a TimerOutputs-style table after export (this rank's frames only)"
                 },
-                "filename": {
-                    "type": "string"
+                "regions": {
+                    "type": "array",
+                    "description": "Extra profiling region paths (slash-separated); parent prefixes are added automatically. Must match on all MPI ranks.",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

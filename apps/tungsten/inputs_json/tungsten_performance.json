@@ -59,11 +59,11 @@
             "rho_seed": -0.047
         }
     ],
-    "detailed_timing": {
+    "profiling": {
         "enabled": true,
-        "print": true,
-        "write": true,
-        "filename": "timing_256.bin"
+        "format": "both",
+        "output": "timing_256_profile",
+        "memory_samples": false
     },
     "plan_options": {
         "backend": "fftw",
