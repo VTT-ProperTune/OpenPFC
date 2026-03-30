@@ -40,12 +40,25 @@ cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --target openpfc-tests
 ```
 
-### Run All Tests
+### Run with CTest (matches CI and coverage workflows)
+
+CMake registers tests in `tests/CMakeLists.txt` (e.g. **`openpfc-all-tests`** with **`~[MPI]`** for the default non-MPI sweep; MPI multi-rank suites appear when **`OpenPFC_RUN_MPI_SUITES=ON`** at configure time). This is what **`.github/workflows/ci.yml`** and **`.github/workflows/coverage.yml`** run:
+
+```bash
+cd build
+ctest --output-on-failure -j2 \
+  --exclude-regex "benchmark" \
+  --timeout 300
+```
+
+### Run the Catch2 executable directly
 
 ```bash
 cd build
 ./tests/openpfc-tests
 ```
+
+**Note:** Running **`openpfc-tests` with no extra arguments** is not guaranteed to match CTest’s registered commands; use tags (e.g. **`~[MPI]`**) or **`ctest`** above to align with automation.
 
 ### Run Tests with Different Reporters
 
@@ -169,8 +182,10 @@ Use these to avoid duplicating test infrastructure across test files.
 Tests are built with coverage instrumentation enabled. To generate coverage reports:
 
 ```bash
-# Run tests
-cd build && ./tests/openpfc-tests
+# Run tests (same CTest invocation as CI coverage job)
+cd build && ctest --output-on-failure -j2 \
+  --exclude-regex "benchmark" \
+  --timeout 300
 
 # Generate coverage report
 lcov --capture --directory . --output-file coverage.info
@@ -225,4 +240,4 @@ Current test suite status:
 
 ---
 
-**Last Updated**: 2025-11-21
+**Last Updated**: 2026-03-30
