@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <iomanip>
 #include <openpfc/frontend/io/vtk_writer.hpp>
@@ -67,12 +68,14 @@ void VTKWriter::write_vti_header(std::ofstream &file,
 }
 
 void VTKWriter::write_vti_data(std::ofstream &file, const RealField &data) const {
-  // Write data size (UInt64)
-  size_t data_size = data.size() * sizeof(double);
-  file.write(reinterpret_cast<const char *>(&data_size), sizeof(size_t));
+  // VTK header_type="UInt64": length prefix is always 8 bytes (see write_vti_header).
+  const std::uint64_t appended_bytes =
+      static_cast<std::uint64_t>(data.size()) * sizeof(double);
+  file.write(reinterpret_cast<const char *>(&appended_bytes),
+             sizeof(appended_bytes));
 
-  // Write actual data
-  file.write(reinterpret_cast<const char *>(data.data()), data_size);
+  const size_t payload_bytes = data.size() * sizeof(double);
+  file.write(reinterpret_cast<const char *>(data.data()), payload_bytes);
 }
 
 void VTKWriter::write_pvti_file(int increment) const {
