@@ -65,6 +65,7 @@ Code that defines data structures, execution abstraction, and simulation logic. 
 | **kernel/fft** | FFT interface and k-space helpers (fft.hpp, fft_layout.hpp, kspace.hpp). No backend-specific FFT code. |
 | **kernel/simulation** | Model, Simulator, Time, FieldModifier, ResultsWriter interface, boundary_conditions, initial_conditions, binary_reader. Optional forward declarations: simulation_fwd.hpp. |
 | **kernel/mpi** | MPI abstraction: communicator, environment, timer, worker, mpi.hpp. |
+| **kernel/profiling** | **`ProfilingMetricCatalog`**: ordered `/`-separated paths (defaults **`communication`**, **`fft`**, **`gradient`** plus config **`regions`**, or **`from_paths_only`**; **`ensure_path`** registers paths on first use). **`ProfilingSession`**: per-step frames (metadata **`wall_step`**, optional RSS/heaps), dense inclusive/exclusive seconds per path; thread-local **`ProfilingContextScope`**, **`record_time`**; **`ProfilingTimedScope`**, **`ProfilingManualScope`** (explicit **stop** / **restart**), macros **`OPENPFC_PROFILE`** / **`PFC_PROFILE_SCOPE`** when **`OpenPFC_PROFILING_LEVEL` > 0**. **`finalize_and_export`**: JSON, CSV, optional HDF5 (**`OpenPFC_ENABLE_HDF5`**); **`print_profiling_timer`**. Helpers: **`measure_barriered`**, **`reduce_max_to_root`**, **`format_bytes`**, RSS sampling. See **docs/performance_profiling.md**. |
 
 ### Runtime (backend-specific)
 
