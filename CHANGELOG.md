@@ -7,10 +7,27 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Added
+
+- **HeFFTe builds**: Optional vendoring of HeFFTe 2.4.1 via CMake FetchContent (`FetchHeffte.cmake`), HeFFTe discovery hints, and a pinned GCC 11 + OpenMPI toolchain preset for fixed cluster layouts (e.g. tohtori).
+- **HIP / AMD GPUs**: CMake HIP/ROCm detection, HeFFTe ROCm backend when HIP is enabled, rocFFT-backed `fft::create_hip`, and Tungsten on HIP (model, kernels, applications, scalability and VTK-focused tests).
+- **MPI halos**: `PersistentHaloExchanger` for six-face persistent MPI halo exchange (with integration coverage against the non-persistent path).
+- **Profiling**: Kernel `ProfilingSession` library, wiring through the JSON/TOML `App`, MPI path instrumentation, and documentation plus Tungsten input/schema alignment for performance runs.
+- **Kokkos-like API**: Experimental View types, execution and memory-space tags, `parallel_for` / `fence`, and host–device copy/mirror helpers for Kokkos-style structuring of numerical code.
+- **Field modifiers**: Multi-field initial/boundary condition targets on `FieldModifier`, with `Simulator` validating each name against `has_field`.
+- **GPU MPI**: CMake option `OpenPFC_MPI_CUDA_AWARE` for GPU-aware MPI when using CUDA.
+- **Documentation**: Developer style guide (`docs/styleguide.md`), separate CPU vs CUDA/HIP build layout guide (`docs/build_cpu_gpu.md`), LUMI-G build notes, and expanded performance/profiling material.
+
 ### Changed
 
-- **UI**: `list_valid_field_modifiers()` now reports types from `FieldModifierRegistry` (sorted) instead of a duplicated hard-coded list, so new registrations stay consistent with error messages.
-- **CI**: GitHub Actions runners pinned to **Ubuntu 24.04 LTS** (main matrix, coverage, docs, clang-tidy, code quality). LLVM apt repos use **noble** for Clang 14/16; removed the gcc-13 toolchain PPA (not needed on 24.04).
+- **Layout & includes**: Clearer **kernel / runtime / frontend** layering, consistent `<openpfc/...>` includes across the library and unit tests, and FFT layout helpers split into `fft_layout.hpp`.
+- **SparseVector / MPI**: Zero-copy face exchange and non-blocking MPI paths for sparse halo communication where applicable.
+- **CI**: GitHub Actions runners pinned to **Ubuntu 24.04 LTS** (main matrix, coverage, docs, clang-tidy, code quality). LLVM apt repos use **noble** for Clang 14/16; removed the gcc-13 toolchain PPA. The coverage job runs tests via **CTest** like the main workflow; workflow README aligned with HeFFTe 2.4.1.
+- **UI**: `list_valid_field_modifiers()` reads registered names from `FieldModifierRegistry` (sorted) instead of a duplicated literal list.
+
+### Fixed
+
+- **Decomposition**: Halo loops aligned with **inclusive** `World` bounds so face exchanges match the intended domain.
 
 ### Removed
 
