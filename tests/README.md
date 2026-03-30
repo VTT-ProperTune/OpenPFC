@@ -208,13 +208,12 @@ xdg-open coverage-html/index.html
 
 ## Continuous Integration
 
-All tests must pass before merging. The CI pipeline:
+All tests must pass before merging. At a high level (see [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)):
 
-1. Builds tests in Debug and Release modes
-2. Runs all unit tests
-3. Runs integration tests with multiple MPI ranks
-4. Checks code coverage (target: >90%)
-5. Runs static analysis and linting
+1. **Build matrix** on **Ubuntu 24.04 LTS**: **Debug** and **Release** with tests, examples, and apps; several **GCC** and **Clang** versions.
+2. **`ctest`** with **`--exclude-regex "benchmark"`** and timeouts: registered targets include **`openpfc-all-tests`** (Catch2 with **`~[MPI]`**) and, because **`OpenPFC_RUN_MPI_SUITES=ON`** in CI, **MPI multi-rank** suites from **`tests/CMakeLists.txt`**.
+3. **Coverage** workflow (also **`ctest`**, benchmarks excluded): line coverage toward **>90%** (Codecov / artifacts).
+4. **clang-format** + **REUSE** (license headers), and a **clang-tidy** job with **`compile_commands.json`**.
 
 ## Test Maintenance
 
