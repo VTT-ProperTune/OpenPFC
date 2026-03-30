@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Build options for apps, examples, tests, and benchmarks
+# Build options for apps, examples, and tests. OpenPFC_BUILD_BENCHMARKS
+# toggles sources under tests/benchmarks/ via tests/CMakeLists.txt.
 
 option(OpenPFC_BUILD_APPS "Build OpenPFC applications" ON)
 option(OpenPFC_BUILD_EXAMPLES "Build OpenPFC examples" ON)
