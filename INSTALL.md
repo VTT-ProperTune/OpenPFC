@@ -62,6 +62,12 @@ ln -sf build-cpu/compile_commands.json compile_commands.json
 
 To mirror CI static analysis locally (see `.github/workflows/ci.yml`), use the build directory that contains `compile_commands.json` as **`-p`** for `run-clang-tidy` / `clang-tidy`.
 
+### VS Code / Cursor on tohtori (CMake presets)
+
+**CMake Tools** often launches `cmake` without an interactive **Lmod** shell, so the generic **`dev-debug`** preset can pick the OS default compiler (e.g. GCC 8.x) and fail to find **OpenMPI**. On **tohtori**, select the **`tohtori-debug`** or **`tohtori-release`** configure preset in `CMakePresets.json`: they apply **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** plus `PATH` / `LD_LIBRARY_PATH` matching **`module show gcc/11.2.0`** and **`module show openmpi/4.1.1`**. If **`$HOME/opt/heffte/2.4.1-cpu`** exists, the toolchain prepends it to **`CMAKE_PREFIX_PATH`**. Those presets set **`OpenPFC_ENABLE_CODE_COVERAGE=OFF`** (many cluster images lack **`lcov`**); install **`lcov`** (e.g. **EPEL** + **`dnf install lcov`** on EL8) and reconfigure with **`-DOpenPFC_ENABLE_CODE_COVERAGE=ON`** if you want **`ninja coverage`**.
+
+Optionally create **`.vscode/settings.json`** with `"cmake.configurePreset": "tohtori-debug"` so the folder opens with the right preset (this repo **`.gitignore`** ignores `.vscode` unless you change that). For different paths after a cluster upgrade, use **`CMakeUserPresets.json`** at the repo root — see **`cmake/README.md`**.
+
 ## 2. Other dependencies
 
 - **CMake** 3.15+
@@ -74,6 +80,8 @@ To mirror CI static analysis locally (see `.github/workflows/ci.yml`), use the b
 ## 3. HeFFTe (required)
 
 Build and install [HeFFTe](https://github.com/icl-utk-edu/heffte) yourself, then point OpenPFC at it with **`CMAKE_PREFIX_PATH`** or **`Heffte_DIR`**.
+
+If you omit those, CMake still runs **`find_package(Heffte)`** first, then probes common install prefixes automatically (see **`cmake/OpenPFCHeffteHints.cmake`**: e.g. **`$HOME/opt/heffte/*`**, **`/opt/heffte/...`**, **`/share/apps/heffte/...`**, Spack **`EBROOTHEFFTE`**). The first prefix that contains **`lib64/cmake/Heffte`** or **`lib/cmake/Heffte`** wins. Add your site’s root to that file if needed.
 
 - **Releases:** <https://github.com/icl-utk-edu/heffte/releases> (recommended: **v2.4.1**)
 - **Upstream install guide:** <https://icl-utk-edu.github.io/heffte/md_doxygen_installation.html>

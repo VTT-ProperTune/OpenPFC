@@ -20,13 +20,19 @@ if(OpenPFC_ENABLE_HDF5)
   message(STATUS "✅ HDF5 enabled for profiling")
 endif()
 
-
-# HeFFTe (required). Prefer an installed package; optionally fetch when missing.
+# HeFFTe (required). Prefer CMAKE_PREFIX_PATH / Heffte_DIR; then well-known prefixes
+# (see cmake/OpenPFCHeffteHints.cmake); optionally FetchContent when still missing.
 option(OpenPFC_FETCH_HEFFTE
   "If no HeFFTe is found, download and build v2.4.1 with FetchContent (needs FFTW)"
   OFF)
 
 find_package(Heffte CONFIG QUIET)
+
+if(NOT Heffte_FOUND AND NOT TARGET Heffte::Heffte AND NOT TARGET Heffte AND NOT TARGET heffte)
+  include(cmake/OpenPFCHeffteHints.cmake)
+  openpfc_heffte_autodetect_from_hints()
+  find_package(Heffte CONFIG QUIET)
+endif()
 
 if(NOT Heffte_FOUND AND NOT TARGET Heffte::Heffte AND NOT TARGET Heffte AND NOT TARGET heffte)
   if(OpenPFC_FETCH_HEFFTE)
@@ -61,25 +67,41 @@ if(Heffte_FOUND)
 elseif(TARGET Heffte::Heffte OR TARGET Heffte OR TARGET heffte)
   message(STATUS "✅ HeFFTe targets available (FetchContent or add_subdirectory)")
 else()
+  include(cmake/OpenPFCHeffteHints.cmake)
+  openpfc_heffte_collect_hint_prefixes(_openpfc_heffte_hint_roots)
+  set(_openpfc_heffte_hint_lines "")
+  foreach(_p IN LISTS _openpfc_heffte_hint_roots)
+    string(APPEND _openpfc_heffte_hint_lines "    ${_p}\n")
+  endforeach()
   message(FATAL_ERROR
     "HeFFTe was not found (CMake package 'Heffte').\n"
     "\n"
-    "This is expected until HeFFTe is installed and CMake can see it. OpenPFC does not "
-    "vendor HeFFTe in the source tree.\n"
+    "OpenPFC searched for HeffteConfig.cmake under your CMAKE_PREFIX_PATH / Heffte_DIR first, "
+    "then under common install prefixes (e.g. \\$HOME/opt/heffte/..., /opt/heffte/..., "
+    "/share/apps/heffte/...). None contained a valid HeFFTe CMake package.\n"
     "\n"
-    "Do this (see INSTALL.md §3 and §5.1):\n"
-    "  • Build/install HeFFTe outside the repo, e.g. prefix $HOME/opt/heffte/2.4.1-cpu\n"
-    "  • Then: export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu:$CMAKE_PREFIX_PATH\n"
-    "    or: cmake ... -DHeffte_DIR=$HOME/opt/heffte/2.4.1-cpu/lib64/cmake/Heffte\n"
+    "Prefix roots considered for auto-detection (install tree must contain "
+    "lib64/cmake/Heffte or lib/cmake/Heffte):\n"
+    "${_openpfc_heffte_hint_lines}"
+    "\n"
+    "Install HeFFTe (recommended: v2.4.1) to a stable prefix — see INSTALL.md §3:\n"
+    "  • Example CPU install prefix:  \\$HOME/opt/heffte/2.4.1-cpu\n"
+    "  • Then either:\n"
+    "      export CMAKE_PREFIX_PATH=\\$HOME/opt/heffte/2.4.1-cpu:\\$CMAKE_PREFIX_PATH\n"
+    "    or pass:\n"
+    "      -DHeffte_DIR=\\$HOME/opt/heffte/2.4.1-cpu/lib64/cmake/Heffte\n"
     "    (use the directory that contains HeffteConfig.cmake; some sites use lib/cmake/Heffte)\n"
     "\n"
-    "Also ensure MPI is OpenMPI from your modules (INSTALL.md §1): module load gcc/... && "
-    "module load openmpi, then CC/CXX from that environment.\n"
+    "Ensure the same MPI toolchain as for OpenPFC (INSTALL.md §1): e.g. module load openmpi "
+    "before configuring.\n"
     "\n"
-    "Optional fallback: -DOpenPFC_FETCH_HEFFTE=ON (FFTW + MPI still required; FetchContent "
-    "uses build/_deps only, not the OpenPFC source tree).\n"
+    "If the install exists but uses a different path, set Heffte_DIR or CMAKE_PREFIX_PATH "
+    "explicitly, or add your site prefix to cmake/OpenPFCHeffteHints.cmake.\n"
     "\n"
-    "  → INSTALL.md §5.1 lists common configure failures (HeFFTe missing, mpi.h missing, stale cache).\n"
+    "Optional fallback: -DOpenPFC_FETCH_HEFFTE=ON (requires FFTW + MPI; downloads into "
+    "build/_deps only — see INSTALL.md).\n"
+    "\n"
+    "  → INSTALL.md §5.1 lists common configure failures (stale CMake cache, wrong MPI).\n"
   )
 endif()
 

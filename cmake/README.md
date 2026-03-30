@@ -34,7 +34,7 @@ This directory contains modular CMake configuration files that organize the buil
 
 4. **Dependencies.cmake**
    - MPI (required)
-   - HeFFTe (with CUDA backend verification)
+   - HeFFTe (with CUDA backend verification); **`OpenPFCHeffteHints.cmake`** probes common install prefixes (`$HOME/opt/heffte`, `/opt`, `/share/apps`, Spack `EBROOTHEFFTE`, …) before failing
    - nlohmann_json (required)
    - toml++ (via FindTomlPlusPlus.cmake)
    - Doxygen (optional, for documentation)
@@ -112,6 +112,30 @@ BuildSummary.cmake
 3. **Modularity**: Easy to modify specific aspects without touching other parts
 4. **Testability**: Individual modules can be tested in isolation
 5. **Documentation**: Each module is self-contained and easier to document
+
+## Cluster / VS Code (tohtori)
+
+On **tohtori**, **Cursor** / **VS Code CMake Tools** may configure without **`module load`**, so MPI and GCC 11 are missing from the environment. Use CMake presets **`tohtori-debug`** and **`tohtori-release`** in the root **`CMakePresets.json`**: they set **`CMAKE_TOOLCHAIN_FILE`** to **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** and preset **`environment`** entries for **`PATH`** and **`LD_LIBRARY_PATH`** (same effect as **`gcc/11.2.0`** + **`openmpi/4.1.1`** modules). Build directories are **`build/tohtori-debug`** and **`build/tohtori-release`**.
+
+The toolchain sets **`MPI_C_COMPILER`** / **`MPI_CXX_COMPILER`** to OpenMPI wrappers under **`/share/apps/OpenMPI/4.1.1`**. Presets **`tohtori-debug`** / **`tohtori-release`** set **`OpenPFC_ENABLE_CODE_COVERAGE=OFF`** so configure stays quiet on nodes without **`lcov`** (typical on RHEL); re-enable with **`-DOpenPFC_ENABLE_CODE_COVERAGE=ON`** after installing **`lcov`** (e.g. **EPEL** + **`dnf install lcov`** on EL8).
+
+If the site layout changes, run **`module show`** on the cluster and edit the toolchain, or add **`CMakeUserPresets.json`** (CMake ≥ 3.19) at the **source root** that inherits **`tohtori-debug`** and overrides **`cacheVariables.CMAKE_TOOLCHAIN_FILE`** to your own file:
+
+```json
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "my-tohtori",
+      "inherits": ["tohtori-debug"],
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/my-site.cmake"
+      }
+    }
+  ]
+}
+```
 
 ## Adding New Configuration
 
