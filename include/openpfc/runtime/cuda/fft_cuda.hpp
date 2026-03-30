@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -56,9 +56,10 @@ using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
  * @example
  * @code{.cpp}
  * #ifdef OpenPFC_ENABLE_CUDA
- *     auto decomp = Decomposition(world, MPI_COMM_WORLD);
- *     int rank_id = 0;  // Get MPI rank
- *     auto gpu_fft = fft::create_cuda(decomp, rank_id);
+ * #include <openpfc/kernel/mpi/mpi.hpp>
+ *     auto world = world::create({128, 128, 128});
+ *     auto decomp = decomposition::create(world, mpi::get_size());
+ *     auto gpu_fft = fft::create_cuda(decomp, mpi::get_rank());
  * #endif
  * @endcode
  */

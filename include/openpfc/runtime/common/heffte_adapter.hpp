@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -20,7 +20,9 @@
  * #include <openpfc/runtime/common/heffte_adapter.hpp>
  * #include <openpfc/kernel/data/world.hpp>
  *
- * pfc::World world({64, 64, 64}, {1.0, 1.0, 1.0});
+ * auto world = pfc::world::create(pfc::GridSize({64, 64, 64}),
+ *                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
  * auto heffte_box = pfc::to_heffte_box(world);
  * @endcode
  *

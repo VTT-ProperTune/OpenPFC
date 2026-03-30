@@ -112,21 +112,18 @@ namespace pfc {
  * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
  *                            GridSpacing({1.0, 1.0, 1.0}));
  * auto decomp = decomposition::create(world, mpi::get_size());
- * auto local_world = decomposition::get_subworld(decomp, mpi_rank);
+ * auto fft = fft::create(decomp);
+ * auto local_world = decomposition::get_subworld(decomp, mpi::get_rank());
  *
- * // Create field and writer
- * auto field = create_real_field(local_world);
- * auto writer = std::make_unique<BinaryWriter>(\"results_%04d.bin\");
- *
- * // Configure writer
  * auto global_size = world::get_size(world);
  * auto local_size = world::get_size(local_world);
- * auto local_offset = compute_offset(local_world);  // Relative to global origin
+ * auto inbox = fft::get_inbox(fft);
+ * std::array<int, 3> local_offset = {inbox.low[0], inbox.low[1], inbox.low[2]};
  *
+ * RealField field(fft.size_inbox());  // fill before writing
+ * auto writer = std::make_unique<BinaryWriter>(\"results_%04d.bin\");
  * writer->set_domain(global_size, local_size, local_offset);
- *
- * // Write field at step 0
- * writer->write(0, field);  // Creates results_0000.bin
+ * writer->write(0, field);  // collective MPI write; returns MPI_Status
  * ```
  *
  * @example
@@ -138,18 +135,13 @@ namespace pfc {
  * auto binary_writer = std::make_unique<BinaryWriter>(\"field_%04d.bin\");
  * binary_writer->set_domain(global_size, local_size, local_offset);
  *
- * // Custom stats writer (rank 0 only)
- * auto stats_writer = std::make_unique<StatsWriter>(\"stats.csv\");
- *
- * // Use both in simulation loop
+ * // Prefer Simulator::add_results_writer() for time-based saves; additional
+ * // formats are separate ResultsWriter subclasses with the same set_domain().
  * for (int step = 0; step < 1000; ++step) {
- *     // ... compute ...
- *
+ *     // ... compute field ...
  *     if (step % 10 == 0) {
- *         binary_writer->write(step, field);  // Every 10 steps
+ *         binary_writer->write(step, field);
  *     }
- *
- *     stats_writer->write_statistics(step, field);  // Every step
  * }
  * ```
  *
@@ -159,7 +151,7 @@ namespace pfc {
  * using namespace pfc;
  *
  * // After FFT forward transform
- * auto k_space_field = create_complex_field(local_world);
+ * ComplexField k_space_field(fft.size_outbox());
  * fft.forward(real_field, k_space_field);
  *
  * // Write complex field

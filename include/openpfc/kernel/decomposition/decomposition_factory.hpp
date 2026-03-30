@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -9,9 +9,10 @@
  * This header provides factory functions to create Decomposition objects
  * for distributing computational domains across MPI processes.
  *
- * Two factory functions are provided:
- * - make_decomposition(world, rank, num_domains): Explicit rank/size
- * - make_decomposition(world, comm): Use MPI communicator
+ * Two overloads are provided:
+ * - make_decomposition(world, rank, num_domains): builds a decomposition for
+ *   `num_domains` parts (rank is reserved for future use)
+ * - make_decomposition(world, comm): uses MPI_Comm_size(comm) as the part count
  *
  * The factory encapsulates the logic for choosing an optimal decomposition
  * strategy based on domain geometry and number of processes.
@@ -20,8 +21,10 @@
  * #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
  * #include <openpfc/kernel/data/world.hpp>
  *
- * pfc::World world({64, 64, 64}, {1.0, 1.0, 1.0});
- * auto decomp = pfc::make_decomposition(world, MPI_COMM_WORLD);
+ * using namespace pfc;
+ * auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                            GridSpacing({1.0, 1.0, 1.0}));
+ * auto decomp = make_decomposition(world, MPI_COMM_WORLD);
  * @endcode
  *
  * @see kernel/decomposition/decomposition.hpp for Decomposition class
