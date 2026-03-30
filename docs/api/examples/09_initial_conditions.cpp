@@ -34,6 +34,23 @@
 using namespace pfc;
 
 //==============================================================================
+// Minimal concrete Model (base Model is abstract)
+//==============================================================================
+
+class DemoModel : public Model {
+  Field m_density;
+
+public:
+  DemoModel(FFT &fft, const World &world) : Model(fft, world) {
+    m_density.resize(fft.size_inbox());
+    pfc::add_real_field(*this, "density", m_density);
+  }
+
+  void initialize(double /*dt*/) override {}
+  void step(double /*t*/) override {}
+};
+
+//==============================================================================
 // Helper function for synchronized output
 //==============================================================================
 
@@ -93,11 +110,11 @@ void demo_constant_ic() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto world = world::create(Int3{64, 64, 64}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   if (rank == 0) {
     std::cout << "Constant IC sets uniform value throughout domain\n";
@@ -138,11 +155,11 @@ void demo_single_seed() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create larger domain for crystal growth
-  auto world = world::create(Int3{128, 128, 128}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   if (rank == 0) {
     std::cout << "SingleSeed IC creates spherical crystalline seed at origin\n";
@@ -195,11 +212,11 @@ void demo_seed_grid() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain
-  auto world = world::create(Int3{128, 128, 128}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   if (rank == 0) {
     std::cout << "SeedGrid IC creates regular array of crystalline seeds\n";
@@ -261,14 +278,13 @@ void demo_random_seeds() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain (should match what RandomSeeds expects)
-  auto world = world::create(Int3{256, 256, 256}, Real3{1.0, 1.0, 1.0});
-  auto origin = Real3{-128.0, -128.0, -128.0}; // Centered at origin
-  world = world::create(Int3{256, 256, 256}, Real3{1.0, 1.0, 1.0}, origin);
+  auto world = world::create(GridSize({256, 256, 256}),
+                             PhysicalOrigin({-128.0, -128.0, -128.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
 
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   if (rank == 0) {
     std::cout << "RandomSeeds IC places seeds at random locations\n";
@@ -325,11 +341,11 @@ void demo_file_reader() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto world = world::create(Int3{64, 64, 64}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   if (rank == 0) {
     std::cout << "FileReader IC loads field from binary checkpoint file\n";
@@ -432,11 +448,11 @@ void demo_composition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain
-  auto world = world::create(Int3{128, 128, 128}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   if (rank == 0) {
     std::cout << "Demonstrating composition of multiple initial conditions\n";

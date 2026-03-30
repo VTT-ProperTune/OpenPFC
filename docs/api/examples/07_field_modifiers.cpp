@@ -26,6 +26,23 @@
 using namespace pfc;
 
 //==============================================================================
+// Minimal concrete Model (base Model is abstract)
+//==============================================================================
+
+class DemoModel : public Model {
+  Field m_density;
+
+public:
+  DemoModel(FFT &fft, const World &world) : Model(fft, world) {
+    m_density.resize(fft.size_inbox());
+    pfc::add_real_field(*this, "density", m_density);
+  }
+
+  void initialize(double /*dt*/) override {}
+  void step(double /*t*/) override {}
+};
+
+//==============================================================================
 // Helper function for synchronized output
 //==============================================================================
 
@@ -65,7 +82,7 @@ public:
       : m_center(center), m_amplitude(amplitude), m_width(width),
         m_background(background) {}
 
-  void apply(Model &model, double time) override {
+  void apply(Model &model, double /*time*/) override {
     // 1. Get the field to modify
     auto &field = get_real_field(model, get_field_name());
 
@@ -106,15 +123,15 @@ void demo_custom_initial_condition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create a small domain for demonstration
-  auto world = world::create(Int3{32, 32, 32}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
 
   // Create FFT with decomposition
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
+  auto fft = fft::create(decomp);
 
   // Create a simple model with one field
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  DemoModel model(fft, world);
 
   // Create and apply Gaussian IC
   GaussianIC gaussian_ic(Real3{16.0, 16.0, 16.0}, // Center at domain middle
@@ -172,7 +189,7 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(Model &model, double time) override {
+  void apply(Model &model, double /*time*/) override {
     auto &field = get_real_field(model, get_field_name());
     const auto &world = get_world(model);
     const auto &fft = get_fft(model);
@@ -211,11 +228,11 @@ void demo_boundary_condition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto world = world::create(Int3{64, 16, 16}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({64, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   // Initialize with constant value
   auto &field = get_real_field(model, "density");
@@ -316,11 +333,11 @@ void demo_space_time_bc() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto world = world::create(Int3{32, 16, 16}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({32, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   // Initialize field
   auto &field = get_real_field(model, "density");
@@ -383,11 +400,11 @@ void demo_composition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto world = world::create(Int3{64, 32, 32}, Real3{1.0, 1.0, 1.0});
+  auto world = world::create(GridSize({64, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
-  auto fft = fft::create(world, decomp, MPI_COMM_WORLD);
-  Model model(world, std::move(fft));
-  model.add_real_field("density");
+  auto fft = fft::create(decomp);
+  DemoModel model(fft, world);
 
   if (rank == 0) {
     std::cout << "Building complex initial state via composition:\n\n";
