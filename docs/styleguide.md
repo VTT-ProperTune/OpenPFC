@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # OpenPFC developer style guide
 
-This document summarizes **how we organize code and name things** in OpenPFC so new contributors can align with existing practice. It complements [CONTRIBUTING.md](../CONTRIBUTING.md) (legal and contribution flow), [INSTALL.md](../INSTALL.md) (build and dependencies), and [architecture.md](architecture.md) (layers and dependency rules).
+This document summarizes **how we organize code, name things, and shape APIs** (free functions, data-centric types) in OpenPFC so new contributors can align with existing practice. It complements [CONTRIBUTING.md](../CONTRIBUTING.md) (legal and contribution flow), [INSTALL.md](../INSTALL.md) (build and dependencies), and [architecture.md](architecture.md) (layers and dependency rules).
 
 ## Language and tooling
 
@@ -75,6 +75,16 @@ When adding a feature, choose the **lowest** layer that can express it without b
 - **Targets:** the main library is **`openpfc`** (alias **`OpenPFC`**). Tests aggregate as **`openpfc-tests`**. Match existing executable names in `examples/` and `apps/`.
 - **Options:** **`OpenPFC_*`** prefix for project-specific cache variables (see `cmake/ProjectSetup.cmake` and related modules).
 
+## API shape: free functions and data-centric types
+
+OpenPFC favors a **laboratory, not fortress** style: code should be easy to read, experiment with, and compose. Prefer exposing behavior as **free functions** in the appropriate namespace over **member functions** when the operation is a natural query or transformation on a value, rather than something that must stay tied to hidden invariants.
+
+- **Examples already in the tree:** `pfc::world::get_size(world, …)` takes `World` as an argument; **`get_world`** is a **free function** for `Decomposition` and `Field` (see `get_world(const Decomposition&)` and `get_world(const Field<T>&)` in their headers). Prefer `get_world(decomp)` / `get_world(field)` over a member spelling when both exist.
+- **Older APIs:** some types still expose members such as `model.get_world()`. When you add or refactor nearby access, **introduce** a free overload in the same module (e.g. `get_world(const Model&)`) and **call that** in new or touched code. Full migration can be incremental; the direction of travel is free functions at namespace scope.
+- **Classes as data carriers:** types should **primarily hold state**. Prefer **`public` data members** when there is no concrete reason to hide them—in practice many types should read like **`struct`s**. Reserve **`private` members** (with the `m_` convention) for cases where hiding genuinely prevents invalid states or where encapsulation is clearly justified, not as a default habit.
+
+This sits alongside the **layer rules** in [architecture.md](architecture.md): kernel/runtime/frontend boundaries still apply; openness is about how each type exposes its *own* fields and helpers, not about crossing forbidden includes.
+
 ## Includes and public API
 
 - Prefer **explicit includes** with the full path under `openpfc/`:
@@ -111,7 +121,7 @@ After structural changes, update or add **Doxygen** on public types and function
 ## Summary checklist for a typical change
 
 1. Correct **layer** (kernel vs runtime vs frontend) and **no upward dependencies**.
-2. **`snake_case` files**, **`PascalCase` types**, **`m_` data members**, **`pfc::` namespaces** consistent with neighbors.
+2. **`snake_case` files**, **`PascalCase` types**, **`m_` data members** where members are private, **`pfc::` namespaces** consistent with neighbors; prefer **free functions** and **public-by-default** data where the API shape section applies.
 3. **SPDX header** on new files.
 4. **`LibraryConfiguration.cmake`** updated for new `.cpp` files.
 5. **Unit tests** where behavior is non-trivial or regression-prone.

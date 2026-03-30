@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -107,6 +107,15 @@ Applications that use **FFT** or **decomposition** (e.g. `pfc::decomposition::De
 - Include the needed runtime headers explicitly (e.g. `#include <openpfc/runtime/common/heffte_adapter.hpp>`).
 
 For CPU-only FFT there is no need to include `runtime/cpu/fft.hpp`; the CPU FFT implementation is linked via the build and used through the kernel FFT interface. For CUDA or HIP FFT, include `openpfc/runtime/cuda/fft_cuda.hpp` or `openpfc/runtime/hip/fft_hip.hpp` as appropriate.
+
+## Design ethos: laboratory, not fortress
+
+The codebase aims to be **easy to extend and inspect**, not maximally locked down. In practice:
+
+- Prefer **free functions** for many queries and operations on domain objects (e.g. `pfc::world::get_size`, and **`get_world`** overloads for `Decomposition` and `Field`) so call sites stay uniform and composable. When parallel access is added for a type that still uses member getters, add a free function and prefer it in new or refactored code.
+- Prefer **struct-like types** with **public data by default**; use **private state** only when it protects real invariants. Full guidance and examples are in [styleguide.md](styleguide.md) (section *API shape: free functions and data-centric types*).
+
+Layer rules (kernel → runtime → frontend) are unchanged: this ethos governs *how* types expose their own state and helpers, not which layers may include each other.
 
 ## Naming policy
 

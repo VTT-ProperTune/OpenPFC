@@ -1,5 +1,5 @@
 <!--
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -22,7 +22,7 @@ The general steps for contributing to OpenPFC software framework are:
 1. Read at least the files [README.md](README.md),
    [CONTRIBUTING.md](CONTRIBUTING.md), [LICENSE.md](LICENSE.md), and the
    documentation in the [docs](docs) directory, including the
-   [developer style guide](docs/styleguide.md) and [architecture overview](docs/architecture.md).
+   [developer style guide](docs/styleguide.md) (including API shape: free functions, public-by-default data) and [architecture overview](docs/architecture.md) (design ethos).
 2. If the contribution is small, e.g., a small fault in the documentation, you
    can point it out by making an issue.
 3. For larger contributions, you should make your local fork of the OpenPFC

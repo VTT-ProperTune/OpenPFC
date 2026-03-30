@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -78,7 +78,7 @@ For faster builds, include specific headers (e.g. `<openpfc/kernel/data/world.hp
 rather than the umbrella `<openpfc/openpfc.hpp>`. Minimal simulations without the
 JSON/TOML frontend can start from `<openpfc/openpfc_minimal.hpp>`; see
 [docs/architecture.md](docs/architecture.md).
-For naming, layout, and SPDX headers, see [docs/styleguide.md](docs/styleguide.md).
+For naming, layout, SPDX headers, and API style (free functions, data-centric types), see [docs/styleguide.md](docs/styleguide.md).
 
 ## Features
 
