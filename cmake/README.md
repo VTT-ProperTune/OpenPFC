@@ -42,7 +42,7 @@ This directory contains modular CMake configuration files that organize the buil
    - nlohmann_json (required)
    - toml++ (via FindTomlPlusPlus.cmake)
    - Optional **HDF5** when **`OpenPFC_ENABLE_HDF5=ON`** (profiling export)
-   - Doxygen (optional, for documentation)
+   - **Doxygen** and **`docs/`** when **`OpenPFC_BUILD_DOCUMENTATION=ON`** (default **ON**); if Doxygen is missing, documentation generation is skipped with a warning
 
 ### Library and Build Configuration
 
