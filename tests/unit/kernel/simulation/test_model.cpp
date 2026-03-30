@@ -22,11 +22,11 @@ TEST_CASE("Model - basic functionality (v2.0)", "[model][unit]") {
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
 
-  REQUIRE(get_size(model.get_world()) == Int3{8, 1, 1});
+  REQUIRE(get_size(get_world(model)) == Int3{8, 1, 1});
 
   SECTION("FFT is available after construction") {
-    REQUIRE(model.get_fft().size_inbox() == fft.size_inbox());
-    REQUIRE(model.get_fft().size_outbox() == fft.size_outbox());
+    REQUIRE(get_fft(model).size_inbox() == fft.size_inbox());
+    REQUIRE(get_fft(model).size_outbox() == fft.size_outbox());
     REQUIRE(model.is_rank0() == (mpi::get_rank() == 0));
   }
 

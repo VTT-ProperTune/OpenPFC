@@ -87,9 +87,9 @@ public:
   const std::string &get_modifier_name() const override { return m_name; }
 
   void apply(Model &m, double) override {
-    const FFT &fft = m.get_fft();
+    const FFT &fft = get_fft(m);
     Field &field = m.get_real_field(get_field_name());
-    const World &w = m.get_world();
+    const World &w = get_world(m);
     Int3 low = get_inbox(fft).low;
     Int3 high = get_inbox(fft).high;
 
@@ -144,7 +144,7 @@ public:
   }
 
   void fill_bc(Model &m) {
-    const World &w = m.get_world();
+    const World &w = get_world(m);
     const double Lx = get_size(w, 0);
     const double dx = get_spacing(w, 0);
     const double l = Lx * dx;

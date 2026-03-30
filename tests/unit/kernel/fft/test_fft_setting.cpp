@@ -24,14 +24,14 @@ TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
   pfc::testing::MockModel model(fft, world);
 
   // Ensure FFT object is set before proceeding
-  REQUIRE_NOTHROW(model.get_fft());
+  REQUIRE_NOTHROW(get_fft(model));
 
   SECTION("Retrieve FFT object") {
-    FFT &retrieved_fft = model.get_fft();
+    FFT &retrieved_fft = get_fft(model);
 
     // Ensure the retrieved FFT object matches the original
     REQUIRE(&retrieved_fft == &fft);
   }
 
-  SECTION("Ensure FFT object is always valid") { REQUIRE_NOTHROW(model.get_fft()); }
+  SECTION("Ensure FFT object is always valid") { REQUIRE_NOTHROW(get_fft(model)); }
 }

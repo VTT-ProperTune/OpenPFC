@@ -20,8 +20,8 @@ private:
 public:
   void initialize(double dt) override {
 
-    const World &w = get_world();
-    FFT &fft = get_fft();
+    const World &w = pfc::get_world(*this);
+    FFT &fft = pfc::get_fft(*this);
 
     psi.resize(fft.size_inbox());
     psi_F.resize(fft.size_outbox());
@@ -74,7 +74,7 @@ public:
   }
 
   void step(double) override {
-    FFT &fft = get_fft();
+    FFT &fft = pfc::get_fft(*this);
     fft.forward(psi, psi_F);
     for (int k = 0, N = psi_F.size(); k < N; k++) {
       psi_F[k] = opL[k] * psi_F[k];

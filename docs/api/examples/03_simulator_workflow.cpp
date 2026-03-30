@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -137,9 +137,9 @@ public:
 
   void apply(Model &model, double t) override {
     auto &field = model.get_real_field(m_field_name);
-    auto &fft = model.get_fft();
+    auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
-    auto world = model.get_world();
+    auto world = get_world(model);
     auto spacing = world::get_spacing(world);
 
     for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {

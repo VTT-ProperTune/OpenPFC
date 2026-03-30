@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -23,7 +23,7 @@
  * pfc::decomposition::Decomposition decomp(global_world, MPI_COMM_WORLD);
  *
  * // Access local subdomain
- * pfc::World local_world = decomp.get_world();
+ * pfc::World local_world = pfc::get_world(decomp);
  *
  * // Get FFT inbox/outbox for spectral operations
  * auto inbox = decomp.get_inbox();

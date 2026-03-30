@@ -103,14 +103,14 @@ public:
    *
    * @return const World&
    */
-  const World &get_world() { return get_model().get_world(); }
+  const World &get_world() { return pfc::get_world(m_model); }
 
   /**
    * @brief Get the FFT object
    *
    * @return FFT&
    */
-  FFT &get_fft() { return get_model().get_fft(); }
+  FFT &get_fft() { return pfc::get_fft(m_model); }
 
   /**
    * @brief Get the time object
@@ -175,8 +175,8 @@ public:
    */
   bool add_results_writer(const std::string &field_name,
                           std::unique_ptr<ResultsWriter> writer) {
-    auto inbox = get_inbox(get_fft());
-    auto world = get_world();
+    auto inbox = get_inbox(pfc::get_fft(m_model));
+    const auto &world = pfc::get_world(m_model);
     writer->set_domain(get_size(world), inbox.size, inbox.low);
 
     Model &model = get_model();
@@ -493,7 +493,25 @@ public:
   }
 };
 
-inline void step(Simulator &s, Model &m) { m.step(s.get_time().get_current()); }
+[[nodiscard]] inline Model &get_model(Simulator &sim) noexcept {
+  return sim.get_model();
+}
+
+[[nodiscard]] inline Time &get_time(Simulator &sim) noexcept {
+  return sim.get_time();
+}
+
+[[nodiscard]] inline const World &get_world(Simulator &sim) noexcept {
+  return pfc::get_world(get_model(sim));
+}
+
+[[nodiscard]] inline FFT &get_fft(Simulator &sim) noexcept {
+  return pfc::get_fft(get_model(sim));
+}
+
+inline void step(Simulator &s, Model &m) {
+  m.step(get_time(s).get_current());
+}
 
 } // namespace pfc
 

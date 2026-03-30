@@ -189,7 +189,7 @@ namespace pfc {
  * auto& field_data = model.get_real_field("density");
  *
  * // Create DiscreteField wrapper for coordinate-aware operations
- * auto inbox = pfc::fft::get_inbox(model.get_fft());
+ * auto inbox = pfc::fft::get_inbox(pfc::get_fft(model));
  * pfc::DiscreteField<double, 3> discrete_field(
  *     {inbox.high[0] - inbox.low[0] + 1,
  *      inbox.high[1] - inbox.low[1] + 1,
@@ -354,8 +354,8 @@ public:
    *     return DiscreteField<D>(
    *       get_inbox_size(decomp),
    *       get_inbox_offset(decomp),
-   *       get_origin(decomp.get_world()),
-   *       get_spacing(decomp.get_world())
+   *       get_origin(pfc::get_world(decomp)),
+   *       get_spacing(pfc::get_world(decomp))
    *     );
    *   }
    * }

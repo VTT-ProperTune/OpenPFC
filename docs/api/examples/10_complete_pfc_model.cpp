@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -393,9 +393,9 @@ int main(int argc, char **argv) {
     }
 
     BinaryWriter writer("pfc_output_{:06d}.bin");
-    writer.set_domain(world::get_size(model.get_world()),
-                      fft::get_inbox(model.get_fft()).size,
-                      fft::get_inbox(model.get_fft()).low);
+    writer.set_domain(world::get_size(get_world(model)),
+                      fft::get_inbox(get_fft(model)).size,
+                      fft::get_inbox(get_fft(model)).low);
 
     if (rank == 0) {
       std::cout << "    Output format: Binary (MPI-IO)\n";

@@ -12,10 +12,13 @@
 #include <openpfc/kernel/simulation/time.hpp>
 
 using namespace std;
+using pfc::get_fft;
+using pfc::get_model;
+using pfc::get_world;
 
 void print_stats(Simulator &simulator) {
   // we can still access the model:
-  auto &model = dynamic_cast<Diffusion &>(simulator.get_model());
+  auto &model = dynamic_cast<Diffusion &>(get_model(simulator));
   auto &field = simulator.get_field();
   auto &time = simulator.get_time();
   int idx = model.get_midpoint_idx();
@@ -25,7 +28,7 @@ void print_stats(Simulator &simulator) {
 }
 
 void run_test(Simulator &simulator) {
-  auto &model = dynamic_cast<Diffusion &>(simulator.get_model());
+  auto &model = dynamic_cast<Diffusion &>(get_model(simulator));
   auto idx = model.get_midpoint_idx();
   if (idx != -1) {
     auto &field = model.get_field();
@@ -49,9 +52,9 @@ public:
     if (m.is_rank0()) {
       cout << "Applying custom initial condition at time " << t << endl;
     }
-    auto &world = m.get_world();
+    auto &world = get_world(m);
     auto &field = m.get_field();
-    auto &fft = m.get_fft();
+    auto &fft = get_fft(m);
     auto origin = get_origin(world);
     auto spacing = get_spacing(world);
 

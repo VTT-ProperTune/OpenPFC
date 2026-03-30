@@ -74,7 +74,7 @@ public:
 
   void apply(Model &m, double) override {
     // Functional coordinate-space implementation using field::apply
-    const World &w = m.get_world();
+    const World &w = get_world(m);
     const auto size = get_size(w);
     const auto spacing = get_spacing(w);
 

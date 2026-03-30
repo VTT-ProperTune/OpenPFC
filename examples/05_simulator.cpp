@@ -48,8 +48,8 @@ private:
 public:
   void apply(Model &m, double t) override {
     (void)t; // suppress compiler warning about unused parameter
-    const World &w = m.get_world();
-    const FFT &fft = m.get_fft();
+    const World &w = pfc::get_world(m);
+    const FFT &fft = pfc::get_fft(m);
     std::vector<double> &field = m.get_real_field("psi");
     Int3 low = get_inbox(fft).low;
     Int3 high = get_inbox(fft).high;
@@ -86,7 +86,7 @@ public:
 
   void allocate() {
     if (is_rank0()) std::cout << "Allocate space" << std::endl;
-    FFT &fft = get_fft();
+    FFT &fft = pfc::get_fft(*this);
     psi.resize(fft.size_inbox());
     psi_F.resize(fft.size_outbox());
     opL.resize(fft.size_outbox());
@@ -97,8 +97,8 @@ public:
   }
 
   void prepare_operators(double dt) {
-    auto &w = get_world();
-    auto &fft = get_fft();
+    auto &w = pfc::get_world(*this);
+    auto &fft = pfc::get_fft(*this);
     std::array<int, 3> low = get_outbox(fft).low;
     std::array<int, 3> high = get_outbox(fft).high;
 
@@ -128,7 +128,7 @@ public:
   }
 
   void step(double) override {
-    FFT &fft = get_fft();
+    FFT &fft = pfc::get_fft(*this);
     fft.forward(psi, psi_F);
     for (int k = 0, N = psi_F.size(); k < N; k++) psi_F[k] = opL[k] * psi_F[k];
     fft.backward(psi_F, psi);
@@ -152,7 +152,7 @@ void print_statline(Simulator &s) {
   if (!s.is_rank0()) return;
   int n = s.get_increment();
   double t = s.get_time();
-  Model &model = s.get_model();
+  Model &model = pfc::get_model(s);
   Diffusion &diffusion_model = dynamic_cast<Diffusion &>(model);
   double min = diffusion_model.get_psi_min();
   double max = diffusion_model.get_psi_max();

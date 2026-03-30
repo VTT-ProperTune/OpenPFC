@@ -68,5 +68,5 @@ TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
   auto fft = fft::create(decomposition);
   ModelWithConstantIC model(fft, world);
 
-  REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});
+  REQUIRE(get_size(get_world(model)) == Int3{8, 8, 8});
 }

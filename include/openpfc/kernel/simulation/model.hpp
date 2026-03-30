@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -686,6 +686,18 @@ private:
         [](const std::string &a, const std::string &b) { return a + ", " + b; });
   }
 };
+
+/**
+ * @brief World associated with the model (free function; preferred over Model::get_world()).
+ */
+[[nodiscard]] inline const World &get_world(const Model &model) noexcept {
+  return model.get_world();
+}
+
+/**
+ * @brief FFT instance used by the model (free function; preferred over Model::get_fft()).
+ */
+[[nodiscard]] inline FFT &get_fft(Model &model) noexcept { return model.get_fft(); }
 
 } // namespace pfc
 

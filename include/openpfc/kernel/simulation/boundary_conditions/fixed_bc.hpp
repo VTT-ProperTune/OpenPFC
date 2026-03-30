@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -61,7 +61,7 @@ public:
   const std::string &get_modifier_name() const override { return m_name; }
 
   void apply(Model &m, double) override {
-    const World &w = m.get_world();
+    const World &w = get_world(m);
     const double Lx = get_size(w, 0);
     const double dx = get_spacing(w, 0);
     const double xpos = Lx * dx - xwidth;

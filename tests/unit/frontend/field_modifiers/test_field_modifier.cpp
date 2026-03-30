@@ -110,5 +110,5 @@ TEST_CASE("FieldModifier - works with MockModel", "[field_modifier][unit]") {
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
 
-  REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});
+  REQUIRE(get_size(get_world(model)) == Int3{8, 8, 8});
 }

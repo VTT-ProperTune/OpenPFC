@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -354,8 +354,8 @@ void demo_file_reader() {
   // Save to file
   std::string checkpoint_file = "checkpoint_test.bin";
   BinaryWriter writer(checkpoint_file);
-  writer.set_domain(world::get_size(world), fft::get_inbox(model.get_fft()).size,
-                    fft::get_inbox(model.get_fft()).low);
+  writer.set_domain(world::get_size(world), fft::get_inbox(get_fft(model)).size,
+                    fft::get_inbox(get_fft(model)).low);
   writer.write(0, model.get_real_field("density"));
 
   if (rank == 0) {

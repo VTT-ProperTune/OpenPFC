@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -70,8 +70,8 @@ public:
     auto &field = model.get_real_field(get_field_name());
 
     // 2. Get geometry information
-    const auto &world = model.get_world();
-    const auto &fft = model.get_fft();
+    const auto &world = get_world(model);
+    const auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
 
     // 3. Loop over local subdomain and set Gaussian profile
@@ -127,7 +127,7 @@ void demo_custom_initial_condition() {
 
   // Verify field values at a few points
   const auto &field = model.get_real_field("density");
-  auto inbox = fft::get_inbox(model.get_fft());
+  auto inbox = fft::get_inbox(get_fft(model));
 
   if (rank == 0) {
     std::cout << "Applied Gaussian IC:\n";
@@ -174,8 +174,8 @@ public:
 
   void apply(Model &model, double time) override {
     auto &field = model.get_real_field(get_field_name());
-    const auto &world = model.get_world();
-    const auto &fft = model.get_fft();
+    const auto &world = get_world(model);
+    const auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
 
     // Get domain size in x-direction
@@ -233,7 +233,7 @@ void demo_boundary_condition() {
   bc.apply(model, 0.0); // Time is irrelevant for this BC
 
   // Sample field values along x-axis
-  auto inbox = fft::get_inbox(model.get_fft());
+  auto inbox = fft::get_inbox(get_fft(model));
   double dx = world::get_spacing(world, 0);
   double x0 = world::get_origin(world, 0);
 
@@ -287,7 +287,7 @@ public:
 
   void apply(Model &model, double time) override {
     auto &field = model.get_real_field(get_field_name());
-    const auto &fft = model.get_fft();
+    const auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
 
     // Time-varying amplitude (sinusoidal)
@@ -346,7 +346,7 @@ void demo_space_time_bc() {
     bc.apply(model, t);
 
     // Check value at i=0 (if this rank owns it)
-    auto inbox = fft::get_inbox(model.get_fft());
+    auto inbox = fft::get_inbox(get_fft(model));
     if (inbox.low[0] == 0) {
       double bc_val = field[0]; // First point in local subdomain
       if (rank == 0) {

@@ -213,8 +213,8 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     // Manually replicate the initial condition logic from the UI
     // This matches exactly what happens when initial conditions are applied
     std::vector<double> &psi = tungsten.get_real_field("psi");
-    const pfc::World &w = tungsten.get_world();
-    const pfc::FFT &fft_ref = tungsten.get_fft();
+    const pfc::World &w = pfc::get_world(tungsten);
+    const pfc::FFT &fft_ref = pfc::get_fft(tungsten);
 
     // 1. Constant initial condition: fill entire field with -0.4
     std::fill(psi.begin(), psi.end(), -0.4);

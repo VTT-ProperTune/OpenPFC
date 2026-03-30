@@ -53,8 +53,8 @@ public:
   explicit FileReader(const std::string &filename) : m_filename(filename) {}
 
   void apply(Model &m, double) override {
-    const FFT &fft = m.get_fft();
-    const auto &world = m.get_world();
+    const FFT &fft = get_fft(m);
+    const auto &world = get_world(m);
     const auto world_size = get_size(world);
     const auto inbox_size = get_inbox(fft).size;
     const auto inbox_offset = get_inbox(fft).low;

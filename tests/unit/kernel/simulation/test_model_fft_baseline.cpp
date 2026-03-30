@@ -44,8 +44,8 @@ TEST_CASE("Model-FFT: Construction requires FFT (v2.0)", "[model][fft][baseline]
 
   SECTION("Construct with FFT reference") {
     pfc::testing::MockModel model(fft, world);
-    REQUIRE_NOTHROW(model.get_fft());
-    REQUIRE(model.get_fft().size_inbox() > 0);
+    REQUIRE_NOTHROW(get_fft(model));
+    REQUIRE(get_fft(model).size_inbox() > 0);
   }
 }
 
@@ -54,7 +54,7 @@ TEST_CASE("Model-FFT: get_fft() never throws (v2.0)", "[model][fft][baseline]") 
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
-  REQUIRE_NOTHROW(model.get_fft());
+  REQUIRE_NOTHROW(get_fft(model));
 }
 
 TEST_CASE("Model-FFT: FFT lifetime management (v2.0)", "[model][fft][baseline]") {
@@ -64,7 +64,7 @@ TEST_CASE("Model-FFT: FFT lifetime management (v2.0)", "[model][fft][baseline]")
     auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
     pfc::testing::MockModel model(fft, world);
-    REQUIRE(model.get_fft().size_inbox() > 0);
+    REQUIRE(get_fft(model).size_inbox() > 0);
     REQUIRE(fft.size_inbox() > 0);
   }
 }
@@ -80,7 +80,7 @@ TEST_CASE("Model-FFT Baseline: Typical usage patterns",
     model.initialize(0.1);
 
     // Model can use FFT in initialize() and step()
-    REQUIRE_NOTHROW(model.get_fft());
+    REQUIRE_NOTHROW(get_fft(model));
   }
 }
 
@@ -93,7 +93,7 @@ TEST_CASE("Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]"
     pfc::testing::MockModel model(fft, world);
 
     // Derived model can access FFT via get_fft()
-    FFT &model_fft = model.get_fft();
+    FFT &model_fft = get_fft(model);
     REQUIRE(model_fft.size_inbox() == fft.size_inbox());
     REQUIRE(model_fft.size_outbox() == fft.size_outbox());
   }
@@ -200,7 +200,7 @@ TEST_CASE("Model-FFT: v2.0 behavior validated", "[model][fft][future]") {
     auto fft = fft::create(decomposition);
 
     pfc::testing::MockModel model(fft, world);
-    REQUIRE_NOTHROW(model.get_fft());
+    REQUIRE_NOTHROW(get_fft(model));
   }
 
   SECTION("v2.0: No set_fft() method") {

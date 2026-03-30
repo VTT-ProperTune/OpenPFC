@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -191,7 +191,8 @@ inline void apply_inplace_with_time(RealField &field, const World &world,
 template <typename Fn>
 inline void apply_inplace(Model &model, std::string_view field_name, Fn &&fn) {
   auto &f = model.get_real_field(field_name);
-  apply_inplace(f, model.get_world(), model.get_fft(), std::forward<Fn>(fn));
+  apply_inplace(f, pfc::get_world(model), pfc::get_fft(model),
+                std::forward<Fn>(fn));
 }
 
 /**
@@ -201,7 +202,7 @@ template <typename Fn>
 inline void apply_inplace_with_time(Model &model, std::string_view field_name,
                                     double t, Fn &&fn) {
   auto &f = model.get_real_field(field_name);
-  apply_inplace_with_time(f, model.get_world(), model.get_fft(), t,
+  apply_inplace_with_time(f, pfc::get_world(model), pfc::get_fft(model), t,
                           std::forward<Fn>(fn));
 }
 
@@ -213,7 +214,7 @@ inline void apply_inplace_with_time(Model &model, std::string_view field_name,
 template <typename Fn>
 inline void apply(Model &model, std::string_view field_name, Fn &&fn) {
   auto &f = model.get_real_field(field_name);
-  apply(f, model.get_world(), model.get_fft(), std::forward<Fn>(fn));
+  apply(f, pfc::get_world(model), pfc::get_fft(model), std::forward<Fn>(fn));
 }
 
 /**
@@ -223,7 +224,8 @@ template <typename Fn>
 inline void apply_with_time(Model &model, std::string_view field_name, double t,
                             Fn &&fn) {
   auto &f = model.get_real_field(field_name);
-  apply_with_time(f, model.get_world(), model.get_fft(), t, std::forward<Fn>(fn));
+  apply_with_time(f, pfc::get_world(model), pfc::get_fft(model), t,
+                  std::forward<Fn>(fn));
 }
 
 } // namespace field

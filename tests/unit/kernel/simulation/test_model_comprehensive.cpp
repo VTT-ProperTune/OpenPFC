@@ -24,5 +24,5 @@ TEST_CASE("Model - comprehensive (stub)", "[model][comprehensive][unit]") {
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   StubModel model(fft, world);
-  REQUIRE(get_size(model.get_world()) == pfc::types::Int3{8, 1, 1});
+  REQUIRE(get_size(get_world(model)) == pfc::types::Int3{8, 1, 1});
 }

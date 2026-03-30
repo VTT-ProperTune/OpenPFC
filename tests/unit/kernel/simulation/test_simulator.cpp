@@ -100,6 +100,6 @@ TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
 
   pfc::testing::MockModel model(fft, world);
 
-  REQUIRE_NOTHROW(model.get_fft());
-  REQUIRE(get_size(model.get_world()) == Int3{8, 8, 8});
+  REQUIRE_NOTHROW(get_fft(model));
+  REQUIRE(get_size(get_world(model)) == Int3{8, 8, 8});
 }

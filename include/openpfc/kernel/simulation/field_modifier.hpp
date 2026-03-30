@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -85,8 +85,8 @@ class Model;
  *
  *   void apply(pfc::Model& model, double time) override {
  *     auto& field = model.get_real_field(get_field_name());
- *     const auto& world = model.get_world();
- *     const auto& fft = model.get_fft();
+ *     const auto& world = pfc::get_world(model);
+ *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
  *
  *     int idx = 0;
@@ -117,8 +117,8 @@ class Model;
  *
  *   void apply(pfc::Model& model, double time) override {
  *     auto& field = model.get_real_field(get_field_name());
- *     const auto& world = model.get_world();
- *     const auto& fft = model.get_fft();
+ *     const auto& world = pfc::get_world(model);
+ *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
  *
  *     double Lx = pfc::world::get_size(world, 0);
@@ -151,8 +151,8 @@ class Model;
  *
  *   void apply(pfc::Model& model, double time) override {
  *     auto& field = model.get_real_field(get_field_name());
- *     const auto& world = model.get_world();
- *     const auto& fft = model.get_fft();
+ *     const auto& world = pfc::get_world(model);
+ *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
  *
  *     // Time-varying amplitude
@@ -352,7 +352,7 @@ public:
    *
    * **Implementation Responsibilities:**
    * - Retrieve field(s) via `model.get_real_field()` or `model.get_complex_field()`
-   * - Access geometry via `model.get_world()` and `model.get_fft()`
+   * - Access geometry via `pfc::get_world(model)` and `pfc::get_fft(model)`
    * - Modify field values according to modifier's purpose
    * - Handle MPI parallelism (operate on local subdomain)
    *
@@ -363,8 +363,8 @@ public:
    *   auto& field = model.get_real_field(get_field_name());
    *
    *   // 2. Get geometry information
-   *   const auto& world = model.get_world();
-   *   const auto& fft = model.get_fft();
+   *   const auto& world = pfc::get_world(model);
+   *   const auto& fft = pfc::get_fft(model);
    *   auto inbox = pfc::fft::get_inbox(fft);
    *
    *   // 3. Loop over local subdomain
@@ -395,8 +395,8 @@ public:
    *          model invariants (e.g., mass conservation if required)
    *
    * @see Model::get_real_field() for field access
-   * @see Model::get_world() for domain geometry
-   * @see Model::get_fft() for subdomain bounds
+   * @see get_world(const Model&) for domain geometry
+   * @see get_fft(Model&) for subdomain bounds
    */
   virtual void apply(Model &model, double time) = 0;
 

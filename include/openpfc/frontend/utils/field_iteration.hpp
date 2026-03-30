@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -16,12 +16,12 @@
  *
  * void apply(pfc::Model& model, double time) override {
  *   auto& field = model.get_real_field(get_field_name());
- *   const auto& fft = model.get_fft();
+ *   const auto& fft = pfc::get_fft(model);
  *   auto inbox = pfc::fft::get_inbox(fft);
  *
  *   // Use helper instead of nested loops
  *   pfc::utils::iterate_inbox(inbox, [&](const pfc::Int3& idx, int linear_idx) {
- *     auto pos = pfc::world::to_coords(model.get_world(), idx);
+ *     auto pos = pfc::world::to_coords(pfc::get_world(model), idx);
  *     field[linear_idx] = compute_value(pos, time);
  *   });
  * }
