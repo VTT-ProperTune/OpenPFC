@@ -31,7 +31,11 @@ Tests mirror the library layout (kernel, runtime, frontend) plus operators. Unde
 
 ## Running Unit Tests
 
+From your **CMake build** directory (same layout as **`tests/integration/README.md`**):
+
 ```bash
+cd build
+
 # All unit tests
 ./tests/openpfc-tests "[unit]"
 
