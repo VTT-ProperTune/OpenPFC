@@ -233,7 +233,7 @@ Build-time setup (HeFFTe, modules, CUDA, and CMake options) is documented in **[
 
 ## Installing
 
-See **[INSTALL.md](INSTALL.md)** for supported compilers, environment modules, building and installing HeFFTe, and OpenPFC configuration (CPU and CUDA). A Singularity/apptainer workflow is not documented yet.
+See **[INSTALL.md](INSTALL.md)** for supported compilers, environment modules, building and installing HeFFTe, and OpenPFC configuration (CPU and CUDA). For **LUMI-G** (ROCm / HIP, Cray PE, projappl and scratch layout), see **[docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md)**. A Singularity/apptainer workflow is not documented yet.
 
 ## Structure of the application
 
