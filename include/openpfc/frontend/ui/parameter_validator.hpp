@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -42,7 +42,7 @@
 #ifndef PFC_UI_PARAMETER_VALIDATOR_HPP
 #define PFC_UI_PARAMETER_VALIDATOR_HPP
 
-#include "parameter_metadata.hpp"
+#include <openpfc/frontend/ui/parameter_metadata.hpp>
 #include <algorithm>
 #include <cmath>
 #include <iomanip>

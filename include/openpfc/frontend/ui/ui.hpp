@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -25,6 +25,6 @@
 #define PFC_UI_HPP
 
 // Include the refactored UI components
-#include "ui_components.hpp"
+#include <openpfc/frontend/ui/ui_components.hpp>
 
 #endif // PFC_UI_HPP

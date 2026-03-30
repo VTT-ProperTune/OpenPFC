@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -61,8 +61,8 @@
 #include <array>
 #include <ostream>
 
-#include "csys.hpp"
-#include "world_types.hpp"
+#include <openpfc/kernel/data/csys.hpp>
+#include <openpfc/kernel/data/world_types.hpp>
 
 namespace pfc {
 namespace world {
@@ -141,6 +141,6 @@ using World = world::CartesianWorld;
 } // namespace pfc
 
 // Include World functionality modules
-#include "world_factory.hpp"
-#include "world_helpers.hpp"
-#include "world_queries.hpp"
+#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/world_helpers.hpp>
+#include <openpfc/kernel/data/world_queries.hpp>

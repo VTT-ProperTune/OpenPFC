@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include "strong_types.hpp"
-#include "world.hpp"
-#include "world_factory.hpp"
-#include "world_types.hpp"
+#include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/world_types.hpp>
 #include <stdexcept>
 #include <string>
 

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -51,8 +51,8 @@
 #ifndef PFC_DISCRETE_FIELD_HPP
 #define PFC_DISCRETE_FIELD_HPP
 
-#include "array.hpp"
-#include "constants.hpp"
+#include <openpfc/kernel/data/array.hpp>
+#include <openpfc/kernel/data/constants.hpp>
 #include <array>
 #include <cmath>
 #include <cstddef>

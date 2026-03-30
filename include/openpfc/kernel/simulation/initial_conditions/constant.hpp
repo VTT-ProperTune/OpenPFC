@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -29,8 +29,8 @@
 #ifndef PFC_INITIAL_CONDITIONS_CONSTANT_HPP
 #define PFC_INITIAL_CONDITIONS_CONSTANT_HPP
 
-#include "../field_modifier.hpp"
 #include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
 
 namespace pfc {
 

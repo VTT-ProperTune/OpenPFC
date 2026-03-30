@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -33,7 +33,7 @@
 #ifndef PFC_ARRAY_HPP
 #define PFC_ARRAY_HPP
 
-#include "multi_index.hpp"
+#include <openpfc/kernel/data/multi_index.hpp>
 #include <algorithm>
 #include <array>
 #include <cmath>

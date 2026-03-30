@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -34,9 +34,9 @@
 
 #include <iostream>
 
-#include "../binary_reader.hpp"
-#include "../field_modifier.hpp"
-#include "../model.hpp"
+#include <openpfc/kernel/simulation/binary_reader.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 

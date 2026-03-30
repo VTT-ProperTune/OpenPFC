@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -22,8 +22,8 @@
 #ifndef PFC_UI_FROM_JSON_HPP
 #define PFC_UI_FROM_JSON_HPP
 
-#include "errors.hpp"
-#include "json_helpers.hpp"
+#include <openpfc/frontend/ui/errors.hpp>
+#include <openpfc/frontend/ui/json_helpers.hpp>
 #include <algorithm>
 #include <cctype>
 #include <heffte.h>

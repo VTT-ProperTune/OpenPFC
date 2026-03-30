@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -37,7 +37,7 @@
 
 #pragma once
 
-#include "world_types.hpp"
+#include <openpfc/kernel/data/world_types.hpp>
 
 namespace pfc {
 namespace csys {
