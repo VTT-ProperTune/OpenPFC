@@ -32,6 +32,8 @@
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/kernel/profiling/context.hpp>
+#include <openpfc/kernel/profiling/names.hpp>
 
 namespace pfc {
 
@@ -140,6 +142,7 @@ public:
    * Must be called after start_halo_exchange(); can be delayed for overlap.
    */
   void finish_halo_exchange() {
+    const double _pfc_t0 = MPI_Wtime();
     exchange::wait_all(m_requests.data(), m_request_count);
     const size_t n = m_directions.size();
     if (n != 6 && m_pending_field != nullptr) {
@@ -149,6 +152,8 @@ public:
     }
     m_pending_field = nullptr;
     m_pending_size = 0;
+    profiling::record_time(profiling::kProfilingRegionCommunication,
+                           MPI_Wtime() - _pfc_t0);
   }
 
   /** @brief Number of active face directions (0--6) */
@@ -176,6 +181,7 @@ private:
     m_request_count = static_cast<int>(req_count);
   }
   void exchange_halos_pack(T *field_ptr, size_t field_size) {
+    const double _pfc_t0 = MPI_Wtime();
     const size_t n = m_directions.size();
     size_t req_count = 0;
     for (size_t i = 0; i < n; ++i) {
@@ -197,6 +203,8 @@ private:
     for (size_t i = 0; i < n; ++i) {
       core::scatter(m_recv_values[i], field_ptr, field_size);
     }
+    profiling::record_time(profiling::kProfilingRegionCommunication,
+                           MPI_Wtime() - _pfc_t0);
   }
 
 private:

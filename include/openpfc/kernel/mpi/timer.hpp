@@ -29,6 +29,7 @@
  *
  * @see mpi/environment.hpp for MPI initialization
  * @see mpi.hpp for top-level MPI utilities
+ * @see openpfc/kernel/profiling/profiling.hpp for MPI-wide stats and step timing I/O
  *
  * @author OpenPFC Development Team
  * @date 2025

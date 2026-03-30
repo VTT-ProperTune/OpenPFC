@@ -13,7 +13,7 @@
  * - Setting up initial and boundary conditions
  * - Running the simulation loop
  * - Writing results
- * - Performance timing and reporting
+ * - Performance timing and reporting (kernel/profiling, see docs/performance_profiling.md)
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -25,13 +25,17 @@
 #include "field_modifier_registry.hpp"
 #include "from_json.hpp"
 #include "json_helpers.hpp"
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
 #include <openpfc/frontend/utils/timeleft.hpp>
+#include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/frontend/utils/toml_to_json.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <toml++/toml.hpp>
@@ -58,11 +62,13 @@ private:
   double m_avg_steptime = 0.0;
   int m_steps_done = 0;
 
-  // save detailed timing information for each mpi rank and step?
-  bool m_detailed_timing = false;
-  bool m_detailed_timing_print = false;
-  bool m_detailed_timing_write = false;
-  std::string m_detailed_timing_filename = "timing.bin";
+  bool m_prof_enabled = false;
+  std::string m_prof_format = "json";
+  std::string m_prof_output = "openpfc_profile";
+  bool m_prof_memory_samples = false;
+  bool m_prof_print_report = false;
+  std::vector<std::string> m_prof_extra_regions;
+  std::unique_ptr<pfc::profiling::ProfilingSession> m_profiler;
 
   // read settings from file (JSON or TOML format)
   json read_settings(int argc, char *argv[]) {
@@ -141,14 +147,26 @@ public:
     }
   }
 
-  void read_detailed_timing_configuration() {
-    if (m_settings.contains("detailed_timing")) {
-      auto timing = m_settings["detailed_timing"];
-      if (timing.contains("enabled")) m_detailed_timing = timing["enabled"];
-      if (timing.contains("print")) m_detailed_timing_print = timing["print"];
-      if (timing.contains("write")) m_detailed_timing_write = timing["write"];
-      if (timing.contains("filename"))
-        m_detailed_timing_filename = timing["filename"];
+  void read_profiling_configuration() {
+    if (!m_settings.contains("profiling"))
+      return;
+    const auto &p = m_settings["profiling"];
+    if (p.contains("enabled"))
+      m_prof_enabled = p["enabled"].get<bool>();
+    if (p.contains("format") && p["format"].is_string())
+      m_prof_format = p["format"].get<std::string>();
+    if (p.contains("output") && p["output"].is_string())
+      m_prof_output = p["output"].get<std::string>();
+    if (p.contains("memory_samples"))
+      m_prof_memory_samples = p["memory_samples"].get<bool>();
+    if (p.contains("print_report"))
+      m_prof_print_report = p["print_report"].get<bool>();
+    m_prof_extra_regions.clear();
+    if (p.contains("regions") && p["regions"].is_array()) {
+      for (const auto &el : p["regions"]) {
+        if (el.is_string())
+          m_prof_extra_regions.push_back(el.get<std::string>());
+      }
     }
   }
 
@@ -275,7 +293,12 @@ public:
     if (m_settings.contains("model") && m_settings["model"].contains("params")) {
       from_json(m_settings["model"]["params"], model);
     }
-    read_detailed_timing_configuration();
+    read_profiling_configuration();
+    if (m_prof_enabled) {
+      m_profiler = std::make_unique<pfc::profiling::ProfilingSession>(
+          pfc::profiling::ProfilingMetricCatalog::with_defaults_and_extras(
+              m_prof_extra_regions));
+    }
 
     std::cout << "Initializing model... " << std::endl;
     model.initialize(time.get_dt());
@@ -325,49 +348,35 @@ public:
       time.next(); // increase increment counter by 1
       simulator.apply_boundary_conditions();
 
-      double l_steptime = 0.0; // l = local for this mpi process
-      double l_fft_time = 0.0;
-      MPI_Barrier(m_comm);
-      l_steptime = -MPI_Wtime();
-      step(simulator, model);
-      MPI_Barrier(m_comm);
-      l_steptime += MPI_Wtime();
-      l_fft_time = fft.get_fft_time();
-
-      if (m_detailed_timing) {
-        double timing[2] = {l_steptime, l_fft_time};
-        MPI_Send(timing, 2, MPI_DOUBLE, 0, 42, m_comm);
-        if (m_worker.get_rank() == 0) {
-          // Use the num_ranks from outer scope (line 230) to avoid shadowing
-          double all_timing[num_ranks][2];
-          for (int rank = 0; rank < num_ranks; rank++) {
-            MPI_Recv(all_timing[rank], 2, MPI_DOUBLE, rank, 42, m_comm,
-                     MPI_STATUS_IGNORE);
-          }
-          auto inc = time.get_increment();
-          if (m_detailed_timing_print) {
-            auto old_precision = std::cout.precision(6);
-            std::cout << "Timing information for all processes:" << std::endl;
-            std::cout << "step;rank;step_time;fft_time" << std::endl;
-            for (int rank = 0; rank < num_ranks; rank++) {
-              std::cout << inc << ";" << rank << ";" << all_timing[rank][0] << ";"
-                        << all_timing[rank][1] << std::endl;
-            }
-            std::cout.precision(old_precision);
-          }
-          if (m_detailed_timing_write) {
-            // so we end up to a binary file, and opening with e.g. Python
-            // np.fromfile("timing.bin").reshape(n_steps, n_procs, 2)
-            std::ofstream outfile(m_detailed_timing_filename, std::ios::app);
-            outfile.write((const char *)timing, sizeof(double) * 2 * num_ranks);
-            outfile.close();
-          }
+      fft.reset_fft_time();
+      const double barrier_step_s = pfc::profiling::measure_barriered(m_comm, [&] {
+        if (m_profiler)
+          m_profiler->begin_step_frame(time.get_increment(), rank_id);
+        if (m_profiler) {
+          pfc::profiling::ProfilingContextScope scope(m_profiler.get());
+          step(simulator, model);
+        } else {
+          step(simulator, model);
         }
+      });
+      const double fft_meter_s = fft.get_fft_time();
+
+      std::uint64_t rss = 0;
+      std::uint64_t model_mem = 0;
+      std::uint64_t fft_mem = 0;
+      if (m_profiler && m_prof_memory_samples) {
+        rss = pfc::profiling::try_read_process_rss_bytes();
+        model_mem = model.get_allocated_memory_bytes();
+        fft_mem = fft.get_allocated_memory_bytes();
+      }
+      if (m_profiler) {
+        m_profiler->set_frame_wall_step(barrier_step_s);
+        m_profiler->assign_recorded_time("fft", fft_meter_s);
+        m_profiler->end_step_frame(rss, model_mem, fft_mem);
       }
 
-      // max reduction over all mpi processes
-      MPI_Reduce(&l_steptime, &m_steptime, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
-      MPI_Reduce(&l_fft_time, &m_fft_time, 1, MPI_DOUBLE, MPI_MAX, 0, m_comm);
+      m_steptime = pfc::profiling::reduce_max_to_root(m_comm, barrier_step_s, 0);
+      m_fft_time = pfc::profiling::reduce_max_to_root(m_comm, fft_meter_s, 0);
 
       if (time.do_save()) {
         simulator.apply_boundary_conditions();
@@ -408,6 +417,49 @@ public:
               << std::endl;
     std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %"
               << std::endl;
+
+    if (m_profiler) {
+      pfc::profiling::ProfilingExportOptions exp;
+      std::string fmt = m_prof_format;
+      std::transform(fmt.begin(), fmt.end(), fmt.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+      });
+      if (fmt == "hdf5") {
+        exp.write_json = false;
+        exp.write_csv = false;
+        exp.write_hdf5 = true;
+        exp.hdf5_path = m_prof_output + ".h5";
+      } else if (fmt == "csv") {
+        exp.write_json = false;
+        exp.write_csv = true;
+        exp.csv_path = m_prof_output + ".csv";
+      } else if (fmt == "csv_hdf5" || fmt == "csv+hdf5") {
+        exp.write_json = false;
+        exp.write_csv = true;
+        exp.write_hdf5 = true;
+        exp.csv_path = m_prof_output + ".csv";
+        exp.hdf5_path = m_prof_output + ".h5";
+      } else if (fmt == "both") {
+        exp.write_json = true;
+        exp.write_hdf5 = true;
+        exp.json_path = m_prof_output + ".json";
+        exp.hdf5_path = m_prof_output + ".h5";
+      } else {
+        if (fmt != "json" && rank0)
+          std::cerr << "profiling.format unknown (\"" << m_prof_format
+                    << "\"), using json\n";
+        exp.write_json = true;
+        exp.json_path = m_prof_output + ".json";
+      }
+      m_profiler->finalize_and_export(m_comm, exp);
+      if (rank0)
+        std::cout << "Profiling export written (see profiling.output / format).\n";
+      if (rank0 && m_prof_print_report && m_profiler) {
+        pfc::profiling::ProfilingPrintOptions popts;
+        popts.title = "OpenPFC profiling (this rank)";
+        pfc::profiling::print_profiling_timer(std::cout, *m_profiler, popts);
+      }
+    }
 
     return 0;
   }

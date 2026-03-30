@@ -33,6 +33,8 @@
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
+#include <openpfc/kernel/profiling/context.hpp>
+#include <openpfc/kernel/profiling/names.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
@@ -132,6 +134,7 @@ public:
   }
 
   void finish_halo_exchange(std::array<std::vector<T>, 6> &face_buffers) {
+    const double _pfc_t0 = MPI_Wtime();
     exchange::wait_all(m_requests.data(), m_request_count);
     const size_t n = m_directions.size();
     if (n != 6 && m_pending_core != nullptr) {
@@ -148,6 +151,8 @@ public:
       }
     }
     m_pending_core = nullptr;
+    profiling::record_time(profiling::kProfilingRegionCommunication,
+                           MPI_Wtime() - _pfc_t0);
   }
 
   size_t num_directions() const { return m_directions.size(); }

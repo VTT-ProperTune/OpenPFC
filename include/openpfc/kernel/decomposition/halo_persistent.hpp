@@ -33,6 +33,8 @@
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/kernel/profiling/context.hpp>
+#include <openpfc/kernel/profiling/names.hpp>
 
 namespace pfc {
 
@@ -133,8 +135,11 @@ public:
 
   /** @brief Complete the exchange started with start_exchange(). */
   void wait_exchange() {
+    const double _pfc_t0 = MPI_Wtime();
     MPI_Waitall(static_cast<int>(m_requests.size()), m_requests.data(),
                 MPI_STATUSES_IGNORE);
+    profiling::record_time(profiling::kProfilingRegionCommunication,
+                           MPI_Wtime() - _pfc_t0);
   }
 
   /** @brief Equivalent to start_exchange(); wait_exchange(); */

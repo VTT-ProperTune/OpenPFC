@@ -46,6 +46,7 @@
 #include <mpi.h>
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/kernel/profiling/format.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
@@ -103,36 +104,6 @@ inline size_t get_system_memory_bytes() noexcept {
 }
 
 /**
- * @brief Format bytes as human-readable string (KB, MB, GB, TB)
- *
- * @param bytes Memory size in bytes
- * @return Formatted string (e.g., "1.23 GB")
- */
-inline std::string format_bytes(size_t bytes) {
-  const double KB = 1024.0;
-  const double MB = KB * 1024.0;
-  const double GB = MB * 1024.0;
-  const double TB = GB * 1024.0;
-
-  std::ostringstream oss;
-  oss.precision(2);
-  oss << std::fixed;
-
-  if (bytes >= TB) {
-    oss << (bytes / TB) << " TB";
-  } else if (bytes >= GB) {
-    oss << (bytes / GB) << " GB";
-  } else if (bytes >= MB) {
-    oss << (bytes / MB) << " MB";
-  } else if (bytes >= KB) {
-    oss << (bytes / KB) << " KB";
-  } else {
-    oss << bytes << " B";
-  }
-  return oss.str();
-}
-
-/**
  * @brief Report memory usage to logger
  *
  * Logs detailed memory statistics including:
@@ -187,14 +158,15 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
 
     // Per-rank memory
     std::ostringstream rank_msg;
-    rank_msg << "  Rank 0 - Application: " << format_bytes(usage.m_application_bytes)
-             << ", FFT: " << format_bytes(usage.m_fft_bytes)
-             << ", Total: " << format_bytes(usage.total_bytes());
+    rank_msg << "  Rank 0 - Application: "
+             << pfc::profiling::format_bytes(usage.m_application_bytes)
+             << ", FFT: " << pfc::profiling::format_bytes(usage.m_fft_bytes)
+             << ", Total: " << pfc::profiling::format_bytes(usage.total_bytes());
     log_info(logger, rank_msg.str());
 
     // Global total
     std::ostringstream global_msg;
-    global_msg << "  Global Total: " << format_bytes(global_mem[2]) << " ("
+    global_msg << "  Global Total: " << pfc::profiling::format_bytes(global_mem[2]) << " ("
                << num_ranks << " ranks)";
     log_info(logger, global_msg.str());
 
@@ -204,7 +176,8 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
     double mem_per_voxel = static_cast<double>(global_mem[2]) / total_voxels;
 
     std::ostringstream voxel_msg;
-    voxel_msg << "  Per Voxel: " << format_bytes(static_cast<size_t>(mem_per_voxel))
+    voxel_msg << "  Per Voxel: "
+              << pfc::profiling::format_bytes(static_cast<size_t>(mem_per_voxel))
               << "/voxel (" << total_voxels << " voxels)";
     log_info(logger, voxel_msg.str());
 
@@ -213,7 +186,7 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
     if (system_mem > 0) {
       double usage_pct = (static_cast<double>(global_mem[2]) / system_mem) * 100.0;
       std::ostringstream sys_msg;
-      sys_msg << "  System Memory: " << format_bytes(system_mem)
+      sys_msg << "  System Memory: " << pfc::profiling::format_bytes(system_mem)
               << ", Usage: " << std::fixed << std::setprecision(1) << usage_pct
               << "%";
       log_info(logger, sys_msg.str());
