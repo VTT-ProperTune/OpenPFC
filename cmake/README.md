@@ -41,8 +41,8 @@ This directory contains modular CMake configuration files that organize the buil
    - HeFFTe: **`OpenPFCHeffteHints.cmake`** probes common install prefixes (`$HOME/opt/heffte`, `/opt`, `/share/apps`, Spack `EBROOTHEFFTE`, …) before failing; when **CUDA** or **HIP** is enabled, **`Dependencies.cmake`** warns if the found HeFFTe lacks the matching backend (CUDA or ROCm)
    - nlohmann_json (required)
    - toml++ (via FindTomlPlusPlus.cmake)
+   - Optional **HDF5** when **`OpenPFC_ENABLE_HDF5=ON`** (profiling export)
    - Doxygen (optional, for documentation)
-   - Catch2 (found when tests are built)
 
 ### Library and Build Configuration
 
