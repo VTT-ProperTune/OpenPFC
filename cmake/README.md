@@ -51,7 +51,7 @@ This directory contains modular CMake configuration files that organize the buil
    - Library properties and versioning
    - Include directories
    - Dependency linking (MPI, HeFFTe)
-   - GPU kernel library (when CUDA is enabled)
+   - GPU kernel library when **CUDA** and/or **HIP** (ROCm) GPU support is enabled
    - toml++ include directory setup
 
 7. **BuildOptions.cmake**
