@@ -57,7 +57,8 @@ include(cmake/LibraryConfiguration.cmake)
 # ----------------------------------------------------------------------------
 # 7. Build Options
 # ----------------------------------------------------------------------------
-# Configure what gets built (apps, examples, tests, benchmarks)
+# Configure what gets built: apps, examples, tests; benchmark sources under
+# tests/ when OpenPFC_BUILD_BENCHMARKS=ON (see tests/CMakeLists.txt).
 include(cmake/BuildOptions.cmake)
 
 # ----------------------------------------------------------------------------
