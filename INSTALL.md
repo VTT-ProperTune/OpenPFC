@@ -17,7 +17,7 @@ This guide’s **source of truth** for MPI is **OpenMPI provided through environ
   which mpicc
   mpicc --version   # should identify Open MPI / openmpi, not MPICH
   ```
-- **Bare OS without modules:** install **Open MPI development** packages (not MPICH) if you want to follow this document literally, **or** use the reproducible [Nix](nix/README.md) workflow in §8. If your site standardizes on MPICH only, you may still build everything consistently with MPICH — but that is **not** the combination this file describes step-by-step; keep HeFFTe and OpenPFC on the **same** `mpicc`/`mpicxx` throughout.
+- **Bare OS without modules:** install **Open MPI development** packages (not MPICH) if you want to follow this document literally. If your site standardizes on MPICH only, you may still build everything consistently with MPICH — but that is **not** the combination this file describes step-by-step; keep HeFFTe and OpenPFC on the **same** `mpicc`/`mpicxx` throughout.
 
 ## 1. Environment modules (recommended on clusters)
 
@@ -94,7 +94,7 @@ Use **one install prefix per backend**, all under **`$HOME/opt/heffte/`**, so yo
 |---------|----------------------------------|--------|
 | **CPU (FFTW only)** | `$HOME/opt/heffte/2.4.1-cpu` | No GPU backend in HeFFTe |
 | **CUDA** | `$HOME/opt/heffte/2.4.1-cuda` | `-DHeffte_ENABLE_CUDA=ON`, `nvcc` on `PATH` when building |
-| **ROCm / HIP** | `$HOME/opt/heffte/2.4.1-rocm` | `-DHeffte_ENABLE_ROCM=ON` (see §9.1) |
+| **ROCm / HIP** | `$HOME/opt/heffte/2.4.1-rocm` | `-DHeffte_ENABLE_ROCM=ON` (see §8.1) |
 
 OpenPFC CPU builds should use **`CMAKE_PREFIX_PATH`** (or `Heffte_DIR`) pointing at **`2.4.1-cpu`**. GPU builds must use the matching **`-cuda`** or **`-rocm`** install.
 
@@ -291,11 +291,7 @@ cmake --install build
 
 (Keep `CMAKE_PREFIX_PATH` including HeFFTe when running this `cmake`.)
 
-## 8. Alternative: Nix
-
-For a reproducible environment (including HeFFTe), see [nix/README.md](nix/README.md).
-
-## 9. AMD GPU (HIP)
+## 8. AMD GPU (HIP)
 
 For ROCm / HIP builds, load a recent GCC, OpenMPI, and **ROCm** before configuring anything (see §1 for compiler notes). Many clusters provide a ROCm module:
 
@@ -318,7 +314,7 @@ rocm-smi          # optional: list AMD GPUs
 
 **CMAKE_PREFIX_PATH for ROCm:** CMake finds HIP via `find_package(HIP)`. If HIP is not found, set `CMAKE_PREFIX_PATH` to your ROCm installation (e.g. `-DCMAKE_PREFIX_PATH=/opt/rocm` or `/opt/rocm-6.4.0`) so that `HIPConfig.cmake` is found.
 
-### 9.1. Build and install HeFFTe with ROCm
+### 8.1. Build and install HeFFTe with ROCm
 
 OpenPFC GPU (HIP) needs HeFFTe built with **`-DHeffte_ENABLE_ROCM=ON`**, installed under **`$HOME/opt/heffte/2.4.1-rocm`** (§3). Use the same host compilers as for OpenPFC (§1). **Do not** build inside the OpenPFC repo; use **`$HOME/src`** (or similar) for the tarball and source, and a **build directory outside** the repo.
 
@@ -353,7 +349,7 @@ Point CMake at this installation when building OpenPFC (see §3 for `lib` vs `li
 export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-rocm:$CMAKE_PREFIX_PATH
 ```
 
-### 9.2. Configure and build OpenPFC (HIP)
+### 8.2. Configure and build OpenPFC (HIP)
 
 Load the **ROCm** module (or set `PATH`) so `hipcc` and HIP are available. Set **`CMAKE_PREFIX_PATH`** to include both the HeFFTe ROCm install and your ROCm installation, so OpenPFC can find HeFFTe and `find_package(HIP)` succeeds:
 
@@ -384,7 +380,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 
 **If HIP is not found:** If you pass `-DOpenPFC_ENABLE_HIP=ON` but CMake does not find HIP, configuration can still succeed with a **warning** and HIP will be disabled. Check the configuration summary and ensure `CMAKE_PREFIX_PATH` includes the ROCm installation so that `HIPConfig.cmake` is found. Then reconfigure from a clean build directory if needed.
 
-CMake will warn if HeFFTe was built without ROCm support when HIP is enabled; use the HeFFTe install from §9.1.
+CMake will warn if HeFFTe was built without ROCm support when HIP is enabled; use the HeFFTe install from §8.1.
 
 **Code coverage:** If the HIP build fails at link with undefined `__gcov_*` symbols, disable code coverage (e.g. `-DOpenPFC_ENABLE_CODE_COVERAGE=OFF`); coverage is not always compatible with the HIP/Clang toolchain.
 

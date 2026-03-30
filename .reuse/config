@@ -4,8 +4,6 @@ exclude = \
     .clang-format \
     .editorconfig \
     .gitignore \
-    flake.lock \
-    flake.nix \
     README.md \
     CHANGELOG.md \
     CMakeLists.txt \

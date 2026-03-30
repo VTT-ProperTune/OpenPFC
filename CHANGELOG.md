@@ -7,6 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Removed
+
+- **Nix / flake support**: Removed `flake.nix`, `flake.lock`, and the `nix/` packaging tree; dropped the Nix job from CI. Use CMake and `INSTALL.md` for builds.
+
 ## [0.1.4] - 2025-12-18
 
 ### Added

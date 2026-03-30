@@ -118,37 +118,6 @@ jobs:
           fi
 
   # ============================================================================
-  # Nix Build and Test
-  # ============================================================================
-  nix-check:
-    name: Nix Build & Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v26
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: Run Nix flake checks
-        run: nix flake check --print-build-logs
-
-      - name: Run tests (excluding benchmarks)
-        run: |
-          # Run tests with verbose output
-          nix run .#test -- '~[benchmark]' --reporter compact || {
-            echo "❌ Tests failed. Checking test binary..."
-            nix build .#openpfc-tests --print-build-logs
-            echo "Test binary location:"
-            nix path-info .#openpfc-tests
-            exit 1
-          }
-
-  # ============================================================================
   # CMake Build Matrix
   # ============================================================================
   build-and-test:
@@ -284,7 +253,7 @@ jobs:
   ci-status:
     name: CI Status
     if: always()
-    needs: [code-quality, clang-tidy, nix-check, build-and-test]
+    needs: [code-quality, clang-tidy, build-and-test]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs status
@@ -295,10 +264,6 @@ jobs:
           fi
           if [[ "${{ needs.clang-tidy.result }}" != "success" ]]; then
             echo "❌ Clang-tidy failed"
-            exit 1
-          fi
-          if [[ "${{ needs.nix-check.result }}" != "success" ]]; then
-            echo "❌ Nix checks failed"
             exit 1
           fi
           if [[ "${{ needs.build-and-test.result }}" != "success" ]]; then

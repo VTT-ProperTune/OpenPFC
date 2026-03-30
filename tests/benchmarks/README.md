@@ -37,10 +37,7 @@ Benchmarks should measure:
 **Note**: Benchmarks are **automatically excluded from CI** to keep build times fast. They must be run manually for performance validation.
 
 ```bash
-# Using nix (recommended)
-nix run .#benchmark
-
-# Or directly with the test executable
+# From your build directory (after cmake --build)
 ./tests/openpfc-tests "[benchmark]"
 
 # Specific benchmark category

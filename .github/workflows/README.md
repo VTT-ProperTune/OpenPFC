@@ -21,10 +21,8 @@ This directory contains CI/CD workflows for the OpenPFC project.
    - clang-format checking (excludes build, external dependencies)
    - REUSE compliance verification
 
-2. **Nix Build & Test**
-   - Runs `nix flake check`
-   - Executes test suite (excluding benchmarks)
-   - Uses Cachix for build caching (optional)
+2. **Clang-Tidy**
+   - Static analysis with `run-clang-tidy` (or per-file fallback)
 
 3. **CMake Build Matrix**
    - **OS:** Ubuntu 22.04, Ubuntu 20.04
@@ -111,7 +109,6 @@ Required secrets (configure in repository settings):
 
 | Secret | Required | Purpose | Where to Get |
 |--------|----------|---------|--------------|
-| `CACHIX_AUTH_TOKEN` | Optional | Speed up Nix builds | [cachix.org](https://cachix.org) |
 | `CODECOV_TOKEN` | Optional | Upload coverage to Codecov | [codecov.io](https://codecov.io) |
 
 ---
@@ -121,7 +118,6 @@ Required secrets (configure in repository settings):
 All workflows use GitHub Actions cache to speed up builds:
 
 - **HeFFTe builds:** Cached per OS/compiler/build-type
-- **Nix builds:** Cached via Cachix (optional)
 - **Cache retention:** 7 days
 
 Expected speedup: 2-3x faster on cache hits
@@ -161,10 +157,9 @@ Add these badges to your README.md:
 ### Slow Builds
 
 **Problem:** Workflows take >45 minutes  
-**Solution:** 
+**Solution:**
 1. Ensure caching is working
 2. Consider reducing matrix size
-3. Use Cachix for Nix builds
 
 ---
 
