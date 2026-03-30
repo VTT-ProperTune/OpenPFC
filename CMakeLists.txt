@@ -45,7 +45,8 @@ include(cmake/HipSupport.cmake)
 # 5. Dependencies
 # ----------------------------------------------------------------------------
 # Third-party dependencies — see cmake/Dependencies.cmake: MPI, HeFFTe,
-# nlohmann_json, toml++; optional HDF5; Doxygen when documentation is enabled.
+# nlohmann_json, toml++; optional HDF5; Doxygen and docs/ when
+# OpenPFC_BUILD_DOCUMENTATION=ON (default ON).
 # Catch2 is found from BuildOptions.cmake when OpenPFC_BUILD_TESTS=ON.
 include(cmake/Dependencies.cmake)
 
