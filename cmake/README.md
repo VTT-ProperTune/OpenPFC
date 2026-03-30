@@ -38,7 +38,7 @@ This directory contains modular CMake configuration files that organize the buil
 
 5. **Dependencies.cmake**
    - MPI (required)
-   - HeFFTe: **`OpenPFCHeffteHints.cmake`** probes common install prefixes (`$HOME/opt/heffte`, `/opt`, `/share/apps`, Spack `EBROOTHEFFTE`, …) before failing; when **CUDA** or **HIP** is enabled, **`Dependencies.cmake`** warns if the found HeFFTe lacks the matching backend (CUDA or ROCm)
+   - HeFFTe: **`OpenPFCHeffteHints.cmake`** probes common install prefixes (`$HOME/opt/heffte`, `/opt`, `/share/apps`, Spack `EBROOTHEFFTE`, …) before failing; when **CUDA** or **HIP** is enabled, **`Dependencies.cmake`** warns if the found HeFFTe lacks the matching backend (CUDA or ROCm); optional **`OpenPFC_FETCH_HEFFTE=ON`** uses **FetchContent** into **`build/_deps`** (needs **FFTW** + **MPI** — see **INSTALL.md**)
    - nlohmann_json (required)
    - toml++ (via FindTomlPlusPlus.cmake)
    - Optional **HDF5** when **`OpenPFC_ENABLE_HDF5=ON`** (profiling export)
