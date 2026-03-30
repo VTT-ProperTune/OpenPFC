@@ -10,11 +10,14 @@
  * using MPI_Wtime(), which provides consistent timing across MPI ranks.
  *
  * The timer class provides:
- * - tic(): Start timing
- * - toc(): Stop timing and return elapsed time
- * - duration(): Get total accumulated duration
- * - reset(): Reset accumulated duration
+ * - tic(): Start a timing lap (required before each toc())
+ * - toc(): Stop the current lap and return elapsed wall time since tic()
+ * - duration(): Get total accumulated duration across completed laps
+ * - reset(): Reset accumulated duration and clear any in-progress lap
  * - description(): Set/get timer description for logging
+ *
+ * Calling toc() without a preceding tic() (or calling toc() twice without an
+ * intervening tic()) throws std::logic_error.
  *
  * @code
  * #include <openpfc/kernel/mpi/timer.hpp>
@@ -40,16 +43,18 @@
 
 #include <iostream>
 #include <mpi.h>
+#include <stdexcept>
 #include <string>
 
 namespace pfc {
 namespace mpi {
 
 class timer {
-  double tic_;
-  double toc_;
+  double tic_ = 0.0;
+  double toc_ = 0.0;
   double duration_ = 0.0;
   std::string description_;
+  bool lap_started_ = false;
 
 public:
   void tic();
@@ -61,7 +66,10 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const timer &t);
 };
 
-inline void timer::reset() { duration_ = 0.0; }
+inline void timer::reset() {
+  duration_ = 0.0;
+  lap_started_ = false;
+}
 
 inline std::string timer::description() const { return description_; }
 
@@ -74,12 +82,21 @@ inline std::ostream &operator<<(std::ostream &os, const timer &t) {
   return os;
 }
 
-inline void timer::tic() { tic_ = MPI_Wtime(); }
+inline void timer::tic() {
+  tic_ = MPI_Wtime();
+  lap_started_ = true;
+}
 
 inline double timer::toc() {
+  if (!lap_started_) {
+    throw std::logic_error(
+        "pfc::mpi::timer::toc() called without a matching tic()");
+  }
   toc_ = MPI_Wtime();
-  duration_ += toc_ - tic_;
-  return toc_ - tic_;
+  const double delta = toc_ - tic_;
+  duration_ += delta;
+  lap_started_ = false;
+  return delta;
 }
 
 } // namespace mpi
