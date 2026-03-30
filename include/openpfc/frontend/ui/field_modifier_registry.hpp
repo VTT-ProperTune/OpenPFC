@@ -19,6 +19,7 @@
 
 #include "errors.hpp"
 #include "from_json.hpp"
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
@@ -31,6 +32,7 @@
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace pfc {
 namespace ui {
@@ -67,6 +69,21 @@ public:
    */
   void register_modifier(const std::string &type, CreatorFunction creator) {
     modifiers[type] = creator;
+  }
+
+  /**
+   * @brief All currently registered field modifier type strings.
+   *
+   * Names are sorted lexicographically for stable error messages and listings.
+   */
+  std::vector<std::string> registered_modifier_types() const {
+    std::vector<std::string> out;
+    out.reserve(modifiers.size());
+    for (const auto &kv : modifiers) {
+      out.push_back(kv.first);
+    }
+    std::sort(out.begin(), out.end());
+    return out;
   }
 
   /**

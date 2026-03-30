@@ -234,16 +234,15 @@ inline std::string get_json_value_string(const nlohmann::json &j,
  * - "fixed": Fixed boundary values
  * - "moving": Moving boundary
  *
- * @return Vector of registered type names
+ * @return Vector of registered type names (lexicographically sorted)
  *
- * @note This function is defined in ui_errors.cpp
- * @note Must be kept in sync with FieldModifierInitializer in ui.hpp
+ * @note This function is defined in ui_errors.cpp and reads from
+ *       FieldModifierRegistry.
  *
- * @warning This function is not yet extensible. Custom field modifiers
- *          registered by users are not automatically included in this list.
- *          Future enhancement: FieldModifierRegistry::get_registered_types()
+ * @warning Types registered only after static initialization completes are
+ *          included once registration has run in that translation unit.
  *
- * Time complexity: O(1) - returns fixed list
+ * Time complexity: O(n log n) for n registered types (sorting)
  */
 std::vector<std::string> list_valid_field_modifiers();
 
@@ -266,16 +265,16 @@ std::vector<std::string> list_valid_field_modifiers();
  * @code
  * // Example: Unknown modifier type
  * auto msg = format_unknown_modifier_error("random_seed");
- * // Output:
+ * // Output (valid types sorted lexicographically):
  * // Unknown field modifier type: 'random_seed'
  * //   Valid types:
  * //     - constant
- * //     - single_seed
+ * //     - fixed
+ * //     - from_file
+ * //     - moving
  * //     - random_seeds
  * //     - seed_grid
- * //     - from_file
- * //     - fixed
- * //     - moving
+ * //     - single_seed
  * //   Check spelling and see documentation for details.
  *
  * // Example: With custom context

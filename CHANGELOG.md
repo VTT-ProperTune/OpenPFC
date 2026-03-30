@@ -9,6 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Changed
 
+- **UI**: `list_valid_field_modifiers()` now reports types from `FieldModifierRegistry` (sorted) instead of a duplicated hard-coded list, so new registrations stay consistent with error messages.
 - **CI**: GitHub Actions runners pinned to **Ubuntu 24.04 LTS** (main matrix, coverage, docs, clang-tidy, code quality). LLVM apt repos use **noble** for Clang 14/16; removed the gcc-13 toolchain PPA (not needed on 24.04).
 
 ### Removed
