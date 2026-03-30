@@ -200,10 +200,11 @@ matrix:
 
 ### Updating Dependencies
 
-Update version numbers in:
-- HeFFTe download URL: `v2.4.0` → `v2.5.0`
-- Cache keys: `heffte-2.4.0-...` → `heffte-2.5.0-...`
-- Update in all three workflows
+When bumping HeFFTe (current release: **v2.4.1**), update every workflow that downloads it:
+
+- **Tarball URL and source directory** (e.g. `v2.4.1`, `heffte-2.4.1`) in `ci.yml` (build matrix and clang-tidy job), `coverage.yml`, and `docs.yml`
+- **Install prefix** paths such as `$HOME/opt/heffte/2.4.1-cpu`
+- **Cache keys** using that prefix, e.g. `heffte-2.4.1-...` → `heffte-2.5.0-...` when moving to the next version
 
 ---
 
