@@ -41,7 +41,7 @@ TEST_CASE("Model - basic functionality (v2.0)", "[model][unit]") {
     field.resize(10);
 
     // Add the field to the model
-    model.add_real_field("field1", field);
+    add_real_field(model, "field1", field);
 
     REQUIRE(has_field(model, "field1"));
     REQUIRE(has_real_field(model, "field1"));
@@ -58,7 +58,7 @@ TEST_CASE("Model - basic functionality (v2.0)", "[model][unit]") {
     field.resize(10);
 
     // Add the field to the model
-    model.add_complex_field("field2", field);
+    add_complex_field(model, "field2", field);
 
     REQUIRE(has_field(model, "field2"));
     REQUIRE_FALSE(has_real_field(model, "field2"));
@@ -145,8 +145,8 @@ TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error
     RealField field1, field2;
     field1.resize(10);
     field2.resize(10);
-    model.add_real_field("density", field1);
-    model.add_real_field("temperature", field2);
+    add_real_field(model, "density", field1);
+    add_real_field(model, "temperature", field2);
 
     try {
       use_field_ref(model.get_real_field("nonexistent"));

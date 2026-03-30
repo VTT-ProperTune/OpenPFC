@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "11_write_results.hpp"
@@ -36,7 +36,7 @@ public:
     c_NF.resize(fft.size_outbox());
     opL.resize(fft.size_outbox());
     opN.resize(fft.size_outbox());
-    add_real_field("concentration", c);
+    pfc::add_real_field(*this, "concentration", c);
 
     // prepare operators
     World w = get_world();

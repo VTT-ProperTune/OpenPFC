@@ -54,7 +54,7 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  m.add_real_field("default", psi);
+  add_real_field(m, "default", psi);
 
   RandomSeeds seeds;
   seeds.set_amplitude(0.2);
@@ -98,7 +98,7 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
 
     // Reset field to zero
     std::vector<double> psi2(field_size, 0.0);
-    m.add_real_field("default", psi2);
+    add_real_field(m, "default", psi2);
 
     // Apply again
     seeds.apply(m, 0.0);
@@ -122,7 +122,7 @@ TEST_CASE("RandomSeeds - Integration with Model", "[ic_random_seeds]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  model.add_real_field("density", psi);
+  add_real_field(model, "density", psi);
 
   RandomSeeds seeds;
   seeds.set_field_name("density");

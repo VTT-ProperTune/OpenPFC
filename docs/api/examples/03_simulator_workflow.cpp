@@ -58,8 +58,8 @@ public:
     m_real_field.resize(fft.size_inbox(), 0.0);
     m_complex_field.resize(fft.size_outbox());
 
-    add_real_field("concentration", m_real_field);
-    add_complex_field("concentration_k", m_complex_field);
+    pfc::add_real_field(*this, "concentration", m_real_field);
+    pfc::add_complex_field(*this, "concentration_k", m_complex_field);
 
     // Precompute propagator in k-space
     auto outbox = fft::get_outbox(fft);

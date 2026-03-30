@@ -59,7 +59,7 @@ TEST_CASE("SingleSeed - Field Application", "[ic_single_seed]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  m.add_real_field("default", psi);
+  add_real_field(m, "default", psi);
 
   SingleSeed seed;
   seed.set_amplitude(0.2);
@@ -114,7 +114,7 @@ TEST_CASE("SingleSeed - Integration with Model", "[ic_single_seed]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  model.add_real_field("density", psi);
+  add_real_field(model, "density", psi);
 
   SingleSeed seed;
   seed.set_field_name("density");

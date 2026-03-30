@@ -86,7 +86,7 @@ TEST_CASE("SeedGrid - Field Application", "[ic_seed_grid]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  m.add_real_field("default", psi);
+  add_real_field(m, "default", psi);
 
   SeedGrid grid;
   grid.set_Nx(1);
@@ -135,7 +135,7 @@ TEST_CASE("SeedGrid - Field Application", "[ic_seed_grid]") {
 
     // Reset field to zero
     std::vector<double> psi2(field_size, 0.0);
-    m.add_real_field("default", psi2);
+    add_real_field(m, "default", psi2);
 
     // Apply again
     grid.apply(m, 0.0);
@@ -159,7 +159,7 @@ TEST_CASE("SeedGrid - Integration with Model", "[ic_seed_grid]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  model.add_real_field("density", psi);
+  add_real_field(model, "density", psi);
 
   SeedGrid grid;
   grid.set_field_name("density");

@@ -89,7 +89,7 @@ TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  m.add_real_field("default", psi);
+  add_real_field(m, "default", psi);
 
   MovingBC bc(0.0, 1.0);
   bc.set_xwidth(15.0);
@@ -150,7 +150,7 @@ TEST_CASE("MovingBC - Integration with Model", "[bc_moving]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  model.add_real_field("density", psi);
+  add_real_field(model, "density", psi);
 
   MovingBC bc;
   bc.set_field_name("density");
@@ -180,7 +180,7 @@ TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  m.add_real_field("default", psi);
+  add_real_field(m, "default", psi);
 
   MovingBC bc(0.0, 1.0);
   bc.set_xpos(100.0);

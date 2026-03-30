@@ -61,7 +61,7 @@ TEST_CASE("FileReader - Invalid File Handling", "[ic_file_reader]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  m.add_real_field("default", psi);
+  add_real_field(m, "default", psi);
 
   FileReader reader("nonexistent_file.bin");
 
@@ -92,7 +92,7 @@ TEST_CASE("FileReader - Read Valid File", "[ic_file_reader]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  m.add_real_field("default", psi);
+  add_real_field(m, "default", psi);
 
   // Create test data with known pattern
   std::vector<double> test_data(64, 0.0); // 4x4x4 = 64 points
@@ -127,7 +127,7 @@ TEST_CASE("FileReader - Integration with Model", "[ic_file_reader]") {
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
-  model.add_real_field("density", psi);
+  add_real_field(model, "density", psi);
 
   FileReader reader;
   reader.set_filename("restart.bin");

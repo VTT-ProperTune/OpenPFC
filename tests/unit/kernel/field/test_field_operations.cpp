@@ -34,7 +34,7 @@ TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
   DummyModel model(fft, world);
 
   std::vector<double> u(fft.size_inbox(), 0.0);
-  model.add_real_field("psi", u);
+  add_real_field(model, "psi", u);
 
   field::apply(model, "psi", [](const Real3 & /*x*/) { return 0.5; });
 
@@ -51,7 +51,7 @@ TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
 
   DummyModel model(fft, world);
   std::vector<double> u(fft.size_inbox(), 0.0);
-  model.add_real_field("psi", u);
+  add_real_field(model, "psi", u);
 
   field::apply_with_time(model, "psi", /*t=*/2.0,
                          [](const Real3 & /*x*/, double t) { return 1.0 + t; });
@@ -70,7 +70,7 @@ TEST_CASE("field::apply_inplace modifies field based on current value",
 
   DummyModel model(fft, world);
   std::vector<double> u(fft.size_inbox(), 1.0);
-  model.add_real_field("psi", u);
+  add_real_field(model, "psi", u);
 
   // Double all values
   field::apply_inplace(model, "psi", [](const Real3 & /*x*/, double current) {
@@ -92,7 +92,7 @@ TEST_CASE("field::apply_inplace selective update preserves untouched cells",
 
   DummyModel model(fft, world);
   std::vector<double> u(fft.size_inbox(), 0.0);
-  model.add_real_field("psi", u);
+  add_real_field(model, "psi", u);
 
   // Set values only where x > 4.0
   field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
@@ -122,7 +122,7 @@ TEST_CASE("field::apply_inplace_with_time uses time parameter",
 
   DummyModel model(fft, world);
   std::vector<double> u(fft.size_inbox(), 1.0);
-  model.add_real_field("psi", u);
+  add_real_field(model, "psi", u);
 
   // Blend current value with time-dependent term
   field::apply_inplace_with_time(
@@ -142,7 +142,7 @@ TEST_CASE("legacy adapter wraps lambda into FieldModifier", "[field_ops][unit]")
   DummyModel model(fft, world);
 
   std::vector<double> u(fft.size_inbox(), 0.0);
-  model.add_real_field("default", u);
+  add_real_field(model, "default", u);
 
   auto mod = field::make_legacy_modifier("default",
                                          [](const Real3 & /*x*/) { return 42.0; });

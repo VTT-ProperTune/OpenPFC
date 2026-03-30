@@ -745,6 +745,30 @@ inline void initialize(Model &model, double dt) { model.initialize(dt); }
 
 inline void step(Model &model, double t) { model.step(t); }
 
+inline void add_real_field(Model &model, std::string_view name, RealField &field) {
+  model.add_real_field(name, field);
+}
+
+inline void add_complex_field(Model &model, std::string_view name,
+                              ComplexField &field) {
+  model.add_complex_field(name, field);
+}
+
+/** @brief Register a real field (same as add_real_field; matches Model::add_field). */
+inline void add_field(Model &model, std::string_view name, RealField &field) {
+  model.add_real_field(name, field);
+}
+
+/** @brief Register a complex field (same as add_complex_field). */
+inline void add_field(Model &model, std::string_view name, ComplexField &field) {
+  model.add_complex_field(name, field);
+}
+
+[[nodiscard]] inline size_t
+get_allocated_memory_bytes(const Model &model) {
+  return model.get_allocated_memory_bytes();
+}
+
 } // namespace pfc
 
 #endif

@@ -122,7 +122,7 @@ TEST_CASE("Model-FFT Baseline: Field operations with FFT",
     RealField field;
     field.resize(fft.size_inbox());
 
-    model.add_real_field("phi", field);
+    add_real_field(model, "phi", field);
     REQUIRE(has_real_field(model, "phi"));
 
     // Field size should match FFT inbox
@@ -139,7 +139,7 @@ TEST_CASE("Model-FFT Baseline: Field operations with FFT",
     ComplexField field;
     field.resize(fft.size_outbox());
 
-    model.add_complex_field("phi_k", field);
+    add_complex_field(model, "phi_k", field);
     REQUIRE(has_complex_field(model, "phi_k"));
 
     // Field size should match FFT outbox

@@ -29,7 +29,7 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     // Add a field called "phi" to the model and fill it with zeros
     size_t N = 1;
     std::vector<double> phi(N, 0.0);
-    model.add_field("phi", phi);
+    add_field(model, "phi", phi);
 
     // Create a FieldModifier object
     pfc::testing::MockIC ic;
@@ -54,8 +54,8 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     Simulator simulator(model, time);
 
     std::vector<double> a(1, 0.0), b(1, 0.0);
-    model.add_field("a", a);
-    model.add_field("b", b);
+    add_field(model, "a", a);
+    add_field(model, "b", b);
 
     auto ic = std::make_unique<pfc::testing::MockICMulti>();
     ic->set_field_names({"a", "b"});
@@ -72,7 +72,7 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     // Add a field called "phi" to the model and fill it with zeros
     size_t N = 1;
     std::vector<double> phi(N, 0.0);
-    model.add_field("phi", phi);
+    add_field(model, "phi", phi);
 
     // Create a FieldModifier object
     pfc::testing::MockIC bc;

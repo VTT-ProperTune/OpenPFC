@@ -41,7 +41,7 @@ TEST_CASE("Constant Field Modifier") {
     auto fft = fft::create(decomposition);
     ModelWithConstantIC m(fft, world);
     std::vector<double> psi(8);
-    m.add_real_field("default", psi);
+    add_real_field(m, "default", psi);
 
     Constant c(1.0);
     c.apply(m, 0.0);

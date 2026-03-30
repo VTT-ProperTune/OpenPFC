@@ -52,7 +52,7 @@ TEST_CASE("FixedBC - apply method", "[boundary_conditions][unit]") {
 
   // Create and add a field
   std::vector<double> field_data(get_total_size(world), 0.0);
-  model.add_real_field("psi", field_data);
+  add_real_field(model, "psi", field_data);
 
   SECTION("FixedBC applies boundary smoothly") {
     FixedBC bc(-1.0, 1.0);

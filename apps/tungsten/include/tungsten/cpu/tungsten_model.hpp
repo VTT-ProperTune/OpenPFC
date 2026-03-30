@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -177,9 +177,9 @@ public:
     psiN_F.resize(size_outbox);
 
     // Register fields with Model base class
-    add_real_field("psi", psi);
-    add_real_field("default", psi); // for backward compatibility
-    add_real_field("psiMF", psiMF);
+    pfc::add_real_field(*this, "psi", psi);
+    pfc::add_real_field(*this, "default", psi); // for backward compatibility
+    pfc::add_real_field(*this, "psiMF", psiMF);
 
     // Track memory usage
     mem_allocated = 0;

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -209,7 +209,7 @@ public:
 
     // Register CPU buffer with Model base class for FieldModifier access
     // FieldModifiers will modify m_psi_cpu, then we sync back to GPU
-    pfc::Model::add_field("psi", m_psi_cpu);
+    pfc::add_field(*this, "psi", m_psi_cpu);
 
     // Track memory usage
     mem_allocated = 0;

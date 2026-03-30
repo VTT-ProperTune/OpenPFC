@@ -107,7 +107,7 @@ public:
     m_operator_N.resize(fft::size_outbox(fft));
 
     // Register field with Model for external access (ICs, BCs, output)
-    add_real_field("density", m_density);
+    pfc::add_real_field(*this, "density", m_density);
 
     // Precompute operators in k-space
     precompute_operators();

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #ifndef ALUMINUM_HPP
@@ -156,13 +156,13 @@ public:
     P_psi_F.resize(size_outbox);
     stress_F.resize(size_outbox);
 
-    add_real_field("psi", psi);
-    add_real_field("default", psi); // for backward compatibility
-    add_real_field("psiMF", psiMF);
-    add_real_field("psiN", psiN);
-    add_real_field("P_star_psi", P_star_psi);
-    add_real_field("temperature", temperature);
-    add_real_field("stress", stress);
+    pfc::add_real_field(*this, "psi", psi);
+    pfc::add_real_field(*this, "default", psi); // for backward compatibility
+    pfc::add_real_field(*this, "psiMF", psiMF);
+    pfc::add_real_field(*this, "psiN", psiN);
+    pfc::add_real_field(*this, "P_star_psi", P_star_psi);
+    pfc::add_real_field(*this, "temperature", temperature);
+    pfc::add_real_field(*this, "stress", stress);
 
     mem_allocated = 0;
     mem_allocated += pfc::utils::sizeof_vec(filterMF);

@@ -183,7 +183,7 @@ namespace pfc {
  * @code
  * // Model stores fields as std::vector<T> (Field = std::vector<double>)
  * pfc::Model model(world, std::move(fft));
- * model.add_real_field("density");
+ * add_real_field(model, "density", field_data);
  *
  * // Get field data
  * auto& field_data = get_real_field(model, "density");

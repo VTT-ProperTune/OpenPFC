@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <array>
@@ -93,7 +93,7 @@ public:
 
     // "Register" real field psi with a name "psi" so that we can access it from
     // initial condition.
-    add_real_field("psi", psi);
+    pfc::add_real_field(*this, "psi", psi);
   }
 
   void prepare_operators(double dt) {

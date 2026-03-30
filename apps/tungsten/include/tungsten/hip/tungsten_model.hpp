@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -123,7 +123,7 @@ public:
     m_psi_cpu.resize(size_inbox);
     m_cpu_buffer_valid = false;
 
-    pfc::Model::add_field("psi", m_psi_cpu);
+    pfc::add_field(*this, "psi", m_psi_cpu);
 
     mem_allocated = 0;
     mem_allocated += filterMF.size() * sizeof(RealType);

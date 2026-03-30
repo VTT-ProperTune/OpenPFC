@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -72,7 +72,7 @@ public:
     m_opL.resize(fft.size_outbox());
 
     // Register primary real field for test integrations
-    add_real_field("density", m_psi);
+    pfc::add_real_field(*this, "density", m_psi);
 
     // Get local domain bounds
     // LLM: Each MPI rank has subset of domain (inbox = real space, outbox = k-space)
