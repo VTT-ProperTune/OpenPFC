@@ -34,10 +34,17 @@ Benchmarks should measure:
 
 ## Running Benchmarks
 
-**Note**: Benchmarks are **automatically excluded from CI** to keep build times fast. They must be run manually for performance validation.
+**Note:** Benchmark sources are **not built unless** **`OpenPFC_BUILD_BENCHMARKS=ON`** (default is **OFF** in CMake). CI keeps build times down by excluding benchmarks from **`ctest`** via **`--exclude-regex "benchmark"`**; run them **locally** when you need timings.
+
+Configure, build **`openpfc-tests`**, then run from the **build** directory:
 
 ```bash
-# From your build directory (after cmake --build)
+cmake -S . -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DOpenPFC_BUILD_BENCHMARKS=ON
+cmake --build build --target openpfc-tests
+cd build
+
 ./tests/openpfc-tests "[benchmark]"
 
 # Specific benchmark category
@@ -52,7 +59,6 @@ Benchmarks should measure:
 
 For accurate results:
 
-- Use Release build: `cmake -B build -DCMAKE_BUILD_TYPE=Release`
 - Run on dedicated nodes (no interference)
 - Use representative problem sizes
 - Run multiple iterations for statistical significance
