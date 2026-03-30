@@ -229,14 +229,14 @@ All tests must pass before merging. The CI pipeline:
 - **Catch2 Documentation**: <https://github.com/catchorg/Catch2/tree/devel/docs>
 - **Ask the Team**: Questions about testing strategy or specific tests
 
-## Test Statistics
+## Test statistics (how to query)
 
-Current test suite status:
+Counts change as tests are added. From your **build** directory:
 
-- **36 test cases**
-- **5,298 assertions**
-- **All passing** ✅
-- Coverage: (to be measured)
+- **CTest entries:** `ctest -N`
+- **Catch2 test cases / tags:** `./tests/openpfc-tests --list-tests` (and related Catch2 CLI options)
+
+**Line coverage** is reported by the **Coverage** GitHub Actions workflow and **Codecov** (see repository badges and [`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml)); the project targets **>90%** (see **Continuous Integration** above).
 
 ---
 
