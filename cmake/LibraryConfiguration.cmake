@@ -5,12 +5,23 @@
 
 option(BUILD_SHARED_LIBS "Build OpenPFC as a shared library" OFF)
 
+# Profiling: OpenPFC_PROFILING_LEVEL==0 strips OPENPFC_PROFILE / PFC_PROFILE_SCOPE to no-ops
+# in profile_scope_macro.hpp; >0 enables those macros. Runtime ProfilingSession is unchanged.
+set(OpenPFC_PROFILING_LEVEL "2" CACHE STRING
+    "Compile-time profiling level (0=off, 1=wall/MPI stats, 2=+scoped regions)")
+set_property(CACHE OpenPFC_PROFILING_LEVEL PROPERTY STRINGS "0" "1" "2")
+if(NOT OpenPFC_PROFILING_LEVEL MATCHES "^[012]$")
+  message(FATAL_ERROR "OpenPFC_PROFILING_LEVEL must be 0, 1, or 2 (got '${OpenPFC_PROFILING_LEVEL}')")
+endif()
+
 # Create library
 add_library(openpfc
     src/openpfc/kernel/data/world.cpp
     src/openpfc/kernel/data/box3d.cpp
     src/openpfc/kernel/decomposition/decomposition.cpp
     src/openpfc/kernel/decomposition/decomposition_factory.cpp
+    src/openpfc/kernel/profiling/session.cpp
+    src/openpfc/kernel/profiling/timer_report.cpp
     src/openpfc/runtime/cpu/fft.cpp
     src/openpfc/frontend/utils/logging.cpp
     src/openpfc/frontend/ui/ui_errors.cpp
@@ -33,6 +44,8 @@ target_include_directories(openpfc
     PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
+    PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>
 )
 
 # Options (MPI option is declared in ProjectSetup.cmake before Dependencies.cmake)
@@ -40,6 +53,24 @@ option(OpenPFC_ENABLE_HEFFTE "Enable HeFFTe FFT support" ON)
 
 if(OpenPFC_ENABLE_MPI)
   target_link_libraries(openpfc PUBLIC MPI::MPI_CXX)
+endif()
+
+target_link_libraries(openpfc PRIVATE nlohmann_json::nlohmann_json)
+
+if(OpenPFC_ENABLE_HDF5)
+  if(TARGET HDF5::HDF5)
+    target_link_libraries(openpfc PRIVATE HDF5::HDF5)
+  elseif(DEFINED HDF5_LIBRARIES)
+    if(DEFINED HDF5_INCLUDE_DIRS)
+      target_include_directories(openpfc PRIVATE ${HDF5_INCLUDE_DIRS})
+    elseif(DEFINED HDF5_INCLUDE_DIR)
+      target_include_directories(openpfc PRIVATE ${HDF5_INCLUDE_DIR})
+    endif()
+    target_link_libraries(openpfc PRIVATE ${HDF5_LIBRARIES})
+  else()
+    message(FATAL_ERROR "HDF5 enabled but HDF5::HDF5 target and HDF5_LIBRARIES not set")
+  endif()
+  target_compile_definitions(openpfc PRIVATE OPENPFC_HAS_HDF5=1)
 endif()
 
 # Conditionally find HeFFTe
@@ -115,6 +146,11 @@ endif()
 
 # Require C++17
 target_compile_features(openpfc PUBLIC cxx_std_17)
+
+target_compile_definitions(openpfc PUBLIC
+    "OPENPFC_PROFILING_LEVEL=${OpenPFC_PROFILING_LEVEL}")
+target_compile_definitions(openpfc PRIVATE
+    "OPENPFC_PROFILING_BUILD_VERSION=\"${PROJECT_VERSION}\"")
 
 # GCC 8.x: std::filesystem is in libstdc++fs and must be linked explicitly
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9.0")

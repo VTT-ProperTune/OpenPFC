@@ -14,6 +14,13 @@ if(NOT OpenPFC_ENABLE_MPI)
 endif()
 find_package(MPI REQUIRED)
 
+option(OpenPFC_ENABLE_HDF5 "Enable HDF5 export for profiling dumps (optional)" OFF)
+if(OpenPFC_ENABLE_HDF5)
+  find_package(HDF5 REQUIRED COMPONENTS C)
+  message(STATUS "✅ HDF5 enabled for profiling")
+endif()
+
+
 # HeFFTe (required). Prefer an installed package; optionally fetch when missing.
 option(OpenPFC_FETCH_HEFFTE
   "If no HeFFTe is found, download and build v2.4.1 with FetchContent (needs FFTW)"
