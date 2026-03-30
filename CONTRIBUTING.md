@@ -21,7 +21,8 @@ copyright holder of OpenPFC (see the details below).
 The general steps for contributing to OpenPFC software framework are:
 1. Read at least the files [README.md](README.md),
    [CONTRIBUTING.md](CONTRIBUTING.md), [LICENSE.md](LICENSE.md), and the
-   documentation in the [docs](docs) directory.
+   documentation in the [docs](docs) directory, including the
+   [developer style guide](docs/styleguide.md) and [architecture overview](docs/architecture.md).
 2. If the contribution is small, e.g., a small fault in the documentation, you
    can point it out by making an issue.
 3. For larger contributions, you should make your local fork of the OpenPFC

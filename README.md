@@ -78,6 +78,7 @@ For faster builds, include specific headers (e.g. `<openpfc/kernel/data/world.hp
 rather than the umbrella `<openpfc/openpfc.hpp>`. Minimal simulations without the
 JSON/TOML frontend can start from `<openpfc/openpfc_minimal.hpp>`; see
 [docs/architecture.md](docs/architecture.md).
+For naming, layout, and SPDX headers, see [docs/styleguide.md](docs/styleguide.md).
 
 ## Features
 
