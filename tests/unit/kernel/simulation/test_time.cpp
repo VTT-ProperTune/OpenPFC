@@ -55,6 +55,10 @@ TEST_CASE("Time - validation errors", "[time][unit]") {
   SECTION("start time equals end time") {
     REQUIRE_THROWS_AS(Time({5.0, 5.0, 1.0}), std::invalid_argument);
   }
+
+  SECTION("end time before start time") {
+    REQUIRE_THROWS_AS(Time({10.0, 5.0, 1.0}), std::invalid_argument);
+  }
 }
 
 TEST_CASE("Time - increment overflow", "[time][unit]") {

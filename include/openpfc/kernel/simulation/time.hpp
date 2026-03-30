@@ -347,8 +347,15 @@ public:
       throw std::invalid_argument("Time step (dt) is too small: " +
                                   std::to_string(m_dt));
     }
-    if (std::abs(m_t0 - m_t1) < 1e-9) {
-      throw std::invalid_argument("Start time cannot equal end time: t0 == t1");
+    if (!(m_t1 > m_t0)) {
+      throw std::invalid_argument(
+          "End time must be greater than start time (t1 > t0). Got t0=" +
+          std::to_string(m_t0) + ", t1=" + std::to_string(m_t1));
+    }
+    if ((m_t1 - m_t0) < 1e-9) {
+      throw std::invalid_argument(
+          "Time span (t1 - t0) is too small; must be at least 1e-9. Got span " +
+          std::to_string(m_t1 - m_t0));
     }
     if (m_saveat > m_t1) {
       throw std::invalid_argument(
