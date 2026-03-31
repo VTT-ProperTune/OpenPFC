@@ -48,6 +48,7 @@
 #include <openpfc/kernel/fft/fft_layout.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 
+#include <cstdint>
 #include <heffte.h>
 #include <iostream>
 #include <memory>
@@ -74,7 +75,7 @@ using ComplexDataBuffer = core::DataBuffer<backend::CpuTag, std::complex<double>
  * FFTW is in kernel; CUDA backend is selected via runtime (include
  * openpfc/runtime/cuda/fft_cuda.hpp for RealDataBufferCUDA, create_cuda, etc.)
  */
-enum class Backend {
+enum class Backend : std::uint8_t {
   FFTW, ///< CPU-based FFT using FFTW (default, always available)
   CUDA  ///< GPU-based FFT using cuFFT (include runtime/cuda/fft_cuda.hpp)
 };

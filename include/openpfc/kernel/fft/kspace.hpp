@@ -177,7 +177,7 @@ inline double k_component(int index, int size, double freq_scale) noexcept {
  * Space complexity: O(1)
  */
 inline double k_laplacian_value(double ki, double kj, double kk) noexcept {
-  return -(ki * ki + kj * kj + kk * kk);
+  return -((ki * ki) + (kj * kj) + (kk * kk));
 }
 
 /**
@@ -216,7 +216,7 @@ inline double k_laplacian_value(double ki, double kj, double kk) noexcept {
  * Space complexity: O(1)
  */
 inline double k_squared_value(double ki, double kj, double kk) noexcept {
-  return ki * ki + kj * kj + kk * kk;
+  return (ki * ki) + (kj * kj) + (kk * kk);
 }
 
 } // namespace pfc::fft::kspace
