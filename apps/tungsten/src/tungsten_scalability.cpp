@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -16,6 +16,7 @@
 #include <iostream>
 #include <mpi.h>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
@@ -55,7 +56,7 @@ private:
   std::string output_file;
 
 public:
-  ScalabilityStudy(const std::string &csv_file) : output_file(csv_file) {
+  ScalabilityStudy(std::string csv_file) : output_file(std::move(csv_file)) {
     // Write CSV header
     std::ofstream out(output_file);
     out << "backend,precision,size_x,size_y,size_z,mpi_ranks,iterations,"
@@ -100,7 +101,9 @@ public:
       // Initialize field
       auto &psi = model.get_real_field("psi");
       for (size_t i = 0; i < psi.size(); ++i) {
-        psi[i] = -0.4 + 0.1 * std::sin(2.0 * M_PI * i / psi.size());
+        const auto di = static_cast<double>(i);
+        const auto n = static_cast<double>(psi.size());
+        psi[i] = -0.4 + 0.1 * std::sin(2.0 * M_PI * di / n);
       }
 
       // Warm-up run
@@ -133,11 +136,14 @@ public:
       // Estimate memory (rough approximation)
       auto size_inbox = fft.size_inbox();
       auto size_outbox = fft.size_outbox();
-      double memory_mb =
-          (size_inbox * sizeof(double) * 3 +               // psi, psiMF, psiN
-           size_outbox * sizeof(double) * 3 +              // operators
-           size_outbox * sizeof(std::complex<double>) * 3) // FFT fields
-          / (1024.0 * 1024.0);
+      const double nbytes = static_cast<double>(size_inbox) *
+                                static_cast<double>(sizeof(double)) * 3.0 +
+                            static_cast<double>(size_outbox) *
+                                static_cast<double>(sizeof(double)) * 3.0 +
+                            static_cast<double>(size_outbox) *
+                                static_cast<double>(sizeof(std::complex<double>)) *
+                                3.0;
+      double memory_mb = nbytes / (1024.0 * 1024.0);
 
       if (rank == 0) {
         ScalabilityResult result;
