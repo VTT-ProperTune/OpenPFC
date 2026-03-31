@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -62,7 +62,9 @@ private:
   std::array<int, D> calculate_end(std::array<int, D> begin,
                                    std::array<int, D> size) {
     std::array<int, D> end;
-    for (size_t i = 0; i < D; i++) end[i] = begin[i] + size[i] - 1;
+    for (size_t i = 0; i < D; i++) {
+      end[i] = begin[i] + size[i] - 1;
+    }
     return end;
   }
 
@@ -145,11 +147,17 @@ public:
    */
   friend std::ostream &operator<<(std::ostream &os, const MultiIndex<D> &index) {
     os << "MultiIndex set with " << D << " dimensions (indices from {";
-    for (size_t i = 0; i < D - 1; i++) os << index.m_begin[i] << ",";
+    for (size_t i = 0; i < D - 1; i++) {
+      os << index.m_begin[i] << ",";
+    }
     os << index.m_begin[D - 1] << "} to {";
-    for (size_t i = 0; i < D - 1; i++) os << index.m_end[i] << ",";
+    for (size_t i = 0; i < D - 1; i++) {
+      os << index.m_end[i] << ",";
+    }
     os << index.m_end[D - 1] << "}, size {";
-    for (size_t i = 0; i < D - 1; i++) os << index.m_size[i] << ",";
+    for (size_t i = 0; i < D - 1; i++) {
+      os << index.m_size[i] << ",";
+    }
     os << index.m_size[D - 1] << "}, linear size " << index.m_linear_size << ")";
     return os;
   }
@@ -293,7 +301,9 @@ public:
      */
     friend std::ostream &operator<<(std::ostream &os, const Iterator &it) {
       os << "{";
-      for (size_t i = 0; i < D - 1; i++) os << it.m_indices[i] << ", ";
+      for (size_t i = 0; i < D - 1; i++) {
+        os << it.m_indices[i] << ", ";
+      }
       os << it.m_indices[D - 1] << "}";
       return os;
     }
