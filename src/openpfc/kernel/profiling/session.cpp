@@ -24,8 +24,7 @@
 #define OPENPFC_PROFILING_BUILD_VERSION "unknown"
 #endif
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 namespace {
 
@@ -61,8 +60,9 @@ void merge_region_json(nlohmann::json &root, const std::string &path, double inc
 
 #ifdef OPENPFC_HAS_HDF5
 hid_t open_or_create_group(hid_t parent, const char *name) {
-  // Prefer H5Lexists + open/create so we do not trigger HDF5-DIAG from a failed H5Gopen2
-  // when the group is about to be created (common on first export for each path).
+  // Prefer H5Lexists + open/create so we do not trigger HDF5-DIAG from a failed
+  // H5Gopen2 when the group is about to be created (common on first export for each
+  // path).
   if (H5Lexists(parent, name, H5P_DEFAULT) > 0) {
     hid_t g = H5Gopen2(parent, name, H5P_DEFAULT);
     if (g >= 0) return g;
@@ -268,8 +268,9 @@ void unpack_row_v2(std::size_t row, int stride, int kpaths,
   inc.resize(static_cast<std::size_t>(kpaths));
   exc.resize(static_cast<std::size_t>(kpaths));
   for (int i = 0; i < kpaths; ++i) {
-    inc[static_cast<std::size_t>(i)] = flat[b + 6 + 2 * i];
-    exc[static_cast<std::size_t>(i)] = flat[b + 6 + 2 * i + 1];
+    const std::size_t base = b + 6u + 2u * static_cast<std::size_t>(i);
+    inc[static_cast<std::size_t>(i)] = flat[base];
+    exc[static_cast<std::size_t>(i)] = flat[base + 1u];
   }
 }
 
@@ -544,7 +545,7 @@ void ProfilingSession::finalize_and_export(
 
   if (rank != 0) return;
 
-  const std::size_t total_rows = static_cast<std::size_t>(
+  const auto total_rows = static_cast<std::size_t>(
       stride > 0 && total_doubles > 0 ? total_doubles / stride : 0);
   const int kpaths = static_cast<int>(catalog_.size());
 
@@ -621,5 +622,4 @@ void ProfilingSession::finalize_and_export(
 #endif
 }
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
