@@ -4,13 +4,17 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <mpi.h>
-#include <openpfc/kernel/profiling/mpi_stats.hpp>
-#include <openpfc/kernel/profiling/memory_sample.hpp>
 #include <openpfc/kernel/profiling/format.hpp>
+#include <openpfc/kernel/profiling/memory_sample.hpp>
+#include <openpfc/kernel/profiling/mpi_stats.hpp>
 
 using Catch::Matchers::WithinAbs;
 
 TEST_CASE("reduce_scalar_across_ranks single process", "[profiling]") {
+  int size = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) return;
+
   const double v = 2.25;
   pfc::profiling::RankStats s =
       pfc::profiling::reduce_scalar_across_ranks(MPI_COMM_WORLD, v, 0);
@@ -25,12 +29,11 @@ TEST_CASE("reduce_scalar_across_ranks single process", "[profiling]") {
 TEST_CASE("reduce_max_to_root", "[profiling]") {
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  const double x = static_cast<double>(rank + 1);
+  const auto x = static_cast<double>(rank + 1);
   const double m = pfc::profiling::reduce_max_to_root(MPI_COMM_WORLD, x, 0);
   int size = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (rank == 0)
-    REQUIRE_THAT(m, WithinAbs(static_cast<double>(size), 1e-12));
+  if (rank == 0) REQUIRE_THAT(m, WithinAbs(static_cast<double>(size), 1e-12));
 }
 
 TEST_CASE("format_bytes non-empty", "[profiling]") {
