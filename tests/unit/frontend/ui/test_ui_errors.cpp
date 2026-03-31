@@ -1,6 +1,7 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/errors.hpp>
@@ -48,7 +49,8 @@ TEST_CASE("format_config_error is concise", "[ui][errors]") {
                                  "256.5 (type: float)", {}, "\"Lx\": 256");
 
   // Count newlines
-  int lines = 1 + std::count(msg.begin(), msg.end(), '\n');
+  const auto n_newlines = std::count(msg.begin(), msg.end(), '\n');
+  const int lines = 1 + static_cast<int>(n_newlines);
   REQUIRE(lines <= 10);
 }
 
