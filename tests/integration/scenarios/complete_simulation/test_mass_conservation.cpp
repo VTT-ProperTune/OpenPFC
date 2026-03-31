@@ -24,16 +24,20 @@ TEST_CASE("Diffusion mass conservation",
   model.initialize(1.0e-3);
 
   // Initial diagnostics
-  double sum0 = 0.0, l2_0 = 0.0;
+  double sum0 = 0.0;
+  double l2_0 = 0.0;
   for (const auto &v : model.m_psi) {
     sum0 += v;
     l2_0 += v * v;
   }
 
   // Advance
-  for (int s = 0; s < 100; ++s) model.step(0.0);
+  for (int s = 0; s < 100; ++s) {
+    model.step(0.0);
+  }
 
-  double sum1 = 0.0, l2_1 = 0.0;
+  double sum1 = 0.0;
+  double l2_1 = 0.0;
   for (const auto &v : model.m_psi) {
     sum1 += v;
     l2_1 += v * v;
