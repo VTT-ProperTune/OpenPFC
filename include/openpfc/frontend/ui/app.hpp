@@ -150,10 +150,9 @@ public:
       std::cout << "Results dir " << results_dir << " does not exist, creating\n";
       std::filesystem::create_directories(results_dir);
       return true;
-    } else {
-      std::cout << "Warning: results dir " << results_dir << " already exists\n";
-      return false;
     }
+    std::cout << "Warning: results dir " << results_dir << " already exists\n";
+    return false;
   }
 
   void read_profiling_configuration() {
@@ -193,7 +192,9 @@ public:
       for (const auto &field : m_settings["fields"]) {
         std::string name = field["name"];
         std::string data = field["data"];
-        if (rank0) create_results_dir(data);
+        if (rank0) {
+          create_results_dir(data);
+        }
         std::cout << "Writing field " << name << " to " << data << '\n';
         sim.add_results_writer(name, std::make_unique<BinaryWriter>(data));
       }
@@ -381,9 +382,10 @@ public:
 
       fft.reset_fft_time();
       const double barrier_step_s = pfc::profiling::measure_barriered(m_comm, [&] {
-        if (m_profiler)
+        if (m_profiler) {
           pfc::profiling::openpfc_begin_frame_with_step_and_rank(
               *m_profiler, time.get_increment(), rank_id);
+        }
         if (m_profiler) {
           pfc::profiling::ProfilingContextScope scope(m_profiler.get());
           step(simulator, model);
@@ -422,7 +424,8 @@ public:
         m_avg_steptime = 0.01 * m_steptime + 0.99 * m_avg_steptime;
       }
       int increment = time.get_increment();
-      double t = time.get_current(), t1 = time.get_t1();
+      double t = time.get_current();
+      double t1 = time.get_t1();
       double eta_i = (t1 - t) / time.get_dt();
       double eta_t = eta_i * m_avg_steptime;
       double other_time = m_steptime - m_fft_time;
@@ -461,7 +464,9 @@ public:
         if (rank0) {
           std::cerr << "profiling.format \"" << m_prof_format
                     << "\" is no longer supported (CSV export removed); using json";
-          if (fmt == "csv_hdf5" || fmt == "csv+hdf5") std::cerr << " and hdf5";
+          if (fmt == "csv_hdf5" || fmt == "csv+hdf5") {
+            std::cerr << " and hdf5";
+          }
           std::cerr << ".\n";
         }
         if (fmt == "csv") {
@@ -479,15 +484,17 @@ public:
         exp.json_path = m_prof_output + ".json";
         exp.hdf5_path = m_prof_output + ".h5";
       } else {
-        if (fmt != "json" && rank0)
+        if (fmt != "json" && rank0) {
           std::cerr << "profiling.format unknown (\"" << m_prof_format
                     << "\"), using json\n";
+        }
         exp.write_json = true;
         exp.json_path = m_prof_output + ".json";
       }
       m_profiler->finalize_and_export(m_comm, exp);
-      if (rank0)
+      if (rank0) {
         std::cout << "Profiling export written (see profiling.output / format).\n";
+      }
       if (m_prof_print_report && m_profiler) {
         pfc::profiling::ProfilingPrintOptions popts;
         popts.title = "OpenPFC profiling (MPI aggregate, mean)";
