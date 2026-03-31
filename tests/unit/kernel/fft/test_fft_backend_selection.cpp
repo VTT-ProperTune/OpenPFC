@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -53,7 +53,7 @@ TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]
   fft->forward(input, fourier);
 
   // DC component should be sum of all input values
-  double expected_dc = static_cast<double>(input.size());
+  auto expected_dc = static_cast<double>(input.size());
   REQUIRE_THAT(std::real(fourier[0]), WithinAbs(expected_dc, 0.01));
 
   // Backward transform (should recover original)
