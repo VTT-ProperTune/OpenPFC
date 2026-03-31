@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -38,7 +38,9 @@ namespace detail {
 template <std::size_t Rank>
 std::size_t product_extents(const std::array<std::size_t, Rank> &extents) {
   std::size_t p = 1;
-  for (std::size_t r = 0; r < Rank; ++r) p *= extents[r];
+  for (std::size_t r = 0; r < Rank; ++r) {
+    p *= extents[r];
+  }
   return p;
 }
 
@@ -155,7 +157,9 @@ public:
   static constexpr std::size_t rank_dynamic() { return Rank; }
 
   constexpr std::size_t extent(std::size_t dim) const {
-    if (dim >= Rank) throw std::out_of_range("View::extent(dim)");
+    if (dim >= Rank) {
+      throw std::out_of_range("View::extent(dim)");
+    }
     return m_extents[dim];
   }
 
@@ -164,7 +168,9 @@ public:
   }
 
   constexpr std::size_t stride(std::size_t dim) const {
-    if (dim >= Rank) throw std::out_of_range("View::stride(dim)");
+    if (dim >= Rank) {
+      throw std::out_of_range("View::stride(dim)");
+    }
     return m_strides[dim];
   }
 
@@ -179,12 +185,18 @@ public:
   // operator() with Rank indices (1D, 2D, 3D supported via parameter pack)
   template <typename... Args> T &operator()(Args... args) {
     static_assert(sizeof...(Args) == Rank, "View::operator() requires Rank indices");
+    if (m_ptr == nullptr) {
+      throw std::logic_error("View::operator(): null data pointer");
+    }
     auto idx = detail::indices_to_array(args...);
     return m_ptr[linear_offset(idx)];
   }
 
   template <typename... Args> const T &operator()(Args... args) const {
     static_assert(sizeof...(Args) == Rank, "View::operator() requires Rank indices");
+    if (m_ptr == nullptr) {
+      throw std::logic_error("View::operator(): null data pointer");
+    }
     auto idx = detail::indices_to_array(args...);
     return m_ptr[linear_offset(idx)];
   }
@@ -195,7 +207,12 @@ public:
             iType i5 = 0, iType i6 = 0, iType i7 = 0) {
     std::array<std::size_t, Rank> idx{};
     std::array<iType, 8> arr{{i0, i1, i2, i3, i4, i5, i6, i7}};
-    for (std::size_t r = 0; r < Rank && r < 8; ++r) idx[r] = arr[r];
+    for (std::size_t r = 0; r < Rank && r < 8; ++r) {
+      idx[r] = arr[r];
+    }
+    if (m_ptr == nullptr) {
+      throw std::logic_error("View::access: null data pointer");
+    }
     return m_ptr[linear_offset(idx)];
   }
 
@@ -204,7 +221,12 @@ public:
                   iType i4 = 0, iType i5 = 0, iType i6 = 0, iType i7 = 0) const {
     std::array<std::size_t, Rank> idx{};
     std::array<iType, 8> arr{{i0, i1, i2, i3, i4, i5, i6, i7}};
-    for (std::size_t r = 0; r < Rank && r < 8; ++r) idx[r] = arr[r];
+    for (std::size_t r = 0; r < Rank && r < 8; ++r) {
+      idx[r] = arr[r];
+    }
+    if (m_ptr == nullptr) {
+      throw std::logic_error("View::access: null data pointer");
+    }
     return m_ptr[linear_offset(idx)];
   }
 
