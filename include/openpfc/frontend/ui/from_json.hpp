@@ -226,7 +226,7 @@ template <> inline World from_json<World>(const json &j) {
         origin_val.is_null() ? "missing" : get_json_value_string(j, origin_key);
     throw std::invalid_argument(format_config_error(
         origin_key, "coordinate system origin", "string ('center' or 'corner')",
-        origin_str, {"center", "corner"}, "\"origin\": \"center\""));
+        origin_str, {"center", "corner"}, R"("origin": "center")"));
   }
   origin = origin_val;
 
@@ -234,7 +234,7 @@ template <> inline World from_json<World>(const json &j) {
   if (origin != "center" && origin != "corner") {
     throw std::invalid_argument(format_config_error(
         origin_key, "coordinate system origin", "string ('center' or 'corner')",
-        "\"" + origin + "\"", {"center", "corner"}, "\"origin\": \"center\""));
+        "\"" + origin + "\"", {"center", "corner"}, R"("origin": "center")"));
   }
 
   if (origin == "center") {
