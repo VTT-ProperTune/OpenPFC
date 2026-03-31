@@ -100,6 +100,16 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   install(TARGETS tungsten_hip DESTINATION bin)
   message(STATUS "Tungsten HIP version enabled")
 
+  # Standalone GPU-aware MPI probe (device pointers; needs MPICH_GPU_SUPPORT_ENABLED=1 on LUMI)
+  add_executable(verify_gpu_aware_mpi src/verify_gpu_aware_mpi.cpp)
+  target_link_libraries(verify_gpu_aware_mpi PRIVATE MPI::MPI_CXX hip::host)
+  set_target_properties(verify_gpu_aware_mpi PROPERTIES
+    HIP_STANDARD 17
+    HIP_STANDARD_REQUIRED ON
+  )
+  install(TARGETS verify_gpu_aware_mpi DESTINATION bin)
+  message(STATUS "verify_gpu_aware_mpi enabled (HIP + MPI device buffer test)")
+
   # Test program for HIP with VTK output
   add_executable(test_tungsten_hip_vtk
     tests/test_tungsten_hip_vtk.cpp
