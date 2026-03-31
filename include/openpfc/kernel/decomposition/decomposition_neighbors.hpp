@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -36,8 +36,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <optional>
 
-namespace pfc {
-namespace decomposition {
+namespace pfc::decomposition {
 
 /**
  * @brief Get neighbor rank in a given direction
@@ -180,5 +179,4 @@ inline std::map<Int3, int> find_all_neighbors(const Decomposition &decomp,
   return neighbors;
 }
 
-} // namespace decomposition
-} // namespace pfc
+} // namespace pfc::decomposition
