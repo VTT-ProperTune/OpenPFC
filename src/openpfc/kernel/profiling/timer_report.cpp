@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <cstddef>
 #include <functional>
 #include <iomanip>
 #include <sstream>
@@ -202,7 +201,7 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
   double denom = 0.0;
   const auto &fm_names = session.frame_metric_names();
   const std::size_t nmeta = fm_names.size();
-  std::size_t wall_ix = static_cast<std::size_t>(-1);
+  auto wall_ix = static_cast<std::size_t>(-1);
   if (!opts.wall_denominator_metric.empty()) {
     for (std::size_t i = 0; i < fm_names.size(); ++i) {
       if (fm_names[i] == opts.wall_denominator_metric) {
