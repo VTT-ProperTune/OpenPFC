@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "test_helpers.hpp"
@@ -29,7 +29,6 @@ TEST_CASE("GPUVector empty construction", "[gpu][vector]") {
   }
 
   pfc::gpu::GPUVector<double> vec(0);
-  REQUIRE(vec.size() == 0);
   REQUIRE(vec.empty());
 }
 
@@ -79,8 +78,10 @@ TEST_CASE("GPUVector move semantics", "[gpu][vector]") {
   pfc::gpu::GPUVector<double> vec2 = std::move(vec1);
   REQUIRE(vec2.data() == ptr1);
   REQUIRE(vec2.size() == size1);
-  REQUIRE(vec1.data() == nullptr); // Moved from
-  REQUIRE(vec1.size() == 0);
+  // NOLINTBEGIN(bugprone-use-after-move) — intentional checks on moved-from state
+  REQUIRE(vec1.data() == nullptr);
+  REQUIRE(vec1.empty());
+  // NOLINTEND(bugprone-use-after-move)
 }
 
 TEST_CASE("GPUVector copy_from_host size mismatch", "[gpu][vector]") {

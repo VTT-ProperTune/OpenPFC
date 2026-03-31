@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -52,8 +52,7 @@
 #define PFC_GPU_CUDA_AVAILABLE 0
 #endif
 
-namespace pfc {
-namespace gpu {
+namespace pfc::gpu {
 
 /**
  * @brief Simple GPU memory container (RAII)
@@ -247,8 +246,7 @@ public:
   }
 };
 
-} // namespace gpu
-} // namespace pfc
+} // namespace pfc::gpu
 
 #undef PFC_GPU_CUDA_AVAILABLE
 

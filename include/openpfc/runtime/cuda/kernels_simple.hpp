@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -29,8 +29,7 @@
 
 #include <openpfc/runtime/cuda/gpu_vector.hpp>
 
-namespace pfc {
-namespace gpu {
+namespace pfc::gpu {
 
 /**
  * @brief Add a scalar value to each element of a GPU vector
@@ -61,7 +60,6 @@ void add_scalar(GPUVector<double> &vec, double value);
  */
 void multiply_scalar(GPUVector<double> &vec, double value);
 
-} // namespace gpu
-} // namespace pfc
+} // namespace pfc::gpu
 
 #endif

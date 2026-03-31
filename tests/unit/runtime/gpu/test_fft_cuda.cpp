@@ -1,5 +1,14 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
+// CPU-only clang-tidy builds omit OpenPFC_ENABLE_CUDA; this TU must still parse.
+#if !defined(OpenPFC_ENABLE_CUDA)
+
+#include <catch2/catch_session.hpp>
+
+int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
+
+#else
 
 #include "test_helpers.hpp"
 #include <algorithm>
@@ -18,10 +27,8 @@
 
 using Catch::Approx;
 
-#if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
 #include <mpi.h>
-#endif
 
 TEST_CASE("GPU FFT: Forward transform", "[gpu][fft]") {
   if (!pfc::gpu::test::is_cuda_available()) {
@@ -29,9 +36,9 @@ TEST_CASE("GPU FFT: Forward transform", "[gpu][fft]") {
   }
 
   // Initialize MPI if not already initialized
-  int mpi_initialized;
+  int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
-  if (!mpi_initialized) {
+  if (mpi_initialized == 0) {
     MPI_Init(nullptr, nullptr);
   }
 
@@ -80,9 +87,9 @@ TEST_CASE("GPU FFT: Backward transform", "[gpu][fft]") {
   }
 
   // Initialize MPI if not already initialized
-  int mpi_initialized;
+  int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
-  if (!mpi_initialized) {
+  if (mpi_initialized == 0) {
     MPI_Init(nullptr, nullptr);
   }
 
@@ -134,9 +141,9 @@ TEST_CASE("GPU FFT: Round-trip (forward then backward)", "[gpu][fft]") {
   }
 
   // Initialize MPI if not already initialized
-  int mpi_initialized;
+  int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
-  if (!mpi_initialized) {
+  if (mpi_initialized == 0) {
     MPI_Init(nullptr, nullptr);
   }
 
@@ -187,9 +194,9 @@ TEST_CASE("GPU FFT: Round-trip (forward then backward)", "[gpu][fft]") {
 
 int main(int argc, char *argv[]) {
   // Initialize MPI for tests
-  int mpi_initialized;
+  int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
-  if (!mpi_initialized) {
+  if (mpi_initialized == 0) {
     MPI_Init(&argc, &argv);
   }
 
@@ -201,3 +208,5 @@ int main(int argc, char *argv[]) {
 
   return result;
 }
+
+#endif // OpenPFC_ENABLE_CUDA

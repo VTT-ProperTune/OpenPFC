@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -15,8 +15,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace pfc {
-namespace gpu {
+namespace pfc::gpu {
 
 // CUDA kernel: Add scalar to each element
 __global__ void add_scalar_kernel(double *data, double scalar, size_t n) {
@@ -86,7 +85,6 @@ void multiply_scalar(GPUVector<double> &vec, double value) {
   }
 }
 
-} // namespace gpu
-} // namespace pfc
+} // namespace pfc::gpu
 
 #endif // OpenPFC_ENABLE_CUDA
