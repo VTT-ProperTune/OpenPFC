@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -66,7 +66,8 @@ TEST_CASE("SparseVector - Gather from large array",
   REQUIRE(data.size() == sparse_size);
   // Spot check: verify first, middle, and last elements
   REQUIRE(data[0] == Approx(0.0).margin(1e-10));
-  REQUIRE(data[sparse_size / 2] == Approx((sparse_size / 2) * 50.0).margin(1e-10));
+  REQUIRE(data[sparse_size / 2] ==
+          Approx(static_cast<double>(sparse_size / 2) * 50.0).margin(1e-10));
   REQUIRE(data[sparse_size - 1] == Approx((sparse_size - 1) * 50.0).margin(1e-10));
 }
 
@@ -80,7 +81,7 @@ TEST_CASE("SparseVector - Scatter to large array",
   std::vector<double> values;
   for (size_t i = 0; i < sparse_size; ++i) {
     indices.push_back(i * 20);
-    values.push_back(100.0 + i);
+    values.push_back(100.0 + static_cast<double>(i));
   }
 
   auto sparse = sparsevector::create<double>(indices, values);
@@ -168,33 +169,33 @@ TEST_CASE("SparseVector - Gather scatter with single element",
 
 TEST_CASE("SparseVector - Float type", "[SparseVector][core][types]") {
   std::vector<size_t> indices = {1, 3, 5};
-  std::vector<float> values = {1.5f, 3.5f, 5.5f};
+  std::vector<float> values = {1.5F, 3.5F, 5.5F};
   auto sparse = core::SparseVector<backend::CpuTag, float>(indices, values);
 
   REQUIRE(sparse.size() == 3);
   auto data = sparsevector::get_data(sparse);
-  REQUIRE(data[0] == Approx(1.5f).margin(1e-5f));
-  REQUIRE(data[1] == Approx(3.5f).margin(1e-5f));
-  REQUIRE(data[2] == Approx(5.5f).margin(1e-5f));
+  REQUIRE(data[0] == Approx(1.5F).margin(1e-5F));
+  REQUIRE(data[1] == Approx(3.5F).margin(1e-5F));
+  REQUIRE(data[2] == Approx(5.5F).margin(1e-5F));
 }
 
 TEST_CASE("SparseVector - Gather scatter with float",
           "[SparseVector][gather][scatter][types]") {
   auto sparse = sparsevector::create<float>({0, 2, 4});
 
-  std::vector<float> source = {1.1f, 2.2f, 3.3f, 4.4f, 5.5f};
+  std::vector<float> source = {1.1F, 2.2F, 3.3F, 4.4F, 5.5F};
   gather(sparse, source);
 
   auto data = sparsevector::get_data(sparse);
-  REQUIRE(data[0] == Approx(1.1f).margin(1e-5f));
-  REQUIRE(data[1] == Approx(3.3f).margin(1e-5f));
-  REQUIRE(data[2] == Approx(5.5f).margin(1e-5f));
+  REQUIRE(data[0] == Approx(1.1F).margin(1e-5F));
+  REQUIRE(data[1] == Approx(3.3F).margin(1e-5F));
+  REQUIRE(data[2] == Approx(5.5F).margin(1e-5F));
 
-  std::vector<float> dest(5, 0.0f);
+  std::vector<float> dest(5, 0.0F);
   scatter(sparse, dest);
-  REQUIRE(dest[0] == Approx(1.1f).margin(1e-5f));
-  REQUIRE(dest[2] == Approx(3.3f).margin(1e-5f));
-  REQUIRE(dest[4] == Approx(5.5f).margin(1e-5f));
+  REQUIRE(dest[0] == Approx(1.1F).margin(1e-5F));
+  REQUIRE(dest[2] == Approx(3.3F).margin(1e-5F));
+  REQUIRE(dest[4] == Approx(5.5F).margin(1e-5F));
 }
 
 TEST_CASE("SparseVector - Gather from initializer list",
