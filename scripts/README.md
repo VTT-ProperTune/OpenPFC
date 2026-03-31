@@ -16,7 +16,13 @@ This directory contains utility scripts for OpenPFC development and workflow aut
 **Installation** (Required for all developers):
 
 ```bash
-# From the project root directory
+# From the project root directory (preferred: tracked hooks under .githooks/)
+git config core.hooksPath .githooks
+```
+
+Alternatively, copy the entrypoint only:
+
+```bash
 cp scripts/pre-commit-hook .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
@@ -27,6 +33,7 @@ chmod +x .git/hooks/pre-commit
 - Checks C++ files (`.cpp`, `.hpp`, `.h`, `.cc`, `.cxx`) for formatting issues
 - Uses `clang-format` to verify code style compliance
 - Blocks commits if formatting issues are found
+- Then runs [`pre-commit-clang-tidy-hook`](pre-commit-clang-tidy-hook) (see below)
 
 **Requirements**:
 
@@ -66,6 +73,16 @@ git commit -m "test"
 git commit --no-verify -m "emergency fix"
 ```
 
+### pre-commit-clang-tidy-hook
+
+**Purpose**: When a CMake build directory with `compile_commands.json` is present (same layout as [`run-clang-tidy.sh`](run-clang-tidy.sh): default `build-tidy`, or `OPENPFC_TIDY_BUILD_DIR`), run `clang-tidy` on **staged** `.cpp` and `.hpp` files only. If there is no compilation database, the hook does nothing (no error).
+
+**Invocation**: Not run standalone; `scripts/pre-commit-hook` `exec`s it after `clang-format` succeeds.
+
+**Requirements**: `clang-tidy` on `PATH` whenever `compile_commands.json` exists in the chosen build directory.
+
+**Notes**: Uses the same default `clang-tidy` flags as `run-clang-tidy.sh` without **`--fail-fast`** (`-p`, `-header-filter='include/openpfc/.*'`; failures follow `.clang-tidy` **WarningsAsErrors** only). Skips the same CPU-only GPU entrypoints as the full tidy script.
+
 ### run-clang-tidy.sh
 
 **Purpose:** Run `clang-tidy` on OpenPFC `.cpp` files **the same way as CI** (`.clang-tidy`, `-header-filter='include/openpfc/.*'`, and the same file list). GitHub Actions calls `bash scripts/run-clang-tidy.sh --build-dir=build-tidy` after configuring; **do not duplicate** the `find`/`clang-tidy` loop in workflow YAML—extend this script instead.
@@ -89,7 +106,7 @@ module load openmpi/4.1.1
 
 - `--configure` / `-c` — configure `build-tidy` (or `OPENPFC_TIDY_BUILD_DIR`) with the tohtori toolchain and OpenPFC test/example/app targets, then exit.
 - `--build-dir=NAME` — build directory under the repo root (default: `build-tidy`).
-- `--fail-fast` — stop after the first `.cpp` on which `clang-tidy` fails (useful to fix issues one file at a time: run, fix, commit, repeat).
+- `--fail-fast` — pass **`--warnings-as-errors=*`** (every tidy diagnostic fails) and stop after the first failing `.cpp` (useful to fix issues one file at a time: run, fix, commit, repeat).
 - `--file=PATH` — run `clang-tidy` on a single `.cpp` relative to the repo root (e.g. after a fix, before a full sweep).
 
 ## Build Scripts
