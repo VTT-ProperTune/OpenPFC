@@ -230,7 +230,7 @@ private:
 
   static bool is_finite_number(const json &v) {
     if (!v.is_number()) return false;
-    double x = v.get<double>();
+    auto x = v.get<double>();
     return std::isfinite(x);
   }
 
@@ -275,7 +275,7 @@ private:
     }
 
     // Get value and validate bounds (reject NaN/Inf)
-    double value = val.get<double>();
+    auto value = val.get<double>();
     if (!std::isfinite(value)) {
       std::ostringstream err;
       err << "Parameter '" << meta.name << "' is not finite (NaN/Inf)\n"
