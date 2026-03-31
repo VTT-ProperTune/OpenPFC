@@ -56,7 +56,9 @@ public:
 
     const auto &local_world = decomposition::get_subworld(m_decomp, m_rank);
     auto local_size = world::get_size(local_world);
-    int nx = local_size[0], ny = local_size[1], nz = local_size[2];
+    int nx = local_size[0];
+    int ny = local_size[1];
+    int nz = local_size[2];
 
     m_face_types = halo::create_face_types_6(nx, ny, nz, m_halo_width,
                                              exchange::detail::get_mpi_type<T>());
