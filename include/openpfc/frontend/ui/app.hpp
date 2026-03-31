@@ -13,7 +13,8 @@
  * - Setting up initial and boundary conditions
  * - Running the simulation loop
  * - Writing results
- * - Performance timing and reporting (kernel/profiling, see docs/performance_profiling.md)
+ * - Performance timing and reporting (kernel/profiling, see
+ * docs/performance_profiling.md)
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -22,9 +23,6 @@
 #ifndef PFC_UI_APP_HPP
 #define PFC_UI_APP_HPP
 
-#include <openpfc/frontend/ui/field_modifier_registry.hpp>
-#include <openpfc/frontend/ui/from_json.hpp>
-#include <openpfc/frontend/ui/json_helpers.hpp>
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -33,10 +31,13 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/io/binary_writer.hpp>
+#include <openpfc/frontend/ui/field_modifier_registry.hpp>
+#include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
 #include <openpfc/frontend/utils/timeleft.hpp>
-#include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/frontend/utils/toml_to_json.hpp>
+#include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <toml++/toml.hpp>
 #include <vector>
@@ -148,11 +149,9 @@ public:
   }
 
   void read_profiling_configuration() {
-    if (!m_settings.contains("profiling"))
-      return;
+    if (!m_settings.contains("profiling")) return;
     const auto &p = m_settings["profiling"];
-    if (p.contains("enabled"))
-      m_prof_enabled = p["enabled"].get<bool>();
+    if (p.contains("enabled")) m_prof_enabled = p["enabled"].get<bool>();
     if (p.contains("format") && p["format"].is_string())
       m_prof_format = p["format"].get<std::string>();
     if (p.contains("output") && p["output"].is_string())
@@ -164,8 +163,7 @@ public:
     m_prof_extra_regions.clear();
     if (p.contains("regions") && p["regions"].is_array()) {
       for (const auto &el : p["regions"]) {
-        if (el.is_string())
-          m_prof_extra_regions.push_back(el.get<std::string>());
+        if (el.is_string()) m_prof_extra_regions.push_back(el.get<std::string>());
       }
     }
   }
@@ -350,8 +348,7 @@ public:
 
       fft.reset_fft_time();
       const double barrier_step_s = pfc::profiling::measure_barriered(m_comm, [&] {
-        if (m_profiler)
-          m_profiler->begin_step_frame(time.get_increment(), rank_id);
+        if (m_profiler) m_profiler->begin_step_frame(time.get_increment(), rank_id);
         if (m_profiler) {
           pfc::profiling::ProfilingContextScope scope(m_profiler.get());
           step(simulator, model);

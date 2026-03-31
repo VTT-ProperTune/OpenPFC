@@ -26,18 +26,15 @@ namespace profiling {
 inline std::size_t try_read_process_rss_bytes() noexcept {
 #if defined(__linux__)
   std::ifstream status("/proc/self/status");
-  if (!status)
-    return 0;
+  if (!status) return 0;
   std::string line;
   while (std::getline(status, line)) {
-    if (line.compare(0, 6, "VmRSS:") != 0)
-      continue;
+    if (line.compare(0, 6, "VmRSS:") != 0) continue;
     std::istringstream iss(line);
     std::string label;
     std::size_t kb = 0;
     std::string unit;
-    if (iss >> label >> kb >> unit)
-      return kb * 1024;
+    if (iss >> label >> kb >> unit) return kb * 1024;
     return 0;
   }
 #endif

@@ -247,8 +247,9 @@ int main(int argc, char **argv) {
     }
 
     // Create 128³ computational domain with unit spacing
-    auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+    auto world =
+        world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                      GridSpacing({1.0, 1.0, 1.0}));
 
     if (rank == 0) {
       std::cout << "    Domain: " << world::get_size(world, 0) << " x "
@@ -383,8 +384,8 @@ int main(int argc, char **argv) {
       std::cout << "    Time span: [" << t_start << ", " << t_end << "]\n";
       std::cout << "    Time step: " << dt << "\n";
       std::cout << "    Approx. steps: " << total_steps_approx << "\n";
-      std::cout << "    Save interval: " << save_interval << " steps (saveat = " << saveat
-                << " time units)\n";
+      std::cout << "    Save interval: " << save_interval
+                << " steps (saveat = " << saveat << " time units)\n";
     }
 
     //======================================================================
@@ -404,8 +405,8 @@ int main(int argc, char **argv) {
     }
 
     Simulator simulator(model, time);
-    simulator.add_results_writer("density",
-                                 std::make_unique<BinaryWriter>("pfc_output_{:06d}.bin"));
+    simulator.add_results_writer(
+        "density", std::make_unique<BinaryWriter>("pfc_output_{:06d}.bin"));
 
     if (rank == 0) {
       std::cout << "    Simulator configured with model and time stepper\n";

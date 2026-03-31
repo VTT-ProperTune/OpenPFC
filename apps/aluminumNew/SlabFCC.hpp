@@ -125,7 +125,8 @@ public:
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
           const std::array<double, 3> location = {
-              X0 + dist_position_jitter(rng), Y0 + Dy * j + dist_position_jitter(rng),
+              X0 + dist_position_jitter(rng),
+              Y0 + Dy * j + dist_position_jitter(rng),
               Z0 + Dz * k + dist_position_jitter(rng)};
           const std::array<double, 3> orientation = {
               dist_orientation_component(rng), dist_orientation_component(rng),
@@ -142,7 +143,8 @@ public:
       for (int j = 0; j < Ny; j++) {
         for (int k = 0; k < Nz; k++) {
           const std::array<double, 3> location = {
-              X0 + dist_position_jitter(rng), Y0 + Dy * j + dist_position_jitter(rng),
+              X0 + dist_position_jitter(rng),
+              Y0 + Dy * j + dist_position_jitter(rng),
               Z0 + Dz * k + dist_position_jitter(rng)};
           const std::array<double, 3> orientation = orientations[j * Nz + k];
           const SeedFCC seed(location, orientation, radius, rho, amplitude);

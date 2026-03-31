@@ -336,7 +336,8 @@ public:
    *
    * @param world The World object to initialize the model.
    */
-  explicit Aluminum(pfc::FFT &fft, const pfc::World &world) : pfc::Model(fft, world) {
+  explicit Aluminum(pfc::FFT &fft, const pfc::World &world)
+      : pfc::Model(fft, world) {
     // Additional initialization if needed
   }
 
@@ -491,8 +492,7 @@ override this function.
 
 void step(pfc::Simulator &s, Aluminum &m) {
 #ifdef ALUMINUM_DEBUG
-  if (m.is_rank0())
-    std::cout << "Performing Aluminum step" << std::endl;
+  if (m.is_rank0()) std::cout << "Performing Aluminum step" << std::endl;
 #endif
 
   for (auto const &bc : s.get_boundary_conditions()) {

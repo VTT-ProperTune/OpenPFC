@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -33,11 +33,10 @@
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
-#include <openpfc/kernel/profiling/context.hpp>
-#include <openpfc/kernel/profiling/names.hpp>
-#include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/kernel/profiling/context.hpp>
+#include <openpfc/kernel/profiling/names.hpp>
 
 namespace pfc {
 
@@ -57,12 +56,12 @@ public:
     int nx = local_size[0], ny = local_size[1], nz = local_size[2];
 
     m_face_types = halo::create_face_types_6(nx, ny, nz, m_halo_width,
-                                               exchange::detail::get_mpi_type<T>());
+                                             exchange::detail::get_mpi_type<T>());
 
     m_face_counts = halo::face_halo_counts(m_decomp, m_rank, m_halo_width);
 
     const std::vector<Int3> direction_order = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
-                                             {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
+                                               {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
 
     for (const auto &dir : direction_order) {
       auto it = patterns.find(dir);
@@ -117,14 +116,14 @@ public:
         int tag = m_base_tag + static_cast<int>(i);
         T *recv_ptr = face_buffers[static_cast<size_t>(slot)].data();
         size_t cnt = m_face_counts.counts[static_cast<size_t>(slot)];
-        exchange::irecv_dense(recv_ptr, static_cast<int>(cnt), m_neighbors[i], m_comm,
-                              &m_requests[req_count], tag);
+        exchange::irecv_dense(recv_ptr, static_cast<int>(cnt), m_neighbors[i],
+                              m_comm, &m_requests[req_count], tag);
         req_count++;
       }
       for (size_t i = 0; i < n; ++i) {
         int tag = m_base_tag + static_cast<int>(i);
-        exchange::isend_face(send_buf, m_face_types[i].send_type.get(), m_neighbors[i],
-                             m_comm, &m_requests[req_count], tag);
+        exchange::isend_face(send_buf, m_face_types[i].send_type.get(),
+                             m_neighbors[i], m_comm, &m_requests[req_count], tag);
         req_count++;
       }
       m_request_count = static_cast<int>(req_count);
@@ -145,7 +144,8 @@ public:
         T *dst = face_buffers[static_cast<size_t>(slot)].data();
         size_t nbytes = recv_sv.size() * sizeof(T);
         if (face_buffers[static_cast<size_t>(slot)].size() * sizeof(T) < nbytes) {
-          throw std::runtime_error("SeparatedFaceHaloExchanger: face buffer too small");
+          throw std::runtime_error(
+              "SeparatedFaceHaloExchanger: face buffer too small");
         }
         std::memcpy(dst, src, nbytes);
       }
@@ -159,8 +159,8 @@ public:
 
 private:
   static int direction_to_slot(const Int3 &d) {
-    const std::array<Int3, 6> dirs = {{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0},
-                                       {0, 0, 1}, {0, 0, -1}}};
+    const std::array<Int3, 6> dirs = {
+        {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
     for (int i = 0; i < 6; ++i) {
       if (dirs[static_cast<size_t>(i)] == d) {
         return i;

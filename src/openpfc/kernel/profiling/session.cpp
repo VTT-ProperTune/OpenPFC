@@ -34,10 +34,8 @@ std::vector<std::string> split_path_segments(const std::string &path) {
   std::size_t start = 0;
   while (start <= path.size()) {
     std::size_t end = path.find('/', start);
-    if (end == std::string::npos)
-      end = path.size();
-    if (end > start)
-      out.push_back(path.substr(start, end - start));
+    if (end == std::string::npos) end = path.size();
+    if (end > start) out.push_back(path.substr(start, end - start));
     start = end + 1;
   }
   return out;
@@ -46,19 +44,16 @@ std::vector<std::string> split_path_segments(const std::string &path) {
 void merge_region_json(nlohmann::json &root, const std::string &path, double inc,
                        double exc) {
   const auto segs = split_path_segments(path);
-  if (segs.empty())
-    return;
+  if (segs.empty()) return;
   nlohmann::json *cur = &root;
   for (std::size_t i = 0; i < segs.size(); ++i) {
     nlohmann::json &slot = (*cur)[segs[i]];
     if (i + 1 == segs.size()) {
-      if (!slot.is_object())
-        slot = nlohmann::json::object();
+      if (!slot.is_object()) slot = nlohmann::json::object();
       slot["inclusive"] = inc;
       slot["exclusive"] = exc;
     } else {
-      if (!slot.is_object())
-        slot = nlohmann::json::object();
+      if (!slot.is_object()) slot = nlohmann::json::object();
       cur = &slot;
     }
   }
@@ -67,8 +62,7 @@ void merge_region_json(nlohmann::json &root, const std::string &path, double inc
 #ifdef OPENPFC_HAS_HDF5
 hid_t open_or_create_group(hid_t parent, const char *name) {
   hid_t g = H5Gopen2(parent, name, H5P_DEFAULT);
-  if (g >= 0)
-    return g;
+  if (g >= 0) return g;
   return H5Gcreate2(parent, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 }
 
@@ -82,8 +76,7 @@ hid_t ensure_group_chain(hid_t prof_root, const std::string &path,
   for (const auto &seg : segs) {
     hid_t next = open_or_create_group(cur, seg.c_str());
     if (next < 0) {
-      for (auto it = opened.rbegin(); it != opened.rend(); ++it)
-        H5Gclose(*it);
+      for (auto it = opened.rbegin(); it != opened.rend(); ++it) H5Gclose(*it);
       opened.clear();
       return -1;
     }
@@ -94,8 +87,7 @@ hid_t ensure_group_chain(hid_t prof_root, const std::string &path,
 }
 
 void write_hdf5_v2(const std::string &path, hsize_t nrows, int npaths,
-                   const std::vector<double> &step,
-                   const std::vector<double> &rank,
+                   const std::vector<double> &step, const std::vector<double> &rank,
                    const std::vector<double> &wall_step,
                    const std::vector<double> &rss_bytes,
                    const std::vector<double> &model_heap,
@@ -103,8 +95,7 @@ void write_hdf5_v2(const std::string &path, hsize_t nrows, int npaths,
                    const std::vector<std::string> &path_names,
                    const std::vector<double> &timer_inc,
                    const std::vector<double> &timer_exc) {
-  hid_t file =
-      H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t file = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   if (file < 0)
     throw std::runtime_error("ProfilingSession: H5Fcreate failed for " + path);
 
@@ -114,8 +105,7 @@ void write_hdf5_v2(const std::string &path, hsize_t nrows, int npaths,
     throw std::runtime_error("ProfilingSession: H5Gcreate2 openpfc failed");
   }
 
-  hid_t prof =
-      H5Gcreate2(root, "profiling", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t prof = H5Gcreate2(root, "profiling", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (prof < 0) {
     H5Gclose(root);
     H5Fclose(file);
@@ -128,14 +118,11 @@ void write_hdf5_v2(const std::string &path, hsize_t nrows, int npaths,
   auto write_top_ds = [&](const char *name, const std::vector<double> &col) {
     hid_t ds = H5Dcreate2(prof, name, H5T_NATIVE_DOUBLE, space, H5P_DEFAULT,
                           H5P_DEFAULT, H5P_DEFAULT);
-    if (ds < 0)
-      throw std::runtime_error(std::string("H5Dcreate2 failed: ") + name);
+    if (ds < 0) throw std::runtime_error(std::string("H5Dcreate2 failed: ") + name);
     const double *ptr = col.empty() ? nullptr : col.data();
-    herr_t st = H5Dwrite(ds, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                         ptr);
+    herr_t st = H5Dwrite(ds, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, ptr);
     H5Dclose(ds);
-    if (st < 0)
-      throw std::runtime_error(std::string("H5Dwrite failed: ") + name);
+    if (st < 0) throw std::runtime_error(std::string("H5Dwrite failed: ") + name);
   };
 
   try {
@@ -148,8 +135,8 @@ void write_hdf5_v2(const std::string &path, hsize_t nrows, int npaths,
 
     for (int pi = 0; pi < npaths; ++pi) {
       std::vector<hid_t> grp_chain;
-      hid_t leaf =
-          ensure_group_chain(prof, path_names[static_cast<std::size_t>(pi)], grp_chain);
+      hid_t leaf = ensure_group_chain(prof, path_names[static_cast<std::size_t>(pi)],
+                                      grp_chain);
       if (leaf < 0)
         throw std::runtime_error("ProfilingSession: HDF5 group chain failed");
       std::vector<double> col_inc(nrows);
@@ -181,8 +168,7 @@ void write_hdf5_v2(const std::string &path, hsize_t nrows, int npaths,
       H5Dwrite(ds_e, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
                col_exc.data());
       H5Dclose(ds_e);
-      for (auto it = grp_chain.rbegin(); it != grp_chain.rend(); ++it)
-        H5Gclose(*it);
+      for (auto it = grp_chain.rbegin(); it != grp_chain.rend(); ++it) H5Gclose(*it);
     }
   } catch (...) {
     H5Sclose(space);
@@ -202,8 +188,8 @@ void write_hdf5_v2(const std::string &path, hsize_t nrows, int npaths,
   hid_t vtype = H5Tcopy(H5T_C_S1);
   H5Tset_size(vtype, H5T_VARIABLE);
   hid_t aspace = H5Screate(H5S_SCALAR);
-  attr = H5Acreate2(prof, "openpfc_version", vtype, aspace, H5P_DEFAULT,
-                    H5P_DEFAULT);
+  attr =
+      H5Acreate2(prof, "openpfc_version", vtype, aspace, H5P_DEFAULT, H5P_DEFAULT);
   const char *vptr = OPENPFC_PROFILING_BUILD_VERSION;
   H5Awrite(attr, vtype, &vptr);
   H5Aclose(attr);
@@ -245,13 +231,14 @@ void write_csv_v2(const std::string &path, std::size_t nrows, int npaths,
   ofs << std::scientific << std::setprecision(17);
   ofs << "step,mpi_rank,wall_step,rss_bytes,model_heap_bytes,fft_heap_bytes";
   for (int pi = 0; pi < npaths; ++pi) {
-    const std::string esc = csv_escape_path(path_names[static_cast<std::size_t>(pi)]);
+    const std::string esc =
+        csv_escape_path(path_names[static_cast<std::size_t>(pi)]);
     ofs << ',' << esc << "_inclusive," << esc << "_exclusive";
   }
   ofs << '\n';
   for (std::size_t r = 0; r < nrows; ++r) {
-    ofs << step[r] << ',' << rank[r] << ',' << wall_step[r] << ','
-        << rss_bytes[r] << ',' << model_heap[r] << ',' << fft_heap[r];
+    ofs << step[r] << ',' << rank[r] << ',' << wall_step[r] << ',' << rss_bytes[r]
+        << ',' << model_heap[r] << ',' << fft_heap[r];
     for (int pi = 0; pi < npaths; ++pi) {
       const std::size_t idx =
           static_cast<std::size_t>(r) * static_cast<std::size_t>(npaths) +
@@ -262,11 +249,12 @@ void write_csv_v2(const std::string &path, std::size_t nrows, int npaths,
   }
 }
 
-void unpack_row_v2(std::size_t row, int stride, int kpaths, const std::vector<double> &flat,
-                   double &step, double &rank, double &wall, double &rss,
-                   double &model, double &fftmem, std::vector<double> &inc,
-                   std::vector<double> &exc) {
-  const std::size_t b = static_cast<std::size_t>(row) * static_cast<std::size_t>(stride);
+void unpack_row_v2(std::size_t row, int stride, int kpaths,
+                   const std::vector<double> &flat, double &step, double &rank,
+                   double &wall, double &rss, double &model, double &fftmem,
+                   std::vector<double> &inc, std::vector<double> &exc) {
+  const std::size_t b =
+      static_cast<std::size_t>(row) * static_cast<std::size_t>(stride);
   step = flat[b + 0];
   rank = flat[b + 1];
   wall = flat[b + 2];
@@ -285,8 +273,7 @@ void unpack_row_v2(std::size_t row, int stride, int kpaths, const std::vector<do
 
 void record_time(std::string_view path, double seconds) noexcept {
   ProfilingSession *s = current_session();
-  if (s)
-    s->add_recorded_time(path, seconds);
+  if (s) s->add_recorded_time(path, seconds);
 }
 
 ProfilingSession::ProfilingSession(ProfilingMetricCatalog catalog)
@@ -295,7 +282,8 @@ ProfilingSession::ProfilingSession(ProfilingMetricCatalog catalog)
   frame_scratch_exc_.assign(catalog_.size(), 0.0);
 }
 
-void ProfilingSession::migrate_to_catalog(ProfilingMetricCatalog &&new_cat) noexcept {
+void ProfilingSession::migrate_to_catalog(
+    ProfilingMetricCatalog &&new_cat) noexcept {
   const ProfilingMetricCatalog old_cat = catalog_;
   const auto &op = old_cat.paths();
   const auto &np = new_cat.paths();
@@ -307,14 +295,12 @@ void ProfilingSession::migrate_to_catalog(ProfilingMetricCatalog &&new_cat) noex
         break;
       }
     }
-    if (same)
-      return;
+    if (same) return;
   }
 
   std::unordered_map<std::string, std::size_t> old_ix;
   old_ix.reserve(op.size());
-  for (std::size_t i = 0; i < op.size(); ++i)
-    old_ix[op[i]] = i;
+  for (std::size_t i = 0; i < op.size(); ++i) old_ix[op[i]] = i;
 
   const std::size_t n = step_index_.size();
   const std::size_t Ko = op.size();
@@ -357,21 +343,18 @@ void ProfilingSession::migrate_to_catalog(ProfilingMetricCatalog &&new_cat) noex
     if (sf.path_index < op.size()) {
       const std::string &pname = op[sf.path_index];
       std::size_t out = 0;
-      if (catalog_.try_index(pname, out))
-        sf.path_index = out;
+      if (catalog_.try_index(pname, out)) sf.path_index = out;
     }
   }
 }
 
 void ProfilingSession::ensure_path(std::string_view path) noexcept {
-  if (path.empty())
-    return;
+  if (path.empty()) return;
   std::size_t idx = 0;
-  if (catalog_.try_index(path, idx))
-    return;
-  ProfilingMetricCatalog new_cat = ProfilingMetricCatalog::merge_one_path(catalog_, path);
-  if (new_cat.size() == catalog_.size())
-    return;
+  if (catalog_.try_index(path, idx)) return;
+  ProfilingMetricCatalog new_cat =
+      ProfilingMetricCatalog::merge_one_path(catalog_, path);
+  if (new_cat.size() == catalog_.size()) return;
   migrate_to_catalog(std::move(new_cat));
 }
 
@@ -388,11 +371,9 @@ void ProfilingSession::begin_step_frame(int step_index, int mpi_rank) noexcept {
 void ProfilingSession::add_recorded_time(std::string_view path,
                                          double seconds) noexcept {
   ensure_path(path);
-  if (pending_step_ < 0 || !std::isfinite(seconds))
-    return;
+  if (pending_step_ < 0 || !std::isfinite(seconds)) return;
   std::size_t idx = 0;
-  if (!catalog_.try_index(path, idx))
-    return;
+  if (!catalog_.try_index(path, idx)) return;
   frame_scratch_inc_[idx] += seconds;
   frame_scratch_exc_[idx] += seconds;
 }
@@ -400,58 +381,47 @@ void ProfilingSession::add_recorded_time(std::string_view path,
 void ProfilingSession::assign_recorded_time(std::string_view path,
                                             double seconds) noexcept {
   ensure_path(path);
-  if (pending_step_ < 0 || !std::isfinite(seconds))
-    return;
+  if (pending_step_ < 0 || !std::isfinite(seconds)) return;
   std::size_t idx = 0;
-  if (!catalog_.try_index(path, idx))
-    return;
+  if (!catalog_.try_index(path, idx)) return;
   frame_scratch_inc_[idx] = seconds;
   frame_scratch_exc_[idx] = seconds;
 }
 
 void ProfilingSession::set_frame_wall_step(double seconds) noexcept {
-  if (pending_step_ < 0 || !std::isfinite(seconds) || seconds < 0.0)
-    return;
+  if (pending_step_ < 0 || !std::isfinite(seconds) || seconds < 0.0) return;
   wall_override_set_ = true;
   wall_override_value_ = seconds;
 }
 
 void ProfilingSession::push_timed_scope(std::string_view path) noexcept {
-  if (pending_step_ < 0)
-    return;
+  if (pending_step_ < 0) return;
   ensure_path(path);
   std::size_t idx = 0;
-  if (!catalog_.try_index(path, idx))
-    return;
-  scope_stack_.push_back(
-      ScopeFrame{idx, std::chrono::steady_clock::now(), 0.0});
+  if (!catalog_.try_index(path, idx)) return;
+  scope_stack_.push_back(ScopeFrame{idx, std::chrono::steady_clock::now(), 0.0});
 }
 
 void ProfilingSession::pop_timed_scope() noexcept {
-  if (pending_step_ < 0 || scope_stack_.empty())
-    return;
+  if (pending_step_ < 0 || scope_stack_.empty()) return;
   ScopeFrame top = scope_stack_.back();
   scope_stack_.pop_back();
   const auto t1 = std::chrono::steady_clock::now();
   const double inc = std::chrono::duration<double>(t1 - top.t0).count();
-  if (!std::isfinite(inc))
-    return;
+  if (!std::isfinite(inc)) return;
   const double child_sum = top.children_inclusive_sum;
   const double exc = inc - child_sum;
   frame_scratch_inc_[top.path_index] += inc;
   frame_scratch_exc_[top.path_index] += exc;
-  if (!scope_stack_.empty())
-    scope_stack_.back().children_inclusive_sum += inc;
+  if (!scope_stack_.empty()) scope_stack_.back().children_inclusive_sum += inc;
 }
 
 void ProfilingSession::commit_frame(double wall_step_seconds, bool inject_fft_region,
                                     double fft_seconds, std::uint64_t rss_bytes,
                                     std::uint64_t model_heap_bytes,
                                     std::uint64_t fft_heap_bytes) noexcept {
-  if (pending_step_ < 0)
-    return;
-  while (!scope_stack_.empty())
-    pop_timed_scope();
+  if (pending_step_ < 0) return;
+  while (!scope_stack_.empty()) pop_timed_scope();
 
   if (inject_fft_region) {
     std::size_t fft_i = 0;
@@ -480,8 +450,7 @@ void ProfilingSession::commit_frame(double wall_step_seconds, bool inject_fft_re
 void ProfilingSession::end_step_frame(std::uint64_t rss_bytes,
                                       std::uint64_t model_heap_bytes,
                                       std::uint64_t fft_heap_bytes) noexcept {
-  if (pending_step_ < 0)
-    return;
+  if (pending_step_ < 0) return;
   double wall = 0.0;
   if (wall_override_set_) {
     wall = wall_override_value_;
@@ -489,8 +458,7 @@ void ProfilingSession::end_step_frame(std::uint64_t rss_bytes,
   } else {
     const auto t1 = std::chrono::steady_clock::now();
     wall = std::chrono::duration<double>(t1 - frame_wall_t0_).count();
-    if (!std::isfinite(wall) || wall < 0.0)
-      wall = 0.0;
+    if (!std::isfinite(wall) || wall < 0.0) wall = 0.0;
   }
   commit_frame(wall, false, 0.0, rss_bytes, model_heap_bytes, fft_heap_bytes);
 }
@@ -541,8 +509,7 @@ void ProfilingSession::finalize_and_export(
   const int stride = stride_doubles();
 
   std::vector<int> row_counts;
-  if (rank == 0)
-    row_counts.resize(static_cast<std::size_t>(size));
+  if (rank == 0) row_counts.resize(static_cast<std::size_t>(size));
   MPI_Gather(&n_local, 1, MPI_INT, rank == 0 ? row_counts.data() : nullptr, 1,
              MPI_INT, 0, comm);
 
@@ -565,31 +532,29 @@ void ProfilingSession::finalize_and_export(
   }
 
   std::vector<double> all_flat;
-  if (rank == 0)
-    all_flat.resize(static_cast<std::size_t>(total_doubles));
+  if (rank == 0) all_flat.resize(static_cast<std::size_t>(total_doubles));
 
   MPI_Gatherv(local_flat.data(), send_doubles, MPI_DOUBLE,
               rank == 0 ? all_flat.data() : nullptr, recvcounts_d.data(),
               displs_d.data(), MPI_DOUBLE, 0, comm);
 
-  if (rank != 0)
-    return;
+  if (rank != 0) return;
 
   const std::size_t total_rows = static_cast<std::size_t>(
       stride > 0 && total_doubles > 0 ? total_doubles / stride : 0);
   const int kpaths = static_cast<int>(catalog_.size());
 
-  std::vector<double> col_step(total_rows), col_rank(total_rows), col_wall(total_rows),
-      col_rss(total_rows), col_model(total_rows), col_fftmem(total_rows);
+  std::vector<double> col_step(total_rows), col_rank(total_rows),
+      col_wall(total_rows), col_rss(total_rows), col_model(total_rows),
+      col_fftmem(total_rows);
   std::vector<double> timer_inc(total_rows * static_cast<std::size_t>(kpaths));
   std::vector<double> timer_exc(total_rows * static_cast<std::size_t>(kpaths));
 
   std::vector<double> inc_buf, exc_buf;
   nlohmann::json frames = nlohmann::json::array();
   for (std::size_t r = 0; r < total_rows; ++r) {
-    unpack_row_v2(r, stride, kpaths, all_flat, col_step[r], col_rank[r],
-                  col_wall[r], col_rss[r], col_model[r], col_fftmem[r], inc_buf,
-                  exc_buf);
+    unpack_row_v2(r, stride, kpaths, all_flat, col_step[r], col_rank[r], col_wall[r],
+                  col_rss[r], col_model[r], col_fftmem[r], inc_buf, exc_buf);
     for (int i = 0; i < kpaths; ++i) {
       const std::size_t idx =
           static_cast<std::size_t>(r) * static_cast<std::size_t>(kpaths) +
@@ -620,8 +585,7 @@ void ProfilingSession::finalize_and_export(
   j["n_frames"] = total_rows;
   j["n_ranks"] = size;
   j["catalog"] = nlohmann::json::array();
-  for (const auto &p : catalog_.paths())
-    j["catalog"].push_back(p);
+  for (const auto &p : catalog_.paths()) j["catalog"].push_back(p);
   j["frames"] = std::move(frames);
 
   if (options.write_json && !options.json_path.empty()) {
@@ -633,16 +597,16 @@ void ProfilingSession::finalize_and_export(
   }
 
   if (options.write_csv && !options.csv_path.empty()) {
-    write_csv_v2(options.csv_path, total_rows, kpaths, col_step, col_rank,
-                 col_wall, col_rss, col_model, col_fftmem, catalog_.paths(),
-                 timer_inc, timer_exc);
+    write_csv_v2(options.csv_path, total_rows, kpaths, col_step, col_rank, col_wall,
+                 col_rss, col_model, col_fftmem, catalog_.paths(), timer_inc,
+                 timer_exc);
   }
 
 #ifdef OPENPFC_HAS_HDF5
   if (options.write_hdf5 && !options.hdf5_path.empty()) {
     write_hdf5_v2(options.hdf5_path, total_rows, kpaths, col_step, col_rank,
-                    col_wall, col_rss, col_model, col_fftmem, catalog_.paths(),
-                    timer_inc, timer_exc);
+                  col_wall, col_rss, col_model, col_fftmem, catalog_.paths(),
+                  timer_inc, timer_exc);
   }
 #else
   if (options.write_hdf5 && !options.hdf5_path.empty()) {

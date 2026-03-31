@@ -18,8 +18,9 @@ namespace pfc {
 namespace profiling {
 
 /**
- * @brief Push a timed scope on construction, pop on destruction (LIFO with other scopes).
- *        No-op if there is no active session. Unknown paths are registered via ensure_path.
+ * @brief Push a timed scope on construction, pop on destruction (LIFO with other
+ * scopes). No-op if there is no active session. Unknown paths are registered via
+ * ensure_path.
  */
 class ProfilingTimedScope {
   bool active_{false};
@@ -37,29 +38,25 @@ public:
   ProfilingTimedScope &operator=(const ProfilingTimedScope &) = delete;
 
   ~ProfilingTimedScope() noexcept {
-    if (!active_)
-      return;
+    if (!active_) return;
     ProfilingSession *s = current_session();
-    if (s)
-      s->pop_timed_scope();
+    if (s) s->pop_timed_scope();
   }
 };
 
 /**
- * @brief Same stack semantics as ProfilingTimedScope, but you may call stop() early or
- *        restart(path) to reuse one object without nested { } blocks. Still LIFO with
+ * @brief Same stack semantics as ProfilingTimedScope, but you may call stop() early
+ * or restart(path) to reuse one object without nested { } blocks. Still LIFO with
  *        other scopes on the active session.
  */
 class ProfilingManualScope {
   bool active_{false};
 
   void pop_if_active() noexcept {
-    if (!active_)
-      return;
+    if (!active_) return;
     active_ = false;
     ProfilingSession *s = current_session();
-    if (s)
-      s->pop_timed_scope();
+    if (s) s->pop_timed_scope();
   }
 
 public:
@@ -81,8 +78,7 @@ public:
   }
 
   ProfilingManualScope &operator=(ProfilingManualScope &&o) noexcept {
-    if (this == &o)
-      return *this;
+    if (this == &o) return *this;
     pop_if_active();
     active_ = o.active_;
     o.active_ = false;
@@ -108,8 +104,7 @@ public:
 
   /// Begin timing @p path if currently inactive (no-op if already active).
   void start(std::string_view path) noexcept {
-    if (active_)
-      return;
+    if (active_) return;
     ProfilingSession *s = current_session();
     if (s) {
       s->push_timed_scope(path);

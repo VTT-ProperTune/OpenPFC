@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -18,7 +18,7 @@ This directory contains CI/CD workflows for the OpenPFC project.
 **Jobs:**
 
 1. **Code Quality**
-   - clang-format checking (excludes build, external dependencies)
+   - clang-format **20** checking (excludes build, external dependencies)
    - REUSE compliance verification
 
 2. **Clang-Tidy**

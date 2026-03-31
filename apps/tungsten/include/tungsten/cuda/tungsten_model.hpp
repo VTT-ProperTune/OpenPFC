@@ -76,11 +76,12 @@ private:
 
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       filterMF; ///< Mean-field filter in Fourier space
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> opL; ///< Linear operator: exp(L·dt)
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
+      opL; ///< Linear operator: exp(L·dt)
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       opN; ///< Nonlinear operator: (exp(L·dt) - 1) / L
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
-      psiMF;                                         ///< Mean-field filtered density
+      psiMF; ///< Mean-field filtered density
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> psi;  ///< Density field
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> psiN; ///< Nonlinear term
   pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>
@@ -93,8 +94,8 @@ private:
 
   // CPU-side buffers for FieldModifiers and VTKWriter
   // These mirror GPU data and are synchronized when needed
-  pfc::RealField m_psi_cpu;     ///< CPU copy of psi for FieldModifiers/VTKWriter
-  bool m_cpu_buffer_valid; ///< Whether CPU buffer is up-to-date
+  pfc::RealField m_psi_cpu; ///< CPU copy of psi for FieldModifiers/VTKWriter
+  bool m_cpu_buffer_valid;  ///< Whether CPU buffer is up-to-date
 
   // CUDA events for non-blocking synchronization
   cudaEvent_t kernel_done_event; ///< Event to track kernel completion
@@ -141,8 +142,8 @@ public:
 
     // Construct FFT_CUDA in place - FFT_Impl constructor takes fft_type by value and
     // moves it to the const member in the initializer list, which should work
-    m_cuda_fft =
-        std::unique_ptr<pfc::fft::FFT_CUDA>(new pfc::fft::FFT_CUDA(std::move(fft_cuda)));
+    m_cuda_fft = std::unique_ptr<pfc::fft::FFT_CUDA>(
+        new pfc::fft::FFT_CUDA(std::move(fft_cuda)));
   }
 
   /**
@@ -198,10 +199,12 @@ public:
     psiN = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_inbox);
 
     // Fourier-space fields (suffix F means in Fourier space)
-    psi_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(size_outbox);
-    psiMF_F =
-        pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(size_outbox);
-    psiN_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(size_outbox);
+    psi_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(
+        size_outbox);
+    psiMF_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(
+        size_outbox);
+    psiN_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(
+        size_outbox);
 
     // Allocate CPU-side buffer for FieldModifiers and VTKWriter
     m_psi_cpu.resize(size_inbox);
@@ -348,8 +351,8 @@ public:
 
     // Apply mean-field filter in Fourier space: ψ̂_MF = χ(k) · ψ̂
     // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-    tungsten::ops::multiply_complex_real<pfc::backend::CudaTag, RealType>(psi_F, filterMF,
-                                                                     psiMF_F);
+    tungsten::ops::multiply_complex_real<pfc::backend::CudaTag, RealType>(
+        psi_F, filterMF, psiMF_F);
     // Record event after kernel launch (kernels run on default stream)
     cudaEventRecord(kernel_done_event, 0);
 
@@ -373,8 +376,8 @@ public:
     double stabP = params.get_stabP();
     if (stabP != 0.0) {
       // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-      tungsten::ops::apply_stabilization<pfc::backend::CudaTag, RealType>(psiN, psi,
-                                                                     stabP, psiN);
+      tungsten::ops::apply_stabilization<pfc::backend::CudaTag, RealType>(
+          psiN, psi, stabP, psiN);
     }
     // Record event after all kernels in this sequence complete
     cudaEventRecord(kernel_done_event, 0);
@@ -413,7 +416,9 @@ public:
 
   // Accessors for fields (for testing/debugging)
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &get_psi() { return psi; }
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &get_psiMF() { return psiMF; }
+  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &get_psiMF() {
+    return psiMF;
+  }
 
   /**
    * @brief Prepare for FieldModifier application

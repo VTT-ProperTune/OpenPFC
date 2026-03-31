@@ -26,9 +26,7 @@ inline void set_current_session(ProfilingSession *s) noexcept {
   current_session_ptr() = s;
 }
 
-inline ProfilingSession *current_session() noexcept {
-  return current_session_ptr();
-}
+inline ProfilingSession *current_session() noexcept { return current_session_ptr(); }
 
 /**
  * @brief Add elapsed time to a named catalog region (inclusive == exclusive).

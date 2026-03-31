@@ -82,7 +82,8 @@ public:
     using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
     fft_r2c_hip fft_hip(inbox, outbox, r2c_direction, comm, options);
 
-    m_hip_fft = std::unique_ptr<pfc::fft::FFT_HIP>(new pfc::fft::FFT_HIP(std::move(fft_hip)));
+    m_hip_fft = std::unique_ptr<pfc::fft::FFT_HIP>(
+        new pfc::fft::FFT_HIP(std::move(fft_hip)));
   }
 
   explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world)
@@ -116,9 +117,12 @@ public:
     psiMF = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
     psiN = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
 
-    psi_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(size_outbox);
-    psiMF_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(size_outbox);
-    psiN_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(size_outbox);
+    psi_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(
+        size_outbox);
+    psiMF_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(
+        size_outbox);
+    psiN_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(
+        size_outbox);
 
     m_psi_cpu.resize(size_inbox);
     m_cpu_buffer_valid = false;
@@ -210,8 +214,8 @@ public:
     hipEventSynchronize(kernel_done_event);
     fft.forward(psi, psi_F);
 
-    tungsten::ops::multiply_complex_real<pfc::backend::HipTag, RealType>(psi_F, filterMF,
-                                                                    psiMF_F);
+    tungsten::ops::multiply_complex_real<pfc::backend::HipTag, RealType>(
+        psi_F, filterMF, psiMF_F);
     hipEventRecord(kernel_done_event, 0);
 
     hipEventSynchronize(kernel_done_event);
@@ -227,8 +231,8 @@ public:
 
     double stabP = params.get_stabP();
     if (stabP != 0.0) {
-      tungsten::ops::apply_stabilization<pfc::backend::HipTag, RealType>(psiN, psi, stabP,
-                                                                    psiN);
+      tungsten::ops::apply_stabilization<pfc::backend::HipTag, RealType>(
+          psiN, psi, stabP, psiN);
     }
     hipEventRecord(kernel_done_event, 0);
 
@@ -249,7 +253,9 @@ public:
   }
 
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psi() { return psi; }
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psiMF() { return psiMF; }
+  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psiMF() {
+    return psiMF;
+  }
 
   void prepare_for_field_modifiers() { sync_gpu_to_cpu(); }
 

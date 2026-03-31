@@ -17,11 +17,11 @@
 #ifndef PFC_UI_FIELD_MODIFIER_REGISTRY_HPP
 #define PFC_UI_FIELD_MODIFIER_REGISTRY_HPP
 
-#include <openpfc/frontend/ui/errors.hpp>
-#include <openpfc/frontend/ui/from_json.hpp>
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <openpfc/frontend/ui/errors.hpp>
+#include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
@@ -142,8 +142,8 @@ template <typename T> void register_field_modifier(const std::string &type) {
  * specified type string from the FieldModifierRegistry and uses it to create
  * the field modifier instance.
  */
-inline std::unique_ptr<FieldModifier>
-create_field_modifier(const std::string &type, const json &params) {
+inline std::unique_ptr<FieldModifier> create_field_modifier(const std::string &type,
+                                                            const json &params) {
   return FieldModifierRegistry::get_instance().create_modifier(type, params);
 }
 

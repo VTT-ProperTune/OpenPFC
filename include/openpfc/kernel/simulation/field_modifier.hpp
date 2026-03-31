@@ -351,7 +351,8 @@ public:
    * to the Model and current simulation time, allowing arbitrary modifications.
    *
    * **Implementation Responsibilities:**
-   * - Retrieve field(s) via `get_real_field(model, name)` or `get_complex_field(model, name)`
+   * - Retrieve field(s) via `get_real_field(model, name)` or
+   * `get_complex_field(model, name)`
    * - Access geometry via `pfc::get_world(model)` and `pfc::get_fft(model)`
    * - Modify field values according to modifier's purpose
    * - Handle MPI parallelism (operate on local subdomain)

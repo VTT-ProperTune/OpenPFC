@@ -177,9 +177,9 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     double x0 = -0.5 * grid_spacing * Lx;
     double y0 = -0.5 * grid_spacing * Ly;
     double z0 = -0.5 * grid_spacing * Lz;
-    auto world =
-        pfc::world::create(pfc::GridSize({Lx, Ly, Lz}), pfc::PhysicalOrigin({x0, y0, z0}),
-                      pfc::GridSpacing({grid_spacing, grid_spacing, grid_spacing}));
+    auto world = pfc::world::create(
+        pfc::GridSize({Lx, Ly, Lz}), pfc::PhysicalOrigin({x0, y0, z0}),
+        pfc::GridSpacing({grid_spacing, grid_spacing, grid_spacing}));
     auto decomp = pfc::decomposition::create(world, 1);
     auto fft = pfc::fft::create(decomp);
 

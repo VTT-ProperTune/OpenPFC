@@ -4,9 +4,9 @@
 #ifndef TUNGSTEN_HPP
 #define TUNGSTEN_HPP
 
+#include <iostream>
 #include <openpfc/frontend/ui/ui.hpp>
 #include <tungsten/common/tungsten_input.hpp>
-#include <iostream>
 #include <tungsten/cpu/tungsten_model.hpp>
 
 /*
@@ -17,8 +17,7 @@ override this function.
 */
 void step(pfc::Simulator &s, Tungsten &m) {
 #ifdef TUNGSTEN_DEBUG
-  if (m.is_rank0())
-    std::cout << "Performing Tungsten step" << std::endl;
+  if (m.is_rank0()) std::cout << "Performing Tungsten step" << std::endl;
 #endif
   double t = s.get_time().get_current();
   m.step(t);

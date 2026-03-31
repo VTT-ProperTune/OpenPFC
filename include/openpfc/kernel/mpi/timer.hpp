@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -91,8 +91,7 @@ inline void timer::tic() {
 
 inline double timer::toc() {
   if (!m_lap_started) {
-    throw std::logic_error(
-        "pfc::mpi::timer::toc() called without a matching tic()");
+    throw std::logic_error("pfc::mpi::timer::toc() called without a matching tic()");
   }
   m_toc = MPI_Wtime();
   const double delta = m_toc - m_tic;

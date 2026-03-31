@@ -41,8 +41,8 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/field/operations.hpp>
-#include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
 
 namespace pfc {
 

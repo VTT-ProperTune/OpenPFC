@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -46,10 +46,10 @@
 #include <mpi.h>
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
-#include <openpfc/kernel/profiling/format.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
+#include <openpfc/kernel/profiling/format.hpp>
 #include <sstream>
 #include <string>
 
@@ -167,8 +167,8 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
 
     // Global total
     std::ostringstream global_msg;
-    global_msg << "  Global Total: " << pfc::profiling::format_bytes(global_mem[2]) << " ("
-               << num_ranks << " ranks)";
+    global_msg << "  Global Total: " << pfc::profiling::format_bytes(global_mem[2])
+               << " (" << num_ranks << " ranks)";
     log_info(logger, global_msg.str());
 
     // Per-voxel memory

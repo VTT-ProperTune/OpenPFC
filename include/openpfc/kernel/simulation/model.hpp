@@ -106,8 +106,8 @@ private:
                                     ///< with the model
   ComplexFieldSet m_complex_fields; ///< Collection of complex-valued fields
                                     ///< associated with the model
-  const World &m_world;   ///< Reference to the World object
-  bool m_rank0 = false;   ///< Flag indicating if the current MPI rank is 0
+  const World &m_world;             ///< Reference to the World object
+  bool m_rank0 = false;             ///< Flag indicating if the current MPI rank is 0
 
 public:
   /**
@@ -688,14 +688,16 @@ private:
 };
 
 /**
- * @brief World associated with the model (free function; preferred over Model::get_world()).
+ * @brief World associated with the model (free function; preferred over
+ * Model::get_world()).
  */
 [[nodiscard]] inline const World &get_world(const Model &model) noexcept {
   return model.get_world();
 }
 
 /**
- * @brief FFT instance used by the model (free function; preferred over Model::get_fft()).
+ * @brief FFT instance used by the model (free function; preferred over
+ * Model::get_fft()).
  */
 [[nodiscard]] inline FFT &get_fft(Model &model) noexcept { return model.get_fft(); }
 
@@ -709,22 +711,21 @@ private:
 }
 
 [[nodiscard]] inline bool has_real_field(const Model &model,
-                                          std::string_view field_name) noexcept {
+                                         std::string_view field_name) noexcept {
   return model.has_real_field(field_name);
 }
 
 [[nodiscard]] inline bool has_complex_field(const Model &model,
-                                              std::string_view field_name) noexcept {
+                                            std::string_view field_name) noexcept {
   return model.has_complex_field(field_name);
 }
 
-[[nodiscard]] inline RealField &get_real_field(Model &model,
-                                               std::string_view name) {
+[[nodiscard]] inline RealField &get_real_field(Model &model, std::string_view name) {
   return model.get_real_field(name);
 }
 
 [[nodiscard]] inline const RealField &get_real_field(const Model &model,
-                                                      std::string_view name) {
+                                                     std::string_view name) {
   return model.get_real_field(name);
 }
 
@@ -733,8 +734,8 @@ private:
   return model.get_complex_field(name);
 }
 
-[[nodiscard]] inline const ComplexField &get_complex_field(
-    const Model &model, std::string_view name) {
+[[nodiscard]] inline const ComplexField &get_complex_field(const Model &model,
+                                                           std::string_view name) {
   return model.get_complex_field(name);
 }
 
@@ -754,7 +755,8 @@ inline void add_complex_field(Model &model, std::string_view name,
   model.add_complex_field(name, field);
 }
 
-/** @brief Register a real field (same as add_real_field; matches Model::add_field). */
+/** @brief Register a real field (same as add_real_field; matches Model::add_field).
+ */
 inline void add_field(Model &model, std::string_view name, RealField &field) {
   model.add_real_field(name, field);
 }
@@ -764,8 +766,7 @@ inline void add_field(Model &model, std::string_view name, ComplexField &field) 
   model.add_complex_field(name, field);
 }
 
-[[nodiscard]] inline size_t
-get_allocated_memory_bytes(const Model &model) {
+[[nodiscard]] inline size_t get_allocated_memory_bytes(const Model &model) {
   return model.get_allocated_memory_bytes();
 }
 

@@ -9,9 +9,9 @@
     "tungsten/cuda/tungsten.hpp requires CUDA support. Enable with -DOpenPFC_ENABLE_CUDA=ON"
 #endif
 
+#include <iostream>
 #include <openpfc/frontend/ui/ui.hpp>
 #include <tungsten/common/tungsten_input.hpp>
-#include <iostream>
 #include <tungsten/cuda/tungsten_model.hpp>
 
 /*
@@ -23,8 +23,7 @@ override this function.
 template <typename RealType>
 void step(pfc::Simulator &s, TungstenCUDA<RealType> &m) {
 #ifdef TUNGSTEN_DEBUG
-  if (m.is_rank0())
-    std::cout << "Performing Tungsten CUDA step" << std::endl;
+  if (m.is_rank0()) std::cout << "Performing Tungsten CUDA step" << std::endl;
 #endif
   double t = s.get_time().get_current();
   m.step(t);

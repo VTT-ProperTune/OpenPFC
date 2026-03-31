@@ -27,12 +27,12 @@ void spin(std::chrono::milliseconds d) {
 } // namespace
 
 int main() {
+  using pfc::profiling::print_profiling_timer;
   using pfc::profiling::ProfilingContextScope;
+  using pfc::profiling::ProfilingManualScope;
   using pfc::profiling::ProfilingMetricCatalog;
   using pfc::profiling::ProfilingPrintOptions;
-  using pfc::profiling::ProfilingManualScope;
   using pfc::profiling::ProfilingSession;
-  using pfc::profiling::print_profiling_timer;
 
   ProfilingSession session(ProfilingMetricCatalog{});
   session.reset_report_clock();
@@ -65,7 +65,8 @@ int main() {
       spin(1ms);
     }
 
-    session.add_recorded_time("manual_chunk", 0.0005 * (1.0 + 0.2 * static_cast<double>(step)));
+    session.add_recorded_time("manual_chunk",
+                              0.0005 * (1.0 + 0.2 * static_cast<double>(step)));
 
     session.end_step_frame(0u, 0u, 0u);
   }
@@ -76,8 +77,9 @@ int main() {
   opts.sort_by_time = true;
   opts.show_exclusive_column = true;
 
-  std::cout << "Committed " << n_steps
-            << " frames: paths auto-registered; OPENPFC_PROFILE uses unique locals.\n";
+  std::cout
+      << "Committed " << n_steps
+      << " frames: paths auto-registered; OPENPFC_PROFILE uses unique locals.\n";
   print_profiling_timer(std::cout, session, opts);
 
   std::cout << "\n--- print_profiling_timer(os) with active session ---\n";

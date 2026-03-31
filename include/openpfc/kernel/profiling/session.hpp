@@ -3,7 +3,8 @@
 
 /**
  * @file session.hpp
- * @brief Per-step profiling frames, nested timed scopes, MPI export (JSON / CSV / HDF5)
+ * @brief Per-step profiling frames, nested timed scopes, MPI export (JSON / CSV /
+ * HDF5)
  */
 
 #ifndef PFC_KERNEL_PROFILING_SESSION_HPP
@@ -36,7 +37,8 @@ struct ProfilingExportOptions {
 };
 
 /**
- * @brief Column-oriented frames; catalog defines dense per-path inclusive/exclusive times.
+ * @brief Column-oriented frames; catalog defines dense per-path inclusive/exclusive
+ * times.
  */
 class ProfilingSession {
 public:
@@ -49,8 +51,9 @@ public:
 
   const ProfilingMetricCatalog &catalog() const noexcept { return catalog_; }
 
-  /// Ensure @p path (and parent prefixes) exist in the catalog; may resize stored frames.
-  /// All MPI ranks must register the same paths in the same order for valid gather.
+  /// Ensure @p path (and parent prefixes) exist in the catalog; may resize stored
+  /// frames. All MPI ranks must register the same paths in the same order for valid
+  /// gather.
   void ensure_path(std::string_view path) noexcept;
 
   void begin_step_frame(int step_index, int mpi_rank) noexcept;
@@ -58,7 +61,8 @@ public:
   /// Manual additive time (inclusive == exclusive); ignored if path not in catalog.
   void add_recorded_time(std::string_view path, double seconds) noexcept;
 
-  /// Set inclusive and exclusive for @p path (overwrites scratch); ignored if not in catalog.
+  /// Set inclusive and exclusive for @p path (overwrites scratch); ignored if not in
+  /// catalog.
   void assign_recorded_time(std::string_view path, double seconds) noexcept;
 
   void push_timed_scope(std::string_view path) noexcept;
@@ -66,14 +70,14 @@ public:
 
   /**
    * @brief Set per-frame wall_step metadata (e.g. MPI barrier duration). Call after
-   *        begin_step_frame and before end_step_frame(rss, …). If omitted, wall_step is
-   *        steady_clock elapsed since begin_step_frame.
+   *        begin_step_frame and before end_step_frame(rss, …). If omitted, wall_step
+   * is steady_clock elapsed since begin_step_frame.
    */
   void set_frame_wall_step(double seconds) noexcept;
 
   /**
-   * @brief Commit the frame: pop scopes, store memory columns, append row. Region times
-   *        come only from scopes, add_recorded_time, and assign_recorded_time.
+   * @brief Commit the frame: pop scopes, store memory columns, append row. Region
+   * times come only from scopes, add_recorded_time, and assign_recorded_time.
    */
   void end_step_frame(std::uint64_t rss_bytes, std::uint64_t model_heap_bytes,
                       std::uint64_t fft_heap_bytes) noexcept;
@@ -83,7 +87,8 @@ public:
                       std::uint64_t rss_bytes, std::uint64_t model_heap_bytes,
                       std::uint64_t fft_heap_bytes) noexcept;
 
-  /// Anchor for optional "wall clock since …" line in print_profiling_timer (TimerOutputs-style).
+  /// Anchor for optional "wall clock since …" line in print_profiling_timer
+  /// (TimerOutputs-style).
   void reset_report_clock() noexcept;
 
   std::size_t num_frames() const noexcept { return step_index_.size(); }
@@ -91,7 +96,8 @@ public:
   void finalize_and_export(MPI_Comm comm,
                            const ProfilingExportOptions &options) const;
 
-  friend void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
+  friend void print_profiling_timer(std::ostream &os,
+                                    const ProfilingSession &session,
                                     const ProfilingPrintOptions &opts);
 
 private:

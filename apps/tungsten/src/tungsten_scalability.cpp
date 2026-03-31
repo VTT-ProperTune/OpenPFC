@@ -79,8 +79,8 @@ public:
     try {
       // Create world and decomposition
       auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
-                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
       auto decomp = pfc::decomposition::create(world, size);
       auto fft = pfc::fft::create(decomp, rank);
 
@@ -187,8 +187,8 @@ public:
     try {
       // Create world and decomposition
       auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
-                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
       auto decomp = pfc::decomposition::create(world, size);
 
       // Create model with specified precision
@@ -309,8 +309,8 @@ public:
 
     try {
       auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
-                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
       auto decomp = pfc::decomposition::create(world, size);
 
       auto fft = pfc::fft::create(decomp, rank);

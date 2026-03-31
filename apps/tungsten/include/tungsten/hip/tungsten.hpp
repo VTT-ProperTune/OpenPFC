@@ -9,9 +9,9 @@
     "tungsten/hip/tungsten.hpp requires HIP support. Enable with -DOpenPFC_ENABLE_HIP=ON"
 #endif
 
+#include <iostream>
 #include <openpfc/frontend/ui/ui.hpp>
 #include <tungsten/common/tungsten_input.hpp>
-#include <iostream>
 #include <tungsten/hip/tungsten_model.hpp>
 
 /*
@@ -20,11 +20,9 @@ done by overriding the following function. The default implementation just runs
 m.step(t) so if there's no need to access the simulator, it's not necessary to
 override this function.
 */
-template <typename RealType>
-void step(pfc::Simulator &s, TungstenHIP<RealType> &m) {
+template <typename RealType> void step(pfc::Simulator &s, TungstenHIP<RealType> &m) {
 #ifdef TUNGSTEN_DEBUG
-  if (m.is_rank0())
-    std::cout << "Performing Tungsten HIP step" << std::endl;
+  if (m.is_rank0()) std::cout << "Performing Tungsten HIP step" << std::endl;
 #endif
   double t = s.get_time().get_current();
   m.step(t);

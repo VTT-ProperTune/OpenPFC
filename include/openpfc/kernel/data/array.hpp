@@ -33,12 +33,12 @@
 #ifndef PFC_ARRAY_HPP
 #define PFC_ARRAY_HPP
 
-#include <openpfc/kernel/data/multi_index.hpp>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <complex>
 #include <functional>
+#include <openpfc/kernel/data/multi_index.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/detail/array_format.hpp>
 #include <openpfc/kernel/detail/typename.hpp>

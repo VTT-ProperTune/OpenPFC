@@ -51,12 +51,12 @@
 #ifndef PFC_DISCRETE_FIELD_HPP
 #define PFC_DISCRETE_FIELD_HPP
 
-#include <openpfc/kernel/data/array.hpp>
-#include <openpfc/kernel/data/constants.hpp>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <openpfc/kernel/data/array.hpp>
+#include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/detail/array_format.hpp>
 #include <openpfc/kernel/detail/typename.hpp>

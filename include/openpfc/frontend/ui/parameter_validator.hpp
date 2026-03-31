@@ -42,12 +42,12 @@
 #ifndef PFC_UI_PARAMETER_VALIDATOR_HPP
 #define PFC_UI_PARAMETER_VALIDATOR_HPP
 
-#include <openpfc/frontend/ui/parameter_metadata.hpp>
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/parameter_metadata.hpp>
 #include <sstream>
 #include <string>
 #include <vector>

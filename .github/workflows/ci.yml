@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 name: CI
@@ -30,7 +30,7 @@ jobs:
       - name: Check code formatting (clang-format)
         uses: ahojukka5/clang-format-action@main
         with:
-          clang-format-version: '16'
+          clang-format-version: '20'
           check-path: '.'
           exclude-regex: '(build|\.cache|extern|third[-_]party|doxygen-awesome-css)'
           fail-on-error: 'true'

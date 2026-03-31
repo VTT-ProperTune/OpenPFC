@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -43,8 +43,8 @@ struct FaceHaloCounts {
 inline FaceHaloCounts face_halo_counts(const decomposition::Decomposition &decomp,
                                        int rank, int halo_width) {
   FaceHaloCounts out{};
-  const std::array<Int3, 6> dirs = {{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0},
-                                     {0, 0, 1}, {0, 0, -1}}};
+  const std::array<Int3, 6> dirs = {
+      {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
   for (int i = 0; i < 6; ++i) {
     auto recv = create_recv_halo<backend::CpuTag>(decomp, rank, dirs[i], halo_width);
     out.counts[static_cast<size_t>(i)] = recv.size();
@@ -59,13 +59,13 @@ inline FaceHaloCounts face_halo_counts_analytic(int nx, int ny, int nz, int hw) 
   FaceHaloCounts out{};
   out.counts[0] = static_cast<size_t>(hw) * static_cast<size_t>(ny) *
                   static_cast<size_t>(nz); // +X
-  out.counts[1] = out.counts[0];          // -X
+  out.counts[1] = out.counts[0];           // -X
   out.counts[2] = static_cast<size_t>(nx) * static_cast<size_t>(hw) *
                   static_cast<size_t>(nz); // +Y
-  out.counts[3] = out.counts[2];          // -Y
+  out.counts[3] = out.counts[2];           // -Y
   out.counts[4] = static_cast<size_t>(nx) * static_cast<size_t>(ny) *
                   static_cast<size_t>(hw); // +Z
-  out.counts[5] = out.counts[4];            // -Z
+  out.counts[5] = out.counts[4];           // -Z
   return out;
 }
 
@@ -85,8 +85,9 @@ std::array<std::vector<T>, 6> allocate_face_halos(const FaceHaloCounts &c) {
  * @brief Convenience: counts from subworld size + allocate.
  */
 template <typename T>
-std::array<std::vector<T>, 6> allocate_face_halos(const decomposition::Decomposition &decomp,
-                                                  int rank, int halo_width) {
+std::array<std::vector<T>, 6>
+allocate_face_halos(const decomposition::Decomposition &decomp, int rank,
+                    int halo_width) {
   return allocate_face_halos<T>(face_halo_counts(decomp, rank, halo_width));
 }
 

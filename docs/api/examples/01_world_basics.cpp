@@ -56,8 +56,8 @@ void example_custom_spacing() {
   // Create domain with specific spacing and offset
   Real3 origin = {0.0, 0.0, 0.0};
   Real3 spacing = {0.1, 0.1, 0.1};
-  auto world =
-      world::create(GridSize({256, 256, 256}), PhysicalOrigin(origin), GridSpacing(spacing));
+  auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin(origin),
+                             GridSpacing(spacing));
 
   std::cout << "Created 256³ grid:\n";
   std::cout << "  Spacing: " << std::fixed << std::setprecision(3);
@@ -83,8 +83,9 @@ void example_custom_spacing() {
 void example_coordinate_transforms() {
   print_section("Example 3: Coordinate Transformations");
 
-  auto world = world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({0.1, 0.1, 0.1}));
+  auto world =
+      world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({0.1, 0.1, 0.1}));
 
   std::cout << "Grid: 100³ with spacing 0.1\n\n";
 

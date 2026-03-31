@@ -329,8 +329,9 @@ void demo_complex_fields() {
   std::cout << "(33 = 64/2 + 1, due to Hermitian symmetry)\n\n";
 
   // Initialize real field with sine wave
-  real_field.apply(
-      [](double x, double /*y*/, double /*z*/) { return std::sin(2.0 * M_PI * x / 64.0); });
+  real_field.apply([](double x, double /*y*/, double /*z*/) {
+    return std::sin(2.0 * M_PI * x / 64.0);
+  });
 
   // Simulate k-space operation: low-pass filter
   kspace_field.apply([](double kx, double ky, double kz) {

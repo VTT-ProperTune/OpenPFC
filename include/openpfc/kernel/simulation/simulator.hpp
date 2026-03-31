@@ -43,13 +43,13 @@
 #ifndef PFC_SIMULATOR_HPP
 #define PFC_SIMULATOR_HPP
 
+#include <iostream>
+#include <memory>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
-#include <iostream>
-#include <memory>
-#include <openpfc/kernel/data/world.hpp>
 #include <unordered_map>
 
 namespace pfc {
@@ -517,9 +517,7 @@ public:
   return pfc::is_rank0(get_model(sim));
 }
 
-inline void step(Simulator &s, Model &m) {
-  pfc::step(m, get_time(s).get_current());
-}
+inline void step(Simulator &s, Model &m) { pfc::step(m, get_time(s).get_current()); }
 
 } // namespace pfc
 

@@ -155,8 +155,9 @@ void demo_single_seed() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create larger domain for crystal growth
-  auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto world =
+      world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
   auto fft = fft::create(decomp);
   DemoModel model(fft, world);
@@ -212,8 +213,9 @@ void demo_seed_grid() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain
-  auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto world =
+      world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
   auto fft = fft::create(decomp);
   DemoModel model(fft, world);
@@ -448,8 +450,9 @@ void demo_composition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain
-  auto world = world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto world =
+      world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 4);
   auto fft = fft::create(decomp);
   DemoModel model(fft, world);

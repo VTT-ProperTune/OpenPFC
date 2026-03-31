@@ -347,7 +347,8 @@ public:
    *
    * @param world The World object defining the simulation domain
    */
-  explicit Tungsten(pfc::FFT &fft, const pfc::World &world) : pfc::Model(fft, world) {
+  explicit Tungsten(pfc::FFT &fft, const pfc::World &world)
+      : pfc::Model(fft, world) {
     // Additional initialization if needed
   }
 };

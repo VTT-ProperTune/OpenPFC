@@ -22,11 +22,11 @@
 #ifndef PFC_UI_FROM_JSON_HPP
 #define PFC_UI_FROM_JSON_HPP
 
-#include <openpfc/frontend/ui/errors.hpp>
-#include <openpfc/frontend/ui/json_helpers.hpp>
 #include <algorithm>
 #include <cctype>
 #include <heffte.h>
+#include <openpfc/frontend/ui/errors.hpp>
+#include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>

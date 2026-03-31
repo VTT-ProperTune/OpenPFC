@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -46,10 +46,12 @@ public:
   using Int3 = pfc::types::Int3;
 
   /**
-   * @param field_ptr Base pointer of the local field; must be stable for object lifetime
+   * @param field_ptr Base pointer of the local field; must be stable for object
+   * lifetime
    */
   PersistentHaloExchanger(const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm, T *field_ptr, int base_tag = 0)
+                          int halo_width, MPI_Comm comm, T *field_ptr,
+                          int base_tag = 0)
       : m_comm(comm), m_base_tag(base_tag), m_buf(static_cast<void *>(field_ptr)) {
     auto patterns = halo::create_halo_patterns<backend::CpuTag>(
         decomp, rank, halo::Connectivity::Faces, halo_width);
@@ -106,7 +108,8 @@ public:
   PersistentHaloExchanger(PersistentHaloExchanger &&other) noexcept
       : m_comm(other.m_comm), m_base_tag(other.m_base_tag), m_buf(other.m_buf),
         m_face_types(std::move(other.m_face_types)),
-        m_neighbors(std::move(other.m_neighbors)), m_requests(std::move(other.m_requests)) {
+        m_neighbors(std::move(other.m_neighbors)),
+        m_requests(std::move(other.m_requests)) {
     other.m_requests.clear();
     other.m_buf = nullptr;
   }

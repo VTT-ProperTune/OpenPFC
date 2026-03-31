@@ -68,7 +68,8 @@ void VTKWriter::write_vti_header(std::ofstream &file,
 }
 
 void VTKWriter::write_vti_data(std::ofstream &file, const RealField &data) const {
-  // VTK header_type="UInt64": length prefix is always 8 bytes (see write_vti_header).
+  // VTK header_type="UInt64": length prefix is always 8 bytes (see
+  // write_vti_header).
   const std::uint64_t appended_bytes =
       static_cast<std::uint64_t>(data.size()) * sizeof(double);
   file.write(reinterpret_cast<const char *>(&appended_bytes),
@@ -124,8 +125,8 @@ void VTKWriter::write_pvti_file(int increment) const {
     size_t base_ext_pos = base.find_last_of('.');
     std::string name =
         (base_ext_pos != std::string::npos) ? base.substr(0, base_ext_pos) : base;
-    std::string ext =
-        (base_ext_pos != std::string::npos) ? base.substr(base_ext_pos) : std::string();
+    std::string ext = (base_ext_pos != std::string::npos) ? base.substr(base_ext_pos)
+                                                          : std::string();
     std::string piece_filename = name + "_" + std::to_string(r) + ext;
     file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << std::endl;
   }

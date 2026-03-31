@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -125,34 +125,37 @@ void laplacian_7point_interior_separated(const T *core,
         const T uxm =
             (ix > imin)
                 ? core[c - 1]
-                : hpx[static_cast<std::size_t>(iz) * static_cast<std::size_t>(ny * hw) +
+                : hpx[static_cast<std::size_t>(iz) *
+                          static_cast<std::size_t>(ny * hw) +
                       static_cast<std::size_t>(iy) * static_cast<std::size_t>(hw) +
                       static_cast<std::size_t>(hw - 1)];
         const T uxp =
             (ix + 1 < imax)
                 ? core[c + 1]
-                : hnx[static_cast<std::size_t>(iz) * static_cast<std::size_t>(ny * hw) +
+                : hnx[static_cast<std::size_t>(iz) *
+                          static_cast<std::size_t>(ny * hw) +
                       static_cast<std::size_t>(iy) * static_cast<std::size_t>(hw) +
                       static_cast<std::size_t>(ix + 1 - (nx - hw))];
 
-        const T uym =
-            (iy > jmin)
-                ? core[c - static_cast<std::size_t>(nx)]
-                : hpy[static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx * hw) +
-                      static_cast<std::size_t>(hw - 1) * static_cast<std::size_t>(nx) +
-                      static_cast<std::size_t>(ix)];
-        const T uyp =
-            (iy + 1 < jmax)
-                ? core[c + static_cast<std::size_t>(nx)]
-                : hny[static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx * hw) +
-                      static_cast<std::size_t>(iy + 1 - (ny - hw)) *
-                          static_cast<std::size_t>(nx) +
-                      static_cast<std::size_t>(ix)];
+        const T uym = (iy > jmin) ? core[c - static_cast<std::size_t>(nx)]
+                                  : hpy[static_cast<std::size_t>(iz) *
+                                            static_cast<std::size_t>(nx * hw) +
+                                        static_cast<std::size_t>(hw - 1) *
+                                            static_cast<std::size_t>(nx) +
+                                        static_cast<std::size_t>(ix)];
+        const T uyp = (iy + 1 < jmax)
+                          ? core[c + static_cast<std::size_t>(nx)]
+                          : hny[static_cast<std::size_t>(iz) *
+                                    static_cast<std::size_t>(nx * hw) +
+                                static_cast<std::size_t>(iy + 1 - (ny - hw)) *
+                                    static_cast<std::size_t>(nx) +
+                                static_cast<std::size_t>(ix)];
 
         const T uzm =
             (iz > kmin)
                 ? core[c - static_cast<std::size_t>(sxy)]
-                : hpz[static_cast<std::size_t>(hw - 1) * static_cast<std::size_t>(sxy) +
+                : hpz[static_cast<std::size_t>(hw - 1) *
+                          static_cast<std::size_t>(sxy) +
                       static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
                       static_cast<std::size_t>(ix)];
         const T uzp =

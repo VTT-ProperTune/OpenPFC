@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -114,7 +114,8 @@ inline void irecv_face(void *buf, MPI_Datatype recv_type, int recv_from_rank,
 template <typename T>
 inline void irecv_dense(T *buf, int count, int recv_from_rank, MPI_Comm comm,
                         MPI_Request *request, int tag = 0) {
-  MPI_Irecv(buf, count, detail::get_mpi_type<T>(), recv_from_rank, tag, comm, request);
+  MPI_Irecv(buf, count, detail::get_mpi_type<T>(), recv_from_rank, tag, comm,
+            request);
 }
 
 /**

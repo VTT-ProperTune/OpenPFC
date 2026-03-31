@@ -22,15 +22,13 @@ constexpr double kEps = 1e-15;
 
 std::string parent_prefix(const std::string &path) {
   const auto pos = path.rfind('/');
-  if (pos == std::string::npos)
-    return std::string{};
+  if (pos == std::string::npos) return std::string{};
   return path.substr(0, pos);
 }
 
 std::string last_segment(const std::string &path) {
   const auto pos = path.rfind('/');
-  if (pos == std::string::npos)
-    return path;
+  if (pos == std::string::npos) return path;
   return path.substr(pos + 1);
 }
 
@@ -77,13 +75,11 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
       const double exc = session.timer_exclusive_[idx];
       total_inc[i] += inc;
       total_exc[i] += exc;
-      if (inc > kEps)
-        ++ncalls[i];
+      if (inc > kEps) ++ncalls[i];
     }
   }
 
-  if (denom <= 0.0)
-    denom = 1.0;
+  if (denom <= 0.0) denom = 1.0;
 
   const auto &paths = session.catalog().paths();
   std::unordered_map<std::string, std::vector<std::string>> children;
@@ -94,15 +90,15 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
 
   // Index path -> catalog index
   std::unordered_map<std::string, std::size_t> path_index;
-  for (std::size_t i = 0; i < K; ++i)
-    path_index[paths[i]] = i;
+  for (std::size_t i = 0; i < K; ++i) path_index[paths[i]] = i;
 
   for (auto &kv : children) {
     auto &vec = kv.second;
     if (opts.sort_by_time) {
-      std::sort(vec.begin(), vec.end(), [&](const std::string &a, const std::string &b) {
-        return total_inc[path_index.at(a)] > total_inc[path_index.at(b)];
-      });
+      std::sort(vec.begin(), vec.end(),
+                [&](const std::string &a, const std::string &b) {
+                  return total_inc[path_index.at(a)] > total_inc[path_index.at(b)];
+                });
     } else {
       std::sort(vec.begin(), vec.end());
     }
@@ -114,8 +110,7 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
     if (ascii) {
       os << std::string(w, '-');
     } else {
-      for (std::size_t i = 0; i < w; ++i)
-        os << "\u2500";
+      for (std::size_t i = 0; i < w; ++i) os << "\u2500";
     }
     os << '\n';
   };
@@ -132,10 +127,10 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
 
   os << '\n' << opts.title << '\n';
   if (session.report_clock_valid_) {
-    const double wall_elapsed = std::chrono::duration<double>(
-                                    std::chrono::steady_clock::now() -
-                                    session.report_clock_origin_)
-                                    .count();
+    const double wall_elapsed =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                      session.report_clock_origin_)
+            .count();
     os << "  Wall clock since reset_report_clock(): " << format_seconds(wall_elapsed)
        << '\n';
   }
@@ -143,16 +138,14 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
   os << std::left << std::setw(sec_w) << "Section" << std::right << std::setw(n_w)
      << "ncalls" << std::setw(t_w) << "time" << std::setw(p_w) << "%tot"
      << std::setw(a_w) << "avg";
-  if (opts.show_exclusive_column)
-    os << std::setw(ex_w) << "exclusive";
+  if (opts.show_exclusive_column) os << std::setw(ex_w) << "exclusive";
   os << '\n';
   line(table_w);
 
   std::function<void(const std::string &, int)> walk;
   walk = [&](const std::string &parent, int depth) {
     auto it = children.find(parent);
-    if (it == children.end())
-      return;
+    if (it == children.end()) return;
     for (const std::string &p : it->second) {
       const std::size_t pi = path_index.at(p);
       const std::size_t nc = ncalls[pi] == 0 ? 1 : ncalls[pi];
@@ -167,9 +160,9 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
       std::string sec_str = sec.str();
       if (sec_str.size() > static_cast<std::size_t>(sec_w))
         sec_str = sec_str.substr(0, static_cast<std::size_t>(sec_w - 3)) + "...";
-      os << std::left << std::setw(sec_w) << sec_str << std::right << std::setw(n_w) << nc
-         << std::setw(t_w) << format_seconds(ttot) << std::setw(p_w) << pct_col.str()
-         << std::setw(a_w) << format_seconds(av);
+      os << std::left << std::setw(sec_w) << sec_str << std::right << std::setw(n_w)
+         << nc << std::setw(t_w) << format_seconds(ttot) << std::setw(p_w)
+         << pct_col.str() << std::setw(a_w) << format_seconds(av);
       if (opts.show_exclusive_column)
         os << std::setw(ex_w) << format_seconds(total_exc[pi]);
       os << '\n';
@@ -184,8 +177,7 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
 
 void print_profiling_timer(std::ostream &os, const ProfilingPrintOptions &opts) {
   ProfilingSession *s = current_session();
-  if (s && s->num_frames() > 0)
-    print_profiling_timer(os, *s, opts);
+  if (s && s->num_frames() > 0) print_profiling_timer(os, *s, opts);
 }
 
 } // namespace profiling
