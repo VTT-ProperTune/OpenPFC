@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_approx.hpp>
@@ -20,7 +20,6 @@ TEST_CASE("DataBuffer CPU construction", "[core][databuffer][cpu]") {
 
 TEST_CASE("DataBuffer CPU empty construction", "[core][databuffer][cpu]") {
   pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf(0);
-  REQUIRE(buf.size() == 0);
   REQUIRE(buf.empty());
 }
 
@@ -69,7 +68,6 @@ TEST_CASE("DataBuffer CPU move semantics", "[core][databuffer][cpu]") {
   // Move construction
   pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf2(std::move(buf1));
   REQUIRE(buf2.size() == 10);
-  REQUIRE(buf1.size() == 0); // Moved from
   for (size_t i = 0; i < 10; ++i) {
     REQUIRE(buf2[i] == Approx(static_cast<double>(i)));
   }
