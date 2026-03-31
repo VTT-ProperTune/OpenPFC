@@ -17,7 +17,8 @@
 using namespace pfc;
 
 TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]") {
-  int rank = 0, size = 1;
+  int rank = 0;
+  int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -30,7 +31,9 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
-  const int nx = local_size[0], ny = local_size[1], nz = local_size[2];
+  const int nx = local_size[0];
+  const int ny = local_size[1];
+  const int nz = local_size[2];
   const size_t nlocal =
       static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
 
@@ -52,7 +55,8 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
 
 TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
           "[MPI][fd][persistent]") {
-  int rank = 0, size = 1;
+  int rank = 0;
+  int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -65,13 +69,15 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
-  const int nx = local_size[0], ny = local_size[1], nz = local_size[2];
+  const int nx = local_size[0];
+  const int ny = local_size[1];
+  const int nz = local_size[2];
   const size_t nlocal =
       static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
 
   std::vector<double> a(nlocal);
   std::vector<double> b(nlocal);
-  const double fill = static_cast<double>(rank);
+  const auto fill = static_cast<double>(rank);
   for (size_t i = 0; i < nlocal; ++i) {
     a[i] = fill;
     b[i] = fill;
@@ -92,7 +98,8 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
 
 TEST_CASE("Separated face halos match in-place Laplacian on interior",
           "[MPI][fd][separated]") {
-  int rank = 0, size = 1;
+  int rank = 0;
+  int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -105,7 +112,9 @@ TEST_CASE("Separated face halos match in-place Laplacian on interior",
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
-  const int nx = local_size[0], ny = local_size[1], nz = local_size[2];
+  const int nx = local_size[0];
+  const int ny = local_size[1];
+  const int nz = local_size[2];
   const size_t nlocal =
       static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
 
