@@ -38,8 +38,7 @@
 #include <openpfc/kernel/data/box3d.hpp>
 #include <openpfc/kernel/data/multi_index.hpp>
 
-namespace pfc {
-namespace utils {
+namespace pfc::utils {
 
 /**
  * @brief Iterate over all points in a 3D box (typically an MPI inbox)
@@ -78,7 +77,6 @@ template <typename Func> void iterate_inbox(const Box3D &inbox, Func &&func) {
   }
 }
 
-} // namespace utils
-} // namespace pfc
+} // namespace pfc::utils
 
 #endif // PFC_UTILS_FIELD_ITERATION_HPP

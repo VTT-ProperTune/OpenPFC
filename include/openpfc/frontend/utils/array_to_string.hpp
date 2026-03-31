@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -15,12 +15,10 @@
 
 #include <openpfc/kernel/detail/array_format.hpp>
 
-namespace pfc {
-namespace utils {
+namespace pfc::utils {
 
 using detail::array_to_string;
 
-} // namespace utils
-} // namespace pfc
+} // namespace pfc::utils
 
 #endif

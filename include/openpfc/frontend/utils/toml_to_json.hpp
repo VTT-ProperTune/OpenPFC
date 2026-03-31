@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -31,8 +31,7 @@
 #undef OPENPFC_SAVED_NOINLINE
 #endif
 
-namespace pfc {
-namespace utils {
+namespace pfc::utils {
 
 // Forward declaration
 inline nlohmann::json toml_to_json(const toml::node &node_ref);
@@ -165,7 +164,6 @@ toml_to_json(const toml::node_view<const toml::node> &node_view) {
   return toml_to_json(*node);
 }
 
-} // namespace utils
-} // namespace pfc
+} // namespace pfc::utils
 
 #endif // PFC_TOML_TO_JSON_HPP
