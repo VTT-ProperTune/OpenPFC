@@ -2,7 +2,9 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Run clang-tidy on OpenPFC sources the same way as CI (.clang-tidy, header filter).
+# Run clang-tidy on OpenPFC sources (.clang-tidy, header filter). By default only
+# diagnostics promoted by .clang-tidy (WarningsAsErrors) fail; with --fail-fast,
+# also passes --warnings-as-errors=* and exits on the first failing file.
 # Requires a Ninja build directory with compile_commands.json (see --configure).
 #
 # Typical tohtori workflow (load modules first: gcc/11.2.0, openmpi/4.1.1):
@@ -29,12 +31,14 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [options]
 
-Run clang-tidy on all *.cpp under src/, apps/, and tests/ (same as CI).
+Run clang-tidy on all *.cpp under src/, apps/, and tests/ (same file set as CI).
+Failures follow .clang-tidy (WarningsAsErrors) unless --fail-fast is set.
 
 Options:
   -c, --configure   Run CMake configure in BUILD_DIR (Ninja + tohtori toolchain by default)
       --build-dir=D Set build directory (default: build-tidy or \$OPENPFC_TIDY_BUILD_DIR)
-      --fail-fast     Stop after the first .cpp file on which clang-tidy exits non-zero
+      --fail-fast     Treat every tidy diagnostic as an error (--warnings-as-errors=*)
+                      and stop after the first .cpp on which clang-tidy exits non-zero
                       (for iterative fix → commit → re-run workflows)
       --file=PATH     Run only one .cpp relative to repo root (e.g. src/openpfc/foo.cpp);
                       must exist. Combines with --fail-fast for quick checks after a fix.
@@ -112,7 +116,7 @@ fi
 
 echo "Using compile_commands: ${BUILD_ABS}/compile_commands.json"
 if [[ "$FAIL_FAST" -eq 1 ]]; then
-  echo "Fail-fast: will exit on first file with clang-tidy errors."
+  echo "Fail-fast: --warnings-as-errors=* enabled; will exit on the first failing .cpp."
 fi
 
 # Source set matched to GitHub Actions CI "Run clang-tidy" (CPU-only: skip TUs that
@@ -137,10 +141,16 @@ list_cpp_for_tidy_stream() {
   fi
 }
 
+TIDY_EXTRA=()
+if [[ "$FAIL_FAST" -eq 1 ]]; then
+  TIDY_EXTRA+=(--warnings-as-errors='*')
+fi
+
 failed=0
 while IFS= read -r -d '' file; do
   if ! clang-tidy -p "$BUILD_ABS" --quiet \
     -header-filter='include/openpfc/.*' \
+    "${TIDY_EXTRA[@]}" \
     "$file"; then
     failed=1
     echo "$(basename "$0"): clang-tidy failed for: $file" >&2
