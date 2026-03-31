@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -44,6 +44,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
@@ -53,15 +54,14 @@
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <vector>
 
-namespace pfc {
-namespace halo {
+namespace pfc::halo {
 
 using Int3 = pfc::types::Int3;
 
 /**
  * @brief Connectivity pattern for halo exchange
  */
-enum class Connectivity {
+enum class Connectivity : std::uint8_t {
   Faces, // 6 neighbors: ±X, ±Y, ±Z (4-connectivity in 2D, 6-connectivity in 3D)
   Edges, // 18 neighbors: faces + edges (8-connectivity in 2D)
   All    // 26 neighbors: faces + edges + corners (full 3D connectivity)
@@ -343,5 +343,4 @@ create_halo_patterns(const decomposition::Decomposition &decomp, int rank,
   return patterns;
 }
 
-} // namespace halo
-} // namespace pfc
+} // namespace pfc::halo
