@@ -11,14 +11,12 @@
 
 #include <string_view>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 inline constexpr std::string_view kProfilingRegionFft = "fft";
 inline constexpr std::string_view kProfilingRegionCommunication = "communication";
 inline constexpr std::string_view kProfilingRegionGradient = "gradient";
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_NAMES_HPP

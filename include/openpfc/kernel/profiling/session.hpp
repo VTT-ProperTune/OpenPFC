@@ -22,8 +22,7 @@
 #include <string_view>
 #include <vector>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 struct ProfilingPrintOptions;
 
@@ -145,7 +144,6 @@ private:
   std::chrono::steady_clock::time_point report_clock_origin_{};
 };
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_SESSION_HPP

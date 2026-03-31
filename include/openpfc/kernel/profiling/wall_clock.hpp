@@ -19,8 +19,7 @@
 #include <mpi.h>
 #include <utility>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 /// Wall time in seconds from MPI (monotonic per rank).
 inline double mpi_wtime_now() noexcept { return MPI_Wtime(); }
@@ -42,7 +41,6 @@ template <typename F> inline double measure_barriered(MPI_Comm comm, F &&fn) {
  */
 inline double mpi_wtime_elapsed(double t0) noexcept { return MPI_Wtime() - t0; }
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_WALL_CLOCK_HPP

@@ -11,8 +11,7 @@
 
 #include <string_view>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 class ProfilingSession;
 
@@ -52,7 +51,6 @@ public:
   ~ProfilingContextScope() { current_session_ptr() = prev_; }
 };
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_CONTEXT_HPP

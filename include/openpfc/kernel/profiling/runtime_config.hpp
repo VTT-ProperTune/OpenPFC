@@ -11,15 +11,13 @@
 #ifndef PFC_KERNEL_PROFILING_RUNTIME_CONFIG_HPP
 #define PFC_KERNEL_PROFILING_RUNTIME_CONFIG_HPP
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 struct ProfilingRuntimeConfig {
   /// When true, include RSS and heap byte columns in each frame (if session used).
   bool sample_memory = false;
 };
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_RUNTIME_CONFIG_HPP

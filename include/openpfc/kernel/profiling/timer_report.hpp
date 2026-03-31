@@ -14,8 +14,7 @@
 #include <iosfwd>
 #include <string>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 /// Options for console profiling table (TimerOutputs-inspired).
 struct ProfilingPrintOptions {
@@ -43,7 +42,6 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
  */
 void print_profiling_timer(std::ostream &os, const ProfilingPrintOptions &opts);
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_TIMER_REPORT_HPP

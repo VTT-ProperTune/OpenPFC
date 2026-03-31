@@ -14,8 +14,7 @@
 
 #include <string_view>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 /**
  * @brief Push a timed scope on construction, pop on destruction (LIFO with other
@@ -113,7 +112,6 @@ public:
   }
 };
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_REGION_SCOPE_HPP

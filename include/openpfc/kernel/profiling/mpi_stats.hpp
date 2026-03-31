@@ -18,8 +18,7 @@
 #include <mpi.h>
 #include <vector>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 /**
  * @brief Statistics of one scalar across MPI ranks (valid on root after reduce).
@@ -87,7 +86,6 @@ inline double reduce_max_to_root(MPI_Comm comm, double local_value, int root = 0
   return out;
 }
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_MPI_STATS_HPP

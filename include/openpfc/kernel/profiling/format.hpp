@@ -14,8 +14,7 @@
 #include <sstream>
 #include <string>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 /**
  * @brief Format byte count as B, KB, MB, GB, or TB (1024-based scales; labels
@@ -45,7 +44,6 @@ inline std::string format_bytes(std::size_t bytes) {
   return oss.str();
 }
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_FORMAT_HPP

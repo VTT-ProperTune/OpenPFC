@@ -17,8 +17,7 @@
 #include <sstream>
 #include <string>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 /**
  * @brief Best-effort resident set size in bytes; 0 if unknown.
@@ -41,7 +40,6 @@ inline std::size_t try_read_process_rss_bytes() noexcept {
   return 0;
 }
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_MEMORY_SAMPLE_HPP

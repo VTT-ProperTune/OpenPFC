@@ -20,8 +20,7 @@
 #include <utility>
 #include <vector>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 /**
  * @brief Immutable ordered list of `/`-separated region paths.
@@ -112,7 +111,6 @@ private:
   std::unordered_map<std::string, std::size_t> index_;
 };
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
 
 #endif // PFC_KERNEL_PROFILING_METRIC_CATALOG_HPP
