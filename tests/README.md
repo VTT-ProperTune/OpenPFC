@@ -3,46 +3,98 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# OpenPFC Test Suite
+# OpenPFC test suite
 
-This directory contains the comprehensive test suite for OpenPFC, organized to support different testing strategies and use cases.
+This directory holds automated tests for the library and related workflows. The layout separates **fast unit checks**, **multi-component integration scenarios**, optional **benchmarks**, and shared **fixtures**.
 
-## Testing Philosophy
+## Testing philosophy
 
-OpenPFC follows a rigorous testing approach with these goals:
+We aim for:
 
-- **>90% code coverage** for all production code
-- **Test-Driven Development (TDD)** for new features
-- **Fast feedback** through isolated unit tests
-- **Confidence** through integration and system tests
-- **Performance validation** through benchmarks
+- **High coverage** of production code (Codecov and local reports target on the order of **90%** line coverage; see [`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml)).
+- **Fast default feedback**: most development runs **CTest** without benchmarks and without spinning up one OS process per Catch2 case (see below).
+- **Layered confidence**: small **unit** tests near components, **integration** tests for cross-cutting behavior (FFT, decomposition, I/O, short simulations).
+- **Explicit MPI and GPU paths**: multi-rank and CUDA checks are **tagged** and/or **optional CMake targets** so laptops and minimal CI hosts stay usable.
 
-## Directory Structure
+Further detail by area: [`unit/README.md`](unit/README.md), [`integration/README.md`](integration/README.md), [`benchmarks/README.md`](benchmarks/README.md), [`fixtures/README.md`](fixtures/README.md).
+
+## Strategies: one main executable vs several
+
+### Primary suite: `openpfc-tests`
+
+Most tests compile into a **single** Catch2 executable, `openpfc-tests`:
+
+- **Sources** are wired in via `target_sources(openpfc-tests PRIVATE …)` from `tests/unit/**`, `tests/integration/**`, and optionally `tests/benchmarks/`.
+- **Custom `main`** (`tests/runtests.cpp`) constructs `pfc::MPI_Worker` once so **MPI is initialized a single time** for the whole run. That avoids large `MPI_Init` / `MPI_Finalize` overhead per test case.
+- **CTest** registers **`openpfc-all-tests`**, which runs:
+
+  ```text
+  openpfc-tests "~[MPI]"
+  ```
+
+  i.e. **all Catch2 cases except those tagged `[MPI]`**, in **one process invocation**. That is much faster than registering each Catch2 test as its own CTest (which would restart the binary repeatedly).
+
+**When adding a typical test:** new `.cpp` file under `unit/` or `integration/`, list it in the nearest `CMakeLists.txt`, use Catch2 `TEST_CASE` names and **tags** (`[unit]`, `[integration]`, `[MPI]`, …). No new executable is required.
+
+### Additional executables (on purpose)
+
+Smaller binaries are used when **linking**, **launch**, or **isolation** differs from the main suite:
+
+| Target (examples) | Rationale |
+|-------------------|-----------|
+| `test_gpu_device`, `test_gpu_vector`, `test_gpu_kernels`, `test_gpu_fft` | Built only with CUDA; link CUDA / kernel objects without pulling them into every default build. See `tests/unit/runtime/gpu/CMakeLists.txt`. |
+| `test_vtk_writer` | CTest runs **serial and 2-rank MPI** invocations via `mpiexec`. See `tests/unit/frontend/io/CMakeLists.txt`. |
+| `test_logging` | Serial Catch2 with `Catch2WithMain` (no shared MPI runner). |
+| Tests under `apps/` (e.g. Tungsten) | Application-scoped correctness, not the core library target. |
+
+**Rule of thumb:** use **`openpfc-tests`** unless you need a different `main`, different mandatory libraries, or a dedicated `mpiexec` line in CTest.
+
+### MPI tagging and CTest MPI suites
+
+- Tests that **require** multi-rank MPI behavior should be tagged **`[MPI]`** (and narrower tags like `[ring]`, `[grid]` where `tests/CMakeLists.txt` filters on them).
+- The default **`openpfc-all-tests`** run **excludes** `[MPI]` so serial/local runs stay simple.
+- If **`OpenPFC_RUN_MPI_SUITES=ON`** at configure time, extra CTest entries (e.g. `mpi_2procs_all`) run **`openpfc-tests`** under **`mpiexec`** with tag filters. Those tests use the environment variable **`OPENPFC_TEST_MPI_INIT=1`** so the runner can align with the pre-initialized MPI world (see comments in `tests/CMakeLists.txt`).
+- On hosts with **few logical CPUs**, CMake may **skip** registering 3- and 4-rank suites unless **`OpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS=ON`**. CI sets **`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`** so only the 2-rank suite is registered on GitHub-hosted runners.
+
+## Directory structure
 
 ```text
 tests/
-├── unit/                    # Fast, isolated unit tests (mirrors kernel/runtime/frontend)
-│   ├── kernel/             # kernel/data, kernel/fft, kernel/simulation, etc.
-│   ├── frontend/            # frontend/io, frontend/ui, frontend/field_modifiers
-│   └── runtime/             # runtime/gpu, etc.
-│
-├── integration/            # Multi-component integration tests
-├── benchmarks/             # Performance benchmarks
-└── fixtures/               # Shared test utilities and mocks
+├── runtests.cpp            # Catch2 runner; single MPI_Worker for whole suite
+├── CMakeLists.txt          # openpfc-tests, CTest, optional benchmarks
+├── unit/                   # Unit tests (mirrors kernel / runtime / frontend / operators)
+├── integration/            # Multi-component scenarios
+├── benchmarks/             # Optional; gated by OpenPFC_BUILD_BENCHMARKS
+└── fixtures/               # Shared headers (e.g. mocks); on include path as "fixtures/..."
 ```
 
-## Running Tests
+## Building and running
 
-### Build the Tests
+### Configure and build
+
+Enable tests (see root `CMakeLists.txt` / options; typical CI uses `-DOpenPFC_BUILD_TESTS=ON`):
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -DCMAKE_BUILD_TYPE=Debug -DOpenPFC_BUILD_TESTS=ON
 cmake --build build --target openpfc-tests
 ```
 
-### Run with CTest (matches CI and coverage workflows)
+Optional: **benchmarks** inside the same binary (default **OFF**):
 
-CMake registers tests in `tests/CMakeLists.txt` (e.g. **`openpfc-all-tests`** with **`~[MPI]`** for the default non-MPI sweep; MPI multi-rank suites appear when **`OpenPFC_RUN_MPI_SUITES=ON`** at configure time). This is what **`.github/workflows/ci.yml`** and **`.github/workflows/coverage.yml`** run:
+```bash
+cmake -B build -DOpenPFC_BUILD_BENCHMARKS=ON
+cmake --build build --target openpfc-tests
+```
+
+Optional: **MPI CTest suites** (for multi-rank jobs):
+
+```bash
+cmake -B build -DOpenPFC_RUN_MPI_SUITES=ON
+```
+
+### CTest (aligned with CI)
+
+From the build directory:
 
 ```bash
 cd build
@@ -51,192 +103,68 @@ ctest --output-on-failure -j2 \
   --timeout 300
 ```
 
-### Run the Catch2 executable directly
+This runs **`openpfc-all-tests`**, the standalone targets (**`test_vtk_writer`**, **`test_logging`**, GPU tests if CUDA was enabled), and—when configured—**MPI** suites. CI uses the same **`ctest`** line in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) with **`OpenPFC_RUN_MPI_SUITES=ON`** and **`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`**.
+
+**Note:** The **coverage** workflow runs the same **`ctest`** invocation but does **not** enable **`OpenPFC_RUN_MPI_SUITES`**; it relies on **`--coverage`** flags passed at configure time. See [`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml).
+
+### Run `openpfc-tests` directly
 
 ```bash
 cd build
-./tests/openpfc-tests
+./tests/openpfc-tests '~[MPI]'    # same filter as openpfc-all-tests
+./tests/openpfc-tests --list-tests
 ```
 
-**Note:** Running **`openpfc-tests` with no extra arguments** is not guaranteed to match CTest’s registered commands; use tags (e.g. **`~[MPI]`**) or **`ctest`** above to align with automation.
+Running **`openpfc-tests` with no arguments** runs **including** `[MPI]` cases, which may fail or hang if not launched with the right rank count—prefer explicit tags or **`ctest`**.
 
-### Run Tests with Different Reporters
+### Catch2 reporters and filtering
 
 ```bash
-# Compact output
-./tests/openpfc-tests --reporter compact
-
-# JUnit XML for CI
-./tests/openpfc-tests --reporter junit --out results.xml
-
-# Verbose output
-./tests/openpfc-tests --reporter console
+./tests/openpfc-tests '~[MPI]' --reporter compact
+./tests/openpfc-tests '~[MPI]' --reporter junit --out results.xml
+./tests/openpfc-tests '[unit]'
+./tests/openpfc-tests '[fft]'
+./tests/openpfc-tests 'World*'
 ```
 
-### Run Specific Tests
+### Local coverage (optional)
 
-```bash
-# By tag
-./tests/openpfc-tests "[unit]"
-./tests/openpfc-tests "[fft]"
+If you configure with **`OpenPFC_ENABLE_CODE_COVERAGE`** (see `tests/CMakeLists.txt`) or with the same **`--coverage`** flags as the coverage workflow, run **`ctest`** as above, then **`lcov`/`genhtml`** (the coverage job uses **`gcov-11`** to match GCC 11—see the workflow file for the exact **`lcov`** filters).
 
-# By test name pattern
-./tests/openpfc-tests "World*"
+## Test framework
 
-# Specific test case
-./tests/openpfc-tests "World - basic functionality"
-```
+**Catch2 v3** (`REQUIRE`, `CHECK`, `Approx`, tags, `BENCHMARK` in benchmarks). Reference: [Catch2 docs](https://github.com/catchorg/Catch2/tree/devel/docs).
 
-### Run Tests with MPI
+## Shared fixtures
 
-For parallel tests:
+Headers under [`fixtures/`](fixtures/) (e.g. `mock_model.hpp`) are included as `#include "fixtures/..."` because `tests/` is on the include path for `openpfc-tests`. Details: [`fixtures/README.md`](fixtures/README.md).
 
-```bash
-mpirun -np 4 ./tests/openpfc-tests
-```
+## Writing new tests
 
-## Test Categories
+1. Decide **unit** vs **integration** (and whether the case needs **`[MPI]`** or CUDA).
+2. Place the file under the matching subtree and **register** it in that directory’s **`CMakeLists.txt`** (`target_sources(openpfc-tests PRIVATE …)`), unless you are intentionally adding a **separate** executable.
+3. Name files **`test_<component>.cpp`** where that matches local convention.
+4. Use clear **`TEST_CASE` titles** and **tags** (`[unit]`, `[integration]`, module tags, `[MPI]` when appropriate).
 
-### Unit Tests (`unit/`)
+## Continuous integration (summary)
 
-Fast, isolated tests that verify individual components in isolation. Each test should:
+- **[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)** — **Ubuntu 24.04**, matrix **GCC 11** and **GCC 13**, **Debug** and **Release**, HeFFTe 2.4.1 CPU build, **`OpenPFC_RUN_MPI_SUITES=ON`**, **`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`**, **`ctest`** with benchmark exclusion. **clang-format** (advisory) and **REUSE** run in a separate job; they do not use the Clang compiler for the build matrix.
+- **[`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml)** — **GCC 11**, coverage flags, **`ctest`** (benchmarks excluded), Codecov upload.
+- **Clang-Tidy** — separate workflow ([`.github/workflows/clang-tidy.yml`](../.github/workflows/clang-tidy.yml)); see [`.github/workflows/README.md`](../.github/workflows/README.md).
 
-- Run in milliseconds
-- Have no external dependencies
-- Use mocks/fixtures for dependencies
-- Test one logical concept per TEST_CASE
+## Maintenance
 
-**Purpose**: Catch bugs early, enable rapid refactoring, document API usage
+- Prefer **independent** test cases; avoid relying on order or hidden global mutation.
+- Keep **unit** cases **fast**; push expensive work to **integration** or **benchmarks**.
+- **Benchmarks** are excluded from default **`ctest`** in CI; enable **`OpenPFC_BUILD_BENCHMARKS`** locally when tuning performance.
 
-### Integration Tests (`integration/`)
+## Discovering what is registered
 
-Tests that verify multiple components working together. May involve:
+From the **build** directory:
 
-- Real FFT operations across MPI ranks
-- File I/O operations
-- Complete simulation workflows (short runs)
-
-**Purpose**: Verify component interactions, catch integration bugs
-
-### Benchmarks (`benchmarks/`)
-
-Performance-focused tests that measure:
-
-- Execution time
-- Memory usage
-- Scaling characteristics
-- Performance regressions
-
-**Purpose**: Maintain performance standards, guide optimization
-
-## Test Framework
-
-OpenPFC uses **Catch2 v3** as its testing framework.
-
-### Key Features
-
-- BDD-style sections for test organization
-- Rich assertion macros (`REQUIRE`, `CHECK`, etc.)
-- Floating-point comparisons with `Approx()`
-- Test tagging for selective execution
-- MPI-aware test runner
-
-### Common Patterns
-
-```cpp
-TEST_CASE("Component - what it does", "[module][tag]") {
-    SECTION("Basic usage") {
-        // Arrange
-        auto input = create_input();
-        
-        // Act
-        auto result = function_under_test(input);
-        
-        // Assert
-        REQUIRE(result.is_valid());
-        REQUIRE(result.value == Approx(expected).margin(1e-10));
-    }
-    
-    SECTION("Edge case") {
-        // Test boundary conditions
-    }
-    
-    SECTION("Error handling") {
-        REQUIRE_THROWS_AS(invalid_call(), std::invalid_argument);
-    }
-}
-```
-
-## Shared Test Utilities
-
-The `fixtures/` directory contains shared test utilities:
-
-- **`mock_model.hpp`**: Mock implementations of Model for testing
-  - `MockModel`: Basic no-op model
-  - `InstrumentedMockModel`: Tracks method calls for verification
-
-Use these to avoid duplicating test infrastructure across test files.
-
-## Coverage Reporting
-
-Tests are built with coverage instrumentation enabled. To generate coverage reports:
-
-```bash
-# Run tests (same CTest invocation as CI coverage job)
-cd build && ctest --output-on-failure -j2 \
-  --exclude-regex "benchmark" \
-  --timeout 300
-
-# Generate coverage report
-lcov --capture --directory . --output-file coverage.info
-lcov --remove coverage.info '/usr/*' --output-file coverage.info
-genhtml coverage.info --output-directory coverage-html
-
-# View report
-xdg-open coverage-html/index.html
-```
-
-## Writing New Tests
-
-1. **Determine test type**: Unit, integration, or benchmark?
-2. **Find the right directory**: Place tests near related code
-3. **Follow naming convention**: `test_<component>.cpp`
-4. **Use descriptive names**: `"Component - specific behavior"`
-5. **Add appropriate tags**: `[unit]`, `[fft]`, `[model]`, etc.
-6. **Update CMakeLists.txt**: Add test file to appropriate subdirectory
-7. **Follow TDD**: Write failing test first, then implement
-
-## Continuous Integration
-
-All tests must pass before merging. At a high level (see [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)):
-
-1. **Build matrix** on **Ubuntu 24.04 LTS**: **Debug** and **Release** with tests, examples, and apps; several **GCC** and **Clang** versions.
-2. **`ctest`** with **`--exclude-regex "benchmark"`** and timeouts: registered targets include **`openpfc-all-tests`** (Catch2 with **`~[MPI]`**) and, because **`OpenPFC_RUN_MPI_SUITES=ON`** in CI, **MPI multi-rank** suites from **`tests/CMakeLists.txt`**. Those MPI CTest targets use **`RUN_SERIAL`** so they do not overlap other tests under **`ctest -j2`**. **`mpi_3procs_ring`** / **`mpi_4procs_grid_multiple`** are omitted when the configure host reports too few logical CPUs **or** when **`OpenPFC_MPI_TEST_MAX_WORLD_SIZE`** caps the world (CI sets **`2`** so only **`mpi_2procs_all`** runs on GitHub Actions). Use **`-DOpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS=ON`** if you configure on a small host but run tests elsewhere (e.g. with **`mpirun --oversubscribe`**).
-3. **Coverage** workflow (also **`ctest`**, benchmarks excluded): line coverage toward **>90%** (Codecov / artifacts).
-4. **clang-format** + **REUSE** (license headers) on the main CI workflow; a separate **Clang-Tidy** workflow runs **`compile_commands.json`** static analysis and does not block the main **CI Status** check.
-
-## Test Maintenance
-
-- **Keep tests fast**: Unit tests should complete in <10ms each
-- **Keep tests independent**: No shared state between tests
-- **Keep tests readable**: Tests are documentation
-- **Update tests with code**: Tests and code evolve together
-- **Remove obsolete tests**: Delete tests for removed features
-
-## Getting Help
-
-- **Catch2 Documentation**: <https://github.com/catchorg/Catch2/tree/devel/docs>
-- **Ask the Team**: Questions about testing strategy or specific tests
-
-## Test statistics (how to query)
-
-Counts change as tests are added. From your **build** directory:
-
-- **CTest entries:** `ctest -N`
-- **Catch2 test cases / tags:** `./tests/openpfc-tests --list-tests` (and related Catch2 CLI options)
-
-**Line coverage** is reported by the **Coverage** GitHub Actions workflow and **Codecov** (see repository badges and [`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml)); the project targets **>90%** (see **Continuous Integration** above).
+- **CTest:** `ctest -N`
+- **Catch2:** `./tests/openpfc-tests --list-tests` (and other Catch2 CLI options)
 
 ---
 
-**Last Updated**: 2026-03-30
+**Last updated:** 2026-03-31
