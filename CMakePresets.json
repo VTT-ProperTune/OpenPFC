@@ -61,6 +61,26 @@
         "PATH": "/share/apps/gcc/11.2.0/bin:/share/apps/OpenMPI/4.1.1/bin:$penv{PATH}",
         "LD_LIBRARY_PATH": "/share/apps/gcc/11.2.0/lib:/share/apps/gcc/11.2.0/lib64:/share/apps/gcc/11.2.0/lib/gcc/x86_64-unknown-linux-gnu/11.2.0:/share/apps/OpenMPI/4.1.1/lib:/share/apps/OpenMPI/4.1.1/lib64:$penv{LD_LIBRARY_PATH}"
       }
+    },
+    {
+      "name": "lumi-release",
+      "displayName": "LUMI-G (cpeGNU/Cray MPICH) Release",
+      "inherits": ["dev-release"],
+      "generator": "Unix Makefiles",
+      "binaryDir": "/flash/project_462001245/juaho/build/openpfc-lumi-release",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/lumi-gcc12-mpich.cmake",
+        "CMAKE_INSTALL_PREFIX": "/projappl/project_462001245/juaho/openpfc",
+        "OpenPFC_ENABLE_HIP": "ON",
+        "OpenPFC_ENABLE_CODE_COVERAGE": "OFF",
+        "OpenPFC_BUILD_DOCUMENTATION": "OFF",
+        "OpenPFC_BUILD_TESTS": "OFF",
+        "OpenPFC_MPI_HIP_AWARE": "ON",
+        "CMAKE_HIP_ARCHITECTURES": "gfx90a"
+      },
+      "environment": {
+        "CMAKE_PREFIX_PATH": "/projappl/project_462001245/heffte/2.4.1-rocm:$penv{CMAKE_PREFIX_PATH}"
+      }
     }
   ],
   "buildPresets": [
@@ -68,7 +88,8 @@
     { "name": "dev-release", "configurePreset": "dev-release" },
     { "name": "analysis", "configurePreset": "analysis" },
     { "name": "tohtori-debug", "configurePreset": "tohtori-debug" },
-    { "name": "tohtori-release", "configurePreset": "tohtori-release" }
+    { "name": "tohtori-release", "configurePreset": "tohtori-release" },
+    { "name": "lumi-release", "configurePreset": "lumi-release" }
   ],
   "testPresets": [
     { "name": "dev", "configurePreset": "dev-debug", "execution": { "jobs": 8 } },
