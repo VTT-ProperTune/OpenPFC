@@ -18,7 +18,7 @@ using pfc::types::Int3;
 
 namespace {
 /** Satisfies [[nodiscard]] on field accessors when tests expect an exception. */
-template <class T> void use_field_ref(T &&) {}
+template <class T> void use_field_ref(T && /*unused*/) {}
 } // namespace
 
 TEST_CASE("Model - basic functionality (v2.0)", "[model][unit]") {
@@ -94,12 +94,8 @@ TEST_CASE("Model::is_rank0() is const-correct (v2.0)", "[model][unit][rank]") {
   // Create const reference to test const-correctness
   const pfc::testing::MockModel &const_model = model;
 
-  // Should compile (is_rank0() is const)
-  bool result = is_rank0(const_model);
-
-  // Valid boolean value (must be either true or false)
-  bool is_valid = (result == true || result == false);
-  REQUIRE(is_valid);
+  // Should compile (is_rank0() is const) and return without throwing
+  REQUIRE_NOTHROW((void)is_rank0(const_model));
 }
 
 TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error]") {
@@ -142,7 +138,8 @@ TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error
 
   SECTION("Error message lists available fields") {
     // Add some fields
-    RealField field1, field2;
+    RealField field1;
+    RealField field2;
     field1.resize(10);
     field2.resize(10);
     add_real_field(model, "density", field1);
@@ -160,8 +157,7 @@ TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error
 
   SECTION("Const version also throws for non-existent fields") {
     const pfc::testing::MockModel &const_model = model;
-    REQUIRE_THROWS_AS(get_real_field(const_model, "nonexistent"),
-                      std::out_of_range);
+    REQUIRE_THROWS_AS(get_real_field(const_model, "nonexistent"), std::out_of_range);
     REQUIRE_THROWS_AS(get_complex_field(const_model, "nonexistent"),
                       std::out_of_range);
   }
