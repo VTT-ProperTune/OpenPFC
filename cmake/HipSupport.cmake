@@ -15,7 +15,7 @@ if(OpenPFC_ENABLE_HIP)
     set(OpenPFC_HIP_AVAILABLE TRUE)
     add_compile_definitions(OpenPFC_ENABLE_HIP)
 
-    option(OpenPFC_MPI_HIP_AWARE "Use GPU-aware MPI with HIP (device pointers in MPI_Send/Recv)" OFF)
+    option(OpenPFC_MPI_HIP_AWARE "Use GPU-aware MPI with HIP (device pointers in MPI_Send/Recv)" ON)
     if(OpenPFC_MPI_HIP_AWARE)
       add_compile_definitions(OpenPFC_MPI_HIP_AWARE)
       message(STATUS "   OpenPFC_MPI_HIP_AWARE=ON (MPI uses device pointers)")
