@@ -25,7 +25,8 @@ TEST_CASE("Complete diffusion simulation pipeline",
   model.initialize(1.0e-3); // dt encoded in operator
 
   // Compute initial diagnostics
-  double sum0 = 0.0, l2_0 = 0.0;
+  double sum0 = 0.0;
+  double l2_0 = 0.0;
   for (const auto &v : model.m_psi) {
     sum0 += v;
     l2_0 += v * v;
@@ -38,7 +39,8 @@ TEST_CASE("Complete diffusion simulation pipeline",
   }
 
   // Basic validations: bounded values, finite norms
-  double sum1 = 0.0, l2_1 = 0.0;
+  double sum1 = 0.0;
+  double l2_1 = 0.0;
   for (const auto &v : model.m_psi) {
     sum1 += v;
     l2_1 += v * v;
