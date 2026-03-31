@@ -38,8 +38,7 @@
 
 #include <openpfc/kernel/execution/backend_tags.hpp>
 
-namespace pfc {
-namespace core {
+namespace pfc::core {
 
 /**
  * @brief Type traits for backend capabilities
@@ -67,5 +66,4 @@ template <> struct backend_traits<backend::CpuTag> {
   static constexpr bool requires_transfer = false;
 };
 
-} // namespace core
-} // namespace pfc
+} // namespace pfc::core
