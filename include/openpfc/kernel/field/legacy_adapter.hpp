@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -15,8 +15,7 @@
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 
-namespace pfc {
-namespace field {
+namespace pfc::field {
 
 /**
  * @brief Create a FieldModifier from a coordinate-space lambda
@@ -54,5 +53,4 @@ std::unique_ptr<FieldModifier> make_legacy_modifier(std::string field_name, Fn f
   return std::make_unique<LambdaModifier>(std::move(field_name), std::move(fn));
 }
 
-} // namespace field
-} // namespace pfc
+} // namespace pfc::field
