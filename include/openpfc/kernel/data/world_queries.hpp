@@ -33,8 +33,7 @@
 #include <openpfc/kernel/data/world_types.hpp>
 #include <vector>
 
-namespace pfc {
-namespace world {
+namespace pfc::world {
 
 using pfc::csys::CoordinateSystem;
 using pfc::types::Int3;
@@ -580,12 +579,6 @@ template <typename T> inline Real3 get_upper_bounds(const World<T> &world) noexc
   return to_coords(world, {size[0] - 1, size[1] - 1, size[2] - 1});
 }
 
-} // namespace world
-} // namespace pfc
-
-namespace pfc {
-namespace world {
-
 /**
  * @brief Generate per-axis coordinate arrays for the world grid
  *
@@ -619,5 +612,4 @@ coordinates(const World<T> &world) noexcept {
   return result;
 }
 
-} // namespace world
-} // namespace pfc
+} // namespace pfc::world
