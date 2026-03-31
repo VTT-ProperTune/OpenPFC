@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -264,6 +265,22 @@ public:
   }
 
   int main() {
+#if defined(OpenPFC_ENABLE_HIP) && defined(OpenPFC_MPI_HIP_AWARE)
+    if (rank0) {
+      std::cout << "OpenPFC: GPU-aware MPI (HIP) is enabled at compile time.\n";
+      const char *gpu_env = std::getenv("MPICH_GPU_SUPPORT_ENABLED");
+      if (gpu_env == nullptr || std::string(gpu_env) != "1") {
+        std::cerr << "Warning: MPICH_GPU_SUPPORT_ENABLED is not set to 1; "
+                     "Cray MPICH may not accept device pointers (set export "
+                     "MPICH_GPU_SUPPORT_ENABLED=1 in your job).\n";
+      }
+    }
+#endif
+#if defined(OpenPFC_ENABLE_CUDA) && defined(OpenPFC_MPI_CUDA_AWARE)
+    if (rank0) {
+      std::cout << "OpenPFC: GPU-aware MPI (CUDA) is enabled at compile time.\n";
+    }
+#endif
     std::cout << "Reading configuration from json file:" << std::endl;
     std::cout << m_settings.dump(4) << "\n\n";
 
