@@ -142,7 +142,7 @@ inline nlohmann::json toml_to_json(const toml::node &node_ref) {
     if (node_ref.is_string()) {
       return std::string(node_ref.as_string()->get());
     }
-    return nlohmann::json(nullptr);
+    return {nullptr};
   }
   }
 }
@@ -159,7 +159,7 @@ inline nlohmann::json
 toml_to_json(const toml::node_view<const toml::node> &node_view) {
   const toml::node *node = node_view.node();
   if (!node) {
-    return nlohmann::json(nullptr);
+    return {nullptr};
   }
   return toml_to_json(*node);
 }
