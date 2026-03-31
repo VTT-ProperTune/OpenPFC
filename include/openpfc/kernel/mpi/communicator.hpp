@@ -51,10 +51,10 @@ protected:
 };
 
 inline communicator::operator MPI_Comm() const {
-  if (comm_ptr)
+  if (comm_ptr) {
     return *comm_ptr;
-  else
-    return MPI_COMM_NULL;
+  }
+  return MPI_COMM_NULL;
 }
 
 inline int communicator::size() const {

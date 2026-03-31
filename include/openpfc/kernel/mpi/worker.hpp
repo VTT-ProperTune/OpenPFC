@@ -76,7 +76,7 @@ public:
       : m_comm(comm) {
     int initialized = 0;
     MPI_Initialized(&initialized);
-    if (!initialized) {
+    if (initialized == 0) {
       MPI_Init(&argc, &argv);
       m_owns_mpi = true;
     } else {
@@ -100,7 +100,7 @@ public:
     if (m_owns_mpi) {
       int finalized = 0;
       MPI_Finalized(&finalized);
-      if (!finalized) {
+      if (finalized == 0) {
         MPI_Finalize();
       }
     }
@@ -126,7 +126,7 @@ public:
    * This function sets the failbit of the standard output stream, effectively
    * muting it.
    */
-  void mute() { std::cout.setstate(std::ios::failbit); }
+  static void mute() { std::cout.setstate(std::ios::failbit); }
 
   /**
    * @brief Unmutes the standard output.
@@ -134,7 +134,7 @@ public:
    * This function clears the failbit of the standard output stream, effectively
    * unmuting it.
    */
-  void unmute() { std::cout.clear(); }
+  static void unmute() { std::cout.clear(); }
 };
 
 } // namespace pfc

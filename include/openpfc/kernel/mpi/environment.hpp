@@ -47,9 +47,9 @@ class environment {
 public:
   inline environment();
   inline ~environment();
-  inline std::string processor_name();
-  inline bool initialized();
-  inline bool finalized();
+  static inline std::string processor_name();
+  static inline bool initialized();
+  static inline bool finalized();
 };
 
 inline environment::environment() { MPI_Init(nullptr, nullptr); }
