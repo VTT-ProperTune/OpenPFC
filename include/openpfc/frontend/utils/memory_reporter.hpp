@@ -87,7 +87,9 @@ struct MemoryUsage {
  */
 inline size_t get_system_memory_bytes() noexcept {
   std::ifstream meminfo("/proc/meminfo");
-  if (!meminfo) return 0;
+  if (!meminfo) {
+    return 0;
+  }
 
   std::string line;
   while (std::getline(meminfo, line)) {
