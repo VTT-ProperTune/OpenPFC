@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define CATCH_CONFIG_RUNNER
@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -65,7 +66,7 @@ public:
   ComplexField create_complex_test_data(size_t size) {
     ComplexField data(size);
     for (size_t i = 0; i < size; ++i) {
-      double real = static_cast<double>(i);
+      auto real = static_cast<double>(i);
       double imag = static_cast<double>(i) * 2.0;
       data[i] = std::complex<double>(real, imag);
     }
@@ -84,9 +85,11 @@ public:
    */
   std::string read_file_content(const std::string &filename) const {
     std::ifstream file(filename);
-    if (!file) return "";
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
+    if (!file) {
+      return "";
+    }
+    return {(std::istreambuf_iterator<char>(file)),
+            std::istreambuf_iterator<char>()};
   }
 
   /**
@@ -246,7 +249,7 @@ TEST_CASE("VTKWriter - Serial output", "[vtk_writer][io][serial]") {
     std::array<int, 3> size = {8, 8, 8};
     writer.set_domain(size, size, {0, 0, 0});
 
-    auto data = fixture.create_test_data(8 * 8 * 8);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(8 * 8 * 8));
 
     [[maybe_unused]] MPI_Status status = writer.write(1, data);
 
@@ -273,7 +276,7 @@ TEST_CASE("VTKWriter - Serial output", "[vtk_writer][io][serial]") {
     writer.set_origin(origin);
     writer.set_spacing(spacing);
 
-    auto data = fixture.create_test_data(4 * 4 * 4);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(4 * 4 * 4));
     writer.write(1, data);
 
     REQUIRE(fixture.file_exists("test_custom_domain_0001.vti"));
@@ -292,7 +295,7 @@ TEST_CASE("VTKWriter - Serial output", "[vtk_writer][io][serial]") {
     writer.set_domain(size, size, {0, 0, 0});
     writer.set_field_name("temperature");
 
-    auto data = fixture.create_test_data(4 * 4 * 4);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(4 * 4 * 4));
     writer.write(1, data);
 
     REQUIRE(fixture.file_exists("test_field_name_0001.vti"));
@@ -306,7 +309,7 @@ TEST_CASE("VTKWriter - Serial output", "[vtk_writer][io][serial]") {
     std::array<int, 3> size = {4, 4, 4};
     writer.set_domain(size, size, {0, 0, 0});
 
-    auto data = fixture.create_test_data(4 * 4 * 4);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(4 * 4 * 4));
 
     // Write 3 time steps
     writer.write(0, data);
@@ -333,7 +336,7 @@ TEST_CASE("VTKWriter - Extent validation", "[vtk_writer][io][extent]") {
     std::array<int, 3> size = {10, 20, 30};
     writer.set_domain(size, size, {0, 0, 0});
 
-    auto data = fixture.create_test_data(10 * 20 * 30);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(10 * 20 * 30));
     writer.write(1, data);
 
     auto extent = fixture.extract_extent("test_extent_0001.vti", "WholeExtent");
@@ -352,7 +355,7 @@ TEST_CASE("VTKWriter - Extent validation", "[vtk_writer][io][extent]") {
     std::array<int, 3> size = {8, 8, 8};
     writer.set_domain(size, size, {0, 0, 0});
 
-    auto data = fixture.create_test_data(8 * 8 * 8);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(8 * 8 * 8));
     writer.write(1, data);
 
     auto whole_extent =
@@ -380,7 +383,8 @@ TEST_CASE("VTKWriter - Complex field handling", "[vtk_writer][io][complex]") {
     std::array<int, 3> size = {4, 4, 4};
     writer.set_domain(size, size, {0, 0, 0});
 
-    auto complex_data = fixture.create_complex_test_data(4 * 4 * 4);
+    auto complex_data =
+        fixture.create_complex_test_data(static_cast<std::size_t>(4 * 4 * 4));
 
     [[maybe_unused]] MPI_Status status = writer.write(1, complex_data);
 
@@ -433,7 +437,7 @@ TEST_CASE("VTKWriter - Parallel output", "[vtk_writer][io][parallel]") {
 
     writer.set_domain(global_size, local_size, offset);
 
-    auto data = fixture.create_test_data(nx_local * 4 * 4);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(nx_local * 4 * 4));
     writer.write(1, data);
 
     // Each rank should create its piece file
@@ -453,7 +457,7 @@ TEST_CASE("VTKWriter - Parallel output", "[vtk_writer][io][parallel]") {
 
     writer.set_domain(global_size, local_size, offset);
 
-    auto data = fixture.create_test_data(nx_local * 4 * 4);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(nx_local * 4 * 4));
     writer.write(1, data);
 
     // Wait for all ranks to finish writing
@@ -502,7 +506,7 @@ TEST_CASE("VTKWriter - Parallel output", "[vtk_writer][io][parallel]") {
 
     writer.set_domain(global_size, local_size, offset);
 
-    auto data = fixture.create_test_data(nx_local * 8 * 8);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(nx_local * 8 * 8));
     writer.write(1, data);
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -574,7 +578,7 @@ TEST_CASE("VTKWriter - Edge cases", "[vtk_writer][io][edge]") {
     std::array<int, 3> size = {16, 8, 4};
     writer.set_domain(size, size, {0, 0, 0});
 
-    auto data = fixture.create_test_data(16 * 8 * 4);
+    auto data = fixture.create_test_data(static_cast<std::size_t>(16 * 8 * 4));
     writer.write(1, data);
 
     REQUIRE(fixture.file_exists("test_noncubic_0001.vti"));
