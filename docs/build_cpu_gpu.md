@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # CPU vs GPU build trees (quick reference)
 
 Use **separate build directories** for CPU and CUDA (or HIP) so you never mix object files or cached flags between toolchains.
