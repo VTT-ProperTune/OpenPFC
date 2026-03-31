@@ -26,7 +26,9 @@ using pfc::profiling::ProfilingTimedScope;
 TEST_CASE("ProfilingSession single rank JSON export", "[profiling]") {
   int mpi_size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-  if (mpi_size != 1) return;
+  if (mpi_size != 1) {
+    return;
+  }
 
   ProfilingSession s(ProfilingMetricCatalog::with_defaults_and_extras({}),
                      ProfilingSession::openpfc_default_frame_metrics());
@@ -35,8 +37,8 @@ TEST_CASE("ProfilingSession single rank JSON export", "[profiling]") {
     ProfilingContextScope scope(&s);
     pfc::profiling::record_time(pfc::profiling::kProfilingRegionGradient, 0.002);
   }
-  openpfc_end_frame_with_fft_region_wall_and_memory(s, 0.42, 0.15, 1000u, 2000u,
-                                                    3000u);
+  openpfc_end_frame_with_fft_region_wall_and_memory(s, 0.42, 0.15, 1000U, 2000U,
+                                                    3000U);
 
   const auto tmp =
       std::filesystem::temp_directory_path() / "openpfc_profiling_test.json";
@@ -50,7 +52,9 @@ TEST_CASE("ProfilingSession single rank JSON export", "[profiling]") {
 
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank != 0) return;
+  if (rank != 0) {
+    return;
+  }
 
   REQUIRE(std::filesystem::exists(tmp));
   std::ifstream in(path);
@@ -76,7 +80,9 @@ TEST_CASE("ProfilingSession single rank JSON export", "[profiling]") {
 TEST_CASE("ProfilingSession nested timed scopes exclusive", "[profiling]") {
   int mpi_size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-  if (mpi_size != 1) return;
+  if (mpi_size != 1) {
+    return;
+  }
 
   ProfilingMetricCatalog cat =
       ProfilingMetricCatalog::with_defaults_and_extras({"outer/inner"});
@@ -93,7 +99,7 @@ TEST_CASE("ProfilingSession nested timed scopes exclusive", "[profiling]") {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
-  openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.0, 0u, 0u, 0u);
+  openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.0, 0U, 0U, 0U);
 
   const auto tmp =
       std::filesystem::temp_directory_path() / "openpfc_profiling_nested.json";
@@ -104,7 +110,9 @@ TEST_CASE("ProfilingSession nested timed scopes exclusive", "[profiling]") {
 
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank != 0) return;
+  if (rank != 0) {
+    return;
+  }
 
   std::ifstream in(tmp.string());
   nlohmann::json j;
@@ -127,7 +135,9 @@ TEST_CASE("ProfilingSession nested timed scopes exclusive", "[profiling]") {
 TEST_CASE("ProfilingSession custom frame metric names", "[profiling]") {
   int mpi_size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-  if (mpi_size != 1) return;
+  if (mpi_size != 1) {
+    return;
+  }
 
   ProfilingSession s(ProfilingMetricCatalog::with_defaults_and_extras({}),
                      {"latency_ms"});
@@ -148,7 +158,9 @@ TEST_CASE("ProfilingSession custom frame metric names", "[profiling]") {
 
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank != 0) return;
+  if (rank != 0) {
+    return;
+  }
 
   std::ifstream in(tmp.string());
   nlohmann::json j;
@@ -165,13 +177,15 @@ TEST_CASE("ProfilingSession MPI gather two ranks", "[profiling][MPI]") {
   int size = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size < 2) return;
+  if (size < 2) {
+    return;
+  }
 
   ProfilingSession s(ProfilingMetricCatalog::with_defaults_and_extras({}),
                      ProfilingSession::openpfc_default_frame_metrics());
   openpfc_begin_frame_with_step_and_rank(s, 100, rank);
   openpfc_end_frame_with_fft_region_wall_and_memory(
-      s, 0.1 * static_cast<double>(rank + 1), 0.05, 0u, 0u, 0u);
+      s, 0.1 * static_cast<double>(rank + 1), 0.05, 0U, 0U, 0U);
 
   const auto tmp =
       std::filesystem::temp_directory_path() / "openpfc_profiling_mpi2.json";
