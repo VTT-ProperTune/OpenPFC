@@ -62,7 +62,7 @@ private:
    *
    * @param fft
    */
-  Array(const FFT &fft, std::true_type)
+  Array(const FFT &fft, [[maybe_unused]] std::true_type is_complex)
       : index(get_outbox(fft).size, get_outbox(fft).low) {}
 
   /**
@@ -71,7 +71,7 @@ private:
    *
    * @param decomp
    */
-  Array(const FFT &fft, std::false_type)
+  Array(const FFT &fft, [[maybe_unused]] std::false_type is_real)
       : index(get_inbox(fft).size, get_inbox(fft).low) {}
 
   // Custom type trait to check if a type is complex
@@ -170,8 +170,9 @@ public:
         "Func must be invocable with std::array<int, D> and return a type "
         "convertible to T");
     auto it = index.begin();
-    for (T &element : get_data())
+    for (T &element : get_data()) {
       element = std::invoke(std::forward<Func>(func), *(it++));
+    }
   }
 
   /**
