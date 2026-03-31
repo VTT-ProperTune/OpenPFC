@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -30,7 +30,8 @@ using Catch::Approx;
 // Helper to get rank and size
 // Note: MPI is already initialized by runtests.cpp
 std::pair<int, int> get_mpi_info() {
-  int rank, size;
+  int rank = 0;
+  int size = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   return {rank, size};
@@ -115,7 +116,7 @@ TEST_CASE("Neighbor exchange - Ring topology",
   // Verify received data
   REQUIRE(sparsevector::get_size(sparse_recv) == 3);
   auto recv_data = sparsevector::get_data(sparse_recv);
-  double expected_base = static_cast<double>(left_neighbor * 100);
+  auto expected_base = static_cast<double>(left_neighbor * 100);
   REQUIRE(recv_data[0] == Approx(expected_base).margin(1e-10));
   REQUIRE(recv_data[1] == Approx(expected_base + 10.0).margin(1e-10));
   REQUIRE(recv_data[2] == Approx(expected_base + 20.0).margin(1e-10));
@@ -132,8 +133,6 @@ TEST_CASE("Neighbor exchange - Data-only runtime phase",
 
     SKIP("This test requires at least 2 MPI processes");
   }
-
-  int partner = (rank == 0) ? 1 : 0;
 
   // Setup: Exchange indices once
   std::vector<size_t> indices = {0, 1, 2, 3, 4};
@@ -274,11 +273,11 @@ TEST_CASE("Neighbor exchange - Multiple neighbors simultaneously",
   auto left_data_recv = sparsevector::get_data(recv_left);
   auto right_data_recv = sparsevector::get_data(recv_right);
 
-  double expected_left_base = static_cast<double>(left_neighbor * 1000);
+  auto expected_left_base = static_cast<double>(left_neighbor * 1000);
   REQUIRE(left_data_recv[0] == Approx(expected_left_base).margin(1e-10));
   REQUIRE(left_data_recv[1] == Approx(expected_left_base + 100.0).margin(1e-10));
 
-  double expected_right_base = static_cast<double>(right_neighbor * 2000);
+  auto expected_right_base = static_cast<double>(right_neighbor * 2000);
   REQUIRE(right_data_recv[0] == Approx(expected_right_base).margin(1e-10));
   REQUIRE(right_data_recv[1] == Approx(expected_right_base + 200.0).margin(1e-10));
 
@@ -349,8 +348,6 @@ TEST_CASE("Neighbor exchange - Data-only with different tags",
     SKIP("This test requires at least 2 MPI processes");
   }
 
-  int partner = (rank == 0) ? 1 : 0;
-
   // Setup with different tags
   std::vector<size_t> indices = {0, 1, 2};
   auto sparse1 = sparsevector::create<double>(indices);
@@ -400,8 +397,6 @@ TEST_CASE("Neighbor exchange - Gather-scatter round-trip via exchange",
 
     SKIP("This test requires at least 2 MPI processes");
   }
-
-  int partner = (rank == 0) ? 1 : 0;
 
   // Rank 0: Create source array, gather into sparse, send
   // Rank 1: Receive, scatter to destination, verify
