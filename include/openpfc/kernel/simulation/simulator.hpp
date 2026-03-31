@@ -180,19 +180,17 @@ public:
     writer->set_domain(get_size(world), inbox.size, inbox.low);
 
     Model &model = get_model();
-    if (pfc::has_field(model, field_name)) {
-      m_result_writers.insert({field_name, std::move(writer)});
-      return true;
-    } else {
+    if (!pfc::has_field(model, field_name)) {
       std::cout << "Warning: tried to add writer for inexistent field " << field_name
-                << ", RESULTS ARE NOT WRITTEN!" << std::endl;
+                << ", RESULTS ARE NOT WRITTEN!" << '\n';
       return false;
     }
+    m_result_writers.insert({field_name, std::move(writer)});
+    return true;
   }
 
   bool add_results_writer(std::unique_ptr<ResultsWriter> writer) {
-    std::cout << "Warning: adding result writer to write field 'default'"
-              << std::endl;
+    std::cout << "Warning: adding result writer to write field 'default'" << '\n';
     return add_results_writer("default", std::move(writer));
   }
 
@@ -247,12 +245,11 @@ public:
     for (const std::string &field_name : modifier->get_field_names()) {
       if (field_name == "default") {
         std::cout << "Warning: adding initial condition to modify field 'default'"
-                  << std::endl;
+                  << '\n';
       }
       if (!pfc::has_field(model, field_name)) {
         std::cout << "Warning: tried to add initial condition for inexistent field "
-                  << field_name << ", INITIAL CONDITIONS ARE NOT APPLIED!"
-                  << std::endl;
+                  << field_name << ", INITIAL CONDITIONS ARE NOT APPLIED!" << '\n';
         return false;
       }
     }
@@ -326,12 +323,11 @@ public:
     for (const std::string &field_name : modifier->get_field_names()) {
       if (field_name == "default") {
         std::cout << "Warning: adding boundary condition to modify field 'default'"
-                  << std::endl;
+                  << '\n';
       }
       if (!pfc::has_field(model, field_name)) {
         std::cout << "Warning: tried to add boundary condition for inexistent field "
-                  << field_name << ", BOUNDARY CONDITIONS ARE NOT APPLIED!"
-                  << std::endl;
+                  << field_name << ", BOUNDARY CONDITIONS ARE NOT APPLIED!" << '\n';
         return false;
       }
     }
