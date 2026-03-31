@@ -40,7 +40,6 @@
 #include <openpfc/frontend/utils/toml_to_json.hpp>
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc_minimal.hpp>
-#include <toml++/toml.hpp>
 #include <utility>
 #include <vector>
 
