@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_all.hpp>
@@ -274,8 +274,8 @@ TEST_CASE("ParameterValidator with default values", "[parameter_validation][unit
 TEST_CASE("ValidationResult error formatting", "[parameter_validation][unit]") {
   ValidationResult result;
   result.valid = false;
-  result.errors.push_back("Error 1: Missing parameter 'x'");
-  result.errors.push_back("Error 2: Parameter 'y' out of range");
+  result.errors.emplace_back("Error 1: Missing parameter 'x'");
+  result.errors.emplace_back("Error 2: Parameter 'y' out of range");
 
   std::string formatted = result.format_errors();
 
