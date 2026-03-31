@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_approx.hpp>
@@ -47,7 +47,7 @@ TEST_CASE("Complete diffusion simulation pipeline",
   REQUIRE(l2_1 > 0.0);
 
   // Diffusion conserves mass (DC mode unchanged) and decreases L2 norm
-  const double N = static_cast<double>(model.m_psi.size());
+  const auto N = static_cast<double>(model.m_psi.size());
   REQUIRE(sum1 / N == Approx(sum0 / N).margin(1e-12));
   REQUIRE(l2_1 <= l2_0 + 1e-12);
 }
