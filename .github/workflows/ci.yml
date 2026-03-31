@@ -102,7 +102,9 @@ jobs:
         run: |
           set -euo pipefail
           if command -v run-clang-tidy >/dev/null 2>&1; then
+              # -source-filter: only TU paths from our trees (exclude FetchContent e.g. Catch2 in build-tidy/_deps)
               run-clang-tidy -p build-tidy -quiet \
+                -source-filter='/(src|apps|tests)/.*\.cpp$' \
                 -header-filter='include/openpfc/.*' \
                 'src/.*\.cpp$' \
                 'apps/.*\.cpp$' \
