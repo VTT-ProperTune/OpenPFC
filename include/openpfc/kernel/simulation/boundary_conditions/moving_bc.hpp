@@ -110,12 +110,12 @@ public:
         for (int i = low[0]; i <= high[0]; i++)
           xline[i] = std::max(xline[i], field[idx++]);
 
-    MPI_Reduce(xline.data(), global_xline.data(), xline.size(), MPI_DOUBLE, MPI_MAX,
-               0, comm);
+    MPI_Reduce(xline.data(), global_xline.data(), static_cast<int>(xline.size()),
+               MPI_DOUBLE, MPI_MAX, 0, comm);
 
     if (rank == 0) {
       if (m_first) {
-        for (int i = global_xline.size() - 1; i >= 0; i--) {
+        for (int i = static_cast<int>(global_xline.size()) - 1; i >= 0; i--) {
           if (global_xline[i] > m_threshold) {
             m_idx = i;
             break;
