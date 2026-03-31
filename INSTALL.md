@@ -367,6 +367,8 @@ cmake --build build-hip -j"$(nproc)"
 
 Adjust the ROCm path in `CMAKE_PREFIX_PATH` if your install is elsewhere (e.g. `/opt/rocm`). Optionally add **`-DCMAKE_HIP_ARCHITECTURES=<arch>`** to match your AMD GPU.
 
+**GPU-aware MPI (HIP):** **`OpenPFC_MPI_HIP_AWARE`** defaults to **ON** when HIP is found. It enables device-pointer halo exchange in OpenPFC and should match a HeFFTe build with GPU-aware MPI (see HeFFTe’s **`Heffte_ENABLE_GPU_AWARE_MPI`**). The install includes **`verify_gpu_aware_mpi`** in **`bin/`** to probe device-buffer MPI at runtime. On **LUMI-G**, see **[docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md)** for **`MPICH_GPU_SUPPORT_ENABLED`** and job layout.
+
 **Minimal configure (optional):** To disable code coverage and documentation (avoids gcov link issues with the HIP toolchain):
 
 ```bash
