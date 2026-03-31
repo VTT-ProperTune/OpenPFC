@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -57,8 +57,8 @@ public:
     MPI_File fh;
     MPI_Status status;
     if (MPI_File_open(MPI_COMM_WORLD, filename.c_str(), MPI_MODE_RDONLY,
-                      MPI_INFO_NULL, &fh)) {
-      std::cout << "Unable to open file!" << std::endl;
+                      MPI_INFO_NULL, &fh) != MPI_SUCCESS) {
+      std::cout << "Unable to open file!" << '\n';
     }
     MPI_File_set_view(fh, 0, MPI_DOUBLE, m_filetype, "native", MPI_INFO_NULL);
     MPI_File_read_all(fh, data.data(), static_cast<int>(data.size()), MPI_DOUBLE,
