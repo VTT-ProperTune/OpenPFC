@@ -40,6 +40,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <fstream>
 #include <iomanip>
@@ -53,8 +54,7 @@
 #include <sstream>
 #include <string>
 
-namespace pfc {
-namespace utils {
+namespace pfc::utils {
 
 /**
  * @brief Memory usage statistics for a single MPI rank
@@ -146,11 +146,12 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
   int num_ranks = pfc::mpi::get_comm_size(comm);
 
   // Gather memory data to rank 0
-  size_t local_mem[3] = {usage.m_application_bytes, usage.m_fft_bytes,
-                         usage.total_bytes()};
-  size_t global_mem[3] = {0, 0, 0};
+  std::array<size_t, 3> local_mem = {usage.m_application_bytes, usage.m_fft_bytes,
+                                     usage.total_bytes()};
+  std::array<size_t, 3> global_mem{};
 
-  MPI_Reduce(local_mem, global_mem, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, comm);
+  MPI_Reduce(local_mem.data(), global_mem.data(), 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
+             0, comm);
 
   // Only rank 0 logs the report
   if (rank == 0) {
@@ -173,19 +174,22 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
 
     // Per-voxel memory
     auto [Nx, Ny, Nz] = get_size(world);
-    size_t total_voxels = static_cast<size_t>(Nx) * Ny * Nz;
-    double mem_per_voxel = static_cast<double>(global_mem[2]) / total_voxels;
+    const size_t total_voxels =
+        static_cast<size_t>(Nx) * static_cast<size_t>(Ny) * static_cast<size_t>(Nz);
+    const size_t bytes_per_voxel =
+        total_voxels > 0 ? global_mem[2] / total_voxels : 0;
 
     std::ostringstream voxel_msg;
-    voxel_msg << "  Per Voxel: "
-              << pfc::profiling::format_bytes(static_cast<size_t>(mem_per_voxel))
+    voxel_msg << "  Per Voxel: " << pfc::profiling::format_bytes(bytes_per_voxel)
               << "/voxel (" << total_voxels << " voxels)";
     log_info(logger, voxel_msg.str());
 
     // System memory (if available)
     size_t system_mem = get_system_memory_bytes();
     if (system_mem > 0) {
-      double usage_pct = (static_cast<double>(global_mem[2]) / system_mem) * 100.0;
+      double usage_pct =
+          (static_cast<double>(global_mem[2]) / static_cast<double>(system_mem)) *
+          100.0;
       std::ostringstream sys_msg;
       sys_msg << "  System Memory: " << pfc::profiling::format_bytes(system_mem)
               << ", Usage: " << std::fixed << std::setprecision(1) << usage_pct
@@ -198,5 +202,4 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
   }
 }
 
-} // namespace utils
-} // namespace pfc
+} // namespace pfc::utils
