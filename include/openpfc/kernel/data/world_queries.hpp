@@ -532,9 +532,15 @@ template <typename T> inline bool is_3d(const World<T> &world) noexcept {
  * Time complexity: O(1)
  */
 template <typename T> inline int dimensionality(const World<T> &world) noexcept {
-  if (is_3d(world)) return 3;
-  if (is_2d(world)) return 2;
-  if (is_1d(world)) return 1;
+  if (is_3d(world)) {
+    return 3;
+  }
+  if (is_2d(world)) {
+    return 2;
+  }
+  if (is_1d(world)) {
+    return 1;
+  }
   return 0; // Degenerate case (all dimensions size 1)
 }
 

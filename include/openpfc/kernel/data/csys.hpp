@@ -287,7 +287,7 @@ inline bool is_periodic(const CartesianCS &cs, int i) { return cs.m_periodic.at(
  * @param idx Grid indices.
  * @return The physical coordinates.
  */
-inline const Real3 to_coords(const CartesianCS &cs, const Int3 &idx) noexcept {
+inline Real3 to_coords(const CartesianCS &cs, const Int3 &idx) noexcept {
   Real3 xyz;
   const auto &offset = get_offset(cs);
   const auto &spacing = get_spacing(cs);
@@ -303,7 +303,7 @@ inline const Real3 to_coords(const CartesianCS &cs, const Int3 &idx) noexcept {
  * @param xyz Physical coordinates.
  * @return The grid indices.
  */
-inline const Int3 to_index(const CartesianCS &cs, const Real3 &xyz) noexcept {
+inline Int3 to_index(const CartesianCS &cs, const Real3 &xyz) noexcept {
   Int3 idx;
   const auto &offset = get_offset(cs);
   const auto &spacing = get_spacing(cs);
