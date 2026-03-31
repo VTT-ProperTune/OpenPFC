@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
@@ -11,7 +11,8 @@ using namespace pfc;
 
 TEST_CASE("Domain decomposition basic properties",
           "[integration][mpi][decomposition]") {
-  int rank = 0, size = 1;
+  int rank = 0;
+  int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
