@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -20,8 +20,7 @@
 #include <string>
 #include <vector>
 
-namespace pfc {
-namespace detail {
+namespace pfc::detail {
 
 template <typename T, std::size_t D>
 std::string array_to_string(const std::array<T, D> &arr) {
@@ -69,7 +68,6 @@ void show(const std::vector<T> &data, const std::array<int, 2> &size,
   }
 }
 
-} // namespace detail
-} // namespace pfc
+} // namespace pfc::detail
 
 #endif
