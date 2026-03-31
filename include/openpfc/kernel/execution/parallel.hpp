@@ -176,7 +176,7 @@ inline void fence() { (void)0; }
  * Serial and OpenMP. For Cuda/HIP include openpfc/runtime/cuda/parallel_cuda.hpp
  * or openpfc/runtime/hip/parallel_hip.hpp.
  */
-template <typename ExecutionSpace> void fence(const ExecutionSpace &) {
+template <typename ExecutionSpace> void fence(const ExecutionSpace & /*space*/) {
   if constexpr (std::is_same_v<ExecutionSpace, Serial> ||
                 std::is_same_v<ExecutionSpace, OpenMP>) {
     (void)0;
