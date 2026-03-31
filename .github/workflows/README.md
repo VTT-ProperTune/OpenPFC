@@ -15,16 +15,13 @@ This directory contains CI/CD workflows for the OpenPFC project.
 
 **Purpose:** Primary continuous integration pipeline ensuring code quality and functionality.
 
-**Jobs (sequential fail-fast):** `code-quality` → `clang-tidy` → `build-and-test`. If an earlier job fails, later jobs are skipped so the workflow stops quickly.
+**Jobs (sequential fail-fast):** `code-quality` → `build-and-test`. If **Code Quality** fails, the build matrix is skipped.
 
 1. **Code Quality**
    - clang-format **20** (advisory: reports formatting issues but does not fail the job)
    - REUSE compliance verification (must pass)
 
-2. **Clang-Tidy**
-   - Static analysis with `run-clang-tidy` (or per-file fallback)
-
-3. **CMake Build Matrix**
+2. **CMake Build Matrix**
    - **OS:** Ubuntu 24.04 LTS
    - **Compilers:** GCC 11, GCC 13, Clang 14, Clang 16
    - **Build Types:** Debug, Release
@@ -32,11 +29,21 @@ This directory contains CI/CD workflows for the OpenPFC project.
    - Runs full test suite with CTest
    - Uploads test logs on failure
 
-4. **CI Status Check**
+3. **CI Status Check**
    - Required status check for merging
-   - Aggregates results from all jobs
+   - Aggregates **Code Quality** and **build-and-test** only (clang-tidy is separate; see below)
 
 **Typical Duration:** 20-30 minutes (with cache), 45-60 minutes (cold cache)
+
+---
+
+### 🔍 `clang-tidy.yml` - Static analysis (non-blocking)
+
+**Runs on:** Same triggers as `ci.yml` (push to master/main/develop, PRs to master/main).
+
+**Purpose:** Run `scripts/run-clang-tidy.sh` with HeFFTe + `compile_commands.json`. **Failures do not fail the main CI workflow** or its **CI Status** job. Treat as advisory unless you add this workflow’s job as a **required** check in branch protection.
+
+**Typical Duration:** ~15–20 minutes (similar HeFFTe cache key to the former in-repo job).
 
 ---
 
@@ -130,6 +137,7 @@ Add these badges to your README.md:
 
 ```markdown
 [![CI](https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg)](https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml)
+[![Clang-Tidy](https://github.com/VTT-ProperTune/OpenPFC/workflows/Clang-Tidy/badge.svg)](https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/clang-tidy.yml)
 [![Documentation](https://github.com/VTT-ProperTune/OpenPFC/workflows/Documentation/badge.svg)](https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml)
 [![Coverage](https://github.com/VTT-ProperTune/OpenPFC/workflows/Coverage/badge.svg)](https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/coverage.yml)
 [![codecov](https://codecov.io/gh/VTT-ProperTune/OpenPFC/branch/master/graph/badge.svg)](https://codecov.io/gh/VTT-ProperTune/OpenPFC)
@@ -202,7 +210,7 @@ matrix:
 
 When bumping HeFFTe (current release: **v2.4.1**), update every workflow that downloads it:
 
-- **Tarball URL and source directory** (e.g. `v2.4.1`, `heffte-2.4.1`) in `ci.yml` (build matrix and clang-tidy job), `coverage.yml`, and `docs.yml`
+- **Tarball URL and source directory** (e.g. `v2.4.1`, `heffte-2.4.1`) in `ci.yml`, `clang-tidy.yml`, `coverage.yml`, and `docs.yml`
 - **Install prefix** paths such as `$HOME/opt/heffte/2.4.1-cpu`
 - **Cache keys** using that prefix, e.g. `heffte-2.4.1-...` → `heffte-2.5.0-...` when moving to the next version
 

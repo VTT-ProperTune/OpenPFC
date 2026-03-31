@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -213,7 +213,7 @@ All tests must pass before merging. At a high level (see [`.github/workflows/ci.
 1. **Build matrix** on **Ubuntu 24.04 LTS**: **Debug** and **Release** with tests, examples, and apps; several **GCC** and **Clang** versions.
 2. **`ctest`** with **`--exclude-regex "benchmark"`** and timeouts: registered targets include **`openpfc-all-tests`** (Catch2 with **`~[MPI]`**) and, because **`OpenPFC_RUN_MPI_SUITES=ON`** in CI, **MPI multi-rank** suites from **`tests/CMakeLists.txt`**.
 3. **Coverage** workflow (also **`ctest`**, benchmarks excluded): line coverage toward **>90%** (Codecov / artifacts).
-4. **clang-format** + **REUSE** (license headers), and a **clang-tidy** job with **`compile_commands.json`**.
+4. **clang-format** + **REUSE** (license headers) on the main CI workflow; a separate **Clang-Tidy** workflow runs **`compile_commands.json`** static analysis and does not block the main **CI Status** check.
 
 ## Test Maintenance
 

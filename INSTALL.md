@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -60,7 +60,7 @@ cmake -S . -B build-cpu -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ...   # plus your usu
 ln -sf build-cpu/compile_commands.json compile_commands.json
 ```
 
-To mirror CI static analysis locally (see `.github/workflows/ci.yml`), use the build directory that contains `compile_commands.json` as **`-p`** for `run-clang-tidy` / `clang-tidy`.
+To mirror CI static analysis locally (see `.github/workflows/clang-tidy.yml`), use the build directory that contains `compile_commands.json` as **`-p`** for `run-clang-tidy` / `clang-tidy`.
 
 ### VS Code / Cursor on tohtori (CMake presets)
 

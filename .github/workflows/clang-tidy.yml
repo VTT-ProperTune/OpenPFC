@@ -1,0 +1,75 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Optional static analysis: failures here do not block the main CI workflow (ci.yml).
+# For branch protection, do not mark this job as a required check if merges should
+# proceed when only clang-tidy is red.
+
+name: Clang-Tidy
+
+on:
+  push:
+    branches: ["master", "main", "develop"]
+  pull_request:
+    branches: ["master", "main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clang-tidy:
+    name: Clang-Tidy Analysis
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            clang-tidy \
+            clang-tools \
+            libopenmpi-dev \
+            openmpi-bin \
+            libfftw3-dev \
+            libfftw3-mpi-dev \
+            nlohmann-json3-dev
+
+      - name: Cache HeFFTe (clang-tidy)
+        id: cache-heffte-tidy
+        uses: actions/cache@v4
+        with:
+          path: ~/opt/heffte/2.4.1-cpu
+          key: heffte-2.4.1-cpu-ubuntu-24.04-tidy-clang-tidy
+
+      - name: Build and install HeFFTe (clang-tidy)
+        if: steps.cache-heffte-tidy.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
+          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
+          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-tidy \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
+            -DHeffte_ENABLE_FFTW=ON \
+            -DBUILD_SHARED_LIBS=ON
+          cmake --build /tmp/heffte-build-tidy -j2
+          cmake --install /tmp/heffte-build-tidy
+          rm -rf /tmp/heffte-build-tidy /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
+
+      - name: Configure (Debug with compile_commands)
+        run: |
+          cmake -S . -B build-tidy -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu
+
+      - name: Run clang-tidy
+        run: bash scripts/run-clang-tidy.sh --build-dir=build-tidy
