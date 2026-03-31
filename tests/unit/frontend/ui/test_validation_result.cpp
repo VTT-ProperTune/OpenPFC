@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_all.hpp>
@@ -10,7 +10,7 @@ TEST_CASE("ValidationResult error formatting", "[validation_result][unit]") {
   ValidationResult result;
 
   SECTION("Single error") {
-    result.errors.push_back("temperature: Value below minimum (0)");
+    result.errors.emplace_back("temperature: Value below minimum (0)");
     result.valid = false;
     REQUIRE_FALSE(result.is_valid());
 
@@ -20,8 +20,8 @@ TEST_CASE("ValidationResult error formatting", "[validation_result][unit]") {
   }
 
   SECTION("Multiple errors") {
-    result.errors.push_back("temperature: Value below minimum");
-    result.errors.push_back("mobility: Value exceeds maximum");
+    result.errors.emplace_back("temperature: Value below minimum");
+    result.errors.emplace_back("mobility: Value exceeds maximum");
     result.valid = false;
     REQUIRE_FALSE(result.is_valid());
 
