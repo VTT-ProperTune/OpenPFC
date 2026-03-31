@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <numeric>
@@ -21,8 +21,8 @@ namespace {
 class DummyModel : public Model {
 public:
   DummyModel(FFT &fft, const World &world) : Model(fft, world) {}
-  void step(double) override {}
-  void initialize(double) override {}
+  void step(double t) override { (void)t; }
+  void initialize(double dt) override { (void)dt; }
 };
 } // namespace
 
@@ -107,8 +107,12 @@ TEST_CASE("field::apply_inplace selective update preserves untouched cells",
   bool has_zero = false;
   bool has_one = false;
   for (const auto &val : ref) {
-    if (val == Approx(0.0)) has_zero = true;
-    if (val == Approx(1.0)) has_one = true;
+    if (val == Approx(0.0)) {
+      has_zero = true;
+    }
+    if (val == Approx(1.0)) {
+      has_one = true;
+    }
   }
   REQUIRE(has_zero);
   REQUIRE(has_one);
@@ -147,7 +151,7 @@ TEST_CASE("legacy adapter wraps lambda into FieldModifier", "[field_ops][unit]")
   auto mod = field::make_legacy_modifier("default",
                                          [](const Real3 & /*x*/) { return 42.0; });
 
-  mod->apply(model, /*t=*/0.0);
+  mod->apply(model, /*time=*/0.0);
 
   const auto &ref = model.get_real_field("default");
   for (const auto &val : ref) {
