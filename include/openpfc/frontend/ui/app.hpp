@@ -41,6 +41,7 @@
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <toml++/toml.hpp>
+#include <utility>
 #include <vector>
 
 namespace pfc::ui {
@@ -72,7 +73,7 @@ private:
   std::unique_ptr<pfc::profiling::ProfilingSession> m_profiler;
 
   // read settings from file (JSON or TOML format)
-  json read_settings(int argc, char *argv[]) {
+  json read_settings(int argc, char **argv) {
     if (argc <= 1) {
       if (rank0) {
         std::cerr << "Error: Configuration file required.\n";
@@ -83,7 +84,9 @@ private:
 
     std::filesystem::path file(argv[1]);
     if (!std::filesystem::exists(file)) {
-      if (rank0) std::cerr << "Error: File " << file << " does not exist!\n";
+      if (rank0) {
+        std::cerr << "Error: File " << file << " does not exist!\n";
+      }
       MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
@@ -91,7 +94,9 @@ private:
     json settings;
 
     if (ext == ".toml") {
-      if (rank0) std::cout << "Reading TOML configuration from " << file << "\n\n";
+      if (rank0) {
+        std::cout << "Reading TOML configuration from " << file << "\n\n";
+      }
       try {
         auto toml_data = toml::parse_file(file.string());
         settings = utils::toml_to_json(toml_data);
@@ -104,7 +109,9 @@ private:
         MPI_Abort(MPI_COMM_WORLD, 1);
       }
     } else if (ext == ".json") {
-      if (rank0) std::cout << "Reading JSON configuration from " << file << "\n\n";
+      if (rank0) {
+        std::cout << "Reading JSON configuration from " << file << "\n\n";
+      }
       std::ifstream input_file(file);
       try {
         input_file >> settings;
@@ -127,17 +134,19 @@ private:
   }
 
 public:
-  App(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD)
+  App(int argc, char **argv, MPI_Comm comm = MPI_COMM_WORLD)
       : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
         rank0(m_worker.get_rank() == 0), m_settings(read_settings(argc, argv)) {}
 
-  App(const json &settings, MPI_Comm comm = MPI_COMM_WORLD)
+  App(json settings, MPI_Comm comm = MPI_COMM_WORLD)
       : m_comm(comm), m_worker(MPI_Worker(0, nullptr, comm)),
-        rank0(m_worker.get_rank() == 0), m_settings(settings) {}
+        rank0(m_worker.get_rank() == 0), m_settings(std::move(settings)) {}
 
   bool create_results_dir(const std::string &output) {
     std::filesystem::path results_dir(output);
-    if (results_dir.has_filename()) results_dir = results_dir.parent_path();
+    if (results_dir.has_filename()) {
+      results_dir = results_dir.parent_path();
+    }
     if (!std::filesystem::exists(results_dir)) {
       std::cout << "Results dir " << results_dir << " does not exist, creating\n";
       std::filesystem::create_directories(results_dir);
@@ -149,52 +158,62 @@ public:
   }
 
   void read_profiling_configuration() {
-    if (!m_settings.contains("profiling")) return;
+    if (!m_settings.contains("profiling")) {
+      return;
+    }
     const auto &p = m_settings["profiling"];
-    if (p.contains("enabled")) m_prof_enabled = p["enabled"].get<bool>();
-    if (p.contains("format") && p["format"].is_string())
+    if (p.contains("enabled")) {
+      m_prof_enabled = p["enabled"].get<bool>();
+    }
+    if (p.contains("format") && p["format"].is_string()) {
       m_prof_format = p["format"].get<std::string>();
-    if (p.contains("output") && p["output"].is_string())
+    }
+    if (p.contains("output") && p["output"].is_string()) {
       m_prof_output = p["output"].get<std::string>();
-    if (p.contains("memory_samples"))
+    }
+    if (p.contains("memory_samples")) {
       m_prof_memory_samples = p["memory_samples"].get<bool>();
-    if (p.contains("print_report"))
+    }
+    if (p.contains("print_report")) {
       m_prof_print_report = p["print_report"].get<bool>();
+    }
     m_prof_extra_regions.clear();
     if (p.contains("regions") && p["regions"].is_array()) {
       for (const auto &el : p["regions"]) {
-        if (el.is_string()) m_prof_extra_regions.push_back(el.get<std::string>());
+        if (el.is_string()) {
+          m_prof_extra_regions.push_back(el.get<std::string>());
+        }
       }
     }
   }
 
   void add_result_writers(Simulator &sim) {
-    std::cout << "Adding results writers" << std::endl;
+    std::cout << "Adding results writers" << '\n';
     if (m_settings.contains("saveat") && m_settings.contains("fields") &&
         m_settings["saveat"] > 0) {
       for (const auto &field : m_settings["fields"]) {
         std::string name = field["name"];
         std::string data = field["data"];
         if (rank0) create_results_dir(data);
-        std::cout << "Writing field " << name << " to " << data << std::endl;
+        std::cout << "Writing field " << name << " to " << data << '\n';
         sim.add_results_writer(name, std::make_unique<BinaryWriter>(data));
       }
     } else {
-      std::cout << "Warning: not writing results to anywhere." << std::endl;
-      std::cout << "To write results, add ResultsWriter to model." << std::endl;
+      std::cout << "Warning: not writing results to anywhere." << '\n';
+      std::cout << "To write results, add ResultsWriter to model." << '\n';
     }
   }
 
   void add_initial_conditions(Simulator &sim) {
     if (!m_settings.contains("initial_conditions")) {
-      std::cout << "WARNING: no initial conditions are set!" << std::endl;
+      std::cout << "WARNING: no initial conditions are set!" << '\n';
       return;
     }
-    std::cout << "Adding initial conditions" << std::endl;
+    std::cout << "Adding initial conditions" << '\n';
     for (const json &params : m_settings["initial_conditions"]) {
-      std::cout << "Creating initial condition from data " << params << std::endl;
+      std::cout << "Creating initial condition from data " << params << '\n';
       if (!params.contains("type")) {
-        std::cout << "Warning: no type is set for initial condition!" << std::endl;
+        std::cout << "Warning: no type is set for initial condition!" << '\n';
         continue;
       }
       std::string type = params["type"];
@@ -202,7 +221,7 @@ public:
       if (!params.contains("target")) {
         std::cout << "Warning: no target is set for initial condition! Using "
                      "target 'default'"
-                  << std::endl;
+                  << '\n';
       } else {
         const auto &target = params["target"];
         if (target.is_array()) {
@@ -212,11 +231,10 @@ public:
             names.push_back(el.get<std::string>());
           }
           field_modifier->set_field_names(std::move(names));
-          std::cout << "Setting initial condition targets (multi-field)"
-                    << std::endl;
+          std::cout << "Setting initial condition targets (multi-field)" << '\n';
         } else {
-          std::string t = target.get<std::string>();
-          std::cout << "Setting initial condition target to " << t << std::endl;
+          auto t = target.get<std::string>();
+          std::cout << "Setting initial condition target to " << t << '\n';
           field_modifier->set_field_name(t);
         }
       }
@@ -226,14 +244,14 @@ public:
 
   void add_boundary_conditions(Simulator &sim) {
     if (!m_settings.contains("boundary_conditions")) {
-      std::cout << "Warning: no boundary conditions are set!" << std::endl;
+      std::cout << "Warning: no boundary conditions are set!" << '\n';
       return;
     }
-    std::cout << "Adding boundary conditions" << std::endl;
+    std::cout << "Adding boundary conditions" << '\n';
     for (const json &params : m_settings["boundary_conditions"]) {
-      std::cout << "Creating boundary condition from data " << params << std::endl;
+      std::cout << "Creating boundary condition from data " << params << '\n';
       if (!params.contains("type")) {
-        std::cout << "Warning: no type is set for initial condition!" << std::endl;
+        std::cout << "Warning: no type is set for initial condition!" << '\n';
         continue;
       }
       std::string type = params["type"];
@@ -241,7 +259,7 @@ public:
       if (!params.contains("target")) {
         std::cout << "Warning: no target is set for boundary condition! Using "
                      "target 'default'"
-                  << std::endl;
+                  << '\n';
       } else {
         const auto &target = params["target"];
         if (target.is_array()) {
@@ -251,11 +269,10 @@ public:
             names.push_back(el.get<std::string>());
           }
           field_modifier->set_field_names(std::move(names));
-          std::cout << "Setting boundary condition targets (multi-field)"
-                    << std::endl;
+          std::cout << "Setting boundary condition targets (multi-field)" << '\n';
         } else {
-          std::string t = target.get<std::string>();
-          std::cout << "Setting boundary condition target to " << t << std::endl;
+          auto t = target.get<std::string>();
+          std::cout << "Setting boundary condition target to " << t << '\n';
           field_modifier->set_field_name(t);
         }
       }
@@ -280,11 +297,11 @@ public:
       std::cout << "OpenPFC: GPU-aware MPI (CUDA) is enabled at compile time.\n";
     }
 #endif
-    std::cout << "Reading configuration from json file:" << std::endl;
+    std::cout << "Reading configuration from json file:" << '\n';
     std::cout << m_settings.dump(4) << "\n\n";
 
     World world(ui::from_json<World>(m_settings));
-    std::cout << "World: " << world << std::endl;
+    std::cout << "World: " << world << '\n';
 
     int num_ranks = m_worker.get_num_ranks();
     int rank_id = m_worker.get_rank();
@@ -314,7 +331,7 @@ public:
               m_prof_extra_regions));
     }
 
-    std::cout << "Initializing model... " << std::endl;
+    std::cout << "Initializing model... " << '\n';
     model.initialize(time.get_dt());
 
     // Report memory usage
@@ -350,10 +367,10 @@ public:
       }
     }
 
-    std::cout << "Applying initial conditions" << std::endl;
+    std::cout << "Applying initial conditions" << '\n';
     simulator.apply_initial_conditions();
     if (time.get_increment() == 0) {
-      std::cout << "First increment: apply boundary conditions" << std::endl;
+      std::cout << "First increment: apply boundary conditions" << '\n';
       simulator.apply_boundary_conditions();
       simulator.write_results();
     }
@@ -411,7 +428,7 @@ public:
       std::cout << "(" << m_fft_time << " s FFT, " << other_time << " s other). ";
       std::cout << "Simulation time: " << t << " / " << t1;
       std::cout << " (" << (t / t1 * 100) << " % done). ";
-      std::cout << "ETA: " << pfc::utils::TimeLeft(eta_t) << std::endl;
+      std::cout << "ETA: " << pfc::utils::TimeLeft(eta_t) << '\n';
 
       m_total_steptime += m_steptime;
       m_total_fft_time += m_fft_time;
@@ -423,13 +440,10 @@ public:
     double avg_oth_time = avg_steptime - avg_fft_time;
     double p_fft = avg_fft_time / avg_steptime * 100.0;
     double p_oth = avg_oth_time / avg_steptime * 100.0;
-    std::cout << "\nSimulated " << m_steps_done
-              << " steps. Average times:" << std::endl;
-    std::cout << "Step time:  " << avg_steptime << " s" << std::endl;
-    std::cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %"
-              << std::endl;
-    std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %"
-              << std::endl;
+    std::cout << "\nSimulated " << m_steps_done << " steps. Average times:" << '\n';
+    std::cout << "Step time:  " << avg_steptime << " s" << '\n';
+    std::cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %" << '\n';
+    std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %" << '\n';
 
     if (m_profiler) {
       pfc::profiling::ProfilingExportOptions exp;
