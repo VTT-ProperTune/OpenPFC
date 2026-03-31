@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -14,9 +14,7 @@
 #include <heffte.h>
 #include <vector>
 
-namespace pfc {
-namespace fft {
-namespace layout {
+namespace pfc::fft::layout {
 
 using box3di = heffte::box3d<int>;
 using Decomposition = pfc::decomposition::Decomposition;
@@ -43,6 +41,4 @@ inline auto get_r2c_direction(const FFTLayout &layout) {
   return layout.m_r2c_direction;
 }
 
-} // namespace layout
-} // namespace fft
-} // namespace pfc
+} // namespace pfc::fft::layout
