@@ -15,12 +15,12 @@ using pfc::profiling::ProfilingTimedScope;
 TEST_CASE("ensure_path empty catalog then timed scope", "[profiling]") {
   ProfilingSession s(ProfilingMetricCatalog{});
   ProfilingContextScope ctx(&s);
-  s.begin_step_frame(0, 0);
+  s.begin_frame();
   {
     ProfilingTimedScope z("nest/inner");
     (void)z;
   }
-  s.end_step_frame(0u, 0u, 0u);
+  s.end_frame();
   REQUIRE(s.catalog().size() >= 2);
   REQUIRE(s.num_frames() == 1);
 }
@@ -28,9 +28,9 @@ TEST_CASE("ensure_path empty catalog then timed scope", "[profiling]") {
 TEST_CASE("OPENPFC_PROFILE macro registers path", "[profiling]") {
   ProfilingSession s(ProfilingMetricCatalog{});
   ProfilingContextScope ctx(&s);
-  s.begin_step_frame(1, 0);
+  s.begin_frame();
   OPENPFC_PROFILE("macro_block") { REQUIRE(true); }
-  s.end_step_frame(0u, 0u, 0u);
+  s.end_frame();
   std::size_t ix = 0;
   REQUIRE(s.catalog().try_index("macro_block", ix));
 }
@@ -38,13 +38,13 @@ TEST_CASE("OPENPFC_PROFILE macro registers path", "[profiling]") {
 TEST_CASE("ProfilingManualScope stop and restart", "[profiling]") {
   ProfilingSession s(ProfilingMetricCatalog{});
   ProfilingContextScope ctx(&s);
-  s.begin_step_frame(0, 0);
+  s.begin_frame();
   ProfilingManualScope timer;
   timer.start("phase_a");
   timer.stop();
   timer.restart("phase_b");
   // destructor pops phase_b
-  s.end_step_frame(0u, 0u, 0u);
+  s.end_frame();
   REQUIRE(s.num_frames() == 1);
   std::size_t ia = 0, ib = 0;
   REQUIRE(s.catalog().try_index("phase_a", ia));
@@ -54,11 +54,11 @@ TEST_CASE("ProfilingManualScope stop and restart", "[profiling]") {
 TEST_CASE("ProfilingManualScope move assigns sequential regions", "[profiling]") {
   ProfilingSession s(ProfilingMetricCatalog{});
   ProfilingContextScope ctx(&s);
-  s.begin_step_frame(0, 0);
+  s.begin_frame();
   ProfilingManualScope t("first");
   t.stop();
   t = ProfilingManualScope("second");
-  s.end_step_frame(0u, 0u, 0u);
+  s.end_frame();
   std::size_t i1 = 0, i2 = 0;
   REQUIRE(s.catalog().try_index("first", i1));
   REQUIRE(s.catalog().try_index("second", i2));
