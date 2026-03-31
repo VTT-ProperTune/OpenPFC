@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -38,9 +38,9 @@
 #define PFC_MPI_ENVIRONMENT_HPP
 
 #include <mpi.h>
+#include <string>
 
-namespace pfc {
-namespace mpi {
+namespace pfc::mpi {
 
 class environment {
 public:
@@ -74,7 +74,6 @@ inline bool environment::finalized() {
   return (flag != 0);
 }
 
-} // namespace mpi
-} // namespace pfc
+} // namespace pfc::mpi
 
 #endif // PFC_MPI_ENVIRONMENT_HPP

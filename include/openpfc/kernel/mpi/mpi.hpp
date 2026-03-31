@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -47,8 +47,7 @@
 #include <openpfc/kernel/mpi/timer.hpp>
 #include <openpfc/kernel/mpi/worker.hpp>
 
-namespace pfc {
-namespace mpi {
+namespace pfc::mpi {
 
 inline int get_rank() {
   int rank;
@@ -74,7 +73,6 @@ inline int get_comm_size(MPI_Comm comm) {
   return size;
 }
 
-} // namespace mpi
-} // namespace pfc
+} // namespace pfc::mpi
 
 #endif // PFC_MPI_HPP

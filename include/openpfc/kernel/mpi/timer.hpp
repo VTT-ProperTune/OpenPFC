@@ -46,8 +46,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace pfc {
-namespace mpi {
+namespace pfc::mpi {
 
 class timer {
   double m_tic = 0.0;
@@ -61,7 +60,7 @@ public:
   double toc();
   double duration() const;
   void reset();
-  void description(const std::string &);
+  void description(const std::string &description);
   std::string description() const;
   friend std::ostream &operator<<(std::ostream &os, const timer &t);
 };
@@ -100,7 +99,6 @@ inline double timer::toc() {
   return delta;
 }
 
-} // namespace mpi
-} // namespace pfc
+} // namespace pfc::mpi
 
 #endif // PFC_MPI_TIMER_HPP

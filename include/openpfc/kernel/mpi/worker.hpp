@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -71,7 +71,7 @@ public:
    * @param comm MPI communicator to use
    * @param verbose Print initialization message if true (default: true)
    */
-  MPI_Worker(int argc, char *argv[], MPI_Comm comm = MPI_COMM_WORLD,
+  MPI_Worker(int argc, char **argv, MPI_Comm comm = MPI_COMM_WORLD,
              bool verbose = true)
       : m_comm(comm) {
     int initialized = 0;
@@ -85,8 +85,7 @@ public:
     MPI_Comm_rank(m_comm, &m_rank);
     MPI_Comm_size(m_comm, &m_num_procs);
     if (m_owns_mpi && verbose) {
-      std::cout << "MPI_Init(): initialized " << m_num_procs << " processes"
-                << std::endl;
+      std::cout << "MPI_Init(): initialized " << m_num_procs << " processes" << '\n';
     }
     if (m_rank != 0) {
       mute();
