@@ -33,18 +33,18 @@ inline void unpack_gathered_profiling_row(std::size_t row, int stride, int nmeta
                                           std::vector<double> &metrics,
                                           std::vector<double> &inc,
                                           std::vector<double> &exc) {
-  const std::size_t b =
-      static_cast<std::size_t>(row) * static_cast<std::size_t>(stride);
+  const std::size_t b = row * static_cast<std::size_t>(stride);
   metrics.resize(static_cast<std::size_t>(nmeta));
-  for (int m = 0; m < nmeta; ++m)
+  for (int m = 0; m < nmeta; ++m) {
     metrics[static_cast<std::size_t>(m)] = flat[b + static_cast<std::size_t>(m)];
+  }
   inc.resize(static_cast<std::size_t>(kpaths));
   exc.resize(static_cast<std::size_t>(kpaths));
   for (int i = 0; i < kpaths; ++i) {
     const std::size_t base =
-        b + static_cast<std::size_t>(nmeta) + 2u * static_cast<std::size_t>(i);
+        b + static_cast<std::size_t>(nmeta) + (2U * static_cast<std::size_t>(i));
     inc[static_cast<std::size_t>(i)] = flat[base];
-    exc[static_cast<std::size_t>(i)] = flat[base + 1u];
+    exc[static_cast<std::size_t>(i)] = flat[base + 1U];
   }
 }
 } // namespace detail
@@ -147,7 +147,7 @@ private:
   };
 
   int stride_doubles() const noexcept {
-    return static_cast<int>(frame_metric_names_.size() + 2u * catalog_.size());
+    return static_cast<int>(frame_metric_names_.size() + (2U * catalog_.size()));
   }
 
   void pack_frames_flat(std::vector<double> &out) const;
@@ -170,9 +170,9 @@ private:
   std::vector<ScopeFrame> scope_stack_;
 
   bool frame_open_{false};
-  std::chrono::steady_clock::time_point frame_wall_t0_{};
+  std::chrono::steady_clock::time_point frame_wall_t0_;
   bool report_clock_valid_{false};
-  std::chrono::steady_clock::time_point report_clock_origin_{};
+  std::chrono::steady_clock::time_point report_clock_origin_;
 };
 
 } // namespace pfc::profiling
