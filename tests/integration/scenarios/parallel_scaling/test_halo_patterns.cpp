@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
@@ -11,7 +11,8 @@ using namespace pfc;
 
 TEST_CASE("Halo send/recv sizes match expected face areas",
           "[integration][mpi][halo]") {
-  int rank = 0, size = 1;
+  int rank = 0;
+  int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -33,9 +34,9 @@ TEST_CASE("Halo send/recv sizes match expected face areas",
 
     // Expected indices count based on direction (match world::get_size: inclusive
     // upper bounds → nx = upper - lower + 1)
-    const long long nx = static_cast<long long>(local_size[0]);
-    const long long ny = static_cast<long long>(local_size[1]);
-    const long long nz = static_cast<long long>(local_size[2]);
+    const auto nx = static_cast<long long>(local_size[0]);
+    const auto ny = static_cast<long long>(local_size[1]);
+    const auto nz = static_cast<long long>(local_size[2]);
 
     long long expected = 0;
     if (dir[0] != 0) {
