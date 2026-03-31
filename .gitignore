@@ -14,6 +14,7 @@ results
 *.err
 *.tmp
 *.sbatch
+!docs/lumi_slurm/*.sbatch
 .trash
 .temp
 docs/Doxyfile.docs

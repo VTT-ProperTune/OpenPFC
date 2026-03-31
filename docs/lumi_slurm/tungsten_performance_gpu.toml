@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# For tungsten_hip: FFT uses rocFFT inside the HIP model; backend below applies to CPU path only.
+
+[model]
+name = "tungsten"
+
+[model.params]
+n0 = -0.10
+alpha = 0.50
+n_sol = -0.047
+n_vap = -0.464
+T = 3300.0
+T0 = 156000.0
+Bx = 0.8582
+alpha_farTol = 0.001
+alpha_highOrd = 4
+lambda = 0.22
+stabP = 0.2
+shift_u = 0.3341
+shift_s = 0.1898
+p2 = 1.0
+p3 = -0.5
+p4 = 0.333333333
+q20 = -0.0037
+q21 = 1.0
+q30 = -12.4567
+q31 = 20.0
+q40 = 45.0
+
+[domain]
+Lx = 1024
+Ly = 1024
+Lz = 1024
+dx = 1.1107207345395915
+dy = 1.1107207345395915
+dz = 1.1107207345395915
+origin = "center"
+
+[timestepping]
+t0 = 0.0
+t1 = 10.0
+dt = 1.0
+saveat = -1.0
+
+[[fields]]
+name = "psi"
+data = "./data/u_%04d.bin"
+
+[[initial_conditions]]
+target = "psi"
+type = "constant"
+n0 = -0.4
+
+[[initial_conditions]]
+target = "psi"
+type = "single_seed"
+amp_eq = 0.216
+rho_seed = -0.047
+
+[profiling]
+enabled = true
+format = "both"
+output = "timing_profile"
+memory_samples = false
+
+[plan_options]
+backend = "fftw"
+use_reorder = true
+reshape_algorithm = "p2p_plined"
+use_pencils = true
+use_gpu_aware = true
