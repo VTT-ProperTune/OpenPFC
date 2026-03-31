@@ -46,8 +46,7 @@
 
 #include <openpfc/kernel/execution/backend_tags.hpp>
 
-namespace pfc {
-namespace core {
+namespace pfc::core {
 
 template <typename T> constexpr bool dependent_false_databuffer = false;
 
@@ -235,5 +234,4 @@ template <typename BackendTag, typename T> struct DataBuffer {
                 "for GPU backends");
 };
 
-} // namespace core
-} // namespace pfc
+} // namespace pfc::core
