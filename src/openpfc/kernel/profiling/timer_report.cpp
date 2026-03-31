@@ -24,13 +24,17 @@ constexpr double kEps = 1e-15;
 
 std::string parent_prefix(const std::string &path) {
   const auto pos = path.rfind('/');
-  if (pos == std::string::npos) return std::string{};
+  if (pos == std::string::npos) {
+    return std::string{};
+  }
   return path.substr(0, pos);
 }
 
 std::string last_segment(const std::string &path) {
   const auto pos = path.rfind('/');
-  if (pos == std::string::npos) return path;
+  if (pos == std::string::npos) {
+    return path;
+  }
   return path.substr(pos + 1);
 }
 
@@ -54,22 +58,36 @@ std::string format_seconds(double s) {
 }
 
 double combine_stat(const std::vector<double> &v, const std::string &stat_raw) {
-  if (v.empty()) return 0.0;
+  if (v.empty()) {
+    return 0.0;
+  }
   std::string s = stat_raw;
   std::transform(s.begin(), s.end(), s.begin(),
                  [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   double sum = 0.0;
-  for (double x : v) sum += x;
-  if (s == "sum") return sum;
-  if (s == "mean") return sum / static_cast<double>(v.size());
-  if (s == "min") return *std::min_element(v.begin(), v.end());
-  if (s == "max") return *std::max_element(v.begin(), v.end());
+  for (double x : v) {
+    sum += x;
+  }
+  if (s == "sum") {
+    return sum;
+  }
+  if (s == "mean") {
+    return sum / static_cast<double>(v.size());
+  }
+  if (s == "min") {
+    return *std::min_element(v.begin(), v.end());
+  }
+  if (s == "max") {
+    return *std::max_element(v.begin(), v.end());
+  }
   if (s == "median") {
     std::vector<double> w = v;
     std::sort(w.begin(), w.end());
     const std::size_t n = w.size();
-    if (n % 2 == 1) return w[n / 2];
-    return 0.5 * (w[n / 2 - 1] + w[n / 2]);
+    if (n % 2 == 1) {
+      return w[n / 2];
+    }
+    return 0.5 * (w[(n / 2) - 1] + w[n / 2]);
   }
   return sum / static_cast<double>(v.size());
 }
@@ -87,7 +105,9 @@ void print_profiling_table(
     return;
   }
 
-  if (denom <= 0.0) denom = 1.0;
+  if (denom <= 0.0) {
+    denom = 1.0;
+  }
 
   const auto &paths = catalog.paths();
   std::unordered_map<std::string, std::vector<std::string>> children;
@@ -97,7 +117,9 @@ void print_profiling_table(
   }
 
   std::unordered_map<std::string, std::size_t> path_index;
-  for (std::size_t i = 0; i < K; ++i) path_index[paths[i]] = i;
+  for (std::size_t i = 0; i < K; ++i) {
+    path_index[paths[i]] = i;
+  }
 
   for (auto &kv : children) {
     auto &vec = kv.second;
@@ -117,7 +139,9 @@ void print_profiling_table(
     if (ascii) {
       os << std::string(w, '-');
     } else {
-      for (std::size_t i = 0; i < w; ++i) os << "\u2500";
+      for (std::size_t i = 0; i < w; ++i) {
+        os << "\u2500";
+      }
     }
     os << '\n';
   };
@@ -130,7 +154,7 @@ void print_profiling_table(
   const int ex_w = 14;
   const int extra = opts.show_exclusive_column ? ex_w + 1 : 0;
   const auto table_w =
-      2u + static_cast<std::size_t>(sec_w) + static_cast<std::size_t>(n_w) +
+      2U + static_cast<std::size_t>(sec_w) + static_cast<std::size_t>(n_w) +
       static_cast<std::size_t>(t_w) + static_cast<std::size_t>(p_w) +
       static_cast<std::size_t>(a_w) + static_cast<std::size_t>(extra);
 
@@ -147,14 +171,18 @@ void print_profiling_table(
   os << std::left << std::setw(sec_w) << "Section" << std::right << std::setw(n_w)
      << "ncalls" << std::setw(t_w) << "time" << std::setw(p_w) << "%tot"
      << std::setw(a_w) << "avg";
-  if (opts.show_exclusive_column) os << std::setw(ex_w) << "exclusive";
+  if (opts.show_exclusive_column) {
+    os << std::setw(ex_w) << "exclusive";
+  }
   os << '\n';
   line(table_w);
 
   std::function<void(const std::string &, int)> walk;
   walk = [&](const std::string &parent, int depth) {
     auto it = children.find(parent);
-    if (it == children.end()) return;
+    if (it == children.end()) {
+      return;
+    }
     for (const std::string &p : it->second) {
       const std::size_t pi = path_index.at(p);
       const std::size_t nc = ncalls[pi] == 0 ? 1 : ncalls[pi];
@@ -167,13 +195,15 @@ void print_profiling_table(
       sec << std::string(static_cast<std::size_t>(depth) * 2, ' ')
           << last_segment(p);
       std::string sec_str = sec.str();
-      if (sec_str.size() > static_cast<std::size_t>(sec_w))
+      if (sec_str.size() > static_cast<std::size_t>(sec_w)) {
         sec_str = sec_str.substr(0, static_cast<std::size_t>(sec_w - 3)) + "...";
+      }
       os << std::left << std::setw(sec_w) << sec_str << std::right << std::setw(n_w)
          << nc << std::setw(t_w) << format_seconds(ttot) << std::setw(p_w)
          << pct_col.str() << std::setw(a_w) << format_seconds(av);
-      if (opts.show_exclusive_column)
+      if (opts.show_exclusive_column) {
         os << std::setw(ex_w) << format_seconds(total_exc[pi]);
+      }
       os << '\n';
       walk(p, depth + 1);
     }
@@ -212,8 +242,9 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
   }
 
   for (std::size_t f = 0; f < n; ++f) {
-    if (wall_ix != static_cast<std::size_t>(-1) && nmeta > 0)
+    if (wall_ix != static_cast<std::size_t>(-1) && nmeta > 0) {
       denom += session.frame_metric_values_[f * nmeta + wall_ix];
+    }
     for (std::size_t i = 0; i < K; ++i) {
       const std::size_t idx = f * K + i;
       const double inc = session.timer_inclusive_[idx];
@@ -224,7 +255,9 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
     }
   }
 
-  if (denom <= 0.0) denom = 1.0;
+  if (denom <= 0.0) {
+    denom = 1.0;
+  }
 
   print_profiling_table(os, session.catalog(), total_inc, total_exc, ncalls, denom,
                         opts, session.report_clock_valid_,
@@ -240,7 +273,9 @@ void print_profiling_timer(std::ostream &os, MPI_Comm comm,
   MPI_Comm_size(comm, &size);
 
   if (!opts.mpi_aggregate_stdout || size == 1) {
-    if (rank == 0) print_profiling_timer(os, session, opts);
+    if (rank == 0) {
+      print_profiling_timer(os, session, opts);
+    }
     return;
   }
 
@@ -248,12 +283,14 @@ void print_profiling_timer(std::ostream &os, MPI_Comm comm,
   std::vector<double> all_flat;
   std::vector<std::size_t> row_offset;
   session.mpi_gather_packed_frames(comm, row_counts, all_flat, row_offset);
-  if (rank != 0) return;
+  if (rank != 0) {
+    return;
+  }
 
   const int kpaths = static_cast<int>(session.catalog().size());
   const int nmeta = static_cast<int>(session.frame_metric_names().size());
   const int stride = static_cast<int>(session.frame_metric_names().size() +
-                                      2u * session.catalog().size());
+                                      2U * session.catalog().size());
   const int mpi_size = static_cast<int>(row_counts.size());
 
   if (kpaths == 0 || stride <= 0) {
@@ -271,7 +308,7 @@ void print_profiling_timer(std::ostream &os, MPI_Comm comm,
                                                 0.0);
     sum_exc[static_cast<std::size_t>(r)].assign(static_cast<std::size_t>(kpaths),
                                                 0.0);
-    cnt[static_cast<std::size_t>(r)].assign(static_cast<std::size_t>(kpaths), 0u);
+    cnt[static_cast<std::size_t>(r)].assign(static_cast<std::size_t>(kpaths), 0U);
   }
 
   double denom = 0.0;
@@ -294,40 +331,47 @@ void print_profiling_timer(std::ostream &os, MPI_Comm comm,
           row_offset[static_cast<std::size_t>(r)] + static_cast<std::size_t>(f);
       detail::unpack_gathered_profiling_row(global_row, stride, nmeta, kpaths,
                                             all_flat, metrics_buf, inc_buf, exc_buf);
-      if (wall_ix != static_cast<std::size_t>(-1) && nmeta_u > 0)
+      if (wall_ix != static_cast<std::size_t>(-1) && nmeta_u > 0) {
         denom += metrics_buf[wall_ix];
+      }
       for (int ki = 0; ki < kpaths; ++ki) {
         const double inc = inc_buf[static_cast<std::size_t>(ki)];
         const double exc = exc_buf[static_cast<std::size_t>(ki)];
         sum_inc[static_cast<std::size_t>(r)][static_cast<std::size_t>(ki)] += inc;
         sum_exc[static_cast<std::size_t>(r)][static_cast<std::size_t>(ki)] += exc;
-        if (inc > kEps)
+        if (inc > kEps) {
           ++cnt[static_cast<std::size_t>(r)][static_cast<std::size_t>(ki)];
+        }
       }
     }
   }
 
-  if (denom <= 0.0) denom = 1.0;
+  if (denom <= 0.0) {
+    denom = 1.0;
+  }
 
   std::vector<double> total_inc(static_cast<std::size_t>(kpaths), 0.0);
   std::vector<double> total_exc(static_cast<std::size_t>(kpaths), 0.0);
-  std::vector<std::size_t> ncalls(static_cast<std::size_t>(kpaths), 0u);
+  std::vector<std::size_t> ncalls(static_cast<std::size_t>(kpaths), 0U);
 
   std::vector<double> col(static_cast<std::size_t>(mpi_size));
   for (int ki = 0; ki < kpaths; ++ki) {
-    for (int r = 0; r < mpi_size; ++r)
+    for (int r = 0; r < mpi_size; ++r) {
       col[static_cast<std::size_t>(r)] =
           sum_inc[static_cast<std::size_t>(r)][static_cast<std::size_t>(ki)];
+    }
     total_inc[static_cast<std::size_t>(ki)] =
         combine_stat(col, opts.mpi_aggregate_stat);
-    for (int r = 0; r < mpi_size; ++r)
+    for (int r = 0; r < mpi_size; ++r) {
       col[static_cast<std::size_t>(r)] =
           sum_exc[static_cast<std::size_t>(r)][static_cast<std::size_t>(ki)];
+    }
     total_exc[static_cast<std::size_t>(ki)] =
         combine_stat(col, opts.mpi_aggregate_stat);
     std::size_t ncall_sum = 0;
-    for (int r = 0; r < mpi_size; ++r)
+    for (int r = 0; r < mpi_size; ++r) {
       ncall_sum += cnt[static_cast<std::size_t>(r)][static_cast<std::size_t>(ki)];
+    }
     ncalls[static_cast<std::size_t>(ki)] = ncall_sum;
   }
 
@@ -338,7 +382,9 @@ void print_profiling_timer(std::ostream &os, MPI_Comm comm,
 
 void print_profiling_timer(std::ostream &os, const ProfilingPrintOptions &opts) {
   ProfilingSession *s = current_session();
-  if (s && s->num_frames() > 0) print_profiling_timer(os, *s, opts);
+  if (s && s->num_frames() > 0) {
+    print_profiling_timer(os, *s, opts);
+  }
 }
 
 } // namespace pfc::profiling
