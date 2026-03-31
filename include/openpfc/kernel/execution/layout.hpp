@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -46,7 +46,9 @@ template <std::size_t Rank>
 std::array<std::size_t, Rank>
 strides_from_extents_layout_right(const std::array<std::size_t, Rank> &extents) {
   std::array<std::size_t, Rank> strides{};
-  if (Rank == 0) return strides;
+  if (Rank == 0) {
+    return strides;
+  }
   strides[Rank - 1] = 1;
   for (std::size_t r = Rank - 1; r > 0; --r) {
     strides[r - 1] = strides[r] * extents[r];
@@ -58,7 +60,9 @@ template <std::size_t Rank>
 std::array<std::size_t, Rank>
 strides_from_extents_layout_left(const std::array<std::size_t, Rank> &extents) {
   std::array<std::size_t, Rank> strides{};
-  if (Rank == 0) return strides;
+  if (Rank == 0) {
+    return strides;
+  }
   strides[0] = 1;
   for (std::size_t r = 1; r < Rank; ++r) {
     strides[r] = strides[r - 1] * extents[r - 1];
@@ -69,7 +73,9 @@ strides_from_extents_layout_left(const std::array<std::size_t, Rank> &extents) {
 template <std::size_t Rank>
 std::size_t span_from_extents(const std::array<std::size_t, Rank> &extents) {
   std::size_t s = 1;
-  for (std::size_t r = 0; r < Rank; ++r) s *= extents[r];
+  for (std::size_t r = 0; r < Rank; ++r) {
+    s *= extents[r];
+  }
   return s;
 }
 
@@ -89,13 +95,15 @@ strides_from_extents(const std::array<std::size_t, Rank> &extents);
 
 template <std::size_t Rank>
 std::array<std::size_t, Rank>
-strides_from_extents(const std::array<std::size_t, Rank> &extents, LayoutRight) {
+strides_from_extents(const std::array<std::size_t, Rank> &extents,
+                     LayoutRight /*layout_tag*/) {
   return detail::strides_from_extents_layout_right(extents);
 }
 
 template <std::size_t Rank>
 std::array<std::size_t, Rank>
-strides_from_extents(const std::array<std::size_t, Rank> &extents, LayoutLeft) {
+strides_from_extents(const std::array<std::size_t, Rank> &extents,
+                     LayoutLeft /*layout_tag*/) {
   return detail::strides_from_extents_layout_left(extents);
 }
 
@@ -117,7 +125,9 @@ template <std::size_t Rank>
 std::size_t linear_index_from_strides(const std::array<std::size_t, Rank> &indices,
                                       const std::array<std::size_t, Rank> &strides) {
   std::size_t idx = 0;
-  for (std::size_t r = 0; r < Rank; ++r) idx += indices[r] * strides[r];
+  for (std::size_t r = 0; r < Rank; ++r) {
+    idx += indices[r] * strides[r];
+  }
   return idx;
 }
 
