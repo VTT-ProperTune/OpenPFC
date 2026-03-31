@@ -28,8 +28,10 @@ TEST_CASE("ParameterMetadata double validation", "[parameter_validation][unit]")
 
     auto error = meta.validate(-100.0);
     REQUIRE(error.has_value());
-    REQUIRE(error->find("below minimum") != std::string::npos);
-    REQUIRE(error->find("temperature") != std::string::npos);
+    if (error) {
+      REQUIRE(error->find("below minimum") != std::string::npos);
+      REQUIRE(error->find("temperature") != std::string::npos);
+    }
   }
 
   SECTION("Value above maximum") {
@@ -40,8 +42,10 @@ TEST_CASE("ParameterMetadata double validation", "[parameter_validation][unit]")
 
     auto error = meta.validate(15000.0);
     REQUIRE(error.has_value());
-    REQUIRE(error->find("exceeds maximum") != std::string::npos);
-    REQUIRE(error->find("temperature") != std::string::npos);
+    if (error) {
+      REQUIRE(error->find("exceeds maximum") != std::string::npos);
+      REQUIRE(error->find("temperature") != std::string::npos);
+    }
   }
 
   SECTION("Value exactly at boundary") {
@@ -112,8 +116,8 @@ TEST_CASE("ParameterMetadata format_info", "[parameter_validation][unit]") {
 
   REQUIRE(info.find("temperature") != std::string::npos);
   REQUIRE(info.find("Effective temperature") != std::string::npos);
-  REQUIRE(info.find("K") != std::string::npos);
-  REQUIRE(info.find("0") != std::string::npos);
+  REQUIRE(info.find('K') != std::string::npos);
+  REQUIRE(info.find('0') != std::string::npos);
   REQUIRE(info.find("10000") != std::string::npos);
   REQUIRE(info.find("3300") != std::string::npos);
   REQUIRE(info.find("yes") != std::string::npos);
@@ -368,7 +372,7 @@ TEST_CASE("Complex validation with multiple constraints",
     REQUIRE(result.errors.size() == 1);
     REQUIRE(result.errors[0].find("below minimum") != std::string::npos);
     REQUIRE(result.errors[0].find("complex_param") != std::string::npos);
-    REQUIRE(result.errors[0].find("0") != std::string::npos);
+    REQUIRE(result.errors[0].find('0') != std::string::npos);
     REQUIRE(result.errors[0].find("100") != std::string::npos);
   }
 
@@ -380,7 +384,7 @@ TEST_CASE("Complex validation with multiple constraints",
     REQUIRE(result.errors.size() == 1);
     REQUIRE(result.errors[0].find("exceeds maximum") != std::string::npos);
     REQUIRE(result.errors[0].find("complex_param") != std::string::npos);
-    REQUIRE(result.errors[0].find("0") != std::string::npos);
+    REQUIRE(result.errors[0].find('0') != std::string::npos);
     REQUIRE(result.errors[0].find("100") != std::string::npos);
   }
 }
@@ -536,7 +540,7 @@ TEST_CASE("Integration test with realistic model configuration",
     auto result = validator.validate(config);
     REQUIRE_FALSE(result.is_valid());
     REQUIRE(result.errors.size() == 1);
-    REQUIRE(result.errors[0].find("T") != std::string::npos);
+    REQUIRE(result.errors[0].find('T') != std::string::npos);
     REQUIRE(result.errors[0].find("missing") != std::string::npos);
   }
 
@@ -548,7 +552,7 @@ TEST_CASE("Integration test with realistic model configuration",
     auto result = validator.validate(config);
     REQUIRE_FALSE(result.is_valid());
     REQUIRE(result.errors.size() == 1);
-    REQUIRE(result.errors[0].find("T") != std::string::npos);
+    REQUIRE(result.errors[0].find('T') != std::string::npos);
     REQUIRE(result.errors[0].find("below minimum") != std::string::npos);
   }
 
@@ -806,14 +810,14 @@ TEST_CASE("Mixed numeric type validation", "[parameter_validation][unit]") {
                              .build());
 
   SECTION("Valid mixed types") {
-    json config = {{"float_param", 50.0f}, {"double_param", 75.0}};
+    json config = {{"float_param", 50.0F}, {"double_param", 75.0}};
 
     auto result = validator.validate(config);
     REQUIRE(result.is_valid());
   }
 
   SECTION("Invalid float type") {
-    json config = {{"float_param", 150.0f}, // Out of range
+    json config = {{"float_param", 150.0F}, // Out of range
                    {"double_param", 75.0}};
 
     auto result = validator.validate(config);
