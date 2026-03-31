@@ -219,7 +219,7 @@ backend = "fftw"  # Options: "fftw", "cuda"
 use_reorder = true
 reshape_algorithm = "alltoall"  # Options: "alltoall", "alltoallv", "p2p", "p2p_plined"
 use_pencils = false
-use_gpu_aware = false  # Enable for GPU-aware MPI (CUDA backend only)
+use_gpu_aware = false  # true for GPU-aware MPI with CUDA or HIP (see INSTALL.md / docs/INSTALL.LUMI.md)
 ```
 
 **Example:** See `examples/fft_backend_selection.toml` for a complete configuration example with detailed documentation.
@@ -228,7 +228,7 @@ use_gpu_aware = false  # Enable for GPU-aware MPI (CUDA backend only)
 
 - **FFTW (CPU)**: Best for CPU-only systems, small to medium problems. Always available and portable.
 - **cuFFT (GPU)**: Significantly faster for large FFTs. Requires CUDA-capable GPU and sufficient GPU memory.
-- **GPU-Aware MPI**: When using CUDA backend with multiple GPUs, enable `use_gpu_aware = true` if your MPI implementation supports it (e.g., OpenMPI with `--with-cuda`). This eliminates host staging and reduces communication latency.
+- **GPU-Aware MPI**: When using CUDA or HIP with multiple GPUs, enable `use_gpu_aware = true` if your MPI stack supports device pointers (e.g., Open MPI with CUDA, or Cray MPICH with `MPICH_GPU_SUPPORT_ENABLED=1` on LUMI-G). Build OpenPFC with GPU-aware MPI enabled (see **INSTALL.md**; **docs/INSTALL.LUMI.md** for ROCm). This eliminates host staging and reduces communication latency.
 
 Build-time setup (HeFFTe, modules, CUDA, and CMake options) is documented in **[INSTALL.md](INSTALL.md)**.
 
