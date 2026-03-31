@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -29,8 +29,11 @@
 #include <openpfc/kernel/execution/policy.hpp>
 #include <string>
 
-#if defined(_OPENMP)
+#if defined(_OPENMP) && __has_include(<omp.h>)
 #include <omp.h>
+#define OPENPFC_KERNEL_HAVE_OMP_HEADER 1
+#else
+#define OPENPFC_KERNEL_HAVE_OMP_HEADER 0
 #endif
 
 namespace pfc {
@@ -47,7 +50,7 @@ void parallel_for_impl_serial(const RangePolicy<Serial, IndexType> &policy,
 }
 
 // RangePolicy + OpenMP
-#if defined(_OPENMP)
+#if OPENPFC_KERNEL_HAVE_OMP_HEADER
 template <typename Functor, typename IndexType>
 void parallel_for_impl_omp(const RangePolicy<OpenMP, IndexType> &policy,
                            const Functor &functor) {
@@ -79,13 +82,10 @@ void parallel_for_impl_serial(
   }
 }
 
-#if defined(_OPENMP)
+#if OPENPFC_KERNEL_HAVE_OMP_HEADER
 template <typename Functor, typename IndexType>
 void parallel_for_impl_omp(const MDRangePolicy<OpenMP, Rank<3>, IndexType> &policy,
                            const Functor &functor) {
-  const IndexType n0 = policy.end(0) - policy.start(0);
-  const IndexType n1 = policy.end(1) - policy.start(1);
-  const IndexType n2 = policy.end(2) - policy.start(2);
 #pragma omp parallel for collapse(3)
   for (IndexType i = policy.start(0); i != policy.end(0); ++i) {
     for (IndexType j = policy.start(1); j != policy.end(1); ++j) {
@@ -116,7 +116,9 @@ void parallel_for_impl_omp(const MDRangePolicy<OpenMP, Rank<3>, IndexType> &poli
 template <typename ExecutionSpace, typename IndexType, typename Functor>
 void parallel_for(const RangePolicy<ExecutionSpace, IndexType> &policy,
                   const Functor &functor) {
-  if (policy.size() == 0) return;
+  if (policy.size() == 0) {
+    return;
+  }
   if constexpr (std::is_same_v<ExecutionSpace, Serial>) {
     detail::parallel_for_impl_serial(policy, functor);
   } else if constexpr (std::is_same_v<ExecutionSpace, OpenMP>) {
@@ -175,9 +177,8 @@ inline void fence() { (void)0; }
  * or openpfc/runtime/hip/parallel_hip.hpp.
  */
 template <typename ExecutionSpace> void fence(const ExecutionSpace &) {
-  if constexpr (std::is_same_v<ExecutionSpace, Serial>) {
-    (void)0;
-  } else if constexpr (std::is_same_v<ExecutionSpace, OpenMP>) {
+  if constexpr (std::is_same_v<ExecutionSpace, Serial> ||
+                std::is_same_v<ExecutionSpace, OpenMP>) {
     (void)0;
   } else {
     static_assert(sizeof(ExecutionSpace) == 0,
@@ -187,3 +188,5 @@ template <typename ExecutionSpace> void fence(const ExecutionSpace &) {
 }
 
 } // namespace pfc
+
+#undef OPENPFC_KERNEL_HAVE_OMP_HEADER
