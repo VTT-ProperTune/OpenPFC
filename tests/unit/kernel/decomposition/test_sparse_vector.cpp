@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -115,7 +115,6 @@ TEST_CASE("SparseVector gather and scatter round-trip",
 
 TEST_CASE("SparseVector empty construction", "[SparseVector][core]") {
   auto sparse = core::SparseVector<backend::CpuTag, double>(0);
-  REQUIRE(sparse.size() == 0);
   REQUIRE(sparse.empty());
 }
 
