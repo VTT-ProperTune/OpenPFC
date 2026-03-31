@@ -52,8 +52,7 @@
 #include <string>
 #include <vector>
 
-namespace pfc {
-namespace ui {
+namespace pfc::ui {
 
 using json = nlohmann::json;
 
@@ -359,7 +358,6 @@ private:
   }
 };
 
-} // namespace ui
-} // namespace pfc
+} // namespace pfc::ui
 
 #endif // PFC_UI_PARAMETER_VALIDATOR_HPP

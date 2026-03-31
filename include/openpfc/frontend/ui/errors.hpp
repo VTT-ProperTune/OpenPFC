@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -54,8 +54,7 @@
 #include <string>
 #include <vector>
 
-namespace pfc {
-namespace ui {
+namespace pfc::ui {
 
 /**
  * @brief Format a helpful configuration error message
@@ -137,7 +136,9 @@ format_config_error(const std::string &field_name, const std::string &descriptio
     oss << "  Valid options: ";
     for (size_t i = 0; i < valid_options.size(); ++i) {
       oss << "'" << valid_options[i] << "'";
-      if (i < valid_options.size() - 1) oss << ", ";
+      if (i < valid_options.size() - 1) {
+        oss << ", ";
+      }
     }
     oss << "\n";
   }
@@ -300,7 +301,6 @@ format_unknown_modifier_error(const std::string &invalid_type,
   return oss.str();
 }
 
-} // namespace ui
-} // namespace pfc
+} // namespace pfc::ui
 
 #endif // PFC_UI_ERRORS_HPP

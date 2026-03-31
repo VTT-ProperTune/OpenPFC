@@ -42,10 +42,9 @@
 #include <openpfc/runtime/common/backend_from_string.hpp>
 #include <stdexcept>
 
-namespace pfc {
-namespace ui {
+namespace pfc::ui {
 
-template <class T> T from_json(const json &settings);
+template <class T> T from_json(const json &j);
 
 /**
  * @brief Converts a JSON string to fft::Backend enum
@@ -69,7 +68,7 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
   std::transform(backend_str.begin(), backend_str.end(), backend_str.begin(),
                  [](unsigned char c) { return std::tolower(c); });
 
-  std::cout << "Selected FFT backend: " << backend_str << std::endl;
+  std::cout << "Selected FFT backend: " << backend_str << '\n';
 
   std::optional<fft::Backend> backend = runtime::backend_from_string(backend_str);
   if (backend) {
@@ -101,33 +100,32 @@ inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
   std::cout << "\nParsing HeFFTe plan options ...\n";
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (j.contains("use_reorder")) {
-    std::cout << "Using strided 1d fft operations" << std::endl;
+    std::cout << "Using strided 1d fft operations" << '\n';
     options.use_reorder = j["use_reorder"];
   }
   if (j.contains("reshape_algorithm")) {
     if (j["reshape_algorithm"] == "alltoall") {
-      std::cout << "Using alltoall reshape algorithm" << std::endl;
+      std::cout << "Using alltoall reshape algorithm" << '\n';
       options.algorithm = heffte::reshape_algorithm::alltoall;
     } else if (j["reshape_algorithm"] == "alltoallv") {
-      std::cout << "Using alltoallv reshape algorithm" << std::endl;
+      std::cout << "Using alltoallv reshape algorithm" << '\n';
       options.algorithm = heffte::reshape_algorithm::alltoallv;
     } else if (j["reshape_algorithm"] == "p2p") {
-      std::cout << "Using p2p reshape algorithm" << std::endl;
+      std::cout << "Using p2p reshape algorithm" << '\n';
       options.algorithm = heffte::reshape_algorithm::p2p;
     } else if (j["reshape_algorithm"] == "p2p_plined") {
-      std::cout << "Using p2p_plined reshape algorithm" << std::endl;
+      std::cout << "Using p2p_plined reshape algorithm" << '\n';
       options.algorithm = heffte::reshape_algorithm::p2p_plined;
     } else {
-      std::cerr << "Unknown reshape algorithm " << j["reshape_algorithm"]
-                << std::endl;
+      std::cerr << "Unknown reshape algorithm " << j["reshape_algorithm"] << '\n';
     }
   }
   if (j.contains("use_pencils")) {
-    std::cout << "Using pencil decomposition" << std::endl;
+    std::cout << "Using pencil decomposition" << '\n';
     options.use_pencils = j["use_pencils"];
   }
   if (j.contains("use_gpu_aware")) {
-    std::cout << "Using gpu aware fft" << std::endl;
+    std::cout << "Using gpu aware fft" << '\n';
     options.use_gpu_aware = j["use_gpu_aware"];
   }
   std::cout << "Backend options: " << options << "\n\n";
@@ -453,10 +451,9 @@ inline void from_json(const json &, Model &) {
   std::cout << "Warning: This model does not implement reading parameters from "
                "json file. In order to read parameters from json file, one needs to "
                "implement 'void from_json(const json &, Model &)'"
-            << std::endl;
+            << '\n';
 }
 
-} // namespace ui
-} // namespace pfc
+} // namespace pfc::ui
 
 #endif // PFC_UI_FROM_JSON_HPP

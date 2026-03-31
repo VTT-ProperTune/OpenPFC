@@ -32,10 +32,10 @@
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
-namespace pfc {
-namespace ui {
+namespace pfc::ui {
 
 using FieldModifier_p = std::unique_ptr<FieldModifier>;
 
@@ -68,7 +68,7 @@ public:
    * modifier.
    */
   void register_modifier(const std::string &type, CreatorFunction creator) {
-    modifiers[type] = creator;
+    modifiers[type] = std::move(creator);
   }
 
   /**
@@ -184,7 +184,6 @@ static FieldModifierInitializer
                                  to trigger field modifier registration during
                                  static initialization. */
 
-} // namespace ui
-} // namespace pfc
+} // namespace pfc::ui
 
 #endif // PFC_UI_FIELD_MODIFIER_REGISTRY_HPP

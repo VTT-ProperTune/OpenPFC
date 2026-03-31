@@ -43,8 +43,7 @@
 #include <toml++/toml.hpp>
 #include <vector>
 
-namespace pfc {
-namespace ui {
+namespace pfc::ui {
 
 /**
  * @brief The main json-based application
@@ -479,7 +478,6 @@ public:
   }
 };
 
-} // namespace ui
-} // namespace pfc
+} // namespace pfc::ui
 
 #endif // PFC_UI_APP_HPP

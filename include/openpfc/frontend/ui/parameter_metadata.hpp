@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -50,8 +50,7 @@
 #include <string>
 #include <type_traits>
 
-namespace pfc {
-namespace ui {
+namespace pfc::ui {
 
 /**
  * @brief Metadata for a single model parameter
@@ -220,7 +219,6 @@ template <typename T> struct ParameterMetadata {
   static Builder builder() { return Builder(); }
 };
 
-} // namespace ui
-} // namespace pfc
+} // namespace pfc::ui
 
 #endif // PFC_UI_PARAMETER_METADATA_HPP

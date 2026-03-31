@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -19,8 +19,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-namespace pfc {
-namespace ui {
+namespace pfc::ui {
 
 using json = nlohmann::json;
 
@@ -62,7 +61,6 @@ inline json get_json_value(const json &j, const std::string &key,
   return json(nullptr);
 }
 
-} // namespace ui
-} // namespace pfc
+} // namespace pfc::ui
 
 #endif // PFC_UI_JSON_HELPERS_HPP
