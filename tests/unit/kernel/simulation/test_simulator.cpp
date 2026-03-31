@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <memory>
@@ -53,7 +53,8 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     Time time({0.0, 10.0, 1.0}, 1.0);
     Simulator simulator(model, time);
 
-    std::vector<double> a(1, 0.0), b(1, 0.0);
+    std::vector<double> a(1, 0.0);
+    std::vector<double> b(1, 0.0);
     add_field(model, "a", a);
     add_field(model, "b", b);
 
