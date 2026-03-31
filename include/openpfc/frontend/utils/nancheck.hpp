@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -62,7 +62,8 @@
  * NaN checks in debug builds and disable them in release builds to optimize
  * performance.
  */
-#define CHECK_AND_ABORT_IF_NAN(value) abortIfNaN(value, __FILE__, __LINE__)
+#define CHECK_AND_ABORT_IF_NAN(value)                                               \
+  ::pfc::utils::abortIfNaN((value), __FILE__, __LINE__)
 
 /**
  * @def CHECK_AND_ABORT_IF_NANS(vec)
@@ -86,14 +87,14 @@
  * NaN checks in debug builds and disable them in release builds to optimize
  * performance.
  */
-#define CHECK_AND_ABORT_IF_NANS(vec) abortIfNaNs(vec, __FILE__, __LINE__)
+#define CHECK_AND_ABORT_IF_NANS(vec)                                                \
+  ::pfc::utils::abortIfNaNs((vec), __FILE__, __LINE__)
 #else
 #define CHECK_AND_ABORT_IF_NAN(value)
 #define CHECK_AND_ABORT_IF_NANS(vec)
 #endif
 
-namespace pfc {
-namespace utils {
+namespace pfc::utils {
 
 /**
  * Checks if there are any NaNs in a vector of floats.
@@ -115,7 +116,7 @@ template <typename T> void abortIfNaN(T value, const char *filename, int line) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     std::cerr << "NaN detected on process " << rank << " at " << filename << ":"
-              << line << ". Aborting MPI application." << std::endl;
+              << line << ". Aborting MPI application." << '\n';
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 }
@@ -133,12 +134,11 @@ void abortIfNaNs(const std::vector<T> &vec, const char *filename, int line) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     std::cerr << "NaNs detected on process " << rank << " at " << filename << ":"
-              << line << ". Aborting MPI application." << std::endl;
+              << line << ". Aborting MPI application." << '\n';
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 }
 
-} // namespace utils
-} // namespace pfc
+} // namespace pfc::utils
 
 #endif // PFC_UTILS_NANCHECK_HPP

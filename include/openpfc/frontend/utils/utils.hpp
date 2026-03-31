@@ -57,8 +57,9 @@ inline std::string string_format(const std::string &format, Args... args) {
   }
   std::vector<char> buf(size);
   snprintf(buf.data(), size, format.c_str(), args...);
-  return std::string(buf.data(),
-                     buf.data() + size - 1); // We don't want the '\0' inside
+  // Braced init avoids repeating std::string in the return
+  // (modernize-return-braced-init-list).
+  return {buf.data(), buf.data() + size - 1}; // omit trailing '\0'
 }
 
 inline std::string format_with_number(const std::string &filename, int increment) {
