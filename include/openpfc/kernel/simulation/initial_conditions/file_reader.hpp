@@ -33,6 +33,7 @@
 #define PFC_INITIAL_CONDITIONS_FILE_READER_HPP
 
 #include <iostream>
+#include <utility>
 
 #include <openpfc/kernel/simulation/binary_reader.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
@@ -50,7 +51,7 @@ public:
   void set_filename(std::string filename) { m_filename = filename; }
   const std::string &get_filename() const { return m_filename; }
 
-  explicit FileReader(const std::string &filename) : m_filename(filename) {}
+  explicit FileReader(std::string filename) : m_filename(std::move(filename)) {}
 
   void apply(Model &m, double) override {
     const FFT &fft = get_fft(m);
