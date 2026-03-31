@@ -151,9 +151,15 @@ inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
  *         or have an invalid value.
  */
 template <> inline World from_json<World>(const json &j) {
-  int Lx = 0, Ly = 0, Lz = 0;
-  double dx = 0.0, dy = 0.0, dz = 0.0;
-  double x0 = 0.0, y0 = 0.0, z0 = 0.0;
+  int Lx = 0;
+  int Ly = 0;
+  int Lz = 0;
+  double dx = 0.0;
+  double dy = 0.0;
+  double dz = 0.0;
+  double x0 = 0.0;
+  double y0 = 0.0;
+  double z0 = 0.0;
   std::string origin;
 
   // Use helper to support both flat and nested structures
@@ -249,12 +255,12 @@ template <> inline World from_json<World>(const json &j) {
   return world;
 }
 
-template <> inline Time from_json<Time>(const json &settings) {
+template <> inline Time from_json<Time>(const json &j) {
   // Support both flat and nested structures
-  auto t0_val = get_json_value(settings, "t0", "timestepping");
-  auto t1_val = get_json_value(settings, "t1", "timestepping");
-  auto dt_val = get_json_value(settings, "dt", "timestepping");
-  auto saveat_val = get_json_value(settings, "saveat", "timestepping");
+  auto t0_val = get_json_value(j, "t0", "timestepping");
+  auto t1_val = get_json_value(j, "t1", "timestepping");
+  auto dt_val = get_json_value(j, "dt", "timestepping");
+  auto saveat_val = get_json_value(j, "saveat", "timestepping");
 
   if (t0_val.is_null() || t1_val.is_null() || dt_val.is_null() ||
       saveat_val.is_null()) {
@@ -285,16 +291,16 @@ inline void from_json(const json &j, Constant &ic) {
 }
 
 inline void from_json(const json &j, SingleSeed &seed) {
-  if (!j.count("type") || j["type"] != "single_seed") {
+  if (!j.contains("type") || j["type"] != "single_seed") {
     throw std::invalid_argument(
         "JSON object does not contain a 'single_seed' type.");
   }
 
-  if (!j.count("amp_eq")) {
+  if (!j.contains("amp_eq")) {
     throw std::invalid_argument("JSON object does not contain an 'amp_eq' key.");
   }
 
-  if (!j.count("rho_seed")) {
+  if (!j.contains("rho_seed")) {
     throw std::invalid_argument("JSON object does not contain a 'rho_seed' key.");
   }
 
@@ -447,7 +453,9 @@ inline void from_json(const json &j, MovingBC &bc) {
   bc.set_xpos(j["xpos"]);
 }
 
-inline void from_json(const json &, Model &) {
+inline void from_json(const json &j, Model &model) {
+  (void)j;
+  (void)model;
   std::cout << "Warning: This model does not implement reading parameters from "
                "json file. In order to read parameters from json file, one needs to "
                "implement 'void from_json(const json &, Model &)'"
