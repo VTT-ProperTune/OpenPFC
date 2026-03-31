@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -27,7 +27,7 @@ Tests mirror the library layout (kernel, runtime, frontend) plus operators. Unde
 - **`frontend/field_modifiers/`** - Initial conditions and boundary conditions
 - **`frontend/io/`**, **`frontend/ui/`** - I/O and UI components
 - **`runtime/gpu/`** - GPU runtime tests
-- **`operators/`** - Sparse vector and operator tests. **test_diffop** is intentionally excluded until a diffop API exists and is tracked in the backlog.
+- **`operators/`** — Sparse vector tests linked into **`openpfc-tests`** (`test_sparsevector.cpp`). **`test_diffop.cpp`** is intentionally not listed in CMake until the diffop API exists.
 
 ## Running Unit Tests
 
@@ -52,11 +52,6 @@ cd build
 4. Use mocks from `tests/fixtures/` for dependencies
 5. Keep tests fast (<10ms) and independent
 
-Unit tests should not involve:
+Prefer unit tests that avoid **heavy** I/O, **long** runs, and **external** services. The **`openpfc-tests`** binary always initializes MPI once via **`runtests.cpp`**; many tests are still purely serial. Tests that **require multi-rank MPI** should be tagged **`[MPI]`** (they are excluded from the default **`openpfc-all-tests`** / **`~[MPI]`** CTest run—see [`tests/README.md`](../README.md)).
 
-- File I/O
-- MPI communication (unless testing MPI-specific component)
-- Long-running computations
-- External dependencies
-
-For tests involving multiple components working together, use `tests/integration/` instead.
+For multi-component workflows and short end-to-end checks, use **`tests/integration/`** instead.
