@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #pragma once
@@ -10,6 +10,7 @@
  * Transparent API following OpenPFC philosophy: structs + free functions.
  */
 
+#include <cstdint>
 #include <iosfwd>
 #include <string>
 #include <string_view>
@@ -19,7 +20,7 @@ namespace pfc {
 /**
  * @brief Log severity levels
  */
-enum class LogLevel { Debug = 0, Info = 1, Warning = 2, Error = 3 };
+enum class LogLevel : std::uint8_t { Debug = 0, Info = 1, Warning = 2, Error = 3 };
 
 /**
  * @brief Lightweight logger configuration

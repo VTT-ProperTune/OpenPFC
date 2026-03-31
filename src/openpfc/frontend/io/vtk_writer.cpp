@@ -32,7 +32,11 @@ std::string VTKWriter::generate_filename(int increment, int rank) const {
     if (ext_pos != std::string::npos) {
       std::string name = base.substr(0, ext_pos);
       std::string ext = base.substr(ext_pos);
-      return name + "_" + std::to_string(rank) + ext;
+      std::string out = name;
+      out += '_';
+      out += std::to_string(rank);
+      out += ext;
+      return out;
     }
   }
   return base;
@@ -68,7 +72,7 @@ void VTKWriter::write_vti_header(std::ofstream &file,
   file << "_"; // Marker for data start
 }
 
-void VTKWriter::write_vti_data(std::ofstream &file, const RealField &data) const {
+void VTKWriter::write_vti_data(std::ofstream &file, const RealField &data) {
   // VTK header_type="UInt64": length prefix is always 8 bytes (see
   // write_vti_header).
   const std::uint64_t appended_bytes =
@@ -131,7 +135,10 @@ void VTKWriter::write_pvti_file(int increment) const {
         (base_ext_pos != std::string::npos) ? base.substr(0, base_ext_pos) : base;
     std::string ext = (base_ext_pos != std::string::npos) ? base.substr(base_ext_pos)
                                                           : std::string();
-    std::string piece_filename = name + "_" + std::to_string(r) + ext;
+    std::string piece_filename = name;
+    piece_filename += '_';
+    piece_filename += std::to_string(r);
+    piece_filename += ext;
     file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << '\n';
   }
 
