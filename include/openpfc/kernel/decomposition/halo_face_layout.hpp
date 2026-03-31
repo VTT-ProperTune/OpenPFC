@@ -25,8 +25,7 @@
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 
-namespace pfc {
-namespace halo {
+namespace pfc::halo {
 
 using Int3 = pfc::types::Int3;
 
@@ -91,5 +90,4 @@ allocate_face_halos(const decomposition::Decomposition &decomp, int rank,
   return allocate_face_halos<T>(face_halo_counts(decomp, rank, halo_width));
 }
 
-} // namespace halo
-} // namespace pfc
+} // namespace pfc::halo

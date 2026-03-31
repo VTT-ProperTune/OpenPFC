@@ -87,10 +87,11 @@ template <> inline MPI_Datatype get_mpi_type<size_t>() {
 inline void sendrecv_face(void *buf, MPI_Datatype send_type, MPI_Datatype recv_type,
                           int send_to_rank, int recv_from_rank, MPI_Comm comm,
                           int tag = 0) {
-  // NOLINTNEXTLINE(readability-suspicious-call-argument) —
-  // MPI_Sendrecv(dest,sendtag,source,recvtag)
+  // NOLINTBEGIN(readability-suspicious-call-argument) — MPI_Sendrecv(dest, sendtag,
+  // …)
   MPI_Sendrecv(buf, 1, send_type, send_to_rank, tag, buf, 1, recv_type,
                recv_from_rank, tag, comm, MPI_STATUS_IGNORE);
+  // NOLINTEND(readability-suspicious-call-argument)
 }
 
 /**
