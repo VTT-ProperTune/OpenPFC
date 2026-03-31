@@ -34,6 +34,7 @@
 #ifndef PFC_UTILS_NANCHECK_HPP
 #define PFC_UTILS_NANCHECK_HPP
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <mpi.h>
@@ -103,12 +104,8 @@ namespace pfc::utils {
  * @return True if NaNs are found, false otherwise.
  */
 template <typename T> bool hasNaNs(const std::vector<T> &vec) {
-  for (float value : vec) {
-    if (std::isnan(value)) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(vec.begin(), vec.end(),
+                     [](const T &value) { return std::isnan(value); });
 }
 
 template <typename T> void abortIfNaN(T value, const char *filename, int line) {
