@@ -46,7 +46,8 @@ TEST_CASE("ProfilingManualScope stop and restart", "[profiling]") {
   // destructor pops phase_b
   s.end_frame();
   REQUIRE(s.num_frames() == 1);
-  std::size_t ia = 0, ib = 0;
+  std::size_t ia = 0;
+  std::size_t ib = 0;
   REQUIRE(s.catalog().try_index("phase_a", ia));
   REQUIRE(s.catalog().try_index("phase_b", ib));
 }
@@ -59,7 +60,8 @@ TEST_CASE("ProfilingManualScope move assigns sequential regions", "[profiling]")
   t.stop();
   t = ProfilingManualScope("second");
   s.end_frame();
-  std::size_t i1 = 0, i2 = 0;
+  std::size_t i1 = 0;
+  std::size_t i2 = 0;
   REQUIRE(s.catalog().try_index("first", i1));
   REQUIRE(s.catalog().try_index("second", i2));
   REQUIRE(s.num_frames() == 1);
