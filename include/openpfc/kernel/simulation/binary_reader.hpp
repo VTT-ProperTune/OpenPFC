@@ -61,7 +61,8 @@ public:
       std::cout << "Unable to open file!" << std::endl;
     }
     MPI_File_set_view(fh, 0, MPI_DOUBLE, m_filetype, "native", MPI_INFO_NULL);
-    MPI_File_read_all(fh, data.data(), data.size(), MPI_DOUBLE, &status);
+    MPI_File_read_all(fh, data.data(), static_cast<int>(data.size()), MPI_DOUBLE,
+                      &status);
     MPI_File_close(&fh);
     return status;
   }
