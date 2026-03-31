@@ -14,7 +14,7 @@ using CartesianCS = CoordinateSystem<CartesianTag>;
 
 // Constructors
 
-const Int3 calc_size(const Int3 &lower, const Int3 &upper) {
+Int3 calc_size(const Int3 &lower, const Int3 &upper) {
   Int3 size;
   for (std::size_t i = 0; i < 3; ++i) {
     if (lower[i] > upper[i]) {
@@ -112,7 +112,10 @@ CartesianWorld create(const Size3 &size, const UpperBounds3 &upper) {
 
 // Operators
 
-inline const char *name_of(CartesianTag) { return "Cartesian"; }
+inline const char *name_of(CartesianTag tag) {
+  (void)tag;
+  return "Cartesian";
+}
 
 template <typename CoordTag>
 std::ostream &operator<<(std::ostream &os, const World<CoordTag> &w) noexcept {
@@ -149,12 +152,12 @@ template World<CartesianTag>::World(const Int3 &lower, const Int3 &upper,
 // Conversion between physical coordinates and grid indices
 
 template <typename T>
-const Real3 to_coords(const World<T> &world, const Int3 &indices) noexcept {
+Real3 to_coords(const World<T> &world, const Int3 &indices) noexcept {
   return to_coords(get_coordinate_system(world), indices);
 }
 
 template <typename T>
-const Int3 to_indices(const World<T> &world, const Real3 &coordinates) noexcept {
+Int3 to_indices(const World<T> &world, const Real3 &coordinates) noexcept {
   return to_index(get_coordinate_system(world), coordinates);
 }
 
