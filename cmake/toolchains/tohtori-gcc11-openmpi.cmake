@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Toolchain for VTT **tohtori**: GCC 11.2.0 + OpenMPI 4.1.1 without `module load`
@@ -15,6 +15,9 @@ set(CMAKE_C_COMPILER "${_OpenPFC_tohtori_gcc_root}/bin/gcc" CACHE FILEPATH "C co
 set(CMAKE_CXX_COMPILER "${_OpenPFC_tohtori_gcc_root}/bin/g++" CACHE FILEPATH "C++ compiler")
 set(MPI_C_COMPILER "${_OpenPFC_tohtori_ompi_root}/bin/mpicc" CACHE FILEPATH "MPI C wrapper")
 set(MPI_CXX_COMPILER "${_OpenPFC_tohtori_ompi_root}/bin/mpicxx" CACHE FILEPATH "MPI C++ wrapper")
+
+# compile_commands.json for clang-tidy, clangd, and IDEs (matches CI -DCMAKE_EXPORT_COMPILE_COMMANDS=ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Generate compile_commands.json (clang-tidy, clangd, IDEs)" FORCE)
 
 if(NOT "$ENV{HOME}" STREQUAL "")
   set(_OpenPFC_heffte_cpu "$ENV{HOME}/opt/heffte/2.4.1-cpu")
