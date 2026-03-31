@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <openpfc/frontend/utils/logging.hpp>
@@ -22,7 +22,9 @@ static const char *to_string(LogLevel lvl) {
 }
 
 void log(const Logger &logger, LogLevel level, std::string_view message) {
-  if (static_cast<int>(level) < static_cast<int>(logger.m_min_level)) return;
+  if (static_cast<int>(level) < static_cast<int>(logger.m_min_level)) {
+    return;
+  }
 
   // Timestamp (UTC)
   auto now = std::chrono::system_clock::now();
@@ -48,9 +50,9 @@ void log(const Logger &logger, LogLevel level, std::string_view message) {
   oss << message;
 
   if (level == LogLevel::Warning || level == LogLevel::Error) {
-    std::cerr << oss.str() << std::endl;
+    std::cerr << oss.str() << '\n';
   } else {
-    std::clog << oss.str() << std::endl;
+    std::clog << oss.str() << '\n';
   }
 }
 
