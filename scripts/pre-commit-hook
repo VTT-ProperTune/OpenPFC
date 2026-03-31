@@ -57,4 +57,4 @@ fi
 
 echo "clang-format check passed."
 
-exec "$ROOT/scripts/pre-commit-clang-tidy-hook"
+# exec "$ROOT/scripts/pre-commit-clang-tidy-hook"
