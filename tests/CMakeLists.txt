@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#top
@@ -57,31 +57,85 @@ set_tests_properties(openpfc-all-tests PROPERTIES
 
 # Register MPI tests explicitly with mpiexec wrappers
 option(OpenPFC_RUN_MPI_SUITES "Enable explicit MPI multi-rank test suites" OFF)
+# When ON, register mpi_3procs_ring / mpi_4procs_grid_multiple even if this machine
+# reports fewer logical CPUs at configure time (e.g. configure on a login node, run
+# tests on a compute node with mpirun --oversubscribe).
+option(OpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS
+       "Always register 3- and 4-rank MPI CTest targets regardless of configure host CPU count"
+       OFF)
 find_package(MPI REQUIRED)
 if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
+  cmake_host_system_information(RESULT _openpfc_mpi_configure_cores
+                                QUERY NUMBER_OF_LOGICAL_CORES)
+  if(NOT _openpfc_mpi_configure_cores GREATER 0)
+    set(_openpfc_mpi_configure_cores 2)
+    message(
+      STATUS
+        "MPI CTest: NUMBER_OF_LOGICAL_CORES unavailable; assuming ${_openpfc_mpi_configure_cores} for multirank registration"
+    )
+  endif()
+  set(_openpfc_mpi_register_3rank TRUE)
+  set(_openpfc_mpi_register_4rank TRUE)
+  if(NOT OpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS)
+    if(_openpfc_mpi_configure_cores LESS 3)
+      set(_openpfc_mpi_register_3rank FALSE)
+      set(_openpfc_mpi_register_4rank FALSE)
+      message(
+        STATUS
+          "MPI CTest: configure host reports ${_openpfc_mpi_configure_cores} logical CPU(s); "
+          "skipping mpi_3procs_ring and mpi_4procs_grid_multiple (OpenMPI default slot limit). "
+          "Reconfigure with -DOpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS=ON to register them anyway."
+      )
+    elseif(_openpfc_mpi_configure_cores LESS 4)
+      set(_openpfc_mpi_register_4rank FALSE)
+      message(
+        STATUS
+          "MPI CTest: configure host reports ${_openpfc_mpi_configure_cores} logical CPU(s); "
+          "skipping mpi_4procs_grid_multiple. "
+          "Use -DOpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS=ON to register it anyway."
+      )
+    endif()
+  endif()
+
   # 2-process MPI suite: runs MPI tests suitable for 2 ranks
   add_test(NAME mpi_2procs_all
        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
            $<TARGET_FILE:openpfc-tests>
            "[MPI]~[grid]~[ring]~[multiple]"
   )
-  set_tests_properties(mpi_2procs_all PROPERTIES TIMEOUT 120 ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1")
+  set_tests_properties(
+    mpi_2procs_all
+    PROPERTIES TIMEOUT 120
+               ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1"
+               RUN_SERIAL TRUE)
 
-  # 3-process ring topology
-  add_test(NAME mpi_3procs_ring
-       COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 3
-           $<TARGET_FILE:openpfc-tests>
-           "[MPI][ring]"
-  )
-  set_tests_properties(mpi_3procs_ring PROPERTIES TIMEOUT 120 ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1")
+  # 3-process ring topology (skipped at configure time if host has < 3 logical CPUs)
+  if(_openpfc_mpi_register_3rank)
+    add_test(NAME mpi_3procs_ring
+         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 3
+             $<TARGET_FILE:openpfc-tests>
+             "[MPI][ring]"
+    )
+    set_tests_properties(
+      mpi_3procs_ring
+      PROPERTIES TIMEOUT 120
+                 ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1"
+                 RUN_SERIAL TRUE)
+  endif()
 
   # 4-process tests: grid (requires exactly 4) and multiple neighbors (>=4)
-  add_test(NAME mpi_4procs_grid_multiple
-       COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
-           $<TARGET_FILE:openpfc-tests>
-           "[MPI][grid],[MPI][multiple],[MPI][fd][persistent]"
-  )
-  set_tests_properties(mpi_4procs_grid_multiple PROPERTIES TIMEOUT 180 ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1")
+  if(_openpfc_mpi_register_4rank)
+    add_test(NAME mpi_4procs_grid_multiple
+         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+             $<TARGET_FILE:openpfc-tests>
+             "[MPI][grid],[MPI][multiple],[MPI][fd][persistent]"
+    )
+    set_tests_properties(
+      mpi_4procs_grid_multiple
+      PROPERTIES TIMEOUT 180
+                 ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1"
+                 RUN_SERIAL TRUE)
+  endif()
 endif()
 
 # Optionally, add a custom target to run tests manually

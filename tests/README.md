@@ -211,7 +211,7 @@ xdg-open coverage-html/index.html
 All tests must pass before merging. At a high level (see [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)):
 
 1. **Build matrix** on **Ubuntu 24.04 LTS**: **Debug** and **Release** with tests, examples, and apps; several **GCC** and **Clang** versions.
-2. **`ctest`** with **`--exclude-regex "benchmark"`** and timeouts: registered targets include **`openpfc-all-tests`** (Catch2 with **`~[MPI]`**) and, because **`OpenPFC_RUN_MPI_SUITES=ON`** in CI, **MPI multi-rank** suites from **`tests/CMakeLists.txt`**.
+2. **`ctest`** with **`--exclude-regex "benchmark"`** and timeouts: registered targets include **`openpfc-all-tests`** (Catch2 with **`~[MPI]`**) and, because **`OpenPFC_RUN_MPI_SUITES=ON`** in CI, **MPI multi-rank** suites from **`tests/CMakeLists.txt`**. Those MPI CTest targets use **`RUN_SERIAL`** so they do not overlap other tests under **`ctest -j2`**. **`mpi_3procs_ring`** / **`mpi_4procs_grid_multiple`** are registered only when **`cmake_host_system_information(NUMBER_OF_LOGICAL_CORES)`** is at least 3 or 4 (GitHub’s 2-vCPU runners skip them); use **`-DOpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS=ON`** if you configure on a small host but run tests elsewhere (e.g. with **`mpirun --oversubscribe`**).
 3. **Coverage** workflow (also **`ctest`**, benchmarks excluded): line coverage toward **>90%** (Codecov / artifacts).
 4. **clang-format** + **REUSE** (license headers) on the main CI workflow; a separate **Clang-Tidy** workflow runs **`compile_commands.json`** static analysis and does not block the main **CI Status** check.
 
