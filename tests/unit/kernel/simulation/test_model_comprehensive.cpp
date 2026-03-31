@@ -14,8 +14,8 @@ namespace {
 class StubModel : public Model {
 public:
   StubModel(FFT &fft, const World &world) : Model(fft, world) {}
-  void step(double) override {}
-  void initialize(double) override {}
+  void step(double /*t*/) override {}
+  void initialize(double /*dt*/) override {}
 };
 } // namespace
 
