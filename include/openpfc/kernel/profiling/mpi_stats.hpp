@@ -48,14 +48,18 @@ inline RankStats reduce_scalar_across_ranks(MPI_Comm comm, double local_value,
   MPI_Comm_size(comm, &size);
 
   std::vector<double> all;
-  if (rank == root) all.resize(static_cast<std::size_t>(size));
+  if (rank == root) {
+    all.resize(static_cast<std::size_t>(size));
+  }
 
   MPI_Gather(&local_value, 1, MPI_DOUBLE, rank == root ? all.data() : nullptr, 1,
              MPI_DOUBLE, root, comm);
 
   RankStats s{};
   s.count = size;
-  if (rank != root) return s;
+  if (rank != root) {
+    return s;
+  }
 
   s.min = all[0];
   s.max = all[0];
