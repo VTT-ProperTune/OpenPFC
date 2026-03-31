@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Slurm: tungsten performance on LUMI
 
 Scripts and TOML inputs for running the tungsten performance case (`tungsten_performance.toml`–style settings) on **LUMI-C** (CPU / FFTW) and **LUMI-G** (HIP / rocFFT).

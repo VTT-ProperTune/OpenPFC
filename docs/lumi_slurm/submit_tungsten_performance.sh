@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
 # Submit tungsten_performance-style jobs for 1, 2, and 4 nodes (CPU + GPU).
 # Run from anywhere; logs and run dirs under scratch (see *.sbatch).
 #

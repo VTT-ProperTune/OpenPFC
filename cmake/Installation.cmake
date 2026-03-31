@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Installation rules for headers, libraries, and binaries
@@ -26,8 +26,9 @@ install(TARGETS openpfc
 )
 
 # FetchContent nlohmann_json is linked to openpfc; CMake requires it in the same
-# export set when installing OpenPFCTargets (INTERFACE target).
-if(TARGET nlohmann_json)
+# export set when installing OpenPFCTargets. System nlohmann_json has no installable
+# target (only nlohmann_json::nlohmann_json), so gate on FetchContent.
+if(DEFINED nlohmann_json_SOURCE_DIR AND TARGET nlohmann_json)
   install(TARGETS nlohmann_json EXPORT OpenPFCTargets
     INCLUDES DESTINATION include)
 endif()
