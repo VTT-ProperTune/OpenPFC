@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_approx.hpp>
@@ -42,15 +42,16 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
   exchanger.exchange_halos(u.data(), u.size());
 
   const double inv = 1.0;
-  field::fd::laplacian_7point_interior(u.data(), lap.data(), nx, ny, nz, inv, inv, inv,
-                                       halo_width);
+  field::fd::laplacian_7point_interior(u.data(), lap.data(), nx, ny, nz, inv, inv,
+                                       inv, halo_width);
 
   for (size_t i = 0; i < nlocal; ++i) {
     REQUIRE(lap[i] == Catch::Approx(0.0).margin(1e-12));
   }
 }
 
-TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync", "[MPI][fd][persistent]") {
+TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
+          "[MPI][fd][persistent]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -78,7 +79,8 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync", "[MPI][fd][
 
   constexpr int halo_width = 1;
   HaloExchanger<double> hex(decomp, rank, halo_width, MPI_COMM_WORLD);
-  PersistentHaloExchanger<double> pex(decomp, rank, halo_width, MPI_COMM_WORLD, b.data());
+  PersistentHaloExchanger<double> pex(decomp, rank, halo_width, MPI_COMM_WORLD,
+                                      b.data());
 
   hex.exchange_halos(a.data(), a.size());
   pex.exchange_halos();
@@ -88,7 +90,8 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync", "[MPI][fd][
   }
 }
 
-TEST_CASE("Separated face halos match in-place Laplacian on interior", "[MPI][fd][separated]") {
+TEST_CASE("Separated face halos match in-place Laplacian on interior",
+          "[MPI][fd][separated]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -119,10 +122,13 @@ TEST_CASE("Separated face halos match in-place Laplacian on interior", "[MPI][fd
   std::vector<double> lap_sep(nlocal, 0.0);
 
   HaloExchanger<double> hex(decomp, rank, halo_width, MPI_COMM_WORLD);
-  hex.exchange_halos(u_inplace.data(), u_inplace.size());
+  // Pack path so ghost layout matches SeparatedFaceHaloExchanger / separated
+  // Laplacian (six-face zero-copy subarrays permute within-face order vs
+  // create_recv_halo).
+  hex.exchange_halos_packed(u_inplace.data(), u_inplace.size());
   const double inv = 1.0;
-  field::fd::laplacian_7point_interior(u_inplace.data(), lap_in.data(), nx, ny, nz, inv,
-                                       inv, inv, halo_width);
+  field::fd::laplacian_7point_interior(u_inplace.data(), lap_in.data(), nx, ny, nz,
+                                       inv, inv, inv, halo_width);
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, halo_width);
   SeparatedFaceHaloExchanger<double> sex(decomp, rank, halo_width, MPI_COMM_WORLD);
@@ -132,8 +138,9 @@ TEST_CASE("Separated face halos match in-place Laplacian on interior", "[MPI][fd
   for (int i = 0; i < 6; ++i) {
     face_ptrs[static_cast<size_t>(i)] = face_halos[static_cast<size_t>(i)].data();
   }
-  field::fd::laplacian_7point_interior_separated(u_core.data(), face_ptrs, lap_sep.data(),
-                                                 nx, ny, nz, inv, inv, inv, halo_width);
+  field::fd::laplacian_7point_interior_separated(u_core.data(), face_ptrs,
+                                                 lap_sep.data(), nx, ny, nz, inv,
+                                                 inv, inv, halo_width);
 
   const int imin = halo_width;
   const int imax = nx - halo_width;
