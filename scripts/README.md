@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -65,6 +65,28 @@ git commit -m "test"
 # Only use this if you have a very good reason
 git commit --no-verify -m "emergency fix"
 ```
+
+### run-clang-tidy.sh
+
+**Purpose:** Run `clang-tidy` on `src/`, `apps/`, and `tests/` `.cpp` files the same way as GitHub Actions (uses `.clang-tidy` and `-header-filter='include/openpfc/.*'`).
+
+**Requirements:** `clang-tidy`, Ninja, CMake, project dependencies (MPI, HeFFTe, etc.). On **tohtori**, load `gcc/11.2.0` and `openmpi/4.1.1` before configuring if you are not using the pinned toolchain paths only.
+
+**Typical workflow (tohtori):**
+
+```bash
+module load gcc/11.2.0
+module load openmpi/4.1.1
+./scripts/run-clang-tidy.sh --configure   # once: CMake + compile_commands.json
+./scripts/run-clang-tidy.sh               # run analysis (can take a long time)
+```
+
+The **tohtori** toolchain file [`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../cmake/toolchains/tohtori-gcc11-openmpi.cmake) sets **`CMAKE_EXPORT_COMPILE_COMMANDS`** so `compile_commands.json` is generated for this script and for `clangd`/IDEs.
+
+**Options:**
+
+- `--configure` / `-c` — configure `build-tidy` (or `OPENPFC_TIDY_BUILD_DIR`) with the tohtori toolchain and OpenPFC test/example/app targets, then exit.
+- `--build-dir=NAME` — build directory under the repo root (default: `build-tidy`).
 
 ## Build Scripts
 
