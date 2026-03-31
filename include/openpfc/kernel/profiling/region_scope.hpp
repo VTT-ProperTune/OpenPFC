@@ -27,7 +27,7 @@ class ProfilingTimedScope {
 public:
   explicit ProfilingTimedScope(std::string_view path) noexcept {
     ProfilingSession *s = current_session();
-    if (s) {
+    if (s != nullptr) {
       s->push_timed_scope(path);
       active_ = true;
     }
@@ -37,9 +37,13 @@ public:
   ProfilingTimedScope &operator=(const ProfilingTimedScope &) = delete;
 
   ~ProfilingTimedScope() noexcept {
-    if (!active_) return;
+    if (!active_) {
+      return;
+    }
     ProfilingSession *s = current_session();
-    if (s) s->pop_timed_scope();
+    if (s != nullptr) {
+      s->pop_timed_scope();
+    }
   }
 };
 
@@ -52,10 +56,14 @@ class ProfilingManualScope {
   bool active_{false};
 
   void pop_if_active() noexcept {
-    if (!active_) return;
+    if (!active_) {
+      return;
+    }
     active_ = false;
     ProfilingSession *s = current_session();
-    if (s) s->pop_timed_scope();
+    if (s != nullptr) {
+      s->pop_timed_scope();
+    }
   }
 
 public:
@@ -63,7 +71,7 @@ public:
 
   explicit ProfilingManualScope(std::string_view path) noexcept {
     ProfilingSession *s = current_session();
-    if (s) {
+    if (s != nullptr) {
       s->push_timed_scope(path);
       active_ = true;
     }
@@ -77,7 +85,9 @@ public:
   }
 
   ProfilingManualScope &operator=(ProfilingManualScope &&o) noexcept {
-    if (this == &o) return *this;
+    if (this == &o) {
+      return *this;
+    }
     pop_if_active();
     active_ = o.active_;
     o.active_ = false;
@@ -95,7 +105,7 @@ public:
   void restart(std::string_view path) noexcept {
     pop_if_active();
     ProfilingSession *s = current_session();
-    if (s) {
+    if (s != nullptr) {
       s->push_timed_scope(path);
       active_ = true;
     }
@@ -103,9 +113,11 @@ public:
 
   /// Begin timing @p path if currently inactive (no-op if already active).
   void start(std::string_view path) noexcept {
-    if (active_) return;
+    if (active_) {
+      return;
+    }
     ProfilingSession *s = current_session();
-    if (s) {
+    if (s != nullptr) {
       s->push_timed_scope(path);
       active_ = true;
     }
