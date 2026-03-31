@@ -23,15 +23,15 @@ OpenPFC records **per-step frames in memory** during a run and performs a **sing
 | Field | Meaning |
 |-------|---------|
 | **enabled** | If true, allocate a `ProfilingSession` with a **metric catalog** and record one frame per time step on each MPI rank. |
-| **format** | `json` (default if unknown), `hdf5`, `csv`, `both` (JSON + HDF5), or `csv_hdf5` / `csv+hdf5` (CSV + HDF5). Extensions: **`.json`**, **`.h5`**, **`.csv`**. |
+| **format** | **`json`** (default if unknown), **`hdf5`**, or **`both`** (JSON + HDF5). Extensions: **`.json`**, **`.h5`**. Legacy values **`csv`**, **`csv_hdf5`**, **`csv+hdf5`** are accepted but **CSV is no longer written**: **`csv`** maps to JSON only; **`csv_hdf5`** / **`csv+hdf5`** map to **`both`** (JSON + HDF5), with a **rank 0** stderr notice. |
 | **output** | Base path **without** extension. |
 | **memory_samples** | If true, each frame stores RSS (`/proc/self/status` on Linux), model heap bytes, and FFT heap bytes (extra cost per step). |
-| **print_report** | If true, **rank 0** prints a [TimerOutputs.jl](https://github.com/KristofferC/TimerOutputs.jl)-style table after file export. Data is **this rank’s** frames only (not MPI-reduced). |
+| **print_report** | If true, print a [TimerOutputs.jl](https://github.com/KristofferC/TimerOutputs.jl)-style table after file export. **`App`** uses **`print_profiling_timer` with MPI gather**: **all ranks** participate in a collective gather (same packed layout as export), and **rank 0** prints a table that **combines per-rank timer totals** (default: **mean** across ranks of each rank’s summed inclusive time per path; see **`ProfilingPrintOptions::mpi_aggregate_stat`**). **`%tot`** uses the sum of **`wall_denominator_metric`** (default **`wall_step`**) over **all** gathered frames. |
 | **regions** | Optional array of extra **`/`-separated paths**. Each entry adds that path and **all parent prefixes** to the catalog (e.g. `a/b` adds `a` and `a/b`). **All MPI ranks must use the same config** so the catalog matches for `MPI_Gatherv`. |
 
 Default catalog paths (always present): **`communication`**, **`fft`**, **`gradient`**.
 
-Avoid extra region names that equal HDF5 top-level dataset names under **`/openpfc/profiling/`** (`step`, `mpi_rank`, `wall_step`, …) so file creation does not fail.
+Avoid extra region names that collide with reserved HDF5 names under **`/openpfc/profiling/`** (**`frame_scalars`**, **`frame_metric_names`**) so file creation does not fail.
 
 HDF5 export requires configuring CMake with **`OpenPFC_ENABLE_HDF5=ON`** and a system HDF5 installation.
 
@@ -42,28 +42,29 @@ The CPU Tungsten model ([`apps/tungsten/include/tungsten/cpu/tungsten_model.hpp`
 - **`gradient/mean_field`** — mean-field filter: **`gradient/mean_field/forward`**, **`gradient/mean_field/multiply`**, **`gradient/mean_field/backward`**
 - **`gradient/evolve`** — exponential integration step: **`gradient/evolve/forward`**, **`gradient/evolve/multiply`**, **`gradient/evolve/backward`**
 
-List these under **`profiling.regions`** in the input file if you want a fixed catalog from step one. **`format`** values **`hdf5`**, **`both`**, **`csv_hdf5`**, etc. require **`OpenPFC_ENABLE_HDF5=ON`** at build time.
+List these under **`profiling.regions`** in the input file if you want a fixed catalog from step one. **`format`** values **`hdf5`** and **`both`** require **`OpenPFC_ENABLE_HDF5=ON`** at build time.
 
-## What each frame stores (schema version 2)
+## What each frame stores (export schema)
 
-After gather on rank 0, each row has:
+After gather on rank 0, each frame has:
 
-| Field | Description |
-|-------|-------------|
-| **step** | Simulation step index (`Time::get_increment()`). |
-| **mpi_rank** | MPI rank of the row. |
-| **wall_step** | **`App`:** MPI barrier-wrapped step time via **`set_frame_wall_step`**. Otherwise: **`steady_clock`** span from **`begin_step_frame`** to **`end_step_frame(rss, …)`** if **`set_frame_wall_step`** was not used (seconds). |
-| **rss_bytes** | Process RSS if `memory_samples` is true, else `0`. |
-| **model_heap_bytes** / **fft_heap_bytes** | Allocator-reported bytes if `memory_samples` is true. |
-| **Per-catalog-path** | **Inclusive** and **exclusive** seconds for each path in the catalog (see below). |
+1. **`scalars`**: array of **`double`** values, in the same order as root **`frame_metric_names`** (see below). Semantics:
+
+| Index | Name (`frame_metric_names`) | Description |
+|-------|-----------------------------|-------------|
+| 0 | **step** | Simulation step index (`Time::get_increment()`). |
+| 1 | **mpi_rank** | MPI rank of the row. |
+| 2 | **wall_step** | **`App`:** MPI barrier-wrapped step time passed to **`openpfc_end_frame_step_wall_and_memory`**. Demos may use **`set_frame_metric_elapsed_since_begin("wall_step")`** or **`openpfc_end_frame_memory_only_wall_from_clock`** (seconds). |
+| 3 | **rss_bytes** | Process RSS if `memory_samples` is true, else `0`. |
+| 4 | **model_heap_bytes** / 5 **heap_secondary_bytes** | Allocator-reported bytes (OpenPFC: model vs second bucket, e.g. FFT workspace) if `memory_samples` is true. |
+
+2. **`regions`**: nested JSON object tree mirroring **`/`-separated** paths in **`region_paths`**, each node holding **`inclusive`** and **`exclusive`** seconds (same semantics as before).
 
 **Inclusive** time for a path is the wall time of that region (nested scopes included). **Exclusive** time is inclusive minus the sum of **children’s inclusive** times (TimerOutputs-style nesting). Manual **`record_time(path, dt)`** adds `dt` to both inclusive and exclusive for that path.
 
-**`wall_step`:** either **`set_frame_wall_step(seconds)`** after **`begin_step_frame`** (e.g. MPI barrier duration from **`measure_barriered`**) or, if you omit that, the elapsed **`steady_clock`** time from **`begin_step_frame`** to **`end_step_frame(rss, …)`**.
+**`wall_step`:** set explicitly (e.g. barrier duration from **`measure_barriered`**) or via **`set_frame_metric_elapsed_since_begin("wall_step")`** after **`begin_frame`**. OpenPFC **`App`** uses **`openpfc_begin_frame_with_step_and_rank`** and **`openpfc_end_frame_step_wall_and_memory`** from **`openpfc_frame_metrics.hpp`**.
 
-**Region times:** use **`ProfilingTimedScope`**, **`add_recorded_time`** (additive), or **`assign_recorded_time(path, seconds)`** (overwrite scratch for that path). **`App`** records the FFT meter with **`assign_recorded_time("fft", fft_seconds)`** after each step (path must exist in the catalog; default **`with_defaults_and_extras`** includes **`fft`**). Any other instrumented quantity can use **`assign_recorded_time`** or **`add_recorded_time`** for paths in the catalog.
-
-A legacy overload **`end_step_frame(wall_step, fft_seconds, …)`** still overwrites the **`fft`** path and sets **`wall_step`** in one call (mainly for tests).
+**Region times:** use **`ProfilingTimedScope`**, **`add_recorded_time`** (additive), or **`assign_recorded_time(path, seconds)`** (overwrite scratch for that path). **`App`** records the FFT meter with **`assign_recorded_time("fft", fft_seconds)`** after each step (path must exist in the catalog; default **`with_defaults_and_extras`** includes **`fft`**). Tests may use **`openpfc_end_frame_with_fft_region_wall_and_memory`** to set the **`fft`** region time and default scalars in one call.
 
 **`communication`:** halo wait paths call **`record_time`** when a profiling context is active during `step()`.
 
@@ -72,7 +73,7 @@ A legacy overload **`end_step_frame(wall_step, fft_seconds, …)`** still overwr
 ## Runtime API
 
 - **`ProfilingMetricCatalog`** — immutable ordered path list; **`with_defaults_and_extras(extra_paths)`** or **`from_paths_only(paths)`** (no built-in regions).
-- **`ProfilingSession`** — owns frame buffers and the catalog; **`ensure_path`** (usually implicit from scopes / **`add_recorded_time`**); **`begin_step_frame`**, optional **`set_frame_wall_step`**, **`end_step_frame(rss, model_heap, fft_heap)`**, **`finalize_and_export`**; optional **`reset_report_clock`** for console report wall-clock line.
+- **`ProfilingSession(catalog, frame_metric_names)`** — second argument is the ordered list of per-frame scalar names (use **`{}`** for region timers only). **`set_frame_metric_elapsed_since_begin(name)`** fills a metric with elapsed time since **`begin_frame`**. OpenPFC **`App`** uses helpers in **`openpfc_frame_metrics.hpp`** (**`openpfc_begin_frame_with_step_and_rank`**, **`openpfc_end_frame_step_wall_and_memory`**, etc.) and **`ProfilingSession::openpfc_default_frame_metrics()`** for the default name list.
 - **`ProfilingContextScope`** — RAII: set the **thread-local** active session for the duration of `step()` so low-level code can call **`record_time`** without passing pointers everywhere.
 - **`record_time(std::string_view path, double seconds)`** — add elapsed time to a catalog path (no-op if no session or unknown path).
 - **`assign_recorded_time(path, seconds)`** on the session — set inclusive/exclusive for that path for the current frame (authoritative meter values, etc.).
@@ -80,8 +81,9 @@ A legacy overload **`end_step_frame(wall_step, fft_seconds, …)`** still overwr
 - **`ProfilingManualScope`** — same stack as **`ProfilingTimedScope`**, but **`stop()`** ends the interval before destruction, **`restart(path)`** stops and starts a new region (reuse one variable without nested braces), optional default construct + **`start(path)`**. Still **LIFO** with other scopes.
 - **`OPENPFC_PROFILE("path") { … }`** — macro (unique local name via **`__LINE__` / `__COUNTER__`**) wrapping **`ProfilingTimedScope`**. **`PFC_PROFILE_SCOPE("path")`** is the single-statement form.
 - **`print_profiling_timer(std::ostream &, const ProfilingSession &, const ProfilingPrintOptions &)`** — aggregate all committed frames and print a hierarchical table (section / ncalls / time / %tot / avg). **`print_profiling_timer(std::ostream &, const ProfilingPrintOptions &)`** uses **`current_session()`** when it has frames (no session pointer).
+- **`print_profiling_timer(std::ostream &, MPI_Comm, const ProfilingSession &, const ProfilingPrintOptions &)`** — optional **MPI** path: when **`mpi_aggregate_stdout`** is true and **`MPI_Comm_size` > 1**, **all ranks** must call it; rank 0 gathers and prints cross-rank combined statistics (**`mpi_aggregate_stat`**: `mean` / `sum` / `min` / `max` / `median` on per-rank per-path totals). When **`mpi_aggregate_stdout`** is false or the communicator has size 1, only rank 0 prints the **local** session (same as the overload without **`MPI_Comm`**).
 
-`ProfilingPrintOptions` controls **title**, **ascii_lines**, **sort_by_time**, and **show_exclusive_column**.
+`ProfilingPrintOptions` controls **title**, **ascii_lines**, **`sort_by_time`**, **`show_exclusive_column`**, **`wall_denominator_metric`** (%tot denominator), **`mpi_aggregate_stdout`**, and **`mpi_aggregate_stat`**.
 
 Canonical string constants: **`kProfilingRegionFft`**, **`kProfilingRegionCommunication`**, **`kProfilingRegionGradient`** in **`profiling/names.hpp`**.
 
@@ -93,44 +95,46 @@ Include the umbrella header:
 
 **Example:** **`examples/profiling_timer_report.cpp`** builds a session with an empty catalog, auto-registers paths via **`OPENPFC_PROFILE`** and **`ProfilingManualScope`**, and prints **`print_profiling_timer`**.
 
-## Export formats (schema version 2)
+## Export format (schema version 2)
 
-### JSON
+Full specification, HDF5 layout, gather row order, and migration from schema 1: **[profiling_export_schema.md](profiling_export_schema.md)**.
 
-Rank 0 writes **`schema_version`: 2**, **`catalog`** (array of path strings), **`n_frames`**, **`n_ranks`**, and **`frames`**: an array of objects with **`step`**, **`mpi_rank`**, **`wall_step`**, **`rss_bytes`**, **`model_heap_bytes`**, **`fft_heap_bytes`**, and **`regions`**: a nested object tree mirroring `/`-separated paths, with each leaf (and internal catalog node) holding **`inclusive`** and **`exclusive`** numbers.
+Summary: rank 0 writes **`schema_version`: 2** with **`ranks`**: one entry per MPI process, each with **`mpi_rank`**, **`n_frames`**, and **`frames`** (nested **`regions`** mirror `/`-separated paths). **`total_frames`** is the sum of per-rank frame counts. HDF5 stores the same hierarchy under **`/openpfc/profiling/ranks/<id>/`** (see the linked doc).
 
-### HDF5
-
-Under **`/openpfc/profiling/`**: 1D datasets **`step`**, **`mpi_rank`**, **`wall_step`**, **`rss_bytes`**, **`model_heap_bytes`**, **`fft_heap_bytes`**. For each catalog path, **nested groups** follow the path segments (e.g. `communication` → group `communication`; `outer/inner` → groups `outer` then `inner`), each leaf group containing 1D datasets **`inclusive`** and **`exclusive`** (length `n_frames`). Attributes **`schema_version`** (2) and **`openpfc_version`** sit on the profiling group.
-
-### CSV
-
-Flattened columns: metadata fields above, then for each catalog path (with `/` replaced by `_` in the header) **`path_inclusive`** and **`path_exclusive`**.
-
-### Python (JSON v2)
+### Python (JSON, schema 2)
 
 ```python
 import json
 with open("my_run_profile.json") as f:
     d = json.load(f)
 assert d["schema_version"] == 2
-wall = [fr["wall_step"] for fr in d["frames"]]
-fft_inc = [fr["regions"]["fft"]["inclusive"] for fr in d["frames"]]
+names = d["frame_metric_names"]
+wall_i = names.index("wall_step")
+wall = []
+fft_inc = []
+for rank_entry in d["ranks"]:
+    for fr in rank_entry["frames"]:
+        wall.append(fr["scalars"][wall_i])
+        fft_inc.append(fr["regions"]["fft"]["inclusive"])
 ```
 
-### Python (HDF5 v2)
+### Python (HDF5, schema 2)
 
 ```python
 import h5py
 with h5py.File("my_run_profile.h5", "r") as f:
     g = f["openpfc/profiling"]
-    wall = g["wall_step"][:]
-    fft_i = g["fft/inclusive"][:]
+    names = [n.decode() if isinstance(n, bytes) else n for n in g["frame_metric_names"][:]]
+    wall_i = names.index("wall_step")
+    r0 = g["ranks/0"]
+    fs = r0["frame_scalars"][:, :]
+    wall = fs[:, wall_i]
+    fft = r0["fft/inclusive"][:]
 ```
 
 ## MPI and memory
 
-`finalize_and_export` uses **`MPI_Gatherv`** to assemble all ranks’ frames on **rank 0**, then writes files. Memory on root scales with **`n_frames_total × (6 + 2 × |catalog|) × sizeof(double)`** plus JSON overhead. **The catalog must be identical on every rank** (same `profiling.regions` and defaults).
+`finalize_and_export` uses **`MPI_Gatherv`** to assemble all ranks’ frames on **rank 0**, then writes files. Memory on root scales with **`n_frames_total × (|frame_metric_names| + 2 × |region_paths|) × sizeof(double)`** plus JSON overhead. **The catalog must be identical on every rank** (same `profiling.regions`, same **frame metric name list**, and defaults).
 
 ## CMake
 
