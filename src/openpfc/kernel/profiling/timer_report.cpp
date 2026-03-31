@@ -13,8 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace pfc {
-namespace profiling {
+namespace pfc::profiling {
 
 namespace {
 
@@ -122,8 +121,10 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
   const int a_w = 14;
   const int ex_w = 14;
   const int extra = opts.show_exclusive_column ? ex_w + 1 : 0;
-  const std::size_t table_w =
-      static_cast<std::size_t>(2 + sec_w + n_w + t_w + p_w + a_w + extra);
+  const auto table_w =
+      2u + static_cast<std::size_t>(sec_w) + static_cast<std::size_t>(n_w) +
+      static_cast<std::size_t>(t_w) + static_cast<std::size_t>(p_w) +
+      static_cast<std::size_t>(a_w) + static_cast<std::size_t>(extra);
 
   os << '\n' << opts.title << '\n';
   if (session.report_clock_valid_) {
@@ -180,5 +181,4 @@ void print_profiling_timer(std::ostream &os, const ProfilingPrintOptions &opts) 
   if (s && s->num_frames() > 0) print_profiling_timer(os, *s, opts);
 }
 
-} // namespace profiling
-} // namespace pfc
+} // namespace pfc::profiling
