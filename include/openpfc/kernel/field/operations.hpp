@@ -43,8 +43,7 @@
 #include <openpfc/kernel/simulation/model.hpp>
 // Local iteration implemented inline to work with HeFFTe inbox type
 
-namespace pfc {
-namespace field {
+namespace pfc::field {
 
 /**
  * @brief Apply a coordinate-space function over a real field (local inbox)
@@ -227,5 +226,4 @@ inline void apply_with_time(Model &model, std::string_view field_name, double t,
                   std::forward<Fn>(fn));
 }
 
-} // namespace field
-} // namespace pfc
+} // namespace pfc::field
