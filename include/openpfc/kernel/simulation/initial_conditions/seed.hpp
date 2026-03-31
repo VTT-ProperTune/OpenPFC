@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -51,25 +51,25 @@ private:
   const double radius_;
   const double amplitude_;
 
-  mat3 yaw(double a) {
+  static mat3 yaw(double a) {
     double ca = cos(a);
     double sa = sin(a);
     return {vec3({ca, -sa, 0.0}), vec3({sa, ca, 0.0}), vec3({0.0, 0.0, 1.0})};
   }
 
-  mat3 pitch(double b) {
+  static mat3 pitch(double b) {
     double cb = cos(b);
     double sb = sin(b);
     return {vec3({cb, 0.0, sb}), vec3({0.0, 1.0, 0.0}), vec3({-sb, 0.0, cb})};
   }
 
-  mat3 roll(double c) {
+  static mat3 roll(double c) {
     double cc = cos(c);
     double sc = sin(c);
     return {vec3({1.0, 0.0, 0.0}), vec3({0.0, cc, -sc}), vec3({0.0, sc, cc})};
   }
 
-  mat3 mult3(const mat3 &A, const mat3 &B) {
+  static mat3 mult3(const mat3 &A, const mat3 &B) {
     mat3 C = {vec3{0.0}};
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
@@ -81,7 +81,7 @@ private:
     return C;
   }
 
-  vec3 mult3(const mat3 &A, const vec3 &b) {
+  static vec3 mult3(const mat3 &A, const vec3 &b) {
     vec3 c = {};
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
@@ -108,7 +108,7 @@ private:
     return q;
   }
 
-  vec32 bounding_box(const vec3 &location, double radius) {
+  static vec32 bounding_box(const vec3 &location, double radius) {
     const vec3 low = {location[0] - radius, location[1] - radius,
                       location[2] - radius};
     const vec3 high = {location[0] + radius, location[1] + radius,
@@ -117,7 +117,7 @@ private:
     return bbox;
   }
 
-  inline bool is_inside_bbox(const vec3 &location) const {
+  bool is_inside_bbox(const vec3 &location) const {
     const vec32 bbox = get_bbox();
     return (location[0] > bbox[0][0]) && (location[0] < bbox[1][0]) &&
            (location[1] > bbox[0][1]) && (location[1] < bbox[1][1]) &&
@@ -161,7 +161,7 @@ public:
     double a = get_amplitude();
     vec36 q = get_q();
     for (int i = 0; i < 6; i++) {
-      u += 2.0 * a * cos(q[i][0] * x + q[i][1] * y + q[i][2] * z);
+      u += 2.0 * a * cos((q[i][0] * x) + (q[i][1] * y) + (q[i][2] * z));
     }
     return u;
   }
