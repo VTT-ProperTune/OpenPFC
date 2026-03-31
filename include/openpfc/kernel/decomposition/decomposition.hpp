@@ -495,7 +495,7 @@ inline auto create(const World &world, const int &nparts) noexcept {
  * @see get_subworlds() - access all subdomains
  */
 inline int get_num_domains(const Decomposition &decomposition) noexcept {
-  return get_subworlds(decomposition).size();
+  return static_cast<int>(get_subworlds(decomposition).size());
 }
 
 } // namespace decomposition
