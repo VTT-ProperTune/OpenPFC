@@ -36,6 +36,7 @@
 #ifndef PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP
 #define PFC_BOUNDARY_CONDITIONS_MOVING_BC_HPP
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <mpi.h>
@@ -86,7 +87,8 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(Model &m, double) override {
+  void apply(Model &m, double time) override {
+    (void)time;
     const FFT &fft = get_fft(m);
     Field &field = get_real_field(m, get_field_name());
     const World &w = get_world(m);
@@ -99,16 +101,21 @@ public:
 
     if (m_first) {
       xline.resize(Lx);
-      if (rank == 0) global_xline.resize(Lx);
+      if (rank == 0) {
+        global_xline.resize(Lx);
+      }
     }
 
     fill(xline.begin(), xline.end(), std::numeric_limits<double>::min());
 
     long int idx = 0;
-    for (int k = low[2]; k <= high[2]; k++)
-      for (int j = low[1]; j <= high[1]; j++)
-        for (int i = low[0]; i <= high[0]; i++)
+    for (int k = low[2]; k <= high[2]; k++) {
+      for (int j = low[1]; j <= high[1]; j++) {
+        for (int i = low[0]; i <= high[0]; i++) {
           xline[i] = std::max(xline[i], field[idx++]);
+        }
+      }
+    }
 
     MPI_Reduce(xline.data(), global_xline.data(), static_cast<int>(xline.size()),
                MPI_DOUBLE, MPI_MAX, 0, comm);
@@ -128,17 +135,15 @@ public:
       }
     }
 
-    double new_xpos = x0 + m_idx * dx + m_disp;
-    if (new_xpos > m_xpos) {
-      m_xpos = new_xpos;
-    }
+    double new_xpos = x0 + (m_idx * dx) + m_disp;
+    m_xpos = std::max(new_xpos, m_xpos);
     MPI_Bcast(&m_xpos, 1, MPI_DOUBLE, 0, comm);
 
     if (m_first) {
       m_first = false;
     }
 
-    std::cout << "Boundary position: " << m_xpos << std::endl;
+    std::cout << "Boundary position: " << m_xpos << '\n';
 
     fill_bc(m);
   }
@@ -158,7 +163,7 @@ public:
           const double dist = x - xpos;
           auto blend = [&](double d) {
             const double S = 1.0 / (1.0 + std::exp(-alpha * d));
-            return m_rho_low * S + m_rho_high * (1.0 - S);
+            return (m_rho_low * S) + (m_rho_high * (1.0 - S));
           };
 
           if (std::abs(dist) < xwidth) {

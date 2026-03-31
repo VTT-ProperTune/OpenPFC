@@ -60,18 +60,19 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
-  void apply(Model &m, double) override {
+  void apply(Model &m, double time) override {
+    (void)time;
     const World &w = get_world(m);
     const double Lx = get_size(w, 0);
     const double dx = get_spacing(w, 0);
-    const double xpos = Lx * dx - xwidth;
+    const double xpos = (Lx * dx) - xwidth;
 
     pfc::field::apply_inplace(
         m, get_field_name(), [=](const pfc::Real3 &X, double current) {
           const double x = X[0];
           if (std::abs(x - xpos) < xwidth) {
             const double S = 1.0 / (1.0 + std::exp(-alpha * (x - xpos)));
-            return m_rho_low * S + m_rho_high * (1.0 - S);
+            return (m_rho_low * S) + (m_rho_high * (1.0 - S));
           }
           return current; // outside transition band, keep value
         });
