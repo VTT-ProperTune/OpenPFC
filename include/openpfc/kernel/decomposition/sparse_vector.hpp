@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -59,7 +59,7 @@ template <typename BackendTag>
 void copy_indices_to_device_impl(DataBuffer<BackendTag, size_t> &buf, size_t n,
                                  const std::vector<size_t> &host_indices) {
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-    std::copy(host_indices.begin(), host_indices.begin() + n, buf.data());
+    std::copy_n(host_indices.begin(), n, buf.data());
   } else {
     static_assert(
         dependent_false_sparse_vector<BackendTag>,
@@ -72,7 +72,7 @@ template <typename BackendTag, typename T>
 void copy_data_to_device_impl(DataBuffer<BackendTag, T> &buf, size_t n,
                               const std::vector<T> &host_data) {
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-    std::copy(host_data.begin(), host_data.begin() + n, buf.data());
+    std::copy_n(host_data.begin(), n, buf.data());
   } else {
     static_assert(
         dependent_false_sparse_vector<BackendTag>,
