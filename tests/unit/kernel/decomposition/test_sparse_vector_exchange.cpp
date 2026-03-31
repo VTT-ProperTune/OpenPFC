@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -18,7 +18,8 @@ using Catch::Approx;
 
 TEST_CASE("Exchange SparseVector indices and data",
           "[SparseVector][MPI][Exchange]") {
-  int rank, size;
+  int rank = 0;
+  int size = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -55,7 +56,8 @@ TEST_CASE("Exchange SparseVector indices and data",
 
 TEST_CASE("Exchange only SparseVector data (indices known)",
           "[SparseVector][MPI][Exchange]") {
-  int rank, size;
+  int rank = 0;
+  int size = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -96,7 +98,8 @@ TEST_CASE("Exchange only SparseVector data (indices known)",
 
 TEST_CASE("Exchange SparseVector with unsorted indices (should be sorted)",
           "[SparseVector][MPI][Exchange]") {
-  int rank, size;
+  int rank = 0;
+  int size = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
