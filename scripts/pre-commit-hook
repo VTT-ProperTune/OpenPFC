@@ -2,10 +2,15 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Staged-file clang-format check (matches CI style: .clang-format at repo root).
+# Staged-file clang-format check (matches CI style: .clang-format at repo root),
+# then clang-tidy on staged .cpp/.hpp when compile_commands.json exists (see
+# scripts/pre-commit-clang-tidy-hook).
 # Install: git config core.hooksPath .githooks   (from repository root)
 
 set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
 
 resolve_clang_format() {
   local c
@@ -51,3 +56,5 @@ if [[ "$failed" -ne 0 ]]; then
 fi
 
 echo "clang-format check passed."
+
+exec "$ROOT/scripts/pre-commit-clang-tidy-hook"
