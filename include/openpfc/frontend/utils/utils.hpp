@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -34,15 +34,16 @@
 #ifndef PFC_UTILS_HPP
 #define PFC_UTILS_HPP
 
-#include <memory>
 #include <mpi.h>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-namespace pfc {
-namespace utils {
+// pfc::mpi::get_comm_rank and get_comm_size are in kernel/mpi/mpi.hpp.
+// Include it when you need MPI rank/size with a specific communicator.
+// Frontend code may use: #include <openpfc/kernel/mpi/mpi.hpp>
+
+namespace pfc::utils {
 
 // Overload for no format arguments - just return the string as-is
 inline std::string string_format(const std::string &str) { return str; }
@@ -54,30 +55,23 @@ inline std::string string_format(const std::string &format, Args... args) {
   if (size <= 0) {
     throw std::runtime_error("Error during formatting.");
   }
-  std::unique_ptr<char[]> buf(new char[size]);
-  snprintf(buf.get(), size, format.c_str(), args...);
-  return std::string(buf.get(),
-                     buf.get() + size - 1); // We don't want the '\0' inside
+  std::vector<char> buf(size);
+  snprintf(buf.data(), size, format.c_str(), args...);
+  return std::string(buf.data(),
+                     buf.data() + size - 1); // We don't want the '\0' inside
 }
 
 inline std::string format_with_number(const std::string &filename, int increment) {
   if (filename.find('%') != std::string::npos) {
-    return utils::string_format(filename, increment);
-  } else {
-    return filename;
+    return string_format(filename, increment);
   }
+  return filename;
 }
 
-template <typename T> size_t sizeof_vec(std::vector<T> &V) {
+template <typename T> size_t sizeof_vec(const std::vector<T> &V) {
   return V.size() * sizeof(T);
 }
 
-} // namespace utils
-
-// pfc::mpi::get_comm_rank and get_comm_size are in kernel/mpi/mpi.hpp.
-// Include it when you need MPI rank/size with a specific communicator.
-// Frontend code may use: #include <openpfc/kernel/mpi/mpi.hpp>
-
-} // namespace pfc
+} // namespace pfc::utils
 
 #endif
