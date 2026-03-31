@@ -39,31 +39,31 @@ std::string VTKWriter::generate_filename(int increment, int rank) const {
 
 void VTKWriter::write_vti_header(std::ofstream &file,
                                  [[maybe_unused]] int increment) const {
-  file << R"(<?xml version="1.0" encoding="utf-8"?>)" << std::endl;
+  file << R"(<?xml version="1.0" encoding="utf-8"?>)" << '\n';
   file
       << R"(<VTKFile type="ImageData" version="1.0" byte_order="LittleEndian" header_type="UInt64">)"
-      << std::endl;
+      << '\n';
 
   // Whole extent (global domain)
   file << R"(  <ImageData WholeExtent="0 )" << m_global_size[0] - 1 << " 0 "
        << m_global_size[1] - 1 << " 0 " << m_global_size[2] - 1 << R"(" Origin=")"
        << m_origin[0] << " " << m_origin[1] << " " << m_origin[2] << R"(" Spacing=")"
        << m_spacing[0] << " " << m_spacing[1] << " " << m_spacing[2] << R"(">)"
-       << std::endl;
+       << '\n';
 
   // Piece extent (local domain)
   file << R"(    <Piece Extent=")" << m_offset[0] << " "
        << m_offset[0] + m_local_size[0] - 1 << " " << m_offset[1] << " "
        << m_offset[1] + m_local_size[1] - 1 << " " << m_offset[2] << " "
-       << m_offset[2] + m_local_size[2] - 1 << R"(">)" << std::endl;
+       << m_offset[2] + m_local_size[2] - 1 << R"(">)" << '\n';
 
-  file << R"(      <PointData>)" << std::endl;
+  file << R"(      <PointData>)" << '\n';
   file << R"(        <DataArray type="Float64" Name=")" << m_field_name
-       << R"(" NumberOfComponents="1" format="appended" offset="0"/>)" << std::endl;
-  file << R"(      </PointData>)" << std::endl;
-  file << R"(    </Piece>)" << std::endl;
-  file << R"(  </ImageData>)" << std::endl;
-  file << R"(  <AppendedData encoding="raw">)" << std::endl;
+       << R"(" NumberOfComponents="1" format="appended" offset="0"/>)" << '\n';
+  file << R"(      </PointData>)" << '\n';
+  file << R"(    </Piece>)" << '\n';
+  file << R"(  </ImageData>)" << '\n';
+  file << R"(  <AppendedData encoding="raw">)" << '\n';
   file << "_"; // Marker for data start
 }
 
@@ -105,18 +105,18 @@ void VTKWriter::write_pvti_file(int increment) const {
     return;
   }
 
-  file << R"(<?xml version="1.0" encoding="utf-8"?>)" << std::endl;
+  file << R"(<?xml version="1.0" encoding="utf-8"?>)" << '\n';
   file << R"(<VTKFile type="PImageData" version="1.0" byte_order="LittleEndian">)"
-       << std::endl;
+       << '\n';
   file << R"(  <PImageData WholeExtent="0 )" << m_global_size[0] - 1 << " 0 "
        << m_global_size[1] - 1 << " 0 " << m_global_size[2] - 1 << R"(" Origin=")"
        << m_origin[0] << " " << m_origin[1] << " " << m_origin[2] << R"(" Spacing=")"
        << m_spacing[0] << " " << m_spacing[1] << " " << m_spacing[2] << R"(">)"
-       << std::endl;
-  file << R"(    <PPointData>)" << std::endl;
+       << '\n';
+  file << R"(    <PPointData>)" << '\n';
   file << R"(      <PDataArray type="Float64" Name=")" << m_field_name
-       << R"(" NumberOfComponents="1"/>)" << std::endl;
-  file << R"(    </PPointData>)" << std::endl;
+       << R"(" NumberOfComponents="1"/>)" << '\n';
+  file << R"(    </PPointData>)" << '\n';
 
   // List all piece files
   for (int r = 0; r < current_size; ++r) {
@@ -128,11 +128,11 @@ void VTKWriter::write_pvti_file(int increment) const {
     std::string ext = (base_ext_pos != std::string::npos) ? base.substr(base_ext_pos)
                                                           : std::string();
     std::string piece_filename = name + "_" + std::to_string(r) + ext;
-    file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << std::endl;
+    file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << '\n';
   }
 
-  file << R"(  </PImageData>)" << std::endl;
-  file << R"(</VTKFile>)" << std::endl;
+  file << R"(  </PImageData>)" << '\n';
+  file << R"(</VTKFile>)" << '\n';
   file.close();
   if (!file.good()) {
     const Logger lg{LogLevel::Error, /*rank*/ 0};
@@ -161,9 +161,9 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
   write_vti_data(file, data);
 
   // Write footer
-  file << std::endl;
-  file << R"(  </AppendedData>)" << std::endl;
-  file << R"(</VTKFile>)" << std::endl;
+  file << '\n';
+  file << R"(  </AppendedData>)" << '\n';
+  file << R"(</VTKFile>)" << '\n';
   file.close();
   if (!file.good()) {
     const Logger lg{LogLevel::Error, m_rank};
