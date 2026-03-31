@@ -8,8 +8,8 @@
 #include <tungsten/hip/tungsten.hpp>
 
 int main(int argc, char *argv[]) {
-  cout << std::fixed;
-  cout.precision(3);
-  App<TungstenHIP<double>> app(argc, argv);
+  std::cout << std::fixed;
+  std::cout.precision(3);
+  pfc::ui::App<TungstenHIP<double>> app(argc, argv);
   return app.main();
 }
