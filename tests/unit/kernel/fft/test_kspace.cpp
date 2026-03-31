@@ -91,7 +91,7 @@ TEST_CASE("k_component handles Nyquist folding correctly", "[fft][kspace]") {
 
   SECTION("Nyquist frequency (i = size/2)") {
     double k_nyquist = k_component(size / 2, size, freq_scale);
-    REQUIRE(k_nyquist == static_cast<double>(size / 2) * freq_scale);
+    REQUIRE(k_nyquist == (static_cast<double>(size) / 2.0) * freq_scale);
   }
 
   SECTION("High frequencies fold to negative (i > size/2)") {
