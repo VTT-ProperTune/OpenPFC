@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -65,9 +65,7 @@
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/world.hpp>
 
-namespace pfc {
-namespace fft {
-namespace kspace {
+namespace pfc::fft::kspace {
 
 /**
  * @brief Compute frequency scaling factors for each dimension.
@@ -221,6 +219,4 @@ inline double k_squared_value(double ki, double kj, double kk) noexcept {
   return ki * ki + kj * kj + kk * kk;
 }
 
-} // namespace kspace
-} // namespace fft
-} // namespace pfc
+} // namespace pfc::fft::kspace
