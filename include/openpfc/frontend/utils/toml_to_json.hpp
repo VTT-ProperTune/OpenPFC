@@ -158,7 +158,7 @@ inline nlohmann::json toml_to_json(const toml::node &node_ref) {
 inline nlohmann::json
 toml_to_json(const toml::node_view<const toml::node> &node_view) {
   const toml::node *node = node_view.node();
-  if (!node) {
+  if (node == nullptr) {
     return {nullptr};
   }
   return toml_to_json(*node);
