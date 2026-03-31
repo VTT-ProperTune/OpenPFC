@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -20,6 +20,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ### Changed
 
+- **Profiling**: `ProfilingSession` is frame-only generic (`begin_frame`, `set_frame_metric`, `set_frame_metric_elapsed_since_begin`, `end_frame`); OpenPFC step/MPI/memory wiring uses **`openpfc_frame_metrics.hpp`**. JSON **`frame_metric_names`** use **`heap_secondary_bytes`** instead of **`fft_heap_bytes`** for the second heap column.
+- **Profiling export**: JSON and HDF5 use **schema version 2** with a per-MPI-rank hierarchy (`ranks[]` in JSON; `openpfc/profiling/ranks/<id>/` in HDF5). See **`docs/profiling_export_schema.md`**. **`ProfilingPrintOptions::wall_denominator_metric`** configures the %tot denominator (default **`wall_step`**). **`print_profiling_timer(std::ostream &, MPI_Comm, …)`** with **`mpi_aggregate_stdout`** prints a rank-0 table combining per-rank timer totals (**`mpi_aggregate_stat`**: mean/sum/min/max/median). **`App`** enables this when **`profiling.print_report`** is true (all ranks participate in the gather).
 - **Layout & includes**: Clearer **kernel / runtime / frontend** layering, consistent `<openpfc/...>` includes across the library and unit tests, and FFT layout helpers split into `fft_layout.hpp`.
 - **SparseVector / MPI**: Zero-copy face exchange and non-blocking MPI paths for sparse halo communication where applicable.
 - **CI**: GitHub Actions runners pinned to **Ubuntu 24.04 LTS** (main matrix, coverage, docs, clang-tidy, code quality). LLVM apt repos use **noble** for Clang 14/16; removed the gcc-13 toolchain PPA. The coverage job runs tests via **CTest** like the main workflow; workflow README aligned with HeFFTe 2.4.1.
