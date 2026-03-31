@@ -1,6 +1,7 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <array>
 #include <cmath>
 #include <complex>
 
@@ -139,9 +140,9 @@ TEST_CASE("constants - compile-time evaluation", "[constants][unit]") {
   SECTION("can use constants in array size") {
     // This must compile - proves constexpr works at compile time
     constexpr int size = static_cast<int>(pfc::pi * 10);
-    double array[size];
+    std::array<double, static_cast<std::size_t>(size)> array{};
     REQUIRE(size == 31);
-    (void)array; // Suppress unused variable warning
+    (void)array;
   }
 }
 
