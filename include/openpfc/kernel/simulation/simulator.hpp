@@ -356,7 +356,7 @@ public:
 
   void set_result_counter(int result_counter) { m_result_counter = result_counter; }
 
-  double get_result_counter() const { return m_result_counter; }
+  int get_result_counter() const { return m_result_counter; }
 
   void write_results() {
     int file_num = get_result_counter();
@@ -455,7 +455,6 @@ public:
     if (time.do_save()) {
       write_results();
     }
-    return;
   }
 
   /**
