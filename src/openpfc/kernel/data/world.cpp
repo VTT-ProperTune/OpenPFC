@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iomanip>
@@ -6,9 +6,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <stdexcept>
 
-namespace pfc {
-
-namespace world {
+namespace pfc::world {
 
 using pfc::csys::CartesianTag;
 using pfc::csys::CoordinateSystem;
@@ -177,5 +175,4 @@ double get_upper_limits(const CartesianWorld &world, int index) noexcept {
   return get_upper(world).at(index);
 }
 
-} // namespace world
-} // namespace pfc
+} // namespace pfc::world
