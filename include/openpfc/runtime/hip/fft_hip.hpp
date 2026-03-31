@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -22,8 +22,7 @@
 #include <heffte.h>
 #include <mpi.h>
 
-namespace pfc {
-namespace fft {
+namespace pfc::fft {
 
 /**
  * @brief Creates an FFT object using rocFFT backend for GPU acceleration
@@ -67,5 +66,4 @@ FFT_HIP create_hip(const Decomposition &decomposition, int rank_id);
 FFT_HIP create_hip(const Decomposition &decomposition);
 #endif // OpenPFC_ENABLE_HIP
 
-} // namespace fft
-} // namespace pfc
+} // namespace pfc::fft

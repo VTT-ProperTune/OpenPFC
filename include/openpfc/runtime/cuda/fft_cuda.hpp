@@ -24,8 +24,7 @@
 #include <heffte.h>
 #include <mpi.h>
 
-namespace pfc {
-namespace fft {
+namespace pfc::fft {
 
 #if defined(OpenPFC_ENABLE_CUDA)
 
@@ -105,5 +104,4 @@ FFT_CUDA create_cuda(const Decomposition &decomposition);
 
 #endif // OpenPFC_ENABLE_CUDA
 
-} // namespace fft
-} // namespace pfc
+} // namespace pfc::fft

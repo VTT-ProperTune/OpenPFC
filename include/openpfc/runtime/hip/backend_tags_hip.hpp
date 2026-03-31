@@ -16,8 +16,7 @@
 
 #include <openpfc/kernel/execution/backend_tags.hpp>
 
-namespace pfc {
-namespace backend {
+namespace pfc::backend {
 
 /**
  * @brief HIP/ROCm backend tag
@@ -28,5 +27,4 @@ namespace backend {
  */
 struct HipTag {};
 
-} // namespace backend
-} // namespace pfc
+} // namespace pfc::backend
