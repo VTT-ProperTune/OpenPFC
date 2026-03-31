@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -104,6 +104,18 @@ public:
   void exchange_halos(T *field_ptr, size_t field_size) {
     start_halo_exchange(field_ptr, field_size);
     finish_halo_exchange();
+  }
+
+  /**
+   * @brief Run halo exchange on the pack path (gather / MPI / scatter).
+   *
+   * Ghost values are written in `create_recv_halo` index order, matching
+   * `SeparatedFaceHaloExchanger` and `laplacian_7point_interior_separated`.
+   * Default `exchange_halos()` uses zero-copy MPI subarrays for six face
+   * neighbors, which can permute elements within a face relative to that order.
+   */
+  void exchange_halos_packed(T *field_ptr, size_t field_size) {
+    exchange_halos_pack(field_ptr, field_size);
   }
 
   /**
