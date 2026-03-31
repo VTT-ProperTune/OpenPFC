@@ -117,8 +117,8 @@ struct ValidationResult {
       }
 
       for (const auto &[key, value] : validated_params) {
-        msg << "  " << std::left << std::setw(max_key_len + 2) << key << " = "
-            << value << "\n";
+        msg << "  " << std::left << std::setw(static_cast<int>(max_key_len + 2))
+            << key << " = " << value << "\n";
       }
     }
 
@@ -190,7 +190,7 @@ private:
   // Falls back to direct key lookup if path has no dots.
   static json get_by_path(const json &j, const std::string &path) {
     if (path.find('.') == std::string::npos) {
-      return j.contains(path) ? j.at(path) : json(nullptr);
+      return j.contains(path) ? j.at(path) : json{nullptr};
     }
     const json *current = &j;
     size_t start = 0;
@@ -199,7 +199,7 @@ private:
       std::string key = (dot == std::string::npos) ? path.substr(start)
                                                    : path.substr(start, dot - start);
       if (!current->is_object() || !current->contains(key)) {
-        return json(nullptr);
+        return {nullptr};
       }
       current = &current->at(key);
       if (dot == std::string::npos) break;
@@ -241,7 +241,7 @@ private:
                           ValidationResult &result) const {
     // Resolve value by path (supports nested keys like "a.b.c")
     bool exists = has_by_path(config, meta.name);
-    json val = exists ? get_by_path(config, meta.name) : json(nullptr);
+    json val = exists ? get_by_path(config, meta.name) : json{nullptr};
     // Check if parameter exists
     if (!exists) {
       if (meta.required && !meta.default_value) {
@@ -306,7 +306,7 @@ private:
                           ValidationResult &result) const {
     // Resolve value by path (supports nested keys like "a.b.c")
     bool exists = has_by_path(config, meta.name);
-    json val = exists ? get_by_path(config, meta.name) : json(nullptr);
+    json val = exists ? get_by_path(config, meta.name) : json{nullptr};
     // Check if parameter exists
     if (!exists) {
       if (meta.required && !meta.default_value) {
