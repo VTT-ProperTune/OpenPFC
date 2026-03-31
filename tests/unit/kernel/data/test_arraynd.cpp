@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
@@ -71,7 +71,9 @@ TEST_CASE("array2d") {
     arr({2, 3}) = 4;
     arr({1, 4}) = 5;
     arr({2, 4}) = 6;
-    for (int i = 0; i < 6; i++) REQUIRE(arr[i] == i + 1);
+    for (int i = 0; i < 6; i++) {
+      REQUIRE(arr[i] == i + 1);
+    }
   }
 
   SECTION("Test apply()") {
