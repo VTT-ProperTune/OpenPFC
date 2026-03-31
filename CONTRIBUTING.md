@@ -32,6 +32,21 @@ The general steps for contributing to OpenPFC software framework are:
    writing, check your text and test your code carefully before your
    contribution.
 
+## Git commits
+
+Prefer **one file per commit** unless several paths are **one indivisible change**
+(e.g., a header and its `.cpp`).
+
+**Do not mix unrelated concerns in a single commit**, even if they were edited in
+the same session:
+
+- **Licensing / REUSE / SPDX** (headers in docs or sources) are separate from
+  **CI/CD** (`.github/workflows/*.yml`) or build tooling.
+- **Documentation-only** edits and **workflow** edits belong in **separate**
+  commits unless you were explicitly asked for one squashed commit.
+
+This keeps `git log -- <path>` and `git bisect` usable and reviews focused.
+
 ## Copyright Transfer
 
 VTT Technical Research Centre of Finland Ltd (VTT) is the sole Copyright Holder
