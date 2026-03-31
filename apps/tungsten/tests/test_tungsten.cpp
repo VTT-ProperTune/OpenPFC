@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define CATCH_CONFIG_RUNNER
@@ -173,7 +173,9 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     // Grid: 32x32x32, spacing: 1.1107207345395915, origin: center
     // When origo="center", origin is at -0.5 * dx * Lx
     double grid_spacing = 1.1107207345395915;
-    int Lx = 32, Ly = 32, Lz = 32;
+    int Lx = 32;
+    int Ly = 32;
+    int Lz = 32;
     double x0 = -0.5 * grid_spacing * Lx;
     double y0 = -0.5 * grid_spacing * Ly;
     double z0 = -0.5 * grid_spacing * Lz;
@@ -298,11 +300,11 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
       max_val = std::max(max_val, x);
     }
     std::cout << "Initial norm: " << std::fixed << std::setprecision(10)
-              << initial_norm << std::endl;
+              << initial_norm << '\n';
     std::cout << "Initial field range: [" << min_val << ", " << max_val << "]"
-              << std::endl;
+              << '\n';
     std::cout << "Expected: constant -0.4 everywhere, then seed applied in center"
-              << std::endl;
+              << '\n';
 
     // Run 10 time steps and verify norms match expected values exactly
     // Expected norms are from actual simulation run with these exact parameters
@@ -310,23 +312,25 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     for (int i = 0; i < 10; ++i) {
       tungsten.step(1.0);
       double norm2 = 0.0;
-      for (auto &x : psi) norm2 += x * x;
+      for (auto &x : psi) {
+        norm2 += x * x;
+      }
       actual_norms.push_back(norm2);
       std::cout << "Step " << (i + 1) << " norm: " << std::fixed
-                << std::setprecision(10) << norm2 << std::endl;
+                << std::setprecision(10) << norm2 << '\n';
     }
 
     // Print summary
-    std::cout << "\nNorm changes:" << std::endl;
+    std::cout << "\nNorm changes:" << '\n';
     for (size_t i = 0; i < actual_norms.size(); ++i) {
       if (i == 0) {
         double change = actual_norms[i] - initial_norm;
         std::cout << "  Step " << (i + 1) << ": " << change << " (from initial)"
-                  << std::endl;
+                  << '\n';
       } else {
         double change = actual_norms[i] - actual_norms[i - 1];
         std::cout << "  Step " << (i + 1) << ": " << change << " (from step " << i
-                  << ")" << std::endl;
+                  << ")" << '\n';
       }
     }
 
@@ -376,14 +380,14 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     REQUIRE(tungsten.has_real_field("default")); // backward compatibility
 
     std::vector<double> &psi = tungsten.get_real_field("psi");
-    REQUIRE(psi.size() > 0);
+    REQUIRE(!psi.empty());
   }
 }
 
 int main(int argc, char *argv[]) {
   // Initialize MPI once for all tests
   if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
-    std::cerr << "MPI initialization failed" << std::endl;
+    std::cerr << "MPI initialization failed" << '\n';
     return 1;
   }
 
