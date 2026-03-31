@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -31,17 +31,17 @@
 #ifndef PFC_UTILS_TIMELEFT_HPP
 #define PFC_UTILS_TIMELEFT_HPP
 
+#include <cmath>
 #include <iostream>
 
-namespace pfc {
-namespace utils {
+namespace pfc::utils {
 
 class TimeLeft {
 private:
   int m_seconds = 0, m_minutes = 0, m_hours = 0, m_days = 0;
 
 public:
-  explicit TimeLeft(double t) : m_seconds(t) {
+  explicit TimeLeft(double t) : m_seconds(static_cast<int>(std::floor(t))) {
     if (m_seconds > 60) {
       m_minutes = m_seconds / 60;
       m_seconds -= m_minutes * 60;
@@ -70,7 +70,7 @@ public:
     return os;
   }
 };
-} // namespace utils
-} // namespace pfc
+
+} // namespace pfc::utils
 
 #endif // PFC_UTILS_TIMELEFT_HPP
