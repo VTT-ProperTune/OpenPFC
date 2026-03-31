@@ -103,12 +103,17 @@ jobs:
           set -euo pipefail
           # Per-file only: Ubuntu's run-clang-tidy is an older script without -source-filter and
           # can otherwise traverse FetchContent TUs under build-tidy/_deps (e.g. Catch2).
+          # Skip GPU-only tungsten tests: they use #error when CUDA/HIP is off (CI is CPU-only).
           failed=0
           while IFS= read -r file; do
             clang-tidy -p build-tidy --quiet \
               -header-filter='include/openpfc/.*' \
               "$file" || failed=1
-          done < <(find src apps tests -name "*.cpp")
+          done < <(find src apps tests -name "*.cpp" \
+            ! -name 'test_tungsten_cuda_vtk.cpp' \
+            ! -name 'test_tungsten_hip_vtk.cpp' \
+            ! -name 'test_tungsten_cpu_vs_cuda.cpp' \
+            ! -name 'test_tungsten_cpu_vs_hip.cpp')
           exit $failed
 
   # ============================================================================
