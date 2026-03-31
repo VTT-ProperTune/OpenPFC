@@ -67,7 +67,8 @@ public:
   }
 
   void run_cpu_test(int size_x, int size_y, int size_z, int num_iterations) {
-    int rank, size;
+    int rank = 0;
+    int size = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -180,7 +181,8 @@ public:
   template <typename RealType>
   void run_cuda_test_impl(int size_x, int size_y, int size_z, int num_iterations,
                           const std::string &precision_name) {
-    int rank, size;
+    int rank = 0;
+    int size = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -303,7 +305,8 @@ public:
   template <typename RealType>
   void run_hip_test_impl(int size_x, int size_y, int size_z, int num_iterations,
                          const std::string &precision_name) {
-    int rank, size;
+    int rank = 0;
+    int size = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
