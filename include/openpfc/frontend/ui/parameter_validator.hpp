@@ -202,7 +202,9 @@ private:
         return {nullptr};
       }
       current = &current->at(key);
-      if (dot == std::string::npos) break;
+      if (dot == std::string::npos) {
+        break;
+      }
       start = dot + 1;
     }
     return *current;
@@ -222,14 +224,18 @@ private:
         return false;
       }
       current = &current->at(key);
-      if (dot == std::string::npos) break;
+      if (dot == std::string::npos) {
+        break;
+      }
       start = dot + 1;
     }
     return true;
   }
 
   static bool is_finite_number(const json &v) {
-    if (!v.is_number()) return false;
+    if (!v.is_number()) {
+      return false;
+    }
     auto x = v.get<double>();
     return std::isfinite(x);
   }
@@ -237,8 +243,9 @@ private:
   /**
    * @brief Validate a single double parameter
    */
-  void validate_parameter(const json &config, const ParameterMetadata<double> &meta,
-                          ValidationResult &result) const {
+  static void validate_parameter(const json &config,
+                                 const ParameterMetadata<double> &meta,
+                                 ValidationResult &result) {
     // Resolve value by path (supports nested keys like "a.b.c")
     bool exists = has_by_path(config, meta.name);
     json val = exists ? get_by_path(config, meta.name) : json{nullptr};
@@ -250,16 +257,16 @@ private:
             << "  " << meta.format_info();
         result.errors.push_back(err.str());
         return;
-      } else if (meta.default_value) {
+      }
+      if (meta.default_value) {
         // Use default value
         std::ostringstream val_str;
         val_str << *meta.default_value << " (default)";
         result.validated_params[meta.name] = val_str.str();
         return;
-      } else {
-        // Optional parameter, not provided
-        return;
       }
+      // Optional parameter, not provided
+      return;
     }
 
     // Check type
@@ -302,8 +309,9 @@ private:
   /**
    * @brief Validate a single int parameter
    */
-  void validate_parameter(const json &config, const ParameterMetadata<int> &meta,
-                          ValidationResult &result) const {
+  static void validate_parameter(const json &config,
+                                 const ParameterMetadata<int> &meta,
+                                 ValidationResult &result) {
     // Resolve value by path (supports nested keys like "a.b.c")
     bool exists = has_by_path(config, meta.name);
     json val = exists ? get_by_path(config, meta.name) : json{nullptr};
@@ -315,16 +323,16 @@ private:
             << "  " << meta.format_info();
         result.errors.push_back(err.str());
         return;
-      } else if (meta.default_value) {
+      }
+      if (meta.default_value) {
         // Use default value
         std::ostringstream val_str;
         val_str << *meta.default_value << " (default)";
         result.validated_params[meta.name] = val_str.str();
         return;
-      } else {
-        // Optional parameter, not provided
-        return;
       }
+      // Optional parameter, not provided
+      return;
     }
 
     // Check type
