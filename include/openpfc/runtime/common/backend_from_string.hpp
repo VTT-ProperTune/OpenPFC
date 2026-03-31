@@ -16,8 +16,7 @@
 #include <optional>
 #include <string>
 
-namespace pfc {
-namespace runtime {
+namespace pfc::runtime {
 
 /**
  * @brief Map backend string (e.g. "fftw", "cuda") to fft::Backend
@@ -36,5 +35,4 @@ inline std::optional<fft::Backend> backend_from_string(const std::string &s) {
   return std::nullopt;
 }
 
-} // namespace runtime
-} // namespace pfc
+} // namespace pfc::runtime
