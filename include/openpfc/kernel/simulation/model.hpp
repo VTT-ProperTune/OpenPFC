@@ -159,7 +159,7 @@ public:
    *
    * @return true if rank is 0, false otherwise
    *
-   * @note This function is thread-safe and has zero overhead (inline)
+   * @note This function is thread-safe and has zero overhead (defined in header)
    *
    * @code
    * if (model.is_rank0()) {
@@ -167,7 +167,7 @@ public:
    * }
    * @endcode
    */
-  inline bool is_rank0() const noexcept { return m_rank0; }
+  bool is_rank0() const noexcept { return m_rank0; }
 
   /**
    * @brief Get the decomposition object associated with the model.

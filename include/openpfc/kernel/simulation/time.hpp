@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -458,7 +458,7 @@ public:
    * @see done() - check if t_current >= t1
    */
   double get_current() const {
-    double current_time = m_t0 + m_increment * m_dt;
+    double current_time = m_t0 + (m_increment * m_dt);
     return (current_time > m_t1) ? m_t1
                                  : current_time; // Clamp to m_t1 if it exceeds
   }
