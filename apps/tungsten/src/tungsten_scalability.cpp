@@ -74,7 +74,7 @@ public:
     if (rank == 0) {
       std::cout << "Running CPU test: size=(" << size_x << "," << size_y << ","
                 << size_z << "), ranks=" << size << ", iterations=" << num_iterations
-                << std::endl;
+                << '\n';
     }
 
     try {
@@ -167,11 +167,11 @@ public:
         std::cout << "  CPU (double): " << time_per_iter * 1000 << " ms/iteration"
                   << " (FFT: " << fft_time_per_iter * 1000
                   << " ms, Other: " << other_time_per_iter * 1000
-                  << " ms, Setup: " << setup_time * 1000 << " ms)" << std::endl;
+                  << " ms, Setup: " << setup_time * 1000 << " ms)" << '\n';
       }
     } catch (const std::exception &e) {
       if (rank == 0) {
-        std::cerr << "Error in CPU test: " << e.what() << std::endl;
+        std::cerr << "Error in CPU test: " << e.what() << '\n';
       }
     }
   }
@@ -187,7 +187,7 @@ public:
     if (rank == 0) {
       std::cout << "Running CUDA test (" << precision_name << "): size=(" << size_x
                 << "," << size_y << "," << size_z << "), ranks=" << size
-                << ", iterations=" << num_iterations << std::endl;
+                << ", iterations=" << num_iterations << '\n';
     }
 
     try {
@@ -282,12 +282,12 @@ public:
                   << " ms/iteration"
                   << " (FFT: " << fft_time_per_iter * 1000
                   << " ms, Other: " << other_time_per_iter * 1000
-                  << " ms, Setup: " << setup_time * 1000 << " ms)" << std::endl;
+                  << " ms, Setup: " << setup_time * 1000 << " ms)" << '\n';
       }
     } catch (const std::exception &e) {
       if (rank == 0) {
         std::cerr << "Error in CUDA test (" << precision_name << "): " << e.what()
-                  << std::endl;
+                  << '\n';
       }
     }
   }
@@ -310,7 +310,7 @@ public:
     if (rank == 0) {
       std::cout << "Running HIP test (" << precision_name << "): size=(" << size_x
                 << "," << size_y << "," << size_z << "), ranks=" << size
-                << ", iterations=" << num_iterations << std::endl;
+                << ", iterations=" << num_iterations << '\n';
     }
 
     try {
@@ -394,12 +394,12 @@ public:
                   << " ms/iteration"
                   << " (FFT: " << fft_time_per_iter * 1000
                   << " ms, Other: " << other_time_per_iter * 1000
-                  << " ms, Setup: " << setup_time * 1000 << " ms)" << std::endl;
+                  << " ms, Setup: " << setup_time * 1000 << " ms)" << '\n';
       }
     } catch (const std::exception &e) {
       if (rank == 0) {
         std::cerr << "Error in HIP test (" << precision_name << "): " << e.what()
-                  << std::endl;
+                  << '\n';
       }
     }
   }
@@ -444,16 +444,16 @@ int main(int argc, char *argv[]) {
   }
 
   if (rank == 0) {
-    std::cout << "Tungsten Scalability Study" << std::endl;
-    std::cout << "Output file: " << output_file << std::endl;
-    std::cout << "Iterations per test: " << num_iterations << std::endl;
+    std::cout << "Tungsten Scalability Study" << '\n';
+    std::cout << "Output file: " << output_file << '\n';
+    std::cout << "Iterations per test: " << num_iterations << '\n';
     std::cout << "MPI ranks: " << std::flush;
   }
 
   int size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (rank == 0) {
-    std::cout << size << std::endl << std::endl;
+    std::cout << size << '\n' << '\n';
   }
 
   ScalabilityStudy study(output_file);
@@ -467,7 +467,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (rank == 0) {
-    std::cout << "Scaling mode: " << scaling_mode << std::endl;
+    std::cout << "Scaling mode: " << scaling_mode << '\n';
   }
 
   if (scaling_mode == "gpu") {
@@ -480,7 +480,7 @@ int main(int argc, char *argv[]) {
     };
 
     if (rank == 0) {
-      std::cout << "GPU scaling test with " << size << " MPI rank(s)" << std::endl;
+      std::cout << "GPU scaling test with " << size << " MPI rank(s)" << '\n';
     }
 
     for (const auto &[sx, sy, sz] : sizes) {
@@ -491,7 +491,7 @@ int main(int argc, char *argv[]) {
       study.run_hip_test(sx, sy, sz, num_iterations);
 #endif
       if (rank == 0) {
-        std::cout << std::endl;
+        std::cout << '\n';
       }
     }
   } else if (scaling_mode == "cpu") {
@@ -504,13 +504,13 @@ int main(int argc, char *argv[]) {
     };
 
     if (rank == 0) {
-      std::cout << "CPU scaling test with " << size << " MPI rank(s)" << std::endl;
+      std::cout << "CPU scaling test with " << size << " MPI rank(s)" << '\n';
     }
 
     for (const auto &[sx, sy, sz] : sizes) {
       study.run_cpu_test(sx, sy, sz, num_iterations);
       if (rank == 0) {
-        std::cout << std::endl;
+        std::cout << '\n';
       }
     }
   } else if (scaling_mode == "strong") {
@@ -521,7 +521,7 @@ int main(int argc, char *argv[]) {
                                     8}; // Will be adjusted based on available ranks
 
     if (rank == 0) {
-      std::cout << "Strong scaling: fixed size " << base_size << "^3" << std::endl;
+      std::cout << "Strong scaling: fixed size " << base_size << "^3" << '\n';
     }
 
     // For now, just test with current number of ranks
@@ -542,7 +542,7 @@ int main(int argc, char *argv[]) {
 
     if (rank == 0) {
       std::cout << "Weak scaling: size per rank " << size_per_rank << ", total size "
-                << total_size << "^3" << std::endl;
+                << total_size << "^3" << '\n';
     }
 
     study.run_cpu_test(total_size, total_size, total_size, num_iterations);
@@ -579,14 +579,14 @@ int main(int argc, char *argv[]) {
 #endif
 
       if (rank == 0) {
-        std::cout << std::endl;
+        std::cout << '\n';
       }
     }
   }
 
   if (rank == 0) {
     std::cout << "Scalability study complete. Results saved to: " << output_file
-              << std::endl;
+              << '\n';
   }
 
   MPI_Finalize();
