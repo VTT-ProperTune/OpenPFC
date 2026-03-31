@@ -269,8 +269,9 @@ private:
    */
   std::array<double, D> calculate_coords_low(const std::array<int, D> &offset) {
     std::array<double, D> coords_low;
-    for (size_t i = 0; i < D; i++)
+    for (size_t i = 0; i < D; i++) {
       coords_low[i] = m_origin[i] + offset[i] * m_discretization[i];
+    }
     return coords_low;
   }
 
@@ -281,8 +282,9 @@ private:
   std::array<double, D> calculate_coords_high(const std::array<int, D> &offset,
                                               const std::array<int, D> &size) {
     std::array<double, D> coords_high;
-    for (size_t i = 0; i < D; i++)
+    for (size_t i = 0; i < D; i++) {
       coords_high[i] = m_origin[i] + (offset[i] + size[i]) * m_discretization[i];
+    }
     return coords_high;
   }
 
@@ -429,7 +431,9 @@ public:
    */
   bool inbounds(const std::array<double, D> &coords) {
     for (size_t i = 0; i < D; i++) {
-      if (m_coords_low[i] > coords[i] || coords[i] >= m_coords_high[i]) return false;
+      if (m_coords_low[i] > coords[i] || coords[i] >= m_coords_high[i]) {
+        return false;
+      }
     }
     return true;
   }
