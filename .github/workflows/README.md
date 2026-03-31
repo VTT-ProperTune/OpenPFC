@@ -15,11 +15,11 @@ This directory contains CI/CD workflows for the OpenPFC project.
 
 **Purpose:** Primary continuous integration pipeline ensuring code quality and functionality.
 
-**Jobs:**
+**Jobs (sequential fail-fast):** `code-quality` → `clang-tidy` → `build-and-test`. If an earlier job fails, later jobs are skipped so the workflow stops quickly.
 
 1. **Code Quality**
-   - clang-format **20** checking (excludes build, external dependencies)
-   - REUSE compliance verification
+   - clang-format **20** (advisory: reports formatting issues but does not fail the job)
+   - REUSE compliance verification (must pass)
 
 2. **Clang-Tidy**
    - Static analysis with `run-clang-tidy` (or per-file fallback)

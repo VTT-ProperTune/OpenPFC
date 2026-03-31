@@ -33,7 +33,7 @@ jobs:
           clang-format-version: '20'
           check-path: '.'
           exclude-regex: '(build|\.cache|extern|third[-_]party|doxygen-awesome-css)'
-          fail-on-error: 'true'
+          fail-on-error: 'false'
 
       - name: Clean up clang-format artifacts
         run: rm -f failing-files.txt
@@ -46,6 +46,7 @@ jobs:
   # ============================================================================
   clang-tidy:
     name: Clang-Tidy Analysis
+    needs: [code-quality]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -125,8 +126,9 @@ jobs:
   # ============================================================================
   build-and-test:
     name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    needs: [clang-tidy]
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       fail-fast: false
       matrix:

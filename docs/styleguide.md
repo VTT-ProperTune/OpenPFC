@@ -10,7 +10,7 @@ This document summarizes **how we organize code, name things, and shape APIs** (
 ## Language and tooling
 
 - **C++17** is required (`CMAKE_CXX_STANDARD` is 17; extensions off).
-- **Formatting:** follow the repository [`.clang-format`](../.clang-format) at the root. CI uses **clang-format 20** (same as the `jidicula/clang-format:20` image). When in doubt, run `clang-format` **20** on touched files before submitting so local results match CI.
+- **Formatting:** follow the repository [`.clang-format`](../.clang-format) at the root. Use **clang-format 20** locally (same major as CI’s `jidicula/clang-format:20` image). **CI** runs the same check in advisory mode (logs violations but does not fail the job). **Local hook:** run `git config core.hooksPath .githooks` once from the repo root so staged C++ files are checked via [`scripts/pre-commit-hook`](../scripts/pre-commit-hook) before each commit.
 - **Static analysis:** optional `clang-tidy` via CMake option `USE_CLANG_TIDY` (see `cmake/CompilerSettings.cmake`).
 - **MPI:** OpenPFC is built and tested with **OpenMPI** in typical workflows; use the same MPI stack for HeFFTe and OpenPFC (see INSTALL.md).
 

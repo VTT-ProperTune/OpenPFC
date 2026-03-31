@@ -1,41 +1,53 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Staged-file clang-format check (matches CI style: .clang-format at repo root).
+# Install: git config core.hooksPath .githooks   (from repository root)
 
-# Pre-commit hook to check code formatting with clang-format
+set -euo pipefail
 
-set -e
+resolve_clang_format() {
+  local c
+  for c in clang-format-20 clang-format; do
+    if command -v "$c" >/dev/null 2>&1; then
+      printf '%s' "$c"
+      return 0
+    fi
+  done
+  return 1
+}
 
-# Get list of C++ files staged for commit
-files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|h|cc|cxx)$' || true)
-
-if [ -z "$files" ]; then
-    # No C++ files to check
-    exit 0
+if ! CF="$(resolve_clang_format)"; then
+  echo "clang-format not found. Install clang-format 20 (or symlink) to match CI." >&2
+  exit 1
 fi
 
-echo "🔍 Checking code formatting with clang-format..."
-
-# Check if clang-format is available
-if ! command -v clang-format &> /dev/null; then
-    echo "❌ clang-format not found!"
-    echo "Please install clang-format (version 17+) to check code formatting."
-    exit 1
+if ! git diff --cached --name-only --diff-filter=ACM | grep -qE '\.(cpp|hpp|h|cc|cxx)$'; then
+  exit 0
 fi
 
-# Check formatting
-if ! clang-format --dry-run --Werror $files 2>&1; then
-    echo "❌ Code formatting check failed!"
-    echo ""
-    echo "Files that need formatting:"
-    for file in $files; do
-        echo "  - $file"
-    done
-    echo ""
-    echo "To fix formatting issues, run:"
-    echo "  clang-format -i $files"
-    exit 1
+echo "Checking formatting with $CF ($($CF --version 2>&1 | head -n1))"
+
+failed=0
+while IFS= read -r f; do
+  [[ -z "$f" ]] && continue
+  [[ -f "$f" ]] || continue
+  case "$f" in
+    build/* | .cache/* | extern/* | third_party/* | third-party/* | docs/doxygen-awesome-css/*)
+      continue
+      ;;
+  esac
+  if ! "$CF" --dry-run --Werror "$f"; then
+    echo "  needs formatting: $f" >&2
+    failed=1
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|h|cc|cxx)$' || true)
+
+if [[ "$failed" -ne 0 ]]; then
+  echo "" >&2
+  echo "Run: $CF -i <files>" >&2
+  exit 1
 fi
 
-echo "✅ Code formatting check passed!"
-exit 0
+echo "clang-format check passed."

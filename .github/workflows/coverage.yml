@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 name: Coverage
@@ -98,8 +98,9 @@ jobs:
       - name: Generate coverage report
         working-directory: build
         run: |
+          # Match gcov to gcc-11 (default /usr/bin/gcov is often newer and breaks lcov)
           # Capture coverage data
-          lcov --directory . --capture --output-file coverage.info
+          lcov --directory . --capture --output-file coverage.info --gcov-tool gcov-11
           
           # Remove external dependencies and test files from coverage
           lcov --remove coverage.info \
