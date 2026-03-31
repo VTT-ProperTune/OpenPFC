@@ -24,9 +24,7 @@
 #include <array>
 #include <cstddef>
 
-namespace pfc {
-namespace field {
-namespace fd {
+namespace pfc::field::fd {
 
 /**
  * @brief 7-point Laplacian on interior indices (periodic ghost layout).
@@ -175,6 +173,4 @@ void laplacian_7point_interior_separated(const T *core,
   }
 }
 
-} // namespace fd
-} // namespace field
-} // namespace pfc
+} // namespace pfc::field::fd
