@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_all.hpp>
@@ -25,8 +25,10 @@ TEST_CASE("ParameterMetadata double validation", "[parameter_metadata][unit]") {
 
     auto error = meta.validate(-100.0);
     REQUIRE(error.has_value());
-    REQUIRE(error->find("below minimum") != std::string::npos);
-    REQUIRE(error->find("temperature") != std::string::npos);
+    if (error) {
+      REQUIRE(error->find("below minimum") != std::string::npos);
+      REQUIRE(error->find("temperature") != std::string::npos);
+    }
   }
 
   SECTION("Value above maximum") {
@@ -37,8 +39,10 @@ TEST_CASE("ParameterMetadata double validation", "[parameter_metadata][unit]") {
 
     auto error = meta.validate(15000.0);
     REQUIRE(error.has_value());
-    REQUIRE(error->find("exceeds maximum") != std::string::npos);
-    REQUIRE(error->find("temperature") != std::string::npos);
+    if (error) {
+      REQUIRE(error->find("exceeds maximum") != std::string::npos);
+      REQUIRE(error->find("temperature") != std::string::npos);
+    }
   }
 
   SECTION("Value exactly at boundary") {
@@ -98,8 +102,8 @@ TEST_CASE("ParameterMetadata format_info", "[parameter_metadata][unit]") {
 
   REQUIRE(info.find("temperature") != std::string::npos);
   REQUIRE(info.find("Effective temperature") != std::string::npos);
-  REQUIRE(info.find("K") != std::string::npos);
-  REQUIRE(info.find("0") != std::string::npos);
+  REQUIRE(info.find('K') != std::string::npos);
+  REQUIRE(info.find('0') != std::string::npos);
   REQUIRE(info.find("10000") != std::string::npos);
   REQUIRE(info.find("3300") != std::string::npos);
   REQUIRE(info.find("yes") != std::string::npos);
