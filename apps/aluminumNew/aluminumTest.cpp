@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "Aluminum.hpp"
@@ -95,8 +95,10 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
                                          1141.09};
     for (int i = 0; i < 5; ++i) {
       double norm2 = 0.0;
-      for (auto &x : psi) norm2 += x * x;
-      std::cout << "norm: " << norm2 << std::endl;
+      for (auto &x : psi) {
+        norm2 += x * x;
+      }
+      std::cout << "norm: " << norm2 << '\n';
       REQUIRE_THAT(norm2, WithinAbs(expected_norms[i], 0.1));
       aluminum.step(1.0);
     }
