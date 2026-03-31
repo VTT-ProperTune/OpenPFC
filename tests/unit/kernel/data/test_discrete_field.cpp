@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
@@ -37,7 +37,9 @@ TEST_CASE("DiscreteField1D") {
       return static_cast<int>(coords[0]);
     };
     field.apply(func);
-    for (int i = 0; i < Lx; i++) REQUIRE(field[i] == -3 + 2 * i);
+    for (int i = 0; i < Lx; i++) {
+      REQUIRE(field[i] == -3 + 2 * i);
+    }
   }
 }
 
@@ -139,10 +141,22 @@ TEST_CASE("pfc::interpolate() integration test",
       return std::sin(x) * std::cos(y) * std::exp(-z / 10.0);
     });
 
-    // Sample at various points
-    for (double x = 0.0; x < 15.0; x += 2.3) {
-      for (double y = 0.0; y < 15.0; y += 3.1) {
-        for (double z = 0.0; z < 15.0; z += 2.7) {
+    // Sample at various points (integer steps avoid float loop counters)
+    for (int ix = 0;; ++ix) {
+      const double x = static_cast<double>(ix) * 2.3;
+      if (!(x < 15.0)) {
+        break;
+      }
+      for (int iy = 0;; ++iy) {
+        const double y = static_cast<double>(iy) * 3.1;
+        if (!(y < 15.0)) {
+          break;
+        }
+        for (int iz = 0;; ++iz) {
+          const double z = static_cast<double>(iz) * 2.7;
+          if (!(z < 15.0)) {
+            break;
+          }
           double value = pfc::interpolate(field, {x, y, z});
 
           // Should be within reasonable bounds (function is bounded)
