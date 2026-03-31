@@ -25,19 +25,20 @@ inline std::string format_bytes(std::size_t bytes) {
   const double MB = KB * 1024.0;
   const double GB = MB * 1024.0;
   const double TB = GB * 1024.0;
+  const auto b = static_cast<double>(bytes);
 
   std::ostringstream oss;
   oss.precision(2);
   oss << std::fixed;
 
-  if (bytes >= TB) {
-    oss << (static_cast<double>(bytes) / TB) << " TB";
-  } else if (bytes >= GB) {
-    oss << (static_cast<double>(bytes) / GB) << " GB";
-  } else if (bytes >= MB) {
-    oss << (static_cast<double>(bytes) / MB) << " MB";
-  } else if (bytes >= KB) {
-    oss << (static_cast<double>(bytes) / KB) << " KB";
+  if (b >= TB) {
+    oss << (b / TB) << " TB";
+  } else if (b >= GB) {
+    oss << (b / GB) << " GB";
+  } else if (b >= MB) {
+    oss << (b / MB) << " MB";
+  } else if (b >= KB) {
+    oss << (b / KB) << " KB";
   } else {
     oss << bytes << " B";
   }
