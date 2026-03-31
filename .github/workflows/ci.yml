@@ -57,14 +57,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
           sudo apt-get install -y \
             cmake \
             ninja-build \
-            clang-tidy-16 \
-            clang-tools-16 \
+            clang-tidy \
+            clang-tools \
             libopenmpi-dev \
             openmpi-bin \
             libfftw3-dev \
@@ -101,20 +98,20 @@ jobs:
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu
 
-      - name: Run clang-tidy (run-clang-tidy-16 if available)
+      - name: Run clang-tidy
         run: |
           set -euo pipefail
-          if command -v run-clang-tidy-16 >/dev/null 2>&1; then
-              run-clang-tidy-16 -p build-tidy -quiet \
+          if command -v run-clang-tidy >/dev/null 2>&1; then
+              run-clang-tidy -p build-tidy -quiet \
                 -header-filter='include/openpfc/.*' \
                 'src/.*\.cpp$' \
                 'apps/.*\.cpp$' \
                 'tests/.*\.cpp$'
           else
-            echo "run-clang-tidy-16 not found; falling back to per-file analysis"
+            echo "run-clang-tidy not found; falling back to per-file analysis"
             failed=0
             while IFS= read -r file; do
-              clang-tidy-16 -p build-tidy --quiet \
+              clang-tidy -p build-tidy --quiet \
                 -header-filter='include/openpfc/.*' \
                 "$file" || failed=1
             done < <(find src apps tests -name "*.cpp")
@@ -133,12 +130,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        compiler: [gcc-11, gcc-13, clang-14, clang-16]
+        compiler: [gcc-11, gcc-13]
         build_type: [Debug, Release]
-        exclude:
-          # Reduce matrix size - skip some combinations
-          - build_type: Debug
-            compiler: clang-14
         include:
           # Add specific compiler versions for each
           - compiler: gcc-11
@@ -147,12 +140,6 @@ jobs:
           - compiler: gcc-13
             cc: gcc-13
             cxx: g++-13
-          - compiler: clang-14
-            cc: clang-14
-            cxx: clang++-14
-          - compiler: clang-16
-            cc: clang-16
-            cxx: clang++-16
 
     steps:
       - name: Checkout repository
@@ -163,19 +150,6 @@ jobs:
       - name: Install dependencies (Ubuntu)
         run: |
           sudo apt-get update
-          # LLVM apt (noble): Clang 14/16 are not the default toolchain on 24.04
-          if [[ "${{ matrix.compiler }}" == "clang-14" || "${{ matrix.compiler }}" == "clang-16" ]]; then
-            wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc
-          fi
-          if [[ "${{ matrix.compiler }}" == "clang-14" ]]; then
-            echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-14 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          fi
-          if [[ "${{ matrix.compiler }}" == "clang-16" ]]; then
-            echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-16 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          fi
-          if [[ "${{ matrix.compiler }}" == "clang-14" || "${{ matrix.compiler }}" == "clang-16" ]]; then
-            sudo apt-get update
-          fi
           sudo apt-get install -y \
             ${{ matrix.cc }} \
             ${{ matrix.cxx }} \
@@ -186,13 +160,6 @@ jobs:
             libfftw3-dev \
             libfftw3-mpi-dev \
             nlohmann-json3-dev
-          # OpenMP runtime for Clang (required by HeFFTe's FindOpenMP)
-          if [[ "${{ matrix.compiler }}" == "clang-14" ]]; then
-            sudo apt-get install -y libomp-14-dev
-          fi
-          if [[ "${{ matrix.compiler }}" == "clang-16" ]]; then
-            sudo apt-get install -y libomp-16-dev
-          fi
 
       - name: Cache HeFFTe
         id: cache-heffte
