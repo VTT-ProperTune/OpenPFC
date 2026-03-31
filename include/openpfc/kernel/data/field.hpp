@@ -65,7 +65,7 @@ template <typename T> struct Field {
   const World &m_world;
 
   Field(const World &world) : m_data(get_total_size(world)), m_world(world) {
-    assert(m_data.size() > 0);
+    assert(!m_data.empty());
   }
 
   Field(const Field &) = delete;
