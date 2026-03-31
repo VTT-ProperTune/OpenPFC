@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -26,7 +26,7 @@ TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
   auto send_halo =
       halo::create_send_halo<backend::CpuTag>(decomp, rank, direction, halo_width);
 
-  REQUIRE(send_halo.size() > 0);
+  REQUIRE(!send_halo.empty());
   REQUIRE(send_halo.is_sorted());
 
   // Verify indices are valid local indices (spot check)
@@ -56,7 +56,7 @@ TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
   auto recv_halo =
       halo::create_recv_halo<backend::CpuTag>(decomp, rank, direction, halo_width);
 
-  REQUIRE(recv_halo.size() > 0);
+  REQUIRE(!recv_halo.empty());
   REQUIRE(recv_halo.is_sorted());
 
   // Verify indices are valid (spot check)
@@ -104,14 +104,14 @@ TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
 
   // Should have neighbors in some directions (depends on rank position)
   // Rank 0 in 2×2×1 grid should have neighbors in +X and +Y directions
-  REQUIRE(patterns.size() > 0);
+  REQUIRE(!patterns.empty());
   REQUIRE(patterns.size() <= 6); // Max 6 face neighbors
 
   // Verify each pattern has send and recv halos
   for (const auto &[direction, halos] : patterns) {
     const auto &[send_halo, recv_halo] = halos;
     REQUIRE(send_halo.size() == recv_halo.size());
-    REQUIRE(send_halo.size() > 0);
+    REQUIRE(!send_halo.empty());
   }
 }
 
