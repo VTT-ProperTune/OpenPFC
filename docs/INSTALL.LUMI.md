@@ -9,8 +9,11 @@ This guide complements the generic instructions in [INSTALL.md](../INSTALL.md). 
 
 **Storage layout used here**
 
-- **Install prefixes** (small, long-lived): `/projappl/project_462001245/` — e.g. HeFFTe and OpenPFC installs.
-- **Sources and build trees** (large, temporary): `/scratch/project_462001245/$USER/` — tarballs, `build-*`, CMake `FetchContent` downloads.
+- **Install prefixes** (small, long-lived): `/projappl/project_462001245/juaho/` for this user’s binaries (e.g. `openpfc/`), and shared project installs under `/projappl/project_462001245/` where applicable (e.g. HeFFTe).
+- **CMake build trees** (fast I/O): `/flash/project_462001245/juaho/build/` — prefer this over building inside the git clone on LUMI.
+- **Large temporary / job output**: `/scratch/project_462001245/$USER/` — job working dirs, logs, heavy I/O.
+
+The **`lumi-release`** preset in [CMakePresets.json](../CMakePresets.json) uses **`/flash/.../build/openpfc-lumi-release`** and **`CMAKE_INSTALL_PREFIX=/projappl/project_462001245/juaho/openpfc`**.
 
 Adjust paths if your project ID or layout differs.
 
@@ -80,6 +83,7 @@ cmake -S "$SCRATCH/src/heffte-${VER}" -B "$SCRATCH/build/heffte-${VER}-rocm" \
   -DHeffte_ENABLE_FFTW=ON \
   -DHeffte_ENABLE_ROCM=ON \
   -DHeffte_ENABLE_CUDA=OFF \
+  -DHeffte_ENABLE_GPU_AWARE_MPI=ON \
   -DCMAKE_HIP_ARCHITECTURES=gfx90a \
   -DCMAKE_HIP_FLAGS="-I${MPI_INC}"
 
@@ -94,6 +98,8 @@ cmake --install "$SCRATCH/build/heffte-${VER}-rocm"
 ```
 
 You may see CMake dev warnings about **GPU_TARGETS** / **amdgpu-arch** on login nodes; **`CMAKE_HIP_ARCHITECTURES=gfx90a`** still produced **gfx90a** code in verified builds.
+
+**GPU-aware MPI (HeFFTe):** For multi-GPU scaling, HeFFTe must use **device-buffer MPI** (no host staging between ranks). In HeFFTe 2.4.x this is controlled by **`Heffte_ENABLE_GPU_AWARE_MPI`** (defaults to **ON** when a GPU backend is enabled, unless **`Heffte_DISABLE_GPU_AWARE_MPI`** was set). Pass **`-DHeffte_ENABLE_GPU_AWARE_MPI=ON`** explicitly so a CMake summary or reinstall clearly shows GPU-aware MPI. At runtime, **Cray MPICH** still requires **`export MPICH_GPU_SUPPORT_ENABLED=1`** (see §5).
 
 **Optional:** add **`-DHeffte_ENABLE_TESTING=OFF`** for a faster build.
 
@@ -121,6 +127,7 @@ cmake -S "$SRC" -B "$SCRATCH/build/openpfc-hip" \
   -DCMAKE_CXX_COMPILER=CC \
   -DCMAKE_INSTALL_PREFIX=/projappl/project_462001245/openpfc/0.1.4-hip \
   -DOpenPFC_ENABLE_HIP=ON \
+  -DOpenPFC_MPI_HIP_AWARE=ON \
   -DCMAKE_HIP_ARCHITECTURES=gfx90a \
   -DCMAKE_HIP_FLAGS="-I${MPI_INC}" \
   -DOpenPFC_ENABLE_CODE_COVERAGE=OFF \
@@ -131,7 +138,9 @@ cmake --build "$SCRATCH/build/openpfc-hip" -j8
 cmake --install "$SCRATCH/build/openpfc-hip"
 ```
 
-**Check the CMake summary:** HIP enabled, **HeFFTe ROCm backend available** (no warning about rebuilding HeFFTe without ROCm).
+**Check the CMake summary:** HIP enabled, **`OpenPFC_MPI_HIP_AWARE=ON`**, **HeFFTe ROCm backend available** (no warning about rebuilding HeFFTe without ROCm). The install includes **`verify_gpu_aware_mpi`** (see §5.1).
+
+**Note:** **`OpenPFC_MPI_HIP_AWARE`** defaults to **ON** when HIP is found. Use **`-DOpenPFC_MPI_HIP_AWARE=OFF`** only for debugging; multi-GPU halo exchange and meaningful scalability tests expect GPU-aware MPI.
 
 **FetchContent:** first configure needs network access (e.g. **nlohmann/json**, **toml++**, **Catch2** if tests are on). Run CMake from a **login node** if compute nodes have no outbound HTTP.
 
@@ -147,13 +156,36 @@ Loading **`lumi-CrayPath`** after all other modules (as above) follows [LUMI’s
 
 ## 5. Running GPU jobs (Slurm)
 
-Use a GPU partition (e.g. **`small-g`**). For **GPU-aware MPI** (device pointers), set:
+Use a GPU partition (e.g. **`small-g`**). For **GPU-aware MPI** (device pointers in MPI and in HeFFTe), set:
 
 ```bash
 export MPICH_GPU_SUPPORT_ENABLED=1
 ```
 
-Minimal batch fragment (adjust **account** and **partition** to your project):
+Without this, **Cray MPICH** may not accept device pointers; HeFFTe’s GPU-aware paths and OpenPFC’s HIP exchange code would fall back or fail unpredictably.
+
+**Startup banner:** When **`tungsten_hip`** is built with **`OpenPFC_MPI_HIP_AWARE=ON`**, rank 0 prints that GPU-aware MPI (HIP) is enabled at compile time, and warns if **`MPICH_GPU_SUPPORT_ENABLED`** is not **`1`**.
+
+### 5.1 Verifying GPU-aware MPI
+
+After installing OpenPFC (HIP), run the bundled check **before** large scalability jobs:
+
+```bash
+export MPICH_GPU_SUPPORT_ENABLED=1
+export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+srun -n2 --gpus-per-node=2 --cpu-bind=cores \
+  /projappl/project_462001245/openpfc/0.1.4-hip/bin/verify_gpu_aware_mpi
+```
+
+Success prints **`[verify_gpu_aware_mpi] OK`**. Failure usually means **`MPICH_GPU_SUPPORT_ENABLED`** is unset, the job has no GPU binding, or the stack does not support device-buffer MPI.
+
+A ready-made Slurm helper is **[lumi_slurm/verify_gpu_aware_mpi.sh](lumi_slurm/verify_gpu_aware_mpi.sh)** (adjust **`VERIFY_GPU_MPI_BIN`** or the default path to match your install).
+
+### 5.2 Maximum-throughput layout (one rank per GCD)
+
+For **MI250X** nodes (8 GCDs per node), LUMI recommends **one MPI rank per GCD**, **`ntasks-per-node=8`**, **`gpus-per-node=8`**, CPU binding, and **`ROCR_VISIBLE_DEVICES=${SLURM_LOCALID}`** via a wrapper. A full example is **[lumi_slurm/tungsten_gpu.sbatch](lumi_slurm/tungsten_gpu.sbatch)** — set **`TUNGSTEN_HIP_BIN`** to your **`tungsten_hip`** if needed.
+
+Minimal single-GPU smoke fragment (adjust **account** and **partition**):
 
 ```bash
 #!/bin/bash
@@ -172,7 +204,14 @@ export MPICH_GPU_SUPPORT_ENABLED=1
 srun /projappl/project_462001245/openpfc/0.1.4-hip/bin/tungsten_hip /path/to/input.json
 ```
 
-The **`tungsten_hip`** binary is the HIP build of the tungsten application. A short smoke run on **small-g** completed two time steps successfully with the stack above (job output showed MPI init, validation, and stepping).
+The **`tungsten_hip`** binary is the HIP build of the tungsten application.
+
+### HeFFTe + Cray MPICH notes
+
+- Build HeFFTe with **`-DHeffte_ENABLE_GPU_AWARE_MPI=ON`** and OpenPFC with **`-DOpenPFC_MPI_HIP_AWARE=ON`** (defaults for both in typical HIP builds).
+- Always **`export MPICH_GPU_SUPPORT_ENABLED=1`** in the job environment.
+- Keep **`lumi-CrayPath`** last in the module order and prepend **`CRAY_LD_LIBRARY_PATH`** to **`LD_LIBRARY_PATH`** so the module ROCm is used (see §4).
+- If **`verify_gpu_aware_mpi`** fails but single-rank **`tungsten_hip`** runs, check **GPU binding** (`--gpus-per-node`, **`select_gpu`** / **`ROCR_VISIBLE_DEVICES`**) and that **`srun`** uses at least **two ranks** on GPUs.
 
 ## 6. Runtime FFT / TOML `backend` field
 
