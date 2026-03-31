@@ -46,8 +46,12 @@ class BinaryWriter : public ResultsWriter {
 private:
   MPI_Datatype m_filetype;
 
-  static MPI_Datatype get_type(RealField) { return MPI_DOUBLE; }
-  static MPI_Datatype get_type(ComplexField) { return MPI_DOUBLE_COMPLEX; }
+  static MPI_Datatype get_type([[maybe_unused]] const RealField &field) {
+    return MPI_DOUBLE;
+  }
+  static MPI_Datatype get_type([[maybe_unused]] const ComplexField &field) {
+    return MPI_DOUBLE_COMPLEX;
+  }
 
 public:
   void set_domain(const std::array<int, 3> &arr_global,
