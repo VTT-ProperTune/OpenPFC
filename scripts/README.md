@@ -68,7 +68,9 @@ git commit --no-verify -m "emergency fix"
 
 ### run-clang-tidy.sh
 
-**Purpose:** Run `clang-tidy` on `src/`, `apps/`, and `tests/` `.cpp` files the same way as GitHub Actions (uses `.clang-tidy` and `-header-filter='include/openpfc/.*'`).
+**Purpose:** Run `clang-tidy` on OpenPFC `.cpp` files **the same way as CI** (`.clang-tidy`, `-header-filter='include/openpfc/.*'`, and the same file list). GitHub Actions calls `bash scripts/run-clang-tidy.sh --build-dir=build-tidy` after configuring; **do not duplicate** the `find`/`clang-tidy` loop in workflow YAML—extend this script instead.
+
+**Excluded sources (CPU-only analysis):** a small set of GPU-only tungsten tests and entrypoints that use `#error` or HIP/CUDA headers when CUDA/HIP is off. The list lives in `list_cpp_for_tidy()` inside the script; keep it in sync if you add similar TUs.
 
 **Requirements:** `clang-tidy`, Ninja, CMake, project dependencies (MPI, HeFFTe, etc.). On **tohtori**, load `gcc/11.2.0` and `openmpi/4.1.1` before configuring if you are not using the pinned toolchain paths only.
 
@@ -81,12 +83,14 @@ module load openmpi/4.1.1
 ./scripts/run-clang-tidy.sh               # run analysis (can take a long time)
 ```
 
-The **tohtori** toolchain file [`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../cmake/toolchains/tohtori-gcc11-openmpi.cmake) sets **`CMAKE_EXPORT_COMPILE_COMMANDS`** so `compile_commands.json` is generated for this script and for `clangd`/IDEs.
+`--configure` passes **`-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`** (and the **tohtori** toolchain file [`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../cmake/toolchains/tohtori-gcc11-openmpi.cmake) also forces it) so `compile_commands.json` is generated for this script and for `clangd`/IDEs.
 
 **Options:**
 
 - `--configure` / `-c` — configure `build-tidy` (or `OPENPFC_TIDY_BUILD_DIR`) with the tohtori toolchain and OpenPFC test/example/app targets, then exit.
 - `--build-dir=NAME` — build directory under the repo root (default: `build-tidy`).
+- `--fail-fast` — stop after the first `.cpp` on which `clang-tidy` fails (useful to fix issues one file at a time: run, fix, commit, repeat).
+- `--file=PATH` — run `clang-tidy` on a single `.cpp` relative to the repo root (e.g. after a fix, before a full sweep).
 
 ## Build Scripts
 

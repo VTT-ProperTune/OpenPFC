@@ -22,6 +22,8 @@ cd "$ROOT"
 BUILD_DIR="${OPENPFC_TIDY_BUILD_DIR:-build-tidy}"
 TOOLCHAIN="${CMAKE_TOOLCHAIN_FILE:-${ROOT}/cmake/toolchains/tohtori-gcc11-openmpi.cmake}"
 CONFIGURE=0
+FAIL_FAST=0
+FILE_FILTER=""
 
 usage() {
   cat <<EOF
@@ -32,11 +34,17 @@ Run clang-tidy on all *.cpp under src/, apps/, and tests/ (same as CI).
 Options:
   -c, --configure   Run CMake configure in BUILD_DIR (Ninja + tohtori toolchain by default)
       --build-dir=D Set build directory (default: build-tidy or \$OPENPFC_TIDY_BUILD_DIR)
+      --fail-fast     Stop after the first .cpp file on which clang-tidy exits non-zero
+                      (for iterative fix → commit → re-run workflows)
+      --file=PATH     Run only one .cpp relative to repo root (e.g. src/openpfc/foo.cpp);
+                      must exist. Combines with --fail-fast for quick checks after a fix.
   -h, --help        Show this help
 
 Examples:
   $(basename "$0") --configure
   $(basename "$0") --build-dir=build-tidy
+  $(basename "$0") --fail-fast
+  $(basename "$0") --file=src/openpfc/kernel/profiling/session.cpp
 EOF
 }
 
@@ -45,6 +53,10 @@ while [[ $# -gt 0 ]]; do
     -c | --configure) CONFIGURE=1 ;;
     --build-dir=*)
       BUILD_DIR="${1#*=}"
+      ;;
+    --fail-fast) FAIL_FAST=1 ;;
+    --file=*)
+      FILE_FILTER="${1#*=}"
       ;;
     -h | --help)
       usage
@@ -65,6 +77,7 @@ if [[ "$CONFIGURE" -eq 1 ]]; then
   echo "Configuring ${BUILD_ABS} (toolchain: ${TOOLCHAIN})"
   cmake -S "$ROOT" -B "$BUILD_ABS" -G Ninja \
     -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
     -DOpenPFC_BUILD_TESTS=ON \
     -DOpenPFC_BUILD_EXAMPLES=ON \
@@ -86,14 +99,55 @@ if ! command -v clang-tidy >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ -n "$FILE_FILTER" ]]; then
+  if [[ "$FILE_FILTER" != *.cpp ]]; then
+    echo "--file must end with .cpp: $FILE_FILTER" >&2
+    exit 2
+  fi
+  if [[ ! -f "${ROOT}/${FILE_FILTER}" ]]; then
+    echo "No such file: ${ROOT}/${FILE_FILTER}" >&2
+    exit 2
+  fi
+fi
+
 echo "Using compile_commands: ${BUILD_ABS}/compile_commands.json"
+if [[ "$FAIL_FAST" -eq 1 ]]; then
+  echo "Fail-fast: will exit on first file with clang-tidy errors."
+fi
+
+# Source set matched to GitHub Actions CI "Run clang-tidy" (CPU-only: skip TUs that
+# use #error or HIP/CUDA headers when GPU toolchains are not configured).
+list_cpp_for_tidy() {
+  cd "$ROOT" && find src apps tests -name '*.cpp' \
+    ! -name 'test_tungsten_cuda_vtk.cpp' \
+    ! -name 'test_tungsten_hip_vtk.cpp' \
+    ! -name 'test_tungsten_cpu_vs_cuda.cpp' \
+    ! -name 'test_tungsten_cpu_vs_hip.cpp' \
+    ! -path 'apps/tungsten/src/cuda/tungsten.cpp' \
+    ! -path 'apps/tungsten/src/hip/tungsten.cpp' \
+    ! -path 'apps/tungsten/src/verify_gpu_aware_mpi.cpp' \
+    -print0
+}
+
+list_cpp_for_tidy_stream() {
+  if [[ -n "$FILE_FILTER" ]]; then
+    printf '%s\0' "$FILE_FILTER"
+  else
+    list_cpp_for_tidy
+  fi
+}
+
 failed=0
 while IFS= read -r -d '' file; do
   if ! clang-tidy -p "$BUILD_ABS" --quiet \
     -header-filter='include/openpfc/.*' \
     "$file"; then
     failed=1
+    echo "$(basename "$0"): clang-tidy failed for: $file" >&2
+    if [[ "$FAIL_FAST" -eq 1 ]]; then
+      exit 1
+    fi
   fi
-done < <(cd "$ROOT" && find src apps tests -name '*.cpp' -print0)
+done < <(cd "$ROOT" && list_cpp_for_tidy_stream)
 
 exit "$failed"
