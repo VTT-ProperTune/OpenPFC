@@ -9,6 +9,9 @@
  * Same communication pattern as `HaloExchanger`, but received ghost values are
  * written to **contiguous per-face buffers** instead of boundary slabs of the
  * core. **Send** still uses MPI derived types into the core `nx×ny×nz` array.
+ * Receives use the **pack path** (same ordering as `create_recv_halo` indices)
+ * so face buffer layout matches `laplacian_7point_interior_separated`; a prior
+ * `irecv_dense` + `isend_face` fast path could reorder elements vs that layout.
  *
  * Face buffer order matches `create_face_types_6` / `halo_face_layout.hpp`:
  * 0:+X, 1:-X, 2:+Y, 3:-Y, 4:+Z, 5:-Z.
@@ -107,36 +110,14 @@ public:
     m_pending_core = core_ptr;
     validate_face_sizes(face_buffers);
 
-    const size_t n = m_directions.size();
-    if (n == 6) {
-      size_t req_count = 0;
-      void *send_buf = static_cast<void *>(core_ptr);
-      for (size_t i = 0; i < n; ++i) {
-        int slot = m_dir_slot[i];
-        int tag = m_base_tag + static_cast<int>(i);
-        T *recv_ptr = face_buffers[static_cast<size_t>(slot)].data();
-        size_t cnt = m_face_counts.counts[static_cast<size_t>(slot)];
-        exchange::irecv_dense(recv_ptr, static_cast<int>(cnt), m_neighbors[i],
-                              m_comm, &m_requests[req_count], tag);
-        req_count++;
-      }
-      for (size_t i = 0; i < n; ++i) {
-        int tag = m_base_tag + static_cast<int>(i);
-        exchange::isend_face(send_buf, m_face_types[i].send_type.get(),
-                             m_neighbors[i], m_comm, &m_requests[req_count], tag);
-        req_count++;
-      }
-      m_request_count = static_cast<int>(req_count);
-    } else {
-      start_halo_exchange_pack(core_ptr, core_size, face_buffers);
-    }
+    start_halo_exchange_pack(core_ptr, core_size, face_buffers);
   }
 
   void finish_halo_exchange(std::array<std::vector<T>, 6> &face_buffers) {
     const double _pfc_t0 = MPI_Wtime();
     exchange::wait_all(m_requests.data(), m_request_count);
     const size_t n = m_directions.size();
-    if (n != 6 && m_pending_core != nullptr) {
+    if (m_pending_core != nullptr) {
       for (size_t i = 0; i < n; ++i) {
         int slot = m_dir_slot[i];
         const auto &recv_sv = m_recv_values[i];
