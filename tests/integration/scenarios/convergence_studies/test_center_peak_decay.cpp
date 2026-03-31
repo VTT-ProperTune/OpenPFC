@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
@@ -28,7 +28,9 @@ TEST_CASE("Center peak amplitude decays under diffusion",
   }
 
   const double a0 = model.m_psi[idx];
-  for (int i = 0; i < 200; ++i) model.step(0.0);
+  for (int i = 0; i < 200; ++i) {
+    model.step(0.0);
+  }
   const double a1 = model.m_psi[idx];
 
   REQUIRE(a1 <= a0 + 1e-12);
