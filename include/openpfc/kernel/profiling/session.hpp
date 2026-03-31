@@ -3,8 +3,8 @@
 
 /**
  * @file session.hpp
- * @brief Per-step profiling frames, nested timed scopes, MPI export (JSON / CSV /
- * HDF5)
+ * @brief Profiling frames (optional per-frame scalars), nested timed scopes, MPI
+ * export (JSON and/or HDF5)
  */
 
 #ifndef PFC_KERNEL_PROFILING_SESSION_HPP
@@ -20,28 +20,64 @@
 #include <mpi.h>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace pfc::profiling {
+
+namespace detail {
+/// Unpack one row from the packed layout used by `MPI_Gatherv` / JSON export.
+inline void unpack_gathered_profiling_row(std::size_t row, int stride, int nmeta,
+                                          int kpaths,
+                                          const std::vector<double> &flat,
+                                          std::vector<double> &metrics,
+                                          std::vector<double> &inc,
+                                          std::vector<double> &exc) {
+  const std::size_t b =
+      static_cast<std::size_t>(row) * static_cast<std::size_t>(stride);
+  metrics.resize(static_cast<std::size_t>(nmeta));
+  for (int m = 0; m < nmeta; ++m)
+    metrics[static_cast<std::size_t>(m)] = flat[b + static_cast<std::size_t>(m)];
+  inc.resize(static_cast<std::size_t>(kpaths));
+  exc.resize(static_cast<std::size_t>(kpaths));
+  for (int i = 0; i < kpaths; ++i) {
+    const std::size_t base =
+        b + static_cast<std::size_t>(nmeta) + 2u * static_cast<std::size_t>(i);
+    inc[static_cast<std::size_t>(i)] = flat[base];
+    exc[static_cast<std::size_t>(i)] = flat[base + 1u];
+  }
+}
+} // namespace detail
 
 struct ProfilingPrintOptions;
 
 struct ProfilingExportOptions {
   bool write_json = true;
-  bool write_csv = false;
   bool write_hdf5 = false;
   std::string json_path;
-  std::string csv_path;
   std::string hdf5_path;
 };
 
 /**
- * @brief Column-oriented frames; catalog defines dense per-path inclusive/exclusive
- * times.
+ * @brief Column-oriented frames; region catalog defines dense per-path
+ * inclusive/exclusive times. Per-frame scalar metrics are configurable by name.
  */
 class ProfilingSession {
 public:
-  explicit ProfilingSession(ProfilingMetricCatalog catalog);
+  /**
+   * @brief Default frame metric names for the OpenPFC `App` (see
+   *        `openpfc_frame_metrics.hpp`). Same as
+   * `openpfc_default_frame_metric_names()`.
+   */
+  static std::vector<std::string> openpfc_default_frame_metrics();
+
+  /**
+   * @param catalog Region paths for inclusive/exclusive timers (tree export).
+   * @param frame_metric_names Ordered names for one double per frame, e.g. latency
+   *        or custom counters. Empty = no per-frame scalars (only region timers).
+   */
+  ProfilingSession(ProfilingMetricCatalog catalog,
+                   std::vector<std::string> frame_metric_names = {});
 
   ProfilingSession(const ProfilingSession &) = delete;
   ProfilingSession &operator=(const ProfilingSession &) = delete;
@@ -50,12 +86,26 @@ public:
 
   const ProfilingMetricCatalog &catalog() const noexcept { return catalog_; }
 
+  const std::vector<std::string> &frame_metric_names() const noexcept {
+    return frame_metric_names_;
+  }
+
   /// Ensure @p path (and parent prefixes) exist in the catalog; may resize stored
   /// frames. All MPI ranks must register the same paths in the same order for valid
   /// gather.
   void ensure_path(std::string_view path) noexcept;
 
-  void begin_step_frame(int step_index, int mpi_rank) noexcept;
+  /// Start a frame: clears region scratch and per-frame metric scratch.
+  void begin_frame() noexcept;
+
+  /// Set a per-frame scalar (ignored if @p name is not in frame_metric_names).
+  void set_frame_metric(std::string_view name, double value) noexcept;
+
+  /// Set @p name to elapsed seconds since @ref begin_frame (steady clock).
+  void set_frame_metric_elapsed_since_begin(std::string_view name) noexcept;
+
+  /// Commit region timers and append this frame (scopes must be balanced).
+  void end_frame() noexcept;
 
   /// Manual additive time (inclusive == exclusive); ignored if path not in catalog.
   void add_recorded_time(std::string_view path, double seconds) noexcept;
@@ -67,35 +117,25 @@ public:
   void push_timed_scope(std::string_view path) noexcept;
   void pop_timed_scope() noexcept;
 
-  /**
-   * @brief Set per-frame wall_step metadata (e.g. MPI barrier duration). Call after
-   *        begin_step_frame and before end_step_frame(rss, …). If omitted, wall_step
-   * is steady_clock elapsed since begin_step_frame.
-   */
-  void set_frame_wall_step(double seconds) noexcept;
-
-  /**
-   * @brief Commit the frame: pop scopes, store memory columns, append row. Region
-   * times come only from scopes, add_recorded_time, and assign_recorded_time.
-   */
-  void end_step_frame(std::uint64_t rss_bytes, std::uint64_t model_heap_bytes,
-                      std::uint64_t fft_heap_bytes) noexcept;
-
-  /// Convenience: fixed wall_step and fft region overwrite (tests / legacy callers).
-  void end_step_frame(double wall_step_seconds, double fft_seconds,
-                      std::uint64_t rss_bytes, std::uint64_t model_heap_bytes,
-                      std::uint64_t fft_heap_bytes) noexcept;
-
   /// Anchor for optional "wall clock since …" line in print_profiling_timer
   /// (TimerOutputs-style).
   void reset_report_clock() noexcept;
 
-  std::size_t num_frames() const noexcept { return step_index_.size(); }
+  std::size_t num_frames() const noexcept;
 
   void finalize_and_export(MPI_Comm comm,
                            const ProfilingExportOptions &options) const;
 
+  /// Gather packed frames on rank @c 0 (same layout as finalize). On non-root,
+  /// `row_counts`, `all_flat`, and `row_offset` are cleared.
+  void mpi_gather_packed_frames(MPI_Comm comm, std::vector<int> &row_counts,
+                                std::vector<double> &all_flat,
+                                std::vector<std::size_t> &row_offset) const;
+
   friend void print_profiling_timer(std::ostream &os,
+                                    const ProfilingSession &session,
+                                    const ProfilingPrintOptions &opts);
+  friend void print_profiling_timer(std::ostream &os, MPI_Comm comm,
                                     const ProfilingSession &session,
                                     const ProfilingPrintOptions &opts);
 
@@ -106,27 +146,21 @@ private:
     double children_inclusive_sum{0};
   };
 
-  static constexpr int kMetaCols = 6;
   int stride_doubles() const noexcept {
-    return kMetaCols + static_cast<int>(2 * catalog_.size());
+    return static_cast<int>(frame_metric_names_.size() + 2u * catalog_.size());
   }
 
   void pack_frames_flat(std::vector<double> &out) const;
 
-  void commit_frame(double wall_step_seconds, bool inject_fft_region,
-                    double fft_seconds, std::uint64_t rss_bytes,
-                    std::uint64_t model_heap_bytes,
-                    std::uint64_t fft_heap_bytes) noexcept;
-
   void migrate_to_catalog(ProfilingMetricCatalog &&new_cat) noexcept;
 
   ProfilingMetricCatalog catalog_;
-  std::vector<int> step_index_;
-  std::vector<int> mpi_rank_;
-  std::vector<double> wall_step_;
-  std::vector<double> rss_bytes_;
-  std::vector<double> model_heap_bytes_;
-  std::vector<double> fft_heap_bytes_;
+  std::vector<std::string> frame_metric_names_;
+  std::unordered_map<std::string, std::size_t> frame_metric_ix_;
+  /// Row-major: frame * n_meta + metric
+  std::vector<double> frame_metric_values_;
+  std::vector<double> frame_metric_scratch_;
+
   /// Row-major: frame * K + path_index
   std::vector<double> timer_inclusive_;
   std::vector<double> timer_exclusive_;
@@ -135,11 +169,8 @@ private:
   std::vector<double> frame_scratch_exc_;
   std::vector<ScopeFrame> scope_stack_;
 
-  int pending_step_ = -1;
-  int pending_rank_ = -1;
+  bool frame_open_{false};
   std::chrono::steady_clock::time_point frame_wall_t0_{};
-  bool wall_override_set_{false};
-  double wall_override_value_{0.0};
   bool report_clock_valid_{false};
   std::chrono::steady_clock::time_point report_clock_origin_{};
 };
