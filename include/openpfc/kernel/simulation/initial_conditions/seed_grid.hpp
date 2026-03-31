@@ -70,7 +70,8 @@ public:
   SeedGrid() = default;
 
   SeedGrid(int Ny, int Nz, double X0, double radius)
-      : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius) {}
+      : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius), m_rho(0.0),
+        m_amplitude(0.0) {}
 
   void apply(Model &m, double time) override {
     (void)time;
