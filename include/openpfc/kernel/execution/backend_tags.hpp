@@ -26,8 +26,7 @@
 
 #pragma once
 
-namespace pfc {
-namespace backend {
+namespace pfc::backend {
 
 /**
  * @brief CPU backend tag
@@ -37,5 +36,4 @@ namespace backend {
  */
 struct CpuTag {};
 
-} // namespace backend
-} // namespace pfc
+} // namespace pfc::backend
