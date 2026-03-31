@@ -127,6 +127,8 @@ list_cpp_for_tidy() {
     ! -name 'test_tungsten_hip_vtk.cpp' \
     ! -name 'test_tungsten_cpu_vs_cuda.cpp' \
     ! -name 'test_tungsten_cpu_vs_hip.cpp' \
+    ! -name 'test_diffop.cpp' \
+    ! -name 'test_sparsevector_cuda.cpp' \
     ! -path 'apps/tungsten/src/cuda/tungsten.cpp' \
     ! -path 'apps/tungsten/src/hip/tungsten.cpp' \
     ! -path 'apps/tungsten/src/verify_gpu_aware_mpi.cpp' \
