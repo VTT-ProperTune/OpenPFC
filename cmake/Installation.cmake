@@ -25,6 +25,13 @@ install(TARGETS openpfc
     RUNTIME DESTINATION bin   # executable files (not needed now but future proof)
 )
 
+# FetchContent nlohmann_json is linked to openpfc; CMake requires it in the same
+# export set when installing OpenPFCTargets (INTERFACE target).
+if(TARGET nlohmann_json)
+  install(TARGETS nlohmann_json EXPORT OpenPFCTargets
+    INCLUDES DESTINATION include)
+endif()
+
 # Install GPU kernel library if CUDA is enabled
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     install(TARGETS openpfc_gpu_kernels
