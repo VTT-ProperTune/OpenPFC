@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_approx.hpp>
@@ -16,13 +16,15 @@ using namespace pfc::test;
 // Minimal FieldModifier that sets a constant value
 class ConstantIC : public FieldModifier {
 public:
-  explicit ConstantIC(std::string field_name, double value) : value_(value) {
+  explicit ConstantIC(const std::string &field_name, double value) : value_(value) {
     set_field_name(field_name);
   }
 
   void apply(Model &m, double /*t*/) override {
     auto &field = m.get_real_field(get_field_name());
-    for (std::size_t i = 0; i < field.size(); ++i) field[i] = value_;
+    for (double &elem : field) {
+      elem = value_;
+    }
   }
 
 private:
@@ -46,7 +48,7 @@ TEST_CASE("FieldModifier integration: constant IC",
 
   // Check the field was set
   auto &psi = model.get_field();
-  REQUIRE(psi.size() > 0);
+  REQUIRE_FALSE(psi.empty());
   for (const auto &v : psi) {
     REQUIRE(v == Catch::Approx(0.25).margin(1e-12));
   }

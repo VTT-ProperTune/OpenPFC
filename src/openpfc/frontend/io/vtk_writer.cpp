@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <iomanip>
+#include <ios>
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
@@ -76,7 +77,8 @@ void VTKWriter::write_vti_data(std::ofstream &file, const RealField &data) const
              sizeof(appended_bytes));
 
   const size_t payload_bytes = data.size() * sizeof(double);
-  file.write(reinterpret_cast<const char *>(data.data()), payload_bytes);
+  file.write(reinterpret_cast<const char *>(data.data()),
+             static_cast<std::streamsize>(payload_bytes));
 }
 
 void VTKWriter::write_pvti_file(int increment) const {
@@ -85,7 +87,9 @@ void VTKWriter::write_pvti_file(int increment) const {
   int current_size = 1;
   MPI_Comm_rank(m_comm, &current_rank);
   MPI_Comm_size(m_comm, &current_size);
-  if (current_rank != 0) return;
+  if (current_rank != 0) {
+    return;
+  }
 
   // Format filename with increment number
   std::string pvti_filename = utils::format_with_number(m_filename, increment);
@@ -144,7 +148,7 @@ void VTKWriter::write_pvti_file(int increment) const {
 MPI_Status VTKWriter::write(int increment, const RealField &data) {
   MPI_Status status;
   MPI_Status_set_cancelled(&status, 0);
-  MPI_Status_set_elements(&status, MPI_DOUBLE, data.size());
+  MPI_Status_set_elements(&status, MPI_DOUBLE, static_cast<int>(data.size()));
 
   std::string filename = generate_filename(increment, m_rank);
   std::ofstream file(filename, std::ios::binary);
