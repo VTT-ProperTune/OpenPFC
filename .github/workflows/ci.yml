@@ -101,24 +101,15 @@ jobs:
       - name: Run clang-tidy
         run: |
           set -euo pipefail
-          if command -v run-clang-tidy >/dev/null 2>&1; then
-              # -source-filter: only TU paths from our trees (exclude FetchContent e.g. Catch2 in build-tidy/_deps)
-              run-clang-tidy -p build-tidy -quiet \
-                -source-filter='/(src|apps|tests)/.*\.cpp$' \
-                -header-filter='include/openpfc/.*' \
-                'src/.*\.cpp$' \
-                'apps/.*\.cpp$' \
-                'tests/.*\.cpp$'
-          else
-            echo "run-clang-tidy not found; falling back to per-file analysis"
-            failed=0
-            while IFS= read -r file; do
-              clang-tidy -p build-tidy --quiet \
-                -header-filter='include/openpfc/.*' \
-                "$file" || failed=1
-            done < <(find src apps tests -name "*.cpp")
-            exit $failed
-          fi
+          # Per-file only: Ubuntu's run-clang-tidy is an older script without -source-filter and
+          # can otherwise traverse FetchContent TUs under build-tidy/_deps (e.g. Catch2).
+          failed=0
+          while IFS= read -r file; do
+            clang-tidy -p build-tidy --quiet \
+              -header-filter='include/openpfc/.*' \
+              "$file" || failed=1
+          done < <(find src apps tests -name "*.cpp")
+          exit $failed
 
   # ============================================================================
   # CMake Build Matrix
