@@ -1,15 +1,14 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <openpfc/kernel/fft/fft.hpp>
 
-namespace pfc {
-namespace fft {
-namespace layout {
-
 #include <array>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
+
+namespace pfc::fft::layout {
 
 // Helper function to print std::array
 template <typename T, std::size_t N>
@@ -37,14 +36,14 @@ auto get_complex_indices(const Decomposition &decomposition, int r2c_direction) 
   auto [N1, N2, N3] = get_size(get_global_world(decomposition));
   if (r2c_direction == 0) {
     return heffte::box3d<int>({0, 0, 0}, {N1 / 2, N2 - 1, N3 - 1});
-  } else if (r2c_direction == 1) {
-    return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 / 2, N3 - 1});
-  } else if (r2c_direction == 2) {
-    return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 - 1, N3 / 2});
-  } else {
-    throw std::logic_error("Invalid r2c_direction: " +
-                           std::to_string(r2c_direction));
   }
+  if (r2c_direction == 1) {
+    return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 / 2, N3 - 1});
+  }
+  if (r2c_direction == 2) {
+    return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 - 1, N3 / 2});
+  }
+  throw std::logic_error("Invalid r2c_direction: " + std::to_string(r2c_direction));
 }
 
 const FFTLayout create(const Decomposition &decomposition, int r2c_direction) {
@@ -56,7 +55,9 @@ const FFTLayout create(const Decomposition &decomposition, int r2c_direction) {
   return FFTLayout{decomposition, r2c_direction, real_boxes, complex_boxes};
 }
 
-} // namespace layout
+} // namespace pfc::fft::layout
+
+namespace pfc::fft {
 
 auto get_comm() { return MPI_COMM_WORLD; }
 
@@ -81,7 +82,7 @@ FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options) {
   auto outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
   auto comm = get_comm();
-  return FFT(fft_r2c(inbox, outbox, r2c_dir, comm, options));
+  return {fft_r2c(inbox, outbox, r2c_dir, comm, options)};
 }
 
 FFT create(const Decomposition &decomposition, int rank_id) {
@@ -156,5 +157,4 @@ FFT create(const Decomposition &decomposition) {
   return create(decomposition, rank_id);
 }
 
-} // namespace fft
-} // namespace pfc
+} // namespace pfc::fft
