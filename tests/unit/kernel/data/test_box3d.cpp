@@ -1,7 +1,8 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
+#include <sstream>
 
 #include <openpfc/kernel/data/box3d.hpp>
 
@@ -44,4 +45,16 @@ TEST_CASE("Box3D throws on invalid construction", "[box3d]") {
   REQUIRE_THROWS_AS(Box3D({5, 0, 0}, {4, 0, 0}), std::invalid_argument);
   REQUIRE_THROWS_AS(Box3D({0, 6, 0}, {0, 5, 0}), std::invalid_argument);
   REQUIRE_THROWS_AS(Box3D({0, 0, 7}, {0, 0, 6}), std::invalid_argument);
+}
+
+TEST_CASE("Box3D stream output", "[box3d]") {
+  Box3D box({1, 2, 3}, {10, 20, 30});
+  std::ostringstream oss;
+  oss << box;
+  const std::string s = oss.str();
+
+  REQUIRE(s.find("Box3D(lower=") != std::string::npos);
+  REQUIRE(s.find("upper=") != std::string::npos);
+  REQUIRE(s.find("{1, 2, 3}") != std::string::npos);
+  REQUIRE(s.find("{10, 20, 30}") != std::string::npos);
 }
