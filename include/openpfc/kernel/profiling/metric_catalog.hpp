@@ -37,7 +37,9 @@ public:
     ordered.insert(std::string{kProfilingRegionCommunication});
     ordered.insert(std::string{kProfilingRegionFft});
     ordered.insert(std::string{kProfilingRegionGradient});
-    for (const std::string &p : extra_paths) insert_path_with_parents(ordered, p);
+    for (const std::string &p : extra_paths) {
+      insert_path_with_parents(ordered, p);
+    }
     return ProfilingMetricCatalog{std::move(ordered)};
   }
 
@@ -46,7 +48,9 @@ public:
   static ProfilingMetricCatalog
   from_paths_only(const std::vector<std::string> &paths) {
     std::set<std::string> ordered;
-    for (const std::string &p : paths) insert_path_with_parents(ordered, p);
+    for (const std::string &p : paths) {
+      insert_path_with_parents(ordered, p);
+    }
     return ProfilingMetricCatalog{std::move(ordered)};
   }
 
@@ -68,7 +72,9 @@ public:
   bool try_index(std::string_view path, std::size_t &out_index) const noexcept {
     std::string key(path);
     auto it = index_.find(key);
-    if (it == index_.end()) return false;
+    if (it == index_.end()) {
+      return false;
+    }
     out_index = it->second;
     return true;
   }
@@ -76,24 +82,31 @@ public:
 private:
   explicit ProfilingMetricCatalog(std::set<std::string> &&ordered) {
     paths_.assign(ordered.begin(), ordered.end());
-    for (std::size_t i = 0; i < paths_.size(); ++i) index_[paths_[i]] = i;
+    for (std::size_t i = 0; i < paths_.size(); ++i) {
+      index_[paths_[i]] = i;
+    }
   }
 
   static void insert_path_with_parents(std::set<std::string> &out,
                                        const std::string &path) {
     std::string p = normalize_path(path);
-    if (p.empty()) return;
+    if (p.empty()) {
+      return;
+    }
     std::string accum;
     std::size_t start = 0;
     while (start <= p.size()) {
       std::size_t end = p.find('/', start);
-      if (end == std::string::npos) end = p.size();
+      if (end == std::string::npos) {
+        end = p.size();
+      }
       if (end > start) {
         std::string seg = p.substr(start, end - start);
-        if (accum.empty())
+        if (accum.empty()) {
           accum = std::move(seg);
-        else
+        } else {
           accum += "/" + seg;
+        }
         out.insert(accum);
       }
       start = end + 1;
@@ -102,8 +115,12 @@ private:
 
   static std::string normalize_path(const std::string &path) {
     std::string p = path;
-    while (!p.empty() && p.front() == '/') p.erase(p.begin());
-    while (!p.empty() && p.back() == '/') p.pop_back();
+    while (!p.empty() && p.front() == '/') {
+      p.erase(p.begin());
+    }
+    while (!p.empty() && p.back() == '/') {
+      p.pop_back();
+    }
     return p;
   }
 
