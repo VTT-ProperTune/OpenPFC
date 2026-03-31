@@ -39,8 +39,7 @@
 
 #include <openpfc/kernel/data/world_types.hpp>
 
-namespace pfc {
-namespace csys {
+namespace pfc::csys {
 
 using pfc::types::Bool3;
 using pfc::types::Int3;
@@ -314,5 +313,4 @@ inline const Int3 to_index(const CartesianCS &cs, const Real3 &xyz) noexcept {
   return idx;
 }
 
-} // namespace csys
-} // namespace pfc
+} // namespace pfc::csys
