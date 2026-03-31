@@ -1,17 +1,28 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <cstddef>
 #include <sstream>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <openpfc/kernel/data/csys.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 
 using namespace Catch::Matchers;
 using namespace pfc;
 using namespace pfc::types;
+
+TEST_CASE("World - explicit constructor rejects invalid bounds", "[world][unit]") {
+  REQUIRE_THROWS_AS((World(Int3{5, 0, 0}, Int3{4, 0, 0}, pfc::csys::CartesianCS{})),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS((World(Int3{0, 6, 0}, Int3{0, 5, 0}, pfc::csys::CartesianCS{})),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS((World(Int3{0, 0, 7}, Int3{0, 0, 6}, pfc::csys::CartesianCS{})),
+                    std::invalid_argument);
+}
 
 TEST_CASE("World - construction and accessors", "[world][unit]") {
   SECTION("Construct World with valid dimensions, origin, and spacing") {
@@ -92,7 +103,7 @@ TEST_CASE("World - total size calculation", "[world][unit]") {
   SECTION("Correct total size calculation") {
     Int3 dimensions = {10, 20, 30};
     World world = world::create(dimensions);
-    REQUIRE(get_total_size(world) == 10 * 20 * 30);
+    REQUIRE(get_total_size(world) == (std::size_t{10} * 20 * 30));
   }
 }
 
