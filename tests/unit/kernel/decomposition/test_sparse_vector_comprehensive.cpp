@@ -67,7 +67,7 @@ TEST_CASE("SparseVector - Gather from large array",
   // Spot check: verify first, middle, and last elements
   REQUIRE(data[0] == Approx(0.0).margin(1e-10));
   REQUIRE(data[sparse_size / 2] ==
-          Approx(static_cast<double>(sparse_size / 2) * 50.0).margin(1e-10));
+          Approx((static_cast<double>(sparse_size) / 2.0) * 50.0).margin(1e-10));
   REQUIRE(data[sparse_size - 1] == Approx((sparse_size - 1) * 50.0).margin(1e-10));
 }
 
