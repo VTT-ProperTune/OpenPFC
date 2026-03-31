@@ -49,8 +49,7 @@
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 
-namespace pfc {
-namespace exchange {
+namespace pfc::exchange {
 
 template <typename T> constexpr bool dependent_false_exchange = false;
 
@@ -88,6 +87,8 @@ template <> inline MPI_Datatype get_mpi_type<size_t>() {
 inline void sendrecv_face(void *buf, MPI_Datatype send_type, MPI_Datatype recv_type,
                           int send_to_rank, int recv_from_rank, MPI_Comm comm,
                           int tag = 0) {
+  // NOLINTNEXTLINE(readability-suspicious-call-argument) —
+  // MPI_Sendrecv(dest,sendtag,source,recvtag)
   MPI_Sendrecv(buf, 1, send_type, send_to_rank, tag, buf, 1, recv_type,
                recv_from_rank, tag, comm, MPI_STATUS_IGNORE);
 }
@@ -426,5 +427,4 @@ inline void wait_all(std::vector<MPI_Request> &requests) {
   wait_all(requests.data(), static_cast<int>(requests.size()));
 }
 
-} // namespace exchange
-} // namespace pfc
+} // namespace pfc::exchange
