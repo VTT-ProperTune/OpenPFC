@@ -54,8 +54,6 @@
 
 namespace pfc {
 
-void step(class Simulator &s, Model &m);
-
 /**
  * @brief The Simulator class is responsible for running the simulation of the
  * model.
