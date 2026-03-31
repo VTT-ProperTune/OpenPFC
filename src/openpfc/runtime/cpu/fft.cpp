@@ -46,7 +46,7 @@ auto get_complex_indices(const Decomposition &decomposition, int r2c_direction) 
   throw std::logic_error("Invalid r2c_direction: " + std::to_string(r2c_direction));
 }
 
-const FFTLayout create(const Decomposition &decomposition, int r2c_direction) {
+FFTLayout create(const Decomposition &decomposition, int r2c_direction) {
   auto real_indices = get_real_indices(decomposition);
   auto complex_indices = get_complex_indices(decomposition, r2c_direction);
   auto grid = get_grid(decomposition);
@@ -81,7 +81,7 @@ FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options) {
   auto inbox = get_real_box(fft_layout, rank_id);
   auto outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
-  auto comm = get_comm();
+  auto *comm = get_comm();
   return {fft_r2c(inbox, outbox, r2c_dir, comm, options)};
 }
 
@@ -98,7 +98,7 @@ std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_
   auto inbox = get_real_box(fft_layout, rank_id);
   auto outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
-  auto comm = get_comm();
+  auto *comm = get_comm();
 
   switch (backend) {
   case Backend::FFTW: {
@@ -139,7 +139,7 @@ std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition,
 }
 
 FFT create(const Decomposition &decomposition) {
-  auto comm = get_comm();
+  auto *comm = get_comm();
   auto mpi_comm_size = get_mpi_size(comm);
   auto rank_id = get_mpi_rank(comm);
   auto decomposition_size = get_num_domains(decomposition);
