@@ -243,15 +243,17 @@ void print_profiling_timer(std::ostream &os, const ProfilingSession &session,
 
   for (std::size_t f = 0; f < n; ++f) {
     if (wall_ix != static_cast<std::size_t>(-1) && nmeta > 0) {
-      denom += session.frame_metric_values_[f * nmeta + wall_ix];
+      denom += session.frame_metric_values_[(f * nmeta) + wall_ix];
     }
     for (std::size_t i = 0; i < K; ++i) {
-      const std::size_t idx = f * K + i;
+      const std::size_t idx = (f * K) + i;
       const double inc = session.timer_inclusive_[idx];
       const double exc = session.timer_exclusive_[idx];
       total_inc[i] += inc;
       total_exc[i] += exc;
-      if (inc > kEps) ++ncalls[i];
+      if (inc > kEps) {
+        ++ncalls[i];
+      }
     }
   }
 
@@ -290,7 +292,7 @@ void print_profiling_timer(std::ostream &os, MPI_Comm comm,
   const int kpaths = static_cast<int>(session.catalog().size());
   const int nmeta = static_cast<int>(session.frame_metric_names().size());
   const int stride = static_cast<int>(session.frame_metric_names().size() +
-                                      2U * session.catalog().size());
+                                      (2U * session.catalog().size()));
   const int mpi_size = static_cast<int>(row_counts.size());
 
   if (kpaths == 0 || stride <= 0) {
@@ -298,7 +300,9 @@ void print_profiling_timer(std::ostream &os, MPI_Comm comm,
     return;
   }
 
-  std::vector<double> metrics_buf, inc_buf, exc_buf;
+  std::vector<double> metrics_buf;
+  std::vector<double> inc_buf;
+  std::vector<double> exc_buf;
 
   std::vector<std::vector<double>> sum_inc(static_cast<std::size_t>(mpi_size));
   std::vector<std::vector<double>> sum_exc(static_cast<std::size_t>(mpi_size));
@@ -382,7 +386,7 @@ void print_profiling_timer(std::ostream &os, MPI_Comm comm,
 
 void print_profiling_timer(std::ostream &os, const ProfilingPrintOptions &opts) {
   ProfilingSession *s = current_session();
-  if (s && s->num_frames() > 0) {
+  if (s != nullptr && s->num_frames() > 0) {
     print_profiling_timer(os, *s, opts);
   }
 }
