@@ -110,6 +110,7 @@ jobs:
             '*/extern/*' \
             '*/build/*' \
             '*/_deps/*' \
+            --ignore-errors unused \
             --output-file coverage.info
           
           # Generate HTML report
