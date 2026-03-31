@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
@@ -91,7 +91,7 @@ TEST_CASE("k_component handles Nyquist folding correctly", "[fft][kspace]") {
 
   SECTION("Nyquist frequency (i = size/2)") {
     double k_nyquist = k_component(size / 2, size, freq_scale);
-    REQUIRE(k_nyquist == (size / 2) * freq_scale);
+    REQUIRE(k_nyquist == static_cast<double>(size / 2) * freq_scale);
   }
 
   SECTION("High frequencies fold to negative (i > size/2)") {
@@ -156,7 +156,9 @@ TEST_CASE("k_laplacian_value computes -k² correctly", "[fft][kspace]") {
   }
 
   SECTION("Matches manual calculation") {
-    double ki = 1.5, kj = 2.5, kk = 3.5;
+    double ki = 1.5;
+    double kj = 2.5;
+    double kk = 3.5;
     double kLap_helper = k_laplacian_value(ki, kj, kk);
     double kLap_manual = -(ki * ki + kj * kj + kk * kk);
     REQUIRE_THAT(kLap_helper, WithinRel(kLap_manual, 1e-15));
@@ -187,7 +189,9 @@ TEST_CASE("k_squared_value computes k² correctly", "[fft][kspace]") {
   }
 
   SECTION("Relationship to k_laplacian_value") {
-    double ki = 1.5, kj = 2.5, kk = 3.5;
+    double ki = 1.5;
+    double kj = 2.5;
+    double kk = 3.5;
     double k2 = k_squared_value(ki, kj, kk);
     double kLap = k_laplacian_value(ki, kj, kk);
     REQUIRE_THAT(kLap, WithinRel(-k2, 1e-15));
@@ -274,4 +278,5 @@ TEST_CASE("Helper functions are noexcept", "[fft][kspace][static]") {
   // k_frequency_scaling is noexcept for all world types
   auto world = world::uniform(64, 0.1);
   STATIC_REQUIRE(noexcept(k_frequency_scaling(world)));
+  static_cast<void>(world);
 }
