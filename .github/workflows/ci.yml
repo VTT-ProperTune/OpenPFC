@@ -103,7 +103,8 @@ jobs:
           set -euo pipefail
           # Per-file only: Ubuntu's run-clang-tidy is an older script without -source-filter and
           # can otherwise traverse FetchContent TUs under build-tidy/_deps (e.g. Catch2).
-          # Skip GPU-only tungsten tests: they use #error when CUDA/HIP is off (CI is CPU-only).
+          # Skip GPU-only sources: they use #error or HIP/CUDA headers when GPU toolchains
+          # are off (CI is CPU-only).
           failed=0
           while IFS= read -r file; do
             clang-tidy -p build-tidy --quiet \
@@ -113,7 +114,9 @@ jobs:
             ! -name 'test_tungsten_cuda_vtk.cpp' \
             ! -name 'test_tungsten_hip_vtk.cpp' \
             ! -name 'test_tungsten_cpu_vs_cuda.cpp' \
-            ! -name 'test_tungsten_cpu_vs_hip.cpp')
+            ! -name 'test_tungsten_cpu_vs_hip.cpp' \
+            ! -path 'apps/tungsten/src/cuda/tungsten.cpp' \
+            ! -path 'apps/tungsten/src/hip/tungsten.cpp')
           exit $failed
 
   # ============================================================================
