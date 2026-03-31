@@ -63,6 +63,11 @@ option(OpenPFC_RUN_MPI_SUITES "Enable explicit MPI multi-rank test suites" OFF)
 option(OpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS
        "Always register 3- and 4-rank MPI CTest targets regardless of configure host CPU count"
        OFF)
+set(OpenPFC_MPI_TEST_MAX_WORLD_SIZE
+    "0"
+    CACHE STRING
+    "If > 0, omit MPI CTest targets that need more ranks than this (e.g. 2 on runners where OpenMPI rejects mpirun -n 3+). 0 = no cap from this option."
+)
 find_package(MPI REQUIRED)
 if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
   cmake_host_system_information(RESULT _openpfc_mpi_configure_cores
@@ -94,6 +99,24 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
           "skipping mpi_4procs_grid_multiple. "
           "Use -DOpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS=ON to register it anyway."
       )
+    endif()
+  endif()
+
+  # Optional hard cap (CI): logical CPU count can exceed OpenMPI slot limits on the same host
+  if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE GREATER 0)
+    if(OpenPFC_MPI_TEST_MAX_WORLD_SIZE LESS 3)
+      set(_openpfc_mpi_register_3rank FALSE)
+      set(_openpfc_mpi_register_4rank FALSE)
+      message(
+        STATUS
+          "MPI CTest: OpenPFC_MPI_TEST_MAX_WORLD_SIZE=${OpenPFC_MPI_TEST_MAX_WORLD_SIZE} — "
+          "skipping mpi_3procs_ring and mpi_4procs_grid_multiple")
+    elseif(OpenPFC_MPI_TEST_MAX_WORLD_SIZE LESS 4)
+      set(_openpfc_mpi_register_4rank FALSE)
+      message(
+        STATUS
+          "MPI CTest: OpenPFC_MPI_TEST_MAX_WORLD_SIZE=${OpenPFC_MPI_TEST_MAX_WORLD_SIZE} — "
+          "skipping mpi_4procs_grid_multiple")
     endif()
   endif()
 

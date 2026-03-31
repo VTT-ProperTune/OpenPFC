@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-name: CI
+name: Unit Tests
 
 on:
   push:
@@ -123,7 +123,8 @@ jobs:
             -DOpenPFC_BUILD_EXAMPLES=ON \
             -DOpenPFC_BUILD_APPS=ON \
             -DOpenPFC_BUILD_DOCUMENTATION=OFF \
-            -DOpenPFC_RUN_MPI_SUITES=ON
+            -DOpenPFC_RUN_MPI_SUITES=ON \
+            -DOpenPFC_MPI_TEST_MAX_WORLD_SIZE=2
 
       - name: Build OpenPFC
         run: cmake --build build -j2

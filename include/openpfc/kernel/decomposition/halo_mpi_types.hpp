@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -8,7 +8,9 @@
  * @details
  * Builds MPI_Type_create_subarray for each of the 6 face regions (send and
  * recv) so MPI can read/write directly from the field buffer. Row-major
- * [nx, ny, nz]; x varies fastest. RAII wrapper frees types in destructor.
+ * [nx, ny, nz]; x varies fastest (linear index z*nx*ny + y*nx + x). For
+ * MPI_ORDER_C, dimension 0 is slowest (z), then y, then x. RAII wrapper frees
+ * types in destructor.
  *
  * @see docs/halo_exchange.md
  */
@@ -21,8 +23,7 @@
 
 #include <openpfc/kernel/data/world_types.hpp>
 
-namespace pfc {
-namespace halo {
+namespace pfc::halo {
 
 using Int3 = pfc::types::Int3;
 
@@ -70,9 +71,11 @@ inline MPI_Type_guard create_face_type(int nx, int ny, int nz, int start_x,
                                        int size_y, int size_z,
                                        MPI_Datatype element_type) {
   const int ndims = 3;
-  std::array<int, 3> sizes = {nx, ny, nz};
-  std::array<int, 3> subsizes = {size_x, size_y, size_z};
-  std::array<int, 3> starts = {start_x, start_y, start_z};
+  // Field layout: x fastest, then y, then z (see finite_difference.hpp). MPI_ORDER_C
+  // lists dimensions slowest → fastest, i.e. z, y, x.
+  std::array<int, 3> sizes = {nz, ny, nx};
+  std::array<int, 3> subsizes = {size_z, size_y, size_x};
+  std::array<int, 3> starts = {start_z, start_y, start_x};
 
   MPI_Datatype dt;
   int err = MPI_Type_create_subarray(ndims, sizes.data(), subsizes.data(),
@@ -107,36 +110,30 @@ inline std::array<FaceTypes, 6> create_face_types_6(int nx, int ny, int nz,
                                                     MPI_Datatype element_type) {
   std::array<FaceTypes, 6> out = {};
   // Order: +X, -X, +Y, -Y, +Z, -Z
-  const struct {
-    int dx, dy, dz;
+  struct FaceDirSpec {
     int send_sx, send_sy, send_sz, send_ox, send_oy, send_oz;
     int recv_sx, recv_sy, recv_sz, recv_ox, recv_oy, recv_oz;
-  } dirs[6] = {
-      {1, 0, 0, halo_width, ny, nz, nx - halo_width, 0, 0, halo_width, ny, nz, 0, 0,
-       0}, // +X
-      {-1, 0, 0, halo_width, ny, nz, 0, 0, 0, halo_width, ny, nz, nx - halo_width, 0,
-       0}, // -X
-      {0, 1, 0, nx, halo_width, nz, 0, ny - halo_width, 0, nx, halo_width, nz, 0, 0,
-       0}, // +Y
-      {0, -1, 0, nx, halo_width, nz, 0, 0, 0, nx, halo_width, nz, 0, ny - halo_width,
-       0}, // -Y
-      {0, 0, 1, nx, ny, halo_width, 0, 0, nz - halo_width, nx, ny, halo_width, 0, 0,
-       0}, // +Z
-      {0, 0, -1, nx, ny, halo_width, 0, 0, 0, nx, ny, halo_width, 0, 0,
-       nz - halo_width}, // -Z
   };
+  const std::array<FaceDirSpec, 6> dirs = {{
+      {halo_width, ny, nz, nx - halo_width, 0, 0, halo_width, ny, nz, 0, 0, 0}, // +X
+      {halo_width, ny, nz, 0, 0, 0, halo_width, ny, nz, nx - halo_width, 0, 0}, // -X
+      {nx, halo_width, nz, 0, ny - halo_width, 0, nx, halo_width, nz, 0, 0, 0}, // +Y
+      {nx, halo_width, nz, 0, 0, 0, nx, halo_width, nz, 0, ny - halo_width, 0}, // -Y
+      {nx, ny, halo_width, 0, 0, nz - halo_width, nx, ny, halo_width, 0, 0, 0}, // +Z
+      {nx, ny, halo_width, 0, 0, 0, nx, ny, halo_width, 0, 0, nz - halo_width}, // -Z
+  }};
 
   for (int d = 0; d < 6; ++d) {
-    const auto &q = dirs[d];
-    out[d].send_type =
+    const auto di = static_cast<size_t>(d);
+    const auto &q = dirs[di];
+    out[di].send_type =
         create_face_type(nx, ny, nz, q.send_ox, q.send_oy, q.send_oz, q.send_sx,
                          q.send_sy, q.send_sz, element_type);
-    out[d].recv_type =
+    out[di].recv_type =
         create_face_type(nx, ny, nz, q.recv_ox, q.recv_oy, q.recv_oz, q.recv_sx,
                          q.recv_sy, q.recv_sz, element_type);
   }
   return out;
 }
 
-} // namespace halo
-} // namespace pfc
+} // namespace pfc::halo
