@@ -1,5 +1,9 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# bugprone-chained-comparison: Catch2 REQUIRE/CHECK use a decomposer that looks
+# like a chained comparison; clang-tidy still reports it in our .cpp (not fixable
+# via -header-filter, which only limits diagnostics to OpenPFC headers).
 
 Checks: >
   -*,
@@ -13,7 +17,8 @@ Checks: >
   -modernize-use-nodiscard,
   -readability-function-cognitive-complexity,
   -readability-magic-numbers,
-  -bugprone-easily-swappable-parameters
+  -bugprone-easily-swappable-parameters,
+  -bugprone-chained-comparison
 
 WarningsAsErrors: clang-analyzer-*,bugprone-*,modernize-*
 
