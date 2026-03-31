@@ -37,6 +37,7 @@
 #ifndef PFC_MPI_ENVIRONMENT_HPP
 #define PFC_MPI_ENVIRONMENT_HPP
 
+#include <array>
 #include <mpi.h>
 #include <string>
 
@@ -51,27 +52,27 @@ public:
   inline bool finalized();
 };
 
-inline environment::environment() { MPI_Init(NULL, NULL); }
+inline environment::environment() { MPI_Init(nullptr, nullptr); }
 
 inline environment::~environment() { MPI_Finalize(); }
 
 inline std::string environment::processor_name() {
-  char name[MPI_MAX_PROCESSOR_NAME];
-  int resultlen;
-  MPI_Get_processor_name(name, &resultlen);
-  return std::string(name, resultlen);
+  std::array<char, MPI_MAX_PROCESSOR_NAME> name{};
+  int resultlen = 0;
+  MPI_Get_processor_name(name.data(), &resultlen);
+  return {name.data(), static_cast<std::size_t>(resultlen)};
 }
 
 inline bool environment::initialized() {
-  int flag;
+  int flag = 0;
   MPI_Initialized(&flag);
-  return (flag != 0);
+  return {flag != 0};
 }
 
 inline bool environment::finalized() {
-  int flag;
+  int flag = 0;
   MPI_Finalized(&flag);
-  return (flag != 0);
+  return {flag != 0};
 }
 
 } // namespace pfc::mpi
