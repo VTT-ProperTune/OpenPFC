@@ -34,8 +34,12 @@ std::vector<std::string> split_path_segments(const std::string &path) {
   std::size_t start = 0;
   while (start <= path.size()) {
     std::size_t end = path.find('/', start);
-    if (end == std::string::npos) end = path.size();
-    if (end > start) out.push_back(path.substr(start, end - start));
+    if (end == std::string::npos) {
+      end = path.size();
+    }
+    if (end > start) {
+      out.push_back(path.substr(start, end - start));
+    }
     start = end + 1;
   }
   return out;
@@ -44,16 +48,22 @@ std::vector<std::string> split_path_segments(const std::string &path) {
 void merge_region_json(nlohmann::json &root, const std::string &path, double inc,
                        double exc) {
   const auto segs = split_path_segments(path);
-  if (segs.empty()) return;
+  if (segs.empty()) {
+    return;
+  }
   nlohmann::json *cur = &root;
   for (std::size_t i = 0; i < segs.size(); ++i) {
     nlohmann::json &slot = (*cur)[segs[i]];
     if (i + 1 == segs.size()) {
-      if (!slot.is_object()) slot = nlohmann::json::object();
+      if (!slot.is_object()) {
+        slot = nlohmann::json::object();
+      }
       slot["inclusive"] = inc;
       slot["exclusive"] = exc;
     } else {
-      if (!slot.is_object()) slot = nlohmann::json::object();
+      if (!slot.is_object()) {
+        slot = nlohmann::json::object();
+      }
       cur = &slot;
     }
   }
@@ -63,7 +73,9 @@ void merge_region_json(nlohmann::json &root, const std::string &path, double inc
 hid_t open_or_create_group(hid_t parent, const char *name) {
   if (H5Lexists(parent, name, H5P_DEFAULT) > 0) {
     hid_t g = H5Gopen2(parent, name, H5P_DEFAULT);
-    if (g >= 0) return g;
+    if (g >= 0) {
+      return g;
+    }
   }
   return H5Gcreate2(parent, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 }
@@ -76,7 +88,9 @@ hid_t ensure_group_chain(hid_t prof_root, const std::string &path,
   for (const auto &seg : segs) {
     hid_t next = open_or_create_group(cur, seg.c_str());
     if (next < 0) {
-      for (auto it = opened.rbegin(); it != opened.rend(); ++it) H5Gclose(*it);
+      for (auto it = opened.rbegin(); it != opened.rend(); ++it) {
+        H5Gclose(*it);
+      }
       opened.clear();
       return -1;
     }
@@ -103,8 +117,9 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
                              const std::vector<std::string> &path_names,
                              const std::vector<double> &all_flat) {
   hid_t file = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-  if (file < 0)
+  if (file < 0) {
     throw std::runtime_error("ProfilingSession: H5Fcreate failed for " + path);
+  }
 
   hid_t root = H5Gcreate2(file, "openpfc", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (root < 0) {
@@ -156,9 +171,10 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
           "ProfilingSession: H5Dcreate2 frame_metric_names failed");
     }
     std::vector<const char *> name_ptrs(static_cast<std::size_t>(nmeta));
-    for (int i = 0; i < nmeta; ++i)
+    for (int i = 0; i < nmeta; ++i) {
       name_ptrs[static_cast<std::size_t>(i)] =
           frame_metric_names[static_cast<std::size_t>(i)].c_str();
+    }
     H5Dwrite(ds_names, vltype, H5S_ALL, H5S_ALL, H5P_DEFAULT, name_ptrs.data());
     H5Dclose(ds_names);
     H5Sclose(space_nm);
@@ -178,9 +194,10 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
       throw std::runtime_error("ProfilingSession: H5Dcreate2 region_paths failed");
     }
     std::vector<const char *> path_ptrs(static_cast<std::size_t>(kpaths));
-    for (int i = 0; i < kpaths; ++i)
+    for (int i = 0; i < kpaths; ++i) {
       path_ptrs[static_cast<std::size_t>(i)] =
           path_names[static_cast<std::size_t>(i)].c_str();
+    }
     H5Dwrite(ds_rp, vltype, H5S_ALL, H5S_ALL, H5P_DEFAULT, path_ptrs.data());
     H5Dclose(ds_rp);
     H5Sclose(space_kp);
@@ -197,7 +214,9 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
     throw std::runtime_error("ProfilingSession: H5Gcreate2 ranks failed");
   }
 
-  std::vector<double> metrics_buf, inc_buf, exc_buf;
+  std::vector<double> metrics_buf;
+  std::vector<double> inc_buf;
+  std::vector<double> exc_buf;
 
   for (int mpi_r = 0; mpi_r < size; ++mpi_r) {
     const int nf = row_counts[static_cast<std::size_t>(mpi_r)];
@@ -298,8 +317,9 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
         H5Dwrite(ds_e, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
                  col_exc.data());
         H5Dclose(ds_e);
-        for (auto it = grp_chain.rbegin(); it != grp_chain.rend(); ++it)
+        for (auto it = grp_chain.rbegin(); it != grp_chain.rend(); ++it) {
           H5Gclose(*it);
+        }
       }
       H5Sclose(space);
     }
@@ -318,7 +338,9 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
 
 void record_time(std::string_view path, double seconds) noexcept {
   ProfilingSession *s = current_session();
-  if (s) s->add_recorded_time(path, seconds);
+  if (s != nullptr) {
+    s->add_recorded_time(path, seconds);
+  }
 }
 
 std::vector<std::string> ProfilingSession::openpfc_default_frame_metrics() {
@@ -332,15 +354,20 @@ ProfilingSession::ProfilingSession(ProfilingMetricCatalog catalog,
   frame_scratch_inc_.assign(catalog_.size(), 0.0);
   frame_scratch_exc_.assign(catalog_.size(), 0.0);
   frame_metric_scratch_.assign(frame_metric_names_.size(), 0.0);
-  for (std::size_t i = 0; i < frame_metric_names_.size(); ++i)
+  for (std::size_t i = 0; i < frame_metric_names_.size(); ++i) {
     frame_metric_ix_[frame_metric_names_[i]] = i;
+  }
 }
 
 std::size_t ProfilingSession::num_frames() const noexcept {
   const std::size_t K = catalog_.size();
   const std::size_t nmeta = frame_metric_names_.size();
-  if (nmeta > 0) return frame_metric_values_.size() / nmeta;
-  if (K > 0) return timer_inclusive_.size() / K;
+  if (nmeta > 0) {
+    return frame_metric_values_.size() / nmeta;
+  }
+  if (K > 0) {
+    return timer_inclusive_.size() / K;
+  }
   return 0;
 }
 
@@ -355,31 +382,48 @@ void ProfilingSession::begin_frame() noexcept {
 
 void ProfilingSession::set_frame_metric(std::string_view name,
                                         double value) noexcept {
-  if (!frame_open_) return;
-  if (!std::isfinite(value)) return;
+  if (!frame_open_) {
+    return;
+  }
+  if (!std::isfinite(value)) {
+    return;
+  }
   auto it = frame_metric_ix_.find(std::string(name));
-  if (it == frame_metric_ix_.end()) return;
+  if (it == frame_metric_ix_.end()) {
+    return;
+  }
   frame_metric_scratch_[it->second] = value;
 }
 
 void ProfilingSession::set_frame_metric_elapsed_since_begin(
     std::string_view name) noexcept {
-  if (!frame_open_) return;
+  if (!frame_open_) {
+    return;
+  }
   auto it = frame_metric_ix_.find(std::string(name));
-  if (it == frame_metric_ix_.end()) return;
+  if (it == frame_metric_ix_.end()) {
+    return;
+  }
   const auto t1 = std::chrono::steady_clock::now();
   double sec = std::chrono::duration<double>(t1 - frame_wall_t0_).count();
-  if (!std::isfinite(sec) || sec < 0.0) sec = 0.0;
+  if (!std::isfinite(sec) || sec < 0.0) {
+    sec = 0.0;
+  }
   frame_metric_scratch_[it->second] = sec;
 }
 
 void ProfilingSession::end_frame() noexcept {
-  if (!frame_open_) return;
-  while (!scope_stack_.empty()) pop_timed_scope();
+  if (!frame_open_) {
+    return;
+  }
+  while (!scope_stack_.empty()) {
+    pop_timed_scope();
+  }
 
   const std::size_t nmeta = frame_metric_names_.size();
-  for (std::size_t m = 0; m < nmeta; ++m)
+  for (std::size_t m = 0; m < nmeta; ++m) {
     frame_metric_values_.push_back(frame_metric_scratch_[m]);
+  }
 
   const std::size_t K = catalog_.size();
   for (std::size_t i = 0; i < K; ++i) {
@@ -403,18 +447,23 @@ void ProfilingSession::migrate_to_catalog(
         break;
       }
     }
-    if (same) return;
+    if (same) {
+      return;
+    }
   }
 
   std::unordered_map<std::string, std::size_t> old_ix;
   old_ix.reserve(op.size());
-  for (std::size_t i = 0; i < op.size(); ++i) old_ix[op[i]] = i;
+  for (std::size_t i = 0; i < op.size(); ++i) {
+    old_ix[op[i]] = i;
+  }
 
   const std::size_t n = num_frames();
   const std::size_t Ko = op.size();
   const std::size_t Kn = np.size();
 
-  std::vector<double> ni, ne;
+  std::vector<double> ni;
+  std::vector<double> ne;
   ni.assign(n * Kn, 0.0);
   ne.assign(n * Kn, 0.0);
   for (std::size_t f = 0; f < n; ++f) {
@@ -422,9 +471,9 @@ void ProfilingSession::migrate_to_catalog(
       auto it = old_ix.find(np[j]);
       if (it != old_ix.end()) {
         const std::size_t oi = it->second;
-        if (Ko > 0 && f * Ko + oi < timer_inclusive_.size()) {
-          ni[f * Kn + j] = timer_inclusive_[f * Ko + oi];
-          ne[f * Kn + j] = timer_exclusive_[f * Ko + oi];
+        if (Ko > 0 && ((f * Ko) + oi) < timer_inclusive_.size()) {
+          ni[(f * Kn) + j] = timer_inclusive_[(f * Ko) + oi];
+          ne[(f * Kn) + j] = timer_exclusive_[(f * Ko) + oi];
         }
       }
     }
@@ -433,7 +482,8 @@ void ProfilingSession::migrate_to_catalog(
   timer_exclusive_ = std::move(ne);
   catalog_ = std::move(new_cat);
 
-  std::vector<double> new_sinc(Kn, 0.0), new_sexc(Kn, 0.0);
+  std::vector<double> new_sinc(Kn, 0.0);
+  std::vector<double> new_sexc(Kn, 0.0);
   for (std::size_t j = 0; j < Kn; ++j) {
     auto it = old_ix.find(catalog_.paths()[j]);
     if (it != old_ix.end()) {
@@ -451,27 +501,39 @@ void ProfilingSession::migrate_to_catalog(
     if (sf.path_index < op.size()) {
       const std::string &pname = op[sf.path_index];
       std::size_t out = 0;
-      if (catalog_.try_index(pname, out)) sf.path_index = out;
+      if (catalog_.try_index(pname, out)) {
+        sf.path_index = out;
+      }
     }
   }
 }
 
 void ProfilingSession::ensure_path(std::string_view path) noexcept {
-  if (path.empty()) return;
+  if (path.empty()) {
+    return;
+  }
   std::size_t idx = 0;
-  if (catalog_.try_index(path, idx)) return;
+  if (catalog_.try_index(path, idx)) {
+    return;
+  }
   ProfilingMetricCatalog new_cat =
       ProfilingMetricCatalog::merge_one_path(catalog_, path);
-  if (new_cat.size() == catalog_.size()) return;
+  if (new_cat.size() == catalog_.size()) {
+    return;
+  }
   migrate_to_catalog(std::move(new_cat));
 }
 
 void ProfilingSession::add_recorded_time(std::string_view path,
                                          double seconds) noexcept {
   ensure_path(path);
-  if (!frame_open_ || !std::isfinite(seconds)) return;
+  if (!frame_open_ || !std::isfinite(seconds)) {
+    return;
+  }
   std::size_t idx = 0;
-  if (!catalog_.try_index(path, idx)) return;
+  if (!catalog_.try_index(path, idx)) {
+    return;
+  }
   frame_scratch_inc_[idx] += seconds;
   frame_scratch_exc_[idx] += seconds;
 }
@@ -479,33 +541,47 @@ void ProfilingSession::add_recorded_time(std::string_view path,
 void ProfilingSession::assign_recorded_time(std::string_view path,
                                             double seconds) noexcept {
   ensure_path(path);
-  if (!frame_open_ || !std::isfinite(seconds)) return;
+  if (!frame_open_ || !std::isfinite(seconds)) {
+    return;
+  }
   std::size_t idx = 0;
-  if (!catalog_.try_index(path, idx)) return;
+  if (!catalog_.try_index(path, idx)) {
+    return;
+  }
   frame_scratch_inc_[idx] = seconds;
   frame_scratch_exc_[idx] = seconds;
 }
 
 void ProfilingSession::push_timed_scope(std::string_view path) noexcept {
-  if (!frame_open_) return;
+  if (!frame_open_) {
+    return;
+  }
   ensure_path(path);
   std::size_t idx = 0;
-  if (!catalog_.try_index(path, idx)) return;
+  if (!catalog_.try_index(path, idx)) {
+    return;
+  }
   scope_stack_.push_back(ScopeFrame{idx, std::chrono::steady_clock::now(), 0.0});
 }
 
 void ProfilingSession::pop_timed_scope() noexcept {
-  if (!frame_open_ || scope_stack_.empty()) return;
+  if (!frame_open_ || scope_stack_.empty()) {
+    return;
+  }
   ScopeFrame top = scope_stack_.back();
   scope_stack_.pop_back();
   const auto t1 = std::chrono::steady_clock::now();
   const double inc = std::chrono::duration<double>(t1 - top.t0).count();
-  if (!std::isfinite(inc)) return;
+  if (!std::isfinite(inc)) {
+    return;
+  }
   const double child_sum = top.children_inclusive_sum;
   const double exc = inc - child_sum;
   frame_scratch_inc_[top.path_index] += inc;
   frame_scratch_exc_[top.path_index] += exc;
-  if (!scope_stack_.empty()) scope_stack_.back().children_inclusive_sum += inc;
+  if (!scope_stack_.empty()) {
+    scope_stack_.back().children_inclusive_sum += inc;
+  }
 }
 
 void ProfilingSession::reset_report_clock() noexcept {
@@ -525,12 +601,13 @@ void ProfilingSession::pack_frames_flat(std::vector<double> &out) const {
   out.resize(n * static_cast<std::size_t>(stride));
   for (std::size_t f = 0; f < n; ++f) {
     const std::size_t b = f * static_cast<std::size_t>(stride);
-    for (std::size_t m = 0; m < nmeta; ++m)
-      out[b + m] = frame_metric_values_[f * nmeta + m];
+    for (std::size_t m = 0; m < nmeta; ++m) {
+      out[b + m] = frame_metric_values_[(f * nmeta) + m];
+    }
     for (std::size_t i = 0; i < K; ++i) {
-      const std::size_t ti = f * K + i;
-      out[b + nmeta + 2 * i] = timer_inclusive_[ti];
-      out[b + nmeta + 2 * i + 1] = timer_exclusive_[ti];
+      const std::size_t ti = (f * K) + i;
+      out[b + nmeta + (2 * i)] = timer_inclusive_[ti];
+      out[b + nmeta + (2 * i) + 1] = timer_exclusive_[ti];
     }
   }
 }
@@ -546,10 +623,11 @@ void ProfilingSession::mpi_gather_packed_frames(
   const int n_local = static_cast<int>(num_frames());
   const int stride = stride_doubles();
 
-  if (rank == 0)
+  if (rank == 0) {
     row_counts.resize(static_cast<std::size_t>(size));
-  else
+  } else {
     row_counts.clear();
+  }
   MPI_Gather(&n_local, 1, MPI_INT, rank == 0 ? row_counts.data() : nullptr, 1,
              MPI_INT, 0, comm);
 
@@ -571,10 +649,11 @@ void ProfilingSession::mpi_gather_packed_frames(
     }
   }
 
-  if (rank == 0)
+  if (rank == 0) {
     all_flat.resize(static_cast<std::size_t>(total_doubles));
-  else
+  } else {
     all_flat.clear();
+  }
 
   MPI_Gatherv(local_flat.data(), send_doubles, MPI_DOUBLE,
               rank == 0 ? all_flat.data() : nullptr,
@@ -582,10 +661,10 @@ void ProfilingSession::mpi_gather_packed_frames(
               rank == 0 ? displs_d.data() : nullptr, MPI_DOUBLE, 0, comm);
 
   if (rank == 0) {
-    row_offset.resize(static_cast<std::size_t>(size) + 1u);
+    row_offset.resize(static_cast<std::size_t>(size) + 1U);
     row_offset[0] = 0;
     for (int r = 0; r < size; ++r) {
-      row_offset[static_cast<std::size_t>(r) + 1u] =
+      row_offset[static_cast<std::size_t>(r) + 1U] =
           row_offset[static_cast<std::size_t>(r)] +
           static_cast<std::size_t>(row_counts[static_cast<std::size_t>(r)]);
     }
@@ -604,7 +683,9 @@ void ProfilingSession::finalize_and_export(
   std::vector<std::size_t> row_offset;
   mpi_gather_packed_frames(comm, row_counts, all_flat, row_offset);
 
-  if (rank != 0) return;
+  if (rank != 0) {
+    return;
+  }
 
   const int kpaths = static_cast<int>(catalog_.size());
   const int nmeta = static_cast<int>(frame_metric_names_.size());
@@ -612,7 +693,8 @@ void ProfilingSession::finalize_and_export(
   const int size = static_cast<int>(row_counts.size());
   const std::size_t total_rows = row_offset.back();
 
-  std::vector<double> inc_buf, exc_buf;
+  std::vector<double> inc_buf;
+  std::vector<double> exc_buf;
   std::vector<double> metrics_buf;
 
   nlohmann::json ranks_json = nlohmann::json::array();
@@ -631,7 +713,9 @@ void ProfilingSession::finalize_and_export(
                                               exc_buf);
         nlohmann::json fr;
         nlohmann::json scalars = nlohmann::json::array();
-        for (double v : metrics_buf) scalars.push_back(v);
+        for (double v : metrics_buf) {
+          scalars.push_back(v);
+        }
         fr["scalars"] = std::move(scalars);
         nlohmann::json regions = nlohmann::json::object();
         for (int i = 0; i < kpaths; ++i) {
@@ -653,16 +737,21 @@ void ProfilingSession::finalize_and_export(
   j["n_mpi_ranks"] = size;
   j["total_frames"] = total_rows;
   j["frame_metric_names"] = nlohmann::json::array();
-  for (const auto &nm : frame_metric_names_) j["frame_metric_names"].push_back(nm);
+  for (const auto &nm : frame_metric_names_) {
+    j["frame_metric_names"].push_back(nm);
+  }
   j["region_paths"] = nlohmann::json::array();
-  for (const auto &p : catalog_.paths()) j["region_paths"].push_back(p);
+  for (const auto &p : catalog_.paths()) {
+    j["region_paths"].push_back(p);
+  }
   j["ranks"] = std::move(ranks_json);
 
   if (options.write_json && !options.json_path.empty()) {
     std::ofstream ofs(options.json_path);
-    if (!ofs)
+    if (!ofs) {
       throw std::runtime_error("ProfilingSession: cannot open JSON path " +
                                options.json_path);
+    }
     ofs << j.dump(2);
   }
 
