@@ -113,7 +113,7 @@ public:
   /**
    * @brief Destroy the Model object.
    */
-  ~Model() {}
+  ~Model() = default;
 
   /**
    * @brief Construct a new Model object
