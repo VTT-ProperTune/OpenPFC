@@ -18,6 +18,7 @@
 #include <openpfc/kernel/profiling/metric_catalog.hpp>
 #include <openpfc/kernel/profiling/mpi_stats.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
+#include <openpfc/kernel/profiling/openpfc_frame_metrics.hpp>
 #include <openpfc/kernel/profiling/profile_scope_macro.hpp>
 #include <openpfc/kernel/profiling/region_scope.hpp>
 #include <openpfc/kernel/profiling/runtime_config.hpp>
