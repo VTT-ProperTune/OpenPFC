@@ -48,12 +48,13 @@ private:
 public:
   FileReader() = default;
 
-  void set_filename(std::string filename) { m_filename = filename; }
+  void set_filename(std::string filename) { m_filename = std::move(filename); }
   const std::string &get_filename() const { return m_filename; }
 
   explicit FileReader(std::string filename) : m_filename(std::move(filename)) {}
 
-  void apply(Model &m, double) override {
+  void apply(Model &m, double time) override {
+    (void)time;
     const FFT &fft = get_fft(m);
     const auto &world = get_world(m);
     const auto world_size = get_size(world);
@@ -61,8 +62,7 @@ public:
     const auto inbox_offset = get_inbox(fft).low;
 
     Field &f = get_real_field(m, get_field_name());
-    std::cout << "Reading initial condition from file" << get_filename()
-              << std::endl;
+    std::cout << "Reading initial condition from file" << get_filename() << '\n';
     BinaryReader reader;
     reader.set_domain(world_size, inbox_size, inbox_offset);
     reader.read(get_filename(), f);

@@ -50,13 +50,14 @@ public:
   void set_density(double density) { m_density = density; }
   double get_density() const { return m_density; }
 
-  void apply(Model &m, double) override {
+  void apply(Model &m, double time) override {
+    (void)time;
     // Functional coordinate-space implementation using field::apply
     std::vector<Seed> seeds;
     const int nseeds = 150;
     const double radius = 20.0;
     const double lower_x = -128.0 + radius;
-    const double upper_x = -128.0 + 3 * radius;
+    const double upper_x = -128.0 + (3 * radius);
     const double lower_y = -128.0;
     const double upper_y = 128.0;
     const double lower_z = -128.0;
