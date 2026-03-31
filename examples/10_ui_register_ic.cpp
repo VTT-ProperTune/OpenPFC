@@ -1,6 +1,7 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <iostream>
 #include <memory>
 #include <openpfc/frontend/ui/ui.hpp>
 #include <openpfc/openpfc.hpp>
@@ -26,14 +27,14 @@ public:
   void set_value(double value) { m_value = value; }
   double get_value() const { return m_value; }
 
-  void apply(Model &, double) override {
-    std::cout << "Applying MyIC with value " << get_value() << std::endl;
+  void apply(Model & /*model*/, double /*t*/) override {
+    std::cout << "Applying MyIC with value " << get_value() << '\n';
   }
 };
 
 // Parse initial condition data from json file
 void from_json(const json &params, MyIC &ic) {
-  std::cout << "Parsing MyIC from json" << std::endl;
+  std::cout << "Parsing MyIC from json" << '\n';
   if (!params.contains("value") || !params["value"].is_number()) {
     throw std::invalid_argument(
         "Reading MyIC failed: missing or invalid 'value' field.");
@@ -53,20 +54,21 @@ public:
     // Additional initialization if needed
   }
 
-  void initialize(double) override { std::cout << "initialize()" << std::endl; }
-  void step(double) override { std::cout << "MyModel.step()" << std::endl; }
+  void initialize(double /*dt*/) override { std::cout << "initialize()" << '\n'; }
+  void step(double /*t*/) override { std::cout << "MyModel.step()" << '\n'; }
 };
 
 // Parse model settings from json file
-void from_json(const json &, MyModel &) {
-  std::cout << "MyModel: reading settings from json file" << std::endl;
+void from_json(const json & /*settings*/, MyModel & /*model*/) {
+  std::cout << "MyModel: reading settings from json file" << '\n';
 }
 
 int main() {
-  // Register initial condition 'MyIC' to 'my_initial_condition'
-  register_field_modifier<MyIC>("my_initial_condition");
+  try {
+    // Register initial condition 'MyIC' to 'my_initial_condition'
+    register_field_modifier<MyIC>("my_initial_condition");
 
-  json settings = R"(
+    json settings = R"(
   {
       "model": {
           "name": "mymodel",
@@ -97,6 +99,10 @@ int main() {
   }
   )"_json;
 
-  App<MyModel> app(settings);
-  return app.main();
+    App<MyModel> app(settings);
+    return app.main();
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << '\n';
+    return 1;
+  }
 }
