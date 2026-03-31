@@ -52,7 +52,7 @@ public:
   /**
    * @brief Create test data with known pattern
    */
-  RealField create_test_data(size_t size) {
+  RealField create_test_data(size_t size) const {
     RealField data(size);
     for (size_t i = 0; i < size; ++i) {
       data[i] = static_cast<double>(i) + m_rank * 1000.0;
@@ -63,7 +63,7 @@ public:
   /**
    * @brief Create complex test data
    */
-  ComplexField create_complex_test_data(size_t size) {
+  static ComplexField create_complex_test_data(size_t size) {
     ComplexField data(size);
     for (size_t i = 0; i < size; ++i) {
       auto real = static_cast<double>(i);
@@ -76,14 +76,14 @@ public:
   /**
    * @brief Check if file exists
    */
-  bool file_exists(const std::string &filename) const {
+  static bool file_exists(const std::string &filename) {
     return std::filesystem::exists(filename);
   }
 
   /**
    * @brief Read entire file content as string
    */
-  std::string read_file_content(const std::string &filename) const {
+  static std::string read_file_content(const std::string &filename) {
     std::ifstream file(filename);
     if (!file) {
       return "";
@@ -148,7 +148,9 @@ public:
 
     std::string pattern = extent_type + "=\"";
     size_t pos = content.find(pattern);
-    if (pos == std::string::npos) return extent;
+    if (pos == std::string::npos) {
+      return extent;
+    }
 
     pos += pattern.length();
     std::string extent_str = content.substr(pos, 100);
@@ -163,12 +165,14 @@ public:
   /**
    * @brief Clean up all test files created during testing
    */
-  void cleanup_test_files() {
+  void cleanup_test_files() const {
     // Synchronize all ranks before cleanup to avoid race conditions
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Only rank 0 performs cleanup to avoid race conditions
-    if (m_rank != 0) return;
+    if (m_rank != 0) {
+      return;
+    }
 
     // Pattern: test_*.vti, test_*.pvti
     for (const auto &entry : std::filesystem::directory_iterator(".")) {
@@ -437,7 +441,10 @@ TEST_CASE("VTKWriter - Parallel output", "[vtk_writer][io][parallel]") {
 
     writer.set_domain(global_size, local_size, offset);
 
-    auto data = fixture.create_test_data(static_cast<std::size_t>(nx_local * 4 * 4));
+    const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
+                              static_cast<std::size_t>(4) *
+                              static_cast<std::size_t>(4);
+    auto data = fixture.create_test_data(n_pts);
     writer.write(1, data);
 
     // Each rank should create its piece file
@@ -457,7 +464,10 @@ TEST_CASE("VTKWriter - Parallel output", "[vtk_writer][io][parallel]") {
 
     writer.set_domain(global_size, local_size, offset);
 
-    auto data = fixture.create_test_data(static_cast<std::size_t>(nx_local * 4 * 4));
+    const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
+                              static_cast<std::size_t>(4) *
+                              static_cast<std::size_t>(4);
+    auto data = fixture.create_test_data(n_pts);
     writer.write(1, data);
 
     // Wait for all ranks to finish writing
@@ -506,7 +516,10 @@ TEST_CASE("VTKWriter - Parallel output", "[vtk_writer][io][parallel]") {
 
     writer.set_domain(global_size, local_size, offset);
 
-    auto data = fixture.create_test_data(static_cast<std::size_t>(nx_local * 8 * 8));
+    const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
+                              static_cast<std::size_t>(8) *
+                              static_cast<std::size_t>(8);
+    auto data = fixture.create_test_data(n_pts);
     writer.write(1, data);
 
     MPI_Barrier(MPI_COMM_WORLD);
