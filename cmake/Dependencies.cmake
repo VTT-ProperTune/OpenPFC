@@ -12,7 +12,8 @@ if(NOT OpenPFC_ENABLE_MPI)
     "  RHEL/Fedora:   sudo dnf install openmpi-devel\n"
     "Then reconfigure with the default OpenPFC_ENABLE_MPI=ON (see INSTALL.md §2).")
 endif()
-find_package(MPI REQUIRED)
+# Cray PE: FindMPI can fail to detect MPI_C while MPI::MPI_CXX is sufficient for OpenPFC.
+find_package(MPI REQUIRED COMPONENTS CXX)
 
 option(OpenPFC_ENABLE_HDF5 "Enable HDF5 export for profiling dumps (optional)" OFF)
 if(OpenPFC_ENABLE_HDF5)

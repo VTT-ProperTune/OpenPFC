@@ -4,7 +4,7 @@
 @PACKAGE_INIT@
 
 if (NOT TARGET MPI::MPI_CXX)
-    find_package(MPI REQUIRED)
+    find_package(MPI REQUIRED COMPONENTS CXX)
 endif()
 
 if (NOT TARGET Heffte::Heffte)
