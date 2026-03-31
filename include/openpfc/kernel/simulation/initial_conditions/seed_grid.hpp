@@ -70,7 +70,7 @@ public:
   SeedGrid() = default;
 
   SeedGrid(int Ny, int Nz, double X0, double radius)
-      : m_Nx(1), m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius) {}
+      : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius) {}
 
   void apply(Model &m, double) override {
     // Functional coordinate-space implementation using field::apply
