@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -37,7 +37,9 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, M1> &dst,
   if (src.size() != n) {
     throw std::runtime_error("deep_copy: View size mismatch");
   }
-  if (n == 0) return;
+  if (n == 0) {
+    return;
+  }
 
   T *dst_ptr = dst.data();
   const T *src_ptr = src.data();
@@ -49,8 +51,7 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, M1> &dst,
   }
 
   // Dst device, src host
-  if constexpr (std::is_same_v<M1, HostSpace> == false &&
-                std::is_same_v<M2, HostSpace>) {
+  if constexpr (!std::is_same_v<M1, HostSpace> && std::is_same_v<M2, HostSpace>) {
     auto *buf = dst.buffer_ptr();
     if (buf) {
       buf->copy_from_host(src_ptr, n);
@@ -62,8 +63,7 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, M1> &dst,
   }
 
   // Dst host, src device
-  if constexpr (std::is_same_v<M1, HostSpace> &&
-                std::is_same_v<M2, HostSpace> == false) {
+  if constexpr (std::is_same_v<M1, HostSpace> && !std::is_same_v<M2, HostSpace>) {
     const auto *buf = src.buffer_ptr();
     if (buf) {
       buf->copy_to_host(dst_ptr, n);
@@ -115,7 +115,8 @@ void deep_copy(View<T, Rank, Layout1, MemorySpace1> &dst,
  */
 template <typename ExecutionSpace, typename T, std::size_t Rank, typename Layout1,
           typename MemorySpace1, typename Layout2, typename MemorySpace2>
-void deep_copy(const ExecutionSpace &, View<T, Rank, Layout1, MemorySpace1> &dst,
+void deep_copy(const ExecutionSpace & /*exec_space*/,
+               View<T, Rank, Layout1, MemorySpace1> &dst,
                const View<T, Rank, Layout2, MemorySpace2> &src) {
   // Synchronous implementation; async can be added per execution space
   deep_copy(dst, src);
@@ -127,7 +128,9 @@ void deep_copy(const ExecutionSpace &, View<T, Rank, Layout1, MemorySpace1> &dst
 template <typename T, std::size_t Rank, typename Layout, typename MemorySpace>
 void deep_copy(View<T, Rank, Layout, MemorySpace> &dst, const T &value) {
   const std::size_t n = dst.size();
-  if (n == 0) return;
+  if (n == 0) {
+    return;
+  }
   T *ptr = dst.data();
   if constexpr (std::is_same_v<MemorySpace, HostSpace>) {
     std::fill(ptr, ptr + n, value);
