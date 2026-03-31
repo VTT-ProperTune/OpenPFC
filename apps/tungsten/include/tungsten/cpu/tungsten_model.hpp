@@ -105,6 +105,7 @@
 #include <openpfc/frontend/utils/nancheck.hpp>
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
+#include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
@@ -282,17 +283,18 @@ public:
 
     pfc::FFT &fft = get_fft();
 
-    // Step 1: Calculate mean-field density n_MF
-    // Forward FFT: ψ → ψ̂
-    fft.forward(psi, psi_F);
+    // Step 1: Calculate mean-field density n_MF (forward FFT → k-space multiply → backward FFT)
+    OPENPFC_PROFILE("gradient/mean_field") {
+      OPENPFC_PROFILE("gradient/mean_field/forward") { fft.forward(psi, psi_F); }
 
-    // Apply mean-field filter in Fourier space: ψ̂_MF = χ(k) · ψ̂
-    for (size_t idx = 0, N = psiMF_F.size(); idx < N; idx++) {
-      psiMF_F[idx] = filterMF[idx] * psi_F[idx];
+      OPENPFC_PROFILE("gradient/mean_field/multiply") {
+        for (size_t idx = 0, N = psiMF_F.size(); idx < N; idx++) {
+          psiMF_F[idx] = filterMF[idx] * psi_F[idx];
+        }
+      }
+
+      OPENPFC_PROFILE("gradient/mean_field/backward") { fft.backward(psiMF_F, psiMF); }
     }
-
-    // Inverse FFT: ψ̂_MF → ψ_MF
-    fft.backward(psiMF_F, psiMF);
 
     // Step 2: Calculate nonlinear part in real space
     // N[ψ, ψ_MF] = p̄₃ψ² + p̄₄ψ³ + q̄₃ψ_MF² + q̄₄ψ_MF³
@@ -319,17 +321,18 @@ public:
       }
     }
 
-    // Step 4: Transform nonlinear term to Fourier space
-    fft.forward(psiN, psiN_F);
+    // Step 4–6: Spectral evolution (forward FFT → k-space multiply → backward FFT)
+    OPENPFC_PROFILE("gradient/evolve") {
+      OPENPFC_PROFILE("gradient/evolve/forward") { fft.forward(psiN, psiN_F); }
 
-    // Step 5: Apply exponential time integration in Fourier space
-    // ψ̂(t+Δt) = L(k)·ψ̂(t) + N(k)·N̂[ψ, ψ_MF]
-    for (size_t idx = 0, N = psi_F.size(); idx < N; idx++) {
-      psi_F[idx] = opL[idx] * psi_F[idx] + opN[idx] * psiN_F[idx];
+      OPENPFC_PROFILE("gradient/evolve/multiply") {
+        for (size_t idx = 0, N = psi_F.size(); idx < N; idx++) {
+          psi_F[idx] = opL[idx] * psi_F[idx] + opN[idx] * psiN_F[idx];
+        }
+      }
+
+      OPENPFC_PROFILE("gradient/evolve/backward") { fft.backward(psi_F, psi); }
     }
-
-    // Step 6: Transform back to real space
-    fft.backward(psi_F, psi);
 
     // Check for NaNs (enabled in Debug mode)
     CHECK_AND_ABORT_IF_NANS(psi);

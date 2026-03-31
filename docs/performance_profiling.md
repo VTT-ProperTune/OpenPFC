@@ -35,6 +35,15 @@ Avoid extra region names that equal HDF5 top-level dataset names under **`/openp
 
 HDF5 export requires configuring CMake with **`OpenPFC_ENABLE_HDF5=ON`** and a system HDF5 installation.
 
+## Tungsten CPU (spectral pipelines)
+
+The CPU Tungsten model ([`apps/tungsten/include/tungsten/cpu/tungsten_model.hpp`](../apps/tungsten/include/tungsten/cpu/tungsten_model.hpp)) uses **`OPENPFC_PROFILE`** with nested paths:
+
+- **`gradient/mean_field`** — mean-field filter: **`gradient/mean_field/forward`**, **`gradient/mean_field/multiply`**, **`gradient/mean_field/backward`**
+- **`gradient/evolve`** — exponential integration step: **`gradient/evolve/forward`**, **`gradient/evolve/multiply`**, **`gradient/evolve/backward`**
+
+List these under **`profiling.regions`** in the input file if you want a fixed catalog from step one. **`format`** values **`hdf5`**, **`both`**, **`csv_hdf5`**, etc. require **`OpenPFC_ENABLE_HDF5=ON`** at build time.
+
 ## What each frame stores (schema version 2)
 
 After gather on rank 0, each row has:

@@ -483,6 +483,9 @@ public:
       if (rank0 && m_prof_print_report && m_profiler) {
         pfc::profiling::ProfilingPrintOptions popts;
         popts.title = "OpenPFC profiling (this rank)";
+        popts.ascii_lines = true;
+        popts.sort_by_time = true;
+        popts.show_exclusive_column = true;
         pfc::profiling::print_profiling_timer(std::cout, *m_profiler, popts);
       }
     }

@@ -63,6 +63,15 @@ enabled = true
 format = "both"
 output = "timing_profile"
 memory_samples = false
+print_report = true
+regions = [
+  "gradient/mean_field/forward",
+  "gradient/mean_field/multiply",
+  "gradient/mean_field/backward",
+  "gradient/evolve/forward",
+  "gradient/evolve/multiply",
+  "gradient/evolve/backward",
+]
 
 [plan_options]
 backend = "fftw"

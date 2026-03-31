@@ -12,6 +12,8 @@
 #SBATCH --chdir=/scratch/project_462001245/juaho/tungsten_perf_jobs
 
 # Tungsten performance (CPU / FFTW) on LUMI-C.
+# Profiling with format "both" needs OpenPFC built with -DOpenPFC_ENABLE_HDF5=ON (timing_profile.h5).
+# Load cray-hdf5 (serial), not cray-hdf5-parallel: rank-0 HDF5 export matches serial lib; parallel HDF5 can error at finalize.
 # Submit with explicit node count, e.g.:  sbatch --nodes=2 --job-name=tperf-cpu-2n tungsten_cpu.sbatch
 #
 # Binding: full-node allocation + srun --cpu-bind=cores (see
@@ -21,11 +23,11 @@ set -euo pipefail
 
 JOBROOT=/scratch/project_462001245/juaho/tungsten_perf_jobs
 REPO_INPUT=/users/juaho/dev/openpfc/docs/lumi_slurm/tungsten_performance_cpu.toml
-OPENPFC_BIN_DEFAULT=/projappl/project_462001245/openpfc/0.1.4-hip/bin/tungsten
+OPENPFC_BIN_DEFAULT=/projappl/project_462001245/juaho/openpfc/bin/tungsten
 TUNGSTEN_BIN="${TUNGSTEN_CPU_BIN:-$OPENPFC_BIN_DEFAULT}"
 
 module purge
-module load LUMI/25.09 partition/C cpeGNU cray-fftw lumi-CrayPath
+module load LUMI/25.09 partition/C cpeGNU cray-fftw cray-hdf5 lumi-CrayPath
 
 export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 

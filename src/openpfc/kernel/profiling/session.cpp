@@ -61,8 +61,12 @@ void merge_region_json(nlohmann::json &root, const std::string &path, double inc
 
 #ifdef OPENPFC_HAS_HDF5
 hid_t open_or_create_group(hid_t parent, const char *name) {
-  hid_t g = H5Gopen2(parent, name, H5P_DEFAULT);
-  if (g >= 0) return g;
+  // Prefer H5Lexists + open/create so we do not trigger HDF5-DIAG from a failed H5Gopen2
+  // when the group is about to be created (common on first export for each path).
+  if (H5Lexists(parent, name, H5P_DEFAULT) > 0) {
+    hid_t g = H5Gopen2(parent, name, H5P_DEFAULT);
+    if (g >= 0) return g;
+  }
   return H5Gcreate2(parent, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 }
 
