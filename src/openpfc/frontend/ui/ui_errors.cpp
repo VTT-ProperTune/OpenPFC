@@ -3,12 +3,10 @@
 
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 
-namespace pfc {
-namespace ui {
+namespace pfc::ui {
 
 std::vector<std::string> list_valid_field_modifiers() {
   return FieldModifierRegistry::get_instance().registered_modifier_types();
 }
 
-} // namespace ui
-} // namespace pfc
+} // namespace pfc::ui
