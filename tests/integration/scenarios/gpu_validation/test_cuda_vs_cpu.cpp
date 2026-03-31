@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_approx.hpp>
@@ -21,9 +21,13 @@ TEST_CASE("CUDA vs CPU diffusion consistency (smoke)", "[integration][gpu][cuda]
   auto fft_cpu = fft::create(decomp_cpu);
   DiffusionModel model_cpu(fft_cpu, world);
   model_cpu.initialize(1.0e-3);
-  for (int i = 0; i < 10; ++i) model_cpu.step(0.0);
+  for (int i = 0; i < 10; ++i) {
+    model_cpu.step(0.0);
+  }
   double l2_cpu = 0.0;
-  for (const auto &v : model_cpu.m_psi) l2_cpu += v * v;
+  for (const auto &v : model_cpu.m_psi) {
+    l2_cpu += v * v;
+  }
 
 #if defined(OpenPFC_ENABLE_CUDA)
   // GPU run
@@ -36,9 +40,13 @@ TEST_CASE("CUDA vs CPU diffusion consistency (smoke)", "[integration][gpu][cuda]
   auto fft_cpu_again = fft::create(decomp_gpu);
   DiffusionModel model_gpu(fft_cpu_again, world);
   model_gpu.initialize(1.0e-3);
-  for (int i = 0; i < 10; ++i) model_gpu.step(0.0);
+  for (int i = 0; i < 10; ++i) {
+    model_gpu.step(0.0);
+  }
   double l2_gpu = 0.0;
-  for (const auto &v : model_gpu.m_psi) l2_gpu += v * v;
+  for (const auto &v : model_gpu.m_psi) {
+    l2_gpu += v * v;
+  }
 
   // Loose tolerance for smoke equivalence
   REQUIRE(l2_gpu == Catch::Approx(l2_cpu).margin(1e-6));
