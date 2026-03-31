@@ -31,8 +31,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace pfc {
-namespace world {
+namespace pfc::world {
 
 using pfc::types::Bool3;
 using pfc::types::Int3;
@@ -191,5 +190,4 @@ inline CartesianWorld with_origin(Int3 size, Real3 origin) {
                 GridSpacing({1.0, 1.0, 1.0}));
 }
 
-} // namespace world
-} // namespace pfc
+} // namespace pfc::world

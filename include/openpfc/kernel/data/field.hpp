@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #pragma once
@@ -55,8 +55,7 @@
 #include <openpfc/kernel/data/world_types.hpp>
 #include <vector>
 
-namespace pfc {
-namespace field {
+namespace pfc::field {
 
 using World = pfc::world::World<pfc::csys::CartesianTag>;
 using pfc::world::get_total_size;
@@ -162,5 +161,4 @@ template <typename T> auto indices(const Field<T> &f) {
   return IndexRange{get_data(f).size()};
 }
 
-} // namespace field
-} // namespace pfc
+} // namespace pfc::field

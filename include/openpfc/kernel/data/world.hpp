@@ -64,8 +64,7 @@
 #include <openpfc/kernel/data/csys.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 
-namespace pfc {
-namespace world {
+namespace pfc::world {
 
 using pfc::csys::CartesianTag;
 using pfc::csys::CoordinateSystem;
@@ -133,11 +132,11 @@ template <typename T> struct World final {
 /// Type alias for Cartesian 3D World (most common usage)
 using CartesianWorld = World<CartesianTag>;
 
-} // namespace world
+} // namespace pfc::world
 
+namespace pfc {
 // Export World to pfc namespace for convenient usage
 using World = world::CartesianWorld;
-
 } // namespace pfc
 
 // Include World functionality modules

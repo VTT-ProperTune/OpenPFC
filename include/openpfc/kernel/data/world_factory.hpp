@@ -28,8 +28,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 
-namespace pfc {
-namespace world {
+namespace pfc::world {
 
 using pfc::csys::CartesianTag;
 using pfc::csys::CoordinateSystem;
@@ -107,5 +106,4 @@ CartesianWorld create(const GridSize &size, const PhysicalOrigin &origin,
              "See migration guide in documentation.")]] CartesianWorld
 create(const Int3 &size, const Real3 &offset, const Real3 &spacing);
 
-} // namespace world
-} // namespace pfc
+} // namespace pfc::world
