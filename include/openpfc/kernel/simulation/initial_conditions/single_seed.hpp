@@ -47,7 +47,8 @@ public:
   void set_density(double density) { rho_seed = density; }
   double get_density() const { return rho_seed; }
 
-  void apply(Model &m, double) override {
+  void apply(Model &m, double time) override {
+    (void)time;
     // Functional coordinate-space implementation using field::apply
     const double s = 1.0 / sqrt(2.0);
     const std::array<double, 3> q1 = {s, s, 0};
@@ -71,7 +72,8 @@ public:
       }
       double u = rho;
       for (int qi = 0; qi < 6; ++qi) {
-        u += 2.0 * amplitude * std::cos(q[qi][0] * x + q[qi][1] * y + q[qi][2] * z);
+        u += 2.0 * amplitude *
+             std::cos((q[qi][0] * x) + (q[qi][1] * y) + (q[qi][2] * z));
       }
       return u;
     });

@@ -91,7 +91,7 @@ private:
     return c;
   }
 
-  vec36 rotate(const vec3 &orientation) {
+  static vec36 rotate(const vec3 &orientation) {
     const double s = 1.0 / sqrt(2.0);
     const vec3 q1 = {s, s, 0};
     const vec3 q2 = {s, 0, s};

@@ -72,7 +72,8 @@ public:
   SeedGrid(int Ny, int Nz, double X0, double radius)
       : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius) {}
 
-  void apply(Model &m, double) override {
+  void apply(Model &m, double time) override {
+    (void)time;
     // Functional coordinate-space implementation using field::apply
     const World &w = get_world(m);
     const auto size = get_size(w);
@@ -100,8 +101,8 @@ public:
 
     for (int j = 0; j < Ny; j++) {
       for (int k = 0; k < Nz; k++) {
-        const std::array<double, 3> location = {X0 + rt(re), Y0 + Dy * j + rt(re),
-                                                Z0 + Dz * k + rt(re)};
+        const std::array<double, 3> location = {X0 + rt(re), Y0 + (Dy * j) + rt(re),
+                                                Z0 + (Dz * k) + rt(re)};
         const std::array<double, 3> orientation = {rr(re), rr(re), rr(re)};
         const Seed seed(location, orientation, get_radius(), get_density(),
                         get_amplitude());
