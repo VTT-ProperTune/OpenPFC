@@ -15,11 +15,12 @@
 using Catch::Approx;
 
 TEST_CASE("Execution and memory space tags exist", "[kokkos_like][core]") {
-  static_assert(sizeof(pfc::Serial) > 0);
-  static_assert(sizeof(pfc::OpenMP) > 0);
-  static_assert(sizeof(pfc::HostSpace) > 0);
-  static_assert(sizeof(pfc::DefaultExecutionSpace) > 0);
-  static_assert(sizeof(pfc::DefaultMemorySpace) > 0);
+  // Types are used by the execution headers; this TU must link and compile them in.
+  (void)sizeof(pfc::Serial);
+  (void)sizeof(pfc::OpenMP);
+  (void)sizeof(pfc::HostSpace);
+  (void)sizeof(pfc::DefaultExecutionSpace);
+  (void)sizeof(pfc::DefaultMemorySpace);
   REQUIRE(true);
 }
 
