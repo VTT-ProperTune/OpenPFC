@@ -30,14 +30,14 @@ TEST_CASE("print_profiling_timer aggregates two frames", "[profiling]") {
     ProfilingContextScope scope(&s);
     pfc::profiling::record_time(pfc::profiling::kProfilingRegionGradient, 0.05);
   }
-  openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.1, 0u, 0u, 0u);
+  openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.1, 0U, 0U, 0U);
 
   openpfc_begin_frame_with_step_and_rank(s, 1, 0);
   {
     ProfilingContextScope scope(&s);
     pfc::profiling::record_time(pfc::profiling::kProfilingRegionCommunication, 0.02);
   }
-  openpfc_end_frame_with_fft_region_wall_and_memory(s, 2.0, 0.3, 0u, 0u, 0u);
+  openpfc_end_frame_with_fft_region_wall_and_memory(s, 2.0, 0.3, 0U, 0U, 0U);
 
   std::ostringstream oss;
   ProfilingPrintOptions opts;
@@ -63,7 +63,7 @@ TEST_CASE("print_profiling_timer uses current_session when in scope",
                      ProfilingSession::openpfc_default_frame_metrics());
   ProfilingContextScope scope(&s);
   openpfc_begin_frame_with_step_and_rank(s, 0, 0);
-  openpfc_end_frame_with_fft_region_wall_and_memory(s, 0.5, 0.2, 0u, 0u, 0u);
+  openpfc_end_frame_with_fft_region_wall_and_memory(s, 0.5, 0.2, 0U, 0U, 0U);
 
   std::ostringstream oss;
   print_profiling_timer(oss, ProfilingPrintOptions{});
@@ -79,7 +79,9 @@ TEST_CASE("print_profiling_timer MPI aggregate mean across ranks",
   int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size < 2) return;
+  if (size < 2) {
+    return;
+  }
 
   ProfilingSession s(ProfilingMetricCatalog::with_defaults_and_extras({}),
                      ProfilingSession::openpfc_default_frame_metrics());
@@ -90,14 +92,14 @@ TEST_CASE("print_profiling_timer MPI aggregate mean across ranks",
       ProfilingContextScope scope(&s);
       pfc::profiling::record_time(pfc::profiling::kProfilingRegionGradient, 0.10);
     }
-    openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.1, 0u, 0u, 0u);
+    openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.1, 0U, 0U, 0U);
   } else {
     openpfc_begin_frame_with_step_and_rank(s, 0, 1);
     {
       ProfilingContextScope scope(&s);
       pfc::profiling::record_time(pfc::profiling::kProfilingRegionGradient, 0.20);
     }
-    openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.1, 0u, 0u, 0u);
+    openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.1, 0U, 0U, 0U);
   }
 
   std::ostringstream oss;
@@ -108,7 +110,9 @@ TEST_CASE("print_profiling_timer MPI aggregate mean across ranks",
   opts.mpi_aggregate_stat = "mean";
   print_profiling_timer(oss, MPI_COMM_WORLD, s, opts);
 
-  if (rank != 0) return;
+  if (rank != 0) {
+    return;
+  }
   const std::string out = oss.str();
   REQUIRE(out.find("MPI agg test") != std::string::npos);
   REQUIRE(out.find("gradient") != std::string::npos);
