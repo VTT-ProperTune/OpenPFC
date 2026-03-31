@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -17,7 +17,8 @@ using namespace pfc;
 
 TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
           "[integration][mpi][halo][driver]") {
-  int rank = 0, size = 1;
+  int rank = 0;
+  int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -36,7 +37,7 @@ TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
                        static_cast<size_t>(local_size[2]);
 
   std::vector<double> field(local_total);
-  double fill = static_cast<double>(rank);
+  auto fill = static_cast<double>(rank);
   for (size_t i = 0; i < local_total; ++i) {
     field[i] = fill;
   }
@@ -48,7 +49,9 @@ TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
   // Recv for +X is leftmost face (x=0); recv for -X is rightmost face (x=nx-1).
   // Rank 0 receives from +X (rank 1) into left face -> rank 0's x=0 layer = 1.0.
   // Rank 1 receives from -X (rank 0) into right face -> rank 1's x=nx-1 layer = 0.0.
-  int nx = local_size[0], ny = local_size[1], nz = local_size[2];
+  int nx = local_size[0];
+  int ny = local_size[1];
+  int nz = local_size[2];
   if (rank == 0) {
     for (int z = 0; z < nz; ++z) {
       for (int y = 0; y < ny; ++y) {
