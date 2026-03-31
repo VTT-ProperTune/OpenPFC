@@ -27,6 +27,8 @@ void spin(std::chrono::milliseconds d) {
 } // namespace
 
 int main() {
+  using pfc::profiling::openpfc_begin_frame_with_step_and_rank;
+  using pfc::profiling::openpfc_end_frame_memory_only_wall_from_clock;
   using pfc::profiling::print_profiling_timer;
   using pfc::profiling::ProfilingContextScope;
   using pfc::profiling::ProfilingManualScope;
@@ -34,13 +36,14 @@ int main() {
   using pfc::profiling::ProfilingPrintOptions;
   using pfc::profiling::ProfilingSession;
 
-  ProfilingSession session(ProfilingMetricCatalog{});
+  ProfilingSession session(ProfilingMetricCatalog{},
+                           ProfilingSession::openpfc_default_frame_metrics());
   session.reset_report_clock();
 
   const int n_steps = 4;
   for (int step = 0; step < n_steps; ++step) {
     ProfilingContextScope ctx(&session);
-    session.begin_step_frame(step, 0);
+    openpfc_begin_frame_with_step_and_rank(session, step, 0);
 
     OPENPFC_PROFILE("demo_nest") {
       spin(2ms);
@@ -68,7 +71,7 @@ int main() {
     session.add_recorded_time("manual_chunk",
                               0.0005 * (1.0 + 0.2 * static_cast<double>(step)));
 
-    session.end_step_frame(0u, 0u, 0u);
+    openpfc_end_frame_memory_only_wall_from_clock(session, 0u, 0u, 0u);
   }
 
   ProfilingPrintOptions opts;
