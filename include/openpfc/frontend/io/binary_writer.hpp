@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -60,15 +60,15 @@ public:
   }
 
   MPI_Status write(int increment, const RealField &data) override {
-    return write_(increment, data);
+    return write_mpi_binary(increment, data);
   }
 
   MPI_Status write(int increment, const ComplexField &data) override {
-    return write_(increment, data);
+    return write_mpi_binary(increment, data);
   }
 
   template <typename T>
-  MPI_Status write_(int increment, const std::vector<T> &data) {
+  MPI_Status write_mpi_binary(int increment, const std::vector<T> &data) {
     MPI_File fh;
     std::string filename2 = utils::format_with_number(m_filename, increment);
     MPI_File_open(MPI_COMM_WORLD, filename2.c_str(),
