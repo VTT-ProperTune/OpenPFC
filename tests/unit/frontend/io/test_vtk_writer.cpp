@@ -95,7 +95,8 @@ public:
   /**
    * @brief Check if file contains expected string
    */
-  bool file_contains(const std::string &filename, const std::string &pattern) const {
+  static bool file_contains(const std::string &filename,
+                            const std::string &pattern) {
     std::string content = read_file_content(filename);
     return content.find(pattern) != std::string::npos;
   }
@@ -103,7 +104,7 @@ public:
   /**
    * @brief Validate VTK XML header structure
    */
-  bool validate_vti_header(const std::string &filename) const {
+  static bool validate_vti_header(const std::string &filename) {
     std::string content = read_file_content(filename);
 
     // Check required XML elements
@@ -123,7 +124,7 @@ public:
   /**
    * @brief Validate PVTI (parallel master) file structure
    */
-  bool validate_pvti_header(const std::string &filename) const {
+  static bool validate_pvti_header(const std::string &filename) {
     std::string content = read_file_content(filename);
 
     // Check required XML elements for parallel file
@@ -141,8 +142,8 @@ public:
   /**
    * @brief Extract extent values from VTI file
    */
-  std::array<int, 6> extract_extent(const std::string &filename,
-                                    const std::string &extent_type) const {
+  static std::array<int, 6> extract_extent(const std::string &filename,
+                                           const std::string &extent_type) {
     std::string content = read_file_content(filename);
     std::array<int, 6> extent = {0, 0, 0, 0, 0, 0};
 
@@ -387,8 +388,9 @@ TEST_CASE("VTKWriter - Complex field handling", "[vtk_writer][io][complex]") {
     std::array<int, 3> size = {4, 4, 4};
     writer.set_domain(size, size, {0, 0, 0});
 
-    auto complex_data =
-        fixture.create_complex_test_data(static_cast<std::size_t>(4 * 4 * 4));
+    auto complex_data = VTKWriterTestFixture::create_complex_test_data(
+        static_cast<std::size_t>(4) * static_cast<std::size_t>(4) *
+        static_cast<std::size_t>(4));
 
     [[maybe_unused]] MPI_Status status = writer.write(1, complex_data);
 
@@ -490,7 +492,7 @@ TEST_CASE("VTKWriter - Parallel output", "[vtk_writer][io][parallel]") {
 
       // Should reference all piece files
       std::string content =
-          fixture.read_file_content("test_parallel_master_0001.pvti");
+          VTKWriterTestFixture::read_file_content("test_parallel_master_0001.pvti");
       for (int r = 0; r < fixture.m_num_ranks; ++r) {
         std::string piece_ref =
             "test_parallel_master_0001_" + std::to_string(r) + ".vti";
