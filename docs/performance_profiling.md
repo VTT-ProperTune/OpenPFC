@@ -16,7 +16,9 @@ OpenPFC records **per-step frames in memory** during a run and performs a **sing
   "output": "my_run_profile",
   "memory_samples": false,
   "print_report": false,
-  "regions": ["custom/kernel", "custom/solver"]
+  "regions": ["custom/kernel", "custom/solver"],
+  "run_id": "",
+  "export_metadata": {}
 }
 ```
 
@@ -28,6 +30,8 @@ OpenPFC records **per-step frames in memory** during a run and performs a **sing
 | **memory_samples** | If true, each frame stores RSS (`/proc/self/status` on Linux), model heap bytes, and FFT heap bytes (extra cost per step). |
 | **print_report** | If true, print a [TimerOutputs.jl](https://github.com/KristofferC/TimerOutputs.jl)-style table after file export. **`App`** uses **`print_profiling_timer` with MPI gather**: **all ranks** participate in a collective gather (same packed layout as export), and **rank 0** prints a table that **combines per-rank timer totals** (default: **mean** across ranks of each rank’s summed inclusive time per path; see **`ProfilingPrintOptions::mpi_aggregate_stat`**). **`%tot`** uses the sum of **`wall_denominator_metric`** (default **`wall_step`**) over **all** gathered frames. |
 | **regions** | Optional array of extra **`/`-separated paths**. Each entry adds that path and **all parent prefixes** to the catalog (e.g. `a/b` adds `a` and `a/b`). **All MPI ranks must use the same config** so the catalog matches for `MPI_Gatherv`. |
+| **run_id** | If non-empty, profiling export uses **schema v3** (namespaced HDF5/JSON under **`runs/<id>/`**). If empty, **`SLURM_JOB_ID`** or **`OPENPFC_PROFILING_RUN_ID`** is used when set; otherwise export stays **schema v2** (legacy single-run layout). |
+| **export_metadata** | Optional object merged into export metadata (HDF5 attributes on the run group, JSON **`metadata`**). **`App`** also fills **`domain_lx`**, **`domain_ly`**, **`domain_lz`** from **`domain`** and Slurm-related keys when the corresponding environment variables exist. |
 
 Default catalog paths (always present): **`communication`**, **`fft`**, **`gradient`**.
 
@@ -95,11 +99,13 @@ Include the umbrella header:
 
 **Example:** **`examples/profiling_timer_report.cpp`** builds a session with an empty catalog, auto-registers paths via **`OPENPFC_PROFILE`** and **`ProfilingManualScope`**, and prints **`print_profiling_timer`**.
 
-## Export format (schema version 2)
+## Export format (schema versions 2 and 3)
 
 Full specification, HDF5 layout, gather row order, and migration from schema 1: **[profiling_export_schema.md](profiling_export_schema.md)**.
 
-Summary: rank 0 writes **`schema_version`: 2** with **`ranks`**: one entry per MPI process, each with **`mpi_rank`**, **`n_frames`**, and **`frames`** (nested **`regions`** mirror `/`-separated paths). **`total_frames`** is the sum of per-rank frame counts. HDF5 stores the same hierarchy under **`/openpfc/profiling/ranks/<id>/`** (see the linked doc).
+Summary: rank 0 writes **`schema_version`**: **2** or **3** with **`ranks`**: one entry per MPI process, each with **`mpi_rank`**, **`n_frames`**, and **`frames`** (nested **`regions`** mirror `/`-separated paths). **`total_frames`** is the sum of per-rank frame counts. HDF5 **v2** stores the hierarchy under **`/openpfc/profiling/ranks/<id>/`**; **v3** nests the same payload under **`/openpfc/profiling/runs/<run_id>/…`** for collision-free merges (see the linked doc).
+
+**Local / CI without Slurm:** set **`export OPENPFC_PROFILING_RUN_ID=mytest`** so exports use v3 and a stable namespace for debugging.
 
 ### Python (JSON, schema 2)
 
@@ -131,6 +137,8 @@ with h5py.File("my_run_profile.h5", "r") as f:
     wall = fs[:, wall_i]
     fft = r0["fft/inclusive"][:]
 ```
+
+**Schema v3 (namespaced run):** if `g.attrs["schema_version"] == 3`, open `run_id = list(f["openpfc/profiling/runs"].keys())[0]` (or use a known job id), then replace `g` with `f["openpfc/profiling/runs"][run_id]` in the snippet above (`frame_metric_names`, `ranks/0`, …).
 
 ## MPI and memory
 
