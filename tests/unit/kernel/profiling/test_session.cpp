@@ -16,12 +16,24 @@
 #include <string>
 #include <thread>
 
+#ifdef OPENPFC_HAS_HDF5
+#include <hdf5.h>
+#endif
+
 using pfc::profiling::openpfc_begin_frame_with_step_and_rank;
 using pfc::profiling::openpfc_end_frame_with_fft_region_wall_and_memory;
 using pfc::profiling::ProfilingContextScope;
 using pfc::profiling::ProfilingMetricCatalog;
 using pfc::profiling::ProfilingSession;
 using pfc::profiling::ProfilingTimedScope;
+using pfc::profiling::sanitize_profiling_run_id_for_hdf5;
+
+TEST_CASE("sanitize_profiling_run_id_for_hdf5", "[profiling]") {
+  REQUIRE(sanitize_profiling_run_id_for_hdf5("12345") == "12345");
+  REQUIRE(sanitize_profiling_run_id_for_hdf5("ab-cd_ef") == "ab-cd_ef");
+  REQUIRE(sanitize_profiling_run_id_for_hdf5("a/b@c") == "a_b_c");
+  REQUIRE(sanitize_profiling_run_id_for_hdf5("") == "run");
+}
 
 TEST_CASE("ProfilingSession single rank JSON export", "[profiling]") {
   int mpi_size = 1;
@@ -76,6 +88,103 @@ TEST_CASE("ProfilingSession single rank JSON export", "[profiling]") {
           Catch::Approx(0.002));
   std::filesystem::remove(tmp);
 }
+
+TEST_CASE("ProfilingSession JSON export schema v3 run_id", "[profiling]") {
+  int mpi_size = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  if (mpi_size != 1) {
+    return;
+  }
+
+  ProfilingSession s(ProfilingMetricCatalog::with_defaults_and_extras({}),
+                     ProfilingSession::openpfc_default_frame_metrics());
+  openpfc_begin_frame_with_step_and_rank(s, 1, 0);
+  openpfc_end_frame_with_fft_region_wall_and_memory(s, 0.5, 0.0, 0U, 0U, 0U);
+
+  const auto tmp =
+      std::filesystem::temp_directory_path() / "openpfc_profiling_v3.json";
+  pfc::profiling::ProfilingExportOptions opt;
+  opt.write_json = true;
+  opt.json_path = tmp.string();
+  opt.run_id = "job_test_1";
+  opt.export_metadata["domain_lx"] = 512;
+  opt.export_metadata["note"] = "unit";
+
+  s.finalize_and_export(MPI_COMM_WORLD, opt);
+
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+
+  std::ifstream in(tmp.string());
+  nlohmann::json j;
+  in >> j;
+  REQUIRE(j["schema_version"] == 3);
+  REQUIRE(j["run_id"] == "job_test_1");
+  REQUIRE(j["metadata"]["domain_lx"] == 512);
+  REQUIRE(j["metadata"]["note"] == "unit");
+  REQUIRE(j["total_frames"] == 1);
+  std::filesystem::remove(tmp);
+}
+
+#ifdef OPENPFC_HAS_HDF5
+TEST_CASE("ProfilingSession HDF5 export schema v3 run group", "[profiling]") {
+  int mpi_size = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  if (mpi_size != 1) {
+    return;
+  }
+
+  ProfilingSession s(ProfilingMetricCatalog::with_defaults_and_extras({}),
+                     ProfilingSession::openpfc_default_frame_metrics());
+  openpfc_begin_frame_with_step_and_rank(s, 2, 0);
+  openpfc_end_frame_with_fft_region_wall_and_memory(s, 0.25, 0.0, 0U, 0U, 0U);
+
+  const auto tmp =
+      std::filesystem::temp_directory_path() / "openpfc_profiling_v3.h5";
+  pfc::profiling::ProfilingExportOptions opt;
+  opt.write_json = false;
+  opt.write_hdf5 = true;
+  opt.hdf5_path = tmp.string();
+  opt.run_id = "99";
+  opt.export_metadata["domain_lx"] = 256;
+
+  s.finalize_and_export(MPI_COMM_WORLD, opt);
+
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return;
+  }
+
+  hid_t file = H5Fopen(tmp.string().c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  REQUIRE(file >= 0);
+  hid_t prof = H5Gopen2(file, "openpfc/profiling", H5P_DEFAULT);
+  REQUIRE(prof >= 0);
+  int top_sv = 0;
+  {
+    hid_t a = H5Aopen(prof, "schema_version", H5P_DEFAULT);
+    REQUIRE(a >= 0);
+    H5Aread(a, H5T_NATIVE_INT, &top_sv);
+    H5Aclose(a);
+  }
+  REQUIRE(top_sv == 3);
+  hid_t runs = H5Gopen2(prof, "runs", H5P_DEFAULT);
+  REQUIRE(runs >= 0);
+  hid_t run_g = H5Gopen2(runs, "99", H5P_DEFAULT);
+  REQUIRE(run_g >= 0);
+  hid_t ranks = H5Gopen2(run_g, "ranks", H5P_DEFAULT);
+  REQUIRE(ranks >= 0);
+  H5Gclose(ranks);
+  H5Gclose(run_g);
+  H5Gclose(runs);
+  H5Gclose(prof);
+  H5Fclose(file);
+  std::filesystem::remove(tmp);
+}
+#endif
 
 TEST_CASE("ProfilingSession nested timed scopes exclusive", "[profiling]") {
   int mpi_size = 1;
