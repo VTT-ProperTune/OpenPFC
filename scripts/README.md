@@ -7,6 +7,68 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This directory contains utility scripts for OpenPFC development and workflow automation.
 
+## Cluster build (tohtori)
+
+### build_tohtori.sh
+
+End-to-end CPU build matching **[INSTALL.md](../INSTALL.md)** (§1 modules, §3 HeFFTe under `$HOME/opt/heffte/2.4.1-cpu`, §5 OpenPFC) and **[cmake/toolchains/tohtori-gcc11-openmpi.cmake](../cmake/toolchains/tohtori-gcc11-openmpi.cmake)**.
+
+```bash
+sh ./scripts/build_tohtori.sh --help
+sh ./scripts/build_tohtori.sh
+```
+
+The script **sources Lmod** when needed and runs **`module load gcc/11.2.0`** itself (you do not need to load it first). Unless you pass **`--build-openmpi`**, it also loads **`openmpi/4.1.1`**. Invoking with **`sh`** re-executes under **bash** so `module` and the rest of the script work.
+
+HeFFTe is skipped if already installed at **`HEFFTE_PREFIX`**; use **`--clean-heffte`** to reconfigure the HeFFTe build tree, or remove the install prefix and re-run to reinstall. **`OpenPFC_ENABLE_HDF5=ON`** is set so profiling HDF5 export (e.g. **experiments/scalability_tohtori**) works. Override **`OPENPFC_BUILD_DIR`** if you do not want **`build/tohtori-release`**.
+
+### User-built OpenMPI (Slurm `srun` / PMI)
+
+Site OpenMPI is sometimes built **without** Slurm PMI; **`srun`** then fails at **`MPI_Init`**. Building OpenMPI with **`--with-slurm`** (as in your own module recipe) fixes that. This repo supports an **opt-in** source build:
+
+```bash
+sh ./scripts/build_tohtori.sh --build-openmpi
+# or only OpenMPI:
+sh ./scripts/build_tohtori.sh --openmpi-only
+```
+
+Defaults: **`OPENMPI_VER=5.0.10`**, prefix **`$HOME/opt/openmpi/$OPENMPI_VER`**. CMake uses it when **`OPENMPI_ROOT`** points at that prefix (**`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** picks **`$OPENMPI_ROOT/bin/mpicc`** when present).
+
+**UCX:** **`--build-ucx`** builds UCX (**default `UCX_VER=1.20.0`**, **`$HOME/opt/ucx/$UCX_VER`**) and sets **`UCX_HOME`** before Open MPI **`configure`**, so the MPI stack links against your UCX (useful when the site UCX and site Open MPI do not match). Example:
+
+```bash
+sh ./scripts/build_tohtori.sh --build-ucx --build-openmpi --openmpi-only
+```
+
+After installing, sanity-check inter-node bandwidth with **`scripts/mpi_inter_node_bw/`** (see that directory’s **`README.md`**).
+
+Configure needs Slurm development files on the **build host**; if the login node lacks them, submit the same script via Slurm (below).
+
+### Queue build with `sbatch`
+
+For long compiles, use **`submit_build_tohtori_sbatch.sh`** (wraps **`sbatch_build_tohtori.slurm`**):
+
+```bash
+./scripts/submit_build_tohtori_sbatch.sh
+SBATCH_PARTITION=gen05_epyc SBATCH_TIME=08:00:00 SBATCH_CPUS_PER_TASK=32 \
+  BUILD_TOHTORI_EXTRA_ARGS='--build-openmpi --clean-openmpi' \
+  ./scripts/submit_build_tohtori_sbatch.sh
+```
+
+**`OPENPFC_REPO`** defaults to the repository root; override if you submit from elsewhere. Optional **`SBATCH_ACCOUNT`** is forwarded to **`sbatch --account`**.
+
+### Build + two-node MPI test (Slurm)
+
+**`submit_build_test_tohtori_sbatch.sh`** submits **two** jobs so you do **not** pay for a second node during compiles:
+
+1. **`sbatch_tohtori_build_stack.slurm`** — **one node**, runs **`build_tohtori.sh`** (default **`--build-ucx --build-openmpi`**, full OpenPFC unless you override **`BUILD_TOHTORI_EXTRA_ARGS`**).
+2. **`sbatch_mpi_inter_node_bw.slurm`** — **two nodes**, Slurm **`--dependency=afterok:`** the build job, then builds and runs **`scripts/mpi_inter_node_bw`**.
+
+```bash
+SBATCH_PARTITION=gen05_epyc SBATCH_BUILD_TIME=08:00:00 SBATCH_BW_TIME=00:30:00 \
+  ./scripts/submit_build_test_tohtori_sbatch.sh
+```
+
 ## Development Scripts
 
 ### pre-commit-hook
