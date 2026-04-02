@@ -68,6 +68,8 @@ To mirror CI static analysis locally (see `.github/workflows/clang-tidy.yml`), u
 
 Optionally create **`.vscode/settings.json`** with `"cmake.configurePreset": "tohtori-debug"` so the folder opens with the right preset (this repo **`.gitignore`** ignores `.vscode` unless you change that). For different paths after a cluster upgrade, use **`CMakeUserPresets.json`** at the repo root — see **`cmake/README.md`**.
 
+**Shell build on tohtori:** **`sh ./scripts/build_tohtori.sh`** (or **`./scripts/build_tohtori.sh`**) sources Lmod when needed, loads **`gcc/11.2.0`** and **`openmpi/4.1.1`**, downloads/builds HeFFTe **2.4.1** (CPU) under **`$HOME/opt/heffte/2.4.1-cpu`** if needed, then configures OpenPFC with the same pinned toolchain file and **`OpenPFC_ENABLE_HDF5=ON`**. Run **`--help`** for options.
+
 ## 2. Other dependencies
 
 - **CMake** 3.15+
