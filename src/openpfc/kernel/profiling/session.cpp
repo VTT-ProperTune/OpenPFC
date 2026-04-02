@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <fstream>
@@ -26,6 +27,22 @@
 #endif
 
 namespace pfc::profiling {
+
+std::string sanitize_profiling_run_id_for_hdf5(std::string_view run_id) {
+  std::string out;
+  out.reserve(run_id.size());
+  for (unsigned char c : run_id) {
+    if (std::isalnum(c) != 0 || c == '_' || c == '-') {
+      out += static_cast<char>(c);
+    } else {
+      out += '_';
+    }
+  }
+  if (out.empty()) {
+    return "run";
+  }
+  return out;
+}
 
 namespace {
 
@@ -108,50 +125,80 @@ void write_h5_int_attr(hid_t loc, const char *name, int v) {
   H5Sclose(s);
 }
 
-/// Schema 2: `openpfc/profiling/ranks/<mpi_rank>/…` with per-rank frame counts.
-void write_profiling_hdf5_v2(const std::string &path, int size,
-                             const std::vector<int> &row_counts,
-                             const std::vector<std::size_t> &row_offset, int stride,
-                             int nmeta, int kpaths,
-                             const std::vector<std::string> &frame_metric_names,
-                             const std::vector<std::string> &path_names,
-                             const std::vector<double> &all_flat) {
-  hid_t file = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-  if (file < 0) {
-    throw std::runtime_error("ProfilingSession: H5Fcreate failed for " + path);
-  }
-
-  hid_t root = H5Gcreate2(file, "openpfc", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  if (root < 0) {
-    H5Fclose(file);
-    throw std::runtime_error("ProfilingSession: H5Gcreate2 openpfc failed");
-  }
-
-  hid_t prof = H5Gcreate2(root, "profiling", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  if (prof < 0) {
-    H5Gclose(root);
-    H5Fclose(file);
-    throw std::runtime_error("ProfilingSession: H5Gcreate2 profiling failed");
-  }
-
+void write_h5_openpfc_version_string_attr(hid_t loc) {
   hid_t scalar = H5Screate(H5S_SCALAR);
-  hid_t attr = H5Acreate2(prof, "schema_version", H5T_NATIVE_INT, scalar,
-                          H5P_DEFAULT, H5P_DEFAULT);
-  int sv = 2;
-  H5Awrite(attr, H5T_NATIVE_INT, &sv);
-  H5Aclose(attr);
-
   hid_t vtype = H5Tcopy(H5T_C_S1);
   H5Tset_size(vtype, H5T_VARIABLE);
   hid_t aspace = H5Screate(H5S_SCALAR);
-  attr =
-      H5Acreate2(prof, "openpfc_version", vtype, aspace, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t attr =
+      H5Acreate2(loc, "openpfc_version", vtype, aspace, H5P_DEFAULT, H5P_DEFAULT);
   const char *vptr = OPENPFC_PROFILING_BUILD_VERSION;
   H5Awrite(attr, vtype, &vptr);
   H5Aclose(attr);
   H5Sclose(aspace);
   H5Tclose(vtype);
   H5Sclose(scalar);
+}
+
+std::string sanitize_hdf5_attribute_name(const std::string &key) {
+  std::string out;
+  out.reserve(key.size());
+  for (unsigned char c : key) {
+    if (std::isalnum(c) != 0 || c == '_' || c == '.') {
+      out += static_cast<char>(c);
+    } else {
+      out += '_';
+    }
+  }
+  return out.empty() ? std::string{"meta_key"} : out;
+}
+
+void write_hdf5_export_metadata_attrs(hid_t loc, const nlohmann::json &meta) {
+  if (!meta.is_object()) {
+    return;
+  }
+  hid_t vtype = H5Tcopy(H5T_C_S1);
+  H5Tset_size(vtype, H5T_VARIABLE);
+  for (const auto &el : meta.items()) {
+    std::string key = sanitize_hdf5_attribute_name(el.key());
+    if (key == "schema_version" || key == "openpfc_version") {
+      continue;
+    }
+    std::string val;
+    if (el.value().is_string()) {
+      val = el.value().get<std::string>();
+    } else {
+      val = el.value().dump();
+    }
+    hid_t aspace = H5Screate(H5S_SCALAR);
+    hid_t a = H5Acreate2(loc, key.c_str(), vtype, aspace, H5P_DEFAULT, H5P_DEFAULT);
+    if (a >= 0) {
+      const char *p = val.c_str();
+      H5Awrite(a, vtype, &p);
+      H5Aclose(a);
+    }
+    H5Sclose(aspace);
+  }
+  H5Tclose(vtype);
+}
+
+/// Per-run payload: same layout as schema v2 file root (`frame_metric_names`, …).
+void write_profiling_hdf5_payload(hid_t content_root, int size,
+                                  const std::vector<int> &row_counts,
+                                  const std::vector<std::size_t> &row_offset,
+                                  int stride, int nmeta, int kpaths,
+                                  const std::vector<std::string> &frame_metric_names,
+                                  const std::vector<std::string> &path_names,
+                                  const std::vector<double> &all_flat) {
+  hid_t scalar = H5Screate(H5S_SCALAR);
+  hid_t attr = H5Acreate2(content_root, "schema_version", H5T_NATIVE_INT, scalar,
+                          H5P_DEFAULT, H5P_DEFAULT);
+  int sv = 2;
+  H5Awrite(attr, H5T_NATIVE_INT, &sv);
+  H5Aclose(attr);
+  H5Sclose(scalar);
+
+  write_h5_openpfc_version_string_attr(content_root);
 
   hid_t vltype = H5Tcopy(H5T_C_S1);
   H5Tset_size(vltype, H5T_VARIABLE);
@@ -159,14 +206,11 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
   if (nmeta > 0) {
     hsize_t nm = static_cast<hsize_t>(nmeta);
     hid_t space_nm = H5Screate_simple(1, &nm, nullptr);
-    hid_t ds_names = H5Dcreate2(prof, "frame_metric_names", vltype, space_nm,
+    hid_t ds_names = H5Dcreate2(content_root, "frame_metric_names", vltype, space_nm,
                                 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (ds_names < 0) {
       H5Sclose(space_nm);
       H5Tclose(vltype);
-      H5Gclose(prof);
-      H5Gclose(root);
-      H5Fclose(file);
       throw std::runtime_error(
           "ProfilingSession: H5Dcreate2 frame_metric_names failed");
     }
@@ -183,14 +227,11 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
   if (kpaths > 0) {
     hsize_t kp = static_cast<hsize_t>(kpaths);
     hid_t space_kp = H5Screate_simple(1, &kp, nullptr);
-    hid_t ds_rp = H5Dcreate2(prof, "region_paths", vltype, space_kp, H5P_DEFAULT,
-                             H5P_DEFAULT, H5P_DEFAULT);
+    hid_t ds_rp = H5Dcreate2(content_root, "region_paths", vltype, space_kp,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (ds_rp < 0) {
       H5Sclose(space_kp);
       H5Tclose(vltype);
-      H5Gclose(prof);
-      H5Gclose(root);
-      H5Fclose(file);
       throw std::runtime_error("ProfilingSession: H5Dcreate2 region_paths failed");
     }
     std::vector<const char *> path_ptrs(static_cast<std::size_t>(kpaths));
@@ -206,11 +247,8 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
   H5Tclose(vltype);
 
   hid_t ranks_root =
-      H5Gcreate2(prof, "ranks", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      H5Gcreate2(content_root, "ranks", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (ranks_root < 0) {
-    H5Gclose(prof);
-    H5Gclose(root);
-    H5Fclose(file);
     throw std::runtime_error("ProfilingSession: H5Gcreate2 ranks failed");
   }
 
@@ -225,9 +263,6 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
         H5Gcreate2(ranks_root, rname.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (gr < 0) {
       H5Gclose(ranks_root);
-      H5Gclose(prof);
-      H5Gclose(root);
-      H5Fclose(file);
       throw std::runtime_error("ProfilingSession: H5Gcreate2 rank group failed");
     }
     write_h5_int_attr(gr, "n_frames", nf);
@@ -290,9 +325,6 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
           H5Sclose(space);
           H5Gclose(gr);
           H5Gclose(ranks_root);
-          H5Gclose(prof);
-          H5Gclose(root);
-          H5Fclose(file);
           throw std::runtime_error("ProfilingSession: HDF5 group chain failed");
         }
         std::vector<double> col_inc(static_cast<std::size_t>(nf));
@@ -328,6 +360,64 @@ void write_profiling_hdf5_v2(const std::string &path, int size,
   }
 
   H5Gclose(ranks_root);
+}
+
+void write_profiling_hdf5_file(
+    const std::string &path, int size, const std::vector<int> &row_counts,
+    const std::vector<std::size_t> &row_offset, int stride, int nmeta, int kpaths,
+    const std::vector<std::string> &frame_metric_names,
+    const std::vector<std::string> &path_names, const std::vector<double> &all_flat,
+    const std::string &run_id, const nlohmann::json &export_metadata) {
+  hid_t file = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  if (file < 0) {
+    throw std::runtime_error("ProfilingSession: H5Fcreate failed for " + path);
+  }
+
+  hid_t root = H5Gcreate2(file, "openpfc", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (root < 0) {
+    H5Fclose(file);
+    throw std::runtime_error("ProfilingSession: H5Gcreate2 openpfc failed");
+  }
+
+  hid_t prof = H5Gcreate2(root, "profiling", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (prof < 0) {
+    H5Gclose(root);
+    H5Fclose(file);
+    throw std::runtime_error("ProfilingSession: H5Gcreate2 profiling failed");
+  }
+
+  try {
+    if (run_id.empty()) {
+      write_profiling_hdf5_payload(prof, size, row_counts, row_offset, stride, nmeta,
+                                   kpaths, frame_metric_names, path_names, all_flat);
+    } else {
+      write_h5_int_attr(prof, "schema_version", 3);
+      write_h5_openpfc_version_string_attr(prof);
+      const std::string sanitized = sanitize_profiling_run_id_for_hdf5(run_id);
+      hid_t runs_g = H5Gcreate2(prof, "runs", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      if (runs_g < 0) {
+        throw std::runtime_error("ProfilingSession: H5Gcreate2 runs failed");
+      }
+      hid_t run_gr = H5Gcreate2(runs_g, sanitized.c_str(), H5P_DEFAULT, H5P_DEFAULT,
+                                H5P_DEFAULT);
+      if (run_gr < 0) {
+        H5Gclose(runs_g);
+        throw std::runtime_error("ProfilingSession: H5Gcreate2 run group failed");
+      }
+      write_hdf5_export_metadata_attrs(run_gr, export_metadata);
+      write_profiling_hdf5_payload(run_gr, size, row_counts, row_offset, stride,
+                                   nmeta, kpaths, frame_metric_names, path_names,
+                                   all_flat);
+      H5Gclose(run_gr);
+      H5Gclose(runs_g);
+    }
+  } catch (...) {
+    H5Gclose(prof);
+    H5Gclose(root);
+    H5Fclose(file);
+    throw;
+  }
+
   H5Gclose(prof);
   H5Gclose(root);
   H5Fclose(file);
@@ -732,7 +822,14 @@ void ProfilingSession::finalize_and_export(
   }
 
   nlohmann::json j;
-  j["schema_version"] = 2;
+  if (options.run_id.empty()) {
+    j["schema_version"] = 2;
+  } else {
+    j["schema_version"] = 3;
+    j["run_id"] = options.run_id;
+    j["metadata"] = options.export_metadata.is_object() ? options.export_metadata
+                                                        : nlohmann::json::object();
+  }
   j["openpfc_version"] = OPENPFC_PROFILING_BUILD_VERSION;
   j["n_mpi_ranks"] = size;
   j["total_frames"] = total_rows;
@@ -757,9 +854,10 @@ void ProfilingSession::finalize_and_export(
 
 #ifdef OPENPFC_HAS_HDF5
   if (options.write_hdf5 && !options.hdf5_path.empty()) {
-    write_profiling_hdf5_v2(options.hdf5_path, size, row_counts, row_offset, stride,
-                            nmeta, kpaths, frame_metric_names_, catalog_.paths(),
-                            all_flat);
+    write_profiling_hdf5_file(options.hdf5_path, size, row_counts, row_offset,
+                              stride, nmeta, kpaths, frame_metric_names_,
+                              catalog_.paths(), all_flat, options.run_id,
+                              options.export_metadata);
   }
 #else
   if (options.write_hdf5 && !options.hdf5_path.empty()) {
