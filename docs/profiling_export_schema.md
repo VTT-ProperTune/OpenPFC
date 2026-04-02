@@ -12,9 +12,10 @@ This document describes the on-disk layout written by `ProfilingSession::finaliz
 | Version | Summary |
 |--------|---------|
 | **1** (legacy) | Single flat `frames` array of length `n_frames` (all ranks’ frames concatenated). HDF5: global `frame_scalars` and per-path datasets of length `n_frames`. |
-| **2** (current) | Hierarchical: `ranks[]`, each with `mpi_rank`, `n_frames`, and `frames[]`. HDF5: `ranks/<mpi_rank>/…` with per-rank row counts. |
+| **2** | Hierarchical: `ranks[]`, each with `mpi_rank`, `n_frames`, and `frames[]`. HDF5: `openpfc/profiling/` holds payload directly (`schema_version` = 2 on that group). |
+| **3** (namespaced run) | Same payload as v2, but nested for merge-friendly multi-job files. JSON: `schema_version` = 3, **`run_id`**, **`metadata`**, then the same fields as v2. HDF5: `openpfc/profiling/` has `schema_version` = 3; payload lives under **`openpfc/profiling/runs/<sanitized_run_id>/`** (inner group still carries v2-style `schema_version` = 2, datasets, and `ranks/`). |
 
-New exports use **schema version 2**. Older tools that expect `frames` at the root must be updated or post-process v2 JSON (see migration below).
+Exports default to **v2** when **`ProfilingExportOptions::run_id`** is empty. When **`run_id`** is set (e.g. Slurm job id via **`App`** or **`OPENPFC_PROFILING_RUN_ID`**), exports use **v3**.
 
 ## Gather layout (all versions)
 
@@ -121,6 +122,29 @@ File root group: `openpfc/profiling/`.
 Path segments follow the `/`-split catalog path (same as JSON nesting). Example: path `main/foo` → groups `main` then `foo`, datasets `inclusive` / `exclusive` on the `foo` group.
 
 **Empty ranks:** If `n_frames == 0`, the rank subgroup exists with `n_frames = 0` and no `frame_scalars` or region datasets.
+
+## JSON schema version 3
+
+Same root fields as version **2**, plus:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `schema_version` | int | Always `3`. |
+| `run_id` | string | Opaque id (e.g. `SLURM_JOB_ID`) for this export. |
+| `metadata` | object | Optional string/number/bool (or nested JSON, implementation-dependent) merged from config and environment; see `performance_profiling.md`. |
+
+All other fields (`openpfc_version`, `n_mpi_ranks`, `total_frames`, `frame_metric_names`, `region_paths`, `ranks`) match v2.
+
+## HDF5 schema version 3
+
+| Path | Description |
+|------|-------------|
+| `openpfc/profiling` | Attribute **`schema_version`** = **3**; attribute **`openpfc_version`**. |
+| `openpfc/profiling/runs` | Container group. |
+| `openpfc/profiling/runs/<id>/` | **`<id>`** = sanitized **`run_id`** (only letters, digits, `-`, `_`; other characters replaced with `_`). User metadata from **`export_metadata`** are stored as **string attributes** on this group (keys sanitized; **`schema_version`** / **`openpfc_version`** in metadata are skipped to avoid clashing with payload attrs). |
+| `openpfc/profiling/runs/<id>/…` | Same layout as **HDF5 schema version 2** under this group (`schema_version` = 2, `openpfc_version`, `frame_metric_names`, `region_paths`, `ranks/…`). |
+
+**Merging jobs:** copy each run subtree into one file, e.g. with **`h5copy`** from `openpfc/profiling/runs/JOB_A` to the same path in a destination file (unique **`run_id`** ⇒ no collisions).
 
 ## Migration from schema 1 to 2
 
