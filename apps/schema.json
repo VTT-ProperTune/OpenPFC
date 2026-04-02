@@ -168,6 +168,14 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "run_id": {
+                    "type": "string",
+                    "description": "If non-empty, profiling export uses schema v3 (namespaced HDF5/JSON). If empty, SLURM_JOB_ID or OPENPFC_PROFILING_RUN_ID is used when set."
+                },
+                "export_metadata": {
+                    "type": "object",
+                    "description": "Extra key/value metadata merged into export (HDF5 attributes on the run group, JSON metadata object). Values may be strings, numbers, or booleans."
                 }
             }
         },
