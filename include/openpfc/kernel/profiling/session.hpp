@@ -12,6 +12,8 @@
 
 #include <openpfc/kernel/profiling/metric_catalog.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include <iosfwd>
 
 #include <chrono>
@@ -56,7 +58,16 @@ struct ProfilingExportOptions {
   bool write_hdf5 = false;
   std::string json_path;
   std::string hdf5_path;
+  /// Empty: legacy layout (JSON/HDF5 schema v2 at `openpfc/profiling/` root).
+  /// Non-empty: schema v3 with payload under `openpfc/profiling/runs/<sanitized>/`.
+  std::string run_id;
+  /// Optional key/value metadata (strings, numbers, bools, or nested JSON dumped
+  /// as strings) written to HDF5 run-group attributes and JSON `metadata`.
+  nlohmann::json export_metadata = nlohmann::json::object();
 };
+
+/// Sanitize @p run_id for use as a single HDF5 group name under `runs/`.
+std::string sanitize_profiling_run_id_for_hdf5(std::string_view run_id);
 
 /**
  * @brief Column-oriented frames; region catalog defines dense per-path
