@@ -69,6 +69,10 @@ private:
   bool m_prof_memory_samples = false;
   bool m_prof_print_report = false;
   std::vector<std::string> m_prof_extra_regions;
+  /// Optional; if empty at export time, `SLURM_JOB_ID` / `OPENPFC_PROFILING_RUN_ID`
+  /// may be used (see `read_profiling_configuration`).
+  std::string m_prof_run_id;
+  json m_prof_export_metadata;
   std::unique_ptr<pfc::profiling::ProfilingSession> m_profiler;
 
   // read settings from file (JSON or TOML format)
@@ -182,6 +186,55 @@ public:
           m_prof_extra_regions.push_back(el.get<std::string>());
         }
       }
+    }
+    m_prof_run_id.clear();
+    if (p.contains("run_id") && p["run_id"].is_string()) {
+      m_prof_run_id = p["run_id"].get<std::string>();
+    }
+    m_prof_export_metadata = json::object();
+    if (p.contains("export_metadata") && p["export_metadata"].is_object()) {
+      m_prof_export_metadata = p["export_metadata"];
+    }
+  }
+
+  void
+  apply_profiling_export_options(pfc::profiling::ProfilingExportOptions &exp) const {
+    exp.run_id = m_prof_run_id;
+    if (exp.run_id.empty()) {
+      if (const char *e = std::getenv("SLURM_JOB_ID")) {
+        exp.run_id = e;
+      } else if (const char *e2 = std::getenv("OPENPFC_PROFILING_RUN_ID")) {
+        exp.run_id = e2;
+      }
+    }
+    exp.export_metadata = json::object();
+    if (m_settings.contains("domain")) {
+      const auto &d = m_settings["domain"];
+      if (d.contains("Lx")) {
+        exp.export_metadata["domain_lx"] = d["Lx"];
+      }
+      if (d.contains("Ly")) {
+        exp.export_metadata["domain_ly"] = d["Ly"];
+      }
+      if (d.contains("Lz")) {
+        exp.export_metadata["domain_lz"] = d["Lz"];
+      }
+    }
+    if (const char *e = std::getenv("SLURM_JOB_ID")) {
+      exp.export_metadata["slurm_job_id"] = std::string(e);
+    }
+    if (const char *e = std::getenv("SLURM_JOB_PARTITION")) {
+      exp.export_metadata["slurm_partition"] = std::string(e);
+    }
+    if (const char *e = std::getenv("SLURM_NNODES")) {
+      exp.export_metadata["slurm_nnodes"] = std::string(e);
+    }
+    if (const char *e = std::getenv("SLURM_NTASKS")) {
+      exp.export_metadata["slurm_ntasks"] = std::string(e);
+    }
+    for (auto it = m_prof_export_metadata.begin();
+         it != m_prof_export_metadata.end(); ++it) {
+      exp.export_metadata[it.key()] = it.value();
     }
   }
 
@@ -491,6 +544,7 @@ public:
         exp.write_json = true;
         exp.json_path = m_prof_output + ".json";
       }
+      apply_profiling_export_options(exp);
       m_profiler->finalize_and_export(m_comm, exp);
       if (rank0) {
         std::cout << "Profiling export written (see profiling.output / format).\n";
