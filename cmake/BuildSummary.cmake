@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Final build configuration summary
@@ -75,6 +75,13 @@ elseif(OpenPFC_ENABLE_CUDA)
   message(STATUS " OpenPFC_ENABLE_CUDA              = ON (⚠️  CUDA not found)")
 else()
   message(STATUS " OpenPFC_ENABLE_CUDA              = OFF")
+endif()
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  message(STATUS " OpenPFC_ENABLE_HIP               = ON (✅ HIP available)")
+elseif(OpenPFC_ENABLE_HIP)
+  message(STATUS " OpenPFC_ENABLE_HIP               = ON (⚠️  HIP not found)")
+else()
+  message(STATUS " OpenPFC_ENABLE_HIP               = OFF")
 endif()
 if(OpenPFC_HIP_AVAILABLE)
   message(STATUS " OpenPFC_MPI_HIP_AWARE            = ${OpenPFC_MPI_HIP_AWARE}")
