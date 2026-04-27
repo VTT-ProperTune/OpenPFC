@@ -33,6 +33,8 @@
 #define PFC_INITIAL_CONDITIONS_FILE_READER_HPP
 
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 #include <utility>
 
 #include <openpfc/kernel/simulation/binary_reader.hpp>
@@ -62,10 +64,22 @@ public:
     const auto inbox_offset = get_inbox(fft).low;
 
     Field &f = get_real_field(m, get_field_name());
-    std::cout << "Reading initial condition from file" << get_filename() << '\n';
-    BinaryReader reader;
-    reader.set_domain(world_size, inbox_size, inbox_offset);
-    reader.read(get_filename(), f);
+    std::cout << "Reading initial condition from file: " << get_filename() << '\n';
+    try {
+      BinaryReader reader;
+      reader.set_domain(world_size, inbox_size, inbox_offset);
+      reader.read(get_filename(), f);
+    } catch (const std::exception &e) {
+      std::ostringstream oss;
+      oss << "FileReader failed to read \"" << get_filename() << "\" into field \""
+          << get_field_name() << "\": " << e.what();
+      throw std::runtime_error(oss.str());
+    } catch (...) {
+      std::ostringstream oss;
+      oss << "FileReader failed to read \"" << get_filename() << "\" into field \""
+          << get_field_name() << "\" (non-standard exception)";
+      throw std::runtime_error(oss.str());
+    }
   }
 };
 
