@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 @PACKAGE_INIT@
@@ -8,7 +8,14 @@ if (NOT TARGET MPI::MPI_CXX)
 endif()
 
 if (NOT TARGET Heffte::Heffte)
-    find_package(Heffte REQUIRED PATHS @Heffte_DIR@)
+    set(_OpenPFC_CONFIGURED_HEFFTE_DIR "@Heffte_DIR@")
+    if (_OpenPFC_CONFIGURED_HEFFTE_DIR AND
+        NOT _OpenPFC_CONFIGURED_HEFFTE_DIR STREQUAL "Heffte_DIR-NOTFOUND")
+        find_package(Heffte REQUIRED CONFIG PATHS "${_OpenPFC_CONFIGURED_HEFFTE_DIR}")
+    else()
+        find_package(Heffte REQUIRED CONFIG)
+    endif()
+    unset(_OpenPFC_CONFIGURED_HEFFTE_DIR)
 endif()
 
 include ( "${CMAKE_CURRENT_LIST_DIR}/OpenPFCTargets.cmake" )
