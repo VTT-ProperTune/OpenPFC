@@ -27,6 +27,7 @@
 #include <heffte.h>
 #include <openpfc/frontend/ui/errors.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
+#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
@@ -40,9 +41,25 @@
 #include <openpfc/kernel/simulation/simulation_fwd.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/runtime/common/backend_from_string.hpp>
+#include <sstream>
 #include <stdexcept>
+#include <string>
 
 namespace pfc::ui {
+
+namespace {
+
+inline const pfc::Logger &ui_json_info_logger() {
+  static const pfc::Logger lg{pfc::LogLevel::Info, /*rank*/ -1};
+  return lg;
+}
+
+inline const pfc::Logger &ui_json_debug_logger() {
+  static const pfc::Logger lg{pfc::LogLevel::Debug, /*rank*/ -1};
+  return lg;
+}
+
+} // namespace
 
 template <class T> T from_json(const json &j);
 
@@ -60,7 +77,8 @@ template <class T> T from_json(const json &j);
 template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
   if (!j.contains("backend") || !j["backend"].is_string()) {
     // Default to FFTW if not specified
-    std::cout << "No FFT backend specified, defaulting to FFTW\n";
+    pfc::log_info(ui_json_info_logger(),
+                  "No FFT backend specified, defaulting to FFTW");
     return fft::Backend::FFTW;
   }
 
@@ -68,7 +86,8 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
   std::transform(backend_str.begin(), backend_str.end(), backend_str.begin(),
                  [](unsigned char c) { return std::tolower(c); });
 
-  std::cout << "Selected FFT backend: " << backend_str << '\n';
+  pfc::log_info(ui_json_info_logger(),
+                std::string("Selected FFT backend: ") + backend_str);
 
   std::optional<fft::Backend> backend = runtime::backend_from_string(backend_str);
   if (backend) {
@@ -97,24 +116,24 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
  */
 template <>
 inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
-  std::cout << "\nParsing HeFFTe plan options ...\n";
+  pfc::log_debug(ui_json_debug_logger(), "Parsing HeFFTe plan options");
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (j.contains("use_reorder")) {
-    std::cout << "Using strided 1d fft operations" << '\n';
+    pfc::log_debug(ui_json_debug_logger(), "Using strided 1d fft operations");
     options.use_reorder = j["use_reorder"];
   }
   if (j.contains("reshape_algorithm")) {
     if (j["reshape_algorithm"] == "alltoall") {
-      std::cout << "Using alltoall reshape algorithm" << '\n';
+      pfc::log_debug(ui_json_debug_logger(), "Using alltoall reshape algorithm");
       options.algorithm = heffte::reshape_algorithm::alltoall;
     } else if (j["reshape_algorithm"] == "alltoallv") {
-      std::cout << "Using alltoallv reshape algorithm" << '\n';
+      pfc::log_debug(ui_json_debug_logger(), "Using alltoallv reshape algorithm");
       options.algorithm = heffte::reshape_algorithm::alltoallv;
     } else if (j["reshape_algorithm"] == "p2p") {
-      std::cout << "Using p2p reshape algorithm" << '\n';
+      pfc::log_debug(ui_json_debug_logger(), "Using p2p reshape algorithm");
       options.algorithm = heffte::reshape_algorithm::p2p;
     } else if (j["reshape_algorithm"] == "p2p_plined") {
-      std::cout << "Using p2p_plined reshape algorithm" << '\n';
+      pfc::log_debug(ui_json_debug_logger(), "Using p2p_plined reshape algorithm");
       options.algorithm = heffte::reshape_algorithm::p2p_plined;
     } else {
       throw std::invalid_argument(
@@ -124,14 +143,16 @@ inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
     }
   }
   if (j.contains("use_pencils")) {
-    std::cout << "Using pencil decomposition" << '\n';
+    pfc::log_debug(ui_json_debug_logger(), "Using pencil decomposition");
     options.use_pencils = j["use_pencils"];
   }
   if (j.contains("use_gpu_aware")) {
-    std::cout << "Using gpu aware fft" << '\n';
+    pfc::log_debug(ui_json_debug_logger(), "Using gpu aware fft");
     options.use_gpu_aware = j["use_gpu_aware"];
   }
-  std::cout << "Backend options: " << options << "\n\n";
+  std::ostringstream options_ss;
+  options_ss << "Backend options: " << options;
+  pfc::log_debug(ui_json_debug_logger(), options_ss.str());
   return options;
 }
 
@@ -459,10 +480,11 @@ inline void from_json(const json &j, MovingBC &bc) {
 inline void from_json(const json &j, Model &model) {
   (void)j;
   (void)model;
-  std::cout << "Warning: This model does not implement reading parameters from "
-               "json file. In order to read parameters from json file, one needs to "
-               "implement 'void from_json(const json &, Model &)'"
-            << '\n';
+  pfc::log_warning(
+      ui_json_info_logger(),
+      "This model does not implement reading parameters from a JSON file. "
+      "Implement 'void from_json(const json &, Model &)' on your model type "
+      "to support JSON parameters.");
 }
 
 } // namespace pfc::ui
