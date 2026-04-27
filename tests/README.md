@@ -53,7 +53,7 @@ Smaller binaries are used when **linking**, **launch**, or **isolation** differs
 
 - Tests that **require** multi-rank MPI behavior should be tagged **`[MPI]`** (and narrower tags like `[ring]`, `[grid]` where `tests/CMakeLists.txt` filters on them).
 - The default **`openpfc-all-tests`** run **excludes** `[MPI]` so serial/local runs stay simple.
-- If **`OpenPFC_RUN_MPI_SUITES=ON`** at configure time, extra CTest entries (e.g. `mpi_2procs_all`) run **`openpfc-tests`** under **`mpiexec`** with tag filters. Those tests use the environment variable **`OPENPFC_TEST_MPI_INIT=1`** so the runner can align with the pre-initialized MPI world (see comments in `tests/CMakeLists.txt`).
+- If **`OpenPFC_RUN_MPI_SUITES=ON`** at configure time, extra CTest entries (e.g. `mpi_2procs_all`) run **`openpfc-tests`** under **`mpiexec`** with tag filters. The shared runner constructs one **`MPI_Worker`** per process; `MPI_Worker` initializes MPI only when needed and reuses the pre-initialized world when launched by `mpiexec`.
 - On hosts with **few logical CPUs**, CMake may **skip** registering 3- and 4-rank suites unless **`OpenPFC_MPI_TEST_REGISTER_HIGH_RANK_ALWAYS=ON`**. CI sets **`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`** so only the 2-rank suite is registered on GitHub-hosted runners.
 
 ## Directory structure

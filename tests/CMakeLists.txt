@@ -143,7 +143,6 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
   set_tests_properties(
     mpi_2procs_all
     PROPERTIES TIMEOUT 120
-               ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1"
                RUN_SERIAL TRUE)
 
   # 3-process ring topology (skipped at configure time if host has < 3 logical CPUs)
@@ -156,7 +155,6 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
     set_tests_properties(
       mpi_3procs_ring
       PROPERTIES TIMEOUT 120
-                 ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1"
                  RUN_SERIAL TRUE)
   endif()
 
@@ -170,7 +168,6 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
     set_tests_properties(
       mpi_4procs_grid_multiple
       PROPERTIES TIMEOUT 180
-                 ENVIRONMENT "OPENPFC_TEST_MPI_INIT=1"
                  RUN_SERIAL TRUE)
   endif()
 endif()
