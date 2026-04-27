@@ -24,6 +24,7 @@
 #define PFC_UI_APP_HPP
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
@@ -40,10 +41,27 @@
 #include <openpfc/frontend/utils/timeleft.hpp>
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc_minimal.hpp>
+#include <ostream>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 namespace pfc::ui {
+
+inline void warn_unknown_profiling_keys(const json &profiling, std::ostream &os) {
+  if (!profiling.is_object()) {
+    return;
+  }
+  static constexpr std::array<std::string_view, 8> known_keys = {
+      "enabled",      "format",  "output", "memory_samples",
+      "print_report", "regions", "run_id", "export_metadata"};
+
+  for (const auto &[key, _] : profiling.items()) {
+    if (std::find(known_keys.begin(), known_keys.end(), key) == known_keys.end()) {
+      os << "Warning: unknown profiling config key '" << key << "'\n";
+    }
+  }
+}
 
 /**
  * @brief The main json-based application
@@ -134,6 +152,9 @@ public:
       return;
     }
     const auto &p = m_settings["profiling"];
+    if (rank0) {
+      warn_unknown_profiling_keys(p, std::cerr);
+    }
     if (p.contains("enabled")) {
       m_prof_enabled = p["enabled"].get<bool>();
     }

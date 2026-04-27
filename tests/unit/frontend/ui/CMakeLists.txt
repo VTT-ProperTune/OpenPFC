@@ -10,6 +10,7 @@ target_sources(openpfc-tests PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/test_toml_to_json.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_parameter_metadata.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_parameter_validator.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_profiling_config.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_validation_result.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_parameter_validation.cpp
 )
