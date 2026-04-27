@@ -96,19 +96,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: |
-          set -euo pipefail
-          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
-          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
-          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-openpfc-ci \
-            -GNinja \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
-            -DHeffte_ENABLE_FFTW=ON \
-            -DBUILD_SHARED_LIBS=ON
-          cmake --build /tmp/heffte-build-openpfc-ci -j2
-          cmake --install /tmp/heffte-build-openpfc-ci
-          rm -rf /tmp/heffte-build-openpfc-ci /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
+        run: scripts/install-heffte-ci.sh "${{ matrix.build_type }}" /tmp/heffte-build-openpfc-ci
 
       - name: Configure OpenPFC
         env:

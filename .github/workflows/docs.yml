@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 name: Documentation
@@ -57,18 +57,7 @@ jobs:
 
       - name: Build HeFFTe (if not cached)
         if: steps.cache-heffte.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
-          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
-          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-docs \
-            -GNinja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
-            -DHeffte_ENABLE_FFTW=ON
-          cmake --build /tmp/heffte-build-docs -j2
-          cmake --install /tmp/heffte-build-docs
-          rm -rf /tmp/heffte-build-docs /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
+        run: scripts/install-heffte-ci.sh Release /tmp/heffte-build-docs
 
       - name: Configure OpenPFC
         run: |

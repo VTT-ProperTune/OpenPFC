@@ -53,19 +53,7 @@ jobs:
         env:
           CC: gcc-11
           CXX: g++-11
-        run: |
-          set -euo pipefail
-          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
-          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
-          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-coverage \
-            -GNinja \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
-            -DHeffte_ENABLE_FFTW=ON \
-            -DBUILD_SHARED_LIBS=ON
-          cmake --build /tmp/heffte-build-coverage -j2
-          cmake --install /tmp/heffte-build-coverage
-          rm -rf /tmp/heffte-build-coverage /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
+        run: scripts/install-heffte-ci.sh Debug /tmp/heffte-build-coverage
 
       - name: Configure OpenPFC with Coverage
         env:

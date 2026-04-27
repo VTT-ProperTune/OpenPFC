@@ -50,19 +50,7 @@ jobs:
 
       - name: Build and install HeFFTe (clang-tidy)
         if: steps.cache-heffte-tidy.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          wget -q -O /tmp/v2.4.1.tar.gz https://github.com/icl-utk-edu/heffte/archive/refs/tags/v2.4.1.tar.gz
-          tar xzf /tmp/v2.4.1.tar.gz -C /tmp
-          cmake -S /tmp/heffte-2.4.1 -B /tmp/heffte-build-tidy \
-            -GNinja \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_INSTALL_PREFIX=$HOME/opt/heffte/2.4.1-cpu \
-            -DHeffte_ENABLE_FFTW=ON \
-            -DBUILD_SHARED_LIBS=ON
-          cmake --build /tmp/heffte-build-tidy -j2
-          cmake --install /tmp/heffte-build-tidy
-          rm -rf /tmp/heffte-build-tidy /tmp/v2.4.1.tar.gz /tmp/heffte-2.4.1
+        run: scripts/install-heffte-ci.sh Debug /tmp/heffte-build-tidy
 
       - name: Configure (Debug with compile_commands)
         run: |
