@@ -35,6 +35,18 @@
       }
     },
     {
+      "name": "dev-asan",
+      "displayName": "Dev Debug (ASan+UBSan)",
+      "inherits": ["dev-debug"],
+      "binaryDir": "build/asan",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -g",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address,undefined"
+      }
+    },
+    {
       "name": "tohtori-debug",
       "displayName": "Tohtori (cluster) Debug",
       "inherits": ["dev-debug"],
@@ -86,6 +98,7 @@
   "buildPresets": [
     { "name": "dev-debug", "configurePreset": "dev-debug" },
     { "name": "dev-release", "configurePreset": "dev-release" },
+    { "name": "dev-asan", "configurePreset": "dev-asan" },
     { "name": "analysis", "configurePreset": "analysis" },
     { "name": "tohtori-debug", "configurePreset": "tohtori-debug" },
     { "name": "tohtori-release", "configurePreset": "tohtori-release" },

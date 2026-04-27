@@ -68,6 +68,8 @@ To mirror CI static analysis locally (see `.github/workflows/clang-tidy.yml`), u
 
 Optionally create **`.vscode/settings.json`** with `"cmake.configurePreset": "tohtori-debug"` so the folder opens with the right preset (this repo **`.gitignore`** ignores `.vscode` unless you change that). For different paths after a cluster upgrade, use **`CMakeUserPresets.json`** at the repo root — see **`cmake/README.md`**.
 
+**AddressSanitizer / UBSan (dev):** The **`dev-asan`** configure preset in **`CMakePresets.json`** extends **`dev-debug`** with **`-fsanitize=address,undefined`** (and matching link flags) for local debugging with **GCC/Clang** that support those flags. Example: **`cmake --preset dev-asan`** then **`cmake --build --preset dev-asan`**. When running tests or **`mpirun`**, you may set **`ASAN_OPTIONS=detect_leaks=1`** (and related runtime flags) in the environment; mixed MPI + sanitizers can be environment-sensitive, so match the same **`gcc`** / OpenMPI stack as the rest of this guide.
+
 **Shell build on tohtori:** **`sh ./scripts/build_tohtori.sh`** (or **`./scripts/build_tohtori.sh`**) sources Lmod when needed, loads **`gcc/11.2.0`** and **`openmpi/4.1.1`**, downloads/builds HeFFTe **2.4.1** (CPU) under **`$HOME/opt/heffte/2.4.1-cpu`** if needed, then configures OpenPFC with the same pinned toolchain file and **`OpenPFC_ENABLE_HDF5=ON`**. Run **`--help`** for options.
 
 ## 2. Other dependencies
