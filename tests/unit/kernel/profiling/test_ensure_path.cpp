@@ -12,6 +12,39 @@ using pfc::profiling::ProfilingMetricCatalog;
 using pfc::profiling::ProfilingSession;
 using pfc::profiling::ProfilingTimedScope;
 
+TEST_CASE("ProfilingSession ensure_path ignores empty paths", "[profiling]") {
+  ProfilingSession s(ProfilingMetricCatalog{});
+
+  s.ensure_path("");
+
+  REQUIRE(s.catalog().size() == 0);
+}
+
+TEST_CASE("ProfilingSession ensure_path is idempotent", "[profiling]") {
+  ProfilingSession s(ProfilingMetricCatalog{});
+
+  s.ensure_path("phase");
+  const auto size_after_first = s.catalog().size();
+  s.ensure_path("phase");
+
+  std::size_t ix = 0;
+  REQUIRE(s.catalog().try_index("phase", ix));
+  REQUIRE(size_after_first == 1);
+  REQUIRE(s.catalog().size() == size_after_first);
+}
+
+TEST_CASE("ProfilingSession ensure_path inserts parent paths", "[profiling]") {
+  ProfilingSession s(ProfilingMetricCatalog{});
+
+  s.ensure_path("outer/inner");
+
+  std::size_t outer_ix = 0;
+  std::size_t inner_ix = 0;
+  REQUIRE(s.catalog().try_index("outer", outer_ix));
+  REQUIRE(s.catalog().try_index("outer/inner", inner_ix));
+  REQUIRE(s.catalog().size() == 2);
+}
+
 TEST_CASE("ensure_path empty catalog then timed scope", "[profiling]") {
   ProfilingSession s(ProfilingMetricCatalog{});
   ProfilingContextScope ctx(&s);
