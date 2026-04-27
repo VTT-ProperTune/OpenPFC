@@ -34,6 +34,7 @@
 
 #include <mpi.h>
 #include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 
 #include <sstream>
 #include <stdexcept>
@@ -41,33 +42,11 @@
 
 namespace pfc {
 
-namespace detail {
-
-inline std::string mpi_error_string(int errcode) {
-  char err[MPI_MAX_ERROR_STRING] = {};
-  int errlen = 0;
-  if (MPI_Error_string(errcode, err, &errlen) == MPI_SUCCESS && errlen > 0) {
-    return std::string(err, err + errlen);
-  }
-  return "MPI error " + std::to_string(errcode);
-}
-
-} // namespace detail
-
 class BinaryReader {
 
 private:
   MPI_Datatype m_filetype{};
   bool m_type_valid = false;
-
-  static void check_mpi(int err, const char *what) {
-    if (err == MPI_SUCCESS) {
-      return;
-    }
-    std::ostringstream oss;
-    oss << what << " failed: " << detail::mpi_error_string(err);
-    throw std::runtime_error(oss.str());
-  }
 
 public:
   BinaryReader() = default;
@@ -86,14 +65,15 @@ public:
   void set_domain(const Vec3<int> &arr_global, const Vec3<int> &arr_local,
                   const Vec3<int> &arr_offset) {
     if (m_type_valid) {
-      check_mpi(MPI_Type_free(&m_filetype), "MPI_Type_free");
+      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
       m_type_valid = false;
     }
-    check_mpi(MPI_Type_create_subarray(3, arr_global.data(), arr_local.data(),
-                                       arr_offset.data(), MPI_ORDER_FORTRAN,
-                                       MPI_DOUBLE, &m_filetype),
-              "MPI_Type_create_subarray");
-    check_mpi(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Type_create_subarray(3, arr_global.data(), arr_local.data(),
+                                 arr_offset.data(), MPI_ORDER_FORTRAN, MPI_DOUBLE,
+                                 &m_filetype),
+        "MPI_Type_create_subarray");
+    pfc::mpi::throw_on_mpi_error(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
     m_type_valid = true;
   }
 
@@ -107,20 +87,22 @@ public:
     if (ierr != MPI_SUCCESS) {
       std::ostringstream oss;
       oss << "Unable to open \"" << filename
-          << "\": " << detail::mpi_error_string(ierr);
+          << "\": " << pfc::mpi::mpi_error_string(ierr);
       throw std::runtime_error(oss.str());
     }
 
-    check_mpi(
+    pfc::mpi::throw_on_mpi_error(
         MPI_File_set_view(fh, 0, MPI_DOUBLE, m_filetype, "native", MPI_INFO_NULL),
         "MPI_File_set_view");
 
     MPI_Status status{};
-    check_mpi(MPI_File_read_all(fh, data.data(), static_cast<int>(data.size()),
-                                MPI_DOUBLE, &status),
-              "MPI_File_read_all");
+    pfc::mpi::throw_on_mpi_error(MPI_File_read_all(fh, data.data(),
+                                                   static_cast<int>(data.size()),
+                                                   MPI_DOUBLE, &status),
+                                 "MPI_File_read_all");
     int received = 0;
-    check_mpi(MPI_Get_count(&status, MPI_DOUBLE, &received), "MPI_Get_count");
+    pfc::mpi::throw_on_mpi_error(MPI_Get_count(&status, MPI_DOUBLE, &received),
+                                 "MPI_Get_count");
     if (received != static_cast<int>(data.size())) {
       (void)MPI_File_close(&fh);
       std::ostringstream oss;
@@ -129,7 +111,7 @@ public:
       throw std::runtime_error(oss.str());
     }
 
-    check_mpi(MPI_File_close(&fh), "MPI_File_close");
+    pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
     return status;
   }
 };

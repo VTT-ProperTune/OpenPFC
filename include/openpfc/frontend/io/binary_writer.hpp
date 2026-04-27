@@ -20,7 +20,12 @@
 
 #include <mpi.h>
 #include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
+
+#include <sstream>
+#include <stdexcept>
+#include <string>
 
 namespace pfc {
 
@@ -44,7 +49,8 @@ class BinaryWriter : public ResultsWriter {
   using ResultsWriter::ResultsWriter;
 
 private:
-  MPI_Datatype m_filetype;
+  MPI_Datatype m_filetype{};
+  bool m_type_valid = false;
 
   static MPI_Datatype get_type([[maybe_unused]] const RealField &field) {
     return MPI_DOUBLE;
@@ -54,13 +60,31 @@ private:
   }
 
 public:
+  ~BinaryWriter() override {
+    if (m_type_valid) {
+      (void)MPI_Type_free(&m_filetype);
+    }
+  }
+
+  BinaryWriter(const BinaryWriter &) = delete;
+  BinaryWriter &operator=(const BinaryWriter &) = delete;
+  BinaryWriter(BinaryWriter &&) = delete;
+  BinaryWriter &operator=(BinaryWriter &&) = delete;
+
   void set_domain(const std::array<int, 3> &arr_global,
                   const std::array<int, 3> &arr_local,
                   const std::array<int, 3> &arr_offset) override {
-    MPI_Type_create_subarray(3, arr_global.data(), arr_local.data(),
-                             arr_offset.data(), MPI_ORDER_FORTRAN, MPI_DOUBLE,
-                             &m_filetype);
-    MPI_Type_commit(&m_filetype);
+    if (m_type_valid) {
+      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
+      m_type_valid = false;
+    }
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Type_create_subarray(3, arr_global.data(), arr_local.data(),
+                                 arr_offset.data(), MPI_ORDER_FORTRAN, MPI_DOUBLE,
+                                 &m_filetype),
+        "MPI_Type_create_subarray");
+    pfc::mpi::throw_on_mpi_error(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
+    m_type_valid = true;
   }
 
   MPI_Status write(int increment, const RealField &data) override {
@@ -73,18 +97,42 @@ public:
 
   template <typename T>
   MPI_Status write_mpi_binary(int increment, const std::vector<T> &data) {
-    MPI_File fh;
+    if (!m_type_valid) {
+      throw std::runtime_error("BinaryWriter::write: set_domain() was not called");
+    }
+    MPI_File fh{};
     std::string filename2 = utils::format_with_number(m_filename, increment);
-    MPI_File_open(MPI_COMM_WORLD, filename2.c_str(),
-                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    pfc::mpi::throw_on_mpi_error(
+        MPI_File_open(MPI_COMM_WORLD, const_cast<char *>(filename2.c_str()),
+                      MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh),
+        "MPI_File_open");
+
     MPI_Offset filesize = 0;
-    MPI_Status status;
+    MPI_Status status{};
     const unsigned int disp = 0;
     MPI_Datatype type = get_type(data);
-    MPI_File_set_size(fh, filesize); // force overwriting existing data
-    MPI_File_set_view(fh, disp, type, m_filetype, "native", MPI_INFO_NULL);
-    MPI_File_write_all(fh, data.data(), data.size(), type, &status);
-    MPI_File_close(&fh);
+    pfc::mpi::throw_on_mpi_error(MPI_File_set_size(fh, filesize),
+                                 "MPI_File_set_size"); // truncate at offset 0
+    pfc::mpi::throw_on_mpi_error(
+        MPI_File_set_view(fh, disp, type, m_filetype, "native", MPI_INFO_NULL),
+        "MPI_File_set_view");
+    pfc::mpi::throw_on_mpi_error(MPI_File_write_all(fh, data.data(),
+                                                    static_cast<int>(data.size()),
+                                                    type, &status),
+                                 "MPI_File_write_all");
+
+    int written = 0;
+    pfc::mpi::throw_on_mpi_error(MPI_Get_count(&status, type, &written),
+                                 "MPI_Get_count");
+    if (written != MPI_UNDEFINED && written != static_cast<int>(data.size())) {
+      pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
+      std::ostringstream oss;
+      oss << "Short write to \"" << filename2 << "\": wrote " << written
+          << " elements, expected " << data.size();
+      throw std::runtime_error(oss.str());
+    }
+
+    pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
     return status;
   }
 };
