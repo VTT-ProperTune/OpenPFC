@@ -34,8 +34,8 @@ using json = nlohmann::json;
  * @param section Optional section name (e.g., "domain", "timestepping")
  * @return JSON value if found, otherwise json(nullptr)
  */
-inline json get_json_value(const json &j, const std::string &key,
-                           const std::string &section = "") {
+[[nodiscard]] inline json get_json_value(const json &j, const std::string &key,
+                                         const std::string &section = "") {
   // First try direct access
   if (j.contains(key)) {
     return j[key];
