@@ -125,6 +125,23 @@ jobs:
             --exclude-regex "benchmark" \
             --timeout 300
 
+      - name: Compile benchmarks
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -S . -B build-benchmarks \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
+            -DOpenPFC_BUILD_TESTS=ON \
+            -DOpenPFC_BUILD_BENCHMARKS=ON \
+            -DOpenPFC_BUILD_EXAMPLES=OFF \
+            -DOpenPFC_BUILD_APPS=OFF \
+            -DOpenPFC_BUILD_DOCUMENTATION=OFF \
+            -DOpenPFC_ENABLE_CODE_COVERAGE=OFF
+          cmake --build build-benchmarks --target openpfc-tests -j2
+
       - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v4
