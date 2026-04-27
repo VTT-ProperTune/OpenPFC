@@ -32,6 +32,14 @@ TEST_CASE("DiscreteField1D") {
     REQUIRE(pfc::interpolate(field, {2.1}) == 1);
   }
 
+  SECTION("Bounds checks work on const fields") {
+    const DiscreteField<int, 1> &const_field = field;
+
+    REQUIRE(const_field.inbounds({1.0}));
+    REQUIRE_FALSE(const_field.inbounds({-3.1}));
+    REQUIRE_FALSE(const_field.inbounds({7.0}));
+  }
+
   SECTION("Test apply()") {
     auto func = [](const std::array<double, 1> &coords) -> int {
       return static_cast<int>(coords[0]);

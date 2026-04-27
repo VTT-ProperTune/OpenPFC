@@ -429,7 +429,7 @@ public:
    * @param coords The coordinates to check.
    * @return True if the coordinates are within the bounds, false otherwise.
    */
-  bool inbounds(const std::array<double, D> &coords) {
+  bool inbounds(const std::array<double, D> &coords) const {
     for (size_t i = 0; i < D; i++) {
       if (m_coords_low[i] > coords[i] || coords[i] >= m_coords_high[i]) {
         return false;
