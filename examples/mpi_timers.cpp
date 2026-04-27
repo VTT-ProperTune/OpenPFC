@@ -1,12 +1,13 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <array>
+#include <chrono>
 #include <iostream>
 #include <openpfc/kernel/mpi/timer.hpp>
-#include <unistd.h>
+#include <thread>
 
-void fft() { sleep(1); }
+void fft() { std::this_thread::sleep_for(std::chrono::seconds(1)); }
 
 enum { Total = 0, FFT = 1 };
 
@@ -26,7 +27,7 @@ int main() {
   }
 
   std::cout << "Finalizing program..." << std::endl;
-  sleep(1);
+  std::this_thread::sleep_for(std::chrono::seconds(1));
   std::cout << "All done!" << std::endl;
 
   timers[Total].toc();
