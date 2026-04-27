@@ -28,9 +28,11 @@
 
 #pragma once
 
+#include <limits>
 #include <openpfc/kernel/data/csys.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
+#include <stdexcept>
 #include <vector>
 
 namespace pfc::world {
@@ -136,8 +138,24 @@ template <typename T> inline int get_size(const World<T> &world, int index) {
  * @see get_size() for individual dimensions
  * @see physical_volume() for physical domain size (not grid points)
  */
-template <typename T> inline size_t get_total_size(const World<T> &world) noexcept {
-  return get_size(world, 0) * get_size(world, 1) * get_size(world, 2);
+template <typename T> inline size_t get_total_size(const World<T> &world) {
+  const int nx = get_size(world, 0);
+  const int ny = get_size(world, 1);
+  const int nz = get_size(world, 2);
+  if (nx <= 0 || ny <= 0 || nz <= 0) {
+    throw std::invalid_argument("get_total_size: grid sizes must be positive");
+  }
+
+  const auto mul2 = [](std::size_t a, std::size_t b) -> std::size_t {
+    if (b != 0 && a > std::numeric_limits<std::size_t>::max() / b) {
+      throw std::overflow_error(
+          "get_total_size: product of grid dimensions overflows");
+    }
+    return a * b;
+  };
+
+  return mul2(mul2(static_cast<std::size_t>(nx), static_cast<std::size_t>(ny)),
+              static_cast<std::size_t>(nz));
 }
 
 /**

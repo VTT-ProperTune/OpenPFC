@@ -48,11 +48,11 @@
  */
 
 #include <array>
-#include <cassert>
 #include <functional>
 #include <openpfc/kernel/data/csys.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
+#include <stdexcept>
 #include <vector>
 
 namespace pfc::field {
@@ -65,7 +65,10 @@ template <typename T> struct Field {
   const World &m_world;
 
   Field(const World &world) : m_data(get_total_size(world)), m_world(world) {
-    assert(!m_data.empty());
+    if (m_data.empty()) {
+      throw std::invalid_argument("field::Field: world produced zero grid points "
+                                  "(get_total_size(world)==0)");
+    }
   }
 
   Field(const Field &) = delete;

@@ -24,6 +24,12 @@ TEST_CASE("World - explicit constructor rejects invalid bounds", "[world][unit]"
                     std::invalid_argument);
 }
 
+TEST_CASE("World - get_total_size overflow is detected", "[world][unit]") {
+  constexpr int n = 3'000'000; // n^3 > 2^64 - 1 on typical 64-bit size_t
+  World w(Int3{0, 0, 0}, Int3{n - 1, n - 1, n - 1}, pfc::csys::CartesianCS{});
+  REQUIRE_THROWS_AS(get_total_size(w), std::overflow_error);
+}
+
 TEST_CASE("World - construction and accessors", "[world][unit]") {
   SECTION("Construct World with valid dimensions, origin, and spacing") {
     Int3 dimensions = {100, 200, 300};
