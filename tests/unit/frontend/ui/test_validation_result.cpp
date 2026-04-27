@@ -26,8 +26,11 @@ TEST_CASE("ValidationResult error formatting", "[validation_result][unit]") {
     REQUIRE_FALSE(result.is_valid());
 
     std::string errors = result.format_errors();
+    REQUIRE(errors.find("VALIDATION FAILED") != std::string::npos);
+    REQUIRE(errors.find("Found 2 error(s)") != std::string::npos);
     REQUIRE(errors.find("temperature") != std::string::npos);
     REQUIRE(errors.find("mobility") != std::string::npos);
+    REQUIRE(errors.find("ABORTING") != std::string::npos);
   }
 
   SECTION("No errors") {
@@ -49,7 +52,8 @@ TEST_CASE("ValidationResult summary", "[validation_result][unit]") {
     result.validated_params["temperature"] = "3300.0";
     result.validated_params["mobility"] = "50.0";
 
-    std::string summary = result.format_summary();
+    std::string summary = result.format_summary("Test Model");
+    REQUIRE(summary.find("Test Model") != std::string::npos);
     REQUIRE(summary.find("2 parameter") != std::string::npos);
     REQUIRE(summary.find("temperature") != std::string::npos);
     REQUIRE(summary.find("mobility") != std::string::npos);

@@ -275,37 +275,6 @@ TEST_CASE("ParameterValidator with default values", "[parameter_validation][unit
   }
 }
 
-TEST_CASE("ValidationResult error formatting", "[parameter_validation][unit]") {
-  ValidationResult result;
-  result.valid = false;
-  result.errors.emplace_back("Error 1: Missing parameter 'x'");
-  result.errors.emplace_back("Error 2: Parameter 'y' out of range");
-
-  std::string formatted = result.format_errors();
-
-  REQUIRE(formatted.find("VALIDATION FAILED") != std::string::npos);
-  REQUIRE(formatted.find("Found 2 error(s)") != std::string::npos);
-  REQUIRE(formatted.find("Error 1") != std::string::npos);
-  REQUIRE(formatted.find("Error 2") != std::string::npos);
-  REQUIRE(formatted.find("ABORTING") != std::string::npos);
-}
-
-TEST_CASE("ValidationResult summary formatting", "[parameter_validation][unit]") {
-  ValidationResult result;
-  result.valid = true;
-  result.validated_params["temperature"] = "3300.0  [range: 0, 10000]";
-  result.validated_params["density"] = "-0.10  [range: -1, 0]";
-
-  std::string summary = result.format_summary("Test Model");
-
-  REQUIRE(summary.find("Test Model") != std::string::npos);
-  REQUIRE(summary.find("Validated 2 parameter(s)") != std::string::npos);
-  REQUIRE(summary.find("temperature") != std::string::npos);
-  REQUIRE(summary.find("density") != std::string::npos);
-  REQUIRE(summary.find("3300") != std::string::npos);
-  REQUIRE(summary.find("-0.10") != std::string::npos);
-}
-
 TEST_CASE("Integer parameter validation", "[parameter_validation][unit]") {
   ParameterValidator validator;
 
