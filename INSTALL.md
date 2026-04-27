@@ -238,6 +238,28 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -S . -B build-cpu
 ```
 
+### 5.2 CMake cache variables (quick reference)
+
+These switches are defined under **`cmake/`** (see **`BuildOptions.cmake`**, **`Dependencies.cmake`**, **`CudaSupport.cmake`**, **`HipSupport.cmake`**, **`LibraryConfiguration.cmake`**, **`CodeCoverage.cmake`**, **`ProjectSetup.cmake`**, **`CompilerSettings.cmake`**). Use **`-DNAME=ON|OFF`** (or **`STRING`** where noted) on the **`cmake`** command line.
+
+| Cache variable | Typical use |
+|------------------|---------------|
+| **`OpenPFC_ENABLE_MPI`** | Must stay **ON** for supported builds (see §2). |
+| **`OpenPFC_ENABLE_HEFFTE`** | HeFFTe FFT stack (**ON** by default). |
+| **`OpenPFC_FETCH_HEFFTE`** | Fetch HeFFTe into **`build/_deps/`** if no install is found. |
+| **`OpenPFC_ENABLE_HDF5`** | Optional HDF5 for profiling dumps (**OFF** by default). |
+| **`OpenPFC_ENABLE_CUDA`** / **`OpenPFC_ENABLE_HIP`** | GPU backends; require matching HeFFTe install (§3, §6–§8). |
+| **`OpenPFC_MPI_CUDA_AWARE`** / **`OpenPFC_MPI_HIP_AWARE`** | GPU-aware MPI when supported (defaults **ON** when CUDA/HIP is enabled). |
+| **`OpenPFC_BUILD_APPS`**, **`OpenPFC_BUILD_EXAMPLES`**, **`OpenPFC_BUILD_TESTS`**, **`OpenPFC_BUILD_BENCHMARKS`** | Scope of targets built alongside **`openpfc`** (benchmarks are slow). |
+| **`OpenPFC_BUILD_DOCUMENTATION`** | Doxygen docs (**ON** if **`doxygen`** is found). |
+| **`OpenPFC_ENABLE_CODE_COVERAGE`** | **`gcov`** coverage (**ON** by default; disable on clusters without **`lcov`**). |
+| **`OpenPFC_DEVELOPMENT`** | Development extras such as **`compile_commands.json`** (**OFF** by default). |
+| **`OpenPFC_PROFILING_LEVEL`** | **`0`**, **`1`**, or **`2`** compile-time profiling macros (`cmake/LibraryConfiguration.cmake`). |
+| **`OpenPFC_ENABLE_NAN_CHECK`** | Optional NaN guards (**OFF** by default). Debug builds enable NaN checks automatically; set **ON** to force them in non-Debug builds (`cmake/CompilerSettings.cmake`). |
+| **`BUILD_SHARED_LIBS`** | Build **`openpfc`** as shared (**OFF** = static, default). |
+
+For toolchain-specific examples (cluster **`CMAKE_TOOLCHAIN_FILE`**), see **`CMakePresets.json`** and **`cmake/toolchains/`**.
+
 ## 6. Configure and build OpenPFC (CUDA)
 
 **HeFFTe requirement:** GPU OpenPFC needs HeFFTe built with **`-DHeffte_ENABLE_CUDA=ON`**, installed under **`$HOME/opt/heffte/2.4.1-cuda`** (§3). Set **`CMAKE_PREFIX_PATH`** to include that prefix (or load a module that does).
