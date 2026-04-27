@@ -15,6 +15,8 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <limits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -24,8 +26,19 @@ using namespace pfc;
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
 
-  int result = Catch::Session().run(argc, argv);
+  Catch::Session session;
+  // Keep Catch2's SECTION ordering and shuffling identical on all MPI ranks
+  // (otherwise different --rng-seed defaults can reorder nested SECTIONs and
+  // deadlock MPI collectives inside tests).
+  session.configData().rngSeed = 1u;
+  session.configData().runOrder = Catch::TestRunOrder::Declared;
 
+  const int cli = session.applyCommandLine(argc, argv);
+  if (cli != 0) {
+    MPI_Finalize();
+    return cli;
+  }
+  const int result = session.run();
   MPI_Finalize();
   return result;
 }
@@ -170,12 +183,37 @@ public:
     // Synchronize all ranks before cleanup to avoid race conditions
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Only rank 0 performs cleanup to avoid race conditions
+    if (m_num_ranks > 1) {
+      // In multi-rank runs, rank 0 used to delete every test_*.vti, which could
+      // remove another rank's piece file before that rank finished the test.
+      // Each rank removes only its own piece files: ..._<rank>.vti
+      const std::string own_suffix = "_" + std::to_string(m_rank) + ".vti";
+      for (const auto &entry : std::filesystem::directory_iterator(".")) {
+        if (!entry.is_regular_file()) {
+          continue;
+        }
+        const std::string filename = entry.path().filename().string();
+        if (filename.find("test_") != 0) {
+          continue;
+        }
+        if (filename.size() >= own_suffix.size() &&
+            filename.compare(filename.size() - own_suffix.size(), own_suffix.size(),
+                             own_suffix) == 0) {
+          std::filesystem::remove(entry.path());
+          continue;
+        }
+        if (m_rank == 0 && filename.find(".pvti") != std::string::npos) {
+          std::filesystem::remove(entry.path());
+        }
+      }
+      return;
+    }
+
     if (m_rank != 0) {
       return;
     }
 
-    // Pattern: test_*.vti, test_*.pvti
+    // Single rank: delete conventional VTK outputs under test_
     for (const auto &entry : std::filesystem::directory_iterator(".")) {
       if (entry.is_regular_file()) {
         std::string filename = entry.path().filename().string();
@@ -424,119 +462,171 @@ TEST_CASE("VTKWriter - Complex field handling", "[vtk_writer][io][complex]") {
   }
 }
 
-TEST_CASE("VTKWriter - Parallel output", "[vtk_writer][io][parallel]") {
+// MPI tests must not use nested Catch2 SECTIONs: each rank advances through the
+// SECTION tree independently, which can mis-match MPI collectives in VTKWriter.
+
+TEST_CASE("VTKWriter - Parallel each rank writes piece file",
+          "[vtk_writer][io][parallel]") {
   VTKWriterTestFixture fixture;
 
-  // This test only makes sense with multiple ranks
   if (fixture.m_num_ranks == 1) {
     SKIP("Parallel test requires multiple MPI ranks");
   }
-
-  SECTION("Each rank writes piece file") {
-    VTKWriter writer("test_parallel_%04d.vti");
-
-    // Simple decomposition: split in X direction
-    int nx_local = 8 / fixture.m_num_ranks;
-    std::array<int, 3> global_size = {8, 4, 4};
-    std::array<int, 3> local_size = {nx_local, 4, 4};
-    std::array<int, 3> offset = {fixture.m_rank * nx_local, 0, 0};
-
-    writer.set_domain(global_size, local_size, offset);
-
-    const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
-                              static_cast<std::size_t>(4) *
-                              static_cast<std::size_t>(4);
-    auto data = fixture.create_test_data(n_pts);
-    writer.write(1, data);
-
-    // Each rank should create its piece file
-    std::string piece_filename =
-        "test_parallel_0001_" + std::to_string(fixture.m_rank) + ".vti";
-    REQUIRE(fixture.file_exists(piece_filename));
-    REQUIRE(fixture.validate_vti_header(piece_filename));
+  if (12 % fixture.m_num_ranks != 0) {
+    SKIP("Needs MPI size dividing 12 for this decomposition");
   }
 
-  SECTION("Rank 0 creates PVTI master file") {
-    VTKWriter writer("test_parallel_master_%04d.vti");
+  VTKWriter writer("test_parallel_%04d.vti");
 
-    int nx_local = 8 / fixture.m_num_ranks;
-    std::array<int, 3> global_size = {8, 4, 4};
-    std::array<int, 3> local_size = {nx_local, 4, 4};
-    std::array<int, 3> offset = {fixture.m_rank * nx_local, 0, 0};
+  const int nx_global = 12;
+  const int nx_local = nx_global / fixture.m_num_ranks;
+  std::array<int, 3> global_size = {nx_global, 4, 4};
+  std::array<int, 3> local_size = {nx_local, 4, 4};
+  std::array<int, 3> offset = {fixture.m_rank * nx_local, 0, 0};
 
-    writer.set_domain(global_size, local_size, offset);
+  writer.set_domain(global_size, local_size, offset);
 
-    const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
-                              static_cast<std::size_t>(4) *
-                              static_cast<std::size_t>(4);
-    auto data = fixture.create_test_data(n_pts);
-    writer.write(1, data);
+  const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
+                            static_cast<std::size_t>(4) *
+                            static_cast<std::size_t>(4);
+  auto data = fixture.create_test_data(n_pts);
+  writer.write(1, data);
 
-    // Wait for all ranks to finish writing
-    MPI_Barrier(MPI_COMM_WORLD);
+  std::string piece_filename =
+      "test_parallel_0001_" + std::to_string(fixture.m_rank) + ".vti";
+  REQUIRE(fixture.file_exists(piece_filename));
+  REQUIRE(fixture.validate_vti_header(piece_filename));
+}
 
-    // All ranks check their piece file exists
-    std::string piece_filename =
-        "test_parallel_master_0001_" + std::to_string(fixture.m_rank) + ".vti";
-    REQUIRE(fixture.file_exists(piece_filename));
-    REQUIRE(fixture.validate_vti_header(piece_filename));
+TEST_CASE("VTKWriter - Parallel PVTI master file", "[vtk_writer][io][parallel]") {
+  VTKWriterTestFixture fixture;
 
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    // Only rank 0 checks PVTI file
-    // Other ranks just pass to avoid test failure
-    if (fixture.m_rank == 0) {
-      // Master file should exist
-      REQUIRE(fixture.file_exists("test_parallel_master_0001.pvti"));
-      REQUIRE(fixture.validate_pvti_header("test_parallel_master_0001.pvti"));
-
-      // Should reference all piece files
-      std::string content =
-          VTKWriterTestFixture::read_file_content("test_parallel_master_0001.pvti");
-      for (int r = 0; r < fixture.m_num_ranks; ++r) {
-        std::string piece_ref =
-            "test_parallel_master_0001_" + std::to_string(r) + ".vti";
-        bool contains = content.find(piece_ref) != std::string::npos;
-        REQUIRE(contains);
-      }
-    } else {
-      // Non-zero ranks just pass these checks
-      REQUIRE(true);
-      REQUIRE(true);
-      REQUIRE(true);
-      REQUIRE(true);
-    }
+  if (fixture.m_num_ranks == 1) {
+    SKIP("Parallel test requires multiple MPI ranks");
+  }
+  if (12 % fixture.m_num_ranks != 0) {
+    SKIP("Needs MPI size dividing 12 for this decomposition");
   }
 
-  SECTION("PVTI WholeExtent matches global domain") {
-    VTKWriter writer("test_pvti_extent_%04d.vti");
+  VTKWriter writer("test_parallel_master_%04d.vti");
 
-    int nx_local = 16 / fixture.m_num_ranks;
-    std::array<int, 3> global_size = {16, 8, 8};
-    std::array<int, 3> local_size = {nx_local, 8, 8};
-    std::array<int, 3> offset = {fixture.m_rank * nx_local, 0, 0};
+  const int nx_global = 12;
+  const int nx_local = nx_global / fixture.m_num_ranks;
+  std::array<int, 3> global_size = {nx_global, 4, 4};
+  std::array<int, 3> local_size = {nx_local, 4, 4};
+  std::array<int, 3> offset = {fixture.m_rank * nx_local, 0, 0};
 
-    writer.set_domain(global_size, local_size, offset);
+  writer.set_domain(global_size, local_size, offset);
 
-    const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
-                              static_cast<std::size_t>(8) *
-                              static_cast<std::size_t>(8);
-    auto data = fixture.create_test_data(n_pts);
-    writer.write(1, data);
+  const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
+                            static_cast<std::size_t>(4) *
+                            static_cast<std::size_t>(4);
+  auto data = fixture.create_test_data(n_pts);
+  writer.write(1, data);
 
-    MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
 
-    if (fixture.m_rank == 0) {
-      auto extent =
-          fixture.extract_extent("test_pvti_extent_0001.pvti", "WholeExtent");
+  std::string piece_filename =
+      "test_parallel_master_0001_" + std::to_string(fixture.m_rank) + ".vti";
+  REQUIRE(fixture.file_exists(piece_filename));
+  REQUIRE(fixture.validate_vti_header(piece_filename));
 
-      REQUIRE(extent[0] == 0);
-      REQUIRE(extent[1] == 15); // 16 - 1
-      REQUIRE(extent[2] == 0);
-      REQUIRE(extent[3] == 7); // 8 - 1
-      REQUIRE(extent[4] == 0);
-      REQUIRE(extent[5] == 7); // 8 - 1
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (fixture.m_rank == 0) {
+    REQUIRE(fixture.file_exists("test_parallel_master_0001.pvti"));
+    REQUIRE(fixture.validate_pvti_header("test_parallel_master_0001.pvti"));
+
+    std::string content =
+        VTKWriterTestFixture::read_file_content("test_parallel_master_0001.pvti");
+    for (int r = 0; r < fixture.m_num_ranks; ++r) {
+      std::string piece_ref =
+          "test_parallel_master_0001_" + std::to_string(r) + ".vti";
+      REQUIRE(content.find(piece_ref) != std::string::npos);
     }
+  }
+}
+
+TEST_CASE("VTKWriter - Parallel PVTI WholeExtent", "[vtk_writer][io][parallel]") {
+  VTKWriterTestFixture fixture;
+
+  if (fixture.m_num_ranks == 1) {
+    SKIP("Parallel test requires multiple MPI ranks");
+  }
+  if (24 % fixture.m_num_ranks != 0) {
+    SKIP("Needs MPI size dividing 24 for this decomposition");
+  }
+
+  VTKWriter writer("test_pvti_extent_%04d.vti");
+
+  const int nx_global = 24;
+  const int nx_local = nx_global / fixture.m_num_ranks;
+  std::array<int, 3> global_size = {nx_global, 8, 8};
+  std::array<int, 3> local_size = {nx_local, 8, 8};
+  std::array<int, 3> offset = {fixture.m_rank * nx_local, 0, 0};
+
+  writer.set_domain(global_size, local_size, offset);
+
+  const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
+                            static_cast<std::size_t>(8) *
+                            static_cast<std::size_t>(8);
+  auto data = fixture.create_test_data(n_pts);
+  writer.write(1, data);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (fixture.m_rank == 0) {
+    auto extent =
+        fixture.extract_extent("test_pvti_extent_0001.pvti", "WholeExtent");
+
+    REQUIRE(extent[0] == 0);
+    REQUIRE(extent[1] == 23); // 24 - 1
+    REQUIRE(extent[2] == 0);
+    REQUIRE(extent[3] == 7); // 8 - 1
+    REQUIRE(extent[4] == 0);
+    REQUIRE(extent[5] == 7); // 8 - 1
+  }
+}
+
+TEST_CASE("VTKWriter rejects invalid VTK extents/domain metadata",
+          "[vtk_writer][io][validation][unit]") {
+  VTKWriterTestFixture fixture;
+
+  if (fixture.m_num_ranks > 1) {
+    SKIP("VTKWriter validation tests require single MPI rank");
+  }
+
+  SECTION("non-positive dimensions") {
+    VTKWriter writer("test_invalid_dims.vti");
+
+    REQUIRE_THROWS_AS(writer.set_domain({0, 8, 8}, {0, 8, 8}, {0, 0, 0}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS(writer.set_domain({8, 8, 8}, {0, 8, 8}, {0, 0, 0}),
+                      std::invalid_argument);
+  }
+
+  SECTION("Piece extent outside WholeExtent") {
+    VTKWriter writer("test_piece_outside_whole.vti");
+
+    REQUIRE_THROWS_AS(writer.set_domain({8, 8, 8}, {8, 8, 8}, {4, 0, 0}),
+                      std::invalid_argument);
+  }
+
+  SECTION("data size mismatch is caught at write time") {
+    VTKWriter writer("test_size_mismatch_0001.vti");
+
+    writer.set_domain({8, 8, 8}, {8, 8, 8}, {0, 0, 0});
+    auto too_small = fixture.create_test_data(10);
+    REQUIRE_THROWS_AS(writer.write(1, too_small), std::runtime_error);
+  }
+
+  SECTION("invalid spacing") {
+    VTKWriter writer("test_bad_spacing.vti");
+
+    REQUIRE_THROWS_AS(writer.set_spacing({0.0, 1.0, 1.0}), std::invalid_argument);
+    REQUIRE_THROWS_AS(
+        writer.set_spacing({std::numeric_limits<double>::quiet_NaN(), 1.0, 1.0}),
+        std::invalid_argument);
   }
 }
 

@@ -109,12 +109,12 @@ public:
   /**
    * @brief Set origin of the domain
    */
-  void set_origin(const std::array<double, 3> &origin) { m_origin = origin; }
+  void set_origin(const std::array<double, 3> &origin);
 
   /**
    * @brief Set spacing of the domain
    */
-  void set_spacing(const std::array<double, 3> &spacing) { m_spacing = spacing; }
+  void set_spacing(const std::array<double, 3> &spacing);
 
   /**
    * @brief Set field name for VTK output
