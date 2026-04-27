@@ -39,6 +39,7 @@ jobs:
             libfftw3-dev \
             libfftw3-mpi-dev \
             nlohmann-json3-dev \
+            bc \
             lcov
 
       - name: Cache HeFFTe
