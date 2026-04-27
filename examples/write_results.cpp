@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <openpfc/frontend/io/binary_writer.hpp>
@@ -8,51 +8,64 @@
 #include <iostream>
 #include <vector>
 
-using namespace std;
-using namespace pfc;
-
 int main(int argc, char *argv[]) {
-  cout << fixed;
-  cout.precision(3);
+  std::cout.setf(std::ios::fixed);
+  std::cout.precision(3);
   MPI_Init(&argc, &argv);
-  int me, num_ranks;
+  int me = 0;
+  int num_ranks = 0;
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm, &me);
   MPI_Comm_size(comm, &num_ranks);
-  if (num_ranks < 2) {
-    if (me == 0) {
-      cerr << "Run at least with two mpi processes\n";
-    }
-    MPI_Abort(comm, -1);
-    return -1;
-  }
 
-  if (me == 0) cout << "Writing results with two separate mpi processes" << endl;
-  {
-    ResultsWriter *writer = new BinaryWriter("test_%04d.bin");
+  // MPI-IO collectives in BinaryWriter require every process in the communicator
+  // to participate, and this decomposition is only valid for two ranks.
+  if (num_ranks != 2) {
     if (me == 0) {
-      writer->set_domain({8, 1, 1}, {4, 1, 1}, {0, 0, 0});
-      writer->write(5, vector<double>{1, 2, 3, 4});
-    } else if (me == 1) {
-      writer->set_domain({8, 1, 1}, {4, 1, 1}, {4, 0, 0});
-      writer->write(5, vector<double>{5, 6, 7, 8});
-    } else {
-      cout << "MPI rank " << me << " is idling" << endl;
+      std::cerr << "This example must be run with exactly 2 MPI processes.\n";
     }
+    MPI_Finalize();
+    return 1;
   }
 
   if (me == 0) {
-    // let's read the data back
-    fstream file("test_0005.bin", ios::in | ios::binary);
-    vector<double> data(8);
-    file.read((char *)(data.data()), sizeof(double) * 8);
-    file.close();
+    std::cout << "Writing results with two MPI processes\n";
+  }
+
+  {
+    pfc::BinaryWriter writer("test_%04d.bin");
+    if (me == 0) {
+      writer.set_domain({8, 1, 1}, {4, 1, 1}, {0, 0, 0});
+      (void)writer.write(5, std::vector<double>{1, 2, 3, 4});
+    } else {
+      writer.set_domain({8, 1, 1}, {4, 1, 1}, {4, 0, 0});
+      (void)writer.write(5, std::vector<double>{5, 6, 7, 8});
+    }
+  }
+
+  MPI_Barrier(comm);
+
+  if (me == 0) {
+    std::ifstream file("test_0005.bin", std::ios::binary);
+    if (!file) {
+      std::cerr << "Failed to open test_0005.bin for reading\n";
+      MPI_Finalize();
+      return 1;
+    }
+    std::vector<double> data(8);
+    const auto nbytes = static_cast<std::streamsize>(data.size() * sizeof(double));
+    file.read(reinterpret_cast<char *>(data.data()), nbytes);
+    if (file.gcount() != nbytes) {
+      std::cerr << "Short read from test_0005.bin: got " << file.gcount()
+                << " bytes, expected " << nbytes << "\n";
+      MPI_Finalize();
+      return 1;
+    }
     for (int i = 0; i < 8; i++) {
-      cout << "data[" << i << "] = " << data[i] << endl;
+      std::cout << "data[" << i << "] = " << data[i] << '\n';
     }
   }
 
   MPI_Finalize();
-
   return 0;
 }
