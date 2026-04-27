@@ -12,6 +12,8 @@
 #include <openpfc/kernel/execution/policy.hpp>
 #include <openpfc/kernel/execution/view.hpp>
 
+#include <stdexcept>
+
 using Catch::Approx;
 
 TEST_CASE("Execution and memory space tags exist", "[kokkos_like][core]") {
@@ -80,6 +82,22 @@ TEST_CASE("View unmanaged constructor", "[kokkos_like][core]") {
   REQUIRE(v.size() == 6);
   v(1, 1) = 99.0;
   REQUIRE(storage[4] == Approx(99.0)); // LayoutRight: (1,1) -> 1*3+1
+}
+
+TEST_CASE("View null data access throws logic_error", "[kokkos_like][core]") {
+  pfc::View<double, 1, pfc::LayoutRight, pfc::HostSpace> empty;
+  REQUIRE_THROWS_AS(empty(0), std::logic_error);
+  REQUIRE_THROWS_AS(empty.access(0), std::logic_error);
+
+  const pfc::View<double, 1, pfc::LayoutRight, pfc::HostSpace> const_empty;
+  REQUIRE_THROWS_AS(const_empty(0), std::logic_error);
+  REQUIRE_THROWS_AS(const_empty.access(0), std::logic_error);
+
+  pfc::View<double, 2, pfc::LayoutRight, pfc::HostSpace> unmanaged_null(nullptr, 2,
+                                                                        3);
+  REQUIRE(unmanaged_null.size() == 6);
+  REQUIRE_THROWS_AS(unmanaged_null(1, 2), std::logic_error);
+  REQUIRE_THROWS_AS(unmanaged_null.access(1, 2), std::logic_error);
 }
 
 TEST_CASE("RangePolicy and parallel_for", "[kokkos_like][core]") {
