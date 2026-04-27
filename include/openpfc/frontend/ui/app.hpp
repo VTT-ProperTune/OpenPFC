@@ -484,15 +484,23 @@ public:
       m_steps_done += 1;
     }
 
-    double avg_steptime = m_total_steptime / m_steps_done;
-    double avg_fft_time = m_total_fft_time / m_steps_done;
-    double avg_oth_time = avg_steptime - avg_fft_time;
-    double p_fft = avg_fft_time / avg_steptime * 100.0;
-    double p_oth = avg_oth_time / avg_steptime * 100.0;
-    std::cout << "\nSimulated " << m_steps_done << " steps. Average times:" << '\n';
-    std::cout << "Step time:  " << avg_steptime << " s" << '\n';
-    std::cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %" << '\n';
-    std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %" << '\n';
+    if (m_steps_done > 0) {
+      const double avg_steptime = m_total_steptime / m_steps_done;
+      const double avg_fft_time = m_total_fft_time / m_steps_done;
+      const double avg_oth_time = avg_steptime - avg_fft_time;
+      const double p_fft = avg_fft_time / avg_steptime * 100.0;
+      const double p_oth = avg_oth_time / avg_steptime * 100.0;
+      std::cout << "\nSimulated " << m_steps_done
+                << " steps. Average times:" << '\n';
+      std::cout << "Step time:  " << avg_steptime << " s" << '\n';
+      std::cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %"
+                << '\n';
+      std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %"
+                << '\n';
+    } else if (rank0) {
+      std::cout << "\nNo complete timesteps were executed; skipping average timing "
+                   "summary.\n";
+    }
 
     if (m_profiler) {
       pfc::profiling::ProfilingExportOptions exp;
