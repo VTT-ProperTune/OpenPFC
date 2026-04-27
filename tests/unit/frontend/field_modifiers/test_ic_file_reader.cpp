@@ -1,8 +1,9 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -66,9 +67,7 @@ TEST_CASE("FileReader - Invalid File Handling", "[ic_file_reader]") {
   FileReader reader("nonexistent_file.bin");
 
   SECTION("Apply with nonexistent file") {
-    // BinaryReader prints error message but doesn't throw
-    // This tests error handling path (file not found)
-    REQUIRE_NOTHROW(reader.apply(m, 0.0));
+    REQUIRE_THROWS_AS(reader.apply(m, 0.0), std::runtime_error);
   }
 }
 
@@ -133,7 +132,7 @@ TEST_CASE("FileReader - Integration with Model", "[ic_file_reader]") {
   reader.set_filename("restart.bin");
   reader.set_field_name("density");
 
-  // Just verify interface works (file doesn't exist, so will throw)
+  // Just verify interface works
   REQUIRE(reader.get_field_name() == "density");
   REQUIRE(reader.get_filename() == "restart.bin");
 }
