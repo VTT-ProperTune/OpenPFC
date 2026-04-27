@@ -23,7 +23,7 @@ This directory contains CI/CD workflows for the OpenPFC project.
 
 2. **CMake Build Matrix**
    - **OS:** Ubuntu 24.04 LTS
-   - **Compilers:** GCC 11, GCC 13, Clang 14, Clang 16
+   - **Compilers:** GCC 11, GCC 13
    - **Build Types:** Debug, Release
    - Caches HeFFTe installation
    - Runs full test suite with CTest
@@ -208,10 +208,9 @@ matrix:
 
 ### Updating Dependencies
 
-When bumping HeFFTe (current release: **v2.4.1**), update every workflow that downloads it:
+When bumping HeFFTe (current release: **v2.4.1**), update the shared installer and cache keys:
 
-- **Tarball URL and source directory** (e.g. `v2.4.1`, `heffte-2.4.1`) in `ci.yml`, `clang-tidy.yml`, `coverage.yml`, and `docs.yml`
-- **Install prefix** paths such as `$HOME/opt/heffte/2.4.1-cpu`
+- **Tarball URL, source directory, and install prefix** in `scripts/install-heffte-ci.sh`
 - **Cache keys** using that prefix, e.g. `heffte-2.4.1-...` → `heffte-2.5.0-...` when moving to the next version
 
 ---
