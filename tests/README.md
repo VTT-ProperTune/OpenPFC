@@ -105,7 +105,7 @@ ctest --output-on-failure -j2 \
 
 This runs **`openpfc-all-tests`**, the standalone targets (**`test_vtk_writer`**, **`test_logging`**, GPU tests if CUDA was enabled), and—when configured—**MPI** suites. CI uses the same **`ctest`** line in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) with **`OpenPFC_RUN_MPI_SUITES=ON`** and **`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`**.
 
-**Note:** The **coverage** workflow runs the same **`ctest`** invocation but does **not** enable **`OpenPFC_RUN_MPI_SUITES`**; it relies on **`--coverage`** flags passed at configure time. See [`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml).
+**Note:** The **coverage** workflow runs the same **`ctest`** invocation and MPI suite cap as the main CI workflow, with coverage flags passed at configure time. See [`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml).
 
 ### Run `openpfc-tests` directly
 
@@ -149,7 +149,7 @@ Headers under [`fixtures/`](fixtures/) (e.g. `mock_model.hpp`) are included as `
 ## Continuous integration (summary)
 
 - **[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)** — **Ubuntu 24.04**, matrix **GCC 11** and **GCC 13**, **Debug** and **Release**, HeFFTe 2.4.1 CPU build, **`OpenPFC_RUN_MPI_SUITES=ON`**, **`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`**, **`ctest`** with benchmark exclusion. **clang-format** (advisory) and **REUSE** run in a separate job; they do not use the Clang compiler for the build matrix.
-- **[`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml)** — **GCC 11**, coverage flags, **`ctest`** (benchmarks excluded), Codecov upload.
+- **[`.github/workflows/coverage.yml`](../.github/workflows/coverage.yml)** — **GCC 11**, coverage flags, **`OpenPFC_RUN_MPI_SUITES=ON`**, **`OpenPFC_MPI_TEST_MAX_WORLD_SIZE=2`**, **`ctest`** (benchmarks excluded), Codecov upload.
 - **Clang-Tidy** — separate workflow ([`.github/workflows/clang-tidy.yml`](../.github/workflows/clang-tidy.yml)); see [`.github/workflows/README.md`](../.github/workflows/README.md).
 
 ## Maintenance
