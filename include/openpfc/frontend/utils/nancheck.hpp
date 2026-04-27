@@ -12,11 +12,12 @@
  * Key features:
  * - CHECK_AND_ABORT_IF_NAN(value): Macro to check single values
  * - CHECK_AND_ABORT_IF_VECTOR_HAS_NAN(vector): Macro to check entire vectors
- * - Enabled with NAN_CHECK_ENABLED preprocessor flag
+ * - Enabled by Debug builds or with OpenPFC_ENABLE_NAN_CHECK
  * - MPI-aware: Reports rank where NaN was detected
  *
- * NaN checks are disabled by default for performance. Enable with:
- * cmake -DNAN_CHECK_ENABLED=ON
+ * NaN checks are enabled automatically in Debug builds. Enable them explicitly
+ * in other build types with:
+ * cmake -DOpenPFC_ENABLE_NAN_CHECK=ON
  *
  * @code
  * #include <openpfc/frontend/utils/nancheck.hpp>
@@ -47,10 +48,9 @@
  * Macro for checking if a single float or double value is NaN and aborting
  * the application if NaN is detected.
  *
- * To enable NaN checks, define the preprocessor flag NAN_CHECK_ENABLED
- * during the build process, typically in the CMake build system, for example:
+ * To enable NaN checks outside Debug builds, use the CMake option:
  *
- *     cmake -DNAN_CHECK_ENABLED=ON path/to/source
+ *     cmake -DOpenPFC_ENABLE_NAN_CHECK=ON path/to/source
  *
  * When enabled, the CHECK_AND_ABORT_IF_NAN macro will call the abortIfNaN
  * function to check the provided value for NaN. If NaN is detected, the
@@ -72,10 +72,9 @@
  * Macro for checking if any NaNs are present in a vector of float or double
  * values and aborting the application if NaNs are detected.
  *
- * To enable NaN checks, define the preprocessor flag NAN_CHECK_ENABLED
- * during the build process, typically in the CMake build system, for example:
+ * To enable NaN checks outside Debug builds, use the CMake option:
  *
- *     cmake -DNAN_CHECK_ENABLED=ON path/to/source
+ *     cmake -DOpenPFC_ENABLE_NAN_CHECK=ON path/to/source
  *
  * When enabled, the CHECK_AND_ABORT_IF_NANS macro will call the abortIfNaNs
  * function to check the vector for NaNs. If NaNs are detected, the

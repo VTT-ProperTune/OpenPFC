@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -19,11 +19,11 @@ When compiling with `CMAKE_BUILD_TYPE=Debug`, the software includes NaN
 helps identify potential numerical issues and prevents the propagation of NaN
 values in calculations.
 
-To enable the NaN check feature, use the `NAN_CHECK_ENABLED` preprocessor flag
-during the build process, typically in the CMake build system:
+Debug builds enable the NaN check feature automatically. To enable it explicitly
+for another build type, use the OpenPFC CMake option:
 
 ```bash
-cmake -DNAN_CHECK_ENABLED=ON path/to/source
+cmake -DOpenPFC_ENABLE_NAN_CHECK=ON path/to/source
 ```
 
 When NaN checks are enabled, the software includes a macro called

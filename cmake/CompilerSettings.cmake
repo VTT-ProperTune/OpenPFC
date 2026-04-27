@@ -30,9 +30,22 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+# NaN checks are enabled automatically in Debug builds and can be forced on for
+# other build types with -DOpenPFC_ENABLE_NAN_CHECK=ON.
+option(OpenPFC_ENABLE_NAN_CHECK "Enable NaN runtime checks in all build types" OFF)
+if(DEFINED NAN_CHECK_ENABLED AND NAN_CHECK_ENABLED)
+    message(WARNING "NAN_CHECK_ENABLED is deprecated; use OpenPFC_ENABLE_NAN_CHECK instead.")
+    set(OpenPFC_ENABLE_NAN_CHECK ON CACHE BOOL "Enable NaN runtime checks in all build types" FORCE)
+endif()
+
+set(OpenPFC_NAN_CHECK_ACTIVE OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR OpenPFC_ENABLE_NAN_CHECK)
+    add_compile_definitions(NAN_CHECK_ENABLED)
+    set(OpenPFC_NAN_CHECK_ACTIVE ON)
+endif()
+
 # Enable debug macros and stricter warnings for Debug builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(NAN_CHECK_ENABLED)
     # Additional warning flags for Debug mode to catch more issues
     # Note: We enable useful warnings but avoid overly pedantic ones
     add_compile_options(

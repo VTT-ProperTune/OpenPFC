@@ -588,20 +588,15 @@ debug build type:
 cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
 ```
 
-Another way to enable NaN check is to use compile option `NAN_CHECK_ENABLED`. In `CMakeLists.txt`, add the following line:
-
-```cmake
-add_compile_definitions(NAN_CHECK_ENABLED)
-```
-
-Or, when configuring a project with CMake, the following is equivalent:
+Another way to enable NaN check, including in non-Debug builds, is to configure
+OpenPFC with `OpenPFC_ENABLE_NAN_CHECK`:
 
 ```bash
-cmake -DNAN_CHECK_ENABLED=ON -S . -B build
+cmake -DOpenPFC_ENABLE_NAN_CHECK=ON -S . -B build
 ```
 
-Or another, quick and dirty solution might be to simply add the following to the
-source file:
+For ad-hoc debugging in a standalone translation unit, you can still define the
+underlying preprocessor flag before including the NaN check header:
 
 ```cpp
 #define NAN_CHECK_ENABLED
