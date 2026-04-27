@@ -117,7 +117,10 @@ inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
       std::cout << "Using p2p_plined reshape algorithm" << '\n';
       options.algorithm = heffte::reshape_algorithm::p2p_plined;
     } else {
-      std::cerr << "Unknown reshape algorithm " << j["reshape_algorithm"] << '\n';
+      throw std::invalid_argument(
+          "Unknown HeFFTe reshape_algorithm: " + j["reshape_algorithm"].dump() +
+          ". Supported: alltoall, alltoallv, p2p, "
+          "p2p_plined");
     }
   }
   if (j.contains("use_pencils")) {

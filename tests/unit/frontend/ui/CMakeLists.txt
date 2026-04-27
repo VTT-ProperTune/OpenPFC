@@ -3,6 +3,7 @@
 
 # Frontend UI layer tests
 target_sources(openpfc-tests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_heffte_plan_options.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_json_helpers.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_ui_errors.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_toml_to_json.cpp
