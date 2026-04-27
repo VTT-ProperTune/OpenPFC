@@ -1,8 +1,6 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-add_subdirectory(common)
-
-if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
-    add_subdirectory(gpu)
-endif()
+target_sources(openpfc-tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_backend_from_string.cpp
+)
