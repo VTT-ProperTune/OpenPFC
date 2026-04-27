@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Compiler flags, warnings, and C++ standard configuration
@@ -56,7 +56,7 @@ if(USE_CLANG_TIDY)
     find_program(CLANG_TIDY_EXECUTABLE NAMES "clang-tidy")
     if(CLANG_TIDY_EXECUTABLE)
         message(STATUS "Enabling clang-tidy")
-        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}" "-extra-arg=-stdlib=libc++")
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
     else()
         message(WARNING "clang-tidy executable not found. Please install clang-tidy and ensure it is in your system PATH.")
         message(WARNING "Refer to the installation instructions at: https://clang.llvm.org/extra/clang-tidy/")
