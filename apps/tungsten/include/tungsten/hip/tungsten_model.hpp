@@ -82,8 +82,7 @@ public:
     using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
     fft_r2c_hip fft_hip(inbox, outbox, r2c_direction, comm, options);
 
-    m_hip_fft = std::unique_ptr<pfc::fft::FFT_HIP>(
-        new pfc::fft::FFT_HIP(std::move(fft_hip)));
+    m_hip_fft = std::make_unique<pfc::fft::FFT_HIP>(std::move(fft_hip));
   }
 
   explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world)

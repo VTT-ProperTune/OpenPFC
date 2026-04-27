@@ -114,19 +114,13 @@ public:
   /**
    * @brief Set the CUDA FFT object from decomposition and rank
    *
-   * Constructs the FFT in place since FFT_Impl cannot be moved/copied due to const
-   * members. Uses direct construction with new since make_unique requires move
-   * construction.
+   * Constructs cuFFT-backed HeFFTe FFT state and wraps it in FFT_CUDA via
+   * std::make_unique.
    *
    * @param decomp Decomposition object
    * @param rank MPI rank
    */
   void set_cuda_fft(const pfc::Decomposition &decomp, int rank) {
-    // FFT_Impl cannot be moved/copied due to const members
-    // We need to construct it in place. Since create_cuda returns by value
-    // and we can't move it, we'll reconstruct the FFT directly from the
-    // decomposition by calling the internal HeFFTe constructor (same as create_cuda
-    // does)
     auto options = heffte::default_options<heffte::backend::cufft>();
     auto r2c_dir = 0;
     auto fft_layout = pfc::fft::layout::create(decomp, r2c_dir);
@@ -140,10 +134,7 @@ public:
     using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
     fft_r2c_cuda fft_cuda(inbox, outbox, r2c_direction, comm, options);
 
-    // Construct FFT_CUDA in place - FFT_Impl constructor takes fft_type by value and
-    // moves it to the const member in the initializer list, which should work
-    m_cuda_fft = std::unique_ptr<pfc::fft::FFT_CUDA>(
-        new pfc::fft::FFT_CUDA(std::move(fft_cuda)));
+    m_cuda_fft = std::make_unique<pfc::fft::FFT_CUDA>(std::move(fft_cuda));
   }
 
   /**
