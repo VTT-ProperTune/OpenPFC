@@ -58,7 +58,7 @@ inline json get_json_value(const json &j, const std::string &key,
       return j["timestepping"][key];
     }
   }
-  return {nullptr};
+  return nullptr;
 }
 
 } // namespace pfc::ui
