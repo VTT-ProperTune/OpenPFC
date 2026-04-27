@@ -127,8 +127,8 @@ private:
   std::vector<double> filterMF; ///< Mean-field filter in Fourier space
   std::vector<double> opL;      ///< Linear operator: exp(L·dt)
   std::vector<double> opN;      ///< Nonlinear operator: (exp(L·dt) - 1) / L
-#ifdef MAHTI_HACK
-  // in principle, we can reuse some of the arrays ...
+#ifdef TUNGSTEN_REUSE_ARRAYS
+  // Reuse work arrays when the memory-saving Tungsten option is enabled.
   std::vector<double> psiMF, psi, &psiN = psiMF;
   std::vector<std::complex<double>> psiMF_F, psi_F, &psiN_F = psiMF_F;
 #else
@@ -283,7 +283,8 @@ public:
 
     pfc::FFT &fft = get_fft();
 
-    // Step 1: Calculate mean-field density n_MF (forward FFT → k-space multiply → backward FFT)
+    // Step 1: Calculate mean-field density n_MF (forward FFT → k-space multiply →
+    // backward FFT)
     OPENPFC_PROFILE("gradient/mean_field") {
       OPENPFC_PROFILE("gradient/mean_field/forward") { fft.forward(psi, psi_F); }
 
@@ -293,7 +294,9 @@ public:
         }
       }
 
-      OPENPFC_PROFILE("gradient/mean_field/backward") { fft.backward(psiMF_F, psiMF); }
+      OPENPFC_PROFILE("gradient/mean_field/backward") {
+        fft.backward(psiMF_F, psiMF);
+      }
     }
 
     // Step 2: Calculate nonlinear part in real space

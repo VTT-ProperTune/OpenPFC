@@ -1,7 +1,15 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 set(TUNGSTEN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+option(TUNGSTEN_REUSE_ARRAYS "Reuse Tungsten work arrays to reduce memory use" OFF)
+
+function(tungsten_apply_options target_name)
+  if(TUNGSTEN_REUSE_ARRAYS)
+    target_compile_definitions(${target_name} PUBLIC TUNGSTEN_REUSE_ARRAYS)
+  endif()
+endfunction()
 
 add_executable(tungsten src/cpu/tungsten.cpp)
 target_include_directories(tungsten PRIVATE ${TUNGSTEN_INCLUDE_DIR})
@@ -15,12 +23,10 @@ else()
   target_link_libraries(tungsten PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
 endif()
 
-option(TUNGSTEN_REUSE_ARRAYS "Reuse some arrays" OFF)
-
 if(TUNGSTEN_REUSE_ARRAYS)
   message(STATUS "Tungsten: reusing arrays")
-  target_compile_definitions(tungsten PUBLIC MAHTI_HACK)
 endif()
+tungsten_apply_options(tungsten)
 
 install(TARGETS tungsten DESTINATION bin)
 
@@ -46,9 +52,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     CUDA_SEPARABLE_COMPILATION ON
   )
 
-  if(TUNGSTEN_REUSE_ARRAYS)
-    target_compile_definitions(tungsten_cuda PUBLIC MAHTI_HACK)
-  endif()
+  tungsten_apply_options(tungsten_cuda)
 
   install(TARGETS tungsten_cuda DESTINATION bin)
   message(STATUS "Tungsten CUDA version enabled")
@@ -93,9 +97,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     HIP_STANDARD_REQUIRED ON
   )
 
-  if(TUNGSTEN_REUSE_ARRAYS)
-    target_compile_definitions(tungsten_hip PUBLIC MAHTI_HACK)
-  endif()
+  tungsten_apply_options(tungsten_hip)
 
   install(TARGETS tungsten_hip DESTINATION bin)
   message(STATUS "Tungsten HIP version enabled")
