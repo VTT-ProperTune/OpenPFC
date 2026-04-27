@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "diffusion_model.hpp"
@@ -13,17 +13,17 @@
 
 using namespace std;
 using pfc::get_fft;
-using pfc::get_field;
 using pfc::get_model;
+using pfc::get_real_field;
 using pfc::get_world;
 
 void print_stats(Simulator &simulator) {
   // we can still access the model:
   auto &model = dynamic_cast<Diffusion &>(get_model(simulator));
-  auto &field = get_field(simulator);
   auto &time = simulator.get_time();
   int idx = model.get_midpoint_idx();
   if (idx == -1) return;
+  auto &field = model.density();
   cout << "n = " << time.get_increment() << ", t = " << time.get_current()
        << ", psi[" << idx << "] = " << field[idx] << endl;
 }
@@ -32,7 +32,7 @@ void run_test(Simulator &simulator) {
   auto &model = dynamic_cast<Diffusion &>(get_model(simulator));
   auto idx = model.get_midpoint_idx();
   if (idx != -1) {
-    auto &field = get_field(model);
+    auto &field = model.density();
     if (abs(field[idx] - 0.5) < 0.01) {
       cout << "Test pass!" << endl;
     } else {
@@ -54,7 +54,7 @@ public:
       cout << "Applying custom initial condition at time " << t << endl;
     }
     auto &world = get_world(m);
-    auto &field = get_field(m);
+    auto &field = get_real_field(m, "density");
     auto &fft = get_fft(m);
     auto origin = get_origin(world);
     auto spacing = get_spacing(world);
@@ -101,6 +101,7 @@ void run() {
   auto decomposition = make_decomposition(world, comm);
   auto fft = fft::create(decomposition);
   Diffusion model(fft, world);
+  model.initialize(dt);
   Simulator simulator(model, time);
 
   print_stats(simulator);

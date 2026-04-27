@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
@@ -35,7 +35,7 @@ TEST_CASE("VTK roundtrip write", "[integration][io][vtk]") {
   writer->set_domain(global_size, local_size, offset);
 
   // Acquire field and write
-  auto &psi = model.get_field();
+  auto &psi = model.get_real_field("density");
   writer->write(0, psi);
 
   // Expect exact file and non-zero size

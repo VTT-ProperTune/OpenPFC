@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
@@ -26,6 +26,7 @@ public:
     psi.resize(fft.size_inbox());
     psi_F.resize(fft.size_outbox());
     opL.resize(fft.size_outbox());
+    pfc::add_real_field(*this, "density", psi);
 
     Vec3<int> i_low = get_inbox(fft).low;
     Vec3<int> i_high = get_inbox(fft).high;
@@ -83,6 +84,8 @@ public:
   }
 
   Field &get_field() override { return psi; }
+
+  Field &density() noexcept { return psi; }
 
   int get_midpoint_idx() const { return m_midpoint_idx; }
 };

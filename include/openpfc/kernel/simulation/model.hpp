@@ -654,6 +654,7 @@ public:
    *
    * @return Reference to the RealField called "default"
    */
+  [[deprecated("Use get_real_field(\"default\") or named real fields instead")]]
   virtual Field &get_field() {
     if (!has_real_field("default")) {
       throw std::runtime_error("'default' field is not defined.");
@@ -740,7 +741,11 @@ private:
 }
 
 /** @brief Default real field named `"default"` (see Model::get_field()). */
-[[nodiscard]] inline Field &get_field(Model &model) { return model.get_field(); }
+[[nodiscard,
+  deprecated("Use get_real_field(model, \"default\") or named real fields instead")]]
+inline Field &get_field(Model &model) {
+  return model.get_real_field("default");
+}
 
 inline void initialize(Model &model, double dt) { model.initialize(dt); }
 

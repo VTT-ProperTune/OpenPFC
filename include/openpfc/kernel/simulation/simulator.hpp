@@ -122,7 +122,11 @@ public:
    *
    * @return Field&
    */
-  Field &get_field() { return pfc::get_field(m_model); }
+  [[deprecated("Use get_real_field(get_model(sim), \"default\") or named real "
+               "fields instead")]]
+  Field &get_field() {
+    return pfc::get_real_field(m_model, "default");
+  }
 
   void initialize() { pfc::initialize(m_model, m_time.get_dt()); }
 
@@ -502,8 +506,11 @@ public:
   return pfc::get_fft(get_model(sim));
 }
 
-[[nodiscard]] inline Field &get_field(Simulator &sim) {
-  return pfc::get_field(get_model(sim));
+[[nodiscard,
+  deprecated("Use get_real_field(get_model(sim), \"default\") or named real fields "
+             "instead")]]
+inline Field &get_field(Simulator &sim) {
+  return pfc::get_real_field(get_model(sim), "default");
 }
 
 [[nodiscard]] inline bool is_rank0(Simulator &sim) noexcept {
