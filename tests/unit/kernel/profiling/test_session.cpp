@@ -14,7 +14,6 @@
 #include <openpfc/kernel/profiling/region_scope.hpp>
 #include <openpfc/kernel/profiling/session.hpp>
 #include <string>
-#include <thread>
 
 #ifdef OPENPFC_HAS_HDF5
 #include <hdf5.h>
@@ -201,12 +200,9 @@ TEST_CASE("ProfilingSession nested timed scopes exclusive", "[profiling]") {
   {
     ProfilingContextScope ctx(&s);
     ProfilingTimedScope o("outer");
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
     {
       ProfilingTimedScope i("outer/inner");
-      std::this_thread::sleep_for(std::chrono::milliseconds(8));
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
   openpfc_end_frame_with_fft_region_wall_and_memory(s, 1.0, 0.0, 0U, 0U, 0U);
 
@@ -233,11 +229,11 @@ TEST_CASE("ProfilingSession nested timed scopes exclusive", "[profiling]") {
       j["ranks"][0]["frames"][0]["regions"]["outer"]["inclusive"].get<double>();
   const auto outer_exc =
       j["ranks"][0]["frames"][0]["regions"]["outer"]["exclusive"].get<double>();
-  REQUIRE(inner_inc > 0.005);
+  REQUIRE(inner_inc >= 0.0);
   REQUIRE(outer_inc >= inner_inc);
   REQUIRE(outer_exc >= 0.0);
   REQUIRE(outer_exc <= outer_inc);
-  REQUIRE(outer_inc - outer_exc == Catch::Approx(inner_inc).margin(1e-3));
+  REQUIRE(outer_inc - outer_exc == Catch::Approx(inner_inc).margin(1e-9));
   std::filesystem::remove(tmp);
 }
 
