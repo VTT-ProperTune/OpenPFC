@@ -35,9 +35,9 @@
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
+#include <openpfc/frontend/ui/settings_loader.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
 #include <openpfc/frontend/utils/timeleft.hpp>
-#include <openpfc/frontend/utils/toml_to_json.hpp>
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <utility>
@@ -86,54 +86,24 @@ private:
     }
 
     std::filesystem::path file(argv[1]);
-    if (!std::filesystem::exists(file)) {
-      if (rank0) {
-        std::cerr << "Error: File " << file << " does not exist!\n";
-      }
-      MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-
     auto ext = file.extension().string();
-    json settings;
 
-    if (ext == ".toml") {
-      if (rank0) {
+    if (rank0) {
+      if (ext == ".toml") {
         std::cout << "Reading TOML configuration from " << file << "\n\n";
-      }
-      try {
-        auto toml_data = toml::parse_file(file.string());
-        settings = utils::toml_to_json(toml_data);
-      } catch (const toml::parse_error &err) {
-        if (rank0) {
-          std::cerr << "Error parsing TOML file: " << err.description() << "\n";
-          std::cerr << "  at line " << err.source().begin.line << ", column "
-                    << err.source().begin.column << "\n";
-        }
-        MPI_Abort(MPI_COMM_WORLD, 1);
-      }
-    } else if (ext == ".json") {
-      if (rank0) {
+      } else if (ext == ".json") {
         std::cout << "Reading JSON configuration from " << file << "\n\n";
       }
-      std::ifstream input_file(file);
-      try {
-        input_file >> settings;
-      } catch (const nlohmann::json::parse_error &err) {
-        if (rank0) {
-          std::cerr << "Error parsing JSON file: " << err.what() << "\n";
-          std::cerr << "  at byte position " << err.byte << "\n";
-        }
-        MPI_Abort(MPI_COMM_WORLD, 1);
-      }
-    } else {
+    }
+
+    try {
+      return load_settings_file(file);
+    } catch (const std::exception &err) {
       if (rank0) {
-        std::cerr << "Error: Unsupported file format: " << ext << "\n";
-        std::cerr << "Supported formats: .json, .toml\n";
+        std::cerr << "Error: " << err.what() << "\n";
       }
       MPI_Abort(MPI_COMM_WORLD, 1);
     }
-
-    return settings;
   }
 
 public:
