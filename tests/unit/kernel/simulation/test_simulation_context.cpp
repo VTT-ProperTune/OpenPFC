@@ -27,3 +27,10 @@ TEST_CASE("SimulationContext null communicator is not rank 0",
   const SimulationContext ctx{MPI_COMM_NULL};
   REQUIRE_FALSE(ctx.is_rank0());
 }
+
+TEST_CASE("mpi_comm_rank_is_zero matches MPI_Comm_rank",
+          "[simulation_context][unit]") {
+  REQUIRE(mpi_comm_rank_is_zero(MPI_COMM_WORLD) ==
+          (mpi::get_rank(MPI_COMM_WORLD) == 0));
+  REQUIRE_FALSE(mpi_comm_rank_is_zero(MPI_COMM_NULL));
+}

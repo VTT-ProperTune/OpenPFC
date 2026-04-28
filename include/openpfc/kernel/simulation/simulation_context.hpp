@@ -21,15 +21,31 @@
 namespace pfc {
 
 /**
+ * @brief True if this process is rank 0 in the given communicator
+ *
+ * `MPI_COMM_NULL` is treated as non-rank-0. Shared by `SimulationContext` and
+ * `Simulator` so I/O and logging use one definition for “rank 0”.
+ */
+[[nodiscard]] inline bool mpi_comm_rank_is_zero(MPI_Comm comm) noexcept {
+  if (comm == MPI_COMM_NULL) {
+    return false;
+  }
+  int rank = 0;
+  MPI_Comm_rank(comm, &rank);
+  return rank == 0;
+}
+
+/**
  * @brief Read-only bundle for modifier application alongside Model
  */
 class SimulationContext {
 public:
   SimulationContext()
-      : m_mpi_comm(MPI_COMM_WORLD), m_is_rank0(compute_is_rank0(MPI_COMM_WORLD)) {}
+      : m_mpi_comm(MPI_COMM_WORLD),
+        m_is_rank0(mpi_comm_rank_is_zero(MPI_COMM_WORLD)) {}
 
   explicit SimulationContext(MPI_Comm mpi_comm) noexcept
-      : m_mpi_comm(mpi_comm), m_is_rank0(compute_is_rank0(mpi_comm)) {}
+      : m_mpi_comm(mpi_comm), m_is_rank0(mpi_comm_rank_is_zero(mpi_comm)) {}
 
   /** @brief Communicator for MPI collectives (MPI-IO, barriers, reductions) */
   [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_mpi_comm; }
@@ -44,15 +60,6 @@ public:
   [[nodiscard]] bool is_rank0() const noexcept { return m_is_rank0; }
 
 private:
-  static bool compute_is_rank0(MPI_Comm comm) noexcept {
-    if (comm == MPI_COMM_NULL) {
-      return false;
-    }
-    int rank = 0;
-    MPI_Comm_rank(comm, &rank);
-    return rank == 0;
-  }
-
   MPI_Comm m_mpi_comm;
   bool m_is_rank0;
 };

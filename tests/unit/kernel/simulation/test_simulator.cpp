@@ -6,8 +6,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <mpi.h>
+
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 
@@ -23,6 +26,15 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
   auto fft = fft::create(decomposition);
 
   pfc::testing::MockModel model(fft, world);
+
+  SECTION("is_rank0 tracks simulator MPI communicator") {
+    Time time({0.0, 10.0, 1.0}, 1.0);
+    Simulator simulator(model, time, MPI_COMM_WORLD);
+    REQUIRE(simulator.is_rank0() == (mpi::get_rank(MPI_COMM_WORLD) == 0));
+    REQUIRE(pfc::is_rank0(simulator) == simulator.is_rank0());
+    simulator.set_mpi_comm(MPI_COMM_WORLD);
+    REQUIRE(simulator.is_rank0() == (mpi::get_rank(MPI_COMM_WORLD) == 0));
+  }
 
   SECTION("Add and apply initial conditions") {
     Time time({0.0, 10.0, 1.0}, 1.0);

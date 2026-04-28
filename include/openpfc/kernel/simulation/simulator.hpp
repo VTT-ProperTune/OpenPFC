@@ -72,6 +72,7 @@ private:
   std::vector<std::unique_ptr<FieldModifier>> m_boundary_conditions;
   int m_result_counter = 0;
   MPI_Comm m_mpi_comm{MPI_COMM_WORLD};
+  bool m_is_rank0{};
 
 public:
   /**
@@ -83,9 +84,13 @@ public:
    * etc.)
    */
   Simulator(Model &model, Time &time, MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : m_model(model), m_time(time), m_mpi_comm(mpi_comm) {}
+      : m_model(model), m_time(time), m_mpi_comm(mpi_comm),
+        m_is_rank0(mpi_comm_rank_is_zero(mpi_comm)) {}
 
-  void set_mpi_comm(MPI_Comm mpi_comm) noexcept { m_mpi_comm = mpi_comm; }
+  void set_mpi_comm(MPI_Comm mpi_comm) noexcept {
+    m_mpi_comm = mpi_comm;
+    m_is_rank0 = mpi_comm_rank_is_zero(mpi_comm);
+  }
 
   [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_mpi_comm; }
 
@@ -141,7 +146,8 @@ public:
 
   void initialize() { pfc::initialize(m_model, m_time.get_dt()); }
 
-  bool is_rank0() { return pfc::is_rank0(m_model); }
+  /** @brief Rank 0 in mpi_comm() (same communicator passed to field modifiers) */
+  [[nodiscard]] bool is_rank0() const noexcept { return m_is_rank0; }
 
   unsigned int get_increment() { return get_time().get_increment(); }
 
@@ -572,8 +578,8 @@ inline Field &get_field(Simulator &sim) {
   return pfc::get_real_field(get_model(sim), "default");
 }
 
-[[nodiscard]] inline bool is_rank0(Simulator &sim) noexcept {
-  return pfc::is_rank0(get_model(sim));
+[[nodiscard]] inline bool is_rank0(const Simulator &sim) noexcept {
+  return sim.is_rank0();
 }
 
 inline void step(Simulator &s, Model &m) { pfc::step(m, get_time(s).get_current()); }
