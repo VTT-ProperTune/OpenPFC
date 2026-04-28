@@ -3,11 +3,17 @@
 
 /**
  * @file simulation_wiring.hpp
- * @brief Connect JSON settings to Simulator (writers, ICs, BCs)
+ * @brief Connect JSON settings to Simulator and Time (writers, ICs, BCs, options)
  *
  * @details
  * Shared helpers used by `App::main()` (and available for other drivers) to
- * register binary result writers and field modifiers from parsed settings.
+ * register binary result writers, field modifiers, and optional `simulator`
+ * subsection keys (`result_counter`, `increment`).
+ *
+ * Drivers that do not use `SpectralSimulationSession` can call
+ * `add_result_writers_from_json` / `add_initial_conditions_from_json` /
+ * `add_boundary_conditions_from_json` and `apply_simulator_section_from_json`
+ * individually on an existing `Simulator` and `Time`.
  */
 
 #ifndef PFC_UI_SIMULATION_WIRING_HPP
@@ -16,6 +22,7 @@
 #include <filesystem>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -26,6 +33,7 @@
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 namespace pfc::ui {
 
@@ -199,6 +207,48 @@ inline void add_boundary_conditions_from_json(Simulator &sim,
     field_modifier->set_mpi_comm(comm);
     sim.add_boundary_conditions(std::move(field_modifier));
   }
+}
+
+/**
+ * @brief Apply optional top-level `"simulator"` object (`result_counter`,
+ * `increment`)
+ *
+ * `result_counter` in JSON is treated as the last completed index; the simulator
+ * counter is set to that value plus one (same as previous `App` behavior).
+ */
+inline void apply_simulator_section_from_json(Simulator &sim, Time &time,
+                                              const nlohmann::json &settings) {
+  if (!settings.contains("simulator")) {
+    return;
+  }
+  const nlohmann::json &j = settings["simulator"];
+  if (j.contains("result_counter")) {
+    if (!j["result_counter"].is_number_integer()) {
+      throw std::invalid_argument(
+          "Invalid JSON input: missing or invalid 'result_counter' field.");
+    }
+    const int result_counter = static_cast<int>(j["result_counter"]) + 1;
+    sim.set_result_counter(result_counter);
+  }
+  if (j.contains("increment")) {
+    if (!j["increment"].is_number_integer()) {
+      throw std::invalid_argument(
+          "Invalid JSON input: missing or invalid 'increment' field.");
+    }
+    const int increment = static_cast<int>(j["increment"]);
+    time.set_increment(increment);
+  }
+}
+
+/** @brief Writers, ICs, BCs, then optional `simulator` JSON subsection */
+inline void wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
+                                                 const nlohmann::json &settings,
+                                                 MPI_Comm comm, int mpi_rank,
+                                                 bool rank0) {
+  add_result_writers_from_json(sim, settings, comm, mpi_rank, rank0);
+  add_initial_conditions_from_json(sim, settings, comm, mpi_rank, rank0);
+  add_boundary_conditions_from_json(sim, settings, comm, mpi_rank, rank0);
+  apply_simulator_section_from_json(sim, time, settings);
 }
 
 } // namespace pfc::ui

@@ -85,7 +85,7 @@ Features that are useful for full applications but not required for minimal simu
 | Directory | Contents |
 |-----------|----------|
 | **frontend/utils** | Logging, utils.hpp, toml_to_json, show, timeleft, nancheck, memory_reporter, field_iteration, typename, array_to_string. |
-| **frontend/ui** | App, `spectral_simulation_session.hpp` (JSON → world/FFT/model/simulator graph), `simulation_wiring.hpp` (JSON → writers/ICs/BCs on `Simulator`), from_json, json_helpers, errors, parameter_validator, parameter_metadata, field_modifier_registry; ui.hpp redirect. |
+| **frontend/ui** | App, `spectral_simulation_session.hpp` (JSON → world/FFT/model/simulator graph), `simulation_wiring.hpp` (JSON → writers/ICs/BCs, optional `simulator` keys on `Simulator`/`Time`), from_json, json_helpers, errors, parameter_validator, parameter_metadata, field_modifier_registry; ui.hpp redirect. |
 | **frontend/io** | Results writer implementations (binary_writer, vtk_writer). |
 
 ## Include paths

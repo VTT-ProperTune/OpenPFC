@@ -303,26 +303,6 @@ public:
 
     session->wire_simulator_from_settings(m_settings, m_comm, rank_id, rank0);
 
-    if (m_settings.contains("simulator")) {
-      const json &j = m_settings["simulator"];
-      if (j.contains("result_counter")) {
-        if (!j["result_counter"].is_number_integer()) {
-          throw std::invalid_argument(
-              "Invalid JSON input: missing or invalid 'result_counter' field.");
-        }
-        int result_counter = (int)j["result_counter"] + 1;
-        session->simulator().set_result_counter(result_counter);
-      }
-      if (j.contains("increment")) {
-        if (!j["increment"].is_number_integer()) {
-          throw std::invalid_argument(
-              "Invalid JSON input: missing or invalid 'increment' field.");
-        }
-        int increment = (int)j["increment"];
-        session->time().set_increment(increment);
-      }
-    }
-
     if (rank0) {
       pfc::log_info(app_lg, "Starting time integration (Simulator integrator API)");
     }

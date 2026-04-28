@@ -94,13 +94,12 @@ public:
   [[nodiscard]] const Simulator &simulator() const noexcept { return m_simulator; }
 
   /**
-   * @brief Register results writers and field modifiers from application JSON
+   * @brief Register writers/modifiers and apply optional `"simulator"` JSON keys
    */
   void wire_simulator_from_settings(const nlohmann::json &settings, MPI_Comm comm,
                                     int mpi_rank, bool rank0) {
-    add_result_writers_from_json(m_simulator, settings, comm, mpi_rank, rank0);
-    add_initial_conditions_from_json(m_simulator, settings, comm, mpi_rank, rank0);
-    add_boundary_conditions_from_json(m_simulator, settings, comm, mpi_rank, rank0);
+    wire_simulator_and_runtime_from_json(m_simulator, m_time, settings, comm,
+                                         mpi_rank, rank0);
   }
 
 private:
