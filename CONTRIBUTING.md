@@ -47,6 +47,19 @@ the same session:
 
 This keeps `git log -- <path>` and `git bisect` usable and reviews focused.
 
+### Signed commits and Cursor / CI sandboxes
+
+If you use **`commit.gpgsign=true`**, a restricted environment (for example the
+Cursor agent **sandbox**, or some CI containers) may report **`gpg failed to sign
+the data`**: GnuPG needs to write lock files under **`~/.gnupg`** and to reach
+**`gpg-agent`** (typically under **`/run/user/<uid>/gnupg/`**). Sandboxes that only
+allow writes inside the repository block that path.
+
+**What to do:** run `git commit` **outside** that restriction (full permissions /
+no sandbox), or use a signing method that works in your environment (for example
+**SSH signing** with a key available in the job). Do not disable signing project-wide
+just to satisfy the sandbox; fix the environment instead.
+
 ## Copyright Transfer
 
 VTT Technical Research Centre of Finland Ltd (VTT) is the sole Copyright Holder
