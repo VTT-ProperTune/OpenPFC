@@ -42,6 +42,7 @@
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <ostream>
+#include <stdexcept>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -100,7 +101,8 @@ private:
         std::cerr << "Error: Configuration file required.\n";
         std::cerr << "Usage: " << argv[0] << " <config.json|config.toml>\n";
       }
-      MPI_Abort(MPI_COMM_WORLD, 1);
+      throw std::runtime_error("OpenPFC App: configuration file required (pass path "
+                               "to JSON or TOML as first argument)");
     }
 
     std::filesystem::path file(argv[1]);
@@ -120,7 +122,8 @@ private:
       if (rank0) {
         std::cerr << "Error: " << err.what() << "\n";
       }
-      MPI_Abort(MPI_COMM_WORLD, 1);
+      throw std::runtime_error(
+          std::string("OpenPFC App: failed to load settings: ") + err.what());
     }
   }
 

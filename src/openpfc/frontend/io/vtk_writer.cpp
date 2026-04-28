@@ -279,8 +279,10 @@ void VTKWriter::write_pvti_file(int increment) const {
   file.close();
   if (!file.good()) {
     const Logger lg{LogLevel::Error, /*rank*/ 0};
-    log_error(lg, std::string("Failed writing PVTI file: ") + pvti_filename);
-    MPI_Abort(m_comm, 1);
+    const std::string msg =
+        std::string("Failed writing PVTI file: ") + pvti_filename;
+    log_error(lg, msg);
+    throw std::runtime_error(msg);
   }
 }
 
@@ -301,8 +303,9 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
   std::ofstream file(filename, std::ios::binary);
   if (!file) {
     const Logger lg{LogLevel::Error, m_rank};
-    log_error(lg, std::string("Failed to open VTK file: ") + filename);
-    MPI_Abort(m_comm, 1);
+    const std::string msg = std::string("Failed to open VTK file: ") + filename;
+    log_error(lg, msg);
+    throw std::runtime_error(msg);
   }
 
   // Write header
@@ -318,8 +321,9 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
   file.close();
   if (!file.good()) {
     const Logger lg{LogLevel::Error, m_rank};
-    log_error(lg, std::string("Failed writing VTK file: ") + filename);
-    MPI_Abort(m_comm, 1);
+    const std::string msg = std::string("Failed writing VTK file: ") + filename;
+    log_error(lg, msg);
+    throw std::runtime_error(msg);
   }
 
   // Synchronize all ranks before writing master file
