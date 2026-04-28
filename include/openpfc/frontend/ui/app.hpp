@@ -13,7 +13,7 @@
  * - Setting up initial and boundary conditions
  * - Running the simulation loop
  * - Writing results
- * - Performance timing and reporting (kernel/profiling, see
+ * - Performance timing and reporting via `AppProfilingController` (see
  * docs/performance_profiling.md)
  *
  * @author OpenPFC Development Team
@@ -23,61 +23,28 @@
 #ifndef PFC_UI_APP_HPP
 #define PFC_UI_APP_HPP
 
-#include <algorithm>
-#include <array>
-#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/app_integrator_loop.hpp>
+#include <openpfc/frontend/ui/app_profiling.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/ui/settings_loader.hpp>
 #include <openpfc/frontend/ui/spectral_simulation_session.hpp>
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
-#include <openpfc/frontend/utils/timeleft.hpp>
-#include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
 namespace pfc::ui {
-
-/**
- * @brief Return profiling JSON keys that are not in the supported set (for tests
- * and diagnostics).
- */
-[[nodiscard]] inline std::vector<std::string>
-list_unknown_profiling_keys(const json &profiling) {
-  std::vector<std::string> out;
-  if (!profiling.is_object()) {
-    return out;
-  }
-  static constexpr std::array<std::string_view, 8> known_keys = {
-      "enabled",      "format",  "output", "memory_samples",
-      "print_report", "regions", "run_id", "export_metadata"};
-
-  for (const auto &[key, _] : profiling.items()) {
-    if (std::find(known_keys.begin(), known_keys.end(), key) == known_keys.end()) {
-      out.push_back(std::string("unknown profiling config key '") + key + "'");
-    }
-  }
-  return out;
-}
-
-inline void warn_unknown_profiling_keys(const json &profiling,
-                                        const pfc::Logger &lg) {
-  for (const auto &msg : list_unknown_profiling_keys(profiling)) {
-    pfc::log_warning(lg, msg);
-  }
-}
 
 /**
  * @brief The main json-based application
@@ -89,25 +56,7 @@ private:
   MPI_Worker m_worker;
   bool rank0;
   json m_settings;
-
-  double m_total_steptime = 0.0;
-  double m_total_fft_time = 0.0;
-  double m_steptime = 0.0;
-  double m_fft_time = 0.0;
-  double m_avg_steptime = 0.0;
-  int m_steps_done = 0;
-
-  bool m_prof_enabled = false;
-  std::string m_prof_format = "json";
-  std::string m_prof_output = "openpfc_profile";
-  bool m_prof_memory_samples = false;
-  bool m_prof_print_report = false;
-  std::vector<std::string> m_prof_extra_regions;
-  /// Optional; if empty at export time, `SLURM_JOB_ID` / `OPENPFC_PROFILING_RUN_ID`
-  /// may be used (see `read_profiling_configuration`).
-  std::string m_prof_run_id;
-  json m_prof_export_metadata;
-  std::unique_ptr<pfc::profiling::ProfilingSession> m_profiler;
+  AppProfilingController m_profiling;
 
   // read settings from file (JSON or TOML format)
   json read_settings(int argc, char **argv) {
@@ -158,89 +107,6 @@ public:
     return ensure_results_parent_dir_for_writer(output, m_worker.get_rank());
   }
 
-  void read_profiling_configuration() {
-    if (!m_settings.contains("profiling")) {
-      return;
-    }
-    const auto &p = m_settings["profiling"];
-    if (rank0) {
-      warn_unknown_profiling_keys(
-          p, pfc::Logger{pfc::LogLevel::Info, m_worker.get_rank()});
-    }
-    if (p.contains("enabled")) {
-      m_prof_enabled = p["enabled"].get<bool>();
-    }
-    if (p.contains("format") && p["format"].is_string()) {
-      m_prof_format = p["format"].get<std::string>();
-    }
-    if (p.contains("output") && p["output"].is_string()) {
-      m_prof_output = p["output"].get<std::string>();
-    }
-    if (p.contains("memory_samples")) {
-      m_prof_memory_samples = p["memory_samples"].get<bool>();
-    }
-    if (p.contains("print_report")) {
-      m_prof_print_report = p["print_report"].get<bool>();
-    }
-    m_prof_extra_regions.clear();
-    if (p.contains("regions") && p["regions"].is_array()) {
-      for (const auto &el : p["regions"]) {
-        if (el.is_string()) {
-          m_prof_extra_regions.push_back(el.get<std::string>());
-        }
-      }
-    }
-    m_prof_run_id.clear();
-    if (p.contains("run_id") && p["run_id"].is_string()) {
-      m_prof_run_id = p["run_id"].get<std::string>();
-    }
-    m_prof_export_metadata = json::object();
-    if (p.contains("export_metadata") && p["export_metadata"].is_object()) {
-      m_prof_export_metadata = p["export_metadata"];
-    }
-  }
-
-  void
-  apply_profiling_export_options(pfc::profiling::ProfilingExportOptions &exp) const {
-    exp.run_id = m_prof_run_id;
-    if (exp.run_id.empty()) {
-      if (const char *e = std::getenv("SLURM_JOB_ID")) {
-        exp.run_id = e;
-      } else if (const char *e2 = std::getenv("OPENPFC_PROFILING_RUN_ID")) {
-        exp.run_id = e2;
-      }
-    }
-    exp.export_metadata = json::object();
-    if (m_settings.contains("domain")) {
-      const auto &d = m_settings["domain"];
-      if (d.contains("Lx")) {
-        exp.export_metadata["domain_lx"] = d["Lx"];
-      }
-      if (d.contains("Ly")) {
-        exp.export_metadata["domain_ly"] = d["Ly"];
-      }
-      if (d.contains("Lz")) {
-        exp.export_metadata["domain_lz"] = d["Lz"];
-      }
-    }
-    if (const char *e = std::getenv("SLURM_JOB_ID")) {
-      exp.export_metadata["slurm_job_id"] = std::string(e);
-    }
-    if (const char *e = std::getenv("SLURM_JOB_PARTITION")) {
-      exp.export_metadata["slurm_partition"] = std::string(e);
-    }
-    if (const char *e = std::getenv("SLURM_NNODES")) {
-      exp.export_metadata["slurm_nnodes"] = std::string(e);
-    }
-    if (const char *e = std::getenv("SLURM_NTASKS")) {
-      exp.export_metadata["slurm_ntasks"] = std::string(e);
-    }
-    for (auto it = m_prof_export_metadata.begin();
-         it != m_prof_export_metadata.end(); ++it) {
-      exp.export_metadata[it.key()] = it.value();
-    }
-  }
-
   int main() {
     const int rank_id = m_worker.get_rank();
     const pfc::Logger app_lg{pfc::LogLevel::Info, rank_id};
@@ -279,13 +145,7 @@ public:
     if (m_settings.contains("model") && m_settings["model"].contains("params")) {
       from_json(m_settings["model"]["params"], session->model());
     }
-    read_profiling_configuration();
-    if (m_prof_enabled) {
-      m_profiler = std::make_unique<pfc::profiling::ProfilingSession>(
-          pfc::profiling::ProfilingMetricCatalog::with_defaults_and_extras(
-              m_prof_extra_regions),
-          pfc::profiling::ProfilingSession::openpfc_default_frame_metrics());
-    }
+    m_profiling.configure_from_root_settings(m_settings, rank_id, rank0);
 
     if (rank0) {
       pfc::log_info(app_lg, "Initializing model...");
@@ -307,152 +167,11 @@ public:
       pfc::log_info(app_lg, "Starting time integration (Simulator integrator API)");
     }
 
-    while (!session->time().done()) {
-      session->fft().reset_fft_time();
-      session->simulator().begin_integrator_step();
-      const double barrier_step_s = pfc::profiling::measure_barriered(m_comm, [&] {
-        if (m_profiler) {
-          pfc::profiling::openpfc_begin_frame_with_step_and_rank(
-              *m_profiler, session->time().get_increment(), rank_id);
-        }
-        if (m_profiler) {
-          pfc::profiling::ProfilingContextScope scope(m_profiler.get());
-          step(session->simulator(), session->model());
-        } else {
-          step(session->simulator(), session->model());
-        }
-      });
-      const double fft_meter_s = session->fft().get_fft_time();
+    (void)run_simulator_time_integration_loop(*session, m_comm, rank_id, rank0,
+                                              m_profiling.session(),
+                                              m_profiling.memory_samples(), app_lg);
 
-      std::uint64_t rss = 0;
-      std::uint64_t model_mem = 0;
-      std::uint64_t fft_mem = 0;
-      if (m_profiler && m_prof_memory_samples) {
-        rss = pfc::profiling::try_read_process_rss_bytes();
-        model_mem = session->model().get_allocated_memory_bytes();
-        fft_mem = session->fft().get_allocated_memory_bytes();
-      }
-      if (m_profiler) {
-        m_profiler->assign_recorded_time("fft", fft_meter_s);
-        pfc::profiling::openpfc_end_frame_step_wall_and_memory(
-            *m_profiler, barrier_step_s, rss, model_mem, fft_mem);
-      }
-
-      m_steptime = pfc::profiling::reduce_max_to_root(m_comm, barrier_step_s, 0);
-      m_fft_time = pfc::profiling::reduce_max_to_root(m_comm, fft_meter_s, 0);
-
-      session->simulator().end_integrator_step();
-
-      // Calculate eta from average step time.
-      // Use exponential moving average when steps > 3.
-      m_avg_steptime = m_steptime;
-      if (m_steps_done > 3) {
-        m_avg_steptime = 0.01 * m_steptime + 0.99 * m_avg_steptime;
-      }
-      int increment = session->time().get_increment();
-      double t = session->time().get_current();
-      double t1 = session->time().get_t1();
-      double eta_i = (t1 - t) / session->time().get_dt();
-      double eta_t = eta_i * m_avg_steptime;
-      double other_time = m_steptime - m_fft_time;
-      if (rank0) {
-        std::ostringstream steposs;
-        steposs << "Step " << increment << " done in " << m_steptime << " s ("
-                << m_fft_time << " s FFT, " << other_time
-                << " s other). Simulation time: " << t << " / " << t1 << " ("
-                << (t / t1 * 100)
-                << " % done). ETA: " << pfc::utils::TimeLeft(eta_t);
-        pfc::log_info(app_lg, steposs.str());
-      }
-
-      m_total_steptime += m_steptime;
-      m_total_fft_time += m_fft_time;
-      m_steps_done += 1;
-    }
-
-    if (m_steps_done > 0) {
-      const double avg_steptime = m_total_steptime / m_steps_done;
-      const double avg_fft_time = m_total_fft_time / m_steps_done;
-      const double avg_oth_time = avg_steptime - avg_fft_time;
-      const double p_fft = avg_fft_time / avg_steptime * 100.0;
-      const double p_oth = avg_oth_time / avg_steptime * 100.0;
-      if (rank0) {
-        std::ostringstream sumoss;
-        sumoss << "Simulated " << m_steps_done << " steps. Average times:\n"
-               << "Step time:  " << avg_steptime << " s\n"
-               << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %\n"
-               << "Other time: " << avg_oth_time << " s / " << p_oth << " %";
-        pfc::log_info(app_lg, sumoss.str());
-      }
-    } else if (rank0) {
-      pfc::log_info(
-          app_lg,
-          "No complete timesteps were executed; skipping average timing summary.");
-    }
-
-    if (m_profiler) {
-      pfc::profiling::ProfilingExportOptions exp;
-      std::string fmt = m_prof_format;
-      std::transform(fmt.begin(), fmt.end(), fmt.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-      });
-      if (fmt == "hdf5") {
-        exp.write_json = false;
-        exp.write_hdf5 = true;
-        exp.hdf5_path = m_prof_output + ".h5";
-      } else if (fmt == "csv" || fmt == "csv_hdf5" || fmt == "csv+hdf5") {
-        if (rank0) {
-          std::ostringstream pfoss;
-          pfoss << "profiling.format \"" << m_prof_format
-                << "\" is no longer supported (CSV export removed); using json";
-          if (fmt == "csv_hdf5" || fmt == "csv+hdf5") {
-            pfoss << " and hdf5";
-          }
-          pfoss << '.';
-          pfc::log_warning(app_lg, pfoss.str());
-        }
-        if (fmt == "csv") {
-          exp.write_json = true;
-          exp.json_path = m_prof_output + ".json";
-        } else {
-          exp.write_json = true;
-          exp.write_hdf5 = true;
-          exp.json_path = m_prof_output + ".json";
-          exp.hdf5_path = m_prof_output + ".h5";
-        }
-      } else if (fmt == "both") {
-        exp.write_json = true;
-        exp.write_hdf5 = true;
-        exp.json_path = m_prof_output + ".json";
-        exp.hdf5_path = m_prof_output + ".h5";
-      } else {
-        if (fmt != "json" && rank0) {
-          pfc::log_warning(app_lg, std::string("profiling.format unknown (\"") +
-                                       m_prof_format + "\"), using json");
-        }
-        exp.write_json = true;
-        exp.json_path = m_prof_output + ".json";
-      }
-      apply_profiling_export_options(exp);
-      m_profiler->finalize_and_export(m_comm, exp);
-      if (rank0) {
-        pfc::log_info(app_lg,
-                      "Profiling export written (see profiling.output / format).");
-      }
-      if (m_prof_print_report && m_profiler) {
-        pfc::profiling::ProfilingPrintOptions popts;
-        popts.title = "OpenPFC profiling (MPI aggregate, mean)";
-        popts.ascii_lines = true;
-        popts.sort_by_time = true;
-        popts.show_exclusive_column = true;
-        popts.mpi_aggregate_stdout = true;
-        std::ostringstream prof_out;
-        pfc::profiling::print_profiling_timer(prof_out, m_comm, *m_profiler, popts);
-        if (rank0 && !prof_out.str().empty()) {
-          pfc::log_info(app_lg, prof_out.str());
-        }
-      }
-    }
+    m_profiling.finalize_and_export_if_active(m_settings, m_comm, rank0, app_lg);
 
     return 0;
   }

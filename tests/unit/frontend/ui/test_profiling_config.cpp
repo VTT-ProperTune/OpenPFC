@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
-#include <openpfc/frontend/ui/app.hpp>
+#include <openpfc/frontend/ui/app_profiling.hpp>
 #include <sstream>
 #include <string>
 
