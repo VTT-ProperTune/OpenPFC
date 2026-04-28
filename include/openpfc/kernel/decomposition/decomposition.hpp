@@ -36,7 +36,6 @@
 #pragma once
 
 #include <array>
-#include <heffte.h>
 #include <openpfc/kernel/data/world.hpp>
 #include <ostream>
 #include <stdexcept>
@@ -48,33 +47,6 @@ namespace pfc {
  * @brief Namespace for decomposition-related classes and functions.
  */
 
-namespace world {
-
-/**
- * @brief Construct a new World object from an existing one and a box.
- */
-template <typename T>
-inline auto create(const World<T> &world, const heffte::box3d<int> &box) {
-  return World(box.low, box.high, get_coordinate_system(world));
-}
-
-template <typename T> inline auto to_indices(const World<T> &world) {
-  std::array<int, 3> lower = get_lower(world);
-  std::array<int, 3> upper = get_upper(world);
-  return heffte::box3d<int>(lower, upper);
-}
-
-template <typename T>
-inline auto split_world(const World<T> &world, const Int3 &grid) {
-  std::vector<World<T>> sub_worlds;
-  for (const auto &box : heffte::split_world(to_indices(world), grid)) {
-    sub_worlds.push_back(create(world, box));
-  }
-  return sub_worlds;
-}
-
-} // namespace world
-
 namespace decomposition {
 
 using pfc::csys::CartesianTag;
@@ -84,8 +56,6 @@ using pfc::types::Real3;
 
 using World = pfc::world::World<CartesianTag>;
 using Int3 = pfc::types::Int3;
-
-using heffte::proc_setup_min_surface;
 
 /**
  * @brief Describes a static, pure partitioning of the global simulation domain
@@ -180,8 +150,7 @@ struct Decomposition {
   const std::array<int, 3> m_grid;  ///< The number of parts in each dimension.
   const std::vector<pfc::World> m_subworlds; ///< The sub-worlds for each part.
 
-  Decomposition(const World &world, const Int3 grid)
-      : m_global_world(world), m_grid(grid), m_subworlds(split_world(world, grid)) {}
+  Decomposition(const World &world, const Int3 &grid);
 
   friend std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
     os << "Decomposition:\n";
@@ -388,9 +357,7 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
  * @see create(world, nparts) - automatic grid selection
  * @see proc_setup_min_surface() - algorithm for optimal grid
  */
-inline auto create(const World &world, const Int3 &grid) noexcept {
-  return Decomposition(world, grid);
-};
+Decomposition create(const World &world, const Int3 &grid) noexcept;
 
 /**
  * @brief Create decomposition with automatic grid selection
@@ -445,11 +412,7 @@ inline auto create(const World &world, const Int3 &grid) noexcept {
  * @see create(world, grid) - manual grid specification
  * @see proc_setup_min_surface() - HeFFTe's grid selection algorithm
  */
-inline auto create(const World &world, const int &nparts) noexcept {
-  auto indices = to_indices(world);
-  auto grid = proc_setup_min_surface(indices, nparts);
-  return create(world, grid);
-}
+Decomposition create(const World &world, const int &nparts) noexcept;
 
 /**
  * @brief Get the total number of subdomains
