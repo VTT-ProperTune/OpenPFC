@@ -14,6 +14,10 @@
  * `add_result_writers_from_json` / `add_initial_conditions_from_json` /
  * `add_boundary_conditions_from_json` and `apply_simulator_section_from_json`
  * individually on an existing `Simulator` and `Time`.
+ *
+ * Initial-condition and boundary-condition JSON share the same `target`
+ * parsing; that logic lives in
+ * `pfc::ui::detail::configure_field_modifier_targets_from_json`.
  */
 
 #ifndef PFC_UI_SIMULATION_WIRING_HPP
@@ -24,6 +28,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -32,10 +37,54 @@
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/utils/logging.hpp>
+#include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 namespace pfc::ui {
+namespace detail {
+
+/**
+ * @brief Parse JSON `target` (string or array) and apply to a field modifier
+ *
+ * Single place for initial-condition and boundary-condition wiring (DRY).
+ * @param modifier_kind Log label, e.g. `"initial condition"` or `"boundary
+ * condition"`.
+ */
+inline void configure_field_modifier_targets_from_json(
+    pfc::FieldModifier &modifier, const nlohmann::json &params,
+    const pfc::Logger &lg, bool rank0, std::string_view modifier_kind) {
+  if (!params.contains("target")) {
+    if (rank0) {
+      pfc::log_warning(lg, std::string("no target is set for ") +
+                               std::string(modifier_kind) +
+                               "! Using target 'default'");
+    }
+    return;
+  }
+  const auto &target = params["target"];
+  if (target.is_array()) {
+    std::vector<std::string> names;
+    names.reserve(target.size());
+    for (const auto &el : target) {
+      names.push_back(el.get<std::string>());
+    }
+    modifier.set_field_names(std::move(names));
+    if (rank0) {
+      pfc::log_info(lg, std::string("Setting ") + std::string(modifier_kind) +
+                            " targets (multi-field)");
+    }
+    return;
+  }
+  const auto t = target.get<std::string>();
+  if (rank0) {
+    pfc::log_info(lg, std::string("Setting ") + std::string(modifier_kind) +
+                          " target to " + t);
+  }
+  modifier.set_field_name(t);
+}
+
+} // namespace detail
 
 /**
  * @brief Ensure parent directory of a writer path exists (rank 0 only)
@@ -119,31 +168,8 @@ inline void add_initial_conditions_from_json(Simulator &sim,
     }
     std::string type = params["type"];
     auto field_modifier = create_field_modifier(type, params);
-    if (!params.contains("target")) {
-      if (rank0) {
-        pfc::log_warning(
-            lg, "no target is set for initial condition! Using target 'default'");
-      }
-    } else {
-      const auto &target = params["target"];
-      if (target.is_array()) {
-        std::vector<std::string> names;
-        names.reserve(target.size());
-        for (const auto &el : target) {
-          names.push_back(el.get<std::string>());
-        }
-        field_modifier->set_field_names(std::move(names));
-        if (rank0) {
-          pfc::log_info(lg, "Setting initial condition targets (multi-field)");
-        }
-      } else {
-        auto t = target.get<std::string>();
-        if (rank0) {
-          pfc::log_info(lg, std::string("Setting initial condition target to ") + t);
-        }
-        field_modifier->set_field_name(t);
-      }
-    }
+    detail::configure_field_modifier_targets_from_json(*field_modifier, params, lg,
+                                                       rank0, "initial condition");
     field_modifier->set_mpi_comm(comm);
     sim.add_initial_conditions(std::move(field_modifier));
   }
@@ -178,32 +204,8 @@ inline void add_boundary_conditions_from_json(Simulator &sim,
     }
     std::string type = params["type"];
     auto field_modifier = create_field_modifier(type, params);
-    if (!params.contains("target")) {
-      if (rank0) {
-        pfc::log_warning(
-            lg, "no target is set for boundary condition! Using target 'default'");
-      }
-    } else {
-      const auto &target = params["target"];
-      if (target.is_array()) {
-        std::vector<std::string> names;
-        names.reserve(target.size());
-        for (const auto &el : target) {
-          names.push_back(el.get<std::string>());
-        }
-        field_modifier->set_field_names(std::move(names));
-        if (rank0) {
-          pfc::log_info(lg, "Setting boundary condition targets (multi-field)");
-        }
-      } else {
-        auto t = target.get<std::string>();
-        if (rank0) {
-          pfc::log_info(lg,
-                        std::string("Setting boundary condition target to ") + t);
-        }
-        field_modifier->set_field_name(t);
-      }
-    }
+    detail::configure_field_modifier_targets_from_json(*field_modifier, params, lg,
+                                                       rank0, "boundary condition");
     field_modifier->set_mpi_comm(comm);
     sim.add_boundary_conditions(std::move(field_modifier));
   }
