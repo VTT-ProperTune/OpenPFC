@@ -10,6 +10,24 @@
 
 namespace pfc::fft::layout {
 
+namespace {
+
+[[nodiscard]] Box3i box3i_from_heffte(const heffte::box3d<int> &b) {
+  return Box3i{b.low, b.high, b.size};
+}
+
+[[nodiscard]] std::vector<Box3i>
+boxes_from_heffte(const std::vector<heffte::box3d<int>> &boxes) {
+  std::vector<Box3i> out;
+  out.reserve(boxes.size());
+  for (const auto &bx : boxes) {
+    out.push_back(box3i_from_heffte(bx));
+  }
+  return out;
+}
+
+} // namespace
+
 // Helper function to print std::array
 template <typename T, std::size_t N>
 std::ostream &operator<<(std::ostream &os, const std::array<T, N> &arr) {
@@ -50,14 +68,23 @@ FFTLayout create(const Decomposition &decomposition, int r2c_direction) {
   auto real_indices = get_real_indices(decomposition);
   auto complex_indices = get_complex_indices(decomposition, r2c_direction);
   auto grid = get_grid(decomposition);
-  auto real_boxes = split_world(real_indices, grid);
-  auto complex_boxes = split_world(complex_indices, grid);
-  return FFTLayout{decomposition, r2c_direction, real_boxes, complex_boxes};
+  auto real_boxes = boxes_from_heffte(split_world(real_indices, grid));
+  auto complex_boxes = boxes_from_heffte(split_world(complex_indices, grid));
+  return FFTLayout{decomposition, r2c_direction, std::move(real_boxes),
+                   std::move(complex_boxes)};
 }
 
 } // namespace pfc::fft::layout
 
 namespace pfc::fft {
+
+namespace {
+
+[[nodiscard]] heffte::box3d<int> heffte_box_from_box3i(const Box3i &b) {
+  return heffte::box3d<int>(b.low, b.high);
+}
+
+} // namespace
 
 auto get_comm() { return MPI_COMM_WORLD; }
 
@@ -78,11 +105,12 @@ using layout::FFTLayout;
 using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 
 FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options) {
-  auto inbox = get_real_box(fft_layout, rank_id);
-  auto outbox = get_complex_box(fft_layout, rank_id);
+  const auto &inbox = get_real_box(fft_layout, rank_id);
+  const auto &outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
   auto *comm = get_comm();
-  return {fft_r2c(inbox, outbox, r2c_dir, comm, options)};
+  return {fft_r2c(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
+                  r2c_dir, comm, options)};
 }
 
 FFT create(const Decomposition &decomposition, int rank_id) {
@@ -104,13 +132,15 @@ std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_
   case Backend::FFTW: {
     using fft_type = heffte::fft3d_r2c<heffte::backend::fftw>;
     return std::make_unique<FFT_Impl<heffte::backend::fftw>>(
-        fft_type(inbox, outbox, r2c_dir, comm, options));
+        fft_type(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
+                 r2c_dir, comm, options));
   }
 #if defined(OpenPFC_ENABLE_CUDA)
   case Backend::CUDA: {
     using fft_type = heffte::fft3d_r2c<heffte::backend::cufft>;
     return std::make_unique<FFT_Impl<heffte::backend::cufft>>(
-        fft_type(inbox, outbox, r2c_dir, comm, options));
+        fft_type(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
+                 r2c_dir, comm, options));
   }
 #endif
   default: throw std::runtime_error("Unsupported FFT backend requested");

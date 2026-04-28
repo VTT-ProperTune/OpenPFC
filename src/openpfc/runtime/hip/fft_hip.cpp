@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #if defined(OpenPFC_ENABLE_HIP)
@@ -36,18 +36,24 @@ static int get_mpi_size(MPI_Comm comm) {
   return size;
 }
 
+static heffte::box3d<int> heffte_box_from_box3i(const Box3i &b) {
+  return heffte::box3d<int>(b.low, b.high);
+}
+
 FFT_HIP create_hip(const Decomposition &decomposition, int rank_id) {
   auto options = heffte::default_options<heffte::backend::rocfft>();
   auto r2c_dir = 0;
   auto fft_layout = layout::create(decomposition, r2c_dir);
 
-  auto inbox = get_real_box(fft_layout, rank_id);
-  auto outbox = get_complex_box(fft_layout, rank_id);
+  const auto &inbox = get_real_box(fft_layout, rank_id);
+  const auto &outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_direction = get_r2c_direction(fft_layout);
   auto comm = get_comm();
 
   using fft_r2c_hip_type = heffte::fft3d_r2c<heffte::backend::rocfft>;
-  fft_r2c_hip_type fft_hip(inbox, outbox, r2c_direction, comm, options);
+  fft_r2c_hip_type fft_hip(heffte_box_from_box3i(inbox),
+                           heffte_box_from_box3i(outbox), r2c_direction, comm,
+                           options);
 
   return FFT_HIP(std::move(fft_hip));
 }

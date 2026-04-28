@@ -45,6 +45,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
+#include <openpfc/kernel/fft/box3i.hpp>
 #include <openpfc/kernel/fft/fft_layout.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 
@@ -63,7 +64,6 @@ using pfc::types::Real3;
 using Decomposition = pfc::decomposition::Decomposition;
 using RealVector = std::vector<double>;
 using ComplexVector = std::vector<std::complex<double>>;
-using box3di = heffte::box3d<int>; ///< Type alias for 3D integer box.
 
 // Backend-aware DataBuffer type aliases (kernel: CPU only; CUDA in runtime/cuda)
 using RealDataBuffer = core::DataBuffer<backend::CpuTag, double>;
@@ -194,7 +194,7 @@ struct IFFT {
 template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
 
   // const Decomposition m_decomposition; /**< The Decomposition object. */
-  // const box3di m_inbox, m_outbox;      /**< Local inbox and outbox boxes. */
+  // const Box3i m_inbox, m_outbox;      /**< Local inbox and outbox boxes. */
 
   using fft_type = heffte::fft3d_r2c<BackendTag>;
   const fft_type m_fft;    /**< HeFFTe FFT object. */
@@ -419,13 +419,15 @@ inline const auto &get_fft_object(const FFT_Impl<BackendTag> &fft) noexcept {
 }
 
 template <typename BackendTag>
-inline auto get_inbox(const FFT_Impl<BackendTag> &fft) noexcept {
-  return get_fft_object(fft).inbox();
+inline Box3i get_inbox(const FFT_Impl<BackendTag> &fft) noexcept {
+  const auto &in = get_fft_object(fft).inbox();
+  return Box3i{in.low, in.high, in.size};
 }
 
 template <typename BackendTag>
-inline auto get_outbox(const FFT_Impl<BackendTag> &fft) noexcept {
-  return get_fft_object(fft).outbox();
+inline Box3i get_outbox(const FFT_Impl<BackendTag> &fft) noexcept {
+  const auto &out = get_fft_object(fft).outbox();
+  return Box3i{out.low, out.high, out.size};
 }
 
 using heffte::plan_options;
