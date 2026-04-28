@@ -5,9 +5,10 @@
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/app.hpp>
 #include <sstream>
+#include <string>
 
 using json = nlohmann::json;
-using pfc::ui::warn_unknown_profiling_keys;
+using pfc::ui::list_unknown_profiling_keys;
 
 TEST_CASE("warn_unknown_profiling_keys ignores known keys", "[ui][profiling]") {
   const json profiling = {
@@ -16,11 +17,8 @@ TEST_CASE("warn_unknown_profiling_keys ignores known keys", "[ui][profiling]") {
       {"print_report", false}, {"regions", json::array({"gradient/custom"})},
       {"run_id", "run-1"},     {"export_metadata", {{"case", "unit"}}},
   };
-  std::ostringstream warnings;
 
-  warn_unknown_profiling_keys(profiling, warnings);
-
-  REQUIRE(warnings.str().empty());
+  REQUIRE(list_unknown_profiling_keys(profiling).empty());
 }
 
 TEST_CASE("warn_unknown_profiling_keys reports unknown keys", "[ui][profiling]") {
@@ -29,12 +27,15 @@ TEST_CASE("warn_unknown_profiling_keys reports unknown keys", "[ui][profiling]")
       {"enable", true},
       {"outptu", "profile"},
   };
-  std::ostringstream warnings;
 
-  warn_unknown_profiling_keys(profiling, warnings);
-
-  const auto text = warnings.str();
-  REQUIRE(text.find("enable") != std::string::npos);
+  const auto warnings = list_unknown_profiling_keys(profiling);
+  REQUIRE(warnings.size() == 2);
+  std::ostringstream joined;
+  for (const auto &w : warnings) {
+    joined << w;
+  }
+  const std::string text = joined.str();
+  REQUIRE(text.find("key 'enable'") != std::string::npos);
   REQUIRE(text.find("outptu") != std::string::npos);
-  REQUIRE(text.find("enabled") == std::string::npos);
+  REQUIRE(text.find("key 'enabled'") == std::string::npos);
 }

@@ -29,7 +29,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/io/binary_writer.hpp>
@@ -37,21 +36,30 @@
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/ui/settings_loader.hpp>
+#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
 #include <openpfc/frontend/utils/timeleft.hpp>
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 namespace pfc::ui {
 
-inline void warn_unknown_profiling_keys(const json &profiling, std::ostream &os) {
+/**
+ * @brief Return profiling JSON keys that are not in the supported set (for tests
+ * and diagnostics).
+ */
+[[nodiscard]] inline std::vector<std::string>
+list_unknown_profiling_keys(const json &profiling) {
+  std::vector<std::string> out;
   if (!profiling.is_object()) {
-    return;
+    return out;
   }
   static constexpr std::array<std::string_view, 8> known_keys = {
       "enabled",      "format",  "output", "memory_samples",
@@ -59,8 +67,16 @@ inline void warn_unknown_profiling_keys(const json &profiling, std::ostream &os)
 
   for (const auto &[key, _] : profiling.items()) {
     if (std::find(known_keys.begin(), known_keys.end(), key) == known_keys.end()) {
-      os << "Warning: unknown profiling config key '" << key << "'\n";
+      out.push_back(std::string("unknown profiling config key '") + key + "'");
     }
+  }
+  return out;
+}
+
+inline void warn_unknown_profiling_keys(const json &profiling,
+                                        const pfc::Logger &lg) {
+  for (const auto &msg : list_unknown_profiling_keys(profiling)) {
+    pfc::log_warning(lg, msg);
   }
 }
 
@@ -96,10 +112,11 @@ private:
 
   // read settings from file (JSON or TOML format)
   json read_settings(int argc, char **argv) {
+    const pfc::Logger lg{pfc::LogLevel::Info, m_worker.get_rank()};
     if (argc <= 1) {
       if (rank0) {
-        std::cerr << "Error: Configuration file required.\n";
-        std::cerr << "Usage: " << argv[0] << " <config.json|config.toml>\n";
+        pfc::log_error(lg, std::string("Configuration file required. Usage: ") +
+                               argv[0] + " <config.json|config.toml>");
       }
       throw std::runtime_error("OpenPFC App: configuration file required (pass path "
                                "to JSON or TOML as first argument)");
@@ -110,9 +127,11 @@ private:
 
     if (rank0) {
       if (ext == ".toml") {
-        std::cout << "Reading TOML configuration from " << file << "\n\n";
+        pfc::log_info(lg, std::string("Reading TOML configuration from ") +
+                              file.string());
       } else if (ext == ".json") {
-        std::cout << "Reading JSON configuration from " << file << "\n\n";
+        pfc::log_info(lg, std::string("Reading JSON configuration from ") +
+                              file.string());
       }
     }
 
@@ -120,7 +139,7 @@ private:
       return load_settings_file(file);
     } catch (const std::exception &err) {
       if (rank0) {
-        std::cerr << "Error: " << err.what() << "\n";
+        pfc::log_error(lg, std::string("Failed to load settings: ") + err.what());
       }
       throw std::runtime_error(
           std::string("OpenPFC App: failed to load settings: ") + err.what());
@@ -137,16 +156,19 @@ public:
         rank0(m_worker.get_rank() == 0), m_settings(std::move(settings)) {}
 
   bool create_results_dir(const std::string &output) {
+    const pfc::Logger lg{pfc::LogLevel::Info, m_worker.get_rank()};
     std::filesystem::path results_dir(output);
     if (results_dir.has_filename()) {
       results_dir = results_dir.parent_path();
     }
     if (!std::filesystem::exists(results_dir)) {
-      std::cout << "Results dir " << results_dir << " does not exist, creating\n";
+      pfc::log_info(lg, std::string("Results dir ") + results_dir.string() +
+                            " does not exist, creating");
       std::filesystem::create_directories(results_dir);
       return true;
     }
-    std::cout << "Warning: results dir " << results_dir << " already exists\n";
+    pfc::log_warning(lg, std::string("results dir ") + results_dir.string() +
+                             " already exists");
     return false;
   }
 
@@ -156,7 +178,8 @@ public:
     }
     const auto &p = m_settings["profiling"];
     if (rank0) {
-      warn_unknown_profiling_keys(p, std::cerr);
+      warn_unknown_profiling_keys(
+          p, pfc::Logger{pfc::LogLevel::Info, m_worker.get_rank()});
     }
     if (p.contains("enabled")) {
       m_prof_enabled = p["enabled"].get<bool>();
@@ -233,7 +256,10 @@ public:
   }
 
   void add_result_writers(Simulator &sim) {
-    std::cout << "Adding results writers" << '\n';
+    const pfc::Logger lg{pfc::LogLevel::Info, m_worker.get_rank()};
+    if (rank0) {
+      pfc::log_info(lg, "Adding results writers");
+    }
     if (m_settings.contains("saveat") && m_settings.contains("fields") &&
         m_settings["saveat"] > 0) {
       for (const auto &field : m_settings["fields"]) {
@@ -242,33 +268,50 @@ public:
         if (rank0) {
           create_results_dir(data);
         }
-        std::cout << "Writing field " << name << " to " << data << '\n';
+        if (rank0) {
+          pfc::log_info(lg, "Writing field " + name + " to " + data);
+        }
         sim.add_results_writer(name, std::make_unique<BinaryWriter>(data));
       }
     } else {
-      std::cout << "Warning: not writing results to anywhere." << '\n';
-      std::cout << "To write results, add ResultsWriter to model." << '\n';
+      if (rank0) {
+        pfc::log_warning(lg, "not writing results to anywhere.");
+        pfc::log_info(lg, "To write results, add ResultsWriter to model.");
+      }
     }
   }
 
   void add_initial_conditions(Simulator &sim) {
+    const pfc::Logger lg{pfc::LogLevel::Info, m_worker.get_rank()};
     if (!m_settings.contains("initial_conditions")) {
-      std::cout << "WARNING: no initial conditions are set!" << '\n';
+      if (rank0) {
+        pfc::log_warning(lg, "no initial conditions are set!");
+      }
       return;
     }
-    std::cout << "Adding initial conditions" << '\n';
+    if (rank0) {
+      pfc::log_info(lg, "Adding initial conditions");
+    }
     for (const json &params : m_settings["initial_conditions"]) {
-      std::cout << "Creating initial condition from data " << params << '\n';
+      if (rank0) {
+        std::ostringstream ps;
+        ps << params;
+        pfc::log_info(lg, std::string("Creating initial condition from data ") +
+                              ps.str());
+      }
       if (!params.contains("type")) {
-        std::cout << "Warning: no type is set for initial condition!" << '\n';
+        if (rank0) {
+          pfc::log_warning(lg, "no type is set for initial condition!");
+        }
         continue;
       }
       std::string type = params["type"];
       auto field_modifier = create_field_modifier(type, params);
       if (!params.contains("target")) {
-        std::cout << "Warning: no target is set for initial condition! Using "
-                     "target 'default'"
-                  << '\n';
+        if (rank0) {
+          pfc::log_warning(
+              lg, "no target is set for initial condition! Using target 'default'");
+        }
       } else {
         const auto &target = params["target"];
         if (target.is_array()) {
@@ -278,10 +321,15 @@ public:
             names.push_back(el.get<std::string>());
           }
           field_modifier->set_field_names(std::move(names));
-          std::cout << "Setting initial condition targets (multi-field)" << '\n';
+          if (rank0) {
+            pfc::log_info(lg, "Setting initial condition targets (multi-field)");
+          }
         } else {
           auto t = target.get<std::string>();
-          std::cout << "Setting initial condition target to " << t << '\n';
+          if (rank0) {
+            pfc::log_info(lg,
+                          std::string("Setting initial condition target to ") + t);
+          }
           field_modifier->set_field_name(t);
         }
       }
@@ -290,23 +338,36 @@ public:
   }
 
   void add_boundary_conditions(Simulator &sim) {
+    const pfc::Logger lg{pfc::LogLevel::Info, m_worker.get_rank()};
     if (!m_settings.contains("boundary_conditions")) {
-      std::cout << "Warning: no boundary conditions are set!" << '\n';
+      if (rank0) {
+        pfc::log_warning(lg, "no boundary conditions are set!");
+      }
       return;
     }
-    std::cout << "Adding boundary conditions" << '\n';
+    if (rank0) {
+      pfc::log_info(lg, "Adding boundary conditions");
+    }
     for (const json &params : m_settings["boundary_conditions"]) {
-      std::cout << "Creating boundary condition from data " << params << '\n';
+      if (rank0) {
+        std::ostringstream ps;
+        ps << params;
+        pfc::log_info(lg, std::string("Creating boundary condition from data ") +
+                              ps.str());
+      }
       if (!params.contains("type")) {
-        std::cout << "Warning: no type is set for initial condition!" << '\n';
+        if (rank0) {
+          pfc::log_warning(lg, "no type is set for boundary condition!");
+        }
         continue;
       }
       std::string type = params["type"];
       auto field_modifier = create_field_modifier(type, params);
       if (!params.contains("target")) {
-        std::cout << "Warning: no target is set for boundary condition! Using "
-                     "target 'default'"
-                  << '\n';
+        if (rank0) {
+          pfc::log_warning(
+              lg, "no target is set for boundary condition! Using target 'default'");
+        }
       } else {
         const auto &target = params["target"];
         if (target.is_array()) {
@@ -316,10 +377,15 @@ public:
             names.push_back(el.get<std::string>());
           }
           field_modifier->set_field_names(std::move(names));
-          std::cout << "Setting boundary condition targets (multi-field)" << '\n';
+          if (rank0) {
+            pfc::log_info(lg, "Setting boundary condition targets (multi-field)");
+          }
         } else {
           auto t = target.get<std::string>();
-          std::cout << "Setting boundary condition target to " << t << '\n';
+          if (rank0) {
+            pfc::log_info(lg,
+                          std::string("Setting boundary condition target to ") + t);
+          }
           field_modifier->set_field_name(t);
         }
       }
@@ -328,30 +394,40 @@ public:
   }
 
   int main() {
+    const int rank_id = m_worker.get_rank();
+    const pfc::Logger app_lg{pfc::LogLevel::Info, rank_id};
 #if defined(OpenPFC_ENABLE_HIP) && defined(OpenPFC_MPI_HIP_AWARE)
     if (rank0) {
-      std::cout << "OpenPFC: GPU-aware MPI (HIP) is enabled at compile time.\n";
+      pfc::log_info(app_lg,
+                    "OpenPFC: GPU-aware MPI (HIP) is enabled at compile time.");
       const char *gpu_env = std::getenv("MPICH_GPU_SUPPORT_ENABLED");
       if (gpu_env == nullptr || std::string(gpu_env) != "1") {
-        std::cerr << "Warning: MPICH_GPU_SUPPORT_ENABLED is not set to 1; "
-                     "Cray MPICH may not accept device pointers (set export "
-                     "MPICH_GPU_SUPPORT_ENABLED=1 in your job).\n";
+        pfc::log_warning(
+            app_lg, "MPICH_GPU_SUPPORT_ENABLED is not set to 1; Cray MPICH may not "
+                    "accept device pointers (set export MPICH_GPU_SUPPORT_ENABLED=1 "
+                    "in your job).");
       }
     }
 #endif
 #if defined(OpenPFC_ENABLE_CUDA) && defined(OpenPFC_MPI_CUDA_AWARE)
     if (rank0) {
-      std::cout << "OpenPFC: GPU-aware MPI (CUDA) is enabled at compile time.\n";
+      pfc::log_info(app_lg,
+                    "OpenPFC: GPU-aware MPI (CUDA) is enabled at compile time.");
     }
 #endif
-    std::cout << "Reading configuration from json file:" << '\n';
-    std::cout << m_settings.dump(4) << "\n\n";
+    if (rank0) {
+      pfc::log_info(app_lg, "Reading configuration from json file:");
+      pfc::log_info(app_lg, m_settings.dump(4));
+    }
 
     World world(ui::from_json<World>(m_settings));
-    std::cout << "World: " << world << '\n';
+    if (rank0) {
+      std::ostringstream woss;
+      woss << world;
+      pfc::log_info(app_lg, std::string("World: ") + woss.str());
+    }
 
     int num_ranks = m_worker.get_num_ranks();
-    int rank_id = m_worker.get_rank();
     auto decomp = decomposition::create(world, num_ranks);
 
     // Create FFT with default FFTW backend for now
@@ -379,7 +455,9 @@ public:
           pfc::profiling::ProfilingSession::openpfc_default_frame_metrics());
     }
 
-    std::cout << "Initializing model... " << '\n';
+    if (rank0) {
+      pfc::log_info(app_lg, "Initializing model...");
+    }
     model.initialize(time.get_dt());
 
     // Report memory usage
@@ -415,10 +493,14 @@ public:
       }
     }
 
-    std::cout << "Applying initial conditions" << '\n';
+    if (rank0) {
+      pfc::log_info(app_lg, "Applying initial conditions");
+    }
     simulator.apply_initial_conditions();
     if (time.get_increment() == 0) {
-      std::cout << "First increment: apply boundary conditions" << '\n';
+      if (rank0) {
+        pfc::log_info(app_lg, "First increment: apply boundary conditions");
+      }
       simulator.apply_boundary_conditions();
       simulator.write_results();
     }
@@ -476,11 +558,15 @@ public:
       double eta_i = (t1 - t) / time.get_dt();
       double eta_t = eta_i * m_avg_steptime;
       double other_time = m_steptime - m_fft_time;
-      std::cout << "Step " << increment << " done in " << m_steptime << " s ";
-      std::cout << "(" << m_fft_time << " s FFT, " << other_time << " s other). ";
-      std::cout << "Simulation time: " << t << " / " << t1;
-      std::cout << " (" << (t / t1 * 100) << " % done). ";
-      std::cout << "ETA: " << pfc::utils::TimeLeft(eta_t) << '\n';
+      if (rank0) {
+        std::ostringstream steposs;
+        steposs << "Step " << increment << " done in " << m_steptime << " s ("
+                << m_fft_time << " s FFT, " << other_time
+                << " s other). Simulation time: " << t << " / " << t1 << " ("
+                << (t / t1 * 100)
+                << " % done). ETA: " << pfc::utils::TimeLeft(eta_t);
+        pfc::log_info(app_lg, steposs.str());
+      }
 
       m_total_steptime += m_steptime;
       m_total_fft_time += m_fft_time;
@@ -493,16 +579,18 @@ public:
       const double avg_oth_time = avg_steptime - avg_fft_time;
       const double p_fft = avg_fft_time / avg_steptime * 100.0;
       const double p_oth = avg_oth_time / avg_steptime * 100.0;
-      std::cout << "\nSimulated " << m_steps_done
-                << " steps. Average times:" << '\n';
-      std::cout << "Step time:  " << avg_steptime << " s" << '\n';
-      std::cout << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %"
-                << '\n';
-      std::cout << "Other time: " << avg_oth_time << " s / " << p_oth << " %"
-                << '\n';
+      if (rank0) {
+        std::ostringstream sumoss;
+        sumoss << "Simulated " << m_steps_done << " steps. Average times:\n"
+               << "Step time:  " << avg_steptime << " s\n"
+               << "FFT time:   " << avg_fft_time << " s / " << p_fft << " %\n"
+               << "Other time: " << avg_oth_time << " s / " << p_oth << " %";
+        pfc::log_info(app_lg, sumoss.str());
+      }
     } else if (rank0) {
-      std::cout << "\nNo complete timesteps were executed; skipping average timing "
-                   "summary.\n";
+      pfc::log_info(
+          app_lg,
+          "No complete timesteps were executed; skipping average timing summary.");
     }
 
     if (m_profiler) {
@@ -517,12 +605,14 @@ public:
         exp.hdf5_path = m_prof_output + ".h5";
       } else if (fmt == "csv" || fmt == "csv_hdf5" || fmt == "csv+hdf5") {
         if (rank0) {
-          std::cerr << "profiling.format \"" << m_prof_format
-                    << "\" is no longer supported (CSV export removed); using json";
+          std::ostringstream pfoss;
+          pfoss << "profiling.format \"" << m_prof_format
+                << "\" is no longer supported (CSV export removed); using json";
           if (fmt == "csv_hdf5" || fmt == "csv+hdf5") {
-            std::cerr << " and hdf5";
+            pfoss << " and hdf5";
           }
-          std::cerr << ".\n";
+          pfoss << '.';
+          pfc::log_warning(app_lg, pfoss.str());
         }
         if (fmt == "csv") {
           exp.write_json = true;
@@ -540,8 +630,8 @@ public:
         exp.hdf5_path = m_prof_output + ".h5";
       } else {
         if (fmt != "json" && rank0) {
-          std::cerr << "profiling.format unknown (\"" << m_prof_format
-                    << "\"), using json\n";
+          pfc::log_warning(app_lg, std::string("profiling.format unknown (\"") +
+                                       m_prof_format + "\"), using json");
         }
         exp.write_json = true;
         exp.json_path = m_prof_output + ".json";
@@ -549,7 +639,8 @@ public:
       apply_profiling_export_options(exp);
       m_profiler->finalize_and_export(m_comm, exp);
       if (rank0) {
-        std::cout << "Profiling export written (see profiling.output / format).\n";
+        pfc::log_info(app_lg,
+                      "Profiling export written (see profiling.output / format).");
       }
       if (m_prof_print_report && m_profiler) {
         pfc::profiling::ProfilingPrintOptions popts;
@@ -558,7 +649,11 @@ public:
         popts.sort_by_time = true;
         popts.show_exclusive_column = true;
         popts.mpi_aggregate_stdout = true;
-        pfc::profiling::print_profiling_timer(std::cout, m_comm, *m_profiler, popts);
+        std::ostringstream prof_out;
+        pfc::profiling::print_profiling_timer(prof_out, m_comm, *m_profiler, popts);
+        if (rank0 && !prof_out.str().empty()) {
+          pfc::log_info(app_lg, prof_out.str());
+        }
       }
     }
 

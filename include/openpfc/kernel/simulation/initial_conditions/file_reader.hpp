@@ -32,11 +32,12 @@
 #ifndef PFC_INITIAL_CONDITIONS_FILE_READER_HPP
 #define PFC_INITIAL_CONDITIONS_FILE_READER_HPP
 
-#include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
+#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
@@ -64,7 +65,11 @@ public:
     const auto inbox_offset = get_inbox(fft).low;
 
     Field &f = get_real_field(m, get_field_name());
-    std::cout << "Reading initial condition from file: " << get_filename() << '\n';
+    if (m.is_rank0()) {
+      const pfc::Logger lg{pfc::LogLevel::Info, 0};
+      pfc::log_info(lg, std::string("Reading initial condition from file: ") +
+                            get_filename());
+    }
     try {
       BinaryReader reader;
       reader.set_domain(world_size, inbox_size, inbox_offset);
