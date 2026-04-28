@@ -75,3 +75,22 @@ if(USE_CLANG_TIDY)
         message(WARNING "Refer to the installation instructions at: https://clang.llvm.org/extra/clang-tidy/")
     endif()
 endif()
+
+# Optional AddressSanitizer (CI manual job / local debugging). HeFFTe must be
+# built with compatible -fsanitize=address flags when linking against a
+# sanitized OpenPFC (see scripts/install-heffte-ci.sh and .github/workflows/asan.yml).
+option(OpenPFC_ENABLE_ADDRESS_SANITIZER
+       "Build with AddressSanitizer (-fsanitize=address); use Debug + matching HeFFTe"
+       OFF)
+if(OpenPFC_ENABLE_ADDRESS_SANITIZER)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g)
+    add_link_options(-fsanitize=address)
+    message(STATUS "OpenPFC_ENABLE_ADDRESS_SANITIZER: AddressSanitizer enabled")
+  else()
+    message(
+      FATAL_ERROR
+        "OpenPFC_ENABLE_ADDRESS_SANITIZER requires GNU or Clang (got ${CMAKE_CXX_COMPILER_ID})"
+    )
+  endif()
+endif()

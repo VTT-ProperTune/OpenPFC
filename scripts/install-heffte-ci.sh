@@ -26,12 +26,25 @@ wget -q -O "${archive}" \
   "https://github.com/icl-utk-edu/heffte/archive/refs/tags/v${heffte_version}.tar.gz"
 tar xzf "${archive}" -C /tmp
 
+# When OPENPFC_CI_HEFFTE_ADDRESS_SANITIZER=1, build HeFFTe with AddressSanitizer
+# so it matches OpenPFC configured with -DOpenPFC_ENABLE_ADDRESS_SANITIZER=ON.
+heffte_extra_cmake_flags=()
+if [[ "${OPENPFC_CI_HEFFTE_ADDRESS_SANITIZER:-0}" == "1" ]]; then
+  heffte_extra_cmake_flags+=(
+    "-DCMAKE_C_FLAGS=-fsanitize=address -fno-omit-frame-pointer -g"
+    "-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer -g"
+    "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address"
+    "-DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address"
+  )
+fi
+
 cmake -S "${source_dir}" -B "${build_dir}" \
   -GNinja \
   -DCMAKE_BUILD_TYPE="${build_type}" \
   -DCMAKE_INSTALL_PREFIX="${install_prefix}" \
   -DHeffte_ENABLE_FFTW=ON \
-  -DBUILD_SHARED_LIBS=ON
+  -DBUILD_SHARED_LIBS=ON \
+  "${heffte_extra_cmake_flags[@]}"
 
 cmake --build "${build_dir}" -j2
 cmake --install "${build_dir}"

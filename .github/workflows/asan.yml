@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Manual AddressSanitizer build + ctest. Not part of the default PR merge path
+# (see ci.yml / ci-status). Use workflow_dispatch from the Actions tab.
+
+name: AddressSanitizer
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+  LSAN_OPTIONS: verbosity=0
+
+jobs:
+  asan:
+    name: GCC 13 / Debug / ASan
+    runs-on: ubuntu-24.04
+    env:
+      CC: gcc-13
+      CXX: g++-13
+      HEFFTE_INSTALL_PREFIX: ${{ github.workspace }}/.ci-heffte-asan
+      OPENPFC_CI_HEFFTE_ADDRESS_SANITIZER: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-13 \
+            g++-13 \
+            cmake \
+            ninja-build \
+            libopenmpi-dev \
+            openmpi-bin \
+            libfftw3-dev \
+            libfftw3-mpi-dev \
+            nlohmann-json3-dev
+
+      - name: Cache HeFFTe (ASan build)
+        id: cache-heffte-asan
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.HEFFTE_INSTALL_PREFIX }}
+          key: heffte-2.4.1-cpu-asan-${{ runner.os }}-gcc-13-Debug-${{ hashFiles('scripts/install-heffte-ci.sh') }}
+
+      - name: Build and install HeFFTe (ASan)
+        if: steps.cache-heffte-asan.outputs.cache-hit != 'true'
+        run: scripts/install-heffte-ci.sh Debug /tmp/heffte-build-openpfc-asan
+
+      - name: Configure OpenPFC (ASan)
+        run: |
+          cmake -S . -B build \
+            -GNinja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${HEFFTE_INSTALL_PREFIX}" \
+            -DOpenPFC_ENABLE_ADDRESS_SANITIZER=ON \
+            -DOpenPFC_BUILD_TESTS=ON \
+            -DOpenPFC_BUILD_EXAMPLES=OFF \
+            -DOpenPFC_BUILD_APPS=OFF \
+            -DOpenPFC_BUILD_DOCUMENTATION=OFF \
+            -DOpenPFC_RUN_MPI_SUITES=ON \
+            -DOpenPFC_MPI_TEST_MAX_WORLD_SIZE=2
+
+      - name: Build OpenPFC
+        run: cmake --build build -j2
+
+      - name: Run tests (ASan)
+        working-directory: build
+        run: |
+          ctest --output-on-failure -j2 \
+            --exclude-regex "benchmark" \
+            --timeout 600
