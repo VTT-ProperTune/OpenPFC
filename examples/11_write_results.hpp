@@ -40,9 +40,10 @@ private:
   std::array<double, 3> m_spacing{};
   std::string m_field_name = "default";
   bool m_have_domain = false;
+  MPI_Comm m_comm = MPI_COMM_WORLD;
 
 public:
-  explicit VtkWriter(MPI_Comm /* comm */ = MPI_COMM_WORLD) {}
+  explicit VtkWriter(MPI_Comm comm = MPI_COMM_WORLD) : m_comm(comm) {}
 
   void set_uri(const std::string &uri) { m_uri = uri; }
   [[nodiscard]] const std::string &get_uri() const { return m_uri; }
@@ -82,7 +83,7 @@ public:
     if (!m_have_domain) {
       throw std::runtime_error("VtkWriter: set_domain before write");
     }
-    VTKWriter vtk(m_uri);
+    VTKWriter vtk(m_uri, m_comm);
     vtk.set_domain(m_global, m_local, m_offset);
     vtk.set_origin(m_origin);
     vtk.set_spacing(m_spacing);

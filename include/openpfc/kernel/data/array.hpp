@@ -62,7 +62,7 @@ private:
    *
    * @param fft
    */
-  Array(const fft::IFFT &fft, [[maybe_unused]] std::true_type is_complex)
+  Array(const fft::IFFT &fft, [[maybe_unused]] std::true_type /*outbox_layout_tag*/)
       : index(get_outbox(fft).size, get_outbox(fft).low) {}
 
   /**
@@ -71,7 +71,7 @@ private:
    *
    * @param decomp
    */
-  Array(const fft::IFFT &fft, [[maybe_unused]] std::false_type is_real)
+  Array(const fft::IFFT &fft, [[maybe_unused]] std::false_type /*inbox_layout_tag*/)
       : index(get_inbox(fft).size, get_inbox(fft).low) {}
 
   // Custom type trait to check if a type is complex

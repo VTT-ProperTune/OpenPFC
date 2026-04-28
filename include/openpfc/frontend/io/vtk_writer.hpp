@@ -66,7 +66,7 @@ private:
   std::string m_field_name = "Field";
   int m_rank = 0;
   int m_num_ranks = 1;
-  MPI_Comm m_comm = MPI_COMM_WORLD;
+  MPI_Comm m_comm{};
 
   /**
    * @brief Generate filename for a given increment and rank
@@ -93,8 +93,11 @@ public:
    * @brief Construct VTKWriter with filename pattern
    *
    * @param filename Filename pattern (e.g., "output_%04d.vti")
+   * @param comm MPI communicator for rank/size and collective VTK metadata (default
+   *        world communicator)
    */
-  explicit VTKWriter(const std::string &filename) : ResultsWriter(filename) {
+  explicit VTKWriter(const std::string &filename, MPI_Comm comm = MPI_COMM_WORLD)
+      : ResultsWriter(filename), m_comm(comm) {
     MPI_Comm_rank(m_comm, &m_rank);
     MPI_Comm_size(m_comm, &m_num_ranks);
   }

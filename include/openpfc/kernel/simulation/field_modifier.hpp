@@ -44,6 +44,8 @@
 #ifndef PFC_FIELD_MODIFIER_HPP
 #define PFC_FIELD_MODIFIER_HPP
 
+#include <mpi.h>
+
 #include <openpfc/kernel/data/constants.hpp>
 
 #include <stdexcept>
@@ -342,6 +344,12 @@ public:
     static const std::string k{"FieldModifier"};
     return k;
   }
+
+  /**
+   * @brief Optional MPI communicator for modifiers that use collectives (MPI-IO,
+   *        reductions). Default is a no-op; FileReader and MovingBC override.
+   */
+  virtual void set_mpi_comm(MPI_Comm /*comm*/) {}
 
   /**
    * @brief Apply the field modification to the model (pure virtual)

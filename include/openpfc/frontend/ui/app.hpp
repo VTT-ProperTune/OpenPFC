@@ -271,7 +271,7 @@ public:
         if (rank0) {
           pfc::log_info(lg, "Writing field " + name + " to " + data);
         }
-        sim.add_results_writer(name, std::make_unique<BinaryWriter>(data));
+        sim.add_results_writer(name, std::make_unique<BinaryWriter>(data, m_comm));
       }
     } else {
       if (rank0) {
@@ -333,6 +333,7 @@ public:
           field_modifier->set_field_name(t);
         }
       }
+      field_modifier->set_mpi_comm(m_comm);
       sim.add_initial_conditions(std::move(field_modifier));
     }
   }
@@ -389,6 +390,7 @@ public:
           field_modifier->set_field_name(t);
         }
       }
+      field_modifier->set_mpi_comm(m_comm);
       sim.add_boundary_conditions(std::move(field_modifier));
     }
   }

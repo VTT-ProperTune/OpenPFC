@@ -87,6 +87,12 @@ public:
 
   const std::string &get_modifier_name() const override { return m_name; }
 
+  void set_mpi_comm(MPI_Comm c) noexcept override {
+    comm = c;
+    rank = mpi::get_comm_rank(comm);
+    size = mpi::get_comm_size(comm);
+  }
+
   void apply(Model &m, double time) override {
     (void)time;
     const fft::IFFT &fft = get_fft(m);

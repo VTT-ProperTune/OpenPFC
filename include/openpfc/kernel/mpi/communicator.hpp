@@ -42,6 +42,10 @@ class communicator {
 
 public:
   communicator() = default;
+
+  /** @brief Wrap an existing communicator (e.g. application or sub-communicator). */
+  explicit communicator(MPI_Comm c) : comm_ptr(std::make_shared<MPI_Comm>(c)) {}
+
   operator MPI_Comm() const;
   int rank() const;
   int size() const;

@@ -32,6 +32,7 @@
 #ifndef PFC_INITIAL_CONDITIONS_FILE_READER_HPP
 #define PFC_INITIAL_CONDITIONS_FILE_READER_HPP
 
+#include <mpi.h>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -47,6 +48,7 @@ namespace pfc {
 class FileReader : public FieldModifier {
 private:
   std::string m_filename;
+  MPI_Comm m_io_comm = MPI_COMM_WORLD;
 
 public:
   FileReader() = default;
@@ -55,6 +57,8 @@ public:
   const std::string &get_filename() const { return m_filename; }
 
   explicit FileReader(std::string filename) : m_filename(std::move(filename)) {}
+
+  void set_mpi_comm(MPI_Comm comm) noexcept override { m_io_comm = comm; }
 
   void apply(Model &m, double time) override {
     (void)time;
@@ -71,7 +75,7 @@ public:
                             get_filename());
     }
     try {
-      BinaryReader reader;
+      BinaryReader reader{m_io_comm};
       reader.set_domain(world_size, inbox_size, inbox_offset);
       reader.read(get_filename(), f);
     } catch (const std::exception &ex) {

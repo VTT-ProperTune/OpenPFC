@@ -32,6 +32,10 @@ add_library(openpfc
 
 add_library(OpenPFC ALIAS openpfc)
 
+# Layering: openpfc is the compiled implementation; public include path is on the
+# target above. HeFFTe stays PRIVATE (see block below) so only TUs that include
+# fft_fftw.hpp need to link HeFFTe.
+
 # Set the library version
 set_target_properties(openpfc PROPERTIES
     VERSION ${PROJECT_VERSION}

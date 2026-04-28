@@ -13,8 +13,9 @@
  * - Restarting simulations
  *
  * @note MPI-IO collectives: `read()` uses `MPI_File_open`, `MPI_File_set_view`,
- * `MPI_File_read_all`, and `MPI_File_close`, which are collective over
- * `MPI_COMM_WORLD`. All ranks must call `read()` together with the same
+ * `MPI_File_read_all`, and `MPI_File_close`, which are collective over the
+ * communicator passed to the constructor (default `MPI_COMM_WORLD`). All ranks
+ * must call `read()` together with the same
  * filename and matching `set_domain()` layout; otherwise the program may hang.
  *
  * The reader handles parallel I/O with proper domain decomposition, allowing
@@ -50,11 +51,14 @@ namespace pfc {
 class BinaryReader {
 
 private:
+  MPI_Comm m_comm = MPI_COMM_WORLD;
   MPI_Datatype m_filetype{};
   bool m_type_valid = false;
 
 public:
   BinaryReader() = default;
+
+  explicit BinaryReader(MPI_Comm comm) : m_comm(comm) {}
 
   BinaryReader(const BinaryReader &) = delete;
   BinaryReader &operator=(const BinaryReader &) = delete;
@@ -87,7 +91,7 @@ public:
       throw std::runtime_error("BinaryReader::read: set_domain() was not called");
     }
     MPI_File fh{};
-    pfc::mpi::throw_on_mpi_error(MPI_File_open(MPI_COMM_WORLD,
+    pfc::mpi::throw_on_mpi_error(MPI_File_open(m_comm,
                                                const_cast<char *>(filename.c_str()),
                                                MPI_MODE_RDONLY, MPI_INFO_NULL, &fh),
                                  "MPI_File_open");

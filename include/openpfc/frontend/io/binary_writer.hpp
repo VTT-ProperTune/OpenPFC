@@ -44,17 +44,17 @@ namespace pfc {
  *
  * @note MPI-IO collectives: `write()` uses `MPI_File_open`, `MPI_File_set_size`,
  * `MPI_File_set_view`, `MPI_File_write_all`, and `MPI_File_close`, which are
- * collective over `MPI_COMM_WORLD`. Every process in that communicator must call
- * `write()` with consistent `set_domain()` and must reach `MPI_File_close`;
+ * collective over the communicator passed to the constructor (default
+ * `MPI_COMM_WORLD`). Every process in that communicator must call `write()` with
+ * consistent `set_domain()` and must reach `MPI_File_close`;
  * skipping the call on some ranks will deadlock the job.
  *
  * @see ResultsWriter - base class interface
  * @see BinaryReader - read binary files for restart
  */
 class BinaryWriter : public ResultsWriter {
-  using ResultsWriter::ResultsWriter;
-
 private:
+  MPI_Comm m_comm = MPI_COMM_WORLD;
   MPI_Datatype m_filetype{};
   bool m_type_valid = false;
 
@@ -76,6 +76,9 @@ public:
   BinaryWriter &operator=(const BinaryWriter &) = delete;
   BinaryWriter(BinaryWriter &&) = delete;
   BinaryWriter &operator=(BinaryWriter &&) = delete;
+
+  explicit BinaryWriter(const std::string &filename, MPI_Comm comm = MPI_COMM_WORLD)
+      : ResultsWriter(filename), m_comm(comm) {}
 
   void set_domain(const std::array<int, 3> &arr_global,
                   const std::array<int, 3> &arr_local,
@@ -109,7 +112,7 @@ public:
     MPI_File fh{};
     std::string filename2 = utils::format_with_number(m_filename, increment);
     pfc::mpi::throw_on_mpi_error(
-        MPI_File_open(MPI_COMM_WORLD, const_cast<char *>(filename2.c_str()),
+        MPI_File_open(m_comm, const_cast<char *>(filename2.c_str()),
                       MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh),
         "MPI_File_open");
 
