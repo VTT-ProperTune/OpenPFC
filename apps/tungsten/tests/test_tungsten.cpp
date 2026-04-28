@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <mpi.h>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/openpfc.hpp>
 #include <tungsten/cpu/tungsten.hpp>
 
@@ -216,7 +216,7 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     // This matches exactly what happens when initial conditions are applied
     std::vector<double> &psi = tungsten.get_real_field("psi");
     const pfc::World &w = pfc::get_world(tungsten);
-    const pfc::FFT &fft_ref = pfc::get_fft(tungsten);
+    const auto &fft_ref = pfc::get_fft(tungsten);
 
     // 1. Constant initial condition: fill entire field with -0.4
     std::fill(psi.begin(), psi.end(), -0.4);

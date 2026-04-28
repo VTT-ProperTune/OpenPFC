@@ -4,7 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 
 using namespace pfc;
 using namespace pfc::fft;

@@ -7,7 +7,7 @@
 #include <mpi.h>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 
 using namespace pfc;

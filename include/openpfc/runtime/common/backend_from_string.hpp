@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <optional>
 #include <string>
 

@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <string>
 
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 
@@ -44,7 +45,7 @@ public:
    *
    * @note v2.0: FFT is now required at construction
    */
-  explicit MockModel(FFT &fft, const World &world) : Model(fft, world) {}
+  explicit MockModel(fft::IFFT &fft, const World &world) : Model(fft, world) {}
 
   /**
    * @brief Mock step() implementation (does nothing)

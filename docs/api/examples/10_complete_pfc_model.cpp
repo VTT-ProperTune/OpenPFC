@@ -92,7 +92,7 @@ public:
    */
   void initialize(double dt) override {
     m_dt = dt;
-    FFT &fft = get_fft();
+    auto &fft = get_fft();
 
     // Allocate real-space fields
     m_density.resize(fft.size_inbox());
@@ -118,7 +118,7 @@ public:
    * @param time Current simulation time (unused in this model)
    */
   void step(double /*time*/) override {
-    FFT &fft = get_fft();
+    auto &fft = get_fft();
 
     // 1. Transform density to k-space
     fft.forward(m_density, m_density_k);
@@ -163,7 +163,7 @@ private:
    * - Nonlinear operator: [exp(L·dt) - 1] / L
    */
   void precompute_operators() {
-    const FFT &fft = get_fft();
+    const auto &fft = get_fft();
     const World &w = pfc::get_world(*this);
     auto outbox = fft::get_outbox(fft);
 

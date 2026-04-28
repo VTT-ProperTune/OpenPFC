@@ -64,7 +64,7 @@
 #include <numeric>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <stdexcept>
 #include <string>
@@ -101,7 +101,7 @@ private:
   ///          of the Model. Do not destroy the FFT while Model is still in use.
   ///
   /// @see get_fft() for access
-  FFT &m_fft;
+  fft::IFFT &m_fft;
   RealFieldSet m_real_fields;       ///< Collection of real-valued fields associated
                                     ///< with the model
   ComplexFieldSet m_complex_fields; ///< Collection of complex-valued fields
@@ -121,7 +121,8 @@ public:
    * Constructs a Model with the given FFT backend and simulation domain.
    * The FFT object must outlive the Model instance.
    *
-   * @param fft Reference to the FFT object used by the model
+   * @param fft Reference to the FFT implementation (`IFFT`, e.g. `CpuFft`) used by
+   * the model
    * @param world Reference to the World object
    *
    * @note FFT is required at construction and cannot be changed later (immutable)
@@ -139,7 +140,7 @@ public:
    *
    * @since v2.0 (breaking change - FFT now required)
    */
-  Model(FFT &fft, const World &world)
+  Model(fft::IFFT &fft, const World &world)
       : m_fft(fft), m_world(world), m_rank0(mpi::get_rank() == 0) {}
 
   /**
@@ -220,12 +221,12 @@ public:
    * }
    * ```
    *
-   * @see FFT::forward() for real-to-complex transforms
-   * @see FFT::backward() for complex-to-real transforms
+   * @see fft::IFFT::forward() for real-to-complex transforms
+   * @see fft::IFFT::backward() for complex-to-real transforms
    *
    * @since v2.0 - no longer throws (FFT always valid)
    */
-  [[nodiscard]] FFT &get_fft() noexcept { return m_fft; }
+  [[nodiscard]] fft::IFFT &get_fft() noexcept { return m_fft; }
 
   /**
    * @brief Advance the model by one time step
@@ -700,7 +701,9 @@ private:
  * @brief FFT instance used by the model (free function; preferred over
  * Model::get_fft()).
  */
-[[nodiscard]] inline FFT &get_fft(Model &model) noexcept { return model.get_fft(); }
+[[nodiscard]] inline fft::IFFT &get_fft(Model &model) noexcept {
+  return model.get_fft();
+}
 
 [[nodiscard]] inline bool is_rank0(const Model &model) noexcept {
   return model.is_rank0();

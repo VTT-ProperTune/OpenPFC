@@ -7,7 +7,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 
 using namespace std;
 using namespace pfc;

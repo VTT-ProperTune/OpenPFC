@@ -8,7 +8,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 
 #include "fixtures/mock_model.hpp"
@@ -27,7 +27,7 @@ TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
   REQUIRE_NOTHROW(get_fft(model));
 
   SECTION("Retrieve FFT object") {
-    FFT &retrieved_fft = get_fft(model);
+    auto &retrieved_fft = get_fft(model);
 
     // Ensure the retrieved FFT object matches the original
     REQUIRE(&retrieved_fft == &fft);

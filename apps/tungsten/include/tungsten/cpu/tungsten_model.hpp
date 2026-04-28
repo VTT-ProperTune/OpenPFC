@@ -158,7 +158,7 @@ public:
    * fields with the Model base class.
    */
   void allocate() {
-    pfc::FFT &fft = get_fft();
+    auto &fft = get_fft();
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
@@ -281,7 +281,7 @@ public:
   void step(double t) override {
     (void)t; // suppress compiler warning about unused parameter
 
-    pfc::FFT &fft = get_fft();
+    auto &fft = get_fft();
 
     // Step 1: Calculate mean-field density n_MF (forward FFT → k-space multiply →
     // backward FFT)

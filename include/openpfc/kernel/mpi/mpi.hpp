@@ -49,6 +49,18 @@
 
 namespace pfc::mpi {
 
+inline int get_comm_rank(MPI_Comm comm) {
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  return rank;
+}
+
+inline int get_comm_size(MPI_Comm comm) {
+  int size;
+  MPI_Comm_size(comm, &size);
+  return size;
+}
+
 inline int get_rank() {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -61,17 +73,13 @@ inline int get_size() {
   return size;
 }
 
-inline int get_comm_rank(MPI_Comm comm) {
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-  return rank;
-}
+/** @brief Rank in the given communicator (preferred over get_rank() for app comms)
+ */
+inline int get_rank(MPI_Comm comm) { return get_comm_rank(comm); }
 
-inline int get_comm_size(MPI_Comm comm) {
-  int size;
-  MPI_Comm_size(comm, &size);
-  return size;
-}
+/** @brief Size of the given communicator (preferred over get_size() for app comms)
+ */
+inline int get_size(MPI_Comm comm) { return get_comm_size(comm); }
 
 } // namespace pfc::mpi
 

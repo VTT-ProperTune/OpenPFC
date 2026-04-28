@@ -9,7 +9,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
@@ -49,7 +49,7 @@ public:
   void apply(Model &m, double t) override {
     (void)t; // suppress compiler warning about unused parameter
     const World &w = pfc::get_world(m);
-    const FFT &fft = pfc::get_fft(m);
+    const auto &fft = pfc::get_fft(m);
     std::vector<double> &field = m.get_real_field("psi");
     Int3 low = get_inbox(fft).low;
     Int3 high = get_inbox(fft).high;
@@ -86,7 +86,7 @@ public:
 
   void allocate() {
     if (pfc::is_rank0(*this)) std::cout << "Allocate space" << std::endl;
-    FFT &fft = pfc::get_fft(*this);
+    auto &fft = pfc::get_fft(*this);
     psi.resize(fft.size_inbox());
     psi_F.resize(fft.size_outbox());
     opL.resize(fft.size_outbox());
@@ -128,7 +128,7 @@ public:
   }
 
   void step(double) override {
-    FFT &fft = pfc::get_fft(*this);
+    auto &fft = pfc::get_fft(*this);
     fft.forward(psi, psi_F);
     for (int k = 0, N = psi_F.size(); k < N; k++) psi_F[k] = opL[k] * psi_F[k];
     fft.backward(psi_F, psi);

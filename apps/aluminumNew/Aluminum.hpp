@@ -130,7 +130,7 @@ public:
   void set_q2_bar_L(double q2_bar_L) { params.q2_bar_L = q2_bar_L; }
 
   void allocate() {
-    pfc::FFT &fft = get_fft();
+    auto &fft = get_fft();
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
@@ -251,7 +251,7 @@ public:
 
   void step(double t) override {
 
-    pfc::FFT &fft = get_fft();
+    auto &fft = get_fft();
     pfc::World w = get_world();
     double dx = pfc::world::get_spacing(w, 0);
     double x0 = pfc::world::get_origin(w, 0);

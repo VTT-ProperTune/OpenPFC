@@ -17,7 +17,9 @@
 #pragma once
 
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/detail/fft_heffte_backend.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
+#include <openpfc/kernel/fft/fft_layout.hpp>
 #include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
 #include <openpfc/runtime/cuda/databuffer_cuda.hpp>
 
@@ -82,12 +84,13 @@ using FFT_CUDA = FFT_Impl<heffte::backend::cufft>;
  * @note Precision (float/double) is determined by data types passed to
  * forward/backward methods
  */
-FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id);
+FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
+                     MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Creates an FFT object using cuFFT backend (auto-detect rank)
  *
- * Convenience function that automatically detects the MPI rank from MPI_COMM_WORLD.
+ * Convenience function that automatically detects the MPI rank from @p comm.
  *
  * @param decomposition The Decomposition object defining the domain decomposition
  * @return FFT_CUDA object configured to use cuFFT backend
@@ -99,7 +102,8 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id);
  * @note Precision (float/double) is determined by data types passed to
  * forward/backward methods
  */
-FFT_CUDA create_cuda(const Decomposition &decomposition);
+FFT_CUDA create_cuda(const Decomposition &decomposition,
+                     MPI_Comm comm = MPI_COMM_WORLD);
 
 #endif // OpenPFC_ENABLE_CUDA
 

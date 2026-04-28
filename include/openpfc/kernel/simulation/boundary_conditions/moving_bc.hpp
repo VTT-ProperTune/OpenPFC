@@ -89,7 +89,7 @@ public:
 
   void apply(Model &m, double time) override {
     (void)time;
-    const FFT &fft = get_fft(m);
+    const fft::IFFT &fft = get_fft(m);
     Field &field = get_real_field(m, get_field_name());
     const World &w = get_world(m);
     Int3 low = get_inbox(fft).low;

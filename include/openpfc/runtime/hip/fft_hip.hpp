@@ -17,7 +17,9 @@
 #pragma once
 
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/detail/fft_heffte_backend.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
+#include <openpfc/kernel/fft/fft_layout.hpp>
 
 #include <mpi.h>
 
@@ -50,19 +52,21 @@ using FFT_HIP = FFT_Impl<heffte::backend::rocfft>;
  * @param rank_id The rank ID of the current process in the MPI communicator
  * @return FFT_HIP object configured to use rocFFT backend
  */
-FFT_HIP create_hip(const Decomposition &decomposition, int rank_id);
+FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
+                   MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Creates an FFT object using rocFFT backend (auto-detect rank)
  *
- * Convenience function that automatically detects the MPI rank from MPI_COMM_WORLD.
+ * Convenience function that automatically detects the MPI rank from @p comm.
  *
  * @param decomposition The Decomposition object defining the domain decomposition
  * @return FFT_HIP object configured to use rocFFT backend
  *
  * @throws std::logic_error if MPI communicator size doesn't match decomposition size
  */
-FFT_HIP create_hip(const Decomposition &decomposition);
+FFT_HIP create_hip(const Decomposition &decomposition,
+                   MPI_Comm comm = MPI_COMM_WORLD);
 #endif // OpenPFC_ENABLE_HIP
 
 } // namespace pfc::fft

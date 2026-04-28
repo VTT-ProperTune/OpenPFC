@@ -107,9 +107,9 @@ public:
   /**
    * @brief Get the FFT object
    *
-   * @return FFT&
+   * @return fft::IFFT&
    */
-  FFT &get_fft() { return pfc::get_fft(m_model); }
+  fft::IFFT &get_fft() { return pfc::get_fft(m_model); }
 
   /**
    * @brief Get the time object
@@ -549,7 +549,7 @@ public:
   return pfc::get_world(get_model(sim));
 }
 
-[[nodiscard]] inline FFT &get_fft(Simulator &sim) noexcept {
+[[nodiscard]] inline fft::IFFT &get_fft(Simulator &sim) noexcept {
   return pfc::get_fft(get_model(sim));
 }
 

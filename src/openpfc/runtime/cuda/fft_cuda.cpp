@@ -4,7 +4,6 @@
 #if defined(OpenPFC_ENABLE_CUDA)
 
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 
 #include <heffte.h>
@@ -23,9 +22,6 @@ using pfc::decomposition::get_num_domains;
 using pfc::fft::FFT_Impl;
 
 // Helper functions (similar to fft.cpp)
-// Made static to avoid multiple definition errors with fft.cpp
-static auto get_comm() { return MPI_COMM_WORLD; }
-
 static int get_mpi_rank(MPI_Comm comm) {
   int rank;
   MPI_Comm_rank(comm, &rank);
@@ -42,7 +38,8 @@ static heffte::box3d<int> heffte_box_from_box3i(const Box3i &b) {
   return heffte::box3d<int>(b.low, b.high);
 }
 
-FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id) {
+FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
+                     MPI_Comm comm) {
   auto options = heffte::default_options<heffte::backend::cufft>();
   auto r2c_dir = 0;
   auto fft_layout = layout::create(decomposition, r2c_dir);
@@ -50,7 +47,6 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id) {
   const auto &inbox = get_real_box(fft_layout, rank_id);
   const auto &outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_direction = get_r2c_direction(fft_layout);
-  auto comm = get_comm();
 
   // Create cuFFT-based FFT (precision determined by data types in forward/backward
   // calls)
@@ -63,8 +59,7 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id) {
   return FFT_CUDA(std::move(fft_cuda));
 }
 
-FFT_CUDA create_cuda(const Decomposition &decomposition) {
-  auto comm = get_comm();
+FFT_CUDA create_cuda(const Decomposition &decomposition, MPI_Comm comm) {
   auto mpi_comm_size = get_mpi_size(comm);
   auto rank_id = get_mpi_rank(comm);
   auto decomposition_size = pfc::decomposition::get_num_domains(decomposition);
@@ -75,11 +70,11 @@ FFT_CUDA create_cuda(const Decomposition &decomposition) {
         std::to_string(mpi_comm_size) + " != " + std::to_string(decomposition_size) +
         ". This indicates that the number of MPI ranks does not match the number of "
         "domains in the decomposition. To resolve this issue, you can manually "
-        "specify the rank by calling fft::create_cuda(decomposition, rank_id) "
+        "specify the rank by calling fft::create_cuda(decomposition, rank_id, comm) "
         "instead.");
   }
 
-  return create_cuda(decomposition, rank_id);
+  return create_cuda(decomposition, rank_id, comm);
 }
 
 } // namespace fft

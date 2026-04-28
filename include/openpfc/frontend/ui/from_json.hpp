@@ -29,7 +29,7 @@
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>

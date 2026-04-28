@@ -4,7 +4,6 @@
 #if defined(OpenPFC_ENABLE_HIP)
 
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/runtime/hip/fft_hip.hpp>
 
 #include <heffte.h>
@@ -22,8 +21,6 @@ using layout::get_real_box;
 using pfc::decomposition::get_num_domains;
 using pfc::fft::FFT_Impl;
 
-static auto get_comm() { return MPI_COMM_WORLD; }
-
 static int get_mpi_rank(MPI_Comm comm) {
   int rank;
   MPI_Comm_rank(comm, &rank);
@@ -40,7 +37,7 @@ static heffte::box3d<int> heffte_box_from_box3i(const Box3i &b) {
   return heffte::box3d<int>(b.low, b.high);
 }
 
-FFT_HIP create_hip(const Decomposition &decomposition, int rank_id) {
+FFT_HIP create_hip(const Decomposition &decomposition, int rank_id, MPI_Comm comm) {
   auto options = heffte::default_options<heffte::backend::rocfft>();
   auto r2c_dir = 0;
   auto fft_layout = layout::create(decomposition, r2c_dir);
@@ -48,7 +45,6 @@ FFT_HIP create_hip(const Decomposition &decomposition, int rank_id) {
   const auto &inbox = get_real_box(fft_layout, rank_id);
   const auto &outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_direction = get_r2c_direction(fft_layout);
-  auto comm = get_comm();
 
   using fft_r2c_hip_type = heffte::fft3d_r2c<heffte::backend::rocfft>;
   fft_r2c_hip_type fft_hip(heffte_box_from_box3i(inbox),
@@ -58,8 +54,7 @@ FFT_HIP create_hip(const Decomposition &decomposition, int rank_id) {
   return FFT_HIP(std::move(fft_hip));
 }
 
-FFT_HIP create_hip(const Decomposition &decomposition) {
-  auto comm = get_comm();
+FFT_HIP create_hip(const Decomposition &decomposition, MPI_Comm comm) {
   auto mpi_comm_size = get_mpi_size(comm);
   auto rank_id = get_mpi_rank(comm);
   auto decomposition_size = pfc::decomposition::get_num_domains(decomposition);
@@ -70,11 +65,11 @@ FFT_HIP create_hip(const Decomposition &decomposition) {
         std::to_string(mpi_comm_size) + " != " + std::to_string(decomposition_size) +
         ". This indicates that the number of MPI ranks does not match the number of "
         "domains in the decomposition. To resolve this issue, you can manually "
-        "specify the rank by calling fft::create_hip(decomposition, rank_id) "
+        "specify the rank by calling fft::create_hip(decomposition, rank_id, comm) "
         "instead.");
   }
 
-  return create_hip(decomposition, rank_id);
+  return create_hip(decomposition, rank_id, comm);
 }
 
 } // namespace fft

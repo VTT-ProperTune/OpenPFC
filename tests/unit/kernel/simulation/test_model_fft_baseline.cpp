@@ -25,7 +25,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 
 #include "fixtures/mock_model.hpp"
@@ -93,7 +93,7 @@ TEST_CASE("Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]"
     pfc::testing::MockModel model(fft, world);
 
     // Derived model can access FFT via get_fft()
-    FFT &model_fft = get_fft(model);
+    auto &model_fft = get_fft(model);
     REQUIRE(model_fft.size_inbox() == fft.size_inbox());
     REQUIRE(model_fft.size_outbox() == fft.size_outbox());
   }

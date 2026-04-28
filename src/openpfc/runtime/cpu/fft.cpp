@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 
 #include <array>
 #include <iostream>
@@ -78,6 +78,8 @@ FFTLayout create(const Decomposition &decomposition, int r2c_direction) {
 
 namespace pfc::fft {
 
+using pfc::decomposition::get_num_domains;
+
 namespace {
 
 [[nodiscard]] heffte::box3d<int> heffte_box_from_box3i(const Box3i &b) {
@@ -85,8 +87,6 @@ namespace {
 }
 
 } // namespace
-
-auto get_comm() { return MPI_COMM_WORLD; }
 
 int get_mpi_rank(MPI_Comm comm) {
   int rank;
@@ -100,33 +100,31 @@ int get_mpi_size(MPI_Comm comm) {
   return size;
 }
 
-using heffte::plan_options;
 using layout::FFTLayout;
 using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 
-FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options) {
+CpuFft create(const FFTLayout &fft_layout, int rank_id,
+              const heffte::plan_options &options, MPI_Comm comm) {
   const auto &inbox = get_real_box(fft_layout, rank_id);
   const auto &outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
-  auto *comm = get_comm();
   return {fft_r2c(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
                   r2c_dir, comm, options)};
 }
 
-FFT create(const Decomposition &decomposition, int rank_id) {
+CpuFft create(const Decomposition &decomposition, int rank_id, MPI_Comm comm) {
   auto options = heffte::default_options<heffte::backend::fftw>();
   auto r2c_dir = 0;
   auto fft_layout = layout::create(decomposition, r2c_dir);
-  return create(fft_layout, rank_id, options);
+  return create(fft_layout, rank_id, options, comm);
 }
 
-// Runtime backend selection - returns IFFT interface
 std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_id,
-                                          plan_options options, Backend backend) {
+                                          const heffte::plan_options &options,
+                                          Backend backend, MPI_Comm comm) {
   auto inbox = get_real_box(fft_layout, rank_id);
   auto outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
-  auto *comm = get_comm();
 
   switch (backend) {
   case Backend::FFTW: {
@@ -148,43 +146,40 @@ std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_
 }
 
 std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition,
-                                          int rank_id, Backend backend) {
+                                          int rank_id, Backend backend,
+                                          MPI_Comm comm) {
   auto r2c_dir = 0;
   auto fft_layout = layout::create(decomposition, r2c_dir);
 
-  // Get default options for the selected backend
   switch (backend) {
   case Backend::FFTW: {
     auto options = heffte::default_options<heffte::backend::fftw>();
-    return create_with_backend(fft_layout, rank_id, options, backend);
+    return create_with_backend(fft_layout, rank_id, options, backend, comm);
   }
 #if defined(OpenPFC_ENABLE_CUDA)
   case Backend::CUDA: {
     auto options = heffte::default_options<heffte::backend::cufft>();
-    return create_with_backend(fft_layout, rank_id, options, backend);
+    return create_with_backend(fft_layout, rank_id, options, backend, comm);
   }
 #endif
   default: throw std::runtime_error("Unsupported FFT backend requested");
   }
 }
 
-FFT create(const Decomposition &decomposition) {
-  auto *comm = get_comm();
-  auto mpi_comm_size = get_mpi_size(comm);
-  auto rank_id = get_mpi_rank(comm);
-  auto decomposition_size = get_num_domains(decomposition);
+CpuFft create(const Decomposition &decomposition, MPI_Comm comm) {
+  const int mpi_comm_size = get_mpi_size(comm);
+  const int rank_id = get_mpi_rank(comm);
+  const auto decomposition_size = get_num_domains(decomposition);
   if (mpi_comm_size != decomposition_size) {
     throw std::logic_error(
         "Mismatch between MPI communicator size and domain decomposition size: " +
         std::to_string(mpi_comm_size) + " != " + std::to_string(decomposition_size) +
         ". This indicates that the number of MPI ranks does not match the number of "
         "domains in the decomposition. To resolve this issue, you can manually "
-        "specify the rank by calling fft::create(decomposition, rank_id) instead.");
+        "specify the rank by calling fft::create(decomposition, rank_id, comm) "
+        "instead.");
   }
-  // if mpi communicator size matches decomposition size, we can safely assume
-  // that the intention is to decompose the whole communicator into the
-  // decomposition
-  return create(decomposition, rank_id);
+  return create(decomposition, rank_id, comm);
 }
 
 } // namespace pfc::fft

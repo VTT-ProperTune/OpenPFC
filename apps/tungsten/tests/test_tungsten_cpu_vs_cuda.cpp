@@ -19,7 +19,7 @@
 #include <cmath>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
 #include <tungsten/cuda/tungsten_model.hpp>

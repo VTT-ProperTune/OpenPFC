@@ -3,52 +3,59 @@
 
 /**
  * @file fft.hpp
- * @brief Fast Fourier Transform API for spectral methods
+ * @brief Fast Fourier Transform API for spectral methods (no HeFFTe headers)
  *
  * @details
- * Public entry point for distributed FFTs. Core interface types live in
- * fft_interface.hpp (no HeFFTe). The HeFFTe-backed implementation template
- * `FFT_Impl` is provided by detail/fft_heffte_backend.hpp, included from here so
- * existing `#include <openpfc/kernel/fft/fft.hpp>` code keeps working.
+ * Core layout and `IFFT` live in fft_interface.hpp / fft_layout.hpp / kspace.hpp.
+ * The default CPU backend `CpuFft` (HeFFTe + FFTW) is declared here and defined in
+ * fft_fftw.hpp — include that header (or openpfc.hpp / openpfc_minimal.hpp) when you
+ * need the complete type, `pfc::FFT`, or `heffte::plan_options` values.
  *
+ * @see fft_fftw.hpp for CpuFft, plan_options alias, and HeFFTe-backed factories
  * @see fft_interface.hpp for IFFT and buffer aliases
- * @see detail/fft_heffte_backend.hpp for FFT_Impl and HeFFTe types
  */
 
 #pragma once
 
-#include <openpfc/kernel/fft/detail/fft_heffte_backend.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/fft/fft_layout.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 
 #include <memory>
+#include <mpi.h>
+
+namespace heffte {
+struct plan_options;
+}
 
 namespace pfc {
 namespace fft {
 
 using Decomposition = pfc::decomposition::Decomposition;
-
-using FFT = FFT_Impl<heffte::backend::fftw>;
-
-using heffte::plan_options;
 using layout::FFTLayout;
 
-FFT create(const FFTLayout &fft_layout, int rank_id, plan_options options);
+/** HeFFTe+FFTW backend; complete definition in fft_fftw.hpp */
+class CpuFft;
 
-FFT create(const Decomposition &decomposition, int rank_id);
+CpuFft create(const FFTLayout &fft_layout, int rank_id,
+              const heffte::plan_options &options, MPI_Comm comm = MPI_COMM_WORLD);
 
-FFT create(const Decomposition &decomposition);
+CpuFft create(const Decomposition &decomposition, int rank_id,
+              MPI_Comm comm = MPI_COMM_WORLD);
+
+CpuFft create(const Decomposition &decomposition, MPI_Comm comm = MPI_COMM_WORLD);
 
 std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_id,
-                                          plan_options options, Backend backend);
+                                          const heffte::plan_options &options,
+                                          Backend backend,
+                                          MPI_Comm comm = MPI_COMM_WORLD);
 
 std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition,
-                                          int rank_id, Backend backend);
+                                          int rank_id, Backend backend,
+                                          MPI_Comm comm = MPI_COMM_WORLD);
 
 } // namespace fft
 
-using FFT = fft::FFT;
 using FFTLayout = fft::layout::FFTLayout;
 
 } // namespace pfc

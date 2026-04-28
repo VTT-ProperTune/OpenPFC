@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <vector>
 

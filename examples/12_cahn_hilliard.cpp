@@ -28,7 +28,7 @@ public:
   }
 
   void initialize(double dt) override {
-    FFT &fft = get_fft();
+    auto &fft = get_fft();
 
     // Allocate space for the main variable and it's fourier transform
     c.resize(fft.size_inbox());
@@ -65,7 +65,7 @@ public:
   }
 
   void step(double) override {
-    FFT &fft = get_fft();
+    auto &fft = get_fft();
     fft.forward(c, c_F);
     for (auto &elem : c) elem = D * elem * elem * elem;
     fft.forward(c, c_NF);

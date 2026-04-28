@@ -63,7 +63,7 @@ public:
    */
   void initialize(double dt) override {
     const World &w = get_world();
-    FFT &fft = get_fft();
+    auto &fft = get_fft();
 
     // Allocate fields
     // LLM: FFT determines field sizes based on decomposition
@@ -151,7 +151,7 @@ public:
    * @param t Current time (unused in linear diffusion)
    */
   void step(double /* t */) override {
-    FFT &fft = get_fft();
+    auto &fft = get_fft();
 
     // Transform to k-space
     // LLM: FFT is MPI-aware - handles distributed memory automatically

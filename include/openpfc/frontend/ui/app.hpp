@@ -439,7 +439,7 @@ public:
             : heffte::default_options<heffte::backend::fftw>();
 
     auto fft_layout = fft::layout::create(decomp, 0);
-    auto fft = fft::create(fft_layout, rank_id, options);
+    auto fft = fft::create(fft_layout, rank_id, options, m_comm);
     Time time(ui::from_json<Time>(m_settings));
     ConcreteModel model(fft, world);
     Simulator simulator(model, time);

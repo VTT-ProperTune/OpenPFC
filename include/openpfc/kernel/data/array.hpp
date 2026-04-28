@@ -42,7 +42,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/detail/array_format.hpp>
 #include <openpfc/kernel/detail/typename.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <ostream>
 #include <type_traits>
 #include <typeinfo>
@@ -62,7 +62,7 @@ private:
    *
    * @param fft
    */
-  Array(const FFT &fft, [[maybe_unused]] std::true_type is_complex)
+  Array(const fft::IFFT &fft, [[maybe_unused]] std::true_type is_complex)
       : index(get_outbox(fft).size, get_outbox(fft).low) {}
 
   /**
@@ -71,7 +71,7 @@ private:
    *
    * @param decomp
    */
-  Array(const FFT &fft, [[maybe_unused]] std::false_type is_real)
+  Array(const fft::IFFT &fft, [[maybe_unused]] std::false_type is_real)
       : index(get_inbox(fft).size, get_inbox(fft).low) {}
 
   // Custom type trait to check if a type is complex

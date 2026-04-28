@@ -39,7 +39,7 @@
 
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 // Local iteration implemented inline to work with HeFFTe inbox type
 
@@ -55,7 +55,8 @@ namespace pfc::field {
  * @param fn    Coordinate-space function returning new value
  */
 template <typename Fn>
-inline void apply(RealField &field, const World &world, const FFT &fft, Fn &&fn) {
+inline void apply(RealField &field, const World &world, const fft::IFFT &fft,
+                  Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   // Safety: ensure field size matches inbox voxel count
   const auto nx = inbox.size[0];
@@ -90,8 +91,8 @@ inline void apply(RealField &field, const World &world, const FFT &fft, Fn &&fn)
  * @param fn    Space-time function returning new value
  */
 template <typename Fn>
-inline void apply_with_time(RealField &field, const World &world, const FFT &fft,
-                            double t, Fn &&fn) {
+inline void apply_with_time(RealField &field, const World &world,
+                            const fft::IFFT &fft, double t, Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
   const auto ny = inbox.size[1];
@@ -128,7 +129,7 @@ inline void apply_with_time(RealField &field, const World &world, const FFT &fft
  * @param fn    Coordinate-space function returning new value given (x, current)
  */
 template <typename Fn>
-inline void apply_inplace(RealField &field, const World &world, const FFT &fft,
+inline void apply_inplace(RealField &field, const World &world, const fft::IFFT &fft,
                           Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
@@ -160,7 +161,7 @@ inline void apply_inplace(RealField &field, const World &world, const FFT &fft,
  */
 template <typename Fn>
 inline void apply_inplace_with_time(RealField &field, const World &world,
-                                    const FFT &fft, double t, Fn &&fn) {
+                                    const fft::IFFT &fft, double t, Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
   const auto ny = inbox.size[1];

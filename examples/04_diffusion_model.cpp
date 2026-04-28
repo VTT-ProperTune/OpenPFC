@@ -9,7 +9,7 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/fft/fft.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 
 using namespace std;
@@ -172,7 +172,7 @@ public:
    *
    */
   void step(double) override {
-    FFT &fft = get_fft();    // Get reference to FFT object
+    auto &fft = get_fft();   // Get reference to FFT object
     fft.forward(psi, psi_F); // Perform forward FFT, psi_F = fft(psi)
     for (int k = 0, N = psi_F.size(); k < N; k++) {
       psi_F[k] = opL[k] * psi_F[k]; // Calculate result psi_F = opL*psi_F

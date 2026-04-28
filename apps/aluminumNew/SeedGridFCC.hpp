@@ -61,7 +61,7 @@ public:
    */
   void apply(pfc::Model &m, double) override {
     const pfc::World &w = pfc::get_world(m);
-    const pfc::FFT &fft = pfc::get_fft(m);
+    const auto &fft = pfc::get_fft(m);
     pfc::Field &field = m.get_real_field("psi");
     pfc::Int3 low = pfc::fft::get_inbox(fft).low;
     pfc::Int3 high = pfc::fft::get_inbox(fft).high;
