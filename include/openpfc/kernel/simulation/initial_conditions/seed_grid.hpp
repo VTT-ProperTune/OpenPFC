@@ -35,7 +35,9 @@
 #define PFC_INITIAL_CONDITIONS_SEED_GRID_HPP
 
 #include <random>
+#include <sstream>
 
+#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
@@ -73,6 +75,18 @@ public:
       : m_Ny(Ny), m_Nz(Nz), m_X0(X0), m_radius(radius), m_rho(0.0),
         m_amplitude(0.0) {}
 
+  void apply(const SimulationContext &ctx, Model &m, double time) override {
+    const int nseeds = m_Nx * m_Ny * m_Nz;
+    if (ctx.is_rank0()) {
+      const Logger lg{LogLevel::Info, 0};
+      std::ostringstream oss;
+      oss << "Generating " << nseeds << " regular seeds with radius "
+          << get_radius();
+      log_info(lg, oss.str());
+    }
+    apply(m, time);
+  }
+
   void apply(Model &m, double time) override {
     (void)time;
     // Functional coordinate-space implementation using field::apply
@@ -81,7 +95,6 @@ public:
     const auto spacing = get_spacing(w);
 
     std::vector<Seed> seeds;
-    const int Nx = m_Nx;
     const int Ny = m_Ny;
     const int Nz = m_Nz;
     const double radius = get_radius();
@@ -91,11 +104,6 @@ public:
     const double X0 = m_X0;
     const double Y0 = Dy / 2.0;
     const double Z0 = Dz / 2.0;
-    const int nseeds = Nx * Ny * Nz;
-
-    std::cout << "Generating " << nseeds << " regular seeds with radius " << radius
-              << "\n";
-
     std::mt19937_64 re(42);
     std::uniform_real_distribution<double> rt(-0.2 * radius, 0.2 * radius);
     std::uniform_real_distribution<double> rr(0.0, 8.0 * atan(1.0));

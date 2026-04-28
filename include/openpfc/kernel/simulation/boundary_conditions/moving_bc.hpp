@@ -40,7 +40,9 @@
 #include <cmath>
 #include <limits>
 #include <mpi.h>
+#include <sstream>
 
+#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
@@ -149,7 +151,12 @@ public:
       m_first = false;
     }
 
-    std::cout << "Boundary position: " << m_xpos << '\n';
+    if (rank == 0) {
+      const Logger lg{LogLevel::Debug, 0};
+      std::ostringstream oss;
+      oss << "Boundary position: " << m_xpos;
+      log_debug(lg, oss.str());
+    }
 
     fill_bc(m);
   }

@@ -43,10 +43,11 @@
 #ifndef PFC_SIMULATOR_HPP
 #define PFC_SIMULATOR_HPP
 
-#include <iostream>
 #include <memory>
 #include <mpi.h>
+#include <string>
 
+#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
@@ -73,6 +74,14 @@ private:
   int m_result_counter = 0;
   MPI_Comm m_mpi_comm{MPI_COMM_WORLD};
   bool m_is_rank0{};
+
+  void warn_rank0_(std::string message) const {
+    if (!m_is_rank0) {
+      return;
+    }
+    const Logger lg{LogLevel::Warning, 0};
+    log_warning(lg, message);
+  }
 
 public:
   /**
@@ -200,8 +209,8 @@ public:
 
     Model &model = get_model();
     if (!pfc::has_field(model, field_name)) {
-      std::cout << "Warning: tried to add writer for inexistent field " << field_name
-                << ", RESULTS ARE NOT WRITTEN!" << '\n';
+      warn_rank0_("Warning: tried to add writer for inexistent field " + field_name +
+                  ", RESULTS ARE NOT WRITTEN!");
       return false;
     }
     m_result_writers.insert({field_name, std::move(writer)});
@@ -209,7 +218,7 @@ public:
   }
 
   bool add_results_writer(std::unique_ptr<ResultsWriter> writer) {
-    std::cout << "Warning: adding result writer to write field 'default'" << '\n';
+    warn_rank0_("Warning: adding result writer to write field 'default'");
     return add_results_writer("default", std::move(writer));
   }
 
@@ -263,12 +272,11 @@ public:
     Model &model = get_model();
     for (const std::string &field_name : modifier->get_field_names()) {
       if (field_name == "default") {
-        std::cout << "Warning: adding initial condition to modify field 'default'"
-                  << '\n';
+        warn_rank0_("Warning: adding initial condition to modify field 'default'");
       }
       if (!pfc::has_field(model, field_name)) {
-        std::cout << "Warning: tried to add initial condition for inexistent field "
-                  << field_name << ", INITIAL CONDITIONS ARE NOT APPLIED!" << '\n';
+        warn_rank0_("Warning: tried to add initial condition for inexistent field " +
+                    field_name + ", INITIAL CONDITIONS ARE NOT APPLIED!");
         return false;
       }
     }
@@ -341,12 +349,12 @@ public:
     Model &model = get_model();
     for (const std::string &field_name : modifier->get_field_names()) {
       if (field_name == "default") {
-        std::cout << "Warning: adding boundary condition to modify field 'default'"
-                  << '\n';
+        warn_rank0_("Warning: adding boundary condition to modify field 'default'");
       }
       if (!pfc::has_field(model, field_name)) {
-        std::cout << "Warning: tried to add boundary condition for inexistent field "
-                  << field_name << ", BOUNDARY CONDITIONS ARE NOT APPLIED!" << '\n';
+        warn_rank0_(
+            "Warning: tried to add boundary condition for inexistent field " +
+            field_name + ", BOUNDARY CONDITIONS ARE NOT APPLIED!");
         return false;
       }
     }
