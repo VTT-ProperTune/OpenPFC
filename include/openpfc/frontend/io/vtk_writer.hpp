@@ -33,7 +33,7 @@
  * @endcode
  *
  * @see ResultsWriter base class
- * @see examples/11_write_results.hpp for original implementation
+ * @see examples/11_write_results.hpp for a thin tutorial wrapper around this class
  */
 
 #ifndef PFC_VTK_WRITER_HPP
