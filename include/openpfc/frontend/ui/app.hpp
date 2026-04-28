@@ -36,6 +36,7 @@
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/ui/settings_loader.hpp>
+#include <openpfc/frontend/ui/spectral_simulation_session.hpp>
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
 #include <openpfc/frontend/utils/timeleft.hpp>
@@ -422,32 +423,16 @@ public:
       pfc::log_info(app_lg, m_settings.dump(4));
     }
 
-    World world(ui::from_json<World>(m_settings));
+    auto session = SpectralSimulationSession<ConcreteModel>::assemble(
+        m_settings, m_comm, rank_id, m_worker.get_num_ranks());
     if (rank0) {
       std::ostringstream woss;
-      woss << world;
+      woss << session->world();
       pfc::log_info(app_lg, std::string("World: ") + woss.str());
     }
 
-    int num_ranks = m_worker.get_num_ranks();
-    auto decomp = decomposition::create(world, num_ranks);
-
-    // Create FFT with default FFTW backend for now
-    // Note: Runtime backend selection via create_with_backend() can be added when
-    // needed
-    auto options =
-        m_settings.contains("plan_options")
-            ? ui::from_json<heffte::plan_options>(m_settings["plan_options"])
-            : heffte::default_options<heffte::backend::fftw>();
-
-    auto fft_layout = fft::layout::create(decomp, 0);
-    auto fft = fft::create(fft_layout, rank_id, options, m_comm);
-    Time time(ui::from_json<Time>(m_settings));
-    ConcreteModel model(fft, world);
-    Simulator simulator(model, time, m_comm);
-
     if (m_settings.contains("model") && m_settings["model"].contains("params")) {
-      from_json(m_settings["model"]["params"], model);
+      from_json(m_settings["model"]["params"], session->model());
     }
     read_profiling_configuration();
     if (m_prof_enabled) {
@@ -460,20 +445,20 @@ public:
     if (rank0) {
       pfc::log_info(app_lg, "Initializing model...");
     }
-    model.initialize(time.get_dt());
+    session->model().initialize(session->time().get_dt());
 
     // Report memory usage
     {
-      size_t model_mem = model.get_allocated_memory_bytes();
-      size_t fft_mem = fft.get_allocated_memory_bytes();
+      size_t model_mem = session->model().get_allocated_memory_bytes();
+      size_t fft_mem = session->fft().get_allocated_memory_bytes();
       pfc::utils::MemoryUsage usage{model_mem, fft_mem};
       pfc::Logger logger{pfc::LogLevel::Info, rank_id};
-      pfc::utils::report_memory_usage(usage, world, logger, m_comm);
+      pfc::utils::report_memory_usage(usage, session->world(), logger, m_comm);
     }
 
-    add_result_writers(simulator);
-    add_initial_conditions(simulator);
-    add_boundary_conditions(simulator);
+    add_result_writers(session->simulator());
+    add_initial_conditions(session->simulator());
+    add_boundary_conditions(session->simulator());
 
     if (m_settings.contains("simulator")) {
       const json &j = m_settings["simulator"];
@@ -483,15 +468,15 @@ public:
               "Invalid JSON input: missing or invalid 'result_counter' field.");
         }
         int result_counter = (int)j["result_counter"] + 1;
-        simulator.set_result_counter(result_counter);
+        session->simulator().set_result_counter(result_counter);
       }
       if (j.contains("increment")) {
         if (!j["increment"].is_number_integer()) {
           throw std::invalid_argument(
               "Invalid JSON input: missing or invalid 'increment' field.");
         }
-        int increment = j["increment"];
-        time.set_increment(increment);
+        int increment = (int)j["increment"];
+        session->time().set_increment(increment);
       }
     }
 
@@ -499,30 +484,30 @@ public:
       pfc::log_info(app_lg, "Starting time integration (Simulator integrator API)");
     }
 
-    while (!time.done()) {
-      fft.reset_fft_time();
-      simulator.begin_integrator_step();
+    while (!session->time().done()) {
+      session->fft().reset_fft_time();
+      session->simulator().begin_integrator_step();
       const double barrier_step_s = pfc::profiling::measure_barriered(m_comm, [&] {
         if (m_profiler) {
           pfc::profiling::openpfc_begin_frame_with_step_and_rank(
-              *m_profiler, time.get_increment(), rank_id);
+              *m_profiler, session->time().get_increment(), rank_id);
         }
         if (m_profiler) {
           pfc::profiling::ProfilingContextScope scope(m_profiler.get());
-          step(simulator, model);
+          step(session->simulator(), session->model());
         } else {
-          step(simulator, model);
+          step(session->simulator(), session->model());
         }
       });
-      const double fft_meter_s = fft.get_fft_time();
+      const double fft_meter_s = session->fft().get_fft_time();
 
       std::uint64_t rss = 0;
       std::uint64_t model_mem = 0;
       std::uint64_t fft_mem = 0;
       if (m_profiler && m_prof_memory_samples) {
         rss = pfc::profiling::try_read_process_rss_bytes();
-        model_mem = model.get_allocated_memory_bytes();
-        fft_mem = fft.get_allocated_memory_bytes();
+        model_mem = session->model().get_allocated_memory_bytes();
+        fft_mem = session->fft().get_allocated_memory_bytes();
       }
       if (m_profiler) {
         m_profiler->assign_recorded_time("fft", fft_meter_s);
@@ -533,7 +518,7 @@ public:
       m_steptime = pfc::profiling::reduce_max_to_root(m_comm, barrier_step_s, 0);
       m_fft_time = pfc::profiling::reduce_max_to_root(m_comm, fft_meter_s, 0);
 
-      simulator.end_integrator_step();
+      session->simulator().end_integrator_step();
 
       // Calculate eta from average step time.
       // Use exponential moving average when steps > 3.
@@ -541,10 +526,10 @@ public:
       if (m_steps_done > 3) {
         m_avg_steptime = 0.01 * m_steptime + 0.99 * m_avg_steptime;
       }
-      int increment = time.get_increment();
-      double t = time.get_current();
-      double t1 = time.get_t1();
-      double eta_i = (t1 - t) / time.get_dt();
+      int increment = session->time().get_increment();
+      double t = session->time().get_current();
+      double t1 = session->time().get_t1();
+      double eta_i = (t1 - t) / session->time().get_dt();
       double eta_t = eta_i * m_avg_steptime;
       double other_time = m_steptime - m_fft_time;
       if (rank0) {
