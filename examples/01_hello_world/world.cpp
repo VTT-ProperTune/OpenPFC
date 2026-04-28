@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
@@ -38,14 +38,10 @@
  * In this example, we construct a `World` object using dimensions, origin,
  * and spacing values in a traditional, positional-parameter style.
  *
- * This interface is fully supported for compatibility, but we anticipate that
- * it may become deprecated in the future due to the potential for **silent bugs**
- * caused by incorrect parameter ordering. Since C++ does not support keyword
- * arguments or dictionary-style construction natively, there is no language-level
- * safeguard to prevent users from passing spacing in the position of origin, or vice
- * versa. To address this, we introduce *strong typedefs* in later examples which
- * make each argument semantically explicit and enable validation at compile-time or
- * construction-time.
+ * Prefer `GridSize`, `PhysicalOrigin`, and `GridSpacing` in new code (see
+ * Example 3) so parameter order mistakes do not compile. To address this, we
+ * introduce *strong typedefs* in later examples which make each argument
+ * semantically explicit and enable validation at compile-time or construction-time.
  *
  * #### Coordinate System and Grid Definition
  *
@@ -87,7 +83,9 @@ void example1_basic_cartesian_world() {
   std::array<double, 3> origin = {0.0, 0.0, 0.0};
   std::array<double, 3> discretization = {0.1, 0.1, 0.1};
 
-  pfc::World w = pfc::world::create(dimensions, origin, discretization);
+  pfc::World w =
+      pfc::world::create(pfc::GridSize(dimensions), pfc::PhysicalOrigin(origin),
+                         pfc::GridSpacing(discretization));
 
   std::cout << "World created:\n" << w << endl;
 

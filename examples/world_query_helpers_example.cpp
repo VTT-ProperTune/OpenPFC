@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -69,23 +69,30 @@ int main() {
 
   // Example 1: 3D cubic domain
   std::cout << "\nExample 1: Standard 3D simulation domain\n";
-  auto world3d = world::create({64, 64, 64}, {0.0, 0.0, 0.0}, {0.1, 0.1, 0.1});
+  auto world3d =
+      world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({0.1, 0.1, 0.1}));
   print_world_info(world3d, "3D Cubic Domain (64³, dx=0.1)");
 
   // Example 2: 2D domain (quasi-2D simulation)
   std::cout << "\n\nExample 2: 2D simulation (thin film)\n";
-  auto world2d = world::create({128, 128, 1}, {0.0, 0.0, 0.0}, {0.01, 0.01, 1.0});
+  auto world2d =
+      world::create(GridSize({128, 128, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({0.01, 0.01, 1.0}));
   print_world_info(world2d, "2D Domain (128² × 1, dx=0.01)");
 
   // Example 3: 1D domain
   std::cout << "\n\nExample 3: 1D simulation (line)\n";
-  auto world1d = world::create({256, 1, 1}, {0.0, 0.0, 0.0}, {0.05, 1.0, 1.0});
+  auto world1d =
+      world::create(GridSize({256, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({0.05, 1.0, 1.0}));
   print_world_info(world1d, "1D Domain (256 × 1 × 1, dx=0.05)");
 
   // Example 4: Non-cubic 3D domain with offset origin
   std::cout << "\n\nExample 4: Non-cubic domain with custom origin\n";
   auto world_offset =
-      world::create({100, 100, 50}, {-5.0, -5.0, 0.0}, {0.1, 0.1, 0.2});
+      world::create(GridSize({100, 100, 50}), PhysicalOrigin({-5.0, -5.0, 0.0}),
+                    GridSpacing({0.1, 0.1, 0.2}));
   print_world_info(world_offset, "Offset Domain (100×100×50, origin at (-5,-5,0))");
 
   // Example 5: Using convenience functions without world:: prefix (ADL)
@@ -94,7 +101,8 @@ int main() {
   {
     using namespace world; // Enable ADL
 
-    auto w = create({32, 32, 32}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+    auto w = create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                    GridSpacing({1.0, 1.0, 1.0}));
 
     // All these work without world:: prefix via ADL!
     std::cout << "  Volume:           " << physical_volume(w) << "\n";
@@ -112,7 +120,8 @@ int main() {
   std::cout << "\n\nExample 6: Manual vs. convenience function\n";
   std::cout << std::string(60, '=') << "\n";
   {
-    auto w = world::create({50, 50, 50}, {0.0, 0.0, 0.0}, {0.2, 0.2, 0.2});
+    auto w = world::create(GridSize({50, 50, 50}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                           GridSpacing({0.2, 0.2, 0.2}));
 
     // Manual calculation
     auto spacing = world::get_spacing(w);

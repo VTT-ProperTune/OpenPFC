@@ -55,17 +55,6 @@ CartesianWorld create(const GridSize &size, const PhysicalOrigin &origin,
   return World(lower, upper, CartesianCS(raw_origin, raw_spacing));
 }
 
-// Old compatibility constructor taking size, offset and spacing, the rest is
-// calculated or assumed. These are a bit hazardous as the user must know the order
-// of the arguments and the meaning of the parameters. The preferred way is to use
-// the strong typedef constructors, which are more explicit and less error-prone.
-// DEPRECATED: Use create(GridSize, PhysicalOrigin, GridSpacing) instead.
-CartesianWorld create(const Int3 &size, const Real3 &offset, const Real3 &spacing) {
-  Int3 lower{0, 0, 0};                               // default lower bounds
-  Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1}; // default upper bounds
-  return World(lower, upper, CartesianCS(offset, spacing));
-}
-
 // old compatibility constructor taking only size, and default lower bounds and
 // spacing and assuming pretty much everything else this is the most common use
 // case

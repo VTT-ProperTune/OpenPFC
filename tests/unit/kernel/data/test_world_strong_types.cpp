@@ -168,12 +168,11 @@ TEST_CASE("Backward compatibility with raw types",
     REQUIRE(raw_spacing[0] == 1.0);
   }
 
-  SECTION("Can mix raw types and strong types in construction") {
-    // Using strong type for size, raw for others
+  SECTION("Strong-type create overload") {
     GridSize size({64, 64, 64});
 
-    // This should work due to implicit conversions
-    auto world = world::create(size.get(), Real3{0, 0, 0}, Real3{1, 1, 1});
+    auto world = world::create(size, PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
 
     REQUIRE(get_size(world)[0] == 64);
   }

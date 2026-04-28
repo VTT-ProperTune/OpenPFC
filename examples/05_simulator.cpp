@@ -181,7 +181,8 @@ void run() {
   std::array<int, 3> dimensions = {L, L, L};
   std::array<double, 3> discretization = {h, h, h};
   std::array<double, 3> origin = {o, o, o};
-  auto world = world::create(dimensions, origin, discretization);
+  auto world = world::create(GridSize(dimensions), PhysicalOrigin(origin),
+                             GridSpacing(discretization));
 
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);

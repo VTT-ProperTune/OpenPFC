@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -179,8 +179,9 @@ int main(int argc, char *argv[]) {
 
   try {
     // Create computational domain (128³ grid)
-    auto world = world::create({GRID_SIZE, GRID_SIZE, GRID_SIZE}, {1.0, 1.0, 1.0},
-                               {1.0, 1.0, 1.0});
+    auto world =
+        world::create(GridSize({GRID_SIZE, GRID_SIZE, GRID_SIZE}),
+                      PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
 
     // Create domain decomposition
     auto decomp = decomposition::create(world, size);
