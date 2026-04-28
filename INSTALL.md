@@ -258,6 +258,14 @@ These switches are defined under **`cmake/`** (see **`BuildOptions.cmake`**, **`
 | **`OpenPFC_ENABLE_NAN_CHECK`** | Optional NaN guards (**OFF** by default). Debug builds enable NaN checks automatically; set **ON** to force them in non-Debug builds (`cmake/CompilerSettings.cmake`). |
 | **`BUILD_SHARED_LIBS`** | Build **`openpfc`** as shared (**OFF** = static, default). |
 
+### 5.2.1 GPU-aware MPI (configure vs runtime)
+
+When **CUDA** is enabled and **`OpenPFC_MPI_CUDA_AWARE=ON`**, CMake may run a small **linked** check **after** `find_package(MPI)` if the implementation is **Open MPI** (`OPEN_MPI` in `mpi.h`). It first verifies that **`MPIX_Query_cuda_support()`** compiles, then runs it under **`MPI_Init` / `MPI_Finalize`**. If Open MPI was built **without** CUDA-aware support, configuration prints a **warning**—use a CUDA-aware Open MPI build, or set **`-DOpenPFC_MPI_CUDA_AWARE=OFF`** and reconfigure.
+
+**Other MPI stacks** (for example **Cray MPICH** on **LUMI-G**) are **not** probed this way. **`OpenPFC_MPI_HIP_AWARE`** is also **not** configure-probed; follow **[docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md)** for **`MPICH_GPU_SUPPORT_ENABLED`**, and use **`verify_gpu_aware_mpi`** (installed under **`bin/`** with HIP builds) for a multi-rank device-buffer smoke test.
+
+**Cross-compiling:** the runtime part of the CUDA probe is **skipped**; validate on the target machine instead.
+
 For toolchain-specific examples (cluster **`CMAKE_TOOLCHAIN_FILE`**), see **`CMakePresets.json`** and **`cmake/toolchains/`**.
 
 ## 6. Configure and build OpenPFC (CUDA)

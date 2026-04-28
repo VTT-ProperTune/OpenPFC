@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -44,9 +44,13 @@ This directory contains modular CMake configuration files that organize the buil
    - Optional **HDF5** when **`OpenPFC_ENABLE_HDF5=ON`** (profiling export)
    - **Doxygen** and **`docs/`** when **`OpenPFC_BUILD_DOCUMENTATION=ON`** (default **ON**); if Doxygen is missing, documentation generation is skipped with a warning
 
+6. **OpenPFCGpuAwareMpi.cmake** (included from the root **`CMakeLists.txt`** immediately after **Dependencies.cmake**)
+   - Optional **CUDA + Open MPI** configure probe using **`MPIX_Query_cuda_support()`** when **`OpenPFC_MPI_CUDA_AWARE=ON`**
+   - **HIP**: status-only reminder for runtime checks (**`verify_gpu_aware_mpi`**, **`MPICH_GPU_SUPPORT_ENABLED`** — see **INSTALL.md** §5.2.1 and **docs/INSTALL.LUMI.md**)
+
 ### Library and Build Configuration
 
-6. **LibraryConfiguration.cmake**
+7. **LibraryConfiguration.cmake**
    - Main `openpfc` library target creation
    - Library properties and versioning
    - Include directories
@@ -54,32 +58,32 @@ This directory contains modular CMake configuration files that organize the buil
    - GPU kernel library when **CUDA** and/or **HIP** (ROCm) GPU support is enabled
    - toml++ include directory setup
 
-7. **BuildOptions.cmake**
+8. **BuildOptions.cmake**
    - Options **`OpenPFC_BUILD_APPS`**, **`OpenPFC_BUILD_EXAMPLES`**, **`OpenPFC_BUILD_TESTS`** (and related); **`add_subdirectory`** for **apps**, **examples**, and **tests** when enabled
    - **`OpenPFC_BUILD_BENCHMARKS`** (default **OFF**) is defined here but only affects sources under **`tests/benchmarks/`** via **`tests/CMakeLists.txt`** (see **`tests/benchmarks/README.md`**)
    - Catch2 finding and **`enable_testing()`** when tests are built
 
-8. **CodeCoverage.cmake**
+9. **CodeCoverage.cmake**
    - Coverage tool detection (lcov, genhtml, gcov)
    - Coverage flags for the library
    - Custom targets: `coverage` and `coverage-clean`
 
 ### Installation and Packaging
 
-9. **Installation.cmake**
+10. **Installation.cmake**
    - Header installation
    - Library installation
    - GPU kernel library installation (if enabled)
    - nlohmann_json header installation (when built from source)
 
-10. **PackageConfig.cmake**
+11. **PackageConfig.cmake**
    - CMake package configuration file generation
    - Export target configuration
    - Version file generation
 
 ### Build Summary
 
-11. **BuildSummary.cmake**
+12. **BuildSummary.cmake**
     - Final build configuration summary
     - Displays all options, dependencies, and settings
 
@@ -97,6 +101,8 @@ CudaSupport.cmake
 HipSupport.cmake
   ↓
 Dependencies.cmake (may check CUDA/HIP availability)
+  ↓
+OpenPFCGpuAwareMpi.cmake (optional CUDA + Open MPI GPU-aware probe)
   ↓
 LibraryConfiguration.cmake (creates openpfc target)
   ↓

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # CMake minimum version (must be at top level, before project())
@@ -49,6 +49,11 @@ include(cmake/HipSupport.cmake)
 # OpenPFC_BUILD_DOCUMENTATION=ON (default ON).
 # Catch2 is found from BuildOptions.cmake when OpenPFC_BUILD_TESTS=ON.
 include(cmake/Dependencies.cmake)
+
+# ----------------------------------------------------------------------------
+# 5b. GPU-aware MPI (configure-time probes where applicable)
+# ----------------------------------------------------------------------------
+include(cmake/OpenPFCGpuAwareMpi.cmake)
 
 # ----------------------------------------------------------------------------
 # 6. Library Configuration
