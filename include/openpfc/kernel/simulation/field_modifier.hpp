@@ -74,8 +74,9 @@ class Model;
  * - **Extensibility**: Users can create custom modifiers without touching OpenPFC
  * - **Composition**: Multiple modifiers can be applied in sequence
  * - **Transparency**: Direct model access allows full inspection and control
- * - **Context**: `SimulationContext` supplies the MPI communicator (and room for
- *   more execution metadata) when the simulator applies modifiers
+ * - **Context**: `SimulationContext` supplies the MPI communicator, rank-0
+ *   flag in that communicator, and room for more execution metadata when the
+ *   simulator applies modifiers
  * - **Single Responsibility**: Each modifier does one thing well
  *
  * @example Creating a custom initial condition

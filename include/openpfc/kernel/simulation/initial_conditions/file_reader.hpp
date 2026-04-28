@@ -69,7 +69,7 @@ public:
     const auto inbox_offset = get_inbox(fft).low;
 
     Field &f = get_real_field(m, get_field_name());
-    if (m.is_rank0()) {
+    if (ctx.is_rank0()) {
       const pfc::Logger lg{pfc::LogLevel::Info, 0};
       pfc::log_info(lg, std::string("Reading initial condition from file: ") +
                             get_filename());
