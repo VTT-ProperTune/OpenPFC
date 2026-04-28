@@ -24,6 +24,7 @@ add_library(openpfc
     src/openpfc/kernel/profiling/timer_report.cpp
     src/openpfc/runtime/cpu/fft.cpp
     src/openpfc/frontend/utils/logging.cpp
+    src/openpfc/frontend/ui/app_profiling.cpp
     src/openpfc/frontend/ui/ui_errors.cpp
     src/openpfc/frontend/io/vtk_writer.cpp
     $<$<BOOL:${OpenPFC_ENABLE_CUDA}>:src/openpfc/runtime/cuda/fft_cuda.cpp>
