@@ -12,6 +12,11 @@
  * - Reading initial conditions from files
  * - Restarting simulations
  *
+ * @note MPI-IO collectives: `read()` uses `MPI_File_open`, `MPI_File_set_view`,
+ * `MPI_File_read_all`, and `MPI_File_close`, which are collective over
+ * `MPI_COMM_WORLD`. All ranks must call `read()` together with the same
+ * filename and matching `set_domain()` layout; otherwise the program may hang.
+ *
  * The reader handles parallel I/O with proper domain decomposition, allowing
  * each MPI rank to read only its local portion of the data.
  *
@@ -82,14 +87,10 @@ public:
       throw std::runtime_error("BinaryReader::read: set_domain() was not called");
     }
     MPI_File fh{};
-    int ierr = MPI_File_open(MPI_COMM_WORLD, const_cast<char *>(filename.c_str()),
-                             MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
-    if (ierr != MPI_SUCCESS) {
-      std::ostringstream oss;
-      oss << "Unable to open \"" << filename
-          << "\": " << pfc::mpi::mpi_error_string(ierr);
-      throw std::runtime_error(oss.str());
-    }
+    pfc::mpi::throw_on_mpi_error(MPI_File_open(MPI_COMM_WORLD,
+                                               const_cast<char *>(filename.c_str()),
+                                               MPI_MODE_RDONLY, MPI_INFO_NULL, &fh),
+                                 "MPI_File_open");
 
     pfc::mpi::throw_on_mpi_error(
         MPI_File_set_view(fh, 0, MPI_DOUBLE, m_filetype, "native", MPI_INFO_NULL),

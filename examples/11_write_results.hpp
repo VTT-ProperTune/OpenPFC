@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #ifndef PFC_VTK_WRITER_HPP
@@ -21,7 +21,9 @@
 #include <fstream>
 #include <iostream>
 #include <mpi.h>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -489,9 +491,11 @@ public:
     int order = MPI_ORDER_FORTRAN;
     MPI_Datatype oldtype = get_mpi_datatype();
     MPI_Datatype *newtype = &m_filetype;
-    MPI_Type_create_subarray(ndims, size_array, subsize_array, start_array, order,
-                             oldtype, newtype);
-    MPI_Type_commit(&m_filetype);
+    pfc::mpi::throw_on_mpi_error(MPI_Type_create_subarray(ndims, size_array,
+                                                          subsize_array, start_array,
+                                                          order, oldtype, newtype),
+                                 "MPI_Type_create_subarray");
+    pfc::mpi::throw_on_mpi_error(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
   }
 
   /**
@@ -510,22 +514,26 @@ public:
     header.set_spacing(IWriter<T>::get_spacing());
     header.set_piece_extent(IWriter<T>::get_global_dimensions());
 
-    MPI_File fh;
-    MPI_Status status;
-    int amode = MPI_MODE_CREATE | MPI_MODE_WRONLY;
-    MPI_File_open(m_comm, IWriter<T>::get_uri().c_str(), amode, MPI_INFO_NULL, &fh);
-    MPI_File_set_size(fh, 0);
-    MPI_File_set_view(fh, header.get_header_offset(), get_mpi_datatype(),
-                      get_filetype(), "native", MPI_INFO_NULL);
-    int ret = MPI_File_write_all(fh, data.data(), data.size(), get_mpi_datatype(),
-                                 &status);
-    if (ret != MPI_SUCCESS) {
-      std::cerr << "Error writing to file: " << ret << std::endl;
-      MPI_Abort(m_comm, ret);
-    }
-    MPI_File_close(&fh);
-    // Wait for all processes to finish writing, after that write header
-    MPI_Barrier(m_comm);
+    MPI_File fh{};
+    MPI_Status status{};
+    const int amode = MPI_MODE_CREATE | MPI_MODE_WRONLY;
+    const std::string uri = IWriter<T>::get_uri();
+    pfc::mpi::throw_on_mpi_error(MPI_File_open(m_comm,
+                                               const_cast<char *>(uri.c_str()),
+                                               amode, MPI_INFO_NULL, &fh),
+                                 "MPI_File_open");
+    pfc::mpi::throw_on_mpi_error(MPI_File_set_size(fh, 0), "MPI_File_set_size");
+    pfc::mpi::throw_on_mpi_error(
+        MPI_File_set_view(fh, header.get_header_offset(), get_mpi_datatype(),
+                          get_filetype(), "native", MPI_INFO_NULL),
+        "MPI_File_set_view");
+    pfc::mpi::throw_on_mpi_error(MPI_File_write_all(fh, data.data(),
+                                                    static_cast<int>(data.size()),
+                                                    get_mpi_datatype(), &status),
+                                 "MPI_File_write_all");
+    pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
+    // Collective: all ranks must reach here before rank 0 rewrites the header.
+    pfc::mpi::throw_on_mpi_error(MPI_Barrier(m_comm), "MPI_Barrier");
     if (is_rank0()) {
       std::string filename = IWriter<T>::get_uri();
       header.write(filename);

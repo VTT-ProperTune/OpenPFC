@@ -42,6 +42,12 @@ namespace pfc {
  * byte order (platform-dependent). Files can be read back using BinaryReader
  * for simulation restart.
  *
+ * @note MPI-IO collectives: `write()` uses `MPI_File_open`, `MPI_File_set_size`,
+ * `MPI_File_set_view`, `MPI_File_write_all`, and `MPI_File_close`, which are
+ * collective over `MPI_COMM_WORLD`. Every process in that communicator must call
+ * `write()` with consistent `set_domain()` and must reach `MPI_File_close`;
+ * skipping the call on some ranks will deadlock the job.
+ *
  * @see ResultsWriter - base class interface
  * @see BinaryReader - read binary files for restart
  */

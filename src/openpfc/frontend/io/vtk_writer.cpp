@@ -12,6 +12,7 @@
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <sstream>
 #include <stdexcept>
 
@@ -326,8 +327,8 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
     throw std::runtime_error(msg);
   }
 
-  // Synchronize all ranks before writing master file
-  MPI_Barrier(m_comm);
+  // Collective on m_comm: all ranks must participate before rank 0 writes PVTI.
+  pfc::mpi::throw_on_mpi_error(MPI_Barrier(m_comm), "MPI_Barrier");
 
   // Write parallel master file (rank 0 only)
   int current_size = 1;
