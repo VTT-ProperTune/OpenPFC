@@ -109,9 +109,9 @@ public:
 
     if (m_first) {
       xline.resize(Lx);
-      if (rank == 0) {
-        global_xline.resize(Lx);
-      }
+      // Receive buffer is ignored on non-root ranks, but a valid length-Lx buffer
+      // avoids undefined behavior from empty-vector data() on some MPI stacks.
+      global_xline.resize(Lx);
     }
 
     fill(xline.begin(), xline.end(), std::numeric_limits<double>::min());
@@ -137,8 +137,13 @@ public:
           }
         }
       } else {
-        while (global_xline[m_idx % Lx] > m_threshold) {
+        // Advance at most one domain period; if every column stays above the
+        // threshold (e.g. uniform supersaturated field), an unbounded loop would
+        // hang the whole simulation.
+        int scanned = 0;
+        while (global_xline[m_idx % Lx] > m_threshold && scanned < Lx) {
           m_idx += 1;
+          scanned += 1;
         }
       }
     }

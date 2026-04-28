@@ -1,8 +1,7 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <algorithm>
-#include <iostream>
 #include <vector>
 
 #include <catch2/catch_approx.hpp>
@@ -80,8 +79,9 @@ TEST_CASE("MovingBC - Modifier Name", "[bc_moving]") {
 }
 
 TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
+  // Small grid: behavior is local; avoid thousands of Catch REQUIREs (very slow).
   auto world =
-      world::create(GridSize({32, 8, 8}), PhysicalOrigin({-128.0, -32.0, -32.0}),
+      world::create(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
                     GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -117,11 +117,14 @@ TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
     bc.apply(m, 0.0);
     const Field &field = m.get_real_field("default");
 
-    // Values should be between rho_low and rho_high
+    double vmin = field[0];
+    double vmax = field[0];
     for (const auto &value : field) {
-      REQUIRE(value >= -0.1); // rho_low with small tolerance
-      REQUIRE(value <= 1.1);  // rho_high with small tolerance
+      vmin = std::min(vmin, value);
+      vmax = std::max(vmax, value);
     }
+    REQUIRE(vmin >= -0.1); // rho_low with small tolerance
+    REQUIRE(vmax <= 1.1);  // rho_high with small tolerance
   }
 
   SECTION("Multiple applications") {
@@ -172,7 +175,7 @@ TEST_CASE("MovingBC - Field Name Assignment", "[bc_moving]") {
 
 TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
   auto world =
-      world::create(GridSize({32, 8, 8}), PhysicalOrigin({-128.0, -32.0, -32.0}),
+      world::create(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
                     GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
