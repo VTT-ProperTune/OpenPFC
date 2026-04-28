@@ -22,6 +22,7 @@
 #include <mpi.h>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/simulation_wiring.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -91,6 +92,16 @@ public:
 
   [[nodiscard]] Simulator &simulator() noexcept { return m_simulator; }
   [[nodiscard]] const Simulator &simulator() const noexcept { return m_simulator; }
+
+  /**
+   * @brief Register results writers and field modifiers from application JSON
+   */
+  void wire_simulator_from_settings(const nlohmann::json &settings, MPI_Comm comm,
+                                    int mpi_rank, bool rank0) {
+    add_result_writers_from_json(m_simulator, settings, comm, mpi_rank, rank0);
+    add_initial_conditions_from_json(m_simulator, settings, comm, mpi_rank, rank0);
+    add_boundary_conditions_from_json(m_simulator, settings, comm, mpi_rank, rank0);
+  }
 
 private:
   World m_world;
