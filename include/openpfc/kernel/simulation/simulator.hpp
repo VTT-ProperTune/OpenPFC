@@ -51,6 +51,7 @@
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <unordered_map>
+#include <utility>
 
 namespace pfc {
 
@@ -387,6 +388,60 @@ public:
   }
 
   /**
+   * @brief Prologue of one integrator step (same ordering as step())
+   *
+   * When `Time::get_increment() == 0`, applies initial conditions, boundary
+   * conditions, and optionally writes results if `Time::do_save()`. Then always
+   * calls `Time::next()` and applies boundary conditions at the new time.
+   *
+   * Call this once per iteration before the physics update, then invoke
+   * `Model::step` (or a model-specific `step(simulator, model)` overload), then
+   * call `end_integrator_step()`.
+   *
+   * @see end_integrator_step()
+   * @see step_with_physics()
+   * @see step()
+   */
+  void begin_integrator_step() {
+    Time &time = get_time();
+    if (time.get_increment() == 0) {
+      apply_initial_conditions();
+      apply_boundary_conditions();
+      if (time.do_save()) {
+        write_results();
+      }
+    }
+    time.next();
+    apply_boundary_conditions();
+  }
+
+  /**
+   * @brief Epilogue of one integrator step: write results if at a save point
+   *
+   * @see begin_integrator_step()
+   */
+  void end_integrator_step() {
+    if (get_time().do_save()) {
+      write_results();
+    }
+  }
+
+  /**
+   * @brief One full step with a custom physics body (same ordering as step())
+   *
+   * Equivalent to `begin_integrator_step(); physics_fn(); end_integrator_step();`
+   * with `physics_fn` typically calling `pfc::step(model, time.get_current())` or
+   * a model-specific overload such as `step(simulator, concrete_model)`.
+   *
+   * @tparam PhysicsFn nullary callable
+   */
+  template <class PhysicsFn> void step_with_physics(PhysicsFn &&physics_fn) {
+    begin_integrator_step();
+    std::forward<PhysicsFn>(physics_fn)();
+    end_integrator_step();
+  }
+
+  /**
    * @brief Execute one time step of the simulation
    *
    * Advances the simulation by one time step, orchestrating all components:
@@ -442,21 +497,9 @@ public:
    * @see get_increment() to get current iteration number
    */
   void step() {
-    Time &time = get_time();
-    Model &model = get_model();
-    if (time.get_increment() == 0) {
-      apply_initial_conditions();
-      apply_boundary_conditions();
-      if (time.do_save()) {
-        write_results();
-      }
-    }
-    time.next();
-    apply_boundary_conditions();
-    pfc::step(model, time.get_current());
-    if (time.do_save()) {
-      write_results();
-    }
+    begin_integrator_step();
+    pfc::step(get_model(), get_time().get_current());
+    end_integrator_step();
   }
 
   /**

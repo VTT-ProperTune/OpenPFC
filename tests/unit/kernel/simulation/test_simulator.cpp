@@ -135,3 +135,59 @@ TEST_CASE("Simulator::step advances Time before Model::step", "[simulator][unit]
   REQUIRE(sim.get_increment() == 3);
   REQUIRE(sim.done());
 }
+
+TEST_CASE("Simulator begin/end/step_with_physics matches step()",
+          "[simulator][unit]") {
+  auto world = world::create(GridSize({8, 8, 8}));
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+
+  pfc::testing::InstrumentedMockModel model_a(fft, world);
+  pfc::testing::InstrumentedMockModel model_b(fft, world);
+  Time time_a({0.0, 1.5, 0.5}, 0.0);
+  Time time_b({0.0, 1.5, 0.5}, 0.0);
+  Simulator sim_a(model_a, time_a);
+  Simulator sim_b(model_b, time_b);
+  sim_a.initialize();
+  sim_b.initialize();
+
+  while (!sim_a.done()) {
+    sim_a.step();
+  }
+  while (!sim_b.done()) {
+    sim_b.step_with_physics(
+        [&] { pfc::step(model_b, sim_b.get_time().get_current()); });
+  }
+
+  REQUIRE(model_a.step_call_count == model_b.step_call_count);
+  REQUIRE(model_a.step_call_count == 3);
+  REQUIRE_THAT(model_b.last_step_time, WithinAbs(1.5, 1e-10));
+}
+
+TEST_CASE("Simulator phased begin/end matches step()", "[simulator][unit]") {
+  auto world = world::create(GridSize({8, 8, 8}));
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+
+  pfc::testing::InstrumentedMockModel model_a(fft, world);
+  pfc::testing::InstrumentedMockModel model_b(fft, world);
+  Time time_a({0.0, 1.5, 0.5}, 0.0);
+  Time time_b({0.0, 1.5, 0.5}, 0.0);
+  Simulator sim_a(model_a, time_a);
+  Simulator sim_b(model_b, time_b);
+  sim_a.initialize();
+  sim_b.initialize();
+
+  while (!sim_a.done()) {
+    sim_a.step();
+  }
+
+  while (!sim_b.done()) {
+    sim_b.begin_integrator_step();
+    pfc::step(model_b, sim_b.get_time().get_current());
+    sim_b.end_integrator_step();
+  }
+
+  REQUIRE(model_a.step_call_count == model_b.step_call_count);
+  REQUIRE(model_b.step_call_count == 3);
+}

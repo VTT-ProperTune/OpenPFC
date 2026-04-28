@@ -494,22 +494,12 @@ public:
     }
 
     if (rank0) {
-      pfc::log_info(app_lg, "Applying initial conditions");
-    }
-    simulator.apply_initial_conditions();
-    if (time.get_increment() == 0) {
-      if (rank0) {
-        pfc::log_info(app_lg, "First increment: apply boundary conditions");
-      }
-      simulator.apply_boundary_conditions();
-      simulator.write_results();
+      pfc::log_info(app_lg, "Starting time integration (Simulator integrator API)");
     }
 
     while (!time.done()) {
-      time.next(); // increase increment counter by 1
-      simulator.apply_boundary_conditions();
-
       fft.reset_fft_time();
+      simulator.begin_integrator_step();
       const double barrier_step_s = pfc::profiling::measure_barriered(m_comm, [&] {
         if (m_profiler) {
           pfc::profiling::openpfc_begin_frame_with_step_and_rank(
@@ -541,10 +531,7 @@ public:
       m_steptime = pfc::profiling::reduce_max_to_root(m_comm, barrier_step_s, 0);
       m_fft_time = pfc::profiling::reduce_max_to_root(m_comm, fft_meter_s, 0);
 
-      if (time.do_save()) {
-        simulator.apply_boundary_conditions();
-        simulator.write_results();
-      }
+      simulator.end_integrator_step();
 
       // Calculate eta from average step time.
       // Use exponential moving average when steps > 3.
