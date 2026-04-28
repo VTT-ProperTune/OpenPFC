@@ -5,6 +5,7 @@
 #include "SeedGridFCC.hpp"
 #include "SlabFCC.hpp"
 
+#include <cstdlib>
 #include <iostream>
 
 int main(int argc, char *argv[]) {
@@ -15,7 +16,8 @@ int main(int argc, char *argv[]) {
     pfc::ui::register_field_modifier<SlabFCC>("slab_fcc");
     pfc::ui::App<Aluminum> app(argc, argv);
     return app.main();
-  } catch (...) {
-    return 1;
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << '\n';
+    return EXIT_FAILURE;
   }
 }

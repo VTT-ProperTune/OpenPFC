@@ -74,15 +74,10 @@ public:
       BinaryReader reader;
       reader.set_domain(world_size, inbox_size, inbox_offset);
       reader.read(get_filename(), f);
-    } catch (const std::exception &e) {
+    } catch (const std::exception &ex) {
       std::ostringstream oss;
       oss << "FileReader failed to read \"" << get_filename() << "\" into field \""
-          << get_field_name() << "\": " << e.what();
-      throw std::runtime_error(oss.str());
-    } catch (...) {
-      std::ostringstream oss;
-      oss << "FileReader failed to read \"" << get_filename() << "\" into field \""
-          << get_field_name() << "\" (non-standard exception)";
+          << get_field_name() << "\": " << ex.what();
       throw std::runtime_error(oss.str());
     }
   }

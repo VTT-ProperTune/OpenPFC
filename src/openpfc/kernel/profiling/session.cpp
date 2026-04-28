@@ -411,10 +411,12 @@ void write_profiling_hdf5_file(
       H5Gclose(run_gr);
       H5Gclose(runs_g);
     }
-  } catch (...) {
-    H5Gclose(prof);
-    H5Gclose(root);
-    H5Fclose(file);
+  } catch (const std::exception &) {
+    // HDF5 payload helpers throw std::runtime_error; still close partial file on any
+    // standard exception before rethrowing.
+    (void)H5Gclose(prof);
+    (void)H5Gclose(root);
+    (void)H5Fclose(file);
     throw;
   }
 
