@@ -46,6 +46,7 @@
 #include <memory>
 #include <mpi.h>
 #include <string>
+#include <string_view>
 
 #include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/data/world.hpp>
@@ -81,6 +82,27 @@ private:
     }
     const Logger lg{LogLevel::Warning, 0};
     log_warning(lg, message);
+  }
+
+  /** @brief Shared validation + append for IC/BC modifier lists */
+  bool try_push_field_modifier_(std::vector<std::unique_ptr<FieldModifier>> &bucket,
+                                std::unique_ptr<FieldModifier> modifier,
+                                std::string_view default_field_warning,
+                                std::string_view missing_field_intro,
+                                std::string_view not_applied_tail) {
+    Model &model = get_model();
+    for (const std::string &field_name : modifier->get_field_names()) {
+      if (field_name == "default") {
+        warn_rank0_(std::string(default_field_warning));
+      }
+      if (!pfc::has_field(model, field_name)) {
+        warn_rank0_(std::string(missing_field_intro) + field_name +
+                    std::string(not_applied_tail));
+        return false;
+      }
+    }
+    bucket.push_back(std::move(modifier));
+    return true;
   }
 
 public:
@@ -269,19 +291,11 @@ public:
    * @see initial_conditions/ for built-in IC types
    */
   bool add_initial_conditions(std::unique_ptr<FieldModifier> modifier) {
-    Model &model = get_model();
-    for (const std::string &field_name : modifier->get_field_names()) {
-      if (field_name == "default") {
-        warn_rank0_("Warning: adding initial condition to modify field 'default'");
-      }
-      if (!pfc::has_field(model, field_name)) {
-        warn_rank0_("Warning: tried to add initial condition for inexistent field " +
-                    field_name + ", INITIAL CONDITIONS ARE NOT APPLIED!");
-        return false;
-      }
-    }
-    m_initial_conditions.push_back(std::move(modifier));
-    return true;
+    return try_push_field_modifier_(
+        m_initial_conditions, std::move(modifier),
+        "Warning: adding initial condition to modify field 'default'",
+        "Warning: tried to add initial condition for inexistent field ",
+        ", INITIAL CONDITIONS ARE NOT APPLIED!");
   }
 
   /**
@@ -346,20 +360,11 @@ public:
    * @see boundary_conditions/ for built-in BC types
    */
   bool add_boundary_conditions(std::unique_ptr<FieldModifier> modifier) {
-    Model &model = get_model();
-    for (const std::string &field_name : modifier->get_field_names()) {
-      if (field_name == "default") {
-        warn_rank0_("Warning: adding boundary condition to modify field 'default'");
-      }
-      if (!pfc::has_field(model, field_name)) {
-        warn_rank0_(
-            "Warning: tried to add boundary condition for inexistent field " +
-            field_name + ", BOUNDARY CONDITIONS ARE NOT APPLIED!");
-        return false;
-      }
-    }
-    m_boundary_conditions.push_back(std::move(modifier));
-    return true;
+    return try_push_field_modifier_(
+        m_boundary_conditions, std::move(modifier),
+        "Warning: adding boundary condition to modify field 'default'",
+        "Warning: tried to add boundary condition for inexistent field ",
+        ", BOUNDARY CONDITIONS ARE NOT APPLIED!");
   }
 
   /**
