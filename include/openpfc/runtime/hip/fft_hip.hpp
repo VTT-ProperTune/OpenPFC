@@ -19,7 +19,6 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 
-#include <heffte.h>
 #include <mpi.h>
 
 namespace pfc::fft {

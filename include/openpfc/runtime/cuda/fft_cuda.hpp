@@ -21,7 +21,6 @@
 #include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
 #include <openpfc/runtime/cuda/databuffer_cuda.hpp>
 
-#include <heffte.h>
 #include <mpi.h>
 
 namespace pfc::fft {
