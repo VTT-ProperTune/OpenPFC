@@ -390,19 +390,24 @@ public:
    * @brief Execute one time step of the simulation
    *
    * Advances the simulation by one time step, orchestrating all components:
-   * 1. On first call (increment==0): Apply initial conditions
-   * 2. Apply boundary conditions
-   * 3. Call Model::step() to evolve physics
-   * 4. Write results if at save point
-   * 5. Advance time counter
+   * 1. On first call (`Time::get_increment() == 0`): apply initial conditions,
+   *    apply boundary conditions, optionally write results if `Time::do_save()`
+   * 2. Call `Time::next()` (increment increases by one; current time becomes
+   *    `t0 + increment * dt`, clamped to `t1`)
+   * 3. Apply boundary conditions at the new time
+   * 4. Call `Model::step()` with `Time::get_current()` (first physics step uses
+   *    `t0 + dt`, not `t0`, because `next()` runs before `step()`)
+   * 5. Optionally write results again if `Time::do_save()` at the new time
    *
    * This is the main simulation loop body. Call repeatedly until done() returns
    * true.
    *
-   * @note Initial conditions applied only on first call
-   * @note Boundary conditions applied before every Model::step()
-   * @note Results written automatically at intervals set by Time::set_saveat()
-   * @note Time state advanced automatically
+   * @note Initial conditions run only when the increment is still zero at entry
+   * @note Boundary conditions run after ICs (first call) and again after each
+   *       `next()`, before every `Model::step()`
+   * @note Results written when `Time::do_save()` is true (after IC path and/or
+   *       after the physics step)
+   * @note `Time::next()` runs on every call, including the first
    *
    * @example
    * ```cpp
@@ -427,11 +432,10 @@ public:
    * }
    * ```
    *
-   * Workflow per step:
-   * - t=0: apply_initial_conditions() → apply_boundary_conditions() →
-   * write_results() → next() → ...
-   * - t>0: next() → apply_boundary_conditions() → model.step() → write_results() (if
-   * save point)
+   * Workflow (actual order):
+   * - First call (`increment == 0`): optional IC/BC/write, then **always**
+   *   `time.next()`, BC, `model.step(time.get_current())`, optional write.
+   * - Later calls: `time.next()`, BC, `model.step(...)`, optional write.
    *
    * @see done() to check if simulation is complete
    * @see get_time() to access current time state
