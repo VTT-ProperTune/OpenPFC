@@ -19,7 +19,7 @@
  * // Typical simulation setup
  * MyPhysicsModel model(fft, world);
  * pfc::Time time({0.0, 100.0, 0.1}, 1.0);  // t0, t1, dt, saveat
- * pfc::Simulator sim(model, time);
+ * pfc::Simulator sim(model, time);  // optional: third arg MPI_Comm (default world)
  *
  * // Add initial conditions
  * sim.add_initial_condition(std::make_unique<pfc::Constant>(0.5));
@@ -45,6 +45,8 @@
 
 #include <iostream>
 #include <memory>
+#include <mpi.h>
+
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
@@ -69,6 +71,7 @@ private:
   std::vector<std::unique_ptr<FieldModifier>> m_initial_conditions;
   std::vector<std::unique_ptr<FieldModifier>> m_boundary_conditions;
   int m_result_counter = 0;
+  MPI_Comm m_mpi_comm{MPI_COMM_WORLD};
 
 public:
   /**
@@ -76,8 +79,15 @@ public:
    *
    * @param model The model to simulate.
    * @param time The time object to use for simulation.
+   * @param mpi_comm Communicator passed to field modifiers (MPI-IO collectives,
+   * etc.)
    */
-  Simulator(Model &model, Time &time) : m_model(model), m_time(time) {}
+  Simulator(Model &model, Time &time, MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : m_model(model), m_time(time), m_mpi_comm(mpi_comm) {}
+
+  void set_mpi_comm(MPI_Comm mpi_comm) noexcept { m_mpi_comm = mpi_comm; }
+
+  [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_mpi_comm; }
 
   /**
    * @brief Get the model object
@@ -374,16 +384,18 @@ public:
   void apply_initial_conditions() {
     Model &model = get_model();
     Time &time = get_time();
+    const SimulationContext sim_ctx{m_mpi_comm};
     for (const auto &ic : m_initial_conditions) {
-      ic->apply(model, time.get_current());
+      ic->apply(sim_ctx, model, time.get_current());
     }
   }
 
   void apply_boundary_conditions() {
     Model &model = get_model();
     Time &time = get_time();
+    const SimulationContext sim_ctx{m_mpi_comm};
     for (const auto &bc : m_boundary_conditions) {
-      bc->apply(model, time.get_current());
+      bc->apply(sim_ctx, model, time.get_current());
     }
   }
 

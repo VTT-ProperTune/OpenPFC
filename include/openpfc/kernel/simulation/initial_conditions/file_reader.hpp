@@ -60,7 +60,7 @@ public:
 
   void set_mpi_comm(MPI_Comm comm) noexcept override { m_io_comm = comm; }
 
-  void apply(Model &m, double time) override {
+  void apply(const SimulationContext &ctx, Model &m, double time) override {
     (void)time;
     const fft::IFFT &fft = get_fft(m);
     const auto &world = get_world(m);
@@ -75,7 +75,7 @@ public:
                             get_filename());
     }
     try {
-      BinaryReader reader{m_io_comm};
+      BinaryReader reader{ctx.mpi_comm()};
       reader.set_domain(world_size, inbox_size, inbox_offset);
       reader.read(get_filename(), f);
     } catch (const std::exception &ex) {
@@ -84,6 +84,10 @@ public:
           << get_field_name() << "\": " << ex.what();
       throw std::runtime_error(oss.str());
     }
+  }
+
+  void apply(Model &m, double time) override {
+    apply(SimulationContext{m_io_comm}, m, time);
   }
 };
 

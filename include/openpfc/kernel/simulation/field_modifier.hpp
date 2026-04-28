@@ -47,6 +47,7 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/simulation/simulation_context.hpp>
 
 #include <stdexcept>
 #include <string>
@@ -73,6 +74,8 @@ class Model;
  * - **Extensibility**: Users can create custom modifiers without touching OpenPFC
  * - **Composition**: Multiple modifiers can be applied in sequence
  * - **Transparency**: Direct model access allows full inspection and control
+ * - **Context**: `SimulationContext` supplies the MPI communicator (and room for
+ *   more execution metadata) when the simulator applies modifiers
  * - **Single Responsibility**: Each modifier does one thing well
  *
  * @example Creating a custom initial condition
@@ -350,6 +353,23 @@ public:
    *        reductions). Default is a no-op; FileReader and MovingBC override.
    */
   virtual void set_mpi_comm(MPI_Comm /*comm*/) {}
+
+  /**
+   * @brief Apply the field modification with explicit simulation context
+   *
+   * The simulator invokes this overload so modifiers can use `simulation_context`
+   * (e.g. `mpi_comm()`) without relying solely on `set_mpi_comm()`. The default
+   * implementation ignores the context and calls `apply(Model&, double)`.
+   *
+   * Modifiers that need MPI collectives should override this method and use
+   * `simulation_context.mpi_comm()`. They may still override `apply(Model&, double)`
+   * to wrap a default `SimulationContext` for direct/test calls.
+   */
+  virtual void apply(const SimulationContext &simulation_context, Model &model,
+                     double time) {
+    (void)simulation_context;
+    apply(model, time);
+  }
 
   /**
    * @brief Apply the field modification to the model (pure virtual)

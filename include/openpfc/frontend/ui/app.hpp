@@ -444,7 +444,7 @@ public:
     auto fft = fft::create(fft_layout, rank_id, options, m_comm);
     Time time(ui::from_json<Time>(m_settings));
     ConcreteModel model(fft, world);
-    Simulator simulator(model, time);
+    Simulator simulator(model, time, m_comm);
 
     if (m_settings.contains("model") && m_settings["model"].contains("params")) {
       from_json(m_settings["model"]["params"], model);
