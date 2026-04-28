@@ -1,5 +1,7 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
+#include <algorithm>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -32,6 +34,23 @@ TEST_CASE("Time - initialization", "[time][unit]") {
     REQUIRE_THAT(t.get_saveat(), WithinAbs(0.5, TOLERANCE));
     REQUIRE_THAT(t.get_current(), WithinAbs(0.0, TOLERANCE));
     REQUIRE(t.get_increment() == 0);
+  }
+}
+
+TEST_CASE("Time - set_increment rejects negative values", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  REQUIRE_THROWS_AS(t.set_increment(-1), std::invalid_argument);
+}
+
+TEST_CASE("Time - get_current invariant after next()", "[time][unit]") {
+  Time t({0.0, 1.0, 0.1}, 0.0);
+  for (int n = 0; n <= 15; ++n) {
+    const double raw = t.get_t0() + static_cast<double>(n) * t.get_dt();
+    const double expected = std::min(raw, t.get_t1());
+    REQUIRE_THAT(t.get_current(), WithinAbs(expected, TOLERANCE));
+    if (n < 15) {
+      t.next();
+    }
   }
 }
 

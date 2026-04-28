@@ -51,6 +51,8 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 
 namespace pfc {
 
@@ -473,9 +475,20 @@ public:
   /**
    * @brief Set the current time increment.
    *
-   * @param increment The current time increment
+   * The increment must be non-negative so that `get_current()` stays in
+   * `[t0, t1]` and `done()` / `do_save()` remain meaningful.
+   *
+   * @param increment The current time increment (number of completed steps
+   *                  from `t0`, i.e. same convention as after `next()`).
+   * @throws std::invalid_argument if `increment < 0`
    */
-  void set_increment(int increment) { m_increment = increment; }
+  void set_increment(int increment) {
+    if (increment < 0) {
+      throw std::invalid_argument("Time increment cannot be negative: " +
+                                  std::to_string(increment));
+    }
+    m_increment = increment;
+  }
 
   /**
    * @brief Set the time interval for saving data.
