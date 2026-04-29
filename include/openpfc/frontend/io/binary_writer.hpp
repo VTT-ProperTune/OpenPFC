@@ -51,6 +51,9 @@ namespace pfc {
  *
  * @see ResultsWriter - base class interface
  * @see BinaryReader - read binary files for restart
+ *
+ * Repository prose describing the on-disk layout and filename templates:
+ * `docs/binary_field_io_spec.md`.
  */
 class BinaryWriter : public ResultsWriter {
 private:
