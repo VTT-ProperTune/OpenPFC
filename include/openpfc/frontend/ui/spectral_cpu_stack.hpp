@@ -13,6 +13,12 @@
  *
  * User-facing JSON/TOML keys for this stack are summarized in the repository
  * under `docs/spectral_app_config_reference.md`.
+ *
+ * @note Roadmap (Phase C): a future GPU-first JSON session may type-erase or
+ *       parameterize the FFT handle at the stack boundary so models are not tied
+ *       to `fft::CpuFft` construction when only device FFT is used. Until then,
+ *       GPU drivers reuse this stack’s host `CpuFft` for `Model(fft, world, comm)`
+ *       and build cuFFT/ROCm paths separately (`spectral_fft_stack_factory.hpp`).
  */
 
 #ifndef PFC_UI_SPECTRAL_CPU_STACK_HPP
