@@ -5,6 +5,7 @@
 #include <heffte.h>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/spectral_cpu_stack_detail.hpp>
 #include <stdexcept>
 #include <type_traits>
 
@@ -25,4 +26,18 @@ TEST_CASE("from_json rejects unknown HeFFTe reshape algorithm", "[ui][heffte]") 
   const json config = {{"reshape_algorithm", "typo"}};
 
   REQUIRE_THROWS_AS(from_json<heffte::plan_options>(config), std::invalid_argument);
+}
+
+TEST_CASE("CPU spectral plan rejects cuda backend", "[ui][heffte][spectral_cpu]") {
+  const json settings = {{"plan_options", {{"backend", "cuda"}}}};
+  REQUIRE_THROWS_AS(pfc::ui::cpu_spectral_plan_options_from_json(settings),
+                    std::invalid_argument);
+}
+
+TEST_CASE("CPU spectral plan merges root backend into plan_options",
+          "[ui][heffte][spectral_cpu]") {
+  const json settings = {{"backend", "fftw"},
+                         {"plan_options", {{"use_pencils", true}}}};
+  const auto opts = pfc::ui::cpu_spectral_plan_options_from_json(settings);
+  REQUIRE(opts.use_pencils == true);
 }

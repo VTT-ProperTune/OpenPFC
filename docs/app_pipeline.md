@@ -40,7 +40,7 @@ flowchart LR
   wire --> S
 ```
 
-- `SpectralCpuStack` reads world, time, and `plan_options` (FFT) from the parsed document and constructs World → Decomposition → CpuFft → Time in a fixed order. CPU plan options and `fft::create` are factored through `spectral_cpu_stack_detail.hpp` (`cpu_spectral_plan_options_from_json`, `cpu_fft_from_json_and_decomposition`) so a future GPU JSON stack can reuse the same parsing surface.
+- `SpectralCpuStack` reads world, time, and `plan_options` (FFT) from the parsed document and constructs World → Decomposition → CpuFft → Time in a fixed order. CPU plan options and `fft::create` are factored through `spectral_cpu_stack_detail.hpp` (`cpu_spectral_plan_options_from_json`, `cpu_fft_from_json_and_decomposition`) so a future GPU JSON stack can reuse the same parsing surface. If `plan_options` omits `backend` but the document has a root-level `backend` string (same key as `from_json<fft::Backend>`), that value is merged into the plan slice for parsing; `backend: "cuda"` is rejected on this CPU-only path.
 - `SpectralSimulationSession` owns the stack, constructs `ConcreteModel(fft, world, comm)` (same `MPI_Comm` as the stack and simulator), then `Simulator(model, time, comm)`. The FFT object and world are referenced by the model; do not reorder or move these after construction. Custom models should forward the optional third `MPI_Comm` argument in their constructor (default `MPI_COMM_WORLD` keeps two-argument construction valid).
 - `wire_simulator_from_settings` (on the session) calls `wire_simulator_and_runtime_from_json`, which attaches writers, `ICs`, `BCs`, and optional `simulator` subsection keys.
 
@@ -69,7 +69,7 @@ Exact keys vary slightly by app and schema version; always treat `apps/tungsten/
 |----------------|------------|------|
 | `Lx`, `Ly`, `Lz`, `dx`, `dy`, `dz`, `origin`, … | `SpectralCpuStack` / `from_json` for `World` | Grid and physical extent. |
 | `t0`, `t1`, `dt`, `saveat` | `Time` | Integration interval and output cadence. |
-| `plan_options` | HeFFTe `plan_options` | FFT backend (`backend`), `use_gpu_aware`, `reshape_algorithm`, etc. |
+| `plan_options` | HeFFTe `plan_options` | FFT backend (`backend`), `use_gpu_aware`, `reshape_algorithm`, etc. Root `backend` is merged when `plan_options` omits it (CPU `App` path only; `cuda` is rejected there). |
 | `model.name`, `model.params` | Your `ConcreteModel` + optional `from_json` into params | Physics coefficients; validation may be model-specific. |
 | `fields`, `saveat` | `add_result_writers_from_json` | If `saveat > 0`, each `fields[]` entry with `name` and `data` path gets a `BinaryWriter` (MPI-IO). |
 | `initial_conditions[]` | `add_initial_conditions_from_json` | Each entry has `type`, optional `target`, type-specific fields. |
