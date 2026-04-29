@@ -37,6 +37,9 @@ Under **`<build>/examples/`** when examples are enabled. Names match the source 
 **Tungsten / app cannot find my JSON**  
 Pass an **absolute path**, or a path relative to your **current working directory** (often the `build/` folder). Stock samples live under **`apps/tungsten/inputs_json/`** in the source tree.
 
+**How do I know an example or tungsten run succeeded?**  
+Expect **`mpirun`** exit code **0** and rank-0 **INFO** logs. Examples do not all print the same banner; apps may write result files when configured. Short checklist: **[`quickstart.md`](quickstart.md)** (sections **2A** / **2B**).
+
 ## Extending the framework
 
 **How do I add a custom model or IC?**  
@@ -68,7 +71,7 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)**, **[`class_
 
 Smaller polish items that may still help:
 
-1. **Session transcripts** — Optional log snippets for a successful **`05_simulator`** and minimal tungsten run for copy-paste reassurance.
+1. **Session transcripts** — Optional verbatim log excerpts for **`05_simulator`** / minimal tungsten (beyond the success hints in **[`quickstart.md`](quickstart.md)** **§2A** / **§2B**).
 2. **CHANGELOG user notes** — Keep meaningful entries under **`[Unreleased]`** in **[`CHANGELOG.md`](../CHANGELOG.md)**; add “upgrading from X” blurbs when CMake or config keys change.
 3. **Published site** — Keep GitHub Pages in sync with **[`quickstart.md`](quickstart.md)** and **[`README.md`](README.md)** so API-only readers find the prose guides.
 

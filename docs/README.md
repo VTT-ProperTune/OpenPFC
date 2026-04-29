@@ -30,6 +30,7 @@ This directory holds guides and assets. **Build and install** from the repositor
 | Topic | Document |
 |--------|-----------|
 | JSON/TOML sections, `plan_options` | [`configuration.md`](configuration.md) |
+| Validated **`model.params`** (custom apps) | [`parameter_validation.md`](parameter_validation.md) |
 | Results writers (binary / VTK / PNG) | [`io_results.md`](io_results.md) |
 | Shipped **`apps/`** programs | [`applications.md`](applications.md) |
 | Runnable **`examples/`** (catalog + folder README) | [`examples_catalog.md`](examples_catalog.md), [`../examples/README.md`](../examples/README.md) |
@@ -67,7 +68,9 @@ This directory holds guides and assets. **Build and install** from the repositor
 |---------|-----------|
 | World, decomposition, FFT, CMake “hello” | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
+| Tour of main types and headers | [`class_tour.md`](class_tour.md) |
 | Minimal out-of-tree **`App`** + JSON | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| Parameter validation for **`model.params`** | [`parameter_validation.md`](parameter_validation.md) |
 
 ## API examples (Doxygen)
 

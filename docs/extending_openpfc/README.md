@@ -51,7 +51,7 @@ Full index: **[`../examples_catalog.md`](../examples_catalog.md)**.
 
 ## Configuration validation
 
-Models can expose validated parameters (ranges, required keys). See **[`../parameter_validation.md`](../parameter_validation.md)**, the **Configuration Validation** section in the root **[`README.md`](../../README.md)**, and **`apps/tungsten/tungsten_input.hpp`** for a large metadata-driven example.
+Models can expose validated parameters (ranges, required keys). See **[`../parameter_validation.md`](../parameter_validation.md)**, the **Configuration Validation** section in the root **[`README.md`](../../README.md)**, and **`apps/tungsten/include/tungsten/common/tungsten_input.hpp`** for a large metadata-driven example.
 
 ## Style and API conventions
 

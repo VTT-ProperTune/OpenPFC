@@ -68,6 +68,8 @@ cd build
 mpirun -n 4 ./examples/05_simulator
 ```
 
+**Signs it worked:** **`mpirun`** exits with status **0**. Rank 0 typically prints **INFO**-level log lines from OpenPFC (world size, timestepping); there is no universal “success” string—if the process aborts, you will see an exception or non-zero exit. For more detail on a specific example, read its source under **`examples/`**.
+
 See **[`examples_catalog.md`](examples_catalog.md)** for the full list of built targets and short descriptions.
 
 ---
@@ -82,6 +84,8 @@ Shipped apps live under **`apps/`**; see **[`applications.md`](applications.md)*
 cd build
 mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
 ```
+
+**Signs it worked:** **`mpirun`** exits **0**; rank 0 logs progress (e.g. effective configuration, world summary, start of time integration). If **`saveat`** and **`fields`** are set, new files appear under the paths in your JSON (see **[`io_results.md`](io_results.md)**).
 
 Smaller or performance-oriented inputs include `tungsten_fixed_bc.json`, `tungsten_moving_bc.json`, and `tungsten_performance.json` in the same directory. TOML equivalents live under `../apps/tungsten/inputs_toml/`. Layout of sections is documented in [`apps/tungsten/inputs_json/README.md`](../apps/tungsten/inputs_json/README.md). GPU builds may provide `tungsten_cuda` or `tungsten_hip` when enabled—use the same config path with the matching binary.
 
