@@ -228,6 +228,14 @@ Examples:
 
 ## Other Scripts
 
+### check_kernel_no_frontend_includes.sh
+
+CI and local guard: fails if any kernel source under `include/openpfc/kernel` or `src/openpfc/kernel` contains `#include` of `openpfc/frontend/...` (see [`docs/architecture.md`](../docs/architecture.md) — *Include audit*). Requires `rg` (ripgrep); exits 0 if `rg` is missing (for minimal sandboxes).
+
+```bash
+bash scripts/check_kernel_no_frontend_includes.sh
+```
+
 ### xdmfgen.py
 
 Generate XDMF files for visualization with ParaView.
