@@ -3,29 +3,18 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Tutorials (`docs/tutorials/`)
+# Tutorials
 
-Step-by-step and workflow guides. Install and MPI setup: [`INSTALL.md`](../../INSTALL.md). Full documentation index: [`../README.md`](../README.md). **Role-based paths:** [`../learning_paths.md`](../learning_paths.md). **Shortest first run:** [`../start_here_15_minutes.md`](../start_here_15_minutes.md). **Named recipes:** [`../recipes/README.md`](../recipes/README.md). **Spectral mental model:** [`../spectral_stack.md`](../concepts/spectral_stack.md). **GPU vs CPU:** [`../gpu_path_decision.md`](../hpc/gpu_path_decision.md).
+The tutorials are for moments when you want to do one concrete thing with OpenPFC and understand what just happened. They are not meant to be read alphabetically. If you have not yet built the project, start with [`../start_here_15_minutes.md`](../start_here_15_minutes.md); if you are still deciding which route fits you, use [`../learning_paths.md`](../learning_paths.md).
 
-| Tutorial | What you will do |
-|----------|------------------|
-| [**End-to-end visualization**](end_to_end_visualization.md) | Build, run Allen–Cahn or Tungsten, get PNG or binary files on disk |
-| [**VTK / ParaView workflow**](vtk_paraview_workflow.md) | Run `11_write_results` / `12_cahn_hilliard`, open `.vti` in ParaView |
-| [**HeFFTe `plan_options`**](fft_heffte_plan_options.md) | Read and tune `[plan_options]` using `examples/fft_backend_selection.toml` |
-| [**Spectral `App` config keys**](../reference/spectral_app_config_reference.md) | Normative JSON/TOML tables for `SpectralCpuStack` + writers |
-| [**Binary MPI-IO field format**](../reference/binary_field_io_spec.md) | On-disk layout for `BinaryWriter` / `BinaryReader` |
-| [**Post-process binary fields**](../user_guide/postprocess_binary_fields.md) | Metadata, Fortran order, NumPy sketch outside OpenPFC |
-| [**Spectral examples sequence**](spectral_examples_sequence.md) | Ordered path through `04_diffusion_model` → `05_simulator` → `12_cahn_hilliard` |
-| [**Minimal custom `App` + JSON**](custom_app_minimal.md) | **Why / what / outcome:** out-of-tree binary + config-driven spectral pipeline; physics lives in `Model::step` (see also app pipeline + spectral examples) |
-| [**GPU apps quickstart**](gpu_app_quickstart.md) | CUDA/HIP builds and shipped GPU binaries |
-| [**Slurm / batch day one**](hpc_slurm_day_one.md) | Minimal `#SBATCH` job + `mpirun` / `srun` |
-| [**MPI / I/O checklist**](../hpc/mpi_io_layout_checklist.md) | Paths, collectives, cluster sanity |
-| [**Tungsten PFC (science)**](../science/tungsten_quicklook.md) | What the tungsten app is for |
-| [**CH vs Allen–Cahn**](../science/cahn_hilliard_vs_allen_cahn.md) | Which entry point matches your goal |
-| [**Add a Catch2 test**](add_catch2_test.md) | Minimal unit-test pattern and `ctest` |
+The most practical first tutorial is [`end_to_end_visualization.md`](end_to_end_visualization.md). It takes you from a built project to files on disk, using either Allen–Cahn for a quick visual run or tungsten for the more realistic application path. If your goal is ParaView, continue with [`vtk_paraview_workflow.md`](vtk_paraview_workflow.md), which uses built-in examples that already write VTK. If your output is raw binary instead, [`../user_guide/postprocess_binary_fields.md`](../user_guide/postprocess_binary_fields.md) explains how to reason about metadata, Fortran order and NumPy-side analysis; the exact binary contract lives in [`../reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md).
 
-## See also
+If you are learning the spectral stack as a developer, read [`spectral_examples_sequence.md`](spectral_examples_sequence.md). It walks through the examples in the order that makes conceptual sense rather than the order they happen to appear in the directory. Once that sequence feels familiar, [`fft_heffte_plan_options.md`](fft_heffte_plan_options.md) explains the `plan_options` vocabulary and how FFT backend choices enter JSON or TOML-driven runs.
 
-- [`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md) — long-form “world → FFT” narrative  
-- [`../examples_catalog.md`](../reference/examples_catalog.md) — every `examples/` target + curriculum tiers  
-- [`../api_examples_walkthrough.md`](../reference/api_examples_walkthrough.md) — Doxygen `docs/api/examples/` reading order  
+If you want to build your own config-driven application, go to [`custom_app_minimal.md`](custom_app_minimal.md). It is intentionally about wiring: out-of-tree CMake, MPI setup, `pfc::ui::App<YourModel>`, JSON on disk and the boundary between framework plumbing and your physics. The parameter-validation details are in [`../user_guide/parameter_validation.md`](../user_guide/parameter_validation.md), and the JSON-to-`Simulator` lifecycle is described in [`../user_guide/app_pipeline.md`](../user_guide/app_pipeline.md).
+
+Cluster and GPU work should come after a successful CPU run. [`hpc_slurm_day_one.md`](hpc_slurm_day_one.md) gives you the smallest useful Slurm job shape, and [`gpu_app_quickstart.md`](gpu_app_quickstart.md) explains CUDA/HIP builds and GPU-enabled application binaries. For production-style runs, the broader operator path starts in [`../hpc/operator_guide.md`](../hpc/operator_guide.md).
+
+There are a few tutorials that are closer to reference material. [`add_catch2_test.md`](add_catch2_test.md) is the shortest route to adding a unit test and running it through `ctest`. The science pages [`../science/tungsten_quicklook.md`](../science/tungsten_quicklook.md) and [`../science/cahn_hilliard_vs_allen_cahn.md`](../science/cahn_hilliard_vs_allen_cahn.md) help you choose the right model or example before you spend time on a run.
+
+For a slower conceptual introduction, [`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md) tells the “world to FFT to CMake” story. For a lookup-oriented catalog, use [`../reference/examples_catalog.md`](../reference/examples_catalog.md) and [`../reference/api_examples_walkthrough.md`](../reference/api_examples_walkthrough.md).

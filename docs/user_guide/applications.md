@@ -3,88 +3,48 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Applications (`apps/`)
+# Applications
 
-These are full programs (not the small `examples/` tutorials). They are built when `OpenPFC_BUILD_APPS=ON` (default). Binaries usually install under `<prefix>/bin` when you `cmake --install`.
+The programs under `apps/` are full OpenPFC applications. They are different from the short executables under `examples/`: examples teach one API pattern at a time, while applications are meant to be run as model-specific binaries with realistic inputs. They are built when `OpenPFC_BUILD_APPS=ON`, which is the default, and they usually install under `<prefix>/bin` when you run `cmake --install`.
 
-All of them expect MPI for realistic runs unless noted. Match the same compiler/MPI/HeFFTe stack you used to build OpenPFC (see [`INSTALL.md`](../../INSTALL.md)).
+For realistic runs, assume MPI is involved. Use the same compiler, MPI and HeFFTe stack that you used to build OpenPFC; the install details are in [`INSTALL.md`](../../INSTALL.md). If you are still learning the library, run an example first through [`../quickstart.md`](../quickstart.md), then come back here.
 
-## App chooser
+## Which application should I run?
 
-Use this table to pick an entry point. Details and sample commands follow in each section below.
+Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
 
-| Application | Config | Typical domain | CPU | CUDA | HIP | Primary I/O | Best for |
-|-------------|--------|----------------|-----|------|-----|-------------|----------|
-| **Tungsten** | JSON / TOML file (`argv[1]`) | 3D PFC, production-style | `tungsten` | `tungsten_cuda` | `tungsten_hip` | Binary (`fields` in config); VTK/PNG via code if you add writers | Large PFC runs, validated inputs, HPC |
-| **AluminumNew** | JSON / TOML (`argv[1]`) | 3D, sample `App<Model>` | `aluminumNew` | — | — | As wired in config / model | Learning `App` + JSON end-to-end |
-| **Allen–Cahn** | CLI args (no `App` JSON) | 2D demo | `allen_cahn` | `allen_cahn_cuda` | `allen_cahn_hip` | Optional PNG paths (grayscale slab) | Quick visual check, 2D explicit interface |
-| **Heat3D** | CLI (`fd` or `spectral`) | 3D heat equation | `heat3d` | — | — | Stdout (timing, L2 vs analytic) | FD order 2/4/6 vs spectral timing |
+If you want declarative configuration, read [`app_pipeline.md`](app_pipeline.md) before writing your own input files. If your immediate question is “what file did this run write?”, read [`io_results.md`](io_results.md).
 
-For declarative runs, start with **Tungsten** or **AluminumNew** and read [`app_pipeline.md`](app_pipeline.md). For a minimal “PNG in/out” path without JSON, see **Allen–Cahn** and [`io_results.md`](io_results.md) (PNG).
+## Tungsten PFC
 
-## Tungsten PFC (`apps/tungsten/`)
+Tungsten is the main 3D PFC application. The CPU binary is `tungsten`; GPU-enabled builds may also provide `tungsten_cuda` or `tungsten_hip`, and HIP builds may include `verify_gpu_aware_mpi` as a device-buffer smoke test for LUMI-style workflows. The application overview, code layout and input directories are documented in [`apps/tungsten/README.md`](../../apps/tungsten/README.md).
 
-Overview: [`apps/tungsten/README.md`](../../apps/tungsten/README.md) (binaries, inputs, code layout).
-
-| Target | When available |
-|--------|----------------|
-| `tungsten` | Always (CPU) |
-| `tungsten_cuda` | `OpenPFC_ENABLE_CUDA` and CUDA toolkit |
-| `tungsten_hip` | `OpenPFC_ENABLE_HIP` and ROCm |
-| `verify_gpu_aware_mpi` | HIP + MPI device-buffer smoke test (LUMI-style workflows) |
-
-Inputs: JSON under [`apps/tungsten/inputs_json/`](../../apps/tungsten/inputs_json/README.md); TOML in `inputs_toml/`.
-
-Run (from your build directory, CPU binary):
+From your build directory, a first CPU run looks like this:
 
 ```bash
 mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
 ```
 
-Other samples in the same folder: `tungsten_fixed_bc.json`, `tungsten_moving_bc.json`, `tungsten_performance.json`; TOML under `../apps/tungsten/inputs_toml/`.
+The JSON inputs live under [`apps/tungsten/inputs_json/`](../../apps/tungsten/inputs_json/README.md), with TOML equivalents under `inputs_toml/`. Other sample JSON files include `tungsten_fixed_bc.json`, `tungsten_moving_bc.json` and `tungsten_performance.json`. For GPU-aware MPI and Slurm examples, use [`../hpc/INSTALL.LUMI.md`](../hpc/INSTALL.LUMI.md) and [`../lumi_slurm/README.md`](../lumi_slurm/README.md).
 
-GPU-aware MPI and Slurm examples: [`INSTALL.LUMI.md`](../hpc/INSTALL.LUMI.md), [`lumi_slurm/README.md`](../lumi_slurm/README.md).
+## AluminumNew
 
-## Aluminum (`apps/aluminumNew/`)
+`aluminumNew` is a sample 3D application using OpenPFC, nlohmann_json and HeFFTe. It is useful when you want to see an `App<Model>` target without the full tungsten complexity. Its README is intentionally small; the source and CMake target are the reference. See [`apps/aluminumNew/README.md`](../../apps/aluminumNew/README.md).
 
-| Target | Notes |
-|--------|--------|
-| `aluminumNew` | Sample application using OpenPFC + nlohmann_json + HeFFTe |
+## Heat3D
 
-See [`apps/aluminumNew/README.md`](../../apps/aluminumNew/README.md) (minimal; source and CMake are the reference).
+`heat3d` solves the 3D heat equation either with finite differences or with a spectral FFT step. The finite-difference path supports even orders from 2 to 20, and the app can use OpenMP when the build enables it. It is useful for checking numerical behaviour, performance and scaling without the full PFC model stack. See [`apps/heat3d/README.md`](../../apps/heat3d/README.md) for CLI syntax, stability notes and `mpirun` examples.
 
-## Heat3D (`apps/heat3d/`)
+## Allen–Cahn
 
-| Target | Notes |
-|--------|-------|
-| `heat3d` | 3D \(\partial_t u = D\nabla^2 u\); finite differences (orders 2, 4, 6) or spectral FFT step; Gaussian IC as in diffusion examples |
-
-See [`apps/heat3d/README.md`](../../apps/heat3d/README.md) for CLI, stability notes, and `mpirun` examples.
-
-## Allen–Cahn (`apps/allen_cahn/`)
-
-| Target | When available |
-|--------|----------------|
-| `allen_cahn` | CPU |
-| `allen_cahn_cuda` | CUDA enabled |
-| `allen_cahn_hip` | HIP enabled |
-
-CLI-driven 2D Allen–Cahn demo (no JSON `App`). See [`apps/allen_cahn/README.md`](../../apps/allen_cahn/README.md) for arguments and example `mpirun`.
+Allen–Cahn is a CLI-driven 2D demo. It does not use the JSON `App` frontend, which makes it a good quick visual check. The CPU binary is `allen_cahn`; CUDA or HIP builds may provide `allen_cahn_cuda` or `allen_cahn_hip`. See [`apps/allen_cahn/README.md`](../../apps/allen_cahn/README.md) for the current arguments and example `mpirun` commands.
 
 MPI: Use `mpirun` from Open MPI, the same stack as at configure time — typically Open MPI 4.1.1 with GCC 11.2 on cluster setups documented in [`INSTALL.md`](../../INSTALL.md) (§1). A mismatched launcher (e.g. system MPICH) causes confusing runtime failures.
 
 Arguments (CPU binary): `nx ny n_steps dt M epsilon [driving_force] [png_final]` or, for an initial and final snapshot, `[png_initial] [png_final]` (two paths). The optional `driving_force` is detected when the next argument is numeric; otherwise that argument is treated as a PNG path for backward compatibility. Optional PNG paths trigger a gather on rank 0 and grayscale export via `pfc::io` (see `include/openpfc/frontend/io/png_writer.hpp`).
 
-Dynamics: For visible motion on the grid, use moderate ε and large M (mean-curvature scaling: shrinking ε alone makes interfaces sharp but slow). A positive `driving_force` favors the `φ≈+1` seed over the `φ≈-1` matrix. The app tracks visible seed growth by counting cells with `φ > 0` globally at the beginning and end of the run; it exits with failure unless the final seed area is at least 5× larger. It also reports step-loop timing, with `avg_step_time_s` based on the slowest rank for MPI scaling comparisons. PNGs use a fixed [-1,1] scale so initial vs final are comparable.
+For visible motion on the grid, use moderate ε and large M; shrinking ε alone makes interfaces sharp but slow. A positive `driving_force` favours the `φ≈+1` seed over the `φ≈-1` matrix. The app reports step-loop timing and can gather PNG output on rank zero through the frontend PNG writer.
 
-## Choosing apps vs examples
+## Building your own application
 
-- Use `examples/` to learn APIs and patterns in short programs.
-- Use `apps/` when you want a deployable binary with model-specific parameters and inputs closer to production PFC runs.
-
-## See also
-
-- [`quickstart.md`](../quickstart.md) — run an app after building
-- [`app_pipeline.md`](app_pipeline.md) — JSON/TOML → `Simulator` for `App`-driven binaries
-- [`io_results.md`](io_results.md) — binary vs VTK vs PNG output
-- [`extending_openpfc/README.md`](../extending_openpfc/README.md) — how to build your own app the same way
+If none of these binaries matches your problem, the next step is not to copy an application wholesale. First read [`app_pipeline.md`](app_pipeline.md) so you understand how JSON and TOML become a `Simulator`, then work through [`../tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md). The extension overview is [`../extending_openpfc/README.md`](../extending_openpfc/README.md).

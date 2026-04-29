@@ -75,26 +75,28 @@ nav:
       - When OpenPFC is the right tool: when_not_to_use_openpfc.md
       - Learning paths: learning_paths.md
 
-  - Get running:
+  - Start:
       - Start here: start_here_15_minutes.md
       - Quick start: quickstart.md
       - Troubleshooting: troubleshooting.md
       - FAQ: faq.md
 
-  - Concepts:
+  - Learn:
       - Architecture: concepts/architecture.md
       - Spectral stack: concepts/spectral_stack.md
       - Halo exchange: concepts/halo_exchange.md
       - Numerics limits: science/numerics_limits.md
-      - Tour of main types: reference/class_tour.md
-
-  - Tutorials and recipes:
       - Tutorials hub: tutorials/README.md
       - Recipes hub: recipes/README.md
       - Getting-started narrative: getting_started/README.md
       - Workshop curriculum: workshop/README.md
 
-  - Running on HPC:
+  - Run:
+      - Shipped applications: user_guide/applications.md
+      - Configuration vocabulary: user_guide/configuration.md
+      - JSON to Simulator pipeline: user_guide/app_pipeline.md
+      - Result files: user_guide/io_results.md
+      - Post-processing binary fields: user_guide/postprocess_binary_fields.md
       - Operator runbook index: hpc/operator_guide.md
       - GPU vs CPU decision: hpc/gpu_path_decision.md
       - Build trees CPU vs GPU: hpc/build_cpu_gpu.md
@@ -104,42 +106,32 @@ nav:
       - LUMI install: hpc/INSTALL.LUMI.md
       - LUMI Slurm: lumi_slurm/README.md
 
-  - Configuration and I/O:
-      - Configuration vocabulary: user_guide/configuration.md
-      - Spectral App config reference: reference/spectral_app_config_reference.md
-      - JSON to Simulator pipeline: user_guide/app_pipeline.md
+  - Extend:
+      - Extension hub: extending_openpfc/README.md
+      - Minimal custom App tutorial: tutorials/custom_app_minimal.md
       - Parameter validation: user_guide/parameter_validation.md
-      - Result files: user_guide/io_results.md
-      - Binary field file layout: reference/binary_field_io_spec.md
-      - Post-processing binary fields: user_guide/postprocess_binary_fields.md
-
-  - Build and tooling:
-      - CMake options: reference/build_options.md
-      - Dependency matrix: reference/dependency_matrix.md
-      - Style guide: development/styleguide.md
-      - Include hygiene: development/include_hygiene.md
       - Testing: development/testing.md
+      - Style guide: development/styleguide.md
+      - Tungsten science quicklook: science/tungsten_quicklook.md
+      - Cahn-Hilliard vs Allen-Cahn: science/cahn_hilliard_vs_allen_cahn.md
 
-  - Applications and examples:
-      - Shipped applications: user_guide/applications.md
+  - Reference:
+      - Tour of main types: reference/class_tour.md
+      - Glossary: reference/glossary.md
       - Examples catalog: reference/examples_catalog.md
       - Showcase: user_guide/showcase.md
       - Example run output: reference/example_run_output.md
       - API examples walkthrough: reference/api_examples_walkthrough.md
-
-  - Extending OpenPFC:
-      - Extension hub: extending_openpfc/README.md
-      - Tungsten science quicklook: science/tungsten_quicklook.md
-      - Cahn-Hilliard vs Allen-Cahn: science/cahn_hilliard_vs_allen_cahn.md
-      - Personas: development/personas.md
-
-  - Reference:
-      - Glossary: reference/glossary.md
+      - Spectral App config reference: reference/spectral_app_config_reference.md
+      - Binary field file layout: reference/binary_field_io_spec.md
+      - CMake options: reference/build_options.md
+      - Dependency matrix: reference/dependency_matrix.md
       - Debugging notes: development/debugging.md
       - From paper to run: development/from_paper_to_run.md
       - Operator playbooks: reference/operator_playbooks.md
+      - Include hygiene: development/include_hygiene.md
 
-  - Project and contributing:
+  - Project:
       - Contributing to docs: development/contributing-docs.md
       - MkDocs preview (this site): development/mkdocs_preview.md
       - Documentation versioning: development/documentation_versioning.md
