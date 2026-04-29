@@ -10,10 +10,11 @@
  * `plan_options` object (same rules as `cpu_spectral_plan_options_from_json`).
  * GPU entry points start from cuFFT / ROCm HeFFTe defaults and overlay the same
  * reshape / pencil / GPU-aware keys as the CPU `from_json<heffte::plan_options>`
- * path (`detail::apply_heffte_plan_options_json_overrides` in `from_json.hpp`).
+ * path (`detail::apply_heffte_plan_options_json_overrides` in
+ * `from_json_heffte.hpp`).
  *
  * @see spectral_cpu_stack_detail.hpp for the CPU `SpectralCpuStack` factory
- * @see from_json.hpp for `detail::apply_heffte_plan_options_json_overrides`
+ * @see from_json_heffte.hpp for `detail::apply_heffte_plan_options_json_overrides`
  */
 
 #ifndef PFC_UI_SPECTRAL_FFT_STACK_FACTORY_HPP
@@ -22,7 +23,7 @@
 #include <heffte.h>
 #include <nlohmann/json.hpp>
 
-#include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/from_json_heffte.hpp>
 
 namespace pfc::ui {
 
