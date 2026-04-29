@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This document tracks planned and in-progress structural improvements discussed for OpenPFC: clearer layering, less duplication, and alignment with SOLID-style practices. It complements [`architecture.md`](architecture.md).
 
-## Phase A — Communicator consistency (in progress)
+## Phase A — Communicator consistency
 
 Goal: `Model::is_rank0()` and `Simulator` / `SimulationContext` use the same `MPI_Comm` for “rank 0” semantics.
 
@@ -34,18 +34,22 @@ Planned steps:
 
 Goal: One JSON → session pipeline for spectral runs, parameterized by FFT backend instead of CPU-only `SpectralCpuStack`.
 
+Done (foundation):
+
+- **`spectral_cpu_stack_detail.hpp`**: `cpu_spectral_plan_options_from_json` and `cpu_fft_from_json_and_decomposition` centralize JSON → HeFFTe CPU FFT construction; `SpectralCpuStack` calls these (extension point for a future GPU stack builder using the same JSON surface).
+
 Planned steps:
 
 - Introduce a stack factory or templated `SpectralSimulationSession<Model, FftBackend>` (or type-erased FFT handle at the session boundary).
 - Align `from_json` FFT backend selection with session construction (see [`app_pipeline.md`](app_pipeline.md)).
 
-## Phase D — CMake library split (optional)
+## Phase D — CMake library split
 
 Goal: Enforce kernel vs frontend vs optional GPU objects at link time; faster incremental builds.
 
-Planned steps:
+Done:
 
-- Split `openpfc` into e.g. `openpfc_core` + `openpfc_frontend` (+ optional CUDA/HIP object libs), with an umbrella `OpenPFC` target for compatibility.
+- **`openpfc_kernel_obj`** and **`openpfc_frontend_obj`** are `OBJECT` libraries; **`openpfc`** is built from their objects (same installed `libopenpfc` / `OpenPFC::openpfc` as before). Optional CUDA/HIP FFT `.cpp` files stay in the kernel object list when enabled.
 
 ## How to use this doc
 

@@ -41,6 +41,8 @@ GPU-aware MPI toggles and CUDA/HIP compiler discovery are described in **`INSTAL
 | **`BUILD_SHARED_LIBS`** | OFF = static **`libopenpfc`** (typical); ON = shared. |
 | **`OpenPFC_PROFILING_LEVEL`** | `0` / `1` / `2` — compile-time stripping of **`OPENPFC_PROFILE`** macros (`cmake/LibraryConfiguration.cmake`). |
 
+Implementation detail: the `openpfc` library merges CMake **`OBJECT`** targets **`openpfc_kernel_obj`** and **`openpfc_frontend_obj`** (`cmake/LibraryConfiguration.cmake`). Downstream **`find_package(OpenPFC)`** usage is unchanged — link **`OpenPFC::openpfc`** only; the object targets are build internals, not installed.
+
 ## Development
 
 | Option | Default | Meaning |

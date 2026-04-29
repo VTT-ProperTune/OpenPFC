@@ -20,6 +20,7 @@
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/spectral_cpu_stack_detail.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -81,12 +82,7 @@ inline SpectralCpuStack::SpectralCpuStack(const nlohmann::json &settings,
                                           MPI_Comm comm, int rank_id, int num_ranks)
     : m_world(ui::from_json<World>(settings)),
       m_decomp(decomposition::create(m_world, num_ranks)),
-      m_fft(fft::create(
-          fft::layout::create(m_decomp, 0), rank_id,
-          settings.contains("plan_options")
-              ? ui::from_json<heffte::plan_options>(settings["plan_options"])
-              : heffte::default_options<heffte::backend::fftw>(),
-          comm)),
+      m_fft(cpu_fft_from_json_and_decomposition(settings, m_decomp, rank_id, comm)),
       m_time(ui::from_json<Time>(settings)), m_comm(comm) {}
 
 } // namespace pfc::ui

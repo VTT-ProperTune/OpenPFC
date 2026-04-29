@@ -40,7 +40,7 @@ flowchart LR
   wire --> S
 ```
 
-- `SpectralCpuStack` reads world, time, and `plan_options` (FFT) from the parsed document and constructs World → Decomposition → CpuFft → Time in a fixed order.
+- `SpectralCpuStack` reads world, time, and `plan_options` (FFT) from the parsed document and constructs World → Decomposition → CpuFft → Time in a fixed order. CPU plan options and `fft::create` are factored through `spectral_cpu_stack_detail.hpp` (`cpu_spectral_plan_options_from_json`, `cpu_fft_from_json_and_decomposition`) so a future GPU JSON stack can reuse the same parsing surface.
 - `SpectralSimulationSession` owns the stack, constructs `ConcreteModel(fft, world, comm)` (same `MPI_Comm` as the stack and simulator), then `Simulator(model, time, comm)`. The FFT object and world are referenced by the model; do not reorder or move these after construction. Custom models should forward the optional third `MPI_Comm` argument in their constructor (default `MPI_COMM_WORLD` keeps two-argument construction valid).
 - `wire_simulator_from_settings` (on the session) calls `wire_simulator_and_runtime_from_json`, which attaches writers, `ICs`, `BCs`, and optional `simulator` subsection keys.
 
