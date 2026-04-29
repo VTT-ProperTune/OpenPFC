@@ -52,7 +52,7 @@ CLI-driven 2D Allen–Cahn demo (no JSON **`App`**). See **[`apps/allen_cahn/REA
 
 **Arguments (CPU binary):** `nx ny n_steps dt M epsilon [png_final]` or, for an initial and final snapshot, `[png_initial] [png_final]` (two paths). Optional PNG paths trigger a gather on rank 0 and grayscale export via **`pfc::io`** (see **`include/openpfc/frontend/io/png_writer.hpp`**).
 
-**Dynamics:** Smaller **`epsilon`** (stronger **1/ε²** reaction term), larger **`M`** (faster diffusion), and more **`n_steps`** make a center seed coarsen more noticeably in PNGs; reduce **`dt`** if the explicit step blows up. Defaults in **`allen_cahn/common.hpp`** aim at a visible 2D demo without huge runtimes.
+**Dynamics:** For **visible** motion on the grid, use **moderate ε** and **large M** (mean-curvature scaling: shrinking ε alone makes interfaces sharp but **slow**). Many **`n_steps`** help; reduce **`dt`** if the explicit step blows up. PNGs use a **fixed [-1,1]** scale so initial vs final are comparable. Defaults in **`allen_cahn/common.hpp`** target obvious nucleus growth.
 
 ## Choosing apps vs examples
 
@@ -62,4 +62,6 @@ CLI-driven 2D Allen–Cahn demo (no JSON **`App`**). See **[`apps/allen_cahn/REA
 ## See also
 
 - **[`quickstart.md`](quickstart.md)** — run an app after building
+- **[`app_pipeline.md`](app_pipeline.md)** — JSON/TOML → **`Simulator`** for **`App`**-driven binaries
+- **[`io_results.md`](io_results.md)** — binary vs VTK vs PNG output
 - **[`extending_openpfc/README.md`](extending_openpfc/README.md)** — how to build your own app the same way
