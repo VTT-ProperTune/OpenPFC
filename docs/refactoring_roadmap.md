@@ -60,6 +60,7 @@ Done:
 
 - `JsonWiringContext` (`simulation_wiring_context.hpp`): bundles `MPI_Comm`, `mpi_rank`, and `rank0` for `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `wire_simulator_and_runtime_from_json`. Legacy `(comm, rank, rank0)` overloads forward to the context form; `SpectralSimulationSession` uses the context overload.
 - `configure_spectral_json_driver_hooks` (`spectral_json_driver_hooks.hpp`): one call sets `from_json` log rank and default NaN-check communicator; `App::main` uses it instead of duplicating globals.
+- `write_scheduled_simulator_results(Simulator&)` in `simulator.hpp`: extracted from `Simulator::write_results()` so scheduled writes + counter bump live in one free-function seam ([`io_results.md`](io_results.md)).
 
 ## Phase D — CMake library split
 

@@ -13,7 +13,7 @@ OpenPFC separates the kernel interface `ResultsWriter` from frontend implementat
 
 ### Narrow dispatch seam (tests)
 
-[`simulator_results_dispatch.hpp`](../include/openpfc/kernel/simulation/simulator_results_dispatch.hpp) defines `pfc::write_results_for_registered_fields(Model&, const ResultsWriterMap&, int file_num)` — the same loop `Simulator::write_results()` uses after reading the counter. Prefer this free function in unit tests with a small `Model` and mock writers when you do not need the full integrator stack. `Simulator::results_writers()` exposes the live map for inspection-only tests on a constructed simulator.
+[`simulator_results_dispatch.hpp`](../include/openpfc/kernel/simulation/simulator_results_dispatch.hpp) defines `pfc::write_results_for_registered_fields(Model&, const ResultsWriterMap&, int file_num)` — the same loop `Simulator::write_results()` uses after reading the counter. Prefer this free function in unit tests with a small `Model` and mock writers when you do not need the full integrator stack. `Simulator::results_writers()` exposes the live map for inspection-only tests on a constructed simulator. The kernel also provides `pfc::write_scheduled_simulator_results(Simulator&)` — the same counter bump + dispatch as `Simulator::write_results()` for callables that should not use member syntax.
 
 ## Binary output (MPI-IO)
 

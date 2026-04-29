@@ -362,20 +362,15 @@ public:
   /**
    * @brief Increment the result counter and invoke every registered writer
    *
-   * Dispatches through `pfc::write_results_for_registered_fields` (see
-   * `simulator_results_dispatch.hpp`). For tests that only need the write loop,
-   * call that free function with a stub model and writer map instead of wiring
-   * a full `Simulator`.
+   * Implemented by @ref write_scheduled_simulator_results. For tests that only
+   * need the write loop, call @ref pfc::write_results_for_registered_fields with a
+   * stub model and writer map instead of wiring a full `Simulator`.
    *
+   * @see write_scheduled_simulator_results
    * @see results_writers()
    * @see pfc::write_results_for_registered_fields
    */
-  void write_results() {
-    const int file_num = get_result_counter();
-    pfc::write_results_for_registered_fields(get_model(), m_result_writers,
-                                             file_num);
-    set_result_counter(file_num + 1);
-  }
+  void write_results();
 
   void apply_initial_conditions() {
     Model &model = get_model();
@@ -542,6 +537,24 @@ public:
     return time.done();
   }
 };
+
+/**
+ * @brief One scheduled results write: dispatch writers then bump `result_counter`
+ *
+ * Same logic as `Simulator::write_results()`. Prefer this free function in
+ * tests or tools that need a callable seam without member syntax.
+ *
+ * @see Simulator::write_results()
+ * @see pfc::write_results_for_registered_fields
+ */
+inline void write_scheduled_simulator_results(Simulator &sim) {
+  const int file_num = sim.get_result_counter();
+  pfc::write_results_for_registered_fields(sim.get_model(), sim.results_writers(),
+                                           file_num);
+  sim.set_result_counter(file_num + 1);
+}
+
+inline void Simulator::write_results() { write_scheduled_simulator_results(*this); }
 
 [[nodiscard]] inline Model &get_model(Simulator &sim) noexcept {
   return sim.get_model();
