@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
@@ -149,38 +149,28 @@ int main() {
 }
 ```
 
-What follows is one of the most difficult questions in C++ development, namely
-how to translate this into a working binary. OpenPFC is a header-only library
-and in that sense compiling is basically easy by specifying the location of
-header files to compiler with the `-I` flag (for example, `g++
--I/opt/OpenPFC/include -o hello hello.cpp`). In practice, however, in order to
-be able to do something useful, additionally HeFFTe and some other libraries are
-needed, which help e.g. making the FFT and distributing the calculation to the
-computing nodes in a HPC cluster. And this is making things a bit more
-complicated. Just so show, that *in principle*, one could manually compile the
-command without any kind of build system, compiling the application with my own
-development system would go as follows:
+What follows is how to turn the example into a working binary. OpenPFC is
+distributed as a **compiled library** (`openpfc`, public headers under
+`include/openpfc`) plus a **CMake package config** so that consumers get the
+correct include directories, link libraries, and usage requirements (MPI,
+HeFFTe where applicable, and other dependencies). You **include** the headers in
+your translation units and **link** against the `OpenPFC` CMake target; you do
+not hand-compile a long list of `-I` and `-l` flags. The supported dependency
+stack—including **HeFFTe 2.4.1**, OpenMPI, and FFTW for CPU FFT—is described in
+**[`INSTALL.md`](../../INSTALL.md)**.
 
-```bash
-# compiling
-/usr/bin/c++ -isystem /opt/openpfc/include -isystem /opt/heffte/2.3/include -isystem /usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -isystem /usr/lib/x86_64-linux-gnu/openmpi/include  -mfma -mavx -pthread -o hello.o -c hello.cpp
+Manual `g++` … `libheffte.so` command lines are **not** supported: they go stale
+across machines and versions. Use **CMake** and `find_package(OpenPFC)` as
+below.
 
-# linking
-/usr/bin/c++ -pthread hello.o -o hello -Wl,-rpath,/opt/heffte/2.3/lib:/usr/lib/x86_64-linux-gnu/openmpi/lib /opt/heffte/2.3/lib/libheffte.so.2.3.0 /usr/lib/x86_64-linux-gnu/libfftw3.so /usr/lib/x86_64-linux-gnu/libfftw3f.so /usr/lib/x86_64-linux-gnu/libfftw3_threads.so /usr/lib/x86_64-linux-gnu/libfftw3f_threads.so /usr/lib/x86_64-linux-gnu/libfftw3_omp.so /usr/lib/x86_64-linux-gnu/libfftw3f_omp.so /usr/lib/gcc/x86_64-linux-gnu/10/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.so /usr/lib/x86_64-linux-gnu/openmpi/lib/libmpi_cxx.so /usr/lib/x86_64-linux-gnu/openmpi/lib/libmpi.so
-```
-
-However, this would not make much sense, because the paths, versions and so on
-would be different on the next computer. A significantly more sensible approach
-to compiling a program is to use a build system. OpenPFC uses cmake, which takes
-care of the details of compiling the program. When OpenPFC is configured and
-built with cmake, it also generated so called pkg-config file, which tells the
-necessary details for compiling programs that depends from OpenPFC. This
-configuration file can be found from path
+OpenPFC uses CMake, which takes care of compile and link details. When OpenPFC
+is configured and installed, it generates a **CMake package configuration file**
+that tells dependent projects how to compile and link. That file is installed at
 `<CMAKE_PREFIX_PATH>/lib/cmake/OpenPFC/OpenPFCConfig.cmake`, where
 `CMAKE_PREFIX_PATH` is the path chosen during the configuration of the
 framework. For a global install, `CMAKE_PREFIX_PATH` is empty, but very likely
 it's nonempty, something like `/opt/OpenPFC` or `$HOME/opt/OpenPFC`, for
-example, as regular users in general does not have write rights to `/usr/local`.
+example, as regular users in general do not have write rights to `/usr/local`.
 
 When the program is compiled, cmake will try to find this file. If the
 installation is done in the default directory, the file is found automatically

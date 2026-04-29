@@ -1,9 +1,9 @@
-<!-- SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd -->
+<!-- SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd -->
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 # Functional Field Operations (IC / BC)
 
-This page shows how to use the new coordinate-space functional API to set initial and boundary conditions without writing manual nested loops.
+This page shows how to use the coordinate-space functional API to set initial and boundary conditions without writing manual nested loops.
 
 ## Basics
 
@@ -37,15 +37,14 @@ field::apply_with_time(model, "psi", t, [freq](const Real3 &x, double tt) {
 });
 ```
 
-        ##In -
-        place Updates(Partial Modifications)
+## In-place updates (partial modifications)
 
-            Use `apply_inplace` when you need to modify only certain regions
-    or when the new value depends on the current value.
+Use `apply_inplace` when you need to modify only certain regions, or when the new value depends on the current value.
 
-       ## #Boundary band with smooth transition
+### Boundary band with smooth transition
 
-```cpp const double xwidth = 20.0;
+```cpp
+const double xwidth = 20.0;
 const double xpos = 100.0;
 const double alpha = 1.0;
 const double rho_low = 0.0;
@@ -60,42 +59,41 @@ field::apply_inplace(model, "psi", [=](const Real3 &x, double current) {
 });
 ```
 
-    ## #Masked update(modify only where condition is true)
+### Masked update (modify only where condition is true)
 
-```cpp field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
-      if (x[0] > 0.0 && x[2] < 10.0) {
-        return 0.5; // set value in region
-      }
-      return current; // keep existing value elsewhere
-    });
+```cpp
+field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
+  if (x[0] > 0.0 && x[2] < 10.0) {
+    return 0.5; // set value in region
+  }
+  return current; // keep existing value elsewhere
+});
 ```
 
-    ## #Accumulate or
-    blend
+### Accumulate or blend
 
-```cpp field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
-      const double perturbation = 0.01 * std::sin(x[0]);
-      return current + perturbation; // additive update
-    });
+```cpp
+field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
+  const double perturbation = 0.01 * std::sin(x[0]);
+  return current + perturbation; // additive update
+});
 ```
 
-    ##Backward compatibility via adapter
+## Backward compatibility via adapter
 
-        You can wrap a lambda into a `FieldModifier` that works with existing
-            Simulator APIs
-    :
+You can wrap a lambda into a `FieldModifier` that works with existing `Simulator` APIs:
 
-```cpp auto mod =
-        field::make_legacy_modifier("psi", [](const Real3 &) { return 0.5; });
+```cpp
+auto mod = field::make_legacy_modifier("psi", [](const Real3 &) { return 0.5; });
 simulator.add_initial_condition(std::move(mod));
 ```
 
-    ##Migration from Legacy Loop -
-    Based Patterns
+## Migration from legacy loop-based patterns
 
-    Before(manual nested loops)
-    :
-```cpp void apply(Model & m, double) override {
+**Before (manual nested loops):**
+
+```cpp
+void apply(Model &m, double) override {
   const FFT &fft = m.get_fft();
   Field &field = m.get_real_field(get_field_name());
   const World &w = m.get_world();
@@ -118,24 +116,25 @@ simulator.add_initial_condition(std::move(mod));
 }
 ```
 
-    After(functional)
-    :
-```cpp void apply(Model & m, double) override {
+**After (functional):**
+
+```cpp
+void apply(Model &m, double) override {
   pfc::field::apply(m, get_field_name(), [](const pfc::Real3 &X) {
     return compute_value(X[0], X[1], X[2]);
   });
 }
 ```
 
-    Benefits : -No manual index management -
-               Coordinates automatically computed via `world::to_coords()` -
-               Clearer intent : focus on the computation,
-    not the iteration -
-        Less boilerplate(15 lines → 5 lines)
+**Benefits:**
 
-            ##Notes
-        - Operates over the local inbox only(MPI - friendly) - Header - only,
-    no allocations; suitable for hot paths when function is simple
-- Prefer pure functions without side-effects for clarity and performance
-- Use `apply_inplace` when new value depends on current value or for partial updates
-- All migrated ICs/BCs in OpenPFC now use this functional API (see `include/openpfc/initial_conditions/` and `include/openpfc/boundary_conditions/`)
+- No manual index management; coordinates come from the world/FFT inbox.
+- Clearer intent: focus on the computation, not the iteration.
+- Less boilerplate (many lines → a short lambda).
+
+## Notes
+
+- Operates over the local inbox only (MPI-friendly).
+- Prefer pure functions without side effects for clarity and performance.
+- Use `apply_inplace` when the new value depends on the current value or for partial updates.
+- Related headers live under `include/openpfc/kernel/simulation/` (e.g. initial conditions and modifiers used by the simulator).
