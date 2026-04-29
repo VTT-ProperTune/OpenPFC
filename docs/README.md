@@ -28,6 +28,8 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | Fix configure/MPI/HeFFTe issues | [`troubleshooting.md`](troubleshooting.md) |
 | Short Q&A | [`faq.md`](faq.md) |
 | Understand JSON/TOML → `Simulator` | [`app_pipeline.md`](app_pipeline.md) |
+| Spectral `App` JSON/TOML key reference | [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
+| Binary field MPI-IO file layout | [`binary_field_io_spec.md`](binary_field_io_spec.md) |
 | Tour of main types (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Minimal custom `App` project (CMake + JSON) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation for custom models | [`parameter_validation.md`](parameter_validation.md) |
@@ -44,7 +46,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 
 | Topic | Document |
 |--------|-----------|
-| JSON/TOML sections, `plan_options` | [`configuration.md`](configuration.md) |
+| JSON/TOML sections, `plan_options` | [`configuration.md`](configuration.md), [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
 | Validated `model.params` (custom apps) | [`parameter_validation.md`](parameter_validation.md) |
 | Results writers (binary / VTK / PNG) | [`io_results.md`](io_results.md) |
 | Shipped `apps/` programs | [`applications.md`](applications.md) |

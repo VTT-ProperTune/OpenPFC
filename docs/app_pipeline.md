@@ -92,6 +92,7 @@ Initial/boundary entries use `"type": "<name>"`. Those names are resolved via `F
 
 | Topic | Where |
 |--------|--------|
+| Spectral `App` JSON/TOML key reference | [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
 | Layered architecture | [`architecture.md`](architecture.md) |
 | Main types and headers (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Minimal out-of-tree `App` + JSON | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
