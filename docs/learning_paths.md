@@ -15,7 +15,7 @@ Goal: build OpenPFC, run a shipped application with a sample input, and know whe
 |------|-------------------|
 | 1 | Install and toolchain: [`INSTALL.md`](../INSTALL.md) |
 | 2 | Fast path from clone to `mpirun`: [`quickstart.md`](quickstart.md) §1–2B |
-| 3 | Which binary and config: [`applications.md`](applications.md) |
+| 3 | Which binary and config: [`applications.md`](applications.md) (**App chooser** table) |
 | 4 | JSON/TOML vocabulary: [`configuration.md`](configuration.md), [`app_pipeline.md`](app_pipeline.md) |
 | 5 | Result files (binary / VTK / PNG): [`io_results.md`](io_results.md) |
 | 6 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |

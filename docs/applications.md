@@ -9,6 +9,18 @@ These are full programs (not the small `examples/` tutorials). They are built wh
 
 All of them expect MPI for realistic runs unless noted. Match the same compiler/MPI/HeFFTe stack you used to build OpenPFC (see [`INSTALL.md`](../INSTALL.md)).
 
+## App chooser
+
+Use this table to pick an entry point. Details and sample commands follow in each section below.
+
+| Application | Config | Typical domain | CPU | CUDA | HIP | Primary I/O | Best for |
+|-------------|--------|----------------|-----|------|-----|-------------|----------|
+| **Tungsten** | JSON / TOML file (`argv[1]`) | 3D PFC, production-style | `tungsten` | `tungsten_cuda` | `tungsten_hip` | Binary (`fields` in config); VTK/PNG via code if you add writers | Large PFC runs, validated inputs, HPC |
+| **AluminumNew** | JSON / TOML (`argv[1]`) | 3D, sample `App<Model>` | `aluminumNew` | — | — | As wired in config / model | Learning `App` + JSON end-to-end |
+| **Allen–Cahn** | CLI args (no `App` JSON) | 2D demo | `allen_cahn` | `allen_cahn_cuda` | `allen_cahn_hip` | Optional PNG paths (grayscale slab) | Quick visual check, 2D explicit interface |
+
+For declarative runs, start with **Tungsten** or **AluminumNew** and read [`app_pipeline.md`](app_pipeline.md). For a minimal “PNG in/out” path without JSON, see **Allen–Cahn** and [`io_results.md`](io_results.md) (PNG).
+
 ## Tungsten PFC (`apps/tungsten/`)
 
 Overview: [`apps/tungsten/README.md`](../apps/tungsten/README.md) (binaries, inputs, code layout).
