@@ -52,6 +52,7 @@ TEST_CASE("Allen–Cahn CPU vs HIP agreement (single rank)", "[AllenCahn][HIP]")
   cfg.dt = 0.002;
   cfg.M = 1.0;
   cfg.epsilon = 0.5;
+  cfg.driving_force = 0.25;
 
   auto world = pfc::world::create(pfc::GridSize({cfg.nx_glob, cfg.ny_glob, 1}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
@@ -88,7 +89,7 @@ TEST_CASE("Allen–Cahn CPU vs HIP agreement (single rank)", "[AllenCahn][HIP]")
   for (int step = 0; step < cfg.n_steps; ++step) {
     allen_cahn::step_explicit_euler_cpu(&u_cpu, &lap, &face_cpu, &exch_cpu, nx, ny,
                                         nz, inv_dx2, inv_dy2, cfg.dt, cfg.M,
-                                        inv_eps2);
+                                        inv_eps2, cfg.driving_force);
   }
 
   u_gpu_host = u0;
@@ -132,7 +133,7 @@ TEST_CASE("Allen–Cahn CPU vs HIP agreement (single rank)", "[AllenCahn][HIP]")
     allen_cahn::allen_cahn_step_hip(u_dev, face_dev[0], face_dev[1], face_dev[2],
                                     face_dev[3], face_dev[4], face_dev[5], nx, ny,
                                     nz, halo_width, inv_dx2, inv_dy2, cfg.dt, cfg.M,
-                                    inv_eps2);
+                                    inv_eps2, cfg.driving_force);
   }
 
   hip_check(hipMemcpy(u_gpu_host.data(), u_dev, nlocal * sizeof(double),

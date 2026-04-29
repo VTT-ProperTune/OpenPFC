@@ -8,6 +8,7 @@
 #include <cuda_runtime.h>
 
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <mpi.h>
@@ -71,9 +72,12 @@ int main(int argc, char *argv[]) {
   std::vector<double> u_host(nlocal);
   allen_cahn::fill_initial_condition(&u_host, decomp, rank);
 
+  const std::int64_t n_local_initial = allen_cahn::count_cells_above(
+      u_host, allen_cahn::RunConfig::kLevelSetThreshold);
+
   if (!cfg.png_output_initial.empty()) {
     pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
-                                           cfg.png_output_initial);
+                                           cfg.png_output_initial, -1.0, 1.0);
     if (rank == 0) {
       std::cout << "Wrote initial-state PNG: " << cfg.png_output_initial << "\n";
     }
@@ -103,6 +107,8 @@ int main(int argc, char *argv[]) {
                         cudaMemcpyHostToDevice),
              "cudaMemcpy H2D core");
 
+  MPI_Barrier(MPI_COMM_WORLD);
+  const double step_t0 = MPI_Wtime();
   for (int step = 0; step < cfg.n_steps; ++step) {
     cuda_check(cudaMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
                           cudaMemcpyDeviceToHost),
@@ -121,8 +127,10 @@ int main(int argc, char *argv[]) {
     allen_cahn::allen_cahn_step_cuda(u_dev, face_dev[0], face_dev[1], face_dev[2],
                                      face_dev[3], face_dev[4], face_dev[5], nx, ny,
                                      nz, halo_width, inv_dx2, inv_dy2, cfg.dt, cfg.M,
-                                     inv_eps2);
+                                     inv_eps2, cfg.driving_force);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
+  const double step_elapsed_s = MPI_Wtime() - step_t0;
 
   cuda_check(cudaMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
                         cudaMemcpyDeviceToHost),
@@ -130,7 +138,7 @@ int main(int argc, char *argv[]) {
 
   if (!cfg.png_output.empty()) {
     pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
-                                           cfg.png_output);
+                                           cfg.png_output, -1.0, 1.0);
     if (rank == 0) {
       std::cout << "Wrote PNG: " << cfg.png_output << "\n";
     }
@@ -151,9 +159,18 @@ int main(int argc, char *argv[]) {
   if (rank == 0) {
     std::cout << "Allen–Cahn FD (CUDA): grid " << cfg.nx_glob << "x" << cfg.ny_glob
               << "x1, ranks=" << nproc << ", steps=" << cfg.n_steps << "\n";
+    std::cout << "Bulk driving force: " << cfg.driving_force << "\n";
     std::cout << "Global sum(phi) after stepping: " << sum_global << "\n";
   }
+  allen_cahn::report_step_timing(MPI_COMM_WORLD, rank, cfg.n_steps, step_elapsed_s);
+
+  const std::int64_t n_local_final = allen_cahn::count_cells_above(
+      u_host, allen_cahn::RunConfig::kLevelSetThreshold);
+  const bool growth_ok = allen_cahn::verify_level_set_area_growth(
+      MPI_COMM_WORLD, rank, n_local_initial, n_local_final,
+      allen_cahn::RunConfig::kMinLevelSetAreaGrowthFactor,
+      allen_cahn::RunConfig::kLevelSetThreshold);
 
   MPI_Finalize();
-  return EXIT_SUCCESS;
+  return growth_ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }

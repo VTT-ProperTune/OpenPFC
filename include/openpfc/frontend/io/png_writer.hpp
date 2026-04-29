@@ -10,6 +10,7 @@
 
 #include <mpi.h>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -37,13 +38,17 @@ void write_png_grayscale_from_doubles(const std::string &path, int width, int he
  * @brief Gather a distributed scalar field (one z-layer, nz==1 per rank) onto rank 0
  *        and write a grayscale PNG. No file is written on other ranks.
  *
- * Values are scaled to the global min/max across the gathered field.
+ * Values are scaled to the global min/max across the gathered field, unless
+ * both @p clip_vmin and @p clip_vmax are set — then that fixed range is used
+ * (e.g. -1 and 1 for Allen–Cahn wells) so successive PNGs are comparable.
  *
  * @throws std::invalid_argument if global nz != 1 or any local patch has nz != 1
  */
 void write_mpi_scalar_field_png_xy(MPI_Comm comm,
                                    const pfc::decomposition::Decomposition &decomp,
                                    int rank, const std::vector<double> &local_field,
-                                   const std::string &path);
+                                   const std::string &path,
+                                   std::optional<double> clip_vmin = std::nullopt,
+                                   std::optional<double> clip_vmax = std::nullopt);
 
 } // namespace pfc::io

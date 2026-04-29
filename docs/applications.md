@@ -64,9 +64,9 @@ CLI-driven 2D Allen–Cahn demo (no JSON `App`). See [`apps/allen_cahn/README.md
 
 MPI: Use `mpirun` from Open MPI, the same stack as at configure time — typically Open MPI 4.1.1 with GCC 11.2 on cluster setups documented in [`INSTALL.md`](../INSTALL.md) (§1). A mismatched launcher (e.g. system MPICH) causes confusing runtime failures.
 
-Arguments (CPU binary): `nx ny n_steps dt M epsilon [png_final]` or, for an initial and final snapshot, `[png_initial] [png_final]` (two paths). Optional PNG paths trigger a gather on rank 0 and grayscale export via `pfc::io` (see `include/openpfc/frontend/io/png_writer.hpp`).
+Arguments (CPU binary): `nx ny n_steps dt M epsilon [driving_force] [png_final]` or, for an initial and final snapshot, `[png_initial] [png_final]` (two paths). The optional `driving_force` is detected when the next argument is numeric; otherwise that argument is treated as a PNG path for backward compatibility. Optional PNG paths trigger a gather on rank 0 and grayscale export via `pfc::io` (see `include/openpfc/frontend/io/png_writer.hpp`).
 
-Dynamics: For visible motion on the grid, use moderate ε and large M (mean-curvature scaling: shrinking ε alone makes interfaces sharp but slow). Many `n_steps` help; reduce `dt` if the explicit step blows up. PNGs use a fixed [-1,1] scale so initial vs final are comparable. Defaults in `allen_cahn/common.hpp` target obvious nucleus growth.
+Dynamics: For visible motion on the grid, use moderate ε and large M (mean-curvature scaling: shrinking ε alone makes interfaces sharp but slow). A positive `driving_force` favors the `φ≈+1` seed over the `φ≈-1` matrix. The app tracks visible seed growth by counting cells with `φ > 0` globally at the beginning and end of the run; it exits with failure unless the final seed area is at least 5× larger. It also reports step-loop timing, with `avg_step_time_s` based on the slowest rank for MPI scaling comparisons. PNGs use a fixed [-1,1] scale so initial vs final are comparable.
 
 ## Choosing apps vs examples
 

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -69,7 +70,9 @@ void write_png_grayscale_from_doubles(const std::string &path, int width, int he
 void write_mpi_scalar_field_png_xy(MPI_Comm comm,
                                    const pfc::decomposition::Decomposition &decomp,
                                    int rank, const std::vector<double> &local_field,
-                                   const std::string &path) {
+                                   const std::string &path,
+                                   std::optional<double> clip_vmin,
+                                   std::optional<double> clip_vmax) {
   int nproc = 1;
   MPI_Comm_size(comm, &nproc);
 
@@ -144,18 +147,29 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
     offset += static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
   }
 
-  double vmin = std::numeric_limits<double>::infinity();
-  double vmax = -std::numeric_limits<double>::infinity();
-  for (double v : global) {
-    if (!std::isfinite(v)) {
-      continue;
+  double vmin = 0.0;
+  double vmax = 0.0;
+  if (clip_vmin.has_value() && clip_vmax.has_value()) {
+    vmin = *clip_vmin;
+    vmax = *clip_vmax;
+    if (!(vmax > vmin)) {
+      throw std::invalid_argument(
+          "write_mpi_scalar_field_png_xy: clip_vmax must exceed clip_vmin");
     }
-    vmin = std::min(vmin, v);
-    vmax = std::max(vmax, v);
-  }
-  if (!std::isfinite(vmin) || !std::isfinite(vmax)) {
-    throw std::runtime_error(
-        "write_mpi_scalar_field_png_xy: no valid samples in global field");
+  } else {
+    vmin = std::numeric_limits<double>::infinity();
+    vmax = -std::numeric_limits<double>::infinity();
+    for (double v : global) {
+      if (!std::isfinite(v)) {
+        continue;
+      }
+      vmin = std::min(vmin, v);
+      vmax = std::max(vmax, v);
+    }
+    if (!std::isfinite(vmin) || !std::isfinite(vmax)) {
+      throw std::runtime_error(
+          "write_mpi_scalar_field_png_xy: no valid samples in global field");
+    }
   }
 
   write_png_grayscale_from_doubles(path, nx_glob, ny_glob, global.data(), vmin,

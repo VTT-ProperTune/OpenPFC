@@ -12,13 +12,13 @@ void allen_cahn_step_cuda(double *core_dev, const double *hpx_dev,
                           const double *hny_dev, const double *hpz_dev,
                           const double *hnz_dev, int nx, int ny, int nz,
                           int halo_width, double inv_dx2, double inv_dy2, double dt,
-                          double M, double inv_eps2);
+                          double M, double inv_eps2, double driving_force);
 
 void allen_cahn_step_hip(double *core_dev, const double *hpx_dev,
                          const double *hnx_dev, const double *hpy_dev,
                          const double *hny_dev, const double *hpz_dev,
                          const double *hnz_dev, int nx, int ny, int nz,
                          int halo_width, double inv_dx2, double inv_dy2, double dt,
-                         double M, double inv_eps2);
+                         double M, double inv_eps2, double driving_force);
 
 } // namespace allen_cahn
