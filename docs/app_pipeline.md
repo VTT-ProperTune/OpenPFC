@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Config-driven application pipeline (`App` → `Simulator`)
 
-This page describes how a **JSON or TOML** file becomes a running simulation when you use **`pfc::ui::App<YourModel>`** (the pattern used by **`apps/tungsten`**, **`apps/aluminumNew`**, and several **`examples/`**). It ties together headers under **`include/openpfc/frontend/ui/`** and **`simulation_wiring.hpp`**.
+This page describes how a JSON or TOML file becomes a running simulation when you use `pfc::ui::App<YourModel>` (the pattern used by `apps/tungsten`, `apps/aluminumNew`, and several `examples/`). It ties together headers under `include/openpfc/frontend/ui/` and `simulation_wiring.hpp`.
 
-For install and MPI setup, see **[`INSTALL.md`](../INSTALL.md)**. For shared config vocabulary, see **[`configuration.md`](configuration.md)**.
+For install and MPI setup, see `[`INSTALL.md`](../INSTALL.md)`. For shared config vocabulary, see `[`configuration.md`](configuration.md)`.
 
 ## Big picture
 
@@ -40,52 +40,52 @@ flowchart LR
   wire --> S
 ```
 
-- **`SpectralCpuStack`** reads **world**, **time**, and **`plan_options`** (FFT) from the parsed document and constructs **World → Decomposition → CpuFft → Time** in a fixed order.
-- **`SpectralSimulationSession`** owns the stack, constructs **`ConcreteModel(fft, world)`**, then **`Simulator(model, time, comm)`**. The **FFT object and world are referenced by the model**; do not reorder or move these after construction.
-- **`wire_simulator_from_settings`** (on the session) calls **`wire_simulator_and_runtime_from_json`**, which attaches **writers**, **ICs**, **BCs**, and optional **`simulator`** subsection keys.
+- `SpectralCpuStack` reads world, time, and `plan_options` (FFT) from the parsed document and constructs World → Decomposition → CpuFft → Time in a fixed order.
+- `SpectralSimulationSession` owns the stack, constructs `ConcreteModel(fft, world, comm)` (same `MPI_Comm` as the stack and simulator), then `Simulator(model, time, comm)`. The FFT object and world are referenced by the model; do not reorder or move these after construction. Custom models should forward the optional third `MPI_Comm` argument in their constructor (default `MPI_COMM_WORLD` keeps two-argument construction valid).
+- `wire_simulator_from_settings` (on the session) calls `wire_simulator_and_runtime_from_json`, which attaches writers, `ICs`, `BCs`, and optional `simulator` subsection keys.
 
 ## `App<ConcreteModel>::main()` order of operations
 
-Implementation: **`include/openpfc/frontend/ui/app.hpp`**.
+Implementation: `include/openpfc/frontend/ui/app.hpp`.
 
 | Step | What happens |
 |------|----------------|
-| 1 | Load settings from **`argv[1]`** via **`load_settings_file`** (JSON or TOML). |
-| 2 | **`SpectralSimulationSession::assemble(settings, comm, rank, nranks)`** — builds stack + model + simulator. |
-| 3 | If present, **`from_json(settings["model"]["params"], model)`** — fills model parameters after construction. |
-| 4 | Profiling controller reads **`[profiling]`** / root keys as implemented in **`app_profiling.hpp`**. |
-| 5 | **`model.initialize(dt)`** from session time. |
+| 1 | Load settings from `argv[1]` via `load_settings_file` (JSON or TOML). |
+| 2 | `SpectralSimulationSession::assemble(settings, comm, rank, nranks)` — builds stack + model + simulator. |
+| 3 | If present, `from_json(settings["model"]["params"], model)` — fills model parameters after construction. |
+| 4 | Profiling controller reads `[profiling]` / root keys as implemented in `app_profiling.hpp`. |
+| 5 | `model.initialize(dt)` from session time. |
 | 6 | Memory report (model + FFT allocations). |
-| 7 | **`wire_simulator_from_settings`** — writers, ICs, BCs, **`simulator`** subsection. |
-| 8 | Time integration loop (**`app_integrator_loop`**) + profiling finalize/export. |
+| 7 | `wire_simulator_from_settings` — writers, ICs, BCs, `simulator` subsection. |
+| 8 | Time integration loop (`app_integrator_loop`) + profiling finalize/export. |
 
-Custom drivers can replicate subsets: build a **`Simulator`** yourself, then call **`add_result_writers_from_json`**, **`add_initial_conditions_from_json`**, **`add_boundary_conditions_from_json`**, and **`apply_simulator_section_from_json`** from **`simulation_wiring.hpp`** directly.
+Custom drivers can replicate subsets: build a `Simulator` yourself, then call `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `apply_simulator_section_from_json` from `simulation_wiring.hpp` directly.
 
 ## JSON sections consumed by the default spectral path
 
-Exact keys vary slightly by app and schema version; always treat **`apps/tungsten/inputs_json/`** and **`examples/fft_backend_selection.toml`** as ground truth. Typical **top-level** usage:
+Exact keys vary slightly by app and schema version; always treat `apps/tungsten/inputs_json/` and `examples/fft_backend_selection.toml` as ground truth. Typical `top-level` usage:
 
 | Section / keys | Handled by | Role |
 |----------------|------------|------|
-| **`Lx`, `Ly`, `Lz`, `dx`, `dy`, `dz`, `origin`, …** | **`SpectralCpuStack`** / **`from_json`** for **`World`** | Grid and physical extent. |
-| **`t0`, `t1`, `dt`, `saveat`** | **`Time`** | Integration interval and output cadence. |
-| **`plan_options`** | HeFFTe **`plan_options`** | FFT backend (`backend`), **`use_gpu_aware`**, **`reshape_algorithm`**, etc. |
-| **`model.name`**, **`model.params`** | Your **`ConcreteModel`** + optional **`from_json` into params** | Physics coefficients; validation may be model-specific. |
-| **`fields`**, **`saveat`** | **`add_result_writers_from_json`** | If **`saveat > 0`**, each **`fields[]`** entry with **`name`** and **`data`** path gets a **`BinaryWriter`** (MPI-IO). |
-| **`initial_conditions[]`** | **`add_initial_conditions_from_json`** | Each entry has **`type`**, optional **`target`**, type-specific fields. |
-| **`boundary_conditions[]`** | **`add_boundary_conditions_from_json`** | Same pattern: **`type`**, **`target`**, … |
-| **`simulator`** | **`apply_simulator_section_from_json`** | Optional **`result_counter`**, **`increment`**. |
-| **`profiling`** | **`AppProfilingController`** | Export paths and regions; see **[`performance_profiling.md`](performance_profiling.md)**. |
+| `Lx`, `Ly`, `Lz`, `dx`, `dy`, `dz`, `origin`, … | `SpectralCpuStack` / `from_json` for `World` | Grid and physical extent. |
+| `t0`, `t1`, `dt`, `saveat` | `Time` | Integration interval and output cadence. |
+| `plan_options` | HeFFTe `plan_options` | FFT backend (`backend`), `use_gpu_aware`, `reshape_algorithm`, etc. |
+| `model.name`, `model.params` | Your `ConcreteModel` + optional `from_json` into params | Physics coefficients; validation may be model-specific. |
+| `fields`, `saveat` | `add_result_writers_from_json` | If `saveat > 0`, each `fields[]` entry with `name` and `data` path gets a `BinaryWriter` (MPI-IO). |
+| `initial_conditions[]` | `add_initial_conditions_from_json` | Each entry has `type`, optional `target`, type-specific fields. |
+| `boundary_conditions[]` | `add_boundary_conditions_from_json` | Same pattern: `type`, `target`, … |
+| `simulator` | `apply_simulator_section_from_json` | Optional `result_counter`, `increment`. |
+| `profiling` | `AppProfilingController` | Export paths and regions; see `[`performance_profiling.md`](performance_profiling.md)`. |
 
-TOML uses the same logical sections (e.g. **`[plan_options]`**).
+TOML uses the same logical sections (e.g. `[plan_options]`).
 
 ## `SimulationContext` and field modifiers
 
-When **`Simulator`** applies **initial** or **boundary** modifiers, it passes a **`SimulationContext`** (MPI communicator, rank-0 flag) together with the **`Model`**. Modifier authors should read **`include/openpfc/kernel/simulation/simulation_context.hpp`**. This is separate from JSON but central to **why** IC/BC code can perform rank-aware I/O.
+When `Simulator` applies initial or boundary modifiers, it passes a `SimulationContext` (MPI communicator, rank-0 flag) together with the `Model`. Modifier authors should read `include/openpfc/kernel/simulation/simulation_context.hpp`. This is separate from JSON but central to why IC/BC code can perform rank-aware I/O.
 
 ## Registration of JSON `type` strings
 
-Initial/boundary entries use **`"type": "<name>"`**. Those names are resolved via **`FieldModifierCatalog`** (**`field_modifier_registry.hpp`**). Applications call **`register_field_modifier<MyModifier>("my_type")`** before constructing **`App`**. See **`examples/10_ui_register_ic.cpp`** and shipped apps’ `main`.
+Initial/boundary entries use `"type": "<name>"`. Those names are resolved via `FieldModifierCatalog` (`field_modifier_registry.hpp`). Applications call `register_field_modifier<MyModifier>("my_type")` before constructing `App`. See `examples/10_ui_register_ic.cpp` and shipped apps’ `main`.
 
 ## See also
 
@@ -93,8 +93,8 @@ Initial/boundary entries use **`"type": "<name>"`**. Those names are resolved vi
 |--------|--------|
 | Layered architecture | [`architecture.md`](architecture.md) |
 | Main types and headers (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
-| Minimal out-of-tree **`App`** + JSON | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
-| Validated **`model.params`** | [`parameter_validation.md`](parameter_validation.md) |
+| Minimal out-of-tree `App` + JSON | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| Validated `model.params` | [`parameter_validation.md`](parameter_validation.md) |
 | FFT / `[plan_options]` examples | [`examples/fft_backend_selection.toml`](../examples/fft_backend_selection.toml) |
 | Results formats (binary, VTK, PNG) | [`io_results.md`](io_results.md) |
 | CMake options | [`build_options.md`](build_options.md) |

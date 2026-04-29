@@ -10,6 +10,7 @@
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
+#include <openpfc/kernel/simulation/simulation_context.hpp>
 
 #include "fixtures/mock_model.hpp"
 
@@ -83,6 +84,16 @@ TEST_CASE("Model::is_rank0() returns correct rank status (v2.0)",
   } else {
     REQUIRE(is_rank0(model) == false);
   }
+}
+
+TEST_CASE("Model::mpi_comm() matches constructor communicator",
+          "[model][unit][rank]") {
+  World world = world::create(GridSize({4, 4, 4}));
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+  pfc::testing::MockModel model(fft, world, MPI_COMM_WORLD);
+  REQUIRE(model.mpi_comm() == MPI_COMM_WORLD);
+  REQUIRE(is_rank0(model) == mpi_comm_rank_is_zero(MPI_COMM_WORLD));
 }
 
 TEST_CASE("Model::is_rank0() is const-correct (v2.0)", "[model][unit][rank]") {

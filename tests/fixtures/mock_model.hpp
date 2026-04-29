@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -45,7 +45,9 @@ public:
    *
    * @note v2.0: FFT is now required at construction
    */
-  explicit MockModel(fft::IFFT &fft, const World &world) : Model(fft, world) {}
+  explicit MockModel(fft::IFFT &fft, const World &world,
+                     MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : Model(fft, world, mpi_comm) {}
 
   /**
    * @brief Mock step() implementation (does nothing)

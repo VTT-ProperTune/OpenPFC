@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <optional>
 #include <sstream>
 
 #include <mpi.h>
@@ -47,16 +48,13 @@ IntegratorTimings run_simulator_time_integration_loop(
     session.fft().reset_fft_time();
     session.simulator().begin_integrator_step();
     const double barrier_step_s = pfc::profiling::measure_barriered(comm, [&] {
+      std::optional<pfc::profiling::ProfilingContextScope> profile_ctx;
       if (profiler) {
         pfc::profiling::openpfc_begin_frame_with_step_and_rank(
             *profiler, session.time().get_increment(), rank_id);
+        profile_ctx.emplace(profiler);
       }
-      if (profiler) {
-        pfc::profiling::ProfilingContextScope scope(profiler);
-        step(session.simulator(), session.model());
-      } else {
-        step(session.simulator(), session.model());
-      }
+      step(session.simulator(), session.model());
     });
     const double fft_meter_s = session.fft().get_fft_time();
 

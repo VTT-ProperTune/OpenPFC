@@ -353,16 +353,6 @@ public:
    * @return Bytes counted above
    */
   size_t get_allocated_memory_bytes() const override { return mem_allocated; }
-
-  /**
-   * @brief Constructs a Tungsten model with the given World object
-   *
-   * @param world The World object defining the simulation domain
-   */
-  explicit Tungsten(pfc::FFT &fft, const pfc::World &world)
-      : pfc::Model(fft, world) {
-    // Additional initialization if needed
-  }
 };
 
 #endif // TUNGSTEN_MODEL_HPP

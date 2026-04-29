@@ -50,7 +50,8 @@ public:
    *
    * @param world The World object to initialize the model.
    */
-  explicit MyModel(FFT &fft, const World &world) : Model(fft, world) {
+  explicit MyModel(FFT &fft, const World &world, MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : Model(fft, world, mpi_comm) {
     // Additional initialization if needed
   }
 

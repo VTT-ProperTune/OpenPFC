@@ -68,6 +68,7 @@
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/simulation/model_field_registry.hpp>
+#include <openpfc/kernel/simulation/simulation_context.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -105,7 +106,9 @@ private:
   fft::IFFT &m_fft;
   ModelFieldRegistry m_fields; ///< Named real/complex field references (not owned)
   const World &m_world;        ///< Reference to the World object
-  bool m_rank0 = false;        ///< Flag indicating if the current MPI rank is 0
+  MPI_Comm m_mpi_comm{
+      MPI_COMM_WORLD};  ///< Communicator for rank-0 / collective alignment
+  bool m_rank0 = false; ///< True if this process is rank 0 in `m_mpi_comm`
 
 public:
   /**
@@ -122,6 +125,10 @@ public:
    * @param fft Reference to the FFT implementation (`IFFT`, e.g. `CpuFft`) used by
    * the model
    * @param world Reference to the World object
+   * @param mpi_comm MPI communicator for `is_rank0()` (default `MPI_COMM_WORLD`).
+   *        Use the same communicator as `Simulator` and FFT when running with a
+   *        non-world communicator (e.g. `SpectralSimulationSession` passes the
+   *        stack communicator).
    *
    * @note FFT is required at construction and cannot be changed later (immutable)
    * @note FFT object must outlive Model (reference semantics)
@@ -138,8 +145,9 @@ public:
    *
    * @since v2.0 (breaking change - FFT now required)
    */
-  Model(fft::IFFT &fft, const World &world)
-      : m_fft(fft), m_world(world), m_rank0(mpi::get_rank() == 0) {}
+  Model(fft::IFFT &fft, const World &world, MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : m_fft(fft), m_world(world), m_mpi_comm(mpi_comm),
+        m_rank0(mpi_comm_rank_is_zero(mpi_comm)) {}
 
   /**
    * @brief Disable copy constructor.
@@ -167,6 +175,14 @@ public:
    * @endcode
    */
   bool is_rank0() const noexcept { return m_rank0; }
+
+  /**
+   * @brief MPI communicator used for rank-0 checks (`is_rank0()`)
+   *
+   * Matches the communicator passed at construction; align with `Simulator` and
+   * FFT when using a subcommunicator or non-default world communicator.
+   */
+  [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_mpi_comm; }
 
   /**
    * @brief Get the decomposition object associated with the model.

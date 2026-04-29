@@ -343,8 +343,9 @@ public:
    *
    * @param world The World object to initialize the model.
    */
-  explicit Aluminum(pfc::FFT &fft, const pfc::World &world)
-      : pfc::Model(fft, world) {
+  explicit Aluminum(pfc::FFT &fft, const pfc::World &world,
+                    MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft, world, mpi_comm) {
     // Additional initialization if needed
   }
 

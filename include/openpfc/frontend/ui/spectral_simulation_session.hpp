@@ -49,7 +49,7 @@ public:
   explicit SpectralSimulationSession(const nlohmann::json &settings, MPI_Comm comm,
                                      int rank_id, int num_ranks)
       : m_stack(settings, comm, rank_id, num_ranks),
-        m_model(m_stack.fft(), m_stack.world()),
+        m_model(m_stack.fft(), m_stack.world(), m_stack.mpi_comm()),
         m_simulator(m_model, m_stack.time(), comm) {}
 
   [[nodiscard]] static std::unique_ptr<SpectralSimulationSession>

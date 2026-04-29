@@ -66,8 +66,6 @@
  * @endcode
  */
 template <typename RealType = double> class TungstenCUDA : public pfc::Model {
-  using pfc::Model::Model;
-
 private:
   // CUDA FFT (precision determined by data types, not template parameter)
   // Stored as unique_ptr, but FFT_Impl cannot be moved due to const members
@@ -118,7 +116,7 @@ public:
    * std::make_unique.
    *
    * @param decomp Decomposition object
-   * @param rank MPI rank
+   * @param rank MPI rank in `mpi_comm()` (same communicator as base `Model`)
    */
   void set_cuda_fft(const pfc::Decomposition &decomp, int rank) {
     auto options = heffte::default_options<heffte::backend::cufft>();
@@ -128,7 +126,7 @@ public:
     auto inbox = pfc::fft::layout::get_real_box(fft_layout, rank);
     auto outbox = pfc::fft::layout::get_complex_box(fft_layout, rank);
     auto r2c_direction = pfc::fft::layout::get_r2c_direction(fft_layout);
-    auto comm = MPI_COMM_WORLD;
+    const MPI_Comm comm = mpi_comm();
 
     // Create cuFFT-based FFT directly
     using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
@@ -143,15 +141,18 @@ public:
    * @param fft CPU FFT reference (used by base Model)
    * @param world Simulation domain
    */
-  explicit TungstenCUDA(pfc::FFT &fft, const pfc::World &world)
-      : pfc::Model(fft, world), m_cpu_buffer_valid(false) {
+  explicit TungstenCUDA(pfc::FFT &fft, const pfc::World &world,
+                        MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
     // Create CUDA events for non-blocking synchronization
     cudaEventCreate(&kernel_done_event);
     cudaEventCreate(&fft_ready_event);
-    // Initialize CUDA FFT based on world and MPI rank
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    // Initialize CUDA FFT using the same communicator as the base Model / App
+    // session
+    int rank = 0;
+    int size = 0;
+    MPI_Comm_rank(mpi_comm(), &rank);
+    MPI_Comm_size(mpi_comm(), &size);
     auto decomp = pfc::decomposition::create(get_world(), size);
     set_cuda_fft(decomp, rank);
   }

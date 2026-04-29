@@ -34,7 +34,8 @@
  * This file is part of the Simulation Control module, providing the main
  * execution framework for time-dependent simulations. Per-field result output is
  * delegated to **`simulator_results_dispatch.hpp`**
- * (`write_results_for_registered_fields`).
+ * (`write_results_for_registered_fields`). IC/BC application uses
+ * **`simulator_field_modifiers_dispatch.hpp`** (`apply_field_modifier_list`).
  *
  * @see model.hpp for physics model implementation
  * @see time.hpp for time state management
@@ -54,6 +55,7 @@
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/kernel/simulation/simulator_field_modifiers_dispatch.hpp>
 #include <openpfc/kernel/simulation/simulator_results_dispatch.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
@@ -400,18 +402,16 @@ public:
     Model &model = get_model();
     Time &time = get_time();
     const SimulationContext sim_ctx{m_mpi_comm};
-    for (const auto &ic : m_initial_conditions) {
-      ic->apply(sim_ctx, model, time.get_current());
-    }
+    pfc::apply_field_modifier_list(sim_ctx, model, time.get_current(),
+                                   m_initial_conditions);
   }
 
   void apply_boundary_conditions() {
     Model &model = get_model();
     Time &time = get_time();
     const SimulationContext sim_ctx{m_mpi_comm};
-    for (const auto &bc : m_boundary_conditions) {
-      bc->apply(sim_ctx, model, time.get_current());
-    }
+    pfc::apply_field_modifier_list(sim_ctx, model, time.get_current(),
+                                   m_boundary_conditions);
   }
 
   /**

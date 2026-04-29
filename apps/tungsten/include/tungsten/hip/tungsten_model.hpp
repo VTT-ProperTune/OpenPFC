@@ -44,8 +44,6 @@
  * @tparam RealType Real number type (float or double). Defaults to double.
  */
 template <typename RealType = double> class TungstenHIP : public pfc::Model {
-  using pfc::Model::Model;
-
 private:
   std::unique_ptr<pfc::fft::FFT_HIP> m_hip_fft;
 
@@ -77,7 +75,7 @@ public:
     auto inbox = pfc::fft::layout::get_real_box(fft_layout, rank);
     auto outbox = pfc::fft::layout::get_complex_box(fft_layout, rank);
     auto r2c_direction = pfc::fft::layout::get_r2c_direction(fft_layout);
-    auto comm = MPI_COMM_WORLD;
+    const MPI_Comm comm = mpi_comm();
 
     using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
     fft_r2c_hip fft_hip(inbox, outbox, r2c_direction, comm, options);
@@ -85,13 +83,15 @@ public:
     m_hip_fft = std::make_unique<pfc::fft::FFT_HIP>(std::move(fft_hip));
   }
 
-  explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world)
-      : pfc::Model(fft, world), m_cpu_buffer_valid(false) {
+  explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world,
+                       MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
     hipEventCreate(&kernel_done_event);
     hipEventCreate(&fft_ready_event);
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    int rank = 0;
+    int size = 0;
+    MPI_Comm_rank(mpi_comm(), &rank);
+    MPI_Comm_size(mpi_comm(), &size);
     auto decomp = pfc::decomposition::create(get_world(), size);
     set_hip_fft(decomp, rank);
   }
