@@ -54,6 +54,8 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)** and the num
 | `App` + JSON pipeline | [`app_pipeline.md`](app_pipeline.md) |
 | CMake options | [`build_options.md`](build_options.md) |
 | Editing documentation | [`contributing-docs.md`](contributing-docs.md) |
+| Contributing (code, tests, changelog) | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| Release history / upgrades | [`../CHANGELOG.md`](../CHANGELOG.md) |
 | Examples folder | [`../examples/README.md`](../examples/README.md) |
 | Published HTML API | [GitHub Pages dev docs](https://vtt-propertune.github.io/OpenPFC/dev/) |
 
@@ -64,6 +66,6 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)** and the num
 Remaining items that would still help:
 
 1. **Session transcripts** — Optional log snippets for a successful `05_simulator` and minimal tungsten run for copy-paste reassurance.
-2. **CHANGELOG user notes** — Per release, a short “upgrading from X” note when CMake options or config keys change.
+2. **CHANGELOG user notes** — Keep meaningful entries under **`[Unreleased]`** in **[`CHANGELOG.md`](../CHANGELOG.md)**; optional per-release “upgrading from X” blurbs when CMake or config keys change (the file is linked from **[`README.md`](README.md)** in this directory).
 3. **CI link check** — **`scripts/check_doc_links.py`** runs in the Documentation workflow; extend the script if you add new top-level doc paths.
 4. **Published site** — Mirror the **`docs/quickstart.md`** first paragraph on the GitHub Pages landing page if the HTML build ever diverges from the repo **`README.md`** main page.

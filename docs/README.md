@@ -17,6 +17,8 @@ This directory holds guides and assets. **Build and install** from the repositor
 | Short Q&A | [`faq.md`](faq.md) |
 | Understand JSON/TOML → **`Simulator`** | [`app_pipeline.md`](app_pipeline.md) |
 | Edit or add markdown in this tree | [`contributing-docs.md`](contributing-docs.md) |
+| Contribute code, tests, or changelog entries | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| See what changed between releases | [`../CHANGELOG.md`](../CHANGELOG.md) |
 
 ## Guides by topic
 
@@ -69,6 +71,8 @@ C++ snippets under [`api/examples/`](api/examples/) are included in the Doxygen 
 
 ## Other
 
+- **Changelog / release history:** [`CHANGELOG.md`](../CHANGELOG.md) (user-facing and developer-facing changes by version).
+- **Contributing (overview):** [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 - **Scalability analysis plan:** [`scalability_analysis_plan.md`](scalability_analysis_plan.md) (redirect when the experiment tree is present).
 - **Image / branding notes:** [`image-prompts.md`](image-prompts.md).
 

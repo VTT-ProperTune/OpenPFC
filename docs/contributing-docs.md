@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Contributing to documentation
 
-Repository-wide pointers (tests, changelog expectations): **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)**.
+Repository-wide pointers (tests, changelog expectations): **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)**. The doc index **[`README.md`](README.md)** lists **`CONTRIBUTING.md`** and **`CHANGELOG.md`** under *Where to go first* and *Other*.
 
 ## Before you open a PR
 
