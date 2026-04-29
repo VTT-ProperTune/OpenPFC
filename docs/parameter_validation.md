@@ -13,9 +13,21 @@ OpenPFC encourages fail-fast configuration: invalid or missing parameters should
 |-------|--------|------|
 | `ParameterMetadata<T>` | `openpfc/frontend/ui/parameter_metadata.hpp` | Describes one parameter: name, range, units, required, typical value. |
 | `ParameterValidator` | `openpfc/frontend/ui/parameter_validator.hpp` | Aggregates metadata, `validate(json)`, formats errors and summaries. |
-| `from_json` into your model | Your translation unit | Still used by `App` to apply `model.params` after construction. |
+| `from_json` into your model | Your translation unit | Used by the default spectral `App` path to apply `model.params` after the session is built (see below). |
 
 Validation is typically invoked from application `main` or a thin wrapper before the expensive `App::main()` path, or integrated inside your app’s settings loader if you have one.
+
+## Validation vs. App parsing order
+
+`ParameterValidator` and the default spectral pipeline both read the **`model.params` JSON object**, but they are separate layers:
+
+| Layer | When | Responsibility |
+|-------|------|------------------|
+| **Optional validation** | In *your* code, after loading the config and **before** `pfc::ui::App<Model>::main()` | Fail fast on missing keys, bad types, or out-of-range values using metadata you register on `ParameterValidator`. |
+| **Library `from_json`** | Inside `SpectralJsonAppRun::execute` (`app_spectral_run.hpp`), **after** `SpectralSimulationSession::assemble` and **before** `model.initialize(dt)` | Copies JSON fields into your model’s parameter struct via your `from_json` overload—same subtree as step 3 in [`app_pipeline.md`](app_pipeline.md#appconcretemodelmain-order-of-operations). |
+| **Wiring** | After initialization | `wire_simulator_from_settings` consumes `fields`, `initial_conditions`, `boundary_conditions`, etc.—not `model.params` for physics scalars. |
+
+The framework **never** calls `ParameterValidator` for you. If you validate in `main` and then call `app.main()`, validation runs first; the library still applies `from_json` so your model receives the parsed values. Keep validator metadata and `from_json` field names in sync to avoid rejecting configs that would parse, or accepting configs that `from_json` would mis-handle.
 
 ## Pattern
 
