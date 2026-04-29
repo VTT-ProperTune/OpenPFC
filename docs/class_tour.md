@@ -77,4 +77,6 @@ GPU FFT and device execution require the matching runtime headers and a build wi
 | [`glossary.md`](glossary.md) | Terminology |
 | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) | Build a small `App`-driven project |
 | [`extending_openpfc/README.md`](extending_openpfc/README.md) | Extension points checklist |
-| [`examples_catalog.md`](examples_catalog.md) | All `examples/` executables |
+| [`examples_catalog.md`](examples_catalog.md) | All `examples/` executables (with curriculum) |
+| [`api_examples_walkthrough.md`](api_examples_walkthrough.md) | Doxygen `docs/api/examples/` in reading order |
+| [`learning_paths.md`](learning_paths.md) | Role-based documentation tracks |

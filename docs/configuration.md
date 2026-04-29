@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 Many programs use `pfc::ui::App<Model>` and accept a single configuration file (JSON or TOML) on the command line. The exact keys depend on the model and how validation is set up, but the same structural ideas recur across apps.
 
-Read this first for the full pipeline: [`app_pipeline.md`](app_pipeline.md) (how settings map to `World`, FFT, `Simulator`, writers, ICs, BCs). For output formats, see [`io_results.md`](io_results.md). To build your own CMake project around `App<Model>`, see [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md); for `model.params` validation, [`parameter_validation.md`](parameter_validation.md) and the root `README.md` (Configuration Validation).
+Read this first for the full pipeline: [`app_pipeline.md`](app_pipeline.md) (how settings map to `World`, FFT, `Simulator`, writers, ICs, BCs). For output formats, see [`io_results.md`](io_results.md). To build your own CMake project around `App<Model>`, see [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md); for `model.params` validation, [`parameter_validation.md`](parameter_validation.md) and the root `README.md` (Configuration Validation). For a sequenced **run** track that ends with config-driven apps, see [`learning_paths.md`](learning_paths.md).
 
 ## Mental model
 
