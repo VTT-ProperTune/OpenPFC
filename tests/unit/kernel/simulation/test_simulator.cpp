@@ -140,7 +140,7 @@ TEST_CASE("Simulator::step advances Time before Model::step", "[simulator][unit]
   REQUIRE(model.step_call_count == 1);
   REQUIRE_THAT(model.last_step_time, WithinAbs(0.5, 1e-10));
   REQUIRE(sim.get_increment() == 1);
-  REQUIRE_THAT(sim.get_time().get_current(), WithinAbs(0.5, 1e-10));
+  REQUIRE_THAT(pfc::time::current(sim.get_time()), WithinAbs(0.5, 1e-10));
 
   sim.step();
   REQUIRE(model.step_call_count == 2);
@@ -174,7 +174,7 @@ TEST_CASE("Simulator begin/end/step_with_physics matches step()",
   }
   while (!sim_b.done()) {
     sim_b.step_with_physics(
-        [&] { pfc::step(model_b, sim_b.get_time().get_current()); });
+        [&] { pfc::step(model_b, pfc::time::current(sim_b.get_time())); });
   }
 
   REQUIRE(model_a.step_call_count == model_b.step_call_count);
@@ -202,7 +202,7 @@ TEST_CASE("Simulator phased begin/end matches step()", "[simulator][unit]") {
 
   while (!sim_b.done()) {
     sim_b.begin_integrator_step();
-    pfc::step(model_b, sim_b.get_time().get_current());
+    pfc::step(model_b, pfc::time::current(sim_b.get_time()));
     sim_b.end_integrator_step();
   }
 

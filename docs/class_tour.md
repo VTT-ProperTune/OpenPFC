@@ -50,7 +50,7 @@ flowchart TB
 | `Decomposition` | MPI partition; per-rank inbox/outbox | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
 | `IFFT` / `CpuFft` | Distributed FFT (HeFFTe); spectral operators | `openpfc/kernel/fft/fft.hpp`, `fft_fftw.hpp` | `examples/05_simulator.cpp` |
 | `Model` | Physics: fields, `initialize()`, `step()` | `openpfc/kernel/simulation/model.hpp` | `examples/04_diffusion_model.cpp`, `12_cahn_hilliard.cpp` |
-| `Time` | Time range, `dt`, output cadence | `openpfc/kernel/simulation/time.hpp` | Wired by `App` / `SpectralCpuStack` |
+| `Time` | Time range, `dt`, output cadence; `pfc::time::current` / `dt` / `done` / `next` / `do_save` mirror members | `openpfc/kernel/simulation/time.hpp` | Wired by `App` / `SpectralCpuStack` |
 | `Simulator` | Runs the loop: ICs, BCs, `step`, writers | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
 | `FieldModifier` | Initial / boundary updates on fields | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `SimulationContext` | MPI comm + rank context for modifiers | `openpfc/kernel/simulation/simulation_context.hpp` | Passed when applying modifiers |

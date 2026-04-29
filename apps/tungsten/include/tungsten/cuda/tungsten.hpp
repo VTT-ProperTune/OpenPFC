@@ -25,7 +25,7 @@ void step(pfc::Simulator &s, TungstenCUDA<RealType> &m) {
 #ifdef TUNGSTEN_DEBUG
   if (m.is_rank0()) std::cout << "Performing Tungsten CUDA step" << std::endl;
 #endif
-  double t = pfc::get_time(s).get_current();
+  double t = pfc::time::current(pfc::get_time(s));
   m.step(t);
   // perform some extra logic after the step, which can access both simulator
   // and model

@@ -252,9 +252,9 @@ void example_complete_simulation() {
 
   if (mpi::get_rank() == 0) {
     std::cout << "Step 4: Configured time integration\n";
-    std::cout << "  Duration: " << time.get_t1() << " time units\n";
-    std::cout << "  Time step: " << time.get_dt() << "\n";
-    std::cout << "  Save interval: " << time.get_saveat() << "\n\n";
+    std::cout << "  Duration: " << pfc::time::t1(time) << " time units\n";
+    std::cout << "  Time step: " << pfc::time::dt(time) << "\n";
+    std::cout << "  Save interval: " << pfc::time::saveat(time) << "\n\n";
   }
 
   // 5. Create simulator
@@ -292,8 +292,9 @@ void example_complete_simulation() {
 
   if (mpi::get_rank() == 0) {
     std::cout << "\n✓ Simulation completed successfully!\n";
-    std::cout << "  Final time: " << pfc::get_time(sim).get_current() << "\n";
-    std::cout << "  Total steps: " << pfc::get_time(sim).get_increment() << "\n";
+    std::cout << "  Final time: " << pfc::time::current(pfc::get_time(sim)) << "\n";
+    std::cout << "  Total steps: " << pfc::time::increment(pfc::get_time(sim))
+              << "\n";
   }
 }
 

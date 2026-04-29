@@ -24,7 +24,7 @@ template <typename RealType> void step(pfc::Simulator &s, TungstenHIP<RealType> 
 #ifdef TUNGSTEN_DEBUG
   if (m.is_rank0()) std::cout << "Performing Tungsten HIP step" << std::endl;
 #endif
-  double t = pfc::get_time(s).get_current();
+  double t = pfc::time::current(pfc::get_time(s));
   m.step(t);
 }
 

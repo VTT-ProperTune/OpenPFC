@@ -42,20 +42,20 @@ namespace simulator_integrator {
 /** @brief Shared body of `Simulator::begin_integrator_step` (ordering contract). */
 inline void begin_integrator_step(Simulator &sim) {
   Time &time = sim.get_time();
-  if (time.get_increment() == 0) {
+  if (pfc::time::increment(time) == 0) {
     sim.apply_initial_conditions();
     sim.apply_boundary_conditions();
-    if (time.do_save()) {
+    if (pfc::time::do_save(time)) {
       sim.write_results();
     }
   }
-  time.next();
+  pfc::time::next(time);
   sim.apply_boundary_conditions();
 }
 
 /** @brief Shared body of `Simulator::end_integrator_step`. */
 inline void end_integrator_step(Simulator &sim) {
-  if (sim.get_time().do_save()) {
+  if (pfc::time::do_save(sim.get_time())) {
     sim.write_results();
   }
 }

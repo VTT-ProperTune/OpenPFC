@@ -114,7 +114,7 @@ private:
       pfc::log_info(app_lg, std::string(detail::k_spectral_app_log_tag) +
                                 "Initializing model...");
     }
-    session.model().initialize(session.time().get_dt());
+    session.model().initialize(pfc::time::dt(session.time()));
   }
 
   void report_memory_usage_(

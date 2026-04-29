@@ -146,12 +146,14 @@ public:
    */
   Time &get_time() { return m_time; }
 
-  void initialize() { pfc::initialize(m_model, m_time.get_dt()); }
+  void initialize() { pfc::initialize(m_model, pfc::time::dt(m_time)); }
 
   /** @brief Rank 0 in mpi_comm() (same communicator passed to field modifiers) */
   [[nodiscard]] bool is_rank0() const noexcept { return m_is_rank0; }
 
-  unsigned int get_increment() { return get_time().get_increment(); }
+  unsigned int get_increment() {
+    return static_cast<unsigned>(pfc::time::increment(get_time()));
+  }
 
   /**
    * @brief Inspect registered results writers (read-only; for tests and tooling)
@@ -381,7 +383,7 @@ public:
     Model &model = get_model();
     Time &time = get_time();
     const SimulationContext sim_ctx{m_mpi_comm};
-    pfc::apply_field_modifier_list(sim_ctx, model, time.get_current(),
+    pfc::apply_field_modifier_list(sim_ctx, model, pfc::time::current(time),
                                    m_initial_conditions);
   }
 
@@ -389,7 +391,7 @@ public:
     Model &model = get_model();
     Time &time = get_time();
     const SimulationContext sim_ctx{m_mpi_comm};
-    pfc::apply_field_modifier_list(sim_ctx, model, time.get_current(),
+    pfc::apply_field_modifier_list(sim_ctx, model, pfc::time::current(time),
                                    m_boundary_conditions);
   }
 
@@ -489,7 +491,7 @@ public:
    */
   void step() {
     begin_integrator_step();
-    pfc::step(get_model(), get_time().get_current());
+    pfc::step(get_model(), pfc::time::current(get_time()));
     end_integrator_step();
   }
 
@@ -522,10 +524,7 @@ public:
    * @see Time::done() for time completion logic
    * @see get_time() to access current time
    */
-  bool done() {
-    Time &time = get_time();
-    return time.done();
-  }
+  bool done() { return pfc::time::done(get_time()); }
 };
 
 #include <openpfc/kernel/simulation/simulator_integrator.hpp>

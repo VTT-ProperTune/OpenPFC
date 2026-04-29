@@ -150,8 +150,8 @@ public:
 
 void print_statline(Simulator &s) {
   if (!pfc::is_rank0(s)) return;
-  int n = static_cast<int>(pfc::get_time(s).get_increment());
-  double t = pfc::get_time(s).get_current();
+  int n = pfc::time::increment(pfc::get_time(s));
+  double t = pfc::time::current(pfc::get_time(s));
   Model &model = pfc::get_model(s);
   Diffusion &diffusion_model = dynamic_cast<Diffusion &>(model);
   double min = diffusion_model.get_psi_min();

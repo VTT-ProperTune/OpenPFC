@@ -38,6 +38,8 @@
   return sim.is_rank0();
 }
 
-inline void step(Simulator &s, Model &m) { pfc::step(m, get_time(s).get_current()); }
+inline void step(Simulator &s, Model &m) {
+  pfc::step(m, pfc::time::current(get_time(s)));
+}
 
 #endif // PFC_KERNEL_SIMULATION_SIMULATOR_QUERIES_HPP

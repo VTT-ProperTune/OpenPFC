@@ -21,12 +21,13 @@ using pfc::get_world;
 void print_stats(Simulator &simulator) {
   // we can still access the model:
   auto &model = dynamic_cast<Diffusion &>(get_model(simulator));
-  auto &time = pfc::get_time(simulator);
+  auto &clock = pfc::get_time(simulator);
   int idx = model.get_midpoint_idx();
   if (idx == -1) return;
   auto &field = model.density();
-  cout << "n = " << time.get_increment() << ", t = " << time.get_current()
-       << ", psi[" << idx << "] = " << field[idx] << endl;
+  cout << "n = " << pfc::time::increment(clock)
+       << ", t = " << pfc::time::current(clock) << ", psi[" << idx
+       << "] = " << field[idx] << endl;
 }
 
 void run_test(Simulator &simulator) {

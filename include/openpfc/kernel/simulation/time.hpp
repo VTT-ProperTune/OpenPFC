@@ -759,6 +759,40 @@ public:
   };
 };
 
+/**
+ * @brief Non-member spellings mirroring @ref Time (consistent with `pfc::get_time`,
+ *        `pfc::get_world`, …).
+ */
+namespace time {
+
+[[nodiscard]] inline double current(const Time &t) noexcept {
+  return t.get_current();
+}
+
+[[nodiscard]] inline double dt(const Time &t) noexcept { return t.get_dt(); }
+
+[[nodiscard]] inline bool done(const Time &t) noexcept { return t.done(); }
+
+inline void next(Time &t) noexcept { t.next(); }
+
+[[nodiscard]] inline bool do_save(const Time &t) noexcept { return t.do_save(); }
+
+[[nodiscard]] inline int increment(const Time &t) noexcept {
+  return t.get_increment();
+}
+
+[[nodiscard]] inline double t0(const Time &t) noexcept { return t.get_t0(); }
+
+[[nodiscard]] inline double t1(const Time &t) noexcept { return t.get_t1(); }
+
+[[nodiscard]] inline double saveat(const Time &t) noexcept { return t.get_saveat(); }
+
+inline void set_increment(Time &t, int inc) { t.set_increment(inc); }
+
+inline void set_saveat(Time &t, double s) { t.set_saveat(s); }
+
+} // namespace time
+
 } // namespace pfc
 
 #endif

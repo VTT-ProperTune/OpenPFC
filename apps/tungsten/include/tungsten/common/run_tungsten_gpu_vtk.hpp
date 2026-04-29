@@ -89,7 +89,7 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
   pfc::Time time(pfc::ui::from_json<pfc::Time>(settings));
 
   if (rank0) std::cout << "Initializing model..." << std::endl;
-  model.initialize(time.get_dt());
+  model.initialize(pfc::time::dt(time));
 
   pfc::Simulator simulator(model, time);
 
@@ -159,30 +159,31 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
 
   if (rank0) std::cout << "Starting simulation..." << std::endl;
 
-  while (!time.done()) {
-    time.next();
+  while (!pfc::time::done(time)) {
+    pfc::time::next(time);
 
     model.prepare_for_field_modifiers();
     simulator.apply_boundary_conditions();
     model.finalize_after_field_modifiers();
 
-    double t = time.get_current();
+    double t = pfc::time::current(time);
     model.step(t);
 
-    double saveat = time.get_saveat();
-    double dt = time.get_dt();
+    double saveat = pfc::time::saveat(time);
+    double dt = pfc::time::dt(time);
     if (saveat > 0.0 && dt > 0.0) {
       int save_interval = static_cast<int>(std::round(saveat / dt));
-      if (save_interval > 0 && time.get_increment() % save_interval == 0) {
+      if (save_interval > 0 && pfc::time::increment(time) % save_interval == 0) {
         if (rank0)
-          std::cout << "Step " << time.get_increment() << ", t = " << t
+          std::cout << "Step " << pfc::time::increment(time) << ", t = " << t
                     << ", writing results..." << std::endl;
         simulator.write_results();
       }
     }
 
-    if (rank0 && time.get_increment() % 10 == 0) {
-      std::cout << "Step " << time.get_increment() << ", t = " << t << std::endl;
+    if (rank0 && pfc::time::increment(time) % 10 == 0) {
+      std::cout << "Step " << pfc::time::increment(time) << ", t = " << t
+                << std::endl;
     }
   }
 

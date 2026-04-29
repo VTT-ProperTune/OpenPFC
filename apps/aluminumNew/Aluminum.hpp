@@ -514,7 +514,7 @@ void step(pfc::Simulator &s, Aluminum &m) {
     }
   }
 
-  double t = pfc::get_time(s).get_current();
+  double t = pfc::time::current(pfc::get_time(s));
   m.step(t);
   // perform some extra logic after the step, which can access both simulator
   // and model
