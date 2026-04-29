@@ -21,6 +21,8 @@
 #define OPENPFC_TESTS_DIFFUSION_MODEL_HPP
 
 #include <complex>
+
+#include "diffusion_spectral_helpers.hpp"
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
@@ -153,20 +155,7 @@ public:
    * @param t Current time (unused in linear diffusion)
    */
   void step(double /* t */) override {
-    auto &fft = get_fft();
-
-    // Transform to k-space
-    // LLM: FFT is MPI-aware - handles distributed memory automatically
-    fft.forward(m_psi, m_psi_F);
-
-    // Apply operator in k-space
-    // LLM: Hot loop - no allocations, fully vectorizable
-    for (size_t k = 0, N = m_psi_F.size(); k < N; k++) {
-      m_psi_F[k] = m_opL[k] * m_psi_F[k];
-    }
-
-    // Transform back to real space
-    fft.backward(m_psi_F, m_psi);
+    diffusion_example::spectral_diffusion_step(get_fft(), m_psi, m_psi_F, m_opL);
   }
 
   /**

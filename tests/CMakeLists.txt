@@ -10,6 +10,8 @@ add_executable(openpfc-tests runtests.cpp)
 
 # Add tests/ directory to include path so fixtures/ can be found
 target_include_directories(openpfc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# Share example-local helpers (e.g. diffusion spectral step) with fixtures
+target_include_directories(openpfc-tests PRIVATE ${CMAKE_SOURCE_DIR}/examples)
 
 # Add test subdirectories (they will add their sources via target_sources)
 add_subdirectory(unit)

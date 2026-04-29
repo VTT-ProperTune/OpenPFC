@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include <algorithm>
 #include <iostream>
-#include <limits>
 
+#include "diffusion_spectral_helpers.hpp"
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -172,13 +171,8 @@ public:
    *
    */
   void step(double) override {
-    auto &fft = pfc::get_fft(*this); // Get reference to FFT object
-    fft.forward(psi, psi_F);         // Perform forward FFT, psi_F = fft(psi)
-    for (int k = 0, N = psi_F.size(); k < N; k++) {
-      psi_F[k] = opL[k] * psi_F[k]; // Calculate result psi_F = opL*psi_F
-    }
-    fft.backward(psi_F, psi); // Perform backward FFT, psi = ifft(psi_F)
-    find_minmax();            // find minimum and maximum values of psi
+    diffusion_example::spectral_diffusion_step(pfc::get_fft(*this), psi, psi_F, opL);
+    find_minmax();
   }
 
   /**
@@ -188,32 +182,7 @@ public:
    * between different MPI ranks.
    */
   void find_minmax() {
-    // Count local minimum and maximum for this particular rank
-    double local_min = std::numeric_limits<double>::max();
-    double local_max = std::numeric_limits<double>::min();
-    auto min_max_finder = [&local_min, &local_max](const double &value) {
-      local_min = std::min(local_min, value);
-      local_max = std::max(local_max, value);
-    };
-    std::for_each(psi.begin(), psi.end(), min_max_finder);
-
-    // This would print maximum only for this particular part of domain attached
-    // to this MPI process, but usually that is NOT what we are trying to do:
-    // cout << "max = " << local_max << endl;
-
-    // Thus, we need some MPI communication. We use MPI_Reduce to make MIN and
-    // MAX reductions and send results to rank 0.
-    MPI_Reduce(&local_min, &psi_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&local_max, &psi_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    //                               ^ size                  ^ rank where to
-    //                               send
-
-    // If the result is needed in all other ranks also, we can use MPI_Allreduce
-    // to do that:
-    /*
-    MPI_Allreduce(&local_min, &psi_min, 1, MPI_DOUBLE, MPI_MIN, comm);
-    MPI_Allreduce(&local_max, &psi_max, 1, MPI_DOUBLE, MPI_MAX, comm);
-    */
+    diffusion_example::reduce_psi_min_max_mpi(psi, psi_min, psi_max);
   }
 };
 
