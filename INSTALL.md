@@ -9,9 +9,13 @@ This document is the **supported** source build guide. OpenPFC is **routinely te
 
 ### MPI: OpenMPI from modules — do not improvise with another stack
 
-This guide’s **source of truth** for MPI is **OpenMPI provided through environment modules** (`module load openmpi` after `module load gcc/…`), as in §1 below. That matches how OpenPFC and HeFFTe are meant to be built together on clusters and many dev machines.
+This guide’s **source of truth** for MPI is **Open MPI** from **environment modules** (`module load openmpi` after `module load gcc/…`), as in §1 below. That matches how OpenPFC and HeFFTe are meant to be built together on clusters and many dev machines.
 
-- **Do not** point CMake at an arbitrary system MPI just because `mpicc` exists (for example **MPICH** under `/usr/lib64/mpich` on RHEL-style systems). **OpenMPI and MPICH are different implementations**; HeFFTe and OpenPFC must be configured, built, and run against the **same** MPI. Mixing “HeFFTe built with MPICH” and “OpenPFC expecting OpenMPI” (or the reverse) produces confusing link or runtime failures.
+The **reference version** used in day-to-day development and in the pinned **tohtori** toolchain is **Open MPI 4.1.1** (`module load openmpi/4.1.1` where your site provides it — see **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`**). Other Open MPI versions may work, but **GCC 11.2 + Open MPI 4.1.1** is the combination this repository is exercised against most often.
+
+- **Run with the same MPI you built with:** after loading modules, **`which mpirun`** and **`which mpicxx`** must come from the **same** Open MPI installation (e.g. both under `/share/apps/OpenMPI/4.1.1/bin` on a typical module layout). Do **not** launch binaries with a system **MPICH** `mpirun` (e.g. `/usr/lib64/mpich/bin/mpirun`) if OpenPFC was linked against Open MPI — you will see link warnings about conflicting `libmpi.so` and runtime errors around **`MPI_Finalize`**.
+
+- **Do not** point CMake at an arbitrary system MPI just because `mpicc` exists (for example **MPICH** under `/usr/lib64/mpich` on RHEL-style systems). **Open MPI and MPICH are different implementations**; HeFFTe and OpenPFC must be configured, built, and run against the **same** MPI. Mixing “HeFFTe built with MPICH” and “OpenPFC expecting Open MPI” (or the reverse) produces confusing link or runtime failures.
 - **Do** run `module load openmpi` (or your site’s equivalent name — use `module avail openmpi`), then confirm you are using **that** toolchain before building HeFFTe **and** OpenPFC:
   ```bash
   which mpicc
@@ -25,7 +29,7 @@ Load a recent GCC, **OpenMPI**, and (for GPU) CUDA **before** configuring anythi
 
 ```bash
 module load gcc/11.2.0
-module load openmpi          # e.g. openmpi/4.1.1 — use `module avail openmpi` on your site
+module load openmpi/4.1.1    # reference version for this guide and tohtori; use `module avail openmpi` on your site
 module load cuda/12.9        # for GPU — run `module avail cuda` and pick a version where `nvcc --version` works
 ```
 
