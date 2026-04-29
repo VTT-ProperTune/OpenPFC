@@ -16,14 +16,26 @@ This directory holds guides and assets. Build and install from the repository ro
 
 Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so you do not land on Doxygen alone.
 
+### First-time onboarding (pick one)
+
+| Time | Goal | Open |
+|------|------|------|
+| ~15 min | Clone → build → `mpirun` one example | [`start_here_15_minutes.md`](start_here_15_minutes.md) |
+| 20 min | Understand the spectral data-flow story | [`spectral_stack.md`](spectral_stack.md) |
+| As needed | Copy-paste **recipes** (simulator, tungsten JSON, VTK/binary) | [`recipes/README.md`](recipes/README.md) |
+| Before GPU | CPU vs CUDA/HIP decision + golden path | [`gpu_path_decision.md`](gpu_path_decision.md) |
+| Clusters | Slurm, MPI-IO, profiling — one runbook index | [`hpc_operator_guide.md`](hpc_operator_guide.md) |
+
 ## Where to go first
 
 | If you want to… | Open |
 |-----------------|------|
+| **Fastest first run** (build + one `mpirun`) | [`start_here_15_minutes.md`](start_here_15_minutes.md) |
 | Pick a guided track (run apps, extend models, or integrate the library) | [`learning_paths.md`](learning_paths.md) |
 | Jump in by role (personas) | [`personas.md`](personas.md) |
 | Figures and runnable entry points | [`showcase.md`](showcase.md) |
 | Step-by-step tutorials (`docs/tutorials/`) | [`tutorials/README.md`](tutorials/README.md) |
+| Named how-to **recipes** (simulator, tungsten, VTK/binary) | [`recipes/README.md`](recipes/README.md) |
 | Get running in one pass (examples, app, or `find_package`) | [`quickstart.md`](quickstart.md) |
 | Tutorials and the examples hub | [`getting_started/README.md`](getting_started/README.md) |
 | Fix configure/MPI/HeFFTe issues | [`troubleshooting.md`](troubleshooting.md) |
@@ -63,6 +75,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | Topic | Document |
 |--------|-----------|
 | CMake options | [`build_options.md`](build_options.md) |
+| **GPU vs CPU** — when to enable CUDA/HIP | [`gpu_path_decision.md`](gpu_path_decision.md) |
 | CPU vs GPU build trees | [`build_cpu_gpu.md`](build_cpu_gpu.md) |
 | Toolchain / optional stacks / doc QA scripts | [`dependency_matrix.md`](dependency_matrix.md) |
 | Code style / API shape | [`styleguide.md`](styleguide.md) |
@@ -78,6 +91,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 
 | Topic | Document |
 |--------|-----------|
+| **Spectral stack** (FFT → model → simulator → writers) | [`spectral_stack.md`](spectral_stack.md) |
 | Kernel / runtime / frontend | [`architecture.md`](architecture.md) |
 | Halo exchange (FD vs FFT-safe) | [`halo_exchange.md`](halo_exchange.md) |
 | Debugging, NaN checks | [`debugging.md`](debugging.md) |
@@ -86,6 +100,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 
 | Topic | Document |
 |--------|-----------|
+| **HPC runbook index** (Slurm, MPI-IO, profiling, site notes) | [`hpc_operator_guide.md`](hpc_operator_guide.md) |
 | Runtime profiling | [`performance_profiling.md`](performance_profiling.md) |
 | Profiling export schema | [`profiling_export_schema.md`](profiling_export_schema.md) |
 | LUMI-G (ROCm / Cray) | [`INSTALL.LUMI.md`](INSTALL.LUMI.md) |

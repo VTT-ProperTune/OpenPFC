@@ -53,7 +53,11 @@ See [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.m
 | Learning paths by role | [`learning_paths.md`](learning_paths.md) |
 | Showcase (figures → runs) | [`showcase.md`](showcase.md) |
 | End-to-end artifacts (PNG / binary) | [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
-| Onboarding | [`quickstart.md`](quickstart.md) |
+| Onboarding | [`quickstart.md`](quickstart.md), [`start_here_15_minutes.md`](start_here_15_minutes.md) |
+| How-to recipes | [`recipes/README.md`](recipes/README.md) |
+| Spectral stack (mental model) | [`spectral_stack.md`](spectral_stack.md) |
+| GPU vs CPU choice | [`gpu_path_decision.md`](gpu_path_decision.md) |
+| HPC runbook index | [`hpc_operator_guide.md`](hpc_operator_guide.md) |
 | Examples catalog + curriculum | [`examples_catalog.md`](examples_catalog.md) |
 | API examples reading order | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
 | Tutorials hub | [`tutorials/README.md`](tutorials/README.md) |

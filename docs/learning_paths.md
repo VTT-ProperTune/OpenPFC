@@ -13,16 +13,18 @@ Goal: build OpenPFC, run a shipped application with a sample input, and know whe
 
 | Step | What to read / do |
 |------|-------------------|
+| 0 | **Optional fastest lane:** [`start_here_15_minutes.md`](start_here_15_minutes.md) (single success path + one troubleshooting fork) |
 | 1 | Install and toolchain: [`INSTALL.md`](../INSTALL.md) |
 | 2 | Fast path from clone to `mpirun`: [`quickstart.md`](quickstart.md) §1–2B |
-| 3 | Which binary and config: [`applications.md`](applications.md) (**App chooser** table) |
-| 4 | JSON/TOML vocabulary: [`configuration.md`](configuration.md), [`app_pipeline.md`](app_pipeline.md) |
-| 5 | Result files (binary / VTK / PNG): [`io_results.md`](io_results.md) |
-| 6 | End-to-end “files on disk” (PNG + Tungsten binary): [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
-| 7 | More walkthroughs (VTK/ParaView, HeFFTe `plan_options`, spectral `examples/` sequence): [`tutorials/README.md`](tutorials/README.md) |
-| 8 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |
-| 9 | Slurm / batch basics: [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md), [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) |
-| 10 | GPU / LUMI-style jobs: [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
+| 3 | Spectral data-flow story + cluster runbook index: [`spectral_stack.md`](spectral_stack.md), [`hpc_operator_guide.md`](hpc_operator_guide.md) |
+| 4 | Which binary and config: [`applications.md`](applications.md) (**App chooser** table) |
+| 5 | JSON/TOML vocabulary: [`configuration.md`](configuration.md), [`app_pipeline.md`](app_pipeline.md) |
+| 6 | Result files (binary / VTK / PNG): [`io_results.md`](io_results.md) |
+| 7 | End-to-end “files on disk” (PNG + Tungsten binary): [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
+| 8 | More walkthroughs (VTK/ParaView, HeFFTe `plan_options`, spectral `examples/` sequence): [`tutorials/README.md`](tutorials/README.md) |
+| 9 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |
+| 10 | Slurm / batch basics: [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md), [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) |
+| 11 | GPU path + LUMI-style jobs: [`gpu_path_decision.md`](gpu_path_decision.md), [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
 
 ## Extend physics and declarative configs (researcher / developer)
 

@@ -5,6 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Quick start
 
+**Brand new?** If you want the shortest linear path (clone → build → one `mpirun`), use [`start_here_15_minutes.md`](start_here_15_minutes.md) first, then come back here for the full menu of tracks.
+
 This page is the fast path from a clone to a running simulation or a linked program. For install details (modules, HeFFTe 2.4.1, CUDA/HIP), use [`INSTALL.md`](../INSTALL.md) first.
 
 ## What you are building toward

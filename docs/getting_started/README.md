@@ -5,12 +5,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Getting started
 
-New to OpenPFC? Start with [`../quickstart.md`](../quickstart.md) (install → run examples or an app → or link the library in your own CMake project). For a **sequenced** path by role, use [`../learning_paths.md`](../learning_paths.md). **Short persona pages:** [`../personas.md`](../personas.md).
+New to OpenPFC? **Shortest path:** [`../start_here_15_minutes.md`](../start_here_15_minutes.md). Then [`../quickstart.md`](../quickstart.md) (install → run examples or an app → or link the library in your own CMake project). For a **sequenced** path by role, use [`../learning_paths.md`](../learning_paths.md). **Short persona pages:** [`../personas.md`](../personas.md). **How-to recipes:** [`../recipes/README.md`](../recipes/README.md).
 
 ## Tutorials (in-repo)
 
 | Topic | Document |
 |--------|-----------|
+| ~15 min first run (clone → build → `mpirun`) | [`../start_here_15_minutes.md`](../start_here_15_minutes.md) |
+| Spectral stack mental model | [`../spectral_stack.md`](../spectral_stack.md) |
+| Named how-to recipes | [`../recipes/README.md`](../recipes/README.md) |
 | Learning paths by role (run / extend / integrate) | [`../learning_paths.md`](../learning_paths.md) |
 | Showcase (figures → apps / examples) | [`../showcase.md`](../showcase.md) |
 | Tutorials hub (`docs/tutorials/`) | [`../tutorials/README.md`](../tutorials/README.md) |

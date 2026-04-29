@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tutorials (`docs/tutorials/`)
 
-Step-by-step and workflow guides. Install and MPI setup: [`INSTALL.md`](../../INSTALL.md). Full documentation index: [`../README.md`](../README.md). **Role-based paths:** [`../learning_paths.md`](../learning_paths.md).
+Step-by-step and workflow guides. Install and MPI setup: [`INSTALL.md`](../../INSTALL.md). Full documentation index: [`../README.md`](../README.md). **Role-based paths:** [`../learning_paths.md`](../learning_paths.md). **Shortest first run:** [`../start_here_15_minutes.md`](../start_here_15_minutes.md). **Named recipes:** [`../recipes/README.md`](../recipes/README.md). **Spectral mental model:** [`../spectral_stack.md`](../spectral_stack.md). **GPU vs CPU:** [`../gpu_path_decision.md`](../gpu_path_decision.md).
 
 | Tutorial | What you will do |
 |----------|------------------|

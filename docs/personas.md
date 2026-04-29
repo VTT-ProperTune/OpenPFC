@@ -9,6 +9,8 @@ Short entry points. Full index: [`README.md`](README.md). Sequenced tracks: [`le
 
 ## I run tungsten (or another `App`) on a cluster
 
+**Fastest lane (clone → build → one example):** [`start_here_15_minutes.md`](start_here_15_minutes.md). **Cluster runbook index (Slurm, MPI-IO, profiling):** [`hpc_operator_guide.md`](hpc_operator_guide.md).
+
 1. [`INSTALL.md`](../INSTALL.md) — modules, MPI, HeFFTe. Optional one-page matrix: [`dependency_matrix.md`](dependency_matrix.md).  
 2. [`quickstart.md`](quickstart.md) §2B — first `mpirun`.  
 3. [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md) — generic Slurm skeleton (`#SBATCH`, launcher).  
@@ -20,6 +22,7 @@ Short entry points. Full index: [`README.md`](README.md). Sequenced tracks: [`le
 ## I extend physics in C++ (`Model`, modifiers)
 
 1. [`architecture.md`](architecture.md) — layers.  
+1b. [`spectral_stack.md`](spectral_stack.md) — spectral path (FFT → model → simulator).  
 2. [`class_tour.md`](class_tour.md) — types and headers.  
 3. [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md) — `04` → `05` → `12`.  
 4. [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) — IC/BC without nested loops.  

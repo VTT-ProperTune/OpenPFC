@@ -66,7 +66,7 @@ T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *�
 
 ## Quick start
 
-First time with the repo? Follow [docs/quickstart.md](docs/quickstart.md) (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). **Sequenced paths by role:** [docs/learning_paths.md](docs/learning_paths.md). **Figures and what to run:** [docs/showcase.md](docs/showcase.md). **Build → artifacts on disk (PNG / binary):** [docs/tutorials/end_to_end_visualization.md](docs/tutorials/end_to_end_visualization.md). Tutorial prose lives under [docs/getting_started/](docs/getting_started/); runnable targets and a **curriculum** are in [docs/examples_catalog.md](docs/examples_catalog.md); Doxygen snippet order: [docs/api_examples_walkthrough.md](docs/api_examples_walkthrough.md). Shipped programs: [docs/applications.md](docs/applications.md). Short Q&A: [docs/faq.md](docs/faq.md).
+First time with the repo? **Shortest path:** [docs/start_here_15_minutes.md](docs/start_here_15_minutes.md). Then [docs/quickstart.md](docs/quickstart.md) (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). **Sequenced paths by role:** [docs/learning_paths.md](docs/learning_paths.md). **Named how-tos:** [docs/recipes/README.md](docs/recipes/README.md). **Figures and what to run:** [docs/showcase.md](docs/showcase.md). **Build → artifacts on disk (PNG / binary):** [docs/tutorials/end_to_end_visualization.md](docs/tutorials/end_to_end_visualization.md). Tutorial prose lives under [docs/getting_started/](docs/getting_started/); runnable targets and a **curriculum** are in [docs/examples_catalog.md](docs/examples_catalog.md); Doxygen snippet order: [docs/api_examples_walkthrough.md](docs/api_examples_walkthrough.md). Shipped programs: [docs/applications.md](docs/applications.md). Short Q&A: [docs/faq.md](docs/faq.md).
 
 ## Documentation
 
@@ -80,7 +80,9 @@ If you are browsing the [source tree](https://github.com/VTT-ProperTune/OpenPFC)
 | Topic | Document |
 |------|----------|
 | Master index (all markdown guides) | [docs/README.md](docs/README.md) |
+| ~15 min first run (clone → build → `mpirun`) | [docs/start_here_15_minutes.md](docs/start_here_15_minutes.md) |
 | Learning paths by role | [docs/learning_paths.md](docs/learning_paths.md) |
+| How-to recipes (simulator, tungsten, VTK/binary) | [docs/recipes/README.md](docs/recipes/README.md) |
 | Tutorials hub (VTK, HeFFTe, spectral examples, …) | [docs/tutorials/README.md](docs/tutorials/README.md) |
 | Docs by role (personas) | [docs/personas.md](docs/personas.md) |
 | Binary MPI-IO field format | [docs/binary_field_io_spec.md](docs/binary_field_io_spec.md) |
