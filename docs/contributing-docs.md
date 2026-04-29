@@ -11,8 +11,9 @@ Repository-wide pointers (tests, changelog expectations): [`../CONTRIBUTING.md`]
 
 1. Relative links — From a file under `docs/`, paths like `../INSTALL.md` reach the repo root. Nested files (e.g. `docs/getting_started/01-basics/README.md`) need enough `..` segments. Run the checker (below).
 2. SPDX — When you edit a file that already has `SPDX-FileCopyrightText`, update the year to the current calendar year (see project rules).
-3. Cross-link new guides — Add a row to [`README.md`](README.md) (*First-time onboarding*, *Where to go first*, and the right topic table—Guides by topic or Tutorials). Short **goal-oriented** pages belong under [`recipes/`](recipes/) with an index row in [`recipes/README.md`](recipes/README.md). List narrative tutorials in [`tutorials/README.md`](tutorials/README.md), update [`personas.md`](personas.md) if a new **role** entry fits, and wire from [`quickstart.md`](quickstart.md) and [`start_here_15_minutes.md`](start_here_15_minutes.md) when the audience is new users. For discoverability, add a line to the [`faq.md`](faq.md) *Documentation map* if the page answers a common “where do I find…?” question.
-4. Topic-specific hooks — Examples: extension / `App` docs should link [`app_pipeline.md`](app_pipeline.md) and [`class_tour.md`](class_tour.md); validation UX should mention [`parameter_validation.md`](parameter_validation.md) and the root `README.md` validation section; GPU CMake flags should point at [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) and [`build_cpu_gpu.md`](build_cpu_gpu.md); test-related CMake knobs belong in [`testing.md`](testing.md) as well as `build_options.md`.
+3. Cross-link new guides — Add a row to [`README.md`](README.md) (*First-time onboarding*, *Where to go first*, and the right topic table—Guides by topic or Tutorials). Short **goal-oriented** pages belong under [`recipes/`](recipes/) with an index row in [`recipes/README.md`](recipes/README.md). List narrative tutorials in [`tutorials/README.md`](tutorials/README.md), update [`personas.md`](personas.md) if a new **role** entry fits, and wire from [`quickstart.md`](quickstart.md) and [`start_here_15_minutes.md`](start_here_15_minutes.md) when the audience is new users. For discoverability, add a line to the [`faq.md`](faq.md) *Documentation map* if the page answers a common “where do I find…?” question. **ADRs** for architectural decisions go under [`adr/`](adr/) with an index row in [`adr/README.md`](adr/README.md).
+4. **User-visible behavior** — If the PR changes how people build, configure, or run OpenPFC, update at least one of: [`INSTALL.md`](../INSTALL.md), a **tutorial** or **recipe**, [`spectral_app_config_reference.md`](spectral_app_config_reference.md), or [`CHANGELOG.md`](../CHANGELOG.md) (as appropriate). Purely internal refactors may skip prose if the contract is unchanged.
+5. Topic-specific hooks — Examples: extension / `App` docs should link [`app_pipeline.md`](app_pipeline.md) and [`class_tour.md`](class_tour.md); validation UX should mention [`parameter_validation.md`](parameter_validation.md) and the root `README.md` validation section; GPU CMake flags should point at [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) and [`build_cpu_gpu.md`](build_cpu_gpu.md); test-related CMake knobs belong in [`testing.md`](testing.md) as well as `build_options.md`.
 
 ## Check markdown links locally
 
@@ -36,6 +37,20 @@ python3 scripts/check_end_to_end_allen_cahn.py
 ```
 
 They run in the Documentation workflow after the link checker.
+
+## Bash fenced blocks (CI)
+
+` ```bash ` / ` ```sh ` snippets under `docs/` are checked with `bash -n`:
+
+```bash
+python3 scripts/check_doc_bash_syntax.py
+```
+
+Keep examples syntactically valid; use comments for non-literal lines if needed.
+
+## Optional printable handbook
+
+Maintainers can build a concatenated PDF/HTML — see [`handbook_build.md`](handbook_build.md) and [`scripts/build_handbook.sh`](../scripts/build_handbook.sh).
 
 ## Style
 

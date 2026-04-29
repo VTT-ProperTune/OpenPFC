@@ -36,6 +36,7 @@ Use this page as a **single entry point** for production-style runs: batch syste
 | Topic | Document |
 |--------|-----------|
 | Profiling hooks and export | [`performance_profiling.md`](performance_profiling.md), [`profiling_export_schema.md`](profiling_export_schema.md) |
+| Symptom → fix playbooks | [`operator_playbooks.md`](operator_playbooks.md) |
 | Configure / MPI / HeFFTe failures | [`troubleshooting.md`](troubleshooting.md) |
 | Halo / FFT / FD interactions | [`halo_exchange.md`](halo_exchange.md), [`architecture.md`](architecture.md) |
 

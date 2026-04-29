@@ -1,0 +1,8 @@
+# Ordered list of markdown files for scripts/build_handbook.sh (paths relative to repo root)
+# Lines starting with # are ignored; blank lines ignored.
+
+INSTALL.md
+docs/start_here_15_minutes.md
+docs/spectral_stack.md
+docs/spectral_app_config_reference.md
+docs/hpc_operator_guide.md

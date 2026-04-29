@@ -58,6 +58,14 @@ See [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.m
 | Spectral stack (mental model) | [`spectral_stack.md`](spectral_stack.md) |
 | GPU vs CPU choice | [`gpu_path_decision.md`](gpu_path_decision.md) |
 | HPC runbook index | [`hpc_operator_guide.md`](hpc_operator_guide.md) |
+| When OpenPFC is (not) right; FD vs spectral direction | [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md) |
+| Doc vs release versioning | [`documentation_versioning.md`](documentation_versioning.md) |
+| Paper → repository map | [`from_paper_to_run.md`](from_paper_to_run.md) |
+| Workshop curriculum | [`workshop/README.md`](workshop/README.md) |
+| ADRs (architecture decisions) | [`adr/README.md`](adr/README.md) |
+| Operator playbooks (symptom → fix) | [`operator_playbooks.md`](operator_playbooks.md) |
+| Numerics / limits | [`science_numerics_limits.md`](science_numerics_limits.md) |
+| Printable handbook | [`handbook_build.md`](handbook_build.md) |
 | Examples catalog + curriculum | [`examples_catalog.md`](examples_catalog.md) |
 | API examples reading order | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
 | Tutorials hub | [`tutorials/README.md`](tutorials/README.md) |

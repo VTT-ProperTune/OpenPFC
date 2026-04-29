@@ -26,6 +26,19 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | Before GPU | CPU vs CUDA/HIP decision + golden path | [`gpu_path_decision.md`](gpu_path_decision.md) |
 | Clusters | Slurm, MPI-IO, profiling — one runbook index | [`hpc_operator_guide.md`](hpc_operator_guide.md) |
 
+### Teaching, quality bar, and expectations
+
+| Need | Document |
+|------|----------|
+| Honest fit (“when not”) + **FD vs spectral** direction | [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md) |
+| Prose vs **release** tags | [`documentation_versioning.md`](documentation_versioning.md) |
+| **Publication →** repo entry points | [`from_paper_to_run.md`](from_paper_to_run.md) |
+| **Workshop** curriculum (three half-days) | [`workshop/README.md`](workshop/README.md) |
+| **Architecture decisions** (ADRs) | [`adr/README.md`](adr/README.md) |
+| **Symptom → fix** playbooks | [`operator_playbooks.md`](operator_playbooks.md) |
+| **Numerics** / stability caveats | [`science_numerics_limits.md`](science_numerics_limits.md) |
+| **Printable handbook** (optional `pandoc`) | [`handbook_build.md`](handbook_build.md) |
+
 ## Where to go first
 
 | If you want to… | Open |
@@ -86,6 +99,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 |--------|-----------|
 | Tungsten PFC (what the shipped app solves) | [`science_tungsten_quicklook.md`](science_tungsten_quicklook.md) |
 | Cahn–Hilliard example vs Allen–Cahn app | [`science_cahn_hilliard_vs_allen_cahn.md`](science_cahn_hilliard_vs_allen_cahn.md) |
+| Numerics limits (timestep, resolution, “pretty pictures”) | [`science_numerics_limits.md`](science_numerics_limits.md) |
 
 ### Architecture and numerics
 

@@ -68,6 +68,7 @@ Done:
 
 High impact, not tied to a single PR; pick by maintenance pain.
 
+- **Gradient / spatial-operator abstraction:** unify spectral (FFT) and finite-difference evaluation of gradients and related operators where supported; track [`adr/0002-gradient-operators-fd-vs-spectral.md`](adr/0002-gradient-operators-fd-vs-spectral.md) and [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md).
 - **Simulator:** If orchestration grows again, consider named collaborators (e.g. explicit IC/BC pipeline type vs results scheduling) on top of existing `*_dispatch.hpp` helpers.
 - **Model:** Narrower test- and tool-facing facades around field registry / world access (interface segregation) without a monolithic `Model` rewrite.
 - **Multi-backend apps:** Share physics and parameters across Tungsten (and similar) CPU/CUDA/HIP; keep only execution and FFT device setup separate.

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Glossary
 
-Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detail is in [`architecture.md`](architecture.md) and [`halo_exchange.md`](halo_exchange.md).
+Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detail is in [`architecture.md`](architecture.md) and [`halo_exchange.md`](halo_exchange.md). Use this page as a **hub**: other guides link here for jargon; follow links out to tutorials and ADRs.
 
 | Term | Meaning |
 |------|---------|
@@ -17,6 +17,7 @@ Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detai
 | In-place vs separated halos | In-place: ghosts stored in the same array as interior (good for FD-only). Separated: ghosts in face buffers so the interior stays FFT-safe — see [`halo_exchange.md`](halo_exchange.md). |
 | Spectral method | Spatial operators applied in Fourier space (FFT forward → multiply → inverse FFT); primary path in OpenPFC. |
 | Finite difference (FD) | Spatial derivatives on the grid with halos; coexists with spectral workflows when layouts match the docs. |
+| Abstract spatial operators (direction) | Roadmap: choose **spectral vs FD** for gradients/Laplacians behind a unified interface where supported — see [`adr/0002-gradient-operators-fd-vs-spectral.md`](adr/0002-gradient-operators-fd-vs-spectral.md). |
 | HeFFTe | Library for distributed FFT; OpenPFC’s FFT backend selection goes through HeFFTe (FFTW / CUDA / ROCm). |
 | Kernel / runtime / frontend | Kernel: portable abstractions. Runtime: CPU/CUDA/HIP execution and FFT. Frontend: optional JSON/TOML `App`, I/O helpers — see [`architecture.md`](architecture.md). |
 | Model | Your physics: fields, time step, spectral or FD operators (`kernel/simulation`). |

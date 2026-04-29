@@ -21,7 +21,7 @@ Goal: build OpenPFC, run a shipped application with a sample input, and know whe
 | 5 | JSON/TOML vocabulary: [`configuration.md`](configuration.md), [`app_pipeline.md`](app_pipeline.md) |
 | 6 | Result files (binary / VTK / PNG): [`io_results.md`](io_results.md) |
 | 7 | End-to-end “files on disk” (PNG + Tungsten binary): [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
-| 8 | More walkthroughs (VTK/ParaView, HeFFTe `plan_options`, spectral `examples/` sequence): [`tutorials/README.md`](tutorials/README.md) |
+| 8 | More walkthroughs (VTK/ParaView, HeFFTe `plan_options`, spectral `examples/` sequence): [`tutorials/README.md`](tutorials/README.md); optional **workshop** pacing: [`workshop/README.md`](workshop/README.md) |
 | 9 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |
 | 10 | Slurm / batch basics: [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md), [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) |
 | 11 | GPU path + LUMI-style jobs: [`gpu_path_decision.md`](gpu_path_decision.md), [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |

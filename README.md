@@ -83,6 +83,10 @@ If you are browsing the [source tree](https://github.com/VTT-ProperTune/OpenPFC)
 | ~15 min first run (clone → build → `mpirun`) | [docs/start_here_15_minutes.md](docs/start_here_15_minutes.md) |
 | Learning paths by role | [docs/learning_paths.md](docs/learning_paths.md) |
 | How-to recipes (simulator, tungsten, VTK/binary) | [docs/recipes/README.md](docs/recipes/README.md) |
+| When OpenPFC fits; FD vs spectral direction | [docs/when_not_to_use_openpfc.md](docs/when_not_to_use_openpfc.md) |
+| Workshop curriculum (teaching) | [docs/workshop/README.md](docs/workshop/README.md) |
+| Architecture decision records | [docs/adr/README.md](docs/adr/README.md) |
+| Documentation vs release tags | [docs/documentation_versioning.md](docs/documentation_versioning.md) |
 | Tutorials hub (VTK, HeFFTe, spectral examples, …) | [docs/tutorials/README.md](docs/tutorials/README.md) |
 | Docs by role (personas) | [docs/personas.md](docs/personas.md) |
 | Binary MPI-IO field format | [docs/binary_field_io_spec.md](docs/binary_field_io_spec.md) |
