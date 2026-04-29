@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Refactoring roadmap (architecture)
 
-This document tracks planned and in-progress structural improvements discussed for OpenPFC: clearer layering, less duplication, and alignment with SOLID-style practices. It complements [`architecture.md`](architecture.md).
+This document tracks planned and in-progress structural improvements discussed for OpenPFC: clearer layering, less duplication, and alignment with SOLID-style practices. It complements [`architecture.md`](../concepts/architecture.md).
 
 ## Phase A — Communicator consistency
 
@@ -31,9 +31,9 @@ Done:
 - `simulation_wiring_conditions.hpp`: `detail::wire_field_modifiers_from_json_array` — one implementation for parsing `initial_conditions` / `boundary_conditions` JSON arrays (inject `add_initial_conditions` vs `add_boundary_conditions` via callback).
 - Tungsten CUDA/HIP VTK integration tests call `add_initial_conditions_from_json` / `add_boundary_conditions_from_json` instead of duplicating factory loops; removed accidental double `apply_initial_conditions()` before the first step.
 - `from_json.hpp`: `set_from_json_log_rank` / `get_from_json_log_rank` replace static loggers fixed at rank `-1`; `App::main` sets the rank so FFT / HeFFTe parse diagnostics align with other MPI-aware logs. Split into `from_json_*` headers under the same umbrella; GPU stack factory includes `from_json_heffte.hpp` only.
-- `ResultsWriterMap` alias in `results_writer.hpp`; `Simulator::results_writers()` const accessor; `write_results_for_registered_fields` takes `ResultsWriterMap` (named type for tests / tooling). Doxygen on `write_results` / dispatch + [`io_results.md`](io_results.md) call out the narrow test seam.
+- `ResultsWriterMap` alias in `results_writer.hpp`; `Simulator::results_writers()` const accessor; `write_results_for_registered_fields` takes `ResultsWriterMap` (named type for tests / tooling). Doxygen on `write_results` / dispatch + [`io_results.md`](../user_guide/io_results.md) call out the narrow test seam.
 - Deprecated `pfc::get_field(Model&)` and `Simulator::get_field()` / `pfc::get_field(Simulator&)` removed; diffusion fixtures register `"default"` alongside `"density"` and drop `get_field()` overrides. `Model::get_field()` remains deprecated for out-of-tree subclasses.
-- Field modifier catalog: header + [`extending_openpfc/README.md`](extending_openpfc/README.md) document singleton vs explicit-catalog DI; `App::set_field_modifier_catalog` forwards an explicit catalog into `wire_simulator_from_settings` ([`app_pipeline.md`](app_pipeline.md)).
+- Field modifier catalog: header + [`extending_openpfc/README.md`](../extending_openpfc/README.md) document singleton vs explicit-catalog DI; `App::set_field_modifier_catalog` forwards an explicit catalog into `wire_simulator_from_settings` ([`app_pipeline.md`](../user_guide/app_pipeline.md)).
 - `app_spectral_run.hpp`: `SpectralJsonAppRun` owns the post-settings spectral pipeline (session → wire → integrate); `App` keeps settings I/O and pre-run logs.
 - `simulator_integrator.hpp` / `simulator_queries.hpp`: post-class `Simulator` helpers (scheduled writes, integrator seam, `get_model` / `get_time` / …) split out of `simulator.hpp` for readability (SRP); single include of `simulator.hpp` remains the public entry point.
 - `model_free_functions.hpp`: non-member `Model` API (`get_world`, `has_field`, `step`, …) split out of `model.hpp` (same include-once pattern as `simulator.hpp`).
@@ -46,7 +46,7 @@ Goal: One JSON → session pipeline for spectral runs, parameterized by FFT back
 Done (foundation):
 
 - **`spectral_cpu_stack_detail.hpp`**: `cpu_spectral_plan_options_from_json` and `cpu_fft_from_json_and_decomposition` centralize JSON → HeFFTe CPU FFT construction; `SpectralCpuStack` calls these (extension point for a future GPU stack builder using the same JSON surface).
-- **CPU spectral `backend` alignment:** `cpu_spectral_plan_options_from_json` merges a root-level `"backend"` into the `plan_options` object when the latter omits it; rejects `"cuda"` on this path (always `fft::CpuFft` / FFTW). See [`app_pipeline.md`](app_pipeline.md).
+- **CPU spectral `backend` alignment:** `cpu_spectral_plan_options_from_json` merges a root-level `"backend"` into the `plan_options` object when the latter omits it; rejects `"cuda"` on this path (always `fft::CpuFft` / FFTW). See [`app_pipeline.md`](../user_guide/app_pipeline.md).
 - **`spectral_fft_stack_factory.hpp`:** `merged_spectral_plan_options_json` (shared merge); `cuda_spectral_plan_options_from_json` / `hip_spectral_plan_options_from_json` apply the same HeFFTe JSON overlay as CPU but start from cuFFT / ROCm defaults (GPU integration tests and future GPU `App` paths).
 
 Planned steps:
@@ -73,17 +73,21 @@ Purpose: validate a **single JSON document** driving either CPU or GPU spectral 
 
 Goal: Fewer repeated parameters at JSON → `Simulator` boundaries; clearer seams for custom drivers and tests.
 
-**Layering:** Confirmed `include/openpfc/kernel` / `src/openpfc/kernel` do not include `openpfc/frontend` headers (see [`architecture.md`](architecture.md) *Include audit*).
+**Layering:** Confirmed `include/openpfc/kernel` / `src/openpfc/kernel` do not include `openpfc/frontend` headers (see [`architecture.md`](../concepts/architecture.md) *Include audit*).
 
 Done:
 
 - `JsonWiringContext` (`simulation_wiring_context.hpp`): bundles `MPI_Comm`, `mpi_rank`, and `rank0` for `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `wire_simulator_and_runtime_from_json`. Legacy `(comm, rank, rank0)` overloads forward to the context form; `SpectralSimulationSession` uses the context overload.
 - `configure_spectral_json_driver_hooks` (`spectral_json_driver_hooks.hpp`): one call sets `from_json` log rank and default NaN-check communicator; `App::main` uses it instead of duplicating globals.
-- `write_scheduled_simulator_results(Simulator&)` in `simulator.hpp`: extracted from `Simulator::write_results()` so scheduled writes + counter bump live in one free-function seam ([`io_results.md`](io_results.md)).
-- `results_writer_catalog.hpp` + optional `fields[].writer` string: `add_result_writers_from_json` resolves writers through `ResultsWriterCatalog` (default `binary`); inject a custom catalog at the wiring call site for tests and app-specific formats ([`app_pipeline.md`](app_pipeline.md)).
+- `write_scheduled_simulator_results(Simulator&)` in `simulator.hpp`: extracted from `Simulator::write_results()` so scheduled writes + counter bump live in one free-function seam ([`io_results.md`](../user_guide/io_results.md)).
+- `results_writer_catalog.hpp` + optional `fields[].writer` string: `add_result_writers_from_json` resolves writers through `ResultsWriterCatalog` (default `binary`); inject a custom catalog at the wiring call site for tests and app-specific formats ([`app_pipeline.md`](../user_guide/app_pipeline.md)).
 - **`errors.hpp` split:** `errors_config_format.hpp` (JSON field messages + `get_json_value_string`) and `errors_field_modifiers.hpp` (unknown modifier type + `list_valid_field_modifiers`); `errors.hpp` remains an umbrella include. `from_json_world_time.hpp` includes only the format header; `field_modifier_registry.hpp` includes only the modifier header.
 - **GPU FFT factories:** `runtime/common/heffte_gpu_r2c_layout.hpp` shares MPI rank/size helpers, HeFFTe box conversion, default r2c layout boxes, and MPI/decomposition mismatch checks between `fft_cuda.cpp` and `fft_hip.cpp`.
 - **JSON IC/BC `from_json`:** `from_json_field_modifiers.hpp` centralizes the repeated `"type"` guard in `detail::throw_unless_json_modifier_type` (same exception strings as before).
+- **`pfc::time::`:** free spellings in `time.hpp` (`current`, `dt`, `done`, `next`, `do_save`, …) aligned with `pfc::get_time` / simulator integrator usage.
+- **`SimulatorIntegratorLoopEnv`:** `app_integrator_loop.hpp` — primary `run_simulator_time_integration_loop(session, env)` plus legacy overload that packs MPI rank, profiler, and logger.
+- **Test fixtures:** `tests/fixtures/simulation_factories.hpp` (`make_world_cube_8`, `make_serial_decomposition`) for repeated simulator/world setup.
+- **Include hygiene:** [include_hygiene.md](include_hygiene.md) and `scripts/check_minimal_includes.sh` (optional gate: no umbrella `openpfc/openpfc.hpp` in `tests/unit/kernel`).
 
 ## Backlog — larger SOLID-oriented refactors
 
@@ -91,7 +95,7 @@ High impact, not tied to a single PR; pick by maintenance pain.
 
 ### Suggested PR-scale moves (free-function & data-centric API)
 
-Aligned with [**laboratory, not fortress**](architecture.md#design-ethos-laboratory-not-fortress) and the [styleguide API shape](styleguide.md#api-shape-free-functions-and-data-centric-types): keep `virtual` boundaries thin; push mechanics to namespaced free functions.
+Aligned with [**laboratory, not fortress**](../concepts/architecture.md#design-ethos-laboratory-not-fortress) and the [styleguide API shape](styleguide.md#api-shape-free-functions-and-data-centric-types): keep `virtual` boundaries thin; push mechanics to namespaced free functions.
 
 1. **Examples + apps:** mechanical pass replacing `model.get_world()` / `get_fft()` member spellings with `pfc::get_world(model)` / `pfc::get_fft(model)` (and simulator analogs) in touched files — high visibility, low risk.
 2. **Shipped models (Tungsten, Aluminum, diffusion fixtures):** extract `initialize` / `step` internals into **`namespace …::`** free functions; leave `Model::step` as a one-line forwarder (easier testing and profiling).
@@ -99,12 +103,12 @@ Aligned with [**laboratory, not fortress**](architecture.md#design-ethos-laborat
 4. **`errors.hpp`:** split by concern + prefer free `format_*` / `make_*` helpers so parsers do not pull unrelated types.
 5. **GPU runtime (`runtime/cuda` vs `runtime/hip`):** deduplicate with **`runtime/common`** free helpers (plan/layout/device buffer) instead of parallel class hierarchies.
 6. **JSON wiring:** extend catalog/factory patterns (already: field modifiers, results writers) for any remaining `if (type == …)` branches in wiring.
-7. **`SpectralCpuStack` / session:** optional free `assemble_*` returning plain structs + explicit `wire_*` free functions for drivers that skip `App` (clearer data flow than only member methods).
-8. **Integrator loop:** narrow `run_simulator_time_integration_loop` inputs to structs + free functions (less hidden state than callbacks on opaque objects).
-9. **Tests:** shared **`tests/fixtures/`** free factories (`make_world`, `make_mock_model`, …) to avoid 40-line setup blocks repeating OO construction patterns.
-10. **Include hygiene:** document + optionally CI-check “minimal includes” (`openpfc_minimal.hpp` + domain headers) so new code does not re-expand umbrella dependencies.
+7. **`SpectralCpuStack` / session:** optional free `assemble_*` + `wire_*` for drivers that skip `App`. **Note:** `fft::CpuFft` is not movable; a “return struct of parts” API cannot move the FFT out of a temporary—use out-parameters, or keep constructing `CpuFft` inside `SpectralCpuStack`’s initializer list (current approach).
+8. **Integrator loop:** narrow `run_simulator_time_integration_loop` inputs to structs + free functions (less hidden state than callbacks on opaque objects). **Done:** `SimulatorIntegratorLoopEnv` + primary overload in `app_integrator_loop.hpp`.
+9. **Tests:** shared **`tests/fixtures/`** free factories (`make_world`, `make_mock_model`, …). **Started:** `simulation_factories.hpp` (8³ world + serial decomposition); extend as more tests adopt it.
+10. **Include hygiene:** document + optionally CI-check “minimal includes”. **Done:** [include_hygiene.md](include_hygiene.md) + `scripts/check_minimal_includes.sh`.
 
-- **Gradient / spatial-operator abstraction:** unify spectral (FFT) and finite-difference evaluation of gradients and related operators where supported; track [`adr/0002-gradient-operators-fd-vs-spectral.md`](adr/0002-gradient-operators-fd-vs-spectral.md) and [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md).
+- **Gradient / spatial-operator abstraction:** unify spectral (FFT) and finite-difference evaluation of gradients and related operators where supported; track [`adr/0002-gradient-operators-fd-vs-spectral.md`](../adr/0002-gradient-operators-fd-vs-spectral.md) and [`when_not_to_use_openpfc.md`](../when_not_to_use_openpfc.md).
 - **Simulator:** If orchestration grows again, consider named collaborators (e.g. explicit IC/BC pipeline type vs results scheduling) on top of existing `*_dispatch.hpp` helpers.
 - **Model:** Narrower test- and tool-facing facades around field registry / world access (interface segregation) without a monolithic `Model` rewrite.
 - **Multi-backend apps:** Share physics and parameters across Tungsten (and similar) CPU/CUDA/HIP; keep only execution and FFT device setup separate.
