@@ -16,9 +16,13 @@ This directory holds guides and assets. **Build and install** from the repositor
 | Fix configure/MPI/HeFFTe issues | [`troubleshooting.md`](troubleshooting.md) |
 | Short Q&A | [`faq.md`](faq.md) |
 | Understand JSON/TOML → **`Simulator`** | [`app_pipeline.md`](app_pipeline.md) |
+| Planned structural refactors (roadmap) | [`refactoring_roadmap.md`](refactoring_roadmap.md) |
 | Tour of main types (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Minimal custom **`App`** project (CMake + JSON) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation for custom models | [`parameter_validation.md`](parameter_validation.md) |
+| Run **`ctest` / Catch2** | [`testing.md`](testing.md) |
+| GPU (CUDA/HIP) build + **`tungsten_cuda`** / config backend | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
+| Compare logs to a reference shape | [`example_run_output.md`](example_run_output.md) |
 | Edit or add markdown in this tree | [`contributing-docs.md`](contributing-docs.md) |
 | Contribute code, tests, or changelog entries | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
 | See what changed between releases | [`../CHANGELOG.md`](../CHANGELOG.md) |
@@ -71,6 +75,9 @@ This directory holds guides and assets. **Build and install** from the repositor
 | Tour of main types and headers | [`class_tour.md`](class_tour.md) |
 | Minimal out-of-tree **`App`** + JSON | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation for **`model.params`** | [`parameter_validation.md`](parameter_validation.md) |
+| GPU-enabled apps (CUDA/HIP, HeFFTe, JSON backend) | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
+| **`ctest`**, **`openpfc-tests`**, MPI test suites | [`testing.md`](testing.md) |
+| What successful runs print | [`example_run_output.md`](example_run_output.md) |
 
 ## API examples (Doxygen)
 
@@ -80,8 +87,8 @@ C++ snippets under [`api/examples/`](api/examples/) are included in the Doxygen 
 
 - **Changelog / release history:** [`CHANGELOG.md`](../CHANGELOG.md) (user-facing and developer-facing changes by version).
 - **Contributing (overview):** [`CONTRIBUTING.md`](../CONTRIBUTING.md).
-- **Scalability analysis plan:** [`scalability_analysis_plan.md`](scalability_analysis_plan.md) (redirect when the experiment tree is present).
-- **Image / branding notes:** [`image-prompts.md`](image-prompts.md).
+- **Scalability analysis plan:** [`scalability_analysis_plan.md`](scalability_analysis_plan.md) (stub that points to **[`experiments/scalability/docs/scalability_analysis_plan.md`](../experiments/scalability/docs/scalability_analysis_plan.md)** when you use the experiment submodule/tree).
+- **Image / branding notes:** [`image-prompts.md`](image-prompts.md) (prompts for project artwork; not required for simulation).
 
 ## Generated HTML (Doxygen)
 

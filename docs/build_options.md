@@ -55,4 +55,5 @@ GPU-aware MPI toggles and CUDA/HIP compiler discovery are described in **`INSTAL
 ## See also
 
 - **[`quickstart.md`](quickstart.md)** — minimal configure line  
+- **[`testing.md`](testing.md)** — **`OpenPFC_BUILD_TESTS`**, CTest, Catch2 filters  
 - **[`troubleshooting.md`](troubleshooting.md)** — when configure fails  

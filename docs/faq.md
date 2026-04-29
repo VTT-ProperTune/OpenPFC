@@ -58,6 +58,9 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)**, **[`class_
 | Main types / headers map | [`class_tour.md`](class_tour.md) |
 | Minimal custom `App` + CMake | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation | [`parameter_validation.md`](parameter_validation.md) |
+| **`ctest` / tests | [`testing.md`](testing.md) |
+| GPU (CUDA/HIP) apps | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
+| Example log output (shape) | [`example_run_output.md`](example_run_output.md) |
 | CMake options | [`build_options.md`](build_options.md) |
 | Editing documentation | [`contributing-docs.md`](contributing-docs.md) |
 | Contributing (code, tests, changelog) | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
@@ -71,7 +74,7 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)**, **[`class_
 
 Smaller polish items that may still help:
 
-1. **Session transcripts** — Optional verbatim log excerpts for **`05_simulator`** / minimal tungsten (beyond the success hints in **[`quickstart.md`](quickstart.md)** **§2A** / **§2B**).
+1. **Richer transcripts** — **[`example_run_output.md`](example_run_output.md)** documents log *shape*; optional verbatim captures from CI or release machines can be added as collapsible sections if maintainers want byte-level fixtures.
 2. **CHANGELOG user notes** — Keep meaningful entries under **`[Unreleased]`** in **[`CHANGELOG.md`](../CHANGELOG.md)**; add “upgrading from X” blurbs when CMake or config keys change.
 3. **Published site** — Keep GitHub Pages in sync with **[`quickstart.md`](quickstart.md)** and **[`README.md`](README.md)** so API-only readers find the prose guides.
 

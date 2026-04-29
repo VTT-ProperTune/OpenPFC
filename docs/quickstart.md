@@ -68,7 +68,7 @@ cd build
 mpirun -n 4 ./examples/05_simulator
 ```
 
-**Signs it worked:** **`mpirun`** exits with status **0**. Rank 0 typically prints **INFO**-level log lines from OpenPFC (world size, timestepping); there is no universal “success” string—if the process aborts, you will see an exception or non-zero exit. For more detail on a specific example, read its source under **`examples/`**.
+**Signs it worked:** **`mpirun`** exits with status **0**. Rank 0 typically prints **INFO**-level log lines from OpenPFC (world size, timestepping); there is no universal “success” string—if the process aborts, you will see an exception or non-zero exit. For more detail on a specific example, read its source under **`examples/`**. Sample **`05_simulator`** / **`App`** log shapes: **[`example_run_output.md`](example_run_output.md)**.
 
 See **[`examples_catalog.md`](examples_catalog.md)** for the full list of built targets and short descriptions.
 
@@ -85,7 +85,7 @@ cd build
 mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
 ```
 
-**Signs it worked:** **`mpirun`** exits **0**; rank 0 logs progress (e.g. effective configuration, world summary, start of time integration). If **`saveat`** and **`fields`** are set, new files appear under the paths in your JSON (see **[`io_results.md`](io_results.md)**).
+**Signs it worked:** **`mpirun`** exits **0**; rank 0 logs progress (e.g. effective configuration, world summary, start of time integration). If **`saveat`** and **`fields`** are set, new files appear under the paths in your JSON (see **[`io_results.md`](io_results.md)**). Reference **`[app]`** log lines: **[`example_run_output.md`](example_run_output.md)**.
 
 Smaller or performance-oriented inputs include `tungsten_fixed_bc.json`, `tungsten_moving_bc.json`, and `tungsten_performance.json` in the same directory. TOML equivalents live under `../apps/tungsten/inputs_toml/`. Layout of sections is documented in [`apps/tungsten/inputs_json/README.md`](../apps/tungsten/inputs_json/README.md). GPU builds may provide `tungsten_cuda` or `tungsten_hip` when enabled—use the same config path with the matching binary.
 
@@ -125,6 +125,9 @@ Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix contain
 | Extend models, ICs, coordinates | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
 | HTML API reference | [Published docs](https://vtt-propertune.github.io/OpenPFC/dev/) (also build `docs` locally with **`OpenPFC_BUILD_DOCUMENTATION=ON`**) — pair with [`README.md`](README.md) and [`quickstart.md`](quickstart.md) for prose not generated from headers |
 | HPC / LUMI | [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
+| **`ctest` / Catch2** | [`testing.md`](testing.md) |
+| GPU build + **`tungsten_cuda`** / HIP | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
+| Example log transcripts (shape) | [`example_run_output.md`](example_run_output.md) |
 
 ---
 

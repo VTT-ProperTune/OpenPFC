@@ -37,3 +37,8 @@ cmake --build build-gpu -j"$(nproc)"
 ```
 
 Full prerequisites (modules, HeFFTe layout, optional FetchContent fallback into **`build/`** only) are in **[INSTALL.md](../INSTALL.md)** §3 and §5–§9.
+
+## See also
+
+- **[`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md)** — JSON **`backend`**, **`tungsten_cuda`**, cluster notes  
+- **[`example_run_output.md`](example_run_output.md)** — what GPU **`App`** logs look like compared to CPU  
