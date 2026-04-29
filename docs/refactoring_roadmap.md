@@ -52,6 +52,21 @@ Planned steps:
 - Optional: templated `SpectralSimulationSession` or type-erased FFT at the session boundary so `App` can skip constructing a dummy `CpuFft` for GPU-only models. (Design note in `spectral_cpu_stack.hpp` Doxygen `@note`.)
 - Documented interim policy (Doxygen): reuse the one `SpectralCpuStack` `CpuFft` for `Model(fft, world, comm)` when adding GPU drivers; use `spectral_fft_stack_factory.hpp` for cuFFT/ROCm plan JSON only—no second throwaway CPU FFT in app code.
 
+### Phase C spike (time-boxed exploration)
+
+Purpose: validate a **single JSON document** driving either CPU or GPU spectral stacks without committing to a full `App` rewrite.
+
+**Spike scope (1–2 weeks of prototyping, not merge criteria by itself):**
+
+- Build a throwaway or feature-flagged **“spectral session”** type that owns `World`, `Decomposition`, and an FFT handle produced either from `cpu_fft_from_json_and_decomposition` or from the GPU plan builders in `spectral_fft_stack_factory.hpp`, using **`merged_spectral_plan_options_json`** so root `backend` and `plan_options` behave like today’s CPU path.
+- Wire **`Time`** and a **minimal `Model` stub** (existing mock or smallest example model) through the same **`wire_simulator_and_runtime_from_json`** entry points to prove IC/BC/result wiring does not depend on `fft::CpuFft` specifically.
+- Measure **what must become type-erased** at the session boundary (e.g. `IFFT &` vs concrete `CpuFft`) and list **API breaks** for shipped apps if `SpectralSimulationSession` were templated on FFT type.
+
+**Exit criteria for closing the spike (documentation-only deliverable is OK):**
+
+- Short decision: **templated session** vs **type-erased FFT interface** vs **defer** until a GPU-first `App` is scheduled.
+- List of **must-keep JSON keys** and **test gaps** (MPI rank, GPU-aware MPI, VTK writers) before any production merge.
+
 ## Phase E — Wiring and driver ergonomics
 
 Goal: Fewer repeated parameters at JSON → `Simulator` boundaries; clearer seams for custom drivers and tests.
