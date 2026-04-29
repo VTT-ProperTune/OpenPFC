@@ -17,7 +17,9 @@
  * `add_result_writers_from_json` / `add_initial_conditions_from_json` /
  * `add_boundary_conditions_from_json` and `apply_simulator_section_from_json`
  * individually on an existing `Simulator` and `Time`. Pass a `JsonWiringContext`
- * for communicator and rank metadata (see `simulation_wiring_context.hpp`).
+ * for communicator and rank metadata (see `simulation_wiring_context.hpp`), or a
+ * `JsonWiringSession` to bundle context with a `FieldModifierCatalog`
+ * (`json_wiring_session.hpp`).
  *
  * Initial-condition and boundary-condition JSON share the same `target`
  * parsing (`configure_field_modifier_targets_from_json`) and the same array
@@ -28,6 +30,7 @@
 #ifndef PFC_UI_SIMULATION_WIRING_HPP
 #define PFC_UI_SIMULATION_WIRING_HPP
 
+#include <openpfc/frontend/ui/json_wiring_session.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_conditions.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_simulator_section.hpp>
@@ -62,6 +65,17 @@ wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
   wire_simulator_and_runtime_from_json(sim, time, settings,
                                        JsonWiringContext{comm, mpi_rank, rank0},
                                        modifier_catalog);
+}
+
+/**
+ * @brief Same as `wire_simulator_and_runtime_from_json(sim, time, settings, ctx,
+ *        catalog)` with `ctx` and `catalog` taken from `session`
+ */
+inline void wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
+                                                 const nlohmann::json &settings,
+                                                 const JsonWiringSession &session) {
+  wire_simulator_and_runtime_from_json(sim, time, settings, session.ctx,
+                                       session.modifier_catalog);
 }
 
 } // namespace pfc::ui

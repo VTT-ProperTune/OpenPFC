@@ -102,6 +102,19 @@ public:
         JsonWiringContext{m_stack.mpi_comm(), mpi_rank, rank0}, modifier_catalog);
   }
 
+  /**
+   * @brief Same as the overload taking `(mpi_rank, rank0, catalog)`; uses the
+   *        stack communicator with rank flags from `session.ctx`
+   */
+  void wire_simulator_from_settings(const nlohmann::json &settings,
+                                    const JsonWiringSession &session) {
+    wire_simulator_and_runtime_from_json(
+        m_simulator, m_stack.time(), settings,
+        JsonWiringSession{JsonWiringContext{m_stack.mpi_comm(), session.ctx.mpi_rank,
+                                            session.ctx.rank0},
+                          session.modifier_catalog});
+  }
+
 private:
   SpectralCpuStack m_stack;
   ConcreteModel m_model;

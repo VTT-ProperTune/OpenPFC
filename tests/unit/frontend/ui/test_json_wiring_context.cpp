@@ -58,3 +58,22 @@ TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringContext",
   REQUIRE_NOTHROW(pfc::ui::wire_simulator_and_runtime_from_json(
       sim, time, settings, MPI_COMM_WORLD, 0, true));
 }
+
+TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringSession",
+          "[ui][wiring]") {
+  auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
+                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = pfc::decomposition::create(world, 1);
+  auto fft = pfc::fft::create(decomposition);
+  pfc::testing::MockModel model(fft, world);
+  pfc::Time time({0.0, 1.0, 0.1}, 1.0);
+  pfc::Simulator sim(model, time, MPI_COMM_WORLD);
+
+  json settings = json::object();
+  const pfc::ui::JsonWiringSession session = pfc::ui::make_json_wiring_session(
+      MPI_COMM_WORLD, 0, true, pfc::ui::default_field_modifier_catalog());
+
+  REQUIRE_NOTHROW(
+      pfc::ui::wire_simulator_and_runtime_from_json(sim, time, settings, session));
+}
