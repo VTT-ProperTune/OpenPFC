@@ -15,6 +15,10 @@
  * CUDA/HIP models should treat this host `CpuFft` as the sole `pfc::FFT` passed
  * into `ConcreteModel` and bind device FFTs from the same decomposition instead
  * of allocating an extra CPU HeFFTe instance in application drivers.
+ *
+ * Non-member accessors (`pfc::ui::world(session)`, `pfc::ui::time(session)`, …)
+ * mirror the member API for consistency with `pfc::get_model(sim)` on
+ * `Simulator`.
  */
 
 #ifndef PFC_UI_SPECTRAL_SIMULATION_SESSION_HPP
@@ -120,6 +124,69 @@ private:
   ConcreteModel m_model;
   Simulator m_simulator;
 };
+
+template <class M>
+[[nodiscard]] inline World &world(SpectralSimulationSession<M> &session) noexcept {
+  return session.world();
+}
+template <class M>
+[[nodiscard]] inline const World &
+world(const SpectralSimulationSession<M> &session) noexcept {
+  return session.world();
+}
+
+template <class M>
+[[nodiscard]] inline decomposition::Decomposition &
+decomposition(SpectralSimulationSession<M> &session) noexcept {
+  return session.decomposition();
+}
+template <class M>
+[[nodiscard]] inline const decomposition::Decomposition &
+decomposition(const SpectralSimulationSession<M> &session) noexcept {
+  return session.decomposition();
+}
+
+template <class M>
+[[nodiscard]] inline fft::CpuFft &
+fft(SpectralSimulationSession<M> &session) noexcept {
+  return session.fft();
+}
+template <class M>
+[[nodiscard]] inline const fft::CpuFft &
+fft(const SpectralSimulationSession<M> &session) noexcept {
+  return session.fft();
+}
+
+template <class M>
+[[nodiscard]] inline Time &time(SpectralSimulationSession<M> &session) noexcept {
+  return session.time();
+}
+template <class M>
+[[nodiscard]] inline const Time &
+time(const SpectralSimulationSession<M> &session) noexcept {
+  return session.time();
+}
+
+template <class M>
+[[nodiscard]] inline M &model(SpectralSimulationSession<M> &session) noexcept {
+  return session.model();
+}
+template <class M>
+[[nodiscard]] inline const M &
+model(const SpectralSimulationSession<M> &session) noexcept {
+  return session.model();
+}
+
+template <class M>
+[[nodiscard]] inline Simulator &
+simulator(SpectralSimulationSession<M> &session) noexcept {
+  return session.simulator();
+}
+template <class M>
+[[nodiscard]] inline const Simulator &
+simulator(const SpectralSimulationSession<M> &session) noexcept {
+  return session.simulator();
+}
 
 } // namespace pfc::ui
 

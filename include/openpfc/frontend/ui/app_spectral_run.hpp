@@ -92,7 +92,7 @@ private:
                      const SpectralSimulationSession<ConcreteModel> &session) const {
     if (m_rank0) {
       std::ostringstream woss;
-      woss << session.world();
+      woss << world(session);
       pfc::log_info(app_lg, std::string(detail::k_spectral_app_log_tag) +
                                 "World: " + woss.str());
     }
@@ -100,7 +100,7 @@ private:
 
   void apply_model_params_(SpectralSimulationSession<ConcreteModel> &session) const {
     if (m_settings.contains("model") && m_settings["model"].contains("params")) {
-      from_json(m_settings["model"]["params"], session.model());
+      from_json(m_settings["model"]["params"], model(session));
     }
   }
 
@@ -114,16 +114,16 @@ private:
       pfc::log_info(app_lg, std::string(detail::k_spectral_app_log_tag) +
                                 "Initializing model...");
     }
-    session.model().initialize(pfc::time::dt(session.time()));
+    model(session).initialize(pfc::time::dt(time(session)));
   }
 
   void report_memory_usage_(
       int rank_id, const SpectralSimulationSession<ConcreteModel> &session) const {
-    const size_t model_mem = session.model().get_allocated_memory_bytes();
-    const size_t fft_mem = session.fft().get_allocated_memory_bytes();
+    const size_t model_mem = model(session).get_allocated_memory_bytes();
+    const size_t fft_mem = fft(session).get_allocated_memory_bytes();
     const pfc::utils::MemoryUsage usage{model_mem, fft_mem};
     const pfc::Logger logger{pfc::LogLevel::Info, rank_id};
-    pfc::utils::report_memory_usage(usage, session.world(), logger, m_comm);
+    pfc::utils::report_memory_usage(usage, world(session), logger, m_comm);
   }
 
   void wire_simulator_and_log_run_start_(

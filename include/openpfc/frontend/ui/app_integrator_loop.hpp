@@ -55,27 +55,27 @@ IntegratorTimings run_simulator_time_integration_loop(
   // Exponential moving average of step wall time for ETA (after a short warm-up).
   double avg_step_ema = 0.0;
 
-  while (!pfc::time::done(session.time())) {
-    session.fft().reset_fft_time();
-    pfc::begin_integrator_step(session.simulator());
+  while (!pfc::time::done(time(session))) {
+    fft(session).reset_fft_time();
+    pfc::begin_integrator_step(simulator(session));
     const double barrier_step_s = pfc::profiling::measure_barriered(env.comm, [&] {
       std::optional<pfc::profiling::ProfilingContextScope> profile_ctx;
       if (env.profiler) {
         pfc::profiling::openpfc_begin_frame_with_step_and_rank(
-            *env.profiler, pfc::time::increment(session.time()), env.rank_id);
+            *env.profiler, pfc::time::increment(time(session)), env.rank_id);
         profile_ctx.emplace(env.profiler);
       }
-      step(session.simulator(), session.model());
+      step(simulator(session), model(session));
     });
-    const double fft_meter_s = session.fft().get_fft_time();
+    const double fft_meter_s = fft(session).get_fft_time();
 
     std::uint64_t rss = 0;
     std::uint64_t model_mem = 0;
     std::uint64_t fft_mem = 0;
     if (env.profiler && env.profiler_memory_samples) {
       rss = pfc::profiling::try_read_process_rss_bytes();
-      model_mem = session.model().get_allocated_memory_bytes();
-      fft_mem = session.fft().get_allocated_memory_bytes();
+      model_mem = model(session).get_allocated_memory_bytes();
+      fft_mem = fft(session).get_allocated_memory_bytes();
     }
     if (env.profiler) {
       env.profiler->assign_recorded_time("fft", fft_meter_s);
@@ -88,17 +88,17 @@ IntegratorTimings run_simulator_time_integration_loop(
     const double fft_time =
         pfc::profiling::reduce_max_to_root(env.comm, fft_meter_s, 0);
 
-    pfc::end_integrator_step(session.simulator());
+    pfc::end_integrator_step(simulator(session));
 
     if (out.steps_completed > 3) {
       avg_step_ema = 0.01 * steptime + 0.99 * avg_step_ema;
     } else {
       avg_step_ema = steptime;
     }
-    const int increment = pfc::time::increment(session.time());
-    const double t = pfc::time::current(session.time());
-    const double t1 = pfc::time::t1(session.time());
-    const double dt = pfc::time::dt(session.time());
+    const int increment = pfc::time::increment(time(session));
+    const double t = pfc::time::current(time(session));
+    const double t1 = pfc::time::t1(time(session));
+    const double dt = pfc::time::dt(time(session));
     double eta_t = 0.0;
     if (dt > 0.0 && std::isfinite(dt) && t1 > t) {
       const double eta_i = (t1 - t) / dt;
