@@ -52,6 +52,14 @@ Planned steps:
 - Optional: templated `SpectralSimulationSession` or type-erased FFT at the session boundary so `App` can skip constructing a dummy `CpuFft` for GPU-only models.
 - Documented interim policy (Doxygen): reuse the one `SpectralCpuStack` `CpuFft` for `Model(fft, world, comm)` when adding GPU drivers; use `spectral_fft_stack_factory.hpp` for cuFFT/ROCm plan JSON only—no second throwaway CPU FFT in app code.
 
+## Phase E — Wiring and driver ergonomics
+
+Goal: Fewer repeated parameters at JSON → `Simulator` boundaries; clearer seams for custom drivers and tests.
+
+Done:
+
+- `JsonWiringContext` (`simulation_wiring_context.hpp`): bundles `MPI_Comm`, `mpi_rank`, and `rank0` for `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `wire_simulator_and_runtime_from_json`. Legacy `(comm, rank, rank0)` overloads forward to the context form; `SpectralSimulationSession` uses the context overload.
+
 ## Phase D — CMake library split
 
 Goal: Enforce kernel vs frontend vs optional GPU objects at link time; faster incremental builds.

@@ -16,7 +16,8 @@
  * Drivers that do not use `SpectralSimulationSession` can call
  * `add_result_writers_from_json` / `add_initial_conditions_from_json` /
  * `add_boundary_conditions_from_json` and `apply_simulator_section_from_json`
- * individually on an existing `Simulator` and `Time`.
+ * individually on an existing `Simulator` and `Time`. Pass a `JsonWiringContext`
+ * for communicator and rank metadata (see `simulation_wiring_context.hpp`).
  *
  * Initial-condition and boundary-condition JSON share the same `target`
  * parsing (`configure_field_modifier_targets_from_json`) and the same array
@@ -28,6 +29,7 @@
 #define PFC_UI_SIMULATION_WIRING_HPP
 
 #include <openpfc/frontend/ui/simulation_wiring_conditions.hpp>
+#include <openpfc/frontend/ui/simulation_wiring_context.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_simulator_section.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_writers.hpp>
 
@@ -41,16 +43,25 @@ namespace pfc::ui {
  */
 inline void
 wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
+                                     const nlohmann::json &settings,
+                                     const JsonWiringContext &ctx,
+                                     const FieldModifierCatalog &modifier_catalog =
+                                         default_field_modifier_catalog()) {
+  add_result_writers_from_json(sim, settings, ctx);
+  add_initial_conditions_from_json(sim, settings, ctx, modifier_catalog);
+  add_boundary_conditions_from_json(sim, settings, ctx, modifier_catalog);
+  apply_simulator_section_from_json(sim, time, settings);
+}
+
+inline void
+wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
                                      const nlohmann::json &settings, MPI_Comm comm,
                                      int mpi_rank, bool rank0,
                                      const FieldModifierCatalog &modifier_catalog =
                                          default_field_modifier_catalog()) {
-  add_result_writers_from_json(sim, settings, comm, mpi_rank, rank0);
-  add_initial_conditions_from_json(sim, settings, comm, mpi_rank, rank0,
-                                   modifier_catalog);
-  add_boundary_conditions_from_json(sim, settings, comm, mpi_rank, rank0,
-                                    modifier_catalog);
-  apply_simulator_section_from_json(sim, time, settings);
+  wire_simulator_and_runtime_from_json(sim, time, settings,
+                                       JsonWiringContext{comm, mpi_rank, rank0},
+                                       modifier_catalog);
 }
 
 } // namespace pfc::ui

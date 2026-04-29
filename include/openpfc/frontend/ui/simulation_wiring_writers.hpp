@@ -16,6 +16,7 @@
 #include <mpi.h>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/io/binary_writer.hpp>
+#include <openpfc/frontend/ui/simulation_wiring_context.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
@@ -48,9 +49,9 @@ inline bool ensure_results_parent_dir_for_writer(const std::string &output,
 
 inline void add_result_writers_from_json(Simulator &sim,
                                          const nlohmann::json &settings,
-                                         MPI_Comm comm, int mpi_rank, bool rank0) {
-  const pfc::Logger lg{pfc::LogLevel::Info, mpi_rank};
-  if (rank0) {
+                                         const JsonWiringContext &ctx) {
+  const pfc::Logger lg{pfc::LogLevel::Info, ctx.mpi_rank};
+  if (ctx.rank0) {
     pfc::log_info(lg, "Adding results writers");
   }
   if (settings.contains("saveat") && settings.contains("fields") &&
@@ -58,20 +59,27 @@ inline void add_result_writers_from_json(Simulator &sim,
     for (const auto &field : settings["fields"]) {
       std::string name = field["name"];
       std::string data = field["data"];
-      if (rank0) {
-        (void)ensure_results_parent_dir_for_writer(data, mpi_rank);
+      if (ctx.rank0) {
+        (void)ensure_results_parent_dir_for_writer(data, ctx.mpi_rank);
       }
-      if (rank0) {
+      if (ctx.rank0) {
         pfc::log_info(lg, "Writing field " + name + " to " + data);
       }
-      sim.add_results_writer(name, std::make_unique<BinaryWriter>(data, comm));
+      sim.add_results_writer(name, std::make_unique<BinaryWriter>(data, ctx.comm));
     }
   } else {
-    if (rank0) {
+    if (ctx.rank0) {
       pfc::log_warning(lg, "not writing results to anywhere.");
       pfc::log_info(lg, "To write results, add ResultsWriter to model.");
     }
   }
+}
+
+inline void add_result_writers_from_json(Simulator &sim,
+                                         const nlohmann::json &settings,
+                                         MPI_Comm comm, int mpi_rank, bool rank0) {
+  add_result_writers_from_json(sim, settings,
+                               JsonWiringContext{comm, mpi_rank, rank0});
 }
 
 } // namespace pfc::ui

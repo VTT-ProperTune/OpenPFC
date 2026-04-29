@@ -97,9 +97,9 @@ public:
                                     bool rank0,
                                     const FieldModifierCatalog &modifier_catalog =
                                         default_field_modifier_catalog()) {
-    wire_simulator_and_runtime_from_json(m_simulator, m_stack.time(), settings,
-                                         m_stack.mpi_comm(), mpi_rank, rank0,
-                                         modifier_catalog);
+    wire_simulator_and_runtime_from_json(
+        m_simulator, m_stack.time(), settings,
+        JsonWiringContext{m_stack.mpi_comm(), mpi_rank, rank0}, modifier_catalog);
   }
 
 private:
