@@ -359,6 +359,17 @@ public:
 
   int get_result_counter() const { return m_result_counter; }
 
+  /**
+   * @brief Increment the result counter and invoke every registered writer
+   *
+   * Dispatches through `pfc::write_results_for_registered_fields` (see
+   * `simulator_results_dispatch.hpp`). For tests that only need the write loop,
+   * call that free function with a stub model and writer map instead of wiring
+   * a full `Simulator`.
+   *
+   * @see results_writers()
+   * @see pfc::write_results_for_registered_fields
+   */
   void write_results() {
     const int file_num = get_result_counter();
     pfc::write_results_for_registered_fields(get_model(), m_result_writers,

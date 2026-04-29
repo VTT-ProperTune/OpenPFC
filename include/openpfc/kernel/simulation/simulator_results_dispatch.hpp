@@ -25,6 +25,15 @@ namespace pfc {
  *
  * For each `(field_name, writer)` entry, dispatches to real or complex field
  * accessors on `model` when that field exists.
+ *
+ * **Test / tooling seam:** Prefer calling this function with a minimal `Model`
+ * fixture and mock `ResultsWriter` subclasses when you only need to assert
+ * dispatch and `write(increment, field)` pairing. `Simulator::write_results()`
+ * is a thin wrapper (counter + this call); bypass it when a full simulator
+ * graph is unnecessary.
+ *
+ * @see Simulator::write_results()
+ * @see Simulator::results_writers()
  */
 inline void write_results_for_registered_fields(Model &model,
                                                 const ResultsWriterMap &writers,

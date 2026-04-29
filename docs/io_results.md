@@ -11,6 +11,10 @@ OpenPFC separates the kernel interface `ResultsWriter` from frontend implementat
 
 [`include/openpfc/kernel/simulation/results_writer.hpp`](../include/openpfc/kernel/simulation/results_writer.hpp) — abstract hook the `Simulator` calls when it is time to persist fields. Implementations live in the frontend (binary/VTK) or in your app.
 
+### Narrow dispatch seam (tests)
+
+[`simulator_results_dispatch.hpp`](../include/openpfc/kernel/simulation/simulator_results_dispatch.hpp) defines `pfc::write_results_for_registered_fields(Model&, const ResultsWriterMap&, int file_num)` — the same loop `Simulator::write_results()` uses after reading the counter. Prefer this free function in unit tests with a small `Model` and mock writers when you do not need the full integrator stack. `Simulator::results_writers()` exposes the live map for inspection-only tests on a constructed simulator.
+
 ## Binary output (MPI-IO)
 
 [`include/openpfc/frontend/io/binary_writer.hpp`](../include/openpfc/frontend/io/binary_writer.hpp) — `BinaryWriter`: raw binary, collective MPI-IO. Documented caveats: all ranks in the communicator must participate consistently in `write()` to avoid deadlock.
