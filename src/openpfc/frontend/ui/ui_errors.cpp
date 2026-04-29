@@ -6,7 +6,7 @@
 namespace pfc::ui {
 
 std::vector<std::string> list_valid_field_modifiers() {
-  return FieldModifierRegistry::get_instance().registered_modifier_types();
+  return default_field_modifier_catalog().registered_modifier_types();
 }
 
 } // namespace pfc::ui

@@ -238,7 +238,8 @@ inline std::string get_json_value_string(const nlohmann::json &j,
  * @return Vector of registered type names (lexicographically sorted)
  *
  * @note This function is defined in ui_errors.cpp and reads from
- *       FieldModifierRegistry.
+ *       `default_field_modifier_catalog()` (built-ins plus types registered via
+ *       `register_field_modifier`).
  *
  * @warning Types registered only after static initialization completes are
  *          included once registration has run in that translation unit.

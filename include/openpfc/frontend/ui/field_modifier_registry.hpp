@@ -3,15 +3,18 @@
 
 /**
  * @file ui/field_modifier_registry.hpp
- * @brief Registry for field modifiers (initial conditions and boundary conditions)
+ * @brief Field modifier catalog: register and create IC/BC modifiers from JSON
  *
  * @details
- * This header provides a registry system for field modifiers that allows
- * dynamic registration and creation of field modifiers from JSON configuration.
- * It supports both initial conditions and boundary conditions.
+ * `FieldModifierCatalog` holds type string → factory mappings. Use
+ * `default_field_modifier_catalog()` for the process-wide built-in set (and
+ * optional `register_field_modifier` extensions). Pass a catalog into
+ * `add_*_conditions_from_json` / `wire_simulator_and_runtime_from_json` for
+ * tests or alternate drivers (dependency injection instead of a hidden
+ * singleton).
  *
- * @author OpenPFC Development Team
- * @date 2025
+ * The historical name `FieldModifierRegistry` is a type alias for
+ * `FieldModifierCatalog`.
  */
 
 #ifndef PFC_UI_FIELD_MODIFIER_REGISTRY_HPP
@@ -40,43 +43,22 @@ namespace pfc::ui {
 using FieldModifier_p = std::unique_ptr<FieldModifier>;
 
 /**
- * @class FieldModifierRegistry
- * @brief A registry for field modifiers used in the application.
- *
- * The FieldModifierRegistry class provides a centralized registry for field
- * modifiers. It allows registration of field modifiers along with their
- * corresponding creator functions, and provides a way to create instances of
- * field modifiers based on their registered types.
+ * @brief Mutable catalog of field modifier factories (IC/BC types from JSON)
  */
-class FieldModifierRegistry {
+class FieldModifierCatalog {
 public:
   using CreatorFunction = std::function<FieldModifier_p(const json &)>;
 
-  /**
-   * @brief Get the singleton instance of the FieldModifierRegistry.
-   * @return Reference to the singleton instance of FieldModifierRegistry.
-   */
-  static FieldModifierRegistry &get_instance() {
-    static FieldModifierRegistry instance;
-    return instance;
-  }
+  FieldModifierCatalog() = default;
 
-  /**
-   * @brief Register a field modifier with its creator function.
-   * @param type The type string associated with the field modifier.
-   * @param creator The creator function that creates an instance of the field
-   * modifier.
-   */
   void register_modifier(const std::string &type, CreatorFunction creator) {
     modifiers[type] = std::move(creator);
   }
 
   /**
-   * @brief All currently registered field modifier type strings.
-   *
-   * Names are sorted lexicographically for stable error messages and listings.
+   * @brief All registered type strings (sorted for stable diagnostics).
    */
-  std::vector<std::string> registered_modifier_types() const {
+  [[nodiscard]] std::vector<std::string> registered_modifier_types() const {
     std::vector<std::string> out;
     out.reserve(modifiers.size());
     for (const auto &kv : modifiers) {
@@ -87,13 +69,10 @@ public:
   }
 
   /**
-   * @brief Create an instance of a field modifier based on its registered type.
-   * @param type The type string of the field modifier to create.
-   * @param data A json object defining the field modifier parameters.
-   * @return Pointer to the created field modifier instance.
-   * @throw std::invalid_argument if the specified type is not registered.
+   * @throw std::invalid_argument if @p type is not registered
    */
-  FieldModifier_p create_modifier(const std::string &type, const json &data) {
+  [[nodiscard]] FieldModifier_p create_modifier(const std::string &type,
+                                                const json &data) const {
     auto it = modifiers.find(type);
     if (it != modifiers.end()) {
       return it->second(data);
@@ -102,87 +81,64 @@ public:
   }
 
 private:
-  /**
-   * @brief Private constructor to enforce singleton pattern.
-   */
-  FieldModifierRegistry() {}
-
-  std::unordered_map<std::string, CreatorFunction>
-      modifiers; /**< Map storing the registered field modifiers and their
-                    creator functions. */
+  std::unordered_map<std::string, CreatorFunction> modifiers;
 };
 
+template <typename T>
+void register_field_modifier(const std::string &type,
+                             FieldModifierCatalog &catalog) {
+  catalog.register_modifier(type, [](const json &params) -> std::unique_ptr<T> {
+    std::unique_ptr<T> modifier = std::make_unique<T>();
+    from_json(params, *modifier);
+    return modifier;
+  });
+}
+
+/** @brief Built-in OpenPFC modifier types (constant, seeds, file, fixed, moving). */
+[[nodiscard]] inline FieldModifierCatalog make_builtin_field_modifier_catalog() {
+  FieldModifierCatalog c;
+  register_field_modifier<Constant>("constant", c);
+  register_field_modifier<SingleSeed>("single_seed", c);
+  register_field_modifier<RandomSeeds>("random_seeds", c);
+  register_field_modifier<SeedGrid>("seed_grid", c);
+  register_field_modifier<FileReader>("from_file", c);
+  register_field_modifier<FixedBC>("fixed", c);
+  register_field_modifier<MovingBC>("moving", c);
+  return c;
+}
+
 /**
- * @brief Register a field modifier type with the FieldModifierRegistry.
- * @tparam T The type of the field modifier to register.
- * @param type The type string associated with the field modifier.
+ * @brief Process-wide catalog: builtins plus any `register_field_modifier` calls
  *
- * This function registers a field modifier type with the FieldModifierRegistry.
- * It associates the specified type string with a creator function that creates
- * an instance of the field modifier.
+ * Used by default `create_field_modifier` and JSON wiring when no catalog is
+ * passed explicitly.
+ */
+[[nodiscard]] inline FieldModifierCatalog &default_field_modifier_catalog() {
+  static FieldModifierCatalog instance = make_builtin_field_modifier_catalog();
+  return instance;
+}
+
+/**
+ * @brief Register a type on the process-wide default catalog (application
+ * extensions)
  */
 template <typename T> void register_field_modifier(const std::string &type) {
-  FieldModifierRegistry::get_instance().register_modifier(
-      type, [](const json &params) -> std::unique_ptr<T> {
-        std::unique_ptr<T> modifier = std::make_unique<T>();
-        from_json(params, *modifier);
-        return modifier;
-      });
+  register_field_modifier<T>(type, default_field_modifier_catalog());
 }
 
-/**
- * @brief Create an instance of a field modifier based on its type.
- * @param type The type string of the field modifier to create.
- * @param params A json object describing the parameters for field modifier.
- * @return Pointer to the created field modifier instance.
- * @throw std::invalid_argument if the specified type is not registered.
- *
- * This function creates an instance of a field modifier based on its registered
- * type. It retrieves the registered creator function associated with the
- * specified type string from the FieldModifierRegistry and uses it to create
- * the field modifier instance.
- */
-inline std::unique_ptr<FieldModifier> create_field_modifier(const std::string &type,
-                                                            const json &params) {
-  return FieldModifierRegistry::get_instance().create_modifier(type, params);
+[[nodiscard]] inline std::unique_ptr<FieldModifier>
+create_field_modifier(const std::string &type, const json &params,
+                      const FieldModifierCatalog &catalog) {
+  return catalog.create_modifier(type, params);
 }
 
-/**
- * @struct FieldModifierInitializer
- * @brief Helper struct for registering field modifiers during static
- * initialization.
- *
- * The FieldModifierInitializer struct provides a convenient way to register
- * field modifiers during static initialization by utilizing its constructor.
- * Inside the constructor, various field modifiers can be registered using the
- * `register_field_modifier` function.
- */
-struct FieldModifierInitializer {
-  /**
-   * @brief Constructor for FieldModifierInitializer.
-   *
-   * This constructor is automatically executed during static initialization.
-   * It can be used to register field modifiers by calling the
-   * `register_field_modifier` function for each desired field modifier type.
-   */
-  FieldModifierInitializer() {
-    // Initial conditions
-    register_field_modifier<Constant>("constant");
-    register_field_modifier<SingleSeed>("single_seed");
-    register_field_modifier<RandomSeeds>("random_seeds");
-    register_field_modifier<SeedGrid>("seed_grid");
-    register_field_modifier<FileReader>("from_file");
-    // Boundary conditions
-    register_field_modifier<FixedBC>("fixed");
-    register_field_modifier<MovingBC>("moving");
-    // Register other field modifiers here ...
-  }
-};
+[[nodiscard]] inline std::unique_ptr<FieldModifier>
+create_field_modifier(const std::string &type, const json &params) {
+  return create_field_modifier(type, params, default_field_modifier_catalog());
+}
 
-static FieldModifierInitializer
-    fieldModifierInitializer; /**< Static instance of FieldModifierInitializer
-                                 to trigger field modifier registration during
-                                 static initialization. */
+/** @brief Historical name; prefer `FieldModifierCatalog` in new code. */
+using FieldModifierRegistry = FieldModifierCatalog;
 
 } // namespace pfc::ui
 

@@ -139,10 +139,11 @@ inline void add_result_writers_from_json(Simulator &sim,
   }
 }
 
-inline void add_initial_conditions_from_json(Simulator &sim,
-                                             const nlohmann::json &settings,
-                                             MPI_Comm comm, int mpi_rank,
-                                             bool rank0) {
+inline void
+add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
+                                 MPI_Comm comm, int mpi_rank, bool rank0,
+                                 const FieldModifierCatalog &modifier_catalog =
+                                     default_field_modifier_catalog()) {
   const pfc::Logger lg{pfc::LogLevel::Info, mpi_rank};
   if (!settings.contains("initial_conditions")) {
     if (rank0) {
@@ -167,7 +168,7 @@ inline void add_initial_conditions_from_json(Simulator &sim,
       continue;
     }
     std::string type = params["type"];
-    auto field_modifier = create_field_modifier(type, params);
+    auto field_modifier = create_field_modifier(type, params, modifier_catalog);
     detail::configure_field_modifier_targets_from_json(*field_modifier, params, lg,
                                                        rank0, "initial condition");
     field_modifier->set_mpi_comm(comm);
@@ -175,10 +176,11 @@ inline void add_initial_conditions_from_json(Simulator &sim,
   }
 }
 
-inline void add_boundary_conditions_from_json(Simulator &sim,
-                                              const nlohmann::json &settings,
-                                              MPI_Comm comm, int mpi_rank,
-                                              bool rank0) {
+inline void
+add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
+                                  MPI_Comm comm, int mpi_rank, bool rank0,
+                                  const FieldModifierCatalog &modifier_catalog =
+                                      default_field_modifier_catalog()) {
   const pfc::Logger lg{pfc::LogLevel::Info, mpi_rank};
   if (!settings.contains("boundary_conditions")) {
     if (rank0) {
@@ -203,7 +205,7 @@ inline void add_boundary_conditions_from_json(Simulator &sim,
       continue;
     }
     std::string type = params["type"];
-    auto field_modifier = create_field_modifier(type, params);
+    auto field_modifier = create_field_modifier(type, params, modifier_catalog);
     detail::configure_field_modifier_targets_from_json(*field_modifier, params, lg,
                                                        rank0, "boundary condition");
     field_modifier->set_mpi_comm(comm);
@@ -242,14 +244,23 @@ inline void apply_simulator_section_from_json(Simulator &sim, Time &time,
   }
 }
 
-/** @brief Writers, ICs, BCs, then optional `simulator` JSON subsection */
-inline void wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
-                                                 const nlohmann::json &settings,
-                                                 MPI_Comm comm, int mpi_rank,
-                                                 bool rank0) {
+/**
+ * @brief Writers, ICs, BCs, then optional `simulator` JSON subsection
+ *
+ * @param modifier_catalog Modifier factories for JSON `type` strings (inject a
+ *        test catalog or extend defaults).
+ */
+inline void
+wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
+                                     const nlohmann::json &settings, MPI_Comm comm,
+                                     int mpi_rank, bool rank0,
+                                     const FieldModifierCatalog &modifier_catalog =
+                                         default_field_modifier_catalog()) {
   add_result_writers_from_json(sim, settings, comm, mpi_rank, rank0);
-  add_initial_conditions_from_json(sim, settings, comm, mpi_rank, rank0);
-  add_boundary_conditions_from_json(sim, settings, comm, mpi_rank, rank0);
+  add_initial_conditions_from_json(sim, settings, comm, mpi_rank, rank0,
+                                   modifier_catalog);
+  add_boundary_conditions_from_json(sim, settings, comm, mpi_rank, rank0,
+                                    modifier_catalog);
   apply_simulator_section_from_json(sim, time, settings);
 }
 

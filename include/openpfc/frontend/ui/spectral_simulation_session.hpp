@@ -85,11 +85,17 @@ public:
    * @brief Register writers/modifiers and apply optional `"simulator"` JSON keys
    *
    * Uses the same MPI communicator as FFT construction (`SpectralCpuStack`).
+   *
+   * @param modifier_catalog Factories for JSON `type` strings (defaults to the
+   *        process-wide catalog; inject a test catalog for unit tests).
    */
   void wire_simulator_from_settings(const nlohmann::json &settings, int mpi_rank,
-                                    bool rank0) {
+                                    bool rank0,
+                                    const FieldModifierCatalog &modifier_catalog =
+                                        default_field_modifier_catalog()) {
     wire_simulator_and_runtime_from_json(m_simulator, m_stack.time(), settings,
-                                         m_stack.mpi_comm(), mpi_rank, rank0);
+                                         m_stack.mpi_comm(), mpi_rank, rank0,
+                                         modifier_catalog);
   }
 
 private:
