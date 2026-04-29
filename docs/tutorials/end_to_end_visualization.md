@@ -24,16 +24,16 @@ Ensure examples and apps are enabled (defaults): `OpenPFC_BUILD_EXAMPLES=ON`, `O
 
 Goal: two PNG files (initial and final field) without writing JSON.
 
-1. From your **build directory**:
+1. From your **build directory**, use the same argument order as in [`apps/allen_cahn/README.md`](../../apps/allen_cahn/README.md) (defaults and **growth check** evolve with the app — the stock example below matches the shipped README):
 
    ```bash
    cd build
    mkdir -p png_out
-   mpirun -n 4 ./apps/allen_cahn/allen_cahn 128 128 500 0.0015 2.0 0.35 \
+   mpirun -n 4 ./apps/allen_cahn/allen_cahn 128 128 5000 0.00009 8.0 0.19 10.0 \
      png_out/initial.png png_out/final.png
    ```
 
-2. **Success**: `mpirun` exits with status 0. On rank 0 you should find `png_out/initial.png` and `png_out/final.png` (grayscale, fixed \[-1,1\] scale — see [`io_results.md`](../io_results.md)).
+2. **Success**: `mpirun` exits with status 0. On rank 0 you should find `png_out/initial.png` and `png_out/final.png` (grayscale, fixed \[-1,1\] scale — see [`io_results.md`](../io_results.md)). The app may **exit non-zero** if its internal growth check fails—reduce ranks or adjust parameters per the app README.
 
 3. **Details**: full CLI reference — [`apps/allen_cahn/README.md`](../../apps/allen_cahn/README.md).
 

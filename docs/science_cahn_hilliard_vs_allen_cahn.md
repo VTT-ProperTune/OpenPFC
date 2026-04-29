@@ -24,6 +24,7 @@ Both names describe **interface-driven** continuum models, but the **shipped Ope
 | **What** | **2D Allen–Cahn**-type **reaction–diffusion** with a double-well potential; **finite differences** with halos on a 2D grid. |
 | **Driver** | **CLI arguments** (no JSON `App`). |
 | **Output** | Optional **PNG** snapshots (gather to rank 0) for quick visuals ([`io_results.md`](io_results.md)). |
+| **Checks** | The shipped app can **verify** seed growth (see [`apps/allen_cahn/README.md`](../apps/allen_cahn/README.md)); exit code may be non-zero if thresholds are not met. |
 | **Use** | Lightweight **visual sanity check**, FD + halo patterns ([`halo_exchange.md`](halo_exchange.md)), GPU variants when built. |
 
 ## Choosing one
