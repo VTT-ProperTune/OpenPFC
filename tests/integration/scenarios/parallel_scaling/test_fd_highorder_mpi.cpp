@@ -15,7 +15,7 @@
 
 using namespace pfc;
 
-TEST_CASE("4th/6th order separated Laplacian of constant field is zero",
+TEST_CASE("even-order (2..20) separated Laplacian of constant field is zero",
           "[MPI][fd]") {
   int rank = 0;
   int size = 1;
@@ -26,7 +26,7 @@ TEST_CASE("4th/6th order separated Laplacian of constant field is zero",
     return;
   }
 
-  auto world = world::uniform(32, 1.0);
+  auto world = world::uniform(128, 1.0);
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
@@ -39,68 +39,42 @@ TEST_CASE("4th/6th order separated Laplacian of constant field is zero",
 
   std::vector<double> u(nlocal, 3.0);
   const double inv = 1.0;
-
-  constexpr int hw4 = 2;
-  auto face4 = halo::allocate_face_halos<double>(decomp, rank, hw4);
-  SeparatedFaceHaloExchanger<double> ex4(decomp, rank, hw4, MPI_COMM_WORLD);
-  ex4.exchange_halos(u.data(), u.size(), face4);
-  std::vector<double> lap4(nlocal, 0.0);
-  std::array<const double *, 6> fp4{};
-  for (int i = 0; i < 6; ++i) {
-    fp4[static_cast<size_t>(i)] = face4[static_cast<size_t>(i)].data();
-  }
-  field::fd::laplacian_4th_order_interior_separated(u.data(), fp4, lap4.data(), nx,
-                                                    ny, nz, inv, inv, inv, hw4);
-
-  constexpr int hw6 = 3;
-  auto face6 = halo::allocate_face_halos<double>(decomp, rank, hw6);
-  SeparatedFaceHaloExchanger<double> ex6(decomp, rank, hw6, MPI_COMM_WORLD);
-  ex6.exchange_halos(u.data(), u.size(), face6);
-  std::vector<double> lap6(nlocal, 0.0);
-  std::array<const double *, 6> fp6{};
-  for (int i = 0; i < 6; ++i) {
-    fp6[static_cast<size_t>(i)] = face6[static_cast<size_t>(i)].data();
-  }
-  field::fd::laplacian_6th_order_interior_separated(u.data(), fp6, lap6.data(), nx,
-                                                    ny, nz, inv, inv, inv, hw6);
-
-  const int imin4 = hw4;
-  const int imax4 = nx - hw4;
-  const int jmin4 = hw4;
-  const int jmax4 = ny - hw4;
-  const int kmin4 = hw4;
-  const int kmax4 = nz - hw4;
   const int sxy = nx * ny;
-  for (int iz = kmin4; iz < kmax4; ++iz) {
-    for (int iy = jmin4; iy < jmax4; ++iy) {
-      for (int ix = imin4; ix < imax4; ++ix) {
-        const size_t c = static_cast<size_t>(ix) +
-                         static_cast<size_t>(iy) * static_cast<size_t>(nx) +
-                         static_cast<size_t>(iz) * static_cast<size_t>(sxy);
-        REQUIRE(lap4[c] == Catch::Approx(0.0).margin(1e-11));
-      }
-    }
-  }
 
-  const int imin6 = hw6;
-  const int imax6 = nx - hw6;
-  const int jmin6 = hw6;
-  const int jmax6 = ny - hw6;
-  const int kmin6 = hw6;
-  const int kmax6 = nz - hw6;
-  for (int iz = kmin6; iz < kmax6; ++iz) {
-    for (int iy = jmin6; iy < jmax6; ++iy) {
-      for (int ix = imin6; ix < imax6; ++ix) {
-        const size_t c = static_cast<size_t>(ix) +
-                         static_cast<size_t>(iy) * static_cast<size_t>(nx) +
-                         static_cast<size_t>(iz) * static_cast<size_t>(sxy);
-        REQUIRE(lap6[c] == Catch::Approx(0.0).margin(1e-11));
+  for (int order = 2; order <= 20; order += 2) {
+    const int hw = order / 2;
+    auto face = halo::allocate_face_halos<double>(decomp, rank, hw);
+    SeparatedFaceHaloExchanger<double> ex(decomp, rank, hw, MPI_COMM_WORLD);
+    ex.exchange_halos(u.data(), u.size(), face);
+    std::vector<double> lap(nlocal, 0.0);
+    std::array<const double *, 6> fp{};
+    for (int i = 0; i < 6; ++i) {
+      fp[static_cast<size_t>(i)] = face[static_cast<size_t>(i)].data();
+    }
+    field::fd::laplacian_even_order_interior_separated(
+        u.data(), fp, lap.data(), nx, ny, nz, inv, inv, inv, hw, order);
+
+    const int imin = hw;
+    const int imax = nx - hw;
+    const int jmin = hw;
+    const int jmax = ny - hw;
+    const int kmin = hw;
+    const int kmax = nz - hw;
+    for (int iz = kmin; iz < kmax; ++iz) {
+      for (int iy = jmin; iy < jmax; ++iy) {
+        for (int ix = imin; ix < imax; ++ix) {
+          const size_t c = static_cast<size_t>(ix) +
+                           static_cast<size_t>(iy) * static_cast<size_t>(nx) +
+                           static_cast<size_t>(iz) * static_cast<size_t>(sxy);
+          INFO("order " << order << " rank " << rank);
+          REQUIRE(lap[c] == Catch::Approx(0.0).margin(1e-10));
+        }
       }
     }
   }
 }
 
-TEST_CASE("4th order Laplacian of global quadratic field is exact (discrete = 6)",
+TEST_CASE("even-order (2..20) Laplacian of global quadratic is exact (6)",
           "[MPI][fd]") {
   int rank = 0;
   int size = 1;
@@ -111,7 +85,7 @@ TEST_CASE("4th order Laplacian of global quadratic field is exact (discrete = 6)
     return;
   }
 
-  auto world = world::uniform(32, 1.0);
+  auto world = world::uniform(128, 1.0);
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
@@ -141,31 +115,35 @@ TEST_CASE("4th order Laplacian of global quadratic field is exact (discrete = 6)
   }
 
   const double inv = 1.0;
-  constexpr int hw2 = 2;
-  auto face2 = halo::allocate_face_halos<double>(decomp, rank, hw2);
-  SeparatedFaceHaloExchanger<double> ex2(decomp, rank, hw2, MPI_COMM_WORLD);
-  ex2.exchange_halos(u.data(), u.size(), face2);
-  std::vector<double> lap4(nlocal, 0.0);
-  std::array<const double *, 6> fp2{};
-  for (int i = 0; i < 6; ++i) {
-    fp2[static_cast<size_t>(i)] = face2[static_cast<size_t>(i)].data();
-  }
-  field::fd::laplacian_4th_order_interior_separated(u.data(), fp2, lap4.data(), nx,
-                                                    ny, nz, inv, inv, inv, hw2);
 
-  const int imin = hw2;
-  const int imax = nx - hw2;
-  const int jmin = hw2;
-  const int jmax = ny - hw2;
-  const int kmin = hw2;
-  const int kmax = nz - hw2;
-  for (int iz = kmin; iz < kmax; ++iz) {
-    for (int iy = jmin; iy < jmax; ++iy) {
-      for (int ix = imin; ix < imax; ++ix) {
-        const size_t c = static_cast<size_t>(ix) +
-                         static_cast<size_t>(iy) * static_cast<size_t>(nx) +
-                         static_cast<size_t>(iz) * static_cast<size_t>(sxy);
-        REQUIRE(lap4[c] == Catch::Approx(6.0).margin(1e-9));
+  for (int order = 2; order <= 20; order += 2) {
+    const int hw = order / 2;
+    auto face = halo::allocate_face_halos<double>(decomp, rank, hw);
+    SeparatedFaceHaloExchanger<double> ex(decomp, rank, hw, MPI_COMM_WORLD);
+    ex.exchange_halos(u.data(), u.size(), face);
+    std::vector<double> lap(nlocal, 0.0);
+    std::array<const double *, 6> fp{};
+    for (int i = 0; i < 6; ++i) {
+      fp[static_cast<size_t>(i)] = face[static_cast<size_t>(i)].data();
+    }
+    field::fd::laplacian_even_order_interior_separated(
+        u.data(), fp, lap.data(), nx, ny, nz, inv, inv, inv, hw, order);
+
+    const int imin = hw;
+    const int imax = nx - hw;
+    const int jmin = hw;
+    const int jmax = ny - hw;
+    const int kmin = hw;
+    const int kmax = nz - hw;
+    for (int iz = kmin; iz < kmax; ++iz) {
+      for (int iy = jmin; iy < jmax; ++iy) {
+        for (int ix = imin; ix < imax; ++ix) {
+          const size_t c = static_cast<size_t>(ix) +
+                           static_cast<size_t>(iy) * static_cast<size_t>(nx) +
+                           static_cast<size_t>(iz) * static_cast<size_t>(sxy);
+          INFO("order " << order << " rank " << rank);
+          REQUIRE(lap[c] == Catch::Approx(6.0).margin(1e-8));
+        }
       }
     }
   }

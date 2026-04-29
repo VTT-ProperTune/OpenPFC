@@ -33,7 +33,7 @@ The JSON inputs live under [`apps/tungsten/inputs_json/`](../../apps/tungsten/in
 
 ## Heat3D
 
-`heat3d` solves the 3D heat equation either with finite differences or with a spectral FFT step. The finite-difference path supports even orders from 2 to 20, and the app can use OpenMP over interior \((i_y,i_z)\) lines when the build enables it (the Laplacian along \(i_x\) stays serial in `finite_difference.hpp`). It is useful for checking numerical behaviour, performance and scaling without the full PFC model stack. See [`apps/heat3d/README.md`](../../apps/heat3d/README.md) for CLI syntax, stability notes and `mpirun` examples.
+`heat3d` solves the 3D heat equation either with finite differences or with a spectral FFT step. The finite-difference path supports even orders from 2 to 20, and the app can use OpenMP over interior \((i_y,i_z)\) lines when the build enables it (the Laplacian along \(i_x\) stays serial in `finite_difference.hpp`). On **Linux**, a **single MPI rank** resets CPU affinity after `MPI_Init` so OpenMP is not stuck on one core under default `mpirun` pinning (set `HEAT3D_NO_RESET_AFFINITY` to opt out). For several ranks per node, tune `mpirun` binding and `OMP_NUM_THREADS` as in [`apps/heat3d/README.md`](../../apps/heat3d/README.md).
 
 ## Allen–Cahn
 

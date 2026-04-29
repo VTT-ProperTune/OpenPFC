@@ -3,10 +3,22 @@
 
 #include <cmath>
 #include <complex>
+#include <cstddef>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <mpi.h>
 #include <vector>
+
+#if defined(__linux__)
+#include <sched.h>
+#include <unistd.h>
+#endif
+
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 #include <heat3d/common.hpp>
 
@@ -21,6 +33,113 @@
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
+
+namespace {
+
+/**
+ * Open MPI (and some other launchers) pin a single rank to one logical CPU, so
+ * OpenMP sees `omp_get_num_procs()==1` and all threads share one core. For
+ * **exactly one MPI rank** on Linux, reset the process affinity mask to all
+ * online CPUs so OpenMP can scale. Multi-rank jobs are unchanged (each rank
+ * keeps the launcher mask). Opt out with `HEAT3D_NO_RESET_AFFINITY` set.
+ */
+void heat3d_reset_cpu_affinity_if_single_mpi_rank(int nproc) {
+#if defined(__linux__)
+  if (nproc != 1) {
+    return;
+  }
+  if (std::getenv("HEAT3D_NO_RESET_AFFINITY") != nullptr) {
+    return;
+  }
+  const long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+  if (ncpus <= 1) {
+    return;
+  }
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  for (long i = 0; i < ncpus; ++i) {
+    CPU_SET(static_cast<int>(i), &set);
+  }
+  (void)sched_setaffinity(0, sizeof(set), &set);
+#endif
+}
+
+/** Synthetic CPU load per interior (iy,iz) line; replaces real Laplacian for OpenMP
+ *  diagnostics (see `HEAT3D_FD_OMP_DUMMY` in README). */
+void fd_dummy_laplace_line(double *lap, int nx, int imin, int imax, int iy, int iz,
+                           int sxy, long long iters) {
+  double s = 0.1 * static_cast<double>((iy ^ iz) + 1);
+  for (long long k = 0; k < iters; ++k) {
+    s = std::fma(std::sin(s), 1.0000000001 + static_cast<double>(k & 511), 0.01);
+  }
+  for (int ix = imin; ix < imax; ++ix) {
+    const size_t c = static_cast<size_t>(ix) +
+                     static_cast<size_t>(iy) * static_cast<size_t>(nx) +
+                     static_cast<size_t>(iz) * static_cast<size_t>(sxy);
+    lap[c] = s + 1e-12 * static_cast<double>(ix);
+  }
+}
+
+bool fd_omp_dummy_bench_from_env() {
+  const char *e = std::getenv("HEAT3D_FD_OMP_DUMMY");
+  return e != nullptr && std::strcmp(e, "1") == 0;
+}
+
+long long fd_dummy_work_iters_from_env() {
+  const char *e = std::getenv("HEAT3D_FD_DUMMY_ITERS");
+  /** Default keeps a single rank / moderate grid run in the ~second range; raise
+   *  HEAT3D_FD_DUMMY_ITERS for a heavier synthetic load. */
+  constexpr long long k_default_iters = 12000LL;
+  if (e == nullptr || e[0] == '\0') {
+    return k_default_iters;
+  }
+  char *end = nullptr;
+  const long long v = std::strtoll(e, &end, 10);
+  if (end == e || v < 1) {
+    return k_default_iters;
+  }
+  return v;
+}
+
+void fd_omp_dummy_print_affinity_diag(int rank) {
+  if (rank != 0) {
+    return;
+  }
+  std::cerr
+      << "heat3d(fd_dummy): HEAT3D_FD_OMP_DUMMY=1 — timed body is **only** the "
+         "same `omp parallel for collapse(2)` over (iy,iz); halo exchange and "
+         "Euler update are **skipped** so time is dominated by dummy FP work.\n";
+  static const char *const keys[] = {"OMP_NUM_THREADS",
+                                     "OMP_PROC_BIND",
+                                     "OMP_PLACES",
+                                     "OMP_WAIT_POLICY",
+                                     "GOMP_CPU_AFFINITY",
+                                     "KMP_AFFINITY",
+                                     "OMPI_MCA_hwloc_base_binding_policy"};
+  std::cerr << "heat3d(fd_dummy): affinity-relevant environment:\n";
+  for (const char *k : keys) {
+    const char *v = std::getenv(k);
+    std::cerr << "  " << k << "=" << (v != nullptr ? v : "<unset>") << "\n";
+  }
+#if defined(__linux__)
+  if (FILE *f = std::fopen("/proc/self/status", "r")) {
+    char buf[512];
+    while (std::fgets(buf, sizeof buf, f) != nullptr) {
+      if (std::strncmp(buf, "Cpus_allowed_list:", 18) == 0) {
+        std::cerr << "heat3d(fd_dummy): " << buf;
+        break;
+      }
+    }
+    std::fclose(f);
+  }
+#endif
+#if defined(_OPENMP)
+  std::cerr << "heat3d(fd_dummy): omp_get_num_procs()=" << omp_get_num_procs()
+            << " omp_get_max_threads()=" << omp_get_max_threads() << "\n";
+#endif
+}
+
+} // namespace
 
 static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   auto world = world::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
@@ -37,6 +156,14 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
       static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
 
   const int hw = cfg.fd_order / 2;
+  if (2 * hw >= nx || 2 * hw >= ny || 2 * hw >= nz) {
+    if (rank == 0) {
+      std::cerr << "heat3d: local subdomain " << nx << "x" << ny << "x" << nz
+                << " too small for fd_order=" << cfg.fd_order << " (need > "
+                << (2 * hw) << " points per dimension)\n";
+    }
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
   const double dx = 1.0;
   const double inv_dx2 = 1.0 / (dx * dx);
 
@@ -51,35 +178,21 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
     face_ptrs[static_cast<size_t>(i)] = face_halos[static_cast<size_t>(i)].data();
   }
 
+  const bool fd_omp_dummy = fd_omp_dummy_bench_from_env();
+  const long long dummy_iters = fd_dummy_work_iters_from_env();
+  if (fd_omp_dummy) {
+#if !defined(_OPENMP)
+    if (rank == 0) {
+      std::cerr << "heat3d(fd_dummy): OpenMP was not enabled at compile time; "
+                   "timings measure serial dummy loops only.\n";
+    }
+#endif
+    fd_omp_dummy_print_affinity_diag(rank);
+  }
+
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
-  for (int step = 0; step < cfg.n_steps; ++step) {
-    exchanger.exchange_halos(u.data(), u.size(), face_halos);
-    std::fill(lap.begin(), lap.end(), 0.0);
-    if (cfg.fd_order == 2) {
-      field::fd::laplacian_7point_interior_separated(u.data(), face_ptrs, lap.data(),
-                                                     nx, ny, nz, inv_dx2, inv_dx2,
-                                                     inv_dx2, hw);
-    } else if (cfg.fd_order == 4) {
-      field::fd::laplacian_4th_order_interior_separated(
-          u.data(), face_ptrs, lap.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2,
-          hw);
-    } else {
-      field::fd::laplacian_6th_order_interior_separated(
-          u.data(), face_ptrs, lap.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2,
-          hw);
-    }
-    for (size_t i = 0; i < nlocal; ++i) {
-      u[i] += cfg.dt * cfg.D * lap[i];
-    }
-  }
-  const double t1 = MPI_Wtime();
-  double elapsed = t1 - t0;
-  double max_elapsed = 0.0;
-  MPI_Allreduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-
-  const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
-  double sum_err2 = 0.0;
+  const ptrdiff_t nptr = static_cast<ptrdiff_t>(nlocal);
   const int imin = hw;
   const int imax = nx - hw;
   const int jmin = hw;
@@ -87,22 +200,59 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   const int kmin = hw;
   const int kmax = nz - hw;
   const int sxy = nx * ny;
-  for (int iz = kmin; iz < kmax; ++iz) {
-    for (int iy = jmin; iy < jmax; ++iy) {
-      for (int ix = imin; ix < imax; ++ix) {
-        const int gi = local_lower[0] + ix;
-        const int gj = local_lower[1] + iy;
-        const int gk = local_lower[2] + iz;
-        const double x = static_cast<double>(gi);
-        const double y = static_cast<double>(gj);
-        const double z = static_cast<double>(gk);
-        const double r2 = x * x + y * y + z * z;
-        const size_t c = static_cast<size_t>(ix) +
-                         static_cast<size_t>(iy) * static_cast<size_t>(nx) +
-                         static_cast<size_t>(iz) * static_cast<size_t>(sxy);
-        const double uex = heat3d::analytic_gaussian(r2, t_final, cfg.D);
-        const double e = u[c] - uex;
-        sum_err2 += e * e;
+  for (int step = 0; step < cfg.n_steps; ++step) {
+    if (!fd_omp_dummy) {
+      exchanger.exchange_halos(u.data(), u.size(), face_halos);
+      for (ptrdiff_t li = 0; li < nptr; ++li) {
+        lap[static_cast<size_t>(li)] = 0.0;
+      }
+    }
+#if defined(_OPENMP)
+#pragma omp parallel for collapse(2) schedule(static)
+#endif
+    for (int iz = kmin; iz < kmax; ++iz) {
+      for (int iy = jmin; iy < jmax; ++iy) {
+        if (fd_omp_dummy) {
+          fd_dummy_laplace_line(lap.data(), nx, imin, imax, iy, iz, sxy,
+                                dummy_iters);
+        } else {
+          field::fd::laplacian_even_order_interior_separated_xy_row(
+              u.data(), face_ptrs, lap.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2,
+              hw, cfg.fd_order, iy, iz);
+        }
+      }
+    }
+    if (!fd_omp_dummy) {
+      for (ptrdiff_t li = 0; li < nptr; ++li) {
+        u[static_cast<size_t>(li)] += cfg.dt * cfg.D * lap[static_cast<size_t>(li)];
+      }
+    }
+  }
+  const double t1 = MPI_Wtime();
+  double elapsed = t1 - t0;
+  double max_elapsed = 0.0;
+  MPI_Allreduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+  double sum_err2 = 0.0;
+  if (!fd_omp_dummy) {
+    const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
+    for (int iz = kmin; iz < kmax; ++iz) {
+      for (int iy = jmin; iy < jmax; ++iy) {
+        for (int ix = imin; ix < imax; ++ix) {
+          const int gi = local_lower[0] + ix;
+          const int gj = local_lower[1] + iy;
+          const int gk = local_lower[2] + iz;
+          const double x = static_cast<double>(gi);
+          const double y = static_cast<double>(gj);
+          const double z = static_cast<double>(gk);
+          const double r2 = x * x + y * y + z * z;
+          const size_t c = static_cast<size_t>(ix) +
+                           static_cast<size_t>(iy) * static_cast<size_t>(nx) +
+                           static_cast<size_t>(iz) * static_cast<size_t>(sxy);
+          const double uex = heat3d::analytic_gaussian(r2, t_final, cfg.D);
+          const double e = u[c] - uex;
+          sum_err2 += e * e;
+        }
       }
     }
   }
@@ -110,17 +260,42 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   MPI_Reduce(&sum_err2, &g_err2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
-    const double rms =
-        std::sqrt(g_err2 / static_cast<double>(cfg.N * cfg.N * cfg.N));
+#if defined(_OPENMP)
+    const int omp_nt = omp_get_max_threads();
+#else
+    const int omp_nt = 1;
+#endif
     std::cout << "heat3d method=fd N=" << cfg.N << " n_steps=" << cfg.n_steps
               << " dt=" << cfg.dt << " D=" << cfg.D << " fd_order=" << cfg.fd_order
-              << " mpi_ranks=" << nproc << "\n";
+              << " mpi_ranks=" << nproc << " omp_max_threads=" << omp_nt;
+#if defined(_OPENMP)
+    std::cout << " omp_get_num_procs()=" << omp_get_num_procs();
+#endif
+    if (fd_omp_dummy) {
+      std::cout << " HEAT3D_FD_OMP_DUMMY=1 HEAT3D_FD_DUMMY_ITERS=" << dummy_iters;
+    }
+    std::cout << "\n";
     std::cout << "timing_s=" << max_elapsed << " avg_step_time_s="
               << (max_elapsed / static_cast<double>(cfg.n_steps))
               << " (MPI_MAX across ranks)\n";
-    std::cout
-        << "l2_error_vs_R3_analytic_rms=" << rms
-        << " (periodic domain; error dominated by boundaries for localized IC)\n";
+    if (fd_omp_dummy) {
+      std::cout << "l2_error_vs_R3_analytic_rms=<skipped: HEAT3D_FD_OMP_DUMMY "
+                   "bench; interpret avg_step_time_s vs OMP_NUM_THREADS only>\n";
+#if defined(_OPENMP)
+      if (omp_get_num_procs() == 1 && omp_get_max_threads() > 1) {
+        std::cerr << "heat3d(fd_dummy): omp_get_num_procs()==1 with multiple "
+                     "OpenMP threads — see `Cpus_allowed_list` above. For one MPI "
+                     "rank on Linux, unset HEAT3D_NO_RESET_AFFINITY; otherwise use "
+                     "`mpirun --bind-to none` or launcher binding options.\n";
+      }
+#endif
+    } else {
+      const double rms =
+          std::sqrt(g_err2 / static_cast<double>(cfg.N * cfg.N * cfg.N));
+      std::cout
+          << "l2_error_vs_R3_analytic_rms=" << rms
+          << " (periodic domain; error dominated by boundaries for localized IC)\n";
+    }
   }
 }
 
@@ -233,6 +408,7 @@ int main(int argc, char **argv) {
   int nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  heat3d_reset_cpu_affinity_if_single_mpi_rank(nproc);
 
   const heat3d::RunConfig cfg = heat3d::parse_args(argc, argv);
   const bool args_ok = (cfg.method == heat3d::Method::Fd && argc >= 7) ||

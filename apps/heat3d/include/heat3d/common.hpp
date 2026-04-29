@@ -23,14 +23,15 @@ struct RunConfig {
   int n_steps = 100;
   double dt = 0.01;
   double D = 1.0;
-  /** Spatial order for FD: 2, 4, or 6 (ignored for spectral). */
+  /** Spatial order for FD: even 2, 4, …, 20 (ignored for spectral). */
   int fd_order = 2;
 };
 
 inline void print_usage(const char *exe) {
-  std::cerr << "Usage:\n  " << exe << " fd <N> <n_steps> <dt> <D> <fd_order>\n  "
-            << exe << " spectral <N> <n_steps> <dt> <D>\n"
-            << "  fd_order: 2, 4, or 6 (central Laplacian accuracy)\n";
+  std::cerr
+      << "Usage:\n  " << exe << " fd <N> <n_steps> <dt> <D> <fd_order>\n  " << exe
+      << " spectral <N> <n_steps> <dt> <D>\n"
+      << "  fd_order: even 2,4,...,20 (central Laplacian; halo width order/2)\n";
 }
 
 /** @param argc argv count; caller must ensure enough arguments for the chosen mode
@@ -66,7 +67,7 @@ inline bool validate(const RunConfig &c) {
     return false;
   }
   if (c.method == Method::Fd) {
-    if (c.fd_order != 2 && c.fd_order != 4 && c.fd_order != 6) {
+    if (c.fd_order < 2 || c.fd_order > 20 || (c.fd_order % 2) != 0) {
       return false;
     }
   }
