@@ -20,6 +20,9 @@
  * `Simulator` members and delegate to `write_scheduled_simulator_results` where
  * applicable.
  *
+ * Const observers: `get_model` / `get_time` / `get_world` / `get_increment` /
+ * `done` accept `const Simulator&` when only read access is required.
+ *
  * @see simulator.hpp
  */
 
@@ -33,11 +36,23 @@
   return sim.get_model();
 }
 
+[[nodiscard]] inline const Model &get_model(const Simulator &sim) noexcept {
+  return sim.get_model();
+}
+
 [[nodiscard]] inline Time &get_time(Simulator &sim) noexcept {
   return sim.get_time();
 }
 
+[[nodiscard]] inline const Time &get_time(const Simulator &sim) noexcept {
+  return sim.get_time();
+}
+
 [[nodiscard]] inline const World &get_world(Simulator &sim) noexcept {
+  return pfc::get_world(get_model(sim));
+}
+
+[[nodiscard]] inline const World &get_world(const Simulator &sim) noexcept {
   return pfc::get_world(get_model(sim));
 }
 
@@ -57,7 +72,7 @@ inline void step(Simulator &sim) { sim.step(); }
 
 /** @brief True when simulation time has reached the end (same as
  * `Simulator::done()`). */
-[[nodiscard]] inline bool done(Simulator &sim) { return sim.done(); }
+[[nodiscard]] inline bool done(const Simulator &sim) noexcept { return sim.done(); }
 
 /** @brief Integrator prologue (same as `Simulator::begin_integrator_step()`). */
 inline void begin_integrator_step(Simulator &sim) {
@@ -71,7 +86,7 @@ inline void end_integrator_step(Simulator &sim) {
 
 /** @brief Completed physics steps after last `step()` (same as
  * `Simulator::get_increment()`). */
-[[nodiscard]] inline unsigned int get_increment(Simulator &sim) {
+[[nodiscard]] inline unsigned int get_increment(const Simulator &sim) noexcept {
   return sim.get_increment();
 }
 

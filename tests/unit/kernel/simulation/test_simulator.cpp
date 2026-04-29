@@ -43,6 +43,17 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     REQUIRE(pfc::results_writers(simulator).empty());
   }
 
+  SECTION("const Simulator query overloads") {
+    Time time({0.0, 10.0, 1.0}, 1.0);
+    Simulator simulator(model, time);
+    const Simulator &cs = simulator;
+    REQUIRE(&pfc::get_model(cs) == &model);
+    REQUIRE(&pfc::get_time(cs) == &time);
+    REQUIRE(&pfc::get_world(cs) == &pfc::get_world(model));
+    REQUIRE_FALSE(pfc::done(cs));
+    REQUIRE(pfc::get_increment(cs) == 0U);
+  }
+
   SECTION("Add and apply initial conditions") {
     Time time({0.0, 10.0, 1.0}, 1.0);
     Simulator simulator(model, time);

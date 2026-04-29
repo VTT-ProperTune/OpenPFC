@@ -120,6 +120,8 @@ public:
    */
   Model &get_model() { return m_model; }
 
+  [[nodiscard]] const Model &get_model() const noexcept { return m_model; }
+
   /**
    * @brief Get the decomposition object
    *
@@ -130,7 +132,9 @@ public:
    *
    * @return const World&
    */
-  const World &get_world() { return pfc::get_world(m_model); }
+  [[nodiscard]] const World &get_world() const noexcept {
+    return pfc::get_world(m_model);
+  }
 
   /**
    * @brief Get the FFT object
@@ -146,13 +150,15 @@ public:
    */
   Time &get_time() { return m_time; }
 
+  [[nodiscard]] const Time &get_time() const noexcept { return m_time; }
+
   void initialize() { pfc::initialize(m_model, pfc::time::dt(m_time)); }
 
   /** @brief Rank 0 in mpi_comm() (same communicator passed to field modifiers) */
   [[nodiscard]] bool is_rank0() const noexcept { return m_is_rank0; }
 
-  unsigned int get_increment() {
-    return static_cast<unsigned>(pfc::time::increment(get_time()));
+  [[nodiscard]] unsigned int get_increment() const noexcept {
+    return static_cast<unsigned>(pfc::time::increment(m_time));
   }
 
   /**
@@ -528,7 +534,7 @@ public:
    * @see Time::done() for time completion logic
    * @see get_time() to access current time
    */
-  bool done() { return pfc::time::done(get_time()); }
+  [[nodiscard]] bool done() const noexcept { return pfc::time::done(m_time); }
 };
 
 #include <openpfc/kernel/simulation/simulator_integrator.hpp>
