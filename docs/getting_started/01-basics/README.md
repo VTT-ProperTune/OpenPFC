@@ -482,3 +482,18 @@ the material model developer, as they are irrelevant details for the development
 of the actual model. However, it is good to understand what happens under the
 hood when the model is simulated in a high-performance computing environment
 with tens or hundreds of computers.
+
+---
+
+## Next steps for application developers
+
+If you already link OpenPFC and want a **JSON-driven program** with **`App<Model>`**, continue with:
+
+| Topic | Document |
+|-------|----------|
+| JSON/TOML → simulator wiring | [`../../app_pipeline.md`](../../app_pipeline.md) |
+| Map of main classes and headers | [`../../class_tour.md`](../../class_tour.md) |
+| Minimal out-of-tree CMake + `App` tutorial | [`../../tutorials/custom_app_minimal.md`](../../tutorials/custom_app_minimal.md) |
+| Validating `model.params` | [`../../parameter_validation.md`](../../parameter_validation.md) |
+
+The docs hub **[`../../README.md`](../../README.md)** lists all guides; extension checklist: [`../../extending_openpfc/README.md`](../../extending_openpfc/README.md).

@@ -15,6 +15,19 @@ Read **[`../architecture.md`](../architecture.md)** first so you know where code
 
 Most extension work is **new types in your app or examples** that plug into **`Model`**, **`FieldModifier`**, **`ResultsWriter`**, or the **`App`** registration APIs.
 
+## Minimum file set for a config-driven binary
+
+If you ship an executable that uses **`pfc::ui::App<YourModel>`** (JSON/TOML on disk), you typically need:
+
+| Piece | Purpose |
+|-------|---------|
+| **`your_model.hpp` / `.cpp`** | **`YourModel : public pfc::Model`** with **`initialize`**, **`step`**; optional **`void from_json(const pfc::ui::json &, YourModel &)`** for **`model.params`**. |
+| **`main.cpp`** | **`register_field_modifier<…>(…)`** for any custom IC/BC types; **`pfc::ui::App<YourModel> app(argc, argv); return app.main();`** |
+| **CMake** | **`find_package(OpenPFC)`**, **`find_package(nlohmann_json)`**, **`target_link_libraries(… OpenPFC nlohmann_json::nlohmann_json)`** |
+| **Config file** | Path as **`argv[1]`** — see **[`../app_pipeline.md`](../app_pipeline.md)** for section names. |
+
+End-to-end walkthrough: **[`../tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md)**. Type map: **[`../class_tour.md`](../class_tour.md)**.
+
 ## Extension points (typical)
 
 | Goal | Mechanism | Starting points |
@@ -38,7 +51,7 @@ Full index: **[`../examples_catalog.md`](../examples_catalog.md)**.
 
 ## Configuration validation
 
-Models can expose validated parameters (ranges, required keys). See the **Configuration Validation** section in the root **[`README.md`](../../README.md)** and **`apps/tungsten/tungsten_input.hpp`** for a large metadata-driven example.
+Models can expose validated parameters (ranges, required keys). See **[`../parameter_validation.md`](../parameter_validation.md)**, the **Configuration Validation** section in the root **[`README.md`](../../README.md)**, and **`apps/tungsten/tungsten_input.hpp`** for a large metadata-driven example.
 
 ## Style and API conventions
 

@@ -16,6 +16,9 @@ This directory holds guides and assets. **Build and install** from the repositor
 | Fix configure/MPI/HeFFTe issues | [`troubleshooting.md`](troubleshooting.md) |
 | Short Q&A | [`faq.md`](faq.md) |
 | Understand JSON/TOML → **`Simulator`** | [`app_pipeline.md`](app_pipeline.md) |
+| Tour of main types (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
+| Minimal custom **`App`** project (CMake + JSON) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| Parameter validation for custom models | [`parameter_validation.md`](parameter_validation.md) |
 | Edit or add markdown in this tree | [`contributing-docs.md`](contributing-docs.md) |
 | Contribute code, tests, or changelog entries | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
 | See what changed between releases | [`../CHANGELOG.md`](../CHANGELOG.md) |
@@ -30,7 +33,7 @@ This directory holds guides and assets. **Build and install** from the repositor
 | Results writers (binary / VTK / PNG) | [`io_results.md`](io_results.md) |
 | Shipped **`apps/`** programs | [`applications.md`](applications.md) |
 | Runnable **`examples/`** (catalog + folder README) | [`examples_catalog.md`](examples_catalog.md), [`../examples/README.md`](../examples/README.md) |
-| Extend models and **`App`** | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
+| Extend models and **`App`** | [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.md`](class_tour.md) |
 | Terminology | [`glossary.md`](glossary.md) |
 
 ### Build and tooling
@@ -64,6 +67,7 @@ This directory holds guides and assets. **Build and install** from the repositor
 |---------|-----------|
 | World, decomposition, FFT, CMake “hello” | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
+| Minimal out-of-tree **`App`** + JSON | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 
 ## API examples (Doxygen)
 
