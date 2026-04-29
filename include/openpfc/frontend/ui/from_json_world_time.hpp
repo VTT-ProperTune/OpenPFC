@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <string>
 
-#include <openpfc/frontend/ui/errors.hpp>
+#include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/kernel/data/world.hpp>

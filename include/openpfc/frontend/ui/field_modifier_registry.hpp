@@ -31,7 +31,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <openpfc/frontend/ui/errors.hpp>
+#include <openpfc/frontend/ui/errors_field_modifiers.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
