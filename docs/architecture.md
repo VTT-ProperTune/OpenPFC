@@ -40,6 +40,8 @@ flowchart TB
 - `Runtime` depends only on kernel.
 - `Kernel` has no dependency on runtime or frontend. Backend tags (CpuTag only), execution spaces (Serial, OpenMP only), DataBuffer&lt;CpuTag,T&gt;, memory space/traits for host, view, parallel_for, and deep_copy are in kernel; GPU specializations of these and all CUDA/HIP code live in `runtime/cuda` and `runtime/hip`. No `#ifdef OpenPFC_ENABLE_CUDA/HIP` in kernel or frontend; backend choice is via templates and including the corresponding runtime headers.
 
+**Include audit:** `include/openpfc/kernel/**` and `src/openpfc/kernel/**` must not `#include` `openpfc/frontend/*` headers. Occasional `rg 'openpfc/frontend' include/openpfc/kernel src/openpfc/kernel` should find no real includes (Doxygen comments may mention frontend types).
+
 Minimal applications can depend only on kernel + runtime and omit frontend (no UI, logging, or extra I/O helpers).
 
 ## Spectral vs finite-difference workflows
@@ -130,3 +132,8 @@ Headers under `include/openpfc/` constitute the public API. Prefer including the
 ## API compatibility
 
 Public namespaces (e.g. `pfc::core::`, `pfc::decomposition::`, `pfc::world::`) are unchanged. Only include paths and file locations change. Existing user code that updates includes to the new paths does not need to change namespace references.
+
+## See also
+
+- [`spectral_stack.md`](spectral_stack.md) — end-to-end **spectral** data-flow narrative (complements the layer diagram above).  
+- [`app_pipeline.md`](app_pipeline.md) — JSON/TOML → `Simulator` for declarative apps.
