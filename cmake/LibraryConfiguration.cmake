@@ -27,6 +27,7 @@ add_library(openpfc
     src/openpfc/frontend/ui/app_profiling.cpp
     src/openpfc/frontend/ui/ui_errors.cpp
     src/openpfc/frontend/io/vtk_writer.cpp
+    src/openpfc/frontend/io/png_writer.cpp
     $<$<BOOL:${OpenPFC_ENABLE_CUDA}>:src/openpfc/runtime/cuda/fft_cuda.cpp>
     $<$<BOOL:${OpenPFC_ENABLE_HIP}>:src/openpfc/runtime/hip/fft_hip.cpp>
 )
@@ -51,6 +52,7 @@ target_include_directories(openpfc
     $<INSTALL_INTERFACE:include>
     PRIVATE
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/stb>
 )
 
 # Options (MPI option is declared in ProjectSetup.cmake before Dependencies.cmake)

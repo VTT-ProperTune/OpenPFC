@@ -39,7 +39,7 @@ while IFS= read -r f; do
   [[ -z "$f" ]] && continue
   [[ -f "$f" ]] || continue
   case "$f" in
-    build/* | .cache/* | extern/* | third_party/* | third-party/* | docs/doxygen-awesome-css/*)
+    build/* | .cache/* | extern/* | external/* | third_party/* | third-party/* | docs/doxygen-awesome-css/*)
       continue
       ;;
   esac

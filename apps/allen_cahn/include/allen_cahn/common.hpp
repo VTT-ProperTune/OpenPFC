@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <string>
 #include <vector>
 
 #include <openpfc/kernel/data/world_queries.hpp>
@@ -24,6 +25,9 @@ struct RunConfig {
   double dt = 0.01;
   double M = 1.0;
   double epsilon = 1.0;
+  /** If non-empty, gather the final scalar field on rank 0 and write a grayscale
+   * PNG. */
+  std::string png_output;
   static constexpr int kHaloWidth = 1;
 };
 
@@ -46,6 +50,9 @@ inline RunConfig parse_args(int argc, char **argv) {
   }
   if (argc > 6) {
     c.epsilon = std::atof(argv[6]);
+  }
+  if (argc > 7) {
+    c.png_output = argv[7];
   }
   return c;
 }

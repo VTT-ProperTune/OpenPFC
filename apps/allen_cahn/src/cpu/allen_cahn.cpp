@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <allen_cahn/common.hpp>
+#include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -61,6 +62,14 @@ int main(int argc, char *argv[]) {
     allen_cahn::step_explicit_euler_cpu(&u, &lap, &face_halos, &exchanger, nx, ny,
                                         nz, inv_dx2, inv_dy2, cfg.dt, cfg.M,
                                         inv_eps2);
+  }
+
+  if (!cfg.png_output.empty()) {
+    pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u,
+                                           cfg.png_output);
+    if (rank == 0) {
+      std::cout << "Wrote PNG: " << cfg.png_output << "\n";
+    }
   }
 
   double sum_u = 0.0;

@@ -17,6 +17,7 @@
 
 #include <allen_cahn/common.hpp>
 #include <allen_cahn/device_step.hpp>
+#include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -118,6 +119,14 @@ int main(int argc, char *argv[]) {
   cuda_check(cudaMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
                         cudaMemcpyDeviceToHost),
              "cudaMemcpy D2H final");
+
+  if (!cfg.png_output.empty()) {
+    pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
+                                           cfg.png_output);
+    if (rank == 0) {
+      std::cout << "Wrote PNG: " << cfg.png_output << "\n";
+    }
+  }
 
   cudaFree(u_dev);
   for (int f = 0; f < 6; ++f) {
