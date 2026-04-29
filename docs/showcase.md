@@ -53,5 +53,7 @@ End-to-step commands and expected files: [`tutorials/end_to_end_visualization.md
 
 ## See also
 
+- [`science_tungsten_quicklook.md`](science_tungsten_quicklook.md) — what tungsten runs represent  
+- [`science_cahn_hilliard_vs_allen_cahn.md`](science_cahn_hilliard_vs_allen_cahn.md) — CH example vs Allen–Cahn app  
 - [`learning_paths.md`](learning_paths.md) — ordered tracks by role
 - [`class_tour.md`](class_tour.md) — how types in the figures map to headers and examples

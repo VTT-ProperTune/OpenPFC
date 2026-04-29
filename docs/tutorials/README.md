@@ -19,6 +19,8 @@ Step-by-step and workflow guides. Install and MPI setup: [`INSTALL.md`](../../IN
 | [**GPU apps quickstart**](gpu_app_quickstart.md) | CUDA/HIP builds and shipped GPU binaries |
 | [**Slurm / batch day one**](hpc_slurm_day_one.md) | Minimal `#SBATCH` job + `mpirun` / `srun` |
 | [**MPI / I/O checklist**](../mpi_io_layout_checklist.md) | Paths, collectives, cluster sanity |
+| [**Tungsten PFC (science)**](../science_tungsten_quicklook.md) | What the tungsten app is for |
+| [**CH vs Allen–Cahn**](../science_cahn_hilliard_vs_allen_cahn.md) | Which entry point matches your goal |
 
 ## See also
 

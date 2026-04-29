@@ -63,6 +63,13 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | CPU vs GPU build trees | [`build_cpu_gpu.md`](build_cpu_gpu.md) |
 | Code style / API shape | [`styleguide.md`](styleguide.md) |
 
+### Science and use-case notes
+
+| Topic | Document |
+|--------|-----------|
+| Tungsten PFC (what the shipped app solves) | [`science_tungsten_quicklook.md`](science_tungsten_quicklook.md) |
+| Cahn–Hilliard example vs Allen–Cahn app | [`science_cahn_hilliard_vs_allen_cahn.md`](science_cahn_hilliard_vs_allen_cahn.md) |
+
 ### Architecture and numerics
 
 | Topic | Document |

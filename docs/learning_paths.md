@@ -40,6 +40,7 @@ Goal: subclass `Model`, optionally drive runs with `App<Model>` and JSON, and va
 | 8 | Validated `model.params`: [`parameter_validation.md`](parameter_validation.md) |
 | 9 | Example ladder: [`examples_catalog.md`](examples_catalog.md) (tiers), runnable [`../examples/README.md`](../examples/README.md) |
 | 10 | Spectral sequence + VTK outputs: [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md), [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md); FFT tuning: [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md) |
+| 11 | Science context (tungsten, CH vs Allen–Cahn): [`science_tungsten_quicklook.md`](science_tungsten_quicklook.md), [`science_cahn_hilliard_vs_allen_cahn.md`](science_cahn_hilliard_vs_allen_cahn.md) |
 
 ## Library and API reference (integrator)
 
