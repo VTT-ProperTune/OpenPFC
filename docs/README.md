@@ -15,171 +15,52 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## What OpenPFC is
 
-**OpenPFC** is an open-source **C++ framework** for **phase-field crystal (PFC)** and related **spectral phase-field** models on structured grids. It is meant for **microstructure-focused simulation**: solidification, defects, and elastic fields at length scales where atomistic molecular dynamics is too costly, but you still want **crystal-level physics** beyond a plain diffuse-interface model. The code is **MPI-parallel**, uses **FFT-based** operators (via **HeFFTe** and friends), and ships both **JSON/TOML-driven applications** (for reproducible runs) and a **library** you can embed when you need a custom `App` or model.
+OpenPFC is an open-source C++ framework for phase-field crystal (PFC) and related spectral phase-field models on structured grids. It is built around three ideas: that microstructure-scale simulations of solidification, defects and elastic fields should be tractable at length scales where atomistic molecular dynamics is too costly; that the physics community already has a working language for those problems in the form of PFC and spectral phase-field models; and that the software underneath should be honest about the cost — distributed memory, FFT-based operators, and a build that you can reproduce on a cluster.
 
-If you arrived from a project web page, **this documentation is the narrative home** for the repository: what the software is, how to build and run it, and how the pieces fit together. The tables below are the full map; you do not need to read them top to bottom.
+In practice this means OpenPFC is MPI-parallel, uses HeFFTe and friends for the spectral work, and ships in two complementary shapes. There is a library, with public headers under `include/openpfc/`, that you can link from your own CMake project when you want to write a custom model or `App`. And there is a small set of ready-made applications under `apps/` that read JSON or TOML and run reproducibly on the cluster you trust. Most users start with the second shape and graduate to the first when they have a research question of their own.
 
-## Start here
+## Who this documentation is for
 
-| Goal | Open |
-|------|------|
-| **Install** (MPI, HeFFTe, optional CUDA/HIP, toolchains) | [`INSTALL.md`](../INSTALL.md) in the repository root |
-| **First run in ~15 minutes** (clone → build → `mpirun` one example) | [`start_here_15_minutes.md`](start_here_15_minutes.md) |
-| **Pick a track** (run apps, extend models, integrate the library) | [`learning_paths.md`](learning_paths.md) |
+If you came here from a project landing page and you're wondering whether OpenPFC is worth your week, the most honest answer lives in [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md). Read that first; it will tell you what kinds of simulations the spectral stack is good at today and where the finite-difference machinery is still being completed.
 
-## Published API reference vs prose in `docs/`
+Beyond that, three reader profiles end up here. The first is someone who needs to run a published phase-field crystal simulation, perhaps on an HPC system, and wants the shortest reproducible path from a clone of the repository to a `mpirun` line. The second is a researcher or graduate student who already understands the physics and wants to add their own model, change boundary conditions, or wire up validated parameters. The third is a software engineer integrating OpenPFC into a larger simulation stack, who cares about CMake, `find_package(OpenPFC)`, and the ABI of the library. The next section points each of those readers somewhere useful.
 
-| You need | Where it lives |
-|-----------|----------------|
-| **HTML class reference** (headers, Doxygen, `api/examples` snippets) | [Published dev docs](https://vtt-propertune.github.io/OpenPFC/dev/) — or build the `docs` target with `OpenPFC_BUILD_DOCUMENTATION=ON` (output under your build tree) |
-| **Tutorials, install, JSON/`App` wiring, troubleshooting, HPC** | This **`docs/`** tree and root [`INSTALL.md`](../INSTALL.md) — not duplicated in the API-only site |
+## Where to start
 
-Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so you do not land on Doxygen alone.
+The fastest possible introduction is [`start_here_15_minutes.md`](start_here_15_minutes.md). It walks from a clean clone through configure, build and one MPI example, and stops there on purpose. If you can finish that page, the rest of the documentation will make a lot more sense.
 
-### First-time onboarding (pick one)
+If you want to understand what OpenPFC is going to feel like before you commit to installing anything, read [`spectral_stack.md`](spectral_stack.md) for the data-flow story and [`architecture.md`](architecture.md) for how the kernel, runtime and frontend are split. Both are short, prose-first pages that treat the abstractions as actual concepts rather than as type lists.
 
-| Time | Goal | Open |
-|------|------|------|
-| ~15 min | Clone → build → `mpirun` one example | [`start_here_15_minutes.md`](start_here_15_minutes.md) |
-| 20 min | Understand the spectral data-flow story | [`spectral_stack.md`](spectral_stack.md) |
-| As needed | Copy-paste **recipes** (simulator, tungsten JSON, VTK/binary) | [`recipes/README.md`](recipes/README.md) |
-| Before GPU | CPU vs CUDA/HIP decision + golden path | [`gpu_path_decision.md`](gpu_path_decision.md) |
-| Clusters | Slurm, MPI-IO, profiling — one runbook index | [`hpc_operator_guide.md`](hpc_operator_guide.md) |
+When you're ready to do real work, [`learning_paths.md`](learning_paths.md) lays out three sequenced tracks — running existing apps, extending physics, and integrating the library — written for the three reader profiles described above. The [`tutorials/`](tutorials/README.md) directory holds the hands-on walkthroughs that those tracks point into, and the small [`recipes/`](recipes/README.md) collection contains copy-paste solutions for the questions people actually ask after their first run.
 
-### Teaching, quality bar, and expectations
+For installation, the canonical reference is the repository-root [`INSTALL.md`](../INSTALL.md). It covers compilers, MPI, HeFFTe 2.4.1, and the optional CUDA and HIP paths. If your build is misbehaving, [`troubleshooting.md`](troubleshooting.md) collects the failures we see most often and how to fix them; if you have a quick question, [`faq.md`](faq.md) has short answers.
 
-| Need | Document |
-|------|----------|
-| **API style** — free functions, data-centric types, when to use `virtual` / inheritance | [`styleguide.md`](styleguide.md#api-shape-free-functions-and-data-centric-types) · [`architecture.md`](architecture.md#design-ethos-laboratory-not-fortress) |
-| Honest fit (“when not”) + **FD vs spectral** direction | [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md) |
-| Prose vs **release** tags | [`documentation_versioning.md`](documentation_versioning.md) |
-| **Publication →** repo entry points | [`from_paper_to_run.md`](from_paper_to_run.md) |
-| **Workshop** curriculum (three half-days) | [`workshop/README.md`](workshop/README.md) |
-| **Architecture decisions** (ADRs) | [`adr/README.md`](adr/README.md) |
-| **Symptom → fix** playbooks | [`operator_playbooks.md`](operator_playbooks.md) |
-| **Numerics** / stability caveats | [`science_numerics_limits.md`](science_numerics_limits.md) |
-| **Printable handbook** (optional `pandoc`) | [`handbook_build.md`](handbook_build.md) |
-| **MkDocs + Material** preview (`uv`, root `mkdocs.yml`) | [`mkdocs_preview.md`](mkdocs_preview.md) |
+## Published API reference and the prose docs
 
-## Where to go first
+OpenPFC has two complementary documentation surfaces. The public [HTML class reference](https://vtt-propertune.github.io/OpenPFC/dev/) is generated from headers and the snippets under [`api/examples/`](api/examples/); it is the right place to look up a class, a function signature, or a Doxygen group. You can also build it locally by configuring with `OpenPFC_BUILD_DOCUMENTATION=ON` and building the `docs` target.
 
-| If you want to… | Open |
-|-----------------|------|
-| **Fastest first run** (build + one `mpirun`) | [`start_here_15_minutes.md`](start_here_15_minutes.md) |
-| Pick a guided track (run apps, extend models, or integrate the library) | [`learning_paths.md`](learning_paths.md) |
-| Jump in by role (personas) | [`personas.md`](personas.md) |
-| Figures and runnable entry points | [`showcase.md`](showcase.md) |
-| Step-by-step tutorials (`docs/tutorials/`) | [`tutorials/README.md`](tutorials/README.md) |
-| Named how-to **recipes** (simulator, tungsten, VTK/binary) | [`recipes/README.md`](recipes/README.md) |
-| Get running in one pass (examples, app, or `find_package`) | [`quickstart.md`](quickstart.md) |
-| Tutorials and the examples hub | [`getting_started/README.md`](getting_started/README.md) |
-| Fix configure/MPI/HeFFTe issues | [`troubleshooting.md`](troubleshooting.md) |
-| Short Q&A | [`faq.md`](faq.md) |
-| Understand JSON/TOML → `Simulator` | [`app_pipeline.md`](app_pipeline.md) |
-| Spectral `App` JSON/TOML key reference | [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
-| Binary field MPI-IO file layout | [`binary_field_io_spec.md`](binary_field_io_spec.md) |
-| Post-process raw `.bin` fields (Python / VTK-aware workflows) | [`postprocess_binary_fields.md`](postprocess_binary_fields.md) |
-| Toolchain and dependency matrix | [`dependency_matrix.md`](dependency_matrix.md) |
-| Tour of main types (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
-| Minimal custom `App` (CMake + JSON — **wiring**, not new physics) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
-| Parameter validation for custom models | [`parameter_validation.md`](parameter_validation.md) |
-| Run `ctest` / Catch2 | [`testing.md`](testing.md) |
-| GPU (CUDA/HIP) build + `tungsten_cuda` / config backend | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
-| Compare logs to a reference shape | [`example_run_output.md`](example_run_output.md) |
-| Edit or add markdown in this tree | [`contributing-docs.md`](contributing-docs.md) |
-| Contribute code, tests, or changelog entries | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
-| See what changed between releases | [`../CHANGELOG.md`](../CHANGELOG.md) |
+This `docs/` tree is the other surface. It is the prose home: the install guide, the tutorials, the configuration vocabulary, the HPC playbooks, the architecture story. It deliberately does not duplicate the API reference, and the API site deliberately does not host tutorials. Pair them: when you find a class in the API site that you don't recognise, search this tree for its name in [`class_tour.md`](class_tour.md); when you finish a tutorial here that mentions a method, jump to the API site for its full signature.
 
-## Guides by topic
+## How the documentation is organised
 
-### Configuration and applications
+The shape of this directory follows the journey, not the source tree. Conceptual material — what OpenPFC is, how the spectral stack flows, why halos matter, where finite differences fit — lives at the top of the directory in pages such as [`architecture.md`](architecture.md), [`spectral_stack.md`](spectral_stack.md), [`halo_exchange.md`](halo_exchange.md), and [`science_numerics_limits.md`](science_numerics_limits.md). Operational material — running `examples/`, configuring an `App`, debugging a build — sits next to it in [`quickstart.md`](quickstart.md), [`configuration.md`](configuration.md), [`troubleshooting.md`](troubleshooting.md), and the tutorials hub.
 
-| Topic | Document |
-|--------|-----------|
-| JSON/TOML sections, `plan_options` | [`configuration.md`](configuration.md), [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
-| Validated `model.params` (custom apps) | [`parameter_validation.md`](parameter_validation.md) |
-| Results writers (binary / VTK / PNG) | [`io_results.md`](io_results.md) |
-| Shipped `apps/` programs | [`applications.md`](applications.md) |
-| Runnable `examples/` (catalog + folder README) | [`examples_catalog.md`](examples_catalog.md), [`../examples/README.md`](../examples/README.md) |
-| Doxygen `api/examples` reading order | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
-| Extend models and `App` | [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.md`](class_tour.md) |
-| Terminology | [`glossary.md`](glossary.md) |
+When the topic is large enough to need its own narrative, it gets a folder. The hands-on tutorials live under [`tutorials/`](tutorials/README.md), the question-shaped recipes under [`recipes/`](recipes/README.md), the multi-day workshop curriculum under [`workshop/`](workshop/README.md), the LUMI-G runbook under [`lumi_slurm/`](lumi_slurm/README.md), the architectural decision records under [`adr/`](adr/README.md), and the framework-extension guides under [`extending_openpfc/`](extending_openpfc/README.md). When you're inside one of those folders, its own `README.md` is the local table of contents; you don't need to keep coming back here.
 
-### Build and tooling
+For the things you actually look up rather than read — JSON keys, the binary file layout, the dependency matrix, CMake options, the glossary — see the reference pages: [`spectral_app_config_reference.md`](spectral_app_config_reference.md), [`binary_field_io_spec.md`](binary_field_io_spec.md), [`dependency_matrix.md`](dependency_matrix.md), [`build_options.md`](build_options.md), and [`glossary.md`](glossary.md).
 
-| Topic | Document |
-|--------|-----------|
-| CMake options | [`build_options.md`](build_options.md) |
-| **GPU vs CPU** — when to enable CUDA/HIP | [`gpu_path_decision.md`](gpu_path_decision.md) |
-| CPU vs GPU build trees | [`build_cpu_gpu.md`](build_cpu_gpu.md) |
-| Toolchain / optional stacks / doc QA scripts | [`dependency_matrix.md`](dependency_matrix.md) |
-| Code style / API shape | [`styleguide.md`](styleguide.md) |
+## Running on clusters
 
-### Science and use-case notes
+If you are heading for a cluster, the entry point is [`hpc_operator_guide.md`](hpc_operator_guide.md). It is a thin runbook index that points at Slurm patterns, MPI-IO checklists, runtime profiling, and the LUMI-G specifics under [`INSTALL.LUMI.md`](INSTALL.LUMI.md) and [`lumi_slurm/`](lumi_slurm/README.md). The decision of whether to enable CUDA or HIP at all is its own page: [`gpu_path_decision.md`](gpu_path_decision.md). The first cluster-side run, with Slurm, is walked end-to-end in [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md).
 
-| Topic | Document |
-|--------|-----------|
-| Tungsten PFC (what the shipped app solves) | [`science_tungsten_quicklook.md`](science_tungsten_quicklook.md) |
-| Cahn–Hilliard example vs Allen–Cahn app | [`science_cahn_hilliard_vs_allen_cahn.md`](science_cahn_hilliard_vs_allen_cahn.md) |
-| Numerics limits (timestep, resolution, “pretty pictures”) | [`science_numerics_limits.md`](science_numerics_limits.md) |
+## Extending OpenPFC
 
-### Architecture and numerics
+If you intend to write a model, an `App`, or a custom writer, the entry point is [`extending_openpfc/README.md`](extending_openpfc/README.md). The shortest path from "I have an idea for a custom App" to "I have a built binary that consumes a JSON config" is [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md); it is deliberately about wiring rather than physics, so the changes you make in your own copy will be physics rather than plumbing. For the parameter-validation story behind `model.params`, read [`parameter_validation.md`](parameter_validation.md).
 
-| Topic | Document |
-|--------|-----------|
-| **Spectral stack** (FFT → model → simulator → writers) | [`spectral_stack.md`](spectral_stack.md) |
-| Kernel / runtime / frontend | [`architecture.md`](architecture.md) |
-| Halo exchange (FD vs FFT-safe) | [`halo_exchange.md`](halo_exchange.md) |
-| Debugging, NaN checks | [`debugging.md`](debugging.md) |
+## Contributing and changelog
 
-### Profiling and HPC
+Code contributions are described in the repository-root [`CONTRIBUTING.md`](../CONTRIBUTING.md), and the user-visible release history is in [`CHANGELOG.md`](../CHANGELOG.md). For doc-only contributions — fixing a sentence, adding a recipe, refreshing a screenshot — see [`contributing-docs.md`](contributing-docs.md), which also describes how to preview the site locally with MkDocs and `uv` ([`mkdocs_preview.md`](mkdocs_preview.md)).
 
-| Topic | Document |
-|--------|-----------|
-| **HPC runbook index** (Slurm, MPI-IO, profiling, site notes) | [`hpc_operator_guide.md`](hpc_operator_guide.md) |
-| Runtime profiling | [`performance_profiling.md`](performance_profiling.md) |
-| Profiling export schema | [`profiling_export_schema.md`](profiling_export_schema.md) |
-| LUMI-G (ROCm / Cray) | [`INSTALL.LUMI.md`](INSTALL.LUMI.md) |
-| LUMI Slurm / tungsten jobs | [`lumi_slurm/README.md`](lumi_slurm/README.md) |
-| Slurm batch day one (generic) | [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md) |
-| MPI / paths / binary I/O checklist | [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) |
+## A small navigation note
 
-## Tutorials (in-repo)
-
-| Section | Document |
-|---------|-----------|
-| **Tutorials hub** (all `docs/tutorials/`) | [`tutorials/README.md`](tutorials/README.md) |
-| End-to-end run → PNG or binary artifacts | [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
-| VTK / ParaView from `examples/` | [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md) |
-| HeFFTe `plan_options` / FFT backend | [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md) |
-| Spectral sequence: `04` → `05` → `12` | [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md) |
-| World, decomposition, FFT, CMake “hello” | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
-| Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
-| Tour of main types and headers | [`class_tour.md`](class_tour.md) |
-| Minimal out-of-tree `App` + JSON (what you build / why) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
-| Parameter validation for `model.params` | [`parameter_validation.md`](parameter_validation.md) |
-| GPU-enabled apps (CUDA/HIP, HeFFTe, JSON backend) | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
-| `ctest`, `openpfc-tests`, MPI test suites | [`testing.md`](testing.md) |
-| What successful runs print | [`example_run_output.md`](example_run_output.md) |
-
-## API examples (Doxygen)
-
-C++ snippets under [`api/examples/`](api/examples/) are included in the Doxygen build (see [`CMakeLists.txt`](CMakeLists.txt)). Reading order and optional `BUILD_API_EXAMPLES` binaries: [`api_examples_walkthrough.md`](api_examples_walkthrough.md).
-
-## Other
-
-- Changelog / release history: [`CHANGELOG.md`](../CHANGELOG.md) (user-facing and developer-facing changes by version).
-- Contributing (overview): [`CONTRIBUTING.md`](../CONTRIBUTING.md).
-- Image / branding notes: [`image-prompts.md`](image-prompts.md) (prompts for project artwork; not required for simulation).
-
-## Contributors and project internals
-
-| Topic | Document |
-|--------|-----------|
-| Editing markdown, link checks | [`contributing-docs.md`](contributing-docs.md) |
-| Planned structural refactors | [`refactoring_roadmap.md`](refactoring_roadmap.md) |
-| Scalability experiment write-up (when submodule present) | [`experiments/scalability/docs/scalability_analysis_plan.md`](../experiments/scalability/docs/scalability_analysis_plan.md) — redirect note: [`scalability_analysis_plan.md`](scalability_analysis_plan.md) |
-
-## Generated HTML (Doxygen)
-
-With `OpenPFC_BUILD_DOCUMENTATION=ON`, configure and build the `docs` target; HTML output is under the build tree (see root [`README.md`](../README.md) and [`CMakeLists.txt`](CMakeLists.txt)). This complements—not replaces—the prose guides above.
+This page is intentionally short and narrative; the long, exhaustive cross-reference table that used to live here was useful for the framework's authors and almost no one else. If you genuinely want every markdown page in one list, the MkDocs site search box is the better tool, and the directory listing on GitHub is the most exhaustive of all. Otherwise, follow the prose: each page below points at a small number of next destinations rather than dumping the whole map at you.
