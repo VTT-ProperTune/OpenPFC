@@ -57,6 +57,7 @@ flowchart TB
 | `ResultsWriter` / `ResultsWriterMap` | Persist fields (binary, VTK, …); `Simulator` holds `ResultsWriterMap` | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](io_results.md) |
 | `pfc::ui::App<Model>` | Load JSON/TOML, build stack, run | `openpfc/frontend/ui/app.hpp` | `apps/aluminumNew/`, `examples/10_ui_register_ic.cpp` |
 | `SpectralCpuStack` | World → decomp → CPU FFT → time from JSON | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | Used inside `SpectralSimulationSession` |
+| `spectral_fft_stack_factory` | Merge `plan_options` + root `backend`; cuFFT / ROCm plan defaults + JSON overlay | `openpfc/frontend/ui/spectral_fft_stack_factory.hpp` | GPU tests / drivers alongside CPU stack helpers |
 | `SpectralSimulationSession` | Owns stack + `Model` + `Simulator` | `openpfc/frontend/ui/spectral_simulation_session.hpp` | Constructed by `App` |
 
 ## Execution and backends (advanced)

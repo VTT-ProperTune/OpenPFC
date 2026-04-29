@@ -7,9 +7,8 @@
  *
  * @details
  * `SpectralCpuStack` uses these functions so plan options and FFT construction
- * live in one place. Future GPU-backed stack builders can mirror the same JSON
- * surface (`plan_options`, `world`, `time`) while swapping the FFT factory
- * (see `docs/refactoring_roadmap.md`, Phase C).
+ * live in one place. GPU JSON plan helpers live in
+ * `spectral_fft_stack_factory.hpp` (Phase C).
  */
 
 #ifndef PFC_UI_SPECTRAL_CPU_STACK_DETAIL_HPP
@@ -21,6 +20,7 @@
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/spectral_fft_stack_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <stdexcept>
@@ -66,15 +66,7 @@ inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &pla
  */
 [[nodiscard]] inline heffte::plan_options
 cpu_spectral_plan_options_from_json(const nlohmann::json &settings) {
-  nlohmann::json plan_opts = nlohmann::json::object();
-  if (settings.contains("plan_options") && !settings["plan_options"].is_null() &&
-      settings["plan_options"].is_object()) {
-    plan_opts = settings["plan_options"];
-  }
-  if (!plan_opts.contains("backend") && settings.contains("backend") &&
-      settings["backend"].is_string()) {
-    plan_opts["backend"] = settings["backend"];
-  }
+  const nlohmann::json plan_opts = merged_spectral_plan_options_json(settings);
   if (plan_opts.empty()) {
     return heffte::default_options<heffte::backend::fftw>();
   }

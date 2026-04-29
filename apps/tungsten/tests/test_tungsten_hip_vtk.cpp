@@ -24,6 +24,7 @@
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_conditions.hpp>
+#include <openpfc/frontend/ui/spectral_fft_stack_factory.hpp>
 #include <openpfc/frontend/ui/ui.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
@@ -69,10 +70,8 @@ int main(int argc, char *argv[]) {
   }
 
   auto decomp = pfc::decomposition::create(world, num_ranks);
-  heffte::plan_options options = heffte::default_options<heffte::backend::rocfft>();
-  if (settings.contains("plan_options")) {
-    options = pfc::ui::from_json<heffte::plan_options>(settings["plan_options"]);
-  }
+  heffte::plan_options options =
+      pfc::ui::hip_spectral_plan_options_from_json(settings);
   auto fft_layout = pfc::fft::layout::create(decomp, 0);
 
   auto dummy_fft = pfc::fft::create(fft_layout, rank, options);

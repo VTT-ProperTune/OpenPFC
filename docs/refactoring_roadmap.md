@@ -42,10 +42,11 @@ Done (foundation):
 
 - **`spectral_cpu_stack_detail.hpp`**: `cpu_spectral_plan_options_from_json` and `cpu_fft_from_json_and_decomposition` centralize JSON → HeFFTe CPU FFT construction; `SpectralCpuStack` calls these (extension point for a future GPU stack builder using the same JSON surface).
 - **CPU spectral `backend` alignment:** `cpu_spectral_plan_options_from_json` merges a root-level `"backend"` into the `plan_options` object when the latter omits it; rejects `"cuda"` on this path (always `fft::CpuFft` / FFTW). See [`app_pipeline.md`](app_pipeline.md).
+- **`spectral_fft_stack_factory.hpp`:** `merged_spectral_plan_options_json` (shared merge); `cuda_spectral_plan_options_from_json` / `hip_spectral_plan_options_from_json` apply the same HeFFTe JSON overlay as CPU but start from cuFFT / ROCm defaults (GPU integration tests and future GPU `App` paths).
 
 Planned steps:
 
-- Introduce a stack factory or templated `SpectralSimulationSession<Model, FftBackend>` (or type-erased FFT handle at the session boundary).
+- Optional: templated `SpectralSimulationSession` or type-erased FFT at the session boundary so `App` can skip constructing a dummy `CpuFft` for GPU-only models.
 
 ## Phase D — CMake library split
 
