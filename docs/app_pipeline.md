@@ -47,7 +47,7 @@ flowchart LR
 
 ## `App<ConcreteModel>::main()` order of operations
 
-Implementation: `include/openpfc/frontend/ui/app.hpp` (settings load, MPI hints) and `include/openpfc/frontend/ui/app_spectral_run.hpp` (`SpectralJsonAppRun` — session through time loop).
+Implementation: `include/openpfc/frontend/ui/app.hpp` (settings load, MPI hints; `configure_spectral_json_driver_hooks` for `from_json` rank + NaN-check comm) and `include/openpfc/frontend/ui/app_spectral_run.hpp` (`SpectralJsonAppRun` — session through time loop).
 
 | Step | What happens |
 |------|----------------|

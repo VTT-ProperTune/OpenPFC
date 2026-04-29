@@ -95,7 +95,7 @@ mpirun -n 4 ./my_app /path/to/settings.json
 
 `pfc::ui::App<Model>` also has a constructor `App(pfc::ui::json settings, MPI_Comm comm)` that skips `argv[1]` and uses an in-memory object instead. `examples/10_ui_register_ic.cpp` builds JSON in C++ and passes it to `App`—useful for unit tests or CI where there is no config file on disk. Production binaries should prefer the `argc`/`argv` constructor so users pass a path.
 
-If you **do not** use `App::main` but still call `pfc::ui::from_json` (for example while building `SpectralCpuStack` by hand), call `pfc::ui::set_from_json_log_rank(mpi_rank)` once the MPI rank is known so FFT / HeFFTe parse diagnostics use the same `rank N:` prefix as the rest of your driver. `App::main` sets this automatically.
+If you **do not** use `App::main` but still call `pfc::ui::from_json` (for example while building `SpectralCpuStack` by hand), call `pfc::ui::configure_spectral_json_driver_hooks(comm, mpi_rank)` once the communicator and rank are known so FFT / HeFFTe parse diagnostics use the same `rank N:` prefix as the rest of your driver and NaN-check defaults match `comm`. `App::main` does this automatically (it replaces separate `set_from_json_log_rank` / `set_default_nan_check_mpi_comm` calls).
 
 ## 5. Minimal JSON
 

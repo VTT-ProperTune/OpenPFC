@@ -30,11 +30,10 @@
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/app_profiling.hpp>
 #include <openpfc/frontend/ui/app_spectral_run.hpp>
-#include <openpfc/frontend/ui/from_json_log.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/ui/settings_loader.hpp>
+#include <openpfc/frontend/ui/spectral_json_driver_hooks.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
-#include <openpfc/frontend/utils/nancheck.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <optional>
@@ -158,10 +157,7 @@ public:
 
   [[nodiscard]] int main() {
     const int rank_id = m_worker.get_rank();
-    // So `from_json` diagnostics (FFT backend, HeFFTe options) use the same rank
-    // prefix as app logs.
-    set_from_json_log_rank(rank_id);
-    pfc::utils::set_default_nan_check_mpi_comm(m_comm);
+    configure_spectral_json_driver_hooks(m_comm, rank_id);
     const pfc::Logger app_lg{pfc::LogLevel::Info, rank_id};
 
     log_gpu_awareness_hints_(app_lg);
