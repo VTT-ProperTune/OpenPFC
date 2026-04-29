@@ -173,11 +173,12 @@ ABORTING: Fix configuration errors before running simulation.
 Add validation to your custom models using the parameter metadata system:
 
 ```cpp
-#include "openpfc/ui/parameter_validator.hpp"
+#include <openpfc/frontend/ui/parameter_metadata.hpp>
+#include <openpfc/frontend/ui/parameter_validator.hpp>
 
-ParameterValidator validator;
+pfc::ui::ParameterValidator validator;
 validator.add_metadata(
-  ParameterMetadata<double>::builder()
+  pfc::ui::ParameterMetadata<double>::builder()
     .name("temperature")
     .description("Effective temperature")
     .required(true)
@@ -194,7 +195,7 @@ if (!result.is_valid()) {
 }
 ```
 
-See `apps/tungsten/tungsten_input.hpp` for a complete example with 21 validated parameters.
+See **`apps/tungsten/include/tungsten/common/tungsten_input.hpp`** for a complete example with many validated parameters. Narrative guide: **[`docs/parameter_validation.md`](docs/parameter_validation.md)**.
 
 ## Extending OpenPFC
 

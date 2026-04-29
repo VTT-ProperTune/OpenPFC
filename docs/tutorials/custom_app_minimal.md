@@ -12,7 +12,7 @@ This tutorial sketches a **small out-of-tree program** that links OpenPFC and ru
 ## 1. What you will implement
 
 - **`MyModel`** — subclass **`pfc::Model`**, override **`initialize`**, **`step`**.
-- **`from_json`** — optional **`void from_json(const nlohmann::json &, MyModel &)`** to fill **`model.params`** from the config file (same pattern as **`apps/aluminumNew`**).
+- **`from_json`** — optional **`void from_json(const pfc::ui::json &, MyModel &)`** so **`App`** can apply **`model.params`** after the session is built (same pattern as **`apps/aluminumNew/Aluminum.hpp`**).
 - **`main`** — register any **`FieldModifier`** types, construct **`App<MyModel>`**, call **`app.main()`**.
 
 Reference implementations:
@@ -35,6 +35,8 @@ find_package(nlohmann_json REQUIRED)
 add_executable(my_app main.cpp my_model.cpp)
 target_link_libraries(my_app PRIVATE OpenPFC nlohmann_json::nlohmann_json)
 ```
+
+**`nlohmann_json`** is linked **privately** inside **`openpfc`**, so your target still needs **`find_package(nlohmann_json)`** and **`nlohmann_json::nlohmann_json`** when you include **`App`** / **`pfc::ui::json`** headers (those pull in **`<nlohmann/json.hpp>`**).
 
 You can consolidate to a single **`main.cpp`** if you keep the model in the same file.
 
@@ -86,6 +88,10 @@ Run with MPI (same toolchain you built against):
 ```bash
 mpirun -n 4 ./my_app /path/to/settings.json
 ```
+
+### In-memory JSON (tests and examples)
+
+**`pfc::ui::App<Model>`** also has a constructor **`App(pfc::ui::json settings, MPI_Comm comm)`** that skips **`argv[1]`** and uses an in-memory object instead. **`examples/10_ui_register_ic.cpp`** builds JSON in C++ and passes it to **`App`**—useful for unit tests or CI where there is no config file on disk. Production binaries should prefer the **`argc`/`argv`** constructor so users pass a path.
 
 ## 5. Minimal JSON
 

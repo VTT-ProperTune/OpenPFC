@@ -92,6 +92,9 @@ Initial/boundary entries use **`"type": "<name>"`**. Those names are resolved vi
 | Topic | Where |
 |--------|--------|
 | Layered architecture | [`architecture.md`](architecture.md) |
+| Main types and headers (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
+| Minimal out-of-tree **`App`** + JSON | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| Validated **`model.params`** | [`parameter_validation.md`](parameter_validation.md) |
 | FFT / `[plan_options]` examples | [`examples/fft_backend_selection.toml`](../examples/fft_backend_selection.toml) |
 | Results formats (binary, VTK, PNG) | [`io_results.md`](io_results.md) |
 | CMake options | [`build_options.md`](build_options.md) |

@@ -20,9 +20,43 @@ Validation is typically invoked from application **`main`** or a thin wrapper **
 ## Pattern
 
 1. **Declare metadata** for each scalar (or structured) parameter your model reads from **`model.params`**.
-2. **Call** **`validator.validate(config["model"]["params"])`** (or the root JSON you use).
+2. **Call** **`validator.validate(config["model"]["params"])`** (or the **`json`** subtree you store parameters in).
 3. If **`!result.is_valid()`**, print **`result.format_errors()`** and exit.
 4. Optionally print **`result.format_summary()`** for reproducibility (see root **`README.md`** — Configuration Validation).
+
+Minimal sketch (matches the root **`README.md`** snippet; headers live under **`openpfc/frontend/ui/`**):
+
+```cpp
+#include <cstdlib>
+#include <iostream>
+#include <openpfc/frontend/ui/parameter_metadata.hpp>
+#include <openpfc/frontend/ui/parameter_validator.hpp>
+
+void validate_my_params(const pfc::ui::json &root) {
+  pfc::ui::ParameterValidator validator;
+  validator.add_metadata(
+      pfc::ui::ParameterMetadata<double>::builder()
+          .name("temperature")
+          .description("Effective temperature")
+          .required(true)
+          .range(0.0, 10000.0)
+          .typical(3300.0)
+          .units("K")
+          .build());
+
+  const pfc::ui::json &params = root["model"]["params"];
+  auto result = validator.validate(params);
+  if (!result.is_valid()) {
+    std::cerr << result.format_errors() << '\n';
+    std::exit(1);
+  }
+  if (/* rank 0 */) {
+    std::cout << result.format_summary() << '\n';
+  }
+}
+```
+
+Call this from **`main`** after loading the config file and **before** **`App::main()`** if you want validation outside the library; many apps instead fold validation into the same code path that parses **`model.params`**.
 
 ## Reference implementation
 

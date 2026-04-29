@@ -99,7 +99,7 @@ add_executable(my_sim main.cpp)
 target_link_libraries(my_sim PRIVATE OpenPFC)
 ```
 
-Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix containing `lib/cmake/OpenPFC/OpenPFCConfig.cmake`. A longer walkthrough is in [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md).
+Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix containing `lib/cmake/OpenPFC/OpenPFCConfig.cmake`. A longer walkthrough is in [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md). For **`pfc::ui::App<YourModel>`** with a JSON file on disk, **`find_package(nlohmann_json)`**, and a full CMake sketch, use [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md).
 
 ---
 
@@ -108,15 +108,18 @@ Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix contain
 | Goal | Where to go |
 |------|-------------|
 | Conceptual layering (kernel / runtime / frontend) | [`architecture.md`](architecture.md) |
+| **Tour of main types** (`World`, `Model`, `Simulator`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Longer tutorial (world → FFT → CMake) | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
+| **Minimal out-of-tree `App` + JSON** (MPI, config file) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
 | Config files (`plan_options`, JSON/TOML) | [`configuration.md`](configuration.md) |
 | **`App`** pipeline (JSON → `Simulator`) | [`app_pipeline.md`](app_pipeline.md) |
+| **Validated `model.params`** (custom models) | [`parameter_validation.md`](parameter_validation.md) |
 | CMake options | [`build_options.md`](build_options.md) |
 | Terminology | [`glossary.md`](glossary.md) |
 | Configure or MPI errors | [`troubleshooting.md`](troubleshooting.md) |
 | Extend models, ICs, coordinates | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
-| HTML API reference | [Published docs](https://vtt-propertune.github.io/OpenPFC/dev/) (also build `docs` locally with **`OpenPFC_BUILD_DOCUMENTATION=ON`**) |
+| HTML API reference | [Published docs](https://vtt-propertune.github.io/OpenPFC/dev/) (also build `docs` locally with **`OpenPFC_BUILD_DOCUMENTATION=ON`**) — pair with [`README.md`](README.md) and [`quickstart.md`](quickstart.md) for prose not generated from headers |
 | HPC / LUMI | [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
 
 ---

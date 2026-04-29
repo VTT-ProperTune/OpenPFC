@@ -40,7 +40,7 @@ Pass an **absolute path**, or a path relative to your **current working director
 ## Extending the framework
 
 **How do I add a custom model or IC?**  
-See **[`extending_openpfc/README.md`](extending_openpfc/README.md)** and the numbered examples **`14_custom_field_initializer.cpp`**, **`17_custom_coordinate_system.cpp`**.
+See **[`extending_openpfc/README.md`](extending_openpfc/README.md)**, **[`class_tour.md`](class_tour.md)** (where types live), **[`app_pipeline.md`](app_pipeline.md)** (JSON sections), and examples **`14_custom_field_initializer.cpp`**, **`17_custom_coordinate_system.cpp`**, **`10_ui_register_ic.cpp`**. For an out-of-tree binary with **`App<Model>`** and a config file, follow **[`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md)**. Optional startup validation of **`model.params`**: **[`parameter_validation.md`](parameter_validation.md)**.
 
 ## Documentation map
 
@@ -52,6 +52,9 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)** and the num
 | Config files | [`configuration.md`](configuration.md) |
 | Terminology | [`glossary.md`](glossary.md) |
 | `App` + JSON pipeline | [`app_pipeline.md`](app_pipeline.md) |
+| Main types / headers map | [`class_tour.md`](class_tour.md) |
+| Minimal custom `App` + CMake | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| Parameter validation | [`parameter_validation.md`](parameter_validation.md) |
 | CMake options | [`build_options.md`](build_options.md) |
 | Editing documentation | [`contributing-docs.md`](contributing-docs.md) |
 | Contributing (code, tests, changelog) | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
@@ -63,9 +66,10 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)** and the num
 
 ## Future documentation improvements (ideas)
 
-Remaining items that would still help:
+Smaller polish items that may still help:
 
-1. **Session transcripts** — Optional log snippets for a successful `05_simulator` and minimal tungsten run for copy-paste reassurance.
-2. **CHANGELOG user notes** — Keep meaningful entries under **`[Unreleased]`** in **[`CHANGELOG.md`](../CHANGELOG.md)**; optional per-release “upgrading from X” blurbs when CMake or config keys change (the file is linked from **[`README.md`](README.md)** in this directory).
-3. **CI link check** — **`scripts/check_doc_links.py`** runs in the Documentation workflow; extend the script if you add new top-level doc paths.
-4. **Published site** — Mirror the **`docs/quickstart.md`** first paragraph on the GitHub Pages landing page if the HTML build ever diverges from the repo **`README.md`** main page.
+1. **Session transcripts** — Optional log snippets for a successful **`05_simulator`** and minimal tungsten run for copy-paste reassurance.
+2. **CHANGELOG user notes** — Keep meaningful entries under **`[Unreleased]`** in **[`CHANGELOG.md`](../CHANGELOG.md)**; add “upgrading from X” blurbs when CMake or config keys change.
+3. **Published site** — Keep GitHub Pages in sync with **[`quickstart.md`](quickstart.md)** and **[`README.md`](README.md)** so API-only readers find the prose guides.
+
+**Link checks:** run **`python3 scripts/check_doc_links.py`** before merging doc changes (see **[`contributing-docs.md`](contributing-docs.md)**).

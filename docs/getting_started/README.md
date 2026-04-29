@@ -14,6 +14,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 | Quick path: three tracks + “next steps” | [`../quickstart.md`](../quickstart.md) |
 | World, decomposition, FFT, `find_package(OpenPFC)` | [`01-basics/README.md`](01-basics/README.md) |
 | Functional field ops (IC/BC without nested loops) | [`functional_field_ops.md`](functional_field_ops.md) |
+| Tour of main classes and headers | [`../class_tour.md`](../class_tour.md) |
+| Minimal custom **`App`** project (CMake + JSON + MPI) | [`../tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md) |
+| Parameter validation for **`model.params`** | [`../parameter_validation.md`](../parameter_validation.md) |
 
 ## Reference tables
 
