@@ -170,7 +170,7 @@ private:
   void wire_simulator_and_log_run_start_(
       const pfc::Logger &app_lg, int rank_id,
       SpectralSimulationSession<ConcreteModel> &session) {
-    session.wire_simulator_from_settings(m_settings, m_comm, rank_id, rank0);
+    session.wire_simulator_from_settings(m_settings, rank_id, rank0);
     if (rank0) {
       pfc::log_info(app_lg,
                     std::string(k_app_log_tag) +
