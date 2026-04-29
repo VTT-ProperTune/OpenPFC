@@ -37,6 +37,8 @@ Single-page summary of **what this repository is tested against** vs **optional 
 | **`scripts/check_doc_links.py`** | Relative markdown links in `docs/`, `README.md`, `INSTALL.md`, etc. |
 | **`scripts/check_examples_catalog.py`** | `examples/CMakeLists.txt` vs [`examples_catalog.md`](examples_catalog.md). |
 | **`scripts/check_end_to_end_allen_cahn.py`** | Tutorial vs [`apps/allen_cahn/README.md`](../apps/allen_cahn/README.md) example command. |
+| **`scripts/check_doc_bash_syntax.py`** | `bash -n` on ` ```bash` / ` ```sh` fenced blocks under `docs/`. |
+| **`scripts/build_handbook.sh`** | Optional Pandoc concatenation — [`handbook_build.md`](handbook_build.md). |
 
 ## See also
 

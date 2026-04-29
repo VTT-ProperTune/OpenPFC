@@ -19,6 +19,8 @@ on:
       - 'apps/*/README.md'
       - 'scripts/install-heffte-ci.sh'
       - 'scripts/check_doc_links.py'
+      - 'scripts/check_doc_bash_syntax.py'
+      - 'scripts/build_handbook.sh'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -46,6 +48,9 @@ jobs:
 
       - name: Verify Allen–Cahn end-to-end doc vs README
         run: python3 scripts/check_end_to_end_allen_cahn.py
+
+      - name: Verify bash syntax in documentation fenced blocks
+        run: python3 scripts/check_doc_bash_syntax.py
 
   # ============================================================================
   # Build Documentation

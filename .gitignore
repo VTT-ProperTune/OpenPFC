@@ -10,6 +10,7 @@ experiments/scalability
 
 .vscode
 build
+build-handbook
 result
 results
 *.out
@@ -31,7 +32,9 @@ scripts/*
 !scripts/pvrender.py
 !scripts/run-clang-tidy.sh
 !scripts/xdmfgen.py
+!scripts/build_handbook.sh
 !scripts/check_doc_links.py
+!scripts/check_doc_bash_syntax.py
 !scripts/check_end_to_end_allen_cahn.py
 !scripts/check_examples_catalog.py
 !scripts/check_kernel_no_frontend_includes.sh
