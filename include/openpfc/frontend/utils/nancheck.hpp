@@ -10,8 +10,11 @@
  * values in floating-point computations, useful for debugging numerical issues.
  *
  * Key features:
- * - CHECK_AND_ABORT_IF_NAN(value): Macro to check single values
- * - CHECK_AND_ABORT_IF_VECTOR_HAS_NAN(vector): Macro to check entire vectors
+ * - CHECK_AND_ABORT_IF_NAN(value): Macro to check single values (uses
+ *   `MPI_COMM_WORLD` for rank / abort — fine for rank-local tools)
+ * - CHECK_AND_ABORT_IF_NANS(vec): Macro to check entire vectors (same)
+ * - CHECK_AND_ABORT_IF_NAN_MPI / CHECK_AND_ABORT_IF_NANS_MPI: use the simulation
+ *   communicator (e.g. `Model::mpi_comm()`) when the job is not on `MPI_COMM_WORLD`
  * - Enabled by Debug builds or with OpenPFC_ENABLE_NAN_CHECK
  * - MPI-aware: Reports rank where NaN was detected
  *

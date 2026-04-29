@@ -17,6 +17,7 @@ Done:
 - `SpectralSimulationSession` constructs `ConcreteModel(fft, world, m_stack.mpi_comm())` so JSON-driven apps align with the simulator communicator.
 - Shipped / example models updated (`Aluminum`, `Tungsten` CPU/CUDA/HIP, `examples/10_ui_register_ic.cpp`).
 - CUDA/HIP Tungsten: HeFFTe GPU FFT and rank/size queries use `Model::mpi_comm()` (no hardcoded `MPI_COMM_WORLD` in `set_cuda_fft` / `set_hip_fft` or constructors).
+- Tungsten CPU/CUDA/HIP: NaN check macros use `CHECK_AND_ABORT_IF_NANS_MPI(..., mpi_comm())` so `MPI_Abort` and rank reporting match the model’s communicator.
 
 ## Phase B — Simulator decomposition
 

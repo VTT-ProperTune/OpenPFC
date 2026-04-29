@@ -249,8 +249,8 @@ public:
       }
     }
 
-    CHECK_AND_ABORT_IF_NANS(opL);
-    CHECK_AND_ABORT_IF_NANS(opN);
+    CHECK_AND_ABORT_IF_NANS_MPI(opL, mpi_comm());
+    CHECK_AND_ABORT_IF_NANS_MPI(opN, mpi_comm());
   }
 
   /**
@@ -338,7 +338,7 @@ public:
     }
 
     // Check for NaNs (enabled in Debug mode)
-    CHECK_AND_ABORT_IF_NANS(psi);
+    CHECK_AND_ABORT_IF_NANS_MPI(psi, mpi_comm());
   }
 
   /**

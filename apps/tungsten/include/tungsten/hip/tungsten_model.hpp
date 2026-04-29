@@ -192,8 +192,8 @@ public:
       }
     }
 
-    CHECK_AND_ABORT_IF_NANS(opL_cpu.as_vector());
-    CHECK_AND_ABORT_IF_NANS(opN_cpu.as_vector());
+    CHECK_AND_ABORT_IF_NANS_MPI(opL_cpu.as_vector(), mpi_comm());
+    CHECK_AND_ABORT_IF_NANS_MPI(opN_cpu.as_vector(), mpi_comm());
 
     filterMF.copy_from_host(filterMF_cpu.to_host());
     opL.copy_from_host(opL_cpu.to_host());
