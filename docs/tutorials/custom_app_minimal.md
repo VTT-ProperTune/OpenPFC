@@ -124,4 +124,4 @@ See `examples/10_ui_register_ic.cpp` end-to-end.
 
 - [`../class_tour.md`](../class_tour.md) — map of main types
 - [`../parameter_validation.md`](../parameter_validation.md) — optional validated `model.params`
-- [`../extending_openpfc/README.md`](../extending_openpfc/README.md)** — extension checklist
+- [`../extending_openpfc/README.md`](../extending_openpfc/README.md) — extension checklist

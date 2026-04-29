@@ -150,21 +150,21 @@ int main() {
 ```
 
 What follows is how to turn the example into a working binary. OpenPFC is
-distributed as a **compiled library** (`openpfc`, public headers under
-`include/openpfc`) plus a **CMake package config** so that consumers get the
+distributed as a compiled library (`openpfc`, public headers under
+`include/openpfc`) plus a CMake package config so that consumers get the
 correct include directories, link libraries, and usage requirements (MPI,
-HeFFTe where applicable, and other dependencies). You **include** the headers in
-your translation units and **link** against the `OpenPFC` CMake target; you do
+HeFFTe where applicable, and other dependencies). You include the headers in
+your translation units and link against the `OpenPFC` CMake target; you do
 not hand-compile a long list of `-I` and `-l` flags. The supported dependency
-stack—including **HeFFTe 2.4.1**, OpenMPI, and FFTW for CPU FFT—is described in
-**[`INSTALL.md`](../../../INSTALL.md)**.
+stack—including HeFFTe 2.4.1, OpenMPI, and FFTW for CPU FFT—is described in
+[`INSTALL.md`](../../../INSTALL.md).
 
-Manual `g++` … `libheffte.so` command lines are **not** supported: they go stale
-across machines and versions. Use **CMake** and `find_package(OpenPFC)` as
+Manual `g++` … `libheffte.so` command lines are not supported: they go stale
+across machines and versions. Use CMake and `find_package(OpenPFC)` as
 below.
 
 OpenPFC uses CMake, which takes care of compile and link details. When OpenPFC
-is configured and installed, it generates a **CMake package configuration file**
+is configured and installed, it generates a CMake package configuration file
 that tells dependent projects how to compile and link. That file is installed at
 `<CMAKE_PREFIX_PATH>/lib/cmake/OpenPFC/OpenPFCConfig.cmake`, where
 `CMAKE_PREFIX_PATH` is the path chosen during the configuration of the
@@ -487,7 +487,7 @@ with tens or hundreds of computers.
 
 ## Next steps for application developers
 
-If you already link OpenPFC and want a **JSON-driven program** with **`App<Model>`**, continue with:
+If you already link OpenPFC and want a JSON-driven program with `App<Model>`, continue with:
 
 | Topic | Document |
 |-------|----------|
@@ -496,4 +496,4 @@ If you already link OpenPFC and want a **JSON-driven program** with **`App<Model
 | Minimal out-of-tree CMake + `App` tutorial | [`../../tutorials/custom_app_minimal.md`](../../tutorials/custom_app_minimal.md) |
 | Validating `model.params` | [`../../parameter_validation.md`](../../parameter_validation.md) |
 
-The docs hub **[`../../README.md`](../../README.md)** lists all guides; extension checklist: [`../../extending_openpfc/README.md`](../../extending_openpfc/README.md).
+The docs hub [`../../README.md`](../../README.md) lists all guides; extension checklist: [`../../extending_openpfc/README.md`](../../extending_openpfc/README.md).

@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Examples catalog
 
-Executables are built when **`OpenPFC_BUILD_EXAMPLES=ON`** (default). Output directory is typically `<build>/examples/` (exact path depends on the CMake generator and multi-config toolchains).
+Executables are built when `OpenPFC_BUILD_EXAMPLES=ON` (default). Output directory is typically `<build>/examples/` (exact path depends on the CMake generator and multi-config toolchains).
 
-**Prerequisites:** Most examples need **MPI** and a working **HeFFTe**-linked OpenPFC build. Run with at least `mpirun -n 1` unless the source states otherwise.
+Prerequisites: Most examples need MPI and a working HeFFTe-linked OpenPFC build. Run with at least `mpirun -n 1` unless the source states otherwise.
 
 | Executable | Source | What it demonstrates |
 |------------|--------|----------------------|
@@ -31,7 +31,7 @@ Executables are built when **`OpenPFC_BUILD_EXAMPLES=ON`** (default). Output dir
 | `time` | `time.cpp` | Time-stepping utilities |
 | `write_results` | `write_results.cpp` | Results I/O variant |
 | `diffusion_model_with_custom_initial_condition` | `diffusion_model_with_custom_initial_condition.cpp` | Diffusion + custom IC |
-| `json_read` | `json_read.cpp` | **Standalone** nlohmann JSON read (does **not** link `OpenPFC`) |
+| `json_read` | `json_read.cpp` | Standalone nlohmann JSON read (does not link `OpenPFC`) |
 | `world_helpers_example` | `world_helpers_example.cpp` | `World` helpers |
 | `14_custom_field_initializer` | `14_custom_field_initializer.cpp` | Custom field initializer |
 | `15_finite_difference_heat` | `15_finite_difference_heat.cpp` | Finite-difference heat (separated halos); see [`halo_exchange.md`](halo_exchange.md) |
@@ -41,10 +41,10 @@ Executables are built when **`OpenPFC_BUILD_EXAMPLES=ON`** (default). Output dir
 
 ## Sources not built by default
 
-`examples/01_hello_world/world.cpp` is used as a **Doxygen** tutorial source; the matching `add_executable` in `examples/CMakeLists.txt` is commented out. Other `.cpp` files may exist under `examples/` without a CMake target—check `examples/CMakeLists.txt` for the authoritative list.
+`examples/01_hello_world/world.cpp` is used as a Doxygen tutorial source; the matching `add_executable` in `examples/CMakeLists.txt` is commented out. Other `.cpp` files may exist under `examples/` without a CMake target—check `examples/CMakeLists.txt` for the authoritative list.
 
 ## See also
 
-- **[`quickstart.md`](quickstart.md)** — suggested order for the first runs
-- **[`getting_started/01-basics/README.md`](getting_started/01-basics/README.md)** — narrative tutorial
-- **[`api/examples/`](api/examples/)** — small snippets pulled into the HTML docs
+- [`quickstart.md`](quickstart.md) — suggested order for the first runs
+- [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) — narrative tutorial
+- [`api/examples/`](api/examples/) — small snippets pulled into the HTML docs

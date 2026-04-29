@@ -66,22 +66,22 @@ T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *�
 
 ## Quick start
 
-**First time with the repo?** Follow **[docs/quickstart.md](docs/quickstart.md)** (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). Tutorial prose lives under **[docs/getting_started/](docs/getting_started/)**; runnable targets are listed in **[docs/examples_catalog.md](docs/examples_catalog.md)** and shipped programs in **[docs/applications.md](docs/applications.md)**. Short Q&A: **[docs/faq.md](docs/faq.md)**.
+First time with the repo? Follow [docs/quickstart.md](docs/quickstart.md) (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). Tutorial prose lives under [docs/getting_started/](docs/getting_started/); runnable targets are listed in [docs/examples_catalog.md](docs/examples_catalog.md) and shipped programs in [docs/applications.md](docs/applications.md). Short Q&A: [docs/faq.md](docs/faq.md).
 
 ## Documentation
 
 The project documentation can be found from
-<https://vtt-propertune.github.io/OpenPFC/dev/> (API reference and generated HTML from this repository’s headers and examples). **Readers of the published HTML only** should treat **[docs/quickstart.md](docs/quickstart.md)** and the **[docs/README.md](docs/README.md)** index as the companion to the API reference — tutorials, troubleshooting, and app wiring live there, not only in Doxygen.
+<https://vtt-propertune.github.io/OpenPFC/dev/> (API reference and generated HTML from this repository’s headers and examples). Readers of the published HTML only should treat [docs/quickstart.md](docs/quickstart.md) and the [docs/README.md](docs/README.md) index as the companion to the API reference — tutorials, troubleshooting, and app wiring live there, not only in Doxygen.
 
-**If you are browsing the [source tree](https://github.com/VTT-ProperTune/OpenPFC), start with [docs/quickstart.md](docs/quickstart.md)** — the published site does not replace the guides in **`docs/`**.
+If you are browsing the [source tree](https://github.com/VTT-ProperTune/OpenPFC), start with [docs/quickstart.md](docs/quickstart.md) — the published site does not replace the guides in `docs/`.
 
-**In-repo guides** for onboarding, configuration, and workflows are indexed from **[docs/README.md](docs/README.md)**. **Contributing (code, tests, docs, changelog):** [CONTRIBUTING.md](CONTRIBUTING.md). **Docs-only details:** [docs/contributing-docs.md](docs/contributing-docs.md) and **`python3 scripts/check_doc_links.py`**. **JSON/TOML → simulator pipeline:** [docs/app_pipeline.md](docs/app_pipeline.md). **Extension map (types, headers, examples):** [docs/class_tour.md](docs/class_tour.md). **Minimal custom `App` project (CMake + JSON):** [docs/tutorials/custom_app_minimal.md](docs/tutorials/custom_app_minimal.md). **Parameter validation:** [docs/parameter_validation.md](docs/parameter_validation.md). **Tests (`ctest`, Catch2):** [docs/testing.md](docs/testing.md). **GPU (CUDA/HIP) apps:** [docs/tutorials/gpu_app_quickstart.md](docs/tutorials/gpu_app_quickstart.md). **Example log shapes:** [docs/example_run_output.md](docs/example_run_output.md). **Results I/O:** [docs/io_results.md](docs/io_results.md). **CMake options:** [docs/build_options.md](docs/build_options.md). **Troubleshooting:** [docs/troubleshooting.md](docs/troubleshooting.md). **Glossary:** [docs/glossary.md](docs/glossary.md).
+In-repo guides for onboarding, configuration, and workflows are indexed from [docs/README.md](docs/README.md). Contributing (code, tests, docs, changelog): [CONTRIBUTING.md](CONTRIBUTING.md). Docs-only details: [docs/contributing-docs.md](docs/contributing-docs.md) and `python3 scripts/check_doc_links.py`. JSON/TOML → simulator pipeline: [docs/app_pipeline.md](docs/app_pipeline.md). Extension map (types, headers, examples): [docs/class_tour.md](docs/class_tour.md). Minimal custom `App` project (CMake + JSON): [docs/tutorials/custom_app_minimal.md](docs/tutorials/custom_app_minimal.md). Parameter validation: [docs/parameter_validation.md](docs/parameter_validation.md). Tests (`ctest`, Catch2): [docs/testing.md](docs/testing.md). GPU (CUDA/HIP) apps: [docs/tutorials/gpu_app_quickstart.md](docs/tutorials/gpu_app_quickstart.md). Example log shapes: [docs/example_run_output.md](docs/example_run_output.md). Results I/O: [docs/io_results.md](docs/io_results.md). CMake options: [docs/build_options.md](docs/build_options.md). Troubleshooting: [docs/troubleshooting.md](docs/troubleshooting.md). Glossary: [docs/glossary.md](docs/glossary.md).
 
-**Build and install from source:** see [INSTALL.md](INSTALL.md).
+Build and install from source: see [INSTALL.md](INSTALL.md).
 
-**CPU vs GPU build trees:** short overview in [docs/build_cpu_gpu.md](docs/build_cpu_gpu.md).
+CPU vs GPU build trees: short overview in [docs/build_cpu_gpu.md](docs/build_cpu_gpu.md).
 
-**C++ includes:** link your target to CMake’s `OpenPFC` (or `openpfc`) target.
+C++ includes: link your target to CMake’s `OpenPFC` (or `openpfc`) target.
 For faster builds, include specific headers (e.g. `<openpfc/kernel/data/world.hpp>`)
 rather than the umbrella `<openpfc/openpfc.hpp>`. Minimal simulations without the
 JSON/TOML frontend can start from `<openpfc/openpfc_minimal.hpp>`; see
@@ -100,16 +100,17 @@ For naming, layout, SPDX headers, and API style (free functions, data-centric ty
 
 ## Configuration Validation
 
-OpenPFC provides **comprehensive parameter validation** to prevent silent failures from missing or invalid configuration parameters. This "fail-fast" approach catches errors immediately at startup rather than hours into a simulation.
+OpenPFC provides comprehensive parameter validation to prevent silent failures from missing or invalid configuration parameters. This "fail-fast" approach catches errors immediately at startup rather than hours into a simulation.
 
 ### The Problem
 
 Missing or invalid parameters can cause:
-- ❌ Silent failures with incorrect physics
-- ❌ Hours/days wasted debugging
-- ❌ Uninitialized values causing unpredictable behavior
 
-**Example of a dangerous configuration:**
+- Silent failures with incorrect physics
+- Hours or days wasted debugging
+- Uninitialized values causing unpredictable behavior
+
+Example of a dangerous configuration:
 ```toml
 [model.params]
 n0 = -0.10
@@ -119,7 +120,7 @@ alpha = 0.50
 
 ### The Solution
 
-OpenPFC validates **all parameters before simulation starts**:
+OpenPFC validates all parameters before simulation starts:
 
 ```
 ================================================================================
@@ -136,7 +137,7 @@ Validated 21 parameter(s):
 ================================================================================
 ```
 
-If validation fails, you get a **clear, actionable error message**:
+If validation fails, you get a clear, actionable error message:
 
 ```
 ================================================================================
@@ -163,10 +164,10 @@ ABORTING: Fix configuration errors before running simulation.
 
 ### Benefits
 
-- ⭐ **Prevents wasted time** - Catch errors immediately, not after hours of simulation
-- ⭐ **Self-documenting** - Parameter summary shows exactly what was run (reproducibility)
-- ⭐ **Helpful errors** - Clear messages with valid ranges and typical values
-- ⭐ **Type safety** - Validates parameter types and bounds
+- Catches errors immediately at startup instead of after hours of simulation
+- Parameter summary documents what was run (reproducibility)
+- Clear messages with valid ranges and typical values
+- Validates parameter types and bounds
 
 ### For Model Developers
 
@@ -195,26 +196,26 @@ if (!result.is_valid()) {
 }
 ```
 
-See **`apps/tungsten/include/tungsten/common/tungsten_input.hpp`** for a complete example with many validated parameters. Narrative guide: **[`docs/parameter_validation.md`](docs/parameter_validation.md)**.
+See `apps/tungsten/include/tungsten/common/tungsten_input.hpp` for a complete example with many validated parameters. Narrative guide: [`docs/parameter_validation.md`](docs/parameter_validation.md).
 
 ## Extending OpenPFC
 
-OpenPFC is designed as an **open laboratory** where you can extend functionality without modifying the library source code. Using C++'s Argument-Dependent Lookup (ADL), you can add:
+OpenPFC is designed as an open laboratory where you can extend functionality without modifying the library source code. Using C++'s Argument-Dependent Lookup (ADL), you can add:
 
-- **Custom coordinate systems** (cylindrical, spherical, curvilinear)
-- **Custom field initializers** (vortices, patterns, complex ICs)
-- **Custom physics models** (user-defined PDEs, multi-physics)
-- **Custom I/O formats** (HDF5, VTK, custom binary)
+- Custom coordinate systems (cylindrical, spherical, curvilinear)
+- Custom field initializers (vortices, patterns, complex ICs)
+- Custom physics models (user-defined PDEs, multi-physics)
+- Custom I/O formats (HDF5, VTK, custom binary)
 
-**Get started:** See the [Extension Guide](docs/extending_openpfc/README.md), **[docs/examples_catalog.md](docs/examples_catalog.md)**, and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
+Get started: See the [Extension Guide](docs/extending_openpfc/README.md), [docs/examples_catalog.md](docs/examples_catalog.md), and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
 
 ## FFT Backend Selection
 
 OpenPFC supports multiple FFT backends through [HeFFTe](https://github.com/icl-utk-edu/heffte), allowing you to choose the optimal implementation for your hardware:
 
-- **FFTW** (CPU): Default backend, always available. Optimized for CPU-based systems.
-- **cuFFT** (NVIDIA GPU): GPU-accelerated FFT for CUDA-capable devices. Requires OpenPFC compiled with `-DOpenPFC_ENABLE_CUDA=ON`.
-- **rocFFT** (AMD GPU): GPU-accelerated FFT for ROCm-capable devices (future support).
+- FFTW (CPU): Default backend, always available. Optimized for CPU-based systems.
+- cuFFT (NVIDIA GPU): GPU-accelerated FFT for CUDA-capable devices. Requires OpenPFC compiled with `-DOpenPFC_ENABLE_CUDA=ON`.
+- rocFFT (AMD GPU): GPU-accelerated FFT for ROCm-capable devices (future support).
 
 ### Configuration
 
@@ -231,19 +232,19 @@ use_pencils = false
 use_gpu_aware = false  # true for GPU-aware MPI with CUDA or HIP (see INSTALL.md / docs/INSTALL.LUMI.md)
 ```
 
-**Example:** See `examples/fft_backend_selection.toml` for a complete configuration example with detailed documentation.
+Example: See `examples/fft_backend_selection.toml` for a complete configuration example with detailed documentation.
 
 ### Performance Considerations
 
-- **FFTW (CPU)**: Best for CPU-only systems, small to medium problems. Always available and portable.
-- **cuFFT (GPU)**: Significantly faster for large FFTs. Requires CUDA-capable GPU and sufficient GPU memory.
-- **GPU-Aware MPI**: When using CUDA or HIP with multiple GPUs, enable `use_gpu_aware = true` if your MPI stack supports device pointers (e.g., Open MPI with CUDA, or Cray MPICH with `MPICH_GPU_SUPPORT_ENABLED=1` on LUMI-G). Build OpenPFC with GPU-aware MPI enabled (see **INSTALL.md**; **docs/INSTALL.LUMI.md** for ROCm). This eliminates host staging and reduces communication latency.
+- FFTW (CPU): Best for CPU-only systems, small to medium problems. Always available and portable.
+- cuFFT (GPU): Significantly faster for large FFTs. Requires CUDA-capable GPU and sufficient GPU memory.
+- GPU-Aware MPI: When using CUDA or HIP with multiple GPUs, enable `use_gpu_aware = true` if your MPI stack supports device pointers (e.g., Open MPI with CUDA, or Cray MPICH with `MPICH_GPU_SUPPORT_ENABLED=1` on LUMI-G). Build OpenPFC with GPU-aware MPI enabled (see INSTALL.md; docs/INSTALL.LUMI.md for ROCm). This eliminates host staging and reduces communication latency.
 
-Build-time setup (HeFFTe, modules, CUDA, and CMake options) is documented in **[INSTALL.md](INSTALL.md)**.
+Build-time setup (HeFFTe, modules, CUDA, and CMake options) is documented in [INSTALL.md](INSTALL.md).
 
 ## Installing
 
-See **[INSTALL.md](INSTALL.md)** for supported compilers, environment modules, building and installing HeFFTe, and OpenPFC configuration (CPU and CUDA). For **LUMI-G** (ROCm / HIP, Cray PE, projappl and scratch layout), see **[docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md)**. A Singularity/apptainer workflow is not documented yet.
+See [INSTALL.md](INSTALL.md) for supported compilers, environment modules, building and installing HeFFTe, and OpenPFC configuration (CPU and CUDA). For LUMI-G (ROCm / HIP, Cray PE, projappl and scratch layout), see [docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md). A Singularity/apptainer workflow is not documented yet.
 
 ## Structure of the application
 

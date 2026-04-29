@@ -5,54 +5,54 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Quick start
 
-This page is the **fast path** from a clone to a running simulation or a linked program. For install details (modules, HeFFTe **2.4.1**, CUDA/HIP), use **[`INSTALL.md`](../INSTALL.md)** first.
+This page is the fast path from a clone to a running simulation or a linked program. For install details (modules, HeFFTe 2.4.1, CUDA/HIP), use [`INSTALL.md`](../INSTALL.md) first.
 
 ## What you are building toward
 
-OpenPFC is a **compiled** C++ library (`openpfc`) with public headers. Meaningful use involves **MPI** and a **HeFFTe** build that matches your toolchain. You can:
+OpenPFC is a compiled C++ library (`openpfc`) with public headers. Meaningful use involves MPI and a HeFFTe build that matches your toolchain. You can:
 
-1. **Run tutorial executables** under `examples/` (after configuring with **`OpenPFC_BUILD_EXAMPLES=ON`**, the default).
-2. **Run a shipped application** under **`apps/`** with JSON/TOML input (after **`OpenPFC_BUILD_APPS=ON`**, the default).
-3. **Link OpenPFC from your own CMake project** via `find_package(OpenPFC)` (see also [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md)).
+1. Run tutorial executables under `examples/` (after configuring with `OpenPFC_BUILD_EXAMPLES=ON`, the default).
+2. Run a shipped application under `apps/` with JSON/TOML input (after `OpenPFC_BUILD_APPS=ON`, the default).
+3. Link OpenPFC from your own CMake project via `find_package(OpenPFC)` (see also [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md)).
 
-Pick **one** track below, then follow **Next steps**.
+Pick one track below, then follow Next steps.
 
 ---
 
 ## 1. Configure and build OpenPFC
 
-From the repository root (after loading compilers and MPI as in **`INSTALL.md`**):
+From the repository root (after loading compilers and MPI as in `INSTALL.md`):
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
 cmake --build build -j"$(nproc)"
 ```
 
-Use **separate build directories** for CPU vs GPU if you switch CUDA/HIP options; see [`build_cpu_gpu.md`](build_cpu_gpu.md).
+Use separate build directories for CPU vs GPU if you switch CUDA/HIP options; see [`build_cpu_gpu.md`](build_cpu_gpu.md).
 
 ### IDE and cluster CMake presets
 
-If **CMake Tools** runs without your shell **`module load`**, configure may pick the wrong GCC or miss MPI. The repo ships **[`CMakePresets.json`](../CMakePresets.json)**:
+If CMake Tools runs without your shell `module load`, configure may pick the wrong GCC or miss MPI. The repo ships [`CMakePresets.json`](../CMakePresets.json):
 
-- **`tohtori-debug`** / **`tohtori-release`** — pinned GCC + Open MPI + optional HeFFTe prefix (**[`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../cmake/toolchains/tohtori-gcc11-openmpi.cmake)**); see **[`INSTALL.md`](../INSTALL.md)** (“VS Code / Cursor on tohtori”).
-- **`dev-debug`**, **`dev-asan`**, etc. — local development; still load modules yourself when not using a preset that sets paths.
+- `tohtori-debug` / `tohtori-release` — pinned GCC + Open MPI + optional HeFFTe prefix ([`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../cmake/toolchains/tohtori-gcc11-openmpi.cmake)); see [`INSTALL.md`](../INSTALL.md) (“VS Code / Cursor on tohtori”).
+- `dev-debug`, `dev-asan`, etc. — local development; still load modules yourself when not using a preset that sets paths.
 
-Override paths on your machine with **`CMakeUserPresets.json`** (see **`cmake/README.md`**).
+Override paths on your machine with `CMakeUserPresets.json` (see `cmake/README.md`).
 
 ### CMake switches for tutorials and apps
 
 | Goal | CMake option |
 |------|----------------|
-| Skip building **`examples/`** | `-DOpenPFC_BUILD_EXAMPLES=OFF` |
-| Skip building **`apps/`** | `-DOpenPFC_BUILD_APPS=OFF` |
+| Skip building `examples/` | `-DOpenPFC_BUILD_EXAMPLES=OFF` |
+| Skip building `apps/` | `-DOpenPFC_BUILD_APPS=OFF` |
 
-Defaults are **ON** for both. If you turned examples or apps off, reconfigure with **`ON`** (or remove the cache entry) and rebuild—otherwise the paths in **§2A** / **§2B** will not exist.
+Defaults are ON for both. If you turned examples or apps off, reconfigure with `ON` (or remove the cache entry) and rebuild—otherwise the paths in §2A / §2B will not exist.
 
 ---
 
 ## 2A. Run examples (library + MPI)
 
-Examples are built into `<build>/examples/` (path may be `build/examples` or `Release/examples` depending on the generator). They are only produced when **`OpenPFC_BUILD_EXAMPLES=ON`** (the default).
+Examples are built into `<build>/examples/` (path may be `build/examples` or `Release/examples` depending on the generator). They are only produced when `OpenPFC_BUILD_EXAMPLES=ON` (the default).
 
 | Order | Executable | What it shows |
 |-------|------------|----------------|
@@ -68,24 +68,24 @@ cd build
 mpirun -n 4 ./examples/05_simulator
 ```
 
-**Signs it worked:** **`mpirun`** exits with status **0**. Rank 0 typically prints **INFO**-level log lines from OpenPFC (world size, timestepping); there is no universal “success” string—if the process aborts, you will see an exception or non-zero exit. For more detail on a specific example, read its source under **`examples/`**. Sample **`05_simulator`** / **`App`** log shapes: **[`example_run_output.md`](example_run_output.md)**.
+Signs it worked: `mpirun` exits with status 0. Rank 0 typically prints INFO-level log lines from OpenPFC (world size, timestepping); there is no universal “success” string—if the process aborts, you will see an exception or non-zero exit. For more detail on a specific example, read its source under `examples/`. Sample `05_simulator` / `App` log shapes: [`example_run_output.md`](example_run_output.md).
 
-See **[`examples_catalog.md`](examples_catalog.md)** for the full list of built targets and short descriptions.
+See [`examples_catalog.md`](examples_catalog.md) for the full list of built targets and short descriptions.
 
 ---
 
 ## 2B. Run an application (config file)
 
-Shipped apps live under **`apps/`**; see **[`applications.md`](applications.md)** for binaries and sample inputs.
+Shipped apps live under `apps/`; see [`applications.md`](applications.md) for binaries and sample inputs.
 
-**Tungsten (CPU)** after a successful build. Requires **`OpenPFC_BUILD_APPS=ON`** (the default). From your **build** directory, point at a file under the source tree (paths are relative to `build/`):
+Tungsten (CPU) after a successful build. Requires `OpenPFC_BUILD_APPS=ON` (the default). From your build directory, point at a file under the source tree (paths are relative to `build/`):
 
 ```bash
 cd build
 mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
 ```
 
-**Signs it worked:** **`mpirun`** exits **0**; rank 0 logs progress (e.g. effective configuration, world summary, start of time integration). If **`saveat`** and **`fields`** are set, new files appear under the paths in your JSON (see **[`io_results.md`](io_results.md)**). Reference **`[app]`** log lines: **[`example_run_output.md`](example_run_output.md)**.
+Signs it worked: `mpirun` exits 0; rank 0 logs progress (e.g. effective configuration, world summary, start of time integration). If `saveat` and `fields` are set, new files appear under the paths in your JSON (see [`io_results.md`](io_results.md)). Reference `[app]` log lines: [`example_run_output.md`](example_run_output.md).
 
 Smaller or performance-oriented inputs include `tungsten_fixed_bc.json`, `tungsten_moving_bc.json`, and `tungsten_performance.json` in the same directory. TOML equivalents live under `../apps/tungsten/inputs_toml/`. Layout of sections is documented in [`apps/tungsten/inputs_json/README.md`](../apps/tungsten/inputs_json/README.md). GPU builds may provide `tungsten_cuda` or `tungsten_hip` when enabled—use the same config path with the matching binary.
 
@@ -103,7 +103,7 @@ add_executable(my_sim main.cpp)
 target_link_libraries(my_sim PRIVATE OpenPFC)
 ```
 
-Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix containing `lib/cmake/OpenPFC/OpenPFCConfig.cmake`. A longer walkthrough is in [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md). For **`pfc::ui::App<YourModel>`** with a JSON file on disk, **`find_package(nlohmann_json)`**, and a full CMake sketch, use [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md).
+Set `CMAKE_PREFIX_PATH` (or `OpenPFC_DIR`) to the install prefix containing `lib/cmake/OpenPFC/OpenPFCConfig.cmake`. A longer walkthrough is in [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md). For `pfc::ui::App<YourModel>` with a JSON file on disk, `find_package(nlohmann_json)`, and a full CMake sketch, use [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md).
 
 ---
 
@@ -112,33 +112,33 @@ Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix contain
 | Goal | Where to go |
 |------|-------------|
 | Conceptual layering (kernel / runtime / frontend) | [`architecture.md`](architecture.md) |
-| **Tour of main types** (`World`, `Model`, `Simulator`, `App`, …) | [`class_tour.md`](class_tour.md) |
+| Tour of main types (`World`, `Model`, `Simulator`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Longer tutorial (world → FFT → CMake) | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
-| **Minimal out-of-tree `App` + JSON** (MPI, config file) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| Minimal out-of-tree `App` + JSON (MPI, config file) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
 | Config files (`plan_options`, JSON/TOML) | [`configuration.md`](configuration.md) |
-| **`App`** pipeline (JSON → `Simulator`) | [`app_pipeline.md`](app_pipeline.md) |
-| **Validated `model.params`** (custom models) | [`parameter_validation.md`](parameter_validation.md) |
+| `App` pipeline (JSON → `Simulator`) | [`app_pipeline.md`](app_pipeline.md) |
+| Validated `model.params` (custom models) | [`parameter_validation.md`](parameter_validation.md) |
 | CMake options | [`build_options.md`](build_options.md) |
 | Terminology | [`glossary.md`](glossary.md) |
 | Configure or MPI errors | [`troubleshooting.md`](troubleshooting.md) |
 | Extend models, ICs, coordinates | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
-| HTML API reference | [Published docs](https://vtt-propertune.github.io/OpenPFC/dev/) (also build `docs` locally with **`OpenPFC_BUILD_DOCUMENTATION=ON`**) — pair with [`README.md`](README.md) and [`quickstart.md`](quickstart.md) for prose not generated from headers |
+| HTML API reference | [Published docs](https://vtt-propertune.github.io/OpenPFC/dev/) (also build `docs` locally with `OpenPFC_BUILD_DOCUMENTATION=ON`) — pair with [`README.md`](README.md) and [`quickstart.md`](quickstart.md) for prose not generated from headers |
 | HPC / LUMI | [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
-| **`ctest` / Catch2** | [`testing.md`](testing.md) |
-| GPU build + **`tungsten_cuda`** / HIP | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
+| `ctest` / Catch2 | [`testing.md`](testing.md) |
+| GPU build + `tungsten_cuda` / HIP | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
 | Example log transcripts (shape) | [`example_run_output.md`](example_run_output.md) |
 
 ---
 
 ## Getting started hub
 
-All beginner-oriented pages are linked from **[`getting_started/README.md`](getting_started/README.md)**. The **full documentation index** is **[`README.md`](README.md)** (this `docs/` directory).
+All beginner-oriented pages are linked from [`getting_started/README.md`](getting_started/README.md). The full documentation index is [`README.md`](README.md) (this `docs/` directory).
 
 ## Common issues
 
-- **`No such file: .../examples/...`** — Examples were not built; configure with **`-DOpenPFC_BUILD_EXAMPLES=ON`** and rebuild.
-- **`No such file: .../apps/tungsten/tungsten`** — Apps were not built; use **`-DOpenPFC_BUILD_APPS=ON`** and rebuild.
-- **`find_package(OpenPFC)` fails** — Set **`CMAKE_PREFIX_PATH`** or **`-DOpenPFC_DIR=.../lib/cmake/OpenPFC`** to the install prefix where **`OpenPFCConfig.cmake`** was installed (see [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md)).
+- `No such file: .../examples/...` — Examples were not built; configure with `-DOpenPFC_BUILD_EXAMPLES=ON` and rebuild.
+- `No such file: .../apps/tungsten/tungsten` — Apps were not built; use `-DOpenPFC_BUILD_APPS=ON` and rebuild.
+- `find_package(OpenPFC)` fails — Set `CMAKE_PREFIX_PATH` or `-DOpenPFC_DIR=.../lib/cmake/OpenPFC` to the install prefix where `OpenPFCConfig.cmake` was installed (see [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md)).
 
-More Q&A: **[`faq.md`](faq.md)**.
+More Q&A: [`faq.md`](faq.md).

@@ -5,45 +5,45 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Frequently asked questions
 
-Short answers; deeper detail lives in **[`INSTALL.md`](../INSTALL.md)**, **[`architecture.md`](architecture.md)**, **[`quickstart.md`](quickstart.md)**, and **[`troubleshooting.md`](troubleshooting.md)**.
+Short answers; deeper detail lives in [`INSTALL.md`](../INSTALL.md), [`architecture.md`](architecture.md), [`quickstart.md`](quickstart.md), and [`troubleshooting.md`](troubleshooting.md).
 
 ## Getting started
 
-**Where do I begin after cloning the repo?**  
-Follow **[`quickstart.md`](quickstart.md)** (configure → run an example or an app → or link OpenPFC from your own CMake project).
+Where do I begin after cloning the repo?  
+Follow [`quickstart.md`](quickstart.md) (configure → run an example or an app → or link OpenPFC from your own CMake project).
 
-**Is OpenPFC header-only?**  
-No. You **link** the compiled **`openpfc`** library and include headers from **`include/openpfc/`**. See [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md).
+Is OpenPFC header-only?  
+No. You link the compiled `openpfc` library and include headers from `include/openpfc/`. See [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md).
 
-**Do I need MPI?**  
-Yes for the documented workflows: the distributed FFT stack and examples assume an **MPI**-enabled build. There is no supported serial-only configuration.
+Do I need MPI?  
+Yes for the documented workflows: the distributed FFT stack and examples assume an MPI-enabled build. There is no supported serial-only configuration.
 
 ## Build and CMake
 
-**`find_package(OpenPFC)` cannot find OpenPFC**  
-Install OpenPFC (or point at the build tree if your workflow exports the package), then set **`CMAKE_PREFIX_PATH`** to the installation prefix, or **`-DOpenPFC_DIR=/path/to/lib/cmake/OpenPFC`**. See the CMake error walkthrough in [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md).
+`find_package(OpenPFC)` cannot find OpenPFC  
+Install OpenPFC (or point at the build tree if your workflow exports the package), then set `CMAKE_PREFIX_PATH` to the installation prefix, or `-DOpenPFC_DIR=/path/to/lib/cmake/OpenPFC`. See the CMake error walkthrough in [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md).
 
-**Examples or apps are missing from my build directory**  
-Ensure **`OpenPFC_BUILD_EXAMPLES=ON`** and **`OpenPFC_BUILD_APPS=ON`** (both default **ON**). If you previously configured with **OFF**, clear the option or delete the build directory and reconfigure.
+Examples or apps are missing from my build directory  
+Ensure `OpenPFC_BUILD_EXAMPLES=ON` and `OpenPFC_BUILD_APPS=ON` (both default ON). If you previously configured with OFF, clear the option or delete the build directory and reconfigure.
 
-**CUDA vs CPU build**  
-Use **separate build trees** when toggling GPU options so CMake does not mix flags; see [`build_cpu_gpu.md`](build_cpu_gpu.md).
+CUDA vs CPU build  
+Use separate build trees when toggling GPU options so CMake does not mix flags; see [`build_cpu_gpu.md`](build_cpu_gpu.md).
 
 ## Running
 
-**Where are the example executables?**  
-Under **`<build>/examples/`** when examples are enabled. Names match the source basename (e.g. `05_simulator`). Full list: [`examples_catalog.md`](examples_catalog.md).
+Where are the example executables?  
+Under `<build>/examples/` when examples are enabled. Names match the source basename (e.g. `05_simulator`). Full list: [`examples_catalog.md`](examples_catalog.md).
 
-**Tungsten / app cannot find my JSON**  
-Pass an **absolute path**, or a path relative to your **current working directory** (often the `build/` folder). Stock samples live under **`apps/tungsten/inputs_json/`** in the source tree.
+Tungsten / app cannot find my JSON  
+Pass an absolute path, or a path relative to your current working directory (often the `build/` folder). Stock samples live under `apps/tungsten/inputs_json/` in the source tree.
 
-**How do I know an example or tungsten run succeeded?**  
-Expect **`mpirun`** exit code **0** and rank-0 **INFO** logs. Examples do not all print the same banner; apps may write result files when configured. Short checklist: **[`quickstart.md`](quickstart.md)** (sections **2A** / **2B**).
+How do I know an example or tungsten run succeeded?  
+Expect `mpirun` exit code 0 and rank-0 INFO logs. Examples do not all print the same banner; apps may write result files when configured. Short checklist: [`quickstart.md`](quickstart.md) (sections 2A / 2B).
 
 ## Extending the framework
 
-**How do I add a custom model or IC?**  
-See **[`extending_openpfc/README.md`](extending_openpfc/README.md)**, **[`class_tour.md`](class_tour.md)** (where types live), **[`app_pipeline.md`](app_pipeline.md)** (JSON sections), and examples **`14_custom_field_initializer.cpp`**, **`17_custom_coordinate_system.cpp`**, **`10_ui_register_ic.cpp`**. For an out-of-tree binary with **`App<Model>`** and a config file, follow **[`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md)**. Optional startup validation of **`model.params`**: **[`parameter_validation.md`](parameter_validation.md)**.
+How do I add a custom model or IC?  
+See [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.md`](class_tour.md) (where types live), [`app_pipeline.md`](app_pipeline.md) (JSON sections), and examples `14_custom_field_initializer.cpp`, `17_custom_coordinate_system.cpp`, `10_ui_register_ic.cpp`. For an out-of-tree binary with `App<Model>` and a config file, follow [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md). Optional startup validation of `model.params`: [`parameter_validation.md`](parameter_validation.md).
 
 ## Documentation map
 
@@ -58,7 +58,7 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)**, **[`class_
 | Main types / headers map | [`class_tour.md`](class_tour.md) |
 | Minimal custom `App` + CMake | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation | [`parameter_validation.md`](parameter_validation.md) |
-| **`ctest` / tests | [`testing.md`](testing.md) |
+| `ctest` / tests | [`testing.md`](testing.md) |
 | GPU (CUDA/HIP) apps | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
 | Example log output (shape) | [`example_run_output.md`](example_run_output.md) |
 | CMake options | [`build_options.md`](build_options.md) |
@@ -74,8 +74,8 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)**, **[`class_
 
 Smaller polish items that may still help:
 
-1. **Richer transcripts** — **[`example_run_output.md`](example_run_output.md)** documents log *shape*; optional verbatim captures from CI or release machines can be added as collapsible sections if maintainers want byte-level fixtures.
-2. **CHANGELOG user notes** — Keep meaningful entries under **`[Unreleased]`** in **[`CHANGELOG.md`](../CHANGELOG.md)**; add “upgrading from X” blurbs when CMake or config keys change.
-3. **Published site** — Keep GitHub Pages in sync with **[`quickstart.md`](quickstart.md)** and **[`README.md`](README.md)** so API-only readers find the prose guides.
+1. Richer transcripts — [`example_run_output.md`](example_run_output.md) documents log *shape*; optional verbatim captures from CI or release machines can be added as collapsible sections if maintainers want byte-level fixtures.
+2. CHANGELOG user notes — Keep meaningful entries under `[Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md); add “upgrading from X” blurbs when CMake or config keys change.
+3. Published site — Keep GitHub Pages in sync with [`quickstart.md`](quickstart.md) and [`README.md`](README.md) so API-only readers find the prose guides.
 
-**Link checks:** run **`python3 scripts/check_doc_links.py`** before merging doc changes (see **[`contributing-docs.md`](contributing-docs.md)**).
+Link checks: run `python3 scripts/check_doc_links.py` before merging doc changes (see [`contributing-docs.md`](contributing-docs.md)).

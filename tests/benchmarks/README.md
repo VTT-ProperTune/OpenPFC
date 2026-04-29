@@ -5,15 +5,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Benchmarks
 
-This directory contains **performance benchmarks** for OpenPFC. Benchmarks measure execution time, memory usage, and scaling characteristics to prevent performance regressions.
+This directory contains performance benchmarks for OpenPFC. Benchmarks measure execution time, memory usage, and scaling characteristics to prevent performance regressions.
 
 ## Purpose
 
-- **Performance tracking**: Monitor performance over time
-- **Regression detection**: Catch performance degradations early
-- **Optimization guidance**: Identify bottlenecks and hot paths
-- **Scaling validation**: Verify parallel scaling characteristics
-- **HPC readiness**: Ensure performance suitable for HPC systems
+- Performance tracking: Monitor performance over time
+- Regression detection: Catch performance degradations early
+- Optimization guidance: Identify bottlenecks and hot paths
+- Scaling validation: Verify parallel scaling characteristics
+- HPC readiness: Ensure performance suitable for HPC systems
 
 ## What Belongs Here
 
@@ -34,14 +34,14 @@ Benchmarks should measure:
 
 ## Running Benchmarks
 
-**Note:** Benchmark sources are **not built unless** **`OpenPFC_BUILD_BENCHMARKS=ON`** (default is **OFF** in CMake). CI keeps build times down by excluding benchmarks from **`ctest`** via **`--exclude-regex "benchmark"`**; run them **locally** when you need timings.
+Note: Benchmark sources are not built unless `OpenPFC_BUILD_BENCHMARKS=ON` (default is OFF in CMake). CI keeps build times down by excluding benchmarks from `ctest` via `--exclude-regex "benchmark"`; run them locally when you need timings.
 
-Configure, build **`openpfc-tests`**, then run from the **build** directory:
+Configure, build `openpfc-tests`, then run from the build directory:
 
 ```bash
 cmake -S . -B build \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DOpenPFC_BUILD_BENCHMARKS=ON
+ -DCMAKE_BUILD_TYPE=Release \
+ -DOpenPFC_BUILD_BENCHMARKS=ON
 cmake --build build --target openpfc-tests
 cd build
 
@@ -76,12 +76,12 @@ Example:
 
 ```cpp
 TEST_CASE("FFT performance", "[fft][benchmark]") {
-    // Setup
-    auto fft = create_fft(large_size);
-    
-    BENCHMARK("forward transform") {
-        return fft.forward();
-    };
+ // Setup
+ auto fft = create_fft(large_size);
+ 
+ BENCHMARK("forward transform") {
+ return fft.forward();
+ };
 }
 ```
 
@@ -91,45 +91,45 @@ TEST_CASE("FFT performance", "[fft][benchmark]") {
 
 Microbenchmarks for core coordinate transformation operations. These functions are used in hot paths (field initialization loops, spatial operations) and must be zero-cost abstractions.
 
-**Benchmark Categories:**
+Benchmark Categories:
 
-1. **Coordinate Transformations** - Core mapping functions
-   - `to_coords()`: Grid indices → physical coordinates (~400 ns)
-   - `to_indices()`: Physical coordinates → grid indices (~400 ns)
-   - Round-trip transformation (~750 ns)
+1. Coordinate Transformations - Core mapping functions
+ - `to_coords()`: Grid indices → physical coordinates (~400 ns)
+ - `to_indices()`: Physical coordinates → grid indices (~400 ns)
+ - Round-trip transformation (~750 ns)
 
-2. **World Accessors** - Property access functions
-   - `get_spacing()`, `get_origin()`, `get_size()` (~70-220 ns)
-   - Verify these inline to direct member access
+2. World Accessors - Property access functions
+ - `get_spacing()`, `get_origin()`, `get_size()` (~70-220 ns)
+ - Verify these inline to direct member access
 
-3. **CoordinateSystem Direct** - Bare coordinate system operations
-   - Verifies no overhead from World wrapper
-   - `to_coords()` on CartesianCS (~380 ns)
-   - Direct member access (~70 ns)
+3. CoordinateSystem Direct - Bare coordinate system operations
+ - Verifies no overhead from World wrapper
+ - `to_coords()` on CartesianCS (~380 ns)
+ - Direct member access (~70 ns)
 
-4. **Loop-Based Realistic Usage** - Representative patterns
-   - Full grid conversion (64³ grid): ~116 ms
-   - Gaussian initialization with coordinates: ~139 ms
-   - Sparse access (1000 points): ~500 μs
+4. Loop-Based Realistic Usage - Representative patterns
+ - Full grid conversion (64³ grid): ~116 ms
+ - Gaussian initialization with coordinates: ~139 ms
+ - Sparse access (1000 points): ~500 μs
 
-5. **Zero-Cost Abstraction Validation** - Compiler optimization check
-   - Manual calculation (baseline): ~404 ns
-   - World abstraction: ~446 ns (~10% overhead - acceptable)
+5. Zero-Cost Abstraction Validation - Compiler optimization check
+ - Manual calculation (baseline): ~404 ns
+ - World abstraction: ~446 ns (~10% overhead - acceptable)
 
-6. **Memory Access Patterns** - Cache and copy performance
-   - World construction/destruction: ~970 ns
-   - World copy: ~220 ns
-   - Equality comparison: ~1.5 μs
+6. Memory Access Patterns - Cache and copy performance
+ - World construction/destruction: ~970 ns
+ - World copy: ~220 ns
+ - Equality comparison: ~1.5 μs
 
-**Key Insights:**
+Key Insights:
 
-- ✅ Coordinate transformations are fast (~400 ns)
-- ✅ Accessors inline well (<100 ns)
-- ✅ World wrapper has minimal overhead (~10%)
-- ✅ Copy semantics are efficient (~220 ns)
-- ⚠️ Debug build - Release build will be significantly faster
+- Coordinate transformations are fast (~400 ns)
+- Accessors inline well (<100 ns)
+- World wrapper has minimal overhead (~10%)
+- Copy semantics are efficient (~220 ns)
+- Debug build - Release build will be significantly faster
 
-**Running:**
+Running:
 
 ```bash
 # All World/coordinate benchmarks
@@ -146,43 +146,43 @@ Microbenchmarks for core coordinate transformation operations. These functions a
 
 For accurate performance measurements:
 
-1. **Use Release build:**
+1. Use Release build:
 
-   ```bash
-   cmake -B build-release -DCMAKE_BUILD_TYPE=Release
-   cmake --build build-release
-   ./build-release/tests/openpfc-tests "[benchmark]"
-   ```
+ ```bash
+ cmake -B build-release -DCMAKE_BUILD_TYPE=Release
+ cmake --build build-release
+ ./build-release/tests/openpfc-tests "[benchmark]"
+ ```
 
-2. **Expected improvements in Release:**
-   - Coordinate transforms: 1-5 ns (vs ~400 ns in Debug)
-   - Accessors: <1 ns (should completely inline)
-   - Zero-cost abstraction overhead: <5%
+2. Expected improvements in Release:
+ - Coordinate transforms: 1-5 ns (vs ~400 ns in Debug)
+ - Accessors: <1 ns (should completely inline)
+ - Zero-cost abstraction overhead: <5%
 
-3. **Run on dedicated system** (no background processes)
-4. **Use representative problem sizes**
-5. **Multiple iterations** for statistical significance
+3. Run on dedicated system (no background processes)
+4. Use representative problem sizes
+5. Multiple iterations for statistical significance
 
 ## Adding New Benchmarks
 
 When adding benchmarks:
 
-1. **Focus on hot paths** (inner loops, frequently called functions)
-2. **Use realistic data** (prevent compiler optimizations with `volatile`)
-3. **Document expected performance** in comments
-4. **Compare to baseline** (manual calculation)
-5. **Tag appropriately**: `[component][benchmark]`
+1. Focus on hot paths (inner loops, frequently called functions)
+2. Use realistic data (prevent compiler optimizations with `volatile`)
+3. Document expected performance in comments
+4. Compare to baseline (manual calculation)
+5. Tag appropriately: `[component][benchmark]`
 
 Example:
 
 ```cpp
 TEST_CASE("FFT performance", "[fft][benchmark]") {
-    auto fft = create_fft({128, 128, 128});
-    
-    BENCHMARK("Forward transform") {
-        return fft.forward();
-    };
-    
-    INFO("Expected: <10 ms for 128³ grid");
+ auto fft = create_fft({128, 128, 128});
+ 
+ BENCHMARK("Forward transform") {
+ return fft.forward();
+ };
+ 
+ INFO("Expected: <10 ms for 128³ grid");
 }
 ```

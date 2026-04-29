@@ -9,101 +9,101 @@ This directory contains CI/CD workflows for the OpenPFC project.
 
 ## Workflows
 
-### 🔧 `ci.yml` - Main CI Pipeline
+### `ci.yml` - Main CI Pipeline
 
-**Runs on:** Push to master/main/develop, PRs to master/main
+Runs on: Push to master/main/develop, PRs to master/main
 
-**Purpose:** Primary continuous integration pipeline ensuring code quality and functionality.
+Purpose: Primary continuous integration pipeline ensuring code quality and functionality.
 
-**Jobs (sequential fail-fast):** `code-quality` → `build-and-test`. If **Code Quality** fails, the build matrix is skipped.
+Jobs (sequential fail-fast): `code-quality` → `build-and-test`. If Code Quality fails, the build matrix is skipped.
 
-1. **Code Quality**
-   - clang-format **20** (advisory: reports formatting issues but does not fail the job)
-   - REUSE compliance verification (must pass)
+1. Code Quality
+ - clang-format 20 (advisory: reports formatting issues but does not fail the job)
+ - REUSE compliance verification (must pass)
 
-2. **CMake Build Matrix**
-   - **OS:** Ubuntu 24.04 LTS
-   - **Compilers:** GCC 11, GCC 13
-   - **Build Types:** Debug, Release
-   - Caches HeFFTe installation
-   - Runs full test suite with CTest
-   - Uploads test logs on failure
+2. CMake Build Matrix
+ - OS: Ubuntu 24.04 LTS
+ - Compilers: GCC 11, GCC 13
+ - Build Types: Debug, Release
+ - Caches HeFFTe installation
+ - Runs full test suite with CTest
+ - Uploads test logs on failure
 
-3. **CI Status Check**
-   - Required status check for merging
-   - Aggregates **Code Quality** and **build-and-test** only (clang-tidy is separate; see below)
+3. CI Status Check
+ - Required status check for merging
+ - Aggregates Code Quality and build-and-test only (clang-tidy is separate; see below)
 
-**Typical Duration:** 20-30 minutes (with cache), 45-60 minutes (cold cache)
-
----
-
-### 🔍 `clang-tidy.yml` - Static analysis (non-blocking)
-
-**Runs on:** Same triggers as `ci.yml` (push to master/main/develop, PRs to master/main).
-
-**Purpose:** Run `scripts/run-clang-tidy.sh` with HeFFTe + `compile_commands.json`. **Failures do not fail the main CI workflow** or its **CI Status** job. Treat as advisory unless you add this workflow’s job as a **required** check in branch protection.
-
-**Typical Duration:** ~15–20 minutes (similar HeFFTe cache key to the former in-repo job).
+Typical Duration: 20-30 minutes (with cache), 45-60 minutes (cold cache)
 
 ---
 
-### 📚 `docs.yml` - Documentation
+### `clang-tidy.yml` - Static analysis (non-blocking)
 
-**Runs on:** 
+Runs on: Same triggers as `ci.yml` (push to master/main/develop, PRs to master/main).
+
+Purpose: Run `scripts/run-clang-tidy.sh` with HeFFTe + `compile_commands.json`. Failures do not fail the main CI workflow or its CI Status job. Treat as advisory unless you add this workflow’s job as a required check in branch protection.
+
+Typical Duration: ~15–20 minutes (similar HeFFTe cache key to the former in-repo job).
+
+---
+
+### `docs.yml` - Documentation
+
+Runs on: 
 - Push to master/main
 - PRs to master/main (when docs/, include/, or README.md changed)
 - Manual trigger (workflow_dispatch)
 
-**Purpose:** Build and deploy Doxygen documentation.
+Purpose: Build and deploy Doxygen documentation.
 
-**Jobs:**
+Jobs:
 
-1. **Build Documentation**
-   - Installs Doxygen, Graphviz, LaTeX
-   - Generates HTML and PDF documentation
-   - Checks for Doxygen warnings (fails on warnings)
-   - Uploads documentation artifact
+1. Build Documentation
+ - Installs Doxygen, Graphviz, LaTeX
+ - Generates HTML and PDF documentation
+ - Checks for Doxygen warnings (fails on warnings)
+ - Uploads documentation artifact
 
-2. **Deploy to GitHub Pages** (master branch only)
-   - Deploys to GitHub Pages
-   - Comments deployment URL on commit
-   - Requires Pages to be enabled in repository settings
+2. Deploy to GitHub Pages (master branch only)
+ - Deploys to GitHub Pages
+ - Comments deployment URL on commit
+ - Requires Pages to be enabled in repository settings
 
-**Typical Duration:** 10-15 minutes
+Typical Duration: 10-15 minutes
 
-**Setup Required:**
+Setup Required:
 1. Enable GitHub Pages in repository settings
 2. Set source to "GitHub Actions"
 
 ---
 
-### 📊 `coverage.yml` - Code Coverage
+### `coverage.yml` - Code Coverage
 
-**Runs on:**
+Runs on:
 - Push to master/main/develop
 - PRs to master/main
 - Weekly schedule (Sunday 00:00 UTC)
 - Manual trigger (workflow_dispatch)
 
-**Purpose:** Measure and report test coverage (target: >90%).
+Purpose: Measure and report test coverage (target: >90%).
 
-**Jobs:**
+Jobs:
 
-1. **Coverage Analysis**
-   - Builds with GCC 11 + coverage flags
-   - Runs full test suite
-   - Generates lcov coverage report
-   - Uploads to Codecov
-   - Comments coverage summary on PRs
-   - Uploads HTML coverage report artifact
+1. Coverage Analysis
+ - Builds with GCC 11 + coverage flags
+ - Runs full test suite
+ - Generates lcov coverage report
+ - Uploads to Codecov
+ - Comments coverage summary on PRs
+ - Uploads HTML coverage report artifact
 
-**Coverage Targets:**
-- **Line Coverage:** >90%
-- **Function Coverage:** >90%
+Coverage Targets:
+- Line Coverage: >90%
+- Function Coverage: >90%
 
-**Typical Duration:** 15-20 minutes
+Typical Duration: 15-20 minutes
 
-**Setup Required:**
+Setup Required:
 1. Create Codecov account (optional)
 2. Add `CODECOV_TOKEN` secret to repository
 3. Without token, artifact is still uploaded
@@ -124,8 +124,8 @@ Required secrets (configure in repository settings):
 
 All workflows use GitHub Actions cache to speed up builds:
 
-- **HeFFTe builds:** Cached per OS/compiler/build-type
-- **Cache retention:** 7 days
+- HeFFTe builds: Cached per OS/compiler/build-type
+- Cache retention: 7 days
 
 Expected speedup: 2-3x faster on cache hits
 
@@ -149,23 +149,23 @@ Add these badges to your README.md:
 
 ### Build Matrix Failures
 
-**Problem:** One compiler/OS combination fails  
-**Solution:** Check uploaded test logs in workflow artifacts
+Problem: One compiler/OS combination fails 
+Solution: Check uploaded test logs in workflow artifacts
 
 ### Coverage Below Threshold
 
-**Problem:** Coverage drops below 90%  
-**Solution:** Add tests for uncovered code paths, view HTML coverage report
+Problem: Coverage drops below 90% 
+Solution: Add tests for uncovered code paths, view HTML coverage report
 
 ### Documentation Warnings
 
-**Problem:** Doxygen warnings fail the build  
-**Solution:** Fix warnings in source code documentation, or temporarily disable check
+Problem: Doxygen warnings fail the build 
+Solution: Fix warnings in source code documentation, or temporarily disable check
 
 ### Slow Builds
 
-**Problem:** Workflows take >45 minutes  
-**Solution:**
+Problem: Workflows take >45 minutes 
+Solution:
 1. Ensure caching is working
 2. Consider reducing matrix size
 
@@ -199,20 +199,20 @@ Edit `ci.yml` matrix section:
 
 ```yaml
 matrix:
-  compiler: [gcc-11, gcc-13, gcc-14]  # Add gcc-14
-  include:
-    - compiler: gcc-14
-      cc: gcc-14
-      cxx: g++-14
+ compiler: [gcc-11, gcc-13, gcc-14] # Add gcc-14
+ include:
+ - compiler: gcc-14
+ cc: gcc-14
+ cxx: g++-14
 ```
 
 ### Updating Dependencies
 
-When bumping HeFFTe (current release: **v2.4.1**), update the shared installer and cache keys:
+When bumping HeFFTe (current release: v2.4.1), update the shared installer and cache keys:
 
-- **Tarball URL, source directory, and install prefix** in `scripts/install-heffte-ci.sh`
-- **Cache keys** using that prefix, e.g. `heffte-2.4.1-...` → `heffte-2.5.0-...` when moving to the next version
+- Tarball URL, source directory, and install prefix in `scripts/install-heffte-ci.sh`
+- Cache keys using that prefix, e.g. `heffte-2.4.1-...` → `heffte-2.5.0-...` when moving to the next version
 
 ---
 
-**Last Updated:** 2026-03-30
+Last Updated: 2026-03-30

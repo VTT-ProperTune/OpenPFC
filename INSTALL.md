@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Installing OpenPFC
 
-This document is the **supported** source build guide. OpenPFC is **routinely tested** with **GCC 11.2.0** in a module environment. Other compilers may work, but if something breaks, try matching this stack first.
+This document is the supported source build guide. OpenPFC is routinely tested with GCC 11.2.0 in a module environment. Other compilers may work, but if something breaks, try matching this stack first.
 
 ### Reference stack (at a glance)
 
@@ -13,32 +13,32 @@ This document is the **supported** source build guide. OpenPFC is **routinely te
 |--------|----------------------------------|
 | CMake | 3.15+ |
 | GCC | 11.2.x (modules on clusters) |
-| Open MPI | 4.1.1 (reference; see **tohtori** toolchain) |
-| HeFFTe | **2.4.1** (separate install per CPU/CUDA/ROCm variant) |
+| Open MPI | 4.1.1 (reference; see tohtori toolchain) |
+| HeFFTe | 2.4.1 (separate install per CPU/CUDA/ROCm variant) |
 
-For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found), see **[`docs/troubleshooting.md`](docs/troubleshooting.md)**.
+For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found), see [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
-**Contributing** (builds, tests, documentation, changelog notes): **[`CONTRIBUTING.md`](CONTRIBUTING.md)**.
+Contributing (builds, tests, documentation, changelog notes): [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ### MPI: OpenMPI from modules — do not improvise with another stack
 
-This guide’s **source of truth** for MPI is **Open MPI** from **environment modules** (`module load openmpi` after `module load gcc/…`), as in §1 below. That matches how OpenPFC and HeFFTe are meant to be built together on clusters and many dev machines.
+This guide’s source of truth for MPI is Open MPI from environment modules (`module load openmpi` after `module load gcc/…`), as in §1 below. That matches how OpenPFC and HeFFTe are meant to be built together on clusters and many dev machines.
 
-The **reference version** used in day-to-day development and in the pinned **tohtori** toolchain is **Open MPI 4.1.1** (`module load openmpi/4.1.1` where your site provides it — see **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`**). Other Open MPI versions may work, but **GCC 11.2 + Open MPI 4.1.1** is the combination this repository is exercised against most often.
+The reference version used in day-to-day development and in the pinned tohtori toolchain is Open MPI 4.1.1 (`module load openmpi/4.1.1` where your site provides it — see `cmake/toolchains/tohtori-gcc11-openmpi.cmake`). Other Open MPI versions may work, but GCC 11.2 + Open MPI 4.1.1 is the combination this repository is exercised against most often.
 
-- **Run with the same MPI you built with:** after loading modules, **`which mpirun`** and **`which mpicxx`** must come from the **same** Open MPI installation (e.g. both under `/share/apps/OpenMPI/4.1.1/bin` on a typical module layout). Do **not** launch binaries with a system **MPICH** `mpirun` (e.g. `/usr/lib64/mpich/bin/mpirun`) if OpenPFC was linked against Open MPI — you will see link warnings about conflicting `libmpi.so` and runtime errors around **`MPI_Finalize`**.
+- Run with the same MPI you built with: after loading modules, `which mpirun` and `which mpicxx` must come from the same Open MPI installation (e.g. both under `/share/apps/OpenMPI/4.1.1/bin` on a typical module layout). Do not launch binaries with a system MPICH `mpirun` (e.g. `/usr/lib64/mpich/bin/mpirun`) if OpenPFC was linked against Open MPI — you will see link warnings about conflicting `libmpi.so` and runtime errors around `MPI_Finalize`.
 
-- **Do not** point CMake at an arbitrary system MPI just because `mpicc` exists (for example **MPICH** under `/usr/lib64/mpich` on RHEL-style systems). **Open MPI and MPICH are different implementations**; HeFFTe and OpenPFC must be configured, built, and run against the **same** MPI. Mixing “HeFFTe built with MPICH” and “OpenPFC expecting Open MPI” (or the reverse) produces confusing link or runtime failures.
-- **Do** run `module load openmpi` (or your site’s equivalent name — use `module avail openmpi`), then confirm you are using **that** toolchain before building HeFFTe **and** OpenPFC:
+- Do not point CMake at an arbitrary system MPI just because `mpicc` exists (for example MPICH under `/usr/lib64/mpich` on RHEL-style systems). Open MPI and MPICH are different implementations; HeFFTe and OpenPFC must be configured, built, and run against the same MPI. Mixing “HeFFTe built with MPICH” and “OpenPFC expecting Open MPI” (or the reverse) produces confusing link or runtime failures.
+- Do run `module load openmpi` (or your site’s equivalent name — use `module avail openmpi`), then confirm you are using that toolchain before building HeFFTe and OpenPFC:
   ```bash
   which mpicc
   mpicc --version   # should identify Open MPI / openmpi, not MPICH
   ```
-- **Bare OS without modules:** install **Open MPI development** packages (not MPICH) if you want to follow this document literally. If your site standardizes on MPICH only, you may still build everything consistently with MPICH — but that is **not** the combination this file describes step-by-step; keep HeFFTe and OpenPFC on the **same** `mpicc`/`mpicxx` throughout.
+- Bare OS without modules: install Open MPI development packages (not MPICH) if you want to follow this document literally. If your site standardizes on MPICH only, you may still build everything consistently with MPICH — but that is not the combination this file describes step-by-step; keep HeFFTe and OpenPFC on the same `mpicc`/`mpicxx` throughout.
 
 ## 1. Environment modules (recommended on clusters)
 
-Load a recent GCC, **OpenMPI**, and (for GPU) CUDA **before** configuring anything:
+Load a recent GCC, OpenMPI, and (for GPU) CUDA before configuring anything:
 
 ```bash
 module load gcc/11.2.0
@@ -54,7 +54,7 @@ mpicc --version
 nvcc --version   # after loading CUDA, for GPU builds
 ```
 
-**Important:** CMake may still pick `/usr/bin/gcc` if it was run before modules were loaded or if the cache is stale. HeFFTe must be built and consumed with the **same** toolchain. After loading `gcc/11.2.0`, set compilers explicitly when configuring OpenPFC (and when building HeFFTe):
+Important: CMake may still pick `/usr/bin/gcc` if it was run before modules were loaded or if the cache is stale. HeFFTe must be built and consumed with the same toolchain. After loading `gcc/11.2.0`, set compilers explicitly when configuring OpenPFC (and when building HeFFTe):
 
 ```bash
 export CC=$(which gcc)
@@ -63,13 +63,13 @@ export CXX=$(which g++)
 
 (or pass `-DCMAKE_C_COMPILER=$(which gcc) -DCMAKE_CXX_COMPILER=$(which g++)` to `cmake`.)
 
-**Stale CMake cache:** If an earlier configure picked the wrong compiler, `build-*/CMakeCache.txt` may still point at `/usr/bin/gcc`. Remove the build directory and reconfigure, or pass `-DCMAKE_C_COMPILER` and `-DCMAKE_CXX_COMPILER` explicitly on every `cmake` invocation.
+Stale CMake cache: If an earlier configure picked the wrong compiler, `build-*/CMakeCache.txt` may still point at `/usr/bin/gcc`. Remove the build directory and reconfigure, or pass `-DCMAKE_C_COMPILER` and `-DCMAKE_CXX_COMPILER` explicitly on every `cmake` invocation.
 
-**CUDA note:** Load a `cuda` module that points at an **installed** toolkit (check with `nvcc --version` after loading). If your site’s `cuda/13` (or similar) sets `PATH` but `nvcc` is missing, pick another module version that matches a real install (e.g. `module avail cuda`), or set `-DCMAKE_CUDA_COMPILER=/path/to/nvcc` / `CUDAToolkit_ROOT` explicitly.
+CUDA note: Load a `cuda` module that points at an installed toolkit (check with `nvcc --version` after loading). If your site’s `cuda/13` (or similar) sets `PATH` but `nvcc` is missing, pick another module version that matches a real install (e.g. `module avail cuda`), or set `-DCMAKE_CUDA_COMPILER=/path/to/nvcc` / `CUDAToolkit_ROOT` explicitly.
 
 ### compile_commands.json (IDEs, clang-tidy, agents)
 
-After modules and compilers are set (§1), configure with **`CMAKE_EXPORT_COMPILE_COMMANDS=ON`** so CMake writes an accurate **`compile_commands.json`** inside the build directory (e.g. `build-cpu/compile_commands.json`). Tools such as **clangd**, **clang-tidy**, and scripted builds depend on this file matching the **same** `mpicc`/GCC the project uses — so always re-run `cmake` **after** `module load`, never from a “clean” shell that falls back to `/usr/bin/gcc` and a different MPI.
+After modules and compilers are set (§1), configure with `CMAKE_EXPORT_COMPILE_COMMANDS=ON` so CMake writes an accurate `compile_commands.json` inside the build directory (e.g. `build-cpu/compile_commands.json`). Tools such as clangd, clang-tidy, and scripted builds depend on this file matching the same `mpicc`/GCC the project uses — so always re-run `cmake` after `module load`, never from a “clean” shell that falls back to `/usr/bin/gcc` and a different MPI.
 
 ```bash
 cmake -S . -B build-cpu -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ...   # plus your usual flags (§5)
@@ -77,68 +77,68 @@ cmake -S . -B build-cpu -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ...   # plus your usu
 ln -sf build-cpu/compile_commands.json compile_commands.json
 ```
 
-To mirror CI static analysis locally (see `.github/workflows/clang-tidy.yml`), use the build directory that contains `compile_commands.json` as **`-p`** for `run-clang-tidy` / `clang-tidy`.
+To mirror CI static analysis locally (see `.github/workflows/clang-tidy.yml`), use the build directory that contains `compile_commands.json` as `-p` for `run-clang-tidy` / `clang-tidy`.
 
 ### VS Code / Cursor on tohtori (CMake presets)
 
-**CMake Tools** often launches `cmake` without an interactive **Lmod** shell, so the generic **`dev-debug`** preset can pick the OS default compiler (e.g. GCC 8.x) and fail to find **OpenMPI**. On **tohtori**, select the **`tohtori-debug`** or **`tohtori-release`** configure preset in `CMakePresets.json`: they apply **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** plus `PATH` / `LD_LIBRARY_PATH` matching **`module show gcc/11.2.0`** and **`module show openmpi/4.1.1`**. If **`$HOME/opt/heffte/2.4.1-cpu`** exists, the toolchain prepends it to **`CMAKE_PREFIX_PATH`**. Those presets set **`OpenPFC_ENABLE_CODE_COVERAGE=OFF`** (many cluster images lack **`lcov`**); install **`lcov`** (e.g. **EPEL** + **`dnf install lcov`** on EL8) and reconfigure with **`-DOpenPFC_ENABLE_CODE_COVERAGE=ON`** if you want **`ninja coverage`**.
+CMake Tools often launches `cmake` without an interactive Lmod shell, so the generic `dev-debug` preset can pick the OS default compiler (e.g. GCC 8.x) and fail to find OpenMPI. On tohtori, select the `tohtori-debug` or `tohtori-release` configure preset in `CMakePresets.json`: they apply `cmake/toolchains/tohtori-gcc11-openmpi.cmake` plus `PATH` / `LD_LIBRARY_PATH` matching `module show gcc/11.2.0` and `module show openmpi/4.1.1`. If `$HOME/opt/heffte/2.4.1-cpu` exists, the toolchain prepends it to `CMAKE_PREFIX_PATH`. Those presets set `OpenPFC_ENABLE_CODE_COVERAGE=OFF` (many cluster images lack `lcov`); install `lcov` (e.g. EPEL + `dnf install lcov` on EL8) and reconfigure with `-DOpenPFC_ENABLE_CODE_COVERAGE=ON` if you want `ninja coverage`.
 
-Optionally create **`.vscode/settings.json`** with `"cmake.configurePreset": "tohtori-debug"` so the folder opens with the right preset (this repo **`.gitignore`** ignores `.vscode` unless you change that). For different paths after a cluster upgrade, use **`CMakeUserPresets.json`** at the repo root — see **`cmake/README.md`**.
+Optionally create `.vscode/settings.json` with `"cmake.configurePreset": "tohtori-debug"` so the folder opens with the right preset (this repo `.gitignore` ignores `.vscode` unless you change that). For different paths after a cluster upgrade, use `CMakeUserPresets.json` at the repo root — see `cmake/README.md`.
 
-**AddressSanitizer / UBSan (dev):** The **`dev-asan`** configure preset in **`CMakePresets.json`** extends **`dev-debug`** with **`-fsanitize=address,undefined`** (and matching link flags) for local debugging with **GCC/Clang** that support those flags. Example: **`cmake --preset dev-asan`** then **`cmake --build --preset dev-asan`**. When running tests or **`mpirun`**, you may set **`ASAN_OPTIONS=detect_leaks=1`** (and related runtime flags) in the environment; mixed MPI + sanitizers can be environment-sensitive, so match the same **`gcc`** / OpenMPI stack as the rest of this guide.
+AddressSanitizer / UBSan (dev): The `dev-asan` configure preset in `CMakePresets.json` extends `dev-debug` with `-fsanitize=address,undefined` (and matching link flags) for local debugging with GCC/Clang that support those flags. Example: `cmake --preset dev-asan` then `cmake --build --preset dev-asan`. When running tests or `mpirun`, you may set `ASAN_OPTIONS=detect_leaks=1` (and related runtime flags) in the environment; mixed MPI + sanitizers can be environment-sensitive, so match the same `gcc` / OpenMPI stack as the rest of this guide.
 
-**Shell build on tohtori:** **`sh ./scripts/build_tohtori.sh`** (or **`./scripts/build_tohtori.sh`**) sources Lmod when needed, loads **`gcc/11.2.0`** and **`openmpi/4.1.1`**, downloads/builds HeFFTe **2.4.1** (CPU) under **`$HOME/opt/heffte/2.4.1-cpu`** if needed, then configures OpenPFC with the same pinned toolchain file and **`OpenPFC_ENABLE_HDF5=ON`**. Run **`--help`** for options.
+Shell build on tohtori: `sh ./scripts/build_tohtori.sh` (or `./scripts/build_tohtori.sh`) sources Lmod when needed, loads `gcc/11.2.0` and `openmpi/4.1.1`, downloads/builds HeFFTe 2.4.1 (CPU) under `$HOME/opt/heffte/2.4.1-cpu` if needed, then configures OpenPFC with the same pinned toolchain file and `OpenPFC_ENABLE_HDF5=ON`. Run `--help` for options.
 
 ## 2. Other dependencies
 
-- **CMake** 3.15+
-- **FFTW** (development packages) — required for HeFFTe’s CPU backend
-- **nlohmann/json** — optional system install; otherwise CMake may fetch it during configuration
-- **MPI** — **Required** for all supported builds (HeFFTe and the distributed FFT stack depend on it). The **documented** setup is **OpenMPI from modules** (see §1 and the MPI callout above). CMake must find `MPI_CXX` for **that** MPI — not a random MPICH install earlier on `PATH`. There is **no supported serial-only** configuration yet — `-DOpenPFC_ENABLE_MPI=OFF` is rejected at configure time with a pointer to this list. If **`mpi.h`** is missing during configure, see **§5.1** (modules + `CC`/`CXX` + stale cache).
-- **toml++** and **Catch2** — if not found on the system, CMake may download them (e.g. when building tests). Ensure network access on first configure, or install/provide packages your site supports.
-- **Doxygen** — optional; if present, documentation generation is enabled by default (disable with `-DOpenPFC_BUILD_DOCUMENTATION=OFF` if you do not need it)
+- CMake 3.15+
+- FFTW (development packages) — required for HeFFTe’s CPU backend
+- nlohmann/json — optional system install; otherwise CMake may fetch it during configuration
+- MPI — Required for all supported builds (HeFFTe and the distributed FFT stack depend on it). The documented setup is OpenMPI from modules (see §1 and the MPI callout above). CMake must find `MPI_CXX` for that MPI — not a random MPICH install earlier on `PATH`. There is no supported serial-only configuration yet — `-DOpenPFC_ENABLE_MPI=OFF` is rejected at configure time with a pointer to this list. If `mpi.h` is missing during configure, see §5.1 (modules + `CC`/`CXX` + stale cache).
+- toml++ and Catch2 — if not found on the system, CMake may download them (e.g. when building tests). Ensure network access on first configure, or install/provide packages your site supports.
+- Doxygen — optional; if present, documentation generation is enabled by default (disable with `-DOpenPFC_BUILD_DOCUMENTATION=OFF` if you do not need it)
 
 ## 3. HeFFTe (required)
 
-Build and install [HeFFTe](https://github.com/icl-utk-edu/heffte) yourself, then point OpenPFC at it with **`CMAKE_PREFIX_PATH`** or **`Heffte_DIR`**.
+Build and install [HeFFTe](https://github.com/icl-utk-edu/heffte) yourself, then point OpenPFC at it with `CMAKE_PREFIX_PATH` or `Heffte_DIR`.
 
-If you omit those, CMake still runs **`find_package(Heffte)`** first, then probes common install prefixes automatically (see **`cmake/OpenPFCHeffteHints.cmake`**: e.g. **`$HOME/opt/heffte/*`**, **`/opt/heffte/...`**, **`/share/apps/heffte/...`**, Spack **`EBROOTHEFFTE`**). The first prefix that contains **`lib64/cmake/Heffte`** or **`lib/cmake/Heffte`** wins. Add your site’s root to that file if needed.
+If you omit those, CMake still runs `find_package(Heffte)` first, then probes common install prefixes automatically (see `cmake/OpenPFCHeffteHints.cmake`: e.g. **`$HOME/opt/heffte/*`, `/opt/heffte/...`, `/share/apps/heffte/...`, Spack `EBROOTHEFFTE`). The first prefix that contains `lib64/cmake/Heffte` or `lib/cmake/Heffte` wins. Add your site’s root to that file if needed.
 
-- **Releases:** <https://github.com/icl-utk-edu/heffte/releases> (recommended: **v2.4.1**)
-- **Upstream install guide:** <https://icl-utk-edu.github.io/heffte/md_doxygen_installation.html>
+- Releases: <https://github.com/icl-utk-edu/heffte/releases> (recommended: v2.4.1)
+- Upstream install guide: <https://icl-utk-edu.github.io/heffte/md_doxygen_installation.html>
 
 ### Install layout: `$HOME/opt/heffte/<variant>`
 
-Use **one install prefix per backend**, all under **`$HOME/opt/heffte/`**, so you can keep CPU, CUDA, and ROCm builds side by side and wire them in with modules:
+Use one install prefix per backend, all under `$HOME/opt/heffte/`, so you can keep CPU, CUDA, and ROCm builds side by side and wire them in with modules:
 
 | Variant | Typical `CMAKE_INSTALL_PREFIX` | Notes |
 |---------|----------------------------------|--------|
-| **CPU (FFTW only)** | `$HOME/opt/heffte/2.4.1-cpu` | No GPU backend in HeFFTe |
-| **CUDA** | `$HOME/opt/heffte/2.4.1-cuda` | `-DHeffte_ENABLE_CUDA=ON`, `nvcc` on `PATH` when building |
-| **ROCm / HIP** | `$HOME/opt/heffte/2.4.1-rocm` | `-DHeffte_ENABLE_ROCM=ON` (see §8.1) |
+| CPU (FFTW only) | `$HOME/opt/heffte/2.4.1-cpu` | No GPU backend in HeFFTe |
+| CUDA | `$HOME/opt/heffte/2.4.1-cuda` | `-DHeffte_ENABLE_CUDA=ON`, `nvcc` on `PATH` when building |
+| ROCm / HIP | `$HOME/opt/heffte/2.4.1-rocm` | `-DHeffte_ENABLE_ROCM=ON` (see §8.1) |
 
-OpenPFC CPU builds should use **`CMAKE_PREFIX_PATH`** (or `Heffte_DIR`) pointing at **`2.4.1-cpu`**. GPU builds must use the matching **`-cuda`** or **`-rocm`** install.
+OpenPFC CPU builds should use `CMAKE_PREFIX_PATH` (or `Heffte_DIR`) pointing at `2.4.1-cpu`. GPU builds must use the matching `-cuda` or `-rocm` install.
 
 ### Do not unpack or build HeFFTe inside the OpenPFC repository
 
-Keep the OpenPFC clone free of HeFFTe **source trees**, **long-lived build trees**, and **release tarballs** (nothing like `heffte-2.4.1/` or `v2.4.1.tar.gz` next to OpenPFC’s top-level `CMakeLists.txt`).
+Keep the OpenPFC clone free of HeFFTe source trees, long-lived build trees, and release tarballs (nothing like `heffte-2.4.1/` or `v2.4.1.tar.gz` next to OpenPFC’s top-level `CMakeLists.txt`).
 
-- Download tarballs to **`$HOME/src`**, **`/tmp`**, or any directory **outside** the OpenPFC tree.
-- Point **`-S`** at the extracted source **outside** the repo (e.g. `$HOME/src/heffte-2.4.1`).
-- Point **`-B`** at a **build directory outside** the repo (e.g. `$HOME/opt/heffte/build-cpu-2.4.1` or `/tmp/heffte-build-cpu-2.4.1`).
-- **`cmake --install`** into **`$HOME/opt/heffte/2.4.1-cpu`** (or `-cuda` / `-rocm`).
+- Download tarballs to `$HOME/src`, `/tmp`, or any directory outside the OpenPFC tree.
+- Point `-S` at the extracted source outside the repo (e.g. `$HOME/src/heffte-2.4.1`).
+- Point `-B` at a build directory outside the repo (e.g. `$HOME/opt/heffte/build-cpu-2.4.1` or `/tmp/heffte-build-cpu-2.4.1`).
+- `cmake --install` into `$HOME/opt/heffte/2.4.1-cpu` (or `-cuda` / `-rocm`).
 
-OpenPFC’s own **`build-cpu/`** / **`build-gpu/`** directories are only for **OpenPFC** (usually gitignored); do not use the **repository root** as a dump for HeFFTe sources or tarballs.
+OpenPFC’s own `build-cpu/` / `build-gpu/` directories are only for OpenPFC (usually gitignored); do not use the repository root as a dump for HeFFTe sources or tarballs.
 
-**GitHub Actions** in this repository follow the same policy: workflows download HeFFTe to **`/tmp`**, build in a temporary directory there, install to **`$HOME/opt/heffte/2.4.1-cpu`** on the runner, and delete the extract — the checked-out OpenPFC tree is not used as a HeFFTe working directory.
+GitHub Actions in this repository follow the same policy: workflows download HeFFTe to `/tmp`, build in a temporary directory there, install to `$HOME/opt/heffte/2.4.1-cpu` on the runner, and delete the extract — the checked-out OpenPFC tree is not used as a HeFFTe working directory.
 
 ### Optional: `OpenPFC_FETCH_HEFFTE=ON`
 
-If no HeFFTe is found, CMake can fetch v2.4.1 via **FetchContent** into **`build/_deps/`** inside an OpenPFC **build** directory (FFTW + MPI still required). This is a fallback only: for day-to-day work, **prefer installs under `$HOME/opt/heffte/<variant>`** as above. FetchContent must **not** be used as an excuse to extract HeFFTe **into the OpenPFC source tree**.
+If no HeFFTe is found, CMake can fetch v2.4.1 via FetchContent into `build/_deps/` inside an OpenPFC build directory (FFTW + MPI still required). This is a fallback only: for day-to-day work, prefer installs under `$HOME/opt/heffte/<variant>` as above. FetchContent must not be used as an excuse to extract HeFFTe into the OpenPFC source tree.
 
 ### Optional: Lmod modulefiles (`$HOME/privatemodules`)
 
-After installing to e.g. `$HOME/opt/heffte/2.4.1-cpu`, you can add a personal module that prepends **`CMAKE_PREFIX_PATH`** (and anything else your site needs):
+After installing to e.g. `$HOME/opt/heffte/2.4.1-cpu`, you can add a personal module that prepends `CMAKE_PREFIX_PATH`** (and anything else your site needs):
 
 ```tcl
 #%Module1.0
@@ -146,13 +146,13 @@ set root $env(HOME)/opt/heffte/2.4.1-cpu
 prepend-path CMAKE_PREFIX_PATH $root
 ```
 
-Place the file where Lmod looks (e.g. `$HOME/privatemodules/heffte/2.4.1-cpu.lua` or `.modulepath` layout your site uses), then `module load heffte/2.4.1-cpu` before configuring OpenPFC. Repeat with different paths for **`2.4.1-cuda`** and **`2.4.1-rocm`**.
+Place the file where Lmod looks (e.g. `$HOME/privatemodules/heffte/2.4.1-cpu.lua` or `.modulepath` layout your site uses), then `module load heffte/2.4.1-cpu` before configuring OpenPFC. Repeat with different paths for `2.4.1-cuda` and `2.4.1-rocm`.
 
 ### Build and install HeFFTe manually (outside OpenPFC)
 
-Load **`gcc/11.2.0`**, **`openmpi`**, and (for CUDA) **`cuda`** first (§1). Use the **same** `CC`/`CXX` as for OpenPFC.
+Load `gcc/11.2.0`, `openmpi`, and (for CUDA) `cuda` first (§1). Use the same `CC`/`CXX` as for OpenPFC.
 
-**Working copy outside the repo** (adjust `SRC` / `BUILD`):
+Working copy outside the repo (adjust `SRC` / `BUILD`):
 
 ```bash
 export VER=2.4.1
@@ -166,7 +166,7 @@ export CC=$(which gcc)
 export CXX=$(which g++)
 ```
 
-**CUDA + FFTW** → install to **`$HOME/opt/heffte/2.4.1-cuda`**:
+CUDA + FFTW → install to `$HOME/opt/heffte/2.4.1-cuda`:
 
 ```bash
 cmake -S "$SRC" -B "$BUILD" -G Ninja \
@@ -183,7 +183,7 @@ cmake --install "$BUILD"
 
 Replace `80` with your GPU’s compute capability, use `native` with CMake 3.24+, or pass several architectures (e.g. `75;80;86`).
 
-**CPU only** → install to **`$HOME/opt/heffte/2.4.1-cpu`** (use a separate **`BUILD`** path, e.g. `$HOME/opt/heffte/build-cpu-${VER}`):
+CPU only → install to `$HOME/opt/heffte/2.4.1-cpu` (use a separate `BUILD` path, e.g. `$HOME/opt/heffte/build-cpu-${VER}`):
 
 ```bash
 cmake -S "$SRC" -B "$BUILD" -G Ninja \
@@ -205,7 +205,7 @@ export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu:$CMAKE_PREFIX_PATH
 # cmake ... -DHeffte_DIR=$HOME/opt/heffte/2.4.1-cpu/lib64/cmake/Heffte
 ```
 
-Use the directory that contains **`HeffteConfig.cmake`**.
+Use the directory that contains `HeffteConfig.cmake`.
 
 ## 4. Get OpenPFC sources
 
@@ -218,19 +218,19 @@ cd OpenPFC
 
 ### 5.1 If `cmake` fails immediately — what is actually blocking?
 
-OpenPFC’s CMake is **not** broken on a correctly prepared machine. Configuration almost always fails for one of these **environment** reasons (all fixable without changing the repo):
+OpenPFC’s CMake is not broken on a correctly prepared machine. Configuration almost always fails for one of these environment reasons (all fixable without changing the repo):
 
 | Symptom | Cause | Fix (see earlier sections) |
 |--------|--------|----------------------------|
-| **`HeFFTe was not found`** / fatal error mentioning `Heffte` | No install on **`CMAKE_PREFIX_PATH`**, and **`OpenPFC_FETCH_HEFFTE=OFF`** (default). | Build and install HeFFTe to **`$HOME/opt/heffte/2.4.1-cpu`** (§3), then `export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu:$CMAKE_PREFIX_PATH` **or** pass **`-DHeffte_DIR=$HOME/opt/heffte/2.4.1-cpu/lib64/cmake/Heffte`** (use the directory that contains **`HeffteConfig.cmake`** — sometimes `lib/cmake/Heffte`). Alternatively, **`-DOpenPFC_FETCH_HEFFTE=ON`** (still requires FFTW + MPI; artifacts only under **`build/_deps/`**, not the source tree). |
-| **`mpi.h: No such file or directory`** during MPI probe, or MPI from the wrong vendor | Shell never ran **`module load openmpi`** (§1), or CMake used **`/usr/bin/cc`** without OpenMPI **include/lib** flags. | Load **GCC + OpenMPI** modules **first**, then **`export CC=$(which gcc)`** and **`export CXX=$(which g++)`**, then configure — or pass **`-DCMAKE_C_COMPILER=... -DCMAKE_CXX_COMPILER=...`** explicitly. Confirm **`mpicc --version`** reports **Open MPI**, not MPICH (see top callout). |
-| Wrong compiler / MPI after you “fixed” modules | **Stale `CMakeCache.txt`** in **`build/`** still points at old paths. | Remove the build directory (**`rm -rf build-cpu`**) and re-run **`cmake`** from a shell **after** modules are loaded. |
+| `HeFFTe was not found` / fatal error mentioning `Heffte` | No install on `CMAKE_PREFIX_PATH`, and `OpenPFC_FETCH_HEFFTE=OFF` (default). | Build and install HeFFTe to `$HOME/opt/heffte/2.4.1-cpu` (§3), then `export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu:$CMAKE_PREFIX_PATH` or pass `-DHeffte_DIR=$HOME/opt/heffte/2.4.1-cpu/lib64/cmake/Heffte` (use the directory that contains `HeffteConfig.cmake` — sometimes `lib/cmake/Heffte`). Alternatively, `-DOpenPFC_FETCH_HEFFTE=ON` (still requires FFTW + MPI; artifacts only under `build/_deps/`, not the source tree). |
+| `mpi.h: No such file or directory` during MPI probe, or MPI from the wrong vendor | Shell never ran `module load openmpi` (§1), or CMake used `/usr/bin/cc` without OpenMPI include/lib flags. | Load GCC + OpenMPI modules first, then `export CC=$(which gcc)` and `export CXX=$(which g++)`, then configure — or pass `-DCMAKE_C_COMPILER=... -DCMAKE_CXX_COMPILER=...` explicitly. Confirm `mpicc --version` reports Open MPI, not MPICH (see top callout). |
+| Wrong compiler / MPI after you “fixed” modules | Stale `CMakeCache.txt` in `build/` still points at old paths. | Remove the build directory (`rm -rf build-cpu`) and re-run `cmake` from a shell after modules are loaded. |
 
-**Agents and IDEs:** Do **not** point CMake at a hard-coded MPI under `/share/apps/...` unless that matches **this** machine’s documented modules. Follow **§1** and **§3** every time; the supported recipe is **module-loaded OpenMPI + HeFFTe under `$HOME/opt/heffte/<variant>`**.
+Agents and IDEs: Do not point CMake at a hard-coded MPI under `/share/apps/...` unless that matches this machine’s documented modules. Follow §1 and §3 every time; the supported recipe is module-loaded OpenMPI + HeFFTe under `$HOME/opt/heffte/<variant>`.
 
 ---
 
-With modules loaded (§1), **`CMAKE_PREFIX_PATH`** including **`$HOME/opt/heffte/2.4.1-cpu`** (or a `module load` that sets it — §3), pass the **same** compilers as for HeFFTe:
+With modules loaded (§1), `CMAKE_PREFIX_PATH` including `$HOME/opt/heffte/2.4.1-cpu` (or a `module load` that sets it — §3), pass the same compilers as for HeFFTe:
 
 ```bash
 export CC=$(which gcc)
@@ -243,7 +243,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 cmake --build build-cpu -j"$(nproc)"
 ```
 
-**Minimal configure (optional):** By default, OpenPFC may enable code coverage and (if Doxygen is installed) documentation. For binaries only:
+Minimal configure (optional): By default, OpenPFC may enable code coverage and (if Doxygen is installed) documentation. For binaries only:
 
 ```bash
 export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu:$CMAKE_PREFIX_PATH
@@ -257,39 +257,39 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 
 ### 5.2 CMake cache variables (quick reference)
 
-These switches are defined under **`cmake/`** (see **`BuildOptions.cmake`**, **`Dependencies.cmake`**, **`CudaSupport.cmake`**, **`HipSupport.cmake`**, **`LibraryConfiguration.cmake`**, **`CodeCoverage.cmake`**, **`ProjectSetup.cmake`**, **`CompilerSettings.cmake`**). Use **`-DNAME=ON|OFF`** (or **`STRING`** where noted) on the **`cmake`** command line.
+These switches are defined under `cmake/` (see `BuildOptions.cmake`, `Dependencies.cmake`, `CudaSupport.cmake`, `HipSupport.cmake`, `LibraryConfiguration.cmake`, `CodeCoverage.cmake`, `ProjectSetup.cmake`, `CompilerSettings.cmake`). Use `-DNAME=ON|OFF` (or `STRING` where noted) on the `cmake` command line.
 
 | Cache variable | Typical use |
 |------------------|---------------|
-| **`OpenPFC_ENABLE_MPI`** | Must stay **ON** for supported builds (see §2). |
-| **`OpenPFC_ENABLE_HEFFTE`** | HeFFTe FFT stack (**ON** by default; **OFF** is rejected at configure time). |
-| **`OpenPFC_FETCH_HEFFTE`** | Fetch HeFFTe into **`build/_deps/`** if no install is found. |
-| **`OpenPFC_ENABLE_HDF5`** | Optional HDF5 for profiling dumps (**OFF** by default). |
-| **`OpenPFC_ENABLE_CUDA`** / **`OpenPFC_ENABLE_HIP`** | GPU backends; require matching HeFFTe install (§3, §6–§8). |
-| **`OpenPFC_MPI_CUDA_AWARE`** / **`OpenPFC_MPI_HIP_AWARE`** | GPU-aware MPI when supported (defaults **ON** when CUDA/HIP is enabled). |
-| **`OpenPFC_BUILD_APPS`**, **`OpenPFC_BUILD_EXAMPLES`**, **`OpenPFC_BUILD_TESTS`**, **`OpenPFC_BUILD_BENCHMARKS`** | Scope of targets built alongside **`openpfc`** (benchmarks are slow). |
-| **`OpenPFC_BUILD_DOCUMENTATION`** | Doxygen docs (**ON** if **`doxygen`** is found). |
-| **`OpenPFC_ENABLE_CODE_COVERAGE`** | **`gcov`** coverage (**ON** by default; disable on clusters without **`lcov`**). |
-| **`OpenPFC_DEVELOPMENT`** | Development extras such as **`compile_commands.json`** (**OFF** by default). |
-| **`OpenPFC_PROFILING_LEVEL`** | **`0`**, **`1`**, or **`2`** compile-time profiling macros (`cmake/LibraryConfiguration.cmake`). |
-| **`OpenPFC_ENABLE_NAN_CHECK`** | Optional NaN guards (**OFF** by default). Debug builds enable NaN checks automatically; set **ON** to force them in non-Debug builds (`cmake/CompilerSettings.cmake`). |
-| **`BUILD_SHARED_LIBS`** | Build **`openpfc`** as shared (**OFF** = static, default). |
+| `OpenPFC_ENABLE_MPI` | Must stay ON for supported builds (see §2). |
+| `OpenPFC_ENABLE_HEFFTE` | HeFFTe FFT stack (ON by default; OFF is rejected at configure time). |
+| `OpenPFC_FETCH_HEFFTE` | Fetch HeFFTe into `build/_deps/` if no install is found. |
+| `OpenPFC_ENABLE_HDF5` | Optional HDF5 for profiling dumps (OFF by default). |
+| `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_HIP` | GPU backends; require matching HeFFTe install (§3, §6–§8). |
+| `OpenPFC_MPI_CUDA_AWARE` / `OpenPFC_MPI_HIP_AWARE` | GPU-aware MPI when supported (defaults ON when CUDA/HIP is enabled). |
+| `OpenPFC_BUILD_APPS`, `OpenPFC_BUILD_EXAMPLES`, `OpenPFC_BUILD_TESTS`, `OpenPFC_BUILD_BENCHMARKS` | Scope of targets built alongside `openpfc` (benchmarks are slow). |
+| `OpenPFC_BUILD_DOCUMENTATION` | Doxygen docs (ON if `doxygen` is found). |
+| `OpenPFC_ENABLE_CODE_COVERAGE` | `gcov` coverage (ON by default; disable on clusters without `lcov`). |
+| `OpenPFC_DEVELOPMENT` | Development extras such as `compile_commands.json` (OFF by default). |
+| `OpenPFC_PROFILING_LEVEL` | `0`, `1`, or `2` compile-time profiling macros (`cmake/LibraryConfiguration.cmake`). |
+| `OpenPFC_ENABLE_NAN_CHECK` | Optional NaN guards (OFF by default). Debug builds enable NaN checks automatically; set ON to force them in non-Debug builds (`cmake/CompilerSettings.cmake`). |
+| `BUILD_SHARED_LIBS` | Build `openpfc` as shared (OFF = static, default). |
 
 ### 5.2.1 GPU-aware MPI (configure vs runtime)
 
-When **CUDA** is enabled and **`OpenPFC_MPI_CUDA_AWARE=ON`**, CMake may run a small **linked** check **after** `find_package(MPI)` if the implementation is **Open MPI** (`OPEN_MPI` in `mpi.h`). It first verifies that **`MPIX_Query_cuda_support()`** compiles, then runs it under **`MPI_Init` / `MPI_Finalize`**. If Open MPI was built **without** CUDA-aware support, configuration prints a **warning**—use a CUDA-aware Open MPI build, or set **`-DOpenPFC_MPI_CUDA_AWARE=OFF`** and reconfigure.
+When CUDA is enabled and `OpenPFC_MPI_CUDA_AWARE=ON`, CMake may run a small linked check after `find_package(MPI)` if the implementation is Open MPI (`OPEN_MPI` in `mpi.h`). It first verifies that `MPIX_Query_cuda_support()` compiles, then runs it under `MPI_Init` / `MPI_Finalize`. If Open MPI was built without CUDA-aware support, configuration prints a warning—use a CUDA-aware Open MPI build, or set `-DOpenPFC_MPI_CUDA_AWARE=OFF` and reconfigure.
 
-**Other MPI stacks** (for example **Cray MPICH** on **LUMI-G**) are **not** probed this way. **`OpenPFC_MPI_HIP_AWARE`** is also **not** configure-probed; follow **[docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md)** for **`MPICH_GPU_SUPPORT_ENABLED`**, and use **`verify_gpu_aware_mpi`** (installed under **`bin/`** with HIP builds) for a multi-rank device-buffer smoke test.
+Other MPI stacks (for example Cray MPICH on LUMI-G) are not probed this way. `OpenPFC_MPI_HIP_AWARE` is also not configure-probed; follow [docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md) for `MPICH_GPU_SUPPORT_ENABLED`, and use `verify_gpu_aware_mpi` (installed under `bin/` with HIP builds) for a multi-rank device-buffer smoke test.
 
-**Cross-compiling:** the runtime part of the CUDA probe is **skipped**; validate on the target machine instead.
+Cross-compiling: the runtime part of the CUDA probe is skipped; validate on the target machine instead.
 
-For toolchain-specific examples (cluster **`CMAKE_TOOLCHAIN_FILE`**), see **`CMakePresets.json`** and **`cmake/toolchains/`**.
+For toolchain-specific examples (cluster `CMAKE_TOOLCHAIN_FILE`), see `CMakePresets.json` and `cmake/toolchains/`.
 
 ## 6. Configure and build OpenPFC (CUDA)
 
-**HeFFTe requirement:** GPU OpenPFC needs HeFFTe built with **`-DHeffte_ENABLE_CUDA=ON`**, installed under **`$HOME/opt/heffte/2.4.1-cuda`** (§3). Set **`CMAKE_PREFIX_PATH`** to include that prefix (or load a module that does).
+HeFFTe requirement: GPU OpenPFC needs HeFFTe built with `-DHeffte_ENABLE_CUDA=ON`, installed under `$HOME/opt/heffte/2.4.1-cuda` (§3). Set `CMAKE_PREFIX_PATH` to include that prefix (or load a module that does).
 
-Load the **CUDA** module so `nvcc` is on `PATH`, then configure with explicit host compilers:
+Load the CUDA module so `nvcc` is on `PATH`, then configure with explicit host compilers:
 
 ```bash
 export CC=$(which gcc)
@@ -310,7 +310,7 @@ Match `CMAKE_CUDA_ARCHITECTURES` to your GPU (or `native` on CMake 3.24+). To fi
 nvidia-smi --query-gpu=compute_cap --format=csv,noheader   # e.g. 8.6 → use 86
 ```
 
-**Minimal configure (optional):** As with the CPU build (§5), you can disable optional features:
+Minimal configure (optional): As with the CPU build (§5), you can disable optional features:
 
 ```bash
 export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cuda:$CMAKE_PREFIX_PATH
@@ -324,7 +324,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -S . -B build-gpu
 ```
 
-**If CUDA is missing:** If you pass `-DOpenPFC_ENABLE_CUDA=ON` but CMake cannot find the CUDA toolkit, configuration **still succeeds** with a **warning** and CUDA support is turned **off**. Always check the configuration summary: `OpenPFC_ENABLE_CUDA` should be **ON** for a true GPU build. Fix `PATH`, `CMAKE_CUDA_COMPILER`, or `CUDAToolkit_ROOT`, then reconfigure from a clean build directory.
+If CUDA is missing: If you pass `-DOpenPFC_ENABLE_CUDA=ON` but CMake cannot find the CUDA toolkit, configuration still succeeds with a warning and CUDA support is turned off. Always check the configuration summary: `OpenPFC_ENABLE_CUDA` should be ON for a true GPU build. Fix `PATH`, `CMAKE_CUDA_COMPILER`, or `CUDAToolkit_ROOT`, then reconfigure from a clean build directory.
 
 ## 7. Install prefix (optional)
 
@@ -344,7 +344,7 @@ cmake --install build
 
 ## 8. AMD GPU (HIP)
 
-For ROCm / HIP builds, load a recent GCC, OpenMPI, and **ROCm** before configuring anything (see §1 for compiler notes). Many clusters provide a ROCm module:
+For ROCm / HIP builds, load a recent GCC, OpenMPI, and ROCm before configuring anything (see §1 for compiler notes). Many clusters provide a ROCm module:
 
 ```bash
 module load gcc/11.2.0
@@ -363,11 +363,11 @@ hipcc --version   # after loading ROCm or setting PATH
 rocm-smi          # optional: list AMD GPUs
 ```
 
-**CMAKE_PREFIX_PATH for ROCm:** CMake finds HIP via `find_package(HIP)`. If HIP is not found, set `CMAKE_PREFIX_PATH` to your ROCm installation (e.g. `-DCMAKE_PREFIX_PATH=/opt/rocm` or `/opt/rocm-6.4.0`) so that `HIPConfig.cmake` is found.
+CMAKE_PREFIX_PATH for ROCm: CMake finds HIP via `find_package(HIP)`. If HIP is not found, set `CMAKE_PREFIX_PATH` to your ROCm installation (e.g. `-DCMAKE_PREFIX_PATH=/opt/rocm` or `/opt/rocm-6.4.0`) so that `HIPConfig.cmake` is found.
 
 ### 8.1. Build and install HeFFTe with ROCm
 
-OpenPFC GPU (HIP) needs HeFFTe built with **`-DHeffte_ENABLE_ROCM=ON`**, installed under **`$HOME/opt/heffte/2.4.1-rocm`** (§3). Use the same host compilers as for OpenPFC (§1). **Do not** build inside the OpenPFC repo; use **`$HOME/src`** (or similar) for the tarball and source, and a **build directory outside** the repo.
+OpenPFC GPU (HIP) needs HeFFTe built with `-DHeffte_ENABLE_ROCM=ON`, installed under `$HOME/opt/heffte/2.4.1-rocm` (§3). Use the same host compilers as for OpenPFC (§1). Do not build inside the OpenPFC repo; use `$HOME/src` (or similar) for the tarball and source, and a build directory outside the repo.
 
 ```bash
 export VER=2.4.1
@@ -392,7 +392,7 @@ cmake --build "$BUILD" -j"$(nproc)"
 cmake --install "$BUILD"
 ```
 
-Optionally set **`-DCMAKE_HIP_ARCHITECTURES=<arch>`** to match your GPU (e.g. `gfx90a` for MI210, `gfx1100` for some RDNA3). Use `rocm-smi` or your vendor docs to get the architecture code.
+Optionally set `-DCMAKE_HIP_ARCHITECTURES=<arch>` to match your GPU (e.g. `gfx90a` for MI210, `gfx1100` for some RDNA3). Use `rocm-smi` or your vendor docs to get the architecture code.
 
 Point CMake at this installation when building OpenPFC (see §3 for `lib` vs `lib64`):
 
@@ -402,7 +402,7 @@ export CMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-rocm:$CMAKE_PREFIX_PATH
 
 ### 8.2. Configure and build OpenPFC (HIP)
 
-Load the **ROCm** module (or set `PATH`) so `hipcc` and HIP are available. Set **`CMAKE_PREFIX_PATH`** to include both the HeFFTe ROCm install and your ROCm installation, so OpenPFC can find HeFFTe and `find_package(HIP)` succeeds:
+Load the ROCm module (or set `PATH`) so `hipcc` and HIP are available. Set `CMAKE_PREFIX_PATH` to include both the HeFFTe ROCm install and your ROCm installation, so OpenPFC can find HeFFTe and `find_package(HIP)` succeeds:
 
 ```bash
 export CC=$(which gcc)
@@ -416,11 +416,11 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 cmake --build build-hip -j"$(nproc)"
 ```
 
-Adjust the ROCm path in `CMAKE_PREFIX_PATH` if your install is elsewhere (e.g. `/opt/rocm`). Optionally add **`-DCMAKE_HIP_ARCHITECTURES=<arch>`** to match your AMD GPU.
+Adjust the ROCm path in `CMAKE_PREFIX_PATH` if your install is elsewhere (e.g. `/opt/rocm`). Optionally add `-DCMAKE_HIP_ARCHITECTURES=<arch>` to match your AMD GPU.
 
-**GPU-aware MPI (HIP):** **`OpenPFC_MPI_HIP_AWARE`** defaults to **ON** when HIP is found. It enables device-pointer halo exchange in OpenPFC and should match a HeFFTe build with GPU-aware MPI (see HeFFTe’s **`Heffte_ENABLE_GPU_AWARE_MPI`**). The install includes **`verify_gpu_aware_mpi`** in **`bin/`** to probe device-buffer MPI at runtime. On **LUMI-G**, see **[docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md)** for **`MPICH_GPU_SUPPORT_ENABLED`** and job layout.
+GPU-aware MPI (HIP): `OpenPFC_MPI_HIP_AWARE` defaults to ON when HIP is found. It enables device-pointer halo exchange in OpenPFC and should match a HeFFTe build with GPU-aware MPI (see HeFFTe’s `Heffte_ENABLE_GPU_AWARE_MPI`). The install includes `verify_gpu_aware_mpi` in `bin/` to probe device-buffer MPI at runtime. On LUMI-G, see [docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md) for `MPICH_GPU_SUPPORT_ENABLED` and job layout.
 
-**Minimal configure (optional):** To disable code coverage and documentation (avoids gcov link issues with the HIP toolchain):
+Minimal configure (optional): To disable code coverage and documentation (avoids gcov link issues with the HIP toolchain):
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release \
@@ -431,15 +431,15 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -S . -B build-hip
 ```
 
-**If HIP is not found:** If you pass `-DOpenPFC_ENABLE_HIP=ON` but CMake does not find HIP, configuration can still succeed with a **warning** and HIP will be disabled. Check the configuration summary and ensure `CMAKE_PREFIX_PATH` includes the ROCm installation so that `HIPConfig.cmake` is found. Then reconfigure from a clean build directory if needed.
+If HIP is not found: If you pass `-DOpenPFC_ENABLE_HIP=ON` but CMake does not find HIP, configuration can still succeed with a warning and HIP will be disabled. Check the configuration summary and ensure `CMAKE_PREFIX_PATH` includes the ROCm installation so that `HIPConfig.cmake` is found. Then reconfigure from a clean build directory if needed.
 
 CMake will warn if HeFFTe was built without ROCm support when HIP is enabled; use the HeFFTe install from §8.1.
 
-**Code coverage:** If the HIP build fails at link with undefined `__gcov_*` symbols, disable code coverage (e.g. `-DOpenPFC_ENABLE_CODE_COVERAGE=OFF`); coverage is not always compatible with the HIP/Clang toolchain.
+Code coverage: If the HIP build fails at link with undefined `__gcov_*` symbols, disable code coverage (e.g. `-DOpenPFC_ENABLE_CODE_COVERAGE=OFF`); coverage is not always compatible with the HIP/Clang toolchain.
 
-**toml++ and ROCm headers:** If you see a preprocessor error in toml++ about `__has_attribute` requiring an identifier, it is due to ROCm headers defining the `__noinline__` macro. As a workaround, ensure translation units that use both OpenPFC (with HIP) and toml++ include the toml-based headers before any OpenPFC or HIP includes, or try a different ROCm version.
+toml++ and ROCm headers: If you see a preprocessor error in toml++ about `__has_attribute` requiring an identifier, it is due to ROCm headers defining the `__noinline__` macro. As a workaround, ensure translation units that use both OpenPFC (with HIP) and toml++ include the toml-based headers before any OpenPFC or HIP includes, or try a different ROCm version.
 
 ## Compiler notes
 
-- **GCC 11.2.0** is the primary tested toolchain.
+- GCC 11.2.0 is the primary tested toolchain.
 - Older GCC (e.g. 8.x) may need extra link flags for `std::filesystem`; OpenPFC’s CMake links `libstdc++fs` automatically for GCC versions older than 9 when using GNU.

@@ -90,7 +90,7 @@ simulator.add_initial_condition(std::move(mod));
 
 ## Migration from legacy loop-based patterns
 
-**Before (manual nested loops):**
+Before (manual nested loops):
 
 ```cpp
 void apply(Model &m, double) override {
@@ -116,7 +116,7 @@ void apply(Model &m, double) override {
 }
 ```
 
-**After (functional):**
+After (functional):
 
 ```cpp
 void apply(Model &m, double) override {
@@ -126,7 +126,7 @@ void apply(Model &m, double) override {
 }
 ```
 
-**Benefits:**
+Benefits:
 
 - No manual index management; coordinates come from the world/FFT inbox.
 - Clearer intent: focus on the computation, not the iteration.
