@@ -58,6 +58,9 @@
  * @see field_modifier.hpp for initial/boundary conditions
  * @see simulation_fwd.hpp for forward declarations only (pointers/references)
  * @see model_field_registry.hpp for the field name → reference maps
+ *
+ * Non-member accessors (`get_world`, `get_fft`, `has_field`, …) are in
+ * **`model_free_functions.hpp`**, included at the end of this header.
  */
 
 #ifndef PFC_MODEL_HPP
@@ -667,87 +670,7 @@ public:
   };
 };
 
-/**
- * @brief World associated with the model (free function; preferred over
- * Model::get_world()).
- */
-[[nodiscard]] inline const World &get_world(const Model &model) noexcept {
-  return model.get_world();
-}
-
-/**
- * @brief FFT instance used by the model (free function; preferred over
- * Model::get_fft()).
- */
-[[nodiscard]] inline fft::IFFT &get_fft(Model &model) noexcept {
-  return model.get_fft();
-}
-
-[[nodiscard]] inline bool is_rank0(const Model &model) noexcept {
-  return model.is_rank0();
-}
-
-[[nodiscard]] inline bool has_field(const Model &model,
-                                    std::string_view field_name) noexcept {
-  return model.has_field(field_name);
-}
-
-[[nodiscard]] inline bool has_real_field(const Model &model,
-                                         std::string_view field_name) noexcept {
-  return model.has_real_field(field_name);
-}
-
-[[nodiscard]] inline bool has_complex_field(const Model &model,
-                                            std::string_view field_name) noexcept {
-  return model.has_complex_field(field_name);
-}
-
-[[nodiscard]] inline RealField &get_real_field(Model &model, std::string_view name) {
-  return model.get_real_field(name);
-}
-
-[[nodiscard]] inline const RealField &get_real_field(const Model &model,
-                                                     std::string_view name) {
-  return model.get_real_field(name);
-}
-
-[[nodiscard]] inline ComplexField &get_complex_field(Model &model,
-                                                     std::string_view name) {
-  return model.get_complex_field(name);
-}
-
-[[nodiscard]] inline const ComplexField &get_complex_field(const Model &model,
-                                                           std::string_view name) {
-  return model.get_complex_field(name);
-}
-
-inline void initialize(Model &model, double dt) { model.initialize(dt); }
-
-inline void step(Model &model, double t) { model.step(t); }
-
-inline void add_real_field(Model &model, std::string_view name, RealField &field) {
-  model.add_real_field(name, field);
-}
-
-inline void add_complex_field(Model &model, std::string_view name,
-                              ComplexField &field) {
-  model.add_complex_field(name, field);
-}
-
-/** @brief Register a real field (same as add_real_field; matches Model::add_field).
- */
-inline void add_field(Model &model, std::string_view name, RealField &field) {
-  model.add_real_field(name, field);
-}
-
-/** @brief Register a complex field (same as add_complex_field). */
-inline void add_field(Model &model, std::string_view name, ComplexField &field) {
-  model.add_complex_field(name, field);
-}
-
-[[nodiscard]] inline size_t get_allocated_memory_bytes(const Model &model) {
-  return model.get_allocated_memory_bytes();
-}
+#include <openpfc/kernel/simulation/model_free_functions.hpp>
 
 } // namespace pfc
 

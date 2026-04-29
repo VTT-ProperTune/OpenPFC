@@ -36,6 +36,7 @@ Done:
 - Field modifier catalog: header + [`extending_openpfc/README.md`](extending_openpfc/README.md) document singleton vs explicit-catalog DI; `App::set_field_modifier_catalog` forwards an explicit catalog into `wire_simulator_from_settings` ([`app_pipeline.md`](app_pipeline.md)).
 - `app_spectral_run.hpp`: `SpectralJsonAppRun` owns the post-settings spectral pipeline (session → wire → integrate); `App` keeps settings I/O and pre-run logs.
 - `simulator_integrator.hpp` / `simulator_queries.hpp`: post-class `Simulator` helpers (scheduled writes, integrator seam, `get_model` / `get_time` / …) split out of `simulator.hpp` for readability (SRP); single include of `simulator.hpp` remains the public entry point.
+- `model_free_functions.hpp`: non-member `Model` API (`get_world`, `has_field`, `step`, …) split out of `model.hpp` (same include-once pattern as `simulator.hpp`).
 - Deprecation hygiene: `DiscreteField` member `interpolate` equivalence test suppresses Clang/MSVC warnings; `Model::get_field()` Doxygen expanded for migration and out-of-tree overrides.
 
 ## Phase C — Unified config-driven stack (CPU / GPU)
