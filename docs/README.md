@@ -11,6 +11,7 @@ This directory holds guides and assets. Build and install from the repository ro
 
 | If you want to… | Open |
 |-----------------|------|
+| Pick a guided track (run apps, extend models, or integrate the library) | [`learning_paths.md`](learning_paths.md) |
 | Get running in one pass (examples, app, or `find_package`) | [`quickstart.md`](quickstart.md) |
 | Tutorials and the examples hub | [`getting_started/README.md`](getting_started/README.md) |
 | Fix configure/MPI/HeFFTe issues | [`troubleshooting.md`](troubleshooting.md) |

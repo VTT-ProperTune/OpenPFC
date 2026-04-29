@@ -5,12 +5,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Getting started
 
-New to OpenPFC? Start with [`../quickstart.md`](../quickstart.md) (install → run examples or an app → or link the library in your own CMake project).
+New to OpenPFC? Start with [`../quickstart.md`](../quickstart.md) (install → run examples or an app → or link the library in your own CMake project). For a **sequenced** path by role, use [`../learning_paths.md`](../learning_paths.md).
 
 ## Tutorials (in-repo)
 
 | Topic | Document |
 |--------|-----------|
+| Learning paths by role (run / extend / integrate) | [`../learning_paths.md`](../learning_paths.md) |
 | Quick path: three tracks + “next steps” | [`../quickstart.md`](../quickstart.md) |
 | World, decomposition, FFT, `find_package(OpenPFC)` | [`01-basics/README.md`](01-basics/README.md) |
 | Functional field ops (IC/BC without nested loops) | [`functional_field_ops.md`](functional_field_ops.md) |
