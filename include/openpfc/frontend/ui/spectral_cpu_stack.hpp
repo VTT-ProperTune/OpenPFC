@@ -19,6 +19,9 @@
  *       to `fft::CpuFft` construction when only device FFT is used. Until then,
  *       GPU drivers reuse this stack’s host `CpuFft` for `Model(fft, world, comm)`
  *       and build cuFFT/ROCm paths separately (`spectral_fft_stack_factory.hpp`).
+ *
+ * Non-member accessors (`pfc::ui::world(stack)`, `pfc::ui::fft(stack)`, …) mirror
+ * the member API alongside `SpectralSimulationSession` helpers.
  */
 
 #ifndef PFC_UI_SPECTRAL_CPU_STACK_HPP
@@ -93,6 +96,40 @@ inline SpectralCpuStack::SpectralCpuStack(const nlohmann::json &settings,
       m_decomp(decomposition::create(m_world, num_ranks)),
       m_fft(cpu_fft_from_json_and_decomposition(settings, m_decomp, rank_id, comm)),
       m_time(ui::from_json<Time>(settings)), m_comm(comm) {}
+
+[[nodiscard]] inline World &world(SpectralCpuStack &stack) noexcept {
+  return stack.world();
+}
+[[nodiscard]] inline const World &world(const SpectralCpuStack &stack) noexcept {
+  return stack.world();
+}
+
+[[nodiscard]] inline decomposition::Decomposition &
+decomposition(SpectralCpuStack &stack) noexcept {
+  return stack.decomposition();
+}
+[[nodiscard]] inline const decomposition::Decomposition &
+decomposition(const SpectralCpuStack &stack) noexcept {
+  return stack.decomposition();
+}
+
+[[nodiscard]] inline fft::CpuFft &fft(SpectralCpuStack &stack) noexcept {
+  return stack.fft();
+}
+[[nodiscard]] inline const fft::CpuFft &fft(const SpectralCpuStack &stack) noexcept {
+  return stack.fft();
+}
+
+[[nodiscard]] inline Time &time(SpectralCpuStack &stack) noexcept {
+  return stack.time();
+}
+[[nodiscard]] inline const Time &time(const SpectralCpuStack &stack) noexcept {
+  return stack.time();
+}
+
+[[nodiscard]] inline MPI_Comm mpi_comm(const SpectralCpuStack &stack) noexcept {
+  return stack.mpi_comm();
+}
 
 } // namespace pfc::ui
 

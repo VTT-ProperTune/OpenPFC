@@ -57,8 +57,9 @@ public:
   explicit SpectralSimulationSession(const nlohmann::json &settings, MPI_Comm comm,
                                      int rank_id, int num_ranks)
       : m_stack(settings, comm, rank_id, num_ranks),
-        m_model(m_stack.fft(), m_stack.world(), m_stack.mpi_comm()),
-        m_simulator(m_model, m_stack.time(), comm) {}
+        m_model(pfc::ui::fft(m_stack), pfc::ui::world(m_stack),
+                pfc::ui::mpi_comm(m_stack)),
+        m_simulator(m_model, pfc::ui::time(m_stack), comm) {}
 
   [[nodiscard]] static std::unique_ptr<SpectralSimulationSession>
   assemble(const nlohmann::json &settings, MPI_Comm comm, int rank_id,
@@ -67,21 +68,25 @@ public:
                                                        num_ranks);
   }
 
-  [[nodiscard]] World &world() noexcept { return m_stack.world(); }
-  [[nodiscard]] const World &world() const noexcept { return m_stack.world(); }
+  [[nodiscard]] World &world() noexcept { return pfc::ui::world(m_stack); }
+  [[nodiscard]] const World &world() const noexcept {
+    return pfc::ui::world(m_stack);
+  }
 
   [[nodiscard]] decomposition::Decomposition &decomposition() noexcept {
-    return m_stack.decomposition();
+    return pfc::ui::decomposition(m_stack);
   }
   [[nodiscard]] const decomposition::Decomposition &decomposition() const noexcept {
-    return m_stack.decomposition();
+    return pfc::ui::decomposition(m_stack);
   }
 
-  [[nodiscard]] fft::CpuFft &fft() noexcept { return m_stack.fft(); }
-  [[nodiscard]] const fft::CpuFft &fft() const noexcept { return m_stack.fft(); }
+  [[nodiscard]] fft::CpuFft &fft() noexcept { return pfc::ui::fft(m_stack); }
+  [[nodiscard]] const fft::CpuFft &fft() const noexcept {
+    return pfc::ui::fft(m_stack);
+  }
 
-  [[nodiscard]] Time &time() noexcept { return m_stack.time(); }
-  [[nodiscard]] const Time &time() const noexcept { return m_stack.time(); }
+  [[nodiscard]] Time &time() noexcept { return pfc::ui::time(m_stack); }
+  [[nodiscard]] const Time &time() const noexcept { return pfc::ui::time(m_stack); }
 
   [[nodiscard]] ConcreteModel &model() noexcept { return m_model; }
   [[nodiscard]] const ConcreteModel &model() const noexcept { return m_model; }
@@ -102,8 +107,9 @@ public:
                                     const FieldModifierCatalog &modifier_catalog =
                                         default_field_modifier_catalog()) {
     wire_simulator_and_runtime_from_json(
-        m_simulator, m_stack.time(), settings,
-        JsonWiringContext{m_stack.mpi_comm(), mpi_rank, rank0}, modifier_catalog);
+        m_simulator, pfc::ui::time(m_stack), settings,
+        JsonWiringContext{pfc::ui::mpi_comm(m_stack), mpi_rank, rank0},
+        modifier_catalog);
   }
 
   /**
@@ -113,9 +119,9 @@ public:
   void wire_simulator_from_settings(const nlohmann::json &settings,
                                     const JsonWiringSession &session) {
     wire_simulator_and_runtime_from_json(
-        m_simulator, m_stack.time(), settings,
-        JsonWiringSession{JsonWiringContext{m_stack.mpi_comm(), session.ctx.mpi_rank,
-                                            session.ctx.rank0},
+        m_simulator, pfc::ui::time(m_stack), settings,
+        JsonWiringSession{JsonWiringContext{pfc::ui::mpi_comm(m_stack),
+                                            session.ctx.mpi_rank, session.ctx.rank0},
                           session.modifier_catalog});
   }
 
