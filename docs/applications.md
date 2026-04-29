@@ -18,6 +18,7 @@ Use this table to pick an entry point. Details and sample commands follow in eac
 | **Tungsten** | JSON / TOML file (`argv[1]`) | 3D PFC, production-style | `tungsten` | `tungsten_cuda` | `tungsten_hip` | Binary (`fields` in config); VTK/PNG via code if you add writers | Large PFC runs, validated inputs, HPC |
 | **AluminumNew** | JSON / TOML (`argv[1]`) | 3D, sample `App<Model>` | `aluminumNew` | — | — | As wired in config / model | Learning `App` + JSON end-to-end |
 | **Allen–Cahn** | CLI args (no `App` JSON) | 2D demo | `allen_cahn` | `allen_cahn_cuda` | `allen_cahn_hip` | Optional PNG paths (grayscale slab) | Quick visual check, 2D explicit interface |
+| **Heat3D** | CLI (`fd` or `spectral`) | 3D heat equation | `heat3d` | — | — | Stdout (timing, L2 vs analytic) | FD order 2/4/6 vs spectral timing |
 
 For declarative runs, start with **Tungsten** or **AluminumNew** and read [`app_pipeline.md`](app_pipeline.md). For a minimal “PNG in/out” path without JSON, see **Allen–Cahn** and [`io_results.md`](io_results.md) (PNG).
 
@@ -51,6 +52,14 @@ GPU-aware MPI and Slurm examples: [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_s
 | `aluminumNew` | Sample application using OpenPFC + nlohmann_json + HeFFTe |
 
 See [`apps/aluminumNew/README.md`](../apps/aluminumNew/README.md) (minimal; source and CMake are the reference).
+
+## Heat3D (`apps/heat3d/`)
+
+| Target | Notes |
+|--------|-------|
+| `heat3d` | 3D \(\partial_t u = D\nabla^2 u\); finite differences (orders 2, 4, 6) or spectral FFT step; Gaussian IC as in diffusion examples |
+
+See [`apps/heat3d/README.md`](../apps/heat3d/README.md) for CLI, stability notes, and `mpirun` examples.
 
 ## Allen–Cahn (`apps/allen_cahn/`)
 

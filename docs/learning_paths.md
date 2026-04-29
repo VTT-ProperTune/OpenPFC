@@ -38,7 +38,7 @@ Goal: subclass `Model`, optionally drive runs with `App<Model>` and JSON, and va
 | 4 | Functional IC/BC patterns: [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
 | 5 | How JSON becomes `Simulator`: [`app_pipeline.md`](app_pipeline.md) |
 | 6 | Extension checklist: [`extending_openpfc/README.md`](extending_openpfc/README.md) |
-| 7 | Out-of-tree `App` + CMake: [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| 7 | Out-of-tree `App` + CMake (config pipeline, physics in `Model::step`): [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | 8 | Validated `model.params`: [`parameter_validation.md`](parameter_validation.md) |
 | 9 | Example ladder: [`examples_catalog.md`](examples_catalog.md) (tiers), runnable [`../examples/README.md`](../examples/README.md) |
 | 10 | Spectral sequence + VTK outputs: [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md), [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md); FFT tuning: [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md) |

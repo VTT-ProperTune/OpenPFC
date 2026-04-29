@@ -4,3 +4,4 @@
 add_subdirectory(tungsten)
 add_subdirectory(aluminumNew)
 add_subdirectory(allen_cahn)
+add_subdirectory(heat3d)

@@ -3,11 +3,31 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# OpenPFC documentation (repository)
+# OpenPFC
 
-This directory holds guides and assets. Build and install from the repository root: [`INSTALL.md`](../INSTALL.md) (toolchains, HeFFTe 2.4.1, MPI, CUDA/HIP).
+<div align="center">
 
-### Published API reference vs prose in `docs/`
+![Visualization of a rapidly solidifying tungsten block — an example phase-field crystal workflow shipped with the project.](img/simulation.png)
+
+*Example result image; parameters, domain, and post-processing will differ in your own runs.*
+
+</div>
+
+## What OpenPFC is
+
+**OpenPFC** is an open-source **C++ framework** for **phase-field crystal (PFC)** and related **spectral phase-field** models on structured grids. It is meant for **microstructure-focused simulation**: solidification, defects, and elastic fields at length scales where atomistic molecular dynamics is too costly, but you still want **crystal-level physics** beyond a plain diffuse-interface model. The code is **MPI-parallel**, uses **FFT-based** operators (via **HeFFTe** and friends), and ships both **JSON/TOML-driven applications** (for reproducible runs) and a **library** you can embed when you need a custom `App` or model.
+
+If you arrived from a project web page, **this documentation is the narrative home** for the repository: what the software is, how to build and run it, and how the pieces fit together. The tables below are the full map; you do not need to read them top to bottom.
+
+## Start here
+
+| Goal | Open |
+|------|------|
+| **Install** (MPI, HeFFTe, optional CUDA/HIP, toolchains) | [`INSTALL.md`](../INSTALL.md) in the repository root |
+| **First run in ~15 minutes** (clone → build → `mpirun` one example) | [`start_here_15_minutes.md`](start_here_15_minutes.md) |
+| **Pick a track** (run apps, extend models, integrate the library) | [`learning_paths.md`](learning_paths.md) |
+
+## Published API reference vs prose in `docs/`
 
 | You need | Where it lives |
 |-----------|----------------|
@@ -60,7 +80,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | Post-process raw `.bin` fields (Python / VTK-aware workflows) | [`postprocess_binary_fields.md`](postprocess_binary_fields.md) |
 | Toolchain and dependency matrix | [`dependency_matrix.md`](dependency_matrix.md) |
 | Tour of main types (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
-| Minimal custom `App` project (CMake + JSON) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| Minimal custom `App` (CMake + JSON — **wiring**, not new physics) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation for custom models | [`parameter_validation.md`](parameter_validation.md) |
 | Run `ctest` / Catch2 | [`testing.md`](testing.md) |
 | GPU (CUDA/HIP) build + `tungsten_cuda` / config backend | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
@@ -135,7 +155,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | World, decomposition, FFT, CMake “hello” | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
 | Tour of main types and headers | [`class_tour.md`](class_tour.md) |
-| Minimal out-of-tree `App` + JSON | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
+| Minimal out-of-tree `App` + JSON (what you build / why) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation for `model.params` | [`parameter_validation.md`](parameter_validation.md) |
 | GPU-enabled apps (CUDA/HIP, HeFFTe, JSON backend) | [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) |
 | `ctest`, `openpfc-tests`, MPI test suites | [`testing.md`](testing.md) |
