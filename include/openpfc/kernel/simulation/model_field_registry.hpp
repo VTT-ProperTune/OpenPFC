@@ -18,6 +18,8 @@
 
 #include <openpfc/kernel/data/model_types.hpp>
 
+#include <complex>
+#include <cstddef>
 #include <numeric>
 #include <stdexcept>
 #include <string>
@@ -121,6 +123,21 @@ public:
 
   [[nodiscard]] bool has_field(std::string_view field_name) const noexcept {
     return has_real_field(field_name) || has_complex_field(field_name);
+  }
+
+  /**
+   * @brief Sum of `size()*sizeof(element)` for all registered real and complex
+   *        vectors (heap storage of the field buffers only).
+   */
+  [[nodiscard]] size_t registered_field_storage_bytes() const noexcept {
+    std::size_t n = 0;
+    for (const auto &[_, rf] : m_real_fields) {
+      n += rf.size() * sizeof(double);
+    }
+    for (const auto &[_, cf] : m_complex_fields) {
+      n += cf.size() * sizeof(std::complex<double>);
+    }
+    return n;
   }
 };
 

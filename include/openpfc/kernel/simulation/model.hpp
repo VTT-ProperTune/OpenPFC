@@ -185,6 +185,16 @@ public:
   const World &get_world() const noexcept { return m_world; }
 
   /**
+   * @brief Read-only access to the named field registry
+   *
+   * Use for helpers, tests, or custom `get_allocated_memory_bytes()` that should
+   * include `registered_field_storage_bytes()`.
+   */
+  [[nodiscard]] const ModelFieldRegistry &fields() const noexcept {
+    return m_fields;
+  }
+
+  /**
    * @brief Get the FFT object associated with the model
    *
    * Returns a reference to the FFT instance used for spectral operations
@@ -337,7 +347,11 @@ public:
    * @return Total allocated memory in bytes
    *
    * @note Does not include FFT workspace (query separately via get_fft())
-   * @note Default implementation returns 0 (models should override)
+   * @note Default implementation returns `fields().registered_field_storage_bytes()`
+   *       (registered field vector storage only). Override to add operators and
+   *       other auxiliary data, typically `base +
+   * fields().registered_field_storage_bytes()` if the override replaces rather than
+   * extends the default.
    *
    * @example
    * ```cpp
@@ -353,7 +367,9 @@ public:
    * @see utils::sizeof_vec() helper for vector memory calculation
    * @see get_fft() to access FFT memory separately
    */
-  virtual size_t get_allocated_memory_bytes() const { return 0; }
+  virtual size_t get_allocated_memory_bytes() const {
+    return m_fields.registered_field_storage_bytes();
+  }
 
   /**
    * @brief Check if the model has a real-valued field with the given name.
