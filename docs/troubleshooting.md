@@ -61,4 +61,6 @@ Paths are resolved from the current working directory (often your `build/` folde
 
 - [`faq.md`](faq.md) — short Q&A  
 - [`quickstart.md`](quickstart.md) — first successful run  
+- [`learning_paths.md`](learning_paths.md) — pick a sequenced track by role  
+- [`README.md`](README.md) — full documentation index  
 - Issues — <https://github.com/VTT-ProperTune/OpenPFC/issues>

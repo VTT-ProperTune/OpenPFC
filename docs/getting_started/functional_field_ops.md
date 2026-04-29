@@ -5,6 +5,16 @@
 
 This page shows how to use the coordinate-space functional API to set initial and boundary conditions without writing manual nested loops.
 
+## Contents
+
+- [Basics](#basics)
+- [Gaussian pulse](#gaussian-pulse)
+- [Time-varying boundary-like pattern](#time-varying-boundary-like-pattern)
+- [In-place updates (partial modifications)](#in-place-updates-partial-modifications)
+- [Backward compatibility via adapter](#backward-compatibility-via-adapter)
+- [Migration from legacy loop-based patterns](#migration-from-legacy-loop-based-patterns)
+- [Notes](#notes)
+
 ## Basics
 
 - `pfc::field::apply(model, field_name, Fn)` applies `Fn(const Real3&) -> double` over the local FFT inbox
@@ -138,3 +148,9 @@ Benefits:
 - Prefer pure functions without side effects for clarity and performance.
 - Use `apply_inplace` when the new value depends on the current value or for partial updates.
 - Related headers live under `include/openpfc/kernel/simulation/` (e.g. initial conditions and modifiers used by the simulator).
+
+## See also
+
+- [`../learning_paths.md`](../learning_paths.md) — extend track links functional IC/BC patterns
+- [`../class_tour.md`](../class_tour.md) — `FieldModifier`, `Simulator`
+- [`../extending_openpfc/README.md`](../extending_openpfc/README.md) — extension checklist
