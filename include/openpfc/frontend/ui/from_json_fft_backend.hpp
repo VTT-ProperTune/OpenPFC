@@ -32,7 +32,8 @@ namespace pfc::ui {
  * @return The fft::Backend enum value
  * @throws std::runtime_error if backend is not supported or not compiled in
  */
-template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
+template <>
+[[nodiscard]] inline fft::Backend from_json<fft::Backend>(const json &j) {
   if (!j.contains("backend") || !j["backend"].is_string()) {
     // Default to FFTW if not specified
     pfc::log_info(from_json_info_logger(),

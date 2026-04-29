@@ -38,7 +38,7 @@ namespace pfc::ui {
  * @throws std::invalid_argument if any of the required fields are missing
  *         or have an invalid value.
  */
-template <> inline World from_json<World>(const json &j) {
+template <> [[nodiscard]] inline World from_json<World>(const json &j) {
   int Lx = 0;
   int Ly = 0;
   int Lz = 0;
@@ -143,7 +143,7 @@ template <> inline World from_json<World>(const json &j) {
   return world;
 }
 
-template <> inline Time from_json<Time>(const json &j) {
+template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
   // Support both flat and nested structures
   auto t0_val = get_json_value(j, "t0", "timestepping");
   auto t1_val = get_json_value(j, "t1", "timestepping");

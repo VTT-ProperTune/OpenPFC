@@ -13,7 +13,7 @@
 
 namespace pfc::ui {
 
-template <class T> T from_json(const json &j);
+template <class T> [[nodiscard]] T from_json(const json &j);
 
 } // namespace pfc::ui
 

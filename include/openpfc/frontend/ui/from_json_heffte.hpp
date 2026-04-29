@@ -81,7 +81,8 @@ inline void apply_heffte_plan_options_json_overrides(const json &j,
  * @return The heffte::plan_options object constructed from the JSON.
  */
 template <>
-inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
+[[nodiscard]] inline heffte::plan_options
+from_json<heffte::plan_options>(const json &j) {
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   detail::apply_heffte_plan_options_json_overrides(j, options);
   return options;
