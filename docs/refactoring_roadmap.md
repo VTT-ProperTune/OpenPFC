@@ -25,6 +25,7 @@ Goal: Reduce responsibilities of `Simulator` (time orchestration vs modifier app
 Done:
 
 - `apply_field_modifier_list` in `simulator_field_modifiers_dispatch.hpp` — shared apply loop for IC and BC lists; `Simulator` delegates to it.
+- `try_push_field_modifier_with_model_check` and message constants in `simulator_modifier_registration.hpp` — IC/BC registration rules and warning strings in one place; `Simulator` uses them instead of a private duplicate loop.
 
 Planned steps:
 

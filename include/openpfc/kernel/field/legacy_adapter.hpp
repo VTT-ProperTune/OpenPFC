@@ -14,6 +14,7 @@
 
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/simulation_context.hpp>
 
 namespace pfc::field {
 
@@ -35,7 +36,15 @@ std::unique_ptr<FieldModifier> make_legacy_modifier(std::string field_name, Fn f
         : name(std::move(n)), func(std::move(f)) {
       set_field_name(name);
     }
-    void apply(Model &m, double t) override {
+    void apply(Model &m, double t) override { apply_impl(m, t); }
+
+    void apply(const SimulationContext & /*simulation_context*/, Model &m,
+               double t) override {
+      apply_impl(m, t);
+    }
+
+  private:
+    void apply_impl(Model &m, double t) {
       // Dispatch based on callable arity (with or without time)
       if constexpr (std::is_invocable_r_v<double, Fn, const Real3 &>) {
         pfc::field::apply(m, get_field_name(), func);

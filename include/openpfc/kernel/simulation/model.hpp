@@ -185,15 +185,6 @@ public:
   [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_mpi_comm; }
 
   /**
-   * @brief Get the decomposition object associated with the model.
-   *
-   * @return Reference to the Decomposition object
-   */
-  /*
-  const Decomposition &get_decomposition() { return get_fft().get_decomposition(); }
-  */
-
-  /**
    * @brief Get the world object associated with the model.
    *
    * @return Reference to the World object
