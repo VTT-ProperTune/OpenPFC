@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This page orients you to the primary classes and namespaces in OpenPFC: what each is for, where it lives, and where to see it in code. For layering rules, see [`architecture.md`](../concepts/architecture.md). For the JSON-driven `App` path, see [`app_pipeline.md`](../user_guide/app_pipeline.md).
 
+Read this page when you have seen a name in an example or API reference and want to know where it sits in the larger system. It is intentionally a map, not a tutorial. The tutorial path starts with [`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md), while this page helps you return from a concrete example to the surrounding types.
+
 ## How pieces connect (spectral / `App` workflow)
 
 ```mermaid
@@ -43,6 +45,8 @@ flowchart TB
 ```
 
 ## Types at a glance
+
+The table below is lookup material. The most important flow for a new reader is `World` to `Decomposition` to FFT to `Model` to `Simulator`, with `App` and `SpectralSimulationSession` providing the JSON-driven frontend around that stack.
 
 | Type / concept | Role | Primary headers | Example / app |
 |----------------|------|-----------------|---------------|

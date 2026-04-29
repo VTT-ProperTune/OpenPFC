@@ -92,19 +92,21 @@ nav:
       - Workshop curriculum: workshop/README.md
 
   - Run:
-      - Shipped applications: user_guide/applications.md
-      - Configuration vocabulary: user_guide/configuration.md
-      - JSON to Simulator pipeline: user_guide/app_pipeline.md
-      - Result files: user_guide/io_results.md
-      - Post-processing binary fields: user_guide/postprocess_binary_fields.md
-      - Operator runbook index: hpc/operator_guide.md
-      - GPU vs CPU decision: hpc/gpu_path_decision.md
-      - Build trees CPU vs GPU: hpc/build_cpu_gpu.md
-      - MPI-IO layout checklist: hpc/mpi_io_layout_checklist.md
-      - Runtime profiling: hpc/performance_profiling.md
-      - Profiling export schema: hpc/profiling_export_schema.md
-      - LUMI install: hpc/INSTALL.LUMI.md
-      - LUMI Slurm: lumi_slurm/README.md
+      - Applications:
+          - Shipped applications: user_guide/applications.md
+          - Configuration vocabulary: user_guide/configuration.md
+          - JSON to Simulator pipeline: user_guide/app_pipeline.md
+          - Result files: user_guide/io_results.md
+          - Post-processing binary fields: user_guide/postprocess_binary_fields.md
+      - Cluster operation:
+          - Operator guide: hpc/operator_guide.md
+          - GPU vs CPU decision: hpc/gpu_path_decision.md
+          - Build trees CPU vs GPU: hpc/build_cpu_gpu.md
+          - MPI-IO layout checklist: hpc/mpi_io_layout_checklist.md
+          - Runtime profiling: hpc/performance_profiling.md
+          - Profiling export schema: hpc/profiling_export_schema.md
+          - LUMI install: hpc/INSTALL.LUMI.md
+          - LUMI Slurm: lumi_slurm/README.md
 
   - Extend:
       - Extension hub: extending_openpfc/README.md

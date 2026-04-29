@@ -9,9 +9,11 @@ Executables are built when `OpenPFC_BUILD_EXAMPLES=ON` (default). Output directo
 
 Prerequisites: Most examples need MPI and a working HeFFTe-linked OpenPFC build. Run with at least `mpirun -n 1` unless the source states otherwise.
 
+This page is for lookup and for choosing the next small executable to read. If you want a guided first run, use [`../start_here_15_minutes.md`](../start_here_15_minutes.md). If you want the examples in a teaching sequence with more context, use [`../tutorials/spectral_examples_sequence.md`](../tutorials/spectral_examples_sequence.md). The catalog below stays compact so it can answer “what is this target for?” without becoming another tutorial.
+
 ## Curriculum (suggested order)
 
-Use **Tier 1** on your first day, then branch by topic.
+Use the first tier on your first day, then branch by topic. The names are numbered because the source files are intended to be read in roughly that order, not because every user must run every target.
 
 ```mermaid
 flowchart LR

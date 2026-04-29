@@ -7,16 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 Many programs use `pfc::ui::App<Model>` and accept a single configuration file (JSON or TOML) on the command line. The exact keys depend on the model and how validation is set up, but the same structural ideas recur across apps.
 
-Read this first for the full pipeline: [`app_pipeline.md`](app_pipeline.md) (how settings map to `World`, FFT, `Simulator`, writers, ICs, BCs). For output formats, see [`io_results.md`](io_results.md) and [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md). **Normative key tables** (world, time, `plan_options`, `fields`, …): [`spectral_app_config_reference.md`](../reference/spectral_app_config_reference.md). To build your own CMake project around `App<Model>`, see [`tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md); for `model.params` validation, [`parameter_validation.md`](parameter_validation.md) and the root `README.md` (Configuration Validation). For a sequenced **run** track that ends with config-driven apps, see [`learning_paths.md`](../learning_paths.md).
+Use this page when you are trying to read an input file and understand what kind of thing each section controls. It is not the normative key reference; that lives in [the spectral App configuration reference](../reference/spectral_app_config_reference.md). This page is the bridge between a real JSON or TOML file and the runtime objects OpenPFC builds from it.
+
+For the full lifecycle from configuration to `World`, FFT, `Simulator`, writers, initial conditions and boundary conditions, read [the App pipeline guide](app_pipeline.md). For output formats, continue with [the results I/O guide](io_results.md) and [the binary field layout reference](../reference/binary_field_io_spec.md). If you are building your own `App<Model>`, the practical tutorial is [the minimal custom App walkthrough](../tutorials/custom_app_minimal.md), with [parameter validation](parameter_validation.md) as the companion for `model.params`.
 
 ## Mental model
 
-1. Domain / grid — sizes, spacing, origin (sometimes nested under `domain`, sometimes top-level keys depending on app and parser version).
-2. Model — `name` and `params` (physics coefficients); often validated at startup.
-3. Time — start, end, timestep, output cadence (`saveat`, etc.).
-4. Fields — named order parameters and optional file paths for I/O.
-5. Initial / boundary conditions — declarative or references to registered modifiers.
-6. `[plan_options]` (TOML) or equivalent — HeFFTe FFT backend and communication options.
+Most configuration files describe the same broad concerns. The domain or grid section defines sizes, spacing and origin. The model section names the physics and supplies parameters. Time controls start, end, timestep and output cadence. Fields describe order parameters and, often, paths for I/O. Initial and boundary conditions either appear directly or refer to registered modifiers. FFT settings appear as `plan_options` in TOML, or as equivalent keys in JSON, when the application exposes HeFFTe backend and communication choices.
 
 For layering (what parses this vs what runs physics), see [`architecture.md`](../concepts/architecture.md).
 
