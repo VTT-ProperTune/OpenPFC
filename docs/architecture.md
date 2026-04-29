@@ -84,7 +84,7 @@ Features that are useful for full applications but not required for minimal simu
 
 | Directory | Contents |
 |-----------|----------|
-| **frontend/utils** | Logging, utils.hpp, toml_to_json, show, timeleft, nancheck, memory_reporter, field_iteration, typename, array_to_string. |
+| **frontend/utils** | `logging.hpp` re-exports **`kernel/utils/logging.hpp`**; utils.hpp, toml_to_json, show, timeleft, nancheck, memory_reporter, field_iteration, typename, array_to_string. |
 | **frontend/ui** | App, `spectral_cpu_stack.hpp` (JSON → world/FFT/time stack), `spectral_simulation_session.hpp`, `simulation_wiring.hpp`, `app_profiling.hpp` / `app_integrator_loop.hpp` (optional profiling lifecycle + time loop), from_json, json_helpers, errors, parameter_validator, parameter_metadata, field_modifier_registry; ui.hpp redirect. |
 | **frontend/io** | Results writer implementations (binary_writer, vtk_writer). |
 
@@ -95,7 +95,7 @@ After refactoring, public headers live under `include/openpfc/` with the structu
 - `#include <openpfc/kernel/data/world.hpp>`
 - `#include <openpfc/kernel/fft/fft.hpp>`
 - `#include <openpfc/runtime/common/heffte_adapter.hpp>`
-- `#include <openpfc/frontend/utils/logging.hpp>`
+- `#include <openpfc/kernel/utils/logging.hpp>`
 
 The convenience header `#include <openpfc/openpfc.hpp>` pulls in kernel and frontend (full API). For **minimal applications** (kernel + minimal runtime, no frontend), use `#include <openpfc/openpfc_minimal.hpp>`; it includes the kernel and a minimal runtime set (e.g. `runtime/common/heffte_adapter.hpp` for HeFFTe conversion used by FFT and decomposition). For CUDA/HIP, include the corresponding runtime headers in addition. For faster compilation in general, prefer including specific headers over the convenience headers.
 

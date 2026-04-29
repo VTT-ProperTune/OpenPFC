@@ -27,8 +27,8 @@
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/ui/settings_loader.hpp>
 #include <openpfc/frontend/ui/spectral_simulation_session.hpp>
-#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <sstream>
 #include <stdexcept>

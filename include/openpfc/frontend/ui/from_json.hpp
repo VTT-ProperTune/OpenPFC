@@ -27,7 +27,6 @@
 #include <heffte.h>
 #include <openpfc/frontend/ui/errors.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
-#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
@@ -40,6 +39,7 @@
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
 #include <openpfc/kernel/simulation/simulation_fwd.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 #include <openpfc/runtime/common/backend_from_string.hpp>
 #include <sstream>
 #include <stdexcept>

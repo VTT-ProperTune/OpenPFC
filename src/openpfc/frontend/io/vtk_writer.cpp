@@ -10,9 +10,9 @@
 #include <ios>
 #include <limits>
 #include <openpfc/frontend/io/vtk_writer.hpp>
-#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 #include <sstream>
 #include <stdexcept>
 

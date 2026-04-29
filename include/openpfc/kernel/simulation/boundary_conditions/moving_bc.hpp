@@ -42,10 +42,10 @@
 #include <mpi.h>
 #include <sstream>
 
-#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc {
 

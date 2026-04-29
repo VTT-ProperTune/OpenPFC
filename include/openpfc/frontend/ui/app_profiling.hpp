@@ -24,7 +24,7 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
-#include <openpfc/frontend/utils/logging.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc::profiling {
 class ProfilingSession;

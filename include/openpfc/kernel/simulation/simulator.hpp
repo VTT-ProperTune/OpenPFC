@@ -48,12 +48,12 @@
 #include <string>
 #include <string_view>
 
-#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 #include <unordered_map>
 #include <utility>
 

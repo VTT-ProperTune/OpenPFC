@@ -14,10 +14,10 @@
 
 #include <mpi.h>
 #include <openpfc/frontend/ui/spectral_simulation_session.hpp>
-#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/frontend/utils/timeleft.hpp>
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc::ui {
 

@@ -23,7 +23,7 @@ add_library(openpfc
     src/openpfc/kernel/profiling/session.cpp
     src/openpfc/kernel/profiling/timer_report.cpp
     src/openpfc/runtime/cpu/fft.cpp
-    src/openpfc/frontend/utils/logging.cpp
+    src/openpfc/kernel/utils/logging.cpp
     src/openpfc/frontend/ui/app_profiling.cpp
     src/openpfc/frontend/ui/ui_errors.cpp
     src/openpfc/frontend/io/vtk_writer.cpp

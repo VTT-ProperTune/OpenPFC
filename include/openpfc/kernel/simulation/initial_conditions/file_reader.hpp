@@ -38,10 +38,10 @@
 #include <string>
 #include <utility>
 
-#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc {
 

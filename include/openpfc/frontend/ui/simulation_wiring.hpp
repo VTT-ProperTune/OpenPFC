@@ -36,10 +36,10 @@
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
-#include <openpfc/frontend/utils/logging.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
+#include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc::ui {
 namespace detail {

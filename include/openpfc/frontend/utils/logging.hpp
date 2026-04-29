@@ -4,56 +4,11 @@
 #pragma once
 
 /**
- * @file logging.hpp
- * @brief Minimal structured logging utilities for OpenPFC
+ * @file frontend/utils/logging.hpp
+ * @brief Backward-compatible include for core logging
  *
- * Transparent API following OpenPFC philosophy: structs + free functions.
+ * @deprecated Prefer `#include <openpfc/kernel/utils/logging.hpp>` in new code.
+ *             Logging is a kernel concern; this path remains for existing includes.
  */
 
-#include <cstdint>
-#include <iosfwd>
-#include <string>
-#include <string_view>
-
-namespace pfc {
-
-/**
- * @brief Log severity levels
- */
-enum class LogLevel : std::uint8_t { Debug = 0, Info = 1, Warning = 2, Error = 3 };
-
-/**
- * @brief Lightweight logger configuration
- *
- * Holds minimal immutable state and is safe to pass by value.
- */
-struct Logger {
-  const LogLevel m_min_level;
-  const int m_rank; // MPI rank (or -1 if unknown)
-};
-
-/**
- * @brief Write a log message if level >= logger.m_min_level
- *
- * Messages at Warning/Error are written to std::cerr, otherwise to std::clog.
- * When m_rank >= 0, messages are prefixed with "rank <N>: ".
- */
-void log(const Logger &logger, LogLevel level, std::string_view message);
-
-/**
- * @brief Convenience helpers
- */
-inline void log_error(const Logger &lg, std::string_view msg) {
-  log(lg, LogLevel::Error, msg);
-}
-inline void log_warning(const Logger &lg, std::string_view msg) {
-  log(lg, LogLevel::Warning, msg);
-}
-inline void log_info(const Logger &lg, std::string_view msg) {
-  log(lg, LogLevel::Info, msg);
-}
-inline void log_debug(const Logger &lg, std::string_view msg) {
-  log(lg, LogLevel::Debug, msg);
-}
-
-} // namespace pfc
+#include <openpfc/kernel/utils/logging.hpp>
