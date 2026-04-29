@@ -22,6 +22,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 |-----------------|------|
 | Pick a guided track (run apps, extend models, or integrate the library) | [`learning_paths.md`](learning_paths.md) |
 | Figures and runnable entry points | [`showcase.md`](showcase.md) |
+| Step-by-step tutorials (`docs/tutorials/`) | [`tutorials/README.md`](tutorials/README.md) |
 | Get running in one pass (examples, app, or `find_package`) | [`quickstart.md`](quickstart.md) |
 | Tutorials and the examples hub | [`getting_started/README.md`](getting_started/README.md) |
 | Fix configure/MPI/HeFFTe issues | [`troubleshooting.md`](troubleshooting.md) |
@@ -81,7 +82,11 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 
 | Section | Document |
 |---------|-----------|
+| **Tutorials hub** (all `docs/tutorials/`) | [`tutorials/README.md`](tutorials/README.md) |
 | End-to-end run → PNG or binary artifacts | [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
+| VTK / ParaView from `examples/` | [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md) |
+| HeFFTe `plan_options` / FFT backend | [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md) |
+| Spectral sequence: `04` → `05` → `12` | [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md) |
 | World, decomposition, FFT, CMake “hello” | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
 | Tour of main types and headers | [`class_tour.md`](class_tour.md) |

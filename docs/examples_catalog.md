@@ -89,4 +89,5 @@ Narrative companion: [`getting_started/01-basics/README.md`](getting_started/01-
 - [`quickstart.md`](quickstart.md) — suggested order for the first runs
 - [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) — narrative tutorial
 - [`api_examples_walkthrough.md`](api_examples_walkthrough.md) — `docs/api/examples/` in reading order
+- [`tutorials/README.md`](tutorials/README.md) — VTK, HeFFTe `plan_options`, spectral sequence, …
 - [`api/examples/`](api/examples/) — sources pulled into the HTML docs

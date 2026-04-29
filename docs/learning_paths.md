@@ -19,8 +19,9 @@ Goal: build OpenPFC, run a shipped application with a sample input, and know whe
 | 4 | JSON/TOML vocabulary: [`configuration.md`](configuration.md), [`app_pipeline.md`](app_pipeline.md) |
 | 5 | Result files (binary / VTK / PNG): [`io_results.md`](io_results.md) |
 | 6 | End-to-end “files on disk” (PNG + Tungsten binary): [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
-| 7 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |
-| 8 | GPU / LUMI-style jobs: [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
+| 7 | More walkthroughs (VTK/ParaView, HeFFTe `plan_options`, spectral `examples/` sequence): [`tutorials/README.md`](tutorials/README.md) |
+| 8 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |
+| 9 | GPU / LUMI-style jobs: [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
 
 ## Extend physics and declarative configs (researcher / developer)
 
@@ -37,6 +38,7 @@ Goal: subclass `Model`, optionally drive runs with `App<Model>` and JSON, and va
 | 7 | Out-of-tree `App` + CMake: [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | 8 | Validated `model.params`: [`parameter_validation.md`](parameter_validation.md) |
 | 9 | Example ladder: [`examples_catalog.md`](examples_catalog.md) (tiers), runnable [`../examples/README.md`](../examples/README.md) |
+| 10 | Spectral sequence + VTK outputs: [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md), [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md); FFT tuning: [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md) |
 
 ## Library and API reference (integrator)
 
@@ -46,11 +48,13 @@ Goal: link OpenPFC from your CMake project, run small `examples/`, and use the H
 |------|-------------------|
 | 1 | `find_package` and first build: [`quickstart.md`](quickstart.md) §2C, [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | 2 | Catalog of `examples/` targets: [`examples_catalog.md`](examples_catalog.md) |
+| 2b | Guided spectral runs + VTK: [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md), [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md) |
 | 3 | Doxygen API snippets in order: [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
 | 4 | Published HTML reference: [OpenPFC dev docs](https://vtt-propertune.github.io/OpenPFC/dev/) (build locally with `OpenPFC_BUILD_DOCUMENTATION=ON`) |
 | 5 | CMake options and install layout: [`build_options.md`](build_options.md), [`INSTALL.md`](../INSTALL.md) |
 
 ## See also
 
+- [`tutorials/README.md`](tutorials/README.md) — all walkthroughs in one place
 - [`showcase.md`](showcase.md) — figures and which app or example they map to
 - [`README.md`](README.md) — full documentation index

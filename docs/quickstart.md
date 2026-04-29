@@ -112,6 +112,10 @@ Set `CMAKE_PREFIX_PATH` (or `OpenPFC_DIR`) to the install prefix containing `lib
 | Goal | Where to go |
 |------|-------------|
 | Run once and inspect output files (PNG / binary) | [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md), [`showcase.md`](showcase.md) |
+| Tutorials hub (all walkthroughs in `docs/tutorials/`) | [`tutorials/README.md`](tutorials/README.md) |
+| VTK / ParaView from `examples/` | [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md) |
+| Spectral `examples/` sequence (`04` → `05` → `12`) | [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md) |
+| HeFFTe `plan_options` / FFT backend | [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md) |
 | Conceptual layering (kernel / runtime / frontend) | [`architecture.md`](architecture.md) |
 | Tour of main types (`World`, `Model`, `Simulator`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Longer tutorial (world → FFT → CMake) | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |

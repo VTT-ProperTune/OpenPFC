@@ -81,6 +81,7 @@ If you are browsing the [source tree](https://github.com/VTT-ProperTune/OpenPFC)
 |------|----------|
 | Master index (all markdown guides) | [docs/README.md](docs/README.md) |
 | Learning paths by role | [docs/learning_paths.md](docs/learning_paths.md) |
+| Tutorials hub (VTK, HeFFTe, spectral examples, …) | [docs/tutorials/README.md](docs/tutorials/README.md) |
 | Contributing (code, tests, changelog) | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Documentation PRs, link checker (`python3 scripts/check_doc_links.py`) | [docs/contributing-docs.md](docs/contributing-docs.md) |
 | JSON/TOML → `Simulator` | [docs/app_pipeline.md](docs/app_pipeline.md) |

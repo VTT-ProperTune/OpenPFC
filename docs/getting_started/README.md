@@ -13,6 +13,10 @@ New to OpenPFC? Start with [`../quickstart.md`](../quickstart.md) (install → r
 |--------|-----------|
 | Learning paths by role (run / extend / integrate) | [`../learning_paths.md`](../learning_paths.md) |
 | Showcase (figures → apps / examples) | [`../showcase.md`](../showcase.md) |
+| Tutorials hub (`docs/tutorials/`) | [`../tutorials/README.md`](../tutorials/README.md) |
+| VTK / ParaView workflow | [`../tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md) |
+| HeFFTe `plan_options` tutorial | [`../tutorials/fft_heffte_plan_options.md`](../tutorials/fft_heffte_plan_options.md) |
+| Spectral examples sequence (04 → 05 → 12) | [`../tutorials/spectral_examples_sequence.md`](../tutorials/spectral_examples_sequence.md) |
 | End-to-end: build → PNG or binary outputs | [`../tutorials/end_to_end_visualization.md`](../tutorials/end_to_end_visualization.md) |
 | Quick path: three tracks + “next steps” | [`../quickstart.md`](../quickstart.md) |
 | World, decomposition, FFT, `find_package(OpenPFC)` | [`01-basics/README.md`](01-basics/README.md) |

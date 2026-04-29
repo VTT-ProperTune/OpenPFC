@@ -37,6 +37,7 @@ This page ties **figures** you may see in the repository or publications to **ru
 | | |
 |---|---|
 | **Runnable** | `examples/12_cahn_hilliard` (see [`examples_catalog.md`](examples_catalog.md)) |
+| **VTK / ParaView** | Walkthrough: [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md) |
 | **Concepts** | Spectral model + `Simulator` workflow |
 
 ## Quick 2D PNG snapshots (Allen–Cahn)

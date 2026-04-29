@@ -34,10 +34,11 @@ These cover decomposition, distributed FFT, the simulator stack, and a richer sp
 
 ## Full catalog and curriculum
 
-Every target registered in `CMakeLists.txt` is listed in [`../docs/examples_catalog.md`](../docs/examples_catalog.md), including **Tier 1–3** suggested order and a flowchart.
+Every target registered in `CMakeLists.txt` is listed in [`../docs/examples_catalog.md`](../docs/examples_catalog.md), including **Tier 1–3** suggested order and a flowchart. Guided **spectral** sequence (`04_diffusion_model` → `05_simulator` → `12_cahn_hilliard`): [`../docs/tutorials/spectral_examples_sequence.md`](../docs/tutorials/spectral_examples_sequence.md).
 
 ## See also
 
+- [`../docs/tutorials/README.md`](../docs/tutorials/README.md) — tutorials hub (VTK, HeFFTe, GPU, …)
 - [`../docs/learning_paths.md`](../docs/learning_paths.md) — ordered tracks by role
 - [`../docs/quickstart.md`](../docs/quickstart.md) — onboarding
 - [`../docs/tutorials/end_to_end_visualization.md`](../docs/tutorials/end_to_end_visualization.md) — run once, inspect outputs

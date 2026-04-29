@@ -42,4 +42,5 @@ Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 - [`app_pipeline.md`](app_pipeline.md) — where `add_result_writers_from_json` runs  
 - [`configuration.md`](configuration.md) — config file overview  
 - [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) — run once, inspect binary or PNG output  
+- [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md) — `11_write_results` / `12_cahn_hilliard` + ParaView  
 - [`learning_paths.md`](learning_paths.md) — documentation tracks by role  

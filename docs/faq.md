@@ -56,6 +56,7 @@ See [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.m
 | Onboarding | [`quickstart.md`](quickstart.md) |
 | Examples catalog + curriculum | [`examples_catalog.md`](examples_catalog.md) |
 | API examples reading order | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
+| Tutorials hub | [`tutorials/README.md`](tutorials/README.md) |
 | Troubleshooting | [`troubleshooting.md`](troubleshooting.md) |
 | Config files | [`configuration.md`](configuration.md) |
 | Terminology | [`glossary.md`](glossary.md) |
