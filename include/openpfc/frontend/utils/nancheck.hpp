@@ -28,8 +28,8 @@
  *
  * @see utils.hpp for other utility functions
  *
- * @author OpenPFC Development Team
- * @date 2025
+ * Use `CHECK_AND_ABORT_IF_NAN_MPI` / `CHECK_AND_ABORT_IF_NANS_MPI` with the
+ * simulation communicator when not using `MPI_COMM_WORLD`.
  */
 
 #ifndef PFC_UTILS_NANCHECK_HPP
@@ -64,7 +64,15 @@
  * performance.
  */
 #define CHECK_AND_ABORT_IF_NAN(value)                                               \
-  ::pfc::utils::abortIfNaN((value), __FILE__, __LINE__)
+  ::pfc::utils::abortIfNaN((value), __FILE__, __LINE__, MPI_COMM_WORLD)
+
+/**
+ * @def CHECK_AND_ABORT_IF_NAN_MPI(value, comm)
+ *
+ * Same as @ref CHECK_AND_ABORT_IF_NAN but uses @p comm for rank and `MPI_Abort`.
+ */
+#define CHECK_AND_ABORT_IF_NAN_MPI(value, comm)                                     \
+  ::pfc::utils::abortIfNaN((value), __FILE__, __LINE__, (comm))
 
 /**
  * @def CHECK_AND_ABORT_IF_NANS(vec)
@@ -88,10 +96,20 @@
  * performance.
  */
 #define CHECK_AND_ABORT_IF_NANS(vec)                                                \
-  ::pfc::utils::abortIfNaNs((vec), __FILE__, __LINE__)
+  ::pfc::utils::abortIfNaNs((vec), __FILE__, __LINE__, MPI_COMM_WORLD)
+
+/**
+ * @def CHECK_AND_ABORT_IF_NANS_MPI(vec, comm)
+ *
+ * Same as @ref CHECK_AND_ABORT_IF_NANS but uses @p comm for rank and `MPI_Abort`.
+ */
+#define CHECK_AND_ABORT_IF_NANS_MPI(vec, comm)                                      \
+  ::pfc::utils::abortIfNaNs((vec), __FILE__, __LINE__, (comm))
 #else
 #define CHECK_AND_ABORT_IF_NAN(value)
 #define CHECK_AND_ABORT_IF_NANS(vec)
+#define CHECK_AND_ABORT_IF_NAN_MPI(value, comm)
+#define CHECK_AND_ABORT_IF_NANS_MPI(vec, comm)
 #endif
 
 namespace pfc::utils {
@@ -107,13 +125,16 @@ template <typename T> bool hasNaNs(const std::vector<T> &vec) {
                      [](const T &value) { return std::isnan(value); });
 }
 
-template <typename T> void abortIfNaN(T value, const char *filename, int line) {
+template <typename T>
+void abortIfNaN(T value, const char *filename, int line,
+                MPI_Comm comm = MPI_COMM_WORLD) {
   if (std::isnan(value)) {
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int rank = 0;
+    MPI_Comm c = (comm == MPI_COMM_NULL) ? MPI_COMM_WORLD : comm;
+    MPI_Comm_rank(c, &rank);
     std::cerr << "NaN detected on process " << rank << " at " << filename << ":"
               << line << ". Aborting MPI application." << '\n';
-    MPI_Abort(MPI_COMM_WORLD, 1);
+    MPI_Abort(c, 1);
   }
 }
 
@@ -125,13 +146,15 @@ template <typename T> void abortIfNaN(T value, const char *filename, int line) {
  * @param vec The vector of floats to check.
  */
 template <typename T>
-void abortIfNaNs(const std::vector<T> &vec, const char *filename, int line) {
+void abortIfNaNs(const std::vector<T> &vec, const char *filename, int line,
+                 MPI_Comm comm = MPI_COMM_WORLD) {
   if (hasNaNs(vec)) {
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int rank = 0;
+    MPI_Comm c = (comm == MPI_COMM_NULL) ? MPI_COMM_WORLD : comm;
+    MPI_Comm_rank(c, &rank);
     std::cerr << "NaNs detected on process " << rank << " at " << filename << ":"
               << line << ". Aborting MPI application." << '\n';
-    MPI_Abort(MPI_COMM_WORLD, 1);
+    MPI_Abort(c, 1);
   }
 }
 
