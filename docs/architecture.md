@@ -118,6 +118,7 @@ The codebase aims to be easy to extend and inspect, not maximally locked down. I
 
 - Prefer free functions for many queries and operations on domain objects (e.g. `pfc::world::get_size`, and `get_world` overloads for `Decomposition` and `Field`) so call sites stay uniform and composable. When parallel access is added for a type that still uses member getters, add a free function and prefer it in new or refactored code.
 - Prefer struct-like types with public data by default; use private state only when it protects real invariants. Full guidance and examples are in [styleguide.md](styleguide.md) (section *API shape: free functions and data-centric types*).
+- **Inheritance and `virtual` are intentional seams, not the default shape of the library.** Use abstract bases (`Model`, `FieldModifier`, `ResultsWriter`, …) where **out-of-tree** code must plug in through one stable boundary in C++. Prefer **thin overrides** that delegate to **free functions** and **data-centric helpers** (namespaced `pfc::…` / `pfc::ui::…`) so behavior stays easy to find and test. Avoid deep hierarchies and “logic sprouting” from many small virtual methods unless the extension point truly needs them.
 
 Layer rules (kernel → runtime → frontend) are unchanged: this ethos governs *how* types expose their own state and helpers, not which layers may include each other.
 

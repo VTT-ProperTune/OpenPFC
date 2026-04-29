@@ -84,6 +84,7 @@ OpenPFC favors a laboratory, not fortress style: code should be easy to read, ex
 - Name lookup inside `Model` subclasses: unqualified `get_fft(*this)` can conflict with the inherited member `Model::get_fft()`; prefer `pfc::get_fft(*this)` and `pfc::get_world(*this)` in derived-class bodies.
 - Older APIs: some types still expose members such as `model.get_world()`. When you add or refactor nearby access, introduce a free overload in the same module (e.g. `get_world(const Model&)`) and call that in new or touched code. Full migration can be incremental; the direction of travel is free functions at namespace scope.
 - Classes as data carriers: types should primarily hold state. Prefer `public` data members when there is no concrete reason to hide them—in practice many types should read like `struct`s. Reserve `private` members (with the `m_` convention) for cases where hiding genuinely prevents invalid states or where encapsulation is clearly justified, not as a default habit.
+- **Virtual bases are extension seams.** Subclass `Model`, `FieldModifier`, or `ResultsWriter` when the framework must **dispatch across app-defined types** at runtime. Implement the bulk of physics, I/O, and wiring as **free functions** (and small POD-ish state) that those overrides call into—avoid growing wide hierarchies for “organization only.”
 
 This sits alongside the layer rules in [architecture.md](architecture.md): kernel/runtime/frontend boundaries still apply; openness is about how each type exposes its *own* fields and helpers, not about crossing forbidden includes.
 

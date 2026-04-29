@@ -50,6 +50,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 
 | Need | Document |
 |------|----------|
+| **API style** — free functions, data-centric types, when to use `virtual` / inheritance | [`styleguide.md`](styleguide.md#api-shape-free-functions-and-data-centric-types) · [`architecture.md`](architecture.md#design-ethos-laboratory-not-fortress) |
 | Honest fit (“when not”) + **FD vs spectral** direction | [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md) |
 | Prose vs **release** tags | [`documentation_versioning.md`](documentation_versioning.md) |
 | **Publication →** repo entry points | [`from_paper_to_run.md`](from_paper_to_run.md) |

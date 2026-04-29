@@ -9,6 +9,10 @@ OpenPFC is meant to be extended without editing the core library: you add models
 
 Read [`../architecture.md`](../architecture.md) first so you know where code belongs. If you use `App<Model>` and JSON, follow [`../app_pipeline.md`](../app_pipeline.md) for wiring order and section names. For an ordered **extend** track (and links to examples), see [`../learning_paths.md`](../learning_paths.md) → *Extend physics and declarative configs*.
 
+## API style when you extend OpenPFC
+
+OpenPFC favors **namespace free functions** and **data-centric types** (“laboratory, not fortress”). Subclass `Model` / `FieldModifier` / `ResultsWriter` only where the framework needs a **runtime extension seam**; implement mechanics as **`pfc::…` helpers** and call **`pfc::get_fft(model)`**, **`pfc::get_world(model)`**, **`pfc::step(model, t)`**, etc., from your model body so behavior stays explicit and grep-friendly (see [`../styleguide.md`](../styleguide.md#api-shape-free-functions-and-data-centric-types)).
+
 - Kernel — backend-agnostic data, decomposition, simulation abstractions (`Model`, `Simulator`, `FieldModifier`, …).
 - Runtime — CPU / CUDA / HIP execution and FFT implementations.
 - Frontend — optional JSON/TOML `App`, I/O helpers, UI-oriented pieces.

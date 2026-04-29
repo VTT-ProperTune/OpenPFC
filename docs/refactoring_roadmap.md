@@ -86,6 +86,21 @@ Done:
 
 High impact, not tied to a single PR; pick by maintenance pain.
 
+### Suggested PR-scale moves (free-function & data-centric API)
+
+Aligned with [**laboratory, not fortress**](architecture.md#design-ethos-laboratory-not-fortress) and the [styleguide API shape](styleguide.md#api-shape-free-functions-and-data-centric-types): keep `virtual` boundaries thin; push mechanics to namespaced free functions.
+
+1. **Examples + apps:** mechanical pass replacing `model.get_world()` / `get_fft()` member spellings with `pfc::get_world(model)` / `pfc::get_fft(model)` (and simulator analogs) in touched files — high visibility, low risk.
+2. **Shipped models (Tungsten, Aluminum, diffusion fixtures):** extract `initialize` / `step` internals into **`namespace …::`** free functions; leave `Model::step` as a one-line forwarder (easier testing and profiling).
+3. **`Time`:** add small free wrappers (`pfc::time::…` or `pfc::` overloads) mirroring hot members (`next`, `done`, …) where it improves consistency with `Model` / `Simulator` free APIs.
+4. **`errors.hpp`:** split by concern + prefer free `format_*` / `make_*` helpers so parsers do not pull unrelated types.
+5. **GPU runtime (`runtime/cuda` vs `runtime/hip`):** deduplicate with **`runtime/common`** free helpers (plan/layout/device buffer) instead of parallel class hierarchies.
+6. **JSON wiring:** extend catalog/factory patterns (already: field modifiers, results writers) for any remaining `if (type == …)` branches in wiring.
+7. **`SpectralCpuStack` / session:** optional free `assemble_*` returning plain structs + explicit `wire_*` free functions for drivers that skip `App` (clearer data flow than only member methods).
+8. **Integrator loop:** narrow `run_simulator_time_integration_loop` inputs to structs + free functions (less hidden state than callbacks on opaque objects).
+9. **Tests:** shared **`tests/fixtures/`** free factories (`make_world`, `make_mock_model`, …) to avoid 40-line setup blocks repeating OO construction patterns.
+10. **Include hygiene:** document + optionally CI-check “minimal includes” (`openpfc_minimal.hpp` + domain headers) so new code does not re-expand umbrella dependencies.
+
 - **Gradient / spatial-operator abstraction:** unify spectral (FFT) and finite-difference evaluation of gradients and related operators where supported; track [`adr/0002-gradient-operators-fd-vs-spectral.md`](adr/0002-gradient-operators-fd-vs-spectral.md) and [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md).
 - **Simulator:** If orchestration grows again, consider named collaborators (e.g. explicit IC/BC pipeline type vs results scheduling) on top of existing `*_dispatch.hpp` helpers.
 - **Model:** Narrower test- and tool-facing facades around field registry / world access (interface segregation) without a monolithic `Model` rewrite.

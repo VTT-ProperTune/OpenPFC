@@ -15,6 +15,8 @@ OpenPFC ships **in-tree** programs (`apps/tungsten`, `apps/aluminumNew`, …) an
 
 This tutorial is about that **integration shell**: a small **out-of-tree** executable that links OpenPFC, subclasses `pfc::Model`, and runs `pfc::ui::App<MyModel>` so a **config file on disk** drives world size, `dt`, FFT options, optional binary output, IC/BC hooks, etc.
 
+**Style:** keep `MyModel` a thin seam over your physics; prefer **`pfc::get_fft(*this)`**, **`pfc::get_world(*this)`**, **`pfc::initialize(*this, dt)`**-style free functions in `initialize` / `step` so readers see where work happens (see [`../styleguide.md`](../styleguide.md#api-shape-free-functions-and-data-centric-types)).
+
 ### What you are *not* building here
 
 - **Not** a full new phase-field model with free energy, stencils, and validation — that is the job of your `Model::initialize` / `Model::step` (and possibly collaborators you add).  
