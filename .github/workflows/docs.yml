@@ -41,6 +41,12 @@ jobs:
       - name: Verify relative markdown links
         run: python3 scripts/check_doc_links.py
 
+      - name: Verify examples catalog vs CMakeLists
+        run: python3 scripts/check_examples_catalog.py
+
+      - name: Verify Allen–Cahn end-to-end doc vs README
+        run: python3 scripts/check_end_to_end_allen_cahn.py
+
   # ============================================================================
   # Build Documentation
   # ============================================================================

@@ -32,4 +32,6 @@ scripts/*
 !scripts/run-clang-tidy.sh
 !scripts/xdmfgen.py
 !scripts/check_doc_links.py
+!scripts/check_end_to_end_allen_cahn.py
+!scripts/check_examples_catalog.py
 !scripts/unbold_markdown_docs.py
