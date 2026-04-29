@@ -50,7 +50,12 @@ See [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.m
 | Need | Document |
 |------|-----------|
 | Index of all guides | [`README.md`](README.md) |
+| Learning paths by role | [`learning_paths.md`](learning_paths.md) |
+| Showcase (figures → runs) | [`showcase.md`](showcase.md) |
+| End-to-end artifacts (PNG / binary) | [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
 | Onboarding | [`quickstart.md`](quickstart.md) |
+| Examples catalog + curriculum | [`examples_catalog.md`](examples_catalog.md) |
+| API examples reading order | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
 | Troubleshooting | [`troubleshooting.md`](troubleshooting.md) |
 | Config files | [`configuration.md`](configuration.md) |
 | Terminology | [`glossary.md`](glossary.md) |
@@ -76,6 +81,6 @@ Smaller polish items that may still help:
 
 1. Richer transcripts — [`example_run_output.md`](example_run_output.md) documents log *shape*; optional verbatim captures from CI or release machines can be added as collapsible sections if maintainers want byte-level fixtures.
 2. CHANGELOG user notes — Keep meaningful entries under `[Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md); add “upgrading from X” blurbs when CMake or config keys change.
-3. Published site — Keep GitHub Pages in sync with [`quickstart.md`](quickstart.md) and [`README.md`](README.md) so API-only readers find the prose guides.
+3. Published site — The doc index opens with **Published API reference vs prose in `docs/`**; keep GitHub Pages builds fresh so class reference matches releases.
 
 Link checks: run `python3 scripts/check_doc_links.py` before merging doc changes (see [`contributing-docs.md`](contributing-docs.md)).

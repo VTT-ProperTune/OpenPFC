@@ -7,6 +7,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This directory holds guides and assets. Build and install from the repository root: [`INSTALL.md`](../INSTALL.md) (toolchains, HeFFTe 2.4.1, MPI, CUDA/HIP).
 
+### Published API reference vs prose in `docs/`
+
+| You need | Where it lives |
+|-----------|----------------|
+| **HTML class reference** (headers, Doxygen, `api/examples` snippets) | [Published dev docs](https://vtt-propertune.github.io/OpenPFC/dev/) — or build the `docs` target with `OpenPFC_BUILD_DOCUMENTATION=ON` (output under your build tree) |
+| **Tutorials, install, JSON/`App` wiring, troubleshooting, HPC** | This **`docs/`** tree and root [`INSTALL.md`](../INSTALL.md) — not duplicated in the API-only site |
+
+Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so you do not land on Doxygen alone.
+
 ## Where to go first
 
 | If you want to… | Open |
@@ -18,7 +27,6 @@ This directory holds guides and assets. Build and install from the repository ro
 | Fix configure/MPI/HeFFTe issues | [`troubleshooting.md`](troubleshooting.md) |
 | Short Q&A | [`faq.md`](faq.md) |
 | Understand JSON/TOML → `Simulator` | [`app_pipeline.md`](app_pipeline.md) |
-| Planned structural refactors (roadmap) | [`refactoring_roadmap.md`](refactoring_roadmap.md) |
 | Tour of main types (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Minimal custom `App` project (CMake + JSON) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation for custom models | [`parameter_validation.md`](parameter_validation.md) |
@@ -40,6 +48,7 @@ This directory holds guides and assets. Build and install from the repository ro
 | Results writers (binary / VTK / PNG) | [`io_results.md`](io_results.md) |
 | Shipped `apps/` programs | [`applications.md`](applications.md) |
 | Runnable `examples/` (catalog + folder README) | [`examples_catalog.md`](examples_catalog.md), [`../examples/README.md`](../examples/README.md) |
+| Doxygen `api/examples` reading order | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
 | Extend models and `App` | [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.md`](class_tour.md) |
 | Terminology | [`glossary.md`](glossary.md) |
 
@@ -90,9 +99,16 @@ C++ snippets under [`api/examples/`](api/examples/) are included in the Doxygen 
 
 - Changelog / release history: [`CHANGELOG.md`](../CHANGELOG.md) (user-facing and developer-facing changes by version).
 - Contributing (overview): [`CONTRIBUTING.md`](../CONTRIBUTING.md).
-- Scalability analysis plan: [`scalability_analysis_plan.md`](scalability_analysis_plan.md) (stub that points to [`experiments/scalability/docs/scalability_analysis_plan.md`](../experiments/scalability/docs/scalability_analysis_plan.md) when you use the experiment submodule/tree).
 - Image / branding notes: [`image-prompts.md`](image-prompts.md) (prompts for project artwork; not required for simulation).
+
+## Contributors and project internals
+
+| Topic | Document |
+|--------|-----------|
+| Editing markdown, link checks | [`contributing-docs.md`](contributing-docs.md) |
+| Planned structural refactors | [`refactoring_roadmap.md`](refactoring_roadmap.md) |
+| Scalability experiment write-up (when submodule present) | [`experiments/scalability/docs/scalability_analysis_plan.md`](../experiments/scalability/docs/scalability_analysis_plan.md) — redirect note: [`scalability_analysis_plan.md`](scalability_analysis_plan.md) |
 
 ## Generated HTML (Doxygen)
 
-With `OpenPFC_BUILD_DOCUMENTATION=ON`, configure and build the `docs` target; HTML output is under the build tree (see root [`README.md`](../README.md) and [`CMakeLists.txt`](CMakeLists.txt)).
+With `OpenPFC_BUILD_DOCUMENTATION=ON`, configure and build the `docs` target; HTML output is under the build tree (see root [`README.md`](../README.md) and [`CMakeLists.txt`](CMakeLists.txt)). This complements—not replaces—the prose guides above.
