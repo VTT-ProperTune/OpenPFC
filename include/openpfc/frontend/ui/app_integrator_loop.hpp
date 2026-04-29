@@ -9,6 +9,7 @@
 #ifndef PFC_UI_APP_INTEGRATOR_LOOP_HPP
 #define PFC_UI_APP_INTEGRATOR_LOOP_HPP
 
+#include <cmath>
 #include <cstdint>
 #include <sstream>
 
@@ -87,15 +88,31 @@ IntegratorTimings run_simulator_time_integration_loop(
     const int increment = session.time().get_increment();
     const double t = session.time().get_current();
     const double t1 = session.time().get_t1();
-    const double eta_i = (t1 - t) / session.time().get_dt();
-    const double eta_t = eta_i * avg_step_ema;
+    const double dt = session.time().get_dt();
+    double eta_t = 0.0;
+    if (dt > 0.0 && std::isfinite(dt) && t1 > t) {
+      const double eta_i = (t1 - t) / dt;
+      if (std::isfinite(eta_i)) {
+        eta_t = eta_i * avg_step_ema;
+      }
+    }
     const double other_time = steptime - fft_time;
     if (rank0) {
       std::ostringstream steposs;
       steposs << "Step " << increment << " done in " << steptime << " s ("
               << fft_time << " s FFT, " << other_time
-              << " s other). Simulation time: " << t << " / " << t1 << " ("
-              << (t / t1 * 100) << " % done). ETA: " << pfc::utils::TimeLeft(eta_t);
+              << " s other). Simulation time: " << t << " / " << t1;
+      if (t1 > 0.0 && std::isfinite(t) && std::isfinite(t1)) {
+        steposs << " (" << (t / t1 * 100.0) << " % done)";
+      } else {
+        steposs << " (progress n/a: end time must be > 0 for %)";
+      }
+      steposs << ". ETA: ";
+      if (dt > 0.0 && t1 > t && std::isfinite(eta_t) && eta_t >= 0.0) {
+        steposs << pfc::utils::TimeLeft(eta_t);
+      } else {
+        steposs << "n/a";
+      }
       pfc::log_info(app_lg, steposs.str());
     }
 
