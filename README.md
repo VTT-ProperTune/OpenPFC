@@ -66,7 +66,7 @@ T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *�
 
 ## Quick start
 
-First time with the repo? Follow [docs/quickstart.md](docs/quickstart.md) (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). Tutorial prose lives under [docs/getting_started/](docs/getting_started/); runnable targets are listed in [docs/examples_catalog.md](docs/examples_catalog.md) and shipped programs in [docs/applications.md](docs/applications.md). Short Q&A: [docs/faq.md](docs/faq.md).
+First time with the repo? Follow [docs/quickstart.md](docs/quickstart.md) (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). **Sequenced paths by role:** [docs/learning_paths.md](docs/learning_paths.md). **Figures and what to run:** [docs/showcase.md](docs/showcase.md). **Build → artifacts on disk (PNG / binary):** [docs/tutorials/end_to_end_visualization.md](docs/tutorials/end_to_end_visualization.md). Tutorial prose lives under [docs/getting_started/](docs/getting_started/); runnable targets and a **curriculum** are in [docs/examples_catalog.md](docs/examples_catalog.md); Doxygen snippet order: [docs/api_examples_walkthrough.md](docs/api_examples_walkthrough.md). Shipped programs: [docs/applications.md](docs/applications.md). Short Q&A: [docs/faq.md](docs/faq.md).
 
 ## Documentation
 

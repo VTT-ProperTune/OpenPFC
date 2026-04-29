@@ -7,7 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Documentation
 
-- [`docs/README.md`](docs/README.md) — index of all guides (architecture, HPC, tutorials).
+- [`docs/README.md`](docs/README.md) — index of all guides (architecture, HPC, tutorials). **API reference (HTML)** vs prose: see the opening table there.
+- [`docs/learning_paths.md`](docs/learning_paths.md) — run / extend / integrate tracks.
+- [`docs/showcase.md`](docs/showcase.md) — figures mapped to apps and examples.
 - [`docs/testing.md`](docs/testing.md) — `ctest`, `openpfc-tests`, MPI test CMake options.
 - [`docs/contributing-docs.md`](docs/contributing-docs.md) — link checks, SPDX headers, where to add cross-links in the doc index.
 - Run from the repo root: `python3 scripts/check_doc_links.py`
