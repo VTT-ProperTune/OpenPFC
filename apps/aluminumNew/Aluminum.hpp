@@ -325,9 +325,16 @@ public:
   }
 
   /**
-   * @brief Calculate memory allocated by the Aluminum model
+   * @brief Host-side model buffer size used for memory reporting
    *
-   * @return Total allocated memory in bytes for all model fields and operators
+   * Returns `mem_allocated`, recomputed in `initialize()` as the sum of
+   * `pfc::utils::sizeof_vec` over spectral operators, the ψ / ψ_MF / ψN buffers,
+   * their Fourier images, and the auxiliary `P_*`, temperature, and stress
+   * fields (see the `mem_allocated` accumulation in `initialize()`). Does not
+   * include the FFT workspace; use `get_fft().get_allocated_memory_bytes()` for
+   * the FFT engine.
+   *
+   * @return Bytes counted above
    */
   size_t get_allocated_memory_bytes() const override { return mem_allocated; }
 

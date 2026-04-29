@@ -20,6 +20,7 @@
 
 #include <complex>
 #include <cstddef>
+#include <iterator>
 #include <numeric>
 #include <stdexcept>
 #include <string>
@@ -36,14 +37,8 @@ private:
   RealFieldSet m_real_fields;
   ComplexFieldSet m_complex_fields;
 
-  [[nodiscard]] std::string list_field_names() const {
-    std::vector<std::string> names;
-    for (const auto &[name, _] : m_real_fields) {
-      names.push_back(name);
-    }
-    for (const auto &[name, _] : m_complex_fields) {
-      names.push_back(name);
-    }
+  [[nodiscard]] std::string format_available_field_names() const {
+    const std::vector<std::string> names = list_field_names();
     if (names.empty()) {
       return "(none)";
     }
@@ -53,6 +48,21 @@ private:
   }
 
 public:
+  /**
+   * @brief All registered field names (real fields first, then complex)
+   */
+  [[nodiscard]] std::vector<std::string> list_field_names() const {
+    std::vector<std::string> names;
+    names.reserve(m_real_fields.size() + m_complex_fields.size());
+    for (const auto &[name, _] : m_real_fields) {
+      names.push_back(name);
+    }
+    for (const auto &[name, _] : m_complex_fields) {
+      names.push_back(name);
+    }
+    return names;
+  }
+
   [[nodiscard]] bool has_real_field(std::string_view field_name) const noexcept {
     return m_real_fields.count(std::string(field_name)) > 0;
   }
@@ -75,7 +85,7 @@ public:
       throw std::out_of_range("Real field '" + std::string(name) +
                               "' not found. "
                               "Available fields: " +
-                              list_field_names());
+                              format_available_field_names());
     }
     return it->second;
   }
@@ -86,7 +96,7 @@ public:
       throw std::out_of_range("Real field '" + std::string(name) +
                               "' not found. "
                               "Available fields: " +
-                              list_field_names());
+                              format_available_field_names());
     }
     return it->second;
   }
@@ -97,7 +107,7 @@ public:
       throw std::out_of_range("Complex field '" + std::string(name) +
                               "' not found. "
                               "Available fields: " +
-                              list_field_names());
+                              format_available_field_names());
     }
     return it->second;
   }
@@ -108,7 +118,7 @@ public:
       throw std::out_of_range("Complex field '" + std::string(name) +
                               "' not found. "
                               "Available fields: " +
-                              list_field_names());
+                              format_available_field_names());
     }
     return it->second;
   }

@@ -188,7 +188,8 @@ public:
    * @brief Read-only access to the named field registry
    *
    * Use for helpers, tests, or custom `get_allocated_memory_bytes()` that should
-   * include `registered_field_storage_bytes()`.
+   * account for `registered_field_storage_bytes()`, and for introspection via
+   * `list_field_names()`.
    */
   [[nodiscard]] const ModelFieldRegistry &fields() const noexcept {
     return m_fields;

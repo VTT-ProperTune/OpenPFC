@@ -342,9 +342,15 @@ public:
   }
 
   /**
-   * @brief Calculate memory allocated by the Tungsten model
+   * @brief Host-side model buffer size used for memory reporting
    *
-   * @return Total allocated memory in bytes for all model fields and operators
+   * Returns `mem_allocated`, recomputed in `initialize()` as the sum of
+   * `pfc::utils::sizeof_vec` over `filterMF`, `opL`, `opN`, `psi`, `psiMF`,
+   * `psiN`, `psi_F`, `psiMF_F`, and `psiN_F`. Does not include the FFT workspace
+   * or MPI buffers; use `get_fft().get_allocated_memory_bytes()` for the FFT
+   * engine.
+   *
+   * @return Bytes counted above
    */
   size_t get_allocated_memory_bytes() const override { return mem_allocated; }
 
