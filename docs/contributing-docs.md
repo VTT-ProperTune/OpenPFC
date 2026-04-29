@@ -26,6 +26,17 @@ The script scans `docs/**/*.md`, `README.md`, `INSTALL.md`, `examples/README.md`
 
 The same check runs in CI as part of the Documentation workflow (`.github/workflows/docs.yml`).
 
+## Catalog and tutorial consistency (CI)
+
+These catch drift between CMake, shipped README examples, and prose:
+
+```bash
+python3 scripts/check_examples_catalog.py
+python3 scripts/check_end_to_end_allen_cahn.py
+```
+
+They run in the Documentation workflow after the link checker.
+
 ## Style
 
 - Prefer tables and short sections over long unstructured prose.

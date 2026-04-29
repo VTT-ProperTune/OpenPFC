@@ -46,6 +46,7 @@ Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 ## See also
 
 - [`binary_field_io_spec.md`](binary_field_io_spec.md) — normative binary field file description  
+- [`postprocess_binary_fields.md`](postprocess_binary_fields.md) — offline analysis of raw binary fields  
 - [`app_pipeline.md`](app_pipeline.md) — where `add_result_writers_from_json` runs  
 - [`configuration.md`](configuration.md) — config file overview  
 - [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) — run once, inspect binary or PNG output  

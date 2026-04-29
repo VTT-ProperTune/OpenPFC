@@ -31,6 +31,8 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | Understand JSON/TOML → `Simulator` | [`app_pipeline.md`](app_pipeline.md) |
 | Spectral `App` JSON/TOML key reference | [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
 | Binary field MPI-IO file layout | [`binary_field_io_spec.md`](binary_field_io_spec.md) |
+| Post-process raw `.bin` fields (Python / VTK-aware workflows) | [`postprocess_binary_fields.md`](postprocess_binary_fields.md) |
+| Toolchain and dependency matrix | [`dependency_matrix.md`](dependency_matrix.md) |
 | Tour of main types (`Model`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Minimal custom `App` project (CMake + JSON) | [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) |
 | Parameter validation for custom models | [`parameter_validation.md`](parameter_validation.md) |
@@ -62,6 +64,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 |--------|-----------|
 | CMake options | [`build_options.md`](build_options.md) |
 | CPU vs GPU build trees | [`build_cpu_gpu.md`](build_cpu_gpu.md) |
+| Toolchain / optional stacks / doc QA scripts | [`dependency_matrix.md`](dependency_matrix.md) |
 | Code style / API shape | [`styleguide.md`](styleguide.md) |
 
 ### Science and use-case notes

@@ -62,8 +62,11 @@ Because there is **no file header**, external tools need **out-of-band** metadat
 - Record metadata alongside runs (JSON/YAML sidecar), or  
 - Use **VTK** export for visualization (`VTKWriter`; see [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md)).
 
+Longer offline sketch (metadata, NumPy layout): [`postprocess_binary_fields.md`](postprocess_binary_fields.md).
+
 ## See also
 
 - [`io_results.md`](io_results.md) — writers overview  
+- [`postprocess_binary_fields.md`](postprocess_binary_fields.md) — reasoning about raw bytes outside OpenPFC  
 - [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) — run that produces binaries  
 - [`app_pipeline.md`](app_pipeline.md) — when writers are wired  

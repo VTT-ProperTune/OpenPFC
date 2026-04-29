@@ -60,6 +60,8 @@ See [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.m
 | Personas (by role) | [`personas.md`](personas.md) |
 | Add a Catch2 test | [`tutorials/add_catch2_test.md`](tutorials/add_catch2_test.md) |
 | Binary field format | [`binary_field_io_spec.md`](binary_field_io_spec.md) |
+| Post-processing raw `.bin` fields | [`postprocess_binary_fields.md`](postprocess_binary_fields.md) |
+| Toolchain / deps matrix | [`dependency_matrix.md`](dependency_matrix.md) |
 | Spectral `App` config keys | [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
 | Slurm day one | [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md) |
 | MPI / I/O checklist | [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) |

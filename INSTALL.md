@@ -16,6 +16,8 @@ This document is the supported source build guide. OpenPFC is routinely tested w
 | Open MPI | 4.1.1 (reference; see tohtori toolchain) |
 | HeFFTe | 2.4.1 (separate install per CPU/CUDA/ROCm variant) |
 
+One-page matrix (optional / QA tooling, doc check scripts): [`docs/dependency_matrix.md`](docs/dependency_matrix.md).
+
 For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found), see [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 **After a successful install**, continue with [`docs/quickstart.md`](docs/quickstart.md) and pick a sequenced track in [`docs/learning_paths.md`](docs/learning_paths.md). The full prose index is [`docs/README.md`](docs/README.md) (tutorials, HPC, troubleshooting — not only Doxygen).

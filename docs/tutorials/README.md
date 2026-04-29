@@ -14,6 +14,7 @@ Step-by-step and workflow guides. Install and MPI setup: [`INSTALL.md`](../../IN
 | [**HeFFTe `plan_options`**](fft_heffte_plan_options.md) | Read and tune `[plan_options]` using `examples/fft_backend_selection.toml` |
 | [**Spectral `App` config keys**](../spectral_app_config_reference.md) | Normative JSON/TOML tables for `SpectralCpuStack` + writers |
 | [**Binary MPI-IO field format**](../binary_field_io_spec.md) | On-disk layout for `BinaryWriter` / `BinaryReader` |
+| [**Post-process binary fields**](../postprocess_binary_fields.md) | Metadata, Fortran order, NumPy sketch outside OpenPFC |
 | [**Spectral examples sequence**](spectral_examples_sequence.md) | Ordered path through `04_diffusion_model` → `05_simulator` → `12_cahn_hilliard` |
 | [**Minimal custom `App` + JSON**](custom_app_minimal.md) | Out-of-tree CMake project with `App<Model>` |
 | [**GPU apps quickstart**](gpu_app_quickstart.md) | CUDA/HIP builds and shipped GPU binaries |

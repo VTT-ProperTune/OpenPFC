@@ -9,12 +9,13 @@ Short entry points. Full index: [`README.md`](README.md). Sequenced tracks: [`le
 
 ## I run tungsten (or another `App`) on a cluster
 
-1. [`INSTALL.md`](../INSTALL.md) — modules, MPI, HeFFTe.  
+1. [`INSTALL.md`](../INSTALL.md) — modules, MPI, HeFFTe. Optional one-page matrix: [`dependency_matrix.md`](dependency_matrix.md).  
 2. [`quickstart.md`](quickstart.md) §2B — first `mpirun`.  
-3. [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md) — Slurm skeleton.  
-4. [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) — paths and binary I/O.  
-5. [`spectral_app_config_reference.md`](spectral_app_config_reference.md) + [`apps/tungsten/inputs_json/README.md`](../apps/tungsten/inputs_json/README.md).  
-6. LUMI-specific: [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md).
+3. [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md) — generic Slurm skeleton (`#SBATCH`, launcher).  
+4. [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) — output paths, MPI-IO collectives, restart sanity.  
+5. [`postprocess_binary_fields.md`](postprocess_binary_fields.md) — optional: interpret raw `.bin` files outside OpenPFC.  
+6. [`spectral_app_config_reference.md`](spectral_app_config_reference.md) + [`apps/tungsten/inputs_json/README.md`](../apps/tungsten/inputs_json/README.md).  
+7. LUMI-specific: [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md).
 
 ## I extend physics in C++ (`Model`, modifiers)
 

@@ -32,7 +32,11 @@
  * @see initial_conditions/file_reader.hpp for using this in initial conditions
  *
  * @author OpenPFC Contributors
- * @date 2025
+ * @date 2026
+ *
+ * @see
+ * https://github.com/VTT-ProperTune/OpenPFC/blob/master/docs/postprocess_binary_fields.md
+ * (post-processing raw binary fields outside OpenPFC)
  */
 
 #ifndef PFC_BINARY_READER_HPP
