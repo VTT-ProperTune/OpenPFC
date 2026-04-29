@@ -82,6 +82,7 @@ Done:
 - `write_scheduled_simulator_results(Simulator&)` in `simulator.hpp`: extracted from `Simulator::write_results()` so scheduled writes + counter bump live in one free-function seam ([`io_results.md`](io_results.md)).
 - `results_writer_catalog.hpp` + optional `fields[].writer` string: `add_result_writers_from_json` resolves writers through `ResultsWriterCatalog` (default `binary`); inject a custom catalog at the wiring call site for tests and app-specific formats ([`app_pipeline.md`](app_pipeline.md)).
 - **`errors.hpp` split:** `errors_config_format.hpp` (JSON field messages + `get_json_value_string`) and `errors_field_modifiers.hpp` (unknown modifier type + `list_valid_field_modifiers`); `errors.hpp` remains an umbrella include. `from_json_world_time.hpp` includes only the format header; `field_modifier_registry.hpp` includes only the modifier header.
+- **GPU FFT factories:** `runtime/common/heffte_gpu_r2c_layout.hpp` shares MPI rank/size helpers, HeFFTe box conversion, default r2c layout boxes, and MPI/decomposition mismatch checks between `fft_cuda.cpp` and `fft_hip.cpp`.
 
 ## Backlog — larger SOLID-oriented refactors
 

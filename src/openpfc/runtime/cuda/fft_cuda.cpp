@@ -4,76 +4,35 @@
 #if defined(OpenPFC_ENABLE_CUDA)
 
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/runtime/common/heffte_gpu_r2c_layout.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 
 #include <heffte.h>
 #include <mpi.h>
-#include <stdexcept>
 
 namespace pfc {
 namespace fft {
 
-using heffte::plan_options;
-using layout::FFTLayout;
-using layout::get_complex_box;
-using layout::get_r2c_direction;
-using layout::get_real_box;
-using pfc::decomposition::get_num_domains;
+using Decomposition = pfc::decomposition::Decomposition;
 using pfc::fft::FFT_Impl;
-
-// Helper functions (similar to fft.cpp)
-static int get_mpi_rank(MPI_Comm comm) {
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-  return rank;
-}
-
-static int get_mpi_size(MPI_Comm comm) {
-  int size;
-  MPI_Comm_size(comm, &size);
-  return size;
-}
-
-static heffte::box3d<int> heffte_box_from_box3i(const Box3i &b) {
-  return heffte::box3d<int>(b.low, b.high);
-}
 
 FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
                      MPI_Comm comm) {
   auto options = heffte::default_options<heffte::backend::cufft>();
-  auto r2c_dir = 0;
-  auto fft_layout = layout::create(decomposition, r2c_dir);
+  auto boxes =
+      pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomposition, rank_id);
 
-  const auto &inbox = get_real_box(fft_layout, rank_id);
-  const auto &outbox = get_complex_box(fft_layout, rank_id);
-  auto r2c_direction = get_r2c_direction(fft_layout);
-
-  // Create cuFFT-based FFT (precision determined by data types in forward/backward
-  // calls)
   using fft_r2c_cuda_type = heffte::fft3d_r2c<heffte::backend::cufft>;
-  fft_r2c_cuda_type fft_cuda(heffte_box_from_box3i(inbox),
-                             heffte_box_from_box3i(outbox), r2c_direction, comm,
-                             options);
+  fft_r2c_cuda_type fft_cuda(boxes.real_inbox, boxes.complex_outbox,
+                             boxes.r2c_direction, comm, options);
 
-  // Return GPU FFT object
   return FFT_CUDA(std::move(fft_cuda));
 }
 
 FFT_CUDA create_cuda(const Decomposition &decomposition, MPI_Comm comm) {
-  auto mpi_comm_size = get_mpi_size(comm);
-  auto rank_id = get_mpi_rank(comm);
-  auto decomposition_size = pfc::decomposition::get_num_domains(decomposition);
-
-  if (mpi_comm_size != decomposition_size) {
-    throw std::logic_error(
-        "Mismatch between MPI communicator size and domain decomposition size: " +
-        std::to_string(mpi_comm_size) + " != " + std::to_string(decomposition_size) +
-        ". This indicates that the number of MPI ranks does not match the number of "
-        "domains in the decomposition. To resolve this issue, you can manually "
-        "specify the rank by calling fft::create_cuda(decomposition, rank_id, comm) "
-        "instead.");
-  }
-
+  pfc::runtime::heffte_gpu::throw_if_mpi_decomposition_mismatch(
+      comm, decomposition, "fft::create_cuda(decomposition, rank_id, comm)");
+  const int rank_id = pfc::runtime::heffte_gpu::mpi_comm_rank(comm);
   return create_cuda(decomposition, rank_id, comm);
 }
 
