@@ -134,7 +134,7 @@ public:
       size_t req_count = 0;
       void *buf = static_cast<void *>(field_ptr);
       for (size_t i = 0; i < n; ++i) {
-        int tag = m_base_tag + static_cast<int>(i);
+        int tag = m_base_tag + opposite_slot(static_cast<int>(i));
         exchange::irecv_face(buf, m_face_types[i].recv_type.get(), m_neighbors[i],
                              m_comm, &m_requests[req_count], tag);
         req_count++;
@@ -174,6 +174,18 @@ public:
   size_t num_directions() const { return m_directions.size(); }
 
 private:
+  static int opposite_slot(int slot) {
+    switch (slot) {
+    case 0: return 1;
+    case 1: return 0;
+    case 2: return 3;
+    case 3: return 2;
+    case 4: return 5;
+    case 5: return 4;
+    default: return -1;
+    }
+  }
+
   void start_halo_exchange_pack(T *field_ptr, size_t field_size) {
     const size_t n = m_directions.size();
     size_t req_count = 0;
@@ -181,7 +193,7 @@ private:
       core::gather(m_send_values[i], field_ptr, field_size);
     }
     for (size_t i = 0; i < n; ++i) {
-      int tag = m_base_tag + static_cast<int>(i);
+      int tag = m_base_tag + opposite_slot(static_cast<int>(i));
       exchange::irecv_data(m_recv_values[i], m_neighbors[i], m_rank, m_comm,
                            &m_requests[req_count], tag);
       req_count++;
@@ -202,7 +214,7 @@ private:
       core::gather(m_send_values[i], field_ptr, field_size);
     }
     for (size_t i = 0; i < n; ++i) {
-      int tag = m_base_tag + static_cast<int>(i);
+      int tag = m_base_tag + opposite_slot(static_cast<int>(i));
       exchange::irecv_data(m_recv_values[i], m_neighbors[i], m_rank, m_comm,
                            &m_requests[req_count], tag);
       req_count++;

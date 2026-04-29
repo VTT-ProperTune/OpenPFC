@@ -141,6 +141,18 @@ public:
   size_t num_directions() const { return m_directions.size(); }
 
 private:
+  static int opposite_slot(int slot) {
+    switch (slot) {
+    case 0: return 1;
+    case 1: return 0;
+    case 2: return 3;
+    case 3: return 2;
+    case 4: return 5;
+    case 5: return 4;
+    default: return -1;
+    }
+  }
+
   static int direction_to_slot(const Int3 &d) {
     const std::array<Int3, 6> dirs = {
         {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
@@ -173,13 +185,13 @@ private:
       core::gather(m_send_values[i], core_ptr, core_size);
     }
     for (size_t i = 0; i < n; ++i) {
-      int tag = m_base_tag + static_cast<int>(i);
+      int tag = m_base_tag + opposite_slot(m_dir_slot[i]);
       exchange::irecv_data(m_recv_values[i], m_neighbors[i], m_rank, m_comm,
                            &m_requests[req_count], tag);
       req_count++;
     }
     for (size_t i = 0; i < n; ++i) {
-      int tag = m_base_tag + static_cast<int>(i);
+      int tag = m_base_tag + m_dir_slot[i];
       exchange::isend_data(m_send_values[i], m_rank, m_neighbors[i], m_comm,
                            &m_requests[req_count], tag);
       req_count++;

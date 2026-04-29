@@ -285,4 +285,69 @@ void laplacian_5point_xy_interior_separated(
   }
 }
 
+/**
+ * @brief 5-point XY Laplacian on every owned cell using separated periodic halos.
+ *
+ * Unlike `laplacian_5point_xy_interior_separated`, this treats `core` as the
+ * owned local domain without ghost padding. Boundary-owned cells use the
+ * separated face buffers for their missing ±X/±Y neighbors, so the result is
+ * independent of the MPI decomposition for periodic domains.
+ */
+template <typename T>
+void laplacian_5point_xy_periodic_separated(
+    const T *core, const std::array<const T *, 6> &face_halos, T *lap, int nx,
+    int ny, int nz, T inv_dx2, T inv_dy2, int halo_width) {
+  if (nz != 1 || nx <= 0 || ny <= 0 || halo_width < 1) {
+    return;
+  }
+
+  constexpr int iz = 0;
+  const int sxy = nx * ny;
+  const int hw = halo_width;
+  const T *hpx = face_halos[0]; // values from the +X neighbor
+  const T *hnx = face_halos[1]; // values from the -X neighbor
+  const T *hpy = face_halos[2]; // values from the +Y neighbor
+  const T *hny = face_halos[3]; // values from the -Y neighbor
+
+  for (int iy = 0; iy < ny; ++iy) {
+    for (int ix = 0; ix < nx; ++ix) {
+      const std::size_t c =
+          static_cast<std::size_t>(ix) +
+          static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
+          static_cast<std::size_t>(iz) * static_cast<std::size_t>(sxy);
+      const T uc = core[c];
+
+      const T uxm =
+          (ix > 0)
+              ? core[c - 1]
+              : hnx[static_cast<std::size_t>(iz) *
+                        static_cast<std::size_t>(ny * hw) +
+                    static_cast<std::size_t>(iy) * static_cast<std::size_t>(hw) +
+                    static_cast<std::size_t>(hw - 1)];
+      const T uxp =
+          (ix + 1 < nx)
+              ? core[c + 1]
+              : hpx[static_cast<std::size_t>(iz) *
+                        static_cast<std::size_t>(ny * hw) +
+                    static_cast<std::size_t>(iy) * static_cast<std::size_t>(hw)];
+
+      const T uym =
+          (iy > 0)
+              ? core[c - static_cast<std::size_t>(nx)]
+              : hny[static_cast<std::size_t>(iz) *
+                        static_cast<std::size_t>(nx * hw) +
+                    static_cast<std::size_t>(hw - 1) * static_cast<std::size_t>(nx) +
+                    static_cast<std::size_t>(ix)];
+      const T uyp = (iy + 1 < ny) ? core[c + static_cast<std::size_t>(nx)]
+                                  : hpy[static_cast<std::size_t>(iz) *
+                                            static_cast<std::size_t>(nx * hw) +
+                                        static_cast<std::size_t>(ix)];
+
+      const T dxx = uxp + uxm - T{2} * uc;
+      const T dyy = uyp + uym - T{2} * uc;
+      lap[c] = inv_dx2 * dxx + inv_dy2 * dyy;
+    }
+  }
+}
+
 } // namespace pfc::field::fd
