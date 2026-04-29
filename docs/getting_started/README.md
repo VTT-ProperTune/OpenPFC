@@ -26,4 +26,5 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 ## See also
 
 - **[`../README.md`](../README.md)** — full documentation index (architecture, profiling, LUMI, …)
+- **[`../faq.md`](../faq.md)** — common questions (MPI, CMake, missing examples/apps)
 - **[`INSTALL.md`](../../INSTALL.md)** — supported build and dependencies

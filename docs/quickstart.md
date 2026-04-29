@@ -30,11 +30,20 @@ cmake --build build -j"$(nproc)"
 
 Use **separate build directories** for CPU vs GPU if you switch CUDA/HIP options; see [`build_cpu_gpu.md`](build_cpu_gpu.md).
 
+### CMake switches for tutorials and apps
+
+| Goal | CMake option |
+|------|----------------|
+| Skip building **`examples/`** | `-DOpenPFC_BUILD_EXAMPLES=OFF` |
+| Skip building **`apps/`** | `-DOpenPFC_BUILD_APPS=OFF` |
+
+Defaults are **ON** for both. If you turned examples or apps off, reconfigure with **`ON`** (or remove the cache entry) and rebuild—otherwise the paths in **§2A** / **§2B** will not exist.
+
 ---
 
 ## 2A. Run examples (library + MPI)
 
-Examples are built into `<build>/examples/` (path may be `build/examples` or `Release/examples` depending on the generator).
+Examples are built into `<build>/examples/` (path may be `build/examples` or `Release/examples` depending on the generator). They are only produced when **`OpenPFC_BUILD_EXAMPLES=ON`** (the default).
 
 | Order | Executable | What it shows |
 |-------|------------|----------------|
@@ -58,14 +67,14 @@ See **[`examples_catalog.md`](examples_catalog.md)** for the full list of built 
 
 Shipped apps live under **`apps/`**; see **[`applications.md`](applications.md)** for binaries and sample inputs.
 
-**Tungsten (CPU)** after a successful build:
+**Tungsten (CPU)** after a successful build. Requires **`OpenPFC_BUILD_APPS=ON`** (the default). From your **build** directory, point at a file under the source tree (paths are relative to `build/`):
 
 ```bash
 cd build
-mpirun -n 4 ./apps/tungsten/tungsten /path/to/input.json
+mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
 ```
 
-Sample JSON layouts are described in [`apps/tungsten/inputs_json/README.md`](../apps/tungsten/inputs_json/README.md). GPU builds may provide `tungsten_cuda` or `tungsten_hip` when enabled.
+Smaller or performance-oriented inputs include `tungsten_fixed_bc.json`, `tungsten_moving_bc.json`, and `tungsten_performance.json` in the same directory. TOML equivalents live under `../apps/tungsten/inputs_toml/`. Layout of sections is documented in [`apps/tungsten/inputs_json/README.md`](../apps/tungsten/inputs_json/README.md). GPU builds may provide `tungsten_cuda` or `tungsten_hip` when enabled—use the same config path with the matching binary.
 
 ---
 
@@ -101,3 +110,11 @@ Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix contain
 ## Getting started hub
 
 All beginner-oriented pages are linked from **[`getting_started/README.md`](getting_started/README.md)**.
+
+## Common issues
+
+- **`No such file: .../examples/...`** — Examples were not built; configure with **`-DOpenPFC_BUILD_EXAMPLES=ON`** and rebuild.
+- **`No such file: .../apps/tungsten/tungsten`** — Apps were not built; use **`-DOpenPFC_BUILD_APPS=ON`** and rebuild.
+- **`find_package(OpenPFC)` fails** — Set **`CMAKE_PREFIX_PATH`** or **`-DOpenPFC_DIR=.../lib/cmake/OpenPFC`** to the install prefix where **`OpenPFCConfig.cmake`** was installed (see [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md)).
+
+More Q&A: **[`faq.md`](faq.md)**.

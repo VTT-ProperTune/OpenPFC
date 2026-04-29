@@ -20,11 +20,13 @@ All of them expect **MPI** for realistic runs unless noted. Match the same compi
 
 **Inputs:** JSON under [`apps/tungsten/inputs_json/`](../apps/tungsten/inputs_json/README.md); TOML may live alongside in `inputs_toml/` where present.
 
-**Run (example):**
+**Run (from your build directory, CPU binary):**
 
 ```bash
-mpirun -n 4 ./apps/tungsten/tungsten /path/to/config.json
+mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
 ```
+
+Other samples in the same folder: `tungsten_fixed_bc.json`, `tungsten_moving_bc.json`, `tungsten_performance.json`; TOML under `../apps/tungsten/inputs_toml/`.
 
 GPU-aware MPI and Slurm examples: **[`INSTALL.LUMI.md`](INSTALL.LUMI.md)**, **[`lumi_slurm/README.md`](lumi_slurm/README.md)**.
 
@@ -43,6 +45,10 @@ See [`apps/aluminumNew/README.md`](../apps/aluminumNew/README.md) (minimal; sour
 | `allen_cahn` | CPU |
 | `allen_cahn_cuda` | CUDA enabled |
 | `allen_cahn_hip` | HIP enabled |
+
+**MPI:** Use **`mpirun` from Open MPI**, the same stack as at configure time — typically **Open MPI 4.1.1** with GCC 11.2 on cluster setups documented in **[`INSTALL.md`](../INSTALL.md)** (§1). A mismatched launcher (e.g. system MPICH) causes confusing runtime failures.
+
+**Arguments (CPU binary):** `nx ny n_steps dt M epsilon [png_final]` or, for an initial and final snapshot, `[png_initial] [png_final]` (two paths). Optional PNG paths trigger a gather on rank 0 and grayscale export via **`pfc::io`** (see **`include/openpfc/frontend/io/png_writer.hpp`**).
 
 ## Choosing apps vs examples
 

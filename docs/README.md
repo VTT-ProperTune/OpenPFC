@@ -12,6 +12,7 @@ This directory holds extra guides and assets. **Installing and building** the pr
 1. **[`quickstart.md`](quickstart.md)** — install → run **examples** or an **app** → or link the library from your own CMake project.
 2. **[`getting_started/README.md`](getting_started/README.md)** — hub for tutorials and links to the **examples catalog** and **applications** pages.
 3. **[`extending_openpfc/README.md`](extending_openpfc/README.md)** — how to add models, modifiers, and config-driven apps without forking the core library.
+4. **[`faq.md`](faq.md)** — short answers (MPI, CMake, missing binaries, `find_package`).
 
 ## Quick links
 
@@ -28,6 +29,7 @@ This directory holds extra guides and assets. **Installing and building** the pr
 | LUMI Slurm / tungsten performance jobs | [`lumi_slurm/README.md`](lumi_slurm/README.md) |
 | Runnable `examples/` executables | [`examples_catalog.md`](examples_catalog.md) |
 | Shipped `apps/` programs | [`applications.md`](applications.md) |
+| FAQ (build, run, extending) | [`faq.md`](faq.md) |
 | Extending models and the UI pipeline | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
 
 ## Tutorials
