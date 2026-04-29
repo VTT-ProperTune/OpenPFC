@@ -108,11 +108,27 @@ TEST_CASE("pfc::interpolate() free function works correctly",
 
     std::array<double, 3> coords{2.5, 3.5, 1.5};
 
-// Suppress deprecation warning for this test
+// Suppress deprecation warning while asserting member matches free function
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
     double &member_result = field.interpolate(coords);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
 #pragma GCC diagnostic pop
+#endif
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
     double &free_result = pfc::interpolate(field, coords);
 

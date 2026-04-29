@@ -645,9 +645,16 @@ public:
   /**
    * @brief Get a reference to the default primary unknown field.
    *
-   * Deprecated; prefer `get_real_field("default")` or a named field. The free
-   * function `pfc::get_field(Model&)` has been removed—call `get_real_field(model,
-   * "default")` at call sites.
+   * @deprecated Prefer `get_real_field("default")` or another registered name.
+   *            The legacy free function `pfc::get_field(Model&)` was removed from
+   *            OpenPFC; use `get_real_field(model, "default")` (or the overload on
+   *            `Simulator`) at new call sites.
+   *
+   * @note Out-of-tree models that still override this hook for a single primary
+   *       field should migrate to explicit `register_real_field("default", …)`
+   *       (or a domain-specific name) and call sites that use `get_real_field`.
+   *       Behavior is rank-local like other field accessors; MPI consistency of
+   *       the underlying `DiscreteField` data is unchanged.
    *
    * @return Reference to the RealField called "default"
    */
