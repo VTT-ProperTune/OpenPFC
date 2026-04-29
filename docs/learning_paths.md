@@ -46,8 +46,9 @@ Goal: link OpenPFC from your CMake project, run small `examples/`, and use the H
 |------|-------------------|
 | 1 | `find_package` and first build: [`quickstart.md`](quickstart.md) §2C, [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | 2 | Catalog of `examples/` targets: [`examples_catalog.md`](examples_catalog.md) |
-| 3 | Published HTML reference: [OpenPFC dev docs](https://vtt-propertune.github.io/OpenPFC/dev/) (build locally with `OpenPFC_BUILD_DOCUMENTATION=ON`) |
-| 4 | CMake options and install layout: [`build_options.md`](build_options.md), [`INSTALL.md`](../INSTALL.md) |
+| 3 | Doxygen API snippets in order: [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
+| 4 | Published HTML reference: [OpenPFC dev docs](https://vtt-propertune.github.io/OpenPFC/dev/) (build locally with `OpenPFC_BUILD_DOCUMENTATION=ON`) |
+| 5 | CMake options and install layout: [`build_options.md`](build_options.md), [`INSTALL.md`](../INSTALL.md) |
 
 ## See also
 

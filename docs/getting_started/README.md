@@ -26,6 +26,7 @@ New to OpenPFC? Start with [`../quickstart.md`](../quickstart.md) (install → r
 | Topic | Document |
 |--------|-----------|
 | Runnable `examples/` executables | [`../examples_catalog.md`](../examples_catalog.md) |
+| Doxygen `api/examples` reading order | [`../api_examples_walkthrough.md`](../api_examples_walkthrough.md) |
 | Shipped `apps/` binaries and inputs | [`../applications.md`](../applications.md) |
 | `App` config pipeline (JSON → `Simulator`) | [`../app_pipeline.md`](../app_pipeline.md) |
 | `ctest` / unit tests | [`../testing.md`](../testing.md) |

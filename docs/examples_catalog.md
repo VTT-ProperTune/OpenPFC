@@ -9,6 +9,47 @@ Executables are built when `OpenPFC_BUILD_EXAMPLES=ON` (default). Output directo
 
 Prerequisites: Most examples need MPI and a working HeFFTe-linked OpenPFC build. Run with at least `mpirun -n 1` unless the source states otherwise.
 
+## Curriculum (suggested order)
+
+Use **Tier 1** on your first day, then branch by topic.
+
+```mermaid
+flowchart LR
+  subgraph t1 [Tier 1 — core stack]
+    A[02_domain_decomposition]
+    B[03_parallel_fft]
+    C[05_simulator]
+    D[12_cahn_hilliard]
+  end
+  subgraph t2 [Tier 2 — App / I/O / IC]
+    E[10_ui_register_ic]
+    F[11_write_results]
+    G[14_custom_field_initializer]
+  end
+  subgraph t3 [Tier 3 — advanced]
+    H[15_finite_difference_heat]
+    I[17_custom_coordinate_system]
+    J[fft_backend_benchmark]
+  end
+  A --> B --> C --> D
+  D --> E
+  D --> F
+  E --> G
+  D --> H
+  D --> I
+  C --> J
+```
+
+| Tier | Executables | Focus |
+|------|-------------|--------|
+| **1 — First week** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `World`, HeFFTe FFT, `Simulator`, spectral model (matches [`quickstart.md`](quickstart.md)) |
+| **2 — Wiring** | `10_ui_register_ic`, `11_write_results`, `14_custom_field_initializer`, `diffusion_model_with_custom_initial_condition` | JSON-style registration, writers, custom IC |
+| **3 — FD / space / tools** | `15_finite_difference_heat`, `17_custom_coordinate_system`, `fft_backend_benchmark`, `profiling_timer_report` | Halos, coordinates, backends, timing |
+
+Narrative companion: [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md). Ordered **Doxygen** snippets (separate tree): [`api_examples_walkthrough.md`](api_examples_walkthrough.md).
+
+## Full catalog
+
 | Executable | Source | What it demonstrates |
 |------------|--------|----------------------|
 | `fft_backend_benchmark` | `fft_backend_benchmark.cpp` | FFT backend benchmarking |
@@ -47,4 +88,5 @@ Prerequisites: Most examples need MPI and a working HeFFTe-linked OpenPFC build.
 
 - [`quickstart.md`](quickstart.md) — suggested order for the first runs
 - [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) — narrative tutorial
-- [`api/examples/`](api/examples/) — small snippets pulled into the HTML docs
+- [`api_examples_walkthrough.md`](api_examples_walkthrough.md) — `docs/api/examples/` in reading order
+- [`api/examples/`](api/examples/) — sources pulled into the HTML docs
