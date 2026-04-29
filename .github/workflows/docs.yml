@@ -12,6 +12,8 @@ on:
       - 'docs/**'
       - 'include/**/*.hpp'
       - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'CHANGELOG.md'
       - 'INSTALL.md'
       - 'examples/README.md'
       - 'apps/*/README.md'

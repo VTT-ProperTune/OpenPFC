@@ -5,6 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Contributing to documentation
 
+Repository-wide pointers (tests, changelog expectations): **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)**.
+
 ## Before you open a PR
 
 1. **Relative links** — From a file under **`docs/`**, paths like **`../INSTALL.md`** reach the repo root. Nested files (e.g. **`docs/getting_started/01-basics/README.md`**) need enough **`..`** segments. Run the checker (below).

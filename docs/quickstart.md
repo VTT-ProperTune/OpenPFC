@@ -123,7 +123,7 @@ Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix contain
 
 ## Getting started hub
 
-All beginner-oriented pages are linked from **[`getting_started/README.md`](getting_started/README.md)**.
+All beginner-oriented pages are linked from **[`getting_started/README.md`](getting_started/README.md)**. The **full documentation index** is **[`README.md`](README.md)** (this `docs/` directory).
 
 ## Common issues
 

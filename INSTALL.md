@@ -18,6 +18,8 @@ This document is the **supported** source build guide. OpenPFC is **routinely te
 
 For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found), see **[`docs/troubleshooting.md`](docs/troubleshooting.md)**.
 
+**Contributing** (builds, tests, documentation, changelog notes): **[`CONTRIBUTING.md`](CONTRIBUTING.md)**.
+
 ### MPI: OpenMPI from modules — do not improvise with another stack
 
 This guide’s **source of truth** for MPI is **Open MPI** from **environment modules** (`module load openmpi` after `module load gcc/…`), as in §1 below. That matches how OpenPFC and HeFFTe are meant to be built together on clusters and many dev machines.

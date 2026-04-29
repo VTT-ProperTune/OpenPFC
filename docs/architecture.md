@@ -85,7 +85,7 @@ Features that are useful for full applications but not required for minimal simu
 | Directory | Contents |
 |-----------|----------|
 | **frontend/utils** | `logging.hpp` re-exports **`kernel/utils/logging.hpp`**; utils.hpp, toml_to_json, show, timeleft, nancheck, memory_reporter, field_iteration, typename, array_to_string. |
-| **frontend/ui** | App, `spectral_cpu_stack.hpp` (JSON → world/FFT/time stack), `spectral_simulation_session.hpp`, `simulation_wiring.hpp`, `app_profiling.hpp` / `app_integrator_loop.hpp` (optional profiling lifecycle + time loop), from_json, json_helpers, errors, parameter_validator, parameter_metadata, field_modifier_registry; ui.hpp redirect. |
+| **frontend/ui** | App, `spectral_cpu_stack.hpp` (JSON → world/FFT/time stack), `spectral_simulation_session.hpp`, `simulation_wiring.hpp` (umbrella; split into `simulation_wiring_writers.hpp`, `simulation_wiring_conditions.hpp`, `simulation_wiring_simulator_section.hpp`, `simulation_wiring_detail.hpp`), `app_profiling.hpp` / `app_integrator_loop.hpp` (optional profiling lifecycle + time loop), from_json, json_helpers, errors, parameter_validator, parameter_metadata, field_modifier_registry; ui.hpp redirect. |
 | **frontend/io** | Results writer implementations (binary_writer, vtk_writer). |
 
 End-to-end flow from **JSON/TOML** to **`Simulator`** ( **`SpectralCpuStack`**, **`SpectralSimulationSession`**, **`simulation_wiring`** ) is described in **[`app_pipeline.md`](app_pipeline.md)**. Result file formats are summarized in **[`io_results.md`](io_results.md)**.

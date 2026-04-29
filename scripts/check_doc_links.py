@@ -18,6 +18,8 @@ SCAN_GLOBS = [
     "docs/**/*.md",
     "README.md",
     "INSTALL.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
     "examples/README.md",
     "apps/*/README.md",
 ]
