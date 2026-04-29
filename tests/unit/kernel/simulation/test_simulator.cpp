@@ -15,14 +15,15 @@
 #include <openpfc/kernel/simulation/simulator.hpp>
 
 #include "fixtures/mock_model.hpp"
+#include "fixtures/simulation_factories.hpp"
 
 using namespace Catch::Matchers;
 using namespace pfc;
 using namespace pfc::types;
 
 TEST_CASE("Simulator functionality", "[simulator][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}));
-  auto decomposition = decomposition::create(world, 1);
+  auto world = pfc::test::make_world_cube_8();
+  auto decomposition = pfc::test::make_serial_decomposition(world);
   auto fft = fft::create(decomposition);
 
   pfc::testing::MockModel model(fft, world);
@@ -115,8 +116,8 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
 }
 
 TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
-  auto world = world::create(GridSize({8, 8, 8}));
-  auto decomposition = decomposition::create(world, 1);
+  auto world = pfc::test::make_world_cube_8();
+  auto decomposition = pfc::test::make_serial_decomposition(world);
   auto fft = fft::create(decomposition);
 
   pfc::testing::MockModel model(fft, world);
@@ -126,8 +127,8 @@ TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
 }
 
 TEST_CASE("Simulator::step advances Time before Model::step", "[simulator][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}));
-  auto decomposition = decomposition::create(world, 1);
+  auto world = pfc::test::make_world_cube_8();
+  auto decomposition = pfc::test::make_serial_decomposition(world);
   auto fft = fft::create(decomposition);
 
   pfc::testing::InstrumentedMockModel model(fft, world);
@@ -156,8 +157,8 @@ TEST_CASE("Simulator::step advances Time before Model::step", "[simulator][unit]
 
 TEST_CASE("Simulator begin/end/step_with_physics matches step()",
           "[simulator][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}));
-  auto decomposition = decomposition::create(world, 1);
+  auto world = pfc::test::make_world_cube_8();
+  auto decomposition = pfc::test::make_serial_decomposition(world);
   auto fft = fft::create(decomposition);
 
   pfc::testing::InstrumentedMockModel model_a(fft, world);
@@ -183,8 +184,8 @@ TEST_CASE("Simulator begin/end/step_with_physics matches step()",
 }
 
 TEST_CASE("Simulator phased begin/end matches step()", "[simulator][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}));
-  auto decomposition = decomposition::create(world, 1);
+  auto world = pfc::test::make_world_cube_8();
+  auto decomposition = pfc::test::make_serial_decomposition(world);
   auto fft = fft::create(decomposition);
 
   pfc::testing::InstrumentedMockModel model_a(fft, world);
