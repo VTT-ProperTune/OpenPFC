@@ -7,9 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Documentation
 
+- **[`docs/README.md`](docs/README.md)** — index of all guides (architecture, HPC, tutorials).
 - **[`docs/contributing-docs.md`](docs/contributing-docs.md)** — link checks, SPDX headers, where to add cross-links in the doc index.
 - Run from the repo root: **`python3 scripts/check_doc_links.py`**
 - **Style** for code and headers: **[`docs/styleguide.md`](docs/styleguide.md)**
+- **Extending the library** (models, **`App`**, validation): **[`docs/extending_openpfc/README.md`](docs/extending_openpfc/README.md)**, **[`docs/class_tour.md`](docs/class_tour.md)**, **[`docs/tutorials/custom_app_minimal.md`](docs/tutorials/custom_app_minimal.md)**, **[`docs/parameter_validation.md`](docs/parameter_validation.md)**
 
 ## Build and test
 

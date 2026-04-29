@@ -27,5 +27,8 @@ Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detai
 
 ## See also
 
-- **[`configuration.md`](configuration.md)** — config file sections  
+- **[`README.md`](README.md)** — full documentation index (this directory)
+- **[`class_tour.md`](class_tour.md)** — main types, headers, and runnable references
+- **[`configuration.md`](configuration.md)** — config file sections
+- **[`app_pipeline.md`](app_pipeline.md)** — JSON/TOML → **`Simulator`**
 - **[`faq.md`](faq.md)** — practical Q&A

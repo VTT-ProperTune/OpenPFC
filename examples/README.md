@@ -38,6 +38,9 @@ Every target registered in **`CMakeLists.txt`** is listed with a one-line descri
 
 ## See also
 
-- **[`../docs/quickstart.md`](../docs/quickstart.md)** — onboarding  
-- **`fft_backend_selection.toml`** — commented TOML for **`[plan_options]`** (FFT backend and HeFFTe knobs)  
+- **[`../docs/quickstart.md`](../docs/quickstart.md)** — onboarding
+- **[`../docs/class_tour.md`](../docs/class_tour.md)** — how examples map to **`World`**, **`Model`**, **`Simulator`**, **`App`**
+- **[`../docs/extending_openpfc/README.md`](../docs/extending_openpfc/README.md)** — turning patterns into your own model or **`App`**
+- **`fft_backend_selection.toml`** — commented TOML for **`[plan_options]`** (FFT backend and HeFFTe knobs)
 - **[`../docs/configuration.md`](../docs/configuration.md)** — how config files map to the framework
+- **[`../docs/app_pipeline.md`](../docs/app_pipeline.md)** — declarative runs with JSON/TOML
