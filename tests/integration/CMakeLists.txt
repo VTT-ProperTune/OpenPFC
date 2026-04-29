@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Integration tests
@@ -12,6 +12,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/parallel_scaling/test_halo_patterns.cpp
   scenarios/parallel_scaling/test_halo_exchange_driver.cpp
   scenarios/parallel_scaling/test_fd_heat_mpi.cpp
+  scenarios/parallel_scaling/test_fd_xy_mpi.cpp
   scenarios/io_workflows/test_vtk_roundtrip.cpp
   scenarios/field_operations/test_field_modifiers_integration.cpp
   scenarios/gpu_validation/test_cuda_vs_cpu.cpp
