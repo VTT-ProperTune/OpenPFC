@@ -43,6 +43,7 @@ Use `tungsten_cuda` / `tungsten_hip` when built; pass the same config path. On L
 | CPU model | `include/tungsten/cpu/` |
 | CUDA / HIP | `include/tungsten/cuda/`, `include/tungsten/hip/` |
 | Shared params / validation | `include/tungsten/common/tungsten_input.hpp` |
+| Shared `main()` / GPU VTK drivers | `include/tungsten/common/tungsten_app_main.hpp`, `run_tungsten_gpu_vtk.hpp` |
 
 ## See also
 

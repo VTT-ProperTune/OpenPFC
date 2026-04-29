@@ -17,7 +17,7 @@
 
 namespace pfc::utils {
 
-using detail::show;
+using pfc::detail::show;
 
 } // namespace pfc::utils
 

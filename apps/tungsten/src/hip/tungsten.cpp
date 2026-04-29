@@ -5,18 +5,9 @@
 #error "tungsten/hip requires HIP support. Enable with -DOpenPFC_ENABLE_HIP=ON"
 #endif
 
-#include <cstdlib>
-#include <iostream>
+#include <tungsten/common/tungsten_app_main.hpp>
 #include <tungsten/hip/tungsten.hpp>
 
 int main(int argc, char *argv[]) {
-  try {
-    std::cout << std::fixed;
-    std::cout.precision(3);
-    pfc::ui::App<TungstenHIP<double>> app(argc, argv);
-    return app.main();
-  } catch (const std::exception &e) {
-    std::cerr << e.what() << '\n';
-    return EXIT_FAILURE;
-  }
+  return tungsten::run_tungsten_app_main<TungstenHIP<double>>(argc, argv);
 }
