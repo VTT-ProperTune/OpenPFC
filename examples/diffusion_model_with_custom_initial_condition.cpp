@@ -107,8 +107,8 @@ void run() {
   Simulator simulator(model, time);
 
   print_stats(simulator);
-  while (!simulator.done()) {
-    simulator.step();
+  while (!pfc::done(simulator)) {
+    pfc::step(simulator);
     print_stats(simulator);
   }
 

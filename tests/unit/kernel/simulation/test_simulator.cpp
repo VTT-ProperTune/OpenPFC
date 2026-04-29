@@ -134,25 +134,25 @@ TEST_CASE("Simulator::step advances Time before Model::step", "[simulator][unit]
   pfc::testing::InstrumentedMockModel model(fft, world);
   Time time({0.0, 1.5, 0.5}, 0.0);
   Simulator sim(model, time);
-  sim.initialize();
+  pfc::initialize(sim);
 
-  REQUIRE_FALSE(sim.done());
-  sim.step();
+  REQUIRE_FALSE(pfc::done(sim));
+  pfc::step(sim);
   REQUIRE(model.step_call_count == 1);
   REQUIRE_THAT(model.last_step_time, WithinAbs(0.5, 1e-10));
-  REQUIRE(sim.get_increment() == 1);
+  REQUIRE(pfc::get_increment(sim) == 1);
   REQUIRE_THAT(pfc::time::current(sim.get_time()), WithinAbs(0.5, 1e-10));
 
-  sim.step();
+  pfc::step(sim);
   REQUIRE(model.step_call_count == 2);
   REQUIRE_THAT(model.last_step_time, WithinAbs(1.0, 1e-10));
-  REQUIRE(sim.get_increment() == 2);
+  REQUIRE(pfc::get_increment(sim) == 2);
 
-  sim.step();
+  pfc::step(sim);
   REQUIRE(model.step_call_count == 3);
   REQUIRE_THAT(model.last_step_time, WithinAbs(1.5, 1e-10));
-  REQUIRE(sim.get_increment() == 3);
-  REQUIRE(sim.done());
+  REQUIRE(pfc::get_increment(sim) == 3);
+  REQUIRE(pfc::done(sim));
 }
 
 TEST_CASE("Simulator begin/end/step_with_physics matches step()",
@@ -167,13 +167,13 @@ TEST_CASE("Simulator begin/end/step_with_physics matches step()",
   Time time_b({0.0, 1.5, 0.5}, 0.0);
   Simulator sim_a(model_a, time_a);
   Simulator sim_b(model_b, time_b);
-  sim_a.initialize();
-  sim_b.initialize();
+  pfc::initialize(sim_a);
+  pfc::initialize(sim_b);
 
-  while (!sim_a.done()) {
-    sim_a.step();
+  while (!pfc::done(sim_a)) {
+    pfc::step(sim_a);
   }
-  while (!sim_b.done()) {
+  while (!pfc::done(sim_b)) {
     sim_b.step_with_physics(
         [&] { pfc::step(model_b, pfc::time::current(sim_b.get_time())); });
   }
@@ -194,17 +194,17 @@ TEST_CASE("Simulator phased begin/end matches step()", "[simulator][unit]") {
   Time time_b({0.0, 1.5, 0.5}, 0.0);
   Simulator sim_a(model_a, time_a);
   Simulator sim_b(model_b, time_b);
-  sim_a.initialize();
-  sim_b.initialize();
+  pfc::initialize(sim_a);
+  pfc::initialize(sim_b);
 
-  while (!sim_a.done()) {
-    sim_a.step();
+  while (!pfc::done(sim_a)) {
+    pfc::step(sim_a);
   }
 
-  while (!sim_b.done()) {
-    sim_b.begin_integrator_step();
+  while (!pfc::done(sim_b)) {
+    pfc::begin_integrator_step(sim_b);
     pfc::step(model_b, pfc::time::current(sim_b.get_time()));
-    sim_b.end_integrator_step();
+    pfc::end_integrator_step(sim_b);
   }
 
   REQUIRE(model_a.step_call_count == model_b.step_call_count);

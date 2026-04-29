@@ -421,8 +421,8 @@ int main(int argc, char **argv) {
       std::cout << std::string(70, '-') << "\n";
     }
 
-    while (!simulator.done()) {
-      simulator.step();
+    while (!pfc::done(simulator)) {
+      pfc::step(simulator);
       Time &clock = pfc::get_time(simulator);
       if (rank == 0 && clock.do_save()) {
         printf("    Step %4d / ~%4d  |  t = %6.2f  |  Saving output...\n",

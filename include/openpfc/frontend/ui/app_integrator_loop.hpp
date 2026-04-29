@@ -57,7 +57,7 @@ IntegratorTimings run_simulator_time_integration_loop(
 
   while (!pfc::time::done(session.time())) {
     session.fft().reset_fft_time();
-    session.simulator().begin_integrator_step();
+    pfc::begin_integrator_step(session.simulator());
     const double barrier_step_s = pfc::profiling::measure_barriered(env.comm, [&] {
       std::optional<pfc::profiling::ProfilingContextScope> profile_ctx;
       if (env.profiler) {
@@ -88,7 +88,7 @@ IntegratorTimings run_simulator_time_integration_loop(
     const double fft_time =
         pfc::profiling::reduce_max_to_root(env.comm, fft_meter_s, 0);
 
-    session.simulator().end_integrator_step();
+    pfc::end_integrator_step(session.simulator());
 
     if (out.steps_completed > 3) {
       avg_step_ema = 0.01 * steptime + 0.99 * avg_step_ema;

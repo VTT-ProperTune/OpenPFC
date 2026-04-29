@@ -163,12 +163,12 @@ void print_statline(Simulator &s) {
 void run_simulator(Simulator &s) {
   // Initialize the simulator before starting time stepping.
   // This also initializes model.
-  s.initialize();
+  pfc::initialize(s);
 
   // Run the simulator until we are done
   print_statline(s);
-  while (!s.done()) {
-    s.step();
+  while (!pfc::done(s)) {
+    pfc::step(s);
     print_statline(s);
   }
 }

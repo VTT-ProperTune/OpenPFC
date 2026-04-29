@@ -259,7 +259,8 @@ void example_complete_simulation() {
 
   // 5. Create simulator
   Simulator sim(model, time);
-  sim.initialize(); // Calls pfc::initialize(model, dt) on the wrapped Model
+  pfc::initialize(
+      sim); // Orchestrates pfc::initialize(model, dt) on the wrapped Model
 
   if (mpi::get_rank() == 0) {
     std::cout << "Step 5: Created simulator\n\n";
@@ -286,8 +287,8 @@ void example_complete_simulation() {
   }
 
   // 8. Run simulation loop
-  while (!sim.done()) {
-    sim.step();
+  while (!pfc::done(sim)) {
+    pfc::step(sim);
   }
 
   if (mpi::get_rank() == 0) {
@@ -322,7 +323,7 @@ int main(int argc, char **argv) {
       std::cout << "  ✓ Simulator orchestrates the entire workflow\n";
       std::cout << "  ✓ Initial conditions applied automatically at t=0\n";
       std::cout << "  ✓ Results writers called at specified intervals\n";
-      std::cout << "  ✓ Main loop: while (!sim.done()) { sim.step(); }\n";
+      std::cout << "  ✓ Main loop: while (!pfc::done(sim)) { pfc::step(sim); }\n";
       std::cout << "\nSee include/openpfc/simulator.hpp for complete API.\n";
     }
 
