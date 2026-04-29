@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <mpi.h>
 #include <vector>
 
@@ -53,6 +54,35 @@ int main(int argc, char *argv[]) {
   std::vector<double> lap(nlocal);
   allen_cahn::fill_initial_condition(&u, decomp, rank);
 
+  if (rank == 0) {
+    std::cout << "IC: Gaussian nucleus (φ→+1 at center, φ→-1 far); sigma ≈ 6% of "
+                 "min(nx,ny) in cell units — see common.hpp.\n";
+  }
+
+  {
+    double lo = std::numeric_limits<double>::infinity();
+    double hi = -std::numeric_limits<double>::infinity();
+    for (double v : u) {
+      lo = std::min(lo, v);
+      hi = std::max(hi, v);
+    }
+    double g_lo = 0.0;
+    double g_hi = 0.0;
+    MPI_Allreduce(&lo, &g_lo, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&hi, &g_hi, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    if (rank == 0) {
+      std::cout << "phi global min/max at t=0: " << g_lo << " " << g_hi << "\n";
+    }
+  }
+
+  if (!cfg.png_output_initial.empty()) {
+    pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u,
+                                           cfg.png_output_initial);
+    if (rank == 0) {
+      std::cout << "Wrote initial-state PNG: " << cfg.png_output_initial << "\n";
+    }
+  }
+
   constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
   auto face_halos = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
   pfc::SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, halo_width,
@@ -78,6 +108,22 @@ int main(int argc, char *argv[]) {
   }
   double sum_global = 0.0;
   MPI_Reduce(&sum_u, &sum_global, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  {
+    double lo = std::numeric_limits<double>::infinity();
+    double hi = -std::numeric_limits<double>::infinity();
+    for (double v : u) {
+      lo = std::min(lo, v);
+      hi = std::max(hi, v);
+    }
+    double g_lo = 0.0;
+    double g_hi = 0.0;
+    MPI_Allreduce(&lo, &g_lo, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&hi, &g_hi, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    if (rank == 0) {
+      std::cout << "phi global min/max at end: " << g_lo << " " << g_hi << "\n";
+    }
+  }
 
   if (rank == 0) {
     std::cout << "Allen–Cahn FD (CPU): grid " << cfg.nx_glob << "x" << cfg.ny_glob

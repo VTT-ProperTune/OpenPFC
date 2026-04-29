@@ -21,13 +21,18 @@ namespace allen_cahn {
 struct RunConfig {
   int nx_glob = 64;
   int ny_glob = 64;
-  int n_steps = 50;
-  double dt = 0.01;
-  double M = 1.0;
-  double epsilon = 1.0;
+  /** Default length chosen so a center seed visibly coarsens in 2D (raise M or
+   * lower ε for faster interface motion; reduce dt if explicit Euler diverges). */
+  int n_steps = 3000;
+  double dt = 0.0015;
+  double M = 2.0;
+  double epsilon = 0.35;
   /** If non-empty, gather the final scalar field on rank 0 and write a grayscale
    * PNG. */
   std::string png_output;
+  /** If non-empty (optional argv[8]), write the field right after IC, before time
+   * stepping. */
+  std::string png_output_initial;
   static constexpr int kHaloWidth = 1;
 };
 
@@ -52,11 +57,23 @@ inline RunConfig parse_args(int argc, char **argv) {
     c.epsilon = std::atof(argv[6]);
   }
   if (argc > 7) {
-    c.png_output = argv[7];
+    if (argc > 8) {
+      c.png_output_initial = argv[7];
+      c.png_output = argv[8];
+    } else {
+      c.png_output = argv[7];
+    }
   }
   return c;
 }
 
+/**
+ * @brief Phase field at t=0: one "grain" as a Gaussian bump on a φ≈-1 matrix.
+ *
+ * φ(g) = -1 + 2 exp( -r² / (2σ²) ), with r measured from the domain center in
+ * index space. At the center φ→+1; far from the center φ→-1 (Allen–Cahn
+ * equilibria). Diffusion and the double-well term then let the +1 region grow.
+ */
 inline void fill_initial_condition(std::vector<double> *u,
                                    const pfc::decomposition::Decomposition &decomp,
                                    int rank) {
@@ -69,7 +86,12 @@ inline void fill_initial_condition(std::vector<double> *u,
   const int ny = sz[1];
   const int nz = sz[2];
   const int sxy = nx * ny;
-  const double pi = std::acos(-1.0);
+  const double cx = 0.5 * static_cast<double>(gsz[0] - 1);
+  const double cy = 0.5 * static_cast<double>(gsz[1] - 1);
+  const int gmin = std::min(gsz[0], gsz[1]);
+  const double sigma =
+      std::max(1.5, 0.06 * static_cast<double>(gmin)); // small seed, ~6% of span
+  const double denom = 2.0 * sigma * sigma;
   for (int iz = 0; iz < nz; ++iz) {
     for (int iy = 0; iy < ny; ++iy) {
       for (int ix = 0; ix < nx; ++ix) {
@@ -79,11 +101,10 @@ inline void fill_initial_condition(std::vector<double> *u,
             static_cast<std::size_t>(ix) +
             static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
             static_cast<std::size_t>(iz) * static_cast<std::size_t>(sxy);
-        const double sx = std::sin(2.0 * pi * static_cast<double>(gx) /
-                                   static_cast<double>(gsz[0]));
-        const double sy = std::sin(2.0 * pi * static_cast<double>(gy) /
-                                   static_cast<double>(gsz[1]));
-        (*u)[idx] = 0.1 * sx * sy;
+        const double dxg = static_cast<double>(gx) - cx;
+        const double dyg = static_cast<double>(gy) - cy;
+        const double r2 = dxg * dxg + dyg * dyg;
+        (*u)[idx] = -1.0 + 2.0 * std::exp(-r2 / denom);
       }
     }
   }

@@ -71,6 +71,14 @@ int main(int argc, char *argv[]) {
   std::vector<double> u_host(nlocal);
   allen_cahn::fill_initial_condition(&u_host, decomp, rank);
 
+  if (!cfg.png_output_initial.empty()) {
+    pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
+                                           cfg.png_output_initial);
+    if (rank == 0) {
+      std::cout << "Wrote initial-state PNG: " << cfg.png_output_initial << "\n";
+    }
+  }
+
   constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
   auto face_halos_host =
       pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
