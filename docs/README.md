@@ -38,6 +38,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | **Symptom → fix** playbooks | [`operator_playbooks.md`](operator_playbooks.md) |
 | **Numerics** / stability caveats | [`science_numerics_limits.md`](science_numerics_limits.md) |
 | **Printable handbook** (optional `pandoc`) | [`handbook_build.md`](handbook_build.md) |
+| **MkDocs + Material** preview (`uv`, root `mkdocs.yml`) | [`mkdocs_preview.md`](mkdocs_preview.md) |
 
 ## Where to go first
 

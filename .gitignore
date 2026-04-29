@@ -9,8 +9,11 @@
 experiments/scalability
 
 .vscode
+.venv
+**/venv
 build
 build-handbook
+site
 result
 results
 *.out
@@ -33,6 +36,7 @@ scripts/*
 !scripts/run-clang-tidy.sh
 !scripts/xdmfgen.py
 !scripts/build_handbook.sh
+!scripts/build_mkdocs.sh
 !scripts/check_doc_links.py
 !scripts/check_doc_bash_syntax.py
 !scripts/check_end_to_end_allen_cahn.py

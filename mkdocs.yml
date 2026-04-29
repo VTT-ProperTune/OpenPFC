@@ -1,0 +1,92 @@
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# MkDocs + Material — prose documentation preview (markdown under docs/).
+# Python env: docs/pyproject.toml (uv). From repository root:
+#   NO_MKDOCS_2_WARNING=1 uv run --project docs mkdocs serve
+#   ./scripts/build_mkdocs.sh build --strict   # output: ./site/
+
+site_name: OpenPFC documentation
+site_description: Prose guides for the OpenPFC phase-field crystal framework (in-repo markdown)
+site_author: OpenPFC contributors
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+# Intentionally link outside docs/ (../INSTALL.md, apps/, include/, …). Suppress
+# MkDocs link/nav validation noise so `mkdocs build --strict` stays clean.
+# Preview locally: NO_MKDOCS_2_WARNING=1 uv run --project docs mkdocs build --strict
+validation:
+  nav:
+    omitted_files: ignore
+  links:
+    not_found: ignore
+    unrecognized_links: ignore
+    absolute_links: relative_to_docs
+
+nav:
+  - Home: README.md
+  - Start here (~15 min): start_here_15_minutes.md
+  - Quick start: quickstart.md
+  - Learning paths: learning_paths.md
+  - Tutorials:
+      - Tutorials hub: tutorials/README.md
+  - Guides:
+      - Architecture: architecture.md
+      - Spectral stack: spectral_stack.md
+      - App pipeline: app_pipeline.md
+      - Spectral config reference: spectral_app_config_reference.md
+  - Reference:
+      - Class tour: class_tour.md
+      - Glossary: glossary.md
+      - Examples catalog: examples_catalog.md
+  - Meta:
+      - When (not) to use OpenPFC: when_not_to_use_openpfc.md
+      - Documentation versioning: documentation_versioning.md
+      - Contributing to docs: contributing-docs.md
+      - MkDocs preview (this site): mkdocs_preview.md

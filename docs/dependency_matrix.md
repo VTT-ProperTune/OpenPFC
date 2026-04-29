@@ -39,6 +39,8 @@ Single-page summary of **what this repository is tested against** vs **optional 
 | **`scripts/check_end_to_end_allen_cahn.py`** | Tutorial vs [`apps/allen_cahn/README.md`](../apps/allen_cahn/README.md) example command. |
 | **`scripts/check_doc_bash_syntax.py`** | `bash -n` on ` ```bash` / ` ```sh` fenced blocks under `docs/`. |
 | **`scripts/build_handbook.sh`** | Optional Pandoc concatenation — [`handbook_build.md`](handbook_build.md). |
+| **`uv` + `docs/pyproject.toml`** | MkDocs + Material for optional prose browser preview — [`mkdocs_preview.md`](mkdocs_preview.md), root `mkdocs.yml`. |
+| **`scripts/build_mkdocs.sh`** | Sets `NO_MKDOCS_2_WARNING=1` and runs `mkdocs` (strict-clean build). |
 
 ## See also
 

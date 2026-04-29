@@ -9,9 +9,9 @@ Structured **time-boxed** modules for teaching OpenPFC. The same material exists
 
 | Module | Time (guide) | Focus |
 |--------|----------------|-------|
-| [Half-day 1 — build & first MPI run](curriculum.md#half-day-1--build-environment-and-first-mpi-run) | ~3 h | Toolchain, `cmake`, `05_simulator`, reading logs |
-| [Half-day 2 — spectral app & artifacts](curriculum.md#half-day-2--json-app-and-artifacts) | ~3 h | Tungsten JSON, binary/VTK, `app_pipeline` |
-| [Half-day 3 — HPC & profiling](curriculum.md#half-day-3--hpc-and-profiling) | ~3 h | Slurm, MPI-IO checklist, profiling export |
+| [Half-day 1 — build & first MPI run](curriculum.md#workshop-day1) | ~3 h | Toolchain, `cmake`, `05_simulator`, reading logs |
+| [Half-day 2 — spectral app & artifacts](curriculum.md#workshop-day2) | ~3 h | Tungsten JSON, binary/VTK, `app_pipeline` |
+| [Half-day 3 — HPC & profiling](curriculum.md#workshop-day3) | ~3 h | Slurm, MPI-IO checklist, profiling export |
 
 Full outline: [`curriculum.md`](curriculum.md).
 

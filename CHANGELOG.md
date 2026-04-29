@@ -11,6 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 - **Onboarding spine:** `docs/start_here_15_minutes.md`, `docs/spectral_stack.md`, `docs/recipes/`, `docs/gpu_path_decision.md`, `docs/hpc_operator_guide.md`.  
 - **Quality / teaching:** `docs/when_not_to_use_openpfc.md` (fit + FD vs spectral direction), `docs/documentation_versioning.md`, `docs/from_paper_to_run.md`, `docs/workshop/`, `docs/adr/`, `docs/operator_playbooks.md`, `docs/science_numerics_limits.md`, optional printable handbook (`docs/handbook_build.md`, `scripts/build_handbook.sh`).  
+- **MkDocs (optional):** `uv` project under `docs/` (`mkdocs`, Material theme); root `mkdocs.yml` builds a browsable prose site — see `docs/mkdocs_preview.md`.  
 - **CI:** `scripts/check_doc_bash_syntax.py` validates fenced `bash`/`sh` blocks under `docs/`.  
 - **Binary MPI-IO fields:** `docs/binary_field_io_spec.md` (layout, filename templates, collectives).  
 - **Spectral `App` config keys:** `docs/spectral_app_config_reference.md` (world, time, `plan_options`, `fields`, IC/BC).  

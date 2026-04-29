@@ -52,6 +52,17 @@ Keep examples syntactically valid; use comments for non-literal lines if needed.
 
 Maintainers can build a concatenated PDF/HTML — see [`handbook_build.md`](handbook_build.md) and [`scripts/build_handbook.sh`](../scripts/build_handbook.sh).
 
+## MkDocs + Material (browser preview)
+
+Optional static site for prose under `docs/`:
+
+```bash
+./scripts/build_mkdocs.sh build --strict   # from repository root; output ./site/
+NO_MKDOCS_2_WARNING=1 uv run --project docs mkdocs serve
+```
+
+Details and caveats (links outside `docs/`): [`mkdocs_preview.md`](mkdocs_preview.md).
+
 ## Style
 
 - Prefer tables and short sections over long unstructured prose.
