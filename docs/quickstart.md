@@ -1,0 +1,103 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+# Quick start
+
+This page is the **fast path** from a clone to a running simulation or a linked program. For install details (modules, HeFFTe **2.4.1**, CUDA/HIP), use **[`INSTALL.md`](../INSTALL.md)** first.
+
+## What you are building toward
+
+OpenPFC is a **compiled** C++ library (`openpfc`) with public headers. Meaningful use involves **MPI** and a **HeFFTe** build that matches your toolchain. You can:
+
+1. **Run tutorial executables** under `examples/` (after configuring with **`OpenPFC_BUILD_EXAMPLES=ON`**, the default).
+2. **Run a shipped application** under **`apps/`** with JSON/TOML input (after **`OpenPFC_BUILD_APPS=ON`**, the default).
+3. **Link OpenPFC from your own CMake project** via `find_package(OpenPFC)` (see also [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md)).
+
+Pick **one** track below, then follow **Next steps**.
+
+---
+
+## 1. Configure and build OpenPFC
+
+From the repository root (after loading compilers and MPI as in **`INSTALL.md`**):
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+cmake --build build -j"$(nproc)"
+```
+
+Use **separate build directories** for CPU vs GPU if you switch CUDA/HIP options; see [`build_cpu_gpu.md`](build_cpu_gpu.md).
+
+---
+
+## 2A. Run examples (library + MPI)
+
+Examples are built into `<build>/examples/` (path may be `build/examples` or `Release/examples` depending on the generator).
+
+| Order | Executable | What it shows |
+|-------|------------|----------------|
+| 1 | `02_domain_decomposition` | `World`, `Decomposition`, MPI layout |
+| 2 | `03_parallel_fft` | Distributed FFT with HeFFTe |
+| 3 | `05_simulator` | `Simulator`, `Time`, `FieldModifier` |
+| 4 | `12_cahn_hilliard` | Fuller spectral model + JSON-style wiring patterns |
+
+Typical run (adjust ranks for your machine):
+
+```bash
+cd build
+mpirun -n 4 ./examples/05_simulator
+```
+
+See **[`examples_catalog.md`](examples_catalog.md)** for the full list of built targets and short descriptions.
+
+---
+
+## 2B. Run an application (config file)
+
+Shipped apps live under **`apps/`**; see **[`applications.md`](applications.md)** for binaries and sample inputs.
+
+**Tungsten (CPU)** after a successful build:
+
+```bash
+cd build
+mpirun -n 4 ./apps/tungsten/tungsten /path/to/input.json
+```
+
+Sample JSON layouts are described in [`apps/tungsten/inputs_json/README.md`](../apps/tungsten/inputs_json/README.md). GPU builds may provide `tungsten_cuda` or `tungsten_hip` when enabled.
+
+---
+
+## 2C. Use OpenPFC from your own project
+
+Minimal pattern (your app sources must see the same MPI/HeFFTe environment used to build OpenPFC):
+
+```cmake
+cmake_minimum_required(VERSION 3.15)
+project(my_sim LANGUAGES CXX)
+find_package(OpenPFC REQUIRED)
+add_executable(my_sim main.cpp)
+target_link_libraries(my_sim PRIVATE OpenPFC)
+```
+
+Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix containing `lib/cmake/OpenPFC/OpenPFCConfig.cmake`. A longer walkthrough is in [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md).
+
+---
+
+## Next steps
+
+| Goal | Where to go |
+|------|-------------|
+| Conceptual layering (kernel / runtime / frontend) | [`architecture.md`](architecture.md) |
+| Longer tutorial (world → FFT → CMake) | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
+| Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
+| Extend models, ICs, coordinates | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
+| HTML API reference | [Published docs](https://vtt-propertune.github.io/OpenPFC/dev/) (also build `docs` locally with **`OpenPFC_BUILD_DOCUMENTATION=ON`**) |
+| HPC / LUMI | [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
+
+---
+
+## Getting started hub
+
+All beginner-oriented pages are linked from **[`getting_started/README.md`](getting_started/README.md)**.

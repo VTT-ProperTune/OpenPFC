@@ -64,10 +64,14 @@ high-performance simulations.
 
 T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *“OpenPFC: an open-source framework for high performance 3D phase field crystal simulations”*, Modelling Simul. Mater. Sci. Eng., Feb. 2024, doi: 10.1088/1361-651X/ad269e. [(link)](https://iopscience.iop.org/article/10.1088/1361-651X/ad269e)
 
+## Quick start
+
+**First time with the repo?** Follow **[docs/quickstart.md](docs/quickstart.md)** (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). Tutorial prose lives under **[docs/getting_started/](docs/getting_started/)**; runnable targets are listed in **[docs/examples_catalog.md](docs/examples_catalog.md)** and shipped programs in **[docs/applications.md](docs/applications.md)**.
+
 ## Documentation
 
 The project documentation can be found from
-<https://vtt-propertune.github.io/OpenPFC/dev/>.
+<https://vtt-propertune.github.io/OpenPFC/dev/> (API reference and generated HTML). **In-repo guides** for onboarding and workflows are indexed from **[docs/README.md](docs/README.md)**.
 
 **Build and install from source:** see [INSTALL.md](INSTALL.md).
 
@@ -197,7 +201,7 @@ OpenPFC is designed as an **open laboratory** where you can extend functionality
 - **Custom physics models** (user-defined PDEs, multi-physics)
 - **Custom I/O formats** (HDF5, VTK, custom binary)
 
-**Get started:** See the [Extension Guide](docs/extending_openpfc/README.md) and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
+**Get started:** See the [Extension Guide](docs/extending_openpfc/README.md), **[docs/examples_catalog.md](docs/examples_catalog.md)**, and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
 
 ## FFT Backend Selection
 

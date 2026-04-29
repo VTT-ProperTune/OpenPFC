@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This directory holds extra guides and assets. **Installing and building** the project is documented in the repository root: **[`INSTALL.md`](../INSTALL.md)** (supported toolchains, HeFFTe **2.4.1**, MPI, CUDA/HIP).
 
+## New users — start here
+
+1. **[`quickstart.md`](quickstart.md)** — install → run **examples** or an **app** → or link the library from your own CMake project.
+2. **[`getting_started/README.md`](getting_started/README.md)** — hub for tutorials and links to the **examples catalog** and **applications** pages.
+3. **[`extending_openpfc/README.md`](extending_openpfc/README.md)** — how to add models, modifiers, and config-driven apps without forking the core library.
+
 ## Quick links
 
 | Topic | Document |
@@ -20,11 +26,15 @@ This directory holds extra guides and assets. **Installing and building** the pr
 | Code style | [`styleguide.md`](styleguide.md) |
 | LUMI-G (HIP / ROCm / Cray) | [`INSTALL.LUMI.md`](INSTALL.LUMI.md) |
 | LUMI Slurm / tungsten performance jobs | [`lumi_slurm/README.md`](lumi_slurm/README.md) |
+| Runnable `examples/` executables | [`examples_catalog.md`](examples_catalog.md) |
+| Shipped `apps/` programs | [`applications.md`](applications.md) |
+| Extending models and the UI pipeline | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
 
 ## Tutorials
 
 | Section | Document |
 |---------|-----------|
+| Getting started hub | [`getting_started/README.md`](getting_started/README.md) |
 | World, decomposition, FFT, CMake “hello” | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
 
