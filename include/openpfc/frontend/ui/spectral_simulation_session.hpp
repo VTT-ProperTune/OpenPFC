@@ -11,6 +11,10 @@
  * returned as `std::unique_ptr` so it is never moved after construction: the
  * simulator holds references to the model and time members. `CpuFft` is held
  * inside the stack and is not movable.
+ *
+ * CUDA/HIP models should treat this host `CpuFft` as the sole `pfc::FFT` passed
+ * into `ConcreteModel` and bind device FFTs from the same decomposition instead
+ * of allocating an extra CPU HeFFTe instance in application drivers.
  */
 
 #ifndef PFC_UI_SPECTRAL_SIMULATION_SESSION_HPP

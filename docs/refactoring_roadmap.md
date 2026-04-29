@@ -50,6 +50,7 @@ Done (foundation):
 Planned steps:
 
 - Optional: templated `SpectralSimulationSession` or type-erased FFT at the session boundary so `App` can skip constructing a dummy `CpuFft` for GPU-only models.
+- Documented interim policy (Doxygen): reuse the one `SpectralCpuStack` `CpuFft` for `Model(fft, world, comm)` when adding GPU drivers; use `spectral_fft_stack_factory.hpp` for cuFFT/ROCm plan JSON only—no second throwaway CPU FFT in app code.
 
 ## Phase D — CMake library split
 
