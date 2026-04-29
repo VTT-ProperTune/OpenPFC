@@ -633,7 +633,7 @@ underlying preprocessor flag before including the NaN check header:
 
 Then, at the code level, there's a macro `CHECK_AND_ABORT_IF_NANS`, which can be
 used to check if there are any NaNs in the simulation. The macro is defined in
-`openpfc/utils/nancheck.hpp`. This is a zero overhead when compiling with
+`openpfc/frontend/utils/nancheck.hpp`. This is a zero overhead when compiling with
 release build type. At the moment, a user must explicitly call the macro, but in
 the future, it might be called automatically in some situations. Example usage is
 (see also [this][tungsten-nan-check] example):
@@ -644,6 +644,12 @@ CHECK_AND_ABORT_IF_NANS(psi);
 psi[0] = std::numeric_limits<double>::quiet_NaN();
 CHECK_AND_ABORT_IF_NANS(psi);
 ```
+
+The non-`_MPI` macros use a **default MPI communicator** for rank labels and
+`MPI_Abort`: `pfc::ui::App::main` sets it to the application communicator; other
+drivers can call `pfc::utils::set_default_nan_check_mpi_comm(comm)` once at
+startup, or use `CHECK_AND_ABORT_IF_NANS_MPI` / `CHECK_AND_ABORT_IF_NAN_MPI` with
+an explicit communicator.
 
 [tungsten-nan-check]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/apps/tungsten.cpp#L220
 

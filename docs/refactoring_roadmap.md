@@ -18,6 +18,7 @@ Done:
 - Shipped / example models updated (`Aluminum`, `Tungsten` CPU/CUDA/HIP, `examples/10_ui_register_ic.cpp`).
 - CUDA/HIP Tungsten: HeFFTe GPU FFT and rank/size queries use `Model::mpi_comm()` (no hardcoded `MPI_COMM_WORLD` in `set_cuda_fft` / `set_hip_fft` or constructors).
 - Tungsten CPU/CUDA/HIP: NaN check macros use `CHECK_AND_ABORT_IF_NANS_MPI(..., mpi_comm())` so `MPI_Abort` and rank reporting match the model’s communicator.
+- `CHECK_AND_ABORT_IF_NAN` / `CHECK_AND_ABORT_IF_NANS` use `default_nan_check_mpi_comm()`; `App::main` calls `set_default_nan_check_mpi_comm(m_comm)` so the default matches non-world app communicators. `pfc::mpi::get_rank()` / `get_size()` without a communicator are documented as deprecated (world-only).
 
 ## Phase B — Simulator decomposition
 

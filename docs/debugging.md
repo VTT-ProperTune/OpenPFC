@@ -30,7 +30,11 @@ When NaN checks are enabled, the software includes a macro called
 `CHECK_AND_ABORT_IF_NAN`, which can be used to check individual floating-point
 values for NaN. If a NaN value is detected, the application will be aborted, and
 an error message will be displayed, indicating the process rank, file name, and
-line number where the NaN was detected.
+line number where the NaN was detected. The rank and abort communicator follow a
+process-wide default (`pfc::utils::default_nan_check_mpi_comm()`): JSON `App`
+drivers set it to the application communicator in `App::main`; other entry points
+should call `pfc::utils::set_default_nan_check_mpi_comm` or use the `*_MPI`
+macro variants with an explicit `MPI_Comm`.
 
 It is recommended to disable NaN checks in release builds
 (`CMAKE_BUILD_TYPE=Release`) to optimize performance. NaN checks are primarily

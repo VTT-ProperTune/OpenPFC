@@ -10,11 +10,14 @@
  * values in floating-point computations, useful for debugging numerical issues.
  *
  * Key features:
- * - CHECK_AND_ABORT_IF_NAN(value): Macro to check single values (uses
- *   `MPI_COMM_WORLD` for rank / abort — fine for rank-local tools)
- * - CHECK_AND_ABORT_IF_NANS(vec): Macro to check entire vectors (same)
- * - CHECK_AND_ABORT_IF_NAN_MPI / CHECK_AND_ABORT_IF_NANS_MPI: use the simulation
- *   communicator (e.g. `Model::mpi_comm()`) when the job is not on `MPI_COMM_WORLD`
+ * - CHECK_AND_ABORT_IF_NAN(value): Macro to check single values; uses the
+ *   **default NaN-check communicator** (see `default_nan_check_mpi_comm()`), which
+ *   `pfc::ui::App::main` sets to the application communicator (otherwise
+ *   `MPI_COMM_WORLD`).
+ * - CHECK_AND_ABORT_IF_NANS(vec): Macro to check entire vectors (same default)
+ * - CHECK_AND_ABORT_IF_NAN_MPI / CHECK_AND_ABORT_IF_NANS_MPI: pass an explicit
+ *   communicator (e.g. `Model::mpi_comm()`) when the check site should not use
+ *   the default
  * - Enabled by Debug builds or with OpenPFC_ENABLE_NAN_CHECK
  * - MPI-aware: Reports rank where NaN was detected
  *
@@ -31,8 +34,9 @@
  *
  * @see utils.hpp for other utility functions
  *
- * Use `CHECK_AND_ABORT_IF_NAN_MPI` / `CHECK_AND_ABORT_IF_NANS_MPI` with the
- * simulation communicator when not using `MPI_COMM_WORLD`.
+ * Use `CHECK_AND_ABORT_IF_NAN_MPI` / `CHECK_AND_ABORT_IF_NANS_MPI` when the
+ * check must use a communicator other than the default (for example inside a
+ * library that does not control `set_default_nan_check_mpi_comm`).
  */
 
 #ifndef PFC_UTILS_NANCHECK_HPP
@@ -67,7 +71,8 @@
  * performance.
  */
 #define CHECK_AND_ABORT_IF_NAN(value)                                               \
-  ::pfc::utils::abortIfNaN((value), __FILE__, __LINE__, MPI_COMM_WORLD)
+  ::pfc::utils::abortIfNaN((value), __FILE__, __LINE__,                             \
+                           ::pfc::utils::default_nan_check_mpi_comm())
 
 /**
  * @def CHECK_AND_ABORT_IF_NAN_MPI(value, comm)
@@ -99,7 +104,8 @@
  * performance.
  */
 #define CHECK_AND_ABORT_IF_NANS(vec)                                                \
-  ::pfc::utils::abortIfNaNs((vec), __FILE__, __LINE__, MPI_COMM_WORLD)
+  ::pfc::utils::abortIfNaNs((vec), __FILE__, __LINE__,                              \
+                            ::pfc::utils::default_nan_check_mpi_comm())
 
 /**
  * @def CHECK_AND_ABORT_IF_NANS_MPI(vec, comm)
@@ -116,6 +122,37 @@
 #endif
 
 namespace pfc::utils {
+
+namespace detail {
+inline MPI_Comm &nan_check_default_comm_slot() {
+  static MPI_Comm comm = MPI_COMM_WORLD;
+  return comm;
+}
+} // namespace detail
+
+/**
+ * @brief Communicator used by @ref CHECK_AND_ABORT_IF_NAN and
+ *        @ref CHECK_AND_ABORT_IF_NANS for rank reporting and `MPI_Abort`.
+ *
+ * Initially `MPI_COMM_WORLD`. `pfc::ui::App::main` calls
+ * `set_default_nan_check_mpi_comm` with the application communicator so split
+ * communicators behave correctly. Standalone drivers may set the default once
+ * at startup.
+ */
+inline MPI_Comm default_nan_check_mpi_comm() {
+  return detail::nan_check_default_comm_slot();
+}
+
+/**
+ * @brief Install the communicator for the non-`_MPI` NaN check macros.
+ *
+ * @param comm Communicator for `MPI_Comm_rank` / `MPI_Abort`. If @p comm is
+ *        `MPI_COMM_NULL`, the default falls back to `MPI_COMM_WORLD`.
+ */
+inline void set_default_nan_check_mpi_comm(MPI_Comm comm) {
+  detail::nan_check_default_comm_slot() =
+      (comm == MPI_COMM_NULL) ? MPI_COMM_WORLD : comm;
+}
 
 /**
  * Checks if there are any NaNs in a vector of floats.

@@ -10,8 +10,10 @@
  * all MPI-related components (communicator, environment, timer, worker).
  *
  * The namespace pfc::mpi contains:
- * - get_rank(): Get current MPI rank
- * - get_size(): Get total number of MPI processes
+ * - get_rank(MPI_Comm) / get_size(MPI_Comm): rank and size in a communicator
+ *   (preferred for application communicators)
+ * - get_rank() / get_size(): rank and size in `MPI_COMM_WORLD` only (deprecated
+ *   for split-communicator jobs; pass an explicit communicator instead)
  * - Communicator: MPI communicator wrapper
  * - Environment: MPI initialization/finalization management
  * - Timer: MPI timing utilities
@@ -22,8 +24,8 @@
  *
  * int main(int argc, char** argv) {
  *     pfc::mpi::Environment env(argc, argv);
- *     int rank = pfc::mpi::get_rank();
- *     int size = pfc::mpi::get_size();
+ *     int rank = pfc::mpi::get_rank(MPI_COMM_WORLD);
+ *     int size = pfc::mpi::get_size(MPI_COMM_WORLD);
  *     std::cout << "Rank " << rank << " of " << size << std::endl;
  *     return 0;
  * }
@@ -61,12 +63,20 @@ inline int get_comm_size(MPI_Comm comm) {
   return size;
 }
 
+/**
+ * @deprecated Use get_rank(MPI_Comm) with your application communicator; this
+ *             queries `MPI_COMM_WORLD` only.
+ */
 inline int get_rank() {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   return rank;
 }
 
+/**
+ * @deprecated Use get_size(MPI_Comm) with your application communicator; this
+ *             queries `MPI_COMM_WORLD` only.
+ */
 inline int get_size() {
   int size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
