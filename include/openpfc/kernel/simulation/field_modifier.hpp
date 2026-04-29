@@ -29,7 +29,7 @@
  * };
  *
  * // Use in simulator
- * simulator.add_initial_condition(std::make_unique<MyInitialCondition>());
+ * simulator.add_initial_conditions(std::make_unique<MyInitialCondition>());
  * @endcode
  *
  * This file is part of the Field Operations module, providing mechanisms
@@ -185,18 +185,18 @@ class Model;
  * // Set uniform background
  * auto constant = std::make_unique<pfc::Constant>(0.5);
  * constant->set_field_name("density");
- * simulator.add_initial_condition(std::move(constant));
+ * simulator.add_initial_conditions(std::move(constant));
  *
  * // Add localized perturbation
  * auto gaussian = std::make_unique<GaussianIC>(
  *   Real3{10.0, 10.0, 10.0}, 0.1, 2.0);
  * gaussian->set_field_name("density");
- * simulator.add_initial_condition(std::move(gaussian));
+ * simulator.add_initial_conditions(std::move(gaussian));
  *
  * // Enforce boundary condition every step
  * auto bc = std::make_unique<DirichletBC>(0.0, 5.0);
  * bc->set_field_name("density");
- * simulator.add_boundary_condition(std::move(bc));
+ * simulator.add_boundary_conditions(std::move(bc));
  * @endcode
  *
  * @example Accessing multiple fields (for future multi-field support)
@@ -218,9 +218,9 @@ class Model;
  *
  * **Usage in Simulator:**
  * - Initial conditions: Applied once before time integration via
- *   `Simulator::add_initial_condition()`
+ *   `Simulator::add_initial_conditions()`
  * - Boundary conditions: Applied every time step (or at intervals) via
- *   `Simulator::add_boundary_condition()`
+ *   `Simulator::add_boundary_conditions()`
  * - Application order: ICs first, then BCs, in the order added
  *
  * **Performance Considerations:**
@@ -241,8 +241,8 @@ class Model;
  *
  * @see Model::get_real_field() for field access
  * @see Model::get_complex_field() for k-space operations
- * @see Simulator::add_initial_condition() for IC registration
- * @see Simulator::add_boundary_condition() for BC registration
+ * @see Simulator::add_initial_conditions() for IC registration
+ * @see Simulator::add_boundary_conditions() for BC registration
  * @see initial_conditions/ for built-in IC implementations
  * @see boundary_conditions/ for built-in BC implementations
  */
@@ -286,7 +286,7 @@ public:
    * @code
    * auto ic = std::make_unique<pfc::Constant>(0.5);
    * ic->set_field_name("density");
-   * simulator.add_initial_condition(std::move(ic));
+   * simulator.add_initial_conditions(std::move(ic));
    * @endcode
    *
    * @example Multiple fields with same modifier type
@@ -294,12 +294,12 @@ public:
    * // Apply constant IC to density field
    * auto density_ic = std::make_unique<pfc::Constant>(0.5);
    * density_ic->set_field_name("density");
-   * simulator.add_initial_condition(std::move(density_ic));
+   * simulator.add_initial_conditions(std::move(density_ic));
    *
    * // Apply constant IC to temperature field
    * auto temp_ic = std::make_unique<pfc::Constant>(300.0);
    * temp_ic->set_field_name("temperature");
-   * simulator.add_initial_condition(std::move(temp_ic));
+   * simulator.add_initial_conditions(std::move(temp_ic));
    * @endcode
    *
    * @note The field name must match a field registered in the Model,

@@ -19,8 +19,9 @@
  * individually on an existing `Simulator` and `Time`.
  *
  * Initial-condition and boundary-condition JSON share the same `target`
- * parsing; that logic lives in
- * `pfc::ui::detail::configure_field_modifier_targets_from_json`.
+ * parsing (`configure_field_modifier_targets_from_json`) and the same array
+ * wiring loop (`wire_field_modifiers_from_json_array` in
+ * `simulation_wiring_conditions.hpp`).
  */
 
 #ifndef PFC_UI_SIMULATION_WIRING_HPP

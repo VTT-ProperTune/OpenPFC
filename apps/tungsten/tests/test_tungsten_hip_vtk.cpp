@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -23,6 +23,7 @@
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/io/vtk_writer.hpp>
+#include <openpfc/frontend/ui/simulation_wiring_conditions.hpp>
 #include <openpfc/frontend/ui/ui.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
@@ -89,28 +90,12 @@ int main(int argc, char *argv[]) {
   pfc::Simulator simulator(model, time);
 
   if (rank0) std::cout << "Adding initial conditions..." << std::endl;
-  if (settings.contains("initial_conditions")) {
-    for (const json &params : settings["initial_conditions"]) {
-      std::string type = params["type"];
-      auto field_modifier = pfc::ui::create_field_modifier(type, params);
-      if (params.contains("target")) {
-        field_modifier->set_field_name(params["target"]);
-      }
-      simulator.add_initial_conditions(std::move(field_modifier));
-    }
-  }
+  pfc::ui::add_initial_conditions_from_json(simulator, settings,
+                                            simulator.mpi_comm(), rank, rank0);
 
   if (rank0) std::cout << "Adding boundary conditions..." << std::endl;
-  if (settings.contains("boundary_conditions")) {
-    for (const json &params : settings["boundary_conditions"]) {
-      std::string type = params["type"];
-      auto field_modifier = pfc::ui::create_field_modifier(type, params);
-      if (params.contains("target")) {
-        field_modifier->set_field_name(params["target"]);
-      }
-      simulator.add_boundary_conditions(std::move(field_modifier));
-    }
-  }
+  pfc::ui::add_boundary_conditions_from_json(simulator, settings,
+                                             simulator.mpi_comm(), rank, rank0);
 
   if (rank0) std::cout << "Adding VTK writer..." << std::endl;
   if (settings.contains("fields") && settings["saveat"] > 0) {
@@ -159,11 +144,6 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-
-  if (rank0) std::cout << "Applying initial conditions..." << std::endl;
-  model.prepare_for_field_modifiers();
-  simulator.apply_initial_conditions();
-  model.finalize_after_field_modifiers();
 
   if (rank0) std::cout << "Applying initial conditions..." << std::endl;
   model.prepare_for_field_modifiers();

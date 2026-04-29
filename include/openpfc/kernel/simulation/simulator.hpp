@@ -22,7 +22,7 @@
  * pfc::Simulator sim(model, time);  // optional: third arg MPI_Comm (default world)
  *
  * // Add initial conditions
- * sim.add_initial_condition(std::make_unique<pfc::Constant>(0.5));
+ * sim.add_initial_conditions(std::make_unique<pfc::Constant>(0.5));
  *
  * // Add results writer
  * sim.add_results_writer("output", std::make_unique<pfc::BinaryWriter>("data.bin"));
