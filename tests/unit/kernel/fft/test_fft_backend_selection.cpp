@@ -152,8 +152,8 @@ TEST_CASE("FFT Backend - timing functions work", "[fft][backend][unit]") {
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
   // Reset timing
-  fft->reset_fft_time();
-  REQUIRE(fft->get_fft_time() == 0.0);
+  pfc::fft::reset_fft_time(*fft);
+  REQUIRE(pfc::fft::get_fft_time(*fft) == 0.0);
 
   // Perform some FFT operations
   std::vector<double> input(fft->size_inbox(), 1.0);
@@ -164,11 +164,11 @@ TEST_CASE("FFT Backend - timing functions work", "[fft][backend][unit]") {
   fft->backward(fourier, output);
 
   // Timing should be non-zero after operations
-  REQUIRE(fft->get_fft_time() > 0.0);
+  REQUIRE(pfc::fft::get_fft_time(*fft) > 0.0);
 
   // Reset should work
-  fft->reset_fft_time();
-  REQUIRE(fft->get_fft_time() == 0.0);
+  pfc::fft::reset_fft_time(*fft);
+  REQUIRE(pfc::fft::get_fft_time(*fft) == 0.0);
 }
 
 TEST_CASE("FFT Backend - size queries work through interface",

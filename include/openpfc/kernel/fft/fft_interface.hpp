@@ -70,5 +70,14 @@ struct IFFT {
   return fft.get_outbox_bounds();
 }
 
+/** @brief Clear accumulated FFT timing (preferred over `IFFT::reset_fft_time()`). */
+inline void reset_fft_time(IFFT &fft) noexcept { fft.reset_fft_time(); }
+
+/** @brief Accumulated FFT time since last reset (preferred over
+ * `IFFT::get_fft_time()`). */
+[[nodiscard]] inline double get_fft_time(const IFFT &fft) noexcept {
+  return fft.get_fft_time();
+}
+
 } // namespace fft
 } // namespace pfc

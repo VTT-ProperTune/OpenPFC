@@ -113,7 +113,7 @@ public:
       }
 
       // Reset FFT timing before iterations
-      fft.reset_fft_time();
+      pfc::fft::reset_fft_time(fft);
 
       // Synchronize before timing
       MPI_Barrier(MPI_COMM_WORLD);
@@ -128,7 +128,7 @@ public:
       MPI_Barrier(MPI_COMM_WORLD);
       double end_time = MPI_Wtime();
       double total_time = end_time - start_time;
-      double fft_time = fft.get_fft_time();
+      double fft_time = pfc::fft::get_fft_time(fft);
       double other_time = total_time - fft_time;
       double time_per_iter = total_time / num_iterations;
       double fft_time_per_iter = fft_time / num_iterations;
@@ -231,7 +231,7 @@ public:
 
       // Reset FFT timing before iterations
       auto &cuda_fft = model.get_cuda_fft();
-      cuda_fft.reset_fft_time();
+      pfc::fft::reset_fft_time(cuda_fft);
 
       // Synchronize before timing
       MPI_Barrier(MPI_COMM_WORLD);
@@ -246,7 +246,7 @@ public:
       MPI_Barrier(MPI_COMM_WORLD);
       double end_time = MPI_Wtime();
       double total_time = end_time - start_time;
-      double fft_time = cuda_fft.get_fft_time();
+      double fft_time = pfc::fft::get_fft_time(cuda_fft);
       double other_time = total_time - fft_time;
       double time_per_iter = total_time / num_iterations;
       double fft_time_per_iter = fft_time / num_iterations;
@@ -349,7 +349,7 @@ public:
       }
 
       auto &hip_fft = model.get_hip_fft();
-      hip_fft.reset_fft_time();
+      pfc::fft::reset_fft_time(hip_fft);
 
       MPI_Barrier(MPI_COMM_WORLD);
       double start_time = MPI_Wtime();
@@ -361,7 +361,7 @@ public:
       MPI_Barrier(MPI_COMM_WORLD);
       double end_time = MPI_Wtime();
       double total_time = end_time - start_time;
-      double fft_time = hip_fft.get_fft_time();
+      double fft_time = pfc::fft::get_fft_time(hip_fft);
       double other_time = total_time - fft_time;
       double time_per_iter = total_time / num_iterations;
       double fft_time_per_iter = fft_time / num_iterations;

@@ -238,7 +238,7 @@ void example_performance() {
   fft.backward(complex_data, real_data);
 
   // Timed run
-  fft.reset_fft_time();
+  pfc::fft::reset_fft_time(fft);
 
   int num_transforms = 100;
   for (int i = 0; i < num_transforms; ++i) {
@@ -246,7 +246,7 @@ void example_performance() {
     fft.backward(complex_data, real_data);
   }
 
-  double total_time = fft.get_fft_time();
+  double total_time = pfc::fft::get_fft_time(fft);
   double avg_time = total_time / (2 * num_transforms); // 2 transforms per iteration
 
   if (mpi::get_rank() == 0) {

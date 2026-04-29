@@ -56,7 +56,7 @@ IntegratorTimings run_simulator_time_integration_loop(
   double avg_step_ema = 0.0;
 
   while (!pfc::time::done(time(session))) {
-    fft(session).reset_fft_time();
+    pfc::fft::reset_fft_time(fft(session));
     pfc::begin_integrator_step(simulator(session));
     const double barrier_step_s = pfc::profiling::measure_barriered(env.comm, [&] {
       std::optional<pfc::profiling::ProfilingContextScope> profile_ctx;
@@ -67,7 +67,7 @@ IntegratorTimings run_simulator_time_integration_loop(
       }
       step(simulator(session), model(session));
     });
-    const double fft_meter_s = fft(session).get_fft_time();
+    const double fft_meter_s = pfc::fft::get_fft_time(fft(session));
 
     std::uint64_t rss = 0;
     std::uint64_t model_mem = 0;
