@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Building and running tests
 
-OpenPFC ships a Catch2-based suite under `tests/`, built as the `openpfc-tests` executable. This page complements the one-line `OpenPFC_BUILD_TESTS` entry in [`build_options.md`](build_options.md).
+OpenPFC ships a Catch2-based suite under `tests/`, built as the `openpfc-tests` executable. This page complements the one-line `OpenPFC_BUILD_TESTS` entry in [`build_options.md`](../reference/build_options.md).
 
 ## Enable / disable
 
@@ -53,11 +53,11 @@ VTK writer tests and other targets may `add_test` separately under `tests/unit/f
 
 When `OpenPFC_BUILD_APPS=ON`, some apps register extra CTest entries (e.g. tungsten / aluminum checks). Those live next to each app’s `CMakeLists.txt`.
 
-Minimal new-test walkthrough: [`tutorials/add_catch2_test.md`](tutorials/add_catch2_test.md).
+Minimal new-test walkthrough: [`tutorials/add_catch2_test.md`](../tutorials/add_catch2_test.md).
 
 ## See also
 
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md) — changelog and review expectations  
-- [`build_options.md`](build_options.md) — all CMake switches  
-- [`INSTALL.md`](../INSTALL.md) — Catch2 / MPI / toolchain prerequisites  
-- [`troubleshooting.md`](troubleshooting.md) — configure and link failures  
+- [`CONTRIBUTING.md`](../../CONTRIBUTING.md) — changelog and review expectations  
+- [`build_options.md`](../reference/build_options.md) — all CMake switches  
+- [`INSTALL.md`](../../INSTALL.md) — Catch2 / MPI / toolchain prerequisites  
+- [`troubleshooting.md`](../troubleshooting.md) — configure and link failures  

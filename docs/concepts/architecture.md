@@ -90,7 +90,7 @@ Features that are useful for full applications but not required for minimal simu
 | `frontend/ui` | App, `app_spectral_run.hpp` (`SpectralJsonAppRun` — JSON spectral pipeline after settings are loaded), `spectral_json_driver_hooks.hpp` (`configure_spectral_json_driver_hooks`), `spectral_cpu_stack.hpp` (JSON → world/FFT/time stack), `spectral_cpu_stack_detail.hpp` (CPU plan/FFT helpers), `spectral_simulation_session.hpp`, `simulation_wiring.hpp` (umbrella; split into `simulation_wiring_writers.hpp`, `simulation_wiring_conditions.hpp`, `simulation_wiring_simulator_section.hpp`, `simulation_wiring_detail.hpp`), `simulation_wiring_context.hpp` (`JsonWiringContext`), `app_profiling.hpp` / `app_integrator_loop.hpp` (optional profiling lifecycle + time loop), `from_json.hpp` (umbrella over `from_json_fwd.hpp`, `from_json_log.hpp`, `from_json_heffte.hpp`, `from_json_fft_backend.hpp`, `from_json_world_time.hpp`, `from_json_field_modifiers.hpp`), json_helpers, errors, parameter_validator, parameter_metadata, field_modifier_registry; ui.hpp redirect. |
 | `frontend/io` | Results writer implementations (binary_writer, vtk_writer). |
 
-End-to-end flow from `JSON/TOML` to `Simulator` ( `SpectralCpuStack`, `SpectralSimulationSession`, `simulation_wiring` ) is described in `[`app_pipeline.md`](app_pipeline.md)`. Result file formats are summarized in `[`io_results.md`](io_results.md)`.
+End-to-end flow from `JSON/TOML` to `Simulator` ( `SpectralCpuStack`, `SpectralSimulationSession`, `simulation_wiring` ) is described in `[`app_pipeline.md`](../user_guide/app_pipeline.md)`. Result file formats are summarized in `[`io_results.md`](../user_guide/io_results.md)`.
 
 ## Include paths
 
@@ -117,7 +117,7 @@ For CPU-only FFT there is no need to include `runtime/cpu/fft.hpp`; the CPU FFT 
 The codebase aims to be easy to extend and inspect, not maximally locked down. In practice:
 
 - Prefer free functions for many queries and operations on domain objects (e.g. `pfc::world::get_size`, and `get_world` overloads for `Decomposition` and `Field`) so call sites stay uniform and composable. When parallel access is added for a type that still uses member getters, add a free function and prefer it in new or refactored code.
-- Prefer struct-like types with public data by default; use private state only when it protects real invariants. Full guidance and examples are in [styleguide.md](styleguide.md) (section *API shape: free functions and data-centric types*).
+- Prefer struct-like types with public data by default; use private state only when it protects real invariants. Full guidance and examples are in [styleguide.md](../development/styleguide.md) (section *API shape: free functions and data-centric types*).
 - **Inheritance and `virtual` are intentional seams, not the default shape of the library.** Use abstract bases (`Model`, `FieldModifier`, `ResultsWriter`, …) where **out-of-tree** code must plug in through one stable boundary in C++. Prefer **thin overrides** that delegate to **free functions** and **data-centric helpers** (namespaced `pfc::…` / `pfc::ui::…`) so behavior stays easy to find and test. Avoid deep hierarchies and “logic sprouting” from many small virtual methods unless the extension point truly needs them.
 
 Layer rules (kernel → runtime → frontend) are unchanged: this ethos governs *how* types expose their own state and helpers, not which layers may include each other.
@@ -137,4 +137,4 @@ Public namespaces (e.g. `pfc::core::`, `pfc::decomposition::`, `pfc::world::`) a
 ## See also
 
 - [`spectral_stack.md`](spectral_stack.md) — end-to-end **spectral** data-flow narrative (complements the layer diagram above).  
-- [`app_pipeline.md`](app_pipeline.md) — JSON/TOML → `Simulator` for declarative apps.
+- [`app_pipeline.md`](../user_guide/app_pipeline.md) — JSON/TOML → `Simulator` for declarative apps.

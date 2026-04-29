@@ -41,7 +41,7 @@ HDF5 export requires configuring CMake with `OpenPFC_ENABLE_HDF5=ON` and a syste
 
 ## Tungsten CPU (spectral pipelines)
 
-The CPU Tungsten model ([`apps/tungsten/include/tungsten/cpu/tungsten_model.hpp`](../apps/tungsten/include/tungsten/cpu/tungsten_model.hpp)) uses `OPENPFC_PROFILE` with nested paths:
+The CPU Tungsten model ([`apps/tungsten/include/tungsten/cpu/tungsten_model.hpp`](../../apps/tungsten/include/tungsten/cpu/tungsten_model.hpp)) uses `OPENPFC_PROFILE` with nested paths:
 
 - `gradient/mean_field` — mean-field filter: `gradient/mean_field/forward`, `gradient/mean_field/multiply`, `gradient/mean_field/backward`
 - `gradient/evolve` — exponential integration step: `gradient/evolve/forward`, `gradient/evolve/multiply`, `gradient/evolve/backward`

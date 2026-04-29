@@ -152,5 +152,5 @@ Benefits:
 ## See also
 
 - [`../learning_paths.md`](../learning_paths.md) — extend track links functional IC/BC patterns
-- [`../class_tour.md`](../class_tour.md) — `FieldModifier`, `Simulator`
+- [`../class_tour.md`](../reference/class_tour.md) — `FieldModifier`, `Simulator`
 - [`../extending_openpfc/README.md`](../extending_openpfc/README.md) — extension checklist

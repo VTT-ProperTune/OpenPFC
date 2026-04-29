@@ -24,16 +24,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
    mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
    ```
 
-   Increase `-n` for larger jobs; match what your site expects (`mpirun` vs `srun` on Slurm: see [`hpc_operator_guide.md`](../hpc_operator_guide.md)).
+   Increase `-n` for larger jobs; match what your site expects (`mpirun` vs `srun` on Slurm: see [`hpc_operator_guide.md`](../hpc/operator_guide.md)).
 
-3. Inspect the config if you change ranks or paths — writers and `fields` entries must stay consistent ([`spectral_app_config_reference.md`](../spectral_app_config_reference.md), [`io_results.md`](../io_results.md)).
+3. Inspect the config if you change ranks or paths — writers and `fields` entries must stay consistent ([`spectral_app_config_reference.md`](../reference/spectral_app_config_reference.md), [`io_results.md`](../user_guide/io_results.md)).
 
 ## Expected result
 
 - Clean exit (0) if the run completes.  
-- Binary field output if configured under `fields` / `data` in the JSON (see [`binary_field_io_spec.md`](../binary_field_io_spec.md)).
+- Binary field output if configured under `fields` / `data` in the JSON (see [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md)).
 
 ## Next steps
 
-- Other sample inputs: `tungsten_fixed_bc.json`, `tungsten_moving_bc.json`, `tungsten_performance.json` in the same folder ([`applications.md`](../applications.md)).  
-- GPU variants: [`gpu_path_decision.md`](../gpu_path_decision.md), [`tutorials/gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md).  
+- Other sample inputs: `tungsten_fixed_bc.json`, `tungsten_moving_bc.json`, `tungsten_performance.json` in the same folder ([`applications.md`](../user_guide/applications.md)).  
+- GPU variants: [`gpu_path_decision.md`](../hpc/gpu_path_decision.md), [`tutorials/gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md).  

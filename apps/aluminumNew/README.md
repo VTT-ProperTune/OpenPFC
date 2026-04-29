@@ -39,6 +39,6 @@ A matching `aluminumNew.toml` is provided for TOML workflows. Adjust `results`, 
 
 ## See also
 
-- [`../../docs/applications.md`](../../docs/applications.md) — other shipped apps 
-- [`../../docs/configuration.md`](../../docs/configuration.md) — config file concepts 
+- [`../../docs/applications.md`](../../docs/user_guide/applications.md) — other shipped apps 
+- [`../../docs/configuration.md`](../../docs/user_guide/configuration.md) — config file concepts 
 - [`../../docs/quickstart.md`](../../docs/quickstart.md) — first-time setup 

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tungsten PFC Model - JSON Input Files
 
-**App overview** (binaries, run line): **[`../README.md`](../README.md)**. **How JSON maps to the simulator:** **[`../../../docs/app_pipeline.md`](../../../docs/app_pipeline.md)**.
+**App overview** (binaries, run line): **[`../README.md`](../README.md)**. **How JSON maps to the simulator:** **[`../../../docs/app_pipeline.md`](../../../docs/user_guide/app_pipeline.md)**.
 
 This directory contains JSON input files for the Tungsten PFC model. These files follow the same structure as the TOML files in the `inputs_toml` directory, with the following sections:
 

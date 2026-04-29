@@ -25,7 +25,7 @@ hidden behind a mega-header.
 
 ## Optional CI check
 
-[`scripts/check_minimal_includes.sh`](../scripts/check_minimal_includes.sh) is a
+[`scripts/check_minimal_includes.sh`](../../scripts/check_minimal_includes.sh) is a
 **lightweight guard**: it fails if kernel unit tests include the full umbrella
 `openpfc/openpfc.hpp` (policy can be tightened over time). Run from the repo
 root:
@@ -37,6 +37,6 @@ root:
 Wire this into CI only if your pipeline already shells out to similar `rg` /
 `grep` gates.
 
-See also [`architecture.md`](architecture.md) (include audit) and
+See also [`architecture.md`](../concepts/architecture.md) (include audit) and
 [`refactoring_roadmap.md`](refactoring_roadmap.md) backlog item on minimal
 includes.

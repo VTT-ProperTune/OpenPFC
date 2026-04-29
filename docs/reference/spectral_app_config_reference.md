@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This page lists the **JSON / TOML surface** consumed by the default **CPU spectral** stack (`SpectralCpuStack` → `SpectralSimulationSession` → `Simulator`) when you use `pfc::ui::App<Model>` (e.g. `apps/tungsten`, `apps/aluminumNew`). **Apps may add keys** or nest objects; treat shipped inputs as ground truth when in doubt.
 
-**Pipeline order:** [`app_pipeline.md`](app_pipeline.md). **Mental model:** [`configuration.md`](configuration.md).
+**Pipeline order:** [`app_pipeline.md`](../user_guide/app_pipeline.md). **Mental model:** [`configuration.md`](../user_guide/configuration.md).
 
 ## World (grid)
 
@@ -19,7 +19,7 @@ Parsed by `from_json<World>(settings)` — supports **flat** keys on the root ob
 | `dx`, `dy`, `dz` | number | Spacing |
 | `origin` (or `origo`) | string | `"center"` or `"corner"` — sets physical origin convention |
 
-**Examples:** top-level keys in some snippets; `tungsten` uses a `"domain"` object with the same logical fields ([`apps/tungsten/inputs_json/`](../apps/tungsten/inputs_json/README.md)).
+**Examples:** top-level keys in some snippets; `tungsten` uses a `"domain"` object with the same logical fields ([`apps/tungsten/inputs_json/`](../../apps/tungsten/inputs_json/README.md)).
 
 ## Time stepping
 
@@ -35,7 +35,7 @@ Parsed by `from_json<Time>(settings)` — supports **flat** keys or nested under
 
 Object key `"plan_options"` (JSON) or `[plan_options]` (TOML). Passed to HeFFTe plan construction on the CPU spectral path. **`backend: "cuda"`** is rejected for `SpectralCpuStack` / `CpuFft` — use CPU `fftw` here or a GPU-specific app driver.
 
-**Annotated reference file:** [`examples/fft_backend_selection.toml`](../examples/fft_backend_selection.toml). **Tutorial:** [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md).
+**Annotated reference file:** [`examples/fft_backend_selection.toml`](../../examples/fft_backend_selection.toml). **Tutorial:** [`tutorials/fft_heffte_plan_options.md`](../tutorials/fft_heffte_plan_options.md).
 
 ## Model
 
@@ -44,7 +44,7 @@ Object key `"plan_options"` (JSON) or `[plan_options]` (TOML). Passed to HeFFTe 
 | `model.name` | string | Conventionally matches the app’s model registration |
 | `model.params` | object | Model-specific; optional `from_json` into your C++ params type |
 
-Validation is **model-dependent** (see [`parameter_validation.md`](parameter_validation.md)).
+Validation is **model-dependent** (see [`parameter_validation.md`](../user_guide/parameter_validation.md)).
 
 ## Result writers (binary)
 
@@ -64,14 +64,14 @@ There is **no** VTK branch in this helper today.
 | `initial_conditions` | array | Objects with `type`, optional `target`, type-specific fields |
 | `boundary_conditions` | array | Same pattern |
 
-Modifier types must be **registered** in `main` before `App` runs (`register_field_modifier<…>`). See [`app_pipeline.md`](app_pipeline.md) and `examples/10_ui_register_ic.cpp`.
+Modifier types must be **registered** in `main` before `App` runs (`register_field_modifier<…>`). See [`app_pipeline.md`](../user_guide/app_pipeline.md) and `examples/10_ui_register_ic.cpp`.
 
 ## Optional sections
 
 | Key | Handled by | Notes |
 |-----|------------|--------|
 | `simulator` | `apply_simulator_section_from_json` | e.g. counter / increment for filenames |
-| `profiling` | `AppProfilingController` | [`performance_profiling.md`](performance_profiling.md) |
+| `profiling` | `AppProfilingController` | [`performance_profiling.md`](../hpc/performance_profiling.md) |
 
 ## TOML vs JSON
 
@@ -79,7 +79,7 @@ Same logical keys; TOML uses tables such as `[domain]`, `[timestepping]`, `[plan
 
 ## See also
 
-- [`app_pipeline.md`](app_pipeline.md) — `App::main` order  
+- [`app_pipeline.md`](../user_guide/app_pipeline.md) — `App::main` order  
 - [`binary_field_io_spec.md`](binary_field_io_spec.md) — binary file layout  
-- [`io_results.md`](io_results.md) — writers overview  
-- [`learning_paths.md`](learning_paths.md) — guided tracks  
+- [`io_results.md`](../user_guide/io_results.md) — writers overview  
+- [`learning_paths.md`](../learning_paths.md) — guided tracks  

@@ -38,16 +38,16 @@ The `App` path logs with the `[app]` prefix on rank 0 (see `include/openpfc/fron
 - `[app] Initializing model...`  
 - `[app] Starting time integration (Simulator integrator API)`  
 
-If `model.params` validation is enabled in your binary, you may also see a Configuration Validation Summary block (root `README.md`, [`parameter_validation.md`](parameter_validation.md)) before the time loop.
+If `model.params` validation is enabled in your binary, you may also see a Configuration Validation Summary block (root `README.md`, [`parameter_validation.md`](../user_guide/parameter_validation.md)) before the time loop.
 
-Exit code 0 from `mpirun` and completion without an exception mean the driver finished; output files appear only when `saveat` and `fields` / writers are configured (see [`io_results.md`](io_results.md)).
+Exit code 0 from `mpirun` and completion without an exception mean the driver finished; output files appear only when `saveat` and `fields` / writers are configured (see [`io_results.md`](../user_guide/io_results.md)).
 
 ## GPU binaries (`tungsten_cuda`, `tungsten_hip`, …)
 
-Log shape matches the CPU `App` flow. Additional lines may appear when GPU-aware MPI or device backends are compiled in (see [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) and [`INSTALL.LUMI.md`](INSTALL.LUMI.md)). Your JSON/TOML should set `plan_options` / `backend` consistently with the build ([`examples/fft_backend_selection.toml`](../examples/fft_backend_selection.toml)).
+Log shape matches the CPU `App` flow. Additional lines may appear when GPU-aware MPI or device backends are compiled in (see [`tutorials/gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md) and [`INSTALL.LUMI.md`](../hpc/INSTALL.LUMI.md)). Your JSON/TOML should set `plan_options` / `backend` consistently with the build ([`examples/fft_backend_selection.toml`](../../examples/fft_backend_selection.toml)).
 
 ## See also
 
-- [`quickstart.md`](quickstart.md) — §2A / §2B success hints  
-- [`faq.md`](faq.md) — “How do I know an example or tungsten run succeeded?”  
-- [`troubleshooting.md`](troubleshooting.md) — when nothing matches the above  
+- [`quickstart.md`](../quickstart.md) — §2A / §2B success hints  
+- [`faq.md`](../faq.md) — “How do I know an example or tungsten run succeeded?”  
+- [`troubleshooting.md`](../troubleshooting.md) — when nothing matches the above  

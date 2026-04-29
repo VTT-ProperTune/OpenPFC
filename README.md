@@ -66,7 +66,7 @@ T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *�
 
 ## Quick start
 
-First time with the repo? **Shortest path:** [docs/start_here_15_minutes.md](docs/start_here_15_minutes.md). Then [docs/quickstart.md](docs/quickstart.md) (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). **Sequenced paths by role:** [docs/learning_paths.md](docs/learning_paths.md). **Named how-tos:** [docs/recipes/README.md](docs/recipes/README.md). **Figures and what to run:** [docs/showcase.md](docs/showcase.md). **Build → artifacts on disk (PNG / binary):** [docs/tutorials/end_to_end_visualization.md](docs/tutorials/end_to_end_visualization.md). Tutorial prose lives under [docs/getting_started/](docs/getting_started/); runnable targets and a **curriculum** are in [docs/examples_catalog.md](docs/examples_catalog.md); Doxygen snippet order: [docs/api_examples_walkthrough.md](docs/api_examples_walkthrough.md). Shipped programs: [docs/applications.md](docs/applications.md). Short Q&A: [docs/faq.md](docs/faq.md).
+First time with the repo? **Shortest path:** [docs/start_here_15_minutes.md](docs/start_here_15_minutes.md). Then [docs/quickstart.md](docs/quickstart.md) (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). **Sequenced paths by role:** [docs/learning_paths.md](docs/learning_paths.md). **Named how-tos:** [docs/recipes/README.md](docs/recipes/README.md). **Figures and what to run:** [docs/showcase.md](docs/user_guide/showcase.md). **Build → artifacts on disk (PNG / binary):** [docs/tutorials/end_to_end_visualization.md](docs/tutorials/end_to_end_visualization.md). Tutorial prose lives under [docs/getting_started/](docs/getting_started); runnable targets and a **curriculum** are in [docs/examples_catalog.md](docs/reference/examples_catalog.md); Doxygen snippet order: [docs/api_examples_walkthrough.md](docs/reference/api_examples_walkthrough.md). Shipped programs: [docs/applications.md](docs/user_guide/applications.md). Short Q&A: [docs/faq.md](docs/faq.md).
 
 ## Documentation
 
@@ -86,37 +86,37 @@ If you are browsing the [source tree](https://github.com/VTT-ProperTune/OpenPFC)
 | When OpenPFC fits; FD vs spectral direction | [docs/when_not_to_use_openpfc.md](docs/when_not_to_use_openpfc.md) |
 | Workshop curriculum (teaching) | [docs/workshop/README.md](docs/workshop/README.md) |
 | Architecture decision records | [docs/adr/README.md](docs/adr/README.md) |
-| Documentation vs release tags | [docs/documentation_versioning.md](docs/documentation_versioning.md) |
+| Documentation vs release tags | [docs/documentation_versioning.md](docs/development/documentation_versioning.md) |
 | Tutorials hub (VTK, HeFFTe, spectral examples, …) | [docs/tutorials/README.md](docs/tutorials/README.md) |
-| Docs by role (personas) | [docs/personas.md](docs/personas.md) |
-| Binary MPI-IO field format | [docs/binary_field_io_spec.md](docs/binary_field_io_spec.md) |
-| Spectral `App` JSON/TOML keys | [docs/spectral_app_config_reference.md](docs/spectral_app_config_reference.md) |
-| Slurm / MPI–I/O checklists | [docs/tutorials/hpc_slurm_day_one.md](docs/tutorials/hpc_slurm_day_one.md), [docs/mpi_io_layout_checklist.md](docs/mpi_io_layout_checklist.md) |
-| Science notes (tungsten, CH vs Allen–Cahn) | [docs/science_tungsten_quicklook.md](docs/science_tungsten_quicklook.md), [docs/science_cahn_hilliard_vs_allen_cahn.md](docs/science_cahn_hilliard_vs_allen_cahn.md) |
+| Docs by role (personas) | [docs/personas.md](docs/development/personas.md) |
+| Binary MPI-IO field format | [docs/binary_field_io_spec.md](docs/reference/binary_field_io_spec.md) |
+| Spectral `App` JSON/TOML keys | [docs/spectral_app_config_reference.md](docs/reference/spectral_app_config_reference.md) |
+| Slurm / MPI–I/O checklists | [docs/tutorials/hpc_slurm_day_one.md](docs/tutorials/hpc_slurm_day_one.md), [docs/mpi_io_layout_checklist.md](docs/hpc/mpi_io_layout_checklist.md) |
+| Science notes (tungsten, CH vs Allen–Cahn) | [docs/science_tungsten_quicklook.md](docs/science/tungsten_quicklook.md), [docs/science_cahn_hilliard_vs_allen_cahn.md](docs/science/cahn_hilliard_vs_allen_cahn.md) |
 | Contributing (code, tests, changelog) | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Documentation PRs, link checker (`python3 scripts/check_doc_links.py`) | [docs/contributing-docs.md](docs/contributing-docs.md) |
-| JSON/TOML → `Simulator` | [docs/app_pipeline.md](docs/app_pipeline.md) |
-| Types, headers, examples map | [docs/class_tour.md](docs/class_tour.md) |
+| Documentation PRs, link checker (`python3 scripts/check_doc_links.py`) | [docs/contributing-docs.md](docs/development/contributing-docs.md) |
+| JSON/TOML → `Simulator` | [docs/app_pipeline.md](docs/user_guide/app_pipeline.md) |
+| Types, headers, examples map | [docs/class_tour.md](docs/reference/class_tour.md) |
 | Minimal custom `App` (CMake + JSON) | [docs/tutorials/custom_app_minimal.md](docs/tutorials/custom_app_minimal.md) |
-| Parameter validation | [docs/parameter_validation.md](docs/parameter_validation.md) |
-| Tests (`ctest`, Catch2) | [docs/testing.md](docs/testing.md) |
+| Parameter validation | [docs/parameter_validation.md](docs/user_guide/parameter_validation.md) |
+| Tests (`ctest`, Catch2) | [docs/testing.md](docs/development/testing.md) |
 | GPU (CUDA/HIP) apps | [docs/tutorials/gpu_app_quickstart.md](docs/tutorials/gpu_app_quickstart.md) |
-| Example log output (reference shape) | [docs/example_run_output.md](docs/example_run_output.md) |
-| Results I/O (binary / VTK / PNG) | [docs/io_results.md](docs/io_results.md) |
-| CMake options | [docs/build_options.md](docs/build_options.md) |
+| Example log output (reference shape) | [docs/example_run_output.md](docs/reference/example_run_output.md) |
+| Results I/O (binary / VTK / PNG) | [docs/io_results.md](docs/user_guide/io_results.md) |
+| CMake options | [docs/build_options.md](docs/reference/build_options.md) |
 | Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
-| Glossary | [docs/glossary.md](docs/glossary.md) |
+| Glossary | [docs/glossary.md](docs/reference/glossary.md) |
 
 Build and install from source: see [INSTALL.md](INSTALL.md).
 
-CPU vs GPU build trees: short overview in [docs/build_cpu_gpu.md](docs/build_cpu_gpu.md).
+CPU vs GPU build trees: short overview in [docs/build_cpu_gpu.md](docs/hpc/build_cpu_gpu.md).
 
 C++ includes: link your target to CMake’s `OpenPFC` (or `openpfc`) target.
 For faster builds, include specific headers (e.g. `<openpfc/kernel/data/world.hpp>`)
 rather than the umbrella `<openpfc/openpfc.hpp>`. Minimal simulations without the
 JSON/TOML frontend can start from `<openpfc/openpfc_minimal.hpp>`; see
-[docs/architecture.md](docs/architecture.md).
-For naming, layout, SPDX headers, and API style (free functions, data-centric types), see [docs/styleguide.md](docs/styleguide.md).
+[docs/architecture.md](docs/concepts/architecture.md).
+For naming, layout, SPDX headers, and API style (free functions, data-centric types), see [docs/styleguide.md](docs/development/styleguide.md).
 
 ## Features
 
@@ -226,7 +226,7 @@ if (!result.is_valid()) {
 }
 ```
 
-See `apps/tungsten/include/tungsten/common/tungsten_input.hpp` for a complete example with many validated parameters. Narrative guide: [`docs/parameter_validation.md`](docs/parameter_validation.md).
+See `apps/tungsten/include/tungsten/common/tungsten_input.hpp` for a complete example with many validated parameters. Narrative guide: [`docs/parameter_validation.md`](docs/user_guide/parameter_validation.md).
 
 ## Extending OpenPFC
 
@@ -237,7 +237,7 @@ OpenPFC is designed as an open laboratory where you can extend functionality wit
 - Custom physics models (user-defined PDEs, multi-physics)
 - Custom I/O formats (HDF5, VTK, custom binary)
 
-Get started: See the [Extension Guide](docs/extending_openpfc/README.md), [docs/examples_catalog.md](docs/examples_catalog.md), and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
+Get started: See the [Extension Guide](docs/extending_openpfc/README.md), [docs/examples_catalog.md](docs/reference/examples_catalog.md), and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
 
 ## FFT Backend Selection
 
@@ -274,7 +274,7 @@ Build-time setup (HeFFTe, modules, CUDA, and CMake options) is documented in [IN
 
 ## Installing
 
-See [INSTALL.md](INSTALL.md) for supported compilers, environment modules, building and installing HeFFTe, and OpenPFC configuration (CPU and CUDA). For LUMI-G (ROCm / HIP, Cray PE, projappl and scratch layout), see [docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md). A Singularity/apptainer workflow is not documented yet.
+See [INSTALL.md](INSTALL.md) for supported compilers, environment modules, building and installing HeFFTe, and OpenPFC configuration (CPU and CUDA). For LUMI-G (ROCm / HIP, Cray PE, projappl and scratch layout), see [docs/INSTALL.LUMI.md](docs/hpc/INSTALL.LUMI.md). A Singularity/apptainer workflow is not documented yet.
 
 ## Structure of the application
 

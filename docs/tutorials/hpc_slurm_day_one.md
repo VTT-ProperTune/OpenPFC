@@ -18,7 +18,7 @@ Slurm starts the job in **`$SLURM_SUBMIT_DIR`** (where you ran `sbatch`) or a di
 
 **Rule:** Paths in JSON (`fields[].data`, logs) are usually **relative to the job’s current working directory**. Use **absolute paths** if you prefer not to depend on `cd`.
 
-See also: [`../mpi_io_layout_checklist.md`](../mpi_io_layout_checklist.md).
+See also: [`../mpi_io_layout_checklist.md`](../hpc/mpi_io_layout_checklist.md).
 
 ## 3. Minimal CPU job (`mpirun` or `srun`)
 
@@ -57,7 +57,7 @@ Binding (`--cpu-bind`, GPUs) is **site-specific** — follow your center’s Ope
 
 For LUMI-G, ROCm, and GPU-aware settings, use the dedicated docs:
 
-- [`../INSTALL.LUMI.md`](../INSTALL.LUMI.md)  
+- [`../INSTALL.LUMI.md`](../hpc/INSTALL.LUMI.md)  
 - [`../lumi_slurm/README.md`](../lumi_slurm/README.md)  
 - GPU apps: [`gpu_app_quickstart.md`](gpu_app_quickstart.md)
 

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Building OpenPFC on LUMI-G (HeFFTe + HIP / ROCm)
 
-This guide complements the generic instructions in [INSTALL.md](../INSTALL.md). It targets LUMI-G (AMD MI250X, gfx90a), the Cray programming environment (`cc` / `CC` wrappers, cray-mpich), and the LUMI/25.09 software stack with ROCm 6.4.x from the `partition/G` toolchain.
+This guide complements the generic instructions in [INSTALL.md](../../INSTALL.md). It targets LUMI-G (AMD MI250X, gfx90a), the Cray programming environment (`cc` / `CC` wrappers, cray-mpich), and the LUMI/25.09 software stack with ROCm 6.4.x from the `partition/G` toolchain.
 
 Storage layout used here
 
@@ -13,7 +13,7 @@ Storage layout used here
 - CMake build trees (fast I/O): `/flash/project_462001245/juaho/build/` — prefer this over building inside the git clone on LUMI.
 - Large temporary / job output: `/scratch/project_462001245/$USER/` — job working dirs, logs, heavy I/O.
 
-The `lumi-release` preset in [CMakePresets.json](../CMakePresets.json) uses `/flash/.../build/openpfc-lumi-release` and `CMAKE_INSTALL_PREFIX=/projappl/project_462001245/juaho/openpfc`.
+The `lumi-release` preset in [CMakePresets.json](../../CMakePresets.json) uses `/flash/.../build/openpfc-lumi-release` and `CMAKE_INSTALL_PREFIX=/projappl/project_462001245/juaho/openpfc`.
 
 Adjust paths if your project ID or layout differs.
 
@@ -179,11 +179,11 @@ srun -n2 --gpus-per-node=2 --cpu-bind=cores \
 
 Success prints `[verify_gpu_aware_mpi] OK`. Failure usually means `MPICH_GPU_SUPPORT_ENABLED` is unset, the job has no GPU binding, or the stack does not support device-buffer MPI.
 
-A ready-made Slurm helper is [lumi_slurm/verify_gpu_aware_mpi.sh](lumi_slurm/verify_gpu_aware_mpi.sh) (adjust `VERIFY_GPU_MPI_BIN` or the default path to match your install).
+A ready-made Slurm helper is [lumi_slurm/verify_gpu_aware_mpi.sh](../lumi_slurm/verify_gpu_aware_mpi.sh) (adjust `VERIFY_GPU_MPI_BIN` or the default path to match your install).
 
 ### 5.2 Maximum-throughput layout (one rank per GCD)
 
-For MI250X nodes (8 GCDs per node), LUMI recommends one MPI rank per GCD, `ntasks-per-node=8`, `gpus-per-node=8`, CPU binding, and `ROCR_VISIBLE_DEVICES=${SLURM_LOCALID}` via a wrapper. A full example is [lumi_slurm/tungsten_gpu.sbatch](lumi_slurm/tungsten_gpu.sbatch) — set `TUNGSTEN_HIP_BIN` to your `tungsten_hip` if needed.
+For MI250X nodes (8 GCDs per node), LUMI recommends one MPI rank per GCD, `ntasks-per-node=8`, `gpus-per-node=8`, CPU binding, and `ROCR_VISIBLE_DEVICES=${SLURM_LOCALID}` via a wrapper. A full example is [lumi_slurm/tungsten_gpu.sbatch](../lumi_slurm/tungsten_gpu.sbatch) — set `TUNGSTEN_HIP_BIN` to your `tungsten_hip` if needed.
 
 Minimal single-GPU smoke fragment (adjust account and partition):
 
@@ -215,11 +215,11 @@ The `tungsten_hip` binary is the HIP build of the tungsten application.
 
 ## 6. Runtime FFT / TOML `backend` field
 
-The TOML/JSON option `backend = "cuda"` in examples such as [examples/fft_backend_selection.toml](../examples/fft_backend_selection.toml) applies to NVIDIA / cuFFT builds only.
+The TOML/JSON option `backend = "cuda"` in examples such as [examples/fft_backend_selection.toml](../../examples/fft_backend_selection.toml) applies to NVIDIA / cuFFT builds only.
 
 On LUMI-G, GPU FFTs use rocFFT via HeFFTe inside HIP-specific code paths (e.g. `tungsten_hip`, `create_hip`). Do not expect a `"rocfft"` string in `backend_from_string` for generic CPU/CUDA runtime switching; use the HIP-enabled applications and APIs documented in the repository.
 
 ## 7. Further reading
 
-- [INSTALL.md](../INSTALL.md) — general HeFFTe and OpenPFC options (CUDA, coverage, documentation).
+- [INSTALL.md](../../INSTALL.md) — general HeFFTe and OpenPFC options (CUDA, coverage, documentation).
 - [LUMI documentation](https://docs.lumi-supercomputer.eu/) — modules, queues, storage, and PE updates.

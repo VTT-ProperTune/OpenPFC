@@ -33,7 +33,7 @@ Goal: two PNG files (initial and final field) without writing JSON.
      png_out/initial.png png_out/final.png
    ```
 
-2. **Success**: `mpirun` exits with status 0. On rank 0 you should find `png_out/initial.png` and `png_out/final.png` (grayscale, fixed \[-1,1\] scale — see [`io_results.md`](../io_results.md)). The app may **exit non-zero** if its internal growth check fails—reduce ranks or adjust parameters per the app README.
+2. **Success**: `mpirun` exits with status 0. On rank 0 you should find `png_out/initial.png` and `png_out/final.png` (grayscale, fixed \[-1,1\] scale — see [`io_results.md`](../user_guide/io_results.md)). The app may **exit non-zero** if its internal growth check fails—reduce ranks or adjust parameters per the app README.
 
 3. **Details**: full CLI reference — [`apps/allen_cahn/README.md`](../../apps/allen_cahn/README.md).
 
@@ -64,9 +64,9 @@ The stock file [`apps/tungsten/inputs_json/tungsten_single_seed.json`](../../app
    mpirun -n 4 ./apps/tungsten/tungsten ./tutorial_tungsten.json
    ```
 
-4. **Success**: exit code 0; rank 0 logs progress. **Artifacts**: binary files under `./data/` whose names match your `data` templates (frame index in place of `%d`). **On-disk layout:** [`binary_field_io_spec.md`](../binary_field_io_spec.md); overview: [`io_results.md`](../io_results.md).
+4. **Success**: exit code 0; rank 0 logs progress. **Artifacts**: binary files under `./data/` whose names match your `data` templates (frame index in place of `%d`). **On-disk layout:** [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md); overview: [`io_results.md`](../user_guide/io_results.md).
 
-5. **Visualization**: VTK/ParaView from the default JSON path is not automatic — the stock wiring registers binary writers. For VTK, attach `VTKWriter` in code (see [`io_results.md`](../io_results.md) and `examples/11_write_results.cpp`). For large campaigns, binary + postprocessing is typical.
+5. **Visualization**: VTK/ParaView from the default JSON path is not automatic — the stock wiring registers binary writers. For VTK, attach `VTKWriter` in code (see [`io_results.md`](../user_guide/io_results.md) and `examples/11_write_results.cpp`). For large campaigns, binary + postprocessing is typical.
 
 ---
 
@@ -74,7 +74,7 @@ The stock file [`apps/tungsten/inputs_json/tungsten_single_seed.json`](../../app
 
 | Goal | Document |
 |------|----------|
-| Full app comparison (JSON vs CLI, GPU) | [`applications.md`](../applications.md) |
-| JSON → `Simulator` order | [`app_pipeline.md`](../app_pipeline.md) |
-| Example executables by topic | [`examples_catalog.md`](../examples_catalog.md) |
-| Figures and which runnable produced them | [`showcase.md`](../showcase.md) |
+| Full app comparison (JSON vs CLI, GPU) | [`applications.md`](../user_guide/applications.md) |
+| JSON → `Simulator` order | [`app_pipeline.md`](../user_guide/app_pipeline.md) |
+| Example executables by topic | [`examples_catalog.md`](../reference/examples_catalog.md) |
+| Figures and which runnable produced them | [`showcase.md`](../user_guide/showcase.md) |

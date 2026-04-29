@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Science and numerics — practical limits
 
-This page collects **honest** expectations: OpenPFC is a serious HPC framework, but **no** numerical method is universal. For code layering, read [`architecture.md`](architecture.md); for spectral vs FD direction, read [`when_not_to_use_openpfc.md`](when_not_to_use_openpfc.md) and [`adr/0002-gradient-operators-fd-vs-spectral.md`](adr/0002-gradient-operators-fd-vs-spectral.md).
+This page collects **honest** expectations: OpenPFC is a serious HPC framework, but **no** numerical method is universal. For code layering, read [`architecture.md`](../concepts/architecture.md); for spectral vs FD direction, read [`when_not_to_use_openpfc.md`](../when_not_to_use_openpfc.md) and [`adr/0002-gradient-operators-fd-vs-spectral.md`](../adr/0002-gradient-operators-fd-vs-spectral.md).
 
 ## Spectral semi-implicit style (typical shipped models)
 
@@ -15,7 +15,7 @@ This page collects **honest** expectations: OpenPFC is a serious HPC framework, 
 
 ## Finite differences (kernel helpers and examples)
 
-- FD stencils need **halo exchange**; **in-place** vs **separated** halos interact with FFT layouts ([`halo_exchange.md`](halo_exchange.md)).  
+- FD stencils need **halo exchange**; **in-place** vs **separated** halos interact with FFT layouts ([`halo_exchange.md`](../concepts/halo_exchange.md)).  
 - FD and spectral operators can coexist in **principle**; user-facing **unified switching** for gradients/Laplacians is **still maturing** (see ADR 0002).
 
 ## What pretty pictures do not prove
@@ -24,5 +24,5 @@ This page collects **honest** expectations: OpenPFC is a serious HPC framework, 
 
 ## See also
 
-- [`science_tungsten_quicklook.md`](science_tungsten_quicklook.md) — what the tungsten model encodes  
-- [`science_cahn_hilliard_vs_allen_cahn.md`](science_cahn_hilliard_vs_allen_cahn.md) — example entry points  
+- [`science_tungsten_quicklook.md`](tungsten_quicklook.md) — what the tungsten model encodes  
+- [`science_cahn_hilliard_vs_allen_cahn.md`](cahn_hilliard_vs_allen_cahn.md) — example entry points  

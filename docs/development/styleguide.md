@@ -5,12 +5,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # OpenPFC developer style guide
 
-This document summarizes how we organize code, name things, and shape APIs (free functions, data-centric types) in OpenPFC so new contributors can align with existing practice. It complements [CONTRIBUTING.md](../CONTRIBUTING.md) (legal and contribution flow), [INSTALL.md](../INSTALL.md) (build and dependencies), and [architecture.md](architecture.md) (layers and dependency rules).
+This document summarizes how we organize code, name things, and shape APIs (free functions, data-centric types) in OpenPFC so new contributors can align with existing practice. It complements [CONTRIBUTING.md](../../CONTRIBUTING.md) (legal and contribution flow), [INSTALL.md](../../INSTALL.md) (build and dependencies), and [architecture.md](../concepts/architecture.md) (layers and dependency rules).
 
 ## Language and tooling
 
 - C++17 is required (`CMAKE_CXX_STANDARD` is 17; extensions off).
-- Formatting: follow the repository [`.clang-format`](../.clang-format) at the root. Use clang-format 20 locally (same major as CI’s `ahojukka5/clang-format-action@main` configuration). CI runs the same check in advisory mode (logs violations but does not fail the job). Local hook: run `git config core.hooksPath .githooks` once from the repo root so staged C++ files are checked via [`scripts/pre-commit-hook`](../scripts/pre-commit-hook) before each commit.
+- Formatting: follow the repository [`.clang-format`](../../.clang-format) at the root. Use clang-format 20 locally (same major as CI’s `ahojukka5/clang-format-action@main` configuration). CI runs the same check in advisory mode (logs violations but does not fail the job). Local hook: run `git config core.hooksPath .githooks` once from the repo root so staged C++ files are checked via [`scripts/pre-commit-hook`](../../scripts/pre-commit-hook) before each commit.
 - Static analysis: optional `clang-tidy` via CMake option `USE_CLANG_TIDY` (see `cmake/CompilerSettings.cmake`).
 - MPI: OpenPFC is built and tested with OpenMPI in typical workflows; use the same MPI stack for HeFFTe and OpenPFC (see INSTALL.md).
 
@@ -24,27 +24,27 @@ This document summarizes how we organize code, name things, and shape APIs (free
   ```
 
 - Use the same pattern in CMake files that already use SPDX comments (`# SPDX-FileCopyrightText: ...`).
-- Contributing implies the copyright transfer described in [CONTRIBUTING.md](../CONTRIBUTING.md); read that file before large changes.
+- Contributing implies the copyright transfer described in [CONTRIBUTING.md](../../CONTRIBUTING.md); read that file before large changes.
 
 ## Repository layout (where things go)
 
 | Area | Role |
 |------|------|
-| [`include/openpfc/`](../include/openpfc/) | Public API — headers only, mirroring the kernel / runtime / frontend split (see below). |
-| [`src/openpfc/`](../src/openpfc/) | Library implementation — `.cpp` (and backend-specific sources) for symbols declared in `include/`. Paths mirror the include tree (e.g. `kernel/data/world.cpp`). |
-| [`apps/`](../apps/) | Full applications (e.g. scenario-specific drivers, JSON inputs). Each app has its own `CMakeLists.txt` where appropriate. |
-| [`examples/`](../examples/) | Small, teaching executables — prefer clear names; many tutorials use numeric prefixes (`01_…`, `02_…`). |
-| [`tests/unit/`](../tests/unit/) | Unit tests (Catch2), grouped under `kernel/`, `runtime/`, `frontend/`, etc., mirroring library structure. |
-| [`tests/integration/`](../tests/integration/) | Integration tests — multi-component or heavier scenarios. |
-| [`tests/benchmarks/`](../tests/benchmarks/) | Benchmarks (optional). Sources are compiled only when `OpenPFC_BUILD_BENCHMARKS=ON`; see [tests/benchmarks/README.md](../tests/benchmarks/README.md). |
-| [`cmake/`](../cmake/) | Build logic included from the root `CMakeLists.txt` — prefer adding options and target wiring here rather than inflating the root file. |
-| [`docs/`](../docs/) | Human-readable documentation (architecture, guides, Doxygen-related assets). |
+| [`include/openpfc/`](../../include/openpfc) | Public API — headers only, mirroring the kernel / runtime / frontend split (see below). |
+| [`src/openpfc/`](../../src/openpfc) | Library implementation — `.cpp` (and backend-specific sources) for symbols declared in `include/`. Paths mirror the include tree (e.g. `kernel/data/world.cpp`). |
+| [`apps/`](../../apps) | Full applications (e.g. scenario-specific drivers, JSON inputs). Each app has its own `CMakeLists.txt` where appropriate. |
+| [`examples/`](../../examples) | Small, teaching executables — prefer clear names; many tutorials use numeric prefixes (`01_…`, `02_…`). |
+| [`tests/unit/`](../../tests/unit) | Unit tests (Catch2), grouped under `kernel/`, `runtime/`, `frontend/`, etc., mirroring library structure. |
+| [`tests/integration/`](../../tests/integration) | Integration tests — multi-component or heavier scenarios. |
+| [`tests/benchmarks/`](../../tests/benchmarks) | Benchmarks (optional). Sources are compiled only when `OpenPFC_BUILD_BENCHMARKS=ON`; see [tests/benchmarks/README.md](../../tests/benchmarks/README.md). |
+| [`cmake/`](../../cmake) | Build logic included from the root `CMakeLists.txt` — prefer adding options and target wiring here rather than inflating the root file. |
+| [`docs/`](..) | Human-readable documentation (architecture, guides, Doxygen-related assets). |
 
 HeFFTe (and similar large third-party trees) must not live inside the OpenPFC clone; install to a prefix (e.g. under `$HOME/opt/heffte/...`) as described in INSTALL.md.
 
 ## Layers: kernel, runtime, frontend
 
-The mental model is fixed: kernel → runtime → frontend in terms of allowed dependencies (frontend may use kernel + runtime; runtime uses kernel only; kernel must not include or depend on runtime or frontend). Details and diagrams are in [architecture.md](architecture.md).
+The mental model is fixed: kernel → runtime → frontend in terms of allowed dependencies (frontend may use kernel + runtime; runtime uses kernel only; kernel must not include or depend on runtime or frontend). Details and diagrams are in [architecture.md](../concepts/architecture.md).
 
 Practical rules:
 
@@ -86,7 +86,7 @@ OpenPFC favors a laboratory, not fortress style: code should be easy to read, ex
 - Classes as data carriers: types should primarily hold state. Prefer `public` data members when there is no concrete reason to hide them—in practice many types should read like `struct`s. Reserve `private` members (with the `m_` convention) for cases where hiding genuinely prevents invalid states or where encapsulation is clearly justified, not as a default habit.
 - **Virtual bases are extension seams.** Subclass `Model`, `FieldModifier`, or `ResultsWriter` when the framework must **dispatch across app-defined types** at runtime. Implement the bulk of physics, I/O, and wiring as **free functions** (and small POD-ish state) that those overrides call into—avoid growing wide hierarchies for “organization only.”
 
-This sits alongside the layer rules in [architecture.md](architecture.md): kernel/runtime/frontend boundaries still apply; openness is about how each type exposes its *own* fields and helpers, not about crossing forbidden includes.
+This sits alongside the layer rules in [architecture.md](../concepts/architecture.md): kernel/runtime/frontend boundaries still apply; openness is about how each type exposes its *own* fields and helpers, not about crossing forbidden includes.
 
 ## Includes and public API
 
@@ -94,18 +94,18 @@ This sits alongside the layer rules in [architecture.md](architecture.md): kerne
 
   `#include <openpfc/kernel/data/world.hpp>`
 
-- Umbrella headers [`openpfc/openpfc.hpp`](../include/openpfc/openpfc.hpp) and [`openpfc/openpfc_minimal.hpp`](../include/openpfc/openpfc_minimal.hpp) are convenient but pull more than needed; prefer specific headers in library and example code for compile times.
+- Umbrella headers [`openpfc/openpfc.hpp`](../../include/openpfc/openpfc.hpp) and [`openpfc/openpfc_minimal.hpp`](../../include/openpfc/openpfc_minimal.hpp) are convenient but pull more than needed; prefer specific headers in library and example code for compile times.
 - Anything under `include/openpfc/` is treated as public API. Subdirectories named `detail` (or future `internal`) are not stability promises—do not rely on them from external projects.
 
-See [architecture.md](architecture.md) for minimal-app include patterns and HeFFTe/runtime headers.
+See [architecture.md](../concepts/architecture.md) for minimal-app include patterns and HeFFTe/runtime headers.
 
 ## Adding or moving library code
 
 1. Header in `include/openpfc/<layer>/.../name.hpp` (or split headers if the module is large, as with `world_*`).
 2. Source in `src/openpfc/<layer>/.../name.cpp` if not header-only.
-3. Register new `.cpp` files on the `openpfc` target in [`cmake/LibraryConfiguration.cmake`](../cmake/LibraryConfiguration.cmake) (generator expressions for CUDA/HIP files follow existing examples).
+3. Register new `.cpp` files on the `openpfc` target in [`cmake/LibraryConfiguration.cmake`](../../cmake/LibraryConfiguration.cmake) (generator expressions for CUDA/HIP files follow existing examples).
 4. Tests: add `test_*.cpp` under the matching `tests/unit/...` tree and list them in the nearest `CMakeLists.txt` via `target_sources(openpfc-tests PRIVATE ...)`.
-5. Examples (optional): add `.cpp` under `examples/` and wire the executable in [`examples/CMakeLists.txt`](../examples/CMakeLists.txt).
+5. Examples (optional): add `.cpp` under `examples/` and wire the executable in [`examples/CMakeLists.txt`](../../examples/CMakeLists.txt).
 
 After structural changes, update or add Doxygen on public types and functions where the rest of the module is documented (`@file`, `@brief`, `@param`, etc.).
 
@@ -113,12 +113,12 @@ After structural changes, update or add Doxygen on public types and functions wh
 
 - Design / physics / algorithms: add or extend Markdown under `docs/` and link from related headers (as with `docs/halo_exchange.md`).
 - User-facing build and HPC notes: INSTALL.md, `docs/build_cpu_gpu.md`, site-specific guides (e.g. `docs/INSTALL.LUMI.md`).
-- API reference: built with Doxygen from configured inputs in [`docs/CMakeLists.txt`](CMakeLists.txt).
+- API reference: built with Doxygen from configured inputs in [`docs/CMakeLists.txt`](../CMakeLists.txt).
 
 ## Tests and quality gate
 
 - Framework: Catch2 v3 (fetched by CMake for tests).
-- Run the test target after changes, e.g. `cmake --build <build-dir> --target openpfc-tests` and execute the test binary (see [tests/README.md](../tests/README.md) for conventions).
+- Run the test target after changes, e.g. `cmake --build <build-dir> --target openpfc-tests` and execute the test binary (see [tests/README.md](../../tests/README.md) for conventions).
 - Prefer deterministic unit tests; use MPI tests only where the behavior under rank layout is what you are validating.
 
 ## Summary checklist for a typical change
@@ -130,4 +130,4 @@ After structural changes, update or add Doxygen on public types and functions wh
 5. Unit tests where behavior is non-trivial or regression-prone.
 6. `clang-format` applied; builds cleanly at least in the configuration you use (Debug recommended during development).
 
-For questions not covered here, use [architecture.md](architecture.md) and nearby code in the same subdirectory as the canonical reference.
+For questions not covered here, use [architecture.md](../concepts/architecture.md) and nearby code in the same subdirectory as the canonical reference.

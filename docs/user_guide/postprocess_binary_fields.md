@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Post-processing binary field files (external tools)
 
-OpenPFC **`BinaryWriter`** files are **raw MPI-IO payloads**: no header, **Fortran (column-major)** order, **`float64`** per sample for typical real fields ([`binary_field_io_spec.md`](binary_field_io_spec.md)). This page sketches how to reason about **offline** analysis; for restart inside OpenPFC, use **`BinaryReader`** with the same decomposition.
+OpenPFC **`BinaryWriter`** files are **raw MPI-IO payloads**: no header, **Fortran (column-major)** order, **`float64`** per sample for typical real fields ([`binary_field_io_spec.md`](../reference/binary_field_io_spec.md)). This page sketches how to reason about **offline** analysis; for restart inside OpenPFC, use **`BinaryReader`** with the same decomposition.
 
 ## What you must know out-of-band
 
@@ -40,10 +40,10 @@ field = data.reshape((nx, ny, nz), order="F")
 
 ## Safer paths for visualization
 
-- **VTK** from code: [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md).  
+- **VTK** from code: [`tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md).  
 - **ParaView** / custom readers: prefer exporting **VTK** or documented **HDF5** profiling paths over ad-hoc raw binary unless you control the full metadata story.
 
 ## See also
 
-- [`binary_field_io_spec.md`](binary_field_io_spec.md) — normative format  
+- [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md) — normative format  
 - [`io_results.md`](io_results.md) — writers overview  

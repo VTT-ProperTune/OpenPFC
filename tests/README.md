@@ -137,7 +137,7 @@ If you configure with **`OpenPFC_ENABLE_CODE_COVERAGE`** (see `tests/CMakeLists.
 
 ## Shared fixtures
 
-Headers under [`fixtures/`](fixtures/) (e.g. `mock_model.hpp`) are included as `#include "fixtures/..."` because `tests/` is on the include path for `openpfc-tests`. Details: [`fixtures/README.md`](fixtures/README.md).
+Headers under [`fixtures/`](fixtures) (e.g. `mock_model.hpp`) are included as `#include "fixtures/..."` because `tests/` is on the include path for `openpfc-tests`. Details: [`fixtures/README.md`](fixtures/README.md).
 
 ## Writing new tests
 

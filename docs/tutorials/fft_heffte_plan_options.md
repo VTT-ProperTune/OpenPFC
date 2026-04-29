@@ -15,7 +15,7 @@ It is organized in four blocks you will see in real configs:
 
 | Block | Role |
 |-------|------|
-| `[domain]` | Grid size, spacing, origin — same information as JSON `domain` / top-level world keys in apps (see [`../configuration.md`](../configuration.md)). |
+| `[domain]` | Grid size, spacing, origin — same information as JSON `domain` / top-level world keys in apps (see [`../configuration.md`](../user_guide/configuration.md)). |
 | `[plan_options]` | HeFFTe backend (`fftw`, `cuda`, …), reshape algorithm, pencils, GPU-aware MPI, etc. |
 | `[timestepping]` | `t0`, `t1`, `dt`, `saveat` — mirrors the `Time` object in the spectral stack. |
 | `[model]` | Placeholder name/params — real apps (e.g. tungsten) use richer `model.params`. |
@@ -43,13 +43,13 @@ Start from defaults (`fftw`, `alltoall`, `use_pencils = false`) and change **one
 
 ## 4. Copy into your project
 
-1. Copy `[plan_options]` from the example into your TOML, **or** translate keys to JSON (same logical names; see [`../app_pipeline.md`](../app_pipeline.md)).  
-2. Keep **one** coherent toolchain: the HeFFTe variant (CPU/CUDA/ROCm) must match how OpenPFC was built ([`../build_cpu_gpu.md`](../build_cpu_gpu.md)).  
+1. Copy `[plan_options]` from the example into your TOML, **or** translate keys to JSON (same logical names; see [`../app_pipeline.md`](../user_guide/app_pipeline.md)).  
+2. Keep **one** coherent toolchain: the HeFFTe variant (CPU/CUDA/ROCm) must match how OpenPFC was built ([`../build_cpu_gpu.md`](../hpc/build_cpu_gpu.md)).  
 3. Validate at run time: wrong backend strings usually fail fast at FFT creation.
 
 ## See also
 
-- [`../configuration.md`](../configuration.md) — mental model for JSON/TOML  
-- [`../app_pipeline.md`](../app_pipeline.md) — where `SpectralCpuStack` consumes `plan_options`  
-- [`../performance_profiling.md`](../performance_profiling.md) — measuring the effect of changes  
+- [`../configuration.md`](../user_guide/configuration.md) — mental model for JSON/TOML  
+- [`../app_pipeline.md`](../user_guide/app_pipeline.md) — where `SpectralCpuStack` consumes `plan_options`  
+- [`../performance_profiling.md`](../hpc/performance_profiling.md) — measuring the effect of changes  
 - [`gpu_app_quickstart.md`](gpu_app_quickstart.md) — GPU binaries and CMake flags  

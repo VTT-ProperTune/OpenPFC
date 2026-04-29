@@ -27,7 +27,7 @@ flowchart TD
 
 | Piece | Rule |
 |-------|------|
-| MPI | Same implementation for OpenPFC, HeFFTe, and `mpirun` ([`INSTALL.md`](../INSTALL.md)). |
+| MPI | Same implementation for OpenPFC, HeFFTe, and `mpirun` ([`INSTALL.md`](../../INSTALL.md)). |
 | HeFFTe | GPU-enabled build (e.g. `2.4.1-cuda` / ROCm variant) on `CMAKE_PREFIX_PATH`. |
 | OpenPFC | `-DOpenPFC_ENABLE_CUDA=ON` or `-DOpenPFC_ENABLE_HIP=ON` in a **fresh** GPU build dir ([`build_cpu_gpu.md`](build_cpu_gpu.md)). |
 
@@ -35,11 +35,11 @@ flowchart TD
 
 1. Keep your working **CPU** tree (`build-cpu`).  
 2. Create **`build-gpu`** (or `build-hip`) and configure with GPU flags + correct `CMAKE_PREFIX_PATH` to the GPU HeFFTe prefix ([`build_cpu_gpu.md`](build_cpu_gpu.md)).  
-3. Run the GPU quickstart: [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md) (`backend` in JSON, `tungsten_cuda` / `tungsten_hip`).  
-4. Compare log shapes to CPU: [`example_run_output.md`](example_run_output.md).
+3. Run the GPU quickstart: [`tutorials/gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md) (`backend` in JSON, `tungsten_cuda` / `tungsten_hip`).  
+4. Compare log shapes to CPU: [`example_run_output.md`](../reference/example_run_output.md).
 
 ## See also
 
-- [`build_options.md`](build_options.md) — CMake reference  
+- [`build_options.md`](../reference/build_options.md) — CMake reference  
 - [`INSTALL.LUMI.md`](INSTALL.LUMI.md) — ROCm / LUMI-G example  
-- [`spectral_stack.md`](spectral_stack.md) — where FFT sits in the stack  
+- [`spectral_stack.md`](../concepts/spectral_stack.md) — where FFT sits in the stack  

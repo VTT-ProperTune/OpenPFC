@@ -17,7 +17,7 @@ CMake or the compiler is not using the same MPI you intend. Before `cmake`:
 2. Set `CC` / `CXX` to the MPI wrappers or module `gcc` explicitly.
 3. Remove a stale build tree or re-run `cmake` with `-DCMAKE_C_COMPILER=…` and `-DCMAKE_CXX_COMPILER=…` so `CMakeCache.txt` does not still point at `/usr/bin/gcc`.
 
-HIP/Cray builds may need extra include flags for MPI in HIP translation units; see [`INSTALL.LUMI.md`](INSTALL.LUMI.md) §2.
+HIP/Cray builds may need extra include flags for MPI in HIP translation units; see [`INSTALL.LUMI.md`](hpc/INSTALL.LUMI.md) §2.
 
 ### CMake finds the wrong GCC (e.g. GCC 8 instead of 11)
 
@@ -59,13 +59,13 @@ Examples and apps are controlled by `OpenPFC_BUILD_EXAMPLES` and `OpenPFC_BUILD_
 
 ### GPU / HIP job fails with GPU-aware MPI errors
 
-For ROCm/LUMI-style stacks, `MPICH_GPU_SUPPORT_ENABLED=1` and a build with GPU-aware MPI may be required. See [`INSTALL.LUMI.md`](INSTALL.LUMI.md) and [`applications.md`](applications.md).
+For ROCm/LUMI-style stacks, `MPICH_GPU_SUPPORT_ENABLED=1` and a build with GPU-aware MPI may be required. See [`INSTALL.LUMI.md`](hpc/INSTALL.LUMI.md) and [`applications.md`](user_guide/applications.md).
 
 ## Config-driven runs (`App` + JSON/TOML)
 
 ### Process exits immediately with “validation” or parameter errors
 
-Models such as tungsten validate `model.params` at startup. Read the printed report: missing keys, out-of-range values, or wrong types. Compare your file to `apps/tungsten/inputs_json/` samples. See [`app_pipeline.md`](app_pipeline.md) for which JSON sections are consumed and [`apps/tungsten/README.md`](../apps/tungsten/README.md) for layout pointers.
+Models such as tungsten validate `model.params` at startup. Read the printed report: missing keys, out-of-range values, or wrong types. Compare your file to `apps/tungsten/inputs_json/` samples. See [`app_pipeline.md`](user_guide/app_pipeline.md) for which JSON sections are consumed and [`apps/tungsten/README.md`](../apps/tungsten/README.md) for layout pointers.
 
 ### “No such file” for the config path
 
@@ -75,7 +75,7 @@ Paths are resolved from the current working directory (often your `build/` folde
 
 - [`faq.md`](faq.md) — short Q&A  
 - [`quickstart.md`](quickstart.md) — first successful run  
-- [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) — MPI ranks, cwd, binary I/O  
+- [`mpi_io_layout_checklist.md`](hpc/mpi_io_layout_checklist.md) — MPI ranks, cwd, binary I/O  
 - [`learning_paths.md`](learning_paths.md) — pick a sequenced track by role  
 - [`README.md`](README.md) — full documentation index  
 - Issues — <https://github.com/VTT-ProperTune/OpenPFC/issues>

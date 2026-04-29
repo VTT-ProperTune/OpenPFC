@@ -10,14 +10,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - [`docs/README.md`](docs/README.md) — index of all guides (architecture, HPC, tutorials). **API reference (HTML)** vs prose: see the opening table there.
 - [`docs/learning_paths.md`](docs/learning_paths.md) — run / extend / integrate tracks.
 - [`docs/tutorials/README.md`](docs/tutorials/README.md) — step-by-step tutorials (VTK, HeFFTe, spectral examples, GPU, …).
-- [`docs/personas.md`](docs/personas.md) — short entry points by role (cluster runner, model developer, integrator).
+- [`docs/personas.md`](docs/development/personas.md) — short entry points by role (cluster runner, model developer, integrator).
 - [`docs/tutorials/add_catch2_test.md`](docs/tutorials/add_catch2_test.md) — minimal Catch2 / `ctest` pattern.
-- [`docs/showcase.md`](docs/showcase.md) — figures mapped to apps and examples.
-- [`docs/testing.md`](docs/testing.md) — `ctest`, `openpfc-tests`, MPI test CMake options.
-- [`docs/contributing-docs.md`](docs/contributing-docs.md) — link checks, SPDX headers, where to add cross-links in the doc index.
+- [`docs/showcase.md`](docs/user_guide/showcase.md) — figures mapped to apps and examples.
+- [`docs/testing.md`](docs/development/testing.md) — `ctest`, `openpfc-tests`, MPI test CMake options.
+- [`docs/contributing-docs.md`](docs/development/contributing-docs.md) — link checks, SPDX headers, where to add cross-links in the doc index.
 - Run from the repo root: `python3 scripts/check_doc_links.py`
-- Style for code and headers: [`docs/styleguide.md`](docs/styleguide.md)
-- Extending the library (models, `App`, validation): [`docs/extending_openpfc/README.md`](docs/extending_openpfc/README.md), [`docs/class_tour.md`](docs/class_tour.md), [`docs/tutorials/custom_app_minimal.md`](docs/tutorials/custom_app_minimal.md), [`docs/parameter_validation.md`](docs/parameter_validation.md)
+- Style for code and headers: [`docs/styleguide.md`](docs/development/styleguide.md)
+- Extending the library (models, `App`, validation): [`docs/extending_openpfc/README.md`](docs/extending_openpfc/README.md), [`docs/class_tour.md`](docs/reference/class_tour.md), [`docs/tutorials/custom_app_minimal.md`](docs/tutorials/custom_app_minimal.md), [`docs/parameter_validation.md`](docs/user_guide/parameter_validation.md)
 
 ## Build and test
 
@@ -25,7 +25,7 @@ Follow [`INSTALL.md`](INSTALL.md) for MPI, HeFFTe, and CMake. Run tests with you
 
 ## CI (GitHub Actions)
 
-Pull requests run workflows under [`.github/workflows/`](.github/workflows/): **`ci.yml`** (main build/test matrix on Ubuntu 24.04), **`docs.yml`** (markdown link check via `scripts/check_doc_links.py`, Doxygen when enabled), **`coverage.yml`**, **`asan.yml`**, **`clang-tidy.yml`**. Doc-only edits under `docs/**` still trigger the **Documentation** workflow’s link job—run `python3 scripts/check_doc_links.py` locally before pushing.
+Pull requests run workflows under [`.github/workflows/`](.github/workflows): **`ci.yml`** (main build/test matrix on Ubuntu 24.04), **`docs.yml`** (markdown link check via `scripts/check_doc_links.py`, Doxygen when enabled), **`coverage.yml`**, **`asan.yml`**, **`clang-tidy.yml`**. Doc-only edits under `docs/**` still trigger the **Documentation** workflow’s link job—run `python3 scripts/check_doc_links.py` locally before pushing.
 
 ## Changelog
 

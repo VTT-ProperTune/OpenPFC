@@ -34,7 +34,7 @@ cd build
 mpirun -n 4 ./apps/tungsten/tungsten ../apps/tungsten/inputs_json/tungsten_single_seed.json
 ```
 
-Use `tungsten_cuda` / `tungsten_hip` when built; pass the same config path. On LUMI-G, see [`docs/INSTALL.LUMI.md`](../../docs/INSTALL.LUMI.md) and [`docs/lumi_slurm/README.md`](../../docs/lumi_slurm/README.md).
+Use `tungsten_cuda` / `tungsten_hip` when built; pass the same config path. On LUMI-G, see [`docs/INSTALL.LUMI.md`](../../docs/hpc/INSTALL.LUMI.md) and [`docs/lumi_slurm/README.md`](../../docs/lumi_slurm/README.md).
 
 ## Code map
 
@@ -47,6 +47,6 @@ Use `tungsten_cuda` / `tungsten_hip` when built; pass the same config path. On L
 
 ## See also
 
-- [`docs/app_pipeline.md`](../../docs/app_pipeline.md) — how JSON maps to `Simulator`
-- [`docs/applications.md`](../../docs/applications.md) — all shipped apps
-- [`docs/io_results.md`](../../docs/io_results.md) — binary result writers from `fields`
+- [`docs/app_pipeline.md`](../../docs/user_guide/app_pipeline.md) — how JSON maps to `Simulator`
+- [`docs/applications.md`](../../docs/user_guide/applications.md) — all shipped apps
+- [`docs/io_results.md`](../../docs/user_guide/io_results.md) — binary result writers from `fields`

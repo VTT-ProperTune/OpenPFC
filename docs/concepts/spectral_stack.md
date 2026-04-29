@@ -33,12 +33,12 @@ flowchart LR
 Reading order for **declarative apps**:
 
 1. **World + decomposition** — global grid and which ranks own which brick (`kernel/data`, `kernel/decomposition`).  
-2. **FFT** — HeFFTe plan and backend (CPU / CUDA / HIP) must match how you built OpenPFC and HeFFTe ([`build_cpu_gpu.md`](build_cpu_gpu.md), [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md)).  
-3. **Model** — physics in Fourier or real space; registers fields and hooks the integrator ([`class_tour.md`](class_tour.md)).  
+2. **FFT** — HeFFTe plan and backend (CPU / CUDA / HIP) must match how you built OpenPFC and HeFFTe ([`build_cpu_gpu.md`](../hpc/build_cpu_gpu.md), [`tutorials/fft_heffte_plan_options.md`](../tutorials/fft_heffte_plan_options.md)).  
+3. **Model** — physics in Fourier or real space; registers fields and hooks the integrator ([`class_tour.md`](../reference/class_tour.md)).  
 4. **Simulator** — owns time loop, calls modifiers, invokes writers at `saveat` boundaries.  
-5. **Writers** — `ResultsWriter` implementations (MPI-IO binary, VTK, …) ([`io_results.md`](io_results.md)).
+5. **Writers** — `ResultsWriter` implementations (MPI-IO binary, VTK, …) ([`io_results.md`](../user_guide/io_results.md)).
 
-JSON/TOML wiring (spectral CPU stack, session, wiring helpers) is summarized in [`app_pipeline.md`](app_pipeline.md).
+JSON/TOML wiring (spectral CPU stack, session, wiring helpers) is summarized in [`app_pipeline.md`](../user_guide/app_pipeline.md).
 
 ## Spectral vs finite differences
 
@@ -49,8 +49,8 @@ JSON/TOML wiring (spectral CPU stack, session, wiring helpers) is summarized in 
 
 | Need | Document |
 |------|-----------|
-| First successful `mpirun` | [`start_here_15_minutes.md`](start_here_15_minutes.md) |
-| Runnable “recipes” | [`recipes/README.md`](recipes/README.md) |
-| Config keys for spectral `App` | [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
-| API map (`Model`, `Simulator`, …) | [`class_tour.md`](class_tour.md) |
-| Examples ladder | [`examples_catalog.md`](examples_catalog.md), [`tutorials/spectral_examples_sequence.md`](tutorials/spectral_examples_sequence.md) |
+| First successful `mpirun` | [`start_here_15_minutes.md`](../start_here_15_minutes.md) |
+| Runnable “recipes” | [`recipes/README.md`](../recipes/README.md) |
+| Config keys for spectral `App` | [`spectral_app_config_reference.md`](../reference/spectral_app_config_reference.md) |
+| API map (`Model`, `Simulator`, …) | [`class_tour.md`](../reference/class_tour.md) |
+| Examples ladder | [`examples_catalog.md`](../reference/examples_catalog.md), [`tutorials/spectral_examples_sequence.md`](../tutorials/spectral_examples_sequence.md) |

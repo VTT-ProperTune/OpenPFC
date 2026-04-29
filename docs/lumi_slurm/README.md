@@ -38,7 +38,7 @@ CPU (`tungsten_cpu.sbatch`)
 GPU (`tungsten_gpu.sbatch`)
 
 - `partition/G` + `small-g`: 8 MPI ranks per node (one per GCD), `--gpus-per-node=8`, `--exclusive`.
-- `MPICH_GPU_SUPPORT_ENABLED=1` for GPU-aware MPI (required for device pointers; see [INSTALL.LUMI.md](../INSTALL.LUMI.md)).
+- `MPICH_GPU_SUPPORT_ENABLED=1` for GPU-aware MPI (required for device pointers; see [INSTALL.LUMI.md](../hpc/INSTALL.LUMI.md)).
 - Optional smoke check: `sbatch docs/lumi_slurm/verify_gpu_aware_mpi.sh` (or run `verify_gpu_aware_mpi` from the OpenPFC `bin/` after setting `VERIFY_GPU_MPI_BIN` if needed).
 - Wrapper script sets `ROCR_VISIBLE_DEVICES=$SLURM_LOCALID` so each rank sees a single GPU as device 0 ([LUMI-G MPI example](https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/lumig-job/)).
 - `srun --cpu-bind=map_cpu:49,57,17,25,1,9,33,41` matches the documented LUMI-G rank/NUMA/GPU mapping ([GPU binding](https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding)).

@@ -28,7 +28,7 @@ mpirun -n 4 ./examples/05_simulator
 mpirun -n 4 ./examples/12_cahn_hilliard
 ```
 
-Adjust `-n` to your machine. Expect exit code **0**; each program prints different INFO — see [`../example_run_output.md`](../example_run_output.md) for log *shape*.
+Adjust `-n` to your machine. Expect exit code **0**; each program prints different INFO — see [`../example_run_output.md`](../reference/example_run_output.md) for log *shape*.
 
 ## What to read in the sources
 
@@ -42,10 +42,10 @@ Adjust `-n` to your machine. Expect exit code **0**; each program prints differe
 
 | Goal | Next document |
 |------|----------------|
-| JSON-driven `App` | [`custom_app_minimal.md`](custom_app_minimal.md), [`../app_pipeline.md`](../app_pipeline.md) |
+| JSON-driven `App` | [`custom_app_minimal.md`](custom_app_minimal.md), [`../app_pipeline.md`](../user_guide/app_pipeline.md) |
 | VTK in more detail | [`vtk_paraview_workflow.md`](vtk_paraview_workflow.md) |
-| Full example list + tiers | [`../examples_catalog.md`](../examples_catalog.md) |
-| Doxygen snippet curriculum | [`../api_examples_walkthrough.md`](../api_examples_walkthrough.md) |
+| Full example list + tiers | [`../examples_catalog.md`](../reference/examples_catalog.md) |
+| Doxygen snippet curriculum | [`../api_examples_walkthrough.md`](../reference/api_examples_walkthrough.md) |
 
 ## See also
 

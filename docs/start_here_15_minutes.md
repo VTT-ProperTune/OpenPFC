@@ -56,7 +56,7 @@ mpirun -n 4 ./examples/05_simulator
 
 ## 3. What you just exercised
 
-`05_simulator` walks the **spectral stack** at library level: `World`, `Decomposition`, HeFFTe-backed FFT, `Simulator`, and time integration. Read the story in [`spectral_stack.md`](spectral_stack.md) and layering in [`architecture.md`](architecture.md).
+`05_simulator` walks the **spectral stack** at library level: `World`, `Decomposition`, HeFFTe-backed FFT, `Simulator`, and time integration. Read the story in [`spectral_stack.md`](concepts/spectral_stack.md) and layering in [`architecture.md`](concepts/architecture.md).
 
 ## 4. Next steps (pick one)
 
@@ -65,7 +65,7 @@ mpirun -n 4 ./examples/05_simulator
 | Shipped JSON/TOML app (e.g. tungsten) | [`recipes/recipe_spectral_app_json.md`](recipes/recipe_spectral_app_json.md) |
 | VTK / ParaView from an example | [`recipes/recipe_artifacts_vtk_or_binary.md`](recipes/recipe_artifacts_vtk_or_binary.md) |
 | Full tutorial index | [`tutorials/README.md`](tutorials/README.md) |
-| GPU vs CPU build | [`gpu_path_decision.md`](gpu_path_decision.md) |
-| Cluster jobs / I/O | [`hpc_operator_guide.md`](hpc_operator_guide.md) |
+| GPU vs CPU build | [`gpu_path_decision.md`](hpc/gpu_path_decision.md) |
+| Cluster jobs / I/O | [`hpc_operator_guide.md`](hpc/operator_guide.md) |
 
 Sequenced tracks by role: [`learning_paths.md`](learning_paths.md).

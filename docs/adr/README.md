@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Architecture Decision Records (ADR)
 
-Short, durable notes for **why** the codebase looks the way it does. They complement narrative docs ([`architecture.md`](../architecture.md), [`refactoring_roadmap.md`](../refactoring_roadmap.md)).
+Short, durable notes for **why** the codebase looks the way it does. They complement narrative docs ([`architecture.md`](../concepts/architecture.md), [`refactoring_roadmap.md`](../development/refactoring_roadmap.md)).
 
 | ADR | Title |
 |-----|--------|

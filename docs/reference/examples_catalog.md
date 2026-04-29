@@ -42,11 +42,11 @@ flowchart LR
 
 | Tier | Executables | Focus |
 |------|-------------|--------|
-| **1 — First week** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `World`, HeFFTe FFT, `Simulator`, spectral model (matches [`quickstart.md`](quickstart.md)) |
+| **1 — First week** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `World`, HeFFTe FFT, `Simulator`, spectral model (matches [`quickstart.md`](../quickstart.md)) |
 | **2 — Wiring** | `10_ui_register_ic`, `11_write_results`, `14_custom_field_initializer`, `diffusion_model_with_custom_initial_condition` | JSON-style registration, writers, custom IC |
 | **3 — FD / space / tools** | `15_finite_difference_heat`, `17_custom_coordinate_system`, `fft_backend_benchmark`, `profiling_timer_report` | Halos, coordinates, backends, timing |
 
-Narrative companion: [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md). Ordered **Doxygen** snippets (separate tree): [`api_examples_walkthrough.md`](api_examples_walkthrough.md).
+Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/01-basics/README.md). Ordered **Doxygen** snippets (separate tree): [`api_examples_walkthrough.md`](api_examples_walkthrough.md).
 
 ## Full catalog
 
@@ -75,7 +75,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](getting_started/01-
 | `json_read` | `json_read.cpp` | Standalone nlohmann JSON read (does not link `OpenPFC`) |
 | `world_helpers_example` | `world_helpers_example.cpp` | `World` helpers |
 | `14_custom_field_initializer` | `14_custom_field_initializer.cpp` | Custom field initializer |
-| `15_finite_difference_heat` | `15_finite_difference_heat.cpp` | Finite-difference heat (separated halos); see [`halo_exchange.md`](halo_exchange.md) |
+| `15_finite_difference_heat` | `15_finite_difference_heat.cpp` | Finite-difference heat (separated halos); see [`halo_exchange.md`](../concepts/halo_exchange.md) |
 | `16_strong_types_demo` | `16_strong_types_demo.cpp` | Strong typing demo |
 | `17_custom_coordinate_system` | `17_custom_coordinate_system.cpp` | Custom coordinate setup |
 | `world_strong_types_example` | `world_strong_types_example.cpp` | Strong types with `World` |
@@ -86,8 +86,8 @@ Narrative companion: [`getting_started/01-basics/README.md`](getting_started/01-
 
 ## See also
 
-- [`quickstart.md`](quickstart.md) — suggested order for the first runs
-- [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) — narrative tutorial
+- [`quickstart.md`](../quickstart.md) — suggested order for the first runs
+- [`getting_started/01-basics/README.md`](../getting_started/01-basics/README.md) — narrative tutorial
 - [`api_examples_walkthrough.md`](api_examples_walkthrough.md) — `docs/api/examples/` in reading order
-- [`tutorials/README.md`](tutorials/README.md) — VTK, HeFFTe `plan_options`, spectral sequence, …
-- [`api/examples/`](api/examples/) — sources pulled into the HTML docs
+- [`tutorials/README.md`](../tutorials/README.md) — VTK, HeFFTe `plan_options`, spectral sequence, …
+- [`api/examples/`](../api/examples) — sources pulled into the HTML docs

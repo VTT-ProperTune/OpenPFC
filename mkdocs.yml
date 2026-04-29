@@ -82,11 +82,11 @@ nav:
       - FAQ: faq.md
 
   - Concepts:
-      - Architecture: architecture.md
-      - Spectral stack: spectral_stack.md
-      - Halo exchange: halo_exchange.md
-      - Numerics limits: science_numerics_limits.md
-      - Tour of main types: class_tour.md
+      - Architecture: concepts/architecture.md
+      - Spectral stack: concepts/spectral_stack.md
+      - Halo exchange: concepts/halo_exchange.md
+      - Numerics limits: science/numerics_limits.md
+      - Tour of main types: reference/class_tour.md
 
   - Tutorials and recipes:
       - Tutorials hub: tutorials/README.md
@@ -95,56 +95,56 @@ nav:
       - Workshop curriculum: workshop/README.md
 
   - Running on HPC:
-      - Operator runbook index: hpc_operator_guide.md
-      - GPU vs CPU decision: gpu_path_decision.md
-      - Build trees CPU vs GPU: build_cpu_gpu.md
-      - MPI-IO layout checklist: mpi_io_layout_checklist.md
-      - Runtime profiling: performance_profiling.md
-      - Profiling export schema: profiling_export_schema.md
-      - LUMI install: INSTALL.LUMI.md
+      - Operator runbook index: hpc/operator_guide.md
+      - GPU vs CPU decision: hpc/gpu_path_decision.md
+      - Build trees CPU vs GPU: hpc/build_cpu_gpu.md
+      - MPI-IO layout checklist: hpc/mpi_io_layout_checklist.md
+      - Runtime profiling: hpc/performance_profiling.md
+      - Profiling export schema: hpc/profiling_export_schema.md
+      - LUMI install: hpc/INSTALL.LUMI.md
       - LUMI Slurm: lumi_slurm/README.md
 
   - Configuration and I/O:
-      - Configuration vocabulary: configuration.md
-      - Spectral App config reference: spectral_app_config_reference.md
-      - JSON to Simulator pipeline: app_pipeline.md
-      - Parameter validation: parameter_validation.md
-      - Result files: io_results.md
-      - Binary field file layout: binary_field_io_spec.md
-      - Post-processing binary fields: postprocess_binary_fields.md
+      - Configuration vocabulary: user_guide/configuration.md
+      - Spectral App config reference: reference/spectral_app_config_reference.md
+      - JSON to Simulator pipeline: user_guide/app_pipeline.md
+      - Parameter validation: user_guide/parameter_validation.md
+      - Result files: user_guide/io_results.md
+      - Binary field file layout: reference/binary_field_io_spec.md
+      - Post-processing binary fields: user_guide/postprocess_binary_fields.md
 
   - Build and tooling:
-      - CMake options: build_options.md
-      - Dependency matrix: dependency_matrix.md
-      - Style guide: styleguide.md
-      - Include hygiene: include_hygiene.md
-      - Testing: testing.md
+      - CMake options: reference/build_options.md
+      - Dependency matrix: reference/dependency_matrix.md
+      - Style guide: development/styleguide.md
+      - Include hygiene: development/include_hygiene.md
+      - Testing: development/testing.md
 
   - Applications and examples:
-      - Shipped applications: applications.md
-      - Examples catalog: examples_catalog.md
-      - Showcase: showcase.md
-      - Example run output: example_run_output.md
-      - API examples walkthrough: api_examples_walkthrough.md
+      - Shipped applications: user_guide/applications.md
+      - Examples catalog: reference/examples_catalog.md
+      - Showcase: user_guide/showcase.md
+      - Example run output: reference/example_run_output.md
+      - API examples walkthrough: reference/api_examples_walkthrough.md
 
   - Extending OpenPFC:
       - Extension hub: extending_openpfc/README.md
-      - Tungsten science quicklook: science_tungsten_quicklook.md
-      - Cahn-Hilliard vs Allen-Cahn: science_cahn_hilliard_vs_allen_cahn.md
-      - Personas: personas.md
+      - Tungsten science quicklook: science/tungsten_quicklook.md
+      - Cahn-Hilliard vs Allen-Cahn: science/cahn_hilliard_vs_allen_cahn.md
+      - Personas: development/personas.md
 
   - Reference:
-      - Glossary: glossary.md
-      - Debugging notes: debugging.md
-      - From paper to run: from_paper_to_run.md
-      - Operator playbooks: operator_playbooks.md
+      - Glossary: reference/glossary.md
+      - Debugging notes: development/debugging.md
+      - From paper to run: development/from_paper_to_run.md
+      - Operator playbooks: reference/operator_playbooks.md
 
   - Project and contributing:
-      - Contributing to docs: contributing-docs.md
-      - MkDocs preview (this site): mkdocs_preview.md
-      - Documentation versioning: documentation_versioning.md
+      - Contributing to docs: development/contributing-docs.md
+      - MkDocs preview (this site): development/mkdocs_preview.md
+      - Documentation versioning: development/documentation_versioning.md
       - Architecture decisions: adr/README.md
-      - Refactoring roadmap: refactoring_roadmap.md
-      - Handbook build: handbook_build.md
-      - Image prompts: image-prompts.md
-      - Scalability analysis plan: scalability_analysis_plan.md
+      - Refactoring roadmap: development/refactoring_roadmap.md
+      - Handbook build: development/handbook_build.md
+      - Image prompts: development/image-prompts.md
+      - Scalability analysis plan: hpc/scalability_analysis_plan.md

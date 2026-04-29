@@ -20,10 +20,10 @@ From the repository root:
 ./scripts/build_handbook.sh
 ```
 
-The script concatenates the manifest order in [`handbook_manifest.txt`](handbook_manifest.txt) and writes `build-handbook/openpfc-handbook.pdf` when LaTeX is available; otherwise it may emit Markdown only—see script output.
+The script concatenates the manifest order in [`handbook_manifest.txt`](../handbook_manifest.txt) and writes `build-handbook/openpfc-handbook.pdf` when LaTeX is available; otherwise it may emit Markdown only—see script output.
 
 **Note:** CI does not fail if Pandoc is missing; this is a **maintainer / educator** convenience.
 
 ## See also
 
-- [`README.md`](README.md) — master index of all guides  
+- [`README.md`](../README.md) — master index of all guides  

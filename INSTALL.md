@@ -16,7 +16,7 @@ This document is the supported source build guide. OpenPFC is routinely tested w
 | Open MPI | 4.1.1 (reference; see tohtori toolchain) |
 | HeFFTe | 2.4.1 (separate install per CPU/CUDA/ROCm variant) |
 
-One-page matrix (optional / QA tooling, doc check scripts): [`docs/dependency_matrix.md`](docs/dependency_matrix.md).
+One-page matrix (optional / QA tooling, doc check scripts): [`docs/dependency_matrix.md`](docs/reference/dependency_matrix.md).
 
 For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found, **link errors involving `libheffte.so` and `GLIBCXX_*`**), see [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
@@ -283,7 +283,7 @@ These switches are defined under `cmake/` (see `BuildOptions.cmake`, `Dependenci
 
 When CUDA is enabled and `OpenPFC_MPI_CUDA_AWARE=ON`, CMake may run a small linked check after `find_package(MPI)` if the implementation is Open MPI (`OPEN_MPI` in `mpi.h`). It first verifies that `MPIX_Query_cuda_support()` compiles, then runs it under `MPI_Init` / `MPI_Finalize`. If Open MPI was built without CUDA-aware support, configuration prints a warning—use a CUDA-aware Open MPI build, or set `-DOpenPFC_MPI_CUDA_AWARE=OFF` and reconfigure.
 
-Other MPI stacks (for example Cray MPICH on LUMI-G) are not probed this way. `OpenPFC_MPI_HIP_AWARE` is also not configure-probed; follow [docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md) for `MPICH_GPU_SUPPORT_ENABLED`, and use `verify_gpu_aware_mpi` (installed under `bin/` with HIP builds) for a multi-rank device-buffer smoke test.
+Other MPI stacks (for example Cray MPICH on LUMI-G) are not probed this way. `OpenPFC_MPI_HIP_AWARE` is also not configure-probed; follow [docs/INSTALL.LUMI.md](docs/hpc/INSTALL.LUMI.md) for `MPICH_GPU_SUPPORT_ENABLED`, and use `verify_gpu_aware_mpi` (installed under `bin/` with HIP builds) for a multi-rank device-buffer smoke test.
 
 Cross-compiling: the runtime part of the CUDA probe is skipped; validate on the target machine instead.
 
@@ -422,7 +422,7 @@ cmake --build build-hip -j"$(nproc)"
 
 Adjust the ROCm path in `CMAKE_PREFIX_PATH` if your install is elsewhere (e.g. `/opt/rocm`). Optionally add `-DCMAKE_HIP_ARCHITECTURES=<arch>` to match your AMD GPU.
 
-GPU-aware MPI (HIP): `OpenPFC_MPI_HIP_AWARE` defaults to ON when HIP is found. It enables device-pointer halo exchange in OpenPFC and should match a HeFFTe build with GPU-aware MPI (see HeFFTe’s `Heffte_ENABLE_GPU_AWARE_MPI`). The install includes `verify_gpu_aware_mpi` in `bin/` to probe device-buffer MPI at runtime. On LUMI-G, see [docs/INSTALL.LUMI.md](docs/INSTALL.LUMI.md) for `MPICH_GPU_SUPPORT_ENABLED` and job layout.
+GPU-aware MPI (HIP): `OpenPFC_MPI_HIP_AWARE` defaults to ON when HIP is found. It enables device-pointer halo exchange in OpenPFC and should match a HeFFTe build with GPU-aware MPI (see HeFFTe’s `Heffte_ENABLE_GPU_AWARE_MPI`). The install includes `verify_gpu_aware_mpi` in `bin/` to probe device-buffer MPI at runtime. On LUMI-G, see [docs/INSTALL.LUMI.md](docs/hpc/INSTALL.LUMI.md) for `MPICH_GPU_SUPPORT_ENABLED` and job layout.
 
 Minimal configure (optional): To disable code coverage and documentation (avoids gcov link issues with the HIP toolchain):
 

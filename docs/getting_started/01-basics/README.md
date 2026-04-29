@@ -508,10 +508,10 @@ If you already link OpenPFC and want a JSON-driven program with `App<Model>`, co
 | Topic | Document |
 |-------|----------|
 | Learning paths (run / extend / integrate) | [`../../learning_paths.md`](../../learning_paths.md) |
-| Examples catalog + curriculum | [`../../examples_catalog.md`](../../examples_catalog.md) |
-| JSON/TOML → simulator wiring | [`../../app_pipeline.md`](../../app_pipeline.md) |
-| Map of main classes and headers | [`../../class_tour.md`](../../class_tour.md) |
+| Examples catalog + curriculum | [`../../examples_catalog.md`](../../reference/examples_catalog.md) |
+| JSON/TOML → simulator wiring | [`../../app_pipeline.md`](../../user_guide/app_pipeline.md) |
+| Map of main classes and headers | [`../../class_tour.md`](../../reference/class_tour.md) |
 | Minimal out-of-tree CMake + `App` tutorial | [`../../tutorials/custom_app_minimal.md`](../../tutorials/custom_app_minimal.md) |
-| Validating `model.params` | [`../../parameter_validation.md`](../../parameter_validation.md) |
+| Validating `model.params` | [`../../parameter_validation.md`](../../user_guide/parameter_validation.md) |
 
 The docs hub [`../../README.md`](../../README.md) lists all guides; extension checklist: [`../../extending_openpfc/README.md`](../../extending_openpfc/README.md).

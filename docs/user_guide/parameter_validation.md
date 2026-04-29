@@ -78,10 +78,10 @@ Smaller programs may only validate 3–5 critical scalars; you can still use the
 
 ## Documentation elsewhere
 
-- Root [`README.md`](../README.md) — user-facing description of validation output and benefits.
+- Root [`README.md`](../../README.md) — user-facing description of validation output and benefits.
 - [`app_pipeline.md`](app_pipeline.md) — when `model.params` is applied relative to `App::main()`.
 
 ## See also
 
-- [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) — minimal `App` tutorial
-- [`styleguide.md`](styleguide.md) — API and header conventions
+- [`tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md) — minimal `App` tutorial
+- [`styleguide.md`](../development/styleguide.md) — API and header conventions

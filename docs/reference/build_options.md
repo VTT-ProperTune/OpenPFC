@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # CMake options reference
 
-High-level switches for OpenPFC. Defaults are chosen for a normal **MPI + HeFFTe** developer build. Full context (toolchains, CUDA/HIP, HeFFTe layout) remains in **[`INSTALL.md`](../INSTALL.md)**.
+High-level switches for OpenPFC. Defaults are chosen for a normal **MPI + HeFFTe** developer build. Full context (toolchains, CUDA/HIP, HeFFTe layout) remains in **[`INSTALL.md`](../../INSTALL.md)**.
 
 ## What to build
 
@@ -52,10 +52,10 @@ Implementation detail: the `openpfc` library merges CMake **`OBJECT`** targets *
 
 ## Presets
 
-**[`CMakePresets.json`](../CMakePresets.json)** and **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** pin cluster-friendly configure flags; see **`INSTALL.md`** (“VS Code / Cursor on tohtori”).
+**[`CMakePresets.json`](../../CMakePresets.json)** and **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** pin cluster-friendly configure flags; see **`INSTALL.md`** (“VS Code / Cursor on tohtori”).
 
 ## See also
 
-- **[`quickstart.md`](quickstart.md)** — minimal configure line  
-- **[`testing.md`](testing.md)** — **`OpenPFC_BUILD_TESTS`**, CTest, Catch2 filters  
-- **[`troubleshooting.md`](troubleshooting.md)** — when configure fails  
+- **[`quickstart.md`](../quickstart.md)** — minimal configure line  
+- **[`testing.md`](../development/testing.md)** — **`OpenPFC_BUILD_TESTS`**, CTest, Catch2 filters  
+- **[`troubleshooting.md`](../troubleshooting.md)** — when configure fails  

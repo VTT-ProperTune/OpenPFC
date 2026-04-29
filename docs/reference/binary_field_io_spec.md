@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This document describes the **raw binary** files produced by `pfc::BinaryWriter` (including the JSON-driven path in `add_result_writers_from_json`). It is the contract you rely on for **checkpoints**, **restarts**, and **post-processing** when you are not using VTK or PNG.
 
-**Implementation references:** [`include/openpfc/frontend/io/binary_writer.hpp`](../include/openpfc/frontend/io/binary_writer.hpp), [`include/openpfc/kernel/simulation/binary_reader.hpp`](../include/openpfc/kernel/simulation/binary_reader.hpp), [`include/openpfc/frontend/utils/utils.hpp`](../include/openpfc/frontend/utils/utils.hpp) (`format_with_number`).
+**Implementation references:** [`include/openpfc/frontend/io/binary_writer.hpp`](../../include/openpfc/frontend/io/binary_writer.hpp), [`include/openpfc/kernel/simulation/binary_reader.hpp`](../../include/openpfc/kernel/simulation/binary_reader.hpp), [`include/openpfc/frontend/utils/utils.hpp`](../../include/openpfc/frontend/utils/utils.hpp) (`format_with_number`).
 
 ## File contents
 
@@ -29,11 +29,11 @@ Each `write(increment, field)` call:
 
 The JSON `fields[].data` string is passed to `BinaryWriter` as the filename template.
 
-- If the string contains **`%`**, it is passed to `printf`-style formatting with the **integer `increment`** supplied by the simulator (see [`simulation_wiring_writers.hpp`](../include/openpfc/frontend/ui/simulation_wiring_writers.hpp) and `BinaryWriter::write_mpi_binary`).  
+- If the string contains **`%`**, it is passed to `printf`-style formatting with the **integer `increment`** supplied by the simulator (see [`simulation_wiring_writers.hpp`](../../include/openpfc/frontend/ui/simulation_wiring_writers.hpp) and `BinaryWriter::write_mpi_binary`).  
   Examples: `./psi_%d.bin`, `./data/u_%04d.bin`.  
 - If there is **no `%`**, the same path is used on every write (overwrites each time).
 
-The `increment` value is advanced by the simulator according to configuration (see [`app_pipeline.md`](app_pipeline.md) and the `simulator` section in JSON).
+The `increment` value is advanced by the simulator according to configuration (see [`app_pipeline.md`](../user_guide/app_pipeline.md) and the `simulator` section in JSON).
 
 ## Reading back (`BinaryReader`)
 
@@ -52,7 +52,7 @@ When `saveat > 0` and `fields` is present, `add_result_writers_from_json` regist
 - **`name`** — field label used by the simulator when dispatching the writer.  
 - **`data`** — filename template as above.
 
-Rank 0 may create parent directories for `data`. See [`io_results.md`](io_results.md) and [`configuration.md`](configuration.md).
+Rank 0 may create parent directories for `data`. See [`io_results.md`](../user_guide/io_results.md) and [`configuration.md`](../user_guide/configuration.md).
 
 ## Post-processing without OpenPFC
 
@@ -60,13 +60,13 @@ Because there is **no file header**, external tools need **out-of-band** metadat
 
 - Read with **OpenPFC** (`BinaryReader` or existing tooling), or  
 - Record metadata alongside runs (JSON/YAML sidecar), or  
-- Use **VTK** export for visualization (`VTKWriter`; see [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md)).
+- Use **VTK** export for visualization (`VTKWriter`; see [`tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md)).
 
-Longer offline sketch (metadata, NumPy layout): [`postprocess_binary_fields.md`](postprocess_binary_fields.md).
+Longer offline sketch (metadata, NumPy layout): [`postprocess_binary_fields.md`](../user_guide/postprocess_binary_fields.md).
 
 ## See also
 
-- [`io_results.md`](io_results.md) — writers overview  
-- [`postprocess_binary_fields.md`](postprocess_binary_fields.md) — reasoning about raw bytes outside OpenPFC  
-- [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) — run that produces binaries  
-- [`app_pipeline.md`](app_pipeline.md) — when writers are wired  
+- [`io_results.md`](../user_guide/io_results.md) — writers overview  
+- [`postprocess_binary_fields.md`](../user_guide/postprocess_binary_fields.md) — reasoning about raw bytes outside OpenPFC  
+- [`tutorials/end_to_end_visualization.md`](../tutorials/end_to_end_visualization.md) — run that produces binaries  
+- [`app_pipeline.md`](../user_guide/app_pipeline.md) — when writers are wired  

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Recipes (how-to)
 
-Short, **goal-oriented** pages: prerequisites, copy-paste steps, expected artifacts. For install and modules, always start from [`INSTALL.md`](../../INSTALL.md). For the big picture, read [`spectral_stack.md`](../spectral_stack.md).
+Short, **goal-oriented** pages: prerequisites, copy-paste steps, expected artifacts. For install and modules, always start from [`INSTALL.md`](../../INSTALL.md). For the big picture, read [`spectral_stack.md`](../concepts/spectral_stack.md).
 
 | Recipe | Goal |
 |--------|------|
@@ -17,4 +17,4 @@ Short, **goal-oriented** pages: prerequisites, copy-paste steps, expected artifa
 
 - [`../start_here_15_minutes.md`](../start_here_15_minutes.md) — fastest first path from clone to `mpirun`  
 - [`../tutorials/README.md`](../tutorials/README.md) — full tutorial hub  
-- [`../applications.md`](../applications.md) — all shipped `apps/` binaries  
+- [`../applications.md`](../user_guide/applications.md) — all shipped `apps/` binaries  

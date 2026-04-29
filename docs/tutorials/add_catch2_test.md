@@ -9,8 +9,8 @@ OpenPFC uses **Catch2** and **CTest** for automated tests. This page is a **mini
 
 ## 1. Read the project conventions
 
-- [`../testing.md`](../testing.md) — `OpenPFC_BUILD_TESTS`, MPI test layout, how to run `ctest`.  
-- [`../styleguide.md`](../styleguide.md) — naming, includes, SPDX headers on new files.
+- [`../testing.md`](../development/testing.md) — `OpenPFC_BUILD_TESTS`, MPI test layout, how to run `ctest`.  
+- [`../styleguide.md`](../development/styleguide.md) — naming, includes, SPDX headers on new files.
 
 ## 2. Pick a home for the test
 
@@ -43,5 +43,5 @@ cd build && ctest -R your_test_pattern --output-on-failure
 
 ## See also
 
-- [`../contributing-docs.md`](../contributing-docs.md) — link checks before you open a PR  
+- [`../contributing-docs.md`](../development/contributing-docs.md) — link checks before you open a PR  
 - [`../CONTRIBUTING.md`](../../CONTRIBUTING.md) — changelog and review expectations  

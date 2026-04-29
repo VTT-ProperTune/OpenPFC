@@ -15,12 +15,12 @@ OpenPFC ships **in-tree** programs (`apps/tungsten`, `apps/aluminumNew`, …) an
 
 This tutorial is about that **integration shell**: a small **out-of-tree** executable that links OpenPFC, subclasses `pfc::Model`, and runs `pfc::ui::App<MyModel>` so a **config file on disk** drives world size, `dt`, FFT options, optional binary output, IC/BC hooks, etc.
 
-**Style:** keep `MyModel` a thin seam over your physics; prefer **`pfc::get_fft(*this)`**, **`pfc::get_world(*this)`**, **`pfc::initialize(*this, dt)`**-style free functions in `initialize` / `step` so readers see where work happens (see [`../styleguide.md`](../styleguide.md#api-shape-free-functions-and-data-centric-types)).
+**Style:** keep `MyModel` a thin seam over your physics; prefer **`pfc::get_fft(*this)`**, **`pfc::get_world(*this)`**, **`pfc::initialize(*this, dt)`**-style free functions in `initialize` / `step` so readers see where work happens (see [`../styleguide.md`](../development/styleguide.md#api-shape-free-functions-and-data-centric-types)).
 
 ### What you are *not* building here
 
 - **Not** a full new phase-field model with free energy, stencils, and validation — that is the job of your `Model::initialize` / `Model::step` (and possibly collaborators you add).  
-- **Not** a duplicate of the tungsten science story — for physics-heavy context see [`science_tungsten_quicklook.md`](../science_tungsten_quicklook.md), the spectral example ladder [`spectral_examples_sequence.md`](spectral_examples_sequence.md), and [`../extending_openpfc/README.md`](../extending_openpfc/README.md).
+- **Not** a duplicate of the tungsten science story — for physics-heavy context see [`science_tungsten_quicklook.md`](../science/tungsten_quicklook.md), the spectral example ladder [`spectral_examples_sequence.md`](spectral_examples_sequence.md), and [`../extending_openpfc/README.md`](../extending_openpfc/README.md).
 
 ### What you *are* building (concrete outcome)
 
@@ -31,7 +31,7 @@ At the end you have:
 | A **CMake project** outside OpenPFC | `find_package(OpenPFC)` + your sources. |
 | A **`MyModel`** subclass | Where **your** physics will run (`initialize`, `step`). This tutorial keeps `step()` minimal on purpose so the file stays short; in a real project it hosts FFT + nonlinear splits, extra fields, etc. |
 | A **`main`** that uses `App<MyModel>` | Same `argv[1]` → config path convention as shipped apps (`mpirun … ./my_app settings.json`). |
-| A **JSON (or TOML)** file | Same *shape* as spectral apps: domain, time, `plan_options`, optional `fields` / `saveat`, optional `initial_conditions` — see [`../app_pipeline.md`](../app_pipeline.md) and [`../spectral_app_config_reference.md`](../spectral_app_config_reference.md). |
+| A **JSON (or TOML)** file | Same *shape* as spectral apps: domain, time, `plan_options`, optional `fields` / `saveat`, optional `initial_conditions` — see [`../app_pipeline.md`](../user_guide/app_pipeline.md) and [`../spectral_app_config_reference.md`](../reference/spectral_app_config_reference.md). |
 
 So the **point** of the tutorial: you leave knowing **where your code plugs in** (`Model`), **what the framework already does** (parse config, build FFT + decomposition + `Simulator`, call `step` in a loop), and **how to compile and run** your own binary against an installed OpenPFC — not how to derive a new PFC free energy.
 
@@ -39,7 +39,7 @@ So the **point** of the tutorial: you leave knowing **where your code plugs in**
 
 **Config file** → **`App<MyModel>`** builds **world + FFT + time + `Simulator`**, then repeatedly calls **`MyModel::step(t)`** — your job is to make `step` physically meaningful; OpenPFC’s job is to make MPI, HeFFTe, and I/O consistent with that config.
 
-If the diagram in [`../app_pipeline.md`](../app_pipeline.md) (*Big picture*) is still fuzzy, skim that section once, then continue here.
+If the diagram in [`../app_pipeline.md`](../user_guide/app_pipeline.md) (*Big picture*) is still fuzzy, skim that section once, then continue here.
 
 ---
 
@@ -116,7 +116,7 @@ void from_json(const pfc::ui::json &j, MyModel &m);
 
 Implement `from_json` only if you read `model.params`. Use the signature above so ADL matches `openpfc/frontend/ui/from_json.hpp`.
 
-**What goes inside `step` in a real app** — typically: forward FFTs, multiply by k-space operators, inverse FFTs, nonlinear terms in real space, coupling to auxiliary fields — the same semi-implicit spectral pattern described in `Model`’s Doxygen and in [`../spectral_stack.md`](../spectral_stack.md). This tutorial omits that body so the page stays a **wiring guide**, not a duplicate of the spectral examples.
+**What goes inside `step` in a real app** — typically: forward FFTs, multiply by k-space operators, inverse FFTs, nonlinear terms in real space, coupling to auxiliary fields — the same semi-implicit spectral pattern described in `Model`’s Doxygen and in [`../spectral_stack.md`](../concepts/spectral_stack.md). This tutorial omits that body so the page stays a **wiring guide**, not a duplicate of the spectral examples.
 
 ---
 
@@ -158,7 +158,7 @@ If you bypass `App::main` but still call `from_json` paths manually, call `pfc::
 
 Your file must include enough keys for `SpectralCpuStack`: world (`Lx`, `Ly`, `Lz`, spacing, origin), time (`t0`, `t1`, `dt`), `plan_options` if you need non-default FFT behavior, plus `model.name` / `model.params` as needed. Copy structure from `examples/fft_backend_selection.toml` or `apps/tungsten/inputs_json/tungsten_single_seed.json` and delete sections you do not use.
 
-When `saveat > 0`, add `fields` with `name` and `data` paths so binary writers register ([`../io_results.md`](../io_results.md)).
+When `saveat > 0`, add `fields` with `name` and `data` paths so binary writers register ([`../io_results.md`](../user_guide/io_results.md)).
 
 ---
 
@@ -173,7 +173,7 @@ When `saveat > 0`, add `fields` with `name` and `data` paths so binary writers r
    pfc::ui::register_field_modifier<MyIC>("my_ic_type");
    ```
 
-3. In JSON, use `"type": "my_ic_type"` under `initial_conditions` ([`../app_pipeline.md`](../app_pipeline.md)).
+3. In JSON, use `"type": "my_ic_type"` under `initial_conditions` ([`../app_pipeline.md`](../user_guide/app_pipeline.md)).
 
 See `examples/10_ui_register_ic.cpp` end-to-end.
 
@@ -189,13 +189,13 @@ See `examples/10_ui_register_ic.cpp` end-to-end.
 
 ## Suggested reading order (if you felt lost)
 
-1. [`../app_pipeline.md`](../app_pipeline.md) — **what** JSON does (`SpectralCpuStack` → session → `Simulator`).  
+1. [`../app_pipeline.md`](../user_guide/app_pipeline.md) — **what** JSON does (`SpectralCpuStack` → session → `Simulator`).  
 2. This page — **how** to host that pipeline in **your** CMake project.  
 3. [`spectral_examples_sequence.md`](spectral_examples_sequence.md) — **physics-shaped** examples inside the OpenPFC tree.  
-4. [`../parameter_validation.md`](../parameter_validation.md) — optional validated `model.params`.
+4. [`../parameter_validation.md`](../user_guide/parameter_validation.md) — optional validated `model.params`.
 
 ## See also
 
 - [`README.md`](README.md) — all tutorials in `docs/tutorials/`  
-- [`../class_tour.md`](../class_tour.md) — map of main types  
+- [`../class_tour.md`](../reference/class_tour.md) — map of main types  
 - [`../extending_openpfc/README.md`](../extending_openpfc/README.md) — extension checklist  

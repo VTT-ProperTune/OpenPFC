@@ -34,4 +34,4 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 ## Next steps
 
 - Spectral tutorial ladder: [`tutorials/spectral_examples_sequence.md`](../tutorials/spectral_examples_sequence.md)  
-- Concept tour: [`spectral_stack.md`](../spectral_stack.md)  
+- Concept tour: [`spectral_stack.md`](../concepts/spectral_stack.md)  

@@ -37,4 +37,4 @@ NO_MKDOCS_2_WARNING=1 uv run --project docs mkdocs build --strict
 ## See also
 
 - [`contributing-docs.md`](contributing-docs.md) — link checks and doc workflow  
-- [`README.md`](README.md) — full prose index  
+- [`README.md`](../README.md) — full prose index  

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tutorial: VTK output and ParaView
 
-OpenPFC can write **VTK Image Data** (`.vti` per rank, or combined pieces you open as a time series). The JSON `App` path registers **binary** writers by default; **VTK is usually attached in C++** (see [`../io_results.md`](../io_results.md)). This tutorial uses the built-in `examples/` targets that already call `VTKWriter`.
+OpenPFC can write **VTK Image Data** (`.vti` per rank, or combined pieces you open as a time series). The JSON `App` path registers **binary** writers by default; **VTK is usually attached in C++** (see [`../io_results.md`](../user_guide/io_results.md)). This tutorial uses the built-in `examples/` targets that already call `VTKWriter`.
 
 ## Prerequisites
 
@@ -51,6 +51,6 @@ mpirun -n 4 ./examples/12_cahn_hilliard
 
 ## See also
 
-- [`../io_results.md`](../io_results.md) — `VTKWriter` vs `BinaryWriter`  
-- [`../examples_catalog.md`](../examples_catalog.md) — catalog entries for `11_write_results`, `12_cahn_hilliard`  
-- [`../class_tour.md`](../class_tour.md) — `ResultsWriter`, `DiscreteField`  
+- [`../io_results.md`](../user_guide/io_results.md) — `VTKWriter` vs `BinaryWriter`  
+- [`../examples_catalog.md`](../reference/examples_catalog.md) — catalog entries for `11_write_results`, `12_cahn_hilliard`  
+- [`../class_tour.md`](../reference/class_tour.md) — `ResultsWriter`, `DiscreteField`  

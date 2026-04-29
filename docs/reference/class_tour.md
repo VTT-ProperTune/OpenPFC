@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tour of main types
 
-This page orients you to the primary classes and namespaces in OpenPFC: what each is for, where it lives, and where to see it in code. For layering rules, see [`architecture.md`](architecture.md). For the JSON-driven `App` path, see [`app_pipeline.md`](app_pipeline.md).
+This page orients you to the primary classes and namespaces in OpenPFC: what each is for, where it lives, and where to see it in code. For layering rules, see [`architecture.md`](../concepts/architecture.md). For the JSON-driven `App` path, see [`app_pipeline.md`](../user_guide/app_pipeline.md).
 
 ## How pieces connect (spectral / `App` workflow)
 
@@ -54,8 +54,8 @@ flowchart TB
 | `Simulator` | Runs the loop: ICs, BCs, `step`, writers | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
 | `FieldModifier` | Initial / boundary updates on fields | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `SimulationContext` | MPI comm + rank context for modifiers | `openpfc/kernel/simulation/simulation_context.hpp` | Passed when applying modifiers |
-| `ResultsWriter` / `ResultsWriterMap` | Persist fields (binary, VTK, …); `Simulator` holds `ResultsWriterMap` | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](io_results.md) |
-| `ResultsWriterCatalog` | JSON `fields[].writer` → factory (`binary` built-in); inject for custom formats | `openpfc/frontend/ui/results_writer_catalog.hpp` | Same as `add_result_writers_from_json` ([`app_pipeline.md`](app_pipeline.md)) |
+| `ResultsWriter` / `ResultsWriterMap` | Persist fields (binary, VTK, …); `Simulator` holds `ResultsWriterMap` | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](../user_guide/io_results.md) |
+| `ResultsWriterCatalog` | JSON `fields[].writer` → factory (`binary` built-in); inject for custom formats | `openpfc/frontend/ui/results_writer_catalog.hpp` | Same as `add_result_writers_from_json` ([`app_pipeline.md`](../user_guide/app_pipeline.md)) |
 | `pfc::ui::App<Model>` | Load JSON/TOML, build stack, run | `openpfc/frontend/ui/app.hpp` | `apps/aluminumNew/`, `examples/10_ui_register_ic.cpp` |
 | `SpectralCpuStack` | World → decomp → CPU FFT → time from JSON | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | Used inside `SpectralSimulationSession` |
 | `spectral_fft_stack_factory` | Merge `plan_options` + root `backend`; cuFFT / ROCm plan defaults + JSON overlay | `openpfc/frontend/ui/spectral_fft_stack_factory.hpp` | GPU tests / drivers alongside CPU stack helpers |
@@ -75,11 +75,11 @@ GPU FFT and device execution require the matching runtime headers and a build wi
 
 | Document | Purpose |
 |----------|---------|
-| [`app_pipeline.md`](app_pipeline.md) | JSON/TOML → `Simulator` wiring order |
-| [`parameter_validation.md`](parameter_validation.md) | Optional validated `model.params` |
+| [`app_pipeline.md`](../user_guide/app_pipeline.md) | JSON/TOML → `Simulator` wiring order |
+| [`parameter_validation.md`](../user_guide/parameter_validation.md) | Optional validated `model.params` |
 | [`glossary.md`](glossary.md) | Terminology |
-| [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) | Out-of-tree `App` + JSON **wiring** (goal/outcome first; physics in `step`) |
-| [`extending_openpfc/README.md`](extending_openpfc/README.md) | Extension points checklist |
+| [`tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md) | Out-of-tree `App` + JSON **wiring** (goal/outcome first; physics in `step`) |
+| [`extending_openpfc/README.md`](../extending_openpfc/README.md) | Extension points checklist |
 | [`examples_catalog.md`](examples_catalog.md) | All `examples/` executables (with curriculum) |
 | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) | Doxygen `docs/api/examples/` in reading order |
-| [`learning_paths.md`](learning_paths.md) | Role-based documentation tracks |
+| [`learning_paths.md`](../learning_paths.md) | Role-based documentation tracks |
