@@ -403,29 +403,14 @@ public:
    * @see step_with_physics()
    * @see step()
    */
-  void begin_integrator_step() {
-    Time &time = get_time();
-    if (time.get_increment() == 0) {
-      apply_initial_conditions();
-      apply_boundary_conditions();
-      if (time.do_save()) {
-        write_results();
-      }
-    }
-    time.next();
-    apply_boundary_conditions();
-  }
+  void begin_integrator_step();
 
   /**
    * @brief Epilogue of one integrator step: write results if at a save point
    *
    * @see begin_integrator_step()
    */
-  void end_integrator_step() {
-    if (get_time().do_save()) {
-      write_results();
-    }
-  }
+  void end_integrator_step();
 
   /**
    * @brief One full step with a custom physics body (same ordering as step())
@@ -555,6 +540,39 @@ inline void write_scheduled_simulator_results(Simulator &sim) {
 }
 
 inline void Simulator::write_results() { write_scheduled_simulator_results(*this); }
+
+namespace simulator_integrator {
+
+/** @brief Shared body of `Simulator::begin_integrator_step` (ordering contract). */
+inline void begin_integrator_step(Simulator &sim) {
+  Time &time = sim.get_time();
+  if (time.get_increment() == 0) {
+    sim.apply_initial_conditions();
+    sim.apply_boundary_conditions();
+    if (time.do_save()) {
+      sim.write_results();
+    }
+  }
+  time.next();
+  sim.apply_boundary_conditions();
+}
+
+/** @brief Shared body of `Simulator::end_integrator_step`. */
+inline void end_integrator_step(Simulator &sim) {
+  if (sim.get_time().do_save()) {
+    sim.write_results();
+  }
+}
+
+} // namespace simulator_integrator
+
+inline void Simulator::begin_integrator_step() {
+  simulator_integrator::begin_integrator_step(*this);
+}
+
+inline void Simulator::end_integrator_step() {
+  simulator_integrator::end_integrator_step(*this);
+}
 
 [[nodiscard]] inline Model &get_model(Simulator &sim) noexcept {
   return sim.get_model();
