@@ -1,0 +1,50 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+# Configuration files (JSON / TOML)
+
+Many programs use **`pfc::ui::App<Model>`** and accept a **single configuration file** (JSON or TOML) on the command line. The exact keys depend on the **model** and how validation is set up, but the same structural ideas recur across apps.
+
+## Mental model
+
+1. **Domain / grid** — sizes, spacing, origin (sometimes nested under `domain`, sometimes top-level keys depending on app and parser version).
+2. **Model** — `name` and **`params`** (physics coefficients); often validated at startup.
+3. **Time** — start, end, timestep, output cadence (`saveat`, etc.).
+4. **Fields** — named order parameters and optional file paths for I/O.
+5. **Initial / boundary conditions** — declarative or references to registered modifiers.
+6. **`[plan_options]`** (TOML) or equivalent — **HeFFTe** FFT backend and communication options.
+
+For **layering** (what parses this vs what runs physics), see **[`architecture.md`](architecture.md)**.
+
+## FFT and parallel layout
+
+The annotated example **`examples/fft_backend_selection.toml`** documents:
+
+- **`[plan_options]`** — `backend` (`fftw`, `cuda`, …), `reshape_algorithm`, `use_pencils`, `use_gpu_aware`, etc.
+
+Copy patterns from that file into your own TOML or translate key names to JSON as your app expects.
+
+## Full application examples
+
+| App | Sample configs | Notes |
+|-----|------------------|--------|
+| **Tungsten** | [`apps/tungsten/inputs_json/`](../apps/tungsten/inputs_json/README.md), `inputs_toml/` | Large validated parameter sets; JSON and TOML mirrors. |
+| **AluminumNew** | [`apps/aluminumNew/aluminumNew.json`](../apps/aluminumNew/aluminumNew.json), `aluminumNew.toml` | `App<Aluminum>` + registered modifiers. |
+
+**Examples** that use JSON for demonstration include **`examples/12_cahn_hilliard.cpp`** and **`examples/10_ui_register_ic.cpp`** — inspect the source for the expected file shape.
+
+## Profiling block
+
+Runtime profiling output (JSON/HDF5) is configured in the same files for App-driven runs. See **[`performance_profiling.md`](performance_profiling.md)** and **[`profiling_export_schema.md`](profiling_export_schema.md)**.
+
+## Validation
+
+Models can register **parameter metadata** (ranges, required keys). On failure you get a printed report instead of a silent wrong run — see the root **[`README.md`](../README.md)** (“Configuration Validation”).
+
+## See also
+
+- **[`quickstart.md`](quickstart.md)** — run an app with a stock input file  
+- **[`faq.md`](faq.md)** — paths and `find_package` issues  
+- **[`applications.md`](applications.md)** — which binaries read which configs

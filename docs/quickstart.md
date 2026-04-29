@@ -30,6 +30,15 @@ cmake --build build -j"$(nproc)"
 
 Use **separate build directories** for CPU vs GPU if you switch CUDA/HIP options; see [`build_cpu_gpu.md`](build_cpu_gpu.md).
 
+### IDE and cluster CMake presets
+
+If **CMake Tools** runs without your shell **`module load`**, configure may pick the wrong GCC or miss MPI. The repo ships **[`CMakePresets.json`](../CMakePresets.json)**:
+
+- **`tohtori-debug`** / **`tohtori-release`** — pinned GCC + Open MPI + optional HeFFTe prefix (**[`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../cmake/toolchains/tohtori-gcc11-openmpi.cmake)**); see **[`INSTALL.md`](../INSTALL.md)** (“VS Code / Cursor on tohtori”).
+- **`dev-debug`**, **`dev-asan`**, etc. — local development; still load modules yourself when not using a preset that sets paths.
+
+Override paths on your machine with **`CMakeUserPresets.json`** (see **`cmake/README.md`**).
+
 ### CMake switches for tutorials and apps
 
 | Goal | CMake option |
@@ -101,6 +110,9 @@ Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix contain
 | Conceptual layering (kernel / runtime / frontend) | [`architecture.md`](architecture.md) |
 | Longer tutorial (world → FFT → CMake) | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
+| Config files (`plan_options`, JSON/TOML) | [`configuration.md`](configuration.md) |
+| Terminology | [`glossary.md`](glossary.md) |
+| Configure or MPI errors | [`troubleshooting.md`](troubleshooting.md) |
 | Extend models, ICs, coordinates | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
 | HTML API reference | [Published docs](https://vtt-propertune.github.io/OpenPFC/dev/) (also build `docs` locally with **`OpenPFC_BUILD_DOCUMENTATION=ON`**) |
 | HPC / LUMI | [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |

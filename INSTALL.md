@@ -7,6 +7,17 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This document is the **supported** source build guide. OpenPFC is **routinely tested** with **GCC 11.2.0** in a module environment. Other compilers may work, but if something breaks, try matching this stack first.
 
+### Reference stack (at a glance)
+
+| Piece | Documented / exercised baseline |
+|--------|----------------------------------|
+| CMake | 3.15+ |
+| GCC | 11.2.x (modules on clusters) |
+| Open MPI | 4.1.1 (reference; see **tohtori** toolchain) |
+| HeFFTe | **2.4.1** (separate install per CPU/CUDA/ROCm variant) |
+
+For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found), see **[`docs/troubleshooting.md`](docs/troubleshooting.md)**.
+
 ### MPI: OpenMPI from modules — do not improvise with another stack
 
 This guide’s **source of truth** for MPI is **Open MPI** from **environment modules** (`module load openmpi` after `module load gcc/…`), as in §1 below. That matches how OpenPFC and HeFFTe are meant to be built together on clusters and many dev machines.

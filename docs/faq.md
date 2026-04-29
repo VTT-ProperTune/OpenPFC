@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Frequently asked questions
 
-Short answers; deeper detail lives in **[`INSTALL.md`](../INSTALL.md)**, **[`architecture.md`](architecture.md)**, and **[`quickstart.md`](quickstart.md)**.
+Short answers; deeper detail lives in **[`INSTALL.md`](../INSTALL.md)**, **[`architecture.md`](architecture.md)**, **[`quickstart.md`](quickstart.md)**, and **[`troubleshooting.md`](troubleshooting.md)**.
 
 ## Getting started
 
@@ -48,18 +48,19 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)** and the num
 |------|-----------|
 | Index of all guides | [`README.md`](README.md) |
 | Onboarding | [`quickstart.md`](quickstart.md) |
+| Troubleshooting | [`troubleshooting.md`](troubleshooting.md) |
+| Config files | [`configuration.md`](configuration.md) |
+| Terminology | [`glossary.md`](glossary.md) |
+| Examples folder | [`../examples/README.md`](../examples/README.md) |
 | Published HTML API | [GitHub Pages dev docs](https://vtt-propertune.github.io/OpenPFC/dev/) |
 
 ---
 
 ## Future documentation improvements (ideas)
 
-These are **not** implemented as full guides yet; they would further lower the barrier for new users and operators.
+Remaining items that would still help:
 
-1. **Troubleshooting appendix** — Collate common configure/runtime errors (`mpi.h` not found, HeFFTe mismatch, stale `CMakeCache`) with one fix each; could live as a new section in **`INSTALL.md`** or a dedicated **`docs/troubleshooting.md`**.
-2. **Configuration reference** — One place describing shared TOML/JSON sections (`domain`, `timestepping`, `plan_options`, profiling blocks) with links to validators and example files under **`apps/`** and **`examples/`**.
-3. **IDE / cluster presets** — Short pointer from **`quickstart.md`** to **`CMakePresets.json`** and **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** for reproducible configure without interactive `module load`.
-4. **Glossary** — PFC-specific terms (order parameter, inbox/outbox, halo, spectral vs FD) with links to **`architecture.md`** and **`halo_exchange.md`**.
-5. **“First failure” screenshots or session transcripts** — Optional: log snippets for a successful `05_simulator` and a minimal tungsten run for visual reassurance.
-6. **Doxygen main page** — Ensure the published site’s landing page highlights **`quickstart.md`** (if Breathe/Sphinx ever wraps markdown) or duplicate a one-paragraph onboarding blurb in **`README.md`** used as Doxygen main page.
-7. **CHANGELOG user notes** — For releases, a short “upgrade from X” subsection when CMake options or config keys change.
+1. **Session transcripts** — Optional log snippets for a successful `05_simulator` and minimal tungsten run for copy-paste reassurance.
+2. **CHANGELOG user notes** — Per release, a short “upgrading from X” note when CMake options or config keys change.
+3. **CI link check** — Automated validation of internal `docs/*.md` links on pull requests.
+4. **Published site** — Mirror the **`docs/quickstart.md`** first paragraph on the GitHub Pages landing page if the HTML build ever diverges from the repo **`README.md`** main page.

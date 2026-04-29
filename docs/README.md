@@ -13,6 +13,9 @@ This directory holds extra guides and assets. **Installing and building** the pr
 2. **[`getting_started/README.md`](getting_started/README.md)** — hub for tutorials and links to the **examples catalog** and **applications** pages.
 3. **[`extending_openpfc/README.md`](extending_openpfc/README.md)** — how to add models, modifiers, and config-driven apps without forking the core library.
 4. **[`faq.md`](faq.md)** — short answers (MPI, CMake, missing binaries, `find_package`).
+5. **[`troubleshooting.md`](troubleshooting.md)** — common configure and runtime failures.
+6. **[`configuration.md`](configuration.md)** — JSON/TOML structure, `plan_options`, links to sample inputs.
+7. **[`glossary.md`](glossary.md)** — PFC and OpenPFC terminology.
 
 ## Quick links
 
@@ -30,7 +33,11 @@ This directory holds extra guides and assets. **Installing and building** the pr
 | Runnable `examples/` executables | [`examples_catalog.md`](examples_catalog.md) |
 | Shipped `apps/` programs | [`applications.md`](applications.md) |
 | FAQ (build, run, extending) | [`faq.md`](faq.md) |
+| Troubleshooting (mpi.h, HeFFTe, wrong MPI) | [`troubleshooting.md`](troubleshooting.md) |
+| Configuration files (JSON/TOML, `plan_options`) | [`configuration.md`](configuration.md) |
+| Glossary | [`glossary.md`](glossary.md) |
 | Extending models and the UI pipeline | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
+| Runnable **`examples/`** (folder README) | [`../examples/README.md`](../examples/README.md) |
 
 ## Tutorials
 

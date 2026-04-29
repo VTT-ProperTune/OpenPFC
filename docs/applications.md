@@ -46,9 +46,13 @@ See [`apps/aluminumNew/README.md`](../apps/aluminumNew/README.md) (minimal; sour
 | `allen_cahn_cuda` | CUDA enabled |
 | `allen_cahn_hip` | HIP enabled |
 
+CLI-driven 2D Allen–Cahn demo (no JSON **`App`**). See **[`apps/allen_cahn/README.md`](../apps/allen_cahn/README.md)** for arguments and example **`mpirun`**.
+
 **MPI:** Use **`mpirun` from Open MPI**, the same stack as at configure time — typically **Open MPI 4.1.1** with GCC 11.2 on cluster setups documented in **[`INSTALL.md`](../INSTALL.md)** (§1). A mismatched launcher (e.g. system MPICH) causes confusing runtime failures.
 
 **Arguments (CPU binary):** `nx ny n_steps dt M epsilon [png_final]` or, for an initial and final snapshot, `[png_initial] [png_final]` (two paths). Optional PNG paths trigger a gather on rank 0 and grayscale export via **`pfc::io`** (see **`include/openpfc/frontend/io/png_writer.hpp`**).
+
+**Dynamics:** Smaller **`epsilon`** (stronger **1/ε²** reaction term), larger **`M`** (faster diffusion), and more **`n_steps`** make a center seed coarsen more noticeably in PNGs; reduce **`dt`** if the explicit step blows up. Defaults in **`allen_cahn/common.hpp`** aim at a visible 2D demo without huge runtimes.
 
 ## Choosing apps vs examples
 
