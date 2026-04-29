@@ -95,6 +95,8 @@ mpirun -n 4 ./my_app /path/to/settings.json
 
 `pfc::ui::App<Model>` also has a constructor `App(pfc::ui::json settings, MPI_Comm comm)` that skips `argv[1]` and uses an in-memory object instead. `examples/10_ui_register_ic.cpp` builds JSON in C++ and passes it to `App`—useful for unit tests or CI where there is no config file on disk. Production binaries should prefer the `argc`/`argv` constructor so users pass a path.
 
+If you **do not** use `App::main` but still call `pfc::ui::from_json` (for example while building `SpectralCpuStack` by hand), call `pfc::ui::set_from_json_log_rank(mpi_rank)` once the MPI rank is known so FFT / HeFFTe parse diagnostics use the same `rank N:` prefix as the rest of your driver. `App::main` sets this automatically.
+
 ## 5. Minimal JSON
 
 Your file must include enough keys for `SpectralCpuStack`: grid (`Lx`, `Ly`, `Lz`, spacing, origin), time (`t0`, `t1`, `dt`), `plan_options` if you rely on non-default FFT settings, plus `model.name` / `model.params` as needed. Copy structure from `examples/fft_backend_selection.toml` or `apps/tungsten/inputs_json/tungsten_single_seed.json` and shrink fields you do not use.
