@@ -21,7 +21,7 @@ using pfc::get_world;
 void print_stats(Simulator &simulator) {
   // we can still access the model:
   auto &model = dynamic_cast<Diffusion &>(get_model(simulator));
-  auto &time = simulator.get_time();
+  auto &time = pfc::get_time(simulator);
   int idx = model.get_midpoint_idx();
   if (idx == -1) return;
   auto &field = model.density();

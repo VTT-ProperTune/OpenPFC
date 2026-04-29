@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #ifndef TUNGSTEN_HIP_HPP
@@ -24,7 +24,7 @@ template <typename RealType> void step(pfc::Simulator &s, TungstenHIP<RealType> 
 #ifdef TUNGSTEN_DEBUG
   if (m.is_rank0()) std::cout << "Performing Tungsten HIP step" << std::endl;
 #endif
-  double t = s.get_time().get_current();
+  double t = pfc::get_time(s).get_current();
   m.step(t);
 }
 

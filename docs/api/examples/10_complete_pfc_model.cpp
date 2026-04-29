@@ -423,7 +423,7 @@ int main(int argc, char **argv) {
 
     while (!simulator.done()) {
       simulator.step();
-      Time &clock = simulator.get_time();
+      Time &clock = pfc::get_time(simulator);
       if (rank == 0 && clock.do_save()) {
         printf("    Step %4d / ~%4d  |  t = %6.2f  |  Saving output...\n",
                clock.get_increment(), total_steps_approx, clock.get_current());
@@ -496,7 +496,7 @@ int main(int argc, char **argv) {
                    "     ║\n";
       std::cout << "║  ✓ Simulator orchestrated time loop                           "
                    "     ║\n";
-      std::cout << "║  ✓ " << simulator.get_time().get_increment()
+      std::cout << "║  ✓ " << pfc::get_time(simulator).get_increment()
                 << " time steps completed                                   ║\n";
       std::cout << "║                                                               "
                    "     ║\n";

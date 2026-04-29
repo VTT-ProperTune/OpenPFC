@@ -292,8 +292,8 @@ void example_complete_simulation() {
 
   if (mpi::get_rank() == 0) {
     std::cout << "\n✓ Simulation completed successfully!\n";
-    std::cout << "  Final time: " << sim.get_time().get_current() << "\n";
-    std::cout << "  Total steps: " << sim.get_increment() << "\n";
+    std::cout << "  Final time: " << pfc::get_time(sim).get_current() << "\n";
+    std::cout << "  Total steps: " << pfc::get_time(sim).get_increment() << "\n";
   }
 }
 

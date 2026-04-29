@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #ifndef TUNGSTEN_CUDA_HPP
@@ -25,7 +25,7 @@ void step(pfc::Simulator &s, TungstenCUDA<RealType> &m) {
 #ifdef TUNGSTEN_DEBUG
   if (m.is_rank0()) std::cout << "Performing Tungsten CUDA step" << std::endl;
 #endif
-  double t = s.get_time().get_current();
+  double t = pfc::get_time(s).get_current();
   m.step(t);
   // perform some extra logic after the step, which can access both simulator
   // and model

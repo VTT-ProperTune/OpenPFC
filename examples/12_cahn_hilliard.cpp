@@ -28,7 +28,7 @@ public:
   }
 
   void initialize(double dt) override {
-    auto &fft = get_fft();
+    auto &fft = pfc::get_fft(*this);
 
     // Allocate space for the main variable and it's fourier transform
     c.resize(fft.size_inbox());
@@ -39,7 +39,7 @@ public:
     pfc::add_real_field(*this, "concentration", c);
 
     // prepare operators
-    World w = get_world();
+    World w = pfc::get_world(*this);
     std::array<int, 3> o_low = get_outbox(fft).low;
     std::array<int, 3> o_high = get_outbox(fft).high;
     size_t idx = 0;
@@ -65,7 +65,7 @@ public:
   }
 
   void step(double) override {
-    auto &fft = get_fft();
+    auto &fft = pfc::get_fft(*this);
     fft.forward(c, c_F);
     for (auto &elem : c) elem = D * elem * elem * elem;
     fft.forward(c, c_NF);
