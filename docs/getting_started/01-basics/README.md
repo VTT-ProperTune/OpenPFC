@@ -16,6 +16,16 @@ classes at a rough level. Not all classes are shown, but the most important
 ones, to get overall understanding about the building blocks we are working
 with.
 
+## Contents
+
+- [Software building blocks](#software-building-blocks)
+- [Hello, World with CMake](#hello-world-with-cmake)
+- [Distributed FFT, decomposition, and FFT](#distributed-fft-decomposition-and-fft)
+- [Spectral derivative example](#spectral-derivative-example)
+- [Next steps for application developers](#next-steps-for-application-developers)
+
+## Software building blocks
+
 ```mermaid
 classDiagram
   App~Model~ --> Simulator
@@ -128,6 +138,8 @@ class World{
   +array<int,3> get_size()
 }
 ```
+
+## Hello, World with CMake
 
 Like all other software projects, let's start this one with the traditional
 ["Hello, World!"][hello]-example, just to make sure that environment is working
@@ -286,6 +298,8 @@ After successful compilation, the executable will be in the directory
 Now the first program has been compiled and run! There is no program yet
 particularly useful, but it can be used to ensure that the installation works.
 
+## Distributed FFT, decomposition, and FFT
+
 In OpenPFC, the starting point for software design is that calculations must be
 able to be done on a really large scale with the world's fastest supercomputers,
 because materials science is a challenging field of science and the problems are
@@ -365,6 +379,8 @@ FFT fft(decomposition, MPI_COMM_WORLD);
 
 After that, `fft.forward` and `fft.backward` commands are available for doing a
 distributed FFT.
+
+## Spectral derivative example
 
 Now enough tools have been introduced to be able to do something remotely
 resembling something useful. Let's conclude the first section of the
@@ -491,6 +507,8 @@ If you already link OpenPFC and want a JSON-driven program with `App<Model>`, co
 
 | Topic | Document |
 |-------|----------|
+| Learning paths (run / extend / integrate) | [`../../learning_paths.md`](../../learning_paths.md) |
+| Examples catalog + curriculum | [`../../examples_catalog.md`](../../examples_catalog.md) |
 | JSON/TOML → simulator wiring | [`../../app_pipeline.md`](../../app_pipeline.md) |
 | Map of main classes and headers | [`../../class_tour.md`](../../class_tour.md) |
 | Minimal out-of-tree CMake + `App` tutorial | [`../../tutorials/custom_app_minimal.md`](../../tutorials/custom_app_minimal.md) |
