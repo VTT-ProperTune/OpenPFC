@@ -645,7 +645,9 @@ public:
   /**
    * @brief Get a reference to the default primary unknown field.
    *
-   * This is deprecated function and will likely be removed in future.
+   * Deprecated; prefer `get_real_field("default")` or a named field. The free
+   * function `pfc::get_field(Model&)` has been removed—call `get_real_field(model,
+   * "default")` at call sites.
    *
    * @return Reference to the RealField called "default"
    */
