@@ -21,6 +21,7 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | If you want to… | Open |
 |-----------------|------|
 | Pick a guided track (run apps, extend models, or integrate the library) | [`learning_paths.md`](learning_paths.md) |
+| Jump in by role (personas) | [`personas.md`](personas.md) |
 | Figures and runnable entry points | [`showcase.md`](showcase.md) |
 | Step-by-step tutorials (`docs/tutorials/`) | [`tutorials/README.md`](tutorials/README.md) |
 | Get running in one pass (examples, app, or `find_package`) | [`quickstart.md`](quickstart.md) |

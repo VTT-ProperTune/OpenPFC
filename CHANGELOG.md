@@ -7,6 +7,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Documentation
+
+- **Binary MPI-IO fields:** `docs/binary_field_io_spec.md` (layout, filename templates, collectives).  
+- **Spectral `App` config keys:** `docs/spectral_app_config_reference.md` (world, time, `plan_options`, `fields`, IC/BC).  
+- **HPC:** `docs/tutorials/hpc_slurm_day_one.md`, `docs/mpi_io_layout_checklist.md`.  
+- **Science notes:** `docs/science_tungsten_quicklook.md`, `docs/science_cahn_hilliard_vs_allen_cahn.md`.  
+- Indexes and cross-links updated (`docs/README.md`, `learning_paths.md`, `tutorials/README.md`, …).
+
+**Upgrade discipline (maintainers):** When a change alters **CMake options**, **JSON/TOML keys**, **default writers**, or **on-disk formats**, add an explicit **migration** bullet under `[Unreleased]` (usually `### Changed` or `### Removed`) with what to do instead and a link to the relevant `docs/*.md`.
+
 ### Added
 
 - **HeFFTe builds**: Optional vendoring of HeFFTe 2.4.1 via CMake FetchContent (`FetchHeffte.cmake`), HeFFTe discovery hints, and a pinned GCC 11 + OpenMPI toolchain preset for fixed cluster layouts (e.g. tohtori).

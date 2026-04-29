@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Getting started
 
-New to OpenPFC? Start with [`../quickstart.md`](../quickstart.md) (install → run examples or an app → or link the library in your own CMake project). For a **sequenced** path by role, use [`../learning_paths.md`](../learning_paths.md).
+New to OpenPFC? Start with [`../quickstart.md`](../quickstart.md) (install → run examples or an app → or link the library in your own CMake project). For a **sequenced** path by role, use [`../learning_paths.md`](../learning_paths.md). **Short persona pages:** [`../personas.md`](../personas.md).
 
 ## Tutorials (in-repo)
 

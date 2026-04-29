@@ -57,6 +57,12 @@ See [`extending_openpfc/README.md`](extending_openpfc/README.md), [`class_tour.m
 | Examples catalog + curriculum | [`examples_catalog.md`](examples_catalog.md) |
 | API examples reading order | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) |
 | Tutorials hub | [`tutorials/README.md`](tutorials/README.md) |
+| Personas (by role) | [`personas.md`](personas.md) |
+| Add a Catch2 test | [`tutorials/add_catch2_test.md`](tutorials/add_catch2_test.md) |
+| Binary field format | [`binary_field_io_spec.md`](binary_field_io_spec.md) |
+| Spectral `App` config keys | [`spectral_app_config_reference.md`](spectral_app_config_reference.md) |
+| Slurm day one | [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md) |
+| MPI / I/O checklist | [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) |
 | Troubleshooting | [`troubleshooting.md`](troubleshooting.md) |
 | Config files | [`configuration.md`](configuration.md) |
 | Terminology | [`glossary.md`](glossary.md) |

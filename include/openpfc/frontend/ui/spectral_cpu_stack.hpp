@@ -10,6 +10,9 @@
  * `Model` type (`SpectralSimulationSession`). That split follows Single
  * Responsibility: this type knows how to build the FFT-backed grid stack from
  * settings; physics models remain independent and are layered on top.
+ *
+ * User-facing JSON/TOML keys for this stack are summarized in the repository
+ * under `docs/spectral_app_config_reference.md`.
  */
 
 #ifndef PFC_UI_SPECTRAL_CPU_STACK_HPP

@@ -82,6 +82,11 @@ If you are browsing the [source tree](https://github.com/VTT-ProperTune/OpenPFC)
 | Master index (all markdown guides) | [docs/README.md](docs/README.md) |
 | Learning paths by role | [docs/learning_paths.md](docs/learning_paths.md) |
 | Tutorials hub (VTK, HeFFTe, spectral examples, …) | [docs/tutorials/README.md](docs/tutorials/README.md) |
+| Docs by role (personas) | [docs/personas.md](docs/personas.md) |
+| Binary MPI-IO field format | [docs/binary_field_io_spec.md](docs/binary_field_io_spec.md) |
+| Spectral `App` JSON/TOML keys | [docs/spectral_app_config_reference.md](docs/spectral_app_config_reference.md) |
+| Slurm / MPI–I/O checklists | [docs/tutorials/hpc_slurm_day_one.md](docs/tutorials/hpc_slurm_day_one.md), [docs/mpi_io_layout_checklist.md](docs/mpi_io_layout_checklist.md) |
+| Science notes (tungsten, CH vs Allen–Cahn) | [docs/science_tungsten_quicklook.md](docs/science_tungsten_quicklook.md), [docs/science_cahn_hilliard_vs_allen_cahn.md](docs/science_cahn_hilliard_vs_allen_cahn.md) |
 | Contributing (code, tests, changelog) | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Documentation PRs, link checker (`python3 scripts/check_doc_links.py`) | [docs/contributing-docs.md](docs/contributing-docs.md) |
 | JSON/TOML → `Simulator` | [docs/app_pipeline.md](docs/app_pipeline.md) |

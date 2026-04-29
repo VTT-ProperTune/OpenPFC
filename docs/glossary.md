@@ -24,6 +24,11 @@ Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detai
 | FieldModifier | Applies initial or boundary updates each step or at startup. |
 | SimulationContext | Small bundle (MPI comm, rank-0) passed with `Model` to modifiers for rank-aware I/O; see `simulation_context.hpp` and [`app_pipeline.md`](app_pipeline.md). |
 | App&lt;Model&gt; | Frontend entry point that loads JSON/TOML and builds a session (`pfc::ui::App`). |
+| `plan_options` | HeFFTe FFT planner settings (backend, reshape algorithm, pencils, GPU-aware MPI, …), usually a JSON object or TOML `[plan_options]` — see [`tutorials/fft_heffte_plan_options.md`](tutorials/fft_heffte_plan_options.md). |
+| `saveat` | Time between periodic result writes in the spectral `Time` object; `≤ 0` disables the default JSON binary-writer path ([`spectral_app_config_reference.md`](spectral_app_config_reference.md)). |
+| `BinaryWriter` / binary field files | MPI-IO raw output per timestep; no file header — see [`binary_field_io_spec.md`](binary_field_io_spec.md). |
+| GPU-aware MPI | MPI implementation that can pass device buffers; required for some CUDA/HIP + HeFFTe paths — see [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md). |
+| VTK (`.vti`) | XML image data for visualization; produced by `VTKWriter` in code — see [`tutorials/vtk_paraview_workflow.md`](tutorials/vtk_paraview_workflow.md). |
 
 ## See also
 

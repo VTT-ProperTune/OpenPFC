@@ -21,6 +21,7 @@ Step-by-step and workflow guides. Install and MPI setup: [`INSTALL.md`](../../IN
 | [**MPI / I/O checklist**](../mpi_io_layout_checklist.md) | Paths, collectives, cluster sanity |
 | [**Tungsten PFC (science)**](../science_tungsten_quicklook.md) | What the tungsten app is for |
 | [**CH vs Allen–Cahn**](../science_cahn_hilliard_vs_allen_cahn.md) | Which entry point matches your goal |
+| [**Add a Catch2 test**](add_catch2_test.md) | Minimal unit-test pattern and `ctest` |
 
 ## See also
 

@@ -57,6 +57,7 @@ Goal: link OpenPFC from your CMake project, run small `examples/`, and use the H
 
 ## See also
 
+- [`personas.md`](personas.md) — same tracks as short “by role” pages  
 - [`tutorials/README.md`](tutorials/README.md) — all walkthroughs in one place
 - [`showcase.md`](showcase.md) — figures and which app or example they map to
 - [`README.md`](README.md) — full documentation index

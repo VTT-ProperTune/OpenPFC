@@ -53,6 +53,8 @@ VTK writer tests and other targets may `add_test` separately under `tests/unit/f
 
 When `OpenPFC_BUILD_APPS=ON`, some apps register extra CTest entries (e.g. tungsten / aluminum checks). Those live next to each app’s `CMakeLists.txt`.
 
+Minimal new-test walkthrough: [`tutorials/add_catch2_test.md`](tutorials/add_catch2_test.md).
+
 ## See also
 
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md) — changelog and review expectations  
