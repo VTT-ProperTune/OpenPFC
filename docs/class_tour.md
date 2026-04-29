@@ -55,6 +55,7 @@ flowchart TB
 | `FieldModifier` | Initial / boundary updates on fields | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `SimulationContext` | MPI comm + rank context for modifiers | `openpfc/kernel/simulation/simulation_context.hpp` | Passed when applying modifiers |
 | `ResultsWriter` / `ResultsWriterMap` | Persist fields (binary, VTK, …); `Simulator` holds `ResultsWriterMap` | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](io_results.md) |
+| `ResultsWriterCatalog` | JSON `fields[].writer` → factory (`binary` built-in); inject for custom formats | `openpfc/frontend/ui/results_writer_catalog.hpp` | Same as `add_result_writers_from_json` ([`app_pipeline.md`](app_pipeline.md)) |
 | `pfc::ui::App<Model>` | Load JSON/TOML, build stack, run | `openpfc/frontend/ui/app.hpp` | `apps/aluminumNew/`, `examples/10_ui_register_ic.cpp` |
 | `SpectralCpuStack` | World → decomp → CPU FFT → time from JSON | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | Used inside `SpectralSimulationSession` |
 | `spectral_fft_stack_factory` | Merge `plan_options` + root `backend`; cuFFT / ROCm plan defaults + JSON overlay | `openpfc/frontend/ui/spectral_fft_stack_factory.hpp` | GPU tests / drivers alongside CPU stack helpers |
@@ -77,7 +78,7 @@ GPU FFT and device execution require the matching runtime headers and a build wi
 | [`app_pipeline.md`](app_pipeline.md) | JSON/TOML → `Simulator` wiring order |
 | [`parameter_validation.md`](parameter_validation.md) | Optional validated `model.params` |
 | [`glossary.md`](glossary.md) | Terminology |
-| [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) | Build a small `App`-driven project |
+| [`tutorials/custom_app_minimal.md`](tutorials/custom_app_minimal.md) | Out-of-tree `App` + JSON **wiring** (goal/outcome first; physics in `step`) |
 | [`extending_openpfc/README.md`](extending_openpfc/README.md) | Extension points checklist |
 | [`examples_catalog.md`](examples_catalog.md) | All `examples/` executables (with curriculum) |
 | [`api_examples_walkthrough.md`](api_examples_walkthrough.md) | Doxygen `docs/api/examples/` in reading order |

@@ -7,7 +7,7 @@
  *
  * @details
  * Shared helpers used by `App::main()` (and available for other drivers) to
- * register binary result writers, field modifiers, and optional `simulator`
+ * register result writers, field modifiers, and optional `simulator`
  * subsection keys (`result_counter`, `increment`).
  *
  * Implementation is split across `simulation_wiring_*.hpp` for readability;
@@ -43,28 +43,28 @@ namespace pfc::ui {
  *
  * @param modifier_catalog Modifier factories for JSON `type` strings (inject a
  *        test catalog or extend defaults).
+ * @param writer_catalog Result writer factories for JSON `fields[].writer` (default
+ *        `binary`); inject for tests or custom formats.
  */
-inline void
-wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
-                                     const nlohmann::json &settings,
-                                     const JsonWiringContext &ctx,
-                                     const FieldModifierCatalog &modifier_catalog =
-                                         default_field_modifier_catalog()) {
-  add_result_writers_from_json(sim, settings, ctx);
+inline void wire_simulator_and_runtime_from_json(
+    Simulator &sim, Time &time, const nlohmann::json &settings,
+    const JsonWiringContext &ctx,
+    const FieldModifierCatalog &modifier_catalog = default_field_modifier_catalog(),
+    const ResultsWriterCatalog &writer_catalog = default_results_writer_catalog()) {
+  add_result_writers_from_json(sim, settings, ctx, writer_catalog);
   add_initial_conditions_from_json(sim, settings, ctx, modifier_catalog);
   add_boundary_conditions_from_json(sim, settings, ctx, modifier_catalog);
   apply_simulator_section_from_json(sim, time, settings);
 }
 
-inline void
-wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
-                                     const nlohmann::json &settings, MPI_Comm comm,
-                                     int mpi_rank, bool rank0,
-                                     const FieldModifierCatalog &modifier_catalog =
-                                         default_field_modifier_catalog()) {
+inline void wire_simulator_and_runtime_from_json(
+    Simulator &sim, Time &time, const nlohmann::json &settings, MPI_Comm comm,
+    int mpi_rank, bool rank0,
+    const FieldModifierCatalog &modifier_catalog = default_field_modifier_catalog(),
+    const ResultsWriterCatalog &writer_catalog = default_results_writer_catalog()) {
   wire_simulator_and_runtime_from_json(sim, time, settings,
                                        JsonWiringContext{comm, mpi_rank, rank0},
-                                       modifier_catalog);
+                                       modifier_catalog, writer_catalog);
 }
 
 /**

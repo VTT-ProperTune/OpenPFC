@@ -15,4 +15,5 @@ target_sources(openpfc-tests PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/test_profiling_config.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_validation_result.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_parameter_validation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_results_writer_catalog.cpp
 )

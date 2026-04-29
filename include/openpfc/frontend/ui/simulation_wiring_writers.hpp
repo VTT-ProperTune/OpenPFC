@@ -3,7 +3,11 @@
 
 /**
  * @file simulation_wiring_writers.hpp
- * @brief JSON-driven binary result writers (`saveat`, `fields`)
+ * @brief JSON-driven result writers (`saveat`, `fields`)
+ *
+ * @details
+ * Each `fields[]` object uses `ResultsWriterCatalog` (default: `binary` →
+ * `pfc::BinaryWriter`). Optional `"writer"` string selects the catalog key.
  */
 
 #ifndef PFC_UI_SIMULATION_WIRING_WRITERS_HPP
@@ -15,7 +19,7 @@
 
 #include <mpi.h>
 #include <nlohmann/json.hpp>
-#include <openpfc/frontend/io/binary_writer.hpp>
+#include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
@@ -47,9 +51,9 @@ inline bool ensure_results_parent_dir_for_writer(const std::string &output,
   return false;
 }
 
-inline void add_result_writers_from_json(Simulator &sim,
-                                         const nlohmann::json &settings,
-                                         const JsonWiringContext &ctx) {
+inline void add_result_writers_from_json(
+    Simulator &sim, const nlohmann::json &settings, const JsonWiringContext &ctx,
+    const ResultsWriterCatalog &writer_catalog = default_results_writer_catalog()) {
   const pfc::Logger lg{pfc::LogLevel::Info, ctx.mpi_rank};
   if (ctx.rank0) {
     pfc::log_info(lg, "Adding results writers");
@@ -59,13 +63,26 @@ inline void add_result_writers_from_json(Simulator &sim,
     for (const auto &field : settings["fields"]) {
       std::string name = field["name"];
       std::string data = field["data"];
+      std::string writer_type = "binary";
+      if (field.contains("writer") && field["writer"].is_string()) {
+        writer_type = field["writer"].get<std::string>();
+      }
       if (ctx.rank0) {
         (void)ensure_results_parent_dir_for_writer(data, ctx.mpi_rank);
       }
       if (ctx.rank0) {
-        pfc::log_info(lg, "Writing field " + name + " to " + data);
+        pfc::log_info(lg, "Writing field " + name + " to " + data +
+                              " (writer: " + writer_type + ")");
       }
-      sim.add_results_writer(name, std::make_unique<BinaryWriter>(data, ctx.comm));
+      auto writer_opt = writer_catalog.try_create(writer_type, data, ctx.comm);
+      if (!writer_opt) {
+        if (ctx.rank0) {
+          pfc::log_warning(lg, "Unknown results writer type '" + writer_type +
+                                   "' for field '" + name + "' — skipping");
+        }
+        continue;
+      }
+      sim.add_results_writer(name, std::move(*writer_opt));
     }
   } else {
     if (ctx.rank0) {
@@ -75,11 +92,12 @@ inline void add_result_writers_from_json(Simulator &sim,
   }
 }
 
-inline void add_result_writers_from_json(Simulator &sim,
-                                         const nlohmann::json &settings,
-                                         MPI_Comm comm, int mpi_rank, bool rank0) {
-  add_result_writers_from_json(sim, settings,
-                               JsonWiringContext{comm, mpi_rank, rank0});
+inline void add_result_writers_from_json(
+    Simulator &sim, const nlohmann::json &settings, MPI_Comm comm, int mpi_rank,
+    bool rank0,
+    const ResultsWriterCatalog &writer_catalog = default_results_writer_catalog()) {
+  add_result_writers_from_json(
+      sim, settings, JsonWiringContext{comm, mpi_rank, rank0}, writer_catalog);
 }
 
 } // namespace pfc::ui
