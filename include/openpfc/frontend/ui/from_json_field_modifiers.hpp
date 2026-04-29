@@ -10,6 +10,7 @@
 #define PFC_UI_FROM_JSON_FIELD_MODIFIERS_HPP
 
 #include <stdexcept>
+#include <string_view>
 
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
 #include <openpfc/frontend/ui/from_json_log.hpp>
@@ -23,13 +24,20 @@
 #include <openpfc/kernel/simulation/simulation_fwd.hpp>
 
 namespace pfc::ui {
+namespace detail {
+
+inline void throw_unless_json_modifier_type(const json &j, const char *expected,
+                                            std::string_view message) {
+  if (!j.contains("type") || j["type"] != expected) {
+    throw std::invalid_argument(std::string(message));
+  }
+}
+
+} // namespace detail
 
 inline void from_json(const json &j, Constant &ic) {
-  // Check that the JSON input has the correct type field
-  if (!j.contains("type") || j["type"] != "constant") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
+  detail::throw_unless_json_modifier_type(
+      j, "constant", "Invalid JSON input: missing or incorrect 'type' field.");
   // Check that the JSON input has the required 'n0' field
   if (!j.contains("n0") || !j["n0"].is_number()) {
     throw std::invalid_argument(
@@ -39,10 +47,8 @@ inline void from_json(const json &j, Constant &ic) {
 }
 
 inline void from_json(const json &j, SingleSeed &seed) {
-  if (!j.contains("type") || j["type"] != "single_seed") {
-    throw std::invalid_argument(
-        "JSON object does not contain a 'single_seed' type.");
-  }
+  detail::throw_unless_json_modifier_type(
+      j, "single_seed", "JSON object does not contain a 'single_seed' type.");
 
   if (!j.contains("amp_eq")) {
     throw std::invalid_argument("JSON object does not contain an 'amp_eq' key.");
@@ -57,11 +63,8 @@ inline void from_json(const json &j, SingleSeed &seed) {
 }
 
 inline void from_json(const json &j, RandomSeeds &ic) {
-  // Check that the JSON input has the correct type field
-  if (!j.contains("type") || j["type"] != "random_seeds") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
+  detail::throw_unless_json_modifier_type(
+      j, "random_seeds", "Invalid JSON input: missing or incorrect 'type' field.");
 
   // Check that the JSON input has the required 'amplitude' field
   if (!j.contains("amplitude") || !j["amplitude"].is_number()) {
@@ -80,10 +83,8 @@ inline void from_json(const json &j, RandomSeeds &ic) {
 }
 
 inline void from_json(const json &j, SeedGrid &ic) {
-  if (!j.contains("type") || j["type"] != "seed_grid") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
+  detail::throw_unless_json_modifier_type(
+      j, "seed_grid", "Invalid JSON input: missing or incorrect 'type' field.");
 
   if (!j.contains("Ny") || !j["Ny"].is_number()) {
     throw std::invalid_argument(
@@ -124,10 +125,8 @@ inline void from_json(const json &j, SeedGrid &ic) {
 }
 
 inline void from_json(const json &j, FileReader &ic) {
-  if (!j.contains("type") || j["type"] != "from_file") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
+  detail::throw_unless_json_modifier_type(
+      j, "from_file", "Invalid JSON input: missing or incorrect 'type' field.");
 
   if (!j.contains("filename") || !j["filename"].is_string()) {
     throw std::invalid_argument(
@@ -138,10 +137,8 @@ inline void from_json(const json &j, FileReader &ic) {
 }
 
 inline void from_json(const json &j, FixedBC &bc) {
-  if (!j.contains("type") || j["type"] != "fixed") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
+  detail::throw_unless_json_modifier_type(
+      j, "fixed", "Invalid JSON input: missing or incorrect 'type' field.");
 
   if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
     throw std::invalid_argument(
@@ -158,10 +155,8 @@ inline void from_json(const json &j, FixedBC &bc) {
 }
 
 inline void from_json(const json &j, MovingBC &bc) {
-  if (!j.contains("type") || j["type"] != "moving") {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or incorrect 'type' field.");
-  }
+  detail::throw_unless_json_modifier_type(
+      j, "moving", "Invalid JSON input: missing or incorrect 'type' field.");
 
   if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
     throw std::invalid_argument(
