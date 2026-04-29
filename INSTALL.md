@@ -18,7 +18,7 @@ This document is the supported source build guide. OpenPFC is routinely tested w
 
 One-page matrix (optional / QA tooling, doc check scripts): [`docs/dependency_matrix.md`](docs/dependency_matrix.md).
 
-For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found), see [`docs/troubleshooting.md`](docs/troubleshooting.md).
+For common failures (`mpi.h`, wrong compiler in cache, HeFFTe not found, **link errors involving `libheffte.so` and `GLIBCXX_*`**), see [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 **After a successful install**, continue with [`docs/quickstart.md`](docs/quickstart.md) and pick a sequenced track in [`docs/learning_paths.md`](docs/learning_paths.md). For the shortest linear path (build → one `mpirun`), use [`docs/start_here_15_minutes.md`](docs/start_here_15_minutes.md). The full prose index is [`docs/README.md`](docs/README.md) (tutorials, HPC, troubleshooting — not only Doxygen).
 

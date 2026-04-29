@@ -39,6 +39,20 @@ OpenPFC must be installed (or you must point CMake at a build tree that exports 
 
 Build and run with the same MPI implementation. `which mpirun` should match the prefix of `mpicc` used to build HeFFTe and OpenPFC. See [`INSTALL.md`](../INSTALL.md) (MPI callout).
 
+### Linking tests / `libheffte.so` / `GLIBCXX_3.4.xx` (libstdc++ mismatch)
+
+**Symptom:** Linking `openpfc-tests` (or similar) fails with undefined references to `std::…@GLIBCXX_3.4.29` (or another GLIBCXX symbol) involving `libheffte.so`, or the link succeeds but you see mixed C++ runtime errors at load time.
+
+**Cause:** HeFFTe was built with a different GCC (or different libstdc++) than the compiler used for OpenPFC/tests. The static library `libopenpfc.a` is fine; the failure often appears when the link line pulls in `libheffte.so` and your default `libstdc++.so` does not match what HeFFTe expected.
+
+| Check | What to verify |
+|-------|----------------|
+| One toolchain | Same `gcc`/`g++` (or `mpicc`/`mpicxx`) for **HeFFTe install** and **OpenPFC** configure — load modules *before* both CMake runs. |
+| Prefix | `CMAKE_PREFIX_PATH` points at the HeFFTe tree built with that toolchain (see [`INSTALL.md`](../INSTALL.md) §3). |
+| Inspect | `ldd $HEFFTE_PREFIX/lib64/libheffte.so` (path may vary) and compare to `$(g++ -print-file-name=libstdc++.so)`. |
+
+**Remediation (preferred order):** (1) `module load` the intended GCC and OpenMPI, then rebuild HeFFTe into a clean prefix and re-run OpenPFC CMake so it picks up the new HeFFTe. (2) Do not mix a system `g++` for OpenPFC with a HeFFTe built under a module GCC without aligning `LD_LIBRARY_PATH` — fix the build instead. (3) CI uses `scripts/install-heffte-ci.sh` with the same compiler matrix as the build; mirror that locally when debugging.
+
 ### Missing `examples/` or `apps/...` binaries
 
 Examples and apps are controlled by `OpenPFC_BUILD_EXAMPLES` and `OpenPFC_BUILD_APPS` (default ON). If you configured with OFF, reconfigure with ON and rebuild. See [`quickstart.md`](quickstart.md).
