@@ -32,7 +32,7 @@ Done:
 - `from_json.hpp`: `set_from_json_log_rank` / `get_from_json_log_rank` replace static loggers fixed at rank `-1`; `App::main` sets the rank so FFT / HeFFTe parse diagnostics align with other MPI-aware logs.
 - `ResultsWriterMap` alias in `results_writer.hpp`; `Simulator::results_writers()` const accessor; `write_results_for_registered_fields` takes `ResultsWriterMap` (named type for tests / tooling).
 - Deprecated `pfc::get_field(Model&)` and `Simulator::get_field()` / `pfc::get_field(Simulator&)` removed; diffusion fixtures register `"default"` alongside `"density"` and drop `get_field()` overrides. `Model::get_field()` remains deprecated for out-of-tree subclasses.
-- Field modifier catalog: header + [`extending_openpfc/README.md`](../extending_openpfc/README.md) document singleton vs explicit-catalog DI.
+- Field modifier catalog: header + [`extending_openpfc/README.md`](extending_openpfc/README.md) document singleton vs explicit-catalog DI.
 
 ## Phase C — Unified config-driven stack (CPU / GPU)
 
