@@ -123,27 +123,27 @@ void laplacian_7point_interior_separated(const T *core,
         const T uxm =
             (ix > imin)
                 ? core[c - 1]
-                : hpx[static_cast<std::size_t>(iz) *
+                : hnx[static_cast<std::size_t>(iz) *
                           static_cast<std::size_t>(ny * hw) +
                       static_cast<std::size_t>(iy) * static_cast<std::size_t>(hw) +
                       static_cast<std::size_t>(hw - 1)];
         const T uxp =
             (ix + 1 < imax)
                 ? core[c + 1]
-                : hnx[static_cast<std::size_t>(iz) *
+                : hpx[static_cast<std::size_t>(iz) *
                           static_cast<std::size_t>(ny * hw) +
                       static_cast<std::size_t>(iy) * static_cast<std::size_t>(hw) +
                       static_cast<std::size_t>(ix + 1 - (nx - hw))];
 
         const T uym = (iy > jmin) ? core[c - static_cast<std::size_t>(nx)]
-                                  : hpy[static_cast<std::size_t>(iz) *
+                                  : hny[static_cast<std::size_t>(iz) *
                                             static_cast<std::size_t>(nx * hw) +
                                         static_cast<std::size_t>(hw - 1) *
                                             static_cast<std::size_t>(nx) +
                                         static_cast<std::size_t>(ix)];
         const T uyp = (iy + 1 < jmax)
                           ? core[c + static_cast<std::size_t>(nx)]
-                          : hny[static_cast<std::size_t>(iz) *
+                          : hpy[static_cast<std::size_t>(iz) *
                                     static_cast<std::size_t>(nx * hw) +
                                 static_cast<std::size_t>(iy + 1 - (ny - hw)) *
                                     static_cast<std::size_t>(nx) +
@@ -152,14 +152,14 @@ void laplacian_7point_interior_separated(const T *core,
         const T uzm =
             (iz > kmin)
                 ? core[c - static_cast<std::size_t>(sxy)]
-                : hpz[static_cast<std::size_t>(hw - 1) *
+                : hnz[static_cast<std::size_t>(hw - 1) *
                           static_cast<std::size_t>(sxy) +
                       static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
                       static_cast<std::size_t>(ix)];
         const T uzp =
             (iz + 1 < kmax)
                 ? core[c + static_cast<std::size_t>(sxy)]
-                : hnz[static_cast<std::size_t>(iz + 1 - (nz - hw)) *
+                : hpz[static_cast<std::size_t>(iz + 1 - (nz - hw)) *
                           static_cast<std::size_t>(sxy) +
                       static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
                       static_cast<std::size_t>(ix)];
@@ -251,14 +251,14 @@ void laplacian_5point_xy_interior_separated(
       const T uxm =
           (ix > imin)
               ? core[c - 1]
-              : hpx[static_cast<std::size_t>(iz) *
+              : hnx[static_cast<std::size_t>(iz) *
                         static_cast<std::size_t>(ny * hw) +
                     static_cast<std::size_t>(iy) * static_cast<std::size_t>(hw) +
                     static_cast<std::size_t>(hw - 1)];
       const T uxp =
           (ix + 1 < imax)
               ? core[c + 1]
-              : hnx[static_cast<std::size_t>(iz) *
+              : hpx[static_cast<std::size_t>(iz) *
                         static_cast<std::size_t>(ny * hw) +
                     static_cast<std::size_t>(iy) * static_cast<std::size_t>(hw) +
                     static_cast<std::size_t>(ix + 1 - (nx - hw))];
@@ -266,13 +266,13 @@ void laplacian_5point_xy_interior_separated(
       const T uym =
           (iy > jmin)
               ? core[c - static_cast<std::size_t>(nx)]
-              : hpy[static_cast<std::size_t>(iz) *
+              : hny[static_cast<std::size_t>(iz) *
                         static_cast<std::size_t>(nx * hw) +
                     static_cast<std::size_t>(hw - 1) * static_cast<std::size_t>(nx) +
                     static_cast<std::size_t>(ix)];
       const T uyp = (iy + 1 < jmax)
                         ? core[c + static_cast<std::size_t>(nx)]
-                        : hny[static_cast<std::size_t>(iz) *
+                        : hpy[static_cast<std::size_t>(iz) *
                                   static_cast<std::size_t>(nx * hw) +
                               static_cast<std::size_t>(iy + 1 - (ny - hw)) *
                                   static_cast<std::size_t>(nx) +

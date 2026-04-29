@@ -131,10 +131,13 @@ TEST_CASE("5-point XY separated vs in-place Laplacian on interior (nz=1)",
   field::fd::laplacian_5point_xy_interior_separated(
       u_core.data(), face_ptrs, lap_sep.data(), nx, ny, nz, inv, inv, halo_width);
 
-  const int imin = halo_width;
-  const int imax = nx - halo_width;
-  const int jmin = halo_width;
-  const int jmax = ny - halo_width;
+  // Compare only cells whose stencil uses owned core values in both layouts.
+  // Halo-touching boundary cells are covered by the explicit face-halo and
+  // periodic-Laplacian tests below.
+  const int imin = 2 * halo_width;
+  const int imax = nx - 2 * halo_width;
+  const int jmin = 2 * halo_width;
+  const int jmax = ny - 2 * halo_width;
   constexpr int iz = 0;
   const int sxy = nx * ny;
   for (int iy = jmin; iy < jmax; ++iy) {
