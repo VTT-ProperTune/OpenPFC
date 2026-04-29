@@ -22,7 +22,7 @@ Done:
 
 ## Phase B — Simulator decomposition
 
-Goal: Reduce responsibilities of `Simulator` (time orchestration vs modifier application vs results scheduling).
+Goal: Reduce responsibilities of `Simulator` (time orchestration vs modifier application vs results scheduling) and keep `App` thin versus the spectral JSON run pipeline.
 
 Done:
 
@@ -34,6 +34,7 @@ Done:
 - `ResultsWriterMap` alias in `results_writer.hpp`; `Simulator::results_writers()` const accessor; `write_results_for_registered_fields` takes `ResultsWriterMap` (named type for tests / tooling).
 - Deprecated `pfc::get_field(Model&)` and `Simulator::get_field()` / `pfc::get_field(Simulator&)` removed; diffusion fixtures register `"default"` alongside `"density"` and drop `get_field()` overrides. `Model::get_field()` remains deprecated for out-of-tree subclasses.
 - Field modifier catalog: header + [`extending_openpfc/README.md`](extending_openpfc/README.md) document singleton vs explicit-catalog DI; `App::set_field_modifier_catalog` forwards an explicit catalog into `wire_simulator_from_settings` ([`app_pipeline.md`](app_pipeline.md)).
+- `app_spectral_run.hpp`: `SpectralJsonAppRun` owns the post-settings spectral pipeline (session → wire → integrate); `App` keeps settings I/O and pre-run logs.
 
 ## Phase C — Unified config-driven stack (CPU / GPU)
 

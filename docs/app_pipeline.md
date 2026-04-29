@@ -47,7 +47,7 @@ flowchart LR
 
 ## `App<ConcreteModel>::main()` order of operations
 
-Implementation: `include/openpfc/frontend/ui/app.hpp`.
+Implementation: `include/openpfc/frontend/ui/app.hpp` (settings load, MPI hints) and `include/openpfc/frontend/ui/app_spectral_run.hpp` (`SpectralJsonAppRun` — session through time loop).
 
 | Step | What happens |
 |------|----------------|

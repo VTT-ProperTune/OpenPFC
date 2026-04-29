@@ -6,9 +6,9 @@
  * @brief Application class for running simulations from JSON/TOML configuration
  *
  * @details
- * Orchestrates loading settings, building a `SpectralSimulationSession`, wiring
- * the simulator from JSON, running the time loop, and optional profiling export.
- * Detailed steps live in private methods so `main()` reads as a high-level script.
+ * Orchestrates loading settings, optional GPU/MPI hints, then delegates the
+ * spectral JSON pipeline to `SpectralJsonAppRun` (session build, wiring, time
+ * loop, profiling export).
  *
  * Call `set_field_modifier_catalog` before `main()` if wiring should use a
  * catalog other than the process-wide `default_field_modifier_catalog()`
@@ -28,12 +28,11 @@
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
-#include <openpfc/frontend/ui/app_integrator_loop.hpp>
 #include <openpfc/frontend/ui/app_profiling.hpp>
-#include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/app_spectral_run.hpp>
+#include <openpfc/frontend/ui/from_json_log.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/ui/settings_loader.hpp>
-#include <openpfc/frontend/ui/spectral_simulation_session.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
 #include <openpfc/frontend/utils/nancheck.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
@@ -133,75 +132,6 @@ private:
     }
   }
 
-  [[nodiscard]] std::unique_ptr<SpectralSimulationSession<ConcreteModel>>
-  build_spectral_session_(int rank_id) const {
-    return SpectralSimulationSession<ConcreteModel>::assemble(
-        m_settings, m_comm, rank_id, m_worker.get_num_ranks());
-  }
-
-  void
-  log_world_summary_(const pfc::Logger &app_lg,
-                     const SpectralSimulationSession<ConcreteModel> &session) const {
-    if (rank0) {
-      std::ostringstream woss;
-      woss << session.world();
-      pfc::log_info(app_lg, std::string(k_app_log_tag) + "World: " + woss.str());
-    }
-  }
-
-  void apply_model_params_from_settings_(
-      SpectralSimulationSession<ConcreteModel> &session) const {
-    if (m_settings.contains("model") && m_settings["model"].contains("params")) {
-      from_json(m_settings["model"]["params"], session.model());
-    }
-  }
-
-  void configure_profiling_(int rank_id) {
-    m_profiling.configure_from_root_settings(m_settings, rank_id, rank0);
-  }
-
-  void initialize_model_(const pfc::Logger &app_lg,
-                         SpectralSimulationSession<ConcreteModel> &session) const {
-    if (rank0) {
-      pfc::log_info(app_lg, std::string(k_app_log_tag) + "Initializing model...");
-    }
-    session.model().initialize(session.time().get_dt());
-  }
-
-  void report_memory_usage_(
-      int rank_id, const SpectralSimulationSession<ConcreteModel> &session) const {
-    const size_t model_mem = session.model().get_allocated_memory_bytes();
-    const size_t fft_mem = session.fft().get_allocated_memory_bytes();
-    const pfc::utils::MemoryUsage usage{model_mem, fft_mem};
-    const pfc::Logger logger{pfc::LogLevel::Info, rank_id};
-    pfc::utils::report_memory_usage(usage, session.world(), logger, m_comm);
-  }
-
-  void wire_simulator_and_log_run_start_(
-      const pfc::Logger &app_lg, int rank_id,
-      SpectralSimulationSession<ConcreteModel> &session) {
-    const FieldModifierCatalog &catalog = m_field_modifier_catalog
-                                              ? *m_field_modifier_catalog
-                                              : default_field_modifier_catalog();
-    session.wire_simulator_from_settings(m_settings, rank_id, rank0, catalog);
-    if (rank0) {
-      pfc::log_info(app_lg,
-                    std::string(k_app_log_tag) +
-                        "Starting time integration (Simulator integrator API)");
-    }
-  }
-
-  void run_time_integration_(const pfc::Logger &app_lg, int rank_id,
-                             SpectralSimulationSession<ConcreteModel> &session) {
-    (void)run_simulator_time_integration_loop(session, m_comm, rank_id, rank0,
-                                              m_profiling.session(),
-                                              m_profiling.memory_samples(), app_lg);
-  }
-
-  void finalize_profiling_export_(const pfc::Logger &app_lg) {
-    m_profiling.finalize_and_export_if_active(m_settings, m_comm, rank0, app_lg);
-  }
-
 public:
   App(int argc, char **argv, MPI_Comm comm = MPI_COMM_WORLD)
       : m_comm(comm), m_worker(MPI_Worker(argc, argv, comm)),
@@ -237,20 +167,11 @@ public:
     log_gpu_awareness_hints_(app_lg);
     log_effective_configuration_(app_lg);
 
-    auto session = build_spectral_session_(rank_id);
-    log_world_summary_(app_lg, *session);
-
-    apply_model_params_from_settings_(*session);
-    configure_profiling_(rank_id);
-
-    initialize_model_(app_lg, *session);
-    report_memory_usage_(rank_id, *session);
-
-    wire_simulator_and_log_run_start_(app_lg, rank_id, *session);
-    run_time_integration_(app_lg, rank_id, *session);
-    finalize_profiling_export_(app_lg);
-
-    return 0;
+    const FieldModifierCatalog *const catalog_override =
+        m_field_modifier_catalog ? &*m_field_modifier_catalog : nullptr;
+    SpectralJsonAppRun<ConcreteModel> runner(m_settings, m_comm, m_worker, rank0,
+                                             m_profiling, catalog_override);
+    return runner.execute(app_lg);
   }
 };
 
