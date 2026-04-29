@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 OpenPFC is meant to be extended without editing the core library: you add models, initial/boundary behavior, writers, and (optionally) coordinate systems in your translation units and link against `OpenPFC`.
 
-Read [`../architecture.md`](../architecture.md) first so you know where code belongs. If you use `App<Model>` and JSON, follow [`../app_pipeline.md`](../app_pipeline.md) for wiring order and section names.
+Read [`../architecture.md`](../architecture.md) first so you know where code belongs. If you use `App<Model>` and JSON, follow [`../app_pipeline.md`](../app_pipeline.md) for wiring order and section names. For an ordered **extend** track (and links to examples), see [`../learning_paths.md`](../learning_paths.md) → *Extend physics and declarative configs*.
 
 - Kernel — backend-agnostic data, decomposition, simulation abstractions (`Model`, `Simulator`, `FieldModifier`, …).
 - Runtime — CPU / CUDA / HIP execution and FFT implementations.
