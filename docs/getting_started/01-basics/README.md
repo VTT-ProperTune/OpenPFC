@@ -157,7 +157,7 @@ HeFFTe where applicable, and other dependencies). You **include** the headers in
 your translation units and **link** against the `OpenPFC` CMake target; you do
 not hand-compile a long list of `-I` and `-l` flags. The supported dependency
 stack—including **HeFFTe 2.4.1**, OpenMPI, and FFTW for CPU FFT—is described in
-**[`INSTALL.md`](../../INSTALL.md)**.
+**[`INSTALL.md`](../../../INSTALL.md)**.
 
 Manual `g++` … `libheffte.so` command lines are **not** supported: they go stale
 across machines and versions. Use **CMake** and `find_package(OpenPFC)` as

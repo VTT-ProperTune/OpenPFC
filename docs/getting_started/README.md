@@ -35,3 +35,4 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - **[`../glossary.md`](../glossary.md)** — terminology
 - **[`../../examples/README.md`](../../examples/README.md)** — building and running examples
 - **[`INSTALL.md`](../../INSTALL.md)** — supported build and dependencies
+- **[`../contributing-docs.md`](../contributing-docs.md)** — link checks and doc PR habits

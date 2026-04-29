@@ -19,6 +19,7 @@ This directory holds extra guides and assets. **Installing and building** the pr
 8. **[`app_pipeline.md`](app_pipeline.md)** — **`App`** → **`SpectralCpuStack`** → **`Simulator`** and JSON sections.
 9. **[`io_results.md`](io_results.md)** — binary, VTK, PNG writers and when each applies.
 10. **[`build_options.md`](build_options.md)** — CMake options at a glance.
+11. **[`contributing-docs.md`](contributing-docs.md)** — link checks, SPDX, where to add cross-links.
 
 ## Quick links
 
@@ -42,6 +43,7 @@ This directory holds extra guides and assets. **Installing and building** the pr
 | Config-driven **`App`** pipeline (JSON → simulator) | [`app_pipeline.md`](app_pipeline.md) |
 | Results I/O (binary / VTK / PNG) | [`io_results.md`](io_results.md) |
 | CMake options | [`build_options.md`](build_options.md) |
+| Contributing to docs | [`contributing-docs.md`](contributing-docs.md) |
 | Extending models and the UI pipeline | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
 | Runnable **`examples/`** (folder README) | [`../examples/README.md`](../examples/README.md) |
 

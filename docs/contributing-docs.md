@@ -1,0 +1,34 @@
+<!--
+SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+# Contributing to documentation
+
+## Before you open a PR
+
+1. **Relative links** — From a file under **`docs/`**, paths like **`../INSTALL.md`** reach the repo root. Nested files (e.g. **`docs/getting_started/01-basics/README.md`**) need enough **`..`** segments. Run the checker (below).
+2. **SPDX** — When you edit a file that already has **`SPDX-FileCopyrightText`**, update the year to the current calendar year (see project rules).
+3. **Cross-link new guides** — Add one line to **[`README.md`](README.md)** (this directory’s index) and, if relevant, **[`quickstart.md`](quickstart.md)** or **[`getting_started/README.md`](getting_started/README.md)**.
+
+## Check markdown links locally
+
+From the repository root:
+
+```bash
+python3 scripts/check_doc_links.py
+```
+
+The script scans **`docs/**/*.md`**, **`README.md`**, **`INSTALL.md`**, **`examples/README.md`**, and **`apps/*/README.md`**. It resolves **relative** links and paths starting with **`/`** (repository root). **http(s)** links are not fetched.
+
+The same check runs in **CI** as part of the Documentation workflow (`.github/workflows/docs.yml`).
+
+## Style
+
+- Prefer **tables** and **short sections** over long unstructured prose.
+- Link to **`architecture.md`** for layering instead of duplicating the kernel/runtime story.
+- For C++ behavior, point to **headers** and **`examples/`** rather than copying signatures.
+
+## See also
+
+- **[`styleguide.md`](styleguide.md)** — code and header style (also informs doc examples)

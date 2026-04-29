@@ -11,6 +11,8 @@ All of them expect **MPI** for realistic runs unless noted. Match the same compi
 
 ## Tungsten PFC (`apps/tungsten/`)
 
+Overview: **[`apps/tungsten/README.md`](../apps/tungsten/README.md)** (binaries, inputs, code layout).
+
 | Target | When available |
 |--------|----------------|
 | `tungsten` | Always (CPU) |
@@ -18,7 +20,7 @@ All of them expect **MPI** for realistic runs unless noted. Match the same compi
 | `tungsten_hip` | `OpenPFC_ENABLE_HIP` and ROCm |
 | `verify_gpu_aware_mpi` | HIP + MPI device-buffer smoke test (LUMI-style workflows) |
 
-**Inputs:** JSON under [`apps/tungsten/inputs_json/`](../apps/tungsten/inputs_json/README.md); TOML may live alongside in `inputs_toml/` where present.
+**Inputs:** JSON under [`apps/tungsten/inputs_json/`](../apps/tungsten/inputs_json/README.md); TOML in **`inputs_toml/`**.
 
 **Run (from your build directory, CPU binary):**
 

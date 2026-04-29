@@ -13,7 +13,10 @@ on:
       - 'include/**/*.hpp'
       - 'README.md'
       - 'INSTALL.md'
+      - 'examples/README.md'
+      - 'apps/*/README.md'
       - 'scripts/install-heffte-ci.sh'
+      - 'scripts/check_doc_links.py'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -24,10 +27,24 @@ concurrency:
 
 jobs:
   # ============================================================================
+  # Markdown link integrity (fast)
+  # ============================================================================
+  check-markdown-links:
+    name: Check documentation links
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify relative markdown links
+        run: python3 scripts/check_doc_links.py
+
+  # ============================================================================
   # Build Documentation
   # ============================================================================
   build-docs:
     name: Build Documentation
+    needs: check-markdown-links
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository

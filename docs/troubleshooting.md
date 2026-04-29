@@ -47,6 +47,16 @@ Examples and apps are controlled by **`OpenPFC_BUILD_EXAMPLES`** and **`OpenPFC_
 
 For ROCm/LUMI-style stacks, **`MPICH_GPU_SUPPORT_ENABLED=1`** and a build with GPU-aware MPI may be required. See **[`INSTALL.LUMI.md`](INSTALL.LUMI.md)** and **[`applications.md`](applications.md)**.
 
+## Config-driven runs (`App` + JSON/TOML)
+
+### Process exits immediately with “validation” or parameter errors
+
+Models such as **tungsten** validate **`model.params`** at startup. Read the printed report: missing keys, out-of-range values, or wrong types. Compare your file to **`apps/tungsten/inputs_json/`** samples. See **[`app_pipeline.md`](app_pipeline.md)** for which JSON sections are consumed and **[`apps/tungsten/README.md`](../apps/tungsten/README.md)** for layout pointers.
+
+### “No such file” for the config path
+
+Paths are resolved from the **current working directory** (often your **`build/`** folder). Use a path relative to that directory, or an absolute path.
+
 ## Still stuck?
 
 - **[`faq.md`](faq.md)** — short Q&A  

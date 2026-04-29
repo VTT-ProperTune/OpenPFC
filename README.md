@@ -73,7 +73,7 @@ T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *�
 The project documentation can be found from
 <https://vtt-propertune.github.io/OpenPFC/dev/> (API reference and generated HTML from this repository’s headers and examples). **If you are reading this file in the [source tree](https://github.com/VTT-ProperTune/OpenPFC), start with [docs/quickstart.md](docs/quickstart.md)** — the published site does not replace the tutorials and troubleshooting in **`docs/`**.
 
-**In-repo guides** for onboarding, configuration, and workflows are indexed from **[docs/README.md](docs/README.md)**. **JSON/TOML → simulator pipeline:** [docs/app_pipeline.md](docs/app_pipeline.md). **Results I/O:** [docs/io_results.md](docs/io_results.md). **CMake options:** [docs/build_options.md](docs/build_options.md). **Troubleshooting:** [docs/troubleshooting.md](docs/troubleshooting.md). **Glossary:** [docs/glossary.md](docs/glossary.md).
+**In-repo guides** for onboarding, configuration, and workflows are indexed from **[docs/README.md](docs/README.md)**. **Contributing to docs:** [docs/contributing-docs.md](docs/contributing-docs.md) and **`python3 scripts/check_doc_links.py`**. **JSON/TOML → simulator pipeline:** [docs/app_pipeline.md](docs/app_pipeline.md). **Results I/O:** [docs/io_results.md](docs/io_results.md). **CMake options:** [docs/build_options.md](docs/build_options.md). **Troubleshooting:** [docs/troubleshooting.md](docs/troubleshooting.md). **Glossary:** [docs/glossary.md](docs/glossary.md).
 
 **Build and install from source:** see [INSTALL.md](INSTALL.md).
 

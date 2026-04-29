@@ -23,4 +23,12 @@ results
 docs/Doxyfile.docs
 docs/html
 docs/latex
-scripts/
+# Ignore untracked files under scripts/ but keep explicit helper scripts in git.
+scripts/*
+!scripts/README.md
+!scripts/install-heffte-ci.sh
+!scripts/pre-commit-hook
+!scripts/pvrender.py
+!scripts/run-clang-tidy.sh
+!scripts/xdmfgen.py
+!scripts/check_doc_links.py
