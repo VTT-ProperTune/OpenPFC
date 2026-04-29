@@ -10,7 +10,14 @@
  * the simulator from JSON, running the time loop, and optional profiling export.
  * Detailed steps live in private methods so `main()` reads as a high-level script.
  *
+ * Call `set_field_modifier_catalog` before `main()` if wiring should use a
+ * catalog other than the process-wide `default_field_modifier_catalog()`
+ * (for example a copy with extra `register_modifier` entries without touching
+ * the global singleton).
+ *
  * @see docs/performance_profiling.md for profiling configuration
+ * @see docs/app_pipeline.md for JSON/TOML → session order
+ * @see docs/tutorials/README.md for step-by-step tutorials
  */
 
 #ifndef PFC_UI_APP_HPP
@@ -31,6 +38,7 @@
 #include <openpfc/frontend/utils/nancheck.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 #include <openpfc/openpfc_minimal.hpp>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -52,6 +60,7 @@ private:
   bool rank0;
   json m_settings;
   AppProfilingController m_profiling;
+  std::optional<FieldModifierCatalog> m_field_modifier_catalog;
 
   [[nodiscard]] json read_settings(int argc, char **argv) {
     const pfc::Logger lg{pfc::LogLevel::Info, m_worker.get_rank()};
@@ -171,7 +180,10 @@ private:
   void wire_simulator_and_log_run_start_(
       const pfc::Logger &app_lg, int rank_id,
       SpectralSimulationSession<ConcreteModel> &session) {
-    session.wire_simulator_from_settings(m_settings, rank_id, rank0);
+    const FieldModifierCatalog &catalog = m_field_modifier_catalog
+                                              ? *m_field_modifier_catalog
+                                              : default_field_modifier_catalog();
+    session.wire_simulator_from_settings(m_settings, rank_id, rank0, catalog);
     if (rank0) {
       pfc::log_info(app_lg,
                     std::string(k_app_log_tag) +
@@ -198,6 +210,17 @@ public:
   App(json settings, MPI_Comm comm = MPI_COMM_WORLD)
       : m_comm(comm), m_worker(MPI_Worker(0, nullptr, comm)),
         rank0(m_worker.get_rank() == 0), m_settings(std::move(settings)) {}
+
+  /**
+   * @brief Use @p catalog when wiring ICs/BCs from JSON instead of the global
+   *        default catalog.
+   *
+   * Must be called before `main()` if used (typically from `main` after
+   * constructing the app, or from a thin wrapper).
+   */
+  void set_field_modifier_catalog(FieldModifierCatalog catalog) {
+    m_field_modifier_catalog = std::move(catalog);
+  }
 
   [[nodiscard]] bool create_results_dir(const std::string &output) {
     return ensure_results_parent_dir_for_writer(output, m_worker.get_rank());

@@ -60,7 +60,9 @@ For **tests** or **libraries** that must not pollute global state, build a local
 `FieldModifierCatalog` and pass it into
 `add_initial_conditions_from_json` / `add_boundary_conditions_from_json` /
 `wire_simulator_and_runtime_from_json` / `SpectralSimulationSession` overloads
-that accept `modifier_catalog`. See `openpfc/frontend/ui/field_modifier_registry.hpp`.
+that accept `modifier_catalog`. JSON `pfc::ui::App` can call
+`set_field_modifier_catalog` before `main()` to use the same injection on the
+default spectral path. See `openpfc/frontend/ui/field_modifier_registry.hpp`.
 
 ## Configuration validation
 

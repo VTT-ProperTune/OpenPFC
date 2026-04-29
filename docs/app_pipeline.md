@@ -43,7 +43,7 @@ flowchart LR
 - `SpectralCpuStack` reads world, time, and `plan_options` (FFT) from the parsed document and constructs World → Decomposition → CpuFft → Time in a fixed order. CPU plan options and `fft::create` are factored through `spectral_cpu_stack_detail.hpp` (`cpu_spectral_plan_options_from_json`, `cpu_fft_from_json_and_decomposition`) so a future GPU JSON stack can reuse the same parsing surface. If `plan_options` omits `backend` but the document has a root-level `backend` string (same key as `from_json<fft::Backend>`), that value is merged into the plan slice for parsing; `backend: "cuda"` is rejected on this CPU-only path.
 - GPU drivers that still need a host `pfc::FFT` for `Model` but build HeFFTe with cuFFT / ROCm should use `spectral_fft_stack_factory.hpp`: `merged_spectral_plan_options_json`, `cuda_spectral_plan_options_from_json`, or `hip_spectral_plan_options_from_json` so `plan_options` overlays match the CPU JSON surface without silently re-basing onto FFTW defaults.
 - `SpectralSimulationSession` owns the stack, constructs `ConcreteModel(fft, world, comm)` (same `MPI_Comm` as the stack and simulator), then `Simulator(model, time, comm)`. The FFT object and world are referenced by the model; do not reorder or move these after construction. Custom models should forward the optional third `MPI_Comm` argument in their constructor (default `MPI_COMM_WORLD` keeps two-argument construction valid).
-- `wire_simulator_from_settings` (on the session) calls `wire_simulator_and_runtime_from_json`, which attaches writers, `ICs`, `BCs`, and optional `simulator` subsection keys.
+- `wire_simulator_from_settings` (on the session) calls `wire_simulator_and_runtime_from_json`, which attaches writers, `ICs`, `BCs`, and optional `simulator` subsection keys. `App` forwards the optional catalog from `set_field_modifier_catalog` when set; otherwise it uses `default_field_modifier_catalog()` (same singleton `SpectralSimulationSession` would default to).
 
 ## `App<ConcreteModel>::main()` order of operations
 
@@ -57,7 +57,7 @@ Implementation: `include/openpfc/frontend/ui/app.hpp`.
 | 4 | Profiling controller reads `[profiling]` / root keys as implemented in `app_profiling.hpp`. |
 | 5 | `model.initialize(dt)` from session time. |
 | 6 | Memory report (model + FFT allocations). |
-| 7 | `wire_simulator_from_settings` — writers, ICs, BCs, `simulator` subsection. |
+| 7 | `wire_simulator_from_settings` — writers, ICs, BCs, `simulator` subsection (catalog: optional `set_field_modifier_catalog`, else process default). |
 | 8 | Time integration loop (`app_integrator_loop`) + profiling finalize/export. |
 
 Custom drivers can replicate subsets: build a `Simulator` yourself, then call `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `apply_simulator_section_from_json` from `simulation_wiring.hpp` directly.

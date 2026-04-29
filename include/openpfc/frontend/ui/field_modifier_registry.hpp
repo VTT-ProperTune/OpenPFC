@@ -18,7 +18,8 @@
  * `make_builtin_field_modifier_catalog()` with extra `register_modifier` calls)
  * into `add_*_conditions_from_json` / `wire_simulator_and_runtime_from_json` /
  * `SpectralSimulationSession` so tests and alternate drivers avoid touching the
- * global default.
+ * global default. JSON `App` drivers can call `App::set_field_modifier_catalog`
+ * before `main()` to pass the same explicit catalog through wiring.
  *
  * The historical name `FieldModifierRegistry` is a type alias for
  * `FieldModifierCatalog`.
