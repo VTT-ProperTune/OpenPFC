@@ -51,6 +51,8 @@ See **[`extending_openpfc/README.md`](extending_openpfc/README.md)** and the num
 | Troubleshooting | [`troubleshooting.md`](troubleshooting.md) |
 | Config files | [`configuration.md`](configuration.md) |
 | Terminology | [`glossary.md`](glossary.md) |
+| `App` + JSON pipeline | [`app_pipeline.md`](app_pipeline.md) |
+| CMake options | [`build_options.md`](build_options.md) |
 | Examples folder | [`../examples/README.md`](../examples/README.md) |
 | Published HTML API | [GitHub Pages dev docs](https://vtt-propertune.github.io/OpenPFC/dev/) |
 

@@ -21,6 +21,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 |--------|-----------|
 | Runnable `examples/` executables | [`../examples_catalog.md`](../examples_catalog.md) |
 | Shipped `apps/` binaries and inputs | [`../applications.md`](../applications.md) |
+| **`App`** config pipeline (JSON → `Simulator`) | [`../app_pipeline.md`](../app_pipeline.md) |
+| Results writers (binary / VTK / PNG) | [`../io_results.md`](../io_results.md) |
+| CMake options | [`../build_options.md`](../build_options.md) |
 | Extending models and the UI pipeline | [`../extending_openpfc/README.md`](../extending_openpfc/README.md) |
 
 ## See also

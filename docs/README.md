@@ -16,6 +16,9 @@ This directory holds extra guides and assets. **Installing and building** the pr
 5. **[`troubleshooting.md`](troubleshooting.md)** — common configure and runtime failures.
 6. **[`configuration.md`](configuration.md)** — JSON/TOML structure, `plan_options`, links to sample inputs.
 7. **[`glossary.md`](glossary.md)** — PFC and OpenPFC terminology.
+8. **[`app_pipeline.md`](app_pipeline.md)** — **`App`** → **`SpectralCpuStack`** → **`Simulator`** and JSON sections.
+9. **[`io_results.md`](io_results.md)** — binary, VTK, PNG writers and when each applies.
+10. **[`build_options.md`](build_options.md)** — CMake options at a glance.
 
 ## Quick links
 
@@ -36,6 +39,9 @@ This directory holds extra guides and assets. **Installing and building** the pr
 | Troubleshooting (mpi.h, HeFFTe, wrong MPI) | [`troubleshooting.md`](troubleshooting.md) |
 | Configuration files (JSON/TOML, `plan_options`) | [`configuration.md`](configuration.md) |
 | Glossary | [`glossary.md`](glossary.md) |
+| Config-driven **`App`** pipeline (JSON → simulator) | [`app_pipeline.md`](app_pipeline.md) |
+| Results I/O (binary / VTK / PNG) | [`io_results.md`](io_results.md) |
+| CMake options | [`build_options.md`](build_options.md) |
 | Extending models and the UI pipeline | [`extending_openpfc/README.md`](extending_openpfc/README.md) |
 | Runnable **`examples/`** (folder README) | [`../examples/README.md`](../examples/README.md) |
 

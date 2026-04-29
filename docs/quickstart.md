@@ -111,6 +111,8 @@ Set **`CMAKE_PREFIX_PATH`** (or **`OpenPFC_DIR`**) to the install prefix contain
 | Longer tutorial (world → FFT → CMake) | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
 | Functional IC/BC (`field::apply`, …) | [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) |
 | Config files (`plan_options`, JSON/TOML) | [`configuration.md`](configuration.md) |
+| **`App`** pipeline (JSON → `Simulator`) | [`app_pipeline.md`](app_pipeline.md) |
+| CMake options | [`build_options.md`](build_options.md) |
 | Terminology | [`glossary.md`](glossary.md) |
 | Configure or MPI errors | [`troubleshooting.md`](troubleshooting.md) |
 | Extend models, ICs, coordinates | [`extending_openpfc/README.md`](extending_openpfc/README.md) |

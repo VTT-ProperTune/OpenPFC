@@ -22,6 +22,7 @@ Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detai
 | **Model** | Your physics: fields, time step, spectral or FD operators (`kernel/simulation`). |
 | **Simulator** | Orchestrates **Model**, **Time**, **FieldModifier** (IC/BC), **ResultsWriter**. |
 | **FieldModifier** | Applies initial or boundary updates each step or at startup. |
+| **SimulationContext** | Small bundle (MPI comm, rank-0) passed with **`Model`** to modifiers for rank-aware I/O; see **`simulation_context.hpp`** and **[`app_pipeline.md`](app_pipeline.md)**. |
 | **App&lt;Model&gt;** | Frontend entry point that loads JSON/TOML and builds a session (`pfc::ui::App`). |
 
 ## See also

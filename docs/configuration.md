@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 Many programs use **`pfc::ui::App<Model>`** and accept a **single configuration file** (JSON or TOML) on the command line. The exact keys depend on the **model** and how validation is set up, but the same structural ideas recur across apps.
 
+**Read this first for the full pipeline:** **[`app_pipeline.md`](app_pipeline.md)** (how settings map to **`World`**, **FFT**, **`Simulator`**, writers, ICs, BCs). For output formats, see **[`io_results.md`](io_results.md)**.
+
 ## Mental model
 
 1. **Domain / grid** — sizes, spacing, origin (sometimes nested under `domain`, sometimes top-level keys depending on app and parser version).
