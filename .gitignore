@@ -42,4 +42,5 @@ scripts/*
 !scripts/check_end_to_end_allen_cahn.py
 !scripts/check_examples_catalog.py
 !scripts/check_kernel_no_frontend_includes.sh
+!scripts/check_minimal_includes.sh
 !scripts/unbold_markdown_docs.py
