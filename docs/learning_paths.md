@@ -21,7 +21,8 @@ Goal: build OpenPFC, run a shipped application with a sample input, and know whe
 | 6 | End-to-end “files on disk” (PNG + Tungsten binary): [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
 | 7 | More walkthroughs (VTK/ParaView, HeFFTe `plan_options`, spectral `examples/` sequence): [`tutorials/README.md`](tutorials/README.md) |
 | 8 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |
-| 9 | GPU / LUMI-style jobs: [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
+| 9 | Slurm / batch basics: [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md), [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) |
+| 10 | GPU / LUMI-style jobs: [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
 
 ## Extend physics and declarative configs (researcher / developer)
 

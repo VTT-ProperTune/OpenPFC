@@ -79,6 +79,8 @@ Pair the published HTML with [`quickstart.md`](quickstart.md) and this index so 
 | Profiling export schema | [`profiling_export_schema.md`](profiling_export_schema.md) |
 | LUMI-G (ROCm / Cray) | [`INSTALL.LUMI.md`](INSTALL.LUMI.md) |
 | LUMI Slurm / tungsten jobs | [`lumi_slurm/README.md`](lumi_slurm/README.md) |
+| Slurm batch day one (generic) | [`tutorials/hpc_slurm_day_one.md`](tutorials/hpc_slurm_day_one.md) |
+| MPI / paths / binary I/O checklist | [`mpi_io_layout_checklist.md`](mpi_io_layout_checklist.md) |
 
 ## Tutorials (in-repo)
 
