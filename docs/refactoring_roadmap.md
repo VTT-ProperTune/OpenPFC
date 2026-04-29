@@ -56,11 +56,22 @@ Planned steps:
 
 Goal: Fewer repeated parameters at JSON → `Simulator` boundaries; clearer seams for custom drivers and tests.
 
+**Layering:** Confirmed `include/openpfc/kernel` / `src/openpfc/kernel` do not include `openpfc/frontend` headers (see [`architecture.md`](architecture.md) *Include audit*).
+
 Done:
 
 - `JsonWiringContext` (`simulation_wiring_context.hpp`): bundles `MPI_Comm`, `mpi_rank`, and `rank0` for `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `wire_simulator_and_runtime_from_json`. Legacy `(comm, rank, rank0)` overloads forward to the context form; `SpectralSimulationSession` uses the context overload.
 - `configure_spectral_json_driver_hooks` (`spectral_json_driver_hooks.hpp`): one call sets `from_json` log rank and default NaN-check communicator; `App::main` uses it instead of duplicating globals.
 - `write_scheduled_simulator_results(Simulator&)` in `simulator.hpp`: extracted from `Simulator::write_results()` so scheduled writes + counter bump live in one free-function seam ([`io_results.md`](io_results.md)).
+
+## Backlog — larger SOLID-oriented refactors
+
+High impact, not tied to a single PR; pick by maintenance pain.
+
+- **Simulator:** If orchestration grows again, consider named collaborators (e.g. explicit IC/BC pipeline type vs results scheduling) on top of existing `*_dispatch.hpp` helpers.
+- **Model:** Narrower test- and tool-facing facades around field registry / world access (interface segregation) without a monolithic `Model` rewrite.
+- **Multi-backend apps:** Share physics and parameters across Tungsten (and similar) CPU/CUDA/HIP; keep only execution and FFT device setup separate.
+- **Configuration:** One story for `ParameterValidator`, JSON `from_json`, and docs for `model.params` so validation behavior matches reader expectations.
 
 ## Phase D — CMake library split
 
@@ -72,4 +83,4 @@ Done:
 
 ## How to use this doc
 
-Update the Phase A–D bullets when work lands or priorities change. Link relevant PRs or commits in project notes if desired (not required in-repo).
+Update the Phase A–E bullets and **Backlog** when work lands or priorities change. Link relevant PRs or commits in project notes if desired (not required in-repo).
