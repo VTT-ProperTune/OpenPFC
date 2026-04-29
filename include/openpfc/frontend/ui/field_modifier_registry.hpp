@@ -6,12 +6,19 @@
  * @brief Field modifier catalog: register and create IC/BC modifiers from JSON
  *
  * @details
- * `FieldModifierCatalog` holds type string → factory mappings. Use
- * `default_field_modifier_catalog()` for the process-wide built-in set (and
- * optional `register_field_modifier` extensions). Pass a catalog into
- * `add_*_conditions_from_json` / `wire_simulator_and_runtime_from_json` for
- * tests or alternate drivers (dependency injection instead of a hidden
- * singleton).
+ * `FieldModifierCatalog` holds type string → factory mappings.
+ *
+ * **Default catalog:** `default_field_modifier_catalog()` returns a
+ * function-local static (process-wide singleton): built-ins plus anything
+ * registered via `register_field_modifier<T>(type)` without an explicit catalog.
+ * It is **not** thread-safe to mutate from multiple threads; typical MPI apps
+ * register custom types once from rank 0 before wiring.
+ *
+ * **Dependency injection:** Pass a `FieldModifierCatalog` (e.g. a copy from
+ * `make_builtin_field_modifier_catalog()` with extra `register_modifier` calls)
+ * into `add_*_conditions_from_json` / `wire_simulator_and_runtime_from_json` /
+ * `SpectralSimulationSession` so tests and alternate drivers avoid touching the
+ * global default.
  *
  * The historical name `FieldModifierRegistry` is a type alias for
  * `FieldModifierCatalog`.

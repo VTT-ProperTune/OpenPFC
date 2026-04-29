@@ -35,7 +35,8 @@
  * This file is part of the I/O module, providing output capabilities for
  * simulation results and checkpointing.
  *
- * @see simulator.hpp for I/O orchestration
+ * @see simulator.hpp for I/O orchestration; `ResultsWriterMap` for the type
+ * `Simulator` stores
  * @see types.hpp for RealField and ComplexField definitions
  * @see binary_reader.hpp for input counterpart
  *
@@ -48,9 +49,11 @@
 
 #include <array>
 #include <iostream>
+#include <memory>
 #include <mpi.h>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace pfc {
@@ -283,6 +286,15 @@ public:
 protected:
   std::string m_filename;
 };
+
+/**
+ * @brief Map of field name → owned `ResultsWriter` (used by `Simulator`)
+ *
+ * Named type so tests and tools can depend on the same shape as
+ * `Simulator::results_writers()` without repeating the template parameters.
+ */
+using ResultsWriterMap =
+    std::unordered_map<std::string, std::unique_ptr<ResultsWriter>>;
 
 } // namespace pfc
 

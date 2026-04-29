@@ -71,8 +71,10 @@ public:
     m_psi_F.resize(fft.size_outbox());
     m_opL.resize(fft.size_outbox());
 
-    // Register primary real field for test integrations
+    // Register primary real field for test integrations ("default" aliases same
+    // storage for legacy Model::get_field() callers).
     pfc::add_real_field(*this, "density", m_psi);
+    pfc::add_real_field(*this, "default", m_psi);
 
     // Get local domain bounds
     // LLM: Each MPI rank has subset of domain (inbox = real space, outbox = k-space)
@@ -166,15 +168,6 @@ public:
     // Transform back to real space
     fft.backward(m_psi_F, m_psi);
   }
-
-  /**
-   * @brief Get reference to field for direct access
-   *
-   * LLM: Override provides direct field access for validation
-   *
-   * @return Reference to real-space field
-   */
-  Field &get_field() override { return m_psi; }
 
   /**
    * @brief Get index of center point in local domain

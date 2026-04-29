@@ -49,6 +49,19 @@ End-to-end walkthrough: [`../tutorials/custom_app_minimal.md`](../tutorials/cust
 
 Full index: [`../examples_catalog.md`](../examples_catalog.md).
 
+## Field modifier catalog (JSON `type` → IC/BC)
+
+Built-in modifier types (`constant`, `single_seed`, …) live in
+`pfc::ui::make_builtin_field_modifier_catalog()`. `pfc::ui::default_field_modifier_catalog()`
+is the process-wide mutable singleton used when you call `register_field_modifier<T>(type)`
+with one argument or `create_field_modifier(type, json)` without a catalog.
+
+For **tests** or **libraries** that must not pollute global state, build a local
+`FieldModifierCatalog` and pass it into
+`add_initial_conditions_from_json` / `add_boundary_conditions_from_json` /
+`wire_simulator_and_runtime_from_json` / `SpectralSimulationSession` overloads
+that accept `modifier_catalog`. See `openpfc/frontend/ui/field_modifier_registry.hpp`.
+
 ## Configuration validation
 
 Models can expose validated parameters (ranges, required keys). See [`../parameter_validation.md`](../parameter_validation.md), the Configuration Validation section in the root [`README.md`](../../README.md), and `apps/tungsten/include/tungsten/common/tungsten_input.hpp` for a large metadata-driven example.

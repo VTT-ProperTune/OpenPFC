@@ -54,7 +54,7 @@ flowchart TB
 | `Simulator` | Runs the loop: ICs, BCs, `step`, writers | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
 | `FieldModifier` | Initial / boundary updates on fields | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `SimulationContext` | MPI comm + rank context for modifiers | `openpfc/kernel/simulation/simulation_context.hpp` | Passed when applying modifiers |
-| `ResultsWriter` | Persist fields (binary, VTK, …) | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](io_results.md) |
+| `ResultsWriter` / `ResultsWriterMap` | Persist fields (binary, VTK, …); `Simulator` holds `ResultsWriterMap` | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](io_results.md) |
 | `pfc::ui::App<Model>` | Load JSON/TOML, build stack, run | `openpfc/frontend/ui/app.hpp` | `apps/aluminumNew/`, `examples/10_ui_register_ic.cpp` |
 | `SpectralCpuStack` | World → decomp → CPU FFT → time from JSON | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | Used inside `SpectralSimulationSession` |
 | `SpectralSimulationSession` | Owns stack + `Model` + `Simulator` | `openpfc/frontend/ui/spectral_simulation_session.hpp` | Constructed by `App` |

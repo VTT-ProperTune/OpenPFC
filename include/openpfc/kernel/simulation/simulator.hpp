@@ -32,8 +32,8 @@
  * @endcode
  *
  * This file is part of the Simulation Control module, providing the main
- * execution framework for time-dependent simulations. Per-field result output is
- * delegated to **`simulator_results_dispatch.hpp`**
+ * execution framework for time-dependent simulations. Per-field result output
+ * uses `ResultsWriterMap` and is delegated to **`simulator_results_dispatch.hpp`**
  * (`write_results_for_registered_fields`). IC/BC application uses
  * **`simulator_field_modifiers_dispatch.hpp`** (`apply_field_modifier_list`).
  *
@@ -59,7 +59,6 @@
 #include <openpfc/kernel/simulation/simulator_results_dispatch.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
-#include <unordered_map>
 #include <utility>
 
 namespace pfc {
@@ -74,7 +73,7 @@ private:
   Model &m_model;
   Time &m_time;
 
-  std::unordered_map<std::string, std::unique_ptr<ResultsWriter>> m_result_writers;
+  ResultsWriterMap m_result_writers;
   std::vector<std::unique_ptr<FieldModifier>> m_initial_conditions;
   std::vector<std::unique_ptr<FieldModifier>> m_boundary_conditions;
   int m_result_counter = 0;
@@ -142,23 +141,21 @@ public:
    */
   Time &get_time() { return m_time; }
 
-  /**
-   * @brief Get the default field object
-   *
-   * @return Field&
-   */
-  [[deprecated("Use get_real_field(get_model(sim), \"default\") or named real "
-               "fields instead")]]
-  Field &get_field() {
-    return pfc::get_real_field(m_model, "default");
-  }
-
   void initialize() { pfc::initialize(m_model, m_time.get_dt()); }
 
   /** @brief Rank 0 in mpi_comm() (same communicator passed to field modifiers) */
   [[nodiscard]] bool is_rank0() const noexcept { return m_is_rank0; }
 
   unsigned int get_increment() { return get_time().get_increment(); }
+
+  /**
+   * @brief Inspect registered results writers (read-only; for tests and tooling)
+   *
+   * Writers are still added only via `add_results_writer`.
+   */
+  [[nodiscard]] const ResultsWriterMap &results_writers() const noexcept {
+    return m_result_writers;
+  }
 
   /**
    * @brief Register a results writer for a specific field
@@ -549,13 +546,6 @@ public:
 
 [[nodiscard]] inline fft::IFFT &get_fft(Simulator &sim) noexcept {
   return pfc::get_fft(get_model(sim));
-}
-
-[[nodiscard,
-  deprecated("Use get_real_field(get_model(sim), \"default\") or named real fields "
-             "instead")]]
-inline Field &get_field(Simulator &sim) {
-  return pfc::get_real_field(get_model(sim), "default");
 }
 
 [[nodiscard]] inline bool is_rank0(const Simulator &sim) noexcept {

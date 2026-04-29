@@ -36,6 +36,12 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     REQUIRE(simulator.is_rank0() == (mpi::get_rank(MPI_COMM_WORLD) == 0));
   }
 
+  SECTION("results_writers exposes the registered writer map") {
+    Time time({0.0, 10.0, 1.0}, 1.0);
+    Simulator simulator(model, time);
+    REQUIRE(simulator.results_writers().empty());
+  }
+
   SECTION("Add and apply initial conditions") {
     Time time({0.0, 10.0, 1.0}, 1.0);
     Simulator simulator(model, time);

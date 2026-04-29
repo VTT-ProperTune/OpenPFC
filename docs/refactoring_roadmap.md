@@ -30,10 +30,9 @@ Done:
 - `simulation_wiring_conditions.hpp`: `detail::wire_field_modifiers_from_json_array` — one implementation for parsing `initial_conditions` / `boundary_conditions` JSON arrays (inject `add_initial_conditions` vs `add_boundary_conditions` via callback).
 - Tungsten CUDA/HIP VTK integration tests call `add_initial_conditions_from_json` / `add_boundary_conditions_from_json` instead of duplicating factory loops; removed accidental double `apply_initial_conditions()` before the first step.
 - `from_json.hpp`: `set_from_json_log_rank` / `get_from_json_log_rank` replace static loggers fixed at rank `-1`; `App::main` sets the rank so FFT / HeFFTe parse diagnostics align with other MPI-aware logs.
-
-Planned steps:
-
-- Optionally move writer map ownership behind a narrow interface for tests.
+- `ResultsWriterMap` alias in `results_writer.hpp`; `Simulator::results_writers()` const accessor; `write_results_for_registered_fields` takes `ResultsWriterMap` (named type for tests / tooling).
+- Deprecated `pfc::get_field(Model&)` and `Simulator::get_field()` / `pfc::get_field(Simulator&)` removed; diffusion fixtures register `"default"` alongside `"density"` and drop `get_field()` overrides. `Model::get_field()` remains deprecated for out-of-tree subclasses.
+- Field modifier catalog: header + [`extending_openpfc/README.md`](../extending_openpfc/README.md) document singleton vs explicit-catalog DI.
 
 ## Phase C — Unified config-driven stack (CPU / GPU)
 

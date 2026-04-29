@@ -27,6 +27,7 @@ public:
     psi_F.resize(fft.size_outbox());
     opL.resize(fft.size_outbox());
     pfc::add_real_field(*this, "density", psi);
+    pfc::add_real_field(*this, "default", psi);
 
     Vec3<int> i_low = get_inbox(fft).low;
     Vec3<int> i_high = get_inbox(fft).high;
@@ -82,8 +83,6 @@ public:
     }
     fft.backward(psi_F, psi);
   }
-
-  Field &get_field() override { return psi; }
 
   Field &density() noexcept { return psi; }
 
