@@ -18,8 +18,9 @@ Goal: build OpenPFC, run a shipped application with a sample input, and know whe
 | 3 | Which binary and config: [`applications.md`](applications.md) (**App chooser** table) |
 | 4 | JSON/TOML vocabulary: [`configuration.md`](configuration.md), [`app_pipeline.md`](app_pipeline.md) |
 | 5 | Result files (binary / VTK / PNG): [`io_results.md`](io_results.md) |
-| 6 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |
-| 7 | GPU / LUMI-style jobs: [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
+| 6 | End-to-end “files on disk” (PNG + Tungsten binary): [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md) |
+| 7 | When things break: [`troubleshooting.md`](troubleshooting.md), [`faq.md`](faq.md) |
+| 8 | GPU / LUMI-style jobs: [`tutorials/gpu_app_quickstart.md`](tutorials/gpu_app_quickstart.md), [`INSTALL.LUMI.md`](INSTALL.LUMI.md), [`lumi_slurm/README.md`](lumi_slurm/README.md) |
 
 ## Extend physics and declarative configs (researcher / developer)
 
@@ -50,4 +51,5 @@ Goal: link OpenPFC from your CMake project, run small `examples/`, and use the H
 
 ## See also
 
+- [`showcase.md`](showcase.md) — figures and which app or example they map to
 - [`README.md`](README.md) — full documentation index

@@ -12,6 +12,8 @@ New to OpenPFC? Start with [`../quickstart.md`](../quickstart.md) (install → r
 | Topic | Document |
 |--------|-----------|
 | Learning paths by role (run / extend / integrate) | [`../learning_paths.md`](../learning_paths.md) |
+| Showcase (figures → apps / examples) | [`../showcase.md`](../showcase.md) |
+| End-to-end: build → PNG or binary outputs | [`../tutorials/end_to_end_visualization.md`](../tutorials/end_to_end_visualization.md) |
 | Quick path: three tracks + “next steps” | [`../quickstart.md`](../quickstart.md) |
 | World, decomposition, FFT, `find_package(OpenPFC)` | [`01-basics/README.md`](01-basics/README.md) |
 | Functional field ops (IC/BC without nested loops) | [`functional_field_ops.md`](functional_field_ops.md) |

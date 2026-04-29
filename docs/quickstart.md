@@ -111,6 +111,7 @@ Set `CMAKE_PREFIX_PATH` (or `OpenPFC_DIR`) to the install prefix containing `lib
 
 | Goal | Where to go |
 |------|-------------|
+| Run once and inspect output files (PNG / binary) | [`tutorials/end_to_end_visualization.md`](tutorials/end_to_end_visualization.md), [`showcase.md`](showcase.md) |
 | Conceptual layering (kernel / runtime / frontend) | [`architecture.md`](architecture.md) |
 | Tour of main types (`World`, `Model`, `Simulator`, `App`, …) | [`class_tour.md`](class_tour.md) |
 | Longer tutorial (world → FFT → CMake) | [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md) |
