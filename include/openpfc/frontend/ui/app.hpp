@@ -204,6 +204,9 @@ public:
 
   [[nodiscard]] int main() {
     const int rank_id = m_worker.get_rank();
+    // So `from_json` diagnostics (FFT backend, HeFFTe options) use the same rank
+    // prefix as app logs.
+    set_from_json_log_rank(rank_id);
     const pfc::Logger app_lg{pfc::LogLevel::Info, rank_id};
 
     log_gpu_awareness_hints_(app_lg);

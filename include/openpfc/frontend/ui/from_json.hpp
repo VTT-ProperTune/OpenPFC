@@ -15,6 +15,10 @@
  * - FFT backend options
  * - Model parameters
  *
+ * Logging from these parsers uses `set_from_json_log_rank` /
+ * `get_from_json_log_rank` so messages can include an MPI rank prefix; `App::main`
+ * sets the rank at startup.
+ *
  * @author OpenPFC Development Team
  * @date 2025
  */
@@ -23,6 +27,7 @@
 #define PFC_UI_FROM_JSON_HPP
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <heffte.h>
 #include <openpfc/frontend/ui/errors.hpp>
@@ -47,19 +52,42 @@
 
 namespace pfc::ui {
 
-namespace {
+namespace detail {
 
-inline const pfc::Logger &ui_json_info_logger() {
-  static const pfc::Logger lg{pfc::LogLevel::Info, /*rank*/ -1};
-  return lg;
+inline std::atomic<int> &from_json_log_rank_storage() noexcept {
+  static std::atomic<int> rank{-1};
+  return rank;
 }
 
-inline const pfc::Logger &ui_json_debug_logger() {
-  static const pfc::Logger lg{pfc::LogLevel::Debug, /*rank*/ -1};
-  return lg;
+} // namespace detail
+
+/**
+ * @brief MPI rank used when `from_json` helpers emit log lines (default: -1, no
+ * prefix).
+ *
+ * Call `set_from_json_log_rank` from the application entry (e.g. `App::main` with
+ * `MPI_Worker::get_rank()`) so FFT / plan-option messages are attributed to the
+ * correct rank. Tests may set this for deterministic diagnostics.
+ */
+[[nodiscard]] inline int get_from_json_log_rank() noexcept {
+  return detail::from_json_log_rank_storage().load(std::memory_order_relaxed);
 }
 
-} // namespace
+inline void set_from_json_log_rank(int mpi_rank) noexcept {
+  detail::from_json_log_rank_storage().store(mpi_rank, std::memory_order_relaxed);
+}
+
+/** @brief Logger for Info-level messages from `from_json` (rank from @ref
+ * get_from_json_log_rank). */
+[[nodiscard]] inline pfc::Logger from_json_info_logger() noexcept {
+  return pfc::Logger{pfc::LogLevel::Info, get_from_json_log_rank()};
+}
+
+/** @brief Logger for Debug-level messages from `from_json` (rank from @ref
+ * get_from_json_log_rank). */
+[[nodiscard]] inline pfc::Logger from_json_debug_logger() noexcept {
+  return pfc::Logger{pfc::LogLevel::Debug, get_from_json_log_rank()};
+}
 
 template <class T> T from_json(const json &j);
 
@@ -77,7 +105,7 @@ template <class T> T from_json(const json &j);
 template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
   if (!j.contains("backend") || !j["backend"].is_string()) {
     // Default to FFTW if not specified
-    pfc::log_info(ui_json_info_logger(),
+    pfc::log_info(from_json_info_logger(),
                   "No FFT backend specified, defaulting to FFTW");
     return fft::Backend::FFTW;
   }
@@ -86,7 +114,7 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
   std::transform(backend_str.begin(), backend_str.end(), backend_str.begin(),
                  [](unsigned char c) { return std::tolower(c); });
 
-  pfc::log_info(ui_json_info_logger(),
+  pfc::log_info(from_json_info_logger(),
                 std::string("Selected FFT backend: ") + backend_str);
 
   std::optional<fft::Backend> backend = runtime::backend_from_string(backend_str);
@@ -116,24 +144,24 @@ template <> inline fft::Backend from_json<fft::Backend>(const json &j) {
  */
 template <>
 inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
-  pfc::log_debug(ui_json_debug_logger(), "Parsing HeFFTe plan options");
+  pfc::log_debug(from_json_debug_logger(), "Parsing HeFFTe plan options");
   heffte::plan_options options = heffte::default_options<heffte::backend::fftw>();
   if (j.contains("use_reorder")) {
-    pfc::log_debug(ui_json_debug_logger(), "Using strided 1d fft operations");
+    pfc::log_debug(from_json_debug_logger(), "Using strided 1d fft operations");
     options.use_reorder = j["use_reorder"];
   }
   if (j.contains("reshape_algorithm")) {
     if (j["reshape_algorithm"] == "alltoall") {
-      pfc::log_debug(ui_json_debug_logger(), "Using alltoall reshape algorithm");
+      pfc::log_debug(from_json_debug_logger(), "Using alltoall reshape algorithm");
       options.algorithm = heffte::reshape_algorithm::alltoall;
     } else if (j["reshape_algorithm"] == "alltoallv") {
-      pfc::log_debug(ui_json_debug_logger(), "Using alltoallv reshape algorithm");
+      pfc::log_debug(from_json_debug_logger(), "Using alltoallv reshape algorithm");
       options.algorithm = heffte::reshape_algorithm::alltoallv;
     } else if (j["reshape_algorithm"] == "p2p") {
-      pfc::log_debug(ui_json_debug_logger(), "Using p2p reshape algorithm");
+      pfc::log_debug(from_json_debug_logger(), "Using p2p reshape algorithm");
       options.algorithm = heffte::reshape_algorithm::p2p;
     } else if (j["reshape_algorithm"] == "p2p_plined") {
-      pfc::log_debug(ui_json_debug_logger(), "Using p2p_plined reshape algorithm");
+      pfc::log_debug(from_json_debug_logger(), "Using p2p_plined reshape algorithm");
       options.algorithm = heffte::reshape_algorithm::p2p_plined;
     } else {
       throw std::invalid_argument(
@@ -143,16 +171,16 @@ inline heffte::plan_options from_json<heffte::plan_options>(const json &j) {
     }
   }
   if (j.contains("use_pencils")) {
-    pfc::log_debug(ui_json_debug_logger(), "Using pencil decomposition");
+    pfc::log_debug(from_json_debug_logger(), "Using pencil decomposition");
     options.use_pencils = j["use_pencils"];
   }
   if (j.contains("use_gpu_aware")) {
-    pfc::log_debug(ui_json_debug_logger(), "Using gpu aware fft");
+    pfc::log_debug(from_json_debug_logger(), "Using gpu aware fft");
     options.use_gpu_aware = j["use_gpu_aware"];
   }
   std::ostringstream options_ss;
   options_ss << "Backend options: " << options;
-  pfc::log_debug(ui_json_debug_logger(), options_ss.str());
+  pfc::log_debug(from_json_debug_logger(), options_ss.str());
   return options;
 }
 
@@ -481,7 +509,7 @@ inline void from_json(const json &j, Model &model) {
   (void)j;
   (void)model;
   pfc::log_warning(
-      ui_json_info_logger(),
+      from_json_info_logger(),
       "This model does not implement reading parameters from a JSON file. "
       "Implement 'void from_json(const json &, Model &)' on your model type "
       "to support JSON parameters.");

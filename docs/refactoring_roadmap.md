@@ -29,6 +29,7 @@ Done:
 - `try_push_field_modifier_with_model_check` and message constants in `simulator_modifier_registration.hpp` — IC/BC registration rules and warning strings in one place; `Simulator` uses them instead of a private duplicate loop.
 - `simulation_wiring_conditions.hpp`: `detail::wire_field_modifiers_from_json_array` — one implementation for parsing `initial_conditions` / `boundary_conditions` JSON arrays (inject `add_initial_conditions` vs `add_boundary_conditions` via callback).
 - Tungsten CUDA/HIP VTK integration tests call `add_initial_conditions_from_json` / `add_boundary_conditions_from_json` instead of duplicating factory loops; removed accidental double `apply_initial_conditions()` before the first step.
+- `from_json.hpp`: `set_from_json_log_rank` / `get_from_json_log_rank` replace static loggers fixed at rank `-1`; `App::main` sets the rank so FFT / HeFFTe parse diagnostics align with other MPI-aware logs.
 
 Planned steps:
 

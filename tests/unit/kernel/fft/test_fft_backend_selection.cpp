@@ -189,3 +189,10 @@ TEST_CASE("FFT Backend - size queries work through interface",
   // Workspace size should be non-zero
   REQUIRE(fft->size_workspace() > 0);
 }
+
+TEST_CASE("from_json log rank hook", "[ui][from_json]") {
+  pfc::ui::set_from_json_log_rank(7);
+  REQUIRE(pfc::ui::get_from_json_log_rank() == 7);
+  pfc::ui::set_from_json_log_rank(-1);
+  REQUIRE(pfc::ui::get_from_json_log_rank() == -1);
+}
