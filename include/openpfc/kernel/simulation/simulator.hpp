@@ -32,7 +32,9 @@
  * @endcode
  *
  * This file is part of the Simulation Control module, providing the main
- * execution framework for time-dependent simulations.
+ * execution framework for time-dependent simulations. Per-field result output is
+ * delegated to **`simulator_results_dispatch.hpp`**
+ * (`write_results_for_registered_fields`).
  *
  * @see model.hpp for physics model implementation
  * @see time.hpp for time state management
@@ -52,6 +54,7 @@
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/kernel/simulation/simulator_results_dispatch.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 #include <unordered_map>
@@ -387,16 +390,9 @@ public:
   int get_result_counter() const { return m_result_counter; }
 
   void write_results() {
-    int file_num = get_result_counter();
-    Model &model = get_model();
-    for (const auto &[field_name, writer] : m_result_writers) {
-      if (pfc::has_real_field(model, field_name)) {
-        writer->write(file_num, pfc::get_real_field(model, field_name));
-      }
-      if (pfc::has_complex_field(model, field_name)) {
-        writer->write(file_num, pfc::get_complex_field(model, field_name));
-      }
-    }
+    const int file_num = get_result_counter();
+    pfc::write_results_for_registered_fields(get_model(), m_result_writers,
+                                             file_num);
     set_result_counter(file_num + 1);
   }
 
