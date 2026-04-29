@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 This page describes how a JSON or TOML file becomes a running simulation when you use `pfc::ui::App<YourModel>` (the pattern used by `apps/tungsten`, `apps/aluminumNew`, and several `examples/`). It ties together headers under `include/openpfc/frontend/ui/` and `simulation_wiring.hpp`.
 
-For install and MPI setup, see `[`INSTALL.md`](../INSTALL.md)`. For shared config vocabulary, see `[`configuration.md`](configuration.md)`.
+For install and MPI setup, see [`INSTALL.md`](../INSTALL.md). For shared config vocabulary, see [`configuration.md`](configuration.md).
 
 ## Big picture
 
@@ -75,7 +75,7 @@ Exact keys vary slightly by app and schema version; always treat `apps/tungsten/
 | `initial_conditions[]` | `add_initial_conditions_from_json` | Each entry has `type`, optional `target`, type-specific fields. |
 | `boundary_conditions[]` | `add_boundary_conditions_from_json` | Same pattern: `type`, `target`, … |
 | `simulator` | `apply_simulator_section_from_json` | Optional `result_counter`, `increment`. |
-| `profiling` | `AppProfilingController` | Export paths and regions; see `[`performance_profiling.md`](performance_profiling.md)`. |
+| `profiling` | `AppProfilingController` | Export paths and regions; see [`performance_profiling.md`](performance_profiling.md). |
 
 TOML uses the same logical sections (e.g. `[plan_options]`).
 

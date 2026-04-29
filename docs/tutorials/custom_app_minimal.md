@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tutorial: minimal custom application (`App` + JSON)
 
-This tutorial sketches a small out-of-tree program that links OpenPFC and runs `pfc::ui::App<MyModel>` with a `JSON` file. It complements `[`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md)` (library linking) and `[`../app_pipeline.md`](../app_pipeline.md)` (what the config contains).
+This tutorial sketches a small out-of-tree program that links OpenPFC and runs `pfc::ui::App<MyModel>` with a `JSON` file. It complements [`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md) (library linking) and [`../app_pipeline.md`](../app_pipeline.md) (what the config contains).
 
-Prerequisites: OpenPFC installed or visible to CMake (`[`INSTALL.md`](../../INSTALL.md)`), MPI and HeFFTe as for any OpenPFC build.
+Prerequisites: OpenPFC installed or visible to CMake ([`INSTALL.md`](../../INSTALL.md)), MPI and HeFFTe as for any OpenPFC build.
 
 ## 1. What you will implement
 
@@ -74,7 +74,7 @@ Use the same argv convention as shipped apps: first argument = path to `.json` o
 #include <iostream>
 #include <openpfc/frontend/ui/app.hpp>
 
-int main(int argc, char argv) {
+int main(int argc, char **argv) {
   try {
     pfc::ui::App<MyModel> app(argc, argv);
     return app.main();
