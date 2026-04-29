@@ -84,6 +84,7 @@ Done:
 - **`errors.hpp` split:** `errors_config_format.hpp` (JSON field messages + `get_json_value_string`) and `errors_field_modifiers.hpp` (unknown modifier type + `list_valid_field_modifiers`); `errors.hpp` remains an umbrella include. `from_json_world_time.hpp` includes only the format header; `field_modifier_registry.hpp` includes only the modifier header.
 - **GPU FFT factories:** `runtime/common/heffte_gpu_r2c_layout.hpp` shares MPI rank/size helpers, HeFFTe box conversion, default r2c layout boxes, and MPI/decomposition mismatch checks between `fft_cuda.cpp` and `fft_hip.cpp`.
 - **JSON IC/BC `from_json`:** `from_json_field_modifiers.hpp` centralizes the repeated `"type"` guard in `detail::throw_unless_json_modifier_type` (same exception strings as before).
+- **Spectral CPU stack:** `SpectralCpuStackComponents` + `assemble_spectral_cpu_stack_from_json` in `spectral_cpu_stack_detail.hpp`; `SpectralCpuStack` delegates construction for reuse by non-`App` drivers.
 
 ## Backlog — larger SOLID-oriented refactors
 

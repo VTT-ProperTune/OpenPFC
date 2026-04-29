@@ -25,6 +25,7 @@
 #define PFC_UI_SPECTRAL_CPU_STACK_HPP
 
 #include <mpi.h>
+#include <utility>
 
 #include <nlohmann/json.hpp>
 
@@ -60,6 +61,10 @@ public:
   explicit SpectralCpuStack(const nlohmann::json &settings, MPI_Comm comm,
                             int rank_id, int num_ranks);
 
+private:
+  explicit SpectralCpuStack(SpectralCpuStackComponents &&parts, MPI_Comm comm);
+
+public:
   [[nodiscard]] World &world() noexcept { return m_world; }
   [[nodiscard]] const World &world() const noexcept { return m_world; }
 
@@ -89,10 +94,14 @@ private:
 
 inline SpectralCpuStack::SpectralCpuStack(const nlohmann::json &settings,
                                           MPI_Comm comm, int rank_id, int num_ranks)
-    : m_world(ui::from_json<World>(settings)),
-      m_decomp(decomposition::create(m_world, num_ranks)),
-      m_fft(cpu_fft_from_json_and_decomposition(settings, m_decomp, rank_id, comm)),
-      m_time(ui::from_json<Time>(settings)), m_comm(comm) {}
+    : SpectralCpuStack(
+          assemble_spectral_cpu_stack_from_json(settings, comm, rank_id, num_ranks),
+          comm) {}
+
+inline SpectralCpuStack::SpectralCpuStack(SpectralCpuStackComponents &&parts,
+                                          MPI_Comm comm)
+    : m_world(std::move(parts.world)), m_decomp(std::move(parts.decomp)),
+      m_fft(std::move(parts.fft)), m_time(std::move(parts.time)), m_comm(comm) {}
 
 } // namespace pfc::ui
 

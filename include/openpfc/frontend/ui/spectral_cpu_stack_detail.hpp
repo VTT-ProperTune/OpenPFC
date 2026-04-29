@@ -21,10 +21,13 @@
 
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/frontend/ui/spectral_fft_stack_factory.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace pfc::ui {
 namespace detail {
@@ -85,6 +88,28 @@ cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
                                     int rank_id, MPI_Comm comm) {
   return fft::create(fft::layout::create(decomp, 0), rank_id,
                      cpu_spectral_plan_options_from_json(settings), comm);
+}
+
+/**
+ * @brief Plain-data result of assembling world, decomposition, CPU FFT, and Time
+ *        from JSON (drivers that skip `SpectralCpuStack` can use this directly).
+ */
+struct SpectralCpuStackComponents {
+  World world;
+  decomposition::Decomposition decomp;
+  fft::CpuFft fft;
+  Time time;
+};
+
+[[nodiscard]] inline SpectralCpuStackComponents
+assemble_spectral_cpu_stack_from_json(const nlohmann::json &settings, MPI_Comm comm,
+                                      int rank_id, int num_ranks) {
+  World world = ui::from_json<World>(settings);
+  decomposition::Decomposition decomp = decomposition::create(world, num_ranks);
+  fft::CpuFft fft =
+      cpu_fft_from_json_and_decomposition(settings, decomp, rank_id, comm);
+  Time time = ui::from_json<Time>(settings);
+  return {std::move(world), std::move(decomp), std::move(fft), std::move(time)};
 }
 
 } // namespace pfc::ui
