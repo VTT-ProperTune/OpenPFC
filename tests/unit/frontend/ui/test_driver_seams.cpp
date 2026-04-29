@@ -21,8 +21,7 @@ TEST_CASE("configure_spectral_json_driver_hooks sets from_json log rank",
   REQUIRE(pfc::ui::get_from_json_log_rank() == -1);
 }
 
-TEST_CASE("write_scheduled_simulator_results bumps result counter",
-          "[ui][simulator]") {
+TEST_CASE("pfc::write_results bumps result counter", "[ui][simulator]") {
   auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
@@ -32,7 +31,7 @@ TEST_CASE("write_scheduled_simulator_results bumps result counter",
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
   pfc::Simulator sim(model, time, MPI_COMM_WORLD);
 
-  REQUIRE(sim.get_result_counter() == 0);
-  pfc::write_scheduled_simulator_results(sim);
-  REQUIRE(sim.get_result_counter() == 1);
+  REQUIRE(pfc::get_result_counter(sim) == 0);
+  pfc::write_results(sim);
+  REQUIRE(pfc::get_result_counter(sim) == 1);
 }

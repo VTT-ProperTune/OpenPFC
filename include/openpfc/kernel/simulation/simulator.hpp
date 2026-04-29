@@ -160,6 +160,7 @@ public:
    *
    * Writers are still added only via `add_results_writer`.
    */
+  /** @see pfc::results_writers */
   [[nodiscard]] const ResultsWriterMap &results_writers() const noexcept {
     return m_result_writers;
   }
@@ -362,8 +363,10 @@ public:
     return m_boundary_conditions;
   }
 
+  /** @see pfc::set_result_counter */
   void set_result_counter(int result_counter) { m_result_counter = result_counter; }
 
+  /** @see pfc::get_result_counter */
   int get_result_counter() const { return m_result_counter; }
 
   /**
@@ -374,6 +377,7 @@ public:
    * stub model and writer map instead of wiring a full `Simulator`.
    *
    * @see write_scheduled_simulator_results
+   * @see pfc::write_results
    * @see results_writers()
    * @see pfc::write_results_for_registered_fields
    */

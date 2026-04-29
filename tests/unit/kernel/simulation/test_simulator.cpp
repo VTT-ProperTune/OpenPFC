@@ -40,7 +40,7 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
   SECTION("results_writers exposes the registered writer map") {
     Time time({0.0, 10.0, 1.0}, 1.0);
     Simulator simulator(model, time);
-    REQUIRE(simulator.results_writers().empty());
+    REQUIRE(pfc::results_writers(simulator).empty());
   }
 
   SECTION("Add and apply initial conditions") {

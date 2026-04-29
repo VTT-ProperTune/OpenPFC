@@ -155,7 +155,7 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
   model.finalize_after_field_modifiers();
 
   if (rank0) std::cout << "Writing initial state..." << std::endl;
-  simulator.write_results();
+  pfc::write_results(simulator);
 
   if (rank0) std::cout << "Starting simulation..." << std::endl;
 
@@ -177,7 +177,7 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
         if (rank0)
           std::cout << "Step " << pfc::time::increment(time) << ", t = " << t
                     << ", writing results..." << std::endl;
-        simulator.write_results();
+        pfc::write_results(simulator);
       }
     }
 

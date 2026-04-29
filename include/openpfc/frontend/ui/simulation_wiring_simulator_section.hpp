@@ -36,7 +36,7 @@ inline void apply_simulator_section_from_json(Simulator &sim, Time &time,
           "Invalid JSON input: missing or invalid 'result_counter' field.");
     }
     const int result_counter = static_cast<int>(j["result_counter"]) + 1;
-    sim.set_result_counter(result_counter);
+    pfc::set_result_counter(sim, result_counter);
   }
   if (j.contains("increment")) {
     if (!j["increment"].is_number_integer()) {
