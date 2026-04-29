@@ -262,7 +262,7 @@ These switches are defined under **`cmake/`** (see **`BuildOptions.cmake`**, **`
 | Cache variable | Typical use |
 |------------------|---------------|
 | **`OpenPFC_ENABLE_MPI`** | Must stay **ON** for supported builds (see §2). |
-| **`OpenPFC_ENABLE_HEFFTE`** | HeFFTe FFT stack (**ON** by default). |
+| **`OpenPFC_ENABLE_HEFFTE`** | HeFFTe FFT stack (**ON** by default; **OFF** is rejected at configure time). |
 | **`OpenPFC_FETCH_HEFFTE`** | Fetch HeFFTe into **`build/_deps/`** if no install is found. |
 | **`OpenPFC_ENABLE_HDF5`** | Optional HDF5 for profiling dumps (**OFF** by default). |
 | **`OpenPFC_ENABLE_CUDA`** / **`OpenPFC_ENABLE_HIP`** | GPU backends; require matching HeFFTe install (§3, §6–§8). |

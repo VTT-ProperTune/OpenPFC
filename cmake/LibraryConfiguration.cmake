@@ -82,7 +82,7 @@ if(OpenPFC_ENABLE_HDF5)
   target_compile_definitions(openpfc PRIVATE OPENPFC_HAS_HDF5=1)
 endif()
 
-# Conditionally find HeFFTe
+# HeFFTe (required for FFT / decomposition — same as find_package in Dependencies.cmake)
 if(OpenPFC_ENABLE_HEFFTE)
   # Prefer already-fetched target; fall back to find_package if needed
   if(TARGET Heffte::Heffte)
@@ -98,6 +98,11 @@ if(OpenPFC_ENABLE_HEFFTE)
   # HeFFTe is linked PRIVATE only; public headers that need <heffte.h> live in
   # fft_fftw.hpp (include explicitly or use openpfc.hpp). Downstream TUs must link
   # HeFFTe themselves if they include fft_fftw.hpp.
+else()
+  message(FATAL_ERROR
+    "OpenPFC_ENABLE_HEFFTE=OFF is not supported. OpenPFC sources require HeFFTe "
+    "for FFT and decomposition. Reconfigure with -DOpenPFC_ENABLE_HEFFTE=ON "
+    "(default) and install HeFFTe (see INSTALL.md).")
 endif()
 
 # GPU kernel library (only when CUDA is enabled)
