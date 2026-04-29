@@ -21,6 +21,8 @@ add_library(openpfc
     src/openpfc/kernel/decomposition/decomposition.cpp
     src/openpfc/kernel/decomposition/decomposition_factory.cpp
     src/openpfc/kernel/profiling/session.cpp
+    src/openpfc/kernel/profiling/detail/session_merge_json.cpp
+    $<$<BOOL:${OpenPFC_ENABLE_HDF5}>:src/openpfc/kernel/profiling/detail/session_profiling_hdf5.cpp>
     src/openpfc/kernel/profiling/timer_report.cpp
     src/openpfc/runtime/cpu/fft.cpp
     src/openpfc/kernel/utils/logging.cpp
