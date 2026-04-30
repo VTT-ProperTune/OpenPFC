@@ -106,7 +106,7 @@ struct HeatModel {
   PointFnT boundary_value{};
 
   /** Per-point right-hand side \f$\partial_t u = D\nabla^2 u\f$ (hot path). */
-  inline double rhs(double /*t*/, const HeatGrads &g) const noexcept {
+  [[nodiscard]] double rhs(double /*t*/, const HeatGrads &g) const noexcept {
     return kD * (g.xx + g.yy + g.zz);
   }
 };
