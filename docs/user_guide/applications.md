@@ -11,7 +11,7 @@ For realistic runs, assume MPI is involved. Use the same compiler, MPI and HeFFT
 
 ## Which application should I run?
 
-Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
+Start with tungsten if you want the production-style PFC path. It reads JSON or TOML, uses the `App` pipeline, writes configured fields, and has CPU, CUDA and HIP variants when the build enables them. Start with Allen–Cahn if you want a small visual sanity check with optional PNG output and fewer moving pieces. Use Heat3D when your question is about finite-difference orders, the spectral heat-equation path, timings or scaling comparisons. Use **wave2d** for a minimal **coupled first-order** wave-equation demo (displacement + velocity) with mixed periodic / physical y-boundaries. AluminumNew is mostly useful as a compact example of an `App<Model>` program wired through JSON.
 
 If you want declarative configuration, read [`app_pipeline.md`](app_pipeline.md) before writing your own input files. If your immediate question is “what file did this run write?”, read [`io_results.md`](io_results.md).
 
@@ -44,6 +44,10 @@ MPI: Use `mpirun` from Open MPI, the same stack as at configure time — typical
 Arguments (CPU binary): `nx ny n_steps dt M epsilon [driving_force] [png_final]` or, for an initial and final snapshot, `[png_initial] [png_final]` (two paths). The optional `driving_force` is detected when the next argument is numeric; otherwise that argument is treated as a PNG path for backward compatibility. Optional PNG paths trigger a gather on rank 0 and grayscale export via `pfc::io` (see `include/openpfc/frontend/io/png_writer.hpp`).
 
 For visible motion on the grid, use moderate ε and large M; shrinking ε alone makes interfaces sharp but slow. A positive `driving_force` favours the `φ≈+1` seed over the `φ≈-1` matrix. The app reports step-loop timing and can gather PNG output on rank zero through the frontend PNG writer.
+
+## wave2d
+
+`wave2d` integrates the 2D acoustic wave equation \(u_{tt} = c^2 \Delta u\) as \(\partial_t u = v\), \(\partial_t v = c^2 \Delta u\) with explicit Euler in time. **x** is periodic (MPI halos); **y** supports homogeneous **Dirichlet** or **Neumann** physical boundaries via ghost correction after the periodic exchange. CPU binaries: `wave2d_fd_manual` (fixed second-order stencil on `PaddedBrick`) and `wave2d_fd` (even orders 2–20). CUDA/HIP builds may add `wave2d_cuda` / `wave2d_hip`. See [`apps/wave2d/README.md`](../../apps/wave2d/README.md) for CLI, CFL guidance, and tests.
 
 ## Building your own application
 

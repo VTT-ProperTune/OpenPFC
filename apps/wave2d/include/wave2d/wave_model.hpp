@@ -8,9 +8,9 @@
  * @brief 2D wave equation as coupled first-order system — physics only.
  *
  * \f$\partial_t u = v\f$, \f$\partial_t v = c^2 \Delta u\f$ on a 2D slab
- * (`nz == 1` in OpenPFC indexing). Laplacian entries are **unscaled** FD
- * sums (same convention as `FdGradient`): multiply by `inv_dx2` / `inv_dy2`
- * outside or fold into `c`.
+ * (`nz == 1` in OpenPFC indexing) with \f$\Delta = \partial_{xx} + \partial_{yy}\f$.
+ * Laplacian entries are **unscaled** FD sums (same convention as `FdGradient`):
+ * multiply by `inv_dx2` / `inv_dy2` in `WaveModel::rhs`.
  */
 
 #include <tuple>
