@@ -29,10 +29,25 @@
 
 namespace heat3d {
 
-/** Time-stepping / discretisation backend selected on the command line. */
+/**
+ * @brief Time-stepping / discretisation backend.
+ *
+ * @deprecated Retained only for the unified `heat3d.cpp` driver during
+ * the per-binary split. Once each method has its own executable each
+ * binary parses its arguments via `parse_fd` / `parse_spectral` and the
+ * `Method` discriminator becomes unnecessary.
+ */
 enum class Method { Fd, Spectral, SpectralPointwise };
 
-/** Parsed CLI configuration for one heat3d run. */
+/**
+ * @brief Parsed CLI configuration for one heat3d run.
+ *
+ * `method` is set by the unified `parse` (legacy `argv[1]` dispatch).
+ * The slim per-binary `parse_fd` / `parse_spectral` overloads do **not**
+ * touch this field — each binary already knows its own method.
+ *
+ * `fd_order` defaults to 2 and is left at the default by `parse_spectral`.
+ */
 struct RunConfig {
   Method method = Method::Fd;
   int N = 32;
@@ -43,7 +58,10 @@ struct RunConfig {
   int fd_order = 2;
 };
 
-/** Print the canonical usage line to `os` (caller picks `std::cerr` etc.). */
+/**
+ * @brief Print the unified usage line covering all three sub-commands.
+ *        Used by the legacy `heat3d` binary's `parse_or_print_usage`.
+ */
 inline void print_usage(std::ostream &os, const char *exe) {
   os << "Usage:\n  " << exe << " fd <N> <n_steps> <dt> <D> <fd_order>\n  " << exe
      << " spectral <N> <n_steps> <dt> <D>\n  " << exe
@@ -52,6 +70,26 @@ inline void print_usage(std::ostream &os, const char *exe) {
      << "  spectral:    implicit Euler in Fourier space (2 FFTs/step)\n"
      << "  spectral_pw: explicit Euler with point-wise RHS over materialized\n"
      << "               second-derivative fields (1 fwd + 3 inv FFTs/step)\n";
+}
+
+/**
+ * @brief Per-binary usage line for the FD-style executables
+ *        (`heat3d_fd`, `heat3d_fd_manual`).
+ *
+ * Each binary already knows its own discretisation, so the usage drops
+ * the `fd` / `spectral` sub-command and just lists the positionals.
+ */
+inline void print_usage_fd(std::ostream &os, const char *exe) {
+  os << "Usage:\n  " << exe << " <N> <n_steps> <dt> <D> <fd_order>\n"
+     << "  fd_order: even 2,4,...,20 (central Laplacian; halo width order/2)\n";
+}
+
+/**
+ * @brief Per-binary usage line for the spectral-style executables
+ *        (`heat3d_spectral`, `heat3d_spectral_pointwise`).
+ */
+inline void print_usage_spectral(std::ostream &os, const char *exe) {
+  os << "Usage:\n  " << exe << " <N> <n_steps> <dt> <D>\n";
 }
 
 namespace detail {
@@ -121,6 +159,71 @@ inline std::optional<RunConfig> parse_or_print_usage(int argc, char **argv,
   auto cfg = parse(argc, argv);
   if (!cfg && rank == 0) {
     print_usage(std::cerr, argc >= 1 ? argv[0] : "heat3d");
+  }
+  return cfg;
+}
+
+// -----------------------------------------------------------------------------
+// Slim per-binary parsers — used by `heat3d_fd`, `heat3d_fd_manual`,
+// `heat3d_spectral`, and `heat3d_spectral_pointwise`. Each binary knows
+// its own method, so the parser does NOT consume an `argv[1]` discriminator.
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief Parse the FD-style positional CLI: `<N> <n_steps> <dt> <D> <fd_order>`.
+ *
+ * Returns `std::nullopt` on insufficient args or out-of-range values.
+ * `RunConfig::method` is set to `Method::Fd` so existing helpers
+ * (`heat3d::report`, `heat3d::fd_extra_metadata`) keep working.
+ */
+inline std::optional<RunConfig> parse_fd(int argc, char **argv) noexcept {
+  if (argc < 6) return std::nullopt;
+  RunConfig c;
+  c.method = Method::Fd;
+  c.N = std::atoi(argv[1]);
+  c.n_steps = std::atoi(argv[2]);
+  c.dt = std::atof(argv[3]);
+  c.D = std::atof(argv[4]);
+  c.fd_order = std::atoi(argv[5]);
+  if (!detail::valid_values(c)) return std::nullopt;
+  return c;
+}
+
+/**
+ * @brief Parse the spectral-style positional CLI: `<N> <n_steps> <dt> <D>`.
+ *
+ * `RunConfig::method` is set to `Method::Spectral` so existing helpers
+ * keep working; the SpectralPointwise binary may overwrite the field
+ * after parsing.
+ */
+inline std::optional<RunConfig> parse_spectral(int argc, char **argv) noexcept {
+  if (argc < 5) return std::nullopt;
+  RunConfig c;
+  c.method = Method::Spectral;
+  c.N = std::atoi(argv[1]);
+  c.n_steps = std::atoi(argv[2]);
+  c.dt = std::atof(argv[3]);
+  c.D = std::atof(argv[4]);
+  if (!detail::valid_values(c)) return std::nullopt;
+  return c;
+}
+
+/// `parse_fd` + rank-0 usage print — drop-in for FD binary `main`s.
+inline std::optional<RunConfig> parse_fd_or_print_usage(int argc, char **argv,
+                                                        int rank) {
+  auto cfg = parse_fd(argc, argv);
+  if (!cfg && rank == 0) {
+    print_usage_fd(std::cerr, argc >= 1 ? argv[0] : "heat3d_fd");
+  }
+  return cfg;
+}
+
+/// `parse_spectral` + rank-0 usage print — drop-in for spectral binary `main`s.
+inline std::optional<RunConfig> parse_spectral_or_print_usage(int argc, char **argv,
+                                                              int rank) {
+  auto cfg = parse_spectral(argc, argv);
+  if (!cfg && rank == 0) {
+    print_usage_spectral(std::cerr, argc >= 1 ? argv[0] : "heat3d_spectral");
   }
   return cfg;
 }
