@@ -79,7 +79,7 @@ template <typename T> struct ParameterMetadata {
    * @param value Value to validate
    * @return Error message if invalid, empty optional if valid
    */
-  std::optional<std::string> validate(T value) const {
+  [[nodiscard]] std::optional<std::string> validate(T value) const {
     if (min_value && value < *min_value) {
       std::ostringstream msg;
       msg << "Parameter '" << name << "' = " << value << " is below minimum "
@@ -108,7 +108,7 @@ template <typename T> struct ParameterMetadata {
    *
    * @return Multi-line string describing the parameter
    */
-  std::string format_info() const {
+  [[nodiscard]] std::string format_info() const {
     std::ostringstream info;
     info << "Parameter: " << name << "\n";
     info << "  Description: " << description;
@@ -210,13 +210,13 @@ template <typename T> struct ParameterMetadata {
       return *this;
     }
 
-    ParameterMetadata<T> build() const { return param_; }
+    [[nodiscard]] ParameterMetadata<T> build() const { return param_; }
   };
 
   /**
    * @brief Start building parameter metadata
    */
-  static Builder builder() { return Builder(); }
+  [[nodiscard]] static Builder builder() { return Builder(); }
 };
 
 } // namespace pfc::ui

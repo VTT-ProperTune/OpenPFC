@@ -15,6 +15,8 @@ OpenPFC encourages fail-fast configuration: invalid or missing parameters should
 | `ParameterValidator` | `openpfc/frontend/ui/parameter_validator.hpp` | Aggregates metadata, `validate(json)`, formats errors and summaries. |
 | `from_json` into your model | Your translation unit | Used by the default spectral `App` path to apply `model.params` after the session is built (see below). |
 
+Value-returning helpers (`ParameterValidator::validate`, `ValidationResult::{is_valid,format_errors,format_summary}`, `ParameterMetadata::validate` / `format_info`, and `ParameterMetadata::Builder::build`) are marked `[[nodiscard]]` so ignoring validation output is typically a compile-time error.
+
 Validation is typically invoked from application `main` or a thin wrapper before the expensive `App::main()` path, or integrated inside your app’s settings loader if you have one.
 
 ## Validation vs. App parsing order

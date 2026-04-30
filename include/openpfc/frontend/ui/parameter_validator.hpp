@@ -69,12 +69,12 @@ struct ValidationResult {
   /**
    * @brief Check if validation passed
    */
-  bool is_valid() const { return valid && errors.empty(); }
+  [[nodiscard]] bool is_valid() const { return valid && errors.empty(); }
 
   /**
    * @brief Format error report
    */
-  std::string format_errors() const {
+  [[nodiscard]] std::string format_errors() const {
     if (errors.empty()) {
       return "No errors";
     }
@@ -98,7 +98,8 @@ struct ValidationResult {
   /**
    * @brief Format parameter summary
    */
-  std::string format_summary(const std::string &model_name = "Model") const {
+  [[nodiscard]] std::string
+  format_summary(const std::string &model_name = "Model") const {
     std::ostringstream msg;
     msg << "\n" << std::string(80, '=') << "\n";
     msg << "Configuration Validation Summary - " << model_name << "\n";
@@ -168,7 +169,7 @@ public:
    * @param config JSON configuration object
    * @return ValidationResult with errors and validated values
    */
-  ValidationResult validate(const json &config) const {
+  [[nodiscard]] ValidationResult validate(const json &config) const {
     ValidationResult result;
 
     // Validate double parameters
