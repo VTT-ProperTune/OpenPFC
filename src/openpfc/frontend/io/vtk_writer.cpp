@@ -15,6 +15,7 @@
 #include <openpfc/kernel/utils/logging.hpp>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 
 namespace pfc {
 
@@ -39,6 +40,27 @@ namespace {
   const auto extent_len = static_cast<long long>(extent_len_ul);
   const auto endpoint = static_cast<long long>(begin_index) + extent_len - 1LL;
   return endpoint <= static_cast<long long>(INT_MAX);
+}
+
+void validate_origin_array_3(const std::array<double, 3> &origin,
+                             const char *context_label) {
+  for (int i = 0; i < 3; ++i) {
+    if (!origin_ok(origin[i])) {
+      throw std::invalid_argument(std::string(context_label) +
+                                  ": origin components must be finite");
+    }
+  }
+}
+
+void validate_spacing_array_3(const std::array<double, 3> &spacing,
+                              const char *context_label) {
+  for (int i = 0; i < 3; ++i) {
+    if (!spacing_ok(spacing[i])) {
+      throw std::invalid_argument(
+          std::string(context_label) +
+          ": spacing components must be finite and positive");
+    }
+  }
 }
 
 void validate_vtk_domain_for_writer(const std::array<int, 3> &global_size,
@@ -72,17 +94,10 @@ void validate_vtk_domain_for_writer(const std::array<int, 3> &global_size,
       throw std::overflow_error(
           "VTKWriter::set_domain: VTK extents overflow int range");
     }
-
-    if (!origin_ok(origin[i])) {
-      throw std::invalid_argument(
-          "VTKWriter::set_domain: origin components must be finite");
-    }
-    if (!spacing_ok(spacing[i])) {
-      throw std::invalid_argument(
-          "VTKWriter::set_domain: spacing components must be finite and "
-          "positive");
-    }
   }
+
+  validate_origin_array_3(origin, "VTKWriter::set_domain");
+  validate_spacing_array_3(spacing, "VTKWriter::set_domain");
 
   // WholeExtent endpoints are global_size[d]-1; guard overflow when nx==INT_MAX.
   for (int i = 0; i < 3; ++i) {
@@ -149,23 +164,12 @@ void VTKWriter::set_domain(const std::array<int, 3> &arr_global,
 }
 
 void VTKWriter::set_origin(const std::array<double, 3> &origin) {
-  for (int i = 0; i < 3; ++i) {
-    if (!origin_ok(origin[i])) {
-      throw std::invalid_argument(
-          "VTKWriter::set_origin: origin components must be finite");
-    }
-  }
+  validate_origin_array_3(origin, "VTKWriter::set_origin");
   m_origin = origin;
 }
 
 void VTKWriter::set_spacing(const std::array<double, 3> &spacing) {
-  for (int i = 0; i < 3; ++i) {
-    if (!spacing_ok(spacing[i])) {
-      throw std::invalid_argument(
-          "VTKWriter::set_spacing: spacing components must be finite and "
-          "positive");
-    }
-  }
+  validate_spacing_array_3(spacing, "VTKWriter::set_spacing");
   m_spacing = spacing;
 }
 
