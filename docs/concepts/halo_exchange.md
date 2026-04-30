@@ -44,7 +44,7 @@ Policies describe where ghost data lives and what is safe for FFT. They are docu
 |--------|---------|-------------------|---------------|
 | None | Core `nx×ny×nz` only | Yes | N/A |
 | InPlace | One array; ghosts in boundary slabs of that array | No (multi-rank) after halo fill | `HaloExchanger` + `laplacian_interior<Order>` |
-| **PaddedBrick** | Single contiguous `(nx+2hw)×(ny+2hw)×(nz+2hw)` buffer with a real ghost ring; owned core at `[hw, hw+n)` per axis | No (FFT does not see padded layout) | `PaddedHaloExchanger` + manual stencil over `pfc::field::PaddedBrick<T>`; see `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` |
+| **PaddedBrick** | Single contiguous `(nx+2hw)×(ny+2hw)×(nz+2hw)` buffer with a real ghost ring; owned core at `[hw, hw+n)` per axis | No (FFT does not see padded layout) | `PaddedHaloExchanger` + manual stencil over `pfc::field::PaddedBrick<T>`; see `apps/heat3d/src/cpu/heat3d_fd_scratch.cpp` (raw pointer arithmetic, `u_ptr[lin ± stride]`) and `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` (lambda-iterator wrapper) |
 | Separated | Core + six face halo buffers | Yes on core only | `SeparatedFaceHaloExchanger` + `laplacian_periodic_separated<Order>` (or `laplacian_interior<Order>` for interior-only) |
 | Mixed / hybrid | Core has no aliased ghosts; sidecar holds all ghost data | Core only | Same as Separated; extra sync/copy steps are explicit, slower path |
 
@@ -146,8 +146,10 @@ Separated recv: No scatter into core; MPI receives into contiguous face buffers 
 
 - **Separated layout** (FFT-safe core + face buffers):
   `examples/15_finite_difference_heat.cpp` — `mpirun -np P ./15_finite_difference_heat` runs the heat equation with `SeparatedFaceHaloExchanger` and `laplacian_periodic_separated<2>`. The core field can be passed to `fft.forward` / `backward` on the same decomposition (comment in source).
-- **Padded brick layout** (in-place ghost ring, laboratory style):
-  `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` — `mpirun -np P ./apps/heat3d/heat3d_fd_manual N n_steps dt D` runs the same heat equation against `pfc::field::PaddedBrick<double>` + `pfc::PaddedHaloExchanger<double>`. The driver shows the explicit non-blocking comm/compute overlap (`start_halo_exchange` → `for_each_inner_omp` → `finish_halo_exchange` → `for_each_border` → Euler) and per-section `pfc::runtime::tic/toc` timers; see [`apps/heat3d/README.md`](../../apps/heat3d/README.md) for the side-by-side comparison with the compact `heat3d_fd`.
+- **Padded brick layout, version 0** (minimum-OpenPFC consumer of `PaddedHaloExchanger`):
+  `apps/heat3d/src/cpu/heat3d_fd_scratch.cpp` — `mpirun -np P ./apps/heat3d/heat3d_fd_scratch N n_steps dt` runs the same heat equation with the only OpenPFC piece in the hot loop being `pfc::PaddedHaloExchanger<double>::exchange_halos`. Everything else is bare triple loops over `[0, n)`, manual padded `lin = (i+hw)*sx + (j+hw)*sy + (k+hw)*sz`, raw pointer arithmetic, and a plain `std::vector<double>` for the per-step Laplacian (no halo). Read this driver to see what the higher-level layouts hide.
+- **Padded brick layout, laboratory style** (in-place ghost ring + comm/compute overlap):
+  `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` — `mpirun -np P ./apps/heat3d/heat3d_fd_manual N n_steps dt` runs the same heat equation against `pfc::field::PaddedBrick<double>` + `pfc::PaddedHaloExchanger<double>` with `HeatModel::rhs` and the `for_each_inner / for_each_border / for_each_owned` lambda iterators. The driver shows the explicit non-blocking overlap (`start_halo_exchange` → `for_each_inner_omp` → `finish_halo_exchange` → `for_each_border` → Euler) and per-section `pfc::runtime::tic/toc` timers; see [`apps/heat3d/README.md`](../../apps/heat3d/README.md) for the side-by-side comparison with `heat3d_fd_scratch` and the compact `heat3d_fd`.
 
 ---
 
