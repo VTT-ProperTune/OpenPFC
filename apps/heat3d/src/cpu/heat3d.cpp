@@ -181,7 +181,6 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   auto decomp = decomposition::create(world, nproc);
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
-  auto local_lower = world::get_lower(local_world);
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];
@@ -218,13 +217,6 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
-  const int imin = hw;
-  const int imax = nx - hw;
-  const int jmin = hw;
-  const int jmax = ny - hw;
-  const int kmin = hw;
-  const int kmax = nz - hw;
-  const int sxy = nx * ny;
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
     exchanger.exchange_halos(u.data(), u.size(), face_halos);
@@ -237,25 +229,13 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
 
   double sum_err2 = 0.0;
   const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
-  for (int iz = kmin; iz < kmax; ++iz) {
-    for (int iy = jmin; iy < jmax; ++iy) {
-      for (int ix = imin; ix < imax; ++ix) {
-        const int gi = local_lower[0] + ix;
-        const int gj = local_lower[1] + iy;
-        const int gk = local_lower[2] + iz;
-        const double x = static_cast<double>(gi);
-        const double y = static_cast<double>(gj);
-        const double z = static_cast<double>(gk);
-        const double r2 = x * x + y * y + z * z;
-        const size_t c = static_cast<size_t>(ix) +
-                         static_cast<size_t>(iy) * static_cast<size_t>(nx) +
-                         static_cast<size_t>(iz) * static_cast<size_t>(sxy);
+  field::for_each_interior_with_coords(
+      u, decomp, rank, hw, [&](const Real3 &x, double u_val) {
+        const double r2 = x[0] * x[0] + x[1] * x[1] + x[2] * x[2];
         const double uex = analytic_gaussian(r2, t_final, cfg.D);
-        const double e = u[c] - uex;
+        const double e = u_val - uex;
         sum_err2 += e * e;
-      }
-    }
-  }
+      });
   double g_err2 = 0.0;
   MPI_Reduce(&sum_err2, &g_err2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 

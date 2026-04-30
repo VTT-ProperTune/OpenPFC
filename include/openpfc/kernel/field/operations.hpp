@@ -305,4 +305,74 @@ inline void apply_subdomain(std::vector<double> &field,
   }
 }
 
+/**
+ * @brief Iterate over the **interior** of a rank's FD subdomain, exposing
+ *        physical coordinates and field values.
+ *
+ * Companion read-side helper to `apply_subdomain`: walks the slab
+ * `[hw, nx-hw) x [hw, ny-hw) x [hw, nz-hw)` of `field` (sized to `nx*ny*nz`)
+ * and calls `fn(coords, value)` for each interior cell, where `coords` is
+ * the physical coordinate computed from the global world's `origin/spacing`
+ * and `value` is `field[idx]`.
+ *
+ * Use this for reductions, error norms, post-processing — anything whose
+ * loop matched the manual triple-nested pattern in early FD apps.
+ * Cells in the per-rank halo region (`[0, hw)` and `[n-hw, n)`) are skipped,
+ * matching the convention used by `pfc::field::FdGradient` and
+ * `pfc::sim::for_each_interior`.
+ *
+ * Layout: row-major `[nx, ny, nz]` with **x varying fastest**.
+ *
+ * @tparam Fn Callable: `void(const Real3& coords, double value)`.
+ * @param field       Input field (size `nx*ny*nz`).
+ * @param decomp      Domain decomposition.
+ * @param rank        MPI rank owning the subdomain.
+ * @param halo_width  Width of the per-rank halo region to skip on each side.
+ * @param fn          Function called once per interior cell.
+ */
+template <typename Fn>
+inline void
+for_each_interior_with_coords(const std::vector<double> &field,
+                              const pfc::decomposition::Decomposition &decomp,
+                              int rank, int halo_width, Fn &&fn) {
+  const auto &gw = pfc::decomposition::get_world(decomp);
+  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
+  const auto lo = pfc::world::get_lower(local);
+  const auto sz = pfc::world::get_size(local);
+  const int nx = sz[0];
+  const int ny = sz[1];
+  const int nz = sz[2];
+  const int hw = halo_width;
+  const int imin = hw;
+  const int imax = nx - hw;
+  const int jmin = hw;
+  const int jmax = ny - hw;
+  const int kmin = hw;
+  const int kmax = nz - hw;
+  if (imin >= imax || jmin >= jmax || kmin >= kmax) {
+    return;
+  }
+  const std::size_t sxy =
+      static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
+  const auto origin = pfc::world::get_origin(gw);
+  const auto spacing = pfc::world::get_spacing(gw);
+  for (int iz = kmin; iz < kmax; ++iz) {
+    for (int iy = jmin; iy < jmax; ++iy) {
+      for (int ix = imin; ix < imax; ++ix) {
+        const int gi = lo[0] + ix;
+        const int gj = lo[1] + iy;
+        const int gk = lo[2] + iz;
+        const pfc::Real3 coords{origin[0] + static_cast<double>(gi) * spacing[0],
+                                origin[1] + static_cast<double>(gj) * spacing[1],
+                                origin[2] + static_cast<double>(gk) * spacing[2]};
+        const std::size_t idx =
+            static_cast<std::size_t>(ix) +
+            static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
+            static_cast<std::size_t>(iz) * sxy;
+        fn(coords, field[idx]);
+      }
+    }
+  }
+}
+
 } // namespace pfc::field
