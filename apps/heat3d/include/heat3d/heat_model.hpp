@@ -11,7 +11,7 @@
  * This is the **only** file a physicist needs to edit to define a heat
  * problem on top of OpenPFC. It carries:
  *
- *  - the physical parameter (just the diffusion coefficient `D`),
+ *  - the physical parameter (just the diffusion coefficient `kD`),
  *  - the initial condition as a runtime-swappable spatial lambda
  *    (`PointFn = (x, y, z) -> u`),
  *  - an optional boundary-value provider for future Dirichlet/Neumann
@@ -21,6 +21,14 @@
  * `rhs` is a plain `inline noexcept` member (not `operator()` and not
  * `std::function`) so the inner `pfc::sim::for_each_interior` loop in the
  * application driver inlines it as cleanly as a free function would.
+ *
+ * The diffusion coefficient is a **single source-level `inline constexpr
+ * double kD`** at namespace scope, not a mutable member: the heat3d
+ * binaries (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_fd_scratch`,
+ * `heat3d_spectral`, `heat3d_spectral_pointwise`) are educational
+ * examples sharing one fixed value of \f$D\f$ so their L2-vs-analytic
+ * outputs are directly comparable. To experiment with a different
+ * coefficient, change the literal here.
  *
  * The struct is intentionally header-only and **free of any
  * `<openpfc/...>` include**: only `<cmath>` and `<functional>` from the
@@ -57,12 +65,24 @@ using PointFn = std::function<double(double, double, double)>;
 using PointFnT = std::function<double(double, double, double, double)>;
 
 /**
+ * @brief Diffusion coefficient \f$D\f$ shared by every heat3d binary.
+ *
+ * Hard-pinned to `1.0` to match `examples/15_finite_difference_heat.cpp`
+ * and to keep the L2 numbers reported by the five drivers comparable.
+ * Change the literal here (and re-build) to experiment with a different
+ * coefficient — every driver, the analytic reference solution, and the
+ * default initial condition pick it up automatically.
+ */
+inline constexpr double kD = 1.0;
+
+/**
  * @brief Heat equation \f$\partial_t u = D \nabla^2 u\f$, self-contained.
+ *
+ * The diffusion coefficient lives outside the struct (see `heat3d::kD`)
+ * so the model has no mutable physical parameters; only the initial
+ * condition and the boundary-value provider are user-tunable.
  */
 struct HeatModel {
-  /** Diffusion coefficient. */
-  double D = 1.0;
-
   /**
    * @brief Initial condition \f$u(x,y,z,0)\f$.
    *
@@ -70,14 +90,11 @@ struct HeatModel {
    * configured diffusion coefficient,
    * \f$u_0(\mathbf{x}) = \exp\!\bigl(-|\mathbf{x}|^2/(4D)\bigr)\f$.
    *
-   * The lambda captures `this` so that updating `model.D` after
-   * construction is automatically reflected in the IC the next time it is
-   * sampled. (Implication: `HeatModel` instances must not be copied or
-   * moved while their `initial_condition` is in use — the captured `this`
-   * would still reference the source object.)
+   * The lambda reads `kD` directly (no `this` capture), so the model is
+   * trivially copyable / movable.
    */
-  PointFn initial_condition = [this](double x, double y, double z) {
-    return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
+  PointFn initial_condition = [](double x, double y, double z) {
+    return std::exp(-(x * x + y * y + z * z) / (4.0 * kD));
   };
 
   /**
@@ -90,7 +107,7 @@ struct HeatModel {
 
   /** Per-point right-hand side \f$\partial_t u = D\nabla^2 u\f$ (hot path). */
   inline double rhs(double /*t*/, const HeatGrads &g) const noexcept {
-    return D * (g.xx + g.yy + g.zz);
+    return kD * (g.xx + g.yy + g.zz);
   }
 };
 
