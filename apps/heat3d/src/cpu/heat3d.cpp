@@ -48,6 +48,7 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/grad_point.hpp>
+#include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
@@ -179,48 +180,43 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
                              pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                              pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, nproc);
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  const int nx = local_size[0];
-  const int ny = local_size[1];
-  const int nz = local_size[2];
-  const size_t nlocal =
-      static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
-
   const int hw = cfg.fd_order / 2;
-  if (2 * hw >= nx || 2 * hw >= ny || 2 * hw >= nz) {
+  field::LocalField<double> u =
+      field::LocalField<double>::from_subdomain(decomp, rank, hw);
+
+  const auto sz = u.size3();
+  if (2 * hw >= sz[0] || 2 * hw >= sz[1] || 2 * hw >= sz[2]) {
     if (rank == 0) {
-      std::cerr << "heat3d: local subdomain " << nx << "x" << ny << "x" << nz
-                << " too small for fd_order=" << cfg.fd_order << " (need > "
+      std::cerr << "heat3d: local subdomain " << sz[0] << "x" << sz[1] << "x"
+                << sz[2] << " too small for fd_order=" << cfg.fd_order << " (need > "
                 << (2 * hw) << " points per dimension)\n";
     }
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
-  const double dx = 1.0;
-  const double inv_dx2 = 1.0 / (dx * dx);
+  const double inv_dx2 = 1.0 / (u.spacing()[0] * u.spacing()[0]);
+  const double inv_dy2 = 1.0 / (u.spacing()[1] * u.spacing()[1]);
+  const double inv_dz2 = 1.0 / (u.spacing()[2] * u.spacing()[2]);
 
   HeatModel model;
   model.D = cfg.D;
   model.initial_condition = [D = cfg.D](double x, double y, double z) {
     return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
   };
-
-  std::vector<double> u;
-  field::apply_subdomain(u, decomp, rank, model.initial_condition);
+  u.apply(model.initial_condition);
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
   SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, hw, MPI_COMM_WORLD);
 
-  field::FdGradient grad(u.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2, hw,
-                         cfg.fd_order);
-  sim::steppers::EulerStepper stepper(grad, model, cfg.dt, nlocal);
+  field::FdGradient grad(u.data(), sz[0], sz[1], sz[2], inv_dx2, inv_dy2, inv_dz2,
+                         hw, cfg.fd_order);
+  sim::steppers::EulerStepper stepper(grad, model, cfg.dt, u.size());
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
     exchanger.exchange_halos(u.data(), u.size(), face_halos);
-    t = stepper.step(t, u);
+    t = stepper.step(t, u.vec());
   }
   const double t1 = MPI_Wtime();
   double elapsed = t1 - t0;
@@ -229,13 +225,12 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
 
   double sum_err2 = 0.0;
   const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
-  field::for_each_interior_with_coords(
-      u, decomp, rank, hw, [&](const Real3 &x, double u_val) {
-        const double r2 = x[0] * x[0] + x[1] * x[1] + x[2] * x[2];
-        const double uex = analytic_gaussian(r2, t_final, cfg.D);
-        const double e = u_val - uex;
-        sum_err2 += e * e;
-      });
+  u.for_each_interior([&](double x, double y, double z, double u_val) {
+    const double r2 = x * x + y * y + z * z;
+    const double uex = analytic_gaussian(r2, t_final, cfg.D);
+    const double e = u_val - uex;
+    sum_err2 += e * e;
+  });
   double g_err2 = 0.0;
   MPI_Reduce(&sum_err2, &g_err2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
@@ -373,31 +368,27 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   auto decomp = decomposition::create(world, nproc);
   fft::CpuFft fft = fft::create(decomp, MPI_COMM_WORLD);
 
-  std::vector<double> u(fft.size_inbox());
-
   const auto &gw = decomposition::get_world(decomp);
-  auto size = world::get_size(gw);
-  auto origin = world::get_origin(gw);
-  auto spacing = world::get_spacing(gw);
-  auto ib = fft.get_inbox_bounds();
+  const auto size = world::get_size(gw);
+  const auto ib = fft.get_inbox_bounds();
+  field::LocalField<double> u = field::LocalField<double>::from_inbox(gw, ib);
 
   HeatModel model;
   model.D = cfg.D;
   model.initial_condition = [D = cfg.D](double x, double y, double z) {
     return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
   };
-  field::apply(u, gw, fft, [&ic = model.initial_condition](const Real3 &r) {
-    return ic(r[0], r[1], r[2]);
-  });
+  u.apply(model.initial_condition);
 
-  field::SpectralGradient grad(fft, u, size, spacing, ib, fft.get_outbox_bounds());
+  field::SpectralGradient grad(fft, u.vec(), size, u.spacing(), ib,
+                               fft.get_outbox_bounds());
   sim::steppers::EulerStepper stepper(grad, model, cfg.dt, u.size());
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
-    t = stepper.step(t, u);
+    t = stepper.step(t, u.vec());
   }
   const double t1 = MPI_Wtime();
   double elapsed = t1 - t0;
@@ -406,21 +397,12 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
 
   const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
   double sum_err2 = 0.0;
-  std::size_t err_idx = 0;
-  for (int k = ib.low[2]; k <= ib.high[2]; ++k) {
-    for (int j = ib.low[1]; j <= ib.high[1]; ++j) {
-      for (int i = ib.low[0]; i <= ib.high[0]; ++i) {
-        const double x = origin[0] + static_cast<double>(i) * spacing[0];
-        const double y = origin[1] + static_cast<double>(j) * spacing[1];
-        const double z = origin[2] + static_cast<double>(k) * spacing[2];
-        const double r2 = x * x + y * y + z * z;
-        const double uex = analytic_gaussian(r2, t_final, cfg.D);
-        const double e = u[err_idx] - uex;
-        sum_err2 += e * e;
-        ++err_idx;
-      }
-    }
-  }
+  u.for_each_owned([&](double x, double y, double z, double u_val) {
+    const double r2 = x * x + y * y + z * z;
+    const double uex = analytic_gaussian(r2, t_final, cfg.D);
+    const double e = u_val - uex;
+    sum_err2 += e * e;
+  });
   double g_err2 = 0.0;
   MPI_Reduce(&sum_err2, &g_err2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
