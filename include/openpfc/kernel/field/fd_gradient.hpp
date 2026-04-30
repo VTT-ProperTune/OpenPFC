@@ -34,6 +34,7 @@
 
 #include <openpfc/kernel/field/finite_difference.hpp>
 #include <openpfc/kernel/field/grad_point.hpp>
+#include <openpfc/kernel/field/local_field.hpp>
 
 namespace pfc::field {
 
@@ -111,5 +112,31 @@ private:
   double m_sz{0.0};
   pfc::field::fd::detail::EvenFdStencil1d m_stencil{};
 };
+
+/**
+ * @brief Free-function factory: build an `FdGradient` from a `LocalField`.
+ *
+ * Mirrors the `world::create`, `decomposition::create`, `fft::create` family:
+ * derives `nx, ny, nz`, the inverse-square grid spacings, and the halo width
+ * directly from `u`. The caller only supplies the spatial accuracy `order`.
+ *
+ * @param u      Local field bound to the FD subdomain (must outlive the
+ *               returned evaluator; the evaluator reads `u.data()`).
+ * @param order  Even spatial order of the central second-derivative stencil
+ *               (2, 4, …, 20). Must satisfy `order/2 == u.halo_width()` for
+ *               the standard "halo width = stencil half-width" contract.
+ *
+ * @return A `FdGradient` ready to be passed to
+ *         `pfc::sim::for_each_interior` (or `pfc::sim::steppers::EulerStepper`).
+ */
+inline FdGradient create(const LocalField<double> &u, int order) {
+  const auto sz = u.size3();
+  const auto sp = u.spacing();
+  const double inv_dx2 = 1.0 / (sp[0] * sp[0]);
+  const double inv_dy2 = 1.0 / (sp[1] * sp[1]);
+  const double inv_dz2 = 1.0 / (sp[2] * sp[2]);
+  return FdGradient(u.data(), sz[0], sz[1], sz[2], inv_dx2, inv_dy2, inv_dz2,
+                    u.halo_width(), order);
+}
 
 } // namespace pfc::field

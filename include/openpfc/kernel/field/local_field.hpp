@@ -14,6 +14,8 @@
  *
  *  - **size**         : local extents `(nx, ny, nz)`
  *  - **lower_global** : global index of cell `(0,0,0)` local
+ *  - **global_size**  : global grid extents `(Nx, Ny, Nz)` (needed by spectral
+ *                       evaluators for the per-axis Fourier symbols)
  *  - **origin**       : physical origin of the global `(0,0,0)` cell
  *  - **spacing**      : grid spacing per axis
  *  - **halo_width**   : per-rank halo region to skip in interior loops
@@ -80,8 +82,8 @@ public:
     const auto &gw = pfc::decomposition::get_world(decomp);
     const auto &local = pfc::decomposition::get_subworld(decomp, rank);
     return LocalField(pfc::world::get_size(local), pfc::world::get_lower(local),
-                      pfc::world::get_origin(gw), pfc::world::get_spacing(gw),
-                      halo_width);
+                      pfc::world::get_size(gw), pfc::world::get_origin(gw),
+                      pfc::world::get_spacing(gw), halo_width);
   }
 
   /**
@@ -91,7 +93,8 @@ public:
    */
   static LocalField from_inbox(const pfc::World &global_world,
                                const pfc::fft::Box3i &inbox) {
-    return LocalField(inbox.size, inbox.low, pfc::world::get_origin(global_world),
+    return LocalField(inbox.size, inbox.low, pfc::world::get_size(global_world),
+                      pfc::world::get_origin(global_world),
                       pfc::world::get_spacing(global_world), 0);
   }
 
@@ -109,6 +112,7 @@ public:
 
   pfc::Int3 size3() const noexcept { return m_size; }
   pfc::Int3 lower_global() const noexcept { return m_lower; }
+  pfc::Int3 global_size() const noexcept { return m_global_size; }
   pfc::Real3 origin() const noexcept { return m_origin; }
   pfc::Real3 spacing() const noexcept { return m_spacing; }
   int halo_width() const noexcept { return m_halo; }
@@ -200,14 +204,14 @@ public:
   }
 
 private:
-  LocalField(pfc::Int3 size, pfc::Int3 lower, pfc::Real3 origin, pfc::Real3 spacing,
-             int halo)
+  LocalField(pfc::Int3 size, pfc::Int3 lower, pfc::Int3 global_size,
+             pfc::Real3 origin, pfc::Real3 spacing, int halo)
       : m_data(static_cast<std::size_t>(size[0]) *
                    static_cast<std::size_t>(size[1]) *
                    static_cast<std::size_t>(size[2]),
                T{}),
-        m_size(size), m_lower(lower), m_origin(origin), m_spacing(spacing),
-        m_halo(halo) {}
+        m_size(size), m_lower(lower), m_global_size(global_size), m_origin(origin),
+        m_spacing(spacing), m_halo(halo) {}
 
   template <class Body>
   static void for_each_index_(int imin, int imax, int jmin, int jmax, int kmin,
@@ -241,6 +245,7 @@ private:
   std::vector<T> m_data;
   pfc::Int3 m_size{};
   pfc::Int3 m_lower{};
+  pfc::Int3 m_global_size{};
   pfc::Real3 m_origin{};
   pfc::Real3 m_spacing{};
   int m_halo{0};

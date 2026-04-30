@@ -193,9 +193,6 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
     }
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
-  const double inv_dx2 = 1.0 / (u.spacing()[0] * u.spacing()[0]);
-  const double inv_dy2 = 1.0 / (u.spacing()[1] * u.spacing()[1]);
-  const double inv_dz2 = 1.0 / (u.spacing()[2] * u.spacing()[2]);
 
   HeatModel model;
   model.D = cfg.D;
@@ -207,8 +204,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
   SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, hw, MPI_COMM_WORLD);
 
-  field::FdGradient grad(u.data(), sz[0], sz[1], sz[2], inv_dx2, inv_dy2, inv_dz2,
-                         hw, cfg.fd_order);
+  auto grad = field::create(u, cfg.fd_order);
   sim::steppers::EulerStepper stepper(grad, model, cfg.dt, u.size());
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -369,9 +365,8 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   fft::CpuFft fft = fft::create(decomp, MPI_COMM_WORLD);
 
   const auto &gw = decomposition::get_world(decomp);
-  const auto size = world::get_size(gw);
-  const auto ib = fft.get_inbox_bounds();
-  field::LocalField<double> u = field::LocalField<double>::from_inbox(gw, ib);
+  field::LocalField<double> u =
+      field::LocalField<double>::from_inbox(gw, fft.get_inbox_bounds());
 
   HeatModel model;
   model.D = cfg.D;
@@ -380,8 +375,7 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   };
   u.apply(model.initial_condition);
 
-  field::SpectralGradient grad(fft, u.vec(), size, u.spacing(), ib,
-                               fft.get_outbox_bounds());
+  auto grad = field::create(u, fft);
   sim::steppers::EulerStepper stepper(grad, model, cfg.dt, u.size());
 
   MPI_Barrier(MPI_COMM_WORLD);

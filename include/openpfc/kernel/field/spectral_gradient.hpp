@@ -39,6 +39,7 @@
 #include <openpfc/kernel/fft/box3i.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/grad_point.hpp>
+#include <openpfc/kernel/field/local_field.hpp>
 
 namespace pfc::field {
 
@@ -157,5 +158,30 @@ private:
   std::vector<double> m_op_yy;
   std::vector<double> m_op_zz;
 };
+
+/**
+ * @brief Free-function factory: build a `SpectralGradient` from an FFT plan
+ *        and a `LocalField`.
+ *
+ * Mirrors the `world::create`, `decomposition::create`, `fft::create` family:
+ * derives the local inbox bounds and the local Fourier outbox bounds from
+ * `fft`, and the global grid size and grid spacing from `u`. The caller
+ * passes only the two pieces that are not derivable from the field (the FFT
+ * plan and the field itself).
+ *
+ * @param u    Local field bound to the FFT inbox layout (must outlive the
+ *             returned evaluator and not be reassigned/resized between
+ *             `prepare()` calls; the evaluator stores a pointer to
+ *             `u.vec()`).
+ * @param fft  FFT plan (caller-owned; must outlive the returned evaluator).
+ *
+ * @return A `SpectralGradient` ready to be passed to
+ *         `pfc::sim::for_each_interior` (or
+ *         `pfc::sim::steppers::EulerStepper`).
+ */
+inline SpectralGradient create(LocalField<double> &u, pfc::fft::IFFT &fft) {
+  return SpectralGradient(fft, u.vec(), u.global_size(), u.spacing(),
+                          fft.get_inbox_bounds(), fft.get_outbox_bounds());
+}
 
 } // namespace pfc::field
