@@ -35,15 +35,39 @@
 
 #pragma once
 
+#include <cstddef>
+#include <functional>
 #include <type_traits>
 
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 // Local iteration implemented inline to work with HeFFTe inbox type
 
 namespace pfc::field {
+
+/**
+ * @brief Spatial coordinate function \f$f(x,y,z)\f$.
+ *
+ * Type-erased lambda used by helpers that walk every local cell of a field
+ * and write a coordinate-derived value (initial conditions, source terms,
+ * spatial coefficient profiles, ...). Prefer the templated `apply` helpers
+ * for hot paths where the function is known at compile time; use `PointFn`
+ * when the function is selected at runtime (e.g. swappable initial
+ * conditions).
+ */
+using PointFn = std::function<double(double, double, double)>;
+
+/**
+ * @brief Space-time coordinate function \f$f(x,y,z,t)\f$.
+ *
+ * Used by helpers that need the simulation time (e.g. boundary-value
+ * providers, time-dependent forcing).
+ */
+using PointFnT = std::function<double(double, double, double, double)>;
 
 /**
  * @brief Apply a coordinate-space function over a real field (local inbox)
@@ -225,6 +249,60 @@ inline void apply_with_time(Model &model, std::string_view field_name, double t,
   auto &f = pfc::get_real_field(model, field_name);
   apply_with_time(f, pfc::get_world(model), pfc::get_fft(model), t,
                   std::forward<Fn>(fn));
+}
+
+/**
+ * @brief Apply a coordinate-space function over a real field laid out as a
+ *        rank-owned **FD subdomain**.
+ *
+ * Companion to `apply()` for callers that work directly with a
+ * `Decomposition` (no `IFFT` needed) — typically pure finite-difference apps
+ * with their own halo exchange. Resizes `field` to `nx*ny*nz` and writes
+ * `fn(x, y, z)` at every cell owned by `rank`, where `(x,y,z)` is the
+ * physical coordinate computed from the global world's `origin/spacing`.
+ *
+ * Layout: row-major `[nx, ny, nz]` with **x varying fastest**, matching
+ * `pfc::field::fd::*` and the `HaloExchanger` family.
+ *
+ * @tparam Fn Callable: `double(double, double, double)`.
+ * @param field  Output field (resized to `nx*ny*nz`).
+ * @param decomp Domain decomposition.
+ * @param rank   MPI rank owning the subdomain.
+ * @param fn     Coordinate function to evaluate at every owned cell.
+ */
+template <typename Fn>
+inline void apply_subdomain(std::vector<double> &field,
+                            const pfc::decomposition::Decomposition &decomp,
+                            int rank, Fn &&fn) {
+  const auto &gw = pfc::decomposition::get_world(decomp);
+  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
+  const auto lo = pfc::world::get_lower(local);
+  const auto sz = pfc::world::get_size(local);
+  const int nx = sz[0];
+  const int ny = sz[1];
+  const int nz = sz[2];
+  const std::size_t sxy =
+      static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
+  const auto origin = pfc::world::get_origin(gw);
+  const auto spacing = pfc::world::get_spacing(gw);
+  field.assign(sxy * static_cast<std::size_t>(nz), 0.0);
+  for (int iz = 0; iz < nz; ++iz) {
+    for (int iy = 0; iy < ny; ++iy) {
+      for (int ix = 0; ix < nx; ++ix) {
+        const int gi = lo[0] + ix;
+        const int gj = lo[1] + iy;
+        const int gk = lo[2] + iz;
+        const double x = origin[0] + static_cast<double>(gi) * spacing[0];
+        const double y = origin[1] + static_cast<double>(gj) * spacing[1];
+        const double z = origin[2] + static_cast<double>(gk) * spacing[2];
+        const std::size_t idx =
+            static_cast<std::size_t>(ix) +
+            static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
+            static_cast<std::size_t>(iz) * sxy;
+        field[idx] = static_cast<double>(fn(x, y, z));
+      }
+    }
+  }
 }
 
 } // namespace pfc::field
