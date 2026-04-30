@@ -26,7 +26,8 @@ struct FFTLayout {
   const std::vector<Box3i> m_complex_boxes;
 };
 
-FFTLayout create(const Decomposition &decomposition, int r2c_direction);
+[[nodiscard]] FFTLayout create(const Decomposition &decomposition,
+                               int r2c_direction);
 
 inline const Box3i &get_real_box(const FFTLayout &layout, int i) {
   return layout.m_real_boxes.at(i);

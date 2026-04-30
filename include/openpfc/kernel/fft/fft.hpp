@@ -37,22 +37,24 @@ using layout::FFTLayout;
 /** HeFFTe+FFTW backend; complete definition in fft_fftw.hpp */
 class CpuFft;
 
-CpuFft create(const FFTLayout &fft_layout, int rank_id,
-              const heffte::plan_options &options, MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] CpuFft create(const FFTLayout &fft_layout, int rank_id,
+                            const heffte::plan_options &options,
+                            MPI_Comm comm = MPI_COMM_WORLD);
 
-CpuFft create(const Decomposition &decomposition, int rank_id,
-              MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] CpuFft create(const Decomposition &decomposition, int rank_id,
+                            MPI_Comm comm = MPI_COMM_WORLD);
 
-CpuFft create(const Decomposition &decomposition, MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] CpuFft create(const Decomposition &decomposition,
+                            MPI_Comm comm = MPI_COMM_WORLD);
 
-std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_id,
-                                          const heffte::plan_options &options,
-                                          Backend backend,
-                                          MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] std::unique_ptr<IFFT>
+create_with_backend(const FFTLayout &fft_layout, int rank_id,
+                    const heffte::plan_options &options, Backend backend,
+                    MPI_Comm comm = MPI_COMM_WORLD);
 
-std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition,
-                                          int rank_id, Backend backend,
-                                          MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] std::unique_ptr<IFFT>
+create_with_backend(const Decomposition &decomposition, int rank_id, Backend backend,
+                    MPI_Comm comm = MPI_COMM_WORLD);
 
 } // namespace fft
 

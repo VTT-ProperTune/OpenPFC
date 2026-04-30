@@ -64,7 +64,8 @@ auto get_complex_indices(const Decomposition &decomposition, int r2c_direction) 
   throw std::logic_error("Invalid r2c_direction: " + std::to_string(r2c_direction));
 }
 
-FFTLayout create(const Decomposition &decomposition, int r2c_direction) {
+[[nodiscard]] FFTLayout create(const Decomposition &decomposition,
+                               int r2c_direction) {
   auto real_indices = get_real_indices(decomposition);
   auto complex_indices = get_complex_indices(decomposition, r2c_direction);
   auto grid = get_grid(decomposition);
@@ -103,8 +104,8 @@ int get_mpi_size(MPI_Comm comm) {
 using layout::FFTLayout;
 using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 
-CpuFft create(const FFTLayout &fft_layout, int rank_id,
-              const heffte::plan_options &options, MPI_Comm comm) {
+[[nodiscard]] CpuFft create(const FFTLayout &fft_layout, int rank_id,
+                            const heffte::plan_options &options, MPI_Comm comm) {
   const auto &inbox = get_real_box(fft_layout, rank_id);
   const auto &outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
@@ -112,16 +113,18 @@ CpuFft create(const FFTLayout &fft_layout, int rank_id,
                   r2c_dir, comm, options)};
 }
 
-CpuFft create(const Decomposition &decomposition, int rank_id, MPI_Comm comm) {
+[[nodiscard]] CpuFft create(const Decomposition &decomposition, int rank_id,
+                            MPI_Comm comm) {
   auto options = heffte::default_options<heffte::backend::fftw>();
   auto r2c_dir = 0;
   auto fft_layout = layout::create(decomposition, r2c_dir);
   return create(fft_layout, rank_id, options, comm);
 }
 
-std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_id,
-                                          const heffte::plan_options &options,
-                                          Backend backend, MPI_Comm comm) {
+[[nodiscard]] std::unique_ptr<IFFT>
+create_with_backend(const FFTLayout &fft_layout, int rank_id,
+                    const heffte::plan_options &options, Backend backend,
+                    MPI_Comm comm) {
   auto inbox = get_real_box(fft_layout, rank_id);
   auto outbox = get_complex_box(fft_layout, rank_id);
   auto r2c_dir = get_r2c_direction(fft_layout);
@@ -145,9 +148,9 @@ std::unique_ptr<IFFT> create_with_backend(const FFTLayout &fft_layout, int rank_
   }
 }
 
-std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition,
-                                          int rank_id, Backend backend,
-                                          MPI_Comm comm) {
+[[nodiscard]] std::unique_ptr<IFFT>
+create_with_backend(const Decomposition &decomposition, int rank_id, Backend backend,
+                    MPI_Comm comm) {
   auto r2c_dir = 0;
   auto fft_layout = layout::create(decomposition, r2c_dir);
 
@@ -166,7 +169,7 @@ std::unique_ptr<IFFT> create_with_backend(const Decomposition &decomposition,
   }
 }
 
-CpuFft create(const Decomposition &decomposition, MPI_Comm comm) {
+[[nodiscard]] CpuFft create(const Decomposition &decomposition, MPI_Comm comm) {
   const int mpi_comm_size = get_mpi_size(comm);
   const int rank_id = get_mpi_rank(comm);
   const auto decomposition_size = get_num_domains(decomposition);
