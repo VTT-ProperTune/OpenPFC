@@ -35,6 +35,7 @@
 #endif
 
 #include <heat3d/cli.hpp>
+#include <heat3d/heat_model.hpp>
 
 namespace heat3d {
 
@@ -97,7 +98,7 @@ void report(int rank, int nproc, const RunConfig &cfg, const char *method_tag,
   const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
   visit_owned_cells([&](double x, double y, double z, double u_val) {
     const double r2 = x * x + y * y + z * z;
-    const double uex = analytic_gaussian(r2, t_final, cfg.D);
+    const double uex = analytic_gaussian(r2, t_final, kD);
     const double e = u_val - uex;
     sum_err2 += e * e;
   });
@@ -106,7 +107,7 @@ void report(int rank, int nproc, const RunConfig &cfg, const char *method_tag,
 
   if (rank == 0) {
     std::cout << "heat3d method=" << method_tag << " N=" << cfg.N
-              << " n_steps=" << cfg.n_steps << " dt=" << cfg.dt << " D=" << cfg.D
+              << " n_steps=" << cfg.n_steps << " dt=" << cfg.dt << " D=" << kD
               << " mpi_ranks=" << nproc;
     if (!extra_metadata.empty()) std::cout << " " << extra_metadata;
     std::cout << "\n";
