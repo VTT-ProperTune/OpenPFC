@@ -124,12 +124,16 @@ TEST_CASE("HeatModel: rhs = D * (uxx + uyy + uzz)", "[heat3d][HeatModel]") {
 // -----------------------------------------------------------------------------
 // Integration tests against OpenPFC primitives (single MPI rank).
 //
-// `pfc::sim::stacks::FdCpuStack` is the recommended bundle: it owns the
-// `World`, `Decomposition`, `LocalField`, halo buffers, and exchanger in the
-// correct declaration order so internal references (e.g.
-// `Decomposition::m_global_world`) stay valid for the lifetime of the stack.
-// We use it here as the canonical "one statement to set up an FD-on-CPU
-// solver" entry point — exactly what `apps/heat3d/src/cpu/heat3d.cpp` uses.
+// `pfc::sim::stacks::FdCpuStack` is the recommended bundle: World,
+// Decomposition, LocalField, halo buffers, and the exchanger are constructed
+// in dependency order so the exchanger's `const Decomposition&` reference
+// stays valid for the lifetime of the stack. (`Decomposition` itself owns
+// its `World` by value — see
+// `tests/unit/kernel/decomposition/test_decomposition_lifetime.cpp` — so a
+// helper that returns a Decomposition by value is also safe.)
+// We use the stack here as the canonical "one statement to set up an
+// FD-on-CPU solver" entry point — exactly what
+// `apps/heat3d/src/cpu/heat3d.cpp` uses.
 // -----------------------------------------------------------------------------
 
 TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",

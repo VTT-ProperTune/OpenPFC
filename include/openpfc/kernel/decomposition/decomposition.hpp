@@ -146,8 +146,18 @@ using Int3 = pfc::types::Int3;
  */
 struct Decomposition {
 
-  const pfc::World &m_global_world; ///< The World object.
-  const std::array<int, 3> m_grid;  ///< The number of parts in each dimension.
+  /**
+   * The global World this decomposition partitions.
+   *
+   * Stored **by value** so the `Decomposition` is self-contained: a
+   * factory function may safely return a `Decomposition` whose source
+   * `World` only existed in the factory's local scope. (Earlier this
+   * member was `const World&`, which silently dangled in exactly that
+   * pattern — see
+   * `tests/unit/kernel/decomposition/test_decomposition_lifetime.cpp`.)
+   */
+  pfc::World m_global_world;
+  const std::array<int, 3> m_grid; ///< The number of parts in each dimension.
   const std::vector<pfc::World> m_subworlds; ///< The sub-worlds for each part.
 
   Decomposition(const World &world, const Int3 &grid);
