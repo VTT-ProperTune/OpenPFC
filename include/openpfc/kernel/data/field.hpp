@@ -48,6 +48,7 @@
  */
 
 #include <array>
+#include <concepts>
 #include <functional>
 #include <openpfc/kernel/data/csys.hpp>
 #include <openpfc/kernel/data/world.hpp>
@@ -115,8 +116,7 @@ Field<T> create(const World &world, const std::vector<T> &data) {
   return f;
 }
 
-template <typename T, typename Func,
-          typename = std::enable_if_t<std::is_invocable_v<Func, Real3>>>
+template <typename T, std::invocable<Real3> Func>
 Field<T> create(const World &world, Func &&func) {
   Field<T> f(world);
   apply(f, std::forward<Func>(func));
