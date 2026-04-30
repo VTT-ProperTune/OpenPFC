@@ -29,6 +29,7 @@
 
 using Catch::Approx;
 using pfc::field::fd::apply_d2_along;
+using pfc::field::fd::apply_tensor_d;
 using pfc::field::fd::EvenCentralD2;
 using pfc::field::fd::EvenCentralD2View;
 using pfc::field::fd::lookup_even_central_d2;
@@ -118,4 +119,67 @@ TEST_CASE("lookup_even_central_d2 rejects unsupported orders",
   REQUIRE_FALSE(lookup_even_central_d2(3, &view));
   REQUIRE_FALSE(lookup_even_central_d2(22, &view));
   REQUIRE_FALSE(lookup_even_central_d2(-2, &view));
+}
+
+TEST_CASE("apply_tensor_d pure-axis case agrees with apply_d2_along",
+          "[kernel][field][fd_apply][unit]") {
+  // Same u(x,y,z) = x^2 + 2y^2 + 3z^2 brick as the per-axis tests; the
+  // tensor-product form with two Mi=0 axes must collapse to the per-axis
+  // primitive bit-for-bit.
+  const auto u = build_field();
+  const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
+
+  for (int order : {2, 4, 6}) {
+    INFO("order " << order);
+    const auto axis = [&](auto stencil_tag) {
+      using S = decltype(stencil_tag);
+      const double xx_axis = apply_d2_along<0, S>(u.data(), c, SX, SY, SZ);
+      const double xx_tensor = apply_tensor_d<2, 0, 0, S>(u.data(), c, SX, SY, SZ);
+      REQUIRE(xx_tensor == Approx(xx_axis));
+      const double yy_axis = apply_d2_along<1, S>(u.data(), c, SX, SY, SZ);
+      const double yy_tensor =
+          apply_tensor_d<0, 2, 0, pfc::field::fd::IdentityStencil1d, S>(u.data(), c,
+                                                                        SX, SY, SZ);
+      REQUIRE(yy_tensor == Approx(yy_axis));
+      const double zz_axis = apply_d2_along<2, S>(u.data(), c, SX, SY, SZ);
+      const double zz_tensor =
+          apply_tensor_d<0, 0, 2, pfc::field::fd::IdentityStencil1d,
+                         pfc::field::fd::IdentityStencil1d, S>(u.data(), c, SX, SY,
+                                                               SZ);
+      REQUIRE(zz_tensor == Approx(zz_axis));
+    };
+    if (order == 2)
+      axis(EvenCentralD2<2>{});
+    else if (order == 4)
+      axis(EvenCentralD2<4>{});
+    else
+      axis(EvenCentralD2<6>{});
+  }
+}
+
+TEST_CASE("apply_tensor_d mixed-second on separable u = x^2 * y^2",
+          "[kernel][field][fd_apply][unit]") {
+  // u(x,y,z) = x^2 * y^2; analytic d4 / dx^2 dy^2 = 4 (constant).
+  // For order-2 stencils along x and y (denom = 1 each) and Mz = 0,
+  // the unscaled tensor sum at any interior (i,j,k) should equal
+  // (denom_x * denom_y) * 4 = 4. We pick the centre of a 7^3 brick so
+  // the +/-1 stencil arms fall in-bounds without any halo plumbing.
+  std::vector<double> u(static_cast<std::size_t>(N) * N * N);
+  for (int iz = 0; iz < N; ++iz) {
+    for (int iy = 0; iy < N; ++iy) {
+      for (int ix = 0; ix < N; ++ix) {
+        const double x = static_cast<double>(ix);
+        const double y = static_cast<double>(iy);
+        const std::size_t c =
+            static_cast<std::size_t>(ix) +
+            static_cast<std::size_t>(iy) * static_cast<std::size_t>(N) +
+            static_cast<std::size_t>(iz) * static_cast<std::size_t>(N * N);
+        u[c] = x * x * y * y; // No z dependence.
+      }
+    }
+  }
+  const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
+  const double sum = apply_tensor_d<2, 2, 0, EvenCentralD2<2>, EvenCentralD2<2>>(
+      u.data(), c, SX, SY, SZ);
+  REQUIRE(sum == Approx(4.0));
 }

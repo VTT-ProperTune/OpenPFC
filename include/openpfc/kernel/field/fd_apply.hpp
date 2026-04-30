@@ -10,33 +10,42 @@
  * @details
  * Applies the central second-derivative stencils tabulated in
  * `fd_stencils.hpp` to a single interior point of a row-major 3D field
- * (`[nx, ny, nz]`, x varies fastest). Two flavours are exposed:
+ * (`[nx, ny, nz]`, x varies fastest). Two layers are exposed:
  *
- * - **Compile-time stencil**: `apply_d2_along<Axis, Stencil>(core, c,
- *   sx, sy, sz)`. With `Stencil = EvenCentralD2<Order>` the coefficient
- *   loop unrolls (`Stencil::half_width` and `Stencil::coeffs` are
- *   `static constexpr`), and the integer weights become immediates.
+ * 1. **Per-axis** `apply_d2_along<Axis, Stencil>(core, c, sx, sy, sz)`
+ *    (and its runtime-stencil sibling) -- the workhorse for pure-axis
+ *    second derivatives. With `Stencil = EvenCentralD2<Order>` the
+ *    coefficient loop unrolls; the runtime overload takes a
+ *    `EvenCentralD2View` for callers that pick `Order` from a CLI /
+ *    JSON configuration (`apps/heat3d`). Both forms return the
+ *    **unscaled** finite-difference sum: divide by `h^2 *
+ *    Stencil::denom` to obtain the second derivative.
  *
- * - **Runtime stencil**: `apply_d2_along<Axis>(view, core, c, sx, sy,
- *   sz)`. Same arithmetic, but `view` is the runtime
- *   `EvenCentralD2View` populated by `lookup_even_central_d2(order, ...)`.
- *   Intended for callers that pick spatial order from a CLI / JSON
- *   configuration (`apps/heat3d`).
- *
- * Both forms return the **unscaled** finite-difference sum: the second
- * derivative along the chosen axis is `result / (h^2 * Stencil::denom)`,
- * where `h` is the grid spacing along that axis. Pre-computing
- * `inv_h2_over_denom = 1/(h^2 * denom)` once per evaluator and applying
- * it after the call is the standard pattern (see `FdGradient<G>`).
+ * 2. **Tensor-product** `apply_tensor_d<Mx, My, Mz, Sx, Sy, Sz>(core, c,
+ *    sx, sy, sz)` -- the explicit Cartesian-product form
+ *    \f$ \partial_x^{M_x} \partial_y^{M_y} \partial_z^{M_z} u_{i,j,k}
+ *      \approx \frac{1}{D_x D_y D_z\,h_x^{M_x} h_y^{M_y} h_z^{M_z}}
+ *      \sum_{a,b,c} c^x_a c^y_b c^z_c\, u_{i+a, j+b, k+c} \f$.
+ *    Pure-axis cases reduce to `apply_d2_along`; mixed second
+ *    derivatives (e.g. `Mx=My=2, Mz=0` for the future `xxyy` member)
+ *    fall out as a single triple loop. Today only `Mi in {0, 2}` is
+ *    accepted (no first-derivative tables yet); enabling Mi=1 just
+ *    adds an `EvenCentralD1<Order>` table family, no other code
+ *    changes.
  *
  * `Axis` is `0` for x, `1` for y, `2` for z, and chooses which of `sx`,
  * `sy`, `sz` is used as the per-step linear-index stride.
  *
- * **Boundary contract**: caller guarantees that `core[c ± k * stride]`
- * (for `k = 1..half_width`) are valid loads. The point-wise driver
+ * **Boundary contract**: caller guarantees that every load referenced
+ * by the stencil (offsets `k * stride` for the per-axis form, the full
+ * cuboid `[-Hx, Hx] x [-Hy, Hy] x [-Hz, Hz]` for the tensor form) lies
+ * inside the local backing buffer. The point-wise driver
  * (`for_each_interior`) and the brick Laplacian routines achieve this
- * by iterating only over the interior `[hw, n - hw)` slab after a halo
- * exchange with `halo_width >= half_width`.
+ * for pure-axis stencils by iterating over `[hw, n - hw)` after a halo
+ * exchange with `halo_width >= half_width`. Mixed-second tensor
+ * products additionally need corner halos -- not yet shipped by the
+ * exchanger, which is why `FdGradient<G>` rejects `xy / xz / yz` at
+ * compile time even though the primitive itself is ready.
  *
  * @see fd_stencils.hpp for the stencil tables consumed here
  * @see fd_gradient.hpp for the per-point evaluator that uses these
@@ -142,6 +151,96 @@ inline T apply_d2_along(const EvenCentralD2View &st, const T *core, std::ptrdiff
     const T ck = static_cast<T>(coeffs[k]);
     const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * s;
     acc += ck * (core[c - ks] + core[c + ks]);
+  }
+  return acc;
+}
+
+/**
+ * @brief Identity (Mi = 0) stencil: contributes one cell at offset 0.
+ *
+ * Used as the per-axis stencil placeholder in `apply_tensor_d` for axes
+ * along which the requested derivative order is zero. The interface
+ * (`half_width`, `denom`, `coeffs`) matches `EvenCentralD2<Order>` so
+ * the tensor-product loop body is uniform across all combinations.
+ */
+struct IdentityStencil1d {
+  static constexpr int half_width = 0;
+  static constexpr std::int64_t denom = 1;
+  static constexpr std::array<std::int64_t, 1> coeffs = {1};
+};
+
+/**
+ * @brief Apply a tensor-product central FD stencil at point `c`.
+ *
+ * Computes the unscaled Cartesian-product sum
+ * \f[
+ *   \sum_{a=-H_x}^{H_x}\sum_{b=-H_y}^{H_y}\sum_{c=-H_z}^{H_z}
+ *     c^x_{|a|}\,c^y_{|b|}\,c^z_{|c|}\;
+ *     \mathrm{core}[c + a\,s_x + b\,s_y + c\,s_z]
+ * \f]
+ * where `H_i = StencilI::half_width` and `c^i_k = StencilI::coeffs[k]`.
+ * The corresponding mixed partial derivative is the result divided by
+ * `StencilX::denom * StencilY::denom * StencilZ::denom * h_x^Mx *
+ * h_y^My * h_z^Mz`.
+ *
+ * Pure-axis cases (e.g. `Mx=2, My=Mz=0`) collapse the two `Mi=0` loops
+ * to a single `dki=0` iteration with weight `1` and reduce exactly to
+ * `apply_d2_along<X-axis, StencilX>(core, c, sx, sy, sz)`. Reach for
+ * `apply_d2_along` directly in that case to skip the cuboid-loop
+ * boilerplate.
+ *
+ * @tparam Mx,My,Mz   Per-axis derivative order. Must each be `0` or `2`
+ *                    today; first-derivative tables (`Mi = 1`) are not
+ *                    yet implemented and trigger a `static_assert`.
+ * @tparam StencilX,Y,Z  Per-axis stencil type. Pass `IdentityStencil1d`
+ *                    (the default) for axes with `Mi = 0`; pass
+ *                    `EvenCentralD2<Order>` for axes with `Mi = 2`.
+ * @tparam T          Field value type (`double` in normal use).
+ *
+ * @param core  Base pointer of the local field (row-major, x fastest).
+ * @param c     Linear index of the centre cell within `core`.
+ * @param sx,sy,sz  Linear-index strides per +1 step in x, y, z.
+ *
+ * @pre Every load `core[c + a*sx + b*sy + c*sz]` for
+ *      `(a,b,c) in [-Hx,Hx] x [-Hy,Hy] x [-Hz,Hz]` is in-bounds. For
+ *      mixed-second cases (>= 2 non-zero `Mi`), this requires corner
+ *      halos -- not currently shipped by the halo exchanger, hence
+ *      `FdGradient<G>` keeps its `static_assert` against `xy/xz/yz`
+ *      members even though this primitive is ready.
+ */
+template <int Mx, int My, int Mz, class StencilX = IdentityStencil1d,
+          class StencilY = IdentityStencil1d, class StencilZ = IdentityStencil1d,
+          class T>
+inline T apply_tensor_d(const T *core, std::ptrdiff_t c, std::ptrdiff_t sx,
+                        std::ptrdiff_t sy, std::ptrdiff_t sz) noexcept {
+  static_assert(Mx == 0 || Mx == 2,
+                "apply_tensor_d: Mx must be 0 or 2; first-derivative "
+                "tables are not yet implemented.");
+  static_assert(My == 0 || My == 2,
+                "apply_tensor_d: My must be 0 or 2; first-derivative "
+                "tables are not yet implemented.");
+  static_assert(Mz == 0 || Mz == 2,
+                "apply_tensor_d: Mz must be 0 or 2; first-derivative "
+                "tables are not yet implemented.");
+
+  constexpr int Hx = StencilX::half_width;
+  constexpr int Hy = StencilY::half_width;
+  constexpr int Hz = StencilZ::half_width;
+
+  T acc{};
+  for (int dkz = -Hz; dkz <= Hz; ++dkz) {
+    const std::int64_t cz = StencilZ::coeffs[(dkz < 0) ? -dkz : dkz];
+    const std::ptrdiff_t offz = static_cast<std::ptrdiff_t>(dkz) * sz;
+    for (int dky = -Hy; dky <= Hy; ++dky) {
+      const std::int64_t cy = StencilY::coeffs[(dky < 0) ? -dky : dky];
+      const std::ptrdiff_t offy = static_cast<std::ptrdiff_t>(dky) * sy;
+      const std::int64_t cyz = cy * cz;
+      for (int dkx = -Hx; dkx <= Hx; ++dkx) {
+        const std::int64_t cx = StencilX::coeffs[(dkx < 0) ? -dkx : dkx];
+        const std::ptrdiff_t offx = static_cast<std::ptrdiff_t>(dkx) * sx;
+        acc += static_cast<T>(cx * cyz) * core[c + offx + offy + offz];
+      }
+    }
   }
   return acc;
 }
