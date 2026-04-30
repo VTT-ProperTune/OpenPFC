@@ -4,6 +4,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/field_modifier_registry.hpp>
+#include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/simulation_wiring.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
 #include <openpfc/kernel/data/world.hpp>
@@ -29,14 +31,17 @@ TEST_CASE("JsonWiringContext IC/BC wiring matches legacy overloads",
   json settings = json::object();
 
   const pfc::ui::JsonWiringContext ctx{MPI_COMM_WORLD, 3, false};
+  auto &mod_cat = pfc::ui::default_field_modifier_catalog();
 
-  REQUIRE_NOTHROW(pfc::ui::add_initial_conditions_from_json(sim, settings, ctx));
+  REQUIRE_NOTHROW(
+      pfc::ui::add_initial_conditions_from_json(sim, settings, ctx, mod_cat));
   REQUIRE_NOTHROW(pfc::ui::add_initial_conditions_from_json(
-      sim, settings, MPI_COMM_WORLD, 3, false));
+      sim, settings, MPI_COMM_WORLD, 3, false, mod_cat));
 
-  REQUIRE_NOTHROW(pfc::ui::add_boundary_conditions_from_json(sim, settings, ctx));
+  REQUIRE_NOTHROW(
+      pfc::ui::add_boundary_conditions_from_json(sim, settings, ctx, mod_cat));
   REQUIRE_NOTHROW(pfc::ui::add_boundary_conditions_from_json(
-      sim, settings, MPI_COMM_WORLD, 3, false));
+      sim, settings, MPI_COMM_WORLD, 3, false, mod_cat));
 }
 
 TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringContext",
@@ -52,11 +57,13 @@ TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringContext",
 
   json settings = json::object();
   const pfc::ui::JsonWiringContext ctx{MPI_COMM_WORLD, 0, true};
+  auto &mod_cat = pfc::ui::default_field_modifier_catalog();
+  auto &res_cat = pfc::ui::default_results_writer_catalog();
 
-  REQUIRE_NOTHROW(
-      pfc::ui::wire_simulator_and_runtime_from_json(sim, time, settings, ctx));
   REQUIRE_NOTHROW(pfc::ui::wire_simulator_and_runtime_from_json(
-      sim, time, settings, MPI_COMM_WORLD, 0, true));
+      sim, time, settings, ctx, mod_cat, res_cat));
+  REQUIRE_NOTHROW(pfc::ui::wire_simulator_and_runtime_from_json(
+      sim, time, settings, MPI_COMM_WORLD, 0, true, mod_cat, res_cat));
 }
 
 TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringSession",
@@ -72,7 +79,8 @@ TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringSession",
 
   json settings = json::object();
   const pfc::ui::JsonWiringSession session = pfc::ui::make_json_wiring_session(
-      MPI_COMM_WORLD, 0, true, pfc::ui::default_field_modifier_catalog());
+      MPI_COMM_WORLD, 0, true, pfc::ui::default_field_modifier_catalog(),
+      pfc::ui::default_results_writer_catalog());
 
   REQUIRE_NOTHROW(
       pfc::ui::wire_simulator_and_runtime_from_json(sim, time, settings, session));

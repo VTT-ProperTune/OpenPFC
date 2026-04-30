@@ -51,9 +51,10 @@ inline bool ensure_results_parent_dir_for_writer(const std::string &output,
   return false;
 }
 
-inline void add_result_writers_from_json(
-    Simulator &sim, const nlohmann::json &settings, const JsonWiringContext &ctx,
-    const ResultsWriterCatalog &writer_catalog = default_results_writer_catalog()) {
+inline void
+add_result_writers_from_json(Simulator &sim, const nlohmann::json &settings,
+                             const JsonWiringContext &ctx,
+                             const ResultsWriterCatalog &writer_catalog) {
   const pfc::Logger lg{pfc::LogLevel::Info, ctx.mpi_rank};
   if (ctx.rank0) {
     pfc::log_info(lg, "Adding results writers");
@@ -92,10 +93,10 @@ inline void add_result_writers_from_json(
   }
 }
 
-inline void add_result_writers_from_json(
-    Simulator &sim, const nlohmann::json &settings, MPI_Comm comm, int mpi_rank,
-    bool rank0,
-    const ResultsWriterCatalog &writer_catalog = default_results_writer_catalog()) {
+inline void
+add_result_writers_from_json(Simulator &sim, const nlohmann::json &settings,
+                             MPI_Comm comm, int mpi_rank, bool rank0,
+                             const ResultsWriterCatalog &writer_catalog) {
   add_result_writers_from_json(
       sim, settings, JsonWiringContext{comm, mpi_rank, rank0}, writer_catalog);
 }

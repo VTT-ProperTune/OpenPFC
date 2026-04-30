@@ -99,21 +99,22 @@ public:
    *
    * Uses the same MPI communicator as FFT construction (`SpectralCpuStack`).
    *
-   * @param modifier_catalog Factories for JSON `type` strings (defaults to the
-   *        process-wide catalog; inject a test catalog for unit tests).
+   * @param modifier_catalog Factories for JSON `type` strings.
+   * @param writer_catalog Factories for JSON `fields[].writer` (e.g.
+   *        `default_results_writer_catalog()` for built-in writers).
    */
   void wire_simulator_from_settings(const nlohmann::json &settings, int mpi_rank,
                                     bool rank0,
-                                    const FieldModifierCatalog &modifier_catalog =
-                                        default_field_modifier_catalog()) {
+                                    const FieldModifierCatalog &modifier_catalog,
+                                    const ResultsWriterCatalog &writer_catalog) {
     wire_simulator_and_runtime_from_json(
         m_simulator, pfc::ui::time(m_stack), settings,
         JsonWiringContext{pfc::ui::mpi_comm(m_stack), mpi_rank, rank0},
-        modifier_catalog);
+        modifier_catalog, writer_catalog);
   }
 
   /**
-   * @brief Same as the overload taking `(mpi_rank, rank0, catalog)`; uses the
+   * @brief Same as the overload taking `(mpi_rank, rank0, catalogs)`; uses the
    *        stack communicator with rank flags from `session.ctx`
    */
   void wire_simulator_from_settings(const nlohmann::json &settings,
@@ -122,7 +123,7 @@ public:
         m_simulator, pfc::ui::time(m_stack), settings,
         JsonWiringSession{JsonWiringContext{pfc::ui::mpi_comm(m_stack),
                                             session.ctx.mpi_rank, session.ctx.rank0},
-                          session.modifier_catalog});
+                          session.modifier_catalog, session.writer_catalog});
   }
 
 private:

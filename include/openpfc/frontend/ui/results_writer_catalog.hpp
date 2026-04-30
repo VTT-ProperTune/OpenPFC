@@ -7,8 +7,10 @@
  *
  * @details
  * JSON `fields[]` entries can specify `"writer": "<type>"` (default `"binary"`).
- * Applications and tests inject a custom `ResultsWriterCatalog` to register
- * additional writer types without editing `simulation_wiring_writers.hpp`.
+ * `add_result_writers_from_json` requires a **`ResultsWriterCatalog`** argument
+ * (no default); pass `default_results_writer_catalog()` for built-in `binary`.
+ * Applications and tests inject a custom catalog to register additional writer
+ * types without editing `simulation_wiring_writers.hpp`.
  */
 
 #ifndef PFC_UI_RESULTS_WRITER_CATALOG_HPP

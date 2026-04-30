@@ -64,7 +64,7 @@ The table below is lookup material. The most important flow for a new reader is 
 | `SpectralCpuStack` | World → decomp → CPU FFT → time from JSON | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | Used inside `SpectralSimulationSession` |
 | `spectral_fft_stack_factory` | Merge `plan_options` + root `backend`; cuFFT / ROCm plan defaults + JSON overlay | `openpfc/frontend/ui/spectral_fft_stack_factory.hpp` | GPU tests / drivers alongside CPU stack helpers |
 | `SpectralSimulationSession` | Owns stack + `Model` + `Simulator` | `openpfc/frontend/ui/spectral_simulation_session.hpp` | Constructed by `App` |
-| `JsonWiringSession` | Bundles `JsonWiringContext` + `FieldModifierCatalog` for `wire_simulator_and_runtime_from_json` | `openpfc/frontend/ui/json_wiring_session.hpp` | Custom apps / tests injecting a modifier catalog |
+| `JsonWiringSession` | Bundles `JsonWiringContext` + `FieldModifierCatalog` + `ResultsWriterCatalog` for `wire_simulator_and_runtime_from_json` | `openpfc/frontend/ui/json_wiring_session.hpp` | Custom apps / tests; catalogs are explicit (no defaulted parameters) |
 
 ## Execution and backends (advanced)
 

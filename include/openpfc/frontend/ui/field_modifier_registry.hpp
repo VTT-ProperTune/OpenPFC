@@ -14,12 +14,14 @@
  * It is **not** thread-safe to mutate from multiple threads; typical MPI apps
  * register custom types once from rank 0 before wiring.
  *
- * **Dependency injection:** Pass a `FieldModifierCatalog` (e.g. a copy from
+ * **Dependency injection:** Wiring helpers take a **`FieldModifierCatalog&`**
+ * (required parameter—no default). Pass `default_field_modifier_catalog()` when
+ * you intend the process-wide singleton, or a dedicated catalog (e.g. from
  * `make_builtin_field_modifier_catalog()` with extra `register_modifier` calls)
- * into `add_*_conditions_from_json` / `wire_simulator_and_runtime_from_json` /
- * `SpectralSimulationSession` so tests and alternate drivers avoid touching the
- * global default. JSON `App` drivers can call `App::set_field_modifier_catalog`
- * before `main()` to pass the same explicit catalog through wiring.
+ * for tests and isolated drivers. JSON `App` drivers can call
+ * `App::set_field_modifier_catalog` before `main()` so `SpectralJsonAppRun`
+ * forwards that catalog into `wire_simulator_from_settings` alongside
+ * `default_results_writer_catalog()`.
  *
  * The historical name `FieldModifierRegistry` is a type alias for
  * `FieldModifierCatalog`.

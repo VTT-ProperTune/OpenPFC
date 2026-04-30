@@ -17,6 +17,7 @@
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/io/vtk_writer.hpp>
+#include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_conditions.hpp>
 #include <openpfc/frontend/ui/spectral_fft_stack_factory.hpp>
 #include <openpfc/frontend/ui/ui.hpp>
@@ -94,12 +95,14 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
   pfc::Simulator simulator(model, time);
 
   if (rank0) std::cout << "Adding initial conditions..." << std::endl;
-  pfc::ui::add_initial_conditions_from_json(simulator, settings,
-                                            simulator.mpi_comm(), rank, rank0);
+  pfc::ui::add_initial_conditions_from_json(
+      simulator, settings, simulator.mpi_comm(), rank, rank0,
+      pfc::ui::default_field_modifier_catalog());
 
   if (rank0) std::cout << "Adding boundary conditions..." << std::endl;
-  pfc::ui::add_boundary_conditions_from_json(simulator, settings,
-                                             simulator.mpi_comm(), rank, rank0);
+  pfc::ui::add_boundary_conditions_from_json(
+      simulator, settings, simulator.mpi_comm(), rank, rank0,
+      pfc::ui::default_field_modifier_catalog());
 
   if (rank0) std::cout << "Adding VTK writer..." << std::endl;
   if (settings.contains("fields") && settings["saveat"] > 0) {

@@ -28,6 +28,7 @@
 #include <openpfc/frontend/ui/app_integrator_loop.hpp>
 #include <openpfc/frontend/ui/app_profiling.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/spectral_simulation_session.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
 #include <openpfc/kernel/mpi/worker.hpp>
@@ -142,10 +143,12 @@ private:
   void wire_simulator_and_log_run_start_(
       const pfc::Logger &app_lg, int rank_id,
       SpectralSimulationSession<ConcreteModel> &session) {
-    const FieldModifierCatalog &catalog = m_modifier_catalog_override
-                                              ? *m_modifier_catalog_override
-                                              : default_field_modifier_catalog();
-    session.wire_simulator_from_settings(m_settings, rank_id, m_rank0, catalog);
+    const FieldModifierCatalog &modifier_catalog =
+        m_modifier_catalog_override ? *m_modifier_catalog_override
+                                    : default_field_modifier_catalog();
+    const ResultsWriterCatalog &writer_catalog = default_results_writer_catalog();
+    session.wire_simulator_from_settings(m_settings, rank_id, m_rank0,
+                                         modifier_catalog, writer_catalog);
     if (m_rank0) {
       pfc::log_info(app_lg,
                     std::string(detail::k_spectral_app_log_tag) +

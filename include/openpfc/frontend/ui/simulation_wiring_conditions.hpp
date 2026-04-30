@@ -75,8 +75,7 @@ void wire_field_modifiers_from_json_array(
 inline void
 add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
                                  const JsonWiringContext &ctx,
-                                 const FieldModifierCatalog &modifier_catalog =
-                                     default_field_modifier_catalog()) {
+                                 const FieldModifierCatalog &modifier_catalog) {
   detail::wire_field_modifiers_from_json_array(
       sim, settings, ctx, modifier_catalog, "initial_conditions",
       "no initial conditions are set!", "Adding initial conditions",
@@ -90,8 +89,7 @@ add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
 inline void
 add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
                                  MPI_Comm comm, int mpi_rank, bool rank0,
-                                 const FieldModifierCatalog &modifier_catalog =
-                                     default_field_modifier_catalog()) {
+                                 const FieldModifierCatalog &modifier_catalog) {
   add_initial_conditions_from_json(
       sim, settings, JsonWiringContext{comm, mpi_rank, rank0}, modifier_catalog);
 }
@@ -99,8 +97,7 @@ add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
 inline void
 add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
                                   const JsonWiringContext &ctx,
-                                  const FieldModifierCatalog &modifier_catalog =
-                                      default_field_modifier_catalog()) {
+                                  const FieldModifierCatalog &modifier_catalog) {
   detail::wire_field_modifiers_from_json_array(
       sim, settings, ctx, modifier_catalog, "boundary_conditions",
       "no boundary conditions are set!", "Adding boundary conditions",
@@ -114,8 +111,7 @@ add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings
 inline void
 add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
                                   MPI_Comm comm, int mpi_rank, bool rank0,
-                                  const FieldModifierCatalog &modifier_catalog =
-                                      default_field_modifier_catalog()) {
+                                  const FieldModifierCatalog &modifier_catalog) {
   add_boundary_conditions_from_json(
       sim, settings, JsonWiringContext{comm, mpi_rank, rank0}, modifier_catalog);
 }

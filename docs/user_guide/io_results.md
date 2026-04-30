@@ -23,7 +23,7 @@ OpenPFC separates the kernel interface `ResultsWriter` from frontend implementat
 
 ### JSON-driven `App` path
 
-[`simulation_wiring.hpp`](../../include/openpfc/frontend/ui/simulation_wiring.hpp) `add_result_writers_from_json` registers `BinaryWriter` only: for each `fields[]` entry it uses `field["data"]` as the path template. There is no VTK branch in that helper today—VTK is attached in code (see below).
+[`simulation_wiring.hpp`](../../include/openpfc/frontend/ui/simulation_wiring.hpp) `add_result_writers_from_json` takes a **`ResultsWriterCatalog`** at the call site (e.g. `default_results_writer_catalog()` for built-in `binary`). It registers `BinaryWriter` only: for each `fields[]` entry it uses `field["data"]` as the path template. There is no VTK branch in that helper today—VTK is attached in code (see below).
 
 Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 
