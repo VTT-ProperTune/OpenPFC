@@ -71,7 +71,7 @@ TEST_CASE("for_each_border covers owned-minus-inner exactly once",
 
       REQUIRE(border.size() + inner.size() == static_cast<std::size_t>(n * n * n));
 
-      for (const auto &c : border) REQUIRE(inner.find(c) == inner.end());
+      for (const auto &c : border) REQUIRE(!inner.contains(c));
 
       for (const auto &b : border) {
         const int i = std::get<0>(b);
