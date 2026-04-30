@@ -22,7 +22,7 @@ Only **`apps/heat3d/src/cpu/heat3d.cpp`**: the Laplacian each step is a `collaps
 
 So `htop`/`top` can look **single-threaded** when wall time is dominated by **MPI** (many ranks, thin subdomains), or when the launcher has pinned the process to a **narrow CPU mask** (OpenMP then schedules all threads inside that mask).
 
-**Single MPI rank on Linux:** `heat3d` calls `sched_setaffinity` after `MPI_Init` to allow **all online logical CPUs** for that process, so OpenMP can use the machine without extra `mpirun` flags. Set **`HEAT3D_NO_RESET_AFFINITY`** (any value) to keep the launcher’s mask unchanged (e.g. if your site policy forbids overriding binding).
+**Single MPI rank on Linux:** `heat3d` calls `pfc::runtime::reset_cpu_affinity_if_single_mpi_rank` (which uses `sched_setaffinity`) after `MPI_Init` to allow **all online logical CPUs** for that process, so OpenMP can use the machine without extra `mpirun` flags. Set **`OPENPFC_NO_RESET_AFFINITY`** (any value) to keep the launcher’s mask unchanged (e.g. if your site policy forbids overriding binding).
 
 **Several MPI ranks on one node:** the reset is **not** applied (`MPI_COMM_WORLD` size \(>1\)); use launcher options so each rank gets a disjoint CPU set and set `OMP_NUM_THREADS` per rank accordingly, for example:
 
@@ -32,7 +32,7 @@ mpirun --bind-to none -n 4 ./apps/heat3d/heat3d fd 256 25 1e-6 1.0 12
 # or: export OMPI_MCA_hwloc_base_binding_policy=none
 ```
 
-Rank 0 prints `omp_max_threads` and **`omp_get_num_procs()`** in the summary line. After a single-rank run, **`omp_get_num_procs()`** should match the number of CPUs OpenMP may use; if it stays at 1, check binding and whether `HEAT3D_NO_RESET_AFFINITY` is set.
+Rank 0 prints `omp_max_threads` and **`omp_get_num_procs()`** in the summary line. After a single-rank run, **`omp_get_num_procs()`** should match the number of CPUs OpenMP may use; if it stays at 1, check binding and whether `OPENPFC_NO_RESET_AFFINITY` is set.
 
 ## Usage
 

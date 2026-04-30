@@ -1,73 +1,180 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/**
+ * @file heat3d.cpp
+ * @brief 3D heat equation \f$\partial_t u = D \nabla^2 u\f$ — single-file app.
+ *
+ * @details
+ * This is the entire `heat3d` application: physics model, command-line
+ * parsing, reference solution, and per-method orchestration in one file. All
+ * reusable mechanism (point-wise gradient evaluators, the explicit-Euler
+ * stepper, the per-cell driver loop, coordinate-space initial-condition
+ * helpers, the host CPU-affinity rescue) lives in OpenPFC; this file imports
+ * those pieces and wires them to `HeatModel`.
+ *
+ * Three solvers are exposed via the CLI:
+ *  - `fd`          — explicit Euler with even-order central FD Laplacian
+ *                    (`pfc::field::FdGradient`) and a separated face-halo
+ *                    exchange.
+ *  - `spectral`    — implicit Euler in Fourier space (2 FFTs/step), specific
+ *                    to the linear heat operator.
+ *  - `spectral_pw` — explicit Euler with a point-wise RHS over materialized
+ *                    second-derivative fields (`pfc::field::SpectralGradient`,
+ *                    1 fwd + 3 inv FFTs/step). Same `HeatModel::rhs` as `fd`.
+ */
+
 #include <cmath>
 #include <complex>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
+#include <functional>
 #include <iostream>
 #include <mpi.h>
+#include <string>
 #include <vector>
-
-#if defined(__linux__)
-#include <sched.h>
-#include <unistd.h>
-#endif
 
 #if defined(_OPENMP)
 #include <omp.h>
 #endif
 
-#include <heat3d/common.hpp>
-#include <heat3d/discretization.hpp>
-#include <heat3d/heat_model.hpp>
-#include <heat3d/initial_condition.hpp>
-#include <heat3d/stepper.hpp>
-
 #include <openpfc/kernel/data/constants.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/separated_halo_exchange.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/field/fd_gradient.hpp>
+#include <openpfc/kernel/field/grad_point.hpp>
+#include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/field/spectral_gradient.hpp>
+#include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/runtime/common/cpu_affinity.hpp>
 
 using namespace pfc;
 
-namespace {
+// -----------------------------------------------------------------------------
+// Physics: the only thing a physicist edits in this file.
+// -----------------------------------------------------------------------------
 
 /**
- * Open MPI (and some other launchers) pin a single rank to one logical CPU, so
- * OpenMP sees `omp_get_num_procs()==1` and all threads share one core. For
- * **exactly one MPI rank** on Linux, reset the process affinity mask to all
- * online CPUs so OpenMP can scale. Multi-rank jobs are unchanged (each rank
- * keeps the launcher mask). Opt out with `HEAT3D_NO_RESET_AFFINITY` set.
+ * @brief Heat equation \f$\partial_t u = D \nabla^2 u\f$, self-contained.
+ *
+ * Carries the physical parameters (just `D`), the initial condition as a
+ * runtime-swappable spatial lambda, an optional boundary-value provider for
+ * future Dirichlet/Neumann support, and the per-point right-hand side as a
+ * direct method `rhs(t, g)`. `rhs` is a regular `inline noexcept` method (not
+ * `operator()` and not `std::function`) so the inner `for_each_interior` loop
+ * inlines it as cleanly as a free function.
  */
-void heat3d_reset_cpu_affinity_if_single_mpi_rank(int nproc) {
-#if defined(__linux__)
-  if (nproc != 1) {
-    return;
+struct HeatModel {
+  /** Diffusion coefficient. */
+  double D = 1.0;
+
+  /** Initial condition \f$u(x,y,z,0)\f$ (default Gaussian). */
+  field::PointFn initial_condition = [](double x, double y, double z) {
+    return std::exp(-(x * x + y * y + z * z) / 4.0);
+  };
+
+  /**
+   * @brief Optional Dirichlet/Neumann boundary value \f$u_b(x,y,z,t)\f$.
+   *
+   * Empty by default — the discretization treats the domain as periodic
+   * (FD freezes its halo region, spectral assumes periodicity).
+   */
+  field::PointFnT boundary_value{};
+
+  /** Per-point right-hand side \f$\partial_t u = D\nabla^2 u\f$ (hot path). */
+  inline double rhs(double /*t*/, const field::GradPoint &g) const noexcept {
+    return D * (g.uxx + g.uyy + g.uzz);
   }
-  if (std::getenv("HEAT3D_NO_RESET_AFFINITY") != nullptr) {
-    return;
-  }
-  const long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
-  if (ncpus <= 1) {
-    return;
-  }
-  cpu_set_t set;
-  CPU_ZERO(&set);
-  for (long i = 0; i < ncpus; ++i) {
-    CPU_SET(static_cast<int>(i), &set);
-  }
-  (void)sched_setaffinity(0, sizeof(set), &set);
-#endif
+};
+
+// -----------------------------------------------------------------------------
+// App scaffolding: CLI, reference solution, per-method orchestration.
+// -----------------------------------------------------------------------------
+
+namespace {
+
+enum class Method { Fd, Spectral, SpectralPointwise };
+
+struct RunConfig {
+  Method method = Method::Fd;
+  int N = 32;
+  int n_steps = 100;
+  double dt = 0.01;
+  double D = 1.0;
+  /** Spatial order for FD: even 2, 4, …, 20 (ignored for spectral methods). */
+  int fd_order = 2;
+};
+
+void print_usage(const char *exe) {
+  std::cerr
+      << "Usage:\n  " << exe << " fd <N> <n_steps> <dt> <D> <fd_order>\n  " << exe
+      << " spectral <N> <n_steps> <dt> <D>\n  " << exe
+      << " spectral_pw <N> <n_steps> <dt> <D>\n"
+      << "  fd_order: even 2,4,...,20 (central Laplacian; halo width order/2)\n"
+      << "  spectral:    implicit Euler in Fourier space (2 FFTs/step)\n"
+      << "  spectral_pw: explicit Euler with point-wise RHS over materialized\n"
+      << "               second-derivative fields (1 fwd + 3 inv FFTs/step)\n";
 }
 
-} // namespace
+RunConfig parse_args(int argc, char **argv) {
+  RunConfig c;
+  if (argc < 2) {
+    return c;
+  }
+  if (std::strcmp(argv[1], "fd") == 0) {
+    c.method = Method::Fd;
+    if (argc < 7) {
+      return c;
+    }
+    c.fd_order = std::atoi(argv[6]);
+  } else if (std::strcmp(argv[1], "spectral") == 0) {
+    c.method = Method::Spectral;
+    if (argc < 6) {
+      return c;
+    }
+  } else if (std::strcmp(argv[1], "spectral_pw") == 0) {
+    c.method = Method::SpectralPointwise;
+    if (argc < 6) {
+      return c;
+    }
+  } else {
+    return c;
+  }
+  c.N = std::atoi(argv[2]);
+  c.n_steps = std::atoi(argv[3]);
+  c.dt = std::atof(argv[4]);
+  c.D = std::atof(argv[5]);
+  return c;
+}
 
-static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
+bool validate(const RunConfig &c) {
+  if (c.N < 8 || c.n_steps < 1 || c.dt <= 0.0 || c.D <= 0.0) {
+    return false;
+  }
+  if (c.method == Method::Fd) {
+    if (c.fd_order < 2 || c.fd_order > 20 || (c.fd_order % 2) != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * @brief Fundamental Gaussian solution on \f$\mathbb{R}^3\f$ for the heat
+ *        equation with IC \f$u(x,0)=\exp(-|x|^2/(4D))\f$:
+ *        \f$u(x,t)=(1+t)^{-3/2}\exp(-|x|^2/(4D(1+t)))\f$.
+ */
+double analytic_gaussian(double r2, double t, double D) {
+  const double s = 1.0 + t;
+  return std::pow(s, -1.5) * std::exp(-r2 / (4.0 * D * s));
+}
+
+void run_fd(const RunConfig &cfg, int rank, int nproc) {
   auto world = world::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
                              pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                              pfc::GridSpacing({1.0, 1.0, 1.0}));
@@ -93,21 +200,21 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   const double dx = 1.0;
   const double inv_dx2 = 1.0 / (dx * dx);
 
-  heat3d::HeatModel model;
+  HeatModel model;
   model.D = cfg.D;
   model.initial_condition = [D = cfg.D](double x, double y, double z) {
     return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
   };
 
   std::vector<double> u;
-  heat3d::apply_initial_condition_fd(u, decomp, rank, model.initial_condition);
+  field::apply_subdomain(u, decomp, rank, model.initial_condition);
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
   SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, hw, MPI_COMM_WORLD);
 
-  heat3d::FdGradient grad(u.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2, hw,
-                          cfg.fd_order);
-  heat3d::EulerStepper stepper(grad, model, cfg.dt, nlocal);
+  field::FdGradient grad(u.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2, hw,
+                         cfg.fd_order);
+  sim::steppers::EulerStepper stepper(grad, model, cfg.dt, nlocal);
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
@@ -143,7 +250,7 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
         const size_t c = static_cast<size_t>(ix) +
                          static_cast<size_t>(iy) * static_cast<size_t>(nx) +
                          static_cast<size_t>(iz) * static_cast<size_t>(sxy);
-        const double uex = heat3d::analytic_gaussian(r2, t_final, cfg.D);
+        const double uex = analytic_gaussian(r2, t_final, cfg.D);
         const double e = u[c] - uex;
         sum_err2 += e * e;
       }
@@ -176,7 +283,7 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   }
 }
 
-static void run_spectral(const heat3d::RunConfig &cfg, int rank, int nproc) {
+void run_spectral(const RunConfig &cfg, int rank, int nproc) {
   auto world = world::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
                              pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                              pfc::GridSpacing({1.0, 1.0, 1.0}));
@@ -255,7 +362,7 @@ static void run_spectral(const heat3d::RunConfig &cfg, int rank, int nproc) {
         const double y = origin[1] + static_cast<double>(j) * spacing[1];
         const double z = origin[2] + static_cast<double>(k) * spacing[2];
         const double r2 = x * x + y * y + z * z;
-        const double uex = heat3d::analytic_gaussian(r2, t_final, cfg.D);
+        const double uex = analytic_gaussian(r2, t_final, cfg.D);
         const double e = psi[static_cast<size_t>(idx)] - uex;
         sum_err2 += e * e;
         ++idx;
@@ -279,8 +386,7 @@ static void run_spectral(const heat3d::RunConfig &cfg, int rank, int nproc) {
   }
 }
 
-static void run_spectral_pointwise(const heat3d::RunConfig &cfg, int rank,
-                                   int nproc) {
+void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   auto world = world::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
                              pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                              pfc::GridSpacing({1.0, 1.0, 1.0}));
@@ -293,18 +399,19 @@ static void run_spectral_pointwise(const heat3d::RunConfig &cfg, int rank,
   auto size = world::get_size(gw);
   auto origin = world::get_origin(gw);
   auto spacing = world::get_spacing(gw);
-
   auto ib = fft.get_inbox_bounds();
 
-  heat3d::HeatModel model;
+  HeatModel model;
   model.D = cfg.D;
   model.initial_condition = [D = cfg.D](double x, double y, double z) {
     return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
   };
-  heat3d::apply_initial_condition_spectral(u, decomp, ib, model.initial_condition);
+  field::apply(u, gw, fft, [&ic = model.initial_condition](const Real3 &r) {
+    return ic(r[0], r[1], r[2]);
+  });
 
-  heat3d::SpectralGradient grad(fft, u, size, spacing, ib, fft.get_outbox_bounds());
-  heat3d::EulerStepper stepper(grad, model, cfg.dt, u.size());
+  field::SpectralGradient grad(fft, u, size, spacing, ib, fft.get_outbox_bounds());
+  sim::steppers::EulerStepper stepper(grad, model, cfg.dt, u.size());
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
@@ -327,7 +434,7 @@ static void run_spectral_pointwise(const heat3d::RunConfig &cfg, int rank,
         const double y = origin[1] + static_cast<double>(j) * spacing[1];
         const double z = origin[2] + static_cast<double>(k) * spacing[2];
         const double r2 = x * x + y * y + z * z;
-        const double uex = heat3d::analytic_gaussian(r2, t_final, cfg.D);
+        const double uex = analytic_gaussian(r2, t_final, cfg.D);
         const double e = u[err_idx] - uex;
         sum_err2 += e * e;
         ++err_idx;
@@ -351,30 +458,31 @@ static void run_spectral_pointwise(const heat3d::RunConfig &cfg, int rank,
   }
 }
 
+} // namespace
+
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   int rank = 0;
   int nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-  heat3d_reset_cpu_affinity_if_single_mpi_rank(nproc);
+  pfc::runtime::reset_cpu_affinity_if_single_mpi_rank(nproc);
 
-  const heat3d::RunConfig cfg = heat3d::parse_args(argc, argv);
-  const bool args_ok =
-      (cfg.method == heat3d::Method::Fd && argc >= 7) ||
-      (cfg.method == heat3d::Method::Spectral && argc >= 6) ||
-      (cfg.method == heat3d::Method::SpectralPointwise && argc >= 6);
-  if (!args_ok || !heat3d::validate(cfg)) {
+  const RunConfig cfg = parse_args(argc, argv);
+  const bool args_ok = (cfg.method == Method::Fd && argc >= 7) ||
+                       (cfg.method == Method::Spectral && argc >= 6) ||
+                       (cfg.method == Method::SpectralPointwise && argc >= 6);
+  if (!args_ok || !validate(cfg)) {
     if (rank == 0) {
-      heat3d::print_usage(argv[0]);
+      print_usage(argv[0]);
     }
     MPI_Finalize();
     return EXIT_FAILURE;
   }
 
-  if (cfg.method == heat3d::Method::Fd) {
+  if (cfg.method == Method::Fd) {
     run_fd(cfg, rank, nproc);
-  } else if (cfg.method == heat3d::Method::Spectral) {
+  } else if (cfg.method == Method::Spectral) {
     run_spectral(cfg, rank, nproc);
   } else {
     run_spectral_pointwise(cfg, rank, nproc);
