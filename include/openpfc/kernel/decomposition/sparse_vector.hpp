@@ -240,7 +240,7 @@ using HostTag = backend::CpuTag;
  * @brief Create empty SparseVector
  */
 template <typename T, typename BackendTag = backend::CpuTag>
-core::SparseVector<BackendTag, T> create(size_t size) {
+[[nodiscard]] core::SparseVector<BackendTag, T> create(size_t size) {
   return core::SparseVector<BackendTag, T>(size);
 }
 
@@ -248,7 +248,8 @@ core::SparseVector<BackendTag, T> create(size_t size) {
  * @brief Create SparseVector with indices (from initializer list)
  */
 template <typename T, typename BackendTag = backend::CpuTag>
-core::SparseVector<BackendTag, T> create(std::initializer_list<size_t> indices) {
+[[nodiscard]] core::SparseVector<BackendTag, T>
+create(std::initializer_list<size_t> indices) {
   return core::SparseVector<BackendTag, T>(std::vector<size_t>(indices));
 }
 
@@ -256,7 +257,8 @@ core::SparseVector<BackendTag, T> create(std::initializer_list<size_t> indices) 
  * @brief Create SparseVector with indices (from vector)
  */
 template <typename T, typename BackendTag = backend::CpuTag>
-core::SparseVector<BackendTag, T> create(const std::vector<size_t> &indices) {
+[[nodiscard]] core::SparseVector<BackendTag, T>
+create(const std::vector<size_t> &indices) {
   return core::SparseVector<BackendTag, T>(indices);
 }
 
@@ -264,8 +266,8 @@ core::SparseVector<BackendTag, T> create(const std::vector<size_t> &indices) {
  * @brief Create SparseVector with indices and data
  */
 template <typename T, typename BackendTag = backend::CpuTag>
-core::SparseVector<BackendTag, T> create(const std::vector<size_t> &indices,
-                                         const std::vector<T> &data) {
+[[nodiscard]] core::SparseVector<BackendTag, T>
+create(const std::vector<size_t> &indices, const std::vector<T> &data) {
   return core::SparseVector<BackendTag, T>(indices, data);
 }
 
