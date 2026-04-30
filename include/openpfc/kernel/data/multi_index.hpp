@@ -33,6 +33,7 @@
 #define PFC_MULTI_INDEX_HPP
 
 #include <array>
+#include <compare>
 #include <iostream>
 #include <vector>
 
@@ -250,23 +251,10 @@ public:
     }
 
     /**
-     * @brief Compares two iterators for inequality.
-     *
-     * @param other The iterator to compare.
-     * @return True if the iterators are not equal, false otherwise.
+     * @brief Compares iterators by linear index (same MultiIndex sequence).
      */
-    bool operator!=(const Iterator &other) const {
-      return m_linear_index != other.m_linear_index;
-    }
-
-    /**
-     * @brief Compares two iterators for equality.
-     *
-     * @param other The iterator to compare.
-     * @return True if the iterators are equal, false otherwise.
-     */
-    bool operator==(const Iterator &other) const {
-      return m_linear_index == other.m_linear_index;
+    std::strong_ordering operator<=>(const Iterator &other) const {
+      return m_linear_index <=> other.m_linear_index;
     }
 
     /**
