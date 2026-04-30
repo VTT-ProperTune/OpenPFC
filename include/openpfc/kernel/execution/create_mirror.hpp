@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -29,19 +29,19 @@ namespace pfc {
  * (Kokkos-compatible). Always allocates; independent of source.
  */
 template <typename T, typename Layout, typename MemorySpace>
-View<T, 1, Layout, HostSpace>
+[[nodiscard]] View<T, 1, Layout, HostSpace>
 create_mirror(const View<T, 1, Layout, MemorySpace> &src) {
   return View<T, 1, Layout, HostSpace>("mirror", src.extent(0));
 }
 
 template <typename T, typename Layout, typename MemorySpace>
-View<T, 2, Layout, HostSpace>
+[[nodiscard]] View<T, 2, Layout, HostSpace>
 create_mirror(const View<T, 2, Layout, MemorySpace> &src) {
   return View<T, 2, Layout, HostSpace>("mirror", src.extent(0), src.extent(1));
 }
 
 template <typename T, typename Layout, typename MemorySpace>
-View<T, 3, Layout, HostSpace>
+[[nodiscard]] View<T, 3, Layout, HostSpace>
 create_mirror(const View<T, 3, Layout, MemorySpace> &src) {
   return View<T, 3, Layout, HostSpace>("mirror", src.extent(0), src.extent(1),
                                        src.extent(2));
@@ -54,7 +54,7 @@ create_mirror(const View<T, 3, Layout, MemorySpace> &src) {
  * a new mirror (same as create_mirror).
  */
 template <typename T, typename Layout, typename MemorySpace>
-View<T, 1, Layout, HostSpace>
+[[nodiscard]] View<T, 1, Layout, HostSpace>
 create_mirror_view(const View<T, 1, Layout, MemorySpace> &src) {
   if constexpr (std::is_same_v<MemorySpace, HostSpace>) {
     return View<T, 1, Layout, HostSpace>(const_cast<T *>(src.data()), src.extent(0));
@@ -63,7 +63,7 @@ create_mirror_view(const View<T, 1, Layout, MemorySpace> &src) {
 }
 
 template <typename T, typename Layout, typename MemorySpace>
-View<T, 2, Layout, HostSpace>
+[[nodiscard]] View<T, 2, Layout, HostSpace>
 create_mirror_view(const View<T, 2, Layout, MemorySpace> &src) {
   if constexpr (std::is_same_v<MemorySpace, HostSpace>) {
     return View<T, 2, Layout, HostSpace>(const_cast<T *>(src.data()), src.extent(0),
@@ -73,7 +73,7 @@ create_mirror_view(const View<T, 2, Layout, MemorySpace> &src) {
 }
 
 template <typename T, typename Layout, typename MemorySpace>
-View<T, 3, Layout, HostSpace>
+[[nodiscard]] View<T, 3, Layout, HostSpace>
 create_mirror_view(const View<T, 3, Layout, MemorySpace> &src) {
   if constexpr (std::is_same_v<MemorySpace, HostSpace>) {
     return View<T, 3, Layout, HostSpace>(const_cast<T *>(src.data()), src.extent(0),
