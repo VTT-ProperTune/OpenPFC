@@ -55,7 +55,7 @@ struct MPI_Type_guard {
   MPI_Type_guard(const MPI_Type_guard &) = delete;
   MPI_Type_guard &operator=(const MPI_Type_guard &) = delete;
 
-  MPI_Datatype get() const { return type; }
+  [[nodiscard]] MPI_Datatype get() const { return type; }
 };
 
 /**
@@ -66,10 +66,9 @@ struct MPI_Type_guard {
  * @param element_type MPI_Datatype for one element (e.g. MPI_DOUBLE)
  * @return RAII guard holding committed type
  */
-inline MPI_Type_guard create_face_type(int nx, int ny, int nz, int start_x,
-                                       int start_y, int start_z, int size_x,
-                                       int size_y, int size_z,
-                                       MPI_Datatype element_type) {
+[[nodiscard]] inline MPI_Type_guard
+create_face_type(int nx, int ny, int nz, int start_x, int start_y, int start_z,
+                 int size_x, int size_y, int size_z, MPI_Datatype element_type) {
   const int ndims = 3;
   // Field layout: x fastest, then y, then z (see finite_difference.hpp). MPI_ORDER_C
   // lists dimensions slowest → fastest, i.e. z, y, x.
