@@ -44,16 +44,33 @@ endif()
 
 find_package(Heffte CONFIG QUIET)
 
+set(OpenPFC_CUDA_SPECTRAL_AVAILABLE FALSE CACHE BOOL
+  "CUDA HeFFTe/cuFFT backend is available for spectral solvers" FORCE)
+set(OpenPFC_ENABLE_CUDA_SPECTRAL FALSE CACHE BOOL
+  "Build CUDA spectral FFT/runtime paths (requires CUDA HeFFTe)" FORCE)
+
 if(Heffte_FOUND)
   message(STATUS "✅ HeFFTe v${Heffte_VERSION} found at ${Heffte_DIR}")
 
   # Verify CUDA backend if CUDA is enabled
   if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
-    if(NOT Heffte_CUDA_FOUND)
-      message(WARNING "⚠️  CUDA-enabled HeFFTe not found. HeFFTe at ${Heffte_DIR} may not have CUDA support.")
-      message(WARNING "   For CUDA builds, rebuild HeFFTe with -DHeffte_ENABLE_CUDA=ON (see INSTALL.md).")
-    else()
+    if(Heffte_CUDA_FOUND)
+      set(OpenPFC_CUDA_SPECTRAL_AVAILABLE TRUE CACHE BOOL
+        "CUDA HeFFTe/cuFFT backend is available for spectral solvers" FORCE)
+      set(OpenPFC_ENABLE_CUDA_SPECTRAL TRUE CACHE BOOL
+        "Build CUDA spectral FFT/runtime paths (requires CUDA HeFFTe)" FORCE)
       message(STATUS "✅ HeFFTe CUDA backend is available")
+    else()
+      message(WARNING
+        "⚠️  CUDA toolkit is available, but CUDA-enabled HeFFTe was not found.\n"
+        "   HeFFTe package: ${Heffte_DIR}\n"
+        "   Meaning: OpenPFC will still build CUDA runtime/kernel targets that do not\n"
+        "   require HeFFTe cuFFT (for example finite-difference CUDA apps such as\n"
+        "   wave2d_cuda), but CUDA spectral FFT paths and CUDA spectral apps/tests are\n"
+        "   disabled for this build.\n"
+        "   To enable CUDA spectral solvers, configure against a HeFFTe install built\n"
+        "   with -DHeffte_ENABLE_CUDA=ON, e.g.\n"
+        "     -DHeffte_DIR=$HOME/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte")
     endif()
   endif()
   # For HIP builds with find_package(Heffte), HeFFTe must have been built with ROCm (Heffte_ENABLE_ROCM=ON)

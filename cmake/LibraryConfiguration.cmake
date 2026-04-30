@@ -29,7 +29,7 @@ set(_openpfc_kernel_obj_sources
     src/openpfc/runtime/cpu/fft.cpp
     src/openpfc/kernel/utils/logging.cpp
 )
-if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+if(OpenPFC_ENABLE_CUDA_SPECTRAL)
   list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/cuda/fft_cuda.cpp)
 endif()
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
@@ -170,6 +170,10 @@ endif()
 
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_link_libraries(openpfc_kernel_obj PRIVATE CUDA::cudart)
+  if(OpenPFC_ENABLE_CUDA_SPECTRAL)
+    target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_CUDA_SPECTRAL)
+    target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_CUDA_SPECTRAL)
+  endif()
 endif()
 
 # GPU kernel library (only when CUDA is enabled)
@@ -190,8 +194,12 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         CUDA::cudart
     )
     
+    # Pin CUDA language standard: project C++20 would otherwise map to "CUDA20" on
+    # some CMake versions that do not know the matching nvcc flags (e.g. CMake 3.22).
     set_target_properties(openpfc_gpu_kernels PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
+        CUDA_STANDARD 20
+        CUDA_STANDARD_REQUIRED ON
     )
     
     # Link GPU kernels to main library (private - implementation detail)

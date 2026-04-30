@@ -16,6 +16,16 @@ if(OpenPFC_ENABLE_CUDA)
         set(OpenPFC_CUDA_AVAILABLE TRUE)
         add_compile_definitions(OpenPFC_ENABLE_CUDA)
 
+        # CMake 3.22 can detect modern nvcc versions but does not know the
+        # CUDA20 dialect flag. OpenPFC public headers require C++20, so teach
+        # older CMake releases the flag instead of downgrading CUDA TUs to C++17.
+        if(CMAKE_VERSION VERSION_LESS "3.25" AND CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
+            set(CMAKE_CUDA20_STANDARD_COMPILE_OPTION "--std=c++20" CACHE STRING
+                "nvcc flag for CUDA C++20" FORCE)
+            set(CMAKE_CUDA20_EXTENSION_COMPILE_OPTION "--std=c++20" CACHE STRING
+                "nvcc flag for CUDA C++20 with extensions" FORCE)
+        endif()
+
         option(OpenPFC_MPI_CUDA_AWARE "Use GPU-aware MPI (device pointers in MPI_Send/Recv)" ON)
         if(OpenPFC_MPI_CUDA_AWARE)
             add_compile_definitions(OpenPFC_MPI_CUDA_AWARE)

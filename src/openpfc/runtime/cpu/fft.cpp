@@ -136,7 +136,7 @@ create_with_backend(const FFTLayout &fft_layout, int rank_id,
         fft_type(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
                  r2c_dir, comm, options));
   }
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
   case Backend::CUDA: {
     using fft_type = heffte::fft3d_r2c<heffte::backend::cufft>;
     return std::make_unique<FFT_Impl<heffte::backend::cufft>>(
@@ -159,7 +159,7 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
     auto options = heffte::default_options<heffte::backend::fftw>();
     return create_with_backend(fft_layout, rank_id, options, backend, comm);
   }
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
   case Backend::CUDA: {
     auto options = heffte::default_options<heffte::backend::cufft>();
     return create_with_backend(fft_layout, rank_id, options, backend, comm);

@@ -8,9 +8,9 @@
  * @details
  * This file provides factory functions to create FFT objects using the cuFFT
  * backend for GPU-accelerated FFT operations. These functions are only available
- * when CUDA is enabled at compile time.
+ * when CUDA spectral support is enabled at compile time.
  *
- * @note Only available when OpenPFC_ENABLE_CUDA is defined.
+ * @note Only available when OpenPFC_ENABLE_CUDA_SPECTRAL is defined.
  * @see fft.hpp for the main FFT interface
  */
 
@@ -27,7 +27,7 @@
 
 namespace pfc::fft {
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 
 // CUDA DataBuffer type aliases (moved from kernel/fft/fft.hpp)
 using RealDataBufferCUDA = core::DataBuffer<backend::CudaTag, double>;
@@ -50,12 +50,12 @@ using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
  *
  * @throws std::runtime_error if CUDA is not available or FFT creation fails
  *
- * @note Only available when OpenPFC_ENABLE_CUDA is defined
+ * @note Only available when OpenPFC_ENABLE_CUDA_SPECTRAL is defined
  * @note Requires CUDA-capable GPU and GPU-aware MPI for multi-GPU setups
  *
  * @example
  * @code{.cpp}
- * #ifdef OpenPFC_ENABLE_CUDA
+ * #ifdef OpenPFC_ENABLE_CUDA_SPECTRAL
  * #include <openpfc/kernel/mpi/mpi.hpp>
  *     auto world = world::create({128, 128, 128});
  *     auto decomp = decomposition::create(world, mpi::get_size());
@@ -79,7 +79,7 @@ using FFT_CUDA = FFT_Impl<heffte::backend::cufft>;
  *
  * @throws std::runtime_error if CUDA is not available or FFT creation fails
  *
- * @note Only available when OpenPFC_ENABLE_CUDA is defined
+ * @note Only available when OpenPFC_ENABLE_CUDA_SPECTRAL is defined
  * @note Requires CUDA-capable GPU and GPU-aware MPI for multi-GPU setups
  * @note Precision (float/double) is determined by data types passed to
  * forward/backward methods
@@ -98,13 +98,13 @@ using FFT_CUDA = FFT_Impl<heffte::backend::cufft>;
  * @throws std::logic_error if MPI communicator size doesn't match decomposition size
  * @throws std::runtime_error if CUDA is not available or FFT creation fails
  *
- * @note Only available when OpenPFC_ENABLE_CUDA is defined
+ * @note Only available when OpenPFC_ENABLE_CUDA_SPECTRAL is defined
  * @note Precision (float/double) is determined by data types passed to
  * forward/backward methods
  */
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition,
                                    MPI_Comm comm = MPI_COMM_WORLD);
 
-#endif // OpenPFC_ENABLE_CUDA
+#endif // OpenPFC_ENABLE_CUDA_SPECTRAL
 
 } // namespace pfc::fft

@@ -30,8 +30,8 @@ tungsten_apply_options(tungsten)
 
 install(TARGETS tungsten DESTINATION bin)
 
-# CUDA version (only if CUDA is enabled)
-if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+# CUDA spectral version (requires CUDA toolkit and CUDA-enabled HeFFTe)
+if(OpenPFC_ENABLE_CUDA_SPECTRAL)
   add_executable(tungsten_cuda
     src/cuda/tungsten.cpp
     src/cuda/tungsten_ops_kernels.cu
@@ -75,6 +75,11 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     CUDA_SEPARABLE_COMPILATION ON
   )
   message(STATUS "Tungsten CUDA VTK test program enabled")
+endif()
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE AND NOT OpenPFC_ENABLE_CUDA_SPECTRAL)
+  message(STATUS
+    "Tungsten CUDA version disabled: CUDA toolkit is available, but CUDA-enabled "
+    "HeFFTe is missing (spectral CUDA support OFF).")
 endif()
 
 # HIP version (only if HIP is enabled)
@@ -150,8 +155,8 @@ if(TUNGSTEN_ENABLE_TESTS)
         # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME tungsten-all-tests COMMAND test_tungsten)
 
-        # CPU vs CUDA comparison test (only if CUDA is enabled)
-        if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+        # CPU vs CUDA comparison test (only if CUDA spectral support is enabled)
+        if(OpenPFC_ENABLE_CUDA_SPECTRAL)
             add_executable(test_tungsten_cpu_vs_cuda tests/test_tungsten_cpu_vs_cuda.cpp)
             target_include_directories(test_tungsten_cpu_vs_cuda PRIVATE ${TUNGSTEN_INCLUDE_DIR})
             target_link_libraries(test_tungsten_cpu_vs_cuda PRIVATE
@@ -212,8 +217,8 @@ target_link_libraries(tungsten_scalability PRIVATE
   MPI::MPI_CXX
 )
 
-# Add CUDA support to scalability app if available
-if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+# Add CUDA spectral support to scalability app if available
+if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     target_link_libraries(tungsten_scalability PRIVATE CUDA::cudart)
     target_sources(tungsten_scalability PRIVATE
         src/cuda/tungsten_ops_kernels.cu

@@ -26,7 +26,8 @@ namespace pfc::ui {
  *
  * Parses backend selection from configuration. Supported values:
  * - "fftw" or "FFTW": CPU-based FFT (always available)
- * - "cuda" or "CUDA": GPU-based FFT using cuFFT (requires OpenPFC_ENABLE_CUDA)
+ * - "cuda" or "CUDA": GPU-based FFT using cuFFT (requires
+ *   OpenPFC_ENABLE_CUDA_SPECTRAL)
  *
  * @param j The JSON object to parse (looks for "backend" field)
  * @return The fft::Backend enum value
@@ -54,8 +55,10 @@ template <>
   }
   if (backend_str == "cuda") {
     throw std::runtime_error(
-        "CUDA backend requested but OpenPFC was not compiled with CUDA support. "
-        "Rebuild with -DOpenPFC_ENABLE_CUDA=ON");
+        "CUDA FFT backend requested, but this OpenPFC build does not include CUDA "
+        "spectral support. Reconfigure with -DOpenPFC_ENABLE_CUDA=ON and a "
+        "CUDA-enabled HeFFTe install (Heffte_CUDA_FOUND=ON). CUDA finite-difference "
+        "apps may still be available in this build.");
   }
   throw std::runtime_error(
       "Unknown FFT backend: " + j["backend"].get<std::string>() +

@@ -25,7 +25,7 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <tungsten/cuda/tungsten_model.hpp>
 #endif
@@ -178,7 +178,7 @@ public:
     }
   }
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
   template <typename RealType>
   void run_cuda_test_impl(int size_x, int size_y, int size_z, int num_iterations,
                           const std::string &precision_name) {
@@ -488,7 +488,7 @@ int main(int argc, char *argv[]) {
     }
 
     for (const auto &[sx, sy, sz] : sizes) {
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
       study.run_cuda_test(sx, sy, sz, num_iterations);
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
@@ -531,7 +531,7 @@ int main(int argc, char *argv[]) {
     // For now, just test with current number of ranks
     // In a real scenario, you'd submit multiple jobs with different rank counts
     study.run_cpu_test(base_size, base_size, base_size, num_iterations);
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
     study.run_cuda_test(base_size, base_size, base_size, num_iterations);
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
@@ -550,7 +550,7 @@ int main(int argc, char *argv[]) {
     }
 
     study.run_cpu_test(total_size, total_size, total_size, num_iterations);
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
     study.run_cuda_test(total_size, total_size, total_size, num_iterations);
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
@@ -574,7 +574,7 @@ int main(int argc, char *argv[]) {
       // Run CPU test
       study.run_cpu_test(sx, sy, sz, num_iterations);
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
       // Run CUDA test (tests both float and double)
       study.run_cuda_test(sx, sy, sz, num_iterations);
 #endif

@@ -55,7 +55,7 @@ merged_spectral_plan_options_json(const nlohmann::json &settings) {
   return plan_opts;
 }
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 
 /**
  * @brief HeFFTe plan options for a cuFFT-backed spectral driver from app JSON
@@ -76,7 +76,7 @@ cuda_spectral_plan_options_from_json(const nlohmann::json &settings) {
   return options;
 }
 
-#endif // OpenPFC_ENABLE_CUDA
+#endif // OpenPFC_ENABLE_CUDA_SPECTRAL
 
 #if defined(OpenPFC_ENABLE_HIP)
 

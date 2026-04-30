@@ -27,7 +27,7 @@ inline std::optional<fft::Backend> backend_from_string(const std::string &s) {
   if (s == "fftw") {
     return fft::Backend::FFTW;
   }
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
   if (s == "cuda") {
     return fft::Backend::CUDA;
   }
