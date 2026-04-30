@@ -10,6 +10,11 @@
  * `Simulator::apply_boundary_conditions` so the apply-loop lives next to
  * `simulator_results_dispatch.hpp` and stays a single place to extend (e.g.
  * logging or ordering policy).
+ *
+ * @note This is the production entry point for modifier application: it always
+ *       calls `FieldModifier::apply(SimulationContext,...)` (not `apply(Model&,...)`
+ *       alone). Keep overrides consistent with the contract documented on
+ *       `FieldModifier`.
  */
 
 #ifndef PFC_KERNEL_SIMULATION_SIMULATOR_FIELD_MODIFIERS_DISPATCH_HPP

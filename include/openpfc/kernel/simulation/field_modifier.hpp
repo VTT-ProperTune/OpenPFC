@@ -37,6 +37,8 @@
  *
  * @see model.hpp for field access methods
  * @see simulator.hpp for modifier application orchestration
+ * @see simulator_field_modifiers_dispatch.hpp (`apply_field_modifier_list`) for the
+ *      simulator path that invokes `FieldModifier::apply(SimulationContext&,...)`
  * @see initial_conditions/ for IC implementations
  * @see boundary_conditions/ for BC implementations
  */
