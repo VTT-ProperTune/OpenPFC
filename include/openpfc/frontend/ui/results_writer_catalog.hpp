@@ -53,7 +53,7 @@ public:
   }
 
   [[nodiscard]] bool has_type(const std::string &type) const {
-    return m_factories.find(type) != m_factories.end();
+    return m_factories.contains(type);
   }
 
 private:
