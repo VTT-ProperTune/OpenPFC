@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -24,7 +24,6 @@
 #include <array>
 #include <cstddef>
 #include <openpfc/kernel/execution/execution_space.hpp>
-#include <type_traits>
 
 namespace pfc {
 
@@ -93,13 +92,15 @@ struct MDRangePolicy {
       : m_start(start), m_end(end) {}
 
   /** @brief 2D: [start0,end0) x [start1,end1) */
-  template <std::size_t R = rank, typename = std::enable_if_t<R == 2>>
+  template <std::size_t R = rank>
+    requires(R == 2)
   MDRangePolicy(index_type start0, index_type end0, index_type start1,
                 index_type end1)
       : m_start{{start0, start1}}, m_end{{end0, end1}} {}
 
   /** @brief 3D: [start0,end0) x [start1,end1) x [start2,end2) */
-  template <std::size_t R = rank, typename = std::enable_if_t<R == 3>>
+  template <std::size_t R = rank>
+    requires(R == 3)
   MDRangePolicy(index_type start0, index_type end0, index_type start1,
                 index_type end1, index_type start2, index_type end2)
       : m_start{{start0, start1, start2}}, m_end{{end0, end1, end2}} {}
