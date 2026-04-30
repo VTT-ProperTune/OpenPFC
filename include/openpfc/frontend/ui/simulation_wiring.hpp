@@ -41,10 +41,23 @@ namespace pfc::ui {
 /**
  * @brief Writers, ICs, BCs, then optional `simulator` JSON subsection
  *
+ * @details
+ * This is a convenience wrapper around four steps (same order). For **partial**
+ * wiring or custom ordering, call the underlying functions directly:
+ * 1. `add_result_writers_from_json`
+ * 2. `add_initial_conditions_from_json`
+ * 3. `add_boundary_conditions_from_json`
+ * 4. `apply_simulator_section_from_json`
+ *
  * @param modifier_catalog Modifier factories for JSON `type` strings (inject a
  *        test catalog or extend defaults).
  * @param writer_catalog Result writer factories for JSON `fields[].writer` (default
  *        `binary`); inject for tests or custom formats.
+ *
+ * @note **Dependency inversion:** The default arguments use the process-wide
+ *       default catalogs (`default_field_modifier_catalog()`,
+ *       `default_results_writer_catalog()`). Prefer passing **explicit** catalogs
+ *       in tests and when you need isolated registration state.
  */
 inline void wire_simulator_and_runtime_from_json(
     Simulator &sim, Time &time, const nlohmann::json &settings,
