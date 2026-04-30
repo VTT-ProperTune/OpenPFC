@@ -121,7 +121,7 @@ For naming, layout, SPDX headers, and API style (free functions, data-centric ty
 ## Features
 
 - scales up to tens of thousands of cores, demonstrably
-- modern C++17 API: compile and link against the `openpfc` library, with most
+- modern C++20 API: compile and link against the `openpfc` library, with most
   of the simulation stack available as headers under `include/openpfc/` (see
   [INSTALL.md](INSTALL.md))
 - extensible architecture - add custom components without modifying source code

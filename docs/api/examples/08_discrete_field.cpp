@@ -13,7 +13,7 @@
  * 5. Integration with Model fields and FFT
  *
  * Compile and run:
- *   g++ -std=c++17 -I/path/to/openpfc/include 08_discrete_field.cpp \
+ *   g++ -std=c++20 -I/path/to/openpfc/include 08_discrete_field.cpp \
  *       -o 08_discrete_field
  *   ./08_discrete_field
  */

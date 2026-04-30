@@ -14,7 +14,7 @@
  * 6. Composition patterns - combining multiple ICs
  *
  * Compile and run:
- *   mpicxx -std=c++17 -I/path/to/openpfc/include 09_initial_conditions.cpp \
+ *   mpicxx -std=c++20 -I/path/to/openpfc/include 09_initial_conditions.cpp \
  *          -L/path/to/openpfc/lib -lopenpfc -lheffte -o 09_initial_conditions
  *   mpirun -np 4 ./09_initial_conditions
  */

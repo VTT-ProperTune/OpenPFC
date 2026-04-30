@@ -12,7 +12,7 @@ Single-page summary of **what this repository is tested against** vs **optional 
 | Component | Reference / CI baseline | Notes |
 |-----------|-------------------------|--------|
 | **CMake** | 3.15+ | |
-| **C++ standard** | C++17 | |
+| **C++ standard** | C++20 | |
 | **GCC** | 11.2.x (modules, tohtori preset) | Other compilers may work; match MPI/HeFFTe. |
 | **MPI** | Open MPI **4.1.1** (reference) | Build and run with the **same** implementation ([`INSTALL.md`](../../INSTALL.md)). MPICH-only sites: build *everything* with that stack, not mixed with Open MPI. |
 | **HeFFTe** | **2.4.1** (CPU / CUDA / ROCm variants) | Separate install per backend; `CMAKE_PREFIX_PATH` ([`INSTALL.md`](../../INSTALL.md) §3). Optional FetchContent vendoring via CMake. |

@@ -23,7 +23,7 @@
  *   Liquid → Solid phase transition driven by undercooling
  *
  * Compile and run:
- *   mpicxx -std=c++17 -I/path/to/openpfc/include 10_complete_pfc_model.cpp \
+ *   mpicxx -std=c++20 -I/path/to/openpfc/include 10_complete_pfc_model.cpp \
  *          -L/path/to/openpfc/lib -lopenpfc -lheffte -o 10_complete_pfc_model
  *   mpirun -np 4 ./10_complete_pfc_model
  */

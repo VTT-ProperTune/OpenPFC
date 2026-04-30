@@ -19,7 +19,7 @@ This directory contains modular CMake configuration files that organize the buil
    - CMake module path setup
 
 2. **CompilerSettings.cmake**
-   - C++ standard (C++17)
+   - C++ standard (C++20)
    - Compiler flags and warnings
    - Build-type specific flags
    - Debug mode settings

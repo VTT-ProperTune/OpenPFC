@@ -11,7 +11,7 @@ If anything here fails, do not keep going and hope the next command fixes it. Op
 
 ## Check the environment
 
-You need a C++17 compiler, an MPI implementation that you will both build with and run with, and HeFFTe 2.4.1 installed somewhere CMake can find it through `CMAKE_PREFIX_PATH` or `Heffte_DIR`. On clusters, `mpicc` and `mpirun` are often unavailable until you load modules. A typical Tohtori-style setup looks like this:
+You need a C++20 compiler, an MPI implementation that you will both build with and run with, and HeFFTe 2.4.1 installed somewhere CMake can find it through `CMAKE_PREFIX_PATH` or `Heffte_DIR`. On clusters, `mpicc` and `mpirun` are often unavailable until you load modules. A typical Tohtori-style setup looks like this:
 
 ```bash
 module load gcc/11.2.0

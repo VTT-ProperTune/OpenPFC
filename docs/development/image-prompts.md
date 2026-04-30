@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Project briefing (read this first)
 
-**OpenPFC** is an **open-source software framework** (C++17, **AGPL-3.0-or-later**) for **large-scale, three-dimensional phase field crystal (PFC) simulations** in **materials science and engineering**. It is developed in a **research** context (e.g. association with **VTT Technical Research Centre of Finland Ltd** and collaborators) and is meant for **serious computational materials work**, not consumer apps or games. The project’s visuals should feel like **peer-reviewed science**, **HPC engineering**, and **crystalline physics**—not fantasy, not stock “tech” clichés unrelated to solids.
+**OpenPFC** is an **open-source software framework** (C++20, **AGPL-3.0-or-later**) for **large-scale, three-dimensional phase field crystal (PFC) simulations** in **materials science and engineering**. It is developed in a **research** context (e.g. association with **VTT Technical Research Centre of Finland Ltd** and collaborators) and is meant for **serious computational materials work**, not consumer apps or games. The project’s visuals should feel like **peer-reviewed science**, **HPC engineering**, and **crystalline physics**—not fantasy, not stock “tech” clichés unrelated to solids.
 
 ### What phase field crystal (PFC) means (for imagery)
 
@@ -201,6 +201,6 @@ Use prompts as **inspiration**; refine in vector tools. Prefer **simple geometry
 | Physics | Phase field crystal, polycrystal, grain boundaries, dislocations, solidification, epitaxy |
 | Methods | Spectral methods, FFT, k-space, periodic domain |
 | Computing | MPI, domain decomposition, halo exchange, CPU/GPU backends, scalability |
-| Identity | Open source (AGPL), C++17, materials science, VTT / research software |
+| Identity | Open source (AGPL), C++20, materials science, VTT / research software |
 
 When generating **series** (hero + banner + icon), lock a **palette** and **style token** across prompts (e.g. *“same palette: #0b1f33, #3d7ea6, #c9a227”*) so assets match. For **dark + light** pairs of the same motif, reuse the **same subject nouns** (e.g. “hex lattice header”) and only swap the **Dark UI token** / **Light UI token** paragraphs above.

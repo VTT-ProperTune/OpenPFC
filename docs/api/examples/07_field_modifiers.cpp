@@ -12,7 +12,7 @@
  * 4. Composing multiple modifiers
  *
  * Compile and run:
- *   mpicxx -std=c++17 -I/path/to/openpfc/include 07_field_modifiers.cpp \
+ *   mpicxx -std=c++20 -I/path/to/openpfc/include 07_field_modifiers.cpp \
  *          -L/path/to/openpfc/lib -lopenpfc -lheffte -o 07_field_modifiers
  *   mpirun -np 4 ./07_field_modifiers
  */

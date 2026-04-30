@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 cff-version: 1.2.0
@@ -36,7 +36,7 @@ keywords:
   - solidification
   - FFT
   - MPI
-  - C++17
+  - C++20
 preferred-citation:
   type: article
   title: "OpenPFC: an open-source framework for high performance 3D phase field crystal simulations"
