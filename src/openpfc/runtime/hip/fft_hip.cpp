@@ -16,7 +16,8 @@ namespace fft {
 using Decomposition = pfc::decomposition::Decomposition;
 using pfc::fft::FFT_Impl;
 
-FFT_HIP create_hip(const Decomposition &decomposition, int rank_id, MPI_Comm comm) {
+[[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
+                                 MPI_Comm comm) {
   auto options = heffte::default_options<heffte::backend::rocfft>();
   auto boxes =
       pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomposition, rank_id);
@@ -28,7 +29,7 @@ FFT_HIP create_hip(const Decomposition &decomposition, int rank_id, MPI_Comm com
   return FFT_HIP(std::move(fft_hip));
 }
 
-FFT_HIP create_hip(const Decomposition &decomposition, MPI_Comm comm) {
+[[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, MPI_Comm comm) {
   pfc::runtime::heffte_gpu::throw_if_mpi_decomposition_mismatch(
       comm, decomposition, "fft::create_hip(decomposition, rank_id, comm)");
   const int rank_id = pfc::runtime::heffte_gpu::mpi_comm_rank(comm);

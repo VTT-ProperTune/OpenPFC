@@ -84,8 +84,8 @@ using FFT_CUDA = FFT_Impl<heffte::backend::cufft>;
  * @note Precision (float/double) is determined by data types passed to
  * forward/backward methods
  */
-FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
-                     MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
+                                   MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Creates an FFT object using cuFFT backend (auto-detect rank)
@@ -102,8 +102,8 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
  * @note Precision (float/double) is determined by data types passed to
  * forward/backward methods
  */
-FFT_CUDA create_cuda(const Decomposition &decomposition,
-                     MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition,
+                                   MPI_Comm comm = MPI_COMM_WORLD);
 
 #endif // OpenPFC_ENABLE_CUDA
 

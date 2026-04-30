@@ -16,8 +16,8 @@ namespace fft {
 using Decomposition = pfc::decomposition::Decomposition;
 using pfc::fft::FFT_Impl;
 
-FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
-                     MPI_Comm comm) {
+[[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
+                                   MPI_Comm comm) {
   auto options = heffte::default_options<heffte::backend::cufft>();
   auto boxes =
       pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomposition, rank_id);
@@ -29,7 +29,8 @@ FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
   return FFT_CUDA(std::move(fft_cuda));
 }
 
-FFT_CUDA create_cuda(const Decomposition &decomposition, MPI_Comm comm) {
+[[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition,
+                                   MPI_Comm comm) {
   pfc::runtime::heffte_gpu::throw_if_mpi_decomposition_mismatch(
       comm, decomposition, "fft::create_cuda(decomposition, rank_id, comm)");
   const int rank_id = pfc::runtime::heffte_gpu::mpi_comm_rank(comm);

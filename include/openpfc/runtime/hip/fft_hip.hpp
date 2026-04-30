@@ -52,8 +52,8 @@ using FFT_HIP = FFT_Impl<heffte::backend::rocfft>;
  * @param rank_id The rank ID of the current process in the MPI communicator
  * @return FFT_HIP object configured to use rocFFT backend
  */
-FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
-                   MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
+                                 MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Creates an FFT object using rocFFT backend (auto-detect rank)
@@ -65,8 +65,8 @@ FFT_HIP create_hip(const Decomposition &decomposition, int rank_id,
  *
  * @throws std::logic_error if MPI communicator size doesn't match decomposition size
  */
-FFT_HIP create_hip(const Decomposition &decomposition,
-                   MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition,
+                                 MPI_Comm comm = MPI_COMM_WORLD);
 #endif // OpenPFC_ENABLE_HIP
 
 } // namespace pfc::fft
