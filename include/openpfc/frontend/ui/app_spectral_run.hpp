@@ -43,6 +43,19 @@ inline constexpr std::string_view k_spectral_app_log_tag = "[app] ";
 
 /**
  * @brief Executes the default spectral JSON pipeline for a concrete model
+ *
+ * @details
+ * `execute()` runs a fixed sequence of phases (each implemented by a private
+ * helper on this class) so `App` stays thin:
+ * 1. `build_session_` — construct session (model, FFT, world, …)
+ * 2. `log_world_summary_` — rank-0 world summary
+ * 3. `apply_model_params_` — optional `model.params` JSON
+ * 4. `configure_profiling_` — profiling from root settings
+ * 5. `initialize_model_` — `Model::initialize`
+ * 6. `report_memory_usage_` — optional memory report
+ * 7. `wire_simulator_and_log_run_start_` — JSON wiring + log line
+ * 8. `run_time_integration_` — simulator loop
+ * 9. `finalize_profiling_export_` — profiling export
  */
 template <class ConcreteModel> class SpectralJsonAppRun {
 public:
