@@ -34,30 +34,6 @@ mpirun --bind-to none -n 4 ./apps/heat3d/heat3d fd 256 25 1e-6 1.0 12
 
 Rank 0 prints `omp_max_threads` and **`omp_get_num_procs()`** in the summary line. After a single-rank run, **`omp_get_num_procs()`** should match the number of CPUs OpenMP may use; if it stays at 1, check binding and whether `HEAT3D_NO_RESET_AFFINITY` is set.
 
-### OpenMP dummy benchmark (isolates threading)
-
-Set **`HEAT3D_FD_OMP_DUMMY=1`** to replace the real Laplacian with synthetic FP work in the **same** `omp parallel for collapse(2)` over interior `(iy,iz)`. The timed loop **skips halo exchange and the Euler update** so wall time is dominated by that parallel region (not the stencil or MPI).
-
-Optional **`HEAT3D_FD_DUMMY_ITERS`** (default `12000`): scalar inner iterations per `(iy,iz)` line; increase for a heavier load.
-
-Rank 0 prints affinity-related environment variables and, on Linux, **`Cpus_allowed_list:`** from `/proc/self/status`. Example sweep (same binary, same grid):
-
-```bash
-# Without mpirun: threads should spread (subject to OS)
-for t in 1 2 4 8; do
-  export OMP_NUM_THREADS=$t
-  HEAT3D_FD_OMP_DUMMY=1 HEAT3D_FD_DUMMY_ITERS=6000 ./apps/heat3d/heat3d fd 32 10 1e-6 1.0 12
-done
-
-# mpirun -n 1: heat3d resets affinity on Linux → omp_get_num_procs() should match hardware
-HEAT3D_FD_OMP_DUMMY=1 HEAT3D_FD_DUMMY_ITERS=6000 OMP_NUM_THREADS=8 mpirun -n 1 ./apps/heat3d/heat3d fd 32 10 1e-6 1.0 12
-
-# Same with affinity reset disabled (mimics old default pin): expect omp_get_num_procs()==1
-HEAT3D_NO_RESET_AFFINITY=1 HEAT3D_FD_OMP_DUMMY=1 HEAT3D_FD_DUMMY_ITERS=6000 OMP_NUM_THREADS=8 mpirun -n 1 ./apps/heat3d/heat3d fd 32 10 1e-6 1.0 12
-```
-
-**What we observed on a login node (illustrative):** before the in-process affinity reset, `mpirun -n 1` often left `Cpus_allowed_list` on a single CPU and `omp_get_num_procs()=1` while `omp_max_threads=8`. After reset (default), `omp_get_num_procs()` matches the node and dummy `avg_step_time_s` drops in line with `mpirun --bind-to none` on the same case. With **`HEAT3D_NO_RESET_AFFINITY`**, the old pinned behaviour returns.
-
 ## Usage
 
 ```text
@@ -128,7 +104,7 @@ Same grid **`256³`**, **`n_steps=25`**, **`dt=1e-6`**, **`mpirun -n 1`**.
 
 **Correctness:** For this case, **`l2_error_vs_R3_analytic_rms` is identical** for `OMP_NUM_THREADS` in `{1,2,4,8}` (bit-for-bit in repeated runs), so the OpenMP region is **not** changing the numerics—only scheduling.
 
-**Scaling (2026-04-29, shared login node):** Real FD run (no `HEAT3D_FD_OMP_DUMMY`), **`mpirun -n 1`**, after the in-process **single-rank CPU mask reset** on Linux so `omp_get_num_procs()` matches the node (here **32**). **`l2_error_vs_R3_analytic_rms=9.91404e-21`** was **identical** for \(\{1,2,4,8\}\) threads. Speedup is **sub-linear** (memory traffic per step + fork/join each step), but **8 threads \(\approx\) 5.3\(\times\)** faster than 1 thread on this capture—consistent with a healthy OpenMP Laplacian loop rather than a pinned single-core mask.
+**Scaling (2026-04-29, shared login node):** Real FD run, **`mpirun -n 1`**, after the in-process **single-rank CPU mask reset** on Linux so `omp_get_num_procs()` matches the node (here **32**). **`l2_error_vs_R3_analytic_rms=9.91404e-21`** was **identical** for \(\{1,2,4,8\}\) threads. Speedup is **sub-linear** (memory traffic per step + fork/join each step), but **8 threads \(\approx\) 5.3\(\times\)** faster than 1 thread on this capture—consistent with a healthy OpenMP Laplacian loop rather than a pinned single-core mask.
 
 | OMP_NUM_THREADS | avg_step_time_s |
 |-----------------|-----------------|
