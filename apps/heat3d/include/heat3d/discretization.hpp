@@ -285,19 +285,20 @@ private:
 };
 
 /**
- * @brief Apply a point-wise RHS to every interior cell of a discretization.
+ * @brief Apply a model's per-point RHS to every interior cell of a discretization.
  *
- * `eval` provides the interior bounds (`imin/imax`, `jmin/jmax`, `kmin/kmax`),
- * the linear index `idx(ix,iy,iz)`, an optional `prepare()` (e.g. FFTs for a
- * spectral evaluator), and `operator()(ix,iy,iz) -> GradPoint`. `rhs(t, g)`
- * returns the time derivative for that cell. Cells outside the interior are
- * left untouched (`du` is not cleared here).
+ * The model is the **only** source of physics: it must expose
+ * `rhs(t, GradPoint) -> double`. The discretization (`eval`) provides the
+ * interior bounds (`imin/imax`, `jmin/jmax`, `kmin/kmax`), the linear index
+ * `idx(ix,iy,iz)`, an optional `prepare()` (e.g. FFTs for a spectral
+ * evaluator), and `operator()(ix,iy,iz) -> GradPoint`. Cells outside the
+ * interior are left untouched (`du` is not cleared here).
  *
  * Parallelized with `#pragma omp parallel for collapse(2)` over `(iz, iy)`,
  * matching the strategy used by `heat3d` today.
  */
-template <class Eval, class Rhs>
-inline void for_each_interior(Eval &eval, double *du, double t, Rhs &&rhs) {
+template <class Model, class Eval>
+inline void for_each_interior(const Model &model, Eval &eval, double *du, double t) {
   eval.prepare();
   const int kmin = eval.kmin();
   const int kmax = eval.kmax();
@@ -312,7 +313,7 @@ inline void for_each_interior(Eval &eval, double *du, double t, Rhs &&rhs) {
     for (int iy = jmin; iy < jmax; ++iy) {
       for (int ix = imin; ix < imax; ++ix) {
         const GradPoint g = eval(ix, iy, iz);
-        du[eval.idx(ix, iy, iz)] = rhs(t, g);
+        du[eval.idx(ix, iy, iz)] = model.rhs(t, g);
       }
     }
   }

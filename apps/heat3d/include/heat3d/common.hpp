@@ -8,10 +8,6 @@
 #include <cstring>
 #include <iostream>
 #include <string>
-#include <vector>
-
-#include <openpfc/kernel/data/world_queries.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 
 namespace heat3d {
 
@@ -81,42 +77,6 @@ inline bool validate(const RunConfig &c) {
     }
   }
   return true;
-}
-
-/**
- * @brief Gaussian IC matching examples/diffusion_model.hpp: exp(-r²/(4D)).
- */
-inline void fill_gaussian_subdomain(std::vector<double> *u,
-                                    const pfc::decomposition::Decomposition &decomp,
-                                    int rank, double D) {
-  const auto &gw = pfc::decomposition::get_world(decomp);
-  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-  auto lo = pfc::world::get_lower(local);
-  auto sz = pfc::world::get_size(local);
-  const int nx = sz[0];
-  const int ny = sz[1];
-  const int nz = sz[2];
-  const int sxy = nx * ny;
-  const auto origin = pfc::world::get_origin(gw);
-  const auto spacing = pfc::world::get_spacing(gw);
-  u->resize(static_cast<size_t>(nx * ny * nz));
-  for (int iz = 0; iz < nz; ++iz) {
-    for (int iy = 0; iy < ny; ++iy) {
-      for (int ix = 0; ix < nx; ++ix) {
-        const int gi = lo[0] + ix;
-        const int gj = lo[1] + iy;
-        const int gk = lo[2] + iz;
-        const double x = origin[0] + static_cast<double>(gi) * spacing[0];
-        const double y = origin[1] + static_cast<double>(gj) * spacing[1];
-        const double z = origin[2] + static_cast<double>(gk) * spacing[2];
-        const double r2 = x * x + y * y + z * z;
-        const size_t idx = static_cast<size_t>(ix) +
-                           static_cast<size_t>(iy) * static_cast<size_t>(nx) +
-                           static_cast<size_t>(iz) * static_cast<size_t>(sxy);
-        (*u)[idx] = std::exp(-r2 / (4.0 * D));
-      }
-    }
-  }
 }
 
 /**
