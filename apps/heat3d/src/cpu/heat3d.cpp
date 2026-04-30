@@ -19,6 +19,8 @@
 #endif
 
 #include <heat3d/common.hpp>
+#include <heat3d/discretization.hpp>
+#include <heat3d/heat_model.hpp>
 
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
@@ -28,7 +30,6 @@
 #include <openpfc/kernel/decomposition/separated_halo_exchange.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
 
@@ -91,15 +92,15 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   const double inv_dx2 = 1.0 / (dx * dx);
 
   std::vector<double> u(nlocal);
-  std::vector<double> lap(nlocal);
+  std::vector<double> du(nlocal, 0.0);
   heat3d::fill_gaussian_subdomain(&u, decomp, rank, cfg.D);
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
   SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, hw, MPI_COMM_WORLD);
-  std::array<const double *, 6> face_ptrs{};
-  for (int i = 0; i < 6; ++i) {
-    face_ptrs[static_cast<size_t>(i)] = face_halos[static_cast<size_t>(i)].data();
-  }
+
+  heat3d::FdGradient grad(u.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2, hw,
+                          cfg.fd_order);
+  heat3d::HeatRhs rhs{heat3d::HeatModel{cfg.D}};
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
@@ -111,24 +112,14 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   const int kmin = hw;
   const int kmax = nz - hw;
   const int sxy = nx * ny;
+  double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
     exchanger.exchange_halos(u.data(), u.size(), face_halos);
+    heat3d::for_each_interior(grad, du.data(), t, rhs);
     for (ptrdiff_t li = 0; li < nptr; ++li) {
-      lap[static_cast<size_t>(li)] = 0.0;
+      u[static_cast<size_t>(li)] += cfg.dt * du[static_cast<size_t>(li)];
     }
-#if defined(_OPENMP)
-#pragma omp parallel for collapse(2) schedule(static)
-#endif
-    for (int iz = kmin; iz < kmax; ++iz) {
-      for (int iy = jmin; iy < jmax; ++iy) {
-        field::fd::laplacian_even_order_interior_separated_xy_row(
-            u.data(), face_ptrs, lap.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2,
-            hw, cfg.fd_order, iy, iz);
-      }
-    }
-    for (ptrdiff_t li = 0; li < nptr; ++li) {
-      u[static_cast<size_t>(li)] += cfg.dt * cfg.D * lap[static_cast<size_t>(li)];
-    }
+    t += cfg.dt;
   }
   const double t1 = MPI_Wtime();
   double elapsed = t1 - t0;
