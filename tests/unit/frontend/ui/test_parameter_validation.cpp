@@ -496,9 +496,9 @@ TEST_CASE("Integration test with realistic model configuration",
     auto result = validator.validate(config);
     REQUIRE(result.is_valid());
     REQUIRE(result.validated_params.size() == 3);
-    REQUIRE(result.validated_params.find("n0") != result.validated_params.end());
-    REQUIRE(result.validated_params.find("T") != result.validated_params.end());
-    REQUIRE(result.validated_params.find("lambda") != result.validated_params.end());
+    REQUIRE(result.validated_params.contains("n0"));
+    REQUIRE(result.validated_params.contains("T"));
+    REQUIRE(result.validated_params.contains("lambda"));
   }
 
   SECTION("Missing required parameter") {
