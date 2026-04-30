@@ -5,9 +5,9 @@
 
 /**
  * @file cli.hpp
- * @brief Command-line parsing for the heat3d binary quartet
- *        (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_spectral`,
- *        `heat3d_spectral_pointwise`).
+ * @brief Command-line parsing for the heat3d binary lineup
+ *        (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_fd_scratch`,
+ *        `heat3d_spectral`, `heat3d_spectral_pointwise`).
  *
  * @details
  * Header-only, MPI-free, OpenPFC-free. Lives next to `heat_model.hpp`
@@ -15,13 +15,17 @@
  * one tiny self-contained file, and the parsers are trivially
  * unit-testable (see `apps/heat3d/tests/test_heat3d.cpp`).
  *
- * Each binary owns its method, so the parsers do **not** consume an
- * `argv[1]` discriminator. Two parser families:
+ * The diffusion coefficient `D` is **not** a CLI knob — it is hard-coded
+ * once in `heat_model.hpp` (`heat3d::kD`) so all binaries share the same
+ * fixed value and their L2 numbers stay comparable. Each binary owns
+ * its method, so the parsers do **not** consume an `argv[1]`
+ * discriminator. Two parser families:
  *
- *  - `parse_fd` / `parse_fd_or_print_usage` — `<N> <n_steps> <dt> <D> <fd_order>`,
- *    used by `heat3d_fd` and `heat3d_fd_manual`.
+ *  - `parse_fd` / `parse_fd_or_print_usage` — `<N> <n_steps> <dt> <fd_order>`,
+ *    used by `heat3d_fd`.
  *  - `parse_spectral` / `parse_spectral_or_print_usage` —
- *    `<N> <n_steps> <dt> <D>`, used by `heat3d_spectral` and
+ *    `<N> <n_steps> <dt>`, used by `heat3d_fd_manual`,
+ *    `heat3d_fd_scratch`, `heat3d_spectral`, and
  *    `heat3d_spectral_pointwise`.
  *
  * Both return `std::optional<RunConfig>`: `nullopt` on insufficient
@@ -39,34 +43,34 @@ namespace heat3d {
 /**
  * @brief Parsed CLI configuration for one heat3d run.
  *
- * `fd_order` is meaningful only for the FD-style binaries; the
+ * `fd_order` is meaningful only for the compact FD binary (`heat3d_fd`);
+ * the manual/scratch FD binaries hard-code 2nd-order central, and the
  * spectral binaries leave it at the default `2`.
  */
 struct RunConfig {
   int N = 32;
   int n_steps = 100;
   double dt = 0.01;
-  double D = 1.0;
-  /** Spatial order for FD: even 2, 4, …, 20 (ignored for spectral binaries). */
+  /** Spatial order for compact FD: even 2, 4, …, 20 (ignored elsewhere). */
   int fd_order = 2;
 };
 
-/// Per-binary usage line for FD-style executables.
+/// Per-binary usage line for the compact FD executable.
 inline void print_usage_fd(std::ostream &os, const char *exe) {
-  os << "Usage:\n  " << exe << " <N> <n_steps> <dt> <D> <fd_order>\n"
+  os << "Usage:\n  " << exe << " <N> <n_steps> <dt> <fd_order>\n"
      << "  fd_order: even 2,4,...,20 (central Laplacian; halo width order/2)\n";
 }
 
-/// Per-binary usage line for spectral-style executables.
+/// Per-binary usage line for the spectral / manual / scratch executables.
 inline void print_usage_spectral(std::ostream &os, const char *exe) {
-  os << "Usage:\n  " << exe << " <N> <n_steps> <dt> <D>\n";
+  os << "Usage:\n  " << exe << " <N> <n_steps> <dt>\n";
 }
 
 namespace detail {
 
 /// Common value-range check shared by both parser families.
 inline bool valid_values(const RunConfig &c, bool needs_fd_order) noexcept {
-  if (c.N < 8 || c.n_steps < 1 || c.dt <= 0.0 || c.D <= 0.0) return false;
+  if (c.N < 8 || c.n_steps < 1 || c.dt <= 0.0) return false;
   if (needs_fd_order) {
     if (c.fd_order < 2 || c.fd_order > 20 || (c.fd_order % 2) != 0) return false;
   }
@@ -76,39 +80,37 @@ inline bool valid_values(const RunConfig &c, bool needs_fd_order) noexcept {
 } // namespace detail
 
 /**
- * @brief Parse the FD-style positional CLI: `<N> <n_steps> <dt> <D> <fd_order>`.
+ * @brief Parse the compact-FD positional CLI: `<N> <n_steps> <dt> <fd_order>`.
  *
  * Returns `std::nullopt` on insufficient args or out-of-range values.
  */
 inline std::optional<RunConfig> parse_fd(int argc, char **argv) noexcept {
-  if (argc < 6) return std::nullopt;
-  RunConfig c;
-  c.N = std::atoi(argv[1]);
-  c.n_steps = std::atoi(argv[2]);
-  c.dt = std::atof(argv[3]);
-  c.D = std::atof(argv[4]);
-  c.fd_order = std::atoi(argv[5]);
-  if (!detail::valid_values(c, /*needs_fd_order=*/true)) return std::nullopt;
-  return c;
-}
-
-/**
- * @brief Parse the spectral-style positional CLI: `<N> <n_steps> <dt> <D>`.
- *
- * `fd_order` is left at the `RunConfig` default (unused).
- */
-inline std::optional<RunConfig> parse_spectral(int argc, char **argv) noexcept {
   if (argc < 5) return std::nullopt;
   RunConfig c;
   c.N = std::atoi(argv[1]);
   c.n_steps = std::atoi(argv[2]);
   c.dt = std::atof(argv[3]);
-  c.D = std::atof(argv[4]);
+  c.fd_order = std::atoi(argv[4]);
+  if (!detail::valid_values(c, /*needs_fd_order=*/true)) return std::nullopt;
+  return c;
+}
+
+/**
+ * @brief Parse the spectral / manual / scratch CLI: `<N> <n_steps> <dt>`.
+ *
+ * `fd_order` is left at the `RunConfig` default (unused).
+ */
+inline std::optional<RunConfig> parse_spectral(int argc, char **argv) noexcept {
+  if (argc < 4) return std::nullopt;
+  RunConfig c;
+  c.N = std::atoi(argv[1]);
+  c.n_steps = std::atoi(argv[2]);
+  c.dt = std::atof(argv[3]);
   if (!detail::valid_values(c, /*needs_fd_order=*/false)) return std::nullopt;
   return c;
 }
 
-/// `parse_fd` + rank-0 usage print — drop-in for FD binary `main`s.
+/// `parse_fd` + rank-0 usage print — drop-in for compact FD `main`.
 inline std::optional<RunConfig> parse_fd_or_print_usage(int argc, char **argv,
                                                         int rank) {
   auto cfg = parse_fd(argc, argv);
@@ -118,7 +120,7 @@ inline std::optional<RunConfig> parse_fd_or_print_usage(int argc, char **argv,
   return cfg;
 }
 
-/// `parse_spectral` + rank-0 usage print — drop-in for spectral binary `main`s.
+/// `parse_spectral` + rank-0 usage print — drop-in for the simpler binaries.
 inline std::optional<RunConfig> parse_spectral_or_print_usage(int argc, char **argv,
                                                               int rank) {
   auto cfg = parse_spectral(argc, argv);
