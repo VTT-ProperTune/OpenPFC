@@ -93,7 +93,7 @@ inline size_t get_system_memory_bytes() noexcept {
 
   std::string line;
   while (std::getline(meminfo, line)) {
-    if (line.find("MemTotal:") == 0) {
+    if (line.starts_with("MemTotal:")) {
       // Format: "MemTotal:       16384000 kB"
       std::istringstream iss(line);
       std::string label;
