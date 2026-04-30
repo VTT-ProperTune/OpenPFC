@@ -14,13 +14,15 @@ endif()
 
 find_package(OpenMP COMPONENTS CXX)
 
-# Per-method binaries:
-#   heat3d_fd                  — compact FD driver
+# Per-method binaries (model hierarchy, primitive -> compact):
+#   heat3d_fd_scratch          — version 0; bare triple loops, raw pointers,
+#                                only PaddedHaloExchanger from openpfc
 #   heat3d_fd_manual           — laboratory-style explicit-stencil FD driver
-#   heat3d_spectral            — implicit-Euler spectral
+#   heat3d_fd                  — compact FD driver (FdCpuStack + EulerStepper)
 #   heat3d_spectral_pointwise  — point-wise spectral RHS + explicit Euler
-set(_heat3d_binaries heat3d_fd heat3d_fd_manual heat3d_spectral
-                     heat3d_spectral_pointwise)
+#   heat3d_spectral            — implicit-Euler spectral
+set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd
+                     heat3d_spectral_pointwise heat3d_spectral)
 foreach(_target IN LISTS _heat3d_binaries)
   add_executable(${_target} src/cpu/${_target}.cpp)
   target_include_directories(${_target} PRIVATE ${HEAT3D_INCLUDE_DIR})
