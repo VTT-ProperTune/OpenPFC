@@ -67,7 +67,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
       GridSpacing({1.0, 1.0, 1.0}), cfg.fd_order, rank, nproc, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
 
-  auto grad = field::create(stack.u(), cfg.fd_order);
+  auto grad = field::create<heat3d::HeatGrads>(stack.u(), cfg.fd_order);
   auto stepper = sim::steppers::create(stack.u(), grad, model, cfg.dt);
 
   runtime::MpiTimer timer{MPI_COMM_WORLD};
@@ -114,7 +114,7 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
       GridSpacing({1.0, 1.0, 1.0}), rank, nproc, MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
 
-  auto grad = field::create(stack.u(), stack.fft());
+  auto grad = field::create<heat3d::HeatGrads>(stack.u(), stack.fft());
   auto stepper = sim::steppers::create(stack.u(), grad, model, cfg.dt);
 
   runtime::MpiTimer timer{MPI_COMM_WORLD};
