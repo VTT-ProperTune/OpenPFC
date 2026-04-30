@@ -3,4 +3,5 @@
 
 target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_backend_from_string.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_mpi_timer.cpp
 )
