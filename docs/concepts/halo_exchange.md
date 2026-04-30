@@ -44,6 +44,7 @@ Policies describe where ghost data lives and what is safe for FFT. They are docu
 |--------|---------|-------------------|---------------|
 | None | Core `nx×ny×nz` only | Yes | N/A |
 | InPlace | One array; ghosts in boundary slabs of that array | No (multi-rank) after halo fill | `HaloExchanger` + `laplacian_interior<Order>` |
+| **PaddedBrick** | Single contiguous `(nx+2hw)×(ny+2hw)×(nz+2hw)` buffer with a real ghost ring; owned core at `[hw, hw+n)` per axis | No (FFT does not see padded layout) | `PaddedHaloExchanger` + manual stencil over `pfc::field::PaddedBrick<T>`; see `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` |
 | Separated | Core + six face halo buffers | Yes on core only | `SeparatedFaceHaloExchanger` + `laplacian_periodic_separated<Order>` (or `laplacian_interior<Order>` for interior-only) |
 | Mixed / hybrid | Core has no aliased ghosts; sidecar holds all ghost data | Core only | Same as Separated; extra sync/copy steps are explicit, slower path |
 
@@ -70,7 +71,11 @@ Ghosts are not resolved by per-point MPI or maps in hot loops. The pattern (whic
 | SparseVector + gather/scatter | `sparse_vector.hpp`, `sparse_vector_ops.hpp` | Pack path for halos. |
 | MPI exchange | `exchange.hpp` | `isend_face` / `irecv_face` (derived types), pack `isend_data` / `irecv_data`, etc. |
 | Face MPI types | `halo_mpi_types.hpp` | `create_face_types_6` for send/recv subarrays in a single `[nx,ny,nz]` buffer. |
+| Padded face MPI types | `padded_halo_mpi_types.hpp` | `create_padded_face_types_6` — same idea but the outer extents are `(nx+2hw, ny+2hw, nz+2hw)` and recv subarrays target the dedicated halo ring rather than the outermost owned cells. |
 | In-place driver | `halo_exchange.hpp` | `HaloExchanger<T>`: recv into core boundary slabs (traditional). |
+| Padded brick driver | `padded_halo_exchange.hpp` | `PaddedHaloExchanger<T>`: in-place non-blocking face exchange on a `pfc::field::PaddedBrick<T>` so `u(i±hw, j, k)` legitimately reaches the ghost ring. Same `start_/finish_halo_exchange` API as `HaloExchanger`. |
+| Padded brick storage | `field/padded_brick.hpp` | `pfc::field::PaddedBrick<T>` — single contiguous owned + halo-ring buffer; `T &operator()(int i, int j, int k)` valid for any `i, j, k in [-hw, n+hw)`. |
+| Brick iteration | `field/brick_iteration.hpp` | `for_each_owned`, `for_each_inner(brick, r, fn)`, `for_each_border(brick, r, fn)` yielding `(int i, int j, int k)` triples — drives the laboratory-style FD loop. OMP-parallel `_omp` variants over `(k, j)`. |
 | Separated driver | `separated_halo_exchange.hpp` | `SeparatedFaceHaloExchanger<T>`: send from core, recv into separate face buffers. |
 | Persistent halos | `halo_persistent.hpp` | `PersistentHaloExchanger` for in-place six-face path. |
 | FD primitives | `field/fd_apply.hpp`, `field/fd_stencils.hpp` | `apply_d2_along<Axis, Stencil>`, `apply_tensor_d<Mx, My, Mz, ...>`, `EvenCentralD2<Order>` |
@@ -88,8 +93,9 @@ Separated recv: No scatter into core; MPI receives into contiguous face buffers 
 
 ### 5.2 Tests
 
-- Unit: `tests/unit/kernel/decomposition/test_halo_pattern.cpp`, `test_halo_face_layout.cpp` — pattern sizes vs face layout counts.
-- Integration: `test_halo_patterns.cpp`, `test_halo_exchange_driver.cpp`, `test_fd_heat_mpi.cpp` — MPI parity (in-place vs separated where applicable).
+- Unit: `tests/unit/kernel/decomposition/test_halo_pattern.cpp`, `test_halo_face_layout.cpp`, `test_padded_halo_mpi_types.cpp` (per-face subarray geometry, MPI_Sendrecv on `MPI_COMM_SELF`).
+- Unit: `tests/unit/kernel/field/test_padded_brick.cpp`, `test_brick_iteration.cpp` — padded indexing, owned/inner/border iteration counts.
+- Integration: `test_halo_patterns.cpp`, `test_halo_exchange_driver.cpp`, `test_padded_halo_exchange.cpp` (1/2/4-rank periodic wrap), `test_fd_heat_mpi.cpp` — MPI parity (in-place vs separated where applicable).
 
 ### 5.3 Documentation references
 
@@ -136,9 +142,12 @@ Separated recv: No scatter into core; MPI receives into contiguous face buffers 
 
 ---
 
-## 10. Working example
+## 10. Working examples
 
-`examples/15_finite_difference_heat.cpp`: `mpirun -np P ./15_finite_difference_heat` — separated face halos, `SeparatedFaceHaloExchanger`, `laplacian_periodic_separated<2>`. The core field can be passed to `fft.forward` / `backward` on the same decomposition (comment in source).
+- **Separated layout** (FFT-safe core + face buffers):
+  `examples/15_finite_difference_heat.cpp` — `mpirun -np P ./15_finite_difference_heat` runs the heat equation with `SeparatedFaceHaloExchanger` and `laplacian_periodic_separated<2>`. The core field can be passed to `fft.forward` / `backward` on the same decomposition (comment in source).
+- **Padded brick layout** (in-place ghost ring, laboratory style):
+  `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` — `mpirun -np P ./apps/heat3d/heat3d_fd_manual N n_steps dt D` runs the same heat equation against `pfc::field::PaddedBrick<double>` + `pfc::PaddedHaloExchanger<double>`. The driver shows the explicit non-blocking comm/compute overlap (`start_halo_exchange` → `for_each_inner_omp` → `finish_halo_exchange` → `for_each_border` → Euler) and per-section `pfc::runtime::tic/toc` timers; see [`apps/heat3d/README.md`](../../apps/heat3d/README.md) for the side-by-side comparison with the compact `heat3d_fd`.
 
 ---
 
