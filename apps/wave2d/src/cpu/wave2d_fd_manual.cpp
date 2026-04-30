@@ -9,8 +9,11 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <memory>
 #include <mpi.h>
 
+#include <openpfc/frontend/io/vtk_writer.hpp>
+#include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -22,6 +25,7 @@
 
 #include <wave2d/cli.hpp>
 #include <wave2d/reporting.hpp>
+#include <wave2d/vtk_snapshot.hpp>
 #include <wave2d/wave_boundary.hpp>
 #include <wave2d/wave_model.hpp>
 
@@ -68,6 +72,15 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
                                             static_cast<double>(cfg.u_wall));
   }
 
+  pfc::RealField vtk_buf;
+  std::unique_ptr<pfc::VTKWriter> vtk_writer;
+  if (!cfg.vtk_pattern.empty()) {
+    vtk_writer = std::make_unique<pfc::VTKWriter>(cfg.vtk_pattern);
+    wave2d::vtk_configure_writer(*vtk_writer, u);
+    wave2d::mkdir_vtk_parent_rank0(cfg.vtk_pattern, rank);
+    wave2d::vtk_write_increment(*vtk_writer, 0, u, vtk_buf);
+  }
+
   auto stencil_lap = [&](int i, int j, int k) {
     const double lxx = u(i + 1, j, k) - 2.0 * u(i, j, k) + u(i - 1, j, k);
     const double lyy = u(i, j + 1, k) - 2.0 * u(i, j, k) + u(i, j - 1, k);
@@ -92,6 +105,10 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
     if (cfg.y_bc == YBoundaryKind::Dirichlet) {
       wave2d::enforce_dirichlet_y_walls_owned(u, v, cfg.Ny,
                                               static_cast<double>(cfg.u_wall));
+    }
+
+    if (vtk_writer && (step + 1) % cfg.vtk_every == 0) {
+      wave2d::vtk_write_increment(*vtk_writer, step + 1, u, vtk_buf);
     }
   }
   const double max_elapsed = runtime::toc(timer);

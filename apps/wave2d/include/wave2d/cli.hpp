@@ -5,7 +5,8 @@
 
 /**
  * @file cli.hpp
- * @brief MPI-free CLI for `wave2d_fd` / `wave2d_fd_manual`.
+ * @brief MPI-free CLI for `wave2d_fd`, `wave2d_fd_manual`, and GPU `wave2d_cuda` /
+ *        `wave2d_hip` (same positional layout as manual).
  */
 
 #include <cstdlib>
@@ -28,21 +29,62 @@ struct RunConfig {
   YBoundaryKind y_bc = YBoundaryKind::Dirichlet;
   /** Dirichlet value on y walls (Neumann ignores). */
   double u_wall = 0.0;
+  /** Empty disables VTK; pattern may include `%04d` for time index (see
+   * `VTKWriter`). */
+  std::string vtk_pattern;
+  /** Write VTK every this many completed steps (after initial frame 0). */
+  int vtk_every = 1;
 };
 
 inline void print_usage(std::ostream &os, const char *exe, bool with_fd_order) {
   os << "Usage:\n  " << exe << " <Nx> <Ny> <n_steps> <dt>";
   if (with_fd_order) {
-    os << " <fd_order> <y_bc> [u_wall]\n";
-    os << "  fd_order: even 2,4,...,20\n";
-    os << "  y_bc: dirichlet | neumann\n";
-    os << "  u_wall: optional, default 0 (Dirichlet value on y=0 and y=Ny-1)\n";
+    os << " <fd_order> <y_bc> [u_wall]";
   } else {
-    os << " <y_bc> [u_wall]\n";
-    os << "  y_bc: dirichlet | neumann\n";
-    os << "  u_wall: optional, default 0\n";
+    os << " <y_bc> [u_wall]";
   }
+  os << " [--vtk <path_%04d.vti>] [--vtk-every <k>]\n";
+  if (with_fd_order) {
+    os << "  fd_order: even 2,4,...,20\n";
+  }
+  os << "  y_bc: dirichlet | neumann\n";
+  os << "  u_wall: optional, default 0 (Dirichlet value on y=0 and y=Ny-1)\n";
+  os << "  --vtk: ParaView VTK ImageData series (omit to skip file output)\n";
+  os << "  --vtk-every: save every k completed steps after t=0 (default 1)\n";
 }
+
+namespace detail {
+
+[[nodiscard]] inline bool is_cli_flag(const char *s) noexcept {
+  return s != nullptr && s[0] == '-' && s[1] == '-';
+}
+
+inline bool parse_vtk_tail(int argc, char **argv, int start, RunConfig &c) {
+  for (int i = start; i < argc;) {
+    const std::string_view a = argv[i];
+    if (a == "--vtk") {
+      if (i + 1 >= argc) {
+        return false;
+      }
+      c.vtk_pattern = argv[i + 1];
+      i += 2;
+    } else if (a == "--vtk-every") {
+      if (i + 1 >= argc) {
+        return false;
+      }
+      c.vtk_every = std::atoi(argv[i + 1]);
+      i += 2;
+    } else {
+      return false;
+    }
+  }
+  if (!c.vtk_pattern.empty() && c.vtk_every < 1) {
+    return false;
+  }
+  return true;
+}
+
+} // namespace detail
 
 inline std::optional<YBoundaryKind> parse_y_bc(std::string_view s) {
   if (s == "dirichlet" || s == "d" || s == "D") return YBoundaryKind::Dirichlet;
@@ -73,7 +115,12 @@ inline std::optional<RunConfig> parse_fd(int argc, char **argv) {
   const auto yb = parse_y_bc(argv[6]);
   if (!yb) return std::nullopt;
   c.y_bc = *yb;
-  if (argc >= 8) c.u_wall = std::atof(argv[7]);
+  int opt = 7;
+  if (argc > 7 && !detail::is_cli_flag(argv[7])) {
+    c.u_wall = std::atof(argv[7]);
+    opt = 8;
+  }
+  if (!detail::parse_vtk_tail(argc, argv, opt, c)) return std::nullopt;
   if (!detail::valid_grid(c) || !detail::valid_fd_order(c)) return std::nullopt;
   return c;
 }
@@ -88,7 +135,12 @@ inline std::optional<RunConfig> parse_manual(int argc, char **argv) {
   const auto yb = parse_y_bc(argv[5]);
   if (!yb) return std::nullopt;
   c.y_bc = *yb;
-  if (argc >= 7) c.u_wall = std::atof(argv[6]);
+  int opt = 6;
+  if (argc > 6 && !detail::is_cli_flag(argv[6])) {
+    c.u_wall = std::atof(argv[6]);
+    opt = 7;
+  }
+  if (!detail::parse_vtk_tail(argc, argv, opt, c)) return std::nullopt;
   if (!detail::valid_grid(c)) return std::nullopt;
   return c;
 }

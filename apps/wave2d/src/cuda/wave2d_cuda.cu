@@ -11,11 +11,14 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <mpi.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include <openpfc/frontend/io/vtk_writer.hpp>
+#include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
@@ -23,7 +26,9 @@
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 
+#include <wave2d/cli.hpp>
 #include <wave2d/device_step.hpp>
+#include <wave2d/vtk_snapshot.hpp>
 #include <wave2d/wave_model.hpp>
 #include <wave2d/wave_step_separated.hpp>
 
@@ -38,34 +43,28 @@ void cuda_check(cudaError_t e, const char *what) {
 } // namespace
 
 int main(int argc, char *argv[]) {
+  const std::string exe = (argc > 0 && argv[0] != nullptr)
+                              ? std::string(argv[0])
+                              : std::string("wave2d_cuda");
+  const auto cfg_o = wave2d::parse_manual(argc, argv);
   MPI_Init(&argc, &argv);
   int rank = 0;
   int nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
-  if (argc < 6) {
+  if (!cfg_o) {
     if (rank == 0) {
-      std::cerr << "Usage: " << argv[0]
-                << " <Nx> <Ny> <n_steps> <dt> <y_bc> [u_wall]\n";
+      wave2d::print_usage(std::cerr, exe.c_str(), false);
     }
     MPI_Finalize();
     return EXIT_FAILURE;
   }
-
-  const int Nx = std::atoi(argv[1]);
-  const int Ny = std::atoi(argv[2]);
-  const int n_steps = std::atoi(argv[3]);
-  const double dt = std::atof(argv[4]);
-  const auto yb = wave2d::parse_y_bc(argv[5]);
-  const double u_wall = (argc >= 7) ? std::atof(argv[6]) : 0.0;
-  if (!yb || Nx < 4 || Ny < 4 || n_steps < 1 || dt <= 0.0) {
-    if (rank == 0) {
-      std::cerr << "Invalid arguments\n";
-    }
-    MPI_Finalize();
-    return EXIT_FAILURE;
-  }
+  const wave2d::RunConfig &cfg = *cfg_o;
+  const int Nx = cfg.Nx;
+  const int Ny = cfg.Ny;
+  const int n_steps = cfg.n_steps;
+  const double dt = cfg.dt;
 
   auto world = pfc::world::create(pfc::GridSize({Nx, Ny, 1}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
@@ -81,6 +80,15 @@ int main(int argc, char *argv[]) {
   const std::size_t nlocal = static_cast<std::size_t>(nx) *
                              static_cast<std::size_t>(ny) *
                              static_cast<std::size_t>(nz);
+
+  const auto gw = pfc::world::get_size(world);
+  const std::array<int, 3> global_vtk{gw[0], gw[1], gw[2]};
+  const std::array<int, 3> local_vtk{nx, ny, nz};
+  const std::array<int, 3> off_vtk{lower[0], lower[1], lower[2]};
+  const auto worg = pfc::world::get_origin(world);
+  const auto wsp = pfc::world::get_spacing(world);
+  const std::array<double, 3> origin_vtk{worg[0], worg[1], worg[2]};
+  const std::array<double, 3> spacing_vtk{wsp[0], wsp[1], wsp[2]};
 
   const double inv_dx2 = 1.0;
   const double inv_dy2 = 1.0;
@@ -137,6 +145,17 @@ int main(int argc, char *argv[]) {
                         cudaMemcpyHostToDevice),
              "H2D v");
 
+  pfc::RealField vtk_buf;
+  std::unique_ptr<pfc::VTKWriter> vtk_writer;
+  if (!cfg.vtk_pattern.empty()) {
+    vtk_writer = std::make_unique<pfc::VTKWriter>(cfg.vtk_pattern);
+    wave2d::vtk_configure_writer_owned_slab(*vtk_writer, global_vtk, local_vtk,
+                                            off_vtk, origin_vtk, spacing_vtk);
+    wave2d::mkdir_vtk_parent_rank0(cfg.vtk_pattern, rank);
+    wave2d::vtk_write_u_owned_buffer(*vtk_writer, 0, u_host.data(), nx, ny, nz,
+                                     vtk_buf);
+  }
+
   for (int step = 0; step < n_steps; ++step) {
     (void)step;
     cuda_check(cudaMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
@@ -146,9 +165,9 @@ int main(int argc, char *argv[]) {
                           cudaMemcpyDeviceToHost),
                "D2H v");
     exchanger.exchange_halos(u_host.data(), u_host.size(), face_halos_host);
-    if (*yb == wave2d::YBoundaryKind::Dirichlet) {
+    if (cfg.y_bc == wave2d::YBoundaryKind::Dirichlet) {
       wave2d::patch_y_face_halos_dirichlet_order2(
-          u_host.data(), nx, ny, face_halos_host, lower, Ny, u_wall);
+          u_host.data(), nx, ny, face_halos_host, lower, Ny, cfg.u_wall);
     } else {
       wave2d::patch_y_face_halos_neumann_order2(u_host.data(), nx, ny,
                                                 face_halos_host, lower, Ny);
@@ -166,7 +185,7 @@ int main(int argc, char *argv[]) {
     wave2d::wave2d_step_cuda(u_dev, v_dev, face_dev[0], face_dev[1], face_dev[2],
                              face_dev[3], face_dev[4], face_dev[5], nx, ny, nz,
                              halo_width, inv_dx2, inv_dy2, dt, wave2d::kC);
-    if (*yb == wave2d::YBoundaryKind::Dirichlet) {
+    if (cfg.y_bc == wave2d::YBoundaryKind::Dirichlet) {
       cuda_check(cudaMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
                             cudaMemcpyDeviceToHost),
                  "D2H u post");
@@ -184,7 +203,7 @@ int main(int argc, char *argv[]) {
                 static_cast<std::size_t>(ix) +
                 static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
                 static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx * ny);
-            u_host[idx] = u_wall;
+            u_host[idx] = cfg.u_wall;
             v_host[idx] = 0.0;
           }
         }
@@ -195,6 +214,14 @@ int main(int argc, char *argv[]) {
       cuda_check(cudaMemcpy(v_dev, v_host.data(), nlocal * sizeof(double),
                             cudaMemcpyHostToDevice),
                  "H2D v wall");
+    }
+
+    if (vtk_writer && (step + 1) % cfg.vtk_every == 0) {
+      cuda_check(cudaMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
+                            cudaMemcpyDeviceToHost),
+                 "D2H u vtk");
+      wave2d::vtk_write_u_owned_buffer(*vtk_writer, step + 1, u_host.data(), nx, ny,
+                                       nz, vtk_buf);
     }
   }
 

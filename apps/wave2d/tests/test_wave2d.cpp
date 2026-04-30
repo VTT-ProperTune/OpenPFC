@@ -61,6 +61,26 @@ TEST_CASE("parse_manual round-trip", "[wave2d][cli]") {
   REQUIRE(c->y_bc == wave2d::YBoundaryKind::Dirichlet);
 }
 
+TEST_CASE("parse_manual VTK flags", "[wave2d][cli]") {
+  const char *argv[] = {
+      "wave2d_fd_manual", "32",          "40", "10", "0.02", "neumann", "--vtk",
+      "out/u_%04d.vti",   "--vtk-every", "5"};
+  const auto c = wave2d::parse_manual(10, const_cast<char **>(argv));
+  REQUIRE(c);
+  REQUIRE(c->vtk_pattern == "out/u_%04d.vti");
+  REQUIRE(c->vtk_every == 5);
+}
+
+TEST_CASE("parse_fd VTK flags", "[wave2d][cli]") {
+  const char *argv[] = {"wave2d_fd",  "32",          "40",      "10",
+                        "0.02",       "4",           "neumann", "--vtk",
+                        "r_%04d.vti", "--vtk-every", "3"};
+  const auto c = wave2d::parse_fd(11, const_cast<char **>(argv));
+  REQUIRE(c);
+  REQUIRE(c->vtk_pattern == "r_%04d.vti");
+  REQUIRE(c->vtk_every == 3);
+}
+
 TEST_CASE("fill_y_physical_ghosts_padded Dirichlet mirrors", "[wave2d][bc]") {
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
