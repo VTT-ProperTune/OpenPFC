@@ -11,7 +11,7 @@
  * settings I/O, and optional field-modifier catalog injection.
  *
  * @see app.hpp
- * @see docs/app_pipeline.md
+ * @see docs/user_guide/app_pipeline.md
  */
 
 #ifndef PFC_UI_APP_SPECTRAL_RUN_HPP
