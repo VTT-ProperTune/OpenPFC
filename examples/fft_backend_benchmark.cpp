@@ -20,9 +20,11 @@
  */
 
 #include <chrono>
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <numbers>
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
@@ -74,7 +76,7 @@ double benchmark_fft(fft::Backend backend, const World &world,
 
     // Initialize with some test data
     for (size_t i = 0; i < real_data.size(); ++i) {
-      real_data[i] = std::sin(2.0 * M_PI * i / real_data.size());
+      real_data[i] = std::sin(2.0 * std::numbers::pi * i / real_data.size());
     }
 
     // Warmup
@@ -117,7 +119,7 @@ double benchmark_fft(fft::Backend backend, const World &world,
     // Initialize on host, copy to device
     std::vector<double> host_data(fft->size_inbox());
     for (size_t i = 0; i < host_data.size(); ++i) {
-      host_data[i] = std::sin(2.0 * M_PI * i / host_data.size());
+      host_data[i] = std::sin(2.0 * std::numbers::pi * i / host_data.size());
     }
     real_data.copy_from_host(host_data);
 

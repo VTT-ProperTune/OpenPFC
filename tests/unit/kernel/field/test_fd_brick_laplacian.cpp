@@ -26,6 +26,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <cstddef>
+#include <numbers>
 #include <vector>
 
 #include <openpfc/kernel/field/finite_difference.hpp>
@@ -169,7 +170,7 @@ TEST_CASE("laplacian_periodic_separated<2> matches the analytic Laplacian "
   // self-exchange on a 1-rank communicator.
   constexpr int N = 32;
   constexpr int hw = 1;
-  const double dx = 2.0 * M_PI / static_cast<double>(N);
+  const double dx = 2.0 * std::numbers::pi / static_cast<double>(N);
   const double inv_dx2 = 1.0 / (dx * dx);
 
   std::vector<double> u(static_cast<std::size_t>(N) * N * N);
@@ -258,7 +259,7 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches the analytic Laplacian "
   // u(x, y) = sin(x) cos(y) on [0, 2π)^2 ⇒ Δu = -2 u.
   constexpr int N = 32;
   constexpr int hw = 1;
-  const double dx = 2.0 * M_PI / static_cast<double>(N);
+  const double dx = 2.0 * std::numbers::pi / static_cast<double>(N);
   const double inv_dx2 = 1.0 / (dx * dx);
 
   std::vector<double> u(static_cast<std::size_t>(N) * N);

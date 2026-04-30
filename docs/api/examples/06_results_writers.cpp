@@ -20,6 +20,7 @@
 #include <iomanip>
 #include <iostream>
 #include <mpi.h>
+#include <numbers>
 #include <numeric>
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/kernel/data/world.hpp>
@@ -47,8 +48,9 @@ RealField create_test_field(const World &world, double time) {
         double z = origin[2] + k * spacing[2];
 
         // Sine wave pattern that evolves with time (uses x, y, z)
-        field[idx] = std::sin(2.0 * M_PI * x) * std::cos(2.0 * M_PI * y) *
-                     std::cos(2.0 * M_PI * z) * std::sin(time);
+        field[idx] = std::sin(2.0 * std::numbers::pi * x) *
+                     std::cos(2.0 * std::numbers::pi * y) *
+                     std::cos(2.0 * std::numbers::pi * z) * std::sin(time);
       }
     }
   }

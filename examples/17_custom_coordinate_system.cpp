@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -44,19 +44,14 @@
  * @endcode
  */
 
-#define _USE_MATH_DEFINES
 #include <cmath>
 #include <iostream>
+#include <numbers>
 
 // OpenPFC includes
 #include <openpfc/openpfc.hpp>
 
 using namespace pfc;
-
-// Use M_PI from cmath (requires _USE_MATH_DEFINES on some platforms)
-#ifndef M_PI
-constexpr double M_PI = 3.14159265358979323846;
-#endif
 
 // ============================================================================
 // Part 1: Polar Coordinates (2D - Simpler Example)
@@ -119,7 +114,7 @@ struct PolarCoordinateSystem {
    * // Full circle: r in [0, 10], theta in [0, 2*pi]
    * PolarCoordinateSystem cs(
    *     {0.0, 10.0},
-   *     {0.0, 2.0 * M_PI},
+   *     {0.0, 2.0 * std::numbers::pi},
    *     {false, true, false}
    * );
    * @endcode
@@ -213,7 +208,7 @@ inline Int3 polar_to_indices(const PolarCoordinateSystem &cs, const Real3 &coord
 
   // Handle angle wraparound: map theta in [-pi, pi] to [theta_min, theta_max]
   if (theta < cs.m_theta_min) {
-    theta += 2.0 * M_PI;
+    theta += 2.0 * std::numbers::pi;
   }
 
   // Map to indices
@@ -276,8 +271,8 @@ struct SphericalCoordinateSystem {
    * @code
    * SphericalCoordinateSystem cs(
    *     {0.0, 10.0},                        // r ∈ [0, 10]
-   *     {0.0, M_PI},           // theta in [0, pi]
-   *     {0.0, 2.0 * M_PI},     // phi in [0, 2*pi]
+   *     {0.0, std::numbers::pi},           // theta in [0, pi]
+   *     {0.0, 2.0 * std::numbers::pi},     // phi in [0, 2*pi]
    *     {false, false, true}                // phi periodic
    * );
    * @endcode
@@ -286,8 +281,8 @@ struct SphericalCoordinateSystem {
    * @code
    * SphericalCoordinateSystem shell(
    *     {5.0, 10.0},  // Annular: 5 ≤ r ≤ 10
-   *     {0.0, M_PI},
-   *     {0.0, 2.0 * M_PI}
+   *     {0.0, std::numbers::pi},
+   *     {0.0, 2.0 * std::numbers::pi}
    * );
    * @endcode
    */
@@ -381,7 +376,7 @@ inline Int3 spherical_to_indices(const SphericalCoordinateSystem &cs,
 
   // Handle angle wraparound
   if (phi < cs.m_phi_min) {
-    phi += 2.0 * M_PI;
+    phi += 2.0 * std::numbers::pi;
   }
 
   // Map to indices
@@ -416,9 +411,9 @@ void example_polar_coordinates() {
   std::cout << "=== Example 1: Polar Coordinates (2D) ===\n\n";
 
   // Define polar coordinate system: r in [0, 10], theta in [0, 2*pi]
-  PolarCoordinateSystem cs({0.0, 10.0},           // r range
-                           {0.0, 2.0 * M_PI},     // theta range
-                           {false, true, false}); // theta periodic
+  PolarCoordinateSystem cs({0.0, 10.0},                   // r range
+                           {0.0, 2.0 * std::numbers::pi}, // theta range
+                           {false, true, false});         // theta periodic
 
   // Grid dimensions: 64 radial × 128 angular × 1
   const Int3 size = {64, 128, 1};
@@ -476,10 +471,10 @@ void example_spherical_coordinates() {
   std::cout << "=== Example 2: Spherical Coordinates (3D) ===\n\n";
 
   // Full sphere: r in [0, 10], theta in [0, pi], phi in [0, 2*pi]
-  SphericalCoordinateSystem cs({0.0, 10.0},           // r range
-                               {0.0, M_PI},           // theta range
-                               {0.0, 2.0 * M_PI},     // phi range
-                               {false, false, true}); // phi periodic
+  SphericalCoordinateSystem cs({0.0, 10.0},                   // r range
+                               {0.0, std::numbers::pi},       // theta range
+                               {0.0, 2.0 * std::numbers::pi}, // phi range
+                               {false, false, true});         // phi periodic
 
   const Int3 size = {32, 32, 64}; // n_r × n_θ × n_φ
 

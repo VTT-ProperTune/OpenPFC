@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_all.hpp>
@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <complex>
+#include <numbers>
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
@@ -49,8 +50,9 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (double) [integration][gpu]", "[gpu
   // Initialize smooth input on host
   std::vector<double> real_in_cpu(n_in);
   for (size_t i = 0; i < real_in_cpu.size(); ++i) {
-    real_in_cpu[i] = 0.3 + 0.4 * std::sin(2.0 * M_PI * static_cast<double>(i) /
-                                          static_cast<double>(real_in_cpu.size()));
+    real_in_cpu[i] =
+        0.3 + 0.4 * std::sin(2.0 * std::numbers::pi * static_cast<double>(i) /
+                             static_cast<double>(real_in_cpu.size()));
   }
 
   // CPU forward

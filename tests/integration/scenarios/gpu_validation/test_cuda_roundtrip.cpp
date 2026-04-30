@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_all.hpp>
@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <complex>
+#include <numbers>
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
@@ -45,8 +46,9 @@ TEST_CASE("CUDA FFT roundtrip (double) [integration][gpu]", "[gpu]") {
   // Initialize host data with a smooth function and copy to device
   std::vector<double> host_in(fft.size_inbox());
   for (size_t i = 0; i < host_in.size(); ++i) {
-    host_in[i] = 0.25 + 0.5 * std::sin(2.0 * M_PI * static_cast<double>(i) /
-                                       static_cast<double>(host_in.size()));
+    host_in[i] =
+        0.25 + 0.5 * std::sin(2.0 * std::numbers::pi * static_cast<double>(i) /
+                              static_cast<double>(host_in.size()));
   }
   real_in.copy_from_host(host_in);
 
@@ -82,7 +84,7 @@ TEST_CASE("CUDA FFT roundtrip (float) [integration][gpu]", "[gpu]") {
   // Initialize host data with a smooth function and copy to device
   std::vector<float> host_in(fft.size_inbox());
   for (size_t i = 0; i < host_in.size(); ++i) {
-    host_in[i] = 0.25f + 0.5f * std::sin(2.0f * static_cast<float>(M_PI) *
+    host_in[i] = 0.25f + 0.5f * std::sin(2.0f * std::numbers::pi_v<float> *
                                          static_cast<float>(i) /
                                          static_cast<float>(host_in.size()));
   }

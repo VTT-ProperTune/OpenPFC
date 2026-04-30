@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -29,14 +29,10 @@
 
 #include <cmath>
 #include <iostream>
+#include <numbers>
 #include <openpfc/openpfc.hpp>
 
 using namespace pfc;
-
-// Use M_PI constant
-#ifndef M_PI
-constexpr double M_PI = 3.14159265358979323846;
-#endif
 
 // ============================================================================
 // Part 1: Define Custom Pattern Types
@@ -116,8 +112,8 @@ double evaluate_vortex(const my_project::VortexPattern &pattern, const Real3 &po
   double value = 0.0;
 
   if (r > 1e-10) { // Avoid division by zero at center
-    value =
-        (pattern.m_strength / (2.0 * M_PI * r)) * (1.0 - std::exp(-r * r / r_c_sq));
+    value = (pattern.m_strength / (2.0 * std::numbers::pi * r)) *
+            (1.0 - std::exp(-r * r / r_c_sq));
   }
 
   return value;

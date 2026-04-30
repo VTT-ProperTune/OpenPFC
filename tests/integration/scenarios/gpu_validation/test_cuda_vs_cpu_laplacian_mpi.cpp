@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_all.hpp>
@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <complex>
+#include <numbers>
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
@@ -57,10 +58,11 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
       for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
         for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
           // Periodic smooth field combining three modes
-          double val = 0.3 +
-                       0.2 * std::sin(2.0 * M_PI * i / static_cast<double>(Lx)) +
-                       0.15 * std::sin(2.0 * M_PI * j / static_cast<double>(Ly)) +
-                       0.1 * std::sin(2.0 * M_PI * k / static_cast<double>(Lz));
+          double val =
+              0.3 +
+              0.2 * std::sin(2.0 * std::numbers::pi * i / static_cast<double>(Lx)) +
+              0.15 * std::sin(2.0 * std::numbers::pi * j / static_cast<double>(Ly)) +
+              0.1 * std::sin(2.0 * std::numbers::pi * k / static_cast<double>(Lz));
           real_in_cpu[idx++] = val;
         }
       }

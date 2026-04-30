@@ -21,6 +21,7 @@
 #include <iostream>
 #include <memory>
 #include <mpi.h>
+#include <numbers>
 #include <openpfc/openpfc.hpp>
 
 using namespace pfc;
@@ -309,7 +310,7 @@ public:
 
     // Time-varying amplitude (sinusoidal)
     double bc_value =
-        m_mean + m_amplitude * std::sin(2.0 * M_PI * m_frequency * time);
+        m_mean + m_amplitude * std::sin(2.0 * std::numbers::pi * m_frequency * time);
 
     // Apply at left boundary (i=0)
     int idx = 0;

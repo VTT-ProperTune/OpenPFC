@@ -32,6 +32,7 @@
 #include <iostream>
 #include <memory>
 #include <mpi.h>
+#include <numbers>
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
@@ -170,9 +171,9 @@ private:
     // Wave vector scaling factors
     auto spacing = world::get_spacing(w);
     auto size = world::get_size(w);
-    double kx_scale = 2.0 * M_PI / (spacing[0] * size[0]);
-    double ky_scale = 2.0 * M_PI / (spacing[1] * size[1]);
-    double kz_scale = 2.0 * M_PI / (spacing[2] * size[2]);
+    double kx_scale = 2.0 * std::numbers::pi / (spacing[0] * size[0]);
+    double ky_scale = 2.0 * std::numbers::pi / (spacing[1] * size[1]);
+    double kz_scale = 2.0 * std::numbers::pi / (spacing[2] * size[2]);
 
     // Loop over k-space
     size_t idx = 0;

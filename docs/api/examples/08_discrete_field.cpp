@@ -22,6 +22,7 @@
 #include <cmath>
 #include <complex>
 #include <iostream>
+#include <numbers>
 #include <numeric>
 #include <openpfc/kernel/data/array.hpp>
 #include <openpfc/kernel/data/discrete_field.hpp>
@@ -78,7 +79,8 @@ void demo_creation_and_initialization() {
   // Initialize with mathematical function - Method 1: 3D lambda
   std::cout << "Method 1: Initialize with 3D function f(x,y,z)\n";
   field.apply([](double x, double y, double /*z*/) {
-    return std::sin(2.0 * M_PI * x / 16.0) * std::cos(2.0 * M_PI * y / 16.0);
+    return std::sin(2.0 * std::numbers::pi * x / 16.0) *
+           std::cos(2.0 * std::numbers::pi * y / 16.0);
   });
 
   // Sample some values
@@ -330,7 +332,7 @@ void demo_complex_fields() {
 
   // Initialize real field with sine wave
   real_field.apply([](double x, double /*y*/, double /*z*/) {
-    return std::sin(2.0 * M_PI * x / 64.0);
+    return std::sin(2.0 * std::numbers::pi * x / 64.0);
   });
 
   // Simulate k-space operation: low-pass filter

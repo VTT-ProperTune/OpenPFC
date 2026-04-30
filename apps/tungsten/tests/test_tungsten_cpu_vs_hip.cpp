@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -17,6 +17,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
+#include <numbers>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -53,7 +54,7 @@ TEST_CASE("Tungsten CPU vs HIP: Same results", "[Tungsten][CPU][HIP]") {
   auto &psi_hip_gpu = model_hip.get_psi();
 
   for (size_t i = 0; i < psi_cpu.size(); ++i) {
-    psi_cpu[i] = -0.4 + 0.1 * std::sin(2.0 * M_PI * i / psi_cpu.size());
+    psi_cpu[i] = -0.4 + 0.1 * std::sin(2.0 * std::numbers::pi * i / psi_cpu.size());
   }
 
   std::vector<double> psi_init(psi_cpu.begin(), psi_cpu.end());

@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <mpi.h>
+#include <numbers>
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
@@ -120,7 +121,7 @@ TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
   }
 
   constexpr int N = 32;
-  const double dx = 2.0 * M_PI / static_cast<double>(N);
+  const double dx = 2.0 * std::numbers::pi / static_cast<double>(N);
   const double inv_dx2 = 1.0 / (dx * dx);
 
   auto world = world::uniform(N, dx);

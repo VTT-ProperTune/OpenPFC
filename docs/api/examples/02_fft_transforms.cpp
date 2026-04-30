@@ -24,6 +24,7 @@
 #include <complex>
 #include <iomanip>
 #include <iostream>
+#include <numbers>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -91,7 +92,8 @@ void example_round_trip() {
 
         // Cosine wave in x-direction
         double x = i * spacing[0];
-        original[idx] = std::cos(2.0 * M_PI * x / (size[0] * spacing[0]));
+        original[idx] =
+            std::cos(2.0 * std::numbers::pi * x / (size[0] * spacing[0]));
       }
     }
   }
@@ -152,7 +154,7 @@ void example_laplacian() {
                      (k - inbox.low[2]);
 
         double x = i * spacing[0];
-        field[idx] = std::sin(2.0 * M_PI * x / L);
+        field[idx] = std::sin(2.0 * std::numbers::pi * x / L);
       }
     }
   }
@@ -175,9 +177,9 @@ void example_laplacian() {
         double ky = (j < size[1] / 2) ? j : j - size[1];
         double kz = k; // Half-space, only positive
 
-        kx *= 2.0 * M_PI / L;
-        ky *= 2.0 * M_PI / L;
-        kz *= 2.0 * M_PI / L;
+        kx *= 2.0 * std::numbers::pi / L;
+        ky *= 2.0 * std::numbers::pi / L;
+        kz *= 2.0 * std::numbers::pi / L;
 
         double k2 = kx * kx + ky * ky + kz * kz;
         field_k[idx] *= -k2;
@@ -190,7 +192,8 @@ void example_laplacian() {
 
   // Compare with analytical result
   double max_error = 0.0;
-  double analytical_value = -(2.0 * M_PI / L) * (2.0 * M_PI / L);
+  double analytical_value =
+      -(2.0 * std::numbers::pi / L) * (2.0 * std::numbers::pi / L);
 
   for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
     for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
@@ -201,7 +204,8 @@ void example_laplacian() {
                      (k - inbox.low[2]);
 
         double x = i * spacing[0];
-        double analytical = analytical_value * std::sin(2.0 * M_PI * x / L);
+        double analytical =
+            analytical_value * std::sin(2.0 * std::numbers::pi * x / L);
         double error = std::abs(laplacian[idx] - analytical);
         max_error = std::max(max_error, error);
       }

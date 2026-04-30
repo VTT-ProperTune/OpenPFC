@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <iostream>
 #include <mpi.h>
+#include <numbers>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -104,7 +105,7 @@ public:
       for (size_t i = 0; i < psi.size(); ++i) {
         const auto di = static_cast<double>(i);
         const auto n = static_cast<double>(psi.size());
-        psi[i] = -0.4 + 0.1 * std::sin(2.0 * M_PI * di / n);
+        psi[i] = -0.4 + 0.1 * std::sin(2.0 * std::numbers::pi * di / n);
       }
 
       // Warm-up run
@@ -217,10 +218,10 @@ public:
       auto &psi_gpu = model.get_psi();
       std::vector<RealType> psi_init(psi_gpu.size());
       for (size_t i = 0; i < psi_init.size(); ++i) {
-        psi_init[i] =
-            static_cast<RealType>(-0.4) +
-            static_cast<RealType>(0.1) *
-                std::sin(static_cast<RealType>(2.0 * M_PI * i / psi_init.size()));
+        psi_init[i] = static_cast<RealType>(-0.4) +
+                      static_cast<RealType>(0.1) *
+                          std::sin(static_cast<RealType>(2.0 * std::numbers::pi * i /
+                                                         psi_init.size()));
       }
       psi_gpu.copy_from_host(psi_init);
 
@@ -337,10 +338,10 @@ public:
       auto &psi_gpu = model.get_psi();
       std::vector<RealType> psi_init(psi_gpu.size());
       for (size_t i = 0; i < psi_init.size(); ++i) {
-        psi_init[i] =
-            static_cast<RealType>(-0.4) +
-            static_cast<RealType>(0.1) *
-                std::sin(static_cast<RealType>(2.0 * M_PI * i / psi_init.size()));
+        psi_init[i] = static_cast<RealType>(-0.4) +
+                      static_cast<RealType>(0.1) *
+                          std::sin(static_cast<RealType>(2.0 * std::numbers::pi * i /
+                                                         psi_init.size()));
       }
       psi_gpu.copy_from_host(psi_init);
 

@@ -6,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <mpi.h>
+#include <numbers>
 #include <vector>
 
 #include <openpfc/kernel/data/strong_types.hpp>
@@ -99,7 +100,7 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches analytic 2D Laplacian on
   }
 
   constexpr int N = 32;
-  const double dx = 2.0 * M_PI / static_cast<double>(N);
+  const double dx = 2.0 * std::numbers::pi / static_cast<double>(N);
   const double inv_dx2 = 1.0 / (dx * dx);
 
   auto world = world::create(GridSize({N, N, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),

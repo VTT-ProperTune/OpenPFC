@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <pfc/diffop.hpp>
@@ -8,13 +8,14 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <numbers>
 
 using namespace pfc;
 
 TEST_CASE("DiffOp - differentiate in all directions", "[diffop][unit]") {
   // Setup
-  auto lo{-M_PI, -M_PI, -M_PI};
-  auto hi{M_PI, M_PI, M_PI};
+  auto lo{-std::numbers::pi, -std::numbers::pi, -std::numbers::pi};
+  auto hi{std::numbers::pi, std::numbers::pi, std::numbers::pi};
   auto size{128, 128, 128};
   auto world = world::create(GridSize(lo), PhysicalOrigin(hi), GridSpacing(size));
   auto fft = fft::create(world);

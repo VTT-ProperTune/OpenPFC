@@ -25,6 +25,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <numbers>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -84,9 +85,9 @@ public:
           double ky = (j < size[1] / 2) ? j : j - size[1];
           double kz = k;
 
-          kx *= 2.0 * M_PI / (size[0] * spacing[0]);
-          ky *= 2.0 * M_PI / (size[1] * spacing[1]);
-          kz *= 2.0 * M_PI / (size[2] * spacing[2]);
+          kx *= 2.0 * std::numbers::pi / (size[0] * spacing[0]);
+          ky *= 2.0 * std::numbers::pi / (size[1] * spacing[1]);
+          kz *= 2.0 * std::numbers::pi / (size[2] * spacing[2]);
 
           double k2 = kx * kx + ky * ky + kz * kz;
 
