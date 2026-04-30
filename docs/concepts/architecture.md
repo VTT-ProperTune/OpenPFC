@@ -75,7 +75,7 @@ Backend-specific implementations: CPU/OpenMP/CUDA/HIP execution and FFT, and GPU
 
 | Directory | Contents |
 |-----------|----------|
-| `runtime/common` | Code shared by runtime backends: heffte_adapter.hpp (HeFFTe box conversion), backend_from_string.hpp (FFT backend name → enum for UI). |
+| `runtime/common` | Code shared by runtime backends and host-side runtime helpers: heffte_adapter.hpp (HeFFTe box conversion), backend_from_string.hpp (FFT backend name → enum for UI), cpu_affinity.hpp (`reset_cpu_affinity_if_single_mpi_rank` so OpenMP scales when a single MPI rank is pinned by the launcher), mpi_timer.hpp (`MpiTimer` + `tic`/`toc` for `MPI_MAX` wall-clock of a parallel section). |
 | `runtime/cpu` | CPU FFT implementation (fft.cpp), serial/OpenMP execution if split. |
 | `runtime/cuda` | CUDA backend: backend_tags_cuda, execution_space_cuda, databuffer_cuda, memory_space_cuda, memory_traits_cuda; exchange_cuda, view_cuda, parallel_cuda, deep_copy_cuda; sparse_vector_ops, sparse_vector_cuda; FFT (fft_cuda.hpp, fft_cuda.cpp); gpu_vector, kernels_simple. |
 | `runtime/hip` | HIP backend: backend_tags_hip, execution_space_hip, databuffer_hip, memory_space_hip, memory_traits_hip; exchange_hip, view_hip, parallel_hip, deep_copy_hip; sparse_vector_hip; FFT (fft_hip.hpp, fft_hip.cpp). |

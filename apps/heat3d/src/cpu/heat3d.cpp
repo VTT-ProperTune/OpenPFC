@@ -58,6 +58,7 @@
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/runtime/common/cpu_affinity.hpp>
+#include <openpfc/runtime/common/mpi_timer.hpp>
 
 #include <heat3d/heat_model.hpp>
 
@@ -234,17 +235,14 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   auto grad = field::create(u, cfg.fd_order);
   auto stepper = sim::steppers::create(u, grad, model, cfg.dt);
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  const double t0 = MPI_Wtime();
+  runtime::MpiTimer timer{MPI_COMM_WORLD};
+  runtime::tic(timer);
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
     exchanger.exchange_halos(u.data(), u.size(), face_halos);
     t = stepper.step(t, u.vec());
   }
-  const double t1 = MPI_Wtime();
-  double elapsed = t1 - t0;
-  double max_elapsed = 0.0;
-  MPI_Allreduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  const double max_elapsed = runtime::toc(timer);
 
   report_l2_and_timing(
       rank, nproc, cfg, "fd", fd_extra_metadata(cfg), max_elapsed,
@@ -295,8 +293,8 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  const double t0 = MPI_Wtime();
+  runtime::MpiTimer timer{MPI_COMM_WORLD};
+  runtime::tic(timer);
   for (int step = 0; step < cfg.n_steps; ++step) {
     fft.forward(u.vec(), psi_F);
     for (std::size_t k = 0; k < psi_F.size(); ++k) {
@@ -304,10 +302,7 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
     }
     fft.backward(psi_F, u.vec());
   }
-  const double t1 = MPI_Wtime();
-  double elapsed = t1 - t0;
-  double max_elapsed = 0.0;
-  MPI_Allreduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  const double max_elapsed = runtime::toc(timer);
 
   report_l2_and_timing(rank, nproc, cfg, "spectral", "", max_elapsed,
                        "(periodic spectral vs infinite-domain reference)",
@@ -332,16 +327,13 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   auto grad = field::create(u, fft);
   auto stepper = sim::steppers::create(u, grad, model, cfg.dt);
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  const double t0 = MPI_Wtime();
+  runtime::MpiTimer timer{MPI_COMM_WORLD};
+  runtime::tic(timer);
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
     t = stepper.step(t, u.vec());
   }
-  const double t1 = MPI_Wtime();
-  double elapsed = t1 - t0;
-  double max_elapsed = 0.0;
-  MPI_Allreduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  const double max_elapsed = runtime::toc(timer);
 
   report_l2_and_timing(rank, nproc, cfg, "spectral_pw", "", max_elapsed,
                        "(point-wise spectral RHS, explicit Euler)",
