@@ -246,6 +246,17 @@ private:
    *        return true (caller should stop). If present, return false.
    */
   template <typename T>
+  static void record_validated_value(const ParameterMetadata<T> &meta, T value,
+                                     ValidationResult &result) {
+    std::ostringstream val_str;
+    val_str << value;
+    if (meta.min_value && meta.max_value) {
+      val_str << "  [range: " << *meta.min_value << ", " << *meta.max_value << "]";
+    }
+    result.validated_params[meta.name] = val_str.str();
+  }
+
+  template <typename T>
   static bool finish_validation_if_missing(const json &config,
                                            const ParameterMetadata<T> &meta,
                                            ValidationResult &result) {
@@ -306,13 +317,7 @@ private:
           << "  " << meta.format_info();
       result.errors.push_back(err.str());
     } else {
-      // Valid parameter
-      std::ostringstream val_str;
-      val_str << value;
-      if (meta.min_value && meta.max_value) {
-        val_str << "  [range: " << *meta.min_value << ", " << *meta.max_value << "]";
-      }
-      result.validated_params[meta.name] = val_str.str();
+      record_validated_value(meta, value, result);
     }
   }
 
@@ -347,13 +352,7 @@ private:
           << "  " << meta.format_info();
       result.errors.push_back(err.str());
     } else {
-      // Valid parameter
-      std::ostringstream val_str;
-      val_str << value;
-      if (meta.min_value && meta.max_value) {
-        val_str << "  [range: " << *meta.min_value << ", " << *meta.max_value << "]";
-      }
-      result.validated_params[meta.name] = val_str.str();
+      record_validated_value(meta, value, result);
     }
   }
 };
