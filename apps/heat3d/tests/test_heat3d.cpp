@@ -49,35 +49,25 @@ using heat3d::HeatModel;
 // Pure-model tests (no MPI / FFT / OpenMP).
 // -----------------------------------------------------------------------------
 
+TEST_CASE("heat3d::kD: pinned to 1.0", "[heat3d][HeatModel]") {
+  REQUIRE_THAT(heat3d::kD, WithinAbs(1.0, 1e-12));
+}
+
 TEST_CASE("HeatModel: defaults", "[heat3d][HeatModel]") {
   HeatModel model;
-
-  SECTION("D defaults to 1.0") { REQUIRE_THAT(model.D, WithinAbs(1.0, 1e-12)); }
 
   SECTION("default IC at the origin equals 1") {
     REQUIRE_THAT(model.initial_condition(0.0, 0.0, 0.0), WithinAbs(1.0, 1e-12));
   }
 
-  SECTION("default IC away from origin matches exp(-r^2/(4D)) with D=1") {
+  SECTION("default IC away from origin matches exp(-r^2/(4 kD))") {
     const double r2 = 1.0 + 4.0 + 9.0; // (1, 2, 3)
     REQUIRE_THAT(model.initial_condition(1.0, 2.0, 3.0),
-                 WithinAbs(std::exp(-r2 / 4.0), 1e-12));
+                 WithinAbs(std::exp(-r2 / (4.0 * heat3d::kD)), 1e-12));
   }
 
   SECTION("default boundary_value is empty") {
     REQUIRE_FALSE(static_cast<bool>(model.boundary_value));
-  }
-}
-
-TEST_CASE("HeatModel: IC tracks D after construction", "[heat3d][HeatModel]") {
-  HeatModel model;
-  const double r2 = 4.0; // (2, 0, 0)
-
-  for (double D : {0.25, 0.5, 1.0, 2.0, 7.5}) {
-    model.D = D;
-    INFO("D = " << D);
-    REQUIRE_THAT(model.initial_condition(2.0, 0.0, 0.0),
-                 WithinAbs(std::exp(-r2 / (4.0 * D)), 1e-12));
   }
 }
 
@@ -92,36 +82,30 @@ TEST_CASE("HeatModel: IC override replaces the default lambda",
   REQUIRE_THAT(model.initial_condition(1.5, -2.0, 3.5), WithinAbs(3.0, 1e-12));
 }
 
-TEST_CASE("HeatModel: rhs = D * (xx + yy + zz)", "[heat3d][HeatModel]") {
+TEST_CASE("HeatModel: rhs = kD * (xx + yy + zz)", "[heat3d][HeatModel]") {
   HeatModel model;
 
-  SECTION("zero Laplacian gives zero RHS regardless of D") {
-    model.D = 17.0;
+  SECTION("zero Laplacian gives zero RHS") {
     heat3d::HeatGrads g{.xx = 0.0, .yy = 0.0, .zz = 0.0};
     REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(0.0, 1e-12));
   }
 
-  SECTION("uniform unit Laplacian (D=1) gives RHS = 3") {
-    model.D = 1.0;
+  SECTION("uniform unit Laplacian gives RHS = 3 * kD") {
     heat3d::HeatGrads g{.xx = 1.0, .yy = 1.0, .zz = 1.0};
-    REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(3.0, 1e-12));
+    REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(3.0 * heat3d::kD, 1e-12));
   }
 
-  SECTION("rhs is linear in D") {
+  SECTION("rhs sums xx + yy + zz scaled by kD") {
     heat3d::HeatGrads g{.xx = 1.0, .yy = -2.0, .zz = 0.5};
     const double lap = 1.0 - 2.0 + 0.5; // -0.5
-    for (double D : {0.1, 1.0, 3.7}) {
-      model.D = D;
-      INFO("D = " << D);
-      REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(D * lap, 1e-12));
-    }
+    REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(heat3d::kD * lap, 1e-12));
   }
 
   SECTION("rhs ignores t") {
-    model.D = 2.0;
     heat3d::HeatGrads g{.xx = 1.0, .yy = 1.0, .zz = 1.0};
-    REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(6.0, 1e-12));
-    REQUIRE_THAT(model.rhs(1234.5, g), WithinAbs(6.0, 1e-12));
+    const double expected = 3.0 * heat3d::kD;
+    REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(expected, 1e-12));
+    REQUIRE_THAT(model.rhs(1234.5, g), WithinAbs(expected, 1e-12));
   }
 }
 
@@ -145,7 +129,6 @@ TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",
   constexpr int N = 8;
 
   HeatModel model;
-  model.D = 1.5;
 
   // FdCpuStack's LocalField stores only owned cells (the face-halo buffer
   // lives separately), so the array indices map directly to the local
@@ -161,7 +144,7 @@ TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",
     REQUIRE_THAT(stack.u()(0, 0, 0), WithinAbs(1.0, 1e-12));
   }
 
-  SECTION("owned cells match exp(-r^2/(4D)) for the configured D") {
+  SECTION("owned cells match exp(-r^2/(4 kD))") {
     for (int iz = 0; iz < 4; ++iz) {
       for (int iy = 0; iy < 4; ++iy) {
         for (int ix = 0; ix < 4; ++ix) {
@@ -171,7 +154,7 @@ TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",
           const double r2 = x * x + y * y + z * z;
           INFO("ix=" << ix << " iy=" << iy << " iz=" << iz);
           REQUIRE_THAT(stack.u()(ix, iy, iz),
-                       WithinAbs(std::exp(-r2 / (4.0 * model.D)), 1e-12));
+                       WithinAbs(std::exp(-r2 / (4.0 * heat3d::kD)), 1e-12));
         }
       }
     }
@@ -190,7 +173,6 @@ TEST_CASE("HeatModel + FdCpuStack + EulerStepper: explicit-Euler FD steps "
                                      /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
 
   HeatModel model;
-  model.D = 1.0;
   stack.u().apply(model.initial_condition);
 
   // L2 norm of the initial state (interior only).
@@ -292,7 +274,6 @@ TEST_CASE("Manual FD driver (PaddedBrick + PaddedHaloExchanger): smoke + L2",
   PaddedHaloExchanger<double> halo(decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
 
   HeatModel model;
-  model.D = 1.0;
   u.apply(model.initial_condition);
 
   double sum0 = 0.0;
@@ -332,7 +313,7 @@ TEST_CASE("Manual FD driver (PaddedBrick + PaddedHaloExchanger): smoke + L2",
   field::for_each_inner(u, hw, [&](int i, int j, int k) {
     const auto p = u.global_coords(i, j, k);
     const double r2 = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
-    const double u_exact = heat3d::analytic_gaussian(r2, t_final, model.D);
+    const double u_exact = heat3d::analytic_gaussian(r2, t_final, heat3d::kD);
     const double diff = u(i, j, k) - u_exact;
     l2sq += diff * diff;
     cnt += 1.0;
@@ -352,7 +333,6 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   const int n_steps = 5;
 
   HeatModel model;
-  model.D = 1.0;
 
   sim::stacks::FdCpuStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                 GridSpacing({1.0, 1.0, 1.0}), order, 0, 1,
@@ -369,7 +349,7 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   const double t_final = static_cast<double>(n_steps) * dt;
   stack.u().for_each_interior([&](double x, double y, double z, double v) {
     const double u_exact =
-        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, model.D);
+        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, heat3d::kD);
     const double diff = v - u_exact;
     l2_compact += diff * diff;
     cnt += 1.0;
@@ -406,7 +386,7 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   field::for_each_inner(u, hw, [&](int i, int j, int k) {
     const auto p = u.global_coords(i, j, k);
     const double u_exact = heat3d::analytic_gaussian(
-        p[0] * p[0] + p[1] * p[1] + p[2] * p[2], t_final, model.D);
+        p[0] * p[0] + p[1] * p[1] + p[2] * p[2], t_final, heat3d::kD);
     const double diff = u(i, j, k) - u_exact;
     l2_manual += diff * diff;
     cnt2 += 1.0;
@@ -432,77 +412,71 @@ TEST_CASE("heat3d::parse_fd: no args returns nullopt", "[heat3d][cli]") {
 
 TEST_CASE("heat3d::parse_fd: happy path", "[heat3d][cli]") {
   char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("64"),
-                  const_cast<char *>("200"),       const_cast<char *>("0.001"),
-                  const_cast<char *>("2.5"),       const_cast<char *>("8")};
-  const auto cfg = heat3d::parse_fd(6, argv);
+                  const_cast<char *>("200"), const_cast<char *>("0.001"),
+                  const_cast<char *>("8")};
+  const auto cfg = heat3d::parse_fd(5, argv);
   REQUIRE(cfg.has_value());
   REQUIRE(cfg->N == 64);
   REQUIRE(cfg->n_steps == 200);
   REQUIRE_THAT(cfg->dt, WithinAbs(0.001, 1e-15));
-  REQUIRE_THAT(cfg->D, WithinAbs(2.5, 1e-15));
   REQUIRE(cfg->fd_order == 8);
 }
 
 TEST_CASE("heat3d::parse_fd: missing fd_order returns nullopt", "[heat3d][cli]") {
   char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("64"),
-                  const_cast<char *>("200"), const_cast<char *>("0.001"),
-                  const_cast<char *>("2.5")};
-  REQUIRE_FALSE(heat3d::parse_fd(5, argv).has_value());
+                  const_cast<char *>("200"), const_cast<char *>("0.001")};
+  REQUIRE_FALSE(heat3d::parse_fd(4, argv).has_value());
 }
 
 TEST_CASE("heat3d::parse_fd: rejects out-of-range values", "[heat3d][cli]") {
   SECTION("N too small") {
     char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("4"),
-                    const_cast<char *>("10"),        const_cast<char *>("0.01"),
-                    const_cast<char *>("1.0"),       const_cast<char *>("2")};
-    REQUIRE_FALSE(heat3d::parse_fd(6, argv).has_value());
+                    const_cast<char *>("10"), const_cast<char *>("0.01"),
+                    const_cast<char *>("2")};
+    REQUIRE_FALSE(heat3d::parse_fd(5, argv).has_value());
   }
   SECTION("fd_order odd") {
     char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("32"),
-                    const_cast<char *>("100"),       const_cast<char *>("0.01"),
-                    const_cast<char *>("1.0"),       const_cast<char *>("3")};
-    REQUIRE_FALSE(heat3d::parse_fd(6, argv).has_value());
+                    const_cast<char *>("100"), const_cast<char *>("0.01"),
+                    const_cast<char *>("3")};
+    REQUIRE_FALSE(heat3d::parse_fd(5, argv).has_value());
   }
   SECTION("fd_order out of range") {
     char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("32"),
-                    const_cast<char *>("100"),       const_cast<char *>("0.01"),
-                    const_cast<char *>("1.0"),       const_cast<char *>("22")};
-    REQUIRE_FALSE(heat3d::parse_fd(6, argv).has_value());
+                    const_cast<char *>("100"), const_cast<char *>("0.01"),
+                    const_cast<char *>("22")};
+    REQUIRE_FALSE(heat3d::parse_fd(5, argv).has_value());
   }
 }
 
 TEST_CASE("heat3d::parse_spectral: happy path", "[heat3d][cli]") {
   char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
-                  const_cast<char *>("50"), const_cast<char *>("0.005"),
-                  const_cast<char *>("1.0")};
-  const auto cfg = heat3d::parse_spectral(5, argv);
+                  const_cast<char *>("50"), const_cast<char *>("0.005")};
+  const auto cfg = heat3d::parse_spectral(4, argv);
   REQUIRE(cfg.has_value());
   REQUIRE(cfg->N == 32);
   REQUIRE(cfg->n_steps == 50);
   REQUIRE_THAT(cfg->dt, WithinAbs(0.005, 1e-15));
-  REQUIRE_THAT(cfg->D, WithinAbs(1.0, 1e-15));
   REQUIRE(cfg->fd_order == 2);
 }
 
 TEST_CASE("heat3d::parse_spectral: insufficient args returns nullopt",
           "[heat3d][cli]") {
   char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
-                  const_cast<char *>("50"), const_cast<char *>("0.005")};
-  REQUIRE_FALSE(heat3d::parse_spectral(4, argv).has_value());
+                  const_cast<char *>("50")};
+  REQUIRE_FALSE(heat3d::parse_spectral(3, argv).has_value());
 }
 
 TEST_CASE("heat3d::parse_spectral: rejects out-of-range values", "[heat3d][cli]") {
   SECTION("dt non-positive") {
     char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
-                    const_cast<char *>("10"), const_cast<char *>("0"),
-                    const_cast<char *>("1.0")};
-    REQUIRE_FALSE(heat3d::parse_spectral(5, argv).has_value());
+                    const_cast<char *>("10"), const_cast<char *>("0")};
+    REQUIRE_FALSE(heat3d::parse_spectral(4, argv).has_value());
   }
-  SECTION("D non-positive") {
+  SECTION("n_steps non-positive") {
     char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
-                    const_cast<char *>("10"), const_cast<char *>("0.005"),
-                    const_cast<char *>("-1.0")};
-    REQUIRE_FALSE(heat3d::parse_spectral(5, argv).has_value());
+                    const_cast<char *>("0"), const_cast<char *>("0.005")};
+    REQUIRE_FALSE(heat3d::parse_spectral(4, argv).has_value());
   }
 }
 
