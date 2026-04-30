@@ -694,8 +694,8 @@ public:
  * @see DiscreteField::inbounds() for bounds checking
  */
 template <typename T, size_t D>
-inline T &interpolate(DiscreteField<T, D> &field,
-                      const std::array<double, D> &coordinates) {
+[[nodiscard]] inline T &interpolate(DiscreteField<T, D> &field,
+                                    const std::array<double, D> &coordinates) {
   return field.get_array()[field.map_coordinates_to_indices(coordinates)];
 }
 
@@ -727,8 +727,8 @@ inline T &interpolate(DiscreteField<T, D> &field,
  * @see interpolate(DiscreteField&, const std::array<double,D>&) mutable version
  */
 template <typename T, size_t D>
-inline const T &interpolate(const DiscreteField<T, D> &field,
-                            const std::array<double, D> &coordinates) {
+[[nodiscard]] inline const T &interpolate(const DiscreteField<T, D> &field,
+                                          const std::array<double, D> &coordinates) {
   // Note: const_cast needed because Array doesn't have const operator[]
   // This is safe because we return const T&
   return const_cast<DiscreteField<T, D> &>(field)
