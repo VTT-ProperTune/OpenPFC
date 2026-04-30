@@ -25,7 +25,7 @@ Defined in **`cmake/BuildOptions.cmake`** and **`cmake/Dependencies.cmake`**.
 |--------|---------|---------|
 | **`OpenPFC_ENABLE_MPI`** | ON | MPI required for supported builds; **OFF is unsupported** — see **`INSTALL.md`**. |
 | **`OpenPFC_ENABLE_HEFFTE`** | ON | Distributed FFT via HeFFTe; **OFF is unsupported** (configure fails). |
-| **`OpenPFC_ENABLE_CUDA`** | OFF | CUDA runtime and **`tungsten_cuda`**, **`allen_cahn_cuda`**, etc. |
+| **`OpenPFC_ENABLE_CUDA`** | OFF | CUDA toolkit/runtime support and CUDA apps that do not require spectral FFTs (for example FD/kernels-only apps). CUDA spectral targets are enabled only when CUDA HeFFTe is also found (`OpenPFC_ENABLE_CUDA_SPECTRAL=ON` in the configure summary). |
 | **`OpenPFC_ENABLE_HIP`** | OFF | ROCm/HIP and **`tungsten_hip`**, **`allen_cahn_hip`**, etc. |
 | **`OpenPFC_ENABLE_HDF5`** | OFF | HDF5 export for profiling dumps (see **`performance_profiling.md`**) |
 | **`OpenPFC_FETCH_HEFFTE`** | (see CMake) | Fetch/build HeFFTe via CMake when not found (see **`INSTALL.md`**) |

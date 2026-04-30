@@ -51,7 +51,7 @@ For the things you actually look up rather than read — JSON keys, the binary f
 
 ## Running on clusters
 
-If you are heading for a cluster, the entry point is [the HPC operator guide](hpc/operator_guide.md). It points at Slurm patterns, MPI-IO checklists, runtime profiling, and the LUMI-G specifics under [the LUMI install notes](hpc/INSTALL.LUMI.md) and [the LUMI Slurm examples](lumi_slurm/README.md). The decision of whether to enable CUDA or HIP at all is covered in [the GPU path guide](hpc/gpu_path_decision.md). The first cluster-side run, with Slurm, is walked end-to-end in [the Slurm day-one tutorial](tutorials/hpc_slurm_day_one.md).
+If you are heading for a cluster, the entry point is [the HPC operator guide](hpc/operator_guide.md). It points at Slurm patterns, MPI-IO checklists, runtime profiling, and the LUMI-G specifics under [the LUMI install notes](hpc/INSTALL.LUMI.md) and [the LUMI Slurm examples](lumi_slurm/README.md). For VTT **tohtori** (GCC + Open MPI modules, optional CUDA `module load cuda`, HeFFTe CUDA install paths), see [INSTALL.tohtori.md](hpc/INSTALL.tohtori.md). The decision of whether to enable CUDA or HIP at all is covered in [the GPU path guide](hpc/gpu_path_decision.md). The first cluster-side run, with Slurm, is walked end-to-end in [the Slurm day-one tutorial](tutorials/hpc_slurm_day_one.md).
 
 ## Extending OpenPFC
 

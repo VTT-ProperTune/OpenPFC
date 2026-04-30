@@ -50,6 +50,8 @@ module load openmpi/4.1.1    # reference version for this guide and tohtori; use
 module load cuda/12.9        # for GPU — run `module avail cuda` and pick a version where `nvcc --version` works
 ```
 
+Site note (**tohtori**): see [`docs/hpc/INSTALL.tohtori.md`](docs/hpc/INSTALL.tohtori.md) for the usual module stack, `module load cuda`, CUDA-capable HeFFTe, and avoiding the wrong HeFFTe package when both CPU and GPU installs exist.
+
 Verify:
 
 ```bash
@@ -269,7 +271,7 @@ These switches are defined under `cmake/` (see `BuildOptions.cmake`, `Dependenci
 | `OpenPFC_ENABLE_HEFFTE` | HeFFTe FFT stack (ON by default; OFF is rejected at configure time). |
 | `OpenPFC_FETCH_HEFFTE` | Fetch HeFFTe into `build/_deps/` if no install is found. |
 | `OpenPFC_ENABLE_HDF5` | Optional HDF5 for profiling dumps (OFF by default). |
-| `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_HIP` | GPU backends; require matching HeFFTe install (§3, §6–§8). |
+| `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_HIP` | GPU toolkit backends. Finite-difference / kernel-only GPU apps can build with the toolkit plus CPU HeFFTe; spectral GPU FFT paths additionally require matching CUDA/ROCm HeFFTe (§3, §6–§8). |
 | `OpenPFC_MPI_CUDA_AWARE` / `OpenPFC_MPI_HIP_AWARE` | GPU-aware MPI when supported (defaults ON when CUDA/HIP is enabled). |
 | `OpenPFC_BUILD_APPS`, `OpenPFC_BUILD_EXAMPLES`, `OpenPFC_BUILD_TESTS`, `OpenPFC_BUILD_BENCHMARKS` | Scope of targets built alongside `openpfc` (benchmarks are slow). |
 | `OpenPFC_BUILD_DOCUMENTATION` | Doxygen docs (ON if `doxygen` is found). |
@@ -291,7 +293,12 @@ For toolchain-specific examples (cluster `CMAKE_TOOLCHAIN_FILE`), see `CMakePres
 
 ## 6. Configure and build OpenPFC (CUDA)
 
-HeFFTe requirement: GPU OpenPFC needs HeFFTe built with `-DHeffte_ENABLE_CUDA=ON`, installed under `$HOME/opt/heffte/2.4.1-cuda` (§3). Set `CMAKE_PREFIX_PATH` to include that prefix (or load a module that does).
+HeFFTe requirement: OpenPFC always needs a HeFFTe package for CPU FFT/decomposition. With `OpenPFC_ENABLE_CUDA=ON`, CMake splits CUDA support into two levels:
+
+- **CUDA runtime / kernel targets**: require the CUDA toolkit. Finite-difference CUDA apps that do not use FFTs (for example `wave2d_cuda`) can still build when the detected HeFFTe package is CPU-only.
+- **CUDA spectral FFT targets**: require HeFFTe built with `-DHeffte_ENABLE_CUDA=ON`, installed under e.g. `$HOME/opt/heffte/2.4.1-cuda` (§3). If this is missing, CMake prints `OpenPFC_ENABLE_CUDA_SPECTRAL = OFF`, skips CUDA spectral FFT runtime and spectral CUDA apps/tests, and continues configuring finite-difference CUDA targets.
+
+For a full CUDA spectral build, set `CMAKE_PREFIX_PATH` to include the CUDA HeFFTe prefix (or load a module that does).
 
 Load the CUDA module so `nvcc` is on `PATH`, then configure with explicit host compilers:
 

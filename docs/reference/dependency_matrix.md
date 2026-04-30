@@ -23,7 +23,7 @@ Single-page summary of **what this repository is tested against** vs **optional 
 
 | Component | When | Notes |
 |-----------|------|--------|
-| **CUDA** | `OpenPFC_ENABLE_CUDA` | Match HeFFTe CUDA build and driver. |
+| **CUDA** | `OpenPFC_ENABLE_CUDA` | CUDA toolkit/driver enables CUDA kernel and finite-difference apps. CUDA spectral FFT targets additionally require a HeFFTe CUDA build (`OpenPFC_ENABLE_CUDA_SPECTRAL=ON`). |
 | **ROCm / HIP** | `OpenPFC_ENABLE_HIP` | LUMI-G: [`INSTALL.LUMI.md`](../hpc/INSTALL.LUMI.md). |
 | **HDF5** | Profiling / some exports | e.g. `OpenPFC_ENABLE_HDF5` where used ([`build_options.md`](build_options.md)). |
 | **GPU-aware MPI** | Device FFT / large GPU jobs | Site-dependent; see [`INSTALL.LUMI.md`](../hpc/INSTALL.LUMI.md), [`mpi_io_layout_checklist.md`](../hpc/mpi_io_layout_checklist.md). |
