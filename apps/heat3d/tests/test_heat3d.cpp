@@ -402,6 +402,220 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
 }
 
 // -----------------------------------------------------------------------------
+// Version-0 (from-scratch) FD driver: bare triple loops + manual padded
+// linear indexing + raw pointer arithmetic + plain Lap aux. The first test
+// is a smoke + L2-vs-analytic check; the second cross-checks the L2 against
+// the compact `FdCpuStack` path the way the manual driver does, to prove
+// the from-scratch loop is numerically equivalent to the framework path.
+// -----------------------------------------------------------------------------
+
+namespace {
+
+// Helper: run the same hot loop heat3d_fd_scratch.cpp ships, single rank.
+// Stays in the test file so the production driver stays free of test hooks.
+inline void run_scratch_loop_(pfc::field::PaddedBrick<double> &u,
+                              pfc::PaddedHaloExchanger<double> &halo, double dt,
+                              int n_steps) {
+  const int hw = u.halo_width();
+  const int nx = u.nx();
+  const int ny = u.ny();
+  const int nz = u.nz();
+  const int nxp = u.nx_padded();
+  const int nyp = u.ny_padded();
+  const auto dx = u.spacing();
+  const std::size_t sx = 1;
+  const std::size_t sy = static_cast<std::size_t>(nxp);
+  const std::size_t sz =
+      static_cast<std::size_t>(nxp) * static_cast<std::size_t>(nyp);
+  const double inv_dx2_x = 1.0 / (dx[0] * dx[0]);
+  const double inv_dx2_y = 1.0 / (dx[1] * dx[1]);
+  const double inv_dx2_z = 1.0 / (dx[2] * dx[2]);
+  double *const u_ptr = u.data();
+  std::vector<double> lap(static_cast<std::size_t>(nx) *
+                              static_cast<std::size_t>(ny) *
+                              static_cast<std::size_t>(nz),
+                          0.0);
+  for (int step = 0; step < n_steps; ++step) {
+    halo.exchange_halos(u_ptr, u.size());
+    for (int k = 0; k < nz; ++k) {
+      for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+          const std::size_t lin = (i + hw) * sx + (j + hw) * sy + (k + hw) * sz;
+          const double c = u_ptr[lin];
+          lap[static_cast<std::size_t>(i) +
+              static_cast<std::size_t>(j) * static_cast<std::size_t>(nx) +
+              static_cast<std::size_t>(k) * static_cast<std::size_t>(nx) *
+                  static_cast<std::size_t>(ny)] =
+              (u_ptr[lin + sx] - 2.0 * c + u_ptr[lin - sx]) * inv_dx2_x +
+              (u_ptr[lin + sy] - 2.0 * c + u_ptr[lin - sy]) * inv_dx2_y +
+              (u_ptr[lin + sz] - 2.0 * c + u_ptr[lin - sz]) * inv_dx2_z;
+        }
+      }
+    }
+    for (int k = 0; k < nz; ++k) {
+      for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+          const std::size_t lin = (i + hw) * sx + (j + hw) * sy + (k + hw) * sz;
+          const std::size_t lin_lap =
+              static_cast<std::size_t>(i) +
+              static_cast<std::size_t>(j) * static_cast<std::size_t>(nx) +
+              static_cast<std::size_t>(k) * static_cast<std::size_t>(nx) *
+                  static_cast<std::size_t>(ny);
+          u_ptr[lin] += dt * heat3d::kD * lap[lin_lap];
+        }
+      }
+    }
+  }
+}
+
+} // namespace
+
+TEST_CASE("Scratch FD driver (bare loops, raw pointers): smoke + L2",
+          "[heat3d][fd_scratch]") {
+  using namespace pfc;
+  constexpr int N = 16;
+  const int hw = 1;
+  const double dt = 1.0e-3;
+  const int n_steps = 5;
+
+  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(world, /*nproc=*/1);
+
+  field::PaddedBrick<double> u(decomp, /*rank=*/0, hw);
+  PaddedHaloExchanger<double> halo(decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
+
+  // From-scratch IC: exp(-r^2 / (4 kD)) by hand, exactly as the driver does.
+  {
+    const int nx = u.nx();
+    const int ny = u.ny();
+    const int nz = u.nz();
+    const auto lower = u.lower_global();
+    const auto origin = u.origin();
+    const auto dx = u.spacing();
+    for (int k = 0; k < nz; ++k) {
+      for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+          const double x = origin[0] + (lower[0] + i) * dx[0];
+          const double y = origin[1] + (lower[1] + j) * dx[1];
+          const double z = origin[2] + (lower[2] + k) * dx[2];
+          const double r2 = x * x + y * y + z * z;
+          u(i, j, k) = std::exp(-r2 / (4.0 * heat3d::kD));
+        }
+      }
+    }
+  }
+
+  double sum0 = 0.0;
+  field::for_each_inner(
+      u, hw, [&](int i, int j, int k) { sum0 += u(i, j, k) * u(i, j, k); });
+  REQUIRE(sum0 > 0.0);
+
+  run_scratch_loop_(u, halo, dt, n_steps);
+
+  double sum1 = 0.0;
+  field::for_each_inner(u, hw, [&](int i, int j, int k) {
+    REQUIRE(std::isfinite(u(i, j, k)));
+    sum1 += u(i, j, k) * u(i, j, k);
+  });
+  REQUIRE(sum1 < sum0); // diffusion dissipates
+  REQUIRE(sum1 > 0.0);
+
+  double l2sq = 0.0;
+  double cnt = 0.0;
+  const double t_final = static_cast<double>(n_steps) * dt;
+  field::for_each_inner(u, hw, [&](int i, int j, int k) {
+    const auto p = u.global_coords(i, j, k);
+    const double r2 = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+    const double u_exact = heat3d::analytic_gaussian(r2, t_final, heat3d::kD);
+    const double diff = u(i, j, k) - u_exact;
+    l2sq += diff * diff;
+    cnt += 1.0;
+  });
+  const double l2_rms = std::sqrt(l2sq / cnt);
+  REQUIRE(std::isfinite(l2_rms));
+  REQUIRE(l2_rms < 1.0e-3);
+}
+
+TEST_CASE("Scratch FD driver: produces same interior L2 as compact FdCpuStack "
+          "path",
+          "[heat3d][fd_scratch]") {
+  using namespace pfc;
+  constexpr int N = 16;
+  const int hw = 1;
+  const int order = 2;
+  const double dt = 1.0e-3;
+  const int n_steps = 5;
+
+  HeatModel model;
+
+  sim::stacks::FdCpuStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                GridSpacing({1.0, 1.0, 1.0}), order, 0, 1,
+                                MPI_COMM_WORLD);
+  stack.u().apply(model.initial_condition);
+  auto grad = field::create<heat3d::HeatGrads>(stack.u(), order);
+  auto stepper = sim::steppers::create(stack.u(), grad, model, dt);
+  for (int step = 0; step < n_steps; ++step) {
+    stack.exchange_halos();
+    (void)stepper.step(static_cast<double>(step) * dt, stack.u().vec());
+  }
+  double l2_compact = 0.0;
+  double cnt = 0.0;
+  const double t_final = static_cast<double>(n_steps) * dt;
+  stack.u().for_each_interior([&](double x, double y, double z, double v) {
+    const double u_exact =
+        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, heat3d::kD);
+    const double diff = v - u_exact;
+    l2_compact += diff * diff;
+    cnt += 1.0;
+  });
+  l2_compact = std::sqrt(l2_compact / cnt);
+
+  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(world, 1);
+  field::PaddedBrick<double> u(decomp, 0, hw);
+  PaddedHaloExchanger<double> halo(decomp, 0, hw, MPI_COMM_WORLD);
+  {
+    const int nx = u.nx();
+    const int ny = u.ny();
+    const int nz = u.nz();
+    const auto lower = u.lower_global();
+    const auto origin = u.origin();
+    const auto dx = u.spacing();
+    for (int k = 0; k < nz; ++k) {
+      for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+          const double x = origin[0] + (lower[0] + i) * dx[0];
+          const double y = origin[1] + (lower[1] + j) * dx[1];
+          const double z = origin[2] + (lower[2] + k) * dx[2];
+          const double r2 = x * x + y * y + z * z;
+          u(i, j, k) = std::exp(-r2 / (4.0 * heat3d::kD));
+        }
+      }
+    }
+  }
+
+  run_scratch_loop_(u, halo, dt, n_steps);
+
+  double l2_scratch = 0.0;
+  double cnt2 = 0.0;
+  field::for_each_inner(u, hw, [&](int i, int j, int k) {
+    const auto p = u.global_coords(i, j, k);
+    const double u_exact = heat3d::analytic_gaussian(
+        p[0] * p[0] + p[1] * p[1] + p[2] * p[2], t_final, heat3d::kD);
+    const double diff = u(i, j, k) - u_exact;
+    l2_scratch += diff * diff;
+    cnt2 += 1.0;
+  });
+  l2_scratch = std::sqrt(l2_scratch / cnt2);
+
+  // Same physical 2nd-order central 7-point stencil and same IC; agreement
+  // to round-off is the contract. Slop matches the manual-driver parity test.
+  REQUIRE_THAT(l2_scratch, WithinAbs(l2_compact, 1.0e-7));
+}
+
+// -----------------------------------------------------------------------------
 // Per-binary CLI parser tests — `parse_fd` / `parse_spectral` (pure, no MPI).
 // -----------------------------------------------------------------------------
 
