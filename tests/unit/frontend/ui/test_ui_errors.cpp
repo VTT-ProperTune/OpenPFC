@@ -132,16 +132,16 @@ TEST_CASE("list_valid_field_modifiers returns non-empty", "[ui][errors]") {
 
 TEST_CASE("list_valid_field_modifiers includes initial conditions", "[ui][errors]") {
   auto types = list_valid_field_modifiers();
-  REQUIRE(std::find(types.begin(), types.end(), "constant") != types.end());
-  REQUIRE(std::find(types.begin(), types.end(), "single_seed") != types.end());
-  REQUIRE(std::find(types.begin(), types.end(), "random_seeds") != types.end());
-  REQUIRE(std::find(types.begin(), types.end(), "seed_grid") != types.end());
-  REQUIRE(std::find(types.begin(), types.end(), "from_file") != types.end());
+  REQUIRE(std::ranges::find(types, "constant") != types.end());
+  REQUIRE(std::ranges::find(types, "single_seed") != types.end());
+  REQUIRE(std::ranges::find(types, "random_seeds") != types.end());
+  REQUIRE(std::ranges::find(types, "seed_grid") != types.end());
+  REQUIRE(std::ranges::find(types, "from_file") != types.end());
 }
 
 TEST_CASE("list_valid_field_modifiers includes boundary conditions",
           "[ui][errors]") {
   auto types = list_valid_field_modifiers();
-  REQUIRE(std::find(types.begin(), types.end(), "fixed") != types.end());
-  REQUIRE(std::find(types.begin(), types.end(), "moving") != types.end());
+  REQUIRE(std::ranges::find(types, "fixed") != types.end());
+  REQUIRE(std::ranges::find(types, "moving") != types.end());
 }
