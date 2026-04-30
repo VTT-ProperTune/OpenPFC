@@ -21,6 +21,7 @@
 #include <heat3d/common.hpp>
 #include <heat3d/discretization.hpp>
 #include <heat3d/heat_model.hpp>
+#include <heat3d/stepper.hpp>
 
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
@@ -92,7 +93,6 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   const double inv_dx2 = 1.0 / (dx * dx);
 
   std::vector<double> u(nlocal);
-  std::vector<double> du(nlocal, 0.0);
   heat3d::fill_gaussian_subdomain(&u, decomp, rank, cfg.D);
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
@@ -100,11 +100,11 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
 
   heat3d::FdGradient grad(u.data(), nx, ny, nz, inv_dx2, inv_dx2, inv_dx2, hw,
                           cfg.fd_order);
-  heat3d::HeatRhs rhs{heat3d::HeatModel{cfg.D}};
+  heat3d::EulerStepper stepper(grad, heat3d::HeatRhs{heat3d::HeatModel{cfg.D}},
+                               cfg.dt, nlocal);
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
-  const ptrdiff_t nptr = static_cast<ptrdiff_t>(nlocal);
   const int imin = hw;
   const int imax = nx - hw;
   const int jmin = hw;
@@ -115,11 +115,7 @@ static void run_fd(const heat3d::RunConfig &cfg, int rank, int nproc) {
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
     exchanger.exchange_halos(u.data(), u.size(), face_halos);
-    heat3d::for_each_interior(grad, du.data(), t, rhs);
-    for (ptrdiff_t li = 0; li < nptr; ++li) {
-      u[static_cast<size_t>(li)] += cfg.dt * du[static_cast<size_t>(li)];
-    }
-    t += cfg.dt;
+    t = stepper.step(t, u);
   }
   const double t1 = MPI_Wtime();
   double elapsed = t1 - t0;
@@ -286,7 +282,6 @@ static void run_spectral_pointwise(const heat3d::RunConfig &cfg, int rank,
   fft::CpuFft fft = fft::create(decomp, MPI_COMM_WORLD);
 
   std::vector<double> u(fft.size_inbox());
-  std::vector<double> du(fft.size_inbox(), 0.0);
 
   const auto &gw = decomposition::get_world(decomp);
   auto size = world::get_size(gw);
@@ -309,18 +304,14 @@ static void run_spectral_pointwise(const heat3d::RunConfig &cfg, int rank,
   }
 
   heat3d::SpectralGradient grad(fft, u, size, spacing, ib, fft.get_outbox_bounds());
-  heat3d::HeatRhs rhs{heat3d::HeatModel{cfg.D}};
+  heat3d::EulerStepper stepper(grad, heat3d::HeatRhs{heat3d::HeatModel{cfg.D}},
+                               cfg.dt, u.size());
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
-  const ptrdiff_t nptr = static_cast<ptrdiff_t>(u.size());
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
-    heat3d::for_each_interior(grad, du.data(), t, rhs);
-    for (ptrdiff_t li = 0; li < nptr; ++li) {
-      u[static_cast<size_t>(li)] += cfg.dt * du[static_cast<size_t>(li)];
-    }
-    t += cfg.dt;
+    t = stepper.step(t, u);
   }
   const double t1 = MPI_Wtime();
   double elapsed = t1 - t0;
