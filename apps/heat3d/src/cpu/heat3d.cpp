@@ -76,9 +76,21 @@ struct HeatModel {
   /** Diffusion coefficient. */
   double D = 1.0;
 
-  /** Initial condition \f$u(x,y,z,0)\f$ (default Gaussian). */
-  field::PointFn initial_condition = [](double x, double y, double z) {
-    return std::exp(-(x * x + y * y + z * z) / 4.0);
+  /**
+   * @brief Initial condition \f$u(x,y,z,0)\f$.
+   *
+   * Default: the fundamental Gaussian solution at \f$t=0\f$ for the
+   * configured diffusion coefficient,
+   * \f$u_0(\mathbf{x}) = \exp\!\bigl(-|\mathbf{x}|^2/(4D)\bigr)\f$.
+   *
+   * The lambda captures `this` so that updating `model.D` after
+   * construction is automatically reflected in the IC the next time it is
+   * sampled. (Implication: `HeatModel` instances must not be copied or
+   * moved while their `initial_condition` is in use — the captured `this`
+   * would still reference the source object.)
+   */
+  field::PointFn initial_condition = [this](double x, double y, double z) {
+    return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
   };
 
   /**
@@ -257,9 +269,6 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
 
   HeatModel model;
   model.D = cfg.D;
-  model.initial_condition = [D = cfg.D](double x, double y, double z) {
-    return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
-  };
   u.apply(model.initial_condition);
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
@@ -299,9 +308,6 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
 
   HeatModel model;
   model.D = cfg.D;
-  model.initial_condition = [D = cfg.D](double x, double y, double z) {
-    return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
-  };
   u.apply(model.initial_condition);
 
   // Implicit-Euler symbol in Fourier space: 1 / (1 - dt * D * k_lap).
@@ -364,9 +370,6 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
 
   HeatModel model;
   model.D = cfg.D;
-  model.initial_condition = [D = cfg.D](double x, double y, double z) {
-    return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
-  };
   u.apply(model.initial_condition);
 
   auto grad = field::create(u, fft);
