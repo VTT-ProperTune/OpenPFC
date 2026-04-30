@@ -37,7 +37,6 @@ namespace {
 
 void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   HeatModel model;
-  model.D = cfg.D;
 
   sim::stacks::SpectralCpuStack stack(
       GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),

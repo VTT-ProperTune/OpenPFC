@@ -41,7 +41,6 @@ namespace {
 
 void run_fd(const RunConfig &cfg, int rank, int nproc) {
   HeatModel model;
-  model.D = cfg.D;
 
   sim::stacks::FdCpuStack stack(
       GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),

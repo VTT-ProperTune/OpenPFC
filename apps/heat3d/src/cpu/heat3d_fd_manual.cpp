@@ -69,9 +69,9 @@ using heat3d::RunConfig;
 namespace {
 
 void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
-  // 1. Physics: parameters + initial condition + RHS live in HeatModel.
+  // 1. Physics: initial condition + RHS live in HeatModel; the diffusion
+  //    coefficient itself is hard-pinned via `heat3d::kD` in heat_model.hpp.
   HeatModel model;
-  model.D = cfg.D;
 
   // 2. Hidden plumbing: world geometry + decomposition. The single
   //    `decomposition::create(world, nproc)` call auto-picks the
