@@ -35,7 +35,9 @@
 #include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
+#include <heat3d/cli.hpp>
 #include <heat3d/heat_model.hpp>
+#include <heat3d/reporting.hpp>
 
 using Catch::Matchers::WithinAbs;
 using heat3d::HeatModel;
@@ -210,6 +212,143 @@ TEST_CASE("HeatModel + EulerStepper: one explicit-Euler FD step decreases the "
   // Sanity: the field shouldn't blow up either.
   REQUIRE(sum1 > 0.0);
   REQUIRE(std::isfinite(sum1));
+}
+
+// -----------------------------------------------------------------------------
+// CLI parser tests (pure, no MPI).
+// -----------------------------------------------------------------------------
+
+TEST_CASE("heat3d::parse: no args returns nullopt", "[heat3d][cli]") {
+  char *argv[] = {const_cast<char *>("heat3d")};
+  REQUIRE_FALSE(heat3d::parse(1, argv).has_value());
+}
+
+TEST_CASE("heat3d::parse: unknown method returns nullopt", "[heat3d][cli]") {
+  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("bogus"),
+                  const_cast<char *>("32"),     const_cast<char *>("100"),
+                  const_cast<char *>("0.01"),   const_cast<char *>("1.0")};
+  REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
+}
+
+TEST_CASE("heat3d::parse: fd needs 7 positional args (method, 4 numbers, order)",
+          "[heat3d][cli]") {
+  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("fd"),
+                  const_cast<char *>("32"),     const_cast<char *>("100"),
+                  const_cast<char *>("0.01"),   const_cast<char *>("1.0")};
+  // 6 args (missing fd_order) -> nullopt
+  REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
+}
+
+TEST_CASE("heat3d::parse: fd happy path", "[heat3d][cli]") {
+  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("fd"),
+                  const_cast<char *>("64"),     const_cast<char *>("200"),
+                  const_cast<char *>("0.001"),  const_cast<char *>("2.5"),
+                  const_cast<char *>("8")};
+  const auto cfg = heat3d::parse(7, argv);
+  REQUIRE(cfg.has_value());
+  REQUIRE(cfg->method == heat3d::Method::Fd);
+  REQUIRE(cfg->N == 64);
+  REQUIRE(cfg->n_steps == 200);
+  REQUIRE_THAT(cfg->dt, WithinAbs(0.001, 1e-15));
+  REQUIRE_THAT(cfg->D, WithinAbs(2.5, 1e-15));
+  REQUIRE(cfg->fd_order == 8);
+}
+
+TEST_CASE("heat3d::parse: spectral happy path (no fd_order)", "[heat3d][cli]") {
+  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral"),
+                  const_cast<char *>("32"),     const_cast<char *>("50"),
+                  const_cast<char *>("0.005"),  const_cast<char *>("1.0")};
+  const auto cfg = heat3d::parse(6, argv);
+  REQUIRE(cfg.has_value());
+  REQUIRE(cfg->method == heat3d::Method::Spectral);
+  REQUIRE(cfg->N == 32);
+  REQUIRE(cfg->n_steps == 50);
+}
+
+TEST_CASE("heat3d::parse: spectral_pw happy path", "[heat3d][cli]") {
+  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral_pw"),
+                  const_cast<char *>("32"),     const_cast<char *>("10"),
+                  const_cast<char *>("0.01"),   const_cast<char *>("1.0")};
+  const auto cfg = heat3d::parse(6, argv);
+  REQUIRE(cfg.has_value());
+  REQUIRE(cfg->method == heat3d::Method::SpectralPointwise);
+}
+
+TEST_CASE("heat3d::parse: rejects out-of-range values", "[heat3d][cli]") {
+  SECTION("N too small") {
+    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral"),
+                    const_cast<char *>("4"), // < 8
+                    const_cast<char *>("10"),     const_cast<char *>("0.01"),
+                    const_cast<char *>("1.0")};
+    REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
+  }
+  SECTION("dt non-positive") {
+    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral"),
+                    const_cast<char *>("32"),     const_cast<char *>("10"),
+                    const_cast<char *>("0"), // <= 0
+                    const_cast<char *>("1.0")};
+    REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
+  }
+  SECTION("D non-positive") {
+    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral"),
+                    const_cast<char *>("32"),     const_cast<char *>("10"),
+                    const_cast<char *>("0.01"),   const_cast<char *>("-1.0")};
+    REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
+  }
+  SECTION("fd_order odd") {
+    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("fd"),
+                    const_cast<char *>("32"),     const_cast<char *>("100"),
+                    const_cast<char *>("0.01"),   const_cast<char *>("1.0"),
+                    const_cast<char *>("3")}; // odd
+    REQUIRE_FALSE(heat3d::parse(7, argv).has_value());
+  }
+  SECTION("fd_order out of range") {
+    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("fd"),
+                    const_cast<char *>("32"),     const_cast<char *>("100"),
+                    const_cast<char *>("0.01"),   const_cast<char *>("1.0"),
+                    const_cast<char *>("22")}; // > 20
+    REQUIRE_FALSE(heat3d::parse(7, argv).has_value());
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Reporting helpers (analytic reference solution).
+// -----------------------------------------------------------------------------
+
+TEST_CASE("heat3d::analytic_gaussian: t=0 collapses to exp(-r^2/(4D))",
+          "[heat3d][reporting]") {
+  const double D = 1.5;
+  const double r2 = 4.0; // |x| = 2
+  REQUIRE_THAT(heat3d::analytic_gaussian(r2, /*t=*/0.0, D),
+               WithinAbs(std::exp(-r2 / (4.0 * D)), 1e-15));
+}
+
+TEST_CASE("heat3d::analytic_gaussian: positive t damps the peak and "
+          "spreads the support",
+          "[heat3d][reporting]") {
+  const double D = 1.0;
+  const double t = 0.25;
+  const double s = 1.0 + t;
+  // Peak at the origin: amplitude is s^{-3/2}.
+  REQUIRE_THAT(heat3d::analytic_gaussian(0.0, t, D),
+               WithinAbs(std::pow(s, -1.5), 1e-15));
+  // Off-origin matches the closed form.
+  const double r2 = 1.0 + 4.0; // (1, 2, 0)
+  REQUIRE_THAT(heat3d::analytic_gaussian(r2, t, D),
+               WithinAbs(std::pow(s, -1.5) * std::exp(-r2 / (4.0 * D * s)), 1e-15));
+}
+
+TEST_CASE("heat3d::analytic_gaussian: t > 0 strictly decreases the peak",
+          "[heat3d][reporting]") {
+  // Solution to a linear diffusion equation: peak amplitude at the origin
+  // is monotonically decreasing in t for any D > 0.
+  const double D = 1.0;
+  const double u0 = heat3d::analytic_gaussian(0.0, 0.0, D);
+  const double u1 = heat3d::analytic_gaussian(0.0, 0.5, D);
+  const double u2 = heat3d::analytic_gaussian(0.0, 2.0, D);
+  REQUIRE(u0 > u1);
+  REQUIRE(u1 > u2);
+  REQUIRE(u2 > 0.0);
 }
 
 // -----------------------------------------------------------------------------
