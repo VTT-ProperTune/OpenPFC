@@ -242,33 +242,42 @@ private:
   }
 
   /**
+   * @brief If the parameter is absent from `config`, record default or errors and
+   *        return true (caller should stop). If present, return false.
+   */
+  template <typename T>
+  static bool finish_validation_if_missing(const json &config,
+                                           const ParameterMetadata<T> &meta,
+                                           ValidationResult &result) {
+    if (has_by_path(config, meta.name)) {
+      return false;
+    }
+    if (meta.required && !meta.default_value) {
+      std::ostringstream err;
+      err << "Required parameter '" << meta.name << "' is missing\n"
+          << "  " << meta.format_info();
+      result.errors.push_back(err.str());
+      return true;
+    }
+    if (meta.default_value) {
+      std::ostringstream val_str;
+      val_str << *meta.default_value << " (default)";
+      result.validated_params[meta.name] = val_str.str();
+      return true;
+    }
+    return true;
+  }
+
+  /**
    * @brief Validate a single double parameter
    */
   static void validate_parameter(const json &config,
                                  const ParameterMetadata<double> &meta,
                                  ValidationResult &result) {
-    // Resolve value by path (supports nested keys like "a.b.c")
-    bool exists = has_by_path(config, meta.name);
-    json val = exists ? get_by_path(config, meta.name) : json{nullptr};
-    // Check if parameter exists
-    if (!exists) {
-      if (meta.required && !meta.default_value) {
-        std::ostringstream err;
-        err << "Required parameter '" << meta.name << "' is missing\n"
-            << "  " << meta.format_info();
-        result.errors.push_back(err.str());
-        return;
-      }
-      if (meta.default_value) {
-        // Use default value
-        std::ostringstream val_str;
-        val_str << *meta.default_value << " (default)";
-        result.validated_params[meta.name] = val_str.str();
-        return;
-      }
-      // Optional parameter, not provided
+    if (finish_validation_if_missing(config, meta, result)) {
       return;
     }
+    const json val = get_by_path(config, meta.name);
 
     // Check type
     if (!val.is_number()) {
@@ -313,28 +322,10 @@ private:
   static void validate_parameter(const json &config,
                                  const ParameterMetadata<int> &meta,
                                  ValidationResult &result) {
-    // Resolve value by path (supports nested keys like "a.b.c")
-    bool exists = has_by_path(config, meta.name);
-    json val = exists ? get_by_path(config, meta.name) : json{nullptr};
-    // Check if parameter exists
-    if (!exists) {
-      if (meta.required && !meta.default_value) {
-        std::ostringstream err;
-        err << "Required parameter '" << meta.name << "' is missing\n"
-            << "  " << meta.format_info();
-        result.errors.push_back(err.str());
-        return;
-      }
-      if (meta.default_value) {
-        // Use default value
-        std::ostringstream val_str;
-        val_str << *meta.default_value << " (default)";
-        result.validated_params[meta.name] = val_str.str();
-        return;
-      }
-      // Optional parameter, not provided
+    if (finish_validation_if_missing(config, meta, result)) {
       return;
     }
+    const json val = get_by_path(config, meta.name);
 
     // Check type
     if (!val.is_number_integer()) {
