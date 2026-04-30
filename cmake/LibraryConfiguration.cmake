@@ -71,8 +71,8 @@ target_include_directories(openpfc_frontend_obj
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/stb>
 )
-target_compile_features(openpfc_kernel_obj PUBLIC cxx_std_17)
-target_compile_features(openpfc_frontend_obj PUBLIC cxx_std_17)
+target_compile_features(openpfc_kernel_obj PUBLIC cxx_std_20)
+target_compile_features(openpfc_frontend_obj PUBLIC cxx_std_20)
 target_compile_definitions(openpfc_kernel_obj PUBLIC
     "OPENPFC_PROFILING_LEVEL=${OpenPFC_PROFILING_LEVEL}")
 target_compile_definitions(openpfc_kernel_obj PRIVATE
@@ -227,8 +227,8 @@ elseif(TARGET tomlplusplus_tomlplusplus)
   endif()
 endif()
 
-# Require C++17
-target_compile_features(openpfc PUBLIC cxx_std_17)
+# Require C++20
+target_compile_features(openpfc PUBLIC cxx_std_20)
 
 target_compile_definitions(openpfc PUBLIC
     "OPENPFC_PROFILING_LEVEL=${OpenPFC_PROFILING_LEVEL}")
