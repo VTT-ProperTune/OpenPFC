@@ -94,6 +94,20 @@ void validate_vtk_domain_for_writer(const std::array<int, 3> &global_size,
   }
 }
 
+/**
+ * Parallel VTK ImageData pieces use `basename_rank.ext` (same convention as
+ * `VTKWriter::generate_filename` for multi-rank runs).
+ */
+[[nodiscard]] std::string vtk_piece_filename_for_rank(std::string base, int rank) {
+  const size_t ext_pos = base.find_last_of('.');
+  if (ext_pos == std::string::npos) {
+    return base + '_' + std::to_string(rank);
+  }
+  std::string name = base.substr(0, ext_pos);
+  std::string ext = base.substr(ext_pos);
+  return name + '_' + std::to_string(rank) + ext;
+}
+
 [[nodiscard]] std::size_t
 vtk_local_point_count_or_throw(const std::array<int, 3> &local_size) {
   for (int i = 0; i < 3; ++i) {
@@ -156,20 +170,13 @@ void VTKWriter::set_spacing(const std::array<double, 3> &spacing) {
 }
 
 std::string VTKWriter::generate_filename(int increment, int rank) const {
-  // Format filename with increment number
   std::string base = utils::format_with_number(m_filename, increment);
 
   if (m_num_ranks > 1 && rank >= 0) {
-    // For parallel: remove .vti extension, add rank, restore extension
-    size_t ext_pos = base.find_last_of('.');
-    if (ext_pos != std::string::npos) {
-      std::string name = base.substr(0, ext_pos);
-      std::string ext = base.substr(ext_pos);
-      std::string out = name;
-      out += '_';
-      out += std::to_string(rank);
-      out += ext;
-      return out;
+    // Match legacy behavior: only insert `_rank` before the extension when a dot
+    // exists.
+    if (base.find_last_of('.') != std::string::npos) {
+      return vtk_piece_filename_for_rank(std::move(base), rank);
     }
   }
   return base;
@@ -259,19 +266,9 @@ void VTKWriter::write_pvti_file(int increment) const {
        << R"(" NumberOfComponents="1"/>)" << '\n';
   file << R"(    </PPointData>)" << '\n';
 
-  // List all piece files
+  const std::string base = utils::format_with_number(m_filename, increment);
   for (int r = 0; r < current_size; ++r) {
-    // Build piece filename deterministically to avoid relying on cached m_num_ranks
-    std::string base = utils::format_with_number(m_filename, increment);
-    size_t base_ext_pos = base.find_last_of('.');
-    std::string name =
-        (base_ext_pos != std::string::npos) ? base.substr(0, base_ext_pos) : base;
-    std::string ext = (base_ext_pos != std::string::npos) ? base.substr(base_ext_pos)
-                                                          : std::string();
-    std::string piece_filename = name;
-    piece_filename += '_';
-    piece_filename += std::to_string(r);
-    piece_filename += ext;
+    const std::string piece_filename = vtk_piece_filename_for_rank(base, r);
     file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << '\n';
   }
 
