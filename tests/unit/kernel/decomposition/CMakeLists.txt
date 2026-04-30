@@ -12,4 +12,5 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_sparse_vector_neighbor_exchange.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_pattern.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_face_layout.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_padded_halo_mpi_types.cpp
 )
