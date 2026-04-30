@@ -293,38 +293,30 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
   auto decomp = decomposition::create(world, nproc);
   fft::CpuFft fft = fft::create(decomp, MPI_COMM_WORLD);
 
-  std::vector<double> psi(fft.size_inbox());
+  const auto &gw = decomposition::get_world(decomp);
+  field::LocalField<double> u =
+      field::LocalField<double>::from_inbox(gw, fft.get_inbox_bounds());
+
+  HeatModel model;
+  model.D = cfg.D;
+  model.initial_condition = [D = cfg.D](double x, double y, double z) {
+    return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
+  };
+  u.apply(model.initial_condition);
+
+  // Implicit-Euler symbol in Fourier space: 1 / (1 - dt * D * k_lap).
   std::vector<std::complex<double>> psi_F(fft.size_outbox());
   std::vector<double> opL(fft.size_outbox());
-
-  const auto &gw = decomposition::get_world(decomp);
-  auto size = world::get_size(gw);
-  auto origin = world::get_origin(gw);
-  auto spacing = world::get_spacing(gw);
-
-  auto ib = fft.get_inbox_bounds();
-  int idx = 0;
-  for (int k = ib.low[2]; k <= ib.high[2]; ++k) {
-    for (int j = ib.low[1]; j <= ib.high[1]; ++j) {
-      for (int i = ib.low[0]; i <= ib.high[0]; ++i) {
-        const double x = origin[0] + static_cast<double>(i) * spacing[0];
-        const double y = origin[1] + static_cast<double>(j) * spacing[1];
-        const double z = origin[2] + static_cast<double>(k) * spacing[2];
-        psi[static_cast<size_t>(idx)] =
-            std::exp(-(x * x + y * y + z * z) / (4.0 * cfg.D));
-        ++idx;
-      }
-    }
-  }
-
-  auto ob = fft.get_outbox_bounds();
+  const auto size = u.global_size();
+  const auto spacing = u.spacing();
+  const auto ob = fft.get_outbox_bounds();
   const double fx =
       2.0 * constants::pi / (spacing[0] * static_cast<double>(size[0]));
   const double fy =
       2.0 * constants::pi / (spacing[1] * static_cast<double>(size[1]));
   const double fz =
       2.0 * constants::pi / (spacing[2] * static_cast<double>(size[2]));
-  idx = 0;
+  std::size_t idx = 0;
   for (int k = ob.low[2]; k <= ob.high[2]; ++k) {
     for (int j = ob.low[1]; j <= ob.high[1]; ++j) {
       for (int i = ob.low[0]; i <= ob.high[0]; ++i) {
@@ -335,8 +327,7 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
         const double kk = (k <= size[2] / 2) ? static_cast<double>(k) * fz
                                              : static_cast<double>(k - size[2]) * fz;
         const double k_lap = -(ki * ki + kj * kj + kk * kk);
-        opL[static_cast<size_t>(idx)] = 1.0 / (1.0 - cfg.dt * cfg.D * k_lap);
-        ++idx;
+        opL[idx++] = 1.0 / (1.0 - cfg.dt * cfg.D * k_lap);
       }
     }
   }
@@ -344,33 +335,20 @@ void run_spectral(const RunConfig &cfg, int rank, int nproc) {
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
   for (int step = 0; step < cfg.n_steps; ++step) {
-    fft.forward(psi, psi_F);
-    for (size_t k = 0; k < psi_F.size(); ++k) {
-      psi_F[k] *= opL[static_cast<size_t>(k)];
+    fft.forward(u.vec(), psi_F);
+    for (std::size_t k = 0; k < psi_F.size(); ++k) {
+      psi_F[k] *= opL[k];
     }
-    fft.backward(psi_F, psi);
+    fft.backward(psi_F, u.vec());
   }
   const double t1 = MPI_Wtime();
   double elapsed = t1 - t0;
   double max_elapsed = 0.0;
   MPI_Allreduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
-  report_l2_and_timing(
-      rank, nproc, cfg, "spectral", "", max_elapsed,
-      "(periodic spectral vs infinite-domain reference)", [&](auto &&cb) {
-        std::size_t err_idx = 0;
-        for (int k = ib.low[2]; k <= ib.high[2]; ++k) {
-          for (int j = ib.low[1]; j <= ib.high[1]; ++j) {
-            for (int i = ib.low[0]; i <= ib.high[0]; ++i) {
-              const double x = origin[0] + static_cast<double>(i) * spacing[0];
-              const double y = origin[1] + static_cast<double>(j) * spacing[1];
-              const double z = origin[2] + static_cast<double>(k) * spacing[2];
-              cb(x, y, z, psi[err_idx]);
-              ++err_idx;
-            }
-          }
-        }
-      });
+  report_l2_and_timing(rank, nproc, cfg, "spectral", "", max_elapsed,
+                       "(periodic spectral vs infinite-domain reference)",
+                       [&u](auto &&cb) { u.for_each_owned(cb); });
 }
 
 void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
