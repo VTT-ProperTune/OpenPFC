@@ -15,7 +15,7 @@
 
 namespace heat3d {
 
-enum class Method { Fd, Spectral };
+enum class Method { Fd, Spectral, SpectralPointwise };
 
 struct RunConfig {
   Method method = Method::Fd;
@@ -23,15 +23,19 @@ struct RunConfig {
   int n_steps = 100;
   double dt = 0.01;
   double D = 1.0;
-  /** Spatial order for FD: even 2, 4, …, 20 (ignored for spectral). */
+  /** Spatial order for FD: even 2, 4, …, 20 (ignored for spectral methods). */
   int fd_order = 2;
 };
 
 inline void print_usage(const char *exe) {
   std::cerr
       << "Usage:\n  " << exe << " fd <N> <n_steps> <dt> <D> <fd_order>\n  " << exe
-      << " spectral <N> <n_steps> <dt> <D>\n"
-      << "  fd_order: even 2,4,...,20 (central Laplacian; halo width order/2)\n";
+      << " spectral <N> <n_steps> <dt> <D>\n  " << exe
+      << " spectral_pw <N> <n_steps> <dt> <D>\n"
+      << "  fd_order: even 2,4,...,20 (central Laplacian; halo width order/2)\n"
+      << "  spectral:    implicit Euler in Fourier space (2 FFTs/step)\n"
+      << "  spectral_pw: explicit Euler with point-wise RHS over materialized\n"
+      << "               second-derivative fields (1 fwd + 3 inv FFTs/step)\n";
 }
 
 /** @param argc argv count; caller must ensure enough arguments for the chosen mode
@@ -49,6 +53,11 @@ inline RunConfig parse_args(int argc, char **argv) {
     c.fd_order = std::atoi(argv[6]);
   } else if (std::strcmp(argv[1], "spectral") == 0) {
     c.method = Method::Spectral;
+    if (argc < 6) {
+      return c;
+    }
+  } else if (std::strcmp(argv[1], "spectral_pw") == 0) {
+    c.method = Method::SpectralPointwise;
     if (argc < 6) {
       return c;
     }

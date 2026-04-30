@@ -277,6 +277,90 @@ static void run_spectral(const heat3d::RunConfig &cfg, int rank, int nproc) {
   }
 }
 
+static void run_spectral_pointwise(const heat3d::RunConfig &cfg, int rank,
+                                   int nproc) {
+  auto world = world::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
+                             pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                             pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(world, nproc);
+  fft::CpuFft fft = fft::create(decomp, MPI_COMM_WORLD);
+
+  std::vector<double> u(fft.size_inbox());
+  std::vector<double> du(fft.size_inbox(), 0.0);
+
+  const auto &gw = decomposition::get_world(decomp);
+  auto size = world::get_size(gw);
+  auto origin = world::get_origin(gw);
+  auto spacing = world::get_spacing(gw);
+
+  auto ib = fft.get_inbox_bounds();
+  int idx = 0;
+  for (int k = ib.low[2]; k <= ib.high[2]; ++k) {
+    for (int j = ib.low[1]; j <= ib.high[1]; ++j) {
+      for (int i = ib.low[0]; i <= ib.high[0]; ++i) {
+        const double x = origin[0] + static_cast<double>(i) * spacing[0];
+        const double y = origin[1] + static_cast<double>(j) * spacing[1];
+        const double z = origin[2] + static_cast<double>(k) * spacing[2];
+        u[static_cast<size_t>(idx)] =
+            std::exp(-(x * x + y * y + z * z) / (4.0 * cfg.D));
+        ++idx;
+      }
+    }
+  }
+
+  heat3d::SpectralGradient grad(fft, u, size, spacing, ib, fft.get_outbox_bounds());
+  heat3d::HeatRhs rhs{heat3d::HeatModel{cfg.D}};
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  const double t0 = MPI_Wtime();
+  const ptrdiff_t nptr = static_cast<ptrdiff_t>(u.size());
+  double t = 0.0;
+  for (int step = 0; step < cfg.n_steps; ++step) {
+    heat3d::for_each_interior(grad, du.data(), t, rhs);
+    for (ptrdiff_t li = 0; li < nptr; ++li) {
+      u[static_cast<size_t>(li)] += cfg.dt * du[static_cast<size_t>(li)];
+    }
+    t += cfg.dt;
+  }
+  const double t1 = MPI_Wtime();
+  double elapsed = t1 - t0;
+  double max_elapsed = 0.0;
+  MPI_Allreduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+  const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
+  double sum_err2 = 0.0;
+  idx = 0;
+  for (int k = ib.low[2]; k <= ib.high[2]; ++k) {
+    for (int j = ib.low[1]; j <= ib.high[1]; ++j) {
+      for (int i = ib.low[0]; i <= ib.high[0]; ++i) {
+        const double x = origin[0] + static_cast<double>(i) * spacing[0];
+        const double y = origin[1] + static_cast<double>(j) * spacing[1];
+        const double z = origin[2] + static_cast<double>(k) * spacing[2];
+        const double r2 = x * x + y * y + z * z;
+        const double uex = heat3d::analytic_gaussian(r2, t_final, cfg.D);
+        const double e = u[static_cast<size_t>(idx)] - uex;
+        sum_err2 += e * e;
+        ++idx;
+      }
+    }
+  }
+  double g_err2 = 0.0;
+  MPI_Reduce(&sum_err2, &g_err2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    const double rms =
+        std::sqrt(g_err2 / static_cast<double>(cfg.N * cfg.N * cfg.N));
+    std::cout << "heat3d method=spectral_pw N=" << cfg.N
+              << " n_steps=" << cfg.n_steps << " dt=" << cfg.dt << " D=" << cfg.D
+              << " mpi_ranks=" << nproc << "\n";
+    std::cout << "timing_s=" << max_elapsed << " avg_step_time_s="
+              << (max_elapsed / static_cast<double>(cfg.n_steps))
+              << " (MPI_MAX across ranks)\n";
+    std::cout << "l2_error_vs_R3_analytic_rms=" << rms
+              << " (point-wise spectral RHS, explicit Euler)\n";
+  }
+}
+
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
   int rank = 0;
@@ -286,8 +370,10 @@ int main(int argc, char **argv) {
   heat3d_reset_cpu_affinity_if_single_mpi_rank(nproc);
 
   const heat3d::RunConfig cfg = heat3d::parse_args(argc, argv);
-  const bool args_ok = (cfg.method == heat3d::Method::Fd && argc >= 7) ||
-                       (cfg.method == heat3d::Method::Spectral && argc >= 6);
+  const bool args_ok =
+      (cfg.method == heat3d::Method::Fd && argc >= 7) ||
+      (cfg.method == heat3d::Method::Spectral && argc >= 6) ||
+      (cfg.method == heat3d::Method::SpectralPointwise && argc >= 6);
   if (!args_ok || !heat3d::validate(cfg)) {
     if (rank == 0) {
       heat3d::print_usage(argv[0]);
@@ -298,8 +384,10 @@ int main(int argc, char **argv) {
 
   if (cfg.method == heat3d::Method::Fd) {
     run_fd(cfg, rank, nproc);
-  } else {
+  } else if (cfg.method == heat3d::Method::Spectral) {
     run_spectral(cfg, rank, nproc);
+  } else {
+    run_spectral_pointwise(cfg, rank, nproc);
   }
 
   MPI_Finalize();
