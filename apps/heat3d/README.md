@@ -16,6 +16,12 @@ Initial condition matches the diffusion examples: \(u(\mathbf{x},0)=\exp(-|\math
 
 Enabled with `OpenPFC_BUILD_APPS=ON` (default). Requires HeFFTe (spectral path uses the same FFT stack as the library). When CMake finds OpenMP for C++, `heat3d` links it so the FD path can use hybrid **MPI + OpenMP**: a **single** `omp parallel for collapse(2)` over interior \((i_y,i_z)\) lines, each line calling `laplacian_even_order_interior_separated_xy_row` (set `OMP_NUM_THREADS`).
 
+### Source layout
+
+- **[`include/heat3d/heat_model.hpp`](include/heat3d/heat_model.hpp)** — the **physics**. A small self-contained `heat3d::HeatModel` struct with the diffusion coefficient, an initial-condition lambda, an optional boundary-value provider, and the per-point right-hand side `D * (uxx + uyy + uzz)`. This is the only file a physicist edits to define a new heat problem.
+- **[`src/cpu/heat3d.cpp`](src/cpu/heat3d.cpp)** — the **driver**. CLI parsing, `MPI_Init`, world / decomposition / FFT setup, three orchestration entry points (`run_fd`, `run_spectral`, `run_spectral_pointwise`), and the shared L2-error reporter. Wires `HeatModel` to the OpenPFC primitives (`pfc::field::LocalField`, `pfc::field::FdGradient`, `pfc::field::SpectralGradient`, `pfc::sim::steppers::EulerStepper`).
+- **[`tests/test_heat3d.cpp`](tests/test_heat3d.cpp)** — Catch2 unit tests covering the model in isolation (defaults, IC tracking `D`, IC override, the `rhs` formula) plus two single-rank integration tests against `LocalField` / `EulerStepper`. Built into the `test_heat3d` executable and registered with CTest as `heat3d-all-tests` whenever `OpenPFC_BUILD_TESTS=ON` and Catch2 is available (set `HEAT3D_ENABLE_TESTS=OFF` to skip).
+
 ### Where OpenMP runs (FD)
 
 Only **`apps/heat3d/src/cpu/heat3d.cpp`**: the Laplacian each step is a `collapse(2)` loop over local interior `iz` and `iy`; each iteration updates one \(x\)-line in `laplacian_even_order_interior_separated_xy_row` (`finite_difference.hpp`). **Not parallel:** `SeparatedFaceHaloExchanger::exchange_halos` (MPI), clearing `lap`, and the explicit Euler update over the full brick.

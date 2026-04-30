@@ -3,15 +3,18 @@
 
 /**
  * @file heat3d.cpp
- * @brief 3D heat equation \f$\partial_t u = D \nabla^2 u\f$ — single-file app.
+ * @brief 3D heat equation \f$\partial_t u = D \nabla^2 u\f$ — application driver.
  *
  * @details
- * This is the entire `heat3d` application: physics model, command-line
- * parsing, reference solution, and per-method orchestration in one file. All
- * reusable mechanism (point-wise gradient evaluators, the explicit-Euler
- * stepper, the per-cell driver loop, coordinate-space initial-condition
- * helpers, the host CPU-affinity rescue) lives in OpenPFC; this file imports
- * those pieces and wires them to `HeatModel`.
+ * Application driver for the `heat3d` example: command-line parsing,
+ * reference solution, and per-method orchestration. The physics model
+ * itself lives in **`heat3d/heat_model.hpp`** — the single header a
+ * physicist edits — and is unit-tested in isolation under
+ * `apps/heat3d/tests/test_heat3d.cpp`. All reusable mechanism (point-wise
+ * gradient evaluators, the explicit-Euler stepper, the per-cell driver
+ * loop, coordinate-space initial-condition helpers, the host CPU-affinity
+ * rescue) lives in OpenPFC; this file imports those pieces and wires
+ * them to `HeatModel`.
  *
  * Three solvers are exposed via the CLI:
  *  - `fd`          — explicit Euler with even-order central FD Laplacian
@@ -56,56 +59,10 @@
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/runtime/common/cpu_affinity.hpp>
 
+#include <heat3d/heat_model.hpp>
+
 using namespace pfc;
-
-// -----------------------------------------------------------------------------
-// Physics: the only thing a physicist edits in this file.
-// -----------------------------------------------------------------------------
-
-/**
- * @brief Heat equation \f$\partial_t u = D \nabla^2 u\f$, self-contained.
- *
- * Carries the physical parameters (just `D`), the initial condition as a
- * runtime-swappable spatial lambda, an optional boundary-value provider for
- * future Dirichlet/Neumann support, and the per-point right-hand side as a
- * direct method `rhs(t, g)`. `rhs` is a regular `inline noexcept` method (not
- * `operator()` and not `std::function`) so the inner `for_each_interior` loop
- * inlines it as cleanly as a free function.
- */
-struct HeatModel {
-  /** Diffusion coefficient. */
-  double D = 1.0;
-
-  /**
-   * @brief Initial condition \f$u(x,y,z,0)\f$.
-   *
-   * Default: the fundamental Gaussian solution at \f$t=0\f$ for the
-   * configured diffusion coefficient,
-   * \f$u_0(\mathbf{x}) = \exp\!\bigl(-|\mathbf{x}|^2/(4D)\bigr)\f$.
-   *
-   * The lambda captures `this` so that updating `model.D` after
-   * construction is automatically reflected in the IC the next time it is
-   * sampled. (Implication: `HeatModel` instances must not be copied or
-   * moved while their `initial_condition` is in use — the captured `this`
-   * would still reference the source object.)
-   */
-  field::PointFn initial_condition = [this](double x, double y, double z) {
-    return std::exp(-(x * x + y * y + z * z) / (4.0 * D));
-  };
-
-  /**
-   * @brief Optional Dirichlet/Neumann boundary value \f$u_b(x,y,z,t)\f$.
-   *
-   * Empty by default — the discretization treats the domain as periodic
-   * (FD freezes its halo region, spectral assumes periodicity).
-   */
-  field::PointFnT boundary_value{};
-
-  /** Per-point right-hand side \f$\partial_t u = D\nabla^2 u\f$ (hot path). */
-  inline double rhs(double /*t*/, const field::GradPoint &g) const noexcept {
-    return D * (g.uxx + g.uyy + g.uzz);
-  }
-};
+using heat3d::HeatModel;
 
 // -----------------------------------------------------------------------------
 // App scaffolding: CLI, reference solution, per-method orchestration.
