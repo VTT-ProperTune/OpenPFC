@@ -35,11 +35,11 @@ Decomposition::Decomposition(const World &world, const Int3 &grid)
     : m_global_world(world), m_grid{grid[0], grid[1], grid[2]},
       m_subworlds(split_world_heffte(world, grid)) {}
 
-Decomposition create(const World &world, const Int3 &grid) noexcept {
+[[nodiscard]] Decomposition create(const World &world, const Int3 &grid) noexcept {
   return Decomposition(world, grid);
 }
 
-Decomposition create(const World &world, const int &nparts) noexcept {
+[[nodiscard]] Decomposition create(const World &world, const int &nparts) noexcept {
   const heffte::box3d<int> indices = global_world_to_heffte_box(world);
   const auto grid = heffte::proc_setup_min_surface(indices, nparts);
   return create(world, grid);

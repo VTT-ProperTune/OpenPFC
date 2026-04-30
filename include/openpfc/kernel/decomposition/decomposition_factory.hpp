@@ -51,7 +51,8 @@ namespace pfc {
  * @param num_domains The total number of domains (defaults to 1).
  * @return Decomposition
  */
-Decomposition make_decomposition(const World &world, int rank, int num_domains);
+[[nodiscard]] Decomposition make_decomposition(const World &world, int rank,
+                                               int num_domains);
 
 /**
  * @brief Factory function to create a Decomposition from MPI communicator.
@@ -60,7 +61,8 @@ Decomposition make_decomposition(const World &world, int rank, int num_domains);
  * @param comm The MPI communicator (defaults to MPI_COMM_WORLD).
  * @return Decomposition
  */
-Decomposition make_decomposition(const World &world, MPI_Comm comm = MPI_COMM_WORLD);
+[[nodiscard]] Decomposition make_decomposition(const World &world,
+                                               MPI_Comm comm = MPI_COMM_WORLD);
 
 } // namespace pfc
 

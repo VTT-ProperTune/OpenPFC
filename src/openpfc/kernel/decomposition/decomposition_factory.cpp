@@ -7,14 +7,15 @@
 
 namespace pfc {
 
-Decomposition make_decomposition(const World &world, int rank, int num_domains) {
+[[nodiscard]] Decomposition make_decomposition(const World &world, int rank,
+                                               int num_domains) {
   // For explicit rank/size, create a decomposition for all domains
   // Each process can access its own subdomain using its rank
   (void)rank; // Rank is not needed here as decomposition contains all subdomains
   return decomposition::create(world, num_domains);
 }
 
-Decomposition make_decomposition(const World &world, MPI_Comm comm) {
+[[nodiscard]] Decomposition make_decomposition(const World &world, MPI_Comm comm) {
   int rank = 0;
   int size = 1;
 
