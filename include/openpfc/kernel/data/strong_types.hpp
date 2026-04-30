@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -149,6 +149,7 @@
 #pragma once
 
 #include <array>
+#include <compare>
 #include <openpfc/kernel/data/world_types.hpp>
 #include <type_traits>
 
@@ -194,23 +195,8 @@ struct GridSize {
    */
   operator const Int3 &() const noexcept { return value; }
 
-  /**
-   * @brief Equality comparison
-   * @param other GridSize to compare
-   * @return true if values are equal
-   */
-  bool operator==(const GridSize &other) const noexcept {
-    return value == other.value;
-  }
-
-  /**
-   * @brief Inequality comparison
-   * @param other GridSize to compare
-   * @return true if values are not equal
-   */
-  bool operator!=(const GridSize &other) const noexcept {
-    return value != other.value;
-  }
+  /** @brief Lexicographic comparison of underlying grid dimensions */
+  auto operator<=>(const GridSize &other) const noexcept = default;
 };
 
 /**
@@ -248,23 +234,8 @@ struct LocalOffset {
    */
   operator const Int3 &() const noexcept { return value; }
 
-  /**
-   * @brief Equality comparison
-   * @param other LocalOffset to compare
-   * @return true if values are equal
-   */
-  bool operator==(const LocalOffset &other) const noexcept {
-    return value == other.value;
-  }
-
-  /**
-   * @brief Inequality comparison
-   * @param other LocalOffset to compare
-   * @return true if values are not equal
-   */
-  bool operator!=(const LocalOffset &other) const noexcept {
-    return value != other.value;
-  }
+  /** @brief Lexicographic comparison of underlying offsets */
+  auto operator<=>(const LocalOffset &other) const noexcept = default;
 };
 
 /**
@@ -302,23 +273,8 @@ struct GlobalOffset {
    */
   operator const Int3 &() const noexcept { return value; }
 
-  /**
-   * @brief Equality comparison
-   * @param other GlobalOffset to compare
-   * @return true if values are equal
-   */
-  bool operator==(const GlobalOffset &other) const noexcept {
-    return value == other.value;
-  }
-
-  /**
-   * @brief Inequality comparison
-   * @param other GlobalOffset to compare
-   * @return true if values are not equal
-   */
-  bool operator!=(const GlobalOffset &other) const noexcept {
-    return value != other.value;
-  }
+  /** @brief Lexicographic comparison of underlying offsets */
+  auto operator<=>(const GlobalOffset &other) const noexcept = default;
 };
 
 /**
@@ -388,23 +344,8 @@ struct GridSpacing {
    */
   operator const Real3 &() const noexcept { return value; }
 
-  /**
-   * @brief Equality comparison
-   * @param other GridSpacing to compare
-   * @return true if values are equal
-   */
-  bool operator==(const GridSpacing &other) const noexcept {
-    return value == other.value;
-  }
-
-  /**
-   * @brief Inequality comparison
-   * @param other GridSpacing to compare
-   * @return true if values are not equal
-   */
-  bool operator!=(const GridSpacing &other) const noexcept {
-    return value != other.value;
-  }
+  /** @brief Lexicographic comparison of underlying spacing */
+  auto operator<=>(const GridSpacing &other) const noexcept = default;
 };
 
 /**
@@ -442,23 +383,8 @@ struct PhysicalOrigin {
    */
   operator const Real3 &() const noexcept { return value; }
 
-  /**
-   * @brief Equality comparison
-   * @param other PhysicalOrigin to compare
-   * @return true if values are equal
-   */
-  bool operator==(const PhysicalOrigin &other) const noexcept {
-    return value == other.value;
-  }
-
-  /**
-   * @brief Inequality comparison
-   * @param other PhysicalOrigin to compare
-   * @return true if values are not equal
-   */
-  bool operator!=(const PhysicalOrigin &other) const noexcept {
-    return value != other.value;
-  }
+  /** @brief Lexicographic comparison of underlying coordinates */
+  auto operator<=>(const PhysicalOrigin &other) const noexcept = default;
 };
 
 /**
@@ -496,23 +422,8 @@ struct PhysicalCoords {
    */
   operator const Real3 &() const noexcept { return value; }
 
-  /**
-   * @brief Equality comparison
-   * @param other PhysicalCoords to compare
-   * @return true if values are equal
-   */
-  bool operator==(const PhysicalCoords &other) const noexcept {
-    return value == other.value;
-  }
-
-  /**
-   * @brief Inequality comparison
-   * @param other PhysicalCoords to compare
-   * @return true if values are not equal
-   */
-  bool operator!=(const PhysicalCoords &other) const noexcept {
-    return value != other.value;
-  }
+  /** @brief Lexicographic comparison of underlying coordinates */
+  auto operator<=>(const PhysicalCoords &other) const noexcept = default;
 };
 
 /**
