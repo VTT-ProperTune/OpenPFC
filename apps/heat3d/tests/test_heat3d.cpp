@@ -29,12 +29,12 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/grad_point.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
 #include <heat3d/cli.hpp>
+#include <heat3d/heat_grads.hpp>
 #include <heat3d/heat_model.hpp>
 #include <heat3d/reporting.hpp>
 
@@ -88,23 +88,23 @@ TEST_CASE("HeatModel: IC override replaces the default lambda",
   REQUIRE_THAT(model.initial_condition(1.5, -2.0, 3.5), WithinAbs(3.0, 1e-12));
 }
 
-TEST_CASE("HeatModel: rhs = D * (uxx + uyy + uzz)", "[heat3d][HeatModel]") {
+TEST_CASE("HeatModel: rhs = D * (xx + yy + zz)", "[heat3d][HeatModel]") {
   HeatModel model;
 
-  SECTION("zero Laplacian gives zero RHS regardless of D and u") {
+  SECTION("zero Laplacian gives zero RHS regardless of D") {
     model.D = 17.0;
-    pfc::field::GradPoint g{42.0, 0.0, 0.0, 0.0};
+    heat3d::HeatGrads g{.xx = 0.0, .yy = 0.0, .zz = 0.0};
     REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(0.0, 1e-12));
   }
 
   SECTION("uniform unit Laplacian (D=1) gives RHS = 3") {
     model.D = 1.0;
-    pfc::field::GradPoint g{0.0, 1.0, 1.0, 1.0};
+    heat3d::HeatGrads g{.xx = 1.0, .yy = 1.0, .zz = 1.0};
     REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(3.0, 1e-12));
   }
 
   SECTION("rhs is linear in D") {
-    pfc::field::GradPoint g{0.0, 1.0, -2.0, 0.5};
+    heat3d::HeatGrads g{.xx = 1.0, .yy = -2.0, .zz = 0.5};
     const double lap = 1.0 - 2.0 + 0.5; // -0.5
     for (double D : {0.1, 1.0, 3.7}) {
       model.D = D;
@@ -113,9 +113,9 @@ TEST_CASE("HeatModel: rhs = D * (uxx + uyy + uzz)", "[heat3d][HeatModel]") {
     }
   }
 
-  SECTION("rhs ignores t and the bare value u") {
+  SECTION("rhs ignores t") {
     model.D = 2.0;
-    pfc::field::GradPoint g{99.0, 1.0, 1.0, 1.0}; // u=99 should not matter
+    heat3d::HeatGrads g{.xx = 1.0, .yy = 1.0, .zz = 1.0};
     REQUIRE_THAT(model.rhs(0.0, g), WithinAbs(6.0, 1e-12));
     REQUIRE_THAT(model.rhs(1234.5, g), WithinAbs(6.0, 1e-12));
   }
@@ -194,7 +194,7 @@ TEST_CASE("HeatModel + FdCpuStack + EulerStepper: explicit-Euler FD steps "
   stack.u().for_each_interior(
       [&sum0](double, double, double, double v) { sum0 += v * v; });
 
-  auto grad = pfc::field::create(stack.u(), order);
+  auto grad = pfc::field::create<heat3d::HeatGrads>(stack.u(), order);
   auto stepper = pfc::sim::steppers::create(stack.u(), grad, model,
                                             /*dt=*/1.0e-3);
 
@@ -210,6 +210,59 @@ TEST_CASE("HeatModel + FdCpuStack + EulerStepper: explicit-Euler FD steps "
   REQUIRE(sum1 < sum0);
   REQUIRE(sum1 > 0.0);
   REQUIRE(std::isfinite(sum1));
+}
+
+// -----------------------------------------------------------------------------
+// Grads-type pruning: an alternative model-owned grads aggregate that drops
+// `zz` (a 2D-style heat slab needs only `xx + yy`) must compile against
+// `pfc::field::create<G>(...)` and the explicit-Euler stepper. This proves
+// the kernel introspects member-by-member rather than assuming a fixed shape.
+// -----------------------------------------------------------------------------
+
+namespace {
+struct PartialHeatGrads {
+  double xx{};
+  double yy{};
+};
+
+struct PartialHeatModel {
+  double D = 1.0;
+  inline double rhs(double, const PartialHeatGrads &g) const noexcept {
+    return D * (g.xx + g.yy);
+  }
+};
+} // namespace
+
+TEST_CASE("FdGradient<G> + EulerStepper compile and run with a pruned grads "
+          "aggregate (only xx, yy)",
+          "[heat3d][FdCpuStack][prune]") {
+  constexpr int N = 12;
+  const int order = 2;
+
+  pfc::sim::stacks::FdCpuStack stack(pfc::GridSize({N, N, N}),
+                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                     pfc::GridSpacing({1.0, 1.0, 1.0}), order,
+                                     /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
+
+  PartialHeatModel model;
+  model.D = 1.0;
+  stack.u().apply([](double x, double y, double z) {
+    return std::exp(-(x * x + y * y + z * z) / 4.0);
+  });
+
+  auto grad = pfc::field::create<PartialHeatGrads>(stack.u(), order);
+  auto stepper = pfc::sim::steppers::create(stack.u(), grad, model,
+                                            /*dt=*/1.0e-3);
+
+  stack.exchange_halos();
+  const double t1 = stepper.step(0.0, stack.u().vec());
+  REQUIRE_THAT(t1, WithinAbs(1.0e-3, 1e-15));
+
+  double l2sq = 0.0;
+  stack.u().for_each_interior(
+      [&l2sq](double, double, double, double v) { l2sq += v * v; });
+  REQUIRE(std::isfinite(l2sq));
+  REQUIRE(l2sq > 0.0);
 }
 
 // -----------------------------------------------------------------------------
