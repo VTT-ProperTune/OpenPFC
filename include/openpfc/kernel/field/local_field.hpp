@@ -53,6 +53,8 @@
 
 #include <array>
 #include <cstddef>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -76,12 +78,18 @@ public:
    * stored so `for_each_interior` can skip the per-rank halo region; the
    * actual halo data, if needed, lives in a separate buffer (e.g.
    * `pfc::halo::FaceHalos<T>`).
+   *
+   * @throws std::invalid_argument if `halo_width < 0` or the local subdomain
+   *         is too small to leave any interior cells given that halo width
+   *         (i.e. requires `size[i] > 2 * halo_width` for every axis).
    */
   static LocalField from_subdomain(const pfc::decomposition::Decomposition &decomp,
                                    int rank, int halo_width = 0) {
     const auto &gw = pfc::decomposition::get_world(decomp);
     const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-    return LocalField(pfc::world::get_size(local), pfc::world::get_lower(local),
+    const auto local_size = pfc::world::get_size(local);
+    check_halo_fits_(local_size, halo_width);
+    return LocalField(local_size, pfc::world::get_lower(local),
                       pfc::world::get_size(gw), pfc::world::get_origin(gw),
                       pfc::world::get_spacing(gw), halo_width);
   }
@@ -239,6 +247,29 @@ private:
       fn(x[0], x[1], x[2], v);
     } else {
       fn(x, v);
+    }
+  }
+
+  /**
+   * @brief Validate that the local subdomain is large enough to host
+   *        `halo_width` per-rank halo cells on each side **and** still leave
+   *        a non-empty interior. Throws on violation.
+   */
+  static void check_halo_fits_(pfc::Int3 size, int halo_width) {
+    if (halo_width < 0) {
+      throw std::invalid_argument(
+          "pfc::field::LocalField: halo_width must be non-negative (got " +
+          std::to_string(halo_width) + ")");
+    }
+    if (2 * halo_width >= size[0] || 2 * halo_width >= size[1] ||
+        2 * halo_width >= size[2]) {
+      throw std::invalid_argument(
+          std::string("pfc::field::LocalField: local subdomain ") +
+          std::to_string(size[0]) + "x" + std::to_string(size[1]) + "x" +
+          std::to_string(size[2]) + " has no interior for halo_width=" +
+          std::to_string(halo_width) + " (need >" + std::to_string(2 * halo_width) +
+          " points per dimension; reduce halo width, increase the grid, or use "
+          "fewer MPI ranks)");
     }
   }
 

@@ -29,6 +29,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <iostream>
 #include <mpi.h>
@@ -183,16 +184,6 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   const int hw = cfg.fd_order / 2;
   field::LocalField<double> u =
       field::LocalField<double>::from_subdomain(decomp, rank, hw);
-
-  const auto sz = u.size3();
-  if (2 * hw >= sz[0] || 2 * hw >= sz[1] || 2 * hw >= sz[2]) {
-    if (rank == 0) {
-      std::cerr << "heat3d: local subdomain " << sz[0] << "x" << sz[1] << "x"
-                << sz[2] << " too small for fd_order=" << cfg.fd_order << " (need > "
-                << (2 * hw) << " points per dimension)\n";
-    }
-    MPI_Abort(MPI_COMM_WORLD, 1);
-  }
 
   HeatModel model;
   model.D = cfg.D;
@@ -436,12 +427,17 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  if (cfg.method == Method::Fd) {
-    run_fd(cfg, rank, nproc);
-  } else if (cfg.method == Method::Spectral) {
-    run_spectral(cfg, rank, nproc);
-  } else {
-    run_spectral_pointwise(cfg, rank, nproc);
+  try {
+    if (cfg.method == Method::Fd) {
+      run_fd(cfg, rank, nproc);
+    } else if (cfg.method == Method::Spectral) {
+      run_spectral(cfg, rank, nproc);
+    } else {
+      run_spectral_pointwise(cfg, rank, nproc);
+    }
+  } catch (const std::exception &e) {
+    std::cerr << "heat3d (rank " << rank << "): " << e.what() << "\n";
+    MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
   MPI_Finalize();
