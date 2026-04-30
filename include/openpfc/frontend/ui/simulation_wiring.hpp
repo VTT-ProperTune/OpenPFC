@@ -91,6 +91,20 @@ inline void wire_simulator_and_runtime_from_json(Simulator &sim, Time &time,
                                        session.modifier_catalog);
 }
 
+/**
+ * @brief Same as `wire_simulator_and_runtime_from_json` with `session` for context
+ *        and modifier catalog, but with an explicit results-writer catalog
+ *
+ * Use this in tests (or custom drivers) when you inject a `JsonWiringSession` for
+ * MPI/modifier factories but still need a non-default `ResultsWriterCatalog`.
+ */
+inline void wire_simulator_and_runtime_from_json(
+    Simulator &sim, Time &time, const nlohmann::json &settings,
+    const JsonWiringSession &session, const ResultsWriterCatalog &writer_catalog) {
+  wire_simulator_and_runtime_from_json(sim, time, settings, session.ctx,
+                                       session.modifier_catalog, writer_catalog);
+}
+
 } // namespace pfc::ui
 
 #endif // PFC_UI_SIMULATION_WIRING_HPP
