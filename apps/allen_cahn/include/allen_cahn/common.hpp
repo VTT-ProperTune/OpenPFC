@@ -208,7 +208,7 @@ step_explicit_euler_cpu(std::vector<double> *u, std::vector<double> *lap,
     face_ptrs[static_cast<std::size_t>(i)] =
         (*face_halos)[static_cast<std::size_t>(i)].data();
   }
-  pfc::field::fd::laplacian_5point_xy_periodic_separated(
+  pfc::field::fd::laplacian2d_xy_periodic_separated<2>(
       u->data(), face_ptrs, lap->data(), nx, ny, nz, inv_dx2, inv_dy2, hw);
   for (std::size_t i = 0; i < u->size(); ++i) {
     const double p = (*u)[i];
