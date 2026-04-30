@@ -182,7 +182,8 @@ private:
  *                    (typically `u.size()`).
  */
 template <class Eval, class Model>
-auto create(Eval &eval, const Model &model, double dt, std::size_t local_size) {
+[[nodiscard]] auto create(Eval &eval, const Model &model, double dt,
+                          std::size_t local_size) {
   auto rhs = [&eval, &model](double t, const std::vector<double> & /*u*/,
                              std::vector<double> &du) {
     pfc::sim::for_each_interior(model, eval, du.data(), t);
@@ -204,8 +205,8 @@ auto create(Eval &eval, const Model &model, double dt, std::size_t local_size) {
  * @param dt     Time-step size.
  */
 template <class T, class Eval, class Model>
-auto create(const pfc::field::LocalField<T> &u, Eval &eval, const Model &model,
-            double dt) {
+[[nodiscard]] auto create(const pfc::field::LocalField<T> &u, Eval &eval,
+                          const Model &model, double dt) {
   return create(eval, model, dt, u.size());
 }
 
@@ -228,8 +229,8 @@ auto create(const pfc::field::LocalField<T> &u, Eval &eval, const Model &model,
  * @param dt      Time-step size.
  */
 template <class... Ts, class Eval, class Model>
-auto create(std::tuple<pfc::field::LocalField<Ts> &...> fields, Eval &eval,
-            const Model &model, double dt) {
+[[nodiscard]] auto create(std::tuple<pfc::field::LocalField<Ts> &...> fields,
+                          Eval &eval, const Model &model, double dt) {
   constexpr std::size_t N = sizeof...(Ts);
   std::array<std::size_t, N> sizes{};
   std::apply(

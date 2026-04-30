@@ -28,7 +28,8 @@ namespace pfc::field {
  * @return std::unique_ptr<FieldModifier> usable with existing Simulator APIs
  */
 template <typename Fn>
-std::unique_ptr<FieldModifier> make_legacy_modifier(std::string field_name, Fn fn) {
+[[nodiscard]] std::unique_ptr<FieldModifier>
+make_legacy_modifier(std::string field_name, Fn fn) {
   struct LambdaModifier final : FieldModifier {
     std::string name;
     Fn func;
