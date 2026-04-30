@@ -7,14 +7,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 MPI CPU driver for the **3D heat equation** \(\partial u/\partial t = D \nabla^2 u\) on a uniform periodic brick \([0,N)^3\) with spacing 1, comparing:
 
-- **Finite differences**: explicit Euler with separated face halos and **even spatial orders 2–20** (central Laplacian; see `laplacian_even_order_interior_separated` in `include/openpfc/kernel/field/finite_difference.hpp`).
+- **Finite differences**: explicit Euler with separated face halos and **even spatial orders 2–20** (central Laplacian; the per-cell evaluator is `pfc::field::FdGradient<HeatGrads>` in `include/openpfc/kernel/field/fd_gradient.hpp`, built on the per-axis primitive `pfc::field::fd::apply_d2_along` and the compile-time stencil tables in `fd_stencils.hpp`).
 - **Spectral**: HeFFTe-backed real FFT, semi-implicit step in Fourier space (same pattern as `examples/diffusion_model.hpp`).
 
 Initial condition matches the diffusion examples: \(u(\mathbf{x},0)=\exp(-|\mathbf{x}|^2/(4D))\) with origin at \((0,0,0)\).
 
 ## Build
 
-Enabled with `OpenPFC_BUILD_APPS=ON` (default). Requires HeFFTe (spectral path uses the same FFT stack as the library). When CMake finds OpenMP for C++, `heat3d` links it so the FD path can use hybrid **MPI + OpenMP**: a **single** `omp parallel for collapse(2)` over interior \((i_y,i_z)\) lines, each line calling `laplacian_even_order_interior_separated_xy_row` (set `OMP_NUM_THREADS`).
+Enabled with `OpenPFC_BUILD_APPS=ON` (default). Requires HeFFTe (spectral path uses the same FFT stack as the library). When CMake finds OpenMP for C++, `heat3d` links it so the FD path can use hybrid **MPI + OpenMP**: each step's interior loop runs under a **single** `omp parallel for collapse(2)` over interior \((i_y,i_z)\) (in `pfc::field::for_each_interior`, `include/openpfc/kernel/simulation/for_each_interior.hpp`), each iteration calling the per-cell `pfc::field::FdGradient<HeatGrads>::operator()` along its row of \(x\). Set `OMP_NUM_THREADS` to control the thread count.
 
 ### Source layout
 
@@ -28,7 +28,7 @@ Enabled with `OpenPFC_BUILD_APPS=ON` (default). Requires HeFFTe (spectral path u
 
 ### Where OpenMP runs (FD)
 
-Only **`apps/heat3d/src/cpu/heat3d.cpp`**: the Laplacian each step is a `collapse(2)` loop over local interior `iz` and `iy`; each iteration updates one \(x\)-line in `laplacian_even_order_interior_separated_xy_row` (`finite_difference.hpp`). **Not parallel:** `SeparatedFaceHaloExchanger::exchange_halos` (MPI), clearing `lap`, and the explicit Euler update over the full brick.
+Inside **`apps/heat3d/src/cpu/heat3d.cpp`** the per-step interior loop is delegated to `pfc::field::for_each_interior` (`include/openpfc/kernel/simulation/for_each_interior.hpp`), which runs a single `#pragma omp parallel for collapse(2) schedule(static)` over local interior \((i_z, i_y)\) and walks the inner \(x\)-line serially. Each cell calls the user lambda, which builds the per-point `HeatGrads` via `pfc::field::FdGradient<HeatGrads>` (per-axis stencil application from `kernel/field/fd_apply.hpp`) and stores the explicit-Euler update in place. **Not parallel:** `SeparatedFaceHaloExchanger::exchange_halos` (MPI) and the boundary-cell pass that the interior loop delegates back to the caller.
 
 So `htop`/`top` can look **single-threaded** when wall time is dominated by **MPI** (many ranks, thin subdomains), or when the launcher has pinned the process to a **narrow CPU mask** (OpenMP then schedules all threads inside that mask).
 
@@ -132,7 +132,7 @@ done
 
 ## Hybrid MPI + OpenMP (FD)
 
-Use **fewer MPI ranks** and **`OMP_NUM_THREADS`** matching usable cores so halo exchange stays smaller while threads parallelize over interior \((i_y,i_z)\) lines (`laplacian_even_order_interior_separated_xy_row` in `heat3d.cpp`; the kernel in `finite_difference.hpp` stays serial along \(x\)).
+Use **fewer MPI ranks** and **`OMP_NUM_THREADS`** matching usable cores so halo exchange stays smaller while threads parallelize over interior \((i_y,i_z)\) lines (the `omp parallel for collapse(2)` lives in `pfc::field::for_each_interior`, `include/openpfc/kernel/simulation/for_each_interior.hpp`; the per-cell `FdGradient<HeatGrads>` walks the inner \(x\)-line serially).
 
 ```bash
 export OMP_NUM_THREADS=8
