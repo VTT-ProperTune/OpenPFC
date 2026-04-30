@@ -30,6 +30,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <openpfc/kernel/field/fd_stencils.hpp>
+
 namespace pfc::field::fd {
 
 /**
@@ -180,48 +182,6 @@ void laplacian_7point_interior_separated(const T *core,
 }
 
 namespace detail {
-
-constexpr std::int64_t fd_center_pair_coeffs_2[] = {-2, 1};
-constexpr std::int64_t fd_center_pair_coeffs_4[] = {-30, 16, -1};
-constexpr std::int64_t fd_center_pair_coeffs_6[] = {-490, 270, -27, 2};
-constexpr std::int64_t fd_center_pair_coeffs_8[] = {-14350, 8064, -1008, 128, -9};
-constexpr std::int64_t fd_center_pair_coeffs_10[] = {-73766, 42000, -6000,
-                                                     1000,   -125,  8};
-constexpr std::int64_t fd_center_pair_coeffs_12[] = {
-    -2480478, 1425600, -222750, 44000, -7425, 864, -50};
-constexpr std::int64_t fd_center_pair_coeffs_14[] = {
-    -228812298, 132432300, -22072050, 4904900, -1003275, 160524, -17150, 900};
-constexpr std::int64_t fd_center_pair_coeffs_16[] = {
-    -924708642, 538137600, -94174080, 22830080, -5350800,
-    1053696,    -156800,   15360,     -735};
-constexpr std::int64_t fd_center_pair_coeffs_18[] = {
-    -47541321542, 27788080320, -5052378240, 1309875840, -340063920,
-    77728896,     -14394240,   1982880,     -178605,    7840};
-constexpr std::int64_t fd_center_pair_coeffs_20[] = {
-    -909151481810, 533306592000, -99994986000, 27349056000, -7691922000, 1969132032,
-    -427329000,    73872000,     -9426375,     784000,      -31752};
-
-struct EvenFdStencil1d {
-  int half_width;
-  std::int64_t denom;
-  const std::int64_t *coeffs;
-};
-
-inline bool fd_even_order_lookup(int order, EvenFdStencil1d *out) {
-  switch (order) {
-  case 2: *out = {1, 1, fd_center_pair_coeffs_2}; return true;
-  case 4: *out = {2, 12, fd_center_pair_coeffs_4}; return true;
-  case 6: *out = {3, 180, fd_center_pair_coeffs_6}; return true;
-  case 8: *out = {4, 5040, fd_center_pair_coeffs_8}; return true;
-  case 10: *out = {5, 25200, fd_center_pair_coeffs_10}; return true;
-  case 12: *out = {6, 831600, fd_center_pair_coeffs_12}; return true;
-  case 14: *out = {7, 75675600, fd_center_pair_coeffs_14}; return true;
-  case 16: *out = {8, 302702400, fd_center_pair_coeffs_16}; return true;
-  case 18: *out = {9, 15437822400, fd_center_pair_coeffs_18}; return true;
-  case 20: *out = {10, 293318625600, fd_center_pair_coeffs_20}; return true;
-  default: return false;
-  }
-}
 
 /**
  * Serial Laplacian contribution for one interior \f$(i_y,i_z)\f$ line: all \f$i_x\f$
