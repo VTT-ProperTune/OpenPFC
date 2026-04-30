@@ -42,6 +42,7 @@ set(_openpfc_frontend_obj_sources
     src/openpfc/frontend/ui/app_profiling.cpp
     src/openpfc/frontend/ui/ui_errors.cpp
     src/openpfc/frontend/io/vtk_writer.cpp
+    src/openpfc/frontend/io/vtk_writer_validate.cpp
     src/openpfc/frontend/io/png_writer.cpp
 )
 add_library(openpfc_frontend_obj OBJECT ${_openpfc_frontend_obj_sources})

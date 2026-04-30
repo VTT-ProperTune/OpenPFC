@@ -29,7 +29,7 @@ Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 
 ## VTK (ParaView / VisIt)
 
-[`include/openpfc/frontend/io/vtk_writer.hpp`](../../include/openpfc/frontend/io/vtk_writer.hpp) — `VTKWriter`: `.vti` / `.pvti` output. Typical use is programmatic: construct `VTKWriter`, `set_domain`, `set_origin`, `set_spacing`, then `add_results_writer` or call from your step loop. See `examples/11_write_results.cpp` and Doxygen on `VTKWriter`.
+[`include/openpfc/frontend/io/vtk_writer.hpp`](../../include/openpfc/frontend/io/vtk_writer.hpp) — `VTKWriter`: `.vti` / `.pvti` output. Extent/origin/spacing and local point-count checks are implemented in [`vtk_writer_validate.hpp`](../../include/openpfc/frontend/io/vtk_writer_validate.hpp) (`pfc::io::vtk_validate`), separate from XML and file I/O. Typical use is programmatic: construct `VTKWriter`, `set_domain`, `set_origin`, `set_spacing`, then `add_results_writer` or call from your step loop. See `examples/11_write_results.cpp` and Doxygen on `VTKWriter`.
 
 ## PNG (2D grayscale, quick look)
 

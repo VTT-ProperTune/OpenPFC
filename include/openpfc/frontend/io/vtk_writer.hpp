@@ -33,6 +33,7 @@
  * @endcode
  *
  * @see ResultsWriter base class
+ * @see vtk_writer_validate.hpp for domain/layout validation (separate module)
  * @see examples/11_write_results.hpp for a thin tutorial wrapper around this class
  */
 
