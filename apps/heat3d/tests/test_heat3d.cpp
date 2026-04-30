@@ -28,11 +28,10 @@
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/separated_halo_exchange.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/grad_point.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
 #include <heat3d/cli.hpp>
@@ -125,34 +124,36 @@ TEST_CASE("HeatModel: rhs = D * (uxx + uyy + uzz)", "[heat3d][HeatModel]") {
 // -----------------------------------------------------------------------------
 // Integration tests against OpenPFC primitives (single MPI rank).
 //
-// `pfc::decomposition::Decomposition` stores a const reference to its source
-// `pfc::World` (`m_global_world`), so the world has to outlive the
-// decomposition in the same scope. We therefore construct both objects inline
-// in each test rather than returning them from a helper (which would leave
-// the decomposition with a dangling reference).
+// `pfc::sim::stacks::FdCpuStack` is the recommended bundle: it owns the
+// `World`, `Decomposition`, `LocalField`, halo buffers, and exchanger in the
+// correct declaration order so internal references (e.g.
+// `Decomposition::m_global_world`) stay valid for the lifetime of the stack.
+// We use it here as the canonical "one statement to set up an FD-on-CPU
+// solver" entry point — exactly what `apps/heat3d/src/cpu/heat3d.cpp` uses.
 // -----------------------------------------------------------------------------
 
-TEST_CASE("HeatModel + LocalField: u.apply samples the model IC",
-          "[heat3d][LocalField]") {
+TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",
+          "[heat3d][FdCpuStack]") {
   constexpr int N = 8;
-  auto world = pfc::world::create(pfc::GridSize({N, N, N}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = pfc::decomposition::create(world, /*nproc=*/1);
 
   HeatModel model;
   model.D = 1.5;
 
-  pfc::field::LocalField<double> u =
-      pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0,
-                                                     /*halo_width=*/0);
-  u.apply(model.initial_condition);
+  // FdCpuStack's LocalField stores only owned cells (the face-halo buffer
+  // lives separately), so the array indices map directly to the local
+  // subworld coordinates. For nproc=1 the local subworld == global world,
+  // so u(ix, iy, iz) samples the IC at global (ix, iy, iz).
+  pfc::sim::stacks::FdCpuStack stack(
+      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}), /*fd_order=*/2, /*rank=*/0, /*nproc=*/1,
+      MPI_COMM_WORLD);
+  stack.u().apply(model.initial_condition);
 
   SECTION("origin cell evaluates to exp(0) = 1") {
-    REQUIRE_THAT(u(0, 0, 0), WithinAbs(1.0, 1e-12));
+    REQUIRE_THAT(stack.u()(0, 0, 0), WithinAbs(1.0, 1e-12));
   }
 
-  SECTION("interior cells match exp(-r^2/(4D)) for the configured D") {
+  SECTION("owned cells match exp(-r^2/(4D)) for the configured D") {
     for (int iz = 0; iz < 4; ++iz) {
       for (int iy = 0; iy < 4; ++iy) {
         for (int ix = 0; ix < 4; ++ix) {
@@ -161,7 +162,7 @@ TEST_CASE("HeatModel + LocalField: u.apply samples the model IC",
           const double z = static_cast<double>(iz);
           const double r2 = x * x + y * y + z * z;
           INFO("ix=" << ix << " iy=" << iy << " iz=" << iz);
-          REQUIRE_THAT(u(ix, iy, iz),
+          REQUIRE_THAT(stack.u()(ix, iy, iz),
                        WithinAbs(std::exp(-r2 / (4.0 * model.D)), 1e-12));
         }
       }
@@ -169,47 +170,40 @@ TEST_CASE("HeatModel + LocalField: u.apply samples the model IC",
   }
 }
 
-TEST_CASE("HeatModel + EulerStepper: one explicit-Euler FD step decreases the "
-          "L2 norm of a Gaussian (heat dissipation)",
-          "[heat3d][Euler]") {
-  // Small but well-resolved single-rank grid; halo_width = order/2 = 1.
+TEST_CASE("HeatModel + FdCpuStack + EulerStepper: explicit-Euler FD steps "
+          "decrease the L2 norm of a Gaussian (heat dissipation)",
+          "[heat3d][FdCpuStack][Euler]") {
   constexpr int N = 16;
   const int order = 2;
-  const int hw = order / 2;
 
-  auto world = pfc::world::create(pfc::GridSize({N, N, N}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = pfc::decomposition::create(world, /*nproc=*/1);
+  pfc::sim::stacks::FdCpuStack stack(pfc::GridSize({N, N, N}),
+                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                     pfc::GridSpacing({1.0, 1.0, 1.0}), order,
+                                     /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
 
   HeatModel model;
   model.D = 1.0;
-
-  pfc::field::LocalField<double> u =
-      pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, hw);
-  u.apply(model.initial_condition);
+  stack.u().apply(model.initial_condition);
 
   // L2 norm of the initial state (interior only).
   double sum0 = 0.0;
-  u.for_each_interior([&sum0](double, double, double, double v) { sum0 += v * v; });
+  stack.u().for_each_interior(
+      [&sum0](double, double, double, double v) { sum0 += v * v; });
 
-  auto face_halos = pfc::halo::allocate_face_halos<double>(decomp, /*rank=*/0, hw);
-  pfc::SeparatedFaceHaloExchanger<double> exchanger(decomp, /*rank=*/0, hw,
-                                                    MPI_COMM_WORLD);
-  auto grad = pfc::field::create(u, order);
-  auto stepper = pfc::sim::steppers::create(u, grad, model, /*dt=*/1.0e-3);
+  auto grad = pfc::field::create(stack.u(), order);
+  auto stepper = pfc::sim::steppers::create(stack.u(), grad, model,
+                                            /*dt=*/1.0e-3);
 
-  // A handful of steps; with diffusion the field's energy must drop.
   for (int step = 0; step < 5; ++step) {
-    exchanger.exchange_halos(u.data(), u.size(), face_halos);
-    (void)stepper.step(static_cast<double>(step) * 1.0e-3, u.vec());
+    stack.exchange_halos();
+    (void)stepper.step(static_cast<double>(step) * 1.0e-3, stack.u().vec());
   }
 
   double sum1 = 0.0;
-  u.for_each_interior([&sum1](double, double, double, double v) { sum1 += v * v; });
+  stack.u().for_each_interior(
+      [&sum1](double, double, double, double v) { sum1 += v * v; });
 
   REQUIRE(sum1 < sum0);
-  // Sanity: the field shouldn't blow up either.
   REQUIRE(sum1 > 0.0);
   REQUIRE(std::isfinite(sum1));
 }
