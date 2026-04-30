@@ -42,8 +42,9 @@ World<CoordTag>::World(const Int3 &lower, const Int3 &upper,
 
 // Strong-type API (PREFERRED) - type-safe World construction
 // Uses GridSize, PhysicalOrigin, GridSpacing from strong_types.hpp
-CartesianWorld create(const GridSize &size, const PhysicalOrigin &origin,
-                      const GridSpacing &spacing) {
+[[nodiscard]] CartesianWorld create(const GridSize &size,
+                                    const PhysicalOrigin &origin,
+                                    const GridSpacing &spacing) {
   // Extract raw values (zero-cost - just references)
   const Int3 &raw_size = size.get();
   const Real3 &raw_origin = origin.get();
@@ -58,7 +59,7 @@ CartesianWorld create(const GridSize &size, const PhysicalOrigin &origin,
 // old compatibility constructor taking only size, and default lower bounds and
 // spacing and assuming pretty much everything else this is the most common use
 // case
-CartesianWorld create(const Int3 &size) {
+[[nodiscard]] CartesianWorld create(const Int3 &size) {
   Int3 lower{0, 0, 0};                               // default lower bounds
   Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1}; // default upper bounds
   return World(lower, upper, CartesianCS());

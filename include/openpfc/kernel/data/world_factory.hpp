@@ -40,7 +40,7 @@ using pfc::types::Real3;
  * @param dimensions Dimensions of the world.
  * @return A World object.
  */
-CartesianWorld create(const Int3 &size);
+[[nodiscard]] CartesianWorld create(const Int3 &size);
 
 /**
  * @brief Create a World object with strong types for type safety
@@ -70,7 +70,8 @@ CartesianWorld create(const Int3 &size);
  *
  * @see GridSize, PhysicalOrigin, GridSpacing in strong_types.hpp
  */
-CartesianWorld create(const GridSize &size, const PhysicalOrigin &origin,
-                      const GridSpacing &spacing);
+[[nodiscard]] CartesianWorld create(const GridSize &size,
+                                    const PhysicalOrigin &origin,
+                                    const GridSpacing &spacing);
 
 } // namespace pfc::world

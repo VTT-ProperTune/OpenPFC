@@ -83,7 +83,7 @@ template <typename T> struct Field {
   const T &operator[](size_t i) const { return m_data[i]; }
 };
 
-template <typename T> inline Field<T> create(const World &world) {
+template <typename T> [[nodiscard]] inline Field<T> create(const World &world) {
   return Field<T>(world);
 }
 
@@ -97,7 +97,8 @@ template <typename T> inline const auto &get_world(const Field<T> &field) {
   return field.m_world;
 }
 
-template <typename T> Field<T> create(const World &world, std::vector<T> &&data) {
+template <typename T>
+[[nodiscard]] Field<T> create(const World &world, std::vector<T> &&data) {
   Field<T> f(world);
   if (data.size() != get_total_size(world)) {
     throw std::runtime_error("Moved-in data size mismatch.");
@@ -107,7 +108,7 @@ template <typename T> Field<T> create(const World &world, std::vector<T> &&data)
 }
 
 template <typename T>
-Field<T> create(const World &world, const std::vector<T> &data) {
+[[nodiscard]] Field<T> create(const World &world, const std::vector<T> &data) {
   Field<T> f(world);
   if (data.size() != get_total_size(world)) {
     throw std::runtime_error("Copied-in data size mismatch.");
@@ -117,7 +118,7 @@ Field<T> create(const World &world, const std::vector<T> &data) {
 }
 
 template <typename T, std::invocable<Real3> Func>
-Field<T> create(const World &world, Func &&func) {
+[[nodiscard]] Field<T> create(const World &world, Func &&func) {
   Field<T> f(world);
   apply(f, std::forward<Func>(func));
   return f;
