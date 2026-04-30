@@ -37,6 +37,7 @@ End-to-end walkthrough: [`../tutorials/custom_app_minimal.md`](../tutorials/cust
 | Goal | Mechanism | Starting points |
 |------|-----------|-----------------|
 | New physics / PDE model | Subclass `Model`, wire FFT and fields | `examples/04_diffusion_model.cpp`, `examples/12_cahn_hilliard.cpp` |
+| Point-wise PDE model (single or multi-field) | Model-owned grads aggregate + `pfc::field::create<G>(...)` | [`per_point_grads.md`](per_point_grads.md), `apps/heat3d/` |
 | Initial or boundary behavior | `FieldModifier` or functional `field::apply` | [`../getting_started/functional_field_ops.md`](../getting_started/functional_field_ops.md), `examples/14_custom_field_initializer.cpp` |
 | Declarative runs (JSON/TOML) | `pfc::ui::App<YourModel>` + registration | `examples/10_ui_register_ic.cpp`, shipped apps under `apps/` |
 | Custom coordinate / spatial setup | World and field helpers | `examples/17_custom_coordinate_system.cpp` |
