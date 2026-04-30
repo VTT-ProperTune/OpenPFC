@@ -41,6 +41,7 @@
 #pragma once
 
 #include <cstddef>
+#include <span>
 #include <stdexcept>
 #include <vector>
 
@@ -193,6 +194,14 @@ public:
                                std::to_string(n));
     }
     std::copy(ptr, ptr + n, m_data.begin());
+  }
+
+  /**
+   * @brief Copy data from a host contiguous range
+   * @param src Source span (size() must equal this buffer's size())
+   */
+  void copy_from_host(std::span<const T> src) {
+    copy_from_host(src.data(), src.size());
   }
 
   /**

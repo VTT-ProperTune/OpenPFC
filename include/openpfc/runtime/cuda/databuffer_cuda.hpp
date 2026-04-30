@@ -20,6 +20,7 @@
 #include <cuda_runtime.h>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <span>
 #include <stdexcept>
 #include <vector>
 
@@ -113,6 +114,10 @@ public:
                                  std::string(cudaGetErrorString(err)));
       }
     }
+  }
+
+  void copy_from_host(std::span<const T> src) {
+    copy_from_host(src.data(), src.size());
   }
 
   void copy_to_host(T *ptr, size_t n) const {
