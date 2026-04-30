@@ -28,8 +28,12 @@
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
@@ -263,6 +267,158 @@ TEST_CASE("FdGradient<G> + EulerStepper compile and run with a pruned grads "
       [&l2sq](double, double, double, double v) { l2sq += v * v; });
   REQUIRE(std::isfinite(l2sq));
   REQUIRE(l2sq > 0.0);
+}
+
+// -----------------------------------------------------------------------------
+// Laboratory-style manual FD driver: PaddedBrick + PaddedHaloExchanger +
+// brick_iteration helpers. The smoke test mirrors the compact `FdCpuStack`
+// test above so the two paths can be cross-checked.
+// -----------------------------------------------------------------------------
+
+TEST_CASE("Manual FD driver (PaddedBrick + PaddedHaloExchanger): smoke + L2",
+          "[heat3d][fd_manual]") {
+  using namespace pfc;
+  constexpr int N = 16;
+  const int hw = 1;
+  const double dt = 1.0e-3;
+  const int n_steps = 5;
+
+  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(world, /*nproc=*/1);
+
+  field::PaddedBrick<double> u(decomp, /*rank=*/0, hw);
+  field::PaddedBrick<double> du(decomp, /*rank=*/0, hw);
+  PaddedHaloExchanger<double> halo(decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
+
+  HeatModel model;
+  model.D = 1.0;
+  u.apply(model.initial_condition);
+
+  double sum0 = 0.0;
+  field::for_each_inner(
+      u, hw, [&](int i, int j, int k) { sum0 += u(i, j, k) * u(i, j, k); });
+  REQUIRE(sum0 > 0.0);
+
+  auto stencil_step = [&](int i, int j, int k) {
+    heat3d::HeatGrads g{};
+    g.xx = u(i + 1, j, k) - 2.0 * u(i, j, k) + u(i - 1, j, k);
+    g.yy = u(i, j + 1, k) - 2.0 * u(i, j, k) + u(i, j - 1, k);
+    g.zz = u(i, j, k + 1) - 2.0 * u(i, j, k) + u(i, j, k - 1);
+    du(i, j, k) = model.rhs(0.0, g);
+  };
+
+  for (int step = 0; step < n_steps; ++step) {
+    halo.start_halo_exchange(u.data(), u.size());
+    field::for_each_inner(u, hw, stencil_step);
+    halo.finish_halo_exchange();
+    field::for_each_border(u, hw, stencil_step);
+    field::for_each_owned(
+        u, [&](int i, int j, int k) { u(i, j, k) += dt * du(i, j, k); });
+  }
+
+  double sum1 = 0.0;
+  field::for_each_inner(u, hw, [&](int i, int j, int k) {
+    REQUIRE(std::isfinite(u(i, j, k)));
+    sum1 += u(i, j, k) * u(i, j, k);
+  });
+
+  REQUIRE(sum1 < sum0);
+  REQUIRE(sum1 > 0.0);
+
+  double l2sq = 0.0;
+  double cnt = 0.0;
+  const double t_final = static_cast<double>(n_steps) * dt;
+  field::for_each_inner(u, hw, [&](int i, int j, int k) {
+    const auto p = u.global_coords(i, j, k);
+    const double r2 = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+    const double u_exact = heat3d::analytic_gaussian(r2, t_final, model.D);
+    const double diff = u(i, j, k) - u_exact;
+    l2sq += diff * diff;
+    cnt += 1.0;
+  });
+  const double l2_rms = std::sqrt(l2sq / cnt);
+  REQUIRE(std::isfinite(l2_rms));
+  REQUIRE(l2_rms < 1.0e-3);
+}
+
+TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack path",
+          "[heat3d][fd_manual]") {
+  using namespace pfc;
+  constexpr int N = 16;
+  const int hw = 1;
+  const int order = 2;
+  const double dt = 1.0e-3;
+  const int n_steps = 5;
+
+  HeatModel model;
+  model.D = 1.0;
+
+  sim::stacks::FdCpuStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                GridSpacing({1.0, 1.0, 1.0}), order, 0, 1,
+                                MPI_COMM_WORLD);
+  stack.u().apply(model.initial_condition);
+  auto grad = field::create<heat3d::HeatGrads>(stack.u(), order);
+  auto stepper = sim::steppers::create(stack.u(), grad, model, dt);
+  for (int step = 0; step < n_steps; ++step) {
+    stack.exchange_halos();
+    (void)stepper.step(static_cast<double>(step) * dt, stack.u().vec());
+  }
+  double l2_compact = 0.0;
+  double cnt = 0.0;
+  const double t_final = static_cast<double>(n_steps) * dt;
+  stack.u().for_each_interior([&](double x, double y, double z, double v) {
+    const double u_exact =
+        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, model.D);
+    const double diff = v - u_exact;
+    l2_compact += diff * diff;
+    cnt += 1.0;
+  });
+  l2_compact = std::sqrt(l2_compact / cnt);
+
+  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(world, 1);
+  field::PaddedBrick<double> u(decomp, 0, hw);
+  field::PaddedBrick<double> du(decomp, 0, hw);
+  PaddedHaloExchanger<double> halo(decomp, 0, hw, MPI_COMM_WORLD);
+  u.apply(model.initial_condition);
+
+  auto stencil_step = [&](int i, int j, int k) {
+    heat3d::HeatGrads g{};
+    g.xx = u(i + 1, j, k) - 2.0 * u(i, j, k) + u(i - 1, j, k);
+    g.yy = u(i, j + 1, k) - 2.0 * u(i, j, k) + u(i, j - 1, k);
+    g.zz = u(i, j, k + 1) - 2.0 * u(i, j, k) + u(i, j, k - 1);
+    du(i, j, k) = model.rhs(0.0, g);
+  };
+
+  for (int step = 0; step < n_steps; ++step) {
+    halo.start_halo_exchange(u.data(), u.size());
+    field::for_each_inner(u, hw, stencil_step);
+    halo.finish_halo_exchange();
+    field::for_each_border(u, hw, stencil_step);
+    field::for_each_owned(
+        u, [&](int i, int j, int k) { u(i, j, k) += dt * du(i, j, k); });
+  }
+
+  double l2_manual = 0.0;
+  double cnt2 = 0.0;
+  field::for_each_inner(u, hw, [&](int i, int j, int k) {
+    const auto p = u.global_coords(i, j, k);
+    const double u_exact = heat3d::analytic_gaussian(
+        p[0] * p[0] + p[1] * p[1] + p[2] * p[2], t_final, model.D);
+    const double diff = u(i, j, k) - u_exact;
+    l2_manual += diff * diff;
+    cnt2 += 1.0;
+  });
+  l2_manual = std::sqrt(l2_manual / cnt2);
+
+  // Both paths apply the same physical 7-point central stencil to the same
+  // initial condition; they should agree to floating-point round-off.
+  // `FdGradient` uses an inner-loop multiply by `1/dx^2 = 1.0` and possibly a
+  // different summation order than the explicit lambda below, so we allow a
+  // few ulps of slop rather than asking for bit equality.
+  REQUIRE_THAT(l2_manual, WithinAbs(l2_compact, 1.0e-7));
 }
 
 // -----------------------------------------------------------------------------
