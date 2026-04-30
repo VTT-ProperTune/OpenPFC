@@ -51,7 +51,7 @@ using pfc::types::Real3;
  * auto world = world::uniform(64);  // 64³ grid, dx=1
  * @endcode
  */
-inline CartesianWorld uniform(int size) {
+[[nodiscard]] inline CartesianWorld uniform(int size) {
   if (size <= 0) {
     throw std::invalid_argument("Grid size must be positive, got: " +
                                 std::to_string(size));
@@ -74,7 +74,7 @@ inline CartesianWorld uniform(int size) {
  * auto world = world::uniform(128, 0.5);  // 128³ grid, dx=0.5
  * @endcode
  */
-inline CartesianWorld uniform(int size, double spacing) {
+[[nodiscard]] inline CartesianWorld uniform(int size, double spacing) {
   if (size <= 0) {
     throw std::invalid_argument("Grid size must be positive, got: " +
                                 std::to_string(size));
@@ -111,8 +111,9 @@ inline CartesianWorld uniform(int size, double spacing) {
  *                               {false, true, true});
  * @endcode
  */
-inline CartesianWorld from_bounds(Int3 size, Real3 lower, Real3 upper,
-                                  Bool3 periodic = {true, true, true}) {
+[[nodiscard]] inline CartesianWorld from_bounds(Int3 size, Real3 lower, Real3 upper,
+                                                Bool3 periodic = {true, true,
+                                                                  true}) {
   // Validate inputs
   for (int i = 0; i < 3; ++i) {
     if (size[i] <= 0) {
@@ -150,7 +151,7 @@ inline CartesianWorld from_bounds(Int3 size, Real3 lower, Real3 upper,
  * auto world = world::with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});
  * @endcode
  */
-inline CartesianWorld with_spacing(Int3 size, Real3 spacing) {
+[[nodiscard]] inline CartesianWorld with_spacing(Int3 size, Real3 spacing) {
   // Validate
   for (int i = 0; i < 3; ++i) {
     if (size[i] <= 0) {
@@ -178,7 +179,7 @@ inline CartesianWorld with_spacing(Int3 size, Real3 spacing) {
  * auto world = world::with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});
  * @endcode
  */
-inline CartesianWorld with_origin(Int3 size, Real3 origin) {
+[[nodiscard]] inline CartesianWorld with_origin(Int3 size, Real3 origin) {
   // Validate
   for (int i = 0; i < 3; ++i) {
     if (size[i] <= 0) {
