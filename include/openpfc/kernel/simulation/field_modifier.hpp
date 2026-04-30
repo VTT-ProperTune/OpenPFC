@@ -365,6 +365,14 @@ public:
    * Modifiers that need MPI collectives should override this method and use
    * `simulation_context.mpi_comm()`. They may still override `apply(Model&, double)`
    * to wrap a default `SimulationContext` for direct/test calls.
+   *
+   * @note **Contract (substitutability):** Production runs use this overload. Prefer
+   *       implementing **one** core body (e.g. a private `apply_impl(...)`) and
+   *       having both `apply(SimulationContext,...)` and `apply(Model&,double)`
+   *       forward to it so direct unit tests and the simulator stay consistent.
+   *       If you override only `apply(Model&,double)`, the context overload’s
+   *       default still delegates there—ensure any MPI-aware logic is reachable
+   *       from that path or override the context overload as well.
    */
   virtual void apply(const SimulationContext &simulation_context, Model &model,
                      double time) {
@@ -420,6 +428,8 @@ public:
    * @note For initial conditions, `time` is typically 0.0
    * @note For boundary conditions, `time` reflects current simulation time
    * @note Method is called on every MPI rank; each rank operates on its subdomain
+   * @note The simulator’s entry point is `apply(SimulationContext,...)`; see its
+   *       documentation for how to keep this overload and that one equivalent.
    *
    * @warning Ensure modifications maintain physical correctness and don't violate
    *          model invariants (e.g., mass conservation if required)
