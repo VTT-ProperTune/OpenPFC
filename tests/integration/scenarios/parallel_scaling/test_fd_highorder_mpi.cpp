@@ -9,20 +9,25 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/separated_halo_exchange.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
 
-TEST_CASE("even-order (2..20) separated Laplacian of constant field is zero",
+TEST_CASE("even-order (2..20) interior Laplacian of constant field is zero",
           "[MPI][fd]") {
+  // Sweep the runtime-order dispatcher `laplacian_interior(order, ...)`
+  // across `order = 2..20` (step 2) on each MPI rank's owned brick. The
+  // interior loop `[hw, n - hw)` reads only from `u`, so no halo
+  // exchange is needed; the test focus is "every templated order maps a
+  // constant field to zero on the interior, on every rank".
   int rank = 0;
   int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  if (size < 2) {
+  // Decomposition is hard-wired to {2,1,1}; only run when launched on
+  // exactly 2 ranks (CI: `mpi_2procs_all`). Other rank counts skip.
+  if (size != 2) {
     return;
   }
 
@@ -43,16 +48,9 @@ TEST_CASE("even-order (2..20) separated Laplacian of constant field is zero",
 
   for (int order = 2; order <= 20; order += 2) {
     const int hw = order / 2;
-    auto face = halo::allocate_face_halos<double>(decomp, rank, hw);
-    SeparatedFaceHaloExchanger<double> ex(decomp, rank, hw, MPI_COMM_WORLD);
-    ex.exchange_halos(u.data(), u.size(), face);
     std::vector<double> lap(nlocal, 0.0);
-    std::array<const double *, 6> fp{};
-    for (int i = 0; i < 6; ++i) {
-      fp[static_cast<size_t>(i)] = face[static_cast<size_t>(i)].data();
-    }
-    field::fd::laplacian_even_order_interior_separated(
-        u.data(), fp, lap.data(), nx, ny, nz, inv, inv, inv, hw, order);
+    field::fd::laplacian_interior(order, u.data(), lap.data(), nx, ny, nz, inv, inv,
+                                  inv, hw);
 
     const int imin = hw;
     const int imax = nx - hw;
@@ -76,12 +74,19 @@ TEST_CASE("even-order (2..20) separated Laplacian of constant field is zero",
 
 TEST_CASE("even-order (2..20) Laplacian of global quadratic is exact (6)",
           "[MPI][fd]") {
+  // Sweep the runtime-order dispatcher on a globally-quadratic field
+  // u(x,y,z) = gx^2 + gy^2 + gz^2. The exact analytic Laplacian is 6,
+  // and the central even-order stencil is exact for polynomials of
+  // degree <= order + 1, so every order in the table must reproduce 6
+  // bit-for-bit on the interior slab on every rank.
   int rank = 0;
   int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  if (size < 2) {
+  // Decomposition is hard-wired to {2,1,1}; only run when launched on
+  // exactly 2 ranks (CI: `mpi_2procs_all`). Other rank counts skip.
+  if (size != 2) {
     return;
   }
 
@@ -118,16 +123,9 @@ TEST_CASE("even-order (2..20) Laplacian of global quadratic is exact (6)",
 
   for (int order = 2; order <= 20; order += 2) {
     const int hw = order / 2;
-    auto face = halo::allocate_face_halos<double>(decomp, rank, hw);
-    SeparatedFaceHaloExchanger<double> ex(decomp, rank, hw, MPI_COMM_WORLD);
-    ex.exchange_halos(u.data(), u.size(), face);
     std::vector<double> lap(nlocal, 0.0);
-    std::array<const double *, 6> fp{};
-    for (int i = 0; i < 6; ++i) {
-      fp[static_cast<size_t>(i)] = face[static_cast<size_t>(i)].data();
-    }
-    field::fd::laplacian_even_order_interior_separated(
-        u.data(), fp, lap.data(), nx, ny, nz, inv, inv, inv, hw, order);
+    field::fd::laplacian_interior(order, u.data(), lap.data(), nx, ny, nz, inv, inv,
+                                  inv, hw);
 
     const int imin = hw;
     const int imax = nx - hw;
