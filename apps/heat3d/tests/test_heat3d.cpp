@@ -195,7 +195,7 @@ TEST_CASE("HeatModel + EulerStepper: one explicit-Euler FD step decreases the "
   pfc::SeparatedFaceHaloExchanger<double> exchanger(decomp, /*rank=*/0, hw,
                                                     MPI_COMM_WORLD);
   auto grad = pfc::field::create(u, order);
-  pfc::sim::steppers::EulerStepper stepper(grad, model, /*dt=*/1.0e-3, u.size());
+  auto stepper = pfc::sim::steppers::create(u, grad, model, /*dt=*/1.0e-3);
 
   // A handful of steps; with diffusion the field's energy must drop.
   for (int step = 0; step < 5; ++step) {

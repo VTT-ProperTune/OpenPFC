@@ -232,7 +232,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, hw, MPI_COMM_WORLD);
 
   auto grad = field::create(u, cfg.fd_order);
-  sim::steppers::EulerStepper stepper(grad, model, cfg.dt, u.size());
+  auto stepper = sim::steppers::create(u, grad, model, cfg.dt);
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
@@ -330,7 +330,7 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   u.apply(model.initial_condition);
 
   auto grad = field::create(u, fft);
-  sim::steppers::EulerStepper stepper(grad, model, cfg.dt, u.size());
+  auto stepper = sim::steppers::create(u, grad, model, cfg.dt);
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double t0 = MPI_Wtime();
