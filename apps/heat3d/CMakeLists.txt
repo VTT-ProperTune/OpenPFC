@@ -12,14 +12,20 @@ elseif(TARGET heffte)
   set(_heat3d_heffte_tgt heffte)
 endif()
 
-add_executable(heat3d src/cpu/heat3d.cpp)
-target_include_directories(heat3d PRIVATE ${HEAT3D_INCLUDE_DIR})
-target_link_libraries(heat3d PRIVATE OpenPFC ${_heat3d_heffte_tgt})
 find_package(OpenMP COMPONENTS CXX)
-if(OpenMP_CXX_FOUND)
-  target_link_libraries(heat3d PRIVATE OpenMP::OpenMP_CXX)
-endif()
-install(TARGETS heat3d DESTINATION bin)
+
+# Per-method binaries: heat3d_fd / heat3d_spectral / heat3d_spectral_pointwise.
+# `heat3d_fd_manual` (laboratory-style FD driver) is added in a follow-up commit.
+set(_heat3d_binaries heat3d_fd heat3d_spectral heat3d_spectral_pointwise)
+foreach(_target IN LISTS _heat3d_binaries)
+  add_executable(${_target} src/cpu/${_target}.cpp)
+  target_include_directories(${_target} PRIVATE ${HEAT3D_INCLUDE_DIR})
+  target_link_libraries(${_target} PRIVATE OpenPFC ${_heat3d_heffte_tgt})
+  if(OpenMP_CXX_FOUND)
+    target_link_libraries(${_target} PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+  install(TARGETS ${_target} DESTINATION bin)
+endforeach()
 
 # Catch2-based unit tests for HeatModel + LocalField/Euler integration.
 # Mirrors the gating used by apps/tungsten and apps/aluminumNew so the test

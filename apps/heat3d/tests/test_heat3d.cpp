@@ -266,114 +266,20 @@ TEST_CASE("FdGradient<G> + EulerStepper compile and run with a pruned grads "
 }
 
 // -----------------------------------------------------------------------------
-// CLI parser tests (pure, no MPI).
+// Per-binary CLI parser tests — `parse_fd` / `parse_spectral` (pure, no MPI).
 // -----------------------------------------------------------------------------
 
-TEST_CASE("heat3d::parse: no args returns nullopt", "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d")};
-  REQUIRE_FALSE(heat3d::parse(1, argv).has_value());
+TEST_CASE("heat3d::parse_fd: no args returns nullopt", "[heat3d][cli]") {
+  char *argv[] = {const_cast<char *>("heat3d_fd")};
+  REQUIRE_FALSE(heat3d::parse_fd(1, argv).has_value());
 }
 
-TEST_CASE("heat3d::parse: unknown method returns nullopt", "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("bogus"),
-                  const_cast<char *>("32"),     const_cast<char *>("100"),
-                  const_cast<char *>("0.01"),   const_cast<char *>("1.0")};
-  REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
-}
-
-TEST_CASE("heat3d::parse: fd needs 7 positional args (method, 4 numbers, order)",
-          "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("fd"),
-                  const_cast<char *>("32"),     const_cast<char *>("100"),
-                  const_cast<char *>("0.01"),   const_cast<char *>("1.0")};
-  // 6 args (missing fd_order) -> nullopt
-  REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
-}
-
-TEST_CASE("heat3d::parse: fd happy path", "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("fd"),
-                  const_cast<char *>("64"),     const_cast<char *>("200"),
-                  const_cast<char *>("0.001"),  const_cast<char *>("2.5"),
-                  const_cast<char *>("8")};
-  const auto cfg = heat3d::parse(7, argv);
-  REQUIRE(cfg.has_value());
-  REQUIRE(cfg->method == heat3d::Method::Fd);
-  REQUIRE(cfg->N == 64);
-  REQUIRE(cfg->n_steps == 200);
-  REQUIRE_THAT(cfg->dt, WithinAbs(0.001, 1e-15));
-  REQUIRE_THAT(cfg->D, WithinAbs(2.5, 1e-15));
-  REQUIRE(cfg->fd_order == 8);
-}
-
-TEST_CASE("heat3d::parse: spectral happy path (no fd_order)", "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral"),
-                  const_cast<char *>("32"),     const_cast<char *>("50"),
-                  const_cast<char *>("0.005"),  const_cast<char *>("1.0")};
-  const auto cfg = heat3d::parse(6, argv);
-  REQUIRE(cfg.has_value());
-  REQUIRE(cfg->method == heat3d::Method::Spectral);
-  REQUIRE(cfg->N == 32);
-  REQUIRE(cfg->n_steps == 50);
-}
-
-TEST_CASE("heat3d::parse: spectral_pw happy path", "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral_pw"),
-                  const_cast<char *>("32"),     const_cast<char *>("10"),
-                  const_cast<char *>("0.01"),   const_cast<char *>("1.0")};
-  const auto cfg = heat3d::parse(6, argv);
-  REQUIRE(cfg.has_value());
-  REQUIRE(cfg->method == heat3d::Method::SpectralPointwise);
-}
-
-TEST_CASE("heat3d::parse: rejects out-of-range values", "[heat3d][cli]") {
-  SECTION("N too small") {
-    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral"),
-                    const_cast<char *>("4"), // < 8
-                    const_cast<char *>("10"),     const_cast<char *>("0.01"),
-                    const_cast<char *>("1.0")};
-    REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
-  }
-  SECTION("dt non-positive") {
-    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral"),
-                    const_cast<char *>("32"),     const_cast<char *>("10"),
-                    const_cast<char *>("0"), // <= 0
-                    const_cast<char *>("1.0")};
-    REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
-  }
-  SECTION("D non-positive") {
-    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("spectral"),
-                    const_cast<char *>("32"),     const_cast<char *>("10"),
-                    const_cast<char *>("0.01"),   const_cast<char *>("-1.0")};
-    REQUIRE_FALSE(heat3d::parse(6, argv).has_value());
-  }
-  SECTION("fd_order odd") {
-    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("fd"),
-                    const_cast<char *>("32"),     const_cast<char *>("100"),
-                    const_cast<char *>("0.01"),   const_cast<char *>("1.0"),
-                    const_cast<char *>("3")}; // odd
-    REQUIRE_FALSE(heat3d::parse(7, argv).has_value());
-  }
-  SECTION("fd_order out of range") {
-    char *argv[] = {const_cast<char *>("heat3d"), const_cast<char *>("fd"),
-                    const_cast<char *>("32"),     const_cast<char *>("100"),
-                    const_cast<char *>("0.01"),   const_cast<char *>("1.0"),
-                    const_cast<char *>("22")}; // > 20
-    REQUIRE_FALSE(heat3d::parse(7, argv).has_value());
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Slim per-binary CLI parser tests — `parse_fd` / `parse_spectral`.
-// -----------------------------------------------------------------------------
-
-TEST_CASE("heat3d::parse_fd: happy path drops the 'fd' subcommand",
-          "[heat3d][cli]") {
+TEST_CASE("heat3d::parse_fd: happy path", "[heat3d][cli]") {
   char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("64"),
                   const_cast<char *>("200"),       const_cast<char *>("0.001"),
                   const_cast<char *>("2.5"),       const_cast<char *>("8")};
   const auto cfg = heat3d::parse_fd(6, argv);
   REQUIRE(cfg.has_value());
-  REQUIRE(cfg->method == heat3d::Method::Fd);
   REQUIRE(cfg->N == 64);
   REQUIRE(cfg->n_steps == 200);
   REQUIRE_THAT(cfg->dt, WithinAbs(0.001, 1e-15));
@@ -388,21 +294,33 @@ TEST_CASE("heat3d::parse_fd: missing fd_order returns nullopt", "[heat3d][cli]")
   REQUIRE_FALSE(heat3d::parse_fd(5, argv).has_value());
 }
 
-TEST_CASE("heat3d::parse_fd: rejects odd fd_order", "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("32"),
-                  const_cast<char *>("100"),       const_cast<char *>("0.01"),
-                  const_cast<char *>("1.0"),       const_cast<char *>("3")};
-  REQUIRE_FALSE(heat3d::parse_fd(6, argv).has_value());
+TEST_CASE("heat3d::parse_fd: rejects out-of-range values", "[heat3d][cli]") {
+  SECTION("N too small") {
+    char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("4"),
+                    const_cast<char *>("10"),        const_cast<char *>("0.01"),
+                    const_cast<char *>("1.0"),       const_cast<char *>("2")};
+    REQUIRE_FALSE(heat3d::parse_fd(6, argv).has_value());
+  }
+  SECTION("fd_order odd") {
+    char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("32"),
+                    const_cast<char *>("100"),       const_cast<char *>("0.01"),
+                    const_cast<char *>("1.0"),       const_cast<char *>("3")};
+    REQUIRE_FALSE(heat3d::parse_fd(6, argv).has_value());
+  }
+  SECTION("fd_order out of range") {
+    char *argv[] = {const_cast<char *>("heat3d_fd"), const_cast<char *>("32"),
+                    const_cast<char *>("100"),       const_cast<char *>("0.01"),
+                    const_cast<char *>("1.0"),       const_cast<char *>("22")};
+    REQUIRE_FALSE(heat3d::parse_fd(6, argv).has_value());
+  }
 }
 
-TEST_CASE("heat3d::parse_spectral: happy path drops the subcommand",
-          "[heat3d][cli]") {
+TEST_CASE("heat3d::parse_spectral: happy path", "[heat3d][cli]") {
   char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
                   const_cast<char *>("50"), const_cast<char *>("0.005"),
                   const_cast<char *>("1.0")};
   const auto cfg = heat3d::parse_spectral(5, argv);
   REQUIRE(cfg.has_value());
-  REQUIRE(cfg->method == heat3d::Method::Spectral);
   REQUIRE(cfg->N == 32);
   REQUIRE(cfg->n_steps == 50);
   REQUIRE_THAT(cfg->dt, WithinAbs(0.005, 1e-15));
@@ -417,11 +335,19 @@ TEST_CASE("heat3d::parse_spectral: insufficient args returns nullopt",
   REQUIRE_FALSE(heat3d::parse_spectral(4, argv).has_value());
 }
 
-TEST_CASE("heat3d::parse_spectral: rejects non-positive D", "[heat3d][cli]") {
-  char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
-                  const_cast<char *>("50"), const_cast<char *>("0.005"),
-                  const_cast<char *>("-1.0")};
-  REQUIRE_FALSE(heat3d::parse_spectral(5, argv).has_value());
+TEST_CASE("heat3d::parse_spectral: rejects out-of-range values", "[heat3d][cli]") {
+  SECTION("dt non-positive") {
+    char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
+                    const_cast<char *>("10"), const_cast<char *>("0"),
+                    const_cast<char *>("1.0")};
+    REQUIRE_FALSE(heat3d::parse_spectral(5, argv).has_value());
+  }
+  SECTION("D non-positive") {
+    char *argv[] = {const_cast<char *>("heat3d_spectral"), const_cast<char *>("32"),
+                    const_cast<char *>("10"), const_cast<char *>("0.005"),
+                    const_cast<char *>("-1.0")};
+    REQUIRE_FALSE(heat3d::parse_spectral(5, argv).has_value());
+  }
 }
 
 // -----------------------------------------------------------------------------
