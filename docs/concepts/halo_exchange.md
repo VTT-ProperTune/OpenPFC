@@ -25,13 +25,13 @@ HeFFTe / FFT expects each rank to hold a contiguous block of physical samples fo
 
 In-place halos (traditional FD): ghost values are written into the boundary slabs of the same `nx×ny×nz` array used for the owned grid. After exchange, those boundary samples are not in general the same as the purely owned global-grid values at those indices on a multi-rank periodic domain. Therefore you must not use that same buffer for distributed FFT after a halo fill unless you know the physics allows it (e.g. single-rank).
 
-Recommended for FFT + FD coexistence: keep a core buffer of size exactly the subdomain (`nx×ny×nz`) for spectral work, and store received ghost data in separate face buffers. Exchange sends from faces of the core (MPI derived types) and receives into contiguous slabs. `SeparatedFaceHaloExchanger` and `field::fd::laplacian_7point_interior_separated` implement this path.
+Recommended for FFT + FD coexistence: keep a core buffer of size exactly the subdomain (`nx×ny×nz`) for spectral work, and store received ghost data in separate face buffers. Exchange sends from faces of the core (MPI derived types) and receives into contiguous slabs. `SeparatedFaceHaloExchanger` and `field::fd::laplacian_periodic_separated<Order>` (or the interior-only `field::fd::laplacian_interior<Order>` when the iteration is restricted to `[hw, n-hw)`) implement this path.
 
-Minimal hybrid timestep (conceptual):
+Minimal hybrid timestep (conceptual, periodic FD):
 
 1. Spectral substep: `fft.forward` / `backward` on core only.
 2. Before FD: `SeparatedFaceHaloExchanger::exchange_halos(core, halos)` (or in-place path if FFT is not used on that field).
-3. FD: `laplacian_7point_interior_separated(core, halos, lap, …)`.
+3. FD: `laplacian_periodic_separated<Order>(core, halos, lap, …)` (full owned domain), or `laplacian_interior<Order>(core, lap, …)` (interior slab only).
 4. Update core (and/or `lap`) as required by the scheme.
 
 ---
@@ -43,8 +43,8 @@ Policies describe where ghost data lives and what is safe for FFT. They are docu
 | Policy | Storage | FFT on same buffer | FD / stencils |
 |--------|---------|-------------------|---------------|
 | None | Core `nx×ny×nz` only | Yes | N/A |
-| InPlace | One array; ghosts in boundary slabs of that array | No (multi-rank) after halo fill | `HaloExchanger` + `laplacian_7point_interior` |
-| Separated | Core + six face halo buffers | Yes on core only | `SeparatedFaceHaloExchanger` + `laplacian_7point_interior_separated` |
+| InPlace | One array; ghosts in boundary slabs of that array | No (multi-rank) after halo fill | `HaloExchanger` + `laplacian_interior<Order>` |
+| Separated | Core + six face halo buffers | Yes on core only | `SeparatedFaceHaloExchanger` + `laplacian_periodic_separated<Order>` (or `laplacian_interior<Order>` for interior-only) |
 | Mixed / hybrid | Core has no aliased ghosts; sidecar holds all ghost data | Core only | Same as Separated; extra sync/copy steps are explicit, slower path |
 
 Note: “No halos in the FFT block” means no ghost layers stored inside that array, not “no periodicity.” Periodicity still comes from `Decomposition` / `World`.
@@ -73,8 +73,8 @@ Ghosts are not resolved by per-point MPI or maps in hot loops. The pattern (whic
 | In-place driver | `halo_exchange.hpp` | `HaloExchanger<T>`: recv into core boundary slabs (traditional). |
 | Separated driver | `separated_halo_exchange.hpp` | `SeparatedFaceHaloExchanger<T>`: send from core, recv into separate face buffers. |
 | Persistent halos | `halo_persistent.hpp` | `PersistentHaloExchanger` for in-place six-face path. |
-| FD (in-place) | `field/finite_difference.hpp` | `laplacian_7point_interior` |
-| FD (separated) | `field/finite_difference.hpp` | `laplacian_7point_interior_separated` |
+| FD primitives | `field/fd_apply.hpp`, `field/fd_stencils.hpp` | `apply_d2_along<Axis, Stencil>`, `apply_tensor_d<Mx, My, Mz, ...>`, `EvenCentralD2<Order>` |
+| FD bricks | `field/finite_difference.hpp` | `laplacian_interior<Order>`, `laplacian_periodic_separated<Order>`, `laplacian2d_xy_interior<Order>`, `laplacian2d_xy_periodic_separated<Order>`, runtime-order `laplacian_interior(int order, ...)` |
 | Examples | `examples/15_finite_difference_heat.cpp` | Separated halos + heat equation; core is FFT-safe. |
 
 Design choice: Indices for the pack path are exchanged once at setup; only values move each step.
@@ -138,7 +138,7 @@ Separated recv: No scatter into core; MPI receives into contiguous face buffers 
 
 ## 10. Working example
 
-`examples/15_finite_difference_heat.cpp`: `mpirun -np P ./15_finite_difference_heat` — separated face halos, `SeparatedFaceHaloExchanger`, `laplacian_7point_interior_separated`. The core field can be passed to `fft.forward` / `backward` on the same decomposition (comment in source).
+`examples/15_finite_difference_heat.cpp`: `mpirun -np P ./15_finite_difference_heat` — separated face halos, `SeparatedFaceHaloExchanger`, `laplacian_periodic_separated<2>`. The core field can be passed to `fft.forward` / `backward` on the same decomposition (comment in source).
 
 ---
 

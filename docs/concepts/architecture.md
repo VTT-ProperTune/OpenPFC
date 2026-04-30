@@ -48,8 +48,8 @@ Minimal applications can depend only on kernel + runtime and omit frontend (no U
 
 - Spectral (FFT / k-space) is the primary, end-to-end path today: models, FFT via HeFFTe, and k-space helpers are wired through the kernel and runtimes (CPU, CUDA, HIP). See `kernel/fft` and application examples that use the simulator stack. FFT buffers must remain pure subdomain samples (`fft::get_inbox` / `decomposition::get_subworld` extents): do not run HeFFTe on an array that has had `in-place` ghost data written into its boundary slabs for multi-rank periodic FD unless you have a domain-specific guarantee.
 - Finite differences use the same decomposition and halo machinery. Two layouts are supported (see `docs/halo_exchange.md` — *Halo policies*):
-  - InPlace (traditional): `HaloExchanger` + `field::fd::laplacian_7point_interior` — ghosts live in the boundary layers of the same `nx×ny×nz` array; fast for FD-only use.
-  - Separated (FFT-safe): `SeparatedFaceHaloExchanger` + `field::fd::laplacian_7point_interior_separated` — core stays contiguous for FFT; ghosts in separate face buffers.
+  - InPlace (traditional): `HaloExchanger` + `field::fd::laplacian_interior<Order>` — ghosts live in the boundary layers of the same `nx×ny×nz` array; fast for FD-only use.
+  - Separated (FFT-safe): `SeparatedFaceHaloExchanger` + `field::fd::laplacian_periodic_separated<Order>` (or `field::fd::laplacian_interior<Order>` if the iteration is restricted to `[hw, n-hw)`) — core stays contiguous for FFT; ghosts in separate face buffers. The XY (`nz==1`) variants are `laplacian2d_xy_interior<Order>` / `laplacian2d_xy_periodic_separated<Order>`. A runtime-order dispatcher `laplacian_interior(int order, ...)` is provided when the spatial order is selected at run time.
 - The flagship multi-rank heat example is `examples/15_finite_difference_heat.cpp` (separated halos + explicit heat equation). For halo design, policies, overlap, and persistent MPI options, see `docs/halo_exchange.md`.
 
 ## Layer descriptions
