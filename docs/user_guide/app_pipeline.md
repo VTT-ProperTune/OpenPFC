@@ -62,7 +62,7 @@ Implementation: `include/openpfc/frontend/ui/app.hpp` (settings load, MPI hints;
 | 7 | `wire_simulator_from_settings` — writers, ICs, BCs, `simulator` subsection (catalog: optional `set_field_modifier_catalog`, else process default). |
 | 8 | Time integration loop (`run_simulator_time_integration_loop` + `SimulatorIntegratorLoopEnv` in `app_integrator_loop.hpp`) + profiling finalize/export. |
 
-Custom drivers can replicate subsets: build a `Simulator` yourself, then call `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `apply_simulator_section_from_json` from `simulation_wiring.hpp` directly. Pass `JsonWiringContext{comm, mpi_rank, rank0}` (or the legacy per-argument overloads) so communicator and rank metadata stay grouped.
+Custom drivers can replicate subsets: build a `Simulator` yourself, then call `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `apply_simulator_section_from_json` from `simulation_wiring.hpp` directly. Pass `JsonWiringContext{comm, mpi_rank, rank0}` (or the legacy per-argument overloads) so communicator and rank metadata stay grouped. When you already use a `JsonWiringSession` (MPI + `FieldModifierCatalog`) but need a non-default `ResultsWriterCatalog`, call `wire_simulator_and_runtime_from_json(sim, time, settings, session, writer_catalog)` so writer factories stay explicit without dropping session injection.
 
 ## JSON sections consumed by the default spectral path
 
