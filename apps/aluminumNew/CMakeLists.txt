@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 cmake_minimum_required(VERSION 3.15)
@@ -10,7 +10,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     find_package(OpenPFC REQUIRED)
     set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
     find_package(nlohmann_json REQUIRED)
-    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD 20)
 endif()
 
 add_executable(aluminumNew aluminumNew.cpp)
