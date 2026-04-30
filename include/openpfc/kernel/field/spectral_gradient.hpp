@@ -163,14 +163,14 @@ public:
   int kmin() const noexcept { return 0; }
   int kmax() const noexcept { return m_nz; }
 
-  inline std::size_t idx(int ix, int iy, int iz) const noexcept {
+  [[nodiscard]] std::size_t idx(int ix, int iy, int iz) const noexcept {
     return static_cast<std::size_t>(ix) +
            static_cast<std::size_t>(iy) * static_cast<std::size_t>(m_nx) +
            static_cast<std::size_t>(iz) * static_cast<std::size_t>(m_nx) *
                static_cast<std::size_t>(m_ny);
   }
 
-  inline G operator()(int ix, int iy, int iz) const noexcept {
+  [[nodiscard]] G operator()(int ix, int iy, int iz) const noexcept {
     G g{};
     const std::size_t c = idx(ix, iy, iz);
     if constexpr (has_value<G>) g.value = (*m_u_in)[c];
@@ -248,7 +248,8 @@ private:
  *         `pfc::sim::for_each_interior` (or `pfc::sim::steppers::create`).
  */
 template <class G>
-inline SpectralGradient<G> create(LocalField<double> &u, pfc::fft::IFFT &fft) {
+[[nodiscard]] inline SpectralGradient<G> create(LocalField<double> &u,
+                                                pfc::fft::IFFT &fft) {
   return SpectralGradient<G>(fft, u.vec(), u.global_size(), u.spacing(),
                              fft.get_inbox_bounds(), fft.get_outbox_bounds());
 }

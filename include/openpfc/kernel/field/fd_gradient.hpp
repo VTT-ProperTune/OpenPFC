@@ -80,13 +80,13 @@ public:
   int kmin() const noexcept { return m_hw; }
   int kmax() const noexcept { return m_nz - m_hw; }
 
-  inline std::size_t idx(int ix, int iy, int iz) const noexcept {
+  [[nodiscard]] std::size_t idx(int ix, int iy, int iz) const noexcept {
     return static_cast<std::size_t>(ix) +
            static_cast<std::size_t>(iy) * static_cast<std::size_t>(m_nx) +
            static_cast<std::size_t>(iz) * static_cast<std::size_t>(m_sxy);
   }
 
-  inline G operator()(int ix, int iy, int iz) const noexcept {
+  [[nodiscard]] G operator()(int ix, int iy, int iz) const noexcept {
     static_assert(!has_x<G> && !has_y<G> && !has_z<G>,
                   "FdGradient: first derivatives are not implemented yet "
                   "(would need an extended halo and 1st-order stencil tables).");
@@ -161,7 +161,7 @@ private:
  *         `pfc::sim::for_each_interior` (or `pfc::sim::steppers::create`).
  */
 template <class G>
-inline FdGradient<G> create(const LocalField<double> &u, int order) {
+[[nodiscard]] inline FdGradient<G> create(const LocalField<double> &u, int order) {
   const auto sz = u.size3();
   const auto sp = u.spacing();
   const double inv_dx2 = 1.0 / (sp[0] * sp[0]);
