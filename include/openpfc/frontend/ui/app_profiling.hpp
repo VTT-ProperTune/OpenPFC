@@ -50,7 +50,7 @@ list_unknown_profiling_keys(const json &profiling) {
       "print_report", "regions", "run_id", "export_metadata"};
 
   for (const auto &[key, _] : profiling.items()) {
-    if (std::find(known_keys.begin(), known_keys.end(), key) == known_keys.end()) {
+    if (std::ranges::find(known_keys, key) == known_keys.end()) {
       out.push_back(std::string("unknown profiling config key '") + key + "'");
     }
   }
