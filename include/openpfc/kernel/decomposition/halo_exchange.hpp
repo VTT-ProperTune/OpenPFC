@@ -112,7 +112,8 @@ public:
    * @brief Run halo exchange on the pack path (gather / MPI / scatter).
    *
    * Ghost values are written in `create_recv_halo` index order, matching
-   * `SeparatedFaceHaloExchanger` and `laplacian_7point_interior_separated`.
+   * `SeparatedFaceHaloExchanger` and the templated brick Laplacians in
+   * `kernel/field/finite_difference.hpp`.
    * Default `exchange_halos()` uses zero-copy MPI subarrays for six face
    * neighbors, which can permute elements within a face relative to that order.
    */

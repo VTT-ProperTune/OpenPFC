@@ -10,8 +10,10 @@
  * written to **contiguous per-face buffers** instead of boundary slabs of the
  * core. **Send** still uses MPI derived types into the core `nx×ny×nz` array.
  * Receives use the **pack path** (same ordering as `create_recv_halo` indices)
- * so face buffer layout matches `laplacian_7point_interior_separated`; a prior
- * `irecv_dense` + `isend_face` fast path could reorder elements vs that layout.
+ * so face buffer layout matches the templated periodic-separated brick
+ * Laplacians (`pfc::field::fd::laplacian_periodic_separated<Order>`,
+ * `laplacian2d_xy_periodic_separated<Order>`); a prior `irecv_dense` +
+ * `isend_face` fast path could reorder elements vs that layout.
  *
  * Face buffer order matches `create_face_types_6` / `halo_face_layout.hpp`:
  * 0:+X, 1:-X, 2:+Y, 3:-Y, 4:+Z, 5:-Z.
