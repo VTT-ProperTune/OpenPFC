@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <cmath>
@@ -18,12 +18,18 @@ using namespace pfc;
 /** \example 15_finite_difference_heat.cpp
  *
  * Multi-rank explicit heat equation \( \partial u / \partial t = D \nabla^2 u \)
- * with a 7-point Laplacian. Uses **separated face halos**
- * (`SeparatedFaceHaloExchanger`): the **core** field is contiguous `nx×ny×nz`
- * subdomain data safe to pass to `fft.forward` / `fft.backward` on the same
- * decomposition without mixing ghost semantics. Ghost values live in six side
- * buffers filled each step before the stencil
- * (`laplacian_7point_interior_separated`).
+ * on a fully periodic 3D box with a 7-point Laplacian. Uses **separated face
+ * halos** (`SeparatedFaceHaloExchanger`): the **core** field is contiguous
+ * `nx×ny×nz` subdomain data safe to pass to `fft.forward` / `fft.backward` on
+ * the same decomposition without mixing ghost semantics. Ghost values live in
+ * six side buffers filled each step before the stencil.
+ *
+ * The Laplacian is the templated brick `laplacian_periodic_separated<2>`,
+ * which iterates the **full owned region** `[0, n)` along every axis and
+ * looks up missing neighbors from the matching face-halo slab. That is the
+ * right primitive for a periodic problem on a separated layout: it updates
+ * every owned cell (including those at the owned-region edge) without ever
+ * reading uninitialized ghost padding.
  *
  * Run: `mpirun -np 4 ./15_finite_difference_heat`
  */
@@ -92,9 +98,9 @@ int main(int argc, char *argv[]) {
   for (int step = 0; step < n_steps; ++step) {
     exchanger.exchange_halos(u.data(), u.size(), face_halos);
     std::fill(lap.begin(), lap.end(), 0.0);
-    field::fd::laplacian_7point_interior_separated(u.data(), face_ptrs, lap.data(),
-                                                   nx, ny, nz, inv_dx2, inv_dx2,
-                                                   inv_dx2, halo_width);
+    field::fd::laplacian_periodic_separated<2>(u.data(), face_ptrs, lap.data(), nx,
+                                               ny, nz, inv_dx2, inv_dx2, inv_dx2,
+                                               halo_width);
     for (size_t i = 0; i < nlocal; ++i) {
       u[i] += dt * D * lap[i];
     }
