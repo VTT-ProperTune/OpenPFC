@@ -53,7 +53,7 @@ public:
 
   ~DataBuffer() {
     if (m_device_ptr != nullptr) {
-      hipFree(m_device_ptr);
+      [[maybe_unused]] const hipError_t freed = hipFree(m_device_ptr);
     }
   }
 
@@ -69,7 +69,7 @@ public:
   DataBuffer &operator=(DataBuffer &&other) noexcept {
     if (this != &other) {
       if (m_device_ptr != nullptr) {
-        hipFree(m_device_ptr);
+        [[maybe_unused]] const hipError_t freed = hipFree(m_device_ptr);
       }
       m_device_ptr = other.m_device_ptr;
       m_size = other.m_size;
@@ -151,7 +151,7 @@ public:
 
   void resize(size_t new_size) {
     if (m_device_ptr != nullptr) {
-      hipFree(m_device_ptr);
+      [[maybe_unused]] const hipError_t freed = hipFree(m_device_ptr);
       m_device_ptr = nullptr;
     }
     m_size = new_size;
