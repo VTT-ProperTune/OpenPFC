@@ -12,6 +12,7 @@ experiments/scalability
 .venv
 **/venv
 build
+builds
 build-handbook
 site
 result
@@ -22,6 +23,8 @@ results
 *.tmp
 *.sbatch
 !docs/lumi_slurm/*.sbatch
+!apps/kobayashi/slurm/*.sbatch
+apps/kobayashi/slurm/builds/
 .trash
 .temp
 docs/Doxyfile.docs
