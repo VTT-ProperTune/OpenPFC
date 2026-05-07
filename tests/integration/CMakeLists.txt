@@ -34,9 +34,15 @@ target_sources(openpfc-tests PRIVATE
 # (e.g. into `kobayashi_fd_cuda`) rather than into `libopenpfc.so`. The test
 # executable consumes those symbols directly, so we add the .cu source to
 # `openpfc-tests` when CUDA is enabled and ensure CUDA::cudart is linked.
+#
+# Likewise, `test_fd_gradient_device.cu` instantiates the templated
+# `for_each_interior_device_kernel` for a test-local model and grads
+# aggregate; the kernel must be compiled by `nvcc`, so the test source is
+# itself a `.cu` file added to the test target only on CUDA builds.
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_sources(openpfc-tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/cuda/padded_halo_faces.cu
+    scenarios/gpu_validation/test_fd_gradient_device.cu
   )
   target_link_libraries(openpfc-tests PRIVATE CUDA::cudart)
 endif()
