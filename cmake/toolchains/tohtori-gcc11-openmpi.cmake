@@ -3,19 +3,17 @@
 #
 # Toolchain for VTT **tohtori**: GCC 11.2.0 + OpenMPI without `module load` in CMake/IDE.
 #
-# GCC path matches `module show gcc/11.2.0` on tohtori. MPI wrappers default to
-# `module show openmpi/4.1.1` unless **OPENMPI_ROOT** is set in the environment and
-# contains bin/mpicc (see scripts/build_tohtori.sh --build-openmpi).
+# GCC path matches `module show gcc/11.2.0` on tohtori. MPI wrappers default to the site
+# **Open MPI 5.0.10** prefix (`module show openmpi/5.0.10`) unless **OPENMPI_ROOT** overrides
+# (user build from scripts/build_tohtori.sh --build-openmpi, or another module path).
 
 set(_OpenPFC_tohtori_gcc_root "/share/apps/gcc/11.2.0")
-# Prefer a user-built OpenMPI (e.g. scripts/build_tohtori.sh --build-openmpi) when set.
-# Note: /share/apps/OpenMPI/4.1.1 is the *site default prefix* (module openmpi/4.1.1), not an
-# API/version pin — when OPENMPI_ROOT is unset, FindMPI uses that tree.
+# Prefer OPENMPI_ROOT when set (custom install or different module layout).
 if(NOT "$ENV{OPENMPI_ROOT}" STREQUAL "" AND EXISTS "$ENV{OPENMPI_ROOT}/bin/mpicc")
   set(_OpenPFC_tohtori_ompi_root "$ENV{OPENMPI_ROOT}")
   set(_OpenPFC_tohtori_ompi_from_env TRUE)
 else()
-  set(_OpenPFC_tohtori_ompi_root "/share/apps/OpenMPI/4.1.1")
+  set(_OpenPFC_tohtori_ompi_root "/share/apps/OpenMPI/5.0.10")
   set(_OpenPFC_tohtori_ompi_from_env FALSE)
 endif()
 

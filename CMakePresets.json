@@ -56,8 +56,8 @@
         "OpenPFC_ENABLE_CODE_COVERAGE": "OFF"
       },
       "environment": {
-        "PATH": "/share/apps/gcc/11.2.0/bin:/share/apps/OpenMPI/4.1.1/bin:$penv{PATH}",
-        "LD_LIBRARY_PATH": "/share/apps/gcc/11.2.0/lib:/share/apps/gcc/11.2.0/lib64:/share/apps/gcc/11.2.0/lib/gcc/x86_64-unknown-linux-gnu/11.2.0:/share/apps/OpenMPI/4.1.1/lib:/share/apps/OpenMPI/4.1.1/lib64:$penv{LD_LIBRARY_PATH}"
+        "PATH": "/share/apps/gcc/11.2.0/bin:/share/apps/OpenMPI/5.0.10/bin:$penv{PATH}",
+        "LD_LIBRARY_PATH": "/share/apps/gcc/11.2.0/lib:/share/apps/gcc/11.2.0/lib64:/share/apps/gcc/11.2.0/lib/gcc/x86_64-unknown-linux-gnu/11.2.0:/share/apps/OpenMPI/5.0.10/lib:/share/apps/OpenMPI/5.0.10/lib64:$penv{LD_LIBRARY_PATH}"
       }
     },
     {
@@ -70,8 +70,8 @@
         "OpenPFC_ENABLE_CODE_COVERAGE": "OFF"
       },
       "environment": {
-        "PATH": "/share/apps/gcc/11.2.0/bin:/share/apps/OpenMPI/4.1.1/bin:$penv{PATH}",
-        "LD_LIBRARY_PATH": "/share/apps/gcc/11.2.0/lib:/share/apps/gcc/11.2.0/lib64:/share/apps/gcc/11.2.0/lib/gcc/x86_64-unknown-linux-gnu/11.2.0:/share/apps/OpenMPI/4.1.1/lib:/share/apps/OpenMPI/4.1.1/lib64:$penv{LD_LIBRARY_PATH}"
+        "PATH": "/share/apps/gcc/11.2.0/bin:/share/apps/OpenMPI/5.0.10/bin:$penv{PATH}",
+        "LD_LIBRARY_PATH": "/share/apps/gcc/11.2.0/lib:/share/apps/gcc/11.2.0/lib64:/share/apps/gcc/11.2.0/lib/gcc/x86_64-unknown-linux-gnu/11.2.0:/share/apps/OpenMPI/5.0.10/lib:/share/apps/OpenMPI/5.0.10/lib64:$penv{LD_LIBRARY_PATH}"
       }
     },
     {
