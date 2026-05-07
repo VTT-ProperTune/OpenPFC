@@ -8,33 +8,49 @@
  * @brief Compile-time and runtime central FD stencil tables for even orders.
  *
  * @details
- * Tabulates the maximal-accuracy central second-derivative stencils on
- * `Order + 1` points for even orders `2, 4, …, 20`. The integer coefficients
- * \f$c_k\f$ and shared denominator \f$D\f$ satisfy
+ * Tabulates the maximal-accuracy **symmetric** central second-derivative
+ * stencils and the **anti-symmetric** central first-derivative stencils on
+ * `Order + 1` points for even orders. The shared coefficient layout is
  * \f[
  *   \partial_x^2 u(x_0) \approx
- *     \frac{1}{D\,h^2}\Bigl(c_0\,u_0 + \sum_{k=1}^{M} c_k\,(u_{-k}+u_{+k})\Bigr)
+ *     \frac{1}{D_2\,h^2}\Bigl(c^{(2)}_0\,u_0
+ *       + \sum_{k=1}^{M} c^{(2)}_k\,(u_{-k}+u_{+k})\Bigr),
+ *   \qquad
+ *   \partial_x u(x_0) \approx
+ *     \frac{1}{D_1\,h}\sum_{k=1}^{M} c^{(1)}_k\,(u_{+k}-u_{-k})
  * \f]
- * with \f$M = \mathrm{Order}/2\f$. Numbers match the "central, second
- * derivative" table on Wikipedia ("Finite difference coefficient").
+ * with \f$M = \mathrm{Order}/2\f$. The first-derivative weights satisfy the
+ * closed form
+ * \f$ c^{(1)}_k = (-1)^{k+1}\,(M!)^2 / (k\,(M-k)!\,(M+k)!) \f$ and match the
+ * "central, first derivative" Wikipedia table; the second-derivative
+ * weights match the "central, second derivative" entry of the same table.
  *
- * Two flavours are exposed:
+ * Two flavours are exposed for each derivative order:
  *
- * - **Compile-time**: `EvenCentralD2<Order>` exposes `half_width`, `denom`,
- *   and `coeffs` as `static constexpr` members so they can be consumed as
- *   template arguments and let the per-point apply loop in
- *   `apply_d2_along<Axis, Stencil>` fully unroll, with the integer weights
- *   becoming immediates.
+ * - **Compile-time**: `EvenCentralD1<Order>` / `EvenCentralD2<Order>`
+ *   expose `half_width`, `denom`, and `coeffs` as `static constexpr`
+ *   members so they can be consumed as template arguments and let the
+ *   per-point apply loops in `apply_d1_along<Axis, Stencil>` /
+ *   `apply_d2_along<Axis, Stencil>` fully unroll, with the integer
+ *   weights becoming immediates.
  *
- * - **Runtime**: `EvenCentralD2View` wraps the same data behind a small POD
- *   handle. `lookup_even_central_d2(order, view)` populates it from a runtime
- *   `order`, intended for callers that select spatial order from a CLI or
- *   JSON configuration (`apps/heat3d`).
+ * - **Runtime**: `EvenCentralD1View` / `EvenCentralD2View` wrap the same
+ *   data behind a small POD handle. `lookup_even_central_d1(order, view)`
+ *   / `lookup_even_central_d2(order, view)` populate it from a runtime
+ *   `order`, intended for callers that select spatial order from a CLI
+ *   or JSON configuration (`apps/heat3d`).
+ *
+ * **Coverage**: D2 orders 2..20 are tabulated; D1 orders 2..14 are
+ * tabulated. Higher D1 orders may be added later as they are needed; the
+ * runtime lookup returns `false` for any unsupported order, and
+ * `FdGradient<G>` translates that to a clean `std::invalid_argument` when
+ * the model declares a derivative member whose stencil is not available.
  *
  * @see fd_apply.hpp for the per-point application primitives that consume
- *      these tables (added in a follow-up commit).
+ *      these tables.
  * @see finite_difference.hpp for the brick Laplacian routines that consume
- *      these tables today via the runtime view.
+ *      the D2 tables via the runtime view.
+ * @see fd_gradient.hpp for the per-point evaluator that uses both tables.
  */
 
 #include <array>
@@ -191,6 +207,116 @@ inline bool lookup_even_central_d2(int order, EvenCentralD2View *out) noexcept {
   case 20:
     *out = {EvenCentralD2<20>::half_width, EvenCentralD2<20>::denom,
             EvenCentralD2<20>::coeffs.data()};
+    return true;
+  default: return false;
+  }
+}
+
+/**
+ * @brief Runtime view onto a central first-derivative stencil.
+ *
+ * `coeffs[0]` is **always 0** (kept for layout symmetry with
+ * `EvenCentralD2View`); `coeffs[k]` for `1 <= k <= half_width` is the
+ * weight at offset `+k`. The unscaled finite-difference sum
+ * \f$\sum_{k=1}^{M} c_k\,(u_{+k}-u_{-k})\f$ divided by `denom * h` yields
+ * the first derivative along the stencil's axis.
+ */
+struct EvenCentralD1View {
+  int half_width;
+  std::int64_t denom;
+  const std::int64_t *coeffs;
+};
+
+/**
+ * @brief Compile-time central first-derivative stencil for even `Order`.
+ *
+ * Use as a template argument to `apply_d1_along<Axis, Stencil>` so the
+ * stencil loop fully unrolls. Instantiating with an odd `Order`, or one
+ * outside the tabulated range, fails at compile time via a `static_assert`.
+ *
+ * Coverage: orders 2, 4, 6, 8, 10, 12, 14. Higher orders may be tabulated
+ * later if needed; the closed form is in the file-level Doxygen.
+ */
+template <int Order> struct EvenCentralD1 {
+  static_assert(detail::always_false_v<Order>,
+                "EvenCentralD1: only even orders 2, 4, 6, 8, 10, 12, 14 are "
+                "tabulated.");
+};
+
+template <> struct EvenCentralD1<2> {
+  static constexpr int half_width = 1;
+  static constexpr std::int64_t denom = 2;
+  static constexpr std::array<std::int64_t, 2> coeffs = {0, 1};
+};
+template <> struct EvenCentralD1<4> {
+  static constexpr int half_width = 2;
+  static constexpr std::int64_t denom = 12;
+  static constexpr std::array<std::int64_t, 3> coeffs = {0, 8, -1};
+};
+template <> struct EvenCentralD1<6> {
+  static constexpr int half_width = 3;
+  static constexpr std::int64_t denom = 60;
+  static constexpr std::array<std::int64_t, 4> coeffs = {0, 45, -9, 1};
+};
+template <> struct EvenCentralD1<8> {
+  static constexpr int half_width = 4;
+  static constexpr std::int64_t denom = 840;
+  static constexpr std::array<std::int64_t, 5> coeffs = {0, 672, -168, 32, -3};
+};
+template <> struct EvenCentralD1<10> {
+  static constexpr int half_width = 5;
+  static constexpr std::int64_t denom = 2520;
+  static constexpr std::array<std::int64_t, 6> coeffs = {0, 2100, -600, 150, -25, 2};
+};
+template <> struct EvenCentralD1<12> {
+  static constexpr int half_width = 6;
+  static constexpr std::int64_t denom = 27720;
+  static constexpr std::array<std::int64_t, 7> coeffs = {0,    23760, -7425, 2200,
+                                                         -495, 72,    -5};
+};
+template <> struct EvenCentralD1<14> {
+  static constexpr int half_width = 7;
+  static constexpr std::int64_t denom = 360360;
+  static constexpr std::array<std::int64_t, 8> coeffs = {
+      0, 315315, -105105, 35035, -9555, 1911, -245, 15};
+};
+
+/**
+ * @brief Populate `*out` with the runtime view of the order-`order` D1 stencil.
+ *
+ * Thin runtime dispatcher built on the compile-time `EvenCentralD1<Order>`
+ * specializations. Returns `true` for orders `2, 4, 6, 8, 10, 12, 14`,
+ * `false` otherwise (and `*out` is left untouched).
+ */
+inline bool lookup_even_central_d1(int order, EvenCentralD1View *out) noexcept {
+  switch (order) {
+  case 2:
+    *out = {EvenCentralD1<2>::half_width, EvenCentralD1<2>::denom,
+            EvenCentralD1<2>::coeffs.data()};
+    return true;
+  case 4:
+    *out = {EvenCentralD1<4>::half_width, EvenCentralD1<4>::denom,
+            EvenCentralD1<4>::coeffs.data()};
+    return true;
+  case 6:
+    *out = {EvenCentralD1<6>::half_width, EvenCentralD1<6>::denom,
+            EvenCentralD1<6>::coeffs.data()};
+    return true;
+  case 8:
+    *out = {EvenCentralD1<8>::half_width, EvenCentralD1<8>::denom,
+            EvenCentralD1<8>::coeffs.data()};
+    return true;
+  case 10:
+    *out = {EvenCentralD1<10>::half_width, EvenCentralD1<10>::denom,
+            EvenCentralD1<10>::coeffs.data()};
+    return true;
+  case 12:
+    *out = {EvenCentralD1<12>::half_width, EvenCentralD1<12>::denom,
+            EvenCentralD1<12>::coeffs.data()};
+    return true;
+  case 14:
+    *out = {EvenCentralD1<14>::half_width, EvenCentralD1<14>::denom,
+            EvenCentralD1<14>::coeffs.data()};
     return true;
   default: return false;
   }

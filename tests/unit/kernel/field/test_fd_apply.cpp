@@ -28,10 +28,14 @@
 #include <openpfc/kernel/field/fd_stencils.hpp>
 
 using Catch::Approx;
+using pfc::field::fd::apply_d1_along;
 using pfc::field::fd::apply_d2_along;
 using pfc::field::fd::apply_tensor_d;
+using pfc::field::fd::EvenCentralD1;
+using pfc::field::fd::EvenCentralD1View;
 using pfc::field::fd::EvenCentralD2;
 using pfc::field::fd::EvenCentralD2View;
+using pfc::field::fd::lookup_even_central_d1;
 using pfc::field::fd::lookup_even_central_d2;
 
 namespace {
@@ -155,6 +159,162 @@ TEST_CASE("apply_tensor_d pure-axis case agrees with apply_d2_along",
     else
       axis(EvenCentralD2<6>{});
   }
+}
+
+TEST_CASE("apply_d1_along (compile-time stencil) returns unscaled FD sum",
+          "[kernel][field][fd_apply][unit]") {
+  // Linear field u(x, y, z) = 2 x + 3 y + 4 z on the same 7^3 brick used
+  // by the D2 cases. Analytically: u_x = 2, u_y = 3, u_z = 4. The
+  // unscaled D1 sum equals `(true derivative) * Stencil::denom * h`.
+  std::vector<double> u(static_cast<std::size_t>(N) * N * N);
+  for (int iz = 0; iz < N; ++iz) {
+    for (int iy = 0; iy < N; ++iy) {
+      for (int ix = 0; ix < N; ++ix) {
+        const double x = static_cast<double>(ix);
+        const double y = static_cast<double>(iy);
+        const double z = static_cast<double>(iz);
+        const std::size_t c =
+            static_cast<std::size_t>(ix) +
+            static_cast<std::size_t>(iy) * static_cast<std::size_t>(N) +
+            static_cast<std::size_t>(iz) * static_cast<std::size_t>(N * N);
+        u[c] = 2.0 * x + 3.0 * y + 4.0 * z;
+      }
+    }
+  }
+  const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
+
+  SECTION("order 2 (denom = 2)") {
+    REQUIRE(apply_d1_along<0, EvenCentralD1<2>>(u.data(), c, SX, SY, SZ) ==
+            Approx(4.0)); // u_x = 2 ⇒ 2 * 2
+    REQUIRE(apply_d1_along<1, EvenCentralD1<2>>(u.data(), c, SX, SY, SZ) ==
+            Approx(6.0)); // 3 * 2
+    REQUIRE(apply_d1_along<2, EvenCentralD1<2>>(u.data(), c, SX, SY, SZ) ==
+            Approx(8.0)); // 4 * 2
+  }
+
+  SECTION("order 4 (denom = 12)") {
+    REQUIRE(apply_d1_along<0, EvenCentralD1<4>>(u.data(), c, SX, SY, SZ) ==
+            Approx(24.0)); // 2 * 12
+    REQUIRE(apply_d1_along<1, EvenCentralD1<4>>(u.data(), c, SX, SY, SZ) ==
+            Approx(36.0)); // 3 * 12
+    REQUIRE(apply_d1_along<2, EvenCentralD1<4>>(u.data(), c, SX, SY, SZ) ==
+            Approx(48.0)); // 4 * 12
+  }
+
+  SECTION("order 6 (denom = 60)") {
+    REQUIRE(apply_d1_along<0, EvenCentralD1<6>>(u.data(), c, SX, SY, SZ) ==
+            Approx(120.0)); // 2 * 60
+    REQUIRE(apply_d1_along<1, EvenCentralD1<6>>(u.data(), c, SX, SY, SZ) ==
+            Approx(180.0)); // 3 * 60
+    REQUIRE(apply_d1_along<2, EvenCentralD1<6>>(u.data(), c, SX, SY, SZ) ==
+            Approx(240.0)); // 4 * 60
+  }
+}
+
+TEST_CASE("apply_d1_along (runtime view) returns unscaled FD sum",
+          "[kernel][field][fd_apply][unit]") {
+  std::vector<double> u(static_cast<std::size_t>(N) * N * N);
+  for (int iz = 0; iz < N; ++iz) {
+    for (int iy = 0; iy < N; ++iy) {
+      for (int ix = 0; ix < N; ++ix) {
+        const double x = static_cast<double>(ix);
+        const double y = static_cast<double>(iy);
+        const double z = static_cast<double>(iz);
+        const std::size_t c =
+            static_cast<std::size_t>(ix) +
+            static_cast<std::size_t>(iy) * static_cast<std::size_t>(N) +
+            static_cast<std::size_t>(iz) * static_cast<std::size_t>(N * N);
+        u[c] = 2.0 * x + 3.0 * y + 4.0 * z;
+      }
+    }
+  }
+  const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
+
+  EvenCentralD1View view{};
+  for (int order : {2, 4, 6}) {
+    REQUIRE(lookup_even_central_d1(order, &view));
+    const double denom = static_cast<double>(view.denom);
+    REQUIRE(apply_d1_along<0>(view, u.data(), c, SX, SY, SZ) == Approx(2.0 * denom));
+    REQUIRE(apply_d1_along<1>(view, u.data(), c, SX, SY, SZ) == Approx(3.0 * denom));
+    REQUIRE(apply_d1_along<2>(view, u.data(), c, SX, SY, SZ) == Approx(4.0 * denom));
+  }
+}
+
+TEST_CASE("apply_d1_along on a constant field returns zero (anti-symmetry)",
+          "[kernel][field][fd_apply][unit]") {
+  // Small 7^3 brick — only orders whose half-width <= 3 are safe at the
+  // centre cell along every axis. Higher-order coverage is tested via the
+  // linear-field cases above (which use the same brick) and via the
+  // FdGradient<G> construction tests in `test_fd_gradient.cpp`, which size
+  // the local LocalField to the requested order.
+  std::vector<double> u(static_cast<std::size_t>(N) * N * N, 7.5);
+  const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
+
+  EvenCentralD1View view{};
+  for (int order : {2, 4, 6}) {
+    REQUIRE(lookup_even_central_d1(order, &view));
+    REQUIRE(apply_d1_along<0>(view, u.data(), c, SX, SY, SZ) ==
+            Approx(0.0).margin(1e-15));
+    REQUIRE(apply_d1_along<1>(view, u.data(), c, SX, SY, SZ) ==
+            Approx(0.0).margin(1e-15));
+    REQUIRE(apply_d1_along<2>(view, u.data(), c, SX, SY, SZ) ==
+            Approx(0.0).margin(1e-15));
+  }
+}
+
+TEST_CASE("apply_d1_along high-order tables exist and are anti-symmetric on a "
+          "linear field (orders 8, 10, 12, 14)",
+          "[kernel][field][fd_apply][unit]") {
+  // Larger brick (17^3) so that half-widths up to 7 stay in-bounds at the
+  // centre cell. We do not check unscaled FD-sum exact values for the new
+  // orders here — `test_fd_gradient.cpp` already covers FdGradient<G> end
+  // to end at order 4, 6, 8 — but we do verify two structural invariants:
+  //   (i) lookup_even_central_d1 succeeds for orders 8..14;
+  //   (ii) the unscaled D1 sum on u(x) = -3 x is **exact** for any order
+  //        (central D1 is degree-1 exact), so it equals -3 * denom.
+  constexpr int M = 17;
+  constexpr std::ptrdiff_t MX = 1;
+  constexpr std::ptrdiff_t MY = M;
+  constexpr std::ptrdiff_t MZ = static_cast<std::ptrdiff_t>(M) * M;
+  std::vector<double> u(static_cast<std::size_t>(M) * M * M);
+  for (int iz = 0; iz < M; ++iz) {
+    for (int iy = 0; iy < M; ++iy) {
+      for (int ix = 0; ix < M; ++ix) {
+        const std::size_t c =
+            static_cast<std::size_t>(ix) +
+            static_cast<std::size_t>(iy) * static_cast<std::size_t>(M) +
+            static_cast<std::size_t>(iz) * static_cast<std::size_t>(M * M);
+        u[c] = -3.0 * static_cast<double>(ix);
+      }
+    }
+  }
+  const std::ptrdiff_t c =
+      8 + 8 * static_cast<std::ptrdiff_t>(M) + 8 * MZ; // safely interior for M=7
+
+  EvenCentralD1View view{};
+  for (int order : {8, 10, 12, 14}) {
+    REQUIRE(lookup_even_central_d1(order, &view));
+    const double denom = static_cast<double>(view.denom);
+    REQUIRE(apply_d1_along<0>(view, u.data(), c, MX, MY, MZ) ==
+            Approx(-3.0 * denom));
+    // Linear-in-x field: D1 along y and z is exactly zero.
+    REQUIRE(apply_d1_along<1>(view, u.data(), c, MX, MY, MZ) ==
+            Approx(0.0).margin(1e-15));
+    REQUIRE(apply_d1_along<2>(view, u.data(), c, MX, MY, MZ) ==
+            Approx(0.0).margin(1e-15));
+  }
+}
+
+TEST_CASE("lookup_even_central_d1 rejects unsupported orders",
+          "[kernel][field][fd_apply][unit]") {
+  EvenCentralD1View view{};
+  REQUIRE_FALSE(lookup_even_central_d1(0, &view));
+  REQUIRE_FALSE(lookup_even_central_d1(1, &view));
+  REQUIRE_FALSE(lookup_even_central_d1(3, &view));
+  REQUIRE_FALSE(lookup_even_central_d1(15, &view));
+  REQUIRE_FALSE(lookup_even_central_d1(16, &view));
+  REQUIRE_FALSE(lookup_even_central_d1(20, &view));
+  REQUIRE_FALSE(lookup_even_central_d1(-2, &view));
 }
 
 TEST_CASE("apply_tensor_d mixed-second on separable u = x^2 * y^2",

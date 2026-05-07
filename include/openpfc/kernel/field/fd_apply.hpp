@@ -8,20 +8,26 @@
  * @brief Per-point apply primitives for central FD stencils.
  *
  * @details
- * Applies the central second-derivative stencils tabulated in
+ * Applies the central first- and second-derivative stencils tabulated in
  * `fd_stencils.hpp` to a single interior point of a row-major 3D field
- * (`[nx, ny, nz]`, x varies fastest). Two layers are exposed:
+ * (`[nx, ny, nz]`, x varies fastest). Three layers are exposed:
  *
- * 1. **Per-axis** `apply_d2_along<Axis, Stencil>(core, c, sx, sy, sz)`
+ * 1. **Per-axis D2** `apply_d2_along<Axis, Stencil>(core, c, sx, sy, sz)`
  *    (and its runtime-stencil sibling) -- the workhorse for pure-axis
- *    second derivatives. With `Stencil = EvenCentralD2<Order>` the
+ *    **second** derivatives. With `Stencil = EvenCentralD2<Order>` the
  *    coefficient loop unrolls; the runtime overload takes a
  *    `EvenCentralD2View` for callers that pick `Order` from a CLI /
  *    JSON configuration (`apps/heat3d`). Both forms return the
  *    **unscaled** finite-difference sum: divide by `h^2 *
  *    Stencil::denom` to obtain the second derivative.
  *
- * 2. **Tensor-product** `apply_tensor_d<Mx, My, Mz, Sx, Sy, Sz>(core, c,
+ * 2. **Per-axis D1** `apply_d1_along<Axis, Stencil>(core, c, sx, sy, sz)`
+ *    (and its runtime-stencil sibling) -- the analogous primitive for
+ *    pure-axis **first** derivatives. The loop body is anti-symmetric:
+ *    `sum_{k=1..M} coeffs[k] * (u_{c + k*s} - u_{c - k*s})`. Divide by
+ *    `h * Stencil::denom` to obtain the first derivative.
+ *
+ * 3. **Tensor-product** `apply_tensor_d<Mx, My, Mz, Sx, Sy, Sz>(core, c,
  *    sx, sy, sz)` -- the explicit Cartesian-product form
  *    \f$ \partial_x^{M_x} \partial_y^{M_y} \partial_z^{M_z} u_{i,j,k}
  *      \approx \frac{1}{D_x D_y D_z\,h_x^{M_x} h_y^{M_y} h_z^{M_z}}
@@ -29,27 +35,31 @@
  *    Pure-axis cases reduce to `apply_d2_along`; mixed second
  *    derivatives (e.g. `Mx=My=2, Mz=0` for the future `xxyy` member)
  *    fall out as a single triple loop. Today only `Mi in {0, 2}` is
- *    accepted (no first-derivative tables yet); enabling Mi=1 just
- *    adds an `EvenCentralD1<Order>` table family, no other code
- *    changes.
+ *    accepted; enabling `Mi = 1` is straightforward (the D1 tables are
+ *    available; the tensor primitive needs a small `static_assert`
+ *    relaxation), but FD `xy / xz / yz` still requires corner-filled
+ *    halos on the field side, so the high-level evaluator
+ *    (`FdGradient<G>`) is gated on `HaloPattern::Full`.
  *
  * `Axis` is `0` for x, `1` for y, `2` for z, and chooses which of `sx`,
  * `sy`, `sz` is used as the per-step linear-index stride.
  *
  * **Boundary contract**: caller guarantees that every load referenced
- * by the stencil (offsets `k * stride` for the per-axis form, the full
+ * by the stencil (offsets `k * stride` for the per-axis forms, the full
  * cuboid `[-Hx, Hx] x [-Hy, Hy] x [-Hz, Hz]` for the tensor form) lies
  * inside the local backing buffer. The point-wise driver
  * (`for_each_interior`) and the brick Laplacian routines achieve this
  * for pure-axis stencils by iterating over `[hw, n - hw)` after a halo
  * exchange with `halo_width >= half_width`. Mixed-second tensor
- * products additionally need corner halos -- not yet shipped by the
- * exchanger, which is why `FdGradient<G>` rejects `xy / xz / yz` at
- * compile time even though the primitive itself is ready.
+ * products additionally need **corner-filled** halos --
+ * `pfc::cuda::FullPaddedDeviceHalo` ships this on the GPU side; the
+ * matching CPU exchanger is a follow-up.
  *
  * @see fd_stencils.hpp for the stencil tables consumed here
  * @see fd_gradient.hpp for the per-point evaluator that uses these
- *      primitives via the runtime overload
+ *      primitives via the runtime overloads
+ * @see runtime/cuda/full_padded_device_halo.hpp for the corner-filled
+ *      halo policy that unblocks the mixed-second tensor case on GPU
  */
 
 #include <cstddef>
@@ -156,6 +166,69 @@ inline T apply_d2_along(const EvenCentralD2View &st, const T *core, std::ptrdiff
 }
 
 /**
+ * @brief Apply a compile-time **central D1** stencil along `Axis` at point `c`.
+ *
+ * @tparam Axis    `0` for x, `1` for y, `2` for z.
+ * @tparam Stencil A specialization of `EvenCentralD1<Order>` (so
+ *                 `half_width`, `denom`, and `coeffs` are
+ *                 `static constexpr` and the loop unrolls).
+ * @tparam T       Field value type (`double` in normal use).
+ *
+ * @param core  Base pointer of the local field (row-major, x fastest).
+ * @param c     Linear index of the centre cell within `core`.
+ * @param sx    Linear-index stride per +1 step in x (typically `1`).
+ * @param sy    Stride per +1 step in y (typically `nx`).
+ * @param sz    Stride per +1 step in z (typically `nx * ny`).
+ *
+ * @return Unscaled FD sum
+ *         `sum_{k=1..M} coeffs[k] * (u_{c+k*s} - u_{c-k*s})`,
+ *         where `s = pick_stride<Axis>(sx, sy, sz)` and `M =
+ *         Stencil::half_width`. Multiply by `1 / (h * Stencil::denom)`
+ *         to obtain the first derivative along `Axis`.
+ *
+ * @pre `core[c ± k * s]` for `k = 1..M` are valid loads (caller iterates
+ *      only over the interior `[hw, n - hw)` after a halo exchange with
+ *      `halo_width >= M`).
+ */
+template <int Axis, class Stencil, class T>
+inline T apply_d1_along(const T *core, std::ptrdiff_t c, std::ptrdiff_t sx,
+                        std::ptrdiff_t sy, std::ptrdiff_t sz) noexcept {
+  constexpr int M = Stencil::half_width;
+  const std::ptrdiff_t s = detail::pick_stride<Axis>(sx, sy, sz);
+  T acc = T{};
+  for (int k = 1; k <= M; ++k) {
+    const T ck = static_cast<T>(Stencil::coeffs[k]);
+    const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * s;
+    acc += ck * (core[c + ks] - core[c - ks]);
+  }
+  return acc;
+}
+
+/**
+ * @brief Apply a runtime **central D1** stencil along `Axis` at point `c`.
+ *
+ * Same arithmetic as the compile-time overload, but reads `half_width`
+ * and the coefficient pointer from the runtime view `st` (typically
+ * populated via `lookup_even_central_d1(order, &st)`). The per-axis
+ * stride decision is still compile-time via `Axis`.
+ */
+template <int Axis, class T>
+inline T apply_d1_along(const EvenCentralD1View &st, const T *core, std::ptrdiff_t c,
+                        std::ptrdiff_t sx, std::ptrdiff_t sy,
+                        std::ptrdiff_t sz) noexcept {
+  const std::ptrdiff_t s = detail::pick_stride<Axis>(sx, sy, sz);
+  const int M = st.half_width;
+  const std::int64_t *coeffs = st.coeffs;
+  T acc = T{};
+  for (int k = 1; k <= M; ++k) {
+    const T ck = static_cast<T>(coeffs[k]);
+    const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * s;
+    acc += ck * (core[c + ks] - core[c - ks]);
+  }
+  return acc;
+}
+
+/**
  * @brief Identity (Mi = 0) stencil: contributes one cell at offset 0.
  *
  * Used as the per-axis stencil placeholder in `apply_tensor_d` for axes
@@ -203,8 +276,10 @@ struct IdentityStencil1d {
  *
  * @pre Every load `core[c + a*sx + b*sy + c*sz]` for
  *      `(a,b,c) in [-Hx,Hx] x [-Hy,Hy] x [-Hz,Hz]` is in-bounds. For
- *      mixed-second cases (>= 2 non-zero `Mi`), this requires corner
- *      halos -- not currently shipped by the halo exchanger, hence
+ *      mixed-second cases (>= 2 non-zero `Mi`), this requires
+ *      **corner-filled** halos — `pfc::cuda::FullPaddedDeviceHalo` ships
+ *      this on the GPU side; the matching CPU exchanger is a follow-up.
+ *      Until both pieces are wired together at the high level,
  *      `FdGradient<G>` keeps its `static_assert` against `xy/xz/yz`
  *      members even though this primitive is ready.
  */
