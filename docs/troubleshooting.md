@@ -39,6 +39,10 @@ OpenPFC must be installed (or you must point CMake at a build tree that exports 
 
 Build and run with the same MPI implementation. `which mpirun` should match the prefix of `mpicc` used to build HeFFTe and OpenPFC. See [`INSTALL.md`](../INSTALL.md) (MPI callout).
 
+### Slurm `srun`: `OMPI was not built with SLURM's PMI support`
+
+You launched with **`srun`**, but this Open MPI was configured **without** Slurm PMI/PMIx. Fix: use an Open MPI **with Slurm integration** (on many VTT partitions **`module load openmpi/5.0.10`**), then **rebuild HeFFTe and OpenPFC** against that MPI; or launch with **`mpirun`** instead of **`srun`** if your site documents that pattern. See [`INSTALL.md`](../INSTALL.md) (MPI callout) and [`apps/kobayashi/slurm/README.md`](../apps/kobayashi/slurm/README.md) for a rebuild `sbatch` example.
+
 ### Linking tests / `libheffte.so` / `GLIBCXX_3.4.xx` (libstdc++ mismatch)
 
 **Symptom:** Linking `openpfc-tests` (or similar) fails with undefined references to `std::…@GLIBCXX_3.4.29` (or another GLIBCXX symbol) involving `libheffte.so`, or the link succeeds but you see mixed C++ runtime errors at load time.
