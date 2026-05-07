@@ -140,9 +140,9 @@ TEST_CASE("Allen–Cahn CPU vs HIP agreement (single rank)", "[AllenCahn][HIP]")
                       hipMemcpyDeviceToHost),
             "hipMemcpy final");
 
-  hipFree(u_dev);
+  hip_check(hipFree(u_dev), "hipFree(u_dev)");
   for (int f = 0; f < 6; ++f) {
-    hipFree(face_dev[static_cast<std::size_t>(f)]);
+    hip_check(hipFree(face_dev[static_cast<std::size_t>(f)]), "hipFree(face)");
   }
 
   double max_diff = 0.0;

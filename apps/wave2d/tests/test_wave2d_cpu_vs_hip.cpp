@@ -170,10 +170,10 @@ TEST_CASE("wave2d CPU vs HIP (Neumann y, single rank)", "[wave2d][HIP]") {
   hip_check(hipMemcpy(v_gpu_host.data(), v_dev, nlocal * sizeof(double),
                       hipMemcpyDeviceToHost),
             "final v");
-  hipFree(u_dev);
-  hipFree(v_dev);
+  hip_check(hipFree(u_dev), "hipFree(u_dev)");
+  hip_check(hipFree(v_dev), "hipFree(v_dev)");
   for (int f = 0; f < 6; ++f) {
-    hipFree(face_dev[static_cast<std::size_t>(f)]);
+    hip_check(hipFree(face_dev[static_cast<std::size_t>(f)]), "hipFree(face)");
   }
 
   double max_diff = 0.0;
