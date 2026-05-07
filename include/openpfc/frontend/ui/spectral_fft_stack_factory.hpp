@@ -78,7 +78,7 @@ cuda_spectral_plan_options_from_json(const nlohmann::json &settings) {
 
 #endif // OpenPFC_ENABLE_CUDA_SPECTRAL
 
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 
 /**
  * @brief HeFFTe plan options for a ROCm-backed spectral driver from app JSON
@@ -97,7 +97,7 @@ hip_spectral_plan_options_from_json(const nlohmann::json &settings) {
   return options;
 }
 
-#endif // OpenPFC_ENABLE_HIP
+#endif // OpenPFC_ENABLE_HIP_SPECTRAL
 
 } // namespace pfc::ui
 

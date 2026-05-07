@@ -61,7 +61,7 @@ TEST_CASE("cuda_spectral_plan_options_from_json overlays plan_options",
 }
 #endif
 
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 TEST_CASE("hip_spectral_plan_options_from_json overlays plan_options",
           "[ui][heffte][spectral_gpu]") {
   const json settings = {{"plan_options", {{"use_pencils", true}}}};

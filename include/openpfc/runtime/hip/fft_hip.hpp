@@ -10,7 +10,7 @@
  * backend for GPU-accelerated FFT operations on AMD GPUs. These functions are
  * only available when HIP (ROCm) is enabled at compile time.
  *
- * @note Only available when OpenPFC_ENABLE_HIP is defined.
+ * @note Only available when OpenPFC_ENABLE_HIP_SPECTRAL is defined (ROCm HeFFTe / rocFFT).
  * @see fft.hpp for the main FFT interface
  */
 
@@ -38,10 +38,10 @@ namespace pfc::fft {
  *
  * @throws std::runtime_error if HIP is not available or FFT creation fails
  *
- * @note Only available when OpenPFC_ENABLE_HIP is defined
+ * @note Only available when OpenPFC_ENABLE_HIP_SPECTRAL is defined
  * @note Requires AMD GPU with ROCm and GPU-aware MPI for multi-GPU setups
  */
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 // GPU FFT type alias for rocFFT backend
 using FFT_HIP = FFT_Impl<heffte::backend::rocfft>;
 
@@ -67,6 +67,6 @@ using FFT_HIP = FFT_Impl<heffte::backend::rocfft>;
  */
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition,
                                  MPI_Comm comm = MPI_COMM_WORLD);
-#endif // OpenPFC_ENABLE_HIP
+#endif // OpenPFC_ENABLE_HIP_SPECTRAL
 
 } // namespace pfc::fft

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/runtime/common/heffte_gpu_r2c_layout.hpp>
@@ -39,4 +39,4 @@ using pfc::fft::FFT_Impl;
 } // namespace fft
 } // namespace pfc
 
-#endif // OpenPFC_ENABLE_HIP
+#endif // OpenPFC_ENABLE_HIP_SPECTRAL
