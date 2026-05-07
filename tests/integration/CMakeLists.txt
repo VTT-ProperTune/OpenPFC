@@ -12,6 +12,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/parallel_scaling/test_halo_patterns.cpp
   scenarios/parallel_scaling/test_halo_exchange_driver.cpp
   scenarios/parallel_scaling/test_padded_halo_exchange.cpp
+  scenarios/parallel_scaling/test_full_padded_device_halo.cpp
   scenarios/parallel_scaling/test_fd_heat_mpi.cpp
   scenarios/parallel_scaling/test_fd_highorder_mpi.cpp
   scenarios/parallel_scaling/test_fd_xy_mpi.cpp
@@ -26,3 +27,16 @@ target_sources(openpfc-tests PRIVATE
   scenarios/convergence_studies/test_center_peak_decay.cpp
   scenarios/convergence_studies/test_monotonic_decay.cpp
 )
+
+# `FullPaddedDeviceHalo` calls `pfc::cuda::detail::launch_padded_pack_face` /
+# `launch_padded_unpack_face`, which today live in
+# `src/openpfc/runtime/cuda/padded_halo_faces.cu` and are linked **per-app**
+# (e.g. into `kobayashi_fd_cuda`) rather than into `libopenpfc.so`. The test
+# executable consumes those symbols directly, so we add the .cu source to
+# `openpfc-tests` when CUDA is enabled and ensure CUDA::cudart is linked.
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+  target_sources(openpfc-tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/cuda/padded_halo_faces.cu
+  )
+  target_link_libraries(openpfc-tests PRIVATE CUDA::cudart)
+endif()
