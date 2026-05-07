@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Minimal check: MPI_Send/MPI_Recv with device pointers (GPU-aware MPI).
@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
               "hipMemcpy D2H");
   }
 
-  hipFree(d_buf);
+  hip_check(hipFree(d_buf), "hipFree");
 
   int ok_local = (rank != 1) ? 1 : (host == 1000.0) ? 1 : 0;
   int ok = 0;
