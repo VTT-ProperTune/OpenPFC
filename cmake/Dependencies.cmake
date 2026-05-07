@@ -13,7 +13,7 @@ if(NOT OpenPFC_ENABLE_MPI)
     "Then reconfigure with the default OpenPFC_ENABLE_MPI=ON (see INSTALL.md §2).")
 endif()
 # Cray PE: FindMPI can fail to detect MPI_C while MPI::MPI_CXX is sufficient for OpenPFC.
-find_package(MPI REQUIRED COMPONENTS CXX)
+find_package(MPI REQUIRED COMPONENTS C CXX)
 
 option(OpenPFC_ENABLE_HDF5 "Enable HDF5 export for profiling dumps (optional)" OFF)
 if(OpenPFC_ENABLE_HDF5)
@@ -49,6 +49,11 @@ set(OpenPFC_CUDA_SPECTRAL_AVAILABLE FALSE CACHE BOOL
 set(OpenPFC_ENABLE_CUDA_SPECTRAL FALSE CACHE BOOL
   "Build CUDA spectral FFT/runtime paths (requires CUDA HeFFTe)" FORCE)
 
+set(OpenPFC_HIP_SPECTRAL_AVAILABLE FALSE CACHE BOOL
+  "ROCm HeFFTe/rocFFT backend is available for spectral solvers" FORCE)
+set(OpenPFC_ENABLE_HIP_SPECTRAL FALSE CACHE BOOL
+  "Build HIP spectral FFT/runtime paths (requires ROCm HeFFTe)" FORCE)
+
 if(Heffte_FOUND)
   message(STATUS "✅ HeFFTe v${Heffte_VERSION} found at ${Heffte_DIR}")
 
@@ -73,17 +78,36 @@ if(Heffte_FOUND)
         "     -DHeffte_DIR=$HOME/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte")
     endif()
   endif()
-  # For HIP builds with find_package(Heffte), HeFFTe must have been built with ROCm (Heffte_ENABLE_ROCM=ON)
+  # HIP spectral FFT (fft_hip.cpp, rocFFT) requires ROCm-enabled HeFFTe — same pattern as CUDA_SPECTRAL.
   if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
-    if(DEFINED Heffte_ROCM_FOUND AND NOT Heffte_ROCM_FOUND)
-      message(WARNING "⚠️  HIP-enabled HeFFTe not found. HeFFTe at ${Heffte_DIR} may not have ROCm/rocFFT support.")
-      message(WARNING "   For HIP builds, use a HeFFTe built with -DHeffte_ENABLE_ROCM=ON.")
-    elseif(Heffte_ROCM_FOUND)
+    if(Heffte_ROCM_FOUND)
+      set(OpenPFC_HIP_SPECTRAL_AVAILABLE TRUE CACHE BOOL
+        "ROCm HeFFTe/rocFFT backend is available for spectral solvers" FORCE)
+      set(OpenPFC_ENABLE_HIP_SPECTRAL TRUE CACHE BOOL
+        "Build HIP spectral FFT/runtime paths (requires ROCm HeFFTe)" FORCE)
       message(STATUS "✅ HeFFTe ROCm backend is available")
+    else()
+      message(WARNING
+        "⚠️  HIP is enabled, but ROCm-enabled HeFFTe was not found.\n"
+        "   HeFFTe package: ${Heffte_DIR}\n"
+        "   Meaning: HIP finite-difference / kernel apps (e.g. allen_cahn_hip, kobayashi_fd_hip,\n"
+        "   wave2d_hip, verify_gpu_aware_mpi) still build, but HIP spectral FFT sources (fft_hip.cpp),\n"
+        "   Tungsten HIP spectral targets, and ROCm spectral JSON helpers are disabled.\n"
+        "   Build HeFFTe with -DHeffte_ENABLE_ROCM=ON (see INSTALL.md §8.1), e.g.\n"
+        "     -DHeffte_DIR=\$HOME/opt/heffte/2.4.1-rocm/lib64/cmake/Heffte")
     endif()
   endif()
 elseif(TARGET Heffte::Heffte OR TARGET Heffte OR TARGET heffte)
   message(STATUS "✅ HeFFTe targets available (FetchContent or add_subdirectory)")
+  if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    if(DEFINED Heffte_ENABLE_ROCM AND Heffte_ENABLE_ROCM)
+      set(OpenPFC_HIP_SPECTRAL_AVAILABLE TRUE CACHE BOOL
+        "ROCm HeFFTe/rocFFT backend is available for spectral solvers" FORCE)
+      set(OpenPFC_ENABLE_HIP_SPECTRAL TRUE CACHE BOOL
+        "Build HIP spectral FFT/runtime paths (requires ROCm HeFFTe)" FORCE)
+      message(STATUS "✅ FetchContent HeFFTe: ROCm backend enabled (HIP spectral ON)")
+    endif()
+  endif()
 else()
   include(cmake/OpenPFCHeffteHints.cmake)
   openpfc_heffte_collect_hint_prefixes(_openpfc_heffte_hint_roots)
