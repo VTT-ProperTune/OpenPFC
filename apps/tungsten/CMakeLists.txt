@@ -82,8 +82,20 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE AND NOT OpenPFC_ENABLE_CUDA_SP
     "HeFFTe is missing (spectral CUDA support OFF).")
 endif()
 
-# HIP version (only if HIP is enabled)
+# HIP: GPU-aware MPI probe builds whenever HIP is available (no rocFFT HeFFTe required).
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  add_executable(verify_gpu_aware_mpi src/verify_gpu_aware_mpi.cpp)
+  target_link_libraries(verify_gpu_aware_mpi PRIVATE MPI::MPI_CXX hip::host)
+  set_target_properties(verify_gpu_aware_mpi PROPERTIES
+    HIP_STANDARD 17
+    HIP_STANDARD_REQUIRED ON
+  )
+  install(TARGETS verify_gpu_aware_mpi DESTINATION bin)
+  message(STATUS "verify_gpu_aware_mpi enabled (HIP + MPI device buffer test)")
+endif()
+
+# HIP spectral Tungsten (requires ROCm-enabled HeFFTe — same rule as CUDA spectral).
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   add_executable(tungsten_hip
     src/hip/tungsten.cpp
     src/hip/tungsten_ops_kernels.hip
@@ -107,17 +119,6 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   install(TARGETS tungsten_hip DESTINATION bin)
   message(STATUS "Tungsten HIP version enabled")
 
-  # Standalone GPU-aware MPI probe (device pointers; needs MPICH_GPU_SUPPORT_ENABLED=1 on LUMI)
-  add_executable(verify_gpu_aware_mpi src/verify_gpu_aware_mpi.cpp)
-  target_link_libraries(verify_gpu_aware_mpi PRIVATE MPI::MPI_CXX hip::host)
-  set_target_properties(verify_gpu_aware_mpi PROPERTIES
-    HIP_STANDARD 17
-    HIP_STANDARD_REQUIRED ON
-  )
-  install(TARGETS verify_gpu_aware_mpi DESTINATION bin)
-  message(STATUS "verify_gpu_aware_mpi enabled (HIP + MPI device buffer test)")
-
-  # Test program for HIP with VTK output
   add_executable(test_tungsten_hip_vtk
     tests/test_tungsten_hip_vtk.cpp
     src/hip/tungsten_ops_kernels.hip
@@ -134,6 +135,9 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     HIP_STANDARD_REQUIRED ON
   )
   message(STATUS "Tungsten HIP VTK test program enabled")
+elseif(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND NOT OpenPFC_ENABLE_HIP_SPECTRAL)
+  message(STATUS
+    "Tungsten HIP spectral targets disabled: ROCm HeFFTe (rocFFT) missing (HIP spectral support OFF).")
 endif()
 
 option(TUNGSTEN_ENABLE_TESTS "Enable building Tungsten tests" ON)
@@ -180,8 +184,8 @@ if(TUNGSTEN_ENABLE_TESTS)
             message(STATUS "Tungsten CPU vs CUDA comparison test enabled")
         endif()
 
-        # CPU vs HIP comparison test (only if HIP is enabled)
-        if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+        # CPU vs HIP comparison test (HIP spectral + rocFFT HeFFTe)
+        if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
             add_executable(test_tungsten_cpu_vs_hip tests/test_tungsten_cpu_vs_hip.cpp)
             target_include_directories(test_tungsten_cpu_vs_hip PRIVATE ${TUNGSTEN_INCLUDE_DIR})
             target_link_libraries(test_tungsten_cpu_vs_hip PRIVATE
@@ -230,8 +234,8 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     )
 endif()
 
-# Add HIP support to scalability app if available
-if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+# Add HIP spectral support to scalability app if ROCm HeFFTe is available
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
     target_link_libraries(tungsten_scalability PRIVATE hip::host)
     target_sources(tungsten_scalability PRIVATE
         src/hip/tungsten_ops_kernels.hip
@@ -240,6 +244,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         HIP_STANDARD 17
         HIP_STANDARD_REQUIRED ON
     )
+    target_compile_definitions(tungsten_scalability PRIVATE OpenPFC_ENABLE_HIP_SPECTRAL)
 endif()
 
 install(TARGETS tungsten_scalability DESTINATION bin)
