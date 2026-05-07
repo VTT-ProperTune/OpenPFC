@@ -17,12 +17,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   )
 endif()
 
-# GCC-specific warnings (not supported by Clang)
+# GCC-specific warnings (not supported by Clang / ROCm HIP device compilation)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  # Apply only to CXX sources — HIP language uses AMDGPU Clang and rejects these flags.
   add_compile_options(
-    -Wduplicated-cond     # Warn about duplicated conditions
-    -Wduplicated-branches # Warn about duplicated branches
-    -Wlogical-op          # Warn about logical operator issues
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wduplicated-cond>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wduplicated-branches>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wlogical-op>"
   )
 endif()
 
