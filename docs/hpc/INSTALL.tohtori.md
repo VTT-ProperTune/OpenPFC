@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Building OpenPFC on tohtori (GCC + Open MPI + optional CUDA)
 
-This note complements the generic instructions in [INSTALL.md](../../INSTALL.md). It matches the pinned paths in [`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../../cmake/toolchains/tohtori-gcc11-openmpi.cmake) and the usual VTT **tohtori** module layout (`gcc/11.2.0`, `openmpi/4.1.1` under `/share/apps/…`).
+This note complements the generic instructions in [INSTALL.md](../../INSTALL.md). It matches the pinned paths in [`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../../cmake/toolchains/tohtori-gcc11-openmpi.cmake) and the usual VTT **tohtori** module layout (`gcc/11.2.0`). For **Slurm `srun`** jobs, use **`module load openmpi/5.0.10`** (PMI/PMIx); the toolchain defaults to **`/share/apps/OpenMPI/5.0.10`** when **`OPENMPI_ROOT`** is unset — override **`OPENMPI_ROOT`** from `module show openmpi/…` if your site layout differs.
 
 ## 1. CPU build (reference)
 
@@ -13,7 +13,7 @@ In an interactive shell:
 
 ```bash
 module load gcc/11.2.0
-module load openmpi/4.1.1
+module load openmpi/5.0.10   # keep one MPI for HeFFTe + OpenPFC
 export CC=$(which gcc) CXX=$(which g++)
 which mpicc mpicxx   # both should resolve under the same Open MPI prefix
 ```
@@ -58,7 +58,7 @@ If you maintain a private Lmod module (e.g. `heffte/2.4.1-cuda`), it should set 
 $HOME/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte
 ```
 
-and load a **GCC** and **Open MPI** build that matches that HeFFTe (often GCC 12.x + `openmpi/4.1.1-cuda` for GPU-aware MPI).
+and load a **GCC** and **Open MPI** build that matches that HeFFTe (often a site **`openmpi/…-cuda`** or **`openmpi/5.0.10`** stack built with CUDA-aware support).
 
 **Important:** If both CPU and CUDA HeFFTe installs exist under `$HOME/opt/heffte/`, OpenPFC’s autodetection may pick the **CPU** tree first. For CUDA spectral builds, set the package location explicitly on the **first** `cmake` invocation:
 

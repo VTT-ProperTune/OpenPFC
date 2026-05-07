@@ -117,7 +117,7 @@ The domain is **periodic**; for a localized Gaussian the mismatch at boundaries 
 
 ## Benchmarks (FD)
 
-All numbers below are **`avg_step_time_s`** from rank 0 (same as **MPI_MAX** across ranks for these runs). Build: **Release**, **GCC 11.2.0**, **Open MPI 4.1.1**, HeFFTe CPU prefix on `CMAKE_PREFIX_PATH`. Host: login node used for development (timing varies with load; repeat for publication-quality data).
+All numbers below are **`avg_step_time_s`** from rank 0 (same as **MPI_MAX** across ranks for these runs). Build: **Release**, **GCC 11.2.0**, **Open MPI 5.0.10**, HeFFTe CPU prefix on `CMAKE_PREFIX_PATH`. Host: login node used for development (timing varies with load; repeat for publication-quality data).
 
 ### Higher-order FD and MPI (`OMP_NUM_THREADS=1`)
 
@@ -133,7 +133,7 @@ Fixed case: **`N=256`**, **`n_steps=25`**, **`dt=1e-6`** (D = `heat3d::kD = 1.0`
 | 18 | 1.42205 | 0.682012 | 0.36659 | 0.18127 |
 | 20 | 1.51928 | 0.839491 | 0.474414 | 0.190416 |
 
-Reproduce (after `module load gcc/11.2.0 openmpi/4.1.1` and configuring with that toolchain):
+Reproduce (after `module load gcc/11.2.0 openmpi/5.0.10` and configuring with that toolchain):
 
 ```bash
 export OMP_NUM_THREADS=1

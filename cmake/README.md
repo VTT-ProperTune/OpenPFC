@@ -45,7 +45,7 @@ This directory contains modular CMake configuration files that organize the buil
    - **Doxygen** and **`docs/`** when **`OpenPFC_BUILD_DOCUMENTATION=ON`** (default **ON**); if Doxygen is missing, documentation generation is skipped with a warning
 
 6. **OpenPFCGpuAwareMpi.cmake** (included from the root **`CMakeLists.txt`** immediately after **Dependencies.cmake**)
-   - Optional **CUDA + Open MPI** configure probe using **`MPIX_Query_cuda_support()`** when **`OpenPFC_MPI_CUDA_AWARE=ON`**
+   - Optional **CUDA + Open MPI** configure probe: compile + run **`MPIX_Query_cuda_support()`** (via **`mpi-ext.h`**) when **`OpenPFC_MPI_CUDA_AWARE=ON`**, with **`MPI_CXX_INCLUDE_DIRS`** / **`mpicxx -showme:compile`** fallbacks for try-compile includes
    - **HIP**: status-only reminder for runtime checks (**`verify_gpu_aware_mpi`**, **`MPICH_GPU_SUPPORT_ENABLED`** — see **INSTALL.md** §5.2.1 and **docs/INSTALL.LUMI.md**)
 
 ### Library and Build Configuration
@@ -127,9 +127,9 @@ BuildSummary.cmake
 
 ## Cluster / VS Code (tohtori)
 
-On **tohtori**, **Cursor** / **VS Code CMake Tools** may configure without **`module load`**, so MPI and GCC 11 are missing from the environment. Use CMake presets **`tohtori-debug`** and **`tohtori-release`** in the root **`CMakePresets.json`**: they set **`CMAKE_TOOLCHAIN_FILE`** to **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** and preset **`environment`** entries for **`PATH`** and **`LD_LIBRARY_PATH`** (same effect as **`gcc/11.2.0`** + **`openmpi/4.1.1`** modules). Build directories are **`build/tohtori-debug`** and **`build/tohtori-release`**.
+On **tohtori**, **Cursor** / **VS Code CMake Tools** may configure without **`module load`**, so MPI and GCC 11 are missing from the environment. Use CMake presets **`tohtori-debug`** and **`tohtori-release`** in the root **`CMakePresets.json`**: they set **`CMAKE_TOOLCHAIN_FILE`** to **`cmake/toolchains/tohtori-gcc11-openmpi.cmake`** and preset **`environment`** entries for **`PATH`** and **`LD_LIBRARY_PATH`** (GCC **11.2.0** + **Open MPI 5.0.10** paths; **`OPENMPI_ROOT`** overrides when your site differs). Build directories are **`build/tohtori-debug`** and **`build/tohtori-release`**.
 
-The toolchain sets **`MPI_C_COMPILER`** / **`MPI_CXX_COMPILER`** to OpenMPI wrappers under **`/share/apps/OpenMPI/4.1.1`**. Presets **`tohtori-debug`** / **`tohtori-release`** set **`OpenPFC_ENABLE_CODE_COVERAGE=OFF`** so configure stays quiet on nodes without **`lcov`** (typical on RHEL); re-enable with **`-DOpenPFC_ENABLE_CODE_COVERAGE=ON`** after installing **`lcov`** (e.g. **EPEL** + **`dnf install lcov`** on EL8).
+The toolchain sets **`MPI_C_COMPILER`** / **`MPI_CXX_COMPILER`** to Open MPI wrappers under **`/share/apps/OpenMPI/5.0.10`** when **`OPENMPI_ROOT`** is unset (Slurm PMI/`srun`). Export **`OPENMPI_ROOT`** from **`module show openmpi/…`** when your cluster layout differs. Presets **`tohtori-debug`** / **`tohtori-release`** set **`OpenPFC_ENABLE_CODE_COVERAGE=OFF`** so configure stays quiet on nodes without **`lcov`** (typical on RHEL); re-enable with **`-DOpenPFC_ENABLE_CODE_COVERAGE=ON`** after installing **`lcov`** (e.g. **EPEL** + **`dnf install lcov`** on EL8).
 
 If the site layout changes, run **`module show`** on the cluster and edit the toolchain, or add **`CMakeUserPresets.json`** (CMake ≥ 3.19) at the **source root** that inherits **`tohtori-debug`** and overrides **`cacheVariables.CMAKE_TOOLCHAIN_FILE`** to your own file:
 

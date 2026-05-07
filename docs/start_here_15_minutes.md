@@ -15,7 +15,7 @@ You need a C++20 compiler, an MPI implementation that you will both build with a
 
 ```bash
 module load gcc/11.2.0
-module load openmpi/4.1.1
+module load openmpi/5.0.10   # Slurm / PMI-friendly (`OPENMPI_ROOT` if your module paths differ)
 ```
 
 Then confirm that the MPI wrappers are really visible:

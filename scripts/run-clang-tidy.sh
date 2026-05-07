@@ -7,7 +7,7 @@
 # also passes --warnings-as-errors=* and exits on the first failing file.
 # Requires a Ninja build directory with compile_commands.json (see --configure).
 #
-# Typical tohtori workflow (load modules first: gcc/11.2.0, openmpi/4.1.1):
+# Typical tohtori workflow (load modules first: gcc/11.2.0, openmpi/5.0.10):
 #   ./scripts/run-clang-tidy.sh --configure
 #   ./scripts/run-clang-tidy.sh
 #
