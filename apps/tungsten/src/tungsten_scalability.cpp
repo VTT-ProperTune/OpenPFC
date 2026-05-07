@@ -30,7 +30,7 @@
 #include <tungsten/cuda/tungsten_model.hpp>
 #endif
 
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 #include <openpfc/runtime/hip/fft_hip.hpp>
 #include <tungsten/hip/tungsten_model.hpp>
 #endif
@@ -302,7 +302,7 @@ public:
   }
 #endif
 
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
   template <typename RealType>
   void run_hip_test_impl(int size_x, int size_y, int size_z, int num_iterations,
                          const std::string &precision_name) {
@@ -491,7 +491,7 @@ int main(int argc, char *argv[]) {
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
       study.run_cuda_test(sx, sy, sz, num_iterations);
 #endif
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
       study.run_hip_test(sx, sy, sz, num_iterations);
 #endif
       if (rank == 0) {
@@ -534,7 +534,7 @@ int main(int argc, char *argv[]) {
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
     study.run_cuda_test(base_size, base_size, base_size, num_iterations);
 #endif
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
     study.run_hip_test(base_size, base_size, base_size, num_iterations);
 #endif
   } else if (scaling_mode == "weak") {
@@ -553,7 +553,7 @@ int main(int argc, char *argv[]) {
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
     study.run_cuda_test(total_size, total_size, total_size, num_iterations);
 #endif
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
     study.run_hip_test(total_size, total_size, total_size, num_iterations);
 #endif
   } else {
@@ -578,7 +578,7 @@ int main(int argc, char *argv[]) {
       // Run CUDA test (tests both float and double)
       study.run_cuda_test(sx, sy, sz, num_iterations);
 #endif
-#if defined(OpenPFC_ENABLE_HIP)
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
       study.run_hip_test(sx, sy, sz, num_iterations);
 #endif
 
