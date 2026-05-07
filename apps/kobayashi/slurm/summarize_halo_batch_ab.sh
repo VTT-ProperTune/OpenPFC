@@ -14,39 +14,45 @@
 # the current directory).
 
 set -euo pipefail
-if [[ $# -ne 2 ]]; then
-  echo "usage: $0 <off_jobid> <on_jobid>" >&2
+if [[ $# -lt 2 ]]; then
+  echo "usage: $0 <off_jobid> <on_jobid> [<extended_jobid> [<extra_jobid> ...]]" >&2
   exit 2
 fi
-OFF="kobayashi_fd_cuda_h100_np2_nsys_$1.out"
-ON="kobayashi_fd_cuda_h100_np2_nsys_$2.out"
-for f in "$OFF" "$ON"; do
-  if [[ ! -f "$f" ]]; then
-    echo "missing: $f" >&2
-    exit 1
-  fi
-done
 
 extract() {
   local f="$1" tag="$2"
   grep -E "^${tag}" "$f" | head -1 || true
 }
 
-echo "=== KOBAYASHI_PERF_LOOP ==="
-echo "[off] $(extract "$OFF" KOBAYASHI_PERF_LOOP)"
-echo "[on ] $(extract "$ON"  KOBAYASHI_PERF_LOOP)"
+declare -a TAGS=( "off" "on" "ext" )
+declare -a FILES=()
+declare -a LABELS=()
+i=0
+for jid in "$@"; do
+  f="kobayashi_fd_cuda_h100_np2_nsys_${jid}.out"
+  if [[ ! -f "$f" ]]; then
+    echo "missing: $f" >&2
+    exit 1
+  fi
+  FILES+=( "$f" )
+  if [[ $i -lt ${#TAGS[@]} ]]; then
+    LABELS+=( "${TAGS[$i]}" )
+  else
+    LABELS+=( "j${jid}" )
+  fi
+  ((i++))
+done
 
-echo ""
-echo "=== OPENPFC_CUDA_PROFILE_HALO_SUMMARY ==="
-echo "[off] $(extract "$OFF" OPENPFC_CUDA_PROFILE_HALO_SUMMARY)"
-echo "[on ] $(extract "$ON"  OPENPFC_CUDA_PROFILE_HALO_SUMMARY)"
+print_block() {
+  local title="$1" tag="$2"
+  echo "=== ${title} ==="
+  for k in "${!FILES[@]}"; do
+    printf "[%s] %s\n" "${LABELS[$k]}" "$(extract "${FILES[$k]}" "${tag}")"
+  done
+  echo ""
+}
 
-echo ""
-echo "=== KOBAYASHI_VERIFY_HEX (must match between off/on) ==="
-echo "[off] $(extract "$OFF" KOBAYASHI_VERIFY_HEX)"
-echo "[on ] $(extract "$ON"  KOBAYASHI_VERIFY_HEX)"
-
-echo ""
-echo "=== KOBAYASHI_CUDA_HALO_MODE ==="
-echo "[off] $(extract "$OFF" KOBAYASHI_CUDA_HALO_MODE)"
-echo "[on ] $(extract "$ON"  KOBAYASHI_CUDA_HALO_MODE)"
+print_block "KOBAYASHI_CUDA_HALO_MODE"            "KOBAYASHI_CUDA_HALO_MODE"
+print_block "KOBAYASHI_PERF_LOOP"                 "KOBAYASHI_PERF_LOOP"
+print_block "OPENPFC_CUDA_PROFILE_HALO_SUMMARY"   "OPENPFC_CUDA_PROFILE_HALO_SUMMARY"
+print_block "KOBAYASHI_VERIFY_HEX (should match for non-boundary-activating runs)" "KOBAYASHI_VERIFY_HEX"
