@@ -32,7 +32,7 @@ set(_openpfc_kernel_obj_sources
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
   list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/cuda/fft_cuda.cpp)
 endif()
-if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+if(OpenPFC_ENABLE_HIP_SPECTRAL)
   list(APPEND _openpfc_kernel_obj_sources src/openpfc/runtime/hip/fft_hip.cpp)
 endif()
 
@@ -174,6 +174,12 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_CUDA_SPECTRAL)
     target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_CUDA_SPECTRAL)
   endif()
+endif()
+
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
+  target_link_libraries(openpfc_kernel_obj PRIVATE hip::host)
+  target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_HIP_SPECTRAL)
+  target_compile_definitions(openpfc PUBLIC OpenPFC_ENABLE_HIP_SPECTRAL)
 endif()
 
 # GPU kernel library (only when CUDA is enabled)
