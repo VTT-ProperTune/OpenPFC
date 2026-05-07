@@ -95,5 +95,8 @@ target_link_libraries(16_strong_types_demo PRIVATE OpenPFC ${_heffte_tgt})
 add_executable(17_custom_coordinate_system 17_custom_coordinate_system.cpp)
 target_link_libraries(17_custom_coordinate_system PRIVATE OpenPFC ${_heffte_tgt})
 
+add_executable(18_sobel_edge_detection 18_sobel_edge_detection.cpp)
+target_link_libraries(18_sobel_edge_detection PRIVATE OpenPFC ${_heffte_tgt})
+
 add_executable(world_strong_types_example world_strong_types_example.cpp)
 target_link_libraries(world_strong_types_example PRIVATE OpenPFC ${_heffte_tgt})
