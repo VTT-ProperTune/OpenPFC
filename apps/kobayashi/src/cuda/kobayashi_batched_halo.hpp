@@ -35,6 +35,24 @@
  * the opposite slot for the recv tag (same convention as
  * `PaddedDeviceHaloExchanger::opposite_slot`).
  *
+ * **Corner-fill mode (`corner_fill=true`):** the standard 6-face exchange does
+ * **not** fill corner halo cells (e.g. `phi(-1, -1)` on a `2x1x1` proc grid).
+ * For Kobayashi's "extended-halo" path, where stage_a is launched on
+ * `interior + 1 ring` and a 5-point stencil at `(-1, 0)` reads `phi(-1, -1)`,
+ * we need corners filled. With corner_fill the order is reversed:
+ *   1. Post Irecv/Isend for **all real-MPI** faces (narrow slabs, ±X only in
+ *      the supported nproc=2 case).
+ *   2. MPI_Waitall (X halos now contain neighbour interior data).
+ *   3. Self-pack/unpack for ±Y using a **widened X slab** (full padded X
+ *      including the just-arrived X-halos). This propagates X-halo data into
+ *      the X-Y corners.
+ *   4. cudaStreamSynchronize.
+ * The widened ±Z self-pack is unused by 2D Kobayashi (kernels read only iz=0)
+ * but the implementation widens it for completeness. Currently this single-pass
+ * corner-fill is correct only when at most **one axis has real MPI neighbours**
+ * (i.e. proc grid has extent 1 along Y and Z); we assert that in the
+ * constructor.
+ *
  * Packed fallback path: not optimised here -- falls back to one
  * `pfc::cuda::PaddedDeviceHaloExchanger` per field so that
  * `OPENPFC_CUDA_FORCE_PACKED_HALO=1` still works for correctness checks. The
@@ -77,9 +95,9 @@ public:
 
   BatchedPaddedDeviceHalo(const pfc::decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, std::size_t n_fields,
-                          int base_tag = 0)
+                          int base_tag = 0, bool corner_fill = false)
       : m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
-        m_n_fields(n_fields) {
+        m_n_fields(n_fields), m_corner_fill(corner_fill) {
     if (n_fields == 0) {
       throw std::invalid_argument("BatchedPaddedDeviceHalo: n_fields must be > 0");
     }
@@ -96,6 +114,7 @@ public:
     m_nzp = nz + 2 * hw;
 
     m_face_specs = pfc::cuda::detail::make_padded_face_slabs(nx, ny, nz, hw);
+    m_face_specs_widened = make_widened_self_face_slabs_(nx, ny, nz, hw);
 
     m_face_types = pfc::halo::create_padded_face_types_6(
         nx, ny, nz, m_halo_width, pfc::exchange::detail::get_mpi_type<double>());
@@ -104,16 +123,37 @@ public:
                                    Int3{0, -1, 0}, Int3{0, 0, 1},  Int3{0, 0, -1}};
     m_neighbors.reserve(6);
     for (const auto &dir : dirs) {
-      m_neighbors.push_back(pfc::decomposition::get_neighbor_rank(decomp, m_rank, dir));
+      m_neighbors.push_back(
+          pfc::decomposition::get_neighbor_rank(decomp, m_rank, dir));
     }
 
     m_any_self_neighbor = false;
     int n_real_faces = 0;
-    for (int n : m_neighbors) {
+    bool real_x = false, real_y = false, real_z = false;
+    for (std::size_t i = 0; i < 6; ++i) {
+      const int n = m_neighbors[i];
       if (n == m_rank) {
         m_any_self_neighbor = true;
       } else {
         ++n_real_faces;
+        if (i < 2)
+          real_x = true;
+        else if (i < 4)
+          real_y = true;
+        else
+          real_z = true;
+      }
+    }
+    if (m_corner_fill) {
+      const int real_axes = static_cast<int>(real_x) + static_cast<int>(real_y) +
+                            static_cast<int>(real_z);
+      if (real_axes > 1) {
+        throw std::runtime_error(
+            "BatchedPaddedDeviceHalo(corner_fill=true): single-pass corner fill "
+            "only "
+            "supports proc grids with at most ONE axis of real MPI neighbours "
+            "(e.g. nproc=2 with 2x1x1). Use the multi-pass scheme for general "
+            "grids.");
       }
     }
     m_requests.assign(static_cast<std::size_t>(2 * n_real_faces) * m_n_fields,
@@ -121,12 +161,16 @@ public:
 
     m_scratch_elems = 0;
     for (std::size_t i = 0; i < 6; ++i) {
-      const auto &send = m_face_specs[i].first;
-      const std::size_t c =
-          static_cast<std::size_t>(send.sx) * static_cast<std::size_t>(send.sy) *
-          static_cast<std::size_t>(send.sz);
-      m_face_elems[i] = c;
-      m_scratch_elems = std::max(m_scratch_elems, c);
+      const auto &send_n = m_face_specs[i].first;
+      const auto &send_w = m_face_specs_widened[i].first;
+      const std::size_t cn = static_cast<std::size_t>(send_n.sx) *
+                             static_cast<std::size_t>(send_n.sy) *
+                             static_cast<std::size_t>(send_n.sz);
+      const std::size_t cw = static_cast<std::size_t>(send_w.sx) *
+                             static_cast<std::size_t>(send_w.sy) *
+                             static_cast<std::size_t>(send_w.sz);
+      m_face_elems[i] = cn;
+      m_scratch_elems = std::max(m_scratch_elems, std::max(cn, cw));
     }
 
     const bool force_packed =
@@ -195,7 +239,8 @@ public:
       }
       t_mark = MPI_Wtime();
       pfc::cuda::detail::cuda_check(
-          cudaDeviceSynchronize(), "cudaDeviceSynchronize post batched GPU-aware MPI");
+          cudaDeviceSynchronize(),
+          "cudaDeviceSynchronize post batched GPU-aware MPI");
       if (perf) {
         H.post_exchange_cuda_sync += MPI_Wtime() - t_mark;
       }
@@ -210,8 +255,10 @@ public:
                                 MPI_Wtime() - t0);
   }
 
-  /// Convenience overload that accepts an `std::initializer_list` of `n_fields()` pointers.
-  void exchange(std::initializer_list<double *> fields, cudaStream_t stream = nullptr) {
+  /// Convenience overload that accepts an `std::initializer_list` of `n_fields()`
+  /// pointers.
+  void exchange(std::initializer_list<double *> fields,
+                cudaStream_t stream = nullptr) {
     if (fields.size() != m_n_fields) {
       throw std::invalid_argument(
           "BatchedPaddedDeviceHalo::exchange: field count mismatch");
@@ -222,24 +269,22 @@ public:
 private:
   static int opposite_slot_(int slot) noexcept {
     switch (slot) {
-    case 0:
-      return 1;
-    case 1:
-      return 0;
-    case 2:
-      return 3;
-    case 3:
-      return 2;
-    case 4:
-      return 5;
-    case 5:
-      return 4;
-    default:
-      return -1;
+    case 0: return 1;
+    case 1: return 0;
+    case 2: return 3;
+    case 3: return 2;
+    case 4: return 5;
+    case 5: return 4;
+    default: return -1;
     }
   }
 
   void exchange_gpu_aware_(double *const *fields, cudaStream_t stream) {
+    if (m_corner_fill) {
+      exchange_gpu_aware_corner_fill_(fields, stream);
+      return;
+    }
+
     // Step 1: device pack/unpack for all (field, self-face) pairs on `stream`.
     if (m_any_self_neighbor) {
       if (m_d_scratch == nullptr) {
@@ -254,13 +299,12 @@ private:
           }
           const auto &send = m_face_specs[i].first;
           const auto &recv = m_face_specs[i].second;
-          pfc::cuda::detail::launch_padded_pack_face(m_d_scratch, d_pad, send.ox, send.oy,
-                                                    send.oz, send.sx, send.sy, send.sz,
-                                                    m_nxp, m_nyp, m_nzp, stream);
-          pfc::cuda::detail::launch_padded_unpack_face(d_pad, m_d_scratch, recv.ox,
-                                                      recv.oy, recv.oz, recv.sx, recv.sy,
-                                                      recv.sz, m_nxp, m_nyp, m_nzp,
-                                                      stream);
+          pfc::cuda::detail::launch_padded_pack_face(
+              m_d_scratch, d_pad, send.ox, send.oy, send.oz, send.sx, send.sy,
+              send.sz, m_nxp, m_nyp, m_nzp, stream);
+          pfc::cuda::detail::launch_padded_unpack_face(
+              d_pad, m_d_scratch, recv.ox, recv.oy, recv.oz, recv.sx, recv.sy,
+              recv.sz, m_nxp, m_nyp, m_nzp, stream);
         }
       }
       pfc::cuda::detail::cuda_check(
@@ -278,8 +322,9 @@ private:
           continue;
         }
         const int tag = field_tag_off + opposite_slot_(static_cast<int>(i));
-        pfc::exchange::irecv_face(buf, m_face_types[i].recv_type.get(), m_neighbors[i],
-                                  m_comm, &m_requests[req_count], tag);
+        pfc::exchange::irecv_face(buf, m_face_types[i].recv_type.get(),
+                                  m_neighbors[i], m_comm, &m_requests[req_count],
+                                  tag);
         ++req_count;
       }
     }
@@ -291,12 +336,102 @@ private:
           continue;
         }
         const int tag = field_tag_off + static_cast<int>(i);
-        pfc::exchange::isend_face(buf, m_face_types[i].send_type.get(), m_neighbors[i],
-                                  m_comm, &m_requests[req_count], tag);
+        pfc::exchange::isend_face(buf, m_face_types[i].send_type.get(),
+                                  m_neighbors[i], m_comm, &m_requests[req_count],
+                                  tag);
         ++req_count;
       }
     }
     pfc::exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
+  }
+
+  void exchange_gpu_aware_corner_fill_(double *const *fields, cudaStream_t stream) {
+    // Order: real-MPI faces first (narrow slabs); then self-faces with widened
+    // slabs that pull from already-filled MPI halos to populate corners.
+
+    // Step 1: post all Irecvs and Isends for real (non-self) faces.
+    std::size_t req_count = 0;
+    for (std::size_t f = 0; f < m_n_fields; ++f) {
+      void *buf = static_cast<void *>(fields[f]);
+      const int field_tag_off = m_base_tag + static_cast<int>(f) * 6;
+      for (std::size_t i = 0; i < 6; ++i) {
+        if (m_neighbors[i] == m_rank) {
+          continue;
+        }
+        const int tag = field_tag_off + opposite_slot_(static_cast<int>(i));
+        pfc::exchange::irecv_face(buf, m_face_types[i].recv_type.get(),
+                                  m_neighbors[i], m_comm, &m_requests[req_count],
+                                  tag);
+        ++req_count;
+      }
+    }
+    for (std::size_t f = 0; f < m_n_fields; ++f) {
+      void *buf = static_cast<void *>(fields[f]);
+      const int field_tag_off = m_base_tag + static_cast<int>(f) * 6;
+      for (std::size_t i = 0; i < 6; ++i) {
+        if (m_neighbors[i] == m_rank) {
+          continue;
+        }
+        const int tag = field_tag_off + static_cast<int>(i);
+        pfc::exchange::isend_face(buf, m_face_types[i].send_type.get(),
+                                  m_neighbors[i], m_comm, &m_requests[req_count],
+                                  tag);
+        ++req_count;
+      }
+    }
+    pfc::exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
+
+    // Step 2: MPI halos are now populated. Self-pack/unpack with the widened
+    // slabs so the X halos (just arrived) propagate into ±Y / ±Z halo corners.
+    if (m_any_self_neighbor) {
+      if (m_d_scratch == nullptr) {
+        throw std::runtime_error("BatchedPaddedDeviceHalo(corner_fill): "
+                                 "self-neighbor halo needs scratch");
+      }
+      for (std::size_t f = 0; f < m_n_fields; ++f) {
+        double *d_pad = fields[f];
+        for (std::size_t i = 0; i < 6; ++i) {
+          if (m_neighbors[i] != m_rank) {
+            continue;
+          }
+          const auto &send = m_face_specs_widened[i].first;
+          const auto &recv = m_face_specs_widened[i].second;
+          pfc::cuda::detail::launch_padded_pack_face(
+              m_d_scratch, d_pad, send.ox, send.oy, send.oz, send.sx, send.sy,
+              send.sz, m_nxp, m_nyp, m_nzp, stream);
+          pfc::cuda::detail::launch_padded_unpack_face(
+              d_pad, m_d_scratch, recv.ox, recv.oy, recv.oz, recv.sx, recv.sy,
+              recv.sz, m_nxp, m_nyp, m_nzp, stream);
+        }
+      }
+      pfc::cuda::detail::cuda_check(
+          cudaStreamSynchronize(stream),
+          "cudaStreamSynchronize after corner_fill self-neighbor halo copies");
+    }
+  }
+
+  /// Self-face slab specs widened so packs along Y read full padded X (and Z slabs
+  /// read full padded X and Y), letting MPI-filled X halos propagate into corners.
+  /// Real-MPI faces (±X) keep the standard narrow specs; self-pack only uses the
+  /// widened ones in `corner_fill` mode.
+  static std::array<
+      std::pair<pfc::cuda::detail::FaceSlabSpec, pfc::cuda::detail::FaceSlabSpec>, 6>
+  make_widened_self_face_slabs_(int nx, int ny, int nz, int hw) {
+    using S = pfc::cuda::detail::FaceSlabSpec;
+    using P = std::pair<S, S>;
+    const int X = nx + 2 * hw;
+    const int Y = ny + 2 * hw;
+    return {{
+        // ±X stays narrow (used only for real-MPI here -- self ±X is unusual)
+        P{S{nx, hw, hw, hw, ny, nz}, S{nx + hw, hw, hw, hw, ny, nz}}, // +X
+        P{S{hw, hw, hw, hw, ny, nz}, S{0, hw, hw, hw, ny, nz}},       // -X
+        // ±Y widened along X
+        P{S{0, ny, hw, X, hw, nz}, S{0, ny + hw, hw, X, hw, nz}}, // +Y
+        P{S{0, hw, hw, X, hw, nz}, S{0, 0, hw, X, hw, nz}},       // -Y
+        // ±Z widened along X and Y
+        P{S{0, 0, nz, X, Y, hw}, S{0, 0, nz + hw, X, Y, hw}}, // +Z
+        P{S{0, 0, hw, X, Y, hw}, S{0, 0, 0, X, Y, hw}},       // -Z
+    }};
   }
 
   int m_rank = 0;
@@ -309,8 +444,12 @@ private:
   int m_nyp = 0;
   int m_nzp = 0;
 
-  std::array<std::pair<pfc::cuda::detail::FaceSlabSpec, pfc::cuda::detail::FaceSlabSpec>, 6>
+  std::array<
+      std::pair<pfc::cuda::detail::FaceSlabSpec, pfc::cuda::detail::FaceSlabSpec>, 6>
       m_face_specs{};
+  std::array<
+      std::pair<pfc::cuda::detail::FaceSlabSpec, pfc::cuda::detail::FaceSlabSpec>, 6>
+      m_face_specs_widened{};
   std::array<pfc::halo::FaceTypes, 6> m_face_types{};
   std::vector<int> m_neighbors;
   std::vector<MPI_Request> m_requests;
@@ -320,11 +459,13 @@ private:
 
   bool m_use_gpu_aware = false;
   bool m_any_self_neighbor = false;
+  bool m_corner_fill = false;
 
   double *m_d_scratch = nullptr;
 
   // Used only on the packed-fallback path -- one exchanger per field.
-  std::vector<std::unique_ptr<pfc::cuda::PaddedDeviceHaloExchanger>> m_per_field_packed;
+  std::vector<std::unique_ptr<pfc::cuda::PaddedDeviceHaloExchanger>>
+      m_per_field_packed;
 };
 
 } // namespace kobayashi::cuda
