@@ -52,7 +52,7 @@ TEST_CASE("merged_spectral_plan_options_json merges root backend",
   REQUIRE(merged["use_pencils"] == true);
 }
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 TEST_CASE("cuda_spectral_plan_options_from_json overlays plan_options",
           "[ui][heffte][spectral_gpu]") {
   const json settings = {{"plan_options", {{"use_pencils", true}}}};

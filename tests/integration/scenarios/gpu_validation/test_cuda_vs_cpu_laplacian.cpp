@@ -14,7 +14,7 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
@@ -28,7 +28,7 @@ static inline World make_world(int nx, int ny, int nz) {
                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 TEST_CASE("CPU vs CUDA Laplacian equivalence (double) [integration][gpu]", "[gpu]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
