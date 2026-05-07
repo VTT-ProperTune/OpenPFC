@@ -68,7 +68,7 @@ public:
     const double xpos = (Lx * dx) - xwidth;
 
     pfc::field::apply_inplace(
-        m, get_field_name(), [=](const pfc::Real3 &X, double current) {
+        m, get_field_name(), [=, this](const pfc::Real3 &X, double current) {
           const double x = X[0];
           if (std::abs(x - xpos) < xwidth) {
             const double S = 1.0 / (1.0 + std::exp(-alpha * (x - xpos)));

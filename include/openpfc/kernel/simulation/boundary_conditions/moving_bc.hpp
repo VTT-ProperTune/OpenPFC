@@ -176,7 +176,7 @@ public:
     const double alpha = m_alpha;
 
     pfc::field::apply_inplace(
-        m, get_field_name(), [=](const pfc::Real3 &X, double current) {
+        m, get_field_name(), [=, this](const pfc::Real3 &X, double current) {
           const double x = X[0];
           const double dist = x - xpos;
           auto blend = [&](double d) {
