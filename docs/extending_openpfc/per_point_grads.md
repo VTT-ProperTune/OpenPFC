@@ -73,12 +73,28 @@ Different backends can fulfill different subsets of the catalog. Asking for a me
 
 | Backend | `value` | `x/y/z` | `xx/yy/zz` | `xy/xz/yz` |
 |---------|---------|---------|------------|------------|
-| `pfc::field::FdGradient<G>` | yes | not yet | yes | not yet (needs corner halos) |
+| `pfc::field::FdGradient<G>` | yes | yes — D1 orders 2..14 | yes — D2 orders 2..20 | not yet (needs corner-filled halos; see `pfc::cuda::FullPaddedDeviceHalo`) |
 | `pfc::field::SpectralGradient<G>` | yes | yes (via `i k_i`) | yes (via `-k_i^2`) | yes (via `-k_i k_j`) |
 
+`FdGradient<G>`'s constructor consults `pfc::field::has_*<G>` for every member individually and throws `std::invalid_argument` if the requested `order` falls outside the tabulated range for any declared member (so a model that asks for `g.x` at order 16 surfaces as a clean error at construction time, not as silent zeros at runtime).
+
 When new requirements show up:
-- FD first derivatives need a 1st-order central stencil table and the same halo width as the existing 2nd-order pass.
-- FD mixed seconds need corner halos in the exchanger; until then the spectral path is the only option.
+- **FD higher-order first derivatives**: extend `EvenCentralD1<Order>` in [`fd_stencils.hpp`](../../include/openpfc/kernel/field/fd_stencils.hpp) — the closed form `c_k = (-1)^{k+1} (M!)^2 / (k (M-k)! (M+k)!)` produces the rational coefficients; build the integer table with their lowest common denominator and add the matching `lookup_even_central_d1` case.
+- **FD mixed seconds (`xy/xz/yz`)** need **corner-filled** halos in the exchanger. The CUDA side has [`pfc::cuda::FullPaddedDeviceHalo`](../../include/openpfc/runtime/cuda/full_padded_device_halo.hpp) (3-pass widening, 26-direction); the matching CPU exchanger is the next plumbing follow-up. Until that lands, `SpectralGradient<G>` is the right path for any model that needs mixed seconds on the CPU.
+
+## Custom stencils — Sobel, CNN-style filters, anisotropic FD
+
+`FdGradient<G>` is the **PDE-specialised** evaluator: it consumes the central-difference tables in [`fd_stencils.hpp`](../../include/openpfc/kernel/field/fd_stencils.hpp) and returns the standard partial derivatives the model expects. For applications that want **arbitrary** stencils — Sobel-style edge detection, learned convolutional kernels, anisotropic FD on a non-uniform grid, separable Gaussian smoothing — OpenPFC ships a parallel **generic stencil layer** in [`stencil_apply.hpp`](../../include/openpfc/kernel/field/stencil_apply.hpp):
+
+| Primitive | Use when... |
+|---|---|
+| `pfc::field::stencil::apply_1d_along<Axis>(coeffs, half_width, core, c, sx, sy, sz)` | The stencil acts along a single axis and the weights are arbitrary (asymmetric OK — first-derivative central FD, anisotropic 1D filter, ...). |
+| `pfc::field::stencil::apply_separable(cx, Hx, cy, Hy, cz, Hz, core, c, sx, sy, sz)` | The 3D stencil factors as `cx ⊗ cy ⊗ cz` (3D Sobel, separable Gaussian, mixed seconds built from two 1D D1 tables, ...). |
+| `pfc::field::stencil::apply_dense<Nz, Ny, Nx>(weights, core, c, sx, sy, sz)` | The 3D stencil does **not** factor (rotationally-invariant FCC Laplacian, fully connected CNN filter, multiscale corner-emphasis filter). Compile-time extents `Nz x Ny x Nx` (each odd, each `>= 1`) so the loop unrolls. |
+
+The contract is identical to `apply_d2_along`: the caller passes a row-major buffer, a centre linear index, and three strides; the primitive returns the **already-scaled** weighted sum. Custom evaluators are easy to write — see the [`examples/16_sobel_edge_detection.cpp`](../../examples/) walkthrough for the full pattern (`prepare()` is a no-op, `operator()(i,j,k)` calls `apply_dense` once and stuffs the result into the model-owned aggregate).
+
+This is the laboratory layer: nothing in `apply_dense` is PDE-specific. If you need to plug a custom stencil through `for_each_interior`, write a small `MyStencilGradient<G>` evaluator that wraps it (~30 lines) and pass it to `pfc::sim::steppers::create(...)` exactly the same way you would `FdGradient<G>`.
 
 ## Multi-field models
 
