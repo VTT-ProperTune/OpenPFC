@@ -16,8 +16,9 @@
  *
  * can be written in user code (compact-driver style) and dispatched to a
  * single axpy in `pfc::field::LocalField::operator+=`. The underlying
- * field types (`LocalField<double>`, `pfc::sim::DuField<G, Eval>`, ...)
- * each provide a `friend operator*(double, ...)` returning this proxy.
+ * field types (`LocalField<double>`, `PaddedBrick<double>`,
+ * `pfc::sim::DuField<G, Eval>`, …) each provide a matching
+ * `operator*(double, …)` returning this proxy.
  *
  * Lifetime: the proxy is intended to be a transient temporary on the same
  * statement (`u += dt * du;`). It captures a raw pointer to the source

@@ -11,7 +11,7 @@ OpenPFC's point-wise driver loop, [`pfc::sim::for_each_interior`](../../include/
 du[{i,j,k}] = model.rhs(t, eval(i,j,k))
 ```
 
-The `eval(i,j,k)` call returns a **model-owned aggregate** that names exactly the partial derivatives the model needs, drawn from a fixed catalog. The kernel's per-point evaluators (`pfc::field::FdGradient<G>`, `pfc::field::SpectralGradient<G>`) are templated on that aggregate `G` and use C++20 concepts to fill **only the members `G` declares** — no wasted FFTs, no wasted stencil sweeps.
+The `eval(i,j,k)` call returns a **model-owned aggregate** that names exactly the partial derivatives the model needs, drawn from a fixed catalog. The kernel's per-point evaluators (`pfc::gradient::FDGradient<G>`, `pfc::field::SpectralGradient<G>`; `pfc::field::FdGradient<G>` is a deprecated alias retained for source compatibility) are templated on that aggregate `G` and use C++20 concepts to fill **only the members `G` declares** — no wasted FFTs, no wasted stencil sweeps.
 
 This page is the contract reference: which catalog members the kernel knows about, how a model declares its needs, what each backend can and cannot supply, and how to bundle multiple fields into one composite per-point view.
 
@@ -59,11 +59,11 @@ struct HeatModel {
 };
 ```
 
-The compact driver wires it to a backend in two lines and lets the user-facing time loop read like the math:
+The **spectral** compact driver wires the evaluator behind `pfc::sim::DuField` so the user-facing time loop reads like the math. **`heat3d_spectral_pointwise`** uses `SpectralCpuStack`:
 
 ```cpp
 auto& u  = stack.u();
-auto  du = stack.du<heat3d::HeatGrads>();   // FD or spectral; halo + evaluator hidden
+auto  du = stack.du<heat3d::HeatGrads>();   // spectral path
 
 for (int step = 0; step < n_steps; ++step) {
   du.apply([](const heat3d::HeatGrads& g) { return heat3d::kD * (g.xx + g.yy + g.zz); });
@@ -72,7 +72,22 @@ for (int step = 0; step < n_steps; ++step) {
 }
 ```
 
-`stack.du<G>()` takes the grads type as an explicit template argument and constructs the matching evaluator (`pfc::field::FdGradient<G>` for `FdCpuStack`, `pfc::field::SpectralGradient<G>` for `SpectralCpuStack`) bound to `stack.u()`. For non-trivial multi-field models, `pfc::sim::steppers::create(...)` plus `pfc::field::CompositeGradient<...>` remains the right tool (see `apps/kobayashi`).
+The **FD** compact driver **`heat3d_fd`** instead spells the three primitives — halo, gradient, sweep — out in `main`, on top of two `pfc::field::PaddedBrick<double>` buffers (`u`, `du`) plus a `pfc::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD)` and a `pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, fd_order)` bound to the same `u`:
+
+```cpp
+for (int step = 0; step < n_steps; ++step) {
+  pfc::start_exchange(halo);
+  pfc::finish_exchange(halo);
+  pfc::field::for_each(du, [&](const auto& idx) {
+    const auto g = pfc::gradient::evaluate(grad, idx);
+    du(idx) = heat3d::kD * (g.xx + g.yy + g.zz);
+  });
+  u += dt * du;
+  t += dt;
+}
+```
+
+The free `pfc::start_exchange / finish_exchange / pfc::gradient::evaluate` wrappers and the dimension-agnostic `pfc::Int3` callback keep the loop readable without hiding the halo or the evaluator. Programmatic code that needs an FFT-safe unpadded core continues to use **`FdCpuStack`** (`stack.du<G>()` wires `SparseHaloExchanger` + face buffers + `FDGradient` behind `DuField`). For non-trivial multi-field models, `pfc::sim::steppers::create(...)` plus `pfc::field::CompositeGradient<...>` remains the right tool (see `apps/kobayashi`).
 
 ## Backend capability matrix
 
@@ -80,10 +95,10 @@ Different backends can fulfill different subsets of the catalog. Asking for a me
 
 | Backend | `value` | `x/y/z` | `xx/yy/zz` | `xy/xz/yz` |
 |---------|---------|---------|------------|------------|
-| `pfc::field::FdGradient<G>` | yes | yes — D1 orders 2..14 | yes — D2 orders 2..20 | not yet (needs corner-filled halos; see `pfc::cuda::FullPaddedDeviceHalo`) |
+| `pfc::gradient::FDGradient<G>` | yes | yes — D1 orders 2..14 | yes — D2 orders 2..20 | not yet (needs corner-filled halos; see `pfc::cuda::FullPaddedDeviceHalo`) |
 | `pfc::field::SpectralGradient<G>` | yes | yes (via `i k_i`) | yes (via `-k_i^2`) | yes (via `-k_i k_j`) |
 
-`FdGradient<G>`'s constructor consults `pfc::field::has_*<G>` for every member individually and throws `std::invalid_argument` if the requested `order` falls outside the tabulated range for any declared member (so a model that asks for `g.x` at order 16 surfaces as a clean error at construction time, not as silent zeros at runtime).
+`FDGradient<G>`'s constructor consults `pfc::field::has_*<G>` for every member individually and throws `std::invalid_argument` if the requested `order` falls outside the tabulated range for any declared member (so a model that asks for `g.x` at order 16 surfaces as a clean error at construction time, not as silent zeros at runtime).
 
 When new requirements show up:
 - **FD higher-order first derivatives**: extend `EvenCentralD1<Order>` in [`fd_stencils.hpp`](../../include/openpfc/kernel/field/fd_stencils.hpp) — the closed form `c_k = (-1)^{k+1} (M!)^2 / (k (M-k)! (M+k)!)` produces the rational coefficients; build the integer table with their lowest common denominator and add the matching `lookup_even_central_d1` case.
@@ -91,7 +106,7 @@ When new requirements show up:
 
 ## Custom stencils — Sobel, CNN-style filters, anisotropic FD
 
-`FdGradient<G>` is the **PDE-specialised** evaluator: it consumes the central-difference tables in [`fd_stencils.hpp`](../../include/openpfc/kernel/field/fd_stencils.hpp) and returns the standard partial derivatives the model expects. For applications that want **arbitrary** stencils — Sobel-style edge detection, learned convolutional kernels, anisotropic FD on a non-uniform grid, separable Gaussian smoothing — OpenPFC ships a parallel **generic stencil layer** in [`stencil_apply.hpp`](../../include/openpfc/kernel/field/stencil_apply.hpp):
+`FDGradient<G>` is the **PDE-specialised** evaluator: it consumes the central-difference tables in [`fd_stencils.hpp`](../../include/openpfc/kernel/field/fd_stencils.hpp) and returns the standard partial derivatives the model expects. For applications that want **arbitrary** stencils — Sobel-style edge detection, learned convolutional kernels, anisotropic FD on a non-uniform grid, separable Gaussian smoothing — OpenPFC ships a parallel **generic stencil layer** in [`stencil_apply.hpp`](../../include/openpfc/kernel/field/stencil_apply.hpp):
 
 | Primitive | Use when... |
 |---|---|
@@ -101,7 +116,7 @@ When new requirements show up:
 
 The contract is identical to `apply_d2_along`: the caller passes a row-major buffer, a centre linear index, and three strides; the primitive returns the **already-scaled** weighted sum. Custom evaluators are easy to write — see the [`examples/16_sobel_edge_detection.cpp`](../../examples/) walkthrough for the full pattern (`prepare()` is a no-op, `operator()(i,j,k)` calls `apply_dense` once and stuffs the result into the model-owned aggregate).
 
-This is the laboratory layer: nothing in `apply_dense` is PDE-specific. If you need to plug a custom stencil through `for_each_interior`, write a small `MyStencilGradient<G>` evaluator that wraps it (~30 lines) and pass it to `pfc::sim::steppers::create(...)` exactly the same way you would `FdGradient<G>`.
+This is the laboratory layer: nothing in `apply_dense` is PDE-specific. If you need to plug a custom stencil through `for_each_interior`, write a small `MyStencilGradient<G>` evaluator that wraps it (~30 lines) and pass it to `pfc::sim::steppers::create(...)` exactly the same way you would `pfc::gradient::FDGradient<G>`.
 
 ## Multi-field models
 

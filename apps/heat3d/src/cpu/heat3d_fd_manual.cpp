@@ -8,10 +8,12 @@
  *
  * @details
  * This is the **"laboratory, not fortress"** counterpart to `heat3d_fd`.
- * Where `heat3d_fd` composes `FdCpuStack + FdGradient + EulerStepper`
- * in three lines and hides the physics inside the kernel, this driver
- * exposes the stencil, the comm/compute overlap, and the explicit
- * Euler update directly in `main`. Only the cumbersome plumbing —
+ * Where `heat3d_fd` composes `PaddedBrick + PaddedHaloExchanger +
+ * FDGradient + for_each` as three visible primitives (halo, gradient,
+ * sweep) in `main`, this driver instead exposes a different decomposition:
+ * a single overlapped halo exchange (start interior / finish border) and a
+ * raw 2nd-order central stencil written line-by-line, with the explicit
+ * Euler update inlined. Only the cumbersome plumbing —
  * decomposition, MPI face exchange, and linear-index arithmetic —
  * stays hidden behind:
  *
