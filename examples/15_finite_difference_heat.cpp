@@ -10,7 +10,7 @@
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/separated_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
@@ -19,10 +19,12 @@ using namespace pfc;
  *
  * Multi-rank explicit heat equation \( \partial u / \partial t = D \nabla^2 u \)
  * on a fully periodic 3D box with a 7-point Laplacian. Uses **separated face
- * halos** (`SeparatedFaceHaloExchanger`): the **core** field is contiguous
- * `nx×ny×nz` subdomain data safe to pass to `fft.forward` / `fft.backward` on
- * the same decomposition without mixing ghost semantics. Ghost values live in
- * six side buffers filled each step before the stencil.
+ * halos** via `pfc::SparseHaloExchanger<double>` configured by
+ * `pfc::halo::make_structured_halos<double>(...)` (default `Axes3D()`): the
+ * **core** field is contiguous `nx×ny×nz` subdomain data safe to pass to
+ * `fft.forward` / `fft.backward` on the same decomposition without mixing
+ * ghost semantics. Ghost values live in six side buffers filled each step
+ * before the stencil via `pfc::halo::copy_to_face_layout`.
  *
  * The Laplacian is the templated brick `laplacian_periodic_separated<2>`,
  * which iterates the **full owned region** `[0, n)` along every axis and
@@ -87,8 +89,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, halo_width,
-                                               MPI_COMM_WORLD);
+  SparseHaloExchanger<double> exchanger(
+      MPI_COMM_WORLD, rank,
+      halo::make_structured_halos<double>(decomp, rank, halo_width));
 
   std::array<const double *, 6> face_ptrs;
   for (int i = 0; i < 6; ++i) {
@@ -96,7 +99,8 @@ int main(int argc, char *argv[]) {
   }
 
   for (int step = 0; step < n_steps; ++step) {
-    exchanger.exchange_halos(u.data(), u.size(), face_halos);
+    exchanger.exchange_halos(u.data(), u.size());
+    halo::copy_to_face_layout(exchanger, face_halos);
     std::fill(lap.begin(), lap.end(), 0.0);
     field::fd::laplacian_periodic_separated<2>(u.data(), face_ptrs, lap.data(), nx,
                                                ny, nz, inv_dx2, inv_dx2, inv_dx2,
