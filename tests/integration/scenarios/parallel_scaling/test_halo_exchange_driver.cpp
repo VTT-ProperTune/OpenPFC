@@ -26,6 +26,13 @@ TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
     return; // need at least 2 ranks
   }
 
+  // Hard-wired {2,1,1} grid (two subdomains only); skip when more MPI ranks
+  // participate — otherwise get_subworld(decomp, rank) is out of range and
+  // neighbor semantics no longer match the assertions below.
+  if (size != 2) {
+    return;
+  }
+
   // 2x1x1 decomposition: rank 0 = left half, rank 1 = right half in X
   auto world = world::uniform(24, 1.0);
   auto decomp = decomposition::create(world, {2, 1, 1});
