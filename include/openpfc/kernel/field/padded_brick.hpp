@@ -50,8 +50,10 @@
 
 #include <array>
 #include <cstddef>
+#include <iterator>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 
@@ -59,8 +61,111 @@
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/field/scaled_field.hpp>
+
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 namespace pfc::field {
+
+namespace detail {
+
+/**
+ * @brief Forward iterator yielding `pfc::Int3{i, j, k}` over a half-open
+ *        cuboid `[lo[0], hi[0]) x [lo[1], hi[1]) x [lo[2], hi[2])` in
+ *        **k-outer / j-middle / i-inner** (row-major, x-fastest) order.
+ *
+ * Used by `PaddedBrick<T>::indices()` and `indices_inner(r)` to drive
+ * `pfc::field::for_each(...)` over the owned region in the same order
+ * the storage is laid out, so the inner loop is cache-friendly.
+ */
+class OwnedIndexIterator {
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = pfc::Int3;
+  using reference = pfc::Int3;
+  using pointer = void;
+  using difference_type = std::ptrdiff_t;
+
+  OwnedIndexIterator() noexcept = default;
+  OwnedIndexIterator(pfc::Int3 lo, pfc::Int3 hi, pfc::Int3 cur) noexcept
+      : m_lo(lo), m_hi(hi), m_cur(cur) {}
+
+  pfc::Int3 operator*() const noexcept { return m_cur; }
+
+  OwnedIndexIterator &operator++() noexcept {
+    if (++m_cur[0] >= m_hi[0]) {
+      m_cur[0] = m_lo[0];
+      if (++m_cur[1] >= m_hi[1]) {
+        m_cur[1] = m_lo[1];
+        ++m_cur[2];
+      }
+    }
+    return *this;
+  }
+  OwnedIndexIterator operator++(int) noexcept {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
+
+  friend bool operator==(const OwnedIndexIterator &a,
+                         const OwnedIndexIterator &b) noexcept {
+    return a.m_cur == b.m_cur;
+  }
+  friend bool operator!=(const OwnedIndexIterator &a,
+                         const OwnedIndexIterator &b) noexcept {
+    return !(a == b);
+  }
+
+private:
+  pfc::Int3 m_lo{};
+  pfc::Int3 m_hi{};
+  pfc::Int3 m_cur{};
+};
+
+/**
+ * @brief Half-open cuboid `[lo, hi)` exposed as a forward range whose
+ *        elements are `pfc::Int3{i, j, k}` triples in k-outer / j-middle
+ *        / i-inner order. Empty whenever any axis has `lo[d] >= hi[d]`.
+ */
+class OwnedIndexRange {
+public:
+  OwnedIndexRange() noexcept = default;
+  OwnedIndexRange(pfc::Int3 lo, pfc::Int3 hi) noexcept : m_lo(lo), m_hi(hi) {
+    if (m_lo[0] >= m_hi[0] || m_lo[1] >= m_hi[1] || m_lo[2] >= m_hi[2]) {
+      m_hi = m_lo; // collapse to empty range
+    }
+  }
+
+  OwnedIndexIterator begin() const noexcept { return {m_lo, m_hi, m_lo}; }
+  OwnedIndexIterator end() const noexcept {
+    // After incrementing past `(hi[0]-1, hi[1]-1, hi[2]-1)` the iterator
+    // reaches `(lo[0], lo[1], hi[2])` — the canonical sentinel.
+    return {m_lo, m_hi, pfc::Int3{m_lo[0], m_lo[1], m_hi[2]}};
+  }
+
+  [[nodiscard]] bool empty() const noexcept {
+    return m_lo[0] == m_hi[0] || m_lo[1] == m_hi[1] || m_lo[2] == m_hi[2];
+  }
+
+  [[nodiscard]] std::size_t size() const noexcept {
+    if (empty()) return 0;
+    return static_cast<std::size_t>(m_hi[0] - m_lo[0]) *
+           static_cast<std::size_t>(m_hi[1] - m_lo[1]) *
+           static_cast<std::size_t>(m_hi[2] - m_lo[2]);
+  }
+
+  [[nodiscard]] pfc::Int3 lower() const noexcept { return m_lo; }
+  [[nodiscard]] pfc::Int3 upper() const noexcept { return m_hi; }
+
+private:
+  pfc::Int3 m_lo{};
+  pfc::Int3 m_hi{};
+};
+
+} // namespace detail
 
 /**
  * @brief Halo-padded contiguous brick: one buffer, `[-hw, n+hw)` indexing.
@@ -69,6 +174,16 @@ namespace pfc::field {
  *   `linear = (i + hw) + (j + hw) * nx_pad + (k + hw) * nx_pad * ny_pad`
  * where `nx_pad = nx + 2*hw`, etc. The MPI subarray types built by
  * `pfc::halo::create_padded_face_types_6` use the same convention.
+ *
+ * Each brick is **self-contained**: it owns the `Decomposition` (by value),
+ * its `rank`, and `halo_width` so downstream consumers — exchangers,
+ * gradient evaluators, iteration helpers — can pick everything they need
+ * from the brick alone. This avoids drift between e.g. an exchanger and
+ * an evaluator constructed against the same field but with mismatched
+ * halo widths.
+ *
+ * The brick itself is **MPI-unaware**: the `MPI_Comm` lives on the
+ * exchanger (`pfc::PaddedHaloExchanger<T>`), not on the storage.
  *
  * @tparam T Element type (`double` for the heat equation; `float` /
  *           `std::complex<double>` are equally valid).
@@ -95,14 +210,14 @@ public:
    */
   PaddedBrick(const pfc::decomposition::Decomposition &decomp, int rank,
               int halo_width)
-      : m_halo(halo_width) {
+      : m_decomp(decomp), m_rank(rank), m_halo(halo_width) {
     if (halo_width < 0) {
       throw std::invalid_argument(
           "pfc::field::PaddedBrick: halo_width must be non-negative (got " +
           std::to_string(halo_width) + ")");
     }
-    const auto &gw = pfc::decomposition::get_world(decomp);
-    const auto &local = pfc::decomposition::get_subworld(decomp, rank);
+    const auto &gw = pfc::decomposition::get_world(m_decomp);
+    const auto &local = pfc::decomposition::get_subworld(m_decomp, m_rank);
     m_size = pfc::world::get_size(local);
     m_lower = pfc::world::get_lower(local);
     m_global_size = pfc::world::get_size(gw);
@@ -150,6 +265,13 @@ public:
   pfc::Real3 spacing() const noexcept { return m_spacing; }
   int halo_width() const noexcept { return m_halo; }
 
+  /// Decomposition that produced this brick (carried by value, MPI-free).
+  const pfc::decomposition::Decomposition &decomposition() const noexcept {
+    return m_decomp;
+  }
+  /// Rank in the parent decomposition the brick was built for.
+  int rank() const noexcept { return m_rank; }
+
   /// Owned-x extent.
   int nx() const noexcept { return m_size[0]; }
   /// Owned-y extent.
@@ -189,6 +311,52 @@ public:
   }
 
   /**
+   * @brief `pfc::Int3` overloads of `idx` / `operator()`.
+   *
+   * Lets generic code call `brick(idx)` after receiving a triple from
+   * `for_each` or `indices()`, instead of unpacking it manually.
+   */
+  std::size_t idx(const pfc::Int3 &c) const noexcept {
+    return idx(c[0], c[1], c[2]);
+  }
+  T &operator()(const pfc::Int3 &c) noexcept { return m_data[idx(c)]; }
+  const T &operator()(const pfc::Int3 &c) const noexcept { return m_data[idx(c)]; }
+
+  // ---- Owned-cell index ranges -------------------------------------------
+
+  /**
+   * @brief Forward range of `pfc::Int3{i, j, k}` over the **owned**
+   *        region `[0, nx) x [0, ny) x [0, nz)`, in k-outer / j-middle
+   *        / i-inner order.
+   *
+   * Pair with `pfc::field::for_each(brick, fn)` for a cache-friendly
+   * sweep over every owned cell, or use the iterators directly:
+   *
+   * ```cpp
+   * for (const auto idx : brick.indices()) {
+   *   brick(idx) = some_value(idx);
+   * }
+   * ```
+   */
+  detail::OwnedIndexRange indices() const noexcept {
+    return {pfc::Int3{0, 0, 0}, m_size};
+  }
+
+  /**
+   * @brief Forward range of `pfc::Int3{i, j, k}` over the inner region
+   *        `[r, n - r)` per axis (no `r`-thick boundary slab).
+   *
+   * Returns an empty range whenever any axis has `n <= 2*r`, so the
+   * caller never iterates past the owned region. Stencils that read
+   * `±r` neighbors entirely inside the owned core (without halo data)
+   * use this to bound the sweep.
+   */
+  detail::OwnedIndexRange indices_inner(int r) const noexcept {
+    return {pfc::Int3{r, r, r},
+            pfc::Int3{m_size[0] - r, m_size[1] - r, m_size[2] - r}};
+  }
+
+  /**
    * @brief Global cell index `(gi, gj, gk)` of local `(i, j, k)`.
    *
    * For halo cells (e.g. `i = -1`) this returns the conceptual global
@@ -200,16 +368,27 @@ public:
   }
 
   /**
+   * @brief Physical coordinates `(x, y, z)` as scalars for local `(i, j, k)`.
+   *
+   * Same geometry as `global_coords`; pair with structured bindings, e.g.
+   * `auto [x, y, z] = brick.global_xyz(i, j, k);`.
+   */
+  [[nodiscard]] std::tuple<double, double, double> global_xyz(int i, int j,
+                                                              int k) const noexcept {
+    return {m_origin[0] + static_cast<double>(m_lower[0] + i) * m_spacing[0],
+            m_origin[1] + static_cast<double>(m_lower[1] + j) * m_spacing[1],
+            m_origin[2] + static_cast<double>(m_lower[2] + k) * m_spacing[2]};
+  }
+
+  /**
    * @brief Physical coordinates `(x, y, z)` of local `(i, j, k)`.
    *
    * Computed as `origin + (lower + i) * spacing` — same as
    * `LocalField::coords` but valid across the halo ring as well.
    */
   pfc::Real3 global_coords(int i, int j, int k) const noexcept {
-    return pfc::Real3{
-        m_origin[0] + static_cast<double>(m_lower[0] + i) * m_spacing[0],
-        m_origin[1] + static_cast<double>(m_lower[1] + j) * m_spacing[1],
-        m_origin[2] + static_cast<double>(m_lower[2] + k) * m_spacing[2]};
+    const auto [x, y, z] = global_xyz(i, j, k);
+    return pfc::Real3{x, y, z};
   }
 
   // ---- Convenience iteration ---------------------------------------------
@@ -237,6 +416,37 @@ public:
     }
   }
 
+  /**
+   * @brief In-place axpy over the full padded buffer:
+   *        `m_data[k] += s.alpha * s.data[k]`.
+   *
+   * Intended for `u += dt * du` when `du` is a `DuField` whose residual
+   * buffer matches `size()` and leaves halo lanes at zero (refreshed each
+   * step by `PaddedHaloExchanger`).
+   *
+   * @throws std::invalid_argument if `s.size != size()`.
+   */
+  template <class U = T, class = std::enable_if_t<std::is_same_v<U, double>>>
+  PaddedBrick &operator+=(const ScaledField &s) {
+    if (s.size != m_data.size()) {
+      throw std::invalid_argument(
+          "pfc::field::PaddedBrick::operator+=: ScaledField size " +
+          std::to_string(s.size) + " does not match field size " +
+          std::to_string(m_data.size()));
+    }
+    const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(m_data.size());
+    const double alpha = s.alpha;
+    const double *src = s.data;
+    double *dst = m_data.data();
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static)
+#endif
+    for (std::ptrdiff_t i = 0; i < n; ++i) {
+      dst[i] += alpha * src[i];
+    }
+    return *this;
+  }
+
 private:
   int padded_extent_(int n) const noexcept { return n + 2 * m_halo; }
 
@@ -248,6 +458,8 @@ private:
     }
   }
 
+  pfc::decomposition::Decomposition m_decomp;
+  int m_rank{0};
   std::vector<T> m_data{};
   pfc::Int3 m_size{};
   pfc::Int3 m_lower{};
@@ -256,5 +468,15 @@ private:
   pfc::Real3 m_spacing{};
   int m_halo{0};
 };
+
+/**
+ * @brief Build a `ScaledField` proxy from a scalar and a padded brick.
+ *
+ * Enables `u += dt * du` when `u` is `PaddedBrick<double>` and `du` is a
+ * matching `DuField` (same flattened padded length).
+ */
+inline ScaledField operator*(double alpha, const PaddedBrick<double> &f) noexcept {
+  return ScaledField{alpha, f.data(), f.size()};
+}
 
 } // namespace pfc::field

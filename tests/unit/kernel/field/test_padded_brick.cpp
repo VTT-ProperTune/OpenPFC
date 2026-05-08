@@ -149,3 +149,95 @@ TEST_CASE("PaddedBrick: rejects negative halo width", "[field][padded_brick]") {
   REQUIRE_THROWS_AS(field::PaddedBrick<double>(decomp, 0, -1),
                     std::invalid_argument);
 }
+
+TEST_CASE("PaddedBrick: carries decomposition and rank along with hw",
+          "[field][padded_brick]") {
+  auto world = world::create(GridSize({8, 6, 4}));
+  auto decomp = decomposition::create(world, 1);
+
+  const int hw = 2;
+  field::PaddedBrick<double> u(decomp, /*rank=*/0, hw);
+
+  REQUIRE(u.rank() == 0);
+  REQUIRE(u.halo_width() == hw);
+
+  // Decomposition is stored by value: PaddedBrick stays valid even after the
+  // factory's local Decomposition object goes out of scope (mirrors the
+  // lifetime guarantee in test_decomposition_lifetime.cpp).
+  const auto &owned_decomp = u.decomposition();
+  REQUIRE(world::get_size(decomposition::get_subworld(owned_decomp, 0)) ==
+          world::get_size(decomposition::get_subworld(decomp, 0)));
+}
+
+TEST_CASE("PaddedBrick: indices() walks every owned cell in row-major order",
+          "[field][padded_brick]") {
+  auto world = world::create(GridSize({4, 3, 2}));
+  auto decomp = decomposition::create(world, 1);
+
+  field::PaddedBrick<int> u(decomp, /*rank=*/0, /*hw=*/1);
+
+  std::size_t count = 0;
+  pfc::Int3 last{-1, -1, -1};
+  for (const auto idx : u.indices()) {
+    REQUIRE(idx[0] >= 0);
+    REQUIRE(idx[0] < u.nx());
+    REQUIRE(idx[1] >= 0);
+    REQUIRE(idx[1] < u.ny());
+    REQUIRE(idx[2] >= 0);
+    REQUIRE(idx[2] < u.nz());
+    last = idx;
+    ++count;
+  }
+  REQUIRE(count == static_cast<std::size_t>(u.nx() * u.ny() * u.nz()));
+  REQUIRE(last == pfc::Int3{u.nx() - 1, u.ny() - 1, u.nz() - 1});
+}
+
+TEST_CASE("PaddedBrick: indices_inner(r) skips r-thick boundary slab",
+          "[field][padded_brick]") {
+  auto world = world::create(GridSize({6, 6, 6}));
+  auto decomp = decomposition::create(world, 1);
+
+  field::PaddedBrick<int> u(decomp, /*rank=*/0, /*hw=*/2);
+
+  const int r = 2;
+  std::size_t count = 0;
+  for (const auto idx : u.indices_inner(r)) {
+    REQUIRE(idx[0] >= r);
+    REQUIRE(idx[0] < u.nx() - r);
+    REQUIRE(idx[1] >= r);
+    REQUIRE(idx[1] < u.ny() - r);
+    REQUIRE(idx[2] >= r);
+    REQUIRE(idx[2] < u.nz() - r);
+    ++count;
+  }
+  REQUIRE(count == static_cast<std::size_t>((u.nx() - 2 * r) * (u.ny() - 2 * r) *
+                                            (u.nz() - 2 * r)));
+
+  // Empty range when r is too large for the owned core.
+  std::size_t empty_count = 0;
+  for (const auto idx : u.indices_inner(/*r=*/u.nx())) {
+    (void)idx;
+    ++empty_count;
+  }
+  REQUIRE(empty_count == 0);
+}
+
+TEST_CASE("PaddedBrick: Int3 overloads of idx/operator() match scalar form",
+          "[field][padded_brick]") {
+  auto world = world::create(GridSize({3, 3, 3}));
+  auto decomp = decomposition::create(world, 1);
+
+  field::PaddedBrick<int> u(decomp, /*rank=*/0, /*hw=*/1);
+
+  for (int k = 0; k < u.nz(); ++k) {
+    for (int j = 0; j < u.ny(); ++j) {
+      for (int i = 0; i < u.nx(); ++i) {
+        u(pfc::Int3{i, j, k}) = i + 10 * j + 100 * k;
+      }
+    }
+  }
+  for (const auto idx : u.indices()) {
+    REQUIRE(u(idx) == idx[0] + 10 * idx[1] + 100 * idx[2]);
+    REQUIRE(u.idx(idx) == u.idx(idx[0], idx[1], idx[2]));
+  }
+}
