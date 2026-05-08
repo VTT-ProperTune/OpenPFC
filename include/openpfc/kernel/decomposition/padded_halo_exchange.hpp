@@ -10,7 +10,8 @@
  * @details
  * Sibling of `pfc::HaloExchanger` (no padding, overwrites the outermost
  * owned cells) and `pfc::SparseHaloExchanger` (sparse, separate face
- * vectors). `pfc::PaddedHaloExchanger<T>` is the in-place exchanger
+ * vectors). `pfc::communication::PaddedHaloExchanger<T>` is the in-place
+ * exchanger
  * that targets a `(nx+2hw)*(ny+2hw)*(nz+2hw)` `pfc::field::PaddedBrick<T>`
  * buffer:
  *
@@ -23,14 +24,14 @@
  *     `finish_halo_exchange()` pair as the existing exchangers, plus a
  *     blocking `exchange_halos(...)` convenience wrapper.
  *   - The **preferred** entry point is the brick-binding constructor
- *     `PaddedHaloExchanger(field::PaddedBrick<T>& u, MPI_Comm comm)`:
+ *     `communication::PaddedHaloExchanger(field::PaddedBrick<T>& u, MPI_Comm comm)`:
  *     it pulls the decomposition / rank / halo width from `u` and
  *     captures the buffer pointer once, so the time loop can read
  *
- *       pfc::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
- *       pfc::start_exchange(halo);
- *       // ... compute on inner cells ...
- *       pfc::finish_exchange(halo);
+ *       pfc::communication::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+ *       pfc::communication::exchange(halo);   // blocking; one call
+ *       // Pro overlap: pfc::communication::start_exchange(halo); …
+ *       //               pfc::communication::finish_exchange(halo);
  *
  *     with no chance of drift between the brick layout and the
  *     exchanger arguments.
@@ -65,7 +66,11 @@
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
-namespace pfc {
+// `pfc::exchange` is already a namespace (`exchange.hpp`). The blocking
+// one-shot helper therefore lives only as `pfc::communication::exchange`
+// and is not re-exported into `pfc::`.
+
+namespace pfc::communication {
 
 /**
  * @brief In-place non-blocking face halo exchange for a padded brick.
@@ -147,9 +152,9 @@ public:
    * Pulls decomposition, rank, halo width, **and the buffer pointer**
    * from `u`. After construction the exchanger is "bound" to that brick
    * and you can drive it with the no-arg `start()` / `finish()` member
-   * functions or the free `pfc::start_exchange(exchanger)` /
-   * `pfc::finish_exchange(exchanger)` wrappers — no need to re-pass the
-   * buffer or the halo width and risk drift.
+   * functions or the free `pfc::communication::start_exchange(exchanger)` /
+   * `pfc::communication::finish_exchange(exchanger)` wrappers — no need to re-pass
+   * the buffer or the halo width and risk drift.
    *
    * The brick must outlive the exchanger; its buffer pointer is captured
    * once at construction and `PaddedBrick` does not reallocate, so this
@@ -282,10 +287,11 @@ private:
 
   void require_bound_(const char *what) const {
     if (m_bound_buf == nullptr) {
-      throw std::logic_error(std::string("pfc::PaddedHaloExchanger::") + what +
-                             ": exchanger is not bound to a PaddedBrick. "
-                             "Use the (PaddedBrick&, MPI_Comm) constructor or call "
-                             "start_halo_exchange(buf, size) directly.");
+      throw std::logic_error(
+          std::string("pfc::communication::PaddedHaloExchanger::") + what +
+          ": exchanger is not bound to a PaddedBrick. "
+          "Use the (PaddedBrick&, MPI_Comm) constructor or call "
+          "start_halo_exchange(buf, size) directly.");
     }
   }
 
@@ -321,13 +327,17 @@ private:
 };
 
 /**
- * @name Free wrappers for `PaddedHaloExchanger`
+ * @name Free helpers for `PaddedHaloExchanger`
  *
- * Mirror the user-side spelling `pfc::start_exchange(halo)` /
- * `pfc::finish_exchange(halo)` so call sites read declaratively
- * ("start the exchange") rather than as method calls. The exchanger
- * must be bound to a `pfc::field::PaddedBrick<T>` (see the brick-binding
- * constructors).
+ * `exchange(halo)` runs a full non-blocking exchange (start then finish)
+ * with no overlap — the usual choice in compact drivers.
+ *
+ * `start_exchange` / `finish_exchange` split the pair so inner work can
+ * run while messages are in flight (same shape as `start_halo_exchange` /
+ * `finish_halo_exchange` on the raw buffer API).
+ *
+ * The exchanger must be bound to a `pfc::field::PaddedBrick<T>` (see the
+ * brick-binding constructors).
  * @{
  */
 template <typename T> inline void start_exchange(PaddedHaloExchanger<T> &h) {
@@ -336,6 +346,18 @@ template <typename T> inline void start_exchange(PaddedHaloExchanger<T> &h) {
 template <typename T> inline void finish_exchange(PaddedHaloExchanger<T> &h) {
   h.finish();
 }
+template <typename T> inline void exchange(PaddedHaloExchanger<T> &h) {
+  start_exchange(h);
+  finish_exchange(h);
+}
 /// @}
 
+} // namespace pfc::communication
+
+namespace pfc {
+using communication::finish_exchange;
+using communication::PaddedHaloExchanger;
+using communication::start_exchange;
+// Note: `communication::exchange` is not brought into `pfc::` — it would
+// collide with the existing `pfc::exchange` namespace from `exchange.hpp`.
 } // namespace pfc

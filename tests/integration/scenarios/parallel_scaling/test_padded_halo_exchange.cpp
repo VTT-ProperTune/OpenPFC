@@ -238,6 +238,31 @@ TEST_CASE("PaddedHaloExchanger: brick-binding ctor + free start/finish wrappers"
   }
 }
 
+TEST_CASE("PaddedHaloExchanger: exchange(halo) matches start+finish",
+          "[MPI][padded_halo]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2) return;
+
+  auto world = world::create(GridSize({16, 8, 4}));
+  auto decomp = decomposition::create(world, {2, 1, 1});
+
+  const int hw = 2;
+  field::PaddedBrick<double> u(decomp, rank, hw);
+  const double mine = static_cast<double>(rank);
+  const double other = static_cast<double>(1 - rank);
+  fill_owned(u, mine);
+
+  pfc::communication::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+  pfc::communication::exchange(halo);
+
+  for (int d = 1; d <= hw; ++d) {
+    assert_halo_layer_x(u, -d, other);
+    assert_halo_layer_x(u, u.nx() + d - 1, other);
+  }
+}
+
 TEST_CASE("PaddedHaloExchanger: unbound start() throws std::logic_error",
           "[MPI][padded_halo]") {
   int rank = 0, size = 1;

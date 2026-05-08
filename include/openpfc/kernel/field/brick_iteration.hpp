@@ -26,10 +26,12 @@
  *                                             region (`[r, n-r)^3`);
  *                                             safe to compute **before**
  *                                             halos arrive.
- *    - `for_each_inner_coords(brick, r, fn)`— same domain, but passes
- *                                             physical `(x,y,z)` plus the
- *                                             cell value (mirrors
- *                                             `LocalField::for_each_interior`).
+ *    - `for_each_coords(brick, fn)`          — every **owned** cell with
+ *                                             physical `(x,y,z)` and a
+ *                                             mutable `T&` (or `const T&`
+ *                                             on a const brick); halo width
+ *                                             is not passed in — the brick
+ *                                             already knows the layout.
  *    - `for_each_border(brick, r, fn)`      — the rest of the owned region;
  *                                             **needs** halo data.
  *
@@ -65,10 +67,24 @@ template <class Fn, class T>
 inline void invoke_coords_value_(Fn &&fn, double x, double y, double z, const T &v) {
   static_assert(std::is_invocable_v<Fn &, double, double, double, const T &> ||
                     std::is_invocable_v<Fn &, const pfc::Real3 &, const T &>,
-                "for_each_inner_coords: lambda must be invocable as "
+                "callback must be invocable as "
                 "(double x, double y, double z, const T& value) or "
                 "(const Real3& xyz, const T& value)");
   if constexpr (std::is_invocable_v<Fn &, double, double, double, const T &>) {
+    std::forward<Fn>(fn)(x, y, z, v);
+  } else {
+    std::forward<Fn>(fn)(pfc::Real3{x, y, z}, v);
+  }
+}
+
+template <class Fn, class T>
+inline void invoke_coords_mutable_(Fn &&fn, double x, double y, double z, T &v) {
+  static_assert(std::is_invocable_v<Fn &, double, double, double, T &> ||
+                    std::is_invocable_v<Fn &, const pfc::Real3 &, T &>,
+                "for_each_coords: lambda must be invocable as "
+                "(double x, double y, double z, T& value) or "
+                "(const Real3& xyz, T& value)");
+  if constexpr (std::is_invocable_v<Fn &, double, double, double, T &>) {
     std::forward<Fn>(fn)(x, y, z, v);
   } else {
     std::forward<Fn>(fn)(pfc::Real3{x, y, z}, v);
@@ -87,7 +103,7 @@ inline void invoke_coords_value_(Fn &&fn, double x, double y, double z, const T 
  * @code
  * pfc::field::for_each(du, [&](const auto& idx) {
  *   const auto g = pfc::gradient::evaluate(grad, idx);
- *   du(idx) = heat3d::kD * (g.xx + g.yy + g.zz);
+ *   du[idx] = g.xx + g.yy + g.zz;
  * });
  * @endcode
  *
@@ -214,25 +230,48 @@ inline void for_each_inner_omp(const PaddedBrick<T> &brick, int r, Fn &&fn) {
 }
 
 /**
- * @brief Same iteration domain as `for_each_inner`, with physical coordinates.
+ * @brief Iterate every **owned** cell with physical coordinates.
  *
- * Invokes `fn` at each inner owned cell. Lambda must be invocable as either:
+ * Visits `(i,j,k) in [0,nx) x [0,ny) x [0,nz)` in k-outer / j-middle /
+ * i-inner order. On a **non-const** `brick`, `fn` is invoked as either:
+ *  - `void(double x, double y, double z, T& value)`, or
+ *  - `void(const Real3& xyz, T& value)`.
+ *
+ * On a **const** `brick`, the value is read-only:
  *  - `void(double x, double y, double z, const T& value)`, or
  *  - `void(const Real3& xyz, const T& value)`.
  *
- * No-op if any axis has `nx <= 2*r`.
+ * Use this for initial conditions and diagnostics that need `(x,y,z)`
+ * without threading a separate `hw` argument — the brick already carries
+ * decomposition, spacing, and origin. For an **interior-only** strip
+ * (e.g. L2 vs an infinite-domain reference away from owned boundaries),
+ * combine `brick.indices_inner(brick.halo_width())` with `global_xyz` /
+ * `operator[]`.
  */
 template <class T, class Fn>
-inline void for_each_inner_coords(const PaddedBrick<T> &brick, int r, Fn &&fn) {
+inline void for_each_coords(PaddedBrick<T> &brick, Fn &&fn) {
   const int nx = brick.nx();
   const int ny = brick.ny();
   const int nz = brick.nz();
-  if (nx <= 2 * r || ny <= 2 * r || nz <= 2 * r) {
-    return;
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        const auto [x, y, z] = brick.global_xyz(i, j, k);
+        detail::invoke_coords_mutable_(std::forward<Fn>(fn), x, y, z,
+                                       brick(i, j, k));
+      }
+    }
   }
-  for (int k = r; k < nz - r; ++k) {
-    for (int j = r; j < ny - r; ++j) {
-      for (int i = r; i < nx - r; ++i) {
+}
+
+template <class T, class Fn>
+inline void for_each_coords(const PaddedBrick<T> &brick, Fn &&fn) {
+  const int nx = brick.nx();
+  const int ny = brick.ny();
+  const int nz = brick.nz();
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
         const auto [x, y, z] = brick.global_xyz(i, j, k);
         detail::invoke_coords_value_(std::forward<Fn>(fn), x, y, z, brick(i, j, k));
       }

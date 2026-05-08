@@ -36,7 +36,7 @@ Minimal hybrid timestep (conceptual, periodic FD):
 
 ### Which exchanger when
 
-Use `pfc::field::PaddedBrick<T>` + `pfc::PaddedHaloExchanger<T>` (or the CUDA `pfc::cuda::PaddedDeviceHaloExchanger`) for **classical FD** with a single contiguous `(nx+2hw)*(ny+2hw)*(nz+2hw)` array and negative halo indexing. This is the **default** for FD-only apps and is the lowest-overhead path: ghost width is baked into storage, and the inner stencil reads `u(i±hw, j, k)` directly with no face-buffer indirection.
+Use `pfc::field::PaddedBrick<T>` + `pfc::communication::PaddedHaloExchanger<T>` (or the CUDA `pfc::cuda::PaddedDeviceHaloExchanger`) for **classical FD** with a single contiguous `(nx+2hw)*(ny+2hw)*(nz+2hw)` array and negative halo indexing. This is the **default** for FD-only apps and is the lowest-overhead path: ghost width is baked into storage, and the inner stencil reads `u(i±hw, j, k)` directly with no face-buffer indirection.
 
 Use `pfc::field::LocalField<T>` (unpadded `nx*ny*nz`) + `pfc::SparseHaloExchanger<T>` (typically built via `pfc::halo::make_structured_halos`) for:
 
@@ -55,7 +55,7 @@ Policies describe where ghost data lives and what is safe for FFT. They are docu
 |--------|---------|-------------------|---------------|
 | None | Core `nx×ny×nz` only | Yes | N/A |
 | InPlace | One array; ghosts in boundary slabs of that array | No (multi-rank) after halo fill | `HaloExchanger` + `laplacian_interior<Order>` |
-| **PaddedBrick** | Single contiguous `(nx+2hw)×(ny+2hw)×(nz+2hw)` buffer with a real ghost ring; owned core at `[hw, hw+n)` per axis | No (FFT does not see padded layout) | `PaddedHaloExchanger` + manual stencil over `pfc::field::PaddedBrick<T>`; see `apps/heat3d/src/cpu/heat3d_fd_scratch.cpp` (raw pointer arithmetic, `u_ptr[lin ± stride]`), `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` (lambda-iterator wrapper), and `apps/heat3d/src/cpu/heat3d_fd.cpp` (decoupled `pfc::start_exchange / finish_exchange` + `pfc::gradient::FDGradient` + `pfc::field::for_each` on the same padded layout) |
+| **PaddedBrick** | Single contiguous `(nx+2hw)×(ny+2hw)×(nz+2hw)` buffer with a real ghost ring; owned core at `[hw, hw+n)` per axis | No (FFT does not see padded layout) | `pfc::communication::PaddedHaloExchanger` + manual stencil over `pfc::field::PaddedBrick<T>`; see `apps/heat3d/src/cpu/heat3d_fd_scratch.cpp` (raw pointer arithmetic, `u_ptr[lin ± stride]`), `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` (lambda-iterator wrapper), and `apps/heat3d/src/cpu/heat3d_fd.cpp` (`pfc::communication::exchange` or `start_exchange` / `finish_exchange` + `pfc::gradient::FDGradient` + `pfc::field::for_each` on the same padded layout) |
 | Separated | Core + six face halo buffers | Yes on core only | `pfc::SparseHaloExchanger<T>` built by `halo::make_structured_halos<T>` + `halo::copy_to_face_layout` + `laplacian_periodic_separated<Order>` (or `laplacian_interior<Order>` for interior-only) |
 | Mixed / hybrid | Core has no aliased ghosts; sidecar holds all ghost data | Core only | Same as Separated; extra sync/copy steps are explicit, slower path |
 | **Sparse / arbitrary** | Any user-supplied `(peer, send_indices, recv_indices)` tuples; no grid concept | Yes on core only | `pfc::SparseHaloExchanger<T>` directly with a hand-built `std::vector<halo::RemoteHalo<T>>` (FEM / non-axis / multi-block patterns) |

@@ -153,3 +153,24 @@ TEST_CASE("for_each_owned_omp visits same set as serial counterpart",
   });
   for (int v : hits) REQUIRE(v == 1);
 }
+
+TEST_CASE("for_each_coords fills every owned cell from physical coordinates",
+          "[field][brick_iteration]") {
+  auto u = make_brick(3, /*hw=*/1);
+  field::for_each_coords(
+      u, [](double x, double y, double z, double &v) { v = x + 2.0 * y + 3.0 * z; });
+  field::for_each_owned(u, [&](int i, int j, int k) {
+    const auto [x, y, z] = u.global_xyz(i, j, k);
+    REQUIRE(u(i, j, k) == Catch::Approx(x + 2.0 * y + 3.0 * z));
+  });
+}
+
+TEST_CASE("PaddedBrick operator[] matches operator() for Int3",
+          "[field][brick_iteration]") {
+  auto u = make_brick(3, /*hw=*/1);
+  const pfc::Int3 idx{1, 2, 0};
+  u(idx) = 42.0;
+  REQUIRE(u[idx] == Catch::Approx(42.0));
+  u[idx] = -1.5;
+  REQUIRE(u(idx) == Catch::Approx(-1.5));
+}

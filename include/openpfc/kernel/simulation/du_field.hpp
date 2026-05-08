@@ -35,11 +35,11 @@
  *
  * **Decoupled vs bundled.** For the new lab-style FD driver
  * (`apps/heat3d/src/cpu/heat3d_fd.cpp`) the separate primitives
- * `pfc::PaddedHaloExchanger` + `pfc::start_exchange` /
- * `pfc::finish_exchange`, `pfc::gradient::FDGradient<G>` +
- * `pfc::gradient::evaluate(grad, idx)`, and `pfc::field::for_each(brick,
- * fn)` are the recommended path — they keep halo, gradient, and
- * iteration as three visible concerns. `DuField` is preserved for the
+ * `pfc::communication::PaddedHaloExchanger` + `pfc::communication::exchange`
+ * (or `start_exchange` / `finish_exchange` for overlap),
+ * `pfc::gradient::FDGradient<G>` + `pfc::gradient::evaluate(grad, idx)`, and
+ * `pfc::field::for_each(brick, fn)` are the recommended path — they keep halo,
+ * gradient, and iteration as three visible concerns. `DuField` is preserved for the
  * spectral and `FdCpuStack` paths where the stack still wants to bundle
  * those concerns into a single `du.apply(...)` call.
  *

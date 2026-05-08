@@ -72,22 +72,21 @@ for (int step = 0; step < n_steps; ++step) {
 }
 ```
 
-The **FD** compact driver **`heat3d_fd`** instead spells the three primitives — halo, gradient, sweep — out in `main`, on top of two `pfc::field::PaddedBrick<double>` buffers (`u`, `du`) plus a `pfc::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD)` and a `pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, fd_order)` bound to the same `u`:
+The **FD** compact driver **`heat3d_fd`** instead spells the three primitives — halo, gradient, sweep — out in `main`, on top of two `pfc::field::PaddedBrick<double>` buffers (`u`, `du`) plus a `pfc::communication::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD)` and a `pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, fd_order)` bound to the same `u`:
 
 ```cpp
 for (int step = 0; step < n_steps; ++step) {
-  pfc::start_exchange(halo);
-  pfc::finish_exchange(halo);
+  pfc::communication::exchange(halo);
   pfc::field::for_each(du, [&](const auto& idx) {
     const auto g = pfc::gradient::evaluate(grad, idx);
-    du(idx) = heat3d::kD * (g.xx + g.yy + g.zz);
+    du[idx] = g.xx + g.yy + g.zz;   // D = 1 in this driver
   });
   u += dt * du;
   t += dt;
 }
 ```
 
-The free `pfc::start_exchange / finish_exchange / pfc::gradient::evaluate` wrappers and the dimension-agnostic `pfc::Int3` callback keep the loop readable without hiding the halo or the evaluator. Programmatic code that needs an FFT-safe unpadded core continues to use **`FdCpuStack`** (`stack.du<G>()` wires `SparseHaloExchanger` + face buffers + `FDGradient` behind `DuField`). For non-trivial multi-field models, `pfc::sim::steppers::create(...)` plus `pfc::field::CompositeGradient<...>` remains the right tool (see `apps/kobayashi`).
+`pfc::communication::exchange` is the blocking one-shot; `start_exchange` / `finish_exchange` live in the same namespace for overlap. `pfc::gradient::evaluate` and the dimension-agnostic `pfc::Int3` callback keep the inner loop readable without hiding the halo or the evaluator. Programmatic code that needs an FFT-safe unpadded core continues to use **`FdCpuStack`** (`stack.du<G>()` wires `SparseHaloExchanger` + face buffers + `FDGradient` behind `DuField`). For non-trivial multi-field models, `pfc::sim::steppers::create(...)` plus `pfc::field::CompositeGradient<...>` remains the right tool (see `apps/kobayashi`).
 
 ## Backend capability matrix
 

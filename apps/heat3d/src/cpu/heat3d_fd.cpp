@@ -21,11 +21,12 @@
  *    buffer (`[-hw, nx+hw)` indexing along each axis). Storage only;
  *    MPI-unaware. `u` holds the state, `du` holds the residual; both are
  *    plain bricks with the same decomposition / rank / halo width.
- *  - `pfc::PaddedHaloExchanger<double>` — non-blocking six-face MPI
- *    exchange into the brick's halo ring. Constructed from `u` directly,
- *    then driven via the free `pfc::start_exchange(halo)` /
- *    `pfc::finish_exchange(halo)` wrappers — no buffer pointer or halo
- *    width to mismatch.
+ *  - `pfc::communication::PaddedHaloExchanger<double>` — non-blocking
+ *    six-face MPI exchange into the brick's halo ring. Constructed from
+ *    `u` directly, then driven via `pfc::communication::exchange(halo)`
+ *    (blocking one-shot) or `start_exchange` / `finish_exchange` when
+ *    overlapping with inner work — no buffer pointer or halo width to
+ *    mismatch.
  *  - **This file** defines `HeatGrads` (below) — the three second-
  *    derivative slots `FDGradient` fills; `heat3d/heat_model.hpp` carries
  *    the same aggregate for the other binaries.
@@ -36,9 +37,10 @@
  *  - `pfc::field::for_each(du, fn)` — sweep every owned cell of `du`,
  *    passing a `pfc::Int3{i, j, k}` to `fn`. The brick already carries
  *    its halo width, so the lambda can hand `idx` straight to `evaluate`.
- *  - `pfc::field::for_each_inner_coords(brick, hw, …)` — owned interior
- *    strip with physical `(x, y, z)` coordinates; used below for the
- *    closed-form L2 report (mirrors `LocalField::for_each_interior`).
+ *  - `pfc::field::for_each_coords(brick, …)` — every owned cell with
+ *    physical `(x, y, z)`; used for the initial condition. For the L2
+ *    report we iterate `u.indices_inner(u.halo_width())` so the strip
+ *    matches the stencil reach without passing `hw` separately.
  *
  * For an FFT-safe **unpadded** core plus separated face buffers, use
  * `pfc::sim::stacks::FdCpuStack` (see tests and `heat3d_spectral_pointwise.cpp`).
@@ -70,8 +72,6 @@
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/runtime/common/cpu_affinity.hpp>
-
-#include <heat3d/heat_model.hpp>
 
 // =============================================================================
 // CLI PART STARTS HERE — argument parsing for `heat3d_fd <N> <n_steps> <dt>
@@ -128,8 +128,8 @@ std::optional<RunConfig> parse_cli(int argc, char **argv) {
 // =============================================================================
 
 void run_fd(const RunConfig &cfg, int rank, int nproc) {
-  // 1. Physics. `HeatGrads` is defined above; `heat3d::kD` is shared with the
-  //    other heat3d binaries and the analytic reference (see `heat_model.hpp`).
+  // 1. Physics. This driver fixes D = 1 (same as `heat3d::kD` elsewhere) so the
+  //    Gaussian IC and analytic reference match the other heat3d binaries.
 
   // 2. Global world + per-rank decomposition.
   const auto world = pfc::world::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
@@ -150,13 +150,12 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   //    exchanger reads `u`'s decomp / rank / halo width and captures
   //    `u.data()` once; the evaluator reads the same geometry directly
   //    so changing `cfg.fd_order` here cannot drift away from the brick.
-  pfc::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+  pfc::communication::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
   pfc::gradient::FDGradient<HeatGrads> grad(u, cfg.fd_order);
 
-  // 5. Initial condition: same Gaussian as `HeatModel::initial_condition`,
-  //    \f$u(x,y,z,0) = \exp(-|x|^2/(4D))\f$.
-  u.apply([](double x, double y, double z) {
-    return std::exp(-(x * x + y * y + z * z) / (4.0 * heat3d::kD));
+  // 5. Initial condition: \f$u(x,y,z,0) = \exp(-|x|^2/(4D))\f$, D = 1.
+  pfc::field::for_each_coords(u, [](double x, double y, double z, double &v) {
+    v = std::exp(-(x * x + y * y + z * z) / 4.0);
   });
 
   // 6. Time loop — explicit Euler, point-wise RHS. Each iteration:
@@ -169,11 +168,10 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   const double t_start = MPI_Wtime();
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
-    pfc::start_exchange(halo);
-    pfc::finish_exchange(halo);
+    pfc::communication::exchange(halo);
     pfc::field::for_each(du, [&](const auto &idx) {
       const auto g = pfc::gradient::evaluate(grad, idx);
-      du(idx) = heat3d::kD * (g.xx + g.yy + g.zz);
+      du[idx] = g.xx + g.yy + g.zz;
     });
     u += cfg.dt * du;
     t += cfg.dt;
@@ -189,14 +187,14 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   double sum_err2 = 0.0;
   const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
   const double s_t = 1.0 + t_final;
-  pfc::field::for_each_inner_coords(
-      u, hw, [&](double x, double y, double z, const double &v) {
-        const double r2 = x * x + y * y + z * z;
-        const double u_exact =
-            std::pow(s_t, -1.5) * std::exp(-r2 / (4.0 * heat3d::kD * s_t));
-        const double e = v - u_exact;
-        sum_err2 += e * e;
-      });
+  for (const auto idx : u.indices_inner(hw)) {
+    const auto [x, y, z] = u.global_xyz(idx[0], idx[1], idx[2]);
+    const double v = u[idx];
+    const double r2 = x * x + y * y + z * z;
+    const double u_exact = std::pow(s_t, -1.5) * std::exp(-r2 / (4.0 * s_t));
+    const double e = v - u_exact;
+    sum_err2 += e * e;
+  }
   double g_err2 = 0.0;
   MPI_Reduce(&sum_err2, &g_err2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
@@ -204,7 +202,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
     const double rms =
         std::sqrt(g_err2 / static_cast<double>(cfg.N * cfg.N * cfg.N));
     std::cout << "heat3d method=fd N=" << cfg.N << " n_steps=" << cfg.n_steps
-              << " dt=" << cfg.dt << " D=" << heat3d::kD << " mpi_ranks=" << nproc
+              << " dt=" << cfg.dt << " D=1 mpi_ranks=" << nproc
               << " fd_order=" << cfg.fd_order;
 #if defined(_OPENMP)
     std::cout << " omp_max_threads=" << omp_get_max_threads()

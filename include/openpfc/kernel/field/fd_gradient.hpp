@@ -140,8 +140,8 @@ public:
    * cell so that `grad(i, j, k)` (and `pfc::gradient::evaluate(grad, idx)`)
    * indexes by **owned coordinates** `i, j, k ∈ [0, nx_owned)`. Every owned
    * cell is stencil-safe because the halo ring is filled by the matching
-   * `pfc::PaddedHaloExchanger<T>` before the sweep starts. The strides used
-   * by the stencil reads are still the **padded** strides
+   * `pfc::communication::PaddedHaloExchanger<T>` before the sweep starts. The
+   * strides used by the stencil reads are still the **padded** strides
    * `(1, nx_pad, nx_pad·ny_pad)` so reads at the boundary reach into the
    * halo correctly.
    *
@@ -323,7 +323,8 @@ private:
 /**
  * @brief Evaluate `grad` at index `idx` (free function form).
  *
- * Mirrors `pfc::start_exchange(halo)` / `pfc::finish_exchange(halo)` so
+ * Mirrors `pfc::communication::exchange(halo)` (or `start_exchange` /
+ * `finish_exchange`) so
  * call sites read declaratively: gradient evaluation, halo control, and
  * iteration are three separate concerns.
  *
@@ -411,7 +412,7 @@ template <class G>
  *
  * The evaluator indexes the **full** `(nx+2hw)×(ny+2hw)×(nz+2hw)` storage with
  * interior bounds `[hw, nx_pad-hw)` per axis, matching ghost cells populated by
- * `pfc::PaddedHaloExchanger<T>` on `u.data()`.
+ * `pfc::communication::PaddedHaloExchanger<T>` on `u.data()`.
  *
  * Equivalent to `pfc::gradient::FDGradient<G>(u, order)`; kept for symmetry
  * with the `LocalField` factory above.

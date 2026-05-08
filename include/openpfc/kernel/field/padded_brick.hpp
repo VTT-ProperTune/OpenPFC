@@ -16,7 +16,7 @@
  *
  * for owned cell `i in [0, nx)` and have `u(-1, j, k)` and `u(nx, j, k)`
  * legitimately reach into the **left/right halo ring** that the in-place
- * `pfc::PaddedHaloExchanger<T>` writes into.
+ * `pfc::communication::PaddedHaloExchanger<T>` writes into.
  *
  * Compared to its older siblings:
  *
@@ -321,6 +321,10 @@ public:
   }
   T &operator()(const pfc::Int3 &c) noexcept { return m_data[idx(c)]; }
   const T &operator()(const pfc::Int3 &c) const noexcept { return m_data[idx(c)]; }
+
+  /// @brief Same as `operator()(c)`; allows `brick[idx]` with `idx` from `for_each`.
+  T &operator[](const pfc::Int3 &c) noexcept { return m_data[idx(c)]; }
+  const T &operator[](const pfc::Int3 &c) const noexcept { return m_data[idx(c)]; }
 
   // ---- Owned-cell index ranges -------------------------------------------
 
