@@ -14,7 +14,7 @@
 #include <openpfc/kernel/decomposition/halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/halo_persistent.hpp>
-#include <openpfc/kernel/decomposition/separated_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
@@ -65,12 +65,14 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  if (size < 4) {
+  // Two ranks split along Z so ±Z neighbors are always different ranks (no
+  // periodic self-messages); matches `mpi_2procs_all` runners.
+  if (size != 2) {
     return;
   }
 
   auto world = world::uniform(16, 1.0);
-  auto decomp = decomposition::create(world, {2, 2, 1});
+  auto decomp = decomposition::create(world, {1, 1, 2});
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
@@ -155,8 +157,11 @@ TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
 
   constexpr int halo_width = 1;
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  SeparatedFaceHaloExchanger<double> sex(decomp, rank, halo_width, MPI_COMM_WORLD);
-  sex.exchange_halos(u.data(), u.size(), face_halos);
+  SparseHaloExchanger<double> sex(
+      MPI_COMM_WORLD, rank,
+      halo::make_structured_halos<double>(decomp, rank, halo_width));
+  sex.exchange_halos(u.data(), u.size());
+  halo::copy_to_face_layout(sex, face_halos);
 
   std::array<const double *, 6> face_ptrs;
   for (int i = 0; i < 6; ++i) {
