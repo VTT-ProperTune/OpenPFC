@@ -195,8 +195,10 @@ create_send_halo(const decomposition::Decomposition &decomp, int rank,
  * @note For periodic boundaries, this will wrap around to the opposite side
  * @note These indices target **in-place** storage: boundary slabs of the same
  *       `nx×ny×nz` core array (`HaloExchanger`). For **separated** face buffers,
- *       use `SeparatedFaceHaloExchanger` / `halo_face_layout.hpp` instead of
- *       scattering into these indices.
+ *       use `pfc::SparseHaloExchanger` (typically built via
+ *       `pfc::halo::make_structured_halos`) plus
+ *       `pfc::halo::copy_to_face_layout` instead of scattering into these
+ *       indices.
  */
 template <typename BackendTag = backend::CpuTag>
 core::SparseVector<BackendTag, size_t>
@@ -316,16 +318,33 @@ create_halo_patterns(const decomposition::Decomposition &decomp, int rank,
                            core::SparseVector<BackendTag, size_t>>>
       patterns;
 
-  // Get neighbors based on connectivity
+  // Get neighbors based on connectivity.
+  //
+  // Note: `Connectivity::Edges` previously fell into the default case and
+  // silently aliased `Faces`. It now correctly returns the faces+edges
+  // subset of the 26-direction enumeration (filters out the 8 corner
+  // directions whose three components are all non-zero).
   std::map<Int3, int> neighbors;
   switch (connectivity) {
   case Connectivity::Faces:
     neighbors = decomposition::find_face_neighbors(decomp, rank);
     break;
+  case Connectivity::Edges: {
+    auto all = decomposition::find_all_neighbors(decomp, rank);
+    for (const auto &[dir, nb] : all) {
+      const int nz_components =
+          (dir[0] != 0 ? 1 : 0) + (dir[1] != 0 ? 1 : 0) + (dir[2] != 0 ? 1 : 0);
+      // Faces have exactly one non-zero component; edges have exactly two.
+      // Corners (three non-zero components) are excluded.
+      if (nz_components == 1 || nz_components == 2) {
+        neighbors[dir] = nb;
+      }
+    }
+    break;
+  }
   case Connectivity::All:
     neighbors = decomposition::find_all_neighbors(decomp, rank);
     break;
-  default: neighbors = decomposition::find_face_neighbors(decomp, rank); break;
   }
 
   // Create send/recv halos for each neighbor
