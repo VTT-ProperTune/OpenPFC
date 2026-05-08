@@ -38,9 +38,8 @@
  *    passing a `pfc::Int3{i, j, k}` to `fn`. The brick already carries
  *    its halo width, so the lambda can hand `idx` straight to `evaluate`.
  *  - `pfc::field::for_each_coords(brick, …)` — every owned cell with
- *    physical `(x, y, z)`; used for the initial condition. For the L2
- *    report we iterate `u.indices_inner(u.halo_width())` so the strip
- *    matches the stencil reach without passing `hw` separately.
+ *    physical `(x, y, z)`; used for the initial condition and the L2
+ *    report (Gaussian IC is centred at the origin, well inside the box).
  *
  * For an FFT-safe **unpadded** core plus separated face buffers, use
  * `pfc::sim::stacks::FdCpuStack` (see tests and `heat3d_spectral_pointwise.cpp`).
@@ -56,6 +55,7 @@
 #include <iostream>
 #include <optional>
 #include <ostream>
+#include <utility>
 
 #include <mpi.h>
 
@@ -187,14 +187,13 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   double sum_err2 = 0.0;
   const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
   const double s_t = 1.0 + t_final;
-  for (const auto idx : u.indices_inner(hw)) {
-    const auto [x, y, z] = u.global_xyz(idx[0], idx[1], idx[2]);
-    const double v = u[idx];
-    const double r2 = x * x + y * y + z * z;
-    const double u_exact = std::pow(s_t, -1.5) * std::exp(-r2 / (4.0 * s_t));
-    const double e = v - u_exact;
-    sum_err2 += e * e;
-  }
+  pfc::field::for_each_coords(
+      std::as_const(u), [&](double x, double y, double z, const double &v) {
+        const double r2 = x * x + y * y + z * z;
+        const double u_exact = std::pow(s_t, -1.5) * std::exp(-r2 / (4.0 * s_t));
+        const double e = v - u_exact;
+        sum_err2 += e * e;
+      });
   double g_err2 = 0.0;
   MPI_Reduce(&sum_err2, &g_err2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
@@ -212,7 +211,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
               << max_elapsed / static_cast<double>(cfg.n_steps)
               << " (MPI_MAX across ranks)\n"
               << "l2_error_vs_R3_analytic_rms=" << rms
-              << " (periodic; interior L2 vs infinite-domain Gaussian)\n";
+              << " (periodic; L2 vs infinite-domain Gaussian over owned cells)\n";
   }
 }
 

@@ -244,9 +244,8 @@ inline void for_each_inner_omp(const PaddedBrick<T> &brick, int r, Fn &&fn) {
  * Use this for initial conditions and diagnostics that need `(x,y,z)`
  * without threading a separate `hw` argument — the brick already carries
  * decomposition, spacing, and origin. For an **interior-only** strip
- * (e.g. L2 vs an infinite-domain reference away from owned boundaries),
- * combine `brick.indices_inner(brick.halo_width())` with `global_xyz` /
- * `operator[]`.
+ * (e.g. overlap with a stencil before halos land), combine
+ * `brick.indices_inner(r)` with `global_xyz` / `operator[]`.
  */
 template <class T, class Fn>
 inline void for_each_coords(PaddedBrick<T> &brick, Fn &&fn) {
