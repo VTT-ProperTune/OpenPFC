@@ -206,3 +206,50 @@ TEST_CASE("PaddedHaloExchanger: Axes2D direction set skips ±Z halos",
   assert_halo_layer_z(u, -1, sentinel);
   assert_halo_layer_z(u, u.nz(), sentinel);
 }
+
+TEST_CASE("PaddedHaloExchanger: brick-binding ctor + free start/finish wrappers",
+          "[MPI][padded_halo]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2) return;
+
+  auto world = world::create(GridSize({16, 8, 4}));
+  auto decomp = decomposition::create(world, {2, 1, 1});
+
+  const int hw = 2;
+  field::PaddedBrick<double> u(decomp, rank, hw);
+  const double mine = static_cast<double>(rank);
+  const double other = static_cast<double>(1 - rank);
+  fill_owned(u, mine);
+
+  // No decomp/rank/hw repeated here: the brick already carries them, the
+  // exchanger picks them up plus binds u.data() once.
+  PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+  REQUIRE(halo.is_bound());
+
+  // Drive via the free wrappers — equivalent to halo.start() / halo.finish().
+  start_exchange(halo);
+  finish_exchange(halo);
+
+  for (int d = 1; d <= hw; ++d) {
+    assert_halo_layer_x(u, -d, other);
+    assert_halo_layer_x(u, u.nx() + d - 1, other);
+  }
+}
+
+TEST_CASE("PaddedHaloExchanger: unbound start() throws std::logic_error",
+          "[MPI][padded_halo]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) return;
+
+  auto world = world::create(GridSize({4, 4, 4}));
+  auto decomp = decomposition::create(world, 1);
+
+  PaddedHaloExchanger<double> halo(decomp, rank, /*hw=*/1, MPI_COMM_WORLD);
+  REQUIRE_FALSE(halo.is_bound());
+  REQUIRE_THROWS_AS(halo.start(), std::logic_error);
+  REQUIRE_THROWS_AS(halo.finish(), std::logic_error);
+}

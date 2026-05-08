@@ -22,6 +22,18 @@
  *     `start_halo_exchange(T*, std::size_t)` /
  *     `finish_halo_exchange()` pair as the existing exchangers, plus a
  *     blocking `exchange_halos(...)` convenience wrapper.
+ *   - The **preferred** entry point is the brick-binding constructor
+ *     `PaddedHaloExchanger(field::PaddedBrick<T>& u, MPI_Comm comm)`:
+ *     it pulls the decomposition / rank / halo width from `u` and
+ *     captures the buffer pointer once, so the time loop can read
+ *
+ *       pfc::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+ *       pfc::start_exchange(halo);
+ *       // ... compute on inner cells ...
+ *       pfc::finish_exchange(halo);
+ *
+ *     with no chance of drift between the brick layout and the
+ *     exchanger arguments.
  *
  * Periodic boundaries are handled by the underlying decomposition: in
  * a single-rank run every direction wraps to self, and `MPI_Isend` /
@@ -39,6 +51,7 @@
 #include <array>
 #include <cstddef>
 #include <mpi.h>
+#include <stdexcept>
 #include <vector>
 
 #include <openpfc/kernel/data/world_types.hpp>
@@ -48,6 +61,7 @@
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
+#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
@@ -128,6 +142,40 @@ public:
   }
 
   /**
+   * @brief Construct directly from a `pfc::field::PaddedBrick<T>`.
+   *
+   * Pulls decomposition, rank, halo width, **and the buffer pointer**
+   * from `u`. After construction the exchanger is "bound" to that brick
+   * and you can drive it with the no-arg `start()` / `finish()` member
+   * functions or the free `pfc::start_exchange(exchanger)` /
+   * `pfc::finish_exchange(exchanger)` wrappers — no need to re-pass the
+   * buffer or the halo width and risk drift.
+   *
+   * The brick must outlive the exchanger; its buffer pointer is captured
+   * once at construction and `PaddedBrick` does not reallocate, so this
+   * is safe for the typical "construct once, exchange many times" loop.
+   *
+   * @param u        Padded brick to bind to (decomp/rank/hw read from `u`).
+   * @param comm     MPI communicator.
+   * @param base_tag Base tag for messages (direction index added).
+   */
+  PaddedHaloExchanger(field::PaddedBrick<T> &u, MPI_Comm comm, int base_tag = 0)
+      : PaddedHaloExchanger(u.decomposition(), u.rank(), u.halo_width(), comm,
+                            halo::presets::Axes3D(), base_tag,
+                            halo::HaloDirectionSelector{}) {
+    bind_(u);
+  }
+
+  /// Same as the brick-binding constructor, with a custom direction set.
+  PaddedHaloExchanger(field::PaddedBrick<T> &u, MPI_Comm comm,
+                      halo::HaloDirectionSet dirs, int base_tag = 0,
+                      halo::HaloDirectionSelector selector = {})
+      : PaddedHaloExchanger(u.decomposition(), u.rank(), u.halo_width(), comm, dirs,
+                            base_tag, selector) {
+    bind_(u);
+  }
+
+  /**
    * @brief Run one halo exchange (post-recv, post-send, wait).
    * @param padded_buf Pointer to the start of the **padded** brick
    *                   (i.e. `brick.data()`). Layout: row-major
@@ -189,6 +237,29 @@ public:
                            MPI_Wtime() - t0);
   }
 
+  // ---- Brick-bound API ---------------------------------------------------
+
+  /**
+   * @brief Post the asynchronous exchange on the bound brick buffer.
+   *
+   * Equivalent to `start_halo_exchange(brick.data(), brick.size())` but
+   * with no chance of passing a mismatched buffer or stale halo width.
+   * Requires that the exchanger was constructed from a `PaddedBrick`.
+   */
+  void start() {
+    require_bound_("start()");
+    start_halo_exchange(m_bound_buf, m_bound_size);
+  }
+
+  /// Wait on the in-flight exchange started by `start()`.
+  void finish() {
+    require_bound_("finish()");
+    finish_halo_exchange();
+  }
+
+  /// `true` once the exchanger has captured a brick buffer.
+  [[nodiscard]] bool is_bound() const noexcept { return m_bound_buf != nullptr; }
+
   /// Number of active face directions (`0..6` depending on the direction set).
   std::size_t num_directions() const {
     std::size_t n = 0;
@@ -204,6 +275,20 @@ public:
   }
 
 private:
+  void bind_(field::PaddedBrick<T> &u) noexcept {
+    m_bound_buf = u.data();
+    m_bound_size = u.size();
+  }
+
+  void require_bound_(const char *what) const {
+    if (m_bound_buf == nullptr) {
+      throw std::logic_error(std::string("pfc::PaddedHaloExchanger::") + what +
+                             ": exchanger is not bound to a PaddedBrick. "
+                             "Use the (PaddedBrick&, MPI_Comm) constructor or call "
+                             "start_halo_exchange(buf, size) directly.");
+    }
+  }
+
   static int opposite_slot(int slot) {
     switch (slot) {
     case 0: return 1;
@@ -229,6 +314,28 @@ private:
   std::vector<MPI_Request> m_requests;
   int m_request_count = 0;
   T *m_pending_field = nullptr;
+
+  // Optional brick binding (set by the (PaddedBrick&, MPI_Comm, ...) ctors).
+  T *m_bound_buf = nullptr;
+  std::size_t m_bound_size = 0;
 };
+
+/**
+ * @name Free wrappers for `PaddedHaloExchanger`
+ *
+ * Mirror the user-side spelling `pfc::start_exchange(halo)` /
+ * `pfc::finish_exchange(halo)` so call sites read declaratively
+ * ("start the exchange") rather than as method calls. The exchanger
+ * must be bound to a `pfc::field::PaddedBrick<T>` (see the brick-binding
+ * constructors).
+ * @{
+ */
+template <typename T> inline void start_exchange(PaddedHaloExchanger<T> &h) {
+  h.start();
+}
+template <typename T> inline void finish_exchange(PaddedHaloExchanger<T> &h) {
+  h.finish();
+}
+/// @}
 
 } // namespace pfc
