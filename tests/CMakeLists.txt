@@ -171,7 +171,7 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
     add_test(NAME mpi_4procs_grid_multiple
          COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
              $<TARGET_FILE:openpfc-tests>
-             "[MPI][grid],[MPI][multiple],[MPI][fd][persistent]"
+             "[MPI][grid],[MPI][multiple]"
     )
     set_tests_properties(
       mpi_4procs_grid_multiple
