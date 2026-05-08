@@ -6,7 +6,7 @@
 /**
  * @file fd_cpu_stack.hpp
  * @brief One-shot bundle of `World + Decomposition + LocalField + face_halos
- *        + SeparatedFaceHaloExchanger` for finite-difference CPU solvers.
+ *        + SparseHaloExchanger` for finite-difference CPU solvers.
  *
  * @details
  * Programmatic counterpart to `pfc::sim::stacks::SpectralCpuStack` for
@@ -18,15 +18,21 @@
  *  - `pfc::decomposition::Decomposition` stores `const World&` to its
  *    constructor argument; `m_world` is initialised first so its
  *    destruction order is correct.
- *  - `pfc::SeparatedFaceHaloExchanger<double>` stores
- *    `const Decomposition&`; `m_decomp` is initialised before it.
+ *  - `pfc::SparseHaloExchanger<double>` is built from a `RemoteHalo` list
+ *    produced by `pfc::halo::make_structured_halos<double>(...)`; it owns
+ *    the index/data buffers internally and only needs `m_comm` and rank
+ *    after construction.
  *  - `m_u` is sized to the local subdomain with a halo of
  *    `halo_width = fd_order / 2` (the standard central-difference halo).
  *
  * `exchange_halos()` is the one-line wrapper every FD time-stepping
  * loop calls each step. Keeping it on the stack means the application
  * does not have to pass the field, its size, and the halo buffer
- * triple to `m_exchanger.exchange_halos(...)` every iteration.
+ * triple to the exchanger every iteration. After the underlying sparse
+ * exchange completes, `m_face_halos` is repopulated via
+ * `pfc::halo::copy_to_face_layout(m_exchanger, m_face_halos)` so the
+ * existing periodic-separated FD Laplacians keep their array-of-six
+ * input.
  *
  * The class is **non-copyable, non-movable** for the same reason as
  * `pfc::ui::SpectralCpuStack` and `pfc::sim::stacks::SpectralCpuStack`:
@@ -34,6 +40,7 @@
  * destroyed. Construct in place, take references.
  *
  * @see openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp
+ * @see openpfc/kernel/decomposition/sparse_halo_exchange.hpp
  */
 
 #include <array>
@@ -44,8 +51,10 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/separated_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
+#include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/simulation/du_field.hpp>
 
 namespace pfc::sim::stacks {
 
@@ -74,8 +83,10 @@ public:
                                                            fd_order / 2)),
         m_face_halos(
             pfc::halo::allocate_face_halos<double>(m_decomp, rank, fd_order / 2)),
-        m_exchanger(m_decomp, rank, fd_order / 2, comm), m_fd_order(fd_order),
-        m_rank(rank), m_nproc(nproc), m_comm(comm) {}
+        m_exchanger(
+            comm, rank,
+            pfc::halo::make_structured_halos<double>(m_decomp, rank, fd_order / 2)),
+        m_fd_order(fd_order), m_rank(rank), m_nproc(nproc), m_comm(comm) {}
 
   FdCpuStack(const FdCpuStack &) = delete;
   FdCpuStack &operator=(const FdCpuStack &) = delete;
@@ -88,7 +99,37 @@ public:
    *        the subdomain interior boundary.
    */
   void exchange_halos() {
-    m_exchanger.exchange_halos(m_u.data(), m_u.size(), m_face_halos);
+    m_exchanger.exchange_halos(m_u.data(), m_u.size());
+    pfc::halo::copy_to_face_layout(m_exchanger, m_face_halos);
+  }
+
+  /**
+   * @brief Build a compact-driver residual field for the FD stack.
+   *
+   * Returns a `pfc::sim::DuField<G, pfc::field::FdGradient<G>>` bound to
+   * `m_u` and the configured FD order, with halo exchange wired into its
+   * `apply(...)` so the user-facing time loop stays
+   *
+   *     du.apply([](const G& g) { ... });
+   *     u += dt * du;
+   *     t += dt;
+   *
+   * with no explicit `exchange_halos()` call. Returned by value (move):
+   * call once outside the time loop, e.g.
+   *
+   *     auto& u  = stack.u();
+   *     auto  du = stack.du<MyGrads>();
+   *
+   * The returned object captures `this` for halo exchange and references
+   * `m_u`'s storage through the evaluator; it must not outlive the stack.
+   *
+   * @tparam G  Model-owned per-point grads aggregate.
+   */
+  template <class G> [[nodiscard]] auto du() {
+    auto eval = pfc::field::create<G>(m_u, m_fd_order);
+    using EvalT = decltype(eval);
+    return pfc::sim::DuField<G, EvalT>(m_u.size(), std::move(eval),
+                                       [this]() { exchange_halos(); });
   }
 
   [[nodiscard]] pfc::World &world() noexcept { return m_world; }
@@ -107,12 +148,21 @@ public:
     return m_u;
   }
 
-  [[nodiscard]] pfc::SeparatedFaceHaloExchanger<double> &exchanger() noexcept {
+  [[nodiscard]] pfc::SparseHaloExchanger<double> &exchanger() noexcept {
     return m_exchanger;
   }
-  [[nodiscard]] const pfc::SeparatedFaceHaloExchanger<double> &
-  exchanger() const noexcept {
+  [[nodiscard]] const pfc::SparseHaloExchanger<double> &exchanger() const noexcept {
     return m_exchanger;
+  }
+
+  /// Read-only access to the array-of-six face buffers. Refreshed by
+  /// `exchange_halos()`; consumers (Laplacian kernels) read from here.
+  [[nodiscard]] std::array<std::vector<double>, 6> &face_halos() noexcept {
+    return m_face_halos;
+  }
+  [[nodiscard]] const std::array<std::vector<double>, 6> &
+  face_halos() const noexcept {
+    return m_face_halos;
   }
 
   [[nodiscard]] int fd_order() const noexcept { return m_fd_order; }
@@ -126,7 +176,7 @@ private:
   pfc::decomposition::Decomposition m_decomp;
   pfc::field::LocalField<double> m_u;
   std::array<std::vector<double>, 6> m_face_halos;
-  pfc::SeparatedFaceHaloExchanger<double> m_exchanger;
+  pfc::SparseHaloExchanger<double> m_exchanger;
   int m_fd_order{2};
   int m_rank{0};
   int m_nproc{1};
