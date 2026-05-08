@@ -34,6 +34,35 @@ TEST_CASE("for_each_owned visits every owned cell exactly once",
   REQUIRE(*seen.rbegin() == std::tuple{u.nx() - 1, u.ny() - 1, u.nz() - 1});
 }
 
+TEST_CASE("for_each yields Int3 in row-major order over every owned cell",
+          "[field][brick_iteration]") {
+  auto u = make_brick(4, /*hw=*/1);
+  std::vector<pfc::Int3> seen;
+  field::for_each(u, [&](const auto &idx) { seen.push_back(idx); });
+
+  REQUIRE(seen.size() == static_cast<std::size_t>(u.nx() * u.ny() * u.nz()));
+  REQUIRE(seen.front() == pfc::Int3{0, 0, 0});
+  REQUIRE(seen.back() == pfc::Int3{u.nx() - 1, u.ny() - 1, u.nz() - 1});
+
+  // Check the k-outer / j-middle / i-inner ordering: the i index must
+  // monotonically advance until it wraps, then j, then k.
+  for (std::size_t s = 1; s < seen.size(); ++s) {
+    const auto &p = seen[s - 1];
+    const auto &c = seen[s];
+    const bool i_advance = (c[0] == p[0] + 1) && c[1] == p[1] && c[2] == p[2];
+    const bool j_advance = (c[0] == 0) && c[1] == p[1] + 1 && c[2] == p[2];
+    const bool k_advance = (c[0] == 0) && c[1] == 0 && c[2] == p[2] + 1;
+    REQUIRE((i_advance || j_advance || k_advance));
+  }
+
+  // Confirm the body can write through brick(idx) without any (i, j, k)
+  // unpacking — this is the workflow the heat3d_fd driver will use.
+  field::for_each(u, [&](const auto &idx) { u(idx) = idx[0] + 10 * idx[1]; });
+  for (int k = 0; k < u.nz(); ++k)
+    for (int j = 0; j < u.ny(); ++j)
+      for (int i = 0; i < u.nx(); ++i) REQUIRE(u(i, j, k) == i + 10 * j);
+}
+
 TEST_CASE("for_each_inner stays in [r, n-r) and obeys r=0 -> entire owned",
           "[field][brick_iteration]") {
   auto u = make_brick(5, /*hw=*/2);

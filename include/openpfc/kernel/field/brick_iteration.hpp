@@ -5,27 +5,38 @@
 
 /**
  * @file brick_iteration.hpp
- * @brief `(i, j, k)` iteration helpers for `PaddedBrick<T>`.
+ * @brief Iteration helpers for `PaddedBrick<T>`.
  *
  * @details
- * The laboratory-style FD driver wants three explicit cell ranges:
+ * Two flavours of helpers live here:
  *
- *  - `for_each_owned(brick, fn)`        — every owned cell `[0, n)^3`,
- *                                         used for IC, Euler updates, etc.
- *  - `for_each_inner(brick, r, fn)`     — owned cells whose `r`-radius
- *                                         stencil lies entirely inside the
- *                                         owned region (`[r, n-r)^3`),
- *                                         safe to compute **before** halos
- *                                         arrive.
- *  - `for_each_border(brick, r, fn)`    — the rest of the owned region:
- *                                         the union of x/y/z slabs of
- *                                         thickness `r` adjacent to the
- *                                         owned-region boundary; **needs**
- *                                         halo data.
+ *  - **Index-aggregate form** (preferred for new code)
+ *    - `for_each(brick, fn)`                — every owned cell, lambda
+ *                                             takes `const pfc::Int3&`.
+ *    - `for_each_omp(brick, fn)`            — same domain, OMP-parallel.
  *
- * Each helper invokes `fn(int i, int j, int k)` with **owned-relative**
- * indices (i.e. `0 <= i < brick.nx()`, etc.), and the lambda may freely
- * read `brick(i +/- r, ...)` thanks to the padded layout.
+ *    Pair these with `pfc::gradient::evaluate(grad, idx)` to keep the
+ *    inner loop dimension-agnostic and free of `(i, j, k)` boilerplate.
+ *
+ *  - **Explicit `(int i, int j, int k)` form** (kept for laboratory-
+ *    style stencils that read offsets directly):
+ *    - `for_each_owned(brick, fn)`          — every owned cell `[0, n)^3`.
+ *    - `for_each_inner(brick, r, fn)`       — owned cells whose `r`-radius
+ *                                             stencil lies inside the owned
+ *                                             region (`[r, n-r)^3`);
+ *                                             safe to compute **before**
+ *                                             halos arrive.
+ *    - `for_each_inner_coords(brick, r, fn)`— same domain, but passes
+ *                                             physical `(x,y,z)` plus the
+ *                                             cell value (mirrors
+ *                                             `LocalField::for_each_interior`).
+ *    - `for_each_border(brick, r, fn)`      — the rest of the owned region;
+ *                                             **needs** halo data.
+ *
+ * Both forms iterate the same owned region and observe the same
+ * **k-outer / j-middle / i-inner** order so the inner loop is cache-
+ * friendly. Bodies may freely read `brick(i ± r, ...)` thanks to the
+ * padded layout.
  *
  * The OMP-parallel variants `..._omp(...)` add a single
  * `#pragma omp parallel for collapse(2) schedule(static)` over the outer
@@ -41,9 +52,84 @@
  * @see kernel/field/padded_brick.hpp for the owning data layout.
  */
 
+#include <type_traits>
+#include <utility>
+
 #include <openpfc/kernel/field/padded_brick.hpp>
 
 namespace pfc::field {
+
+namespace detail {
+
+template <class Fn, class T>
+inline void invoke_coords_value_(Fn &&fn, double x, double y, double z, const T &v) {
+  static_assert(std::is_invocable_v<Fn &, double, double, double, const T &> ||
+                    std::is_invocable_v<Fn &, const pfc::Real3 &, const T &>,
+                "for_each_inner_coords: lambda must be invocable as "
+                "(double x, double y, double z, const T& value) or "
+                "(const Real3& xyz, const T& value)");
+  if constexpr (std::is_invocable_v<Fn &, double, double, double, const T &>) {
+    std::forward<Fn>(fn)(x, y, z, v);
+  } else {
+    std::forward<Fn>(fn)(pfc::Real3{x, y, z}, v);
+  }
+}
+
+} // namespace detail
+
+/**
+ * @brief Iterate every owned cell of `brick`, passing each as a
+ *        `pfc::Int3{i, j, k}` to `fn`.
+ *
+ * Preferred form for code that hands the index straight to a gradient
+ * evaluator or to `brick(idx)`:
+ *
+ * @code
+ * pfc::field::for_each(du, [&](const auto& idx) {
+ *   const auto g = pfc::gradient::evaluate(grad, idx);
+ *   du(idx) = heat3d::kD * (g.xx + g.yy + g.zz);
+ * });
+ * @endcode
+ *
+ * Iteration order is k-outer / j-middle / i-inner, matching the brick's
+ * row-major (x-fastest) storage.
+ *
+ * Lambda signature: any callable invocable as `void(const pfc::Int3&)`
+ * or `void(pfc::Int3)`.
+ */
+template <class T, class Fn>
+inline void for_each(const PaddedBrick<T> &brick, Fn &&fn) {
+  const int nx = brick.nx();
+  const int ny = brick.ny();
+  const int nz = brick.nz();
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        fn(pfc::Int3{i, j, k});
+      }
+    }
+  }
+}
+
+/**
+ * @brief OMP-parallel `for_each`. Identical iteration domain and order;
+ *        the body must be race-free with respect to writes to shared
+ *        cells (per-cell writes via `brick(idx)` are race-free).
+ */
+template <class T, class Fn>
+inline void for_each_omp(const PaddedBrick<T> &brick, Fn &&fn) {
+  const int nx = brick.nx();
+  const int ny = brick.ny();
+  const int nz = brick.nz();
+#pragma omp parallel for collapse(2) schedule(static)
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        fn(pfc::Int3{i, j, k});
+      }
+    }
+  }
+}
 
 /**
  * @brief Iterate every owned cell `(i, j, k) in [0, nx) x [0, ny) x [0, nz)`.
@@ -122,6 +208,33 @@ inline void for_each_inner_omp(const PaddedBrick<T> &brick, int r, Fn &&fn) {
     for (int j = r; j < ny - r; ++j) {
       for (int i = r; i < nx - r; ++i) {
         fn(i, j, k);
+      }
+    }
+  }
+}
+
+/**
+ * @brief Same iteration domain as `for_each_inner`, with physical coordinates.
+ *
+ * Invokes `fn` at each inner owned cell. Lambda must be invocable as either:
+ *  - `void(double x, double y, double z, const T& value)`, or
+ *  - `void(const Real3& xyz, const T& value)`.
+ *
+ * No-op if any axis has `nx <= 2*r`.
+ */
+template <class T, class Fn>
+inline void for_each_inner_coords(const PaddedBrick<T> &brick, int r, Fn &&fn) {
+  const int nx = brick.nx();
+  const int ny = brick.ny();
+  const int nz = brick.nz();
+  if (nx <= 2 * r || ny <= 2 * r || nz <= 2 * r) {
+    return;
+  }
+  for (int k = r; k < nz - r; ++k) {
+    for (int j = r; j < ny - r; ++j) {
+      for (int i = r; i < nx - r; ++i) {
+        const auto [x, y, z] = brick.global_xyz(i, j, k);
+        detail::invoke_coords_value_(std::forward<Fn>(fn), x, y, z, brick(i, j, k));
       }
     }
   }
