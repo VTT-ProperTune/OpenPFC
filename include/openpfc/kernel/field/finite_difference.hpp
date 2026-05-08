@@ -27,13 +27,14 @@
  *    `laplacian2d_xy_periodic_separated<Order>`): iterate the full
  *    owned region `[0, n)` and fall back to the matching `face_halos`
  *    slab whenever a stencil arm overflows the owned region. Halo
- *    indexing matches `pfc::SeparatedFaceHaloExchanger`. This is the
+ *    indexing matches `pfc::halo::make_structured_halos` +
+ *    `pfc::halo::copy_to_face_layout`. This is the
  *    correct primitive for periodic problems on a separated layout
  *    (e.g. `apps/allen_cahn/`, `examples/15_finite_difference_heat.cpp`).
  *
  * @see docs/halo_exchange.md
  * @see kernel/decomposition/halo_exchange.hpp
- * @see kernel/decomposition/separated_halo_exchange.hpp
+ * @see kernel/decomposition/sparse_halo_exchange.hpp
  * @see kernel/field/fd_apply.hpp
  * @see kernel/field/fd_stencils.hpp
  */
@@ -163,7 +164,8 @@ void laplacian_interior(int order, const T *buf, T *lap, int nx, int ny, int nz,
  * Iterates `[0, nx) x [0, ny) x [0, nz)` over the separated `core` buffer.
  * For each per-axis stencil arm that falls outside the owned region, reads
  * from the matching slab of `face_halos` (typically populated by
- * `pfc::SeparatedFaceHaloExchanger`):
+ * `pfc::SparseHaloExchanger` + `pfc::halo::copy_to_face_layout`, or built
+ * via `pfc::halo::make_structured_halos`):
  * face_halos[0]=+X, [1]=-X, [2]=+Y, [3]=-Y, [4]=+Z, [5]=-Z (recv buffers,
  * each of size `hw * (other two * nx)`).
  *

@@ -166,7 +166,8 @@ TEST_CASE("laplacian_periodic_separated<2> matches the analytic Laplacian "
   // Periodic 3D field on [0, 2π)^3 sampled on N^3 with a single rank.
   // u = sin(x) cos(y) sin(z) ⇒ Δu = -3 u.
   // We synthesise face halos by wrapping the owned data (single-rank
-  // periodic), exactly as the SeparatedFaceHaloExchanger would after a
+  // periodic), exactly as the SparseHaloExchanger + copy_to_face_layout
+  // pipeline would produce after a
   // self-exchange on a 1-rank communicator.
   constexpr int N = 32;
   constexpr int hw = 1;

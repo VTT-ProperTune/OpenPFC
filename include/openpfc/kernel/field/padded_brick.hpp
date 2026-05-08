@@ -22,7 +22,8 @@
  *
  * - `pfc::field::LocalField<T>` carries no halo storage at all (size is
  *   exactly `nx*ny*nz`); the FD path keeps its halos in six separate
- *   face vectors and exchanges them with `SeparatedFaceHaloExchanger`.
+ *   face vectors and exchanges them with `pfc::SparseHaloExchanger`
+ *   (typically built via `pfc::halo::make_structured_halos`).
  * - `pfc::HaloExchanger<T>` is the existing in-place exchanger but its
  *   "no extra padding" face-type spec (see
  *   `kernel/decomposition/halo_mpi_types.hpp` line 105) **overwrites the

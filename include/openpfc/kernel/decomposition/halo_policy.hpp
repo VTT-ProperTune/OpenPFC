@@ -29,7 +29,7 @@ enum class HaloPolicy {
   /// Not FFT-safe on that buffer after exchange (multi-rank), in general.
   InPlace,
   /// Core nx×ny×nz for FFT; ghosts in separate face slabs
-  /// (`SeparatedFaceHaloExchanger`).
+  /// (`pfc::SparseHaloExchanger` + `pfc::halo::make_structured_halos`).
   Separated,
   /// Explicit slow path: extra copies or side structures; same idea as
   /// Separated but caller accepts orchestration cost.

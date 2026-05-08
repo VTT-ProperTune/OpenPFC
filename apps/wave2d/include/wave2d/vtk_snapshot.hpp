@@ -67,7 +67,8 @@ inline void vtk_write_increment(pfc::VTKWriter &w, int increment,
 /**
  * @brief Configure VTK writer for one rank’s owned brick (no halos), x fastest.
  *
- * Matches the layout of `SeparatedFaceHaloExchanger` local vectors (`nx*ny*nz`).
+ * Matches the layout of `LocalField` / `SparseHaloExchanger` local field
+ * vectors (`nx*ny*nz`).
  */
 inline void vtk_configure_writer_owned_slab(pfc::VTKWriter &w,
                                             const std::array<int, 3> &global_size,
