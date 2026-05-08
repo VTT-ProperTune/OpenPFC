@@ -83,8 +83,9 @@ TEST_CASE("Allen–Cahn CPU vs CUDA agreement (single rank)", "[AllenCahn][CUDA]
 
   constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
   auto face_cpu = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SeparatedFaceHaloExchanger<double> exch_cpu(decomp, rank, halo_width,
-                                                   MPI_COMM_WORLD);
+  pfc::SparseHaloExchanger<double> exch_cpu(
+      MPI_COMM_WORLD, rank,
+      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
 
   for (int step = 0; step < cfg.n_steps; ++step) {
     allen_cahn::step_explicit_euler_cpu(&u_cpu, &lap, &face_cpu, &exch_cpu, nx, ny,
@@ -96,8 +97,9 @@ TEST_CASE("Allen–Cahn CPU vs CUDA agreement (single rank)", "[AllenCahn][CUDA]
 
   auto face_halos_host =
       pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, halo_width,
-                                                    MPI_COMM_WORLD);
+  pfc::SparseHaloExchanger<double> exchanger(
+      MPI_COMM_WORLD, rank,
+      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
   const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
 
   double *u_dev = nullptr;
@@ -119,7 +121,8 @@ TEST_CASE("Allen–Cahn CPU vs CUDA agreement (single rank)", "[AllenCahn][CUDA]
     cuda_check(cudaMemcpy(u_gpu_host.data(), u_dev, nlocal * sizeof(double),
                           cudaMemcpyDeviceToHost),
                "cudaMemcpy D2H core");
-    exchanger.exchange_halos(u_gpu_host.data(), u_gpu_host.size(), face_halos_host);
+    exchanger.exchange_halos(u_gpu_host.data(), u_gpu_host.size());
+    pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
     for (int f = 0; f < 6; ++f) {
       const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
       if (n == 0) {

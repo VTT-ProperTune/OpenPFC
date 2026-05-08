@@ -86,8 +86,9 @@ int main(int argc, char *argv[]) {
   constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
   auto face_halos_host =
       pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, halo_width,
-                                                    MPI_COMM_WORLD);
+  pfc::SparseHaloExchanger<double> exchanger(
+      MPI_COMM_WORLD, rank,
+      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
 
   const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
 
@@ -113,7 +114,8 @@ int main(int argc, char *argv[]) {
     hip_check(hipMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
                         hipMemcpyDeviceToHost),
               "hipMemcpy D2H core");
-    exchanger.exchange_halos(u_host.data(), u_host.size(), face_halos_host);
+    exchanger.exchange_halos(u_host.data(), u_host.size());
+    pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
     for (int f = 0; f < 6; ++f) {
       const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
       if (n == 0) {

@@ -89,8 +89,9 @@ int main(int argc, char *argv[]) {
 
   constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
   auto face_halos = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, halo_width,
-                                                    MPI_COMM_WORLD);
+  pfc::SparseHaloExchanger<double> exchanger(
+      MPI_COMM_WORLD, rank,
+      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
 
   MPI_Barrier(MPI_COMM_WORLD);
   const double step_t0 = MPI_Wtime();
