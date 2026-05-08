@@ -38,6 +38,7 @@
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/runtime/cuda/full_padded_device_halo.hpp>
 
 namespace {
@@ -237,6 +238,88 @@ TEST_CASE("FullPaddedDeviceHalo: hw=2 1-rank widened halo correctness",
   auto decomp = pfc::decomposition::create(world, 1);
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/2, /*n_fields=*/1);
+}
+
+TEST_CASE("FullPaddedDeviceHalo: Axes3D set fills only the 6 axis faces",
+          "[gpu][padded_halo][full_halo][halo_directions]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) {
+    return;
+  }
+  if (!cuda_runtime_available()) {
+    SKIP("No CUDA runtime / device available on this host");
+  }
+
+  const Int3 global_size{8, 6, 4};
+  auto world = pfc::world::create(
+      pfc::GridSize({global_size[0], global_size[1], global_size[2]}));
+  auto decomp = pfc::decomposition::create(world, 1);
+
+  const int hw = 1;
+  const std::size_t n_fields = 1;
+  const int field_idx = 0;
+  const auto ref = build_reference(field_idx, rank, decomp, global_size, hw);
+
+  const auto &local_world = pfc::decomposition::get_subworld(decomp, rank);
+  const auto local_size = pfc::world::get_size(local_world);
+  const int nx = local_size[0], ny = local_size[1], nz = local_size[2];
+  const int nxp = nx + 2 * hw, nyp = ny + 2 * hw, nzp = nz + 2 * hw;
+  const std::size_t total = static_cast<std::size_t>(nxp) *
+                            static_cast<std::size_t>(nyp) *
+                            static_cast<std::size_t>(nzp);
+  const std::size_t bytes = total * sizeof(double);
+
+  // Initial buffer: sentinel everywhere, owned cells overwritten with the
+  // reference hash.
+  const double sentinel = -1.0;
+  std::vector<double> initial(total, sentinel);
+  for (int pk = hw; pk < hw + nz; ++pk)
+    for (int pj = hw; pj < hw + ny; ++pj)
+      for (int pi = hw; pi < hw + nx; ++pi)
+        initial[lin(pi, pj, pk, nxp, nyp)] = ref.expected[lin(pi, pj, pk, nxp, nyp)];
+
+  double *d_field = nullptr;
+  REQUIRE(cudaMalloc(reinterpret_cast<void **>(&d_field), bytes) == cudaSuccess);
+  REQUIRE(cudaMemcpy(d_field, initial.data(), bytes, cudaMemcpyHostToDevice) ==
+          cudaSuccess);
+
+  pfc::cuda::FullPaddedDeviceHalo halo(decomp, rank, hw, MPI_COMM_WORLD, n_fields,
+                                       pfc::halo::presets::Axes3D(),
+                                       /*base_tag=*/0);
+  REQUIRE(halo.direction_set() == pfc::halo::presets::Axes3D());
+  halo.exchange(&d_field, /*stream=*/nullptr);
+
+  std::vector<double> host_after(total);
+  REQUIRE(cudaMemcpy(host_after.data(), d_field, bytes, cudaMemcpyDeviceToHost) ==
+          cudaSuccess);
+  REQUIRE(cudaFree(d_field) == cudaSuccess);
+
+  // Axes3D should fill ±X / ±Y / ±Z face slabs with the reference, but leave
+  // edges and corners at the sentinel value (no widening passes).
+  for (int pk = 0; pk < nzp; ++pk) {
+    for (int pj = 0; pj < nyp; ++pj) {
+      for (int pi = 0; pi < nxp; ++pi) {
+        const bool in_x = pi >= hw && pi < hw + nx;
+        const bool in_y = pj >= hw && pj < hw + ny;
+        const bool in_z = pk >= hw && pk < hw + nz;
+        const int axis_inside =
+            static_cast<int>(in_x) + static_cast<int>(in_y) + static_cast<int>(in_z);
+        const std::size_t l = lin(pi, pj, pk, nxp, nyp);
+        if (axis_inside == 3) {
+          // Owned cell — already had the reference value.
+          REQUIRE(host_after[l] == ref.expected[l]);
+        } else if (axis_inside == 2) {
+          // Face cell — Axes3D fills it.
+          REQUIRE(host_after[l] == ref.expected[l]);
+        } else {
+          // Edge or corner — Axes3D narrow passes do not fill these.
+          REQUIRE(host_after[l] == sentinel);
+        }
+      }
+    }
+  }
 }
 
 #endif // OpenPFC_ENABLE_CUDA

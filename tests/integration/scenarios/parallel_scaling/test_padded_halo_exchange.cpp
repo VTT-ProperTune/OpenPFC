@@ -16,6 +16,7 @@
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 
@@ -169,4 +170,39 @@ TEST_CASE("PaddedHaloExchanger: 2x2x1 grid fills X and Y with right neighbours",
   assert_halo_layer_y(u, -1, static_cast<double>(yneg_neighbor));
   assert_halo_layer_z(u, -1, mine);
   assert_halo_layer_z(u, u.nz(), mine);
+}
+
+TEST_CASE("PaddedHaloExchanger: Axes2D direction set skips ±Z halos",
+          "[MPI][padded_halo][halo_directions]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) return;
+
+  auto world = pfc::world::create(GridSize({8, 6, 4}));
+  auto decomp = pfc::decomposition::create(world, 1);
+
+  const int hw = 1;
+  field::PaddedBrick<double> u(decomp, rank, hw);
+  // Pre-fill every cell (owned + halo ring) with sentinel; then overwrite
+  // owned region with 7.0. After Axes2D exchange ±Z halos must remain
+  // sentinel; ±X and ±Y halos should self-wrap to 7.0.
+  const double sentinel = -999.0;
+  for (int k = -hw; k < u.nz() + hw; ++k)
+    for (int j = -hw; j < u.ny() + hw; ++j)
+      for (int i = -hw; i < u.nx() + hw; ++i) u(i, j, k) = sentinel;
+  fill_owned(u, 7.0);
+
+  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD,
+                                   pfc::halo::presets::Axes2D());
+  REQUIRE(halo.num_directions() == 4);
+  halo.exchange_halos(u.data(), u.size());
+
+  assert_halo_layer_x(u, -1, 7.0);
+  assert_halo_layer_x(u, u.nx(), 7.0);
+  assert_halo_layer_y(u, -1, 7.0);
+  assert_halo_layer_y(u, u.ny(), 7.0);
+  // ±Z stay at sentinel — Axes2D excludes them.
+  assert_halo_layer_z(u, -1, sentinel);
+  assert_halo_layer_z(u, u.nz(), sentinel);
 }
