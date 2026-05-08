@@ -25,14 +25,25 @@ HeFFTe / FFT expects each rank to hold a contiguous block of physical samples fo
 
 In-place halos (traditional FD): ghost values are written into the boundary slabs of the same `nx×ny×nz` array used for the owned grid. After exchange, those boundary samples are not in general the same as the purely owned global-grid values at those indices on a multi-rank periodic domain. Therefore you must not use that same buffer for distributed FFT after a halo fill unless you know the physics allows it (e.g. single-rank).
 
-Recommended for FFT + FD coexistence: keep a core buffer of size exactly the subdomain (`nx×ny×nz`) for spectral work, and store received ghost data in separate face buffers. Exchange sends from faces of the core (MPI derived types) and receives into contiguous slabs. `SeparatedFaceHaloExchanger` and `field::fd::laplacian_periodic_separated<Order>` (or the interior-only `field::fd::laplacian_interior<Order>` when the iteration is restricted to `[hw, n-hw)`) implement this path.
+Recommended for FFT + FD coexistence: keep a core buffer of size exactly the subdomain (`nx×ny×nz`) for spectral work, and store received ghost data in separate face buffers. Exchange is driven by `pfc::SparseHaloExchanger<T>` ([`include/openpfc/kernel/decomposition/sparse_halo_exchange.hpp`](../../include/openpfc/kernel/decomposition/sparse_halo_exchange.hpp)) — fully sparse, grid-agnostic, accepts an arbitrary `std::vector<halo::RemoteHalo<T>>`. For the standard structured face exchange, `pfc::halo::make_structured_halos<T>(decomp, rank, hw, dirs = Axes3D())` builds the `RemoteHalo` list from a `HaloDirectionSet`. After the exchange, `pfc::halo::copy_to_face_layout(ex, face_halos)` (see [`halo_face_layout.hpp`](../../include/openpfc/kernel/decomposition/halo_face_layout.hpp)) refills the `std::array<std::vector<T>, 6>` layout that `field::fd::laplacian_periodic_separated<Order>` (or the interior-only `field::fd::laplacian_interior<Order>` when the iteration is restricted to `[hw, n-hw)`) expects.
 
 Minimal hybrid timestep (conceptual, periodic FD):
 
 1. Spectral substep: `fft.forward` / `backward` on core only.
-2. Before FD: `SeparatedFaceHaloExchanger::exchange_halos(core, halos)` (or in-place path if FFT is not used on that field).
-3. FD: `laplacian_periodic_separated<Order>(core, halos, lap, …)` (full owned domain), or `laplacian_interior<Order>(core, lap, …)` (interior slab only).
+2. Before FD: `ex.exchange_halos(core, core_size); halo::copy_to_face_layout(ex, face_halos);` (or use the padded-brick path if FFT is not used on that field).
+3. FD: `laplacian_periodic_separated<Order>(core, face_halos, lap, …)` (full owned domain), or `laplacian_interior<Order>(core, lap, …)` (interior slab only).
 4. Update core (and/or `lap`) as required by the scheme.
+
+### Which exchanger when
+
+Use `pfc::field::PaddedBrick<T>` + `pfc::PaddedHaloExchanger<T>` (or the CUDA `pfc::cuda::PaddedDeviceHaloExchanger`) for **classical FD** with a single contiguous `(nx+2hw)*(ny+2hw)*(nz+2hw)` array and negative halo indexing. This is the **default** for FD-only apps and is the lowest-overhead path: ghost width is baked into storage, and the inner stencil reads `u(i±hw, j, k)` directly with no face-buffer indirection.
+
+Use `pfc::field::LocalField<T>` (unpadded `nx*ny*nz`) + `pfc::SparseHaloExchanger<T>` (typically built via `pfc::halo::make_structured_halos`) for:
+
+- **Mixed FD + spectral** — the FFT does not tolerate halo regions in the data block, so the core stays unpadded.
+- **Non-axis halos** (edges / corners) without baking a 3-pass widening into the FD path — the user supplies any `HaloDirectionSet` (or any `RemoteHalo` list at all).
+- **Arbitrary peer / index patterns** that have no face geometry — multi-block grids, hopping over distance, mixed `(peer_rank, send_indices, recv_indices, send_tag, recv_tag)` tuples.
+- **Future unstructured / FEM** halo communication — the API already accepts arbitrary `RemoteHalo` entries; only a `make_fem_halos(...)` builder needs to land on top.
 
 ---
 
@@ -45,8 +56,9 @@ Policies describe where ghost data lives and what is safe for FFT. They are docu
 | None | Core `nx×ny×nz` only | Yes | N/A |
 | InPlace | One array; ghosts in boundary slabs of that array | No (multi-rank) after halo fill | `HaloExchanger` + `laplacian_interior<Order>` |
 | **PaddedBrick** | Single contiguous `(nx+2hw)×(ny+2hw)×(nz+2hw)` buffer with a real ghost ring; owned core at `[hw, hw+n)` per axis | No (FFT does not see padded layout) | `PaddedHaloExchanger` + manual stencil over `pfc::field::PaddedBrick<T>`; see `apps/heat3d/src/cpu/heat3d_fd_scratch.cpp` (raw pointer arithmetic, `u_ptr[lin ± stride]`) and `apps/heat3d/src/cpu/heat3d_fd_manual.cpp` (lambda-iterator wrapper) |
-| Separated | Core + six face halo buffers | Yes on core only | `SeparatedFaceHaloExchanger` + `laplacian_periodic_separated<Order>` (or `laplacian_interior<Order>` for interior-only) |
+| Separated | Core + six face halo buffers | Yes on core only | `pfc::SparseHaloExchanger<T>` built by `halo::make_structured_halos<T>` + `halo::copy_to_face_layout` + `laplacian_periodic_separated<Order>` (or `laplacian_interior<Order>` for interior-only) |
 | Mixed / hybrid | Core has no aliased ghosts; sidecar holds all ghost data | Core only | Same as Separated; extra sync/copy steps are explicit, slower path |
+| **Sparse / arbitrary** | Any user-supplied `(peer, send_indices, recv_indices)` tuples; no grid concept | Yes on core only | `pfc::SparseHaloExchanger<T>` directly with a hand-built `std::vector<halo::RemoteHalo<T>>` (FEM / non-axis / multi-block patterns) |
 
 Note: “No halos in the FFT block” means no ghost layers stored inside that array, not “no periodicity.” Periodicity still comes from `Decomposition` / `World`.
 
@@ -74,11 +86,11 @@ Ghosts are not resolved by per-point MPI or maps in hot loops. The pattern (whic
 | Padded face MPI types | `padded_halo_mpi_types.hpp` | `create_padded_face_types_6` — same idea but the outer extents are `(nx+2hw, ny+2hw, nz+2hw)` and recv subarrays target the dedicated halo ring rather than the outermost owned cells. |
 | In-place driver | `halo_exchange.hpp` | `HaloExchanger<T>`: recv into core boundary slabs (traditional). |
 | Padded brick driver | `padded_halo_exchange.hpp` | `PaddedHaloExchanger<T>`: in-place non-blocking face exchange on a `pfc::field::PaddedBrick<T>` so `u(i±hw, j, k)` legitimately reaches the ghost ring. Same `start_/finish_halo_exchange` API as `HaloExchanger`. |
-| Padded brick, **device buffer** (axis-aligned 6-face) | `runtime/cuda/padded_device_halo_exchange.hpp` | `pfc::cuda::PaddedDeviceHaloExchanger`: same MPI face derived types as `PaddedHaloExchanger<double>`, but the base pointer is a **CUDA device** allocation. Uses **GPU-aware MPI** when `OpenPFC_MPI_CUDA_AWARE` and `MPIX_Query_cuda_support()` succeed; otherwise **pack/unpack face slabs** (kernels in `src/openpfc/runtime/cuda/padded_halo_faces.cu`) + MPI on pinned host. Those kernels are **linked into `kobayashi_fd_cuda`** (not `libopenpfc_gpu_kernels`) so CUDA separable compilation device-links with the executable. Env **`OPENPFC_CUDA_FORCE_PACKED_HALO=1`** forces the packed path. **Periodic faces whose neighbor rank equals the caller** (e.g. ±Z when the MPI process grid is one cell thick in Z) use **device pack/unpack** instead of GPU-aware MPI to self, which is slow or problematic on some stacks. **`kobayashi_fd_cuda`** with **one MPI rank** skips this in the timestep loop and applies **periodic halos on device** (`kobayashi_periodic_halos_xy_cuda` in `apps/kobayashi/`) instead of MPI + `cudaStreamSynchronize` / `cudaDeviceSynchronize` per exchange. **Fills only the 6 face halo strips — corners and edges are *not* populated**, so this exchanger is correct for axis-aligned stencils (5/7-point Laplacians, gradients along x/y/z) and **incorrect for any stencil that reads diagonal neighbours** such as the mixed second derivatives `u_xy` / `u_xz` / `u_yz`. Use `FullPaddedDeviceHalo` (below) for general second-order PDE kernels. |
+| Padded brick, **device buffer** (axis-aligned 6-face) | `runtime/cuda/padded_device_halo_exchange.hpp` | `pfc::cuda::PaddedDeviceHaloExchanger`: same MPI face derived types as `PaddedHaloExchanger<double>`, but the base pointer is a **CUDA device** allocation. Uses **GPU-aware MPI** when `OpenPFC_MPI_CUDA_AWARE` and `MPIX_Query_cuda_support()` succeed; otherwise **pack/unpack face slabs** (kernels in `src/openpfc/runtime/cuda/padded_halo_faces.cu`) + MPI on pinned host. Those kernels are **linked into `kobayashi_fd_cuda`** (not `libopenpfc_gpu_kernels`) so CUDA separable compilation device-links with the executable. Env **`OPENPFC_CUDA_FORCE_PACKED_HALO=1`** forces the packed path. **Periodic faces whose neighbor rank equals the caller** (e.g. ±Z when the MPI process grid is one cell thick in Z) use **device pack/unpack** instead of GPU-aware **or packed MPI** to self — important when **local nz = 1**, because ±Z face slabs are **nx×ny** elements (~128 MiB per message at 4096²) and must not be staged through **`MPI_Irecv`/`Isend` to self**. **`kobayashi_fd_cuda`** with **one MPI rank** skips this in the timestep loop and applies **periodic halos on device** (`kobayashi_periodic_halos_xy_cuda` in `apps/kobayashi/`) instead of MPI + `cudaStreamSynchronize` / `cudaDeviceSynchronize` per exchange. **Fills only the 6 face halo strips — corners and edges are *not* populated**, so this exchanger is correct for axis-aligned stencils (5/7-point Laplacians, gradients along x/y/z) and **incorrect for any stencil that reads diagonal neighbours** such as the mixed second derivatives `u_xy` / `u_xz` / `u_yz`. Use `FullPaddedDeviceHalo` (below) for general second-order PDE kernels. |
 | Padded brick, **device buffer** (full 26-direction) | `runtime/cuda/full_padded_device_halo.hpp` | `pfc::cuda::FullPaddedDeviceHalo`: corner- and edge-correct **multi-field** halo exchange built on the same MPI derived types and the same `padded_pack_face_kernel` as `PaddedDeviceHaloExchanger`, but in **3 widening passes** (X → Y-with-X-halos → Z-with-XY-halos) so every cell of the halo ring `[-hw, 0)` and `[n, n+hw)` on every axis is populated, including the 12 edge strips and 8 corner cubes. After the call, every padded cell equals the **periodic-equivalent global value** at that offset — verified bit-identically by `tests/integration/scenarios/parallel_scaling/test_full_padded_device_halo.cpp` on 1/2/4 ranks. Self-axis loops (proc-grid extent 1 along an axis) use device pack/unpack with widened slabs and the **correct** periodic direction (the +axis halo receives the rank's *first* `hw` owned cells, not its *last* `hw`); the self-pack in `PaddedDeviceHaloExchanger` does not implement this wrap correctly and remains in place only for backwards compatibility on small models that do not stress the self-axis. Cost: **3 syncs per call** vs. 2 for the single-pass exchanger; total MPI message count is unchanged. Env **`OPENPFC_CUDA_FORCE_PACKED_HALO=1`** falls back to a per-field axis-aligned `PaddedDeviceHaloExchanger` (corners *not* filled), useful as a sanity check against the same env switch in the older exchanger. **Foundation layer for the planned PDE-kernel codegen path** (`f(t, u, ∂_i u, ∂_i ∂_j u)`): see [`docs/development/refactoring_roadmap.md`](../development/refactoring_roadmap.md) once the rest of the stack lands. |
 | Padded brick storage | `field/padded_brick.hpp` | `pfc::field::PaddedBrick<T>` — single contiguous owned + halo-ring buffer; `T &operator()(int i, int j, int k)` valid for any `i, j, k in [-hw, n+hw)`. |
 | Brick iteration | `field/brick_iteration.hpp` | `for_each_owned`, `for_each_inner(brick, r, fn)`, `for_each_border(brick, r, fn)` yielding `(int i, int j, int k)` triples — drives the laboratory-style FD loop. OMP-parallel `_omp` variants over `(k, j)`. |
-| Separated driver | `separated_halo_exchange.hpp` | `SeparatedFaceHaloExchanger<T>`: send from core, recv into separate face buffers. |
+| Sparse driver | `sparse_halo_exchange.hpp` | `pfc::SparseHaloExchanger<T>`: fully sparse, grid-agnostic non-blocking exchanger. Accepts any `std::vector<halo::RemoteHalo<T>>` (peer + send/recv indices + tags). For structured exchanges use `pfc::halo::make_structured_halos<T>(decomp, rank, hw, dirs = Axes3D())` and `pfc::halo::copy_to_face_layout` to refill the array-of-six face buffers consumed by the templated periodic-separated FD Laplacians. |
 | Persistent halos | `halo_persistent.hpp` | `PersistentHaloExchanger` for in-place six-face path. |
 | FD primitives | `field/fd_apply.hpp`, `field/fd_stencils.hpp` | `apply_d1_along<Axis, Stencil>`, `apply_d2_along<Axis, Stencil>`, `apply_tensor_d<Mx, My, Mz, ...>`, `EvenCentralD1<Order>` (orders 2..14), `EvenCentralD2<Order>` (orders 2..20) |
 | Generic stencils (custom: Sobel, CNN, anisotropic) | `field/stencil_apply.hpp` | `apply_1d_along<Axis>(coeffs, half_width, ...)`, `apply_separable(cx, Hx, cy, Hy, cz, Hz, ...)`, `apply_dense<Nz, Ny, Nx>(weights, ...)` — runtime-coefficient primitives that accept arbitrary kernels (laboratory layer for custom evaluators built atop the same halo plumbing). |
@@ -109,6 +121,41 @@ Separated recv: No scatter into core; MPI receives into contiguous face buffers 
 
 - Architecture: `docs/architecture.md`
 - Design history: `llm/user-stories/0009-implement-halo-exchange-layer.md`, `llm/IMPLEMENTATION_HALO_PATTERN.md`, `llm/IMPLEMENTATION_SPARSE_VECTOR.md`, `llm/design/finite_difference_gradient_design.md`
+
+---
+
+## 5.4 Direction sets and presets
+
+Every face exchanger above accepts an explicit **`pfc::halo::HaloDirectionSet`** (in `include/openpfc/kernel/decomposition/halo_directions.hpp`) so callers can shrink the active direction list — most commonly to skip ±Z on a 2D slab problem. The set is a deduplicated, validated list of unit `Int3` vectors (each component in `{-1, 0, 1}`, never `{0,0,0}`); presets cover the canonical cases.
+
+| Preset      | Size | Members                                      | Use for |
+|-------------|------|----------------------------------------------|---------|
+| `Axes2D()`  |   4  | `±X, ±Y`                                     | 2D slab problems (`nz == 1`) with axis-aligned stencils. |
+| `Full2D()`  |   8  | axes + 4 XY corners                          | 2D problems with diagonal reads (`u_xy`, 9-point Laplacian). |
+| `Axes3D()`  |   6  | `±X, ±Y, ±Z`                                 | Default 3D — historical 6-face exchange (7-point Laplacian). |
+| `Full3D()`  |  26  | axes + 12 edges + 8 corners                  | 3D mixed second derivatives, `FullPaddedDeviceHalo` default. |
+
+Public ctor pattern, applied uniformly to every face exchanger:
+
+```cpp
+Exchanger(decomp, rank, hw, comm,
+          pfc::halo::HaloDirectionSet dirs = presets::Axes3D(),
+          int base_tag = 0,
+          pfc::halo::HaloDirectionSelector per_rank = {});
+```
+
+If `per_rank` is provided, the exchanger calls `per_rank(rank)` for its own rank and uses that result; otherwise it uses the uniform `dirs`. Exchangers that historically defaulted to a different connectivity (`FullPaddedDeviceHalo` ⇒ `Full3D()`) keep their old default after the change. Custom sets that mix faces with diagonals are tolerated by face-only exchangers (the diagonals are silently ignored — they cannot be expressed as one of the 6 canonical face slots); for full corner/edge fill use `FullPaddedDeviceHalo` and feed it `Full3D()` (or a smaller preset to subset its widening passes).
+
+`HaloExchanger` and `PaddedHaloExchanger` use the zero-copy MPI subarray fast path **iff** every face slot is in the active set; subsetting via direction set falls back to the gather/scatter pack path. `PaddedDeviceHaloExchanger` and `BatchedPaddedDeviceHalo` skip excluded slots in both their GPU-aware and packed-fallback branches; same-rank periodic faces *inside* the active set still use device pack/unpack (no MPI-to-self) — this is the lever that turns off the `nx*ny*hw` ±Z self transfers when `local nz == 1`.
+
+`FullPaddedDeviceHalo` is the only exchanger that interprets diagonal directions:
+
+- **Pass `a` is enabled** iff at least one of `±a` is in the set.
+- **Pass `a` widens** the slab cross-section over previously-filled axes iff the set contains a direction with `d[a] != 0` and `d[b] != 0` for some `b < a`. With `Full3D()` this is exactly the original 3-pass widening; with `Axes3D()` every pass uses narrow slabs (face-only); with `Axes2D()` the Z pass is skipped entirely.
+
+For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonical example), pass `presets::Axes2D()` to both `PaddedDeviceHaloExchanger` and `BatchedPaddedDeviceHalo` to remove all ±Z communication / self-pack work without changing the rest of the driver.
+
+> **Inter-rank consistency:** a runtime check that paired ranks agree on directions across their boundary is **not** built into the constructors today; sets that do not match cause MPI message tag mismatches at runtime. The library aborts with an unmatched-Wait error in that case rather than a clean ctor throw — fix the per-rank selector. (A planned follow-up will validate via `MPI_Allgather` at construction.)
 
 ---
 
@@ -145,7 +192,8 @@ Separated recv: No scatter into core; MPI receives into contiguous face buffers 
 
 ## 9. Next steps
 
-- GPU / persistent variants for `SeparatedFaceHaloExchanger`.
+- GPU / persistent variants for `pfc::SparseHaloExchanger`.
+- `make_fem_halos(...)` helper on top of `pfc::SparseHaloExchanger` for unstructured / FEM neighbour discovery.
 - Optional `DataBlock` / gradient abstractions per `llm/design/finite_difference_gradient_design.md`.
 - Derived types or tuning for pack-heavy decompositions.
 
@@ -154,7 +202,7 @@ Separated recv: No scatter into core; MPI receives into contiguous face buffers 
 ## 10. Working examples
 
 - **Separated layout** (FFT-safe core + face buffers):
-  `examples/15_finite_difference_heat.cpp` — `mpirun -np P ./15_finite_difference_heat` runs the heat equation with `SeparatedFaceHaloExchanger` and `laplacian_periodic_separated<2>`. The core field can be passed to `fft.forward` / `backward` on the same decomposition (comment in source).
+  `examples/15_finite_difference_heat.cpp` — `mpirun -np P ./15_finite_difference_heat` runs the heat equation with `pfc::SparseHaloExchanger<double>` (configured by `pfc::halo::make_structured_halos<double>(...)`, default `Axes3D()`) and `laplacian_periodic_separated<2>`. After the exchange the example calls `pfc::halo::copy_to_face_layout` to refill the array-of-six face buffers the Laplacian consumes. The core field can be passed to `fft.forward` / `backward` on the same decomposition (comment in source).
 - **Padded brick layout, version 0** (minimum-OpenPFC consumer of `PaddedHaloExchanger`):
   `apps/heat3d/src/cpu/heat3d_fd_scratch.cpp` — `mpirun -np P ./apps/heat3d/heat3d_fd_scratch N n_steps dt` runs the same heat equation with the only OpenPFC piece in the hot loop being `pfc::PaddedHaloExchanger<double>::exchange_halos`. Everything else is bare triple loops over `[0, n)`, manual padded `lin = (i+hw)*sx + (j+hw)*sy + (k+hw)*sz`, raw pointer arithmetic, and a plain `std::vector<double>` for the per-step Laplacian (no halo). Read this driver to see what the higher-level layouts hide.
 - **Padded brick layout, laboratory style** (in-place ghost ring + comm/compute overlap):
