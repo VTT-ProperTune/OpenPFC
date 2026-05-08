@@ -43,6 +43,8 @@
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/field/spectral_gradient.hpp>
+#include <openpfc/kernel/simulation/du_field.hpp>
 
 namespace pfc::sim::stacks {
 
@@ -93,6 +95,33 @@ public:
   [[nodiscard]] pfc::field::LocalField<double> &u() noexcept { return m_u; }
   [[nodiscard]] const pfc::field::LocalField<double> &u() const noexcept {
     return m_u;
+  }
+
+  /**
+   * @brief Build a compact-driver residual field for the spectral stack.
+   *
+   * Returns a `pfc::sim::DuField<G, pfc::field::SpectralGradient<G>>`
+   * bound to `m_u` and the cached FFT plan. There is no halo exchange to
+   * hide here, so the prepare callable is a no-op; the spectral
+   * evaluator's own `prepare()` runs the forward FFT plus one inverse
+   * FFT per declared derivative inside `apply(...)`.
+   *
+   * Usage mirrors the FD stack:
+   *
+   *     auto& u  = stack.u();
+   *     auto  du = stack.du<MyGrads>();
+   *     du.apply([](const G& g) { ... });
+   *     u += dt * du;
+   *
+   * Returned by value (move). Captures `this` only indirectly through
+   * the evaluator's reference to `m_u.vec()`; must not outlive the stack.
+   *
+   * @tparam G  Model-owned per-point grads aggregate.
+   */
+  template <class G> [[nodiscard]] auto du() {
+    auto eval = pfc::field::create<G>(m_u, m_fft);
+    using EvalT = decltype(eval);
+    return pfc::sim::DuField<G, EvalT>(m_u.size(), std::move(eval), []() {});
   }
 
   [[nodiscard]] int rank() const noexcept { return m_rank; }
