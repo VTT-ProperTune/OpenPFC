@@ -13,6 +13,8 @@ target_sources(openpfc-tests PRIVATE
   scenarios/parallel_scaling/test_halo_exchange_driver.cpp
   scenarios/parallel_scaling/test_padded_halo_exchange.cpp
   scenarios/parallel_scaling/test_full_padded_device_halo.cpp
+  scenarios/parallel_scaling/test_halo_direction_set.cpp
+  scenarios/parallel_scaling/test_sparse_halo_exchange.cpp
   scenarios/parallel_scaling/test_fd_heat_mpi.cpp
   scenarios/parallel_scaling/test_fd_highorder_mpi.cpp
   scenarios/parallel_scaling/test_fd_xy_mpi.cpp
