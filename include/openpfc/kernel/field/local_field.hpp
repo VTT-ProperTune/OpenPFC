@@ -58,11 +58,16 @@
 #include <type_traits>
 #include <vector>
 
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/box3i.hpp>
+#include <openpfc/kernel/field/scaled_field.hpp>
 
 namespace pfc::field {
 
@@ -186,6 +191,45 @@ public:
                     });
   }
 
+  // ---- Linear-combination operators --------------------------------------
+
+  /**
+   * @brief In-place axpy: `*this += s.alpha * s.data[0..s.size)`.
+   *
+   * `ScaledField` is the proxy returned by `operator*(double, ...)`, so
+   * the call site reads
+   *
+   *     u += dt * du;
+   *
+   * which is the explicit-Euler update in math-shaped form. The proxy
+   * must point to a buffer the same size as this field; an exception is
+   * thrown otherwise so layout mismatches surface immediately.
+   *
+   * Only available for `T == double` (the proxy is a `double` view).
+   *
+   * @throws std::invalid_argument if `s.size != size()`.
+   */
+  template <class U = T, class = std::enable_if_t<std::is_same_v<U, double>>>
+  LocalField &operator+=(const pfc::field::ScaledField &s) {
+    if (s.size != m_data.size()) {
+      throw std::invalid_argument(
+          "pfc::field::LocalField::operator+=: ScaledField size " +
+          std::to_string(s.size) + " does not match field size " +
+          std::to_string(m_data.size()));
+    }
+    const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(m_data.size());
+    const double alpha = s.alpha;
+    const double *src = s.data;
+    double *dst = m_data.data();
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static)
+#endif
+    for (std::ptrdiff_t i = 0; i < n; ++i) {
+      dst[i] += alpha * src[i];
+    }
+    return *this;
+  }
+
   /**
    * @brief Iterate the **interior** `[hw, n-hw)` of every axis, exposing
    *        `coords` and `value`. No-op if the interior is empty.
@@ -281,5 +325,20 @@ private:
   pfc::Real3 m_spacing{};
   int m_halo{0};
 };
+
+/**
+ * @brief Build a `ScaledField` proxy from a scalar and a `LocalField<double>`.
+ *
+ * Enables compact-driver expressions such as
+ *
+ *     u += dt * du;
+ *
+ * The proxy is intended for use as a transient on a single statement; it
+ * holds a raw pointer to `f.data()` and does not extend the lifetime of
+ * the source.
+ */
+inline ScaledField operator*(double alpha, const LocalField<double> &f) noexcept {
+  return ScaledField{alpha, f.data(), f.size()};
+}
 
 } // namespace pfc::field
