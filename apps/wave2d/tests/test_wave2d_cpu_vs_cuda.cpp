@@ -100,8 +100,9 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
   std::vector<double> v_cpu = v0;
   std::vector<double> lap_cpu(nlocal);
   auto face_cpu = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SeparatedFaceHaloExchanger<double> exch_cpu(decomp, rank, halo_width,
-                                                   MPI_COMM_WORLD);
+  pfc::SparseHaloExchanger<double> exch_cpu(
+      MPI_COMM_WORLD, rank,
+      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
   for (int s = 0; s < n_steps; ++s) {
     (void)s;
     wave2d::step_wave_separated_order2_cpu(u_cpu, v_cpu, lap_cpu, face_cpu, exch_cpu,
@@ -113,8 +114,9 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
   std::vector<double> v_gpu_host = v0;
   auto face_halos_host =
       pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, halo_width,
-                                                    MPI_COMM_WORLD);
+  pfc::SparseHaloExchanger<double> exchanger(
+      MPI_COMM_WORLD, rank,
+      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
   const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
 
   double *u_dev = nullptr;
@@ -146,7 +148,8 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
     cuda_check(cudaMemcpy(v_gpu_host.data(), v_dev, nlocal * sizeof(double),
                           cudaMemcpyDeviceToHost),
                "D2H v");
-    exchanger.exchange_halos(u_gpu_host.data(), u_gpu_host.size(), face_halos_host);
+    exchanger.exchange_halos(u_gpu_host.data(), u_gpu_host.size());
+    pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
     wave2d::patch_y_face_halos_neumann_order2(u_gpu_host.data(), nx, ny,
                                               face_halos_host, lower, Ny);
     for (int f = 0; f < 6; ++f) {

@@ -191,7 +191,9 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
     }
   }
   auto face_halos = pfc::halo::allocate_face_halos<double>(decomp, rank, 1);
-  pfc::SeparatedFaceHaloExchanger<double> exch(decomp, rank, 1, MPI_COMM_WORLD);
+  pfc::SparseHaloExchanger<double> exch(
+      MPI_COMM_WORLD, rank,
+      pfc::halo::make_structured_halos<double>(decomp, rank, 1));
   for (int s = 0; s < n_steps; ++s) {
     wave2d::step_wave_separated_order2_cpu(u_sep, v_sep, lap_sep, face_halos, exch,
                                            nx, ny, nz, decomp, rank, dt,

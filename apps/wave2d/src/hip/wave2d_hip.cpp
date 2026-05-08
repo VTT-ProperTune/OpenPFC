@@ -120,8 +120,9 @@ int main(int argc, char *argv[]) {
 
   auto face_halos_host =
       pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SeparatedFaceHaloExchanger<double> exchanger(decomp, rank, halo_width,
-                                                    MPI_COMM_WORLD);
+  pfc::SparseHaloExchanger<double> exchanger(
+      MPI_COMM_WORLD, rank,
+      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
   const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
 
   double *u_dev = nullptr;
@@ -165,7 +166,8 @@ int main(int argc, char *argv[]) {
     hip_check(hipMemcpy(v_host.data(), v_dev, nlocal * sizeof(double),
                         hipMemcpyDeviceToHost),
               "D2H v");
-    exchanger.exchange_halos(u_host.data(), u_host.size(), face_halos_host);
+    exchanger.exchange_halos(u_host.data(), u_host.size());
+    pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
     if (cfg.y_bc == wave2d::YBoundaryKind::Dirichlet) {
       wave2d::patch_y_face_halos_dirichlet_order2(
           u_host.data(), nx, ny, face_halos_host, lower, Ny, cfg.u_wall);
