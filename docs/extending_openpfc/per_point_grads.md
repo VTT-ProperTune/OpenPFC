@@ -39,7 +39,7 @@ A convenience default catalog struct, [`pfc::field::GradPoint`](../../include/op
 
 ## Single-field example: heat equation
 
-The `apps/heat3d/` model is the canonical small example. The grads aggregate ([`apps/heat3d/include/heat3d/heat_grads.hpp`](../../apps/heat3d/include/heat3d/heat_grads.hpp)) names exactly three slots:
+The `apps/heat3d/` model is the canonical small example. The grads aggregate, the diffusion constant, and the model itself all live in one self-consistent file ([`apps/heat3d/include/heat3d/heat_model.hpp`](../../apps/heat3d/include/heat3d/heat_model.hpp)). The grads aggregate names exactly three slots:
 
 ```cpp
 namespace heat3d {
@@ -47,25 +47,32 @@ struct HeatGrads { double xx{}, yy{}, zz{}; };
 }
 ```
 
-The model ([`apps/heat3d/include/heat3d/heat_model.hpp`](../../apps/heat3d/include/heat3d/heat_model.hpp)) is **OpenPFC-free** — only `<cmath>` and `<functional>` are needed, plus the local `heat_grads.hpp`:
+The model is **OpenPFC-free** — only `<cmath>` and `<functional>` are needed:
 
 ```cpp
+inline constexpr double kD = 1.0;
+
 struct HeatModel {
-  double D = 1.0;
   inline double rhs(double, const HeatGrads& g) const noexcept {
-    return D * (g.xx + g.yy + g.zz);
+    return kD * (g.xx + g.yy + g.zz);
   }
 };
 ```
 
-The driver wires it to a backend with two lines:
+The compact driver wires it to a backend in two lines and lets the user-facing time loop read like the math:
 
 ```cpp
-auto grad    = pfc::field::create<heat3d::HeatGrads>(stack.u(), order);
-auto stepper = pfc::sim::steppers::create(stack.u(), grad, model, dt);
+auto& u  = stack.u();
+auto  du = stack.du<heat3d::HeatGrads>();   // FD or spectral; halo + evaluator hidden
+
+for (int step = 0; step < n_steps; ++step) {
+  du.apply([](const heat3d::HeatGrads& g) { return heat3d::kD * (g.xx + g.yy + g.zz); });
+  u += dt * du;                              // explicit Euler, on the page
+  t  += dt;
+}
 ```
 
-The `field::create<G>(...)` factory takes the grads type as an explicit template argument. The stepper deduces everything else from the field bundle.
+`stack.du<G>()` takes the grads type as an explicit template argument and constructs the matching evaluator (`pfc::field::FdGradient<G>` for `FdCpuStack`, `pfc::field::SpectralGradient<G>` for `SpectralCpuStack`) bound to `stack.u()`. For non-trivial multi-field models, `pfc::sim::steppers::create(...)` plus `pfc::field::CompositeGradient<...>` remains the right tool (see `apps/kobayashi`).
 
 ## Backend capability matrix
 
