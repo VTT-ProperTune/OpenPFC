@@ -38,7 +38,6 @@
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
 #include <heat3d/cli.hpp>
-#include <heat3d/heat_grads.hpp>
 #include <heat3d/heat_model.hpp>
 #include <heat3d/reporting.hpp>
 

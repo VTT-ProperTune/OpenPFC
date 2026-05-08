@@ -9,19 +9,31 @@
  * @details
  * Per-method binary in the heat3d quartet
  * (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_spectral`,
- * `heat3d_spectral_pointwise`). This driver uses
- * `pfc::field::SpectralGradient<heat3d::HeatGrads>` to materialize
- * the second derivatives (1 fwd + 3 inv FFTs/step) and then drives an
- * explicit Euler step with the **same** `HeatModel::rhs(t, HeatGrads&)`
- * that the FD path uses — same physics, different gradient evaluator.
+ * `heat3d_spectral_pointwise`). This driver is the **spectral twin** of
+ * `heat3d_fd`: the user-facing time loop is identical save for the stack
+ * type, and `pfc::field::SpectralGradient<HeatGrads>` (1 fwd + 3 inv FFTs
+ * per step) replaces `FdGradient<HeatGrads>`. The same `HeatModel::rhs`
+ * is applied cell-by-cell through `pfc::sim::DuField<G, ...>`:
+ *
+ *     auto& u  = stack.u();
+ *     auto  du = stack.du<HeatGrads>();   // spectral evaluator wired in
+ *
+ *     u.apply(model.initial_condition);
+ *
+ *     for (int step = 0; step < cfg.n_steps; ++step) {
+ *       du.apply([](const HeatGrads& g) { return kD * (g.xx + g.yy + g.zz); });
+ *       u += cfg.dt * du;                 // explicit Euler, on the page
+ *       t  += cfg.dt;
+ *     }
+ *
+ * For the implicit Euler in Fourier space (1 fwd + 1 inv FFT, diagonal
+ * multiplier), see `heat3d_spectral`.
  */
 
 #include <cstdlib>
 #include <mpi.h>
 
-#include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
-#include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
@@ -30,6 +42,7 @@
 #include <heat3d/reporting.hpp>
 
 using namespace pfc;
+using heat3d::HeatGrads;
 using heat3d::HeatModel;
 using heat3d::RunConfig;
 
@@ -41,21 +54,26 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   sim::stacks::SpectralCpuStack stack(
       GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
       GridSpacing({1.0, 1.0, 1.0}), rank, nproc, MPI_COMM_WORLD);
-  stack.u().apply(model.initial_condition);
 
-  auto grad = field::create<heat3d::HeatGrads>(stack.u(), stack.fft());
-  auto stepper = sim::steppers::create(stack.u(), grad, model, cfg.dt);
+  auto &u = stack.u();
+  auto du = stack.du<HeatGrads>();
+
+  u.apply(model.initial_condition);
 
   runtime::MpiTimer timer{MPI_COMM_WORLD};
   runtime::tic(timer);
   double t = 0.0;
-  for (int step = 0; step < cfg.n_steps; ++step)
-    t = stepper.step(t, stack.u().vec());
+  for (int step = 0; step < cfg.n_steps; ++step) {
+    du.apply([](const HeatGrads &g) { return heat3d::kD * (g.xx + g.yy + g.zz); });
+    u += cfg.dt * du;
+    t += cfg.dt;
+  }
   const double max_elapsed = runtime::toc(timer);
+  (void)t;
 
   heat3d::report(rank, nproc, cfg, "spectral_pw", "", max_elapsed,
                  "(point-wise spectral RHS, explicit Euler)",
-                 [&stack](auto &&cb) { stack.u().for_each_owned(cb); });
+                 [&u](auto &&cb) { u.for_each_owned(cb); });
 }
 
 } // namespace

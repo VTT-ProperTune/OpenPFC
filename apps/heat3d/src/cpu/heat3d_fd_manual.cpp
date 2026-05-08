@@ -57,7 +57,6 @@
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
 #include <heat3d/cli.hpp>
-#include <heat3d/heat_grads.hpp>
 #include <heat3d/heat_model.hpp>
 #include <heat3d/reporting.hpp>
 
