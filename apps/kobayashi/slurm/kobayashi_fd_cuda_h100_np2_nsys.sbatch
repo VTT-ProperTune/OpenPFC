@@ -13,6 +13,10 @@
 # Output: `kobayashi_fd_cuda_h100_nsys_<jobid>/` with `*.nsys-rep`, app log, and optional
 # `nsys stats` text summaries. Default problem is **shorter** than production so reports
 # stay small; override with **`KOBAYASHI_NSYS_STEPS`**, **`KOBAYASHI_CMP_NX`**, etc.
+#
+# Large `.nsys-rep` files: if **`/WRKDIR/$USER/openpfc`** exists (fast NVMe), artifacts go
+# there; else under **`SLURM_SUBMIT_DIR`**. Override with **`KOBAYASHI_NSYS_ARTIFACT_BASE`**.
+# See **`pick_nsys_artifact_base.bash`**.
 
 #SBATCH --job-name=kob-cuda-n2-nsys
 #SBATCH --partition=nvidia_h100
@@ -25,6 +29,10 @@
 #SBATCH --error=kobayashi_fd_cuda_h100_np2_nsys_%j.err
 
 set -euo pipefail
+
+SLURM_SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# shellcheck source=pick_nsys_artifact_base.bash
+source "${SLURM_SCRIPT_DIR}/pick_nsys_artifact_base.bash"
 
 OPENPFC_BUILD_DIR="${OPENPFC_BUILD_DIR:-${KOBAYASHI_CUDA_OPENPFC_BUILD_DIR:-}}"
 if [[ -z "${OPENPFC_BUILD_DIR}" ]]; then
@@ -71,7 +79,7 @@ DT="${KOBAYASHI_CMP_DT:-${KOBAYASHI_SCALING_DT:-1e-4}}"
 DX="${KOBAYASHI_CMP_DX:-${KOBAYASHI_SCALING_DX:-0.03}}"
 
 JOB_TAG="${SLURM_JOB_ID:-local}"
-OUT_ROOT="${SLURM_SUBMIT_DIR:-.}/kobayashi_fd_cuda_h100_nsys_${JOB_TAG}"
+OUT_ROOT="${KOBAYASHI_NSYS_ARTIFACT_BASE}/kobayashi_fd_cuda_h100_nsys_${JOB_TAG}"
 mkdir -p "${OUT_ROOT}"
 
 export OPENPFC_KOBAYASHI_SKIP_PNG=1
@@ -82,6 +90,7 @@ echo "host=$(hostname) SLURM_JOB_ID=${SLURM_JOB_ID:-}"
 echo "partition=nvidia_h100 (fixed in #SBATCH)"
 echo "nsys=$(command -v nsys) $(nsys --version 2>/dev/null | head -1 || true)"
 echo "OPENPFC_BUILD_DIR=${OPENPFC_BUILD_DIR}"
+echo "KOBAYASHI_NSYS_ARTIFACT_BASE=${KOBAYASHI_NSYS_ARTIFACT_BASE} (${KOBAYASHI_NSYS_ARTIFACT_BASE_REASON})"
 echo "problem: Nx=${NX} Ny=${NY} steps=${NSTEPS} dt=${DT} dx=${DX} (override NSTEPS with KOBAYASHI_NSYS_STEPS)"
 echo "OUT_ROOT=${OUT_ROOT}"
 nvidia-smi -L 2>/dev/null || true
