@@ -285,6 +285,9 @@ TEST_CASE("ProfilingSession MPI gather two ranks", "[profiling][MPI]") {
   if (size < 2) {
     return;
   }
+  if (size != 2) {
+    return;
+  }
 
   ProfilingSession s(ProfilingMetricCatalog::with_defaults_and_extras({}),
                      ProfilingSession::openpfc_default_frame_metrics());
