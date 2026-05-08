@@ -160,3 +160,31 @@ TEST_CASE("FdGradient<OnlyX>: order-2 D1 is exact on a constant field "
     REQUIRE(grad(N / 2, N / 2, N / 2).x == Approx(-3.0));
   }
 }
+
+TEST_CASE("pfc::gradient::FDGradient binds to a PaddedBrick and matches the "
+          "LocalField path",
+          "[kernel][field][fd_gradient][unit]") {
+  // Same -3 x linear ramp as the OnlyX case above, this time evaluated on a
+  // PaddedBrick via the brick-binding constructor (default order = 2). The
+  // pfc::field::FdGradient alias must remain spell-compatible.
+  using namespace pfc;
+  auto world = world::create(GridSize({8, 8, 8}));
+  auto decomp = decomposition::create(world, 1);
+
+  field::PaddedBrick<double> u(decomp, /*rank=*/0, /*hw=*/1);
+  u.apply([](double x, double, double) { return -3.0 * x; });
+
+  // Default order, free `prepare` is a no-op for FD.
+  pfc::gradient::FDGradient<OnlyX> grad(u);
+  pfc::gradient::prepare(grad);
+
+  // Free `evaluate` over a centre-cell Int3.
+  const pfc::Int3 c{u.nx() / 2, u.ny() / 2, u.nz() / 2};
+  const auto g_free = pfc::gradient::evaluate(grad, c);
+  REQUIRE(g_free.x == Approx(-3.0));
+
+  // Deprecated alias still resolves to the canonical evaluator.
+  static_assert(std::is_same_v<pfc::field::FdGradient<OnlyX>,
+                               pfc::gradient::FDGradient<OnlyX>>,
+                "pfc::field::FdGradient should alias pfc::gradient::FDGradient");
+}
