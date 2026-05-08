@@ -43,6 +43,7 @@
 #include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
@@ -328,36 +329,47 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   // Extended mode always batches {phi, tempr} (only 1 exchange per step, 2 fields).
   const bool use_batched_pre_a = halo_batch || halo_extended;
 
+  // Kobayashi FD is a 2D slab problem (`GridSize({Nx, Ny, 1})`); the CUDA
+  // stage_a / stage_b kernels hardcode `iz = 0` and never read `k±1`. Use the
+  // 2D in-plane axes preset so the exchangers skip ±Z entirely — this avoids
+  // packing or MPI-to-self transferring the full nx*ny ±Z face slabs (which
+  // would be ~128 MiB per message at 4096^2). The legacy
+  // `kobayashi_periodic_halos_z_edges_hw1_kernel` is no longer needed in the
+  // multi-rank path; tracked as a follow-up cleanup.
+  const auto halo_dirs = pfc::halo::presets::Axes2D();
+
   if (nproc > 1) {
     if (halo_extended) {
-      // corner_fill=true: ±X MPI first, then self ±Y/±Z pack with widened X so that
-      // the X-Y / X-Z corner halos used by extended stage_a's 5-point stencil at
+      // corner_fill=true: ±X MPI first, then self ±Y pack with widened X so that
+      // the X-Y corner halos used by extended stage_a's 5-point stencil at
       // (-1, 0) / (-1, ny-1) etc. are populated correctly.
       halo_pre_a = std::make_unique<kobayashi::cuda::BatchedPaddedDeviceHalo>(
-          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/2, /*base_tag=*/0,
-          /*corner_fill=*/true);
+          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/2, halo_dirs,
+          /*base_tag=*/0, /*corner_fill=*/true);
       // No halo_pre_b: stage_a writes the 1-cell ring of its outputs directly.
     } else if (use_batched_pre_a) {
       // Pre-stage-A batch: phi, tempr (base_tag=0). Pre-stage-B batch: eps,
       // eps_deriv, phidx, phidy (base_tag=200) -- well separated from the
       // pre-A range (2 fields x 6 face slots = 12 tags below 200).
       halo_pre_a = std::make_unique<kobayashi::cuda::BatchedPaddedDeviceHalo>(
-          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/2, /*base_tag=*/0);
+          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/2, halo_dirs,
+          /*base_tag=*/0);
       halo_pre_b = std::make_unique<kobayashi::cuda::BatchedPaddedDeviceHalo>(
-          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/4, /*base_tag=*/200);
+          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/4, halo_dirs,
+          /*base_tag=*/200);
     } else {
       halo_phi = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, 0);
+          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 0);
       halo_t = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, 20);
+          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 20);
       halo_eps = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, 40);
+          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 40);
       halo_epsd = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, 60);
+          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 60);
       halo_phidx = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, 80);
+          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 80);
       halo_phidy = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, 100);
+          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 100);
     }
   }
 
