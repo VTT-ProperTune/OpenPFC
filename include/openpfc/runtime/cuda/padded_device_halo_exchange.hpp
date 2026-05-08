@@ -16,6 +16,9 @@
  *   `MPI_Isend` use the device pointer directly (after CUDA stream sync).
  * - **Packed fallback**: pack each send face into a contiguous device buffer,
  *   copy to pinned host, MPI on host, copy recv back and unpack into halos.
+ *   Same-rank periodic faces use **device pack/unpack only** (no MPI-to-self),
+ *   matching the GPU-aware path — important when **nz == 1** (±Z faces are full
+ *   **nx×ny** slabs, not thin halos).
  *
  * Set **`OPENPFC_CUDA_FORCE_PACKED_HALO=1`** to force the fallback path.
  *
@@ -61,6 +64,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
@@ -206,10 +210,35 @@ class PaddedDeviceHaloExchanger {
 public:
   using Int3 = pfc::types::Int3;
 
+  /**
+   * @brief Construct with the historical 6-face axis-aligned set (`Axes3D()`).
+   */
   PaddedDeviceHaloExchanger(const decomposition::Decomposition &decomp, int rank,
                             int halo_width, MPI_Comm comm, int base_tag = 0)
+      : PaddedDeviceHaloExchanger(decomp, rank, halo_width, comm,
+                                  halo::presets::Axes3D(), base_tag,
+                                  halo::HaloDirectionSelector{}) {}
+
+  /**
+   * @brief Construct with a user-selected halo direction set.
+   *
+   * Both the GPU-aware and packed branches skip excluded slots; same-rank
+   * periodic faces inside the active set continue to use device pack/unpack
+   * (no MPI-to-self).
+   *
+   * Non-face directions are tolerated but ignored — this is a face-only
+   * exchanger. Use `FullPaddedDeviceHalo` for 26-direction fills.
+   *
+   * @param dirs     Direction set (defaults to `Axes3D()` for back-compat).
+   * @param selector Optional per-rank override of the direction set.
+   */
+  PaddedDeviceHaloExchanger(const decomposition::Decomposition &decomp, int rank,
+                            int halo_width, MPI_Comm comm,
+                            halo::HaloDirectionSet dirs, int base_tag = 0,
+                            halo::HaloDirectionSelector selector = {})
       : m_decomp(decomp), m_rank(rank), m_halo_width(halo_width), m_comm(comm),
-        m_base_tag(base_tag) {
+        m_base_tag(base_tag),
+        m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     const auto &local_world = decomposition::get_subworld(m_decomp, m_rank);
     const auto local_size = pfc::world::get_size(local_world);
     const int nx = local_size[0];
@@ -226,11 +255,14 @@ public:
     m_face_types = halo::create_padded_face_types_6(
         nx, ny, nz, m_halo_width, exchange::detail::get_mpi_type<double>());
 
-    const std::array<Int3, 6> dirs{Int3{1, 0, 0},  Int3{-1, 0, 0}, Int3{0, 1, 0},
-                                   Int3{0, -1, 0}, Int3{0, 0, 1},  Int3{0, 0, -1}};
+    const std::array<Int3, 6> dirs_canon{Int3{1, 0, 0}, Int3{-1, 0, 0},
+                                         Int3{0, 1, 0}, Int3{0, -1, 0},
+                                         Int3{0, 0, 1}, Int3{0, 0, -1}};
     m_neighbors.clear();
-    for (const auto &dir : dirs) {
-      m_neighbors.push_back(decomposition::get_neighbor_rank(m_decomp, m_rank, dir));
+    for (std::size_t i = 0; i < 6; ++i) {
+      m_active[i] = m_dirs.contains(dirs_canon[i]);
+      m_neighbors.push_back(
+          decomposition::get_neighbor_rank(m_decomp, m_rank, dirs_canon[i]));
     }
     m_requests.resize(2 * 6);
 
@@ -241,7 +273,11 @@ public:
                             static_cast<std::size_t>(send.sy) *
                             static_cast<std::size_t>(send.sz);
       m_face_elems[i] = c;
-      m_scratch_elems = std::max(m_scratch_elems, c);
+      // Only consider active slots when sizing scratch — excluded slots will
+      // never pack/unpack so their footprint is irrelevant.
+      if (m_active[i]) {
+        m_scratch_elems = std::max(m_scratch_elems, c);
+      }
     }
 
     const bool force_packed =
@@ -249,8 +285,8 @@ public:
     m_use_gpu_aware = !force_packed && detail::runtime_mpi_cuda_aware();
 
     m_any_self_neighbor = false;
-    for (int n : m_neighbors) {
-      if (n == m_rank) {
+    for (std::size_t i = 0; i < 6; ++i) {
+      if (m_active[i] && m_neighbors[i] == m_rank) {
         m_any_self_neighbor = true;
         break;
       }
@@ -258,6 +294,9 @@ public:
 
     if (!m_use_gpu_aware) {
       for (std::size_t i = 0; i < 6; ++i) {
+        if (!m_active[i] || m_face_elems[i] == 0) {
+          continue;
+        }
         const std::size_t bytes = m_face_elems[i] * sizeof(double);
         detail::cuda_check(
             cudaMallocHost(reinterpret_cast<void **>(&m_h_send[i]), bytes),
@@ -280,6 +319,11 @@ public:
   ~PaddedDeviceHaloExchanger() { cleanup(); }
 
   [[nodiscard]] bool uses_gpu_aware_mpi() const { return m_use_gpu_aware; }
+
+  /** Read-only access to the active direction set (after `selector` resolution). */
+  [[nodiscard]] const halo::HaloDirectionSet &direction_set() const noexcept {
+    return m_dirs;
+  }
 
   void exchange_halos_device(double *d_padded, std::size_t padded_size,
                              cudaStream_t stream = nullptr) {
@@ -334,6 +378,20 @@ private:
     }
   }
 
+  /**
+   * GPU-aware halo: `MPI_Irecv` / `MPI_Isend` with **count = 1** and face types from
+   * `MPI_Type_create_subarray` (`halo_mpi_types.hpp`). That datatype describes a
+   * **non-contiguous** slab inside the padded brick. Application code does **not**
+   * call `cudaMemcpy` here; transfers are meant to be performed by the MPI/CUDA
+   * transport. In practice **Open MPI + UCX** often realize non-contiguous
+   * **device** datatypes as **many small driver copies** (`cuMemcpyAsync`) and
+   * matching syncs, which Nsight reports as huge **Num Calls** even when total moved
+   * bytes are
+   * \(O(\text{face})\). The **packed** path (`exchange_packed_fallback_`) gathers
+   * each face to a **contiguous** buffer first, then uses a **small number** of
+   * `cudaMemcpyAsync` calls per face — set **`OPENPFC_CUDA_FORCE_PACKED_HALO=1`**
+   * to force that path for performance experiments.
+   */
   void exchange_gpu_aware_(double *d_padded, cudaStream_t stream) {
     void *buf = static_cast<void *>(d_padded);
     // Same-rank periodic faces (e.g. ±Z when the MPI grid is one cell thick in Z):
@@ -344,7 +402,7 @@ private:
                                  "needs non-zero device scratch");
       }
       for (std::size_t i = 0; i < 6; ++i) {
-        if (m_neighbors[i] != m_rank) {
+        if (!m_active[i] || m_neighbors[i] != m_rank) {
           continue;
         }
         const auto &send = m_face_specs[i].first;
@@ -363,7 +421,7 @@ private:
 
     std::size_t req_count = 0;
     for (std::size_t i = 0; i < 6; ++i) {
-      if (m_neighbors[i] == m_rank) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
         continue;
       }
       const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
@@ -372,7 +430,7 @@ private:
       ++req_count;
     }
     for (std::size_t i = 0; i < 6; ++i) {
-      if (m_neighbors[i] == m_rank) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
         continue;
       }
       const int tag = m_base_tag + static_cast<int>(i);
@@ -387,8 +445,38 @@ private:
     const bool perf = cuda_halo_exchange_perf_enabled();
     auto &H = cuda_halo_exchange_cpu_timers();
 
+    // Mirror **exchange_gpu_aware_**: periodic faces whose neighbor is **this rank**
+    // must not use MPI (especially ±Z when **nz == 1**, where each face is **nx×ny**
+    // doubles — MPI-to-self would move ~128 MiB per face per exchange). Use device
+    // pack/unpack into **m_d_scratch** instead.
+    if (m_any_self_neighbor) {
+      if (m_d_scratch == nullptr || m_scratch_elems == 0) {
+        throw std::runtime_error("PaddedDeviceHaloExchanger: packed self-neighbor "
+                                 "halo needs non-zero device scratch");
+      }
+      for (std::size_t i = 0; i < 6; ++i) {
+        if (!m_active[i] || m_neighbors[i] != m_rank) {
+          continue;
+        }
+        const auto &send = m_face_specs[i].first;
+        const auto &recv = m_face_specs[i].second;
+        detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
+                                        send.oz, send.sx, send.sy, send.sz, m_nxp,
+                                        m_nyp, m_nzp, stream);
+        detail::launch_padded_unpack_face(d_padded, m_d_scratch, recv.ox, recv.oy,
+                                          recv.oz, recv.sx, recv.sy, recv.sz, m_nxp,
+                                          m_nyp, m_nzp, stream);
+      }
+      detail::cuda_check(
+          cudaStreamSynchronize(stream),
+          "cudaStreamSynchronize after packed self-neighbor halo copies");
+    }
+
     std::size_t req_count = 0;
     for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
+        continue;
+      }
       const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
       MPI_Irecv(m_h_recv[i], static_cast<int>(m_face_elems[i]), MPI_DOUBLE,
                 m_neighbors[i], tag, m_comm, &m_requests[req_count]);
@@ -396,6 +484,9 @@ private:
     }
 
     for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
+        continue;
+      }
       const double t_face = perf ? MPI_Wtime() : 0.0;
       const auto &send = m_face_specs[i].first;
       detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
@@ -424,6 +515,9 @@ private:
     }
 
     for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
+        continue;
+      }
       const double t_face = perf ? MPI_Wtime() : 0.0;
       detail::cuda_check(cudaMemcpyAsync(m_d_scratch, m_h_recv[i],
                                          m_face_elems[i] * sizeof(double),
@@ -466,6 +560,7 @@ private:
   int m_halo_width = 1;
   MPI_Comm m_comm = MPI_COMM_NULL;
   int m_base_tag = 0;
+  halo::HaloDirectionSet m_dirs;
 
   int m_nxp = 0;
   int m_nyp = 0;
@@ -474,6 +569,10 @@ private:
   std::array<std::pair<detail::FaceSlabSpec, detail::FaceSlabSpec>, 6>
       m_face_specs{};
   std::array<halo::FaceTypes, 6> m_face_types{};
+  /** Per-slot membership in the active direction set (slot order
+   *  +X,-X,+Y,-Y,+Z,-Z). Inactive slots are skipped in both the GPU-aware and
+   *  packed branches. */
+  std::array<bool, 6> m_active{};
   std::vector<int> m_neighbors;
   std::vector<MPI_Request> m_requests;
 

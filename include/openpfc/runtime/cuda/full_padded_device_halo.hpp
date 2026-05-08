@@ -95,6 +95,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/runtime/cuda/padded_device_halo_exchange.hpp>
 
@@ -115,6 +116,8 @@ public:
   using Int3 = pfc::types::Int3;
 
   /**
+   * @brief Construct with the historical 26-direction default (`Full3D()`).
+   *
    * @param decomp      Decomposition shared by every field.
    * @param rank        MPI rank of the caller.
    * @param halo_width  Halo ring thickness `hw` on every side; must be `>=1`.
@@ -125,8 +128,52 @@ public:
   FullPaddedDeviceHalo(const decomposition::Decomposition &decomp, int rank,
                        int halo_width, MPI_Comm comm, std::size_t n_fields,
                        int base_tag = 0)
+      : FullPaddedDeviceHalo(decomp, rank, halo_width, comm, n_fields,
+                             halo::presets::Full3D(), base_tag,
+                             halo::HaloDirectionSelector{}) {}
+
+  /**
+   * @brief Construct with a user-selected halo direction set.
+   *
+   * **Default:** `Full3D()` — the historical 26-direction widening exchange.
+   *
+   * **Direction-set semantics for the 3 widening passes:**
+   *   - Each axis pass `a ∈ {0=X, 1=Y, 2=Z}` is **enabled** iff at least one
+   *     of `±a` is in the active set. A pass that is not enabled is skipped
+   *     entirely (no MPI, no self-pack along that axis).
+   *   - A pass `a` runs with **widened** slabs (covering halos filled by
+   *     passes `< a`) iff some direction `d` in the active set has
+   *     `d[a] != 0` **and** `d[b] != 0` for some `b < a` (i.e. corner/edge
+   *     fill is requested along that axis pair). Otherwise the pass uses
+   *     **narrow** slabs that match `PaddedDeviceHaloExchanger`'s 6-face
+   *     specs (no corner fill in that pass).
+   *
+   * **Examples:**
+   *   - `Full3D()`   → 3 widening passes (default — produces full 26-fill).
+   *   - `Full2D()`   → X (narrow) + Y (widened over X) + Z skipped (8-fill).
+   *   - `Axes3D()`   → 3 narrow passes (produces 6-face-only fill).
+   *   - `Axes2D()`   → 2 narrow passes (X and Y) + Z skipped (4-face-only).
+   *   - **Custom**   → narrow per active axis. The 26-fill semantics no
+   *     longer hold (e.g. requesting `±X` and `(0, 1, 1)` widens Z but not
+   *     necessarily covers `(0, 1, 1)` correctly because Y pass did not run
+   *     widened); document non-preset use as an advanced API.
+   *
+   * Non-face entries in custom sets influence *which* passes widen; they
+   * are not exchanged as separate diagonal subarray messages.
+   *
+   * If `selector` is provided the active set for this rank is
+   * `selector(rank)`; otherwise the uniform `dirs` is used.
+   *
+   * @param dirs     Direction set (defaults to `Full3D()` for back-compat).
+   * @param selector Optional per-rank override of the direction set.
+   */
+  FullPaddedDeviceHalo(const decomposition::Decomposition &decomp, int rank,
+                       int halo_width, MPI_Comm comm, std::size_t n_fields,
+                       halo::HaloDirectionSet dirs, int base_tag = 0,
+                       halo::HaloDirectionSelector selector = {})
       : m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
-        m_n_fields(n_fields) {
+        m_n_fields(n_fields),
+        m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     if (halo_width < 1) {
       throw std::invalid_argument("FullPaddedDeviceHalo: halo_width must be >= 1");
     }
@@ -152,6 +199,28 @@ public:
         {{Int3{0, 0, 1}, Int3{0, 0, -1}}}, // Z
     }};
     for (int a = 0; a < 3; ++a) {
+      // Active iff any face of this axis is in the direction set.
+      m_axis_active[a] =
+          m_dirs.contains(kAxisDirs[a][0]) || m_dirs.contains(kAxisDirs[a][1]);
+      // Widen pass `a` iff some direction in the set involves `a` and a
+      // strictly earlier axis (corner / edge fill across that axis pair).
+      m_axis_widen[a] = false;
+      if (a > 0) {
+        for (const auto &d : m_dirs.dirs) {
+          if (d[a] == 0) {
+            continue;
+          }
+          for (int b = 0; b < a; ++b) {
+            if (d[b] != 0) {
+              m_axis_widen[a] = true;
+              break;
+            }
+          }
+          if (m_axis_widen[a]) {
+            break;
+          }
+        }
+      }
       for (int f = 0; f < 2; ++f) {
         m_neighbors[a][f] =
             pfc::decomposition::get_neighbor_rank(decomp, m_rank, kAxisDirs[a][f]);
@@ -169,6 +238,9 @@ public:
     // are the largest: nxp * nyp * hw.
     m_scratch_elems = 0;
     for (int a = 0; a < 3; ++a) {
+      if (!m_axis_active[a]) {
+        continue;
+      }
       for (int f = 0; f < 2; ++f) {
         const auto &send = m_slabs[a][f].first;
         const std::size_t c = static_cast<std::size_t>(send.sx) *
@@ -187,8 +259,9 @@ public:
     m_use_gpu_aware = !force_packed && detail::runtime_mpi_cuda_aware();
 
     if (m_use_gpu_aware) {
-      const bool any_self_axis =
-          m_axis_is_self[0] || m_axis_is_self[1] || m_axis_is_self[2];
+      const bool any_self_axis = (m_axis_is_self[0] && m_axis_active[0]) ||
+                                 (m_axis_is_self[1] && m_axis_active[1]) ||
+                                 (m_axis_is_self[2] && m_axis_active[2]);
       if (any_self_axis && m_scratch_elems > 0) {
         detail::cuda_check(cudaMalloc(reinterpret_cast<void **>(&m_d_scratch),
                                       m_scratch_elems * sizeof(double)),
@@ -197,12 +270,13 @@ public:
     } else {
       // Packed fallback: per-field axis-aligned 6-face exchanger. **Does not
       // fill corners** — provided only so the env switch still works for
-      // axis-aligned correctness checks.
+      // axis-aligned correctness checks. The packed exchanger inherits the
+      // active direction set so e.g. an `Axes2D()` request still skips ±Z.
       m_per_field_packed.reserve(m_n_fields);
       for (std::size_t f = 0; f < m_n_fields; ++f) {
         const int per_field_tag = m_base_tag + static_cast<int>(f) * 6;
         m_per_field_packed.push_back(std::make_unique<PaddedDeviceHaloExchanger>(
-            decomp, m_rank, m_halo_width, m_comm, per_field_tag));
+            decomp, m_rank, m_halo_width, m_comm, m_dirs, per_field_tag));
       }
     }
   }
@@ -219,6 +293,11 @@ public:
 
   [[nodiscard]] bool uses_gpu_aware_mpi() const noexcept { return m_use_gpu_aware; }
   [[nodiscard]] std::size_t n_fields() const noexcept { return m_n_fields; }
+
+  /** Read-only access to the active direction set (after `selector` resolution). */
+  [[nodiscard]] const halo::HaloDirectionSet &direction_set() const noexcept {
+    return m_dirs;
+  }
 
   /**
    * @brief Fill the full 26-direction halo for `n_fields` device buffers.
@@ -247,9 +326,12 @@ public:
     const double t0 = MPI_Wtime();
     if (m_use_gpu_aware) {
       t_mark = MPI_Wtime();
-      run_pass_(0, fields, stream);
-      run_pass_(1, fields, stream);
-      run_pass_(2, fields, stream);
+      for (int a = 0; a < 3; ++a) {
+        if (!m_axis_active[a]) {
+          continue;
+        }
+        run_pass_(a, fields, stream);
+      }
       if (perf) {
         H.gpu_aware_mpi += MPI_Wtime() - t_mark;
       }
@@ -282,30 +364,47 @@ private:
     return slot ^ 1;
   }
 
-  /// Build per-axis (send, recv) slab pairs widened to include halos that
-  /// previous passes have already filled.
+  /// Build per-axis (send, recv) slab pairs.
+  ///
+  /// Pass `a` uses widened slabs (covering halos populated by passes `< a`)
+  /// when `m_axis_widen[a]` is true; otherwise it uses narrow slabs that
+  /// match `pfc::cuda::detail::make_padded_face_slabs` (the same shape as
+  /// `PaddedDeviceHaloExchanger`'s 6-face specs).
   void build_slabs_(int nx, int ny, int nz, int hw) {
     const int X = nx + 2 * hw;
     const int Y = ny + 2 * hw;
 
-    // Pass 0 — X axis: narrow cross-section (interior Y × interior Z).
-    // Identical to `make_padded_face_slabs`'s ±X entries.
+    // Pass 0 — X axis: always narrow (no prior axes to propagate from).
     m_slabs[0][0] = {SlabSpec{nx, hw, hw, hw, ny, nz},
                      SlabSpec{nx + hw, hw, hw, hw, ny, nz}}; // +X
     m_slabs[0][1] = {SlabSpec{hw, hw, hw, hw, ny, nz},
                      SlabSpec{0, hw, hw, hw, ny, nz}}; // -X
 
-    // Pass 1 — Y axis: full padded X (X halos populated by pass 0), interior Z.
-    m_slabs[1][0] = {SlabSpec{0, ny, hw, X, hw, nz},
-                     SlabSpec{0, ny + hw, hw, X, hw, nz}}; // +Y
-    m_slabs[1][1] = {SlabSpec{0, hw, hw, X, hw, nz},
-                     SlabSpec{0, 0, hw, X, hw, nz}}; // -Y
+    // Pass 1 — Y axis.
+    if (m_axis_widen[1]) {
+      m_slabs[1][0] = {SlabSpec{0, ny, hw, X, hw, nz},
+                       SlabSpec{0, ny + hw, hw, X, hw, nz}}; // +Y widened
+      m_slabs[1][1] = {SlabSpec{0, hw, hw, X, hw, nz},
+                       SlabSpec{0, 0, hw, X, hw, nz}}; // -Y widened
+    } else {
+      m_slabs[1][0] = {SlabSpec{hw, ny, hw, nx, hw, nz},
+                       SlabSpec{hw, ny + hw, hw, nx, hw, nz}}; // +Y narrow
+      m_slabs[1][1] = {SlabSpec{hw, hw, hw, nx, hw, nz},
+                       SlabSpec{hw, 0, hw, nx, hw, nz}}; // -Y narrow
+    }
 
-    // Pass 2 — Z axis: full padded X and Y (filled by passes 0 and 1).
-    m_slabs[2][0] = {SlabSpec{0, 0, nz, X, Y, hw},
-                     SlabSpec{0, 0, nz + hw, X, Y, hw}}; // +Z
-    m_slabs[2][1] = {SlabSpec{0, 0, hw, X, Y, hw},
-                     SlabSpec{0, 0, 0, X, Y, hw}}; // -Z
+    // Pass 2 — Z axis.
+    if (m_axis_widen[2]) {
+      m_slabs[2][0] = {SlabSpec{0, 0, nz, X, Y, hw},
+                       SlabSpec{0, 0, nz + hw, X, Y, hw}}; // +Z widened
+      m_slabs[2][1] = {SlabSpec{0, 0, hw, X, Y, hw},
+                       SlabSpec{0, 0, 0, X, Y, hw}}; // -Z widened
+    } else {
+      m_slabs[2][0] = {SlabSpec{hw, hw, nz, nx, ny, hw},
+                       SlabSpec{hw, hw, nz + hw, nx, ny, hw}}; // +Z narrow
+      m_slabs[2][1] = {SlabSpec{hw, hw, hw, nx, ny, hw},
+                       SlabSpec{hw, hw, 0, nx, ny, hw}}; // -Z narrow
+    }
   }
 
   /// Build matching MPI subarray types for each pass's widened slabs.
@@ -403,6 +502,7 @@ private:
   MPI_Comm m_comm = MPI_COMM_NULL;
   int m_base_tag = 0;
   std::size_t m_n_fields = 0;
+  halo::HaloDirectionSet m_dirs;
 
   int m_nx = 0, m_ny = 0, m_nz = 0;
   int m_nxp = 0, m_nyp = 0, m_nzp = 0;
@@ -413,6 +513,12 @@ private:
 
   std::array<std::array<int, 2>, 3> m_neighbors{};
   std::array<bool, 3> m_axis_is_self{};
+  /** True if at least one of `±a` is in the active direction set; false ⇒
+   *  pass `a` is skipped entirely. */
+  std::array<bool, 3> m_axis_active{};
+  /** True if pass `a` runs with widened slabs (corner/edge fill across an
+   *  earlier axis). False ⇒ narrow slabs (face-only). */
+  std::array<bool, 3> m_axis_widen{};
 
   std::vector<MPI_Request> m_requests;
   std::size_t m_scratch_elems = 0;
