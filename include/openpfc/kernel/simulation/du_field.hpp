@@ -5,49 +5,65 @@
 
 /**
  * @file du_field.hpp
- * @brief Compact-driver residual field: a `du` buffer bound to a parent
- *        `u` plus an evaluator.
+ * @brief Stack-bound residual field: a `du` buffer bundled with an
+ *        evaluator and a "prepare parent" hook.
  *
  * @details
- * `pfc::sim::DuField<G, Eval>` is the user-facing object behind the
- * teaching-style time loop
+ * `pfc::sim::DuField<G, Eval>` is the **stack-friendly** entry point for
+ * compact time loops that work on a `LocalField<double>` (FFT-safe core
+ * + sparse face halos for FD, or pure spectral inboxes):
  *
  *     du.apply([](const G& g) { return ...physics... });   // hot path
  *     u += dt * du;                                         // explicit Euler
  *     t += dt;
  *
- * The class hides three pieces of plumbing that should not appear at the
- * user level in the compact heat3d / examples drivers:
+ * The class hides three pieces of plumbing that the compact heat3d
+ * spectral driver and `pfc::sim::stacks::FdCpuStack`-based callers do
+ * not want to see:
  *
- *  1. The **per-point evaluator** (`pfc::field::FdGradient<G>`,
+ *  1. The **per-point evaluator** (`pfc::gradient::FDGradient<G>`,
  *     `pfc::field::SpectralGradient<G>`) that materialises the `G`
  *     aggregate from the parent field.
  *  2. The **once-per-call backend prep** the parent needs before its
- *     derivatives are valid: an MPI halo exchange for FD, or nothing for
- *     spectral (whose own `Eval::prepare()` runs the FFT inside the loop
- *     driver). The "prepare parent" step is supplied by the stack as a
- *     `std::function<void()>` so the user never sees `exchange_halos()`.
+ *     derivatives are valid: a sparse halo exchange for FD, or nothing
+ *     for spectral (whose own `Eval::prepare()` runs the FFT inside the
+ *     loop driver). The "prepare parent" step is supplied by the stack
+ *     as a `std::function<void()>` so the user never sees the exchange.
  *  3. The **scratch `du` buffer** used by the explicit-Euler write-back.
- *     `apply(...)` writes only to interior cells; halo cells stay zero and
- *     are still a valid contribution to `u += dt * du` (`+= 0`).
+ *     `apply(...)` writes only to interior cells; halo cells stay zero
+ *     and are still a valid contribution to `u += dt * du` (`+= 0`).
+ *
+ * **Decoupled vs bundled.** For the new lab-style FD driver
+ * (`apps/heat3d/src/cpu/heat3d_fd.cpp`) the separate primitives
+ * `pfc::PaddedHaloExchanger` + `pfc::start_exchange` /
+ * `pfc::finish_exchange`, `pfc::gradient::FDGradient<G>` +
+ * `pfc::gradient::evaluate(grad, idx)`, and `pfc::field::for_each(brick,
+ * fn)` are the recommended path — they keep halo, gradient, and
+ * iteration as three visible concerns. `DuField` is preserved for the
+ * spectral and `FdCpuStack` paths where the stack still wants to bundle
+ * those concerns into a single `du.apply(...)` call.
  *
  * This is the teaching counterpart to `pfc::sim::steppers::EulerStepper`,
  * which packages the same machinery for non-trivial multi-field models
  * (`apps/kobayashi`, `apps/pfc-1`). For single-field explicit-Euler
- * problems, the laboratory form here keeps the Euler line on the page.
+ * problems on a `LocalField`, the laboratory form here keeps the Euler
+ * line on the page.
  *
  * Lifetime: a `DuField` is constructed by the stack
  * (`stack.du<G>()`) and **must not outlive its parent stack** — the
  * captured "prepare parent" lambda holds a pointer into the stack and
  * the evaluator references the parent field's storage.
  *
- * @see openpfc/kernel/field/local_field.hpp for the matching `+=` /
- *      `operator*(double, LocalField)` operators.
+ * @see openpfc/kernel/field/local_field.hpp and
+ *      openpfc/kernel/field/padded_brick.hpp for `+=` /
+ *      `operator*(double, …)` axpy targets (`LocalField`, `PaddedBrick`).
  * @see openpfc/kernel/simulation/for_each_interior.hpp for the inner
  *      driver loop that `apply()` dispatches to.
  * @see openpfc/kernel/simulation/steppers/euler.hpp for the multi-field
  *      stepper that solves the same kind of problem at a different layer
  *      of abstraction.
+ * @see apps/heat3d/src/cpu/heat3d_fd.cpp for the decoupled lab-style FD
+ *      driver that uses the explicit primitives instead of `DuField`.
  */
 
 #include <cstddef>
