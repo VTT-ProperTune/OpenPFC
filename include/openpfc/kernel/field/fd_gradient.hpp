@@ -105,6 +105,10 @@ public:
    * case; this raw-pointer constructor is for power users that build the
    * evaluator from a `LocalField` or a buffer the kernel does not own.
    *
+   * Treats `core` as a tightly-packed `nx*ny*nz` row-major buffer
+   * (x fastest), with iteration bounds `[halo_width, n-halo_width)` per
+   * axis — the `LocalField` convention.
+   *
    * @param core         Pointer to the local `nx*ny*nz` row-major buffer
    *                     (x fastest); must outlive the evaluator.
    * @param nx,ny,nz     Local extents in cells.
@@ -121,9 +125,130 @@ public:
    */
   FDGradient(const double *core, int nx, int ny, int nz, double dx, double dy,
              double dz, int halo_width, int order = 2)
-      : m_core(core), m_nx(nx), m_ny(ny), m_nz(nz),
-        m_sxy(static_cast<std::ptrdiff_t>(nx) * static_cast<std::ptrdiff_t>(ny)),
-        m_hw(halo_width) {
+      : FDGradient(core, nx, ny, nz, /*sy=*/static_cast<std::ptrdiff_t>(nx),
+                   /*sxy=*/static_cast<std::ptrdiff_t>(nx) *
+                       static_cast<std::ptrdiff_t>(ny),
+                   dx, dy, dz, /*imin=*/halo_width, /*imax=*/nx - halo_width,
+                   /*jmin=*/halo_width, /*jmax=*/ny - halo_width,
+                   /*kmin=*/halo_width, /*kmax=*/nz - halo_width, halo_width,
+                   order) {}
+
+  /**
+   * @brief Bind the evaluator to a `pfc::field::PaddedBrick<double>`.
+   *
+   * Pre-offsets the stored core pointer to the brick's **owned** `(0, 0, 0)`
+   * cell so that `grad(i, j, k)` (and `pfc::gradient::evaluate(grad, idx)`)
+   * indexes by **owned coordinates** `i, j, k ∈ [0, nx_owned)`. Every owned
+   * cell is stencil-safe because the halo ring is filled by the matching
+   * `pfc::PaddedHaloExchanger<T>` before the sweep starts. The strides used
+   * by the stencil reads are still the **padded** strides
+   * `(1, nx_pad, nx_pad·ny_pad)` so reads at the boundary reach into the
+   * halo correctly.
+   *
+   * @param u     Padded brick to evaluate over (must outlive `*this`).
+   * @param order Even spatial order (defaults to 2).
+   */
+  explicit FDGradient(const pfc::field::PaddedBrick<double> &u, int order = 2)
+      : FDGradient(brick_owned_origin_(u), u.nx(), u.ny(), u.nz(),
+                   /*sy=*/static_cast<std::ptrdiff_t>(u.padded_size3()[0]),
+                   /*sxy=*/static_cast<std::ptrdiff_t>(u.padded_size3()[0]) *
+                       static_cast<std::ptrdiff_t>(u.padded_size3()[1]),
+                   u.spacing()[0], u.spacing()[1], u.spacing()[2],
+                   /*imin=*/0, /*imax=*/u.nx(),
+                   /*jmin=*/0, /*jmax=*/u.ny(),
+                   /*kmin=*/0, /*kmax=*/u.nz(), u.halo_width(), order) {}
+
+  /// FD evaluator has no per-step preparation step; kept for symmetry with
+  /// `pfc::gradient::SpectralGradient<G>` where `prepare()` runs the FFTs.
+  void prepare() noexcept {}
+
+  int imin() const noexcept { return m_imin; }
+  int imax() const noexcept { return m_imax; }
+  int jmin() const noexcept { return m_jmin; }
+  int jmax() const noexcept { return m_jmax; }
+  int kmin() const noexcept { return m_kmin; }
+  int kmax() const noexcept { return m_kmax; }
+
+  [[nodiscard]] std::size_t idx(int ix, int iy, int iz) const noexcept {
+    return static_cast<std::size_t>(ix) +
+           static_cast<std::size_t>(iy) * static_cast<std::size_t>(m_sy) +
+           static_cast<std::size_t>(iz) * static_cast<std::size_t>(m_sxy);
+  }
+
+  [[nodiscard]] G operator()(int ix, int iy, int iz) const noexcept {
+    G g{};
+    const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(idx(ix, iy, iz));
+
+    if constexpr (pfc::field::has_value<G>) {
+      g.value = m_core[c];
+    }
+
+    if constexpr (pfc::field::has_x<G>) {
+      g.x = m_sx1 *
+            pfc::field::fd::apply_d1_along<0>(m_d1_stencil, m_core, c,
+                                              /*sx=*/static_cast<std::ptrdiff_t>(1),
+                                              /*sy=*/m_sy, m_sxy);
+    }
+    if constexpr (pfc::field::has_y<G>) {
+      g.y = m_sy1 *
+            pfc::field::fd::apply_d1_along<1>(m_d1_stencil, m_core, c,
+                                              /*sx=*/static_cast<std::ptrdiff_t>(1),
+                                              /*sy=*/m_sy, m_sxy);
+    }
+    if constexpr (pfc::field::has_z<G>) {
+      g.z = m_sz1 *
+            pfc::field::fd::apply_d1_along<2>(m_d1_stencil, m_core, c,
+                                              /*sx=*/static_cast<std::ptrdiff_t>(1),
+                                              /*sy=*/m_sy, m_sxy);
+    }
+
+    if constexpr (pfc::field::has_xx<G>) {
+      g.xx = m_sx2 *
+             pfc::field::fd::apply_d2_along<0>(m_d2_stencil, m_core, c,
+                                               /*sx=*/static_cast<std::ptrdiff_t>(1),
+                                               /*sy=*/m_sy, m_sxy);
+    }
+    if constexpr (pfc::field::has_yy<G>) {
+      g.yy = m_sy2 *
+             pfc::field::fd::apply_d2_along<1>(m_d2_stencil, m_core, c,
+                                               /*sx=*/static_cast<std::ptrdiff_t>(1),
+                                               /*sy=*/m_sy, m_sxy);
+    }
+    if constexpr (pfc::field::has_zz<G>) {
+      g.zz = m_sz2 *
+             pfc::field::fd::apply_d2_along<2>(m_d2_stencil, m_core, c,
+                                               /*sx=*/static_cast<std::ptrdiff_t>(1),
+                                               /*sy=*/m_sy, m_sxy);
+    }
+
+    return g;
+  }
+
+  /// Convenience overload: evaluate at a `pfc::Int3` index directly.
+  [[nodiscard]] G operator()(const pfc::Int3 &c) const noexcept {
+    return (*this)(c[0], c[1], c[2]);
+  }
+
+private:
+  /// Pointer to the brick's **owned** `(0, 0, 0)` cell inside its padded
+  /// buffer. Used by the brick-binding constructor so the public
+  /// `operator()` indexes by owned coordinates while the stencil reads
+  /// still hop along the padded strides.
+  static const double *
+  brick_owned_origin_(const pfc::field::PaddedBrick<double> &u) noexcept {
+    const std::size_t hw = static_cast<std::size_t>(u.halo_width());
+    const std::size_t nxp = static_cast<std::size_t>(u.padded_size3()[0]);
+    const std::size_t nyp = static_cast<std::size_t>(u.padded_size3()[1]);
+    return u.data() + hw + hw * nxp + hw * nxp * nyp;
+  }
+
+  /// Common private constructor — every public ctor delegates here.
+  FDGradient(const double *core, int nx, int ny, int nz, std::ptrdiff_t sy,
+             std::ptrdiff_t sxy, double dx, double dy, double dz, int imin, int imax,
+             int jmin, int jmax, int kmin, int kmax, int halo_width, int order)
+      : m_core(core), m_nx(nx), m_ny(ny), m_nz(nz), m_sy(sy), m_sxy(sxy),
+        m_imin(imin), m_imax(imax), m_jmin(jmin), m_jmax(jmax), m_kmin(kmin),
+        m_kmax(kmax), m_hw(halo_width) {
     static_assert(!pfc::field::has_xy<G> && !pfc::field::has_xz<G> &&
                       !pfc::field::has_yz<G>,
                   "FDGradient: mixed second derivatives (xy/xz/yz) need "
@@ -171,98 +296,15 @@ public:
     }
   }
 
-  /**
-   * @brief Bind the evaluator to a `pfc::field::PaddedBrick<double>`.
-   *
-   * Reads `nx, ny, nz`, the per-axis grid spacings, and the halo width
-   * straight from `u`. The brick must outlive `*this` (the evaluator
-   * captures `u.data()`).
-   *
-   * @param u     Padded brick to evaluate over.
-   * @param order Even spatial order (defaults to 2).
-   */
-  explicit FDGradient(const pfc::field::PaddedBrick<double> &u, int order = 2)
-      : FDGradient(u.data(), u.padded_size3()[0], u.padded_size3()[1],
-                   u.padded_size3()[2], u.spacing()[0], u.spacing()[1],
-                   u.spacing()[2], u.halo_width(), order) {}
-
-  /// FD evaluator has no per-step preparation step; kept for symmetry with
-  /// `pfc::gradient::SpectralGradient<G>` where `prepare()` runs the FFTs.
-  void prepare() noexcept {}
-
-  int imin() const noexcept { return m_hw; }
-  int imax() const noexcept { return m_nx - m_hw; }
-  int jmin() const noexcept { return m_hw; }
-  int jmax() const noexcept { return m_ny - m_hw; }
-  int kmin() const noexcept { return m_hw; }
-  int kmax() const noexcept { return m_nz - m_hw; }
-
-  [[nodiscard]] std::size_t idx(int ix, int iy, int iz) const noexcept {
-    return static_cast<std::size_t>(ix) +
-           static_cast<std::size_t>(iy) * static_cast<std::size_t>(m_nx) +
-           static_cast<std::size_t>(iz) * static_cast<std::size_t>(m_sxy);
-  }
-
-  [[nodiscard]] G operator()(int ix, int iy, int iz) const noexcept {
-    G g{};
-    const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(idx(ix, iy, iz));
-
-    if constexpr (pfc::field::has_value<G>) {
-      g.value = m_core[c];
-    }
-
-    if constexpr (pfc::field::has_x<G>) {
-      g.x = m_sx1 * pfc::field::fd::apply_d1_along<0>(
-                        m_d1_stencil, m_core, c,
-                        /*sx=*/static_cast<std::ptrdiff_t>(1),
-                        /*sy=*/static_cast<std::ptrdiff_t>(m_nx), m_sxy);
-    }
-    if constexpr (pfc::field::has_y<G>) {
-      g.y = m_sy1 * pfc::field::fd::apply_d1_along<1>(
-                        m_d1_stencil, m_core, c,
-                        /*sx=*/static_cast<std::ptrdiff_t>(1),
-                        /*sy=*/static_cast<std::ptrdiff_t>(m_nx), m_sxy);
-    }
-    if constexpr (pfc::field::has_z<G>) {
-      g.z = m_sz1 * pfc::field::fd::apply_d1_along<2>(
-                        m_d1_stencil, m_core, c,
-                        /*sx=*/static_cast<std::ptrdiff_t>(1),
-                        /*sy=*/static_cast<std::ptrdiff_t>(m_nx), m_sxy);
-    }
-
-    if constexpr (pfc::field::has_xx<G>) {
-      g.xx = m_sx2 * pfc::field::fd::apply_d2_along<0>(
-                         m_d2_stencil, m_core, c,
-                         /*sx=*/static_cast<std::ptrdiff_t>(1),
-                         /*sy=*/static_cast<std::ptrdiff_t>(m_nx), m_sxy);
-    }
-    if constexpr (pfc::field::has_yy<G>) {
-      g.yy = m_sy2 * pfc::field::fd::apply_d2_along<1>(
-                         m_d2_stencil, m_core, c,
-                         /*sx=*/static_cast<std::ptrdiff_t>(1),
-                         /*sy=*/static_cast<std::ptrdiff_t>(m_nx), m_sxy);
-    }
-    if constexpr (pfc::field::has_zz<G>) {
-      g.zz = m_sz2 * pfc::field::fd::apply_d2_along<2>(
-                         m_d2_stencil, m_core, c,
-                         /*sx=*/static_cast<std::ptrdiff_t>(1),
-                         /*sy=*/static_cast<std::ptrdiff_t>(m_nx), m_sxy);
-    }
-
-    return g;
-  }
-
-  /// Convenience overload: evaluate at a `pfc::Int3` index directly.
-  [[nodiscard]] G operator()(const pfc::Int3 &c) const noexcept {
-    return (*this)(c[0], c[1], c[2]);
-  }
-
-private:
   const double *m_core{nullptr};
   int m_nx{0};
   int m_ny{0};
   int m_nz{0};
+  std::ptrdiff_t m_sy{0};
   std::ptrdiff_t m_sxy{0};
+  int m_imin{0}, m_imax{0};
+  int m_jmin{0}, m_jmax{0};
+  int m_kmin{0}, m_kmax{0};
   int m_hw{0};
 
   // D2 (xx, yy, zz) per-axis combined scale `1 / (h_i^2 * denom_2)`.
