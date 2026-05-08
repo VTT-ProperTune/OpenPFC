@@ -27,6 +27,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
@@ -50,16 +51,46 @@ public:
 
   /**
    * @brief Construct driver and build patterns (expensive, do once).
-   * @param decomp Decomposition (must outlive this object)
-   * @param rank Current MPI rank
-   * @param halo_width Number of halo layers (e.g. 1 for 3-point stencil)
-   * @param comm MPI communicator
-   * @param base_tag Base tag for messages (direction index added)
+   *
+   * Defaults to the historical 6-face axis-aligned exchange (`Axes3D()`).
+   *
+   * @param decomp     Decomposition (must outlive this object).
+   * @param rank       Current MPI rank.
+   * @param halo_width Number of halo layers (e.g. 1 for 3-point stencil).
+   * @param comm       MPI communicator.
+   * @param base_tag   Base tag for messages (direction index added).
    */
   HaloExchanger(const decomposition::Decomposition &decomp, int rank, int halo_width,
                 MPI_Comm comm, int base_tag = 0)
+      : HaloExchanger(decomp, rank, halo_width, comm, halo::presets::Axes3D(),
+                      base_tag, halo::HaloDirectionSelector{}) {}
+
+  /**
+   * @brief Construct driver with a user-selected halo direction set.
+   *
+   * Restricts the active 6-face slot list to the directions in `dirs` (the
+   * fast zero-copy face path is used iff `dirs` covers the full 6 axis
+   * faces). Non-axis directions in `dirs` are tolerated but ignored — this
+   * exchanger is a face-only driver. For mixed face/edge/corner exchanges
+   * use `FullPaddedDeviceHalo` (CUDA) or build a custom exchanger.
+   *
+   * If `selector` is provided, the active set for this rank is
+   * `selector(rank)`; otherwise the uniform `dirs` is used.
+   *
+   * @param decomp     Decomposition (must outlive this object).
+   * @param rank       Current MPI rank.
+   * @param halo_width Number of halo layers (e.g. 1 for 3-point stencil).
+   * @param comm       MPI communicator.
+   * @param dirs       Direction set (defaults to `Axes3D()` for back-compat).
+   * @param base_tag   Base tag for messages (direction index added).
+   * @param selector   Optional per-rank override of the direction set.
+   */
+  HaloExchanger(const decomposition::Decomposition &decomp, int rank, int halo_width,
+                MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
+                halo::HaloDirectionSelector selector = {})
       : m_decomp(decomp), m_rank(rank), m_halo_width(halo_width), m_comm(comm),
-        m_base_tag(base_tag) {
+        m_base_tag(base_tag),
+        m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     auto patterns = halo::create_halo_patterns<backend::CpuTag>(
         m_decomp, m_rank, halo::Connectivity::Faces, m_halo_width);
 
@@ -76,6 +107,9 @@ public:
                                                {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
 
     for (const auto &dir : direction_order) {
+      if (!m_dirs.contains(dir)) {
+        continue; // Excluded by direction set
+      }
       auto it = patterns.find(dir);
       if (it == patterns.end()) {
         continue;
@@ -112,7 +146,8 @@ public:
    * @brief Run halo exchange on the pack path (gather / MPI / scatter).
    *
    * Ghost values are written in `create_recv_halo` index order, matching
-   * `SeparatedFaceHaloExchanger` and the templated brick Laplacians in
+   * `pfc::halo::make_structured_halos` (the structured shortcut for
+   * `SparseHaloExchanger`) and the templated brick Laplacians in
    * `kernel/field/finite_difference.hpp`.
    * Default `exchange_halos()` uses zero-copy MPI subarrays for six face
    * neighbors, which can permute elements within a face relative to that order.
@@ -131,7 +166,10 @@ public:
     m_pending_field = field_ptr;
     m_pending_size = field_size;
     const size_t n = m_directions.size();
-    if (n == 6) {
+    // Zero-copy fast path: only when every face direction is active and they
+    // map 1:1 to the canonical 6-slot layout. Subsetting via direction-set or
+    // partial neighbour lists falls back to the gather/scatter pack path.
+    if (n == 6 && m_directions.size() == m_dirs.size() && m_dirs.size() == 6) {
       size_t req_count = 0;
       void *buf = static_cast<void *>(field_ptr);
       for (size_t i = 0; i < n; ++i) {
@@ -160,7 +198,9 @@ public:
     const double _pfc_t0 = MPI_Wtime();
     exchange::wait_all(m_requests.data(), m_request_count);
     const size_t n = m_directions.size();
-    if (n != 6 && m_pending_field != nullptr) {
+    const bool zero_copy_path =
+        (n == 6 && m_directions.size() == m_dirs.size() && m_dirs.size() == 6);
+    if (!zero_copy_path && m_pending_field != nullptr) {
       for (size_t i = 0; i < n; ++i) {
         core::scatter(m_recv_values[i], m_pending_field, m_pending_size);
       }
@@ -239,6 +279,7 @@ private:
   int m_halo_width;
   MPI_Comm m_comm;
   int m_base_tag;
+  halo::HaloDirectionSet m_dirs;
 
   std::array<halo::FaceTypes, 6> m_face_types;
   std::vector<Int3> m_directions;

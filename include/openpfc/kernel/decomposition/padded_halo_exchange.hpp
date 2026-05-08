@@ -9,7 +9,7 @@
  *
  * @details
  * Sibling of `pfc::HaloExchanger` (no padding, overwrites the outermost
- * owned cells) and `pfc::SeparatedFaceHaloExchanger` (separate face
+ * owned cells) and `pfc::SparseHaloExchanger` (sparse, separate face
  * vectors). `pfc::PaddedHaloExchanger<T>` is the in-place exchanger
  * that targets a `(nx+2hw)*(ny+2hw)*(nz+2hw)` `pfc::field::PaddedBrick<T>`
  * buffer:
@@ -45,6 +45,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
@@ -66,7 +67,9 @@ public:
   using Int3 = pfc::types::Int3;
 
   /**
-   * @brief Construct the exchanger and pre-build the 6 face MPI types.
+   * @brief Construct the exchanger and pre-build the 6 face MPI types
+   *        (default: full `Axes3D()` set, identical to the historical 6-face
+   *        exchange).
    *
    * @param decomp     Decomposition (must outlive this object).
    * @param rank       This MPI rank.
@@ -77,8 +80,34 @@ public:
    */
   PaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
                       int halo_width, MPI_Comm comm, int base_tag = 0)
+      : PaddedHaloExchanger(decomp, rank, halo_width, comm, halo::presets::Axes3D(),
+                            base_tag, halo::HaloDirectionSelector{}) {}
+
+  /**
+   * @brief Construct with a user-selected halo direction set.
+   *
+   * Restricts the active face slots to those listed in `dirs`. Non-face
+   * directions (edges, corners) are tolerated but ignored — this exchanger
+   * is face-only. For full 26-direction fills use `FullPaddedDeviceHalo`
+   * (CUDA) or run a 3-pass face-only exchange manually.
+   *
+   * If `selector` is provided the active set for this rank is
+   * `selector(rank)`; otherwise the uniform `dirs` is used.
+   *
+   * @param decomp     Decomposition (must outlive this object).
+   * @param rank       This MPI rank.
+   * @param halo_width Ghost ring thickness `hw`.
+   * @param comm       MPI communicator.
+   * @param dirs       Direction set (defaults to `Axes3D()` for back-compat).
+   * @param base_tag   Base tag for messages (direction index added).
+   * @param selector   Optional per-rank override of the direction set.
+   */
+  PaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
+                      int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
+                      int base_tag = 0, halo::HaloDirectionSelector selector = {})
       : m_decomp(decomp), m_rank(rank), m_halo_width(halo_width), m_comm(comm),
-        m_base_tag(base_tag) {
+        m_base_tag(base_tag),
+        m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     const auto &local_world = decomposition::get_subworld(m_decomp, m_rank);
     const auto local_size = world::get_size(local_world);
     const int nx = local_size[0];
@@ -88,10 +117,12 @@ public:
     m_face_types = halo::create_padded_face_types_6(
         nx, ny, nz, m_halo_width, exchange::detail::get_mpi_type<T>());
 
-    const std::array<Int3, 6> dirs = {
+    const std::array<Int3, 6> dirs_canon = {
         {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
-    for (const auto &dir : dirs) {
-      m_neighbors.push_back(decomposition::get_neighbor_rank(m_decomp, m_rank, dir));
+    for (std::size_t i = 0; i < 6; ++i) {
+      m_active[i] = m_dirs.contains(dirs_canon[i]);
+      m_neighbors.push_back(
+          decomposition::get_neighbor_rank(m_decomp, m_rank, dirs_canon[i]));
     }
     m_requests.resize(2 * 6);
   }
@@ -123,12 +154,18 @@ public:
     void *buf = static_cast<void *>(padded_buf);
     std::size_t req_count = 0;
     for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i]) {
+        continue;
+      }
       const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
       exchange::irecv_face(buf, m_face_types[i].recv_type.get(), m_neighbors[i],
                            m_comm, &m_requests[req_count], tag);
       ++req_count;
     }
     for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i]) {
+        continue;
+      }
       const int tag = m_base_tag + static_cast<int>(i);
       exchange::isend_face(buf, m_face_types[i].send_type.get(), m_neighbors[i],
                            m_comm, &m_requests[req_count], tag);
@@ -152,8 +189,19 @@ public:
                            MPI_Wtime() - t0);
   }
 
-  /// Number of face directions (always 6 with periodic decompositions).
-  std::size_t num_directions() const { return 6; }
+  /// Number of active face directions (`0..6` depending on the direction set).
+  std::size_t num_directions() const {
+    std::size_t n = 0;
+    for (bool a : m_active) {
+      if (a) ++n;
+    }
+    return n;
+  }
+
+  /// Read-only access to the active direction set.
+  [[nodiscard]] const halo::HaloDirectionSet &direction_set() const noexcept {
+    return m_dirs;
+  }
 
 private:
   static int opposite_slot(int slot) {
@@ -173,8 +221,10 @@ private:
   int m_halo_width;
   MPI_Comm m_comm;
   int m_base_tag;
+  halo::HaloDirectionSet m_dirs;
 
   std::array<halo::FaceTypes, 6> m_face_types;
+  std::array<bool, 6> m_active{};
   std::vector<int> m_neighbors;
   std::vector<MPI_Request> m_requests;
   int m_request_count = 0;
