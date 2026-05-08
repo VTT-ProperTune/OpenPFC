@@ -47,6 +47,11 @@ TEST_CASE("Neighbor exchange - Bidirectional 2 processes",
     SKIP("This test requires at least 2 MPI processes");
   }
 
+  if (size != 2) {
+
+    SKIP("This test requires exactly 2 MPI processes");
+  }
+
   if (rank == 0) {
     // Rank 0 sends to rank 1
     std::vector<size_t> indices = {0, 2, 4};
@@ -106,12 +111,16 @@ TEST_CASE("Neighbor exchange - Ring topology",
                                    static_cast<double>(rank * 100 + 20)};
   auto sparse_send = sparsevector::create<double>(send_indices, send_data);
 
-  // Send to right neighbor
-  exchange::send(sparse_send, rank, right_neighbor, MPI_COMM_WORLD);
-
-  // Receive from left neighbor
+  // Avoid cyclic blocking deadlock when messages exceed the eager limit: even
+  // ranks send then recv, odd ranks recv then send (same pattern as face halos).
   auto sparse_recv = sparsevector::create<double>(0);
-  exchange::receive(sparse_recv, left_neighbor, rank, MPI_COMM_WORLD);
+  if (rank % 2 == 0) {
+    exchange::send(sparse_send, rank, right_neighbor, MPI_COMM_WORLD);
+    exchange::receive(sparse_recv, left_neighbor, rank, MPI_COMM_WORLD);
+  } else {
+    exchange::receive(sparse_recv, left_neighbor, rank, MPI_COMM_WORLD);
+    exchange::send(sparse_send, rank, right_neighbor, MPI_COMM_WORLD);
+  }
 
   // Verify received data
   REQUIRE(sparsevector::get_size(sparse_recv) == 3);
@@ -132,6 +141,11 @@ TEST_CASE("Neighbor exchange - Data-only runtime phase",
   if (size < 2) {
 
     SKIP("This test requires at least 2 MPI processes");
+  }
+
+  if (size != 2) {
+
+    SKIP("This test requires exactly 2 MPI processes");
   }
 
   // Setup: Exchange indices once
@@ -179,6 +193,11 @@ TEST_CASE("Neighbor exchange - Large data", "[SparseVector][MPI][neighbor][large
     SKIP("This test requires at least 2 MPI processes");
   }
 
+  if (size != 2) {
+
+    SKIP("This test requires exactly 2 MPI processes");
+  }
+
   const size_t large_size = 10000;
   std::vector<size_t> indices(large_size);
   std::vector<double> data(large_size);
@@ -212,6 +231,11 @@ TEST_CASE("Neighbor exchange - Empty sparse vector",
   if (size < 2) {
 
     SKIP("This test requires at least 2 MPI processes");
+  }
+
+  if (size != 2) {
+
+    SKIP("This test requires exactly 2 MPI processes");
   }
 
   if (rank == 0) {
@@ -256,15 +280,22 @@ TEST_CASE("Neighbor exchange - Multiple neighbors simultaneously",
                                     static_cast<double>(rank * 2000 + 200)};
   auto sparse_right = sparsevector::create<double>(right_indices, right_data);
 
-  // Send to both neighbors
-  exchange::send(sparse_left, rank, left_neighbor, MPI_COMM_WORLD, 100);
-  exchange::send(sparse_right, rank, right_neighbor, MPI_COMM_WORLD, 200);
-
-  // Receive from both neighbors
+  // Rank R sends sparse_left to left_neighbor L — L receives from R (= R's
+  // right_neighbor from L's view). Rank R sends sparse_right to right_neighbor
+  // H — H receives from R (= R's left_neighbor from H's view).
   auto recv_left = sparsevector::create<double>(0);
   auto recv_right = sparsevector::create<double>(0);
-  exchange::receive(recv_left, left_neighbor, rank, MPI_COMM_WORLD, 100);
-  exchange::receive(recv_right, right_neighbor, rank, MPI_COMM_WORLD, 200);
+  if (rank % 2 == 0) {
+    exchange::send(sparse_left, rank, left_neighbor, MPI_COMM_WORLD, 100);
+    exchange::send(sparse_right, rank, right_neighbor, MPI_COMM_WORLD, 200);
+    exchange::receive(recv_left, right_neighbor, rank, MPI_COMM_WORLD, 100);
+    exchange::receive(recv_right, left_neighbor, rank, MPI_COMM_WORLD, 200);
+  } else {
+    exchange::receive(recv_left, right_neighbor, rank, MPI_COMM_WORLD, 100);
+    exchange::receive(recv_right, left_neighbor, rank, MPI_COMM_WORLD, 200);
+    exchange::send(sparse_left, rank, left_neighbor, MPI_COMM_WORLD, 100);
+    exchange::send(sparse_right, rank, right_neighbor, MPI_COMM_WORLD, 200);
+  }
 
   // Verify received data
   REQUIRE(sparsevector::get_size(recv_left) == 2);
@@ -273,11 +304,11 @@ TEST_CASE("Neighbor exchange - Multiple neighbors simultaneously",
   auto left_data_recv = sparsevector::get_data(recv_left);
   auto right_data_recv = sparsevector::get_data(recv_right);
 
-  auto expected_left_base = static_cast<double>(left_neighbor * 1000);
+  auto expected_left_base = static_cast<double>(right_neighbor * 1000);
   REQUIRE(left_data_recv[0] == Approx(expected_left_base).margin(1e-10));
   REQUIRE(left_data_recv[1] == Approx(expected_left_base + 100.0).margin(1e-10));
 
-  auto expected_right_base = static_cast<double>(right_neighbor * 2000);
+  auto expected_right_base = static_cast<double>(left_neighbor * 2000);
   REQUIRE(right_data_recv[0] == Approx(expected_right_base).margin(1e-10));
   REQUIRE(right_data_recv[1] == Approx(expected_right_base + 200.0).margin(1e-10));
 
@@ -315,15 +346,31 @@ TEST_CASE("Neighbor exchange - 2D grid pattern (4 processes)",
   std::vector<double> v_data = {static_cast<double>(rank * 200)};
   auto sparse_v = sparsevector::create<double>(v_indices, v_data);
 
-  // Send to neighbors
-  exchange::send(sparse_h, rank, h_neighbor, MPI_COMM_WORLD, 10);
-  exchange::send(sparse_v, rank, v_neighbor, MPI_COMM_WORLD, 20);
-
-  // Receive from neighbors
   auto recv_h = sparsevector::create<double>(0);
   auto recv_v = sparsevector::create<double>(0);
-  exchange::receive(recv_h, h_neighbor, rank, MPI_COMM_WORLD, 10);
-  exchange::receive(recv_v, v_neighbor, rank, MPI_COMM_WORLD, 20);
+  // Exchange horizontal edges without deadlock (lower rank of each pair sends
+  // first), barrier, then vertical — avoids cross-edge waits on a 2×2 torus.
+  {
+    const int lo = std::min(rank, h_neighbor);
+    if (rank == lo) {
+      exchange::send(sparse_h, rank, h_neighbor, MPI_COMM_WORLD, 10);
+      exchange::receive(recv_h, h_neighbor, rank, MPI_COMM_WORLD, 10);
+    } else {
+      exchange::receive(recv_h, h_neighbor, rank, MPI_COMM_WORLD, 10);
+      exchange::send(sparse_h, rank, h_neighbor, MPI_COMM_WORLD, 10);
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  {
+    const int lo = std::min(rank, v_neighbor);
+    if (rank == lo) {
+      exchange::send(sparse_v, rank, v_neighbor, MPI_COMM_WORLD, 20);
+      exchange::receive(recv_v, v_neighbor, rank, MPI_COMM_WORLD, 20);
+    } else {
+      exchange::receive(recv_v, v_neighbor, rank, MPI_COMM_WORLD, 20);
+      exchange::send(sparse_v, rank, v_neighbor, MPI_COMM_WORLD, 20);
+    }
+  }
 
   // Verify
   REQUIRE(sparsevector::get_size(recv_h) == 1);
@@ -346,6 +393,11 @@ TEST_CASE("Neighbor exchange - Data-only with different tags",
   if (size < 2) {
 
     SKIP("This test requires at least 2 MPI processes");
+  }
+
+  if (size != 2) {
+
+    SKIP("This test requires exactly 2 MPI processes");
   }
 
   // Setup with different tags
@@ -396,6 +448,11 @@ TEST_CASE("Neighbor exchange - Gather-scatter round-trip via exchange",
   if (size < 2) {
 
     SKIP("This test requires at least 2 MPI processes");
+  }
+
+  if (size != 2) {
+
+    SKIP("This test requires exactly 2 MPI processes");
   }
 
   // Rank 0: Create source array, gather into sparse, send
