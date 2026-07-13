@@ -14,8 +14,8 @@ If anything here fails, do not keep going and hope the next command fixes it. Op
 You need a C++20 compiler, an MPI implementation that you will both build with and run with, and HeFFTe 2.4.1 installed somewhere CMake can find it through `CMAKE_PREFIX_PATH` or `Heffte_DIR`. On clusters, `mpicc` and `mpirun` are often unavailable until you load modules. A typical Tohtori-style setup looks like this:
 
 ```bash
-module load gcc/11.2.0
-module load openmpi/5.0.10   # Slurm / PMI-friendly (`OPENMPI_ROOT` if your module paths differ)
+module purge
+module load openmpi/5.0.10   # also loads its matching GCC on Tohtori
 ```
 
 Then confirm that the MPI wrappers are really visible:

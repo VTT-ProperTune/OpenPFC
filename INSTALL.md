@@ -5,14 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Installing OpenPFC
 
-This document is the supported source build guide. OpenPFC is routinely tested with GCC 11.2.0 in a module environment. Other compilers may work, but if something breaks, try matching this stack first.
+This document is the supported source build guide. On Tohtori, the current site Open MPI 5.0.10 module uses GCC 15.2.0. Other compilers may work, but OpenPFC, HeFFTe, and MPI must use one matching compiler/MPI stack.
 
 ### Reference stack (at a glance)
 
 | Piece | Documented / exercised baseline |
 |--------|----------------------------------|
 | CMake | 3.15+ |
-| GCC | 11.2.x (modules on clusters) |
+| GCC | 15.2.x with the current Tohtori Open MPI 5.0.10 module |
 | Open MPI | **5.0.10** (Slurm `srun` needs PMI/PMIx); **[OPENMPI_ROOT](#1-environment-modules-recommended-on-clusters)** overrides IDE toolchain paths if your site differs |
 | HeFFTe | 2.4.1 (separate install per CPU/CUDA/ROCm variant) |
 
@@ -32,7 +32,7 @@ This guide’s source of truth for MPI is Open MPI from environment modules (`mo
 
 **IDE / preset pins:** `cmake/toolchains/tohtori-gcc11-openmpi.cmake` defaults to **`/share/apps/OpenMPI/5.0.10`** when **`OPENMPI_ROOT`** is unset (matching `module show openmpi/5.0.10` on typical nodes). For another install or module layout, set **`OPENMPI_ROOT`** to that prefix before CMake.
 
-Keep **one** MPI per build: GCC 11.2.x + the same Open MPI for HeFFTe, OpenPFC, and `mpirun`/`srun` at run time.
+Keep one compiler and MPI stack per build: use the compiler loaded by the Open MPI module for HeFFTe and OpenPFC, then use the same Open MPI for `mpirun`/`srun` at run time.
 
 - Run with the same MPI you built with: after loading modules, `which mpirun` and `which mpicxx` must come from the same Open MPI installation (e.g. both under `/share/apps/OpenMPI/5.0.10/bin` when using that module). Do not launch binaries with a system MPICH `mpirun` (e.g. `/usr/lib64/mpich/bin/mpirun`) if OpenPFC was linked against Open MPI — you will see link warnings about conflicting `libmpi.so` and runtime errors around `MPI_Finalize`.
 
@@ -46,11 +46,11 @@ Keep **one** MPI per build: GCC 11.2.x + the same Open MPI for HeFFTe, OpenPFC, 
 
 ## 1. Environment modules (recommended on clusters)
 
-Load a recent GCC, OpenMPI, and (for GPU) CUDA before configuring anything:
+Load Open MPI first so Lmod also selects the compiler with which that MPI was built. Load CUDA as needed:
 
 ```bash
-module load gcc/11.2.0
-module load openmpi/5.0.10   # Slurm `srun` (PMI/PMIx); use `module avail openmpi` on your site — rebuild HeFFTe/OpenPFC when switching MPI
+module purge
+module load openmpi/5.0.10   # currently loads gcc/15.2.0 on Tohtori
 module load cuda/12.9        # for GPU — run `module avail cuda` and pick a version where `nvcc --version` works
 ```
 
@@ -59,12 +59,12 @@ Site note (**tohtori**): see [`docs/hpc/INSTALL.tohtori.md`](docs/hpc/INSTALL.to
 Verify:
 
 ```bash
-g++ --version    # expect 11.2.x when using gcc/11.2.0
+g++ --version    # expect the compiler named by `module show openmpi/5.0.10`
 mpicc --version
 nvcc --version   # after loading CUDA, for GPU builds
 ```
 
-Important: CMake may still pick `/usr/bin/gcc` if it was run before modules were loaded or if the cache is stale. HeFFTe must be built and consumed with the same toolchain. After loading `gcc/11.2.0`, set compilers explicitly when configuring OpenPFC (and when building HeFFTe):
+Important: CMake may still pick `/usr/bin/gcc` if it was run before modules were loaded or if the cache is stale. HeFFTe must be built and consumed with the same toolchain. After loading Open MPI and its compiler dependency, set compilers explicitly when configuring OpenPFC (and when building HeFFTe):
 
 ```bash
 export CC=$(which gcc)
@@ -91,13 +91,13 @@ To mirror CI static analysis locally (see `.github/workflows/clang-tidy.yml`), u
 
 ### VS Code / Cursor on tohtori (CMake presets)
 
-CMake Tools often launches `cmake` without an interactive Lmod shell, so the generic `dev-debug` preset can pick the OS default compiler (e.g. GCC 8.x) and fail to find OpenMPI. On tohtori, select the `tohtori-debug` or `tohtori-release` configure preset in `CMakePresets.json`: they apply `cmake/toolchains/tohtori-gcc11-openmpi.cmake` plus `PATH` / `LD_LIBRARY_PATH` matching `module show gcc/11.2.0` and **`openmpi/5.0.10`** (`OPENMPI_ROOT` overrides when your prefix differs). If `$HOME/opt/heffte/2.4.1-cpu` exists, the toolchain prepends it to `CMAKE_PREFIX_PATH`. Those presets set `OpenPFC_ENABLE_CODE_COVERAGE=OFF` (many cluster images lack `lcov`); install `lcov` (e.g. EPEL + `dnf install lcov` on EL8) and reconfigure with `-DOpenPFC_ENABLE_CODE_COVERAGE=ON` if you want `ninja coverage`.
+CMake Tools often launches `cmake` without an interactive Lmod shell, so the generic `dev-debug` preset can pick the OS default compiler and fail to find Open MPI. On Tohtori, select the `tohtori-debug` or `tohtori-release` configure preset in `CMakePresets.json`: they apply the historically named `cmake/toolchains/tohtori-gcc11-openmpi.cmake` plus `PATH` / `LD_LIBRARY_PATH` matching the current GCC 15.2.0 + Open MPI 5.0.10 site module. For a custom stack, set both `OPENPFC_GCC_ROOT` and `OPENMPI_ROOT` before CMake. If `$HOME/opt/heffte/2.4.1-cpu` exists, the toolchain prepends it to `CMAKE_PREFIX_PATH`. Those presets set `OpenPFC_ENABLE_CODE_COVERAGE=OFF` (many cluster images lack `lcov`); install `lcov` (e.g. EPEL + `dnf install lcov` on EL8) and reconfigure with `-DOpenPFC_ENABLE_CODE_COVERAGE=ON` if you want `ninja coverage`.
 
 Optionally create `.vscode/settings.json` with `"cmake.configurePreset": "tohtori-debug"` so the folder opens with the right preset (this repo `.gitignore` ignores `.vscode` unless you change that). For different paths after a cluster upgrade, use `CMakeUserPresets.json` at the repo root — see `cmake/README.md`.
 
 AddressSanitizer / UBSan (dev): The `dev-asan` configure preset in `CMakePresets.json` extends `dev-debug` with `-fsanitize=address,undefined` (and matching link flags) for local debugging with GCC/Clang that support those flags. Example: `cmake --preset dev-asan` then `cmake --build --preset dev-asan`. When running tests or `mpirun`, you may set `ASAN_OPTIONS=detect_leaks=1` (and related runtime flags) in the environment; mixed MPI + sanitizers can be environment-sensitive, so match the same `gcc` / OpenMPI stack as the rest of this guide.
 
-Shell build on tohtori: `sh ./scripts/build_tohtori.sh` (or `./scripts/build_tohtori.sh`) sources Lmod when needed, loads **`gcc/11.2.0`** and **`openmpi/5.0.10`** by default. Pass **`--build-openmpi`** to compile Open MPI **5.0.10** with **`--with-slurm`** under `$HOME/opt/openmpi/5.0.10` instead of the site module (still PMI-friendly for **`srun`**); the script then sets **`OPENMPI_ROOT`** to that prefix. Otherwise download/build HeFFTe 2.4.1 (CPU) under `$HOME/opt/heffte/2.4.1-cpu` if needed, then configure OpenPFC with the pinned toolchain file and `OpenPFC_ENABLE_HDF5=ON`. Run `--help` for options.
+Shell build on Tohtori: `sh ./scripts/build_tohtori.sh` (or `./scripts/build_tohtori.sh`) sources Lmod when needed and loads the site `openmpi/5.0.10` module, including its compiler dependency. Pass `--build-openmpi` to compile Open MPI 5.0.10 with `--with-slurm` under `$HOME/opt/openmpi/5.0.10`; `OPENPFC_GCC_MODULE` selects that custom build's compiler module and defaults to `gcc/11.2.0`. The script sets `OPENPFC_GCC_ROOT` and `OPENMPI_ROOT` together, builds HeFFTe 2.4.1 under `$HOME/opt/heffte/2.4.1-cpu` if needed, and configures OpenPFC with `OpenPFC_ENABLE_HDF5=ON`. Run `--help` for options.
 
 ## 2. Other dependencies
 
@@ -160,7 +160,7 @@ Place the file where Lmod looks (e.g. `$HOME/privatemodules/heffte/2.4.1-cpu.lua
 
 ### Build and install HeFFTe manually (outside OpenPFC)
 
-Load `gcc/11.2.0`, `openmpi`, and (for CUDA) `cuda` first (§1). Use the same `CC`/`CXX` as for OpenPFC.
+Load Open MPI (which selects its matching GCC) and, for CUDA, `cuda` first (§1). Use the same `CC`/`CXX` as for OpenPFC.
 
 Working copy outside the repo (adjust `SRC` / `BUILD`):
 
@@ -363,8 +363,8 @@ cmake --install build
 For ROCm / HIP builds, load a recent GCC, OpenMPI, and ROCm before configuring anything (see §1 for compiler notes). Many clusters provide a ROCm module:
 
 ```bash
-module load gcc/11.2.0
-module load openmpi          # e.g. openmpi/5.0.10
+module purge
+module load openmpi/5.0.10   # also selects its matching GCC on Tohtori
 module load rocm/6.4.0       # for GPU — run `module avail rocm` and pick a version
 ```
 
@@ -462,5 +462,5 @@ toml++ and ROCm headers: If you see a preprocessor error in toml++ about `__has_
 
 ## Compiler notes
 
-- GCC 11.2.0 is the primary tested toolchain.
+- The current Tohtori reference stack is GCC 15.2.0 with Open MPI 5.0.10.
 - Older GCC (e.g. 8.x) may need extra link flags for `std::filesystem`; OpenPFC’s CMake links `libstdc++fs` automatically for GCC versions older than 9 when using GNU.

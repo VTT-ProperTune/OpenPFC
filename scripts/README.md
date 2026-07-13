@@ -18,9 +18,9 @@ sh ./scripts/build_tohtori.sh --help
 sh ./scripts/build_tohtori.sh
 ```
 
-The script sources Lmod when needed and runs `module load gcc/11.2.0` itself (you do not need to load it first). Unless you pass `--build-openmpi`, it loads **`openmpi/5.0.10`** from modules. Use **`--build-openmpi`** to build Open MPI **5.0.10** with **`--with-slurm`** under **`$HOME/opt/openmpi/5.0.10`** instead (Slurm **`srun`** / PMI). Invoking with `sh` re-executes under bash so `module` and the rest of the script work.
+The script sources Lmod when needed and loads the site `openmpi/5.0.10` module together with its compiler dependency. Use `--build-openmpi` to build Open MPI 5.0.10 with `--with-slurm` under `$HOME/opt/openmpi/5.0.10`; `OPENPFC_GCC_MODULE` selects the compiler for that custom build and defaults to `gcc/11.2.0`. Invoking with `sh` re-executes under bash so `module` and the rest of the script work.
 
-HeFFTe is skipped if already installed at `HEFFTE_PREFIX`; use `--clean-heffte` to reconfigure the HeFFTe build tree, or remove the install prefix and re-run to reinstall. `OpenPFC_ENABLE_HDF5=ON` is set so profiling HDF5 export (e.g. experiments/scalability_tohtori) works. Override `OPENPFC_BUILD_DIR` if you do not want `build/tohtori-release`.
+HeFFTe is skipped if already installed at `HEFFTE_PREFIX`; use `--clean-heffte` to reconfigure the HeFFTe build tree, or remove the install prefix and re-run to reinstall. `OpenPFC_ENABLE_HDF5=ON` is set so profiling HDF5 export (e.g. experiments/scalability_tohtori) works. Override `OPENPFC_BUILD_DIR` if you do not want `builds/tohtori-release`.
 
 ### User-built OpenMPI (Slurm `srun` / PMI)
 
@@ -151,12 +151,12 @@ Purpose: Run `clang-tidy` on OpenPFC `.cpp` files the same way as CI (`.clang-ti
 
 Excluded sources (CPU-only analysis): a small set of GPU-only tungsten tests and entrypoints that use `#error` or HIP/CUDA headers when CUDA/HIP is off. The list lives in `list_cpp_for_tidy()` inside the script; keep it in sync if you add similar TUs.
 
-Requirements: `clang-tidy`, Ninja, CMake, project dependencies (MPI, HeFFTe, etc.). On tohtori, load `gcc/11.2.0` and `openmpi/5.0.10` before configuring if you are not using the pinned toolchain paths only.
+Requirements: `clang-tidy`, Ninja, CMake, project dependencies (MPI, HeFFTe, etc.). On Tohtori, load `openmpi/5.0.10` and its compiler dependency before configuring if you are not using the pinned toolchain paths only.
 
 Typical workflow (tohtori):
 
 ```bash
-module load gcc/11.2.0
+module purge
 module load openmpi/5.0.10
 ./scripts/run-clang-tidy.sh --configure # once: CMake + compile_commands.json
 ./scripts/run-clang-tidy.sh # run analysis (can take a long time)
@@ -194,7 +194,7 @@ Usage**:
 
 What it does:
 - Automatically loads required modules (`cuda`, `openmpi/5.0.10`)
-- Sets correct compiler paths (GCC 11.2.0)
+- Uses the compiler paths selected by the Open MPI module
 - Selects appropriate HeFFTe version (2.4.1 for CPU, 2.4.1-cuda for GPU)
 - Configures CMake with correct options
 - Builds with specified number of parallel jobs

@@ -33,8 +33,7 @@ Many sites provide Open MPI; you may use `mpirun` or `srun` as your scheduler do
 #SBATCH -p <your-partition>
 
 module purge
-module load gcc/11.2.0
-module load openmpi/5.0.10   # PMI/PMIx for `srun`; rebuild OpenPFC/HeFFTe against this MPI
+module load openmpi/5.0.10   # also loads its matching GCC; rebuild OpenPFC/HeFFTe together
 
 cd "$SLURM_SUBMIT_DIR"   # or cd /scratch/$USER/run123
 

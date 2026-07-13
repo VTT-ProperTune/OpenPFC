@@ -5,15 +5,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Building OpenPFC on tohtori (GCC + Open MPI + optional CUDA)
 
-This note complements the generic instructions in [INSTALL.md](../../INSTALL.md). It matches the pinned paths in [`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../../cmake/toolchains/tohtori-gcc11-openmpi.cmake) and the usual VTT **tohtori** module layout (`gcc/11.2.0`). For **Slurm `srun`** jobs, use **`module load openmpi/5.0.10`** (PMI/PMIx); the toolchain defaults to **`/share/apps/OpenMPI/5.0.10`** when **`OPENMPI_ROOT`** is unset — override **`OPENMPI_ROOT`** from `module show openmpi/…` if your site layout differs.
+This note complements the generic instructions in [INSTALL.md](../../INSTALL.md). The current Tohtori `openmpi/5.0.10` site module loads GCC 15.2.0 and provides PMI/PMIx support for Slurm `srun`. The historically named [`cmake/toolchains/tohtori-gcc11-openmpi.cmake`](../../cmake/toolchains/tohtori-gcc11-openmpi.cmake) defaults to those current site paths. For a custom stack, set both `OPENPFC_GCC_ROOT` and `OPENMPI_ROOT`.
 
 ## 1. CPU build (reference)
 
 In an interactive shell:
 
 ```bash
-module load gcc/11.2.0
-module load openmpi/5.0.10   # keep one MPI for HeFFTe + OpenPFC
+module purge
+module load openmpi/5.0.10   # also loads its matching GCC (currently 15.2.0)
 export CC=$(which gcc) CXX=$(which g++)
 which mpicc mpicxx   # both should resolve under the same Open MPI prefix
 ```
