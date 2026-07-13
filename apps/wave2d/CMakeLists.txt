@@ -3,16 +3,22 @@
 
 set(WAVE2D_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+# Resolve the C++ runtime from the configured compiler so CUDA/HIP targets do
+# not accidentally link a stale module tree after a site compiler upgrade.
 set(_wave2d_libstdcxx_so "")
-foreach(_p IN ITEMS
-    "$ENV{OPENPFC_LIBSTDCXX_SO}"
-    "/share/apps/gcc/11.2.0/lib64/libstdc++.so"
-    "/export/apps/gcc/11.2.0/lib64/libstdc++.so")
-  if(EXISTS "${_p}")
-    set(_wave2d_libstdcxx_so "${_p}")
-    break()
+if(DEFINED ENV{OPENPFC_LIBSTDCXX_SO} AND EXISTS "$ENV{OPENPFC_LIBSTDCXX_SO}")
+  set(_wave2d_libstdcxx_so "$ENV{OPENPFC_LIBSTDCXX_SO}")
+else()
+  execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libstdc++.so
+    OUTPUT_VARIABLE _wave2d_libstdcxx_from_compiler
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(_wave2d_libstdcxx_from_compiler MATCHES "^/" AND
+     EXISTS "${_wave2d_libstdcxx_from_compiler}")
+    set(_wave2d_libstdcxx_so "${_wave2d_libstdcxx_from_compiler}")
   endif()
-endforeach()
+endif()
 
 function(wave2d_link_libstdcxx target_name)
   if(_wave2d_libstdcxx_so)

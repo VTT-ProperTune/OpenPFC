@@ -50,28 +50,28 @@
       "name": "tohtori-debug",
       "displayName": "Tohtori (cluster) Debug",
       "inherits": ["dev-debug"],
-      "binaryDir": "${sourceDir}/build/tohtori-debug",
+      "binaryDir": "${sourceDir}/builds/tohtori-debug",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/tohtori-gcc11-openmpi.cmake",
         "OpenPFC_ENABLE_CODE_COVERAGE": "OFF"
       },
       "environment": {
-        "PATH": "/share/apps/gcc/11.2.0/bin:/share/apps/OpenMPI/5.0.10/bin:$penv{PATH}",
-        "LD_LIBRARY_PATH": "/share/apps/gcc/11.2.0/lib:/share/apps/gcc/11.2.0/lib64:/share/apps/gcc/11.2.0/lib/gcc/x86_64-unknown-linux-gnu/11.2.0:/share/apps/OpenMPI/5.0.10/lib:/share/apps/OpenMPI/5.0.10/lib64:$penv{LD_LIBRARY_PATH}"
+        "PATH": "/share/apps/gcc/15.2.0/bin:/share/apps/OpenMPI/5.0.10/bin:$penv{PATH}",
+        "LD_LIBRARY_PATH": "/share/apps/gcc/15.2.0/lib:/share/apps/gcc/15.2.0/lib64:/share/apps/gcc/15.2.0/lib/gcc/x86_64-unknown-linux-gnu/15.2.0:/share/apps/OpenMPI/5.0.10/lib:/share/apps/OpenMPI/5.0.10/lib64:$penv{LD_LIBRARY_PATH}"
       }
     },
     {
       "name": "tohtori-release",
       "displayName": "Tohtori (cluster) Release",
       "inherits": ["dev-release"],
-      "binaryDir": "${sourceDir}/build/tohtori-release",
+      "binaryDir": "${sourceDir}/builds/tohtori-release",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/tohtori-gcc11-openmpi.cmake",
         "OpenPFC_ENABLE_CODE_COVERAGE": "OFF"
       },
       "environment": {
-        "PATH": "/share/apps/gcc/11.2.0/bin:/share/apps/OpenMPI/5.0.10/bin:$penv{PATH}",
-        "LD_LIBRARY_PATH": "/share/apps/gcc/11.2.0/lib:/share/apps/gcc/11.2.0/lib64:/share/apps/gcc/11.2.0/lib/gcc/x86_64-unknown-linux-gnu/11.2.0:/share/apps/OpenMPI/5.0.10/lib:/share/apps/OpenMPI/5.0.10/lib64:$penv{LD_LIBRARY_PATH}"
+        "PATH": "/share/apps/gcc/15.2.0/bin:/share/apps/OpenMPI/5.0.10/bin:$penv{PATH}",
+        "LD_LIBRARY_PATH": "/share/apps/gcc/15.2.0/lib:/share/apps/gcc/15.2.0/lib64:/share/apps/gcc/15.2.0/lib/gcc/x86_64-unknown-linux-gnu/15.2.0:/share/apps/OpenMPI/5.0.10/lib:/share/apps/OpenMPI/5.0.10/lib64:$penv{LD_LIBRARY_PATH}"
       }
     },
     {

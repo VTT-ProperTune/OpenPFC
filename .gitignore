@@ -37,6 +37,9 @@ scripts/*
 !scripts/pre-commit-hook
 !scripts/pvrender.py
 !scripts/run-clang-tidy.sh
+!scripts/build_tohtori.sh
+!scripts/sbatch_build_tohtori.slurm
+!scripts/submit_build_tohtori_sbatch.sh
 !scripts/xdmfgen.py
 !scripts/build_handbook.sh
 !scripts/build_mkdocs.sh

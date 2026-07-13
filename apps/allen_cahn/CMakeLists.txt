@@ -3,18 +3,22 @@
 
 set(ALLEN_CAHN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Link libstdc++ by absolute path when the module-loaded GCC tree is visible at
-# configure time (mpicxx + -lstdc++ alone may pick an older devtoolset DSO).
+# Link the C++ runtime reported by the configured compiler. Hard-coding an older
+# module tree here causes ABI link failures when the site MPI module changes GCC.
 set(_allen_libstdcxx_so "")
-foreach(_p IN ITEMS
-    "$ENV{OPENPFC_LIBSTDCXX_SO}"
-    "/share/apps/gcc/11.2.0/lib64/libstdc++.so"
-    "/export/apps/gcc/11.2.0/lib64/libstdc++.so")
-  if(EXISTS "${_p}")
-    set(_allen_libstdcxx_so "${_p}")
-    break()
+if(DEFINED ENV{OPENPFC_LIBSTDCXX_SO} AND EXISTS "$ENV{OPENPFC_LIBSTDCXX_SO}")
+  set(_allen_libstdcxx_so "$ENV{OPENPFC_LIBSTDCXX_SO}")
+else()
+  execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libstdc++.so
+    OUTPUT_VARIABLE _allen_libstdcxx_from_compiler
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(_allen_libstdcxx_from_compiler MATCHES "^/" AND
+     EXISTS "${_allen_libstdcxx_from_compiler}")
+    set(_allen_libstdcxx_so "${_allen_libstdcxx_from_compiler}")
   endif()
-endforeach()
+endif()
 
 set(_allen_cahn_heffte_tgt "")
 if(TARGET Heffte::Heffte)

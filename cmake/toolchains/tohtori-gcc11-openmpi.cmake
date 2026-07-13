@@ -1,13 +1,17 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Toolchain for VTT **tohtori**: GCC 11.2.0 + OpenMPI without `module load` in CMake/IDE.
+# Toolchain for VTT **tohtori**: GCC + OpenMPI without `module load` in CMake/IDE.
 #
-# GCC path matches `module show gcc/11.2.0` on tohtori. MPI wrappers default to the site
-# **Open MPI 5.0.10** prefix (`module show openmpi/5.0.10`) unless **OPENMPI_ROOT** overrides
-# (user build from scripts/build_tohtori.sh --build-openmpi, or another module path).
+# The historical filename is retained for compatibility. The current site Open MPI 5.0.10
+# module loads GCC 15.2.0. OPENPFC_GCC_ROOT and OPENMPI_ROOT select a matching custom stack
+# (for example a user build from scripts/build_tohtori.sh --build-openmpi).
 
-set(_OpenPFC_tohtori_gcc_root "/share/apps/gcc/11.2.0")
+if(NOT "$ENV{OPENPFC_GCC_ROOT}" STREQUAL "" AND EXISTS "$ENV{OPENPFC_GCC_ROOT}/bin/g++")
+  set(_OpenPFC_tohtori_gcc_root "$ENV{OPENPFC_GCC_ROOT}")
+else()
+  set(_OpenPFC_tohtori_gcc_root "/share/apps/gcc/15.2.0")
+endif()
 # Prefer OPENMPI_ROOT when set (custom install or different module layout).
 if(NOT "$ENV{OPENMPI_ROOT}" STREQUAL "" AND EXISTS "$ENV{OPENMPI_ROOT}/bin/mpicc")
   set(_OpenPFC_tohtori_ompi_root "$ENV{OPENMPI_ROOT}")
