@@ -377,6 +377,13 @@ public:
   std::vector<T> &get_data() { return get_array().get_data(); }
 
   /**
+   * @brief Get the data object
+   *
+   * @return const std::vector<T>&
+   */
+  const std::vector<T> &get_data() const { return get_array().get_data(); }
+
+  /**
    * @brief Returns the element at the specified index.
    *
    * @param indices multi-dimensional indices
@@ -592,7 +599,7 @@ public:
    * @return A reference to the underlying data.
    */
   operator std::vector<T> &() { return get_data(); }
-  operator std::vector<T> &() const { return get_data(); }
+  operator const std::vector<T> &() const { return get_data(); }
 
   /**
    * @brief Get the size of the field.
