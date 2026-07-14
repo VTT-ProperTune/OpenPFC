@@ -9,6 +9,8 @@
 experiments/scalability
 
 .vscode
+.limina/
+/.env
 .venv
 **/venv
 build
@@ -37,6 +39,7 @@ scripts/*
 !scripts/pre-commit-hook
 !scripts/pvrender.py
 !scripts/run-clang-tidy.sh
+!scripts/build.sh
 !scripts/build_tohtori.sh
 !scripts/sbatch_build_tohtori.slurm
 !scripts/submit_build_tohtori_sbatch.sh

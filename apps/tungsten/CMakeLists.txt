@@ -47,7 +47,7 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
 
   # Set CUDA properties
   set_target_properties(tungsten_cuda PROPERTIES
-    CUDA_STANDARD 17
+    CUDA_STANDARD 20
     CUDA_STANDARD_REQUIRED ON
     CUDA_SEPARABLE_COMPILATION ON
   )
@@ -70,7 +70,7 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     CUDA::cudart
   )
   set_target_properties(test_tungsten_cuda_vtk PROPERTIES
-    CUDA_STANDARD 17
+    CUDA_STANDARD 20
     CUDA_STANDARD_REQUIRED ON
     CUDA_SEPARABLE_COMPILATION ON
   )
@@ -87,7 +87,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   add_executable(verify_gpu_aware_mpi src/verify_gpu_aware_mpi.cpp)
   target_link_libraries(verify_gpu_aware_mpi PRIVATE MPI::MPI_CXX hip::host)
   set_target_properties(verify_gpu_aware_mpi PROPERTIES
-    HIP_STANDARD 17
+    HIP_STANDARD 20
     HIP_STANDARD_REQUIRED ON
   )
   install(TARGETS verify_gpu_aware_mpi DESTINATION bin)
@@ -110,7 +110,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   )
 
   set_target_properties(tungsten_hip PROPERTIES
-    HIP_STANDARD 17
+    HIP_STANDARD 20
     HIP_STANDARD_REQUIRED ON
   )
 
@@ -131,7 +131,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
     hip::host
   )
   set_target_properties(test_tungsten_hip_vtk PROPERTIES
-    HIP_STANDARD 17
+    HIP_STANDARD 20
     HIP_STANDARD_REQUIRED ON
   )
   message(STATUS "Tungsten HIP VTK test program enabled")
@@ -174,7 +174,7 @@ if(TUNGSTEN_ENABLE_TESTS)
                 src/cuda/tungsten_ops_kernels.cu
             )
             set_target_properties(test_tungsten_cpu_vs_cuda PROPERTIES
-                CUDA_STANDARD 17
+                CUDA_STANDARD 20
                 CUDA_STANDARD_REQUIRED ON
                 CUDA_SEPARABLE_COMPILATION ON
             )
@@ -199,7 +199,7 @@ if(TUNGSTEN_ENABLE_TESTS)
                 src/hip/tungsten_ops_kernels.hip
             )
             set_target_properties(test_tungsten_cpu_vs_hip PROPERTIES
-                HIP_STANDARD 17
+                HIP_STANDARD 20
                 HIP_STANDARD_REQUIRED ON
             )
             include(CTest)
@@ -228,7 +228,7 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
         src/cuda/tungsten_ops_kernels.cu
     )
     set_target_properties(tungsten_scalability PROPERTIES
-        CUDA_STANDARD 17
+        CUDA_STANDARD 20
         CUDA_STANDARD_REQUIRED ON
         CUDA_SEPARABLE_COMPILATION ON
     )
@@ -241,7 +241,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
         src/hip/tungsten_ops_kernels.hip
     )
     set_target_properties(tungsten_scalability PROPERTIES
-        HIP_STANDARD 17
+        HIP_STANDARD 20
         HIP_STANDARD_REQUIRED ON
     )
     target_compile_definitions(tungsten_scalability PRIVATE OpenPFC_ENABLE_HIP_SPECTRAL)

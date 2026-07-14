@@ -9,6 +9,47 @@ This directory contains utility scripts for OpenPFC development and workflow aut
 
 ## Cluster build (tohtori)
 
+### build.sh
+
+`build.sh` is the standalone configure, build, and test entry point for automated
+Tohtori checks. With no arguments it performs a 32-way Release CPU build in
+`builds/release` and runs every registered CTest test:
+
+```bash
+./scripts/build.sh
+```
+
+The script loads the Tohtori compiler and MPI modules, selects the matching
+HeFFTe installation, configures CMake, builds all library, application, example,
+and test targets, and runs the aggregate serial tests plus the explicit 2-, 3-,
+and 4-rank MPI suites with `ctest --output-on-failure`. One CTest entry can
+contain hundreds of Catch2 cases and many thousands of assertions. It writes
+`configure.log`, `build.log`, and `test.log` under the selected build directory.
+The final summary reports configure, build, test, and total elapsed times. A
+successful workflow exits with status 0; any configuration, build, or test
+failure exits with status 1.
+
+Common command-line forms:
+
+```bash
+./scripts/build.sh --build-type=Debug
+./scripts/build.sh --build-type=Release --with-timestamp
+./scripts/build.sh --machine=tohtori --with-cuda --with-timestamp --test
+./scripts/build.sh --with-rocm --build-dir=builds/rocm-check --test
+```
+
+The corresponding environment variables are `MACHINE`, `BUILD_TYPE`,
+`BUILD_DIR`, `ADD_TIMESTAMP`, `WITH_CUDA`, `WITH_ROCM`, `RUN_TESTS`,
+`RUN_MPI_TESTS`, `JOBS`, and `CLEAN_BUILD`. The default directory is `builds/debug` or
+`builds/release`; `ADD_TIMESTAMP=1` (or `--with-timestamp`) appends a
+`YYYYmmdd-HHMMSS` suffix. CUDA and ROCm builds use
+`$HOME/opt/heffte/2.4.1-cuda` and `$HOME/opt/heffte/2.4.1-rocm`, respectively,
+unless `HEFFTE_PREFIX` overrides the selection. The CUDA workflow loads
+`heffte/2.4.1-cuda-openmpi5` from `$HOME/privatemodules`; that module represents
+the GCC 15.2/Open MPI 5.0.10/CUDA 13.1, H100-targeted installation. Override it
+with `HEFFTE_MODULE` when testing another stack. Run `./scripts/build.sh --help`
+for all module, architecture, and CMake override options.
+
 ### build_tohtori.sh
 
 End-to-end CPU build matching [INSTALL.md](../INSTALL.md) (§1 modules, §3 HeFFTe under `$HOME/opt/heffte/2.4.1-cpu`, §5 OpenPFC) and [cmake/toolchains/tohtori-gcc11-openmpi.cmake](../cmake/toolchains/tohtori-gcc11-openmpi.cmake).

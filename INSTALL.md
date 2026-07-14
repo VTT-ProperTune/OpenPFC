@@ -51,7 +51,7 @@ Load Open MPI first so Lmod also selects the compiler with which that MPI was bu
 ```bash
 module purge
 module load openmpi/5.0.10   # currently loads gcc/15.2.0 on Tohtori
-module load cuda/12.9        # for GPU — run `module avail cuda` and pick a version where `nvcc --version` works
+module load cuda/13.1        # current Tohtori toolkit; verify with `nvcc --version`
 ```
 
 Site note (**tohtori**): see [`docs/hpc/INSTALL.tohtori.md`](docs/hpc/INSTALL.tohtori.md) for the usual module stack, `module load cuda`, CUDA-capable HeFFTe, and avoiding the wrong HeFFTe package when both CPU and GPU installs exist.
@@ -97,7 +97,24 @@ Optionally create `.vscode/settings.json` with `"cmake.configurePreset": "tohtor
 
 AddressSanitizer / UBSan (dev): The `dev-asan` configure preset in `CMakePresets.json` extends `dev-debug` with `-fsanitize=address,undefined` (and matching link flags) for local debugging with GCC/Clang that support those flags. Example: `cmake --preset dev-asan` then `cmake --build --preset dev-asan`. When running tests or `mpirun`, you may set `ASAN_OPTIONS=detect_leaks=1` (and related runtime flags) in the environment; mixed MPI + sanitizers can be environment-sensitive, so match the same `gcc` / OpenMPI stack as the rest of this guide.
 
-Shell build on Tohtori: `sh ./scripts/build_tohtori.sh` (or `./scripts/build_tohtori.sh`) sources Lmod when needed and loads the site `openmpi/5.0.10` module, including its compiler dependency. Pass `--build-openmpi` to compile Open MPI 5.0.10 with `--with-slurm` under `$HOME/opt/openmpi/5.0.10`; `OPENPFC_GCC_MODULE` selects that custom build's compiler module and defaults to `gcc/11.2.0`. The script sets `OPENPFC_GCC_ROOT` and `OPENMPI_ROOT` together, builds HeFFTe 2.4.1 under `$HOME/opt/heffte/2.4.1-cpu` if needed, and configures OpenPFC with `OpenPFC_ENABLE_HDF5=ON`. Run `--help` for options.
+For a one-command configure, build, and test workflow on Tohtori, run
+`./scripts/build.sh`. It defaults to a 32-way Release CPU build under
+`builds/release`, runs the serial and explicit 2-, 3-, and 4-rank MPI CTest
+suites with failure output enabled, writes phase logs into the build directory,
+and reports configure/build/test timings. Use, for example,
+`./scripts/build.sh --build-type=Debug --with-timestamp` or
+`./scripts/build.sh --machine=tohtori --with-cuda --with-timestamp --test`.
+Environment variables provide the same controls; see `./scripts/build.sh --help`.
+
+For dependency bootstrapping, `sh ./scripts/build_tohtori.sh` (or
+`./scripts/build_tohtori.sh`) sources Lmod when needed and loads the site
+`openmpi/5.0.10` module, including its compiler dependency. Pass
+`--build-openmpi` to compile Open MPI 5.0.10 with `--with-slurm` under
+`$HOME/opt/openmpi/5.0.10`; `OPENPFC_GCC_MODULE` selects that custom build's
+compiler module and defaults to `gcc/11.2.0`. The script sets
+`OPENPFC_GCC_ROOT` and `OPENMPI_ROOT` together, builds HeFFTe 2.4.1 under
+`$HOME/opt/heffte/2.4.1-cpu` if needed, and configures OpenPFC with
+`OpenPFC_ENABLE_HDF5=ON`. Run `--help` for options.
 
 ## 2. Other dependencies
 

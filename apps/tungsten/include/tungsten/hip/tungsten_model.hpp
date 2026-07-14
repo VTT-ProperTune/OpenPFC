@@ -30,6 +30,7 @@
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/openpfc.hpp>
+#include <openpfc/runtime/common/heffte_gpu_r2c_layout.hpp>
 #include <openpfc/runtime/hip/fft_hip.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
@@ -68,19 +69,11 @@ public:
   TungstenParams params;
 
   void set_hip_fft(const pfc::Decomposition &decomp, int rank) {
-    auto options = heffte::default_options<heffte::backend::rocfft>();
-    auto r2c_dir = 0;
-    auto fft_layout = pfc::fft::layout::create(decomp, r2c_dir);
-
-    auto inbox = pfc::fft::layout::get_real_box(fft_layout, rank);
-    auto outbox = pfc::fft::layout::get_complex_box(fft_layout, rank);
-    auto r2c_direction = pfc::fft::layout::get_r2c_direction(fft_layout);
-    const MPI_Comm comm = mpi_comm();
-
-    using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
-    fft_r2c_hip fft_hip(inbox, outbox, r2c_direction, comm, options);
-
-    m_hip_fft = std::make_unique<pfc::fft::FFT_HIP>(std::move(fft_hip));
+    auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomp, rank);
+    using HeffteHipFft = heffte::fft3d_r2c<heffte::backend::rocfft>;
+    HeffteHipFft fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
+                     mpi_comm());
+    m_hip_fft = std::make_unique<pfc::fft::FFT_HIP>(std::move(fft));
   }
 
   explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world,
@@ -90,8 +83,8 @@ public:
     hipEventCreate(&fft_ready_event);
     int rank = 0;
     int size = 0;
-    MPI_Comm_rank(mpi_comm(), &rank);
-    MPI_Comm_size(mpi_comm(), &size);
+    MPI_Comm_rank(this->mpi_comm(), &rank);
+    MPI_Comm_size(this->mpi_comm(), &size);
     auto decomp = pfc::decomposition::create(get_world(), size);
     set_hip_fft(decomp, rank);
   }

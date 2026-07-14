@@ -33,12 +33,15 @@ cmake -S . -B build-cpu \
 **Before** configuring a CUDA-enabled OpenPFC build, load a CUDA module so `nvcc` and the toolkit match your driver and CMake can detect `CUDAToolkit`:
 
 ```bash
-module load cuda/12.9    # or: module avail cuda   # pick a version where `nvcc --version` works
+module load cuda/13.1    # current Tohtori toolkit; verify with `nvcc --version`
 which nvcc
 nvcc --version
 ```
 
-The site may default to `cuda/13.0` or similar; use `module avail cuda` and choose a version that installs a real toolkit (not only driver stubs).
+The site may default to a newer CUDA release; use `module avail cuda` and choose
+a version that installs a real toolkit (not only driver stubs). The obsolete
+`cuda/12.9` modulefile can still be visible even though its toolkit directory is
+absent, so always confirm that `nvcc --version` succeeds.
 
 Without this, CMake may still find `/usr/local/cuda/bin/nvcc`, but your `PATH` and library layout are easier to reason about if they come from one module stack.
 
@@ -52,7 +55,15 @@ For **CUDA spectral FFT** paths (Tungsten CUDA spectral binaries, CUDA FFT runti
 $HOME/opt/heffte/2.4.1-cuda
 ```
 
-If you maintain a private Lmod module (e.g. `heffte/2.4.1-cuda`), it should set `Heffte_DIR` to the CMake package directory:
+The current Tohtori CUDA installation can be loaded from the private module tree:
+
+```bash
+module load heffte/2.4.1-cuda-openmpi5
+```
+
+That module selects GCC 15.2.0, Open MPI 5.0.10, CUDA 13.1, and the H100-targeted
+HeFFTe build. A private HeFFTe module should set `Heffte_DIR` to the CMake package
+directory:
 
 ```text
 $HOME/opt/heffte/2.4.1-cuda/lib64/cmake/Heffte

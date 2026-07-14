@@ -11,7 +11,7 @@
 
 #include <filesystem>
 #include <fstream>
-#include <heffte.hpp>
+#include <heffte.h>
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>

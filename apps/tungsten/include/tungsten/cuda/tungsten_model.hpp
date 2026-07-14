@@ -37,6 +37,7 @@
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/openpfc.hpp>
+#include <openpfc/runtime/common/heffte_gpu_r2c_layout.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
@@ -119,20 +120,11 @@ public:
    * @param rank MPI rank in `mpi_comm()` (same communicator as base `Model`)
    */
   void set_cuda_fft(const pfc::Decomposition &decomp, int rank) {
-    auto options = heffte::default_options<heffte::backend::cufft>();
-    auto r2c_dir = 0;
-    auto fft_layout = pfc::fft::layout::create(decomp, r2c_dir);
-
-    auto inbox = pfc::fft::layout::get_real_box(fft_layout, rank);
-    auto outbox = pfc::fft::layout::get_complex_box(fft_layout, rank);
-    auto r2c_direction = pfc::fft::layout::get_r2c_direction(fft_layout);
-    const MPI_Comm comm = mpi_comm();
-
-    // Create cuFFT-based FFT directly
-    using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
-    fft_r2c_cuda fft_cuda(inbox, outbox, r2c_direction, comm, options);
-
-    m_cuda_fft = std::make_unique<pfc::fft::FFT_CUDA>(std::move(fft_cuda));
+    auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomp, rank);
+    using HeffteCudaFft = heffte::fft3d_r2c<heffte::backend::cufft>;
+    HeffteCudaFft fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
+                      mpi_comm());
+    m_cuda_fft = std::make_unique<pfc::fft::FFT_CUDA>(std::move(fft));
   }
 
   /**
@@ -151,8 +143,8 @@ public:
     // session
     int rank = 0;
     int size = 0;
-    MPI_Comm_rank(mpi_comm(), &rank);
-    MPI_Comm_size(mpi_comm(), &size);
+    MPI_Comm_rank(this->mpi_comm(), &rank);
+    MPI_Comm_size(this->mpi_comm(), &size);
     auto decomp = pfc::decomposition::create(get_world(), size);
     set_cuda_fft(decomp, rank);
   }
