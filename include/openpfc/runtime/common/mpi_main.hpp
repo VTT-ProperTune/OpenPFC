@@ -77,8 +77,11 @@ template <class Body> int mpi_main(int argc, char **argv, Body &&body) {
   int rc = EXIT_SUCCESS;
   try {
     rc = std::forward<Body>(body)(argc, argv, rank, nproc);
-  } catch (const std::exception &e) {
+ } catch (const std::exception &e) {
     std::cerr << "(rank " << rank << "): " << e.what() << "\n";
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  } catch (...) {
+    std::cerr << "(rank " << rank << "): unknown exception" << "\n";
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
