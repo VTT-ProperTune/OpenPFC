@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <stdexcept>
 #include <string>
 
@@ -94,9 +95,25 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
     }
   }
 
+
+  // Validate that local_field.size() matches expected per-rank point count
+  const auto &my_subworld = pfc::decomposition::get_subworld(decomp, rank);
+  auto my_sz = pfc::world::get_size(my_subworld);
+  int expected_count = my_sz[0] * my_sz[1] * my_sz[2];
+  if (static_cast<int>(local_field.size()) != expected_count) {
+    throw std::runtime_error(
+        "local_field.size() (" + std::to_string(local_field.size()) +
+        ") does not match expected subworld point count (" + std::to_string(expected_count) +
+        ") for rank " + std::to_string(rank) +
+        " expected nx*ny*nz=" + std::to_string(my_sz[0]) + "*" +
+        std::to_string(my_sz[1]) + "*" + std::to_string(my_sz[2])
+    );
+  }
   const int my_count = static_cast<int>(local_field.size());
   std::vector<int> counts(static_cast<std::size_t>(nproc));
-  MPI_Allgather(&my_count, 1, MPI_INT, counts.data(), 1, MPI_INT, comm);
+  int err;
+  err = MPI_Allgather(&my_count, 1, MPI_INT, counts.data(), 1, MPI_INT, comm);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Allgather");
 
   std::vector<int> displs(static_cast<std::size_t>(nproc));
   int total = 0;
@@ -110,9 +127,10 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
     gathered.resize(static_cast<std::size_t>(total));
   }
 
-  MPI_Gatherv(const_cast<double *>(local_field.data()), my_count, MPI_DOUBLE,
-              rank == 0 ? gathered.data() : nullptr, counts.data(), displs.data(),
-              MPI_DOUBLE, 0, comm);
+  err = MPI_Gatherv(const_cast<double *>(local_field.data()), my_count, MPI_DOUBLE,
+                   rank == 0 ? gathered.data() : nullptr, counts.data(), displs.data(),
+                   MPI_DOUBLE, 0, comm);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Gatherv");
 
   if (rank != 0) {
     return;

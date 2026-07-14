@@ -47,8 +47,8 @@ namespace pfc {
 class SeedGrid : public FieldModifier {
 private:
   int m_Nx = 1, m_Ny = 2, m_Nz = 2;
-  double m_X0, m_radius;
-  double m_rho, m_amplitude;
+  double m_X0 = 0.0, m_radius = 0.0;
+  double m_rho = 0.0, m_amplitude = 0.0;
 
 public:
   // Setters

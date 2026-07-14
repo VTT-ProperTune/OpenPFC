@@ -115,7 +115,7 @@ void report(int rank, int nproc, const RunConfig &cfg, const char *method_tag,
               << (max_elapsed / static_cast<double>(cfg.n_steps))
               << " (MPI_MAX across ranks)\n";
     const double rms =
-        std::sqrt(g_err2 / static_cast<double>(cfg.N * cfg.N * cfg.N));
+        std::sqrt(g_err2 / (static_cast<double>(cfg.N) * cfg.N * cfg.N));
     std::cout << "l2_error_vs_R3_analytic_rms=" << rms << " " << l2_note << "\n";
   }
 }

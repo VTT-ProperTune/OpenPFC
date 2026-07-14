@@ -38,7 +38,7 @@
 namespace pfc {
 
 class SingleSeed : public FieldModifier {
-  double amp_eq, rho_seed;
+  double amp_eq = 0.0, rho_seed = 0.0;
 
 public:
   void set_amplitude(double amplitude) { amp_eq = amplitude; }

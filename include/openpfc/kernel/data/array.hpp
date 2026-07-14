@@ -124,6 +124,13 @@ public:
    */
   std::vector<T> &get_data() { return data; }
 
+  /**
+   * @brief Get the data object
+   *
+   * @return const std::vector<T>&
+   */
+  const std::vector<T> &get_data() const { return data; }
+
   T &operator[](const std::array<int, D> &indices) {
     return operator[](index.to_linear(indices));
   }
