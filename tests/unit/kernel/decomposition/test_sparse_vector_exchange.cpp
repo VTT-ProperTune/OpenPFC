@@ -80,6 +80,7 @@ TEST_CASE("Exchange only SparseVector data (indices known)",
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Runtime: Exchange only data (multiple times)
+  bool values_match = true;
   for (int step = 0; step < 3; ++step) {
     if (rank == 0) {
       // Update data
@@ -88,12 +89,13 @@ TEST_CASE("Exchange only SparseVector data (indices known)",
     } else if (rank == 1) {
       exchange::receive_data(sparse1, 0, 1, MPI_COMM_WORLD);
       auto data = sparsevector::get_data(sparse1);
-      REQUIRE(data[0] == Approx(10.0 + step).margin(1e-10));
-      REQUIRE(data[1] == Approx(30.0 + step).margin(1e-10));
-      REQUIRE(data[2] == Approx(50.0 + step).margin(1e-10));
+      values_match &= data[0] == Approx(10.0 + step).margin(1e-10) &&
+                      data[1] == Approx(30.0 + step).margin(1e-10) &&
+                      data[2] == Approx(50.0 + step).margin(1e-10);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("Exchange SparseVector with unsorted indices (should be sorted)",

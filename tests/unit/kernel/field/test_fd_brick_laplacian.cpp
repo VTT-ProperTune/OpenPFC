@@ -66,13 +66,15 @@ TEST_CASE("laplacian_interior<2> is exact on a quadratic polynomial",
     }
   }
   laplacian_interior<2>(u.data(), lap.data(), N, N, N, 1.0, 1.0, 1.0, hw);
+  bool values_match = true;
   for (int iz = hw; iz < N - hw; ++iz) {
     for (int iy = hw; iy < N - hw; ++iy) {
       for (int ix = hw; ix < N - hw; ++ix) {
-        REQUIRE(lap[lin(ix, iy, iz, N, N)] == Approx(12.0));
+        values_match &= lap[lin(ix, iy, iz, N, N)] == Approx(12.0);
       }
     }
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("laplacian_interior<4> is exact on a quartic polynomial",
@@ -96,6 +98,7 @@ TEST_CASE("laplacian_interior<4> is exact on a quartic polynomial",
     }
   }
   laplacian_interior<4>(u.data(), lap.data(), N, N, N, 1.0, 1.0, 1.0, hw);
+  bool values_match = true;
   for (int iz = hw; iz < N - hw; ++iz) {
     for (int iy = hw; iy < N - hw; ++iy) {
       for (int ix = hw; ix < N - hw; ++ix) {
@@ -103,10 +106,11 @@ TEST_CASE("laplacian_interior<4> is exact on a quartic polynomial",
         const double y = static_cast<double>(iy);
         const double z = static_cast<double>(iz);
         const double expected = 12.0 * (x * x + y * y + z * z);
-        REQUIRE(lap[lin(ix, iy, iz, N, N)] == Approx(expected));
+        values_match &= lap[lin(ix, iy, iz, N, N)] == Approx(expected);
       }
     }
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("laplacian_interior runtime-order dispatcher matches templated form",
@@ -128,14 +132,17 @@ TEST_CASE("laplacian_interior runtime-order dispatcher matches templated form",
   }
   laplacian_interior<4>(u.data(), lap_tpl.data(), N, N, N, 1.0, 1.0, 1.0, hw);
   laplacian_interior(4, u.data(), lap_run.data(), N, N, N, 1.0, 1.0, 1.0, hw);
-  for (std::size_t i = 0; i < u.size(); ++i) {
-    REQUIRE(lap_run[i] == Approx(lap_tpl[i]));
-  }
+  bool dispatch_matches = true;
+  for (std::size_t i = 0; i < u.size(); ++i)
+    dispatch_matches &= lap_run[i] == Approx(lap_tpl[i]);
+  REQUIRE(dispatch_matches);
 
   // An unsupported order is a no-op (matches the legacy contract).
   std::vector<double> lap_bad(u.size(), 7.0);
   laplacian_interior(3, u.data(), lap_bad.data(), N, N, N, 1.0, 1.0, 1.0, hw);
-  for (double v : lap_bad) REQUIRE(v == Approx(7.0));
+  bool unchanged = true;
+  for (double v : lap_bad) unchanged &= v == Approx(7.0);
+  REQUIRE(unchanged);
 }
 
 TEST_CASE("laplacian2d_xy_interior<2> is exact on a quadratic polynomial",
@@ -153,11 +160,13 @@ TEST_CASE("laplacian2d_xy_interior<2> is exact on a quadratic polynomial",
     }
   }
   laplacian2d_xy_interior<2>(u.data(), lap.data(), N, N, 1, 1.0, 1.0, hw);
+  bool values_match = true;
   for (int iy = hw; iy < N - hw; ++iy) {
     for (int ix = hw; ix < N - hw; ++ix) {
-      REQUIRE(lap[lin(ix, iy, 0, N, N)] == Approx(6.0));
+      values_match &= lap[lin(ix, iy, 0, N, N)] == Approx(6.0);
     }
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("laplacian_periodic_separated<2> matches the analytic Laplacian "
@@ -177,6 +186,7 @@ TEST_CASE("laplacian_periodic_separated<2> matches the analytic Laplacian "
   std::vector<double> u(static_cast<std::size_t>(N) * N * N);
   std::vector<double> lap(u.size(), 0.0);
   auto coord = [&](int i) { return static_cast<double>(i) * dx; };
+  bool values_match = true;
   for (int iz = 0; iz < N; ++iz) {
     for (int iy = 0; iy < N; ++iy) {
       for (int ix = 0; ix < N; ++ix) {
@@ -248,10 +258,11 @@ TEST_CASE("laplacian_periodic_separated<2> matches the analytic Laplacian "
     for (int iy = 0; iy < N; ++iy) {
       for (int ix = 0; ix < N; ++ix) {
         const double expected = -3.0 * u[lin(ix, iy, iz, N, N)];
-        REQUIRE(lap[lin(ix, iy, iz, N, N)] == Approx(expected).margin(0.05));
+        values_match &= lap[lin(ix, iy, iz, N, N)] == Approx(expected).margin(0.05);
       }
     }
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("laplacian2d_xy_periodic_separated<2> matches the analytic Laplacian "
@@ -266,6 +277,7 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches the analytic Laplacian "
   std::vector<double> u(static_cast<std::size_t>(N) * N);
   std::vector<double> lap(u.size(), 0.0);
   auto coord = [&](int i) { return static_cast<double>(i) * dx; };
+  bool values_match = true;
   for (int iy = 0; iy < N; ++iy) {
     for (int ix = 0; ix < N; ++ix) {
       u[lin(ix, iy, 0, N, N)] = std::sin(coord(ix)) * std::cos(coord(iy));
@@ -300,7 +312,8 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches the analytic Laplacian "
   for (int iy = 0; iy < N; ++iy) {
     for (int ix = 0; ix < N; ++ix) {
       const double expected = -2.0 * u[lin(ix, iy, 0, N, N)];
-      REQUIRE(lap[lin(ix, iy, 0, N, N)] == Approx(expected).margin(0.05));
+      values_match &= lap[lin(ix, iy, 0, N, N)] == Approx(expected).margin(0.05);
     }
   }
+  REQUIRE(values_match);
 }

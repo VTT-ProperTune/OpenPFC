@@ -152,7 +152,6 @@ void run_full_halo_check(const pfc::decomposition::Decomposition &decomp, int ra
         ++total_mismatches;
       }
     }
-    REQUIRE(host_after == refs[f].expected);
     REQUIRE(cudaFree(d_fields[f]) == cudaSuccess);
   }
   REQUIRE(total_mismatches == 0);
@@ -298,6 +297,7 @@ TEST_CASE("FullPaddedDeviceHalo: Axes3D set fills only the 6 axis faces",
 
   // Axes3D should fill ±X / ±Y / ±Z face slabs with the reference, but leave
   // edges and corners at the sentinel value (no widening passes).
+  bool values_match = true;
   for (int pk = 0; pk < nzp; ++pk) {
     for (int pj = 0; pj < nyp; ++pj) {
       for (int pi = 0; pi < nxp; ++pi) {
@@ -309,17 +309,18 @@ TEST_CASE("FullPaddedDeviceHalo: Axes3D set fills only the 6 axis faces",
         const std::size_t l = lin(pi, pj, pk, nxp, nyp);
         if (axis_inside == 3) {
           // Owned cell — already had the reference value.
-          REQUIRE(host_after[l] == ref.expected[l]);
+          values_match &= host_after[l] == ref.expected[l];
         } else if (axis_inside == 2) {
           // Face cell — Axes3D fills it.
-          REQUIRE(host_after[l] == ref.expected[l]);
+          values_match &= host_after[l] == ref.expected[l];
         } else {
           // Edge or corner — Axes3D narrow passes do not fill these.
-          REQUIRE(host_after[l] == sentinel);
+          values_match &= host_after[l] == sentinel;
         }
       }
     }
   }
+  REQUIRE(values_match);
 }
 
 #endif // OpenPFC_ENABLE_CUDA

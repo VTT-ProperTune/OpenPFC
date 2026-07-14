@@ -177,6 +177,7 @@ TEST_CASE("for_each_interior_device + FdGradientDevice<G> agree with the "
   // Owned-cell loop: assert (i) every owned cell matches the analytic
   // formula, (ii) every halo cell of `du` is still zero (the kernel must
   // not write outside the owned region).
+  bool owned_cells_match = true;
   for (int iz = 0; iz < nz; ++iz) {
     for (int iy = 0; iy < ny; ++iy) {
       for (int ix = 0; ix < nx; ++ix) {
@@ -188,14 +189,14 @@ TEST_CASE("for_each_interior_device + FdGradientDevice<G> agree with the "
         const double z = static_cast<double>(iz) * dz;
         const double expected = poly_rhs(x, y, z);
         const double got = h_du[lin(pi, pj, pk, nxp, nyp)];
-        INFO("Owned cell (" << ix << ", " << iy << ", " << iz << ")"
-                            << " expected=" << expected << " got=" << got);
-        REQUIRE(got == Catch::Approx(expected).margin(1e-9));
+        owned_cells_match &= std::abs(got - expected) <= 1e-9;
       }
     }
   }
+  REQUIRE(owned_cells_match);
 
   // Halo cells must be untouched (still 0.0).
+  bool halo_cells_untouched = true;
   for (int pk = 0; pk < nzp; ++pk) {
     for (int pj = 0; pj < nyp; ++pj) {
       for (int pi = 0; pi < nxp; ++pi) {
@@ -205,10 +206,11 @@ TEST_CASE("for_each_interior_device + FdGradientDevice<G> agree with the "
         if (is_owned) {
           continue;
         }
-        REQUIRE(h_du[lin(pi, pj, pk, nxp, nyp)] == 0.0);
+        halo_cells_untouched &= h_du[lin(pi, pj, pk, nxp, nyp)] == 0.0;
       }
     }
   }
+  REQUIRE(halo_cells_untouched);
 
   cudaFree(d_u);
   cudaFree(d_du);

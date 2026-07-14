@@ -83,12 +83,14 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
     double max_expected = seeds.get_density() + 12.0 * seeds.get_amplitude();
     double min_expected = seeds.get_density() - 12.0 * seeds.get_amplitude();
 
+    bool values_in_range = true;
     for (const auto &value : field) {
-      if (value != 0.0) {                     // Inside a seed
-        REQUIRE(value >= min_expected - 0.1); // Small tolerance
-        REQUIRE(value <= max_expected + 0.1);
+      if (value != 0.0) { // Inside a seed
+        values_in_range &= value >= min_expected - 0.1;
+        values_in_range &= value <= max_expected + 0.1;
       }
     }
+    REQUIRE(values_in_range);
   }
 
   SECTION("Deterministic with fixed seed") {
@@ -105,10 +107,7 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
     Field field2 = m.get_real_field("default");
 
     // Results should be identical
-    REQUIRE(field1.size() == field2.size());
-    for (size_t i = 0; i < field1.size(); ++i) {
-      REQUIRE(field1[i] == Approx(field2[i]));
-    }
+    REQUIRE(field1 == field2);
   }
 }
 

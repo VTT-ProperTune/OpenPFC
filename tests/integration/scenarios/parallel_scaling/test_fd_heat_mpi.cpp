@@ -53,9 +53,10 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
   field::fd::laplacian_interior<2>(u.data(), lap.data(), nx, ny, nz, inv, inv, inv,
                                    halo_width);
 
-  for (size_t i = 0; i < nlocal; ++i) {
-    REQUIRE(lap[i] == Catch::Approx(0.0).margin(1e-12));
-  }
+  bool all_values_are_zero = true;
+  for (size_t i = 0; i < nlocal; ++i)
+    all_values_are_zero &= std::abs(lap[i]) <= 1e-12;
+  REQUIRE(all_values_are_zero);
 }
 
 TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
@@ -98,9 +99,9 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
   hex.exchange_halos(a.data(), a.size());
   pex.exchange_halos();
 
-  for (size_t i = 0; i < nlocal; ++i) {
-    REQUIRE(b[i] == Catch::Approx(a[i]).margin(1e-12));
-  }
+  bool fields_match = true;
+  for (size_t i = 0; i < nlocal; ++i) fields_match &= std::abs(b[i] - a[i]) <= 1e-12;
+  REQUIRE(fields_match);
 }
 
 TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
@@ -140,6 +141,7 @@ TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
 
   std::vector<double> u(nlocal);
   std::vector<double> lap(nlocal, 0.0);
+  bool laplacian_matches = true;
   for (int iz = 0; iz < nz; ++iz) {
     for (int iy = 0; iy < ny; ++iy) {
       for (int ix = 0; ix < nx; ++ix) {
@@ -182,8 +184,9 @@ TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
                          static_cast<size_t>(iz) * static_cast<size_t>(nx) *
                              static_cast<size_t>(ny);
         const double expected = -3.0 * u[c];
-        REQUIRE(lap[c] == Catch::Approx(expected).margin(0.05));
+        laplacian_matches &= std::abs(lap[c] - expected) <= 0.05;
       }
     }
   }
+  REQUIRE(laplacian_matches);
 }

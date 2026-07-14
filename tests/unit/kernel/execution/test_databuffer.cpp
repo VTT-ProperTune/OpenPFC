@@ -32,9 +32,11 @@ TEST_CASE("DataBuffer CPU element access", "[core][databuffer][cpu]") {
   }
 
   // Read via operator[]
+  bool values_match = true;
   for (size_t i = 0; i < 10; ++i) {
-    REQUIRE(buf[i] == Approx(static_cast<double>(i)));
+    values_match &= buf[i] == Approx(static_cast<double>(i));
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("DataBuffer CPU copy semantics", "[core][databuffer][cpu]") {
@@ -46,8 +48,9 @@ TEST_CASE("DataBuffer CPU copy semantics", "[core][databuffer][cpu]") {
   // Copy construction
   pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf2(buf1);
   REQUIRE(buf2.size() == buf1.size());
+  bool copies_match = true;
   for (size_t i = 0; i < 10; ++i) {
-    REQUIRE(buf2[i] == Approx(buf1[i]));
+    copies_match &= buf2[i] == Approx(buf1[i]);
   }
 
   // Copy assignment
@@ -55,8 +58,9 @@ TEST_CASE("DataBuffer CPU copy semantics", "[core][databuffer][cpu]") {
   buf3 = buf1;
   REQUIRE(buf3.size() == buf1.size());
   for (size_t i = 0; i < 10; ++i) {
-    REQUIRE(buf3[i] == Approx(buf1[i]));
+    copies_match &= buf3[i] == Approx(buf1[i]);
   }
+  REQUIRE(copies_match);
 }
 
 TEST_CASE("DataBuffer CPU move semantics", "[core][databuffer][cpu]") {
@@ -68,9 +72,11 @@ TEST_CASE("DataBuffer CPU move semantics", "[core][databuffer][cpu]") {
   // Move construction
   pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf2(std::move(buf1));
   REQUIRE(buf2.size() == 10);
+  bool values_match = true;
   for (size_t i = 0; i < 10; ++i) {
-    REQUIRE(buf2[i] == Approx(static_cast<double>(i)));
+    values_match &= buf2[i] == Approx(static_cast<double>(i));
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("DataBuffer CPU copy_from_host", "[core][databuffer][cpu]") {
@@ -79,9 +85,11 @@ TEST_CASE("DataBuffer CPU copy_from_host", "[core][databuffer][cpu]") {
 
   buf.copy_from_host(input);
 
+  bool values_match = true;
   for (size_t i = 0; i < 5; ++i) {
-    REQUIRE(buf[i] == Approx(input[i]));
+    values_match &= buf[i] == Approx(input[i]);
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("DataBuffer CPU to_host", "[core][databuffer][cpu]") {
@@ -92,9 +100,11 @@ TEST_CASE("DataBuffer CPU to_host", "[core][databuffer][cpu]") {
 
   std::vector<double> result = buf.to_host();
   REQUIRE(result.size() == 5);
+  bool values_match = true;
   for (size_t i = 0; i < 5; ++i) {
-    REQUIRE(result[i] == Approx(static_cast<double>(i + 1)));
+    values_match &= result[i] == Approx(static_cast<double>(i + 1));
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("DataBuffer CPU resize", "[core][databuffer][cpu]") {
@@ -190,9 +200,11 @@ TEST_CASE("DataBuffer CUDA CPU-GPU round trip", "[core][databuffer][cuda]") {
   std::vector<double> output = gpu_buf.to_host();
 
   REQUIRE(output.size() == input.size());
+  bool values_match = true;
   for (size_t i = 0; i < input.size(); ++i) {
-    REQUIRE(output[i] == Approx(input[i]));
+    values_match &= output[i] == Approx(input[i]);
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("DataBuffer CUDA large data round trip", "[core][databuffer][cuda]") {
@@ -212,9 +224,11 @@ TEST_CASE("DataBuffer CUDA large data round trip", "[core][databuffer][cuda]") {
   std::vector<double> output = gpu_buf.to_host();
 
   REQUIRE(output.size() == size);
+  bool values_match = true;
   for (size_t i = 0; i < size; ++i) {
-    REQUIRE(output[i] == Approx(static_cast<double>(i)));
+    values_match &= output[i] == Approx(static_cast<double>(i));
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("DataBuffer CUDA copy_from_host size mismatch",

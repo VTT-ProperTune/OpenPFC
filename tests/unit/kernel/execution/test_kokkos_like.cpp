@@ -105,9 +105,11 @@ TEST_CASE("RangePolicy and parallel_for", "[kokkos_like][core]") {
   pfc::deep_copy(v, 0.0);
   auto policy = pfc::RangePolicy<pfc::Serial>(0, 100);
   pfc::parallel_for(policy, [&v](std::size_t i) { v(i) = static_cast<double>(i); });
+  bool values_match = true;
   for (std::size_t i = 0; i < 100; ++i) {
-    REQUIRE(v(i) == Approx(static_cast<double>(i)));
+    values_match &= v(i) == Approx(static_cast<double>(i));
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("MDRangePolicy 3D and parallel_for", "[kokkos_like][core]") {
@@ -131,17 +133,21 @@ TEST_CASE("deep_copy View to View host", "[kokkos_like][core]") {
     a.data()[i] = static_cast<double>(i);
   }
   pfc::deep_copy(b, a);
+  bool values_match = true;
   for (std::size_t i = 0; i < a.size(); ++i) {
-    REQUIRE(b.data()[i] == Approx(static_cast<double>(i)));
+    values_match &= b.data()[i] == Approx(static_cast<double>(i));
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("deep_copy scalar fill", "[kokkos_like][core]") {
   pfc::View<double, 2, pfc::LayoutRight, pfc::HostSpace> v("v", 3, 4);
   pfc::deep_copy(v, 3.14);
+  bool values_match = true;
   for (std::size_t i = 0; i < v.size(); ++i) {
-    REQUIRE(v.data()[i] == Approx(3.14));
+    values_match &= v.data()[i] == Approx(3.14);
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("create_mirror and create_mirror_view", "[kokkos_like][core]") {

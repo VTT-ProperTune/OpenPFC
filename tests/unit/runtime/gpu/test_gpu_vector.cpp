@@ -108,11 +108,7 @@ TEST_CASE("GPUVector complex type", "[gpu][vector]") {
 
   std::vector<Complex> output = gpu_vec.to_host();
 
-  REQUIRE(output.size() == input.size());
-  for (size_t i = 0; i < input.size(); ++i) {
-    REQUIRE(output[i].real() == Approx(input[i].real()));
-    REQUIRE(output[i].imag() == Approx(input[i].imag()));
-  }
+  REQUIRE(output == input);
 }
 
 int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }

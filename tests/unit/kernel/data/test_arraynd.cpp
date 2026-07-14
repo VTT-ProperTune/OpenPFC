@@ -71,9 +71,9 @@ TEST_CASE("array2d") {
     arr({2, 3}) = 4;
     arr({1, 4}) = 5;
     arr({2, 4}) = 6;
-    for (int i = 0; i < 6; i++) {
-      REQUIRE(arr[i] == i + 1);
-    }
+    bool values_match = true;
+    for (int i = 0; i < 6; i++) values_match &= arr[i] == i + 1;
+    REQUIRE(values_match);
   }
 
   SECTION("Test apply()") {

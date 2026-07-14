@@ -59,13 +59,14 @@ TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
   int nx = local_size[0];
   int ny = local_size[1];
   int nz = local_size[2];
+  bool face_matches = true;
   if (rank == 0) {
     for (int z = 0; z < nz; ++z) {
       for (int y = 0; y < ny; ++y) {
         size_t idx = static_cast<size_t>(z) * static_cast<size_t>(ny) *
                          static_cast<size_t>(nx) +
                      static_cast<size_t>(y) * static_cast<size_t>(nx) + 0;
-        REQUIRE(field[idx] == 1.0);
+        face_matches &= field[idx] == 1.0;
       }
     }
   } else if (rank == 1) {
@@ -75,8 +76,9 @@ TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
                          static_cast<size_t>(nx) +
                      static_cast<size_t>(y) * static_cast<size_t>(nx) +
                      static_cast<size_t>(nx - 1);
-        REQUIRE(field[idx] == 0.0);
+        face_matches &= field[idx] == 0.0;
       }
     }
   }
+  REQUIRE(face_matches);
 }

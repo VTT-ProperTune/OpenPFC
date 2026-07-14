@@ -26,6 +26,7 @@ TEST_CASE("Halo send/recv sizes match expected face areas",
   auto patterns = halo::create_halo_patterns(decomp, rank, halo::Connectivity::Faces,
                                              halo_width);
 
+  bool pattern_sizes_match = true;
   for (const auto &entry : patterns) {
     const auto &dir = entry.first;
     const auto &send_recv = entry.second;
@@ -47,7 +48,8 @@ TEST_CASE("Halo send/recv sizes match expected face areas",
       expected = nx * ny * static_cast<long long>(halo_width);
     }
 
-    REQUIRE(static_cast<long long>(send.size()) == expected);
-    REQUIRE(static_cast<long long>(recv.size()) == expected);
+    pattern_sizes_match &= static_cast<long long>(send.size()) == expected &&
+                           static_cast<long long>(recv.size()) == expected;
   }
+  REQUIRE(pattern_sizes_match);
 }

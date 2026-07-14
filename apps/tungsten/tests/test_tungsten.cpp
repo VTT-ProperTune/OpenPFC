@@ -339,9 +339,11 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
 
     // Verify norms match expected values (tight tolerance for regression testing)
     REQUIRE(actual_norms.size() == 10);
+    bool norms_match = true;
     for (int i = 0; i < 10; ++i) {
-      REQUIRE_THAT(actual_norms[i], WithinAbs(expected_norms[i + 1], 0.1));
+      norms_match &= std::abs(actual_norms[i] - expected_norms[i + 1]) <= 0.1;
     }
+    REQUIRE(norms_match);
   }
 
   SECTION("Model initialization and allocation") {

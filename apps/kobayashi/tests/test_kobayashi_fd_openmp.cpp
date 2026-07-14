@@ -21,10 +21,6 @@ TEST_CASE("kobayashi_fd_openmp thread parity vs serial") {
   base.num_threads = 4;
   auto par = kobayashi::openmp_engine::run(base, /*skip_png=*/true, /*quiet=*/true);
 
-  REQUIRE(ref.phi_xy.size() == par.phi_xy.size());
-  REQUIRE(ref.tempr_xy.size() == par.tempr_xy.size());
-  for (std::size_t i = 0; i < ref.phi_xy.size(); ++i) {
-    REQUIRE(ref.phi_xy[i] == par.phi_xy[i]);
-    REQUIRE(ref.tempr_xy[i] == par.tempr_xy[i]);
-  }
+  REQUIRE(ref.phi_xy == par.phi_xy);
+  REQUIRE(ref.tempr_xy == par.tempr_xy);
 }

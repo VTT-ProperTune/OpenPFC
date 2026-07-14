@@ -135,9 +135,10 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (double) [integration][gpu]", "[gpu
   REQUIRE(l2_gpu == Catch::Approx(l2_cpu).epsilon(1e-10));
 
   // Element-wise tolerance
-  for (size_t i = 0; i < real_out_cpu.size(); ++i) {
-    REQUIRE(real_out_gpu_host[i] == Catch::Approx(real_out_cpu[i]).margin(1e-10));
-  }
+  bool fields_match = true;
+  for (size_t i = 0; i < real_out_cpu.size(); ++i)
+    fields_match &= std::abs(real_out_gpu_host[i] - real_out_cpu[i]) <= 1e-10;
+  REQUIRE(fields_match);
 }
 #else
 TEST_CASE("CPU vs CUDA Laplacian skipped (CUDA disabled) [integration][gpu]",

@@ -144,6 +144,7 @@ TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",
   }
 
   SECTION("owned cells match exp(-r^2/(4 kD))") {
+    bool values_match = true;
     for (int iz = 0; iz < 4; ++iz) {
       for (int iy = 0; iy < 4; ++iy) {
         for (int ix = 0; ix < 4; ++ix) {
@@ -151,12 +152,12 @@ TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",
           const double y = static_cast<double>(iy);
           const double z = static_cast<double>(iz);
           const double r2 = x * x + y * y + z * z;
-          INFO("ix=" << ix << " iy=" << iy << " iz=" << iz);
-          REQUIRE_THAT(stack.u()(ix, iy, iz),
-                       WithinAbs(std::exp(-r2 / (4.0 * heat3d::kD)), 1e-12));
+          values_match &= std::abs(stack.u()(ix, iy, iz) -
+                                   std::exp(-r2 / (4.0 * heat3d::kD))) <= 1e-12;
         }
       }
     }
+    REQUIRE(values_match);
   }
 }
 
@@ -513,10 +514,12 @@ TEST_CASE("Scratch FD driver (bare loops, raw pointers): smoke + L2",
   run_scratch_loop_(u, halo, dt, n_steps);
 
   double sum1 = 0.0;
+  bool values_are_finite = true;
   field::for_each_inner(u, hw, [&](int i, int j, int k) {
-    REQUIRE(std::isfinite(u(i, j, k)));
+    values_are_finite &= std::isfinite(u(i, j, k));
     sum1 += u(i, j, k) * u(i, j, k);
   });
+  REQUIRE(values_are_finite);
   REQUIRE(sum1 < sum0); // diffusion dissipates
   REQUIRE(sum1 > 0.0);
 

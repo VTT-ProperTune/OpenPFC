@@ -45,9 +45,11 @@ TEST_CASE("DiscreteField1D") {
       return static_cast<int>(coords[0]);
     };
     field.apply(func);
+    bool values_match = true;
     for (int i = 0; i < Lx; i++) {
-      REQUIRE(field[i] == -3 + 2 * i);
+      values_match &= field[i] == -3 + 2 * i;
     }
+    REQUIRE(values_match);
   }
 }
 
@@ -166,6 +168,7 @@ TEST_CASE("pfc::interpolate() integration test",
     });
 
     // Sample at various points (integer steps avoid float loop counters)
+    bool values_in_range = true;
     for (int ix = 0;; ++ix) {
       const double x = static_cast<double>(ix) * 2.3;
       if (!(x < 15.0)) {
@@ -184,9 +187,10 @@ TEST_CASE("pfc::interpolate() integration test",
           double value = pfc::interpolate(field, {x, y, z});
 
           // Should be within reasonable bounds (function is bounded)
-          REQUIRE(std::abs(value) <= 1.5);
+          values_in_range &= std::abs(value) <= 1.5;
         }
       }
     }
+    REQUIRE(values_in_range);
   }
 }

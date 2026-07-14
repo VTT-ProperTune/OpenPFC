@@ -49,7 +49,9 @@ TEST_CASE("FieldModifier integration: constant IC",
   // Check the field was set
   auto &psi = model.get_real_field("density");
   REQUIRE_FALSE(psi.empty());
+  bool values_match = true;
   for (const auto &v : psi) {
-    REQUIRE(v == Catch::Approx(0.25).margin(1e-12));
+    values_match &= v == Catch::Approx(0.25).margin(1e-12);
   }
+  REQUIRE(values_match);
 }

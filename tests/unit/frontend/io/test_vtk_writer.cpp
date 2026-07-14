@@ -407,9 +407,9 @@ TEST_CASE("VTKWriter - Extent validation", "[vtk_writer][io][extent]") {
         fixture.extract_extent("test_piece_extent_0001.vti", "Piece Extent");
 
     // In serial, Piece extent should match WholeExtent
-    for (int i = 0; i < 6; ++i) {
-      REQUIRE(piece_extent[i] == whole_extent[i]);
-    }
+    bool extents_match = true;
+    for (int i = 0; i < 6; ++i) extents_match &= piece_extent[i] == whole_extent[i];
+    REQUIRE(extents_match);
   }
 }
 
@@ -539,11 +539,13 @@ TEST_CASE("VTKWriter - Parallel PVTI master file", "[vtk_writer][io][parallel]")
 
     std::string content =
         VTKWriterTestFixture::read_file_content("test_parallel_master_0001.pvti");
+    bool references_all_pieces = true;
     for (int r = 0; r < fixture.m_num_ranks; ++r) {
       std::string piece_ref =
           "test_parallel_master_0001_" + std::to_string(r) + ".vti";
-      REQUIRE(content.find(piece_ref) != std::string::npos);
+      references_all_pieces &= content.find(piece_ref) != std::string::npos;
     }
+    REQUIRE(references_all_pieces);
   }
 }
 

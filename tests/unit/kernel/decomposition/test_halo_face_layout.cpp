@@ -9,22 +9,26 @@
 
 using namespace pfc;
 
-TEST_CASE("face_halo_counts matches create_recv_halo per direction", "[halo][layout]") {
+TEST_CASE("face_halo_counts matches create_recv_halo per direction",
+          "[halo][layout]") {
   auto world = world::create(GridSize({64, 64, 64}));
   auto decomp = decomposition::create(world, {2, 2, 1});
   const int rank = 0;
   const int hw = 2;
-  const std::array<Int3, 6> dirs = {{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0},
-                                     {0, 0, 1}, {0, 0, -1}}};
+  const std::array<Int3, 6> dirs = {
+      {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
 
   auto fc = halo::face_halo_counts(decomp, rank, hw);
+  bool counts_match = true;
   for (int i = 0; i < 6; ++i) {
     auto recv = halo::create_recv_halo<backend::CpuTag>(decomp, rank, dirs[i], hw);
-    REQUIRE(fc.counts[static_cast<size_t>(i)] == recv.size());
+    counts_match &= fc.counts[static_cast<size_t>(i)] == recv.size();
   }
+  REQUIRE(counts_match);
 }
 
-TEST_CASE("face_halo_counts_analytic matches pattern-based counts", "[halo][layout]") {
+TEST_CASE("face_halo_counts_analytic matches pattern-based counts",
+          "[halo][layout]") {
   auto world = world::create(GridSize({32, 48, 16}));
   auto decomp = decomposition::create(world, {2, 1, 1});
   const int rank = 0;
@@ -32,9 +36,11 @@ TEST_CASE("face_halo_counts_analytic matches pattern-based counts", "[halo][layo
   auto local = world::get_size(decomposition::get_subworld(decomp, rank));
   auto fc = halo::face_halo_counts(decomp, rank, hw);
   auto an = halo::face_halo_counts_analytic(local[0], local[1], local[2], hw);
-  for (int i = 0; i < 6; ++i) {
-    REQUIRE(fc.counts[static_cast<size_t>(i)] == an.counts[static_cast<size_t>(i)]);
-  }
+  bool counts_match = true;
+  for (int i = 0; i < 6; ++i)
+    counts_match &=
+        fc.counts[static_cast<size_t>(i)] == an.counts[static_cast<size_t>(i)];
+  REQUIRE(counts_match);
 }
 
 TEST_CASE("allocate_face_halos sizes", "[halo][layout]") {
@@ -44,7 +50,9 @@ TEST_CASE("allocate_face_halos sizes", "[halo][layout]") {
   const int hw = 1;
   auto bufs = halo::allocate_face_halos<double>(decomp, rank, hw);
   auto fc = halo::face_halo_counts(decomp, rank, hw);
-  for (int i = 0; i < 6; ++i) {
-    REQUIRE(bufs[static_cast<size_t>(i)].size() == fc.counts[static_cast<size_t>(i)]);
-  }
+  bool sizes_match = true;
+  for (int i = 0; i < 6; ++i)
+    sizes_match &=
+        bufs[static_cast<size_t>(i)].size() == fc.counts[static_cast<size_t>(i)];
+  REQUIRE(sizes_match);
 }

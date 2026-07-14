@@ -108,11 +108,12 @@ TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
   REQUIRE(patterns.size() <= 6); // Max 6 face neighbors
 
   // Verify each pattern has send and recv halos
+  bool patterns_are_valid = true;
   for (const auto &[direction, halos] : patterns) {
     const auto &[send_halo, recv_halo] = halos;
-    REQUIRE(send_halo.size() == recv_halo.size());
-    REQUIRE(!send_halo.empty());
+    patterns_are_valid &= send_halo.size() == recv_halo.size() && !send_halo.empty();
   }
+  REQUIRE(patterns_are_valid);
 }
 
 TEST_CASE("Gather from local field using send halo", "[halo][gather]") {

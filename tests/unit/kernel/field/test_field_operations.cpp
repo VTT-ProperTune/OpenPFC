@@ -39,9 +39,11 @@ TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
   field::apply(model, "psi", [](const Real3 & /*x*/) { return 0.5; });
 
   const auto &ref = model.get_real_field("psi");
+  bool values_match = true;
   for (const auto &val : ref) {
-    REQUIRE(val == Approx(0.5));
+    values_match &= val == Approx(0.5);
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
@@ -57,9 +59,11 @@ TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
                          [](const Real3 & /*x*/, double t) { return 1.0 + t; });
 
   const auto &ref = model.get_real_field("psi");
+  bool values_match = true;
   for (const auto &val : ref) {
-    REQUIRE(val == Approx(3.0));
+    values_match &= val == Approx(3.0);
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("field::apply_inplace modifies field based on current value",
@@ -78,9 +82,11 @@ TEST_CASE("field::apply_inplace modifies field based on current value",
   });
 
   const auto &ref = model.get_real_field("psi");
+  bool values_match = true;
   for (const auto &val : ref) {
-    REQUIRE(val == Approx(2.0));
+    values_match &= val == Approx(2.0);
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("field::apply_inplace selective update preserves untouched cells",
@@ -134,9 +140,11 @@ TEST_CASE("field::apply_inplace_with_time uses time parameter",
       [](const Real3 & /*x*/, double current, double t) { return current + t; });
 
   const auto &ref = model.get_real_field("psi");
+  bool values_match = true;
   for (const auto &val : ref) {
-    REQUIRE(val == Approx(3.0)); // 1.0 + 2.0
+    values_match &= val == Approx(3.0); // 1.0 + 2.0
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("legacy adapter wraps lambda into FieldModifier", "[field_ops][unit]") {
@@ -154,7 +162,9 @@ TEST_CASE("legacy adapter wraps lambda into FieldModifier", "[field_ops][unit]")
   mod->apply(model, /*time=*/0.0);
 
   const auto &ref = model.get_real_field("default");
+  bool values_match = true;
   for (const auto &val : ref) {
-    REQUIRE(val == Approx(42.0));
+    values_match &= val == Approx(42.0);
   }
+  REQUIRE(values_match);
 }

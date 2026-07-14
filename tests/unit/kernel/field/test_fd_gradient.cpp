@@ -78,6 +78,7 @@ TEST_CASE("FdGradient<GradXYZ> recovers exact first derivatives on a linear fiel
   // Central D1 of any order is **exact** for linear functions — every
   // tabulated order should reproduce the analytic derivative bit-for-bit
   // (modulo round-off from the integer-weight summation).
+  bool gradients_match = true;
   for (int order : {2, 4, 6, 8}) {
     INFO("order = " << order);
     const int hw = order / 2;
@@ -90,10 +91,10 @@ TEST_CASE("FdGradient<GradXYZ> recovers exact first derivatives on a linear fiel
 
     auto grad = pfc::field::create<GradXYZ>(u, order);
     const GradXYZ g = grad(N / 2, N / 2, N / 2);
-    REQUIRE(g.x == Approx(2.0));
-    REQUIRE(g.y == Approx(3.0));
-    REQUIRE(g.z == Approx(4.0));
+    gradients_match &=
+        g.x == Approx(2.0) && g.y == Approx(3.0) && g.z == Approx(4.0);
   }
+  REQUIRE(gradients_match);
 }
 
 TEST_CASE("FdGradient<ValueXXX> populates value, x, and xx coherently",

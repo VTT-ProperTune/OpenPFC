@@ -95,12 +95,14 @@ TEST_CASE("SingleSeed - Field Application", "[ic_single_seed]") {
     double max_expected = seed.get_density() + 12.0 * seed.get_amplitude();
     double min_expected = seed.get_density() - 12.0 * seed.get_amplitude();
 
+    bool values_in_range = true;
     for (const auto &value : field) {
       if (value != 0.0) { // Inside seed
-        REQUIRE(value >= min_expected);
-        REQUIRE(value <= max_expected);
+        values_in_range &= value >= min_expected;
+        values_in_range &= value <= max_expected;
       }
     }
+    REQUIRE(values_in_range);
   }
 }
 

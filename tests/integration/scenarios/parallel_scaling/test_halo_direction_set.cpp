@@ -106,10 +106,12 @@ TEST_CASE("HaloDirectionSet custom construction validates and dedupes",
 
 TEST_CASE("direction_to_face_slot / face_slot_to_direction round trip",
           "[halo_directions][slot]") {
+  bool round_trip_matches = true;
   for (int slot = 0; slot < 6; ++slot) {
     const auto dir = halo::face_slot_to_direction(slot);
-    REQUIRE(halo::direction_to_face_slot(dir) == slot);
+    round_trip_matches &= halo::direction_to_face_slot(dir) == slot;
   }
+  REQUIRE(round_trip_matches);
   REQUIRE(halo::direction_to_face_slot(Int3{1, 1, 0}) == -1);
   REQUIRE(halo::direction_to_face_slot(Int3{1, 1, 1}) == -1);
   REQUIRE_THROWS_AS(halo::face_slot_to_direction(-1), std::out_of_range);
@@ -179,24 +181,23 @@ TEST_CASE("PaddedHaloExchanger Axes2D leaves ±Z halos untouched on nz=1 slab",
   REQUIRE(halo.num_directions() == 4);
   halo.exchange_halos(u.data(), u.size());
 
+  bool halos_match = true;
   // X / Y halos populated by self-wrap.
   for (int k = 0; k < u.nz(); ++k) {
     for (int j = 0; j < u.ny(); ++j) {
-      REQUIRE(u(-1, j, k) == 7.0);
-      REQUIRE(u(u.nx(), j, k) == 7.0);
+      halos_match &= u(-1, j, k) == 7.0 && u(u.nx(), j, k) == 7.0;
     }
     for (int i = 0; i < u.nx(); ++i) {
-      REQUIRE(u(i, -1, k) == 7.0);
-      REQUIRE(u(i, u.ny(), k) == 7.0);
+      halos_match &= u(i, -1, k) == 7.0 && u(i, u.ny(), k) == 7.0;
     }
   }
   // Z halos must be untouched (set to sentinel by `clear_halo`).
   for (int j = 0; j < u.ny(); ++j) {
     for (int i = 0; i < u.nx(); ++i) {
-      REQUIRE(u(i, j, -1) == sentinel);
-      REQUIRE(u(i, j, u.nz()) == sentinel);
+      halos_match &= u(i, j, -1) == sentinel && u(i, j, u.nz()) == sentinel;
     }
   }
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("PaddedHaloExchanger Axes2D matches Axes3D in XY (two-rank X-split)",
@@ -229,26 +230,28 @@ TEST_CASE("PaddedHaloExchanger Axes2D matches Axes3D in XY (two-rank X-split)",
   halo2d.exchange_halos(u_axes2d.data(), u_axes2d.size());
   halo3d.exchange_halos(u_axes3d.data(), u_axes3d.size());
 
+  bool halos_match = true;
   // X and Y halos should be identical between the two configurations.
   for (int k = 0; k < u_axes2d.nz(); ++k) {
     for (int j = 0; j < u_axes2d.ny(); ++j) {
-      REQUIRE(u_axes2d(-1, j, k) == u_axes3d(-1, j, k));
-      REQUIRE(u_axes2d(u_axes2d.nx(), j, k) == u_axes3d(u_axes3d.nx(), j, k));
+      halos_match &= u_axes2d(-1, j, k) == u_axes3d(-1, j, k) &&
+                     u_axes2d(u_axes2d.nx(), j, k) == u_axes3d(u_axes3d.nx(), j, k);
     }
     for (int i = 0; i < u_axes2d.nx(); ++i) {
-      REQUIRE(u_axes2d(i, -1, k) == u_axes3d(i, -1, k));
-      REQUIRE(u_axes2d(i, u_axes2d.ny(), k) == u_axes3d(i, u_axes3d.ny(), k));
+      halos_match &= u_axes2d(i, -1, k) == u_axes3d(i, -1, k) &&
+                     u_axes2d(i, u_axes2d.ny(), k) == u_axes3d(i, u_axes3d.ny(), k);
     }
   }
   // Z halo: Axes3D self-wraps mine; Axes2D leaves sentinel.
   for (int j = 0; j < u_axes2d.ny(); ++j) {
     for (int i = 0; i < u_axes2d.nx(); ++i) {
-      REQUIRE(u_axes2d(i, j, -1) == sentinel);
-      REQUIRE(u_axes2d(i, j, u_axes2d.nz()) == sentinel);
-      REQUIRE(u_axes3d(i, j, -1) == mine);
-      REQUIRE(u_axes3d(i, j, u_axes3d.nz()) == mine);
+      halos_match &= u_axes2d(i, j, -1) == sentinel &&
+                     u_axes2d(i, j, u_axes2d.nz()) == sentinel &&
+                     u_axes3d(i, j, -1) == mine &&
+                     u_axes3d(i, j, u_axes3d.nz()) == mine;
     }
   }
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("HaloDirectionSelector overrides the uniform direction set",

@@ -3,6 +3,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <cmath>
 #include <mpi.h>
 #include <vector>
 
@@ -46,6 +47,8 @@ TEST_CASE("even-order (2..20) interior Laplacian of constant field is zero",
   const double inv = 1.0;
   const int sxy = nx * ny;
 
+  bool all_values_are_zero = true;
+  double max_error = 0.0;
   for (int order = 2; order <= 20; order += 2) {
     const int hw = order / 2;
     std::vector<double> lap(nlocal, 0.0);
@@ -64,12 +67,15 @@ TEST_CASE("even-order (2..20) interior Laplacian of constant field is zero",
           const size_t c = static_cast<size_t>(ix) +
                            static_cast<size_t>(iy) * static_cast<size_t>(nx) +
                            static_cast<size_t>(iz) * static_cast<size_t>(sxy);
-          INFO("order " << order << " rank " << rank);
-          REQUIRE(lap[c] == Catch::Approx(0.0).margin(1e-10));
+          const double error = std::abs(lap[c]);
+          max_error = std::max(max_error, error);
+          all_values_are_zero &= error <= 1e-10;
         }
       }
     }
   }
+  INFO("rank " << rank << " maximum absolute error " << max_error);
+  REQUIRE(all_values_are_zero);
 }
 
 TEST_CASE("even-order (2..20) Laplacian of global quadratic is exact (6)",
@@ -121,6 +127,8 @@ TEST_CASE("even-order (2..20) Laplacian of global quadratic is exact (6)",
 
   const double inv = 1.0;
 
+  bool all_values_are_exact = true;
+  double max_error = 0.0;
   for (int order = 2; order <= 20; order += 2) {
     const int hw = order / 2;
     std::vector<double> lap(nlocal, 0.0);
@@ -139,10 +147,13 @@ TEST_CASE("even-order (2..20) Laplacian of global quadratic is exact (6)",
           const size_t c = static_cast<size_t>(ix) +
                            static_cast<size_t>(iy) * static_cast<size_t>(nx) +
                            static_cast<size_t>(iz) * static_cast<size_t>(sxy);
-          INFO("order " << order << " rank " << rank);
-          REQUIRE(lap[c] == Catch::Approx(6.0).margin(1e-8));
+          const double error = std::abs(lap[c] - 6.0);
+          max_error = std::max(max_error, error);
+          all_values_are_exact &= error <= 1e-8;
         }
       }
     }
   }
+  INFO("rank " << rank << " maximum absolute error " << max_error);
+  REQUIRE(all_values_are_exact);
 }

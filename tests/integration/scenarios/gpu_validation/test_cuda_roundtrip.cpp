@@ -60,10 +60,11 @@ TEST_CASE("CUDA FFT roundtrip (double) [integration][gpu]", "[gpu]") {
   auto host_out = real_out.to_host();
 
   // Expect near-exact roundtrip
-  REQUIRE(host_out.size() == host_in.size());
+  bool roundtrip_matches = host_out.size() == host_in.size();
   for (size_t i = 0; i < host_in.size(); ++i) {
-    REQUIRE(host_out[i] == Catch::Approx(host_in[i]).margin(1e-10));
+    roundtrip_matches &= std::abs(host_out[i] - host_in[i]) <= 1e-10;
   }
+  REQUIRE(roundtrip_matches);
 }
 
 TEST_CASE("CUDA FFT roundtrip (float) [integration][gpu]", "[gpu]") {
@@ -97,10 +98,11 @@ TEST_CASE("CUDA FFT roundtrip (float) [integration][gpu]", "[gpu]") {
   // Copy back and verify (looser tolerance for float)
   auto host_out = real_out.to_host();
 
-  REQUIRE(host_out.size() == host_in.size());
+  bool roundtrip_matches = host_out.size() == host_in.size();
   for (size_t i = 0; i < host_in.size(); ++i) {
-    REQUIRE(host_out[i] == Catch::Approx(host_in[i]).margin(1e-5f));
+    roundtrip_matches &= std::abs(host_out[i] - host_in[i]) <= 1e-5f;
   }
+  REQUIRE(roundtrip_matches);
 }
 #else
 TEST_CASE("CUDA FFT roundtrip skipped (CUDA disabled) [integration][gpu]", "[gpu]") {

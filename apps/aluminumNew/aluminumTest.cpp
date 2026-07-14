@@ -5,6 +5,7 @@
 #include "SeedGridFCC.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <cmath>
 #include <openpfc/openpfc.hpp>
 
 using namespace Catch::Matchers;
@@ -93,14 +94,16 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
 
     std::array<double, 5> expected_norms{1297.08, 1250.21, 1209.28, 1173.19,
                                          1141.09};
+    bool norms_match = true;
     for (int i = 0; i < 5; ++i) {
       double norm2 = 0.0;
       for (auto &x : psi) {
         norm2 += x * x;
       }
       std::cout << "norm: " << norm2 << '\n';
-      REQUIRE_THAT(norm2, WithinAbs(expected_norms[i], 0.1));
+      norms_match &= std::abs(norm2 - expected_norms[i]) <= 0.1;
       aluminum.step(1.0);
     }
+    REQUIRE(norms_match);
   }
 }

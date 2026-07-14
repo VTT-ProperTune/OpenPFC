@@ -162,6 +162,7 @@ TEST_CASE("Neighbor exchange - Data-only runtime phase",
 
   // Runtime: Exchange data multiple times
   const int num_steps = 10;
+  bool values_match = true;
   for (int step = 0; step < num_steps; ++step) {
     if (rank == 0) {
       // Update data
@@ -174,14 +175,15 @@ TEST_CASE("Neighbor exchange - Data-only runtime phase",
     } else {
       exchange::receive_data(sparse, 0, 1, MPI_COMM_WORLD);
       auto data = sparsevector::get_data(sparse);
-      REQUIRE(data[0] == Approx(step * 10.0).margin(1e-10));
-      REQUIRE(data[1] == Approx(step * 10.0 + 1.0).margin(1e-10));
-      REQUIRE(data[2] == Approx(step * 10.0 + 2.0).margin(1e-10));
-      REQUIRE(data[3] == Approx(step * 10.0 + 3.0).margin(1e-10));
-      REQUIRE(data[4] == Approx(step * 10.0 + 4.0).margin(1e-10));
+      values_match &= data[0] == Approx(step * 10.0).margin(1e-10) &&
+                      data[1] == Approx(step * 10.0 + 1.0).margin(1e-10) &&
+                      data[2] == Approx(step * 10.0 + 2.0).margin(1e-10) &&
+                      data[3] == Approx(step * 10.0 + 3.0).margin(1e-10) &&
+                      data[4] == Approx(step * 10.0 + 4.0).margin(1e-10);
     }
     MPI_Barrier(MPI_COMM_WORLD);
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("Neighbor exchange - Large data", "[SparseVector][MPI][neighbor][large]") {
@@ -215,9 +217,11 @@ TEST_CASE("Neighbor exchange - Large data", "[SparseVector][MPI][neighbor][large
 
     REQUIRE(sparsevector::get_size(sparse) == large_size);
     auto recv_data = sparsevector::get_data(sparse);
+    bool values_match = true;
     for (size_t i = 0; i < large_size; ++i) {
-      REQUIRE(recv_data[i] == Approx(1.0 + i).margin(1e-10));
+      values_match &= recv_data[i] == Approx(1.0 + i).margin(1e-10);
     }
+    REQUIRE(values_match);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);

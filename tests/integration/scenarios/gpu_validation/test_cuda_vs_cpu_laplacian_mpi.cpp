@@ -123,10 +123,10 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
   auto real_out_gpu_host = real_out_gpu.to_host();
 
   // Local element-wise comparison
-  REQUIRE(real_out_gpu_host.size() == real_out_cpu.size());
-  for (size_t i = 0; i < real_out_cpu.size(); ++i) {
-    REQUIRE(real_out_gpu_host[i] == Catch::Approx(real_out_cpu[i]).margin(1e-10));
-  }
+  bool local_fields_match = real_out_gpu_host.size() == real_out_cpu.size();
+  for (size_t i = 0; i < real_out_cpu.size(); ++i)
+    local_fields_match &= std::abs(real_out_gpu_host[i] - real_out_cpu[i]) <= 1e-10;
+  REQUIRE(local_fields_match);
 
   // Global L2 comparison across ranks
   auto local_l2_sq = [&]() {

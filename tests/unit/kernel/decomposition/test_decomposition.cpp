@@ -57,16 +57,18 @@ TEST_CASE("Decomposition - periodic neighbor ranks", "[decomposition][unit]") {
     const int rank = 0;
     auto faces = decomposition::find_face_neighbors(decomp, rank);
     REQUIRE(faces.size() == 6);
+    bool neighbors_match = true;
     for (const auto &entry : faces) {
-      REQUIRE(entry.second ==
-              decomposition::get_neighbor_rank(decomp, rank, entry.first));
+      neighbors_match &= entry.second ==
+                         decomposition::get_neighbor_rank(decomp, rank, entry.first);
     }
 
     auto alln = decomposition::find_all_neighbors(decomp, rank);
     REQUIRE(alln.size() == 26);
     for (const auto &entry : alln) {
-      REQUIRE(entry.second ==
-              decomposition::get_neighbor_rank(decomp, rank, entry.first));
+      neighbors_match &= entry.second ==
+                         decomposition::get_neighbor_rank(decomp, rank, entry.first);
     }
+    REQUIRE(neighbors_match);
   }
 }

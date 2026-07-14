@@ -56,11 +56,12 @@ TEST_CASE("create_padded_face_types_6: +X/-X subarrays map the right slabs",
   std::vector<double> recv(N, -1.0);
   self_sendrecv(faces[0].send_type.get(), sendbuf.data(), faces[0].recv_type.get(),
                 recv.data());
+  bool slabs_match = true;
   for (int k = 0; k < nz; ++k) {
     for (int j = 0; j < ny; ++j) {
       const std::size_t dst = lin(nx + hw, hw + j, hw + k, nxp, nyp);
       const std::size_t src = lin(hw + (nx - 1), hw + j, hw + k, nxp, nyp);
-      REQUIRE(recv[dst] == sendbuf[src]);
+      slabs_match &= recv[dst] == sendbuf[src];
     }
   }
 
@@ -71,9 +72,10 @@ TEST_CASE("create_padded_face_types_6: +X/-X subarrays map the right slabs",
     for (int j = 0; j < ny; ++j) {
       const std::size_t dst = lin(0, hw + j, hw + k, nxp, nyp);
       const std::size_t src = lin(hw, hw + j, hw + k, nxp, nyp);
-      REQUIRE(recv[dst] == sendbuf[src]);
+      slabs_match &= recv[dst] == sendbuf[src];
     }
   }
+  REQUIRE(slabs_match);
 }
 
 TEST_CASE("create_padded_face_types_6: +Y/-Y subarrays map the right slabs",
@@ -97,11 +99,12 @@ TEST_CASE("create_padded_face_types_6: +Y/-Y subarrays map the right slabs",
   std::vector<double> recv(N, -1.0);
   self_sendrecv(faces[2].send_type.get(), sendbuf.data(), faces[2].recv_type.get(),
                 recv.data());
+  bool slabs_match = true;
   for (int k = 0; k < nz; ++k) {
     for (int i = 0; i < nx; ++i) {
       const std::size_t dst = lin(hw + i, ny + hw, hw + k, nxp, nyp);
       const std::size_t src = lin(hw + i, hw + (ny - 1), hw + k, nxp, nyp);
-      REQUIRE(recv[dst] == sendbuf[src]);
+      slabs_match &= recv[dst] == sendbuf[src];
     }
   }
 
@@ -112,9 +115,10 @@ TEST_CASE("create_padded_face_types_6: +Y/-Y subarrays map the right slabs",
     for (int i = 0; i < nx; ++i) {
       const std::size_t dst = lin(hw + i, 0, hw + k, nxp, nyp);
       const std::size_t src = lin(hw + i, hw, hw + k, nxp, nyp);
-      REQUIRE(recv[dst] == sendbuf[src]);
+      slabs_match &= recv[dst] == sendbuf[src];
     }
   }
+  REQUIRE(slabs_match);
 }
 
 TEST_CASE("create_padded_face_types_6: +Z/-Z subarrays map the right slabs",
@@ -138,11 +142,12 @@ TEST_CASE("create_padded_face_types_6: +Z/-Z subarrays map the right slabs",
   std::vector<double> recv(N, -1.0);
   self_sendrecv(faces[4].send_type.get(), sendbuf.data(), faces[4].recv_type.get(),
                 recv.data());
+  bool slabs_match = true;
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       const std::size_t dst = lin(hw + i, hw + j, nz + hw, nxp, nyp);
       const std::size_t src = lin(hw + i, hw + j, hw + (nz - 1), nxp, nyp);
-      REQUIRE(recv[dst] == sendbuf[src]);
+      slabs_match &= recv[dst] == sendbuf[src];
     }
   }
 
@@ -153,9 +158,10 @@ TEST_CASE("create_padded_face_types_6: +Z/-Z subarrays map the right slabs",
     for (int i = 0; i < nx; ++i) {
       const std::size_t dst = lin(hw + i, hw + j, 0, nxp, nyp);
       const std::size_t src = lin(hw + i, hw + j, hw, nxp, nyp);
-      REQUIRE(recv[dst] == sendbuf[src]);
+      slabs_match &= recv[dst] == sendbuf[src];
     }
   }
+  REQUIRE(slabs_match);
 }
 
 TEST_CASE(

@@ -182,10 +182,11 @@ TEST_CASE("GPU FFT: Round-trip (forward then backward)", "[gpu][fft]") {
   std::vector<double> output_host = output.to_host();
 
   // Verify round-trip (within numerical precision)
-  REQUIRE(output_host.size() == input_host.size());
+  bool roundtrip_matches = output_host.size() == input_host.size();
   for (size_t i = 0; i < output_host.size(); ++i) {
-    REQUIRE(output_host[i] == Approx(input_host[i]).margin(1e-5));
+    roundtrip_matches &= std::abs(output_host[i] - input_host[i]) <= 1e-5;
   }
+  REQUIRE(roundtrip_matches);
 
   if (mpi_initialized == 0) {
     MPI_Finalize();

@@ -75,9 +75,10 @@ TEST_CASE("5-point XY Laplacian of constant field is zero (nz=1)", "[MPI][fd][xy
   field::fd::laplacian2d_xy_interior<2>(u.data(), lap.data(), nx, ny, nz, inv, inv,
                                         halo_width);
 
-  for (size_t i = 0; i < nlocal; ++i) {
-    REQUIRE(lap[i] == Catch::Approx(0.0).margin(1e-12));
-  }
+  bool all_values_are_zero = true;
+  for (size_t i = 0; i < nlocal; ++i)
+    all_values_are_zero &= std::abs(lap[i]) <= 1e-12;
+  REQUIRE(all_values_are_zero);
 }
 
 TEST_CASE("laplacian2d_xy_periodic_separated<2> matches analytic 2D Laplacian on "
@@ -119,6 +120,7 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches analytic 2D Laplacian on
       static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
   std::vector<double> u(nlocal);
   std::vector<double> lap(nlocal, 0.0);
+  bool laplacian_matches = true;
   for (int iy = 0; iy < ny; ++iy) {
     for (int ix = 0; ix < nx; ++ix) {
       const double x = static_cast<double>(local_lower[0] + ix) * dx;
@@ -152,9 +154,10 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches analytic 2D Laplacian on
       const size_t c = static_cast<size_t>(ix) +
                        static_cast<size_t>(iy) * static_cast<size_t>(nx);
       const double expected = -2.0 * u[c];
-      REQUIRE(lap[c] == Catch::Approx(expected).margin(0.05));
+      laplacian_matches &= std::abs(lap[c] - expected) <= 0.05;
     }
   }
+  REQUIRE(laplacian_matches);
 }
 
 TEST_CASE("Separated face halos contain opposite periodic neighbor faces (XY)",
@@ -184,6 +187,7 @@ TEST_CASE("Separated face halos contain opposite periodic neighbor faces (XY)",
   REQUIRE(nz == 1);
 
   std::vector<double> u(static_cast<size_t>(nx) * static_cast<size_t>(ny));
+  bool neighbor_faces_match = true;
   for (int iy = 0; iy < ny; ++iy) {
     for (int ix = 0; ix < nx; ++ix) {
       const int gx = local_lower[0] + ix;
@@ -205,15 +209,14 @@ TEST_CASE("Separated face halos contain opposite periodic neighbor faces (XY)",
   for (int iy = 0; iy < ny; ++iy) {
     const int gy = local_lower[1] + iy;
     const auto offset = static_cast<size_t>(iy);
-    REQUIRE(
-        face_halos[0][offset] ==
-        Catch::Approx(periodic_xy_value(local_lower[0] + nx, gy, nx_glob, ny_glob))
-            .margin(1e-12));
-    REQUIRE(
-        face_halos[1][offset] ==
-        Catch::Approx(periodic_xy_value(local_lower[0] - 1, gy, nx_glob, ny_glob))
-            .margin(1e-12));
+    neighbor_faces_match &= std::abs(face_halos[0][offset] -
+                                     periodic_xy_value(local_lower[0] + nx, gy,
+                                                       nx_glob, ny_glob)) <= 1e-12;
+    neighbor_faces_match &= std::abs(face_halos[1][offset] -
+                                     periodic_xy_value(local_lower[0] - 1, gy,
+                                                       nx_glob, ny_glob)) <= 1e-12;
   }
+  REQUIRE(neighbor_faces_match);
 }
 
 TEST_CASE("5-point XY separated periodic Laplacian matches serial global formula",
@@ -247,6 +250,7 @@ TEST_CASE("5-point XY separated periodic Laplacian matches serial global formula
       static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
   std::vector<double> u(nlocal);
   std::vector<double> lap(nlocal, 0.0);
+  bool laplacian_matches = true;
   for (int iy = 0; iy < ny; ++iy) {
     for (int ix = 0; ix < nx; ++ix) {
       const int gx = local_lower[0] + ix;
@@ -278,9 +282,9 @@ TEST_CASE("5-point XY separated periodic Laplacian matches serial global formula
       const int gy = local_lower[1] + iy;
       const size_t c = static_cast<size_t>(ix) +
                        static_cast<size_t>(iy) * static_cast<size_t>(nx);
-      REQUIRE(lap[c] ==
-              Catch::Approx(expected_periodic_xy_laplacian(gx, gy, nx_glob, ny_glob))
-                  .margin(1e-12));
+      laplacian_matches &= std::abs(lap[c] - expected_periodic_xy_laplacian(
+                                                 gx, gy, nx_glob, ny_glob)) <= 1e-12;
     }
   }
+  REQUIRE(laplacian_matches);
 }

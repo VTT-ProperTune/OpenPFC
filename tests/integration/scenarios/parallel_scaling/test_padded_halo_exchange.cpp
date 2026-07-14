@@ -30,22 +30,28 @@ void fill_owned(field::PaddedBrick<double> &u, double val) {
       for (int i = 0; i < u.nx(); ++i) u(i, j, k) = val;
 }
 
-void assert_halo_layer_x(const field::PaddedBrick<double> &u, int i,
-                         double expected) {
+bool halo_layer_x_matches(const field::PaddedBrick<double> &u, int i,
+                          double expected) {
+  bool matches = true;
   for (int k = 0; k < u.nz(); ++k)
-    for (int j = 0; j < u.ny(); ++j) REQUIRE(u(i, j, k) == expected);
+    for (int j = 0; j < u.ny(); ++j) matches &= u(i, j, k) == expected;
+  return matches;
 }
 
-void assert_halo_layer_y(const field::PaddedBrick<double> &u, int j,
-                         double expected) {
+bool halo_layer_y_matches(const field::PaddedBrick<double> &u, int j,
+                          double expected) {
+  bool matches = true;
   for (int k = 0; k < u.nz(); ++k)
-    for (int i = 0; i < u.nx(); ++i) REQUIRE(u(i, j, k) == expected);
+    for (int i = 0; i < u.nx(); ++i) matches &= u(i, j, k) == expected;
+  return matches;
 }
 
-void assert_halo_layer_z(const field::PaddedBrick<double> &u, int k,
-                         double expected) {
+bool halo_layer_z_matches(const field::PaddedBrick<double> &u, int k,
+                          double expected) {
+  bool matches = true;
   for (int j = 0; j < u.ny(); ++j)
-    for (int i = 0; i < u.nx(); ++i) REQUIRE(u(i, j, k) == expected);
+    for (int i = 0; i < u.nx(); ++i) matches &= u(i, j, k) == expected;
+  return matches;
 }
 
 } // namespace
@@ -67,12 +73,11 @@ TEST_CASE("PaddedHaloExchanger: single-rank periodic wrap fills all 6 halos",
   PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
   halo.exchange_halos(u.data(), u.size());
 
-  assert_halo_layer_x(u, -1, 7.0);
-  assert_halo_layer_x(u, u.nx(), 7.0);
-  assert_halo_layer_y(u, -1, 7.0);
-  assert_halo_layer_y(u, u.ny(), 7.0);
-  assert_halo_layer_z(u, -1, 7.0);
-  assert_halo_layer_z(u, u.nz(), 7.0);
+  const bool halos_match =
+      halo_layer_x_matches(u, -1, 7.0) && halo_layer_x_matches(u, u.nx(), 7.0) &&
+      halo_layer_y_matches(u, -1, 7.0) && halo_layer_y_matches(u, u.ny(), 7.0) &&
+      halo_layer_z_matches(u, -1, 7.0) && halo_layer_z_matches(u, u.nz(), 7.0);
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("PaddedHaloExchanger: two-rank X-split fills +X / -X with neighbour",
@@ -94,14 +99,15 @@ TEST_CASE("PaddedHaloExchanger: two-rank X-split fills +X / -X with neighbour",
   PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
   halo.exchange_halos(u.data(), u.size());
 
-  for (int d = 1; d <= hw; ++d) {
-    assert_halo_layer_x(u, -d, other);
-    assert_halo_layer_x(u, u.nx() + d - 1, other);
-    assert_halo_layer_y(u, -d, mine);
-    assert_halo_layer_y(u, u.ny() + d - 1, mine);
-    assert_halo_layer_z(u, -d, mine);
-    assert_halo_layer_z(u, u.nz() + d - 1, mine);
-  }
+  bool halos_match = true;
+  for (int d = 1; d <= hw; ++d)
+    halos_match &= halo_layer_x_matches(u, -d, other) &&
+                   halo_layer_x_matches(u, u.nx() + d - 1, other) &&
+                   halo_layer_y_matches(u, -d, mine) &&
+                   halo_layer_y_matches(u, u.ny() + d - 1, mine) &&
+                   halo_layer_z_matches(u, -d, mine) &&
+                   halo_layer_z_matches(u, u.nz() + d - 1, mine);
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("PaddedHaloExchanger: non-blocking start/finish overlaps with inner work",
@@ -133,10 +139,10 @@ TEST_CASE("PaddedHaloExchanger: non-blocking start/finish overlaps with inner wo
 
   halo.finish_halo_exchange();
 
-  assert_halo_layer_x(u, -1, other);
-  assert_halo_layer_x(u, u.nx(), other);
-  assert_halo_layer_y(u, -1, mine);
-  assert_halo_layer_z(u, -1, mine);
+  const bool halos_match =
+      halo_layer_x_matches(u, -1, other) && halo_layer_x_matches(u, u.nx(), other) &&
+      halo_layer_y_matches(u, -1, mine) && halo_layer_z_matches(u, -1, mine);
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("PaddedHaloExchanger: 2x2x1 grid fills X and Y with right neighbours",
@@ -164,12 +170,13 @@ TEST_CASE("PaddedHaloExchanger: 2x2x1 grid fills X and Y with right neighbours",
   const int ypos_neighbor = rank_x + ((rank_y + 1) % 2) * 2;
   const int yneg_neighbor = rank_x + ((rank_y - 1 + 2) % 2) * 2;
 
-  assert_halo_layer_x(u, u.nx(), static_cast<double>(xpos_neighbor));
-  assert_halo_layer_x(u, -1, static_cast<double>(xneg_neighbor));
-  assert_halo_layer_y(u, u.ny(), static_cast<double>(ypos_neighbor));
-  assert_halo_layer_y(u, -1, static_cast<double>(yneg_neighbor));
-  assert_halo_layer_z(u, -1, mine);
-  assert_halo_layer_z(u, u.nz(), mine);
+  const bool halos_match =
+      halo_layer_x_matches(u, u.nx(), static_cast<double>(xpos_neighbor)) &&
+      halo_layer_x_matches(u, -1, static_cast<double>(xneg_neighbor)) &&
+      halo_layer_y_matches(u, u.ny(), static_cast<double>(ypos_neighbor)) &&
+      halo_layer_y_matches(u, -1, static_cast<double>(yneg_neighbor)) &&
+      halo_layer_z_matches(u, -1, mine) && halo_layer_z_matches(u, u.nz(), mine);
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("PaddedHaloExchanger: Axes2D direction set skips ±Z halos",
@@ -198,13 +205,13 @@ TEST_CASE("PaddedHaloExchanger: Axes2D direction set skips ±Z halos",
   REQUIRE(halo.num_directions() == 4);
   halo.exchange_halos(u.data(), u.size());
 
-  assert_halo_layer_x(u, -1, 7.0);
-  assert_halo_layer_x(u, u.nx(), 7.0);
-  assert_halo_layer_y(u, -1, 7.0);
-  assert_halo_layer_y(u, u.ny(), 7.0);
-  // ±Z stay at sentinel — Axes2D excludes them.
-  assert_halo_layer_z(u, -1, sentinel);
-  assert_halo_layer_z(u, u.nz(), sentinel);
+  const bool halos_match =
+      halo_layer_x_matches(u, -1, 7.0) && halo_layer_x_matches(u, u.nx(), 7.0) &&
+      halo_layer_y_matches(u, -1, 7.0) && halo_layer_y_matches(u, u.ny(), 7.0) &&
+      // ±Z stay at sentinel — Axes2D excludes them.
+      halo_layer_z_matches(u, -1, sentinel) &&
+      halo_layer_z_matches(u, u.nz(), sentinel);
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("PaddedHaloExchanger: brick-binding ctor + free start/finish wrappers",
@@ -232,10 +239,11 @@ TEST_CASE("PaddedHaloExchanger: brick-binding ctor + free start/finish wrappers"
   start_exchange(halo);
   finish_exchange(halo);
 
-  for (int d = 1; d <= hw; ++d) {
-    assert_halo_layer_x(u, -d, other);
-    assert_halo_layer_x(u, u.nx() + d - 1, other);
-  }
+  bool halos_match = true;
+  for (int d = 1; d <= hw; ++d)
+    halos_match &= halo_layer_x_matches(u, -d, other) &&
+                   halo_layer_x_matches(u, u.nx() + d - 1, other);
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("PaddedHaloExchanger: exchange(halo) matches start+finish",
@@ -257,10 +265,11 @@ TEST_CASE("PaddedHaloExchanger: exchange(halo) matches start+finish",
   pfc::communication::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
   pfc::communication::exchange(halo);
 
-  for (int d = 1; d <= hw; ++d) {
-    assert_halo_layer_x(u, -d, other);
-    assert_halo_layer_x(u, u.nx() + d - 1, other);
-  }
+  bool halos_match = true;
+  for (int d = 1; d <= hw; ++d)
+    halos_match &= halo_layer_x_matches(u, -d, other) &&
+                   halo_layer_x_matches(u, u.nx() + d - 1, other);
+  REQUIRE(halos_match);
 }
 
 TEST_CASE("PaddedHaloExchanger: unbound start() throws std::logic_error",

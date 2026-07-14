@@ -106,13 +106,19 @@ TEST_CASE("apply_d2_along (runtime view) returns unscaled FD sum",
   const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
 
   EvenCentralD2View view{};
+  bool results_match = true;
   for (int order : {2, 4, 6}) {
-    REQUIRE(lookup_even_central_d2(order, &view));
+    if (!lookup_even_central_d2(order, &view)) {
+      results_match = false;
+      continue;
+    }
     const double denom = static_cast<double>(view.denom);
-    REQUIRE(apply_d2_along<0>(view, u.data(), c, SX, SY, SZ) == Approx(2.0 * denom));
-    REQUIRE(apply_d2_along<1>(view, u.data(), c, SX, SY, SZ) == Approx(4.0 * denom));
-    REQUIRE(apply_d2_along<2>(view, u.data(), c, SX, SY, SZ) == Approx(6.0 * denom));
+    results_match &=
+        apply_d2_along<0>(view, u.data(), c, SX, SY, SZ) == Approx(2.0 * denom) &&
+        apply_d2_along<1>(view, u.data(), c, SX, SY, SZ) == Approx(4.0 * denom) &&
+        apply_d2_along<2>(view, u.data(), c, SX, SY, SZ) == Approx(6.0 * denom);
   }
+  REQUIRE(results_match);
 }
 
 TEST_CASE("lookup_even_central_d2 rejects unsupported orders",
@@ -133,24 +139,25 @@ TEST_CASE("apply_tensor_d pure-axis case agrees with apply_d2_along",
   const auto u = build_field();
   const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
 
+  bool results_match = true;
   for (int order : {2, 4, 6}) {
     INFO("order " << order);
     const auto axis = [&](auto stencil_tag) {
       using S = decltype(stencil_tag);
       const double xx_axis = apply_d2_along<0, S>(u.data(), c, SX, SY, SZ);
       const double xx_tensor = apply_tensor_d<2, 0, 0, S>(u.data(), c, SX, SY, SZ);
-      REQUIRE(xx_tensor == Approx(xx_axis));
+      results_match &= xx_tensor == Approx(xx_axis);
       const double yy_axis = apply_d2_along<1, S>(u.data(), c, SX, SY, SZ);
       const double yy_tensor =
           apply_tensor_d<0, 2, 0, pfc::field::fd::IdentityStencil1d, S>(u.data(), c,
                                                                         SX, SY, SZ);
-      REQUIRE(yy_tensor == Approx(yy_axis));
+      results_match &= yy_tensor == Approx(yy_axis);
       const double zz_axis = apply_d2_along<2, S>(u.data(), c, SX, SY, SZ);
       const double zz_tensor =
           apply_tensor_d<0, 0, 2, pfc::field::fd::IdentityStencil1d,
                          pfc::field::fd::IdentityStencil1d, S>(u.data(), c, SX, SY,
                                                                SZ);
-      REQUIRE(zz_tensor == Approx(zz_axis));
+      results_match &= zz_tensor == Approx(zz_axis);
     };
     if (order == 2)
       axis(EvenCentralD2<2>{});
@@ -159,6 +166,7 @@ TEST_CASE("apply_tensor_d pure-axis case agrees with apply_d2_along",
     else
       axis(EvenCentralD2<6>{});
   }
+  REQUIRE(results_match);
 }
 
 TEST_CASE("apply_d1_along (compile-time stencil) returns unscaled FD sum",
@@ -231,13 +239,19 @@ TEST_CASE("apply_d1_along (runtime view) returns unscaled FD sum",
   const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
 
   EvenCentralD1View view{};
+  bool results_match = true;
   for (int order : {2, 4, 6}) {
-    REQUIRE(lookup_even_central_d1(order, &view));
+    if (!lookup_even_central_d1(order, &view)) {
+      results_match = false;
+      continue;
+    }
     const double denom = static_cast<double>(view.denom);
-    REQUIRE(apply_d1_along<0>(view, u.data(), c, SX, SY, SZ) == Approx(2.0 * denom));
-    REQUIRE(apply_d1_along<1>(view, u.data(), c, SX, SY, SZ) == Approx(3.0 * denom));
-    REQUIRE(apply_d1_along<2>(view, u.data(), c, SX, SY, SZ) == Approx(4.0 * denom));
+    results_match &=
+        apply_d1_along<0>(view, u.data(), c, SX, SY, SZ) == Approx(2.0 * denom) &&
+        apply_d1_along<1>(view, u.data(), c, SX, SY, SZ) == Approx(3.0 * denom) &&
+        apply_d1_along<2>(view, u.data(), c, SX, SY, SZ) == Approx(4.0 * denom);
   }
+  REQUIRE(results_match);
 }
 
 TEST_CASE("apply_d1_along on a constant field returns zero (anti-symmetry)",
@@ -251,15 +265,20 @@ TEST_CASE("apply_d1_along on a constant field returns zero (anti-symmetry)",
   const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
 
   EvenCentralD1View view{};
+  bool results_match = true;
   for (int order : {2, 4, 6}) {
-    REQUIRE(lookup_even_central_d1(order, &view));
-    REQUIRE(apply_d1_along<0>(view, u.data(), c, SX, SY, SZ) ==
-            Approx(0.0).margin(1e-15));
-    REQUIRE(apply_d1_along<1>(view, u.data(), c, SX, SY, SZ) ==
-            Approx(0.0).margin(1e-15));
-    REQUIRE(apply_d1_along<2>(view, u.data(), c, SX, SY, SZ) ==
-            Approx(0.0).margin(1e-15));
+    if (!lookup_even_central_d1(order, &view)) {
+      results_match = false;
+      continue;
+    }
+    results_match &= apply_d1_along<0>(view, u.data(), c, SX, SY, SZ) ==
+                         Approx(0.0).margin(1e-15) &&
+                     apply_d1_along<1>(view, u.data(), c, SX, SY, SZ) ==
+                         Approx(0.0).margin(1e-15) &&
+                     apply_d1_along<2>(view, u.data(), c, SX, SY, SZ) ==
+                         Approx(0.0).margin(1e-15);
   }
+  REQUIRE(results_match);
 }
 
 TEST_CASE("apply_d1_along high-order tables exist and are anti-symmetric on a "
@@ -292,17 +311,22 @@ TEST_CASE("apply_d1_along high-order tables exist and are anti-symmetric on a "
       8 + 8 * static_cast<std::ptrdiff_t>(M) + 8 * MZ; // safely interior for M=7
 
   EvenCentralD1View view{};
+  bool results_match = true;
   for (int order : {8, 10, 12, 14}) {
-    REQUIRE(lookup_even_central_d1(order, &view));
+    if (!lookup_even_central_d1(order, &view)) {
+      results_match = false;
+      continue;
+    }
     const double denom = static_cast<double>(view.denom);
-    REQUIRE(apply_d1_along<0>(view, u.data(), c, MX, MY, MZ) ==
-            Approx(-3.0 * denom));
+    results_match &=
+        apply_d1_along<0>(view, u.data(), c, MX, MY, MZ) == Approx(-3.0 * denom);
     // Linear-in-x field: D1 along y and z is exactly zero.
-    REQUIRE(apply_d1_along<1>(view, u.data(), c, MX, MY, MZ) ==
-            Approx(0.0).margin(1e-15));
-    REQUIRE(apply_d1_along<2>(view, u.data(), c, MX, MY, MZ) ==
-            Approx(0.0).margin(1e-15));
+    results_match &= apply_d1_along<1>(view, u.data(), c, MX, MY, MZ) ==
+                         Approx(0.0).margin(1e-15) &&
+                     apply_d1_along<2>(view, u.data(), c, MX, MY, MZ) ==
+                         Approx(0.0).margin(1e-15);
   }
+  REQUIRE(results_match);
 }
 
 TEST_CASE("lookup_even_central_d1 rejects unsupported orders",

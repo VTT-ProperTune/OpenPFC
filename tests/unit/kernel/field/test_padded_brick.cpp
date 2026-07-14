@@ -49,9 +49,11 @@ TEST_CASE("PaddedBrick: zero-initialized on construction", "[field][padded_brick
   auto decomp = decomposition::create(world, 1);
 
   field::PaddedBrick<double> u(decomp, 0, /*hw=*/1);
+  bool values_are_zero = true;
   for (double v : u.vec()) {
-    REQUIRE(v == 0.0);
+    values_are_zero &= v == 0.0;
   }
+  REQUIRE(values_are_zero);
 }
 
 TEST_CASE("PaddedBrick: operator() reaches halo cells in [-hw, n+hw)",
@@ -62,6 +64,7 @@ TEST_CASE("PaddedBrick: operator() reaches halo cells in [-hw, n+hw)",
   const int hw = 1;
   field::PaddedBrick<int> u(decomp, 0, hw);
 
+  bool values_match = true;
   for (int k = -hw; k < u.nz() + hw; ++k) {
     for (int j = -hw; j < u.ny() + hw; ++j) {
       for (int i = -hw; i < u.nx() + hw; ++i) {
@@ -73,10 +76,11 @@ TEST_CASE("PaddedBrick: operator() reaches halo cells in [-hw, n+hw)",
   for (int k = -hw; k < u.nz() + hw; ++k) {
     for (int j = -hw; j < u.ny() + hw; ++j) {
       for (int i = -hw; i < u.nx() + hw; ++i) {
-        REQUIRE(u(i, j, k) == 100 * (k + hw) + 10 * (j + hw) + (i + hw));
+        values_match &= u(i, j, k) == 100 * (k + hw) + 10 * (j + hw) + (i + hw);
       }
     }
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("PaddedBrick: apply fills only owned cells, halos stay zero",
@@ -89,29 +93,28 @@ TEST_CASE("PaddedBrick: apply fills only owned cells, halos stay zero",
 
   u.apply([](double x, double y, double z) { return x + 10 * y + 100 * z; });
 
+  bool values_match = true;
   for (int k = 0; k < u.nz(); ++k) {
     for (int j = 0; j < u.ny(); ++j) {
       for (int i = 0; i < u.nx(); ++i) {
         const auto p = u.global_coords(i, j, k);
-        REQUIRE(u(i, j, k) == Approx(p[0] + 10 * p[1] + 100 * p[2]));
+        values_match &= u(i, j, k) == Approx(p[0] + 10 * p[1] + 100 * p[2]);
       }
     }
   }
 
   for (int i = -hw; i < u.nx() + hw; ++i) {
-    REQUIRE(u(i, -1, 0) == 0.0);
-    REQUIRE(u(i, u.ny(), 0) == 0.0);
+    values_match &= u(i, -1, 0) == 0.0 && u(i, u.ny(), 0) == 0.0;
   }
   for (int j = -hw; j < u.ny() + hw; ++j) {
-    REQUIRE(u(-1, j, 0) == 0.0);
-    REQUIRE(u(u.nx(), j, 0) == 0.0);
+    values_match &= u(-1, j, 0) == 0.0 && u(u.nx(), j, 0) == 0.0;
   }
   for (int j = 0; j < u.ny(); ++j) {
     for (int i = 0; i < u.nx(); ++i) {
-      REQUIRE(u(i, j, -1) == 0.0);
-      REQUIRE(u(i, j, u.nz()) == 0.0);
+      values_match &= u(i, j, -1) == 0.0 && u(i, j, u.nz()) == 0.0;
     }
   }
+  REQUIRE(values_match);
 }
 
 TEST_CASE("PaddedBrick: global_coords extrapolates across the halo ring",
@@ -178,16 +181,14 @@ TEST_CASE("PaddedBrick: indices() walks every owned cell in row-major order",
 
   std::size_t count = 0;
   pfc::Int3 last{-1, -1, -1};
+  bool indices_are_owned = true;
   for (const auto idx : u.indices()) {
-    REQUIRE(idx[0] >= 0);
-    REQUIRE(idx[0] < u.nx());
-    REQUIRE(idx[1] >= 0);
-    REQUIRE(idx[1] < u.ny());
-    REQUIRE(idx[2] >= 0);
-    REQUIRE(idx[2] < u.nz());
+    indices_are_owned &= idx[0] >= 0 && idx[0] < u.nx() && idx[1] >= 0 &&
+                         idx[1] < u.ny() && idx[2] >= 0 && idx[2] < u.nz();
     last = idx;
     ++count;
   }
+  REQUIRE(indices_are_owned);
   REQUIRE(count == static_cast<std::size_t>(u.nx() * u.ny() * u.nz()));
   REQUIRE(last == pfc::Int3{u.nx() - 1, u.ny() - 1, u.nz() - 1});
 }
@@ -201,15 +202,13 @@ TEST_CASE("PaddedBrick: indices_inner(r) skips r-thick boundary slab",
 
   const int r = 2;
   std::size_t count = 0;
+  bool indices_are_inner = true;
   for (const auto idx : u.indices_inner(r)) {
-    REQUIRE(idx[0] >= r);
-    REQUIRE(idx[0] < u.nx() - r);
-    REQUIRE(idx[1] >= r);
-    REQUIRE(idx[1] < u.ny() - r);
-    REQUIRE(idx[2] >= r);
-    REQUIRE(idx[2] < u.nz() - r);
+    indices_are_inner &= idx[0] >= r && idx[0] < u.nx() - r && idx[1] >= r &&
+                         idx[1] < u.ny() - r && idx[2] >= r && idx[2] < u.nz() - r;
     ++count;
   }
+  REQUIRE(indices_are_inner);
   REQUIRE(count == static_cast<std::size_t>((u.nx() - 2 * r) * (u.ny() - 2 * r) *
                                             (u.nz() - 2 * r)));
 
@@ -236,8 +235,9 @@ TEST_CASE("PaddedBrick: Int3 overloads of idx/operator() match scalar form",
       }
     }
   }
-  for (const auto idx : u.indices()) {
-    REQUIRE(u(idx) == idx[0] + 10 * idx[1] + 100 * idx[2]);
-    REQUIRE(u.idx(idx) == u.idx(idx[0], idx[1], idx[2]));
-  }
+  bool overloads_match = true;
+  for (const auto idx : u.indices())
+    overloads_match &= u(idx) == idx[0] + 10 * idx[1] + 100 * idx[2] &&
+                       u.idx(idx) == u.idx(idx[0], idx[1], idx[2]);
+  REQUIRE(overloads_match);
 }

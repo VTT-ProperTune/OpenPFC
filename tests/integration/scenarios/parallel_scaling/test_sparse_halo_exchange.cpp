@@ -118,6 +118,7 @@ TEST_CASE("SparseHaloExchanger: Axes3D self-wrap on a single rank",
                              static_cast<std::size_t>(N) *
                              static_cast<std::size_t>(N);
   std::vector<double> u(nlocal);
+  bool faces_match = true;
   for (int z = 0; z < N; ++z) {
     for (int y = 0; y < N; ++y) {
       for (int x = 0; x < N; ++x) {
@@ -160,10 +161,11 @@ TEST_CASE("SparseHaloExchanger: Axes3D self-wrap on a single rank",
       const std::size_t off =
           static_cast<std::size_t>(y) +
           static_cast<std::size_t>(z) * static_cast<std::size_t>(N);
-      REQUIRE(face_halos[0][off] == periodic_field_value(0, y, z));
-      REQUIRE(face_halos[1][off] == periodic_field_value(N - 1, y, z));
+      faces_match &= face_halos[0][off] == periodic_field_value(0, y, z) &&
+                     face_halos[1][off] == periodic_field_value(N - 1, y, z);
     }
   }
+  REQUIRE(faces_match);
 }
 
 TEST_CASE("SparseHaloExchanger: Full3D self-wrap delivers edge data",
@@ -205,22 +207,25 @@ TEST_CASE("SparseHaloExchanger: Full3D self-wrap delivers edge data",
   // Find the (1, 1, 0) edge entry: send slab is the (x=N-1, y=N-1) line,
   // recv slab is the (x=0, y=0) line of the field (z varies).
   bool checked_edge = false;
+  bool edge_matches = true;
   for (const auto &h : ex.halos()) {
     if (h.direction == Int3{1, 1, 0}) {
-      REQUIRE(h.recv_values.size() == static_cast<std::size_t>(N) *
-                                          static_cast<std::size_t>(hw) *
-                                          static_cast<std::size_t>(hw));
+      edge_matches &= h.recv_values.size() == static_cast<std::size_t>(N) *
+                                                  static_cast<std::size_t>(hw) *
+                                                  static_cast<std::size_t>(hw);
       const double *recv = h.recv_values.data().data();
       // Recv indices were sorted, so the recv buffer holds (z varies
       // slowest) values at (x=0, y=0, z=0..N-1).
       for (int z = 0; z < N; ++z) {
-        REQUIRE(recv[static_cast<std::size_t>(z)] == periodic_field_value(0, 0, z));
+        edge_matches &=
+            recv[static_cast<std::size_t>(z)] == periodic_field_value(0, 0, z);
       }
       checked_edge = true;
       break;
     }
   }
-  REQUIRE(checked_edge);
+  const bool edge_is_valid = checked_edge && edge_matches;
+  REQUIRE(edge_is_valid);
 }
 
 TEST_CASE("SparseHaloExchanger: Axes3D X-split on np=2 delivers neighbour data",
@@ -250,6 +255,7 @@ TEST_CASE("SparseHaloExchanger: Axes3D X-split on np=2 delivers neighbour data",
 
   std::vector<double> u(static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny) *
                         static_cast<std::size_t>(nz));
+  bool faces_match = true;
   for (int z = 0; z < nz; ++z) {
     for (int y = 0; y < ny; ++y) {
       for (int x = 0; x < nx; ++x) {
@@ -281,10 +287,12 @@ TEST_CASE("SparseHaloExchanger: Axes3D X-split on np=2 delivers neighbour data",
           static_cast<std::size_t>(z) * static_cast<std::size_t>(ny);
       const int gy = local_lower[1] + y;
       const int gz = local_lower[2] + z;
-      REQUIRE(face_halos[0][off] == periodic_field_value(peer_x_plus_lo, gy, gz));
-      REQUIRE(face_halos[1][off] == periodic_field_value(peer_x_minus_hi, gy, gz));
+      faces_match &=
+          face_halos[0][off] == periodic_field_value(peer_x_plus_lo, gy, gz) &&
+          face_halos[1][off] == periodic_field_value(peer_x_minus_hi, gy, gz);
     }
   }
+  REQUIRE(faces_match);
 }
 
 TEST_CASE("Connectivity::Edges yields faces+edges, no corners",
@@ -307,11 +315,12 @@ TEST_CASE("Connectivity::Edges yields faces+edges, no corners",
       decomp, rank, halo::Connectivity::Edges, hw);
   // 6 face directions + 12 edge directions = 18 entries; no corners.
   REQUIRE(patterns.size() == 18);
+  bool directions_match = true;
   for (const auto &kv : patterns) {
     const auto &d = kv.first;
     const int nz_components =
         (d[0] != 0 ? 1 : 0) + (d[1] != 0 ? 1 : 0) + (d[2] != 0 ? 1 : 0);
-    REQUIRE(nz_components >= 1);
-    REQUIRE(nz_components <= 2);
+    directions_match &= nz_components >= 1 && nz_components <= 2;
   }
+  REQUIRE(directions_match);
 }

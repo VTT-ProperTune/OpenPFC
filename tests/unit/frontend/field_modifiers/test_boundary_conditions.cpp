@@ -83,10 +83,9 @@ TEST_CASE("FixedBC - apply method", "[boundary_conditions][unit]") {
 
     // Values should be between rho_low and rho_high
     const auto &result = model.get_real_field("psi");
-    for (const auto &val : result) {
-      REQUIRE(val >= -2.6); // Allow small tolerance
-      REQUIRE(val <= 3.6);
-    }
+    bool values_in_range = true;
+    for (const auto &val : result) values_in_range &= val >= -2.6 && val <= 3.6;
+    REQUIRE(values_in_range);
   }
 
   SECTION("FixedBC can be applied multiple times") {
