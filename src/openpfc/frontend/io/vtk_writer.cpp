@@ -133,9 +133,10 @@ void VTKWriter::write_pvti_file(int increment) const {
 
   std::ofstream file(pvti_filename);
   if (!file) {
-    const Logger lg{LogLevel::Warning, /*rank*/ 0};
-    log_error(lg, std::string("Failed to open PVTI file: ") + pvti_filename);
-    return;
+    const Logger lg{LogLevel::Error, /*rank*/ 0};
+    const std::string msg = std::string("Failed to open PVTI file: ") + pvti_filename;
+    log_error(lg, msg);
+    throw std::runtime_error(msg);
   }
 
   file << R"(<?xml version="1.0" encoding="utf-8"?>)" << '\n';
