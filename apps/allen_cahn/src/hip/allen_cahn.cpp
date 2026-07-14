@@ -33,10 +33,8 @@ void hip_check(hipError_t e, const char *what) {
     throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
   }
 
-} // namespace
 
 } // namespace
-
 int main(int argc, char *argv[]) {
   return pfc::runtime::mpi_main(
       argc, argv, [](int app_argc, char **app_argv, int rank, int nproc) {
@@ -47,12 +45,10 @@ int main(int argc, char *argv[]) {
           }
           return EXIT_FAILURE;
         }
-
         auto world = pfc::world::create(pfc::GridSize({cfg.nx_glob, cfg.ny_glob, 1}),
                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
         auto decomp = pfc::decomposition::create(world, nproc);
-
         const auto &local_world = pfc::decomposition::get_subworld(decomp, rank);
         auto local_size = pfc::world::get_size(local_world);
         const int nx = local_size[0];
@@ -61,18 +57,14 @@ int main(int argc, char *argv[]) {
         const std::size_t nlocal = static_cast<std::size_t>(nx) *
                                    static_cast<std::size_t>(ny) *
                                    static_cast<std::size_t>(nz);
-
         const double dx = 1.0;
         const double inv_dx2 = 1.0 / (dx * dx);
         const double inv_dy2 = inv_dx2;
         const double inv_eps2 = 1.0 / (cfg.epsilon * cfg.epsilon);
-
         std::vector<double> u_host(nlocal);
         allen_cahn::fill_initial_condition(&u_host, decomp, rank);
-
         const std::int64_t n_local_initial = allen_cahn::count_cells_above(
             u_host, allen_cahn::RunConfig::kLevelSetThreshold);
-
         if (!cfg.png_output_initial.empty()) {
           pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
                                                  cfg.png_output_initial, -1.0, 1.0);
@@ -80,16 +72,13 @@ int main(int argc, char *argv[]) {
             std::cout << "Wrote initial-state PNG: " << cfg.png_output_initial << "\n";
           }
         }
-
         constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
         auto face_halos_host =
             pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
         pfc::SparseHaloExchanger<double> exchanger(
             MPI_COMM_WORLD, rank,
             pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
-
         const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
-
         double *u_dev = nullptr;
         hip_check(hipMalloc(reinterpret_cast<void **>(&u_dev), nlocal * sizeof(double)),
                   "hipMalloc core");
@@ -101,11 +90,9 @@ int main(int argc, char *argv[]) {
                         n * sizeof(double)),
               "hipMalloc face");
         }
-
         hip_check(hipMemcpy(u_dev, u_host.data(), nlocal * sizeof(double),
                             hipMemcpyHostToDevice),
                   "hipMemcpy H2D core");
-
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_t0 = MPI_Wtime();
         for (int step = 0; step < cfg.n_steps; ++step) {
@@ -131,11 +118,9 @@ int main(int argc, char *argv[]) {
         }
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_elapsed_s = MPI_Wtime() - step_t0;
-
         hip_check(hipMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
                             hipMemcpyDeviceToHost),
                   "hipMemcpy D2H final");
-
         if (!cfg.png_output.empty()) {
           pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
                                                  cfg.png_output, -1.0, 1.0);
@@ -143,19 +128,16 @@ int main(int argc, char *argv[]) {
             std::cout << "Wrote PNG: " << cfg.png_output << "\n";
           }
         }
-
         hip_check(hipFree(u_dev), "hipFree(u_dev)");
         for (int f = 0; f < 6; ++f) {
           hip_check(hipFree(face_dev[static_cast<std::size_t>(f)]), "hipFree(face)");
         }
-
         double sum_u = 0.0;
         for (double v : u_host) {
           sum_u += v;
         }
         double sum_global = 0.0;
         MPI_Reduce(&sum_u, &sum_global, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
         if (rank == 0) {
           std::cout << "Allen–Cahn FD (HIP): grid " << cfg.nx_glob << "x" << cfg.ny_glob
                     << "x1, ranks=" << nproc << ", steps=" << cfg.n_steps << "\n";
@@ -163,14 +145,12 @@ int main(int argc, char *argv[]) {
           std::cout << "Global sum(phi) after stepping: " << sum_global << "\n";
         }
         allen_cahn::report_step_timing(MPI_COMM_WORLD, rank, cfg.n_steps, step_elapsed_s);
-
         const std::int64_t n_local_final = allen_cahn::count_cells_above(
             u_host, allen_cahn::RunConfig::kLevelSetThreshold);
         const bool growth_ok = allen_cahn::verify_level_set_area_growth(
             MPI_COMM_WORLD, rank, n_local_initial, n_local_final,
             allen_cahn::RunConfig::kMinLevelSetAreaGrowthFactor,
             allen_cahn::RunConfig::kLevelSetThreshold);
-
         return growth_ok ? EXIT_SUCCESS : EXIT_FAILURE;
       });
 }
