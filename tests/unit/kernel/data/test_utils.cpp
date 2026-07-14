@@ -69,6 +69,71 @@ TEST_CASE("utils - sizeof_vec", "[utils][unit]") {
   }
 }
 
+TEST_CASE("utils - format_with_number validation rejects dangerous patterns", "[utils][unit]") {
+  SECTION("Rejects %n specifier") {
+    REQUIRE_THROWS_AS(utils::format_with_number("output_%n.dat", 7), std::invalid_argument);
+    try {
+      utils::format_with_number("output_%n.dat", 7);
+      FAIL("Should have thrown std::invalid_argument");
+    } catch (const std::invalid_argument &e) {
+      std::string msg = e.what();
+      REQUIRE(msg.find("invalid filename pattern") != std::string::npos);
+      REQUIRE(msg.find("%n") != std::string::npos);
+    }
+  }
+
+  SECTION("Rejects %s specifier") {
+    REQUIRE_THROWS_AS(utils::format_with_number("file_%s.txt", 1), std::invalid_argument);
+  }
+
+  SECTION("Rejects %f specifier") {
+    REQUIRE_THROWS_AS(utils::format_with_number("data_%f.bin", 42), std::invalid_argument);
+  }
+
+  SECTION("Rejects multiple %d specifiers") {
+    REQUIRE_THROWS_AS(utils::format_with_number("step_%d_rank_%d.dat", 1), std::invalid_argument);
+  }
+
+  SECTION("Rejects mixed specifiers (%d and %f)") {
+    REQUIRE_THROWS_AS(utils::format_with_number("out_%d_%f.dat", 1), std::invalid_argument);
+  }
+
+  SECTION("Rejects %x specifier") {
+    REQUIRE_THROWS_AS(utils::format_with_number("hex_%x.dat", 10), std::invalid_argument);
+  }
+
+  SECTION("Rejects %p specifier") {
+    REQUIRE_THROWS_AS(utils::format_with_number("ptr_%p.dat", 1), std::invalid_argument);
+  }
+}
+
+TEST_CASE("utils - format_with_number validation accepts valid patterns", "[utils][unit]") {
+  SECTION("Accepts %d and produces correct output") {
+    std::string result = utils::format_with_number("step_%d.dat", 123);
+    REQUIRE(result == "step_123.dat");
+  }
+
+  SECTION("Accepts %04d (zero-padded) and produces correct output") {
+    std::string result = utils::format_with_number("frame_%04d.vti", 7);
+    REQUIRE(result == "frame_0007.vti");
+  }
+
+  SECTION("Accepts %-5d (left-align) and produces correct output") {
+    std::string result = utils::format_with_number("result_%-5d.bin", 42);
+    REQUIRE(result == "result_42   .bin");  // Note: left-align with space padding to width 5
+  }
+
+  SECTION("Accepts pattern with no % specifier unchanged") {
+    std::string result = utils::format_with_number("output_fixed.dat", 999);
+    REQUIRE(result == "output_fixed.dat");
+  }
+
+  SECTION("Accepts pattern with % in middle of text") {
+    std::string result = utils::format_with_number("data_frame_%d_raw", 5);
+    REQUIRE(result == "data_frame_5_raw");
+  }
+}
+
 TEST_CASE("mpi - get comm rank and size", "[mpi][unit]") {
   SECTION("Get rank returns valid rank") {
     int rank = mpi::get_comm_rank(MPI_COMM_WORLD);
