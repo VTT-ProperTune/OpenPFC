@@ -199,7 +199,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
 
   if (rank == 0) {
     const double rms =
-        std::sqrt(g_err2 / static_cast<double>(cfg.N * cfg.N * cfg.N));
+        std::sqrt(g_err2 / (static_cast<double>(cfg.N) * cfg.N * cfg.N));
     std::cout << "heat3d method=fd N=" << cfg.N << " n_steps=" << cfg.n_steps
               << " dt=" << cfg.dt << " D=1 mpi_ranks=" << nproc
               << " fd_order=" << cfg.fd_order;
