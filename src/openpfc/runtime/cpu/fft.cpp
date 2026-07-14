@@ -8,6 +8,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
+
 namespace pfc::fft::layout {
 
 namespace {
@@ -91,13 +93,15 @@ namespace {
 
 int get_mpi_rank(MPI_Comm comm) {
   int rank;
-  MPI_Comm_rank(comm, &rank);
+  int err = MPI_Comm_rank(comm, &rank);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Comm_rank");
   return rank;
 }
 
 int get_mpi_size(MPI_Comm comm) {
   int size;
-  MPI_Comm_size(comm, &size);
+  int err = MPI_Comm_size(comm, &size);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Comm_size");
   return size;
 }
 
