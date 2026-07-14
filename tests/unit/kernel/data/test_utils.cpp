@@ -30,6 +30,15 @@ TEST_CASE("utils - string formatting", "[utils][unit]") {
     std::string result = utils::string_format("plain_file.dat");
     REQUIRE(result == "plain_file.dat");
   }
+
+  SECTION("Handles encoding errors") {
+    // Use an invalid format specifier that triggers snprintf to return negative
+    // Different snprintf implementations may behave differently; this is a common case
+    REQUIRE_THROWS_AS(
+      utils::string_format("%lc", static_cast<wchar_t>(0xD800)),  // invalid UTF-16 surrogate
+      std::runtime_error
+    );
+  }
 }
 
 TEST_CASE("utils - format with number", "[utils][unit]") {
