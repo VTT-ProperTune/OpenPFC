@@ -35,6 +35,10 @@ namespace pfc::ui {
  */
 inline bool ensure_results_parent_dir_for_writer(const std::string &output,
                                                  int mpi_rank) {
+  if (mpi_rank != 0) {
+    return false;
+  }
+
   const pfc::Logger lg{pfc::LogLevel::Info, mpi_rank};
   std::filesystem::path results_dir(output);
   if (results_dir.has_filename()) {

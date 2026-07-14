@@ -11,6 +11,7 @@
 #include <iostream>
 #include <mpi.h>
 #include <vector>
+#include <stdexcept>
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
@@ -215,6 +216,73 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
   }
   REQUIRE(max_diff < 1e-9);
 }
+
+
+TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent", "[wave2d][bc]") {
+  int rank = 0;
+  int nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 2) return;  // This test requires exactly 2 MPI ranks
+
+  constexpr int Nx = 8;
+  constexpr int Ny = 4;  // As specified in acceptance criteria id=962
+  constexpr int Nz = 8;
+  constexpr int hw = 3;  // As specified in acceptance criteria id=962
+  const double u_wall_dirichlet = 1.5;  // non-zero for Dirichlet
+
+  auto world = pfc::world::create(pfc::GridSize({Nx, Ny, Nz}),
+                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(world, 2);
+  pfc::field::PaddedBrick<double> u(decomp, rank, hw);
+  u.apply([&](double, double, double) { return 0.0; });
+
+  SECTION("Dirichlet boundary") {
+    REQUIRE_THROWS_AS(
+        wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny, u_wall_dirichlet),
+        std::out_of_range
+    );
+    bool caught = false;
+    try {
+      wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny, u_wall_dirichlet);
+    } catch (const std::out_of_range& e) {
+      caught = true;
+      std::string msg(e.what());
+      REQUIRE(msg.find("rank=") != std::string::npos);
+      REQUIRE(msg.find("halo_width=") != std::string::npos);
+      REQUIRE(msg.find("local_ny=") != std::string::npos);
+      REQUIRE(msg.find("valid_range=[") != std::string::npos);
+      REQUIRE(msg.find("mirrored_global_yp=") != std::string::npos);
+      REQUIRE(msg.find("computed_local_jm=") != std::string::npos);
+      REQUIRE(msg.find("Dirichlet") != std::string::npos);
+    }
+    REQUIRE(caught);
+  }
+
+  SECTION("Neumann boundary") {
+    REQUIRE_THROWS_AS(
+        wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Neumann, Ny, 0.0),
+        std::out_of_range
+    );
+    bool caught = false;
+    try {
+      wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Neumann, Ny, 0.0);
+    } catch (const std::out_of_range& e) {
+      caught = true;
+      std::string msg(e.what());
+      REQUIRE(msg.find("rank=") != std::string::npos);
+      REQUIRE(msg.find("halo_width=") != std::string::npos);
+      REQUIRE(msg.find("local_ny=") != std::string::npos);
+      REQUIRE(msg.find("valid_range=[") != std::string::npos);
+      REQUIRE(msg.find("mirrored_global_yp=") != std::string::npos);
+      REQUIRE(msg.find("computed_local_jm=") != std::string::npos);
+      REQUIRE(msg.find("Neumann") != std::string::npos);
+    }
+    REQUIRE(caught);
+  }
+}
+
 
 int main(int argc, char *argv[]) {
   if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {

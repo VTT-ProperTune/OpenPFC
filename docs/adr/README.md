@@ -11,5 +11,6 @@ Short, durable notes for **why** the codebase looks the way it does. They comple
 |-----|--------|
 | [0001-record-architecture-decisions.md](0001-record-architecture-decisions.md) | Why we keep ADRs |
 | [0002-gradient-operators-fd-vs-spectral.md](0002-gradient-operators-fd-vs-spectral.md) | FD vs spectral operators (direction) |
+| [0003-time-integrator-interface.md](0003-time-integrator-interface.md) | Time integrator interface contracts |
 
 New ADRs: copy the template sections from `0001`, use the next number, and add a row here.
