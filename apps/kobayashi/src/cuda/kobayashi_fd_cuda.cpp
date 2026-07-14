@@ -629,14 +629,7 @@ int main(int argc, char **argv) {
         if (!cfg) {
           return EXIT_FAILURE;
         }
-        try {
-          run_kobayashi_cuda(*cfg, rank, nproc);
-        } catch (const std::exception &e) {
-          if (rank == 0) {
-            std::cerr << "kobayashi_fd_cuda: " << e.what() << "\n";
-          }
-          return EXIT_FAILURE;
-        }
+        run_kobayashi_cuda(*cfg, rank, nproc);
         return EXIT_SUCCESS;
       });
 }
