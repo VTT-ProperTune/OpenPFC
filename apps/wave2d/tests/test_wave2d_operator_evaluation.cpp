@@ -141,13 +141,13 @@ TEST_CASE("WaveOperator accepts time parameter", "[wave2d][operator]") {
 TEST_CASE("WaveOperator is constructible and callable", "[wave2d][operator]") {
   const double inv_dx2 = 1.0;
   const double inv_dy2 = 1.0;
-  
+
   WaveOperator op1(inv_dx2, inv_dy2);
   REQUIRE(std::is_nothrow_constructible_v<WaveOperator, double, double>);
-  
+
   WaveOperator op2(op1);
   REQUIRE(std::is_nothrow_copy_constructible_v<WaveOperator>);
-  
+
   WaveOperator op3(std::move(op2));
   REQUIRE(std::is_nothrow_move_constructible_v<WaveOperator>);
 

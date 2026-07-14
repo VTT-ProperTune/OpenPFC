@@ -32,11 +32,11 @@ TEST_CASE("Heat3D: HeatModel does not have step() method", "[heat3d][legacy]") {
   // Compile-time verification: HeatModel does not expose step(double).
   // This test passes if it compiles and links without requiring a step() method.
   HeatModel model;
-  
+
   // Verify we can call rhs() which is the correct API for Heat3D
   HeatGrads g{.xx = 1.0, .yy = 2.0, .zz = 3.0};
   const double rhs_value = model.rhs(0.0, g);
-  
+
   // Verify the value is computed correctly (sanity check)
   REQUIRE(rhs_value == 6.0 * heat3d::kD); // (1 + 2 + 3) * D
 }
@@ -44,11 +44,11 @@ TEST_CASE("Heat3D: HeatModel does not have step() method", "[heat3d][legacy]") {
 TEST_CASE("Heat3D: Operator evaluation contract exists", "[heat3d][legacy]") {
   // Verify operator evaluation header is available (semantic contract).
   // Actual functionality tested in test_heat3d_operator_evaluation.cpp.
-  
+
   HeatOperator op;
   HeatGrads g{.xx = 1.0, .yy = 1.0, .zz = 1.0};
   const auto result = op.evaluate(g, 0.0);
-  
+
   // Verify operator evaluation works (basic sanity check)
   REQUIRE(result.d_u == 3.0 * heat3d::kD);
 }
@@ -58,17 +58,17 @@ TEST_CASE("Heat3D: HeatModel uses rhs() pattern, not step() pattern", "[heat3d][
   // uses the rhs() pattern (operator evaluation) rather than the step()
   // pattern (state mutation), which is why the migration to the formal
   // operator-evaluation contract is straightforward.
-  
+
   HeatModel model;
-  
+
   // The correct API for Heat3D is rhs(), which computes the time derivative
   // without mutating state
   HeatGrads g{.xx = 1.0, .yy = 0.0, .zz = 0.0};
   const double du_dt = model.rhs(0.0, g);
-  
+
   // Verify rhs() returns a value (the operator-evaluation pattern)
   REQUIRE(du_dt == heat3d::kD); // D * 1.0
-  
+
   // HeatModel does not have a step() method that mutates internal state
   // This is a deliberate design choice that enables operator-evaluation
   REQUIRE(std::is_member_function_pointer_v<decltype(&heat3d::HeatModel::rhs)>);
