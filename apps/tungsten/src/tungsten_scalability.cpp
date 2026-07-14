@@ -19,6 +19,7 @@
 #include <sstream>
 #include <utility>
 #include <vector>
+#include <stdexcept>
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -444,7 +445,28 @@ int main(int argc, char *argv[]) {
     output_file = argv[1];
   }
   if (argc > 2) {
-    num_iterations = std::stoi(argv[2]);
+    try {
+      num_iterations = std::stoi(argv[2]);
+      if (num_iterations <= 0) {
+        throw std::invalid_argument("num_iterations must be positive");
+      }
+    } catch (const std::invalid_argument &e) {
+      if (rank == 0) {
+        std::cerr << "Error: Invalid num_iterations argument '" << argv[2]
+                  << "' -- " << e.what() << "\n";
+        std::cerr << "Usage: mpirun -n <ranks> " << argv[0]
+                  << " [output_file] [num_iterations] [scaling_mode]\n";
+      }
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    } catch (const std::out_of_range &e) {
+      if (rank == 0) {
+        std::cerr << "Error: num_iterations '" << argv[2]
+                  << "' out of range -- " << e.what() << "\n";
+        std::cerr << "Usage: mpirun -n <ranks> " << argv[0]
+                  << " [output_file] [num_iterations] [scaling_mode]\n";
+      }
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
   }
 
   if (rank == 0) {
