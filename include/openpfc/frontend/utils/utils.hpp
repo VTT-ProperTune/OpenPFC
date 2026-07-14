@@ -50,11 +50,11 @@ inline std::string string_format(const std::string &str) { return str; }
 
 template <typename... Args>
 inline std::string string_format(const std::string &format, Args... args) {
-  size_t size =
-      snprintf(nullptr, 0, format.c_str(), args...) + 1; // Extra space for '\0'
-  if (size <= 0) {
+  const int n = std::snprintf(nullptr, 0, format.c_str(), args...);
+  if (n < 0) {
     throw std::runtime_error("Error during formatting.");
   }
+  const size_t size = static_cast<size_t>(n) + 1;
   std::vector<char> buf(size);
   snprintf(buf.data(), size, format.c_str(), args...);
   // Braced init avoids repeating std::string in the return
