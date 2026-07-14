@@ -202,7 +202,7 @@ CONFIGURE_SECONDS=0
 BUILD_SECONDS=0
 TEST_SECONDS=0
 TEST_BATCHES=0
-PYTHON_TESTS="not found"
+PYTHON_TESTS="not run"
 FAILED_PHASE=""
 OVERALL_START="$(date +%s)"
 
@@ -385,6 +385,8 @@ if (( RUN_TESTS )); then
       exit 1
     fi
     PYTHON_TESTS="passed"
+  else
+    PYTHON_TESTS="not found"
   fi
   if ! ctest --test-dir "${BUILD_DIR}" --output-on-failure --parallel "${JOBS}" 2>&1 |
        tee "${BUILD_DIR}/test.log"; then
