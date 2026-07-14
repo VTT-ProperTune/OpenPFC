@@ -223,3 +223,47 @@ TEST_CASE("DiscreteField::set_data - move semantics enabled", "[discrete_field][
   REQUIRE(moved_from.empty());
   REQUIRE(moved_from.capacity() == 0);
 }
+
+TEST_CASE("test_data_conversion_non_const") {
+  DiscreteField<double, 3> field(
+      {1, 1, 1},              // dimensions
+      {0, 0, 0},              // offsets
+      {0.0, 0.0, 0.0},       // origin
+      {1.0, 1.0, 1.0}        // discretization
+  );
+  field[{0, 0, 0}] = 10.0;
+  std::vector<double>& ref = field;
+  CHECK(&ref == &field.get_data());
+  CHECK(ref[0] == 10.0);
+  ref[0] = 20.0;  // Can modify through non-const reference
+  CHECK(field[{0, 0, 0}] == 20.0);
+}
+
+TEST_CASE("test_data_conversion_const") {
+  DiscreteField<double, 3> field(
+      {1, 1, 1},              // dimensions
+      {0, 0, 0},              // offsets
+      {0.0, 0.0, 0.0},       // origin
+      {1.0, 1.0, 1.0}        // discretization
+  );
+  field[{0, 0, 0}] = 10.0;
+  const DiscreteField<double, 3>& const_field = field;
+  const std::vector<double>& ref = const_field;
+  CHECK(&ref == &const_field.get_data());
+  CHECK(ref[0] == 10.0);
+  // ref[0] = 20.0;  // Compile error: cannot modify through const reference
+}
+
+TEST_CASE("test_get_data_const") {
+  DiscreteField<double, 3> field(
+      {1, 1, 1},              // dimensions
+      {0, 0, 0},              // offsets
+      {0.0, 0.0, 0.0},       // origin
+      {1.0, 1.0, 1.0}        // discretization
+  );
+  field[{0, 0, 0}] = 10.0;
+  const DiscreteField<double, 3>& const_field = field;
+  const std::vector<double>& data = const_field.get_data();
+  CHECK(data.size() == 1);
+  CHECK(data[0] == 10.0);
+}
