@@ -113,9 +113,10 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   size_t size_workspace() const override { return m_fft.size_workspace(); }
 
   size_t get_allocated_memory_bytes() const override {
-    size_t total_elements = m_wrk.size() + m_gpu_wrk_double.size();
-    total_elements += m_gpu_wrk_float.size();
-    return total_elements * sizeof(typename workspace_type::value_type);
+    size_t total_bytes = m_wrk.size() * sizeof(typename workspace_type::value_type);
+    total_bytes += m_gpu_wrk_double.size() * sizeof(typename gpu_workspace_type::value_type);
+    total_bytes += m_gpu_wrk_float.size() * sizeof(typename gpu_workspace_float::value_type);
+    return total_bytes;
   }
 
   Box3i get_inbox_bounds() const override {
