@@ -5,6 +5,7 @@
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/catch_approx.hpp>
 #include <cmath>
 #include <iomanip>
 #include <mpi.h>
@@ -14,6 +15,7 @@
 #include <tungsten/cpu/tungsten.hpp>
 
 using namespace Catch::Matchers;
+#include <tungsten/common/tungsten_spectral.hpp>
 
 /* Parameters from tungsten_single_seed.json:
 {
@@ -383,6 +385,167 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
 
     std::vector<double> &psi = tungsten.get_real_field("psi");
     REQUIRE(!psi.empty());
+ }
+}
+
+// Helper to construct OperatorParams with representative values
+tungsten::spectral::OperatorParams make_test_params(double stabP, double p2_bar,
+                                                     double q2_bar, double T,
+                                                     double T0, double Bx, double alpha2,
+                                                     double lambda2, double alpha_farTol,
+                                                     int alpha_highOrd) {
+  tungsten::spectral::OperatorParams p;
+  p.stabP = stabP;
+  p.p2_bar = p2_bar;
+  p.q2_bar = q2_bar;
+  p.T = T;
+  p.T0 = T0;
+  p.Bx = Bx;
+  p.alpha2 = alpha2;
+  p.lambda2 = lambda2;
+  p.alpha_farTol = alpha_farTol;
+  p.alpha_highOrd = alpha_highOrd;
+  return p;
+}
+
+TEST_CASE("spectral_operators_exact_zero", "[tungsten][spectral]") {
+  double k_laplacian = -4.0;
+  double dt = 0.01;
+
+  // Construct parameters such that opCk = p.stabP + p.p2_bar - opPeak + p.q2_bar * fMF = 0.0
+  // By setting q2_bar = 0.0 and ensuringstabP + p2_bar - opPeak = 0.0
+  auto p = make_test_params(1.0, 0.5, 0.0, 3300.0, 156000.0, 0.8582,
+                            0.5, 0.0484, 0.001, 4);
+
+  // Calculate what opPeak would be for k_laplacian = -4.0
+  double k_val = std::sqrt(-k_laplacian) - 1.0;
+  double k2 = k_val * k_val;
+  double rTol = -p.alpha2 * std::log(p.alpha_farTol) - 1.0;
+  double g1 = std::exp(-(k2 + rTol * std::pow(k_val, p.alpha_highOrd)) / p.alpha2);
+  double g2 = 1.0 - 1.0 / p.alpha2 * k2;
+  double gf = (k_val < 0.0) ? g1 : g2;
+  double opPeak = p.Bx * std::exp(-p.T / p.T0) * gf;
+
+  // Adjust stabP to make opCk = 0.0
+  p.stabP = opPeak - p.p2_bar;  // Then opCk = 0.0 + 0.5 - opPeak + 0.0*fMF = 0.0
+
+  tungsten::spectral::ModeOperators out =
+      tungsten::spectral::operators_for_mode(k_laplacian, dt, p);
+
+  // When opCk ≈ 0, expected opN = k_laplacian * dt from Taylor series
+  double expected_opN = k_laplacian * dt;
+
+  CHECK(out.opN == Catch::Approx(expected_opN).epsilon(1e-14));
+  CHECK(out.opL == Catch::Approx(std::exp(k_laplacian * 0.0 * dt)).epsilon(1e-14));
+}
+
+TEST_CASE("spectral_operators_near_zero_no_cancellation",
+          "[tungsten][spectral][numerical]") {
+  double k_laplacian = -4.0;
+  double dt = 0.01;
+
+  auto p_base = make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582,
+                                 0.5, 0.0484, 0.001, 4);
+
+  std::vector<double> test_opCk_values = {1e-15, 1e-14, 1e-13, 1e-12, 1e-11};
+
+  for (double target_opCk : test_opCk_values) {
+    // Calculate opPeak to get the right starting point
+    double k_val = std::sqrt(-k_laplacian) - 1.0;
+    double k2 = k_val * k_val;
+    double rTol = -p_base.alpha2 * std::log(p_base.alpha_farTol) - 1.0;
+    double g1 = std::exp(-(k2 + rTol * std::pow(k_val, p_base.alpha_highOrd)) /
+                         p_base.alpha2);
+    double g2 = 1.0 - 1.0 / p_base.alpha2 * k2;
+    double gf = (k_val < 0.0) ? g1 : g2;
+    double opPeak = p_base.Bx * std::exp(-p_base.T / p_base.T0) * gf;
+
+    // Adjust stabP to achieve target opCk
+    // opCk = p.stabP + p.p2_bar - opPeak + p.q2_bar * fMF
+    // fMF = exp(k_laplacian / lambda2)
+    double fMF = std::exp(k_laplacian / p_base.lambda2);
+    p_base.stabP = target_opCk + opPeak - p_base.p2_bar - p_base.q2_bar * fMF;
+
+    tungsten::spectral::ModeOperators out =
+        tungsten::spectral::operators_for_mode(k_laplacian, dt, p_base);
+
+    // Reference: high-precision expm1 calculation
+    double arg = k_laplacian * target_opCk * dt;
+    double reference_opN = std::expm1(arg) / target_opCk;
+
+    // Check within 10 ULPs of high-precision reference
+    double relative_error = std::abs(out.opN - reference_opN) / std::abs(reference_opN);
+    double max_relative_error = 10.0 * std::numeric_limits<double>::epsilon();
+    CHECK(relative_error < max_relative_error);
+  }
+}
+
+TEST_CASE("spectral_operators_typical_values", "[tungsten][spectral]") {
+  // Use representative parameter combinations from existing tests
+  std::vector<std::tuple<double, double, tungsten::spectral::OperatorParams>>
+      test_cases = {
+          {-4.0, 0.01, make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582,
+                                       0.5, 0.0484, 0.001, 4)},
+          {-2.5, 0.005, make_test_params(0.2, 0.3, 0.5, 3300.0, 156000.0, 0.8582,
+                                        0.5, 0.0484, 0.001, 4)},
+          {-6.0, 0.001, make_test_params(0.2, 0.7, 1.5, 3300.0, 156000.0, 0.8582,
+                                        0.5, 0.0484, 0.001, 4)}};
+
+  for (const auto &[k_laplacian, dt, p] : test_cases) {
+    tungsten::spectral::ModeOperators out =
+        tungsten::spectral::operators_for_mode(k_laplacian, dt, p);
+
+    // Calculate opCk for this case
+    double k_val = std::sqrt(-k_laplacian) - 1.0;
+    double k2 = k_val * k_val;
+    double rTol = -p.alpha2 * std::log(p.alpha_farTol) - 1.0;
+    double g1 = std::exp(-(k2 + rTol * std::pow(k_val, p.alpha_highOrd)) / p.alpha2);
+    double g2 = 1.0 - 1.0 / p.alpha2 * k2;
+    double gf = (k_val < 0.0) ? g1 : g2;
+    double opPeak = p.Bx * std::exp(-p.T / p.T0) * gf;
+    double fMF = std::exp(k_laplacian / p.lambda2);
+    double opCk = p.stabP + p.p2_bar - opPeak + p.q2_bar * fMF;
+
+    double arg = k_laplacian * opCk * dt;
+    double expected_opN = std::expm1(arg) / opCk;
+
+    CHECK(out.opN == Catch::Approx(expected_opN).epsilon(1e-14));
+    CHECK(out.opL == Catch::Approx(std::exp(arg)).epsilon(1e-14));
+  }
+}
+
+TEST_CASE("spectral_operators_stability_long_dt",
+          "[tungsten][spectral][numerical]") {
+  double k_laplacian = -4.0;
+
+  auto p = make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582, 0.5,
+                           0.0484, 0.001, 4);
+
+  // Test a range of dt values where arg varies significantly
+  std::vector<double> test_dt_values = {0.001, 0.01, 0.1, 1.0};
+
+  for (double dt : test_dt_values) {
+    tungsten::spectral::ModeOperators out =
+        tungsten::spectral::operators_for_mode(k_laplacian, dt, p);
+
+    // Calculate opCk for this case
+    double k_val = std::sqrt(-k_laplacian) - 1.0;
+    double k2 = k_val * k_val;
+    double rTol = -p.alpha2 * std::log(p.alpha_farTol) - 1.0;
+    double g1 = std::exp(-(k2 + rTol * std::pow(k_val, p.alpha_highOrd)) / p.alpha2);
+    double g2 = 1.0 - 1.0 / p.alpha2 * k2;
+    double gf = (k_val < 0.0) ? g1 : g2;
+    double opPeak = p.Bx * std::exp(-p.T / p.T0) * gf;
+    double fMF = std::exp(k_laplacian / p.lambda2);
+    double opCk = p.stabP + p.p2_bar - opPeak + p.q2_bar * fMF;
+
+    double arg = k_laplacian * opCk * dt;
+    double expected_opN = std::expm1(arg) / opCk;
+    double expected_opL = std::exp(arg);
+
+    // Check both operators match mathematical definitions
+    CHECK(out.opN == Catch::Approx(expected_opN).epsilon(1e-12));
+    CHECK(out.opL == Catch::Approx(expected_opL).epsilon(1e-12));
   }
 }
 
