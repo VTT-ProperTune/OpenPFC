@@ -9,6 +9,7 @@
  */
 
 #include <openpfc/kernel/field/padded_brick.hpp>
+#include <stdexcept>
 
 namespace wave2d {
 
@@ -46,6 +47,22 @@ inline void fill_y_physical_ghosts_padded(pfc::field::PaddedBrick<T> &u,
                                                : (2 * (Ny_global - 1) - gj);
       }
       const int jm = yp - lo[1];
+
+      // Bounds check: mirrored local index must be within valid padded range
+      if (jm < -hw || jm >= u.ny() + hw) {
+        const std::string kind_str = (ybc == YBoundaryKind::Dirichlet) ? "Dirichlet" : "Neumann";
+        throw std::out_of_range(
+            "fill_y_physical_ghosts_padded: mirrored ghost index out of bounds. "
+            "rank=" + std::to_string(u.rank()) +
+            ", halo_width=" + std::to_string(hw) +
+            ", local_ny=" + std::to_string(u.ny()) +
+            ", valid_range=[" + std::to_string(-hw) + "," + std::to_string(u.ny() + hw) +
+            "), mirrored_global_yp=" + std::to_string(yp) +
+            ", computed_local_jm=" + std::to_string(jm) +
+            ", boundary_kind=" + kind_str
+        );
+      }
+
       for (int i = -hw; i < u.nx() + hw; ++i) {
         const T um = u(i, jm, k);
         if (ybc == YBoundaryKind::Dirichlet) {

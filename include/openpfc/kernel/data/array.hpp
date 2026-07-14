@@ -182,7 +182,7 @@ public:
    */
   operator std::vector<T> &() { return data; }
 
-  void set_data(const std::vector<T> &new_data) {
+  void set_data(std::vector<T> new_data) {
     if (new_data.size() != index.get_linear_size()) {
       throw std::runtime_error("Dimension mismatch, set_data failed");
     }

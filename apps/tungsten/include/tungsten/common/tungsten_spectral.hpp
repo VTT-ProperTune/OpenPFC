@@ -74,8 +74,18 @@ inline ModeOperators operators_for_mode(double k_laplacian, double dt,
 
   ModeOperators out{};
   out.filterMF = fMF;
-  out.opL = std::exp(k_laplacian * opCk * dt);
-  out.opN = (opCk == 0.0) ? k_laplacian * dt : (out.opL - 1.0) / opCk;
+
+  constexpr double opCk_threshold = 1e-12;
+  double arg = k_laplacian * opCk * dt;
+  out.opL = std::exp(arg);
+  if (std::abs(opCk) < opCk_threshold) {
+    // Taylor series: e^x - 1 ≈ x + x²/2 for small x, then divide by opCk
+    // arg = k_laplacian * opCk * dt, so arg² = k_laplacian² * opCk² * dt²
+    // Dividing (arg + arg²/2) by opCk gives: k_laplacian * dt + 0.5 * k_laplacian² * dt² * opCk
+    out.opN = k_laplacian * dt + 0.5 * k_laplacian * k_laplacian * dt * dt * opCk;
+  } else {
+    out.opN = std::expm1(arg) / opCk;
+  }
   return out;
 }
 

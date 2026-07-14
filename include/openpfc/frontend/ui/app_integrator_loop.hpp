@@ -50,7 +50,8 @@ template <class ConcreteModel>
 IntegratorTimings run_simulator_time_integration_loop(
     SpectralSimulationSession<ConcreteModel> &session,
     const SimulatorIntegratorLoopEnv &env) {
-  const pfc::Logger &app_lg = *env.app_log;
+  const pfc::Logger &app_lg =
+      env.app_log ? *env.app_log : pfc::k_null_logger;
   IntegratorTimings out{};
   // Exponential moving average of step wall time for ETA (after a short warm-up).
   double avg_step_ema = 0.0;

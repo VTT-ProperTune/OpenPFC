@@ -55,5 +55,6 @@
 #include <openpfc/kernel/simulation/simulation_context.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
+#include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 
 #endif // PFC_OPENPFC_HPP

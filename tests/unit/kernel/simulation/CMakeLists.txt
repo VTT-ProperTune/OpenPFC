@@ -9,4 +9,8 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_model_fft_baseline.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_model_comprehensive.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_steppers.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/state_concepts_test.cpp
 )
+
+add_subdirectory(steppers)
