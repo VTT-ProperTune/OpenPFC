@@ -98,3 +98,26 @@ TEST_CASE("array2d") {
     std::transform(index.begin(), index.end(), data.begin(), func);
   }
 }
+
+TEST_CASE("Array::set_data - move semantics enabled", "[array][set_data][move]") {
+  // Create a vector with known contents
+  std::vector<double> original(100, 3.14);
+  original[0] = 1.0;
+  original[99] = 2.0;
+  std::vector<double> moved_from = original;
+
+  // Create array and move data in
+  Array<double, 3> arr({10, 10, 1});
+  arr.set_data(std::move(moved_from));
+
+  // Verify data was moved correctly into array
+  REQUIRE(arr.get_data().size() == 100);
+  REQUIRE(arr.get_data()[0] == 1.0);
+  REQUIRE(arr.get_data()[99] == 2.0);
+
+  // Verify moved-from vector is now empty (actual move occurred)
+  REQUIRE(moved_from.empty());
+
+  // Verify still has moved-from state (not just size 0, but capacity 0)
+  REQUIRE(moved_from.capacity() == 0);
+}

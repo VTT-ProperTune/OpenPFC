@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
 #include <fstream>
 #include <openpfc/frontend/ui/settings_loader.hpp>
@@ -68,4 +69,22 @@ TEST_CASE("load_settings_file reports TOML parse errors", "[ui][settings]") {
   const auto path = write_test_file("invalid.toml", "model = \n");
 
   REQUIRE_THROWS_AS(load_settings_file(path), std::runtime_error);
+}
+
+TEST_CASE("load_settings_file_rejects_directories", "[ui][settings]") {
+  const auto path = settings_loader_test_dir() / "settings.json";
+
+  // Remove any stale path before creating directory
+  std::filesystem::remove_all(path);
+
+  // Create directory instead of file
+  std::filesystem::create_directory(path);
+
+  // Verify that load_settings_file() throws std::invalid_argument with correct message
+  REQUIRE_THROWS_AS(load_settings_file(path), std::invalid_argument);
+  REQUIRE_THROWS_WITH(load_settings_file(path),
+                     Catch::Matchers::ContainsSubstring("not a regular file"));
+
+  // Clean up
+  std::filesystem::remove_all(path);
 }

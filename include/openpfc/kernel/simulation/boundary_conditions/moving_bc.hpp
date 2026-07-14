@@ -114,7 +114,7 @@ public:
       global_xline.resize(Lx);
     }
 
-    fill(xline.begin(), xline.end(), std::numeric_limits<double>::min());
+    fill(xline.begin(), xline.end(), std::numeric_limits<double>::lowest());
 
     long int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
