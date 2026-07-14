@@ -26,6 +26,11 @@ using json = nlohmann::json;
                                 file.string());
   }
 
+  if (!std::filesystem::is_regular_file(file)) {
+    throw std::invalid_argument("Configuration file is not a regular file: " +
+                                file.string());
+  }
+
   const std::string ext = file.extension().string();
   if (ext == ".toml") {
     try {
