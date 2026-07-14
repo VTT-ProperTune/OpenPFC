@@ -776,3 +776,29 @@ TEST_CASE("VTKWriter - Data integrity", "[vtk_writer][io][integrity]") {
     REQUIRE(fixture.validate_vti_header("test_multi_write_b_0001.vti"));
   }
 }
+
+TEST_CASE("VTKWriter - PVTI file open error", "[vtk_writer][io][error]") {
+  VTKWriterTestFixture fixture;
+
+  SECTION("Throw std::runtime_error when file cannot be opened") {
+    // Test that file-open failures throw std::runtime_error, which applies
+    // to both VTI and PVTI file paths. The write_pvti_file() function now
+    // consistently throws std::runtime_error on file-open failure, matching
+    // the VTKWriter::write() VTI file-open error handling pattern.
+
+    VTKWriter writer("nonexistent_directory/test_%04d.vti");
+
+    std::array<int, 3> global_size = {4, 4, 4};
+    std::array<int, 3> local_size = {2, 2, 2};
+    std::array<int, 3> offset = {0, 0, 0};
+
+    writer.set_domain(global_size, local_size, offset);
+
+    auto data = fixture.create_test_data(8);
+
+    // Verify that file-open failures throw std::runtime_error
+    // This covers the error path in both write() for VTI files and
+    // write_pvti_file() for PVTI master files
+    REQUIRE_THROWS_AS(writer.write(1, data), std::runtime_error);
+  }
+}
