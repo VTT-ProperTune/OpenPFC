@@ -25,6 +25,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
+#include <openpfc/runtime/common/mpi_main.hpp>
 
 #include <wave2d/cli.hpp>
 #include <wave2d/device_step.hpp>
@@ -42,30 +43,13 @@ void cuda_check(cudaError_t e, const char *what) {
 
 } // namespace
 
-int main(int argc, char *argv[]) {
-  const std::string exe = (argc > 0 && argv[0] != nullptr)
-                              ? std::string(argv[0])
-                              : std::string("wave2d_cuda");
-  const auto cfg_o = wave2d::parse_manual(argc, argv);
-  MPI_Init(&argc, &argv);
-  int rank = 0;
-  int nproc = 1;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+namespace {
 
-  if (!cfg_o) {
-    if (rank == 0) {
-      wave2d::print_usage(std::cerr, exe.c_str(), false);
-    }
-    MPI_Finalize();
-    return EXIT_FAILURE;
-  }
-  const wave2d::RunConfig &cfg = *cfg_o;
+int run_wave2d_cuda(const wave2d::RunConfig &cfg, int rank, int nproc) {
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
   const int n_steps = cfg.n_steps;
   const double dt = cfg.dt;
-
   auto world = pfc::world::create(pfc::GridSize({Nx, Ny, 1}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
@@ -237,6 +221,16 @@ int main(int argc, char *argv[]) {
     std::cout << "wave2d_cuda: finished " << n_steps << " steps on " << Nx << "x"
               << Ny << " (ranks=" << nproc << ")\n";
   }
-  MPI_Finalize();
   return EXIT_SUCCESS;
+}
+
+} // namespace
+
+int main(int argc, char *argv[]) {
+  return pfc::runtime::mpi_main(
+      argc, argv, [](int app_argc, char **app_argv, int rank, int nproc) {
+        const auto cfg = wave2d::parse_manual_or_print_usage(app_argc, app_argv, rank);
+        if (!cfg) return EXIT_FAILURE;
+        return run_wave2d_cuda(*cfg, rank, nproc);
+      });
 }

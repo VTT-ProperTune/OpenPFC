@@ -194,3 +194,32 @@ TEST_CASE("pfc::interpolate() integration test",
     REQUIRE(values_in_range);
   }
 }
+
+
+TEST_CASE("DiscreteField::set_data - move semantics enabled", "[discrete_field][set_data][move]") {
+  // Setup a simple grid (size doesn't matter for move test)
+  std::array<int, 3> grid{{10, 10, 1}};
+  std::array<int, 3> offsets{{0, 0, 0}};
+  std::array<double, 3> origin{{0.0, 0.0, 0.0}};
+  std::array<double, 3> discretization{{1.0, 1.0, 1.0}};
+
+  DiscreteField<double, 3> field(grid, offsets, origin, discretization);
+
+  // Create a vector with known contents
+  std::vector<double> original(100, 2.718);
+  original[0] = 1.0;
+  original[99] = 99.0;
+  std::vector<double> moved_from = original;
+
+  // Move data into field
+  field.set_data(std::move(moved_from));
+
+  // Verify data was moved correctly into field
+  REQUIRE(field.get_array().get_data().size() == 100);
+  REQUIRE(field.get_array().get_data()[0] == 1.0);
+  REQUIRE(field.get_array().get_data()[99] == 99.0);
+
+  // Verify moved-from vector is now empty (actual move occurred)
+  REQUIRE(moved_from.empty());
+  REQUIRE(moved_from.capacity() == 0);
+}
