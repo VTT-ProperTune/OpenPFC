@@ -51,8 +51,8 @@ Options:
   --with-cuda             Enable CUDA and use the CUDA HeFFTe prefix
   --with-rocm             Enable HIP/ROCm and use the ROCm HeFFTe prefix
   --cpu                   Disable CUDA and ROCm
-  --test                  Run CTest after building (default)
-  --no-test               Configure and build without running CTest
+  --test                  Run Python tests and CTest after building (default)
+  --no-test               Configure and build without running tests
   --mpi-tests             Register the 2-, 3-, and 4-rank MPI suites (default)
   --no-mpi-tests          Do not register the explicit multi-rank MPI suites
   --jobs=N, -j N          Parallel build/test jobs (default: 32)
@@ -202,6 +202,7 @@ CONFIGURE_SECONDS=0
 BUILD_SECONDS=0
 TEST_SECONDS=0
 TEST_BATCHES=0
+PYTHON_TESTS="not found"
 FAILED_PHASE=""
 OVERALL_START="$(date +%s)"
 
@@ -229,6 +230,7 @@ summary() {
   echo "Build:         $(format_duration "${BUILD_SECONDS}")"
   if (( RUN_TESTS )); then
     echo "Tests:         $(format_duration "${TEST_SECONDS}")"
+    echo "Python tests:  ${PYTHON_TESTS}"
     echo "Test batches:  ${TEST_BATCHES} (aggregate CTest commands)"
   else
     echo "Tests:         skipped"
@@ -374,6 +376,16 @@ BUILD_SECONDS=$(( $(date +%s) - phase_start ))
 if (( RUN_TESTS )); then
   phase_start="$(date +%s)"
   FAILED_PHASE="tests"
+  if [[ -d "${REPO_ROOT}/scripts/tests" ]]; then
+    command -v python3 >/dev/null 2>&1 || die "python3 not found"
+    if ! python3 -m pytest "${REPO_ROOT}/scripts/tests" 2>&1 |
+         tee "${BUILD_DIR}/python-test.log"; then
+      TEST_SECONDS=$(( $(date +%s) - phase_start ))
+      FAILED_PHASE="python tests"
+      exit 1
+    fi
+    PYTHON_TESTS="passed"
+  fi
   if ! ctest --test-dir "${BUILD_DIR}" --output-on-failure --parallel "${JOBS}" 2>&1 |
        tee "${BUILD_DIR}/test.log"; then
     TEST_SECONDS=$(( $(date +%s) - phase_start ))
