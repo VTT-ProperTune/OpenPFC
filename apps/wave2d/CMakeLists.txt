@@ -64,6 +64,18 @@ if(WAVE2D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_wave2d PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
     include(CTest)
     add_test(NAME wave2d-all-tests COMMAND test_wave2d)
+
+    # Operator-evaluation contract tests
+    add_executable(test_wave2d_operator_evaluation tests/test_wave2d_operator_evaluation.cpp)
+    target_include_directories(test_wave2d_operator_evaluation PRIVATE ${WAVE2D_INCLUDE_DIR})
+    target_link_libraries(test_wave2d_operator_evaluation PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
+    add_test(NAME wave2d-operator-evaluation COMMAND test_wave2d_operator_evaluation)
+
+    # Legacy vs operator-evaluation structural stub
+    add_executable(test_wave2d_vs_legacy_step tests/test_wave2d_vs_legacy_step.cpp)
+    target_include_directories(test_wave2d_vs_legacy_step PRIVATE ${WAVE2D_INCLUDE_DIR})
+    target_link_libraries(test_wave2d_vs_legacy_step PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
+    add_test(NAME wave2d-vs-legacy-step COMMAND test_wave2d_vs_legacy_step)
   else()
     message(STATUS "wave2d: Catch2 not found, not building tests")
   endif()
