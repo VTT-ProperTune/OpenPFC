@@ -50,6 +50,7 @@ inline void cuda_check(cudaError_t e, const char *what) {
     throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
   }
 }
+} // namespace
 
 
 /**
