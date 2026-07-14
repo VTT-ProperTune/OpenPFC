@@ -46,7 +46,7 @@ class FixedBC : public FieldModifier {
 private:
   double xwidth = 20.0;
   double alpha = 1.0;
-  double m_rho_low, m_rho_high;
+  double m_rho_low = 0.0, m_rho_high = 0.0;
   std::string m_name = "FixedBC";
 
 public:

@@ -43,7 +43,7 @@ namespace pfc {
  */
 class Constant : public FieldModifier {
 private:
-  double m_n0;
+  double m_n0 = 0.0;
 
 public:
   /**
