@@ -24,15 +24,15 @@ struct MockField {
     std::size_t size() const noexcept { return data_.size(); }
     T* data() noexcept { return data_.data(); }
     const T* data() const noexcept { return data_.data(); }
-    
-    T& operator()(int i, int j, int k) noexcept 
-    { 
+
+    T& operator()(int i, int j, int k) noexcept
+    {
         std::size_t idx = i + j * nx_ + k * nx_ * ny_;
         return data_[idx];
     }
-    
-    const T& operator()(int i, int j, int k) const noexcept 
-    { 
+
+    const T& operator()(int i, int j, int k) const noexcept
+    {
         std::size_t idx = i + j * nx_ + k * nx_ * ny_;
         return data_[idx];
     }
@@ -50,9 +50,9 @@ struct MockConstField {
 
     std::size_t size() const noexcept { return data_.size(); }
     const T* data() const noexcept { return data_.data(); }
-    
-    const T& operator()(int i, int j, int k) const noexcept 
-    { 
+
+    const T& operator()(int i, int j, int k) const noexcept
+    {
         std::size_t idx = i + j * nx_ + k * nx_ * ny_;
         return data_[idx];
     }
@@ -83,9 +83,9 @@ struct MockBadConstField {
     std::size_t size() const noexcept { return data_.size(); }
     // Non-const data() - cannot be called on const reference
     T* data() { return data_.data(); }
-    
-    const T& operator()(int i, int j, int k) const noexcept 
-    { 
+
+    const T& operator()(int i, int j, int k) const noexcept
+    {
         return data_[0]; // Simplified
     }
 };
@@ -97,12 +97,12 @@ struct MockArrayField {
     std::vector<T> data_;
     std::array<int, D> dims_;
 
-    MockArrayField(const std::array<int, D>& dims) 
+    MockArrayField(const std::array<int, D>& dims)
         : data_(dims[0] * dims[1] * dims[2]), dims_(dims) {}
 
     std::array<int, D> get_size() const noexcept { return dims_; }
     std::vector<T>& get_data() { return data_; }
-    
+
     T& operator()(const std::array<int, D>& idx) noexcept { return data_[0]; }
     // Missing size(), operator()(int,int,int)
 };
@@ -232,7 +232,7 @@ TEST_CASE("ShapeCompatible - field compatibility checking", "[state_concepts][un
         struct OtherField {
             using value_type = float; // Different type
             std::vector<float> data_;
-            
+
             OtherField(std::size_t size) : data_(size) {}
             std::size_t size() const { return data_.size(); }
             float* data() { return data_.data(); }
@@ -240,7 +240,7 @@ TEST_CASE("ShapeCompatible - field compatibility checking", "[state_concepts][un
             float& operator()(int, int, int) { return data_[0]; }
             const float& operator()(int, int, int) const { return data_[0]; }
         };
-        
+
         REQUIRE_FALSE(ShapeCompatible<MockField<double>, OtherField>);
     }
 
