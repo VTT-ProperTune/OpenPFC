@@ -26,8 +26,12 @@ SCAN_GLOBS = [
 
 
 def strip_fenced_code(text: str) -> str:
-    """Remove fenced code blocks so example URLs in snippets are not checked."""
-    return re.sub(r"^```.*?^```", "", text, flags=re.MULTILINE | re.DOTALL)
+    """Remove fenced code blocks so example URLs in snippets are not checked.
+
+    Handles both non-indented and indented code blocks (for example, under
+    list items) by allowing optional leading whitespace on fence markers.
+    """
+    return re.sub(r"^\s*```.*?^\s*```", "", text, flags=re.MULTILINE | re.DOTALL)
 
 
 def collect_markdown_files() -> list[Path]:
