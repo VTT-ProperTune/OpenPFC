@@ -42,7 +42,7 @@
 namespace pfc {
 
 class RandomSeeds : public FieldModifier {
-  double m_density, m_amplitude;
+  double m_density = 0.0, m_amplitude = 0.0;
 
 public:
   void set_amplitude(double amplitude) { m_amplitude = amplitude; }
