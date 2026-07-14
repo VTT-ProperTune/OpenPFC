@@ -54,6 +54,26 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     # Run the whole heat3d suite in a single invocation to avoid per-test MPI
     # init/finalize overhead (matches tungsten-all-tests / aluminum-all-tests).
     add_test(NAME heat3d-all-tests COMMAND test_heat3d)
+
+    # Operator-evaluation contract tests
+    add_executable(test_heat3d_operator_evaluation tests/test_heat3d_operator_evaluation.cpp)
+    target_include_directories(test_heat3d_operator_evaluation PRIVATE ${HEAT3D_INCLUDE_DIR})
+    target_link_libraries(test_heat3d_operator_evaluation PRIVATE
+      OpenPFC
+      ${_heat3d_heffte_tgt}
+      Catch2::Catch2
+    )
+    add_test(NAME heat3d-operator-evaluation COMMAND test_heat3d_operator_evaluation)
+
+    # Legacy vs operator-evaluation structural stub
+    add_executable(test_heat3d_vs_legacy_step tests/test_heat3d_vs_legacy_step.cpp)
+    target_include_directories(test_heat3d_vs_legacy_step PRIVATE ${HEAT3D_INCLUDE_DIR})
+    target_link_libraries(test_heat3d_vs_legacy_step PRIVATE
+      OpenPFC
+      ${_heat3d_heffte_tgt}
+      Catch2::Catch2
+    )
+    add_test(NAME heat3d-vs-legacy-step COMMAND test_heat3d_vs_legacy_step)
   else()
     message(STATUS "heat3d: Catch2 not found, not building tests")
   endif()

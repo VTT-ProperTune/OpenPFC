@@ -776,3 +776,58 @@ TEST_CASE("VTKWriter - Data integrity", "[vtk_writer][io][integrity]") {
     REQUIRE(fixture.validate_vti_header("test_multi_write_b_0001.vti"));
   }
 }
+
+TEST_CASE("VTKWriter - PVTI file open error", "[vtk_writer][io][error]") {
+  VTKWriterTestFixture fixture;
+
+  SECTION("Throw std::runtime_error when PVTI file cannot be opened") {
+    // This test specifically exercises the PVTI file-open error path in
+    // write_pvti_file(). The write_pvti_file() function is only called
+    // when running with multiple MPI ranks (current_size > 1).
+
+    if (fixture.m_num_ranks == 1) {
+      SKIP("PVTI master file only written in parallel with multiple ranks");
+    }
+
+    // Use a valid output directory (current directory) so per-rank .vti files
+    // can be written successfully. This ensures we reach the PVTI code path.
+    VTKWriter writer("test_pvti_open_%04d.vti");
+
+    const int nx_global = 4;
+    const int nx_local = nx_global / fixture.m_num_ranks;
+    std::array<int, 3> global_size = {nx_global, 4, 4};
+    std::array<int, 3> local_size = {nx_local, 4, 4};
+    std::array<int, 3> offset = {fixture.m_rank * nx_local, 0, 0};
+
+    writer.set_domain(global_size, local_size, offset);
+
+    const std::size_t n_pts = static_cast<std::size_t>(nx_local) *
+                              static_cast<std::size_t>(4) *
+                              static_cast<std::size_t>(4);
+    auto data = fixture.create_test_data(n_pts);
+
+    // On rank 0, create a directory with the exact name of the expected .pvti file.
+    // std::ofstream will fail to open a path that is itself a directory, triggering
+    // the PVTI file-open error path specifically while per-rank .vti files succeed.
+    const std::string pvti_filename = "test_pvti_open_0001.pvti";
+    if (fixture.m_rank == 0) {
+      std::filesystem::create_directory(pvti_filename);
+    }
+
+    // Synchronize to ensure rank 0 has created the directory before other ranks proceed
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Only rank 0 throws std::runtime_error because only rank 0 writes the .pvti master file
+    if (fixture.m_rank == 0) {
+      REQUIRE_THROWS_AS(writer.write(1, data), std::runtime_error);
+
+      // Clean up the blocking directory
+      std::filesystem::remove(pvti_filename);
+    } else {
+      // Other ranks complete normally (write .vti piece files only)
+      writer.write(1, data);
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+}

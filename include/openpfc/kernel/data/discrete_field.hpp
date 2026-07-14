@@ -603,7 +603,7 @@ public:
 
   const std::array<int, D> &get_offset() const { return get_index().get_begin(); }
 
-  void set_data(const std::vector<T> &data) { get_array().set_data(data); }
+  void set_data(std::vector<T> data) { get_array().set_data(std::move(data)); }
 
   /**
    * @brief Outputs the discrete field to the specified output stream.

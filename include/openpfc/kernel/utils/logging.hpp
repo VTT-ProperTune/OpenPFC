@@ -58,4 +58,8 @@ inline void log_debug(const Logger &lg, std::string_view msg) {
   log(lg, LogLevel::Debug, msg);
 }
 
+/** @brief Null logger that suppresses all output for optional logger pointers */
+inline constexpr Logger k_null_logger{
+    static_cast<LogLevel>(static_cast<std::uint8_t>(LogLevel::Error) + 1), -1};
+
 } // namespace pfc
