@@ -36,9 +36,18 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   workspace_type m_wrk;
 
 
+  // GPU workspaces for float and double precision
+  // FFT_Impl can be called with RealType=float or double, so pre-allocate both
   using gpu_workspace_type = typename heffte::fft3d_r2c<BackendTag>::template buffer_container<std::complex<double>>;
-  gpu_workspace_type m_gpu_wrk;
-  FFT_Impl(fft_type fft) : m_fft(std::move(fft)), m_wrk(m_fft.size_workspace()), m_gpu_wrk(m_fft.size_workspace()) {}
+  using gpu_workspace_float = typename heffte::fft3d_r2c<BackendTag>::template buffer_container<std::complex<float>>;
+  gpu_workspace_type m_gpu_wrk_double;
+  gpu_workspace_float m_gpu_wrk_float;
+
+  FFT_Impl(fft_type fft)
+      : m_fft(std::move(fft)),
+        m_wrk(m_fft.size_workspace()),
+        m_gpu_wrk_double(m_fft.size_workspace()),
+        m_gpu_wrk_float(m_fft.size_workspace()) {}
 
   template <typename RealBackendTag, typename ComplexBackendTag, typename RealType>
   void forward(const core::DataBuffer<RealBackendTag, RealType> &in,
@@ -46,7 +55,11 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
     static_assert(std::is_same_v<RealBackendTag, ComplexBackendTag>,
                   "Input and output must use the same backend");
     m_fft_time -= MPI_Wtime();
-    m_fft.forward(in.data(), out.data(), m_gpu_wrk.data());
+    if constexpr (std::is_same_v<RealType, double>) {
+      m_fft.forward(in.data(), out.data(), m_gpu_wrk_double.data());
+    } else if constexpr (std::is_same_v<RealType, float>) {
+      m_fft.forward(in.data(), out.data(), m_gpu_wrk_float.data());
+    }
     m_fft_time += MPI_Wtime();
   }
 
@@ -69,7 +82,11 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
     static_assert(std::is_same_v<ComplexBackendTag, RealBackendTag>,
                   "Input and output must use the same backend");
     m_fft_time -= MPI_Wtime();
-    m_fft.backward(in.data(), out.data(), m_gpu_wrk.data(), heffte::scale::full);
+    if constexpr (std::is_same_v<RealType, double>) {
+      m_fft.backward(in.data(), out.data(), m_gpu_wrk_double.data(), heffte::scale::full);
+    } else if constexpr (std::is_same_v<RealType, float>) {
+      m_fft.backward(in.data(), out.data(), m_gpu_wrk_float.data(), heffte::scale::full);
+    }
     m_fft_time += MPI_Wtime();
   }
 
@@ -96,7 +113,9 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   size_t size_workspace() const override { return m_fft.size_workspace(); }
 
   size_t get_allocated_memory_bytes() const override {
-    return (m_wrk.size() + m_gpu_wrk.size()) * sizeof(typename workspace_type::value_type);
+    size_t total_elements = m_wrk.size() + m_gpu_wrk_double.size();
+    total_elements += m_gpu_wrk_float.size();
+    return total_elements * sizeof(typename workspace_type::value_type);
   }
 
   Box3i get_inbox_bounds() const override {
