@@ -98,7 +98,7 @@ Interface for driver-provided distributed operations:
 class ExecutionService {
 public:
     virtual ~ExecutionService() = default;
-    
+
     virtual void request_halo_exchange(const std::vector<std::string>& field_names) = 0;
     virtual void prepare_boundaries(const std::vector<std::string>& field_names) = 0;
     virtual void global_reduce(const std::vector<double>& data, MPI_Op op) = 0;
@@ -132,8 +132,8 @@ concept SolveFunction = requires(Func solver,
                                     const StageContext& ctx) {
     requires tuple_protocol<RHSFields>;
     requires tuple_protocol<TargetFields>;
-    
-    { solver(op_desc, rhs, target_out, options, ctx) } 
+
+    { solver(op_desc, rhs, target_out, options, ctx) }
         -> std::same_as<SolveOutcome<TargetFields>>;
 };
 ```
@@ -154,13 +154,13 @@ auto spectral_diagonal_solver = [](const LinearOperatorDesc& desc,
                                     const StageContext& ctx) {
     // Extract spectral propagator from operator_context
     const auto& propagator = std::get<std::vector<double>>(desc.operator_context);
-    
+
     // Element-wise division: target = rhs / propagator
     // (using field bundle iteration utilities)
     for_each_interior(rhs, target, [&](auto rhs_val, auto target_val) {
         target_val = rhs_val / propagator[/* index */];
     });
-    
+
     return SolveOutcome<decltype(target)>{
         target,
         ConvergenceStatus::converged,
@@ -197,22 +197,22 @@ auto iterative_solver = [](const LinearOperatorDesc& desc,
     // Internal workspace for Krylov subspace
     std::vector<double> internal_buffer(rhs.size());
     std::vector<double> residual(rhs.size());
-    
+
     // Iteration loop
     for (int iter = 0; iter < opts.max_iterations; ++iter) {
         // Request halo exchange before operator application
         ctx.execution_service.request_halo_exchange({"solution"});
         ctx.execution_service.prepare_boundaries({"solution"});
-        
+
         // Apply operator: residual = rhs - A * x
         apply_operator(desc, internal_buffer, residual);
-        
+
         // Compute residual norm
         double local_norm = compute_norm(residual);
         double global_norm;
         ctx.execution_service.global_reduce({local_norm}, MPI_SUM);
         global_norm = std::sqrt(global_norm);
-        
+
         // Check convergence
         if (global_norm < opts.tolerance) {
             return SolveOutcome<std::vector<double>>{
@@ -223,16 +223,16 @@ auto iterative_solver = [](const LinearOperatorDesc& desc,
                 std::nullopt
             };
         }
-        
+
         // Apply preconditioner if specified
         if (opts.preconditioner_desc) {
             apply_preconditioner(*opts.preconditioner_desc, residual);
         }
-        
+
         // Update solution (Krylov step)
         update_solution(internal_buffer, residual);
     }
-    
+
     return SolveOutcome<std::vector<double>>{
         internal_buffer,
         ConvergenceStatus::max_iterations_reached,

@@ -98,10 +98,10 @@ concept tuple_protocol = requires(T& t) {
 struct LinearOperatorDesc {
     /// Operator identifier (e.g., "spectral_diagonal", "finite_difference_stencil")
     std::string operator_identifier;
-    
+
     /// Optional preconditioner identifier
     std::optional<std::string> preconditioner_identifier;
-    
+
     /// Operator-specific context (spectral propagator, stencil coeffs, or opaque handle)
     std::variant<std::monostate, std::vector<double>, std::string> operator_context;
 };
@@ -115,13 +115,13 @@ struct LinearOperatorDesc {
 struct SolveOptions {
     /// Maximum number of solver iterations
     int max_iterations = 1000;
-    
+
     /// Relative tolerance on residual norm (default 1e-6)
     double tolerance = 1e-6;
-    
+
     /// Optional absolute tolerance (disables pure relative tolerance if set)
     std::optional<double> absolute_tolerance;
-    
+
     /// Optional caller-selected preconditioning descriptor
     std::optional<LinearOperatorDesc> preconditioner_desc;
 };
@@ -163,16 +163,16 @@ template<typename Fields>
 struct SolveOutcome {
     /// Solution state: reference to target_out or view into internal buffer
     Fields solution;
-    
+
     /// Convergence status of the solve attempt
     ConvergenceStatus status;
-    
+
     /// Number of iterations performed
     int iteration_count;
-    
+
     /// Final residual norm
     double final_residual_norm;
-    
+
     /// Optional failure cause description
     std::optional<std::string> failure_cause;
 };
@@ -199,21 +199,21 @@ concept solve_outcome_type = is_solve_outcome<T>::value;
 class ExecutionService {
 public:
     virtual ~ExecutionService() = default;
-    
+
     /**
      * @brief Request halo exchange for specified fields before operator evaluation
      *
      * @param field_names Names of fields requiring halo exchange
      */
     virtual void request_halo_exchange(const std::vector<std::string>& field_names) = 0;
-    
+
     /**
      * @brief Apply boundary conditions to specified fields
      *
      * @param field_names Names of fields requiring boundary preparation
      */
     virtual void prepare_boundaries(const std::vector<std::string>& field_names) = 0;
-    
+
     /**
      * @brief Perform global reduction of scalar values across all ranks
      *
@@ -232,7 +232,7 @@ public:
 struct StageContext {
     /// Evaluation time for the current stage
     double evaluation_time;
-    
+
     /// Reference to execution service for distributed operations
     ExecutionService& execution_service;
 };
@@ -262,7 +262,7 @@ concept SolveFunction = requires(Func solver,
     // Both RHS and Target must satisfy tuple_protocol
     requires tuple_protocol<RHSFields>;
     requires tuple_protocol<TargetFields>;
-    
+
     // Solver must be callable with specified signature
     // and return a SolveOutcome (solution field type may differ from TargetFields)
     { solver(op_desc, rhs, target_out, options, ctx) } -> solve_outcome_type;

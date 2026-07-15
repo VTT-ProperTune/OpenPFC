@@ -21,15 +21,15 @@ public:
     std::vector<std::string> last_boundaries;
     std::vector<double> last_reduce_data;
     MPI_Op last_op = MPI_OP_NULL;
-    
+
     void request_halo_exchange(const std::vector<std::string>& field_names) override {
         last_halos = field_names;
     }
-    
+
     void prepare_boundaries(const std::vector<std::string>& field_names) override {
         last_boundaries = field_names;
     }
-    
+
     void global_reduce(const std::vector<double>& data, MPI_Op op) override {
         last_reduce_data = data;
         last_op = op;
@@ -102,7 +102,7 @@ TEST_CASE("test_convergence_status_enum_values") {
 TEST_CASE("test_solve_outcome_solution_field_present") {
     using TargetType = std::vector<double>;
     std::vector<double> solution_field{1.0, 2.0, 3.0};
-    
+
     SolveOutcome<TargetType> outcome{
         solution_field,  // solution field present as required
         ConvergenceStatus::converged,
@@ -110,7 +110,7 @@ TEST_CASE("test_solve_outcome_solution_field_present") {
         1e-7,
         std::nullopt
     };
-    
+
     REQUIRE(outcome.solution.size() == 3);
     REQUIRE(outcome.solution[0] == 1.0);
     REQUIRE(outcome.status == ConvergenceStatus::converged);
@@ -122,7 +122,7 @@ TEST_CASE("test_solve_outcome_solution_field_present") {
 TEST_CASE("test_solve_outcome_solution_can_hold_reference") {
     // In-place solver pattern: solution references target_out
     double target_value = 0.0;
-    
+
     SolveOutcome<double&> outcome{
         target_value,  // reference to target_out
         ConvergenceStatus::converged,
@@ -130,12 +130,12 @@ TEST_CASE("test_solve_outcome_solution_can_hold_reference") {
         0.0,
         std::nullopt
     };
-    
+
     REQUIRE(outcome.status == ConvergenceStatus::converged);
     // Can read solution through outcome
     double read_value = outcome.solution;
     REQUIRE(read_value == 0.0);
-    
+
     // Modifying through reference affects original
     outcome.solution = 5.0;
     REQUIRE(target_value == 5.0);
@@ -143,7 +143,7 @@ TEST_CASE("test_solve_outcome_solution_can_hold_reference") {
 
 TEST_CASE("test_solve_outcome_with_failure") {
     std::vector<double> solution{1.0, 2.0};
-    
+
     SolveOutcome<std::vector<double>> outcome{
         solution,
         ConvergenceStatus::ill_conditioned,
@@ -151,7 +151,7 @@ TEST_CASE("test_solve_outcome_with_failure") {
         1e-3,
         std::string("Matrix singular")
     };
-    
+
     REQUIRE(outcome.status == ConvergenceStatus::ill_conditioned);
     REQUIRE(outcome.failure_cause.has_value());
     REQUIRE(*outcome.failure_cause == "Matrix singular");
@@ -162,13 +162,13 @@ TEST_CASE("test_tuple_protocol_field_bundle_compatible") {
     double scalar_field = 0.0;
     auto scalar_bundle = std::tie(scalar_field);
     static_assert(tuple_protocol<decltype(scalar_bundle)>);
-    
+
     // Multi-field via std::tuple
     std::vector<double> field1 = {0.0};
     std::vector<double> field2 = {0.0};
     auto multi_field = std::make_tuple(std::ref(field1), std::ref(field2));
     static_assert(tuple_protocol<decltype(multi_field)>);
-    
+
     // Check concept satisfaction
     REQUIRE(tuple_protocol<decltype(scalar_bundle)>);
     REQUIRE(tuple_protocol<decltype(multi_field)>);
@@ -190,7 +190,7 @@ TEST_CASE("test_solver_function_concept_satisfies_requirement_with_inplace") {
                                   const StageContext&) -> SolveOutcome<decltype(target)> {
         // Simulate element-wise division (spectral diagonal)
         // In reality: target = rhs / spectral_propagator
-        
+
         return SolveOutcome<decltype(target)>{
             target,  // reference to target_out
             ConvergenceStatus::converged,
@@ -199,18 +199,18 @@ TEST_CASE("test_solver_function_concept_satisfies_requirement_with_inplace") {
             std::nullopt
         };
     };
-    
+
     double rhs_value = 1.0;
     double target_value = 0.0;
     auto rhs_bundle = std::tie(rhs_value);
     auto target_bundle = std::tie(target_value);
-    
+
     MockExecutionService mock_service;
     StageContext ctx{0.0, mock_service};
     SolveOptions opts;
-    
+
     REQUIRE(SolveFunction<decltype(mock_inplace_solver), decltype(rhs_bundle), decltype(target_bundle)>);
-    
+
     auto outcome = mock_inplace_solver(LinearOperatorDesc{"spectral"}, rhs_bundle, target_bundle, opts, ctx);
     REQUIRE(outcome.status == ConvergenceStatus::converged);
     REQUIRE(outcome.iteration_count == 1);
@@ -226,7 +226,7 @@ TEST_CASE("test_solver_function_concept_satisfies_requirement_with_outofplace") 
         const StageContext&) -> SolveOutcome<std::vector<double>> {
         // In real out-of-place solver, internal Krylov subspace vectors would be used
         std::vector<double> internal_solution{0.5, 1.5, 2.5};
-        
+
         return SolveOutcome<std::vector<double>>{
             internal_solution,  // view into internal buffer
             ConvergenceStatus::converged,
@@ -235,18 +235,18 @@ TEST_CASE("test_solver_function_concept_satisfies_requirement_with_outofplace") 
             std::nullopt
         };
     };
-    
+
     double rhs_field = 1.0;
     double target_field = 0.0;
     auto rhs_bundle = std::tie(rhs_field);
     auto target_bundle = std::tie(target_field);
-    
+
     MockExecutionService mock_service;
     StageContext ctx{0.0, mock_service};
     SolveOptions opts;
-    
+
     REQUIRE(SolveFunction<decltype(mock_outofplace_solver), decltype(rhs_bundle), decltype(target_bundle)>);
-    
+
     auto outcome = mock_outofplace_solver(
         LinearOperatorDesc{"iterative"},
         rhs_bundle,
@@ -254,7 +254,7 @@ TEST_CASE("test_solver_function_concept_satisfies_requirement_with_outofplace") 
         opts,
         ctx
     );
-    
+
     REQUIRE(outcome.status == ConvergenceStatus::converged);
     REQUIRE(outcome.iteration_count == 42);
     REQUIRE(outcome.solution.size() == 3);
@@ -277,19 +277,19 @@ TEST_CASE("test_solver_function_concept_with_multifield") {
             std::nullopt
         };
     };
-    
+
     std::vector<double> rhs1{0.0}, rhs2{0.0};
     std::vector<double> target1{0.0}, target2{0.0};
-    
+
     auto rhs_bundle = std::make_tuple(std::ref(rhs1), std::ref(rhs2));
     auto target_bundle = std::make_tuple(std::ref(target1), std::ref(target2));
-    
+
     MockExecutionService mock_service;
     StageContext ctx{0.0, mock_service};
     SolveOptions opts;
-    
+
     REQUIRE(SolveFunction<decltype(mock_multifield_solver), decltype(rhs_bundle), decltype(target_bundle)>);
-    
+
     auto outcome = mock_multifield_solver(LinearOperatorDesc{}, rhs_bundle, target_bundle, opts, ctx);
     REQUIRE(outcome.status == ConvergenceStatus::converged);
 }
@@ -297,26 +297,26 @@ TEST_CASE("test_solver_function_concept_with_multifield") {
 TEST_CASE("test_stage_context_contains_execution_service") {
     MockExecutionService mock_service;
     StageContext ctx{1.5, mock_service};
-    
+
     REQUIRE(ctx.evaluation_time == 1.5);
     REQUIRE(&ctx.execution_service == &mock_service);
 }
 
 TEST_CASE("test_execution_service_interface_methods") {
     MockExecutionService service;
-    
+
     std::vector<std::string> fields{"field1", "field2"};
     service.request_halo_exchange(fields);
     REQUIRE(service.last_halos == fields);
-    
+
     service.prepare_boundaries(fields);
     REQUIRE(service.last_boundaries == fields);
-    
+
     std::vector<double> data{1.0, 2.0, 3.0};
     service.global_reduce(data, MPI_SUM);
     REQUIRE(service.last_reduce_data == data);
     REQUIRE(service.last_op == MPI_SUM);
-    
+
     service.global_reduce(data, MPI_MAX);
     REQUIRE(service.last_op == MPI_MAX);
 }
@@ -324,7 +324,7 @@ TEST_CASE("test_execution_service_interface_methods") {
 TEST_CASE("test_execution_service_virtual_destructor") {
     // Ensure ExecutionService has a virtual destructor for proper cleanup
     static_assert(std::has_virtual_destructor_v<ExecutionService>);
-    
+
     auto service = std::make_unique<MockExecutionService>();
     REQUIRE(service != nullptr);
 }
@@ -337,7 +337,7 @@ TEST_CASE("test_convergence_status_all_values_distinct") {
     constexpr auto ill_cond = ConvergenceStatus::ill_conditioned;
     constexpr auto cancelled = ConvergenceStatus::cancelled;
     constexpr auto unknown = ConvergenceStatus::unknown_failure;
-    
+
     static_assert(converged != max_iter);
     static_assert(max_iter != stagnation);
     static_assert(stagnation != ill_cond);
