@@ -177,7 +177,7 @@ void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
   // 6. Report. The L2 visitor walks the same interior region the other
   //    drivers report on (skipping the outermost owned layer) using the
   //    same hand-written stride arithmetic, so the L2 number is
-  //    directly comparable with `heat3d_fd` and `heat3d_fd_manual`.
+  //    directly comparable across all three FD drivers.
   heat3d::report(
       rank, nproc, cfg, "fd_scratch",
       "from-scratch stencil, raw pointer arithmetic, plain Lap aux", max_elapsed,
