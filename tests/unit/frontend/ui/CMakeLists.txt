@@ -17,4 +17,5 @@ target_sources(openpfc-tests PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/test_parameter_validation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_results_writer_catalog.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_app_integrator_loop.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_time_integrator.cpp
 )

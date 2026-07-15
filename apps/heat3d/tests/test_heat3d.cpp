@@ -36,6 +36,7 @@
 #include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/kernel/simulation/steppers/rk2_heun.hpp>
 
 #include <heat3d/cli.hpp>
 #include <heat3d/heat_model.hpp>
@@ -739,6 +740,43 @@ TEST_CASE("heat3d::analytic_gaussian: t > 0 strictly decreases the peak",
 // -----------------------------------------------------------------------------
 // MPI lifecycle around Catch2 (mirrors apps/tungsten/tests/test_tungsten.cpp).
 // -----------------------------------------------------------------------------
+
+
+// -----------------------------------------------------------------------------
+// RK2HeunStepper tests (integrator selection).
+// -----------------------------------------------------------------------------
+
+TEST_CASE("test_rk2_heun_stepper_basic", "[heat3d]") {
+  // Test ODE: du/dt = 1, with u(0) = 0.0
+  // Analytical solution: u(t) = t, so u(0.1) = 0.1 (exact)
+  // Both Euler and RK2 Heun are exact for linear ODEs
+
+  const double dt = 0.1;
+  const std::size_t local_size = 1;
+  std::vector<double> u = {0.0};  // u(0) = 0
+
+  // RHS: du/dt = 1
+  auto rhs = [](double t, const std::vector<double> & /*u_in*/, std::vector<double> &du) {
+    du[0] = 1.0;
+  };
+
+  pfc::sim::steppers::RK2HeunStepper<decltype(rhs)> stepper(dt, local_size, rhs);
+  double t = 0.0;
+  t = stepper.step(t, u);
+
+  // RK2 Heun is exact for linear ODE: u(0.1) = 0.1
+  REQUIRE_THAT(u[0], WithinAbs(0.1, 1e-12));
+  REQUIRE_THAT(t, WithinAbs(0.1, 1e-12));
+
+  // Euler: u_new = u + dt * rhs(t, u) = 0 + 0.1 * 1 = 0.1 (also exact for linear ODE)
+  std::vector<double> u_euler = {0.0};
+  double t_euler = 0.0;
+  std::vector<double> du(1);
+  rhs(t_euler, u_euler, du);
+  u_euler[0] += dt * du[0];
+  t_euler += dt;
+  REQUIRE_THAT(u_euler[0], WithinAbs(0.1, 1e-12));
+}
 
 int main(int argc, char *argv[]) {
   if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {

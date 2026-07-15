@@ -232,6 +232,9 @@ namespace pfc {
  * @see do_save() - determines when to write output
  * @see get_current() - computes current time from increment
  */
+
+enum class IntegratorMethod { euler, rk2_heun };
+
 class Time {
 private:
   double m_t0;     ///< Start time
@@ -239,6 +242,7 @@ private:
   double m_dt;     ///< Time step
   int m_increment; ///< Current time increment
   double m_saveat; ///< Time interval for saving data
+  IntegratorMethod m_method{IntegratorMethod::euler};
 
 public:
   /**
@@ -334,9 +338,9 @@ public:
    * @see done() - check if simulation is complete
    * @see do_save() - check if results should be saved at current time
    */
-  Time(const std::array<double, 3> &time, double saveat)
+  Time(const std::array<double, 3> &time, double saveat, IntegratorMethod method)
       : m_t0(time[0]), m_t1(time[1]), m_dt(time[2]), m_increment(0),
-        m_saveat(saveat) {
+        m_saveat(saveat), m_method(method) {
     if (m_t0 < 0) {
       throw std::invalid_argument("Start time cannot be negative: " +
                                   std::to_string(m_t0));
@@ -375,7 +379,18 @@ public:
    * @param time An array containing the start time, end time, and time step in
    * that order
    */
-  Time(const std::array<double, 3> &time) : Time(time, time[2]) {}
+  Time(const std::array<double, 3> &time) : Time(time, time[2], IntegratorMethod::euler) {}
+
+  /**
+   * @brief Construct a new Time object with the specified time interval and
+   * default save interval (euler integrator).
+   *
+   * The save interval is set to the same value as the time step.
+   *
+   * @param time An array containing the start time, end time, and time step in
+   * that order
+   */
+  Time(const std::array<double, 3> &time, double saveat) : Time(time, saveat, IntegratorMethod::euler) {}
 
   /**
    * @brief Get the start time.
@@ -499,6 +514,13 @@ public:
    * @return The save interval
    */
   double get_saveat() const { return m_saveat; }
+
+  /**
+   * @brief Get the integrator method.
+   *
+   * @return The integrator method
+   */
+  IntegratorMethod method() const noexcept { return m_method; }
 
   /**
    * @brief Set the current time increment.

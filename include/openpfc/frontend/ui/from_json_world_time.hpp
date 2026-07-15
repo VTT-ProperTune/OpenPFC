@@ -160,7 +160,25 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
   double t1 = t1_val;
   double dt = dt_val;
   double saveat = saveat_val;
-  Time time({t0, t1, dt}, saveat);
+
+  // Parse integrator method (optional, defaults to euler)
+  IntegratorMethod method = IntegratorMethod::euler;
+  if (j.contains("timestepping") && j["timestepping"].contains("integrator")) {
+    const auto &integrator = j["timestepping"]["integrator"];
+    if (integrator.contains("method")) {
+      const std::string method_str = integrator["method"].get<std::string>();
+      if (method_str == "euler") {
+        method = IntegratorMethod::euler;
+      } else if (method_str == "rk2_heun") {
+        method = IntegratorMethod::rk2_heun;
+      } else {
+        throw std::invalid_argument("Unknown integrator method: " + method_str +
+                                   " (expected 'euler' or 'rk2_heun')");
+      }
+    }
+  }
+
+  Time time({t0, t1, dt}, saveat, method);
   return time;
 }
 

@@ -69,6 +69,18 @@
                 },
                 "saveat": {
                     "type": "number"
+                },
+                "integrator": {
+                    "type": "object",
+                    "properties": {
+                        "method": {
+                            "type": "string",
+                            "enum": [
+                                "euler",
+                                "rk2_heun"
+                            ]
+                        }
+                    }
                 }
             },
             "required": [
