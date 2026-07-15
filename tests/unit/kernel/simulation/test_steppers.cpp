@@ -3,23 +3,25 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <cmath>
 #include <vector>
 
-#include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/simulation/steppers/euler.hpp>
 
 using namespace pfc::sim::steppers;
 using Catch::Approx;
 
-TEST_CASE("EulerStepper accumulates correctly with constant RHS", "[stepper][unit]") {
+TEST_CASE("EulerStepper accumulates correctly with constant RHS",
+          "[stepper][unit]") {
   constexpr double dt = 0.1;
   constexpr std::size_t n = 10;
   std::vector<double> u(n, 0.0);
 
   // Mock RHS: fills du[i] = 2.0 for all i
-  auto rhs = [](double /*t*/, std::vector<double>& /*u*/, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> & /*u*/, std::vector<double> &du) {
     for (std::size_t i = 0; i < du.size(); ++i) {
       du[i] = 2.0;
     }
@@ -49,7 +51,8 @@ TEST_CASE("EulerStepper returns correct new time", "[stepper][unit]") {
   std::vector<double> u(n, 0.0);
 
   // RHS that does nothing (focus on time return)
-  auto dummy_rhs = [](double /*t*/, std::vector<double>& /*u*/, std::vector<double>& du) {
+  auto dummy_rhs = [](double /*t*/, std::vector<double> & /*u*/,
+                      std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 0.0);
   };
 
@@ -76,7 +79,8 @@ TEST_CASE("EulerStepper reuses du buffer across steps", "[stepper][unit]") {
   // Functor-based RHS that only writes to one index per step
   struct SelectiveRhs {
     std::size_t step_counter = 0;
-    void operator()(double /*t*/, std::vector<double>& /*u*/, std::vector<double>& du) {
+    void operator()(double /*t*/, std::vector<double> & /*u*/,
+                    std::vector<double> &du) {
       // Write to index 0 on even steps, index 1 on odd steps
       std::size_t write_idx = (step_counter % 2 == 0) ? 0 : 1;
       for (std::size_t i = 0; i < du.size(); ++i) {
@@ -97,9 +101,10 @@ TEST_CASE("EulerStepper reuses du buffer across steps", "[stepper][unit]") {
     }
   }
 
-  SECTION("Step 1: only du[1] written, du[0] from previous step ignored in accumulation") {
-    stepper.step(0.0, u); // Step 0: writes du[0]=1.0, others 0.0
-    stepper.step(dt, u);  // Step 1: writes du[1]=1.0, others 0.0
+  SECTION("Step 1: only du[1] written, du[0] from previous step ignored in "
+          "accumulation") {
+    stepper.step(0.0, u);              // Step 0: writes du[0]=1.0, others 0.0
+    stepper.step(dt, u);               // Step 1: writes du[1]=1.0, others 0.0
     REQUIRE(u[0] == Approx(dt * 1.0)); // Only advanced once
     REQUIRE(u[1] == Approx(dt * 1.0)); // Advanced on step 1
     for (std::size_t i = 2; i < n; ++i) {
@@ -116,9 +121,9 @@ TEST_CASE("MultiEulerStepper updates fields independently", "[stepper][unit]") {
   std::vector<double> u2(n, 0.0); // Second field
 
   // RHS that fills du1[i]=1.0, du2[i]=2.0 for all i
-  auto rhs = [](double /*t*/, auto& /*u_pack*/, auto& du_pack) {
-    auto& du1 = std::get<0>(du_pack);
-    auto& du2 = std::get<1>(du_pack);
+  auto rhs = [](double /*t*/, auto & /*u_pack*/, auto &du_pack) {
+    auto &du1 = std::get<0>(du_pack);
+    auto &du2 = std::get<1>(du_pack);
     for (std::size_t i = 0; i < n; ++i) {
       du1[i] = 1.0;
       du2[i] = 2.0;
@@ -146,15 +151,16 @@ TEST_CASE("MultiEulerStepper updates fields independently", "[stepper][unit]") {
   }
 }
 
-#include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
+#include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
 
-TEST_CASE("ExplicitRKStepper accumulates correctly with constant RHS (RK4)", "[stepper][unit]") {
+TEST_CASE("ExplicitRKStepper accumulates correctly with constant RHS (RK4)",
+          "[stepper][unit]") {
   constexpr double dt = 0.1;
   constexpr std::size_t n = 10;
   std::vector<double> u(n, 0.0);
 
-  auto rhs = [](double /*t*/, std::vector<double>& /*u*/, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> & /*u*/, std::vector<double> &du) {
     for (std::size_t i = 0; i < du.size(); ++i) {
       du[i] = 2.0;
     }
@@ -176,12 +182,14 @@ TEST_CASE("ExplicitRKStepper accumulates correctly with constant RHS (RK4)", "[s
   }
 }
 
-TEST_CASE("ExplicitRKStepper returns correct new time (RK2 midpoint)", "[stepper][unit]") {
+TEST_CASE("ExplicitRKStepper returns correct new time (RK2 midpoint)",
+          "[stepper][unit]") {
   constexpr double dt = 0.1;
   constexpr std::size_t n = 5;
   std::vector<double> u(n, 0.0);
 
-  auto dummy_rhs = [](double /*t*/, std::vector<double>& /*u*/, std::vector<double>& du) {
+  auto dummy_rhs = [](double /*t*/, std::vector<double> & /*u*/,
+                      std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 0.0);
   };
 
@@ -198,16 +206,17 @@ TEST_CASE("ExplicitRKStepper returns correct new time (RK2 midpoint)", "[stepper
   REQUIRE(stepper.step(t, u) == Approx(t + dt)); // 0.2 -> 0.3
 }
 
-TEST_CASE("MultiExplicitRKStepper updates fields independently (RK4)", "[stepper][unit]") {
+TEST_CASE("MultiExplicitRKStepper updates fields independently (RK4)",
+          "[stepper][unit]") {
   constexpr double dt = 0.1;
   constexpr std::size_t n = 10;
   constexpr std::size_t N = 2;
   std::vector<double> u1(n, 0.0);
   std::vector<double> u2(n, 0.0);
 
-  auto rhs = [](double /*t*/, auto& /*u_pack*/, auto& du_pack) {
-    auto& du1 = std::get<0>(du_pack);
-    auto& du2 = std::get<1>(du_pack);
+  auto rhs = [](double /*t*/, auto & /*u_pack*/, auto &du_pack) {
+    auto &du1 = std::get<0>(du_pack);
+    auto &du2 = std::get<1>(du_pack);
     for (std::size_t i = 0; i < n; ++i) {
       du1[i] = 1.0;
       du2[i] = 2.0;
@@ -250,7 +259,9 @@ TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
     int jmax() const { return 1; }
     int kmin() const { return 0; }
     int kmax() const { return 1; }
-    std::size_t idx(int ix, int /*iy*/, int /*iz*/) const { return static_cast<std::size_t>(ix); }
+    std::size_t idx(int ix, int /*iy*/, int /*iz*/) const {
+      return static_cast<std::size_t>(ix);
+    }
     double operator()(int /*ix*/, int /*iy*/, int /*iz*/) const { return 0.0; }
   };
 
@@ -262,7 +273,8 @@ TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-  pfc::field::LocalField<double> u = pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, /*halo_width=*/0);
+  pfc::field::LocalField<double> u = pfc::field::LocalField<double>::from_subdomain(
+      decomp, /*rank=*/0, /*halo_width=*/0);
 
   auto tableau = make_rk4_classical<double>();
   auto stepper = create(u, eval, model, dt, tableau);
@@ -296,7 +308,9 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
     int jmax() const { return 1; }
     int kmin() const { return 0; }
     int kmax() const { return 1; }
-    std::size_t idx(int ix, int /*iy*/, int /*iz*/) const { return static_cast<std::size_t>(ix); }
+    std::size_t idx(int ix, int /*iy*/, int /*iz*/) const {
+      return static_cast<std::size_t>(ix);
+    }
     double operator()(int /*ix*/, int /*iy*/, int /*iz*/) const { return 0.0; }
   };
 
@@ -308,8 +322,10 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-  pfc::field::LocalField<double> u1 = pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, /*halo_width=*/0);
-  pfc::field::LocalField<double> u2 = pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, /*halo_width=*/0);
+  pfc::field::LocalField<double> u1 = pfc::field::LocalField<double>::from_subdomain(
+      decomp, /*rank=*/0, /*halo_width=*/0);
+  pfc::field::LocalField<double> u2 = pfc::field::LocalField<double>::from_subdomain(
+      decomp, /*rank=*/0, /*halo_width=*/0);
 
   auto fields = std::tie(u1, u2);
   auto tableau = make_rk4_classical<double>();
@@ -323,4 +339,83 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
     REQUIRE(u1_vec[i] == Approx(dt * 1.0)); // 0.1
     REQUIRE(u2_vec[i] == Approx(dt * 2.0)); // 0.2
   }
+}
+
+// -----------------------------------------------------------------------------
+// Convergence-order tests.
+//
+// The tests above only check exactness for a constant RHS, which any
+// consistent method of any order satisfies -- it cannot distinguish a
+// correct RK4 implementation from one with a coefficient bug that happens
+// to still integrate a constant exactly. These tests instead integrate a
+// genuine linear ODE (exponential decay, du/dt = -lambda*u) to a fixed end
+// time at two step sizes related by a factor of 2, and check that the
+// final error shrinks by ~2^order when dt halves -- the standard way to
+// verify an RK method's actual order of accuracy.
+// -----------------------------------------------------------------------------
+
+TEST_CASE("ExplicitRKStepper RK2 midpoint shows second-order convergence",
+          "[stepper][unit][convergence]") {
+  constexpr double lambda = 1.0;
+  constexpr double t_final = 1.0;
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
+    du[0] = -lambda * u[0];
+  };
+
+  auto run = [&](double dt) {
+    std::vector<double> u = {1.0};
+    auto tableau = make_rk2_midpoint<double>();
+    ExplicitRKStepper stepper(dt, 1, tableau, rhs);
+    double t = 0.0;
+    const int steps = static_cast<int>(std::lround(t_final / dt));
+    for (int i = 0; i < steps; ++i) {
+      t = stepper.step(t, u);
+    }
+    return std::abs(u[0] - std::exp(-lambda * t));
+  };
+
+  const double dt_coarse = 0.02;
+  const double err_coarse = run(dt_coarse);
+  const double err_fine = run(dt_coarse / 2.0);
+
+  REQUIRE(err_coarse > 1e-8); // sanity: coarse error must be measurable
+  REQUIRE(err_fine > 0.0);
+  const double ratio = err_coarse / err_fine;
+  // Second order: halving dt should reduce error by ~4x. Allow generous
+  // slack (3x-5x) for the asymptotic regime not being exact at this dt.
+  REQUIRE(ratio > 3.0);
+  REQUIRE(ratio < 5.0);
+}
+
+TEST_CASE("ExplicitRKStepper RK4 classical shows fourth-order convergence",
+          "[stepper][unit][convergence]") {
+  constexpr double lambda = 1.0;
+  constexpr double t_final = 1.0;
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
+    du[0] = -lambda * u[0];
+  };
+
+  auto run = [&](double dt) {
+    std::vector<double> u = {1.0};
+    auto tableau = make_rk4_classical<double>();
+    ExplicitRKStepper stepper(dt, 1, tableau, rhs);
+    double t = 0.0;
+    const int steps = static_cast<int>(std::lround(t_final / dt));
+    for (int i = 0; i < steps; ++i) {
+      t = stepper.step(t, u);
+    }
+    return std::abs(u[0] - std::exp(-lambda * t));
+  };
+
+  const double dt_coarse = 0.1;
+  const double err_coarse = run(dt_coarse);
+  const double err_fine = run(dt_coarse / 2.0);
+
+  REQUIRE(err_coarse > 1e-10); // sanity: coarse error must be measurable
+  REQUIRE(err_fine > 0.0);
+  const double ratio = err_coarse / err_fine;
+  // Fourth order: halving dt should reduce error by ~16x. Allow generous
+  // slack (10x-24x) for the asymptotic regime not being exact at this dt.
+  REQUIRE(ratio > 10.0);
+  REQUIRE(ratio < 24.0);
 }
