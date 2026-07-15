@@ -80,7 +80,7 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
   Lz = lz_val;
 
   auto dx_val = get_json_value(j, "dx", "domain");
-  if (dx_val.is_null() || !dx_val.is_number_float()) {
+  if (dx_val.is_null() || !dx_val.is_number()) {
     std::string dx_str =
         dx_val.is_null() ? "missing" : get_json_value_string(j, "dx");
     throw std::invalid_argument(
@@ -90,7 +90,7 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
   dx = dx_val;
 
   auto dy_val = get_json_value(j, "dy", "domain");
-  if (dy_val.is_null() || !dy_val.is_number_float()) {
+  if (dy_val.is_null() || !dy_val.is_number()) {
     std::string dy_str =
         dy_val.is_null() ? "missing" : get_json_value_string(j, "dy");
     throw std::invalid_argument(
@@ -100,7 +100,7 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
   dy = dy_val;
 
   auto dz_val = get_json_value(j, "dz", "domain");
-  if (dz_val.is_null() || !dz_val.is_number_float()) {
+  if (dz_val.is_null() || !dz_val.is_number()) {
     std::string dz_str =
         dz_val.is_null() ? "missing" : get_json_value_string(j, "dz");
     throw std::invalid_argument(
