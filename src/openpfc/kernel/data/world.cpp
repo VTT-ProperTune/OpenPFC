@@ -151,21 +151,5 @@ Int3 to_indices(const World<T> &world, const Real3 &coordinates) noexcept {
   return to_index(get_coordinate_system(world), coordinates);
 }
 
-Real3 get_lower_limits(const CartesianWorld &world) noexcept {
-  Int3 zero = {0, 0, 0};
-  return to_coords(get_coordinate_system(world), zero);
-}
-
-Real3 get_upper_limits(const CartesianWorld &world) noexcept {
-  return to_coords(get_coordinate_system(world), get_size(world));
-}
-
-double get_lower_limits(const CartesianWorld &world, int index) noexcept {
-  return get_lower(world).at(index);
-}
-
-double get_upper_limits(const CartesianWorld &world, int index) noexcept {
-  return get_upper(world).at(index);
-}
 
 } // namespace pfc::world
