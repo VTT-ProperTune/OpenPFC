@@ -96,6 +96,7 @@ nav:
           - Shipped applications: user_guide/applications.md
           - Configuration vocabulary: user_guide/configuration.md
           - JSON to Simulator pipeline: user_guide/app_pipeline.md
+          - Custom stepper integration: user_guide/custom_stepper_integration.md
           - Result files: user_guide/io_results.md
           - Post-processing binary fields: user_guide/postprocess_binary_fields.md
       - Cluster operation:
