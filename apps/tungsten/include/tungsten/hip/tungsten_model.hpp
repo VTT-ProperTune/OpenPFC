@@ -35,6 +35,15 @@
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
+// HIP error checking helper
+namespace {
+inline void hip_check(hipError_t e, const char *what) {
+  if (e != hipSuccess) {
+    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
+  }
+}
+} // namespace
+
 
 /**
  * @brief Tungsten Phase Field Crystal model (HIP version)
@@ -63,7 +72,6 @@ private:
   bool m_cpu_buffer_valid;
 
   hipEvent_t kernel_done_event;
-  hipEvent_t fft_ready_event;
 
 public:
   TungstenParams params;
@@ -79,8 +87,7 @@ public:
   explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world,
                        MPI_Comm mpi_comm = MPI_COMM_WORLD)
       : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
-    hipEventCreate(&kernel_done_event);
-    hipEventCreate(&fft_ready_event);
+    hip_check(hipEventCreate(&kernel_done_event), "hipEventCreate(kernel_done_event)");
     int rank = 0;
     int size = 0;
     MPI_Comm_rank(this->mpi_comm(), &rank);
@@ -241,7 +248,6 @@ public:
 
   ~TungstenHIP() {
     hipEventDestroy(kernel_done_event);
-    hipEventDestroy(fft_ready_event);
   }
 
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psi() { return psi; }
