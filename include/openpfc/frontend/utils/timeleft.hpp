@@ -42,15 +42,15 @@ private:
 
 public:
   explicit TimeLeft(double t) : m_seconds(static_cast<int>(std::floor(t))) {
-    if (m_seconds > 60) {
+    if (m_seconds >= 60) {
       m_minutes = m_seconds / 60;
       m_seconds -= m_minutes * 60;
     }
-    if (m_minutes > 60) {
+    if (m_minutes >= 60) {
       m_hours = m_minutes / 60;
       m_minutes -= m_hours * 60;
     }
-    if (m_hours > 24) {
+    if (m_hours >= 24) {
       m_days = m_hours / 24;
       m_hours -= m_days * 24;
     }
@@ -60,10 +60,10 @@ public:
     if (e.m_days > 0) {
       os << e.m_days << "d ";
     }
-    if (e.m_hours > 0) {
+    if (e.m_days > 0 || e.m_hours > 0) {
       os << e.m_hours << "h ";
     }
-    if (e.m_minutes > 0) {
+    if (e.m_days > 0 || e.m_hours > 0 || e.m_minutes > 0) {
       os << e.m_minutes << "m ";
     }
     os << e.m_seconds << "s";
