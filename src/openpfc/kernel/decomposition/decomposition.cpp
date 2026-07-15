@@ -4,6 +4,8 @@
 #include <heffte.h>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <stdexcept>
+#include <string>
 
 namespace pfc::decomposition {
 
@@ -35,11 +37,23 @@ Decomposition::Decomposition(const World &world, const Int3 &grid)
     : m_global_world(world), m_grid{grid[0], grid[1], grid[2]},
       m_subworlds(split_world_heffte(world, grid)) {}
 
-[[nodiscard]] Decomposition create(const World &world, const Int3 &grid) noexcept {
+[[nodiscard]] Decomposition create(const World &world, const Int3 &grid) {
   return Decomposition(world, grid);
 }
 
-[[nodiscard]] Decomposition create(const World &world, const int &nparts) noexcept {
+[[nodiscard]] Decomposition create(const World &world, const int &nparts) {
+  // Validate nparts against total grid points before calling HeFFTe
+  const Int3 size = pfc::world::get_size(world);
+  const long long total_grid_points = static_cast<long long>(size[0]) *
+                                       static_cast<long long>(size[1]) *
+                                       static_cast<long long>(size[2]);
+  if (nparts > total_grid_points) {
+    throw std::invalid_argument(
+        "Cannot create decomposition with " + std::to_string(nparts) +
+        " parts for a world with only " + std::to_string(total_grid_points) +
+        " grid points");
+  }
+
   const heffte::box3d<int> indices = global_world_to_heffte_box(world);
   const auto grid = heffte::proc_setup_min_surface(indices, nparts);
   return create(world, grid);
