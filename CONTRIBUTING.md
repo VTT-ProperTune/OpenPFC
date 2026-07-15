@@ -27,6 +27,34 @@ Follow [`INSTALL.md`](INSTALL.md) for MPI, HeFFTe, and CMake. Run tests with you
 
 Pull requests run workflows under [`.github/workflows/`](.github/workflows): **`ci.yml`** (main build/test matrix on Ubuntu 24.04), **`docs.yml`** (markdown link check via `scripts/check_doc_links.py`, Doxygen when enabled), **`coverage.yml`**, **`asan.yml`**, **`clang-tidy.yml`**. Doc-only edits under `docs/**` still trigger the **Documentation** workflow’s link job—run `python3 scripts/check_doc_links.py` locally before pushing.
 
+## Commit messages
+
+Every commit (human or agent-authored) follows [Conventional Commits](https://www.conventionalcommits.org/) for the subject, plus a structured body:
+
+- **Subject:** `type(scope): short description`, imperative mood, **max 72 characters**, no trailing period. Common types: `feat`, `fix`, `refactor`, `test`, `docs`, `perf`, `build`, `chore`.
+- **Body:** a blank line after the subject, then **1-3 sentences** summarizing what changed and why (not a restatement of the subject).
+- If more detail is needed, follow the summary with a **bullet-pointed list** of specifics (files/functions touched, notable tradeoffs, what was deliberately left out).
+- **Wrap the body at 80 characters** per line.
+
+Example:
+
+```
+fix(mpi): delete copy/move on MPI_Worker to prevent double MPI_Finalize
+
+MPI_Worker relied on the default copyable/movable special member
+functions, so two copies of an owning worker could both believe they
+were responsible for calling MPI_Finalize() -- undefined behavior per
+the MPI standard.
+
+- Delete copy/move constructor and assignment, matching the pattern
+  already used by BinaryWriter/BinaryReader in the same MPI layer.
+- Add compile-time tests asserting MPI_Worker is neither copyable nor
+  movable.
+```
+
+A one-line subject with no body is fine for genuinely trivial changes (e.g. a
+single typo fix), but is the exception, not the default.
+
 ## Changelog
 
 User-visible and developer-facing changes are recorded in [`CHANGELOG.md`](CHANGELOG.md). Add a note under `[Unreleased]` when your change affects behavior, CMake options, or config file keys.
