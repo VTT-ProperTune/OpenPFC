@@ -72,6 +72,7 @@
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/runtime/common/cpu_affinity.hpp>
+#include <heat3d/reporting.hpp>
 
 // =============================================================================
 // CLI PART STARTS HERE — argument parsing for `heat3d_fd <N> <n_steps> <dt>
@@ -182,37 +183,18 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
                 MPI_COMM_WORLD);
   (void)t; // autonomous heat equation; the running clock is reported by t_final
 
-  // 7. L2-vs-analytic report. Closed form on \f$\mathbb{R}^3\f$:
-  //    \f$u(x,t) = (1+t)^{-3/2}\,\exp(-|x|^2/(4D(1+t)))\f$ for the same IC.
-  double sum_err2 = 0.0;
-  const double t_final = static_cast<double>(cfg.n_steps) * cfg.dt;
-  const double s_t = 1.0 + t_final;
-  pfc::field::for_each_coords(
-      std::as_const(u), [&](double x, double y, double z, const double &v) {
-        const double r2 = x * x + y * y + z * z;
-        const double u_exact = std::pow(s_t, -1.5) * std::exp(-r2 / (4.0 * s_t));
-        const double e = v - u_exact;
-        sum_err2 += e * e;
-      });
-  double g_err2 = 0.0;
-  MPI_Reduce(&sum_err2, &g_err2, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
-  if (rank == 0) {
-    const double rms =
-        std::sqrt(g_err2 / (static_cast<double>(cfg.N) * cfg.N * cfg.N));
-    std::cout << "heat3d method=fd N=" << cfg.N << " n_steps=" << cfg.n_steps
-              << " dt=" << cfg.dt << " D=1 mpi_ranks=" << nproc
-              << " fd_order=" << cfg.fd_order;
-#if defined(_OPENMP)
-    std::cout << " omp_max_threads=" << omp_get_max_threads()
-              << " omp_get_num_procs()=" << omp_get_num_procs();
-#endif
-    std::cout << "\ntiming_s=" << max_elapsed << " avg_step_time_s="
-              << max_elapsed / static_cast<double>(cfg.n_steps)
-              << " (MPI_MAX across ranks)\n"
-              << "l2_error_vs_R3_analytic_rms=" << rms
-              << " (periodic; L2 vs infinite-domain Gaussian over owned cells)\n";
-  }
+  // 7. L2-vs-analytic report via shared reporting infrastructure.
+  //    Closed form on R^3: u(x,t) = (1+t)^(-3/2) * exp(-|x|^2/(4D(1+t))).
+  // Convert local RunConfig to heat3d::RunConfig for shared reporting
+  heat3d::RunConfig heat_cfg{cfg.N, cfg.n_steps, cfg.dt, cfg.fd_order};
+  heat3d::report(rank, nproc, heat_cfg, "fd",
+                 heat3d::fd_extra_metadata(heat_cfg), max_elapsed,
+                 "(periodic; interior L2)", [&u, hw](auto &&cb) {
+                   pfc::field::for_each_inner(u, hw, [&](int i, int j, int k) {
+                     const auto p = u.global_coords(i, j, k);
+                     cb(p[0], p[1], p[2], u(i, j, k));
+                   });
+                 });
 }
 
 } // namespace

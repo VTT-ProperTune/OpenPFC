@@ -146,8 +146,8 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   // Reporting: bridge a `for_each_inner`-style visitor to the shared
   // `heat3d::report` API which expects `cb(x, y, z, value)`. We
   // report over the *interior* (skipping the outermost owned layer)
-  // so the L2 number is comparable with `heat3d_fd`'s reporting,
-  // which uses `LocalField::for_each_interior` (also `[hw, n-hw)`).
+  // so the L2 number is computed over the interior domain
+  // matching the design documented in reporting.hpp.
   heat3d::report(rank, nproc, cfg, "fd_manual",
                  "manual stencil, padded brick, non-blocking halos", max_elapsed,
                  "(periodic; manual loop, interior L2)", [&u, hw](auto &&cb) {
