@@ -58,10 +58,10 @@ double compute_l2_norm(const pfc::field::LocalField<double>& u) {
   u.for_each_owned([&](double /*x*/, double /*y*/, double /*z*/, double val) {
     local_sum += val * val;
   });
-  
+
   double global_sum = 0.0;
   MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  
+
   const auto& global_size = u.global_size();
   const double volume = static_cast<double>(global_size[0] * global_size[1] * global_size[2]);
   return std::sqrt(global_sum / volume);
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
   constexpr double D = 1.0;
   constexpr int n_steps = 40;
   constexpr int fd_order = 2;  // second-order central differences
-  
+
   // Stability: dt <= dx^2 / (6*D) for explicit Euler in 3D
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
@@ -117,14 +117,14 @@ int main(int argc, char* argv[]) {
   for (int step = 0; step < n_steps; ++step) {
     // FD requires halo exchange before each step
     stack.exchange_halos();
-    
+
     // Advance one time step
     t = stepper.step(t, u.vec());
-    
+
     // Monitor dissipation
     l2_norm = compute_l2_norm(u);
     if (rank == 0 && step % 10 == 0) {
-      std::cout << "Step " << step << ", t = " << t 
+      std::cout << "Step " << step << ", t = " << t
                 << ", L2 norm = " << l2_norm << "\n";
     }
   }
