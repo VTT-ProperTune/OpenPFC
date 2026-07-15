@@ -12,6 +12,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_steppers.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_euler_stepper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/state_concepts_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_solver_contract.cpp
 )
 
 add_subdirectory(steppers)
