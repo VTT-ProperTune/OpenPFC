@@ -52,7 +52,7 @@ public:
   environment& operator=(environment&&) = delete;
 
   inline environment();
-  inline ~environment();
+  inline ~environment() noexcept(false);
   static inline std::string processor_name();
   static inline bool initialized();
   static inline bool finalized();
@@ -61,12 +61,12 @@ public:
 inline environment::environment() {
   int err = MPI_Init(nullptr, nullptr);
   pfc::mpi::throw_on_mpi_error(err, "MPI_Init");
- }
+}
 
-inline environment::~environment() {
+inline environment::~environment() noexcept(false) {
   int err = MPI_Finalize();
   pfc::mpi::throw_on_mpi_error(err, "MPI_Finalize");
- }
+}
 
 inline std::string environment::processor_name() {
   std::array<char, MPI_MAX_PROCESSOR_NAME> name{};
