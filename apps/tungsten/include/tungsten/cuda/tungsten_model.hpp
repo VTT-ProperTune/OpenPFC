@@ -43,6 +43,16 @@
 #include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
 
+// CUDA error checking helper
+namespace {
+inline void cuda_check(cudaError_t e, const char *what) {
+  if (e != cudaSuccess) {
+    throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
+  }
+}
+} // namespace
+
+
 /**
  * @brief Tungsten Phase Field Crystal model (CUDA version)
  *
@@ -98,7 +108,6 @@ private:
 
   // CUDA events for non-blocking synchronization
   cudaEvent_t kernel_done_event; ///< Event to track kernel completion
-  cudaEvent_t fft_ready_event;   ///< Event to track FFT readiness
 
 public:
   /**
@@ -137,9 +146,7 @@ public:
                         MPI_Comm mpi_comm = MPI_COMM_WORLD)
       : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
     // Create CUDA events for non-blocking synchronization
-    cudaEventCreate(&kernel_done_event);
-    cudaEventCreate(&fft_ready_event);
-    // Initialize CUDA FFT using the same communicator as the base Model / App
+    cuda_check(cudaEventCreate(&kernel_done_event), "cudaEventCreate(kernel_done_event)");
     // session
     int rank = 0;
     int size = 0;
@@ -395,7 +402,6 @@ public:
    */
   ~TungstenCUDA() {
     cudaEventDestroy(kernel_done_event);
-    cudaEventDestroy(fft_ready_event);
   }
 
   // Accessors for fields (for testing/debugging)
