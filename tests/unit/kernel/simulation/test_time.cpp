@@ -136,3 +136,47 @@ TEST_CASE("Time - save condition", "[time][unit]") {
     REQUIRE_FALSE(t.do_save());
   }
 }
+
+TEST_CASE("Time::set_dt accepts positive values", "[time]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  // Test initial dt
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.1, TOLERANCE));
+
+  // Set new dt and verify
+  time.set_dt(0.05);
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.05, TOLERANCE));
+
+  // Set another dt and verify
+  time.set_dt(0.2);
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.2, TOLERANCE));
+
+  // Test with very small positive dt
+  time.set_dt(1e-8);
+  REQUIRE_THAT(time.get_dt(), WithinAbs(1e-8, TOLERANCE));
+
+  // Test with large dt
+  time.set_dt(100.0);
+  REQUIRE_THAT(time.get_dt(), WithinAbs(100.0, TOLERANCE));
+}
+
+TEST_CASE("Time::set_dt rejects zero", "[time]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  REQUIRE_THROWS_AS(time.set_dt(0.0), std::invalid_argument);
+
+  // Verify dt is unchanged after failed set
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.1, TOLERANCE));
+}
+
+TEST_CASE("Time::set_dt rejects negative values", "[time]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  // Test negative dt
+  REQUIRE_THROWS_AS(time.set_dt(-0.1), std::invalid_argument);
+  REQUIRE_THROWS_AS(time.set_dt(-1.0), std::invalid_argument);
+  REQUIRE_THROWS_AS(time.set_dt(-1e-10), std::invalid_argument);
+
+  // Verify dt is unchanged after failed set
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.1, TOLERANCE));
+}
