@@ -51,9 +51,12 @@
 
 #include "kobayashi_batched_halo.hpp"
 
+#include <kobayashi/verification_utilities.hpp>
+
 namespace {
 
 using pfc::field::for_each_owned;
+
 using pfc::field::PaddedBrick;
 
 void cuda_check(cudaError_t e, const char *what) {
@@ -84,106 +87,6 @@ struct HostPinnedRegistration {
   HostPinnedRegistration &operator=(const HostPinnedRegistration &) = delete;
 };
 
-void pack_owned_xy0(const PaddedBrick<double> &b, std::vector<double> &out) {
-  const int nx = b.nx();
-  const int ny = b.ny();
-  out.resize(static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny));
-  for (int j = 0; j < ny; ++j) {
-    for (int i = 0; i < nx; ++i) {
-      out[static_cast<std::size_t>(i) +
-          static_cast<std::size_t>(j) * static_cast<std::size_t>(nx)] = b(i, j, 0);
-    }
-  }
-}
-
-void write_phi_png(int rank, const pfc::decomposition::Decomposition &decomp,
-                   const PaddedBrick<double> &phi, const std::string &path) {
-  std::vector<double> local;
-  pack_owned_xy0(phi, local);
-  pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, local, path,
-                                         0.0, 1.0);
-}
-
-void gather_global_xy_rank0(const pfc::decomposition::Decomposition &decomp,
-                            int rank, int nproc, MPI_Comm comm,
-                            const std::vector<double> &local_owned_xy, int nx_glob,
-                            int ny_glob, std::vector<double> &global_out) {
-  const int my_count = static_cast<int>(local_owned_xy.size());
-  std::vector<int> counts(static_cast<std::size_t>(nproc));
-  MPI_Allgather(&my_count, 1, MPI_INT, counts.data(), 1, MPI_INT, comm);
-
-  std::vector<int> displs(static_cast<std::size_t>(nproc));
-  int total = 0;
-  for (int r = 0; r < nproc; ++r) {
-    displs[static_cast<std::size_t>(r)] = total;
-    total += counts[static_cast<std::size_t>(r)];
-  }
-
-  std::vector<double> gathered;
-  if (rank == 0) {
-    gathered.resize(static_cast<std::size_t>(total));
-  }
-
-  MPI_Gatherv(const_cast<double *>(local_owned_xy.data()), my_count, MPI_DOUBLE,
-              rank == 0 ? gathered.data() : nullptr, counts.data(), displs.data(),
-              MPI_DOUBLE, 0, comm);
-
-  if (rank != 0) {
-    return;
-  }
-
-  global_out.assign(static_cast<std::size_t>(nx_glob) *
-                        static_cast<std::size_t>(ny_glob),
-                    std::numeric_limits<double>::quiet_NaN());
-
-  std::size_t offset = 0;
-  for (int r = 0; r < nproc; ++r) {
-    const auto &sw = pfc::decomposition::get_subworld(decomp, r);
-    auto lo = pfc::world::get_lower(sw);
-    auto sz = pfc::world::get_size(sw);
-    const int nx = sz[0];
-    const int ny = sz[1];
-    for (int iy = 0; iy < ny; ++iy) {
-      for (int ix = 0; ix < nx; ++ix) {
-        const std::size_t li =
-            static_cast<std::size_t>(ix) +
-            static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx);
-        const int gx = lo[0] + ix;
-        const int gy = lo[1] + iy;
-        global_out[static_cast<std::size_t>(gx) +
-                   static_cast<std::size_t>(gy) *
-                       static_cast<std::size_t>(nx_glob)] = gathered[offset + li];
-      }
-    }
-    offset += static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
-  }
-}
-
-struct FieldStats {
-  double sum = 0.0;
-  double sumsq = 0.0;
-  double min_v = 0.0;
-  double max_v = 0.0;
-};
-
-FieldStats stats_global_ordered(const std::vector<double> &global_xy, int nx_glob,
-                                int ny_glob) {
-  FieldStats s{};
-  s.min_v = std::numeric_limits<double>::infinity();
-  s.max_v = -std::numeric_limits<double>::infinity();
-  for (int gy = 0; gy < ny_glob; ++gy) {
-    for (int gx = 0; gx < nx_glob; ++gx) {
-      const double v = global_xy[static_cast<std::size_t>(gx) +
-                                 static_cast<std::size_t>(gy) *
-                                     static_cast<std::size_t>(nx_glob)];
-      s.sum += v;
-      s.sumsq += v * v;
-      s.min_v = std::min(s.min_v, v);
-      s.max_v = std::max(s.max_v, v);
-    }
-  }
-  return s;
-}
 
 void sync_padded_d2h(const double *dev, PaddedBrick<double> &host) {
   cuda_check(cudaMemcpy(host.data(), dev, host.size() * sizeof(double),

@@ -17,32 +17,9 @@
 #include <kobayashi/cli.hpp>
 #include <kobayashi/openmp_engine.hpp>
 
+#include <kobayashi/verification_utilities.hpp>
+
 namespace {
-
-struct FieldStats {
-  double sum = 0.0;
-  double sumsq = 0.0;
-  double min_v = 0.0;
-  double max_v = 0.0;
-};
-
-FieldStats stats_global_ordered(const std::vector<double> &global_xy, int nx_glob, int ny_glob) {
-  FieldStats s{};
-  s.min_v = std::numeric_limits<double>::infinity();
-  s.max_v = -std::numeric_limits<double>::infinity();
-  for (int gy = 0; gy < ny_glob; ++gy) {
-    for (int gx = 0; gx < nx_glob; ++gx) {
-      const double v =
-          global_xy[static_cast<std::size_t>(gx) +
-                    static_cast<std::size_t>(gy) * static_cast<std::size_t>(nx_glob)];
-      s.sum += v;
-      s.sumsq += v * v;
-      s.min_v = std::min(s.min_v, v);
-      s.max_v = std::max(s.max_v, v);
-    }
-  }
-  return s;
-}
 
 } // namespace
 
