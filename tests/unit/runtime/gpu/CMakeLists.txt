@@ -41,3 +41,24 @@ elseif(OpenPFC_ENABLE_CUDA)
 else()
     message(STATUS "ℹ️  GPU tests disabled (OpenPFC_ENABLE_CUDA=OFF)")
 endif()
+
+# GPU autotuning tests - only build if GPU autotuning is enabled
+if(OpenPFC_ENABLE_GPU_AUTOTUNING)
+    add_executable(test_gpu_autotune test_gpu_autotune.cpp)
+    target_include_directories(test_gpu_autotune PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_gpu_autotune PRIVATE
+        Catch2::Catch2
+        nlohmann_json::nlohmann_json
+    )
+    if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+        target_link_libraries(test_gpu_autotune PRIVATE CUDA::cudart)
+    endif()
+    if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+        target_link_libraries(test_gpu_autotune PRIVATE hip::host)
+    endif()
+    add_test(NAME GPU_Autotune COMMAND test_gpu_autotune)
+    message(STATUS "✅ GPU autotuning tests enabled")
+endif()
