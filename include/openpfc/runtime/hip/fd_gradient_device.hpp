@@ -6,8 +6,8 @@
 /**
  * @file fd_gradient_device.hpp
  * @brief GPU-side per-point FD gradient evaluator parameterized on a
- *        model-owned grads aggregate `G` (mirror of
- *        `pfc::field::FdGradient<G>`).
+ *        model-owned grads aggregate `G` (HIP mirror of
+ *        `pfc::cuda::FdGradientDevice<G>`).
  *
  * @details
  * The CPU evaluator [`pfc::field::FdGradient<G>`](
@@ -43,39 +43,37 @@
  * raising the caps requires extending the table sizes here and the
  * stencil tables in `fd_stencils.hpp`.
  *
- * **Usage** (typical for a `.cu` translation unit):
+ * **Usage** (typical for a `.hip` translation unit):
  *
  * @code
- * #include <openpfc/runtime/cuda/fd_gradient_device.hpp>
- * #include <openpfc/runtime/cuda/for_each_interior_device.hpp>
+ * #include <openpfc/runtime/hip/fd_gradient_device.hpp>
+ * #include <openpfc/runtime/hip/for_each_interior_device.hpp>
  *
- * pfc::cuda::FdGradientDevice<MyGrads> eval(d_padded_u, nx, ny, nz, dx, dy, dz,
+ * pfc::hip::FdGradientDevice<MyGrads> eval(d_padded_u, nx, ny, nz, dx, dy, dz,
  *                                           hw, order);
- * pfc::sim::cuda::for_each_interior_device(model, eval.pod(), d_du, t,
+ * pfc::sim::hip::for_each_interior_device(model, eval.pod(), d_du, t,
  *                                          nx, ny, nz, stream);
  * @endcode
  *
  * @see openpfc/kernel/field/fd_gradient.hpp — CPU twin
- * @see openpfc/runtime/cuda/full_padded_device_halo.hpp — corner-filled
- *      halo that unblocks the future `xy / xz / yz` extension
- * @see openpfc/kernel/data/host_device.hpp — `OPENPFC_HD` portable
- *      annotation used by user-defined `model.rhs(t, g)`
+ * @see openpfc/runtime/hip/for_each_interior_device.hpp — HIP driver loop
+ * @see openpfc/runtime/cuda/fd_gradient_device.hpp — CUDA twin
  */
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_HIP)
 
 #include <cstddef>
 #include <stdexcept>
 #include <string>
 
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 
 #include <openpfc/kernel/data/host_device.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 
-namespace pfc::cuda {
+namespace pfc::hip {
 
 /**
  * @brief Compile-time caps on the per-derivative half-widths the device
@@ -92,7 +90,7 @@ inline constexpr int kFdDeviceMaxHw2 = 10;
  * The host-side `FdGradientDevice<G>` populates this struct from a
  * `LocalField`-style triple `(d_core, padded_extents, spacing)` and a
  * runtime `order`. The kernel takes a copy of this struct by value (it
- * fits comfortably on the stack of a CUDA thread).
+ * fits comfortably on the stack of a HIP thread).
  *
  * **Coefficient layout**: `cx1[k]` is the **already-scaled** D1 weight
  * at offset `+k` along x, with `1 / (dx * denom_d1)` baked in; the
@@ -111,102 +109,119 @@ struct FdGradientDevicePOD {
   int hw{0};                     ///< Halo width (= `order / 2`).
 
   // Strides through the padded buffer.
-  std::ptrdiff_t sx{0}; ///< stride along x = 1
-  std::ptrdiff_t sy{0}; ///< stride along y = nxp
-  std::ptrdiff_t sz{0}; ///< stride along z = nxp * nyp
+  std::ptrdiff_t sx{0}; ///< stride along x (always 1).
+  std::ptrdiff_t sy{0}; ///< stride along y (= nxp).
+  std::ptrdiff_t sz{0}; ///< stride along z (= nxp * nyp).
 
-  // D1 — pre-scaled weights, indices `[1..hw1]` only (index 0 unused).
-  int hw1{0};
-  double cx1[kFdDeviceMaxHw1 + 1]{};
-  double cy1[kFdDeviceMaxHw1 + 1]{};
-  double cz1[kFdDeviceMaxHw1 + 1]{};
+  // Half-widths for first and second derivatives (populated only if the
+  // corresponding derivative is present in `G`).
+  int hw1{0}; ///< D1 half-width (populated if `has_x<G> || has_y<G> || has_z<G>`).
+  int hw2{0}; ///< D2 half-width (populated if `has_xx<G> || has_yy<G> || has_zz<G>`).
 
-  // D2 — pre-scaled weights, indices `[0..hw2]`.
-  int hw2{0};
-  double cx2[kFdDeviceMaxHw2 + 1]{};
-  double cy2[kFdDeviceMaxHw2 + 1]{};
-  double cz2[kFdDeviceMaxHw2 + 1]{};
+  // Pre-scaled FD weights. `cx1[k]` is the weight at offset `+k` along x
+  // (anti-symmetric: the `-k` offset uses `-cx1[k]`). `cx2[k]` is the
+  // symmetric weight at offset `±k` along x (with `cx2[0]` being the centre
+  // weight). All weights are already divided by `(dx * denom_d1)` or
+  // `(dx^2 * denom_d2)`, so the device code only does a double-precision
+  // dot product.
+  double cx1[kFdDeviceMaxHw1 + 1]{}; ///< Pre-scaled D1 weights along x.
+  double cy1[kFdDeviceMaxHw1 + 1]{}; ///< Pre-scaled D1 weights along y.
+  double cz1[kFdDeviceMaxHw1 + 1]{}; ///< Pre-scaled D1 weights along z.
+  double cx2[kFdDeviceMaxHw2 + 1]{}; ///< Pre-scaled D2 weights along x.
+  double cy2[kFdDeviceMaxHw2 + 1]{}; ///< Pre-scaled D2 weights along y.
+  double cz2[kFdDeviceMaxHw2 + 1]{}; ///< Pre-scaled D2 weights along z.
 };
 
 /**
- * @brief Device-side per-point evaluator: returns `G` populated according
- *        to `has_*<G>`.
+ * @brief Device-side evaluator: build a model-owned `G` aggregate from a
+ *        padded buffer at owned cell `(ix, iy, iz)`.
  *
- * Owned-cell indices `(ix, iy, iz) ∈ [0, n)`; the function adds `hw` to
- * each axis to index into the padded buffer. `prepare()` is a no-op for
- * FD; included only so the evaluator satisfies the same interface as
- * `pfc::field::FdGradient<G>` and can be dropped into a hypothetical
- * generic device driver loop.
+ * This function is the HIP twin of `pfc::field::FdGradient<G>::operator()`.
+ * It must be callable from device code (annotated `OPENPFC_HD`) and
+ * materialize only the derivative fields that `G` actually declares.
  *
- * @note Mixed second derivatives `g.xy / g.xz / g.yz` are
- *       `static_assert`-rejected here, mirroring the CPU twin.
+ * @tparam G  Model-owned grads aggregate (e.g. `HeatGrads`, `HasXx`).
+ * @param eval POD describing the evaluator (passed by value to the kernel).
+ * @param ix   Owned x-coordinate in `[0, nx)`.
+ * @param iy   Owned y-coordinate in `[0, ny)`.
+ * @param iz   Owned z-coordinate in `[0, nz)`.
+ *
+ * @return A `G` instance with each member populated from the padded buffer.
  */
 template <class G>
-OPENPFC_INLINE_HD G evaluate_fd_grad(const FdGradientDevicePOD &e, int ix, int iy,
-                                     int iz) noexcept {
-  static_assert(!pfc::field::has_xy<G> && !pfc::field::has_xz<G> &&
-                    !pfc::field::has_yz<G>,
-                "FdGradientDevice: mixed second derivatives (xy/xz/yz) are not "
-                "yet implemented; the corner-filled halo "
-                "(`pfc::cuda::FullPaddedDeviceHalo`) makes them feasible but "
-                "the tensor-product device kernel is a follow-up.");
-
-  const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(ix + e.hw) +
-                           static_cast<std::ptrdiff_t>(iy + e.hw) * e.sy +
-                           static_cast<std::ptrdiff_t>(iz + e.hw) * e.sz;
-
+OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
+                                     int ix, int iy, int iz) {
   G g{};
 
+  // Translate owned coordinates to padded buffer indices.
+  const std::ptrdiff_t c0 = static_cast<std::ptrdiff_t>(ix + eval.hw) +
+                            static_cast<std::ptrdiff_t>(iy + eval.hw) *
+                                eval.sy +
+                            static_cast<std::ptrdiff_t>(iz + eval.hw) *
+                                eval.sz;
+
+  const double *u = eval.d_core;
+
   if constexpr (pfc::field::has_value<G>) {
-    g.value = e.d_core[c];
+    g.value = u[c0];
   }
 
   if constexpr (pfc::field::has_x<G>) {
     double acc = 0.0;
-    for (int k = 1; k <= e.hw1; ++k) {
-      const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sx;
-      acc += e.cx1[k] * (e.d_core[c + ks] - e.d_core[c - ks]);
+    for (int k = 1; k <= eval.hw1; ++k) {
+      const std::ptrdiff_t cp = c0 + static_cast<std::ptrdiff_t>(k) * eval.sx;
+      const std::ptrdiff_t cm = c0 - static_cast<std::ptrdiff_t>(k) * eval.sx;
+      acc += eval.cx1[k] * (u[cp] - u[cm]);
     }
     g.x = acc;
   }
+
   if constexpr (pfc::field::has_y<G>) {
     double acc = 0.0;
-    for (int k = 1; k <= e.hw1; ++k) {
-      const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sy;
-      acc += e.cy1[k] * (e.d_core[c + ks] - e.d_core[c - ks]);
+    for (int k = 1; k <= eval.hw1; ++k) {
+      const std::ptrdiff_t cp = c0 + static_cast<std::ptrdiff_t>(k) * eval.sy;
+      const std::ptrdiff_t cm = c0 - static_cast<std::ptrdiff_t>(k) * eval.sy;
+      acc += eval.cy1[k] * (u[cp] - u[cm]);
     }
     g.y = acc;
   }
+
   if constexpr (pfc::field::has_z<G>) {
     double acc = 0.0;
-    for (int k = 1; k <= e.hw1; ++k) {
-      const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
-      acc += e.cz1[k] * (e.d_core[c + ks] - e.d_core[c - ks]);
+    for (int k = 1; k <= eval.hw1; ++k) {
+      const std::ptrdiff_t cp = c0 + static_cast<std::ptrdiff_t>(k) * eval.sz;
+      const std::ptrdiff_t cm = c0 - static_cast<std::ptrdiff_t>(k) * eval.sz;
+      acc += eval.cz1[k] * (u[cp] - u[cm]);
     }
     g.z = acc;
   }
 
   if constexpr (pfc::field::has_xx<G>) {
-    double acc = e.cx2[0] * e.d_core[c];
-    for (int k = 1; k <= e.hw2; ++k) {
-      const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sx;
-      acc += e.cx2[k] * (e.d_core[c + ks] + e.d_core[c - ks]);
+    double acc = eval.cx2[0] * u[c0];
+    for (int k = 1; k <= eval.hw2; ++k) {
+      const std::ptrdiff_t cp = c0 + static_cast<std::ptrdiff_t>(k) * eval.sx;
+      const std::ptrdiff_t cm = c0 - static_cast<std::ptrdiff_t>(k) * eval.sx;
+      acc += eval.cx2[k] * (u[cp] + u[cm]);
     }
     g.xx = acc;
   }
+
   if constexpr (pfc::field::has_yy<G>) {
-    double acc = e.cy2[0] * e.d_core[c];
-    for (int k = 1; k <= e.hw2; ++k) {
-      const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sy;
-      acc += e.cy2[k] * (e.d_core[c + ks] + e.d_core[c - ks]);
+    double acc = eval.cy2[0] * u[c0];
+    for (int k = 1; k <= eval.hw2; ++k) {
+      const std::ptrdiff_t cp = c0 + static_cast<std::ptrdiff_t>(k) * eval.sy;
+      const std::ptrdiff_t cm = c0 - static_cast<std::ptrdiff_t>(k) * eval.sy;
+      acc += eval.cy2[k] * (u[cp] + u[cm]);
     }
     g.yy = acc;
   }
+
   if constexpr (pfc::field::has_zz<G>) {
-    double acc = e.cz2[0] * e.d_core[c];
-    for (int k = 1; k <= e.hw2; ++k) {
-      const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * e.sz;
-      acc += e.cz2[k] * (e.d_core[c + ks] + e.d_core[c - ks]);
+    double acc = eval.cz2[0] * u[c0];
+    for (int k = 1; k <= eval.hw2; ++k) {
+      const std::ptrdiff_t cp = c0 + static_cast<std::ptrdiff_t>(k) * eval.sz;
+      const std::ptrdiff_t cm = c0 - static_cast<std::ptrdiff_t>(k) * eval.sz;
+      acc += eval.cz2[k] * (u[cp] + u[cm]);
     }
     g.zz = acc;
   }
@@ -215,28 +230,23 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FdGradientDevicePOD &e, int ix, int i
 }
 
 /**
- * @brief Host-side wrapper: build a populated `FdGradientDevicePOD` from a
- *        padded device buffer + grid spacing + runtime FD order.
+ * @brief Host-side wrapper for a device-side FD gradient evaluator.
  *
- * Constructed with the same template parameter `G` as the model's grads
- * aggregate; the constructor consults `pfc::field::has_*<G>` to populate
- * only the per-axis weight rows that the model actually reads. Asking
- * for a derivative whose stencil order is not tabulated (D1 over 14, D2
- * over 20) produces a `std::invalid_argument` — strictly better than the
- * silent-zero behaviour the early CPU evaluator had.
+ * The constructor populates a `FdGradientDevicePOD` struct from a
+ * `LocalField`-style triple `(d_core, padded_extents, spacing)` and a
+ * runtime `order`. The POD can then be passed by value to a HIP kernel,
+ * where `evaluate_fd_grad<G>` uses it to materialize the grads aggregate
+ * at each owned cell.
  *
- * The resulting `FdGradientDevicePOD` is **trivially copyable** and
- * passed by value into device kernels via the `for_each_interior_device`
- * launcher. The wrapper itself stores nothing the kernel cares about and
- * is safe to destroy as soon as the kernel has been launched (the POD
- * carries everything that lives across the kernel call).
+ * @tparam G  Model-owned grads aggregate (e.g. `HeatGrads`, `HasXx`).
  */
 template <class G> class FdGradientDevice {
 public:
   /**
-   * @param d_core      Pointer to the **padded** device buffer, cell
-   *                    `(-hw,-hw,-hw)` (i.e. element `0` of the padded
-   *                    contiguous storage).
+   * @brief Construct a device evaluator from a padded device buffer.
+   *
+   * @param d_core       Pointer to the **start of the padded buffer**
+   *                    (cell `(-hw,-hw,-hw)`), not the `(0,0,0)` owned cell.
    * @param nx,ny,nz    Owned (non-halo) extents of the local subdomain.
    * @param dx,dy,dz    Grid spacing in physical coordinates.
    * @param halo_width  Halo width on every side; must equal `order / 2`.
@@ -370,6 +380,6 @@ template <class G>
                              u.halo_width(), order);
 }
 
-} // namespace pfc::cuda
+} // namespace pfc::hip
 
-#endif // OpenPFC_ENABLE_CUDA
+#endif // OpenPFC_ENABLE_HIP
