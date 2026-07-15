@@ -180,3 +180,170 @@ TEST_CASE("Time::set_dt rejects negative values", "[time]") {
   // Verify dt is unchanged after failed set
   REQUIRE_THAT(time.get_dt(), WithinAbs(0.1, TOLERANCE));
 }
+
+TEST_CASE("TimeStateGuard - restores dt and increment on destruction", "[time][unit]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  // Modify time state
+  time.set_dt(0.05);
+  time.set_increment(5);
+
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.05, TOLERANCE));
+  REQUIRE(time.get_increment() == 5);
+
+  {
+    TimeStateGuard guard(time);
+    // Guard has captured dt=0.05, increment=5
+
+    // Modify time state again
+    time.set_dt(0.02);
+    time.set_increment(10);
+
+    REQUIRE_THAT(time.get_dt(), WithinAbs(0.02, TOLERANCE));
+    REQUIRE(time.get_increment() == 10);
+  }
+  // Guard destroyed: dt and increment restored
+
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.05, TOLERANCE));
+  REQUIRE(time.get_increment() == 5);
+}
+
+TEST_CASE("TimeStateGuard - commit disables restoration", "[time][unit]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  time.set_dt(0.05);
+  time.set_increment(5);
+
+  {
+    TimeStateGuard guard(time);
+
+    time.set_dt(0.02);
+    time.set_increment(10);
+
+    guard.commit();  // Mark step as accepted
+  }
+  // Guard destroyed but committed: no restoration
+
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.02, TOLERANCE));
+  REQUIRE(time.get_increment() == 10);
+}
+
+TEST_CASE("TimeStateGuard - multiple scopes stack correctly", "[time][unit]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  {
+    TimeStateGuard outer(time);
+    time.set_dt(0.05);
+    time.set_increment(5);
+
+    {
+      TimeStateGuard inner(time);
+      time.set_dt(0.02);
+      time.set_increment(10);
+
+      REQUIRE_THAT(time.get_dt(), WithinAbs(0.02, TOLERANCE));
+      REQUIRE(time.get_increment() == 10);
+    }
+    // Inner destroyed: restore to outer's captured state
+
+    REQUIRE_THAT(time.get_dt(), WithinAbs(0.05, TOLERANCE));
+    REQUIRE(time.get_increment() == 5);
+  }
+  // Outer destroyed: restore to original state
+
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.1, TOLERANCE));
+  REQUIRE(time.get_increment() == 0);
+}
+
+TEST_CASE("TimeStateGuard - move semantics preserve state", "[time][unit]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  time.set_dt(0.05);
+  time.set_increment(5);
+
+  {
+    TimeStateGuard original(time);
+    time.set_dt(0.02);
+    time.set_increment(10);
+
+    // Move construct
+    TimeStateGuard moved(std::move(original));
+
+    // Original is now committed (no restoration)
+    REQUIRE(original.committed());
+
+    // Modify time again
+    time.set_dt(0.01);
+    time.set_increment(15);
+
+    REQUIRE_THAT(time.get_dt(), WithinAbs(0.01, TOLERANCE));
+    REQUIRE(time.get_increment() == 15);
+  }
+  // End of scope: moved guard destroyed, should restore to original captured state
+  // (dt=0.05, increment=5)
+
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.05, TOLERANCE));
+  REQUIRE(time.get_increment() == 5);
+}
+
+TEST_CASE("TimeStateGuard - move assignment restores before transfer", "[time][unit]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  time.set_dt(0.05);
+  time.set_increment(5);
+
+  TimeStateGuard source(time);
+  time.set_dt(0.02);
+  time.set_increment(10);
+
+  // Create target guard
+  time.set_dt(0.03);
+  time.set_increment(8);
+
+  TimeStateGuard target(time);
+  time.set_dt(0.015);
+  time.set_increment(12);
+
+  // Target should restore to dt=0.03, increment=8 before taking over
+  target = std::move(source);
+
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.03, TOLERANCE));
+  REQUIRE(time.get_increment() == 8);
+
+  // Source is now committed (no restoration)
+  REQUIRE(source.committed());
+}
+
+TEST_CASE("TimeStateGuard - committed() reflects state", "[time][unit]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  TimeStateGuard guard(time);
+
+  REQUIRE_FALSE(guard.committed());
+
+  guard.commit();
+
+  REQUIRE(guard.committed());
+}
+
+TEST_CASE("TimeStateGuard - with time state modifications", "[time][unit]") {
+  Time time({0.0, 10.0, 0.1}, 1.0);
+
+  {
+    TimeStateGuard guard(time);
+
+    // Modify dt multiple times
+    time.set_dt(0.05);
+    time.set_dt(0.02);
+    time.set_dt(0.01);
+
+    // Modify increment multiple times
+    time.set_increment(5);
+    time.set_increment(10);
+    time.set_increment(15);
+  }
+  // Should restore to original state
+
+  REQUIRE_THAT(time.get_dt(), WithinAbs(0.1, TOLERANCE));
+  REQUIRE(time.get_increment() == 0);
+}

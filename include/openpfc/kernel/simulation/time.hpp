@@ -810,6 +810,122 @@ public:
 };
 
 /**
+ * @brief RAII guard for temporal state rollback in adaptive time-stepping
+ *
+ * Captures the dt and increment values from a Time object on construction
+ * and restores them on destruction unless commit() is called. This provides
+ * exception-safe support for adaptive Runge-Kutta methods that reject steps
+ * when error estimates exceed tolerance.
+ *
+ * Typical usage:
+ * ```cpp
+ * while (!time.done()) {
+ *   TimeStateGuard guard(time);  // Snapshot dt and increment
+ *
+ *   double error = attempt_step(time);
+ *   if (error > tolerance) {
+ *     continue;  // Step rejected: guard restores state
+ *   }
+ *   guard.commit();  // Step accepted: disable restoration
+ *   time.next();
+ * }
+ * ```
+ *
+ * @note Moving a guard after the referenced Time has been modified may
+ *       restore stale state. Moved-from guards are in a valid but unspecified
+ *       state and should not be used.
+ */
+class TimeStateGuard {
+public:
+  /**
+   * @brief Construct a guard capturing the current temporal state
+   * @param time Reference to the Time object to guard
+   */
+  explicit TimeStateGuard(Time& time)
+      : m_time(time),
+        m_saved_dt(time.get_dt()),
+        m_saved_increment(time.get_increment()),
+        m_committed(false) {}
+
+  /**
+   * @brief Restore captured dt and increment unless committed
+   *
+   * Calls Time::set_dt() and Time::set_increment() with the saved values
+   * if commit() was not called. These methods are expected to succeed since
+   * they restore previously-valid values.
+   */
+  ~TimeStateGuard() {
+    if (!m_committed) {
+      m_time.set_dt(m_saved_dt);
+      m_time.set_increment(m_saved_increment);
+    }
+  }
+
+  // Copy operations deleted: only one guard should own rollback state
+  TimeStateGuard(const TimeStateGuard&) = delete;
+  TimeStateGuard& operator=(const TimeStateGuard&) = delete;
+
+  /**
+   * @brief Move constructor transfers guard ownership
+   * @param other Source guard to move from
+   *
+   * The moved-from guard is left in a committed state (no restoration on
+   * destruction) to prevent accidental rollback.
+   */
+  TimeStateGuard(TimeStateGuard&& other) noexcept
+      : m_time(other.m_time),
+        m_saved_dt(other.m_saved_dt),
+        m_saved_increment(other.m_saved_increment),
+        m_committed(other.m_committed) {
+    other.m_committed = true;
+  }
+
+  /**
+   * @brief Move assignment transfers guard ownership
+   * @param other Source guard to move from
+   * @return Reference to this guard
+   *
+   * If this guard was uncommitted, its saved values are restored before
+   * taking ownership of other's state. The moved-from guard is left in
+   * a committed state.
+   */
+  TimeStateGuard& operator=(TimeStateGuard&& other) noexcept {
+    if (this != &other) {
+      if (!m_committed) {
+        m_time.set_dt(m_saved_dt);
+        m_time.set_increment(m_saved_increment);
+      }
+      m_time = other.m_time;
+      m_saved_dt = other.m_saved_dt;
+      m_saved_increment = other.m_saved_increment;
+      m_committed = other.m_committed;
+      other.m_committed = true;
+    }
+    return *this;
+  }
+
+  /**
+   * @brief Mark the step as accepted, disabling restoration on destruction
+   *
+   * Call this when the adaptive step succeeds and the temporal state should
+   * be preserved. After commit(), the destructor becomes a no-op.
+   */
+  void commit() noexcept { m_committed = true; }
+
+  /**
+   * @brief Check if the guard has been committed
+   * @return true if commit() was called, false otherwise
+   */
+  [[nodiscard]] bool committed() const noexcept { return m_committed; }
+
+private:
+  Time& m_time;           ///< Reference to guarded Time object
+  double m_saved_dt;      ///< Captured time step value
+  int m_saved_increment;  ///< Captured increment counter
+  bool m_committed;       ///< Flag to disable restoration
+};
+
+/**
  * @brief Non-member spellings mirroring @ref Time (consistent with `pfc::get_time`,
  *        `pfc::get_world`, …).
  */
