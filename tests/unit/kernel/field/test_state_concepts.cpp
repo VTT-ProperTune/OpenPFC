@@ -78,10 +78,10 @@ TEST_CASE("FieldView concept requirements", "[field][state_concepts]") {
 
     SECTION("FieldView works with complex types") {
         using ComplexViewType = FieldView<std::complex<double>>;
-        
+
         static_assert(std::is_copy_constructible_v<ComplexViewType>);
         static_assert(std::is_copy_assignable_v<ComplexViewType>);
-        
+
         std::vector<std::complex<double>> data(64, std::complex<double>(1.0, 2.0));
         pfc::types::Int3 extents{4, 4, 4};
         pfc::types::Real3 spacing{1.0, 1.0, 1.0};
@@ -131,10 +131,10 @@ TEST_CASE("FieldOutput concept requirements", "[field][state_concepts]") {
 
     SECTION("FieldOutput works with complex types") {
         using ComplexOutputType = FieldOutput<std::complex<double>>;
-        
+
         static_assert(std::is_copy_constructible_v<ComplexOutputType>);
         static_assert(std::is_copy_assignable_v<ComplexOutputType>);
-        
+
         std::vector<std::complex<double>> data(64, std::complex<double>(0.0, 0.0));
         ComplexOutputType output(data.data(), data.size());
 

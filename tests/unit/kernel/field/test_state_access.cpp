@@ -31,10 +31,10 @@ TEST_CASE("FieldView const access", "[field][state_access]") {
         // Verify that data() returns const pointer
         const double* const_ptr = view.data();
         REQUIRE(const_ptr != nullptr);
-        
+
         // Verify size is correct
         REQUIRE(view.size() == 64);
-        
+
         // Verify geometry queries work
         REQUIRE(view.extents()[0] == 4);
         REQUIRE(view.extents()[1] == 4);
@@ -171,7 +171,7 @@ TEST_CASE("Shape compatibility validation", "[field][state_access]") {
 
     SECTION("is_compatible_with returns correct bool") {
         REQUIRE(field1.is_compatible_with(field2));
-        
+
         pfc::types::Int3 different_extents{8, 4, 4};
         std::vector<double> data3(128, 1.0);
         FieldView<double> field3(data3.data(), data3.size(), different_extents, spacing, origin);
@@ -194,7 +194,7 @@ TEST_CASE("FieldBundle multi-field", "[field][state_access]") {
 
     SECTION("construction with multiple fields") {
         FieldBundle<FieldView<double>, FieldView<double>, FieldView<double>> bundle(u_view, v_view, lap_view);
-        
+
         REQUIRE(bundle.get<0>().data() == u_data.data());
         REQUIRE(bundle.get<1>().data() == v_data.data());
         REQUIRE(bundle.get<2>().data() == lap_data.data());
@@ -202,11 +202,11 @@ TEST_CASE("FieldBundle multi-field", "[field][state_access]") {
 
     SECTION("get<I>() access to individual fields") {
         FieldBundle<FieldView<double>, FieldView<double>, FieldView<double>> bundle(u_view, v_view, lap_view);
-        
+
         const auto& u = bundle.get<0>();
         const auto& v = bundle.get<1>();
         const auto& lap = bundle.get<2>();
-        
+
         REQUIRE(u.data() == u_data.data());
         REQUIRE(v.data() == v_data.data());
         REQUIRE(lap.data() == lap_data.data());
@@ -221,7 +221,7 @@ TEST_CASE("FieldBundle multi-field", "[field][state_access]") {
         pfc::types::Int3 different_extents{8, 4, 4};
         std::vector<double> w_data(128, 3.0);
         FieldView<double> w_view(w_data.data(), w_data.size(), different_extents, spacing, origin);
-        
+
         FieldBundle<FieldView<double>, FieldView<double>, FieldView<double>> bundle(u_view, v_view, w_view);
         REQUIRE_FALSE(bundle.validate_shapes());
     }

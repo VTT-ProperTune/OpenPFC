@@ -196,16 +196,16 @@ public:
         // Cast to void* to avoid strict aliasing warnings
         const void* output_ptr = static_cast<const void*>(m_data);
         const void* input_ptr = static_cast<const void*>(input.data());
-        
+
         // Check if pointers overlap by comparing ranges
         const std::size_t output_size = m_size * sizeof(T);
         const std::size_t input_size = input.size() * sizeof(T);
-        
+
         const unsigned char* output_start = static_cast<const unsigned char*>(output_ptr);
         const unsigned char* output_end = output_start + output_size;
         const unsigned char* input_start = static_cast<const unsigned char*>(input_ptr);
         const unsigned char* input_end = input_start + input_size;
-        
+
         // Check for overlap
         if (!(output_end <= input_start || input_end <= output_start)) {
             throw std::invalid_argument(
