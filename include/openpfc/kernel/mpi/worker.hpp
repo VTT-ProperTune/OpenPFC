@@ -106,6 +106,13 @@ public:
     }
   }
 
+  // Prevent copying and moving to avoid multiple MPI_Worker objects believing they own MPI.
+  // This pattern matches BinaryWriter and BinaryReader in the same MPI layer.
+  MPI_Worker(const MPI_Worker &) = delete;
+  MPI_Worker &operator=(const MPI_Worker &) = delete;
+  MPI_Worker(MPI_Worker &&) noexcept = delete;
+  MPI_Worker &operator=(MPI_Worker &&) noexcept = delete;
+
   /**
    * @brief Returns the rank of this worker process in the MPI communicator.
    *
