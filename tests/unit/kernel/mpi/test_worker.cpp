@@ -20,4 +20,3 @@ TEST_CASE("MPI_Worker is not move constructible", "[mpi][worker]") {
 TEST_CASE("MPI_Worker is not move assignable", "[mpi][worker]") {
   STATIC_REQUIRE(!std::is_move_assignable_v<pfc::MPI_Worker>);
 }
-
