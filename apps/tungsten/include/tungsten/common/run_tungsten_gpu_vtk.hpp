@@ -121,6 +121,7 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
             std::filesystem::create_directories(results_dir);
           }
         }
+        MPI_Barrier(MPI_COMM_WORLD);
 
         auto vtk_writer = std::make_unique<pfc::VTKWriter>(data);
 
