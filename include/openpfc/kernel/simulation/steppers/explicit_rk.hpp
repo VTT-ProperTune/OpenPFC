@@ -190,7 +190,7 @@ public:
   double step(double t, std::vector<U>&... u_buffers) {
     static_assert(sizeof...(U) == N,
                   "MultiExplicitRKStepper::step: number of u buffers must match N.");
-    
+
     const unsigned int s = m_tableau.stage_count();
     auto u_pack = std::tie(u_buffers...);
 
@@ -225,7 +225,7 @@ private:
   template <std::size_t FieldIdx, class U>
   std::vector<double> make_u_temp_one(std::vector<U>& u, unsigned int stage_idx) {
     std::vector<double> u_temp(u.begin(), u.end());
-    
+
     // Add contributions from previous stages: u_temp += dt * sum_j(a_ij * k_j)
     for (unsigned int j = 0; j < stage_idx; ++j) {
       const double a_ij = m_tableau.a(stage_idx, j);
@@ -236,7 +236,7 @@ private:
         }
       }
     }
-    
+
     return u_temp;
   }
 
