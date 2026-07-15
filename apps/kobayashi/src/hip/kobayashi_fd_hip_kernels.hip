@@ -12,6 +12,10 @@
 #include <stdexcept>
 #include <string>
 
+#if defined(OpenPFC_ENABLE_GPU_AUTOTUNING) && defined(OpenPFC_ENABLE_HIP)
+#include "openpfc/runtime/common/gpu_autotune.hpp"
+#endif
+
 namespace kobayashi {
 namespace {
 
@@ -132,9 +136,17 @@ void hip_check(hipError_t e, const char *what) {
 }
 
 void launch_rect(int nx, int ny, dim3 *grid, dim3 *block) {
+#if defined(OpenPFC_ENABLE_GPU_AUTOTUNING) && defined(OpenPFC_ENABLE_HIP)
+  size_t total_elements = static_cast<size_t>(nx) * static_cast<size_t>(ny);
+  auto config = pfc::gpu::AutoTuner::instance().get_config("kobayashi_fd_3d", total_elements);
+  block->x = config.block_size_x;
+  block->y = config.block_size_y;
+  block->z = config.block_size_z;
+#else
   block->x = 16;
   block->y = 16;
   block->z = 1;
+#endif
   grid->x = (static_cast<unsigned>(nx) + block->x - 1) / block->x;
   grid->y = (static_cast<unsigned>(ny) + block->y - 1) / block->y;
   grid->z = 1;

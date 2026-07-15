@@ -59,6 +59,10 @@
 
 #include <openpfc/runtime/cuda/fd_gradient_device.hpp>
 
+#ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
+#include "openpfc/runtime/common/gpu_autotune.hpp"
+#endif
+
 namespace pfc::sim::cuda {
 
 namespace detail {
@@ -133,13 +137,19 @@ inline void for_each_interior_device(const Model &model,
   if (nx <= 0 || ny <= 0 || nz <= 0) {
     return;
   }
+#ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
+  size_t total_elements = static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
+  auto config = pfc::gpu::AutoTuner::instance().get_config("for_each_interior_3d", total_elements);
+  dim3 block(config.block_size_x, config.block_size_y, config.block_size_z);
+#else
   constexpr int Tx = 32;
   constexpr int Ty = 4;
   constexpr int Tz = 1;
-  const dim3 block(Tx, Ty, Tz);
-  const dim3 grid((static_cast<unsigned>(nx) + Tx - 1) / Tx,
-                  (static_cast<unsigned>(ny) + Ty - 1) / Ty,
-                  (static_cast<unsigned>(nz) + Tz - 1) / Tz);
+  dim3 block(Tx, Ty, Tz);
+#endif
+  dim3 grid((static_cast<unsigned>(nx) + block.x - 1) / block.x,
+            (static_cast<unsigned>(ny) + block.y - 1) / block.y,
+            (static_cast<unsigned>(nz) + block.z - 1) / block.z);
   detail::for_each_interior_device_kernel<Model, G>
       <<<grid, block, 0, stream>>>(model, eval, du_padded, t, nx, ny, nz);
   const cudaError_t e = cudaGetLastError();

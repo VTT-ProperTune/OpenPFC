@@ -15,6 +15,10 @@
 #include <stdexcept>
 #include <string>
 
+#ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
+#include "openpfc/runtime/common/gpu_autotune.hpp"
+#endif
+
 namespace pfc::gpu {
 
 // CUDA kernel: Add scalar to each element
@@ -40,7 +44,12 @@ void add_scalar(GPUVector<double> &vec, double value) {
     return; // Nothing to do
   }
 
-  const int threads_per_block = 256;
+#ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
+  auto config = pfc::gpu::AutoTuner::instance().get_config("add_scalar", n);
+  int threads_per_block = config.block_size_x;
+#else
+  int threads_per_block = 256;
+#endif
   const int blocks =
       (static_cast<int>(n) + threads_per_block - 1) / threads_per_block;
 
@@ -66,7 +75,12 @@ void multiply_scalar(GPUVector<double> &vec, double value) {
     return; // Nothing to do
   }
 
-  const int threads_per_block = 256;
+#ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
+  auto config = pfc::gpu::AutoTuner::instance().get_config("multiply_scalar", n);
+  int threads_per_block = config.block_size_x;
+#else
+  int threads_per_block = 256;
+#endif
   const int blocks =
       (static_cast<int>(n) + threads_per_block - 1) / threads_per_block;
 

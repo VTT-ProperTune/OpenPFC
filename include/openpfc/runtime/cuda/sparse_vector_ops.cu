@@ -13,6 +13,10 @@
 #include <stdexcept>
 #include <string>
 
+#ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
+#include "openpfc/runtime/common/gpu_autotune.hpp"
+#endif
+
 namespace pfc {
 namespace core {
 
@@ -39,7 +43,12 @@ void gather_cuda_impl(size_t n, const size_t *indices, double *data,
   if (n == 0) {
     return;
   }
-  const int threads_per_block = 256;
+#ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
+  auto config = pfc::gpu::AutoTuner::instance().get_config("gather", n);
+  int threads_per_block = config.block_size_x;
+#else
+  int threads_per_block = 256;
+#endif
   const int blocks =
       (static_cast<int>(n) + threads_per_block - 1) / threads_per_block;
   gather_kernel<<<blocks, threads_per_block>>>(n, indices, data, source);
@@ -56,7 +65,12 @@ void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
   if (n == 0) {
     return;
   }
-  const int threads_per_block = 256;
+#ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
+  auto config = pfc::gpu::AutoTuner::instance().get_config("scatter", n);
+  int threads_per_block = config.block_size_x;
+#else
+  int threads_per_block = 256;
+#endif
   const int blocks =
       (static_cast<int>(n) + threads_per_block - 1) / threads_per_block;
   scatter_kernel<<<blocks, threads_per_block>>>(n, indices, data, dest);
