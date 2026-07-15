@@ -17,8 +17,8 @@
 #include <kobayashi/cli.hpp>
 #include <kobayashi/openmp_engine.hpp>
 
-
 #include <kobayashi/verification_utilities.hpp>
+
 namespace {
 
 } // namespace
