@@ -39,12 +39,18 @@
 
 #include <array>
 #include <mpi.h>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <string>
 
 namespace pfc::mpi {
 
 class environment {
 public:
+  environment(const environment&) = delete;
+  environment& operator=(const environment&) = delete;
+  environment(environment&&) = delete;
+  environment& operator=(environment&&) = delete;
+
   inline environment();
   inline ~environment();
   static inline std::string processor_name();
@@ -52,9 +58,15 @@ public:
   static inline bool finalized();
 };
 
-inline environment::environment() { MPI_Init(nullptr, nullptr); }
+inline environment::environment() {
+  int err = MPI_Init(nullptr, nullptr);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Init");
+ }
 
-inline environment::~environment() { MPI_Finalize(); }
+inline environment::~environment() {
+  int err = MPI_Finalize();
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Finalize");
+ }
 
 inline std::string environment::processor_name() {
   std::array<char, MPI_MAX_PROCESSOR_NAME> name{};
