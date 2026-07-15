@@ -39,21 +39,21 @@ namespace pfc::runtime {
  */
 inline void reset_cpu_affinity_if_single_mpi_rank(int nproc) noexcept {
 #if defined(__linux__)
- if (nproc != 1) {
-   return;
- }
- if (std::getenv("OPENPFC_NO_RESET_AFFINITY") != nullptr) {
-   return;
- }
- const long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
- if (ncpus <= 1) {
-   return;
- }
- cpu_set_t set;
- CPU_ZERO(&set);
- for (long i = 0; i < ncpus; ++i) {
-   CPU_SET(static_cast<int>(i), &set);
- }
+  if (nproc != 1) {
+    return;
+  }
+  if (std::getenv("OPENPFC_NO_RESET_AFFINITY") != nullptr) {
+    return;
+  }
+  const long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+  if (ncpus <= 1) {
+    return;
+  }
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  for (long i = 0; i < ncpus; ++i) {
+    CPU_SET(static_cast<int>(i), &set);
+  }
   int ret = sched_setaffinity(0, sizeof(set), &set);
   if (ret != 0) {
     int saved_errno = errno;
