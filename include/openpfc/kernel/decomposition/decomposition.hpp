@@ -367,7 +367,7 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
  * @see create(world, nparts) - automatic grid selection
  * @see proc_setup_min_surface() - algorithm for optimal grid
  */
-[[nodiscard]] Decomposition create(const World &world, const Int3 &grid) noexcept;
+[[nodiscard]] Decomposition create(const World &world, const Int3 &grid);
 
 /**
  * @brief Create decomposition with automatic grid selection
@@ -422,7 +422,7 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
  * @see create(world, grid) - manual grid specification
  * @see proc_setup_min_surface() - HeFFTe's grid selection algorithm
  */
-[[nodiscard]] Decomposition create(const World &world, const int &nparts) noexcept;
+[[nodiscard]] Decomposition create(const World &world, const int &nparts);
 
 /**
  * @brief Get the total number of subdomains

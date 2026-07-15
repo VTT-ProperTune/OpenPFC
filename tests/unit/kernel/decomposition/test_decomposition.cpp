@@ -72,3 +72,18 @@ TEST_CASE("Decomposition - periodic neighbor ranks", "[decomposition][unit]") {
     REQUIRE(neighbors_match);
   }
 }
+
+TEST_CASE("test_create_rejects_excessive_nparts", "[decomposition][unit][error]") {
+  using namespace pfc;
+  // World: 2x2x2, only 8 total grid points
+  // Requesting 9 decompositions exceeds what HeFFTe can partition
+  auto world = world::create(GridSize({2, 2, 2}));
+  REQUIRE_THROWS_AS(::decomposition::create(world, 9), std::invalid_argument);
+}
+
+TEST_CASE("test_create_rejects_invalid_grid", "[decomposition][unit][error]") {
+  using namespace pfc;
+  auto world = world::create(GridSize({128, 128, 128}));
+  // Grid dimension of zero is invalid
+  REQUIRE_THROWS_AS(::decomposition::create(world, Int3{300, 1, 1}), std::invalid_argument);
+}
