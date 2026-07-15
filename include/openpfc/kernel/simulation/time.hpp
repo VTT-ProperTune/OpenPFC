@@ -399,6 +399,34 @@ public:
   double get_dt() const { return m_dt; }
 
   /**
+   * @brief Set the time step.
+   *
+   * Sets a new time step size for adaptive time-stepping. The time step must
+   * be positive to ensure meaningful time integration.
+   *
+   * This method enables runtime adjustment of the time step, which is useful
+   * for adaptive time-stepping algorithms that adjust dt based on error estimates.
+   *
+   * @param[in] dt The new time step size (must be > 0)
+   * @throws std::invalid_argument If dt <= 0
+   *
+   * @post get_dt() returns the new dt value
+   *
+   * @note Changing dt during a simulation affects all subsequent time steps.
+   *       The current time is recomputed as `t0 + increment * dt`.
+   *
+   * @see get_dt() - query the current time step
+   * @see set_increment() - manually adjust the step counter for retry logic
+   */
+  void set_dt(double dt) {
+    if (dt <= 0.0) {
+      throw std::invalid_argument("Time step must be positive: " +
+                                  std::to_string(dt));
+    }
+    m_dt = dt;
+  }
+
+  /**
    * @brief Get the current time increment.
    *
    * @return Current increment
@@ -790,6 +818,8 @@ inline void next(Time &t) noexcept { t.next(); }
 inline void set_increment(Time &t, int inc) { t.set_increment(inc); }
 
 inline void set_saveat(Time &t, double s) { t.set_saveat(s); }
+inline void set_dt(Time &t, double d) { t.set_dt(d); }
+
 
 } // namespace time
 
