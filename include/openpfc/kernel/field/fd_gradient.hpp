@@ -74,6 +74,7 @@
  */
 
 #include <cstddef>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -89,6 +90,10 @@ namespace pfc::gradient {
 
 /**
  * @brief Even-order central FD point evaluator (first + second derivatives).
+ *
+ * The optional halo_prepare_callback enables multi-stage Runge-Kutta steppers
+ * to coordinate halo exchange with stage evaluation through the prepare() hook.
+ * When no callback is provided, prepare() is a no-op (backward compatible).
  *
  * @tparam G Model-owned per-point grads aggregate. The constructor and
  *           `operator()` consult `pfc::field::has_*<G>` to decide which
@@ -109,29 +114,33 @@ public:
    * (x fastest), with iteration bounds `[halo_width, n-halo_width)` per
    * axis — the `LocalField` convention.
    *
-   * @param core         Pointer to the local `nx*ny*nz` row-major buffer
-   *                     (x fastest); must outlive the evaluator.
-   * @param nx,ny,nz     Local extents in cells.
-   * @param dx,dy,dz     Per-axis grid spacing.
-   * @param halo_width   Local halo width (`order / 2` is required for the
-   *                     central FD contract).
-   * @param order        Even spatial order. Must be tabulated for every
-   *                     derivative `G` declares: D2 orders 2..20 are
-   *                     supported; D1 orders 2..14 are supported.
-   *                     Defaults to 2 (the cheapest 7-point Laplacian).
+   * @param core                  Pointer to the local `nx*ny*nz` row-major buffer
+   *                             (x fastest); must outlive the evaluator.
+   * @param nx,ny,nz              Local extents in cells.
+   * @param dx,dy,dz              Per-axis grid spacing.
+   * @param halo_width            Local halo width (`order / 2` is required for the
+   *                             central FD contract).
+   * @param order                 Even spatial order. Must be tabulated for every
+   *                             derivative `G` declares: D2 orders 2..20 are
+   *                             supported; D1 orders 2..14 are supported.
+   *                             Defaults to 2 (the cheapest 7-point Laplacian).
+   * @param halo_prepare_callback Optional function invoked by prepare() to
+   *                             trigger halo exchange before each stage in
+   *                             multi-stage methods.
    *
    * @throws std::invalid_argument if `order` is outside the tabulated
    *         range for any derivative member declared by `G`.
    */
   FDGradient(const double *core, int nx, int ny, int nz, double dx, double dy,
-             double dz, int halo_width, int order = 2)
+             double dz, int halo_width, int order = 2,
+             std::function<void()> halo_prepare_callback = {})
       : FDGradient(core, nx, ny, nz, /*sy=*/static_cast<std::ptrdiff_t>(nx),
                    /*sxy=*/static_cast<std::ptrdiff_t>(nx) *
                        static_cast<std::ptrdiff_t>(ny),
                    dx, dy, dz, /*imin=*/halo_width, /*imax=*/nx - halo_width,
                    /*jmin=*/halo_width, /*jmax=*/ny - halo_width,
                    /*kmin=*/halo_width, /*kmax=*/nz - halo_width, halo_width,
-                   order) {}
+                   order, std::move(halo_prepare_callback)) {}
 
   /**
    * @brief Bind the evaluator to a `pfc::field::PaddedBrick<double>`.
@@ -145,10 +154,14 @@ public:
    * `(1, nx_pad, nx_pad·ny_pad)` so reads at the boundary reach into the
    * halo correctly.
    *
-   * @param u     Padded brick to evaluate over (must outlive `*this`).
-   * @param order Even spatial order (defaults to 2).
+   * @param u                     Padded brick to evaluate over (must outlive `*this`).
+   * @param order                 Even spatial order (defaults to 2).
+   * @param halo_prepare_callback Optional function invoked by prepare() to
+   *                             trigger halo exchange before each stage in
+   *                             multi-stage methods.
    */
-  explicit FDGradient(const pfc::field::PaddedBrick<double> &u, int order = 2)
+  explicit FDGradient(const pfc::field::PaddedBrick<double> &u, int order = 2,
+                    std::function<void()> halo_prepare_callback = {})
       : FDGradient(brick_owned_origin_(u), u.nx(), u.ny(), u.nz(),
                    /*sy=*/static_cast<std::ptrdiff_t>(u.padded_size3()[0]),
                    /*sxy=*/static_cast<std::ptrdiff_t>(u.padded_size3()[0]) *
@@ -156,11 +169,25 @@ public:
                    u.spacing()[0], u.spacing()[1], u.spacing()[2],
                    /*imin=*/0, /*imax=*/u.nx(),
                    /*jmin=*/0, /*jmax=*/u.ny(),
-                   /*kmin=*/0, /*kmax=*/u.nz(), u.halo_width(), order) {}
+                   /*kmin=*/0, /*kmax=*/u.nz(), u.halo_width(), order,
+                   std::move(halo_prepare_callback)) {}
 
-  /// FD evaluator has no per-step preparation step; kept for symmetry with
-  /// `pfc::gradient::SpectralGradient<G>` where `prepare()` runs the FFTs.
-  void prepare() noexcept {}
+  /**
+   * @brief Prepare for gradient evaluation.
+   *
+   * If a halo_prepare_callback was provided to the constructor, invokes it to
+   * trigger halo exchange before each stage in multi-stage methods. Otherwise,
+   * does nothing (backward compatible with existing FD code).
+   *
+   * @note This method is not `noexcept` because the user-provided callback may
+   *       throw, matching the behavior of `SpectralGradient::prepare()` which
+   *       can throw during FFT operations.
+   */
+  void prepare() {
+    if (m_halo_prepare_callback) {
+      m_halo_prepare_callback();
+    }
+  }
 
   int imin() const noexcept { return m_imin; }
   int imax() const noexcept { return m_imax; }
@@ -245,10 +272,12 @@ private:
   /// Common private constructor — every public ctor delegates here.
   FDGradient(const double *core, int nx, int ny, int nz, std::ptrdiff_t sy,
              std::ptrdiff_t sxy, double dx, double dy, double dz, int imin, int imax,
-             int jmin, int jmax, int kmin, int kmax, int halo_width, int order)
+             int jmin, int jmax, int kmin, int kmax, int halo_width, int order,
+             std::function<void()> halo_prepare_callback)
       : m_core(core), m_nx(nx), m_ny(ny), m_nz(nz), m_sy(sy), m_sxy(sxy),
         m_imin(imin), m_imax(imax), m_jmin(jmin), m_jmax(jmax), m_kmin(kmin),
-        m_kmax(kmax), m_hw(halo_width) {
+        m_kmax(kmax), m_hw(halo_width),
+        m_halo_prepare_callback(std::move(halo_prepare_callback)) {
     static_assert(!pfc::field::has_xy<G> && !pfc::field::has_xz<G> &&
                       !pfc::field::has_yz<G>,
                   "FDGradient: mixed second derivatives (xy/xz/yz) need "
@@ -318,6 +347,7 @@ private:
   double m_sy1{0.0};
   double m_sz1{0.0};
   pfc::field::fd::EvenCentralD1View m_d1_stencil{};
+  std::function<void()> m_halo_prepare_callback{};
 };
 
 /**

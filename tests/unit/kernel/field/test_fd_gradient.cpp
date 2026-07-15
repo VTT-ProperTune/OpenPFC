@@ -189,3 +189,103 @@ TEST_CASE("pfc::gradient::FDGradient binds to a PaddedBrick and matches the "
                                pfc::gradient::FDGradient<OnlyX>>,
                 "pfc::field::FdGradient should alias pfc::gradient::FDGradient");
 }
+
+
+TEST_CASE("FDGradient prepare invokes callback when provided",
+          "[kernel][field][fd_gradient][unit]") {
+  // Test that prepare() calls the callback when one is provided.
+  int callback_invoked = 0;
+  auto callback = [&callback_invoked]() { ++callback_invoked; };
+
+  const int order = 2;
+  const int hw = order / 2;
+  const int N = 8;
+  auto u = make_field(N, hw);
+  u.apply([](double, double, double) { return 1.0; });
+
+  // Create FDGradient with callback via raw-pointer constructor
+  auto grad = pfc::gradient::FDGradient<OnlyX>(
+      u.data(), u.size3()[0], u.size3()[1], u.size3()[2],
+      u.spacing()[0], u.spacing()[1], u.spacing()[2],
+      u.halo_width(), order, callback);
+
+  REQUIRE(callback_invoked == 0);
+  grad.prepare();
+  REQUIRE(callback_invoked == 1);
+  grad.prepare();
+  REQUIRE(callback_invoked == 2);
+}
+
+TEST_CASE("FDGradient prepare is no-op without callback",
+          "[kernel][field][fd_gradient][unit]") {
+  // Test backward compatibility: prepare() does nothing when no callback is provided.
+  const int order = 2;
+  const int hw = order / 2;
+  const int N = 8;
+  auto u = make_field(N, hw);
+  u.apply([](double, double, double) { return 1.0; });
+
+  // Create FDGradient without callback (default parameter)
+  auto grad = pfc::field::create<OnlyX>(u, order);
+
+  // Should not throw and should have no side effects
+  REQUIRE_NOTHROW(grad.prepare());
+  const auto g1 = grad(N / 2, N / 2, N / 2);
+  grad.prepare();
+  const auto g2 = grad(N / 2, N / 2, N / 2);
+  REQUIRE(g1.x == g2.x);
+}
+
+TEST_CASE("FDGradient PaddedBrick constructor accepts callback",
+          "[kernel][field][fd_gradient][unit]") {
+  // Test that the PaddedBrick constructor accepts and stores the callback.
+  int callback_invoked = 0;
+  auto callback = [&callback_invoked]() { ++callback_invoked; };
+
+  using namespace pfc;
+  auto world = world::create(GridSize({8, 8, 8}));
+  auto decomp = decomposition::create(world, 1);
+
+  field::PaddedBrick<double> u(decomp, /*rank=*/0, /*hw=*/1);
+  u.apply([](double x, double, double) { return -3.0 * x; });
+
+  // Create FDGradient with callback via PaddedBrick constructor
+  pfc::gradient::FDGradient<OnlyX> grad(u, 2, callback);
+
+  REQUIRE(callback_invoked == 0);
+  grad.prepare();
+  REQUIRE(callback_invoked == 1);
+
+  // Verify gradient computation still works
+  const pfc::Int3 c{u.nx() / 2, u.ny() / 2, u.nz() / 2};
+  const auto g = pfc::gradient::evaluate(grad, c);
+  REQUIRE(g.x == Approx(-3.0));
+}
+
+TEST_CASE("FDGradient raw-pointer constructor accepts callback",
+          "[kernel][field][fd_gradient][unit]") {
+  // Test that the raw-pointer constructor accepts and stores the callback.
+  int callback_invoked = 0;
+  auto callback = [&callback_invoked]() { ++callback_invoked; };
+
+  const int order = 4;
+  const int hw = order / 2;
+  const int N = 10;
+  auto u = make_field(N, hw);
+  u.apply([](double x, double, double) { return 2.0 * x; });
+
+  // Create FDGradient with callback via raw-pointer constructor
+  const auto sz = u.size3();
+  const auto sp = u.spacing();
+  auto grad = pfc::gradient::FDGradient<OnlyX>(
+      u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
+      u.halo_width(), order, callback);
+
+  REQUIRE(callback_invoked == 0);
+  grad.prepare();
+  REQUIRE(callback_invoked == 1);
+
+  // Verify gradient computation still works
+  const auto g = grad(N / 2, N / 2, N / 2);
+  REQUIRE(g.x == Approx(2.0));
+}
