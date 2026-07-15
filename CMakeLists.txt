@@ -42,6 +42,13 @@ include(cmake/CudaSupport.cmake)
 include(cmake/HipSupport.cmake)
 
 # ----------------------------------------------------------------------------
+# 5a. GPU Kernel Auto-Tuning
+#----------------------------------------------------------------------------
+# GPU kernel auto-tuning infrastructure (requires CUDA or HIP)
+include(cmake/GpuAutotuning.cmake)
+
+
+# ----------------------------------------------------------------------------
 # 5. Dependencies
 # ----------------------------------------------------------------------------
 # Third-party dependencies — see cmake/Dependencies.cmake: MPI, HeFFTe,
