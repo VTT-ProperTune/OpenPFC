@@ -87,6 +87,49 @@ struct HostPinnedRegistration {
   HostPinnedRegistration &operator=(const HostPinnedRegistration &) = delete;
 };
 
+/// RAII guard for CUDA device buffers, ensures cudaFree on all exit paths
+struct DeviceBuffer {
+  double *ptr = nullptr;
+  // Default constructor
+  DeviceBuffer() = default;
+
+  // Constructor: take ownership of raw pointer
+  explicit DeviceBuffer(double *p) : ptr(p) {}
+
+  // Disable copying
+  DeviceBuffer(const DeviceBuffer &) = delete;
+  DeviceBuffer &operator=(const DeviceBuffer &) = delete;
+
+  // Move constructor
+  DeviceBuffer(DeviceBuffer &&other) noexcept : ptr(other.ptr) {
+    other.ptr = nullptr;
+  }
+
+  // Move assignment
+  DeviceBuffer &operator=(DeviceBuffer &&other) noexcept {
+    if (this != &other) {
+      if (ptr) {
+        [[maybe_unused]] const cudaError_t e = cudaFree(ptr);
+        (void)e;
+      }
+      ptr = other.ptr;
+      other.ptr = nullptr;
+    }
+    return *this;
+  }
+
+  // Destructor: free on all exit paths
+  ~DeviceBuffer() {
+    if (ptr) {
+      [[maybe_unused]] const cudaError_t e = cudaFree(ptr);
+      (void)e;
+      ptr = nullptr;
+    }
+  }
+
+  // Expose raw pointer for CUDA APIs
+  double *get() const { return ptr; }
+};
 
 void sync_padded_d2h(const double *dev, PaddedBrick<double> &host) {
   cuda_check(cudaMemcpy(host.data(), dev, host.size() * sizeof(double),
@@ -177,34 +220,50 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const std::size_t padded_elems = phi_h.size();
   const std::size_t padded_bytes = padded_elems * sizeof(double);
 
-  double *phi_d = nullptr;
-  double *tempr_d = nullptr;
-  double *lap_phi_d = nullptr;
-  double *lap_t_d = nullptr;
-  double *phidx_d = nullptr;
-  double *phidy_d = nullptr;
-  double *epsilon_d = nullptr;
-  double *epsilon_deriv_d = nullptr;
+  DeviceBuffer phi_d;
+  DeviceBuffer tempr_d;
+  DeviceBuffer lap_phi_d;
+  DeviceBuffer lap_t_d;
+  DeviceBuffer phidx_d;
+  DeviceBuffer phidy_d;
+  DeviceBuffer epsilon_d;
+  DeviceBuffer epsilon_deriv_d;
 
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&phi_d), padded_bytes),
+  double *raw_phi_d = nullptr;
+  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_phi_d), padded_bytes),
              "cudaMalloc phi");
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&tempr_d), padded_bytes),
+  phi_d = DeviceBuffer(raw_phi_d);
+  double *raw_tempr_d = nullptr;
+  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_tempr_d), padded_bytes),
              "cudaMalloc tempr");
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&lap_phi_d), padded_bytes),
+  tempr_d = DeviceBuffer(raw_tempr_d);
+  double *raw_lap_phi_d = nullptr;
+  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_lap_phi_d), padded_bytes),
              "cudaMalloc lap_phi");
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&lap_t_d), padded_bytes),
+  lap_phi_d = DeviceBuffer(raw_lap_phi_d);
+  double *raw_lap_t_d = nullptr;
+  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_lap_t_d), padded_bytes),
              "cudaMalloc lap_t");
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&phidx_d), padded_bytes),
+  lap_t_d = DeviceBuffer(raw_lap_t_d);
+  double *raw_phidx_d = nullptr;
+  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_phidx_d), padded_bytes),
              "cudaMalloc phidx");
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&phidy_d), padded_bytes),
+  phidx_d = DeviceBuffer(raw_phidx_d);
+  double *raw_phidy_d = nullptr;
+  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_phidy_d), padded_bytes),
              "cudaMalloc phidy");
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&epsilon_d), padded_bytes),
+  phidy_d = DeviceBuffer(raw_phidy_d);
+  double *raw_epsilon_d = nullptr;
+  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_epsilon_d), padded_bytes),
              "cudaMalloc epsilon");
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&epsilon_deriv_d), padded_bytes),
+  epsilon_d = DeviceBuffer(raw_epsilon_d);
+  double *raw_epsilon_deriv_d = nullptr;
+  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_epsilon_deriv_d), padded_bytes),
              "cudaMalloc epsilon_deriv");
+  epsilon_deriv_d = DeviceBuffer(raw_epsilon_deriv_d);
 
-  sync_padded_h2d(phi_h, phi_d);
-  sync_padded_h2d(tempr_h, tempr_d);
+  sync_padded_h2d(phi_h, phi_d.get());
+  sync_padded_h2d(tempr_h, tempr_d.get());
 
   // Single-rank periodic torus: MPI halos only burn CPU (MPI progress) + CUDA global
   // sync; use device-side periodic copies instead (see
@@ -340,7 +399,7 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
   int filenum = 0;
   if (!skip_png) {
-    sync_padded_d2h(phi_d, phi_h);
+    sync_padded_d2h(phi_d.get(), phi_h);
     char path[4096];
     std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                   filenum);
@@ -356,22 +415,22 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
   for (int istep = 1; istep <= cfg.n_steps; ++istep) {
     if (use_batched_pre_a) {
-      exchange_batch(halo_pre_a.get(), {phi_d, tempr_d});
+      exchange_batch(halo_pre_a.get(), {phi_d.get(), tempr_d.get()});
     } else {
-      exchange_padded(phi_d, halo_phi.get());
-      exchange_padded(tempr_d, halo_t.get());
+      exchange_padded(phi_d.get(), halo_phi.get());
+      exchange_padded(tempr_d.get(), halo_t.get());
     }
 
     if (perf_k) {
       const double t0 = MPI_Wtime();
-      kobayashi::kobayashi_stage_a_cuda(phi_d, tempr_d, lap_phi_d, lap_t_d, phidx_d,
-                                        phidy_d, epsilon_d, epsilon_deriv_d, nx, ny,
+      kobayashi::kobayashi_stage_a_cuda(phi_d.get(), tempr_d.get(), lap_phi_d.get(), lap_t_d.get(), phidx_d.get(),
+                                        phidy_d.get(), epsilon_d.get(), epsilon_deriv_d.get(), nx, ny,
                                         nz, hw, inv_dx, inv_dy, inv_lap_den,
                                         stage_a_extend);
       perf_sum_stage_a += MPI_Wtime() - t0;
     } else {
-      kobayashi::kobayashi_stage_a_cuda(phi_d, tempr_d, lap_phi_d, lap_t_d, phidx_d,
-                                        phidy_d, epsilon_d, epsilon_deriv_d, nx, ny,
+      kobayashi::kobayashi_stage_a_cuda(phi_d.get(), tempr_d.get(), lap_phi_d.get(), lap_t_d.get(), phidx_d.get(),
+                                        phidy_d.get(), epsilon_d.get(), epsilon_deriv_d.get(), nx, ny,
                                         nz, hw, inv_dx, inv_dy, inv_lap_den,
                                         stage_a_extend);
     }
@@ -380,23 +439,23 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
       // No exchange: stage_a wrote the 1-cell ring of eps, eps_d, phidx, phidy.
     } else if (use_batched_pre_a) {
       exchange_batch(halo_pre_b.get(),
-                     {epsilon_d, epsilon_deriv_d, phidx_d, phidy_d});
+                     {epsilon_d.get(), epsilon_deriv_d.get(), phidx_d.get(), phidy_d.get()});
     } else {
-      exchange_padded(epsilon_d, halo_eps.get());
-      exchange_padded(epsilon_deriv_d, halo_epsd.get());
-      exchange_padded(phidx_d, halo_phidx.get());
-      exchange_padded(phidy_d, halo_phidy.get());
+      exchange_padded(epsilon_d.get(), halo_eps.get());
+      exchange_padded(epsilon_deriv_d.get(), halo_epsd.get());
+      exchange_padded(phidx_d.get(), halo_phidx.get());
+      exchange_padded(phidy_d.get(), halo_phidy.get());
     }
 
     if (perf_k) {
       const double t0 = MPI_Wtime();
-      kobayashi::kobayashi_stage_b_cuda(phi_d, tempr_d, lap_phi_d, lap_t_d,
-                                        epsilon_d, epsilon_deriv_d, phidx_d, phidy_d,
+      kobayashi::kobayashi_stage_b_cuda(phi_d.get(), tempr_d.get(), lap_phi_d.get(), lap_t_d.get(),
+                                        epsilon_d.get(), epsilon_deriv_d.get(), phidx_d.get(), phidy_d.get(),
                                         nx, ny, nz, hw, inv_dx, inv_dy, cfg.dt);
       perf_sum_stage_b += MPI_Wtime() - t0;
     } else {
-      kobayashi::kobayashi_stage_b_cuda(phi_d, tempr_d, lap_phi_d, lap_t_d,
-                                        epsilon_d, epsilon_deriv_d, phidx_d, phidy_d,
+      kobayashi::kobayashi_stage_b_cuda(phi_d.get(), tempr_d.get(), lap_phi_d.get(), lap_t_d.get(),
+                                        epsilon_d.get(), epsilon_deriv_d.get(), phidx_d.get(), phidy_d.get(),
                                         nx, ny, nz, hw, inv_dx, inv_dy, cfg.dt);
     }
 
@@ -406,7 +465,7 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
     if (!skip_png && cfg.nsave > 0 && istep % cfg.nsave == 0) {
       const double t_png0 = perf_k ? MPI_Wtime() : 0.0;
-      sync_padded_d2h(phi_d, phi_h);
+      sync_padded_d2h(phi_d.get(), phi_h);
       char path[4096];
       std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                     filenum);
@@ -465,8 +524,8 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     pfc::cuda::print_cuda_halo_exchange_cpu_timers(MPI_COMM_WORLD);
   }
 
-  sync_padded_d2h(phi_d, phi_h);
-  sync_padded_d2h(tempr_d, tempr_h);
+  sync_padded_d2h(phi_d.get(), phi_h);
+  sync_padded_d2h(tempr_d.get(), tempr_h);
 
   if (!skip_png) {
     char path[4096];
@@ -477,14 +536,6 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     write_phi_png(rank, decomp, phi_h, path);
   }
 
-  cuda_check(cudaFree(phi_d), "cudaFree(phi_d)");
-  cuda_check(cudaFree(tempr_d), "cudaFree(tempr_d)");
-  cuda_check(cudaFree(lap_phi_d), "cudaFree(lap_phi_d)");
-  cuda_check(cudaFree(lap_t_d), "cudaFree(lap_t_d)");
-  cuda_check(cudaFree(phidx_d), "cudaFree(phidx_d)");
-  cuda_check(cudaFree(phidy_d), "cudaFree(phidy_d)");
-  cuda_check(cudaFree(epsilon_d), "cudaFree(epsilon_d)");
-  cuda_check(cudaFree(epsilon_deriv_d), "cudaFree(epsilon_deriv_d)");
 
   if (node_comm != MPI_COMM_NULL) {
     MPI_Comm_free(&node_comm);
