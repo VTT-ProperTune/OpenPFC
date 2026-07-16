@@ -11,8 +11,14 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_model_comprehensive.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_steppers.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_euler_stepper.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_wave_model_multifield_integration.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/state_concepts_test.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_solver_contract.cpp
+)
+
+# Add wave2d include directory for WaveModel access
+target_include_directories(openpfc-tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/apps/wave2d/include
 )
 
 add_subdirectory(steppers)
