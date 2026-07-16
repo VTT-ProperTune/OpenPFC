@@ -76,6 +76,12 @@ if(WAVE2D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_include_directories(test_wave2d_vs_legacy_step PRIVATE ${WAVE2D_INCLUDE_DIR})
     target_link_libraries(test_wave2d_vs_legacy_step PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
     add_test(NAME wave2d-vs-legacy-step COMMAND test_wave2d_vs_legacy_step)
+
+    # RK2/RK4 convergence integration tests
+    add_executable(test_wave2d_rk_convergence tests/test_wave2d_rk_convergence.cpp)
+    target_include_directories(test_wave2d_rk_convergence PRIVATE ${WAVE2D_INCLUDE_DIR})
+    target_link_libraries(test_wave2d_rk_convergence PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
+    add_test(NAME wave2d-rk-convergence COMMAND test_wave2d_rk_convergence)
   else()
     message(STATUS "wave2d: Catch2 not found, not building tests")
   endif()
