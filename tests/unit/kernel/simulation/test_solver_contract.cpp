@@ -12,7 +12,7 @@
 #include <vector>
 #include <functional>
 
-using namespace openpfc::kernel::simulation;
+using namespace pfc::sim;
 
 // Mock ExecutionService implementation for testing
 class MockExecutionService : public ExecutionService {

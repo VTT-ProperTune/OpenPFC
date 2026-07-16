@@ -68,7 +68,7 @@
 #include <mpi.h>
 #include "openpfc/kernel/field/tuple_protocol.hpp"
 
-namespace openpfc::kernel::simulation {
+namespace pfc::sim {
 
 // Forward declaration for tuple_protocol concept
 // This will be defined below using utilities from tuple_protocol.hpp
@@ -268,6 +268,6 @@ concept SolveFunction = requires(Func solver,
     { solver(op_desc, rhs, target_out, options, ctx) } -> solve_outcome_type;
 };
 
-} // namespace openpfc::kernel::simulation
+} // namespace pfc::sim
 
 #endif // OPENPFC_KERNEL_SIMULATION_SOLVER_CONTRACT_HPP
