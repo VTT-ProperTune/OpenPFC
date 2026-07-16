@@ -372,8 +372,8 @@ TEST_CASE("RK4 shows fourth-order convergence", "[integration][convergence][RK4]
   const double ratio1 = errors[0] / errors[1];
   const double ratio2 = errors[1] / errors[2];
 
-  // Check that at least one ratio shows strong fourth-order behavior
-  // (This accommodates the fact that convergence rate may degrade at smallest dt)
+  // At least one ratio should show strong fourth-order behavior
+  // (This accommodates potential numerical degradation at smallest dt)
   const bool has_strong_convergence = (ratio1 >= 10.0 && ratio1 <= 24.0) ||
                                       (ratio2 >= 10.0 && ratio2 <= 24.0);
   REQUIRE(has_strong_convergence);
