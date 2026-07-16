@@ -69,7 +69,7 @@ namespace pfc::sim::steppers {
 template <class Rhs> class EulerStepper {
 public:
   EulerStepper(double dt, std::size_t local_size, Rhs rhs)
-      : m_dt(dt), m_du(local_size, 0.0), m_rhs(std::move(rhs)) {}
+      : m_dt(dt), m_du(local_size, 0.0), m_u_checkpoint(local_size, 0.0), m_rhs(std::move(rhs)) {}
 
   /** Advance `u` by one explicit-Euler step in place; returns the new time. */
   double step(double t, std::vector<double> &u) {
@@ -83,9 +83,58 @@ public:
 
   double dt() const noexcept { return m_dt; }
 
+  /**
+   * @brief Save current field state for potential rollback.
+   * @param u Current field buffer to checkpoint.
+   *
+   * This stores a deep copy of u into internal m_u_checkpoint.
+   * The checkpoint can be restored via restore_state() to revert
+   * the field to its pre-step state, enabling adaptive time-stepping
+   * with step rejection.
+   *
+   * @note This is part of the duck-typed checkpoint protocol. Future
+   * steppers must implement save_state(), restore_state(), and can_rollback()
+   * with matching signatures to support adaptive error control.
+   */
+  void save_state(const std::vector<double>& u) {
+    m_u_checkpoint = u;
+  }
+
+  /**
+   * @brief Restore field state to last checkpointed state.
+   * @param u Field buffer to restore into.
+   *
+   * This copies m_u_checkpoint back into u, reverting the field to its
+   * pre-step state. Used when an adaptive step is rejected due to error
+   * estimates exceeding tolerance.
+   *
+   * @note This is part of the duck-typed checkpoint protocol. Must be
+   * called after save_state() to have valid checkpoint data.
+   */
+  void restore_state(std::vector<double>& u) {
+    u = m_u_checkpoint;
+  }
+
+  /**
+   * @brief Check whether this stepper supports rollback.
+   * @return Always true for EulerStepper.
+   *
+   * This enables duck-typed protocol checking without RTTI. Application
+   * code can use `if (stepper.can_rollback())` to conditionally enable
+   * adaptive error control patterns.
+   *
+   * @note This is part of the duck-typed checkpoint protocol. Future
+   * steppers should return true if they implement save_state() and
+   * restore_state().
+   */
+  [[nodiscard]] bool can_rollback() const noexcept {
+    return true;
+  }
+
 private:
   double m_dt{0.0};
   std::vector<double> m_du;
+  std::vector<double> m_u_checkpoint;
   Rhs m_rhs;
 };
 
@@ -112,6 +161,7 @@ public:
   MultiEulerStepper(double dt, std::array<std::size_t, N> local_sizes, Rhs rhs)
       : m_dt(dt), m_rhs(std::move(rhs)) {
     for (std::size_t i = 0; i < N; ++i) m_du[i].assign(local_sizes[i], 0.0);
+    for (std::size_t i = 0; i < N; ++i) m_u_checkpoint[i].assign(local_sizes[i], 0.0);
   }
 
   /** Advance every field by one explicit-Euler step in place. */
@@ -126,6 +176,63 @@ public:
   }
 
   double dt() const noexcept { return m_dt; }
+
+  /**
+   * @brief Save current field states for potential rollback.
+   * @param u_buffers Field buffers to checkpoint (must be std::vector<double>).
+   *
+   * This stores deep copies of all field buffers into internal m_u_checkpoint array.
+   * The checkpoint can be restored via restore_state() to revert all fields to their
+   * pre-step state, enabling adaptive time-stepping with step rejection.
+   *
+   * @note The field order must match the order used in step().
+   * @note This is part of the duck-typed checkpoint protocol. Future
+   * steppers must implement save_state(), restore_state(), and can_rollback()
+   * with matching signatures to support adaptive error control.
+   */
+  template <class... U>
+  void save_state(const std::vector<U>&... u_buffers) {
+    static_assert(sizeof...(U) == N, "Number of fields must match template parameter N");
+    static_assert((std::is_same_v<U, double> && ...), "MultiEulerStepper checkpoint requires std::vector<double>");
+    std::size_t i = 0;
+    ((m_u_checkpoint[i++] = u_buffers), ...);
+  }
+
+  /**
+   * @brief Restore field states to last checkpointed states.
+   * @param u_buffers Field buffers to restore into (must be std::vector<double>).
+   *
+   * This copies m_u_checkpoint back into all field buffers, reverting them to
+   * their pre-step state. Used when an adaptive step is rejected due to error
+   * estimates exceeding tolerance.
+   *
+   * @note The field order must match the order used in step().
+   * @note This is part of the duck-typed checkpoint protocol. Must be
+   * called after save_state() to have valid checkpoint data.
+   */
+  template <class... U>
+  void restore_state(std::vector<U>&... u_buffers) {
+    static_assert(sizeof...(U) == N, "Number of fields must match template parameter N");
+    static_assert((std::is_same_v<U, double> && ...), "MultiEulerStepper checkpoint requires std::vector<double>");
+    std::size_t i = 0;
+    ((u_buffers = m_u_checkpoint[i++]), ...);
+  }
+
+  /**
+   * @brief Check whether this stepper supports rollback.
+   * @return Always true for MultiEulerStepper.
+   *
+   * This enables duck-typed protocol checking without RTTI. Application
+   * code can use `if (stepper.can_rollback())` to conditionally enable
+   * adaptive error control patterns.
+   *
+   * @note This is part of the duck-typed checkpoint protocol. Future
+   * steppers should return true if they implement save_state() and
+   * restore_state().
+   */
+  [[nodiscard]] bool can_rollback() const noexcept {
+    return true;
+  }
 
 private:
   template <std::size_t... I> auto make_du_tuple(std::index_sequence<I...>) {
@@ -146,6 +253,7 @@ private:
 
   double m_dt{0.0};
   std::array<std::vector<double>, N> m_du;
+  std::array<std::vector<double>, N> m_u_checkpoint;
   Rhs m_rhs;
 };
 
