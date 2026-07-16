@@ -31,6 +31,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/convergence_studies/test_temporal_convergence.cpp
   scenarios/convergence_studies/test_center_peak_decay.cpp
   scenarios/convergence_studies/test_monotonic_decay.cpp
+  scenarios/time_integration/test_stepper_contract_equivalence.cpp
 )
 
 # `FullPaddedDeviceHalo` calls `pfc::cuda::detail::launch_padded_pack_face` /
