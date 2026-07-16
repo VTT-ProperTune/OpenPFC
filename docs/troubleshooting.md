@@ -67,21 +67,22 @@ For ROCm/LUMI-style stacks, `MPICH_GPU_SUPPORT_ENABLED=1` and a build with GPU-a
 
 ## CUDA toolchain compatibility
 
-### nvcc/GCC 15.2.0 `<compare>` header limitation
+### `<compare>`/`operator<=>` are unavailable in CUDA device code
 
-When using GCC 15.2.0 or later versions as the host compiler with nvcc, CUDA compilation may fail with errors like:
-
-```
-fatal error: compare: No such file or directory
-```
-
-This occurs because nvcc silently drops the `-std=c++20` flag for unsupported GCC versions, making the C++20-only `<compare>` header unavailable. OpenPFC works around this limitation by detecting CUDA compilation via the `__CUDACC__` macro and providing hand-written comparison operators instead of relying on the defaulted `operator<=>`.
+`std::array::operator==` (used internally by a defaulted `operator<=>`) is not
+usable in `__device__` code, so `strong_types.hpp` cannot rely on the
+C++20 `<compare>` header/defaulted spaceship operator for CUDA translation
+units. This is a `__CUDACC__`-mode limitation, not a host-compiler-version
+issue — it applies to any GCC version, including current ones (verified with
+GCC 15.2.0 as the host compiler: `<compare>`, `operator<=>`, and concepts all
+compile cleanly for ordinary host-only code; the limitation is specific to
+device code, not to this GCC version).
 
 **Affected files:** CUDA translation units (`.cu` files) that transitively include `include/openpfc/kernel/data/strong_types.hpp`.
 
 **Implementation detail:** The hand-written comparison operators use element-by-element comparison of the underlying array members to avoid calling `std::array::operator==`, which is not available in device code.
 
-**Workaround:** The code-level workaround is automatic - no user action required. The strong types in `strong_types.hpp` use `#ifdef __CUDACC__` guards to provide compatible comparison operators in CUDA mode while preserving C++20 idioms for host-only compilation.
+**Workaround:** The code-level workaround is automatic - no user action required. The strong types in `strong_types.hpp` guard `#include <compare>` and the defaulted `operator<=>` behind `#ifndef __CUDACC__`, providing a hand-written `__host__ __device__` `operator==` instead when compiling under nvcc.
 
 **Verification:** Test CUDA compilation with:
 
@@ -90,7 +91,7 @@ echo '#include <openpfc/kernel/data/world.hpp>
 int main(){return 0;}' | nvcc --std=c++20 -x cu -c -o /tmp/test_world_cu.o -
 ```
 
-If you encounter similar issues with other C++20 features in CUDA code, consider using older GCC versions supported by nvcc for C++20, or report the issue so similar conditional compilation workarounds can be applied.
+If you encounter similar issues with other C++20 features in CUDA device code, apply the same pattern: guard the C++20-only construct behind `#ifndef __CUDACC__` and provide a hand-written `__host__ __device__` equivalent for device code.
 
 
 ### Process exits immediately with “validation” or parameter errors
