@@ -164,7 +164,7 @@ auto stepper = pfc::sim::steppers::create(u_local, grad, model, dt);
 
 The factory function:
 
-- Constructs an `EulerStepper` (currently the only implemented stepper)
+- Constructs an `EulerStepper` by default, or an `ExplicitRKStepper` (RK2/RK4) when a `ButcherTableau` is passed as an extra argument -- see [Higher-order steppers](#higher-order-steppers-rk2-and-rk4) below
 - Captures the gradient evaluator and model by reference (they must outlive the stepper)
 - Creates an internal RHS lambda that calls `pfc::sim::for_each_interior(model, eval, du, t)`
 - Allocates an internal scratch buffer `du` sized to match the field
@@ -337,7 +337,7 @@ Your stepper must respect that boundary conditions are already valid when `stepp
 
 ## Higher-order steppers: RK2 and RK4
 
-The explicit stepper composition pattern generalizes to higher-order Runge-Kutta methods. OpenPFC provides the infrastructure for RK2 and RK4 steppers in [`include/openpfc/kernel/simulation/steppers/butcher_tableau.hpp`](../../include/openpfc/kernel/simulation/steppers/butcher_tableau.hpp), though implementations don't yet exist.
+The explicit stepper composition pattern generalizes to higher-order Runge-Kutta methods. OpenPFC implements RK2 and RK4 steppers in [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp), built on top of the validated coefficient tables in [`include/openpfc/kernel/simulation/steppers/butcher_tableau.hpp`](../../include/openpfc/kernel/simulation/steppers/butcher_tableau.hpp).
 
 ### Butcher tableau infrastructure
 
@@ -347,7 +347,6 @@ The `ButcherTableau<T>` class template represents validated explicit Runge-Kutta
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 
 // Example: classic fourth-order Runge-Kutta coefficients
-// (Not yet implemented in OpenPFC, but infrastructure exists)
 constexpr std::array<std::array<double, 4>, 4> rk4_a = {
   {{0.0, 0.0, 0.0, 0.0}},
   {{0.5, 0.0, 0.0, 0.0}},
@@ -366,13 +365,18 @@ The infrastructure includes:
 - **Type safety**: Template parameter `T` must be a real floating-point type (float or double)
 - **Immutable coefficients**: Tableaus are validated at construction and then read-only
 
-### Future RK2/RK4 steppers
+Ready-made tableaus are available as factory functions in `butcher_tableau.hpp`: `make_rk2_midpoint<double>()`, `make_rk2_heun<double>()`, and `make_rk4_classical<double>()`.
 
-When RK2 and RK4 steppers are implemented, they will follow the same pattern as `EulerStepper`:
+### RK2/RK4 steppers
+
+`ExplicitRKStepper` (single-field) and `MultiExplicitRKStepper` (multi-field) in `explicit_rk.hpp` consume a `ButcherTableau<double>` to implement any explicit RK method. They follow the same pattern as `EulerStepper`: own `dt`, pre-allocate scratch buffers, and take a user-supplied RHS. The `pfc::sim::steppers::create` factory overload that takes a tableau builds one directly from a gradient evaluator and model, mirroring the `EulerStepper` factory used earlier in this guide:
 
 ```cpp
-// Hypothetical future usage (not yet implemented)
-auto rk4_stepper = pfc::sim::steppers::create_rk4(grad, model, dt, u.size());
+#include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
+#include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
+
+auto tableau = pfc::sim::steppers::make_rk4_classical<double>();
+auto rk4_stepper = pfc::sim::steppers::create(grad, model, dt, u.size(), tableau);
 
 sim.step_with_physics([&]() {
   t = rk4_stepper.step(t, u);  // Fourth-order accurate
@@ -388,8 +392,9 @@ The key advantages:
 ### Implementation status
 
 - ✅ **Euler stepper**: Fully implemented in [`include/openpfc/kernel/simulation/steppers/euler.hpp`](../../include/openpfc/kernel/simulation/steppers/euler.hpp)
-- ⏳ **RK2 stepper**: Infrastructure exists, implementation pending
-- ⏳ **RK4 stepper**: Infrastructure exists, implementation pending
+- ✅ **RK2 stepper**: Fully implemented in [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp) (`make_rk2_midpoint`/`make_rk2_heun` tableaus)
+- ✅ **RK4 stepper**: Fully implemented in [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp) (`make_rk4_classical` tableau)
+- ❌ **Adaptive RK stepper**: Exists on branch `ahojukka5/work-0070-add-adaptive-runge-kutta-stepper-with`, not yet merged to master
 - ⏳ **IMEX methods**: Design phase, no implementation yet
 
 Check the [refactoring roadmap](../development/refactoring_roadmap.md) for progress on higher-order stepper implementations.
