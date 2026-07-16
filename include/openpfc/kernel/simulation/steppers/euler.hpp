@@ -56,6 +56,7 @@
 
 #include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
+#include <openpfc/kernel/simulation/steppers/stepper_validation.hpp>
 
 namespace pfc::sim::steppers {
 
@@ -158,6 +159,8 @@ private:
  */
 template <class Rhs, std::size_t N> class MultiEulerStepper {
 public:
+  using RhsType = Rhs;
+  static constexpr std::size_t field_count = N;
   MultiEulerStepper(double dt, std::array<std::size_t, N> local_sizes, Rhs rhs)
       : m_dt(dt), m_rhs(std::move(rhs)) {
     for (std::size_t i = 0; i < N; ++i) m_du[i].assign(local_sizes[i], 0.0);
@@ -292,6 +295,8 @@ private:
 template <class Eval, class Model>
 [[nodiscard]] auto create(Eval &eval, const Model &model, double dt,
                           std::size_t local_size) {
+  pfc::sim::steppers::validate_rhs_signature<Model, Eval>();
+  pfc::sim::steppers::validate_spatial_compatibility<Eval>();
   auto rhs = [&eval, &model](double t, const std::vector<double> & /*u*/,
                              std::vector<double> &du) {
     pfc::sim::for_each_interior(model, eval, du.data(), t);
