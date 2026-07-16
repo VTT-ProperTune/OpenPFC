@@ -41,12 +41,10 @@ private:
   using vec3 = std::array<double, 3>;
   using mat3 = std::array<vec3, 3>;
   using vec36 = std::array<vec3, 6>;
-  using vec32 = std::array<vec3, 2>;
 
   const vec3 location_;
   const vec3 orientation_;
   const vec36 q_;
-  const vec32 bbox_;
   const double rho_;
   const double radius_;
   const double amplitude_;
@@ -108,42 +106,19 @@ private:
     return q;
   }
 
-  static vec32 bounding_box(const vec3 &location, double radius) {
-    const vec3 low = {location[0] - radius, location[1] - radius,
-                      location[2] - radius};
-    const vec3 high = {location[0] + radius, location[1] + radius,
-                       location[2] + radius};
-    const vec32 bbox = {low, high};
-    return bbox;
-  }
-
-  bool is_inside_bbox(const vec3 &location) const {
-    const vec32 bbox = get_bbox();
-    return (location[0] > bbox[0][0]) && (location[0] < bbox[1][0]) &&
-           (location[1] > bbox[0][1]) && (location[1] < bbox[1][1]) &&
-           (location[2] > bbox[0][2]) && (location[2] < bbox[1][2]);
-  }
-
   double get_radius() const { return radius_; }
   double get_rho() const { return rho_; }
   double get_amplitude() const { return amplitude_; }
   vec3 get_location() const { return location_; }
   vec36 get_q() const { return q_; }
-  vec32 get_bbox() const { return bbox_; }
 
 public:
   Seed(const vec3 &location, const vec3 &orientation, const double radius,
        const double rho, const double amplitude)
       : location_(location), orientation_(orientation), q_(rotate(orientation_)),
-        bbox_(bounding_box(location, radius)), rho_(rho), radius_(radius),
-        amplitude_(amplitude) {}
+        rho_(rho), radius_(radius), amplitude_(amplitude) {}
 
   bool is_inside(const vec3 &X) const {
-    /*
-    if (!is_inside_bbox(X)) {
-      return false;
-    }
-    */
     const vec3 Y = get_location();
     double x = X[0] - Y[0];
     double y = X[1] - Y[1];
