@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "test_helpers.hpp"
@@ -32,6 +32,36 @@ TEST_CASE("GPU memory allocation", "[gpu][memory]") {
   REQUIRE(d_ptr != nullptr);
 
   cudaFree(d_ptr);
+}
+#endif
+
+TEST_CASE("HIP device detection", "[gpu][device][hip]") {
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available - skipping HIP tests");
+  }
+
+  // If we get here, HIP is available
+  REQUIRE(true);
+}
+
+// Only compile HIP-specific tests if HIP is enabled
+// CMake only defines OpenPFC_ENABLE_HIP if HIP was found
+#if defined(OpenPFC_ENABLE_HIP)
+#include <hip/hip_runtime.h>
+
+TEST_CASE("HIP memory allocation", "[gpu][memory][hip]") {
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+
+  double *d_ptr = nullptr;
+  size_t n = 100;
+
+  hipError_t err = hipMalloc(&d_ptr, n * sizeof(double));
+  REQUIRE(err == hipSuccess);
+  REQUIRE(d_ptr != nullptr);
+
+  hipFree(d_ptr);
 }
 #endif
 

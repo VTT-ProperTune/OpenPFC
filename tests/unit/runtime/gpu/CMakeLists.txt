@@ -62,3 +62,41 @@ if(OpenPFC_ENABLE_GPU_AUTOTUNING)
     add_test(NAME GPU_Autotune COMMAND test_gpu_autotune)
     message(STATUS "✅ GPU autotuning tests enabled")
 endif()
+
+# HIP unit tests - only build if HIP is enabled AND found
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    add_executable(test_hip_device test_device.cpp)
+    target_include_directories(test_hip_device PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_hip_device PRIVATE Catch2::Catch2 hip::host)
+    add_test(NAME HIP_DeviceDetection COMMAND test_hip_device)
+
+    message(STATUS "✅ HIP tests enabled")
+elseif(OpenPFC_ENABLE_HIP)
+    message(STATUS "⚠️  HIP tests disabled (HIP not found)")
+else()
+    message(STATUS "ℹ️  HIP tests disabled (OpenPFC_ENABLE_HIP=OFF)")
+endif()
+
+# SparseVector tests - build based on available backends
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+    add_executable(test_sparsevector_cuda ../operators/test_sparsevector_cuda.cpp)
+    target_include_directories(test_sparsevector_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/operators
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_sparsevector_cuda PRIVATE Catch2::Catch2 openpfc_gpu_kernels CUDA::cudart)
+    add_test(NAME CUDA_SparseVector COMMAND test_sparsevector_cuda)
+endif()
+
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    add_executable(test_sparsevector_hip ../operators/test_sparsevector_hip.cpp)
+    target_include_directories(test_sparsevector_hip PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/operators
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_sparsevector_hip PRIVATE Catch2::Catch2 openpfc_hip_kernels hip::host)
+    add_test(NAME HIP_SparseVector COMMAND test_sparsevector_hip)
+endif()

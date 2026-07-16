@@ -17,6 +17,19 @@
 #define PFC_GPU_CUDA_HEADERS_AVAILABLE 0
 #endif
 
+// Only include HIP headers if HIP is enabled at compile time
+// Note: This header must compile on NVIDIA systems (no HIP headers available)
+// On NVIDIA systems, OpenPFC_ENABLE_HIP will not be defined, so this is safe
+#if defined(OpenPFC_ENABLE_HIP)
+// CMake only defines OpenPFC_ENABLE_HIP if HIP was actually found
+// So if we're here, HIP headers should be available
+#include <hip/hip_runtime.h>
+#define PFC_GPU_HIP_HEADERS_AVAILABLE 1
+#else
+// HIP not enabled - safe to compile on NVIDIA systems
+#define PFC_GPU_HIP_HEADERS_AVAILABLE 0
+#endif
+
 namespace pfc {
 namespace gpu {
 namespace test {
@@ -41,10 +54,31 @@ inline bool is_cuda_available() {
 #endif
 }
 
+/**
+ * @brief Check if HIP is available at runtime
+ *
+ * Returns true only if:
+ * 1. HIP was enabled at compile time (OpenPFC_ENABLE_HIP defined)
+ * 2. HIP runtime is available
+ * 3. At least one HIP device is present
+ *
+ * Safe to call on systems without HIP - will return false.
+ */
+inline bool is_hip_available() {
+#if PFC_GPU_HIP_HEADERS_AVAILABLE
+  int device_count = 0;
+  hipError_t err = hipGetDeviceCount(&device_count);
+  return (err == hipSuccess) && (device_count > 0);
+#else
+  return false;
+#endif
+}
+
 } // namespace test
 } // namespace gpu
 } // namespace pfc
 
 #undef PFC_GPU_CUDA_HEADERS_AVAILABLE
+#undef PFC_GPU_HIP_HEADERS_AVAILABLE
 
 #endif

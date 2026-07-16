@@ -188,18 +188,18 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         include/openpfc/runtime/cuda/kernels_simple.cu
         include/openpfc/runtime/cuda/sparse_vector_ops.cu
     )
-    
+
     target_include_directories(openpfc_gpu_kernels
         PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
     )
-    
+
     target_link_libraries(openpfc_gpu_kernels
         PUBLIC
         CUDA::cudart
     )
-    
+
     # Pin CUDA language standard: project C++20 would otherwise map to "CUDA20" on
     # some CMake versions that do not know the matching nvcc flags (e.g. CMake 3.22).
     set_target_properties(openpfc_gpu_kernels PROPERTIES
@@ -207,12 +207,42 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         CUDA_STANDARD 20
         CUDA_STANDARD_REQUIRED ON
     )
-    
+
     # Link GPU kernels to main library (private - implementation detail)
     # Users can still use the kernels via headers, but don't need to link the library
     target_link_libraries(openpfc PRIVATE openpfc_gpu_kernels)
-    
+
     message(STATUS "✅ GPU kernel library enabled")
+endif()
+
+# HIP kernel library (only when HIP is enabled)
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    add_library(openpfc_hip_kernels
+        include/openpfc/runtime/hip/sparse_vector_ops.hip
+        include/openpfc/runtime/hip/padded_halo_faces.hip
+    )
+
+    target_include_directories(openpfc_hip_kernels
+        PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+
+    target_link_libraries(openpfc_hip_kernels
+        PUBLIC
+        hip::host
+    )
+
+    # Pin HIP language standard to C++20
+    set_target_properties(openpfc_hip_kernels PROPERTIES
+        HIP_STANDARD 20
+        HIP_STANDARD_REQUIRED ON
+    )
+
+    # Link HIP kernels to main library (private - implementation detail)
+    target_link_libraries(openpfc PRIVATE openpfc_hip_kernels)
+
+    message(STATUS "✅ HIP kernel library enabled")
 endif()
 
 # Add tomlplusplus include directory (header-only library)
