@@ -19,6 +19,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <mpi.h>
 #include <stdexcept>
 #include <string>
@@ -41,6 +42,70 @@
 namespace {
 
 
+
+// RAII wrappers for HIP device memory and MPI communicators
+struct hip_buffer_deleter {
+  void operator()(void* ptr) const noexcept {
+    if (ptr) {
+      (void)hipFree(ptr);  // Discard error to preserve no-throw guarantee
+    }
+  }
+};
+
+template<typename T>
+using hip_buffer_guard = std::unique_ptr<T, hip_buffer_deleter>;
+
+class mpi_comm_guard {
+private:
+  MPI_Comm comm_;
+  struct mpi_comm_deleter {
+    void operator()(MPI_Comm* comm) const noexcept {
+      if (comm && *comm != MPI_COMM_NULL && *comm != MPI_COMM_WORLD) {
+        (void)MPI_Comm_free(comm);  // Discard error to preserve no-throw guarantee
+      }
+    }
+  };
+  std::unique_ptr<MPI_Comm, mpi_comm_deleter> holder_;
+
+public:
+  explicit mpi_comm_guard(MPI_Comm comm = MPI_COMM_NULL)
+      : comm_(comm) {
+    if (comm != MPI_COMM_NULL) {
+      holder_ = std::unique_ptr<MPI_Comm, mpi_comm_deleter>(new MPI_Comm(comm), mpi_comm_deleter{});
+    }
+  }
+
+  ~mpi_comm_guard() noexcept = default;
+
+  // Disable copy, enable move
+  mpi_comm_guard(const mpi_comm_guard&) = delete;
+  mpi_comm_guard& operator=(const mpi_comm_guard&) = delete;
+  mpi_comm_guard(mpi_comm_guard&& other) noexcept
+      : comm_(other.comm_), holder_(std::move(other.holder_)) {
+    other.comm_ = MPI_COMM_NULL;
+  }
+
+  mpi_comm_guard& operator=(mpi_comm_guard&& other) noexcept {
+    if (this != &other) {
+      comm_ = other.comm_;
+      holder_ = std::move(other.holder_);
+      other.comm_ = MPI_COMM_NULL;
+    }
+    return *this;
+  }
+
+  // Implicit conversion to raw communicator for seamless integration
+  operator MPI_Comm() const { return comm_; }
+  MPI_Comm get() const { return comm_; }
+  MPI_Comm release() {
+    MPI_Comm tmp = comm_;
+    comm_ = MPI_COMM_NULL;
+    if (holder_) {
+      holder_.release();  // Release ownership without freeing
+    }
+    return tmp;
+  }
+};
 using pfc::field::PaddedBrick;
 using pfc::field::for_each_owned;
 
@@ -64,8 +129,9 @@ void sync_padded_h2d(const PaddedBrick<double> &host, double *dev) {
 }
 
 void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
-  MPI_Comm node_comm{};
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &node_comm);
+  MPI_Comm temp_node_comm{};
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &temp_node_comm);
+  mpi_comm_guard node_comm(temp_node_comm);
   int local_rank = 0;
   if (node_comm != MPI_COMM_NULL) {
     MPI_Comm_rank(node_comm, &local_rank);
@@ -118,27 +184,37 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   });
   for_each_owned(tempr_h, [&](int i, int j, int k) { tempr_h(i, j, k) = 0.0; });
 
-  const std::size_t padded_elems = phi_h.size();
-  const std::size_t padded_bytes = padded_elems * sizeof(double);
+  double *temp_phi_d = nullptr;
+  hip_check(hipMalloc(reinterpret_cast<void **>(&temp_phi_d), padded_bytes), "hipMalloc phi");
+  hip_buffer_guard<double> phi_d(temp_phi_d);
 
-  double *phi_d = nullptr;
-  double *tempr_d = nullptr;
-  double *lap_phi_d = nullptr;
-  double *lap_t_d = nullptr;
-  double *phidx_d = nullptr;
-  double *phidy_d = nullptr;
-  double *epsilon_d = nullptr;
-  double *epsilon_deriv_d = nullptr;
+  double *temp_tempr_d = nullptr;
+  hip_check(hipMalloc(reinterpret_cast<void **>(&temp_tempr_d), padded_bytes), "hipMalloc tempr");
+  hip_buffer_guard<double> tempr_d(temp_tempr_d);
 
-  hip_check(hipMalloc(reinterpret_cast<void **>(&phi_d), padded_bytes), "hipMalloc phi");
-  hip_check(hipMalloc(reinterpret_cast<void **>(&tempr_d), padded_bytes), "hipMalloc tempr");
-  hip_check(hipMalloc(reinterpret_cast<void **>(&lap_phi_d), padded_bytes), "hipMalloc lap_phi");
-  hip_check(hipMalloc(reinterpret_cast<void **>(&lap_t_d), padded_bytes), "hipMalloc lap_t");
-  hip_check(hipMalloc(reinterpret_cast<void **>(&phidx_d), padded_bytes), "hipMalloc phidx");
-  hip_check(hipMalloc(reinterpret_cast<void **>(&phidy_d), padded_bytes), "hipMalloc phidy");
-  hip_check(hipMalloc(reinterpret_cast<void **>(&epsilon_d), padded_bytes), "hipMalloc epsilon");
-  hip_check(hipMalloc(reinterpret_cast<void **>(&epsilon_deriv_d), padded_bytes),
-            "hipMalloc epsilon_deriv");
+  double *temp_lap_phi_d = nullptr;
+  hip_check(hipMalloc(reinterpret_cast<void **>(&temp_lap_phi_d), padded_bytes), "hipMalloc lap_phi");
+  hip_buffer_guard<double> lap_phi_d(temp_lap_phi_d);
+
+  double *temp_lap_t_d = nullptr;
+  hip_check(hipMalloc(reinterpret_cast<void **>(&temp_lap_t_d), padded_bytes), "hipMalloc lap_t");
+  hip_buffer_guard<double> lap_t_d(temp_lap_t_d);
+
+  double *temp_phidx_d = nullptr;
+  hip_check(hipMalloc(reinterpret_cast<void **>(&temp_phidx_d), padded_bytes), "hipMalloc phidx");
+  hip_buffer_guard<double> phidx_d(temp_phidx_d);
+
+  double *temp_phidy_d = nullptr;
+  hip_check(hipMalloc(reinterpret_cast<void **>(&temp_phidy_d), padded_bytes), "hipMalloc phidy");
+  hip_buffer_guard<double> phidy_d(temp_phidy_d);
+
+  double *temp_epsilon_d = nullptr;
+  hip_check(hipMalloc(reinterpret_cast<void **>(&temp_epsilon_d), padded_bytes), "hipMalloc epsilon");
+  hip_buffer_guard<double> epsilon_d(temp_epsilon_d);
+
+  double *temp_epsilon_deriv_d = nullptr;
+  hip_check(hipMalloc(reinterpret_cast<void **>(&temp_epsilon_deriv_d), padded_bytes), "hipMalloc epsilon_deriv");
+  hip_buffer_guard<double> epsilon_deriv_d(temp_epsilon_deriv_d);
 
   sync_padded_h2d(phi_h, phi_d);
   sync_padded_h2d(tempr_h, tempr_d);
@@ -250,18 +326,6 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     write_phi_png(rank, decomp, phi_h, path);
   }
 
-  hip_check(hipFree(phi_d), "hipFree(phi_d)");
-  hip_check(hipFree(tempr_d), "hipFree(tempr_d)");
-  hip_check(hipFree(lap_phi_d), "hipFree(lap_phi_d)");
-  hip_check(hipFree(lap_t_d), "hipFree(lap_t_d)");
-  hip_check(hipFree(phidx_d), "hipFree(phidx_d)");
-  hip_check(hipFree(phidy_d), "hipFree(phidy_d)");
-  hip_check(hipFree(epsilon_d), "hipFree(epsilon_d)");
-  hip_check(hipFree(epsilon_deriv_d), "hipFree(epsilon_deriv_d)");
-
-  if (node_comm != MPI_COMM_NULL) {
-    MPI_Comm_free(&node_comm);
-  }
 
   std::vector<double> loc_phi;
   std::vector<double> loc_T;
