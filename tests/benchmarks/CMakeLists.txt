@@ -6,4 +6,5 @@
 
 target_sources(openpfc-tests PRIVATE
     bench_world_coords.cpp
+    bench_time_integration.cpp
 )
