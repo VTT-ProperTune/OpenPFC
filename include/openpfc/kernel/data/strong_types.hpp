@@ -149,7 +149,9 @@
 #pragma once
 
 #include <array>
+#ifndef __CUDACC__
 #include <compare>
+#endif
 #include <openpfc/kernel/data/world_types.hpp>
 #include <type_traits>
 
@@ -196,7 +198,23 @@ struct GridSize {
   operator const Int3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying grid dimensions */
+#ifndef __CUDACC__
   auto operator<=>(const GridSize &other) const noexcept = default;
+#else
+  /** @brief Equality comparison for CUDA (element-by-element) */
+  __host__ __device__
+  constexpr bool operator==(const GridSize &other) const noexcept {
+    return value[0] == other.value[0] &&
+           value[1] == other.value[1] &&
+           value[2] == other.value[2];
+  }
+
+  /** @brief Inequality comparison for CUDA */
+  __host__ __device__
+  constexpr bool operator!=(const GridSize &other) const noexcept {
+    return !(*this == other);
+  }
+#endif
 };
 
 /**
@@ -235,7 +253,23 @@ struct LocalOffset {
   operator const Int3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying offsets */
+#ifndef __CUDACC__
   auto operator<=>(const LocalOffset &other) const noexcept = default;
+#else
+  /** @brief Equality comparison for CUDA (element-by-element) */
+  __host__ __device__
+  constexpr bool operator==(const LocalOffset &other) const noexcept {
+    return value[0] == other.value[0] &&
+           value[1] == other.value[1] &&
+           value[2] == other.value[2];
+  }
+
+  /** @brief Inequality comparison for CUDA */
+  __host__ __device__
+  constexpr bool operator!=(const LocalOffset &other) const noexcept {
+    return !(*this == other);
+  }
+#endif
 };
 
 /**
@@ -274,7 +308,23 @@ struct GlobalOffset {
   operator const Int3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying offsets */
+#ifndef __CUDACC__
   auto operator<=>(const GlobalOffset &other) const noexcept = default;
+#else
+  /** @brief Equality comparison for CUDA (element-by-element) */
+  __host__ __device__
+  constexpr bool operator==(const GlobalOffset &other) const noexcept {
+    return value[0] == other.value[0] &&
+           value[1] == other.value[1] &&
+           value[2] == other.value[2];
+  }
+
+  /** @brief Inequality comparison for CUDA */
+  __host__ __device__
+  constexpr bool operator!=(const GlobalOffset &other) const noexcept {
+    return !(*this == other);
+  }
+#endif
 };
 
 /**
@@ -345,7 +395,23 @@ struct GridSpacing {
   operator const Real3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying spacing */
+#ifndef __CUDACC__
   auto operator<=>(const GridSpacing &other) const noexcept = default;
+#else
+  /** @brief Equality comparison for CUDA (element-by-element) */
+  __host__ __device__
+  constexpr bool operator==(const GridSpacing &other) const noexcept {
+    return value[0] == other.value[0] &&
+           value[1] == other.value[1] &&
+           value[2] == other.value[2];
+  }
+
+  /** @brief Inequality comparison for CUDA */
+  __host__ __device__
+  constexpr bool operator!=(const GridSpacing &other) const noexcept {
+    return !(*this == other);
+  }
+#endif
 };
 
 /**
@@ -384,7 +450,23 @@ struct PhysicalOrigin {
   operator const Real3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying coordinates */
+#ifndef __CUDACC__
   auto operator<=>(const PhysicalOrigin &other) const noexcept = default;
+#else
+  /** @brief Equality comparison for CUDA (element-by-element) */
+  __host__ __device__
+  constexpr bool operator==(const PhysicalOrigin &other) const noexcept {
+    return value[0] == other.value[0] &&
+           value[1] == other.value[1] &&
+           value[2] == other.value[2];
+  }
+
+  /** @brief Inequality comparison for CUDA */
+  __host__ __device__
+  constexpr bool operator!=(const PhysicalOrigin &other) const noexcept {
+    return !(*this == other);
+  }
+#endif
 };
 
 /**
@@ -423,7 +505,23 @@ struct PhysicalCoords {
   operator const Real3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying coordinates */
+#ifndef __CUDACC__
   auto operator<=>(const PhysicalCoords &other) const noexcept = default;
+#else
+  /** @brief Equality comparison for CUDA (element-by-element) */
+  __host__ __device__
+  constexpr bool operator==(const PhysicalCoords &other) const noexcept {
+    return value[0] == other.value[0] &&
+           value[1] == other.value[1] &&
+           value[2] == other.value[2];
+  }
+
+  /** @brief Inequality comparison for CUDA */
+  __host__ __device__
+  constexpr bool operator!=(const PhysicalCoords &other) const noexcept {
+    return !(*this == other);
+  }
+#endif
 };
 
 /**
@@ -473,6 +571,8 @@ static_assert(sizeof(PhysicalCoords) == sizeof(Real3),
               "PhysicalCoords must be same size as Real3 (zero-cost)");
 
 // Verify trivial copyability (required for performance)
+
+#if __cplusplus >= 201703L && !defined(__CUDACC__)
 static_assert(std::is_trivially_copyable_v<GridSize>,
               "GridSize must be trivially copyable");
 static_assert(std::is_trivially_copyable_v<LocalOffset>,
@@ -490,7 +590,12 @@ static_assert(std::is_trivially_copyable_v<PhysicalCoords>,
 static_assert(std::is_trivially_copyable_v<PhysicalBounds>,
               "PhysicalBounds must be trivially copyable");
 
+
+#endif
+
 // Verify standard layout (required for interop)
+
+#if __cplusplus >= 201703L && !defined(__CUDACC__)
 static_assert(std::is_standard_layout_v<GridSize>,
               "GridSize must have standard layout");
 static_assert(std::is_standard_layout_v<LocalOffset>,
@@ -507,5 +612,8 @@ static_assert(std::is_standard_layout_v<PhysicalCoords>,
               "PhysicalCoords must have standard layout");
 static_assert(std::is_standard_layout_v<PhysicalBounds>,
               "PhysicalBounds must have standard layout");
+
+
+#endif
 
 } // namespace pfc
