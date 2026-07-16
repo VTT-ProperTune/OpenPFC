@@ -57,7 +57,7 @@ TEST_CASE("test_validate_method_rejects_adaptive_without_estimator") {
     REQUIRE(validate_method(RKIntegratorMethod::RK2_Midpoint, true));
     REQUIRE(validate_method(RKIntegratorMethod::RK2_Heun, true));
     REQUIRE(validate_method(RKIntegratorMethod::RK4_Classical, true));
-    
+
     // Embedded method should pass
     REQUIRE_FALSE(validate_method(RKIntegratorMethod::BogackiShampine32, true));
 }
@@ -77,7 +77,7 @@ TEST_CASE("test_validate_method_returns_descriptive_errors") {
 
 TEST_CASE("test_from_json_deserializes_valid_methods") {
     using pfc::ui::from_json;
-    
+
     REQUIRE(from_json<RKIntegratorMethod>(nlohmann::json("euler")) == RKIntegratorMethod::Euler);
     REQUIRE(from_json<RKIntegratorMethod>(nlohmann::json("rk2_midpoint")) == RKIntegratorMethod::RK2_Midpoint);
     REQUIRE(from_json<RKIntegratorMethod>(nlohmann::json("rk2_heun")) == RKIntegratorMethod::RK2_Heun);
@@ -87,11 +87,11 @@ TEST_CASE("test_from_json_deserializes_valid_methods") {
 
 TEST_CASE("test_from_json_throws_on_unknown_string") {
     using pfc::ui::from_json;
-    
+
     REQUIRE_THROWS_AS(from_json<RKIntegratorMethod>(nlohmann::json("unknown_method")), std::runtime_error);
     REQUIRE_THROWS_AS(from_json<RKIntegratorMethod>(nlohmann::json("RK4")), std::runtime_error);
     REQUIRE_THROWS_AS(from_json<RKIntegratorMethod>(nlohmann::json("euler ")), std::runtime_error);
-    
+
     // Verify error message is descriptive
     try {
         (void)from_json<RKIntegratorMethod>(nlohmann::json("invalid"));
@@ -113,19 +113,19 @@ TEST_CASE("test_make_tableau_returns_correct_coefficients") {
     auto euler_tableau = make_tableau(RKIntegratorMethod::Euler);
     REQUIRE(euler_tableau.stage_count() == 1);
     REQUIRE(std::string(euler_tableau.name()) == "Euler");
-    
+
     auto rk2_midpoint_tableau = make_tableau(RKIntegratorMethod::RK2_Midpoint);
     REQUIRE(rk2_midpoint_tableau.stage_count() == 2);
     REQUIRE(std::string(rk2_midpoint_tableau.name()) == "RK2 midpoint");
-    
+
     auto rk2_heun_tableau = make_tableau(RKIntegratorMethod::RK2_Heun);
     REQUIRE(rk2_heun_tableau.stage_count() == 2);
     REQUIRE(std::string(rk2_heun_tableau.name()) == "RK2 Heun");
-    
+
     auto rk4_tableau = make_tableau(RKIntegratorMethod::RK4_Classical);
     REQUIRE(rk4_tableau.stage_count() == 4);
     REQUIRE(std::string(rk4_tableau.name()) == "RK4 classical");
-    
+
     auto bs32_tableau = make_tableau(RKIntegratorMethod::BogackiShampine32);
     REQUIRE(bs32_tableau.stage_count() == 4);
     REQUIRE(std::string(bs32_tableau.name()) == "Bogacki-Shampine 3(2)");
@@ -134,18 +134,18 @@ TEST_CASE("test_make_tableau_returns_correct_coefficients") {
 TEST_CASE("test_make_euler_tableau_has_correct_coefficients") {
     // Test local Euler tableau coefficients: a_ij=[0], b_i=[1], c_i=[0]
     auto tableau = make_tableau(RKIntegratorMethod::Euler);
-    
+
     REQUIRE(tableau.stage_count() == 1);
-    
+
     // Check a_ij coefficients (1x1 matrix, should be [0])
     REQUIRE(tableau.a(0, 0) == 0.0);
-    
+
     // Check b_i coefficients (should be [1])
     REQUIRE(tableau.b(0) == 1.0);
-    
+
     // Check c_i coefficients (should be [0])
     REQUIRE(tableau.c(0) == 0.0);
-    
+
     // Verify no embedded error estimator
     REQUIRE(tableau.has_embedded() == false);
 }

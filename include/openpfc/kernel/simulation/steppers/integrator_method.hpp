@@ -122,7 +122,7 @@ inline bool is_embedded(RKIntegratorMethod method) {
  */
 inline std::optional<std::string> validate_method(RKIntegratorMethod method, bool requires_adaptive = false) {
     if (requires_adaptive && !is_embedded(method)) {
-        return "Adaptive step-size control requires an embedded method with error estimator, but " + 
+        return "Adaptive step-size control requires an embedded method with error estimator, but " +
                to_string(method) + " does not provide one";
     }
     return std::nullopt;  // Valid
@@ -222,17 +222,17 @@ namespace pfc::ui {
  * @note Follows from_json<Time> pattern in from_json_world_time.hpp
  */
 template<>
-[[nodiscard]] inline pfc::sim::steppers::RKIntegratorMethod 
+[[nodiscard]] inline pfc::sim::steppers::RKIntegratorMethod
 from_json<pfc::sim::steppers::RKIntegratorMethod>(const json& j) {
     const std::string s = j.get<std::string>();
-    
+
     if (s == "euler") return pfc::sim::steppers::RKIntegratorMethod::Euler;
     if (s == "rk2_midpoint") return pfc::sim::steppers::RKIntegratorMethod::RK2_Midpoint;
     if (s == "rk2_heun") return pfc::sim::steppers::RKIntegratorMethod::RK2_Heun;
     if (s == "rk4_classical") return pfc::sim::steppers::RKIntegratorMethod::RK4_Classical;
     if (s == "bogacki_shampine32") return pfc::sim::steppers::RKIntegratorMethod::BogackiShampine32;
-    
-    throw std::runtime_error("Unknown RK integrator method: '" + s + 
+
+    throw std::runtime_error("Unknown RK integrator method: '" + s +
                              "'. Valid methods are: euler, rk2_midpoint, rk2_heun, rk4_classical, bogacki_shampine32");
 }
 
