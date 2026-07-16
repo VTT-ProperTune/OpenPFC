@@ -34,6 +34,7 @@ void hip_check(hipError_t e, const char *what) {
   }
 
 
+}
 } // namespace
 int main(int argc, char *argv[]) {
   return pfc::runtime::mpi_main(
