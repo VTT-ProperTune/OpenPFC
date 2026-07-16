@@ -44,67 +44,81 @@ namespace {
 
 
 // RAII wrappers for HIP device memory and MPI communicators
-struct hip_buffer_deleter {
-  void operator()(void* ptr) const noexcept {
-    if (ptr) {
-      (void)hipFree(ptr);  // Discard error to preserve no-throw guarantee
-    }
-  }
-};
-
 template<typename T>
-using hip_buffer_guard = std::unique_ptr<T, hip_buffer_deleter>;
+class hip_buffer_guard {
+private:
+    T* ptr_;
+
+public:
+    explicit hip_buffer_guard(T* ptr = nullptr) : ptr_(ptr) {}
+    ~hip_buffer_guard() noexcept {
+        if (ptr_) {
+            (void)hipFree(ptr_);  // Discard error to preserve no-throw guarantee
+        }
+    }
+    // Disable copy, enable move
+    hip_buffer_guard(const hip_buffer_guard&) = delete;
+    hip_buffer_guard& operator=(const hip_buffer_guard&) = delete;
+    hip_buffer_guard(hip_buffer_guard&& other) noexcept : ptr_(other.ptr_) {
+        other.ptr_ = nullptr;
+    }
+    hip_buffer_guard& operator=(hip_buffer_guard&& other) noexcept {
+        if (this != &other) {
+            if (ptr_) {
+                (void)hipFree(ptr_);  // Discard error to preserve no-throw guarantee
+            }
+            ptr_ = other.ptr_;
+            other.ptr_ = nullptr;
+        }
+        return *this;
+    }
+
+    // Implicit conversion to raw pointer for seamless integration
+    operator T*() const { return ptr_; }
+    T* get() const { return ptr_; }
+    T* release() {
+        T* tmp = ptr_;
+        ptr_ = nullptr;
+        return tmp;
+    }
+};
 
 class mpi_comm_guard {
 private:
-  MPI_Comm comm_;
-  struct mpi_comm_deleter {
-    void operator()(MPI_Comm* comm) const noexcept {
-      if (comm && *comm != MPI_COMM_NULL && *comm != MPI_COMM_WORLD) {
-        (void)MPI_Comm_free(comm);  // Discard error to preserve no-throw guarantee
-      }
-    }
-  };
-  std::unique_ptr<MPI_Comm, mpi_comm_deleter> holder_;
+    MPI_Comm comm_;
 
 public:
-  explicit mpi_comm_guard(MPI_Comm comm = MPI_COMM_NULL)
-      : comm_(comm) {
-    if (comm != MPI_COMM_NULL) {
-      holder_ = std::unique_ptr<MPI_Comm, mpi_comm_deleter>(new MPI_Comm(comm), mpi_comm_deleter{});
+    explicit mpi_comm_guard(MPI_Comm comm = MPI_COMM_NULL) : comm_(comm) {}
+    ~mpi_comm_guard() noexcept {
+        if (comm_ != MPI_COMM_NULL && comm_ != MPI_COMM_WORLD) {
+            (void)MPI_Comm_free(&comm_);  // Discard error to preserve no-throw guarantee
+        }
     }
-  }
-
-  ~mpi_comm_guard() noexcept = default;
-
-  // Disable copy, enable move
-  mpi_comm_guard(const mpi_comm_guard&) = delete;
-  mpi_comm_guard& operator=(const mpi_comm_guard&) = delete;
-  mpi_comm_guard(mpi_comm_guard&& other) noexcept
-      : comm_(other.comm_), holder_(std::move(other.holder_)) {
-    other.comm_ = MPI_COMM_NULL;
-  }
-
-  mpi_comm_guard& operator=(mpi_comm_guard&& other) noexcept {
-    if (this != &other) {
-      comm_ = other.comm_;
-      holder_ = std::move(other.holder_);
-      other.comm_ = MPI_COMM_NULL;
+    // Disable copy, enable move
+    mpi_comm_guard(const mpi_comm_guard&) = delete;
+    mpi_comm_guard& operator=(const mpi_comm_guard&) = delete;
+    mpi_comm_guard(mpi_comm_guard&& other) noexcept : comm_(other.comm_) {
+        other.comm_ = MPI_COMM_NULL;
     }
-    return *this;
-  }
-
-  // Implicit conversion to raw communicator for seamless integration
-  operator MPI_Comm() const { return comm_; }
-  MPI_Comm get() const { return comm_; }
-  MPI_Comm release() {
-    MPI_Comm tmp = comm_;
-    comm_ = MPI_COMM_NULL;
-    if (holder_) {
-      holder_.release();  // Release ownership without freeing
+    mpi_comm_guard& operator=(mpi_comm_guard&& other) noexcept {
+        if (this != &other) {
+            if (comm_ != MPI_COMM_NULL && comm_ != MPI_COMM_WORLD) {
+                (void)MPI_Comm_free(&comm_);
+            }
+            comm_ = other.comm_;
+            other.comm_ = MPI_COMM_NULL;
+        }
+        return *this;
     }
-    return tmp;
-  }
+
+    // Implicit conversion to raw communicator for seamless integration
+    operator MPI_Comm() const { return comm_; }
+    MPI_Comm get() const { return comm_; }
+    MPI_Comm release() {
+        MPI_Comm tmp = comm_;
+        comm_ = MPI_COMM_NULL;
+        return tmp;
+    }
 };
 using pfc::field::PaddedBrick;
 using pfc::field::for_each_owned;
@@ -183,6 +197,9 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     phi_h(i, j, 0) = (ddx * ddx + ddy * ddy < kobayashi::kSeed) ? 1.0 : 0.0;
   });
   for_each_owned(tempr_h, [&](int i, int j, int k) { tempr_h(i, j, k) = 0.0; });
+
+  const std::size_t padded_elems = phi_h.size();
+  const std::size_t padded_bytes = padded_elems * sizeof(double);
 
   double *temp_phi_d = nullptr;
   hip_check(hipMalloc(reinterpret_cast<void **>(&temp_phi_d), padded_bytes), "hipMalloc phi");
