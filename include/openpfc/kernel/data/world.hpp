@@ -126,7 +126,7 @@ template <typename T> struct World final {
    * @return Reference to the output stream.
    */
   template <typename T_>
-  friend std::ostream &operator<<(std::ostream &os, const World<T_> &w) noexcept;
+  friend std::ostream &operator<<(std::ostream &os, const World<T_> &w);
 };
 
 /// Type alias for Cartesian 3D World (most common usage)

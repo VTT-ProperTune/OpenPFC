@@ -108,7 +108,7 @@ inline const char *name_of(CartesianTag tag) {
 }
 
 template <typename CoordTag>
-std::ostream &operator<<(std::ostream &os, const World<CoordTag> &w) noexcept {
+std::ostream &operator<<(std::ostream &os, const World<CoordTag> &w) {
   std::ostringstream out;
   out << std::fixed << std::setprecision(2);
   out << "World Summary\n";
@@ -133,8 +133,8 @@ std::ostream &operator<<(std::ostream &os, const World<CoordTag> &w) noexcept {
 }
 
 // Explicit instantiation of operator<< for CartesianTag
-template std::ostream &
-operator<< <CartesianTag>(std::ostream &os, const World<CartesianTag> &w) noexcept;
+template std::ostream &operator<< <CartesianTag>(std::ostream &os,
+                                                 const World<CartesianTag> &w);
 // Explicit instantiation of World constructor for CartesianTag
 template World<CartesianTag>::World(const Int3 &lower, const Int3 &upper,
                                     const CoordinateSystem<CartesianTag> &cs);
@@ -150,6 +150,5 @@ template <typename T>
 Int3 to_indices(const World<T> &world, const Real3 &coordinates) noexcept {
   return to_index(get_coordinate_system(world), coordinates);
 }
-
 
 } // namespace pfc::world
