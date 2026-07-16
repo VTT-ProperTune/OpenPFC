@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <algorithm>
+#include <sstream>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <openpfc/kernel/simulation/time.hpp>
 
@@ -181,7 +183,8 @@ TEST_CASE("Time::set_dt rejects negative values", "[time]") {
   REQUIRE_THAT(time.get_dt(), WithinAbs(0.1, TOLERANCE));
 }
 
-TEST_CASE("TimeStateGuard - restores dt and increment on destruction", "[time][unit]") {
+TEST_CASE("TimeStateGuard - restores dt and increment on destruction",
+          "[time][unit]") {
   Time time({0.0, 10.0, 0.1}, 1.0);
 
   // Modify time state
@@ -220,7 +223,7 @@ TEST_CASE("TimeStateGuard - commit disables restoration", "[time][unit]") {
     time.set_dt(0.02);
     time.set_increment(10);
 
-    guard.commit();  // Mark step as accepted
+    guard.commit(); // Mark step as accepted
   }
   // Guard destroyed but committed: no restoration
 
@@ -286,7 +289,8 @@ TEST_CASE("TimeStateGuard - move semantics preserve state", "[time][unit]") {
   REQUIRE(time.get_increment() == 5);
 }
 
-TEST_CASE("TimeStateGuard - move assignment restores before transfer", "[time][unit]") {
+TEST_CASE("TimeStateGuard - move assignment restores before transfer",
+          "[time][unit]") {
   Time time({0.0, 10.0, 0.1}, 1.0);
 
   time.set_dt(0.05);
@@ -346,4 +350,74 @@ TEST_CASE("TimeStateGuard - with time state modifications", "[time][unit]") {
 
   REQUIRE_THAT(time.get_dt(), WithinAbs(0.1, TOLERANCE));
   REQUIRE(time.get_increment() == 0);
+}
+
+TEST_CASE("Time - stage tracking initializes to 0/1", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 2.0);
+
+  REQUIRE(t.get_stage() == 0);
+  REQUIRE(t.get_stage_count() == 1);
+}
+
+TEST_CASE("Time - set_stage_count and set_stage accept valid values",
+          "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+
+  t.set_stage_count(4);
+  REQUIRE(t.get_stage_count() == 4);
+
+  t.set_stage(0);
+  REQUIRE(t.get_stage() == 0);
+
+  t.set_stage(3);
+  REQUIRE(t.get_stage() == 3);
+}
+
+TEST_CASE("Time - set_stage rejects out-of-range values", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  t.set_stage_count(2);
+
+  REQUIRE_THROWS_AS(t.set_stage(-1), std::invalid_argument);
+  REQUIRE_THROWS_AS(t.set_stage(2), std::invalid_argument);
+}
+
+TEST_CASE("Time - set_stage_count rejects values below 1", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+
+  REQUIRE_THROWS_AS(t.set_stage_count(0), std::invalid_argument);
+  REQUIRE_THROWS_AS(t.set_stage_count(-1), std::invalid_argument);
+}
+
+TEST_CASE("Time - stage is independent from increment", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  t.set_stage_count(4);
+  t.set_stage(2);
+
+  t.next();
+  t.next();
+
+  REQUIRE(t.get_increment() == 2);
+  REQUIRE(t.get_stage() == 2); // next() does not touch stage
+}
+
+TEST_CASE("Time - non-member stage functions mirror member functions",
+          "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+
+  pfc::time::set_stage_count(t, 3);
+  REQUIRE(pfc::time::stage_count(t) == 3);
+
+  pfc::time::set_stage(t, 1);
+  REQUIRE(pfc::time::stage(t) == 1);
+}
+
+TEST_CASE("Time - operator<< includes stage information", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  t.set_stage_count(4);
+  t.set_stage(1);
+
+  std::ostringstream oss;
+  oss << t;
+
+  REQUIRE_THAT(oss.str(), ContainsSubstring("stage = 1/4"));
 }

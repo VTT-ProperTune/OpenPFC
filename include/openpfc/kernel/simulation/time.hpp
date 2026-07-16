@@ -243,6 +243,8 @@ private:
   int m_increment; ///< Current time increment
   double m_saveat; ///< Time interval for saving data
   IntegratorMethod m_method{IntegratorMethod::euler};
+  int m_stage{0};       ///< Current stage index within this time step (0-based)
+  int m_stage_count{1}; ///< Total number of stages in the current time step
 
 public:
   /**
@@ -379,7 +381,8 @@ public:
    * @param time An array containing the start time, end time, and time step in
    * that order
    */
-  Time(const std::array<double, 3> &time) : Time(time, time[2], IntegratorMethod::euler) {}
+  Time(const std::array<double, 3> &time)
+      : Time(time, time[2], IntegratorMethod::euler) {}
 
   /**
    * @brief Construct a new Time object with the specified time interval and
@@ -390,7 +393,8 @@ public:
    * @param time An array containing the start time, end time, and time step in
    * that order
    */
-  Time(const std::array<double, 3> &time, double saveat) : Time(time, saveat, IntegratorMethod::euler) {}
+  Time(const std::array<double, 3> &time, double saveat)
+      : Time(time, saveat, IntegratorMethod::euler) {}
 
   /**
    * @brief Get the start time.
@@ -447,6 +451,59 @@ public:
    * @return Current increment
    */
   int get_increment() const { return m_increment; }
+
+  /**
+   * @brief Get the current stage index within this time step.
+   *
+   * Stage tracking is independent of @ref get_increment(): stages range from
+   * `0` to `get_stage_count() - 1` and describe progress within a single
+   * multi-stage step (e.g. RK2/RK4), while the increment counts completed
+   * time steps.
+   *
+   * @return Current stage index (0-based)
+   */
+  int get_stage() const { return m_stage; }
+
+  /**
+   * @brief Set the current stage index within this time step.
+   *
+   * Multi-stage steppers should call this before computing each stage.
+   *
+   * @param[in] stage New stage index (must satisfy `0 <= stage < get_stage_count()`)
+   * @throws std::invalid_argument If stage is out of range
+   */
+  void set_stage(int stage) {
+    if (stage < 0 || stage >= m_stage_count) {
+      throw std::invalid_argument(
+          "Stage must satisfy 0 <= stage < stage_count (stage_count=" +
+          std::to_string(m_stage_count) + "): " + std::to_string(stage));
+    }
+    m_stage = stage;
+  }
+
+  /**
+   * @brief Get the total number of stages in the current time step.
+   *
+   * @return Stage count (always >= 1)
+   */
+  int get_stage_count() const { return m_stage_count; }
+
+  /**
+   * @brief Set the total number of stages for this time step.
+   *
+   * Multi-stage steppers should call this once during initialization to
+   * configure how many stages each step has (e.g. 2 for RK2, 4 for RK4).
+   *
+   * @param[in] stage_count New stage count (must be >= 1)
+   * @throws std::invalid_argument If stage_count < 1
+   */
+  void set_stage_count(int stage_count) {
+    if (stage_count < 1) {
+      throw std::invalid_argument("Stage count must be >= 1: " +
+                                  std::to_string(stage_count));
+    }
+    m_stage_count = stage_count;
+  }
 
   /**
    * @brief Get the current simulation time
@@ -803,8 +860,8 @@ public:
    */
   friend std::ostream &operator<<(std::ostream &os, const Time &t) {
     os << "(t0 = " << t.m_t0 << ", t1 = " << t.m_t1 << ", dt = " << t.m_dt;
-    os << ", saveat = " << t.m_saveat << ", t_current = " << t.get_current()
-       << ")\n";
+    os << ", saveat = " << t.m_saveat << ", t_current = " << t.get_current();
+    os << ", stage = " << t.m_stage << "/" << t.m_stage_count << ")\n";
     return os;
   };
 };
@@ -841,11 +898,9 @@ public:
    * @brief Construct a guard capturing the current temporal state
    * @param time Reference to the Time object to guard
    */
-  explicit TimeStateGuard(Time& time)
-      : m_time(time),
-        m_saved_dt(time.get_dt()),
-        m_saved_increment(time.get_increment()),
-        m_committed(false) {}
+  explicit TimeStateGuard(Time &time)
+      : m_time(time), m_saved_dt(time.get_dt()),
+        m_saved_increment(time.get_increment()), m_committed(false) {}
 
   /**
    * @brief Restore captured dt and increment unless committed
@@ -862,8 +917,8 @@ public:
   }
 
   // Copy operations deleted: only one guard should own rollback state
-  TimeStateGuard(const TimeStateGuard&) = delete;
-  TimeStateGuard& operator=(const TimeStateGuard&) = delete;
+  TimeStateGuard(const TimeStateGuard &) = delete;
+  TimeStateGuard &operator=(const TimeStateGuard &) = delete;
 
   /**
    * @brief Move constructor transfers guard ownership
@@ -872,11 +927,9 @@ public:
    * The moved-from guard is left in a committed state (no restoration on
    * destruction) to prevent accidental rollback.
    */
-  TimeStateGuard(TimeStateGuard&& other) noexcept
-      : m_time(other.m_time),
-        m_saved_dt(other.m_saved_dt),
-        m_saved_increment(other.m_saved_increment),
-        m_committed(other.m_committed) {
+  TimeStateGuard(TimeStateGuard &&other) noexcept
+      : m_time(other.m_time), m_saved_dt(other.m_saved_dt),
+        m_saved_increment(other.m_saved_increment), m_committed(other.m_committed) {
     other.m_committed = true;
   }
 
@@ -889,7 +942,7 @@ public:
    * taking ownership of other's state. The moved-from guard is left in
    * a committed state.
    */
-  TimeStateGuard& operator=(TimeStateGuard&& other) noexcept {
+  TimeStateGuard &operator=(TimeStateGuard &&other) noexcept {
     if (this != &other) {
       if (!m_committed) {
         m_time.set_dt(m_saved_dt);
@@ -919,10 +972,10 @@ public:
   [[nodiscard]] bool committed() const noexcept { return m_committed; }
 
 private:
-  Time& m_time;           ///< Reference to guarded Time object
-  double m_saved_dt;      ///< Captured time step value
-  int m_saved_increment;  ///< Captured increment counter
-  bool m_committed;       ///< Flag to disable restoration
+  Time &m_time;          ///< Reference to guarded Time object
+  double m_saved_dt;     ///< Captured time step value
+  int m_saved_increment; ///< Captured increment counter
+  bool m_committed;      ///< Flag to disable restoration
 };
 
 /**
@@ -958,6 +1011,17 @@ inline void set_increment(Time &t, int inc) { t.set_increment(inc); }
 inline void set_saveat(Time &t, double s) { t.set_saveat(s); }
 inline void set_dt(Time &t, double d) { t.set_dt(d); }
 
+[[nodiscard]] inline int stage(const Time &t) noexcept { return t.get_stage(); }
+
+[[nodiscard]] inline int stage_count(const Time &t) noexcept {
+  return t.get_stage_count();
+}
+
+inline void set_stage(Time &t, int stage) { t.set_stage(stage); }
+
+inline void set_stage_count(Time &t, int stage_count) {
+  t.set_stage_count(stage_count);
+}
 
 } // namespace time
 
