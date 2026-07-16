@@ -814,10 +814,12 @@ TEST_CASE("VTKWriter - PVTI file open error", "[vtk_writer][io][error]") {
       std::filesystem::create_directory(pvti_filename);
     }
 
-    // Synchronize to ensure rank 0 has created the directory before other ranks proceed
+    // Synchronize to ensure rank 0 has created the directory before other ranks
+    // proceed
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Only rank 0 throws std::runtime_error because only rank 0 writes the .pvti master file
+    // Only rank 0 throws std::runtime_error because only rank 0 writes the .pvti
+    // master file
     if (fixture.m_rank == 0) {
       REQUIRE_THROWS_AS(writer.write(1, data), std::runtime_error);
 
@@ -832,7 +834,8 @@ TEST_CASE("VTKWriter - PVTI file open error", "[vtk_writer][io][error]") {
   }
 }
 
-TEST_CASE("test_vtk_writer_collective_error_field_size_mismatch", "[vtk][mpi][error]") {
+TEST_CASE("test_vtk_writer_collective_error_field_size_mismatch",
+          "[vtk][mpi][error]") {
   VTKWriterTestFixture fixture;
 
   // Only run this test with multiple MPI ranks
@@ -869,7 +872,8 @@ TEST_CASE("test_vtk_writer_collective_error_field_size_mismatch", "[vtk][mpi][er
   REQUIRE_THROWS_AS(writer.write(1, data), std::runtime_error);
 }
 
-TEST_CASE("test_vtk_writer_collective_error_file_open_failure", "[vtk][mpi][error]") {
+TEST_CASE("test_vtk_writer_collective_error_file_open_failure",
+          "[vtk][mpi][error]") {
   VTKWriterTestFixture fixture;
 
   // Only run this test with multiple MPI ranks
@@ -909,14 +913,16 @@ TEST_CASE("test_vtk_writer_collective_error_file_open_failure", "[vtk][mpi][erro
   // Clean up any files that were created on non-failing ranks
   if (fixture.m_rank != 0) {
     char filename[256];
-    snprintf(filename, sizeof(filename), "test_file_open_0001_%d.vti", fixture.m_rank);
+    snprintf(filename, sizeof(filename), "test_file_open_0001_%d.vti",
+             fixture.m_rank);
     if (fixture.file_exists(filename)) {
       std::filesystem::remove(filename);
     }
   }
 }
 
-TEST_CASE("test_vtk_writer_collective_error_file_write_failure", "[vtk][mpi][error]") {
+TEST_CASE("test_vtk_writer_collective_error_file_write_failure",
+          "[vtk][mpi][error]") {
   VTKWriterTestFixture fixture;
 
   // Only run this test with multiple MPI ranks
@@ -924,28 +930,17 @@ TEST_CASE("test_vtk_writer_collective_error_file_write_failure", "[vtk][mpi][err
     SKIP("Test requires multiple MPI ranks to verify collective error agreement");
   }
 
-  // Note: Testing actual file write failure is difficult without filesystem manipulation.
-  // This test verifies the collective error agreement path by using a read-only file
-  // on rank 0 only. However, since we open files with std::ios::binary and write,
-  // we'd need to manipulate the filesystem to make the write fail.
-  //
-  // As a practical alternative, we verify the collective error agreement mechanism
-  // is in place by checking that the code path exists and would be triggered
-  // if a write failure occurred.
-  //
-  // In a real scenario, file write failures could occur due to:
-  // - Disk full conditions
-  // - Read-only filesystem
-  // - Quota exceeded
-  // - I/O errors
-  //
-  // Since we cannot reliably simulate these conditions in a test environment,
-  // we document that the collective error agreement for file write failures
-  // is implemented in vtk_writer.cpp lines 7-9 (second MPI_Allreduce).
+  // Force a genuine write failure on rank 0 only, using /dev/full: a
+  // standard Linux device that always reports ENOSPC on write. This is a
+  // reliable, portable way to exercise the second collective agreement
+  // (post-write-failure) without filesystem permission games. /dev/full has
+  // no '.' in its name, so generate_filename() returns it unchanged (no
+  // per-rank suffix), and format_with_number() passes through a pattern with
+  // no '%' specifier unchanged too -- so this path is used verbatim.
+  std::string filename_pattern =
+      (fixture.m_rank == 0) ? "/dev/full" : "test_write_failure_%04d.vti";
 
-  // For this test, we verify the normal successful path to ensure we didn't
-  // break anything with the collective error agreement changes.
-  VTKWriter writer("test_collective_write_success_%04d.vti");
+  VTKWriter writer(filename_pattern.c_str());
 
   const int nx_global = 4;
   const int nx_local = nx_global / fixture.m_num_ranks;
@@ -960,26 +955,24 @@ TEST_CASE("test_vtk_writer_collective_error_file_write_failure", "[vtk][mpi][err
                             static_cast<std::size_t>(4);
   auto data = fixture.create_test_data(n_pts);
 
-  // This should succeed without throwing
-  REQUIRE_NOTHROW(writer.write(1, data));
+  // ALL ranks should throw std::runtime_error due to collective error
+  // agreement -- this call returning at all (rather than hanging) is itself
+  // the deadlock regression test.
+  REQUIRE_THROWS_AS(writer.write(1, data), std::runtime_error);
 
-  // Verify files were created
-  // Filename format: test_collective_write_success_0001_RANK.vti
-  char filename[256];
-  snprintf(filename, sizeof(filename), "test_collective_write_success_0001_%d.vti", fixture.m_rank);
-  REQUIRE(fixture.file_exists(filename));
-
-  // Clean up
-  if (fixture.m_rank == 0) {
-    std::string pvti_filename = "test_collective_write_success_0001.pvti";
-    if (fixture.file_exists(pvti_filename)) {
-      std::filesystem::remove(pvti_filename);
+  // Clean up any files that were created on the non-failing ranks.
+  if (fixture.m_rank != 0) {
+    char filename[256];
+    snprintf(filename, sizeof(filename), "test_write_failure_0001_%d.vti",
+             fixture.m_rank);
+    if (fixture.file_exists(filename)) {
+      std::filesystem::remove(filename);
     }
   }
-  std::filesystem::remove(filename);
 }
 
-TEST_CASE("test_vtk_writer_complexfield_collective_error_agreement", "[vtk][mpi][error]") {
+TEST_CASE("test_vtk_writer_complexfield_collective_error_agreement",
+          "[vtk][mpi][error]") {
   VTKWriterTestFixture fixture;
 
   // Only run this test with multiple MPI ranks
