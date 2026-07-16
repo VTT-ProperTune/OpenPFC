@@ -54,13 +54,13 @@ endif()
 
 
 # HIP integration tests follow the same pattern as CUDA tests.
-# test_fd_gradient_device_hip.cpp instantiates the templated
+# test_fd_gradient_device_hip.hip instantiates the templated
 # for_each_interior_device_kernel for a test-local model and grads
 # aggregate; the kernel must be compiled by hipcc, so the test source is
 # added to the test target only on HIP builds.
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_sources(openpfc-tests PRIVATE
-    scenarios/gpu_validation/test_fd_gradient_device_hip.cpp
+    scenarios/gpu_validation/test_fd_gradient_device_hip.hip
   )
   target_link_libraries(openpfc-tests PRIVATE hip::host)
 endif()
