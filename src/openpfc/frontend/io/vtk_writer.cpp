@@ -173,72 +173,128 @@ void VTKWriter::write_pvti_file(int increment) const {
 MPI_Status VTKWriter::write(int increment, const RealField &data) {
   const std::size_t expected_pts =
       io::vtk_validate::expect_local_point_count(m_local_size);
+
+  // 1. Initialize local success flag and error message storage
+  int local_ok = 1;
+  std::string error_msg;
+
+  // 2. Field size mismatch check - sets local_ok=0 on error, delays throw
   if (data.size() != expected_pts) {
     std::ostringstream oss;
     oss << "VTKWriter::write: field size mismatch for VTK Piece (expected "
         << expected_pts << " points, got " << data.size() << ")";
-    throw std::runtime_error(oss.str());
+    error_msg = oss.str();
+    local_ok = 0;
   }
 
-  MPI_Status status;
-  MPI_Status_set_cancelled(&status, 0);
-  MPI_Status_set_elements(&status, MPI_DOUBLE, static_cast<int>(data.size()));
-
+  // 3. File open check - sets local_ok=0 on error, delays throw
   std::string filename = generate_filename(increment, m_rank);
   std::ofstream file(filename, std::ios::binary);
   if (!file) {
     const Logger lg{LogLevel::Error, m_rank};
-    const std::string msg = std::string("Failed to open VTK file: ") + filename;
-    log_error(lg, msg);
-    throw std::runtime_error(msg);
+    error_msg = std::string("Failed to open VTK file: ") + filename;
+    log_error(lg, error_msg);
+    local_ok = 0;
   }
 
-  // Write header
+  // 4. FIRST collective agreement: field size AND file open checks combined BEFORE file write
+  int global_ok = 0;
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
+      "MPI_Allreduce on error flag");
+
+  // 5. Throw collectively if any rank failed field size or file open
+  if (global_ok == 0) {
+    if (!error_msg.empty()) {
+      throw std::runtime_error(error_msg);
+    } else {
+      throw std::runtime_error("VTKWriter::write: collective error detected");
+    }
+  }
+
+  // 6. Proceed with file writes on all ranks (now guaranteed to reach barrier)
   write_vti_header(file, increment);
-
-  // Write data
   write_vti_data(file, data);
-
-  // Write footer
   file << '\n';
   file << R"(  </AppendedData>)" << '\n';
   file << R"(</VTKFile>)" << '\n';
   file.close();
+
+  // 7. File write failure check - sets local_ok=0 on error
   if (!file.good()) {
     const Logger lg{LogLevel::Error, m_rank};
     const std::string msg = std::string("Failed writing VTK file: ") + filename;
     log_error(lg, msg);
-    throw std::runtime_error(msg);
+    local_ok = 0;
+    error_msg = msg;
   }
 
-  // Collective on m_comm: all ranks must participate before rank 0 writes PVTI.
+  // 8. SECOND collective agreement: file write failure check AFTER file write completion
+  global_ok = 0;
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
+      "MPI_Allreduce on file write error flag");
+
+  // 9. Throw collectively if any rank failed file write check
+  if (global_ok == 0) {
+    throw std::runtime_error(error_msg);
+  }
+
+  // 10. Collective barrier before parallel master file write
   pfc::mpi::throw_on_mpi_error(MPI_Barrier(m_comm), "MPI_Barrier");
 
-  // Write parallel master file (rank 0 only)
+  // 11. Write parallel master file (rank 0 only)
   int current_size = 1;
   MPI_Comm_size(m_comm, &current_size);
   if (current_size > 1) {
     write_pvti_file(increment);
   }
 
+  // 12. Return MPI status only after all ranks complete
+  MPI_Status status;
+  MPI_Status_set_cancelled(&status, 0);
+  MPI_Status_set_elements(&status, MPI_DOUBLE, static_cast<int>(data.size()));
   return status;
 }
 
 MPI_Status VTKWriter::write(int increment, const ComplexField &data) {
   const std::size_t expected_pts =
       io::vtk_validate::expect_local_point_count(m_local_size);
+
+  // 1. Initialize local success flag and error message storage
+  int local_ok = 1;
+  std::string error_msg;
+
+  // 2. Field size mismatch check - sets local_ok=0 on error, delays throw
   if (data.size() != expected_pts) {
     std::ostringstream oss;
     oss << "VTKWriter::write: field size mismatch for VTK Piece (expected "
         << expected_pts << " points, got " << data.size() << ")";
-    throw std::runtime_error(oss.str());
+    error_msg = oss.str();
+    local_ok = 0;
   }
 
-  // Convert complex to real (magnitude)
+  // 3. Collective error agreement before field conversion
+  int global_ok = 0;
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
+      "MPI_Allreduce on complex field error flag");
+
+  // 4. Throw collectively if any rank failed
+  if (global_ok == 0) {
+    if (!error_msg.empty()) {
+      throw std::runtime_error(error_msg);
+    } else {
+      throw std::runtime_error("VTKWriter::write: collective complex field error detected");
+    }
+  }
+
+  // 5. Convert complex to real (magnitude) - only happens if all ranks passed
   RealField magnitude(data.size());
   std::transform(data.begin(), data.end(), magnitude.begin(),
                  [](const std::complex<double> &c) { return std::abs(c); });
 
+  // 6. Delegate to RealField overload which has its own collective error agreements
   return write(increment, magnitude);
 }
 
