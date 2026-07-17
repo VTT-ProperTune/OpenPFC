@@ -5,6 +5,7 @@
 target_sources(openpfc-tests PRIVATE
   test_ui_validation.cpp
   test_diffusion_integration.cpp
+  test_multifield_stepper.cpp
   scenarios/complete_simulation/test_complete_diffusion_simulation.cpp
   scenarios/complete_simulation/test_mass_conservation.cpp
   scenarios/parallel_scaling/test_domain_decomposition.cpp
