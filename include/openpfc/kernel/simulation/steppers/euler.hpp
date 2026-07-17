@@ -56,6 +56,7 @@
 
 #include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
+#include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/stepper_validation.hpp>
 
 namespace pfc::sim::steppers {
@@ -67,10 +68,13 @@ namespace pfc::sim::steppers {
  *             `rhs(double t, std::vector<double>& u, std::vector<double>& du)`.
  *             It must fill `du`; the stepper adds `dt * du` to `u`.
  */
-template <class Rhs> class EulerStepper {
+template <class Rhs>
+  requires StageFunction<Rhs>
+class EulerStepper {
 public:
   EulerStepper(double dt, std::size_t local_size, Rhs rhs)
-      : m_dt(dt), m_du(local_size, 0.0), m_u_checkpoint(local_size, 0.0), m_rhs(std::move(rhs)) {}
+      : m_dt(dt), m_du(local_size, 0.0), m_u_checkpoint(local_size, 0.0),
+        m_rhs(std::move(rhs)) {}
 
   /** Advance `u` by one explicit-Euler step in place; returns the new time. */
   double step(double t, std::vector<double> &u) {
@@ -97,9 +101,7 @@ public:
    * steppers must implement save_state(), restore_state(), and can_rollback()
    * with matching signatures to support adaptive error control.
    */
-  void save_state(const std::vector<double>& u) {
-    m_u_checkpoint = u;
-  }
+  void save_state(const std::vector<double> &u) { m_u_checkpoint = u; }
 
   /**
    * @brief Restore field state to last checkpointed state.
@@ -112,9 +114,7 @@ public:
    * @note This is part of the duck-typed checkpoint protocol. Must be
    * called after save_state() to have valid checkpoint data.
    */
-  void restore_state(std::vector<double>& u) {
-    u = m_u_checkpoint;
-  }
+  void restore_state(std::vector<double> &u) { u = m_u_checkpoint; }
 
   /**
    * @brief Check whether this stepper supports rollback.
@@ -128,9 +128,7 @@ public:
    * steppers should return true if they implement save_state() and
    * restore_state().
    */
-  [[nodiscard]] bool can_rollback() const noexcept {
-    return true;
-  }
+  [[nodiscard]] bool can_rollback() const noexcept { return true; }
 
 private:
   double m_dt{0.0};
@@ -164,7 +162,8 @@ public:
   MultiEulerStepper(double dt, std::array<std::size_t, N> local_sizes, Rhs rhs)
       : m_dt(dt), m_rhs(std::move(rhs)) {
     for (std::size_t i = 0; i < N; ++i) m_du[i].assign(local_sizes[i], 0.0);
-    for (std::size_t i = 0; i < N; ++i) m_u_checkpoint[i].assign(local_sizes[i], 0.0);
+    for (std::size_t i = 0; i < N; ++i)
+      m_u_checkpoint[i].assign(local_sizes[i], 0.0);
   }
 
   /** Advance every field by one explicit-Euler step in place. */
@@ -193,10 +192,11 @@ public:
    * steppers must implement save_state(), restore_state(), and can_rollback()
    * with matching signatures to support adaptive error control.
    */
-  template <class... U>
-  void save_state(const std::vector<U>&... u_buffers) {
-    static_assert(sizeof...(U) == N, "Number of fields must match template parameter N");
-    static_assert((std::is_same_v<U, double> && ...), "MultiEulerStepper checkpoint requires std::vector<double>");
+  template <class... U> void save_state(const std::vector<U> &...u_buffers) {
+    static_assert(sizeof...(U) == N,
+                  "Number of fields must match template parameter N");
+    static_assert((std::is_same_v<U, double> && ...),
+                  "MultiEulerStepper checkpoint requires std::vector<double>");
     std::size_t i = 0;
     ((m_u_checkpoint[i++] = u_buffers), ...);
   }
@@ -213,10 +213,11 @@ public:
    * @note This is part of the duck-typed checkpoint protocol. Must be
    * called after save_state() to have valid checkpoint data.
    */
-  template <class... U>
-  void restore_state(std::vector<U>&... u_buffers) {
-    static_assert(sizeof...(U) == N, "Number of fields must match template parameter N");
-    static_assert((std::is_same_v<U, double> && ...), "MultiEulerStepper checkpoint requires std::vector<double>");
+  template <class... U> void restore_state(std::vector<U> &...u_buffers) {
+    static_assert(sizeof...(U) == N,
+                  "Number of fields must match template parameter N");
+    static_assert((std::is_same_v<U, double> && ...),
+                  "MultiEulerStepper checkpoint requires std::vector<double>");
     std::size_t i = 0;
     ((u_buffers = m_u_checkpoint[i++]), ...);
   }
@@ -233,9 +234,7 @@ public:
    * steppers should return true if they implement save_state() and
    * restore_state().
    */
-  [[nodiscard]] bool can_rollback() const noexcept {
-    return true;
-  }
+  [[nodiscard]] bool can_rollback() const noexcept { return true; }
 
 private:
   template <std::size_t... I> auto make_du_tuple(std::index_sequence<I...>) {

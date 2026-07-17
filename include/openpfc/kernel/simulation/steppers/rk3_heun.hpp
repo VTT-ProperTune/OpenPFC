@@ -106,6 +106,8 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+
 namespace pfc::sim::steppers {
 
 /**
@@ -132,7 +134,9 @@ namespace pfc::sim::steppers {
  *   longer needed
  * - `m_u_temp`: Staging buffer for the stage-2 and stage-3 evaluation points
  */
-template <class Rhs> class RK3HeunStepper {
+template <class Rhs>
+  requires StageFunction<Rhs>
+class RK3HeunStepper {
 public:
   /**
    * @brief Construct an RK3 Heun stepper.

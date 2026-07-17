@@ -3,7 +3,8 @@
 
 /**
  * @file rk2_heun.hpp
- * @brief Explicit RK2 (Heun's method) stepper for arbitrary point-wise RHS callables.
+ * @brief Explicit RK2 (Heun's method) stepper for arbitrary point-wise RHS
+ * callables.
  *
  * @details
  * `RK2HeunStepper` is a **pure ODE integrator** that applies one RK2 Heun step
@@ -75,10 +76,13 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+
 namespace pfc::sim::steppers {
 
 /**
- * @brief Explicit RK2 (Heun's method) stepper: `u += dt/2 * (rhs(t, u) + rhs(t + dt, u_p))`.
+ * @brief Explicit RK2 (Heun's method) stepper: `u += dt/2 * (rhs(t, u) + rhs(t + dt,
+ * u_p))`.
  *
  * @tparam Rhs Any callable invocable as
  *             `rhs(double t, std::vector<double>& u, std::vector<double>& du)`.
@@ -102,7 +106,9 @@ namespace pfc::sim::steppers {
  * This design avoids per-step allocations and mirrors `EulerStepper`'s
  * pre-allocation strategy.
  */
-template <class Rhs> class RK2HeunStepper {
+template <class Rhs>
+  requires StageFunction<Rhs>
+class RK2HeunStepper {
 public:
   /**
    * @brief Construct an RK2 Heun stepper.
@@ -110,7 +116,8 @@ public:
    * @param dt Time step size (must be positive)
    * @param local_size Number of elements in the local state vector `u`
    * @param rhs Right-hand side callable, invocable as
-   *            `rhs(double t, const std::vector<double>& u, std::vector<double>& du)`
+   *            `rhs(double t, const std::vector<double>& u, std::vector<double>&
+   * du)`
    *
    * @post All buffers are value-initialized to 0.0
    */
@@ -148,7 +155,8 @@ public:
     const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(u.size());
     for (std::ptrdiff_t li = 0; li < n; ++li) {
       m_predictor[static_cast<std::size_t>(li)] =
-          u[static_cast<std::size_t>(li)] + m_dt * m_du[static_cast<std::size_t>(li)];
+          u[static_cast<std::size_t>(li)] +
+          m_dt * m_du[static_cast<std::size_t>(li)];
     }
 
     // Corrector step: u += dt/2 * (rhs(t, u) + rhs(t + dt, u_p))
@@ -156,8 +164,9 @@ public:
     m_rhs(t + m_dt, m_predictor, m_rhs_predictor);
     for (std::ptrdiff_t li = 0; li < n; ++li) {
       u[static_cast<std::size_t>(li)] +=
-          0.5 * m_dt * (m_du[static_cast<std::size_t>(li)] +
-                        m_rhs_predictor[static_cast<std::size_t>(li)]);
+          0.5 * m_dt *
+          (m_du[static_cast<std::size_t>(li)] +
+           m_rhs_predictor[static_cast<std::size_t>(li)]);
     }
 
     return t + m_dt;
@@ -171,11 +180,11 @@ public:
   double dt() const noexcept { return m_dt; }
 
 private:
-  double m_dt{0.0};                      ///< Time step size
-  std::vector<double> m_du;              ///< RHS at (t, u) - reused in corrector
-  std::vector<double> m_predictor;       ///< Predictor state u_p
-  std::vector<double> m_rhs_predictor;   ///< RHS at (t + dt, u_p)
-  Rhs m_rhs;                             ///< Right-hand side callable
+  double m_dt{0.0};                    ///< Time step size
+  std::vector<double> m_du;            ///< RHS at (t, u) - reused in corrector
+  std::vector<double> m_predictor;     ///< Predictor state u_p
+  std::vector<double> m_rhs_predictor; ///< RHS at (t + dt, u_p)
+  Rhs m_rhs;                           ///< Right-hand side callable
 };
 
 } // namespace pfc::sim::steppers

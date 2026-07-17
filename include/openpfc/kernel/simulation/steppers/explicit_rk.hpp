@@ -17,16 +17,19 @@
  * about the spatial discretization. The stepper itself is agnostic.
  *
  * **Single-field variant** (`ExplicitRKStepper<Rhs>`):
- *   - RHS signature: `rhs(double t, std::vector<double>& u, std::vector<double>& du)`
+ *   - RHS signature: `rhs(double t, std::vector<double>& u, std::vector<double>&
+ * du)`
  *   - Stores one `du` buffer and one scratch buffer per RK stage (`m_k`)
  *   - Implements the explicit RK algorithm: for each stage i, compute
  *     `k_i = rhs(t + c_i*dt, u + sum_j(a_ij*k_j))`, then final accumulation
  *     `u += dt * sum_i(b_i*k_i)`
  *
  * **Multi-field variant** (`MultiExplicitRKStepper<Rhs, N>`):
- *   - RHS signature: `rhs(double t, std::tuple<std::vector<double>&, ...> u_pack, std::tuple<std::vector<double>&, ...> du_pack)`
+ *   - RHS signature: `rhs(double t, std::tuple<std::vector<double>&, ...> u_pack,
+ * std::tuple<std::vector<double>&, ...> du_pack)`
  *   - Stores one `du` buffer per field and one scratch buffer per field per stage
- *   - Applies the same RK algorithm to each field independently using the tuple protocol
+ *   - Applies the same RK algorithm to each field independently using the tuple
+ * protocol
  *
  * Factory functions mirror the `euler.hpp` pattern, binding models and
  * evaluators to the canonical `for_each_interior` driver. They capture
@@ -49,6 +52,7 @@
 #include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
+#include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 
 namespace pfc::sim::steppers {
 
@@ -63,7 +67,9 @@ namespace pfc::sim::steppers {
  *             `rhs(double t, std::vector<double>& u, std::vector<double>& du)`.
  *             It must fill `du`; the stepper accumulates the result.
  */
-template <class Rhs> class ExplicitRKStepper {
+template <class Rhs>
+  requires StageFunction<Rhs>
+class ExplicitRKStepper {
 public:
   /**
    * @brief Construct an explicit RK stepper.
@@ -73,8 +79,10 @@ public:
    * @param tableau Butcher tableau defining the RK method coefficients.
    * @param rhs RHS callable.
    */
-  ExplicitRKStepper(double dt, std::size_t local_size, ButcherTableau<double> tableau, Rhs rhs)
-      : m_dt(dt), m_du(local_size, 0.0), m_tableau(std::move(tableau)), m_rhs(std::move(rhs)) {
+  ExplicitRKStepper(double dt, std::size_t local_size,
+                    ButcherTableau<double> tableau, Rhs rhs)
+      : m_dt(dt), m_du(local_size, 0.0), m_tableau(std::move(tableau)),
+        m_rhs(std::move(rhs)) {
     const unsigned int s = m_tableau.stage_count();
     m_k.resize(s);
     for (unsigned int i = 0; i < s; ++i) {
@@ -93,7 +101,7 @@ public:
    * @param u State vector (modified in place).
    * @return New time `t + dt`.
    */
-  double step(double t, std::vector<double>& u) {
+  double step(double t, std::vector<double> &u) {
     const unsigned int s = m_tableau.stage_count();
     const std::size_t n = u.size();
 
@@ -140,7 +148,7 @@ public:
 private:
   double m_dt{0.0};
   std::vector<double> m_du;
-  std::vector<std::vector<double>> m_k;  // scratch buffers per stage
+  std::vector<std::vector<double>> m_k; // scratch buffers per stage
   ButcherTableau<double> m_tableau;
   Rhs m_rhs;
 };
@@ -149,10 +157,12 @@ private:
  * @brief Multi-field explicit Runge-Kutta ODE stepper.
  *
  * Owns one `du` buffer per field and one scratch buffer per field per RK stage.
- * Applies the same RK algorithm to each field independently using the tuple protocol.
+ * Applies the same RK algorithm to each field independently using the tuple
+ * protocol.
  *
  * @tparam Rhs Multi-field RHS callable invocable as
- *             `rhs(double t, std::tuple<std::vector<double>&, ...> u_pack, std::tuple<std::vector<double>&, ...> du_pack)`.
+ *             `rhs(double t, std::tuple<std::vector<double>&, ...> u_pack,
+ * std::tuple<std::vector<double>&, ...> du_pack)`.
  * @tparam N Number of fields.
  */
 template <class Rhs, std::size_t N> class MultiExplicitRKStepper {
@@ -186,8 +196,7 @@ public:
    * @param u_buffers Field buffers (modified in place).
    * @return New time `t + dt`.
    */
-  template <class... U>
-  double step(double t, std::vector<U>&... u_buffers) {
+  template <class... U> double step(double t, std::vector<U> &...u_buffers) {
     static_assert(sizeof...(U) == N,
                   "MultiExplicitRKStepper::step: number of u buffers must match N.");
 
@@ -197,7 +206,8 @@ public:
     // Compute stages for each field
     for (unsigned int i = 0; i < s; ++i) {
       // Build temp states for each field
-      auto u_temp_pack = make_u_temp_tuples(u_pack, std::index_sequence_for<U...>{}, i);
+      auto u_temp_pack =
+          make_u_temp_tuples(u_pack, std::index_sequence_for<U...>{}, i);
 
       // Compute stage i for all fields
       const double stage_time = t + m_tableau.c(i) * m_dt;
@@ -218,12 +228,13 @@ public:
 
 private:
   template <class... U, std::size_t... I>
-  auto make_u_temp_tuples(std::tuple<std::vector<U>&...>& u_pack, std::index_sequence<I...>, unsigned int stage_idx) {
+  auto make_u_temp_tuples(std::tuple<std::vector<U> &...> &u_pack,
+                          std::index_sequence<I...>, unsigned int stage_idx) {
     return std::make_tuple(make_u_temp_one<I>(std::get<I>(u_pack), stage_idx)...);
   }
 
   template <std::size_t FieldIdx, class U>
-  std::vector<double> make_u_temp_one(std::vector<U>& u, unsigned int stage_idx) {
+  std::vector<double> make_u_temp_one(std::vector<U> &u, unsigned int stage_idx) {
     std::vector<double> u_temp(u.begin(), u.end());
 
     // Add contributions from previous stages: u_temp += dt * sum_j(a_ij * k_j)
@@ -240,23 +251,22 @@ private:
     return u_temp;
   }
 
-  template <std::size_t... I>
-  auto make_du_tuple(std::index_sequence<I...>) {
+  template <std::size_t... I> auto make_du_tuple(std::index_sequence<I...>) {
     return std::tie(m_du[I]...);
   }
 
   template <class DuPack, std::size_t... I>
-  void copy_du_to_k(DuPack& du_pack, std::index_sequence<I...>, unsigned int stage_idx) {
+  void copy_du_to_k(DuPack &du_pack, std::index_sequence<I...>,
+                    unsigned int stage_idx) {
     ((m_k[I][stage_idx] = std::get<I>(du_pack)), ...);
   }
 
   template <class UPack, std::size_t... I>
-  void accumulate(UPack& u_pack, std::index_sequence<I...>) {
+  void accumulate(UPack &u_pack, std::index_sequence<I...>) {
     (accumulate_one<I>(std::get<I>(u_pack)), ...);
   }
 
-  template <std::size_t FieldIdx, class U>
-  void accumulate_one(std::vector<U>& u) {
+  template <std::size_t FieldIdx, class U> void accumulate_one(std::vector<U> &u) {
     const unsigned int s = m_tableau.stage_count();
     const std::size_t n = u.size();
     for (unsigned int i = 0; i < s; ++i) {
@@ -271,7 +281,7 @@ private:
 
   double m_dt{0.0};
   std::array<std::vector<double>, N> m_du;
-  std::array<std::vector<std::vector<double>>, N> m_k;  // scratch per field per stage
+  std::array<std::vector<std::vector<double>>, N> m_k; // scratch per field per stage
   ButcherTableau<double> m_tableau;
   Rhs m_rhs;
 };
@@ -306,10 +316,11 @@ private:
  * @param tableau Butcher tableau defining the RK method coefficients.
  */
 template <class Eval, class Model>
-[[nodiscard]] auto create(Eval& eval, const Model& model, double dt,
-                          std::size_t local_size, const ButcherTableau<double>& tableau) {
-  auto rhs = [&eval, &model](double t, const std::vector<double>& /*u*/,
-                             std::vector<double>& du) {
+[[nodiscard]] auto create(Eval &eval, const Model &model, double dt,
+                          std::size_t local_size,
+                          const ButcherTableau<double> &tableau) {
+  auto rhs = [&eval, &model](double t, const std::vector<double> & /*u*/,
+                             std::vector<double> &du) {
     pfc::sim::for_each_interior(model, eval, du.data(), t);
   };
   return ExplicitRKStepper<decltype(rhs)>(dt, local_size, tableau, std::move(rhs));
@@ -330,9 +341,9 @@ template <class Eval, class Model>
  * @param tableau Butcher tableau defining the RK method coefficients.
  */
 template <class T, class Eval, class Model>
-[[nodiscard]] auto create(const pfc::field::LocalField<T>& u, Eval& eval,
-                          const Model& model, double dt,
-                          const ButcherTableau<double>& tableau) {
+[[nodiscard]] auto create(const pfc::field::LocalField<T> &u, Eval &eval,
+                          const Model &model, double dt,
+                          const ButcherTableau<double> &tableau) {
   return create(eval, model, dt, u.size(), tableau);
 }
 
@@ -355,24 +366,25 @@ template <class T, class Eval, class Model>
  * @param tableau Butcher tableau defining the RK method coefficients.
  */
 template <class... Ts, class Eval, class Model>
-[[nodiscard]] auto create(std::tuple<pfc::field::LocalField<Ts>&...> fields,
-                          Eval& eval, const Model& model, double dt,
-                          const ButcherTableau<double>& tableau) {
+[[nodiscard]] auto create(std::tuple<pfc::field::LocalField<Ts> &...> fields,
+                          Eval &eval, const Model &model, double dt,
+                          const ButcherTableau<double> &tableau) {
   constexpr std::size_t N = sizeof...(Ts);
   std::array<std::size_t, N> sizes{};
   std::apply(
-      [&](auto&... f) {
+      [&](auto &...f) {
         std::size_t i = 0;
         ((sizes[i++] = f.size()), ...);
       },
       fields);
 
-  auto rhs = [&eval, &model](double t, auto& /*u_tuple*/, auto& du_tuple) {
+  auto rhs = [&eval, &model](double t, auto & /*u_tuple*/, auto &du_tuple) {
     auto du_ptrs = std::apply(
-        [](auto&... vs) { return std::make_tuple(vs.data()...); }, du_tuple);
+        [](auto &...vs) { return std::make_tuple(vs.data()...); }, du_tuple);
     pfc::sim::for_each_interior(model, eval, du_ptrs, t);
   };
-  return MultiExplicitRKStepper<decltype(rhs), N>(dt, sizes, tableau, std::move(rhs));
+  return MultiExplicitRKStepper<decltype(rhs), N>(dt, sizes, tableau,
+                                                  std::move(rhs));
 }
 
 } // namespace pfc::sim::steppers
