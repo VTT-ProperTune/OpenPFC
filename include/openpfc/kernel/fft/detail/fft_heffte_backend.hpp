@@ -9,12 +9,22 @@
 #pragma once
 
 #include <openpfc/kernel/fft/fft_interface.hpp>
+#include <openpfc/kernel/fft/heap_concept.hpp>
 
 #include <heffte.h>
 #include <mpi.h>
 
 #include <stdexcept>
 #include <type_traits>
+
+#if defined(OpenPFC_ENABLE_CUDA)
+static_assert(pfc::fft::HeapBackend<heffte::backend::cufft>,
+              "cuFFT backend must satisfy HeapBackend concept");
+#endif
+#if defined(OpenPFC_ENABLE_HIP)
+static_assert(pfc::fft::HeapBackend<heffte::backend::rocfft>,
+              "rocFFT backend must satisfy HeapBackend concept");
+#endif
 
 namespace pfc {
 namespace fft {
@@ -35,17 +45,17 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
       BackendTag>::template buffer_container<std::complex<double>>;
   workspace_type m_wrk;
 
-
   // GPU workspaces for float and double precision
   // FFT_Impl can be called with RealType=float or double, so pre-allocate both
-  using gpu_workspace_type = typename heffte::fft3d_r2c<BackendTag>::template buffer_container<std::complex<double>>;
-  using gpu_workspace_float = typename heffte::fft3d_r2c<BackendTag>::template buffer_container<std::complex<float>>;
+  using gpu_workspace_type = typename heffte::fft3d_r2c<
+      BackendTag>::template buffer_container<std::complex<double>>;
+  using gpu_workspace_float = typename heffte::fft3d_r2c<
+      BackendTag>::template buffer_container<std::complex<float>>;
   gpu_workspace_type m_gpu_wrk_double;
   gpu_workspace_float m_gpu_wrk_float;
 
   FFT_Impl(fft_type fft)
-      : m_fft(std::move(fft)),
-        m_wrk(m_fft.size_workspace()),
+      : m_fft(std::move(fft)), m_wrk(m_fft.size_workspace()),
         m_gpu_wrk_double(m_fft.size_workspace()),
         m_gpu_wrk_float(m_fft.size_workspace()) {}
 
@@ -83,9 +93,11 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
                   "Input and output must use the same backend");
     m_fft_time -= MPI_Wtime();
     if constexpr (std::is_same_v<RealType, double>) {
-      m_fft.backward(in.data(), out.data(), m_gpu_wrk_double.data(), heffte::scale::full);
+      m_fft.backward(in.data(), out.data(), m_gpu_wrk_double.data(),
+                     heffte::scale::full);
     } else if constexpr (std::is_same_v<RealType, float>) {
-      m_fft.backward(in.data(), out.data(), m_gpu_wrk_float.data(), heffte::scale::full);
+      m_fft.backward(in.data(), out.data(), m_gpu_wrk_float.data(),
+                     heffte::scale::full);
     }
     m_fft_time += MPI_Wtime();
   }
@@ -114,8 +126,10 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
 
   size_t get_allocated_memory_bytes() const override {
     size_t total_bytes = m_wrk.size() * sizeof(typename workspace_type::value_type);
-    total_bytes += m_gpu_wrk_double.size() * sizeof(typename gpu_workspace_type::value_type);
-    total_bytes += m_gpu_wrk_float.size() * sizeof(typename gpu_workspace_float::value_type);
+    total_bytes +=
+        m_gpu_wrk_double.size() * sizeof(typename gpu_workspace_type::value_type);
+    total_bytes +=
+        m_gpu_wrk_float.size() * sizeof(typename gpu_workspace_float::value_type);
     return total_bytes;
   }
 
