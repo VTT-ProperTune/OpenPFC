@@ -139,8 +139,8 @@ public:
                        static_cast<std::ptrdiff_t>(ny),
                    dx, dy, dz, /*imin=*/halo_width, /*imax=*/nx - halo_width,
                    /*jmin=*/halo_width, /*jmax=*/ny - halo_width,
-                   /*kmin=*/halo_width, /*kmax=*/nz - halo_width, halo_width,
-                   order, std::move(halo_prepare_callback)) {}
+                   /*kmin=*/halo_width, /*kmax=*/nz - halo_width, halo_width, order,
+                   std::move(halo_prepare_callback)) {}
 
   /**
    * @brief Bind the evaluator to a `pfc::field::PaddedBrick<double>`.
@@ -154,14 +154,15 @@ public:
    * `(1, nx_pad, nx_pad·ny_pad)` so reads at the boundary reach into the
    * halo correctly.
    *
-   * @param u                     Padded brick to evaluate over (must outlive `*this`).
+   * @param u                     Padded brick to evaluate over (must outlive
+   * `*this`).
    * @param order                 Even spatial order (defaults to 2).
    * @param halo_prepare_callback Optional function invoked by prepare() to
    *                             trigger halo exchange before each stage in
    *                             multi-stage methods.
    */
   explicit FDGradient(const pfc::field::PaddedBrick<double> &u, int order = 2,
-                    std::function<void()> halo_prepare_callback = {})
+                      std::function<void()> halo_prepare_callback = {})
       : FDGradient(brick_owned_origin_(u), u.nx(), u.ny(), u.nz(),
                    /*sy=*/static_cast<std::ptrdiff_t>(u.padded_size3()[0]),
                    /*sxy=*/static_cast<std::ptrdiff_t>(u.padded_size3()[0]) *
@@ -184,6 +185,22 @@ public:
    *       can throw during FFT operations.
    */
   void prepare() {
+    if (m_halo_prepare_callback) {
+      m_halo_prepare_callback();
+    }
+  }
+
+  /**
+   * @brief Coordinate halo exchange before a multi-stage integrator's stage.
+   *
+   * Semantically identical to prepare() -- invokes the halo_prepare_callback
+   * if one was provided -- but named for the specific purpose of halo
+   * coordination, so multi-stage integrator code can call it without
+   * conflating "refresh halos" with the more general "prepare this
+   * evaluator" meaning prepare() carries for other backends (e.g.
+   * SpectralGradient::prepare() runs the forward FFT).
+   */
+  void halo_preparation() {
     if (m_halo_prepare_callback) {
       m_halo_prepare_callback();
     }

@@ -190,7 +190,6 @@ TEST_CASE("pfc::gradient::FDGradient binds to a PaddedBrick and matches the "
                 "pfc::field::FdGradient should alias pfc::gradient::FDGradient");
 }
 
-
 TEST_CASE("FDGradient prepare invokes callback when provided",
           "[kernel][field][fd_gradient][unit]") {
   // Test that prepare() calls the callback when one is provided.
@@ -205,9 +204,8 @@ TEST_CASE("FDGradient prepare invokes callback when provided",
 
   // Create FDGradient with callback via raw-pointer constructor
   auto grad = pfc::gradient::FDGradient<OnlyX>(
-      u.data(), u.size3()[0], u.size3()[1], u.size3()[2],
-      u.spacing()[0], u.spacing()[1], u.spacing()[2],
-      u.halo_width(), order, callback);
+      u.data(), u.size3()[0], u.size3()[1], u.size3()[2], u.spacing()[0],
+      u.spacing()[1], u.spacing()[2], u.halo_width(), order, callback);
 
   REQUIRE(callback_invoked == 0);
   grad.prepare();
@@ -218,7 +216,8 @@ TEST_CASE("FDGradient prepare invokes callback when provided",
 
 TEST_CASE("FDGradient prepare is no-op without callback",
           "[kernel][field][fd_gradient][unit]") {
-  // Test backward compatibility: prepare() does nothing when no callback is provided.
+  // Test backward compatibility: prepare() does nothing when no callback is
+  // provided.
   const int order = 2;
   const int hw = order / 2;
   const int N = 8;
@@ -277,9 +276,9 @@ TEST_CASE("FDGradient raw-pointer constructor accepts callback",
   // Create FDGradient with callback via raw-pointer constructor
   const auto sz = u.size3();
   const auto sp = u.spacing();
-  auto grad = pfc::gradient::FDGradient<OnlyX>(
-      u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
-      u.halo_width(), order, callback);
+  auto grad =
+      pfc::gradient::FDGradient<OnlyX>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1],
+                                       sp[2], u.halo_width(), order, callback);
 
   REQUIRE(callback_invoked == 0);
   grad.prepare();
@@ -288,4 +287,49 @@ TEST_CASE("FDGradient raw-pointer constructor accepts callback",
   // Verify gradient computation still works
   const auto g = grad(N / 2, N / 2, N / 2);
   REQUIRE(g.x == Approx(2.0));
+}
+
+TEST_CASE("halo_preparation calls callback", "[kernel][field][fd_gradient][unit]") {
+  int callback_invoked = 0;
+  auto callback = [&callback_invoked]() { ++callback_invoked; };
+
+  const int order = 2;
+  const int hw = order / 2;
+  const int N = 8;
+  auto u = make_field(N, hw);
+  u.apply([](double, double, double) { return 1.0; });
+
+  auto grad = pfc::gradient::FDGradient<OnlyX>(
+      u.data(), u.size3()[0], u.size3()[1], u.size3()[2], u.spacing()[0],
+      u.spacing()[1], u.spacing()[2], u.halo_width(), order, callback);
+
+  REQUIRE(callback_invoked == 0);
+  grad.halo_preparation();
+  REQUIRE(callback_invoked == 1);
+  grad.halo_preparation();
+  REQUIRE(callback_invoked == 2);
+}
+
+TEST_CASE("halo_preparation and prepare identity",
+          "[kernel][field][fd_gradient][unit]") {
+  int callback_invoked = 0;
+  auto callback = [&callback_invoked]() { ++callback_invoked; };
+
+  const int order = 2;
+  const int hw = order / 2;
+  const int N = 8;
+  auto u = make_field(N, hw);
+  u.apply([](double, double, double) { return 1.0; });
+
+  auto grad = pfc::gradient::FDGradient<OnlyX>(
+      u.data(), u.size3()[0], u.size3()[1], u.size3()[2], u.spacing()[0],
+      u.spacing()[1], u.spacing()[2], u.halo_width(), order, callback);
+
+  // Both methods invoke the same callback, and can be interleaved.
+  grad.prepare();
+  REQUIRE(callback_invoked == 1);
+  grad.halo_preparation();
+  REQUIRE(callback_invoked == 2);
+  grad.prepare();
+  REQUIRE(callback_invoked == 3);
 }
