@@ -453,6 +453,19 @@ public:
   int get_increment() const { return m_increment; }
 
   /**
+   * @brief Get the number of steps completed so far.
+   *
+   * Self-documenting alternative to @ref get_increment() for integrator
+   * authors querying progress (checkpoint/restart, adaptive step rejection
+   * logic, output scheduling): "increment" reads as a small delta, not a
+   * count, whereas "step count" states the intent directly. Returns the
+   * same underlying value as get_increment().
+   *
+   * @return Current step count
+   */
+  int get_step_count() const { return m_increment; }
+
+  /**
    * @brief Get the current stage index within this time step.
    *
    * Stage tracking is independent of @ref get_increment(): stages range from

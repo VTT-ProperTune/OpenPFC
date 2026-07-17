@@ -421,3 +421,24 @@ TEST_CASE("Time - operator<< includes stage information", "[time][unit]") {
 
   REQUIRE_THAT(oss.str(), ContainsSubstring("stage = 1/4"));
 }
+
+TEST_CASE("Time - get_step_count returns zero initially", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  REQUIRE(t.get_step_count() == 0);
+}
+
+TEST_CASE("Time - get_step_count increments with next", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  t.next();
+  REQUIRE(t.get_step_count() == 1);
+  t.next();
+  t.next();
+  REQUIRE(t.get_step_count() == 3);
+}
+
+TEST_CASE("Time - get_step_count matches get_increment", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  t.next();
+  t.next();
+  REQUIRE(t.get_step_count() == t.get_increment());
+}
