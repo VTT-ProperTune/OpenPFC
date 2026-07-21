@@ -149,19 +149,36 @@ public:
     return result;
   }
 
+  /**
+   * @brief Resize the device buffer.
+   *
+   * Allocates the new buffer before freeing the old one. On hipMalloc
+   * failure, size() and data() remain unchanged. After a successful alloc,
+   * the new buffer is published even if freeing the previous pointer fails
+   * (best-effort free; peak device memory briefly doubles during grow).
+   */
   void resize(size_t new_size) {
+    if (new_size == 0) {
+      if (m_device_ptr != nullptr) {
+        [[maybe_unused]] const hipError_t freed = hipFree(m_device_ptr);
+        m_device_ptr = nullptr;
+      }
+      m_size = 0;
+      return;
+    }
+
+    T *new_ptr = nullptr;
+    hipError_t err = hipMalloc(&new_ptr, new_size * sizeof(T));
+    if (err != hipSuccess) {
+      throw std::runtime_error("HIP allocation failed: " +
+                               std::string(hipGetErrorString(err)));
+    }
+
     if (m_device_ptr != nullptr) {
       [[maybe_unused]] const hipError_t freed = hipFree(m_device_ptr);
-      m_device_ptr = nullptr;
     }
+    m_device_ptr = new_ptr;
     m_size = new_size;
-    if (new_size > 0) {
-      hipError_t err = hipMalloc(&m_device_ptr, new_size * sizeof(T));
-      if (err != hipSuccess) {
-        throw std::runtime_error("HIP allocation failed: " +
-                                 std::string(hipGetErrorString(err)));
-      }
-    }
   }
 };
 

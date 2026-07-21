@@ -149,19 +149,36 @@ public:
     return result;
   }
 
+  /**
+   * @brief Resize the device buffer.
+   *
+   * Allocates the new buffer before freeing the old one. On cudaMalloc
+   * failure, size() and data() remain unchanged. After a successful alloc,
+   * the new buffer is published even if freeing the previous pointer fails
+   * (best-effort free; peak device memory briefly doubles during grow).
+   */
   void resize(size_t new_size) {
-    if (m_device_ptr != nullptr) {
-      cudaFree(m_device_ptr);
-      m_device_ptr = nullptr;
-    }
-    m_size = new_size;
-    if (new_size > 0) {
-      cudaError_t err = cudaMalloc(&m_device_ptr, new_size * sizeof(T));
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA allocation failed: " +
-                                 std::string(cudaGetErrorString(err)));
+    if (new_size == 0) {
+      if (m_device_ptr != nullptr) {
+        [[maybe_unused]] const cudaError_t freed = cudaFree(m_device_ptr);
+        m_device_ptr = nullptr;
       }
+      m_size = 0;
+      return;
     }
+
+    T *new_ptr = nullptr;
+    cudaError_t err = cudaMalloc(&new_ptr, new_size * sizeof(T));
+    if (err != cudaSuccess) {
+      throw std::runtime_error("CUDA allocation failed: " +
+                               std::string(cudaGetErrorString(err)));
+    }
+
+    if (m_device_ptr != nullptr) {
+      [[maybe_unused]] const cudaError_t freed = cudaFree(m_device_ptr);
+    }
+    m_device_ptr = new_ptr;
+    m_size = new_size;
   }
 };
 
