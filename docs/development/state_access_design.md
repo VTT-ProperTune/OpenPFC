@@ -134,7 +134,7 @@ double* data() noexcept { return m_data.data(); }  // Device pointer
 - No shared abstraction layer required
 - Backend allocation APIs permitted
 
-### MPI Coordination Patterns
+## MPI Coordination Patterns
 
 **Source**: Existing drivers with halo exchange
 
@@ -155,9 +155,69 @@ for (int step = 0; step < n_steps; ++step) {
 - Integrator doesn't manage MPI
 
 **Design implications**:
-- StageContext carries timing and region requirements
+- `pfc::integrator::StageContext` carries timing and region requirements
 - Driver reads context and schedules MPI operations
 - Integrator focuses on algorithm, not communication
+
+## Workspace vs StageWorkspace
+
+Two similarly named workspace types exist; they must not be conflated:
+
+| | `pfc::integrator::Workspace<T>` | `pfc::sim::steppers::StageWorkspace<T>` |
+|---|---|---|
+| Header | `include/openpfc/kernel/integrator/workspace.hpp` | `include/openpfc/kernel/simulation/steppers/stage_workspace.hpp` |
+| Constructor | `(extents, num_stages)` | `(num_stages, local_size)` |
+| Reclaim | `clear()` | `reset()` |
+| Role in this slice | Integrator-owned stage + scratch for the state-access contract | Existing stepper helper under `kernel/simulation/steppers/`; out of scope here |
+
+This design slice specifies and tests only `pfc::integrator::Workspace<T>`. Do not edit or merge `StageWorkspace`.
+
+## Integrator StageContext vs solver StageContext
+
+Two different `StageContext` types share a short name:
+
+| | `pfc::integrator::StageContext` | `pfc::sim::StageContext` |
+|---|---|---|
+| Header | `include/openpfc/kernel/integrator/stage_context.hpp` | `include/openpfc/kernel/simulation/solver_contract.hpp` |
+| Fields | `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange` | `evaluation_time`, `ExecutionService& execution_service` |
+| Role | MPI / BC coordination flags from integrators to drivers | Solver evaluation context with execution service |
+
+Always qualify as `pfc::integrator::StageContext` in this slice. Do not merge or replace the solver_contract type.
+
+## Migration examples
+
+### Scalar path (Heat3D-style)
+
+```cpp
+FieldView<double> u_view(u.data(), u.size(), extents, spacing, origin);
+FieldOutput<double> du_out(du.data(), du.size());
+du_out.validate_no_alias(u_view);  // distinct RHS buffer
+// heat3d::HeatOperator::evaluate(u_view, du_out, ...);
+// In-place Euler may use LocalField: u += dt * du (ScaledField; bypasses validate_no_alias)
+```
+
+Evidence: `tests/integration/scenarios/field_operations/test_heat3d_state_access.cpp`
+(`Heat3D numerical equivalence test`, `Heat3D time integration pattern`,
+`Heat3D migration path from LocalField to FieldView`).
+
+### Multi-field path (Wave2D-style)
+
+```cpp
+FieldBundle<FieldView<double>, FieldView<double>> wave(u_view, v_view);
+REQUIRE(wave.validate_shapes());
+auto& u = wave.get<0>();
+auto& v = wave.get<1>();
+// wave2d::WaveOperatorResult::as_tuple() scatters coupled (du, dv) outputs
+```
+
+Evidence: `tests/integration/scenarios/field_operations/test_wave2d_state_access.cpp`
+(`Wave2D multi-field bundle pattern`, `Wave2D coupled time integration pattern`,
+`Wave2D migration path from multi-field to FieldBundle`).
+
+### Workspace and MPI coordination
+
+- Integrators own `pfc::integrator::Workspace<T>`; models never access it.
+- Drivers read `pfc::integrator::StageContext` flags to schedule halo/BC work.
 
 ## Why FieldView is Backend-Agnostic
 
@@ -317,21 +377,17 @@ The following items are explicitly out of scope for this design slice:
 
 ## Acceptance Criteria Verification
 
-The design satisfies all acceptance criteria:
+Mapped to the current work-item acceptance criteria (not legacy numeric ids):
 
-- **AC 2397**: State access primitives implemented with concrete types
-- **AC 2398**: Workspace management with integrator-owned lifetime
-- **AC 2399**: Stage context with MPI coordination fields
-- **AC 2400**: Validation utilities with concrete signatures including `validate_backend_compatibility`
-- **AC 2401**: CPU unit tests exist and pass
-- **AC 2402**: Contract tests verify semantic requirements
-- **AC 2403**: Compile-time tests verify type requirements
-- **AC 2404**: Evidence tests verify numerical equivalence
-- **AC 2405**: Build validation passes
-- **AC 2406**: No virtual dispatch introduced
-- **AC 2407**: No return-by-value field allocations
-- **AC 2408**: CUDA/HIP implementation possible without changes
-- **AC 2409**: Documentation explicitly states verification methods
+- `FieldView<T>` provides const access to field data and geometry for operator inputs (`state_access.hpp`; unit case `FieldView const access`).
+- `FieldOutput<T>` provides mutable caller-owned output storage with `validate_no_alias` (`state_access.hpp`; unit cases `FieldOutput mutable access`, `Field aliasing detection`).
+- `FieldBundle<Fields...>` groups fields with `get<I>()` and `validate_shapes()` (`state_access.hpp`; unit case `FieldBundle multi-field`).
+- `pfc::integrator::Workspace<T>` provides integrator-owned stage and scratch storage (unit cases `Workspace stage storage and scratch`, `Workspace clear resets buffers`).
+- `pfc::integrator::StageContext` carries `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange` (unit case `StageContext MPI coordination fields`).
+- Validation free functions cover shape, aliasing, and backend-tag checks (`validation.hpp`; unit cases `Shape compatibility validation`, `Backend compatibility validation`). Backend mismatch is a compile-time `static_assert`, not a runtime throw.
+- Unit tests in `tests/unit/kernel/field/test_state_access.cpp` exercise the contracts without CUDA/HIP dependencies (including the documented ScaledField in-place exception).
+- Integration evidence: `test_heat3d_state_access.cpp` (scalar) and `test_wave2d_state_access.cpp` (multi-field).
+- This document covers value semantics, backend compatibility, validation strategy, Workspace vs StageWorkspace, and integrator vs solver StageContext distinctions, plus migration examples above.
 
 ## Summary
 
