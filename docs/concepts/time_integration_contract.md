@@ -243,9 +243,20 @@ if (time.do_save()) {
 
 ### Checkpoint writing
 
-Checkpoints are written via `ResultsWriters` during scheduled writes. The `BinaryWriter` produces raw binary files in MPI-IO format as specified in [`docs/reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md).
+Scheduled field dumps still go through `ResultsWriters` / frontend
+`BinaryWriter` as **headerless** MPI-IO bricks (periodic output and
+post-processing). That raw layout is specified in
+[`docs/reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md).
 
-Key checkpoint format properties:
+For a **durable accepted-state restart bundle**, use
+`pfc::checkpoint::publish_checkpoint_directory` (kernel headers under
+`include/openpfc/kernel/checkpoint/`). It stages versioned `metadata.json`
+plus accepted field bricks, then atomically renames the staging directory to
+the final path so incomplete writes are never loadable. See
+[`docs/development/checkpoint_publish.md`](../development/checkpoint_publish.md).
+Restore / migration validation is not claimed here.
+
+Key properties of the **headerless scheduled dump** format:
 
 - **Layout:** Single global 3D array in Fortran (column-major) order
 - **Element type:** `double` for real fields, `std::complex<double>` for complex fields
@@ -416,4 +427,4 @@ This pattern extends the finite difference heat example at [`examples/15_finite_
 
 ---
 
-**See also:** [`docs/concepts/architecture.md`](architecture.md) for overall system architecture, [`docs/concepts/halo_exchange.md`](halo_exchange.md) for halo exchange patterns, and [`docs/reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md) for checkpoint format details.
+**See also:** [`docs/concepts/architecture.md`](architecture.md) for overall system architecture, [`docs/concepts/halo_exchange.md`](halo_exchange.md) for halo exchange patterns, [`docs/development/checkpoint_publish.md`](../development/checkpoint_publish.md) for atomic accepted-state publication, and [`docs/reference/binary_field_io_spec.md`](../reference/binary_field_io_spec.md) for headerless scheduled field dumps.
