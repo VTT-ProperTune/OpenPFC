@@ -23,6 +23,7 @@
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 
+#include <array>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -49,16 +50,26 @@ namespace pfc {
  * consistent `set_domain()` and must reach `MPI_File_close`;
  * skipping the call on some ranks will deadlock the job.
  *
+ * @note Filetype/etype: `set_domain` only stores the decomposition. Before each
+ * write, the MPI filetype is rebuilt from the same element type used as the
+ * `MPI_File_set_view` etype (`MPI_DOUBLE` or `MPI_DOUBLE_COMPLEX`), so filetype
+ * oldtype and etype always match.
+ *
  * @see ResultsWriter - base class interface
  * @see BinaryReader - read binary files for restart
  *
  * Repository prose describing the on-disk layout and filename templates:
- * `docs/binary_field_io_spec.md`.
+ * `docs/reference/binary_field_io_spec.md`.
  */
 class BinaryWriter : public ResultsWriter {
 private:
   MPI_Comm m_comm = MPI_COMM_WORLD;
+  std::array<int, 3> m_global{};
+  std::array<int, 3> m_local{};
+  std::array<int, 3> m_offset{};
+  bool m_domain_valid = false;
   MPI_Datatype m_filetype{};
+  MPI_Datatype m_etype = MPI_DATATYPE_NULL;
   bool m_type_valid = false;
 
   static MPI_Datatype get_type([[maybe_unused]] const RealField &field) {
@@ -66,6 +77,26 @@ private:
   }
   static MPI_Datatype get_type([[maybe_unused]] const ComplexField &field) {
     return MPI_DOUBLE_COMPLEX;
+  }
+
+  void ensure_filetype(MPI_Datatype etype) {
+    if (!m_domain_valid) {
+      throw std::runtime_error("BinaryWriter::write: set_domain() was not called");
+    }
+    if (m_type_valid && m_etype == etype) {
+      return;
+    }
+    if (m_type_valid) {
+      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
+      m_type_valid = false;
+    }
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Type_create_subarray(3, m_global.data(), m_local.data(), m_offset.data(),
+                                 MPI_ORDER_FORTRAN, etype, &m_filetype),
+        "MPI_Type_create_subarray");
+    pfc::mpi::throw_on_mpi_error(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
+    m_etype = etype;
+    m_type_valid = true;
   }
 
 public:
@@ -89,14 +120,12 @@ public:
     if (m_type_valid) {
       pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
       m_type_valid = false;
+      m_etype = MPI_DATATYPE_NULL;
     }
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Type_create_subarray(3, arr_global.data(), arr_local.data(),
-                                 arr_offset.data(), MPI_ORDER_FORTRAN, MPI_DOUBLE,
-                                 &m_filetype),
-        "MPI_Type_create_subarray");
-    pfc::mpi::throw_on_mpi_error(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
-    m_type_valid = true;
+    m_global = arr_global;
+    m_local = arr_local;
+    m_offset = arr_offset;
+    m_domain_valid = true;
   }
 
   MPI_Status write(int increment, const RealField &data) override {
@@ -109,9 +138,9 @@ public:
 
   template <typename T>
   MPI_Status write_mpi_binary(int increment, const std::vector<T> &data) {
-    if (!m_type_valid) {
-      throw std::runtime_error("BinaryWriter::write: set_domain() was not called");
-    }
+    MPI_Datatype type = get_type(data);
+    ensure_filetype(type);
+
     MPI_File fh{};
     std::string filename2 = utils::format_with_number(m_filename, increment);
     pfc::mpi::throw_on_mpi_error(
@@ -122,7 +151,6 @@ public:
     MPI_Offset filesize = 0;
     MPI_Status status{};
     const unsigned int disp = 0;
-    MPI_Datatype type = get_type(data);
     pfc::mpi::throw_on_mpi_error(MPI_File_set_size(fh, filesize),
                                  "MPI_File_set_size"); // truncate at offset 0
     pfc::mpi::throw_on_mpi_error(
