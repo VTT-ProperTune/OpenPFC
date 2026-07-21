@@ -18,8 +18,8 @@ using Catch::Approx;
 /**
  * @brief Test Wave2D multi-field state access pattern with numerical equivalence
  *
- * This test verifies that the new state access primitives can represent
- * the Wave2D multi-field pattern AND produce numerically equivalent results
+ * Verifies that `FieldView` / `FieldOutput` / `FieldBundle` can represent the
+ * Wave2D coupled multi-field pattern and produce numerically equivalent results
  * to manual FD computations.
  *
  * Wave2D pattern from apps/wave2d/src/cpu/wave2d_fd.cpp:
@@ -195,9 +195,11 @@ TEST_CASE("Wave2D multi-field bundle pattern", "[field][wave2d_evidence]") {
     // Create a multi-field bundle
     FieldBundle<FieldView<double>, FieldView<double>> wave_bundle(u_view, v_view);
 
-    // Verify bundle provides access to individual fields
-    // FieldBundle stores fields by value, so addresses differ
-    // FieldBundle stores fields by value, so addresses differ
+    // Indexed get<I>() access (FieldBundle stores fields by value)
+    REQUIRE(wave_bundle.get<0>().data() == u_data.data());
+    REQUIRE(wave_bundle.get<1>().data() == v_data.data());
+    REQUIRE(wave_bundle.get<0>().size() == size);
+    REQUIRE(wave_bundle.get<1>().size() == size);
 
     // Verify shape validation across bundle
     REQUIRE(wave_bundle.validate_shapes());
@@ -277,8 +279,10 @@ TEST_CASE("Wave2D coupled time integration pattern", "[field][wave2d_evidence]")
 /**
  * @brief Document migration path from WaveIncrements to FieldBundle
  *
- * This section documents how to migrate from Wave2D's multi-field
- * pattern to FieldBundle.
+ * Multi-field migration: wrap each owning field in `FieldView`, group with
+ * `FieldBundle`, and use `get<I>()` plus `validate_shapes()` for coupled
+ * systems. RHS buffers use `FieldOutput` with `validate_no_alias` when
+ * storage must be distinct from inputs.
  */
 TEST_CASE("Wave2D migration path from multi-field to FieldBundle", "[field][wave2d_evidence]") {
     // Old pattern (separate PaddedBrick):
@@ -293,25 +297,19 @@ TEST_CASE("Wave2D migration path from multi-field to FieldBundle", "[field][wave
     // });
 
     // New pattern (FieldBundle):
-    // Create FieldView for each field, bundle them together
-    // FieldBundle<FieldView<double>, FieldView<double>, FieldView<double>> wave_bundle(u_view, v_view, lap_view);
-    //
-    // Usage:
+    // FieldBundle<FieldView<double>, FieldView<double>, FieldView<double>>
+    //     wave_bundle(u_view, v_view, lap_view);
+    // REQUIRE(wave_bundle.validate_shapes());
     // auto& u = wave_bundle.get<0>();
     // auto& v = wave_bundle.get<1>();
     // auto& lap = wave_bundle.get<2>();
-    // for (std::size_t i = 0; i < size; ++i) {
-    //     u_data[i] += dt * v_data[i];
-    //     v_data[i] += dt * k^2 * lap_data[i];
-    // }
 
-    // The new pattern provides:
-    // 1. Coordinated access to multiple fields
-    // 2. Shape validation across all fields in bundle
-    // 3. Type-safe indexed access via get<I>()
+    // The FieldBundle pattern provides:
+    // 1. Coordinated access to multiple fields via get<I>()
+    // 2. Shape validation across all fields in the bundle
+    // 3. Type-safe indexed access
     // 4. Backend-agnostic views for each field
 
-    // For this test, we'll demonstrate the pattern with simple data
     const int nx = 4;
     const int ny = 4;
     const int nz = 1;
@@ -331,14 +329,11 @@ TEST_CASE("Wave2D migration path from multi-field to FieldBundle", "[field][wave
     FieldView<double> v_view(v_data.data(), v_data.size(), extents, spacing, origin);
     FieldView<double> lap_view(lap_data.data(), lap_data.size(), extents, spacing, origin);
 
-    // Create multi-field bundle
-    FieldBundle<FieldView<double>, FieldView<double>, FieldView<double>> wave_bundle(u_view, v_view, lap_view);
+    FieldBundle<FieldView<double>, FieldView<double>, FieldView<double>> wave_bundle(
+        u_view, v_view, lap_view);
 
-    // Verify bundle provides coordinated access
-    // FieldBundle stores fields by value, so addresses differ
-    // FieldBundle stores fields by value, so addresses differ
-    // FieldBundle stores fields by value, so addresses differ
-
-    // Verify shape validation works across bundle
+    REQUIRE(wave_bundle.get<0>().data() == u_data.data());
+    REQUIRE(wave_bundle.get<1>().data() == v_data.data());
+    REQUIRE(wave_bundle.get<2>().data() == lap_data.data());
     REQUIRE(wave_bundle.validate_shapes());
 }

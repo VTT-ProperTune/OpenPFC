@@ -18,14 +18,17 @@ using Catch::Approx;
 /**
  * @brief Test Heat3D scalar field state access pattern with numerical equivalence
  *
- * This test verifies that the new state access primitives can represent
- * the Heat3D scalar field pattern AND produce numerically equivalent results
- * to manual FD computations.
+ * Verifies that `FieldView<double>` (const input) and `FieldOutput<double>`
+ * (mutable RHS storage) can represent the Heat3D scalar pattern and produce
+ * numerically equivalent results to manual FD computations.
  *
  * Heat3D pattern from apps/heat3d/src/cpu/heat3d_fd.cpp:
  * - Single scalar field u (temperature)
  * - Laplacian evaluation via FD
  * - Explicit Euler time integration: u += dt * du
+ *
+ * WriteMode (overwrite / accumulate / in_place_alias) lives on the Heat3D
+ * operator contract (`heat3d::WriteMode`), not on `FieldOutput` itself.
  */
 TEST_CASE("Heat3D numerical equivalence test", "[field][heat3d_evidence][numerical]") {
     // Create test data for numerical equivalence verification
@@ -197,32 +200,37 @@ TEST_CASE("Heat3D time integration pattern", "[field][heat3d_evidence]") {
 /**
  * @brief Document migration path from LocalField to FieldView
  *
- * This section documents how to migrate from LocalField<T> to FieldView<T>.
+ * Scalar migration: wrap owning `LocalField<T>` storage in a non-owning
+ * `FieldView<T>` for operator inputs, and use `FieldOutput<T>` for RHS
+ * buffers. Geometry comes from extents/spacing/origin accessors.
  */
 TEST_CASE("Heat3D migration path from LocalField to FieldView", "[field][heat3d_evidence]") {
-    // Old pattern (LocalField):
+    // Old pattern (LocalField owning storage):
     // LocalField<double> u = LocalField<double>::from_subdomain(decomp, rank, halo_width);
     // const double* u_data = u.data();
     // Int3 u_size = u.size3();
     // Real3 u_spacing = u.spacing();
     // Real3 u_origin = u.origin();
 
-    // New pattern (FieldView):
+    // New pattern (FieldView / FieldOutput contracts):
     // LocalField<double> u_local = LocalField<double>::from_subdomain(decomp, rank, halo_width);
     // FieldView<double> u_view(u_local.data(), u_local.size(), u_local.size3(),
     //                          u_local.spacing(), u_local.origin());
+    // std::vector<double> du_storage(u_local.size());
+    // FieldOutput<double> du_out(du_storage.data(), du_storage.size());
+    // du_out.validate_no_alias(u_view);  // distinct RHS buffer
     // const double* u_data = u_view.data();
     // Int3 u_size = u_view.extents();
     // Real3 u_spacing = u_view.spacing();
     // Real3 u_origin = u_view.origin();
 
-    // The new pattern provides:
+    // The FieldView pattern provides:
     // 1. Backend-agnostic view (works with CPU and GPU storage)
     // 2. Explicit read-only semantics (const access)
     // 3. Shape validation via is_compatible_with()
-    // 4. Aliasing detection for output storage
+    // 4. Aliasing detection for output storage via validate_no_alias()
 
-    // For this test, we'll demonstrate the pattern with simple data
+    // For this test, demonstrate the pattern with simple contiguous data
     std::vector<double> u_data(64, 1.0);
     Int3 extents{4, 4, 4};
     Real3 spacing{1.0, 1.0, 1.0};
