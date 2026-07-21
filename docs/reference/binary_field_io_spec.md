@@ -14,7 +14,8 @@ This document describes the **raw binary** files produced by `pfc::BinaryWriter`
 | Property | Value |
 |----------|--------|
 | **Layout** | A single **global** 3D array in **Fortran (column-major) order** (`MPI_ORDER_FORTRAN` in `MPI_Type_create_subarray`). |
-| **Element type** | `double` for real fields (`MPI_DOUBLE`). `BinaryWriter` also supports `std::complex<double>` (`MPI_DOUBLE_COMPLEX`) when writing complex buffers. |
+| **Element type** | Real fields: `double` (`MPI_DOUBLE`). Complex fields: `std::complex<double>` (`MPI_DOUBLE_COMPLEX`). Each complex element occupies `sizeof(std::complex<double>)` bytes (two native doubles) in the raw payload. |
+| **MPI filetype / etype** | `BinaryWriter` and `BinaryReader` build the MPI filetype subarray from the **same** element type used as the `MPI_File_set_view` etype. Real paths use `MPI_DOUBLE`; complex paths use `MPI_DOUBLE_COMPLEX`. The filetype is rebuilt if the same writer/reader instance later switches element type after one `set_domain()`. |
 | **Byte order** | **Native** (`"native"` in `MPI_File_set_view`) — endianness matches the machine that wrote the file. |
 | **Header / magic** | **None.** The file is only the raw payload for the MPI file view (no metadata block, no version tag). |
 | **Per-rank data** | Each MPI rank writes its **local** brick; together the ranks cover the global grid without overlap. The view is built from `(global_size, local_size, local_offset)` passed to `set_domain()`. |
@@ -37,13 +38,18 @@ The `increment` value is advanced by the simulator according to configuration (s
 
 ## Reading back (`BinaryReader`)
 
-`BinaryReader` uses the same **Fortran-ordered 3D subarray** view and **`MPI_File_read_all`** at displacement **0**, with element type **`MPI_DOUBLE`** in the public `read()` API shown in the header.
+`BinaryReader` uses the same **Fortran-ordered 3D subarray** view and **`MPI_File_read_all`** at displacement **0**.
+
+| API | Element type |
+|-----|--------------|
+| `BinaryReader::read(filename, Field&)` / `RealField` | `MPI_DOUBLE` |
+| `BinaryReader::read(filename, ComplexField&)` | `MPI_DOUBLE_COMPLEX` |
 
 **Implications:**
 
 - Files written as **pure `double`** real fields with the same `(global, local, offset)` decomposition can be read back for restart or `FileReader` initial conditions.  
-- Match **communicator**, **decomposition**, and **datatype** when reading: a file written on *N* ranks is not automatically loadable on a different *N* without re-decomposition logic outside this low-level format.  
-- For **complex** fields, prefer treating restart paths as **implementation-defined** unless your build uses matching writer/reader pairs for complex data (consult headers for your version).
+- Files written as **`std::complex<double>`** round-trip through `BinaryReader::read(..., ComplexField&)` with the same decomposition.  
+- Match **communicator**, **decomposition**, and **datatype** when reading: a file written on *N* ranks is not automatically loadable on a different *N* without re-decomposition logic outside this low-level format. Do not read a complex file with the real `read` overload (or vice versa).
 
 ## JSON configuration surface
 
@@ -56,7 +62,7 @@ Rank 0 may create parent directories for `data`. See [`io_results.md`](../user_g
 
 ## Post-processing without OpenPFC
 
-Because there is **no file header**, external tools need **out-of-band** metadata: global `Lx, Ly, Lz`, dtype (`float64`), Fortran ordering, and how ranks map to subdomains if you concatenate manually. In practice, teams either:
+Because there is **no file header**, external tools need **out-of-band** metadata: global `Lx, Ly, Lz`, dtype (`float64` or complex-of-two-float64), Fortran ordering, and how ranks map to subdomains if you concatenate manually. In practice, teams either:
 
 - Read with **OpenPFC** (`BinaryReader` or existing tooling), or  
 - Record metadata alongside runs (JSON/YAML sidecar), or  
