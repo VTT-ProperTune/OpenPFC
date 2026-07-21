@@ -120,7 +120,6 @@ nav:
 
   - Reference:
       - Tour of main types: reference/class_tour.md
-      - Time integration architecture: development/time_integration_architecture.md
       - Glossary: reference/glossary.md
       - Examples catalog: reference/examples_catalog.md
       - Showcase: user_guide/showcase.md
