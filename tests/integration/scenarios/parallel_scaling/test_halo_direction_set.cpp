@@ -3,8 +3,8 @@
 
 /**
  * @file test_halo_direction_set.cpp
- * @brief Tests for `pfc::halo::HaloDirectionSet`, presets, and per-rank
- *        selectors plumbed into the CPU exchangers.
+ * @brief Tests for `pfc::halo::HaloDirectionSet`, presets, per-rank
+ *        selectors, and neighbour-boundary agreement at exchanger construction.
  *
  * Covers:
  *   1. Preset content and size invariants for `Axes2D / Full2D / Axes3D /
@@ -17,19 +17,26 @@
  *      periodic field is bit-equal to a manual XY periodic fill (no Z
  *      halo touched).
  *   6. Per-rank selector: rank 0 gets `Axes2D`, rank 1 gets `±X` only —
- *      verify each rank's halo ring matches the configured set.
+ *      verify each rank's halo ring matches the configured set (paired X
+ *      still agrees on a `{2,1,1}` split).
+ *   7. Neighbour agreement: mismatched selectors that disagree on a shared
+ *      face throw `std::runtime_error` at construction; uniform Axes2D /
+ *      Axes3D still construct and exchange.
  */
 
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 
 #include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
+#include <openpfc/kernel/decomposition/halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
+#include <openpfc/kernel/decomposition/halo_persistent.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 
@@ -288,4 +295,52 @@ TEST_CASE("HaloDirectionSelector overrides the uniform direction set",
     REQUIRE(halo.direction_set().size() == 2);
     REQUIRE(halo.num_directions() == 2);
   }
+}
+
+TEST_CASE("Mismatched HaloDirectionSelector throws at construction",
+          "[MPI][halo_directions][agreement]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2) return;
+
+  auto world = pfc::world::create(GridSize({16, 8, 1}));
+  auto decomp = pfc::decomposition::create(world, {2, 1, 1});
+
+  // Shared X face disagrees: rank 0 posts ±X (Axes2D); rank 1 has ±Y only.
+  halo::HaloDirectionSelector selector = [](int r) {
+    if (r == 0) return halo::presets::Axes2D();
+    return HaloDirectionSet(std::vector<Int3>{Int3{0, 1, 0}, Int3{0, -1, 0}});
+  };
+
+  const int hw = 1;
+  REQUIRE_THROWS_AS(
+      (PaddedHaloExchanger<double>(decomp, rank, hw, MPI_COMM_WORLD,
+                                   halo::presets::Axes3D(), /*base_tag=*/0,
+                                   selector)),
+      std::runtime_error);
+}
+
+TEST_CASE("Agreeing Axes2D constructs HaloExchanger and PersistentHaloExchanger",
+          "[MPI][halo_directions][agreement]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2) return;
+
+  auto world = pfc::world::create(GridSize({16, 8, 1}));
+  auto decomp = pfc::decomposition::create(world, {2, 1, 1});
+  const int hw = 1;
+
+  REQUIRE_NOTHROW(HaloExchanger<double>(decomp, rank, hw, MPI_COMM_WORLD,
+                                        halo::presets::Axes2D()));
+
+  const auto &local_world = decomposition::get_subworld(decomp, rank);
+  const auto local_size = world::get_size(local_world);
+  const std::size_t n =
+      static_cast<std::size_t>(local_size[0]) * static_cast<std::size_t>(local_size[1]) *
+      static_cast<std::size_t>(local_size[2]);
+  std::vector<double> field(n, static_cast<double>(rank));
+  REQUIRE_NOTHROW(PersistentHaloExchanger<double>(
+      decomp, rank, hw, MPI_COMM_WORLD, field.data(), halo::presets::Axes2D()));
 }
