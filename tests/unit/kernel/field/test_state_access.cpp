@@ -4,9 +4,15 @@
 #include <catch2/catch_test_macros.hpp>
 #include <complex>
 #include <catch2/catch_approx.hpp>
+#include <vector>
 
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/field/validation.hpp>
+#include <openpfc/kernel/integrator/stage_context.hpp>
+#include <openpfc/kernel/integrator/workspace.hpp>
 
 using namespace pfc::field;
 using Catch::Approx;
@@ -277,5 +283,122 @@ TEST_CASE("FieldOutput with complex types", "[field][state_access]") {
             REQUIRE(data[i].real() == static_cast<double>(i));
             REQUIRE(data[i].imag() == static_cast<double>(i) * 2.0);
         }
+    }
+}
+
+TEST_CASE("Workspace stage storage and scratch", "[field][state_access]") {
+    pfc::types::Int3 extents{4, 4, 4};
+    pfc::integrator::Workspace<double> ws(extents, /*num_stages=*/3);
+
+    REQUIRE(ws.stage_count() == 3);
+    REQUIRE(ws.stage_size() == 64);
+
+    double* stage0 = ws.stage(0);
+    double* scratch = ws.scratch();
+    REQUIRE(stage0 != nullptr);
+    REQUIRE(scratch != nullptr);
+
+    stage0[0] = 1.5;
+    stage0[63] = 2.5;
+    scratch[0] = 3.5;
+    scratch[63] = 4.5;
+
+    REQUIRE(ws.stage(0)[0] == Approx(1.5));
+    REQUIRE(ws.stage(0)[63] == Approx(2.5));
+    REQUIRE(ws.scratch()[0] == Approx(3.5));
+    REQUIRE(ws.scratch()[63] == Approx(4.5));
+}
+
+TEST_CASE("Workspace clear resets buffers", "[field][state_access]") {
+    pfc::types::Int3 extents{4, 4, 4};
+    pfc::integrator::Workspace<double> ws(extents, /*num_stages=*/2);
+
+    for (std::size_t s = 0; s < ws.stage_count(); ++s) {
+        double* stage = ws.stage(s);
+        for (std::size_t i = 0; i < ws.stage_size(); ++i) {
+            stage[i] = 7.0;
+        }
+    }
+    for (std::size_t i = 0; i < ws.stage_size(); ++i) {
+        ws.scratch()[i] = 9.0;
+    }
+
+    ws.clear();
+
+    for (std::size_t s = 0; s < ws.stage_count(); ++s) {
+        const double* stage = ws.stage(s);
+        for (std::size_t i = 0; i < ws.stage_size(); ++i) {
+            REQUIRE(stage[i] == Approx(0.0));
+        }
+    }
+    for (std::size_t i = 0; i < ws.stage_size(); ++i) {
+        REQUIRE(ws.scratch()[i] == Approx(0.0));
+    }
+}
+
+TEST_CASE("StageContext MPI coordination fields", "[field][state_access]") {
+    pfc::integrator::StageContext ctx{
+        .time = 1.25,
+        .dt = 0.01,
+        .stage_index = 2,
+        .region_kind = pfc::integrator::StageContext::RegionKind::Interior,
+        .needs_boundary_update = true,
+        .needs_halo_exchange = false,
+    };
+
+    REQUIRE(ctx.time == Approx(1.25));
+    REQUIRE(ctx.dt == Approx(0.01));
+    REQUIRE(ctx.stage_index == 2);
+    REQUIRE(ctx.region_kind == pfc::integrator::StageContext::RegionKind::Interior);
+    REQUIRE(ctx.needs_boundary_update);
+    REQUIRE_FALSE(ctx.needs_halo_exchange);
+
+    ctx.region_kind = pfc::integrator::StageContext::RegionKind::All;
+    ctx.needs_halo_exchange = true;
+    REQUIRE(ctx.region_kind == pfc::integrator::StageContext::RegionKind::All);
+    REQUIRE(ctx.needs_halo_exchange);
+}
+
+TEST_CASE("Backend compatibility validation", "[field][state_access]") {
+    // Matching backend tags succeed at runtime. Mismatched tags fail at
+    // compile time via static_assert inside validate_backend_compatibility;
+    // do not invent a runtime throw for that path.
+    struct CPUBackendTag {};
+
+    std::vector<double> data1(64, 1.0);
+    std::vector<double> data2(64, 2.0);
+    pfc::types::Int3 extents{4, 4, 4};
+    pfc::types::Real3 spacing{1.0, 1.0, 1.0};
+    pfc::types::Real3 origin{0.0, 0.0, 0.0};
+
+    FieldView<double> field1(data1.data(), data1.size(), extents, spacing, origin);
+    FieldView<double> field2(data2.data(), data2.size(), extents, spacing, origin);
+
+    REQUIRE_NOTHROW(
+        (validate_backend_compatibility<double, CPUBackendTag, CPUBackendTag>(
+            field1, field2)));
+}
+
+TEST_CASE("Aliasing allows documented ScaledField pattern", "[field][state_access]") {
+    // LocalField value ctor is private; construct via from_subdomain only.
+    // In-place axpy `u += dt * du` uses ScaledField and must not route through
+    // FieldOutput::validate_no_alias (documented exception to alias rejection).
+    auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+    auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
+    auto u = LocalField<double>::from_subdomain(decomp, /*rank=*/0, /*hw=*/0);
+    auto du = LocalField<double>::from_subdomain(decomp, /*rank=*/0, /*hw=*/0);
+
+    for (std::size_t i = 0; i < u.size(); ++i) {
+        u.data()[i] = 1.0;
+        du.data()[i] = 2.0;
+    }
+
+    const double dt = 0.5;
+    u += dt * du; // ScaledField in-place update; no validate_no_alias call
+
+    for (std::size_t i = 0; i < u.size(); ++i) {
+        REQUIRE(u.data()[i] == Approx(2.0)); // 1.0 + 0.5 * 2.0
     }
 }
