@@ -5,10 +5,12 @@
 
 #include <mpi.h>
 
-#include <sstream>
-#include <stdexcept>
+#include <array>
 #include <climits>
 #include <cstddef>
+#include <limits>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace pfc::mpi {
@@ -80,6 +82,44 @@ struct MPI_File_guard {
                               ": local element count exceeds INT_MAX");
   }
   return static_cast<int>(n);
+}
+
+/**
+ * @brief Overflow-safe product of local brick extents for MPI-IO buffers.
+ *
+ * Used by BinaryWriter / BinaryReader to compute the expected local element
+ * count from `set_domain` extents. Rejects non-positive extents and silent
+ * wrap on multiply. Does **not** clamp to `INT_MAX` (see
+ * `expect_mpi_io_count`).
+ *
+ * @param local Local brick extents `(Lx, Ly, Lz)`.
+ * @param context Caller label included in exception messages.
+ * @return `local[0] * local[1] * local[2]` as `std::size_t`.
+ * @throws std::invalid_argument if any extent is `<= 0`.
+ * @throws std::overflow_error if the product would exceed `size_t` max.
+ */
+[[nodiscard]] inline std::size_t
+checked_local_extent_product(const std::array<int, 3> &local,
+                             const char *context) {
+  for (int i = 0; i < 3; ++i) {
+    if (local[i] <= 0) {
+      throw std::invalid_argument(std::string(context) +
+                                  ": local extent must be positive");
+    }
+  }
+
+  unsigned long long n = 1;
+  const auto max_sz =
+      static_cast<unsigned long long>((std::numeric_limits<std::size_t>::max)());
+  for (int i = 0; i < 3; ++i) {
+    const auto li = static_cast<unsigned long long>(local[i]);
+    if (n > max_sz / li) {
+      throw std::overflow_error(std::string(context) +
+                                ": local extent product overflows size_t");
+    }
+    n *= li;
+  }
+  return static_cast<std::size_t>(n);
 }
 
 } // namespace pfc::mpi
