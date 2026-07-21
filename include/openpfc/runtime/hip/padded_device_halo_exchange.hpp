@@ -59,6 +59,8 @@
 
 #include <hip/hip_runtime.h>
 
+#include <openpfc/runtime/hip/hip_check.hpp>
+
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -123,12 +125,6 @@ make_padded_face_slabs(int nx, int ny, int nz, int hw) {
       P{FaceSlabSpec{hw, hw, hw, nx, ny, hw},
         FaceSlabSpec{hw, hw, 0, nx, ny, hw}}, // -Z
   }};
-}
-
-inline void hip_check(hipError_t e, const char *what) {
-  if (e != hipSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
-  }
 }
 
 } // namespace detail
