@@ -55,6 +55,7 @@ The table below is lookup material. The most important flow for a new reader is 
 | `IFFT` / `CpuFft` | Distributed FFT (HeFFTe); spectral operators | `openpfc/kernel/fft/fft.hpp`, `fft_fftw.hpp` | `examples/05_simulator.cpp` |
 | `Model` | Physics: fields, `initialize()`, `step()` | `openpfc/kernel/simulation/model.hpp` | `examples/04_diffusion_model.cpp`, `12_cahn_hilliard.cpp` |
 | `Time` | Time range, `dt`, output cadence; `pfc::time::current` / `dt` / `done` / `next` / `do_save` mirror members | `openpfc/kernel/simulation/time.hpp` | Wired by `App` / `SpectralCpuStack` |
+| `SpectralExpCoeffs` / `SpectralExpCoefficientCache` | CPU diagonal `exp(L*dt)` and stable `(exp(L*dt)-1)/L`; caller-owned fill or method-owned cache with identity-keyed rebuild | `openpfc/kernel/integrator/spectral_exp_coefficients.hpp` | Unit: `tests/unit/kernel/integrator/test_spectral_exp_coefficients.cpp` |
 | `Simulator` | Runs the loop: ICs, BCs, `step`, writers | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
 | `FieldModifier` | Initial / boundary updates on fields | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `SimulationContext` | MPI comm + rank context for modifiers | `openpfc/kernel/simulation/simulation_context.hpp` | Passed when applying modifiers |

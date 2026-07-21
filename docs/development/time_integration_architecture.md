@@ -234,6 +234,29 @@ custom multi-stage steppers:
 (`std::vector<std::vector<T>>`, move-only). The shipped `ExplicitRKStepper`
 manages `m_k` itself today.
 
+### Spectral exponential-action coefficients (CPU)
+
+Diagonal integrating-factor / ETD1-style updates need per-mode coefficients
+`exp(L*dt)` and `(exp(L*dt)-1)/L` from already-formed spectral samples `L`.
+That construction lives in
+[`spectral_exp_coefficients.hpp`](../../include/openpfc/kernel/integrator/spectral_exp_coefficients.hpp)
+(`pfc::integrator`), not in app models:
+
+- `spectral_exp_coeffs(L, dt)` — scalar evaluation; near `|L| < 1e-12` uses
+  Taylor `dt + 0.5*L*dt*dt` for `phi1_L`, otherwise `expm1(L*dt)/L`.
+- **Caller-owned:** `fill_spectral_exp_coeffs` writes into caller `std::span`s.
+- **Method-owned:** `SpectralExpCoefficientCache` owns `std::vector` storage;
+  `exp_Ldt()` / `phi1_L()` views remain valid until a resizing `ensure` or
+  destruction/move. Rebuild when `SpectralExpOperatorId`, `SpectralExpDtId`,
+  or `SpectralExpConfigId` (or mode count) changes.
+
+Coefficients are transient/recomputable and are **not** checkpointed.
+This API is not Tungsten's physics-specific `opN = expm1(arg)/opCk` path;
+ETD steppers and Tungsten migration onto shared operators remain separate
+work. Coverage:
+[`test_spectral_exp_coefficients.cpp`](../../tests/unit/kernel/integrator/test_spectral_exp_coefficients.cpp)
+(`[integrator][spectral_exp]`).
+
 ## 5. Future stepper integration
 
 New steppers should follow the duck-typed surface already formalized in
