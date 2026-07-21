@@ -437,27 +437,23 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
  * @brief Wait for all non-blocking requests to complete
  *
  * @details
- * Call after posting all Irecv then all Isend. Frees the requests (MPI standard).
- * Entries equal to `MPI_REQUEST_NULL` are skipped. If any remaining request fails
- * in `MPI_Waitall`, throws `std::runtime_error` via `pfc::mpi::throw_on_mpi_error`.
+ * Call after posting all Irecv then all Isend. Runs `MPI_Waitall` **in-place** on
+ * the caller-provided array so completed active slots become `MPI_REQUEST_NULL`
+ * (MPI standard). Inactive / `MPI_REQUEST_NULL` entries are ignored and remain
+ * null. If `MPI_Waitall` fails, throws `std::runtime_error` via
+ * `pfc::mpi::throw_on_mpi_error`.
  *
  * @param requests Array of MPI_Request (may contain MPI_REQUEST_NULL)
  * @param count Number of requests
  */
 inline void wait_all(MPI_Request *requests, int count) {
-  std::vector<MPI_Request> non_null;
-  non_null.reserve(static_cast<size_t>(count));
-  for (int i = 0; i < count; ++i) {
-    if (requests[i] != MPI_REQUEST_NULL) {
-      non_null.push_back(requests[i]);
-    }
+  if (count <= 0 || requests == nullptr) {
+    return;
   }
-  if (!non_null.empty()) {
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Waitall(static_cast<int>(non_null.size()), non_null.data(),
-                    MPI_STATUSES_IGNORE),
-        "MPI_Waitall");
-  }
+  // MPI_Waitall ignores MPI_REQUEST_NULL entries; completed active slots
+  // are set to MPI_REQUEST_NULL in this array (caller-visible).
+  pfc::mpi::throw_on_mpi_error(MPI_Waitall(count, requests, MPI_STATUSES_IGNORE),
+                               "MPI_Waitall");
 }
 
 /** @brief Overload for vector of requests */
