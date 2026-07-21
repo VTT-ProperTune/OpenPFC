@@ -59,6 +59,31 @@ struct TestModel {
   }
 };
 
+constexpr double kH = 1.25;
+constexpr double kI = -0.75;
+constexpr double kJ = 0.5;
+
+struct MixedGrads {
+  double value{};
+  double xy{};
+  double xz{};
+  double yz{};
+};
+
+struct MixedModel {
+  OPENPFC_HD double rhs(double /*t*/, const MixedGrads &g) const noexcept {
+    return g.value + g.xy + g.xz + g.yz;
+  }
+};
+
+struct OnlyXY {
+  double xy{};
+};
+
+struct OnlyX {
+  double x{};
+};
+
 constexpr double kA = 0.5;
 constexpr double kB = 1.5;
 constexpr double kC = -0.25;
@@ -216,16 +241,127 @@ TEST_CASE("HIP for_each_interior_device + FdGradientDevice<G> agree with "
   hipFree(d_du);
 }
 
-TEST_CASE("HIP FdGradientDevice<G> ctor rejects an order without a D1 stencil table",
+TEST_CASE("HIP FdGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
           "[hip][fd_gradient_device][integration]") {
   if (!hip_runtime_available()) {
     SUCCEED("Skipping: no HIP device on this host.");
     return;
   }
 
-  struct OnlyX {
-    double x{};
+  const auto mixed_poly = [](double x, double y, double z) {
+    return kA + kB * x + kC * x * x + kD * y + kE * y * y + kF * z +
+           kG * z * z + kH * x * y + kI * x * z + kJ * y * z;
   };
+  const auto mixed_rhs = [&](double x, double y, double z) {
+    return mixed_poly(x, y, z) + kH + kI + kJ;
+  };
+
+  const int order = 2;
+  const int hw = order / 2;
+  const int nx = 8, ny = 8, nz = 8;
+  const int nxp = nx + 2 * hw, nyp = ny + 2 * hw, nzp = nz + 2 * hw;
+  const std::size_t total = static_cast<std::size_t>(nxp) *
+                            static_cast<std::size_t>(nyp) *
+                            static_cast<std::size_t>(nzp);
+  const double dx = 1.0 / 8.0, dy = 1.0 / 8.0, dz = 1.0 / 8.0;
+
+  std::vector<double> h_u(total, 0.0);
+  for (int pk = 0; pk < nzp; ++pk) {
+    for (int pj = 0; pj < nyp; ++pj) {
+      for (int pi = 0; pi < nxp; ++pi) {
+        const double x = static_cast<double>(pi - hw) * dx;
+        const double y = static_cast<double>(pj - hw) * dy;
+        const double z = static_cast<double>(pk - hw) * dz;
+        h_u[lin(pi, pj, pk, nxp, nyp)] = mixed_poly(x, y, z);
+      }
+    }
+  }
+
+  double *d_u = nullptr;
+  double *d_du = nullptr;
+  REQUIRE(hipMalloc(&d_u, total * sizeof(double)) == hipSuccess);
+  REQUIRE(hipMalloc(&d_du, total * sizeof(double)) == hipSuccess);
+  REQUIRE(hipMemcpy(d_u, h_u.data(), total * sizeof(double),
+                    hipMemcpyHostToDevice) == hipSuccess);
+  REQUIRE(hipMemset(d_du, 0, total * sizeof(double)) == hipSuccess);
+
+  pfc::hip::FdGradientDevice<MixedGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
+                                              order);
+  MixedModel model;
+  pfc::sim::hip::for_each_interior_device<MixedModel, MixedGrads>(
+      model, eval.pod(), d_du, /*t=*/0.0, nx, ny, nz);
+  REQUIRE(hipDeviceSynchronize() == hipSuccess);
+
+  std::vector<double> h_du(total, 0.0);
+  REQUIRE(hipMemcpy(h_du.data(), d_du, total * sizeof(double),
+                    hipMemcpyDeviceToHost) == hipSuccess);
+
+  bool owned_cells_match = true;
+  for (int iz = 0; iz < nz; ++iz) {
+    for (int iy = 0; iy < ny; ++iy) {
+      for (int ix = 0; ix < nx; ++ix) {
+        const double x = static_cast<double>(ix) * dx;
+        const double y = static_cast<double>(iy) * dy;
+        const double z = static_cast<double>(iz) * dz;
+        const double got = h_du[lin(ix + hw, iy + hw, iz + hw, nxp, nyp)];
+        owned_cells_match &= std::abs(got - mixed_rhs(x, y, z)) <= 1e-9;
+      }
+    }
+  }
+  REQUIRE(owned_cells_match);
+
+  bool halo_cells_untouched = true;
+  for (int pk = 0; pk < nzp; ++pk) {
+    for (int pj = 0; pj < nyp; ++pj) {
+      for (int pi = 0; pi < nxp; ++pi) {
+        const bool is_owned = (pi >= hw && pi < nx + hw) &&
+                              (pj >= hw && pj < ny + hw) &&
+                              (pk >= hw && pk < nz + hw);
+        if (!is_owned) {
+          halo_cells_untouched &= h_du[lin(pi, pj, pk, nxp, nyp)] == 0.0;
+        }
+      }
+    }
+  }
+  REQUIRE(halo_cells_untouched);
+
+  hipFree(d_u);
+  hipFree(d_du);
+}
+
+TEST_CASE("HIP FdGradientDevice mixed-only OnlyXY loads D1 weights",
+          "[hip][fd_gradient_device][integration]") {
+  if (!hip_runtime_available()) {
+    SUCCEED("Skipping: no HIP device on this host.");
+    return;
+  }
+
+  const int order = 2;
+  const int hw = order / 2;
+  const int nx = 4, ny = 4, nz = 4;
+  const int nxp = nx + 2 * hw, nyp = ny + 2 * hw, nzp = nz + 2 * hw;
+  const std::size_t total =
+      static_cast<std::size_t>(nxp) * nyp * nzp * sizeof(double);
+
+  double *d_u = nullptr;
+  REQUIRE(hipMalloc(&d_u, total) == hipSuccess);
+
+  pfc::hip::FdGradientDevice<OnlyXY> eval(d_u, nx, ny, nz, 1.0, 1.0, 1.0, hw,
+                                          order);
+  const auto &pod = eval.pod();
+  REQUIRE(pod.hw1 == 1);
+  REQUIRE(pod.cx1[1] != 0.0);
+  REQUIRE(pod.cy1[1] != 0.0);
+
+  hipFree(d_u);
+}
+
+TEST_CASE("HIP FdGradientDevice<G> ctor rejects an order without a D1 stencil table",
+          "[hip][fd_gradient_device][integration]") {
+  if (!hip_runtime_available()) {
+    SUCCEED("Skipping: no HIP device on this host.");
+    return;
+  }
 
   // D1 tables cap at order 14 today; order 16 must surface as a clean
   // `std::invalid_argument` (mirrors the CPU evaluator).
@@ -239,7 +375,7 @@ TEST_CASE("HIP FdGradientDevice<G> ctor rejects an order without a D1 stencil ta
   double *d_u = nullptr;
   REQUIRE(hipMalloc(&d_u, total) == hipSuccess);
   REQUIRE_THROWS_AS((pfc::hip::FdGradientDevice<OnlyX>(d_u, nx, ny, nz, 1.0, 1.0,
-                                                        1.0, hw, order)),
+                                                       1.0, hw, order)),
                     std::invalid_argument);
   hipFree(d_u);
 }
