@@ -150,6 +150,8 @@ void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   }
 
   size_t size = sparse_vector.size();
+  // Fail closed before size header / host copies so oversize never posts MPI.
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::send");
 
   // Send size first
   pfc::mpi::throw_on_mpi_error(
@@ -181,15 +183,14 @@ void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
 
   // Send indices
   pfc::mpi::throw_on_mpi_error(
-      MPI_Send(indices.data(), static_cast<int>(size), MPI_UNSIGNED_LONG_LONG,
-               receiver_rank, tag + 1, comm),
+      MPI_Send(indices.data(), count, MPI_UNSIGNED_LONG_LONG, receiver_rank,
+               tag + 1, comm),
       "MPI_Send");
 
   // Send data
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
   pfc::mpi::throw_on_mpi_error(
-      MPI_Send(data.data(), static_cast<int>(size), mpi_type, receiver_rank, tag + 2,
-               comm),
+      MPI_Send(data.data(), count, mpi_type, receiver_rank, tag + 2, comm),
       "MPI_Send");
 }
 
@@ -226,11 +227,13 @@ void receive(core::SparseVector<BackendTag, T> &sparse_vector, int sender_rank,
     return;
   }
 
+  // Fail closed before allocating staging buffers for an impossible MPI count.
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::receive");
+
   // Receive indices and data
   std::vector<size_t> indices(size);
   std::vector<T> data(size);
 
-  int count = static_cast<int>(size);
   pfc::mpi::throw_on_mpi_error(
       MPI_Recv(indices.data(), count, MPI_UNSIGNED_LONG_LONG, sender_rank, tag + 1,
                comm, MPI_STATUS_IGNORE),
@@ -275,7 +278,7 @@ void send_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   }
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  int count = static_cast<int>(size);
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::send_data");
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
     pfc::mpi::throw_on_mpi_error(
@@ -319,7 +322,8 @@ void receive_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_r
   }
 
   MPI_Datatype mpi_type = exchange::detail::get_mpi_type<T>();
-  int count = static_cast<int>(size);
+  const int count =
+      pfc::mpi::ensure_mpi_int_count(size, "exchange::receive_data");
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
     pfc::mpi::throw_on_mpi_error(
@@ -367,7 +371,7 @@ void isend_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   }
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  int count = static_cast<int>(size);
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::isend_data");
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
     pfc::mpi::throw_on_mpi_error(
@@ -414,7 +418,7 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   }
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  int count = static_cast<int>(size);
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::irecv_data");
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
     pfc::mpi::throw_on_mpi_error(
