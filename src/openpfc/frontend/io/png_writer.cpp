@@ -12,6 +12,7 @@
 #include <optional>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <stdexcept>
+#include <sstream>
 #include <string>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -96,19 +97,37 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
   }
 
 
-  // Validate that local_field.size() matches expected per-rank point count
+  // Collective size agreement: all ranks must agree on size mismatches
   const auto &my_subworld = pfc::decomposition::get_subworld(decomp, rank);
   auto my_sz = pfc::world::get_size(my_subworld);
   int expected_count = my_sz[0] * my_sz[1] * my_sz[2];
+
+  int local_ok = 1;
+  std::string error_msg;
+
   if (static_cast<int>(local_field.size()) != expected_count) {
-    throw std::runtime_error(
-        "local_field.size() (" + std::to_string(local_field.size()) +
-        ") does not match expected subworld point count (" + std::to_string(expected_count) +
-        ") for rank " + std::to_string(rank) +
-        " expected nx*ny*nz=" + std::to_string(my_sz[0]) + "*" +
-        std::to_string(my_sz[1]) + "*" + std::to_string(my_sz[2])
-    );
+    local_ok = 0;
+    std::ostringstream oss;
+    oss << "local_field.size() (" << local_field.size() << ") does not match expected "
+        << "subworld point count (" << expected_count << ") for rank " << rank
+        << " expected nx*ny*nz=" << my_sz[0] << "*" << my_sz[1] << "*" << my_sz[2];
+    error_msg = oss.str();
   }
+
+  // Collective agreement: all ranks throw together if any rank has a size mismatch
+  int global_ok = 0;
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, comm),
+      "MPI_Allreduce on size check");
+
+  if (global_ok == 0) {
+    if (!error_msg.empty()) {
+      throw std::runtime_error(error_msg);
+    } else {
+      throw std::runtime_error("write_mpi_scalar_field_png_xy: collective size mismatch detected");
+    }
+  }
+
   const int my_count = static_cast<int>(local_field.size());
   std::vector<int> counts(static_cast<std::size_t>(nproc));
   int err;

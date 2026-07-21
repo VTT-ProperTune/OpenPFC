@@ -43,6 +43,9 @@ void write_png_grayscale_from_doubles(const std::string &path, int width, int he
  * (e.g. -1 and 1 for Allen–Cahn wells) so successive PNGs are comparable.
  *
  * @throws std::invalid_argument if global nz != 1 or any local patch has nz != 1
+ * @throws std::runtime_error if @p local_field.size() does not match the expected
+ *         point count for any rank (collective fail-closed: all ranks throw together
+ *         via MPI_Allreduce to prevent MPI_Allgather/MPI_Gatherv deadlocks)
  */
 void write_mpi_scalar_field_png_xy(MPI_Comm comm,
                                    const pfc::decomposition::Decomposition &decomp,
