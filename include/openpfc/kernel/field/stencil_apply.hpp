@@ -46,10 +46,13 @@
  * for_each_border` lambdas in `apps/heat3d/src/cpu/heat3d_fd_manual.cpp`
  * achieve this by iterating over `[hw, n - hw)` after a halo exchange of
  * matching width (axis-aligned for `apply_1d_along`; **corner-filled** —
- * see [`runtime/cuda/full_padded_device_halo.hpp`](
- * ../runtime/cuda/full_padded_device_halo.hpp) — for any `apply_separable`
- * or `apply_dense` call whose support extends in more than one axis at
- * once).
+ * see [`full_padded_halo_exchange.hpp`](
+ * ../decomposition/full_padded_halo_exchange.hpp) on the host or
+ * [`runtime/cuda/full_padded_device_halo.hpp`](
+ * ../runtime/cuda/full_padded_device_halo.hpp) on device — for any
+ * `apply_separable` or `apply_dense` call whose support extends in more
+ * than one axis at once). Face-only `PaddedHaloExchanger` is not
+ * sufficient for multi-axis support.
  *
  * **Coefficient layout**: every weight array is **full**, including
  * zero/negative offsets, so the primitives accept asymmetric stencils
@@ -68,9 +71,11 @@
  *      consumed by `fd_apply.hpp`.
  * @see openpfc/kernel/simulation/for_each_interior.hpp for the canonical
  *      interior driver loop these primitives plug into.
- * @see runtime/cuda/full_padded_device_halo.hpp for the halo policy
- *      required by `apply_separable` / `apply_dense` cases that span more
- *      than one axis.
+ * @see runtime/cuda/full_padded_device_halo.hpp for the device corner-filled
+ *      halo policy required by `apply_separable` / `apply_dense` cases that
+ *      span more than one axis.
+ * @see full_padded_halo_exchange.hpp for the host twin
+ *      (`pfc::communication::FullPaddedHaloExchanger`).
  */
 
 #include <cstddef>
@@ -165,7 +170,8 @@ inline T apply_1d_along(const T *coeffs, int half_width, const T *core,
  *
  * **Halo requirement**: the union of stencil supports along non-trivial
  * axes generally extends into corner halos. Use a corner-filled exchanger
- * (`pfc::cuda::FullPaddedDeviceHalo` on the GPU side) before iterating;
+ * (`pfc::communication::FullPaddedHaloExchanger` on the host, or
+ * `pfc::cuda::FullPaddedDeviceHalo` on the GPU) before iterating;
  * `pfc::PaddedHaloExchanger` (axis-aligned only) is **not** sufficient
  * when more than one of `Hi` is non-zero.
  *
