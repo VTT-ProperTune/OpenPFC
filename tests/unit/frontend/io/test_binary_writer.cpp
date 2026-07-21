@@ -237,6 +237,43 @@ TEST_CASE("BinaryWriter rebuilds filetype when switching real then complex",
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+TEST_CASE("BinaryWriter and BinaryReader reject invalid domain geometry",
+          "[binary_writer][io][validation][unit]") {
+  if (mpi::get_size() > 1) {
+    SKIP("binary domain validation tests require single MPI rank");
+  }
+
+  auto require_invalid_domain = [](auto &io) {
+    REQUIRE_THROWS_AS(io.set_domain({0, 8, 8}, {0, 8, 8}, {0, 0, 0}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS(io.set_domain({8, 8, 8}, {0, 8, 8}, {0, 0, 0}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS(io.set_domain({8, 8, 8}, {8, 8, 8}, {-1, 0, 0}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS(io.set_domain({8, 8, 8}, {8, 8, 8}, {4, 0, 0}),
+                      std::invalid_argument);
+  };
+
+  SECTION("BinaryWriter") {
+    BinaryWriter writer("unused.bin");
+    require_invalid_domain(writer);
+    REQUIRE_NOTHROW(writer.set_domain({8, 8, 8}, {8, 8, 8}, {0, 0, 0}));
+  }
+
+  SECTION("BinaryReader") {
+    BinaryReader reader;
+    require_invalid_domain(reader);
+    REQUIRE_NOTHROW(reader.set_domain({8, 8, 8}, {8, 8, 8}, {0, 0, 0}));
+  }
+
+  SECTION("invalid attempts leave BinaryWriter domain unconfigured") {
+    BinaryWriter writer("unused.bin");
+    REQUIRE_THROWS_AS(writer.set_domain({8, 8, 8}, {8, 8, 8}, {4, 0, 0}),
+                      std::invalid_argument);
+    REQUIRE_THROWS_AS(writer.write(0, RealField(1)), std::runtime_error);
+  }
+}
+
 TEST_CASE("BinaryWriter does not leak an MPI_File handle when MPI_File_open fails",
           "[binary_writer][mpi][leak]") {
   BinaryWriter writer("/nonexistent_dir_for_binary_writer_test/out_%04d.bin");
