@@ -82,6 +82,7 @@ Ghosts are not resolved by per-point MPI or maps in hot loops. The pattern (whic
 | Halo patterns | `halo_pattern.hpp` | `create_send_halo`, `create_recv_halo`, `create_halo_patterns`. Recv indices target in-place positions in `[0, nx·ny·nz)` today. |
 | SparseVector + gather/scatter | `sparse_vector.hpp`, `sparse_vector_ops.hpp` | Pack path for halos. |
 | MPI exchange | `exchange.hpp` | `isend_face` / `irecv_face` (derived types), pack `isend_data` / `irecv_data`, etc. |
+| Device SparseVector MPI | `runtime/cuda/exchange_cuda.hpp`, `runtime/hip/exchange_hip.hpp` | `SparseVector<CudaTag\|HipTag>` overloads. **Non-blocking** `isend_data` / `irecv_data` require GPU-aware MPI (`OpenPFC_MPI_CUDA_AWARE` / `OpenPFC_MPI_HIP_AWARE` **and** runtime `MPIX_Query_cuda_support()` / `MPIX_Query_hip_support()`); otherwise they throw `std::runtime_error` (never a silent no-op with `MPI_REQUEST_NULL`). **Blocking** `send_data` / `receive_data` / `send` host-stage via `cudaMemcpy` / `hipMemcpy` when unaware (same runtime gate as `PaddedDeviceHaloExchanger`). |
 | Face MPI types | `halo_mpi_types.hpp` | `create_face_types_6` for send/recv subarrays in a single `[nx,ny,nz]` buffer. |
 | Padded face MPI types | `padded_halo_mpi_types.hpp` | `create_padded_face_types_6` — same idea but the outer extents are `(nx+2hw, ny+2hw, nz+2hw)` and recv subarrays target the dedicated halo ring rather than the outermost owned cells. |
 | In-place driver | `halo_exchange.hpp` | `HaloExchanger<T>`: recv into core boundary slabs (traditional). |
