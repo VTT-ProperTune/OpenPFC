@@ -20,6 +20,7 @@
 
 #include <mpi.h>
 #include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/kernel/mpi/domain_geometry.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 
@@ -54,10 +55,13 @@ namespace pfc {
  * product from `set_domain`. A mismatch is fail-closed (communicator-wide
  * agreement via `MPI_Allreduce`) before `MPI_File_open` / `MPI_File_write_all`.
  *
- * @note Filetype/etype: `set_domain` only stores the decomposition. Before each
- * write, the MPI filetype is rebuilt from the same element type used as the
- * `MPI_File_set_view` etype (`MPI_DOUBLE` or `MPI_DOUBLE_COMPLEX`), so filetype
- * oldtype and etype always match.
+ * @note Filetype/etype: `set_domain` validates positive global/local dimensions,
+ * non-negative offsets, and that each local piece lies inside the global box
+ * (`offset + local <= global` per axis) via `pfc::mpi::validate_subarray_domain`
+ * before marking the domain valid. Before each write, the MPI filetype is
+ * rebuilt from the same element type used as the `MPI_File_set_view` etype
+ * (`MPI_DOUBLE` or `MPI_DOUBLE_COMPLEX`), so filetype oldtype and etype always
+ * match.
  *
  * @see ResultsWriter - base class interface
  * @see BinaryReader - read binary files for restart
@@ -121,6 +125,8 @@ public:
   void set_domain(const std::array<int, 3> &arr_global,
                   const std::array<int, 3> &arr_local,
                   const std::array<int, 3> &arr_offset) override {
+    pfc::mpi::validate_subarray_domain(arr_global, arr_local, arr_offset,
+                                       "BinaryWriter::set_domain");
     if (m_type_valid) {
       pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
       m_type_valid = false;
