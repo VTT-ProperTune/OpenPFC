@@ -327,11 +327,19 @@ This protocol enables multi-field systems (e.g., coupled phase-field equations) 
 
 ## Integration with time integration
 
-The solver contract is designed to work with IMEX (implicit-explicit) time integration:
+The solver contract is the solve vocabulary for IMEX (implicit-explicit) stage
+composition. The kernel seam lives in
+[`imex_stage_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_stage_composition.hpp)
+(`pfc::sim::steppers::ImexEulerComposer`):
 
-1. **Explicit RHS:** Directly evaluated without solving
-2. **Implicit RHS:** Solved through solver contract with operator descriptor
-3. **IMEX integrator:** Combines explicit evaluation with implicit solves
-4. **Driver:** Manages step acceptance based on convergence evidence
+1. **Explicit RHS:** Evaluated into stage storage (`ExplicitOperatorEval`)
+2. **Implicit solve:** Invoked via `SolveFunction` with `LinearOperatorDesc` + RHS
+3. **Isolated candidate:** Written to method-owned buffers; accepted state is
+   unchanged until the driver calls `apply_candidate`
+4. **Driver:** Decides whether to commit based on `ImexStepAttemptResult`
+   / `ConvergenceStatus`
 
-See the implicit and IMEX time integration framework documentation for full integration patterns.
+Use `pfc::sim::StageContext` from this contract header (not
+`pfc::integrator::StageContext`). Full product IMEX Euler method bodies remain
+board follow-on (#168); this contract does not prescribe tableau coefficients
+or spectral/Krylov solver implementations.

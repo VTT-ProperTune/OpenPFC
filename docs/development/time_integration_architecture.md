@@ -362,8 +362,13 @@ Recommended pattern:
 
 Embedded pair evidence already exists under `steppers/`
 (`EmbeddedRKStepper::attempt`, `make_embedded_rk45` / `make_embedded_rk23`).
-IMEX schemes and adaptive *controller* policy (accept/reject and next-`dt`
-selection) remain future/driver-owned work tracked in
+The shared IMEX stage-composition seam is also landed
+(`ImexEulerComposer` / `ImexStepAttemptResult` in
+[`imex_stage_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_stage_composition.hpp)):
+explicit operator evaluation then an implicit `SolveFunction` solve into an
+isolated candidate, with driver commit via `apply_candidate`. Product IMEX
+Euler method wiring (#168) and adaptive *controller* policy (accept/reject and
+next-`dt` selection) remain follow-on / driver-owned work tracked in
 [`refactoring_roadmap.md`](refactoring_roadmap.md). The checkpoint protocol on
 `EulerStepper` (`save_state` / `restore_state` / `can_rollback`) is the hook
 those controller features are expected to use.
