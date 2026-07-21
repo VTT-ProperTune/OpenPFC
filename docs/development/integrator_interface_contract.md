@@ -56,9 +56,11 @@ an architectural narrative to interpret.
 ## 5. Error control API requirements
 
 - Current stepper implementations (see [`include/openpfc/kernel/simulation/steppers/euler.hpp`](../../include/openpfc/kernel/simulation/steppers/euler.hpp)) do not implement adaptive error estimation; a valid integrator today is not required to reject steps.
-- Where a step-rejection protocol does exist (future adaptive schemes), the *caller* is responsible for restoring state and not advancing time on rejection -- the integrator's role is limited to reporting rejection, not performing the rollback itself.
+- Where a step-rejection protocol does exist, the *caller* is responsible for restoring state and not advancing time on rejection or on `NoDecision` -- the integrator's role is limited to producing evidence / reporting a verdict, not performing the rollback itself.
 - Any error-control API an integrator exposes must remain compatible with the plain `t = stepper.step(t, u)` time-advance pattern used throughout the current stepper classes; it must not require the caller to change how it invokes `step()` on the success path.
-- Full adaptive error estimation APIs (embedded RK error estimates, step-size controllers) are explicitly out of scope for this document and are future work.
+- Method-independent error evidence and controller normalization live in [`include/openpfc/kernel/integrator/error_evidence.hpp`](../../include/openpfc/kernel/integrator/error_evidence.hpp): integrators produce `ErrorEvidence` (embedded-pair, residual / a-posteriori, or a documented method-specific extension hook); optional `reduce_error_evidence` promotes `AggregationScope::RankLocal` to `AlreadyReduced` (single-rank identity; already-reduced is not double-reduced); `normalize_error_evidence` returns a dimensionless metric plus `StepAttemptVerdict` (`Accept` / `Reject` / `NoDecision`) without computing a next `dt`.
+- Transient per-step `ErrorEvidence` is **not** checkpointed. Only future controller history that affects subsequent decisions may persist (restore is not implemented in this seam).
+- Still out of scope for this seam: the embedded RK stepper body (#162), adaptive tolerance / step-bound JSON schema (#163), full Simulator accept/reject/output orchestration, and on-hold `IntegratorResult` (#141).
 
 ## 6. Checkpoint/restart semantics requirements
 
