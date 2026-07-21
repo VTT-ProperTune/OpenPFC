@@ -9,4 +9,5 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_kspace.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_comprehensive.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_heap_concept.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_buffer_sizes.cpp
 )
