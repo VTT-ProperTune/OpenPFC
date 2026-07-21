@@ -61,6 +61,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_direction_agreement.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
@@ -130,6 +131,8 @@ public:
       : m_decomp(decomp), m_rank(rank), m_halo_width(halo_width), m_comm(comm),
         m_base_tag(base_tag),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
+    halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
+
     const auto &local_world = decomposition::get_subworld(m_decomp, m_rank);
     const auto local_size = world::get_size(local_world);
     const int nx = local_size[0];
