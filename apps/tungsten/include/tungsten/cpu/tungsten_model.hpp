@@ -77,17 +77,16 @@
  *
  * ### Time Integration
  *
- * The model uses exponential time integration:
- *
- * \f[
- * \psi(t+\Delta t) = e^{\mathcal{L} \Delta t} \psi(t) + \frac{e^{\mathcal{L} \Delta
- * t} - 1}{\mathcal{L}} \mathcal{N}[\psi, \psi_{MF}]
- * \f]
+ * The model uses exponential time integration. Method weights
+ * (@c exp(L·dt), @c n_weight = k_laplacian·phi1) are owned by
+ * @c tungsten::etd::TungstenEtdWorkspace over
+ * @c pfc::integrator::SpectralExpCoefficientCache — not by Model members.
  *
  * ## Implementation Details
  *
  * - Uses FFT for efficient spectral methods
- * - Operators are precomputed in `prepare_operators()`
+ * - Physics filters are precomputed in `prepare_operators()`; ETD weights via
+ *   the method workspace
  * - Mean-field filtering is applied in each time step
  * - Supports MPI parallelization via domain decomposition
  *
@@ -96,7 +95,7 @@
  * @see Model base class for interface documentation
  *
  * @author OpenPFC Development Team
- * @date 2025
+ * @date 2026
  */
 
 #ifndef TUNGSTEN_MODEL_HPP
@@ -107,6 +106,7 @@
 #include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/kernel/profiling/profiling.hpp>
 #include <openpfc/openpfc.hpp>
+#include <tungsten/common/tungsten_etd_workspace.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
 
@@ -125,8 +125,10 @@ class Tungsten : public pfc::Model {
 
 private:
   std::vector<double> filterMF; ///< Mean-field filter in Fourier space
-  std::vector<double> opL;      ///< Linear operator: exp(L·dt)
-  std::vector<double> opN;      ///< Nonlinear operator: (exp(L·dt) - 1) / L
+  /// Method-owned ETD weights (transient; not checkpointed).
+  /// TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+  tungsten::etd::TungstenEtdWorkspace<> m_etd;
+  std::uint64_t m_operator_generation{0}; ///< Bumped each prepare_operators
 #ifdef TUNGSTEN_REUSE_ARRAYS
   // Reuse work arrays when the memory-saving Tungsten option is enabled.
   std::vector<double> psiMF, psi, &psiN = psiMF;
@@ -155,17 +157,17 @@ public:
    * @brief Allocate memory for fields and operators
    *
    * Resizes all field arrays based on FFT inbox/outbox sizes and registers
-   * fields with the Model base class.
+   * fields with the Model base class. ETD coefficient scratch lives in
+   * @c m_etd and is not registered as checkpoint fields.
    */
   void allocate() {
     auto &fft = get_fft();
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
-    // Operators are only half size due to the symmetry of Fourier space
+    // Physics filter (half size due to R2C Fourier symmetry)
     filterMF.resize(size_outbox);
-    opL.resize(size_outbox);
-    opN.resize(size_outbox);
+    m_etd.reserve(size_outbox);
 
     // Real-space fields
     psi.resize(size_inbox);
@@ -177,16 +179,15 @@ public:
     psiMF_F.resize(size_outbox);
     psiN_F.resize(size_outbox);
 
-    // Register fields with Model base class
+    // Register fields with Model base class (coefficients excluded)
     pfc::add_real_field(*this, "psi", psi);
     pfc::add_real_field(*this, "default", psi); // for backward compatibility
     pfc::add_real_field(*this, "psiMF", psiMF);
 
-    // Track memory usage
+    // Track memory usage (physics fields + non-checkpoint ETD scratch)
     mem_allocated = 0;
     mem_allocated += pfc::utils::sizeof_vec(filterMF);
-    mem_allocated += pfc::utils::sizeof_vec(opL);
-    mem_allocated += pfc::utils::sizeof_vec(opN);
+    mem_allocated += m_etd.host_scratch_bytes();
     mem_allocated += pfc::utils::sizeof_vec(psi);
     mem_allocated += pfc::utils::sizeof_vec(psiMF);
     mem_allocated += pfc::utils::sizeof_vec(psiN);
@@ -196,18 +197,11 @@ public:
   }
 
   /**
-   * @brief Precompute time integration operators in k-space
+   * @brief Precompute physics filter and ETD method weights in k-space
    *
-   * Computes the linear and nonlinear operators for exponential time integration:
-   * - Linear operator: \f$L(k) = \exp(\mathcal{L}(k) \cdot \Delta t)\f$
-   * - Nonlinear operator: \f$N(k) = [\exp(\mathcal{L}(k) \cdot \Delta t) - 1] /
-   * \mathcal{L}(k)\f$
-   *
-   * The linear operator \f$\mathcal{L}(k)\f$ includes:
-   * - Stabilization term: `stabP`
-   * - Vapor model term: `p2_bar`
-   * - Temperature-dependent peak: \f$B_x e^{-T/T_0} g_f(k)\f$
-   * - Mean-field coupling: \f$\bar{q}_2 \chi(k)\f$
+   * Builds @c filterMF from @c physics_for_mode, diagonal samples
+   * @c L = k_laplacian * opCk, then ensures method weights via
+   * @c TungstenEtdWorkspace / @c SpectralExpCoefficientCache.
    *
    * @param dt Time step size
    */
@@ -225,6 +219,10 @@ public:
     auto [fx, fy, fz] = pfc::fft::kspace::k_frequency_scaling(world);
 
     const auto op_params = tungsten::spectral::make_operator_params(params);
+    const std::size_t n_modes = static_cast<std::size_t>(fft.size_outbox());
+
+    std::vector<double> k_laps(n_modes);
+    std::vector<double> opCks(n_modes);
 
     int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
@@ -239,18 +237,30 @@ public:
           // Compute Laplacian operator -k² using helper function
           double kLap = pfc::fft::kspace::k_laplacian_value(ki, kj, kk);
 
-          auto m = tungsten::spectral::operators_for_mode(kLap, dt, op_params);
-          filterMF[idx] = m.filterMF;
-          opL[idx] = m.opL;
-          opN[idx] = m.opN;
+          auto phys = tungsten::spectral::physics_for_mode(kLap, op_params);
+          filterMF[static_cast<std::size_t>(idx)] = phys.filterMF;
+          k_laps[static_cast<std::size_t>(idx)] = kLap;
+          opCks[static_cast<std::size_t>(idx)] = phys.opCk;
 
           idx += 1;
         }
       }
     }
 
-    CHECK_AND_ABORT_IF_NANS_MPI(opL, mpi_comm());
-    CHECK_AND_ABORT_IF_NANS_MPI(opN, mpi_comm());
+    ++m_operator_generation;
+    m_etd.ensure(k_laps, opCks, dt,
+                 pfc::integrator::SpectralExpOperatorId{.value =
+                                                            m_operator_generation},
+                 tungsten::etd::k_tungsten_etd_config_id);
+
+    {
+      const auto exp_w = m_etd.exp_Ldt();
+      const auto n_w = m_etd.n_weight();
+      std::vector<double> exp_v(exp_w.begin(), exp_w.end());
+      std::vector<double> n_v(n_w.begin(), n_w.end());
+      CHECK_AND_ABORT_IF_NANS_MPI(exp_v, mpi_comm());
+      CHECK_AND_ABORT_IF_NANS_MPI(n_v, mpi_comm());
+    }
   }
 
   /**
@@ -273,7 +283,7 @@ public:
    * 1. Compute mean-field filtered density ψ_MF
    * 2. Calculate nonlinear term N[ψ, ψ_MF] in real space
    * 3. Transform nonlinear term to Fourier space
-   * 4. Apply linear and nonlinear operators
+   * 4. Apply method weights via @c TungstenEtdWorkspace::apply_etd
    * 5. Transform back to real space
    *
    * @param t Current time (unused, kept for interface compatibility)
@@ -324,14 +334,13 @@ public:
       }
     }
 
-    // Step 4–6: Spectral evolution (forward FFT → k-space multiply → backward FFT)
+    // Step 4–6: Spectral evolution (forward FFT → ETD combine → backward FFT)
     OPENPFC_PROFILE("gradient/evolve") {
       OPENPFC_PROFILE("gradient/evolve/forward") { fft.forward(psiN, psiN_F); }
 
       OPENPFC_PROFILE("gradient/evolve/multiply") {
-        for (size_t idx = 0, N = psi_F.size(); idx < N; idx++) {
-          psi_F[idx] = opL[idx] * psi_F[idx] + opN[idx] * psiN_F[idx];
-        }
+        // TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+        m_etd.apply_etd(psi_F, psiN_F);
       }
 
       OPENPFC_PROFILE("gradient/evolve/backward") { fft.backward(psi_F, psi); }
@@ -345,10 +354,10 @@ public:
    * @brief Host-side model buffer size used for memory reporting
    *
    * Returns `mem_allocated`, recomputed in `initialize()` as the sum of
-   * `pfc::utils::sizeof_vec` over `filterMF`, `opL`, `opN`, `psi`, `psiMF`,
-   * `psiN`, `psi_F`, `psiMF_F`, and `psiN_F`. Does not include the FFT workspace
-   * or MPI buffers; use `get_fft().get_allocated_memory_bytes()` for the FFT
-   * engine.
+   * `pfc::utils::sizeof_vec` over `filterMF`, fields, plus non-checkpoint
+   * ETD workspace scratch (`TungstenEtdWorkspace::host_scratch_bytes`). Does
+   * not include the FFT workspace or MPI buffers; use
+   * `get_fft().get_allocated_memory_bytes()` for the FFT engine.
    *
    * @return Bytes counted above
    */
