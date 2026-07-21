@@ -96,10 +96,41 @@ inline int checked_padded_extent(int n, int hw) {
  * Built on the existing `create_face_type(...)` helper, just with the
  * **padded** outer extents `(nx + 2hw, ny + 2hw, nz + 2hw)` and the
  * appropriate `(hw, ...)` offsets baked into the start vectors.
+ *
+ * When `halo_width > 0`, each owned extent must be `>= halo_width` so the
+ * owned send slab fits inside the core. Unlike non-padded
+ * `create_face_types_6`, tiny owned cores are allowed (`PaddedBrick`
+ * semantics) — the LocalField `> 2*hw` rule does **not** apply here.
+ *
+ * @throws std::invalid_argument if `halo_width < 0`, owned extents are
+ *         non-positive, or (when `halo_width > 0`) any owned axis is
+ *         `< halo_width`
  */
 inline std::array<FaceTypes, 6>
 create_padded_face_types_6(int nx, int ny, int nz, int halo_width,
                            MPI_Datatype element_type) {
+  if (halo_width < 0) {
+    throw std::invalid_argument(
+        "pfc::halo::create_padded_face_types_6: halo_width must be "
+        "non-negative (got " +
+        std::to_string(halo_width) + ")");
+  }
+  if (nx <= 0 || ny <= 0 || nz <= 0) {
+    throw std::invalid_argument(
+        "pfc::halo::create_padded_face_types_6: owned extents must be "
+        "positive (got " +
+        std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
+        ")");
+  }
+  if (halo_width > 0 &&
+      (nx < halo_width || ny < halo_width || nz < halo_width)) {
+    throw std::invalid_argument(
+        std::string("pfc::halo::create_padded_face_types_6: owned extents ") +
+        std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
+        " cannot host halo_width=" + std::to_string(halo_width) +
+        " owned send slabs (need >= halo_width points per owned dimension)");
+  }
+
   const int hw = halo_width;
   const int nxp = checked_padded_extent(nx, hw);
   const int nyp = checked_padded_extent(ny, hw);
