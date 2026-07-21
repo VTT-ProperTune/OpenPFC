@@ -31,8 +31,10 @@
  */
 
 #include <cstddef>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include <openpfc/kernel/data/world_types.hpp>
 

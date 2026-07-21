@@ -109,34 +109,34 @@ void validate_no_alias(const FieldOutput<T>& output,
 /**
  * @brief Validate that two fields use compatible backend memory spaces
  *
- * Performs compile-time and runtime checks to ensure fields use compatible
- * backend memory spaces (e.g., both CPU, both GPU, not mixed).
+ * Ensures fields use compatible backend memory spaces (e.g., both CPU, both
+ * GPU, not mixed). The default implementation is a compile-time check:
+ * mismatched backend tags fail via `static_assert`, not a runtime throw.
  *
- * The default implementation validates that backend tags are the same type.
- * Backend-specific implementations can provide additional runtime checks
- * (e.g., CUDA device ID compatibility, HIP stream compatibility).
+ * Backend-specific implementations may add additional runtime checks
+ * (e.g., CUDA device ID compatibility, HIP stream compatibility) in separate
+ * headers such as `validation_cuda.hpp`.
  *
- * This function is called at binding time to detect backend mismatches
- * before field operations are performed. Mixing CPU and GPU storage in
- * the same operation can cause undefined behavior or performance issues.
+ * Call this at binding time so backend mismatches are caught before field
+ * operations run. Mixing CPU and GPU storage in the same operation can cause
+ * undefined behavior or performance issues.
  *
  * @tparam T Field value type
  * @tparam BackendTag1 Backend tag for first field (e.g., struct CPUBackendTag)
  * @tparam BackendTag2 Backend tag for second field (e.g., struct GPUBackendTag)
- * @param field1 First field view (unused in default implementation, only for API consistency)
- * @param field2 Second field view (unused in default implementation, only for API consistency)
- * @throws std::invalid_argument if backends are incompatible
+ * @param field1 First field view (unused in default implementation; API consistency)
+ * @param field2 Second field view (unused in default implementation; API consistency)
  *
  * Example usage:
  * @code
  * struct CPUBackendTag {};
  * struct CUDABackendTag {};
  *
- * // CPU fields are compatible with each other
- * validate_backend_compatibility<double, CPUBackendTag, CPUBackendTag>(field1, field2); // OK
+ * // Matching tags: compiles and runs
+ * validate_backend_compatibility<double, CPUBackendTag, CPUBackendTag>(field1, field2);
  *
- * // Mixing CPU and GPU fields is not allowed
- * validate_backend_compatibility<double, CPUBackendTag, CUDABackendTag>(field1, field2); // Throws
+ * // Mismatched tags: compile-time static_assert failure (not a runtime throw)
+ * // validate_backend_compatibility<double, CPUBackendTag, CUDABackendTag>(field1, field2);
  * @endcode
  */
 template<typename T, typename BackendTag1, typename BackendTag2>
