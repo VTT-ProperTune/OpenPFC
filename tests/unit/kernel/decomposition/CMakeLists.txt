@@ -14,3 +14,11 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_face_layout.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_padded_halo_mpi_types.cpp
 )
+
+# Device SparseVector MPI exchange (CudaTag / HipTag) — TU self-guards when
+# neither backend is enabled.
+if(OpenPFC_ENABLE_CUDA OR OpenPFC_ENABLE_HIP)
+  target_sources(openpfc-tests PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_sparse_vector_exchange_device.cpp
+  )
+endif()
