@@ -196,3 +196,30 @@ TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
     REQUIRE(bc.get_xpos() >= 100.0); // Monotonic movement expected
   }
 }
+
+TEST_CASE("MovingBC - MPI collectives fail closed", "[bc_moving]") {
+  // Contract: MovingBC::apply must check MPI_Reduce and MPI_Bcast via
+  // pfc::mpi::throw_on_mpi_error before mutating m_idx (after Reduce) and
+  // before fill_bc (after Bcast). A failed collective must throw
+  // std::runtime_error rather than apply a divergent m_xpos.
+  // Verified by code inspection of moving_bc.hpp (no MPI mock framework);
+  // this case locks the success-path apply still works under that contract.
+  auto world =
+      world::create(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
+                    GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+  ModelWithMovingBC m(fft, world);
+
+  const size_t field_size = fft.size_inbox();
+  std::vector<double> psi(field_size, 0.0);
+  add_real_field(m, "default", psi);
+
+  MovingBC bc(0.0, 1.0);
+  bc.set_xwidth(15.0);
+  bc.set_xpos(0.0);
+  bc.set_threshold(0.1);
+
+  REQUIRE_NOTHROW(bc.apply(m, 0.0));
+  REQUIRE(bc.get_xpos() >= 0.0);
+}

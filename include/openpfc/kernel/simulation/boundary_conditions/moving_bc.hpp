@@ -41,9 +41,11 @@
 #include <limits>
 #include <mpi.h>
 #include <sstream>
+#include <stdexcept>
 
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
@@ -125,8 +127,18 @@ public:
       }
     }
 
-    MPI_Reduce(xline.data(), global_xline.data(), static_cast<int>(xline.size()),
-               MPI_DOUBLE, MPI_MAX, 0, comm);
+    if (xline.empty() ||
+        xline.size() > static_cast<size_t>(std::numeric_limits<int>::max())) {
+      throw std::runtime_error(
+          "MovingBC::apply: MPI_Reduce count must be in (0, INT_MAX]");
+    }
+
+    // Fail closed before any root m_idx mutation from global_xline.
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Reduce(xline.data(), global_xline.data(),
+                   static_cast<int>(xline.size()), MPI_DOUBLE, MPI_MAX, 0,
+                   comm),
+        "MPI_Reduce");
 
     if (rank == 0) {
       if (m_first) {
@@ -150,7 +162,9 @@ public:
 
     double new_xpos = x0 + (m_idx * dx) + m_disp;
     m_xpos = std::max(new_xpos, m_xpos);
-    MPI_Bcast(&m_xpos, 1, MPI_DOUBLE, 0, comm);
+    // Fail closed before fill_bc so ranks never apply a divergent m_xpos.
+    pfc::mpi::throw_on_mpi_error(MPI_Bcast(&m_xpos, 1, MPI_DOUBLE, 0, comm),
+                                 "MPI_Bcast");
 
     if (m_first) {
       m_first = false;
