@@ -4,6 +4,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <limits>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/execution/memory_traits.hpp>
@@ -258,6 +259,29 @@ TEST_CASE("DataBuffer CUDA resize", "[core][databuffer][cuda]") {
   REQUIRE(buf.size() == 3);
 }
 
+TEST_CASE("DataBuffer CUDA resize preserves size/pointer on cudaMalloc failure",
+          "[core][databuffer][cuda]") {
+  if (!pfc::gpu::test::is_cuda_available()) {
+    SKIP("CUDA not available");
+  }
+
+  std::vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf(input.size());
+  buf.copy_from_host(input);
+
+  const size_t old_size = buf.size();
+  double *const old_ptr = buf.data();
+  REQUIRE(old_ptr != nullptr);
+
+  // Non-wrapping size far beyond device capacity so cudaMalloc must fail.
+  const size_t too_big = std::numeric_limits<size_t>::max() / sizeof(double);
+  REQUIRE_THROWS_AS(buf.resize(too_big), std::runtime_error);
+
+  REQUIRE(buf.size() == old_size);
+  REQUIRE(buf.data() == old_ptr);
+  REQUIRE(buf.to_host() == input);
+}
+
 TEST_CASE("DataBuffer CUDA backend traits", "[core][databuffer][cuda]") {
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
@@ -269,3 +293,59 @@ TEST_CASE("DataBuffer CUDA backend traits", "[core][databuffer][cuda]") {
   REQUIRE(traits::requires_transfer == true);
 }
 #endif // OpenPFC_ENABLE_CUDA
+
+#if defined(OpenPFC_ENABLE_HIP)
+#include "unit/runtime/gpu/test_helpers.hpp"
+#include <openpfc/runtime/hip/backend_tags_hip.hpp>
+#include <openpfc/runtime/hip/databuffer_hip.hpp>
+#include <openpfc/runtime/hip/memory_traits_hip.hpp>
+
+TEST_CASE("DataBuffer HIP resize", "[core][databuffer][hip]") {
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+
+  pfc::core::DataBuffer<pfc::backend::HipTag, double> buf(5);
+  REQUIRE(buf.size() == 5);
+
+  buf.resize(10);
+  REQUIRE(buf.size() == 10);
+
+  buf.resize(3);
+  REQUIRE(buf.size() == 3);
+}
+
+TEST_CASE("DataBuffer HIP resize preserves size/pointer on hipMalloc failure",
+          "[core][databuffer][hip]") {
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+
+  std::vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+  pfc::core::DataBuffer<pfc::backend::HipTag, double> buf(input.size());
+  buf.copy_from_host(input);
+
+  const size_t old_size = buf.size();
+  double *const old_ptr = buf.data();
+  REQUIRE(old_ptr != nullptr);
+
+  // Non-wrapping size far beyond device capacity so hipMalloc must fail.
+  const size_t too_big = std::numeric_limits<size_t>::max() / sizeof(double);
+  REQUIRE_THROWS_AS(buf.resize(too_big), std::runtime_error);
+
+  REQUIRE(buf.size() == old_size);
+  REQUIRE(buf.data() == old_ptr);
+  REQUIRE(buf.to_host() == input);
+}
+
+TEST_CASE("DataBuffer HIP backend traits", "[core][databuffer][hip]") {
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+
+  using traits = pfc::core::backend_traits<pfc::backend::HipTag>;
+  REQUIRE(traits::has_host_access == false);
+  REQUIRE(traits::has_device_access == true);
+  REQUIRE(traits::requires_transfer == true);
+}
+#endif // OpenPFC_ENABLE_HIP
