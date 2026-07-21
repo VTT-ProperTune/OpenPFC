@@ -9,6 +9,7 @@
  * through the IFFT interface and configuration parsing.
  */
 
+#include <complex>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -36,6 +37,18 @@ TEST_CASE("FFT Backend - FFTW backend selection", "[fft][backend][unit]") {
   REQUIRE(fft->size_inbox() > 0);
   REQUIRE(fft->size_outbox() > 0);
   REQUIRE(fft->size_workspace() > 0);
+}
+
+TEST_CASE("FFT Backend - FFTW allocated memory equals one workspace",
+          "[fft][backend][unit]") {
+  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+                             GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
+
+  REQUIRE(fft != nullptr);
+  REQUIRE(fft->get_allocated_memory_bytes() ==
+          fft->size_workspace() * sizeof(std::complex<double>));
 }
 
 TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]") {
@@ -91,6 +104,23 @@ TEST_CASE("FFT Backend - CUDA requires DataBuffer", "[fft][backend][cuda][unit]"
   std::vector<std::complex<double>> output(fft->size_outbox());
 
   REQUIRE_THROWS_AS(fft->forward(input, output), std::runtime_error);
+}
+
+TEST_CASE("FFT Backend - CUDA allocated memory excludes unused host workspace",
+          "[fft][backend][cuda][unit]") {
+  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+                             GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::CUDA);
+
+  REQUIRE(fft != nullptr);
+  const auto ws = fft->size_workspace();
+  const auto expected = ws * sizeof(std::complex<double>) +
+                        ws * sizeof(std::complex<float>);
+  REQUIRE(fft->get_allocated_memory_bytes() == expected);
+  // Guard against leftover unused m_wrk still being counted.
+  REQUIRE(fft->get_allocated_memory_bytes() !=
+          3 * ws * sizeof(std::complex<double>));
 }
 #endif
 
