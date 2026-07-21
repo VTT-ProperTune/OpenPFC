@@ -252,11 +252,34 @@ That construction lives in
   or `SpectralExpConfigId` (or mode count) changes.
 
 Coefficients are transient/recomputable and are **not** checkpointed.
-This API is not Tungsten's physics-specific `opN = expm1(arg)/opCk` path;
-ETD steppers and Tungsten migration onto shared operators remain separate
-work. Coverage:
+This API is not Tungsten's physics-specific `opN = expm1(arg)/opCk` path.
+Coverage:
 [`test_spectral_exp_coefficients.cpp`](../../tests/unit/kernel/integrator/test_spectral_exp_coefficients.cpp)
 (`[integrator][spectral_exp]`).
+
+### ETD1 step attempts (`Etd1Stepper`)
+
+CPU first-order exponential time-differencing lives in
+[`etd1.hpp`](../../include/openpfc/kernel/simulation/steppers/etd1.hpp)
+(`pfc::sim::steppers`). It consumes injectable diagonal coefficient spans
+(`exp_Ldt`, `phi1_L` from the builder above or test-built views) and a
+`StageFunction`-compatible nonlinear `N`:
+
+```cpp
+Etd1Stepper stepper(dt, local_size, rhs);
+stepper.set_coefficients(exp_Ldt, phi1_L);  // or SpectralExpCoefficientCache
+auto attempt = stepper.attempt_step(t, u_accepted);  // u_accepted never written
+// candidate = exp_Ldt * u + phi1_L * N   (phi1_L already includes dt)
+```
+
+`attempt_step` copies accepted state into method-owned scratch before
+evaluating `N`, writes an isolated `candidate()`, and returns
+`Etd1StepAttempt` (`success` / `t_next`) — computational completion only,
+not adaptive accept/reject. `MultiEtd1Stepper<Rhs, 2>` covers a two-field
+pack with the same isolation per field. Transient coeff/scratch caches are
+not checkpointable. Tungsten `Model::step` migration onto this path remains
+out of scope. Coverage: `tests/unit/kernel/simulation/steppers/test_etd1.cpp`
+(`[stepper][etd1]`).
 
 ### Embedded RK step attempts (`EmbeddedRKStepper`)
 
