@@ -27,6 +27,7 @@
 #include <cmath>
 #include <cstddef>
 #include <numbers>
+#include <stdexcept>
 #include <vector>
 
 #include <openpfc/kernel/field/finite_difference.hpp>
@@ -143,6 +144,17 @@ TEST_CASE("laplacian_interior runtime-order dispatcher matches templated form",
   bool unchanged = true;
   for (double v : lap_bad) unchanged &= v == Approx(7.0);
   REQUIRE(unchanged);
+}
+
+TEST_CASE("laplacian_interior throws when halo_width is below Order/2",
+          "[kernel][field][fd][brick][unit]") {
+  constexpr int N = 11;
+  constexpr int hw = 1; // Order 4 requires half_width 2
+  std::vector<double> u(static_cast<std::size_t>(N) * N * N, 0.0);
+  std::vector<double> lap(u.size(), 0.0);
+  REQUIRE_THROWS_AS(
+      (laplacian_interior<4>(u.data(), lap.data(), N, N, N, 1.0, 1.0, 1.0, hw)),
+      std::invalid_argument);
 }
 
 TEST_CASE("laplacian2d_xy_interior<2> is exact on a quadratic polynomial",

@@ -44,6 +44,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
+#include <string>
 
 #include <openpfc/kernel/field/fd_apply.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
@@ -62,7 +64,10 @@ namespace pfc::field::fd {
  * @tparam Order  Even spatial order in `{2, 4, …, 20}`.
  * @param buf  Source field (`nx*ny*nz`, x fastest).
  * @param lap  Destination buffer; only interior cells are written.
- * @param halo_width  Must be `>= Order/2`; otherwise the call is a no-op.
+ * @param halo_width  Must be `>= Order/2`; otherwise throws
+ *                    `std::invalid_argument`.
+ *
+ * @throws std::invalid_argument if `halo_width < Order/2`.
  *
  * @note Out-of-range `Order` is a compile-time error via
  *       `EvenCentralD2<Order>`'s `static_assert`.
@@ -72,7 +77,12 @@ void laplacian_interior(const T *buf, T *lap, int nx, int ny, int nz, T inv_dx2,
                         T inv_dy2, T inv_dz2, int halo_width) {
   using S = EvenCentralD2<Order>;
   constexpr int M = S::half_width;
-  if (halo_width < M) return;
+  if (halo_width < M) {
+    throw std::invalid_argument(
+        "laplacian_interior: halo_width " + std::to_string(halo_width) +
+        " < required half_width " + std::to_string(M) + " for Order " +
+        std::to_string(Order));
+  }
   const int imin = halo_width;
   const int imax = nx - halo_width;
   const int jmin = halo_width;
@@ -170,7 +180,10 @@ void laplacian_interior(int order, const T *buf, T *lap, int nx, int ny, int nz,
  * each of size `hw * (other two * nx)`).
  *
  * @tparam Order  Even spatial order in `{2, 4, …, 20}`.
- * @param halo_width  Must be `>= Order/2`; otherwise the call is a no-op.
+ * @param halo_width  Must be `>= Order/2`; otherwise throws
+ *                    `std::invalid_argument`.
+ *
+ * @throws std::invalid_argument if `halo_width < Order/2`.
  *
  * @note For interior-only use cases (no owned-region-edge updates), reach
  *       for `laplacian_interior` instead -- it skips the boundary checks
@@ -184,7 +197,13 @@ void laplacian_periodic_separated(const T *core,
   using S = EvenCentralD2<Order>;
   constexpr int M = S::half_width;
   const int hw = halo_width;
-  if (hw < M || nx <= 0 || ny <= 0 || nz <= 0) return;
+  if (hw < M) {
+    throw std::invalid_argument(
+        "laplacian_periodic_separated: halo_width " + std::to_string(hw) +
+        " < required half_width " + std::to_string(M) + " for Order " +
+        std::to_string(Order));
+  }
+  if (nx <= 0 || ny <= 0 || nz <= 0) return;
 
   const std::ptrdiff_t sy = nx;
   const std::ptrdiff_t sz = static_cast<std::ptrdiff_t>(nx) * ny;
@@ -258,6 +277,8 @@ void laplacian_periodic_separated(const T *core,
  *
  * 2D analogue of `laplacian_interior`. Returns without writing if
  * `nz != 1`.
+ *
+ * @throws std::invalid_argument if `halo_width < Order/2`.
  */
 template <int Order, class T>
 void laplacian2d_xy_interior(const T *buf, T *lap, int nx, int ny, int nz, T inv_dx2,
@@ -265,7 +286,12 @@ void laplacian2d_xy_interior(const T *buf, T *lap, int nx, int ny, int nz, T inv
   if (nz != 1) return;
   using S = EvenCentralD2<Order>;
   constexpr int M = S::half_width;
-  if (halo_width < M) return;
+  if (halo_width < M) {
+    throw std::invalid_argument(
+        "laplacian2d_xy_interior: halo_width " + std::to_string(halo_width) +
+        " < required half_width " + std::to_string(M) + " for Order " +
+        std::to_string(Order));
+  }
   const int imin = halo_width;
   const int imax = nx - halo_width;
   const int jmin = halo_width;
@@ -298,6 +324,8 @@ void laplacian2d_xy_interior(const T *buf, T *lap, int nx, int ny, int nz, T inv
  * 2D analogue of `laplacian_periodic_separated`. Returns without writing
  * if `nz != 1`. Uses face_halos slots 0..3 (+X, -X, +Y, -Y); slots 4..5
  * are ignored.
+ *
+ * @throws std::invalid_argument if `halo_width < Order/2`.
  */
 template <int Order, class T>
 void laplacian2d_xy_periodic_separated(const T *core,
@@ -308,7 +336,13 @@ void laplacian2d_xy_periodic_separated(const T *core,
   using S = EvenCentralD2<Order>;
   constexpr int M = S::half_width;
   const int hw = halo_width;
-  if (hw < M || nx <= 0 || ny <= 0) return;
+  if (hw < M) {
+    throw std::invalid_argument(
+        "laplacian2d_xy_periodic_separated: halo_width " + std::to_string(hw) +
+        " < required half_width " + std::to_string(M) + " for Order " +
+        std::to_string(Order));
+  }
+  if (nx <= 0 || ny <= 0) return;
 
   const T inv_den = T{1} / static_cast<T>(S::denom);
   const T px = inv_dx2 * inv_den;
