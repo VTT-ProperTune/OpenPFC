@@ -14,6 +14,7 @@
 #include "../../../fixtures/mpi_file_guard_test_utils.hpp"
 
 #include <array>
+#include <climits>
 #include <complex>
 #include <cstddef>
 #include <filesystem>
@@ -248,6 +249,132 @@ TEST_CASE("BinaryWriter does not leak an MPI_File handle when MPI_File_open fail
   // handle is ever produced to leak -- the property under test is simply
   // that the failure propagates as a clean exception rather than hanging.
   REQUIRE_THROWS_AS(writer.write(1, RealField(4, 1.0)), std::runtime_error);
+}
+
+TEST_CASE("checked_local_extent_product rejects overflow and non-positive extents",
+          "[binary_writer][io]") {
+  REQUIRE_THROWS_AS(
+      pfc::mpi::checked_local_extent_product({INT_MAX, INT_MAX, INT_MAX},
+                                             "test"),
+      std::overflow_error);
+  REQUIRE_THROWS_AS(pfc::mpi::checked_local_extent_product({0, 2, 2}, "test"),
+                    std::invalid_argument);
+  REQUIRE_THROWS_AS(pfc::mpi::checked_local_extent_product({2, -1, 2}, "test"),
+                    std::invalid_argument);
+  REQUIRE(pfc::mpi::checked_local_extent_product({4, 2, 2}, "test") == 16u);
+}
+
+TEST_CASE("BinaryWriter::write fails closed on buffer size mismatch",
+          "[binary_writer][io]") {
+  const int rank = mpi::get_rank();
+  const int size = mpi::get_size();
+  if (size > 2) {
+    SKIP("binary_writer tests support 1 or 2 ranks only");
+  }
+
+  const DomainBrick domain = make_domain(rank, size);
+  const auto n = local_count(domain);
+  const auto out_dir = test_dir();
+  const std::string template_path = (out_dir / "mismatch_write_%d.bin").string();
+
+  BinaryWriter writer(template_path);
+  writer.set_domain(domain.global, domain.local, domain.offset);
+
+  REQUIRE_THROWS_AS(writer.write(0, RealField(n - 1, 0.0)), std::runtime_error);
+  REQUIRE_THROWS_AS(writer.write(0, RealField(n + 1, 0.0)), std::runtime_error);
+}
+
+TEST_CASE("BinaryReader::read fails closed on buffer size mismatch",
+          "[binary_writer][io]") {
+  const int rank = mpi::get_rank();
+  const int size = mpi::get_size();
+  if (size > 2) {
+    SKIP("binary_writer tests support 1 or 2 ranks only");
+  }
+
+  const DomainBrick domain = make_domain(rank, size);
+  const auto n = local_count(domain);
+  const auto out_dir = test_dir();
+  const std::string template_path = (out_dir / "mismatch_read_%d.bin").string();
+  const std::string path = (out_dir / "mismatch_read_0.bin").string();
+
+  const RealField written = make_real(domain, rank);
+  {
+    BinaryWriter writer(template_path);
+    writer.set_domain(domain.global, domain.local, domain.offset);
+    REQUIRE_NOTHROW(writer.write(0, written));
+  }
+
+  BinaryReader reader;
+  reader.set_domain(domain.global, domain.local, domain.offset);
+
+  RealField too_small(n - 1);
+  RealField too_large(n + 1);
+  REQUIRE_THROWS_AS(reader.read(path, too_small), std::runtime_error);
+  REQUIRE_THROWS_AS(reader.read(path, too_large), std::runtime_error);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    std::filesystem::remove(path);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST_CASE("BinaryWriter buffer mismatch on one rank fails closed for all ranks",
+          "[binary_writer][io]") {
+  const int rank = mpi::get_rank();
+  const int size = mpi::get_size();
+  if (size != 2) {
+    SKIP("single-rank mismatch Allreduce case requires exactly 2 ranks");
+  }
+
+  const DomainBrick domain = make_domain(rank, size);
+  const auto n = local_count(domain);
+  const auto out_dir = test_dir();
+  const std::string template_path =
+      (out_dir / "mismatch_peer_write_%d.bin").string();
+
+  BinaryWriter writer(template_path);
+  writer.set_domain(domain.global, domain.local, domain.offset);
+
+  // Rank 0 posts a wrong-sized buffer; rank 1 is correctly sized. Allreduce
+  // must make every rank throw before MPI_File_open.
+  RealField data = (rank == 0) ? RealField(n + 1, 0.0) : make_real(domain, rank);
+  REQUIRE_THROWS_AS(writer.write(0, data), std::runtime_error);
+}
+
+TEST_CASE("BinaryReader buffer mismatch on one rank fails closed for all ranks",
+          "[binary_writer][io]") {
+  const int rank = mpi::get_rank();
+  const int size = mpi::get_size();
+  if (size != 2) {
+    SKIP("single-rank mismatch Allreduce case requires exactly 2 ranks");
+  }
+
+  const DomainBrick domain = make_domain(rank, size);
+  const auto n = local_count(domain);
+  const auto out_dir = test_dir();
+  const std::string template_path =
+      (out_dir / "mismatch_peer_read_%d.bin").string();
+  const std::string path = (out_dir / "mismatch_peer_read_0.bin").string();
+
+  {
+    BinaryWriter writer(template_path);
+    writer.set_domain(domain.global, domain.local, domain.offset);
+    REQUIRE_NOTHROW(writer.write(0, make_real(domain, rank)));
+  }
+
+  BinaryReader reader;
+  reader.set_domain(domain.global, domain.local, domain.offset);
+
+  RealField data = (rank == 0) ? RealField(n - 1) : RealField(n);
+  REQUIRE_THROWS_AS(reader.read(path, data), std::runtime_error);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank == 0) {
+    std::filesystem::remove(path);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST_CASE("MPI_File_guard closes the handle when MPI_File_set_view fails after open",
