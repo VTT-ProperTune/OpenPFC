@@ -94,14 +94,14 @@ Different backends can fulfill different subsets of the catalog. Asking for a me
 
 | Backend | `value` | `x/y/z` | `xx/yy/zz` | `xy/xz/yz` |
 |---------|---------|---------|------------|------------|
-| `pfc::gradient::FDGradient<G>` | yes | yes — D1 orders 2..14 | yes — D2 orders 2..20 | not yet (needs corner-filled halos; see `pfc::cuda::FullPaddedDeviceHalo`) |
+| `pfc::gradient::FDGradient<G>` | yes | yes — D1 orders 2..14 | yes — D2 orders 2..20 | not yet (host 26-fill via `pfc::communication::FullPaddedHaloExchanger`; member enablement is a follow-up — see also `pfc::cuda::FullPaddedDeviceHalo`) |
 | `pfc::field::SpectralGradient<G>` | yes | yes (via `i k_i`) | yes (via `-k_i^2`) | yes (via `-k_i k_j`) |
 
 `FDGradient<G>`'s constructor consults `pfc::field::has_*<G>` for every member individually and throws `std::invalid_argument` if the requested `order` falls outside the tabulated range for any declared member (so a model that asks for `g.x` at order 16 surfaces as a clean error at construction time, not as silent zeros at runtime).
 
 When new requirements show up:
 - **FD higher-order first derivatives**: extend `EvenCentralD1<Order>` in [`fd_stencils.hpp`](../../include/openpfc/kernel/field/fd_stencils.hpp) — the closed form `c_k = (-1)^{k+1} (M!)^2 / (k (M-k)! (M+k)!)` produces the rational coefficients; build the integer table with their lowest common denominator and add the matching `lookup_even_central_d1` case.
-- **FD mixed seconds (`xy/xz/yz`)** need **corner-filled** halos in the exchanger. The CUDA side has [`pfc::cuda::FullPaddedDeviceHalo`](../../include/openpfc/runtime/cuda/full_padded_device_halo.hpp) (3-pass widening, 26-direction); the matching CPU exchanger is the next plumbing follow-up. Until that lands, `SpectralGradient<G>` is the right path for any model that needs mixed seconds on the CPU.
+- **FD mixed seconds (`xy/xz/yz`)** need **corner-filled** halos in the exchanger. Host plumbing is [`pfc::communication::FullPaddedHaloExchanger`](../../include/openpfc/kernel/decomposition/full_padded_halo_exchange.hpp) (3-pass widening, 26-direction); the CUDA twin is [`pfc::cuda::FullPaddedDeviceHalo`](../../include/openpfc/runtime/cuda/full_padded_device_halo.hpp). `FDGradient` still compile-rejects `xy/xz/yz` until a follow-up enables those members after Catch2 proves corners. Until then, `SpectralGradient<G>` is the right path for any model that needs mixed seconds on the CPU.
 
 ## Custom stencils — Sobel, CNN-style filters, anisotropic FD
 
