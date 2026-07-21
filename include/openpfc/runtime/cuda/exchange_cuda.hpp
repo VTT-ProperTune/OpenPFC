@@ -83,9 +83,10 @@ void send(core::SparseVector<backend::CudaTag, T> &sparse_vector, int sender_ran
   }
 
   size_t size = sparse_vector.size();
+  // Match CPU exchange.hpp: always post one size word (including 0).
   if (size == 0) {
     pfc::mpi::throw_on_mpi_error(
-        MPI_Send(nullptr, 0, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm),
+        MPI_Send(&size, 1, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm),
         "MPI_Send");
     return;
   }
