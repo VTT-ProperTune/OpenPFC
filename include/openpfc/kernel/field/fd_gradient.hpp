@@ -69,8 +69,9 @@
  * @see openpfc/kernel/simulation/for_each_interior.hpp for the driver loop
  * @see fd_apply.hpp for the per-axis apply primitives
  * @see fd_stencils.hpp for the underlying stencil tables
- * @see runtime/cuda/full_padded_device_halo.hpp for the corner-filled halo
- *      policy required to unblock `xy/xz/yz` on a future GPU evaluator
+ * @see full_padded_halo_exchange.hpp for the host 26-direction exchanger
+ *      (corners proven; `xy/xz/yz` member enablement is a follow-up)
+ * @see runtime/cuda/full_padded_device_halo.hpp for the device twin
  */
 
 #include <cstddef>
@@ -298,10 +299,12 @@ private:
     static_assert(!pfc::field::has_xy<G> && !pfc::field::has_xz<G> &&
                       !pfc::field::has_yz<G>,
                   "FDGradient: mixed second derivatives (xy/xz/yz) need "
-                  "corner-filled halos. The CPU exchanger is axis-aligned "
-                  "today; use `pfc::cuda::FullPaddedDeviceHalo` plus the "
-                  "GPU evaluator (when available), or `SpectralGradient<G>`, "
-                  "for these members.");
+                  "corner-filled halos. Host 26-fill exists via "
+                  "`pfc::communication::FullPaddedHaloExchanger`, but "
+                  "FDGradient still rejects has_xy/has_xz/has_yz until a "
+                  "follow-up enables those members after Catch2 proves "
+                  "corners. Use `SpectralGradient<G>` or the GPU path "
+                  "with `pfc::cuda::FullPaddedDeviceHalo` for now.");
 
     const double inv_dx = 1.0 / dx;
     const double inv_dy = 1.0 / dy;

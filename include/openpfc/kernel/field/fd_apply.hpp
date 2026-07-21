@@ -52,14 +52,17 @@
  * for pure-axis stencils by iterating over `[hw, n - hw)` after a halo
  * exchange with `halo_width >= half_width`. Mixed-second tensor
  * products additionally need **corner-filled** halos --
- * `pfc::cuda::FullPaddedDeviceHalo` ships this on the GPU side; the
- * matching CPU exchanger is a follow-up.
+ * `pfc::communication::FullPaddedHaloExchanger` on the host and
+ * `pfc::cuda::FullPaddedDeviceHalo` on the GPU. Enabling the
+ * mixed-second evaluator path (`Mi = 1` / `FDGradient` `xy/xz/yz`)
+ * remains a follow-up after corners are proven.
  *
  * @see fd_stencils.hpp for the stencil tables consumed here
  * @see fd_gradient.hpp for the per-point evaluator that uses these
  *      primitives via the runtime overloads
- * @see runtime/cuda/full_padded_device_halo.hpp for the corner-filled
- *      halo policy that unblocks the mixed-second tensor case on GPU
+ * @see full_padded_halo_exchange.hpp for the host corner-filled
+ *      26-direction exchanger
+ * @see runtime/cuda/full_padded_device_halo.hpp for the device twin
  */
 
 #include <cstddef>
@@ -277,11 +280,13 @@ struct IdentityStencil1d {
  * @pre Every load `core[c + a*sx + b*sy + c*sz]` for
  *      `(a,b,c) in [-Hx,Hx] x [-Hy,Hy] x [-Hz,Hz]` is in-bounds. For
  *      mixed-second cases (>= 2 non-zero `Mi`), this requires
- *      **corner-filled** halos — `pfc::cuda::FullPaddedDeviceHalo` ships
- *      this on the GPU side; the matching CPU exchanger is a follow-up.
- *      Until both pieces are wired together at the high level,
- *      `FdGradient<G>` keeps its `static_assert` against `xy/xz/yz`
- *      members even though this primitive is ready.
+ *      **corner-filled** halos — `pfc::communication::FullPaddedHaloExchanger`
+ *      on the host and `pfc::cuda::FullPaddedDeviceHalo` on the GPU.
+ *      Enabling the mixed-second evaluator path (`Mi = 1` /
+ *      `FDGradient` `xy/xz/yz`) remains a follow-up after corners are
+ *      proven. Until that wiring lands, `FdGradient<G>` keeps its
+ *      `static_assert` against `xy/xz/yz` members even though this
+ *      primitive is ready.
  */
 template <int Mx, int My, int Mz, class StencilX = IdentityStencil1d,
           class StencilY = IdentityStencil1d, class StencilZ = IdentityStencil1d,
