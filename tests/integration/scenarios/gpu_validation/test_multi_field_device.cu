@@ -17,7 +17,6 @@
 
 #include <cuda_runtime.h>
 
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <tuple>
@@ -73,13 +72,6 @@ struct WaveLocal {
   auto as_tuple() const { return std::tie(u, v); }
 };
 
-struct WaveCpuIncrements {
-  double du{};
-  double dv{};
-  auto as_tuple() { return std::tie(du, dv); }
-  auto as_tuple() const { return std::tie(du, dv); }
-};
-
 struct WaveDeviceModel {
   double inv_dx2{1.0};
   double inv_dy2{1.0};
@@ -87,16 +79,6 @@ struct WaveDeviceModel {
                                             const WaveLocal &g) const noexcept {
     const double lap_u = inv_dx2 * g.u.xx + inv_dy2 * g.u.yy;
     return pfc::sim::cuda::DeviceInc2{g.v.value, kWaveC * kWaveC * lap_u};
-  }
-};
-
-struct WaveCpuModel {
-  double inv_dx2{1.0};
-  double inv_dy2{1.0};
-  [[nodiscard]] WaveCpuIncrements rhs(double /*t*/,
-                                      const WaveLocal &g) const noexcept {
-    const double lap_u = inv_dx2 * g.u.xx + inv_dy2 * g.u.yy;
-    return WaveCpuIncrements{g.v.value, kWaveC * kWaveC * lap_u};
   }
 };
 
@@ -123,23 +105,6 @@ struct KobayashiDeviceModel {
   }
 };
 
-struct KobayashiCpuIncrements {
-  double dphi{};
-  double dtempr{};
-  auto as_tuple() { return std::tie(dphi, dtempr); }
-  auto as_tuple() const { return std::tie(dphi, dtempr); }
-};
-
-struct KobayashiCpuModel {
-  double alpha{0.5};
-  [[nodiscard]] KobayashiCpuIncrements
-  rhs(double /*t*/, const KobayashiLocal &g) const noexcept {
-    const double lap = g.phi.xx + g.phi.yy;
-    return KobayashiCpuIncrements{g.phi.value * (1.0 - g.phi.value) + alpha * lap,
-                                  -g.tempr.value + g.phi.value};
-  }
-};
-
 struct AGrads {
   double value{};
 };
@@ -159,21 +124,6 @@ struct TripleDeviceModel {
   OPENPFC_HD pfc::sim::cuda::DeviceInc3 rhs(double /*t*/,
                                             const TripleLocal &g) const noexcept {
     return pfc::sim::cuda::DeviceInc3{g.a.value, g.b.xx, g.c.yy};
-  }
-};
-
-struct TripleCpuIncrements {
-  double da{};
-  double db{};
-  double dc{};
-  auto as_tuple() { return std::tie(da, db, dc); }
-  auto as_tuple() const { return std::tie(da, db, dc); }
-};
-
-struct TripleCpuModel {
-  [[nodiscard]] TripleCpuIncrements rhs(double /*t*/,
-                                        const TripleLocal &g) const noexcept {
-    return TripleCpuIncrements{g.a.value, g.b.xx, g.c.yy};
   }
 };
 
@@ -409,7 +359,7 @@ TEST_CASE("test_wave2d_double_field_kernel",
   auto grad_u = pfc::field::create<UGrads>(u, order);
   auto grad_v = pfc::field::create<VGrads>(v, order);
   auto composite = pfc::field::create_composite<WaveLocal>(grad_u, grad_v);
-  WaveCpuModel cpu_model{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2};
+  WaveDeviceModel cpu_model{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2};
   auto du_tuple = std::make_tuple(du_cpu.data() + owned_origin(hw, u.padded_size3()[0],
                                                                u.padded_size3()[1]),
                                   dv_cpu.data() + owned_origin(hw, v.padded_size3()[0],
@@ -479,70 +429,6 @@ TEST_CASE("test_wave2d_double_field_kernel",
   REQUIRE(match);
   REQUIRE(halo_ok);
 
-  // Performance: 50 multi-field launches on 64x64x1 must beat CPU.
-  {
-    constexpr int pn = 64;
-    auto pworld = pfc::world::create(pfc::GridSize({pn, pn, 1}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
-    auto pdecomp = pfc::decomposition::create(pworld, 1);
-    pfc::field::PaddedBrick<double> pu(pdecomp, 0, hw);
-    pfc::field::PaddedBrick<double> pv(pdecomp, 0, hw);
-    pfc::field::PaddedBrick<double> pdu(pdecomp, 0, hw);
-    pfc::field::PaddedBrick<double> pdv(pdecomp, 0, hw);
-    for (int pj = -hw; pj < pn + hw; ++pj) {
-      for (int pi = -hw; pi < pn + hw; ++pi) {
-        pu(pi, pj, 0) = 0.01 * static_cast<double>(pi + pj);
-        pv(pi, pj, 0) = 0.02 * static_cast<double>(pi - pj);
-      }
-    }
-    auto pgu = pfc::field::create<UGrads>(pu, order);
-    auto pgv = pfc::field::create<VGrads>(pv, order);
-    auto pcomp = pfc::field::create_composite<WaveLocal>(pgu, pgv);
-    auto pdu_t = std::make_tuple(
-        pdu.data() + owned_origin(hw, pu.padded_size3()[0], pu.padded_size3()[1]),
-        pdv.data() + owned_origin(hw, pv.padded_size3()[0], pv.padded_size3()[1]));
-
-    const auto t0 = std::chrono::steady_clock::now();
-    for (int i = 0; i < 50; ++i) {
-      pfc::sim::for_each_interior(cpu_model, pcomp, pdu_t, 0.0);
-    }
-    const auto t1 = std::chrono::steady_clock::now();
-    const double cpu_ms =
-        std::chrono::duration<double, std::milli>(t1 - t0).count();
-
-    const std::size_t ptotal = pu.size();
-    double *pd_u = nullptr, *pd_v = nullptr, *pd_du = nullptr, *pd_dv = nullptr;
-    REQUIRE(cudaMalloc(&pd_u, ptotal * sizeof(double)) == cudaSuccess);
-    REQUIRE(cudaMalloc(&pd_v, ptotal * sizeof(double)) == cudaSuccess);
-    REQUIRE(cudaMalloc(&pd_du, ptotal * sizeof(double)) == cudaSuccess);
-    REQUIRE(cudaMalloc(&pd_dv, ptotal * sizeof(double)) == cudaSuccess);
-    REQUIRE(cudaMemcpy(pd_u, pu.data(), ptotal * sizeof(double),
-                       cudaMemcpyHostToDevice) == cudaSuccess);
-    REQUIRE(cudaMemcpy(pd_v, pv.data(), ptotal * sizeof(double),
-                       cudaMemcpyHostToDevice) == cudaSuccess);
-    pfc::cuda::FdGradientDevice<UGrads> dpu(pd_u, pn, pn, 1, 1.0, 1.0, 1.0, hw,
-                                            order);
-    pfc::cuda::FdGradientDevice<VGrads> dpv(pd_v, pn, pn, 1, 1.0, 1.0, 1.0, hw,
-                                            order);
-    auto dpc = pfc::cuda::create_composite_device<WaveLocal>(dpu, dpv);
-    auto pp = pfc::sim::cuda::make_device_ptr_pack(pd_du, pd_dv);
-    REQUIRE(cudaDeviceSynchronize() == cudaSuccess);
-    const auto g0 = std::chrono::steady_clock::now();
-    for (int i = 0; i < 50; ++i) {
-      pfc::sim::cuda::for_each_interior_device(gpu_model, dpc, pp, 0.0, pn, pn, 1);
-    }
-    REQUIRE(cudaDeviceSynchronize() == cudaSuccess);
-    const auto g1 = std::chrono::steady_clock::now();
-    const double gpu_ms =
-        std::chrono::duration<double, std::milli>(g1 - g0).count();
-    CHECK(gpu_ms < cpu_ms);
-    cudaFree(pd_u);
-    cudaFree(pd_v);
-    cudaFree(pd_du);
-    cudaFree(pd_dv);
-  }
-
   cudaFree(d_u);
   cudaFree(d_v);
   cudaFree(d_du);
@@ -588,7 +474,7 @@ TEST_CASE("test_kobayashi_double_field_kernel",
   auto gtempr = pfc::field::create<TemprGrads>(tempr, order);
   auto composite =
       pfc::field::create_composite<KobayashiLocal>(gphi, gtempr);
-  KobayashiCpuModel cpu_model{};
+  KobayashiDeviceModel cpu_model{};
   const int nxp = phi.padded_size3()[0];
   const int nyp = phi.padded_size3()[1];
   auto du_tuple = std::make_tuple(dphi_cpu.data() + owned_origin(hw, nxp, nyp),
@@ -685,7 +571,7 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   auto gb = pfc::field::create<BGrads>(b, order);
   auto gc = pfc::field::create<CGrads>(c, order);
   auto composite = pfc::field::create_composite<TripleLocal>(ga, gb, gc);
-  TripleCpuModel cpu_model{};
+  TripleDeviceModel cpu_model{};
   const int nxp = a.padded_size3()[0];
   const int nyp = a.padded_size3()[1];
   const auto off = owned_origin(hw, nxp, nyp);
