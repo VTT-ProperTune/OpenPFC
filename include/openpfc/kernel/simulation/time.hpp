@@ -48,6 +48,7 @@
 #ifndef PFC_TIME_HPP
 #define PFC_TIME_HPP
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <iostream>
@@ -64,35 +65,38 @@ namespace pfc {
  * intervals.
  *
  * The Time class is used by Simulator to orchestrate the time integration loop.
- * It tracks the current simulation time based on time step size (`dt`) and the
- * number of steps taken (`increment`), and determines when results should be
- * saved based on the `saveat` interval.
+ * It stores an explicit **accepted** simulation time (`m_accepted_time`) that
+ * advances only on `next()` or `commit_attempt()`, and determines when results
+ * should be saved based on the `saveat` interval keyed off accepted time.
  *
  * ## Key Responsibilities
  *
  * - Define simulation time span: start time (`t0`), end time (`t1`), and time
  *   step size (`dt`)
- * - Track current time based on number of steps taken: `t_current = t0 +
- *   increment * dt`
- * - Determine when simulation is complete: `t_current >= t1`
+ * - Store accepted simulation time independently of the next candidate `dt`
+ *   (so `set_dt` cannot rewrite past accepted time)
+ * - Determine when simulation is complete: `accepted_time >= t1`
  * - Manage output intervals: control when results should be written via
- *   `saveat`
+ *   `saveat` (queries use accepted time only)
+ * - Driver-owned attempt transactions: `clip_attempt_dt` / `begin_attempt` /
+ *   `commit_attempt` / `reject_attempt` for adaptive control
  * - Track accepted/rejected adaptive step attempts via
  *   `increment_step_success()` / `increment_step_rejection()` (separate from
- *   `get_step_count()`, which only counts committed advances via `next()`)
+ *   `get_step_count()`, which only counts committed advances via `next()` /
+ *   `commit_attempt`)
  * - Provide validation: ensure `dt > 0`, `t0 < t1`, and `saveat` is valid
  *
  * ## Design Philosophy
  *
  * Time follows OpenPFC's "laboratory" philosophy:
- * - **Immutable core**: Start time, end time, and time step are const (set at
- *   construction)
- * - **Transparent state**: Current time is computed from increment (no hidden
- *   state)
- * - **Mutable progress**: Only the increment counter can be changed (via
- *   `next()`)
- * - **Explicit**: No automatic time advancement; user controls when `next()` is
- *   called
+ * - **Immutable core**: Start time and end time are fixed at construction
+ * - **Accepted clock**: Simulation time is stored as `m_accepted_time` and is
+ *   unchanged for the duration of an active attempt
+ * - **Mutable progress**: Accepted time advances via `next()` (fixed `dt`) or
+ *   `commit_attempt()` (clipped attempted interval); `set_dt` only updates the
+ *   recommended step size
+ * - **Explicit**: No automatic time advancement; user controls when `next()` /
+ *   commit is called
  *
  * ## Usage Pattern
  *
@@ -150,31 +154,39 @@ namespace pfc {
  * ```
  *
  * @example
- * **Adaptive Time Step Sizes**
+ * **Adaptive attempt transaction (preferred)**
  * ```cpp
  * using namespace pfc;
  *
- * // Start with dt=0.01
  * Time time({0.0, 10.0, 0.01}, 0.5);
+ * double candidate_dt = time.get_dt();
  *
  * while (!time.done()) {
- *     // Compute error estimate
- *     double error = compute_error();
+ *     time.begin_attempt(candidate_dt);  // clips vs t1 and saveat
+ *     const double attempted = time.get_attempted_dt();
+ *     // Integrate with attempted (not get_dt()); accepted time stays fixed
+ *     double error = attempt_step(time.get_accepted_time(), attempted);
  *
  *     if (error > tolerance) {
- *         // Need smaller time step - restart from previous time
- *         time.set_dt(time.get_dt() * 0.5);
- *         time.set_increment(time.get_increment() - 1);
+ *         time.reject_attempt();  // accepted time unchanged
+ *         candidate_dt = attempted * 0.5;
+ *         time.set_dt(candidate_dt);  // policy only — does not rewrite clock
  *         continue;
  *     }
  *
+ *     time.commit_attempt();  // accepted += attempted
+ *     time.increment_step_success();
  *     if (time.do_save()) {
- *         // Save results
+ *         write_results(time.get_accepted_time());
  *     }
- *
- *     time.next();
+ *     candidate_dt = recommend_next_dt(...);
+ *     time.set_dt(candidate_dt);
  * }
  * ```
+ *
+ * @warning Do not adapt by set_dt plus decrementing set_increment: that
+ *          fixed-dt reconstruction helper rewrites accepted time as
+ *          t0 + n * dt and is not the adaptive commit path.
  *
  * @example
  * **Save at First and Last Steps Only**
@@ -217,23 +229,24 @@ namespace pfc {
  * std::cout << "After 10 steps: t=" << time.get_current() << "\n";   // 1.5
  * ```
  *
- * @note The current time is computed as `t0 + increment * dt`, not stored
- *       explicitly. This ensures consistency and avoids floating-point drift.
+ * @note Accepted time is stored explicitly (`m_accepted_time`) and advances on
+ *       `next()` / `commit_attempt()`. `set_dt` does not rewrite accepted time.
  * @note The `saveat` interval uses floating-point modulo with tolerance (1e-6)
  *       to handle rounding errors.
  * @note Setting `saveat = 0.0` disables automatic saving entirely.
  * @note The `done()` method uses a small tolerance (1e-9) to handle
  *       floating-point comparison.
  *
- * @warning Time step size (`dt`) cannot be changed after construction in
- *          typical usage. For adaptive time stepping, you must manage `dt` and
- *          increment manually.
+ * @warning Prefer `begin_attempt` / `commit_attempt` / `reject_attempt` for
+ *          adaptive control. `set_increment` is a fixed-`dt` reconstruction
+ *          helper and will set accepted time to `min(t0 + n * dt, t1)`.
  * @warning If `dt * num_steps` doesn't exactly equal `t1 - t0`, the final step
  *          will be clamped to `t1`.
  *
  * @see Simulator - uses Time for orchestrating simulation loop
  * @see do_save() - determines when to write output
- * @see get_current() - computes current time from increment
+ * @see get_current() - returns accepted simulation time
+ * @see clip_attempt_dt() - clip candidate dt before an attempt
  */
 
 enum class IntegratorMethod { euler, rk2_heun };
@@ -242,14 +255,17 @@ class Time {
 private:
   double m_t0;     ///< Start time
   double m_t1;     ///< End time
-  double m_dt;     ///< Time step
-  int m_increment; ///< Current time increment
+  double m_dt;     ///< Time step (policy / recommended next step)
+  int m_increment; ///< Current time increment (committed step count)
+  double m_accepted_time; ///< Accepted simulation time (immutable during attempt)
   double m_saveat; ///< Time interval for saving data
   IntegratorMethod m_method{IntegratorMethod::euler};
   int m_stage{0};       ///< Current stage index within this time step (0-based)
   int m_stage_count{1}; ///< Total number of stages in the current time step
   int accepted_steps_{0}; ///< Accepted adaptive step attempts
   int rejected_steps_{0}; ///< Rejected adaptive step attempts
+  bool m_attempt_active{false}; ///< True while begin_attempt is open
+  double m_attempted_dt{0.0};   ///< Clipped interval for the active attempt
 
   friend class TimeStateGuard;
 
@@ -349,7 +365,7 @@ public:
    */
   Time(const std::array<double, 3> &time, double saveat, IntegratorMethod method)
       : m_t0(time[0]), m_t1(time[1]), m_dt(time[2]), m_increment(0),
-        m_saveat(saveat), m_method(method) {
+        m_accepted_time(time[0]), m_saveat(saveat), m_method(method) {
     if (m_t0 < 0) {
       throw std::invalid_argument("Start time cannot be negative: " +
                                   std::to_string(m_t0));
@@ -430,19 +446,21 @@ public:
    * Sets a new time step size for adaptive time-stepping. The time step must
    * be positive to ensure meaningful time integration.
    *
-   * This method enables runtime adjustment of the time step, which is useful
-   * for adaptive time-stepping algorithms that adjust dt based on error estimates.
+   * This method enables runtime adjustment of the recommended / policy `dt`.
+   * It does **not** change accepted simulation time; adaptive drivers must
+   * advance time via @ref commit_attempt (or fixed-step @ref next).
    *
    * @param[in] dt The new time step size (must be > 0)
    * @throws std::invalid_argument If dt <= 0
    *
    * @post get_dt() returns the new dt value
+   * @post get_accepted_time() is unchanged
    *
-   * @note Changing dt during a simulation affects all subsequent time steps.
-   *       The current time is recomputed as `t0 + increment * dt`.
+   * @note Changing dt does not rewrite past accepted time. Use
+   *       @ref begin_attempt / @ref commit_attempt for clipped attempts.
    *
    * @see get_dt() - query the current time step
-   * @see set_increment() - manually adjust the step counter for retry logic
+   * @see set_increment() - fixed-dt reconstruction helper (not adaptive commit)
    */
   void set_dt(double dt) {
     if (dt <= 0.0) {
@@ -569,63 +587,36 @@ public:
   }
 
   /**
-   * @brief Get the current simulation time
+   * @brief Get the accepted simulation time (read-only)
    *
-   * Computes the current time as `t_current = t0 + increment * dt`, where
-   * `increment` is the number of time steps taken via `next()`. The result is
-   * clamped to `t1` if it exceeds the end time (handles rounding errors).
+   * Returns the stored accepted clock. Unchanged for the duration of an
+   * active attempt (`begin_attempt` … `commit_attempt` / `reject_attempt`).
    *
-   * This computation-based approach (rather than storing `t_current`) ensures
-   * consistency and avoids floating-point drift over many time steps.
+   * @return Accepted simulation time
+   */
+  [[nodiscard]] double get_accepted_time() const noexcept {
+    return m_accepted_time;
+  }
+
+  /**
+   * @brief Get the current (accepted) simulation time
+   *
+   * Returns the stored accepted time (`m_accepted_time`), clamped to `t1` if
+   * needed. Prefer @ref get_accepted_time for adaptive drivers; this alias
+   * preserves the historical name used by Simulator and writers.
    *
    * @return Current simulation time, clamped to [t0, t1]
    *
-   * @example
-   * **Track Simulation Progress**
-   * ```cpp
-   * using namespace pfc;
+   * @note Accepted time advances on @ref next or @ref commit_attempt only.
+   *       @ref set_dt does not rewrite this value.
    *
-   * Time time({0.0, 1.0, 0.1}, 0.0);
-   *
-   * std::cout << "t = " << time.get_current() << "\n";  // 0.0
-   *
-   * for (int i = 0; i < 5; ++i) {
-   *     time.next();
-   *     std::cout << "After step " << i+1 << ": t = " << time.get_current() << "\n";
-   * }
-   * // Output: 0.1, 0.2, 0.3, 0.4, 0.5
-   * ```
-   *
-   * @example
-   * **Clamping at End Time**
-   * ```cpp
-   * using namespace pfc;
-   *
-   * // dt doesn't divide (t1-t0) evenly
-   * Time time({0.0, 1.0, 0.3}, 0.0);
-   *
-   * while (!time.done()) {
-   *     std::cout << "t = " << time.get_current() << "\n";
-   *     time.next();
-   * }
-   * // Output: 0.0, 0.3, 0.6, 0.9
-   * // Next would be 1.2, but get_current() clamps to 1.0
-   * ```
-   *
-   * @note The current time is NOT stored as a member variable; it's computed
-   *       on-the-fly from the increment. This prevents accumulation of
-   *       floating-point errors.
-   * @note Clamping ensures `get_current()` never exceeds `t1`, even if
-   *       `increment * dt` overshoots due to rounding.
-   *
+   * @see get_accepted_time() - explicit accepted-time accessor
    * @see get_increment() - get the number of steps taken
-   * @see next() - advance to next time step
+   * @see next() - advance to next time step (fixed dt)
    * @see done() - check if t_current >= t1
    */
   double get_current() const {
-    double current_time = m_t0 + (m_increment * m_dt);
-    return (current_time > m_t1) ? m_t1
-                                 : current_time; // Clamp to m_t1 if it exceeds
+    return (m_accepted_time > m_t1) ? m_t1 : m_accepted_time;
   }
 
   /**
@@ -643,7 +634,12 @@ public:
   IntegratorMethod method() const noexcept { return m_method; }
 
   /**
-   * @brief Set the current time increment.
+   * @brief Set the current time increment (fixed-`dt` reconstruction helper).
+   *
+   * Sets the committed step count and reconstructs accepted time as
+   * `min(t0 + increment * dt, t1)`. This preserves restart / rewind helpers
+   * that assume a constant `dt`. It is **not** the adaptive commit path —
+   * use @ref commit_attempt after a clipped attempt instead.
    *
    * The increment must be non-negative so that `get_current()` stays in
    * `[t0, t1]` and `done()` / `do_save()` remain meaningful.
@@ -651,6 +647,9 @@ public:
    * @param increment The current time increment (number of completed steps
    *                  from `t0`, i.e. same convention as after `next()`).
    * @throws std::invalid_argument if `increment < 0`
+   *
+   * @post get_increment() == increment
+   * @post get_accepted_time() == min(t0 + increment * dt, t1)
    */
   void set_increment(int increment) {
     if (increment < 0) {
@@ -658,6 +657,7 @@ public:
                                   std::to_string(increment));
     }
     m_increment = increment;
+    m_accepted_time = std::min(m_t0 + static_cast<double>(increment) * m_dt, m_t1);
   }
 
   /**
@@ -734,70 +734,140 @@ public:
   }
 
   /**
-   * @brief Advance to the next time step
+   * @brief Advance to the next time step (fixed `dt`)
    *
-   * Increments the step counter by 1, which advances the current time by `dt`.
-   * The new time becomes `t_current = t0 + (increment + 1) * dt`.
-   *
-   * This is the ONLY method that mutates the Time object's state during normal
-   * simulation. It should be called at the end of each time step after all
-   * computations and output operations are complete.
+   * Advances accepted time by `dt` (clamped to `t1`) and increments the step
+   * counter by 1. For adaptive clipped intervals, use @ref begin_attempt /
+   * @ref commit_attempt instead.
    *
    * @post get_increment() returns previous value + 1
-   * @post get_current() returns previous value + dt (clamped to t1)
-   *
-   * @example
-   * **Manual Time Stepping**
-   * ```cpp
-   * using namespace pfc;
-   *
-   * Time time({0.0, 1.0, 0.25}, 0.0);
-   *
-   * std::cout << "Step 0: t = " << time.get_current() << "\n";  // 0.00
-   *
-   * time.next();
-   * std::cout << "Step 1: t = " << time.get_current() << "\n";  // 0.25
-   *
-   * time.next();
-   * std::cout << "Step 2: t = " << time.get_current() << "\n";  // 0.50
-   *
-   * time.next();
-   * std::cout << "Step 3: t = " << time.get_current() << "\n";  // 0.75
-   *
-   * time.next();
-   * std::cout << "Step 4: t = " << time.get_current() << "\n";  // 1.00
-   * std::cout << "Done? " << time.done() << "\n";  // true
-   * ```
-   *
-   * @example
-   * **Integration with Simulator**
-   * ```cpp
-   * using namespace pfc;
-   *
-   * Time time({0.0, 10.0, 0.01}, 1.0);
-   *
-   * while (!time.done()) {
-   *     model.step(time.get_dt());  // Advance physics
-   *
-   *     if (time.do_save()) {
-   *         writer.write(time.get_current());  // Output results
-   *     }
-   *
-   *     time.next();  // ← Advance time (called ONCE per iteration)
-   * }
-   * ```
-   *
-   * @note This method does NOT perform any time step computation or physics
-   *       simulation; it only updates the internal counter. The actual numerical
-   *       time stepping is done by Model::step().
-   * @note Call `next()` AFTER all operations for the current time step are
-   *       complete (including output).
+   * @post get_accepted_time() returns previous value + dt (clamped to t1)
    *
    * @see get_increment() - query current step number
-   * @see get_current() - compute time from increment
+   * @see get_current() - accepted simulation time
    * @see done() - check completion status
+   * @see commit_attempt() - advance by a clipped attempted interval
    */
-  void next() { m_increment += 1; }
+  void next() {
+    m_accepted_time = std::min(m_accepted_time + m_dt, m_t1);
+    m_increment += 1;
+  }
+
+  /**
+   * @brief Clip a candidate step interval against terminal and output bounds
+   *
+   * Returns an attempted `dt` such that `accepted_time + attempted_dt` does
+   * not exceed `t1`. When `saveat > 0`, also does not pass the next
+   * output-alignment time without landing on it.
+   *
+   * Alignment uses the same tolerance family as @ref do_save (`1e-9`):
+   * `next_save = ceil((accepted + 1e-9) / saveat) * saveat`. When both the
+   * terminal bound and saveat constrain the step, the **most restrictive**
+   * (minimum) wins. If `next_save >= t1`, only the terminal bound matters.
+   * When `saveat <= 0`, output-alignment clipping is skipped.
+   *
+   * @param[in] candidate_dt Proposed step size (must be > 0)
+   * @return Clipped attempted interval
+   * @throws std::invalid_argument If candidate_dt <= 0
+   */
+  [[nodiscard]] double clip_attempt_dt(double candidate_dt) const {
+    if (candidate_dt <= 0.0) {
+      throw std::invalid_argument(
+          "Attempt interval (candidate_dt) must be greater than zero: " +
+          std::to_string(candidate_dt));
+    }
+    const double remaining_t1 = m_t1 - m_accepted_time;
+    double clipped = std::min(candidate_dt, remaining_t1);
+    if (m_saveat > 0.0) {
+      const double next_save =
+          std::ceil((m_accepted_time + 1.0e-9) / m_saveat) * m_saveat;
+      if (next_save > m_accepted_time) {
+        clipped = std::min(clipped, next_save - m_accepted_time);
+      }
+    }
+    return clipped;
+  }
+
+  /**
+   * @brief Whether an attempt transaction is currently open
+   */
+  [[nodiscard]] bool attempt_active() const noexcept { return m_attempt_active; }
+
+  /**
+   * @brief Clipped interval for the active attempt
+   *
+   * @throws std::logic_error If no attempt is active
+   */
+  [[nodiscard]] double get_attempted_dt() const {
+    if (!m_attempt_active) {
+      throw std::logic_error(
+          "get_attempted_dt() requires an active attempt (call begin_attempt)");
+    }
+    return m_attempted_dt;
+  }
+
+  /**
+   * @brief Begin an attempt: clip candidate_dt and leave accepted time unchanged
+   *
+   * @param[in] candidate_dt Proposed step size (must be > 0)
+   * @throws std::logic_error If an attempt is already active
+   * @throws std::invalid_argument If candidate_dt <= 0 (via clip_attempt_dt)
+   *
+   * @post attempt_active() is true
+   * @post get_accepted_time() is unchanged
+   * @post get_attempted_dt() == clip_attempt_dt(candidate_dt)
+   */
+  void begin_attempt(double candidate_dt) {
+    if (m_attempt_active) {
+      throw std::logic_error(
+          "begin_attempt() called while an attempt is already active");
+    }
+    m_attempted_dt = clip_attempt_dt(candidate_dt);
+    m_attempt_active = true;
+  }
+
+  /**
+   * @brief Commit the active attempt: advance accepted time by attempted_dt
+   *
+   * Does **not** auto-call @ref increment_step_success (counters stay
+   * caller-owned).
+   *
+   * @throws std::logic_error If no attempt is active
+   *
+   * @post get_accepted_time() advanced by the attempted interval (clamped to t1)
+   * @post get_increment() increased by 1
+   * @post attempt_active() is false
+   */
+  void commit_attempt() {
+    if (!m_attempt_active) {
+      throw std::logic_error(
+          "commit_attempt() requires an active attempt (call begin_attempt)");
+    }
+    m_accepted_time = std::min(m_accepted_time + m_attempted_dt, m_t1);
+    m_increment += 1;
+    m_attempt_active = false;
+    m_attempted_dt = 0.0;
+  }
+
+  /**
+   * @brief Reject the active attempt without changing accepted time
+   *
+   * Does **not** auto-call @ref increment_step_rejection (counters stay
+   * caller-owned).
+   *
+   * @throws std::logic_error If no attempt is active
+   *
+   * @post get_accepted_time() and get_increment() unchanged
+   * @post attempt_active() is false
+   */
+  void reject_attempt() {
+    if (!m_attempt_active) {
+      throw std::logic_error(
+          "reject_attempt() requires an active attempt (call begin_attempt)");
+    }
+    m_attempt_active = false;
+    m_attempted_dt = 0.0;
+  }
 
   /**
    * @brief Determine if results should be saved at the current time
@@ -932,30 +1002,40 @@ public:
 /**
  * @brief RAII guard for temporal state rollback in adaptive time-stepping
  *
- * Captures the dt, increment, and accepted/rejected step counters from a
- * Time object on construction and restores them on destruction unless
- * commit() is called. This provides exception-safe support for adaptive
- * Runge-Kutta methods that reject steps when error estimates exceed
- * tolerance.
+ * Captures dt, increment, accepted time, attempt flags, and accepted/rejected
+ * step counters from a Time object on construction and restores them on
+ * destruction unless commit() is called.
+ *
+ * Uncommitted restore order (destructor and move-assignment):
+ * 1. set_dt(saved_dt)
+ * 2. set_increment(saved_increment)  // may temporarily rewrite accepted via
+ *    fixed-dt reconstruction
+ * 3. Friend-restore m_accepted_time, then attempt flags (after setters)
+ * 4. Friend-restore accepted/rejected counters
+ *
+ * Adaptive drivers should prefer begin_attempt / commit_attempt /
+ * reject_attempt over rewriting set_dt + decrementing increment.
  *
  * Typical usage:
  * ```cpp
  * while (!time.done()) {
  *   bool accepted = false;
  *   {
- *     TimeStateGuard guard(time);  // Snapshot dt, increment, counters
+ *     TimeStateGuard guard(time);
  *
- *     double error = attempt_step(time);
+ *     time.begin_attempt(candidate_dt);
+ *     double error = attempt_step(time.get_accepted_time(),
+ *                                 time.get_attempted_dt());
  *     if (error <= tolerance) {
+ *       time.commit_attempt();
  *       time.increment_step_success();
- *       guard.commit();  // Keep counters and temporal state
- *       time.next();
+ *       guard.commit();
  *       accepted = true;
+ *     } else {
+ *       time.reject_attempt();
  *     }
- *     // Uncommitted: destructor restores dt, increment, and counters
  *   }
  *   if (!accepted) {
- *     // Record rejection after the guard ends so the count is kept
  *     time.increment_step_rejection();
  *   }
  * }
@@ -974,23 +1054,22 @@ public:
   explicit TimeStateGuard(Time &time)
       : m_time(time), m_saved_dt(time.get_dt()),
         m_saved_increment(time.get_increment()),
+        m_saved_accepted_time(time.get_accepted_time()),
+        m_saved_attempt_active(time.attempt_active()),
+        m_saved_attempted_dt(time.m_attempted_dt),
         m_saved_accepted_steps(time.get_accepted_steps()),
         m_saved_rejected_steps(time.get_rejected_steps()), m_committed(false) {}
 
   /**
-   * @brief Restore captured dt, increment, and step counters unless committed
+   * @brief Restore captured temporal state unless committed
    *
-   * Calls Time::set_dt() and Time::set_increment() with the saved values
-   * and restores accepted/rejected counters via friend access if commit()
-   * was not called. These methods are expected to succeed since they
-   * restore previously-valid values.
+   * Applies set_dt / set_increment first, then friend-restores accepted time
+   * and attempt flags so adaptive commits with attempted_dt != dt are not
+   * clobbered by fixed-dt reconstruction.
    */
   ~TimeStateGuard() {
     if (!m_committed) {
-      m_time.set_dt(m_saved_dt);
-      m_time.set_increment(m_saved_increment);
-      m_time.accepted_steps_ = m_saved_accepted_steps;
-      m_time.rejected_steps_ = m_saved_rejected_steps;
+      restore_uncommitted();
     }
   }
 
@@ -1008,6 +1087,9 @@ public:
   TimeStateGuard(TimeStateGuard &&other) noexcept
       : m_time(other.m_time), m_saved_dt(other.m_saved_dt),
         m_saved_increment(other.m_saved_increment),
+        m_saved_accepted_time(other.m_saved_accepted_time),
+        m_saved_attempt_active(other.m_saved_attempt_active),
+        m_saved_attempted_dt(other.m_saved_attempted_dt),
         m_saved_accepted_steps(other.m_saved_accepted_steps),
         m_saved_rejected_steps(other.m_saved_rejected_steps),
         m_committed(other.m_committed) {
@@ -1026,14 +1108,14 @@ public:
   TimeStateGuard &operator=(TimeStateGuard &&other) noexcept {
     if (this != &other) {
       if (!m_committed) {
-        m_time.set_dt(m_saved_dt);
-        m_time.set_increment(m_saved_increment);
-        m_time.accepted_steps_ = m_saved_accepted_steps;
-        m_time.rejected_steps_ = m_saved_rejected_steps;
+        restore_uncommitted();
       }
       m_time = other.m_time;
       m_saved_dt = other.m_saved_dt;
       m_saved_increment = other.m_saved_increment;
+      m_saved_accepted_time = other.m_saved_accepted_time;
+      m_saved_attempt_active = other.m_saved_attempt_active;
+      m_saved_attempted_dt = other.m_saved_attempted_dt;
       m_saved_accepted_steps = other.m_saved_accepted_steps;
       m_saved_rejected_steps = other.m_saved_rejected_steps;
       m_committed = other.m_committed;
@@ -1057,9 +1139,22 @@ public:
   [[nodiscard]] bool committed() const noexcept { return m_committed; }
 
 private:
+  void restore_uncommitted() noexcept {
+    m_time.set_dt(m_saved_dt);
+    m_time.set_increment(m_saved_increment);
+    m_time.m_accepted_time = m_saved_accepted_time;
+    m_time.m_attempt_active = m_saved_attempt_active;
+    m_time.m_attempted_dt = m_saved_attempted_dt;
+    m_time.accepted_steps_ = m_saved_accepted_steps;
+    m_time.rejected_steps_ = m_saved_rejected_steps;
+  }
+
   Time &m_time;          ///< Reference to guarded Time object
   double m_saved_dt;     ///< Captured time step value
   int m_saved_increment; ///< Captured increment counter
+  double m_saved_accepted_time; ///< Captured accepted simulation time
+  bool m_saved_attempt_active;  ///< Captured attempt-active flag
+  double m_saved_attempted_dt;  ///< Captured attempted interval
   int m_saved_accepted_steps; ///< Captured accepted-attempt counter
   int m_saved_rejected_steps; ///< Captured rejected-attempt counter
   bool m_committed;      ///< Flag to disable restoration
@@ -1108,6 +1203,31 @@ inline void set_stage(Time &t, int stage) { t.set_stage(stage); }
 
 inline void set_stage_count(Time &t, int stage_count) {
   t.set_stage_count(stage_count);
+}
+
+[[nodiscard]] inline double accepted_time(const Time &t) noexcept {
+  return t.get_accepted_time();
+}
+
+[[nodiscard]] inline double clip_attempt_dt(const Time &t,
+                                            double candidate_dt) {
+  return t.clip_attempt_dt(candidate_dt);
+}
+
+inline void begin_attempt(Time &t, double candidate_dt) {
+  t.begin_attempt(candidate_dt);
+}
+
+inline void commit_attempt(Time &t) { t.commit_attempt(); }
+
+inline void reject_attempt(Time &t) { t.reject_attempt(); }
+
+[[nodiscard]] inline double attempted_dt(const Time &t) {
+  return t.get_attempted_dt();
+}
+
+[[nodiscard]] inline bool attempt_active(const Time &t) noexcept {
+  return t.attempt_active();
 }
 
 } // namespace time
