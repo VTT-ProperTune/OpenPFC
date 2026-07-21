@@ -29,8 +29,10 @@
  * argument binds to either a const or non-const reference parameter, so
  * testing with non-const `u` is strictly more permissive, not less.
  *
- * @see euler.hpp, explicit_rk.hpp, rk2_heun.hpp, rk3_heun.hpp for the
- *      stepper classes constrained by these concepts.
+ * @see euler.hpp, explicit_rk.hpp, rk2_heun.hpp, rk3_heun.hpp,
+ *      imex_euler.hpp for the stepper classes constrained by these concepts
+ *      (IMEX Euler uses StageFunction / MultiStageFunction for the explicit
+ *      half E).
  */
 
 #include <tuple>

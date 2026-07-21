@@ -38,8 +38,9 @@
  * `world::create`, `decomposition::create`, `fft::create`, `field::create`
  * convention used throughout OpenPFC.
  *
- * Further methods (RK2, RK4, IMEX) belong in sibling files in this folder
- * under `pfc::sim::steppers::`.
+ * Higher-order explicit methods (RK2, RK4) live in sibling files in this
+ * folder under `pfc::sim::steppers::`. First-order IMEX Euler with an
+ * explicit–implicit split is in `imex_euler.hpp`.
  *
  * @see openpfc/kernel/simulation/for_each_interior.hpp for the canonical
  *      point-wise driver loop the `create` factories wrap
@@ -47,6 +48,7 @@
  *      concepts that drive backend pruning
  * @see openpfc/kernel/field/local_field.hpp for the typed field bundle
  *      that the `LocalField` overload derives `local_size` from
+ * @see imex_euler.hpp for first-order IMEX Euler (`ImexEulerStepper`)
  */
 
 #include <cstddef>
