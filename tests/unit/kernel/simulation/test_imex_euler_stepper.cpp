@@ -23,7 +23,10 @@ class MockExecutionService : public ExecutionService {
 public:
   void request_halo_exchange(const std::vector<std::string> &) override {}
   void prepare_boundaries(const std::vector<std::string> &) override {}
-  void global_reduce(const std::vector<double> &, MPI_Op) override {}
+  std::vector<double> global_reduce(const std::vector<double> &data, MPI_Op) override {
+    // Return copy of input (serial behavior)
+    return data;
+  }
 };
 
 struct ConstantRHS {
