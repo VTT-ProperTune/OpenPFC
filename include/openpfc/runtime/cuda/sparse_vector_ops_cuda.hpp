@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -9,6 +9,10 @@
  * linked when OpenPFC_ENABLE_CUDA is defined. Use
  * openpfc/runtime/cuda/sparse_vector_ops.hpp for gather/scatter overloads for
  * SparseVector<CudaTag, T>.
+ *
+ * Fail-closed OOB: any index `>=` the dense length throws `std::runtime_error`
+ * with the same messages as CPU (`gather: index out of bounds` /
+ * `scatter: index out of bounds`) before any device write.
  */
 
 #pragma once
@@ -26,7 +30,9 @@ namespace core {
  * @param indices Device pointer to indices (size_t)
  * @param data Device pointer to output data (written)
  * @param source Device pointer to source array
- * @param source_size Size of source (for bounds check)
+ * @param source_size Size of source; any `indices[i] >= source_size` throws
+ *        `std::runtime_error("gather: index out of bounds")` before the kernel
+ *        runs (parity with CPU `pfc::core::gather`)
  */
 void gather_cuda_impl(size_t n, const size_t *indices, double *data,
                       const double *source, size_t source_size);
@@ -37,7 +43,9 @@ void gather_cuda_impl(size_t n, const size_t *indices, double *data,
  * @param indices Device pointer to indices (size_t)
  * @param data Device pointer to input data (read)
  * @param dest Device pointer to destination array
- * @param dest_size Size of dest (for bounds check)
+ * @param dest_size Size of dest; any `indices[i] >= dest_size` throws
+ *        `std::runtime_error("scatter: index out of bounds")` before the kernel
+ *        runs (parity with CPU `pfc::core::scatter`)
  */
 void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
                        double *dest, size_t dest_size);

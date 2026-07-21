@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -22,7 +22,12 @@
 namespace pfc {
 namespace core {
 
-/** @brief Gather for SparseVector<CudaTag, double> (CUDA device). */
+/**
+ * @brief Gather for SparseVector<CudaTag, double> (CUDA device).
+ * @note Fail-closed OOB parity with CPU `pfc::core::gather` in
+ *       `kernel/decomposition/sparse_vector_ops.hpp`: `idx >= source_size`
+ *       throws `std::runtime_error("gather: index out of bounds")`.
+ */
 inline void gather(SparseVector<backend::CudaTag, double> &sparse_vector,
                    const double *source, size_t source_size) {
   if (sparse_vector.empty()) {
@@ -32,7 +37,12 @@ inline void gather(SparseVector<backend::CudaTag, double> &sparse_vector,
                    sparse_vector.data().data(), source, source_size);
 }
 
-/** @brief Scatter for SparseVector<CudaTag, double> (CUDA device). */
+/**
+ * @brief Scatter for SparseVector<CudaTag, double> (CUDA device).
+ * @note Fail-closed OOB parity with CPU `pfc::core::scatter` in
+ *       `kernel/decomposition/sparse_vector_ops.hpp`: `idx >= dest_size`
+ *       throws `std::runtime_error("scatter: index out of bounds")`.
+ */
 inline void scatter(const SparseVector<backend::CudaTag, double> &sparse_vector,
                     double *dest, size_t dest_size) {
   if (sparse_vector.empty()) {
