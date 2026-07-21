@@ -11,24 +11,27 @@
  * Drivers obtain a validated, driver-usable integrator via
  * `compose_scalar` / `compose_multi` from a stable method identifier plus
  * `IntegratorComposeConfig` — without switching on method-specific
- * construction code. Euler is registered through
- * `register_method_composer`; additional explicit methods can join the
- * same table later without editing call sites.
+ * construction code. Builtin composers cover Euler, RK2 midpoint, RK2 Heun,
+ * and classical RK4 through `register_method_composer`; additional explicit
+ * methods can join the same table later without editing call sites.
  *
- * This is distinct from the typed `steppers::create(Eval&, Model&, …)`
- * helpers in `euler.hpp` / `explicit_rk.hpp`, which bind a known method
- * type to a model + gradient evaluator. Composition here is
- * identifier + config + RHS → `IntegratorComposition<Stepper>` with
- * declared `WorkspaceOwnership` and optional `MethodStateCapability`
- * (empty for stateless Euler; field `save_state` / `restore_state` is
- * orthogonal and is not claimed as method-controller metadata).
+ * Construction unifies on `ExplicitRKStepper` / `MultiExplicitRKStepper`
+ * with `make_tableau(method)` so every registered fixed-step id shares one
+ * concrete return type. This is distinct from the typed
+ * `steppers::create(Eval&, Model&, …)` helpers in `euler.hpp` /
+ * `explicit_rk.hpp`, which bind a known method type to a model + gradient
+ * evaluator. Composition here is identifier + config + RHS →
+ * `IntegratorComposition<Stepper>` with declared `WorkspaceOwnership` and
+ * optional `MethodStateCapability` (empty for these stateless fixed-step
+ * methods; field `save_state` / `restore_state` is orthogonal and is not
+ * claimed as method-controller metadata).
  *
  * Identity tokens reuse `RKIntegratorMethod` / `to_string` /
  * `validate_method` from `integrator_method.hpp`. Adaptive capability
  * checks call `validate_method` rather than inventing a second rule.
  *
- * @see euler.hpp for typed `create` factories and `EulerStepper`
- * @see integrator_method.hpp for `RKIntegratorMethod` and `validate_method`
+ * @see explicit_rk.hpp for `ExplicitRKStepper` / `MultiExplicitRKStepper`
+ * @see integrator_method.hpp for `RKIntegratorMethod` and `make_tableau`
  * @see docs/user_guide/custom_stepper_integration.md
  */
 
@@ -43,7 +46,7 @@
 #include <utility>
 #include <vector>
 
-#include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
 #include <openpfc/kernel/simulation/steppers/integrator_method.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 
@@ -52,8 +55,8 @@ namespace pfc::sim::steppers {
 /**
  * @brief Who owns scratch / workspace buffers for the composed stepper.
  *
- * Euler composition always reports `MethodOwned` (owns `m_du` /
- * `m_u_checkpoint` scratch inside the stepper).
+ * Builtin fixed-step composition always reports `MethodOwned` (owns stage
+ * scratch inside `ExplicitRKStepper` / `MultiExplicitRKStepper`).
  */
 enum class WorkspaceOwnership {
   MethodOwned, ///< Stepper owns its scratch buffers
@@ -64,9 +67,9 @@ enum class WorkspaceOwnership {
 /**
  * @brief Optional checkpointable method-controller state metadata.
  *
- * Stateless Euler leaves `checkpointable == false` and `state_keys` empty.
- * Field rollback via `save_state` / `restore_state` is orthogonal and is
- * not claimed here.
+ * Stateless fixed-step methods leave `checkpointable == false` and
+ * `state_keys` empty. Field rollback via `save_state` / `restore_state` is
+ * orthogonal and is not claimed here.
  */
 struct MethodStateCapability {
   bool checkpointable{false};
@@ -104,7 +107,7 @@ private:
 /**
  * @brief Driver-usable result of successful method composition.
  *
- * @tparam Stepper Concrete stepper type (e.g. `EulerStepper<Rhs>`).
+ * @tparam Stepper Concrete stepper type (e.g. `ExplicitRKStepper<Rhs>`).
  */
 template <class Stepper> struct IntegratorComposition {
   Stepper stepper;
@@ -142,6 +145,27 @@ inline void ensure_builtin_composers() {
   composer_registry().push_back(MethodComposerEntry{
       .id = "euler",
       .method = RKIntegratorMethod::Euler,
+      .supports_embedded_error = false,
+      .supports_scalar = true,
+      .supports_multi = true,
+  });
+  composer_registry().push_back(MethodComposerEntry{
+      .id = "rk2_midpoint",
+      .method = RKIntegratorMethod::RK2_Midpoint,
+      .supports_embedded_error = false,
+      .supports_scalar = true,
+      .supports_multi = true,
+  });
+  composer_registry().push_back(MethodComposerEntry{
+      .id = "rk2_heun",
+      .method = RKIntegratorMethod::RK2_Heun,
+      .supports_embedded_error = false,
+      .supports_scalar = true,
+      .supports_multi = true,
+  });
+  composer_registry().push_back(MethodComposerEntry{
+      .id = "rk4_classical",
+      .method = RKIntegratorMethod::RK4_Classical,
       .supports_embedded_error = false,
       .supports_scalar = true,
       .supports_multi = true,
@@ -274,9 +298,8 @@ resolve_or_throw(std::string_view id) {
         ComposeError::Kind::UnknownIdentifier,
         "unknown method identifier \"" + std::string(id) +
             "\"; registered composers: " + format_registered_ids() +
-            " (known tokens also include rk2_midpoint, rk2_heun, "
-            "rk4_classical, bogacki_shampine32 — register a composer to "
-            "construct them)");
+            " (known tokens also include bogacki_shampine32 — register a "
+            "composer to construct it)");
   }
   return *method;
 }
@@ -316,28 +339,22 @@ require_composer(std::string_view id, RKIntegratorMethod method,
  *
  * Fail-fast: throws `ComposeError` before constructing a stepper when the
  * id is unknown, config is invalid, or no composer is registered.
+ * Registered builtins return `ExplicitRKStepper` via `make_tableau(method)`.
  */
 template <class Rhs>
   requires StageFunction<Rhs>
-IntegratorComposition<EulerStepper<Rhs>>
+IntegratorComposition<ExplicitRKStepper<Rhs>>
 compose_scalar(std::string_view id, const IntegratorComposeConfig &cfg,
                std::size_t local_size, Rhs rhs) {
   detail::ensure_builtin_composers();
   const RKIntegratorMethod method = detail::resolve_or_throw(id);
-  const MethodComposerEntry &entry =
-      detail::require_composer(id, method, /*need_scalar=*/true,
-                               /*need_multi=*/false);
+  (void)detail::require_composer(id, method, /*need_scalar=*/true,
+                                  /*need_multi=*/false);
   detail::throw_if_error(validate_compose_config(method, cfg));
-  if (entry.method != RKIntegratorMethod::Euler) {
-    throw ComposeError(
-        ComposeError::Kind::CapabilityMismatch,
-        "compose_scalar: registered composer for \"" + std::string(id) +
-            "\" is not Euler; only Euler construction is implemented in "
-            "this seam");
-  }
-  return IntegratorComposition<EulerStepper<Rhs>>{
-      .stepper = EulerStepper<Rhs>(cfg.dt, local_size, std::move(rhs)),
-      .method = RKIntegratorMethod::Euler,
+  return IntegratorComposition<ExplicitRKStepper<Rhs>>{
+      .stepper = ExplicitRKStepper<Rhs>(cfg.dt, local_size,
+                                        make_tableau(method), std::move(rhs)),
+      .method = method,
       .workspace_ownership = WorkspaceOwnership::MethodOwned,
       .method_state = {},
   };
@@ -348,7 +365,7 @@ compose_scalar(std::string_view id, const IntegratorComposeConfig &cfg,
  */
 template <class Rhs>
   requires StageFunction<Rhs>
-IntegratorComposition<EulerStepper<Rhs>>
+IntegratorComposition<ExplicitRKStepper<Rhs>>
 compose_scalar(RKIntegratorMethod method, const IntegratorComposeConfig &cfg,
                std::size_t local_size, Rhs rhs) {
   const std::string id = to_string(method);
@@ -357,28 +374,23 @@ compose_scalar(RKIntegratorMethod method, const IntegratorComposeConfig &cfg,
 
 /**
  * @brief Compose a multi-field stepper from method id + config + RHS.
+ *
+ * Registered builtins return `MultiExplicitRKStepper` via
+ * `make_tableau(method)`.
  */
 template <class Rhs, std::size_t N>
-IntegratorComposition<MultiEulerStepper<Rhs, N>>
+IntegratorComposition<MultiExplicitRKStepper<Rhs, N>>
 compose_multi(std::string_view id, const IntegratorComposeConfig &cfg,
               const std::array<std::size_t, N> &local_sizes, Rhs rhs) {
   detail::ensure_builtin_composers();
   const RKIntegratorMethod method = detail::resolve_or_throw(id);
-  const MethodComposerEntry &entry =
-      detail::require_composer(id, method, /*need_scalar=*/false,
-                               /*need_multi=*/true);
+  (void)detail::require_composer(id, method, /*need_scalar=*/false,
+                                 /*need_multi=*/true);
   detail::throw_if_error(validate_compose_config(method, cfg));
-  if (entry.method != RKIntegratorMethod::Euler) {
-    throw ComposeError(
-        ComposeError::Kind::CapabilityMismatch,
-        "compose_multi: registered composer for \"" + std::string(id) +
-            "\" is not Euler; only Euler construction is implemented in "
-            "this seam");
-  }
-  return IntegratorComposition<MultiEulerStepper<Rhs, N>>{
-      .stepper =
-          MultiEulerStepper<Rhs, N>(cfg.dt, local_sizes, std::move(rhs)),
-      .method = RKIntegratorMethod::Euler,
+  return IntegratorComposition<MultiExplicitRKStepper<Rhs, N>>{
+      .stepper = MultiExplicitRKStepper<Rhs, N>(
+          cfg.dt, local_sizes, make_tableau(method), std::move(rhs)),
+      .method = method,
       .workspace_ownership = WorkspaceOwnership::MethodOwned,
       .method_state = {},
   };
@@ -388,7 +400,7 @@ compose_multi(std::string_view id, const IntegratorComposeConfig &cfg,
  * @brief Compose a multi-field stepper from `RKIntegratorMethod` + config.
  */
 template <class Rhs, std::size_t N>
-IntegratorComposition<MultiEulerStepper<Rhs, N>>
+IntegratorComposition<MultiExplicitRKStepper<Rhs, N>>
 compose_multi(RKIntegratorMethod method, const IntegratorComposeConfig &cfg,
               const std::array<std::size_t, N> &local_sizes, Rhs rhs) {
   const std::string id = to_string(method);
