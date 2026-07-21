@@ -32,10 +32,10 @@ void hip_check(hipError_t e, const char *what) {
   if (e != hipSuccess) {
     throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
   }
-
-
 }
+
 } // namespace
+
 int main(int argc, char *argv[]) {
   return pfc::runtime::mpi_main(
       argc, argv, [](int app_argc, char **app_argv, int rank, int nproc) {

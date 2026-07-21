@@ -32,10 +32,10 @@ void cuda_check(cudaError_t e, const char *what) {
   if (e != cudaSuccess) {
     throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
   }
-
-
 }
+
 } // namespace
+
 int main(int argc, char *argv[]) {
   return pfc::runtime::mpi_main(
       argc, argv, [](int app_argc, char **app_argv, int rank, int nproc) {
