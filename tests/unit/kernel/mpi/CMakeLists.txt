@@ -5,6 +5,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_timer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_worker.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_environment.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_mpi_io_helpers.cpp
 )
 
 # Standalone MPI error handling test executable
