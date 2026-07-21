@@ -48,6 +48,7 @@
 
 #include <mpi.h>
 #include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/mpi/domain_geometry.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 
 #include <sstream>
@@ -168,6 +169,8 @@ public:
 
   void set_domain(const Vec3<int> &arr_global, const Vec3<int> &arr_local,
                   const Vec3<int> &arr_offset) {
+    pfc::mpi::validate_subarray_domain(arr_global, arr_local, arr_offset,
+                                       "BinaryReader::set_domain");
     if (m_type_valid) {
       pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
       m_type_valid = false;
