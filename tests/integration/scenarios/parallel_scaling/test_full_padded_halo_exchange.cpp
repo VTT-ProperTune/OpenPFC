@@ -138,7 +138,7 @@ void run_full_halo_check(const pfc::decomposition::Decomposition &decomp, int ra
 } // namespace
 
 TEST_CASE("FullPaddedHaloExchanger: 1-rank periodic full-fill (all 26 halos)",
-          "[padded_halo][full_halo]") {
+          "[MPI][padded_halo][full_halo]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -189,7 +189,7 @@ TEST_CASE("FullPaddedHaloExchanger: 4-rank 2x2x1 full-fill (X+Y real, Z self)",
 }
 
 TEST_CASE("FullPaddedHaloExchanger: hw=2 1-rank widened halo correctness",
-          "[padded_halo][full_halo]") {
+          "[MPI][padded_halo][full_halo]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
