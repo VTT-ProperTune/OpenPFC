@@ -138,6 +138,23 @@ TEST_CASE("FdGradient ctor throws when a model needs a missing D2 table",
   REQUIRE_THROWS_AS(pfc::field::create<OnlyXX>(u, order), std::invalid_argument);
 }
 
+TEST_CASE("FdGradient ctor throws when halo_width is below stencil half_width",
+          "[kernel][field][fd_gradient][unit]") {
+  // Order-4 D2 half_width is 2; hw=1 is strictly insufficient.
+  constexpr int order = 4;
+  constexpr int hw = 1;
+  constexpr int N = 10;
+  auto u = make_field(N, hw);
+  REQUIRE_THROWS_AS(pfc::field::create<OnlyXX>(u, order), std::invalid_argument);
+
+  using namespace pfc;
+  auto world = world::create(GridSize({N, N, N}));
+  auto decomp = decomposition::create(world, 1);
+  field::PaddedBrick<double> brick(decomp, /*rank=*/0, hw);
+  REQUIRE_THROWS_AS(
+      (pfc::gradient::FDGradient<OnlyXX>(brick, order)), std::invalid_argument);
+}
+
 TEST_CASE("FdGradient<OnlyX>: order-2 D1 is exact on a constant field "
           "(anti-symmetry) and on a linear ramp (closed form)",
           "[kernel][field][fd_gradient][unit]") {

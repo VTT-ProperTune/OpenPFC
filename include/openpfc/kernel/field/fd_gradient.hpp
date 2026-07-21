@@ -52,13 +52,16 @@
  * `prepare()` is a no-op for FD: the application is responsible for any
  * halo exchange before iterating. Face halos are unused in the interior
  * `[hw, n-hw)` because, with `halo_width >= order/2`, all stencil
- * neighbours stay in the local core.
+ * neighbours stay in the local core. Construction **fail-closes** when
+ * `halo_width` is strictly less than the stencil half-width required by
+ * the members `G` declares (see `@throws` on the constructors).
  *
  * **Error handling**: if the model's `G` declares a derivative member
  * (e.g. `g.x`) whose stencil order is not tabulated (e.g. order 16 for
  * D1 today), the constructor throws `std::invalid_argument` with the
  * offending order in the message — strictly better behaviour than
- * silently producing zeros.
+ * silently producing zeros. The same exception is thrown when
+ * `halo_width` is insufficient for the looked-up D1/D2 half-widths.
  *
  * @note `operator()` is `const`/`noexcept` and intentionally inlines the
  *       stencil arithmetic so the surrounding `for_each_interior` /
@@ -119,19 +122,23 @@ public:
    *                             (x fastest); must outlive the evaluator.
    * @param nx,ny,nz              Local extents in cells.
    * @param dx,dy,dz              Per-axis grid spacing.
-   * @param halo_width            Local halo width (`order / 2` is required for the
-   *                             central FD contract).
-   * @param order                 Even spatial order. Must be tabulated for every
-   *                             derivative `G` declares: D2 orders 2..20 are
-   *                             supported; D1 orders 2..14 are supported.
-   *                             Defaults to 2 (the cheapest 7-point Laplacian).
-   * @param halo_prepare_callback Optional function invoked by prepare() to
-   *                             trigger halo exchange before each stage in
-   *                             multi-stage methods.
-   *
-   * @throws std::invalid_argument if `order` is outside the tabulated
-   *         range for any derivative member declared by `G`.
-   */
+ * @param halo_width            Local halo width; must be `>=` the stencil
+ *                             half-width required by members `G` declares
+ *                             (typically `order / 2` for tabulated even
+ *                             central D1/D2).
+ * @param order                 Even spatial order. Must be tabulated for every
+ *                             derivative `G` declares: D2 orders 2..20 are
+ *                             supported; D1 orders 2..14 are supported.
+ *                             Defaults to 2 (the cheapest 7-point Laplacian).
+ * @param halo_prepare_callback Optional function invoked by prepare() to
+ *                             trigger halo exchange before each stage in
+ *                             multi-stage methods.
+ *
+ * @throws std::invalid_argument if `order` is outside the tabulated
+ *         range for any derivative member declared by `G`, or if
+ *         `halo_width` is strictly less than the required stencil
+ *         half-width for those members.
+ */
   FDGradient(const double *core, int nx, int ny, int nz, double dx, double dy,
              double dz, int halo_width, int order = 2,
              std::function<void()> halo_prepare_callback = {})
@@ -313,6 +320,8 @@ private:
     const double inv_dy2 = inv_dy * inv_dy;
     const double inv_dz2 = inv_dz * inv_dz;
 
+    int required_half_width = 0;
+
     if constexpr (pfc::field::has_xx<G> || pfc::field::has_yy<G> ||
                   pfc::field::has_zz<G>) {
       pfc::field::fd::EvenCentralD2View st2{};
@@ -327,6 +336,9 @@ private:
       m_sx2 = inv_dx2 * inv_den2;
       m_sy2 = inv_dy2 * inv_den2;
       m_sz2 = inv_dz2 * inv_den2;
+      if (st2.half_width > required_half_width) {
+        required_half_width = st2.half_width;
+      }
     }
 
     if constexpr (pfc::field::has_x<G> || pfc::field::has_y<G> ||
@@ -342,6 +354,16 @@ private:
       m_sx1 = inv_dx * inv_den1;
       m_sy1 = inv_dy * inv_den1;
       m_sz1 = inv_dz * inv_den1;
+      if (st1.half_width > required_half_width) {
+        required_half_width = st1.half_width;
+      }
+    }
+
+    if (halo_width < required_half_width) {
+      throw std::invalid_argument(
+          "FDGradient: halo_width " + std::to_string(halo_width) +
+          " < required half_width " + std::to_string(required_half_width) +
+          " for order " + std::to_string(order));
     }
   }
 
@@ -437,16 +459,18 @@ template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
  *               returned evaluator; the evaluator reads `u.data()`).
  * @param order  Even spatial order of the central stencil. Must be
  *               tabulated for every derivative `G` declares: D2 orders
- *               2..20 are supported; D1 orders 2..14 are supported. For
- *               the standard "halo width = stencil half-width" contract,
- *               `order/2 == u.halo_width()` should hold on the field.
+ *               2..20 are supported; D1 orders 2..14 are supported.
+ *               Construction requires `u.halo_width() >= order/2` (the
+ *               stencil half-width for tabulated even central D1/D2).
  *               Defaults to 2.
  *
  * @return An `FdGradient<G>` ready to be passed to
  *         `pfc::sim::for_each_interior` (or `pfc::sim::steppers::create`).
  *
  * @throws std::invalid_argument if `order` is outside the tabulated range
- *         for any derivative member declared by `G`.
+ *         for any derivative member declared by `G`, or if
+ *         `u.halo_width()` is strictly less than the required stencil
+ *         half-width.
  */
 template <class G>
 [[nodiscard]] inline FdGradient<G> create(const LocalField<double> &u,
@@ -469,8 +493,11 @@ template <class G>
  *
  * @tparam G     Model-owned grads aggregate (see `grad_concepts.hpp`).
  * @param u      Padded brick (must outlive the returned evaluator).
- * @param order  Even spatial order; should satisfy `order / 2 == u.halo_width()`.
+ * @param order  Even spatial order; requires `u.halo_width() >= order / 2`.
  *               Defaults to 2.
+ *
+ * @throws std::invalid_argument if `order` is unsupported for `G`, or if
+ *         `u.halo_width()` is strictly less than the required half-width.
  */
 template <class G>
 [[nodiscard]] inline FdGradient<G> create(const PaddedBrick<double> &u,
