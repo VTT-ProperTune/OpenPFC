@@ -7,6 +7,8 @@
 
 #include <sstream>
 #include <stdexcept>
+#include <climits>
+#include <cstddef>
 #include <string>
 
 namespace pfc::mpi {
@@ -59,5 +61,25 @@ struct MPI_File_guard {
   MPI_File_guard(const MPI_File_guard &) = delete;
   MPI_File_guard &operator=(const MPI_File_guard &) = delete;
 };
+
+/**
+ * @brief Fail closed when a local MPI-IO element count exceeds INT_MAX.
+ *
+ * Classic MPI-IO count parameters are `int`. Returning a truncated
+ * `static_cast<int>(n)` would post a wrong collective count. Callers must
+ * invoke this before `MPI_File_open` / `MPI_File_*_all`.
+ *
+ * @param n Local element count (`size_t`).
+ * @param context Caller label included in the exception message.
+ * @return `n` as `int` when `n <= INT_MAX`.
+ * @throws std::overflow_error when `n > INT_MAX`.
+ */
+[[nodiscard]] inline int expect_mpi_io_count(std::size_t n, const char *context) {
+  if (n > static_cast<std::size_t>(INT_MAX)) {
+    throw std::overflow_error(std::string(context) +
+                              ": local element count exceeds INT_MAX");
+  }
+  return static_cast<int>(n);
+}
 
 } // namespace pfc::mpi
