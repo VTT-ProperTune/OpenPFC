@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -14,7 +14,7 @@
  * - Complex field multiplication (for mean-field filtering)
  * - Nonlinear term computation (Tungsten-specific: p3*u² + p4*u³ + q3*v² + q4*v³)
  * - Stabilization operations (Tungsten-specific)
- * - Time integration operators (Tungsten-specific exponential integration)
+ * - Time integration combine using cache-derived exp(L·dt) and n_weight spans
  *
  * @note These operations are Tungsten-specific and should not be used by other
  * models. For generic operations, see openpfc/utils/ or create model-specific
@@ -102,17 +102,21 @@ void apply_stabilization(const pfc::core::DataBuffer<BackendTag, RealType> &in,
                          pfc::core::DataBuffer<BackendTag, RealType> &out);
 
 /**
- * @brief Apply exponential time integration: out = opL * psi_F + opN * psiN_F
+ * @brief Apply exponential time integration:
+ *        out = exp_Ldt * psi_F + n_weight * psiN_F
  *
- * Applies the Tungsten-specific exponential time integration operator in Fourier
- * space.
+ * Combines Fourier-space state with a nonlinear term using cache-derived
+ * weights from @c TungstenEtdWorkspace / @c SpectralExpCoefficientCache
+ * (@c exp_Ldt = exp(L·dt), @c n_weight = k_laplacian * phi1_L). Parameter
+ * names @c opL / @c opN are historical aliases for those spans — not
+ * Model-owned coefficient members.
  *
  * @tparam BackendTag Backend tag (CpuTag, CudaTag, etc.)
  * @tparam RealType Real number type (float or double)
  * @param psi_F Current state in Fourier space
  * @param psiN_F Nonlinear term in Fourier space
- * @param opL Linear operator (precomputed)
- * @param opN Nonlinear operator (precomputed)
+ * @param opL Cache-derived @c exp(L·dt) weights
+ * @param opN Cache-derived @c n_weight (= k_laplacian * phi1_L) weights
  * @param out Output field (must be pre-allocated)
  *
  * @pre psi_F.size() == psiN_F.size() == opL.size() == opN.size() == out.size()
