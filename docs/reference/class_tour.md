@@ -71,6 +71,8 @@ The table below is lookup material. The most important flow for a new reader is 
 | `JsonWiringSession` | Bundles `JsonWiringContext` + `FieldModifierCatalog` + `ResultsWriterCatalog` for `wire_simulator_and_runtime_from_json` | `openpfc/frontend/ui/json_wiring_session.hpp` | Custom apps / tests; catalogs are explicit (no defaulted parameters) |
 | `LinearOperatorDesc` / `SolveOptions` / `SolveOutcome` / `SolveFunction` | Solver capability contract types (no `LinearSolver` base) | `openpfc/kernel/simulation/solver_contract.hpp` | unit: `test_solver_contract.cpp` |
 | `SpectralDiagonalSolver` | CPU spectral diagonal scale-and-divide (`SolveFunction`) with nullspace policies | `openpfc/kernel/simulation/spectral_diagonal_solver.hpp` (contract: `solver_contract.hpp`) | unit: `test_spectral_diagonal_solver.cpp` |
+| `FieldPayload` / `ComponentPayload` / `PersistentState` | Versioned named field and irreducible component checkpoint payloads (serialization-agnostic) | `openpfc/kernel/checkpoint/payloads.hpp` | [`checkpoint_state_capture.md`](../development/checkpoint_state_capture.md); Heat3D/Wave2D adapters |
+| `capture_field` / `restore_field` | Capture/restore free functions with validate-before-mutate (exact byte length) | `openpfc/kernel/checkpoint/state_capture.hpp` | unit: `tests/unit/kernel/checkpoint/test_state_capture.cpp` |
 
 ## Execution and backends (advanced)
 
