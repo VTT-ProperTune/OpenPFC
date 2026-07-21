@@ -5,7 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Binary field I/O specification (MPI-IO)
 
-This document describes the **raw binary** files produced by `pfc::BinaryWriter` (including the JSON-driven path in `add_result_writers_from_json`). It is the contract you rely on for **checkpoints**, **restarts**, and **post-processing** when you are not using VTK or PNG.
+This document describes the **raw binary** files produced by `pfc::BinaryWriter` (including the JSON-driven path in `add_result_writers_from_json`). Those headerless MPI-IO bricks remain the scheduled **`ResultsWriter` / `BinaryWriter` format** for periodic field dumps and **post-processing** when you are not using VTK or PNG.
+
+**Durable versioned restart bundles** use
+`pfc::checkpoint::publish_checkpoint_directory` instead — a directory with
+`metadata.json` plus accepted field bricks, published atomically. See
+[`docs/development/checkpoint_publish.md`](../development/checkpoint_publish.md).
+Do not treat a lone headerless `BinaryWriter` file as the full checkpoint /
+restart contract.
 
 **Implementation references:** [`include/openpfc/frontend/io/binary_writer.hpp`](../../include/openpfc/frontend/io/binary_writer.hpp), [`include/openpfc/kernel/simulation/binary_reader.hpp`](../../include/openpfc/kernel/simulation/binary_reader.hpp), [`include/openpfc/frontend/utils/utils.hpp`](../../include/openpfc/frontend/utils/utils.hpp) (`format_with_number`).
 
@@ -72,6 +79,7 @@ Longer offline sketch (metadata, NumPy layout): [`postprocess_binary_fields.md`]
 
 ## See also
 
+- [`checkpoint_publish.md`](../development/checkpoint_publish.md) — atomic accepted-state restart bundles  
 - [`io_results.md`](../user_guide/io_results.md) — writers overview  
 - [`postprocess_binary_fields.md`](../user_guide/postprocess_binary_fields.md) — reasoning about raw bytes outside OpenPFC  
 - [`tutorials/end_to_end_visualization.md`](../tutorials/end_to_end_visualization.md) — run that produces binaries  

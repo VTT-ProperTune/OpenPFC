@@ -59,6 +59,8 @@ The table below is lookup material. The most important flow for a new reader is 
 | `Simulator` | Runs the loop: ICs, BCs, `step`, writers | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
 | `FieldModifier` | Initial / boundary updates on fields | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `SimulationContext` | MPI comm + rank context for modifiers | `openpfc/kernel/simulation/simulation_context.hpp` | Passed when applying modifiers |
+| `CheckpointMetadata` | Versioned accepted-time/domain sidecar for filesystem checkpoint bundles | `openpfc/kernel/checkpoint/checkpoint_metadata.hpp` | [`checkpoint_publish.md`](../development/checkpoint_publish.md) |
+| `publish_checkpoint_directory` | Atomic stage-then-rename publish of metadata + accepted field bricks | `openpfc/kernel/checkpoint/publish.hpp` | Unit: `tests/unit/kernel/checkpoint/test_checkpoint_publish.cpp`; [`checkpoint_publish.md`](../development/checkpoint_publish.md) |
 | `ResultsWriter` / `ResultsWriterMap` | Persist fields (binary, VTK, …); `Simulator` holds `ResultsWriterMap` | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](../user_guide/io_results.md) |
 | `ResultsWriterCatalog` | JSON `fields[].writer` → factory (`binary` built-in); inject for custom formats | `openpfc/frontend/ui/results_writer_catalog.hpp` | Same as `add_result_writers_from_json` ([`app_pipeline.md`](../user_guide/app_pipeline.md)) |
 | `pfc::ui::App<Model>` | Load JSON/TOML, build stack, run | `openpfc/frontend/ui/app.hpp` | `apps/aluminumNew/`, `examples/10_ui_register_ic.cpp` |
