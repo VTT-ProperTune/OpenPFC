@@ -26,6 +26,7 @@ restart contract.
 | **Byte order** | **Native** (`"native"` in `MPI_File_set_view`) — endianness matches the machine that wrote the file. |
 | **Header / magic** | **None.** The file is only the raw payload for the MPI file view (no metadata block, no version tag). |
 | **Per-rank data** | Each MPI rank writes its **local** brick; together the ranks cover the global grid without overlap. The view is built from `(global_size, local_size, local_offset)` passed to `set_domain()`. |
+| **Local count limit** | Classic MPI-IO count parameters are `int`. Each rank's local element count (`data.size()`) must be **≤ `INT_MAX`**. `BinaryWriter` and `BinaryReader` fail closed via `pfc::mpi::expect_mpi_io_count` (`include/openpfc/kernel/mpi/mpi_io_helpers.hpp`), throwing `std::overflow_error` **before** `MPI_File_open` / `MPI_File_write_all` / `MPI_File_read_all` — never a silent `static_cast<int>` truncation. |
 
 Each `write(increment, field)` call:
 
