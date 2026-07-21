@@ -48,6 +48,18 @@ The root [`.gitignore`](.gitignore) ignores common build and output paths (`buil
 
 Project-specific guidance for Cursor lives under [`.cursor/rules/`](.cursor/rules/) (build system, documentation expectations, SPDX year updates, cluster module notes, etc.). Read the relevant rule when changing builds, docs, or public API.
 
+### Limina gate agents
+
+When you are a **Limina gate role** (especially `implement` / `code_review`)
+driven by `scripts/run_*.sh` and the living prompt from `limina-rpc`, that
+**living prompt wins** for board and git workflow on the prepared work
+branch. Implementers may commit, rebase onto the base branch, squash/amend
+for a clean history, and `git push --force-with-lease` **only that work
+branch** when history was rewritten. Never rewrite or force-push `master` /
+`main`. Interactive Cursor chats (human-driven, no Limina Mode A) still
+follow normal “commit/push only when asked” habits unless the human says
+otherwise.
+
 ## Published API reference
 
 HTML generated from headers: <https://vtt-propertune.github.io/OpenPFC/dev/> — pair with the `docs/` tree for tutorials and cluster operations.
