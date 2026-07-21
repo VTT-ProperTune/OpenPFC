@@ -8,14 +8,23 @@
  * @brief Integrator-owned workspace for stage storage and scratch buffers
  *
  * @details
- * This header provides Workspace<T>, a value-semantic container for integrator-owned
- * storage including:
+ * This header provides `pfc::integrator::Workspace<T>`, a value-semantic
+ * container for integrator-owned storage including:
  *
  * - Stage storage: Intermediate RK stages or method-specific state
  * - Scratch buffers: Temporary workspace for operator evaluations
  *
- * Workspace<T> is owned by integrators and is not exposed to physics models or drivers.
- * Lifetime can be per-method-object, per-step, or pooled depending on integrator needs.
+ * `Workspace<T>` is owned by integrators and is not exposed to physics models or
+ * drivers. Lifetime can be per-method-object, per-step, or pooled depending on
+ * integrator needs.
+ *
+ * This type is distinct from `pfc::sim::steppers::StageWorkspace<T>` in
+ * `include/openpfc/kernel/simulation/steppers/stage_workspace.hpp`:
+ * - Different namespace (`pfc::integrator` vs `pfc::sim::steppers`)
+ * - Different constructor (`extents` + `num_stages` vs `num_stages` + `local_size`)
+ * - Different reclaim API (`clear()` vs `reset()`)
+ *
+ * Do not conflate the two; this slice uses only `pfc::integrator::Workspace<T>`.
  *
  * Design rationale:
  * - Integrator-owned allocation: Integrators allocate, own, and manage all storage
@@ -26,6 +35,7 @@
  * @see kernel/integrator/stage_context.hpp for MPI coordination context
  */
 
+#include <algorithm>
 #include <vector>
 
 #include <openpfc/kernel/data/world_types.hpp>
@@ -36,7 +46,7 @@ namespace pfc::integrator {
  * @brief Integrator-owned workspace for stage storage and scratch buffers
  *
  * @details
- * Workspace<T> provides storage for:
+ * `Workspace<T>` provides storage for:
  *
  * - Stage storage: Intermediate Runge-Kutta stages or method-specific state
  * - Scratch buffers: Temporary workspace for operator evaluations
@@ -48,6 +58,8 @@ namespace pfc::integrator {
  * - Per-method-object: Workspace lives as long as the integrator object
  * - Per-step: Workspace can be cleared/reclaimed between steps
  * - Pooled: Multiple workspaces can be managed by an execution layer
+ *
+ * @note Not the same type as `pfc::sim::steppers::StageWorkspace<T>`.
  *
  * @tparam T Field value type (e.g., double, std::complex<double>)
  */

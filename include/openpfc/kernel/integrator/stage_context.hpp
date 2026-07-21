@@ -8,12 +8,18 @@
  * @brief Stage context for MPI coordination and boundary conditions
  *
  * @details
- * This header provides StageContext, a simple struct that carries information
- * required for MPI halo exchange timing and boundary condition application.
+ * This header provides `pfc::integrator::StageContext`, a simple struct that
+ * carries information required for MPI halo exchange timing and boundary
+ * condition application.
  *
  * Stage context enables orchestration to apply boundary conditions and perform
  * halo exchanges at required stages without understanding method internals.
  * The driver reads the context and schedules MPI operations accordingly.
+ *
+ * Name collision: `pfc::sim::StageContext` in
+ * `include/openpfc/kernel/simulation/solver_contract.hpp` is a different type
+ * (`evaluation_time` + `ExecutionService&`). Always use the fully qualified
+ * name `pfc::integrator::StageContext` at call sites in this design slice.
  *
  * Design rationale:
  * - Explicit timing: Carries time, dt, and stage index for coordination
@@ -30,17 +36,19 @@ namespace pfc::integrator {
  * @brief Stage context for MPI coordination and boundary conditions
  *
  * @details
- * StageContext carries information from integrators to drivers/orchestration
- * about what needs to happen at each evaluation stage:
+ * `pfc::integrator::StageContext` carries information from integrators to
+ * drivers/orchestration about what needs to happen at each evaluation stage:
  *
- * - Time information: Current time and timestep being attempted
+ * - Time information: Current time and timestep being attempted (`time`, `dt`)
  * - Stage index: RK stage index or method-specific stage identifier
- * - Region requirements: Interior vs boundary vs all cells
- * - Boundary conditions: Whether BCs need to be applied
- * - Halo exchange: Whether halo exchange is needed
+ * - Region requirements: Interior vs boundary vs all cells (`region_kind`)
+ * - Boundary conditions: Whether BCs need to be applied (`needs_boundary_update`)
+ * - Halo exchange: Whether halo exchange is needed (`needs_halo_exchange`)
  *
  * This enables orchestration to schedule MPI operations and boundary condition
  * application without understanding method internals.
+ *
+ * @note Distinct from `pfc::sim::StageContext` in `solver_contract.hpp`.
  */
 struct StageContext {
     /**
