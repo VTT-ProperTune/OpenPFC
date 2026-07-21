@@ -5,25 +5,24 @@
 
 /**
  * @file heap_concept.hpp
- * @brief C++20 concept unifying GPU workspace allocation across HeFFTe
+ * @brief C++20 concept unifying GPU workspace *types* across HeFFTe
  *        device backends.
  *
  * @details
- * `FFT_Impl<BackendTag>` (fft_heffte_backend.hpp) pre-allocates two GPU
- * workspace buffers, one per precision, as separate type aliases:
+ * `HeapBackend` is a compile-time contract on dual-precision
+ * `buffer_container` type availability for GPU tags
+ * (`heffte::backend::cufft`, `heffte::backend::rocfft`): both
+ * `std::complex<double>` and `std::complex<float>` containers must exist, be
+ * constructible from a size, and expose `size()`/`data()`.
  *
- *     using gpu_workspace_type  =
- * heffte::fft3d_r2c<BackendTag>::buffer_container<std::complex<double>>; using
- * gpu_workspace_float =
- * heffte::fft3d_r2c<BackendTag>::buffer_container<std::complex<float>>;
+ * It does **not** require every `FFT_Impl` instantiation to eagerly allocate
+ * unused workspaces. Eager ownership is backend-specialized in
+ * `fft_heffte_backend.hpp` via `detail::FftWorkspaceStorage`:
+ * - FFTW: host `m_wrk` only (this concept does not apply).
+ * - GPU: per-precision device workspaces only (no idle host `m_wrk`).
  *
- * `HeapBackend` states, as a single compile-time-checkable contract, what
- * every GPU `BackendTag` (`heffte::backend::cufft`, `heffte::backend::rocfft`)
- * must satisfy for this pattern to be safe: both precisions' buffer
- * containers must exist, be constructible from a size, and expose
- * `size()`/`data()`. The CPU backend (`heffte::backend::fftw`) is excluded
- * on purpose -- it uses `std::vector`-backed host memory, not a
- * device-allocating container, so the concept does not apply to it.
+ * The CPU backend (`heffte::backend::fftw`) is excluded on purpose -- it uses
+ * `std::vector`-backed host memory, not a device-allocating container.
  *
  * @see fft_heffte_backend.hpp for the two `static_assert`s that check this
  *      contract against the real CUDA/HIP backend tags whenever the
@@ -47,8 +46,8 @@ concept NotCPUBackend = !std::is_same_v<BackendTag, heffte::backend::fftw>;
 /**
  * @brief Satisfied by a HeFFTe GPU backend tag whose per-precision buffer
  *        containers are constructible from a size and expose `size()`/
- *        `data()` -- the pattern `FFT_Impl`'s GPU workspace members rely on
- *        for both `std::complex<double>` and `std::complex<float>`.
+ *        `data()` -- the type availability GPU `FftWorkspaceStorage` relies
+ *        on for both `std::complex<double>` and `std::complex<float>`.
  */
 template <typename BackendTag>
 concept HeapBackend =
