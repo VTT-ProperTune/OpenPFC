@@ -366,12 +366,14 @@ The shared IMEX stage-composition seam is also landed
 (`ImexEulerComposer` / `ImexStepAttemptResult` in
 [`imex_stage_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_stage_composition.hpp)):
 explicit operator evaluation then an implicit `SolveFunction` solve into an
-isolated candidate, with driver commit via `apply_candidate`. Product IMEX
-Euler method wiring (#168) and adaptive *controller* policy (accept/reject and
-next-`dt` selection) remain follow-on / driver-owned work tracked in
-[`refactoring_roadmap.md`](refactoring_roadmap.md). The checkpoint protocol on
-`EulerStepper` (`save_state` / `restore_state` / `can_rollback`) is the hook
-those controller features are expected to use.
+isolated candidate, with driver commit via `apply_candidate`. First-order
+IMEX Euler (`ImexEulerStepper` in
+[`imex_euler.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_euler.hpp))
+is landed on CPU; higher-order IMEX-RK and adaptive *controller* policy
+(accept/reject and next-`dt` selection) remain follow-on / driver-owned work
+tracked in [`refactoring_roadmap.md`](refactoring_roadmap.md). The checkpoint
+protocol on `EulerStepper` (`save_state` / `restore_state` / `can_rollback`)
+is the hook those controller features are expected to use.
 
 ## 6. Migration path from virtual step methods to explicit stepper composition
 

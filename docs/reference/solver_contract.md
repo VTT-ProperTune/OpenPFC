@@ -340,6 +340,6 @@ composition. The kernel seam lives in
    / `ConvergenceStatus`
 
 Use `pfc::sim::StageContext` from this contract header (not
-`pfc::integrator::StageContext`). Full product IMEX Euler method bodies remain
-board follow-on (#168); this contract does not prescribe tableau coefficients
-or spectral/Krylov solver implementations.
+`pfc::integrator::StageContext`). First-order IMEX Euler
+(`ImexEulerStepper`) is available separately; this contract does not prescribe
+tableau coefficients or spectral/Krylov solver implementations.
