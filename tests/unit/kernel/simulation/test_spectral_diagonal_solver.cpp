@@ -27,6 +27,7 @@ public:
   std::vector<std::string> last_halos;
   std::vector<std::string> last_boundaries;
   std::vector<double> last_reduce_data;
+  std::vector<double> last_reduce_result;
   MPI_Op last_op = MPI_OP_NULL;
 
   void request_halo_exchange(const std::vector<std::string> &field_names) override {
@@ -37,9 +38,12 @@ public:
     last_boundaries = field_names;
   }
 
-  void global_reduce(const std::vector<double> &data, MPI_Op op) override {
+  std::vector<double> global_reduce(const std::vector<double> &data, MPI_Op op) override {
     last_reduce_data = data;
     last_op = op;
+    // By default, return a copy of input (serial behavior)
+    last_reduce_result = data;
+    return last_reduce_result;
   }
 };
 
@@ -417,5 +421,57 @@ TEST_CASE("spectral diagonal complex inputs unchanged",
   REQUIRE(outcome.status == ConvergenceStatus::converged);
   REQUIRE(rhs == rhs_copy);
   REQUIRE(std::get<std::vector<Complex>>(desc.operator_context) == diag_copy);
+}
+
+TEST_CASE("spectral diagonal injected reduced sum affects convergence",
+          "[spectral_diagonal][solver]") {
+  SpectralDiagonalConfig config;
+  config.nullspace_policy = DiagonalNullspacePolicy::project;
+  config.null_mode_value = 0.0;
+  SpectralDiagonalSolver solver(config);
+
+  // Singular mode with incompatible RHS → local sum_sq = 25.0 (r = -b = -5.0)
+  std::vector<double> diag{2.0, 0.0};
+  std::vector<double> rhs{2.0, 5.0};
+  std::vector<double> target{-1.0, -1.0};
+  const auto sentinel = target;
+
+  // Mock simulates a 2-rank MPI run with each rank having sum_sq = 25.0
+  // The reduced sum would be 50.0, so residual_norm = sqrt(50.0) ~ 7.07
+  class ReducingMockExecutionService : public ExecutionService {
+  public:
+    std::vector<double> last_reduce_data;
+    MPI_Op last_op = MPI_OP_NULL;
+
+    void request_halo_exchange(const std::vector<std::string> &) override {}
+    void prepare_boundaries(const std::vector<std::string> &) override {}
+
+    std::vector<double> global_reduce(const std::vector<double> &data, MPI_Op op) override {
+      last_reduce_data = data;
+      last_op = op;
+      // Simulate 2-rank MPI: input is local sum from one rank, return global sum
+      // If local sum_sq is 25.0, return 50.0 (sum from 2 ranks)
+      return {data[0] * 2.0};
+    }
+  };
+
+  ReducingMockExecutionService service;
+  StageContext ctx{0.0, service};
+  SolveOptions opts{};
+  opts.absolute_tolerance = 1e-12;
+
+  auto outcome = solver(make_desc(diag), rhs, target, opts, ctx);
+
+  // Should fail because the mock injected a large reduced sum (50.0)
+  // residual_norm = sqrt(50.0) ~ 7.07, which exceeds tolerance 1e-12
+  REQUIRE(outcome.status != ConvergenceStatus::converged);
+  REQUIRE(outcome.status == ConvergenceStatus::max_iterations_reached);
+  // Verify the reduced sum was actually used: sqrt(50.0) ≈ 7.07
+  REQUIRE_THAT(outcome.final_residual_norm, WithinAbs(std::sqrt(50.0), 1e-10));
+  REQUIRE(service.last_op == MPI_SUM);
+  REQUIRE(service.last_reduce_data.size() == 1);
+  // Local sum_sq from one rank is 25.0 (r = -5.0 on singular mode)
+  REQUIRE_THAT(service.last_reduce_data[0], WithinAbs(25.0, 1e-10));
+  REQUIRE(target == sentinel);  // Target unchanged on convergence failure
 }
 
