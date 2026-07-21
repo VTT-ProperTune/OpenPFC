@@ -33,6 +33,7 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <openpfc/runtime/cuda/cuda_check.hpp>
 
 #if defined(OpenPFC_MPI_CUDA_AWARE) && defined(OPEN_MPI) && __has_include(<mpi-ext.h>)
 #include <mpi-ext.h>
@@ -53,12 +54,6 @@ inline bool runtime_mpi_cuda_aware() {
 #else
   return false;
 #endif
-}
-
-inline void cuda_memcpy_check(cudaError_t err, const char *what) {
-  if (err != cudaSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(err));
-  }
 }
 
 [[noreturn]] inline void throw_device_nb_requires_aware(const char *op) {
@@ -93,13 +88,14 @@ void send(core::SparseVector<backend::CudaTag, T> &sparse_vector, int sender_ran
 
   std::vector<size_t> indices(size);
   std::vector<T> data(size);
-  detail::cuda_memcpy_check(
+  pfc::cuda::detail::cuda_check(
       cudaMemcpy(indices.data(), sparse_vector.indices().data(),
                  size * sizeof(size_t), cudaMemcpyDeviceToHost),
       "cudaMemcpy indices D2H (exchange::send)");
-  detail::cuda_memcpy_check(cudaMemcpy(data.data(), sparse_vector.data().data(),
-                                       size * sizeof(T), cudaMemcpyDeviceToHost),
-                            "cudaMemcpy data D2H (exchange::send)");
+  pfc::cuda::detail::cuda_check(
+      cudaMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
+                 cudaMemcpyDeviceToHost),
+      "cudaMemcpy data D2H (exchange::send)");
 
   pfc::mpi::throw_on_mpi_error(
       MPI_Send(&size, 1, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm),
@@ -140,7 +136,7 @@ void send_data(const core::SparseVector<backend::CudaTag, T> &sparse_vector,
         "MPI_Send");
   } else {
     std::vector<T> data(size);
-    detail::cuda_memcpy_check(
+    pfc::cuda::detail::cuda_check(
         cudaMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
                    cudaMemcpyDeviceToHost),
         "cudaMemcpy D2H (exchange::send_data)");
@@ -179,7 +175,7 @@ void receive_data(core::SparseVector<backend::CudaTag, T> &sparse_vector,
         MPI_Recv(data.data(), count, mpi_type, sender_rank, tag, comm,
                  MPI_STATUS_IGNORE),
         "MPI_Recv");
-    detail::cuda_memcpy_check(
+    pfc::cuda::detail::cuda_check(
         cudaMemcpy(sparse_vector.data().data(), data.data(), size * sizeof(T),
                    cudaMemcpyHostToDevice),
         "cudaMemcpy H2D (exchange::receive_data)");

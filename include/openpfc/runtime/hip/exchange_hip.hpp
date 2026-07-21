@@ -32,6 +32,7 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/runtime/hip/backend_tags_hip.hpp>
+#include <openpfc/runtime/hip/hip_check.hpp>
 
 #if defined(OpenPFC_MPI_HIP_AWARE) && defined(OPEN_MPI) && __has_include(<mpi-ext.h>)
 #include <mpi-ext.h>
@@ -52,12 +53,6 @@ inline bool runtime_mpi_hip_aware() {
 #else
   return false;
 #endif
-}
-
-inline void hip_memcpy_check(hipError_t err, const char *what) {
-  if (err != hipSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(err));
-  }
 }
 
 [[noreturn]] inline void throw_hip_nb_requires_aware(const char *op) {
@@ -92,13 +87,14 @@ void send(core::SparseVector<backend::HipTag, T> &sparse_vector, int sender_rank
 
   std::vector<size_t> indices(size);
   std::vector<T> data(size);
-  detail::hip_memcpy_check(
+  pfc::hip::detail::hip_check(
       hipMemcpy(indices.data(), sparse_vector.indices().data(),
                 size * sizeof(size_t), hipMemcpyDeviceToHost),
       "hipMemcpy indices D2H (exchange::send)");
-  detail::hip_memcpy_check(hipMemcpy(data.data(), sparse_vector.data().data(),
-                                     size * sizeof(T), hipMemcpyDeviceToHost),
-                           "hipMemcpy data D2H (exchange::send)");
+  pfc::hip::detail::hip_check(
+      hipMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
+                hipMemcpyDeviceToHost),
+      "hipMemcpy data D2H (exchange::send)");
 
   pfc::mpi::throw_on_mpi_error(
       MPI_Send(&size, 1, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm),
@@ -139,7 +135,7 @@ void send_data(const core::SparseVector<backend::HipTag, T> &sparse_vector,
         "MPI_Send");
   } else {
     std::vector<T> data(size);
-    detail::hip_memcpy_check(
+    pfc::hip::detail::hip_check(
         hipMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
                   hipMemcpyDeviceToHost),
         "hipMemcpy D2H (exchange::send_data)");
@@ -178,7 +174,7 @@ void receive_data(core::SparseVector<backend::HipTag, T> &sparse_vector,
         MPI_Recv(data.data(), count, mpi_type, sender_rank, tag, comm,
                  MPI_STATUS_IGNORE),
         "MPI_Recv");
-    detail::hip_memcpy_check(
+    pfc::hip::detail::hip_check(
         hipMemcpy(sparse_vector.data().data(), data.data(), size * sizeof(T),
                   hipMemcpyHostToDevice),
         "hipMemcpy H2D (exchange::receive_data)");
