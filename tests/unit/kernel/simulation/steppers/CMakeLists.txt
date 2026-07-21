@@ -32,6 +32,8 @@ set_tests_properties(method_composition PROPERTIES
 add_test(NAME test_imex_stage_composition
          COMMAND $<TARGET_FILE:openpfc-tests> "[imex_stage_composition]")
 set_tests_properties(test_imex_stage_composition PROPERTIES
+  ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+
 # AC-facing CTest name: `ctest -R '^test_step_attempt$'` (shared openpfc-tests binary).
 add_test(NAME test_step_attempt
          COMMAND $<TARGET_FILE:openpfc-tests> "[step_attempt]")
