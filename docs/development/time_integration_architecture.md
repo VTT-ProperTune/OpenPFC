@@ -372,7 +372,9 @@ Recommended pattern:
 
 Embedded pair evidence already exists under `steppers/`
 (`EmbeddedRKStepper::attempt`, `make_embedded_rk45` / `make_embedded_rk23`).
-<<<<<<< HEAD
+Adaptive-control **policy configuration** (tolerances, growth/shrink limits,
+min/max `dt`, rejection cap, fixed-vs-adaptive mode) lives in
+[`adaptive_control_config.hpp`](../../include/openpfc/kernel/simulation/adaptive_control_config.hpp).
 The shared IMEX stage-composition seam is also landed
 (`ImexEulerComposer` / `ImexStepAttemptResult` in
 [`imex_stage_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_stage_composition.hpp)):
@@ -381,20 +383,11 @@ isolated candidate, with driver commit via `apply_candidate`. First-order
 IMEX Euler (`ImexEulerStepper` in
 [`imex_euler.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_euler.hpp))
 is landed on CPU; higher-order IMEX-RK and adaptive *controller* policy
-(accept/reject and next-`dt` selection) remain follow-on / driver-owned work
-tracked in [`refactoring_roadmap.md`](refactoring_roadmap.md). The checkpoint
-protocol on `EulerStepper` (`save_state` / `restore_state` / `can_rollback`)
-is the hook those controller features are expected to use.
-=======
-Adaptive-control **policy configuration** (tolerances, growth/shrink limits,
-min/max `dt`, rejection cap, fixed-vs-adaptive mode) lives in
-[`adaptive_control_config.hpp`](../../include/openpfc/kernel/simulation/adaptive_control_config.hpp).
-IMEX schemes and adaptive *controller* policy (accept/reject and next-`dt`
-selection that *uses* that config) remain future/driver-owned work tracked in
+(accept/reject and next-`dt` selection that *uses* that config) remain
+follow-on / driver-owned work tracked in
 [`refactoring_roadmap.md`](refactoring_roadmap.md). The checkpoint protocol on
 `EulerStepper` (`save_state` / `restore_state` / `can_rollback`) is the hook
 those controller features are expected to use.
->>>>>>> b263f973 (docs: document AdaptiveControlConfig in tour and architecture)
 
 ## 6. Migration path from virtual step methods to explicit stepper composition
 
