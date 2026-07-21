@@ -529,3 +529,188 @@ TEST_CASE("test_time_state_guard_restores_counters", "[time][unit]") {
     REQUIRE(time.get_rejected_steps() == 1);
   }
 }
+
+TEST_CASE("Time - attempt accepted time immutable on reject", "[time][unit]") {
+  Time t({0.0, 10.0, 0.5}, 0.0);
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(0.0, TOLERANCE));
+  REQUIRE_THAT(t.get_current(), WithinAbs(0.0, TOLERANCE));
+
+  t.begin_attempt(0.5);
+  REQUIRE(t.attempt_active());
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(0.0, TOLERANCE));
+  REQUIRE_THAT(t.get_current(), WithinAbs(0.0, TOLERANCE));
+  REQUIRE_THAT(t.get_attempted_dt(), WithinAbs(0.5, TOLERANCE));
+
+  t.reject_attempt();
+  REQUIRE_FALSE(t.attempt_active());
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(0.0, TOLERANCE));
+  REQUIRE(t.get_increment() == 0);
+
+  for (int i = 0; i < 5; ++i) {
+    t.begin_attempt(0.25);
+    t.reject_attempt();
+  }
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(0.0, TOLERANCE));
+  REQUIRE(t.get_increment() == 0);
+}
+
+TEST_CASE("Time - clip_attempt_dt terminal bound", "[time][unit]") {
+  Time t({0.0, 1.0, 0.1}, 0.0);
+  t.set_increment(8); // accepted = 0.8
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(0.8, TOLERANCE));
+
+  const double clipped = t.clip_attempt_dt(1.0);
+  REQUIRE_THAT(clipped, WithinAbs(0.2, TOLERANCE));
+  REQUIRE_THAT(t.get_accepted_time() + clipped, WithinAbs(1.0, TOLERANCE));
+  REQUIRE(clipped < 1.0);
+
+  REQUIRE_THROWS_AS(t.clip_attempt_dt(0.0), std::invalid_argument);
+  REQUIRE_THROWS_AS(t.clip_attempt_dt(-0.1), std::invalid_argument);
+}
+
+TEST_CASE("Time - clip_attempt_dt saveat alignment", "[time][unit]") {
+  Time t({0.0, 10.0, 0.5}, 1.0);
+  t.set_increment(1); // accepted = 0.5, next save = 1.0
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(0.5, TOLERANCE));
+
+  const double clipped = t.clip_attempt_dt(0.8);
+  REQUIRE_THAT(clipped, WithinAbs(0.5, TOLERANCE));
+  REQUIRE_THAT(t.get_accepted_time() + clipped, WithinAbs(1.0, TOLERANCE));
+}
+
+TEST_CASE("Time - clip_attempt_dt saveat<=0 skips alignment", "[time][unit]") {
+  Time t({0.0, 10.0, 0.5}, 0.0);
+  t.set_increment(1); // accepted = 0.5
+  // With saveat disabled, a large candidate only hits the terminal bound.
+  const double clipped = t.clip_attempt_dt(3.0);
+  REQUIRE_THAT(clipped, WithinAbs(3.0, TOLERANCE));
+
+  Time near_end({0.0, 1.0, 0.1}, 0.0);
+  near_end.set_increment(8); // accepted = 0.8
+  REQUIRE_THAT(near_end.clip_attempt_dt(1.0), WithinAbs(0.2, TOLERANCE));
+}
+
+TEST_CASE("Time - commit_attempt advances by attempted_dt", "[time][unit]") {
+  Time t({0.0, 10.0, 0.5}, 1.0);
+  t.set_increment(1); // accepted = 0.5
+  const int steps_before = t.get_step_count();
+
+  t.begin_attempt(0.8); // clipped to 0.5 (next saveat)
+  const double attempted = t.get_attempted_dt();
+  REQUIRE_THAT(attempted, WithinAbs(0.5, TOLERANCE));
+
+  t.commit_attempt();
+  REQUIRE_FALSE(t.attempt_active());
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(0.5 + attempted, TOLERANCE));
+  REQUIRE(t.get_step_count() == steps_before + 1);
+  REQUIRE(t.get_accepted_steps() == 0); // counters stay caller-owned
+}
+
+TEST_CASE("Time - do_save keys off accepted time after reject", "[time][unit]") {
+  Time t({0.0, 10.0, 0.5}, 1.0);
+  t.set_increment(1); // accepted = 0.5 — not a save point (saveat=1)
+  const bool save_before = t.do_save();
+  REQUIRE_FALSE(save_before);
+
+  t.begin_attempt(0.5);
+  REQUIRE_FALSE(t.do_save()); // still keyed off accepted time
+  t.reject_attempt();
+  REQUIRE(t.do_save() == save_before);
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(0.5, TOLERANCE));
+}
+
+TEST_CASE("Time - set_dt does not rewrite accepted time", "[time][unit]") {
+  Time t({0.0, 10.0, 0.5}, 0.0);
+  t.next();
+  t.next();
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(1.0, TOLERANCE));
+  REQUIRE(t.get_increment() == 2);
+
+  t.set_dt(0.1);
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(1.0, TOLERANCE));
+  REQUIRE_THAT(t.get_current(), WithinAbs(1.0, TOLERANCE));
+  REQUIRE(t.get_increment() == 2);
+
+  t.begin_attempt(0.2);
+  t.set_dt(0.05);
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(1.0, TOLERANCE));
+  t.reject_attempt();
+  REQUIRE_THAT(t.get_accepted_time(), WithinAbs(1.0, TOLERANCE));
+}
+
+TEST_CASE("TimeStateGuard - restores accepted time and attempt flags after begin_attempt",
+          "[time][unit]") {
+  Time time({0.0, 10.0, 0.5}, 0.0);
+  time.next();
+  REQUIRE_THAT(time.get_accepted_time(), WithinAbs(0.5, TOLERANCE));
+
+  {
+    TimeStateGuard guard(time);
+    time.begin_attempt(0.25);
+    REQUIRE(time.attempt_active());
+    REQUIRE_THAT(time.get_attempted_dt(), WithinAbs(0.25, TOLERANCE));
+  }
+
+  REQUIRE_FALSE(time.attempt_active());
+  REQUIRE_THAT(time.get_accepted_time(), WithinAbs(0.5, TOLERANCE));
+  REQUIRE(time.get_increment() == 1);
+}
+
+TEST_CASE("TimeStateGuard - restores accepted time after commit with attempted_dt != dt",
+          "[time][unit]") {
+  Time time({0.0, 1.0, 0.5}, 0.0);
+  // Pre-guard accepted at 0.0; commit a clipped terminal step with attempted != dt.
+  {
+    TimeStateGuard guard(time);
+    time.begin_attempt(2.0); // clips to remaining 1.0
+    REQUIRE_THAT(time.get_attempted_dt(), WithinAbs(1.0, TOLERANCE));
+    REQUIRE(time.get_attempted_dt() != time.get_dt());
+    time.commit_attempt();
+    REQUIRE_THAT(time.get_accepted_time(), WithinAbs(1.0, TOLERANCE));
+    REQUIRE(time.get_increment() == 1);
+    // Uncommitted: must restore accepted via friend assign after set_increment,
+    // not t0 + n * dt reconstruction (which would also be 0 here, so also
+    // exercise a mid-span case below).
+  }
+  REQUIRE_THAT(time.get_accepted_time(), WithinAbs(0.0, TOLERANCE));
+  REQUIRE(time.get_increment() == 0);
+
+  // Mid-span: commit clipped saveat step so accepted != t0 + n * dt after set_dt.
+  Time mid({0.0, 10.0, 0.5}, 1.0);
+  mid.set_increment(1); // accepted = 0.5
+  const double pre_guard = mid.get_accepted_time();
+  {
+    TimeStateGuard guard(mid);
+    mid.begin_attempt(0.8); // clips to 0.5 → accepted becomes 1.0 on commit
+    mid.commit_attempt();
+    REQUIRE_THAT(mid.get_accepted_time(), WithinAbs(1.0, TOLERANCE));
+    mid.set_dt(0.2); // if restore used only set_increment, accepted would be
+                     // t0 + 2 * 0.2 = 0.4, not the pre-guard 0.5
+  }
+  REQUIRE_THAT(mid.get_accepted_time(), WithinAbs(pre_guard, TOLERANCE));
+  REQUIRE(mid.get_increment() == 1);
+  REQUIRE_FALSE(mid.attempt_active());
+}
+
+TEST_CASE("Time - attempt API throws on misuse", "[time][unit]") {
+  Time t({0.0, 10.0, 0.5}, 0.0);
+  REQUIRE_THROWS_AS(t.get_attempted_dt(), std::logic_error);
+  REQUIRE_THROWS_AS(t.commit_attempt(), std::logic_error);
+  REQUIRE_THROWS_AS(t.reject_attempt(), std::logic_error);
+
+  t.begin_attempt(0.1);
+  REQUIRE_THROWS_AS(t.begin_attempt(0.1), std::logic_error);
+  t.reject_attempt();
+}
+
+TEST_CASE("Time - non-member attempt helpers mirror members", "[time][unit]") {
+  Time t({0.0, 5.0, 0.5}, 0.0);
+  REQUIRE_THAT(pfc::time::accepted_time(t), WithinAbs(0.0, TOLERANCE));
+  REQUIRE_THAT(pfc::time::clip_attempt_dt(t, 10.0), WithinAbs(5.0, TOLERANCE));
+
+  pfc::time::begin_attempt(t, 1.0);
+  REQUIRE(pfc::time::attempt_active(t));
+  REQUIRE_THAT(pfc::time::attempted_dt(t), WithinAbs(1.0, TOLERANCE));
+  pfc::time::commit_attempt(t);
+  REQUIRE_THAT(pfc::time::accepted_time(t), WithinAbs(1.0, TOLERANCE));
+}

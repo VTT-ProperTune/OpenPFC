@@ -312,6 +312,29 @@ into `u_low`, and forms `error = u_high - u_low`. Accept/reject and next-`dt`
 selection stay driver/controller-owned. FSAL stage reuse is deferred; any
 future cache must invalidate on reject, restart, or configuration change.
 
+### Driver-owned time attempt transactions (`Time`)
+
+Adaptive control needs an accepted-time clock that does not move on reject,
+plus a clipped attempt interval that cannot overshoot `t1` or skip past the
+next `saveat` alignment point. That seam lives on
+[`time.hpp`](../../include/openpfc/kernel/simulation/time.hpp):
+
+- `get_accepted_time()` — read-only accepted clock; unchanged while an attempt
+  is active.
+- `clip_attempt_dt(candidate_dt)` — returns an attempted interval so
+  `accepted + attempted <= t1`, and when `saveat > 0` lands on the next output
+  alignment (most-restrictive `min` when both constraints apply; `saveat <= 0`
+  skips alignment).
+- `begin_attempt` / `commit_attempt` / `reject_attempt` — store the clipped
+  interval, advance accepted time by exactly that interval on commit, or leave
+  accepted time unchanged on reject. `do_save()` continues to key off accepted
+  time only (rejected attempts never advance emission).
+
+Prefer this transaction API over rewriting history with `set_dt` +
+`set_increment`. When Simulator wires adaptive loops, every MPI rank must use
+the **same** clipped `attempted_dt` for a given attempt (rank-consistency is
+a driver obligation; this leaf does not orchestrate Simulator).
+
 ## 5. Future stepper integration
 
 New steppers should follow the duck-typed surface already formalized in
