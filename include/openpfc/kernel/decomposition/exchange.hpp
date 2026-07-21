@@ -48,6 +48,7 @@
 
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 
 namespace pfc::exchange {
 
@@ -89,8 +90,10 @@ inline void sendrecv_face(void *buf, MPI_Datatype send_type, MPI_Datatype recv_t
                           int tag = 0) {
   // NOLINTBEGIN(readability-suspicious-call-argument) — MPI_Sendrecv(dest, sendtag,
   // …)
-  MPI_Sendrecv(buf, 1, send_type, send_to_rank, tag, buf, 1, recv_type,
-               recv_from_rank, tag, comm, MPI_STATUS_IGNORE);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Sendrecv(buf, 1, send_type, send_to_rank, tag, buf, 1, recv_type,
+                   recv_from_rank, tag, comm, MPI_STATUS_IGNORE),
+      "MPI_Sendrecv");
   // NOLINTEND(readability-suspicious-call-argument)
 }
 
@@ -99,7 +102,8 @@ inline void sendrecv_face(void *buf, MPI_Datatype send_type, MPI_Datatype recv_t
  */
 inline void isend_face(void *buf, MPI_Datatype send_type, int send_to_rank,
                        MPI_Comm comm, MPI_Request *request, int tag = 0) {
-  MPI_Isend(buf, 1, send_type, send_to_rank, tag, comm, request);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Isend(buf, 1, send_type, send_to_rank, tag, comm, request), "MPI_Isend");
 }
 
 /**
@@ -107,7 +111,8 @@ inline void isend_face(void *buf, MPI_Datatype send_type, int send_to_rank,
  */
 inline void irecv_face(void *buf, MPI_Datatype recv_type, int recv_from_rank,
                        MPI_Comm comm, MPI_Request *request, int tag = 0) {
-  MPI_Irecv(buf, 1, recv_type, recv_from_rank, tag, comm, request);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Irecv(buf, 1, recv_type, recv_from_rank, tag, comm, request), "MPI_Irecv");
 }
 
 /**
@@ -116,8 +121,10 @@ inline void irecv_face(void *buf, MPI_Datatype recv_type, int recv_from_rank,
 template <typename T>
 inline void irecv_dense(T *buf, int count, int recv_from_rank, MPI_Comm comm,
                         MPI_Request *request, int tag = 0) {
-  MPI_Irecv(buf, count, detail::get_mpi_type<T>(), recv_from_rank, tag, comm,
-            request);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Irecv(buf, count, detail::get_mpi_type<T>(), recv_from_rank, tag, comm,
+                request),
+      "MPI_Irecv");
 }
 
 /**
@@ -136,7 +143,7 @@ template <typename BackendTag, typename T>
 void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_rank,
           int receiver_rank, MPI_Comm comm, int tag = 0) {
   int my_rank;
-  MPI_Comm_rank(comm, &my_rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &my_rank), "MPI_Comm_rank");
 
   if (my_rank != sender_rank) {
     return; // Not the sender
@@ -145,7 +152,9 @@ void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   size_t size = sparse_vector.size();
 
   // Send size first
-  MPI_Send(&size, 1, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Send(&size, 1, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm),
+      "MPI_Send");
 
   if (size == 0) {
     return;
@@ -171,13 +180,17 @@ void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   }
 
   // Send indices
-  MPI_Send(indices.data(), static_cast<int>(size), MPI_UNSIGNED_LONG_LONG,
-           receiver_rank, tag + 1, comm);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Send(indices.data(), static_cast<int>(size), MPI_UNSIGNED_LONG_LONG,
+               receiver_rank, tag + 1, comm),
+      "MPI_Send");
 
   // Send data
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  MPI_Send(data.data(), static_cast<int>(size), mpi_type, receiver_rank, tag + 2,
-           comm);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Send(data.data(), static_cast<int>(size), mpi_type, receiver_rank, tag + 2,
+               comm),
+      "MPI_Send");
 }
 
 /**
@@ -195,7 +208,7 @@ template <typename BackendTag, typename T>
 void receive(core::SparseVector<BackendTag, T> &sparse_vector, int sender_rank,
              int receiver_rank, MPI_Comm comm, int tag = 0) {
   int my_rank;
-  MPI_Comm_rank(comm, &my_rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &my_rank), "MPI_Comm_rank");
 
   if (my_rank != receiver_rank) {
     return; // Not the receiver
@@ -203,8 +216,10 @@ void receive(core::SparseVector<BackendTag, T> &sparse_vector, int sender_rank,
 
   // Receive size first
   size_t size;
-  MPI_Recv(&size, 1, MPI_UNSIGNED_LONG_LONG, sender_rank, tag, comm,
-           MPI_STATUS_IGNORE);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Recv(&size, 1, MPI_UNSIGNED_LONG_LONG, sender_rank, tag, comm,
+               MPI_STATUS_IGNORE),
+      "MPI_Recv");
 
   if (size == 0) {
     sparse_vector = core::SparseVector<BackendTag, T>(0);
@@ -216,12 +231,16 @@ void receive(core::SparseVector<BackendTag, T> &sparse_vector, int sender_rank,
   std::vector<T> data(size);
 
   int count = static_cast<int>(size);
-  MPI_Recv(indices.data(), count, MPI_UNSIGNED_LONG_LONG, sender_rank, tag + 1, comm,
-           MPI_STATUS_IGNORE);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Recv(indices.data(), count, MPI_UNSIGNED_LONG_LONG, sender_rank, tag + 1,
+               comm, MPI_STATUS_IGNORE),
+      "MPI_Recv");
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  MPI_Recv(data.data(), count, mpi_type, sender_rank, tag + 2, comm,
-           MPI_STATUS_IGNORE);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Recv(data.data(), count, mpi_type, sender_rank, tag + 2, comm,
+               MPI_STATUS_IGNORE),
+      "MPI_Recv");
 
   // Create SparseVector from received data (will sort indices)
   sparse_vector = core::SparseVector<BackendTag, T>(indices, data);
@@ -243,7 +262,7 @@ template <typename BackendTag, typename T>
 void send_data(const core::SparseVector<BackendTag, T> &sparse_vector,
                int sender_rank, int receiver_rank, MPI_Comm comm, int tag = 0) {
   int my_rank;
-  MPI_Comm_rank(comm, &my_rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &my_rank), "MPI_Comm_rank");
 
   if (my_rank != sender_rank) {
     return; // Not the sender
@@ -259,7 +278,10 @@ void send_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   int count = static_cast<int>(size);
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-    MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm);
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
+                 comm),
+        "MPI_Send");
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
@@ -284,7 +306,7 @@ template <typename BackendTag, typename T>
 void receive_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_rank,
                   int receiver_rank, MPI_Comm comm, int tag = 0) {
   int my_rank;
-  MPI_Comm_rank(comm, &my_rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &my_rank), "MPI_Comm_rank");
 
   if (my_rank != receiver_rank) {
     return; // Not the receiver
@@ -300,8 +322,10 @@ void receive_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_r
   int count = static_cast<int>(size);
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-    MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
-             MPI_STATUS_IGNORE);
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag,
+                 comm, MPI_STATUS_IGNORE),
+        "MPI_Recv");
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
@@ -329,7 +353,7 @@ void isend_data(const core::SparseVector<BackendTag, T> &sparse_vector,
                 int sender_rank, int receiver_rank, MPI_Comm comm,
                 MPI_Request *request, int tag = 0) {
   int my_rank;
-  MPI_Comm_rank(comm, &my_rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &my_rank), "MPI_Comm_rank");
 
   if (my_rank != sender_rank) {
     *request = MPI_REQUEST_NULL;
@@ -346,8 +370,10 @@ void isend_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   int count = static_cast<int>(size);
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-    MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag, comm,
-              request);
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
+                  comm, request),
+        "MPI_Isend");
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
@@ -374,7 +400,7 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
                 int receiver_rank, MPI_Comm comm, MPI_Request *request,
                 int tag = 0) {
   int my_rank;
-  MPI_Comm_rank(comm, &my_rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &my_rank), "MPI_Comm_rank");
 
   if (my_rank != receiver_rank) {
     *request = MPI_REQUEST_NULL;
@@ -391,8 +417,10 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   int count = static_cast<int>(size);
 
   if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
-    MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag, comm,
-              request);
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag,
+                  comm, request),
+        "MPI_Irecv");
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
@@ -404,7 +432,10 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
 /**
  * @brief Wait for all non-blocking requests to complete
  *
+ * @details
  * Call after posting all Irecv then all Isend. Frees the requests (MPI standard).
+ * Entries equal to `MPI_REQUEST_NULL` are skipped. If any remaining request fails
+ * in `MPI_Waitall`, throws `std::runtime_error` via `pfc::mpi::throw_on_mpi_error`.
  *
  * @param requests Array of MPI_Request (may contain MPI_REQUEST_NULL)
  * @param count Number of requests
@@ -418,8 +449,10 @@ inline void wait_all(MPI_Request *requests, int count) {
     }
   }
   if (!non_null.empty()) {
-    MPI_Waitall(static_cast<int>(non_null.size()), non_null.data(),
-                MPI_STATUSES_IGNORE);
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Waitall(static_cast<int>(non_null.size()), non_null.data(),
+                    MPI_STATUSES_IGNORE),
+        "MPI_Waitall");
   }
 }
 
