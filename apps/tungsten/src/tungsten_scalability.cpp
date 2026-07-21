@@ -42,7 +42,7 @@ struct ScalabilityResult {
   int size_x, size_y, size_z;
   int mpi_ranks;
   int num_iterations;
-  double setup_time;         // seconds (allocation + prepare_operators)
+  double setup_time;         // seconds (allocation + prepare_operators / ETD workspace)
   double total_time;         // seconds (total iteration time)
   double fft_time;           // seconds (total FFT time across all iterations)
   double other_time;         // seconds (total non-FFT time across all iterations)
@@ -93,7 +93,7 @@ public:
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
 
-      // Measure setup time (allocation + prepare_operators)
+      // Measure setup time (allocation + prepare_operators / ETD workspace)
       MPI_Barrier(MPI_COMM_WORLD);
       double setup_start = MPI_Wtime();
       double dt = 0.01;
@@ -207,7 +207,7 @@ public:
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
 
-      // Measure setup time (allocation + prepare_operators)
+      // Measure setup time (allocation + prepare_operators / ETD workspace)
       MPI_Barrier(MPI_COMM_WORLD);
       double setup_start = MPI_Wtime();
       double dt = 0.01;

@@ -6,16 +6,20 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/catch_approx.hpp>
+#include <array>
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <mpi.h>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 #include <openpfc/openpfc.hpp>
+#include <tungsten/common/tungsten_etd_workspace.hpp>
+#include <tungsten/common/tungsten_spectral.hpp>
 #include <tungsten/cpu/tungsten.hpp>
 
 using namespace Catch::Matchers;
-#include <tungsten/common/tungsten_spectral.hpp>
 
 /* Parameters from tungsten_single_seed.json:
 {
@@ -430,13 +434,21 @@ TEST_CASE("spectral_operators_exact_zero", "[tungsten][spectral]") {
   p.stabP = opPeak - p.p2_bar;  // Then opCk = 0.0 + 0.5 - opPeak + 0.0*fMF = 0.0
 
   tungsten::spectral::ModeOperators out =
-      tungsten::spectral::operators_for_mode(k_laplacian, dt, p);
+      tungsten::spectral::legacy_etd_weights_for_mode(k_laplacian, dt, p);
 
   // When opCk ≈ 0, expected opN = k_laplacian * dt from Taylor series
   double expected_opN = k_laplacian * dt;
 
   CHECK(out.opN == Catch::Approx(expected_opN).epsilon(1e-14));
   CHECK(out.opL == Catch::Approx(std::exp(k_laplacian * 0.0 * dt)).epsilon(1e-14));
+
+  // Shared SpectralExpCoefficientCache mapping must match legacy weights
+  const auto phys = tungsten::spectral::physics_for_mode(k_laplacian, p);
+  const double L = tungsten::spectral::linear_symbol(k_laplacian, phys.opCk);
+  const auto shared = pfc::integrator::spectral_exp_coeffs(L, dt);
+  const double shared_opN = k_laplacian * shared.phi1_L;
+  CHECK(shared.exp_Ldt == Catch::Approx(out.opL).epsilon(1e-14));
+  CHECK(shared_opN == Catch::Approx(out.opN).epsilon(1e-14));
 }
 
 TEST_CASE("spectral_operators_near_zero_no_cancellation",
@@ -467,7 +479,7 @@ TEST_CASE("spectral_operators_near_zero_no_cancellation",
     p_base.stabP = target_opCk + opPeak - p_base.p2_bar - p_base.q2_bar * fMF;
 
     tungsten::spectral::ModeOperators out =
-        tungsten::spectral::operators_for_mode(k_laplacian, dt, p_base);
+        tungsten::spectral::legacy_etd_weights_for_mode(k_laplacian, dt, p_base);
 
     // Reference: high-precision expm1 calculation
     double arg = k_laplacian * target_opCk * dt;
@@ -477,6 +489,14 @@ TEST_CASE("spectral_operators_near_zero_no_cancellation",
     double relative_error = std::abs(out.opN - reference_opN) / std::abs(reference_opN);
     double max_relative_error = 10.0 * std::numeric_limits<double>::epsilon();
     CHECK(relative_error < max_relative_error);
+
+    // Shared L + spectral_exp_coeffs vs legacy (near-zero may use |L| vs |opCk|)
+    const auto phys = tungsten::spectral::physics_for_mode(k_laplacian, p_base);
+    const double L = tungsten::spectral::linear_symbol(k_laplacian, phys.opCk);
+    const auto shared = pfc::integrator::spectral_exp_coeffs(L, dt);
+    const double shared_opN = k_laplacian * shared.phi1_L;
+    CHECK(shared.exp_Ldt == Catch::Approx(out.opL).epsilon(1e-12));
+    CHECK(shared_opN == Catch::Approx(out.opN).epsilon(1e-12));
   }
 }
 
@@ -493,7 +513,7 @@ TEST_CASE("spectral_operators_typical_values", "[tungsten][spectral]") {
 
   for (const auto &[k_laplacian, dt, p] : test_cases) {
     tungsten::spectral::ModeOperators out =
-        tungsten::spectral::operators_for_mode(k_laplacian, dt, p);
+        tungsten::spectral::legacy_etd_weights_for_mode(k_laplacian, dt, p);
 
     // Calculate opCk for this case
     double k_val = std::sqrt(-k_laplacian) - 1.0;
@@ -511,6 +531,11 @@ TEST_CASE("spectral_operators_typical_values", "[tungsten][spectral]") {
 
     CHECK(out.opN == Catch::Approx(expected_opN).epsilon(1e-14));
     CHECK(out.opL == Catch::Approx(std::exp(arg)).epsilon(1e-14));
+
+    const double L = tungsten::spectral::linear_symbol(k_laplacian, opCk);
+    const auto shared = pfc::integrator::spectral_exp_coeffs(L, dt);
+    CHECK(shared.exp_Ldt == Catch::Approx(out.opL).epsilon(1e-14));
+    CHECK((k_laplacian * shared.phi1_L) == Catch::Approx(out.opN).epsilon(1e-14));
   }
 }
 
@@ -526,7 +551,7 @@ TEST_CASE("spectral_operators_stability_long_dt",
 
   for (double dt : test_dt_values) {
     tungsten::spectral::ModeOperators out =
-        tungsten::spectral::operators_for_mode(k_laplacian, dt, p);
+        tungsten::spectral::legacy_etd_weights_for_mode(k_laplacian, dt, p);
 
     // Calculate opCk for this case
     double k_val = std::sqrt(-k_laplacian) - 1.0;
@@ -546,7 +571,37 @@ TEST_CASE("spectral_operators_stability_long_dt",
     // Check both operators match mathematical definitions
     CHECK(out.opN == Catch::Approx(expected_opN).epsilon(1e-12));
     CHECK(out.opL == Catch::Approx(expected_opL).epsilon(1e-12));
+
+    const double L = tungsten::spectral::linear_symbol(k_laplacian, opCk);
+    const auto shared = pfc::integrator::spectral_exp_coeffs(L, dt);
+    CHECK(shared.exp_Ldt == Catch::Approx(out.opL).epsilon(1e-12));
+    CHECK((k_laplacian * shared.phi1_L) == Catch::Approx(out.opN).epsilon(1e-12));
   }
+}
+
+TEST_CASE("spectral_exp_cache_matches_legacy_etd_weights",
+          "[tungsten][spectral][integrator]") {
+  const double k_laplacian = -4.0;
+  const double dt = 0.01;
+  auto p = make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582, 0.5, 0.0484,
+                            0.001, 4);
+
+  const auto legacy =
+      tungsten::spectral::legacy_etd_weights_for_mode(k_laplacian, dt, p);
+  const auto phys = tungsten::spectral::physics_for_mode(k_laplacian, p);
+  const double L = tungsten::spectral::linear_symbol(k_laplacian, phys.opCk);
+
+  pfc::integrator::SpectralExpCoefficientCache cache;
+  std::array<double, 1> L_arr{L};
+  cache.ensure(L_arr, dt, pfc::integrator::SpectralExpOperatorId{.value = 1},
+               pfc::integrator::SpectralExpDtId::from_bits(dt),
+               tungsten::etd::k_tungsten_etd_config_id);
+
+  REQUIRE(cache.exp_Ldt().size() == 1);
+  REQUIRE(cache.phi1_L().size() == 1);
+  CHECK(cache.exp_Ldt()[0] == Catch::Approx(legacy.opL).epsilon(1e-14));
+  CHECK((k_laplacian * cache.phi1_L()[0]) ==
+        Catch::Approx(legacy.opN).epsilon(1e-14));
 }
 
 int main(int argc, char *argv[]) {
