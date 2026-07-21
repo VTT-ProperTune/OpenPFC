@@ -303,6 +303,31 @@ not checkpointable. Tungsten still uses the temporary
 `Etd1Stepper` time advance (`TODO(remove-tungsten-etd-workspace)`). Coverage:
 `tests/unit/kernel/simulation/steppers/test_etd1.cpp` (`[stepper][etd1]`).
 
+### Shared step-attempt seam (Euler proof path)
+
+The shared step-attempt contract lives in
+[`step_attempt.hpp`](../../include/openpfc/kernel/simulation/steppers/step_attempt.hpp):
+`StepAttemptResult` carries an isolated `candidate` view (method-owned
+storage), attempted interval (`t0`, `dt`, `t1`), `success`, and optional stubs
+(`error_norm`, `min_next_dt`). Drivers apply a successful candidate only via
+`commit_step_attempt` — accepted state stays bitwise unchanged until then.
+Soft failure (`prep` / `eval` returns `false`) reports `success == false`,
+does not mutate accepted state, and leaves workspace **reusable** (buffers
+remain allocated/sized; contents unspecified). Candidate views are valid until
+the next `attempt()` on the owning stepper or destruction.
+
+The explicit-Euler proof path is
+[`euler_attempt.hpp`](../../include/openpfc/kernel/simulation/steppers/euler_attempt.hpp)
+(`EulerAttemptStepper`, plus `MultiEulerAttemptStepper` for N=2). It invokes a
+caller-provided `OperatorEvaluator` and `PreparationService` with
+`pfc::integrator::StageContext` and never writes the accepted buffer.
+Legacy in-place `EulerStepper::step` is unchanged. Coverage:
+[`test_step_attempt.cpp`](../../tests/unit/kernel/simulation/steppers/test_step_attempt.cpp)
+(`[step_attempt][unit]`).
+
+`EmbeddedRKStepper` below remains the embedded high/low/error evidence API; it
+is not replaced by this seam.
+
 ### Embedded RK step attempts (`EmbeddedRKStepper`)
 
 For adaptive controllers that need local truncation-error evidence without
