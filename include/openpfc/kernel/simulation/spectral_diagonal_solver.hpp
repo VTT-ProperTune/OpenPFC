@@ -230,9 +230,8 @@ private:
       const double r = diag[i] * residual_scratch_[i] - rhs_vec[i];
       sum_sq += r * r;
     }
-    // Seam exercise only: ExecutionService::global_reduce does not write back.
-    ctx.execution_service.global_reduce({sum_sq}, MPI_SUM);
-    const double residual_norm = std::sqrt(sum_sq);
+    std::vector<double> reduced = ctx.execution_service.global_reduce({sum_sq}, MPI_SUM);
+    const double residual_norm = std::sqrt(reduced[0]);
 
     const double abs_tol =
         options.absolute_tolerance.value_or(options.tolerance);
@@ -348,9 +347,8 @@ private:
           diag[i] * complex_residual_scratch_[i] - rhs_vec[i];
       sum_sq += std::norm(r);
     }
-    // Seam exercise only: ExecutionService::global_reduce does not write back.
-    ctx.execution_service.global_reduce({sum_sq}, MPI_SUM);
-    const double residual_norm = std::sqrt(sum_sq);
+    std::vector<double> reduced = ctx.execution_service.global_reduce({sum_sq}, MPI_SUM);
+    const double residual_norm = std::sqrt(reduced[0]);
 
     const double abs_tol =
         options.absolute_tolerance.value_or(options.tolerance);
