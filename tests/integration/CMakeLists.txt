@@ -54,6 +54,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_sources(openpfc-tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/cuda/padded_halo_faces.cu
     scenarios/gpu_validation/test_fd_gradient_device.cu
+    scenarios/gpu_validation/test_composite_gradient_pod_size.cu
+    scenarios/gpu_validation/test_multi_field_device.cu
   )
   target_link_libraries(openpfc-tests PRIVATE CUDA::cudart)
 endif()
