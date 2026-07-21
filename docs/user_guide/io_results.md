@@ -35,6 +35,8 @@ Requirements in settings: `saveat > 0`, `fields` array with `name` and `data`.
 
 [`include/openpfc/frontend/io/png_writer.hpp`](../../include/openpfc/frontend/io/png_writer.hpp) — `pfc::io::write_mpi_scalar_field_png_xy`: gathers a single z-slab (`nz == 1` globally) to rank 0 and writes an 8-bit grayscale PNG. Used for lightweight visualization (e.g. Allen–Cahn `apps/allen_cahn`), not the main spectral `App` JSON pipeline.
 
+**Collective contract:** All ranks in the communicator must participate consistently. Buffer size validation is fail-closed (communicator-wide agreement via `MPI_Allreduce`) before the `MPI_Allgather`/`MPI_Gatherv` calls, preventing deadlocks when a rank provides an incorrectly sized `local_field`.
+
 ## Choosing a path
 
 | Goal | Mechanism |
