@@ -67,6 +67,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include <cuda_runtime.h>
 
@@ -215,6 +216,63 @@ OPENPFC_INLINE_HD G evaluate_fd_grad(const FdGradientDevicePOD &e, int ix, int i
 }
 
 /**
+ * @brief Maximum number of per-field evaluators in a device composite.
+ *
+ * Covers in-tree multi-field FD CUDA models (wave2d / kobayashi: 2 fields)
+ * with headroom up to 4.
+ */
+inline constexpr int kMaxCompositeFields = 4;
+
+/**
+ * @brief Trivially-copyable pack of up to `kMaxCompositeFields` per-field
+ *        `FdGradientDevicePOD` payloads for multi-field device kernels.
+ *
+ * Layout is an array of the existing single-field POD (not a parallel-array
+ * redesign). `n_fields` records how many leading slots are live.
+ */
+struct CompositeGradientDevicePOD {
+  FdGradientDevicePOD fields[kMaxCompositeFields]{};
+  int n_fields{0};
+};
+
+static_assert(sizeof(CompositeGradientDevicePOD) == 2088,
+              "CompositeGradientDevicePOD size mismatch");
+
+namespace detail {
+
+template <class Composite, class... PerFieldGrads, std::size_t... Is>
+__device__ inline Composite
+evaluate_fd_grad_composite_impl(const CompositeGradientDevicePOD &eval, int ix,
+                                int iy, int iz, std::index_sequence<Is...>) {
+  return Composite{
+      ::pfc::cuda::evaluate_fd_grad<PerFieldGrads>(eval.fields[Is], ix, iy,
+                                                   iz)...};
+}
+
+} // namespace detail
+
+/**
+ * @brief Device-side multi-field evaluator: build a brace-initializable
+ *        `Composite` from per-field catalog grads aggregates.
+ *
+ * @tparam Composite      Model-owned aggregate listing one member per field
+ *                        in pack order (same contract as CPU
+ *                        `pfc::field::CompositeGradient`).
+ * @tparam PerFieldGrads  Per-field grads types passed to `evaluate_fd_grad`
+ *                        (must use catalog names `{value,x,y,z,xx,...}`).
+ */
+template <class Composite, class... PerFieldGrads>
+__device__ inline Composite
+evaluate_fd_grad_composite(const CompositeGradientDevicePOD &eval, int ix,
+                           int iy, int iz) {
+  static_assert(sizeof...(PerFieldGrads) >= 1 &&
+                    sizeof...(PerFieldGrads) <= kMaxCompositeFields,
+                "evaluate_fd_grad_composite: N must be in [1, kMaxCompositeFields]");
+  return detail::evaluate_fd_grad_composite_impl<Composite, PerFieldGrads...>(
+      eval, ix, iy, iz, std::index_sequence_for<PerFieldGrads...>{});
+}
+
+/**
  * @brief Host-side wrapper: build a populated `FdGradientDevicePOD` from a
  *        padded device buffer + grid spacing + runtime FD order.
  *
@@ -346,6 +404,63 @@ private:
   FdGradientDevicePOD m_pod;
 };
 
+/**
+ * @brief Host-side wrapper: pack per-field `FdGradientDevice` PODs into a
+ *        `CompositeGradientDevicePOD` for multi-field device launches.
+ *
+ * Mirrors CPU `pfc::field::CompositeGradient<Composite, PerField...>`:
+ * constructor takes one `FdGradientDevice<PerFieldGrads>` per field,
+ * `prepare()` is a no-op fan-out, and `pod()` returns the packed payload.
+ */
+template <class Composite, class... PerFieldGrads> class CompositeGradientDevice {
+public:
+  static_assert(sizeof...(PerFieldGrads) >= 1 &&
+                    sizeof...(PerFieldGrads) <= kMaxCompositeFields,
+                "CompositeGradientDevice: N must be in [1, kMaxCompositeFields]");
+
+  explicit CompositeGradientDevice(const FdGradientDevice<PerFieldGrads> &...evals) {
+    const FdGradientDevicePOD pods[] = {evals.pod()...};
+    m_pod.n_fields = static_cast<int>(sizeof...(PerFieldGrads));
+    for (int i = 0; i < m_pod.n_fields; ++i) {
+      m_pod.fields[i] = pods[i];
+    }
+  }
+
+  void prepare() noexcept {}
+
+  [[nodiscard]] const CompositeGradientDevicePOD &pod() const noexcept {
+    return m_pod;
+  }
+
+  int imin() const noexcept { return 0; }
+  int imax() const noexcept {
+    return m_pod.fields[0].nxp - 2 * m_pod.fields[0].hw;
+  }
+  int jmin() const noexcept { return 0; }
+  int jmax() const noexcept {
+    return m_pod.fields[0].nyp - 2 * m_pod.fields[0].hw;
+  }
+  int kmin() const noexcept { return 0; }
+  int kmax() const noexcept {
+    return m_pod.fields[0].nzp - 2 * m_pod.fields[0].hw;
+  }
+
+private:
+  CompositeGradientDevicePOD m_pod{};
+};
+
+/**
+ * @brief Free-function factory: deduces `PerFieldGrads...` from arguments.
+ *
+ * @code
+ * auto composite = pfc::cuda::create_composite_device<WaveLocal>(eval_u, eval_v);
+ * @endcode
+ */
+template <class Composite, class... PerFieldGrads>
+[[nodiscard]] inline CompositeGradientDevice<Composite, PerFieldGrads...>
+create_composite_device(const FdGradientDevice<PerFieldGrads> &...evals) {
+  return CompositeGradientDevice<Composite, PerFieldGrads...>(evals...);
+}
 
 /**
  * @brief Build a `FdGradientDevice<G>` over a halo-padded brick.
