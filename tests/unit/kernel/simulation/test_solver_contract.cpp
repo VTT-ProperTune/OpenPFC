@@ -8,6 +8,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include "openpfc/kernel/simulation/solver_contract.hpp"
+#include <complex>
 #include <tuple>
 #include <vector>
 #include <functional>
@@ -62,6 +63,17 @@ TEST_CASE("test_linear_operator_desc_with_vector_context") {
     REQUIRE(desc.operator_identifier == "stencil");
     REQUIRE(std::holds_alternative<std::vector<double>>(desc.operator_context));
     REQUIRE(std::get<std::vector<double>>(desc.operator_context) == coeffs);
+}
+
+TEST_CASE("test_linear_operator_desc_with_complex_vector_context") {
+    std::vector<std::complex<double>> coeffs{
+        {1.0, 0.0}, {2.0, 1.0}, {3.0, -1.0}};
+    LinearOperatorDesc desc{"spectral_diagonal", std::nullopt, coeffs};
+    REQUIRE(desc.operator_identifier == "spectral_diagonal");
+    REQUIRE(std::holds_alternative<std::vector<std::complex<double>>>(
+        desc.operator_context));
+    REQUIRE(std::get<std::vector<std::complex<double>>>(desc.operator_context) ==
+            coeffs);
 }
 
 TEST_CASE("test_solve_options_default_criteria") {
