@@ -7,6 +7,8 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
+#include <stdexcept>
+#include <string>
 
 namespace {
 
@@ -206,4 +208,31 @@ TEST_CASE("create_padded_face_types_6: throws on negative halo width",
   REQUIRE_THROWS_AS(pfc::halo::create_padded_face_types_6(nx, ny, nz, -1,
                                                          MPI_DOUBLE),
                     std::invalid_argument);
+}
+
+TEST_CASE("create_padded_face_types_6: thin owned core throws before MPI",
+          "[halo][padded_mpi_types]") {
+  // Owned nx=1 < hw=2 — send slab of thickness hw cannot fit in owned core.
+  REQUIRE_THROWS_AS(pfc::halo::create_padded_face_types_6(1, 4, 4, 2, MPI_DOUBLE),
+                    std::invalid_argument);
+  try {
+    (void)pfc::halo::create_padded_face_types_6(1, 4, 4, 2, MPI_DOUBLE);
+    FAIL("expected throw");
+  } catch (const std::invalid_argument &e) {
+    const std::string msg = e.what();
+    REQUIRE(msg.find("1x4x4") != std::string::npos);
+    REQUIRE(msg.find("halo_width=2") != std::string::npos);
+  }
+}
+
+TEST_CASE("create_padded_face_types_6: borderline owned == hw constructs",
+          "[halo][padded_mpi_types]") {
+  const int nx = 2, ny = 2, nz = 2;
+  const int hw = 2;
+  auto faces = pfc::halo::create_padded_face_types_6(nx, ny, nz, hw, MPI_DOUBLE);
+
+  int size = 0;
+  MPI_Type_size(faces[0].send_type.get(), &size);
+  REQUIRE(static_cast<std::size_t>(size) / sizeof(double) ==
+          static_cast<std::size_t>(hw * ny * nz));
 }
