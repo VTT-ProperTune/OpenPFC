@@ -270,7 +270,9 @@ TEST_CASE("BinaryWriter and BinaryReader reject invalid domain geometry",
     BinaryWriter writer("unused.bin");
     REQUIRE_THROWS_AS(writer.set_domain({8, 8, 8}, {8, 8, 8}, {4, 0, 0}),
                       std::invalid_argument);
-    REQUIRE_THROWS_AS(writer.write(0, RealField(1)), std::runtime_error);
+    // Domain members stay default (non-positive); write fails closed before
+    // MPI-IO (checked_local_extent_product), not via a successful configure.
+    REQUIRE_THROWS_AS(writer.write(0, RealField(1)), std::invalid_argument);
   }
 }
 
