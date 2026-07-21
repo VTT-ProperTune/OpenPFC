@@ -189,6 +189,7 @@ take an extra `const ButcherTableau<double>& tableau`. Ready-made tableaus from
 | `make_rk2_heun<T>()` | RK2 Heun |
 | `make_rk4_classical<T>()` | Classical RK4 |
 | `make_embedded_rk23<T>()` | Bogacki–Shampine 3(2) |
+| `make_embedded_rk45<T>()` | Dormand–Prince 5(4) |
 
 Standalone Heun steppers (`RK2HeunStepper`, `RK3HeunStepper` in
 `rk2_heun.hpp` / `rk3_heun.hpp`) have **no** `create(...)` overload — construct
@@ -257,6 +258,25 @@ work. Coverage:
 [`test_spectral_exp_coefficients.cpp`](../../tests/unit/kernel/integrator/test_spectral_exp_coefficients.cpp)
 (`[integrator][spectral_exp]`).
 
+### Embedded RK step attempts (`EmbeddedRKStepper`)
+
+For adaptive controllers that need local truncation-error evidence without
+mutating the accepted state, use
+[`embedded_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/embedded_rk.hpp):
+
+```cpp
+EmbeddedRKStepper stepper(local_size, make_embedded_rk45<double>(), rhs);
+auto result = stepper.attempt(t, dt, u);  // u is const — never written
+// result.u_high / result.u_low / result.error  (views into method-owned buffers)
+// result.success == computational completion only (not accept/reject)
+```
+
+`attempt` evaluates shared stages once (`rhs_evals == tableau.stage_count()`),
+accumulates with primary `b` into isolated `u_high` and with embedded `b_hat`
+into `u_low`, and forms `error = u_high - u_low`. Accept/reject and next-`dt`
+selection stay driver/controller-owned. FSAL stage reuse is deferred; any
+future cache must invalidate on reject, restart, or configuration change.
+
 ## 5. Future stepper integration
 
 New steppers should follow the duck-typed surface already formalized in
@@ -282,10 +302,13 @@ Recommended pattern:
    [`Simulator::step_with_physics`](../../include/openpfc/kernel/simulation/simulator.hpp)
    between `begin_integrator_step()` / `end_integrator_step()`.
 
-IMEX and adaptive step-size control remain future work tracked in
-[`refactoring_roadmap.md`](refactoring_roadmap.md); the checkpoint protocol on
+Embedded pair evidence already exists under `steppers/`
+(`EmbeddedRKStepper::attempt`, `make_embedded_rk45` / `make_embedded_rk23`).
+IMEX schemes and adaptive *controller* policy (accept/reject and next-`dt`
+selection) remain future/driver-owned work tracked in
+[`refactoring_roadmap.md`](refactoring_roadmap.md). The checkpoint protocol on
 `EulerStepper` (`save_state` / `restore_state` / `can_rollback`) is the hook
-those features are expected to use.
+those controller features are expected to use.
 
 ## 6. Migration path from virtual step methods to explicit stepper composition
 
