@@ -174,7 +174,18 @@ If `per_rank` is provided, the exchanger calls `per_rank(rank)` for its own rank
 
 For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonical example), pass `presets::Axes2D()` to both `PaddedDeviceHaloExchanger` and `BatchedPaddedDeviceHalo` to remove all ±Z communication / self-pack work without changing the rest of the driver.
 
-> **Inter-rank consistency:** a runtime check that paired ranks agree on directions across their boundary is **not** built into the constructors today; sets that do not match cause MPI message tag mismatches at runtime. The library aborts with an unmatched-Wait error in that case rather than a clean ctor throw — fix the per-rank selector. (A planned follow-up will validate via `MPI_Allgather` at construction.)
+> **Inter-rank consistency:** CPU exchangers that accept a `HaloDirectionSet` /
+> `HaloDirectionSelector` (`HaloExchanger`, `PaddedHaloExchanger`,
+> `PersistentHaloExchanger`) call
+> `pfc::halo::validate_neighbour_direction_agreement` immediately after
+> `resolve_direction_set`. That helper `MPI_Allgather`s a canonical encoding of
+> each rank's resolved set and checks **paired-boundary** agreement: every
+> active direction `d` toward neighbour `n` requires `-d` in `n`'s set (global
+> set identity is not required). A mismatch throws `std::runtime_error` at
+> construction — before any exchange posts — rather than hanging on an unmatched
+> Waitall. **Follow-up:** CUDA/HIP `PaddedDeviceHaloExchanger` /
+> `FullPaddedDeviceHalo` (and app-local `BatchedPaddedDeviceHalo`) dirs/selector
+> constructors do not yet call the same helper.
 
 ---
 
