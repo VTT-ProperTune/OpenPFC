@@ -17,7 +17,7 @@
  * `FdGradientDevice<G>` is its **GPU twin**: same per-member concept
  * introspection, same FD stencils (orders 2..14 for D1, orders 2..20
  * for D2), same compile-time pruning of the catalog `{value, x, y, z,
- * xx, yy, zz}`. Only the moving parts differ:
+ * xx, yy, zz, xy, xz, yz}`. Only the moving parts differ:
  *
  *   - The evaluator reads from a **PaddedBrick**-layout device buffer,
  *     so the input pointer points at cell `(0, 0, 0)` of the padded box
@@ -31,11 +31,13 @@
  *     kernel by value (the pre-scaling lifts the `int64_t * double`
  *     conversion out of the inner loop).
  *
- * Like the CPU twin, mixed second derivatives `xy / xz / yz` are
- * **rejected at compile time**. Lifting that requires both the
- * corner-filled halo (already shipped on the GPU side via
- * [`FullPaddedDeviceHalo`](full_padded_device_halo.hpp)) and a tensor
- * stencil device routine — a follow-up commit.
+ * Mixed second derivatives `xy / xz / yz` are supported via a separable
+ * D1⊗D1 product on the padded buffer (same pre-scaled `cx1`/`cy1`/`cz1`
+ * rows as first derivatives). Callers that request those members must
+ * ensure edge and corner ghosts are valid — typically
+ * [`FullPaddedDeviceHalo`](full_padded_device_halo.hpp), or an equivalent
+ * corner fill (e.g. writing the analytic field into the full padded host
+ * buffer in single-rank tests).
  *
  * **Maximum half-widths** baked into the POD: `MAX_HW1 = 7` (D1 orders
  * 2..14) and `MAX_HW2 = 10` (D2 orders 2..20). Higher orders simply
@@ -57,6 +59,8 @@
  *
  * @see openpfc/kernel/field/fd_gradient.hpp — CPU twin
  * @see openpfc/runtime/hip/for_each_interior_device.hpp — HIP driver loop
+ * @see openpfc/runtime/hip/full_padded_device_halo.hpp — corner-filled
+ *      halo required when `G` declares `xy` / `xz` / `yz`
  * @see openpfc/runtime/cuda/fd_gradient_device.hpp — CUDA twin
  */
 
@@ -115,8 +119,8 @@ struct FdGradientDevicePOD {
 
   // Half-widths for first and second derivatives (populated only if the
   // corresponding derivative is present in `G`).
-  int hw1{0}; ///< D1 half-width (populated if `has_x<G> || has_y<G> || has_z<G>`).
-  int hw2{0}; ///< D2 half-width (populated if `has_xx<G> || has_yy<G> || has_zz<G>`).
+  int hw1{0}; ///< D1 half-width (also when `has_xy|has_xz|has_yz`).
+  int hw2{0}; ///< D2 half-width (populated if `has_xx|has_yy|has_zz`).
 
   // Pre-scaled FD weights. `cx1[k]` is the weight at offset `+k` along x
   // (anti-symmetric: the `-k` offset uses `-cx1[k]`). `cx2[k]` is the
@@ -147,6 +151,10 @@ struct FdGradientDevicePOD {
  * @param iz   Owned z-coordinate in `[0, nz)`.
  *
  * @return A `G` instance with each member populated from the padded buffer.
+ *
+ * @note Mixed seconds `g.xy` / `g.xz` / `g.yz` use a separable D1⊗D1
+ *       product. The padded buffer must have valid edge/corner ghosts
+ *       (`pfc::hip::FullPaddedDeviceHalo` or equivalent corner fill).
  */
 template <class G>
 OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
@@ -226,6 +234,47 @@ OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
     g.zz = acc;
   }
 
+  // Mixed seconds: separable D1⊗D1 on the padded buffer.
+  if constexpr (pfc::field::has_xy<G>) {
+    double acc = 0.0;
+    for (int i = 1; i <= eval.hw1; ++i) {
+      const std::ptrdiff_t is = static_cast<std::ptrdiff_t>(i) * eval.sx;
+      for (int j = 1; j <= eval.hw1; ++j) {
+        const std::ptrdiff_t js = static_cast<std::ptrdiff_t>(j) * eval.sy;
+        acc += eval.cx1[i] * eval.cy1[j] *
+               (u[c0 + is + js] - u[c0 - is + js] - u[c0 + is - js] +
+                u[c0 - is - js]);
+      }
+    }
+    g.xy = acc;
+  }
+  if constexpr (pfc::field::has_xz<G>) {
+    double acc = 0.0;
+    for (int i = 1; i <= eval.hw1; ++i) {
+      const std::ptrdiff_t is = static_cast<std::ptrdiff_t>(i) * eval.sx;
+      for (int k = 1; k <= eval.hw1; ++k) {
+        const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * eval.sz;
+        acc += eval.cx1[i] * eval.cz1[k] *
+               (u[c0 + is + ks] - u[c0 - is + ks] - u[c0 + is - ks] +
+                u[c0 - is - ks]);
+      }
+    }
+    g.xz = acc;
+  }
+  if constexpr (pfc::field::has_yz<G>) {
+    double acc = 0.0;
+    for (int j = 1; j <= eval.hw1; ++j) {
+      const std::ptrdiff_t js = static_cast<std::ptrdiff_t>(j) * eval.sy;
+      for (int k = 1; k <= eval.hw1; ++k) {
+        const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * eval.sz;
+        acc += eval.cy1[j] * eval.cz1[k] *
+               (u[c0 + js + ks] - u[c0 - js + ks] - u[c0 + js - ks] +
+                u[c0 - js - ks]);
+      }
+    }
+    g.yz = acc;
+  }
+
   return g;
 }
 
@@ -258,12 +307,6 @@ public:
    */
   FdGradientDevice(const double *d_core, int nx, int ny, int nz, double dx,
                    double dy, double dz, int halo_width, int order) {
-    static_assert(!pfc::field::has_xy<G> && !pfc::field::has_xz<G> &&
-                      !pfc::field::has_yz<G>,
-                  "FdGradientDevice: mixed second derivatives (xy/xz/yz) are "
-                  "not yet implemented (corner-filled halo is shipped; the "
-                  "tensor-product device routine is a follow-up).");
-
     m_pod.d_core = d_core;
     m_pod.hw = halo_width;
     m_pod.nxp = nx + 2 * halo_width;
@@ -306,8 +349,12 @@ public:
       }
     }
 
+    // D1 weights also feed mixed seconds (D1⊗D1); load whenever any first
+    // or mixed member is requested so mixed-only aggregates still get
+    // populated cx1/cy1/cz1 rows.
     if constexpr (pfc::field::has_x<G> || pfc::field::has_y<G> ||
-                  pfc::field::has_z<G>) {
+                  pfc::field::has_z<G> || pfc::field::has_xy<G> ||
+                  pfc::field::has_xz<G> || pfc::field::has_yz<G>) {
       pfc::field::fd::EvenCentralD1View st1{};
       if (!pfc::field::fd::lookup_even_central_d1(order, &st1)) {
         throw std::invalid_argument("FdGradientDevice: order " +
