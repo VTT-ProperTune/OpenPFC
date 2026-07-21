@@ -140,22 +140,30 @@ The tuple protocol from [`include/openpfc/kernel/field/tuple_protocol.hpp`](../.
 // include/openpfc/kernel/field/tuple_protocol.hpp
 namespace pfc::field::detail {
 
-template <class T>
-concept has_as_tuple = requires(T &t) { t.as_tuple(); };
+template <class T, class = void>
+struct has_as_tuple : std::false_type {};
 
 template <class T>
-concept is_tuple = /* std::tuple specialization */;
+struct has_as_tuple<T, std::void_t<decltype(std::declval<T &>().as_tuple())>>
+    : std::true_type {};
+
+template <class T> struct is_std_tuple : std::false_type {};
+template <class... Ts> struct is_std_tuple<std::tuple<Ts...>> : std::true_type {};
+
+template <class T>
+struct is_tuple : is_std_tuple<std::remove_cv_t<std::remove_reference_t<T>>> {};
 
 /**
  * @brief Normalize `t` into a tuple-like view for fan-out.
  *
  * Returns `t.as_tuple()` if `T` opts in, `t` itself if it is already a
  * `std::tuple`, otherwise `std::forward_as_tuple(t)` (one-element view).
+ * Host-oriented — device multi-field scatter uses `DevicePtrPackN` instead.
  */
 template <class T> constexpr decltype(auto) to_tuple(T &t) {
-  if constexpr (has_as_tuple<T>) {
+  if constexpr (has_as_tuple<T>::value) {
     return t.as_tuple();  // user-defined opt-in
-  } else if constexpr (is_tuple<T>) {
+  } else if constexpr (is_tuple<T>::value) {
     return (t);  // std::tuple accepted as-is
   } else {
     return std::forward_as_tuple(t);  // scalar handled as 1-tuple
