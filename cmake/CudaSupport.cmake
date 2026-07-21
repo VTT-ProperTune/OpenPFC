@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # CUDA support detection and configuration
@@ -15,6 +15,18 @@ if(OpenPFC_ENABLE_CUDA)
     if(CUDAToolkit_FOUND)
         set(OpenPFC_CUDA_AVAILABLE TRUE)
         add_compile_definitions(OpenPFC_ENABLE_CUDA)
+
+        # Floor for toolkit features used by the CUDA runtime headers and
+        # device drivers. This does *not* claim device-side std::tuple /
+        # std::get / std::apply work; multi-field device scatter uses
+        # DevicePtrPackN (see for_each_interior_device.hpp).
+        if(DEFINED CMAKE_CUDA_COMPILER_VERSION AND CMAKE_CUDA_COMPILER_VERSION VERSION_LESS "11.0")
+            message(FATAL_ERROR
+                "OpenPFC requires CUDA toolkit 11.0 or higher when OpenPFC_ENABLE_CUDA=ON. "
+                "Found CUDA ${CMAKE_CUDA_COMPILER_VERSION}. "
+                "This floor does not claim device-side std::tuple/std::get/std::apply work; "
+                "multi-field device scatter uses DevicePtrPackN (see for_each_interior_device.hpp).")
+        endif()
 
         # CMake 3.22 can detect modern nvcc versions but does not know the
         # CUDA20 dialect flag. OpenPFC public headers require C++20, so teach
