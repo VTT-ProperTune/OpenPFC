@@ -144,47 +144,66 @@ Both `RHSFields` and `TargetFields` must satisfy the tuple protocol from `field/
 
 ## Usage examples
 
-### Spectral diagonal solver (in-place)
+### SpectralDiagonalSolver (production CPU diagonal solve)
+
+Header: `include/openpfc/kernel/simulation/spectral_diagonal_solver.hpp`.
+
+`SpectralDiagonalSolver` is a header-only value type that models `SolveFunction`.
+It reads real diagonal coefficients from `LinearOperatorDesc::operator_context`
+(`std::vector<double>`), writes element-wise @f$ s = b / d @f$ into
+caller-owned result storage, and returns `SolveOutcome` residual evidence.
+Direct-solve semantics: `iteration_count = 1` on a completed attempt; there is
+no separate algorithm field on `SolveOutcome`.
 
 ```cpp
-auto spectral_diagonal_solver = [](const LinearOperatorDesc& desc,
-                                    const auto& rhs,
-                                    auto& target,
-                                    const SolveOptions& opts,
-                                    const StageContext& ctx) {
-    // Extract spectral propagator from operator_context
-    const auto& propagator = std::get<std::vector<double>>(desc.operator_context);
+#include "openpfc/kernel/simulation/spectral_diagonal_solver.hpp"
 
-    // Element-wise division: target = rhs / propagator
-    // (using field bundle iteration utilities)
-    for_each_interior(rhs, target, [&](auto rhs_val, auto target_val) {
-        target_val = rhs_val / propagator[/* index */];
-    });
+using namespace pfc::sim;
 
-    return SolveOutcome<decltype(target)>{
-        target,
-        ConvergenceStatus::converged,
-        1,
-        0.0,
-        std::nullopt
-    };
-};
+SpectralDiagonalConfig config;
+config.nullspace_policy = DiagonalNullspacePolicy::fail; // or project / regularize
+config.singular_threshold = 1e-14;  // τ
+config.null_mode_value = 0.0;      // project only
+config.regularization = 0.0;       // λ; must be > 0 when policy is regularize
 
-// Usage
-double rhs_field = 1.0;
-double solution_field = 0.0;
-auto rhs_bundle = std::tie(rhs_field);
-auto target_bundle = std::tie(solution_field);
+SpectralDiagonalSolver solver(config);
 
-LinearOperatorDesc op_desc{"spectral_diagonal", std::nullopt, propagator_array};
-SolveOptions opts{1000, 1e-8};
+std::vector<double> diag{2.0, 4.0, 5.0};
+std::vector<double> rhs{2.0, 8.0, 15.0};
+std::vector<double> target(3, 0.0);
+
+LinearOperatorDesc op_desc{"spectral_diagonal", std::nullopt, diag};
+SolveOptions opts{};
+opts.absolute_tolerance = 1e-12;
 StageContext ctx{current_time, execution_service};
 
-auto outcome = spectral_diagonal_solver(op_desc, rhs_bundle, target_bundle, opts, ctx);
+auto outcome = solver(op_desc, rhs, target, opts, ctx);
 if (outcome.status == ConvergenceStatus::converged) {
-    // Solution is already in target_bundle
+    // Solution is already in target; outcome.solution references it
 }
 ```
+
+#### Nullspace mathematics
+
+Let @f$ \tau @f$ = `singular_threshold`. Mode @f$ i @f$ is singular when
+@f$ |d_i| < \tau @f$. Residual always uses the **original** diagonal:
+@f$ r_i = d_i s_i - b_i @f$ (not @f$ d_i + \lambda @f$).
+
+| Policy | Behavior |
+|--------|----------|
+| `fail` | Any singular mode → `ill_conditioned`, `target_out` unchanged |
+| `project` | Singular → @f$ s_i = @f$ `null_mode_value`; else @f$ s_i = b_i / d_i @f$. For @f$ d_i=0 @f$, @f$ s_i=0 @f$, residual @f$ r_i = -b_i @f$ — keep @f$ \|b_i\| @f$ small on null modes when compatibility is required |
+| `regularize` | Require @f$ \lambda = @f$ `regularization` @f$ > 0 @f$; @f$ s_i = b_i / (d_i + \lambda) @f$ for every @f$ i @f$ (explicit additive shift in units of @f$ d @f$, not a silent epsilon) |
+
+`operator_identifier` must be empty or `"spectral_diagonal"`. Absolute
+threshold is `absolute_tolerance.value_or(tolerance)`.
+
+#### Workspace ownership (scratch vs checkpoint)
+
+Solver-owned `residual_scratch_` holds the candidate solution during a solve
+attempt. It is **recomputable transient state** and is **not** part of any
+checkpoint, `save_state`, or `restore_state` API. On failure or cancellation,
+`target_out` is left unmodified (contract rule).
 
 ### Iterative solver with preconditioning (out-of-place)
 
@@ -248,6 +267,8 @@ auto iterative_solver = [](const LinearOperatorDesc& desc,
 ### Workspace ownership
 
 - **Solver-owned:** Member buffers with lifetime bounded by solve attempt
+  (e.g. `SpectralDiagonalSolver::residual_scratch_` — recomputable transient
+  state, **excluded from checkpoint / save_state serialization**)
 - **Caller-lent:** Scratch arrays passed via `SolveOptions` context
 - **Execution-pooled:** Requested through a workspace service
 - **Never leaks** into physics models
