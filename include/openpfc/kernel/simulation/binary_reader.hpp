@@ -18,6 +18,10 @@
  * must call `read()` together with the same
  * filename and matching `set_domain()` layout; otherwise the program may hang.
  *
+ * @note Buffer vs domain: each rank's buffer length must equal the local brick
+ * product from `set_domain`. A mismatch is fail-closed (communicator-wide
+ * agreement via `MPI_Allreduce`) before `MPI_File_open` / `MPI_File_read_all`.
+ *
  * The reader handles parallel I/O with proper domain decomposition, allowing
  * each MPI rank to read only its local portion of the data.
  *
@@ -87,6 +91,31 @@ private:
   template <typename T>
   MPI_Status read_mpi_binary(const std::string &filename, std::vector<T> &data,
                              MPI_Datatype etype, const char *element_name) {
+    const std::size_t expected =
+        pfc::mpi::checked_local_extent_product(m_local, "BinaryReader::read");
+
+    int local_ok = 1;
+    std::string error_msg;
+    if (data.size() != expected) {
+      std::ostringstream oss;
+      oss << "BinaryReader::read: buffer size mismatch (expected " << expected
+          << " elements from set_domain, got " << data.size() << ")";
+      error_msg = oss.str();
+      local_ok = 0;
+    }
+
+    int global_ok = 0;
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
+        "MPI_Allreduce on buffer size check");
+    if (global_ok == 0) {
+      if (!error_msg.empty()) {
+        throw std::runtime_error(error_msg);
+      }
+      throw std::runtime_error(
+          "BinaryReader::read: collective buffer size mismatch on peer rank");
+    }
+
     ensure_filetype(etype);
 
     const int count =

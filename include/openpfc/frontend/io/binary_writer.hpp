@@ -50,6 +50,10 @@ namespace pfc {
  * consistent `set_domain()` and must reach `MPI_File_close`;
  * skipping the call on some ranks will deadlock the job.
  *
+ * @note Buffer vs domain: each rank's buffer length must equal the local brick
+ * product from `set_domain`. A mismatch is fail-closed (communicator-wide
+ * agreement via `MPI_Allreduce`) before `MPI_File_open` / `MPI_File_write_all`.
+ *
  * @note Filetype/etype: `set_domain` only stores the decomposition. Before each
  * write, the MPI filetype is rebuilt from the same element type used as the
  * `MPI_File_set_view` etype (`MPI_DOUBLE` or `MPI_DOUBLE_COMPLEX`), so filetype
@@ -138,6 +142,31 @@ public:
 
   template <typename T>
   MPI_Status write_mpi_binary(int increment, const std::vector<T> &data) {
+    const std::size_t expected = pfc::mpi::checked_local_extent_product(
+        m_local, "BinaryWriter::write");
+
+    int local_ok = 1;
+    std::string error_msg;
+    if (data.size() != expected) {
+      std::ostringstream oss;
+      oss << "BinaryWriter::write: buffer size mismatch (expected " << expected
+          << " elements from set_domain, got " << data.size() << ")";
+      error_msg = oss.str();
+      local_ok = 0;
+    }
+
+    int global_ok = 0;
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
+        "MPI_Allreduce on buffer size check");
+    if (global_ok == 0) {
+      if (!error_msg.empty()) {
+        throw std::runtime_error(error_msg);
+      }
+      throw std::runtime_error(
+          "BinaryWriter::write: collective buffer size mismatch on peer rank");
+    }
+
     MPI_Datatype type = get_type(data);
     ensure_filetype(type);
 
