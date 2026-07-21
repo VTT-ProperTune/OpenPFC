@@ -223,10 +223,15 @@ public:
     /**
      * @brief Perform global reduction of scalar values across all ranks
      *
-     * @param data Data values to reduce
+     * Returns a vector of reduced values with the same size as the input.
+     * For MPI runs, this performs an Allreduce operation across all ranks.
+     * For serial runs, this returns a copy of the input values.
+     *
+     * @param data Data values to reduce (local values from a single rank)
      * @param op MPI reduction operation (e.g., MPI_SUM, MPI_MAX)
+     * @return std::vector<double> Reduced values across all ranks
      */
-    virtual void global_reduce(const std::vector<double>& data, MPI_Op op) = 0;
+    virtual std::vector<double> global_reduce(const std::vector<double>& data, MPI_Op op) = 0;
 };
 
 /**
