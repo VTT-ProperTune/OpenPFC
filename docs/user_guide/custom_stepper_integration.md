@@ -395,7 +395,7 @@ The key advantages:
 - ✅ **RK2 stepper**: Fully implemented in [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp) (`make_rk2_midpoint`/`make_rk2_heun` tableaus)
 - ✅ **RK4 stepper**: Fully implemented in [`include/openpfc/kernel/simulation/steppers/explicit_rk.hpp`](../../include/openpfc/kernel/simulation/steppers/explicit_rk.hpp) (`make_rk4_classical` tableau)
 - ❌ **Adaptive RK stepper**: Exists on branch `ahojukka5/work-0070-add-adaptive-runge-kutta-stepper-with`, not yet merged to master
-- ⏳ **IMEX methods**: Design phase, no implementation yet
+- ⏳ **IMEX methods**: First-order IMEX Euler is landed on CPU in [`include/openpfc/kernel/simulation/steppers/imex_euler.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_euler.hpp) (`ImexEulerStepper` / `MultiImexEulerStepper` attempt/commit isolation with injected `SolveFunction` + `LinearOperatorDesc`). Higher-order IMEX-RK and production spectral diagonal solvers remain separate work (e.g. board #161).
 
 Check the [refactoring roadmap](../development/refactoring_roadmap.md) for progress on higher-order stepper implementations.
 
