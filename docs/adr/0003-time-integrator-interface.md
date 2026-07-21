@@ -140,6 +140,7 @@ The tuple protocol from [`include/openpfc/kernel/field/tuple_protocol.hpp`](../.
 // include/openpfc/kernel/field/tuple_protocol.hpp
 namespace pfc::field::detail {
 
+namespace sfinae {
 template <class T, class = void>
 struct has_as_tuple : std::false_type {};
 
@@ -152,6 +153,13 @@ template <class... Ts> struct is_std_tuple<std::tuple<Ts...>> : std::true_type {
 
 template <class T>
 struct is_tuple : is_std_tuple<std::remove_cv_t<std::remove_reference_t<T>>> {};
+} // namespace sfinae
+
+// Boolean predicates preserve former concept call syntax (`has_as_tuple<T>`).
+template <class T>
+inline constexpr bool has_as_tuple = sfinae::has_as_tuple<T>::value;
+template <class T>
+inline constexpr bool is_tuple = sfinae::is_tuple<T>::value;
 
 /**
  * @brief Normalize `t` into a tuple-like view for fan-out.
@@ -161,9 +169,9 @@ struct is_tuple : is_std_tuple<std::remove_cv_t<std::remove_reference_t<T>>> {};
  * Host-oriented — device multi-field scatter uses `DevicePtrPackN` instead.
  */
 template <class T> constexpr decltype(auto) to_tuple(T &t) {
-  if constexpr (has_as_tuple<T>::value) {
+  if constexpr (has_as_tuple<T>) {
     return t.as_tuple();  // user-defined opt-in
-  } else if constexpr (is_tuple<T>::value) {
+  } else if constexpr (is_tuple<T>) {
     return (t);  // std::tuple accepted as-is
   } else {
     return std::forward_as_tuple(t);  // scalar handled as 1-tuple
