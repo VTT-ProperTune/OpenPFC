@@ -1,6 +1,7 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <complex>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -67,4 +68,16 @@ TEST_CASE("FFT - backward transformation", "[fft][unit]") {
 
   // Average value should be (1.0 + 2.0) / 2 = 1.5
   REQUIRE_THAT(output[0], WithinAbs(1.5, 0.01));
+}
+
+TEST_CASE("FFT workspace allocation - FFTW reports one complex workspace",
+          "[fft][unit][allocation]") {
+  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+                             GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = decomposition::create(world, 1);
+  auto fft = fft::create(decomposition);
+
+  REQUIRE(fft.size_workspace() > 0);
+  REQUIRE(fft.get_allocated_memory_bytes() ==
+          fft.size_workspace() * sizeof(std::complex<double>));
 }
