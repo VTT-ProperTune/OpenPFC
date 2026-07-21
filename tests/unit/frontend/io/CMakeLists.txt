@@ -10,6 +10,14 @@ add_test(NAME vtk_writer_parallel COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPRO
                  ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_vtk_writer> ${MPIEXEC_POSTFLAGS})
 set_tests_properties(vtk_writer vtk_writer_parallel PROPERTIES RUN_SERIAL TRUE)
 
+add_executable(test_binary_writer test_binary_writer.cpp)
+target_link_libraries(test_binary_writer PRIVATE openpfc Catch2::Catch2 MPI::MPI_CXX)
+add_test(NAME binary_writer COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1
+                 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_binary_writer> ${MPIEXEC_POSTFLAGS})
+add_test(NAME binary_writer_parallel COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:test_binary_writer> ${MPIEXEC_POSTFLAGS})
+set_tests_properties(binary_writer binary_writer_parallel PROPERTIES RUN_SERIAL TRUE)
+
 add_executable(test_logging test_logging.cpp)
 target_link_libraries(test_logging PRIVATE openpfc Catch2::Catch2WithMain)
 add_test(NAME logging COMMAND $<TARGET_FILE:test_logging>)
