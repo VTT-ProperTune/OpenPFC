@@ -4,6 +4,7 @@
 target_sources(openpfc-tests
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_butcher_tableau.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_embedded_rk.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_stage_workspace.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_integrator_method.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_integrator_base.cpp
