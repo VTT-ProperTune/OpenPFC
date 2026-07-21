@@ -34,3 +34,4 @@ docs/html
 docs/latex
 **/__pycache__/
 scripts/mpi_inter_node_bw/mpi_inter_node_bw
+scripts/logs/
