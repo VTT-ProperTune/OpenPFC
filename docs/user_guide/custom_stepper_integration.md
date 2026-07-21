@@ -191,12 +191,15 @@ auto composition =
 
 - `compose_scalar` / `compose_multi` validate `IntegratorComposeConfig`
   (positive `dt`, adaptive capability via `validate_method`) and return an
-  `IntegratorComposition` with declared `WorkspaceOwnership` and optional
-  `MethodStateCapability` (empty for stateless Euler).
+  `IntegratorComposition` whose stepper is an `ExplicitRKStepper` /
+  `MultiExplicitRKStepper` built with `make_tableau(method)`, plus declared
+  `WorkspaceOwnership` and optional `MethodStateCapability` (empty for these
+  stateless fixed-step methods).
+- Builtin method ids: `euler`, `rk2_midpoint`, `rk2_heun`, `rk4_classical`.
 - Unknown identifiers, invalid config, and capability mismatches throw
   `ComposeError` before any step is taken.
 - Extend the table with `register_method_composer` so new methods do not
-  require driver-side method switches. Euler is registered as a builtin.
+  require driver-side method switches.
 
 See also [Time integration architecture](../development/time_integration_architecture.md).
 
