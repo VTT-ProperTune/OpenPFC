@@ -22,24 +22,34 @@
 namespace pfc {
 namespace core {
 
-/** @brief Gather for SparseVector<HipTag, double> (HIP device). */
+/**
+ * @brief Gather for SparseVector<HipTag, double> (HIP device).
+ * @note Fail-closed OOB parity with CPU `pfc::core::gather` in
+ *       `kernel/decomposition/sparse_vector_ops.hpp`: `idx >= source_size`
+ *       throws `std::runtime_error("gather: index out of bounds")`.
+ */
 inline void gather(SparseVector<backend::HipTag, double> &sparse_vector,
                    const double *source, size_t source_size) {
   if (sparse_vector.empty()) {
     return;
   }
   gather_hip_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                   sparse_vector.data().data(), source, source_size);
+                  sparse_vector.data().data(), source, source_size);
 }
 
-/** @brief Scatter for SparseVector<HipTag, double> (HIP device). */
+/**
+ * @brief Scatter for SparseVector<HipTag, double> (HIP device).
+ * @note Fail-closed OOB parity with CPU `pfc::core::scatter` in
+ *       `kernel/decomposition/sparse_vector_ops.hpp`: `idx >= dest_size`
+ *       throws `std::runtime_error("scatter: index out of bounds")`.
+ */
 inline void scatter(const SparseVector<backend::HipTag, double> &sparse_vector,
                     double *dest, size_t dest_size) {
   if (sparse_vector.empty()) {
     return;
   }
   scatter_hip_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                    sparse_vector.data().data(), dest, dest_size);
+                   sparse_vector.data().data(), dest, dest_size);
 }
 
 } // namespace core
