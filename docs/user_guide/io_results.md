@@ -17,7 +17,7 @@ OpenPFC separates the kernel interface `ResultsWriter` from frontend implementat
 
 ## Binary output (MPI-IO)
 
-[`include/openpfc/frontend/io/binary_writer.hpp`](../../include/openpfc/frontend/io/binary_writer.hpp) — `BinaryWriter`: raw binary, collective MPI-IO. Documented caveats: all ranks in the communicator must participate consistently in `write()` to avoid deadlock.
+[`include/openpfc/frontend/io/binary_writer.hpp`](../../include/openpfc/frontend/io/binary_writer.hpp) — `BinaryWriter`: raw binary, collective MPI-IO. Documented caveats: all ranks in the communicator must participate consistently in `write()` to avoid deadlock. Both `BinaryWriter::set_domain` and kernel `BinaryReader::set_domain` fail closed on invalid geometry (non-positive extents, negative offsets, or a piece outside the global box); see [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md).
 
 **Format (layout, filename `printf` pattern, collectives):** [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md).
 
