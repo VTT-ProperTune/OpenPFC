@@ -401,12 +401,16 @@ private:
         throw std::runtime_error("PaddedDeviceHaloExchanger: self-neighbor halo "
                                  "needs non-zero device scratch");
       }
+      // Opposite-face unpack matches FullPaddedDeviceHalo::run_self_pass_:
+      // pack face i's owned send slab into the opposite face's recv halo.
       for (std::size_t i = 0; i < 6; ++i) {
         if (!m_active[i] || m_neighbors[i] != m_rank) {
           continue;
         }
         const auto &send = m_face_specs[i].first;
-        const auto &recv = m_face_specs[i].second;
+        const auto &recv =
+            m_face_specs[static_cast<std::size_t>(opposite_slot(static_cast<int>(i)))]
+                .second;
         detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
                                         send.oz, send.sx, send.sy, send.sz, m_nxp,
                                         m_nyp, m_nzp, stream);
@@ -454,12 +458,15 @@ private:
         throw std::runtime_error("PaddedDeviceHaloExchanger: packed self-neighbor "
                                  "halo needs non-zero device scratch");
       }
+      // Opposite-face unpack matches FullPaddedDeviceHalo::run_self_pass_.
       for (std::size_t i = 0; i < 6; ++i) {
         if (!m_active[i] || m_neighbors[i] != m_rank) {
           continue;
         }
         const auto &send = m_face_specs[i].first;
-        const auto &recv = m_face_specs[i].second;
+        const auto &recv =
+            m_face_specs[static_cast<std::size_t>(opposite_slot(static_cast<int>(i)))]
+                .second;
         detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
                                         send.oz, send.sx, send.sy, send.sz, m_nxp,
                                         m_nyp, m_nzp, stream);
