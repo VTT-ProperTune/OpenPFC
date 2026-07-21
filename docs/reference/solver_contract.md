@@ -31,12 +31,15 @@ Identifies the transformation to apply without prescribing implementation:
 struct LinearOperatorDesc {
     std::string operator_identifier;           // e.g., "spectral_diagonal"
     std::optional<std::string> preconditioner_identifier;
-    std::variant<std::monostate, std::vector<double>, std::string> operator_context;
+    std::variant<std::monostate, std::vector<double>,
+                 std::vector<std::complex<double>>, std::string>
+        operator_context;
 };
 ```
 
 The `operator_context` can hold:
-- Spectral propagator arrays for diagonal operators
+- Spectral propagator arrays for diagonal operators (`std::vector<double>` or
+  `std::vector<std::complex<double>>` for complex Fourier multipliers)
 - Stencil coefficients for finite-difference methods
 - Opaque handles for external solver libraries
 
@@ -149,11 +152,12 @@ Both `RHSFields` and `TargetFields` must satisfy the tuple protocol from `field/
 Header: `include/openpfc/kernel/simulation/spectral_diagonal_solver.hpp`.
 
 `SpectralDiagonalSolver` is a header-only value type that models `SolveFunction`.
-It reads real diagonal coefficients from `LinearOperatorDesc::operator_context`
-(`std::vector<double>`), writes element-wise @f$ s = b / d @f$ into
-caller-owned result storage, and returns `SolveOutcome` residual evidence.
-Direct-solve semantics: `iteration_count = 1` on a completed attempt; there is
-no separate algorithm field on `SolveOutcome`.
+It reads diagonal coefficients from `LinearOperatorDesc::operator_context` as
+either `std::vector<double>` or `std::vector<std::complex<double>>`, writes
+element-wise @f$ s = b / d @f$ into caller-owned result storage of the **same**
+scalar type, and returns `SolveOutcome` residual evidence. Direct-solve
+semantics: `iteration_count = 1` on a completed attempt; there is no separate
+algorithm field on `SolveOutcome`.
 
 ```cpp
 #include "openpfc/kernel/simulation/spectral_diagonal_solver.hpp"
@@ -181,29 +185,34 @@ auto outcome = solver(op_desc, rhs, target, opts, ctx);
 if (outcome.status == ConvergenceStatus::converged) {
     // Solution is already in target; outcome.solution references it
 }
+
+// Complex diagonals use the same solver with matching field types:
+// std::vector<std::complex<double>> diag_c, rhs_c, target_c;
+// LinearOperatorDesc op_c{"spectral_diagonal", std::nullopt, diag_c};
 ```
 
 #### Nullspace mathematics
 
 Let @f$ \tau @f$ = `singular_threshold`. Mode @f$ i @f$ is singular when
-@f$ |d_i| < \tau @f$. Residual always uses the **original** diagonal:
-@f$ r_i = d_i s_i - b_i @f$ (not @f$ d_i + \lambda @f$).
+@f$ |d_i| < \tau @f$ (`std::abs` for real or complex). Residual always uses the
+**original** diagonal: @f$ r_i = d_i s_i - b_i @f$ (not @f$ d_i + \lambda @f$).
+The residual norm is @f$ \|r\|_2 = \sqrt{\sum |r_i|^2} @f$.
 
 | Policy | Behavior |
 |--------|----------|
 | `fail` | Any singular mode → `ill_conditioned`, `target_out` unchanged |
-| `project` | Singular → @f$ s_i = @f$ `null_mode_value`; else @f$ s_i = b_i / d_i @f$. For @f$ d_i=0 @f$, @f$ s_i=0 @f$, residual @f$ r_i = -b_i @f$ — keep @f$ \|b_i\| @f$ small on null modes when compatibility is required |
-| `regularize` | Require @f$ \lambda = @f$ `regularization` @f$ > 0 @f$; @f$ s_i = b_i / (d_i + \lambda) @f$ for every @f$ i @f$ (explicit additive shift in units of @f$ d @f$, not a silent epsilon) |
+| `project` | Singular → @f$ s_i = @f$ `null_mode_value` (real) or `std::complex<double>(null_mode_value, 0.0)` (complex); else @f$ s_i = b_i / d_i @f$. For @f$ d_i=0 @f$, @f$ s_i=0 @f$, residual @f$ r_i = -b_i @f$ — keep @f$ \|b_i\| @f$ small on null modes when compatibility is required |
+| `regularize` | Require @f$ \lambda = @f$ `regularization` @f$ > 0 @f$; @f$ s_i = b_i / (d_i + \lambda) @f$ for every @f$ i @f$ (real @f$ \lambda @f$ added to real or complex @f$ d_i @f$; not a silent epsilon) |
 
 `operator_identifier` must be empty or `"spectral_diagonal"`. Absolute
 threshold is `absolute_tolerance.value_or(tolerance)`.
 
 #### Workspace ownership (scratch vs checkpoint)
 
-Solver-owned `residual_scratch_` holds the candidate solution during a solve
-attempt. It is **recomputable transient state** and is **not** part of any
-checkpoint, `save_state`, or `restore_state` API. On failure or cancellation,
-`target_out` is left unmodified (contract rule).
+Solver-owned `residual_scratch_` / `complex_residual_scratch_` hold the
+candidate solution during a solve attempt. They are **recomputable transient
+state** and are **not** part of any checkpoint, `save_state`, or `restore_state`
+API. On failure or cancellation, `target_out` is left unmodified (contract rule).
 
 ### Iterative solver with preconditioning (out-of-place)
 
