@@ -25,6 +25,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 
 #if defined(OpenPFC_ENABLE_CUDA)
@@ -39,6 +40,25 @@ static_assert(pfc::fft::HeapBackend<heffte::backend::rocfft>,
 namespace pfc {
 namespace fft {
 namespace detail {
+
+/**
+ * @brief Throw if a transform buffer extent does not match the FFT contract.
+ * @param actual Caller buffer size
+ * @param expected Required size (`size_inbox()` or `size_outbox()`)
+ * @param context Message prefix naming the overload and buffer role, ending with
+ *        `"size "` (e.g. `"FFT_Impl::forward: real buffer size "`)
+ * @param expected_label Name of the expected extent accessor for the message
+ * @throws std::invalid_argument when `actual != expected`
+ */
+inline void require_equal_size(std::size_t actual, std::size_t expected,
+                               const char *context,
+                               const char *expected_label) {
+  if (actual != expected) [[unlikely]] {
+    throw std::invalid_argument(std::string(context) + std::to_string(actual) +
+                                " != " + expected_label + "() " +
+                                std::to_string(expected));
+  }
+}
 
 /**
  * @brief Backend-gated HeFFTe workspace ownership for `FFT_Impl`.
@@ -118,11 +138,22 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   FFT_Impl(fft_type fft)
       : m_fft(std::move(fft)), m_ws(m_fft.size_workspace()) {}
 
+  /**
+   * @brief Forward transform via `DataBuffer` (GPU backends).
+   * @throws std::invalid_argument if `in.size() != size_inbox()` or
+   *         `out.size() != size_outbox()`
+   */
   template <typename RealBackendTag, typename ComplexBackendTag, typename RealType>
   void forward(const core::DataBuffer<RealBackendTag, RealType> &in,
                core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &out) {
     static_assert(std::is_same_v<RealBackendTag, ComplexBackendTag>,
                   "Input and output must use the same backend");
+    detail::require_equal_size(
+        in.size(), size_inbox(),
+        "FFT_Impl::forward: real buffer size ", "size_inbox");
+    detail::require_equal_size(
+        out.size(), size_outbox(),
+        "FFT_Impl::forward: complex buffer size ", "size_outbox");
     if constexpr (HeapBackend<BackendTag>) {
       m_fft_time -= MPI_Wtime();
       if constexpr (std::is_same_v<RealType, double>) {
@@ -138,7 +169,18 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
     }
   }
 
+  /**
+   * @brief Forward transform via host vectors (FFTW).
+   * @throws std::invalid_argument if `in.size() != size_inbox()` or
+   *         `out.size() != size_outbox()`
+   */
   void forward(const RealVector &in, ComplexVector &out) override {
+    detail::require_equal_size(
+        in.size(), size_inbox(),
+        "FFT_Impl::forward: real buffer size ", "size_inbox");
+    detail::require_equal_size(
+        out.size(), size_outbox(),
+        "FFT_Impl::forward: complex buffer size ", "size_outbox");
     if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
       m_fft_time -= MPI_Wtime();
       m_fft.forward(in.data(), out.data(), m_ws.data_wrk());
@@ -150,12 +192,23 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
     }
   }
 
+  /**
+   * @brief Backward transform via `DataBuffer` (GPU backends).
+   * @throws std::invalid_argument if `in.size() != size_outbox()` or
+   *         `out.size() != size_inbox()`
+   */
   template <typename ComplexBackendTag, typename RealBackendTag, typename RealType>
   void
   backward(const core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &in,
            core::DataBuffer<RealBackendTag, RealType> &out) {
     static_assert(std::is_same_v<ComplexBackendTag, RealBackendTag>,
                   "Input and output must use the same backend");
+    detail::require_equal_size(
+        in.size(), size_outbox(),
+        "FFT_Impl::backward: complex buffer size ", "size_outbox");
+    detail::require_equal_size(
+        out.size(), size_inbox(),
+        "FFT_Impl::backward: real buffer size ", "size_inbox");
     if constexpr (HeapBackend<BackendTag>) {
       m_fft_time -= MPI_Wtime();
       if constexpr (std::is_same_v<RealType, double>) {
@@ -173,7 +226,18 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
     }
   }
 
+  /**
+   * @brief Backward transform via host vectors (FFTW).
+   * @throws std::invalid_argument if `in.size() != size_outbox()` or
+   *         `out.size() != size_inbox()`
+   */
   void backward(const ComplexVector &in, RealVector &out) override {
+    detail::require_equal_size(
+        in.size(), size_outbox(),
+        "FFT_Impl::backward: complex buffer size ", "size_outbox");
+    detail::require_equal_size(
+        out.size(), size_inbox(),
+        "FFT_Impl::backward: real buffer size ", "size_inbox");
     if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
       m_fft_time -= MPI_Wtime();
       m_fft.backward(in.data(), out.data(), m_ws.data_wrk(), heffte::scale::full);

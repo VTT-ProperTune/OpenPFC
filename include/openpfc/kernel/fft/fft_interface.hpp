@@ -39,13 +39,32 @@ enum class Backend : std::uint8_t {
 struct IFFT {
   virtual ~IFFT() = default;
 
+  /**
+   * @brief Forward real-to-complex transform on this rank's local boxes.
+   *
+   * @param in Real buffer; must satisfy `in.size() == size_inbox()`
+   * @param out Complex buffer; must satisfy `out.size() == size_outbox()`
+   * @throws std::invalid_argument when either buffer size mismatches the
+   *         inbox/outbox contract (implementations report expected and actual).
+   */
   virtual void forward(const RealVector &in, ComplexVector &out) = 0;
+
+  /**
+   * @brief Backward complex-to-real transform on this rank's local boxes.
+   *
+   * @param in Complex buffer; must satisfy `in.size() == size_outbox()`
+   * @param out Real buffer; must satisfy `out.size() == size_inbox()`
+   * @throws std::invalid_argument when either buffer size mismatches the
+   *         outbox/inbox contract (implementations report expected and actual).
+   */
   virtual void backward(const ComplexVector &in, RealVector &out) = 0;
 
   virtual void reset_fft_time() = 0;
   virtual double get_fft_time() const = 0;
 
+  /** @brief Local real-buffer element count required by `forward`/`backward`. */
   virtual size_t size_inbox() const = 0;
+  /** @brief Local complex-buffer element count required by `forward`/`backward`. */
   virtual size_t size_outbox() const = 0;
   virtual size_t size_workspace() const = 0;
 
