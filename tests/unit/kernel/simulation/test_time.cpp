@@ -442,3 +442,90 @@ TEST_CASE("Time - get_step_count matches get_increment", "[time][unit]") {
   t.next();
   REQUIRE(t.get_step_count() == t.get_increment());
 }
+
+TEST_CASE("test_time_step_counters_initialization", "[time][unit]") {
+  SECTION("one-arg constructor") {
+    Time t({0.0, 10.0, 1.0});
+    REQUIRE(t.get_accepted_steps() == 0);
+    REQUIRE(t.get_rejected_steps() == 0);
+  }
+
+  SECTION("two-arg constructor with saveat") {
+    Time t({0.0, 10.0, 1.0}, 2.0);
+    REQUIRE(t.get_accepted_steps() == 0);
+    REQUIRE(t.get_rejected_steps() == 0);
+  }
+
+  SECTION("three-arg constructor with method") {
+    Time t({0.0, 10.0, 1.0}, 2.0, IntegratorMethod::rk2_heun);
+    REQUIRE(t.get_accepted_steps() == 0);
+    REQUIRE(t.get_rejected_steps() == 0);
+  }
+}
+
+TEST_CASE("test_time_increment_step_success", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  t.increment_step_success();
+  REQUIRE(t.get_accepted_steps() == 1);
+  REQUIRE(t.get_rejected_steps() == 0);
+}
+
+TEST_CASE("test_time_increment_step_rejection", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  t.increment_step_rejection();
+  REQUIRE(t.get_rejected_steps() == 1);
+  REQUIRE(t.get_accepted_steps() == 0);
+}
+
+TEST_CASE("test_time_get_accepted_and_rejected_steps", "[time][unit]") {
+  Time t({0.0, 10.0, 1.0}, 0.0);
+  t.increment_step_success();
+  t.increment_step_success();
+  t.increment_step_rejection();
+  t.increment_step_success();
+  t.increment_step_rejection();
+  t.increment_step_rejection();
+  REQUIRE(t.get_accepted_steps() == 3);
+  REQUIRE(t.get_rejected_steps() == 3);
+}
+
+TEST_CASE("test_time_state_guard_restores_counters", "[time][unit]") {
+  SECTION("uncommitted guard restores counters") {
+    Time time({0.0, 10.0, 0.1}, 1.0);
+    time.increment_step_success();
+    time.increment_step_rejection();
+    REQUIRE(time.get_accepted_steps() == 1);
+    REQUIRE(time.get_rejected_steps() == 1);
+
+    {
+      TimeStateGuard guard(time);
+      time.increment_step_success();
+      time.increment_step_success();
+      time.increment_step_rejection();
+      REQUIRE(time.get_accepted_steps() == 3);
+      REQUIRE(time.get_rejected_steps() == 2);
+    }
+
+    REQUIRE(time.get_accepted_steps() == 1);
+    REQUIRE(time.get_rejected_steps() == 1);
+  }
+
+  SECTION("committed guard preserves counters") {
+    Time time({0.0, 10.0, 0.1}, 1.0);
+    time.increment_step_success();
+    REQUIRE(time.get_accepted_steps() == 1);
+    REQUIRE(time.get_rejected_steps() == 0);
+
+    {
+      TimeStateGuard guard(time);
+      time.increment_step_success();
+      time.increment_step_rejection();
+      guard.commit();
+      REQUIRE(time.get_accepted_steps() == 2);
+      REQUIRE(time.get_rejected_steps() == 1);
+    }
+
+    REQUIRE(time.get_accepted_steps() == 2);
+    REQUIRE(time.get_rejected_steps() == 1);
+  }
+}

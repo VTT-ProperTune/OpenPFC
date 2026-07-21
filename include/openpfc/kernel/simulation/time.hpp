@@ -77,6 +77,9 @@ namespace pfc {
  * - Determine when simulation is complete: `t_current >= t1`
  * - Manage output intervals: control when results should be written via
  *   `saveat`
+ * - Track accepted/rejected adaptive step attempts via
+ *   `increment_step_success()` / `increment_step_rejection()` (separate from
+ *   `get_step_count()`, which only counts committed advances via `next()`)
  * - Provide validation: ensure `dt > 0`, `t0 < t1`, and `saveat` is valid
  *
  * ## Design Philosophy
@@ -245,6 +248,10 @@ private:
   IntegratorMethod m_method{IntegratorMethod::euler};
   int m_stage{0};       ///< Current stage index within this time step (0-based)
   int m_stage_count{1}; ///< Total number of stages in the current time step
+  int accepted_steps_{0}; ///< Accepted adaptive step attempts
+  int rejected_steps_{0}; ///< Rejected adaptive step attempts
+
+  friend class TimeStateGuard;
 
 public:
   /**
@@ -464,6 +471,42 @@ public:
    * @return Current step count
    */
   int get_step_count() const { return m_increment; }
+
+  /**
+   * @brief Record a successful adaptive step attempt.
+   *
+   * Increments the accepted-attempt counter. Unlike @ref next(), this does
+   * not advance simulation time; it only updates attempt statistics for
+   * adaptive time-stepping algorithms.
+   *
+   * @post get_accepted_steps() returns previous value + 1
+   */
+  void increment_step_success() { accepted_steps_++; }
+
+  /**
+   * @brief Record a rejected adaptive step attempt.
+   *
+   * Increments the rejected-attempt counter. Persists across
+   * @ref TimeStateGuard rollback of dt/increment so rejection statistics
+   * are not lost when a step is undone.
+   *
+   * @post get_rejected_steps() returns previous value + 1
+   */
+  void increment_step_rejection() { rejected_steps_++; }
+
+  /**
+   * @brief Get the number of accepted adaptive step attempts.
+   *
+   * @return Accepted step count (starts at 0)
+   */
+  int get_accepted_steps() const { return accepted_steps_; }
+
+  /**
+   * @brief Get the number of rejected adaptive step attempts.
+   *
+   * @return Rejected step count (starts at 0)
+   */
+  int get_rejected_steps() const { return rejected_steps_; }
 
   /**
    * @brief Get the current stage index within this time step.
@@ -882,20 +925,23 @@ public:
 /**
  * @brief RAII guard for temporal state rollback in adaptive time-stepping
  *
- * Captures the dt and increment values from a Time object on construction
- * and restores them on destruction unless commit() is called. This provides
- * exception-safe support for adaptive Runge-Kutta methods that reject steps
- * when error estimates exceed tolerance.
+ * Captures the dt, increment, and accepted/rejected step counters from a
+ * Time object on construction and restores them on destruction unless
+ * commit() is called. This provides exception-safe support for adaptive
+ * Runge-Kutta methods that reject steps when error estimates exceed
+ * tolerance.
  *
  * Typical usage:
  * ```cpp
  * while (!time.done()) {
- *   TimeStateGuard guard(time);  // Snapshot dt and increment
+ *   TimeStateGuard guard(time);  // Snapshot dt, increment, counters
  *
  *   double error = attempt_step(time);
  *   if (error > tolerance) {
+ *     time.increment_step_rejection();
  *     continue;  // Step rejected: guard restores state
  *   }
+ *   time.increment_step_success();
  *   guard.commit();  // Step accepted: disable restoration
  *   time.next();
  * }
@@ -913,19 +959,24 @@ public:
    */
   explicit TimeStateGuard(Time &time)
       : m_time(time), m_saved_dt(time.get_dt()),
-        m_saved_increment(time.get_increment()), m_committed(false) {}
+        m_saved_increment(time.get_increment()),
+        m_saved_accepted_steps(time.get_accepted_steps()),
+        m_saved_rejected_steps(time.get_rejected_steps()), m_committed(false) {}
 
   /**
-   * @brief Restore captured dt and increment unless committed
+   * @brief Restore captured dt, increment, and step counters unless committed
    *
    * Calls Time::set_dt() and Time::set_increment() with the saved values
-   * if commit() was not called. These methods are expected to succeed since
-   * they restore previously-valid values.
+   * and restores accepted/rejected counters via friend access if commit()
+   * was not called. These methods are expected to succeed since they
+   * restore previously-valid values.
    */
   ~TimeStateGuard() {
     if (!m_committed) {
       m_time.set_dt(m_saved_dt);
       m_time.set_increment(m_saved_increment);
+      m_time.accepted_steps_ = m_saved_accepted_steps;
+      m_time.rejected_steps_ = m_saved_rejected_steps;
     }
   }
 
@@ -942,7 +993,10 @@ public:
    */
   TimeStateGuard(TimeStateGuard &&other) noexcept
       : m_time(other.m_time), m_saved_dt(other.m_saved_dt),
-        m_saved_increment(other.m_saved_increment), m_committed(other.m_committed) {
+        m_saved_increment(other.m_saved_increment),
+        m_saved_accepted_steps(other.m_saved_accepted_steps),
+        m_saved_rejected_steps(other.m_saved_rejected_steps),
+        m_committed(other.m_committed) {
     other.m_committed = true;
   }
 
@@ -960,10 +1014,14 @@ public:
       if (!m_committed) {
         m_time.set_dt(m_saved_dt);
         m_time.set_increment(m_saved_increment);
+        m_time.accepted_steps_ = m_saved_accepted_steps;
+        m_time.rejected_steps_ = m_saved_rejected_steps;
       }
       m_time = other.m_time;
       m_saved_dt = other.m_saved_dt;
       m_saved_increment = other.m_saved_increment;
+      m_saved_accepted_steps = other.m_saved_accepted_steps;
+      m_saved_rejected_steps = other.m_saved_rejected_steps;
       m_committed = other.m_committed;
       other.m_committed = true;
     }
@@ -988,6 +1046,8 @@ private:
   Time &m_time;          ///< Reference to guarded Time object
   double m_saved_dt;     ///< Captured time step value
   int m_saved_increment; ///< Captured increment counter
+  int m_saved_accepted_steps; ///< Captured accepted-attempt counter
+  int m_saved_rejected_steps; ///< Captured rejected-attempt counter
   bool m_committed;      ///< Flag to disable restoration
 };
 
