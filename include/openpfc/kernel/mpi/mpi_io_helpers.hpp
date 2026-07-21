@@ -85,6 +85,28 @@ struct MPI_File_guard {
 }
 
 /**
+ * @brief Fail closed when an MPI message element count exceeds INT_MAX.
+ *
+ * Classic MPI `count` arguments are `int`. A silent `static_cast<int>(n)`
+ * truncates and posts the wrong length. Call before every SparseVector or
+ * packed-face `MPI_Send` / `Recv` / `Isend` / `Irecv` that takes an element
+ * count derived from `size_t`.
+ *
+ * @param n Element count (`size_t`).
+ * @param what Caller label included in the exception message.
+ * @return `n` as `int` when `n <= INT_MAX`.
+ * @throws std::overflow_error when `n > INT_MAX`.
+ */
+[[nodiscard]] inline int ensure_mpi_int_count(std::size_t n, const char *what) {
+  if (n > static_cast<std::size_t>(INT_MAX)) {
+    std::ostringstream oss;
+    oss << what << ": MPI count " << n << " exceeds INT_MAX";
+    throw std::overflow_error(oss.str());
+  }
+  return static_cast<int>(n);
+}
+
+/**
  * @brief Overflow-safe product of local brick extents for MPI-IO buffers.
  *
  * Used by BinaryWriter / BinaryReader to compute the expected local element
