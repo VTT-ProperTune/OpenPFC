@@ -341,12 +341,16 @@ private:
       }
       for (std::size_t f = 0; f < m_n_fields; ++f) {
         double *d_pad = fields[f];
+        // Opposite-face unpack matches PaddedDeviceHaloExchanger / FullPaddedDeviceHalo.
         for (std::size_t i = 0; i < 6; ++i) {
           if (!m_active[i] || m_neighbors[i] != m_rank) {
             continue;
           }
           const auto &send = m_face_specs[i].first;
-          const auto &recv = m_face_specs[i].second;
+          const auto &recv =
+              m_face_specs[static_cast<std::size_t>(
+                               opposite_slot_(static_cast<int>(i)))]
+                  .second;
           pfc::cuda::detail::launch_padded_pack_face(
               m_d_scratch, d_pad, send.ox, send.oy, send.oz, send.sx, send.sy,
               send.sz, m_nxp, m_nyp, m_nzp, stream);
@@ -438,12 +442,16 @@ private:
       }
       for (std::size_t f = 0; f < m_n_fields; ++f) {
         double *d_pad = fields[f];
+        // Opposite-face unpack on widened slabs (same semantics as narrow path).
         for (std::size_t i = 0; i < 6; ++i) {
           if (!m_active[i] || m_neighbors[i] != m_rank) {
             continue;
           }
           const auto &send = m_face_specs_widened[i].first;
-          const auto &recv = m_face_specs_widened[i].second;
+          const auto &recv =
+              m_face_specs_widened[static_cast<std::size_t>(
+                                      opposite_slot_(static_cast<int>(i)))]
+                  .second;
           pfc::cuda::detail::launch_padded_pack_face(
               m_d_scratch, d_pad, send.ox, send.oy, send.oz, send.sx, send.sy,
               send.sz, m_nxp, m_nyp, m_nzp, stream);
