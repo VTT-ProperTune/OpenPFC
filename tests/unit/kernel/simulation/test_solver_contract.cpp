@@ -21,6 +21,7 @@ public:
     std::vector<std::string> last_halos;
     std::vector<std::string> last_boundaries;
     std::vector<double> last_reduce_data;
+    std::vector<double> last_reduce_result;
     MPI_Op last_op = MPI_OP_NULL;
 
     void request_halo_exchange(const std::vector<std::string>& field_names) override {
@@ -31,9 +32,12 @@ public:
         last_boundaries = field_names;
     }
 
-    void global_reduce(const std::vector<double>& data, MPI_Op op) override {
+    std::vector<double> global_reduce(const std::vector<double>& data, MPI_Op op) override {
         last_reduce_data = data;
         last_op = op;
+        // By default, return a copy of input (serial behavior)
+        last_reduce_result = data;
+        return last_reduce_result;
     }
 };
 
@@ -325,12 +329,14 @@ TEST_CASE("test_execution_service_interface_methods") {
     REQUIRE(service.last_boundaries == fields);
 
     std::vector<double> data{1.0, 2.0, 3.0};
-    service.global_reduce(data, MPI_SUM);
+    auto result = service.global_reduce(data, MPI_SUM);
     REQUIRE(service.last_reduce_data == data);
     REQUIRE(service.last_op == MPI_SUM);
+    REQUIRE(result == data);  // Mock returns copy by default (serial behavior)
 
-    service.global_reduce(data, MPI_MAX);
+    auto result_max = service.global_reduce(data, MPI_MAX);
     REQUIRE(service.last_op == MPI_MAX);
+    REQUIRE(result_max == data);
 }
 
 TEST_CASE("test_execution_service_virtual_destructor") {
