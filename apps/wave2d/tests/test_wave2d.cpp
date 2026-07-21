@@ -10,8 +10,8 @@
 #include <cmath>
 #include <iostream>
 #include <mpi.h>
-#include <vector>
 #include <stdexcept>
+#include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
@@ -21,6 +21,7 @@
 #include <openpfc/kernel/field/padded_brick.hpp>
 
 #include <wave2d/cli.hpp>
+#include <wave2d/state_capture.hpp>
 #include <wave2d/wave_boundary.hpp>
 #include <wave2d/wave_model.hpp>
 #include <wave2d/wave_step_separated.hpp>
@@ -217,19 +218,19 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
   REQUIRE(max_diff < 1e-9);
 }
 
-
-TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent", "[wave2d][bc]") {
+TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent",
+          "[wave2d][bc]") {
   int rank = 0;
   int nproc = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-  if (nproc != 2) return;  // This test requires exactly 2 MPI ranks
+  if (nproc != 2) return; // This test requires exactly 2 MPI ranks
 
   constexpr int Nx = 8;
-  constexpr int Ny = 4;  // As specified in acceptance criteria id=962
+  constexpr int Ny = 4; // As specified in acceptance criteria id=962
   constexpr int Nz = 8;
-  constexpr int hw = 3;  // As specified in acceptance criteria id=962
-  const double u_wall_dirichlet = 1.5;  // non-zero for Dirichlet
+  constexpr int hw = 3;                // As specified in acceptance criteria id=962
+  const double u_wall_dirichlet = 1.5; // non-zero for Dirichlet
 
   auto world = pfc::world::create(pfc::GridSize({Nx, Ny, Nz}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
@@ -239,14 +240,14 @@ TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent", "
   u.apply([&](double, double, double) { return 0.0; });
 
   SECTION("Dirichlet boundary") {
-    REQUIRE_THROWS_AS(
-        wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny, u_wall_dirichlet),
-        std::out_of_range
-    );
+    REQUIRE_THROWS_AS(wave2d::fill_y_physical_ghosts_padded(
+                          u, wave2d::YBoundaryKind::Dirichlet, Ny, u_wall_dirichlet),
+                      std::out_of_range);
     bool caught = false;
     try {
-      wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny, u_wall_dirichlet);
-    } catch (const std::out_of_range& e) {
+      wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny,
+                                            u_wall_dirichlet);
+    } catch (const std::out_of_range &e) {
       caught = true;
       std::string msg(e.what());
       REQUIRE(msg.find("rank=") != std::string::npos);
@@ -261,14 +262,14 @@ TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent", "
   }
 
   SECTION("Neumann boundary") {
-    REQUIRE_THROWS_AS(
-        wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Neumann, Ny, 0.0),
-        std::out_of_range
-    );
+    REQUIRE_THROWS_AS(wave2d::fill_y_physical_ghosts_padded(
+                          u, wave2d::YBoundaryKind::Neumann, Ny, 0.0),
+                      std::out_of_range);
     bool caught = false;
     try {
-      wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Neumann, Ny, 0.0);
-    } catch (const std::out_of_range& e) {
+      wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Neumann, Ny,
+                                            0.0);
+    } catch (const std::out_of_range &e) {
       caught = true;
       std::string msg(e.what());
       REQUIRE(msg.find("rank=") != std::string::npos);
@@ -283,6 +284,38 @@ TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent", "
   }
 }
 
+TEST_CASE("wave2d state_capture u/v round-trip", "[wave2d][state_capture]") {
+  const pfc::types::Int3 extents{2, 2, 1};
+  const std::size_t n = 4;
+  std::vector<double> u = {1.0, 2.0, 3.0, 4.0};
+  std::vector<double> v = {10.0, 20.0, 30.0, 40.0};
+
+  const auto state = wave2d::capture_uv(u, v, extents);
+  REQUIRE(state.fields.size() == 2);
+
+  std::vector<double> u_dest(n, -1.0);
+  std::vector<double> v_dest(n, -2.0);
+  const auto outcome = wave2d::restore_uv(state, u_dest, v_dest, extents);
+  REQUIRE(outcome.ok);
+  REQUIRE(u_dest == u);
+  REQUIRE(v_dest == v);
+}
+
+TEST_CASE("wave2d state_capture reject", "[wave2d][state_capture]") {
+  const pfc::types::Int3 extents{2, 2, 1};
+  std::vector<double> u = {1.0, 2.0, 3.0, 4.0};
+  std::vector<double> v = {5.0, 6.0, 7.0, 8.0};
+  auto state = wave2d::capture_uv(u, v, extents);
+  // Corrupt velocity payload shape while leaving displacement intact.
+  state.fields[1].extents = pfc::types::Int3{3, 2, 1};
+
+  std::vector<double> u_dest(4, 42.0);
+  std::vector<double> v_dest(4, 43.0);
+  const auto outcome = wave2d::restore_uv(state, u_dest, v_dest, extents);
+  REQUIRE_FALSE(outcome.ok);
+  REQUIRE(u_dest == std::vector<double>{42.0, 42.0, 42.0, 42.0});
+  REQUIRE(v_dest == std::vector<double>{43.0, 43.0, 43.0, 43.0});
+}
 
 int main(int argc, char *argv[]) {
   if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
