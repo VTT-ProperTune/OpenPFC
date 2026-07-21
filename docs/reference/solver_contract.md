@@ -104,11 +104,13 @@ public:
 
     virtual void request_halo_exchange(const std::vector<std::string>& field_names) = 0;
     virtual void prepare_boundaries(const std::vector<std::string>& field_names) = 0;
-    virtual void global_reduce(const std::vector<double>& data, MPI_Op op) = 0;
+    virtual std::vector<double> global_reduce(const std::vector<double>& data, MPI_Op op) = 0;
 };
 ```
 
 Implemented by the simulation driver (adapting `SimulationContext`) to coordinate halo exchange, boundary preparation, and global reductions during solver iterations.
+
+**Important:** `global_reduce` returns a vector containing the reduced values across all ranks. For MPI runs, this performs an Allreduce operation. For serial runs, this returns a copy of the input values. The returned vector has the same size as the input. Always use the returned reduced values for convergence calculations.
 
 ### StageContext
 
@@ -236,10 +238,9 @@ auto iterative_solver = [](const LinearOperatorDesc& desc,
         apply_operator(desc, internal_buffer, residual);
 
         // Compute residual norm
-        double local_norm = compute_norm(residual);
-        double global_norm;
-        ctx.execution_service.global_reduce({local_norm}, MPI_SUM);
-        global_norm = std::sqrt(global_norm);
+        double local_sum_sq = compute_sum_sq(residual);
+        auto reduced = ctx.execution_service.global_reduce({local_sum_sq}, MPI_SUM);
+        double global_norm = std::sqrt(reduced[0]);
 
         // Check convergence
         if (global_norm < opts.tolerance) {
