@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -6,7 +6,8 @@
  * @brief CUDA kernel implementations for Tungsten-specific operations
  *
  * This file contains CUDA kernel code for Tungsten operations. It is only compiled
- * when CUDA is enabled.
+ * when CUDA is enabled. apply_time_integration uses cache-derived exp(L·dt) /
+ * n_weight spans (parameter names opL/opN are historical aliases).
  */
 
 #if defined(OpenPFC_ENABLE_CUDA)
@@ -97,6 +98,7 @@ template __global__ void apply_stabilization_kernel<float>(const float *,
                                                            float *, size_t);
 
 // CUDA kernel: Apply time integration (template-based for precision)
+// out = exp_Ldt * psi_F + n_weight * psiN_F (params historically named opL/opN)
 template <typename RealType>
 __global__ void apply_time_integration_kernel_impl(
     const typename std::conditional<std::is_same<RealType, double>::value,
@@ -115,7 +117,7 @@ __global__ void apply_time_integration_kernel_impl(
       double opL_val = opL[idx];
       double opN_val = opN[idx];
 
-      // out = opL * psi_F + opN * psiN_F
+      // out = exp_Ldt * psi_F + n_weight * psiN_F
       cuDoubleComplex term1 = cuCmul(cuDoubleComplex{opL_val, 0.0}, psi_F_val);
       cuDoubleComplex term2 = cuCmul(cuDoubleComplex{opN_val, 0.0}, psiN_F_val);
       out[idx] = cuCadd(term1, term2);
@@ -125,7 +127,7 @@ __global__ void apply_time_integration_kernel_impl(
       float opL_val = opL[idx];
       float opN_val = opN[idx];
 
-      // out = opL * psi_F + opN * psiN_F
+      // out = exp_Ldt * psi_F + n_weight * psiN_F
       cuFloatComplex term1 = cuCmulf(cuFloatComplex{opL_val, 0.0f}, psi_F_val);
       cuFloatComplex term2 = cuCmulf(cuFloatComplex{opN_val, 0.0f}, psiN_F_val);
       out[idx] = cuCaddf(term1, term2);

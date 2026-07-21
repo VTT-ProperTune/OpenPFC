@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -6,7 +6,8 @@
  * @brief HIP kernel implementations for Tungsten-specific operations
  *
  * This file contains HIP kernel code for Tungsten operations. It is only
- * compiled when HIP (ROCm) is enabled.
+ * compiled when HIP (ROCm) is enabled. apply_time_integration uses cache-derived
+ * exp(L·dt) / n_weight spans (parameter names opL/opN are historical aliases).
  */
 
 #if defined(OpenPFC_ENABLE_HIP)
@@ -90,6 +91,7 @@ template __global__ void apply_stabilization_kernel<float>(const float *,
                                                            float *, size_t);
 
 template <typename RealType>
+// out = exp_Ldt * psi_F + n_weight * psiN_F (params historically named opL/opN)
 __global__ void apply_time_integration_kernel_impl(
     const typename std::conditional<std::is_same<RealType, double>::value,
                                     hipDoubleComplex, hipFloatComplex>::type *psi_F,
@@ -106,6 +108,7 @@ __global__ void apply_time_integration_kernel_impl(
       hipDoubleComplex psiN_F_val = psiN_F[idx];
       double opL_val = opL[idx];
       double opN_val = opN[idx];
+      // out = exp_Ldt * psi_F + n_weight * psiN_F
       hipDoubleComplex term1 = hipCmul(make_hipDoubleComplex(opL_val, 0.0), psi_F_val);
       hipDoubleComplex term2 = hipCmul(make_hipDoubleComplex(opN_val, 0.0), psiN_F_val);
       out[idx] = hipCadd(term1, term2);
@@ -114,6 +117,7 @@ __global__ void apply_time_integration_kernel_impl(
       hipFloatComplex psiN_F_val = psiN_F[idx];
       float opL_val = opL[idx];
       float opN_val = opN[idx];
+      // out = exp_Ldt * psi_F + n_weight * psiN_F
       hipFloatComplex term1 = hipCmulf(make_hipFloatComplex(opL_val, 0.0f), psi_F_val);
       hipFloatComplex term2 = hipCmulf(make_hipFloatComplex(opN_val, 0.0f), psiN_F_val);
       out[idx] = hipCaddf(term1, term2);
