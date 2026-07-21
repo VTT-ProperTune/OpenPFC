@@ -42,11 +42,43 @@
  */
 
 #include <array>
+#include <limits>
 #include <mpi.h>
+#include <stdexcept>
+#include <string>
 
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 
 namespace pfc::halo {
+
+namespace {
+
+/**
+ * @brief Compute padded extent `n + 2*hw` with overflow check.
+ *
+ * @param n Base extent.
+ * @param hw Halo width (non-negative).
+ * @return Padded extent.
+ * @throws std::overflow_error if `n + 2*hw` would overflow `int`.
+ * @throws std::invalid_argument if `hw < 0`.
+ */
+inline int checked_padded_extent(int n, int hw) {
+  if (hw < 0) {
+    throw std::invalid_argument("padded extent: halo width must be non-negative (got " +
+                                std::to_string(hw) + ")");
+  }
+  // Use long long to detect overflow in addition
+  const long long result = static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
+  if (result > static_cast<long long>(std::numeric_limits<int>::max()) ||
+      result < static_cast<long long>(std::numeric_limits<int>::min())) {
+    throw std::overflow_error("padded extent overflow in create_padded_face_types_6: " +
+                              std::to_string(n) + " + 2*" + std::to_string(hw) +
+                              " exceeds int range");
+  }
+  return static_cast<int>(result);
+}
+
+} // anonymous namespace
 
 /**
  * @brief Create send/recv MPI face subarrays for the **padded** brick layout.
@@ -69,9 +101,9 @@ inline std::array<FaceTypes, 6>
 create_padded_face_types_6(int nx, int ny, int nz, int halo_width,
                            MPI_Datatype element_type) {
   const int hw = halo_width;
-  const int nxp = nx + 2 * hw;
-  const int nyp = ny + 2 * hw;
-  const int nzp = nz + 2 * hw;
+  const int nxp = checked_padded_extent(nx, hw);
+  const int nyp = checked_padded_extent(ny, hw);
+  const int nzp = checked_padded_extent(nz, hw);
 
   std::array<FaceTypes, 6> out = {};
 

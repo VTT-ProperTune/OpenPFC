@@ -76,6 +76,32 @@ namespace pfc::hip {
 
 namespace detail {
 
+/**
+ * @brief Compute padded extent `n + 2*hw` with overflow check.
+ *
+ * @param n Base extent.
+ * @param hw Halo width (non-negative).
+ * @return Padded extent.
+ * @throws std::overflow_error if `n + 2*hw` would overflow `int`.
+ * @throws std::invalid_argument if `hw < 0`.
+ */
+inline int checked_padded_extent_hip(int n, int hw) {
+  if (hw < 0) {
+    throw std::invalid_argument(
+        "HIP PaddedDeviceHaloExchanger: halo width must be non-negative (got " +
+        std::to_string(hw) + ")");
+  }
+  // Use long long to detect overflow in addition
+  const long long result = static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
+  if (result > static_cast<long long>(std::numeric_limits<int>::max()) ||
+      result < static_cast<long long>(std::numeric_limits<int>::min())) {
+    throw std::overflow_error(
+        "HIP PaddedDeviceHaloExchanger: padded extent overflow " + std::to_string(n) +
+        " + 2*" + std::to_string(hw) + " exceeds int range");
+  }
+  return static_cast<int>(result);
+}
+
 void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
                              int oy, int oz, int sx, int sy, int sz, int nxp,
                              int nyp, int nzp, hipStream_t stream);
@@ -243,9 +269,10 @@ public:
     const int nz = local_size[2];
     const int hw = m_halo_width;
 
-    m_nxp = nx + 2 * hw;
-    m_nyp = ny + 2 * hw;
-    m_nzp = nz + 2 * hw;
+    // Check for overflow before computing padded extents
+    m_nxp = detail::checked_padded_extent_hip(nx, hw);
+    m_nyp = detail::checked_padded_extent_hip(ny, hw);
+    m_nzp = detail::checked_padded_extent_hip(nz, hw);
 
     m_face_specs = detail::make_padded_face_slabs(nx, ny, nz, hw);
 

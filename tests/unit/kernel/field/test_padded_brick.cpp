@@ -241,3 +241,37 @@ TEST_CASE("PaddedBrick: Int3 overloads of idx/operator() match scalar form",
                        u.idx(idx) == u.idx(idx[0], idx[1], idx[2]);
   REQUIRE(overloads_match);
 }
+
+TEST_CASE("PaddedBrick: throws on halo width overflow in extent calculation",
+          "[field][padded_brick]") {
+  auto world = world::create(GridSize({1000000, 1, 1}));
+  auto decomp = decomposition::create(world, 1);
+
+  // Large halo width that causes nx + 2*hw to exceed INT_MAX
+  // INT_MAX on most systems is 2147483647
+  // 1000000 + 2*1500000000 = 1000000 + 3000000000 = 4000000000 > INT_MAX
+  REQUIRE_THROWS_AS(
+      field::PaddedBrick<double>(decomp, /*rank=*/0, /*hw=*/1500000000),
+      std::overflow_error);
+}
+
+TEST_CASE("PaddedBrick: throws on product overflow in storage allocation",
+          "[field][padded_brick]") {
+  auto world = world::create(GridSize({1000000, 2000000, 1}));
+  auto decomp = decomposition::create(world, 1);
+
+  // Large extents that cause nx*ny*nz to overflow size_t
+  // On binary64 systems, size_t is 64-bit, but the product of three int32 values
+  // can still exceed the max before the product check
+  // Use a smaller halo width to avoid extent overflow but still hit product overflow
+  REQUIRE_THROWS_AS(
+      field::PaddedBrick<double>(decomp, /*rank=*/0, /*hw=*/1000),
+      std::overflow_error);
+}
+
+TEST_CASE("PaddedBrick: throws on negative halo width", "[field][padded_brick]") {
+  auto world = world::create(GridSize({4, 4, 4}));
+  auto decomp = decomposition::create(world, 1);
+  REQUIRE_THROWS_AS(field::PaddedBrick<double>(decomp, 0, -1),
+                    std::invalid_argument);
+}

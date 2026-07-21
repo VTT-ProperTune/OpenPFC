@@ -184,3 +184,26 @@ TEST_CASE(
 
   REQUIRE(count(faces[4].send_type.get()) == static_cast<std::size_t>(nx * ny * hw));
 }
+
+TEST_CASE("create_padded_face_types_6: throws on halo width overflow",
+          "[halo][padded_mpi_types]") {
+  const int nx = 1000000;
+  const int ny = 1;
+  const int nz = 1;
+  const int hw = 1500000000; // Causes nx + 2*hw to overflow int
+
+  REQUIRE_THROWS_AS(
+      pfc::halo::create_padded_face_types_6(nx, ny, nz, hw, MPI_DOUBLE),
+      std::overflow_error);
+}
+
+TEST_CASE("create_padded_face_types_6: throws on negative halo width",
+          "[halo][padded_mpi_types]") {
+  const int nx = 4;
+  const int ny = 4;
+  const int nz = 4;
+
+  REQUIRE_THROWS_AS(pfc::halo::create_padded_face_types_6(nx, ny, nz, -1,
+                                                         MPI_DOUBLE),
+                    std::invalid_argument);
+}
