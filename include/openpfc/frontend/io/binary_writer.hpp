@@ -141,6 +141,9 @@ public:
     MPI_Datatype type = get_type(data);
     ensure_filetype(type);
 
+    const int count =
+        pfc::mpi::expect_mpi_io_count(data.size(), "BinaryWriter::write");
+
     MPI_File fh{};
     std::string filename2 = utils::format_with_number(m_filename, increment);
     pfc::mpi::throw_on_mpi_error(
@@ -157,15 +160,14 @@ public:
     pfc::mpi::throw_on_mpi_error(
         MPI_File_set_view(fh, disp, type, m_filetype, "native", MPI_INFO_NULL),
         "MPI_File_set_view");
-    pfc::mpi::throw_on_mpi_error(MPI_File_write_all(fh, data.data(),
-                                                    static_cast<int>(data.size()),
-                                                    type, &status),
-                                 "MPI_File_write_all");
+    pfc::mpi::throw_on_mpi_error(
+        MPI_File_write_all(fh, data.data(), count, type, &status),
+        "MPI_File_write_all");
 
     int written = 0;
     pfc::mpi::throw_on_mpi_error(MPI_Get_count(&status, type, &written),
                                  "MPI_Get_count");
-    if (written != MPI_UNDEFINED && written != static_cast<int>(data.size())) {
+    if (written != MPI_UNDEFINED && written != count) {
       std::ostringstream oss;
       oss << "Short write to \"" << filename2 << "\": wrote " << written
           << " elements, expected " << data.size();

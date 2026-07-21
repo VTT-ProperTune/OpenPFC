@@ -89,6 +89,9 @@ private:
                              MPI_Datatype etype, const char *element_name) {
     ensure_filetype(etype);
 
+    const int count =
+        pfc::mpi::expect_mpi_io_count(data.size(), "BinaryReader::read");
+
     MPI_File fh{};
     pfc::mpi::throw_on_mpi_error(MPI_File_open(m_comm,
                                                const_cast<char *>(filename.c_str()),
@@ -101,14 +104,13 @@ private:
         "MPI_File_set_view");
 
     MPI_Status status{};
-    pfc::mpi::throw_on_mpi_error(MPI_File_read_all(fh, data.data(),
-                                                   static_cast<int>(data.size()),
-                                                   etype, &status),
-                                 "MPI_File_read_all");
+    pfc::mpi::throw_on_mpi_error(
+        MPI_File_read_all(fh, data.data(), count, etype, &status),
+        "MPI_File_read_all");
     int received = 0;
     pfc::mpi::throw_on_mpi_error(MPI_Get_count(&status, etype, &received),
                                  "MPI_Get_count");
-    if (received != static_cast<int>(data.size())) {
+    if (received != count) {
       std::ostringstream oss;
       oss << "Short read from \"" << filename << "\": got " << received << " "
           << element_name << ", expected " << data.size();
