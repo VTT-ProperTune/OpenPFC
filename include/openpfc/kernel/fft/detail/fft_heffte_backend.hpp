@@ -4,6 +4,15 @@
 /**
  * @file fft_heffte_backend.hpp
  * @brief HeFFTe-backed FFT_Impl template (include only where HeFFTe is required)
+ *
+ * @details
+ * Workspace ownership is backend-specialized via `detail::FftWorkspaceStorage`:
+ * - FFTW owns only the host `m_wrk` buffer used by the `std::vector` transform
+ *   path.
+ * - GPU backends (`cufft` / `rocfft`) own only the dual-precision device
+ *   workspaces used by the `DataBuffer` path. Both float and double remain
+ *   because `FFT_Impl` is not templated on `RealType` and both overloads share
+ *   one instance — no idle host/device twin is allocated.
  */
 
 #pragma once
@@ -14,6 +23,7 @@
 #include <heffte.h>
 #include <mpi.h>
 
+#include <cstddef>
 #include <stdexcept>
 #include <type_traits>
 
@@ -28,12 +38,74 @@ static_assert(pfc::fft::HeapBackend<heffte::backend::rocfft>,
 
 namespace pfc {
 namespace fft {
+namespace detail {
+
+/**
+ * @brief Backend-gated HeFFTe workspace ownership for `FFT_Impl`.
+ *
+ * Primary template is intentionally incomplete; specialize per backend family.
+ */
+template <typename BackendTag> struct FftWorkspaceStorage;
+
+/**
+ * @brief FFTW: host workspace only (`std::vector`-backed HeFFTe container).
+ */
+template <> struct FftWorkspaceStorage<heffte::backend::fftw> {
+  using workspace_type = typename heffte::fft3d_r2c<
+      heffte::backend::fftw>::template buffer_container<std::complex<double>>;
+
+  workspace_type m_wrk;
+
+  explicit FftWorkspaceStorage(std::size_t n) : m_wrk(n) {}
+
+  auto *data_wrk() noexcept { return m_wrk.data(); }
+
+  [[nodiscard]] std::size_t allocated_bytes() const noexcept {
+    return m_wrk.size() * sizeof(typename workspace_type::value_type);
+  }
+};
+
+/**
+ * @brief GPU backends: dual-precision device workspaces only (no unused `m_wrk`).
+ *
+ * Both precisions stay owned because float and double `DataBuffer` overloads
+ * share one `FFT_Impl` instance.
+ */
+template <typename BackendTag>
+  requires HeapBackend<BackendTag>
+struct FftWorkspaceStorage<BackendTag> {
+  using gpu_workspace_type = typename heffte::fft3d_r2c<
+      BackendTag>::template buffer_container<std::complex<double>>;
+  using gpu_workspace_float = typename heffte::fft3d_r2c<
+      BackendTag>::template buffer_container<std::complex<float>>;
+
+  gpu_workspace_type m_gpu_wrk_double;
+  gpu_workspace_float m_gpu_wrk_float;
+
+  explicit FftWorkspaceStorage(std::size_t n)
+      : m_gpu_wrk_double(n), m_gpu_wrk_float(n) {}
+
+  auto *data_gpu_double() noexcept { return m_gpu_wrk_double.data(); }
+  auto *data_gpu_float() noexcept { return m_gpu_wrk_float.data(); }
+
+  [[nodiscard]] std::size_t allocated_bytes() const noexcept {
+    return m_gpu_wrk_double.size() *
+               sizeof(typename gpu_workspace_type::value_type) +
+           m_gpu_wrk_float.size() *
+               sizeof(typename gpu_workspace_float::value_type);
+  }
+};
+
+} // namespace detail
 
 /**
  * @brief FFT class template for distributed-memory parallel Fourier transforms
  *
  * @tparam BackendTag HeFFTe backend tag (heffte::backend::fftw or
  * heffte::backend::cufft / rocfft)
+ *
+ * Workspace buffers are owned by `detail::FftWorkspaceStorage<BackendTag>` so
+ * unused twin host/device allocations are not constructed.
  */
 template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
 
@@ -41,42 +113,35 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   const fft_type m_fft;
   double m_fft_time = 0.0;
 
-  using workspace_type = typename heffte::fft3d_r2c<
-      BackendTag>::template buffer_container<std::complex<double>>;
-  workspace_type m_wrk;
-
-  // GPU workspaces for float and double precision
-  // FFT_Impl can be called with RealType=float or double, so pre-allocate both
-  using gpu_workspace_type = typename heffte::fft3d_r2c<
-      BackendTag>::template buffer_container<std::complex<double>>;
-  using gpu_workspace_float = typename heffte::fft3d_r2c<
-      BackendTag>::template buffer_container<std::complex<float>>;
-  gpu_workspace_type m_gpu_wrk_double;
-  gpu_workspace_float m_gpu_wrk_float;
+  detail::FftWorkspaceStorage<BackendTag> m_ws;
 
   FFT_Impl(fft_type fft)
-      : m_fft(std::move(fft)), m_wrk(m_fft.size_workspace()),
-        m_gpu_wrk_double(m_fft.size_workspace()),
-        m_gpu_wrk_float(m_fft.size_workspace()) {}
+      : m_fft(std::move(fft)), m_ws(m_fft.size_workspace()) {}
 
   template <typename RealBackendTag, typename ComplexBackendTag, typename RealType>
   void forward(const core::DataBuffer<RealBackendTag, RealType> &in,
                core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &out) {
     static_assert(std::is_same_v<RealBackendTag, ComplexBackendTag>,
                   "Input and output must use the same backend");
-    m_fft_time -= MPI_Wtime();
-    if constexpr (std::is_same_v<RealType, double>) {
-      m_fft.forward(in.data(), out.data(), m_gpu_wrk_double.data());
-    } else if constexpr (std::is_same_v<RealType, float>) {
-      m_fft.forward(in.data(), out.data(), m_gpu_wrk_float.data());
+    if constexpr (HeapBackend<BackendTag>) {
+      m_fft_time -= MPI_Wtime();
+      if constexpr (std::is_same_v<RealType, double>) {
+        m_fft.forward(in.data(), out.data(), m_ws.data_gpu_double());
+      } else if constexpr (std::is_same_v<RealType, float>) {
+        m_fft.forward(in.data(), out.data(), m_ws.data_gpu_float());
+      }
+      m_fft_time += MPI_Wtime();
+    } else {
+      throw std::runtime_error(
+          "FFTW FFT requires std::vector, not DataBuffer. Use forward(RealVector, "
+          "ComplexVector) instead.");
     }
-    m_fft_time += MPI_Wtime();
   }
 
   void forward(const RealVector &in, ComplexVector &out) override {
     if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
       m_fft_time -= MPI_Wtime();
-      m_fft.forward(in.data(), out.data(), m_wrk.data());
+      m_fft.forward(in.data(), out.data(), m_ws.data_wrk());
       m_fft_time += MPI_Wtime();
     } else {
       throw std::runtime_error(
@@ -91,21 +156,27 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
            core::DataBuffer<RealBackendTag, RealType> &out) {
     static_assert(std::is_same_v<ComplexBackendTag, RealBackendTag>,
                   "Input and output must use the same backend");
-    m_fft_time -= MPI_Wtime();
-    if constexpr (std::is_same_v<RealType, double>) {
-      m_fft.backward(in.data(), out.data(), m_gpu_wrk_double.data(),
-                     heffte::scale::full);
-    } else if constexpr (std::is_same_v<RealType, float>) {
-      m_fft.backward(in.data(), out.data(), m_gpu_wrk_float.data(),
-                     heffte::scale::full);
+    if constexpr (HeapBackend<BackendTag>) {
+      m_fft_time -= MPI_Wtime();
+      if constexpr (std::is_same_v<RealType, double>) {
+        m_fft.backward(in.data(), out.data(), m_ws.data_gpu_double(),
+                       heffte::scale::full);
+      } else if constexpr (std::is_same_v<RealType, float>) {
+        m_fft.backward(in.data(), out.data(), m_ws.data_gpu_float(),
+                       heffte::scale::full);
+      }
+      m_fft_time += MPI_Wtime();
+    } else {
+      throw std::runtime_error(
+          "FFTW FFT requires std::vector, not DataBuffer. Use "
+          "backward(ComplexVector, RealVector) instead.");
     }
-    m_fft_time += MPI_Wtime();
   }
 
   void backward(const ComplexVector &in, RealVector &out) override {
     if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
       m_fft_time -= MPI_Wtime();
-      m_fft.backward(in.data(), out.data(), m_wrk.data(), heffte::scale::full);
+      m_fft.backward(in.data(), out.data(), m_ws.data_wrk(), heffte::scale::full);
       m_fft_time += MPI_Wtime();
     } else {
       throw std::runtime_error(
@@ -125,12 +196,7 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
   size_t size_workspace() const override { return m_fft.size_workspace(); }
 
   size_t get_allocated_memory_bytes() const override {
-    size_t total_bytes = m_wrk.size() * sizeof(typename workspace_type::value_type);
-    total_bytes +=
-        m_gpu_wrk_double.size() * sizeof(typename gpu_workspace_type::value_type);
-    total_bytes +=
-        m_gpu_wrk_float.size() * sizeof(typename gpu_workspace_float::value_type);
-    return total_bytes;
+    return m_ws.allocated_bytes();
   }
 
   Box3i get_inbox_bounds() const override {
