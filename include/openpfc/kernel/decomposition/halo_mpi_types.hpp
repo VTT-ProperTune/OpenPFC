@@ -20,6 +20,7 @@
 #include <array>
 #include <mpi.h>
 #include <stdexcept>
+#include <string>
 
 #include <openpfc/kernel/data/world_types.hpp>
 
@@ -60,15 +61,38 @@ struct MPI_Type_guard {
 
 /**
  * @brief Create MPI_Datatype for a 3D face (subarray) in row-major [nx,ny,nz]
- * @param nx, ny, nz Full array dimensions
- * @param start_x, start_y, start_z Start of subarray (0-based)
- * @param size_x, size_y, size_z Extent of subarray
+ * @param nx, ny, nz Full array dimensions (must be positive)
+ * @param start_x, start_y, start_z Start of subarray (0-based, non-negative)
+ * @param size_x, size_y, size_z Extent of subarray (non-negative; start+size
+ *        must fit inside the matching outer extent on each axis)
  * @param element_type MPI_Datatype for one element (e.g. MPI_DOUBLE)
  * @return RAII guard holding committed type
+ * @throws std::invalid_argument if extents are non-positive or the subarray
+ *         does not fit (no MPI call is made)
+ * @throws std::runtime_error if MPI_Type_create_subarray / MPI_Type_commit fails
  */
 [[nodiscard]] inline MPI_Type_guard
 create_face_type(int nx, int ny, int nz, int start_x, int start_y, int start_z,
                  int size_x, int size_y, int size_z, MPI_Datatype element_type) {
+  if (nx <= 0 || ny <= 0 || nz <= 0) {
+    throw std::invalid_argument(
+        "pfc::halo::create_face_type: outer extents must be positive (got " +
+        std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
+        ")");
+  }
+  const auto fits = [](int start, int size, int extent) {
+    return start >= 0 && size >= 0 && start <= extent - size;
+  };
+  if (!fits(start_x, size_x, nx) || !fits(start_y, size_y, ny) ||
+      !fits(start_z, size_z, nz)) {
+    throw std::invalid_argument(
+        "pfc::halo::create_face_type: subarray does not fit outer extents " +
+        std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
+        " (start=(" + std::to_string(start_x) + "," + std::to_string(start_y) +
+        "," + std::to_string(start_z) + "), size=(" + std::to_string(size_x) +
+        "," + std::to_string(size_y) + "," + std::to_string(size_z) + "))");
+  }
+
   const int ndims = 3;
   // Field layout: x fastest, then y, then z (see finite_difference.hpp). MPI_ORDER_C
   // lists dimensions slowest → fastest, i.e. z, y, x.
@@ -103,10 +127,39 @@ struct FaceTypes {
  *
  * Field layout: row-major [nx, ny, nz], boundary layers are the halo (no
  * extra padding). For direction +X: send right face, recv into left face.
+ *
+ * When `halo_width > 0`, each local extent must be strictly greater than
+ * `2 * halo_width` (same inequality as `LocalField::check_halo_fits_`) so
+ * send/recv slabs do not overlap and starts stay non-negative.
+ *
+ * @throws std::invalid_argument if `halo_width < 0`, extents are non-positive,
+ *         or (when `halo_width > 0`) any axis is `<= 2 * halo_width`
  */
 inline std::array<FaceTypes, 6> create_face_types_6(int nx, int ny, int nz,
                                                     int halo_width,
                                                     MPI_Datatype element_type) {
+  if (halo_width < 0) {
+    throw std::invalid_argument(
+        "pfc::halo::create_face_types_6: halo_width must be non-negative (got " +
+        std::to_string(halo_width) + ")");
+  }
+  if (nx <= 0 || ny <= 0 || nz <= 0) {
+    throw std::invalid_argument(
+        "pfc::halo::create_face_types_6: extents must be positive (got " +
+        std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
+        ")");
+  }
+  if (halo_width > 0 &&
+      (nx <= 2 * halo_width || ny <= 2 * halo_width || nz <= 2 * halo_width)) {
+    throw std::invalid_argument(
+        std::string("pfc::halo::create_face_types_6: local extents ") +
+        std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
+        " cannot host non-overlapping face halos of halo_width=" +
+        std::to_string(halo_width) + " (need >" + std::to_string(2 * halo_width) +
+        " points per dimension; reduce halo width, increase the grid, or use "
+        "fewer MPI ranks)");
+  }
+
   std::array<FaceTypes, 6> out = {};
   // Order: +X, -X, +Y, -Y, +Z, -Z
   struct FaceDirSpec {
