@@ -197,7 +197,19 @@ them with an explicit low-level RHS lambda if needed.
 
 Config-driven selection:
 [`integrator_method.hpp`](../../include/openpfc/kernel/simulation/steppers/integrator_method.hpp)
-provides `RKIntegratorMethod` and `make_tableau(method)`.
+provides `RKIntegratorMethod` and `make_tableau(method)`. Those helpers
+remain **identity / tableau** tools (`to_string`, `validate_method`,
+`make_tableau`) — they do not construct a stepper.
+
+The **composition boundary** is
+[`method_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/method_composition.hpp):
+`compose_scalar` / `compose_multi` map a stable method id plus
+`IntegratorComposeConfig` through the `register_method_composer` table to a
+validated `IntegratorComposition` (Euler today, via the same
+`EulerStepper` / `MultiEulerStepper` types as typed `create`). Prefer that
+API when the driver must not switch on method-specific construction;
+prefer typed `create` when the method type is fixed at the call site. See
+[Custom stepper integration](../user_guide/custom_stepper_integration.md).
 
 ## 4. Workspace ownership contract
 

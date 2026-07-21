@@ -172,6 +172,34 @@ The factory function:
 
 **Type inference**: The factory deduces all template arguments automatically. You don't need to specify the gradient type, model type, or RHS signature explicitly.
 
+## Identifier-driven composition (`compose_scalar` / `compose_multi`)
+
+Typed `steppers::create(Eval&, Model&, dt)` binds physics and a gradient
+evaluator when the method type is already known at the call site. For
+config- or string-driven selection, use the composition boundary in
+[`method_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/method_composition.hpp):
+
+```cpp
+#include <openpfc/kernel/simulation/steppers/method_composition.hpp>
+
+pfc::sim::steppers::IntegratorComposeConfig cfg{.dt = 0.01,
+                                                .requires_adaptive = false};
+auto composition =
+    pfc::sim::steppers::compose_scalar("euler", cfg, u.size(), rhs);
+// composition.stepper, .workspace_ownership, .method_state
+```
+
+- `compose_scalar` / `compose_multi` validate `IntegratorComposeConfig`
+  (positive `dt`, adaptive capability via `validate_method`) and return an
+  `IntegratorComposition` with declared `WorkspaceOwnership` and optional
+  `MethodStateCapability` (empty for stateless Euler).
+- Unknown identifiers, invalid config, and capability mismatches throw
+  `ComposeError` before any step is taken.
+- Extend the table with `register_method_composer` so new methods do not
+  require driver-side method switches. Euler is registered as a builtin.
+
+See also [Time integration architecture](../development/time_integration_architecture.md).
+
 ## Simulator integration with `step_with_physics()`
 
 The `Simulator::step_with_physics()` method provides the integration point for custom steppers. It handles the prologue/epilogue contract (initial conditions, boundary conditions, result writing) while delegating the physics update to your stepper:
