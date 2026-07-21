@@ -43,10 +43,12 @@
  * The exchange is **face-only** — corner halo cells (e.g. `u(-1, -1, k)`)
  * are not filled. That matches the needs of the 7-point Laplacian and
  * any face-only stencil; mixed derivatives that read corners need a
- * 26-neighbor exchanger that this class does not provide.
+ * 26-neighbor exchanger — use `pfc::communication::FullPaddedHaloExchanger`
+ * on the host, or `pfc::cuda::FullPaddedDeviceHalo` on device.
  *
  * @see pfc::field::PaddedBrick
  * @see pfc::halo::create_padded_face_types_6
+ * @see full_padded_halo_exchange.hpp — host 26-direction twin
  */
 
 #include <array>
@@ -107,8 +109,9 @@ public:
    *
    * Restricts the active face slots to those listed in `dirs`. Non-face
    * directions (edges, corners) are tolerated but ignored — this exchanger
-   * is face-only. For full 26-direction fills use `FullPaddedDeviceHalo`
-   * (CUDA) or run a 3-pass face-only exchange manually.
+   * is face-only. For full 26-direction fills use
+   * `pfc::communication::FullPaddedHaloExchanger` (host) or
+   * `pfc::cuda::FullPaddedDeviceHalo` (CUDA).
    *
    * If `selector` is provided the active set for this rank is
    * `selector(rank)`; otherwise the uniform `dirs` is used.
