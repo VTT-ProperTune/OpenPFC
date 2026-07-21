@@ -56,8 +56,68 @@ class BinaryReader {
 
 private:
   MPI_Comm m_comm = MPI_COMM_WORLD;
+  Vec3<int> m_global{};
+  Vec3<int> m_local{};
+  Vec3<int> m_offset{};
+  bool m_domain_valid = false;
   MPI_Datatype m_filetype{};
+  MPI_Datatype m_etype = MPI_DATATYPE_NULL;
   bool m_type_valid = false;
+
+  void ensure_filetype(MPI_Datatype etype) {
+    if (!m_domain_valid) {
+      throw std::runtime_error("BinaryReader::read: set_domain() was not called");
+    }
+    if (m_type_valid && m_etype == etype) {
+      return;
+    }
+    if (m_type_valid) {
+      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
+      m_type_valid = false;
+    }
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Type_create_subarray(3, m_global.data(), m_local.data(), m_offset.data(),
+                                 MPI_ORDER_FORTRAN, etype, &m_filetype),
+        "MPI_Type_create_subarray");
+    pfc::mpi::throw_on_mpi_error(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
+    m_etype = etype;
+    m_type_valid = true;
+  }
+
+  template <typename T>
+  MPI_Status read_mpi_binary(const std::string &filename, std::vector<T> &data,
+                             MPI_Datatype etype, const char *element_name) {
+    ensure_filetype(etype);
+
+    MPI_File fh{};
+    pfc::mpi::throw_on_mpi_error(MPI_File_open(m_comm,
+                                               const_cast<char *>(filename.c_str()),
+                                               MPI_MODE_RDONLY, MPI_INFO_NULL, &fh),
+                                 "MPI_File_open");
+
+    pfc::mpi::throw_on_mpi_error(
+        MPI_File_set_view(fh, 0, etype, m_filetype, "native", MPI_INFO_NULL),
+        "MPI_File_set_view");
+
+    MPI_Status status{};
+    pfc::mpi::throw_on_mpi_error(MPI_File_read_all(fh, data.data(),
+                                                   static_cast<int>(data.size()),
+                                                   etype, &status),
+                                 "MPI_File_read_all");
+    int received = 0;
+    pfc::mpi::throw_on_mpi_error(MPI_Get_count(&status, etype, &received),
+                                 "MPI_Get_count");
+    if (received != static_cast<int>(data.size())) {
+      (void)MPI_File_close(&fh);
+      std::ostringstream oss;
+      oss << "Short read from \"" << filename << "\": got " << received << " "
+          << element_name << ", expected " << data.size();
+      throw std::runtime_error(oss.str());
+    }
+
+    pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
+    return status;
+  }
 
 public:
   BinaryReader() = default;
@@ -80,48 +140,20 @@ public:
     if (m_type_valid) {
       pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype), "MPI_Type_free");
       m_type_valid = false;
+      m_etype = MPI_DATATYPE_NULL;
     }
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Type_create_subarray(3, arr_global.data(), arr_local.data(),
-                                 arr_offset.data(), MPI_ORDER_FORTRAN, MPI_DOUBLE,
-                                 &m_filetype),
-        "MPI_Type_create_subarray");
-    pfc::mpi::throw_on_mpi_error(MPI_Type_commit(&m_filetype), "MPI_Type_commit");
-    m_type_valid = true;
+    m_global = arr_global;
+    m_local = arr_local;
+    m_offset = arr_offset;
+    m_domain_valid = true;
   }
 
   MPI_Status read(const std::string &filename, Field &data) {
-    if (!m_type_valid) {
-      throw std::runtime_error("BinaryReader::read: set_domain() was not called");
-    }
-    MPI_File fh{};
-    pfc::mpi::throw_on_mpi_error(MPI_File_open(m_comm,
-                                               const_cast<char *>(filename.c_str()),
-                                               MPI_MODE_RDONLY, MPI_INFO_NULL, &fh),
-                                 "MPI_File_open");
+    return read_mpi_binary(filename, data, MPI_DOUBLE, "doubles");
+  }
 
-    pfc::mpi::throw_on_mpi_error(
-        MPI_File_set_view(fh, 0, MPI_DOUBLE, m_filetype, "native", MPI_INFO_NULL),
-        "MPI_File_set_view");
-
-    MPI_Status status{};
-    pfc::mpi::throw_on_mpi_error(MPI_File_read_all(fh, data.data(),
-                                                   static_cast<int>(data.size()),
-                                                   MPI_DOUBLE, &status),
-                                 "MPI_File_read_all");
-    int received = 0;
-    pfc::mpi::throw_on_mpi_error(MPI_Get_count(&status, MPI_DOUBLE, &received),
-                                 "MPI_Get_count");
-    if (received != static_cast<int>(data.size())) {
-      (void)MPI_File_close(&fh);
-      std::ostringstream oss;
-      oss << "Short read from \"" << filename << "\": got " << received
-          << " doubles, expected " << data.size();
-      throw std::runtime_error(oss.str());
-    }
-
-    pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
-    return status;
+  MPI_Status read(const std::string &filename, ComplexField &data) {
+    return read_mpi_binary(filename, data, MPI_DOUBLE_COMPLEX, "complex elements");
   }
 };
 
