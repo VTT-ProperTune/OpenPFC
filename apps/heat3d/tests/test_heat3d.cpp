@@ -41,6 +41,7 @@
 #include <heat3d/cli.hpp>
 #include <heat3d/heat_model.hpp>
 #include <heat3d/reporting.hpp>
+#include <heat3d/state_capture.hpp>
 
 using Catch::Matchers::WithinAbs;
 using heat3d::HeatModel;
@@ -741,7 +742,6 @@ TEST_CASE("heat3d::analytic_gaussian: t > 0 strictly decreases the peak",
 // MPI lifecycle around Catch2 (mirrors apps/tungsten/tests/test_tungsten.cpp).
 // -----------------------------------------------------------------------------
 
-
 // -----------------------------------------------------------------------------
 // RK2HeunStepper tests (integrator selection).
 // -----------------------------------------------------------------------------
@@ -753,12 +753,11 @@ TEST_CASE("test_rk2_heun_stepper_basic", "[heat3d]") {
 
   const double dt = 0.1;
   const std::size_t local_size = 1;
-  std::vector<double> u = {0.0};  // u(0) = 0
+  std::vector<double> u = {0.0}; // u(0) = 0
 
   // RHS: du/dt = 1
-  auto rhs = [](double t, const std::vector<double> & /*u_in*/, std::vector<double> &du) {
-    du[0] = 1.0;
-  };
+  auto rhs = [](double t, const std::vector<double> & /*u_in*/,
+                std::vector<double> &du) { du[0] = 1.0; };
 
   pfc::sim::steppers::RK2HeunStepper<decltype(rhs)> stepper(dt, local_size, rhs);
   double t = 0.0;
@@ -768,7 +767,8 @@ TEST_CASE("test_rk2_heun_stepper_basic", "[heat3d]") {
   REQUIRE_THAT(u[0], WithinAbs(0.1, 1e-12));
   REQUIRE_THAT(t, WithinAbs(0.1, 1e-12));
 
-  // Euler: u_new = u + dt * rhs(t, u) = 0 + 0.1 * 1 = 0.1 (also exact for linear ODE)
+  // Euler: u_new = u + dt * rhs(t, u) = 0 + 0.1 * 1 = 0.1 (also exact for linear
+  // ODE)
   std::vector<double> u_euler = {0.0};
   double t_euler = 0.0;
   std::vector<double> du(1);
@@ -776,6 +776,40 @@ TEST_CASE("test_rk2_heun_stepper_basic", "[heat3d]") {
   u_euler[0] += dt * du[0];
   t_euler += dt;
   REQUIRE_THAT(u_euler[0], WithinAbs(0.1, 1e-12));
+}
+
+// -----------------------------------------------------------------------------
+// Checkpoint state capture adapters.
+// -----------------------------------------------------------------------------
+
+TEST_CASE("heat3d state_capture round-trip", "[heat3d][state_capture]") {
+  const pfc::types::Int3 extents{3, 2, 1};
+  const std::size_t n = 6;
+  std::vector<double> u(n);
+  for (std::size_t i = 0; i < n; ++i) {
+    u[i] = 0.5 * static_cast<double>(i + 1);
+  }
+
+  const auto payload = heat3d::capture_u(u, extents);
+  REQUIRE(payload.field_id == heat3d::kTemperatureFieldId);
+
+  std::vector<double> dest(n, -1.0);
+  const auto outcome = heat3d::restore_u(payload, dest, extents);
+  REQUIRE(outcome.ok);
+  REQUIRE(dest == u);
+}
+
+TEST_CASE("heat3d state_capture reject", "[heat3d][state_capture]") {
+  const pfc::types::Int3 extents{2, 2, 1};
+  std::vector<double> u = {1.0, 2.0, 3.0, 4.0};
+  auto payload = heat3d::capture_u(u, extents);
+  payload.field_id = "wrong.id";
+
+  std::vector<double> dest(4, 42.0);
+  const auto outcome = heat3d::restore_u(payload, dest, extents);
+  REQUIRE_FALSE(outcome.ok);
+  REQUIRE(outcome.error == pfc::checkpoint::RestoreError::FieldIdMismatch);
+  REQUIRE(dest == std::vector<double>{42.0, 42.0, 42.0, 42.0});
 }
 
 int main(int argc, char *argv[]) {
