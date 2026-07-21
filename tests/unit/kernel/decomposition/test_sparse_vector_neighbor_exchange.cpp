@@ -24,6 +24,22 @@
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <vector>
 
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+#include "unit/runtime/gpu/test_helpers.hpp"
+#endif
+
+#if defined(OpenPFC_ENABLE_CUDA)
+#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <openpfc/runtime/cuda/exchange_cuda.hpp>
+#include <openpfc/runtime/cuda/sparse_vector_cuda.hpp>
+#endif
+
+#if defined(OpenPFC_ENABLE_HIP)
+#include <openpfc/runtime/hip/backend_tags_hip.hpp>
+#include <openpfc/runtime/hip/exchange_hip.hpp>
+#include <openpfc/runtime/hip/sparse_vector_hip.hpp>
+#endif
+
 using namespace pfc;
 using Catch::Approx;
 
@@ -256,6 +272,71 @@ TEST_CASE("Neighbor exchange - Empty sparse vector",
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
+
+#if defined(OpenPFC_ENABLE_CUDA)
+TEST_CASE("Neighbor exchange - Empty sparse vector (CUDA)",
+          "[SparseVector][MPI][neighbor][empty][cuda]") {
+
+  auto [rank, size] = get_mpi_info();
+
+  if (size < 2) {
+    SKIP("This test requires at least 2 MPI processes");
+  }
+
+  if (size != 2) {
+    SKIP("This test requires exactly 2 MPI processes");
+  }
+
+  if (!pfc::gpu::test::is_cuda_available()) {
+    SKIP("CUDA device not available");
+  }
+
+  if (rank == 0) {
+    core::SparseVector<backend::CudaTag, double> sparse(0);
+    exchange::send(sparse, 0, 1, MPI_COMM_WORLD);
+  } else if (rank == 1) {
+    // Receive into CpuTag via shared receive (size envelope contract)
+    core::SparseVector<backend::CpuTag, double> sparse(0);
+    exchange::receive(sparse, 0, 1, MPI_COMM_WORLD);
+    REQUIRE(sparse.size() == 0);
+    REQUIRE(sparse.empty());
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+#endif // OpenPFC_ENABLE_CUDA
+
+#if defined(OpenPFC_ENABLE_HIP)
+TEST_CASE("Neighbor exchange - Empty sparse vector (HIP)",
+          "[SparseVector][MPI][neighbor][empty][hip]") {
+
+  auto [rank, size] = get_mpi_info();
+
+  if (size < 2) {
+    SKIP("This test requires at least 2 MPI processes");
+  }
+
+  if (size != 2) {
+    SKIP("This test requires exactly 2 MPI processes");
+  }
+
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP device not available");
+  }
+
+  if (rank == 0) {
+    core::SparseVector<backend::HipTag, double> sparse(0);
+    exchange::send(sparse, 0, 1, MPI_COMM_WORLD);
+  } else if (rank == 1) {
+    core::SparseVector<backend::CpuTag, double> sparse(0);
+    exchange::receive(sparse, 0, 1, MPI_COMM_WORLD);
+    REQUIRE(sparse.size() == 0);
+    REQUIRE(sparse.empty());
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+#endif // OpenPFC_ENABLE_HIP
 
 TEST_CASE("Neighbor exchange - Multiple neighbors simultaneously",
           "[SparseVector][MPI][neighbor][multiple]") {
