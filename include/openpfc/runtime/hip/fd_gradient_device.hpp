@@ -298,12 +298,16 @@ public:
    *                    (cell `(-hw,-hw,-hw)`), not the `(0,0,0)` owned cell.
    * @param nx,ny,nz    Owned (non-halo) extents of the local subdomain.
    * @param dx,dy,dz    Grid spacing in physical coordinates.
-   * @param halo_width  Halo width on every side; must equal `order / 2`.
+   * @param halo_width  Halo width on every side; must be `>=` the stencil
+   *                    half-width required by members `G` declares
+   *                    (typically `order / 2`). Larger halos remain valid.
    * @param order       Even spatial order. D2 orders 2..20, D1 orders
    *                    2..14 are tabulated.
    *
    * @throws std::invalid_argument if any derivative declared by `G`
-   *         requires an order that is not tabulated.
+   *         requires an order that is not tabulated, if a looked-up
+   *         half-width exceeds the compiled-in POD caps, or if
+   *         `halo_width` is strictly less than the required half-width.
    */
   FdGradientDevice(const double *d_core, int nx, int ny, int nz, double dx,
                    double dy, double dz, int halo_width, int order) {
@@ -380,6 +384,15 @@ public:
         m_pod.cz1[k] = scale_z * ck;
       }
     }
+
+    const int required =
+        m_pod.hw1 > m_pod.hw2 ? m_pod.hw1 : m_pod.hw2;
+    if (halo_width < required) {
+      throw std::invalid_argument(
+          "FdGradientDevice: halo_width " + std::to_string(halo_width) +
+          " < required half_width " + std::to_string(required) +
+          " for order " + std::to_string(order));
+    }
   }
 
   /// Owned-region extents (host-side accessors, mirror the CPU twin's
@@ -413,7 +426,7 @@ private:
  *
  * @tparam G     Model-owned grads aggregate (see `grad_concepts.hpp`).
  * @param u      Padded brick (must outlive the returned evaluator).
- * @param order  Even spatial order; should satisfy `order / 2 == u.halo_width()`.
+ * @param order  Even spatial order; requires `u.halo_width() >= order / 2`.
  *               Defaults to 2.
  *
  * @return FdGradientDevice<G> ready for use with for_each_interior_device.
