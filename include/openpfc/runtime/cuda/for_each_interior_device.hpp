@@ -65,6 +65,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <type_traits>
 
 #include <cuda_runtime.h>
@@ -98,21 +99,34 @@ struct DevicePtrPack4 {
   double *p3{nullptr};
 };
 
-/** Fixed-arity increment packs returned by multi-field `Model::rhs` on device. */
+/**
+ * Fixed-arity increment packs returned by multi-field `Model::rhs`.
+ *
+ * Named members are written by device `scatter_device`. Host-only
+ * `as_tuple()` (no `OPENPFC_HD`) lets CPU `pfc::sim::detail::scatter` /
+ * `for_each_interior` normalize via `tuple_protocol` — never call
+ * `as_tuple` from `__device__` code.
+ */
 struct DeviceInc2 {
   double v0{};
   double v1{};
+  auto as_tuple() { return std::tie(v0, v1); }
+  auto as_tuple() const { return std::tie(v0, v1); }
 };
 struct DeviceInc3 {
   double v0{};
   double v1{};
   double v2{};
+  auto as_tuple() { return std::tie(v0, v1, v2); }
+  auto as_tuple() const { return std::tie(v0, v1, v2); }
 };
 struct DeviceInc4 {
   double v0{};
   double v1{};
   double v2{};
   double v3{};
+  auto as_tuple() { return std::tie(v0, v1, v2, v3); }
+  auto as_tuple() const { return std::tie(v0, v1, v2, v3); }
 };
 
 [[nodiscard]] inline DevicePtrPack2 make_device_ptr_pack(double *a, double *b) {
