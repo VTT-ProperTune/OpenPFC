@@ -77,6 +77,8 @@ void send(core::SparseVector<backend::HipTag, T> &sparse_vector, int sender_rank
   }
 
   size_t size = sparse_vector.size();
+  // Fail closed before size header / device copies so oversize never posts MPI.
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::send");
   // Match CPU exchange.hpp: always post one size word (including 0).
   if (size == 0) {
     pfc::mpi::throw_on_mpi_error(
@@ -100,13 +102,12 @@ void send(core::SparseVector<backend::HipTag, T> &sparse_vector, int sender_rank
       MPI_Send(&size, 1, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm),
       "MPI_Send");
   pfc::mpi::throw_on_mpi_error(
-      MPI_Send(indices.data(), static_cast<int>(size), MPI_UNSIGNED_LONG_LONG,
-               receiver_rank, tag + 1, comm),
+      MPI_Send(indices.data(), count, MPI_UNSIGNED_LONG_LONG, receiver_rank,
+               tag + 1, comm),
       "MPI_Send");
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
   pfc::mpi::throw_on_mpi_error(
-      MPI_Send(data.data(), static_cast<int>(size), mpi_type, receiver_rank,
-               tag + 2, comm),
+      MPI_Send(data.data(), count, mpi_type, receiver_rank, tag + 2, comm),
       "MPI_Send");
 }
 
@@ -126,7 +127,7 @@ void send_data(const core::SparseVector<backend::HipTag, T> &sparse_vector,
   }
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  int count = static_cast<int>(size);
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::send_data");
 
   if (detail::runtime_mpi_hip_aware()) {
     pfc::mpi::throw_on_mpi_error(
@@ -161,7 +162,8 @@ void receive_data(core::SparseVector<backend::HipTag, T> &sparse_vector,
   }
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  int count = static_cast<int>(size);
+  const int count =
+      pfc::mpi::ensure_mpi_int_count(size, "exchange::receive_data");
 
   if (detail::runtime_mpi_hip_aware()) {
     pfc::mpi::throw_on_mpi_error(
@@ -205,7 +207,7 @@ void isend_data(const core::SparseVector<backend::HipTag, T> &sparse_vector,
   }
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  int count = static_cast<int>(size);
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::isend_data");
   pfc::mpi::throw_on_mpi_error(
       MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
                 comm, request),
@@ -236,7 +238,7 @@ void irecv_data(core::SparseVector<backend::HipTag, T> &sparse_vector,
   }
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  int count = static_cast<int>(size);
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::irecv_data");
   pfc::mpi::throw_on_mpi_error(
       MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag,
                 comm, request),
