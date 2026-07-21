@@ -479,6 +479,10 @@ public:
    * not advance simulation time; it only updates attempt statistics for
    * adaptive time-stepping algorithms.
    *
+   * @note When used with @ref TimeStateGuard, call this before @c commit()
+   *       (or outside an uncommitted guard); otherwise the guard restores
+   *       the counter on destruction.
+   *
    * @post get_accepted_steps() returns previous value + 1
    */
   void increment_step_success() { accepted_steps_++; }
@@ -486,9 +490,12 @@ public:
   /**
    * @brief Record a rejected adaptive step attempt.
    *
-   * Increments the rejected-attempt counter. Persists across
-   * @ref TimeStateGuard rollback of dt/increment so rejection statistics
-   * are not lost when a step is undone.
+   * Increments the rejected-attempt counter. Unlike @ref next(), this does
+   * not advance simulation time; it only updates attempt statistics.
+   *
+   * @note @ref TimeStateGuard also restores accepted/rejected counters unless
+   *       @c commit() was called. Call this after an uncommitted guard's
+   *       scope ends (or outside the guard) so the rejection count is kept.
    *
    * @post get_rejected_steps() returns previous value + 1
    */
@@ -934,16 +941,23 @@ public:
  * Typical usage:
  * ```cpp
  * while (!time.done()) {
- *   TimeStateGuard guard(time);  // Snapshot dt, increment, counters
+ *   bool accepted = false;
+ *   {
+ *     TimeStateGuard guard(time);  // Snapshot dt, increment, counters
  *
- *   double error = attempt_step(time);
- *   if (error > tolerance) {
- *     time.increment_step_rejection();
- *     continue;  // Step rejected: guard restores state
+ *     double error = attempt_step(time);
+ *     if (error <= tolerance) {
+ *       time.increment_step_success();
+ *       guard.commit();  // Keep counters and temporal state
+ *       time.next();
+ *       accepted = true;
+ *     }
+ *     // Uncommitted: destructor restores dt, increment, and counters
  *   }
- *   time.increment_step_success();
- *   guard.commit();  // Step accepted: disable restoration
- *   time.next();
+ *   if (!accepted) {
+ *     // Record rejection after the guard ends so the count is kept
+ *     time.increment_step_rejection();
+ *   }
  * }
  * ```
  *
