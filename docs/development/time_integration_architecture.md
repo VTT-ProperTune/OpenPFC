@@ -264,10 +264,19 @@ That construction lives in
   or `SpectralExpConfigId` (or mode count) changes.
 
 Coefficients are transient/recomputable and are **not** checkpointed.
-This API is not Tungsten's physics-specific `opN = expm1(arg)/opCk` path.
+Tungsten no longer builds physics-specific `opN = expm1(arg)/opCk` inside
+`Model` members. The app maps `L = k_laplacian * opCk` and owns method weights
+in [`TungstenEtdWorkspace`](../../apps/tungsten/include/tungsten/common/tungsten_etd_workspace.hpp)
+(`n_weight = k_laplacian * phi1_L`) over `SpectralExpCoefficientCache`.
+`Model::step` delegates the exponential combine to that workspace (CPU) or to
+`tungsten::ops::apply_time_integration` with workspace device buffers
+(CUDA/HIP). Temporary adapter removal:
+`TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169`.
 Coverage:
 [`test_spectral_exp_coefficients.cpp`](../../tests/unit/kernel/integrator/test_spectral_exp_coefficients.cpp)
-(`[integrator][spectral_exp]`).
+(`[integrator][spectral_exp]`) and Tungsten
+[`test_tungsten.cpp`](../../apps/tungsten/tests/test_tungsten.cpp)
+(`[tungsten][spectral]`).
 
 ### ETD1 step attempts (`Etd1Stepper`)
 
@@ -289,9 +298,10 @@ evaluating `N`, writes an isolated `candidate()`, and returns
 `Etd1StepAttempt` (`success` / `t_next`) — computational completion only,
 not adaptive accept/reject. `MultiEtd1Stepper<Rhs, 2>` covers a two-field
 pack with the same isolation per field. Transient coeff/scratch caches are
-not checkpointable. Tungsten `Model::step` migration onto this path remains
-out of scope. Coverage: `tests/unit/kernel/simulation/steppers/test_etd1.cpp`
-(`[stepper][etd1]`).
+not checkpointable. Tungsten still uses the temporary
+`TungstenEtdWorkspace` adapter until App/Simulator wires driver-owned
+`Etd1Stepper` time advance (`TODO(remove-tungsten-etd-workspace)`). Coverage:
+`tests/unit/kernel/simulation/steppers/test_etd1.cpp` (`[stepper][etd1]`).
 
 ### Embedded RK step attempts (`EmbeddedRKStepper`)
 
