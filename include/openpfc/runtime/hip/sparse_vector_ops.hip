@@ -12,6 +12,7 @@
 #include <openpfc/runtime/hip/sparse_vector_ops_hip.hpp>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
 #include "openpfc/runtime/common/gpu_autotune.hpp"
@@ -38,11 +39,32 @@ __global__ void scatter_kernel(size_t n, const size_t *indices, const double *da
   }
 }
 
+namespace {
+
+void check_indices_host(size_t n, const size_t *indices, size_t length,
+                        const char *oob_message) {
+  std::vector<size_t> host_idx(n);
+  hipError_t err =
+      hipMemcpy(host_idx.data(), indices, n * sizeof(size_t),
+                hipMemcpyDeviceToHost);
+  if (err != hipSuccess) {
+    throw std::runtime_error(std::string(hipGetErrorString(err)));
+  }
+  for (size_t i = 0; i < n; ++i) {
+    if (host_idx[i] >= length) {
+      throw std::runtime_error(oob_message);
+    }
+  }
+}
+
+} // namespace
+
 void gather_hip_impl(size_t n, const size_t *indices, double *data,
-                      const double *source, size_t source_size) {
+                     const double *source, size_t source_size) {
   if (n == 0) {
     return;
   }
+  check_indices_host(n, indices, source_size, "gather: index out of bounds");
 #ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
   auto config = pfc::gpu::AutoTuner::instance().get_config("gather", n);
   int threads_per_block = config.block_size_x;
@@ -57,14 +79,14 @@ void gather_hip_impl(size_t n, const size_t *indices, double *data,
     throw std::runtime_error("HIP gather kernel failed: " +
                              std::string(hipGetErrorString(err)));
   }
-  (void)source_size;
 }
 
 void scatter_hip_impl(size_t n, const size_t *indices, const double *data,
-                       double *dest, size_t dest_size) {
+                      double *dest, size_t dest_size) {
   if (n == 0) {
     return;
   }
+  check_indices_host(n, indices, dest_size, "scatter: index out of bounds");
 #ifdef OpenPFC_ENABLE_GPU_AUTOTUNING
   auto config = pfc::gpu::AutoTuner::instance().get_config("scatter", n);
   int threads_per_block = config.block_size_x;
@@ -79,7 +101,6 @@ void scatter_hip_impl(size_t n, const size_t *indices, const double *data,
     throw std::runtime_error("HIP scatter kernel failed: " +
                              std::string(hipGetErrorString(err)));
   }
-  (void)dest_size;
 }
 
 } // namespace core
