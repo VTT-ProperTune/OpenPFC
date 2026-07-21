@@ -47,8 +47,10 @@
 #include <cstring>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <mpi.h>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 

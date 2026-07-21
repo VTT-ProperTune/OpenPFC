@@ -51,6 +51,7 @@
 #include <array>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -111,15 +112,22 @@ inline std::size_t checked_product_3d(long long nx, long long ny, long long nz) 
                                 std::to_string(nx) + ", " + std::to_string(ny) +
                                 ", " + std::to_string(nz) + ")");
   }
-  // Multiply using long long first, then check against size_t max
-  const long long product = nx * ny * nz;
-  if (product < 0 || static_cast<unsigned long long>(product) >
-                        static_cast<unsigned long long>(std::numeric_limits<std::size_t>::max())) {
-    throw std::overflow_error("3D product overflow: " + std::to_string(nx) + " * " +
-                              std::to_string(ny) + " * " + std::to_string(nz) +
-                              " exceeds std::size_t range");
+  // Stepwise unsigned multiply (same pattern as vtk_writer_validate) — avoids
+  // signed long long overflow UB when intermediate products exceed LLONG_MAX.
+  unsigned long long n = 1;
+  const auto max_sz =
+      static_cast<unsigned long long>((std::numeric_limits<std::size_t>::max)());
+  for (const unsigned long long dim :
+       {static_cast<unsigned long long>(nx), static_cast<unsigned long long>(ny),
+        static_cast<unsigned long long>(nz)}) {
+    if (dim != 0ULL && n > max_sz / dim) {
+      throw std::overflow_error("3D product overflow: " + std::to_string(nx) + " * " +
+                                std::to_string(ny) + " * " + std::to_string(nz) +
+                                " exceeds std::size_t range");
+    }
+    n *= dim;
   }
-  return static_cast<std::size_t>(product);
+  return static_cast<std::size_t>(n);
 }
 
 /**

@@ -255,18 +255,13 @@ TEST_CASE("PaddedBrick: throws on halo width overflow in extent calculation",
       std::overflow_error);
 }
 
-TEST_CASE("PaddedBrick: throws on product overflow in storage allocation",
+TEST_CASE("PaddedBrick: checked_product_3d throws when size_t would overflow",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({1000000, 2000000, 1}));
-  auto decomp = decomposition::create(world, 1);
-
-  // Large extents that cause nx*ny*nz to overflow size_t
-  // On binary64 systems, size_t is 64-bit, but the product of three int32 values
-  // can still exceed the max before the product check
-  // Use a smaller halo width to avoid extent overflow but still hit product overflow
-  REQUIRE_THROWS_AS(
-      field::PaddedBrick<double>(decomp, /*rank=*/0, /*hw=*/1000),
-      std::overflow_error);
+  // 2^22 cubed exceeds size_t on LP64 without needing a multi-TiB GridSize.
+  constexpr long long dim = 1LL << 22;
+  REQUIRE_THROWS_AS(field::detail::checked_product_3d(dim, dim, dim),
+                    std::overflow_error);
+  REQUIRE(field::detail::checked_product_3d(4, 5, 6) == std::size_t{120});
 }
 
 TEST_CASE("PaddedBrick: throws on negative halo width", "[field][padded_brick]") {
