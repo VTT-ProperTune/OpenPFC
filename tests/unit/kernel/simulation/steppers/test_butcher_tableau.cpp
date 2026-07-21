@@ -73,6 +73,40 @@ TEST_CASE("Embedded RK23 (Bogacki-Shampine) tableau is valid") {
   REQUIRE(tableau.b_hat(3) == Catch::Approx(1.0/8.0));
 }
 
+TEST_CASE("Embedded RK45 (Dormand-Prince) tableau is valid") {
+  auto tableau = pfc::sim::steppers::make_embedded_rk45<double>();
+  REQUIRE(tableau.stage_count() == 7);
+  REQUIRE(tableau.has_embedded());
+  REQUIRE(tableau.order() == 5);
+  REQUIRE(tableau.embedded_order() == 4);
+  REQUIRE(tableau.name() == "Dormand-Prince 5(4)");
+
+  REQUIRE(tableau.c(0) == Catch::Approx(0.0));
+  REQUIRE(tableau.c(1) == Catch::Approx(1.0 / 5.0));
+  REQUIRE(tableau.c(2) == Catch::Approx(3.0 / 10.0));
+  REQUIRE(tableau.c(3) == Catch::Approx(4.0 / 5.0));
+  REQUIRE(tableau.c(4) == Catch::Approx(8.0 / 9.0));
+  REQUIRE(tableau.c(5) == Catch::Approx(1.0));
+  REQUIRE(tableau.c(6) == Catch::Approx(1.0));
+
+  REQUIRE(tableau.a(1, 0) == Catch::Approx(1.0 / 5.0));
+  REQUIRE(tableau.a(2, 0) == Catch::Approx(3.0 / 40.0));
+  REQUIRE(tableau.a(2, 1) == Catch::Approx(9.0 / 40.0));
+  REQUIRE(tableau.a(6, 0) == Catch::Approx(35.0 / 384.0));
+  REQUIRE(tableau.a(6, 5) == Catch::Approx(11.0 / 84.0));
+
+  REQUIRE(tableau.b(0) == Catch::Approx(35.0 / 384.0));
+  REQUIRE(tableau.b(1) == Catch::Approx(0.0));
+  REQUIRE(tableau.b(2) == Catch::Approx(500.0 / 1113.0));
+  REQUIRE(tableau.b(5) == Catch::Approx(11.0 / 84.0));
+  REQUIRE(tableau.b(6) == Catch::Approx(0.0));
+
+  REQUIRE(tableau.b_hat(0) == Catch::Approx(5179.0 / 57600.0));
+  REQUIRE(tableau.b_hat(1) == Catch::Approx(0.0));
+  REQUIRE(tableau.b_hat(5) == Catch::Approx(187.0 / 2100.0));
+  REQUIRE(tableau.b_hat(6) == Catch::Approx(1.0 / 40.0));
+}
+
 TEST_CASE("Float type coefficients work correctly") {
   auto tableau = pfc::sim::steppers::make_rk2_midpoint<float>();
   REQUIRE(tableau.stage_count() == 2);

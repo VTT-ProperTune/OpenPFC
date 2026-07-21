@@ -520,4 +520,53 @@ inline ButcherTableau<T> make_embedded_rk23()
   );
 }
 
+/**
+ * @brief Create Dormand-Prince 5(4) embedded tableau
+ *
+ * Classical seven-stage explicit Runge-Kutta method with a fifth-order
+ * primary solution (`b`) and a fourth-order embedded estimator (`b_hat`)
+ * for local truncation-error evidence. FSAL reuse is not encoded here —
+ * callers that cache the final stage must invalidate on reject/restart.
+ *
+ * Coefficients (row-major `a_ij`, length 49; zeros on/above the diagonal):
+ *   - c: [0, 1/5, 3/10, 4/5, 8/9, 1, 1]
+ *   - b (5th): [35/384, 0, 500/1113, 125/192, -2187/6784, 11/84, 0]
+ *   - b_hat (4th): [5179/57600, 0, 7571/16695, 393/640, -92097/339200, 187/2100, 1/40]
+ *
+ * @tparam T Real floating-point type (float or double)
+ * @return ButcherTableau<T> configured for Dormand-Prince 5(4)
+ */
+template <typename T>
+inline ButcherTableau<T> make_embedded_rk45()
+{
+  return ButcherTableau<T>(
+    7,
+    {// row 0
+     T(0), T(0), T(0), T(0), T(0), T(0), T(0),
+     // row 1
+     T(1) / T(5), T(0), T(0), T(0), T(0), T(0), T(0),
+     // row 2
+     T(3) / T(40), T(9) / T(40), T(0), T(0), T(0), T(0), T(0),
+     // row 3
+     T(44) / T(45), T(-56) / T(15), T(32) / T(9), T(0), T(0), T(0), T(0),
+     // row 4
+     T(19372) / T(6561), T(-25360) / T(2187), T(64448) / T(6561),
+     T(-212) / T(729), T(0), T(0), T(0),
+     // row 5
+     T(9017) / T(3168), T(-355) / T(33), T(46732) / T(5247), T(49) / T(176),
+     T(-5103) / T(18656), T(0), T(0),
+     // row 6
+     T(35) / T(384), T(0), T(500) / T(1113), T(125) / T(192),
+     T(-2187) / T(6784), T(11) / T(84), T(0)},
+    {T(35) / T(384), T(0), T(500) / T(1113), T(125) / T(192),
+     T(-2187) / T(6784), T(11) / T(84), T(0)},
+    {T(0), T(1) / T(5), T(3) / T(10), T(4) / T(5), T(8) / T(9), T(1), T(1)},
+    {T(5179) / T(57600), T(0), T(7571) / T(16695), T(393) / T(640),
+     T(-92097) / T(339200), T(187) / T(2100), T(1) / T(40)},
+    "Dormand-Prince 5(4)",
+    5,
+    4
+  );
+}
+
 } // namespace pfc::sim::steppers
