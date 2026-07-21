@@ -118,6 +118,8 @@ Ghosts are not resolved by per-point MPI or maps in hot loops. The pattern (whic
 
 Design choice: Indices for the pack path are exchanged once at setup; only values move each step.
 
+Setup-phase size envelope: `exchange::send` on CPU (`exchange.hpp`), CUDA (`exchange_cuda.hpp`), and HIP (`exchange_hip.hpp`) always posts exactly one `MPI_UNSIGNED_LONG_LONG` size word before any index/data messages — including value `0` when the `SparseVector` is empty — matching shared `exchange::receive`, which always `MPI_Recv`s that single size word. A prior GPU empty path that used a zero-count `MPI_Send(nullptr, 0, …)` was incorrect and could hang or skew tags against CPU peers.
+
 Index semantics (in-place):
 
 - Send: Local linear indices of the boundary layer to send.
