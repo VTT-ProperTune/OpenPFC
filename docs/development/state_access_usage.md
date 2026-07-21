@@ -209,26 +209,31 @@ private:
 
 ```cpp
 #include <openpfc/kernel/integrator/stage_context.hpp>
+#include <openpfc/kernel/decomposition/stage_preparation.hpp>
 
 using namespace pfc::integrator;
+using namespace pfc::communication;
 
-// Create stage context
+// Create stage context (flag-only descriptor)
 StageContext ctx;
 ctx.time = 0.0;  // Current simulation time
 ctx.dt = 0.01;   // Timestep being attempted
 ctx.stage_index = 0;  // RK stage index
 ctx.region_kind = StageContext::RegionKind::All;  // Field region needed
-ctx.needs_boundary_update = true;  // BCs need updating
-ctx.needs_halo_exchange = true;  // Halo exchange needed
+ctx.needs_boundary_update = true;  // Pre-eval BC hook inside prepare
+ctx.needs_halo_exchange = true;  // Halo exchange needed before evaluation
 
-// Driver uses context to coordinate MPI
-if (ctx.needs_halo_exchange) {
-    exchange_halos(field);
-}
+// Prefer the stage-preparation protocol over ad-hoc MPI at each site
+StagePreparationService<double> prep;
+prep.bind("u", padded_halo_u);  // brick-bound PaddedHaloExchanger
+prep.set_boundary_hook([](std::string_view /*name*/) {
+    // Apply owned-face BCs before halo (default BoundaryThenHalo)
+});
+const std::string_view fields[] = {"u"};
+prep.prepare(requirements_from(ctx), fields);
 
-if (ctx.needs_boundary_update) {
-    apply_boundary_conditions(field);
-}
+// Reject/retry: no halo rollback — re-prepare from accepted owned state
+// prep.prepare(requirements_from(ctx), fields);
 ```
 
 ### Stage Context in Integrator

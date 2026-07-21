@@ -45,6 +45,20 @@ Use `pfc::field::LocalField<T>` (unpadded `nx*ny*nz`) + `pfc::SparseHaloExchange
 - **Arbitrary peer / index patterns** that have no face geometry — multi-block grids, hopping over distance, mixed `(peer_rank, send_indices, recv_indices, send_tag, recv_tag)` tuples.
 - **Future unstructured / FEM** halo communication — the API already accepts arbitrary `RemoteHalo` entries; only a `make_fem_halos(...)` builder needs to land on top.
 
+### Stage preparation protocol
+
+`PaddedHaloExchanger` / `HaloExchanger` / `SparseHaloExchanger` are **transport**: they move ghost faces given buffers and a decomposition. They do not interpret integrator stage flags or boundary-condition timing.
+
+`pfc::communication::StagePreparationService` ([`stage_preparation.hpp`](../../include/openpfc/kernel/decomposition/stage_preparation.hpp)) is the **protocol** layered on that transport for CPU/MPI padded bricks:
+
+- Consumes `StagePreparationRequirements` (`needs_halo_exchange`, `needs_boundary_update`, `region_kind`, `BoundaryHaloOrder`), typically via `pfc::integrator::requirements_from(StageContext)`.
+- When halo is required, calls existing `pfc::communication::exchange` on named, bound `PaddedHaloExchanger`s.
+- When boundary update is required, runs an injectable boundary hook. Default order is **boundary then halo** so updated owned faces are published to neighbors before evaluation.
+- `prepare` is **pre-evaluation** only. Post-evaluation BC enforcement after writing new owned values stays a separate driver responsibility outside `prepare`.
+- Rejection / retry does not roll back halo buffers: re-prepare from the accepted owned core.
+
+Method and operator layers should request `prepare` rather than embedding ad-hoc MPI at each evaluation site. Raw exchanger calls remain valid for drivers that manage timing themselves.
+
 ---
 
 ## 3. Halo policies
