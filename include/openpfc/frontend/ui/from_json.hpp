@@ -13,6 +13,7 @@
  * - `from_json_heffte.hpp` — HeFFTe `plan_options` overlay and specialization
  * - `from_json_fft_backend.hpp` — `fft::Backend` specialization
  * - `from_json_world_time.hpp` — `World` and `Time` specializations
+ * - `from_json_integrator_method.hpp` — `sim::steppers::RKIntegratorMethod`
  * - `from_json_field_modifiers.hpp` — built-in IC/BC `from_json` overloads and
  *   base `Model` params stub
  *
@@ -35,6 +36,7 @@
 #include <openpfc/frontend/ui/from_json_field_modifiers.hpp>
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
 #include <openpfc/frontend/ui/from_json_heffte.hpp>
+#include <openpfc/frontend/ui/from_json_integrator_method.hpp>
 #include <openpfc/frontend/ui/from_json_log.hpp>
 #include <openpfc/frontend/ui/from_json_world_time.hpp>
 
