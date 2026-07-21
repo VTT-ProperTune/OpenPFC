@@ -35,6 +35,7 @@
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
@@ -178,18 +179,33 @@ public:
 
   ~PersistentHaloExchanger() { free_all_requests(); }
 
-  /** @brief Start one halo exchange (MPI_Startall on persistent requests). */
+  /**
+   * @brief Start one halo exchange (`MPI_Startall` on persistent requests).
+   *
+   * @throws std::runtime_error if `MPI_Startall` returns non-`MPI_SUCCESS`
+   *         (via `pfc::mpi::throw_on_mpi_error`).
+   */
   void start_exchange() {
-    MPI_Startall(static_cast<int>(m_requests.size()), m_requests.data());
+    const int err =
+        MPI_Startall(static_cast<int>(m_requests.size()), m_requests.data());
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Startall");
   }
 
-  /** @brief Complete the exchange started with start_exchange(). */
+  /**
+   * @brief Complete the exchange started with `start_exchange()`.
+   *
+   * Profiling time is recorded around `MPI_Waitall` even if that call fails;
+   * a non-`MPI_SUCCESS` return then throws via `pfc::mpi::throw_on_mpi_error`.
+   *
+   * @throws std::runtime_error if `MPI_Waitall` returns non-`MPI_SUCCESS`.
+   */
   void wait_exchange() {
     const double _pfc_t0 = MPI_Wtime();
-    MPI_Waitall(static_cast<int>(m_requests.size()), m_requests.data(),
-                MPI_STATUSES_IGNORE);
+    const int err = MPI_Waitall(static_cast<int>(m_requests.size()),
+                                m_requests.data(), MPI_STATUSES_IGNORE);
     profiling::record_time(profiling::kProfilingRegionCommunication,
                            MPI_Wtime() - _pfc_t0);
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Waitall");
   }
 
   /** @brief Equivalent to start_exchange(); wait_exchange(); */
