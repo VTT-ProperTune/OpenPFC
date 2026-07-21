@@ -35,6 +35,15 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_link_libraries(test_gpu_fft PRIVATE Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX)
     add_test(NAME GPU_FFT COMMAND test_gpu_fft)
 
+    add_executable(test_exchange_cuda_fail_closed test_exchange_cuda_fail_closed.cpp)
+    target_include_directories(test_exchange_cuda_fail_closed PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_exchange_cuda_fail_closed PRIVATE
+        Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX)
+    add_test(NAME CUDA_ExchangeFailClosed COMMAND test_exchange_cuda_fail_closed)
+
     message(STATUS "✅ GPU tests enabled")
 elseif(OpenPFC_ENABLE_CUDA)
     message(STATUS "⚠️  GPU tests disabled (CUDA not found)")
@@ -73,6 +82,15 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     target_link_libraries(test_hip_device PRIVATE Catch2::Catch2 hip::host)
     add_test(NAME HIP_DeviceDetection COMMAND test_hip_device)
 
+    add_executable(test_exchange_hip_fail_closed test_exchange_hip_fail_closed.cpp)
+    target_include_directories(test_exchange_hip_fail_closed PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_exchange_hip_fail_closed PRIVATE
+        Catch2::Catch2 openpfc hip::host MPI::MPI_CXX)
+    add_test(NAME HIP_ExchangeFailClosed COMMAND test_exchange_hip_fail_closed)
+
     message(STATUS "✅ HIP tests enabled")
 elseif(OpenPFC_ENABLE_HIP)
     message(STATUS "⚠️  HIP tests disabled (HIP not found)")
@@ -82,7 +100,8 @@ endif()
 
 # SparseVector tests - build based on available backends
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
-    add_executable(test_sparsevector_cuda ../operators/test_sparsevector_cuda.cpp)
+    add_executable(test_sparsevector_cuda
+        ${CMAKE_SOURCE_DIR}/tests/unit/operators/test_sparsevector_cuda.cpp)
     target_include_directories(test_sparsevector_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/operators
         ${CMAKE_SOURCE_DIR}/include
@@ -92,7 +111,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
 endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
-    add_executable(test_sparsevector_hip ../operators/test_sparsevector_hip.cpp)
+    add_executable(test_sparsevector_hip
+        ${CMAKE_SOURCE_DIR}/tests/unit/operators/test_sparsevector_hip.cpp)
     target_include_directories(test_sparsevector_hip PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/operators
         ${CMAKE_SOURCE_DIR}/include
