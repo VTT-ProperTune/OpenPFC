@@ -30,6 +30,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_direction_agreement.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
@@ -79,6 +80,8 @@ public:
                           halo::HaloDirectionSelector selector = {})
       : m_comm(comm), m_base_tag(base_tag), m_buf(static_cast<void *>(field_ptr)),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
+    halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
+
     auto patterns = halo::create_halo_patterns<backend::CpuTag>(
         decomp, rank, halo::Connectivity::Faces, halo_width);
 
