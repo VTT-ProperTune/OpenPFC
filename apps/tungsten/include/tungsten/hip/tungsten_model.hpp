@@ -8,7 +8,8 @@
  * @details
  * This file implements the HIP version of the Tungsten PFC model.
  * It uses DataBuffer<HipTag, T> for GPU memory management and HIP kernels
- * for element-wise operations.
+ * for element-wise operations. ETD method weights are owned by
+ * @c tungsten::etd::TungstenEtdWorkspace (not persistent Model coefficient members).
  *
  * @see tungsten/cuda/tungsten_model.hpp for the CUDA version
  * @see tungsten_params.hpp for model parameters
@@ -32,6 +33,7 @@
 #include <openpfc/openpfc.hpp>
 #include <openpfc/runtime/common/heffte_gpu_r2c_layout.hpp>
 #include <openpfc/runtime/hip/fft_hip.hpp>
+#include <tungsten/common/tungsten_etd_workspace.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
@@ -58,8 +60,10 @@ private:
   std::unique_ptr<pfc::fft::FFT_HIP> m_hip_fft;
 
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> filterMF;
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> opL;
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> opN;
+  /// Method-owned ETD weights (transient; not checkpointed).
+  /// TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+  tungsten::etd::TungstenEtdWorkspace<RealType> m_etd;
+  std::uint64_t m_operator_generation{0};
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psiMF;
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psi;
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psiN;
@@ -109,8 +113,8 @@ public:
     auto size_outbox = fft.size_outbox();
 
     filterMF = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_outbox);
-    opL = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_outbox);
-    opN = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_outbox);
+    m_etd.reserve(size_outbox);
+    m_etd.allocate_hip(size_outbox);
 
     psi = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
     psiMF = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
@@ -130,8 +134,7 @@ public:
 
     mem_allocated = 0;
     mem_allocated += filterMF.size() * sizeof(RealType);
-    mem_allocated += opL.size() * sizeof(RealType);
-    mem_allocated += opN.size() * sizeof(RealType);
+    mem_allocated += m_etd.host_scratch_bytes() + m_etd.hip_scratch_bytes();
     mem_allocated += psi.size() * sizeof(RealType);
     mem_allocated += psiMF.size() * sizeof(RealType);
     mem_allocated += psiN.size() * sizeof(RealType);
@@ -166,10 +169,11 @@ public:
     const auto op_params = tungsten::spectral::make_operator_params(params);
 
     auto size_outbox = fft.size_outbox();
+    const std::size_t n_modes = static_cast<std::size_t>(size_outbox);
 
     pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> filterMF_cpu(size_outbox);
-    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> opL_cpu(size_outbox);
-    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> opN_cpu(size_outbox);
+    std::vector<double> k_laps(n_modes);
+    std::vector<double> opCks(n_modes);
 
     int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
@@ -182,22 +186,33 @@ public:
 
           double kLap = pfc::fft::kspace::k_laplacian_value(ki, kj, kk);
 
-          auto m = tungsten::spectral::operators_for_mode(kLap, dt, op_params);
-          filterMF_cpu[idx] = static_cast<RealType>(m.filterMF);
-          opL_cpu[idx] = static_cast<RealType>(m.opL);
-          opN_cpu[idx] = static_cast<RealType>(m.opN);
+          auto phys = tungsten::spectral::physics_for_mode(kLap, op_params);
+          filterMF_cpu[idx] = static_cast<RealType>(phys.filterMF);
+          k_laps[static_cast<std::size_t>(idx)] = kLap;
+          opCks[static_cast<std::size_t>(idx)] = phys.opCk;
 
           idx += 1;
         }
       }
     }
 
-    CHECK_AND_ABORT_IF_NANS_MPI(opL_cpu.as_vector(), mpi_comm());
-    CHECK_AND_ABORT_IF_NANS_MPI(opN_cpu.as_vector(), mpi_comm());
+    ++m_operator_generation;
+    m_etd.ensure(k_laps, opCks, dt,
+                 pfc::integrator::SpectralExpOperatorId{.value =
+                                                            m_operator_generation},
+                 tungsten::etd::k_tungsten_etd_config_id);
+
+    {
+      const auto exp_w = m_etd.exp_Ldt();
+      const auto n_w = m_etd.n_weight();
+      std::vector<double> exp_v(exp_w.begin(), exp_w.end());
+      std::vector<double> n_v(n_w.begin(), n_w.end());
+      CHECK_AND_ABORT_IF_NANS_MPI(exp_v, mpi_comm());
+      CHECK_AND_ABORT_IF_NANS_MPI(n_v, mpi_comm());
+    }
 
     filterMF.copy_from_host(filterMF_cpu.to_host());
-    opL.copy_from_host(opL_cpu.to_host());
-    opN.copy_from_host(opN_cpu.to_host());
+    m_etd.upload_hip();
   }
 
   void initialize(double dt) override {
@@ -238,8 +253,9 @@ public:
     hipEventSynchronize(kernel_done_event);
     fft.forward(psiN, psiN_F);
 
+    // TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
     tungsten::ops::apply_time_integration<pfc::backend::HipTag, RealType>(
-        psi_F, psiN_F, opL, opN, psi_F);
+        psi_F, psiN_F, m_etd.hip_exp_Ldt(), m_etd.hip_n_weight(), psi_F);
     hipEventRecord(kernel_done_event, 0);
 
     hipEventSynchronize(kernel_done_event);

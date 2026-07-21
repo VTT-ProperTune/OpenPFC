@@ -8,7 +8,8 @@
  * @details
  * This file implements the CUDA version of the Tungsten PFC model.
  * It uses DataBuffer<CudaTag, T> for GPU memory management and CUDA kernels
- * for element-wise operations.
+ * for element-wise operations. ETD method weights are owned by
+ * @c tungsten::etd::TungstenEtdWorkspace (not persistent Model coefficient members).
  *
  * This is a separate implementation from the CPU version
  * (tungsten/cpu/tungsten_model.hpp) to allow incremental development and testing.
@@ -17,7 +18,7 @@
  * @see tungsten_params.hpp for model parameters
  *
  * @author OpenPFC Development Team
- * @date 2025
+ * @date 2026
  */
 
 #ifndef TUNGSTEN_CUDA_MODEL_HPP
@@ -39,6 +40,7 @@
 #include <openpfc/openpfc.hpp>
 #include <openpfc/runtime/common/heffte_gpu_r2c_layout.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
+#include <tungsten/common/tungsten_etd_workspace.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
 #include <tungsten/common/tungsten_params.hpp>
 #include <tungsten/common/tungsten_spectral.hpp>
@@ -85,10 +87,10 @@ private:
 
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       filterMF; ///< Mean-field filter in Fourier space
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
-      opL; ///< Linear operator: exp(L·dt)
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
-      opN; ///< Nonlinear operator: (exp(L·dt) - 1) / L
+  /// Method-owned ETD weights (transient; not checkpointed).
+  /// TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+  tungsten::etd::TungstenEtdWorkspace<RealType> m_etd;
+  std::uint64_t m_operator_generation{0};
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       psiMF; ///< Mean-field filtered density
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> psi;  ///< Density field
@@ -173,16 +175,16 @@ public:
    *
    * Resizes all field arrays based on FFT inbox/outbox sizes.
    * Also allocates CPU-side buffers for FieldModifiers and VTKWriter.
+   * ETD coefficient device buffers live in @c m_etd (not checkpointed).
    */
   void allocate() {
     auto &fft = get_cuda_fft();
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
-    // Operators are only half size due to the symmetry of Fourier space
     filterMF = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_outbox);
-    opL = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_outbox);
-    opN = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_outbox);
+    m_etd.reserve(size_outbox);
+    m_etd.allocate_cuda(size_outbox);
 
     // Real-space fields
     psi = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_inbox);
@@ -208,8 +210,7 @@ public:
     // Track memory usage
     mem_allocated = 0;
     mem_allocated += filterMF.size() * sizeof(RealType);
-    mem_allocated += opL.size() * sizeof(RealType);
-    mem_allocated += opN.size() * sizeof(RealType);
+    mem_allocated += m_etd.host_scratch_bytes() + m_etd.cuda_scratch_bytes();
     mem_allocated += psi.size() * sizeof(RealType);
     mem_allocated += psiMF.size() * sizeof(RealType);
     mem_allocated += psiN.size() * sizeof(RealType);
@@ -243,10 +244,10 @@ public:
   }
 
   /**
-   * @brief Precompute time integration operators in k-space
+   * @brief Precompute physics filter and ETD method weights in k-space
    *
-   * Computes operators on CPU and transfers to GPU.
-   * This is acceptable since operators are computed once during initialization.
+   * Computes physics on CPU, ensures method weights via @c TungstenEtdWorkspace,
+   * then uploads filter and device weights to GPU.
    *
    * @param dt Time step size
    */
@@ -266,11 +267,12 @@ public:
 
     // Get FFT sizes
     auto size_outbox = fft.size_outbox();
+    const std::size_t n_modes = static_cast<std::size_t>(size_outbox);
 
-    // Compute operators on CPU first
+    // Compute physics on CPU first
     pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> filterMF_cpu(size_outbox);
-    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> opL_cpu(size_outbox);
-    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> opN_cpu(size_outbox);
+    std::vector<double> k_laps(n_modes);
+    std::vector<double> opCks(n_modes);
 
     int idx = 0;
     for (int k = low[2]; k <= high[2]; k++) {
@@ -285,23 +287,34 @@ public:
           // Compute Laplacian operator -k² using helper function
           double kLap = pfc::fft::kspace::k_laplacian_value(ki, kj, kk);
 
-          auto m = tungsten::spectral::operators_for_mode(kLap, dt, op_params);
-          filterMF_cpu[idx] = static_cast<RealType>(m.filterMF);
-          opL_cpu[idx] = static_cast<RealType>(m.opL);
-          opN_cpu[idx] = static_cast<RealType>(m.opN);
+          auto phys = tungsten::spectral::physics_for_mode(kLap, op_params);
+          filterMF_cpu[idx] = static_cast<RealType>(phys.filterMF);
+          k_laps[static_cast<std::size_t>(idx)] = kLap;
+          opCks[static_cast<std::size_t>(idx)] = phys.opCk;
 
           idx += 1;
         }
       }
     }
 
-    CHECK_AND_ABORT_IF_NANS_MPI(opL_cpu.as_vector(), mpi_comm());
-    CHECK_AND_ABORT_IF_NANS_MPI(opN_cpu.as_vector(), mpi_comm());
+    ++m_operator_generation;
+    m_etd.ensure(k_laps, opCks, dt,
+                 pfc::integrator::SpectralExpOperatorId{.value =
+                                                            m_operator_generation},
+                 tungsten::etd::k_tungsten_etd_config_id);
+
+    {
+      const auto exp_w = m_etd.exp_Ldt();
+      const auto n_w = m_etd.n_weight();
+      std::vector<double> exp_v(exp_w.begin(), exp_w.end());
+      std::vector<double> n_v(n_w.begin(), n_w.end());
+      CHECK_AND_ABORT_IF_NANS_MPI(exp_v, mpi_comm());
+      CHECK_AND_ABORT_IF_NANS_MPI(n_v, mpi_comm());
+    }
 
     // Transfer to GPU
     filterMF.copy_from_host(filterMF_cpu.to_host());
-    opL.copy_from_host(opL_cpu.to_host());
-    opN.copy_from_host(opN_cpu.to_host());
+    m_etd.upload_cuda();
   }
 
   /**
@@ -324,7 +337,7 @@ public:
    * 1. Compute mean-field filtered density ψ_MF
    * 2. Calculate nonlinear term N[ψ, ψ_MF] in real space
    * 3. Transform nonlinear term to Fourier space
-   * 4. Apply linear and nonlinear operators
+   * 4. Apply method weights via workspace device buffers
    * 5. Transform back to real space
    *
    * @param t Current time (unused, kept for interface compatibility)
@@ -379,10 +392,9 @@ public:
     fft.forward(psiN, psiN_F);
 
     // Step 5: Apply exponential time integration in Fourier space
-    // ψ̂(t+Δt) = L(k)·ψ̂(t) + N(k)·N̂[ψ, ψ_MF]
-    // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
+    // TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
     tungsten::ops::apply_time_integration<pfc::backend::CudaTag, RealType>(
-        psi_F, psiN_F, opL, opN, psi_F);
+        psi_F, psiN_F, m_etd.cuda_exp_Ldt(), m_etd.cuda_n_weight(), psi_F);
     // Record event after kernel launch
     cudaEventRecord(kernel_done_event, 0);
 
