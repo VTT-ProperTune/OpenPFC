@@ -68,6 +68,7 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
@@ -481,8 +482,10 @@ private:
         continue;
       }
       const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
-      MPI_Irecv(m_h_recv[i], static_cast<int>(m_face_elems[i]), MPI_DOUBLE,
-                m_neighbors[i], tag, m_comm, &m_requests[req_count]);
+      const int face_count = pfc::mpi::ensure_mpi_int_count(
+          m_face_elems[i], "PaddedDeviceHaloExchanger packed face");
+      MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
+                &m_requests[req_count]);
       ++req_count;
     }
 
@@ -506,8 +509,10 @@ private:
       }
 
       const int tag = m_base_tag + static_cast<int>(i);
-      MPI_Isend(m_h_send[i], static_cast<int>(m_face_elems[i]), MPI_DOUBLE,
-                m_neighbors[i], tag, m_comm, &m_requests[req_count]);
+      const int face_count = pfc::mpi::ensure_mpi_int_count(
+          m_face_elems[i], "PaddedDeviceHaloExchanger packed face");
+      MPI_Isend(m_h_send[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
+                &m_requests[req_count]);
       ++req_count;
     }
 
