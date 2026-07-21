@@ -60,12 +60,15 @@
 #ifndef OPENPFC_KERNEL_SIMULATION_SOLVER_CONTRACT_HPP
 #define OPENPFC_KERNEL_SIMULATION_SOLVER_CONTRACT_HPP
 
+#include <complex>
+#include <functional>
+#include <mpi.h>
 #include <optional>
 #include <string>
-#include <functional>
-#include <variant>
 #include <type_traits>
-#include <mpi.h>
+#include <variant>
+#include <vector>
+
 #include "openpfc/kernel/field/tuple_protocol.hpp"
 
 namespace pfc::sim {
@@ -102,8 +105,11 @@ struct LinearOperatorDesc {
     /// Optional preconditioner identifier
     std::optional<std::string> preconditioner_identifier;
 
-    /// Operator-specific context (spectral propagator, stencil coeffs, or opaque handle)
-    std::variant<std::monostate, std::vector<double>, std::string> operator_context;
+    /// Operator-specific context (spectral propagator — real or complex —
+    /// stencil coeffs, or opaque handle)
+    std::variant<std::monostate, std::vector<double>,
+                 std::vector<std::complex<double>>, std::string>
+        operator_context;
 };
 
 /**
