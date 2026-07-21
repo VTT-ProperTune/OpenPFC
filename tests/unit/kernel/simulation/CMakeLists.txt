@@ -18,6 +18,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_diagonal_solver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_stepper_equivalence.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_integrator_result.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_binary_reader.cpp
 )
 
 # Add wave2d include directory for WaveModel access

@@ -94,6 +94,7 @@ private:
                                                const_cast<char *>(filename.c_str()),
                                                MPI_MODE_RDONLY, MPI_INFO_NULL, &fh),
                                  "MPI_File_open");
+    pfc::mpi::MPI_File_guard file_guard(fh);
 
     pfc::mpi::throw_on_mpi_error(
         MPI_File_set_view(fh, 0, etype, m_filetype, "native", MPI_INFO_NULL),
@@ -108,14 +109,13 @@ private:
     pfc::mpi::throw_on_mpi_error(MPI_Get_count(&status, etype, &received),
                                  "MPI_Get_count");
     if (received != static_cast<int>(data.size())) {
-      (void)MPI_File_close(&fh);
       std::ostringstream oss;
       oss << "Short read from \"" << filename << "\": got " << received << " "
           << element_name << ", expected " << data.size();
       throw std::runtime_error(oss.str());
     }
 
-    pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
+    pfc::mpi::throw_on_mpi_error(MPI_File_close(&file_guard.file), "MPI_File_close");
     return status;
   }
 

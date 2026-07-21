@@ -8,12 +8,16 @@
 
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
+
+#include "../../../fixtures/mpi_file_guard_test_utils.hpp"
 
 #include <array>
 #include <complex>
 #include <cstddef>
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -230,4 +234,77 @@ TEST_CASE("BinaryWriter rebuilds filetype when switching real then complex",
     std::filesystem::remove(cplx_path);
   }
   MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST_CASE("BinaryWriter does not leak an MPI_File handle when MPI_File_open fails",
+          "[binary_writer][mpi][leak]") {
+  BinaryWriter writer("/nonexistent_dir_for_binary_writer_test/out_%04d.bin");
+  const std::array<int, 3> global{2, 2, 1};
+  const std::array<int, 3> local{2, 2, 1};
+  const std::array<int, 3> offset{0, 0, 0};
+  writer.set_domain(global, local, offset);
+
+  // MPI_File_open itself fails here (nonexistent directory), so no MPI_File
+  // handle is ever produced to leak -- the property under test is simply
+  // that the failure propagates as a clean exception rather than hanging.
+  REQUIRE_THROWS_AS(writer.write(1, RealField(4, 1.0)), std::runtime_error);
+}
+
+TEST_CASE("MPI_File_guard closes the handle when MPI_File_set_view fails after open",
+          "[binary_writer][mpi][leak]") {
+  const std::string filename = "/tmp/test_mpi_file_guard_set_view_fail.bin";
+  MPI_File fh{};
+  pfc::mpi::throw_on_mpi_error(
+      MPI_File_open(MPI_COMM_WORLD, const_cast<char *>(filename.c_str()),
+                    MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh),
+      "MPI_File_open");
+  REQUIRE(pfc::test::is_path_open(filename));
+
+  bool threw = false;
+  {
+    pfc::mpi::MPI_File_guard guard(fh);
+    try {
+      pfc::mpi::throw_on_mpi_error(MPI_File_set_view(fh, 0, MPI_DATATYPE_NULL,
+                                                     MPI_DATATYPE_NULL, "native",
+                                                     MPI_INFO_NULL),
+                                   "MPI_File_set_view");
+    } catch (const std::runtime_error &) {
+      threw = true;
+    }
+  }
+
+  REQUIRE(threw);
+  REQUIRE_FALSE(pfc::test::is_path_open(filename));
+  std::filesystem::remove(filename);
+}
+
+TEST_CASE(
+    "MPI_File_guard closes the handle when MPI_File_write_all fails after open",
+    "[binary_writer][mpi][leak]") {
+  const std::string filename = "/tmp/test_mpi_file_guard_write_all_fail.bin";
+  MPI_File fh{};
+  pfc::mpi::throw_on_mpi_error(
+      MPI_File_open(MPI_COMM_WORLD, const_cast<char *>(filename.c_str()),
+                    MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh),
+      "MPI_File_open");
+  REQUIRE(pfc::test::is_path_open(filename));
+
+  bool threw = false;
+  {
+    pfc::mpi::MPI_File_guard guard(fh);
+    std::vector<double> data(4, 1.0);
+    MPI_Status status{};
+    try {
+      pfc::mpi::throw_on_mpi_error(MPI_File_write_all(fh, data.data(),
+                                                      static_cast<int>(data.size()),
+                                                      MPI_DATATYPE_NULL, &status),
+                                   "MPI_File_write_all");
+    } catch (const std::runtime_error &) {
+      threw = true;
+    }
+  }
+
+  REQUIRE(threw);
+  REQUIRE_FALSE(pfc::test::is_path_open(filename));
+  std::filesystem::remove(filename);
 }

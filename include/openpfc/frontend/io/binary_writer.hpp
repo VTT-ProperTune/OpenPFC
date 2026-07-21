@@ -147,6 +147,7 @@ public:
         MPI_File_open(m_comm, const_cast<char *>(filename2.c_str()),
                       MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh),
         "MPI_File_open");
+    pfc::mpi::MPI_File_guard file_guard(fh);
 
     MPI_Offset filesize = 0;
     MPI_Status status{};
@@ -165,14 +166,13 @@ public:
     pfc::mpi::throw_on_mpi_error(MPI_Get_count(&status, type, &written),
                                  "MPI_Get_count");
     if (written != MPI_UNDEFINED && written != static_cast<int>(data.size())) {
-      pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
       std::ostringstream oss;
       oss << "Short write to \"" << filename2 << "\": wrote " << written
           << " elements, expected " << data.size();
       throw std::runtime_error(oss.str());
     }
 
-    pfc::mpi::throw_on_mpi_error(MPI_File_close(&fh), "MPI_File_close");
+    pfc::mpi::throw_on_mpi_error(MPI_File_close(&file_guard.file), "MPI_File_close");
     return status;
   }
 };
