@@ -9,6 +9,7 @@
 #ifndef PFC_UI_FROM_JSON_WORLD_TIME_HPP
 #define PFC_UI_FROM_JSON_WORLD_TIME_HPP
 
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -103,6 +104,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
                             dx_str, {}, "\"dx\": 1.0"));
   }
   dx = dx_val;
+  if (!std::isfinite(dx)) {
+    throw std::invalid_argument(
+        format_config_error("dx", "grid spacing in X direction", "finite float",
+                            get_json_value_string(j, "dx"), {}, "\"dx\": 1.0"));
+  }
   if (dx <= 0.0) {
     throw std::invalid_argument(
         format_config_error("dx", "grid spacing in X direction", "positive float",
@@ -118,6 +124,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
                             dy_str, {}, "\"dy\": 1.0"));
   }
   dy = dy_val;
+  if (!std::isfinite(dy)) {
+    throw std::invalid_argument(
+        format_config_error("dy", "grid spacing in Y direction", "finite float",
+                            get_json_value_string(j, "dy"), {}, "\"dy\": 1.0"));
+  }
   if (dy <= 0.0) {
     throw std::invalid_argument(
         format_config_error("dy", "grid spacing in Y direction", "positive float",
@@ -133,6 +144,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
                             dz_str, {}, "\"dz\": 1.0"));
   }
   dz = dz_val;
+  if (!std::isfinite(dz)) {
+    throw std::invalid_argument(
+        format_config_error("dz", "grid spacing in Z direction", "finite float",
+                            get_json_value_string(j, "dz"), {}, "\"dz\": 1.0"));
+  }
   if (dz <= 0.0) {
     throw std::invalid_argument(
         format_config_error("dz", "grid spacing in Z direction", "positive float",
@@ -191,18 +207,40 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
   double dt = dt_val;
   double saveat = saveat_val;
 
+  if (!std::isfinite(t0)) {
+    throw std::invalid_argument(
+        format_config_error("t0", "simulation start time", "finite float",
+                            get_json_value_string(j, "t0"), {}, "\"t0\": 0.0"));
+  }
+
+  if (!std::isfinite(t1)) {
+    throw std::invalid_argument(
+        format_config_error("t1", "simulation end time", "finite float",
+                            get_json_value_string(j, "t1"), {}, "\"t1\": 100.0"));
+  }
+
   if (t1 <= t0) {
     throw std::invalid_argument(
         format_config_error("t1", "simulation end time", "value greater than t0",
                             get_json_value_string(j, "t1"), {}, "\"t1\": 100.0"));
   }
 
+  if (!std::isfinite(dt)) {
+    throw std::invalid_argument(
+        format_config_error("dt", "timestep size", "finite float",
+                            get_json_value_string(j, "dt"), {}, "\"dt\": 0.01"));
+  }
   if (dt <= 0.0) {
     throw std::invalid_argument(
         format_config_error("dt", "timestep size", "positive float",
                             get_json_value_string(j, "dt"), {}, "\"dt\": 0.01"));
   }
 
+  if (!std::isfinite(saveat)) {
+    throw std::invalid_argument(
+        format_config_error("saveat", "snapshot output interval", "finite float",
+                            get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
+  }
   if (saveat <= 0.0) {
     throw std::invalid_argument(
         format_config_error("saveat", "snapshot output interval", "positive float",
