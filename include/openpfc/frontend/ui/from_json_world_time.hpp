@@ -58,6 +58,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
         get_json_value_string(j, "Lx"), {}, "\"Lx\": 256"));
   }
   Lx = lx_val;
+  if (Lx <= 0) {
+    throw std::invalid_argument(
+        format_config_error("Lx", "number of grid points in X direction", "positive integer",
+                            get_json_value_string(j, "Lx"), {}, "\"Lx\": 256"));
+  }
 
   auto ly_val = get_json_value(j, "Ly", "domain");
   if (ly_val.is_null() || !ly_val.is_number_integer()) {
@@ -68,6 +73,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
                             "positive integer", ly_str, {}, "\"Ly\": 256"));
   }
   Ly = ly_val;
+  if (Ly <= 0) {
+    throw std::invalid_argument(
+        format_config_error("Ly", "number of grid points in Y direction", "positive integer",
+                            get_json_value_string(j, "Ly"), {}, "\"Ly\": 256"));
+  }
 
   auto lz_val = get_json_value(j, "Lz", "domain");
   if (lz_val.is_null() || !lz_val.is_number_integer()) {
@@ -78,6 +88,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
                             "positive integer", lz_str, {}, "\"Lz\": 256"));
   }
   Lz = lz_val;
+  if (Lz <= 0) {
+    throw std::invalid_argument(
+        format_config_error("Lz", "number of grid points in Z direction", "positive integer",
+                            get_json_value_string(j, "Lz"), {}, "\"Lz\": 256"));
+  }
 
   auto dx_val = get_json_value(j, "dx", "domain");
   if (dx_val.is_null() || !dx_val.is_number()) {
