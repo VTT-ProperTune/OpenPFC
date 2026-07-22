@@ -201,7 +201,14 @@ public:
    * @see write() - uses filename pattern with increment
    */
   ResultsWriter(const std::string &filename) { m_filename = filename; }
-  virtual ~ResultsWriter() = default;
+
+  /**
+   * @brief Virtual destructor
+   *
+   * Marked noexcept(false) to allow subclasses to throw on MPI cleanup
+   * failures (fail-closed policy).
+   */
+  virtual ~ResultsWriter() noexcept(false) = default;
 
   /**
    * @brief Configure the domain decomposition for parallel I/O
