@@ -98,9 +98,9 @@ inline int checked_padded_extent(int n, int hw) {
  * appropriate `(hw, ...)` offsets baked into the start vectors.
  *
  * When `halo_width > 0`, each owned extent must be `>= halo_width` so the
- * owned send slab fits inside the core. Unlike non-padded
- * `create_face_types_6`, tiny owned cores are allowed (`PaddedBrick`
- * semantics) — the LocalField `> 2*hw` rule does **not** apply here.
+ * owned send slab fits inside the core. Same per-axis fit rule as
+ * non-padded `create_face_types_6`. The LocalField `> 2*hw` interior rule
+ * does **not** apply here (`PaddedBrick` semantics).
  *
  * @throws std::invalid_argument if `halo_width < 0`, owned extents are
  *         non-positive, or (when `halo_width > 0`) any owned axis is
