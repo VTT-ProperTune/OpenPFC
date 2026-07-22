@@ -168,16 +168,16 @@ void TungstenOps<pfc::backend::HipTag, double>::multiply_complex_real_impl(
   hipLaunchKernelGGL(multiply_complex_real_kernel_impl<double>, dim3(blocks),
                     dim3(threads_per_block), 0, 0, a_ptr, b_ptr, out_ptr, N);
 
-  hipError_t err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (multiply_complex_real<double>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipGetLastError();
+  hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error(
         std::string("HIP kernel launch failed (multiply_complex_real<double>): ") +
+        hipGetErrorString(err));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error(
+        std::string("HIP kernel sync failed (multiply_complex_real<double>): ") +
         hipGetErrorString(err));
   }
 }
@@ -202,16 +202,16 @@ void TungstenOps<pfc::backend::HipTag, double>::compute_nonlinear_impl(
                     dim3(threads_per_block), 0, 0, u.data(), v.data(), p3, p4, q3,
                     q4, out.data(), N);
 
-  hipError_t err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (compute_nonlinear<double>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipGetLastError();
+  hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error(
         std::string("HIP kernel launch failed (compute_nonlinear<double>): ") +
+        hipGetErrorString(err));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error(
+        std::string("HIP kernel sync failed (compute_nonlinear<double>): ") +
         hipGetErrorString(err));
   }
 }
@@ -235,16 +235,16 @@ void TungstenOps<pfc::backend::HipTag, double>::apply_stabilization_impl(
                     dim3(threads_per_block), 0, 0, in.data(), field.data(), stabP,
                     out.data(), N);
 
-  hipError_t err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (apply_stabilization<double>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipGetLastError();
+  hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error(
         std::string("HIP kernel launch failed (apply_stabilization<double>): ") +
+        hipGetErrorString(err));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error(
+        std::string("HIP kernel sync failed (apply_stabilization<double>): ") +
         hipGetErrorString(err));
   }
 }
@@ -278,16 +278,16 @@ void TungstenOps<pfc::backend::HipTag, double>::apply_time_integration_impl(
                     dim3(threads_per_block), 0, 0, psi_F_ptr, psiN_F_ptr, opL_ptr,
                     opN_ptr, out_ptr, N);
 
-  hipError_t err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (apply_time_integration<double>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipGetLastError();
+  hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error(
         std::string("HIP kernel launch failed (apply_time_integration<double>): ") +
+        hipGetErrorString(err));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error(
+        std::string("HIP kernel sync failed (apply_time_integration<double>): ") +
         hipGetErrorString(err));
   }
 }
@@ -315,16 +315,16 @@ void TungstenOps<pfc::backend::HipTag, float>::multiply_complex_real_impl(
   hipLaunchKernelGGL(multiply_complex_real_kernel_impl<float>, dim3(blocks),
                     dim3(threads_per_block), 0, 0, a_ptr, b_ptr, out_ptr, N);
 
-  hipError_t err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (multiply_complex_real<float>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipGetLastError();
+  hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error(
         std::string("HIP kernel launch failed (multiply_complex_real<float>): ") +
+        hipGetErrorString(err));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error(
+        std::string("HIP kernel sync failed (multiply_complex_real<float>): ") +
         hipGetErrorString(err));
   }
 }
@@ -349,16 +349,16 @@ void TungstenOps<pfc::backend::HipTag, float>::compute_nonlinear_impl(
                     dim3(threads_per_block), 0, 0, u.data(), v.data(), p3, p4, q3,
                     q4, out.data(), N);
 
-  hipError_t err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (compute_nonlinear<float>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipGetLastError();
+  hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error(
         std::string("HIP kernel launch failed (compute_nonlinear<float>): ") +
+        hipGetErrorString(err));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error(
+        std::string("HIP kernel sync failed (compute_nonlinear<float>): ") +
         hipGetErrorString(err));
   }
 }
@@ -382,16 +382,16 @@ void TungstenOps<pfc::backend::HipTag, float>::apply_stabilization_impl(
                     dim3(threads_per_block), 0, 0, in.data(), field.data(), stabP,
                     out.data(), N);
 
-  hipError_t err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (apply_stabilization<float>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipGetLastError();
+  hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error(
         std::string("HIP kernel launch failed (apply_stabilization<float>): ") +
+        hipGetErrorString(err));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error(
+        std::string("HIP kernel sync failed (apply_stabilization<float>): ") +
         hipGetErrorString(err));
   }
 }
@@ -425,16 +425,16 @@ void TungstenOps<pfc::backend::HipTag, float>::apply_time_integration_impl(
                     dim3(threads_per_block), 0, 0, psi_F_ptr, psiN_F_ptr, opL_ptr,
                     opN_ptr, out_ptr, N);
 
-  hipError_t err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (apply_time_integration<float>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipGetLastError();
+  hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error(
         std::string("HIP kernel launch failed (apply_time_integration<float>): ") +
+        hipGetErrorString(err));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error(
+        std::string("HIP kernel sync failed (apply_time_integration<float>): ") +
         hipGetErrorString(err));
   }
 }
