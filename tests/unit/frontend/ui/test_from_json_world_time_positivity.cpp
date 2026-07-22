@@ -98,6 +98,84 @@ TEST_CASE("[world][positivity] from_json_world_rejects_negative_dz") {
   REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
 }
 
+TEST_CASE("[world][positivity] from_json_world_rejects_zero_Lx") {
+  json j = {
+      {"Lx", 0},
+      {"Ly", 128},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_rejects_negative_Lx") {
+  json j = {
+      {"Lx", -64},
+      {"Ly", 128},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_rejects_zero_Ly") {
+  json j = {
+      {"Lx", 128},
+      {"Ly", 0},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_rejects_negative_Ly") {
+  json j = {
+      {"Lx", 128},
+      {"Ly", -32},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_rejects_zero_Lz") {
+  json j = {
+      {"Lx", 128},
+      {"Ly", 128},
+      {"Lz", 0},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_rejects_negative_Lz") {
+  json j = {
+      {"Lx", 128},
+      {"Ly", 128},
+      {"Lz", -16},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
 TEST_CASE("[world][positivity] from_json_world_accepts_valid_positive_dx_dy_dz") {
   json j = {
       {"Lx", 128},
@@ -106,6 +184,19 @@ TEST_CASE("[world][positivity] from_json_world_accepts_valid_positive_dx_dy_dz")
       {"dx", 1.5},
       {"dy", 0.01},
       {"dz", 4.7},
+      {"origin", "center"}};
+
+  REQUIRE_NOTHROW(from_json<World>(j));
+}
+
+TEST_CASE("[world][positivity] from_json_world_accepts_valid_positive_Lx_Ly_Lz") {
+  json j = {
+      {"Lx", 256},
+      {"Ly", 64},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
       {"origin", "center"}};
 
   REQUIRE_NOTHROW(from_json<World>(j));
@@ -171,6 +262,66 @@ TEST_CASE("[world][positivity] from_json_world_error_message_names_dz") {
   }
 }
 
+TEST_CASE("[world][positivity] from_json_world_error_message_names_Lx") {
+  json j = {
+      {"Lx", 0},
+      {"Ly", 128},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  try {
+    (void)from_json<World>(j);
+    FAIL("Expected std::invalid_argument to be thrown");
+  } catch (const std::invalid_argument &e) {
+    std::string msg = e.what();
+    REQUIRE(msg.find("Lx") != std::string::npos);
+    REQUIRE(msg.find("number of grid points in X direction") != std::string::npos);
+  }
+}
+
+TEST_CASE("[world][positivity] from_json_world_error_message_names_Ly") {
+  json j = {
+      {"Lx", 128},
+      {"Ly", -32},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  try {
+    (void)from_json<World>(j);
+    FAIL("Expected std::invalid_argument to be thrown");
+  } catch (const std::invalid_argument &e) {
+    std::string msg = e.what();
+    REQUIRE(msg.find("Ly") != std::string::npos);
+    REQUIRE(msg.find("number of grid points in Y direction") != std::string::npos);
+  }
+}
+
+TEST_CASE("[world][positivity] from_json_world_error_message_names_Lz") {
+  json j = {
+      {"Lx", 128},
+      {"Ly", 128},
+      {"Lz", 0},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  try {
+    (void)from_json<World>(j);
+    FAIL("Expected std::invalid_argument to be thrown");
+  } catch (const std::invalid_argument &e) {
+    std::string msg = e.what();
+    REQUIRE(msg.find("Lz") != std::string::npos);
+    REQUIRE(msg.find("number of grid points in Z direction") != std::string::npos);
+  }
+}
+
 TEST_CASE("[time][positivity] from_json_time_rejects_zero_dt") {
   json j = {
       {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.0}, {"saveat", 1.0}}}};
@@ -222,6 +373,38 @@ TEST_CASE("[world][positivity] from_json_world_with_nested_domain") {
 
   // Test with positive value should work
   j["domain"]["dx"] = 1.5;
+  REQUIRE_NOTHROW(from_json<World>(j));
+}
+
+TEST_CASE("[world][positivity] from_json_world_with_nested_domain_rejects_zero_Lx") {
+  json j = {
+      {"domain", {{"Lx", 0}, {"Ly", 64}, {"Lz", 64}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_with_nested_domain_rejects_negative_Ly") {
+  json j = {
+      {"domain", {{"Lx", 64}, {"Ly", -32}, {"Lz", 64}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_with_nested_domain_rejects_zero_Lz") {
+  json j = {
+      {"domain", {{"Lx", 64}, {"Ly", 64}, {"Lz", 0}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
+      {"origin", "center"}};
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_with_nested_domain_accepts_valid_positive_Lx_Ly_Lz") {
+  json j = {
+      {"domain", {{"Lx", 32}, {"Ly", 64}, {"Lz", 128}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
+      {"origin", "center"}};
+
   REQUIRE_NOTHROW(from_json<World>(j));
 }
 
