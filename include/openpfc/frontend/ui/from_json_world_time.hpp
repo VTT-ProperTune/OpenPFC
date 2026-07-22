@@ -176,10 +176,22 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
   double dt = dt_val;
   double saveat = saveat_val;
 
+  if (t1 <= t0) {
+    throw std::invalid_argument(
+        format_config_error("t1", "simulation end time", "value greater than t0",
+                            get_json_value_string(j, "t1"), {}, "\"t1\": 100.0"));
+  }
+
   if (dt <= 0.0) {
     throw std::invalid_argument(
         format_config_error("dt", "timestep size", "positive float",
                             get_json_value_string(j, "dt"), {}, "\"dt\": 0.01"));
+  }
+
+  if (saveat <= 0.0) {
+    throw std::invalid_argument(
+        format_config_error("saveat", "snapshot output interval", "positive float",
+                            get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
   }
 
   // Parse integrator method (optional, defaults to euler)

@@ -224,3 +224,93 @@ TEST_CASE("[world][positivity] from_json_world_with_nested_domain") {
   j["domain"]["dx"] = 1.5;
   REQUIRE_NOTHROW(from_json<World>(j));
 }
+
+TEST_CASE("[time][positivity] from_json_time_rejects_zero_saveat") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 0.0}}}};
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_rejects_negative_saveat") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", -1.0}}}};
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_accepts_valid_positive_saveat") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 0.5}}}};
+
+  REQUIRE_NOTHROW(from_json<Time>(j));
+}
+
+TEST_CASE("[time][positivity] from_json_time_error_message_names_saveat") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 0.0}}}};
+
+  try {
+    (void)from_json<Time>(j);
+    FAIL("Expected std::invalid_argument to be thrown");
+  } catch (const std::invalid_argument &e) {
+    std::string msg = e.what();
+    REQUIRE(msg.find("saveat") != std::string::npos);
+    REQUIRE(msg.find("snapshot output interval") != std::string::npos);
+  }
+}
+
+TEST_CASE("[time][positivity] from_json_time_rejects_t1_equal_to_t0") {
+  json j = {
+      {"timestepping", {{"t0", 5.0}, {"t1", 5.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_rejects_t1_less_than_t0") {
+  json j = {
+      {"timestepping", {{"t0", 10.0}, {"t1", 5.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_accepts_valid_t1_greater_than_t0") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 100.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  REQUIRE_NOTHROW(from_json<Time>(j));
+}
+
+TEST_CASE("[time][positivity] from_json_time_error_message_names_t1_interval") {
+  json j = {
+      {"timestepping", {{"t0", 10.0}, {"t1", 5.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  try {
+    (void)from_json<Time>(j);
+    FAIL("Expected std::invalid_argument to be thrown");
+  } catch (const std::invalid_argument &e) {
+    std::string msg = e.what();
+    REQUIRE(msg.find("t1") != std::string::npos);
+    REQUIRE(msg.find("simulation end time") != std::string::npos);
+  }
+}
+
+TEST_CASE("[time][positivity] from_json_time_with_flat_structure_rejects_non_positive_saveat") {
+  json j = {
+      {"t0", 0.0},
+      {"t1", 10.0},
+      {"dt", 0.1},
+      {"saveat", -0.5}};
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_with_flat_structure_rejects_t1_less_than_t0") {
+  json j = {
+      {"t0", 8.0},
+      {"t1", 2.0},
+      {"dt", 0.1},
+      {"saveat", 1.0}};
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
