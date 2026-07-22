@@ -6,6 +6,9 @@
  * @brief Unit tests for halo pattern creation from Decomposition
  */
 
+#include <stdexcept>
+#include <string>
+
 #include <catch2/catch_test_macros.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -160,4 +163,61 @@ TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
     REQUIRE(gathered_data[gathered_data.size() - 1] ==
             local_field[indices[indices.size() - 1]]);
   }
+}
+
+TEST_CASE("create_send_halo throws when active axis thinner than halo_width",
+          "[halo][pattern]") {
+  // Global 8³ with 8×1×1 ranks → local nx=1; hw=2 cannot fit on +X.
+  auto world = world::create(GridSize({8, 8, 8}));
+  auto decomp = decomposition::create(world, {8, 1, 1});
+  const int rank = 0;
+  const int halo_width = 2;
+  const Int3 direction = {1, 0, 0};
+
+  REQUIRE_THROWS_AS(
+      (halo::create_send_halo<backend::CpuTag>(decomp, rank, direction,
+                                               halo_width)),
+      std::invalid_argument);
+  try {
+    (void)halo::create_send_halo<backend::CpuTag>(decomp, rank, direction,
+                                                  halo_width);
+    FAIL("expected throw");
+  } catch (const std::invalid_argument &e) {
+    const std::string msg = e.what();
+    REQUIRE(msg.find("halo_width=2") != std::string::npos);
+    REQUIRE(msg.find("1,0,0") != std::string::npos);
+  }
+}
+
+TEST_CASE("create_recv_halo throws when active axis thinner than halo_width",
+          "[halo][pattern]") {
+  auto world = world::create(GridSize({8, 8, 8}));
+  auto decomp = decomposition::create(world, {8, 1, 1});
+  const int rank = 0;
+  const int halo_width = 2;
+  const Int3 direction = {1, 0, 0};
+
+  REQUIRE_THROWS_AS(
+      (halo::create_recv_halo<backend::CpuTag>(decomp, rank, direction,
+                                               halo_width)),
+      std::invalid_argument);
+  try {
+    (void)halo::create_recv_halo<backend::CpuTag>(decomp, rank, direction,
+                                                  halo_width);
+    FAIL("expected throw");
+  } catch (const std::invalid_argument &e) {
+    const std::string msg = e.what();
+    REQUIRE(msg.find("halo_width=2") != std::string::npos);
+    REQUIRE(msg.find("1,0,0") != std::string::npos);
+  }
+}
+
+TEST_CASE("create_send_halo allows flat inactive axis (nz==1, ±X only)",
+          "[halo][pattern]") {
+  auto world = world::create(GridSize({16, 8, 1}));
+  auto decomp = decomposition::create(world, {2, 1, 1});
+  REQUIRE_NOTHROW(halo::create_send_halo<backend::CpuTag>(
+      decomp, 0, Int3{1, 0, 0}, 1));
+  REQUIRE_NOTHROW(halo::create_recv_halo<backend::CpuTag>(
+      decomp, 0, Int3{1, 0, 0}, 1));
 }
