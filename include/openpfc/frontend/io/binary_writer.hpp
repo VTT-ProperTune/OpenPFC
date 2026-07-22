@@ -215,7 +215,7 @@ public:
       throw std::runtime_error(oss.str());
     }
 
-    pfc::mpi::throw_on_mpi_error(MPI_File_close(&file_guard.file), "MPI_File_close");
+    // MPI_File_guard destructor handles MPI_File_close with error handling.
     return status;
   }
 };
