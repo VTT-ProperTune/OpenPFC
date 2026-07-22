@@ -43,6 +43,8 @@
 
 #include <iostream>
 
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
+
 namespace pfc {
 
 /**
@@ -82,8 +84,10 @@ public:
     } else {
       m_owns_mpi = false;
     }
-    MPI_Comm_rank(m_comm, &m_rank);
-    MPI_Comm_size(m_comm, &m_num_procs);
+    int err = MPI_Comm_rank(m_comm, &m_rank);
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Worker constructor: MPI_Comm_rank");
+    err = MPI_Comm_size(m_comm, &m_num_procs);
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Worker constructor: MPI_Comm_size");
     if (m_owns_mpi && verbose) {
       std::cout << "MPI_Init(): initialized " << m_num_procs << " processes" << '\n';
     }
