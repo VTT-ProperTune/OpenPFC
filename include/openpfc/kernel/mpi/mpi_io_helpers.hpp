@@ -37,14 +37,19 @@ inline void throw_on_mpi_error(int err, const char *what) {
  * @brief RAII guard for an MPI_File handle -- closes it unconditionally on
  * every exit path (including exceptions thrown after a successful
  * MPI_File_open), mirroring the MPI_Type_guard pattern in halo_mpi_types.hpp.
+ *
+ * Destructor is noexcept(false) and fails closed via throw_on_mpi_error
+ * (same policy as environment::~environment).
  */
 struct MPI_File_guard {
   MPI_File file = MPI_FILE_NULL;
   MPI_File_guard() = default;
   explicit MPI_File_guard(MPI_File f) : file(f) {}
-  ~MPI_File_guard() {
+  ~MPI_File_guard() noexcept(false) {
     if (file != MPI_FILE_NULL) {
-      MPI_File_close(&file);
+      // Fail closed: silent MPI_File_close errors mask I/O / MPI state issues.
+      pfc::mpi::throw_on_mpi_error(MPI_File_close(&file),
+                                   "MPI_File_close in ~MPI_File_guard");
     }
   }
   MPI_File_guard(MPI_File_guard &&other) noexcept : file(other.file) {

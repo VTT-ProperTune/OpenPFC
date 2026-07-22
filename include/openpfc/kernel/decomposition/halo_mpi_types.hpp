@@ -23,6 +23,7 @@
 #include <string>
 
 #include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 
 namespace pfc::halo {
 
@@ -30,14 +31,19 @@ using Int3 = pfc::types::Int3;
 
 /**
  * @brief RAII holder for MPI_Datatype (calls MPI_Type_free in destructor)
+ *
+ * Destructor is noexcept(false) and fails closed via
+ * pfc::mpi::throw_on_mpi_error (same policy as environment::~environment).
  */
 struct MPI_Type_guard {
   MPI_Datatype type = MPI_DATATYPE_NULL;
   MPI_Type_guard() = default;
   explicit MPI_Type_guard(MPI_Datatype t) : type(t) {}
-  ~MPI_Type_guard() {
+  ~MPI_Type_guard() noexcept(false) {
     if (type != MPI_DATATYPE_NULL) {
-      MPI_Type_free(&type);
+      // Fail closed: silent MPI_Type_free errors mask corrupted MPI state.
+      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&type),
+                                   "MPI_Type_free in ~MPI_Type_guard");
     }
   }
   MPI_Type_guard(MPI_Type_guard &&other) noexcept : type(other.type) {

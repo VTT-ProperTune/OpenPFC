@@ -57,6 +57,25 @@
 
 namespace pfc {
 
+/**
+ * @brief Read field data from binary files using MPI-IO
+ *
+ * BinaryReader reads field data from binary files with proper domain decomposition.
+ * Each MPI rank reads only its local portion of the data.
+ *
+ * @note MPI-IO collectives: `read()` uses `MPI_File_open`, `MPI_File_set_view`,
+ * `MPI_File_read_all`, and `MPI_File_close`, which are collective over the
+ * communicator passed to the constructor (default `MPI_COMM_WORLD`). All ranks
+ * must call `read()` together with matching `set_domain()` layout.
+ *
+ * @note Buffer vs domain: each rank's buffer length must equal the local brick
+ * product from `set_domain`. A mismatch is fail-closed (communicator-wide
+ * agreement via `MPI_Allreduce`) before `MPI_File_open` / `MPI_File_read_all`.
+ *
+ * @note Destructor: The destructor is noexcept(false) and fails closed on
+ * MPI_Type_free errors via pfc::mpi::throw_on_mpi_error (same policy as
+ * environment::~environment).
+ */
 class BinaryReader {
 
 private:
@@ -161,9 +180,11 @@ public:
   BinaryReader(BinaryReader &&) = delete;
   BinaryReader &operator=(BinaryReader &&) = delete;
 
-  ~BinaryReader() {
+  ~BinaryReader() noexcept(false) {
     if (m_type_valid) {
-      (void)MPI_Type_free(&m_filetype);
+      // Fail closed: silent MPI_Type_free errors mask corrupted MPI state.
+      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype),
+                                   "MPI_Type_free in ~BinaryReader");
     }
   }
 

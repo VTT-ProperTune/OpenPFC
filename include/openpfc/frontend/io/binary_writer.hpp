@@ -63,6 +63,10 @@ namespace pfc {
  * (`MPI_DOUBLE` or `MPI_DOUBLE_COMPLEX`), so filetype oldtype and etype always
  * match.
  *
+ * @note Destructor: The destructor is noexcept(false) and fails closed on
+ * MPI_Type_free errors via pfc::mpi::throw_on_mpi_error (same policy as
+ * environment::~environment).
+ *
  * @see ResultsWriter - base class interface
  * @see BinaryReader - read binary files for restart
  *
@@ -108,9 +112,11 @@ private:
   }
 
 public:
-  ~BinaryWriter() override {
+  ~BinaryWriter() noexcept(false) override {
     if (m_type_valid) {
-      (void)MPI_Type_free(&m_filetype);
+      // Fail closed: silent MPI_Type_free errors mask corrupted MPI state.
+      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&m_filetype),
+                                   "MPI_Type_free in ~BinaryWriter");
     }
   }
 
