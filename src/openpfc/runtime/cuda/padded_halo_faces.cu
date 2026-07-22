@@ -6,6 +6,8 @@
 #include <cuda_runtime.h>
 
 #include <cstddef>
+#include <stdexcept>
+#include <string>
 
 namespace pfc::cuda::detail {
 
@@ -68,6 +70,11 @@ void launch_padded_pack_face(double *d_dst_contig, const double *d_pad, int ox,
   const int blocks = (n + threads - 1) / threads;
   padded_pack_face_kernel<<<blocks, threads, 0, stream>>>(
       d_dst_contig, d_pad, ox, oy, oz, sx, sy, sz, nxp, nyp, nzp);
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    throw std::runtime_error(
+        "cuda padded_pack_face kernel launch failed: " + std::string(cudaGetErrorString(err)));
+  }
 }
 
 void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox,
@@ -81,6 +88,11 @@ void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox
   const int blocks = (n + threads - 1) / threads;
   padded_unpack_face_kernel<<<blocks, threads, 0, stream>>>(
       d_pad, d_src_contig, ox, oy, oz, sx, sy, sz, nxp, nyp, nzp);
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    throw std::runtime_error(
+        "cuda padded_unpack_face kernel launch failed: " + std::string(cudaGetErrorString(err)));
+  }
 }
 
 } // namespace pfc::cuda::detail
