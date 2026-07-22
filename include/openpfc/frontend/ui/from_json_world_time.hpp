@@ -88,6 +88,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
                             dx_str, {}, "\"dx\": 1.0"));
   }
   dx = dx_val;
+  if (dx <= 0.0) {
+    throw std::invalid_argument(
+        format_config_error("dx", "grid spacing in X direction", "positive float",
+                            get_json_value_string(j, "dx"), {}, "\"dx\": 1.0"));
+  }
 
   auto dy_val = get_json_value(j, "dy", "domain");
   if (dy_val.is_null() || !dy_val.is_number()) {
@@ -98,6 +103,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
                             dy_str, {}, "\"dy\": 1.0"));
   }
   dy = dy_val;
+  if (dy <= 0.0) {
+    throw std::invalid_argument(
+        format_config_error("dy", "grid spacing in Y direction", "positive float",
+                            get_json_value_string(j, "dy"), {}, "\"dy\": 1.0"));
+  }
 
   auto dz_val = get_json_value(j, "dz", "domain");
   if (dz_val.is_null() || !dz_val.is_number()) {
@@ -108,6 +118,11 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
                             dz_str, {}, "\"dz\": 1.0"));
   }
   dz = dz_val;
+  if (dz <= 0.0) {
+    throw std::invalid_argument(
+        format_config_error("dz", "grid spacing in Z direction", "positive float",
+                            get_json_value_string(j, "dz"), {}, "\"dz\": 1.0"));
+  }
 
   // Support both "origin" (new) and "origo" (legacy) for backward compatibility
   auto origin_val = get_json_value(j, "origin", "domain");
@@ -160,6 +175,12 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
   double t1 = t1_val;
   double dt = dt_val;
   double saveat = saveat_val;
+
+  if (dt <= 0.0) {
+    throw std::invalid_argument(
+        format_config_error("dt", "timestep size", "positive float",
+                            get_json_value_string(j, "dt"), {}, "\"dt\": 0.01"));
+  }
 
   // Parse integrator method (optional, defaults to euler)
   IntegratorMethod method = IntegratorMethod::euler;
