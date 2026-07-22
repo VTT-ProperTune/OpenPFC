@@ -294,7 +294,7 @@ inline void for_each_interior_device(const Model &model,
   const dim3 grid = detail::for_each_interior_grid(nx, ny, nz, block);
   detail::for_each_interior_device_kernel<Model, G>
       <<<grid, block, 0, stream>>>(model, eval, du_padded, t, nx, ny, nz);
-  const cudaError_t e = cudaGetLastError();
+  cudaError_t e = cudaGetLastError();
   if (e != cudaSuccess) {
     throw std::runtime_error(std::string("for_each_interior_device: kernel "
                                          "launch failed: ") +
