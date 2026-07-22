@@ -191,19 +191,24 @@ inline void print_hip_halo_exchange_cpu_timers(MPI_Comm comm) {
     return;
   }
   int rank = 0;
-  MPI_Comm_rank(comm, &rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &rank),
+                               "MPI_Comm_rank in print_hip_halo_exchange_cpu_timers");
   auto &T = hip_halo_exchange_cpu_timers();
   if (T.n_calls == 0) {
     return;
   }
   auto reduce_max = [&](double local) {
     double mx = 0;
-    MPI_Reduce(&local, &mx, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+    pfc::mpi::throw_on_mpi_error(
+        MPI_Reduce(&local, &mx, 1, MPI_DOUBLE, MPI_MAX, 0, comm),
+        "MPI_Reduce in print_hip_halo_exchange_cpu_timers (reduce_max)");
     return (rank == 0) ? mx : 0.0;
   };
   std::uint64_t nloc = T.n_calls;
   std::uint64_t nmax = 0;
-  MPI_Reduce(&nloc, &nmax, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, comm);
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Reduce(&nloc, &nmax, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, comm),
+      "MPI_Reduce in print_hip_halo_exchange_cpu_timers (n_calls)");
 
   const double mx_pre = reduce_max(T.pre_stream_sync);
   const double mx_gw = reduce_max(T.gpu_aware_mpi);
