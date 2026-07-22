@@ -189,13 +189,10 @@ TEST_CASE(
 
 TEST_CASE("create_padded_face_types_6: throws on halo width overflow",
           "[halo][padded_mpi_types]") {
-  const int nx = 1000000;
-  const int ny = 1;
-  const int nz = 1;
-  const int hw = 1500000000; // Causes nx + 2*hw to overflow int
-
+  // Pass the thin-owned-core guard (extent >= hw) but overflow nx+2*hw.
+  constexpr int huge = 1073741824; // 2^30; 3*huge exceeds INT_MAX
   REQUIRE_THROWS_AS(
-      pfc::halo::create_padded_face_types_6(nx, ny, nz, hw, MPI_DOUBLE),
+      pfc::halo::create_padded_face_types_6(huge, huge, huge, huge, MPI_DOUBLE),
       std::overflow_error);
 }
 

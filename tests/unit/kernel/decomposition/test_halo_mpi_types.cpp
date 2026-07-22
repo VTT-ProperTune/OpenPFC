@@ -11,22 +11,22 @@
 
 TEST_CASE("create_face_types_6: thin local brick throws before MPI",
           "[halo][mpi_types]") {
-  // nx=3 <= 2*hw=4 — overlapping / negative-start face slabs.
-  REQUIRE_THROWS_AS(pfc::halo::create_face_types_6(3, 8, 8, 2, MPI_DOUBLE),
+  // nx=1 < hw=2 — send/recv slab of thickness hw cannot fit.
+  REQUIRE_THROWS_AS(pfc::halo::create_face_types_6(1, 8, 8, 2, MPI_DOUBLE),
                     std::invalid_argument);
   try {
-    (void)pfc::halo::create_face_types_6(3, 8, 8, 2, MPI_DOUBLE);
+    (void)pfc::halo::create_face_types_6(1, 8, 8, 2, MPI_DOUBLE);
     FAIL("expected throw");
   } catch (const std::invalid_argument &e) {
     const std::string msg = e.what();
-    REQUIRE(msg.find("3x8x8") != std::string::npos);
+    REQUIRE(msg.find("1x8x8") != std::string::npos);
     REQUIRE(msg.find("halo_width=2") != std::string::npos);
   }
 }
 
-TEST_CASE("create_face_types_6: borderline nx > 2*hw constructs",
+TEST_CASE("create_face_types_6: borderline extent == hw constructs",
           "[halo][mpi_types]") {
-  const int nx = 5, ny = 5, nz = 5;
+  const int nx = 2, ny = 2, nz = 2;
   const int hw = 2;
   auto faces = pfc::halo::create_face_types_6(nx, ny, nz, hw, MPI_DOUBLE);
 
@@ -34,4 +34,14 @@ TEST_CASE("create_face_types_6: borderline nx > 2*hw constructs",
   MPI_Type_size(faces[0].send_type.get(), &size);
   REQUIRE(static_cast<std::size_t>(size) / sizeof(double) ==
           static_cast<std::size_t>(hw * ny * nz));
+}
+
+TEST_CASE("create_face_types_6: flat nz==1 Axes2D-style constructs",
+          "[halo][mpi_types]") {
+  // Orthogonal thin axis must remain valid (e.g. 8x8x1 + hw=1).
+  auto faces = pfc::halo::create_face_types_6(8, 8, 1, 1, MPI_DOUBLE);
+  int size = 0;
+  MPI_Type_size(faces[0].send_type.get(), &size);
+  REQUIRE(static_cast<std::size_t>(size) / sizeof(double) ==
+          static_cast<std::size_t>(1 * 8 * 1));
 }

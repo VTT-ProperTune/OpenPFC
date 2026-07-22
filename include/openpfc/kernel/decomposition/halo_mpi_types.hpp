@@ -128,12 +128,15 @@ struct FaceTypes {
  * Field layout: row-major [nx, ny, nz], boundary layers are the halo (no
  * extra padding). For direction +X: send right face, recv into left face.
  *
- * When `halo_width > 0`, each local extent must be strictly greater than
- * `2 * halo_width` (same inequality as `LocalField::check_halo_fits_`) so
- * send/recv slabs do not overlap and starts stay non-negative.
+ * When `halo_width > 0`, each local extent must be at least `halo_width`
+ * so a face send/recv slab fits along that axis. Orthogonal thin axes
+ * (e.g. `nz == 1` for Axes2D) remain valid — same rule as
+ * `create_padded_face_types_6`. Overlap of ± faces when an extent is
+ * `< 2 * halo_width` is allowed for MPI type construction; higher-level
+ * layouts (e.g. `LocalField`) may still require a non-empty interior.
  *
  * @throws std::invalid_argument if `halo_width < 0`, extents are non-positive,
- *         or (when `halo_width > 0`) any axis is `<= 2 * halo_width`
+ *         or (when `halo_width > 0`) any axis is `< halo_width`
  */
 inline std::array<FaceTypes, 6> create_face_types_6(int nx, int ny, int nz,
                                                     int halo_width,
@@ -150,14 +153,13 @@ inline std::array<FaceTypes, 6> create_face_types_6(int nx, int ny, int nz,
         ")");
   }
   if (halo_width > 0 &&
-      (nx <= 2 * halo_width || ny <= 2 * halo_width || nz <= 2 * halo_width)) {
+      (nx < halo_width || ny < halo_width || nz < halo_width)) {
     throw std::invalid_argument(
         std::string("pfc::halo::create_face_types_6: local extents ") +
         std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
-        " cannot host non-overlapping face halos of halo_width=" +
-        std::to_string(halo_width) + " (need >" + std::to_string(2 * halo_width) +
-        " points per dimension; reduce halo width, increase the grid, or use "
-        "fewer MPI ranks)");
+        " cannot host halo_width=" + std::to_string(halo_width) +
+        " face slabs (need >= halo_width points per dimension; reduce halo "
+        "width, increase the grid, or use fewer MPI ranks)");
   }
 
   std::array<FaceTypes, 6> out = {};
