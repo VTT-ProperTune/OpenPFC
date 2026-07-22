@@ -215,7 +215,6 @@ For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonic
 - Persistent separated exchanger not implemented yet (mirror `PersistentHaloExchanger`).
 - Overlap API for separated exchanger: can add `start_` / `finish_` mirroring `HaloExchanger`.
 - Face-only vs full-26 on the **CPU** padded-brick path: `PaddedHaloExchanger` remains the axis-aligned 6-face default. Full corner/edge fill is available via `pfc::communication::FullPaddedHaloExchanger` (3-pass widening, host twin of `FullPaddedDeviceHalo`). Wiring mixed seconds into `FDGradient` / `apply_tensor_d` is still a follow-up after corners are proven.
-- Self-axis periodic wrap in `PaddedDeviceHaloExchanger` writes the rank's *last* `hw` owned cells into the +axis halo (rather than the *first*). This is masked on small/short runs but is incorrect for periodic boundary conditions when the dendrite or front reaches the boundary on a single-rank-per-axis grid; `FullPaddedDeviceHalo` implements the correct wrap.
 - Orchestration: Optional thin `exchange_if_needed(HaloPolicy, …)` can be added when multiple call sites need it; policies are documented first.
 
 ---
