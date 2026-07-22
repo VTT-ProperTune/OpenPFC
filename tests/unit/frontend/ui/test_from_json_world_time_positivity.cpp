@@ -8,6 +8,8 @@
  */
 
 #include <catch2/catch_test_macros.hpp>
+#include <cstring>
+#include <limits>
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/from_json_world_time.hpp>
@@ -496,4 +498,129 @@ TEST_CASE("[time][positivity] from_json_time_with_flat_structure_rejects_t1_less
       {"saveat", 1.0}};
 
   REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_rejects_nan_dx") {
+  // Use quiet NaN which JSON can represent as a string that gets parsed
+  // Construct JSON then override dx to NaN
+  json j = {
+      {"Lx", 128},
+      {"Ly", 128},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  // Set dx to NaN via direct manipulation of the JSON value
+  std::vector<uint8_t> nan_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f}; // double NaN
+  double nan_val;
+  std::memcpy(&nan_val, nan_bytes.data(), sizeof(nan_val));
+  j["dx"] = nan_val;
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_rejects_inf_dy") {
+  // Construct JSON then override dy to Infinity
+  json j = {
+      {"Lx", 128},
+      {"Ly", 128},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  // Set dy to positive infinity
+  j["dy"] = std::numeric_limits<double>::infinity();
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_rejects_negative_inf_dz") {
+  // Construct JSON then override dz to -Infinity
+  json j = {
+      {"Lx", 128},
+      {"Ly", 128},
+      {"Lz", 128},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "center"}};
+
+  // Set dz to negative infinity
+  j["dz"] = -std::numeric_limits<double>::infinity();
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_rejects_nan_dt") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  // Set dt to NaN
+  std::vector<uint8_t> nan_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f}; // double NaN
+  double nan_val;
+  std::memcpy(&nan_val, nan_bytes.data(), sizeof(nan_val));
+  j["timestepping"]["dt"] = nan_val;
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_rejects_inf_dt") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  // Set dt to positive infinity
+  j["timestepping"]["dt"] = std::numeric_limits<double>::infinity();
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_rejects_inf_saveat") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  // Set saveat to positive infinity
+  j["timestepping"]["saveat"] = std::numeric_limits<double>::infinity();
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_rejects_nan_t0") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  // Set t0 to NaN
+  std::vector<uint8_t> nan_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f}; // double NaN
+  double nan_val;
+  std::memcpy(&nan_val, nan_bytes.data(), sizeof(nan_val));
+  j["timestepping"]["t0"] = nan_val;
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[time][positivity] from_json_time_rejects_inf_t1") {
+  json j = {
+      {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0}}}};
+
+  // Set t1 to positive infinity
+  j["timestepping"]["t1"] = std::numeric_limits<double>::infinity();
+
+  REQUIRE_THROWS_AS(from_json<Time>(j), std::invalid_argument);
+}
+
+TEST_CASE("[world][positivity] from_json_world_with_nested_domain_rejects_nan_dx") {
+  json j = {
+      {"domain", {{"Lx", 64}, {"Ly", 64}, {"Lz", 64}, {"dx", 1.0}, {"dy", 1.0}, {"dz", 1.0}}},
+      {"origin", "center"}};
+
+  // Set dx to NaN
+  std::vector<uint8_t> nan_bytes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f}; // double NaN
+  double nan_val;
+  std::memcpy(&nan_val, nan_bytes.data(), sizeof(nan_val));
+  j["domain"]["dx"] = nan_val;
+
+  REQUIRE_THROWS_AS(from_json<World>(j), std::invalid_argument);
 }
