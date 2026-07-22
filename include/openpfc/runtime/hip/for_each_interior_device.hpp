@@ -145,7 +145,7 @@ inline void for_each_interior_device(const Model &model,
                                          "launch failed: ") +
                              hipGetErrorString(e));
   }
-  e = hipDeviceSynchronize();
+  e = hipStreamSynchronize(stream);
   if (e != hipSuccess) {
     throw std::runtime_error(std::string("for_each_interior_device: synchronize "
                                          "failed: ") +

@@ -335,7 +335,7 @@ for_each_interior_device(const Model &model,
                     "failed: ") +
         cudaGetErrorString(e));
   }
-  e = cudaDeviceSynchronize();
+  e = cudaStreamSynchronize(stream);
   if (e != cudaSuccess) {
     throw std::runtime_error(
         std::string("for_each_interior_device(multi-field): synchronize "
@@ -365,7 +365,7 @@ for_each_interior_device(const Model &model,
                     "failed: ") +
         cudaGetErrorString(e));
   }
-  e = cudaDeviceSynchronize();
+  e = cudaStreamSynchronize(stream);
   if (e != cudaSuccess) {
     throw std::runtime_error(
         std::string("for_each_interior_device(multi-field): synchronize "
@@ -395,7 +395,7 @@ for_each_interior_device(const Model &model,
                     "failed: ") +
         cudaGetErrorString(e));
   }
-  e = cudaDeviceSynchronize();
+  e = cudaStreamSynchronize(stream);
   if (e != cudaSuccess) {
     throw std::runtime_error(
         std::string("for_each_interior_device(multi-field): synchronize "
