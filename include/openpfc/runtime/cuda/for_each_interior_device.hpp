@@ -279,7 +279,8 @@ inline dim3 for_each_interior_block(int nx, int ny, int nz) {
  * @param nx,ny,nz    Owned-region extents of the local subdomain.
  * @param stream      CUDA stream to launch on (0 for the default stream).
  *
- * @throws std::runtime_error if the kernel launch fails.
+ * @throws std::runtime_error if the kernel launch or synchronization fails.
+ *         Both kernel launch and stream synchronization are checked.
  */
 template <class Model, class G>
 inline void for_each_interior_device(const Model &model,
@@ -297,6 +298,12 @@ inline void for_each_interior_device(const Model &model,
   if (e != cudaSuccess) {
     throw std::runtime_error(std::string("for_each_interior_device: kernel "
                                          "launch failed: ") +
+                             cudaGetErrorString(e));
+  }
+  e = cudaStreamSynchronize(stream);
+  if (e != cudaSuccess) {
+    throw std::runtime_error(std::string("for_each_interior_device: synchronize "
+                                         "failed: ") +
                              cudaGetErrorString(e));
   }
 }

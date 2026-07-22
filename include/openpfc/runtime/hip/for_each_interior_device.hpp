@@ -119,9 +119,8 @@ for_each_interior_device_kernel(Model model, ::pfc::hip::FdGradientDevicePOD eva
  * @param nx,ny,nz    Owned-region extents of the local subdomain.
  * @param stream      HIP stream to launch on (0 for the default stream).
  *
- * @throws std::runtime_error if the kernel launch fails. The host code
- *         path is otherwise free of HIP error checking — a follow-up
- *         can wire `hipGetLastError()` into the launcher.
+ * @throws std::runtime_error if the kernel launch or synchronization fails.
+ *         Both kernel launch and device synchronization are checked.
  */
 template <class Model, class G>
 inline void for_each_interior_device(const Model &model,
@@ -140,10 +139,16 @@ inline void for_each_interior_device(const Model &model,
                   (static_cast<unsigned>(nz) + Tz - 1) / Tz);
   detail::for_each_interior_device_kernel<Model, G>
       <<<grid, block, 0, stream>>>(model, eval, du_padded, t, nx, ny, nz);
-  const hipError_t e = hipGetLastError();
+  hipError_t e = hipGetLastError();
   if (e != hipSuccess) {
     throw std::runtime_error(std::string("for_each_interior_device: kernel "
                                          "launch failed: ") +
+                             hipGetErrorString(e));
+  }
+  e = hipDeviceSynchronize();
+  if (e != hipSuccess) {
+    throw std::runtime_error(std::string("for_each_interior_device: synchronize "
+                                         "failed: ") +
                              hipGetErrorString(e));
   }
 }
@@ -173,7 +178,8 @@ inline void for_each_interior_device(const Model &model,
  * @param nx,ny,nz    Owned-region extents of the local subdomain.
  * @param stream      HIP stream to launch on (0 for the default stream).
  *
- * @throws std::runtime_error if the kernel launch fails.
+ * @throws std::runtime_error if the kernel launch or synchronization fails.
+ *         Both kernel launch and device synchronization are checked.
  */
 template <class Model, class G>
 inline void for_each_interior_device(const Model &model,
