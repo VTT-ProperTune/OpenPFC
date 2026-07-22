@@ -79,6 +79,11 @@ void gather_hip_impl(size_t n, const size_t *indices, double *data,
     throw std::runtime_error("HIP gather kernel failed: " +
                              std::string(hipGetErrorString(err)));
   }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error("HIP gather kernel sync failed: " +
+                             std::string(hipGetErrorString(err)));
+  }
 }
 
 void scatter_hip_impl(size_t n, const size_t *indices, const double *data,
@@ -99,6 +104,11 @@ void scatter_hip_impl(size_t n, const size_t *indices, const double *data,
   hipError_t err = hipGetLastError();
   if (err != hipSuccess) {
     throw std::runtime_error("HIP scatter kernel failed: " +
+                             std::string(hipGetErrorString(err)));
+  }
+  err = hipDeviceSynchronize();
+  if (err != hipSuccess) {
+    throw std::runtime_error("HIP scatter kernel sync failed: " +
                              std::string(hipGetErrorString(err)));
   }
 }

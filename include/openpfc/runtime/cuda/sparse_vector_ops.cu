@@ -79,6 +79,11 @@ void gather_cuda_impl(size_t n, const size_t *indices, double *data,
     throw std::runtime_error("CUDA gather kernel failed: " +
                              std::string(cudaGetErrorString(err)));
   }
+  err = cudaDeviceSynchronize();
+  if (err != cudaSuccess) {
+    throw std::runtime_error("CUDA gather kernel sync failed: " +
+                             std::string(cudaGetErrorString(err)));
+  }
 }
 
 void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
@@ -99,6 +104,11 @@ void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
     throw std::runtime_error("CUDA scatter kernel failed: " +
+                             std::string(cudaGetErrorString(err)));
+  }
+  err = cudaDeviceSynchronize();
+  if (err != cudaSuccess) {
+    throw std::runtime_error("CUDA scatter kernel sync failed: " +
                              std::string(cudaGetErrorString(err)));
   }
 }
