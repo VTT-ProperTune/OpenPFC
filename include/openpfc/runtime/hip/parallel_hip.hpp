@@ -16,6 +16,7 @@
 #include <openpfc/kernel/execution/parallel.hpp>
 #include <openpfc/kernel/execution/policy.hpp>
 #include <openpfc/runtime/hip/execution_space_hip.hpp>
+#include <openpfc/runtime/hip/hip_check.hpp>
 #include <string>
 
 namespace pfc {
@@ -71,7 +72,9 @@ void parallel_for(const std::string &name,
   parallel_for(policy, functor);
 }
 
-inline void fence(const HIP &) { hipDeviceSynchronize(); }
+inline void fence(const HIP &) {
+  hip::detail::hip_check(hipDeviceSynchronize(), "fence(HIP)");
+}
 
 } // namespace pfc
 
