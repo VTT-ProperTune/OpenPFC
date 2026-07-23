@@ -30,8 +30,8 @@
 
 #include <limits>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
 #include <stdexcept>
 #include <vector>
 

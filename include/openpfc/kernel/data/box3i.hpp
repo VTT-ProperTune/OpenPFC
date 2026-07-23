@@ -7,10 +7,10 @@
  *
  * @details
  * A 3D axis-aligned index box with **inclusive** low/high corners and per-axis
- * `size`. This is the single index-box type for OpenPFC 0.2, unifying the old
- * `pfc::Box3D` and `pfc::fft::Box3i` (which is now an alias of this type, see
- * `kernel/fft/box3i.hpp`). It carries no HeFFTe-specific fields, so public
- * headers stay HeFFTe-free.
+ * `size`. This is the single index-box type for OpenPFC 0.2, unifying the two
+ * former integer index boxes (the removed dense-box type and `pfc::fft::Box3i`,
+ * which is now an alias of this type, see `kernel/fft/box3i.hpp`). It carries no
+ * HeFFTe-specific fields, so public headers stay HeFFTe-free.
  *
  * It is an aggregate (no user-declared constructors) so existing brace
  * initialization `{low, high, size}` and member access `.low/.high/.size`

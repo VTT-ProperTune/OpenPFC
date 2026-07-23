@@ -58,7 +58,7 @@
 #include <utility>
 #include <vector>
 
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>

@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 
 namespace pfc::checkpoint {
 

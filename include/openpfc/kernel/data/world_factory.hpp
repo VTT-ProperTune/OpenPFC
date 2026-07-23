@@ -23,8 +23,8 @@
 #pragma once
 
 #include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
 
 namespace pfc::world {
 

@@ -62,7 +62,7 @@
 #include <string>
 #include <vector>
 
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 
 namespace pfc::halo {

@@ -36,7 +36,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 
 namespace pfc::field {
 
