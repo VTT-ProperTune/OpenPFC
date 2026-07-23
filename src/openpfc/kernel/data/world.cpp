@@ -67,41 +67,6 @@ World<CoordTag>::World(const Int3 &lower, const Int3 &upper,
   return World(lower, upper, CartesianCS());
 }
 
-// Strong typedef constructors. We don't necessary need these at all as now we
-// have a separate World and CoordinateSystem making this less harazardous.
-
-/*
-
-// We don't have to manually define the values for both upper bounds and spacing as
-// we can calulcate one from another
-
-CartesianWorld create(const Size3 &size, const LowerBounds3 &lower,
-                      const UpperBounds3 &upper, const Periodic3 &periodic) {
-  Spacing3 spacing = compute_spacing(size, lower, upper, periodic);
-  CartesianCS cs(lower.value, spacing.value, periodic.value);
-  return World(size.value, cs);
-}
-
-CartesianWorld create(const Size3 &size, const LowerBounds3 &lower,
-                      const Spacing3 &spacing, const Periodic3 &periodic) {
-  CartesianCS cs(lower.value, spacing.value, periodic.value);
-  return World(size.value, cs);
-}
-*/
-
-// This is the most common use case, where we assume the lower bounds are {0,0,0} and
-// we have cartesian coordinate system with periodic boundaries and spacing is
-// calculated from the size and lower bounds
-/*
-CartesianWorld create(const Size3 &size, const UpperBounds3 &upper) {
-  LowerBounds3 lower{{0.0, 0.0, 0.0}};
-  Periodic3 periodic{{true, true, true}};
-  Spacing3 spacing = compute_spacing(size, lower, upper, periodic);
-  CartesianCS cs(lower.value, spacing.value, periodic.value);
-  return World(size.value, cs);
-}
-*/
-
 // Operators
 
 inline const char *name_of(CartesianTag tag) {
