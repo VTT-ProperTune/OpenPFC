@@ -123,45 +123,40 @@ TEST_CASE("World accessor functions - microbenchmarks",
 }
 
 // ============================================================================
-// Coordinate System Direct Access Benchmarks
+// Domain Direct Access Benchmarks
 // ============================================================================
 
-TEST_CASE("CoordinateSystem direct operations - microbenchmarks",
-          "[csys][benchmark]") {
-  using namespace pfc::csys;
-
-  // Create coordinate system directly
-  const Real3 offset = {0.0, 0.0, 0.0};
-  const Real3 spacing = {0.1, 0.1, 0.1};
-  const Bool3 periodic = {true, true, true};
-  const CartesianCS cs(offset, spacing, periodic);
+TEST_CASE("Domain direct operations - microbenchmarks", "[domain][benchmark]") {
+  // Bare Domain (the canonical coordinate system) — verifies the query/transform
+  // primitives carry no overhead beyond the World wrapper.
+  const Domain d = domain::with_spacing({128, 128, 128}, {0.1, 0.1, 0.1});
 
   const Int3 test_indices = {42, 53, 64};
 
-  SECTION("to_coords on bare CoordinateSystem") {
-    BENCHMARK("to_coords (CartesianCS)") { return to_coords(cs, test_indices); };
+  SECTION("to_coords on bare Domain") {
+    BENCHMARK("to_coords (Domain)") { return domain::to_coords(d, test_indices); };
 
     INFO("Expected: ~1-5 ns");
     INFO("Verifies no overhead from World wrapper");
   }
 
-  SECTION("to_index on bare CoordinateSystem") {
+  SECTION("to_indices on bare Domain") {
     const Real3 test_coords = {4.2, 5.3, 6.4};
 
-    BENCHMARK("to_index (CartesianCS)") { return to_index(cs, test_coords); };
+    BENCHMARK("to_indices (Domain)") { return domain::to_indices(d, test_coords); };
 
     INFO("Expected: ~1-5 ns");
     INFO("Verifies no overhead from World wrapper");
   }
 
-  SECTION("get_spacing on CoordinateSystem") {
-    BENCHMARK("get_spacing (CartesianCS)") { return get_spacing(cs); };
+  SECTION("get_spacing on Domain") {
+    BENCHMARK("get_spacing (Domain)") { return domain::get_spacing(d); };
 
     INFO("Expected: <1 ns (direct member access)");
   }
 
-  SECTION("get_offset on CoordinateSystem") {
-    BENCHMARK("get_offset (CartesianCS)") { return get_offset(cs); };
+  SECTION("get_origin on Domain") {
+    BENCHMARK("get_origin (Domain)") { return domain::get_origin(d); };
 
     INFO("Expected: <1 ns (direct member access)");
   }

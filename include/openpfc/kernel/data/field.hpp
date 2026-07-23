@@ -50,7 +50,6 @@
 #include <array>
 #include <concepts>
 #include <functional>
-#include <openpfc/kernel/data/csys.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 #include <stdexcept>

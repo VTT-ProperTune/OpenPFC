@@ -29,7 +29,7 @@
 #pragma once
 
 #include <limits>
-#include <openpfc/kernel/data/csys.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 #include <stdexcept>
@@ -37,7 +37,6 @@
 
 namespace pfc::world {
 
-using pfc::csys::CoordinateSystem;
 using pfc::types::Int3;
 using pfc::types::Real3;
 

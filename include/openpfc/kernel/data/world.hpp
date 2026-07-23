@@ -39,7 +39,6 @@
  * World follows OpenPFC's "Laboratory, Not Fortress" principles:
  * - **Immutable value-type**: No mutable state, thread-safe by design
  * - **Functional API**: Free functions for operations (not member methods)
- * - **Template-based extensibility**: Support custom coordinate systems via tags
  * - **Zero-overhead abstractions**: Inline functions, no runtime polymorphism
  * - **Explicit over implicit**: Clear, self-documenting APIs
  *

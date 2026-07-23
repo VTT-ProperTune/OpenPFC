@@ -22,15 +22,12 @@
 
 #pragma once
 
-#include <openpfc/kernel/data/csys.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 
 namespace pfc::world {
 
-using pfc::csys::CartesianTag;
-using pfc::csys::CoordinateSystem;
 using pfc::types::Bool3;
 using pfc::types::Int3;
 using pfc::types::Real3;
