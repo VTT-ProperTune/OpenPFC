@@ -46,13 +46,13 @@ namespace pfc::mpi {
 
 class environment {
 public:
-  environment(const environment&) = delete;
-  environment& operator=(const environment&) = delete;
-  environment(environment&&) = delete;
-  environment& operator=(environment&&) = delete;
+  environment(const environment &) = delete;
+  environment &operator=(const environment &) = delete;
+  environment(environment &&) = delete;
+  environment &operator=(environment &&) = delete;
 
   inline environment();
-  inline ~environment() noexcept(false);
+  inline ~environment() noexcept;
   static inline std::string processor_name();
   static inline bool initialized();
   static inline bool finalized();
@@ -63,9 +63,10 @@ inline environment::environment() {
   pfc::mpi::throw_on_mpi_error(err, "MPI_Init");
 }
 
-inline environment::~environment() noexcept(false) {
-  int err = MPI_Finalize();
-  pfc::mpi::throw_on_mpi_error(err, "MPI_Finalize");
+inline environment::~environment() noexcept {
+  // Fail-closed cleanup policy: never throw from a destructor (would risk
+  // std::terminate during unwinding). Log + MPI_Abort on a finalize error.
+  pfc::mpi::abort_on_mpi_error(MPI_Finalize(), "MPI_Finalize");
 }
 
 inline std::string environment::processor_name() {

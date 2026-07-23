@@ -154,9 +154,10 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
   }
 
   if (rank0) std::cout << "Applying initial conditions..." << std::endl;
-  model.prepare_for_field_modifiers();
+  // Residency bracketing (device <-> host mirror) is now handled by the
+  // Simulator dispatch (audit 4.1: Model::prepare/finalize_for_field_modifiers),
+  // so these calls no longer bracket modifiers or writers here.
   simulator.apply_initial_conditions();
-  model.finalize_after_field_modifiers();
 
   if (rank0) std::cout << "Writing initial state..." << std::endl;
   pfc::write_results(simulator);
@@ -166,23 +167,19 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
   while (!pfc::time::done(time)) {
     pfc::time::next(time);
 
-    model.prepare_for_field_modifiers();
     simulator.apply_boundary_conditions();
-    model.finalize_after_field_modifiers();
 
     double t = pfc::time::current(time);
     model.step(t);
 
-    double saveat = pfc::time::saveat(time);
-    double dt = pfc::time::dt(time);
-    if (saveat > 0.0 && dt > 0.0) {
-      int save_interval = static_cast<int>(std::round(saveat / dt));
-      if (save_interval > 0 && pfc::time::increment(time) % save_interval == 0) {
-        if (rank0)
-          std::cout << "Step " << pfc::time::increment(time) << ", t = " << t
-                    << ", writing results..." << std::endl;
-        pfc::write_results(simulator);
-      }
+    // Single save-point scheduler (audit 4.12): use Time::do_save() (float-mod
+    // with the framework's tolerance) instead of a divergent round(saveat/dt)
+    // rule that disagreed when dt did not evenly divide saveat.
+    if (pfc::time::do_save(time)) {
+      if (rank0)
+        std::cout << "Step " << pfc::time::increment(time) << ", t = " << t
+                  << ", writing results..." << std::endl;
+      pfc::write_results(simulator);
     }
 
     if (rank0 && pfc::time::increment(time) % 10 == 0) {

@@ -83,6 +83,20 @@ target_compile_definitions(openpfc_frontend_obj PUBLIC
 target_compile_definitions(openpfc_frontend_obj PRIVATE
     "OPENPFC_PROFILING_BUILD_VERSION=\"${PROJECT_VERSION}\"")
 
+# Export the backend-enable flags as PUBLIC usage requirements (audit 11 / PM).
+# Previously these were directory-scope add_compile_definitions in
+# CudaSupport/HipSupport.cmake, which are NOT part of the installed INTERFACE, so
+# downstream header inclusion could differ from the in-tree build. Setting them
+# on the object libraries keeps in-tree and installed behavior identical.
+if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+  target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_CUDA)
+  target_compile_definitions(openpfc_frontend_obj PUBLIC OpenPFC_ENABLE_CUDA)
+endif()
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+  target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_HIP)
+  target_compile_definitions(openpfc_frontend_obj PUBLIC OpenPFC_ENABLE_HIP)
+endif()
+
 # Layering: openpfc is the compiled implementation; public include path is on the
 # target above. HeFFTe stays PRIVATE (see block below) so only TUs that include
 # fft_fftw.hpp need to link HeFFTe.

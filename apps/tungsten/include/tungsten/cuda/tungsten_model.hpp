@@ -54,7 +54,6 @@ inline void cuda_check(cudaError_t e, const char *what) {
 }
 } // namespace
 
-
 /**
  * @brief Tungsten Phase Field Crystal model (CUDA version)
  *
@@ -148,7 +147,8 @@ public:
                         MPI_Comm mpi_comm = MPI_COMM_WORLD)
       : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
     // Create CUDA events for non-blocking synchronization
-    cuda_check(cudaEventCreate(&kernel_done_event), "cudaEventCreate(kernel_done_event)");
+    cuda_check(cudaEventCreate(&kernel_done_event),
+               "cudaEventCreate(kernel_done_event)");
     // session
     int rank = 0;
     int size = 0;
@@ -227,7 +227,14 @@ public:
    */
   void sync_gpu_to_cpu() {
     if (!m_cpu_buffer_valid) {
-      m_psi_cpu = psi.to_host();
+      // Convert element-wise: the host mirror is RealField (std::vector<double>)
+      // while the device buffer is std::vector<RealType>. For RealType=double
+      // this is a plain copy; for RealType=float it converts precision. (Making
+      // these hooks virtual for the residency fix forces instantiation for every
+      // RealType, which exposed the previous double-only assignment.)
+      // TODO: not tested at runtime (requires a CUDA device / cluster run).
+      const auto host = psi.to_host();
+      m_psi_cpu.assign(host.begin(), host.end());
       m_cpu_buffer_valid = true;
     }
   }
@@ -239,7 +246,10 @@ public:
    * have modified the CPU buffer.
    */
   void sync_cpu_to_gpu() {
-    psi.copy_from_host(m_psi_cpu);
+    // Convert double mirror back to the device element type (see sync_gpu_to_cpu).
+    // TODO: not tested at runtime (requires a CUDA device / cluster run).
+    std::vector<RealType> tmp(m_psi_cpu.begin(), m_psi_cpu.end());
+    psi.copy_from_host(tmp);
     m_cpu_buffer_valid = false; // GPU is now the source of truth
   }
 
@@ -298,10 +308,10 @@ public:
     }
 
     ++m_operator_generation;
-    m_etd.ensure(k_laps, opCks, dt,
-                 pfc::integrator::SpectralExpOperatorId{.value =
-                                                            m_operator_generation},
-                 tungsten::etd::k_tungsten_etd_config_id);
+    m_etd.ensure(
+        k_laps, opCks, dt,
+        pfc::integrator::SpectralExpOperatorId{.value = m_operator_generation},
+        tungsten::etd::k_tungsten_etd_config_id);
 
     {
       const auto exp_w = m_etd.exp_Ldt();
@@ -412,9 +422,7 @@ public:
   /**
    * @brief Destructor - cleans up CUDA events
    */
-  ~TungstenCUDA() {
-    cudaEventDestroy(kernel_done_event);
-  }
+  ~TungstenCUDA() { cudaEventDestroy(kernel_done_event); }
 
   // Accessors for fields (for testing/debugging)
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &get_psi() { return psi; }
@@ -428,7 +436,11 @@ public:
    * Syncs GPU data to CPU buffer so FieldModifiers can access it.
    * Call this before applying initial/boundary conditions.
    */
-  void prepare_for_field_modifiers() { sync_gpu_to_cpu(); }
+  // Override the base Model residency hooks (audit 4.1): the Simulator now
+  // calls these around field-modifier application and result writing, so the
+  // device field is seeded from JSON initial conditions and writers see current
+  // data. TODO: not tested at runtime (requires a CUDA device / cluster run).
+  void prepare_for_field_modifiers() override { sync_gpu_to_cpu(); }
 
   /**
    * @brief Finalize after FieldModifier application
@@ -436,7 +448,7 @@ public:
    * Syncs modified CPU buffer back to GPU.
    * Call this after applying initial/boundary conditions.
    */
-  void finalize_after_field_modifiers() { sync_cpu_to_gpu(); }
+  void finalize_after_field_modifiers() override { sync_cpu_to_gpu(); }
 
   /**
    * @brief Get CPU copy of psi field for VTKWriter

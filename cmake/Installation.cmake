@@ -15,7 +15,11 @@ if(DEFINED nlohmann_json_SOURCE_DIR)
 endif()
 
 # Install headers
-install(DIRECTORY include/openpfc DESTINATION include)
+# Install public headers only (audit 11 / PM): the tree also contains .cu/.hip
+# device sources and stray .md files that must not be shipped into the include
+# prefix. (Relocating those sources under src/ is deferred to M3.)
+install(DIRECTORY include/openpfc DESTINATION include
+        FILES_MATCHING PATTERN "*.hpp")
 
 # Install library binary
 install(TARGETS openpfc
@@ -36,6 +40,17 @@ endif()
 # Install GPU kernel library if CUDA is enabled
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     install(TARGETS openpfc_gpu_kernels
+        EXPORT OpenPFCTargets
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+    )
+endif()
+
+# Install HIP kernel library if HIP is enabled (audit 11 / PM: this block was
+# missing, so install(EXPORT OpenPFCTargets) failed or HIP installs shipped
+# without libopenpfc_hip_kernels -- mirror the CUDA block above).
+if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    install(TARGETS openpfc_hip_kernels
         EXPORT OpenPFCTargets
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib

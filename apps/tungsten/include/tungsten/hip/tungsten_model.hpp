@@ -46,7 +46,6 @@ inline void hip_check(hipError_t e, const char *what) {
 }
 } // namespace
 
-
 /**
  * @brief Tungsten Phase Field Crystal model (HIP version)
  *
@@ -91,7 +90,8 @@ public:
   explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world,
                        MPI_Comm mpi_comm = MPI_COMM_WORLD)
       : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
-    hip_check(hipEventCreate(&kernel_done_event), "hipEventCreate(kernel_done_event)");
+    hip_check(hipEventCreate(&kernel_done_event),
+              "hipEventCreate(kernel_done_event)");
     int rank = 0;
     int size = 0;
     MPI_Comm_rank(this->mpi_comm(), &rank);
@@ -145,13 +145,19 @@ public:
 
   void sync_gpu_to_cpu() {
     if (!m_cpu_buffer_valid) {
-      m_psi_cpu = psi.to_host();
+      // Element-wise convert: host mirror is std::vector<double>, device buffer
+      // is std::vector<RealType> (see the CUDA model for the rationale).
+      // TODO: not tested at runtime (requires a ROCm device / LUMI run).
+      const auto host = psi.to_host();
+      m_psi_cpu.assign(host.begin(), host.end());
       m_cpu_buffer_valid = true;
     }
   }
 
   void sync_cpu_to_gpu() {
-    psi.copy_from_host(m_psi_cpu);
+    // TODO: not tested at runtime (requires a ROCm device / LUMI run).
+    std::vector<RealType> tmp(m_psi_cpu.begin(), m_psi_cpu.end());
+    psi.copy_from_host(tmp);
     m_cpu_buffer_valid = false;
   }
 
@@ -197,10 +203,10 @@ public:
     }
 
     ++m_operator_generation;
-    m_etd.ensure(k_laps, opCks, dt,
-                 pfc::integrator::SpectralExpOperatorId{.value =
-                                                            m_operator_generation},
-                 tungsten::etd::k_tungsten_etd_config_id);
+    m_etd.ensure(
+        k_laps, opCks, dt,
+        pfc::integrator::SpectralExpOperatorId{.value = m_operator_generation},
+        tungsten::etd::k_tungsten_etd_config_id);
 
     {
       const auto exp_w = m_etd.exp_Ldt();
@@ -262,18 +268,18 @@ public:
     fft.backward(psi_F, psi);
   }
 
-  ~TungstenHIP() {
-    hipEventDestroy(kernel_done_event);
-  }
+  ~TungstenHIP() { hipEventDestroy(kernel_done_event); }
 
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psi() { return psi; }
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psiMF() {
     return psiMF;
   }
 
-  void prepare_for_field_modifiers() { sync_gpu_to_cpu(); }
+  // Override the base Model residency hooks (audit 4.1); see the CUDA model.
+  // TODO: not tested at runtime (requires a ROCm device / LUMI run).
+  void prepare_for_field_modifiers() override { sync_gpu_to_cpu(); }
 
-  void finalize_after_field_modifiers() { sync_cpu_to_gpu(); }
+  void finalize_after_field_modifiers() override { sync_cpu_to_gpu(); }
 
   pfc::RealField &get_psi_for_writer() {
     sync_gpu_to_cpu();

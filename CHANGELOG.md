@@ -7,6 +7,29 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## [Unreleased]
 
+### Fixed (Pre-M0 stabilization — final 0.1.x correctness pass before the 0.2 refactor)
+
+Each fix has a regression test; the full CPU suite (26 ctest batches + Python)
+passes, and CUDA/HIP compile cleanly. GPU *runtime* behavior for the device-only
+fixes is marked `// TODO: not tested` pending a GPU-node run.
+
+- **FD dispatcher fail-closed (audit §4.3):** `field::fd::laplacian_interior(int order, …)` now throws `std::invalid_argument` on an unsupported order instead of silently doing nothing.
+- **Periodicity honored (audit §4.4):** `world::create` / `from_bounds` now store the requested per-axis periodicity (was always all-periodic); added `world::get_periodic` / `world::is_periodic`.
+- **Subdomain bounds (audit §4.5):** `world::get_lower_bounds` / `get_upper_bounds` now respect a subdomain's index offset instead of reporting the global origin.
+- **Coordinate→index convention (audit §4.6):** `csys::to_index` now rounds (matching the documented `to_indices` contract and `DiscreteField`), not truncates.
+- **Dead API removed (audit §4.8):** deleted the undefined `utils::compute_upper_bounds/compute_spacing` declarations and the constructors that called them.
+- **Dangling reference removed (audit §4.10):** `field::Field<T>` stores `World` by value.
+- **Checked MPI + fail-closed cleanup (audit §4.7, §4.11):** checked `MPI_Comm_size` in the decomposition factory and the GPU packed-halo `Irecv/Isend`; unified destructor/move-assign cleanup on a single `abort_on_mpi_error` (log + `MPI_Abort`, never throw from a destructor).
+- **Device `parallel_for` trap (audit §4.2):** CUDA/HIP `parallel_for` is now a compile-time error instead of silently running device work on the host.
+- **GPU initial-condition residency (audit §4.1):** `Model` gained `prepare/finalize_for_field_modifiers` hooks that the `Simulator` calls around modifier application and result writing, so App-driven GPU runs seed the device field (previously integrated from an unseeded buffer).
+- **Single save scheduler (audit §4.12):** the Tungsten GPU driver uses `Time::do_save()` instead of a divergent `round(saveat/dt)` rule.
+- **HeFFTe box-order invariant (audit §4.9):** `Decomposition` asserts at construction that `heffte::split_world` box order matches the x-fastest neighbor convention.
+
+### Fixed — packaging / build (audit §11)
+
+- Code-coverage instrumentation no longer defaults ON and is `PRIVATE`, so it cannot leak into Release builds or the installed/exported package.
+- The HIP kernel library is now part of the install/export set; `OpenPFCConfig.cmake` declares its transitive dependencies (CUDAToolkit / hip / HDF5 / nlohmann_json); backend-enable definitions are exported; installs ship headers only. Guarded by a new `find_package(OpenPFC)` packaging smoke test in CI (`tests/packaging/consumer`).
+
 ### Documentation
 
 - **Onboarding spine:** `docs/start_here_15_minutes.md`, `docs/spectral_stack.md`, `docs/recipes/`, `docs/gpu_path_decision.md`, `docs/hpc_operator_guide.md`.  

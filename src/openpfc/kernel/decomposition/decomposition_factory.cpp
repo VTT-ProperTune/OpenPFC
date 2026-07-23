@@ -4,6 +4,7 @@
 #include <mpi.h>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/mpi/mpi.hpp>
 
 namespace pfc {
 
@@ -16,12 +17,9 @@ namespace pfc {
 }
 
 [[nodiscard]] Decomposition make_decomposition(const World &world, MPI_Comm comm) {
-  int rank = 0;
-  int size = 1;
-
-  // Get MPI rank and size from communicator
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  // Fail closed: these were previously unchecked (audit 4.7). The checked
+  // helpers throw on a nonzero MPI error code.
+  const int size = pfc::mpi::get_comm_size(comm);
 
   // Create decomposition with automatic grid selection based on number of processes
   return decomposition::create(world, size);

@@ -94,12 +94,13 @@ inline int checked_padded_extent_cuda(int n, int hw) {
         std::to_string(hw) + ")");
   }
   // Use long long to detect overflow in addition
-  const long long result = static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
+  const long long result =
+      static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
   if (result > static_cast<long long>(std::numeric_limits<int>::max()) ||
       result < static_cast<long long>(std::numeric_limits<int>::min())) {
     throw std::overflow_error(
-        "CUDA PaddedDeviceHaloExchanger: padded extent overflow " + std::to_string(n) +
-        " + 2*" + std::to_string(hw) + " exceeds int range");
+        "CUDA PaddedDeviceHaloExchanger: padded extent overflow " +
+        std::to_string(n) + " + 2*" + std::to_string(hw) + " exceeds int range");
   }
   return static_cast<int>(result);
 }
@@ -191,8 +192,9 @@ inline void print_cuda_halo_exchange_cpu_timers(MPI_Comm comm) {
     return;
   }
   int rank = 0;
-  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &rank),
-                               "MPI_Comm_rank in print_cuda_halo_exchange_cpu_timers");
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Comm_rank(comm, &rank),
+      "MPI_Comm_rank in print_cuda_halo_exchange_cpu_timers");
   auto &T = cuda_halo_exchange_cpu_timers();
   if (T.n_calls == 0) {
     return;
@@ -439,9 +441,9 @@ private:
           continue;
         }
         const auto &send = m_face_specs[i].first;
-        const auto &recv =
-            m_face_specs[static_cast<std::size_t>(opposite_slot(static_cast<int>(i)))]
-                .second;
+        const auto &recv = m_face_specs[static_cast<std::size_t>(
+                                            opposite_slot(static_cast<int>(i)))]
+                               .second;
         detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
                                         send.oz, send.sx, send.sy, send.sz, m_nxp,
                                         m_nyp, m_nzp, stream);
@@ -495,9 +497,9 @@ private:
           continue;
         }
         const auto &send = m_face_specs[i].first;
-        const auto &recv =
-            m_face_specs[static_cast<std::size_t>(opposite_slot(static_cast<int>(i)))]
-                .second;
+        const auto &recv = m_face_specs[static_cast<std::size_t>(
+                                            opposite_slot(static_cast<int>(i)))]
+                               .second;
         detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
                                         send.oz, send.sx, send.sy, send.sz, m_nxp,
                                         m_nyp, m_nzp, stream);
@@ -518,8 +520,10 @@ private:
       const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "PaddedDeviceHaloExchanger packed face");
-      MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
-                &m_requests[req_count]);
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
+                    &m_requests[req_count]),
+          "PaddedDeviceHaloExchanger packed-fallback MPI_Irecv");
       ++req_count;
     }
 
@@ -545,8 +549,10 @@ private:
       const int tag = m_base_tag + static_cast<int>(i);
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "PaddedDeviceHaloExchanger packed face");
-      MPI_Isend(m_h_send[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
-                &m_requests[req_count]);
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Isend(m_h_send[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
+                    &m_requests[req_count]),
+          "PaddedDeviceHaloExchanger packed-fallback MPI_Isend");
       ++req_count;
     }
 

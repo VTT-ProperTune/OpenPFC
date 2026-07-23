@@ -13,6 +13,16 @@ install(EXPORT OpenPFCTargets
 # Generate config and write package config
 include(CMakePackageConfigHelpers)
 
+# Was nlohmann_json vendored via FetchContent (installed into OpenPFCTargets) or
+# taken from a system/config package (audit 11 / PM)? In the system case the
+# consumer must find_dependency(nlohmann_json); in the vendored case the target
+# ships in OpenPFCTargets and no find is needed. Stamped into OpenPFCConfig.cmake.
+if(DEFINED nlohmann_json_SOURCE_DIR)
+  set(OpenPFC_NLOHMANN_JSON_VENDORED 1)
+else()
+  set(OpenPFC_NLOHMANN_JSON_VENDORED 0)
+endif()
+
 configure_package_config_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenPFCConfig.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/OpenPFCConfig.cmake"

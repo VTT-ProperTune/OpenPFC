@@ -28,10 +28,13 @@ configure_file(
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
-# Default to Debug build type if not set
-if(NOT CMAKE_BUILD_TYPE)
-  message(STATUS "No build type selected, defaulting to Debug.")
-  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build." FORCE)
+# Default build type (audit 11 / PM): RelWithDebInfo, not Debug -- a bare
+# `cmake ..` for an HPC code should not silently produce an unoptimized library.
+# Multi-config generators ignore CMAKE_BUILD_TYPE; presets set it explicitly.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "No build type selected, defaulting to RelWithDebInfo.")
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build."
+      FORCE)
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

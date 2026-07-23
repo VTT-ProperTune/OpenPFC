@@ -44,16 +44,18 @@ World<CoordTag>::World(const Int3 &lower, const Int3 &upper,
 // Uses GridSize, PhysicalOrigin, GridSpacing from strong_types.hpp
 [[nodiscard]] CartesianWorld create(const GridSize &size,
                                     const PhysicalOrigin &origin,
-                                    const GridSpacing &spacing) {
+                                    const GridSpacing &spacing,
+                                    const pfc::types::Bool3 &periodic) {
   // Extract raw values (zero-cost - just references)
   const Int3 &raw_size = size.get();
   const Real3 &raw_origin = origin.get();
   const Real3 &raw_spacing = spacing.get();
 
-  // Create world with extracted values
+  // Create world with extracted values. Periodicity is plumbed into the
+  // coordinate system (previously silently dropped -> always all-periodic).
   Int3 lower{0, 0, 0};
   Int3 upper{raw_size[0] - 1, raw_size[1] - 1, raw_size[2] - 1};
-  return World(lower, upper, CartesianCS(raw_origin, raw_spacing));
+  return World(lower, upper, CartesianCS(raw_origin, raw_spacing, periodic));
 }
 
 // old compatibility constructor taking only size, and default lower bounds and
@@ -64,41 +66,6 @@ World<CoordTag>::World(const Int3 &lower, const Int3 &upper,
   Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1}; // default upper bounds
   return World(lower, upper, CartesianCS());
 }
-
-// Strong typedef constructors. We don't necessary need these at all as now we
-// have a separate World and CoordinateSystem making this less harazardous.
-
-/*
-
-// We don't have to manually define the values for both upper bounds and spacing as
-// we can calulcate one from another
-
-CartesianWorld create(const Size3 &size, const LowerBounds3 &lower,
-                      const UpperBounds3 &upper, const Periodic3 &periodic) {
-  Spacing3 spacing = compute_spacing(size, lower, upper, periodic);
-  CartesianCS cs(lower.value, spacing.value, periodic.value);
-  return World(size.value, cs);
-}
-
-CartesianWorld create(const Size3 &size, const LowerBounds3 &lower,
-                      const Spacing3 &spacing, const Periodic3 &periodic) {
-  CartesianCS cs(lower.value, spacing.value, periodic.value);
-  return World(size.value, cs);
-}
-*/
-
-// This is the most common use case, where we assume the lower bounds are {0,0,0} and
-// we have cartesian coordinate system with periodic boundaries and spacing is
-// calculated from the size and lower bounds
-/*
-CartesianWorld create(const Size3 &size, const UpperBounds3 &upper) {
-  LowerBounds3 lower{{0.0, 0.0, 0.0}};
-  Periodic3 periodic{{true, true, true}};
-  Spacing3 spacing = compute_spacing(size, lower, upper, periodic);
-  CartesianCS cs(lower.value, spacing.value, periodic.value);
-  return World(size.value, cs);
-}
-*/
 
 // Operators
 

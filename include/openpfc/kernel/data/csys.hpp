@@ -37,6 +37,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <openpfc/kernel/data/world_types.hpp>
 
 namespace pfc::csys {
@@ -308,7 +309,10 @@ inline Int3 to_index(const CartesianCS &cs, const Real3 &xyz) noexcept {
   const auto &offset = get_offset(cs);
   const auto &spacing = get_spacing(cs);
   for (int i = 0; i < 3; ++i) {
-    idx[i] = static_cast<int>((xyz[i] - offset[i]) / spacing[i]);
+    // Nearest-grid-point rounding (documented `to_indices` contract; matches
+    // DiscreteField::map_coordinates_to_indices). Truncation here silently
+    // disagreed with the documentation and with DiscreteField.
+    idx[i] = static_cast<int>(std::lround((xyz[i] - offset[i]) / spacing[i]));
   }
   return idx;
 }

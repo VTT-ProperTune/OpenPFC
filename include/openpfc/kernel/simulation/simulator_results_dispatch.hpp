@@ -38,6 +38,10 @@ namespace pfc {
 inline void write_results_for_registered_fields(Model &model,
                                                 const ResultsWriterMap &writers,
                                                 int file_num) {
+  if (writers.empty()) return;
+  // Residency (audit 4.1): sync device -> host so writers read current data for
+  // device-backed models. No-op for host-only models.
+  model.prepare_for_field_modifiers();
   for (const auto &[field_name, writer] : writers) {
     if (pfc::has_real_field(model, field_name)) {
       writer->write(file_num, pfc::get_real_field(model, field_name));

@@ -139,16 +139,11 @@ void example3_strong_typedef_construction() {
 
   cout << "\n=== Example 3: Strong Typedefs ===\n";
 
-  using namespace world;
-
-  Size3 size({16, 16, 1});
-  LowerBounds3 lower({-1.0, -1.0, 0.0});
-  UpperBounds3 upper({1.0, 1.0, 0.0});
-  Spacing3 spacing({0.125, 0.125, 1.0});
-  Periodic3 periodic({true, true, false});
-
-  World w = world::create(size, lower, upper, spacing, periodic,
-                          CoordinateSystemTag::Plane);
+  // The type-safe creation API takes GridSize / PhysicalOrigin / GridSpacing
+  // strong types (parameter order cannot be confused) plus per-axis periodicity.
+  World w =
+      world::create(GridSize({16, 16, 1}), PhysicalOrigin({-1.0, -1.0, 0.0}),
+                    GridSpacing({0.125, 0.125, 1.0}), Bool3{true, true, false});
   cout << w << endl;
 }
 

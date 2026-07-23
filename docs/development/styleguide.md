@@ -131,3 +131,17 @@ After structural changes, update or add Doxygen on public types and functions wh
 6. `clang-format` applied; builds cleanly at least in the configuration you use (Debug recommended during development).
 
 For questions not covered here, use [architecture.md](../concepts/architecture.md) and nearby code in the same subdirectory as the canonical reference.
+
+## MPI cleanup-failure policy
+
+Cleanup paths that run in `noexcept` contexts — destructors of RAII guards
+(`pfc::mpi::MPI_File_guard`, `pfc::MPI_Type_guard`), their move-assignment
+operators, and `pfc::mpi::environment::~environment` — must **not throw**.
+Throwing from a destructor risks `std::terminate` during stack unwinding, and a
+nonzero MPI error code during cleanup indicates corrupted MPI state that cannot
+be recovered from locally.
+
+The single policy is: call `pfc::mpi::abort_on_mpi_error(err, what)`, which logs
+to stderr and `MPI_Abort`s the world communicator on a nonzero code (no-op on
+`MPI_SUCCESS`). Use `pfc::mpi::throw_on_mpi_error` only on normal (non-cleanup)
+code paths where an exception can propagate safely.

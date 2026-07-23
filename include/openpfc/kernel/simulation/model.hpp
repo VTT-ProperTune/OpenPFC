@@ -248,6 +248,30 @@ public:
   [[nodiscard]] fft::IFFT &get_fft() noexcept { return m_fft; }
 
   /**
+   * @brief Hook run by the Simulator just before field modifiers (initial /
+   *        boundary conditions) or result writers touch the registered fields.
+   *
+   * Default: no-op. A model whose authoritative field lives on a device (a GPU
+   * model with a registered host mirror) overrides this to copy device -> host
+   * so modifiers and writers observe current data. Paired with
+   * finalize_after_field_modifiers().
+   *
+   * @note Fixes audit 4.1: previously the App/Simulator path applied JSON
+   *       initial conditions to a GPU model's host mirror and never propagated
+   *       them to the device, so App-driven GPU runs integrated from an
+   *       unseeded device buffer. The Simulator now brackets modifier
+   *       application and result writing with these hooks.
+   */
+  virtual void prepare_for_field_modifiers() {}
+
+  /**
+   * @brief Hook run by the Simulator just after field modifiers have mutated
+   *        the registered (host) fields, to propagate changes back to the
+   *        model's authoritative storage (host -> device). Default: no-op.
+   */
+  virtual void finalize_after_field_modifiers() {}
+
+  /**
    * @brief Advance the model by one time step
    *
    * This pure virtual function must be implemented by derived classes to

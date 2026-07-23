@@ -85,5 +85,42 @@ TEST_CASE("test_create_rejects_invalid_grid", "[decomposition][unit][error]") {
   using namespace pfc;
   auto world = world::create(GridSize({128, 128, 128}));
   // Grid dimension of zero is invalid
-  REQUIRE_THROWS_AS(::decomposition::create(world, Int3{300, 1, 1}), std::invalid_argument);
+  REQUIRE_THROWS_AS(::decomposition::create(world, Int3{300, 1, 1}),
+                    std::invalid_argument);
+}
+
+TEST_CASE("Decomposition - split_world box ordering matches x-fastest ranks",
+          "[decomposition][unit]") {
+  using namespace pfc;
+  // Construction runs validate_split_world_ordering (audit 4.9). If HeFFTe ever
+  // enumerated boxes in a different order, construction would throw here.
+  // Non-cubic grids exercise gx != gy != gz.
+  for (const Int3 grid :
+       {Int3{2, 3, 4}, Int3{1, 2, 4}, Int3{4, 1, 2}, Int3{3, 3, 1}}) {
+    auto world = world::create(GridSize({24, 24, 24}));
+    REQUIRE_NOTHROW(decomposition::create(world, grid));
+  }
+}
+
+TEST_CASE("Decomposition - get_neighbor_rank round-trips on non-cubic grids",
+          "[decomposition][unit]") {
+  using namespace pfc;
+  const Int3 grid{2, 3, 4};
+  auto world = world::create(GridSize({24, 24, 24}));
+  auto decomp = decomposition::create(world, grid);
+  const int n = decomposition::get_num_domains(decomp);
+  REQUIRE(n == grid[0] * grid[1] * grid[2]);
+
+  const std::array<Int3, 6> dirs = {Int3{1, 0, 0},  Int3{-1, 0, 0}, Int3{0, 1, 0},
+                                    Int3{0, -1, 0}, Int3{0, 0, 1},  Int3{0, 0, -1}};
+  bool roundtrips = true;
+  for (int r = 0; r < n; ++r) {
+    for (const Int3 &d : dirs) {
+      const int nb = decomposition::get_neighbor_rank(decomp, r, d);
+      const Int3 back{-d[0], -d[1], -d[2]};
+      // Stepping back from the neighbor along the opposite direction returns r.
+      roundtrips &= (decomposition::get_neighbor_rank(decomp, nb, back) == r);
+    }
+  }
+  REQUIRE(roundtrips);
 }

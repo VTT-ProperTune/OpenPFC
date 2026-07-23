@@ -98,11 +98,33 @@ TEST_CASE("World - coordinate transformations", "[world][unit]") {
     REQUIRE(indices[2] < 0);
   }
 
-  SECTION("Non-integer grid indices") {
-    Real3 coords = {10.5, 20.5, 30.5};
+  SECTION("Non-integer grid indices round to nearest (documented contract)") {
+    // 10.6 must round up to 11 (truncation would wrongly give 10);
+    // 20.4 rounds down to 20; 30.5 rounds half away from zero to 31.
+    Real3 coords = {10.6, 20.4, 30.5};
     Int3 indices = to_indices(world, coords);
-    REQUIRE(indices == Int3{10, 20, 30});
+    REQUIRE(indices == Int3{11, 20, 31});
   }
+}
+
+TEST_CASE("World - subdomain physical bounds honor index offset", "[world][unit]") {
+  // A subworld (as produced by Decomposition) inherits the GLOBAL coordinate
+  // system but owns a shifted index range [m_lower, m_upper]. Its physical
+  // bounds must reflect m_lower/m_upper, not {0,0,0}/{size-1}.
+  World global =
+      world::create(GridSize(Int3{64, 16, 16}), PhysicalOrigin(Real3{0.0, 0.0, 0.0}),
+                    GridSpacing(Real3{0.1, 0.2, 0.4}));
+  World sub(Int3{32, 0, 0}, Int3{63, 15, 15}, world::get_coordinate_system(global));
+
+  Real3 lo = world::get_lower_bounds(sub);
+  Real3 hi = world::get_upper_bounds(sub);
+  using Catch::Matchers::WithinAbs;
+  REQUIRE_THAT(lo[0], WithinAbs(3.2, 1e-12)); // 32 * 0.1
+  REQUIRE_THAT(lo[1], WithinAbs(0.0, 1e-12));
+  REQUIRE_THAT(lo[2], WithinAbs(0.0, 1e-12));
+  REQUIRE_THAT(hi[0], WithinAbs(6.3, 1e-12)); // 63 * 0.1
+  REQUIRE_THAT(hi[1], WithinAbs(3.0, 1e-12)); // 15 * 0.2
+  REQUIRE_THAT(hi[2], WithinAbs(6.0, 1e-12)); // 15 * 0.4
 }
 
 TEST_CASE("World - total size calculation", "[world][unit]") {
@@ -231,6 +253,11 @@ TEST_CASE("World - from_bounds() computes spacing correctly",
     // Non-periodic: dx = (upper - lower) / (size - 1)
     double expected = 10.0 / 99.0;
     REQUIRE_THAT(world::get_spacing(world, 0), WithinAbs(expected, 1e-10));
+
+    // Periodicity flags must be stored, not silently defaulted to true.
+    REQUIRE(world::is_periodic(world, 0) == false);
+    REQUIRE(world::is_periodic(world, 1) == false);
+    REQUIRE(world::is_periodic(world, 2) == false);
   }
 
   SECTION("Mixed periodicity") {
@@ -243,6 +270,11 @@ TEST_CASE("World - from_bounds() computes spacing correctly",
     REQUIRE_THAT(world::get_spacing(world, 1),
                  WithinAbs(20.0 / 99.0, 1e-10));                       // 20/99
     REQUIRE_THAT(world::get_spacing(world, 2), WithinAbs(0.3, 1e-10)); // 30/100
+
+    // Stored periodicity flags must match the request {true, false, true}.
+    REQUIRE(world::is_periodic(world, 0) == true);
+    REQUIRE(world::is_periodic(world, 1) == false);
+    REQUIRE(world::is_periodic(world, 2) == true);
   }
 
   SECTION("Validates inputs") {

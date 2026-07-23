@@ -3,12 +3,16 @@
 #
 # Code coverage configuration and targets
 
-option(OpenPFC_ENABLE_CODE_COVERAGE "Enable coverage" ON)
+# Default OFF (audit 11 / PM): coverage instrumentation must never leak into a
+# normal Release build or, worse, into the installed/exported package. CI enables
+# it explicitly (see coverage workflow). PRIVATE so --coverage is not part of the
+# exported INTERFACE and cannot be forced onto downstream consumers.
+option(OpenPFC_ENABLE_CODE_COVERAGE "Enable coverage" OFF)
 
 if(OpenPFC_ENABLE_CODE_COVERAGE)
   message(STATUS "📊 Enabling code coverage")
-  target_compile_options(openpfc PUBLIC --coverage)
-  target_link_options(openpfc PUBLIC --coverage)
+  target_compile_options(openpfc PRIVATE --coverage)
+  target_link_options(openpfc PRIVATE --coverage)
   
   # Find coverage tools
   find_program(LCOV_EXECUTABLE lcov)

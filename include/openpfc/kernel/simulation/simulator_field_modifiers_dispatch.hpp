@@ -40,9 +40,15 @@ namespace pfc {
 inline void apply_field_modifier_list(
     const SimulationContext &sim_ctx, Model &model, double t,
     const std::vector<std::unique_ptr<FieldModifier>> &modifiers) {
+  if (modifiers.empty()) return;
+  // Residency bracket (audit 4.1): let device-backed models sync device -> host
+  // before modifiers read/write the registered host fields, and host -> device
+  // afterwards. No-op for host-only models.
+  model.prepare_for_field_modifiers();
   for (const auto &mod : modifiers) {
     mod->apply(sim_ctx, model, t);
   }
+  model.finalize_after_field_modifiers();
 }
 
 } // namespace pfc
