@@ -94,12 +94,13 @@ inline int checked_padded_extent_hip(int n, int hw) {
         std::to_string(hw) + ")");
   }
   // Use long long to detect overflow in addition
-  const long long result = static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
+  const long long result =
+      static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
   if (result > static_cast<long long>(std::numeric_limits<int>::max()) ||
       result < static_cast<long long>(std::numeric_limits<int>::min())) {
     throw std::overflow_error(
-        "HIP PaddedDeviceHaloExchanger: padded extent overflow " + std::to_string(n) +
-        " + 2*" + std::to_string(hw) + " exceeds int range");
+        "HIP PaddedDeviceHaloExchanger: padded extent overflow " +
+        std::to_string(n) + " + 2*" + std::to_string(hw) + " exceeds int range");
   }
   return static_cast<int>(result);
 }
@@ -118,7 +119,7 @@ inline bool getenv_truthy(const char *name) {
 }
 
 inline bool runtime_mpi_hip_aware() {
-#if defined(OpenPFC_MPI_HIP_AWARE) && defined(OPEN_MPI) &&                         \
+#if defined(OpenPFC_MPI_HIP_AWARE) && defined(OPEN_MPI) &&                          \
     defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT)
   return MPIX_Query_hip_support() == 1;
 #else
@@ -191,8 +192,9 @@ inline void print_hip_halo_exchange_cpu_timers(MPI_Comm comm) {
     return;
   }
   int rank = 0;
-  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &rank),
-                               "MPI_Comm_rank in print_hip_halo_exchange_cpu_timers");
+  pfc::mpi::throw_on_mpi_error(
+      MPI_Comm_rank(comm, &rank),
+      "MPI_Comm_rank in print_hip_halo_exchange_cpu_timers");
   auto &T = hip_halo_exchange_cpu_timers();
   if (T.n_calls == 0) {
     return;
@@ -311,8 +313,7 @@ public:
       }
     }
 
-    const bool force_packed =
-        detail::getenv_truthy("OPENPFC_HIP_FORCE_PACKED_HALO");
+    const bool force_packed = detail::getenv_truthy("OPENPFC_HIP_FORCE_PACKED_HALO");
     m_use_gpu_aware = !force_packed && detail::runtime_mpi_hip_aware();
 
     m_any_self_neighbor = false;
@@ -339,8 +340,8 @@ public:
     }
     if (m_scratch_elems > 0) {
       detail::hip_check(hipMalloc(reinterpret_cast<void **>(&m_d_scratch),
-                                    m_scratch_elems * sizeof(double)),
-                         "hipMalloc halo device scratch (pack/unpack)");
+                                  m_scratch_elems * sizeof(double)),
+                        "hipMalloc halo device scratch (pack/unpack)");
     }
   }
 
@@ -363,8 +364,7 @@ public:
     auto &H = hip_halo_exchange_cpu_timers();
 
     double t_mark = MPI_Wtime();
-    detail::hip_check(hipStreamSynchronize(stream),
-                       "hipStreamSynchronize pre halo");
+    detail::hip_check(hipStreamSynchronize(stream), "hipStreamSynchronize pre halo");
     if (perf) {
       H.pre_stream_sync += MPI_Wtime() - t_mark;
       ++H.n_calls;
@@ -379,7 +379,7 @@ public:
       }
       t_mark = MPI_Wtime();
       detail::hip_check(hipDeviceSynchronize(),
-                         "hipDeviceSynchronize post GPU-aware MPI");
+                        "hipDeviceSynchronize post GPU-aware MPI");
       if (perf) {
         H.post_exchange_hip_sync += MPI_Wtime() - t_mark;
       }
@@ -387,7 +387,7 @@ public:
       exchange_packed_fallback_(d_padded, stream);
       t_mark = MPI_Wtime();
       detail::hip_check(hipStreamSynchronize(stream),
-                         "hipStreamSynchronize post packed halo");
+                        "hipStreamSynchronize post packed halo");
       if (perf) {
         H.post_exchange_hip_sync += MPI_Wtime() - t_mark;
       }
@@ -439,9 +439,9 @@ private:
           continue;
         }
         const auto &send = m_face_specs[i].first;
-        const auto &recv =
-            m_face_specs[static_cast<std::size_t>(opposite_slot(static_cast<int>(i)))]
-                .second;
+        const auto &recv = m_face_specs[static_cast<std::size_t>(
+                                            opposite_slot(static_cast<int>(i)))]
+                               .second;
         detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
                                         send.oz, send.sx, send.sy, send.sz, m_nxp,
                                         m_nyp, m_nzp, stream);
@@ -495,9 +495,9 @@ private:
           continue;
         }
         const auto &send = m_face_specs[i].first;
-        const auto &recv =
-            m_face_specs[static_cast<std::size_t>(opposite_slot(static_cast<int>(i)))]
-                .second;
+        const auto &recv = m_face_specs[static_cast<std::size_t>(
+                                            opposite_slot(static_cast<int>(i)))]
+                               .second;
         detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
                                         send.oz, send.sx, send.sy, send.sz, m_nxp,
                                         m_nyp, m_nzp, stream);
@@ -518,8 +518,10 @@ private:
       const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "PaddedDeviceHaloExchanger packed face");
-      MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
-                &m_requests[req_count]);
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
+                    &m_requests[req_count]),
+          "PaddedDeviceHaloExchanger packed-fallback MPI_Irecv");
       ++req_count;
     }
 
@@ -533,11 +535,11 @@ private:
                                       send.oz, send.sx, send.sy, send.sz, m_nxp,
                                       m_nyp, m_nzp, stream);
       detail::hip_check(hipMemcpyAsync(m_h_send[i], m_d_scratch,
-                                         m_face_elems[i] * sizeof(double),
-                                         hipMemcpyDeviceToHost, stream),
-                         "hipMemcpyAsync pack face D2H");
+                                       m_face_elems[i] * sizeof(double),
+                                       hipMemcpyDeviceToHost, stream),
+                        "hipMemcpyAsync pack face D2H");
       detail::hip_check(hipStreamSynchronize(stream),
-                         "hipStreamSynchronize pack face");
+                        "hipStreamSynchronize pack face");
       if (perf) {
         H.packed_face_pack_d2h_sync += MPI_Wtime() - t_face;
       }
@@ -545,8 +547,10 @@ private:
       const int tag = m_base_tag + static_cast<int>(i);
       const int face_count = pfc::mpi::ensure_mpi_int_count(
           m_face_elems[i], "PaddedDeviceHaloExchanger packed face");
-      MPI_Isend(m_h_send[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
-                &m_requests[req_count]);
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Isend(m_h_send[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
+                    &m_requests[req_count]),
+          "PaddedDeviceHaloExchanger packed-fallback MPI_Isend");
       ++req_count;
     }
 
@@ -562,11 +566,11 @@ private:
       }
       const double t_face = perf ? MPI_Wtime() : 0.0;
       detail::hip_check(hipMemcpyAsync(m_d_scratch, m_h_recv[i],
-                                         m_face_elems[i] * sizeof(double),
-                                         hipMemcpyHostToDevice, stream),
-                         "hipMemcpyAsync unpack face H2D");
+                                       m_face_elems[i] * sizeof(double),
+                                       hipMemcpyHostToDevice, stream),
+                        "hipMemcpyAsync unpack face H2D");
       detail::hip_check(hipStreamSynchronize(stream),
-                         "hipStreamSynchronize unpack H2D");
+                        "hipStreamSynchronize unpack H2D");
 
       const auto &recv = m_face_specs[i].second;
       detail::launch_padded_unpack_face(d_padded, m_d_scratch, recv.ox, recv.oy,

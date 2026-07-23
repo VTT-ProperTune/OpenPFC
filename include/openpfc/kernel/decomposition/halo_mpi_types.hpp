@@ -32,17 +32,20 @@ using Int3 = pfc::types::Int3;
 /**
  * @brief RAII holder for MPI_Datatype (calls MPI_Type_free in destructor)
  *
- * Destructor is noexcept(false) and fails closed via
- * pfc::mpi::throw_on_mpi_error (same policy as environment::~environment).
+ * Destructor and move-assignment are noexcept and fail closed via
+ * pfc::mpi::abort_on_mpi_error (the single MPI cleanup-failure policy; same as
+ * environment::~environment and MPI_File_guard). Move-assignment previously
+ * ignored MPI_Type_free errors silently -- inconsistent with the destructor
+ * (audit 4.11); both now use the same handler.
  */
 struct MPI_Type_guard {
   MPI_Datatype type = MPI_DATATYPE_NULL;
   MPI_Type_guard() = default;
   explicit MPI_Type_guard(MPI_Datatype t) : type(t) {}
-  ~MPI_Type_guard() noexcept(false) {
+  ~MPI_Type_guard() noexcept {
     if (type != MPI_DATATYPE_NULL) {
       // Fail closed: silent MPI_Type_free errors mask corrupted MPI state.
-      pfc::mpi::throw_on_mpi_error(MPI_Type_free(&type),
+      pfc::mpi::abort_on_mpi_error(MPI_Type_free(&type),
                                    "MPI_Type_free in ~MPI_Type_guard");
     }
   }
@@ -52,7 +55,9 @@ struct MPI_Type_guard {
   MPI_Type_guard &operator=(MPI_Type_guard &&other) noexcept {
     if (this != &other) {
       if (type != MPI_DATATYPE_NULL) {
-        MPI_Type_free(&type);
+        // Same fail-closed policy as the destructor (was silently ignored).
+        pfc::mpi::abort_on_mpi_error(MPI_Type_free(&type),
+                                     "MPI_Type_free in MPI_Type_guard move-assign");
       }
       type = other.type;
       other.type = MPI_DATATYPE_NULL;
@@ -94,9 +99,9 @@ create_face_type(int nx, int ny, int nz, int start_x, int start_y, int start_z,
     throw std::invalid_argument(
         "pfc::halo::create_face_type: subarray does not fit outer extents " +
         std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
-        " (start=(" + std::to_string(start_x) + "," + std::to_string(start_y) +
-        "," + std::to_string(start_z) + "), size=(" + std::to_string(size_x) +
-        "," + std::to_string(size_y) + "," + std::to_string(size_z) + "))");
+        " (start=(" + std::to_string(start_x) + "," + std::to_string(start_y) + "," +
+        std::to_string(start_z) + "), size=(" + std::to_string(size_x) + "," +
+        std::to_string(size_y) + "," + std::to_string(size_z) + "))");
   }
 
   const int ndims = 3;
@@ -158,8 +163,7 @@ inline std::array<FaceTypes, 6> create_face_types_6(int nx, int ny, int nz,
         std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
         ")");
   }
-  if (halo_width > 0 &&
-      (nx < halo_width || ny < halo_width || nz < halo_width)) {
+  if (halo_width > 0 && (nx < halo_width || ny < halo_width || nz < halo_width)) {
     throw std::invalid_argument(
         std::string("pfc::halo::create_face_types_6: local extents ") +
         std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +

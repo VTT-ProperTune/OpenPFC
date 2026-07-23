@@ -8,6 +8,7 @@
 #include <array>
 #include <climits>
 #include <cstddef>
+#include <cstdio>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -34,21 +35,42 @@ inline void throw_on_mpi_error(int err, const char *what) {
 }
 
 /**
+ * @brief Fail-closed cleanup-path error handler (never throws).
+ *
+ * The single cleanup-failure policy for destructors and other `noexcept`
+ * contexts (RAII guards, MPI environment teardown): a nonzero MPI error code
+ * during cleanup indicates corrupted MPI state that cannot be safely recovered
+ * from, and throwing from a destructor risks `std::terminate` during stack
+ * unwinding. Instead we log to stderr and `MPI_Abort` the world communicator.
+ * See docs/development/styleguide.md ("MPI cleanup-failure policy").
+ */
+inline void abort_on_mpi_error(int err, const char *what) noexcept {
+  if (err == MPI_SUCCESS) {
+    return;
+  }
+  std::fprintf(stderr, "[OpenPFC] fatal: %s failed during cleanup: %s\n", what,
+               mpi_error_string(err).c_str());
+  std::fflush(stderr);
+  MPI_Abort(MPI_COMM_WORLD, err);
+}
+
+/**
  * @brief RAII guard for an MPI_File handle -- closes it unconditionally on
  * every exit path (including exceptions thrown after a successful
  * MPI_File_open), mirroring the MPI_Type_guard pattern in halo_mpi_types.hpp.
  *
- * Destructor is noexcept(false) and fails closed via throw_on_mpi_error
- * (same policy as environment::~environment).
+ * Destructor is noexcept and fails closed via abort_on_mpi_error (the single
+ * MPI cleanup-failure policy; same as environment::~environment and
+ * ~MPI_Type_guard).
  */
 struct MPI_File_guard {
   MPI_File file = MPI_FILE_NULL;
   MPI_File_guard() = default;
   explicit MPI_File_guard(MPI_File f) : file(f) {}
-  ~MPI_File_guard() noexcept(false) {
+  ~MPI_File_guard() noexcept {
     if (file != MPI_FILE_NULL) {
       // Fail closed: silent MPI_File_close errors mask I/O / MPI state issues.
-      pfc::mpi::throw_on_mpi_error(MPI_File_close(&file),
+      pfc::mpi::abort_on_mpi_error(MPI_File_close(&file),
                                    "MPI_File_close in ~MPI_File_guard");
     }
   }
@@ -58,7 +80,9 @@ struct MPI_File_guard {
   MPI_File_guard &operator=(MPI_File_guard &&other) noexcept {
     if (this != &other) {
       if (file != MPI_FILE_NULL) {
-        MPI_File_close(&file);
+        // Consistent fail-closed cleanup policy (previously silently ignored).
+        pfc::mpi::abort_on_mpi_error(MPI_File_close(&file),
+                                     "MPI_File_close in MPI_File_guard move-assign");
       }
       file = other.file;
       other.file = MPI_FILE_NULL;
@@ -126,8 +150,7 @@ struct MPI_File_guard {
  * @throws std::overflow_error if the product would exceed `size_t` max.
  */
 [[nodiscard]] inline std::size_t
-checked_local_extent_product(const std::array<int, 3> &local,
-                             const char *context) {
+checked_local_extent_product(const std::array<int, 3> &local, const char *context) {
   for (int i = 0; i < 3; ++i) {
     if (local[i] <= 0) {
       throw std::invalid_argument(std::string(context) +
