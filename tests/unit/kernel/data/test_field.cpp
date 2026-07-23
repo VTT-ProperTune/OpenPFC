@@ -15,6 +15,26 @@ static double gaussian(Real3 r) {
   return std::exp(-(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]));
 }
 
+// Regression (audit 4.10 / PL): Field stores the World by value, so a Field
+// may safely outlive the World object it was constructed from. A helper that
+// returns a Field built from a local World would dangle under the old
+// `const World&` member.
+static field::Field<double> make_field_from_local_world() {
+  auto local_world =
+      world::create(GridSize(Int3{6, 5, 4}), PhysicalOrigin(Real3{1.0, 2.0, 3.0}),
+                    GridSpacing(Real3{0.5, 0.25, 0.125}));
+  return field::create<double>(local_world);
+}
+
+TEST_CASE("Field keeps a valid World after its source World is gone", "[field]") {
+  auto f = make_field_from_local_world(); // source World destroyed here
+  const auto &w = field::get_world(f);
+  REQUIRE(get_size(w) == Int3{6, 5, 4});
+  REQUIRE(get_spacing(w) == Real3{0.5, 0.25, 0.125});
+  REQUIRE(get_origin(w) == Real3{1.0, 2.0, 3.0});
+  REQUIRE(field::get_data(f).size() == get_total_size(w));
+}
+
 TEST_CASE("Field", "[field]") {
   Int3 size = {8, 8, 8};
   auto world = world::create(size);

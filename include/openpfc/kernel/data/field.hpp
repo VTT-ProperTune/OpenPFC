@@ -63,7 +63,11 @@ using pfc::world::get_total_size;
 
 template <typename T> struct Field {
   std::vector<T> m_data;
-  const World &m_world;
+  // Stored by value (not `const World&`): a reference dangled whenever the Field
+  // outlived the World it was built from (e.g. a temporary or a reordered
+  // struct member) — the same hazard Decomposition was already fixed for.
+  // World is small and copy-constructible, so this is cheap and safe.
+  World m_world;
 
   Field(const World &world) : m_data(get_total_size(world)), m_world(world) {
     if (m_data.empty()) {
