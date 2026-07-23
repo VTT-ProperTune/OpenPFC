@@ -71,27 +71,30 @@ inline int get_neighbor_rank(const Decomposition &decomp, int rank,
     return -1; // Invalid rank
   }
 
-  // Convert rank to 3D grid coordinates
-  int rank_z = rank / (grid[0] * grid[1]);
-  int rank_y = (rank % (grid[0] * grid[1])) / grid[0];
-  int rank_x = rank % grid[0];
+  // Per-axis periodicity from the global Domain (M1.3): a non-periodic axis has
+  // no neighbor across its boundary (returns -1), whereas a periodic axis wraps.
+  // Default is all-periodic, so the historical torus behavior is unchanged.
+  const Bool3 &periodic = pfc::world::get_periodic(get_global_world(decomp));
 
-  // Calculate neighbor coordinates
-  int neighbor_x = rank_x + direction[0];
-  int neighbor_y = rank_y + direction[1];
-  int neighbor_z = rank_z + direction[2];
+  // Convert rank to 3D grid coordinates (x-fastest).
+  const int rank_coord[3] = {rank % grid[0], (rank % (grid[0] * grid[1])) / grid[0],
+                             rank / (grid[0] * grid[1])};
 
-  // Wrap around for periodic boundary conditions
-  // This ensures every rank has neighbors in all directions
-  neighbor_x = (neighbor_x + grid[0]) % grid[0];
-  neighbor_y = (neighbor_y + grid[1]) % grid[1];
-  neighbor_z = (neighbor_z + grid[2]) % grid[2];
+  int neighbor_coord[3];
+  for (int axis = 0; axis < 3; ++axis) {
+    int c = rank_coord[axis] + direction[axis];
+    if (c < 0 || c >= grid[axis]) {
+      if (!periodic[axis]) {
+        return -1; // no neighbor across a non-periodic face
+      }
+      c = (c % grid[axis] + grid[axis]) % grid[axis]; // periodic wrap
+    }
+    neighbor_coord[axis] = c;
+  }
 
-  // Convert neighbor coordinates back to rank
-  int neighbor_rank =
-      neighbor_z * (grid[0] * grid[1]) + neighbor_y * grid[0] + neighbor_x;
-
-  return neighbor_rank;
+  // Convert neighbor coordinates back to rank.
+  return neighbor_coord[2] * (grid[0] * grid[1]) + neighbor_coord[1] * grid[0] +
+         neighbor_coord[0];
 }
 
 /**

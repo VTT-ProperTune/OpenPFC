@@ -124,3 +124,37 @@ TEST_CASE("Decomposition - get_neighbor_rank round-trips on non-cubic grids",
   }
   REQUIRE(roundtrips);
 }
+
+TEST_CASE("Decomposition - per-axis periodicity in get_neighbor_rank (M1.3)",
+          "[decomposition][unit]") {
+  using namespace pfc;
+  // Non-periodic in x, periodic in y and z.
+  auto world =
+      world::from_bounds({16, 16, 16}, {0, 0, 0}, {16, 16, 16}, {false, true, true});
+  auto decomp = decomposition::create(world, Int3{2, 2, 2});
+  REQUIRE(decomposition::get_num_domains(decomp) == 8);
+
+  SECTION("non-periodic x boundary has no neighbor") {
+    // rank 0 sits at x-coord 0: stepping to -x leaves the domain -> no neighbor.
+    REQUIRE(decomposition::get_neighbor_rank(decomp, 0, Int3{-1, 0, 0}) == -1);
+    // rank 1 sits at x-coord 1 (the max): stepping to +x leaves the domain.
+    REQUIRE(decomposition::get_neighbor_rank(decomp, 1, Int3{1, 0, 0}) == -1);
+    // Interior x step stays valid.
+    REQUIRE(decomposition::get_neighbor_rank(decomp, 0, Int3{1, 0, 0}) == 1);
+  }
+
+  SECTION("periodic y and z still wrap") {
+    REQUIRE(decomposition::get_neighbor_rank(decomp, 0, Int3{0, -1, 0}) == 2);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, 0, Int3{0, 0, -1}) == 4);
+  }
+
+  SECTION("find_face_neighbors drops the non-periodic face for a boundary rank") {
+    // rank 0 loses its -x face; +x (rank 1), ±y, ±z remain valid -> 5.
+    auto faces = decomposition::find_face_neighbors(decomp, 0);
+    REQUIRE(faces.size() == 6);
+    int valid = 0;
+    for (const auto &e : faces)
+      if (e.second >= 0) ++valid;
+    REQUIRE(valid == 5);
+  }
+}
