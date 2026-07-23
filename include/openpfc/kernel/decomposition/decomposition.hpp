@@ -51,7 +51,6 @@ namespace pfc {
 
 namespace decomposition {
 
-using pfc::csys::CartesianTag;
 using pfc::types::Bool3;
 using pfc::types::Int3;
 using pfc::types::Real3;
