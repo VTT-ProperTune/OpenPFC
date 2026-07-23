@@ -7,6 +7,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_box3i.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_constants.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_discrete_field.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_domain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_field.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_multi_index.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_strong_types.cpp
