@@ -133,8 +133,7 @@ public:
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
 
-    const auto &local_world = decomposition::get_subworld(m_decomp, m_rank);
-    const auto local_size = world::get_size(local_world);
+    const auto local_size = decomposition::local_box(m_decomp, m_rank).size;
     const int nx = local_size[0];
     const int ny = local_size[1];
     const int nz = local_size[2];

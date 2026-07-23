@@ -45,8 +45,6 @@
 #pragma once
 
 #include <cstdint>
-#include <stdexcept>
-#include <string>
 #include <map>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
@@ -54,12 +52,13 @@
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/kernel/execution/backend_tags.hpp>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace pfc::halo {
 
 using Int3 = pfc::types::Int3;
-
 
 namespace detail {
 
@@ -68,12 +67,10 @@ namespace detail {
 /// `nz==1` remain valid for face-only ±X/±Y exchanges (same spirit as
 /// `create_face_types_6` after #204).
 inline void ensure_halo_width_fits_direction(const Int3 &local_size,
-                                             const Int3 &direction,
-                                             int halo_width) {
+                                             const Int3 &direction, int halo_width) {
   if (halo_width < 0) {
-    throw std::invalid_argument(
-        "pfc::halo: halo_width must be non-negative (got " +
-        std::to_string(halo_width) + ")");
+    throw std::invalid_argument("pfc::halo: halo_width must be non-negative (got " +
+                                std::to_string(halo_width) + ")");
   }
   if (halo_width == 0) {
     return;
@@ -85,20 +82,18 @@ inline void ensure_halo_width_fits_direction(const Int3 &local_size,
     }
     if (local_size[a] < halo_width) {
       throw std::invalid_argument(
-          std::string("pfc::halo: local extent ") +
-          std::to_string(local_size[0]) + "x" + std::to_string(local_size[1]) +
-          "x" + std::to_string(local_size[2]) + " cannot host halo_width=" +
-          std::to_string(halo_width) + " on direction (" +
-          std::to_string(direction[0]) + "," + std::to_string(direction[1]) +
-          "," + std::to_string(direction[2]) + ") (need >=" +
-          std::to_string(halo_width) + " points on active " + axis_name[a] +
-          " axis)");
+          std::string("pfc::halo: local extent ") + std::to_string(local_size[0]) +
+          "x" + std::to_string(local_size[1]) + "x" + std::to_string(local_size[2]) +
+          " cannot host halo_width=" + std::to_string(halo_width) +
+          " on direction (" + std::to_string(direction[0]) + "," +
+          std::to_string(direction[1]) + "," + std::to_string(direction[2]) +
+          ") (need >=" + std::to_string(halo_width) + " points on active " +
+          axis_name[a] + " axis)");
     }
   }
 }
 
 } // namespace detail
-
 
 /**
  * @brief Connectivity pattern for halo exchange
@@ -134,14 +129,13 @@ template <typename BackendTag = backend::CpuTag>
 core::SparseVector<BackendTag, size_t>
 create_send_halo(const decomposition::Decomposition &decomp, int rank,
                  const Int3 &direction, int halo_width) {
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  (void)decomp; // For future use (periodic boundaries, etc.)
+  const auto owned_box = decomposition::local_box(decomp, rank);
 
   // Get local domain size and bounds
-  auto local_size = world::get_size(local_world);
+  auto local_size = owned_box.size;
   detail::ensure_halo_width_fits_direction(local_size, direction, halo_width);
-  auto local_lower = world::get_lower(local_world);
-  auto local_upper = world::get_upper(local_world);
+  auto local_lower = owned_box.low;
+  auto local_upper = owned_box.high;
 
   // Calculate which face/edge/corner we're sending
   std::vector<size_t> indices;
@@ -247,15 +241,15 @@ template <typename BackendTag = backend::CpuTag>
 core::SparseVector<BackendTag, size_t>
 create_recv_halo(const decomposition::Decomposition &decomp, int rank,
                  const Int3 &direction, int halo_width) {
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
+  const auto owned_box = decomposition::local_box(decomp, rank);
   [[maybe_unused]] const auto &global_world =
       decomposition::get_global_world(decomp);
   [[maybe_unused]] const auto &grid = decomposition::get_grid(decomp);
 
-  auto local_size = world::get_size(local_world);
+  auto local_size = owned_box.size;
   detail::ensure_halo_width_fits_direction(local_size, direction, halo_width);
-  auto local_lower = world::get_lower(local_world);
-  auto local_upper = world::get_upper(local_world);
+  auto local_lower = owned_box.low;
+  auto local_upper = owned_box.high;
 
   std::vector<size_t> indices;
 
@@ -329,19 +323,16 @@ create_recv_halo(const decomposition::Decomposition &decomp, int rank,
         // In-place recv targets boundary slabs inside [0, nx·ny·nz). Fail
         // closed rather than casting negative / OOB coords to size_t.
         if (local_x < 0 || local_x >= local_size[0] || local_y < 0 ||
-            local_y >= local_size[1] || local_z < 0 ||
-            local_z >= local_size[2]) {
+            local_y >= local_size[1] || local_z < 0 || local_z >= local_size[2]) {
           throw std::invalid_argument(
               "pfc::halo::create_recv_halo: local coordinate (" +
               std::to_string(local_x) + "," + std::to_string(local_y) + "," +
               std::to_string(local_z) + ") outside owned extents " +
-              std::to_string(local_size[0]) + "x" +
-              std::to_string(local_size[1]) + "x" +
-              std::to_string(local_size[2]) + " for direction (" +
-              std::to_string(direction[0]) + "," +
-              std::to_string(direction[1]) + "," +
-              std::to_string(direction[2]) + "), halo_width=" +
-              std::to_string(halo_width));
+              std::to_string(local_size[0]) + "x" + std::to_string(local_size[1]) +
+              "x" + std::to_string(local_size[2]) + " for direction (" +
+              std::to_string(direction[0]) + "," + std::to_string(direction[1]) +
+              "," + std::to_string(direction[2]) +
+              "), halo_width=" + std::to_string(halo_width));
         }
         // Row-major indexing: idx = z * (ny * nx) + y * nx + x
         size_t local_idx =
