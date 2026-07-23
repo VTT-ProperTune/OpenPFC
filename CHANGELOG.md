@@ -5,6 +5,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Changelog
 
+## [Unreleased] — 0.2.0 development
+
+Breaking architecture refactor (see `OPENPFC_REFACTORING_EXECUTION_PLAN.md`,
+milestones M0–M12). 0.2.0 will be released only after the Gen-1 architecture and
+all temporary migration adapters are removed. Expect breaking API changes; 0.1.x
+source compatibility is explicitly not a goal.
+
 ## [0.1.5] - 2026-07-23
 
 Final stable 0.1.x release: a correctness and packaging pass ("Pre-M0
