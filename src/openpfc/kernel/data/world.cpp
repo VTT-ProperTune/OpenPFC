@@ -29,9 +29,7 @@ Int3 calc_size(const Int3 &lower, const Int3 &upper) {
   return size;
 }
 
-template <typename CoordTag>
-World<CoordTag>::World(const Int3 &lower, const Int3 &upper,
-                       const CoordinateSystem<CoordTag> &cs)
+World::World(const Int3 &lower, const Int3 &upper, const CartesianCS &cs)
     : m_lower(lower), m_upper(upper), m_size(calc_size(lower, upper)), m_cs(cs) {
   for (std::size_t i = 0; i < 3; ++i) {
     if (m_size[i] <= 0) {
@@ -74,48 +72,26 @@ inline const char *name_of(CartesianTag tag) {
   return "Cartesian";
 }
 
-template <typename CoordTag>
-std::ostream &operator<<(std::ostream &os, const World<CoordTag> &w) {
+std::ostream &operator<<(std::ostream &os, const World &w) {
   std::ostringstream out;
   out << std::fixed << std::setprecision(2);
   out << "World Summary\n";
   out << "  Size           : {" << w.m_size[0] << ", " << w.m_size[1] << ", "
       << w.m_size[2] << "}\n";
-  out << "  Coordinate Sys : " << name_of(CoordTag{}) << "\n";
+  out << "  Coordinate Sys : " << name_of(CartesianTag{}) << "\n";
 
-  if constexpr (std::is_same_v<CoordTag, CartesianTag>) {
-    const auto &offset = w.m_cs.m_offset;
-    const auto &spacing = w.m_cs.m_spacing;
-    const auto &periodic = w.m_cs.m_periodic;
-    out << "  Offset         : {" << offset[0] << ", " << offset[1] << ", "
-        << offset[2] << "}\n";
-    out << "  Spacing        : {" << spacing[0] << ", " << spacing[1] << ", "
-        << spacing[2] << "}\n";
-    out << "  Periodicity    : {" << (periodic[0] ? "true" : "false") << ", "
-        << (periodic[1] ? "true" : "false") << ", "
-        << (periodic[2] ? "true" : "false") << "}\n";
-  }
+  const auto &offset = w.m_cs.m_offset;
+  const auto &spacing = w.m_cs.m_spacing;
+  const auto &periodic = w.m_cs.m_periodic;
+  out << "  Offset         : {" << offset[0] << ", " << offset[1] << ", "
+      << offset[2] << "}\n";
+  out << "  Spacing        : {" << spacing[0] << ", " << spacing[1] << ", "
+      << spacing[2] << "}\n";
+  out << "  Periodicity    : {" << (periodic[0] ? "true" : "false") << ", "
+      << (periodic[1] ? "true" : "false") << ", " << (periodic[2] ? "true" : "false")
+      << "}\n";
 
   return os << out.str();
-}
-
-// Explicit instantiation of operator<< for CartesianTag
-template std::ostream &operator<< <CartesianTag>(std::ostream &os,
-                                                 const World<CartesianTag> &w);
-// Explicit instantiation of World constructor for CartesianTag
-template World<CartesianTag>::World(const Int3 &lower, const Int3 &upper,
-                                    const CoordinateSystem<CartesianTag> &cs);
-
-// Conversion between physical coordinates and grid indices
-
-template <typename T>
-Real3 to_coords(const World<T> &world, const Int3 &indices) noexcept {
-  return to_coords(get_coordinate_system(world), indices);
-}
-
-template <typename T>
-Int3 to_indices(const World<T> &world, const Real3 &coordinates) noexcept {
-  return to_index(get_coordinate_system(world), coordinates);
 }
 
 } // namespace pfc::world

@@ -42,11 +42,11 @@ struct PNGWriterTestFixture {
   }
 
   // Create a simple World and decomposition for testing
-  std::pair<world::World<csys::CartesianTag>, decomposition::Decomposition> create_test_decomp(
-      int nx_global, int ny_global) {
-    auto world = world::create(GridSize({nx_global, ny_global, 1}),
-                               PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
+  std::pair<world::World, decomposition::Decomposition>
+  create_test_decomp(int nx_global, int ny_global) {
+    auto world =
+        world::create(GridSize({nx_global, ny_global, 1}),
+                      PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
     auto decomp = make_decomposition(world, m_comm);
     return {world, decomp};
   }
@@ -75,8 +75,7 @@ int main(int argc, char *argv[]) {
   return result;
 }
 
-TEST_CASE("PNGWriter - Valid write with correct sizes",
-          "[png_writer][io]") {
+TEST_CASE("PNGWriter - Valid write with correct sizes", "[png_writer][io]") {
   PNGWriterTestFixture fixture;
 
   const int nx_global = 8;
@@ -96,8 +95,8 @@ TEST_CASE("PNGWriter - Valid write with correct sizes",
   }
 
   // Should succeed without throwing
-  REQUIRE_NOTHROW(write_mpi_scalar_field_png_xy(fixture.m_comm, decomp, fixture.m_rank,
-                                                 data, "test_valid_write.png"));
+  REQUIRE_NOTHROW(write_mpi_scalar_field_png_xy(
+      fixture.m_comm, decomp, fixture.m_rank, data, "test_valid_write.png"));
 }
 
 // MPI tests must not use nested Catch2 SECTIONs: each rank advances through the
@@ -142,18 +141,17 @@ TEST_CASE("PNGWriter - Collective size mismatch (all ranks throw)",
   // ALL ranks should throw std::runtime_error due to collective error agreement
   // This verifies that the collective error agreement prevents deadlock
   // in MPI_Allgather/MPI_Gatherv
-  REQUIRE_THROWS_AS(write_mpi_scalar_field_png_xy(fixture.m_comm, decomp, fixture.m_rank,
-                                                    data, "test_collective_size_mismatch.png"),
-                    std::runtime_error);
+  REQUIRE_THROWS_AS(
+      write_mpi_scalar_field_png_xy(fixture.m_comm, decomp, fixture.m_rank, data,
+                                    "test_collective_size_mismatch.png"),
+      std::runtime_error);
 }
 
-TEST_CASE("PNGWriter - Global nz validation (single rank)",
-          "[png_writer][io]") {
+TEST_CASE("PNGWriter - Global nz validation (single rank)", "[png_writer][io]") {
   PNGWriterTestFixture fixture;
 
   // Create a 3D world (nz=8) which should fail validation
-  auto world = world::create(GridSize({8, 8, 8}),
-                             PhysicalOrigin({0.0, 0.0, 0.0}),
+  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({0.0, 0.0, 0.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = make_decomposition(world, fixture.m_comm);
 
@@ -167,7 +165,8 @@ TEST_CASE("PNGWriter - Global nz validation (single rank)",
   }
 
   // Should throw because global nz != 1
-  REQUIRE_THROWS_AS(write_mpi_scalar_field_png_xy(fixture.m_comm, decomp, fixture.m_rank,
-                                                   data, "test_invalid_nz.png"),
+  REQUIRE_THROWS_AS(write_mpi_scalar_field_png_xy(fixture.m_comm, decomp,
+                                                  fixture.m_rank, data,
+                                                  "test_invalid_nz.png"),
                     std::invalid_argument);
 }

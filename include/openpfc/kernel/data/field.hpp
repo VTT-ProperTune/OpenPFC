@@ -58,7 +58,7 @@
 
 namespace pfc::field {
 
-using World = pfc::world::World<pfc::csys::CartesianTag>;
+using World = pfc::world::World;
 using pfc::world::get_total_size;
 
 template <typename T> struct Field {

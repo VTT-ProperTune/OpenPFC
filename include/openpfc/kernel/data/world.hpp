@@ -6,7 +6,7 @@
  * @brief World class definition and unified interface
  *
  * @details
- * The `World<CoordTag>` class defines the **global simulation domain** in
+ * The `World` class defines the **global simulation domain** in
  * OpenPFC's computational physics framework. It provides a unified abstraction
  * for describing a discretized physical space in which fields are defined,
  * evolved, and coupled to solvers.
@@ -66,8 +66,7 @@
 
 namespace pfc::world {
 
-using pfc::csys::CartesianTag;
-using pfc::csys::CoordinateSystem;
+using pfc::csys::CartesianCS;
 using pfc::types::Int3;
 
 /**
@@ -78,20 +77,19 @@ using pfc::types::Int3;
  * constructed once and immutable thereafter. This design enhances correctness,
  * thread safety, testability, and reproducibility.
  *
- * Coordinate system is defined via a tag-based programming approach, allowing
- * different coordinate systems (Cartesian, Polar, Cylindrical) without creating
- * a separate class for each. We default to 3D Cartesian as it's most common.
- *
- * @tparam T Coordinate system tag (e.g., CartesianTag)
+ * As of the 0.2 M1 refactor this is a plain (non-template) 3D Cartesian type:
+ * the coordinate-system tag parameter had exactly one instantiation and is being
+ * removed. `World` is the deprecated **A0 shim** over the canonical `Domain`
+ * (see `domain.hpp`); framework code migrates to `Domain` + `Box3i`.
  *
  * @see world_factory.hpp for construction
  * @see world_queries.hpp for accessing properties
  */
-template <typename T> struct World final {
-  const Int3 m_lower;             ///< Lower index bounds
-  const Int3 m_upper;             ///< Upper index bounds
-  const Int3 m_size;              ///< Grid dimensions: {nx, ny, nz}
-  const CoordinateSystem<T> m_cs; ///< Coordinate system
+struct World final {
+  const Int3 m_lower;     ///< Lower index bounds
+  const Int3 m_upper;     ///< Upper index bounds
+  const Int3 m_size;      ///< Grid dimensions: {nx, ny, nz}
+  const CartesianCS m_cs; ///< Coordinate system (Cartesian)
 
   /**
    * @brief Constructs a World object.
@@ -99,8 +97,7 @@ template <typename T> struct World final {
    * @param upper Upper index bounds of the world.
    * @param cs Coordinate system.
    */
-  explicit World(const Int3 &lower, const Int3 &upper,
-                 const CoordinateSystem<T> &cs);
+  explicit World(const Int3 &lower, const Int3 &upper, const CartesianCS &cs);
 
   /**
    * @brief Equality operator.
@@ -125,12 +122,11 @@ template <typename T> struct World final {
    * @param w World object.
    * @return Reference to the output stream.
    */
-  template <typename T_>
-  friend std::ostream &operator<<(std::ostream &os, const World<T_> &w);
+  friend std::ostream &operator<<(std::ostream &os, const World &w);
 };
 
-/// Type alias for Cartesian 3D World (most common usage)
-using CartesianWorld = World<CartesianTag>;
+/// Deprecated alias retained for source compatibility (equals `World`).
+using CartesianWorld = World;
 
 } // namespace pfc::world
 

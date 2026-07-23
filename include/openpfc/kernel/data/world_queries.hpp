@@ -51,7 +51,6 @@ using pfc::types::Real3;
  * Returns the number of grid points in each direction [nx, ny, nz].
  * This defines the discrete resolution of the computational domain.
  *
- * @tparam T Coordinate system tag (e.g., CartesianTag)
  * @param world World object to query
  * @return Grid dimensions as Int3 array [nx, ny, nz]
  *
@@ -73,9 +72,7 @@ using pfc::types::Real3;
  * @see get_total_size() to get the product nx*ny*nz
  * @see get_size(world, index) to get size in specific dimension
  */
-template <typename T> inline Int3 get_size(const World<T> &world) noexcept {
-  return world.m_size;
-}
+inline Int3 get_size(const World &world) noexcept { return world.m_size; }
 
 /**
  * @brief Get the grid size in a specific dimension
@@ -83,7 +80,6 @@ template <typename T> inline Int3 get_size(const World<T> &world) noexcept {
  * Returns the number of grid points in the specified dimension.
  * Convenience function equivalent to get_size(world)[index].
  *
- * @tparam T Coordinate system tag
  * @param world World object to query
  * @param index Dimension index (0=x, 1=y, 2=z)
  * @return Number of grid points in dimension 'index'
@@ -104,7 +100,7 @@ template <typename T> inline Int3 get_size(const World<T> &world) noexcept {
  *
  * @see get_size(world) to get all dimensions at once
  */
-template <typename T> inline int get_size(const World<T> &world, int index) {
+inline int get_size(const World &world, int index) {
   return get_size(world).at(index);
 }
 
@@ -114,7 +110,6 @@ template <typename T> inline int get_size(const World<T> &world, int index) {
  * Computes the product nx × ny × nz, which is the total number of
  * discrete grid points in the computational domain.
  *
- * @tparam T Coordinate system tag
  * @param world World object to query
  * @return Total grid points (nx * ny * nz)
  *
@@ -138,7 +133,7 @@ template <typename T> inline int get_size(const World<T> &world, int index) {
  * @see get_size() for individual dimensions
  * @see physical_volume() for physical domain size (not grid points)
  */
-template <typename T> inline size_t get_total_size(const World<T> &world) {
+inline size_t get_total_size(const World &world) {
   const int nx = get_size(world, 0);
   const int ny = get_size(world, 1);
   const int nz = get_size(world, 2);
@@ -205,8 +200,7 @@ inline auto get_upper(const CartesianWorld &world, int index) {
  * @param w World object.
  * @return The coordinate system of the world.
  */
-template <typename T>
-inline const auto &get_coordinate_system(const World<T> &world) noexcept {
+inline const auto &get_coordinate_system(const World &world) noexcept {
   return world.m_cs;
 }
 
@@ -367,7 +361,6 @@ inline double get_origin(const CartesianWorld &world, int index) noexcept {
  *
  * For Cartesian coordinates: x = origin[d] + i * spacing[d]
  *
- * @tparam T Coordinate system tag
  * @param world World object defining the coordinate system
  * @param indices Grid indices [i, j, k] where 0 ≤ i < nx, etc.
  * @return Physical coordinates [x, y, z]
@@ -399,8 +392,7 @@ inline double get_origin(const CartesianWorld &world, int index) noexcept {
  * @see get_spacing() to understand coordinate scaling
  * @see get_origin() for coordinate system offset
  */
-template <typename T>
-inline auto to_coords(const World<T> &world, const Int3 &indices) noexcept {
+inline auto to_coords(const World &world, const Int3 &indices) noexcept {
   return to_coords(get_coordinate_system(world), indices);
 }
 
@@ -412,7 +404,6 @@ inline auto to_coords(const World<T> &world, const Int3 &indices) noexcept {
  *
  * For Cartesian coordinates: i = round((x - origin[d]) / spacing[d])
  *
- * @tparam T Coordinate system tag
  * @param world World object defining the coordinate system
  * @param coords Physical coordinates [x, y, z]
  * @return Grid indices [i, j, k] (nearest grid point)
@@ -454,8 +445,7 @@ inline auto to_coords(const World<T> &world, const Int3 &indices) noexcept {
  * @see to_coords() for inverse transformation (grid → physical)
  * @see DiscreteField::interpolate() for higher-order interpolation
  */
-template <typename T>
-inline auto to_indices(const World<T> &world, const Real3 &coords) noexcept {
+inline auto to_indices(const World &world, const Real3 &coords) noexcept {
   return to_index(get_coordinate_system(world), coords);
 }
 
@@ -483,7 +473,7 @@ inline auto to_indices(const World<T> &world, const Real3 &coords) noexcept {
  * Time complexity: O(1)
  * Space complexity: O(1)
  */
-template <typename T> inline double physical_volume(const World<T> &world) noexcept {
+inline double physical_volume(const World &world) noexcept {
   const auto spacing = get_spacing(world);
   const auto size = get_size(world);
   return spacing[0] * spacing[1] * spacing[2] * size[0] * size[1] * size[2];
@@ -505,7 +495,7 @@ template <typename T> inline double physical_volume(const World<T> &world) noexc
  *
  * Time complexity: O(1)
  */
-template <typename T> inline bool is_1d(const World<T> &world) noexcept {
+inline bool is_1d(const World &world) noexcept {
   const auto size = get_size(world);
   return (size[0] > 1) && (size[1] == 1) && (size[2] == 1);
 }
@@ -526,7 +516,7 @@ template <typename T> inline bool is_1d(const World<T> &world) noexcept {
  *
  * Time complexity: O(1)
  */
-template <typename T> inline bool is_2d(const World<T> &world) noexcept {
+inline bool is_2d(const World &world) noexcept {
   const auto size = get_size(world);
   return (size[0] > 1) && (size[1] > 1) && (size[2] == 1);
 }
@@ -547,7 +537,7 @@ template <typename T> inline bool is_2d(const World<T> &world) noexcept {
  *
  * Time complexity: O(1)
  */
-template <typename T> inline bool is_3d(const World<T> &world) noexcept {
+inline bool is_3d(const World &world) noexcept {
   const auto size = get_size(world);
   return (size[0] > 1) && (size[1] > 1) && (size[2] > 1);
 }
@@ -569,7 +559,7 @@ template <typename T> inline bool is_3d(const World<T> &world) noexcept {
  *
  * Time complexity: O(1)
  */
-template <typename T> inline int dimensionality(const World<T> &world) noexcept {
+inline int dimensionality(const World &world) noexcept {
   if (is_3d(world)) {
     return 3;
   }
@@ -598,7 +588,7 @@ template <typename T> inline int dimensionality(const World<T> &world) noexcept 
  *
  * Time complexity: O(1)
  */
-template <typename T> inline Real3 get_lower_bounds(const World<T> &world) noexcept {
+inline Real3 get_lower_bounds(const World &world) noexcept {
   // Use the world's own lower index bounds, not {0,0,0}: subdomains inherit the
   // global coordinate system but own a shifted index range [m_lower, m_upper].
   return to_coords(world, get_lower(world));
@@ -620,7 +610,7 @@ template <typename T> inline Real3 get_lower_bounds(const World<T> &world) noexc
  *
  * Time complexity: O(1)
  */
-template <typename T> inline Real3 get_upper_bounds(const World<T> &world) noexcept {
+inline Real3 get_upper_bounds(const World &world) noexcept {
   // Use the world's own upper index bounds; see get_lower_bounds().
   return to_coords(world, get_upper(world));
 }
@@ -631,7 +621,6 @@ template <typename T> inline Real3 get_upper_bounds(const World<T> &world) noexc
  * Returns three arrays containing the physical coordinates along each axis
  * (x, y, z). Each array has length equal to the grid size in that dimension.
  *
- * @tparam T Coordinate system tag
  * @param world World object to query
  * @return std::array of 3 vectors: {x_coords, y_coords, z_coords}
  *
@@ -642,9 +631,7 @@ template <typename T> inline Real3 get_upper_bounds(const World<T> &world) noexc
  * // coords[0][i] = x(i), coords[1][j] = y(j), coords[2][k] = z(k)
  * ```
  */
-template <typename T>
-inline std::array<std::vector<double>, 3>
-coordinates(const World<T> &world) noexcept {
+inline std::array<std::vector<double>, 3> coordinates(const World &world) noexcept {
   std::array<std::vector<double>, 3> result;
   const auto size = get_size(world);
   const auto origin = get_origin(world);

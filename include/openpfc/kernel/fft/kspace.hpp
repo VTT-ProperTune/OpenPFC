@@ -77,7 +77,6 @@ namespace pfc::fft::kspace {
  * multiplications by wave vectors in Fourier space. The frequency scaling
  * establishes the relationship between grid indices and physical wave numbers.
  *
- * @tparam T World coordinate system type (e.g., CartesianTag)
  * @param world Simulation world containing grid size and spacing
  * @return Array of frequency scaling factors [fx, fy, fz] in rad/unit_length
  *
@@ -94,9 +93,8 @@ namespace pfc::fft::kspace {
  * Time complexity: O(1)
  * Space complexity: O(1)
  */
-template <typename T>
 inline std::array<double, 3>
-k_frequency_scaling(const world::World<T> &world) noexcept {
+k_frequency_scaling(const world::World &world) noexcept {
   const auto spacing = world::get_spacing(world);
   const auto size = world::get_size(world);
   return {two_pi / (spacing[0] * size[0]), two_pi / (spacing[1] * size[1]),
