@@ -5,7 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Changelog
 
-## [Unreleased]
+## [0.1.5] - 2026-07-23
+
+Final stable 0.1.x release: a correctness and packaging pass ("Pre-M0
+stabilization") completed before the breaking OpenPFC 0.2 architecture refactor.
+This is the last release on the 0.1 architecture.
 
 ### Fixed (Pre-M0 stabilization — final 0.1.x correctness pass before the 0.2 refactor)
 
