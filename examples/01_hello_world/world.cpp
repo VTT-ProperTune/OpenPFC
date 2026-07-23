@@ -95,8 +95,7 @@ void example1_basic_cartesian_world() {
             << get_origin(w)[2] << ")\n";
   std::cout << "Spacing: " << get_spacing(w)[0] << ", " << get_spacing(w)[1] << ", "
             << get_spacing(w)[2] << endl;
-  std::cout << "Coordinate System: " << static_cast<int>(get_coordinate_system(w))
-            << endl;
+  std::cout << "Coordinate System: Cartesian" << endl;
 
   std::cout << "Periodicity in dimensions (x, y, z):\n";
   for (int i = 0; i < 3; ++i) {
