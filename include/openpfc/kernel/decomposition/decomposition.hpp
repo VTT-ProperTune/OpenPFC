@@ -56,7 +56,7 @@ using pfc::types::Bool3;
 using pfc::types::Int3;
 using pfc::types::Real3;
 
-using World = pfc::world::World<CartesianTag>;
+using World = pfc::world::World;
 using Int3 = pfc::types::Int3;
 
 /**
