@@ -14,17 +14,12 @@
 
 #pragma once
 
-#include <array>
+#include <openpfc/kernel/data/box3i.hpp>
 
 namespace pfc::fft {
 
-/**
- * @brief Inclusive integer index box with explicit per-axis sizes
- */
-struct Box3i {
-  std::array<int, 3> low{};
-  std::array<int, 3> high{};
-  std::array<int, 3> size{};
-};
+/// @brief Alias of the canonical `pfc::Box3i` (M1). Kept so existing
+/// `pfc::fft::Box3i` / `fft::get_inbox`/`get_outbox` call sites are unchanged.
+using Box3i = pfc::Box3i;
 
 } // namespace pfc::fft

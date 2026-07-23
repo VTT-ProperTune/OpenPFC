@@ -4,7 +4,7 @@
 # Kernel data layer unit tests
 target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_arraynd.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_box3d.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_box3i.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_constants.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_discrete_field.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_field.cpp

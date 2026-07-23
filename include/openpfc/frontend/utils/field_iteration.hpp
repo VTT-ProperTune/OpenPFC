@@ -28,14 +28,14 @@
  * @endcode
  *
  * @see field_modifier.hpp for usage in modifiers
- * @see kernel/data/box3d.hpp for Box3D definition
+ * @see kernel/data/box3i.hpp for the Box3i definition
  */
 
 #ifndef PFC_UTILS_FIELD_ITERATION_HPP
 #define PFC_UTILS_FIELD_ITERATION_HPP
 
 #include <functional>
-#include <openpfc/kernel/data/box3d.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/multi_index.hpp>
 
 namespace pfc::utils {
@@ -66,7 +66,7 @@ namespace pfc::utils {
  * });
  * @endcode
  */
-template <typename Func> void iterate_inbox(const Box3D &inbox, Func &&func) {
+template <typename Func> void iterate_inbox(const Box3i &inbox, Func &&func) {
   int linear_idx = 0;
   for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
     for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
