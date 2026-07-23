@@ -47,6 +47,9 @@ jobs:
           sudo apt-get install -y ripgrep
           bash scripts/check_kernel_no_frontend_includes.sh
 
+      - name: Kernel layering self-test (checker detects a deliberate violation)
+        run: bash scripts/check_kernel_no_frontend_includes.sh --self-test
+
   # ============================================================================
   # CMake Build Matrix
   # ============================================================================
@@ -124,13 +127,35 @@ jobs:
       - name: Build OpenPFC
         run: cmake --build build -j2
 
+      - name: Verify sharded discovery covers every non-MPI case
+        working-directory: build
+        run: |
+          # M0 (audit §11): OpenPFC_CTEST_DISCOVER shards each non-MPI Catch2 case
+          # into its own CTest entry. Assert the shard lost no case versus the
+          # binary's own enumeration of the ~[MPI] set (the "monolithic" run).
+          discovered=$(ctest -N 2>/dev/null | grep -c 'openpfc:')
+          enumerated=$(./tests/openpfc-tests --list-tests "~[MPI]" \
+            | grep -Eo '[0-9]+ (matching )?test cases' | tail -1 | grep -Eo '^[0-9]+')
+          echo "discovered CTest shards : $discovered"
+          echo "enumerated ~[MPI] cases : $enumerated"
+          if [ -z "$enumerated" ] || [ "$discovered" -ne "$enumerated" ]; then
+            echo "::error::sharded discovery ($discovered) != non-MPI Catch2 cases ($enumerated)"
+            exit 1
+          fi
+          echo "Sharded non-MPI CTest entries: **$discovered** (matches monolithic enumeration)" \
+            >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run Tests
         working-directory: build
         run: |
           # Run tests with verbose output on failure
           ctest --output-on-failure -j2 \
             --exclude-regex "benchmark" \
-            --timeout 300
+            --timeout 300 | tee ctest.log
+          # Record sharded-run wall-time (M0 required test).
+          total=$(grep -E "Total Test time" ctest.log | tail -1 || true)
+          echo "${{ matrix.compiler }}/${{ matrix.build_type }} sharded CTest — ${total:-time unavailable}" \
+            >> "$GITHUB_STEP_SUMMARY"
 
       - name: Compile benchmarks
         env:
