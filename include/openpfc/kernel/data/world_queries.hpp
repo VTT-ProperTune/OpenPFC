@@ -72,7 +72,7 @@ using pfc::types::Real3;
  * @see get_total_size() to get the product nx*ny*nz
  * @see get_size(world, index) to get size in specific dimension
  */
-inline Int3 get_size(const World &world) noexcept { return world.m_size; }
+inline Int3 get_size(const World &world) noexcept { return world.m_box.size; }
 
 /**
  * @brief Get the grid size in a specific dimension
@@ -159,7 +159,7 @@ inline size_t get_total_size(const World &world) {
  * @return The lower bounds of the world.
  */
 inline const auto &get_lower(const CartesianWorld &world) noexcept {
-  return world.m_lower;
+  return world.m_box.low;
 }
 
 /**
@@ -178,7 +178,7 @@ inline const auto &get_lower(const CartesianWorld &world, int index) {
  * @return The upper bounds of the world.
  */
 inline const auto &get_upper(const CartesianWorld &world) noexcept {
-  return world.m_upper;
+  return world.m_box.high;
 }
 
 /**
@@ -201,7 +201,7 @@ inline auto get_upper(const CartesianWorld &world, int index) {
  * @return The coordinate system of the world.
  */
 inline const auto &get_coordinate_system(const World &world) noexcept {
-  return world.m_cs;
+  return world.m_domain;
 }
 
 /**
@@ -236,7 +236,7 @@ inline const auto &get_coordinate_system(const World &world) noexcept {
  * @see to_coords() which uses spacing for coordinate transforms
  */
 inline const Real3 &get_spacing(const CartesianWorld &world) noexcept {
-  return get_spacing(get_coordinate_system(world));
+  return pfc::domain::get_spacing(get_coordinate_system(world));
 }
 
 /**
@@ -245,7 +245,7 @@ inline const Real3 &get_spacing(const CartesianWorld &world) noexcept {
  * @return {periodic_x, periodic_y, periodic_z}
  */
 inline const Bool3 &get_periodic(const CartesianWorld &world) noexcept {
-  return pfc::csys::get_periodic(get_coordinate_system(world));
+  return pfc::domain::get_periodic(get_coordinate_system(world));
 }
 
 /**
@@ -256,7 +256,7 @@ inline const Bool3 &get_periodic(const CartesianWorld &world) noexcept {
  * @throws std::out_of_range if index is not 0, 1, or 2
  */
 inline bool is_periodic(const CartesianWorld &world, int index) {
-  return pfc::csys::is_periodic(get_coordinate_system(world), index);
+  return pfc::domain::is_periodic(get_coordinate_system(world), index);
 }
 
 /**
@@ -284,7 +284,7 @@ inline bool is_periodic(const CartesianWorld &world, int index) {
  * @see get_spacing(world) to get all spacings at once
  */
 inline double get_spacing(const CartesianWorld &world, int index) noexcept {
-  return get_spacing(get_coordinate_system(world), index);
+  return pfc::domain::get_spacing(get_coordinate_system(world), index);
 }
 
 /**
@@ -319,7 +319,7 @@ inline double get_spacing(const CartesianWorld &world, int index) noexcept {
  * @see to_coords() which uses origin for coordinate transforms
  */
 inline const Real3 &get_origin(const CartesianWorld &world) noexcept {
-  return get_offset(get_coordinate_system(world));
+  return pfc::domain::get_origin(get_coordinate_system(world));
 }
 
 /**
@@ -346,7 +346,7 @@ inline const Real3 &get_origin(const CartesianWorld &world) noexcept {
  * @see get_origin(world) to get all origin coordinates
  */
 inline double get_origin(const CartesianWorld &world, int index) noexcept {
-  return get_offset(get_coordinate_system(world), index);
+  return get_origin(world).at(index);
 }
 
 // ============================================================================
@@ -393,7 +393,7 @@ inline double get_origin(const CartesianWorld &world, int index) noexcept {
  * @see get_origin() for coordinate system offset
  */
 inline auto to_coords(const World &world, const Int3 &indices) noexcept {
-  return to_coords(get_coordinate_system(world), indices);
+  return pfc::domain::to_coords(get_coordinate_system(world), indices);
 }
 
 /**
@@ -446,7 +446,7 @@ inline auto to_coords(const World &world, const Int3 &indices) noexcept {
  * @see DiscreteField::interpolate() for higher-order interpolation
  */
 inline auto to_indices(const World &world, const Real3 &coords) noexcept {
-  return to_index(get_coordinate_system(world), coords);
+  return pfc::domain::to_indices(get_coordinate_system(world), coords);
 }
 
 // ============================================================================

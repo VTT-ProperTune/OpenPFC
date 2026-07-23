@@ -61,12 +61,13 @@
 #include <array>
 #include <ostream>
 
-#include <openpfc/kernel/data/csys.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 
 namespace pfc::world {
 
-using pfc::csys::CartesianCS;
+using pfc::Box3i;
+using pfc::Domain;
 using pfc::types::Int3;
 
 /**
@@ -86,18 +87,17 @@ using pfc::types::Int3;
  * @see world_queries.hpp for accessing properties
  */
 struct World final {
-  const Int3 m_lower;     ///< Lower index bounds
-  const Int3 m_upper;     ///< Upper index bounds
-  const Int3 m_size;      ///< Grid dimensions: {nx, ny, nz}
-  const CartesianCS m_cs; ///< Coordinate system (Cartesian)
+  const Box3i m_box; ///< Index range [low, high] + size (subdomain role)
+  const Domain
+      m_domain; ///< Global Cartesian coordinate system (origin/spacing/periodic)
 
   /**
    * @brief Constructs a World object.
    * @param lower Lower index bounds of the world.
    * @param upper Upper index bounds of the world.
-   * @param cs Coordinate system.
+   * @param domain Coordinate system (origin/spacing/periodicity) this box lives in.
    */
-  explicit World(const Int3 &lower, const Int3 &upper, const CartesianCS &cs);
+  explicit World(const Int3 &lower, const Int3 &upper, const Domain &domain);
 
   /**
    * @brief Equality operator.
@@ -105,8 +105,7 @@ struct World final {
    * @return True if equal, false otherwise.
    */
   bool operator==(const World &other) const noexcept {
-    return m_lower == other.m_lower && m_upper == other.m_upper &&
-           m_size == other.m_size && m_cs == other.m_cs;
+    return m_box == other.m_box && m_domain == other.m_domain;
   }
 
   /**

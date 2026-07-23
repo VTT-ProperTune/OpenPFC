@@ -16,17 +16,17 @@ using namespace pfc;
 using namespace pfc::types;
 
 TEST_CASE("World - explicit constructor rejects invalid bounds", "[world][unit]") {
-  REQUIRE_THROWS_AS((World(Int3{5, 0, 0}, Int3{4, 0, 0}, pfc::csys::CartesianCS{})),
+  REQUIRE_THROWS_AS((World(Int3{5, 0, 0}, Int3{4, 0, 0}, pfc::Domain{})),
                     std::invalid_argument);
-  REQUIRE_THROWS_AS((World(Int3{0, 6, 0}, Int3{0, 5, 0}, pfc::csys::CartesianCS{})),
+  REQUIRE_THROWS_AS((World(Int3{0, 6, 0}, Int3{0, 5, 0}, pfc::Domain{})),
                     std::invalid_argument);
-  REQUIRE_THROWS_AS((World(Int3{0, 0, 7}, Int3{0, 0, 6}, pfc::csys::CartesianCS{})),
+  REQUIRE_THROWS_AS((World(Int3{0, 0, 7}, Int3{0, 0, 6}, pfc::Domain{})),
                     std::invalid_argument);
 }
 
 TEST_CASE("World - get_total_size overflow is detected", "[world][unit]") {
   constexpr int n = 3'000'000; // n^3 > 2^64 - 1 on typical 64-bit size_t
-  World w(Int3{0, 0, 0}, Int3{n - 1, n - 1, n - 1}, pfc::csys::CartesianCS{});
+  World w(Int3{0, 0, 0}, Int3{n - 1, n - 1, n - 1}, pfc::Domain{});
   REQUIRE_THROWS_AS(get_total_size(w), std::overflow_error);
 }
 

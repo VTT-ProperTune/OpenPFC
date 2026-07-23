@@ -136,7 +136,6 @@ template <typename T, typename Func> void apply(Field<T> &f, Func &&func) {
 
   auto &data = get_data(f);
   const auto &world = get_world(f);
-  const auto &cs = get_coordinate_system(world);
 
   Int3 low = get_lower(world);
   Int3 high = get_upper(world);
@@ -145,7 +144,7 @@ template <typename T, typename Func> void apply(Field<T> &f, Func &&func) {
   for (int k = low[2]; k <= high[2]; ++k) {
     for (int j = low[1]; j <= high[1]; ++j) {
       for (int i = low[0]; i <= high[0]; ++i) {
-        data[idx++] = std::invoke(func, to_coords(cs, {i, j, k}));
+        data[idx++] = std::invoke(func, to_coords(world, Int3{i, j, k}));
       }
     }
   }
