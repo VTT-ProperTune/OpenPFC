@@ -138,12 +138,14 @@ TEST_CASE("laplacian_interior runtime-order dispatcher matches templated form",
     dispatch_matches &= lap_run[i] == Approx(lap_tpl[i]);
   REQUIRE(dispatch_matches);
 
-  // An unsupported order is a no-op (matches the legacy contract).
+  // An unsupported order must fail closed (fixed: previously a silent no-op).
   std::vector<double> lap_bad(u.size(), 7.0);
-  laplacian_interior(3, u.data(), lap_bad.data(), N, N, N, 1.0, 1.0, 1.0, hw);
-  bool unchanged = true;
-  for (double v : lap_bad) unchanged &= v == Approx(7.0);
-  REQUIRE(unchanged);
+  REQUIRE_THROWS_AS(
+      laplacian_interior(3, u.data(), lap_bad.data(), N, N, N, 1.0, 1.0, 1.0, hw),
+      std::invalid_argument);
+  REQUIRE_THROWS_AS(
+      laplacian_interior(22, u.data(), lap_bad.data(), N, N, N, 1.0, 1.0, 1.0, hw),
+      std::invalid_argument);
 }
 
 TEST_CASE("laplacian_interior throws when halo_width is below Order/2",

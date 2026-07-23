@@ -78,10 +78,10 @@ void laplacian_interior(const T *buf, T *lap, int nx, int ny, int nz, T inv_dx2,
   using S = EvenCentralD2<Order>;
   constexpr int M = S::half_width;
   if (halo_width < M) {
-    throw std::invalid_argument(
-        "laplacian_interior: halo_width " + std::to_string(halo_width) +
-        " < required half_width " + std::to_string(M) + " for Order " +
-        std::to_string(Order));
+    throw std::invalid_argument("laplacian_interior: halo_width " +
+                                std::to_string(halo_width) +
+                                " < required half_width " + std::to_string(M) +
+                                " for Order " + std::to_string(Order));
   }
   const int imin = halo_width;
   const int imax = nx - halo_width;
@@ -117,7 +117,7 @@ void laplacian_interior(const T *buf, T *lap, int nx, int ny, int nz, T inv_dx2,
  * @brief Runtime-order dispatcher for `laplacian_interior<Order>`.
  *
  * Useful when the spatial order is selected at run time (CLI / JSON).
- * `order` outside `{2, 4, …, 20}` is a no-op.
+ * `order` outside `{2, 4, …, 20}` throws `std::invalid_argument` (fail-closed).
  */
 template <class T>
 void laplacian_interior(int order, const T *buf, T *lap, int nx, int ny, int nz,
@@ -163,7 +163,11 @@ void laplacian_interior(int order, const T *buf, T *lap, int nx, int ny, int nz,
     laplacian_interior<20>(buf, lap, nx, ny, nz, inv_dx2, inv_dy2, inv_dz2,
                            halo_width);
     break;
-  default: return;
+  default:
+    throw std::invalid_argument(
+        "laplacian_interior: unsupported finite-difference order " +
+        std::to_string(order) +
+        "; supported even central orders are 2, 4, 6, 8, 10, 12, 14, 16, 18, 20");
   }
 }
 
@@ -198,10 +202,10 @@ void laplacian_periodic_separated(const T *core,
   constexpr int M = S::half_width;
   const int hw = halo_width;
   if (hw < M) {
-    throw std::invalid_argument(
-        "laplacian_periodic_separated: halo_width " + std::to_string(hw) +
-        " < required half_width " + std::to_string(M) + " for Order " +
-        std::to_string(Order));
+    throw std::invalid_argument("laplacian_periodic_separated: halo_width " +
+                                std::to_string(hw) + " < required half_width " +
+                                std::to_string(M) + " for Order " +
+                                std::to_string(Order));
   }
   if (nx <= 0 || ny <= 0 || nz <= 0) return;
 
@@ -287,10 +291,10 @@ void laplacian2d_xy_interior(const T *buf, T *lap, int nx, int ny, int nz, T inv
   using S = EvenCentralD2<Order>;
   constexpr int M = S::half_width;
   if (halo_width < M) {
-    throw std::invalid_argument(
-        "laplacian2d_xy_interior: halo_width " + std::to_string(halo_width) +
-        " < required half_width " + std::to_string(M) + " for Order " +
-        std::to_string(Order));
+    throw std::invalid_argument("laplacian2d_xy_interior: halo_width " +
+                                std::to_string(halo_width) +
+                                " < required half_width " + std::to_string(M) +
+                                " for Order " + std::to_string(Order));
   }
   const int imin = halo_width;
   const int imax = nx - halo_width;
@@ -337,10 +341,10 @@ void laplacian2d_xy_periodic_separated(const T *core,
   constexpr int M = S::half_width;
   const int hw = halo_width;
   if (hw < M) {
-    throw std::invalid_argument(
-        "laplacian2d_xy_periodic_separated: halo_width " + std::to_string(hw) +
-        " < required half_width " + std::to_string(M) + " for Order " +
-        std::to_string(Order));
+    throw std::invalid_argument("laplacian2d_xy_periodic_separated: halo_width " +
+                                std::to_string(hw) + " < required half_width " +
+                                std::to_string(M) + " for Order " +
+                                std::to_string(Order));
   }
   if (nx <= 0 || ny <= 0) return;
 

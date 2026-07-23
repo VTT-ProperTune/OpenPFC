@@ -44,16 +44,18 @@ World<CoordTag>::World(const Int3 &lower, const Int3 &upper,
 // Uses GridSize, PhysicalOrigin, GridSpacing from strong_types.hpp
 [[nodiscard]] CartesianWorld create(const GridSize &size,
                                     const PhysicalOrigin &origin,
-                                    const GridSpacing &spacing) {
+                                    const GridSpacing &spacing,
+                                    const pfc::types::Bool3 &periodic) {
   // Extract raw values (zero-cost - just references)
   const Int3 &raw_size = size.get();
   const Real3 &raw_origin = origin.get();
   const Real3 &raw_spacing = spacing.get();
 
-  // Create world with extracted values
+  // Create world with extracted values. Periodicity is plumbed into the
+  // coordinate system (previously silently dropped -> always all-periodic).
   Int3 lower{0, 0, 0};
   Int3 upper{raw_size[0] - 1, raw_size[1] - 1, raw_size[2] - 1};
-  return World(lower, upper, CartesianCS(raw_origin, raw_spacing));
+  return World(lower, upper, CartesianCS(raw_origin, raw_spacing, periodic));
 }
 
 // old compatibility constructor taking only size, and default lower bounds and

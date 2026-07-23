@@ -134,7 +134,8 @@ using pfc::types::Real3;
     }
   }
 
-  return create(GridSize(size), PhysicalOrigin(lower), GridSpacing(spacing));
+  return create(GridSize(size), PhysicalOrigin(lower), GridSpacing(spacing),
+                periodic);
 }
 
 /**

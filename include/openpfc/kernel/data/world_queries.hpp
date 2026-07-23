@@ -246,6 +246,26 @@ inline const Real3 &get_spacing(const CartesianWorld &world) noexcept {
 }
 
 /**
+ * @brief Get the per-axis periodicity flags of the world.
+ * @param world World object to query
+ * @return {periodic_x, periodic_y, periodic_z}
+ */
+inline const Bool3 &get_periodic(const CartesianWorld &world) noexcept {
+  return pfc::csys::get_periodic(get_coordinate_system(world));
+}
+
+/**
+ * @brief Query whether a specific axis is periodic.
+ * @param world World object to query
+ * @param index Axis index (0=x, 1=y, 2=z)
+ * @return true if the axis is periodic
+ * @throws std::out_of_range if index is not 0, 1, or 2
+ */
+inline bool is_periodic(const CartesianWorld &world, int index) {
+  return pfc::csys::is_periodic(get_coordinate_system(world), index);
+}
+
+/**
  * @brief Get the grid spacing in a specific dimension
  *
  * Returns the physical distance between adjacent grid points in the
@@ -579,7 +599,9 @@ template <typename T> inline int dimensionality(const World<T> &world) noexcept 
  * Time complexity: O(1)
  */
 template <typename T> inline Real3 get_lower_bounds(const World<T> &world) noexcept {
-  return to_coords(world, {0, 0, 0});
+  // Use the world's own lower index bounds, not {0,0,0}: subdomains inherit the
+  // global coordinate system but own a shifted index range [m_lower, m_upper].
+  return to_coords(world, get_lower(world));
 }
 
 /**
@@ -599,8 +621,8 @@ template <typename T> inline Real3 get_lower_bounds(const World<T> &world) noexc
  * Time complexity: O(1)
  */
 template <typename T> inline Real3 get_upper_bounds(const World<T> &world) noexcept {
-  const auto size = get_size(world);
-  return to_coords(world, {size[0] - 1, size[1] - 1, size[2] - 1});
+  // Use the world's own upper index bounds; see get_lower_bounds().
+  return to_coords(world, get_upper(world));
 }
 
 /**

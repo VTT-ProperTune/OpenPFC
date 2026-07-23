@@ -31,6 +31,7 @@ namespace pfc::world {
 
 using pfc::csys::CartesianTag;
 using pfc::csys::CoordinateSystem;
+using pfc::types::Bool3;
 using pfc::types::Int3;
 using pfc::types::Real3;
 
@@ -68,10 +69,15 @@ using pfc::types::Real3;
  * // auto bad = world::create(spacing, size, origin);  // Compile error!
  * @endcode
  *
+ * @param periodic Per-axis periodicity flags (default: all periodic). Stored in
+ *        the coordinate system and reported by `world::get_periodic` /
+ *        `csys::is_periodic`.
+ *
  * @see GridSize, PhysicalOrigin, GridSpacing in strong_types.hpp
  */
 [[nodiscard]] CartesianWorld create(const GridSize &size,
                                     const PhysicalOrigin &origin,
-                                    const GridSpacing &spacing);
+                                    const GridSpacing &spacing,
+                                    const Bool3 &periodic = {true, true, true});
 
 } // namespace pfc::world
