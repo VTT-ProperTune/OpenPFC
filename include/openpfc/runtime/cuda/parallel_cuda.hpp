@@ -22,26 +22,32 @@
 namespace pfc {
 namespace detail {
 
+// NOTE (audit 4.2 / PB): the Cuda parallel_for previously ran the functor in a
+// serial *host* loop. Paired with a device-space View (whose operator()
+// dereferences a device pointer), that silently produced a host dereference of
+// device memory -- a segfault/garbage trap with no diagnostic. Until a real
+// device kernel launch is implemented (M3), fail closed at compile time: any
+// attempt to instantiate a device parallel_for is a hard error instead of a
+// silent wrong-backend execution. `sizeof(Functor) == 0` is always false but
+// dependent, so it fires only on instantiation.
+// TODO: not tested at runtime (device kernel launch is deferred to M3).
 template <typename Functor, typename IndexType>
-void parallel_for_impl_cuda(const RangePolicy<Cuda, IndexType> &policy,
-                            const Functor &functor) {
-  (void)policy;
-  (void)functor;
-  for (IndexType i = policy.begin(); i != policy.end(); ++i) {
-    functor(i);
-  }
+void parallel_for_impl_cuda(const RangePolicy<Cuda, IndexType> &, const Functor &) {
+  static_assert(sizeof(Functor) == 0,
+                "pfc::parallel_for on the Cuda execution space is not "
+                "implemented yet (it would otherwise run on the host over "
+                "device memory). Use DataBuffer + the runtime device kernels, "
+                "or run on a host execution space. See audit 4.2 / M3.");
 }
 
 template <typename Functor, typename IndexType>
-void parallel_for_impl_cuda(const MDRangePolicy<Cuda, Rank<3>, IndexType> &policy,
-                            const Functor &functor) {
-  for (IndexType i = policy.start(0); i != policy.end(0); ++i) {
-    for (IndexType j = policy.start(1); j != policy.end(1); ++j) {
-      for (IndexType k = policy.start(2); k != policy.end(2); ++k) {
-        functor(i, j, k);
-      }
-    }
-  }
+void parallel_for_impl_cuda(const MDRangePolicy<Cuda, Rank<3>, IndexType> &,
+                            const Functor &) {
+  static_assert(sizeof(Functor) == 0,
+                "pfc::parallel_for on the Cuda execution space is not "
+                "implemented yet (it would otherwise run on the host over "
+                "device memory). Use DataBuffer + the runtime device kernels, "
+                "or run on a host execution space. See audit 4.2 / M3.");
 }
 
 } // namespace detail

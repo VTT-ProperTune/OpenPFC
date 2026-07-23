@@ -3,8 +3,31 @@
 
 @PACKAGE_INIT@
 
+include(CMakeFindDependencyMacro)
+
 if(NOT TARGET MPI::MPI_CXX OR NOT TARGET MPI::MPI_C)
   find_package(MPI REQUIRED COMPONENTS C CXX)
+endif()
+
+# Transitive dependencies of the installed targets (audit 11 / PM). Without
+# these, find_package(OpenPFC) on a CUDA/HIP/HDF5-enabled install fails unless
+# the consumer happens to have already found them. The flags are stamped from
+# the configure that produced this package.
+if(@OpenPFC_ENABLE_CUDA@)
+  find_dependency(CUDAToolkit)
+endif()
+if(@OpenPFC_ENABLE_HIP@)
+  find_dependency(hip)
+endif()
+if(@OpenPFC_ENABLE_HDF5@)
+  find_dependency(HDF5)
+endif()
+
+# nlohmann_json is a PUBLIC dependency of the openpfc target. When it was taken
+# from a system/config package the consumer must find it too; when vendored via
+# FetchContent the target is part of OpenPFCTargets (included below).
+if(NOT @OpenPFC_NLOHMANN_JSON_VENDORED@)
+  find_dependency(nlohmann_json)
 endif()
 
 if (NOT TARGET Heffte::Heffte)

@@ -61,3 +61,20 @@ Minimal new-test walkthrough: [`tutorials/add_catch2_test.md`](../tutorials/add_
 - [`build_options.md`](../reference/build_options.md) — all CMake switches  
 - [`INSTALL.md`](../../INSTALL.md) — Catch2 / MPI / toolchain prerequisites  
 - [`troubleshooting.md`](../troubleshooting.md) — configure and link failures  
+
+## What runs in CI vs on clusters (audit 11 / PN)
+
+| Check | GitHub Actions CI | Cluster (tohtori / LUMI) |
+|-------|-------------------|--------------------------|
+| CPU unit + integration (`ctest`) | yes (gcc-11/13, Debug/Release) | yes |
+| MPI suites | 2 ranks only | 2/3/4 ranks (`build.sh --mpi-tests`) |
+| `find_package(OpenPFC)` packaging smoke | yes (`packaging-smoke` job) | `tests/packaging/consumer` |
+| CUDA/HIP **compile** (no GPU) | best-effort `cuda-compile` / `hip-compile` jobs (`continue-on-error` until validated) | `build.sh --with-cuda --no-test`, `build.sh --with-rocm --no-test` |
+| CUDA/HIP **run** (parity, VTK, IC residency) | not possible (no GPU) | tohtori (CUDA), LUMI (HIP) |
+| Golden trajectories / performance baselines | no | yes (see `tests/baselines/`) |
+
+The authoritative GPU compile check today is `scripts/build.sh --with-cuda --no-test`
+(and `--with-rocm`) on a machine with the toolchain; the GPU-run checks
+(`test_tungsten_cpu_vs_cuda`, `test_tungsten_app_gpu_ic`, etc.) must be run on a
+GPU node. See `tests/baselines/BASELINES.md` for the scientific/performance
+baselines and which comparisons are bitwise vs tolerance-based.

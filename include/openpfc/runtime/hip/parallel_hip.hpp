@@ -22,24 +22,29 @@
 namespace pfc {
 namespace detail {
 
+// NOTE (audit 4.2 / PB): mirror of the Cuda case -- the HIP parallel_for used to
+// run the functor in a serial *host* loop, silently dereferencing device memory
+// on the host when paired with a device-space View. Fail closed at compile time
+// until a real device kernel launch exists (M3). `sizeof(Functor) == 0` is a
+// dependent false that fires only on instantiation.
+// TODO: not tested at runtime (device kernel launch is deferred to M3).
 template <typename Functor, typename IndexType>
-void parallel_for_impl_hip(const RangePolicy<HIP, IndexType> &policy,
-                           const Functor &functor) {
-  for (IndexType i = policy.begin(); i != policy.end(); ++i) {
-    functor(i);
-  }
+void parallel_for_impl_hip(const RangePolicy<HIP, IndexType> &, const Functor &) {
+  static_assert(sizeof(Functor) == 0,
+                "pfc::parallel_for on the HIP execution space is not "
+                "implemented yet (it would otherwise run on the host over "
+                "device memory). Use DataBuffer + the runtime device kernels, "
+                "or run on a host execution space. See audit 4.2 / M3.");
 }
 
 template <typename Functor, typename IndexType>
-void parallel_for_impl_hip(const MDRangePolicy<HIP, Rank<3>, IndexType> &policy,
-                           const Functor &functor) {
-  for (IndexType i = policy.start(0); i != policy.end(0); ++i) {
-    for (IndexType j = policy.start(1); j != policy.end(1); ++j) {
-      for (IndexType k = policy.start(2); k != policy.end(2); ++k) {
-        functor(i, j, k);
-      }
-    }
-  }
+void parallel_for_impl_hip(const MDRangePolicy<HIP, Rank<3>, IndexType> &,
+                           const Functor &) {
+  static_assert(sizeof(Functor) == 0,
+                "pfc::parallel_for on the HIP execution space is not "
+                "implemented yet (it would otherwise run on the host over "
+                "device memory). Use DataBuffer + the runtime device kernels, "
+                "or run on a host execution space. See audit 4.2 / M3.");
 }
 
 } // namespace detail

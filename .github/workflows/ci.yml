@@ -156,12 +156,134 @@ jobs:
           path: build/Testing/Temporary/LastTest.log
 
   # ============================================================================
+  # Packaging smoke test (audit 11 / PN): install OpenPFC and build a downstream
+  # consumer against it via find_package(OpenPFC). Guards the export set, the
+  # OpenPFCConfig transitive dependencies, and the header-only install filter.
+  # Validated locally on tohtori; the flow mirrors tests/packaging/consumer.
+  # ============================================================================
+  packaging-smoke:
+    name: Packaging (find_package consumer)
+    needs: [code-quality]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-13 g++-13 cmake ninja-build \
+            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev
+
+      - name: Cache HeFFTe
+        id: cache-heffte
+        uses: actions/cache@v4
+        with:
+          path: ~/opt/heffte/2.4.1-cpu
+          key: heffte-2.4.1-cpu-ubuntu-24.04-gcc-13-Release
+
+      - name: Build and Install HeFFTe
+        if: steps.cache-heffte.outputs.cache-hit != 'true'
+        env: { CC: gcc-13, CXX: g++-13 }
+        run: scripts/install-heffte-ci.sh Release /tmp/heffte-build-openpfc-ci
+
+      - name: Configure + build + install OpenPFC
+        env: { CC: gcc-13, CXX: g++-13 }
+        run: |
+          cmake -S . -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
+            -DCMAKE_INSTALL_PREFIX=$HOME/openpfc-prefix \
+            -DOpenPFC_BUILD_TESTS=OFF -DOpenPFC_BUILD_APPS=OFF \
+            -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
+          cmake --build build -j2
+          cmake --install build
+
+      - name: Fail if device sources leaked into the install
+        run: |
+          if find "$HOME/openpfc-prefix/include" \( -name '*.cu' -o -name '*.hip' \) | grep .; then
+            echo "::error::device sources leaked into installed include tree"; exit 1
+          fi
+
+      - name: Build + run downstream consumer via find_package
+        env: { CC: gcc-13, CXX: g++-13 }
+        run: |
+          cmake -S tests/packaging/consumer -B build-consumer -GNinja \
+            -DCMAKE_PREFIX_PATH="$HOME/openpfc-prefix;$HOME/opt/heffte/2.4.1-cpu"
+          cmake --build build-consumer -j2
+          ./build-consumer/consumer
+
+  # ============================================================================
+  # Compile-only GPU jobs (audit 11 / PN). GitHub runners have no GPU, but nvcc
+  # / hipcc compile without one, so these catch GPU-path rot between manual
+  # cluster builds. NOTE: authored to mirror the CPU job + build.sh; they build a
+  # matching-backend HeFFTe and are marked continue-on-error until first
+  # validated on GitHub (the authoritative GPU compile check today is
+  # `scripts/build.sh --with-cuda|--with-rocm --no-test` on the clusters).
+  # ============================================================================
+  cuda-compile:
+    name: CUDA compile-only (no GPU)
+    needs: [code-quality]
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    container: nvidia/cuda:12.6.0-devel-ubuntu24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: true }
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y gcc-13 g++-13 cmake ninja-build git \
+            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev
+      - name: Build HeFFTe (CUDA)
+        env: { CC: gcc-13, CXX: g++-13 }
+        run: scripts/install-heffte-ci.sh Release /tmp/heffte-cuda --cuda || scripts/install-heffte-ci.sh Release /tmp/heffte-cuda
+      - name: Configure + compile (no tests, no run)
+        env: { CC: gcc-13, CXX: g++-13 }
+        run: |
+          cmake -S . -B build-cuda -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cuda \
+            -DOpenPFC_ENABLE_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=90 \
+            -DOpenPFC_BUILD_TESTS=ON -DOpenPFC_BUILD_APPS=ON \
+            -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
+          cmake --build build-cuda -j2
+
+  hip-compile:
+    name: HIP compile-only (no GPU)
+    needs: [code-quality]
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    container: rocm/dev-ubuntu-24.04:6.2
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: true }
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake ninja-build git \
+            libopenmpi-dev openmpi-bin libfftw3-dev libfftw3-mpi-dev nlohmann-json3-dev
+      - name: Build HeFFTe (ROCm)
+        run: scripts/install-heffte-ci.sh Release /tmp/heffte-rocm --rocm || scripts/install-heffte-ci.sh Release /tmp/heffte-rocm
+      - name: Configure + compile (no tests, no run)
+        run: |
+          cmake -S . -B build-hip -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-rocm \
+            -DOpenPFC_ENABLE_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx90a \
+            -DOpenPFC_BUILD_TESTS=ON -DOpenPFC_BUILD_APPS=ON \
+            -DOpenPFC_BUILD_EXAMPLES=OFF -DOpenPFC_BUILD_DOCUMENTATION=OFF
+          cmake --build build-hip -j2
+
+  # ============================================================================
   # Status Check (required for merge)
   # ============================================================================
   ci-status:
     name: CI Status
     if: always()
-    needs: [code-quality, build-and-test]
+    needs: [code-quality, build-and-test, packaging-smoke]
     runs-on: ubuntu-24.04
     steps:
       - name: Check all jobs status

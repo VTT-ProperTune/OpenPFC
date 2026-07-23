@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # CMake minimum version (must be at top level, before project())
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.21)
 
 # Project definition (must be literal in root file to avoid CMake warnings)
 project(OpenPFC VERSION 0.1.4 DESCRIPTION "Phase Field Crystal simulation framework")
