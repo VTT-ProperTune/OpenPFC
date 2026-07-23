@@ -36,6 +36,8 @@
 #pragma once
 
 #include <array>
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <ostream>
 #include <stdexcept>
@@ -469,6 +471,37 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
  */
 inline int get_num_domains(const Decomposition &decomposition) noexcept {
   return static_cast<int>(get_subworlds(decomposition).size());
+}
+
+// ---------------------------------------------------------------------------
+// 0.2 canonical accessors (M1.3): expose the decomposition as `Domain` (global
+// coordinate system) + `Box3i` (index ranges), the target types that replace
+// the `World`-as-box conflation. Derived from the existing `World` members, so
+// they are additive and numerically identical to the `get_subworld*` surface;
+// consumers migrate onto them across M1.3–M1.4, after which the `World`
+// accessors become the deprecated A0 shim.
+// ---------------------------------------------------------------------------
+
+/// The global coordinate system this decomposition partitions, as a `Domain`.
+[[nodiscard]] inline Domain domain(const Decomposition &decomposition) {
+  const auto &w = get_global_world(decomposition);
+  return pfc::domain::create(pfc::GridSize(pfc::world::get_size(w)),
+                             pfc::PhysicalOrigin(pfc::world::get_origin(w)),
+                             pfc::GridSpacing(pfc::world::get_spacing(w)),
+                             pfc::world::get_periodic(w));
+}
+
+/// The global index box `[lower, upper]` covered by the whole decomposition.
+[[nodiscard]] inline Box3i global_box(const Decomposition &decomposition) {
+  const auto &w = get_global_world(decomposition);
+  return Box3i::from_bounds(pfc::world::get_lower(w), pfc::world::get_upper(w));
+}
+
+/// The index box owned by subdomain `i` (typically the MPI rank).
+/// @throws std::out_of_range if `i` is not a valid subdomain index.
+[[nodiscard]] inline Box3i local_box(const Decomposition &decomposition, int i) {
+  const auto &w = get_subworld(decomposition, i);
+  return Box3i::from_bounds(pfc::world::get_lower(w), pfc::world::get_upper(w));
 }
 
 } // namespace decomposition
