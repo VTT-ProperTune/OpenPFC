@@ -86,8 +86,7 @@ public:
     auto patterns = halo::create_halo_patterns<backend::CpuTag>(
         decomp, rank, halo::Connectivity::Faces, halo_width);
 
-    const auto &local_world = decomposition::get_subworld(decomp, rank);
-    auto local_size = world::get_size(local_world);
+    auto local_size = decomposition::local_box(decomp, rank).size;
     int nx = local_size[0];
     int ny = local_size[1];
     int nz = local_size[2];

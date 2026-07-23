@@ -117,19 +117,17 @@ public:
    * `selector(rank)`; otherwise the uniform `dirs` is used.
    */
   FullPaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
-                          int halo_width, MPI_Comm comm,
-                          halo::HaloDirectionSet dirs, int base_tag = 0,
+                          int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
+                          int base_tag = 0,
                           halo::HaloDirectionSelector selector = {})
-      : m_rank(rank), m_halo_width(halo_width), m_comm(comm),
-        m_base_tag(base_tag),
+      : m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     if (halo_width < 1) {
       throw std::invalid_argument(
           "FullPaddedHaloExchanger: halo_width must be >= 1");
     }
 
-    const auto &local_world = decomposition::get_subworld(decomp, m_rank);
-    const auto local_size = world::get_size(local_world);
+    const auto local_size = decomposition::local_box(decomp, m_rank).size;
     m_nx = local_size[0];
     m_ny = local_size[1];
     m_nz = local_size[2];
@@ -203,10 +201,9 @@ public:
    * Pulls decomposition, rank, and halo width from `u`. Default direction
    * set is `Full3D()`.
    */
-  FullPaddedHaloExchanger(field::PaddedBrick<T> &u, MPI_Comm comm,
-                          int base_tag = 0)
-      : FullPaddedHaloExchanger(u.decomposition(), u.rank(), u.halo_width(),
-                                comm, halo::presets::Full3D(), base_tag,
+  FullPaddedHaloExchanger(field::PaddedBrick<T> &u, MPI_Comm comm, int base_tag = 0)
+      : FullPaddedHaloExchanger(u.decomposition(), u.rank(), u.halo_width(), comm,
+                                halo::presets::Full3D(), base_tag,
                                 halo::HaloDirectionSelector{}) {
     bind_(u);
   }
@@ -215,8 +212,8 @@ public:
   FullPaddedHaloExchanger(field::PaddedBrick<T> &u, MPI_Comm comm,
                           halo::HaloDirectionSet dirs, int base_tag = 0,
                           halo::HaloDirectionSelector selector = {})
-      : FullPaddedHaloExchanger(u.decomposition(), u.rank(), u.halo_width(),
-                                comm, dirs, base_tag, selector) {
+      : FullPaddedHaloExchanger(u.decomposition(), u.rank(), u.halo_width(), comm,
+                                dirs, base_tag, selector) {
     bind_(u);
   }
 
@@ -346,8 +343,7 @@ private:
     for (int k = 0; k < s.sz; ++k) {
       for (int j = 0; j < s.sy; ++j) {
         for (int i = 0; i < s.sx; ++i) {
-          m_scratch[idx++] =
-              buf[lin_(s.ox + i, s.oy + j, s.oz + k, m_nxp, m_nyp)];
+          m_scratch[idx++] = buf[lin_(s.ox + i, s.oy + j, s.oz + k, m_nxp, m_nyp)];
         }
       }
     }
@@ -358,8 +354,7 @@ private:
     for (int k = 0; k < r.sz; ++k) {
       for (int j = 0; j < r.sy; ++j) {
         for (int i = 0; i < r.sx; ++i) {
-          buf[lin_(r.ox + i, r.oy + j, r.oz + k, m_nxp, m_nyp)] =
-              m_scratch[idx++];
+          buf[lin_(r.ox + i, r.oy + j, r.oz + k, m_nxp, m_nyp)] = m_scratch[idx++];
         }
       }
     }
