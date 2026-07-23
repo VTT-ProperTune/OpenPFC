@@ -19,7 +19,6 @@ endif()
 # install/export (see docs/refactoring_roadmap.md Phase D).
 set(_openpfc_kernel_obj_sources
     src/openpfc/kernel/data/world.cpp
-    src/openpfc/kernel/data/box3d.cpp
     src/openpfc/kernel/decomposition/decomposition.cpp
     src/openpfc/kernel/decomposition/decomposition_factory.cpp
     src/openpfc/kernel/profiling/session.cpp
