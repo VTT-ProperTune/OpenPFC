@@ -118,7 +118,8 @@ jobs:
             -DOpenPFC_BUILD_APPS=ON \
             -DOpenPFC_BUILD_DOCUMENTATION=OFF \
             -DOpenPFC_RUN_MPI_SUITES=ON \
-            -DOpenPFC_MPI_TEST_MAX_WORLD_SIZE=2
+            -DOpenPFC_MPI_TEST_MAX_WORLD_SIZE=2 \
+            -DOpenPFC_CTEST_DISCOVER=ON
 
       - name: Build OpenPFC
         run: cmake --build build -j2

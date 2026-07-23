@@ -70,12 +70,33 @@ if(OpenPFC_ENABLE_CODE_COVERAGE)
   target_link_options(openpfc-tests PRIVATE --coverage)
 endif()
 
-# Run all non-MPI tests in a single invocation to avoid per-test overhead
-# This is much faster than catch_discover_tests which runs each test separately
-add_test(NAME openpfc-all-tests
-         COMMAND openpfc-tests "~[MPI]")
-set_tests_properties(openpfc-all-tests PROPERTIES
-  ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+# Non-MPI test registration (audit §11 / M0).
+#
+# Default: a single invocation of all non-MPI cases -- fastest for local dev,
+# no per-test process overhead.
+#
+# CI (OpenPFC_CTEST_DISCOVER=ON): register each Catch2 TEST_CASE as its own CTest
+# entry via catch_discover_tests, so a single crashing/hanging case is isolated
+# in the report instead of taking down the whole batch, and CTest sharding
+# (`ctest -j`) parallelizes across cases. No case is lost: discovery enumerates
+# the binary's full `~[MPI]` set (compare counts against the single-run summary).
+option(OpenPFC_CTEST_DISCOVER
+       "Register each non-MPI Catch2 case as its own CTest entry (CI granular reporting)"
+       OFF)
+if(OpenPFC_CTEST_DISCOVER)
+  include(Catch)
+  catch_discover_tests(openpfc-tests
+    TEST_SPEC "~[MPI]"
+    TEST_PREFIX "openpfc:"
+    PROPERTIES ENVIRONMENT
+      "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+else()
+  # Single-invocation fast path (default).
+  add_test(NAME openpfc-all-tests
+           COMMAND openpfc-tests "~[MPI]")
+  set_tests_properties(openpfc-all-tests PROPERTIES
+    ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+endif()
 
 # Register MPI tests explicitly with mpiexec wrappers
 option(OpenPFC_RUN_MPI_SUITES "Enable explicit MPI multi-rank test suites" OFF)
