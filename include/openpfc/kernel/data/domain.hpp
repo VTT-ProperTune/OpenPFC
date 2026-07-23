@@ -9,8 +9,8 @@
  * `Domain` describes the **global** discretized Cartesian space: grid size,
  * uniform spacing, physical origin (coordinate of index `(0,0,0)`), and
  * **per-axis periodicity that is actually consumed**. It is the 0.2 replacement
- * for `World<CartesianTag>` and drops the vestigial coordinate-system template
- * parameter (there was ever exactly one instantiation, `CartesianTag`, and half
+ * for the old templated `World` and drops its vestigial coordinate-system tag
+ * parameter (there was ever exactly one coordinate system, Cartesian, and half
  * the query surface was already Cartesian-concrete — see audit §13.2).
  *
  * Roles are split cleanly:
@@ -43,7 +43,7 @@
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 
 namespace pfc {
 

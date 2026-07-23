@@ -46,8 +46,8 @@
 
 #include <cstdint>
 #include <map>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>

@@ -38,7 +38,7 @@
 #include <iomanip>
 #include <iostream>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 
 using namespace pfc;
 

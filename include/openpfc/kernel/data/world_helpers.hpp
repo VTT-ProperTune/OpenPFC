@@ -25,9 +25,9 @@
 #pragma once
 
 #include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
 #include <stdexcept>
 #include <string>
 

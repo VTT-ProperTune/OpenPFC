@@ -152,7 +152,7 @@
 #ifndef __CUDACC__
 #include <compare>
 #endif
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <type_traits>
 
 namespace pfc {

@@ -24,7 +24,7 @@
 #include <vector>
 
 #include <openpfc/kernel/checkpoint/state_capture.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 
 namespace wave2d {

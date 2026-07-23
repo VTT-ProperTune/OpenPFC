@@ -22,8 +22,8 @@
 #include <mpi.h>
 #include <vector>
 
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>

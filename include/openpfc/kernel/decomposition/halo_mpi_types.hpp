@@ -22,7 +22,7 @@
 #include <stdexcept>
 #include <string>
 
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 
 namespace pfc::halo {

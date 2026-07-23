@@ -131,9 +131,9 @@ void example3_strong_typedef_construction() {
    * construct a `World` object. This method ensures correctness by making
    * it impossible to accidentally swap parameters like spacing and bounds.
    *
-   * Each wrapper (e.g. `Size3`, `LowerBounds3`, `Spacing3`) validates its values
-   * during construction, and improves the readability and maintainability of code
-   * by documenting intent explicitly.
+   * Each wrapper (e.g. `GridSize`, `PhysicalOrigin`, `GridSpacing`) validates its
+   * values during construction, and improves the readability and maintainability
+   * of code by documenting intent explicitly.
    */
 
   cout << "\n=== Example 3: Strong Typedefs ===\n";

@@ -50,8 +50,8 @@
 #include <array>
 #include <concepts>
 #include <functional>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
 #include <stdexcept>
 #include <vector>
 

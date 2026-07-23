@@ -61,7 +61,7 @@
 #include <ostream>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 
 namespace pfc::world {
 

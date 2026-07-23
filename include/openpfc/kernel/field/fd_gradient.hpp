@@ -83,7 +83,7 @@
 #include <string>
 #include <type_traits>
 
-#include <openpfc/kernel/data/world_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/field/fd_apply.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
