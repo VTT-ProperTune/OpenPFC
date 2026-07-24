@@ -42,17 +42,15 @@
  * - **Zero-overhead abstractions**: Inline functions, no runtime polymorphism
  * - **Explicit over implicit**: Clear, self-documenting APIs
  *
- * ## Extending with Custom Coordinate Systems
+ * ## Status (0.2)
  *
- * Add custom coordinate systems (cylindrical, spherical, etc.) without modifying
- * OpenPFC source. See `examples/17_custom_coordinate_system.cpp` for complete
- * working examples and `docs/extending_openpfc/adl_extension_patterns.md` for
- * comprehensive guide.
+ * `World` is a plain 3D Cartesian value type and a deprecated compatibility
+ * shim over `pfc::Domain` (see `domain.hpp`). New code should prefer `Domain`
+ * + `Box3i` directly; `World` is retained only so legacy call sites compile.
  *
  * @see world_factory.hpp for World creation functions
  * @see world_queries.hpp for queries and coordinate transforms
  * @see world_helpers.hpp for convenience constructors
- * @see examples/17_custom_coordinate_system.cpp for extension example
  */
 
 #pragma once
