@@ -156,6 +156,9 @@ namespace domain {
 [[nodiscard]] inline const Real3 &get_origin(const Domain &d) noexcept {
   return d.origin;
 }
+[[nodiscard]] inline double get_origin(const Domain &d, int i) {
+  return d.origin.at(i);
+}
 
 [[nodiscard]] inline const Bool3 &get_periodic(const Domain &d) noexcept {
   return d.periodic;

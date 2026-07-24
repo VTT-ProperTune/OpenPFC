@@ -104,3 +104,13 @@ TEST_CASE("Domain matches World numerically on the shared surface",
     REQUIRE(domain::to_indices(d, x) == pfc::world::to_indices(w, x));
   }
 }
+
+TEST_CASE("Domain::get_origin(d, i) returns per-axis origin", "[domain][unit]") {
+  const Domain d = domain::with_spacing({8, 8, 8}, {1.0, 1.0, 1.0});
+  const Domain e = domain::from_bounds({4, 4, 4}, {-1.0, 2.0, 3.0}, {1.0, 6.0, 7.0},
+                                       {false, false, false});
+  REQUIRE(domain::get_origin(e, 0) == -1.0);
+  REQUIRE(domain::get_origin(e, 1) == 2.0);
+  REQUIRE(domain::get_origin(e, 2) == 3.0);
+  REQUIRE_THROWS_AS(domain::get_origin(e, 3), std::out_of_range);
+}
