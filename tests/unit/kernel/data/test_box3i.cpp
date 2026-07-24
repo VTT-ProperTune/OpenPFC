@@ -7,6 +7,7 @@
 #include <openpfc/kernel/fft/box3i.hpp>
 
 #include <sstream>
+#include <vector>
 
 using pfc::Box3i;
 
@@ -50,4 +51,27 @@ TEST_CASE("Box3i stream operator", "[box3i][unit]") {
   REQUIRE(output.find("Box3i") != std::string::npos);
   REQUIRE(output.find("0") != std::string::npos);
   REQUIRE(output.find("5") != std::string::npos);
+}
+
+TEST_CASE("for_each_index visits all indices in x-fastest order", "[box3i][unit]") {
+  Box3i box = Box3i::from_bounds({0, 0, 0}, {2, 1, 1});  // small non-cubic: 3x2x2 = 12 points
+
+  std::vector<std::array<int, 3>> visited;
+  pfc::for_each_index(box, [&](std::array<int, 3> idx) { visited.push_back(idx); });
+
+  SECTION("visit count matches count()") {
+    REQUIRE(visited.size() == static_cast<size_t>(box.count()));
+  }
+
+  SECTION("first index is low, last is high") {
+    REQUIRE(visited.front() == box.low);
+    REQUIRE(visited.back() == box.high);
+  }
+
+  SECTION("x varies fastest") {
+    REQUIRE(visited[1] != visited[0]);
+    REQUIRE(visited[1][0] == visited[0][0] + 1);  // x increment
+    REQUIRE(visited[1][1] == visited[0][1]);       // y unchanged
+    REQUIRE(visited[1][2] == visited[0][2]);       // z unchanged
+  }
 }

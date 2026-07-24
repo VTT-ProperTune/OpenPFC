@@ -78,4 +78,15 @@ inline std::ostream &operator<<(std::ostream &os, const Box3i &b) {
   return os;
 }
 
+/// Visit each index point in the box in row-major, x-fastest order.
+/// @param b The box to iterate over.
+/// @param fn Callable taking `std::array<int, 3>` for each index point.
+template <typename Fn>
+constexpr void for_each_index(const Box3i &b, Fn &&fn) {
+  for (int k = b.low[2]; k <= b.high[2]; ++k)
+    for (int j = b.low[1]; j <= b.high[1]; ++j)
+      for (int i = b.low[0]; i <= b.high[0]; ++i)
+        fn(std::array<int, 3>{i, j, k});
+}
+
 } // namespace pfc
