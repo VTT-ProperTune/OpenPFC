@@ -58,6 +58,8 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
+
 namespace pfc::runtime {
 
 /**
@@ -88,8 +90,8 @@ struct MpiTimer {
  * Calls `MPI_Barrier` so every rank agrees on the start instant, then
  * records `MPI_Wtime()` into `timer.t_start`. Pair with `toc`.
  */
-inline void tic(MpiTimer &timer) noexcept {
-  MPI_Barrier(timer.comm);
+inline void tic(MpiTimer &timer) {
+  pfc::mpi::throw_on_mpi_error(MPI_Barrier(timer.comm), "MPI_Barrier in pfc::runtime::tic failed");
   timer.t_start = MPI_Wtime();
 }
 
@@ -106,10 +108,11 @@ inline void tic(MpiTimer &timer) noexcept {
  *       barrier saves one round-trip when the caller only needs the
  *       reduced max (the common case).
  */
-inline double toc(const MpiTimer &timer) noexcept {
+inline double toc(const MpiTimer &timer) {
   const double local = MPI_Wtime() - timer.t_start;
   double global = 0.0;
-  MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, timer.comm);
+  int err = MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, timer.comm);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce in pfc::runtime::toc failed");
   return global;
 }
 
@@ -159,7 +162,8 @@ print_timing_summary(const MpiTimer &timer, int print_rank = 0,
   for (const auto &kv : timer.sections) {
     const double local = kv.second.second;
     double global = 0.0;
-    MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, timer.comm);
+    int err = MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, timer.comm);
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce in pfc::runtime::print_timing_summary failed");
     out.emplace_back(kv.first, global);
   }
 
@@ -167,7 +171,7 @@ print_timing_summary(const MpiTimer &timer, int print_rank = 0,
             [](const auto &a, const auto &b) { return a.second > b.second; });
 
   int rank = 0;
-  MPI_Comm_rank(timer.comm, &rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(timer.comm, &rank), "MPI_Comm_rank in pfc::runtime::print_timing_summary failed");
   if (rank == print_rank && !out.empty()) {
     std::size_t width = 0;
     for (const auto &kv : out) width = std::max(width, kv.first.size());
