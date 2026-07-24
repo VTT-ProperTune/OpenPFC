@@ -18,6 +18,8 @@
 
 #include <mpi.h>
 
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
+
 namespace pfc {
 
 /**
@@ -26,12 +28,13 @@ namespace pfc {
  * `MPI_COMM_NULL` is treated as non-rank-0. Shared by `SimulationContext` and
  * `Simulator` so I/O and logging use one definition for “rank 0”.
  */
-[[nodiscard]] inline bool mpi_comm_rank_is_zero(MPI_Comm comm) noexcept {
+[[nodiscard]] inline bool mpi_comm_rank_is_zero(MPI_Comm comm) {
   if (comm == MPI_COMM_NULL) {
     return false;
   }
   int rank = 0;
-  MPI_Comm_rank(comm, &rank);
+  pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(comm, &rank),
+                               "MPI_Comm_rank in mpi_comm_rank_is_zero");
   return rank == 0;
 }
 
