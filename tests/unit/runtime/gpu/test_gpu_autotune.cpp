@@ -144,6 +144,27 @@ TEST_CASE("test_cache_missing_file") {
   REQUIRE(config.block_size_x == 256);
 }
 
+TEST_CASE("test_cache_save_error_handling") {
+  AutoTuner& tuner = AutoTuner::instance();
+  tuner.reset();
+
+  // Attempt to save to a non-existent directory
+  std::string invalid_path = "/nonexistent/path/cache.json";
+
+  // Should throw std::runtime_error when file cannot be opened
+  REQUIRE_THROWS_AS(
+    tuner.save_cache(invalid_path),
+    std::runtime_error
+  );
+
+  // Verify the error message contains the filepath and a descriptive message
+  REQUIRE_THROWS_WITH(
+    tuner.save_cache(invalid_path),
+    Catch::Matchers::ContainsSubstring(invalid_path) &&
+    Catch::Matchers::ContainsSubstring("Cannot open cache file")
+  );
+}
+
 TEST_CASE("test_autotuner_get_config") {
   AutoTuner& tuner = AutoTuner::instance();
   tuner.reset();
