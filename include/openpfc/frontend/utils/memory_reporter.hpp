@@ -152,8 +152,10 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
                                      usage.total_bytes()};
   std::array<size_t, 3> global_mem{};
 
-  MPI_Reduce(local_mem.data(), global_mem.data(), 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
-             0, comm);
+  pfc::mpi::throw_on_mpi_error(
+      ::MPI_Reduce(local_mem.data(), global_mem.data(), 3, MPI_UNSIGNED_LONG_LONG,
+                   MPI_SUM, 0, comm),
+      "MPI_Reduce in report_memory_usage (memory statistics aggregation)");
 
   // Only rank 0 logs the report
   if (rank == 0) {
