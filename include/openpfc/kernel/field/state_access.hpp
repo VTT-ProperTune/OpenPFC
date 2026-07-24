@@ -36,6 +36,7 @@
 #include <type_traits>
 #include <utility>
 
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/world_types.hpp>
 
 namespace pfc::field {
@@ -112,6 +113,16 @@ public:
      * @return pfc::types::Real3 Origin (x0, y0, z0)
      */
     pfc::types::Real3 origin() const noexcept { return m_origin; }
+
+    /**
+     * @brief Get the local index box of the view
+     *
+     * @return pfc::Box3i Index box [0, extents-1] in integer coordinates
+     */
+    [[nodiscard]] pfc::Box3i box() const noexcept {
+        return pfc::Box3i::from_bounds({0, 0, 0},
+                                       {m_extents[0] - 1, m_extents[1] - 1, m_extents[2] - 1});
+    }
 
     /**
      * @brief Check if this field is compatible with another field

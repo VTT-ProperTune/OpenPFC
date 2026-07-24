@@ -402,3 +402,17 @@ TEST_CASE("Aliasing allows documented ScaledField pattern", "[field][state_acces
         REQUIRE(u.data()[i] == Approx(2.0)); // 1.0 + 0.5 * 2.0
     }
 }
+
+TEST_CASE("FieldView::box() returns the local index box", "[field][state_access]") {
+    // Construct a small non-cubic grid to exercise extents properly
+    std::array<int, 3> extents{3, 4, 5};
+    std::vector<double> data(3 * 4 * 5);
+    pfc::types::Real3 spacing{1.0, 1.0, 1.0};
+    pfc::types::Real3 origin{0.0, 0.0, 0.0};
+    pfc::field::FieldView<double> view(data.data(), data.size(), extents, spacing, origin);
+
+    // Verify box bounds and properties
+    REQUIRE(view.box().size == view.extents());
+    REQUIRE(view.box().low == std::array<int, 3>{0, 0, 0});
+    REQUIRE(static_cast<std::size_t>(view.box().count()) == view.size());
+}
