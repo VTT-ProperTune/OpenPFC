@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <sstream>
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -286,6 +287,60 @@ TEST_CASE("World - from_bounds() computes spacing correctly",
 
     REQUIRE_THROWS_AS(world::from_bounds({-5, 100, 100}, {0, 0, 0}, {10, 10, 10}),
                       std::invalid_argument);
+  }
+}
+
+TEST_CASE("Domain - from_bounds() computes spacing correctly",
+          "[domain][unit]") {
+  SECTION("Periodic {true,true,true}") {
+    constexpr pfc::types::Bool3 periodic{{true, true, true}};
+    constexpr int size = 100;
+    constexpr pfc::types::Real3 lower{{0.0, 0.0, 0.0}};
+    constexpr pfc::types::Real3 upper{{10.0, 10.0, 10.0}};
+
+    const auto d = world::from_bounds({size, size, size}, lower, upper, periodic);
+
+    // Periodic: spacing = bounds / size
+    REQUIRE(world::get_spacing(d, 0) == Catch::Approx(10.0 / 100.0));
+    REQUIRE(world::get_spacing(d, 1) == Catch::Approx(10.0 / 100.0));
+    REQUIRE(world::get_spacing(d, 2) == Catch::Approx(10.0 / 100.0));
+    REQUIRE(world::is_periodic(d, 0) == true);
+    REQUIRE(world::is_periodic(d, 1) == true);
+    REQUIRE(world::is_periodic(d, 2) == true);
+  }
+
+  SECTION("Non-periodic {false,false,false}") {
+    constexpr pfc::types::Bool3 periodic{{false, false, false}};
+    constexpr int size = 100;
+    constexpr pfc::types::Real3 lower{{0.0, 0.0, 0.0}};
+    constexpr pfc::types::Real3 upper{{10.0, 10.0, 10.0}};
+
+    const auto d = world::from_bounds({size, size, size}, lower, upper, periodic);
+
+    // Non-periodic: spacing = bounds / (size - 1)
+    REQUIRE(world::get_spacing(d, 0) == Catch::Approx(10.0 / 99.0));
+    REQUIRE(world::get_spacing(d, 1) == Catch::Approx(10.0 / 99.0));
+    REQUIRE(world::get_spacing(d, 2) == Catch::Approx(10.0 / 99.0));
+    REQUIRE(world::is_periodic(d, 0) == false);
+    REQUIRE(world::is_periodic(d, 1) == false);
+    REQUIRE(world::is_periodic(d, 2) == false);
+  }
+
+  SECTION("Mixed {true,false,true}") {
+    constexpr pfc::types::Bool3 periodic{{true, false, true}};
+    constexpr int size = 100;
+    constexpr pfc::types::Real3 lower{{0.0, 0.0, 0.0}};
+    constexpr pfc::types::Real3 upper{{10.0, 20.0, 30.0}};
+
+    const auto d = world::from_bounds({size, size, size}, lower, upper, periodic);
+
+    // Mixed periodicity: correct spacing per axis
+    REQUIRE(world::get_spacing(d, 0) == Catch::Approx(10.0 / 100.0));  // periodic
+    REQUIRE(world::get_spacing(d, 1) == Catch::Approx(20.0 / 99.0));   // non-periodic
+    REQUIRE(world::get_spacing(d, 2) == Catch::Approx(30.0 / 100.0));  // periodic
+    REQUIRE(world::is_periodic(d, 0) == true);
+    REQUIRE(world::is_periodic(d, 1) == false);
+    REQUIRE(world::is_periodic(d, 2) == true);
   }
 }
 
