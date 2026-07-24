@@ -21,6 +21,7 @@
 #pragma once
 
 #include <array>
+#include <ostream>
 
 namespace pfc {
 
@@ -68,5 +69,13 @@ struct Box3i {
     return !(a == b);
   }
 };
+
+/// Stream operator for diagnostics output.
+inline std::ostream &operator<<(std::ostream &os, const Box3i &b) {
+  os << "Box3i(low={" << b.low[0] << "," << b.low[1] << "," << b.low[2]
+     << "}, high={" << b.high[0] << "," << b.high[1] << "," << b.high[2]
+     << "}, size={" << b.size[0] << "," << b.size[1] << "," << b.size[2] << "})";
+  return os;
+}
 
 } // namespace pfc

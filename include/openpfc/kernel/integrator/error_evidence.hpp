@@ -42,6 +42,8 @@
 #include <span>
 #include <vector>
 
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
+
 namespace pfc::integrator {
 
 /**
@@ -253,7 +255,8 @@ reduce_error_evidence(ErrorEvidence ev, MPI_Comm comm = MPI_COMM_WORLD) {
   }
 
   int size = 1;
-  MPI_Comm_size(comm, &size);
+  int err = MPI_Comm_size(comm, &size);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Comm_size in reduce_error_evidence");
   if (size <= 1) {
     ev.scope = AggregationScope::AlreadyReduced;
     return ev;
@@ -261,12 +264,14 @@ reduce_error_evidence(ErrorEvidence ev, MPI_Comm comm = MPI_COMM_WORLD) {
 
   // Validity: AND across ranks (pack bools as ints).
   int global_valid = ev.valid ? 1 : 0;
-  MPI_Allreduce(MPI_IN_PLACE, &global_valid, 1, MPI_INT, MPI_LAND, comm);
+  err = MPI_Allreduce(MPI_IN_PLACE, &global_valid, 1, MPI_INT, MPI_LAND, comm);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce for global_valid in reduce_error_evidence");
   ev.valid = (global_valid != 0);
 
   if (!ev.field_norms.empty()) {
-    MPI_Allreduce(MPI_IN_PLACE, ev.field_norms.data(),
+    err = MPI_Allreduce(MPI_IN_PLACE, ev.field_norms.data(),
                   static_cast<int>(ev.field_norms.size()), MPI_DOUBLE, MPI_MAX, comm);
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce for field_norms in reduce_error_evidence");
   }
 
   if (!ev.field_valid.empty()) {
@@ -274,8 +279,9 @@ reduce_error_evidence(ErrorEvidence ev, MPI_Comm comm = MPI_COMM_WORLD) {
     for (std::size_t i = 0; i < ev.field_valid.size(); ++i) {
       packed[i] = ev.field_valid[i] ? 1 : 0;
     }
-    MPI_Allreduce(MPI_IN_PLACE, packed.data(), static_cast<int>(packed.size()), MPI_INT,
+    err = MPI_Allreduce(MPI_IN_PLACE, packed.data(), static_cast<int>(packed.size()), MPI_INT,
                   MPI_LAND, comm);
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce for field_valid in reduce_error_evidence");
     for (std::size_t i = 0; i < packed.size(); ++i) {
       ev.field_valid[i] = (packed[i] != 0);
     }
@@ -283,7 +289,8 @@ reduce_error_evidence(ErrorEvidence ev, MPI_Comm comm = MPI_COMM_WORLD) {
 
   if (ev.combined_metric.has_value()) {
     double combined = *ev.combined_metric;
-    MPI_Allreduce(MPI_IN_PLACE, &combined, 1, MPI_DOUBLE, MPI_MAX, comm);
+    err = MPI_Allreduce(MPI_IN_PLACE, &combined, 1, MPI_DOUBLE, MPI_MAX, comm);
+    pfc::mpi::throw_on_mpi_error(err, "MPI_Allreduce for combined_metric in reduce_error_evidence");
     ev.combined_metric = combined;
   }
 

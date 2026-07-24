@@ -6,6 +6,8 @@
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/fft/box3i.hpp>
 
+#include <sstream>
+
 using pfc::Box3i;
 
 TEST_CASE("Box3i::from_bounds computes a consistent size", "[box3i][unit]") {
@@ -35,4 +37,17 @@ TEST_CASE("fft::Box3i is the same type as pfc::Box3i", "[box3i][fft][unit]") {
                 "fft::Box3i must alias pfc::Box3i after M1");
   pfc::fft::Box3i b = Box3i::from_bounds({1, 1, 1}, {2, 2, 2});
   REQUIRE(b.count() == 8);
+}
+
+TEST_CASE("Box3i stream operator", "[box3i][unit]") {
+  pfc::Box3i box;
+  box.low = {0, 1, 2};
+  box.high = {3, 4, 5};
+  box.size = {3, 3, 3};
+  std::ostringstream oss;
+  oss << box;
+  std::string output = oss.str();
+  REQUIRE(output.find("Box3i") != std::string::npos);
+  REQUIRE(output.find("0") != std::string::npos);
+  REQUIRE(output.find("5") != std::string::npos);
 }

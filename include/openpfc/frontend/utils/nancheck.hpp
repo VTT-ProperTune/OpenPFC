@@ -46,6 +46,7 @@
 #include <cmath>
 #include <iostream>
 #include <mpi.h>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <vector>
 
 #if defined(NAN_CHECK_ENABLED)
@@ -171,7 +172,7 @@ void abortIfNaN(T value, const char *filename, int line,
   if (std::isnan(value)) {
     int rank = 0;
     MPI_Comm c = (comm == MPI_COMM_NULL) ? MPI_COMM_WORLD : comm;
-    MPI_Comm_rank(c, &rank);
+    pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(c, &rank), "nancheck: MPI_Comm_rank");
     std::cerr << "NaN detected on process " << rank << " at " << filename << ":"
               << line << ". Aborting MPI application." << '\n';
     MPI_Abort(c, 1);
@@ -191,7 +192,7 @@ void abortIfNaNs(const std::vector<T> &vec, const char *filename, int line,
   if (hasNaNs(vec)) {
     int rank = 0;
     MPI_Comm c = (comm == MPI_COMM_NULL) ? MPI_COMM_WORLD : comm;
-    MPI_Comm_rank(c, &rank);
+    pfc::mpi::throw_on_mpi_error(MPI_Comm_rank(c, &rank), "nancheck: MPI_Comm_rank");
     std::cerr << "NaNs detected on process " << rank << " at " << filename << ":"
               << line << ". Aborting MPI application." << '\n';
     MPI_Abort(c, 1);
