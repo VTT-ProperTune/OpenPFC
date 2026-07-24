@@ -357,6 +357,9 @@ inline void AutoTuner::save_cache(const std::string& filepath) {
   j["kernels"] = kernels_json;
 
   std::ofstream file(filepath);
+  if (!file.is_open()) {
+    throw std::runtime_error("Cannot open cache file: " + filepath);
+  }
   file << j.dump(2);
 }
 
