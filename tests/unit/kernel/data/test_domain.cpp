@@ -3,6 +3,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <sstream>
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp> // cross-check numerical parity with World
@@ -113,4 +114,76 @@ TEST_CASE("Domain::get_origin(d, i) returns per-axis origin", "[domain][unit]") 
   REQUIRE(domain::get_origin(e, 1) == 2.0);
   REQUIRE(domain::get_origin(e, 2) == 3.0);
   REQUIRE_THROWS_AS(domain::get_origin(e, 3), std::out_of_range);
+}
+
+TEST_CASE("Domain equality operators", "[domain][unit]") {
+  using pfc::Domain;
+  const Int3 size{10, 20, 30};
+  const Real3 spacing{0.5, 1.0, 2.0};
+  const Real3 origin{1.0, 2.0, 3.0};
+  const Bool3 periodic{true, false, true};
+
+  const Domain d1{size, spacing, origin, periodic};
+  const Domain d2{size, spacing, origin, periodic};
+
+  SECTION("identical domains are equal") {
+    REQUIRE(d1 == d2);
+    REQUIRE_FALSE(d1 != d2);
+  }
+
+  SECTION("different sizes are not equal") {
+    const Int3 diff_size{11, 20, 30};
+    const Domain d3{diff_size, spacing, origin, periodic};
+    REQUIRE_FALSE(d1 == d3);
+    REQUIRE(d1 != d3);
+  }
+
+  SECTION("different spacing are not equal") {
+    const Real3 diff_spacing{0.6, 1.0, 2.0};
+    const Domain d3{size, diff_spacing, origin, periodic};
+    REQUIRE_FALSE(d1 == d3);
+    REQUIRE(d1 != d3);
+  }
+
+  SECTION("different origins are not equal") {
+    const Real3 diff_origin{1.1, 2.0, 3.0};
+    const Domain d3{size, spacing, diff_origin, periodic};
+    REQUIRE_FALSE(d1 == d3);
+    REQUIRE(d1 != d3);
+  }
+
+  SECTION("different periodicity are not equal") {
+    const Bool3 diff_periodic{false, false, true};
+    const Domain d3{size, spacing, origin, diff_periodic};
+    REQUIRE_FALSE(d1 == d3);
+    REQUIRE(d1 != d3);
+  }
+}
+
+TEST_CASE("Domain streaming operator", "[domain][unit]") {
+  using pfc::Domain;
+  const Int3 size{10, 20, 30};
+  const Real3 spacing{0.5, 1.0, 2.0};
+  const Real3 origin{1.0, 2.0, 3.0};
+  const Bool3 periodic{true, false, true};
+
+  const Domain d{size, spacing, origin, periodic};
+
+  std::ostringstream oss;
+  oss << d;
+
+  const std::string output = oss.str();
+
+  SECTION("streaming produces non-empty output") {
+    REQUIRE_FALSE(output.empty());
+  }
+
+  SECTION("output contains identifying information") {
+    // Check for domain marker or component keywords
+    REQUIRE((output.find("Domain") != std::string::npos ||
+             output.find("size") != std::string::npos ||
+             output.find("spacing") != std::string::npos ||
+             output.find("origin") != std::string::npos ||
+             output.find("periodic") != std::string::npos));
+  }
 }
