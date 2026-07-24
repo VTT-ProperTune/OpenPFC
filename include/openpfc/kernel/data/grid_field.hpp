@@ -28,16 +28,25 @@
  * the legacy container zoo (and that alias) is deleted, this collapses into
  * `pfc::Field` in `kernel/data/field.hpp`.
  *
- * Residency tracking (mirror_host/mirror_device + validity flags) lands in
- * M2.2; this file is the storage + layout + iteration core only.
+ * Residency tracking (M2.2): a device-backed field (device `MemorySpace`) also
+ * owns a host mirror and a `Residency` (residency.hpp) recording which side is
+ * current. `with_host_view(fn)` brackets host access (pulling device->host when
+ * stale), `sync_to_device()` pushes host->device before a device kernel, and
+ * `note_device_write()` records a device-side write. For a host-space field the
+ * buffer is the host data and these collapse to no-ops. This is the framework
+ * residency protocol that replaces the per-app `m_cpu_buffer_valid` +
+ * `sync_*` hacks (Audit §4.1).
  */
 
 #include <array>
 #include <cstddef>
 #include <stdexcept>
+#include <type_traits>
+#include <vector>
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/residency.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
@@ -64,6 +73,9 @@ public:
   using backend_tag = pfc::memory_space_to_backend_t<MemorySpace>;
   using storage_type = pfc::core::DataBuffer<backend_tag, T>;
 
+  /// True when this field's memory space is host-accessible (no device mirror).
+  static constexpr bool is_host_space = std::is_same_v<MemorySpace, pfc::HostSpace>;
+
   Field() = default;
 
   /**
@@ -73,7 +85,14 @@ public:
    */
   Field(const pfc::Domain &domain, const pfc::Box3i &owned_box, int halo_width = 0)
       : m_domain(domain), m_box(owned_box), m_halo(halo_width),
-        m_buffer(padded_volume_(owned_box, halo_width)) {}
+        m_buffer(padded_volume_(owned_box, halo_width)) {
+    if constexpr (!is_host_space) {
+      // Device-backed field: seed on the host mirror (ICs land there), push to
+      // the device on first device use. See residency.hpp / Audit §4.1.
+      m_residency = Residency::device_backed();
+      m_host_mirror.assign(m_buffer.size(), T{});
+    }
+  }
 
   // ---- storage ----------------------------------------------------------
   T *data() noexcept { return m_buffer.data(); }
@@ -148,11 +167,53 @@ public:
   }
 
   /// Fill every owned cell by sampling `fn(x, y, z)` at its physical coords.
+  /// A host-side write, so the device copy (if any) is marked stale.
   template <typename Fn> void apply(Fn &&fn) {
     for_each_owned([&](int i, int j, int k) {
       const auto c = coords(i, j, k);
       (*this)(i, j, k) = fn(c[0], c[1], c[2]);
     });
+    m_residency.note_host_write();
+  }
+
+  // ---- residency (M2.2) -------------------------------------------------
+  /// Host/device coherence state (see residency.hpp).
+  const Residency &residency() const noexcept { return m_residency; }
+
+  /// Record that a device kernel wrote the device buffer (host mirror stale).
+  void note_device_write() noexcept { m_residency.note_device_write(); }
+
+  /**
+   * @brief Push the host mirror to the device buffer when the device copy is
+   *        stale. No-op for a host-space field. Call before a device kernel
+   *        reads this field -- the sync the audit-4.1 bug omitted.
+   */
+  void sync_to_device() {
+    if constexpr (!is_host_space) {
+      if (m_residency.device_needs_refresh()) {
+        m_buffer.copy_from_host(m_host_mirror.data(), m_host_mirror.size());
+        m_residency.note_synced();
+      }
+    }
+  }
+
+  /**
+   * @brief Bracket a host-side access. Ensures the host data is current
+   *        (pulling device->host for a device field), invokes
+   *        `fn(T* data, std::size_t size)` over the padded host buffer, then
+   *        marks the host side authoritative (device copy stale).
+   */
+  template <typename Fn> void with_host_view(Fn &&fn) {
+    if constexpr (is_host_space) {
+      fn(m_buffer.data(), m_buffer.size());
+    } else {
+      if (m_residency.host_needs_refresh()) {
+        m_buffer.copy_to_host(m_host_mirror.data(), m_host_mirror.size());
+        m_residency.note_synced();
+      }
+      fn(m_host_mirror.data(), m_host_mirror.size());
+    }
+    m_residency.note_host_write();
   }
 
 private:
@@ -170,6 +231,9 @@ private:
   pfc::Box3i m_box{};
   int m_halo{0};
   storage_type m_buffer{};
+  Residency m_residency{Residency::host_only()};
+  // Host mirror for a device-backed field; stays empty for a host-space field.
+  std::vector<T> m_host_mirror{};
 };
 
 } // namespace pfc::data

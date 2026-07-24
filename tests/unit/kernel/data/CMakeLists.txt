@@ -11,6 +11,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_field.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_grid_field.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_multi_index.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_residency.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_strong_types.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_world.cpp

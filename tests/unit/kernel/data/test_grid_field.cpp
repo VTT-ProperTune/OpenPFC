@@ -115,3 +115,28 @@ TEST_CASE("Field: rejects a negative halo or inconsistent box",
   REQUIRE_THROWS_AS(data::Field<double>(domain::create({4, 4, 4}), bad, 0),
                     std::invalid_argument);
 }
+
+TEST_CASE("Field: a host-space field is one-sided and needs no transfer",
+          "[grid_field][residency][unit]") {
+  data::Field<double> f(domain::create({4, 4, 4}),
+                        Box3i::from_bounds({0, 0, 0}, {3, 3, 3}), 0);
+  REQUIRE_FALSE(f.residency().two_sided());
+  REQUIRE(f.residency().host_valid());
+  REQUIRE_FALSE(f.residency().host_needs_refresh());
+  REQUIRE_FALSE(f.residency().device_needs_refresh());
+}
+
+TEST_CASE("Field: with_host_view brackets host access on a host-space field",
+          "[grid_field][residency][unit]") {
+  data::Field<double> f(domain::create({4, 4, 4}),
+                        Box3i::from_bounds({0, 0, 0}, {3, 3, 3}), 0);
+  bool called = false;
+  f.with_host_view([&](double *data, std::size_t n) {
+    called = true;
+    REQUIRE(n == f.size());
+    data[0] = 42.0; // write through the host buffer
+  });
+  REQUIRE(called);
+  REQUIRE(f(0, 0, 0) == 42.0); // the write is visible through the field
+  REQUIRE(f.residency().host_valid());
+}
