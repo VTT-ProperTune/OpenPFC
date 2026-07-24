@@ -16,6 +16,7 @@
 #include <cmath>
 #include <cstddef>
 #include <mpi.h>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <vector>
 
 namespace pfc::profiling {
@@ -86,7 +87,9 @@ inline RankStats reduce_scalar_across_ranks(MPI_Comm comm, double local_value,
  */
 inline double reduce_max_to_root(MPI_Comm comm, double local_value, int root = 0) {
   double out = 0.0;
-  MPI_Reduce(&local_value, &out, 1, MPI_DOUBLE, MPI_MAX, root, comm);
+  pfc::mpi::throw_on_mpi_error(
+      ::MPI_Reduce(&local_value, &out, 1, MPI_DOUBLE, MPI_MAX, root, comm),
+      "MPI_Reduce in reduce_max_to_root (profiling statistics aggregation)");
   return out;
 }
 
