@@ -12,6 +12,12 @@ milestones M0–M12). 0.2.0 will be released only after the Gen-1 architecture a
 all temporary migration adapters are removed. Expect breaking API changes; 0.1.x
 source compatibility is explicitly not a goal.
 
+### Added
+
+- `pfc::Domain` — canonical coordinate/geometry type replacing the templated `World`
+- `pfc::Box3i` — single canonical inclusive integer index box
+- `pfc::data::Field<T, MemorySpace>` — canonical owning field container unifying LocalField/PaddedBrick
+
 ## [0.1.5] - 2026-07-23
 
 Final stable 0.1.x release: a correctness and packaging pass ("Pre-M0
