@@ -68,7 +68,7 @@ using pfc::types::Real3;
  *
  * @param periodic Per-axis periodicity flags (default: all periodic). Stored in
  *        the coordinate system and reported by `world::get_periodic` /
- *        `csys::is_periodic`.
+ *        `world::is_periodic`.
  *
  * @see GridSize, PhysicalOrigin, GridSpacing in strong_types.hpp
  */
