@@ -10,6 +10,8 @@
 #include <mpi.h>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_exchange.hpp>
 
@@ -49,7 +51,9 @@ TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
     field[i] = fill;
   }
 
-  HaloExchanger<double> exchanger(decomp, rank, 1, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  HaloExchanger<double> exchanger(subdomain_box, domain, decomp, rank, 1, MPI_COMM_WORLD);
 
   exchanger.exchange_halos(field.data(), field.size());
 

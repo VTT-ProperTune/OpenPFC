@@ -17,6 +17,8 @@
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
@@ -62,7 +64,9 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
   field::PaddedBrick<double> v(decomp, rank, hw);
   field::PaddedBrick<double> lap(decomp, rank, hw);
 
-  PaddedHaloExchanger<double> halo_u(decomp, rank, hw, MPI_COMM_WORLD, 0);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo_u(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD, 0);
 
   const double inv_den = 1.0 / static_cast<double>(stencil.denom);
   const double sx = model.inv_dx2 * inv_den;

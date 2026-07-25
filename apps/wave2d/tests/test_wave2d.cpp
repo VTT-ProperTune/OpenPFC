@@ -15,6 +15,8 @@
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
@@ -98,7 +100,9 @@ TEST_CASE("fill_y_physical_ghosts_padded Dirichlet mirrors", "[wave2d][bc]") {
   pfc::field::PaddedBrick<double> u(decomp, rank, hw);
   u.apply([&](double, double, double) { return 0.0; });
   u(0, 0, 0) = 1.25;
-  pfc::PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  pfc::PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD);
   halo.exchange_halos(u.data(), u.size());
   wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny,
                                         0.0);
@@ -127,7 +131,9 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
   pfc::field::PaddedBrick<double> u_pad(decomp, rank, hw);
   pfc::field::PaddedBrick<double> v_pad(decomp, rank, hw);
   pfc::field::PaddedBrick<double> lap_pad(decomp, rank, hw);
-  pfc::PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  pfc::PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD);
 
   const double xc = 0.5 * static_cast<double>(Nx - 1);
   const double yc = 0.5 * static_cast<double>(Ny - 1);

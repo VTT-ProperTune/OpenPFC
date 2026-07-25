@@ -12,6 +12,8 @@
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
@@ -68,7 +70,9 @@ TEST_CASE("5-point XY Laplacian of constant field is zero (nz=1)", "[MPI][fd][xy
   std::vector<double> lap(nlocal, 0.0);
 
   constexpr int halo_width = 1;
-  HaloExchanger<double> exchanger(decomp, rank, halo_width, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  HaloExchanger<double> exchanger(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD);
   exchanger.exchange_halos(u.data(), u.size());
 
   const double inv = 1.0;

@@ -10,6 +10,8 @@
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
@@ -46,7 +48,9 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
   std::vector<double> lap(nlocal, 0.0);
 
   constexpr int halo_width = 1;
-  HaloExchanger<double> exchanger(decomp, rank, halo_width, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  HaloExchanger<double> exchanger(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD);
   exchanger.exchange_halos(u.data(), u.size());
 
   const double inv = 1.0;
@@ -92,8 +96,10 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
   }
 
   constexpr int halo_width = 1;
-  HaloExchanger<double> hex(decomp, rank, halo_width, MPI_COMM_WORLD);
-  PersistentHaloExchanger<double> pex(decomp, rank, halo_width, MPI_COMM_WORLD,
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  HaloExchanger<double> hex(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD);
+  PersistentHaloExchanger<double> pex(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD,
                                       b.data());
 
   hex.exchange_halos(a.data(), a.size());
