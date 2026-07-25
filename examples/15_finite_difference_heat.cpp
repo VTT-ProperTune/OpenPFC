@@ -6,8 +6,8 @@
 #include <mpi.h>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
@@ -50,12 +50,16 @@ int main(int argc, char *argv[]) {
   // second-order Laplacian.
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
-  auto world = world::uniform(N, dx);
+  // Create decomposition from domain configuration
+  auto world = world::create(pfc::GridSize({N, N, N}),
+                             pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                             pfc::GridSpacing({dx, dx, dx}));
   auto decomp = decomposition::create(world, nproc);
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  auto local_lower = world::get_lower(local_world);
+  // Get local subdomain box using decomposition::local_box (Domain-based API)
+  auto local_box = decomposition::local_box(decomp, rank);
+  auto local_lower = local_box.low;
+  auto local_size = local_box.size;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];

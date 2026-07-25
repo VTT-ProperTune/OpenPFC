@@ -5,7 +5,7 @@
 #include <iostream>
 #include <mpi.h>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
   constexpr int n_steps = 40;
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
-  // Build spectral stack (World + Decomposition + FFT + inbox-sized LocalField)
+  // Build spectral stack (Domain + Decomposition + FFT + inbox-sized LocalField)
   pfc::sim::stacks::SpectralCpuStack stack(
     pfc::GridSize{{N, N, N}},
     pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},

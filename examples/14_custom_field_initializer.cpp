@@ -20,7 +20,7 @@
  *
  * ## Integration with OpenPFC
  *
- * For full integration with DiscreteField/World APIs using ADL, see:
+ * For full integration with DiscreteField/Domain APIs using ADL, see:
  * - docs/extending_openpfc/adl_extension_patterns.md
  * - examples/17_custom_coordinate_system.cpp
  *
@@ -224,7 +224,7 @@ int main() {
 
   std::cout << "✅ All examples completed successfully!\n";
   std::cout << "\n";
-  std::cout << "📖 For full integration with DiscreteField/World using ADL, see:\n";
+  std::cout << "📖 For full integration with DiscreteField/Domain using ADL, see:\n";
   std::cout << "   - docs/extending_openpfc/adl_extension_patterns.md\n";
   std::cout << "   - examples/17_custom_coordinate_system.cpp\n";
   std::cout << "\n";

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <mpi.h>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
   // Stability: dt <= dx^2 / (6*D) for explicit Euler in 3D
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
-  // Build FD stack (World + Decomposition + halo-aware LocalField + exchanger)
+  // Build FD stack (Domain + Decomposition + halo-aware LocalField + exchanger)
   pfc::sim::stacks::FdCpuStack stack(
     pfc::GridSize{{N, N, N}},
     pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
