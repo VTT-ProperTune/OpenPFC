@@ -564,3 +564,56 @@ template <class G>
 }
 
 } // namespace pfc::field
+
+// Box3i+Domain factory functions for gradient evaluators
+#include <array>
+#include <memory>
+
+namespace pfc::gradient {
+
+template <class G>
+using GradientEvaluatorPtr = std::shared_ptr<G>;
+
+// FD gradient factory functions using Box3i and Domain
+//
+// Note: These are convenience functions that create FDGradient evaluators with
+// default settings. For full control over field_data, halo_width, and order,
+// use the FDGradient constructor directly or the pfc::field::create() family.
+//
+// The returned gradient evaluator requires valid field_data to perform gradient
+// computations. These factory functions construct a default-configured evaluator
+// that can be assigned field data later.
+
+template <class G>
+[[nodiscard]] inline GradientEvaluatorPtr<pfc::gradient::FDGradient<G>>
+make_fd_gradient(const pfc::Box3i& region) {
+  return std::make_shared<pfc::gradient::FDGradient<G>>(
+      /* field_data */ static_cast<const double*>(nullptr),
+      region.size[0], region.size[1], region.size[2],
+      /* dx, dy, dz */ 1.0, 1.0, 1.0,
+      /* halo_width */ 1, /* order */ 2);
+}
+
+template <class G>
+[[nodiscard]] inline GradientEvaluatorPtr<pfc::gradient::FDGradient<G>>
+make_fd_gradient(const pfc::Box3i& region, const pfc::Domain& domain) {
+  const auto& sp = pfc::domain::get_spacing(domain);
+  return std::make_shared<pfc::gradient::FDGradient<G>>(
+      /* field_data */ static_cast<const double*>(nullptr),
+      region.size[0], region.size[1], region.size[2],
+      sp[0], sp[1], sp[2],
+      /* halo_width */ 1, /* order */ 2);
+}
+
+template <class G>
+[[nodiscard]] inline GradientEvaluatorPtr<pfc::gradient::FDGradient<G>>
+make_fd_gradient(const pfc::Box3i& region, const pfc::Domain& domain,
+                 const std::array<double, 3>& spacing) {
+  return std::make_shared<pfc::gradient::FDGradient<G>>(
+      /* field_data */ static_cast<const double*>(nullptr),
+      region.size[0], region.size[1], region.size[2],
+      spacing[0], spacing[1], spacing[2],
+      /* halo_width */ 1, /* order */ 2);
+}
+
+} // namespace pfc::gradient

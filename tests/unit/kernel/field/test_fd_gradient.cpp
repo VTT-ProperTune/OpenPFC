@@ -352,3 +352,63 @@ TEST_CASE("halo_preparation and prepare identity",
   grad.prepare();
   REQUIRE(callback_invoked == 3);
 }
+
+// Box3i+Domain factory function tests
+TEST_CASE("make_fd_gradient with Box3i only creates default-configured evaluator",
+          "[kernel][field][fd_gradient][box3i_domain]") {
+  using namespace pfc;
+  Box3i region = Box3i::from_bounds({0, 0, 0}, {9, 9, 9});
+  
+  auto evaluator = pfc::gradient::make_fd_gradient<OnlyX>(region);
+  
+  REQUIRE(evaluator != nullptr);
+  REQUIRE(evaluator->imin() == 1);  // Default halo_width=1
+  REQUIRE(evaluator->imax() == 9);
+  REQUIRE(evaluator->jmin() == 1);
+  REQUIRE(evaluator->jmax() == 9);
+  REQUIRE(evaluator->kmin() == 1);
+  REQUIRE(evaluator->kmax() == 9);
+}
+
+TEST_CASE("make_fd_gradient with Box3i and Domain uses Domain spacing",
+          "[kernel][field][fd_gradient][box3i_domain]") {
+  using namespace pfc;
+  Box3i region = Box3i::from_bounds({0, 0, 0}, {7, 7, 7});
+  auto world = world::create(GridSize({8, 8, 8}),
+                              PhysicalOrigin({0.0, 0.0, 0.0}),
+                              GridSpacing({2.0, 3.0, 4.0}));
+  auto decomp = decomposition::create(world, 1);
+  Domain domain = decomposition::domain(decomp);
+  
+  auto evaluator = pfc::gradient::make_fd_gradient<OnlyX>(region, domain);
+  
+  REQUIRE(evaluator != nullptr);
+  REQUIRE(evaluator->imin() == 1);
+  REQUIRE(evaluator->imax() == 7);
+  REQUIRE(evaluator->jmin() == 1);
+  REQUIRE(evaluator->jmax() == 7);
+  REQUIRE(evaluator->kmin() == 1);
+  REQUIRE(evaluator->kmax() == 7);
+}
+
+TEST_CASE("make_fd_gradient with Box3i, Domain, and custom spacing",
+          "[kernel][field][fd_gradient][box3i_domain]") {
+  using namespace pfc;
+  Box3i region = Box3i::from_bounds({0, 0, 0}, {11, 11, 11});
+  auto world = world::create(GridSize({12, 12, 12}),
+                              PhysicalOrigin({0.0, 0.0, 0.0}),
+                              GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(world, 1);
+  Domain domain = decomposition::domain(decomp);
+  std::array<double, 3> custom_spacing{1.5, 2.0, 2.5};
+  
+  auto evaluator = pfc::gradient::make_fd_gradient<OnlyXX>(region, domain, custom_spacing);
+  
+  REQUIRE(evaluator != nullptr);
+  REQUIRE(evaluator->imin() == 1);
+  REQUIRE(evaluator->imax() == 11);
+  REQUIRE(evaluator->jmin() == 1);
+  REQUIRE(evaluator->jmax() == 11);
+  REQUIRE(evaluator->kmin() == 1);
+  REQUIRE(evaluator->kmax() == 11);
+}
