@@ -32,6 +32,7 @@
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_exchange.hpp>
@@ -183,7 +184,9 @@ TEST_CASE("PaddedHaloExchanger Axes2D leaves ±Z halos untouched on nz=1 slab",
   clear_halo(u, sentinel);
   fill_owned(u, 7.0);
 
-  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD,
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD,
                                    halo::presets::Axes2D());
   REQUIRE(halo.num_directions() == 4);
   halo.exchange_halos(u.data(), u.size());
@@ -228,9 +231,11 @@ TEST_CASE("PaddedHaloExchanger Axes2D matches Axes3D in XY (two-rank X-split)",
   fill_owned(u_axes2d, mine);
   fill_owned(u_axes3d, mine);
 
-  PaddedHaloExchanger<double> halo2d(decomp, rank, hw, MPI_COMM_WORLD,
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo2d(subdomain_box, domain, rank, hw, MPI_COMM_WORLD,
                                      halo::presets::Axes2D(), /*base_tag=*/0);
-  PaddedHaloExchanger<double> halo3d(decomp, rank, hw, MPI_COMM_WORLD,
+  PaddedHaloExchanger<double> halo3d(subdomain_box, domain, rank, hw, MPI_COMM_WORLD,
                                      halo::presets::Axes3D(),
                                      /*base_tag=*/100);
 
@@ -285,7 +290,9 @@ TEST_CASE("HaloDirectionSelector overrides the uniform direction set",
 
   // The uniform fallback is never used because `selector` is always called
   // for the local rank; pass any valid set as the fallback.
-  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD,
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo(subdomain_box, domain, rank, hw, MPI_COMM_WORLD,
                                    halo::presets::Axes3D(), /*base_tag=*/0,
                                    selector);
   if (rank == 0) {
@@ -314,8 +321,10 @@ TEST_CASE("Mismatched HaloDirectionSelector throws at construction",
   };
 
   const int hw = 1;
+  auto domain = pfc::decomposition::domain(decomp);
+  auto subdomain_box = pfc::decomposition::local_box(decomp, rank);
   REQUIRE_THROWS_AS(
-      (PaddedHaloExchanger<double>(decomp, rank, hw, MPI_COMM_WORLD,
+      (PaddedHaloExchanger<double>(subdomain_box, domain, rank, hw, MPI_COMM_WORLD,
                                    halo::presets::Axes3D(), /*base_tag=*/0,
                                    selector)),
       std::runtime_error);

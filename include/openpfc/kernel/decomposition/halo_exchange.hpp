@@ -22,6 +22,8 @@
 #include <mpi.h>
 #include <vector>
 
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -51,53 +53,49 @@ public:
   using Int3 = pfc::types::Int3;
 
   /**
-   * @brief Construct driver and build patterns (expensive, do once).
+   * @brief Construct with explicit Box3i subdomain bounds and Domain reference.
+   *        This is the preferred interface for M1+ code.
    *
-   * Defaults to the historical 6-face axis-aligned exchange (`Axes3D()`).
-   *
-   * @param decomp     Decomposition (must outlive this object).
-   * @param rank       Current MPI rank.
-   * @param halo_width Number of halo layers (e.g. 1 for 3-point stencil).
-   * @param comm       MPI communicator.
-   * @param base_tag   Base tag for messages (direction index added).
+   * @param subdomain_box Local subdomain box (bounds for this rank).
+   * @param domain        Global domain (for periodicity/spacing metadata).
+   * @param decomp        Decomposition for neighbor calculation (must outlive this object).
+   * @param rank          This MPI rank.
+   * @param halo_width    Number of halo layers (e.g. 1 for 3-point stencil).
+   * @param comm          MPI communicator.
+   * @param base_tag      Base tag for messages (direction index added).
    */
-  HaloExchanger(const decomposition::Decomposition &decomp, int rank, int halo_width,
+  HaloExchanger(const Box3i &subdomain_box, const Domain &domain,
+                const decomposition::Decomposition &decomp, int rank, int halo_width,
                 MPI_Comm comm, int base_tag = 0)
-      : HaloExchanger(decomp, rank, halo_width, comm, halo::presets::Axes3D(),
-                      base_tag, halo::HaloDirectionSelector{}) {}
+      : HaloExchanger(subdomain_box, domain, decomp, rank, halo_width, comm,
+                      halo::presets::Axes3D(), base_tag, halo::HaloDirectionSelector{}) {}
 
   /**
-   * @brief Construct driver with a user-selected halo direction set.
+   * @brief Construct with a user-selected halo direction set using explicit Box3i + Domain.
    *
-   * Restricts the active 6-face slot list to the directions in `dirs` (the
-   * fast zero-copy face path is used iff `dirs` covers the full 6 axis
-   * faces). Non-axis directions in `dirs` are tolerated but ignored — this
-   * exchanger is a face-only driver. For mixed face/edge/corner exchanges
-   * use `FullPaddedDeviceHalo` (CUDA) or build a custom exchanger.
-   *
-   * If `selector` is provided, the active set for this rank is
-   * `selector(rank)`; otherwise the uniform `dirs` is used.
-   *
-   * @param decomp     Decomposition (must outlive this object).
-   * @param rank       Current MPI rank.
-   * @param halo_width Number of halo layers (e.g. 1 for 3-point stencil).
-   * @param comm       MPI communicator.
-   * @param dirs       Direction set (defaults to `Axes3D()` for back-compat).
-   * @param base_tag   Base tag for messages (direction index added).
-   * @param selector   Optional per-rank override of the direction set.
+   * @param subdomain_box Local subdomain box (bounds for this rank).
+   * @param domain        Global domain (for periodicity/spacing metadata).
+   * @param decomp        Decomposition for neighbor calculation (must outlive this object).
+   * @param rank          This MPI rank.
+   * @param halo_width    Number of halo layers (e.g. 1 for 3-point stencil).
+   * @param comm          MPI communicator.
+   * @param dirs          Direction set (defaults to `Axes3D()` for back-compat).
+   * @param base_tag      Base tag for messages (direction index added).
+   * @param selector      Optional per-rank override of the direction set.
    */
-  HaloExchanger(const decomposition::Decomposition &decomp, int rank, int halo_width,
+  HaloExchanger(const Box3i &subdomain_box, const Domain &domain,
+                const decomposition::Decomposition &decomp, int rank, int halo_width,
                 MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
                 halo::HaloDirectionSelector selector = {})
-      : m_decomp(decomp), m_rank(rank), m_halo_width(halo_width), m_comm(comm),
-        m_base_tag(base_tag),
-        m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
+      : m_subdomain_box(subdomain_box), m_domain(domain), m_decomp(decomp),
+        m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
+        m_dirs(halo::resolve_direction_set(dirs, selector, rank)), m_use_box3i_domain(true) {
     halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
 
     auto patterns = halo::create_halo_patterns<backend::CpuTag>(
         m_decomp, m_rank, halo::Connectivity::Faces, m_halo_width);
 
-    auto local_size = decomposition::local_box(m_decomp, m_rank).size;
+    auto local_size = m_subdomain_box.size;
     int nx = local_size[0];
     int ny = local_size[1];
     int nz = local_size[2];
@@ -133,6 +131,55 @@ public:
 
     m_requests.resize(2 * m_directions.size());
   }
+
+  /**
+   * @brief Construct driver and build patterns (expensive, do once).
+   *
+   * Defaults to the historical 6-face axis-aligned exchange (`Axes3D()`).
+   *
+   * @param decomp     Decomposition (must outlive this object).
+   * @param rank       Current MPI rank.
+   * @param halo_width Number of halo layers (e.g. 1 for 3-point stencil).
+   * @param comm       MPI communicator.
+   * @param base_tag   Base tag for messages (direction index added).
+   *
+   * @deprecated Use explicit Box3i + Domain constructor: HaloExchanger(box, domain, decomp, rank, ...)
+   */
+  [[deprecated("Use explicit Box3i + Domain constructor: HaloExchanger(box, domain, decomp, rank, ...)")]]
+  HaloExchanger(const decomposition::Decomposition &decomp, int rank, int halo_width,
+                MPI_Comm comm, int base_tag = 0)
+      : HaloExchanger(decomposition::local_box(decomp, rank), decomposition::domain(decomp),
+                      decomp, rank, halo_width, comm, halo::presets::Axes3D(),
+                      base_tag, halo::HaloDirectionSelector{}) {}
+
+  /**
+   * @brief Construct driver with a user-selected halo direction set.
+   *
+   * Restricts the active 6-face slot list to the directions in `dirs` (the
+   * fast zero-copy face path is used iff `dirs` covers the full 6 axis
+   * faces). Non-axis directions in `dirs` are tolerated but ignored — this
+   * exchanger is a face-only driver. For mixed face/edge/corner exchanges
+   * use `FullPaddedDeviceHalo` (CUDA) or build a custom exchanger.
+   *
+   * If `selector` is provided, the active set for this rank is
+   * `selector(rank)`; otherwise the uniform `dirs` is used.
+   *
+   * @param decomp     Decomposition (must outlive this object).
+   * @param rank       Current MPI rank.
+   * @param halo_width Number of halo layers (e.g. 1 for 3-point stencil).
+   * @param comm       MPI communicator.
+   * @param dirs       Direction set (defaults to `Axes3D()` for back-compat).
+   * @param base_tag   Base tag for messages (direction index added).
+   * @param selector   Optional per-rank override of the direction set.
+   *
+   * @deprecated Use explicit Box3i + Domain constructor: HaloExchanger(box, domain, decomp, rank, ...)
+   */
+  [[deprecated("Use explicit Box3i + Domain constructor: HaloExchanger(box, domain, decomp, rank, ...)")]]
+  HaloExchanger(const decomposition::Decomposition &decomp, int rank, int halo_width,
+                MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
+                halo::HaloDirectionSelector selector = {})
+      : HaloExchanger(decomposition::local_box(decomp, rank), decomposition::domain(decomp),
+                      decomp, rank, halo_width, comm, dirs, base_tag, selector) {}
 
   /**
    * @brief Run one halo exchange (zero-copy for faces: Irecv then Isend, wait).
@@ -275,6 +322,11 @@ private:
     profiling::record_time(profiling::kProfilingRegionCommunication,
                            MPI_Wtime() - _pfc_t0);
   }
+
+  // Box3i + Domain interface (preferred for M1+)
+  Box3i m_subdomain_box;
+  Domain m_domain;
+  bool m_use_box3i_domain = false; // True when constructed via Box3i+Domain path
 
   const decomposition::Decomposition &m_decomp;
   int m_rank;

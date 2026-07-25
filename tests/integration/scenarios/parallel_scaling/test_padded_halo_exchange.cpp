@@ -15,6 +15,7 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
@@ -70,7 +71,9 @@ TEST_CASE("PaddedHaloExchanger: single-rank periodic wrap fills all 6 halos",
   field::PaddedBrick<double> u(decomp, rank, hw);
   fill_owned(u, 7.0);
 
-  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD);
   halo.exchange_halos(u.data(), u.size());
 
   const bool halos_match =
@@ -96,7 +99,9 @@ TEST_CASE("PaddedHaloExchanger: two-rank X-split fills +X / -X with neighbour",
   const double other = static_cast<double>(1 - rank);
   fill_owned(u, mine);
 
-  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD);
   halo.exchange_halos(u.data(), u.size());
 
   bool halos_match = true;
@@ -126,7 +131,9 @@ TEST_CASE("PaddedHaloExchanger: non-blocking start/finish overlaps with inner wo
   const double other = static_cast<double>(1 - rank);
   fill_owned(u, mine);
 
-  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD);
   halo.start_halo_exchange(u.data(), u.size());
 
   double inner_sum = 0.0;
@@ -160,7 +167,9 @@ TEST_CASE("PaddedHaloExchanger: 2x2x1 grid fills X and Y with right neighbours",
   const double mine = static_cast<double>(rank);
   fill_owned(u, mine);
 
-  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD);
   halo.exchange_halos(u.data(), u.size());
 
   const int rank_x = rank % 2;
@@ -200,7 +209,9 @@ TEST_CASE("PaddedHaloExchanger: Axes2D direction set skips ±Z halos",
       for (int i = -hw; i < u.nx() + hw; ++i) u(i, j, k) = sentinel;
   fill_owned(u, 7.0);
 
-  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD,
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD,
                                    pfc::halo::presets::Axes2D());
   REQUIRE(halo.num_directions() == 4);
   halo.exchange_halos(u.data(), u.size());
@@ -282,7 +293,9 @@ TEST_CASE("PaddedHaloExchanger: unbound start() throws std::logic_error",
   auto world = world::create(GridSize({4, 4, 4}));
   auto decomp = decomposition::create(world, 1);
 
-  PaddedHaloExchanger<double> halo(decomp, rank, /*hw=*/1, MPI_COMM_WORLD);
+  auto domain = decomposition::domain(decomp);
+  auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, /*hw=*/1, MPI_COMM_WORLD);
   REQUIRE_FALSE(halo.is_bound());
   REQUIRE_THROWS_AS(halo.start(), std::logic_error);
   REQUIRE_THROWS_AS(halo.finish(), std::logic_error);
