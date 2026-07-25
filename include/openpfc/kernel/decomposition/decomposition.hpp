@@ -496,6 +496,53 @@ inline int get_num_domains(const Decomposition &decomposition) noexcept {
   return decomposition.m_local_boxes.at(i);
 }
 
+// ---------------------------------------------------------------------------
+// Backward compatibility accessor (M1.3b): get_subworld implemented using
+// stored Box3i+Domain for legacy code that still expects World objects.
+// Note: get_subworlds() (vector accessor) was removed per M1.3b - use
+// local_box()/domain() accessors instead.
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Get a specific subdomain as World (backward compatibility)
+ *
+ * Returns a World object for the specified rank, constructed from the stored
+ * Box3i local box and Domain. This provides backward compatibility for code
+ * that expects World objects from decomposition.
+ *
+ * @param[in] decomposition The decomposition to query
+ * @param[in] rank The rank/subdomain index (0 to get_num_domains()-1)
+ * @return World object representing the subdomain's index space and coordinate system
+ * @throws std::out_of_range if rank is out of range
+ *
+ * @deprecated This compatibility function provides World objects for legacy code.
+ *             New code should use Box3i/Domain accessors: local_box() / domain().
+ *
+ * @see local_box() - direct Box3i access (preferred for new code)
+ * @see domain() - coordinate system access
+ *
+ * @example
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto world = world::create(GridSize({128, 128, 128}));
+ * auto decomp = decomposition::create(world, {2, 2, 1});
+ *
+ * // Legacy usage (still supported for compatibility)
+ * const World &subworld = decomposition::get_subworld(decomp, 0);
+ *
+ * // Preferred new usage (faster, no deprecated World)
+ * Box3i local_box = decomposition::local_box(decomp, 0);
+ * Domain coord_sys = decomposition::domain(decomp);
+ * ```
+ */
+[[nodiscard]] inline World
+get_subworld(const Decomposition &decomp, int rank) {
+  const Box3i &box = local_box(decomp, rank);
+  const Domain &dom = domain(decomp);
+  return World(box.low, box.high, dom);
+}
+
 } // namespace decomposition
 
 using Decomposition = decomposition::Decomposition;

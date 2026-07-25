@@ -161,13 +161,12 @@ void scenario_automatic_grid() {
     std::cout << "Product: " << grid[0] << " × " << grid[1] << " × " << grid[2]
               << " = " << (grid[0] * grid[1] * grid[2]) << "\n\n";
 
-    // Show subdomain sizes
-    auto subworlds = decomposition::get_subworlds(decomp);
+    // Show subdomain sizes (using Box3i/Domain accessors, not deprecated World vector)
     std::cout << "Subdomain sizes:\n";
     for (int i = 0; i < std::min(4, num_domains); ++i) {
-      auto sz = world::get_size(subworlds[i]);
-      std::cout << "  Rank " << i << ": [" << sz[0] << ", " << sz[1] << ", " << sz[2]
-                << "]\n";
+      auto box = decomposition::local_box(decomp, i);
+      std::cout << "  Rank " << i << ": [" << box.size[0] << ", " << box.size[1] << ", "
+                << box.size[2] << "]\n";
     }
     if (num_domains > 4) {
       std::cout << "  ... (total " << num_domains << " subdomains)\n";
