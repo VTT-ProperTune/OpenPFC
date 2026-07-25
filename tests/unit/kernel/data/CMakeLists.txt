@@ -2,20 +2,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Kernel data layer unit tests
-target_sources(openpfc-tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_arraynd.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_box3i.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_constants.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_discrete_field.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_domain.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_field.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_grid_field.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_grid_field_concepts.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_grid_field_semantics.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_multi_index.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_residency.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_strong_types.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_utils.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_world.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_world_strong_types.cpp
-)
+file(GLOB DATA_UNIT_TEST_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp)
+target_sources(openpfc-tests PRIVATE ${DATA_UNIT_TEST_SOURCES})
