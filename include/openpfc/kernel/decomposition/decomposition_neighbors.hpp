@@ -42,27 +42,27 @@ namespace pfc::decomposition {
  * @brief Get neighbor rank in a given direction
  *
  * Given a decomposition grid and current rank, returns the rank of the neighbor
- * in the specified direction. With periodic boundary conditions, every rank
- * has neighbors in all directions (wraps around the domain).
+ * in the specified direction. Respects per-axis periodicity from the Domain.
  *
  * @param decomp Decomposition object
+ * @param domain Domain object for per-axis periodicity information
  * @param rank Current rank (0 to num_domains-1)
  * @param direction Direction vector, e.g., {1,0,0} for +X, {-1,0,0} for -X
- * @return Neighbor rank (always valid with periodic boundaries)
+ * @return Neighbor rank, or -1 if no neighbor exists (non-periodic boundary)
  *
  * @example
  * ```cpp
  * auto decomp = decomposition::create(world, {2, 2, 2}); // 8 ranks in 2×2×2 grid
+ * auto domain = decomposition::domain(decomp);
  *
  * // Rank 0 in 2×2×2 grid: neighbors are 1 (+X), 2 (+Y), 4 (+Z)
- * int neighbor_x = get_neighbor_rank(decomp, 0, {1, 0, 0}); // Returns 1
- * int neighbor_y = get_neighbor_rank(decomp, 0, {0, 1, 0}); // Returns 2
- * int neighbor_z = get_neighbor_rank(decomp, 0, {0, 0, 1}); // Returns 4
- * int neighbor_nx = get_neighbor_rank(decomp, 0, {-1, 0, 0}); // Returns 1 (wraps to
- * rightmost)
+ * int neighbor_x = get_neighbor_rank(decomp, domain, 0, {1, 0, 0}); // Returns 1
+ * int neighbor_y = get_neighbor_rank(decomp, domain, 0, {0, 1, 0}); // Returns 2
+ * int neighbor_z = get_neighbor_rank(decomp, domain, 0, {0, 0, 1}); // Returns 4
+ * // With non-periodic X, crossing boundary returns -1 (no neighbor)
  * ```
  */
-inline int get_neighbor_rank(const Decomposition &decomp, int rank,
+inline int get_neighbor_rank(const Decomposition &decomp, const Domain &domain, int rank,
                              const Int3 &direction) {
   const auto &grid = get_grid(decomp);
   int num_domains = get_num_domains(decomp);
@@ -70,11 +70,6 @@ inline int get_neighbor_rank(const Decomposition &decomp, int rank,
   if (rank < 0 || rank >= num_domains) {
     return -1; // Invalid rank
   }
-
-  // Per-axis periodicity from the global Domain (M1.3): a non-periodic axis has
-  // no neighbor across its boundary (returns -1), whereas a periodic axis wraps.
-  // Default is all-periodic, so the historical torus behavior is unchanged.
-  const Bool3 &periodic = pfc::world::get_periodic(get_global_world(decomp));
 
   // Convert rank to 3D grid coordinates (x-fastest).
   const int rank_coord[3] = {rank % grid[0], (rank % (grid[0] * grid[1])) / grid[0],
@@ -84,7 +79,8 @@ inline int get_neighbor_rank(const Decomposition &decomp, int rank,
   for (int axis = 0; axis < 3; ++axis) {
     int c = rank_coord[axis] + direction[axis];
     if (c < 0 || c >= grid[axis]) {
-      if (!periodic[axis]) {
+      // Check per-axis periodicity using Domain::is_periodic(int axis)
+      if (!pfc::domain::is_periodic(domain, axis)) {
         return -1; // no neighbor across a non-periodic face
       }
       c = (c % grid[axis] + grid[axis]) % grid[axis]; // periodic wrap
@@ -95,6 +91,25 @@ inline int get_neighbor_rank(const Decomposition &decomp, int rank,
   // Convert neighbor coordinates back to rank.
   return neighbor_coord[2] * (grid[0] * grid[1]) + neighbor_coord[1] * grid[0] +
          neighbor_coord[0];
+}
+
+/**
+ * @brief Get neighbor rank in a given direction (backward-compatible overload)
+ *
+ * Given a decomposition grid and current rank, returns the rank of the neighbor
+ * in the specified direction. Extracts Domain from Decomposition for periodicity.
+ *
+ * @param decomp Decomposition object
+ * @param rank Current rank (0 to num_domains-1)
+ * @param direction Direction vector, e.g., {1,0,0} for +X, {-1,0,0} for -X
+ * @return Neighbor rank, or -1 if no neighbor exists (non-periodic boundary)
+ *
+ * @deprecated Prefer get_neighbor_rank(decomp, domain, rank, direction) for
+ *             explicit control over periodicity.
+ */
+inline int get_neighbor_rank(const Decomposition &decomp, int rank,
+                             const Int3 &direction) {
+  return get_neighbor_rank(decomp, domain(decomp), rank, direction);
 }
 
 /**
