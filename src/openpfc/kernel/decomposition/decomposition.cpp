@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <array>
 #include <heffte.h>
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <stdexcept>
@@ -103,7 +105,24 @@ void validate_split_world_ordering(const std::vector<World> &subs,
 
 Decomposition::Decomposition(const World &world, const Int3 &grid)
     : m_global_world(world), m_grid{grid[0], grid[1], grid[2]},
-      m_subworlds(split_world_heffte(world, grid)) {}
+      m_local_boxes(), m_domain() {
+  // Generate subworlds using HeFFte (kept for partitioning logic)
+  const std::vector<World> subworlds = split_world_heffte(world, grid);
+
+  // Extract Box3i from each subworld
+  m_local_boxes.reserve(subworlds.size());
+  for (const auto &subworld : subworlds) {
+    m_local_boxes.push_back(Box3i::from_bounds(
+        pfc::world::get_lower(subworld), pfc::world::get_upper(subworld)));
+  }
+
+  // Extract Domain from the global World
+  m_domain = pfc::domain::create(
+      pfc::GridSize(pfc::world::get_size(world)),
+      pfc::PhysicalOrigin(pfc::world::get_origin(world)),
+      pfc::GridSpacing(pfc::world::get_spacing(world)),
+      pfc::world::get_periodic(world));
+}
 
 [[nodiscard]] Decomposition create(const World &world, const Int3 &grid) {
   return Decomposition(world, grid);

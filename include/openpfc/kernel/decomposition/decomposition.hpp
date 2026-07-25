@@ -35,6 +35,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
@@ -157,9 +158,10 @@ struct Decomposition {
    * pattern — see
    * `tests/unit/kernel/decomposition/test_decomposition_lifetime.cpp`.)
    */
-  pfc::World m_global_world;
+  pfc::World m_global_world; ///< Backward compatibility: kept for migration.
   const std::array<int, 3> m_grid; ///< The number of parts in each dimension.
-  const std::vector<pfc::World> m_subworlds; ///< The sub-worlds for each part.
+  const std::vector<pfc::Box3i> m_local_boxes; ///< Local subdomain boxes (M1.3).
+  pfc::Domain m_domain; ///< Global domain extracted from World (M1.3).
 
   Decomposition(const World &world, const Int3 &grid);
 
@@ -249,80 +251,8 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
   return decomposition.m_grid;
 }
 
-/**
- * @brief Get all subdomains (local World instances)
- *
- * Returns a vector containing all partitioned subdomains. Each subdomain is a
- * World representing a rank-local portion of the global domain.
- *
- * @param[in] decomposition The decomposition to query
- * @return Vector of World objects, one per subdomain (size = nx*ny*nz)
- *
- * @example
- * ```cpp
- * using namespace pfc;
- *
- * auto world = world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
- * {2, 2, 1});  // 4 subdomains
- *
- * auto subworlds = decomposition::get_subworlds(decomp);
- * for (int i = 0; i < subworlds.size(); ++i) {
- *     auto size = world::get_size(subworlds[i]);
- *     std::cout << "Rank " << i << ": " << size << "\n";  // Each is 50×50×100
- * }
- * ```
- *
- * @note Subdomains are ordered consistently with MPI rank assignment (in most
- * cases).
- * @note All subdomains are non-overlapping and collectively cover the global World.
- *
- * @see get_subworld() - get a single subdomain by index
- * @see get_num_domains() - number of subdomains
- */
-inline const auto &get_subworlds(const Decomposition &decomposition) noexcept {
-  return decomposition.m_subworlds;
-}
-
-/**
- * @brief Get a specific subdomain by index
- *
- * Returns the subdomain (local World) assigned to the specified index. In MPI
- * contexts, the index typically corresponds to the MPI rank.
- *
- * @param[in] decomposition The decomposition to query
- * @param[in] i Index of the subdomain to retrieve (0 to num_domains-1)
- * @return Reference to the World representing subdomain i
- *
- * @throws std::out_of_range If i >= num_domains
- *
- * @example
- * ```cpp
- * using namespace pfc;
- *
- * auto world = world::create(GridSize({200, 200, 200}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({0.5, 0.5, 0.5})); auto decomp = decomposition::create(world,
- * 4);  // 4 subdomains (auto grid)
- *
- * int rank;
- * MPI_Comm_rank(MPI_COMM_WORLD, &rank);
- *
- * // Get this rank's local subdomain
- * auto local_world = decomposition::get_subworld(decomp, rank);
- * auto local_size = world::get_size(local_world);
- * std::cout << "Rank " << rank << " owns: " << local_size << "\n";
- * ```
- *
- * @note In MPI applications, typically each rank accesses get_subworld(decomp,
- * rank).
- * @note Bounds checking is performed; invalid indices throw std::out_of_range.
- *
- * @see get_subworlds() - get all subdomains
- * @see get_num_domains() - valid range for index i
- */
-inline const auto &get_subworld(const Decomposition &decomposition, int i) {
-  return get_subworlds(decomposition).at(i);
-}
+// Removed per M1.3: get_subworlds() and get_subworld() were the World accessor.
+// Use the Box3i/Domain access instead: local_box() / global_box() / domain().
 
 /**
  * @brief Create decomposition with explicit grid pattern
@@ -521,10 +451,9 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
  * ```
  *
  * @see get_grid() - decomposition pattern
- * @see get_subworlds() - access all subdomains
  */
 inline int get_num_domains(const Decomposition &decomposition) noexcept {
-  return static_cast<int>(get_subworlds(decomposition).size());
+  return static_cast<int>(decomposition.m_local_boxes.size());
 }
 
 // ---------------------------------------------------------------------------
@@ -537,25 +466,37 @@ inline int get_num_domains(const Decomposition &decomposition) noexcept {
 // ---------------------------------------------------------------------------
 
 /// The global coordinate system this decomposition partitions, as a `Domain`.
+/// Derived from the stored Domain (M1.3 direct access).
 [[nodiscard]] inline Domain domain(const Decomposition &decomposition) {
-  const auto &w = get_global_world(decomposition);
-  return pfc::domain::create(pfc::GridSize(pfc::world::get_size(w)),
-                             pfc::PhysicalOrigin(pfc::world::get_origin(w)),
-                             pfc::GridSpacing(pfc::world::get_spacing(w)),
-                             pfc::world::get_periodic(w));
+  return decomposition.m_domain;
 }
 
 /// The global index box `[lower, upper]` covered by the whole decomposition.
+/// Derived from the local boxes (M1.3 direct access).
 [[nodiscard]] inline Box3i global_box(const Decomposition &decomposition) {
-  const auto &w = get_global_world(decomposition);
-  return Box3i::from_bounds(pfc::world::get_lower(w), pfc::world::get_upper(w));
+  // Derive global extent from all local boxes (union of lower/upper bounds)
+  if (decomposition.m_local_boxes.empty()) {
+    return Box3i{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+  }
+
+  std::array<int, 3> global_low = decomposition.m_local_boxes[0].low;
+  std::array<int, 3> global_high = decomposition.m_local_boxes[0].high;
+
+  for (const auto &local_box : decomposition.m_local_boxes) {
+    for (int d = 0; d < 3; ++d) {
+      global_low[d] = std::min(global_low[d], local_box.low[d]);
+      global_high[d] = std::max(global_high[d], local_box.high[d]);
+    }
+  }
+
+  return Box3i::from_bounds(global_low, global_high);
 }
 
 /// The index box owned by subdomain `i` (typically the MPI rank).
+/// Direct access to stored Box3i (M1.3).
 /// @throws std::out_of_range if `i` is not a valid subdomain index.
 [[nodiscard]] inline Box3i local_box(const Decomposition &decomposition, int i) {
-  const auto &w = get_subworld(decomposition, i);
-  return Box3i::from_bounds(pfc::world::get_lower(w), pfc::world::get_upper(w));
+  return decomposition.m_local_boxes.at(i);
 }
 
 } // namespace decomposition

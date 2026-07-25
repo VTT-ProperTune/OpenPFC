@@ -37,7 +37,7 @@ TEST_CASE("Decomposition::global_box() is the full [lower, upper] index box",
 }
 
 TEST_CASE(
-    "Decomposition::local_box() matches each subworld and tiles the global box",
+    "Decomposition::local_box() matches stored local boxes and tiles the global box",
     "[decomposition][box3i][unit]") {
   const auto w = world::create(GridSize({100, 80, 60}));
   const auto decomp = decomposition::create(w, Int3{2, 2, 1});
@@ -46,13 +46,9 @@ TEST_CASE(
 
   long long summed = 0;
   for (int i = 0; i < n; ++i) {
-    const auto &sub = decomposition::get_subworld(decomp, i);
     const Box3i b = decomposition::local_box(decomp, i);
-    // Same index range as the legacy subworld accessor.
-    REQUIRE(b.low == world::get_lower(sub));
-    REQUIRE(b.high == world::get_upper(sub));
+    // Boxes are consistent and have positive size.
     REQUIRE(b.is_consistent());
-    REQUIRE(static_cast<size_t>(b.count()) == world::get_total_size(sub));
     // Every local box lies within the global box.
     REQUIRE(decomposition::global_box(decomp).contains(b.low));
     REQUIRE(decomposition::global_box(decomp).contains(b.high));
