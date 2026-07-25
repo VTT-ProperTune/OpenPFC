@@ -127,4 +127,22 @@ Decomposition::Decomposition(const World &world, const Int3 &grid)
   return create(world, grid);
 }
 
+[[nodiscard]] Decomposition create(const Domain &domain, const Int3 &grid) {
+  // Create a World from Domain with global bounds [0, size-1]
+  const Int3 &size = domain.size;
+  const Int3 lower{0, 0, 0};
+  const Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
+  const World world(lower, upper, domain);
+  return create(world, grid);
+}
+
+[[nodiscard]] Decomposition create(const Domain &domain, const int &nparts) {
+  // Create a World from Domain with global bounds [0, size-1]
+  const Int3 &size = domain.size;
+  const Int3 lower{0, 0, 0};
+  const Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
+  const World world(lower, upper, domain);
+  return create(world, nparts);
+}
+
 } // namespace pfc::decomposition

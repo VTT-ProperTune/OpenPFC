@@ -77,8 +77,12 @@ public:
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
         m_fft(pfc::fft::create(m_decomp, comm)),
-        m_u(pfc::field::LocalField<double>::from_inbox_domain(
-            domain, m_fft.get_inbox_bounds())),
+        m_u(pfc::field::LocalField<double>::from_inbox(
+            pfc::World(pfc::Int3{0, 0, 0},
+                       pfc::Int3{domain.size[0] - 1, domain.size[1] - 1,
+                                  domain.size[2] - 1},
+                       domain),
+            m_fft.get_inbox_bounds())),
         m_rank(rank), m_nproc(nproc), m_comm(comm) {}
 
   /**

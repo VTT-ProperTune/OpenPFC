@@ -11,7 +11,7 @@ using pfc::Int3;
 using pfc::Real3;
 namespace pfc::sim::stacks {
 
-TEST_CASE("FdCpuStack constructs from Domain", "[stacks][unit]") {
+TEST_CASE("FdCpuStack constructs from Domain", "[cpu_stack][stacks][unit]") {
   const Int3 size{32, 32, 32};
   const Real3 origin{0.0, 0.0, 0.0};
   const Real3 spacing{1.0, 1.0, 1.0};
@@ -83,7 +83,7 @@ TEST_CASE("FdCpuStack constructs from Domain", "[stacks][unit]") {
   }
 }
 
-TEST_CASE("FdCpuStack with non-default Domain parameters", "[stacks][unit]") {
+TEST_CASE("FdCpuStack with non-default Domain parameters", "[cpu_stack][stacks][unit]") {
   const Int3 size{64, 48, 16};
   const Real3 origin{-10.0, -5.0, 0.0};
   const Real3 spacing{0.5, 0.25, 1.0};
@@ -105,7 +105,7 @@ TEST_CASE("FdCpuStack with non-default Domain parameters", "[stacks][unit]") {
   REQUIRE(stack.halo_width() == fd_order / 2);
 }
 
-TEST_CASE("FdCpuStack with non-periodic Domain", "[stacks][unit]") {
+TEST_CASE("FdCpuStack with non-periodic Domain", "[cpu_stack][stacks][unit]") {
   const Int3 size{16, 16, 16};
   const Real3 origin{0.0, 0.0, 0.0};
   const Real3 spacing{1.0, 1.0, 1.0};
@@ -131,7 +131,7 @@ TEST_CASE("FdCpuStack with non-periodic Domain", "[stacks][unit]") {
   REQUIRE(pfc::world::get_periodic(world) == periodic);
 }
 
-TEST_CASE("FdCpuStack is non-copyable and non-movable", "[stacks][unit]") {
+TEST_CASE("FdCpuStack is non-copyable and non-movable", "[cpu_stack][stacks][unit]") {
   const auto domain = pfc::domain::create(Int3{16, 16, 16});
   FdCpuStack stack(domain, 2, 0, 1);
 

@@ -11,7 +11,7 @@ using pfc::Int3;
 using pfc::Real3;
 namespace pfc::sim::stacks {
 
-TEST_CASE("SpectralCpuStack constructs from Domain", "[stacks][unit]") {
+TEST_CASE("SpectralCpuStack constructs from Domain", "[cpu_stack][stacks][unit]") {
   const Int3 size{32, 32, 32};
   const Real3 origin{0.0, 0.0, 0.0};
   const Real3 spacing{1.0, 1.0, 1.0};
@@ -68,7 +68,7 @@ TEST_CASE("SpectralCpuStack constructs from Domain", "[stacks][unit]") {
 }
 
 TEST_CASE("SpectralCpuStack with non-default Domain parameters",
-          "[stacks][unit]") {
+          "[cpu_stack][stacks][unit]") {
   const Int3 size{48, 48, 32};
   const Real3 origin{-5.0, -5.0, 0.0};
   const Real3 spacing{0.5, 0.5, 1.0};
@@ -87,7 +87,7 @@ TEST_CASE("SpectralCpuStack with non-default Domain parameters",
   REQUIRE(geom.origin == origin);
 }
 
-TEST_CASE("SpectralCpuStack with non-periodic Domain", "[stacks][unit]") {
+TEST_CASE("SpectralCpuStack with non-periodic Domain", "[cpu_stack][stacks][unit]") {
   const Int3 size{16, 16, 16};
   const Real3 origin{0.0, 0.0, 0.0};
   const Real3 spacing{1.0, 1.0, 1.0};
@@ -112,7 +112,7 @@ TEST_CASE("SpectralCpuStack with non-periodic Domain", "[stacks][unit]") {
   REQUIRE(pfc::world::get_periodic(world) == periodic);
 }
 
-TEST_CASE("SpectralCpuStack is non-copyable and non-movable", "[stacks][unit]") {
+TEST_CASE("SpectralCpuStack is non-copyable and non-movable", "[cpu_stack][stacks][unit]") {
   const auto domain = pfc::domain::create(Int3{16, 16, 16});
   SpectralCpuStack stack(domain, 0, 1);
 

@@ -426,6 +426,61 @@ inline const auto &get_subworld(const Decomposition &decomposition, int i) {
 [[nodiscard]] Decomposition create(const World &world, const int &nparts);
 
 /**
+ * @brief Domain-based decomposition creation with manual grid specification
+ *
+ * Partitions the global Domain into subdomains using a specified grid pattern.
+ * This overload accepts Domain directly for M1 migration convenience.
+ *
+ * @param[in] domain The global computational domain to partition
+ * @param[in] grid   Grid pattern {gx, gy, gz} (number of subdomains per axis)
+ * @return Decomposition with the specified grid pattern
+ *
+ * @example
+ * **Manual Grid with Domain**
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto domain = pfc::domain::create({256, 256, 256});
+ * auto decomp = decomposition::create(domain, {2, 2, 1});
+ *
+ * auto grid = decomposition::get_grid(decomp);
+ * // grid = [2, 2, 1]
+ * ```
+ *
+ * @see create(World&, const Int3&) - World-based overload
+ * @see create(domain, nparts) - automatic grid selection
+ */
+[[nodiscard]] Decomposition create(const Domain &domain, const Int3 &grid);
+
+/**
+ * @brief Domain-based decomposition creation with automatic grid selection
+ *
+ * Partitions the global Domain into the specified number of subdomains,
+ * automatically choosing a grid pattern that minimizes communication surface
+ * area. This overload accepts Domain directly for M1 migration convenience.
+ *
+ * @param[in] domain The global computational domain to partition
+ * @param[in] nparts Number of subdomains (typically MPI size)
+ * @return Decomposition with optimally chosen grid pattern
+ *
+ * @example
+ * **Automatic Grid with Domain**
+ * ```cpp
+ * using namespace pfc;
+ *
+ * auto domain = pfc::domain::create({256, 256, 256});
+ * auto decomp = decomposition::create(domain, 8);
+ *
+ * auto grid = decomposition::get_grid(decomp);
+ * // Likely chooses 4×2×1 or 2×2×2 (minimizes surface area)
+ * ```
+ *
+ * @see create(World&, const int&) - World-based overload
+ * @see create(domain, grid) - manual grid specification
+ */
+[[nodiscard]] Decomposition create(const Domain &domain, const int &nparts);
+
+/**
  * @brief Get the total number of subdomains
  *
  * Returns the count of subdomains in this decomposition. Equals the product

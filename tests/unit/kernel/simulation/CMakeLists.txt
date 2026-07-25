@@ -28,3 +28,4 @@ target_include_directories(openpfc-tests PRIVATE
 )
 
 add_subdirectory(steppers)
+add_subdirectory(stacks)

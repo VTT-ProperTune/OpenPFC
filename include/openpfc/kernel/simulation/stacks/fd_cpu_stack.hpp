@@ -88,7 +88,7 @@ public:
                       int nproc, MPI_Comm comm = MPI_COMM_WORLD)
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
-        m_u(pfc::field::LocalField<double>::from_subdomain_domain(m_decomp, rank,
+        m_u(pfc::field::LocalField<double>::from_subdomain(m_decomp, rank,
                                                            fd_order / 2)),
         m_face_halos(
             pfc::halo::allocate_face_halos<double>(m_decomp, rank, fd_order / 2)),
