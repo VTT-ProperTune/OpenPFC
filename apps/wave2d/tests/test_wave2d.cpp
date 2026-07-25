@@ -29,6 +29,7 @@
 #include <wave2d/wave_step_separated.hpp>
 
 using Catch::Matchers::WithinAbs;
+using namespace pfc;
 
 TEST_CASE("wave2d::kC is 1.0", "[wave2d]") {
   REQUIRE_THAT(wave2d::kC, WithinAbs(1.0, 1e-15));

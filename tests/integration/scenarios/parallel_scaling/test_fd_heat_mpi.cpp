@@ -100,7 +100,7 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
   auto subdomain_box = decomposition::local_box(decomp, rank);
   HaloExchanger<double> hex(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD);
   PersistentHaloExchanger<double> pex(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD,
-                                      b.data());
+                                      b.data(), halo::presets::Axes3D());
 
   hex.exchange_halos(a.data(), a.size());
   pex.exchange_halos();
