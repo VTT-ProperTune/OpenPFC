@@ -128,6 +128,66 @@ std::optional<RunConfig> parse_cli(int argc, char **argv) {
 // step 6; the rest is the per-rank scaffolding it depends on.
 // =============================================================================
 
+/**
+ * @brief Heat equation solver using explicit finite-difference forward Euler integration
+ *
+ * @details This implementation solves the three-dimensional heat equation
+ * ∂T/∂t = α * ∇²T on a fully periodic 3D box using explicit forward Euler
+ * time integration with a 7-point finite-difference Laplacian stencil.
+ *
+ * @par Integrator method
+ * Concrete integrator: explicit forward Euler (first-order, conditionally stable).
+ * Each time step computes: T_next = T + dt * α * ∇²T, where the Laplacian is
+ * evaluated using central finite differences with configurable order (2, 4, ..., 20).
+ * This is a self-contained implementation that does not inherit from the Simulator
+ * base class but demonstrates the same time-integration concepts.
+ *
+ * @par Lifecycle stage ownership
+ * This implementation owns the following lifecycle stages:
+ * - Pre-step preparation: performs MPI halo exchange to synchronize ghost cell
+ *   values across domain decomposition boundaries
+ * - RHS evaluation (compute_rhs): computes the Laplacian using central finite
+ *   differences via FDGradient evaluator
+ * - Post-step updates: applies explicit Euler update: u += dt * α * ∇²u
+ * - Output generation: computes L2 error against analytical solution (no VTK output)
+ * - No checkpointing: this is a benchmark/educational solver without restart capability
+ *
+ * @par Boundary/halo synchronization
+ * Boundary conditions and halo exchanges occur at:
+ * - Pre-stage: MPId halo exchange via PaddedHaloExchanger before each RHS evaluation
+ * - The solver assumes periodic boundary conditions in all directions
+ * - Halo width is automatically configured as fd_order/2 to accommodate the stencil
+ * - The PaddedHaloExchanger handles six-face MPI communication for the halo ring
+ *
+ * @par Application-specific constraints
+ * - Stability: the explicit forward Euler scheme requires dt ≤ dx²/(6α) in 3D for
+ *   numerical stability (von Neumann analysis). Violating this constraint leads to
+ *   exponential growth of numerical errors.
+ * - Memory: uses two padded bricks (u and du) with halo regions for computation
+ * - Spatial accuracy: finite-difference order is configurable (2, 4, ..., 20) via
+ *   command line parameter; higher orders require wider halos and more computation
+ * - Parallel: domain decomposition with MPI; must ensure global grid size is
+ *   divisible by number of processes
+ * - No adaptive time stepping: dt is fixed for the entire simulation
+ *
+ * @par Contract for substituting alternative integrators
+ * To implement a different time-integration scheme in this code structure:
+ * - Replace the explicit Euler update "u += cfg.dt * du" with the desired scheme
+ * - For explicit multi-stage methods (e.g., Runge-Kutta), implement multiple RHS
+ *   evaluations per time step with appropriate stage combinations
+ * - For implicit methods, would need to solve linear systems and modify the
+ *   halo exchange pattern accordingly
+ * - Maintain the same pre-step halo exchange pattern for explicit schemes
+ * - Preserve the L2 error calculation for verification purposes
+ *
+ * @note This is an educational implementation designed for clarity rather than
+ *   production use. It demonstrates explicit connection between halo exchange,
+ *   gradient evaluation, and time integration. For production thermal simulations,
+ *   consider the SpectralHeatPropagator (implicit Euler) for unconditional stability.
+ *
+ * @see SpectralHeatPropagator for an implicit Euler implementation in Fourier space
+ * @see Simulator for the base class contract on time-integration assumptions
+ */
 void run_fd(const RunConfig &cfg, int rank, int nproc) {
   // 1. Physics. This driver fixes D = 1 (same as `heat3d::kD` elsewhere) so the
   //    Gaussian IC and analytic reference match the other heat3d binaries.

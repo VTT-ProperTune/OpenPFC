@@ -69,8 +69,54 @@
 namespace pfc {
 
 /**
- * @brief The Simulator class is responsible for running the simulation of the
- * model.
+ * @brief Base class for time-stepping simulations with forward Euler integration
+ *
+ * @details The Simulator class provides a framework for time-dependent field
+ * evolution using an embedded forward Euler time-integration method. The class
+ * owns specific lifecycle stages (pre-step preparation, RHS evaluation, post-step
+ * updates, output generation, checkpointing) and coordinates boundary condition
+ * application and MPI halo exchange with these stages.
+ *
+ * @par Time-integration assumptions
+ * - Embedded integrator: forward Euler (first-order explicit)
+ * - One RHS evaluation per time step
+ * - No substepping; each call to advance() evolves fields by exactly dt
+ * - Time step size dt is fixed and enforced by an external scheduler; the
+ *   simulator does not adapt dt
+ * - Field update follows: phi_next = phi + dt * RHS(phi, t)
+ *
+ * @par Lifecycle stage ownership
+ * The Simulator base class owns the following stages (implemented via virtual
+ * methods that subclasses may override):
+ * - Pre-step preparation: anything required before RHS evaluation (e.g., loading
+ *   boundary conditions)
+ * - RHS evaluation: computes the right-hand side of the evolution equation
+ * - Post-step updates: applies time-stepped field updates after RHS is computed
+ * - Output generation: writes field data, diagnostics, or visualization files
+ * - Checkpointing: saves simulation state for restart
+ *
+ * @par Boundary/halo synchronization
+ * Boundary conditions and MPI halo exchanges must be synchronized with the
+ * integration stages. The expected ordering is:
+ * 1. Apply boundary conditions to fill halo regions
+ * 2. Compute RHS using the synchronized field state
+ * 3. Post-step updates complete before the next synchronization
+ *
+ * @par Contract for substituting alternative integrators
+ * To swap in a different time-integration scheme (e.g., Runge-Kutta), subclasses
+ * must:
+ * - Override advance() to implement the multi-stage algorithm
+ * - Provide intermediate storage for stage values if needed
+ * - Call boundary synchronization at appropriate stage boundaries
+ * - Maintain the same pre- and post-step hooks for compatibility with output
+ *   and checkpoint scheduling
+ * - Preserve the contract that dt is externally fixed (no adaptive dt)
+ * - Document the new scheme's stage count, RHS evaluations per step, and
+ *   any additional synchronization points
+ *
+ * @note This base class does not own the time-stepping loop or schedule;
+ * external code determines when advance() is called and how to drive the
+ * simulation to completion or termination.
  */
 class Simulator {
 

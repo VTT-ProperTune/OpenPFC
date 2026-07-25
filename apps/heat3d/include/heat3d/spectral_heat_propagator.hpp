@@ -40,10 +40,62 @@
 namespace heat3d {
 
 /**
- * @brief Implicit-Euler propagator for \f$\partial_t u = D\nabla^2 u\f$.
+ * @brief Heat equation solver using implicit Euler time integration in Fourier space
  *
- * Construct once from the FFT and the field's geometry; call `step(u)`
- * each time-step to advance `u` by `dt` in place.
+ * @details SpectralHeatPropagator solves the three-dimensional heat equation
+ * ∂T/∂t = α * ∇²T on a doubly-periodic domain using an implicit Euler
+ * time-integration scheme in Fourier space. The implementation is unconditionally
+ * stable and efficient, requiring only forward and inverse FFTs per time step.
+ *
+ * @par Integrator method
+ * Concrete integrator: implicit Euler (first-order, unconditionally stable).
+ * Each advance() call computes the solution in spectral space using the exact
+ * symbol of the Laplacian operator: T_next = T / (1 - dt * α * k_lap), where
+ * k_lap = -(k_x² + k_y² + k_z²) is the Fourier symbol of the Laplacian.
+ *
+ * @par Lifecycle stage ownership
+ * SpectralHeatPropagator implements the following lifecycle stages:
+ * - Pre-step construction: builds the wavenumber lookup table from FFT layout
+ *   and diffusion coefficient
+ * - Time advancement: performs forward FFT of field, applies diagonal multiplier
+ *   in Fourier space, then inverse FFT back to physical space
+ * - No explicit boundary/halo exchange: periodic boundary conditions are
+ *   implicit in Fourier representation
+ *
+ * @par Boundary/halo synchronization
+ * Boundary conditions and halo exchanges occur at:
+ * - Construction: the wavenumber table is precomputed based on domain geometry
+ * - Runtime: periodic boundary conditions are automatically satisfied by the
+ *   Fourier representation; no explicit halo exchange is needed
+ * - The propagator assumes a fully periodic domain; Dirichlet/Neumann conditions
+ *   would require additional modifications (not supported in this implementation)
+ *
+ * @par Application-specific constraints
+ * - Spectral transforms: assumes the underlying FFT layout is compatible with
+ *   the provided field geometry
+ * - Time step stability: the implicit Euler scheme is unconditionally stable,
+ *   allowing arbitrarily large dt without numerical instability
+ * - Spectral accuracy: the method achieves spectral spatial accuracy for smooth
+ *   solutions, but still only first-order accuracy in time
+ * - Memory: requires storage for complex-valued spectral representation of the field
+ *
+ * @par Contract for substituting alternative integrators
+ * To implement a different time-integration scheme (e.g., explicit Euler, Runge-Kutta,
+ *   Crank-Nicolson), subclasses must:
+ * - Override the step() method to implement the desired algorithm
+ * - Preserve the constructor interface (FFT, field, diffusion coefficient, dt)
+ * - Document the new scheme's stability constraints and accuracy order
+ * - For explicit schemes, implement appropriate time step restrictions
+ * - For multi-stage schemes, manage intermediate storage appropriately
+ *
+ * @note This propagator does not inherit from Simulator; it is a standalone
+ *   implementation designed for the Heat3D application family. The documentation
+ *   here provides a concrete example of how time-integration contracts are
+ *   fulfilled in practice, complementing the abstract contract described in
+ *   the Simulator base class.
+ *
+ * @see Simulator for the base class contract on time-integration assumptions
+ *   and how to substitute alternative integrators.
  */
 class SpectralHeatPropagator {
 public:
