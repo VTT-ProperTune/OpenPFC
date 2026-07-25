@@ -19,7 +19,7 @@ This directory contains **unit tests** for OpenPFC components. Unit tests verify
 
 Tests mirror the library layout (kernel, runtime, frontend) plus operators. Under `unit/`:
 
-- **`kernel/data/`** - World, Field, Box3D, MultiIndex, ArrayND, etc.
+- **`kernel/data/`** - World, Field, Box3i, MultiIndex, ArrayND, etc.
 - **`kernel/decomposition/`** - Domain decomposition
 - **`kernel/fft/`** - FFT functionality and settings
 - **`kernel/simulation/`** - Model, Simulator, Time
