@@ -33,28 +33,10 @@ World::World(const Int3 &lower, const Int3 &upper, const Domain &domain)
     : subdomain_{lower, upper, calc_size(lower, upper)},
       domain_{calc_size(lower, upper), domain.spacing, domain.origin, domain.periodic} {}
 
-// Strong-type API (PREFERRED) - type-safe World construction
-// Uses GridSize, PhysicalOrigin, GridSpacing from strong_types.hpp
-[[nodiscard]] CartesianWorld create(const GridSize &size,
-                                    const PhysicalOrigin &origin,
-                                    const GridSpacing &spacing,
-                                    const pfc::types::Bool3 &periodic) {
-  // The World's subdomain spans the whole global grid; its coordinate system is the
-  // canonical Domain (origin/spacing/per-axis periodicity all carried through).
-  const Int3 &raw_size = size.get();
-  Int3 lower{0, 0, 0};
-  Int3 upper{raw_size[0] - 1, raw_size[1] - 1, raw_size[2] - 1};
-  return World(lower, upper, pfc::domain::create(size, origin, spacing, periodic));
-}
-
-// old compatibility constructor taking only size, and default lower bounds and
-// spacing and assuming pretty much everything else this is the most common use
-// case
-[[nodiscard]] CartesianWorld create(const Int3 &size) {
-  Int3 lower{0, 0, 0};                               // default lower bounds
-  Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1}; // default upper bounds
-  return World(lower, upper, pfc::domain::create(size));
-}
+// NOTE: world::create() implementations moved to pfc::domain::create() in
+// include/openpfc/domain/create.hpp and src/kernel/data/world_factory.cpp.
+// The world::create() functions in world_factory.hpp are now deprecated
+// inline forwarders that call the new domain::create() functions.
 
 // Operators
 
