@@ -5,7 +5,7 @@
 
 /**
  * @file fd_cpu_stack.hpp
- * @brief One-shot bundle of `World + Decomposition + LocalField + face_halos
+ * @brief One-shot bundle of `Domain + Decomposition + LocalField + face_halos
  *        + SparseHaloExchanger` for finite-difference CPU solvers.
  *
  * @details
@@ -13,11 +13,11 @@
  * the explicit-FD path. The members are declared in dependency order so
  * cross-references stay valid for the lifetime of the stack:
  *
- *     m_world  →  m_decomp  →  m_u  →  m_face_halos  →  m_exchanger
+ *     m_geometry  →  m_decomp  →  m_u  →  m_face_halos  →  m_exchanger
  *
- *  - `pfc::decomposition::Decomposition` stores `const World&` to its
- *    constructor argument; `m_world` is initialised first so its
- *    destruction order is correct.
+ *  - Geometry (size/spacing/origin/periodicity) is extracted from the
+ *    Domain and stored internally.
+ *  - Decomposition is created directly from Domain.
  *  - `pfc::SparseHaloExchanger<double>` is built from a `RemoteHalo` list
  *    produced by `pfc::halo::make_structured_halos<double>(...)`; it owns
  *    the index/data buffers internally and only needs `m_comm` and rank
@@ -47,7 +47,9 @@
 #include <mpi.h>
 #include <vector>
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
@@ -59,11 +61,42 @@
 namespace pfc::sim::stacks {
 
 /**
- * @brief Programmatic FD periodic CPU stack: World + Decomposition +
+ * @brief Internal geometry storage extracted from Domain.
+ */
+struct FDGeometry {
+  pfc::Int3 size{1, 1, 1};
+  pfc::Real3 spacing{1.0, 1.0, 1.0};
+  pfc::Real3 origin{0.0, 0.0, 0.0};
+  pfc::Bool3 periodic{true, true, true};
+};
+
+/**
+ * @brief Programmatic FD periodic CPU stack: Domain + Decomposition +
  *        halo-aware LocalField + face-halo buffers + halo exchanger.
  */
 class FdCpuStack {
 public:
+  /**
+   * @param domain    The global Cartesian simulation domain.
+   * @param fd_order  Even FD order (2, 4, …, 20). Halo width is
+   *                  `fd_order / 2`.
+   * @param rank      Caller's MPI rank on `comm`.
+   * @param nproc     Total number of ranks on `comm`.
+   * @param comm      MPI communicator passed to the halo exchanger.
+   */
+  explicit FdCpuStack(pfc::Domain domain, int fd_order, int rank,
+                      int nproc, MPI_Comm comm = MPI_COMM_WORLD)
+      : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
+        m_decomp(pfc::decomposition::create(domain, nproc)),
+        m_u(pfc::field::LocalField<double>::from_subdomain_domain(m_decomp, rank,
+                                                           fd_order / 2)),
+        m_face_halos(
+            pfc::halo::allocate_face_halos<double>(m_decomp, rank, fd_order / 2)),
+        m_exchanger(
+            comm, rank,
+            pfc::halo::make_structured_halos<double>(m_decomp, rank, fd_order / 2)),
+        m_fd_order(fd_order), m_rank(rank), m_nproc(nproc), m_comm(comm) {}
+
   /**
    * @param size      Global grid size `{Nx, Ny, Nz}`.
    * @param origin    World origin in physical coordinates.
@@ -73,20 +106,16 @@ public:
    * @param rank      Caller's MPI rank on `comm`.
    * @param nproc     Total number of ranks on `comm`.
    * @param comm      MPI communicator passed to the halo exchanger.
+   *
+   * @deprecated Use the Domain-based constructor for new code. This constructor
+   *             exists for backward compatibility with existing code.
    */
+  [[deprecated("Use FdCpuStack(const Domain&, int, int, int, MPI_Comm) instead")]]
   FdCpuStack(const pfc::GridSize &size, const pfc::PhysicalOrigin &origin,
              const pfc::GridSpacing &spacing, int fd_order, int rank, int nproc,
              MPI_Comm comm = MPI_COMM_WORLD)
-      : m_world(pfc::world::create(size, origin, spacing)),
-        m_decomp(pfc::decomposition::create(m_world, nproc)),
-        m_u(pfc::field::LocalField<double>::from_subdomain(m_decomp, rank,
-                                                           fd_order / 2)),
-        m_face_halos(
-            pfc::halo::allocate_face_halos<double>(m_decomp, rank, fd_order / 2)),
-        m_exchanger(
-            comm, rank,
-            pfc::halo::make_structured_halos<double>(m_decomp, rank, fd_order / 2)),
-        m_fd_order(fd_order), m_rank(rank), m_nproc(nproc), m_comm(comm) {}
+      : FdCpuStack(pfc::domain::create(size, origin, spacing), fd_order, rank, nproc,
+                   comm) {}
 
   FdCpuStack(const FdCpuStack &) = delete;
   FdCpuStack &operator=(const FdCpuStack &) = delete;
@@ -132,8 +161,22 @@ public:
                                        [this]() { exchange_halos(); });
   }
 
-  [[nodiscard]] pfc::World &world() noexcept { return m_world; }
-  [[nodiscard]] const pfc::World &world() const noexcept { return m_world; }
+  /**
+   * @brief Get a World adapter constructed from the stored Domain geometry.
+   *
+   * @note This accessor is provided for backward compatibility during the M1 migration.
+   *       Returns a newly constructed World each call; prefer using geometry() or
+   *       accessing the decomposition directly in new code.
+   */
+  [[nodiscard]] pfc::World world() const noexcept {
+    const pfc::Int3 global_upper{
+        m_geometry.size[0] - 1, m_geometry.size[1] - 1, m_geometry.size[2] - 1};
+    return pfc::World(pfc::Int3{0, 0, 0}, global_upper,
+                      pfc::domain::create(m_geometry.size, pfc::PhysicalOrigin(m_geometry.origin),
+                                          pfc::GridSpacing(m_geometry.spacing), m_geometry.periodic));
+  }
+
+  [[nodiscard]] const FDGeometry &geometry() const noexcept { return m_geometry; }
 
   [[nodiscard]] pfc::decomposition::Decomposition &decomposition() noexcept {
     return m_decomp;
@@ -172,7 +215,7 @@ public:
   [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_comm; }
 
 private:
-  pfc::World m_world;
+  FDGeometry m_geometry;
   pfc::decomposition::Decomposition m_decomp;
   pfc::field::LocalField<double> m_u;
   std::array<std::vector<double>, 6> m_face_halos;

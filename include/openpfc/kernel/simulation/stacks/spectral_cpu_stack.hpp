@@ -5,7 +5,7 @@
 
 /**
  * @file spectral_cpu_stack.hpp
- * @brief One-shot bundle of `World + Decomposition + CpuFft + LocalField` for
+ * @brief One-shot bundle of `Domain + Decomposition + CpuFft + LocalField` for
  *        spectral CPU solvers driven programmatically (no JSON / `App`).
  *
  * @details
@@ -16,15 +16,14 @@
  * The members are stored in a strict declaration order so that internal
  * cross-references stay valid for the lifetime of the stack:
  *
- *     m_world  →  m_decomp  →  m_fft  →  m_u
+ *     m_geometry  →  m_decomp  →  m_fft  →  m_u
  *
- *  - `pfc::decomposition::Decomposition` stores `const World&` to its
- *    constructor argument. Putting `m_world` first guarantees it is
- *    initialised before — and destroyed after — `m_decomp`.
- *  - `pfc::fft::CpuFft` internally caches a `Decomposition` (which still
- *    references the same `m_world`).
+ *  - Geometry (size/spacing/origin/periodicity) is extracted from the
+ *    Domain and stored internally.
+ *  - Decomposition is created directly from Domain.
+ *  - `pfc::fft::CpuFft` internally caches a `Decomposition`.
  *  - `pfc::field::LocalField<double>` is sized to the FFT's local
- *    real-space inbox via `LocalField::from_inbox(world, fft.get_inbox_bounds())`.
+ *    real-space inbox via `LocalField::from_inbox_domain(domain, fft.get_inbox_bounds())`.
  *
  * The class is **non-copyable, non-movable** for the same reason as
  * `pfc::ui::SpectralCpuStack`: a copy or move of the bundle would leave
@@ -37,7 +36,9 @@
 
 #include <mpi.h>
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
@@ -49,11 +50,37 @@
 namespace pfc::sim::stacks {
 
 /**
- * @brief Programmatic spectral CPU stack: World + Decomposition + CpuFft +
+ * @brief Internal geometry storage extracted from Domain.
+ */
+struct SpectralGeometry {
+  pfc::Int3 size{1, 1, 1};
+  pfc::Real3 spacing{1.0, 1.0, 1.0};
+  pfc::Real3 origin{0.0, 0.0, 0.0};
+  pfc::Bool3 periodic{true, true, true};
+};
+
+/**
+ * @brief Programmatic spectral CPU stack: Domain + Decomposition + CpuFft +
  *        LocalField sized to the FFT inbox.
  */
 class SpectralCpuStack {
 public:
+  /**
+   * @param domain  The global Cartesian simulation domain.
+   * @param rank    Caller's MPI rank on `comm`.
+   * @param nproc   Total number of ranks on `comm` (used by
+   *                `decomposition::create`).
+   * @param comm    MPI communicator passed to the FFT.
+   */
+  explicit SpectralCpuStack(pfc::Domain domain, int rank, int nproc,
+                            MPI_Comm comm = MPI_COMM_WORLD)
+      : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
+        m_decomp(pfc::decomposition::create(domain, nproc)),
+        m_fft(pfc::fft::create(m_decomp, comm)),
+        m_u(pfc::field::LocalField<double>::from_inbox_domain(
+            domain, m_fft.get_inbox_bounds())),
+        m_rank(rank), m_nproc(nproc), m_comm(comm) {}
+
   /**
    * @param size    Global grid size `{Nx, Ny, Nz}`.
    * @param origin  World origin in physical coordinates.
@@ -62,24 +89,38 @@ public:
    * @param nproc   Total number of ranks on `comm` (used by
    *                `decomposition::create`).
    * @param comm    MPI communicator passed to the FFT.
+   *
+   * @deprecated Use the Domain-based constructor for new code. This constructor
+   *             exists for backward compatibility with existing code.
    */
+  [[deprecated("Use SpectralCpuStack(const Domain&, int, int, MPI_Comm) instead")]]
   SpectralCpuStack(const pfc::GridSize &size, const pfc::PhysicalOrigin &origin,
                    const pfc::GridSpacing &spacing, int rank, int nproc,
                    MPI_Comm comm = MPI_COMM_WORLD)
-      : m_world(pfc::world::create(size, origin, spacing)),
-        m_decomp(pfc::decomposition::create(m_world, nproc)),
-        m_fft(pfc::fft::create(m_decomp, comm)),
-        m_u(pfc::field::LocalField<double>::from_inbox(
-            pfc::decomposition::get_world(m_decomp), m_fft.get_inbox_bounds())),
-        m_rank(rank), m_nproc(nproc), m_comm(comm) {}
+      : SpectralCpuStack(pfc::domain::create(size, origin, spacing), rank, nproc,
+                         comm) {}
 
   SpectralCpuStack(const SpectralCpuStack &) = delete;
   SpectralCpuStack &operator=(const SpectralCpuStack &) = delete;
   SpectralCpuStack(SpectralCpuStack &&) = delete;
   SpectralCpuStack &operator=(SpectralCpuStack &&) = delete;
 
-  [[nodiscard]] pfc::World &world() noexcept { return m_world; }
-  [[nodiscard]] const pfc::World &world() const noexcept { return m_world; }
+  /**
+   * @brief Get a World adapter constructed from the stored Domain geometry.
+   *
+   * @note This accessor is provided for backward compatibility during the M1 migration.
+   *       Returns a newly constructed World each call; prefer using geometry() or
+   *       accessing the decomposition directly in new code.
+   */
+  [[nodiscard]] pfc::World world() const noexcept {
+    const pfc::Int3 global_upper{
+        m_geometry.size[0] - 1, m_geometry.size[1] - 1, m_geometry.size[2] - 1};
+    return pfc::World(pfc::Int3{0, 0, 0}, global_upper,
+                      pfc::domain::create(m_geometry.size, pfc::PhysicalOrigin(m_geometry.origin),
+                                          pfc::GridSpacing(m_geometry.spacing), m_geometry.periodic));
+  }
+
+  [[nodiscard]] const SpectralGeometry &geometry() const noexcept { return m_geometry; }
 
   [[nodiscard]] pfc::decomposition::Decomposition &decomposition() noexcept {
     return m_decomp;
@@ -129,7 +170,7 @@ public:
   [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_comm; }
 
 private:
-  pfc::World m_world;
+  SpectralGeometry m_geometry;
   pfc::decomposition::Decomposition m_decomp;
   pfc::fft::CpuFft m_fft;
   pfc::field::LocalField<double> m_u;
