@@ -146,7 +146,7 @@ TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
 }
 
 TEST_CASE("MovingBC - Integration with Model", "[bc_moving]") {
-  auto world = world::create(GridSize({16, 8, 8}));
+  auto world = world::create(GridSize({16, 8, 8}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithMovingBC model(fft, world);

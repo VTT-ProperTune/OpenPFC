@@ -27,7 +27,7 @@ public:
 } // namespace
 
 TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
-  auto world = world::create(GridSize({8, 4, 2}));
+  auto world = world::create(GridSize({8, 4, 2}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -47,7 +47,7 @@ TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
 }
 
 TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
-  auto world = world::create(GridSize({4, 4, 1}));
+  auto world = world::create(GridSize({4, 4, 1}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -68,7 +68,7 @@ TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
 
 TEST_CASE("field::apply_inplace modifies field based on current value",
           "[field_ops][unit]") {
-  auto world = world::create(GridSize({4, 2, 2}));
+  auto world = world::create(GridSize({4, 2, 2}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -126,7 +126,7 @@ TEST_CASE("field::apply_inplace selective update preserves untouched cells",
 
 TEST_CASE("field::apply_inplace_with_time uses time parameter",
           "[field_ops][unit]") {
-  auto world = world::create(GridSize({4, 2, 1}));
+  auto world = world::create(GridSize({4, 2, 1}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -148,7 +148,7 @@ TEST_CASE("field::apply_inplace_with_time uses time parameter",
 }
 
 TEST_CASE("legacy adapter wraps lambda into FieldModifier", "[field_ops][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}));
+  auto world = world::create(GridSize({8, 1, 1}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
   DummyModel model(fft, world);

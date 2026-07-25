@@ -106,9 +106,9 @@ TEST_CASE("GridSize construction and conversion", "[strong_types][construction]"
     REQUIRE(converted[2] == 100);
   }
 
-  SECTION("Implicit conversion back to Int3 still works") {
+  SECTION("Explicit conversion back to Int3 works") {
     GridSize size({100, 100, 100});
-    Int3 converted = size;  // Implicit conversion
+    Int3 converted = size.to_vector3();  // Explicit conversion
 
     REQUIRE(converted[0] == 100);
     REQUIRE(converted[1] == 100);
@@ -162,9 +162,9 @@ TEST_CASE("GridSpacing construction and conversion",
     REQUIRE(converted[2] == 0.25);
   }
 
-  SECTION("Implicit conversion back to Real3 still works") {
+  SECTION("Explicit conversion back to Real3 works") {
     GridSpacing spacing({0.25, 0.25, 0.25});
-    Real3 converted = spacing;  // Implicit conversion
+    Real3 converted = spacing.to_vector3();  // Explicit conversion
 
     REQUIRE(converted[0] == 0.25);
     REQUIRE(converted[1] == 0.25);
@@ -183,9 +183,9 @@ TEST_CASE("PhysicalOrigin construction and conversion",
     REQUIRE(origin.get()[2] == -10.0);
   }
 
-  SECTION("Implicit conversion back to Real3") {
+  SECTION("Explicit conversion back to Real3 works") {
     PhysicalOrigin origin({5.5, 10.5, 15.5});
-    Real3 converted = origin;
+    Real3 converted = origin.to_vector3();
 
     REQUIRE(converted[0] == 5.5);
     REQUIRE(converted[1] == 10.5);

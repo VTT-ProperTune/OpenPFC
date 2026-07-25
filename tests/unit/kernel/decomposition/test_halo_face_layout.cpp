@@ -11,7 +11,7 @@ using namespace pfc;
 
 TEST_CASE("face_halo_counts matches create_recv_halo per direction",
           "[halo][layout]") {
-  auto world = world::create(GridSize({64, 64, 64}));
+  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
   auto decomp = decomposition::create(world, {2, 2, 1});
   const int rank = 0;
   const int hw = 2;
@@ -29,7 +29,7 @@ TEST_CASE("face_halo_counts matches create_recv_halo per direction",
 
 TEST_CASE("face_halo_counts_analytic matches pattern-based counts",
           "[halo][layout]") {
-  auto world = world::create(GridSize({32, 48, 16}));
+  auto world = world::create(GridSize({32, 48, 16}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
   const int rank = 0;
   const int hw = 1;
@@ -44,7 +44,7 @@ TEST_CASE("face_halo_counts_analytic matches pattern-based counts",
 }
 
 TEST_CASE("allocate_face_halos sizes", "[halo][layout]") {
-  auto world = world::create(GridSize({16, 16, 16}));
+  auto world = world::create(GridSize({16, 16, 16}).to_vector3());
   auto decomp = decomposition::create(world, {2, 2, 2});
   const int rank = 0;
   const int hw = 1;

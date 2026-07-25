@@ -177,8 +177,9 @@ public:
     const pfc::Int3 global_upper{
         m_geometry.size[0] - 1, m_geometry.size[1] - 1, m_geometry.size[2] - 1};
     return pfc::World(pfc::Int3{0, 0, 0}, global_upper,
-                      pfc::domain::create(m_geometry.size, pfc::PhysicalOrigin(m_geometry.origin),
-                                          pfc::GridSpacing(m_geometry.spacing), m_geometry.periodic));
+                      pfc::domain::create(::pfc::GridSize::from_vector3(m_geometry.size), 
+                                          pfc::PhysicalOrigin::from_vector3(m_geometry.origin),
+                                          pfc::GridSpacing::from_vector3(m_geometry.spacing), m_geometry.periodic));
   }
 
   [[nodiscard]] const FDGeometry &geometry() const noexcept { return m_geometry; }

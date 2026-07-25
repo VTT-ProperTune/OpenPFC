@@ -26,7 +26,7 @@ TEST_CASE("Decomposition::domain() reproduces the global World coordinate system
 
 TEST_CASE("Decomposition::global_box() is the full [lower, upper] index box",
           "[decomposition][box3i][unit]") {
-  const auto w = world::create(GridSize({128, 128, 128}));
+  const auto w = world::create(GridSize({128, 128, 128}).to_vector3());
   const auto decomp = decomposition::create(w, Int3{2, 2, 2});
 
   const Box3i g = decomposition::global_box(decomp);
@@ -39,7 +39,7 @@ TEST_CASE("Decomposition::global_box() is the full [lower, upper] index box",
 TEST_CASE(
     "Decomposition::local_box() matches stored local boxes and tiles the global box",
     "[decomposition][box3i][unit]") {
-  const auto w = world::create(GridSize({100, 80, 60}));
+  const auto w = world::create(GridSize({100, 80, 60}).to_vector3());
   const auto decomp = decomposition::create(w, Int3{2, 2, 1});
   const int n = decomposition::get_num_domains(decomp);
   REQUIRE(n == 4);

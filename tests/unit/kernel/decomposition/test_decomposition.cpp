@@ -15,7 +15,7 @@ using namespace pfc::types;
 
 TEST_CASE("Decomposition - basic functionality", "[decomposition][unit]") {
   // Create a dummy World object for testing
-  auto world = world::create(GridSize({128, 128, 128}));
+  auto world = world::create(GridSize({128, 128, 128}).to_vector3());
 
   SECTION("Construction and getters") {
     auto decomposition = decomposition::create(world, 1);
@@ -32,7 +32,7 @@ TEST_CASE("Decomposition - basic functionality", "[decomposition][unit]") {
 }
 
 TEST_CASE("Decomposition - periodic neighbor ranks", "[decomposition][unit]") {
-  auto world = world::create(GridSize({16, 16, 16}));
+  auto world = world::create(GridSize({16, 16, 16}).to_vector3());
   const Int3 grid{2, 2, 2};
   auto decomp = decomposition::create(world, grid);
 
@@ -77,13 +77,13 @@ TEST_CASE("test_create_rejects_excessive_nparts", "[decomposition][unit][error]"
   using namespace pfc;
   // World: 2x2x2, only 8 total grid points
   // Requesting 9 decompositions exceeds what HeFFTe can partition
-  auto world = world::create(GridSize({2, 2, 2}));
+  auto world = world::create(GridSize({2, 2, 2}).to_vector3());
   REQUIRE_THROWS_AS(::decomposition::create(world, 9), std::invalid_argument);
 }
 
 TEST_CASE("test_create_rejects_invalid_grid", "[decomposition][unit][error]") {
   using namespace pfc;
-  auto world = world::create(GridSize({128, 128, 128}));
+  auto world = world::create(GridSize({128, 128, 128}).to_vector3());
   // Grid dimension of zero is invalid
   REQUIRE_THROWS_AS(::decomposition::create(world, Int3{300, 1, 1}),
                     std::invalid_argument);
@@ -97,7 +97,7 @@ TEST_CASE("Decomposition - split_world box ordering matches x-fastest ranks",
   // Non-cubic grids exercise gx != gy != gz.
   for (const Int3 grid :
        {Int3{2, 3, 4}, Int3{1, 2, 4}, Int3{4, 1, 2}, Int3{3, 3, 1}}) {
-    auto world = world::create(GridSize({24, 24, 24}));
+    auto world = world::create(GridSize({24, 24, 24}).to_vector3());
     REQUIRE_NOTHROW(decomposition::create(world, grid));
   }
 }
@@ -106,7 +106,7 @@ TEST_CASE("Decomposition - get_neighbor_rank round-trips on non-cubic grids",
           "[decomposition][unit]") {
   using namespace pfc;
   const Int3 grid{2, 3, 4};
-  auto world = world::create(GridSize({24, 24, 24}));
+  auto world = world::create(GridSize({24, 24, 24}).to_vector3());
   auto decomp = decomposition::create(world, grid);
   const int n = decomposition::get_num_domains(decomp);
   REQUIRE(n == grid[0] * grid[1] * grid[2]);

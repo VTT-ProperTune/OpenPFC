@@ -17,7 +17,7 @@ using namespace pfc;
 namespace {
 
 field::PaddedBrick<double> make_brick(int n, int hw) {
-  auto world = world::create(GridSize({n, n, n}));
+  auto world = world::create(GridSize({n, n, n}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   return field::PaddedBrick<double>(decomp, /*rank=*/0, hw);
 }

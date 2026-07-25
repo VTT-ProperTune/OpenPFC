@@ -12,7 +12,7 @@ using namespace pfc;
 
 TEST_CASE("Field operations - comprehensive (stub)",
           "[field][comprehensive][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}));
+  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   REQUIRE(fft.size_inbox() > 0);

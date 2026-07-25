@@ -153,15 +153,15 @@ TEST_CASE("Backward compatibility with raw types",
     REQUIRE(get_origin(world)[0] == Approx(0.0));
   }
 
-  SECTION("Strong types implicitly convert to raw types") {
+  SECTION("Strong types explicitly convert to raw types") {
     GridSize size({64, 64, 64});
     PhysicalOrigin origin({0.0, 0.0, 0.0});
     GridSpacing spacing({1.0, 1.0, 1.0});
 
-    // Should be able to extract raw values
-    Int3 raw_size = size;
-    Real3 raw_origin = origin;
-    Real3 raw_spacing = spacing;
+    // Should be able to extract raw values using explicit conversions
+    Int3 raw_size = size.to_vector3();
+    Real3 raw_origin = origin.to_vector3();
+    Real3 raw_spacing = spacing.to_vector3();
 
     REQUIRE(raw_size[0] == 64);
     REQUIRE(raw_origin[0] == 0.0);

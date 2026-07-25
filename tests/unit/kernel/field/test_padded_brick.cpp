@@ -13,7 +13,7 @@ using Catch::Approx;
 
 TEST_CASE("PaddedBrick: storage size matches (n+2hw)^3 and idx round-trip",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({8, 6, 4}));
+  auto world = world::create(GridSize({8, 6, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   const int hw = 2;
@@ -45,7 +45,7 @@ TEST_CASE("PaddedBrick: storage size matches (n+2hw)^3 and idx round-trip",
 }
 
 TEST_CASE("PaddedBrick: zero-initialized on construction", "[field][padded_brick]") {
-  auto world = world::create(GridSize({4, 4, 4}));
+  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   field::PaddedBrick<double> u(decomp, 0, /*hw=*/1);
@@ -58,7 +58,7 @@ TEST_CASE("PaddedBrick: zero-initialized on construction", "[field][padded_brick
 
 TEST_CASE("PaddedBrick: operator() reaches halo cells in [-hw, n+hw)",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({4, 4, 4}));
+  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   const int hw = 1;
@@ -85,7 +85,7 @@ TEST_CASE("PaddedBrick: operator() reaches halo cells in [-hw, n+hw)",
 
 TEST_CASE("PaddedBrick: apply fills only owned cells, halos stay zero",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({4, 4, 4}));
+  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   const int hw = 1;
@@ -119,7 +119,7 @@ TEST_CASE("PaddedBrick: apply fills only owned cells, halos stay zero",
 
 TEST_CASE("PaddedBrick: global_coords extrapolates across the halo ring",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({4, 4, 4}));
+  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   const int hw = 2;
@@ -136,7 +136,7 @@ TEST_CASE("PaddedBrick: global_coords extrapolates across the halo ring",
 
 TEST_CASE("PaddedBrick: hw=0 reduces to plain owned-only buffer",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({3, 3, 3}));
+  auto world = world::create(GridSize({3, 3, 3}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   field::PaddedBrick<double> u(decomp, 0, /*hw=*/0);
@@ -147,7 +147,7 @@ TEST_CASE("PaddedBrick: hw=0 reduces to plain owned-only buffer",
 }
 
 TEST_CASE("PaddedBrick: rejects negative halo width", "[field][padded_brick]") {
-  auto world = world::create(GridSize({4, 4, 4}));
+  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   REQUIRE_THROWS_AS(field::PaddedBrick<double>(decomp, 0, -1),
                     std::invalid_argument);
@@ -155,7 +155,7 @@ TEST_CASE("PaddedBrick: rejects negative halo width", "[field][padded_brick]") {
 
 TEST_CASE("PaddedBrick: carries decomposition and rank along with hw",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({8, 6, 4}));
+  auto world = world::create(GridSize({8, 6, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   const int hw = 2;
@@ -174,7 +174,7 @@ TEST_CASE("PaddedBrick: carries decomposition and rank along with hw",
 
 TEST_CASE("PaddedBrick: indices() walks every owned cell in row-major order",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({4, 3, 2}));
+  auto world = world::create(GridSize({4, 3, 2}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   field::PaddedBrick<int> u(decomp, /*rank=*/0, /*hw=*/1);
@@ -195,7 +195,7 @@ TEST_CASE("PaddedBrick: indices() walks every owned cell in row-major order",
 
 TEST_CASE("PaddedBrick: indices_inner(r) skips r-thick boundary slab",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({6, 6, 6}));
+  auto world = world::create(GridSize({6, 6, 6}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   field::PaddedBrick<int> u(decomp, /*rank=*/0, /*hw=*/2);
@@ -223,7 +223,7 @@ TEST_CASE("PaddedBrick: indices_inner(r) skips r-thick boundary slab",
 
 TEST_CASE("PaddedBrick: Int3 overloads of idx/operator() match scalar form",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({3, 3, 3}));
+  auto world = world::create(GridSize({3, 3, 3}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   field::PaddedBrick<int> u(decomp, /*rank=*/0, /*hw=*/1);
@@ -244,7 +244,7 @@ TEST_CASE("PaddedBrick: Int3 overloads of idx/operator() match scalar form",
 
 TEST_CASE("PaddedBrick: throws on halo width overflow in extent calculation",
           "[field][padded_brick]") {
-  auto world = world::create(GridSize({1000000, 1, 1}));
+  auto world = world::create(GridSize({1000000, 1, 1}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   // Large halo width that causes nx + 2*hw to exceed INT_MAX
@@ -265,7 +265,7 @@ TEST_CASE("PaddedBrick: checked_product_3d throws when size_t would overflow",
 }
 
 TEST_CASE("PaddedBrick: throws on negative halo width", "[field][padded_brick]") {
-  auto world = world::create(GridSize({4, 4, 4}));
+  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   REQUIRE_THROWS_AS(field::PaddedBrick<double>(decomp, 0, -1),
                     std::invalid_argument);

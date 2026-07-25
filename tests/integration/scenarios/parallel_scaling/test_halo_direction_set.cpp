@@ -176,7 +176,7 @@ TEST_CASE("PaddedHaloExchanger Axes2D leaves ±Z halos untouched on nz=1 slab",
   // Single-rank, periodic, 2D slab (nz=1). With `Axes3D()` periodic ±Z would
   // fill the Z halos (here from the same rank's owned cells); with
   // `Axes2D()` they must remain at the sentinel value.
-  auto world = pfc::world::create(GridSize({8, 8, 1}));
+  auto world = pfc::world::create(GridSize({8, 8, 1}).to_vector3());
   auto decomp = pfc::decomposition::create(world, 1);
 
   const int hw = 1;
@@ -218,7 +218,7 @@ TEST_CASE("PaddedHaloExchanger Axes2D matches Axes3D in XY (two-rank X-split)",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = pfc::world::create(GridSize({16, 8, 1}));
+  auto world = pfc::world::create(GridSize({16, 8, 1}).to_vector3());
   auto decomp = pfc::decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;
@@ -274,7 +274,7 @@ TEST_CASE("HaloDirectionSelector overrides the uniform direction set",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = pfc::world::create(GridSize({16, 8, 1}));
+  auto world = pfc::world::create(GridSize({16, 8, 1}).to_vector3());
   auto decomp = pfc::decomposition::create(world, {2, 1, 1});
 
   // Selector: rank 0 → Axes2D (4 dirs); rank 1 → ±X only (2 dirs).
@@ -312,7 +312,7 @@ TEST_CASE("Mismatched HaloDirectionSelector throws at construction",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = pfc::world::create(GridSize({16, 8, 1}));
+  auto world = pfc::world::create(GridSize({16, 8, 1}).to_vector3());
   auto decomp = pfc::decomposition::create(world, {2, 1, 1});
 
   // Shared X face disagrees: rank 0 posts ±X (Axes2D); rank 1 has ±Y only.
@@ -338,7 +338,7 @@ TEST_CASE("Agreeing Axes2D constructs HaloExchanger and PersistentHaloExchanger"
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = pfc::world::create(GridSize({16, 8, 1}));
+  auto world = pfc::world::create(GridSize({16, 8, 1}).to_vector3());
   auto decomp = pfc::decomposition::create(world, {2, 1, 1});
   const int hw = 1;
 

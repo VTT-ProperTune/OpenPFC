@@ -17,7 +17,7 @@ namespace pfc::test {
 
 /** @brief Uniform 8³ grid world (common in unit tests). */
 [[nodiscard]] inline World make_world_cube_8() {
-  return pfc::world::create(GridSize({8, 8, 8}));
+  return pfc::world::create(GridSize({8, 8, 8}).to_vector3());
 }
 
 /** @brief Single-domain decomposition for @p world (one MPI rank owns all). */

@@ -56,6 +56,10 @@ using namespace pfc;
  * @param size Grid dimensions
  * @param spacing Physical spacing between grid points
  * @param origin Physical origin of coordinate system
+ *
+ * @note This function requires GridSize, GridSpacing, and PhysicalOrigin
+ * types. Use explicit factory methods (e.g., GridSize::from_vector3)
+ * to convert from Int3/Real3 types.
  */
 void print_domain_info(GridSize size, GridSpacing spacing, PhysicalOrigin origin) {
   std::cout << "Domain Information:\n";
@@ -210,21 +214,25 @@ int main() {
   std::cout << "  Volume: " << volume << " cubic units\n\n";
 
   // ========================================================================
-  // Example 6: Backward Compatibility
+  // Example 6: Explicit Conversions
   // ========================================================================
 
-  std::cout << "Example 6: Backward Compatibility\n";
-  std::cout << "----------------------------------\n\n";
+  std::cout << "Example 6: Explicit Conversions\n";
+  std::cout << "--------------------------------\n\n";
 
-  // Old style code still works
+  // Convert from raw types using explicit factory methods
   Int3 old_size = {128, 128, 128};
   Real3 old_spacing = {0.5, 0.5, 0.5};
   Real3 old_origin = {0.0, 0.0, 0.0};
 
-  std::cout << "Old style (raw types) works:\n";
-  print_domain_info(old_size, old_spacing, old_origin); // Implicit conversion!
+  std::cout << "Old style (raw types) converted using explicit factories:\n";
+  print_domain_info(GridSize::from_vector3(old_size),
+                    GridSpacing::from_vector3(old_spacing),
+                    PhysicalOrigin::from_vector3(old_origin));
 
-  std::cout << "\n";
+  std::cout << "\nImplicit conversions are no longer supported:\n";
+  std::cout << "  // print_domain_info(old_size, old_spacing, old_origin);\n";
+  std::cout << "  // Error: no implicit conversion from Int3/Real3 to strong types\n\n";
 
   // ========================================================================
   // Example 7: Zero-Cost Verification
@@ -265,7 +273,7 @@ int main() {
   std::cout << "  ✅ Type safety (compiler catches mistakes)\n";
   std::cout << "  ✅ Self-documenting code (clear intent)\n";
   std::cout << "  ✅ Zero runtime cost (same size, same performance)\n";
-  std::cout << "  ✅ Backward compatibility (implicit conversions)\n";
+  std::cout << "  ✅ Explicit conversions only (maximal type safety)\n";
   std::cout << "  ✅ Better IDE support (autocomplete knows types)\n\n";
 
   std::cout << "Use strong types for:\n";

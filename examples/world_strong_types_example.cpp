@@ -139,22 +139,22 @@ int main() {
   std::cout << "\n";
 
   // ========================================================================
-  // Example 6: Backward compatibility
+  // Example 6: Converting from raw types
   // ========================================================================
-  std::cout << "6. Backward compatibility with raw types:\n";
+  std::cout << "6. Converting from raw types to strong types:\n";
   {
-    // Old API still works (though deprecated)
+    // Raw types still work with explicit conversions
     Int3 size = {32, 32, 32};
     Real3 offset = {0.0, 0.0, 0.0};
     Real3 spacing = {1.0, 1.0, 1.0};
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    auto world = create(size, offset, spacing);
-#pragma GCC diagnostic pop
+    // Convert to strong types using explicit factory methods
+    auto world = domain::create_world(GridSize::from_vector3(size),
+                                      PhysicalOrigin::from_vector3(offset),
+                                      GridSpacing::from_vector3(spacing));
 
-    std::cout << "   Old API still works (with deprecation warning)\n";
-    std::cout << "   Migration: Just wrap parameters in strong types!\n";
+    std::cout << "   Raw types converted to strong types!\n";
+    std::cout << "   Migration: Use explicit factory methods!\n";
   }
   std::cout << "\n";
 

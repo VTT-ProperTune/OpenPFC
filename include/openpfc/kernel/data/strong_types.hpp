@@ -45,24 +45,26 @@
  *
  * Assembly output is identical to using raw `Int3` or `Real3` types.
  *
- * ## Backward Compatibility
+ * ## Explicit Conversions
  *
- * Strong types provide both **implicit conversions** for backward compatibility
- * and **explicit conversion methods** for type safety:
+ * Strong types provide **explicit conversions** only to ensure type safety:
  *
  * @code
- * // Old code with implicit conversions still works
- * Int3 size = {64, 64, 64};
- * auto world = create(size, ...);  // ✅ Works via implicit conversion
+ * // Construction requires explicit factory method or explicit constructor
+ * Int3 raw_size = {64, 64, 64};
+ * GridSize size = GridSize::from_vector3(raw_size);  // ✅ Explicit factory
+ * GridSize size2{raw_size};                          // ✅ Explicit construction
  *
- * // New code uses strong types explicitly
- * GridSize size({64, 64, 64});
- * auto world = create(size, ...);  // ✅ Also works
+ * // No implicit conversions from raw types
+ * // GridSize size3 = raw_size;                      // ❌ Won't compile
  *
- * // Can extract back to raw type (explicit preferred)
- * Int3 raw = size.to_vector3();     // ✅ Explicit conversion (preferred)
- * Int3 raw2 = size;                // ✅ Also works via implicit conversion
+ * // Extract back to raw type (explicit only)
+ * Int3 extracted = size.to_vector3();               // ✅ Explicit conversion
+ * // Int3 extracted2 = size;                         // ❌ Won't compile
  * @endcode
+ *
+ * This explicit-only approach maximizes type safety by preventing accidental
+ * conversions that could mask type mistakes.
  *
  * ## Available Types
  *
@@ -78,7 +80,7 @@
  * ### Basic Construction
  *
  * @code
- * // From raw arrays (explicit construction)
+ * // From raw arrays (explicit factory method)
  * Int3 raw_size = {64, 64, 64};
  * GridSize size = GridSize::from_vector3(raw_size);
  *
@@ -166,10 +168,10 @@ struct GridSize {
   Int3 value; ///< Underlying array value
 
   /**
-   * @brief Construct from Int3 (implicit for backward compatibility)
+   * @brief Construct from Int3 (explicit construction)
    * @param v Grid dimensions
    */
-  GridSize(const Int3 &v) : value(v) {}
+  explicit GridSize(const Int3 &v) : value(v) {}
 
   /**
    * @brief Create from Int3 (explicit factory method)
@@ -185,16 +187,10 @@ struct GridSize {
   const Int3 &get() const noexcept { return value; }
 
   /**
-   * @brief Explicit conversion to Int3 (preferred over implicit conversion)
+   * @brief Explicit conversion to Int3
    * @return Copy of underlying Int3
    */
   Int3 to_vector3() const noexcept { return value; }
-
-  /**
-   * @brief Implicit conversion to Int3 (for backward compatibility)
-   * @return Reference to underlying Int3
-   */
-  operator const Int3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying grid dimensions */
 #ifndef __CUDACC__
@@ -243,10 +239,10 @@ struct GridSpacing {
   Real3 value; ///< Underlying array value
 
   /**
-   * @brief Construct from Real3 (implicit for backward compatibility)
+   * @brief Construct from Real3 (explicit construction)
    * @param v Spacing in each dimension
    */
-  GridSpacing(const Real3 &v) : value(v) {}
+  explicit GridSpacing(const Real3 &v) : value(v) {}
 
   /**
    * @brief Create from Real3 (explicit factory method)
@@ -262,16 +258,10 @@ struct GridSpacing {
   const Real3 &get() const noexcept { return value; }
 
   /**
-   * @brief Explicit conversion to Real3 (preferred over implicit conversion)
+   * @brief Explicit conversion to Real3
    * @return Copy of underlying Real3
    */
   Real3 to_vector3() const noexcept { return value; }
-
-  /**
-   * @brief Implicit conversion to Real3 (for backward compatibility)
-   * @return Reference to underlying Real3
-   */
-  operator const Real3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying spacing */
 #ifndef __CUDACC__
@@ -314,10 +304,10 @@ struct PhysicalOrigin {
   Real3 value; ///< Underlying array value
 
   /**
-   * @brief Construct from Real3 (implicit for backward compatibility)
+   * @brief Construct from Real3 (explicit construction)
    * @param v Origin coordinates
    */
-  PhysicalOrigin(const Real3 &v) : value(v) {}
+  explicit PhysicalOrigin(const Real3 &v) : value(v) {}
 
   /**
    * @brief Create from Real3 (explicit factory method)
@@ -333,16 +323,10 @@ struct PhysicalOrigin {
   const Real3 &get() const noexcept { return value; }
 
   /**
-   * @brief Explicit conversion to Real3 (preferred over implicit conversion)
+   * @brief Explicit conversion to Real3
    * @return Copy of underlying Real3
    */
   Real3 to_vector3() const noexcept { return value; }
-
-  /**
-   * @brief Implicit conversion to Real3 (for backward compatibility)
-   * @return Reference to underlying Real3
-   */
-  operator const Real3 &() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying coordinates */
 #ifndef __CUDACC__

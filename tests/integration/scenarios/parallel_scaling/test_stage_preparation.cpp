@@ -116,7 +116,7 @@ TEST_CASE("StagePreparationService: scalar prepare fills ±X ghosts",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 2;
@@ -148,7 +148,7 @@ TEST_CASE("StagePreparationService: two-field prepare fills both ghost rings",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;
@@ -187,7 +187,7 @@ TEST_CASE("StagePreparationService: needs_halo=false leaves ghosts untouched",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;
@@ -219,7 +219,7 @@ TEST_CASE("StagePreparationService: reject/retry re-prepare restores ghosts",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 2;
@@ -258,7 +258,7 @@ TEST_CASE("StagePreparationService: boundary hook ordering vs halo",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;

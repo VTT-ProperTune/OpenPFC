@@ -36,7 +36,7 @@ TEST_CASE("Constant Field Modifier") {
   }
 
   SECTION("Apply field modifier") {
-    auto world = world::create(GridSize({8, 1, 1}));
+    auto world = world::create(GridSize({8, 1, 1}).to_vector3());
     auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
     ModelWithConstantIC m(fft, world);
@@ -55,7 +55,7 @@ TEST_CASE("Constant Field Modifier") {
 }
 
 TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
-  auto world = world::create(GridSize({8, 8, 8}));
+  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
@@ -65,7 +65,7 @@ TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
 }
 
 TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
-  auto world = world::create(GridSize({8, 8, 8}));
+  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithConstantIC model(fft, world);

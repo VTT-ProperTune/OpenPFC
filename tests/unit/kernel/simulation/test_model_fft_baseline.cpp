@@ -38,7 +38,8 @@ using pfc::types::Int3;
 // =============================================================================
 
 TEST_CASE("Model-FFT: Construction requires FFT (v2.0)", "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}));
+  GridSize grid_size({8, 8, 8});
+  World world = world::create(grid_size.to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
@@ -50,7 +51,7 @@ TEST_CASE("Model-FFT: Construction requires FFT (v2.0)", "[model][fft][baseline]
 }
 
 TEST_CASE("Model-FFT: get_fft() never throws (v2.0)", "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}));
+  World world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
@@ -58,7 +59,7 @@ TEST_CASE("Model-FFT: get_fft() never throws (v2.0)", "[model][fft][baseline]") 
 }
 
 TEST_CASE("Model-FFT: FFT lifetime management (v2.0)", "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}));
+  World world = world::create(GridSize({8, 8, 8}).to_vector3());
 
   SECTION("FFT must outlive Model (documented requirement)") {
     auto decomposition = decomposition::create(world, 1);
@@ -71,7 +72,7 @@ TEST_CASE("Model-FFT: FFT lifetime management (v2.0)", "[model][fft][baseline]")
 
 TEST_CASE("Model-FFT Baseline: Typical usage patterns",
           "[model][fft][baseline][patterns]") {
-  World world = world::create(GridSize({16, 16, 16}));
+  World world = world::create(GridSize({16, 16, 16}).to_vector3());
 
   SECTION("Pattern: Create FFT then construct model (v2.0)") {
     auto decomposition = decomposition::create(world, 1);
@@ -85,7 +86,7 @@ TEST_CASE("Model-FFT Baseline: Typical usage patterns",
 }
 
 TEST_CASE("Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}));
+  World world = world::create(GridSize({8, 8, 8}).to_vector3());
 
   SECTION("Derived model inherits FFT access") {
     auto decomposition = decomposition::create(world, 1);
@@ -111,7 +112,7 @@ TEST_CASE("Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]"
 
 TEST_CASE("Model-FFT Baseline: Field operations with FFT",
           "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}));
+  World world = world::create(GridSize({8, 8, 8}).to_vector3());
 
   SECTION("Real fields work after FFT is set") {
     auto decomposition = decomposition::create(world, 1);
@@ -195,7 +196,7 @@ TEST_CASE("Model-FFT: v2.0 behavior validated", "[model][fft][future]") {
   // They are currently disabled (. tag) and will be enabled in v2.0
 
   SECTION("v2.0: Single constructor with FFT reference") {
-    World world = world::create(GridSize({8, 8, 8}));
+    World world = world::create(GridSize({8, 8, 8}).to_vector3());
     auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
 

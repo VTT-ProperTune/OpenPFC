@@ -150,7 +150,7 @@ TEST_CASE("FdGradient ctor throws when halo_width is below stencil half_width",
   REQUIRE_THROWS_AS(pfc::field::create<OnlyXX>(u, order), std::invalid_argument);
 
   using namespace pfc;
-  auto world = world::create(GridSize({N, N, N}));
+  auto world = world::create(GridSize({N, N, N}).to_vector3());
   auto decomp = decomposition::create(world, 1);
   field::PaddedBrick<double> brick(decomp, /*rank=*/0, hw);
   REQUIRE_THROWS_AS(
@@ -188,7 +188,7 @@ TEST_CASE("pfc::gradient::FDGradient binds to a PaddedBrick and matches the "
   // PaddedBrick via the brick-binding constructor (default order = 2). The
   // pfc::field::FdGradient alias must remain spell-compatible.
   using namespace pfc;
-  auto world = world::create(GridSize({8, 8, 8}));
+  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   field::PaddedBrick<double> u(decomp, /*rank=*/0, /*hw=*/1);
@@ -261,7 +261,7 @@ TEST_CASE("FDGradient PaddedBrick constructor accepts callback",
   auto callback = [&callback_invoked]() { ++callback_invoked; };
 
   using namespace pfc;
-  auto world = world::create(GridSize({8, 8, 8}));
+  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   field::PaddedBrick<double> u(decomp, /*rank=*/0, /*hw=*/1);

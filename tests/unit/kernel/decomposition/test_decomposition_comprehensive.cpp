@@ -11,7 +11,7 @@ using namespace pfc;
 
 TEST_CASE("Decomposition - comprehensive (stub)",
           "[decomposition][comprehensive][unit]") {
-  auto world = world::create(GridSize({128, 128, 128}));
+  auto world = world::create(GridSize({128, 128, 128}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   REQUIRE(get_world(decomposition) == world);
 }

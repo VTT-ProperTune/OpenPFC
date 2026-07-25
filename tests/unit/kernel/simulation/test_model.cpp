@@ -23,7 +23,7 @@ template <class T> void use_field_ref(T && /*unused*/) {}
 } // namespace
 
 TEST_CASE("Model - basic functionality (v2.0)", "[model][unit]") {
-  World world = world::create(GridSize({8, 1, 1}));
+  World world = world::create(GridSize({8, 1, 1}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
@@ -73,7 +73,7 @@ TEST_CASE("Model - basic functionality (v2.0)", "[model][unit]") {
 
 TEST_CASE("Model::is_rank0() returns correct rank status (v2.0)",
           "[model][unit][rank]") {
-  World world = world::create(GridSize({10, 10, 10}));
+  World world = world::create(GridSize({10, 10, 10}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
@@ -88,7 +88,7 @@ TEST_CASE("Model::is_rank0() returns correct rank status (v2.0)",
 
 TEST_CASE("Model::mpi_comm() matches constructor communicator",
           "[model][unit][rank]") {
-  World world = world::create(GridSize({4, 4, 4}));
+  World world = world::create(GridSize({4, 4, 4}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world, MPI_COMM_WORLD);
@@ -97,7 +97,7 @@ TEST_CASE("Model::mpi_comm() matches constructor communicator",
 }
 
 TEST_CASE("Model::is_rank0() is const-correct (v2.0)", "[model][unit][rank]") {
-  World world = world::create(GridSize({10, 10, 10}));
+  World world = world::create(GridSize({10, 10, 10}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
@@ -110,7 +110,7 @@ TEST_CASE("Model::is_rank0() is const-correct (v2.0)", "[model][unit][rank]") {
 }
 
 TEST_CASE("Model - error handling for non-existent fields", "[model][unit][error]") {
-  World world = world::create(GridSize({8, 8, 8}));
+  World world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);

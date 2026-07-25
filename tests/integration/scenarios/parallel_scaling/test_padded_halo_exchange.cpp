@@ -64,7 +64,7 @@ TEST_CASE("PaddedHaloExchanger: single-rank periodic wrap fills all 6 halos",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 1) return;
 
-  auto world = world::create(GridSize({8, 6, 4}));
+  auto world = world::create(GridSize({8, 6, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   const int hw = 1;
@@ -90,7 +90,7 @@ TEST_CASE("PaddedHaloExchanger: two-rank X-split fills +X / -X with neighbour",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 2;
@@ -122,7 +122,7 @@ TEST_CASE("PaddedHaloExchanger: non-blocking start/finish overlaps with inner wo
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;
@@ -159,7 +159,7 @@ TEST_CASE("PaddedHaloExchanger: 2x2x1 grid fills X and Y with right neighbours",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 4) return;
 
-  auto world = world::create(GridSize({16, 16, 4}));
+  auto world = world::create(GridSize({16, 16, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   const int hw = 1;
@@ -195,7 +195,7 @@ TEST_CASE("PaddedHaloExchanger: Axes2D direction set skips ±Z halos",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 1) return;
 
-  auto world = pfc::world::create(GridSize({8, 6, 4}));
+  auto world = pfc::world::create(GridSize({8, 6, 4}).to_vector3());
   auto decomp = pfc::decomposition::create(world, 1);
 
   const int hw = 1;
@@ -232,7 +232,7 @@ TEST_CASE("PaddedHaloExchanger: brick-binding ctor + free start/finish wrappers"
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 2;
@@ -264,7 +264,7 @@ TEST_CASE("PaddedHaloExchanger: exchange(halo) matches start+finish",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = world::create(GridSize({16, 8, 4}));
+  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 2;
@@ -290,7 +290,7 @@ TEST_CASE("PaddedHaloExchanger: unbound start() throws std::logic_error",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 1) return;
 
-  auto world = world::create(GridSize({4, 4, 4}));
+  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   auto domain = decomposition::domain(decomp);

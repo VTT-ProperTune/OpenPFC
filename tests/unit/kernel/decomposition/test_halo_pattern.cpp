@@ -19,7 +19,7 @@
 using namespace pfc;
 
 TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
-  auto world = world::create(GridSize({64, 64, 64}));
+  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
   auto decomp = decomposition::create(world, {2, 2, 1}); // 2×2×1 = 4 ranks
 
   int rank = 0;
@@ -49,7 +49,7 @@ TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
 }
 
 TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
-  auto world = world::create(GridSize({64, 64, 64}));
+  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   int rank = 0;
@@ -79,7 +79,7 @@ TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
 }
 
 TEST_CASE("Send and recv halo have same size", "[halo][pattern]") {
-  auto world = world::create(GridSize({64, 64, 64}));
+  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   int rank = 0;
@@ -96,7 +96,7 @@ TEST_CASE("Send and recv halo have same size", "[halo][pattern]") {
 }
 
 TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
-  auto world = world::create(GridSize({64, 64, 64}));
+  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   int rank = 0;
@@ -120,7 +120,7 @@ TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
 }
 
 TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
-  auto world = world::create(GridSize({64, 64, 64}));
+  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
   auto decomp = decomposition::create(world, {2, 2, 1});
 
   int rank = 0;
@@ -168,7 +168,7 @@ TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
 TEST_CASE("create_send_halo throws when active axis thinner than halo_width",
           "[halo][pattern]") {
   // Global 8³ with 8×1×1 ranks → local nx=1; hw=2 cannot fit on +X.
-  auto world = world::create(GridSize({8, 8, 8}));
+  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomp = decomposition::create(world, {8, 1, 1});
   const int rank = 0;
   const int halo_width = 2;
@@ -191,7 +191,7 @@ TEST_CASE("create_send_halo throws when active axis thinner than halo_width",
 
 TEST_CASE("create_recv_halo throws when active axis thinner than halo_width",
           "[halo][pattern]") {
-  auto world = world::create(GridSize({8, 8, 8}));
+  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
   auto decomp = decomposition::create(world, {8, 1, 1});
   const int rank = 0;
   const int halo_width = 2;
@@ -214,7 +214,7 @@ TEST_CASE("create_recv_halo throws when active axis thinner than halo_width",
 
 TEST_CASE("create_send_halo allows flat inactive axis (nz==1, ±X only)",
           "[halo][pattern]") {
-  auto world = world::create(GridSize({16, 8, 1}));
+  auto world = world::create(GridSize({16, 8, 1}).to_vector3());
   auto decomp = decomposition::create(world, {2, 1, 1});
   REQUIRE_NOTHROW(halo::create_send_halo<backend::CpuTag>(
       decomp, 0, Int3{1, 0, 0}, 1));

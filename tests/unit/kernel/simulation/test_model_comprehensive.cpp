@@ -20,7 +20,7 @@ public:
 } // namespace
 
 TEST_CASE("Model - comprehensive (stub)", "[model][comprehensive][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}));
+  auto world = world::create(GridSize({8, 1, 1}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   StubModel model(fft, world);

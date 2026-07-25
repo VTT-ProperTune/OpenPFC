@@ -53,9 +53,9 @@ TEST_CASE("World - construction and accessors", "[world][unit]") {
   }
 
   SECTION("Invalid dimensions throw exception") {
-    REQUIRE_THROWS_AS(world::create(GridSize({-1, 100, 100})),
+    REQUIRE_THROWS_AS(world::create(Int3{-1, 100, 100}),
                       std::invalid_argument);
-    REQUIRE_THROWS_AS(world::create(GridSize({0, 100, 100})), std::invalid_argument);
+    REQUIRE_THROWS_AS(world::create(Int3{0, 100, 100}), std::invalid_argument);
   }
 
   SECTION("Invalid spacing throws exception") {
@@ -381,7 +381,7 @@ TEST_CASE("World - physical_volume() calculates correctly",
 TEST_CASE("World - dimensionality checks work correctly",
           "[world][convenience][unit]") {
   SECTION("1D domain (nx > 1, ny = 1, nz = 1)") {
-    auto world1d = world::create(GridSize({100, 1, 1}));
+    auto world1d = world::create(Int3{100, 1, 1});
 
     REQUIRE(world::is_1d(world1d));
     REQUIRE_FALSE(world::is_2d(world1d));
@@ -390,7 +390,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("2D domain (nx > 1, ny > 1, nz = 1)") {
-    auto world2d = world::create(GridSize({64, 64, 1}));
+    auto world2d = world::create(Int3{64, 64, 1});
 
     REQUIRE_FALSE(world::is_1d(world2d));
     REQUIRE(world::is_2d(world2d));
@@ -399,7 +399,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("3D domain (nx > 1, ny > 1, nz > 1)") {
-    auto world3d = world::create(GridSize({32, 32, 32}));
+    auto world3d = world::create(Int3{32, 32, 32});
 
     REQUIRE_FALSE(world::is_1d(world3d));
     REQUIRE_FALSE(world::is_2d(world3d));
@@ -408,7 +408,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("Degenerate case (nx = 1, ny = 1, nz = 1)") {
-    auto world_degenerate = world::create(GridSize({1, 1, 1}));
+    auto world_degenerate = world::create(GridSize({1, 1, 1}).to_vector3());
 
     REQUIRE_FALSE(world::is_1d(world_degenerate));
     REQUIRE_FALSE(world::is_2d(world_degenerate));
@@ -418,7 +418,7 @@ TEST_CASE("World - dimensionality checks work correctly",
 
   SECTION("Non-standard 2D (nx = 1, ny > 1, nz > 1)") {
     // This is NOT considered 2D by our definition
-    auto world_yz = world::create(GridSize({1, 64, 64}));
+    auto world_yz = world::create(GridSize({1, 64, 64}).to_vector3());
 
     REQUIRE_FALSE(world::is_1d(world_yz));
     REQUIRE_FALSE(world::is_2d(world_yz)); // Only x-y plane is 2D
@@ -557,7 +557,7 @@ TEST_CASE("World - convenience functions integrate with existing API",
   }
 
   SECTION("Dimensionality checks consistent with size queries") {
-    auto world2d = world::create(GridSize({128, 128, 1}));
+    auto world2d = world::create(GridSize({128, 128, 1}).to_vector3());
 
     REQUIRE(world::is_2d(world2d));
     REQUIRE(world::get_size(world2d, 0) > 1);
