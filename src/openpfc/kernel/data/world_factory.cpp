@@ -33,6 +33,88 @@ namespace domain {
   return world::World(lower, upper, domain_obj);
 }
 
+// Helper functions (moved from world_helpers.hpp)
+
+// Create uniform grid with unit spacing at origin.
+[[nodiscard]] world::World create_world_uniform(int size) {
+  if (size <= 0) {
+    throw std::invalid_argument("Grid size must be positive, got: " +
+                                std::to_string(size));
+  }
+  return create_world(GridSize({size, size, size}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                      GridSpacing({1.0, 1.0, 1.0}));
+}
+
+// Create uniform grid with specified spacing.
+[[nodiscard]] world::World create_world_uniform(int size, double spacing) {
+  if (size <= 0) {
+    throw std::invalid_argument("Grid size must be positive, got: " +
+                                std::to_string(size));
+  }
+  if (spacing <= 0.0) {
+    throw std::invalid_argument("Spacing must be positive, got: " +
+                                std::to_string(spacing));
+  }
+  return create_world(GridSize({size, size, size}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                      GridSpacing({spacing, spacing, spacing}));
+}
+
+// Create grid from physical bounds (automatically computes spacing).
+[[nodiscard]] world::World create_world_from_bounds(Int3 size, Real3 lower, Real3 upper,
+                                                     Bool3 periodic) {
+  // Validate inputs
+  for (int i = 0; i < 3; ++i) {
+    if (size[i] <= 0) {
+      throw std::invalid_argument("Grid size must be positive in all dimensions");
+    }
+    if (upper[i] <= lower[i]) {
+      throw std::invalid_argument("Upper bound must be greater than lower bound");
+    }
+  }
+
+  // Compute spacing based on periodicity
+  Real3 spacing;
+  for (int i = 0; i < 3; ++i) {
+    if (periodic[i]) {
+      spacing[i] = (upper[i] - lower[i]) / size[i];
+    } else {
+      spacing[i] = (upper[i] - lower[i]) / (size[i] - 1);
+    }
+  }
+
+  return create_world(GridSize(size), PhysicalOrigin(lower), GridSpacing(spacing),
+                      periodic);
+}
+
+// Create grid with default origin but custom spacing.
+[[nodiscard]] world::World create_world_with_spacing(Int3 size, Real3 spacing) {
+  // Validate
+  for (int i = 0; i < 3; ++i) {
+    if (size[i] <= 0) {
+      throw std::invalid_argument("Grid size must be positive");
+    }
+    if (spacing[i] <= 0.0) {
+      throw std::invalid_argument("Spacing must be positive");
+    }
+  }
+
+  return create_world(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
+                      GridSpacing(spacing));
+}
+
+// Create grid with custom origin but unit spacing.
+[[nodiscard]] world::World create_world_with_origin(Int3 size, Real3 origin) {
+  // Validate
+  for (int i = 0; i < 3; ++i) {
+    if (size[i] <= 0) {
+      throw std::invalid_argument("Grid size must be positive");
+    }
+  }
+
+  return create_world(GridSize(size), PhysicalOrigin(origin),
+                      GridSpacing({1.0, 1.0, 1.0}));
+}
+
 } // namespace domain
 
 } // namespace pfc

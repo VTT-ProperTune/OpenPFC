@@ -24,15 +24,12 @@
 
 #pragma once
 
-#include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
-#include <stdexcept>
-#include <string>
+#include <openpfc/domain/create.hpp>
 
 namespace pfc::world {
 
+// Convenience helper types for backward compatibility
 using pfc::types::Bool3;
 using pfc::types::Int3;
 using pfc::types::Real3;
@@ -42,26 +39,25 @@ using pfc::types::Real3;
  *
  * Most common case: N×N×N grid with spacing=1, origin=(0,0,0).
  *
+ * @deprecated Use pfc::domain::create_world_uniform(int) instead
+ *
  * @param size Grid dimensions (same in all directions)
  * @return World with uniform grid
  *
  * @throws std::invalid_argument if size <= 0
  *
  * @code
- * auto world = world::uniform(64);  // 64³ grid, dx=1
+ * auto world = pfc::domain::create_world_uniform(64);  // 64³ grid, dx=1
  * @endcode
  */
-[[nodiscard]] inline CartesianWorld uniform(int size) {
-  if (size <= 0) {
-    throw std::invalid_argument("Grid size must be positive, got: " +
-                                std::to_string(size));
-  }
-  return create(GridSize({size, size, size}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                GridSpacing({1.0, 1.0, 1.0}));
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_uniform(int) instead")]] inline CartesianWorld uniform(int size) {
+  return pfc::domain::create_world_uniform(size);
 }
 
 /**
  * @brief Create uniform grid with specified spacing.
+ *
+ * @deprecated Use pfc::domain::create_world_uniform(int, double) instead
  *
  * @param size Grid dimensions (same in all directions)
  * @param spacing Grid spacing (same in all directions)
@@ -71,24 +67,17 @@ using pfc::types::Real3;
  * @throws std::invalid_argument if spacing <= 0
  *
  * @code
- * auto world = world::uniform(128, 0.5);  // 128³ grid, dx=0.5
+ * auto world = pfc::domain::create_world_uniform(128, 0.5);  // 128³ grid, dx=0.5
  * @endcode
  */
-[[nodiscard]] inline CartesianWorld uniform(int size, double spacing) {
-  if (size <= 0) {
-    throw std::invalid_argument("Grid size must be positive, got: " +
-                                std::to_string(size));
-  }
-  if (spacing <= 0.0) {
-    throw std::invalid_argument("Spacing must be positive, got: " +
-                                std::to_string(spacing));
-  }
-  return create(GridSize({size, size, size}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                GridSpacing({spacing, spacing, spacing}));
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_uniform(int, double) instead")]] inline CartesianWorld uniform(int size, double spacing) {
+  return pfc::domain::create_world_uniform(size, spacing);
 }
 
 /**
  * @brief Create grid from physical bounds (automatically computes spacing).
+ *
+ * @deprecated Use pfc::domain::create_world_from_bounds(const Int3&, const Real3&, const Real3&, const Bool3&) instead
  *
  * @param size Grid dimensions
  * @param lower Lower physical bounds
@@ -104,42 +93,23 @@ using pfc::types::Real3;
  *
  * @code
  * // 100 cells from 0 to 10 (periodic)
- * auto w1 = world::from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});
+ * auto w1 = pfc::domain::create_world_from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});
  *
  * // Non-periodic in x (different spacing formula)
- * auto w2 = world::from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10},
- *                               {false, true, true});
+ * auto w2 = pfc::domain::create_world_from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10},
+ *                                               {false, true, true});
  * @endcode
  */
-[[nodiscard]] inline CartesianWorld from_bounds(Int3 size, Real3 lower, Real3 upper,
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_from_bounds(const Int3&, const Real3&, const Real3&, const Bool3&) instead")]] inline CartesianWorld from_bounds(Int3 size, Real3 lower, Real3 upper,
                                                 Bool3 periodic = {true, true,
                                                                   true}) {
-  // Validate inputs
-  for (int i = 0; i < 3; ++i) {
-    if (size[i] <= 0) {
-      throw std::invalid_argument("Grid size must be positive in all dimensions");
-    }
-    if (upper[i] <= lower[i]) {
-      throw std::invalid_argument("Upper bound must be greater than lower bound");
-    }
-  }
-
-  // Compute spacing based on periodicity
-  Real3 spacing;
-  for (int i = 0; i < 3; ++i) {
-    if (periodic[i]) {
-      spacing[i] = (upper[i] - lower[i]) / size[i];
-    } else {
-      spacing[i] = (upper[i] - lower[i]) / (size[i] - 1);
-    }
-  }
-
-  return create(GridSize(size), PhysicalOrigin(lower), GridSpacing(spacing),
-                periodic);
+  return pfc::domain::create_world_from_bounds(size, lower, upper, periodic);
 }
 
 /**
  * @brief Create grid with default origin but custom spacing.
+ *
+ * @deprecated Use pfc::domain::create_world_with_spacing(const Int3&, const Real3&) instead
  *
  * @param size Grid dimensions
  * @param spacing Grid spacing
@@ -149,26 +119,17 @@ using pfc::types::Real3;
  * @throws std::invalid_argument if any spacing <= 0
  *
  * @code
- * auto world = world::with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});
+ * auto world = pfc::domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});
  * @endcode
  */
-[[nodiscard]] inline CartesianWorld with_spacing(Int3 size, Real3 spacing) {
-  // Validate
-  for (int i = 0; i < 3; ++i) {
-    if (size[i] <= 0) {
-      throw std::invalid_argument("Grid size must be positive");
-    }
-    if (spacing[i] <= 0.0) {
-      throw std::invalid_argument("Spacing must be positive");
-    }
-  }
-
-  return create(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
-                GridSpacing(spacing));
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_with_spacing(const Int3&, const Real3&) instead")]] inline CartesianWorld with_spacing(Int3 size, Real3 spacing) {
+  return pfc::domain::create_world_with_spacing(size, spacing);
 }
 
 /**
  * @brief Create grid with custom origin but unit spacing.
+ *
+ * @deprecated Use pfc::domain::create_world_with_origin(const Int3&, const Real3&) instead
  *
  * @param size Grid dimensions
  * @param origin Physical origin
@@ -177,19 +138,11 @@ using pfc::types::Real3;
  * @throws std::invalid_argument if any size <= 0
  *
  * @code
- * auto world = world::with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});
+ * auto world = pfc::domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});
  * @endcode
  */
-[[nodiscard]] inline CartesianWorld with_origin(Int3 size, Real3 origin) {
-  // Validate
-  for (int i = 0; i < 3; ++i) {
-    if (size[i] <= 0) {
-      throw std::invalid_argument("Grid size must be positive");
-    }
-  }
-
-  return create(GridSize(size), PhysicalOrigin(origin),
-                GridSpacing({1.0, 1.0, 1.0}));
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_with_origin(const Int3&, const Real3&) instead")]] inline CartesianWorld with_origin(Int3 size, Real3 origin) {
+  return pfc::domain::create_world_with_origin(size, origin);
 }
 
 } // namespace pfc::world
