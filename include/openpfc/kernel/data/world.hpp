@@ -45,8 +45,10 @@
  * ## Status (0.2)
  *
  * `World` is a plain 3D Cartesian value type and a deprecated compatibility
- * shim over `pfc::Domain` (see `domain.hpp`). New code should prefer `Domain`
- * + `Box3i` directly; `World` is retained only so legacy call sites compile.
+ * shim over `pfc::Domain` (see `domain.hpp`). This is the M1 A0 adapter:
+ * World provides deprecated member methods for Gen-1 source compatibility;
+ * framework code should use `Domain` + `Box3i` directly. New code should not
+ * use World or its deprecated member methods.
  *
  * @see world_factory.hpp for World creation functions
  * @see world_queries.hpp for queries and coordinate transforms
@@ -60,6 +62,19 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/types.hpp>
+
+// Deprecation attribute guard
+#if !defined(OPENPFC_SUPPRESS_LEGACY_WARNINGS)
+#if defined(__GNUC__) || defined(__clang__)
+#define OPENPFC_DEPRECATED_API [[deprecated("World member methods are deprecated; use pfc::Domain + pfc::world free functions instead")]]
+#elif defined(_MSC_VER)
+#define OPENPFC_DEPRECATED_API __declspec(deprecated("World member methods are deprecated; use pfc::Domain + pfc::world free functions instead"))
+#else
+#define OPENPFC_DEPRECATED_API
+#endif
+#else
+#define OPENPFC_DEPRECATED_API
+#endif
 
 namespace pfc::world {
 
@@ -75,18 +90,94 @@ using pfc::types::Int3;
  * constructed once and immutable thereafter. This design enhances correctness,
  * thread safety, testability, and reproducibility.
  *
- * As of the 0.2 M1 refactor this is a plain (non-template) 3D Cartesian type:
- * the coordinate-system tag parameter had exactly one instantiation and is being
- * removed. `World` is the deprecated **A0 shim** over the canonical `Domain`
- * (see `domain.hpp`); framework code migrates to `Domain` + `Box3i`.
- *
- * @see world_factory.hpp for construction
- * @see world_queries.hpp for accessing properties
+ * As of the 0.2 M1 refactor this is the **A0 deprecated shim** over the
+ * canonical `Domain` (see `domain.hpp`). The member methods below are provided
+ * only for Gen-1 source compatibility and are deprecated; new code should
+ * prefer `Domain` + `Box3i` with the free functions in `world_queries.hpp`.
  */
 struct World final {
   const Box3i m_box; ///< Index range [low, high] + size (subdomain role)
   const Domain
       m_domain; ///< Global Cartesian coordinate system (origin/spacing/periodic)
+
+  // ========================================================================
+  // Deprecated member methods (A0 shim for Gen-1 compatibility)
+  // ========================================================================
+
+  /**
+   * @brief Get the global domain box.
+   *
+   * @deprecated Use `world::get_size()` and `world::get_lower/upper_bounds()` instead.
+   */
+  OPENPFC_DEPRECATED_API Box3i get_domain() const { return m_box; }
+
+  /**
+   * @brief Get the subdomain box (local subdomain).
+   *
+   * @deprecated Use `world::get_lower()` and `world::get_upper()` instead.
+   */
+  OPENPFC_DEPRECATED_API Box3i get_subdomain() const { return m_box; }
+
+  /**
+   * @brief Total size of the domain.
+   *
+   * @deprecated Use `world::get_size()` instead.
+   */
+  OPENPFC_DEPRECATED_API int size() const {
+    const auto &sz = m_box.size;
+    return sz[0] * sz[1] * sz[2];
+  }
+
+  /**
+   * @brief Size in a specific dimension.
+   *
+   * @deprecated Use `world::get_size(world, dim)` instead.
+   */
+  OPENPFC_DEPRECATED_API int get_size(int dim) const {
+    if (dim < 0 || dim > 2) {
+      throw std::out_of_range("World::get_size: dimension out of range");
+    }
+    return m_box.size[dim];
+  }
+
+  /**
+   * @brief Lower bound (origin) in a specific dimension.
+   *
+   * @deprecated Use `world::get_lower(world, dim)` instead.
+   */
+  OPENPFC_DEPRECATED_API int origin(int dim) const {
+    if (dim < 0 || dim > 2) {
+      throw std::out_of_range("World::origin: dimension out of range");
+    }
+    return m_box.low[dim];
+  }
+
+  /**
+   * @brief Upper bound in a specific dimension.
+   *
+   * @deprecated Use `world::get_upper(world, dim)` instead.
+   */
+  OPENPFC_DEPRECATED_API int upper(int dim) const {
+    if (dim < 0 || dim > 2) {
+      throw std::out_of_range("World::upper: dimension out of range");
+    }
+    return m_box.high[dim];
+  }
+
+  /**
+   * @brief Set the subdomain box (no-op: World is immutable).
+   *
+   * @deprecated World is immutable; cannot set subdomain after construction.
+   */
+  OPENPFC_DEPRECATED_API void set_subdomain(const Box3i &subdomain) {
+    // World is immutable - this deprecated method does nothing
+    // Gen-1 code that calls set_subdomain will compile but have no effect
+    (void)subdomain;
+  }
+
+  // ========================================================================
+  // Core constructors and operators (non-deprecated)
+  // ========================================================================
 
   /**
    * @brief Constructs a World object.
