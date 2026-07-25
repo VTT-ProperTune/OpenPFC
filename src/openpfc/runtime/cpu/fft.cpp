@@ -8,6 +8,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 
 namespace pfc::fft::layout {
@@ -47,13 +49,13 @@ std::ostream &operator<<(std::ostream &os, const std::array<T, N> &arr) {
 using heffte::split_world;
 
 auto get_real_indices(const Decomposition &decomposition) {
-  auto world = get_global_world(decomposition);
-  auto [N1, N2, N3] = get_size(world);
+  auto dom = decomposition::domain(decomposition);
+  auto [N1, N2, N3] = pfc::domain::get_size(dom);
   return heffte::box3d<int>({0, 0, 0}, {N1 - 1, N2 - 1, N3 - 1});
 }
 
 auto get_complex_indices(const Decomposition &decomposition, int r2c_direction) {
-  auto [N1, N2, N3] = get_size(get_global_world(decomposition));
+  auto [N1, N2, N3] = pfc::domain::get_size(decomposition::domain(decomposition));
   if (r2c_direction == 0) {
     return heffte::box3d<int>({0, 0, 0}, {N1 / 2, N2 - 1, N3 - 1});
   }

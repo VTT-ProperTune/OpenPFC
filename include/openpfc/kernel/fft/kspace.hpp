@@ -63,6 +63,7 @@
 #include <array>
 #include <cmath>
 #include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 
 namespace pfc::fft::kspace {
@@ -97,6 +98,34 @@ inline std::array<double, 3>
 k_frequency_scaling(const world::World &world) noexcept {
   const auto spacing = world::get_spacing(world);
   const auto size = world::get_size(world);
+  return {two_pi / (spacing[0] * size[0]), two_pi / (spacing[1] * size[1]),
+          two_pi / (spacing[2] * size[2])};
+}
+
+/**
+ * @brief Compute frequency scaling factors for each dimension (Domain overload).
+ *
+ * Domain-based overload of `k_frequency_scaling` for M1 migration. Computes
+ * f = 2π / (spacing * size) for each dimension.
+ *
+ * @param domain Simulation domain containing grid size and spacing
+ * @return Array of frequency scaling factors [fx, fy, fz] in rad/unit_length
+ *
+ * @note This is a zero-cost abstraction (inline, noexcept)
+ * @note Numerically identical to the World-based overload
+ *
+ * @code
+ * auto domain = domain::create({128, 128, 128}, {0.1, 0.1, 0.1});
+ * auto [fx, fy, fz] = k_frequency_scaling(domain);
+ * // fx = fy = fz = 2π / (0.1 * 128) ≈ 0.490873...
+ * @endcode
+ *
+ * Time complexity: O(1)
+ * Space complexity: O(1)
+ */
+inline std::array<double, 3> k_frequency_scaling(const Domain &domain) noexcept {
+  const auto spacing = domain::get_spacing(domain);
+  const auto size = domain::get_size(domain);
   return {two_pi / (spacing[0] * size[0]), two_pi / (spacing[1] * size[1]),
           two_pi / (spacing[2] * size[2])};
 }
