@@ -44,11 +44,11 @@
  *
  * ## Status (0.2)
  *
- * `World` is a plain 3D Cartesian value type and a deprecated compatibility
- * shim over `pfc::Domain` (see `domain.hpp`). This is the M1 A0 adapter:
- * World provides deprecated member methods for Gen-1 source compatibility;
- * framework code should use `Domain` + `Box3i` directly. New code should not
- * use World or its deprecated member methods.
+ * `World` is a deprecated thin wrapper over `pfc::Domain` with a `Box3i`
+ * subdomain member for Gen-1 compatibility. This is the M1 A0 adapter: World
+ * provides deprecated member methods for Gen-1 source compatibility; framework
+ * code should use `Domain` + `Box3i` directly. New code should not use World or
+ * its deprecated member methods.
  *
  * @see world_factory.hpp for World creation functions
  * @see world_queries.hpp for queries and coordinate transforms
@@ -56,19 +56,20 @@
  */
 
 #pragma once
-
 #include <array>
 #include <ostream>
+#include <stdexcept>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/types.hpp>
 
 // Deprecation attribute guard
 #if !defined(OPENPFC_SUPPRESS_LEGACY_WARNINGS)
 #if defined(__GNUC__) || defined(__clang__)
-#define OPENPFC_DEPRECATED_API [[deprecated("World member methods are deprecated; use pfc::Domain + pfc::world free functions instead")]]
+#define OPENPFC_DEPRECATED_API [[deprecated("World is deprecated; use pfc::Domain + pfc::world free functions instead")]]
 #elif defined(_MSC_VER)
-#define OPENPFC_DEPRECATED_API __declspec(deprecated("World member methods are deprecated; use pfc::Domain + pfc::world free functions instead"))
+#define OPENPFC_DEPRECATED_API __declspec(deprecated("World is deprecated; use pfc::Domain + pfc::world free functions instead"))
 #else
 #define OPENPFC_DEPRECATED_API
 #endif
@@ -85,20 +86,18 @@ using pfc::types::Int3;
 /**
  * @brief Represents the global simulation domain (the "world").
  *
- * The World class defines the size of the global simulation domain and
- * coordinate system. It is a purely functional object with no mutable state,
- * constructed once and immutable thereafter. This design enhances correctness,
- * thread safety, testability, and reproducibility.
+ * World is a deprecated thin wrapper over Domain with a Box3i subdomain member
+ * for Gen-1 compatibility. The wrapper maintains exact ABI compatibility for
+ * existing code while establishing Domain as the primary abstraction.
  *
  * As of the 0.2 M1 refactor this is the **A0 deprecated shim** over the
  * canonical `Domain` (see `domain.hpp`). The member methods below are provided
  * only for Gen-1 source compatibility and are deprecated; new code should
  * prefer `Domain` + `Box3i` with the free functions in `world_queries.hpp`.
  */
-struct World final {
-  const Box3i m_box; ///< Index range [low, high] + size (subdomain role)
-  const Domain
-      m_domain; ///< Global Cartesian coordinate system (origin/spacing/periodic)
+struct OPENPFC_DEPRECATED_API World final {
+  Box3i subdomain_;           ///< Local subdomain box for subdomain role
+  Domain domain_;             ///< Global Cartesian coordinate system (origin/spacing/periodic)
 
   // ========================================================================
   // Deprecated member methods (A0 shim for Gen-1 compatibility)
@@ -109,14 +108,18 @@ struct World final {
    *
    * @deprecated Use `world::get_size()` and `world::get_lower/upper_bounds()` instead.
    */
-  OPENPFC_DEPRECATED_API Box3i get_domain() const { return m_box; }
+  OPENPFC_DEPRECATED_API Box3i get_domain() const {
+    return pfc::domain::index_box(domain_);
+  }
 
   /**
    * @brief Get the subdomain box (local subdomain).
    *
    * @deprecated Use `world::get_lower()` and `world::get_upper()` instead.
    */
-  OPENPFC_DEPRECATED_API Box3i get_subdomain() const { return m_box; }
+  OPENPFC_DEPRECATED_API Box3i get_subdomain() const {
+    return subdomain_;
+  }
 
   /**
    * @brief Total size of the domain.
@@ -124,8 +127,7 @@ struct World final {
    * @deprecated Use `world::get_size()` instead.
    */
   OPENPFC_DEPRECATED_API int size() const {
-    const auto &sz = m_box.size;
-    return sz[0] * sz[1] * sz[2];
+    return static_cast<int>(pfc::domain::get_total_size(domain_));
   }
 
   /**
@@ -134,10 +136,7 @@ struct World final {
    * @deprecated Use `world::get_size(world, dim)` instead.
    */
   OPENPFC_DEPRECATED_API int get_size(int dim) const {
-    if (dim < 0 || dim > 2) {
-      throw std::out_of_range("World::get_size: dimension out of range");
-    }
-    return m_box.size[dim];
+    return pfc::domain::get_size(domain_, dim);
   }
 
   /**
@@ -146,10 +145,7 @@ struct World final {
    * @deprecated Use `world::get_lower(world, dim)` instead.
    */
   OPENPFC_DEPRECATED_API int origin(int dim) const {
-    if (dim < 0 || dim > 2) {
-      throw std::out_of_range("World::origin: dimension out of range");
-    }
-    return m_box.low[dim];
+    return subdomain_.low[dim];
   }
 
   /**
@@ -158,21 +154,16 @@ struct World final {
    * @deprecated Use `world::get_upper(world, dim)` instead.
    */
   OPENPFC_DEPRECATED_API int upper(int dim) const {
-    if (dim < 0 || dim > 2) {
-      throw std::out_of_range("World::upper: dimension out of range");
-    }
-    return m_box.high[dim];
+    return subdomain_.high[dim];
   }
 
   /**
-   * @brief Set the subdomain box (no-op: World is immutable).
+   * @brief Set the subdomain box.
    *
-   * @deprecated World is immutable; cannot set subdomain after construction.
+   * @deprecated World is deprecated; use Domain + Box3i directly.
    */
   OPENPFC_DEPRECATED_API void set_subdomain(const Box3i &subdomain) {
-    // World is immutable - this deprecated method does nothing
-    // Gen-1 code that calls set_subdomain will compile but have no effect
-    (void)subdomain;
+    subdomain_ = subdomain;
   }
 
   // ========================================================================
@@ -193,7 +184,7 @@ struct World final {
    * @return True if equal, false otherwise.
    */
   bool operator==(const World &other) const noexcept {
-    return m_box == other.m_box && m_domain == other.m_domain;
+    return subdomain_ == other.subdomain_ && domain_ == other.domain_;
   }
 
   /**
@@ -201,7 +192,9 @@ struct World final {
    * @param other Another World object.
    * @return True if not equal, false otherwise.
    */
-  bool operator!=(const World &other) const noexcept { return !(*this == other); }
+  bool operator!=(const World &other) const noexcept {
+    return !(*this == other);
+  }
 
   /**
    * @brief Stream output operator.

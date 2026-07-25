@@ -71,7 +71,7 @@ using pfc::types::Real3;
  * @see get_total_size() to get the product nx*ny*nz
  * @see get_size(world, index) to get size in specific dimension
  */
-inline Int3 get_size(const World &world) noexcept { return world.m_box.size; }
+inline Int3 get_size(const World &world) noexcept { return world.domain_.size; }
 
 /**
  * @brief Get the grid size in a specific dimension
@@ -158,7 +158,7 @@ inline size_t get_total_size(const World &world) {
  * @return The lower bounds of the world.
  */
 inline const auto &get_lower(const CartesianWorld &world) noexcept {
-  return world.m_box.low;
+  return world.subdomain_.low;
 }
 
 /**
@@ -177,7 +177,7 @@ inline const auto &get_lower(const CartesianWorld &world, int index) {
  * @return The upper bounds of the world.
  */
 inline const auto &get_upper(const CartesianWorld &world) noexcept {
-  return world.m_box.high;
+  return world.subdomain_.high;
 }
 
 /**
@@ -200,7 +200,7 @@ inline auto get_upper(const CartesianWorld &world, int index) {
  * @return The coordinate system of the world.
  */
 inline const auto &get_coordinate_system(const World &world) noexcept {
-  return world.m_domain;
+  return world.domain_;
 }
 
 /**

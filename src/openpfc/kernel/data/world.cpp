@@ -28,10 +28,10 @@ Int3 calc_size(const Int3 &lower, const Int3 &upper) {
 }
 
 World::World(const Int3 &lower, const Int3 &upper, const Domain &domain)
-    // calc_size validates lower <= upper and positivity; m_domain carries the
+    // calc_size validates lower <= upper and positivity; domain_ carries the
     // (global) coordinate system, its size aligned to this box for consistency.
-    : m_box{lower, upper, calc_size(lower, upper)},
-      m_domain{m_box.size, domain.spacing, domain.origin, domain.periodic} {}
+    : subdomain_{lower, upper, calc_size(lower, upper)},
+      domain_{calc_size(lower, upper), domain.spacing, domain.origin, domain.periodic} {}
 
 // Strong-type API (PREFERRED) - type-safe World construction
 // Uses GridSize, PhysicalOrigin, GridSpacing from strong_types.hpp
@@ -39,7 +39,7 @@ World::World(const Int3 &lower, const Int3 &upper, const Domain &domain)
                                     const PhysicalOrigin &origin,
                                     const GridSpacing &spacing,
                                     const pfc::types::Bool3 &periodic) {
-  // The World's box spans the whole global grid; its coordinate system is the
+  // The World's subdomain spans the whole global grid; its coordinate system is the
   // canonical Domain (origin/spacing/per-axis periodicity all carried through).
   const Int3 &raw_size = size.get();
   Int3 lower{0, 0, 0};
@@ -62,20 +62,20 @@ std::ostream &operator<<(std::ostream &os, const World &w) {
   std::ostringstream out;
   out << std::fixed << std::setprecision(2);
   out << "World Summary\n";
-  out << "  Size           : {" << w.m_box.size[0] << ", " << w.m_box.size[1] << ", "
-      << w.m_box.size[2] << "}\n";
+  out << "  Size           : {" << w.domain_.size[0] << ", " << w.domain_.size[1] << ", "
+      << w.domain_.size[2] << "}\n";
   out << "  Coordinate Sys : Cartesian\n";
 
-  const auto &offset = w.m_domain.origin;
-  const auto &spacing = w.m_domain.spacing;
-  const auto &periodic = w.m_domain.periodic;
-  out << "  Offset         : {" << offset[0] << ", " << offset[1] << ", "
-      << offset[2] << "}\n";
+  const auto &origin = w.domain_.origin;
+  const auto &spacing = w.domain_.spacing;
+  const auto &periodic = w.domain_.periodic;
+  out << "  Offset         : {" << origin[0] << ", " << origin[1] << ", "
+      << origin[2] << "}\n";
   out << "  Spacing        : {" << spacing[0] << ", " << spacing[1] << ", "
       << spacing[2] << "}\n";
   out << "  Periodicity    : {" << (periodic[0] ? "true" : "false") << ", "
-      << (periodic[1] ? "true" : "false") << ", " << (periodic[2] ? "true" : "false")
-      << "}\n";
+      << (periodic[1] ? "true" : "false") << ", "
+      << (periodic[2] ? "true" : "false") << "}\n";
 
   return os << out.str();
 }
