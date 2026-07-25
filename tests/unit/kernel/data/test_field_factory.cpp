@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
+#include <complex>
 #include <openpfc/kernel/data/field_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/domain.hpp>
@@ -17,7 +18,7 @@ TEST_CASE("field_from_subdomain creates Field with matching geometry",
 
   SECTION("All ranks get correctly sized fields") {
     for (int rank = 0; rank < num_ranks; ++rank) {
-      pfc::data::Field<double, HostSpace> field =
+      pfc::data::Field<double, pfc::HostSpace> field =
           pfc::data::field_from_subdomain<double>(decomp, rank, halo);
 
       const pfc::Box3i expected_box = pfc::decomposition::local_box(decomp, rank);
@@ -30,7 +31,7 @@ TEST_CASE("field_from_subdomain creates Field with matching geometry",
   SECTION("Zero halo width works correctly") {
     const int zero_halo = 0;
     for (int rank = 0; rank < num_ranks; ++rank) {
-      pfc::data::Field<double, HostSpace> field =
+      pfc::data::Field<double, pfc::HostSpace> field =
           pfc::data::field_from_subdomain<double>(decomp, rank, zero_halo);
 
       const pfc::Box3i expected_box = pfc::decomposition::local_box(decomp, rank);
@@ -43,9 +44,9 @@ TEST_CASE("field_from_subdomain creates Field with matching geometry",
   }
 
   SECTION("Different element types work") {
-    pfc::data::Field<int, HostSpace> int_field =
+    pfc::data::Field<int, pfc::HostSpace> int_field =
         pfc::data::field_from_subdomain<int>(decomp, 0, halo);
-    pfc::data::Field<std::complex<double>, HostSpace> complex_field =
+    pfc::data::Field<std::complex<double>, pfc::HostSpace> complex_field =
         pfc::data::field_from_subdomain<std::complex<double>>(decomp, 1, halo);
 
     REQUIRE(int_field.halo_width() == halo);
@@ -83,7 +84,7 @@ TEST_CASE("field_from_subdomain with larger domain", "[field_factory][unit]") {
   SECTION("All ranks partition domain correctly") {
     int total_cells = 0;
     for (int rank = 0; rank < num_ranks; ++rank) {
-      pfc::data::Field<double, HostSpace> field =
+      pfc::data::Field<double, pfc::HostSpace> field =
           pfc::data::field_from_subdomain<double>(decomp, rank, 0);
 
       const pfc::Box3i box = field.box();
