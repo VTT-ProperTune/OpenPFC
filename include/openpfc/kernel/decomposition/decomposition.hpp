@@ -160,7 +160,7 @@ struct Decomposition {
    */
   pfc::World m_global_world; ///< Backward compatibility: kept for migration.
   const std::array<int, 3> m_grid; ///< The number of parts in each dimension.
-  const std::vector<pfc::Box3i> m_local_boxes; ///< Local subdomain boxes (M1.3).
+  std::vector<pfc::Box3i> m_local_boxes; ///< Local subdomain boxes (M1.3).
   pfc::Domain m_domain; ///< Global domain extracted from World (M1.3).
 
   Decomposition(const World &world, const Int3 &grid);
@@ -170,10 +170,7 @@ struct Decomposition {
     os << "  Global World: " << d.m_global_world << "\n";
     os << "  Grid: [" << d.m_grid.at(0) << ", " << d.m_grid.at(1) << ", "
        << d.m_grid.at(2) << "]\n";
-    os << "  Sub-worlds:\n";
-    for (size_t i = 0; i < d.m_subworlds.size(); ++i) {
-      os << "    Sub-world " << i << ": " << d.m_subworlds[i] << "\n";
-    }
+    os << "  Local boxes: " << d.m_local_boxes.size() << " subdomains\n";
     return os;
   }
 };
