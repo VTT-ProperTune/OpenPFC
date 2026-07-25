@@ -9,15 +9,27 @@
  * This example demonstrates OpenPFC's extensibility by showing how to add
  * custom coordinate systems without modifying the library source code.
  *
- * We implement two complete coordinate systems:
- * 1. **Polar coordinates** (2D: r, θ) - simpler case
- * 2. **Spherical coordinates** (3D: r, θ, φ) - complete 3D case
+ * We implement several coordinate system patterns:
+ * 1. **Polar coordinates** (2D: r, θ) - with free functions
+ * 2. **Spherical coordinates** (3D: r, θ, φ) - with free functions
+ * 3. **User-side coordinate wrapper** ( coordinate_wrapper<D> ) - modern pattern
  *
- * ## Key Technique: ADL (Argument-Dependent Lookup)
+ * ## Key Techniques
+ *
+ * ### ADL (Argument-Dependent Lookup) - Free Function Pattern
  *
  * OpenPFC uses ADL to find coordinate transformation functions. You define
  * functions in your namespace (or pfc namespace), and ADL ensures they're
  * found automatically.
+ *
+ * ### User-Side Coordinate Wrapper - Modern Pattern
+ *
+ * The `coordinate_wrapper<D>` class template demonstrates how users can wrap
+ * a `Domain` with custom coordinate transformations using modern C++ patterns.
+ * This is the recommended approach for M1 and later, as it:
+ * - Works with the new `Domain` API (M1.2+)
+ * - Provides a template-based, dimension-agnostic interface
+ * - Encapsulates coordinate transformation logic in a reusable component
  *
  * ## Philosophy: Laboratory, Not Fortress
  *
@@ -26,22 +38,11 @@
  *
  * ## How to Use This Example
  *
- * 1. Read through the polar coordinate implementation (simpler)
- * 2. Study the spherical coordinate implementation (complete)
- * 3. Copy the pattern for your own coordinate system
- * 4. No OpenPFC source code modifications required!
- *
- * @example
- * @code
- * // Define your tag
- * struct MyCoordTag {};
- *
- * // Implement the pattern shown in this file
- * // ... your coordinate system code ...
- *
- * // Use it!
- * Real3 coords = my_to_coords({10, 20, 30});
- * @endcode
+ * 1. Read the polar coordinate example (simpler free-function pattern)
+ * 2. Study the spherical coordinate example (complete free-function pattern)
+ * 3. Learn the `coordinate_wrapper<D>` pattern (modern, recommended)
+ * 4. Copy the pattern for your own coordinate system
+ * 5. No OpenPFC source code modifications required!
  */
 
 #include <cmath>
@@ -54,7 +55,7 @@
 using namespace pfc;
 
 // ============================================================================
-// Part 1: Polar Coordinates (2D - Simpler Example)
+// Part 1: Polar Coordinates (2D - Free Function Pattern)
 // ============================================================================
 
 /**
@@ -76,48 +77,19 @@ struct PolarTag {};
  * - x = r * cos(θ)
  * - y = r * sin(θ)
  * - z = 0 (2D system)
- *
- * This is a value type (struct) following OpenPFC's "laboratory" philosophy:
- * - All members public and const (transparent, inspectable)
- * - Immutable after construction (functional style)
- * - No methods (operations via free functions)
  */
 struct PolarCoordinateSystem {
-  /// Minimum radial distance (typically 0, but can be > 0 for annular domains)
-  const double m_r_min;
-
-  /// Maximum radial distance
-  const double m_r_max;
-
-  /// Minimum angle (radians, typically 0)
-  const double m_theta_min;
-
-  /// Maximum angle (radians, typically 2*pi for full circle)
-  const double m_theta_max;
-
-  /// Grid periodicity: {radial, angular, unused}
-  /// Typically {false, true, false} since θ is periodic
-  const Bool3 m_periodic;
+  const double m_r_min;    ///< Minimum radial distance
+  const double m_r_max;    ///< Maximum radial distance
+  const double m_theta_min; ///< Minimum angle (radians)
+  const double m_theta_max; ///< Maximum angle (radians)
+  const Bool3 m_periodic;   ///< Grid periodicity: {radial, angular, unused}
 
   /**
    * @brief Construct polar coordinate system
-   *
    * @param r_range Radial range [r_min, r_max]
    * @param theta_range Angular range [θ_min, θ_max] in radians
    * @param periodic Periodicity (θ is typically periodic)
-   *
-   * @pre r_max > r_min ≥ 0
-   * @pre theta_max > theta_min
-   *
-   * @example
-   * @code
-   * // Full circle: r in [0, 10], theta in [0, 2*pi]
-   * PolarCoordinateSystem cs(
-   *     {0.0, 10.0},
-   *     {0.0, 2.0 * std::numbers::pi},
-   *     {false, true, false}
-   * );
-   * @endcode
    */
   PolarCoordinateSystem(std::pair<double, double> r_range,
                         std::pair<double, double> theta_range,
@@ -130,51 +102,26 @@ struct PolarCoordinateSystem {
 /**
  * @brief Convert grid indices to physical Cartesian coordinates (Polar → Cartesian)
  *
- * This function is found via ADL when used with polar coordinate grids.
- * It implements the polar to Cartesian transformation:
- *
- * Given grid indices (i, j, k):
- * 1. Map to polar coordinates: r = r(i), θ = θ(j)
- * 2. Convert to Cartesian: x = r*cos(θ), y = r*sin(θ), z = 0
- *
- * @param cs Polar coordinate system defining the domain
- * @param indices Grid indices (i_r, i_θ, 0)
- * @param size Grid dimensions [n_r, n_θ, 1]
- * @return Cartesian coordinates (x, y, z)
- *
- * @note This is found via ADL - no explicit namespace qualification needed
- * @note For 2D polar coords, z is always 0
- *
- * Algorithm:
- * - r = r_min + i * (r_max - r_min) / n_r
- * - θ = θ_min + j * (θ_max - θ_min) / n_θ
+ * Applies the polar to Cartesian transformation:
+ * - r = r_min + i * dr
+ * - θ = θ_min + j * dtheta
  * - x = r * cos(θ)
  * - y = r * sin(θ)
  * - z = 0
- *
- * @example
- * @code
- * PolarCoordinateSystem cs({0, 10}, {0, 2*pi});
- * Int3 idx = {50, 64, 0};  // Middle of r, 90° angle
- * Int3 size = {100, 128, 1};
- * Real3 xyz = polar_to_coords(cs, idx, size);  // Returns (0, 5, 0)
- * @endcode
  */
 inline Real3 polar_to_coords(const PolarCoordinateSystem &cs, const Int3 &indices,
                              const Int3 &size) {
-  // Map indices to polar coordinates
   const double dr = (cs.m_r_max - cs.m_r_min) / size[0];
   const double dtheta =
       (cs.m_theta_max - cs.m_theta_min) /
-      (cs.m_periodic[1] ? size[1] : size[1] - 1); // Handle periodicity
+      (cs.m_periodic[1] ? size[1] : size[1] - 1);
 
   const double r = cs.m_r_min + indices[0] * dr;
   const double theta = cs.m_theta_min + indices[1] * dtheta;
 
-  // Polar → Cartesian transformation
   const double x = r * std::cos(theta);
   const double y = r * std::sin(theta);
-  const double z = 0.0; // 2D system
+  const double z = 0.0;
 
   return {x, y, z};
 }
@@ -183,35 +130,19 @@ inline Real3 polar_to_coords(const PolarCoordinateSystem &cs, const Int3 &indice
  * @brief Convert Cartesian coordinates to grid indices (Cartesian → Polar)
  *
  * Inverse transformation of polar_to_coords().
- *
- * Given Cartesian coordinates (x, y, z):
- * 1. Convert to polar: r = √(x² + y²), θ = atan2(y, x)
- * 2. Map to grid indices: i = round(r), j = round(θ)
- *
- * @param cs Polar coordinate system
- * @param coords Cartesian coordinates (x, y, z)
- * @param size Grid dimensions [n_r, n_θ, 1]
- * @return Grid indices (i_r, i_θ, 0)
- *
- * @note z coordinate is ignored (2D system)
- * @warning Indices may be outside grid range - caller should check bounds
  */
 inline Int3 polar_to_indices(const PolarCoordinateSystem &cs, const Real3 &coords,
                              const Int3 &size) {
   const double x = coords[0];
   const double y = coords[1];
-  // z is ignored (2D)
 
-  // Cartesian → Polar
   const double r = std::sqrt(x * x + y * y);
   double theta = std::atan2(y, x);
 
-  // Handle angle wraparound: map theta in [-pi, pi] to [theta_min, theta_max]
   if (theta < cs.m_theta_min) {
     theta += 2.0 * std::numbers::pi;
   }
 
-  // Map to indices
   const double dr = (cs.m_r_max - cs.m_r_min) / size[0];
   const double dtheta =
       (cs.m_theta_max - cs.m_theta_min) / (cs.m_periodic[1] ? size[1] : size[1] - 1);
@@ -224,7 +155,7 @@ inline Int3 polar_to_indices(const PolarCoordinateSystem &cs, const Real3 &coord
 }
 
 // ============================================================================
-// Part 2: Spherical Coordinates (3D - Complete Example)
+// Part 2: Spherical Coordinates (3D - Free Function Pattern)
 // ============================================================================
 
 /**
@@ -244,11 +175,6 @@ struct SphericalTag {};
  * - x = r * sin(θ) * cos(φ)
  * - y = r * sin(θ) * sin(φ)
  * - z = r * cos(θ)
- *
- * Common use cases:
- * - Planetary atmospheres (full sphere)
- * - Radial growth problems (bubble, crystal)
- * - Spherical shell problems (annular: r_min > 0)
  */
 struct SphericalCoordinateSystem {
   const double m_r_min;     ///< Minimum radius (0 for full sphere)
@@ -261,30 +187,10 @@ struct SphericalCoordinateSystem {
 
   /**
    * @brief Construct spherical coordinate system
-   *
    * @param r_range Radial range [r_min, r_max]
-   * @param theta_range Polar angle range [theta_min, theta_max], typically [0, pi]
-   * @param phi_range Azimuthal angle range [phi_min, phi_max], typically [0, 2*pi]
+   * @param theta_range Polar angle range [theta_min, theta_max]
+   * @param phi_range Azimuthal angle range [phi_min, phi_max]
    * @param periodic Periodicity (phi is typically periodic)
-   *
-   * @example Full sphere
-   * @code
-   * SphericalCoordinateSystem cs(
-   *     {0.0, 10.0},                        // r ∈ [0, 10]
-   *     {0.0, std::numbers::pi},           // theta in [0, pi]
-   *     {0.0, 2.0 * std::numbers::pi},     // phi in [0, 2*pi]
-   *     {false, false, true}                // phi periodic
-   * );
-   * @endcode
-   *
-   * @example Spherical shell
-   * @code
-   * SphericalCoordinateSystem shell(
-   *     {5.0, 10.0},  // Annular: 5 ≤ r ≤ 10
-   *     {0.0, std::numbers::pi},
-   *     {0.0, 2.0 * std::numbers::pi}
-   * );
-   * @endcode
    */
   SphericalCoordinateSystem(std::pair<double, double> r_range,
                             std::pair<double, double> theta_range,
@@ -299,29 +205,13 @@ struct SphericalCoordinateSystem {
 /**
  * @brief Spherical → Cartesian coordinate transformation
  *
- * Transforms grid indices in spherical coordinates to Cartesian (x,y,z).
- *
- * Transformation:
+ * Transforms grid indices in spherical coordinates to Cartesian:
  * - x = r * sin(θ) * cos(φ)
  * - y = r * sin(θ) * sin(φ)
  * - z = r * cos(θ)
- *
- * @param cs Spherical coordinate system
- * @param indices Grid indices (i_r, i_theta, i_phi)
- * @param size Grid dimensions [n_r, n_θ, n_φ]
- * @return Cartesian coordinates (x, y, z)
- *
- * @note Found via ADL - no namespace qualification needed
- *
- * Special points:
- * - theta = 0: North pole (0, 0, r)
- * - theta = pi: South pole (0, 0, -r)
- * - theta = pi/2, phi = 0: Point on +x axis (r, 0, 0)
- * - theta = pi/2, phi = pi/2: Point on +y axis (0, r, 0)
  */
 inline Real3 spherical_to_coords(const SphericalCoordinateSystem &cs,
                                  const Int3 &indices, const Int3 &size) {
-  // Map indices to spherical coordinates
   const double dr = (cs.m_r_max - cs.m_r_min) / size[0];
   const double dtheta =
       (cs.m_theta_max - cs.m_theta_min) / (cs.m_periodic[1] ? size[1] : size[1] - 1);
@@ -332,7 +222,6 @@ inline Real3 spherical_to_coords(const SphericalCoordinateSystem &cs,
   const double theta = cs.m_theta_min + indices[1] * dtheta;
   const double phi = cs.m_phi_min + indices[2] * dphi;
 
-  // Spherical → Cartesian transformation
   const double sin_theta = std::sin(theta);
   const double cos_theta = std::cos(theta);
   const double sin_phi = std::sin(phi);
@@ -348,20 +237,10 @@ inline Real3 spherical_to_coords(const SphericalCoordinateSystem &cs,
 /**
  * @brief Cartesian → Spherical coordinate transformation
  *
- * Inverse of spherical_to_coords().
- *
- * Transformation:
+ * Inverse of spherical_to_coords():
  * - r = √(x² + y² + z²)
  * - theta = acos(z / r)
  * - phi = atan2(y, x)
- *
- * @param cs Spherical coordinate system
- * @param coords Cartesian coordinates (x, y, z)
- * @param size Grid dimensions [n_r, n_theta, n_phi]
- * @return Grid indices (i_r, i_theta, i_phi)
- *
- * @warning Singular at origin (r=0) - undefined theta and phi
- * @warning Indices may be outside grid - caller should validate
  */
 inline Int3 spherical_to_indices(const SphericalCoordinateSystem &cs,
                                  const Real3 &coords, const Int3 &size) {
@@ -369,17 +248,14 @@ inline Int3 spherical_to_indices(const SphericalCoordinateSystem &cs,
   const double y = coords[1];
   const double z = coords[2];
 
-  // Cartesian → Spherical
   const double r = std::sqrt(x * x + y * y + z * z);
-  const double theta = r > 1e-14 ? std::acos(z / r) : 0.0; // Handle r ≈ 0
+  const double theta = r > 1e-14 ? std::acos(z / r) : 0.0;
   double phi = std::atan2(y, x);
 
-  // Handle angle wraparound
   if (phi < cs.m_phi_min) {
     phi += 2.0 * std::numbers::pi;
   }
 
-  // Map to indices
   const double dr = (cs.m_r_max - cs.m_r_min) / size[0];
   const double dtheta =
       (cs.m_theta_max - cs.m_theta_min) / (cs.m_periodic[1] ? size[1] : size[1] - 1);
@@ -395,27 +271,166 @@ inline Int3 spherical_to_indices(const SphericalCoordinateSystem &cs,
 }
 
 // ============================================================================
-// Part 3: Usage Examples and Demonstrations
+// Part 3: User-Side Coordinate Wrapper - Modern Pattern (M1+)
+// ============================================================================
+
+/**
+ * @brief User-side coordinate wrapper template for custom coordinate systems
+ *
+ * This template demonstrates the recommended pattern for wrapping OpenPFC's
+ * `Domain` with custom coordinate transformations in the M1 API. Instead of
+ * relying on the removed csys tag machinery, users create their own wrapper
+ * classes that handle coordinate transformations.
+ *
+ * @tparam D Effective spatial dimension (2 for 2D, 3 for 3D)
+ *
+ * The wrapper provides:
+ * - A callable interface via operator() for coordinate transformations
+ * - Helper methods for transformations and indexing
+ * - Encapsulation of custom coordinate system parameters
+ *
+ * This pattern is:
+ * - Template-based: works with any dimension (2D or 3D)
+ * - Non-intrusive: doesn't require modifying OpenPFC source code
+ * - Reusable: can be composed and extended for complex coordinate systems
+ * - Modern: uses standard C++ features (classes, templates, operators)
+ */
+template<int D>
+class coordinate_wrapper {
+private:
+  Domain& domain; ///< Reference to the underlying OpenPFC Domain
+
+  /**
+   * @brief Scaling factors for user-to-Domain coordinate transformation
+   *
+   * For each axis i: domain_coord = user_coord / scaling_factors[i]
+   *
+   * This allows users to define non-uniform scaling between their
+   * coordinate system and the Domain's Cartesian coordinates.
+   *
+   * For a simple scaled coordinate system:
+   * - If scaling_factors = {2.0, 2.0}, then user (1.0, 1.0) maps to domain (0.5, 0.5)
+   * - If scaling_factors = {10.0, 5.0}, then user (10.0, 10.0) maps to domain (1.0, 2.0)
+   */
+  std::array<double, D> scaling_factors;
+
+public:
+  /**
+   * @brief Construct coordinate wrapper with default scaling factors
+   *
+   * Default scaling factors are set to 1.0 (identity transformation),
+   * meaning user coordinates map directly to Domain coordinates.
+   *
+   * @param d Reference to the OpenPFC Domain to wrap
+   *
+   * @example Unit scaling (identity)
+   * @code
+   * Domain domain = domain::create({64, 64, 1});
+   * coordinate_wrapper<2> wrapper(domain);
+   * auto domain_coords = wrapper({1.0, 2.0});  // Returns {1.0, 2.0}
+   * @endcode
+   */
+  explicit coordinate_wrapper(Domain& d) : domain(d) {
+    for (int i = 0; i < D; ++i) {
+      scaling_factors[i] = 1.0;  // Default: identity transformation
+    }
+  }
+
+  /**
+   * @brief Construct coordinate wrapper with custom scaling factors
+   *
+   * @param d Reference to the OpenPFC Domain to wrap
+   * @param factors Scaling factors for each dimension
+   *
+   * @example Non-uniform scaling
+   * @code
+   * // User coordinates in millimeters, Domain in meters with different aspect ratio
+   * coordinate_wrapper<2> wrapper(domain, {1000.0, 500.0});
+   * auto domain_coords = wrapper({100.0, 50.0});  // Returns {0.1, 0.1}
+   * @endcode
+   */
+  coordinate_wrapper(Domain& d, const std::array<double, D>& factors)
+      : domain(d), scaling_factors(factors) {}
+
+  /**
+   * @brief Transform user coordinates to Domain coordinates
+   *
+   * This operator() provides a callable interface for coordinate transformation.
+   * It applies the scaling factors to convert user coordinates to the Domain's
+   * Cartesian coordinate system.
+   *
+   * For example, with scaling_factors = {2.0, 2.0}:
+   * - user_coord = (2.0, 4.0)
+   * - domain_coord = (1.0, 2.0)  [divided by scaling factors]
+   *
+   * @param user_coords User coordinates in the custom coordinate system
+   * @return Domain coordinates in the wrapped.Domain's Cartesian system
+   *
+   * @note This is the primary interface of the wrapper
+   * @note The transformation is linear: domain_coord = user_coord / scaling_factors
+   */
+  std::array<double, D> operator()(const std::array<double, D>& user_coords) {
+    std::array<double, D> domain_coords = user_coords;
+
+    for (int i = 0; i < D; ++i) {
+      domain_coords[i] = user_coords[i] / scaling_factors[i];
+    }
+
+    return domain_coords;
+  }
+
+  /**
+   * @brief Transform user coordinates to Domain coordinates (explicit method)
+   *
+   * This provides an explicit alternative to operator(), which can be clearer
+   * in some contexts or when passing function pointers.
+   *
+   * @param user_coords User coordinates in the custom coordinate system
+   * @return Domain coordinates in the wrapped Domain's Cartesian system
+   */
+  std::array<double, D> user_to_domain(const std::array<double, D>& user_coords) {
+    return operator()(user_coords);
+  }
+
+  /**
+   * @brief Get the underlying Domain reference
+   *
+   * @return Reference to the wrapped Domain object
+   */
+  Domain& get_domain() { return domain; }
+  const Domain& get_domain() const { return domain; }
+
+  /**
+   * @brief Get the current scaling factors
+   *
+   * @return Copy of the scaling factors array
+   */
+  std::array<double, D> get_scaling_factors() const { return scaling_factors; }
+
+  /**
+   * @brief Set new scaling factors
+   *
+   * @param factors New scaling factors to apply
+   */
+  void set_scaling_factors(const std::array<double, D>& factors) {
+    scaling_factors = factors;
+  }
+};
+
+// ============================================================================
+// Part 4: Usage Examples and Demonstrations
 // ============================================================================
 
 /**
  * @brief Demonstrate polar coordinate system usage
- *
- * Shows:
- * - Creating polar coordinate system
- * - Converting grid indices to Cartesian coordinates
- * - Round-trip transformation (indices → coords → indices)
- * - Verification of mathematical properties
  */
 void example_polar_coordinates() {
-  std::cout << "=== Example 1: Polar Coordinates (2D) ===\n\n";
+  std::cout << "=== Example 1: Polar Coordinates (2D - Free Function Pattern) ===\n\n";
 
-  // Define polar coordinate system: r in [0, 10], theta in [0, 2*pi]
   PolarCoordinateSystem cs({0.0, 10.0},                   // r range
                            {0.0, 2.0 * std::numbers::pi}, // theta range
                            {false, true, false});         // theta periodic
 
-  // Grid dimensions: 64 radial × 128 angular × 1
   const Int3 size = {64, 128, 1};
 
   std::cout << "Polar grid configuration:\n";
@@ -425,157 +440,174 @@ void example_polar_coordinates() {
   std::cout << "  Grid size: " << size[0] << " (radial) × " << size[1]
             << " (angular)\n\n";
 
-  // Test point 1: Center of grid (middle r, θ = 0)
-  std::cout << "Test 1: Point at r=5, theta=0 (on +x axis)\n";
-  Int3 idx1 = {32, 0, 0}; // Middle of radial, theta=0
+  // Test point: r=5, theta=0 (on +x axis)
+  std::cout << "Test: Point at r=5, theta=0 (on +x axis)\n";
+  Int3 idx1 = {32, 0, 0};
   Real3 coords1 = polar_to_coords(cs, idx1, size);
   std::cout << "  Grid indices: (" << idx1[0] << ", " << idx1[1] << ", " << idx1[2]
             << ")\n";
   std::cout << "  Cartesian (x,y,z): (" << coords1[0] << ", " << coords1[1] << ", "
             << coords1[2] << ")\n";
   std::cout << "  Expected: (~5.0, ~0.0, 0.0)\n\n";
-
-  // Test point 2: θ = π/2 (on +y axis)
-  std::cout << "Test 2: Point at r=5, theta=pi/2 (on +y axis)\n";
-  Int3 idx2 = {32, 32, 0}; // Middle r, theta = pi/2
-  Real3 coords2 = polar_to_coords(cs, idx2, size);
-  std::cout << "  Grid indices: (" << idx2[0] << ", " << idx2[1] << ", " << idx2[2]
-            << ")\n";
-  std::cout << "  Cartesian (x,y,z): (" << coords2[0] << ", " << coords2[1] << ", "
-            << coords2[2] << ")\n";
-  std::cout << "  Expected: (~0.0, ~5.0, 0.0)\n\n";
-
-  // Test round-trip transformation
-  std::cout << "Test 3: Round-trip transformation\n";
-  Int3 idx_original = {40, 60, 0};
-  Real3 coords_temp = polar_to_coords(cs, idx_original, size);
-  Int3 idx_roundtrip = polar_to_indices(cs, coords_temp, size);
-  std::cout << "  Original indices: (" << idx_original[0] << ", " << idx_original[1]
-            << ", " << idx_original[2] << ")\n";
-  std::cout << "  After round-trip: (" << idx_roundtrip[0] << ", "
-            << idx_roundtrip[1] << ", " << idx_roundtrip[2] << ")\n";
-  std::cout << "  Match: "
-            << (idx_original[0] == idx_roundtrip[0] &&
-                        idx_original[1] == idx_roundtrip[1]
-                    ? "✓ YES"
-                    : "✗ NO")
-            << "\n\n";
 }
 
 /**
  * @brief Demonstrate spherical coordinate system usage
- *
- * Shows complete 3D spherical coordinate transformations with verification.
  */
 void example_spherical_coordinates() {
-  std::cout << "=== Example 2: Spherical Coordinates (3D) ===\n\n";
+  std::cout << "=== Example 2: Spherical Coordinates (3D - Free Function Pattern) ===\n\n";
 
-  // Full sphere: r in [0, 10], theta in [0, pi], phi in [0, 2*pi]
   SphericalCoordinateSystem cs({0.0, 10.0},                   // r range
                                {0.0, std::numbers::pi},       // theta range
                                {0.0, 2.0 * std::numbers::pi}, // phi range
                                {false, false, true});         // phi periodic
 
-  const Int3 size = {32, 32, 64}; // n_r × n_θ × n_φ
+  const Int3 size = {32, 32, 64};
 
   std::cout << "Spherical grid configuration:\n";
   std::cout << "  r ∈ [" << cs.m_r_min << ", " << cs.m_r_max << "]\n";
-  std::cout << "  theta in [" << cs.m_theta_min << ", " << cs.m_theta_max
-            << "] (polar)\n";
-  std::cout << "  phi in [" << cs.m_phi_min << ", " << cs.m_phi_max
-            << "] (azimuthal)\n";
   std::cout << "  Grid size: " << size[0] << " × " << size[1] << " × " << size[2]
             << "\n\n";
 
-  // Test 1: North pole (θ = 0, z = +r)
-  std::cout << "Test 1: North pole (theta=0, any phi)\n";
-  Int3 idx1 = {16, 0, 0}; // Mid radius, theta=0
+  // Test: North pole (θ = 0)
+  std::cout << "Test: North pole (theta=0)\n";
+  Int3 idx1 = {16, 0, 0};
   Real3 coords1 = spherical_to_coords(cs, idx1, size);
   std::cout << "  Cartesian (x,y,z): (" << coords1[0] << ", " << coords1[1] << ", "
             << coords1[2] << ")\n";
   std::cout << "  Expected: (~0, ~0, ~5) - on +z axis\n\n";
-
-  // Test 2: Equator, +x direction (θ = π/2, φ = 0)
-  std::cout << "Test 2: Equator, +x direction (theta=pi/2, phi=0)\n";
-  Int3 idx2 = {16, 16, 0}; // Mid r, theta=pi/2, phi=0
-  Real3 coords2 = spherical_to_coords(cs, idx2, size);
-  std::cout << "  Cartesian (x,y,z): (" << coords2[0] << ", " << coords2[1] << ", "
-            << coords2[2] << ")\n";
-  std::cout << "  Expected: (~5, ~0, ~0) - on +x axis\n\n";
-
-  // Test 3: Equator, +y direction (θ = π/2, φ = π/2)
-  std::cout << "Test 3: Equator, +y direction (theta=pi/2, phi=pi/2)\n";
-  Int3 idx3 = {16, 16, 16}; // Mid r, theta=pi/2, phi=pi/2
-  Real3 coords3 = spherical_to_coords(cs, idx3, size);
-  std::cout << "  Cartesian (x,y,z): (" << coords3[0] << ", " << coords3[1] << ", "
-            << coords3[2] << ")\n";
-  std::cout << "  Expected: (~0, ~5, ~0) - on +y axis\n\n";
-
-  // Test round-trip
-  std::cout << "Test 4: Round-trip transformation\n";
-  Int3 idx_orig = {20, 10, 40};
-  Real3 coords_temp = spherical_to_coords(cs, idx_orig, size);
-  Int3 idx_back = spherical_to_indices(cs, coords_temp, size);
-  std::cout << "  Original: (" << idx_orig[0] << ", " << idx_orig[1] << ", "
-            << idx_orig[2] << ")\n";
-  std::cout << "  Round-trip: (" << idx_back[0] << ", " << idx_back[1] << ", "
-            << idx_back[2] << ")\n";
-  std::cout << "  Match: "
-            << (idx_orig[0] == idx_back[0] && idx_orig[1] == idx_back[1] &&
-                        idx_orig[2] == idx_back[2]
-                    ? "✓ YES"
-                    : "✗ NO")
-            << "\n\n";
 }
 
 /**
- * @brief Summary of the extension pattern
+ * @brief Demonstrate user-side coordinate wrapper pattern
  *
- * Shows the complete recipe for adding custom coordinate systems.
+ * This example shows the recommended M1 pattern for custom coordinate systems:
+ * using `coordinate_wrapper<D>` to wrap a `Domain` with custom transformations.
+ */
+void example_coordinate_wrapper() {
+  std::cout << "=== Example 3: User-Side Coordinate Wrapper (Modern M1 Pattern) ===\n\n";
+
+  // Create a Domain representing a 2D physical space
+  // Grid: 64x64, unit spacing, origin at (0, 0), fully periodic
+  Domain domain = domain::create({64, 64, 1});
+
+  std::cout << "Domain configuration:\n";
+  std::cout << "  Size: " << domain.size[0] << "×" << domain.size[1]
+            << "×" << domain.size[2] << "\n";
+  std::cout << "  Spacing: (" << domain.spacing[0] << ", " << domain.spacing[1]
+            << ", " << domain.spacing[2] << ")\n";
+  std::cout << "  Origin: (" << domain.origin[0] << ", " << domain.origin[1]
+            << ", " << domain.origin[2] << ")\n\n";
+
+  // Example 1: Identity transformation (default scaling)
+  std::cout << "--- Test 1: Identity Transformation ---\n";
+  {
+    coordinate_wrapper<2> wrapper(domain);
+
+    std::array<double, 2> user_coords = {5.0, 10.0};
+    auto domain_coords = wrapper(user_coords);
+
+    std::cout << "  User coordinates: (" << user_coords[0] << ", " << user_coords[1] << ")\n";
+    std::cout << "  Domain coordinates: (" << domain_coords[0] << ", " << domain_coords[1] << ")\n";
+    std::cout << "  Expected: (5.0, 10.0) - identity transformation\n\n";
+  }
+
+  // Example 2: Scaled coordinate system
+  std::cout << "--- Test 2: Scaled Coordinate System ---\n";
+  {
+    // User coordinates are in millimeters, Domain is in units
+    // Scaling factor: 2.0 means 2 user units = 1 domain unit
+    coordinate_wrapper<2> wrapper(domain, {2.0, 2.0});
+
+    std::array<double, 2> user_coords = {10.0, 20.0};
+    auto domain_coords = wrapper(user_coords);
+
+    std::cout << "  Scaling factors: (" << wrapper.get_scaling_factors()[0]
+              << ", " << wrapper.get_scaling_factors()[1] << ")\n";
+    std::cout << "  User coordinates: (" << user_coords[0] << ", " << user_coords[1] << ")\n";
+    std::cout << "  Domain coordinates: (" << domain_coords[0] << ", " << domain_coords[1] << ")\n";
+    std::cout << "  Expected: (5.0, 10.0) - user coords scaled by factor 2.0\n\n";
+  }
+
+  // Example 3: Non-uniform scaling
+  std::cout << "--- Test 3: Non-Uniform Scaling ---\n";
+  {
+    // Different scaling for x and y axes
+    coordinate_wrapper<2> wrapper(domain, {10.0, 5.0});
+
+    std::array<double, 2> user_coords = {100.0, 50.0};
+    auto domain_coords = wrapper(user_coords);
+
+    std::cout << "  Scaling factors: (" << wrapper.get_scaling_factors()[0]
+              << ", " << wrapper.get_scaling_factors()[1] << ")\n";
+    std::cout << "  User coordinates: (" << user_coords[0] << ", " << user_coords[1] << ")\n";
+    std::cout << "  Domain coordinates: (" << domain_coords[0] << ", " << domain_coords[1] << ")\n";
+    std::cout << "  Expected: (10.0, 10.0) - x scaled by 10, y scaled by 5\n\n";
+  }
+
+  // Example 4: Using explicit user_to_domain method
+  std::cout << "--- Test 4: Explicit user_to_domain Method ---\n";
+  {
+    coordinate_wrapper<2> wrapper(domain, {3.0, 3.0});
+
+    std::array<double, 2> user_coords = {9.0, 6.0};
+    auto domain_coords = wrapper.user_to_domain(user_coords);
+
+    std::cout << "  User coordinates: (" << user_coords[0] << ", " << user_coords[1] << ")\n";
+    std::cout << "  Domain coordinates: (" << domain_coords[0] << ", " << domain_coords[1] << ")\n";
+    std::cout << "  Expected: (3.0, 2.0) - using explicit method\n\n";
+  }
+
+  // Example 5: 3D wrapper
+  std::cout << "--- Test 5: 3D Coordinate Wrapper ---\n";
+  {
+    Domain domain_3d = domain::create({32, 32, 32});
+    coordinate_wrapper<3> wrapper_3d(domain_3d, {2.0, 2.0, 2.0});
+
+    std::array<double, 3> user_coords_3d = {10.0, 14.0, 18.0};
+    auto domain_coords_3d = wrapper_3d(user_coords_3d);
+
+    std::cout << "  User coordinates: (" << user_coords_3d[0] << ", " << user_coords_3d[1]
+              << ", " << user_coords_3d[2] << ")\n";
+    std::cout << "  Domain coordinates: (" << domain_coords_3d[0] << ", " << domain_coords_3d[1]
+              << ", " << domain_coords_3d[2] << ")\n";
+    std::cout << "  Expected: (5.0, 7.0, 9.0) - 3D with uniform scaling\n\n";
+  }
+
+  std::cout << "Key advantages of the coordinate_wrapper pattern:\n";
+  std::cout << "  ✓ Works with the new Domain API (M1.2+)\n";
+  std::cout << "  ✓ Template-based, dimension-agnostic\n";
+  std::cout << "  ✓ Encapsulates coordinate transformation logic\n";
+  std::cout << "  ✓ Callable interface via operator()\n";
+  std::cout << "  ✓ Extendable to complex coordinate systems\n\n";
+}
+
+/**
+ * @brief Summary of extension patterns
  */
 void show_extension_pattern() {
-  std::cout << "=== Extension Pattern: How to Add Your Own Coordinate System "
-               "===\n\n";
+  std::cout << "=== Extension Patterns: How to Add Your Own Coordinate System ===\n\n";
 
-  std::cout << "Step 1: Define a tag struct\n";
-  std::cout << "  struct MyCoordTag {};  // Empty struct for tag dispatch\n\n";
+  std::cout << "Pattern 1: Free Functions (Traditional, ADL-based)\n";
+  std::cout << "  - Define tag struct and coordinate system value type\n";
+  std::cout << "  - Implement `*_to_coords()` and `*_to_indices()` free functions\n";
+  std::cout << "  - Found via ADL, no namespace qualification needed\n";
+  std::cout << "  - Used in polar/spherical examples above\n\n";
 
-  std::cout << "Step 2: Create coordinate system struct\n";
-  std::cout << "  struct MyCoordinateSystem {\n";
-  std::cout << "    const double m_param1;  // Your parameters\n";
-  std::cout << "    const double m_param2;\n";
-  std::cout << "    const Bool3 m_periodic;\n";
-  std::cout << "  };\n\n";
+  std::cout << "Pattern 2: User-Side Wrapper (Recommended for M1+)\n";
+  std::cout << "  - Create `coordinate_wrapper<D>` class template\n";
+  std::cout << "  - Store reference to Domain and custom parameters\n";
+  std::cout << "  - Implement operator() for coordinate transformations\n";
+  std::cout << "  - Encapsulates all transformation logic\n";
+  std::cout << "  - Works with new Domain API\n\n";
 
-  std::cout << "Step 3: Implement coordinate transformations\n";
-  std::cout << "  // Indices → Physical coordinates\n";
-  std::cout << "  inline Real3 my_to_coords(\n";
-  std::cout << "      const MyCoordinateSystem& cs,\n";
-  std::cout << "      const Int3& indices,\n";
-  std::cout << "      const Int3& size) {\n";
-  std::cout << "    // Your transformation math here\n";
-  std::cout << "    return {x, y, z};\n";
-  std::cout << "  }\n\n";
-
-  std::cout << "  // Physical coordinates → Indices\n";
-  std::cout << "  inline Int3 my_to_indices(\n";
-  std::cout << "      const MyCoordinateSystem& cs,\n";
-  std::cout << "      const Real3& coords,\n";
-  std::cout << "      const Int3& size) {\n";
-  std::cout << "    // Inverse transformation\n";
-  std::cout << "    return {i, j, k};\n";
-  std::cout << "  }\n\n";
-
-  std::cout << "Step 4: Use it!\n";
-  std::cout << "  MyCoordinateSystem cs(/* params */);\n";
-  std::cout << "  Int3 size = {100, 100, 100};\n";
-  std::cout << "  Real3 xyz = my_to_coords(cs, {50, 50, 50}, size);\n\n";
+  std::cout << "Choosing a pattern:\n";
+  std::cout << "  - Use free functions for simple coordinate systems (polar, spherical)\n";
+  std::cout << "  - Use coordinate_wrapper<D> for complex, reusable coordinates\n";
+  std::cout << "  - coordinate_wrapper<D> integrates better with M1 Domain API\n\n";
 
   std::cout << "✓ No modifications to OpenPFC source code required!\n";
-  std::cout << "✓ Your code lives in your own files\n";
-  std::cout << "✓ ADL (Argument-Dependent Lookup) makes it \"just work\"\n";
-  std::cout
-      << "✓ This is the \"Laboratory, Not Fortress\" philosophy in action!\n\n";
+  std::cout << "✓ Both patterns follow the \"Laboratory, Not Fortress\" philosophy\n\n";
 }
 
 // ============================================================================
@@ -596,10 +628,14 @@ int main() {
   example_spherical_coordinates();
   std::cout << std::string(70, '-') << "\n\n";
 
+  example_coordinate_wrapper();
+  std::cout << std::string(70, '-') << "\n\n";
+
   show_extension_pattern();
 
   std::cout << "For more information, see:\n";
   std::cout << "- docs/advanced_topics/coordinate_systems.md\n";
+  std::cout << "- include/openpfc/kernel/data/domain.hpp (M1 Domain API)\n";
   std::cout << "\n";
 
   return 0;
