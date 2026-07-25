@@ -30,7 +30,8 @@
  *
  * ```cpp
  * GridSize size({64, 64, 64});
- * LocalOffset offset({0, 0, 0});
+ * GridSpacing spacing({1.0, 1.0, 1.0});
+ * PhysicalOrigin origin({0.0, 0.0, 0.0});
  * // Compiler knows these are different!
  * ```
  */
@@ -65,41 +66,36 @@ void print_domain_info(GridSize size, GridSpacing spacing, PhysicalOrigin origin
   std::cout << "  Origin: (" << origin.get()[0] << ", " << origin.get()[1] << ", "
             << origin.get()[2] << ")\n";
 
-  // Calculate physical domain size
-  Real3 domain_size = {size.get()[0] * spacing.get()[0],
-                       size.get()[1] * spacing.get()[1],
-                       size.get()[2] * spacing.get()[2]};
+  // Calculate physical domain size using explicit conversions
+  Int3 size_raw = size.to_vector3();
+  Real3 spacing_raw = spacing.to_vector3();
+  Real3 domain_size = {size_raw[0] * spacing_raw[0],
+                       size_raw[1] * spacing_raw[1],
+                       size_raw[2] * spacing_raw[2]};
 
   std::cout << "  Physical domain: " << domain_size[0] << " x " << domain_size[1]
             << " x " << domain_size[2] << " units\n";
 }
 
+// Note: LocalOffset and IndexBounds types removed - using Int3 directly
 /**
- * @brief Calculate subdomain bounds using strong types
- *
- * This function demonstrates type safety - you cannot accidentally
- * pass spacing where offset is expected.
+ * @brief Calculate subdomain bounds using Int3 arrays (removed LocalOffset/IndexBounds types)
  */
-IndexBounds calculate_subdomain_bounds(GridSize total_size, LocalOffset local_offset,
-                                       GridSize local_size) {
-  Int3 lower = local_offset.get();
-  Int3 upper = {local_offset.get()[0] + local_size.get()[0] - 1,
-                local_offset.get()[1] + local_size.get()[1] - 1,
-                local_offset.get()[2] + local_size.get()[2] - 1};
-
-  return IndexBounds(lower, upper);
+Int3 calculate_subdomain_upper(GridSize total_size, const Int3& local_offset,
+                               GridSize local_size) {
+  return {local_offset[0] + local_size.get()[0] - 1,
+          local_offset[1] + local_size.get()[1] - 1,
+          local_offset[2] + local_size.get()[2] - 1};
 }
 
 /**
  * @brief Map index to physical coordinates
  */
-PhysicalCoords index_to_physical(Int3 index, PhysicalOrigin origin,
-                                 GridSpacing spacing) {
-  Real3 coords = {origin.get()[0] + index[0] * spacing.get()[0],
-                  origin.get()[1] + index[1] * spacing.get()[1],
-                  origin.get()[2] + index[2] * spacing.get()[2]};
-
-  return PhysicalCoords(coords);
+Real3 index_to_physical(Int3 index, PhysicalOrigin origin,
+                        GridSpacing spacing) {
+  return {origin.get()[0] + index[0] * spacing.get()[0],
+          origin.get()[1] + index[1] * spacing.get()[1],
+          origin.get()[2] + index[2] * spacing.get()[2]};
 }
 
 // ============================================================================
@@ -126,9 +122,9 @@ int main() {
   std::cout << "Created domain with strong types:\n";
   print_domain_info(size, spacing, origin);
 
-  // Demonstrate implicit conversion to raw types
-  Int3 size_raw = size; // Implicit conversion
-  std::cout << "\nImplicit conversion to raw Int3: [" << size_raw[0] << ", "
+  // Demonstrate explicit conversion to raw types
+  Int3 size_raw = size.to_vector3(); // Explicit conversion (preferred)
+  std::cout << "\nExplicit conversion to raw Int3: [" << size_raw[0] << ", "
             << size_raw[1] << ", " << size_raw[2] << "]\n";
 
   std::cout << "\n";
@@ -155,28 +151,24 @@ int main() {
   std::cout << "----------------------------------\n\n";
 
   // Define subdomains (as in domain decomposition)
-  LocalOffset subdomain1_offset({0, 0, 0});
+  Int3 subdomain1_offset{0, 0, 0};
   GridSize subdomain1_size({32, 64, 64});
 
-  LocalOffset subdomain2_offset({32, 0, 0});
+  Int3 subdomain2_offset{32, 0, 0};
   GridSize subdomain2_size({32, 64, 64});
 
-  auto bounds1 =
-      calculate_subdomain_bounds(size, subdomain1_offset, subdomain1_size);
-  auto bounds2 =
-      calculate_subdomain_bounds(size, subdomain2_offset, subdomain2_size);
+  auto upper1 = calculate_subdomain_upper(size, subdomain1_offset, subdomain1_size);
+  auto upper2 = calculate_subdomain_upper(size, subdomain2_offset, subdomain2_size);
 
   std::cout << "Subdomain 1 bounds:\n";
-  std::cout << "  Lower: [" << bounds1.lower[0] << ", " << bounds1.lower[1] << ", "
-            << bounds1.lower[2] << "]\n";
-  std::cout << "  Upper: [" << bounds1.upper[0] << ", " << bounds1.upper[1] << ", "
-            << bounds1.upper[2] << "]\n\n";
+  std::cout << "  Lower: [" << subdomain1_offset[0] << ", " << subdomain1_offset[1] << ", "
+            << subdomain1_offset[2] << "]\n";
+  std::cout << "  Upper: [" << upper1[0] << ", " << upper1[1] << ", " << upper1[2] << "]\n\n";
 
   std::cout << "Subdomain 2 bounds:\n";
-  std::cout << "  Lower: [" << bounds2.lower[0] << ", " << bounds2.lower[1] << ", "
-            << bounds2.lower[2] << "]\n";
-  std::cout << "  Upper: [" << bounds2.upper[0] << ", " << bounds2.upper[1] << ", "
-            << bounds2.upper[2] << "]\n\n";
+  std::cout << "  Lower: [" << subdomain2_offset[0] << ", " << subdomain2_offset[1] << ", "
+            << subdomain2_offset[2] << "]\n";
+  std::cout << "  Upper: [" << upper2[0] << ", " << upper2[1] << ", " << upper2[2] << "]\n\n";
 
   // ========================================================================
   // Example 4: Index to Physical Coordinate Mapping
@@ -189,10 +181,10 @@ int main() {
 
   std::cout << std::fixed << std::setprecision(2);
   for (const auto &idx : test_indices) {
-    PhysicalCoords coords = index_to_physical(idx, origin, spacing);
+    Real3 coords = index_to_physical(idx, origin, spacing);
     std::cout << "Index [" << idx[0] << ", " << idx[1] << ", " << idx[2] << "] → ";
-    std::cout << "Physical (" << coords.get()[0] << ", " << coords.get()[1] << ", "
-              << coords.get()[2] << ")\n";
+    std::cout << "Physical (" << coords[0] << ", " << coords[1] << ", "
+              << coords[2] << ")\n";
   }
 
   std::cout << "\n";
@@ -204,17 +196,16 @@ int main() {
   std::cout << "Example 5: Physical Bounds\n";
   std::cout << "--------------------------\n\n";
 
-  PhysicalBounds domain_bounds({-32.0, -32.0, -32.0}, {32.0, 32.0, 32.0});
+  // Using raw Real3 arrays for bounds (PhysicalBounds type removed)
+  Real3 lower{-32.0, -32.0, -32.0};
+  Real3 upper{32.0, 32.0, 32.0};
 
   std::cout << "Physical domain bounds:\n";
-  std::cout << "  Lower: (" << domain_bounds.lower[0] << ", "
-            << domain_bounds.lower[1] << ", " << domain_bounds.lower[2] << ")\n";
-  std::cout << "  Upper: (" << domain_bounds.upper[0] << ", "
-            << domain_bounds.upper[1] << ", " << domain_bounds.upper[2] << ")\n";
+  std::cout << "  Lower: (" << lower[0] << ", " << lower[1] << ", " << lower[2] << ")\n";
+  std::cout << "  Upper: (" << upper[0] << ", " << upper[1] << ", " << upper[2] << ")\n";
 
-  double volume = (domain_bounds.upper[0] - domain_bounds.lower[0]) *
-                  (domain_bounds.upper[1] - domain_bounds.lower[1]) *
-                  (domain_bounds.upper[2] - domain_bounds.lower[2]);
+  double volume = (upper[0] - lower[0]) * (upper[1] - lower[1]) *
+                  (upper[2] - lower[2]);
 
   std::cout << "  Volume: " << volume << " cubic units\n\n";
 
@@ -245,7 +236,6 @@ int main() {
   std::cout << "Size comparisons (bytes):\n";
   std::cout << "  sizeof(Int3):        " << sizeof(Int3) << "\n";
   std::cout << "  sizeof(GridSize):    " << sizeof(GridSize) << " ✅ Same!\n";
-  std::cout << "  sizeof(LocalOffset): " << sizeof(LocalOffset) << " ✅ Same!\n\n";
 
   std::cout << "  sizeof(Real3):          " << sizeof(Real3) << "\n";
   std::cout << "  sizeof(GridSpacing):    " << sizeof(GridSpacing) << " ✅ Same!\n";
