@@ -15,7 +15,7 @@ flowchart LR
     J[JSON / TOML]
   end
   subgraph kernel [Kernel]
-    W[World + Decomposition]
+    W[Domain + Decomposition]
     F[FFT plan HeFFTe]
     M[Model + fields]
     S[Simulator + Time]
@@ -32,7 +32,7 @@ flowchart LR
 
 Reading order for **declarative apps**:
 
-1. **World + decomposition** — global grid and which ranks own which brick (`kernel/data`, `kernel/decomposition`).  
+1. **Domain + decomposition** — global grid and which ranks own which brick (`kernel/data`, `kernel/decomposition`).  
 2. **FFT** — HeFFTe plan and backend (CPU / CUDA / HIP) must match how you built OpenPFC and HeFFTe ([`build_cpu_gpu.md`](../hpc/build_cpu_gpu.md), [`tutorials/fft_heffte_plan_options.md`](../tutorials/fft_heffte_plan_options.md)).  
 3. **Model** — physics in Fourier or real space; registers fields and hooks the integrator ([`class_tour.md`](../reference/class_tour.md)).  
 4. **Simulator** — owns time loop, calls modifiers, invokes writers at `saveat` boundaries.  

@@ -74,7 +74,7 @@ Policies describe where ghost data lives and what is safe for FFT. They are docu
 | Mixed / hybrid | Core has no aliased ghosts; sidecar holds all ghost data | Core only | Same as Separated; extra sync/copy steps are explicit, slower path |
 | **Sparse / arbitrary** | Any user-supplied `(peer, send_indices, recv_indices)` tuples; no grid concept | Yes on core only | `pfc::SparseHaloExchanger<T>` directly with a hand-built `std::vector<halo::RemoteHalo<T>>` (FEM / non-axis / multi-block patterns) |
 
-Note: “No halos in the FFT block” means no ghost layers stored inside that array, not “no periodicity.” Periodicity still comes from `Decomposition` / `World`.
+Note: “No halos in the FFT block” means no ghost layers stored inside that array, not “no periodicity.” Periodicity still comes from `Decomposition` / `Domain`.
 
 ---
 
