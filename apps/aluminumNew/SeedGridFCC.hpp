@@ -60,16 +60,17 @@ public:
    * @param m is the model to apply the initial condition to.
    */
   void apply(pfc::Model &m, double) override {
-    const pfc::World &w = pfc::get_world(m);
+    const auto &world_obj = pfc::get_world(m);
+    const pfc::Domain &d = world_obj.domain_;
     const auto &fft = pfc::get_fft(m);
     pfc::Field &field = m.get_real_field("psi");
     pfc::Int3 low = pfc::fft::get_inbox(fft).low;
     pfc::Int3 high = pfc::fft::get_inbox(fft).high;
 
-    // Use the new World API to get size, spacing, and origin
-    auto size = pfc::world::get_size(w);
-    auto spacing = pfc::world::get_spacing(w);
-    auto origin = pfc::world::get_origin(w);
+    // Use the Domain API to get size, spacing, and origin
+    auto size = pfc::domain::get_size(d);
+    auto spacing = pfc::domain::get_spacing(d);
+    auto origin = pfc::domain::get_origin(d);
     auto Ly = size[1];
     auto Lz = size[2];
     auto dx = spacing[0];

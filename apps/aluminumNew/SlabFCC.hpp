@@ -74,17 +74,18 @@ public:
    */
   void apply(pfc::Model &model, double time) override {
     (void)time;
-    const pfc::World &w = pfc::get_world(model);
+    const auto &world_obj = pfc::get_world(model);
+    const pfc::Domain &d = world_obj.domain_;
     const auto &fft = pfc::get_fft(model);
     pfc::Field &field = pfc::get_real_field(model, "psi");
     pfc::Int3 low = pfc::fft::get_inbox(fft).low;
     pfc::Int3 high = pfc::fft::get_inbox(fft).high;
 
-    // auto Lx = w.Lx;
-    auto Ly = pfc::world::get_size(w, 1);
-    auto Lz = pfc::world::get_size(w, 2);
-    auto [dx, dy, dz] = pfc::world::get_spacing(w);
-    auto [x0, y0, z0] = pfc::world::get_origin(w);
+    // auto Lx = d.Lx;
+    auto Ly = pfc::domain::get_size(d, 1);
+    auto Lz = pfc::domain::get_size(d, 2);
+    auto [dx, dy, dz] = pfc::domain::get_spacing(d);
+    auto [x0, y0, z0] = pfc::domain::get_origin(d);
 
     std::vector<SeedFCC> seeds;
 

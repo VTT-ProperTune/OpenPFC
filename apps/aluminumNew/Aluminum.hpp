@@ -185,8 +185,8 @@ public:
   void prepare_operators(double dt) {
     auto &fft = get_fft();
     auto world = get_world();
-    auto [dx, dy, dz] = pfc::world::get_spacing(world);
-    auto [Lx, Ly, Lz] = pfc::world::get_size(world);
+    auto [dx, dy, dz] = pfc::domain::get_spacing(world.domain_);
+    auto [Lx, Ly, Lz] = pfc::domain::get_size(world.domain_);
     auto low = pfc::fft::get_outbox(fft).low;
     auto high = pfc::fft::get_outbox(fft).high;
 
@@ -252,10 +252,11 @@ public:
   void step(double t) override {
 
     auto &fft = get_fft();
-    pfc::World w = get_world();
-    double dx = pfc::world::get_spacing(w, 0);
-    double x0 = pfc::world::get_origin(w, 0);
-    int Lx = pfc::world::get_size(w, 0);
+    const auto &world_obj = get_world();
+    const pfc::Domain &d = world_obj.domain_;
+    double dx = pfc::domain::get_spacing(d, 0);
+    double x0 = pfc::domain::get_origin(d, 0);
+    int Lx = pfc::domain::get_size(d, 0);
     pfc::Int3 low = pfc::fft::get_inbox(fft).low;
     pfc::Int3 high = pfc::fft::get_inbox(fft).high;
 
@@ -339,9 +340,9 @@ public:
   size_t get_allocated_memory_bytes() const override { return mem_allocated; }
 
   /**
-   * @brief Constructs an Aluminum model with the given World object.
+   * @brief Constructs an Aluminum model with the given world object.
    *
-   * @param world The World object to initialize the model.
+   * @param world The world object to initialize the model.
    */
   explicit Aluminum(pfc::FFT &fft, const pfc::World &world,
                     MPI_Comm mpi_comm = MPI_COMM_WORLD)
