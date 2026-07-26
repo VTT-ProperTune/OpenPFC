@@ -14,7 +14,7 @@ Read this page when you have seen a name in an example or API reference and want
 ```mermaid
 flowchart TB
   subgraph data [kernel/data]
-    W[World]
+    Dm[Domain]
   end
   subgraph decomp [kernel/decomposition]
     D[Decomposition]
@@ -33,7 +33,7 @@ flowchart TB
     A[App]
     Sess[SpectralSimulationSession]
   end
-  W --> D --> F
+  Dm --> D --> F
   F --> M
   M --> Sim
   Tm --> Sim
@@ -46,11 +46,11 @@ flowchart TB
 
 ## Types at a glance
 
-The table below is lookup material. The most important flow for a new reader is `World` to `Decomposition` to FFT to `Model` to `Simulator`, with `App` and `SpectralSimulationSession` providing the JSON-driven frontend around that stack.
+The table below is lookup material. The most important flow for a new reader is `Domain` to `Decomposition` to FFT to `Model` to `Simulator`, with `App` and `SpectralSimulationSession` providing the JSON-driven frontend around that stack.
 
 | Type / concept | Role | Primary headers | Example / app |
 |----------------|------|-----------------|---------------|
-| `World` | Global grid: sizes, spacing, origin, periodicity | `openpfc/kernel/data/world.hpp` | `examples/02_domain_decomposition.cpp` |
+| `Domain` | Global grid: sizes, spacing, origin, periodicity | `openpfc/kernel/data/domain.hpp` | `examples/02_domain_decomposition.cpp` |
 | `Decomposition` | MPI partition; per-rank inbox/outbox | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
 | `IFFT` / `CpuFft` | Distributed FFT (HeFFTe); spectral operators | `openpfc/kernel/fft/fft.hpp`, `fft_fftw.hpp` | `examples/05_simulator.cpp` |
 | `Model` | Physics: fields, `initialize()`, `step()` | `openpfc/kernel/simulation/model.hpp` | `examples/04_diffusion_model.cpp`, `12_cahn_hilliard.cpp` |
@@ -67,7 +67,7 @@ The table below is lookup material. The most important flow for a new reader is 
 | `ResultsWriter` / `ResultsWriterMap` | Persist fields (binary, VTK, …); `Simulator` holds `ResultsWriterMap` | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](../user_guide/io_results.md) |
 | `ResultsWriterCatalog` | JSON `fields[].writer` → factory (`binary` built-in); inject for custom formats | `openpfc/frontend/ui/results_writer_catalog.hpp` | Same as `add_result_writers_from_json` ([`app_pipeline.md`](../user_guide/app_pipeline.md)) |
 | `pfc::ui::App<Model>` | Load JSON/TOML, build stack, run | `openpfc/frontend/ui/app.hpp` | `apps/aluminumNew/`, `examples/10_ui_register_ic.cpp` |
-| `SpectralCpuStack` | World → decomp → CPU FFT → time from JSON | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | Used inside `SpectralSimulationSession` |
+| `SpectralCpuStack` | Domain → decomp → CPU FFT → time from JSON | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | Used inside `SpectralSimulationSession` |
 | `spectral_fft_stack_factory` | Merge `plan_options` + root `backend`; cuFFT / ROCm plan defaults + JSON overlay | `openpfc/frontend/ui/spectral_fft_stack_factory.hpp` | GPU tests / drivers alongside CPU stack helpers |
 | `SpectralSimulationSession` | Owns stack + `Model` + `Simulator` | `openpfc/frontend/ui/spectral_simulation_session.hpp` | Constructed by `App` |
 | `JsonWiringSession` | Bundles `JsonWiringContext` + `FieldModifierCatalog` + `ResultsWriterCatalog` for `wire_simulator_and_runtime_from_json` | `openpfc/frontend/ui/json_wiring_session.hpp` | Custom apps / tests; catalogs are explicit (no defaulted parameters) |

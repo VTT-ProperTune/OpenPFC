@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 Sources live under [`api/examples/`](../api/examples). They are **included in the HTML API reference** when you build documentation (`OpenPFC_BUILD_DOCUMENTATION=ON`). Optionally, you can compile them as standalone programs with `-DBUILD_API_EXAMPLES=ON` (see [`api/examples/CMakeLists.txt`](../api/examples/CMakeLists.txt)); binaries are emitted under `<build>/docs/api/examples/`.
 
-Read them **in order** the first time: each file builds on the same stack (`World` → decomposition / FFT → `Simulator` → I/O and modifiers).
+Read them **in order** the first time: each file builds on the same stack (`Domain` → decomposition / FFT → `Simulator` → I/O and modifiers).
 
 | # | Source | Focus |
 |---|--------|--------|

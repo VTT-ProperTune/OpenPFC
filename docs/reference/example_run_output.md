@@ -34,7 +34,7 @@ The `App` path logs with the `[app]` prefix on rank 0 (see `include/openpfc/fron
 
 - `[app] Reading JSON configuration from …` or the TOML equivalent  
 - `[app] Effective configuration (JSON):` followed by an indented dump of the parsed settings  
-- `[app] World: …` summarizing the grid  
+- `[app] Domain: …` summarizing the grid  
 - `[app] Initializing model...`  
 - `[app] Starting time integration (Simulator integrator API)`  
 

@@ -9,9 +9,9 @@ This page lists the **JSON / TOML surface** consumed by the default **CPU spectr
 
 **Pipeline order:** [`app_pipeline.md`](../user_guide/app_pipeline.md). **Mental model:** [`configuration.md`](../user_guide/configuration.md).
 
-## World (grid)
+## Domain (grid)
 
-Parsed by `from_json<World>(settings)` — supports **flat** keys on the root object **or** nested under `"domain"`.
+Parsed by `from_json<Domain>(settings)` — supports **flat** keys on the root object **or** nested under `"domain"`.
 
 | Key(s) | Type | Meaning |
 |--------|------|---------|

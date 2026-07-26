@@ -44,7 +44,7 @@ flowchart LR
 
 | Tier | Executables | Focus |
 |------|-------------|--------|
-| **1 — First week** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `World`, HeFFTe FFT, `Simulator`, spectral model (matches [`quickstart.md`](../quickstart.md)) |
+| **1 — First week** | `02_domain_decomposition`, `03_parallel_fft`, `05_simulator`, `12_cahn_hilliard` | `Domain`, HeFFTe FFT, `Simulator`, spectral model (matches [`quickstart.md`](../quickstart.md)) |
 | **2 — Wiring** | `10_ui_register_ic`, `11_write_results`, `14_custom_field_initializer`, `diffusion_model_with_custom_initial_condition` | JSON-style registration, writers, custom IC |
 | **3 — FD / space / tools** | `15_finite_difference_heat`, `17_custom_coordinate_system`, `fft_backend_benchmark`, `profiling_timer_report` | Halos, coordinates, backends, timing |
 
@@ -55,7 +55,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | Executable | Source | What it demonstrates |
 |------------|--------|----------------------|
 | `fft_backend_benchmark` | `fft_backend_benchmark.cpp` | FFT backend benchmarking |
-| `02_domain_decomposition` | `02_domain_decomposition.cpp` | `World`, `Decomposition`, MPI |
+| `02_domain_decomposition` | `02_domain_decomposition.cpp` | `Domain`, `Decomposition`, MPI |
 | `03_parallel_fft` | `03_parallel_fft.cpp` | Distributed FFT (HeFFTe) |
 | `04_diffusion_model` | `04_diffusion_model.cpp` | Simple spectral diffusion `Model` |
 | `05_simulator` | `05_simulator.cpp` | `Simulator`, `Time`, `FieldModifier` |
@@ -75,12 +75,12 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `write_results` | `write_results.cpp` | Results I/O variant |
 | `diffusion_model_with_custom_initial_condition` | `diffusion_model_with_custom_initial_condition.cpp` | Diffusion + custom IC |
 | `json_read` | `json_read.cpp` | Standalone nlohmann JSON read (does not link `OpenPFC`) |
-| `world_helpers_example` | `world_helpers_example.cpp` | `World` helpers |
+| `world_helpers_example` | `world_helpers_example.cpp` | `Domain` helpers |
 | `14_custom_field_initializer` | `14_custom_field_initializer.cpp` | Custom field initializer |
 | `15_finite_difference_heat` | `15_finite_difference_heat.cpp` | Finite-difference heat (separated halos); see [`halo_exchange.md`](../concepts/halo_exchange.md) |
 | `16_strong_types_demo` | `16_strong_types_demo.cpp` | Strong typing demo |
 | `17_custom_coordinate_system` | `17_custom_coordinate_system.cpp` | Custom coordinate setup |
-| `world_strong_types_example` | `world_strong_types_example.cpp` | Strong types with `World` |
+| `world_strong_types_example` | `world_strong_types_example.cpp` | Strong types with `Domain` |
 
 ## Sources not built by default
 
