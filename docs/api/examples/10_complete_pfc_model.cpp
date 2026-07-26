@@ -6,7 +6,7 @@
  * @brief Complete Phase Field Crystal simulation demonstrating all OpenPFC APIs
  *
  * This comprehensive example demonstrates:
- * 1. World - Domain geometry and coordinate system
+ * 1. Domain - Domain geometry and coordinate system
  * 2. Decomposition - MPI domain decomposition for parallelism
  * 3. FFT - Spectral transforms and k-space operations
  * 4. Model - Custom PFC model with field management
@@ -81,11 +81,11 @@ public:
   /**
    * @brief Construct PFC model with specified domain
    * @param fft FFT engine for spectral transforms (must outlive the model)
-   * @param world Physical domain geometry
+   * @param domain Physical domain geometry
    * @param epsilon Dimensionless temperature (ε < 0 for undercooling)
    */
-  PFCModel(FFT &fft, const World &world, double epsilon)
-      : Model(fft, world), m_epsilon(epsilon), m_dt(0.0) {}
+  PFCModel(FFT &fft, const Domain &domain, double epsilon)
+      : Model(fft, domain), m_epsilon(epsilon), m_dt(0.0) {}
 
   /**
    * @brief Initialize model: allocate fields and precompute operators
@@ -165,12 +165,12 @@ private:
    */
   void precompute_operators() {
     const auto &fft = get_fft();
-    const World &w = pfc::get_world(*this);
+    const Domain &w = pfc::get_domain(*this);
     auto outbox = fft::get_outbox(fft);
 
     // Wave vector scaling factors
-    auto spacing = world::get_spacing(w);
-    auto size = world::get_size(w);
+    auto spacing = domain::get_spacing(w);
+    auto size = domain::get_size(w);
     double kx_scale = 2.0 * std::numbers::pi / (spacing[0] * size[0]);
     double ky_scale = 2.0 * std::numbers::pi / (spacing[1] * size[1]);
     double kz_scale = 2.0 * std::numbers::pi / (spacing[2] * size[2]);
@@ -244,22 +244,22 @@ int main(int argc, char **argv) {
     // 1. WORLD API: Define physical domain geometry
     //======================================================================
     if (rank == 0) {
-      std::cout << "\n[1] Creating domain with World API...\n";
+      std::cout << "\n[1] Creating domain with Domain API...\n";
     }
 
     // Create 128³ computational domain with unit spacing
-    auto world =
-        world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({1.0, 1.0, 1.0}));
+    auto domain =
+        domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                       GridSpacing({1.0, 1.0, 1.0}));
 
     if (rank == 0) {
-      std::cout << "    Domain: " << world::get_size(world, 0) << " x "
-                << world::get_size(world, 1) << " x " << world::get_size(world, 2)
+      std::cout << "    Domain: " << domain::get_size(domain, 0) << " x "
+                << domain::get_size(domain, 1) << " x " << domain::get_size(domain, 2)
                 << " points\n";
       std::cout << "    Physical size: ["
-                << world::get_size(world, 0) * world::get_spacing(world, 0) << " x "
-                << world::get_size(world, 1) * world::get_spacing(world, 1) << " x "
-                << world::get_size(world, 2) * world::get_spacing(world, 2) << "]\n";
+                << domain::get_size(domain, 0) * domain::get_spacing(domain, 0) << " x "
+                << domain::get_size(domain, 1) * domain::get_spacing(domain, 1) << " x "
+                << domain::get_size(domain, 2) * domain::get_spacing(domain, 2) << "]\n";
     }
 
     //======================================================================
@@ -269,7 +269,7 @@ int main(int argc, char **argv) {
       std::cout << "\n[2] Creating MPI decomposition...\n";
     }
 
-    auto decomp = decomposition::create(world, size);
+    auto decomp = decomposition::create(domain, size);
     auto grid = decomposition::get_grid(decomp);
 
     if (rank == 0) {
@@ -280,11 +280,11 @@ int main(int argc, char **argv) {
     }
 
     // Each rank prints its local subdomain
-    auto local_world = decomposition::get_world(decomp);
+    auto local_domain = decomposition::get_subworld(decomp, rank);
     std::cout << "    [Rank " << rank
-              << "] Local size: " << world::get_size(local_world, 0) << " x "
-              << world::get_size(local_world, 1) << " x "
-              << world::get_size(local_world, 2) << "\n";
+              << "] Local size: " << domain::get_size(local_domain.domain_, 0) << " x "
+              << domain::get_size(local_domain.domain_, 1) << " x "
+              << domain::get_size(local_domain.domain_, 2) << "\n";
     MPI_Barrier(MPI_COMM_WORLD);
 
     //======================================================================
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
     }
 
     double epsilon = -0.25; // Undercooling parameter (ε < 0 favors solid)
-    PFCModel model(fft, world, epsilon);
+    PFCModel model(fft, domain, epsilon);
 
     double dt = 0.5; // Time step
     initialize(model, dt);
@@ -479,7 +479,7 @@ int main(int argc, char **argv) {
                    "     ║\n";
       std::cout << "║                                                               "
                    "     ║\n";
-      std::cout << "║  ✓ Domain created with World API                              "
+      std::cout << "║  ✓ Domain created with Domain API                            "
                    "     ║\n";
       std::cout << "║  ✓ MPI decomposition configured                               "
                    "     ║\n";

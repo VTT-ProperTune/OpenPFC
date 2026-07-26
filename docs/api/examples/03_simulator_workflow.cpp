@@ -26,7 +26,7 @@
 #include <iostream>
 #include <limits>
 #include <numbers>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
@@ -48,7 +48,7 @@ private:
   std::vector<double> m_propagator; // Precomputed (1 - D*dt*k²)^{-1}
 
 public:
-  DiffusionModel(FFT &fft, const World &world) : Model(fft, world) {}
+  DiffusionModel(FFT &fft, const Domain &domain) : Model(fft, domain) {}
 
   void initialize(double dt) override {
     if (is_rank0()) {
@@ -66,9 +66,9 @@ public:
 
     // Precompute propagator in k-space
     auto outbox = fft::get_outbox(fft);
-    const auto &w = pfc::get_world(*this);
-    auto size = world::get_size(w);
-    auto spacing = world::get_spacing(w);
+    const auto &w = pfc::get_domain(*this);
+    auto size = domain::get_size(w);
+    auto spacing = domain::get_spacing(w);
 
     m_propagator.resize(fft.size_outbox());
 
@@ -140,8 +140,8 @@ public:
     auto &field = get_real_field(model, get_field_name());
     auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
-    const auto &w = get_world(model);
-    auto spacing = world::get_spacing(w);
+    const auto &w = get_domain(model);
+    auto spacing = domain::get_spacing(w);
 
     for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
       for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
@@ -223,8 +223,8 @@ void example_complete_simulation() {
   std::cout << std::string(60, '=') << "\n\n";
 
   // 1. Create computational domain
-  auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({0.1, 0.1, 0.1}));
+  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({0.1, 0.1, 0.1}));
 
   if (mpi::get_rank() == 0) {
     std::cout << "Step 1: Created 64³ computational domain\n";
@@ -232,7 +232,7 @@ void example_complete_simulation() {
   }
 
   // 2. Set up FFT
-  auto decomp = decomposition::create(world, mpi::get_size());
+  auto decomp = decomposition::create(domain, mpi::get_size());
   auto fft = fft::create(decomp);
 
   if (mpi::get_rank() == 0) {
@@ -241,7 +241,7 @@ void example_complete_simulation() {
   }
 
   // 3. Create model
-  DiffusionModel model(fft, world);
+  DiffusionModel model(fft, domain);
 
   if (mpi::get_rank() == 0) {
     std::cout << "Step 3: Created diffusion model\n\n";

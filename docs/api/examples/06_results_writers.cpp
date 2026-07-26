@@ -23,17 +23,17 @@
 #include <numbers>
 #include <numeric>
 #include <openpfc/frontend/io/binary_writer.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 
 using namespace pfc;
 
 // Helper: Create test field data (sine wave)
-RealField create_test_field(const World &world, double time) {
-  auto size = world::get_size(world);
-  auto spacing = world::get_spacing(world);
-  auto origin = world::get_origin(world);
+RealField create_test_field(const Domain &domain, double time) {
+  auto size = domain::get_size(domain);
+  auto spacing = domain::get_spacing(domain);
+  auto origin = domain::get_origin(domain);
 
   int total = size[0] * size[1] * size[2];
   RealField field(total);
@@ -128,18 +128,18 @@ void scenario_basic_binary() {
   }
 
   // Create domain
-  auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, size);
-  auto local_world = decomposition::get_subworld(decomp, rank);
+  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
+  auto local_domain = decomposition::get_subworld(decomp, rank);
 
   // Setup writer
   auto writer = std::make_unique<BinaryWriter>("output/field_%04d.bin");
 
-  auto global_size = world::get_size(world);
-  auto local_size = world::get_size(local_world);
-  auto local_origin = world::get_origin(local_world);
-  auto spacing = world::get_spacing(world);
+  auto global_size = domain::get_size(domain);
+  auto local_size = domain::get_size(local_domain.domain_);
+  auto local_origin = domain::get_origin(local_domain.domain_);
+  auto spacing = domain::get_spacing(domain);
 
   // Compute offset in grid points
   std::array<int, 3> offset = {static_cast<int>(local_origin[0] / spacing[0]),
@@ -155,7 +155,7 @@ void scenario_basic_binary() {
   // Write several time steps
   for (int step = 0; step < 5; ++step) {
     double time = step * 0.1;
-    auto field = create_test_field(local_world, time);
+    auto field = create_test_field(domain, time);
 
     writer->write(step, field);
 
@@ -184,19 +184,19 @@ void scenario_multiple_writers() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create domain
-  auto world =
-      world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, size);
-  auto local_world = decomposition::get_subworld(decomp, rank);
+  auto domain =
+      domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
+  auto local_domain = decomposition::get_subworld(decomp, rank);
 
   // Binary writer (full field, save every 10 steps)
   auto binary_writer = std::make_unique<BinaryWriter>("output/checkpoint_%04d.bin");
 
-  auto global_size = world::get_size(world);
-  auto local_size = world::get_size(local_world);
-  auto local_origin = world::get_origin(local_world);
-  auto spacing = world::get_spacing(world);
+  auto global_size = domain::get_size(domain);
+  auto local_size = domain::get_size(local_domain.domain_);
+  auto local_origin = domain::get_origin(local_domain.domain_);
+  auto spacing = domain::get_spacing(domain);
 
   std::array<int, 3> offset = {static_cast<int>(local_origin[0] / spacing[0]),
                                static_cast<int>(local_origin[1] / spacing[1]),
@@ -216,7 +216,7 @@ void scenario_multiple_writers() {
   // Simulate 50 steps
   for (int step = 0; step < 50; ++step) {
     double time = step * 0.01;
-    auto field = create_test_field(local_world, time);
+    auto field = create_test_field(domain, time);
 
     // Always write statistics
     stats_writer->write_statistics(step, time, field);
@@ -254,18 +254,18 @@ void scenario_checkpoint_restart() {
   }
 
   // Create domain
-  auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, size);
-  auto local_world = decomposition::get_subworld(decomp, rank);
+  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
+  auto local_domain = decomposition::get_subworld(decomp, rank);
 
   // Setup checkpoint writer
   auto checkpoint = std::make_unique<BinaryWriter>("output/restart_%04d.bin");
 
-  auto global_size = world::get_size(world);
-  auto local_size = world::get_size(local_world);
-  auto local_origin = world::get_origin(local_world);
-  auto spacing = world::get_spacing(world);
+  auto global_size = domain::get_size(domain);
+  auto local_size = domain::get_size(local_domain.domain_);
+  auto local_origin = domain::get_origin(local_domain.domain_);
+  auto spacing = domain::get_spacing(domain);
 
   std::array<int, 3> offset = {static_cast<int>(local_origin[0] / spacing[0]),
                                static_cast<int>(local_origin[1] / spacing[1]),
@@ -284,7 +284,7 @@ void scenario_checkpoint_restart() {
 
   for (int step = 0; step <= total_steps; ++step) {
     double time = step * 0.01;
-    auto field = create_test_field(local_world, time);
+    auto field = create_test_field(domain, time);
 
     if (step % checkpoint_interval == 0) {
       checkpoint->write(step, field);

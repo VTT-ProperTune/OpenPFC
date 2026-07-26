@@ -34,7 +34,7 @@ class DemoModel : public Model {
   Field m_density;
 
 public:
-  DemoModel(FFT &fft, const World &world) : Model(fft, world) {
+  DemoModel(FFT &fft, const Domain &domain) : Model(fft, domain) {
     m_density.resize(fft.size_inbox());
     pfc::add_real_field(*this, "density", m_density);
   }
@@ -68,7 +68,7 @@ void print_section(const std::string &title) {
  * This demonstrates:
  * - Deriving from FieldModifier
  * - Accessing model geometry (world, fft, inbox)
- * - Coordinate-space operations (world::to_coords)
+ * - Coordinate-space operations (domain::to_coords)
  * - Spatial field initialization
  */
 class GaussianIC : public FieldModifier {
@@ -88,7 +88,7 @@ public:
     auto &field = get_real_field(model, get_field_name());
 
     // 2. Get geometry information
-    const auto &world = get_world(model);
+    const auto &domain = get_domain(model);
     const auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
 
@@ -98,7 +98,7 @@ public:
       for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
         for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
           // Convert grid indices to physical coordinates
-          auto pos = world::to_coords(world, Int3{i, j, k});
+          auto pos = domain::to_coords(domain.domain_, Int3{i, j, k});
 
           // Compute distance from center
           double dx = pos[0] - m_center[0];
@@ -124,15 +124,15 @@ void demo_custom_initial_condition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create a small domain for demonstration
-  auto world = world::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto domain = domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
 
   // Create FFT with decomposition
-  auto decomp = decomposition::create(world, 4);
+  auto decomp = decomposition::create(domain, 4);
   auto fft = fft::create(decomp);
 
   // Create a simple model with one field
-  DemoModel model(fft, world);
+  DemoModel model(fft, domain);
 
   // Create and apply Gaussian IC
   GaussianIC gaussian_ic(Real3{16.0, 16.0, 16.0}, // Center at domain middle
@@ -192,14 +192,14 @@ public:
 
   void apply(Model &model, double /*time*/) override {
     auto &field = get_real_field(model, get_field_name());
-    const auto &world = get_world(model);
+    const auto &domain = get_domain(model);
     const auto &fft = get_fft(model);
     auto inbox = fft::get_inbox(fft);
 
     // Get domain size in x-direction
-    double Lx = world::get_size(world, 0) * world::get_spacing(world, 0);
-    double dx = world::get_spacing(world, 0);
-    double x0 = world::get_origin(world, 0);
+    double Lx = domain::get_size(domain.domain_, 0) * domain::get_spacing(domain.domain_, 0);
+    double dx = domain::get_spacing(domain.domain_, 0);
+    double x0 = domain::get_origin(domain.domain_, 0);
 
     // Apply BC at right boundary with smooth transition
     int idx = 0;
@@ -229,11 +229,11 @@ void demo_boundary_condition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto world = world::create(GridSize({64, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, 4);
+  auto domain = domain::create(GridSize({64, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, 4);
   auto fft = fft::create(decomp);
-  DemoModel model(fft, world);
+  DemoModel model(fft, domain);
 
   // Initialize with constant value
   auto &field = get_real_field(model, "density");
@@ -252,8 +252,8 @@ void demo_boundary_condition() {
 
   // Sample field values along x-axis
   auto inbox = fft::get_inbox(get_fft(model));
-  double dx = world::get_spacing(world, 0);
-  double x0 = world::get_origin(world, 0);
+  double dx = domain::get_spacing(domain.domain_, 0);
+  double x0 = domain::get_origin(domain.domain_, 0);
 
   if (rank == 0) {
     std::cout << "Field values after BC application:\n";
@@ -334,11 +334,11 @@ void demo_space_time_bc() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto world = world::create(GridSize({32, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, 4);
+  auto domain = domain::create(GridSize({32, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, 4);
   auto fft = fft::create(decomp);
-  DemoModel model(fft, world);
+  DemoModel model(fft, domain);
 
   // Initialize field
   auto &field = get_real_field(model, "density");
@@ -401,11 +401,11 @@ void demo_composition() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Create domain and model
-  auto world = world::create(GridSize({64, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, 4);
+  auto domain = domain::create(GridSize({64, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, 4);
   auto fft = fft::create(decomp);
-  DemoModel model(fft, world);
+  DemoModel model(fft, domain);
 
   if (rank == 0) {
     std::cout << "Building complex initial state via composition:\n\n";
@@ -458,8 +458,8 @@ void demo_composition() {
   MPI_Reduce(&sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
-    int total_points = world::get_size(world, 0) * world::get_size(world, 1) *
-                       world::get_size(world, 2);
+    int total_points = domain::get_size(domain.domain_, 0) * domain::get_size(domain.domain_, 1) *
+                       domain::get_size(domain.domain_, 2);
     double mean = global_sum / total_points;
 
     std::cout << "\nResulting field statistics:\n";
@@ -512,7 +512,7 @@ int main(int argc, char **argv) {
                    "     ║\n";
       std::cout << "║  1. Derive from FieldModifier and implement apply()           "
                    "     ║\n";
-      std::cout << "║  2. Access model geometry via get_world(), get_fft()          "
+      std::cout << "║  2. Access model geometry via get_domain(), get_fft()        "
                    "     ║\n";
       std::cout << "║  3. Use time parameter for time-varying BCs                   "
                    "     ║\n";

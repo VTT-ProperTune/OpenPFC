@@ -12,7 +12,7 @@
  * - Subdomain queries and properties
  * - Integration with MPI parallel execution
  *
- * The Decomposition class partitions a global World into non-overlapping
+ * The Decomposition class partitions a global Domain into non-overlapping
  * subdomains, each owned by one MPI rank. This enables scalable parallel
  * simulations on HPC clusters.
  *
@@ -31,7 +31,7 @@
 #include <iomanip>
 #include <iostream>
 #include <mpi.h>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <sstream>
 
@@ -70,21 +70,21 @@ void scenario_manual_grid() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create global domain
-  auto world =
-      world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
+  auto domain_obj =
+      domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
 
   if (rank == 0) {
-    auto global_size = world::get_size(world);
+    auto global_size = domain::get_size(domain_obj);
     std::cout << "Global domain: [" << global_size[0] << ", " << global_size[1]
               << ", " << global_size[2] << "]\n";
-    std::cout << "Physical volume: " << world::physical_volume(world)
+    std::cout << "Physical volume: " << domain::physical_volume(domain_obj)
               << " units³\n\n";
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create decomposition with 2x2x1 grid (suitable for 4 ranks)
-  auto decomp = decomposition::create(world, {2, 2, 1});
+  auto decomp = decomposition::create(domain_obj, {2, 2, 1});
 
   if (rank == 0) {
     auto grid = decomposition::get_grid(decomp);
@@ -104,10 +104,10 @@ void scenario_manual_grid() {
 
   // Each rank queries its local subdomain
   if (rank < decomposition::get_num_domains(decomp)) {
-    auto local_world = decomposition::get_subworld(decomp, rank);
-    auto local_size = world::get_size(local_world);
-    auto local_origin = world::get_origin(local_world);
-    auto local_bounds = world::get_upper_bounds(local_world);
+    auto local_domain = decomposition::get_subworld(decomp, rank);
+    auto local_size = domain::get_size(local_domain.domain_);
+    auto local_origin = domain::get_origin(local_domain.domain_);
+    auto local_bounds = domain::get_upper_bounds(local_domain.domain_);
 
     std::ostringstream oss;
     oss << rank_prefix(rank) << "Local subdomain:\n";
@@ -144,12 +144,12 @@ void scenario_automatic_grid() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create global domain
-  auto world =
-      world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({0.5, 0.5, 0.5}));
+  auto domain =
+      domain::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({0.5, 0.5, 0.5}));
 
   // Let algorithm choose optimal grid pattern
-  auto decomp = decomposition::create(world, size);
+  auto decomp = decomposition::create(domain, size);
 
   if (rank == 0) {
     auto grid = decomposition::get_grid(decomp);
@@ -161,7 +161,7 @@ void scenario_automatic_grid() {
     std::cout << "Product: " << grid[0] << " × " << grid[1] << " × " << grid[2]
               << " = " << (grid[0] * grid[1] * grid[2]) << "\n\n";
 
-    // Show subdomain sizes (using Box3i/Domain accessors, not deprecated World vector)
+    // Show subdomain sizes (using Box3i/Domain accessors, not deprecated World type)
     std::cout << "Subdomain sizes:\n";
     for (int i = 0; i < std::min(4, num_domains); ++i) {
       auto box = decomposition::local_box(decomp, i);
@@ -175,10 +175,10 @@ void scenario_automatic_grid() {
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Each rank gets its local world
-  auto local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  auto local_vol = world::physical_volume(local_world);
+  // Each rank gets its local domain
+  auto local_domain = decomposition::get_subworld(decomp, rank);
+  auto local_size = domain::get_size(local_domain.domain_);
+  auto local_vol = domain::physical_volume(local_domain.domain_);
 
   std::ostringstream oss;
   oss << rank_prefix(rank) << "Size: [" << local_size[0] << ", " << local_size[1]
@@ -208,21 +208,21 @@ void scenario_coordinate_mapping() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create decomposition
-  auto global_world =
-      world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(global_world, size);
-  auto local_world = decomposition::get_subworld(decomp, rank);
+  auto domain =
+      domain::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
+  auto local_domain = decomposition::get_subworld(decomp, rank);
 
   // Compute center point coordinates
-  auto local_size = world::get_size(local_world);
+  auto local_size = domain::get_size(local_domain.domain_);
   Int3 local_center = {local_size[0] / 2, local_size[1] / 2, local_size[2] / 2};
 
   // Local coordinates (within subdomain)
-  auto local_coords = world::to_coords(local_world, local_center);
+  auto local_coords = domain::to_coords(local_domain.domain_, local_center);
 
   // Global coordinates (within full domain)
-  auto global_origin = world::get_origin(local_world);
+  auto global_origin = domain::get_origin(local_domain.domain_);
   Real3 global_coords = {global_origin[0] + local_coords[0],
                          global_origin[1] + local_coords[1],
                          global_origin[2] + local_coords[2]};
@@ -255,9 +255,9 @@ void scenario_properties() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create various decompositions
-  auto world =
-      world::create(GridSize({200, 200, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({0.5, 0.5, 1.0}));
+  auto domain =
+      domain::create(GridSize({200, 200, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({0.5, 0.5, 1.0}));
 
   if (rank == 0) {
     std::cout << "Global domain: 200×200×100, spacing: [0.5, 0.5, 1.0]\n\n";
@@ -273,7 +273,7 @@ void scenario_properties() {
       auto grid = test_grids[i];
       if (grid[0] * grid[1] * grid[2] != size) continue; // Skip invalid
 
-      auto decomp = decomposition::create(world, grid);
+      auto decomp = decomposition::create(domain, grid);
       auto num = decomposition::get_num_domains(decomp);
 
       std::cout << "Grid [" << grid[0] << ", " << grid[1] << ", " << grid[2]
@@ -282,7 +282,7 @@ void scenario_properties() {
 
       // Show first subdomain as example
       auto subworld_0 = decomposition::get_subworld(decomp, 0);
-      auto sz = world::get_size(subworld_0);
+      auto sz = domain::get_size(subworld_0.domain_);
       std::cout << "  Example subdomain (rank 0): [" << sz[0] << ", " << sz[1]
                 << ", " << sz[2] << "]\n\n";
     }
@@ -290,12 +290,12 @@ void scenario_properties() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Each rank queries its configuration
-  auto decomp = decomposition::create(world, size);
+  auto decomp = decomposition::create(domain, size);
   auto local = decomposition::get_subworld(decomp, rank);
   auto grid = decomposition::get_grid(decomp);
 
-  auto local_size = world::get_size(local);
-  auto local_spacing = world::get_spacing(local);
+  auto local_size = domain::get_size(local.domain_);
+  auto local_spacing = domain::get_spacing(local.domain_);
   int local_points = local_size[0] * local_size[1] * local_size[2];
 
   std::ostringstream oss;
@@ -327,14 +327,14 @@ void scenario_load_balance() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create decomposition
-  auto world =
-      world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, size);
+  auto domain =
+      domain::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, size);
   auto local = decomposition::get_subworld(decomp, rank);
 
   // Count local grid points
-  auto local_size = world::get_size(local);
+  auto local_size = domain::get_size(local.domain_);
   int local_points = local_size[0] * local_size[1] * local_size[2];
 
   // Gather all point counts to rank 0
@@ -397,9 +397,9 @@ void scenario_aspect_ratios() {
                                  {{1024, 256, 64}, "Thin film (16:4:1)"}};
 
   for (const auto &test : cases) {
-    auto world = world::create(GridSize(test.size), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({1.0, 1.0, 1.0}));
-    auto decomp = decomposition::create(world, size);
+    auto domain = domain::create(GridSize(test.size), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                 GridSpacing({1.0, 1.0, 1.0}));
+    auto decomp = decomposition::create(domain, size);
     auto grid = decomposition::get_grid(decomp);
 
     if (rank == 0) {
