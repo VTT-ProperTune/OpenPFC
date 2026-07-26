@@ -48,9 +48,8 @@
 #include <cstdlib>
 #include <mpi.h>
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -76,13 +75,13 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   //    coefficient itself is hard-pinned via `heat3d::kD` in heat_model.hpp.
   HeatModel model;
 
-  // 2. Hidden plumbing: world geometry + decomposition. The single
-  //    `decomposition::create(world, nproc)` call auto-picks the
+  // 2. Hidden plumbing: domain geometry + decomposition. The single
+  //    `decomposition::create(domain, nproc)` call auto-picks the
   //    rank grid; the manual driver does not need to spell it out.
-  const auto world =
-      world::create(GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
-  const auto decomp = decomposition::create(world, nproc);
+  const auto domain =
+      pfc::domain::create(GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
+  const auto decomp = decomposition::create(domain, nproc);
 
   // 3. Two halo-padded buffers: `u` (state) and `du` (RHS). Both
   //    cover the local owned core plus a 1-cell ghost ring on every

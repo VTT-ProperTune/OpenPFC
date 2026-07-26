@@ -30,7 +30,7 @@
  * The OpenPFC pieces still used (because rebuilding them would just
  * duplicate the design) are:
  *
- *  - `pfc::world::create` + `pfc::decomposition::create` for the
+ *  - `pfc::domain::create` + `pfc::decomposition::create` for the
  *    geometry (so `mpirun -n 4` actually distributes the brick).
  *  - `pfc::field::PaddedBrick<double>` as the storage container — but
  *    the driver immediately drops to `u.data()` and computes its own
@@ -49,8 +49,8 @@
 
 #include <mpi.h>
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
@@ -67,13 +67,13 @@ namespace {
 using heat3d::RunConfig;
 
 void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
-  // 1. Geometry: world + decomposition + padded storage. The PaddedBrick
+  // 1. Geometry: domain + decomposition + padded storage. The PaddedBrick
   //    constructor allocates the contiguous (nx+2)*(ny+2)*(nz+2) buffer
   //    and remembers (lower, origin, spacing); it does *not* fill data.
-  const auto world = pfc::world::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
-                                        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                        pfc::GridSpacing({1.0, 1.0, 1.0}));
-  const auto decomp = pfc::decomposition::create(world, nproc);
+  const auto domain = pfc::domain::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const auto decomp = pfc::decomposition::create(domain, nproc);
   const int hw = 1; // 2nd-order central stencil -> halo width 1
   pfc::field::PaddedBrick<double> u(decomp, rank, hw);
   pfc::PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);

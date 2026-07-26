@@ -26,7 +26,7 @@
 #include <mpi.h>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
@@ -113,11 +113,11 @@ TEST_CASE("HeatModel: rhs = kD * (xx + yy + zz)", "[heat3d][HeatModel]") {
 // -----------------------------------------------------------------------------
 // Integration tests against OpenPFC primitives (single MPI rank).
 //
-// `pfc::sim::stacks::FdCpuStack` is the recommended bundle: World,
+// `pfc::sim::stacks::FdCpuStack` is the recommended bundle: Domain,
 // Decomposition, LocalField, halo buffers, and the exchanger are constructed
 // in dependency order so the exchanger's `const Decomposition&` reference
 // stays valid for the lifetime of the stack. (`Decomposition` itself owns
-// its `World` by value — see
+// its `Domain` by value — see
 // `tests/unit/kernel/decomposition/test_decomposition_lifetime.cpp` — so a
 // helper that returns a Decomposition by value is also safe.)
 // We use the stack here as the canonical "one statement to set up an
@@ -267,9 +267,9 @@ TEST_CASE("Manual FD driver (PaddedBrick + PaddedHaloExchanger): smoke + L2",
   const double dt = 1.0e-3;
   const int n_steps = 5;
 
-  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, /*nproc=*/1);
+  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, /*nproc=*/1);
 
   field::PaddedBrick<double> u(decomp, /*rank=*/0, hw);
   field::PaddedBrick<double> du(decomp, /*rank=*/0, hw);
@@ -358,9 +358,9 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   });
   l2_compact = std::sqrt(l2_compact / cnt);
 
-  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, 1);
+  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, 1);
   field::PaddedBrick<double> u(decomp, 0, hw);
   field::PaddedBrick<double> du(decomp, 0, hw);
   PaddedHaloExchanger<double> halo(decomp, 0, hw, MPI_COMM_WORLD);
@@ -480,9 +480,9 @@ TEST_CASE("Scratch FD driver (bare loops, raw pointers): smoke + L2",
   const double dt = 1.0e-3;
   const int n_steps = 5;
 
-  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, /*nproc=*/1);
+  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, /*nproc=*/1);
 
   field::PaddedBrick<double> u(decomp, /*rank=*/0, hw);
   PaddedHaloExchanger<double> halo(decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
@@ -575,9 +575,9 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FdCpuStack "
   });
   l2_compact = std::sqrt(l2_compact / cnt);
 
-  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, 1);
+  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, 1);
   field::PaddedBrick<double> u(decomp, 0, hw);
   PaddedHaloExchanger<double> halo(decomp, 0, hw, MPI_COMM_WORLD);
   {

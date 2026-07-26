@@ -63,8 +63,8 @@
 #include <omp.h>
 #endif
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
@@ -192,11 +192,11 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   // 1. Physics. This driver fixes D = 1 (same as `heat3d::kD` elsewhere) so the
   //    Gaussian IC and analytic reference match the other heat3d binaries.
 
-  // 2. Global world + per-rank decomposition.
-  const auto world = pfc::world::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
-                                        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                        pfc::GridSpacing({1.0, 1.0, 1.0}));
-  const auto decomp = pfc::decomposition::create(world, nproc);
+  // 2. Global domain + per-rank decomposition.
+  const auto domain = pfc::domain::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const auto decomp = pfc::decomposition::create(domain, nproc);
 
   // 3. Storage. Two padded bricks share decomp, rank, and halo width so
   //    nothing downstream can disagree with the layout: `u` is the state,
