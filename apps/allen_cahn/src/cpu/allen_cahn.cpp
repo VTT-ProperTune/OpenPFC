@@ -14,7 +14,7 @@
 #include <allen_cahn/common.hpp>
 #include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 
@@ -29,13 +29,13 @@ int main(int argc, char *argv[]) {
           return EXIT_FAILURE;
         }
 
-        auto world = pfc::world::create(pfc::GridSize({cfg.nx_glob, cfg.ny_glob, 1}),
-                                        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                        pfc::GridSpacing({1.0, 1.0, 1.0}));
-        auto decomp = pfc::decomposition::create(world, nproc);
+        auto domain = pfc::domain::create(pfc::GridSize({cfg.nx_glob, cfg.ny_glob, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+        auto decomp = pfc::decomposition::create(domain, nproc);
 
-        const auto &local_world = pfc::decomposition::get_subworld(decomp, rank);
-        auto local_size = pfc::world::get_size(local_world);
+        const auto &local_box = pfc::decomposition::local_box(decomp, rank);
+        auto local_size = local_box.size;
         const int nx = local_size[0];
         const int ny = local_size[1];
         const int nz = local_size[2];

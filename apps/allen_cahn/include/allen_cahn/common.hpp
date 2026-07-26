@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
@@ -93,11 +93,11 @@ inline RunConfig parse_args(int argc, char **argv) {
 inline void fill_initial_condition(std::vector<double> *u,
                                    const pfc::decomposition::Decomposition &decomp,
                                    int rank) {
-  const auto &gw = pfc::decomposition::get_world(decomp);
-  auto gsz = pfc::world::get_size(gw);
-  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-  auto lo = pfc::world::get_lower(local);
-  auto sz = pfc::world::get_size(local);
+  const auto &gw = pfc::decomposition::domain(decomp);
+  auto gsz = pfc::domain::get_size(gw);
+  const auto &local = pfc::decomposition::local_box(decomp, rank);
+  auto lo = local.low;
+  auto sz = local.size;
   const int nx = sz[0];
   const int ny = sz[1];
   const int nz = sz[2];
