@@ -5,7 +5,7 @@
 
 #include "diffusion_spectral_helpers.hpp"
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -40,8 +40,8 @@ using namespace pfc;
  *    values of psi locally for each MPI rank and performs reduction operations
  *    to obtain the global minimum and maximum values.
  *
- * The `run()` function defines the world dimensions and discretization
- * parameters, constructs the World, Decomposition, FFT, and Diffusion objects,
+ * The `run()` function defines the domain dimensions and discretization
+ * parameters, constructs the Domain, Decomposition, FFT, and Diffusion objects,
  * and initializes the simulation. It then enters a loop where the model is
  * stepped forward in time until a specified stopping time is reached. During
  * each iteration, the current time, the iteration number, and the minimum and
@@ -100,10 +100,14 @@ public:
     opL.resize(fft.size_outbox());
 
     /*
-    World is defining the global dimensions of the problem as well as origin and
+    Domain is defining the global dimensions of the problem as well as origin and
     chosen discretization parameters.
     */
-    if (pfc::is_rank0(*this)) cout << "World: " << world << endl;
+    if (pfc::is_rank0(*this)) {
+      const auto &world = pfc::get_world(*this);
+      const auto &domain = pfc::world::get_coordinate_system(world);
+      cout << "Domain: " << domain << endl;
+    }
 
     /*
     Upper and lower limits for this particular MPI rank, in both inbox and
@@ -121,9 +125,10 @@ public:
     */
     if (pfc::is_rank0(*this)) cout << "Create initial condition" << endl;
 
-    auto size = get_size(world);
-    auto origin = get_origin(world);
-    auto spacing = get_spacing(world);
+    const auto &domain = pfc::world::get_coordinate_system(world);
+    auto size = pfc::domain::get_size(domain);
+    auto origin = pfc::domain::get_origin(domain);
+    auto spacing = pfc::domain::get_spacing(domain);
 
     int idx = 0;
     double D = 1.0;
@@ -199,12 +204,14 @@ void run() {
   double y0 = -0.5 * Ly * dy;
   double z0 = -0.5 * Lz * dz;
 
-  // Construct world, decomposition, fft and model
+  // Construct domain, decomposition, fft and model
   // Using strong types for clarity and type safety
-  auto world = world::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
-                             GridSpacing{{dx, dy, dz}});
-  auto decomp = decomposition::create(world, 1);
+  Domain domain = domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
+                                 GridSpacing{{dx, dy, dz}});
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
+  // Create World for Model
+  auto world = domain::create_world_from_bounds({Lx, Ly, Lz}, {x0, y0, z0}, {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
   Diffusion model(fft, world);
 
   // Define time

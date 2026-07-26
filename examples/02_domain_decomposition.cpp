@@ -4,7 +4,7 @@
 #include <iostream>
 #include <mpi.h>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
@@ -13,8 +13,8 @@ using namespace pfc;
 
 /** \example 02_domain_decomposition.cpp
  *
- * Once the World object has been defined, the next step is to determine how the
- * world will be divided among different MPI processes. In OpenPFC, the
+ * Once the Domain object has been defined, the next step is to determine how the
+ * domain will be divided among different MPI processes. In OpenPFC, the
  * calculation area is partitioned into smaller parts using the Decomposition
  * class. This class utilizes the excellent functionality provided by HeFFTe.
  * The partitioning is done in such a way that minimizes the surface area
@@ -24,8 +24,8 @@ using namespace pfc;
  * effective to divide the calculation area into the same number of parts as the
  * number of computing nodes allocated from the HPC cluster.
  *
- * This example demonstrates how to use the World class to create a simulation
- * world and after that, decompose world to smaller domains using Decomposition
+ * This example demonstrates how to use the Domain class to create a simulation
+ * domain and after that, decompose domain to smaller subdomains using Decomposition
  * class.
  */
 int main(int argc, char *argv[]) {
@@ -33,8 +33,8 @@ int main(int argc, char *argv[]) {
   // Domain decomposition can be done in a manual manner, just by giving the
   // size of the calculation domain, id number and total number of subdomains:
   int comm_rank = 0, comm_size = 2;
-  auto world1 = world::create({32, 4, 4});
-  auto decomp1 = decomposition::create(world1, comm_size);
+  auto domain1 = domain::create({32, 4, 4});
+  auto decomp1 = decomposition::create(domain1, comm_size);
   cout << decomp1 << endl;
 
   MPI_Finalize();

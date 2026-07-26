@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -36,7 +36,7 @@ void dft_forward(const vector<double> x, vector<complex<double>> &X) {
 
 /** \example 03_parallel_fft.cpp
  *
- * When the World and Decomposition are defined, the next step is to specify the
+ * When the Domain and Decomposition are defined, the next step is to specify the
  * FFT, which serves as the true workhorse of OpenPFC. It is responsible for
  * performing the parallel FFT computations. OpenPFC leverages the remarkable
  * algorithm provided by the HeFFTe library, which is widely recognized and
@@ -59,9 +59,9 @@ void dft_forward(const vector<double> x, vector<complex<double>> &X) {
  *
  * The main function initializes the MPI process, retrieves the rank and number
  * of processes, and sets up the necessary components for parallel computing
- * using OpenPFC. It creates a `World` object with a size of 8 in the
+ * using OpenPFC. It creates a `Domain` object with a size of 8 in the
  * x-direction and 1 in the y- and z-directions. It then constructs a
- * `Decomposition` object based on the created `World` and the MPI communicator.
+ * `Decomposition` object based on the created `Domain` and the MPI communicator.
  * Finally, it creates an `FFT` object using the `Decomposition` and MPI
  * communicator.
  *
@@ -125,9 +125,9 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &num_procs);
 
-  // Construct world, decomposition and fft
-  auto world = world::create({8, 1, 1});
-  auto decomposition = decomposition::create(world, num_procs);
+  // Construct domain, decomposition and fft
+  auto domain = domain::create({8, 1, 1});
+  auto decomposition = decomposition::create(domain, num_procs);
   auto fft = fft::create(decomposition);
 
   // Create two vectors; in contains input data and results are stored to out

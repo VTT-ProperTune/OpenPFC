@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 /** \example world.cpp
  *
  * ## Overview
  *
- * This tutorial-style example introduces the `World` object, which plays a
+ * This tutorial-style example introduces the `Domain` object, which plays a
  * foundational role in OpenPFC. It represents the global simulation domain \( \Omega
  * \), encoding the size, lower and upper bounds, spacing, coordinate system, and
  * periodicity.
  *
- * The core purpose of `World` is to provide a **geometric abstraction** of the
+ * The core purpose of `Domain` is to provide a **geometric abstraction** of the
  * domain used in simulations. It does not perform computational steps, but rather
  * serves as a foundational definition of the simulation space, essential for
  * defining fields, applying boundary conditions, and performing discretization.
@@ -27,15 +27,15 @@
  *
  * This maps each grid point (i, j, k) to a point in physical space (x, y, z).
  *
- * In this set of examples, we explore several different ways of constructing `World`
+ * In this set of examples, we explore several different ways of constructing `Domain`
  * objects and using their features, showcasing the flexibility and design philosophy
  * of the OpenPFC framework.
  */
 
 /**
- * ### Example 1: Creating a Basic Cartesian World
+ * ### Example 1: Creating a Basic Cartesian Domain
  *
- * In this example, we construct a `World` object using dimensions, origin,
+ * In this example, we construct a `Domain` object using dimensions, origin,
  * and spacing values in a traditional, positional-parameter style.
  *
  * Prefer `GridSize`, `PhysicalOrigin`, and `GridSpacing` in new code (see
@@ -77,36 +77,36 @@
  */
 void example1_basic_cartesian_world() {
 
-  cout << "=== Example 1: Basic Cartesian World ===\n";
+  cout << "=== Example 1: Basic Cartesian Domain ===\n";
 
   std::array<int, 3> dimensions = {10, 20, 30};
   std::array<double, 3> origin = {0.0, 0.0, 0.0};
   std::array<double, 3> discretization = {0.1, 0.1, 0.1};
 
-  pfc::World w =
-      pfc::world::create(pfc::GridSize(dimensions), pfc::PhysicalOrigin(origin),
+  pfc::Domain d =
+      pfc::domain::create_domain(pfc::GridSize(dimensions), pfc::PhysicalOrigin(origin),
                          pfc::GridSpacing(discretization));
 
-  std::cout << "World created:\n" << w << endl;
+  std::cout << "Domain created:\n" << d << endl;
 
-  std::cout << "Size: " << get_size(w)[0] << ", " << get_size(w)[1] << ", "
-            << get_size(w)[2] << endl;
-  std::cout << "Origin: (" << get_origin(w)[0] << ", " << get_origin(w)[1] << ", "
-            << get_origin(w)[2] << ")\n";
-  std::cout << "Spacing: " << get_spacing(w)[0] << ", " << get_spacing(w)[1] << ", "
-            << get_spacing(w)[2] << endl;
+  std::cout << "Size: " << get_size(d)[0] << ", " << get_size(d)[1] << ", "
+            << get_size(d)[2] << endl;
+  std::cout << "Origin: (" << get_origin(d)[0] << ", " << get_origin(d)[1] << ", "
+            << get_origin(d)[2] << ")\n";
+  std::cout << "Spacing: " << get_spacing(d)[0] << ", " << get_spacing(d)[1] << ", "
+            << get_spacing(d)[2] << endl;
   std::cout << "Coordinate System: Cartesian" << endl;
 
   std::cout << "Periodicity in dimensions (x, y, z):\n";
   for (int i = 0; i < 3; ++i) {
     std::cout << "  Dimension " << i << ": "
-              << (is_periodic(w, i) ? "true" : "false") << std::endl;
+              << (is_periodic(d, i) ? "true" : "false") << std::endl;
   }
 }
 
-void example2_minimal_world() {
+void example2_minimal_domain() {
   /**
-   * ### Example 2: Creating a Minimalistic World
+   * ### Example 2: Creating a Minimalistic Domain
    *
    * In this example, we show how to define a simulation domain using only the
    * number of grid points. This is useful for prototyping or testing when precise
@@ -119,8 +119,8 @@ void example2_minimal_world() {
 
   cout << "\n=== Example 2: Minimal Definition ===\n";
 
-  World w = world::create({64, 64, 64});
-  cout << w << endl;
+  pfc::Domain d = pfc::domain::create_domain({64, 64, 64});
+  cout << d << endl;
 }
 
 void example3_strong_typedef_construction() {
@@ -128,7 +128,7 @@ void example3_strong_typedef_construction() {
    * ### Example 3: Construction with Strong Typedefs
    *
    * In this example, we demonstrate the use of strong typedef wrappers to
-   * construct a `World` object. This method ensures correctness by making
+   * construct a `Domain` object. This method ensures correctness by making
    * it impossible to accidentally swap parameters like spacing and bounds.
    *
    * Each wrapper (e.g. `GridSize`, `PhysicalOrigin`, `GridSpacing`) validates its
@@ -140,10 +140,10 @@ void example3_strong_typedef_construction() {
 
   // The type-safe creation API takes GridSize / PhysicalOrigin / GridSpacing
   // strong types (parameter order cannot be confused) plus per-axis periodicity.
-  World w =
-      world::create(GridSize({16, 16, 1}), PhysicalOrigin({-1.0, -1.0, 0.0}),
+  Domain d =
+      domain::create(GridSize({16, 16, 1}), PhysicalOrigin({-1.0, -1.0, 0.0}),
                     GridSpacing({0.125, 0.125, 1.0}), Bool3{true, true, false});
-  cout << w << endl;
+  cout << d << endl;
 }
 
 void example4_coordinate_conversion() {
@@ -151,7 +151,7 @@ void example4_coordinate_conversion() {
    * ### Example 4: Coordinate Transformation in the Native System
    *
    * In this example, we show how to convert between grid indices and physical
-   * coordinates in the **native coordinate system** of the `World`. For Cartesian
+   * coordinates in the **native coordinate system** of the `Domain`. For Cartesian
    * coordinates, this is straightforward multiplication and offsetting.
    *
    * OpenPFC does not lock the user into one coordinate system. We support
@@ -176,23 +176,23 @@ void example4_coordinate_conversion() {
 
   cout << "\n=== Example 4: Grid ↔ Coordinates ===\n";
 
-  World w = world::create({10, 10, 1});
+  Domain d = domain::create({10, 10, 1});
 
   Int3 idx = {3, 7, 0};
-  Real3 coords = to_coords(w, idx);
+  Real3 coords = to_coords(d, idx);
 
   cout << "Grid index: (" << idx[0] << ", " << idx[1] << ", " << idx[2]
        << ") maps to: ";
   cout << "(" << coords[0] << ", " << coords[1] << ", " << coords[2] << ")\n";
 
-  Int3 roundtrip = to_indices(w, coords);
+  Int3 roundtrip = to_indices(d, coords);
   cout << "Back to index: (" << roundtrip[0] << ", " << roundtrip[1] << ", "
        << roundtrip[2] << ")\n";
 }
 
 int main() {
-  example1_basic_cartesian_world();
-  example2_minimal_world();
+  example1_basic_cartesian_domain();
+  example2_minimal_domain();
   example3_strong_typedef_construction();
   example4_coordinate_conversion();
   return 0;

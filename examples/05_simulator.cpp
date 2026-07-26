@@ -6,7 +6,7 @@
 #include <limits>
 #include <memory>
 #include <openpfc/kernel/data/constants.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -48,7 +48,8 @@ private:
 public:
   void apply(Model &m, double t) override {
     (void)t; // suppress compiler warning about unused parameter
-    const World &w = pfc::get_world(m);
+    const auto &world = pfc::get_world(m);
+    const auto &domain = pfc::world::get_coordinate_system(world);
     const auto &fft = pfc::get_fft(m);
     std::vector<double> &field = m.get_real_field("psi");
     Int3 low = get_inbox(fft).low;
@@ -59,8 +60,8 @@ public:
     for (int k = low[2]; k <= high[2]; k++) {
       for (int j = low[1]; j <= high[1]; j++) {
         for (int i = low[0]; i <= high[0]; i++) {
-          auto origin = get_origin(w);
-          auto spacing = get_spacing(w);
+          auto origin = pfc::domain::get_origin(domain);
+          auto spacing = pfc::domain::get_spacing(domain);
           double x = origin[0] + i * spacing[0];
           double y = origin[1] + j * spacing[1];
           double z = origin[2] + k * spacing[2];
@@ -98,14 +99,15 @@ public:
 
   void prepare_operators(double dt) {
     auto &w = pfc::get_world(*this);
+    const auto &domain = pfc::world::get_coordinate_system(w);
     auto &fft = pfc::get_fft(*this);
     std::array<int, 3> low = get_outbox(fft).low;
     std::array<int, 3> high = get_outbox(fft).high;
 
     if (pfc::is_rank0(*this)) std::cout << "Prepare operators" << std::endl;
     size_t idx = 0;
-    auto spacing = get_spacing(w);
-    auto size = get_size(w);
+    auto spacing = pfc::domain::get_spacing(domain);
+    auto size = pfc::domain::get_size(domain);
     double fx = 2.0 * constants::pi / (spacing[0] * size[0]);
     double fy = 2.0 * constants::pi / (spacing[1] * size[1]);
     double fz = 2.0 * constants::pi / (spacing[2] * size[2]);
@@ -174,18 +176,19 @@ void run_simulator(Simulator &s) {
 }
 
 void run() {
-  // Construct world, decomposition, fft and model
+  // Construct domain, decomposition, fft and model
   int L = 64;
   double h = 2.0 * constants::pi / 8.0;
   double o = -0.5 * L * h;
   std::array<int, 3> dimensions = {L, L, L};
   std::array<double, 3> discretization = {h, h, h};
   std::array<double, 3> origin = {o, o, o};
-  auto world = world::create(GridSize(dimensions), PhysicalOrigin(origin),
-                             GridSpacing(discretization));
-
-  auto decomp = decomposition::create(world, 1);
+  Domain domain = domain::create(GridSize(dimensions), PhysicalOrigin(origin),
+                                 GridSpacing(discretization));
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
+  // Create World for Model
+  auto world = domain::create_world_from_bounds({L, L, L}, {o, o, o}, {o + (L - 1) * h, o + (L - 1) * h, o + (L - 1) * h});
   Diffusion model(fft, world);
 
   // Define time
