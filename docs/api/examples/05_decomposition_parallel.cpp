@@ -161,7 +161,7 @@ void scenario_automatic_grid() {
     std::cout << "Product: " << grid[0] << " × " << grid[1] << " × " << grid[2]
               << " = " << (grid[0] * grid[1] * grid[2]) << "\n\n";
 
-    // Show subdomain sizes (using Box3i/Domain accessors, not deprecated World type)
+    // Show subdomain sizes (using Box3i/Domain accessors)
     std::cout << "Subdomain sizes:\n";
     for (int i = 0; i < std::min(4, num_domains); ++i) {
       auto box = decomposition::local_box(decomp, i);
