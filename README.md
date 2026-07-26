@@ -112,7 +112,7 @@ Build and install from source: see [INSTALL.md](INSTALL.md).
 CPU vs GPU build trees: short overview in [docs/build_cpu_gpu.md](docs/hpc/build_cpu_gpu.md).
 
 C++ includes: link your target to CMake’s `OpenPFC` (or `openpfc`) target.
-For faster builds, include specific headers (e.g. `<openpfc/kernel/data/world.hpp>`)
+For faster builds, include specific headers (e.g. `<openpfc/kernel/data/domain.hpp>`)
 rather than the umbrella `<openpfc/openpfc.hpp>`. Minimal simulations without the
 JSON/TOML frontend can start from `<openpfc/openpfc_minimal.hpp>`; see
 [docs/architecture.md](docs/concepts/architecture.md).
@@ -289,14 +289,14 @@ classDiagram
   Model --> RealField
   Model --> ComplexField
   FFT --> Decomposition
-  Decomposition --> World
+  Decomposition --> Domain
 ```
 
 The OpenPFC framework aims to simplify the development of highly scalable
 applications for solving partial differential equations using spectral methods.
 It provides a modular application structure that users can customize by
 inheriting and overriding specific classes. When examining the class diagram
-from bottom to top, we first encounter classes such as `World`, `Decomposition`,
+from bottom to top, we first encounter classes such as `Domain`, `Decomposition`,
 and `FFT`. These classes form a low-level layer responsible for domain
 decomposition and performing FFT using the HeFFTe library. These details might
 not be of general interest from an implementation perspective, except for the
@@ -351,8 +351,8 @@ using namespace std;
 using namespace pfc;
 
 int main() {
-  World world({32, 32, 32});
-  cout << world << endl;
+  Domain domain({32, 32, 32});
+  cout << domain << endl;
 }
 ```
 
