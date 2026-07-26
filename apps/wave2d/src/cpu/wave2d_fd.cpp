@@ -3,7 +3,7 @@
 
 /**
  * @file wave2d_fd.cpp
- * @brief 2D wave — `PaddedBrick` + runtime even-order central Laplacian
+ * @brief 2D wave — `Field<T,HostSpace>` + runtime even-order central Laplacian
  *        (`EvenCentralD2View`) + same y-physical BC path as `wave2d_fd_manual`.
  */
 
@@ -14,17 +14,19 @@
 #include <mpi.h>
 
 #include <openpfc/frontend/io/vtk_writer.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/field_factory.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/fd_apply.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
@@ -55,16 +57,18 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
   }
 
   const int hw = stencil.half_width;
-  const auto world =
-      world::create(GridSize({cfg.Nx, cfg.Ny, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
-  const auto decomp = decomposition::create(world, nproc);
+  const auto domain =
+      pfc::domain::create(pfc::GridSize({cfg.Nx, cfg.Ny, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const auto decomp = decomposition::create(domain, nproc);
 
-  field::PaddedBrick<double> u(decomp, rank, hw);
-  field::PaddedBrick<double> v(decomp, rank, hw);
-  field::PaddedBrick<double> lap(decomp, rank, hw);
+  pfc::data::Field<double, pfc::HostSpace> u =
+      pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  pfc::data::Field<double, pfc::HostSpace> v =
+      pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  pfc::data::Field<double, pfc::HostSpace> lap =
+      pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
-  auto domain = decomposition::domain(decomp);
   auto subdomain_box = decomposition::local_box(decomp, rank);
   PaddedHaloExchanger<double> halo_u(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD, 0);
 
@@ -72,20 +76,21 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
   const double sx = model.inv_dx2 * inv_den;
   const double sy = model.inv_dy2 * inv_den;
 
-  const std::ptrdiff_t sy_stride = static_cast<std::ptrdiff_t>(u.nx_padded());
-  const std::ptrdiff_t sz_stride = static_cast<std::ptrdiff_t>(u.nx_padded()) *
-                                   static_cast<std::ptrdiff_t>(u.ny_padded());
+  const std::ptrdiff_t sy_stride = static_cast<std::ptrdiff_t>(u.padded_extent(0));
+  const std::ptrdiff_t sz_stride = static_cast<std::ptrdiff_t>(u.padded_extent(0)) *
+                                   static_cast<std::ptrdiff_t>(u.padded_extent(1));
 
   const double xc = 0.5 * static_cast<double>(cfg.Nx - 1);
   const double yc = 0.5 * static_cast<double>(cfg.Ny - 1);
   const double sigma = 0.12 * static_cast<double>(std::min(cfg.Nx, cfg.Ny));
 
-  u.apply([&](double x, double y, double /*z*/) {
+  u.apply([&](double x, double y, double z) {
     const double dx = x - xc;
     const double dy = y - yc;
+    (void)z;
     return std::exp(-(dx * dx + dy * dy) / (2.0 * sigma * sigma));
   });
-  v.apply([](double, double, double) { return 0.0; });
+  v.apply([](double x, double y, double z) { (void)x; (void)y; (void)z; return 0.0; });
 
   halo_u.exchange_halos(u.data(), u.size());
   wave2d::fill_y_physical_ghosts_padded(u, cfg.y_bc, cfg.Ny,
@@ -122,9 +127,9 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
     halo_u.exchange_halos(u.data(), u.size());
     wave2d::fill_y_physical_ghosts_padded(u, cfg.y_bc, cfg.Ny,
                                           static_cast<double>(cfg.u_wall));
-    field::for_each_owned(u, [&](int i, int j, int k) { stencil_lap(i, j, k); });
+    u.for_each_owned([&](int i, int j, int k) { stencil_lap(i, j, k); });
 
-    field::for_each_owned(u, [&](int i, int j, int k) {
+    u.for_each_owned([&](int i, int j, int k) {
       const double v0 = v(i, j, k);
       const double l = lap(i, j, k);
       u(i, j, k) += cfg.dt * v0;
@@ -143,13 +148,18 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
   const double max_elapsed = runtime::toc(timer);
 
   const int skip = hw;
+  const auto local_size = u.local_size();
   wave2d::report(rank, nproc, cfg, "fd", wave2d::fd_extra_metadata(cfg), max_elapsed,
                  "(runtime FD order; y physical BC; interior RMS u)",
                  [&](auto &&cb) {
-                   field::for_each_inner(u, skip, [&](int i, int j, int k) {
-                     const auto p = u.global_coords(i, j, k);
-                     cb(p[0], p[1], p[2], u(i, j, k));
-                   });
+                   for (int k = skip; k < local_size[2] - skip; ++k) {
+                     for (int j = skip; j < local_size[1] - skip; ++j) {
+                       for (int i = skip; i < local_size[0] - skip; ++i) {
+                         const auto p = u.coords(i, j, k);
+                         cb(p[0], p[1], p[2], u(i, j, k));
+                       }
+                     }
+                   }
                  });
   return EXIT_SUCCESS;
 }

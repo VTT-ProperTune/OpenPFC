@@ -9,6 +9,7 @@
  */
 
 #include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <stdexcept>
 
 namespace wave2d {
@@ -91,6 +92,95 @@ inline void enforce_dirichlet_y_walls_owned(pfc::field::PaddedBrick<T> &u,
         continue;
       }
       for (int i = 0; i < u.nx(); ++i) {
+        u(i, j, k) = u_wall;
+        v(i, j, k) = T{0};
+      }
+    }
+  }
+}
+
+/**
+ * @brief Overload of fill_y_physical_ghosts_padded for Field<T,HostSpace>.
+ *
+ * Fills y-halo cells for Field<T,HostSpace> with the same boundary logic as
+ * the PaddedBrick version. Uses Field's coords() and box() methods instead of
+ * PaddedBrick's lower_global()/nx()/ny()/nz().
+ */
+template <class T>
+inline void fill_y_physical_ghosts_padded(pfc::data::Field<T, pfc::HostSpace> &u,
+                                          YBoundaryKind ybc, int Ny_global,
+                                          T u_wall = T{}) {
+  const auto &box = u.box();
+  const int hw = u.halo_width();
+  const auto local_size = u.local_size();
+
+  for (int k = -hw; k < static_cast<int>(local_size[2]) + hw; ++k) {
+    for (int j = -hw; j < static_cast<int>(local_size[1]) + hw; ++j) {
+      const auto global_coords = u.coords(j >= 0 && j < static_cast<int>(local_size[1]) ? 
+                                          0 : j >= static_cast<int>(local_size[1]) ? 
+                                          local_size[1] - 1 : 0, j, k);
+      const int gj = static_cast<int>(global_coords[1]);
+      
+      if (gj >= 0 && gj < Ny_global) {
+        continue;
+      }
+      
+      int yp = 0;
+      if (gj < 0) {
+        yp = (ybc == YBoundaryKind::Dirichlet) ? (-1 - gj) : (-gj);
+      } else {
+        yp = (ybc == YBoundaryKind::Dirichlet) ? (2 * Ny_global - 1 - gj)
+                                               : (2 * (Ny_global - 1) - gj);
+      }
+      
+      // Convert global yp to local jm
+      const int jm = yp - box.low[1];
+
+      // Bounds check: mirrored local index must be within valid padded range
+      if (jm < -hw || jm >= static_cast<int>(local_size[1]) + hw) {
+        const std::string kind_str = (ybc == YBoundaryKind::Dirichlet) ? "Dirichlet" : "Neumann";
+        throw std::out_of_range(
+            "fill_y_physical_ghosts_padded: mirrored ghost index out of bounds. "
+            ", halo_width=" + std::to_string(hw) +
+            ", local_ny=" + std::to_string(local_size[1]) +
+            ", valid_range=[" + std::to_string(-hw) + "," + std::to_string(local_size[1] + hw) +
+            "), mirrored_global_yp=" + std::to_string(yp) +
+            ", computed_local_jm=" + std::to_string(jm) +
+            ", boundary_kind=" + kind_str
+        );
+      }
+
+      for (int i = -hw; i < static_cast<int>(local_size[0]) + hw; ++i) {
+        const T um = u(i, jm, k);
+        if (ybc == YBoundaryKind::Dirichlet) {
+          u(i, j, k) = static_cast<T>(static_cast<T>(2) * u_wall - um);
+        } else {
+          u(i, j, k) = um;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * @brief Overload of enforce_dirichlet_y_walls_owned for Field<T,HostSpace>.
+ */
+template <class T>
+inline void enforce_dirichlet_y_walls_owned(pfc::data::Field<T, pfc::HostSpace> &u,
+                                            pfc::data::Field<T, pfc::HostSpace> &v,
+                                            int Ny_global, T u_wall) {
+  const auto local_size = u.local_size();
+  
+  for (int k = 0; k < static_cast<int>(local_size[2]); ++k) {
+    for (int j = 0; j < static_cast<int>(local_size[1]); ++j) {
+      const auto global_coords = u.coords(0, j, k);
+      const int gj = static_cast<int>(global_coords[1]);
+      
+      if (gj != 0 && gj != Ny_global - 1) {
+        continue;
+      }
+      
+      for (int i = 0; i < static_cast<int>(local_size[0]); ++i) {
         u(i, j, k) = u_wall;
         v(i, j, k) = T{0};
       }
