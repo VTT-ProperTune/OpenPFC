@@ -135,8 +135,8 @@ public:
       throw std::invalid_argument("BatchedPaddedDeviceHalo: n_fields must be > 0");
     }
 
-    const auto &local_world = pfc::decomposition::get_subworld(decomp, m_rank);
-    const auto local_size = pfc::world::get_size(local_world);
+    const auto &local_box = pfc::decomposition::local_box(decomp, m_rank);
+    const auto local_size = local_box.size;
     const int nx = local_size[0];
     const int ny = local_size[1];
     const int nz = local_size[2];

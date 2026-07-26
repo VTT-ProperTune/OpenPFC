@@ -21,7 +21,8 @@
 
 #include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/frontend/io/png_writer.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
 namespace {
@@ -115,9 +116,9 @@ void gather_global_xy_rank0(const pfc::decomposition::Decomposition &decomp,
 
   std::size_t offset = 0;
   for (int r = 0; r < nproc; ++r) {
-    const auto &sw = pfc::decomposition::get_subworld(decomp, r);
-    auto lo = pfc::world::get_lower(sw);
-    auto sz = pfc::world::get_size(sw);
+    const auto &box = pfc::decomposition::local_box(decomp, r);
+    auto lo = box.low;
+    auto sz = box.size;
     const int nx = sz[0];
     const int ny = sz[1];
     for (int iy = 0; iy < ny; ++iy) {

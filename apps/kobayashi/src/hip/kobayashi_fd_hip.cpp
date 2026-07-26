@@ -30,7 +30,8 @@
 #include <kobayashi/device_step_hip.hpp>
 
 #include <openpfc/frontend/io/png_writer.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
@@ -165,10 +166,10 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const double inv_dy = 1.0 / dy;
   const double inv_lap_den = 1.0 / (dx * dy);
 
-  const auto world = pfc::world::create(pfc::GridSize({cfg.Nx, cfg.Ny, 1}),
-                                        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                        pfc::GridSpacing({dx, dy, 1.0}));
-  const auto decomp = pfc::decomposition::create(world, nproc);
+  const auto domain = pfc::domain::create(pfc::GridSize({cfg.Nx, cfg.Ny, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, dy, 1.0}));
+  const auto decomp = pfc::decomposition::create(domain, nproc);
 
   constexpr int hw = 1;
   PaddedBrick<double> phi_h(decomp, rank, hw);
