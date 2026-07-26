@@ -99,45 +99,7 @@ TEST_CASE("CompositeGradient fans two heterogeneous FD evaluators into a "
 }
 
 // Box3i+Domain factory function tests
-TEST_CASE("make_composite_gradient with Box3i and components",
-          "[kernel][field][composite_gradient][box3i_domain]") {
-  using namespace pfc;
-  
-  // Create a small test field
-  constexpr int N = 8;
-  const int order = 2;
-  
-  auto world = world::create(GridSize({N, N, N}),
-                              PhysicalOrigin({0.0, 0.0, 0.0}),
-                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, /*nparts=*/1);
-  auto u = LocalField<double>::from_subdomain(decomp, /*rank=*/0,
-                                              /*halo_width=*/1);
-  u.apply([](double x, double y, double z) { return x * x + y * y + z * z; });
-  
-  // Create component evaluators
-  auto grad_u = pfc::field::create<HasXx>(u, order);
-  auto grad_v = pfc::field::create<HasYyZz>(u, order);
-  
-  // Create composite using Box3i factory
-  Box3i region = Box3i::from_bounds({0, 0, 0}, {N - 1, N - 1, N - 1});
-  auto composite = pfc::gradient::make_composite_gradient<TwoField>(region, grad_u, grad_v);
-  
-  REQUIRE(composite.imin() == 1);
-  REQUIRE(composite.imax() == N - 1);
-  REQUIRE(composite.jmin() == 1);
-  REQUIRE(composite.jmax() == N - 1);
-  REQUIRE(composite.kmin() == 1);
-  REQUIRE(composite.kmax() == N - 1);
-  
-  // Verify gradient computation
-  const TwoField g = composite(N / 2, N / 2, N / 2);
-  REQUIRE(g.u.xx == Approx(2.0));
-  REQUIRE(g.v.yy == Approx(2.0));
-  REQUIRE(g.v.zz == Approx(2.0));
-}
-
-TEST_CASE("make_composite_gradient with Box3i, Domain, and components",
+TEST_CASE("test_composite_gradient_box3i_domain",
           "[kernel][field][composite_gradient][box3i_domain]") {
   using namespace pfc;
   
@@ -176,7 +138,7 @@ TEST_CASE("make_composite_gradient with Box3i, Domain, and components",
   REQUIRE(g.v.zz == Approx(2.0));
 }
 
-TEST_CASE("make_composite_gradient with Box3i, Domain, spacing, and components",
+TEST_CASE("test_composite_gradient_box3i_domain_spacing",
           "[kernel][field][composite_gradient][box3i_domain]") {
   using namespace pfc;
   

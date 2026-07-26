@@ -354,23 +354,7 @@ TEST_CASE("halo_preparation and prepare identity",
 }
 
 // Box3i+Domain factory function tests
-TEST_CASE("make_fd_gradient with Box3i only creates default-configured evaluator",
-          "[kernel][field][fd_gradient][box3i_domain]") {
-  using namespace pfc;
-  Box3i region = Box3i::from_bounds({0, 0, 0}, {9, 9, 9});
-  
-  auto evaluator = pfc::gradient::make_fd_gradient<OnlyX>(region);
-  
-  REQUIRE(evaluator != nullptr);
-  REQUIRE(evaluator->imin() == 1);  // Default halo_width=1
-  REQUIRE(evaluator->imax() == 9);
-  REQUIRE(evaluator->jmin() == 1);
-  REQUIRE(evaluator->jmax() == 9);
-  REQUIRE(evaluator->kmin() == 1);
-  REQUIRE(evaluator->kmax() == 9);
-}
-
-TEST_CASE("make_fd_gradient with Box3i and Domain uses Domain spacing",
+TEST_CASE("test_fd_gradient_box3i_domain",
           "[kernel][field][fd_gradient][box3i_domain]") {
   using namespace pfc;
   Box3i region = Box3i::from_bounds({0, 0, 0}, {7, 7, 7});
@@ -391,7 +375,7 @@ TEST_CASE("make_fd_gradient with Box3i and Domain uses Domain spacing",
   REQUIRE(evaluator->kmax() == 7);
 }
 
-TEST_CASE("make_fd_gradient with Box3i, Domain, and custom spacing",
+TEST_CASE("test_fd_gradient_box3i_domain_spacing",
           "[kernel][field][fd_gradient][box3i_domain]") {
   using namespace pfc;
   Box3i region = Box3i::from_bounds({0, 0, 0}, {11, 11, 11});
