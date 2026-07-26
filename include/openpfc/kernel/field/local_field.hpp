@@ -209,19 +209,19 @@ public:
    *
    * Only available for `T == double` (the proxy is a `double` view).
    *
-   * @throws std::invalid_argument if `s.size != size()`.
+   * @throws std::invalid_argument if `s.size() != size()`.
    */
   template <class U = T, class = std::enable_if_t<std::is_same_v<U, double>>>
   LocalField &operator+=(const pfc::field::ScaledField &s) {
-    if (s.size != m_data.size()) {
+    if (s.size() != m_data.size()) {
       throw std::invalid_argument(
           "pfc::field::LocalField::operator+=: ScaledField size " +
-          std::to_string(s.size) + " does not match field size " +
+          std::to_string(s.size()) + " does not match field size " +
           std::to_string(m_data.size()));
     }
     const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(m_data.size());
     const double alpha = s.alpha;
-    const double *src = s.data;
+    const double *src = s.data();
     double *dst = m_data.data();
 #if defined(_OPENMP)
 #pragma omp parallel for schedule(static)
@@ -335,12 +335,17 @@ private:
  *
  *     u += dt * du;
  *
- * The proxy is intended for use as a transient on a single statement; it
- * holds a raw pointer to `f.data()` and does not extend the lifetime of
- * the source.
+ * The proxy is intended for use as a transient on a single statement.
  */
 inline ScaledField operator*(double alpha, const LocalField<double> &f) noexcept {
-  return ScaledField{alpha, f.data(), f.size()};
+  FieldView<double> view(
+      f.data(),
+      f.size(),
+      f.size3(),
+      f.spacing(),
+      f.origin()
+  );
+  return ScaledField{alpha, std::move(view)};
 }
 
 } // namespace pfc::field

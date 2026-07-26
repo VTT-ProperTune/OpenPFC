@@ -163,7 +163,14 @@ public:
    */
   friend pfc::field::ScaledField operator*(double alpha,
                                            const DuField &du) noexcept {
-    return pfc::field::ScaledField{alpha, du.m_data.data(), du.m_data.size()};
+    pfc::field::FieldView<double> view(
+        du.m_data.data(),
+        du.m_data.size(),
+        {},  // zero extents
+        {},  // zero spacing
+        {}   // zero origin
+    );
+    return pfc::field::ScaledField{alpha, std::move(view)};
   }
 
 private:

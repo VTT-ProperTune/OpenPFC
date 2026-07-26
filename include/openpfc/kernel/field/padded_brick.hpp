@@ -499,19 +499,19 @@ public:
    * buffer matches `size()` and leaves halo lanes at zero (refreshed each
    * step by `PaddedHaloExchanger`).
    *
-   * @throws std::invalid_argument if `s.size != size()`.
+   * @throws std::invalid_argument if `s.size() != size()`.
    */
   template <class U = T, class = std::enable_if_t<std::is_same_v<U, double>>>
   PaddedBrick &operator+=(const ScaledField &s) {
-    if (s.size != m_data.size()) {
+    if (s.size() != m_data.size()) {
       throw std::invalid_argument(
           "pfc::field::PaddedBrick::operator+=: ScaledField size " +
-          std::to_string(s.size) + " does not match field size " +
+          std::to_string(s.size()) + " does not match field size " +
           std::to_string(m_data.size()));
     }
     const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(m_data.size());
     const double alpha = s.alpha;
-    const double *src = s.data;
+    const double *src = s.data();
     double *dst = m_data.data();
 #if defined(_OPENMP)
 #pragma omp parallel for schedule(static)
@@ -551,7 +551,14 @@ private:
  * matching `DuField` (same flattened padded length).
  */
 inline ScaledField operator*(double alpha, const PaddedBrick<double> &f) noexcept {
-  return ScaledField{alpha, f.data(), f.size()};
+  FieldView<double> view(
+      f.data(),
+      f.size(),
+      f.padded_size3(),
+      f.spacing(),
+      f.origin()
+  );
+  return ScaledField{alpha, std::move(view)};
 }
 
 } // namespace pfc::field

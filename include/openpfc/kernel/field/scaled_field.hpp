@@ -21,26 +21,29 @@
  * `operator*(double, …)` returning this proxy.
  *
  * Lifetime: the proxy is intended to be a transient temporary on the same
- * statement (`u += dt * du;`). It captures a raw pointer to the source
- * buffer and is **not** safe to store or pass across statements where the
- * source could be moved or resized.
+ * statement (`u += dt * du;`).
  */
 
 #include <cstddef>
+#include <vector>
+
+#include <openpfc/kernel/field/state_access.hpp>
 
 namespace pfc::field {
 
 /**
- * @brief View of a scaled contiguous `double` buffer (`alpha * data[0..size)`).
+ * @brief View of a scaled contiguous `double` buffer.
  *
  * Produced by `operator*(double, const LocalField<double>&)` and the
  * matching overload on `pfc::sim::DuField<G, Eval>`. Consumed by
  * `LocalField::operator+=(ScaledField)`.
  */
 struct ScaledField {
-  double alpha{0.0};
-  const double *data{nullptr};
-  std::size_t size{0};
+    double alpha{0.0};
+    FieldView<double> field_;
+
+    const double* data() const noexcept { return field_.data(); }
+    std::size_t size() const noexcept { return field_.size(); }
 };
 
 } // namespace pfc::field

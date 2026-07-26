@@ -59,6 +59,21 @@ template<typename T>
 class FieldView {
 public:
     /**
+     * @brief Default constructor: creates a view with null data and zero geometry
+     *
+     * This enables FieldView to serve as an aggregate member in ScaledField
+     * without requiring immediate initialization from actual field data.
+     * A default-constructed FieldView provides null data() and zero size().
+     */
+    FieldView() noexcept
+        : m_data(nullptr)
+        , m_size(0)
+        , m_extents{}
+        , m_spacing{}
+        , m_origin{}
+    {}
+
+    /**
      * @brief Construct a field view from data pointer and geometry
      *
      * @param data Pointer to field data (must remain valid for view lifetime)
