@@ -29,7 +29,7 @@
  * Two named constructors cover the common layout sources:
  *
  *  - `LocalField::from_subdomain(decomp, rank, halo_width = 0)` — geometry
- *    derived from `decomposition::get_subworld(decomp, rank)`. Use this for
+ *    derived from `decomposition::local_box(decomp, rank)`. Use this for
  *    pure FD apps that own the halo exchange.
  *  - `LocalField::from_inbox(global_world, inbox)` — geometry derived from
  *    an FFT inbox `Box3i` plus the global world. Use this for spectral apps.
@@ -62,6 +62,7 @@
 #include <omp.h>
 #endif
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
@@ -76,8 +77,8 @@ public:
   // ---- Named constructors -------------------------------------------------
 
   /**
-   * @brief FD subdomain layout: geometry from `decomp.get_subworld(rank)`,
-   *        physical metadata from the global world.
+   * @brief FD subdomain layout: geometry from `decomposition::local_box(decomp,
+   *        rank)`, physical metadata from `decomposition::domain(decomp)`.
    *
    * Storage is sized to `nx*ny*nz` and value-initialized. `halo_width` is
    * stored so `for_each_interior` can skip the per-rank halo region; the
@@ -90,13 +91,14 @@ public:
    */
   static LocalField from_subdomain(const pfc::decomposition::Decomposition &decomp,
                                    int rank, int halo_width = 0) {
-    const auto &gw = pfc::decomposition::get_world(decomp);
-    const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-    const auto local_size = pfc::world::get_size(local);
-    check_halo_fits_(local_size, halo_width);
-    return LocalField(local_size, pfc::world::get_lower(local),
-                      pfc::world::get_size(gw), pfc::world::get_origin(gw),
-                      pfc::world::get_spacing(gw), halo_width);
+    // M1: geometry comes from the decomposition's Box3i/Domain accessors
+    // (local_box + domain) instead of the removed World subworld accessor.
+    const auto local = pfc::decomposition::local_box(decomp, rank);
+    const auto dom = pfc::decomposition::domain(decomp);
+    check_halo_fits_(local.size, halo_width);
+    return LocalField(local.size, local.low, pfc::domain::get_size(dom),
+                      pfc::domain::get_origin(dom), pfc::domain::get_spacing(dom),
+                      halo_width);
   }
 
   /**

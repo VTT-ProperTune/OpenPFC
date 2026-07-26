@@ -58,6 +58,7 @@
 #include <type_traits>
 #include <vector>
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
@@ -83,11 +84,13 @@ namespace detail {
  */
 inline long long checked_padded_extent(int n, int hw) {
   if (hw < 0) {
-    throw std::invalid_argument("padded extent: halo width must be non-negative (got " +
-                                std::to_string(hw) + ")");
+    throw std::invalid_argument(
+        "padded extent: halo width must be non-negative (got " + std::to_string(hw) +
+        ")");
   }
   // Use long long to detect overflow
-  const long long result = static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
+  const long long result =
+      static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
   if (result > static_cast<long long>(std::numeric_limits<int>::max()) ||
       result < static_cast<long long>(std::numeric_limits<int>::min())) {
     throw std::overflow_error("padded extent overflow: " + std::to_string(n) +
@@ -108,9 +111,9 @@ inline long long checked_padded_extent(int n, int hw) {
  */
 inline std::size_t checked_product_3d(long long nx, long long ny, long long nz) {
   if (nx < 0 || ny < 0 || nz < 0) {
-    throw std::invalid_argument("product overflow: dimensions must be non-negative (" +
-                                std::to_string(nx) + ", " + std::to_string(ny) +
-                                ", " + std::to_string(nz) + ")");
+    throw std::invalid_argument(
+        "product overflow: dimensions must be non-negative (" + std::to_string(nx) +
+        ", " + std::to_string(ny) + ", " + std::to_string(nz) + ")");
   }
   // Stepwise unsigned multiply (same pattern as vtk_writer_validate) — avoids
   // signed long long overflow UB when intermediate products exceed LLONG_MAX.
@@ -121,9 +124,9 @@ inline std::size_t checked_product_3d(long long nx, long long ny, long long nz) 
        {static_cast<unsigned long long>(nx), static_cast<unsigned long long>(ny),
         static_cast<unsigned long long>(nz)}) {
     if (dim != 0ULL && n > max_sz / dim) {
-      throw std::overflow_error("3D product overflow: " + std::to_string(nx) + " * " +
-                                std::to_string(ny) + " * " + std::to_string(nz) +
-                                " exceeds std::size_t range");
+      throw std::overflow_error("3D product overflow: " + std::to_string(nx) +
+                                " * " + std::to_string(ny) + " * " +
+                                std::to_string(nz) + " exceeds std::size_t range");
     }
     n *= dim;
   }
@@ -252,8 +255,8 @@ public:
   /**
    * @brief Construct a padded brick from an existing decomposition.
    *
-   * Geometry comes from `decomposition::get_subworld(decomp, rank)` for
-   * the owned size + lower global index, and from the **global world**
+   * Geometry comes from `decomposition::local_box(decomp, rank)` for
+   * the owned size + lower global index, and from `decomposition::domain`
    * for the physical origin/spacing (so `global_coords(i, j, k)`
    * returns the right physical position even for halo cells `i = -1`,
    * which conceptually live at the rank's left neighbor).
@@ -275,13 +278,16 @@ public:
           "pfc::field::PaddedBrick: halo_width must be non-negative (got " +
           std::to_string(halo_width) + ")");
     }
-    const auto &gw = pfc::decomposition::get_world(m_decomp);
-    const auto &local = pfc::decomposition::get_subworld(m_decomp, m_rank);
-    m_size = pfc::world::get_size(local);
-    m_lower = pfc::world::get_lower(local);
-    m_global_size = pfc::world::get_size(gw);
-    m_origin = pfc::world::get_origin(gw);
-    m_spacing = pfc::world::get_spacing(gw);
+    // M1: owned box + global metadata come from the decomposition's
+    // Box3i/Domain accessors (local_box + domain) instead of the removed
+    // World subworld accessor.
+    const auto local = pfc::decomposition::local_box(m_decomp, m_rank);
+    const auto dom = pfc::decomposition::domain(m_decomp);
+    m_size = local.size;
+    m_lower = local.low;
+    m_global_size = pfc::domain::get_size(dom);
+    m_origin = pfc::domain::get_origin(dom);
+    m_spacing = pfc::domain::get_spacing(dom);
 
     // Check for overflow before computing padded extents
     const auto npx_ll = detail::checked_padded_extent(m_size[0], m_halo);
@@ -289,7 +295,8 @@ public:
     const auto npz_ll = detail::checked_padded_extent(m_size[2], m_halo);
 
     // Check for overflow in the total element count
-    const std::size_t total_elements = detail::checked_product_3d(npx_ll, npy_ll, npz_ll);
+    const std::size_t total_elements =
+        detail::checked_product_3d(npx_ll, npy_ll, npz_ll);
 
     m_data.assign(total_elements, T{});
   }
