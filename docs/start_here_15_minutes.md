@@ -54,7 +54,7 @@ Success means every rank exits with status zero. Rank zero usually prints a few 
 
 ## What you just exercised
 
-`05_simulator` walks the spectral stack at library level: `World`, `Decomposition`, a HeFFTe-backed FFT, `Simulator`, and time integration. Read [`concepts/spectral_stack.md`](concepts/spectral_stack.md) for the data-flow story and [`concepts/architecture.md`](concepts/architecture.md) for the layer boundaries.
+`05_simulator` walks the spectral stack at library level: `Domain`, `Decomposition`, a HeFFTe-backed FFT, `Simulator`, and time integration. Read [`concepts/spectral_stack.md`](concepts/spectral_stack.md) for the data-flow story and [`concepts/architecture.md`](concepts/architecture.md) for the layer boundaries.
 
 ## Where to go next
 

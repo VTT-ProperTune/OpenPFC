@@ -25,7 +25,7 @@ For a complete “run and inspect output” walkthrough, read [`tutorials/end_to
 
 This route is for someone who wants to write or modify a model, add parameters, or build a custom config-driven application.
 
-Start with [`concepts/architecture.md`](concepts/architecture.md), because it explains where the kernel, runtime and frontend responsibilities begin and end. Then read [`reference/class_tour.md`](reference/class_tour.md), which connects the important names — `World`, `Model`, `Simulator`, `App`, fields and writers — to the headers you will actually open.
+Start with [`concepts/architecture.md`](concepts/architecture.md), because it explains where the kernel, runtime and frontend responsibilities begin and end. Then read [`reference/class_tour.md`](reference/class_tour.md), which connects the important names — `Domain`, `Model`, `Simulator`, `App`, fields and writers — to the headers you will actually open.
 
 After that, use the long-form getting-started tutorial at [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md). It is slower than `quickstart.md`, but it gives you the mental model for a small out-of-tree CMake project. [`getting_started/functional_field_ops.md`](getting_started/functional_field_ops.md) is the companion for initial and boundary conditions without hand-written nested loops.
 
