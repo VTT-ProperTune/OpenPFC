@@ -1,37 +1,38 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <iostream>
 #include <openpfc/frontend/utils/array_to_string.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
-#include <openpfc/kernel/data/discrete_field.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
 using namespace pfc;
+using namespace pfc::data;
 using namespace pfc::utils;
 
 /**
  * \example 08_discrete_fields.cpp
  *
- * Arrays are already quite useful for applying modification to data. Our aim is
- * to do this as easily as possible, because in general, users want to define
- * several different initial conditions and/or boundary conditions for their
- * simulations. By combining the information from World and Decomposition with
- * Array, we can construct "coordinate-aware arrays", which are aware which part
- * of domain decomposition they represent (via the information provided by size
- * of offset from Decomposition), as well as their relative relation to physical
- * coordinate system (origin and discretization from World).
+ * The new `pfc::data::Field<T>` is the canonical field container that replaces
+ * the legacy `Array<T,D>` and `DiscreteField<T,D>` types. It makes it easy to
+ * apply modifications to data, define initial conditions and boundary conditions
+ * for simulations.
  *
- * In example 07, it was shown how to use multidimensional arrays to manually
- * "decompose" one bigger array to two smaller ones, manually calculate
- * coordinate system and fill arrays with some data based on physical
- * coordinates. This example reimplements 07 using DiscreteField.
+ * Field combines geometry information (coordinate system) with data storage,
+ * making it aware of which part of domain decomposition it represents and its
+ * relationship to physical coordinates and discretization.
+ *
+ * In example 07, we manually decomposed arrays and calculated coordinate systems.
+ * This example shows how the new Field API simplifies this by integrating domain
+ * decomposition information directly into the field structure.
  *
  * It's possible to add field modifier $$f(x,y,z) = 1 + x + y^2$$ using
- * anonymous function like before, yet more flexible way to work around would be
- * use a class with `operator()` overloading.
+ * anonymous functions or classes with `operator()` overloading.
  */
 
 class Modifier {
@@ -44,70 +45,90 @@ public:
   }
 };
 
-auto create_field(const pfc::Decomposition &decomp, int field_num) {
-  auto subworld = get_subworld(decomp, field_num);
-  auto size = get_size(subworld);
-  auto lower = get_lower(subworld);
-  auto origin = get_origin(subworld);
-  auto spacing = get_spacing(subworld);
-  return DiscreteField<double, 3>(size, lower, origin, spacing);
+Field<double> create_field_from_decomp(const pfc::Decomposition &decomp, int rank_id) {
+  return Field<double>(decomp.m_domain, pfc::decomposition::local_box(decomp, rank_id), 0);
 }
 
 int main() {
   auto world = world::create({16, 8, 1});
-  std::cout << world << std::endl;
+  std::cout << "World: " << world << std::endl;
   auto decomposition = decomposition::create(world, 4);
+  std::cout << "Decomposition: " << decomposition << std::endl;
 
-  std::cout << decomposition << std::endl;
+  auto field1 = create_field_from_decomp(decomposition, 0);
+  auto field2 = create_field_from_decomp(decomposition, 1);
+  auto field3 = create_field_from_decomp(decomposition, 2);
+  auto field4 = create_field_from_decomp(decomposition, 3);
 
-  auto field1 = create_field(decomposition, 0);
-  auto field2 = create_field(decomposition, 1);
-  auto field3 = create_field(decomposition, 2);
-  auto field4 = create_field(decomposition, 3);
-  std::cout << field1 << std::endl;
-  std::cout << field2 << std::endl;
-  std::cout << field3 << std::endl;
-  std::cout << field4 << std::endl;
+  std::cout << "\nField 1:" << std::endl;
+  std::cout << "  Owned box: [" << field1.box().low[0] << "," << field1.box().low[1] << ","
+            << field1.box().low[2] << "] to [" << field1.box().high[0] << ","
+            << field1.box().high[1] << "," << field1.box().high[2] << "]" << std::endl;
+  std::cout << "\nField 2:" << std::endl;
+  std::cout << "  Owned box: [" << field2.box().low[0] << "," << field2.box().low[1] << ","
+            << field2.box().low[2] << "] to [" << field2.box().high[0] << ","
+            << field2.box().high[1] << "," << field2.box().high[2] << "]" << std::endl;
+  std::cout << "\nField 3:" << std::endl;
+  std::cout << "  Owned box: [" << field3.box().low[0] << "," << field3.box().low[1] << ","
+            << field3.box().low[2] << "] to [" << field3.box().high[0] << ","
+            << field3.box().high[1] << "," << field3.box().high[2] << "]" << std::endl;
+  std::cout << "\nField 4:" << std::endl;
+  std::cout << "  Owned box: [" << field4.box().low[0] << "," << field4.box().low[1] << ","
+            << field4.box().low[2] << "] to [" << field4.box().high[0] << ","
+            << field4.box().high[1] << "," << field4.box().high[2] << "]" << std::endl;
 
-  // Define function that is applied to fields. Can can be callable which
-  // returns type T and takes std::array<double, D> as input argument.
-  // Alternatively, specializations are made for D=2 and D=3, so those also
-  // works, taking input arguments `double x, double y` or `double x, double y,
-  // double z`.
+  // Define functions that are applied to fields. Field::apply() takes a callable
+  // that accepts physical coordinates (x, y, z) as separate arguments.
   Modifier func1;
 
-  // This would be alternative way ...
-  auto func2 = [](const std::array<double, 3> &coords) {
-    auto [x, y, z] = coords;
-    return 1.0 + x + y * y;
-  };
+  // Alternative: lambda taking separate coordinates
+  auto func2 = [](double x, double y, double z) { return 1.0 + x + y * y; };
 
-  // ... or even this
-  auto func3 = [](auto x, auto y, auto z) { return 1.0 + x + y * y + 0.0 * z; };
+  // Alternative: lambda taking separate coordinates
+  auto func3 = [](double x, double y, double z) { return 1.0 + x + y * y + 0.0 * z; };
 
-  // Here, we apply some function to four different "sub-domains" of a single
-  // field. Coordinate transforms and knowledge of offsets and dimensions make
-  // sure that function gets applied correctly to each part of the domain.
+  // Apply functions to the four sub-domains. Field API handles coordinate
+  // transforms correctly for each part of the domain.
   field1.apply(func1);
   field2.apply(func2);
   field3.apply(func3);
-  field4.apply([](auto x, auto y, auto z) { return 1.0 + x + y * y + 0.0 * z; });
+  field4.apply([](double x, double y, double z) { return 1.0 + x + y * y + 0.0 * z; });
 
-  // Keep on mind, that in general, one would define only one decomposition and
-  // thus one "field" for each MPI process. Thus it's hard to say, given some
-  // spesific coordinate (x, y, z), in which MPI process it stays, and some
-  // extra work to find it needs to be done, potentially involving MPI traffic.
+  // Keep in mind that in general, one would define only one decomposition and
+  // thus one field for each MPI process. It requires extra work to determine
+  // which MPI process contains a specific coordinate (x, y, z), potentially
+  // involving MPI traffic.
   auto probe = [&](double x, double y) {
-    std::array<DiscreteField<double, 3>, 4> fields{field1, field2, field3, field4};
+    std::array<Field<double>, 4> fields{field1, field2, field3, field4};
     const std::array<double, 3> coords = {x, y, 0.0};
     int field_num = 0;
     for (auto &field : fields) {
-      if (field.inbounds(coords)) {
-        std::cout << "Coordinate " << array_to_string(coords)
-                  << " found from sub-domain #" << field_num << std::endl;
-        std::cout << "Value at " << array_to_string(coords) << " is "
-                  << pfc::interpolate(field, coords)
-                  << std::endl; // Using free function
+      // Check if coordinate is within field's physical bounds
+      const auto &origin = field.domain().origin;
+      const auto &spacing = field.domain().spacing;
+      const auto &local_size = field.local_size();
+
+      // Calculate physical bounds
+      double x_low = origin[0] + field.box().low[0] * spacing[0];
+      double x_high = origin[0] + field.box().high[0] * spacing[0] + spacing[0];
+      double y_low = origin[1] + field.box().low[1] * spacing[1];
+      double y_high = origin[1] + field.box().high[1] * spacing[1] + spacing[1];
+
+      bool inbounds = (coords[0] >= x_low && coords[0] < x_high &&
+                       coords[1] >= y_low && coords[1] < y_high);
+
+      if (inbounds) {
+        // Map coordinate to local indices
+        int i = static_cast<int>((coords[0] - origin[0]) / spacing[0]) - field.box().low[0];
+        int j = static_cast<int>((coords[1] - origin[1]) / spacing[1]) - field.box().low[1];
+        int k = 0; // z is fixed at 0
+
+        if (i >= 0 && i < local_size[0] && j >= 0 && j < local_size[1]) {
+          std::cout << "Coordinate " << array_to_string(coords)
+                    << " found from sub-domain #" << field_num << std::endl;
+          std::cout << "Value at " << array_to_string(coords) << " is "
+                    << field(i, j, k) << std::endl;
+        }
       }
       field_num++;
     }
