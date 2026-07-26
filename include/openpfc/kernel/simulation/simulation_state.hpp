@@ -44,21 +44,23 @@ namespace pfc {
 /**
  * @brief Opaque, type-safe handle to a field owned by a `SimulationState`.
  *
- * A handle carries a non-zero integer id (0 is the invalid sentinel) and the
- * element type `T` in its own type. Retrieving the field additionally needs the
- * `MemorySpace` (supplied at the call site), so a handle stays as small as a
- * `std::size_t` while still preventing a `double` handle from being used to
- * fetch a `std::complex<double>` field.
+ * A handle carries an integer id (`invalid_id` is the sentinel for a
+ * default-constructed handle) and the element type `T` in its own type.
+ * Retrieving the field additionally needs the `MemorySpace` (supplied at the
+ * call site), so a handle stays as small as a `std::size_t` while still
+ * preventing a `double` handle from being used to fetch a
+ * `std::complex<double>` field.
  */
 template <typename T> class FieldHandle {
 public:
-  static constexpr std::size_t invalid_id = 0;
+  using value_type = T;
+  static constexpr std::size_t invalid_id = static_cast<std::size_t>(-1);
 
   FieldHandle() noexcept : m_id(invalid_id) {}
   explicit FieldHandle(std::size_t id) noexcept : m_id(id) {}
 
   std::size_t id() const noexcept { return m_id; }
-  bool valid() const noexcept { return m_id != invalid_id; }
+  bool is_valid() const noexcept { return m_id != invalid_id; }
 
   bool operator==(const FieldHandle &other) const noexcept {
     return m_id == other.m_id;
@@ -84,14 +86,14 @@ public:
 
   /**
    * @brief Take ownership of @p field under @p name.
-   * @throws std::invalid_argument if @p name is already in use.
+   * @throws std::runtime_error if @p name is already in use.
    */
   template <typename T, typename MemorySpace = pfc::HostSpace>
   void add_field(const std::string &name, pfc::data::Field<T, MemorySpace> field);
 
   /**
    * @brief Reference to the field named @p name.
-   * @throws std::out_of_range if no such field, or it is of another
+   * @throws std::runtime_error if no such field, or it is of another
    *         `(T, MemorySpace)` than requested.
    */
   template <typename T, typename MemorySpace = pfc::HostSpace>
@@ -101,14 +103,14 @@ public:
 
   /**
    * @brief Handle for the field named @p name, for repeated hot-path access.
-   * @throws std::out_of_range if no such field of the requested type exists.
+   * @throws std::runtime_error if no such field of the requested type exists.
    */
   template <typename T, typename MemorySpace = pfc::HostSpace>
   FieldHandle<T> get_field_handle(const std::string &name) const;
 
   /**
    * @brief Reference to the field a handle refers to.
-   * @throws std::out_of_range if the handle is invalid or refers to a field of
+   * @throws std::runtime_error if the handle is invalid or refers to a field of
    *         another `(T, MemorySpace)` than requested.
    */
   template <typename T, typename MemorySpace = pfc::HostSpace>
@@ -152,7 +154,7 @@ private:
 
   std::unordered_map<std::type_index, std::any> m_stores;
   std::unordered_map<std::string, std::size_t> m_name_to_id;
-  std::size_t m_next_id = 1; // 0 is FieldHandle::invalid_id
+  std::size_t m_next_id = 0; // ids count up; invalid_id (size_t -1) is the sentinel
 };
 
 } // namespace pfc

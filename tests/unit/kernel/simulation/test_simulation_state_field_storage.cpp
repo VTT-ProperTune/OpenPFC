@@ -64,8 +64,8 @@ TEST_CASE("SimulationState: handle from name fetches the same field",
   FieldHandle<double> hu = state.get_field_handle<double>("u");
   FieldHandle<double> hv = state.get_field_handle<double>("v");
 
-  REQUIRE(hu.valid());
-  REQUIRE(hv.valid());
+  REQUIRE(hu.is_valid());
+  REQUIRE(hv.is_valid());
   REQUIRE(hu != hv);
 
   REQUIRE(state.get_field_by_handle<double>(hu)(0, 0, 0) == 2.0);
@@ -104,20 +104,20 @@ TEST_CASE("SimulationState: error paths throw", "[simulation_state][unit]") {
 
   SECTION("duplicate name is rejected") {
     REQUIRE_THROWS_AS(state.add_field<double>("u", make_field(2.0)),
-                      std::invalid_argument);
+                      std::runtime_error);
   }
   SECTION("unknown name throws") {
-    REQUIRE_THROWS_AS(state.get_field<double>("nope"), std::out_of_range);
-    REQUIRE_THROWS_AS(state.get_field_handle<double>("nope"), std::out_of_range);
+    REQUIRE_THROWS_AS(state.get_field<double>("nope"), std::runtime_error);
+    REQUIRE_THROWS_AS(state.get_field_handle<double>("nope"), std::runtime_error);
   }
   SECTION("wrong element type throws") {
-    REQUIRE_THROWS_AS(state.get_field<cdouble>("u"), std::out_of_range);
-    REQUIRE_THROWS_AS(state.get_field_handle<cdouble>("u"), std::out_of_range);
+    REQUIRE_THROWS_AS(state.get_field<cdouble>("u"), std::runtime_error);
+    REQUIRE_THROWS_AS(state.get_field_handle<cdouble>("u"), std::runtime_error);
   }
   SECTION("invalid / default handle throws") {
     FieldHandle<double> bad; // default-constructed, invalid
-    REQUIRE_FALSE(bad.valid());
-    REQUIRE_THROWS_AS(state.get_field_by_handle<double>(bad), std::out_of_range);
+    REQUIRE_FALSE(bad.is_valid());
+    REQUIRE_THROWS_AS(state.get_field_by_handle<double>(bad), std::runtime_error);
   }
 }
 
@@ -139,8 +139,8 @@ TEST_CASE("FieldHandle: value semantics and std::hash", "[simulation_state][unit
   FieldHandle<double> b(7);
   FieldHandle<double> c(7);
 
-  REQUIRE_FALSE(a.valid());
-  REQUIRE(b.valid());
+  REQUIRE_FALSE(a.is_valid());
+  REQUIRE(b.is_valid());
   REQUIRE(b == c);
   REQUIRE(a != b);
 
