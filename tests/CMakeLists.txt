@@ -202,5 +202,14 @@ if(OpenPFC_RUN_MPI_SUITES AND MPI_CXX_FOUND)
   endif()
 endif()
 
+# Guard test: verify deprecated symbols are removed
+add_test(
+  NAME check_deprecated_symbols
+  COMMAND bash ${CMAKE_SOURCE_DIR}/tests/check_deprecated_symbols.sh
+)
+set_tests_properties(check_deprecated_symbols PROPERTIES
+  LABELS "verification"
+)
+
 # Optionally, add a custom target to run tests manually
 add_custom_target(run-tests COMMAND openpfc-tests)
