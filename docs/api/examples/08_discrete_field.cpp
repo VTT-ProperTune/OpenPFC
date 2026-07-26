@@ -3,14 +3,17 @@
 
 /**
  * @file 08_discrete_field.cpp
- * @brief Comprehensive examples of the DiscreteField API
+ * @brief Comprehensive examples of the Field API
  *
- * This example demonstrates:
- * 1. Creating and initializing discrete fields
+ * This example demonstrates the new `pfc::data::Field<T>` API that replaces
+ * the legacy `DiscreteField<T,D>` and `Array<T,D>` types.
+ *
+ * Demonstrated features:
+ * 1. Creating and initializing fields with domain geometry
  * 2. Array-style indexing and data access
  * 3. Coordinate-space operations and transformations
- * 4. Interpolation at arbitrary coordinates
- * 5. Integration with Model fields and FFT
+ * 4. Integration with Model fields and FFT
+ * 5. Field iteration and STL algorithm compatibility
  *
  * Compile and run:
  *   g++ -std=c++20 -I/path/to/openpfc/include 08_discrete_field.cpp \
@@ -24,10 +27,12 @@
 #include <iostream>
 #include <numbers>
 #include <numeric>
-#include <openpfc/kernel/data/array.hpp>
-#include <openpfc/kernel/data/discrete_field.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 
 using namespace pfc;
+using namespace pfc::data;
 
 //==============================================================================
 // Helper functions for output formatting
@@ -60,21 +65,23 @@ void print_array_int(const std::array<int, D> &arr, const std::string &name) {
 }
 
 //==============================================================================
-// SCENARIO 1: Creating and Initializing Discrete Fields
+// SCENARIO 1: Creating and Initializing Fields
 //==============================================================================
 
 void demo_creation_and_initialization() {
-  print_section("SCENARIO 1: Creating and Initializing Discrete Fields");
+  print_section("SCENARIO 1: Creating and Initializing Fields");
 
-  // Create a 3D field with specified geometry
-  DiscreteField<double, 3> field({32, 32, 32},    // dimensions: 32³ points
-                                 {0, 0, 0},       // offset: no offset (full domain)
-                                 {0.0, 0.0, 0.0}, // origin: starts at (0,0,0)
-                                 {0.5, 0.5, 0.5}  // discretization: 0.5 spacing
-  );
+  // Create a domain and a 3D field covering the full domain
+  auto domain = domain::create({32, 32, 32}, {0.0, 0.0, 0.0}, {0.5, 0.5, 0.5});
+  Field<double> field(domain, Box3i::from_bounds({0, 0, 0}, {31, 31, 31}), 0);
 
-  std::cout << "Created DiscreteField<double, 3>:\n";
-  std::cout << field << "\n\n";
+  std::cout << "Created Field<double>:\n";
+  std::cout << "  Local size: [" << field.local_size()[0] << ", " << field.local_size()[1] << ", "
+            << field.local_size()[2] << "]\n";
+  std::cout << "  Origin: [" << domain.get_origin()[0] << ", " << domain.get_origin()[1] << ", "
+            << domain.get_origin()[2] << "]\n";
+  std::cout << "  Spacing: [" << domain.get_spacing()[0] << ", " << domain.get_spacing()[1] << ", "
+            << domain.get_spacing()[2] << "]\n\n";
 
   // Initialize with mathematical function - Method 1: 3D lambda
   std::cout << "Method 1: Initialize with 3D function f(x,y,z)\n";
@@ -85,10 +92,10 @@ void demo_creation_and_initialization() {
 
   // Sample some values
   std::cout << "Sample values after initialization:\n";
-  std::cout << "  f(0, 0, 0) = " << field[{0, 0, 0}] << "\n";
-  std::cout << "  f(4, 0, 0) = " << field[{4, 0, 0}] << "\n";
-  std::cout << "  f(0, 4, 0) = " << field[{0, 4, 0}] << "\n";
-  std::cout << "  f(4, 4, 0) = " << field[{4, 4, 0}] << "\n\n";
+  std::cout << "  f(0, 0, 0) = " << field(0, 0, 0) << "\n";
+  std::cout << "  f(4, 0, 0) = " << field(4, 0, 0) << "\n";
+  std::cout << "  f(0, 4, 0) = " << field(0, 4, 0) << "\n";
+  std::cout << "  f(4, 4, 0) = " << field(4, 4, 0) << "\n\n";
 
   // Initialize with 1D function - only uses x coordinate
   std::cout << "Method 2: Initialize with 1D function f(x)\n";
@@ -108,21 +115,20 @@ void demo_creation_and_initialization() {
   std::cout << "  f(0, 0, 0) = " << field[{0, 0, 0}] << " (maximum)\n";
   std::cout << "  f(10, 0, 0) = " << field[{20, 0, 0}] << " (x=10 physical)\n\n";
 
-  // Create 2D field for comparison
-  DiscreteField<double, 2> field2d({64, 64},               // 64² points
-                                   {0, 0}, {-32.0, -32.0}, // centered origin
-                                   {1.0, 1.0});
+  // Create 2D field for comparison (using 3D field with z-size=1)
+  auto domain2d = domain::create({64, 64, 1}, {-32.0, -32.0, 0.0}, {1.0, 1.0, 1.0});
+  Field<double> field2d(domain2d, Box3i::from_bounds({0, 0, 0}, {63, 63, 0}), 0);
 
-  field2d.apply([](double x, double y) {
+  field2d.apply([](double x, double y, double /*z*/) {
     double r = std::sqrt(x * x + y * y);
     return std::sin(r) / (r + 0.01); // Sinc-like function
   });
 
-  std::cout << "Created DiscreteField<double, 2> (2D field):\n";
-  std::cout << "  Size: 64x64\n";
-  std::cout << "  Origin: (-32, -32)\n";
-  std::cout << "  f(0, 0) = " << field2d[{32, 32}] << " (center)\n";
-  std::cout << "  f(-32, -32) = " << field2d[{0, 0}] << " (corner)\n";
+  std::cout << "Created Field<double> (2D field in 3D, z-size=1):\n";
+  std::cout << "  Size: 64x64x1\n";
+  std::cout << "  Origin: (-32, -32, 0)\n";
+  std::cout << "  f(0, 0, 0) = " << field2d(32, 32, 0) << " (center)\n";
+  std::cout << "  f(-32, -32, 0) = " << field2d(0, 0, 0) << " (corner)\n";
 }
 
 //==============================================================================
@@ -132,54 +138,49 @@ void demo_creation_and_initialization() {
 void demo_indexing() {
   print_section("SCENARIO 2: Array-Style Indexing and Data Access");
 
-  DiscreteField<double, 3> field({16, 16, 16}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                 {1.0, 1.0, 1.0});
+  auto domain = domain::create({16, 16, 16}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  Field<double> field(domain, Box3i::from_bounds({0, 0, 0}, {15, 15, 15}), 0);
 
   // Initialize with constant
-  std::fill(field.get_data().begin(), field.get_data().end(), 1.0);
+  std::fill(field.data(), field.data() + field.size(), 1.0);
 
   std::cout << "Access patterns:\n\n";
 
   // 1. Multi-dimensional index access
-  std::cout << "1. Multi-dimensional indexing: field[{i,j,k}]\n";
-  field[{5, 5, 5}] = 10.0;
-  field[{10, 10, 10}] = 20.0;
-  std::cout << "   Set field[{5,5,5}] = 10.0\n";
-  std::cout << "   Set field[{10,10,10}] = 20.0\n";
-  std::cout << "   field[{5,5,5}] = " << field[{5, 5, 5}] << "\n";
-  std::cout << "   field[{10,10,10}] = " << field[{10, 10, 10}] << "\n\n";
+  std::cout << "1. Multi-dimensional indexing: field(i, j, k)\n";
+  field(5, 5, 5) = 10.0;
+  field(10, 10, 10) = 20.0;
+  std::cout << "   Set field(5,5,5) = 10.0\n";
+  std::cout << "   Set field(10,10,10) = 20.0\n";
+  std::cout << "   field(5,5,5) = " << field(5, 5, 5) << "\n";
+  std::cout << "   field(10,10,10) = " << field(10, 10, 10) << "\n\n";
 
-  // 2. Linear index access
-  std::cout << "2. Linear indexing: field[idx]\n";
-  field[0] = 100.0; // First element
-  field[1] = 200.0; // Second element
-  std::cout << "   field[0] = " << field[0] << "\n";
-  std::cout << "   field[1] = " << field[1] << "\n\n";
-
-  // 3. Direct data access for performance
-  std::cout << "3. Direct data access: field.get_data()\n";
-  auto &data = field.get_data();
-  std::cout << "   Total elements: " << data.size() << "\n";
-  std::cout << "   Element type: std::vector<double>\n";
+  // 2. Linear index access for reading
+  std::cout << "2. Direct data access: field.data()\n";
+  std::cout << "   Total elements: " << field.size() << "\n";
+  std::cout << "   Element type: DataBuffer<T>*\n";
 
   // Compute statistics using STL algorithms
-  double sum = std::accumulate(data.begin(), data.end(), 0.0);
-  double mean = sum / data.size();
-  double min_val = *std::min_element(data.begin(), data.end());
-  double max_val = *std::max_element(data.begin(), data.end());
+  auto *data = field.data();
+  double sum = std::accumulate(data, data + field.size(), 0.0);
+  double mean = sum / field.size();
+  double min_val = *std::min_element(data, data + field.size());
+  double max_val = *std::max_element(data, data + field.size());
 
   std::cout << "   Mean: " << mean << "\n";
   std::cout << "   Min: " << min_val << "\n";
   std::cout << "   Max: " << max_val << "\n\n";
 
-  // 4. Geometry accessors
-  std::cout << "4. Geometry information:\n";
-  print_array(field.get_origin(), "   Origin");
-  print_array(field.get_discretization(), "   Discretization");
-  print_array(field.get_coords_low(), "   Bounding box low");
-  print_array(field.get_coords_high(), "   Bounding box high");
-  print_array_int(field.get_size(), "   Size");
-  print_array_int(field.get_offset(), "   Offset");
+  // 3. Geometry accessors
+  std::cout << "3. Geometry information:\n";
+  print_array(field.origin(), "   Origin");
+  print_array(field.spacing(), "   Spacing");
+  std::cout << "   Owned box: [" << field.box().low[0] << "," << field.box().low[1] << ","
+            << field.box().low[2] << "] to [" << field.box().high[0] << ","
+            << field.box().high[1] << "," << field.box().high[2] << "]\n";
+  print_array_int(field.local_size(), "   Local size");
+  std::cout << "   Domain size: [" << domain.get_size()[0] << "," << domain.get_size()[1] << ","
+            << domain.get_size()[2] << "]\n";
 }
 
 //==============================================================================
@@ -189,9 +190,8 @@ void demo_indexing() {
 void demo_coordinate_operations() {
   print_section("SCENARIO 3: Coordinate-Space Operations");
 
-  DiscreteField<double, 3> field({32, 32, 32}, {0, 0, 0},
-                                 {5.0, 5.0, 5.0},  // origin at (5,5,5)
-                                 {0.5, 0.5, 0.5}); // 0.5 spacing
+  auto domain = domain::create({32, 32, 32}, {5.0, 5.0, 5.0}, {0.5, 0.5, 0.5});
+  Field<double> field(domain, Box3i::from_bounds({0, 0, 0}, {31, 31, 31}), 0);
 
   std::cout << "Field geometry:\n";
   std::cout << "  Grid size: 32³\n";
@@ -205,14 +205,14 @@ void demo_coordinate_operations() {
       {0, 0, 0}, {10, 10, 10}, {31, 31, 31}};
 
   for (const auto &idx : test_indices) {
-    auto coords = field.map_indices_to_coordinates(idx);
+    auto coords = field.coords(idx[0], idx[1], idx[2]);
     std::cout << "   Index [" << idx[0] << "," << idx[1] << "," << idx[2]
               << "] → Coord [" << coords[0] << "," << coords[1] << "," << coords[2]
               << "]\n";
   }
   std::cout << "\n";
 
-  // 2. Map coordinates to indices
+  // 2. Map coordinates to indices (nearest grid point)
   std::cout << "2. Coordinate → Index mapping (nearest):\n";
   std::vector<std::array<double, 3>> test_coords = {
       {5.0, 5.0, 5.0},   // Exactly at grid point
@@ -221,9 +221,11 @@ void demo_coordinate_operations() {
   };
 
   for (const auto &coord : test_coords) {
-    auto idx = field.map_coordinates_to_indices(coord);
+    int i = static_cast<int>((coord[0] - domain.get_origin()[0]) / domain.get_spacing()[0]);
+    int j = static_cast<int>((coord[1] - domain.get_origin()[1]) / domain.get_spacing()[1]);
+    int k = static_cast<int>((coord[2] - domain.get_origin()[2]) / domain.get_spacing()[2]);
     std::cout << "   Coord [" << coord[0] << "," << coord[1] << "," << coord[2]
-              << "] → Index [" << idx[0] << "," << idx[1] << "," << idx[2] << "]\n";
+              << "] → Index [" << i << "," << j << "," << k << "]\n";
   }
   std::cout << "\n";
 
@@ -238,71 +240,75 @@ void demo_coordinate_operations() {
   };
 
   for (const auto &coord : test_bounds) {
-    bool in = field.inbounds(coord);
+    // Check if coordinate is within physical bounds
+    bool in = (coord[0] >= domain.get_origin()[0] &&
+               coord[0] < domain.get_origin()[0] + domain.get_size()[0] * domain.get_spacing()[0] &&
+               coord[1] >= domain.get_origin()[1] &&
+               coord[1] < domain.get_origin()[1] + domain.get_size()[1] * domain.get_spacing()[1] &&
+               coord[2] >= domain.get_origin()[2] &&
+               coord[2] < domain.get_origin()[2] + domain.get_size()[2] * domain.get_spacing()[2]);
     std::cout << "   [" << coord[0] << "," << coord[1] << "," << coord[2] << "] → "
               << (in ? "INSIDE" : "OUTSIDE") << "\n";
   }
 }
 
 //==============================================================================
-// SCENARIO 4: Interpolation
+// SCENARIO 4: Direct Access at Grid Points
 //==============================================================================
 
 void demo_interpolation() {
-  print_section("SCENARIO 4: Interpolation at Arbitrary Coordinates");
+  print_section("SCENARIO 4: Direct Access at Grid Points");
 
   // Create field with known analytical function
-  DiscreteField<double, 3> field({64, 64, 64}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                 {1.0, 1.0, 1.0});
+  auto domain = domain::create({64, 64, 64}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  Field<double> field(domain, Box3i::from_bounds({0, 0, 0}, {63, 63, 63}), 0);
 
   // Initialize: f(x,y,z) = x² + y² + z²
   field.apply([](double x, double y, double z) { return x * x + y * y + z * z; });
 
   std::cout << "Field function: f(x,y,z) = x² + y² + z²\n";
-  std::cout << "Interpolation method: Nearest-neighbor\n\n";
+  std::cout << "Access method: Direct lookup at nearest grid point\n\n";
 
-  // Test interpolation at various points
-  std::cout << "Interpolation tests:\n";
-  std::cout << "Query Coord\t\tInterpolated\tExpected\tError\n";
-  std::cout << std::string(65, '-') << "\n";
+  // Test access at various grid points
+  std::cout << "Grid point access tests:\n";
+  std::cout << "Grid Index\t\tPhysical Coord\t\tValue\t\tExpected\tError\n";
+  std::cout << std::string(75, '-') << "\n";
 
-  std::vector<std::array<double, 3>> query_points = {
-      {10.0, 10.0, 10.0}, // Exactly on grid
-      {10.3, 10.0, 10.0}, // Slightly off (→ 10)
-      {10.5, 10.0, 10.0}, // Midpoint (→ 10 or 11)
-      {10.7, 10.0, 10.0}, // Slightly off (→ 11)
-      {5.2, 8.7, 12.1},   // Arbitrary point
-      {20.0, 20.0, 20.0}, // On grid
-      {31.8, 31.9, 31.7}  // Near boundary
+  std::vector<std::array<int, 3>> grid_points = {
+      {10, 10, 10}, {10, 5, 0}, {20, 20, 20}, {0, 0, 0}, {63, 63, 63}
   };
 
-  for (const auto &query : query_points) {
-    if (field.inbounds(query)) {
-      double interp_val =
-          pfc::interpolate(field, query); // Free function (preferred)
-      double exact_val =
-          query[0] * query[0] + query[1] * query[1] + query[2] * query[2];
-      double error = std::abs(interp_val - exact_val);
+  for (const auto &idx : grid_points) {
+    auto coords = field.coords(idx[0], idx[1], idx[2]);
+    double value = field(idx[0], idx[1], idx[2]);
+    double exact_val = coords[0] * coords[0] + coords[1] * coords[1] + coords[2] * coords[2];
+    double error = std::abs(value - exact_val);
 
-      printf("[%.1f,%.1f,%.1f]\t%.2f\t\t%.2f\t\t%.2f\n", query[0], query[1],
-             query[2], interp_val, exact_val, error);
-    }
+    printf("[%d,%d,%d]\t\t[%.1f,%.1f,%.1f]\t\t%.2f\t\t%.2f\t\t%.2f\n",
+           idx[0], idx[1], idx[2], coords[0], coords[1], coords[2],
+           value, exact_val, error);
   }
 
-  std::cout << "\nNote: Nearest-neighbor error depends on function curvature\n";
-  std::cout << "      Error is typically < 0.5 * dx² * |∇²f| for smooth functions\n";
+  std::cout << "\nNote: The Field API provides direct access to grid-point values.\n";
+  std::cout << "      For interpolation between grid points, use appropriate\n";
+  std::cout << "      interpolation libraries or implement interpolation manually\n";
+  std::cout << "      using the grid-point values and coordinate transformations.\n";
 
-  // Example: Safe interpolation with bounds checking
-  std::cout << "\nSafe interpolation pattern:\n";
-  std::array<double, 3> test_point = {5.5, 10.2, 15.7};
-  std::cout << "Query: [" << test_point[0] << "," << test_point[1] << ","
-            << test_point[2] << "]\n";
+  // Example: Safe access with bounds checking
+  std::cout << "\nSafe access pattern:\n";
+  std::array<int, 3> test_index = {10, 20, 30};
+  std::cout << "Grid index: [" << test_index[0] << "," << test_index[1] << ","
+            << test_index[2] << "]\n";
 
-  if (field.inbounds(test_point)) {
-    double value = pfc::interpolate(field, test_point); // Free function (preferred)
-    std::cout << "Result: " << value << " (IN BOUNDS)\n";
+  if (test_index[0] >= 0 && test_index[0] < field.local_size()[0] &&
+      test_index[1] >= 0 && test_index[1] < field.local_size()[1] &&
+      test_index[2] >= 0 && test_index[2] < field.local_size()[2]) {
+    auto coords = field.coords(test_index[0], test_index[1], test_index[2]);
+    double value = field(test_index[0], test_index[1], test_index[2]);
+    std::cout << "Physical coord: [" << coords[0] << "," << coords[1] << "," << coords[2] << "]\n";
+    std::cout << "Value: " << value << " (VALID INDEX)\n";
   } else {
-    std::cout << "Result: OUT OF BOUNDS - cannot interpolate\n";
+    std::cout << "Result: OUT OF BOUNDS\n";
   }
 }
 
@@ -316,17 +322,17 @@ void demo_complex_fields() {
   using Complex = std::complex<double>;
 
   // Real-space field
-  DiscreteField<double, 3> real_field({64, 64, 64}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                      {1.0, 1.0, 1.0});
+  auto domain_real = domain::create({64, 64, 64}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  Field<double> real_field(domain_real, Box3i::from_bounds({0, 0, 0}, {63, 63, 63}), 0);
 
   // Complex k-space field (after real-to-complex FFT)
   // Size is (nx, ny, nz/2+1) for real-to-complex transform
-  DiscreteField<Complex, 3> kspace_field({64, 64, 33}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                         {1.0, 1.0, 1.0});
+  auto domain_k = domain::create({64, 64, 33}, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  Field<Complex> kspace_field(domain_k, Box3i::from_bounds({0, 0, 0}, {63, 63, 32}), 0);
 
-  std::cout << "Real-space field: 64 x 64 x 64 = " << real_field.get_data().size()
+  std::cout << "Real-space field: 64 x 64 x 64 = " << real_field.size()
             << " points\n";
-  std::cout << "K-space field: 64 x 64 x 33 = " << kspace_field.get_data().size()
+  std::cout << "K-space field: 64 x 64 x 33 = " << kspace_field.size()
             << " complex points\n";
   std::cout << "(33 = 64/2 + 1, due to Hermitian symmetry)\n\n";
 
@@ -351,17 +357,17 @@ void demo_complex_fields() {
 
   // Demonstrate complex field operations
   std::cout << "Complex field operations:\n";
-  std::cout << "  kspace_field[{0,0,0}] = " << kspace_field[{0, 0, 0}] << "\n";
-  std::cout << "  kspace_field[{1,0,0}] = " << kspace_field[{1, 0, 0}] << "\n";
-  std::cout << "  kspace_field[{10,0,0}] = " << kspace_field[{10, 0, 0}] << "\n\n";
+  std::cout << "  kspace_field(0,0,0) = " << kspace_field(0, 0, 0) << "\n";
+  std::cout << "  kspace_field(1,0,0) = " << kspace_field(1, 0, 0) << "\n";
+  std::cout << "  kspace_field(10,0,0) = " << kspace_field(10, 0, 0) << "\n\n";
 
   // Count non-zero k-space modes
   int non_zero = 0;
-  for (const auto &val : kspace_field.get_data()) {
-    if (std::abs(val) > 1e-10) non_zero++;
+  for (size_t i = 0; i < kspace_field.size(); ++i) {
+    if (std::abs(kspace_field.data()[i]) > 1e-10) non_zero++;
   }
   std::cout << "Non-zero k-space modes: " << non_zero << " / "
-            << kspace_field.get_data().size() << "\n";
+            << kspace_field.size() << "\n";
 }
 
 //==============================================================================
@@ -373,11 +379,13 @@ int main() {
   std::cout
       << "╔════════════════════════════════════════════════════════════════════╗\n";
   std::cout
-      << "║          OpenPFC DiscreteField API Examples                        ║\n";
+      << "║          OpenPFC Field API Examples                                ║\n";
   std::cout
       << "║                                                                    ║\n";
   std::cout
-      << "║  Demonstrates discrete fields with coordinate mapping              ║\n";
+      << "║  Demonstrates the new Field<T> API that replaces                  ║\n";
+  std::cout
+      << "║  DiscreteField<T,D> and Array<T,D>                               ║\n";
   std::cout
       << "╚════════════════════════════════════════════════════════════════════╝\n";
 
@@ -396,20 +404,22 @@ int main() {
     std::cout << "║                                                                 "
                  "   ║\n";
     std::cout
-        << "║  1. DiscreteField bridges discrete grids and physical space       ║\n";
+        << "║  1. Field<T> bridges discrete grids and physical space             ║\n";
     std::cout << "║  2. Multiple initialization methods: apply() with lambdas       "
                  "   ║\n";
-    std::cout << "║  3. Flexible indexing: multi-dimensional or linear              "
+    std::cout << "║  3. Flexible indexing: multi-dimensional (i,j,k) or linear data()  "
                  "   ║\n";
     std::cout << "║  4. Coordinate transformations: indices ↔ physical coords       "
                  "   ║\n";
-    std::cout << "║  5. Interpolation: nearest-neighbor (check bounds first!)       "
+    std::cout << "║  5. Direct grid-point access (implement interpolation separately)  "
                  "   ║\n";
     std::cout << "║  6. Works with real and complex fields (FFT integration)        "
                  "   ║\n";
+    std::cout << "║  7. Domain-aware with Box3i for decomposition support          "
+                 "   ║\n";
     std::cout << "║                                                                 "
                  "   ║\n";
-    std::cout << "║  Performance: Direct data access via get_data() for hot paths   "
+    std::cout << "║  Performance: Direct data access via data() for hot paths       "
                  "   ║\n";
     std::cout << "╚═════════════════════════════════════════════════════════════════"
                  "═══╝\n";
