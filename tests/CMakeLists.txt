@@ -16,6 +16,7 @@ target_include_directories(openpfc-tests PRIVATE ${CMAKE_SOURCE_DIR}/examples)
 # Add test subdirectories (they will add their sources via target_sources)
 add_subdirectory(unit)
 add_subdirectory(integration)
+add_subdirectory(regression)
 
 # Benchmarks are optional (can be slow)
 if(OpenPFC_BUILD_BENCHMARKS)
