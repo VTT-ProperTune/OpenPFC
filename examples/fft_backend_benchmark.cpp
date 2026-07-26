@@ -27,7 +27,7 @@
 #include <numbers>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -51,7 +51,7 @@ constexpr int NUM_ITERATIONS = 10; // Number of iterations for averaging
  * @param rank_id MPI rank ID
  * @return Average time per forward+backward transform pair (in milliseconds)
  */
-double benchmark_fft(fft::Backend backend, const World &world,
+double benchmark_fft(fft::Backend backend, const Domain &world,
                      const decomposition::Decomposition &decomp, int rank_id) {
 
   std::string backend_name =
@@ -182,8 +182,8 @@ int main(int argc, char *argv[]) {
   try {
     // Create computational domain (128³ grid)
     auto world =
-        world::create(GridSize({GRID_SIZE, GRID_SIZE, GRID_SIZE}),
-                      PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
+        domain::create_world_from_bounds({GRID_SIZE, GRID_SIZE, GRID_SIZE},
+                                          {1.0, 1.0, 1.0}, {128.0, 128.0, 128.0});
 
     // Create domain decomposition
     auto decomp = decomposition::create(world, size);
@@ -197,14 +197,14 @@ int main(int argc, char *argv[]) {
     // Benchmark CPU (FFTW)
     double cpu_time_ms = 0.0;
     if (rank == 0) {
-      cpu_time_ms = benchmark_fft(fft::Backend::FFTW, world, decomp, rank);
+      cpu_time_ms = benchmark_fft(fft::Backend::FFTW, world.domain_, decomp, rank);
     }
 
 #if defined(OpenPFC_ENABLE_CUDA)
     // Benchmark GPU (CUDA)
     double gpu_time_ms = 0.0;
     if (rank == 0) {
-      gpu_time_ms = benchmark_fft(fft::Backend::CUDA, world, decomp, rank);
+      gpu_time_ms = benchmark_fft(fft::Backend::CUDA, world.domain_, decomp, rank);
     }
 
     // Report results

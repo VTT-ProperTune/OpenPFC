@@ -89,8 +89,8 @@ void run() {
   Vec3<int> dimensions{Lx, Ly, Lz};
   Vec3<double> origo{x0, y0, z0};
   Vec3<double> discretization{dx, dy, dz};
-  World world = world::create(GridSize(dimensions), PhysicalOrigin(origo),
-                              GridSpacing(discretization));
+  Domain domain = domain::create(GridSize(dimensions), PhysicalOrigin(origo),
+                                 GridSpacing(discretization));
 
   double t0 = 0.0;
   double t1 = 0.5874010519681994;
@@ -100,8 +100,12 @@ void run() {
   Time time(tspan, saveat);
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  auto decomposition = make_decomposition(world, comm);
+  int size;
+  MPI_Comm_size(comm, &size);
+  auto decomposition = decomposition::create(domain, size);
   auto fft = fft::create(decomposition);
+  auto world = domain::create_world_from_bounds({Lx, Ly, Lz}, {x0, y0, z0},
+                                                {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
   Diffusion model(fft, world);
   model.initialize(dt);
   Simulator simulator(model, time);
