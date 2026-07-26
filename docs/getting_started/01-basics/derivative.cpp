@@ -18,10 +18,9 @@ int main(int argc, char *argv[]) {
   const double dx = 2 * pi / Lx;
   const double x0 = -0.5 * Lx * dx;
 
-  auto world = world::create(GridSize({Lx, 1, 1}), PhysicalOrigin({x0, 0.0, 0.0}),
-                             GridSpacing({dx, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, mpi::get_size());
-  auto fft = fft::create(decomp);
+  Domain domain({Lx, 1, 1}, {x0, 0, 0}, {dx, 1, 1});
+  Decomposition decomp(domain, MPI_COMM_WORLD);
+  FFT fft(decomp, MPI_COMM_WORLD);
 
   const size_t size_inbox = fft.size_inbox();
   const size_t size_outbox = fft.size_outbox();
@@ -30,14 +29,14 @@ int main(int argc, char *argv[]) {
   std::vector<double> op(size_outbox);
   std::vector<std::complex<double>> Y(size_outbox);
 
-  auto outbox = fft::get_outbox(fft);
+  auto outbox = fft.get_outbox();
   const double fx = 2.0 * pi / (dx * Lx);
   size_t idx = 0;
   for (int i = outbox.low[0]; i <= outbox.high[0]; ++i) {
     op[idx++] = (i < Lx / 2) ? i * fx : (i - Lx) * fx;
   }
 
-  auto inbox = fft::get_inbox(fft);
+  auto inbox = fft.get_inbox();
   idx = 0;
   for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
     double x = x0 + i * dx;

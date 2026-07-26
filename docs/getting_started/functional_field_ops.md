@@ -138,7 +138,7 @@ void apply(Model &m, double) override {
 
 Benefits:
 
-- No manual index management; coordinates come from the world/FFT inbox.
+- No manual index management; coordinates come from the Domain/FFT inbox.
 - Clearer intent: focus on the computation, not the iteration.
 - Less boilerplate (many lines → a short lambda).
 

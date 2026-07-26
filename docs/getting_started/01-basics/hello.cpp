@@ -6,6 +6,6 @@
 
 int main() {
   using namespace pfc;
-  auto world = world::create({32, 32, 32});
-  std::cout << world << std::endl;
+  Domain domain({32, 32, 32});
+  std::cout << domain << std::endl;
 }

@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Basics: world, domain decomposition and FFT
+# Basics: domain, decomposition and FFT
 
 Hello, and welcome to the first part of the getting started tutorial of OpenPFC
 software. The goal of this section is to familiarize the user with the lowest
@@ -397,7 +397,7 @@ As described above, the Domain, Decomposition and FFT are defined first:
 MPI_Init(&argc, &argv);
 MPI_Comm comm = MPI_COMM_WORLD;
 
-// define world
+// define domain
 int Lx = 16;
 double pi = 3.14159265358979323846;
 double dx = 2 * pi / Lx;
