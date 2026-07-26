@@ -7,7 +7,6 @@
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
@@ -50,9 +49,9 @@ Field<double> create_field_from_decomp(const pfc::Decomposition &decomp, int ran
 }
 
 int main() {
-  auto world = world::create({16, 8, 1});
-  std::cout << "World: " << world << std::endl;
-  auto decomposition = decomposition::create(world, 4);
+  auto domain = domain::create({16, 8, 1});
+  std::cout << "Domain: " << domain << std::endl;
+  auto decomposition = decomposition::create(domain, 4);
   std::cout << "Decomposition: " << decomposition << std::endl;
 
   auto field1 = create_field_from_decomp(decomposition, 0);
