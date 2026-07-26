@@ -44,7 +44,7 @@ Every target registered in `CMakeLists.txt` is listed in [`../docs/examples_cata
 - [`../docs/tutorials/end_to_end_visualization.md`](../docs/tutorials/end_to_end_visualization.md) — run once, inspect outputs
 - [`../docs/api_examples_walkthrough.md`](../docs/reference/api_examples_walkthrough.md) — Doxygen `docs/api/examples` reading order
 - [`../docs/showcase.md`](../docs/user_guide/showcase.md) — figures → runnable entry points
-- [`../docs/class_tour.md`](../docs/reference/class_tour.md) — how examples map to `World`, `Model`, `Simulator`, `App`
+- [`../docs/class_tour.md`](../docs/reference/class_tour.md) — how examples map to `Domain`, `Model`, `Simulator`, `App`
 - [`../docs/extending_openpfc/README.md`](../docs/extending_openpfc/README.md) — turning patterns into your own model or `App`
 - `fft_backend_selection.toml` — commented TOML for `[plan_options]` (FFT backend and HeFFTe knobs)
 - [`../docs/configuration.md`](../docs/user_guide/configuration.md) — how config files map to the framework
