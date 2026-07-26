@@ -37,14 +37,14 @@ classDiagram
   Model --> RealField
   Model --> ComplexField
   FFT --> Decomposition
-  Decomposition --> World
+  Decomposition --> Domain
 ```
 
 The framework consists of building blocks that can be stacked on top of each
 other from the bottom up. Starting from the bottom, we first want do define
 calculation domain, decompose it into smaller parts, distribute it between MPI
 processes and set up FFT. These operations are the responsibilities of classes
-`World`, `Decomposition` and `FFT`.
+`Domain`, `Decomposition` and `FFT`.
 
 The actual physics is introduced in class `Model`, which combines FFT and
 real/complex fields. The responsiblities of `Model` is to perform model
@@ -108,7 +108,7 @@ the beginning of the simulation, the reproducibility of the results is
 guaranteed, which is crucial for research purposes.
 
 Let's examine the operation of these classes in smaller entities, starting with
-classes World, Decomposition and FFT. It is the responsibility of the World
+classes Domain, Decomposition and FFT. It is the responsibility of the Domain
 class to define the computational domain and its discretization. We can define
 any point in the calculation area with linear interpolation:
 
@@ -123,7 +123,7 @@ z(k) &= z_0 + k \cdot \delta z \qquad k \in [0, L_z]
 ```mermaid
 classDiagram
 
-class World{
+class Domain{
   +int Lx
   +int Ly
   +int Lz
@@ -133,8 +133,8 @@ class World{
   +double dx
   +double dy
   +double dz
-  +World(array<int, 3> dimensions, array<int, 3> origo, array<int, 3> discretization)
-  +World(array<int, 3> dimensions)
+  +Domain(array<int, 3> dimensions, array<int, 3> origo, array<int, 3> discretization)
+  +Domain(array<int, 3> dimensions)
   +array<int,3> get_size()
 }
 ```
@@ -156,8 +156,8 @@ using namespace std;
 using namespace pfc;
 
 int main() {
-  World world({32, 32, 32});
-  cout << world << endl;
+  Domain domain({32, 32, 32});
+  cout << domain << endl;
 }
 ```
 
@@ -331,9 +331,9 @@ calculation domain can be divided, for example, into two separate parts as
 follows:
 
 ```cpp
-World world({16, 1, 1});
-Decomposition decomp1(world, 0, 2);
-Decomposition decomp2(world, 1, 2);
+Domain domain({16, 1, 1});
+Decomposition decomp1(domain, 0, 2);
+Decomposition decomp2(domain, 1, 2);
 cout << decomp1 << endl;
 cout << decomp2 << endl;
 ```
@@ -355,8 +355,8 @@ it can be found from the MPI communicator `MPI_COMM_WORLD`:
 int comm_rank, comm_size;
 MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);  // this particular process id
 MPI_Comm_size(MPI_COMM_WORLD, &comm_size);  // number of mpi processes
-World world({16, 1, 1});
-Decomposition decomposition(world, comm_rank, comm_size);
+Domain domain({16, 1, 1});
+Decomposition decomposition(domain, comm_rank, comm_size);
 cout << decomposition << endl;
 ```
 
@@ -364,8 +364,8 @@ This is so common, in fact, that OpenPFC has simplified domain decomposition so
 that all you need to know is the size of the domain and the MPI communicator:
 
 ```cpp
-World world({16, 1, 1});
-Decomposition decomposition(world, MPI_COMM_WORLD);
+Domain domain({16, 1, 1});
+Decomposition decomposition(domain, MPI_COMM_WORLD);
 cout << decomposition << endl;
 ```
 
@@ -390,7 +390,7 @@ transform.
 
 [derivative]: https://medium.com/geekculture/numerical-differentiation-via-the-fft-algorithm-calculating-the-spectral-derivative-a8ab18e1abbe
 
-As described above, the World, Decomposition and FFT are defined first:
+As described above, the Domain, Decomposition and FFT are defined first:
 
 ```cpp
 // initialize mpi
@@ -402,10 +402,10 @@ int Lx = 16;
 double pi = 3.14159265358979323846;
 double dx = 2 * pi / Lx;
 double x0 = -0.5 * Lx * dx;
-World world({Lx, 1, 1}, {x0, 0, 0}, {dx, 1, 1});
+Domain domain({Lx, 1, 1}, {x0, 0, 0}, {dx, 1, 1});
 
 // define domain decomposition
-Decomposition decomp(world, 0, 1);
+Decomposition decomp(domain, 0, 1);
 
 // construct FFT object
 FFT fft(decomp, comm);

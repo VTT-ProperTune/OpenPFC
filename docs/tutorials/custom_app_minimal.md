@@ -93,7 +93,7 @@ You may merge everything into one `main.cpp` if you prefer.
 
 **Purpose:** give `App` something that satisfies the `Model` interface. The constructor signature must match what `SpectralSimulationSession` expects when it builds your type.
 
-Your model constructs with `(pfc::FFT &fft, const pfc::World &world)` and may take an optional third argument `MPI_Comm` (default `MPI_COMM_WORLD`) so rank-0 logging matches the session communicator — see `pfc::Model` in `include/openpfc/kernel/simulation/model.hpp`.
+Your model constructs with `(pfc::FFT &fft, const pfc::Domain &domain)` and may take an optional third argument `MPI_Comm` (default `MPI_COMM_WORLD`) so rank-0 logging matches the session communicator — see `pfc::Model` in `include/openpfc/kernel/simulation/model.hpp`.
 
 ```cpp
 // my_model.hpp
@@ -103,9 +103,9 @@ Your model constructs with `(pfc::FFT &fft, const pfc::World &world)` and may ta
 
 class MyModel : public pfc::Model {
 public:
-  explicit MyModel(pfc::FFT &fft, const pfc::World &world,
+  explicit MyModel(pfc::FFT &fft, const pfc::Domain &domain,
                    MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, world, mpi_comm) {}
+      : pfc::Model(fft, domain, mpi_comm) {}
   void initialize(double dt) override;
   void step(double t) override;
 };

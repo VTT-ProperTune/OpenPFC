@@ -9,7 +9,7 @@ Many programs use `pfc::ui::App<Model>` and accept a single configuration file (
 
 Use this page when you are trying to read an input file and understand what kind of thing each section controls. It is not the normative key reference; that lives in [the spectral App configuration reference](../reference/spectral_app_config_reference.md). This page is the bridge between a real JSON or TOML file and the runtime objects OpenPFC builds from it.
 
-For the full lifecycle from configuration to `World`, FFT, `Simulator`, writers, initial conditions and boundary conditions, read [the App pipeline guide](app_pipeline.md). For output formats, continue with [the results I/O guide](io_results.md) and [the binary field layout reference](../reference/binary_field_io_spec.md). If you are building your own `App<Model>`, the practical tutorial is [the minimal custom App walkthrough](../tutorials/custom_app_minimal.md), with [parameter validation](parameter_validation.md) as the companion for `model.params`.
+For the full lifecycle from configuration to `Domain`, FFT, `Simulator`, writers, initial conditions and boundary conditions, read [the App pipeline guide](app_pipeline.md). For output formats, continue with [the results I/O guide](io_results.md) and [the binary field layout reference](../reference/binary_field_io_spec.md). If you are building your own `App<Model>`, the practical tutorial is [the minimal custom App walkthrough](../tutorials/custom_app_minimal.md), with [parameter validation](parameter_validation.md) as the companion for `model.params`.
 
 ## Mental model
 

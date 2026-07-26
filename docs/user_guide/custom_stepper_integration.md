@@ -212,7 +212,7 @@ The `Simulator::step_with_physics()` method provides the integration point for c
 
 // Assume we have:
 // - model: physics model
-// - world: World object
+// - world: Domain object
 // - fft: FFT plan
 // - u: field vector
 // - grad: gradient evaluator

@@ -22,7 +22,7 @@ New to OpenPFC? **Shortest path:** [`../start_here_15_minutes.md`](../start_here
 | Spectral examples sequence (04 → 05 → 12) | [`../tutorials/spectral_examples_sequence.md`](../tutorials/spectral_examples_sequence.md) |
 | End-to-end: build → PNG or binary outputs | [`../tutorials/end_to_end_visualization.md`](../tutorials/end_to_end_visualization.md) |
 | Quick path: three tracks + “next steps” | [`../quickstart.md`](../quickstart.md) |
-| World, decomposition, FFT, `find_package(OpenPFC)` | [`01-basics/README.md`](01-basics/README.md) |
+| Domain, decomposition, FFT, `find_package(OpenPFC)` | [`01-basics/README.md`](01-basics/README.md) |
 | Functional field ops (IC/BC without nested loops) | [`functional_field_ops.md`](functional_field_ops.md) |
 | Tour of main classes and headers | [`../class_tour.md`](../reference/class_tour.md) |
 | Minimal custom `App` project (CMake + JSON + MPI) | [`../tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md) |
