@@ -11,16 +11,17 @@ int main(int argc, char *argv[]) {
 
   // Create MPI session, Domain and Decomposition
   MPI_Worker worker(argc, argv);
-  auto world = domain::create_world({4, 3, 2});
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create({4, 3, 2});
+  auto decomp = decomposition::create(domain, 1);
 
   // Create input field
   // DiscreteField<double, 3> input(decomp);
 
-  auto dimensions = get_size(get_subworld(decomp, 0));
-  auto offsets = get_lower(get_subworld(decomp, 0));
-  auto origin = get_origin(world);
-  auto discretization = get_spacing(world);
+  auto local_box_0 = decomposition::local_box(decomp, 0);
+  auto dimensions = local_box_0.size;
+  auto offsets = local_box_0.low;
+  auto origin = domain::get_origin(domain);
+  auto discretization = domain::get_spacing(domain);
   DiscreteField<double, 3> input(dimensions, offsets, origin, discretization);
 
   // Create a random number generator

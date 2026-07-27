@@ -13,13 +13,14 @@ using namespace pfc;
 // In this example, we will write the results of a simulation to a file.
 int main(int argc, char **argv) {
   MPI_Worker worker(argc, argv);
-  auto world = domain::create_world({4, 3, 2});
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create({4, 3, 2});
+  auto decomposition_obj = decomposition::create(domain, 1);
   // DiscreteField<double, 3> field(decomp);
-  auto dimensions = get_size(get_subworld(decomposition, 0));
-  auto offsets = get_lower(get_subworld(decomposition, 0));
-  auto origin = get_origin(world);
-  auto discretization = get_spacing(world);
+  auto local_box_0 = decomposition::local_box(decomposition_obj, 0);
+  auto dimensions = local_box_0.size;
+  auto offsets = local_box_0.low;
+  auto origin = domain::get_origin(domain);
+  auto discretization = domain::get_spacing(domain);
   DiscreteField<double, 3> field(dimensions, offsets, origin, discretization);
 
   std::vector<double> arr(2 * 3 * 4);
@@ -29,9 +30,9 @@ int main(int argc, char **argv) {
   VtkWriter<double> writer;
   writer.set_uri("results.vti");
   writer.set_field_name("density");
-  writer.set_domain(get_size(world), field.get_size(), field.get_offset());
-  writer.set_origin(get_origin(world));
-  writer.set_spacing(get_spacing(world));
+  writer.set_domain(domain::get_size(domain), field.get_size(), field.get_offset());
+  writer.set_origin(domain::get_origin(domain));
+  writer.set_spacing(domain::get_spacing(domain));
   std::cout << "Writing results to file: " << writer.get_uri() << "\n";
   writer.initialize();
   writer.write(field.get_array().get_data());
@@ -41,13 +42,13 @@ int main(int argc, char **argv) {
 
 /*
 TEST_CASE("VtkWriter", "[VtkWriter]") {
-  auto world = domain::create_world({8, 2, 2});
-  Decomposition decomp(world);
+  auto domain = domain::create({8, 2, 2});
+  Decomposition decomp(domain);
   DiscreteField<double, 3> field(decomp);
   field.apply([](auto x, auto y, auto z) { return x + y + z; });
   VtkWriter<double> writer;
   writer.set_uri("results.vtk");
-  writer.set_domain(get_size(world), field.get_size(), field.get_offset());
+  writer.set_domain(domain::get_size(domain), field.get_size(), field.get_offset());
   writer.write(field.get_array().get_data());
   std::string expectedOutput = R"EXPECTED(<?xml version="1.0" encoding="utf-8"?>
 <VTKFile type="ImageData" version="1.0" byte_order="LittleEndian"
