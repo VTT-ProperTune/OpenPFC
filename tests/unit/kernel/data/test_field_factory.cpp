@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <complex>
-#include <openpfc/kernel/data/field_factory.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 
