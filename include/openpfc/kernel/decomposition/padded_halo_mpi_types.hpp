@@ -99,7 +99,7 @@ inline int checked_padded_extent(int n, int hw) {
  *
  * When `halo_width > 0`, each owned extent must be `>= halo_width` so the
  * owned send slab fits inside the core. Same per-axis fit rule as
- * non-padded `create_face_types_6`. The LocalField `> 2*hw` interior rule
+ * non-padded `create_face_types_6`. The Field `> 2*hw` interior rule
  * does **not** apply here (`PaddedBrick` semantics).
  *
  * @throws std::invalid_argument if `halo_width < 0`, owned extents are

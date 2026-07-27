@@ -144,7 +144,7 @@ struct FaceTypes {
  * (e.g. `nz == 1` for Axes2D) remain valid — same rule as
  * `create_padded_face_types_6`. Overlap of ± faces when an extent is
  * `< 2 * halo_width` is allowed for MPI type construction; higher-level
- * layouts (e.g. `LocalField`) may still require a non-empty interior.
+ * layouts (e.g. `Field`) may still require a non-empty interior.
  *
  * @throws std::invalid_argument if `halo_width < 0`, extents are non-positive,
  *         or (when `halo_width > 0`) any axis is `< halo_width`

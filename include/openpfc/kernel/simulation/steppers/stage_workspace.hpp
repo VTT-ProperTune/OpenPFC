@@ -16,7 +16,7 @@
  * not Model fields.
  *
  * The workspace is constructed with a fixed number of stages and a fixed
- * local buffer size (typically `local_size` from a `LocalField`). All
+ * local buffer size (typically `local_size` from a `Field`). All
  * buffers are value-initialized to zero at construction and can be reset
  * to zero via `reset()`. Stage buffers are accessed by zero-based index
  * with bounds checking that throws `std::out_of_range` for invalid indices.

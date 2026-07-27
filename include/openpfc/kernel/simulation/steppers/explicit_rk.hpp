@@ -304,7 +304,7 @@ private:
  * @brief Build an `ExplicitRKStepper` for the canonical point-wise RHS, given
  *        the local buffer size explicitly.
  *
- * Prefer the `LocalField` overload when you have one — it derives
+ * Prefer the `Field` overload when you have one — it derives
  * `local_size` from `u.size()`.
  *
  * @param eval Per-point gradient evaluator. Captured by reference; must outlive
@@ -351,7 +351,7 @@ template <class T, class Eval, class Model>
 
 /**
  * @brief Multi-field overload: build a `MultiExplicitRKStepper` from a tuple of
- *        `LocalField` references, a composite evaluator, and a model whose
+ *        `Field` references, a composite evaluator, and a model whose
  *        `rhs` returns a tuple-protocol bundle of increments.
  *
  * The composite evaluator is responsible for returning a per-point bundle the
@@ -359,7 +359,7 @@ template <class T, class Eval, class Model>
  * bundle (a `std::tuple` or a struct exposing `as_tuple()`); the stepper scatters
  * the elements into the per-field `du` buffers in order.
  *
- * @param fields Tuple of `LocalField` references whose `size()` defines
+ * @param fields Tuple of `Field` references whose `size()` defines
  *               each per-field internal `du` buffer. The fields themselves
  *               are not stored by the stepper.
  * @param eval Composite per-point evaluator. Captured by reference.

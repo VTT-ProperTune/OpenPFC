@@ -119,7 +119,7 @@ template <typename T> struct RemoteHalo {
 
   /// If `true`, the exchanger calls `core::scatter(recv_values, field, …)`
   /// after `wait_all`. If `false`, the caller reads `recv_values.data()`
-  /// directly (typical for `LocalField` + face-buffer Laplacian patterns).
+  /// directly (typical for `Field` + face-buffer Laplacian patterns).
   bool scatter_after_recv{false};
 
   /// **Optional, purely informational** direction hint, set by

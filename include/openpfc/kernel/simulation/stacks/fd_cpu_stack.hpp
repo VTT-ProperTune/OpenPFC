@@ -24,7 +24,7 @@
  *    after construction.
  *  - `m_u` is an unpadded `pfc::data::Field<double>` (halo=0) sized to the
  *    local subdomain. Face-halo data lives in `m_face_halos` (the legacy
- *    LocalField face-halo layout). Iteration halo width is `fd_order / 2`,
+ *    Field face-halo layout). Iteration halo width is `fd_order / 2`,
  *    applied when building the FD evaluator — not as Field storage padding.
  *
  * `exchange_halos()` is the one-line wrapper every FD time-stepping
