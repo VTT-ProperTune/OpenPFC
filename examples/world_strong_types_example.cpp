@@ -13,13 +13,13 @@
  *
  * **Before (ambiguous):**
  * @code
- * auto world = world::create({256, 256, 256}, {0, 0, 0}, {1, 1, 1});
+ * auto world = domain::create_world({256, 256, 256}, {0, 0, 0}, {1, 1, 1});
  * // Which is which? Have to check documentation!
  * @endcode
  *
  * **After (self-documenting):**
  * @code
- * auto world = world::create(
+ * auto world = domain::create_world(
  *     GridSize({256, 256, 256}),      // Clear: grid dimensions
  *     PhysicalOrigin({0, 0, 0}),      // Clear: origin location
  *     GridSpacing({1, 1, 1})          // Clear: grid spacing
@@ -30,6 +30,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 
@@ -49,7 +50,7 @@ int main() {
     PhysicalOrigin origin({-32.0, -32.0, -32.0});
     GridSpacing spacing({1.0, 1.0, 1.0});
 
-    auto world = create(size, origin, spacing);
+    auto world = domain::create_world(size, origin, spacing);
 
     std::cout << "   Grid size: " << get_size(world)[0] << "³\n";
     std::cout << "   Physical origin: (" << get_origin(world)[0] << ", "
@@ -64,7 +65,7 @@ int main() {
   std::cout << "2. Inline construction:\n";
   {
     auto world =
-        create(GridSize({128, 128, 128}), PhysicalOrigin({-64.0, -64.0, -64.0}),
+        domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({-64.0, -64.0, -64.0}),
                GridSpacing({0.5, 0.5, 0.5}));
 
     std::cout << "   Created 128³ grid with spacing 0.5\n";
@@ -85,7 +86,7 @@ int main() {
     PhysicalOrigin origin({0.0, 0.0, 0.0});
     GridSpacing spacing({0.1, 0.2, 0.4});
 
-    auto world = create(size, origin, spacing);
+    auto world = domain::create_world(size, origin, spacing);
 
     std::cout << "   Grid: " << get_size(world)[0] << "×" << get_size(world)[1]
               << "×" << get_size(world)[2] << "\n";
@@ -112,13 +113,13 @@ int main() {
     GridSpacing spacing({1.0, 1.0, 1.0});
 
     // This compiles - correct order
-    auto world1 = create(size, origin, spacing);
-    std::cout << "   ✓ Correct: create(size, origin, spacing)\n";
+    auto world1 = domain::create_world(size, origin, spacing);
+    std::cout << "   ✓ Correct: create_world(size, origin, spacing)\n";
 
     // These would NOT compile (uncomment to verify):
-    // auto bad1 = create(spacing, size, origin);  // Compile error!
-    // auto bad2 = create(origin, spacing, size);  // Compile error!
-    // auto bad3 = create(size, spacing, origin);  // Compile error!
+    // auto bad1 = create_world(spacing, size, origin);  // Compile error!
+    // auto bad2 = create_world(origin, spacing, size);  // Compile error!
+    // auto bad3 = create_world(size, spacing, origin);  // Compile error!
     std::cout << "   ✗ Wrong parameter orders rejected at compile time\n";
   }
   std::cout << "\n";
@@ -159,19 +160,19 @@ int main() {
   std::cout << "\n";
 
   // ========================================================================
-  // Example 7: Working with World helper functions
+  // Example 7: Working with Domain helper functions
   // ========================================================================
   std::cout << "7. Helper functions use strong types internally:\n";
   {
-    // uniform() now uses strong types internally
-    auto world1 = uniform(64);
-    std::cout << "   uniform(64) creates 64³ grid\n";
+    // create_world_uniform() now uses strong types internally
+    auto world1 = domain::create_world_uniform(64);
+    std::cout << "   create_world_uniform(64) creates 64³ grid\n";
 
-    auto world2 = uniform(128, 0.5);
-    std::cout << "   uniform(128, 0.5) creates 128³ grid with spacing 0.5\n";
+    auto world2 = domain::create_world_uniform(128, 0.5);
+    std::cout << "   create_world_uniform(128, 0.5) creates 128³ grid with spacing 0.5\n";
 
-    auto world3 = from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});
-    std::cout << "   from_bounds() computes spacing automatically\n";
+    auto world3 = domain::create_world_from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});
+    std::cout << "   create_world_from_bounds() computes spacing automatically\n";
   }
   std::cout << "\n";
 
@@ -181,7 +182,7 @@ int main() {
   std::cout << "8. Coordinate transformations:\n";
   {
     auto world =
-        create(GridSize({64, 64, 64}), PhysicalOrigin({-32.0, -32.0, -32.0}),
+        domain::create_world(GridSize({64, 64, 64}), PhysicalOrigin({-32.0, -32.0, -32.0}),
                GridSpacing({1.0, 1.0, 1.0}));
 
     // Index to physical coordinates

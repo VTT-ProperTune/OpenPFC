@@ -3,20 +3,21 @@
 
 /**
  * @file world_helpers_example.cpp
- * @brief Example: Using World construction helper functions
+ * @brief Example: Using Domain construction helper functions
  *
- * Demonstrates the new convenience functions for creating World objects
- * with less boilerplate and clearer intent.
+ * Demonstrates the modern Domain API for creating simulation domains
+ * with less boilerplate and clearer intent using the pfc::domain namespace.
  */
 
 #include <iomanip>
 #include <iostream>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/world.hpp>
 
 using namespace pfc;
 
 int main() {
-  std::cout << "=== World Construction Helpers Example ===\n\n";
+  std::cout << "=== Domain Construction Helpers Example ===\n\n";
 
   // ========================================================================
   // Example 1: Simple uniform grids
@@ -25,8 +26,8 @@ int main() {
   std::cout << "------------------------------------\n";
 
   // Create 64³ grid with unit spacing
-  auto world1 = world::uniform(64);
-  std::cout << "  uniform(64):\n";
+  auto world1 = domain::create_world_uniform(64);
+  std::cout << "  create_world_uniform(64):\n";
   auto size1 = world::get_size(world1);
   std::cout << "    Size: [" << size1[0] << ", " << size1[1] << ", " << size1[2]
             << "]\n";
@@ -38,8 +39,8 @@ int main() {
             << origin1[2] << "]\n\n";
 
   // Create 128³ grid with custom spacing
-  auto world2 = world::uniform(128, 0.5);
-  std::cout << "  uniform(128, 0.5):\n";
+  auto world2 = domain::create_world_uniform(128, 0.5);
+  std::cout << "  create_world_uniform(128, 0.5):\n";
   auto size2 = world::get_size(world2);
   std::cout << "    Size: [" << size2[0] << ", " << size2[1] << ", " << size2[2]
             << "]\n";
@@ -54,13 +55,13 @@ int main() {
   std::cout << "-------------------------------\n";
 
   // Periodic domain from [0, 0, 0] to [10, 10, 10] with 100 cells
-  auto world3 = world::from_bounds({100, 100, 100},    // grid size
+  auto world3 = domain::create_world_from_bounds({100, 100, 100},    // grid size
                                    {0.0, 0.0, 0.0},    // lower bounds
                                    {10.0, 10.0, 10.0}, // upper bounds
                                    {true, true, true}  // periodic in all directions
   );
 
-  std::cout << "  from_bounds (periodic):\n";
+  std::cout << "  create_world_from_bounds (periodic):\n";
   auto size3 = world::get_size(world3);
   std::cout << "    Size: [" << size3[0] << ", " << size3[1] << ", " << size3[2]
             << "]\n";
@@ -77,11 +78,11 @@ int main() {
 
   // Non-periodic in x direction
   auto world4 =
-      world::from_bounds({100, 100, 100}, {0.0, 0.0, 0.0}, {10.0, 10.0, 10.0},
+      domain::create_world_from_bounds({100, 100, 100}, {0.0, 0.0, 0.0}, {10.0, 10.0, 10.0},
                          {false, true, true} // non-periodic in x
       );
 
-  std::cout << "  from_bounds (non-periodic in x):\n";
+  std::cout << "  create_world_from_bounds (non-periodic in x):\n";
   auto spacing4 = world::get_spacing(world4);
   std::cout << "    Spacing: [" << spacing4[0] << ", " << spacing4[1] << ", "
             << spacing4[2] << "]\n";
@@ -94,8 +95,8 @@ int main() {
   std::cout << "3. Custom spacing, default origin\n";
   std::cout << "-----------------------------------\n";
 
-  auto world5 = world::with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});
-  std::cout << "  with_spacing({64, 64, 128}, {0.1, 0.1, 0.05}):\n";
+  auto world5 = domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});
+  std::cout << "  create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05}):\n";
   auto size5 = world::get_size(world5);
   std::cout << "    Size: [" << size5[0] << ", " << size5[1] << ", " << size5[2]
             << "]\n";
@@ -112,8 +113,8 @@ int main() {
   std::cout << "4. Custom origin, unit spacing\n";
   std::cout << "--------------------------------\n";
 
-  auto world6 = world::with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});
-  std::cout << "  with_origin({64, 64, 64}, {-5.0, -5.0, 0.0}):\n";
+  auto world6 = domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});
+  std::cout << "  create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0}):\n";
   auto size6 = world::get_size(world6);
   std::cout << "    Size: [" << size6[0] << ", " << size6[1] << ", " << size6[2]
             << "]\n";
@@ -125,35 +126,17 @@ int main() {
             << spacing6[2] << "]\n\n";
 
   // ========================================================================
-  // Example 5: Comparison with traditional create()
+  // Example 5: Benefits summary
   // ========================================================================
-  std::cout << "5. Comparison: Helper vs Traditional\n";
-  std::cout << "--------------------------------------\n";
-
-  // Traditional way (still works!)
-  auto traditional =
-      world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
-
-  // New helper way (cleaner!)
-  auto helper = world::uniform(64);
-
-  std::cout << "  Traditional: create({64,64,64}, {0,0,0}, {1,1,1})\n";
-  std::cout << "  Helper:      uniform(64)\n";
-  std::cout << "  Same result: " << (traditional == helper ? "YES" : "NO") << "\n\n";
-
-  // ========================================================================
-  // Example 6: Benefits summary
-  // ========================================================================
-  std::cout << "Benefits of Helper Functions:\n";
+  std::cout << "Benefits of Domain Helper Functions:\n";
   std::cout << "==============================\n";
-  std::cout << "  ✓ Less boilerplate (uniform(64) vs create({64,64,64}, {0,0,0}, "
+  std::cout << "  ✓ Less boilerplate (create_world_uniform(64) vs create({64,64,64}, {0,0,0}, "
                "{1,1,1}))\n";
-  std::cout << "  ✓ Self-documenting code (from_bounds shows intent)\n";
+  std::cout << "  ✓ Self-documenting code (create_world_from_bounds shows intent)\n";
   std::cout << "  ✓ Automatic spacing calculation (no manual math)\n";
   std::cout << "  ✓ Early validation (catch errors at construction)\n";
   std::cout << "  ✓ Zero runtime overhead (all inline)\n";
-  std::cout << "  ✓ Backward compatible (old create() still works)\n";
+  std::cout << "  ✓ Modern API (part of pfc::domain namespace)\n";
 
   return 0;
 }
