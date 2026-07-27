@@ -13,6 +13,7 @@
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/domain/create.hpp>
 
 using namespace pfc;
 using Catch::Approx;
@@ -63,8 +64,8 @@ TEST_CASE("test_decay_single_step", "[stepper][equivalence]") {
   constexpr int nx = 8, ny = 8, nz = 8;
 
   // Legacy setup
-  auto world = world::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                             GridSpacing({1, 1, 1}));
+  auto world = pfc::domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
+                                        GridSpacing({1, 1, 1}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   LegacyDecayModel legacy_model(fft, world);
@@ -99,8 +100,8 @@ TEST_CASE("test_decay_multiple_steps", "[stepper][equivalence]") {
   constexpr int num_steps = 10;
 
   // Legacy setup
-  auto world = world::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                             GridSpacing({1, 1, 1}));
+  auto world = pfc::domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
+                                        GridSpacing({1, 1, 1}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   LegacyDecayModel legacy_model(fft, world);
@@ -138,8 +139,8 @@ TEST_CASE("test_decay_with_nonzero_initial_condition", "[stepper][equivalence]")
   };
 
   // Legacy setup
-  auto world = world::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                             GridSpacing({1, 1, 1}));
+  auto world = pfc::domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
+                                        GridSpacing({1, 1, 1}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   LegacyDecayModel legacy_model(fft, world);

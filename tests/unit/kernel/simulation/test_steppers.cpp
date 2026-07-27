@@ -12,6 +12,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/domain/create.hpp>
 
 using namespace pfc::sim::steppers;
 using Catch::Approx;
@@ -271,9 +272,9 @@ TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
   MockEval eval;
 
   // Create LocalField using named constructor
-  auto world = pfc::world::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto world = pfc::domain::create_world(pfc::GridSize({static_cast<int>(n), 1, 1}),
+                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
   pfc::data::Field<double> u = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
 
@@ -319,9 +320,9 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
   MockEval eval;
 
   // Create LocalFields using named constructor
-  auto world = pfc::world::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto world = pfc::domain::create_world(pfc::GridSize({static_cast<int>(n), 1, 1}),
+                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
   pfc::data::Field<double> u1 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
   pfc::data::Field<double> u2 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
