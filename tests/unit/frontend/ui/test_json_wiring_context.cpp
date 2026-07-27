@@ -8,6 +8,7 @@
 #include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/simulation_wiring.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -19,10 +20,11 @@ using json = nlohmann::json;
 
 TEST_CASE("JsonWiringContext IC/BC wiring matches legacy overloads",
           "[ui][wiring]") {
-  auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = pfc::decomposition::create(world, 1);
+  auto domain = pfc::domain::create(pfc::GridSize({4, 4, 4}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = pfc::decomposition::create(domain, 1);
+  const auto& world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -46,10 +48,11 @@ TEST_CASE("JsonWiringContext IC/BC wiring matches legacy overloads",
 
 TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringContext",
           "[ui][wiring]") {
-  auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = pfc::decomposition::create(world, 1);
+  auto domain = pfc::domain::create(pfc::GridSize({4, 4, 4}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = pfc::decomposition::create(domain, 1);
+  const auto& world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -68,10 +71,11 @@ TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringContext",
 
 TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringSession",
           "[ui][wiring]") {
-  auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = pfc::decomposition::create(world, 1);
+  auto domain = pfc::domain::create(pfc::GridSize({4, 4, 4}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = pfc::decomposition::create(domain, 1);
+  const auto& world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -88,10 +92,11 @@ TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringSession",
 
 TEST_CASE("JsonWiringSession accepts temporary catalogs without dangling references",
           "[ui][wiring]") {
-  auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = pfc::decomposition::create(world, 1);
+  auto domain = pfc::domain::create(pfc::GridSize({4, 4, 4}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = pfc::decomposition::create(domain, 1);
+  const auto& world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -112,10 +117,11 @@ TEST_CASE("JsonWiringSession accepts temporary catalogs without dangling referen
 
 TEST_CASE("JsonWiringSession accepts lvalue catalog references",
           "[ui][wiring]") {
-  auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = pfc::decomposition::create(world, 1);
+  auto domain = pfc::domain::create(pfc::GridSize({4, 4, 4}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = pfc::decomposition::create(domain, 1);
+  const auto& world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
