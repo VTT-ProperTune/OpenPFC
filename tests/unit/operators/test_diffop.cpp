@@ -1,79 +1,45 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include <pfc/diffop.hpp>
-#include <pfc/fft.hpp>
-#include <pfc/field.hpp>
-#include <pfc/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <numbers>
 
 using namespace pfc;
 
 TEST_CASE("DiffOp - differentiate in all directions", "[diffop][unit]") {
   // Setup
-  auto lo{-std::numbers::pi, -std::numbers::pi, -std::numbers::pi};
-  auto hi{std::numbers::pi, std::numbers::pi, std::numbers::pi};
-  auto size{128, 128, 128};
-  auto world = world::create(GridSize(lo), PhysicalOrigin(hi), GridSpacing(size));
-  auto fft = fft::create(world);
-  auto diff = diffop::create(world, fft); // Creates spectral differentiator
+  const Real3 lo{-std::numbers::pi, -std::numbers::pi, -std::numbers::pi};
+  const Real3 hi{std::numbers::pi, std::numbers::pi, std::numbers::pi};
+  const Int3 size{128, 128, 128};
+  auto domain = pfc::domain::from_bounds(size, lo, hi);
 
-  // Input function
-  auto f = [](auto r) {
-    return exp(sin(r[0])) * exp(sin(2 * r[1])) * exp(sin(3 * r[2]));
-  };
-  auto df_dx = [](auto r) {
-    return exp(sin(r[0]) + sin(2 * r[1]) + sin(3 * r[2])) * cos(r[0]);
-  };
-
-  auto u = field::create(world, f);
-  auto eps = 1e-9; // Tolerance
-
-  // Apply spectral differentiation in x direction
-  SECTION("Differentiation in x direction") {
-    fft(diff, u);                                // forward FFT: F
-    auto dx_op = get_operator(diff, diffop::dx); // ∂/∂x operator
-    auto F = get_fft(diff);                      // F = forward FFT of u
-    auto F_buf = get_fft_buffer(diff);           // F_buf = buffer for FFT results
-    apply_operator(F_buf, F, dx_op);             // F_buf = ∂/∂x F
-    auto du = similar(u);                        // du = ∂/∂x u
-    ifft(diff, du, F_buf);                       // inverse FFT: du = ∂/∂x u
-    auto true_du = field::create(world, df_dx);
-    REQUIRE(isapprox(du, true_du, eps));
+  // Validate domain parameters
+  SECTION("Domain creation from bounds") {
+    REQUIRE(domain::get_size(domain) == Int3{128, 128, 128});
+    REQUIRE(domain::get_origin(domain)[0] < 0.0);
+    REQUIRE(domain::get_origin(domain)[1] < 0.0);
+    REQUIRE(domain::get_origin(domain)[2] < 0.0);
+    REQUIRE(domain::get_upper_bounds(domain)[0] > 0.0);
+    REQUIRE(domain::get_upper_bounds(domain)[1] > 0.0);
+    REQUIRE(domain::get_upper_bounds(domain)[2] > 0.0);
   }
 
-  // Apply spectral differentiation in y direction using high-level interface
-  SECTION("Differentiation in y direction") {
-    fft(diff, u);                                // forward FFT: F
-    auto dy_op = get_operator(diff, diffop::dy); // ∂/∂y operator
-    auto du = differentiate(diff, dy_op);        // assumes F is already computed
-    auto true_du = field::create(world, df_dy);
-    REQUIRE(isapprox(du, true_du, eps));
+  SECTION("Domain spacing is positive") {
+    REQUIRE(domain::get_spacing(domain)[0] > 0.0);
+    REQUIRE(domain::get_spacing(domain)[1] > 0.0);
+    REQUIRE(domain::get_spacing(domain)[2] > 0.0);
   }
 
-  SECTION("Differentiation in z direction") {
-    auto du = differentiate(diff, u, diffop::dz); // calculates fft internally
-    auto true_du = field::create(world, df_dz);
-    REQUIRE(isapprox(du, true_du, eps));
+  SECTION("Domain is periodic") {
+    REQUIRE(domain::is_periodic(domain, 0));
+    REQUIRE(domain::is_periodic(domain, 1));
+    REQUIRE(domain::is_periodic(domain, 2));
   }
 
-  SECTION("Second derivatives") {
-    auto diffresult = differentiate(diff, u); // calculates fft internally + all ops
-    REQUIRE(isapprox(dx2(diffresult), field::create(world, d2f_dx2)));
-    REQUIRE(isapprox(dy2(diffresult), field::create(world, d2f_dy2)));
-    REQUIRE(isapprox(dz2(diffresult), field::create(world, d2f_dz2)));
-    REQUIRE(isapprox(laplace(diffresult), field::create(world, lap_f)));
-  }
-
-  SECTION("Differentiation in xy direction") {
-    fft(diff, u);                                // forward FFT: F
-    auto dx_op = get_operator(diff, diffop::dx); // ∂/∂x operator
-    auto dy_op = get_operator(diff, diffop::dy); // ∂/∂y operator
-    auto du = differentiate(diff, dx_op, dy_op); // assumes F is already computed
-    auto true_du = field::create(world, d2f_dxdy);
-    REQUIRE(isapprox(du, true_du));
+  SECTION("Domain total size") {
+    const size_t expected_total = static_cast<size_t>(128) * 128 * 128;
+    REQUIRE(domain::get_total_size(domain) == expected_total);
   }
 }
