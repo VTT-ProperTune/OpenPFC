@@ -7,7 +7,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/legacy_adapter.hpp>
@@ -27,7 +28,9 @@ public:
 } // namespace
 
 TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
-  auto world = world::create(GridSize({8, 4, 2}).to_vector3());
+  auto world = domain::create_world(GridSize({8, 4, 2}),
+                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -47,7 +50,9 @@ TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
 }
 
 TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
-  auto world = world::create(GridSize({4, 4, 1}).to_vector3());
+  auto world = domain::create_world(GridSize({4, 4, 1}),
+                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -68,7 +73,9 @@ TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
 
 TEST_CASE("field::apply_inplace modifies field based on current value",
           "[field_ops][unit]") {
-  auto world = world::create(GridSize({4, 2, 2}).to_vector3());
+  auto world = domain::create_world(GridSize({4, 2, 2}),
+                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -91,8 +98,8 @@ TEST_CASE("field::apply_inplace modifies field based on current value",
 
 TEST_CASE("field::apply_inplace selective update preserves untouched cells",
           "[field_ops][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto world = domain::create_world(GridSize({8, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -126,7 +133,9 @@ TEST_CASE("field::apply_inplace selective update preserves untouched cells",
 
 TEST_CASE("field::apply_inplace_with_time uses time parameter",
           "[field_ops][unit]") {
-  auto world = world::create(GridSize({4, 2, 1}).to_vector3());
+  auto world = domain::create_world(GridSize({4, 2, 1}),
+                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -148,7 +157,9 @@ TEST_CASE("field::apply_inplace_with_time uses time parameter",
 }
 
 TEST_CASE("legacy adapter wraps lambda into FieldModifier", "[field_ops][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}).to_vector3());
+  auto world = domain::create_world(GridSize({8, 1, 1}),
+                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
   DummyModel model(fft, world);
