@@ -13,7 +13,7 @@ using namespace pfc;
 // In this example, we will write the results of a simulation to a file.
 int main(int argc, char **argv) {
   MPI_Worker worker(argc, argv);
-  auto world = world::create({4, 3, 2});
+  auto world = domain::create_world({4, 3, 2});
   auto decomposition = decomposition::create(world, 1);
   // DiscreteField<double, 3> field(decomp);
   auto dimensions = get_size(get_subworld(decomposition, 0));
@@ -41,13 +41,13 @@ int main(int argc, char **argv) {
 
 /*
 TEST_CASE("VtkWriter", "[VtkWriter]") {
-  World world = world::create({8, 2, 2});
+  World world = domain::create_world({8, 2, 2});
   Decomposition decomp(world);
   DiscreteField<double, 3> field(decomp);
   field.apply([](auto x, auto y, auto z) { return x + y + z; });
   VtkWriter<double> writer;
   writer.set_uri("results.vtk");
-  writer.set_domain(world.get_size(), field.get_size(), field.get_offset());
+  writer.set_domain(get_size(world), field.get_size(), field.get_offset());
   writer.write(field.get_array().get_data());
   std::string expectedOutput = R"EXPECTED(<?xml version="1.0" encoding="utf-8"?>
 <VTKFile type="ImageData" version="1.0" byte_order="LittleEndian"

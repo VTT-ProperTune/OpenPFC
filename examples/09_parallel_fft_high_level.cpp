@@ -9,9 +9,9 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
-  // Create MPI session, World and Decomposition
+  // Create MPI session, Domain and Decomposition
   MPI_Worker worker(argc, argv);
-  auto world = world::create({4, 3, 2});
+  auto world = domain::create_world({4, 3, 2});
   auto decomp = decomposition::create(world, 1);
 
   // Create input field
