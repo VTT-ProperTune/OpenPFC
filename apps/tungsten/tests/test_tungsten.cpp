@@ -133,7 +133,9 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
 
 TEST_CASE("Tungsten parameter setters", "[Tungsten][Setters]") {
   pfc::MPI_Worker worker(0, nullptr);
-  auto world = pfc::domain::create(pfc::Int3{32, 32, 32});
+  auto world = pfc::domain::create(pfc::GridSize(pfc::Int3{32, 32, 32}),
+                                    pfc::PhysicalOrigin(pfc::Real3{0, 0, 0}),
+                                    pfc::GridSpacing(pfc::Real3{1, 1, 1}));
   auto decomp = pfc::decomposition::create(world, 1);
   auto fft = pfc::fft::create(decomp);
   Tungsten tungsten(fft, world);
