@@ -18,14 +18,7 @@ private:
   double D = 1.0;                              // Diffusion coefficient
 
 public:
-  /**
-   * @brief Constructs a CahnHilliard instance with the given World object.
-   *
-   * @param world The World object to initialize the model.
-   */
-  explicit CahnHilliard(FFT &fft, const World &world) : Model(fft, world) {
-    // Additional initialization if needed
-  }
+  using Model::Model; // Inherit the default constructor of base class
 
   void initialize(double dt) override {
     auto &fft = pfc::get_fft(*this);
@@ -39,7 +32,7 @@ public:
     pfc::add_real_field(*this, "concentration", c);
 
     // prepare operators
-    World w = pfc::get_world(*this);
+    auto &w = pfc::get_world(*this);
     std::array<int, 3> o_low = get_outbox(fft).low;
     std::array<int, 3> o_high = get_outbox(fft).high;
     size_t idx = 0;
@@ -110,9 +103,9 @@ int main(int argc, char **argv) {
   double z0 = 0.0;
 
   // Construct world, decomposition, fft and model
-  // Using strong types for type-safe World construction
-  auto world = world::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
-                             GridSpacing{{dx, dy, dz}});
+  // Using strong types for type-safe Domain construction
+  auto world = domain::create_world(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
+                                    GridSpacing{{dx, dy, dz}});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   CahnHilliard model(fft, world);
