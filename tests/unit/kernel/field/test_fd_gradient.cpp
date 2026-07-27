@@ -32,7 +32,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -64,10 +64,10 @@ struct OnlyX {
 };
 
 Field<double> make_field(int N, int hw) {
-  auto world = pfc::world::create(pfc::GridSize({N, N, N}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
+  auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
   // LocalField-compatible: unpadded storage + iteration halo metadata.
   return pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, hw);
 }
@@ -150,8 +150,8 @@ TEST_CASE("FdGradient ctor throws when halo_width is below stencil half_width",
   REQUIRE_THROWS_AS(pfc::field::create<OnlyXX>(u, order), std::invalid_argument);
 
   using namespace pfc;
-  auto world = world::create(GridSize({N, N, N}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create({N, N, N});
+  auto decomp = decomposition::create(domain, 1);
   field::PaddedBrick<double> brick(decomp, /*rank=*/0, hw);
   REQUIRE_THROWS_AS(
       (pfc::gradient::FDGradient<OnlyXX>(brick, order)), std::invalid_argument);
@@ -188,8 +188,8 @@ TEST_CASE("pfc::gradient::FDGradient binds to a PaddedBrick and matches the "
   // PaddedBrick via the brick-binding constructor (default order = 2). The
   // pfc::field::FdGradient alias must remain spell-compatible.
   using namespace pfc;
-  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create({8, 8, 8});
+  auto decomp = decomposition::create(domain, 1);
 
   field::PaddedBrick<double> u(decomp, /*rank=*/0, /*hw=*/1);
   u.apply([](double x, double, double) { return -3.0 * x; });
@@ -261,8 +261,8 @@ TEST_CASE("FDGradient PaddedBrick constructor accepts callback",
   auto callback = [&callback_invoked]() { ++callback_invoked; };
 
   using namespace pfc;
-  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create({8, 8, 8});
+  auto decomp = decomposition::create(domain, 1);
 
   field::PaddedBrick<double> u(decomp, /*rank=*/0, /*hw=*/1);
   u.apply([](double x, double, double) { return -3.0 * x; });

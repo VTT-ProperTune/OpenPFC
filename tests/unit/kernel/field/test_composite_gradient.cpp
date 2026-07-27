@@ -30,7 +30,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
@@ -66,10 +66,10 @@ TEST_CASE("CompositeGradient fans two heterogeneous FD evaluators into a "
   constexpr int N = 8;
   const int order = 2;
 
-  auto world = pfc::world::create(pfc::GridSize({N, N, N}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
+  auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
 
   auto u = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo_width=*/1);
 
