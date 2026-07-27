@@ -18,7 +18,7 @@ find_package(OpenMP COMPONENTS CXX)
 #   heat3d_fd_scratch          — version 0; bare triple loops, raw pointers,
 #                                only PaddedHaloExchanger from openpfc
 #   heat3d_fd_manual           — laboratory-style explicit-stencil FD driver
-#   heat3d_fd                  — compact FD (Field + PaddedHalo +
+#   heat3d_fd                  — compact FD (pfc::data::Field + PaddedHalo +
 #                                FDGradient + for_each, decoupled in main)
 #   heat3d_spectral_pointwise  — point-wise spectral RHS + explicit Euler
 #   heat3d_spectral            — implicit-Euler spectral
@@ -34,7 +34,7 @@ foreach(_target IN LISTS _heat3d_binaries)
   install(TARGETS ${_target} DESTINATION bin)
 endforeach()
 
-# Catch2-based unit tests for HeatModel + LocalField/Euler integration.
+# Catch2-based unit tests for HeatModel + field stack/Euler integration.
 # Mirrors the gating used by apps/tungsten and apps/aluminumNew so the test
 # target only builds when the project was configured with tests enabled and
 # Catch2 is actually available.
