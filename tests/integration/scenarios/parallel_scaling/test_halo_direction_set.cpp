@@ -31,7 +31,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -180,8 +179,8 @@ TEST_CASE("PaddedHaloExchanger Axes2D leaves ±Z halos untouched on nz=1 slab",
   // Single-rank, periodic, 2D slab (nz=1). With `Axes3D()` periodic ±Z would
   // fill the Z halos (here from the same rank's owned cells); with
   // `Axes2D()` they must remain at the sentinel value.
-  auto world = pfc::world::create(GridSize({8, 8, 1}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, 1);
+  auto global_domain = pfc::domain::create({8, 8, 1});
+  auto decomp = pfc::decomposition::create(global_domain, 1);
 
   const int hw = 1;
   auto u = data::field_from_subdomain<double>(decomp, rank, hw);
@@ -223,8 +222,8 @@ TEST_CASE("PaddedHaloExchanger Axes2D matches Axes3D in XY (two-rank X-split)",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = pfc::world::create(GridSize({16, 8, 1}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 1});
+  auto decomp = pfc::decomposition::create(global_domain, {2, 1, 1});
 
   const int hw = 1;
   auto u_axes2d = data::field_from_subdomain<double>(decomp, rank, hw);
@@ -281,8 +280,8 @@ TEST_CASE("HaloDirectionSelector overrides the uniform direction set",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = pfc::world::create(GridSize({16, 8, 1}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 1});
+  auto decomp = pfc::decomposition::create(global_domain, {2, 1, 1});
 
   // Selector: rank 0 → Axes2D (4 dirs); rank 1 → ±X only (2 dirs).
   halo::HaloDirectionSelector selector = [](int r) {
@@ -319,8 +318,8 @@ TEST_CASE("Mismatched HaloDirectionSelector throws at construction",
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = pfc::world::create(GridSize({16, 8, 1}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 1});
+  auto decomp = pfc::decomposition::create(global_domain, {2, 1, 1});
 
   // Shared X face disagrees: rank 0 posts ±X (Axes2D); rank 1 has ±Y only.
   halo::HaloDirectionSelector selector = [](int r) {
@@ -345,8 +344,8 @@ TEST_CASE("Agreeing Axes2D constructs HaloExchanger and PersistentHaloExchanger"
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (size != 2) return;
 
-  auto world = pfc::world::create(GridSize({16, 8, 1}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 1});
+  auto decomp = pfc::decomposition::create(global_domain, {2, 1, 1});
   const int hw = 1;
 
   auto domain = decomposition::domain(decomp);

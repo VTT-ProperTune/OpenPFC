@@ -10,8 +10,6 @@
 #include <vector>
 
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -52,9 +50,9 @@ TEST_CASE("5-point XY Laplacian of constant field is zero (nz=1)", "[MPI][fd][xy
     return;
   }
 
-  auto world = world::create(GridSize({24, 24, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create(pfc::GridSize({24, 24, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                             pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
@@ -108,9 +106,9 @@ TEST_CASE("laplacian2d_xy_periodic_separated<2> matches analytic 2D Laplacian on
   const double dx = 2.0 * std::numbers::pi / static_cast<double>(N);
   const double inv_dx2 = 1.0 / (dx * dx);
 
-  auto world = world::create(GridSize({N, N, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({dx, dx, dx}));
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create(pfc::GridSize({N, N, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                             pfc::GridSpacing({dx, dx, dx}));
+  auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
@@ -177,10 +175,10 @@ TEST_CASE("Separated face halos contain opposite periodic neighbor faces (XY)",
 
   constexpr int nx_glob = 12;
   constexpr int ny_glob = 5;
-  auto world =
-      world::create(GridSize({nx_glob, ny_glob, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, {3, 1, 1});
+  auto global_domain =
+      pfc::domain::create(pfc::GridSize({nx_glob, ny_glob, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(global_domain, {3, 1, 1});
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);
@@ -236,11 +234,11 @@ TEST_CASE("5-point XY separated periodic Laplacian matches serial global formula
 
   constexpr int nx_glob = 12;
   constexpr int ny_glob = 12;
-  auto world =
-      world::create(GridSize({nx_glob, ny_glob, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = (size == 2) ? decomposition::create(world, {2, 1, 1})
-                            : decomposition::create(world, {2, 2, 1});
+  auto global_domain =
+      pfc::domain::create(pfc::GridSize({nx_glob, ny_glob, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = (size == 2) ? decomposition::create(global_domain, {2, 1, 1})
+                            : decomposition::create(global_domain, {2, 2, 1});
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_size = world::get_size(local_world);

@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
@@ -127,8 +127,8 @@ TEST_CASE("StagePreparationService: scalar prepare fills ±X ghosts",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 4});
+  auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const int hw = 2;
   auto u = data::field_from_subdomain<double>(decomp, rank, hw);
@@ -159,8 +159,8 @@ TEST_CASE("StagePreparationService: two-field prepare fills both ghost rings",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 4});
+  auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const int hw = 1;
   auto u = data::field_from_subdomain<double>(decomp, rank, hw);
@@ -198,8 +198,8 @@ TEST_CASE("StagePreparationService: needs_halo=false leaves ghosts untouched",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 4});
+  auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const int hw = 1;
   auto u = data::field_from_subdomain<double>(decomp, rank, hw);
@@ -230,8 +230,8 @@ TEST_CASE("StagePreparationService: reject/retry re-prepare restores ghosts",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 4});
+  auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const int hw = 2;
   auto u = data::field_from_subdomain<double>(decomp, rank, hw);
@@ -269,8 +269,8 @@ TEST_CASE("StagePreparationService: boundary hook ordering vs halo",
   if (size != 2)
     return;
 
-  auto world = world::create(GridSize({16, 8, 4}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create({16, 8, 4});
+  auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const int hw = 1;
   auto u = data::field_from_subdomain<double>(decomp, rank, hw);

@@ -34,7 +34,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -172,9 +172,8 @@ TEST_CASE("FullPaddedDeviceHalo: 1-rank periodic full-fill (all 26 halos)",
   }
 
   const Int3 global_size{8, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}));
-  auto decomp = pfc::decomposition::create(world, 1);
+  auto global_domain = pfc::domain::create(global_size);
+  auto decomp = pfc::decomposition::create(global_domain, 1);
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/1, /*n_fields=*/2);
 }
@@ -192,9 +191,8 @@ TEST_CASE("FullPaddedDeviceHalo: 2-rank 2x1x1 full-fill (X real, Y/Z self)",
   }
 
   const Int3 global_size{8, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}));
-  auto decomp = pfc::decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create(global_size);
+  auto decomp = pfc::decomposition::create(global_domain, {2, 1, 1});
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/1, /*n_fields=*/2);
 }
@@ -212,9 +210,8 @@ TEST_CASE("FullPaddedDeviceHalo: 4-rank 2x2x1 full-fill (X+Y real, Z self)",
   }
 
   const Int3 global_size{8, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}));
-  auto decomp = pfc::decomposition::create(world, {2, 2, 1});
+  auto global_domain = pfc::domain::create(global_size);
+  auto decomp = pfc::decomposition::create(global_domain, {2, 2, 1});
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/1, /*n_fields=*/2);
 }
@@ -232,9 +229,8 @@ TEST_CASE("FullPaddedDeviceHalo: hw=2 1-rank widened halo correctness",
   }
 
   const Int3 global_size{6, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}));
-  auto decomp = pfc::decomposition::create(world, 1);
+  auto global_domain = pfc::domain::create(global_size);
+  auto decomp = pfc::decomposition::create(global_domain, 1);
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/2, /*n_fields=*/1);
 }
@@ -252,9 +248,8 @@ TEST_CASE("FullPaddedDeviceHalo: Axes3D set fills only the 6 axis faces",
   }
 
   const Int3 global_size{8, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}));
-  auto decomp = pfc::decomposition::create(world, 1);
+  auto global_domain = pfc::domain::create(global_size);
+  auto decomp = pfc::decomposition::create(global_domain, 1);
 
   const int hw = 1;
   const std::size_t n_fields = 1;

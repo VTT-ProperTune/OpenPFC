@@ -20,7 +20,6 @@
 #include <cstddef>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -150,9 +149,9 @@ TEST_CASE("FullPaddedHaloExchanger: 1-rank periodic full-fill (all 26 halos)",
   }
 
   const Int3 global_size{8, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, 1);
+  auto global_domain = pfc::domain::create(
+      pfc::GridSize({global_size[0], global_size[1], global_size[2]}).value);
+  auto decomp = pfc::decomposition::create(global_domain, 1);
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/1);
 }
@@ -167,9 +166,9 @@ TEST_CASE("FullPaddedHaloExchanger: 2-rank 2x1x1 full-fill (X real, Y/Z self)",
   }
 
   const Int3 global_size{8, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, {2, 1, 1});
+  auto global_domain = pfc::domain::create(
+      pfc::GridSize({global_size[0], global_size[1], global_size[2]}).value);
+  auto decomp = pfc::decomposition::create(global_domain, {2, 1, 1});
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/1);
 }
@@ -184,9 +183,9 @@ TEST_CASE("FullPaddedHaloExchanger: 4-rank 2x2x1 full-fill (X+Y real, Z self)",
   }
 
   const Int3 global_size{8, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, {2, 2, 1});
+  auto global_domain = pfc::domain::create(
+      pfc::GridSize({global_size[0], global_size[1], global_size[2]}).value);
+  auto decomp = pfc::decomposition::create(global_domain, {2, 2, 1});
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/1);
 }
@@ -201,9 +200,9 @@ TEST_CASE("FullPaddedHaloExchanger: hw=2 1-rank widened halo correctness",
   }
 
   const Int3 global_size{6, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}).to_vector3());
-  auto decomp = pfc::decomposition::create(world, 1);
+  auto global_domain = pfc::domain::create(
+      pfc::GridSize({global_size[0], global_size[1], global_size[2]}).value);
+  auto decomp = pfc::decomposition::create(global_domain, 1);
 
   run_full_halo_check(decomp, rank, global_size, /*hw=*/2);
 }

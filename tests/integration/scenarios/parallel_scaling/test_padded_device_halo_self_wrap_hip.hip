@@ -21,7 +21,7 @@
 #include <cstdlib>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -142,9 +142,8 @@ TEST_CASE("HIP PaddedDeviceHaloExchanger self-wrap face halos hw=1",
   }
 
   const Int3 global_size{8, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}));
-  auto decomp = pfc::decomposition::create(world, 1);
+  auto global_domain = pfc::domain::create(global_size);
+  auto decomp = pfc::decomposition::create(global_domain, 1);
 
   const int hw = 1;
   const FaceHaloRef ref = build_face_reference(rank, decomp, global_size, hw);
@@ -182,9 +181,8 @@ TEST_CASE("HIP PaddedDeviceHaloExchanger self-wrap face halos hw=2 packed",
   REQUIRE(::setenv("OPENPFC_HIP_FORCE_PACKED_HALO", "1", /*overwrite=*/1) == 0);
 
   const Int3 global_size{6, 6, 4};
-  auto world = pfc::world::create(
-      pfc::GridSize({global_size[0], global_size[1], global_size[2]}));
-  auto decomp = pfc::decomposition::create(world, 1);
+  auto global_domain = pfc::domain::create(global_size);
+  auto decomp = pfc::decomposition::create(global_domain, 1);
 
   {
     const int hw = 2;

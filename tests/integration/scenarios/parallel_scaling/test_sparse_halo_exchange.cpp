@@ -31,8 +31,7 @@
 #include <cstddef>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
@@ -110,9 +109,9 @@ TEST_CASE("SparseHaloExchanger: Axes3D self-wrap on a single rank",
 
   constexpr int N = 4;
   constexpr int hw = 1;
-  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  auto global_domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, nproc);
+  auto decomp = decomposition::create(global_domain, nproc);
 
   const std::size_t nlocal = static_cast<std::size_t>(N) *
                              static_cast<std::size_t>(N) *
@@ -180,9 +179,9 @@ TEST_CASE("SparseHaloExchanger: Full3D self-wrap delivers edge data",
 
   constexpr int N = 4;
   constexpr int hw = 1;
-  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  auto global_domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, nproc);
+  auto decomp = decomposition::create(global_domain, nproc);
 
   const std::size_t nlocal = static_cast<std::size_t>(N) *
                              static_cast<std::size_t>(N) *
@@ -242,9 +241,9 @@ TEST_CASE("SparseHaloExchanger: Axes3D X-split on np=2 delivers neighbour data",
   constexpr int Ny = 4;
   constexpr int Nz = 1;
   constexpr int hw = 1;
-  auto world = world::create(GridSize({Nx, Ny, Nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  auto global_domain = pfc::domain::create(GridSize({Nx, Ny, Nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
   const auto &local_world = decomposition::get_subworld(decomp, rank);
   auto local_lower = world::get_lower(local_world);
@@ -307,9 +306,9 @@ TEST_CASE("Connectivity::Edges yields faces+edges, no corners",
 
   constexpr int N = 6;
   constexpr int hw = 1;
-  auto world = world::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  auto global_domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = decomposition::create(world, nproc);
+  auto decomp = decomposition::create(global_domain, nproc);
 
   auto patterns = halo::create_halo_patterns<backend::CpuTag>(
       decomp, rank, halo::Connectivity::Edges, hw);
