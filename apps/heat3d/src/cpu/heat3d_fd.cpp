@@ -17,36 +17,14 @@
  * concerns** that drive an FD step — halo exchange, gradient evaluation,
  * and iteration — so a reader can see where each one lives:
  *
- *  - `pfc::data::Field<double, HostSpace>` — one contiguous owned-plus-halo-ring
- *    buffer (`[-hw, nx+hw)` indexing along each axis). Storage only;
- *    MPI-unaware. `u` holds the state, `du` holds the residual; both are
- *    plain fields with the same decomposition / rank / halo width.
- *  - `pfc::communication::PaddedHaloExchanger<double>` — non-blocking
- *    six-face MPI exchange into the field's halo ring. Constructed from
- *    decomposition geometry matching the field layout, then driven via
- *    `pfc::communication::exchange(halo)` (blocking one-shot) or
- *    `start_exchange` / `finish_exchange` when overlapping with inner work —
- *    no buffer pointer or halo width to mismatch.
- *  - **This file** defines `HeatGrads` (below) — the three second-
- *    derivative slots `FDGradient` fills; `heat3d/heat_model.hpp` carries
- *    the same aggregate for the other binaries.
- *  - `pfc::gradient::FDGradient<HeatGrads>` — per-point central FD
- *    evaluator bound to `u`; consumed via the free
- *    `pfc::gradient::evaluate(grad, idx)` so the inner loop reads as
- *    "evaluate the gradient at this index, then write the residual".
- *  - `pfc::field::for_each(du, fn)` — sweep every owned cell of `du`,
- *    passing a `pfc::Int3{i, j, k}` to `fn`. The field already carries
- *    its halo width, so the lambda can hand `idx` straight to `evaluate`.
- *  - `pfc::field::for_each_coords(field, …)` — every owned cell with
- *    physical `(x, y, z)`; used for the initial condition and the L2
- *    report (Gaussian IC is centred at the origin, well inside the box).
+ *  - `pfc::data::Field<double, HostSpace>` via `field_from_subdomain` —
+ *    padded owned-plus-halo storage for `u` / `du`.
+ *  - `pfc::communication::PaddedHaloExchanger` bound to that Field.
+ *  - `pfc::gradient::FDGradient<HeatGrads>` bound to the same Field.
+ *  - `Field::for_each_owned` / `Field::apply` for residual and IC/L2.
  *
  * For an FFT-safe **unpadded** core plus separated face buffers, use
  * `pfc::sim::stacks::FdCpuStack` (see tests and `heat3d_spectral_pointwise.cpp`).
- *
- * The companion drivers (`heat3d_fd_scratch`, `heat3d_fd_manual`) walk
- * the same physics with progressively more plumbing on the page; the
- * `apps/heat3d/README.md` ladder explains what each one teaches.
  */
 
 #include <cmath>
@@ -64,17 +42,19 @@
 #endif
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/field_factory.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/field/scaled_field.hpp>
 #include <openpfc/runtime/common/cpu_affinity.hpp>
 #include <heat3d/reporting.hpp>
+
+using pfc::field::operator*;
+using pfc::field::operator+=;
 
 // =============================================================================
 // CLI PART STARTS HERE — argument parsing for `heat3d_fd <N> <n_steps> <dt>
@@ -200,7 +180,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
   const auto decomp = pfc::decomposition::create(domain, nproc);
 
-  // 3. Storage. Two fields share decomp, rank, and halo width so
+  // 3. Storage. Two padded Fields share decomp, rank, and halo width so
   //    nothing downstream can disagree with the layout: `u` is the state,
   //    `du` is the residual we accumulate each step. Halo width = order/2
   //    so the central stencil's most distant neighbour is a halo cell on
@@ -211,49 +191,27 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   pfc::data::Field<double, pfc::HostSpace> du =
       pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
-  // 4. Halo exchanger and gradient evaluator, both constructed from decomp
-  //    geometry matching `u`. The exchanger uses decomp/rank/hw from the
-  //    decomposition; the gradient evaluator reads the same geometry
-  //    directly so changing `cfg.fd_order` here cannot drift away from the
-  //    brick.
-  const auto subdomain_box = pfc::decomposition::local_box(decomp, rank);
-  const auto global_domain = pfc::decomposition::domain(decomp);
-  pfc::communication::PaddedHaloExchanger<double> halo(
-      subdomain_box, global_domain, decomp, rank, hw, MPI_COMM_WORLD, 0);
-  
-  // Construct FDGradient from raw pointer to Field<T,HostSpace> data
-  const auto spacing = pfc::domain::get_spacing(global_domain);
-  const auto local_size = subdomain_box.size;
-  pfc::gradient::FDGradient<HeatGrads> grad(
-      u.data(), local_size[0], local_size[1], local_size[2],
-      spacing[0], spacing[1], spacing[2], hw, cfg.fd_order, {});
+  // 4. Halo exchanger and gradient evaluator, both bound to `u`.
+  pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank,
+                                                       MPI_COMM_WORLD);
+  pfc::gradient::FDGradient<HeatGrads> grad(u, cfg.fd_order);
 
   // 5. Initial condition: \f$u(x,y,z,0) = \exp(-|x|^2/(4D))\f$, D = 1.
   u.apply([](double x, double y, double z) {
     return std::exp(-(x * x + y * y + z * z) / 4.0);
   });
 
-  // 6. Time loop — explicit Euler, point-wise RHS. Each iteration:
-  //      a) refresh `u`'s halo ring (start + finish; no overlap here),
-  //      b) sweep `du` and write `kD * Δu` per cell using the gradient
-  //         evaluator,
-  //      c) axpy `u += dt * du` over the padded buffer.
-  //    Wall time is the slowest rank (MPI_MAX).
+  // 6. Time loop — explicit Euler, point-wise RHS.
   MPI_Barrier(MPI_COMM_WORLD);
   const double t_start = MPI_Wtime();
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
     pfc::communication::exchange(halo);
-    du.for_each_owned([&](int i, int j, int k) {
+    u.for_each_owned([&](int i, int j, int k) {
       const auto g = pfc::gradient::evaluate(grad, pfc::Int3{i, j, k});
       du(i, j, k) = g.xx + g.yy + g.zz;
     });
-    // Simple in-place axpy: u[i] += dt * du[i]
-    const double dt_coef = cfg.dt;
-    const std::size_t n = u.size();
-    for (std::size_t i = 0; i < n; ++i) {
-      u.data()[i] += dt_coef * du.data()[i];
-    }
+    u += cfg.dt * du;
     t += cfg.dt;
   }
   const double local_elapsed = MPI_Wtime() - t_start;
@@ -263,15 +221,14 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   (void)t; // autonomous heat equation; the running clock is reported by t_final
 
   // 7. L2-vs-analytic report via shared reporting infrastructure.
-  //    Closed form on R^3: u(x,t) = (1+t)^(-3/2) * exp(-|x|^2/(4D(1+t))).
-  // Convert local RunConfig to heat3d::RunConfig for shared reporting
   heat3d::RunConfig heat_cfg{cfg.N, cfg.n_steps, cfg.dt, cfg.fd_order};
   heat3d::report(rank, nproc, heat_cfg, "fd",
                  heat3d::fd_extra_metadata(heat_cfg), max_elapsed,
                  "(periodic; interior L2)", [&u, hw](auto &&cb) {
-                   for (int k = hw; k < u.local_size()[2] - hw; ++k) {
-                     for (int j = hw; j < u.local_size()[1] - hw; ++j) {
-                       for (int i = hw; i < u.local_size()[0] - hw; ++i) {
+                   const auto sz = u.local_size();
+                   for (int k = hw; k < sz[2] - hw; ++k) {
+                     for (int j = hw; j < sz[1] - hw; ++j) {
+                       for (int i = hw; i < sz[0] - hw; ++i) {
                          const auto p = u.coords(i, j, k);
                          cb(p[0], p[1], p[2], u(i, j, k));
                        }

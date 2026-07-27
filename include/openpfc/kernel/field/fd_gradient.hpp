@@ -183,6 +183,29 @@ public:
                    std::move(halo_prepare_callback)) {}
 
   /**
+   * @brief Bind the evaluator to a padded `pfc::data::Field<double>`
+   *        (`storage_halo() > 0`).
+   *
+   * Same indexing contract as the `PaddedBrick` constructor: owned
+   * coordinates with padded strides so stencil reads reach the halo ring.
+   *
+   * @throws std::invalid_argument if `u.storage_halo() <= 0` (use
+   *         `pfc::field::create(Field)` for the unpadded face-halo layout).
+   */
+  explicit FDGradient(const pfc::data::Field<double> &u, int order = 2,
+                      std::function<void()> halo_prepare_callback = {})
+      : FDGradient(field_owned_origin_(require_padded_field_(u)),
+                   u.local_size()[0], u.local_size()[1], u.local_size()[2],
+                   /*sy=*/static_cast<std::ptrdiff_t>(u.padded_extent(0)),
+                   /*sxy=*/static_cast<std::ptrdiff_t>(u.padded_extent(0)) *
+                       static_cast<std::ptrdiff_t>(u.padded_extent(1)),
+                   u.spacing()[0], u.spacing()[1], u.spacing()[2],
+                   /*imin=*/0, /*imax=*/u.local_size()[0],
+                   /*jmin=*/0, /*jmax=*/u.local_size()[1],
+                   /*kmin=*/0, /*kmax=*/u.local_size()[2], u.storage_halo(),
+                   order, std::move(halo_prepare_callback)) {}
+
+  /**
    * @brief Prepare for gradient evaluation.
    *
    * If a halo_prepare_callback was provided to the constructor, invokes it to
@@ -292,6 +315,25 @@ private:
     const std::size_t hw = static_cast<std::size_t>(u.halo_width());
     const std::size_t nxp = static_cast<std::size_t>(u.padded_size3()[0]);
     const std::size_t nyp = static_cast<std::size_t>(u.padded_size3()[1]);
+    return u.data() + hw + hw * nxp + hw * nxp * nyp;
+  }
+
+  static const pfc::data::Field<double> &
+  require_padded_field_(const pfc::data::Field<double> &u) {
+    if (u.storage_halo() <= 0) {
+      throw std::invalid_argument(
+          "pfc::gradient::FDGradient(Field): storage_halo must be > 0 for the "
+          "padded binding; use pfc::field::create(Field) for unpadded "
+          "face-halo Fields");
+    }
+    return u;
+  }
+
+  static const double *
+  field_owned_origin_(const pfc::data::Field<double> &u) noexcept {
+    const std::size_t hw = static_cast<std::size_t>(u.storage_halo());
+    const std::size_t nxp = static_cast<std::size_t>(u.padded_extent(0));
+    const std::size_t nyp = static_cast<std::size_t>(u.padded_extent(1));
     return u.data() + hw + hw * nxp + hw * nxp * nyp;
   }
 
@@ -476,21 +518,15 @@ template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
 template <class G>
 [[nodiscard]] inline FdGradient<G> create(const pfc::data::Field<double> &u,
                                           int order = 2) {
-  // Unpadded Field (storage_halo==0) is the LocalField face-halo layout:
-  // tightly packed nx*ny*nz with iteration halo in u.halo_width().
-  // Padded Field (storage_halo>0) must use create(PaddedBrick) / FDGradient
-  // over a padded brick — this factory indexes a tightly packed core.
-  if (u.storage_halo() != 0) {
-    throw std::invalid_argument(
-        "pfc::field::create(Field): padded Field (storage_halo>0) is not "
-        "supported by the unpadded FdGradient factory; use create(PaddedBrick) "
-        "or construct FDGradient from a padded brick, or allocate Field with "
-        "storage_halo=0 for the face-halo / LocalField layout");
+  // Unpadded Field (storage_halo==0): tightly packed core + iteration halo.
+  // Padded Field (storage_halo>0): same layout contract as PaddedBrick.
+  if (u.storage_halo() == 0) {
+    const auto sz = u.local_size();
+    const auto sp = u.spacing();
+    return FdGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
+                         u.halo_width(), order);
   }
-  const auto sz = u.local_size();
-  const auto sp = u.spacing();
-  return FdGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
-                       u.halo_width(), order);
+  return FdGradient<G>(u, order);
 }
 
 // Backward compatibility overload for LocalField (TODO: remove when LocalField is deprecated)

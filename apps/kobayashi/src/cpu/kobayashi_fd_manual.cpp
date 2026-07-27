@@ -27,10 +27,10 @@
 #include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/field/brick_iteration.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
 #include <kobayashi/verification_utilities.hpp>
@@ -38,8 +38,7 @@
 namespace {
 
 
-using pfc::field::PaddedBrick;
-using pfc::field::for_each_owned;
+using Field = pfc::data::Field<double, pfc::HostSpace>;
 
 
 void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
@@ -55,21 +54,21 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const auto decomp = pfc::decomposition::create(domain, nproc);
 
   constexpr int hw = 1;
-  PaddedBrick<double> phi(decomp, rank, hw);
-  PaddedBrick<double> tempr(decomp, rank, hw);
-  PaddedBrick<double> lap_phi(decomp, rank, hw);
-  PaddedBrick<double> lap_t(decomp, rank, hw);
-  PaddedBrick<double> phidx(decomp, rank, hw);
-  PaddedBrick<double> phidy(decomp, rank, hw);
-  PaddedBrick<double> epsilon(decomp, rank, hw);
-  PaddedBrick<double> epsilon_deriv(decomp, rank, hw);
+  Field phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  Field tempr = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  Field lap_phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  Field lap_t = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  Field phidx = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  Field phidy = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  Field epsilon = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  Field epsilon_deriv = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
   const int ci = Nx / 2;
   const int cj = Ny / 2;
 
-  for_each_owned(phi, [&](int i, int j, int k) {
+  phi.for_each_owned([&](int i, int j, int k) {
     (void)k;
     const auto g = phi.global(i, j, 0);
     const int gi = g[0];
@@ -78,14 +77,20 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     const double ddy = static_cast<double>(gj - cj);
     phi(i, j, 0) = (ddx * ddx + ddy * ddy < kobayashi::kSeed) ? 1.0 : 0.0;
   });
-  for_each_owned(tempr, [&](int i, int j, int k) { tempr(i, j, k) = 0.0; });
+  tempr.for_each_owned([&](int i, int j, int k) { tempr(i, j, k) = 0.0; });
 
-  pfc::PaddedHaloExchanger<double> halo_phi(decomp, rank, hw, MPI_COMM_WORLD, 0);
-  pfc::PaddedHaloExchanger<double> halo_t(decomp, rank, hw, MPI_COMM_WORLD, 20);
-  pfc::PaddedHaloExchanger<double> halo_eps(decomp, rank, hw, MPI_COMM_WORLD, 40);
-  pfc::PaddedHaloExchanger<double> halo_epsd(decomp, rank, hw, MPI_COMM_WORLD, 60);
-  pfc::PaddedHaloExchanger<double> halo_phidx(decomp, rank, hw, MPI_COMM_WORLD, 80);
-  pfc::PaddedHaloExchanger<double> halo_phidy(decomp, rank, hw, MPI_COMM_WORLD, 100);
+  pfc::communication::PaddedHaloExchanger<double> halo_phi(phi, decomp, rank,
+                                                           MPI_COMM_WORLD, 0);
+  pfc::communication::PaddedHaloExchanger<double> halo_t(tempr, decomp, rank,
+                                                         MPI_COMM_WORLD, 20);
+  pfc::communication::PaddedHaloExchanger<double> halo_eps(epsilon, decomp, rank,
+                                                           MPI_COMM_WORLD, 40);
+  pfc::communication::PaddedHaloExchanger<double> halo_epsd(
+      epsilon_deriv, decomp, rank, MPI_COMM_WORLD, 60);
+  pfc::communication::PaddedHaloExchanger<double> halo_phidx(phidx, decomp, rank,
+                                                             MPI_COMM_WORLD, 80);
+  pfc::communication::PaddedHaloExchanger<double> halo_phidy(
+      phidy, decomp, rank, MPI_COMM_WORLD, 100);
 
   const bool skip_png = std::getenv("OPENPFC_KOBAYASHI_SKIP_PNG") != nullptr;
   const bool quiet = std::getenv("OPENPFC_KOBAYASHI_QUIET") != nullptr;
@@ -116,10 +121,10 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const double t_loop0 = MPI_Wtime();
 
   for (int istep = 1; istep <= cfg.n_steps; ++istep) {
-    halo_phi.exchange_halos(phi.data(), phi.size());
-    halo_t.exchange_halos(tempr.data(), tempr.size());
+    pfc::communication::exchange(halo_phi);
+    pfc::communication::exchange(halo_t);
 
-    for_each_owned(phi, [&](int i, int j, int k) {
+    phi.for_each_owned([&](int i, int j, int k) {
       const double hne = phi(i + 1, j, k);
       const double hnw = phi(i - 1, j, k);
       const double hns = phi(i, j - 1, k);
@@ -148,12 +153,12 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
                                std::sin(kobayashi::kAniso * (theta - kobayashi::kTheta0));
     });
 
-    halo_eps.exchange_halos(epsilon.data(), epsilon.size());
-    halo_epsd.exchange_halos(epsilon_deriv.data(), epsilon_deriv.size());
-    halo_phidx.exchange_halos(phidx.data(), phidx.size());
-    halo_phidy.exchange_halos(phidy.data(), phidy.size());
+    pfc::communication::exchange(halo_eps);
+    pfc::communication::exchange(halo_epsd);
+    pfc::communication::exchange(halo_phidx);
+    pfc::communication::exchange(halo_phidy);
 
-    for_each_owned(phi, [&](int i, int j, int k) {
+    phi.for_each_owned([&](int i, int j, int k) {
       const double phiold = phi(i, j, k);
 
       const double term1 = (epsilon(i, j + 1, k) * epsilon_deriv(i, j + 1, k) *

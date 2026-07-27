@@ -67,6 +67,7 @@
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
@@ -224,6 +225,36 @@ public:
   }
 
   /**
+   * @brief Bind a padded `pfc::data::Field<T, HostSpace>` (storage_halo > 0).
+   *
+   * Geometry comes from `u.box()` / `u.domain()`; neighbours still need the
+   * live `decomp` (Field does not carry a Decomposition). Captures `u.data()`
+   * for the no-arg `start()` / `finish()` / `exchange` helpers.
+   *
+   * @throws std::invalid_argument if `u.storage_halo() <= 0` (unpadded Fields
+   *         use `SparseHaloExchanger` / face buffers, not this layout).
+   */
+  PaddedHaloExchanger(data::Field<T, HostSpace> &u,
+                      const decomposition::Decomposition &decomp, int rank,
+                      MPI_Comm comm, int base_tag = 0)
+      : PaddedHaloExchanger(u.box(), u.domain(), decomp, rank, u.storage_halo(),
+                            comm, halo::presets::Axes3D(), base_tag,
+                            halo::HaloDirectionSelector{}) {
+    bind_field_(u);
+  }
+
+  /// Same as the Field-binding constructor, with a custom direction set.
+  PaddedHaloExchanger(data::Field<T, HostSpace> &u,
+                      const decomposition::Decomposition &decomp, int rank,
+                      MPI_Comm comm, halo::HaloDirectionSet dirs,
+                      int base_tag = 0,
+                      halo::HaloDirectionSelector selector = {})
+      : PaddedHaloExchanger(u.box(), u.domain(), decomp, rank, u.storage_halo(),
+                            comm, dirs, base_tag, selector) {
+    bind_field_(u);
+  }
+
+  /**
    * @brief Run one halo exchange (post-recv, post-send, wait).
    * @param padded_buf Pointer to the start of the **padded** brick
    *                   (i.e. `brick.data()`). Layout: row-major
@@ -292,7 +323,8 @@ public:
    *
    * Equivalent to `start_halo_exchange(brick.data(), brick.size())` but
    * with no chance of passing a mismatched buffer or stale halo width.
-   * Requires that the exchanger was constructed from a `PaddedBrick`.
+   * Requires that the exchanger was constructed from a `PaddedBrick` or a
+   * padded `pfc::data::Field`.
    */
   void start() {
     require_bound_("start()");
@@ -305,7 +337,7 @@ public:
     finish_halo_exchange();
   }
 
-  /// `true` once the exchanger has captured a brick buffer.
+  /// `true` once the exchanger has captured a brick/Field buffer.
   [[nodiscard]] bool is_bound() const noexcept { return m_bound_buf != nullptr; }
 
   /// Number of active face directions (`0..6` depending on the direction set).
@@ -328,12 +360,23 @@ private:
     m_bound_size = u.size();
   }
 
+  void bind_field_(data::Field<T, HostSpace> &u) {
+    if (u.storage_halo() <= 0) {
+      throw std::invalid_argument(
+          "pfc::communication::PaddedHaloExchanger: Field binding requires "
+          "storage_halo > 0 (padded layout). Unpadded Fields use "
+          "SparseHaloExchanger / face buffers.");
+    }
+    m_bound_buf = u.data();
+    m_bound_size = u.size();
+  }
+
   void require_bound_(const char *what) const {
     if (m_bound_buf == nullptr) {
       throw std::logic_error(
           std::string("pfc::communication::PaddedHaloExchanger::") + what +
-          ": exchanger is not bound to a PaddedBrick. "
-          "Use the (PaddedBrick&, MPI_Comm) constructor or call "
+          ": exchanger is not bound to a PaddedBrick or padded Field. "
+          "Use a binding constructor or call "
           "start_halo_exchange(buf, size) directly.");
     }
   }
@@ -386,8 +429,8 @@ private:
  * run while messages are in flight (same shape as `start_halo_exchange` /
  * `finish_halo_exchange` on the raw buffer API).
  *
- * The exchanger must be bound to a `pfc::field::PaddedBrick<T>` (see the
- * brick-binding constructors).
+ * The exchanger must be bound to a `pfc::field::PaddedBrick<T>` or a padded
+ * `pfc::data::Field<T, HostSpace>` (see the binding constructors).
  * @{
  */
 template <typename T> inline void start_exchange(PaddedHaloExchanger<T> &h) {
