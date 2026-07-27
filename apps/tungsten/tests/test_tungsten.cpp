@@ -133,7 +133,7 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
 
 TEST_CASE("Tungsten parameter setters", "[Tungsten][Setters]") {
   pfc::MPI_Worker worker(0, nullptr);
-  auto world = pfc::world::create({32, 32, 32});
+  auto world = pfc::domain::create(pfc::Int3{32, 32, 32});
   auto decomp = pfc::decomposition::create(world, 1);
   auto fft = pfc::fft::create(decomp);
   Tungsten tungsten(fft, world);
@@ -221,9 +221,8 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     // Manually replicate the initial condition logic from the UI
     // This matches exactly what happens when initial conditions are applied
     std::vector<double> &psi = tungsten.get_real_field("psi");
-    // Need to use get_world because Model base class still returns World&
-    // TODO: This will be fixed when Model base class is updated
-    const pfc::World &w = pfc::get_world(tungsten);
+    // Get the domain from the world
+    const pfc::Domain &w = pfc::get_world(tungsten).domain_;
     const auto &fft_ref = pfc::get_fft(tungsten);
 
     // 1. Constant initial condition: fill entire field with -0.4
@@ -234,8 +233,8 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     pfc::types::Int3 low = pfc::fft::get_inbox(fft_ref).low;
     pfc::types::Int3 high = pfc::fft::get_inbox(fft_ref).high;
 
-    auto spacing = pfc::world::get_spacing(w);
-    auto origin = pfc::world::get_origin(w);
+    auto spacing = pfc::domain::get_spacing(w);
+    auto origin = pfc::domain::get_origin(w);
     double dx_ic = spacing[0];
     double dy_ic = spacing[1];
     double dz_ic = spacing[2];
