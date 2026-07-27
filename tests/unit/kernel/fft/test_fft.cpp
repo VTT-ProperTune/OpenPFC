@@ -7,7 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -16,9 +16,9 @@ using namespace Catch::Matchers;
 using namespace pfc;
 
 TEST_CASE("FFT - basic functionality", "[fft][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
   REQUIRE(fft.size_inbox() > 0);
   REQUIRE(fft.size_outbox() > 0);
@@ -27,9 +27,9 @@ TEST_CASE("FFT - basic functionality", "[fft][unit]") {
 
 TEST_CASE("FFT - forward transformation", "[fft][unit]") {
   // Create an FFT object with a fixed decomposition
-  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
   // Generate input data: sine wave samples at 8 equally spaced points
@@ -49,9 +49,9 @@ TEST_CASE("FFT - forward transformation", "[fft][unit]") {
 
 TEST_CASE("FFT - backward transformation", "[fft][unit]") {
   // Create an FFT object with a fixed decomposition
-  auto world = world::create(GridSize({2, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+  auto domain = domain::create(GridSize({2, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
   // Generate input data in frequency space
@@ -72,9 +72,9 @@ TEST_CASE("FFT - backward transformation", "[fft][unit]") {
 
 TEST_CASE("FFT workspace allocation - FFTW reports one complex workspace",
           "[fft][unit][allocation]") {
-  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
                              GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
   REQUIRE(fft.size_workspace() > 0);

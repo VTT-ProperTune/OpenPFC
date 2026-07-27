@@ -5,7 +5,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -16,7 +16,7 @@
 using namespace pfc;
 
 TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
+  auto world = domain::create_world(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
                              GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
