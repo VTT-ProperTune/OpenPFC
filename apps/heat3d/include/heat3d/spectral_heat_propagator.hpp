@@ -36,7 +36,6 @@
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
 
 namespace heat3d {
 
@@ -97,7 +96,7 @@ namespace heat3d {
  *
  * @see Simulator for the base class contract on time-integration assumptions
  *   and how to substitute alternative integrators.
- * @tparam FieldType The field type (e.g., pfc::field::LocalField<double> or pfc::data::Field<double, pfc::HostSpace>)
+ * @tparam FieldType The field type (e.g., pfc::data::Field<double, pfc::HostSpace>)
  */
 template <typename FieldType>
 class SpectralHeatPropagator {
@@ -115,11 +114,12 @@ public:
                          const FieldType &u, double D,
                          double dt)
       : m_fft(fft), m_psi_F(fft.size_outbox()), m_opL(fft.size_outbox()) {
-    // Handle both Field (which has domain()) and LocalField (which has global_size())
+    // Handle Field types (which have domain())
     const auto size = []<typename T>(const T& field) {
       if constexpr (requires { field.domain(); }) {
         return pfc::domain::get_size(field.domain());
       } else {
+        // Fallback for older APIs with global_size()
         return field.global_size();
       }
     }(u);

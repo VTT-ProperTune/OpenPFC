@@ -32,7 +32,6 @@
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
