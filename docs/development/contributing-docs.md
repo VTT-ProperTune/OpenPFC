@@ -5,71 +5,167 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Contributing to documentation
 
-Repository-wide pointers (tests, changelog expectations): [`../CONTRIBUTING.md`](../../CONTRIBUTING.md). The doc index [`README.md`](../README.md) lists onboarding under *Where to go first*; contributor-only topics (roadmap, scalability experiment doc) sit in **Contributors and project internals**.
+Repository-wide contribution rules, commit messages, tests, and changelog
+expectations are in [`CONTRIBUTING.md`](../../CONTRIBUTING.md). This page covers
+the documentation-specific workflow.
 
-## Before you open a PR
+## Documentation surfaces
 
-1. Relative links — From a file under `docs/`, paths like `../INSTALL.md` reach the repo root. Nested files (e.g. `docs/getting_started/01-basics/README.md`) need enough `..` segments. Run the checker (below).
-2. SPDX — When you edit a file that already has `SPDX-FileCopyrightText`, update the year to the current calendar year (see project rules).
-3. Cross-link new guides — Add a row to [`README.md`](../README.md) (*First-time onboarding*, *Where to go first*, and the right topic table—Guides by topic or Tutorials). Short **goal-oriented** pages belong under [`recipes/`](../recipes) with an index row in [`recipes/README.md`](../recipes/README.md). List narrative tutorials in [`tutorials/README.md`](../tutorials/README.md), update [`personas.md`](personas.md) if a new **role** entry fits, and wire from [`quickstart.md`](../quickstart.md) and [`start_here_15_minutes.md`](../start_here_15_minutes.md) when the audience is new users. For discoverability, add a line to the [`faq.md`](../faq.md) *Documentation map* if the page answers a common “where do I find…?” question. **ADRs** for architectural decisions go under [`adr/`](../adr) with an index row in [`adr/README.md`](../adr/README.md).
-4. **User-visible behavior** — If the PR changes how people build, configure, or run OpenPFC, update at least one of: [`INSTALL.md`](../../INSTALL.md), a **tutorial** or **recipe**, [`spectral_app_config_reference.md`](../reference/spectral_app_config_reference.md), or [`CHANGELOG.md`](../../CHANGELOG.md) (as appropriate). Purely internal refactors may skip prose if the contract is unchanged.
-5. Topic-specific hooks — Examples: extension / `App` docs should link [`app_pipeline.md`](../user_guide/app_pipeline.md) and [`class_tour.md`](../reference/class_tour.md); validation UX should mention [`parameter_validation.md`](../user_guide/parameter_validation.md) and the root `README.md` validation section; GPU CMake flags should point at [`tutorials/gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md) and [`build_cpu_gpu.md`](../hpc/build_cpu_gpu.md); test-related CMake knobs belong in [`testing.md`](testing.md) as well as `build_options.md`.
+OpenPFC has two source surfaces and one rendered product:
 
-## Check markdown links locally
+| Source | Purpose | Rendered by |
+|--------|---------|-------------|
+| Markdown under `docs/` | Tutorials, concepts, operations, and stable reference guides | Sphinx with MyST |
+| Public headers | Exact C++ declarations and source-level comments | Doxygen XML through Breathe |
+
+The root [`README.md`](../../README.md) is a stable project landing page, not a
+second manual. Sphinx combines prose and generated API material into one site,
+one navigation tree, and one search index.
+
+## Choose the right location
+
+| Content | Location |
+|---------|----------|
+| Smallest first successful run | `docs/start_here_15_minutes.md` |
+| Broad build/run/link overview | `docs/quickstart.md` |
+| Sequenced route for a user role | `docs/learning_paths.md` |
+| Task-shaped copy-paste answer | `docs/recipes/` |
+| Multi-step hands-on walkthrough | `docs/tutorials/` |
+| Concept or architecture explanation | `docs/concepts/` |
+| Cluster and performance operations | `docs/hpc/` or `docs/lumi_slurm/` |
+| Scientific interpretation and limitations | `docs/science/` |
+| Lookup-oriented stable contract | `docs/reference/` |
+| Curated generated C++ declarations | Public headers, exposed through `docs/api/` |
+| Maintainer workflow or implementation note | `docs/development/` |
+| Architecture decision | `docs/adr/` |
+
+Large subtrees have their own `README.md` index. Add new pages to the nearest
+local index and to `docs/index.md` when they belong in primary navigation. Only
+add a root README link when the page is an important entry point for a broad
+audience.
+
+## Before opening a pull request
+
+1. Preserve the SPDX header and update its year when project policy requires
+   it.
+2. Use relative Markdown links so pages work both on GitHub and in Sphinx.
+3. Update the nearest local index and, when appropriate, `docs/index.md`.
+4. Keep user-visible commands aligned with scripts, CMake targets, and
+   packaging tests rather than copying an unverified approximation.
+5. Update behavior documentation when a change affects installation, CMake
+   options, configuration keys, output formats, or runtime operation.
+6. Prefer links to headers and runnable examples over copied signatures or
+   large code listings that will drift.
+7. Put exact declarations and parameter comments next to public C++ code; add
+   narrative explanation to Markdown only when users need context or workflow.
+8. Do not add new Doxygen warnings. When touching an already warned comment,
+   reduce or remove the corresponding baseline category when practical.
+
+Topic-specific cross-links are still useful:
+
+- extension and `App` pages should link
+  [`app_pipeline.md`](../user_guide/app_pipeline.md) and
+  [`class_tour.md`](../reference/class_tour.md);
+- GPU build flags should link
+  [`gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md) and
+  [`build_cpu_gpu.md`](../hpc/build_cpu_gpu.md);
+- test-related CMake options belong in both
+  [`testing.md`](testing.md) and
+  [`build_options.md`](../reference/build_options.md);
+- configuration validation belongs in
+  [`parameter_validation.md`](../user_guide/parameter_validation.md), not as a
+  second tutorial in the root README.
+
+## Run source checks
 
 From the repository root:
 
 ```bash
 python3 scripts/check_doc_links.py
-```
-
-The script scans `docs/**/*.md`, `README.md`, `INSTALL.md`, `examples/README.md`, and `apps/*/README.md`. It resolves relative links and paths starting with `/` (repository root). http(s) links are not fetched.
-
-The same check runs in CI as part of the Documentation workflow (`.github/workflows/docs.yml`).
-
-## Catalog and tutorial consistency (CI)
-
-These catch drift between CMake, shipped README examples, and prose:
-
-```bash
+python3 scripts/check_doc_toolchain_refs.py
 python3 scripts/check_examples_catalog.py
 python3 scripts/check_end_to_end_allen_cahn.py
-```
-
-They run in the Documentation workflow after the link checker.
-
-## Bash fenced blocks (CI)
-
-` ```bash ` / ` ```sh ` snippets under `docs/` are checked with `bash -n`:
-
-```bash
 python3 scripts/check_doc_bash_syntax.py
 ```
 
-Keep examples syntactically valid; use comments for non-literal lines if needed.
+These checks cover repository-relative Markdown links, retired toolchain
+references, the examples catalog, the Allen-Cahn end-to-end documentation
+contract, and shell syntax in fenced `bash` or `sh` blocks. External HTTP links
+are not fetched by the repository link checker.
+
+## Build the complete site
+
+Install Doxygen and Ninja, synchronize the locked Python environment, and run
+the one canonical build command:
+
+```bash
+uv sync --project docs --locked
+bash scripts/build_docs.sh build
+```
+
+The command generates Doxygen XML and then renders the complete Sphinx site.
+The rendered site is written to `site/` and includes both prose and the curated
+C++ API reference. Maintained Sphinx sources must be warning-free.
+
+For an interactive preview:
+
+```bash
+uv sync --project docs --locked
+bash scripts/build_docs.sh serve
+```
+
+See [`sphinx_preview.md`](sphinx_preview.md) for environment, link-rewriting,
+and publication details.
+
+## API documentation policy
+
+Doxygen is a parser, not a separately published site. Public API changes should
+update comments near declarations. Breathe imports the resulting XML into the
+curated pages under [`../api/`](../api/index.md).
+
+The repository currently contains a classified legacy Doxygen-comment debt.
+`scripts/check_doxygen_log.py` records the exact count in each known category
+and fails when a category grows or an unknown warning appears. The baseline is
+therefore a ceiling, not an accepted quality target. Reducing a category should
+be followed by lowering its baseline in the checker.
+
+Avoid long narrative Doxygen blocks when a prose concept or tutorial page is
+the clearer home; link the two surfaces instead.
 
 ## Optional printable handbook
 
-Maintainers can build a concatenated PDF/HTML — see [`handbook_build.md`](handbook_build.md) and [`scripts/build_handbook.sh`](../../scripts/build_handbook.sh).
-
-## MkDocs + Material (browser preview)
-
-Optional static site for prose under `docs/`:
+Maintainers can build the concatenated handbook described in
+[`handbook_build.md`](handbook_build.md):
 
 ```bash
-./scripts/build_mkdocs.sh build --strict   # from repository root; output ./site/
-NO_MKDOCS_2_WARNING=1 uv run --project docs mkdocs serve
+bash scripts/build_handbook.sh
 ```
-
-Details and caveats (links outside `docs/`): [`mkdocs_preview.md`](mkdocs_preview.md).
 
 ## Style
 
-- Prefer tables and short sections over long unstructured prose.
-- Link to [`architecture.md`](../concepts/architecture.md) for layering instead of duplicating the kernel/runtime story.
-- For C++ behavior, point to headers and `examples/` rather than copying signatures.
-- Prose: avoid bold except rarely; do not use emojis in technical docs. Optional workspace rule: `.cursor/rules/documentation-prose-style.mdc`. Optional bulk cleanup: `scripts/unbold_markdown_docs.py` (inspect the diff).
+- Prefer short sections, focused tables, and explicit outcomes.
+- Explain concepts in prose; use reference pages for exhaustive lookup.
+- Keep commands executable and code snippets minimal.
+- Avoid implementation-roadmap details in user-facing type tours.
+- Link to [`architecture.md`](../concepts/architecture.md) instead of repeating
+  the kernel/runtime/frontend layering on multiple pages.
+- Avoid decorative emphasis and emojis in technical documentation.
+
+## Review checklist
+
+- [ ] The page has one clear audience and purpose.
+- [ ] Commands and CMake targets match the current repository.
+- [ ] New pages are linked from the correct local index.
+- [ ] Primary pages are represented in `docs/index.md`.
+- [ ] Relative links and fenced shell blocks pass their checkers.
+- [ ] `bash scripts/build_docs.sh build` succeeds.
+- [ ] Maintained Sphinx documentation is warning-free.
+- [ ] Doxygen diagnostics stay within the recorded baseline and add no unknown warning.
+- [ ] The root README remains a landing page rather than a duplicate manual.
 
 ## See also
 
-- [`styleguide.md`](styleguide.md) — code and header style (also informs doc examples)
+- [`styleguide.md`](styleguide.md) — code and public-header style
+- [`documentation_versioning.md`](documentation_versioning.md) — development
+  docs versus release tags
+- [`testing.md`](testing.md) — code and MPI test workflows

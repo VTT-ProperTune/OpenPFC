@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Ensure docs/examples_catalog.md lists the same executables as examples/CMakeLists.txt."""
+"""Ensure the examples reference lists the executables from examples/CMakeLists.txt."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CMAKE = ROOT / "examples" / "CMakeLists.txt"
-CATALOG = ROOT / "docs" / "examples_catalog.md"
+CATALOG = ROOT / "docs" / "reference" / "examples_catalog.md"
 
 ADD_EXE_RE = re.compile(r"^\s*add_executable\(\s*([^\s\)]+)")
 
@@ -20,12 +20,12 @@ def targets_from_cmake() -> set[str]:
     text = CMAKE.read_text(encoding="utf-8", errors="replace")
     out: set[str] = set()
     for line in text.splitlines():
-        s = line.strip()
-        if not s or s.startswith("#"):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
             continue
-        m = ADD_EXE_RE.match(line)
-        if m:
-            out.add(m.group(1))
+        match = ADD_EXE_RE.match(line)
+        if match:
+            out.add(match.group(1))
     return out
 
 
@@ -41,29 +41,50 @@ def targets_from_catalog() -> set[str]:
             break
         if not in_full or not line.startswith("|"):
             continue
-        m = re.match(r"\|\s*`([^`]+)`\s*\|", line)
-        if m:
-            names.append(m.group(1))
+        match = re.match(r"\|\s*`([^`]+)`\s*\|", line)
+        if match:
+            names.append(match.group(1))
     return set(names)
 
 
 def main() -> int:
     if not CMAKE.is_file() or not CATALOG.is_file():
-        print("check_examples_catalog: missing CMakeLists or catalog", file=sys.stderr)
+        print(
+            "check_examples_catalog: missing examples/CMakeLists.txt or "
+            "docs/reference/examples_catalog.md",
+            file=sys.stderr,
+        )
         return 2
-    cm = targets_from_cmake()
-    doc = targets_from_catalog()
-    only_cmake = sorted(cm - doc)
-    only_doc = sorted(doc - cm)
-    if not only_cmake and not only_doc:
-        print("check_examples_catalog: OK (CMake targets match docs/examples_catalog.md)")
+
+    cmake_targets = targets_from_cmake()
+    documented_targets = targets_from_catalog()
+    only_cmake = sorted(cmake_targets - documented_targets)
+    only_documented = sorted(documented_targets - cmake_targets)
+
+    if not only_cmake and not only_documented:
+        print(
+            "check_examples_catalog: OK "
+            "(CMake targets match docs/reference/examples_catalog.md)"
+        )
         return 0
+
     print("check_examples_catalog: mismatch\n", file=sys.stderr)
     if only_cmake:
-        print("  In CMakeLists.txt but not catalog:", ", ".join(only_cmake), file=sys.stderr)
-    if only_doc:
-        print("  In catalog but not CMakeLists.txt:", ", ".join(only_doc), file=sys.stderr)
-    print("  Update docs/examples_catalog.md or examples/CMakeLists.txt.", file=sys.stderr)
+        print(
+            "  In examples/CMakeLists.txt but not catalog: "
+            + ", ".join(only_cmake),
+            file=sys.stderr,
+        )
+    if only_documented:
+        print(
+            "  In catalog but not examples/CMakeLists.txt: "
+            + ", ".join(only_documented),
+            file=sys.stderr,
+        )
+    print(
+        "  Update docs/reference/examples_catalog.md or examples/CMakeLists.txt.",
+        file=sys.stderr,
+    )
     return 1
 
 

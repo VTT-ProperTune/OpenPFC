@@ -3,139 +3,230 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# OpenPFC Package Architecture
+# Package architecture
 
-This document describes the logical structure of the OpenPFC library. The codebase is organized into three layers: kernel, runtime, and frontend. There is no directory or layer named "core"; the former "core" responsibilities are split into kernel subdirectories by responsibility.
+OpenPFC is organized into three logical layers: **kernel**, **runtime**, and
+**frontend**. The layer names describe dependency direction and extension
+boundaries; they are more stable than individual headers or helper types.
+
+There is no `core` layer. Responsibilities that older versions grouped under
+that name now live in focused kernel subdirectories.
 
 ## Dependency direction
 
 ```mermaid
 flowchart TB
-  subgraph kernel [kernel - backend-agnostic]
-    data[kernel/data]
-    decomposition[kernel/decomposition]
-    execution[kernel/execution]
-    field_ops[kernel/field]
-    fft[kernel/fft]
-    simulation[kernel/simulation]
-    mpi[kernel/mpi]
+  subgraph frontend [frontend — application-facing features]
+    ui[configuration and App wiring]
+    io[result writers]
+    utilities[logging and utilities]
   end
-  subgraph runtime [runtime - backend-specific]
-    rcommon[runtime/common]
-    rcpu[runtime/cpu]
-    rcuda[runtime/cuda]
-    rhip[runtime/hip]
+
+  subgraph runtime [runtime — backend implementations]
+    common[shared runtime helpers]
+    cpu[CPU / OpenMP]
+    cuda[CUDA]
+    hip[HIP]
   end
-  subgraph frontend [frontend - optional app features]
-    futils[frontend/utils]
-    fui[frontend/ui]
-    fio[frontend/io]
+
+  subgraph kernel [kernel — backend-independent contracts]
+    data[data and domain]
+    decomposition[decomposition and communication]
+    execution[execution and memory abstractions]
+    field[field operations]
+    fft[FFT interfaces]
+    simulation[models and simulation]
+    profiling[profiling contracts]
+    mpi[MPI wrappers]
   end
+
   frontend --> runtime
   frontend --> kernel
   runtime --> kernel
 ```
 
-- `Frontend` depends on kernel and runtime (optional for minimal applications).
-- `Runtime` depends only on kernel.
-- `Kernel` has no dependency on runtime or frontend. Backend tags (CpuTag only), execution spaces (Serial, OpenMP only), DataBuffer&lt;CpuTag,T&gt;, memory space/traits for host, view, parallel_for, and deep_copy are in kernel; GPU specializations of these and all CUDA/HIP code live in `runtime/cuda` and `runtime/hip`. No `#ifdef OpenPFC_ENABLE_CUDA/HIP` in kernel or frontend; backend choice is via templates and including the corresponding runtime headers.
+The rules are:
 
-**Include audit:** `include/openpfc/kernel/**` and `src/openpfc/kernel/**` must not `#include` `openpfc/frontend/*` headers. Occasional `rg 'openpfc/frontend' include/openpfc/kernel src/openpfc/kernel` should find no real includes (Doxygen comments may mention frontend types).
+1. **Kernel does not depend on runtime or frontend.** It defines data types,
+   backend-independent interfaces, simulation contracts, and host-side
+   execution primitives.
+2. **Runtime depends on kernel.** It supplies CPU, CUDA, and HIP
+   implementations behind kernel contracts.
+3. **Frontend depends on kernel and runtime.** It adds configuration-driven
+   application wiring, result writers, and user-facing utilities.
 
-Minimal applications can depend only on kernel + runtime and omit frontend (no UI, logging, or extra I/O helpers).
+A lightweight program may use kernel and runtime directly without the frontend.
+A full application normally uses all three layers.
 
-## Spectral vs finite-difference workflows
+## Layer responsibilities
 
-- Spectral (FFT / k-space) is the primary, end-to-end path today: models, FFT via HeFFTe, and k-space helpers are wired through the kernel and runtimes (CPU, CUDA, HIP). See `kernel/fft` and application examples that use the simulator stack. FFT buffers must remain pure subdomain samples (`fft::get_inbox` / `decomposition::get_subworld` extents): do not run HeFFTe on an array that has had `in-place` ghost data written into its boundary slabs for multi-rank periodic FD unless you have a domain-specific guarantee.
-- Finite differences use the same decomposition and halo machinery. Three layouts are supported (see `docs/halo_exchange.md` — *Halo policies*):
-  - InPlace (traditional): `HaloExchanger` + `field::fd::laplacian_interior<Order>` — ghosts live in the boundary layers of the same `nx×ny×nz` array; fast for FD-only use.
-  - Separated (FFT-safe): `pfc::SparseHaloExchanger<T>` (configured by `pfc::halo::make_structured_halos<T>(decomp, rank, hw, dirs = Axes3D())`, refilled into the array-of-six face buffers via `pfc::halo::copy_to_face_layout`) + `field::fd::laplacian_periodic_separated<Order>` (or `field::fd::laplacian_interior<Order>` if the iteration is restricted to `[hw, n-hw)`) — core stays contiguous for FFT; ghosts in separate face buffers. The XY (`nz==1`) variants are `laplacian2d_xy_interior<Order>` / `laplacian2d_xy_periodic_separated<Order>`. A runtime-order dispatcher `laplacian_interior(int order, ...)` is provided when the spatial order is selected at run time. `SparseHaloExchanger` also accepts arbitrary `RemoteHalo` lists (any peer / index pattern, no grid concept), which is the foundation for future FEM / unstructured halos.
-  - **PaddedBrick** (laboratory style, in-place ghost ring): `pfc::field::PaddedBrick<T>` (`field/padded_brick.hpp`) is a single contiguous owned + halo-ring buffer with `T &operator()(int i, int j, int k)` valid for any `i, j, k in [-hw, n+hw)`. `pfc::communication::PaddedHaloExchanger<T>` (`decomposition/padded_halo_exchange.hpp`) drives a non-blocking face exchange directly into the ring so a hand-written stencil can read `u(i±hw, j, k)` after `finish_halo_exchange`. Lambda-based `for_each_owned/inner/border` helpers (`field/brick_iteration.hpp`) keep the index loops out of the driver.
-- The flagship multi-rank heat example is `examples/15_finite_difference_heat.cpp` (separated halos + explicit heat equation). The `apps/heat3d/` lineup walks the **same** discretisation up the model hierarchy: `heat3d_fd_scratch` (version 0 — bare loops, raw pointers, only `pfc::communication::PaddedHaloExchanger` from openpfc) → `heat3d_fd_manual` (laboratory-style padded brick + lambda iterators + comm/compute overlap) → `heat3d_fd` (decoupled primitives in `main`: two `pfc::field::PaddedBrick<double>`s, `pfc::communication::PaddedHaloExchanger<double>` driven by `pfc::communication::exchange` or `start_exchange` / `finish_exchange`, `pfc::gradient::FDGradient<HeatGrads>` evaluated per cell with `pfc::gradient::evaluate(grad, idx)` inside `pfc::field::for_each(du, …)`). Programmatic FFT-safe FD with a contiguous core continues to use `FdCpuStack` (which still bundles those concerns through `pfc::sim::DuField`). Spectral siblings `heat3d_spectral_pointwise` and `heat3d_spectral` show the FFT-based variants. For halo design, policies, overlap, and persistent MPI options, see `docs/halo_exchange.md`.
+### Kernel
 
-## Layer descriptions
+The kernel owns the concepts that should remain meaningful regardless of the
+selected compute backend.
 
-### Kernel (backend-agnostic)
+| Area | Responsibility |
+|------|----------------|
+| `kernel/data` | `Domain`, boxes, fields, strong types, and basic data containers |
+| `kernel/decomposition` | MPI partitioning, neighbor relationships, and halo-exchange contracts |
+| `kernel/execution` | execution spaces, memory spaces, views, buffers, and copy abstractions |
+| `kernel/field` | field operations, finite-difference primitives, and iteration helpers |
+| `kernel/fft` | FFT interfaces, layouts, and wave-number helpers |
+| `kernel/simulation` | `Model`, `Simulator`, time integration, modifiers, writers, and solver contracts |
+| `kernel/checkpoint` | backend-independent persistent-state and checkpoint contracts |
+| `kernel/profiling` | metric catalogs, scopes, sessions, and export contracts |
+| `kernel/mpi` | small MPI environment and communicator helpers |
 
-Code that defines data structures, execution abstraction, and simulation logic. `Backend-agnostic`: kernel defines only `CpuTag`, `Serial`, `OpenMP`, `HostSpace`, and CPU implementations (e.g. `DataBuffer<CpuTag,T>`, host memory traits). CUDA and HIP tags, execution spaces, memory spaces, and GPU implementations live in `runtime/cuda` and `runtime/hip`; use templating to choose the backend. The chosen FFT abstraction is HeFFTe; kernel types may use HeFFTe types (e.g. `heffte::box3d<int>`) where that is the agreed interface.
+Kernel headers must not include frontend headers. This can be checked with:
 
-| Directory | Contents |
-|-----------|----------|
-| `kernel/data` | Domain, Box3i, World (deprecated A0 shim over Domain), Field, types (types, model_types), strong types, multi-index, array, constants, discrete field; world_helpers, world_queries, world_factory. |
-| `kernel/decomposition` | Decomposition (value-owning: Domain by value, not a reference, so factories returning a Decomposition by value are safe — covered by `tests/unit/kernel/decomposition/test_decomposition_lifetime.cpp`), decomposition_neighbors, sparse_vector, exchange, halo_pattern, halo_mpi_types, `padded_halo_mpi_types.hpp` (face subarrays for the padded-brick layout), `halo_policy.hpp`, `halo_face_layout.hpp` (face counts, allocator, `make_structured_halos`, `copy_to_face_layout`), `halo_exchange.hpp` (`HaloExchanger`), `sparse_halo_exchange.hpp` (`pfc::SparseHaloExchanger<T>` — fully sparse, grid-agnostic; foundation for FEM-style halos), `padded_halo_exchange.hpp` (`PaddedHaloExchanger` — non-blocking face exchange into a `PaddedBrick`'s ghost ring), `halo_persistent.hpp` (`PersistentHaloExchanger`); decomposition_factory. |
-| `kernel/execution` | Execution/memory abstraction: execution_space, memory_space, policy, parallel_for, view, layout, backend_tags, memory_traits, databuffer; create_mirror, deep_copy. CPU/host only; GPU specializations (CudaTag, HipTag, CudaSpace, HipSpace, parallel_for/fence/deep_copy for device) live in `runtime/cuda` and `runtime/hip`. |
-| `kernel/field` | Field operations and adapters (operations.hpp, legacy_adapter.hpp); `finite_difference.hpp` (templated brick FD Laplacians); `fd_apply.hpp` / `fd_stencils.hpp` (per-axis stencil primitives + compile-time coefficient tables); `fd_gradient.hpp` / `spectral_gradient.hpp` (per-point evaluators); `local_field.hpp` (unpadded owning ndarray with optional separated halo width); `padded_brick.hpp` + `brick_iteration.hpp` (single contiguous owned + halo-ring buffer with `(int, int, int)` lambda iterators for laboratory-style FD drivers). |
-| `kernel/fft` | FFT interface and k-space helpers (fft.hpp, fft_layout.hpp, kspace.hpp). No backend-specific FFT code. |
-| `kernel/simulation` | Model, Simulator, Time, FieldModifier, ResultsWriter interface, boundary_conditions, initial_conditions, binary_reader; `simulator_results_dispatch.hpp` (per-field writer writes), `simulator_field_modifiers_dispatch.hpp` (IC/BC apply loop), `simulator_modifier_registration.hpp` (IC/BC registration validation); `for_each_interior.hpp` (per-cell driver loop), `steppers/euler.hpp` (`EulerStepper` + `steppers::create` factories), `stacks/spectral_cpu_stack.hpp` (`SpectralCpuStack` — Domain+Decomposition+CpuFft+LocalField bundle for programmatic spectral apps) and `stacks/fd_cpu_stack.hpp` (`FdCpuStack` — Domain+Decomposition+LocalField+halo buffers+`pfc::SparseHaloExchanger` bundle for FD apps; the stack's `exchange_halos()` calls `pfc::halo::copy_to_face_layout` after the underlying exchange so the array-of-six face buffers stay current for the FD Laplacians), both non-copyable/non-movable so internal `const` references stay valid. Optional forward declarations: simulation_fwd.hpp. |
-| `kernel/mpi` | MPI abstraction: communicator, environment, timer, worker, mpi.hpp. |
-| `kernel/profiling` | `ProfilingMetricCatalog`: ordered `/`-separated paths (defaults `communication`, `fft`, `gradient` plus config `regions`, or `from_paths_only`; `ensure_path` registers paths on first use). `ProfilingSession`: generic per-frame named scalars (`openpfc_frame_metrics.hpp` supplies OpenPFC defaults and `App` helpers), dense inclusive/exclusive seconds per path; thread-local `ProfilingContextScope`, `record_time`; `ProfilingTimedScope`, `ProfilingManualScope` (explicit stop / restart), macros `OPENPFC_PROFILE` / `PFC_PROFILE_SCOPE` when `OpenPFC_PROFILING_LEVEL` > 0. `finalize_and_export`: JSON and/or HDF5 (`OpenPFC_ENABLE_HDF5`), schema v2 (`docs/profiling_export_schema.md`); `print_profiling_timer`. Helpers: `measure_barriered`, `reduce_max_to_root`, `format_bytes`, RSS sampling. See `docs/performance_profiling.md`. |
+```bash
+rg 'openpfc/frontend' include/openpfc/kernel src/openpfc/kernel
+```
 
-### Runtime (backend-specific)
+Real includes in that search indicate a dependency-direction violation.
 
-Backend-specific implementations: CPU/OpenMP/CUDA/HIP execution and FFT, and GPU kernel sources.
+### Runtime
 
-| Directory | Contents |
-|-----------|----------|
-| `runtime/common` | Code shared by runtime backends and host-side runtime helpers: heffte_adapter.hpp (HeFFTe box conversion), backend_from_string.hpp (FFT backend name → enum for UI), cpu_affinity.hpp (`reset_cpu_affinity_if_single_mpi_rank` so OpenMP scales when a single MPI rank is pinned by the launcher), mpi_timer.hpp (`MpiTimer` + `tic`/`toc` for `MPI_MAX` wall-clock of a parallel section, plus collective-free labeled `tic(timer, "label")` / `toc(timer, "label")` overloads and a `print_timing_summary` reducer for per-section breakdowns inside hot loops), mpi_main.hpp (`mpi_main(argc, argv, body)` wraps `MPI_Init`/`Comm_rank`/affinity rescue/exception → `MPI_Abort`/`MPI_Finalize` so app `main`s reduce to one statement). |
-| `runtime/cpu` | CPU FFT implementation (fft.cpp), serial/OpenMP execution if split. |
-| `runtime/cuda` | CUDA backend: backend_tags_cuda, execution_space_cuda, databuffer_cuda, memory_space_cuda, memory_traits_cuda; exchange_cuda, view_cuda, parallel_cuda, deep_copy_cuda; sparse_vector_ops, sparse_vector_cuda; FFT (fft_cuda.hpp, fft_cuda.cpp); gpu_vector, kernels_simple. |
-| `runtime/hip` | HIP backend: backend_tags_hip, execution_space_hip, databuffer_hip, memory_space_hip, memory_traits_hip; exchange_hip, view_hip, parallel_hip, deep_copy_hip; sparse_vector_hip; FFT (fft_hip.hpp, fft_hip.cpp). |
+Runtime code realizes backend-specific behavior.
 
-### Frontend (optional app features)
+| Area | Responsibility |
+|------|----------------|
+| `runtime/common` | shared adapters, MPI timing, affinity handling, and common launch helpers |
+| `runtime/cpu` | CPU and OpenMP execution plus the CPU FFT implementation |
+| `runtime/cuda` | CUDA memory, execution, kernels, exchange, and FFT support |
+| `runtime/hip` | HIP memory, execution, kernels, exchange, and FFT support |
 
-Features that are useful for full applications but not required for minimal simulations: UI, logging, extra I/O.
+Backend selection is made through templates, execution/memory-space types, and
+explicit runtime headers. CUDA and HIP implementation code should not leak into
+backend-independent kernel interfaces.
 
-| Directory | Contents |
-|-----------|----------|
-| `frontend/utils` | `logging.hpp` re-exports `kernel/utils/logging.hpp`; utils.hpp, toml_to_json, show, timeleft, nancheck, memory_reporter, field_iteration, typename, array_to_string. |
-| `frontend/ui` | App, `app_spectral_run.hpp` (`SpectralJsonAppRun` — JSON spectral pipeline after settings are loaded), `spectral_json_driver_hooks.hpp` (`configure_spectral_json_driver_hooks`), `spectral_cpu_stack.hpp` (JSON → world/FFT/time stack), `spectral_cpu_stack_detail.hpp` (CPU plan/FFT helpers), `spectral_simulation_session.hpp`, `simulation_wiring.hpp` (umbrella; split into `simulation_wiring_writers.hpp`, `simulation_wiring_conditions.hpp`, `simulation_wiring_simulator_section.hpp`, `simulation_wiring_detail.hpp`), `simulation_wiring_context.hpp` (`JsonWiringContext`), `app_profiling.hpp` / `app_integrator_loop.hpp` (optional profiling lifecycle + time loop), `from_json.hpp` (umbrella over `from_json_fwd.hpp`, `from_json_log.hpp`, `from_json_heffte.hpp`, `from_json_fft_backend.hpp`, `from_json_world_time.hpp`, `from_json_field_modifiers.hpp`), json_helpers, errors, parameter_validator, parameter_metadata, field_modifier_registry; ui.hpp redirect. |
-| `frontend/io` | Results writer implementations (binary_writer, vtk_writer). VTK domain/layout validation lives in `vtk_writer_validate` (used by `VTKWriter`; I/O and XML stay in `vtk_writer.cpp`). |
+### Frontend
 
-End-to-end flow from `JSON/TOML` to `Simulator` ( `SpectralCpuStack`, `SpectralSimulationSession`, `simulation_wiring` ) is described in `[`app_pipeline.md`](../user_guide/app_pipeline.md)`. Result file formats are summarized in `[`io_results.md`](../user_guide/io_results.md)`.
+Frontend code turns the lower layers into deployable applications.
 
-## Include paths
+| Area | Responsibility |
+|------|----------------|
+| `frontend/ui` | JSON/TOML loading, parameter validation, `App` wiring, catalogs, and simulation sessions |
+| `frontend/io` | concrete binary, VTK, PNG, and related result writers |
+| `frontend/utils` | application-facing logging, diagnostics, and convenience utilities |
 
-After refactoring, public headers live under `include/openpfc/` with the structure above. Use explicit paths:
+The end-to-end configuration path is documented in
+[`app_pipeline.md`](../user_guide/app_pipeline.md). Result formats and writer
+selection are documented in [`io_results.md`](../user_guide/io_results.md).
 
-- `#include <openpfc/kernel/data/world.hpp>`
-- `#include <openpfc/kernel/fft/fft.hpp>`
-- `#include <openpfc/runtime/common/heffte_adapter.hpp>`
-- `#include <openpfc/kernel/utils/logging.hpp>`
+## Primary workflows
 
-The convenience header `#include <openpfc/openpfc.hpp>` pulls in kernel and frontend (full API). For minimal applications (kernel + minimal runtime, no frontend), use `#include <openpfc/openpfc_minimal.hpp>`; it includes the kernel and a minimal runtime set (e.g. `runtime/common/heffte_adapter.hpp` for HeFFTe conversion used by FFT and decomposition). For CUDA/HIP, include the corresponding runtime headers in addition. For faster compilation in general, prefer including specific headers over the convenience headers.
+### Spectral workflow
 
-### Minimal app and runtime inclusion
+The spectral stack is the primary end-to-end path:
 
-Applications that use `FFT` or decomposition (e.g. `pfc::decomposition::Decomposition`, `pfc::FFT`) must include the minimal runtime so that HeFFTe box conversion and related types are available. Either:
+```mermaid
+flowchart LR
+  Domain --> Decomposition --> FFT
+  FFT --> Model --> Simulator
+  Configuration --> App --> Simulator
+  Simulator --> Writers
+```
 
-- Use `#include <openpfc/openpfc_minimal.hpp>` (recommended for minimal apps), which already pulls in `runtime/common/heffte_adapter.hpp`, or  
-- Include the needed runtime headers explicitly (e.g. `#include <openpfc/runtime/common/heffte_adapter.hpp>`).
+HeFFTe performs distributed FFT work. Real-space fields are transformed to
+wave-number space, updated by the model or time integrator, transformed back,
+and passed to modifiers and writers as configured.
 
-For CPU-only FFT there is no need to include `runtime/cpu/fft.hpp`; the CPU FFT implementation is linked via the build and used through the kernel FFT interface. For CUDA or HIP FFT, include `openpfc/runtime/cuda/fft_cuda.hpp` or `openpfc/runtime/hip/fft_hip.hpp` as appropriate.
+Read [`spectral_stack.md`](spectral_stack.md) for the data-flow narrative and
+[`../reference/class_tour.md`](../reference/class_tour.md) for the stable type
+map.
 
-## Design ethos: laboratory, not fortress
+### Finite-difference workflow
 
-The codebase aims to be easy to extend and inspect, not maximally locked down. In practice:
+Finite-difference applications use the same domain decomposition and MPI
+infrastructure but choose an explicit halo layout:
 
-- Prefer free functions for many queries and operations on domain objects (e.g. `pfc::world::get_size`, and `get_world` overloads for `Decomposition` and `Field`) so call sites stay uniform and composable. When parallel access is added for a type that still uses member getters, add a free function and prefer it in new or refactored code.
-- Prefer struct-like types with public data by default; use private state only when it protects real invariants. Full guidance and examples are in [styleguide.md](../development/styleguide.md) (section *API shape: free functions and data-centric types*).
-- **Inheritance and `virtual` are intentional seams, not the default shape of the library.** Use abstract bases (`Model`, `FieldModifier`, `ResultsWriter`, …) where **out-of-tree** code must plug in through one stable boundary in C++. Prefer **thin overrides** that delegate to **free functions** and **data-centric helpers** (namespaced `pfc::…` / `pfc::ui::…`) so behavior stays easy to find and test. Avoid deep hierarchies and “logic sprouting” from many small virtual methods unless the extension point truly needs them.
+- **In-place halos** reuse boundary slabs inside the main array.
+- **Separated halos** keep ghost faces outside the FFT-compatible core array.
+- **Padded bricks** store owned cells and a surrounding ghost ring in one
+  contiguous allocation.
 
-Layer rules (kernel → runtime → frontend) are unchanged: this ethos governs *how* types expose their own state and helpers, not which layers may include each other.
+The correct layout depends on whether the same field must also remain a valid
+FFT input. Do not pass an array containing in-place ghost values to HeFFTe
+unless the application has explicitly restored a pure subdomain layout.
 
-## Naming policy
+See [`halo_exchange.md`](halo_exchange.md) for policies, overlap, persistent
+communication, and runnable examples.
 
-Prefer directory names that clearly describe their contents. Avoid vague names like "core" or "all", which tend to become catch-all junkyards. "common" is acceptable when it clearly means "shared by sibling components" (e.g. `runtime/common` for code shared across the cpu, cuda, and hip backends).
+## Ownership and extension boundaries
 
-## Public API
+OpenPFC favors data-centric types and free functions for queries and operations.
+Inheritance is reserved for stable out-of-tree extension seams such as
+`Model`, `FieldModifier`, and `ResultsWriter`.
 
-Headers under `include/openpfc/` constitute the public API. Prefer including the specific headers you need. Avoid relying on internal layout or undocumented details. Headers in subdirs such as `detail/` or `internal/` (if introduced later) are not part of the supported API and may change without notice.
+Use these rules when adding functionality:
 
-## API compatibility
+- put backend-independent contracts and algorithms in kernel;
+- put CUDA/HIP/CPU realization details in runtime;
+- put configuration, user interaction, and concrete application I/O in
+  frontend;
+- keep virtual interfaces narrow and delegate implementation to testable free
+  functions;
+- avoid introducing a generic catch-all directory such as `core`, `common`, or
+  `utils` unless its sharing boundary is explicit.
 
-Public namespaces (e.g. `pfc::core::`, `pfc::decomposition::`, `pfc::world::`) are unchanged. Only include paths and file locations change. Existing user code that updates includes to the new paths does not need to change namespace references.
+The API-shape conventions and examples are in
+[`../development/styleguide.md`](../development/styleguide.md).
+
+## Public headers and includes
+
+Headers under `include/openpfc/` form the public source-level API. Prefer the
+specific header that declares the functionality you use:
+
+```cpp
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/fft/fft.hpp>
+```
+
+The convenience headers serve broader use cases:
+
+- `<openpfc/openpfc.hpp>` includes the full public stack, including frontend
+  facilities;
+- `<openpfc/openpfc_minimal.hpp>` includes the kernel and minimal runtime pieces
+  needed by small programmatic applications.
+
+CUDA and HIP applications also include the relevant runtime headers and must be
+built with the matching CMake option and dependency stack.
+
+Installed consumers link the exported CMake target:
+
+```cmake
+target_link_libraries(my_sim PRIVATE OpenPFC::openpfc)
+```
+
+See [`../quickstart.md`](../quickstart.md) for the complete downstream CMake
+shape.
+
+## Architecture documentation policy
+
+This page documents stable responsibilities and dependency rules. It should not
+become an exhaustive list of every header, test, or experimental helper.
+
+Use instead:
+
+- the [integrated C++ API reference](../api/index.md) for signatures and member
+  documentation;
+- [`../reference/class_tour.md`](../reference/class_tour.md) for the primary
+  concepts;
+- [`../reference/examples_catalog.md`](../reference/examples_catalog.md) for
+  runnable code;
+- [`../development/refactoring_roadmap.md`](../development/refactoring_roadmap.md)
+  for implementation migration plans;
+- [`../adr/README.md`](../adr/README.md) for accepted architecture decisions.
 
 ## See also
 
-- [`spectral_stack.md`](spectral_stack.md) — end-to-end **spectral** data-flow narrative (complements the layer diagram above).  
-- [`app_pipeline.md`](../user_guide/app_pipeline.md) — JSON/TOML → `Simulator` for declarative apps.
+- [`spectral_stack.md`](spectral_stack.md) — spectral data flow
+- [`halo_exchange.md`](halo_exchange.md) — distributed halo layouts
+- [`../user_guide/app_pipeline.md`](../user_guide/app_pipeline.md) — JSON/TOML
+  to `Simulator`
+- [`../hpc/performance_profiling.md`](../hpc/performance_profiling.md) — runtime
+  profiling
+- [`../hpc/profiling_export_schema.md`](../hpc/profiling_export_schema.md) —
+  profiling output contract

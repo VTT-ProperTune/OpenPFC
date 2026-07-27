@@ -38,7 +38,7 @@ This document summarizes how we organize code, name things, and shape APIs (free
 | [`tests/integration/`](../../tests/integration) | Integration tests — multi-component or heavier scenarios. |
 | [`tests/benchmarks/`](../../tests/benchmarks) | Benchmarks (optional). Sources are compiled only when `OpenPFC_BUILD_BENCHMARKS=ON`; see [tests/benchmarks/README.md](../../tests/benchmarks/README.md). |
 | [`cmake/`](../../cmake) | Build logic included from the root `CMakeLists.txt` — prefer adding options and target wiring here rather than inflating the root file. |
-| [`docs/`](..) | Human-readable documentation (architecture, guides, Doxygen-related assets). |
+| [Documentation](../index.md) | Human-readable architecture, guides, reference pages, and integrated API documentation. |
 
 HeFFTe (and similar large third-party trees) must not live inside the OpenPFC clone; install to a prefix (e.g. under `$HOME/opt/heffte/...`) as described in INSTALL.md.
 
@@ -113,7 +113,7 @@ After structural changes, update or add Doxygen on public types and functions wh
 
 - Design / physics / algorithms: add or extend Markdown under `docs/` and link from related headers (as with `docs/halo_exchange.md`).
 - User-facing build and HPC notes: INSTALL.md, `docs/build_cpu_gpu.md`, site-specific guides (e.g. `docs/INSTALL.LUMI.md`).
-- API reference: built with Doxygen from configured inputs in [`docs/CMakeLists.txt`](../CMakeLists.txt).
+- API reference: Doxygen extracts public headers as XML and Breathe renders the curated pages under [`docs/api/`](../api/index.md).
 
 ## Tests and quality gate
 

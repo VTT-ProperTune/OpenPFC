@@ -11,7 +11,7 @@ Single-page summary of **what this repository is tested against** vs **optional 
 
 | Component | Reference / CI baseline | Notes |
 |-----------|-------------------------|--------|
-| **CMake** | 3.15+ | |
+| **CMake** | 3.21+ | Matches the top-level project requirement. |
 | **C++ standard** | C++20 | |
 | **GCC** | 15.2.x (current Tohtori Open MPI module/preset) | Other compilers may work; match MPI/HeFFTe. |
 | **MPI** | Open MPI **5.0.10** (Slurm / `srun`, PMI/PMIx); **`OPENMPI_ROOT`** when your prefix differs | Build and run with the **same** implementation ([`INSTALL.md`](../../INSTALL.md)). MPICH-only sites: build *everything* with that stack, not mixed with Open MPI. |
@@ -34,16 +34,20 @@ Single-page summary of **what this repository is tested against** vs **optional 
 |------|------|
 | **clang-format** | Pre-commit / CI formatting ([`styleguide.md`](../development/styleguide.md)). |
 | **REUSE** | License header compliance (CI). |
-| **`scripts/check_doc_links.py`** | Relative markdown links in `docs/`, `README.md`, `INSTALL.md`, etc. |
+| **`scripts/check_doc_links.py`** | Relative Markdown links in `docs/`, `README.md`, `INSTALL.md`, and related source pages. |
 | **`scripts/check_examples_catalog.py`** | `examples/CMakeLists.txt` vs [`examples_catalog.md`](examples_catalog.md). |
 | **`scripts/check_end_to_end_allen_cahn.py`** | Tutorial vs [`apps/allen_cahn/README.md`](../../apps/allen_cahn/README.md) example command. |
-| **`scripts/check_doc_bash_syntax.py`** | `bash -n` on ` ```bash` / ` ```sh` fenced blocks under `docs/`. |
+| **`scripts/check_doc_bash_syntax.py`** | `bash -n` on ` ```bash` and ` ```sh` fenced blocks under `docs/`. |
+| **Doxygen** | Extract public C++ declarations and comments into XML. |
+| **Sphinx + MyST** | Render the Markdown prose, navigation, cross-references, and final HTML site. |
+| **Breathe** | Import Doxygen XML into the Sphinx API section. |
+| **Furo** | Theme for the unified documentation site. |
+| **`uv` + `docs/pyproject.toml`** | Reproducible Python documentation environment; see [`sphinx_preview.md`](../development/sphinx_preview.md). |
+| **`scripts/build_docs.sh`** | Generate Doxygen XML and build or serve the unified Sphinx site. |
 | **`scripts/build_handbook.sh`** | Optional Pandoc concatenation — [`handbook_build.md`](../development/handbook_build.md). |
-| **`uv` + `docs/pyproject.toml`** | MkDocs + Material for optional prose browser preview — [`mkdocs_preview.md`](../development/mkdocs_preview.md), root `mkdocs.yml`. |
-| **`scripts/build_mkdocs.sh`** | Sets `NO_MKDOCS_2_WARNING=1` and runs `mkdocs` (strict-clean build). |
 
 ## See also
 
-- [`INSTALL.md`](../../INSTALL.md) — full procedure  
-- [`build_cpu_gpu.md`](../hpc/build_cpu_gpu.md) — separate build trees  
-- [`troubleshooting.md`](../troubleshooting.md) — configure/run fixes  
+- [`INSTALL.md`](../../INSTALL.md) — full procedure
+- [`build_cpu_gpu.md`](../hpc/build_cpu_gpu.md) — separate build trees
+- [`troubleshooting.md`](../troubleshooting.md) — configure/run fixes

@@ -11,6 +11,6 @@ If you run tungsten or another shipped application on a cluster, follow the “I
 
 If you extend physics in C++, follow the “I want to extend the physics” route. It introduces the architecture, the main types, the getting-started CMake tutorial, custom `App` wiring and parameter validation in the order that usually makes sense for a developer.
 
-If you integrate OpenPFC into another CMake project, follow the “I want to integrate the library” route. It points at the `find_package(OpenPFC)` pattern, the examples catalog, the Doxygen examples and the published API reference.
+If you integrate OpenPFC into another CMake project, follow the “I want to integrate the library” route. It points at the `find_package(OpenPFC)` pattern, the examples catalog, the curated source examples, and the integrated C++ API reference.
 
-For a one-command first run, use [`../start_here_15_minutes.md`](../start_here_15_minutes.md). For the public landing page and overall documentation map, return to [`../README.md`](../README.md).
+For a one-command first run, use [`../start_here_15_minutes.md`](../start_here_15_minutes.md). For the public landing page and overall documentation map, return to the [documentation index](../index.md).

@@ -39,7 +39,7 @@ This route is for someone embedding OpenPFC into another CMake project rather th
 
 The shortest mechanical example is in [`quickstart.md`](quickstart.md), in the section about `find_package(OpenPFC)`. The longer version is again [`getting_started/01-basics/README.md`](getting_started/01-basics/README.md), because it shows what a small linked program actually does after CMake resolves the package. Keep [`reference/build_options.md`](reference/build_options.md) nearby when you care about install layout, exported targets or optional components.
 
-For API orientation, use [`reference/examples_catalog.md`](reference/examples_catalog.md) to find runnable examples and [`reference/api_examples_walkthrough.md`](reference/api_examples_walkthrough.md) for the curated Doxygen snippets. The published HTML reference at [vtt-propertune.github.io/OpenPFC/dev](https://vtt-propertune.github.io/OpenPFC/dev/) is where class and function signatures belong; this prose tree is where the surrounding story lives.
+For API orientation, use [`reference/examples_catalog.md`](reference/examples_catalog.md) to find runnable examples, [`reference/api_examples_walkthrough.md`](reference/api_examples_walkthrough.md) for the curated source snippets, and the [integrated C++ API reference](api/index.md) for exact class and function declarations. The surrounding design and workflow story remains in the prose sections of the same site.
 
 ## If you are still unsure
 

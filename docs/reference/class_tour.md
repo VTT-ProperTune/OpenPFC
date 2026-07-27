@@ -5,96 +5,155 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tour of main types
 
-This page orients you to the primary classes and namespaces in OpenPFC: what each is for, where it lives, and where to see it in code. For layering rules, see [`architecture.md`](../concepts/architecture.md). For the JSON-driven `App` path, see [`app_pipeline.md`](../user_guide/app_pipeline.md).
+This page maps the primary OpenPFC concepts to their responsibilities, headers,
+and runnable examples. It is a lookup-oriented bridge between tutorials and the
+generated API reference, not an exhaustive inventory of implementation types.
 
-Read this page when you have seen a name in an example or API reference and want to know where it sits in the larger system. It is intentionally a map, not a tutorial. The tutorial path starts with [`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md), while this page helps you return from a concrete example to the surrounding types.
+For dependency rules, read
+[`architecture.md`](../concepts/architecture.md). For configuration-driven
+application wiring, read
+[`app_pipeline.md`](../user_guide/app_pipeline.md).
 
-## How pieces connect (spectral / `App` workflow)
+## Core spectral workflow
 
 ```mermaid
-flowchart TB
-  subgraph data [kernel/data]
-    Dm[Domain]
-  end
-  subgraph decomp [kernel/decomposition]
-    D[Decomposition]
-  end
-  subgraph fft [kernel/fft + runtime]
-    F[IFFT / CpuFft / GPU backends]
-  end
-  subgraph sim [kernel/simulation]
-    M[Model]
-    Tm[Time]
-    Sim[Simulator]
-    FM[FieldModifier]
-    RW[ResultsWriter]
-  end
-  subgraph ui [frontend/ui]
-    A[App]
-    Sess[SpectralSimulationSession]
-  end
-  Dm --> D --> F
-  F --> M
-  M --> Sim
-  Tm --> Sim
-  A --> Sess
-  Sess --> M
-  Sess --> Sim
-  FM --> Sim
-  RW --> Sim
+flowchart LR
+  Domain --> Decomposition --> FFT
+  FFT --> Model --> Simulator
+  Time --> Simulator
+  FieldModifier --> Simulator
+  Simulator --> ResultsWriter
+  Configuration --> App --> SpectralSimulationSession --> Simulator
 ```
 
-## Types at a glance
+The shortest useful mental model is:
 
-The table below is lookup material. The most important flow for a new reader is `Domain` to `Decomposition` to FFT to `Model` to `Simulator`, with `App` and `SpectralSimulationSession` providing the JSON-driven frontend around that stack.
+1. `Domain` describes the global grid.
+2. `Decomposition` partitions it across MPI ranks.
+3. an FFT implementation transforms local field data;
+4. `Model` defines the physics update;
+5. `Simulator` coordinates time, modifiers, model steps, and writers;
+6. `App` and `SpectralSimulationSession` build that stack from configuration.
 
-| Type / concept | Role | Primary headers | Example / app |
-|----------------|------|-----------------|---------------|
-| `Domain` | Global grid: sizes, spacing, origin, periodicity | `openpfc/kernel/data/domain.hpp` | `examples/02_domain_decomposition.cpp` |
-| `Decomposition` | MPI partition; per-rank inbox/outbox | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
-| `IFFT` / `CpuFft` | Distributed FFT (HeFFTe); spectral operators | `openpfc/kernel/fft/fft.hpp`, `fft_fftw.hpp` | `examples/05_simulator.cpp` |
-| `Model` | Physics: fields, `initialize()`, `step()` | `openpfc/kernel/simulation/model.hpp` | `examples/04_diffusion_model.cpp`, `12_cahn_hilliard.cpp` |
-| `Time` | Time range, `dt`, output cadence; `pfc::time::current` / `dt` / `done` / `next` / `do_save` mirror members | `openpfc/kernel/simulation/time.hpp` | Wired by `App` / `SpectralCpuStack` |
-| `SpectralExpCoeffs` / `SpectralExpCoefficientCache` | CPU diagonal `exp(L*dt)` and stable `(exp(L*dt)-1)/L`; caller-owned fill or method-owned cache with identity-keyed rebuild; transient / not checkpointed | `openpfc/kernel/integrator/spectral_exp_coefficients.hpp` | Unit: `tests/unit/kernel/integrator/test_spectral_exp_coefficients.cpp` |
-| `TungstenEtdWorkspace` | Tungsten method-owned adapter: `L=k_lap*opCk` → cache → `n_weight=k_lap*phi1`; CPU `apply_etd` / CUDA·HIP device weight upload; not a Model field; `TODO(remove-tungsten-etd-workspace)` after #169 | `apps/tungsten/include/tungsten/common/tungsten_etd_workspace.hpp` | App: `apps/tungsten/`; tests: `apps/tungsten/tests/test_tungsten.cpp` |
-| `Etd1Stepper` / `MultiEtd1Stepper` / `Etd1StepAttempt` | CPU ETD1: `candidate = exp_Ldt*u + phi1_L*N` into isolated buffers; injectable coeff spans + `StageFunction` `N`; no accepted-state mutation | `openpfc/kernel/simulation/steppers/etd1.hpp` | Unit: `tests/unit/kernel/simulation/steppers/test_etd1.cpp` |
-| `AdaptiveControlConfig` / `AdaptiveConfigIdentity` | Validated adaptive-control policy (tolerances, dt bounds, fixed/adaptive mode); identity for checkpoint metadata | `openpfc/kernel/simulation/adaptive_control_config.hpp` | Unit test `test_adaptive_control_config.cpp` |
-| `Simulator` | Runs the loop: ICs, BCs, `step`, writers | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
-| `FieldModifier` | Initial / boundary updates on fields | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
-| `SimulationContext` | MPI comm + rank context for modifiers | `openpfc/kernel/simulation/simulation_context.hpp` | Passed when applying modifiers |
-| `CheckpointMetadata` | Versioned accepted-time/domain sidecar for filesystem checkpoint bundles | `openpfc/kernel/checkpoint/checkpoint_metadata.hpp` | [`checkpoint_publish.md`](../development/checkpoint_publish.md) |
-| `publish_checkpoint_directory` | Atomic stage-then-rename publish of metadata + accepted field bricks | `openpfc/kernel/checkpoint/publish.hpp` | Unit: `tests/unit/kernel/checkpoint/test_checkpoint_publish.cpp`; [`checkpoint_publish.md`](../development/checkpoint_publish.md) |
-| `ResultsWriter` / `ResultsWriterMap` | Persist fields (binary, VTK, …); `Simulator` holds `ResultsWriterMap` | `openpfc/kernel/simulation/results_writer.hpp`; implementations under `openpfc/frontend/io/` | `examples/11_write_results.cpp`, [`io_results.md`](../user_guide/io_results.md) |
-| `ResultsWriterCatalog` | JSON `fields[].writer` → factory (`binary` built-in); inject for custom formats | `openpfc/frontend/ui/results_writer_catalog.hpp` | Same as `add_result_writers_from_json` ([`app_pipeline.md`](../user_guide/app_pipeline.md)) |
-| `pfc::ui::App<Model>` | Load JSON/TOML, build stack, run | `openpfc/frontend/ui/app.hpp` | `apps/aluminumNew/`, `examples/10_ui_register_ic.cpp` |
-| `SpectralCpuStack` | Domain → decomp → CPU FFT → time from JSON | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | Used inside `SpectralSimulationSession` |
-| `spectral_fft_stack_factory` | Merge `plan_options` + root `backend`; cuFFT / ROCm plan defaults + JSON overlay | `openpfc/frontend/ui/spectral_fft_stack_factory.hpp` | GPU tests / drivers alongside CPU stack helpers |
-| `SpectralSimulationSession` | Owns stack + `Model` + `Simulator` | `openpfc/frontend/ui/spectral_simulation_session.hpp` | Constructed by `App` |
-| `JsonWiringSession` | Bundles `JsonWiringContext` + `FieldModifierCatalog` + `ResultsWriterCatalog` for `wire_simulator_and_runtime_from_json` | `openpfc/frontend/ui/json_wiring_session.hpp` | Custom apps / tests; catalogs are explicit (no defaulted parameters) |
-| `LinearOperatorDesc` / `SolveOptions` / `SolveOutcome` / `SolveFunction` | Solver capability contract types (no `LinearSolver` base) | `openpfc/kernel/simulation/solver_contract.hpp` | unit: `test_solver_contract.cpp` |
-| `SpectralDiagonalSolver` | CPU spectral diagonal scale-and-divide (`SolveFunction`) with nullspace policies; real or complex diagonals | `openpfc/kernel/simulation/spectral_diagonal_solver.hpp` (contract: `solver_contract.hpp`) | unit: `test_spectral_diagonal_solver.cpp` |
-| `ImexEulerComposer` / `ImexStepAttemptResult` | IMEX stage-composition seam: explicit eval then `SolveFunction` into isolated candidate; commit via `apply_candidate` (no virtual `ImexIntegrator` base) | `openpfc/kernel/simulation/steppers/imex_stage_composition.hpp` | unit: `tests/unit/kernel/simulation/steppers/test_imex_stage_composition.cpp` |
-| `FieldPayload` / `ComponentPayload` / `PersistentState` | Versioned named field and irreducible component checkpoint payloads (serialization-agnostic) | `openpfc/kernel/checkpoint/payloads.hpp` | [`checkpoint_state_capture.md`](../development/checkpoint_state_capture.md); Heat3D/Wave2D adapters |
-| `capture_field` / `restore_field` | Capture/restore free functions with validate-before-mutate (exact byte length) | `openpfc/kernel/checkpoint/state_capture.hpp` | unit: `tests/unit/kernel/checkpoint/test_state_capture.cpp` |
+## Stable concepts at a glance
 
-## Execution and backends (advanced)
+| Type or concept | Responsibility | Primary header | Start with |
+|-----------------|----------------|----------------|------------|
+| `Domain` | Global grid size, spacing, origin, and periodicity | `openpfc/kernel/data/domain.hpp` | `examples/02_domain_decomposition.cpp` |
+| `Box3i` | Inclusive integer bounds for local or transformed regions | `openpfc/kernel/data/box.hpp` | `examples/02_domain_decomposition.cpp` |
+| `Decomposition` | MPI partition and per-rank inbox/outbox geometry | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
+| `IFFT` / `CpuFft` | Distributed forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
+| `Model` | Physics fields, initialization, and time-step update | `openpfc/kernel/simulation/model.hpp` | `examples/04_diffusion_model.cpp` |
+| `Time` | Start, stop, step size, current time, and save cadence | `openpfc/kernel/simulation/time.hpp` | `examples/time.cpp` |
+| `Simulator` | Coordinates modifiers, model steps, time, and result output | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
+| `FieldModifier` | Initial conditions and boundary-condition-style updates | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
+| `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
+| `pfc::ui::App<Model>` | Loads JSON/TOML and runs a configured application | `openpfc/frontend/ui/app.hpp` | `apps/` and `tutorials/custom_app_minimal.md` |
+| `SpectralCpuStack` | Owns the CPU domain, decomposition, FFT, fields, and time stack | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
+| `SpectralSimulationSession` | Owns model and simulator state around a spectral stack | `openpfc/frontend/ui/spectral_simulation_session.hpp` | `user_guide/app_pipeline.md` |
 
-| Concept | Role | Headers |
-|---------|------|---------|
-| `DataBuffer`, `backend` tags | Host/device buffers; template dispatch | `kernel/execution/databuffer.hpp`, `runtime/cuda/*`, `runtime/hip/*` |
-| `parallel_for`, views | Kokkos-style loops (CPU/GPU) | `kernel/execution/parallel.hpp`, `view.hpp` |
+Use the [integrated C++ API reference](../api/index.md) for exact constructors,
+overloads, namespaces, and member documentation.
 
-GPU FFT and device execution require the matching runtime headers and a build with `OpenPFC_ENABLE_CUDA` or `OpenPFC_ENABLE_HIP`.
+## Data and execution
+
+OpenPFC separates logical fields from execution and memory backends.
+
+| Concept | Role | Location |
+|---------|------|----------|
+| `Field` / local field containers | Associate local values with domain and decomposition information | `kernel/data`, `kernel/field` |
+| `DataBuffer` | Own host or device storage selected by backend type | `kernel/execution`, GPU specializations under `runtime/` |
+| execution spaces | Select serial, OpenMP, CUDA, or HIP execution | `kernel/execution`, `runtime/cuda`, `runtime/hip` |
+| memory spaces | Express host versus device residency | `kernel/execution`, `runtime/cuda`, `runtime/hip` |
+| views and `parallel_for` | Backend-oriented access and iteration | `kernel/execution` and runtime specializations |
+| `deep_copy` and mirrors | Move or expose data across memory spaces | `kernel/execution` and runtime specializations |
+
+GPU execution requires a matching CUDA or HIP build and the corresponding
+runtime headers. Build decisions are documented in
+[`../hpc/gpu_path_decision.md`](../hpc/gpu_path_decision.md).
+
+## Finite-difference types
+
+Finite-difference applications choose a field/halo layout according to whether
+the data must also remain FFT-compatible.
+
+| Concept | Use |
+|---------|-----|
+| in-place halo exchange | Compact FD-only arrays whose boundary slabs may hold ghosts |
+| separated halo exchange | FFT-safe core arrays with separate face buffers |
+| `PaddedBrick<T>` | Owned cells plus a contiguous ghost ring for direct stencil indexing |
+| sparse halo exchange | Explicit remote-index lists and structured separated halos |
+| FD gradients and stencils | Per-cell differential operators and reusable coefficients |
+
+Start with `examples/15_finite_difference_heat.cpp` and
+[`../concepts/halo_exchange.md`](../concepts/halo_exchange.md).
+
+## Configuration and extension catalogs
+
+The frontend maps configuration names to concrete behavior through catalogs and
+wiring helpers.
+
+| Concept | Responsibility |
+|---------|----------------|
+| parameter metadata and validation | Check required keys, types, bounds, units, and typical values |
+| field-modifier catalog | Map configuration names to initial/boundary modifier factories |
+| results-writer catalog | Map `fields[].writer` names to writer factories |
+| JSON wiring context/session | Hold the objects required to connect configuration to a simulator |
+| spectral stack factory | Merge backend and HeFFTe plan options into a concrete FFT stack |
+
+These are extension mechanisms rather than first-day concepts. Follow
+[`../tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md) and
+[`../extending_openpfc/README.md`](../extending_openpfc/README.md) before using
+them directly.
+
+## Advanced subsystems
+
+OpenPFC also contains stable subsystem contracts that are best learned from
+their focused documentation rather than from one expanding type table.
+
+| Subsystem | Read |
+|-----------|------|
+| time integration and adaptive stepping | simulation stepper headers and generated API reference |
+| solver contracts and spectral diagonal solves | solver headers under `kernel/simulation` and unit tests |
+| checkpoint state and atomic publication | `docs/development/checkpoint_state_capture.md` and `checkpoint_publish.md` |
+| profiling sessions and export | [`../hpc/performance_profiling.md`](../hpc/performance_profiling.md) |
+| profiling file schema | [`../hpc/profiling_export_schema.md`](../hpc/profiling_export_schema.md) |
+| result formats | [`../user_guide/io_results.md`](../user_guide/io_results.md) |
+| binary field layout | [`binary_field_io_spec.md`](binary_field_io_spec.md) |
+
+Application-private workspaces and temporary migration adapters are intentionally
+excluded from this page. They remain discoverable through their application
+headers, tests, and generated API documentation without becoming part of the
+core learning path.
+
+## Find a runnable example
+
+| Goal | Example or guide |
+|------|------------------|
+| inspect domain decomposition | `02_domain_decomposition` |
+| perform a distributed FFT | `03_parallel_fft` |
+| implement a small spectral model | `04_diffusion_model` |
+| understand simulator orchestration | `05_simulator` |
+| register a custom initial condition | `10_ui_register_ic` |
+| write result files | `11_write_results` |
+| inspect a Cahn-Hilliard workflow | `12_cahn_hilliard` |
+| add a custom field initializer | `14_custom_field_initializer` |
+| run finite differences with halos | `15_finite_difference_heat` |
+| add a coordinate system | `17_custom_coordinate_system` |
+
+The complete catalog and suggested curriculum are in
+[`examples_catalog.md`](examples_catalog.md).
 
 ## See also
 
-| Document | Purpose |
-|----------|---------|
-| [`app_pipeline.md`](../user_guide/app_pipeline.md) | JSON/TOML → `Simulator` wiring order |
-| [`parameter_validation.md`](../user_guide/parameter_validation.md) | Optional validated `model.params` |
-| [`glossary.md`](glossary.md) | Terminology |
-| [`tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md) | Out-of-tree `App` + JSON **wiring** (goal/outcome first; physics in `step`) |
-| [`extending_openpfc/README.md`](../extending_openpfc/README.md) | Extension points checklist |
-| [`examples_catalog.md`](examples_catalog.md) | All `examples/` executables (with curriculum) |
-| [`api_examples_walkthrough.md`](api_examples_walkthrough.md) | Doxygen `docs/api/examples/` in reading order |
-| [`learning_paths.md`](../learning_paths.md) | Role-based documentation tracks |
+- [`../learning_paths.md`](../learning_paths.md) — role-based reading order
+- [`../concepts/spectral_stack.md`](../concepts/spectral_stack.md) — spectral
+  data flow
+- [`../user_guide/app_pipeline.md`](../user_guide/app_pipeline.md) —
+  configuration to `Simulator`
+- [`api_examples_walkthrough.md`](api_examples_walkthrough.md) — curated API
+  examples
+- [`../getting_started/01-basics/README.md`](../getting_started/01-basics/README.md)
+  — out-of-tree consumer tutorial
+- [`../extending_openpfc/README.md`](../extending_openpfc/README.md) — extension
+  checklist
