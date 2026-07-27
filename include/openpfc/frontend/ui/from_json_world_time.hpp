@@ -183,7 +183,7 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
     z0 = -0.5 * dz * Lz;
   }
 
-  World world = world::create(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
+  World world = pfc::domain::create_world(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
                               GridSpacing({dx, dy, dz}));
 
   return world;
