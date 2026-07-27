@@ -34,6 +34,7 @@
 #include <vector>
 
 #include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
 
@@ -96,7 +97,9 @@ namespace heat3d {
  *
  * @see Simulator for the base class contract on time-integration assumptions
  *   and how to substitute alternative integrators.
+ * @tparam FieldType The field type (e.g., pfc::field::LocalField<double> or pfc::data::Field<double, pfc::HostSpace>)
  */
+template <typename FieldType>
 class SpectralHeatPropagator {
 public:
   /**
@@ -109,10 +112,18 @@ public:
    * @param dt  Time-step size.
    */
   SpectralHeatPropagator(pfc::fft::IFFT &fft,
-                         const pfc::field::LocalField<double> &u, double D,
+                         const FieldType &u, double D,
                          double dt)
       : m_fft(fft), m_psi_F(fft.size_outbox()), m_opL(fft.size_outbox()) {
-    const auto size = u.global_size();
+    // Handle both Field (which has domain()) and LocalField (which has global_size())
+    const auto size = []<typename T>(const T& field) {
+      if constexpr (requires { field.domain(); }) {
+        return pfc::domain::get_size(field.domain());
+      } else {
+        return field.global_size();
+      }
+    }(u);
+
     const auto spacing = u.spacing();
     const auto ob = fft.get_outbox_bounds();
     const double fx =
@@ -142,10 +153,14 @@ public:
   }
 
   /** Advance `u` by one implicit-Euler step (1 fwd FFT + 1 inv FFT). */
-  void step(pfc::field::LocalField<double> &u) {
-    m_fft.forward(u.vec(), m_psi_F);
+  void step(FieldType &u) {
+    // Create a std::vector view around the Field's data buffer for FFT compatibility
+    std::vector<double> u_view(u.data(), u.data() + u.size());
+    m_fft.forward(u_view, m_psi_F);
     for (std::size_t k = 0; k < m_psi_F.size(); ++k) m_psi_F[k] *= m_opL[k];
-    m_fft.backward(m_psi_F, u.vec());
+    m_fft.backward(m_psi_F, u_view);
+    // Copy the data back from the view to the Field
+    std::copy(u_view.begin(), u_view.end(), u.data());
   }
 
 private:

@@ -6,6 +6,7 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
@@ -53,7 +54,8 @@ struct HeatModel {
 };
 
 // Helper: compute global L2 norm across all ranks
-double compute_l2_norm(const pfc::field::LocalField<double>& u) {
+template <typename FieldType>
+double compute_l2_norm(const FieldType& u) {
   double local_sum = 0.0;
   u.for_each_owned([&](double /*x*/, double /*y*/, double /*z*/, double val) {
     local_sum += val * val;
@@ -62,7 +64,15 @@ double compute_l2_norm(const pfc::field::LocalField<double>& u) {
   double global_sum = 0.0;
   MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-  const auto& global_size = u.global_size();
+  // Handle both Field (which has domain()) and LocalField (which has global_size())
+  const auto& global_size = [&u] {
+    if constexpr (requires { u.domain(); }) {
+      return pfc::domain::get_size(u.domain());
+    } else {
+      return u.global_size();
+    }
+  }();
+
   const double volume = static_cast<double>(global_size[0] * global_size[1] * global_size[2]);
   return std::sqrt(global_sum / volume);
 }
