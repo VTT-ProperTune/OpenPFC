@@ -16,6 +16,7 @@
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/domain/create.hpp>
 
 using namespace pfc;
 
@@ -24,12 +25,18 @@ namespace {
 Box3i whole_box(int nx, int ny, int nz) {
   return Box3i::from_bounds({0, 0, 0}, {nx - 1, ny - 1, nz - 1});
 }
+
+// Helper function to create a simple world with given dimensions
+// (reduces boilerplate for common test cases)
+World create_simple_world(int nx, int ny, int nz) {
+  return domain::create_world(Int3{nx, ny, nz});
+}
 } // namespace
 
 TEST_CASE("Field: idx matches LocalField bit-for-bit (halo 0)",
           "[grid_field][unit]") {
   const int nx = 8, ny = 6, nz = 4;
-  auto world = world::create({nx, ny, nz});
+  auto world = create_simple_world(nx, ny, nz);
   auto decomp = decomposition::create(world, 1);
   auto lf = field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, 0);
 
@@ -45,7 +52,7 @@ TEST_CASE("Field: idx matches PaddedBrick bit-for-bit across the halo (halo n)",
           "[grid_field][unit]") {
   const int nx = 8, ny = 6, nz = 4;
   const int hw = 2;
-  auto world = world::create({nx, ny, nz});
+  auto world = create_simple_world(nx, ny, nz);
   auto decomp = decomposition::create(world, 1);
   field::PaddedBrick<double> pb(decomp, /*rank=*/0, hw);
 
@@ -60,7 +67,7 @@ TEST_CASE("Field: idx matches PaddedBrick bit-for-bit across the halo (halo n)",
 
 TEST_CASE("Field: coordinate queries match LocalField", "[grid_field][unit]") {
   const int nx = 5, ny = 5, nz = 5;
-  auto world = world::create({nx, ny, nz});
+  auto world = create_simple_world(nx, ny, nz);
   auto decomp = decomposition::create(world, 1);
   auto lf = field::LocalField<double>::from_subdomain(decomp, 0, 0);
 
