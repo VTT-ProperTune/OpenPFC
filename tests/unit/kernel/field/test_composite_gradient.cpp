@@ -112,8 +112,8 @@ TEST_CASE("test_composite_gradient_box3i_domain",
                               GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, /*nparts=*/1);
   Domain domain = decomposition::domain(decomp);
-  auto u = LocalField<double>::from_subdomain(decomp, /*rank=*/0,
-                                              /*halo_width=*/1);
+  auto u = data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0,
+                                                       /*halo_width=*/1);
   u.apply([](double x, double y, double z) { return x * x + y * y + z * z; });
   
   // Create component evaluators
@@ -151,8 +151,8 @@ TEST_CASE("test_composite_gradient_box3i_domain_spacing",
                               GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(world, /*nparts=*/1);
   Domain domain = decomposition::domain(decomp);
-  auto u = LocalField<double>::from_subdomain(decomp, /*rank=*/0,
-                                              /*halo_width=*/1);
+  auto u = data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0,
+                                                       /*halo_width=*/1);
   u.apply([](double x, double y, double z) { return x * x + y * y + z * z; });
   
   // Create component evaluators
