@@ -5,78 +5,102 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Extending OpenPFC
 
-OpenPFC is meant to be extended without editing the core library: you add models, initial/boundary behavior, writers, and (optionally) coordinate systems in your translation units and link against `OpenPFC`.
+OpenPFC is designed so application-specific physics can live outside the
+framework repository. A downstream project can add models, field modifiers,
+writers, and spatial setup while linking the installed `OpenPFC::openpfc`
+target.
 
-Read [`../architecture.md`](../concepts/architecture.md) first so you know where code belongs. If you use `App<Model>` and JSON, follow [`../app_pipeline.md`](../user_guide/app_pipeline.md) for wiring order and section names. For an ordered **extend** track (and links to examples), see [`../learning_paths.md`](../learning_paths.md) → *Extend physics and declarative configs*.
+Read [Architecture](../concepts/architecture.md) first. It defines the stable
+kernel, runtime, and frontend boundaries used by this guide. For a complete
+out-of-tree executable, follow the
+[Minimal custom application tutorial](../tutorials/custom_app_minimal.md).
 
-## API style when you extend OpenPFC
+## Choose the extension point
 
-OpenPFC favors **namespace free functions** and **data-centric types** (“laboratory, not fortress”). Subclass `Model` / `FieldModifier` / `ResultsWriter` only where the framework needs a **runtime extension seam**; implement mechanics as **`pfc::…` helpers** and call **`pfc::get_fft(model)`**, **`pfc::get_world(model)`**, **`pfc::step(model, t)`**, etc., from your model body so behavior stays explicit and grep-friendly (see [`../styleguide.md`](../development/styleguide.md#api-shape-free-functions-and-data-centric-types)).
+| Goal | Primary extension point | Starting point |
+|------|-------------------------|----------------|
+| Add a PDE or phase-field model | `pfc::Model` | `examples/04_diffusion_model.cpp`, `examples/12_cahn_hilliard.cpp` |
+| Add a config-selected initial or boundary condition | `pfc::FieldModifier` and a modifier catalog | `examples/10_ui_register_ic.cpp`, `examples/14_custom_field_initializer.cpp` |
+| Apply programmatic field operations | Namespace free functions and field iteration helpers | [Functional field operations](../getting_started/functional_field_ops.md) |
+| Add an output format | `pfc::ResultsWriter` or a writer catalog | `examples/11_write_results.cpp` |
+| Add custom spatial interpretation | Domain and coordinate helper functions | `examples/17_custom_coordinate_system.cpp` |
+| Build a JSON/TOML-driven binary | `pfc::ui::App<Model>` | [Minimal custom application](../tutorials/custom_app_minimal.md) |
+| Add point-wise gradients or finite-difference physics | Field/gradient primitives and halo policies | [Per-point gradients](per_point_grads.md), [Halo exchange](../concepts/halo_exchange.md) |
 
-- Kernel — backend-agnostic data, decomposition, simulation abstractions (`Model`, `Simulator`, `FieldModifier`, …).
-- Runtime — CPU / CUDA / HIP execution and FFT implementations.
-- Frontend — optional JSON/TOML `App`, I/O helpers, UI-oriented pieces.
+The [Examples catalog](../reference/examples_catalog.md) is the authoritative
+inventory of runnable examples.
 
-Most extension work is new types in your app or examples that plug into `Model`, `FieldModifier`, `ResultsWriter`, or the `App` registration APIs.
+## API style
 
-## Minimum file set for a config-driven binary
+OpenPFC favors data-centric types and namespace free functions. Use inheritance
+where the framework needs a runtime extension seam, such as `Model`,
+`FieldModifier`, or `ResultsWriter`; keep the implementation behind that seam in
+ordinary functions and small data types.
 
-If you ship an executable that uses `pfc::ui::App<YourModel>` (JSON/TOML on disk), you typically need:
+This keeps physics code testable and avoids deep class hierarchies. The complete
+conventions are in the [Style guide](../development/styleguide.md).
 
-| Piece | Purpose |
-|-------|---------|
-| `your_model.hpp` / `.cpp` | `YourModel : public pfc::Model` with `initialize`, `step`; optional `void from_json(const pfc::ui::json &, YourModel &)` for `model.params`. |
-| `main.cpp` | `register_field_modifier<…>(…)` for any custom IC/BC types; `pfc::ui::App<YourModel> app(argc, argv); return app.main();` |
-| CMake | `find_package(OpenPFC)`, `find_package(nlohmann_json)`, `target_link_libraries(… OpenPFC nlohmann_json::nlohmann_json)` |
-| Config file | Path as `argv[1]` — see [`../app_pipeline.md`](../user_guide/app_pipeline.md) for section names. |
+## Minimal config-driven project
 
-End-to-end walkthrough: [`../tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md). Type map: [`../class_tour.md`](../reference/class_tour.md).
+A downstream application commonly contains:
 
-## Extension points (typical)
+| File | Responsibility |
+|------|----------------|
+| `your_model.hpp` and implementation files | Define the model fields, initialization, and time step |
+| `main.cpp` | Construct `pfc::ui::App<YourModel>` and register optional extension catalogs |
+| `CMakeLists.txt` | Find OpenPFC and link `OpenPFC::openpfc` |
+| JSON or TOML input | Define domain, time integration, planner options, modifiers, and writers |
 
-| Goal | Mechanism | Starting points |
-|------|-----------|-----------------|
-| New physics / PDE model | Subclass `Model`, wire FFT and fields | `examples/04_diffusion_model.cpp`, `examples/12_cahn_hilliard.cpp` |
-| Point-wise PDE model (single or multi-field) | Model-owned grads aggregate + `pfc::field::create<G>(...)` | [`per_point_grads.md`](per_point_grads.md), `apps/heat3d/` |
-| Initial or boundary behavior | `FieldModifier` or functional `field::apply` | [`../getting_started/functional_field_ops.md`](../getting_started/functional_field_ops.md), `examples/14_custom_field_initializer.cpp` |
-| Declarative runs (JSON/TOML) | `pfc::ui::App<YourModel>` + registration | `examples/10_ui_register_ic.cpp`, shipped apps under `apps/` |
-| Custom coordinate / spatial setup | Domain and field helpers | `examples/17_custom_coordinate_system.cpp` |
-| Output formats | Implement `ResultsWriter` or use existing writers | `examples/11_write_results.cpp` |
+The minimal CMake shape uses the same target as the packaging smoke test:
 
-## Worked examples in `examples/`
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(my_openpfc_app LANGUAGES C CXX)
 
-| Source | Focus |
-|--------|--------|
-| `14_custom_field_initializer.cpp` | Custom initializer pattern |
-| `17_custom_coordinate_system.cpp` | Non-trivial spatial setup |
-| `10_ui_register_ic.cpp` | Registering pieces with the UI / config path |
-| `12_cahn_hilliard.cpp` | End-to-end spectral model with simulator stack |
+find_package(OpenPFC REQUIRED)
 
-Full index: [`../examples_catalog.md`](../reference/examples_catalog.md).
+add_executable(my_openpfc_app main.cpp your_model.cpp)
+target_link_libraries(my_openpfc_app PRIVATE OpenPFC::openpfc)
+```
 
-## Field modifier catalog (JSON `type` → IC/BC)
+Frontend headers may require additional packages used directly by the
+application, such as `nlohmann_json`. The complete wiring and run command belong
+in the [custom application tutorial](../tutorials/custom_app_minimal.md), not in
+this overview.
 
-Built-in modifier types (`constant`, `single_seed`, …) live in
-`pfc::ui::make_builtin_field_modifier_catalog()`. `pfc::ui::default_field_modifier_catalog()`
-is the process-wide mutable singleton used when you call `register_field_modifier<T>(type)`
-with one argument or `create_field_modifier(type, json)` without a catalog.
+## Configuration and registration
 
-For **tests** or **libraries** that must not pollute global state, build a local
-`FieldModifierCatalog` and pass it into
-`add_initial_conditions_from_json` / `add_boundary_conditions_from_json` /
-`wire_simulator_and_runtime_from_json` / `SpectralSimulationSession` overloads
-that accept `modifier_catalog`. JSON `pfc::ui::App` can call
-`set_field_modifier_catalog` before `main()` to use the same injection on the
-default spectral path. See `openpfc/frontend/ui/field_modifier_registry.hpp`.
+The frontend converts JSON or TOML into a domain, decomposition, FFT stack,
+model, simulator, modifiers, and writers. The ownership and wiring order are
+described in [Application pipeline](../user_guide/app_pipeline.md). Exact keys
+belong in the
+[Spectral App configuration reference](../reference/spectral_app_config_reference.md).
 
-## Configuration validation
+For custom initial and boundary conditions, prefer an explicit local
+`FieldModifierCatalog` in tests and reusable libraries. Process-wide registration
+is convenient for simple applications but introduces shared mutable state.
 
-Models can expose validated parameters (ranges, required keys). See [`../parameter_validation.md`](../user_guide/parameter_validation.md), the Configuration Validation section in the root [`README.md`](../../README.md), and `apps/tungsten/include/tungsten/common/tungsten_input.hpp` for a large metadata-driven example.
+## Validation
 
-## Style and API conventions
+A model can validate required parameters, types, ranges, units, and typical
+values before time integration begins. See
+[Parameter validation](../user_guide/parameter_validation.md) and the tungsten
+application for a larger metadata-driven example.
 
-Follow [`../styleguide.md`](../development/styleguide.md) (naming, headers, SPDX, free-function style where appropriate).
+## Backend-specific work
 
-## Applications as references
+Kernel code must remain independent of CUDA and HIP implementation headers.
+Backend-specific execution, memory, and FFT functionality belongs under the
+runtime layer. Review [Architecture](../concepts/architecture.md) and the
+[GPU path guide](../hpc/gpu_path_decision.md) before adding a new backend path.
 
-Production-style programs under `apps/` (tungsten, aluminum, Allen–Cahn) show how a full binary ties JSON/TOML, model parameters, and MPI together. See [`../applications.md`](../user_guide/applications.md).
+## Review checklist
+
+Before proposing an extension:
+
+- identify the layer that owns the new behavior;
+- reuse an existing extension point when one matches;
+- avoid copying complete option or configuration references into examples;
+- add a focused test and a runnable example when the behavior is user-facing;
+- update the canonical guide or reference page for any new public contract;
+- record release-visible changes under `[Unreleased]` in the changelog.

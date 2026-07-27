@@ -93,7 +93,6 @@ int main(){return 0;}' | nvcc --std=c++20 -x cu -c -o /tmp/test_world_cu.o -
 
 If you encounter similar issues with other C++20 features in CUDA device code, apply the same pattern: guard the C++20-only construct behind `#ifndef __CUDACC__` and provide a hand-written `__host__ __device__` equivalent for device code.
 
-
 ### Process exits immediately with “validation” or parameter errors
 
 Models such as tungsten validate `model.params` at startup. Read the printed report: missing keys, out-of-range values, or wrong types. Compare your file to `apps/tungsten/inputs_json/` samples. See [`app_pipeline.md`](user_guide/app_pipeline.md) for which JSON sections are consumed and [`apps/tungsten/README.md`](../apps/tungsten/README.md) for layout pointers.
@@ -102,13 +101,11 @@ Models such as tungsten validate `model.params` at startup. Read the printed rep
 
 Paths are resolved from the current working directory (often your `build/` folder). Use a path relative to that directory, or an absolute path.
 
-
-
 ## Still stuck?
 
-- [`faq.md`](faq.md) — short Q&A  
-- [`quickstart.md`](quickstart.md) — first successful run  
-- [`mpi_io_layout_checklist.md`](hpc/mpi_io_layout_checklist.md) — MPI ranks, cwd, binary I/O  
-- [`learning_paths.md`](learning_paths.md) — pick a sequenced track by role  
-- [`README.md`](README.md) — full documentation index  
+- [`faq.md`](faq.md) — short Q&A
+- [`quickstart.md`](quickstart.md) — first successful run
+- [`mpi_io_layout_checklist.md`](hpc/mpi_io_layout_checklist.md) — MPI ranks, cwd, binary I/O
+- [`learning_paths.md`](learning_paths.md) — pick a sequenced track by role
+- [Documentation index](index.md) — full documentation map
 - Issues — <https://github.com/VTT-ProperTune/OpenPFC/issues>

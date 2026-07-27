@@ -102,7 +102,6 @@ CPU binaries `wave2d_fd_manual` / `wave2d_fd` and the CUDA app `wave2d_cuda` acc
 ```bash
 mpirun -n 2 ./wave2d_fd_manual 96 96 200 0.02 neumann \
   --vtk $PWD/wave2d-run-out/cpu/u_%04d.vti --vtk-every 50
-
 mpirun -n 2 ./wave2d_cuda 96 96 200 0.02 neumann \
   --vtk $PWD/wave2d-run-out/gpu/u_%04d.vti --vtk-every 50
 ```
@@ -111,6 +110,6 @@ Open the generated `.pvti` files in ParaView (multi-rank) or the single `.vti` i
 
 ## See also
 
-- [INSTALL.md](../../INSTALL.md) — supported stack, HeFFTe build, troubleshooting  
-- [tohtori OpenMPI environment](../../.cursor/rules/tohtori-openmpi-environment.mdc) (Cursor rule: fixed paths when modules are not loaded)  
-- [GPU path decision](gpu_path_decision.md) — whether to enable CUDA/HIP at all  
+- [INSTALL.md](../../INSTALL.md) — supported stack, HeFFTe build, troubleshooting
+- [Tohtori CMake toolchain](../../cmake/toolchains/tohtori-gcc11-openmpi.cmake) — checked-in paths and environment overrides for non-interactive configuration
+- [GPU path decision](gpu_path_decision.md) — whether to enable CUDA/HIP at all

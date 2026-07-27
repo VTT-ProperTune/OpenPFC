@@ -3,54 +3,51 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Getting started
+# Getting started: library concepts
 
-New to OpenPFC? **Shortest path:** [`../start_here_15_minutes.md`](../start_here_15_minutes.md). Then [`../quickstart.md`](../quickstart.md) (install → run examples or an app → or link the library in your own CMake project). For a **sequenced** path by role, use [`../learning_paths.md`](../learning_paths.md). **Short persona pages:** [`../personas.md`](../development/personas.md). **How-to recipes:** [`../recipes/README.md`](../recipes/README.md).
+This folder contains the slower, code-oriented introduction to the OpenPFC
+library. It is for readers who have already completed the short
+[Start here](../start_here_15_minutes.md) build-and-run check and now want to
+understand the objects behind that run.
 
-## Tutorials (in-repo)
+For the complete documentation map, use the [documentation index](../index.md).
+For a role-based sequence covering applications, extension work, or downstream
+integration, use [Learning paths](../learning_paths.md).
 
-| Topic | Document |
-|--------|-----------|
-| ~15 min first run (clone → build → `mpirun`) | [`../start_here_15_minutes.md`](../start_here_15_minutes.md) |
-| Spectral stack mental model | [`../spectral_stack.md`](../concepts/spectral_stack.md) |
-| Named how-to recipes | [`../recipes/README.md`](../recipes/README.md) |
-| Learning paths by role (run / extend / integrate) | [`../learning_paths.md`](../learning_paths.md) |
-| Showcase (figures → apps / examples) | [`../showcase.md`](../user_guide/showcase.md) |
-| Tutorials hub (`docs/tutorials/`) | [`../tutorials/README.md`](../tutorials/README.md) |
-| VTK / ParaView workflow | [`../tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md) |
-| HeFFTe `plan_options` tutorial | [`../tutorials/fft_heffte_plan_options.md`](../tutorials/fft_heffte_plan_options.md) |
-| Spectral examples sequence (04 → 05 → 12) | [`../tutorials/spectral_examples_sequence.md`](../tutorials/spectral_examples_sequence.md) |
-| End-to-end: build → PNG or binary outputs | [`../tutorials/end_to_end_visualization.md`](../tutorials/end_to_end_visualization.md) |
-| Quick path: three tracks + “next steps” | [`../quickstart.md`](../quickstart.md) |
-| Domain, decomposition, FFT, `find_package(OpenPFC)` | [`01-basics/README.md`](01-basics/README.md) |
-| Functional field ops (IC/BC without nested loops) | [`functional_field_ops.md`](functional_field_ops.md) |
-| Tour of main classes and headers | [`../class_tour.md`](../reference/class_tour.md) |
-| Minimal custom `App` project (CMake + JSON + MPI) | [`../tutorials/custom_app_minimal.md`](../tutorials/custom_app_minimal.md) |
-| Parameter validation for `model.params` | [`../parameter_validation.md`](../user_guide/parameter_validation.md) |
+## Tutorial sequence
 
-## Reference tables
+1. [Library basics](01-basics/README.md)
+   - create a domain;
+   - decompose it across MPI ranks;
+   - construct and use the FFT layer;
+   - build a small out-of-tree CMake consumer.
+2. [Functional field operations](functional_field_ops.md)
+   - express initial and boundary operations without repeating nested index
+     loops;
+   - connect field operations to the extension style used elsewhere in the
+     framework.
 
-| Topic | Document |
-|--------|-----------|
-| Runnable `examples/` executables | [`../examples_catalog.md`](../reference/examples_catalog.md) |
-| Doxygen `api/examples` reading order | [`../api_examples_walkthrough.md`](../reference/api_examples_walkthrough.md) |
-| Shipped `apps/` binaries and inputs | [`../applications.md`](../user_guide/applications.md) |
-| `App` config pipeline (JSON → `Simulator`) | [`../app_pipeline.md`](../user_guide/app_pipeline.md) |
-| `ctest` / unit tests | [`../testing.md`](../development/testing.md) |
-| GPU-enabled shipped apps | [`../tutorials/gpu_app_quickstart.md`](../tutorials/gpu_app_quickstart.md) |
-| Example terminal output (reference) | [`../example_run_output.md`](../reference/example_run_output.md) |
-| Results writers (binary / VTK / PNG) | [`../io_results.md`](../user_guide/io_results.md) |
-| CMake options | [`../build_options.md`](../reference/build_options.md) |
-| Extending models and the UI pipeline | [`../extending_openpfc/README.md`](../extending_openpfc/README.md) |
+The runnable examples that accompany these ideas are catalogued in
+[Examples catalog](../reference/examples_catalog.md). A guided sequence through
+the spectral examples is available in
+[Spectral examples sequence](../tutorials/spectral_examples_sequence.md).
 
-## See also
+## Choose the next document
 
-- [`../README.md`](../README.md) — full documentation index (architecture, profiling, LUMI, …)
-- [`../faq.md`](../faq.md) — common questions (MPI, CMake, missing examples/apps)
-- [`../troubleshooting.md`](../troubleshooting.md) — configure/run fixes
-- [`../configuration.md`](../user_guide/configuration.md) — JSON/TOML and `plan_options`
-- [`../glossary.md`](../reference/glossary.md) — terminology
-- [`../../examples/README.md`](../../examples/README.md) — building and running examples
-- [`INSTALL.md`](../../INSTALL.md) — supported build and dependencies
-- [`../contributing-docs.md`](../development/contributing-docs.md) — link checks and doc PR habits
-- [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) — contributing overview; [`../../CHANGELOG.md`](../../CHANGELOG.md) — release history
+| Next goal | Document |
+|-----------|----------|
+| Build a config-driven executable in another repository | [Minimal custom application](../tutorials/custom_app_minimal.md) |
+| Understand the main package layers | [Architecture](../concepts/architecture.md) |
+| Find the header for a type | [Tour of main types](../reference/class_tour.md) |
+| Understand JSON/TOML wiring | [Application pipeline](../user_guide/app_pipeline.md) |
+| Add models, modifiers, or writers | [Extending OpenPFC](../extending_openpfc/README.md) |
+| Run an existing application | [Applications](../user_guide/applications.md) |
+
+## Scope
+
+This folder teaches library concepts. Installation details belong in
+[`INSTALL.md`](../../INSTALL.md), short operational procedures belong in
+[`recipes/`](../recipes/README.md), and exact options and formats belong in the
+[reference index](../reference/README.md). Keeping those details in their
+canonical documents prevents tutorial examples from drifting away from the
+tested build and runtime interfaces.

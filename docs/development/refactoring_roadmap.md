@@ -95,7 +95,7 @@ High impact, not tied to a single PR; pick by maintenance pain.
 
 ### Suggested PR-scale moves (free-function & data-centric API)
 
-Aligned with [**laboratory, not fortress**](../concepts/architecture.md#design-ethos-laboratory-not-fortress) and the [styleguide API shape](styleguide.md#api-shape-free-functions-and-data-centric-types): keep `virtual` boundaries thin; push mechanics to namespaced free functions.
+Aligned with the [ownership and extension boundaries](../concepts/architecture.md#ownership-and-extension-boundaries) and the [styleguide API shape](styleguide.md#api-shape-free-functions-and-data-centric-types): keep `virtual` boundaries thin; push mechanics to namespaced free functions.
 
 1. **Examples + apps:** mechanical pass replacing `model.get_world()` / `get_fft()` member spellings with `pfc::get_world(model)` / `pfc::get_fft(model)` (and simulator analogs) in touched files — high visibility, low risk.
 2. **Shipped models (Tungsten, Aluminum, diffusion fixtures):** extract `initialize` / `step` internals into **`namespace …::`** free functions; leave `Model::step` as a one-line forwarder (easier testing and profiling).

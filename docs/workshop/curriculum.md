@@ -7,7 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 Assume participants have a **cluster login** or a strong laptop with MPI + HeFFTe available (or use a prepared container/site module stack). Adjust times for your audience.
 
-## Half-day 1 — Build, environment, and first MPI run { #workshop-day1 }
+(workshop-day1)=
+## Half-day 1 — Build, environment, and first MPI run
 
 **Outcomes:** configure Release build, run `examples/05_simulator`, explain world/decomposition at a high level.
 
@@ -19,7 +20,8 @@ Assume participants have a **cluster login** or a strong laptop with MPI + HeFFT
 | 1:40–2:30 | Examples ladder: `02` → `03` → `05` (instructor picks depth) | [`examples_catalog.md`](../reference/examples_catalog.md), [`getting_started/01-basics/README.md`](../getting_started/01-basics/README.md) |
 | 2:30–3:00 | Q&A; homework: read [`architecture.md`](../concepts/architecture.md) layers | — |
 
-## Half-day 2 — JSON app and artifacts { #workshop-day2 }
+(workshop-day2)=
+## Half-day 2 — JSON app and artifacts
 
 **Outcomes:** run **tungsten** with a repo JSON; know where binary fields go; optional VTK path.
 
@@ -31,7 +33,8 @@ Assume participants have a **cluster login** or a strong laptop with MPI + HeFFT
 | 2:00–2:45 | Binary I/O contract; optional VTK tutorial path | [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md), [`tutorials/vtk_paraview_workflow.md`](../tutorials/vtk_paraview_workflow.md) |
 | 2:45–3:00 | Q&A | [`troubleshooting.md`](../troubleshooting.md) |
 
-## Half-day 3 — HPC and profiling { #workshop-day3 }
+(workshop-day3)=
+## Half-day 3 — HPC and profiling
 
 **Outcomes:** submit a batch job skeleton; avoid common MPI-IO mistakes; read a profiling export.
 
@@ -44,5 +47,5 @@ Assume participants have a **cluster login** or a strong laptop with MPI + HeFFT
 
 ## See also
 
-- [`recipes/README.md`](../recipes/README.md) — copy-paste how-tos  
-- [`when_not_to_use_openpfc.md`](../when_not_to_use_openpfc.md) — set expectations  
+- [`recipes/README.md`](../recipes/README.md) — copy-paste how-tos
+- [`when_not_to_use_openpfc.md`](../when_not_to_use_openpfc.md) — set expectations

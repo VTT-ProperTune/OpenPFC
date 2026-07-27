@@ -3,11 +3,22 @@ SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Doxygen API examples walkthrough
+# C++ API examples walkthrough
 
-Sources live under [`api/examples/`](../api/examples). They are **included in the HTML API reference** when you build documentation (`OpenPFC_BUILD_DOCUMENTATION=ON`). Optionally, you can compile them as standalone programs with `-DBUILD_API_EXAMPLES=ON` (see [`api/examples/CMakeLists.txt`](../api/examples/CMakeLists.txt)); binaries are emitted under `<build>/docs/api/examples/`.
+Sources live in the
+[`docs/api/examples/` source tree](https://github.com/VTT-ProperTune/OpenPFC/tree/master/docs/api/examples).
+They are curated, runnable examples that complement the
+[unified API reference](../api/index.md), which is generated from installed
+public headers. Keeping examples outside the Doxygen API input avoids duplicate
+demo class names while preserving them as a clear source-level learning path.
 
-Read them **in order** the first time: each file builds on the same stack (`Domain` → decomposition / FFT → `Simulator` → I/O and modifiers).
+Optionally compile the examples as standalone programs with
+`-DBUILD_API_EXAMPLES=ON` (see
+[`api/examples/CMakeLists.txt`](../api/examples/CMakeLists.txt)); binaries are
+emitted under `<build>/docs/api/examples/`.
+
+Read them **in order** the first time: each file builds on the same stack
+(`Domain` → decomposition / FFT → `Simulator` → I/O and modifiers).
 
 | # | Source | Focus |
 |---|--------|--------|
@@ -24,9 +35,13 @@ Read them **in order** the first time: each file builds on the same stack (`Doma
 
 ## How this relates to `examples/`
 
-The tree under [`examples/`](../../examples) is the **tutorial** catalog (many small executables). The `docs/api/examples/` set is curated for **Doxygen** and reads as a single ascending narrative. Cross-reference: [`examples_catalog.md`](examples_catalog.md) (tiers), [`class_tour.md`](class_tour.md).
+The tree under [`examples/`](../../examples) is the tutorial catalog with many
+small executables. The `docs/api/examples/` set is curated as one ascending
+source narrative. Cross-reference [`examples_catalog.md`](examples_catalog.md)
+for teaching tiers and [`class_tour.md`](class_tour.md) for the conceptual map.
 
 ## See also
 
-- [Published API docs](https://vtt-propertune.github.io/OpenPFC/dev/) — HTML from headers + these snippets
-- [`learning_paths.md`](../learning_paths.md) — **Library and API reference** track
+- [Integrated C++ API reference](../api/index.md) — exact declarations and
+  source-level comments from public headers
+- [`learning_paths.md`](../learning_paths.md) — library and API reference track

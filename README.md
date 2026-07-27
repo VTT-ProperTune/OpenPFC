@@ -5,689 +5,155 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # OpenPFC
 
-[![][doi-badge-img]][doi-badge-url]
-[![][docs-dev-img]][docs-dev-url]
-[![][releases-img]][releases-url]
+[![DOI][doi-badge-img]][doi-badge-url]
+[![Documentation][docs-site-img]][docs-site-url]
+[![Release][releases-img]][releases-url]
 [![CI][ci-badge-img]][ci-badge-url]
-[![Documentation][docs-badge-img]][docs-badge-url]
+[![Documentation build][docs-badge-img]][docs-badge-url]
 [![Coverage][coverage-badge-img]][coverage-badge-url]
-[![][license-img]][license-url]
+[![License][license-img]][license-url]
 
-![Screenshot of OpenPFC simulation result](docs/img/simulation.png)
+![OpenPFC simulation result](docs/img/simulation.png)
 
-Phase field crystal (PFC) is a semi-atomistic technique, containing atomic
-resolution information of crystalline structures while operating on diffusive
-time scales. PFC can simulate solidification and elastic-plastic material
-response, coupled with a wide range of phenomena, including formation and
-co-evolution of microstructural defects such as dislocations and stacking
-faults, voids, defect formation in epitaxial growth, displacive phase
-transitions, and electromigration.
+OpenPFC is an open-source C++20 framework for high-performance phase-field
+crystal and related spectral phase-field simulations on structured grids. It
+combines MPI domain decomposition with HeFFTe-based distributed FFTs and can be
+used either as a library or through the configuration-driven applications
+shipped under `apps/`.
 
-The image above shows a simulation of a rapidly solidifying tungsten block
-approximately 50 x 100 x 200 nm in size, using MovingBC boundary conditions. The
-rightmost section depicts the pure atomic structure of the tungsten, the middle
-section highlights the surface of the entire object and the leftmost section
-provides a transparent view of the surface, revealing the lattice defects that
-formed during the simulation. This visualization aids in understanding the
-atomic arrangement, surface features, and internal defects of the tungsten
-block.
+OpenPFC is intended for research workflows that need atomic-resolution
+microstructure information on diffusive time scales, including solidification,
+defect evolution, elastic-plastic response, epitaxial growth, phase
+transformations, and related coupled phenomena.
 
-## Scalability and Performance
+## Start here
 
-OpenPFC is an open-source framework for high-performance 3D phase field crystal
-simulations. It is designed to scale up from a single laptop to exascale class
-supercomputers. OpenPFC has successfully been used to simulate a domain of size
-8192 x 8192 x 4096 on CSC Mahti. 200 computing nodes were used, where each node
-contained 128 cores, thus total of 25600 cores were used. During the simulation,
-25 TB of memory was utilized. The central part of the solver is the Fast Fourier
-Transform with time complexity of O(N log N), and there are no known limiting
-bottlenecks, why larger models could not be calculated as well.
+Choose the shortest path that matches your goal:
+
+| Goal | Start with |
+|------|------------|
+| Build and run one MPI example | [15-minute start](docs/start_here_15_minutes.md) |
+| Run a shipped JSON or TOML application | [Quick start](docs/quickstart.md) |
+| Choose a sequenced path by role | [Learning paths](docs/learning_paths.md) |
+| Decide whether OpenPFC fits the problem | [When not to use OpenPFC](docs/when_not_to_use_openpfc.md) |
+| Install dependencies and toolchains | [Installation guide](INSTALL.md) |
+| Run on a cluster or GPU | [HPC operator guide](docs/hpc/operator_guide.md) |
+| Add a model, application, or writer | [Extension guide](docs/extending_openpfc/README.md) |
+| Look up classes and function signatures | [Integrated C++ API reference][api-url] |
+
+The complete source documentation index is [docs/README.md](docs/README.md).
+The published site combines tutorials, configuration, cluster operation,
+architecture, and generated C++ declarations in one navigation tree and search
+index.
+
+## Capabilities
+
+- distributed-memory simulations using MPI and HeFFTe;
+- CPU spectral execution through FFTW;
+- CUDA and HIP execution paths when built with matching GPU toolchains and
+  HeFFTe backends;
+- configuration-driven applications with JSON and TOML input;
+- parameter validation with actionable startup diagnostics;
+- binary, VTK, PNG, and application-specific result workflows;
+- extension points for models, field modifiers, coordinate systems, writers,
+  and application wiring;
+- examples, tutorials, recipes, testing guidance, and HPC runbooks maintained
+  alongside the source.
+
+See the [CMake option reference](docs/reference/build_options.md) for the exact
+build switches supported by the current checkout.
+
+## Build and run
+
+OpenPFC requires a consistent compiler, MPI, and HeFFTe stack. Follow the
+[installation guide](INSTALL.md), then use the minimal first-run sequence:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+cmake --build build -j"$(nproc)"
+cd build
+mpirun -n 1 ./examples/05_simulator
+```
+
+Increase the rank count after the single-rank run succeeds and your local MPI
+or scheduler allocation provides the requested slots.
+
+## Use the installed library
+
+An installed OpenPFC package exports `OpenPFC::openpfc`. The minimal downstream
+CMake project enables both C and C++ because the package resolves MPI C and C++
+components:
+
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(my_sim LANGUAGES C CXX)
+
+find_package(OpenPFC REQUIRED)
+
+add_executable(my_sim main.cpp)
+target_link_libraries(my_sim PRIVATE OpenPFC::openpfc)
+```
+
+Set `CMAKE_PREFIX_PATH` or `OpenPFC_DIR` to the OpenPFC installation prefix.
+The longer walkthrough is in
+[docs/getting_started/01-basics/README.md](docs/getting_started/01-basics/README.md).
+
+## Scalability
+
+OpenPFC has been exercised on domains up to `8192 x 8192 x 4096` using 25,600
+CPU cores and approximately 25 TB of memory. The spectral solver is dominated
+by distributed FFT work with `O(N log N)` complexity.
 
 ![OpenPFC scalability](docs/img/scalability.png)
 
-The graph above demonstrates the remarkable scalability and performance of the
-simulation framework. In the strong scaling analysis (panel a), the step time
-significantly decreases as the number of cores increases for various grid sizes,
-from 256³ to 8192³. This indicates efficient parallelization, though the rate of
-decrease diminishes at higher core counts.
-
-In the weak scaling analysis (panel b), the step time remains relatively
-constant as the grid size increases while maintaining a fixed number of voxels
-per core. This stability illustrates excellent weak scaling performance,
-highlighting the framework's capability to efficiently manage larger problems by
-proportionally increasing computational resources. The right Y-axis projects the
-number of time steps calculable in a week, emphasizing the framework's
-suitability for extensive simulations on supercomputers. Notably, these
-simulations were conducted using the LUMI supercomputer, further showcasing the
-framework's capability to leverage top-tier computational resources for
-high-performance simulations.
-
-T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and A. Laukkanen, *“OpenPFC: an open-source framework for high performance 3D phase field crystal simulations”*, Modelling Simul. Mater. Sci. Eng., Feb. 2024, doi: 10.1088/1361-651X/ad269e. [(link)](https://iopscience.iop.org/article/10.1088/1361-651X/ad269e)
-
-## Quick start
-
-First time with the repo? **Shortest path:** [docs/start_here_15_minutes.md](docs/start_here_15_minutes.md). Then [docs/quickstart.md](docs/quickstart.md) (configure → run `examples/` or an `apps/` binary → or `find_package(OpenPFC)` in your own project). **Sequenced paths by role:** [docs/learning_paths.md](docs/learning_paths.md). **Named how-tos:** [docs/recipes/README.md](docs/recipes/README.md). **Figures and what to run:** [docs/showcase.md](docs/user_guide/showcase.md). **Build → artifacts on disk (PNG / binary):** [docs/tutorials/end_to_end_visualization.md](docs/tutorials/end_to_end_visualization.md). Tutorial prose lives under [docs/getting_started/](docs/getting_started); runnable targets and a **curriculum** are in [docs/examples_catalog.md](docs/reference/examples_catalog.md); Doxygen snippet order: [docs/api_examples_walkthrough.md](docs/reference/api_examples_walkthrough.md). Shipped programs: [docs/applications.md](docs/user_guide/applications.md). Short Q&A: [docs/faq.md](docs/faq.md).
-
-## Documentation
-
-The project documentation can be found from
-<https://vtt-propertune.github.io/OpenPFC/dev/> (API reference and generated HTML from this repository’s headers and examples). Readers of the published HTML only should treat [docs/quickstart.md](docs/quickstart.md) and the [docs/README.md](docs/README.md) index as the companion to the API reference — tutorials, troubleshooting, and app wiring live there, not only in Doxygen.
-
-If you are browsing the [source tree](https://github.com/VTT-ProperTune/OpenPFC), start with [docs/quickstart.md](docs/quickstart.md) — the published site does not replace the guides in `docs/`.
-
-### In-repository guides
-
-| Topic | Document |
-|------|----------|
-| Master index (all markdown guides) | [docs/README.md](docs/README.md) |
-| ~15 min first run (clone → build → `mpirun`) | [docs/start_here_15_minutes.md](docs/start_here_15_minutes.md) |
-| Learning paths by role | [docs/learning_paths.md](docs/learning_paths.md) |
-| How-to recipes (simulator, tungsten, VTK/binary) | [docs/recipes/README.md](docs/recipes/README.md) |
-| When OpenPFC fits; FD vs spectral direction | [docs/when_not_to_use_openpfc.md](docs/when_not_to_use_openpfc.md) |
-| Workshop curriculum (teaching) | [docs/workshop/README.md](docs/workshop/README.md) |
-| Architecture decision records | [docs/adr/README.md](docs/adr/README.md) |
-| Documentation vs release tags | [docs/documentation_versioning.md](docs/development/documentation_versioning.md) |
-| Tutorials hub (VTK, HeFFTe, spectral examples, …) | [docs/tutorials/README.md](docs/tutorials/README.md) |
-| Docs by role (personas) | [docs/personas.md](docs/development/personas.md) |
-| Binary MPI-IO field format | [docs/binary_field_io_spec.md](docs/reference/binary_field_io_spec.md) |
-| Spectral `App` JSON/TOML keys | [docs/spectral_app_config_reference.md](docs/reference/spectral_app_config_reference.md) |
-| Slurm / MPI–I/O checklists | [docs/tutorials/hpc_slurm_day_one.md](docs/tutorials/hpc_slurm_day_one.md), [docs/mpi_io_layout_checklist.md](docs/hpc/mpi_io_layout_checklist.md) |
-| Science notes (tungsten, CH vs Allen–Cahn) | [docs/science_tungsten_quicklook.md](docs/science/tungsten_quicklook.md), [docs/science_cahn_hilliard_vs_allen_cahn.md](docs/science/cahn_hilliard_vs_allen_cahn.md) |
-| Contributing (code, tests, changelog) | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Documentation PRs, link checker (`python3 scripts/check_doc_links.py`) | [docs/contributing-docs.md](docs/development/contributing-docs.md) |
-| JSON/TOML → `Simulator` | [docs/app_pipeline.md](docs/user_guide/app_pipeline.md) |
-| Types, headers, examples map | [docs/class_tour.md](docs/reference/class_tour.md) |
-| Minimal custom `App` (CMake + JSON) | [docs/tutorials/custom_app_minimal.md](docs/tutorials/custom_app_minimal.md) |
-| Parameter validation | [docs/parameter_validation.md](docs/user_guide/parameter_validation.md) |
-| Tests (`ctest`, Catch2) | [docs/testing.md](docs/development/testing.md) |
-| GPU (CUDA/HIP) apps | [docs/tutorials/gpu_app_quickstart.md](docs/tutorials/gpu_app_quickstart.md) |
-| Example log output (reference shape) | [docs/example_run_output.md](docs/reference/example_run_output.md) |
-| Results I/O (binary / VTK / PNG) | [docs/io_results.md](docs/user_guide/io_results.md) |
-| CMake options | [docs/build_options.md](docs/reference/build_options.md) |
-| Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
-| Glossary | [docs/glossary.md](docs/reference/glossary.md) |
-
-Build and install from source: see [INSTALL.md](INSTALL.md).
-
-CPU vs GPU build trees: short overview in [docs/build_cpu_gpu.md](docs/hpc/build_cpu_gpu.md).
-
-C++ includes: link your target to CMake’s `OpenPFC` (or `openpfc`) target.
-For faster builds, include specific headers (e.g. `<openpfc/kernel/data/domain.hpp>`)
-rather than the umbrella `<openpfc/openpfc.hpp>`. Minimal simulations without the
-JSON/TOML frontend can start from `<openpfc/openpfc_minimal.hpp>`; see
-[docs/architecture.md](docs/concepts/architecture.md).
-For naming, layout, SPDX headers, and API style (free functions, data-centric types), see [docs/styleguide.md](docs/development/styleguide.md).
-
-## Features
-
-- scales up to tens of thousands of cores, demonstrably
-- modern C++20 API: compile and link against the `openpfc` library, with most
-  of the simulation stack available as headers under `include/openpfc/` (see
-  [INSTALL.md](INSTALL.md))
-- extensible architecture - add custom components without modifying source code
-- runtime-switchable FFT backends (CPU/GPU) for optimal performance
-- comprehensive configuration validation with helpful error messages
-
-## Configuration Validation
-
-OpenPFC provides comprehensive parameter validation to prevent silent failures from missing or invalid configuration parameters. This "fail-fast" approach catches errors immediately at startup rather than hours into a simulation.
-
-### The Problem
-
-Missing or invalid parameters can cause:
-
-- Silent failures with incorrect physics
-- Hours or days wasted debugging
-- Uninitialized values causing unpredictable behavior
-
-Example of a dangerous configuration:
-```toml
-[model.params]
-n0 = -0.10
-alpha = 0.50
-# Forgot to add lambda!  ← Simulation will run with wrong/uninitialized value
-```
-
-### The Solution
-
-OpenPFC validates all parameters before simulation starts:
-
-```
-================================================================================
-Configuration Validation Summary - Tungsten PFC Model
-================================================================================
-Validated 21 parameter(s):
---------------------------------------------------------------------------------
-  n0            = -0.1  [range: -1, 0]
-  n_sol         = -0.047  [range: -1, 0]
-  n_vap         = -0.464  [range: -1, 0]
-  T             = 3300  [range: 0, 10000]
-  T0            = 156000  [range: 1, 1e+06]
-  ... (all 21 parameters validated)
-================================================================================
-```
-
-If validation fails, you get a clear, actionable error message:
-
-```
-================================================================================
-CONFIGURATION VALIDATION FAILED
-================================================================================
-Found 2 error(s):
-
-1. Required parameter 'lambda' is missing
-  Parameter: lambda
-  Description: Strength of meanfield filter (avoid >0.28)
-  Valid range: [0, 0.5]
-  Typical value: 0.22
-  Required: yes
-
-2. Parameter 'stabP' = 2.5 exceeds maximum 1.0
-  Parameter: stabP
-  Description: Numerical stability parameter for exponential integrator
-  Valid range: [0, 1]
-  Typical value: 0.2
-
-ABORTING: Fix configuration errors before running simulation.
-================================================================================
-```
-
-### Benefits
-
-- Catches errors immediately at startup instead of after hours of simulation
-- Parameter summary documents what was run (reproducibility)
-- Clear messages with valid ranges and typical values
-- Validates parameter types and bounds
-
-### For Model Developers
-
-Add validation to your custom models using the parameter metadata system:
-
-```cpp
-#include <openpfc/frontend/ui/parameter_metadata.hpp>
-#include <openpfc/frontend/ui/parameter_validator.hpp>
-
-pfc::ui::ParameterValidator validator;
-validator.add_metadata(
-  pfc::ui::ParameterMetadata<double>::builder()
-    .name("temperature")
-    .description("Effective temperature")
-    .required(true)
-    .range(0.0, 10000.0)
-    .typical(3300.0)
-    .units("K")
-    .build()
-);
-
-auto result = validator.validate(config);
-if (!result.is_valid()) {
-  std::cerr << result.format_errors() << std::endl;
-  throw std::invalid_argument("Validation failed");
-}
-```
-
-See `apps/tungsten/include/tungsten/common/tungsten_input.hpp` for a complete example with many validated parameters. Narrative guide: [`docs/parameter_validation.md`](docs/user_guide/parameter_validation.md).
-
-## Extending OpenPFC
-
-OpenPFC is designed as an open laboratory where you can extend functionality without modifying the library source code. Using C++'s Argument-Dependent Lookup (ADL), you can add:
-
-- Custom coordinate systems (cylindrical, spherical, curvilinear)
-- Custom field initializers (vortices, patterns, complex ICs)
-- Custom physics models (user-defined PDEs, multi-physics)
-- Custom I/O formats (HDF5, VTK, custom binary)
-
-Get started: See the [Extension Guide](docs/extending_openpfc/README.md), [docs/examples_catalog.md](docs/reference/examples_catalog.md), and working examples in `examples/14_custom_field_initializer.cpp` and `examples/17_custom_coordinate_system.cpp`.
-
-## FFT Backend Selection
-
-OpenPFC supports multiple FFT backends through [HeFFTe](https://github.com/icl-utk-edu/heffte), allowing you to choose the optimal implementation for your hardware:
-
-- FFTW (CPU): Default backend, always available. Optimized for CPU-based systems.
-- cuFFT (NVIDIA GPU): GPU-accelerated FFT for CUDA-capable devices. Requires OpenPFC compiled with `-DOpenPFC_ENABLE_CUDA=ON`.
-- rocFFT (AMD GPU): GPU-accelerated FFT for ROCm-capable devices (future support).
-
-### Configuration
-
-Select the FFT backend in your configuration file (TOML or JSON):
-
-```toml
-[plan_options]
-backend = "fftw"  # Options: "fftw", "cuda"
-
-# Additional HeFFTe options
-use_reorder = true
-reshape_algorithm = "alltoall"  # Options: "alltoall", "alltoallv", "p2p", "p2p_plined"
-use_pencils = false
-use_gpu_aware = false  # true for GPU-aware MPI with CUDA or HIP (see INSTALL.md / docs/INSTALL.LUMI.md)
-```
-
-Example: See `examples/fft_backend_selection.toml` for a complete configuration example with detailed documentation.
-
-### Performance Considerations
-
-- FFTW (CPU): Best for CPU-only systems, small to medium problems. Always available and portable.
-- cuFFT (GPU): Significantly faster for large FFTs. Requires CUDA-capable GPU and sufficient GPU memory.
-- GPU-Aware MPI: When using CUDA or HIP with multiple GPUs, enable `use_gpu_aware = true` if your MPI stack supports device pointers (e.g., Open MPI with CUDA, or Cray MPICH with `MPICH_GPU_SUPPORT_ENABLED=1` on LUMI-G). Build OpenPFC with GPU-aware MPI enabled (see INSTALL.md; docs/INSTALL.LUMI.md for ROCm). This eliminates host staging and reduces communication latency.
-
-Build-time setup (HeFFTe, modules, CUDA, and CMake options) is documented in [INSTALL.md](INSTALL.md).
-
-## Installing
-
-See [INSTALL.md](INSTALL.md) for supported compilers, environment modules, building and installing HeFFTe, and OpenPFC configuration (CPU and CUDA). For LUMI-G (ROCm / HIP, Cray PE, projappl and scratch layout), see [docs/INSTALL.LUMI.md](docs/hpc/INSTALL.LUMI.md). A Singularity/apptainer workflow is not documented yet.
-
-## Structure of the application
-
-```mermaid
-classDiagram
-  App~Model~ --> Simulator
-  Simulator --> Model
-  Simulator --> Time
-  Simulator --> FieldModifier
-  Simulator --> ResultsWriter
-  Model --> FFT
-  Model --> RealField
-  Model --> ComplexField
-  FFT --> Decomposition
-  Decomposition --> Domain
-```
-
-The OpenPFC framework aims to simplify the development of highly scalable
-applications for solving partial differential equations using spectral methods.
-It provides a modular application structure that users can customize by
-inheriting and overriding specific classes. When examining the class diagram
-from bottom to top, we first encounter classes such as `Domain`, `Decomposition`,
-and `FFT`. These classes form a low-level layer responsible for domain
-decomposition and performing FFT using the HeFFTe library. These details might
-not be of general interest from an implementation perspective, except for the
-framework developers themselves.
-
-Next, we have classes such as `Model`, `FieldModifier`, and `ResultsWriter`. The
-`Model` class is of particular interest as it describes the physics of the
-model, including the partial differential equation (PDE) itself. Inside the
-`Model` class, there is a function called `step` that needs to be overridden.
-Currently, users are free to choose whichever time integration method they are
-comfortable with. However, in the future, we may abstract the time integration
-method away from the model and create a separate class to approach the problem
-using "The Method of Lines" view. The `Model` class consists of one or several
-different "fields" which can be real or complex-valued. These fields are updated
-during time stepping. The `FieldModifier` class does exactly what the name
-implies – it modifies these fields. In more detail, initial and boundary
-conditions serve as field modifiers and are often also of interest, although
-some already implemented ones exist. Lastly, we should mention the
-`ResultsWriter`, which implements a way to store results during certain periods.
-We have some existing implementations such as raw binary format and vti
-format, but nothing is preventing us from implementing, for example, the storage
-of results in hdf5 format, which is currently under planning.
-
-In the third level, we have the `Simulator`, which assembles and runs the actual
-simulation. It's a simple container-like class that calls lower-level objects in
-a stepper to ensure that everything is called in time. Typically, there should
-be no need to override this, but it is still possible to do so.
-
-The top level is `App`, which handles the user interface. Since the simulations
-are usually run on supercomputers, we don't have anything fancy like a graphical
-user interface or interactive control of the simulation. Instead, we input user
-parameters in an input file, preferably in JSON format. After reading the model
-parameters, the simulator starts. This type of user interface is very basic, but
-it works well in high-performance computing (HPC) environments where there are
-no displays available. Typically, a batch script (e.g. Slurm) is created to run
-the application in the chosen HPC environment's queue.
-
-## Getting started
-
-OpenPFC is a [software framework][software framework]. It doesn't give you
-ready-made solutions, but a platform on which you can start building your own
-scalable PFC code. We will familiarize ourselves with the construction of the
-model with the help of a simple diffusion model in a later stage of the
-documentation. However, let's give a tip already at this stage, how to start the
-development work effectively. Our "hello world" code is as follows:
-
-```cpp
-#include <iostream>
-#include <openpfc/openpfc.hpp>
-
-using namespace std;
-using namespace pfc;
-
-int main() {
-  Domain domain({32, 32, 32});
-  cout << domain << endl;
-}
-```
-
-To compile, `CMakeLists.txt` is needed. Minimal `CMakeLists.txt` is:
-
-```cmake
-cmake_minimum_required(VERSION 3.15)
-project(helloworld)
-find_package(OpenPFC REQUIRED)
-add_executable(main main.cpp)
-target_link_libraries(main OpenPFC)
-```
-
-With the help of `CMakeLists.txt`, build and compilation of the application is
-straightforward:
-
-```bash
-cmake -S . -B build
-cmake --build build
-./build/main
-```
-
-There are also some examples in [examples][examples-url] directory, which can be
-used as a base for your codes.
-
-## Example: Cahill-Hilliard equation
-
-The Cahn-Hilliard equation is a fundamental model in materials science used to
-describe the phase separation process in binary mixtures. It models how the
-concentration field evolves over time to minimize the free energy of the system.
-The equation is particularly useful in understanding the dynamics of spinodal
-decomposition and coarsening processes.
-
-Spectral methods, combined with the Fast Fourier Transform (FFT), are highly
-efficient for solving partial differential equations (PDEs) like the
-Cahn-Hilliard equation. The FFT allows us to transform differential operators
-into algebraic ones in the frequency domain, significantly simplifying the
-computation. This approach is particularly advantageous for problems involving
-periodic boundary conditions and large-scale simulations, where the efficiency
-and accuracy of the FFT are paramount.
-
-Exponential time integration is well-suited for stiff PDEs like the
-Cahn-Hilliard equation. Traditional explicit methods require very small time
-steps to maintain stability, which can be computationally expensive. Exponential
-integrators, however, handle the stiff linear part of the equation exactly,
-allowing for larger time steps without sacrificing stability. This makes the
-integration process more efficient and stable, especially for long-term
-simulations.
-
-Starting with the Cahn-Hilliard equation:
-
-$$
-\frac{\partial c}{\partial t} = D \nabla^{2} \left( c^{3} - c - \gamma \nabla^{2} c \right)
-$$
-
-### Fourier Transform
-
-Applying the Fourier transform to the equation converts the spatial differential
-operators into algebraic forms:
-
-$$
-\frac{\partial \hat{c}}{\partial t} = D \left[ -k^2 \left( \hat{c^3} - \hat{c} - \gamma (-k^2 \hat{c}) \right) \right]
-$$
-
-Simplifying the right-hand side:
-
-$$
-\frac{\partial \hat{c}}{\partial t} = D \left[ -k^2 \hat{c^3} + k^2 \hat{c} + \gamma k^4 \hat{c} \right]
-$$
-
-$$
-\frac{\partial \hat{c}}{\partial t} = D \left[ -k^2 \hat{c^3} + (k^2 + \gamma k^4) \hat{c} \right]
-$$
-
-### Discretization in Time
-
-Using an exponential integrator, we handle the linear part exactly and integrate
-the non-linear part explicitly:
-
-$$
-\hat{c}(t + \Delta t) = \exp(DL \Delta t) \hat{c}(t) + \int_t^{t + \Delta t} \exp(DL (t + \Delta t - s)) (-Dk^2 \hat{c^3}(s)) \, \mathrm{d}s
-$$
-
-Here, $L = k^2 + \gamma k^4$.
-
-Assuming $\hat{c}$ is approximately constant over the small interval $\Delta t$,
-we approximate the integral:
-
-$$
-\hat{c}(t + \Delta t) \approx \exp(D (k^2 + \gamma k^4) \Delta t) \hat{c}(t) + \left( \frac{ \exp(D (k^2 + \gamma k^4) \Delta t) - 1 }{D (k^2 + \gamma k^4)} \right) (-Dk^2 \hat{c^3}(t))
-$$
-
-### Final Time-Stepping Formula
-
-Combining the terms, we obtain the discrete update rule for $\hat{c}$:
-
-$$
-\hat{c}_{n+1} = \exp(D (k^2 + \gamma k^4) \Delta t) \hat{c}_n + \frac{\exp(D (k^2 + \gamma k^4) \Delta t) - 1}{D (k^2 + \gamma k^4)} (-Dk^2 \hat{c^3}_n)
-$$
-
-Simplify the coefficient for the non-linear term:
-
-$$
-\hat{c}_{n+1} = \exp(D (k^2 + \gamma k^4) \Delta t) \hat{c}_n - \frac{\exp(D (k^2 + \gamma k^4) \Delta t) - 1}{k^2 + \gamma k^4} k^2 \hat{c^3}_n
-$$
-
-### Linear and Non-Linear Operators
-
-The linear and non-linear operators can be defined as follows:
-
-$$
-\begin{align}
-\text{opL} &= \exp(D (k^2 + \gamma k^4) \Delta t) \\
-\text{opN} &= \frac{\exp(D (k^2 + \gamma k^4) \Delta t) - 1}{k^2 + \gamma k^4} k^2
-\end{align}
-$$
-
-These operators are used to update the concentration field $c$ in the
-Fourier domain efficiently, leveraging the FFT for computational efficiency.
-This method allows for stable and accurate integration of the Cahn-Hilliard
-equation over time, making it suitable for large-scale simulations of phase
-separation processes.
-
-Below is the code snippet for the Cahn-Hilliard model in OpenPFC:
-
-```cpp
-class CahnHilliard : public Model {
-private:
-  std::vector<double> opL, opN, c;             // Define operators and field c
-  std::vector<std::complex<double>> c_F, c_NF; // Define (complex) psi
-  double gamma = 1.0e-2;                       // Surface tension
-  double D = 1.0;                              // Diffusion coefficient
-
-public:
-  void initialize(double dt) override {
-    FFT &fft = get_fft();
-    const Decomposition &decomp = get_decomposition();
-
-    // Allocate space for the main variable and it's fourier transform
-    c.resize(fft.size_inbox());
-    c_F.resize(fft.size_outbox());
-    c_NF.resize(fft.size_outbox());
-    opL.resize(fft.size_outbox());
-    opN.resize(fft.size_outbox());
-    add_real_field("concentration", c);
-
-    // prepare operators
-    World w = get_world();
-    std::array<int, 3> o_low = decomp.outbox.low;
-    std::array<int, 3> o_high = decomp.outbox.high;
-    size_t idx = 0;
-    double pi = std::atan(1.0) * 4.0;
-    double fx = 2.0 * pi / (w.dx * w.Lx);
-    double fy = 2.0 * pi / (w.dy * w.Ly);
-    double fz = 2.0 * pi / (w.dz * w.Lz);
-    for (int k = o_low[2]; k <= o_high[2]; k++) {
-      for (int j = o_low[1]; j <= o_high[1]; j++) {
-        for (int i = o_low[0]; i <= o_high[0]; i++) {
-          // Laplacian operator -k^2
-          double ki = (i <= w.Lx / 2) ? i * fx : (i - w.Lx) * fx;
-          double kj = (j <= w.Ly / 2) ? j * fy : (j - w.Ly) * fy;
-          double kk = (k <= w.Lz / 2) ? k * fz : (k - w.Lz) * fz;
-          double kLap = -(ki * ki + kj * kj + kk * kk);
-          double L = kLap * (-D - D * gamma * kLap);
-          opL[idx] = std::exp(L * dt);
-          opN[idx] = (L != 0.0) ? (opL[idx] - 1.0) / L * kLap : 0.0;
-          idx++;
-        }
-      }
-    }
-  }
-
-  void step(double) override {
-    // Calculate cₙ₊₁ = opL * cₙ + opN * cₙ³
-    FFT &fft = get_fft();
-    fft.forward(c, c_F);
-    for (auto &elem : c) elem = D * elem * elem * elem;
-    fft.forward(c, c_NF);
-    for (size_t i = 0; i < c_F.size(); i++) {
-      c_F[i] = opL[i] * c_F[i] + opN[i] * c_NF[i];
-    }
-    fft.backward(c_F, c);
-  }
-};
-```
-
-![Cahn-Hilliard simulation](docs/img/cahn_hilliard.gif)
-
-The full code can be found from [examples](/examples/12_cahn_hilliard.cpp).
-
-## Troubleshooting and debugging
-
-Here are some common problems and their solutions.
-
-### FindOpenPFC.cmake not found
-
-During the configuration step (`cmake -S. -B build`), you might end up with the
-following error message:
-
-```text
-CMake Error at CMakeLists.txt:3 (find_package):
-By not providing "FindOpenPFC.cmake" in CMAKE_MODULE_PATH this project has
-asked CMake to find a package configuration file provided by "OpenPFC", but
-CMake did not find one.
-```
-
-The error message is trying to say the command in `CMakeLists.txt` (line 3) fails:
-
-```cmake
-find_package(OpenPFC REQUIRED)  # <-- this is failing
-```
-
-The reason why this happens is that CMake is not able to find the package. By
-default, CMake finds packages by looking at a file which is called
-`Find<package_name>.cmake` from a couple of standard locations. For example, in
-Ubuntu, one of these locations is `/usr/lib/cmake`, where the files are
-installed when doing a global install of some package with root rights. When
-working with supercomputers, users, in general, don't have rights to make global
-installations, thus packages are almost always installed to some non-default
-locations. Thus, one needs to give some hints to CMake where the file could be
-found. This can be done (at least) in two different ways.
-
-The first way is to set up an environment variable indicating any extra
-locations for the files. One option is to use `CMAKE_PREFIX_PATH` environment
-variable, like before. For example, if `OpenPFC` is installed to `/opt/OpenPFC`,
-one can give that information before starting the configuration:
-
- ```bash
- export CMAKE_PREFIX_PATH=/opt/OpenPFC:$CMAKE_PREFIX_PATH
- cmake -S . -B build
- # rest of the things ...
- ```
-
- Another option is to hardcode the choice inside the `CMakeLists.txt` file
- directly. Just keep in mind, that this option is not very portable as users
- tends to install software to several different locations and there is no any
- general rule on how it should be done. So, instead of defining `CMAKE_PREFIX_PATH`
- before doing configuration, the following change in `CMakeLists.txt` is
- equivalent:
-
- ```cmake
-cmake_minimum_required(VERSION 3.15)
-project(helloworld)
-# find_package(OpenPFC REQUIRED)                                     #  <-- Replace this command ...
-find_package(OpenPFC REQUIRED PATHS /opt/OpenPFC/lib/cmake/OpenPFC)  #  <-- ... with this one
-add_executable(main main.cpp)
-target_link_libraries(main OpenPFC)
-```
-
-This way, CMake knows to search for necessary files from the path given above.
-
-### NaNs in the simulation
-
-There might be various reasons why the simulation returns NaNs. Despite the
-reason, it usually makes sense to stop simulation as it doesn't do anything
-useful. OpenPFC does not currently have a built-in JSON validator, which would
-check that simulation parameters are valid. Thus, it is possible to give invalid
-parameters to the simulation, which might lead to NaNs. If some model parameters
-that should be defined are undefined and thus zero, there might be a zero
-division problem.
-
-There is a schema file for the input file, which can be used to validate the JSON
-file using an external validator like `check-jsonchema`:
-
- ```bash
- check-jsonschema --schemafile apps/schema.json input.json
- ```
-
-OpenPFC implements NaN check, which is enabled by default when compiling with a
-debug build type:
-
-```bash
-cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
-```
-
-Another way to enable NaN check, including in non-Debug builds, is to configure
-OpenPFC with `OpenPFC_ENABLE_NAN_CHECK`:
-
-```bash
-cmake -DOpenPFC_ENABLE_NAN_CHECK=ON -S . -B build
-```
-
-For ad-hoc debugging in a standalone translation unit, you can still define the
-underlying preprocessor flag before including the NaN check header:
-
-```cpp
-#define NAN_CHECK_ENABLED
-```
-
-Then, at the code level, there's a macro `CHECK_AND_ABORT_IF_NANS`, which can be
-used to check if there are any NaNs in the simulation. The macro is defined in
-`openpfc/frontend/utils/nancheck.hpp`. This is a zero overhead when compiling with
-release build type. At the moment, a user must explicitly call the macro, but in
-the future, it might be called automatically in some situations. Example usage is
-(see also [this][tungsten-nan-check] example):
-
-```cpp
-std::vector<double> psi = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
-CHECK_AND_ABORT_IF_NANS(psi);
-psi[0] = std::numeric_limits<double>::quiet_NaN();
-CHECK_AND_ABORT_IF_NANS(psi);
-```
-
-The non-`_MPI` macros use a **default MPI communicator** for rank labels and
-`MPI_Abort`: `pfc::ui::App::main` sets it to the application communicator; other
-drivers can call `pfc::utils::set_default_nan_check_mpi_comm(comm)` once at
-startup, or use `CHECK_AND_ABORT_IF_NANS_MPI` / `CHECK_AND_ABORT_IF_NAN_MPI` with
-an explicit communicator.
-
-[tungsten-nan-check]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/apps/tungsten.cpp#L220
-
-## Citing
+For experiment context, assumptions, and current performance guidance, use the
+[performance profiling guide](docs/hpc/performance_profiling.md) and the
+[scalability analysis plan](docs/hpc/scalability_analysis_plan.md) rather than
+treating the landing page as a benchmark specification.
+
+## Documentation and quality checks
+
+Documentation changes are checked for relative-link integrity, example-catalog
+consistency, shell syntax, Doxygen XML warnings, and strict Sphinx rendering.
+Contributor instructions are in [CONTRIBUTING.md](CONTRIBUTING.md) and
+[docs/development/contributing-docs.md](docs/development/contributing-docs.md).
+
+The development documentation follows the repository default branch. For
+reproducible simulations, record the OpenPFC commit or release tag together
+with the HeFFTe and MPI versions; see
+[documentation versioning](docs/development/documentation_versioning.md).
+
+## Citation
+
+If OpenPFC contributes to published work, cite:
+
+> T. Pinomaa, J. Aho, J. Suviranta, P. Jreidini, N. Provatas, and
+> A. Laukkanen, “OpenPFC: an open-source framework for high performance 3D
+> phase field crystal simulations,” *Modelling and Simulation in Materials
+> Science and Engineering*, 2024. DOI: 10.1088/1361-651X/ad269e.
 
 ```bibtex
 @article{pinomaa2024openpfc,
-  title={OpenPFC: an open-source framework for high performance 3D phase field crystal simulations},
-  author={Pinomaa, Tatu and Aho, Jukka and Suviranta, Jaarli and Jreidini, Paul and Provatas, Nikolaos and Laukkanen, Anssi},
-  journal={Modelling and Simulation in Materials Science and Engineering},
-  year={2024}
+  title   = {OpenPFC: an open-source framework for high performance 3D phase field crystal simulations},
+  author  = {Pinomaa, Tatu and Aho, Jukka and Suviranta, Jaarli and Jreidini, Paul and Provatas, Nikolaos and Laukkanen, Anssi},
+  journal = {Modelling and Simulation in Materials Science and Engineering},
+  year    = {2024},
+  doi     = {10.1088/1361-651X/ad269e}
 }
 ```
 
-[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[docs-dev-url]: https://vtt-propertune.github.io/OpenPFC/dev/
-[releases-img]: https://img.shields.io/github/v/release/VTT-ProperTune/OpenPFC
-[releases-url]: https://github.com/VTT-ProperTune/OpenPFC/releases/latest
-[ci-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/CI/badge.svg
-[ci-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml
-[docs-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/Documentation/badge.svg
-[docs-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml
-[coverage-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/workflows/Coverage/badge.svg
-[coverage-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/coverage.yml
-[license-img]: https://img.shields.io/github/license/VTT-ProperTune/OpenPFC
-[license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/LICENSE
 [doi-badge-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.10799936.svg
 [doi-badge-url]: https://zenodo.org/doi/10.5281/zenodo.10799935
-[examples-url]: https://github.com/VTT-ProperTune/OpenPFC/tree/master/examples
-[software framework]: https://en.wikipedia.org/wiki/Software_framework
+[docs-site-img]: https://img.shields.io/badge/docs-Sphinx-blue.svg
+[docs-site-url]: https://vtt-propertune.github.io/OpenPFC/
+[api-url]: https://vtt-propertune.github.io/OpenPFC/api/
+[releases-img]: https://img.shields.io/github/v/release/VTT-ProperTune/OpenPFC
+[releases-url]: https://github.com/VTT-ProperTune/OpenPFC/releases/latest
+[ci-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml/badge.svg
+[ci-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/ci.yml
+[docs-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml/badge.svg
+[docs-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/docs.yml
+[coverage-badge-img]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/coverage.yml/badge.svg
+[coverage-badge-url]: https://github.com/VTT-ProperTune/OpenPFC/actions/workflows/coverage.yml
+[license-img]: https://img.shields.io/github/license/VTT-ProperTune/OpenPFC
+[license-url]: https://github.com/VTT-ProperTune/OpenPFC/blob/master/LICENSE.md

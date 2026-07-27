@@ -33,7 +33,7 @@ Short definitions for OpenPFC and PFC simulation vocabulary. Deeper design detai
 
 ## See also
 
-- [`README.md`](../README.md) — full documentation index (this directory)
+- [Documentation index](../index.md) — full documentation map
 - [`class_tour.md`](class_tour.md) — main types, headers, and runnable references
 - [`configuration.md`](../user_guide/configuration.md) — config file sections
 - [`app_pipeline.md`](../user_guide/app_pipeline.md) — JSON/TOML → `Simulator`

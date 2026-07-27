@@ -1,9 +1,13 @@
 [project]
 name = "openpfc-docs"
 version = "0.1.0"
-description = "MkDocs + Material toolchain for the prose site (see ../mkdocs.yml, docs/mkdocs_preview.md)"
+description = "Unified Sphinx, MyST, and Breathe documentation toolchain"
 requires-python = ">=3.12"
 dependencies = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.5",
+    "breathe>=4.36",
+    "furo>=2024.8.6",
+    "myst-parser>=4.0",
+    "sphinx>=8.2,<9",
+    "sphinx-autobuild>=2024.10",
+    "sphinxcontrib-mermaid>=1.0",
 ]

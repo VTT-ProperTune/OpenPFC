@@ -1,118 +1,73 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# ============================================================================
-# Core Doxygen Settings
-# ============================================================================
+cmake_minimum_required(VERSION 3.21)
 
-# Only document explicitly documented items (encourages better documentation)
+# Support both `add_subdirectory(docs)` from the OpenPFC build and a lightweight
+# standalone documentation configure that does not require MPI or HeFFTe.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(OpenPFCDocumentation NONE)
+  find_package(Doxygen REQUIRED)
+  set(OPENPFC_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/..")
+else()
+  set(OPENPFC_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
+endif()
+
 set(DOXYGEN_EXTRACT_ALL NO)
 set(DOXYGEN_BUILTIN_STL_SUPPORT YES)
-set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
 
-# Warnings - encourage good documentation practices
-set(DOXYGEN_WARN_IF_UNDOCUMENTED YES)
+# The existing public API is only partially documented. Requiring prose for
+# every member and parameter would turn the migration into thousands of
+# unrelated warnings. Keep warnings for malformed documentation and unresolved
+# references; expand curated API coverage incrementally.
+set(DOXYGEN_WARN_IF_UNDOCUMENTED NO)
 set(DOXYGEN_WARN_IF_DOC_ERROR YES)
-set(DOXYGEN_WARN_NO_PARAMDOC YES)
-set(DOXYGEN_WARN_AS_ERROR NO)  # Don't fail build on warnings, but show them
+set(DOXYGEN_WARN_NO_PARAMDOC NO)
+set(DOXYGEN_WARN_AS_ERROR NO)
+set(DOXYGEN_WARN_LOGFILE "${CMAKE_CURRENT_BINARY_DIR}/doxygen.log")
+set(DOXYGEN_QUIET YES)
+set(DOXYGEN_INCLUDE_PATH "${OPENPFC_SOURCE_DIR}/include")
 
-# Math support - needed for LaTeX formulas in code (e.g., world.hpp)
-set(DOXYGEN_USE_MATHJAX YES)
-set(DOXYGEN_MATHJAX_RELPATH "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js")
-
-# Output formats
-set(DOXYGEN_GENERATE_HTML YES)
-set(DOXYGEN_GENERATE_LATEX YES)
-set(DOXYGEN_GENERATE_XML YES)  # For tool integration (e.g., Sphinx with Breathe)
-set(DOXYGEN_USE_PDFLATEX YES)
-set(DOXYGEN_COMPACT_LATEX YES)
-
-# ============================================================================
-# Navigation and UI
-# ============================================================================
-
-set(DOXYGEN_AWESOME "${CMAKE_CURRENT_SOURCE_DIR}/doxygen-awesome-css")
-
-set(DOXYGEN_GENERATE_TREEVIEW YES) # optional. Also works without treeview
-set(DOXYGEN_DISABLE_INDEX NO)
-set(DOXYGEN_FULL_SIDEBAR NO)
-set(DOXYGEN_TOC_INCLUDE_HEADINGS 5)
-
-# Custom styling
-set(DOXYGEN_HTML_EXTRA_STYLESHEET
-  ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-custom/custom.css
-  ${DOXYGEN_AWESOME}/doxygen-awesome.css
-  ${DOXYGEN_AWESOME}/doxygen-awesome-sidebar-only.css
-  ${DOXYGEN_AWESOME}/doxygen-awesome-sidebar-only-darkmode-toggle.css
+# Source annotations that are meaningful to the compiler but should disappear
+# before Breathe asks Sphinx to parse the resulting C++ declarations.
+set(DOXYGEN_PREDEFINED
+  "OPENPFC_DEPRECATED_API="
+)
+set(DOXYGEN_MACRO_EXPANSION YES)
+set(DOXYGEN_EXPAND_ONLY_PREDEF YES)
+set(DOXYGEN_MAX_INITIALIZER_LINES 0)
+set(DOXYGEN_EXCLUDE_SYMBOLS
+  "*::comm_deleter"
 )
 
-set(DOXYGEN_HTML_EXTRA_FILES
-  ${DOXYGEN_AWESOME}/doxygen-awesome-darkmode-toggle.js
-  ${DOXYGEN_AWESOME}/doxygen-awesome-fragment-copy-button.js
-  ${DOXYGEN_AWESOME}/doxygen-awesome-paragraph-link.js
-  ${DOXYGEN_AWESOME}/doxygen-awesome-interactive-toc.js
+# Doxygen is the C++ parser in the unified documentation pipeline. Sphinx and
+# Breathe own the rendered HTML product.
+set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+set(DOXYGEN_GENERATE_HTML NO)
+set(DOXYGEN_GENERATE_LATEX NO)
+set(DOXYGEN_GENERATE_XML YES)
+set(DOXYGEN_XML_OUTPUT xml)
+set(DOXYGEN_CALL_GRAPH NO)
+set(DOXYGEN_CALLER_GRAPH NO)
+
+# The generated API represents the installed source-level contract. Runnable
+# examples remain linked from prose but are not parsed as API declarations;
+# several intentionally reuse small demo class names across separate programs.
+file(GLOB_RECURSE OPENPFC_HEADER_FILES
+  "${OPENPFC_SOURCE_DIR}/include/*.hpp"
 )
 
-set(DOXYGEN_PROJECT_LOGO ${CMAKE_CURRENT_SOURCE_DIR}/img/logo.png)
-
-# Custom header and footer
-set(DOXYGEN_HTML_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-custom/header.html)
-set(DOXYGEN_HTML_FOOTER ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-custom/footer.html)
-
-# ============================================================================
-# Examples Configuration
-# ============================================================================
-
-set(DOXYGEN_EXAMPLE_PATH 
-  "${PROJECT_SOURCE_DIR}/examples"
-  "${CMAKE_CURRENT_SOURCE_DIR}/api/examples"
+doxygen_add_docs(openpfc-doxygen-xml
+  "${OPENPFC_HEADER_FILES}"
+  WORKING_DIRECTORY "${OPENPFC_SOURCE_DIR}"
+  COMMENT "Extracting OpenPFC public C++ API as Doxygen XML"
 )
-set(DOXYGEN_EXAMPLE_RECURSIVE YES)  # Include examples in subdirectories
 
-# ============================================================================
-# Call Graphs (requires Graphviz/dot)
-# ============================================================================
+# Preserve the historical target name for existing local scripts and users.
+add_custom_target(docs DEPENDS openpfc-doxygen-xml)
 
-set(DOXYGEN_CALL_GRAPH YES)      # Show what functions call
-set(DOXYGEN_CALLER_GRAPH YES)    # Show what calls this function
-
-# ============================================================================
-# File Collection
-# ============================================================================
-
-# NOTE: Using GLOB_RECURSE for documentation file collection.
-# This is acceptable here because:
-# 1. Documentation generation is not part of the build dependency graph
-# 2. Files are collected at configure time, not build time
-# 3. The alternative (explicit file lists) would be very maintenance-heavy
-#    for a project with many header files
-# If you prefer explicit lists for better CMake dependency tracking,
-# replace these with explicit file() calls listing each file.
-
-file(GLOB_RECURSE HEADER_FILES "${PROJECT_SOURCE_DIR}/include/*.hpp")
-file(GLOB_RECURSE EXAMPLE_FILES "${PROJECT_SOURCE_DIR}/examples/*.cpp")
-file(GLOB_RECURSE API_EXAMPLE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/api/examples/*.cpp")
-
-# ============================================================================
-# Include API examples subdirectory
-# ============================================================================
-
-add_subdirectory(api/examples)
-
-# ============================================================================
-# Copy images for documentation front page
-# ============================================================================
-
-# to make img in front page to show up also in documentation
-file(COPY img DESTINATION html/docs)
-
-# ============================================================================
-# Generate Documentation
-# ============================================================================
-
-doxygen_add_docs(docs
-  "${PROJECT_SOURCE_DIR}/README.md"
-  "${HEADER_FILES}"
-  "${EXAMPLE_FILES}"
-  "${API_EXAMPLE_FILES}"
-  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/include")
+# API examples are only buildable when this directory is part of the full
+# OpenPFC project and the required library targets exist.
+if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  add_subdirectory(api/examples)
+endif()

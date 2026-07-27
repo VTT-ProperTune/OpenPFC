@@ -26,4 +26,4 @@ The script concatenates the manifest order in [`handbook_manifest.txt`](../handb
 
 ## See also
 
-- [`README.md`](../README.md) — master index of all guides  
+- [Documentation index](../index.md) — master index of all guides

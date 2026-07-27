@@ -9,13 +9,13 @@ Structured **time-boxed** modules for teaching OpenPFC. The same material exists
 
 | Module | Time (guide) | Focus |
 |--------|----------------|-------|
-| [Half-day 1 — build & first MPI run](curriculum.md#workshop-day1) | ~3 h | Toolchain, `cmake`, `05_simulator`, reading logs |
-| [Half-day 2 — spectral app & artifacts](curriculum.md#workshop-day2) | ~3 h | Tungsten JSON, binary/VTK, `app_pipeline` |
-| [Half-day 3 — HPC & profiling](curriculum.md#workshop-day3) | ~3 h | Slurm, MPI-IO checklist, profiling export |
+| {ref}`Half-day 1 — build and first MPI run <workshop-day1>` | ~3 h | Toolchain, `cmake`, `05_simulator`, reading logs |
+| {ref}`Half-day 2 — spectral app and artifacts <workshop-day2>` | ~3 h | Tungsten JSON, binary/VTK, `app_pipeline` |
+| {ref}`Half-day 3 — HPC and profiling <workshop-day3>` | ~3 h | Slurm, MPI-IO checklist, profiling export |
 
 Full outline: [`curriculum.md`](curriculum.md).
 
 ## See also
 
-- [`start_here_15_minutes.md`](../start_here_15_minutes.md) — prerequisite “single success path”  
-- [`learning_paths.md`](../learning_paths.md) — same content as role-based tracks  
+- [`start_here_15_minutes.md`](../start_here_15_minutes.md) — prerequisite “single success path”
+- [`learning_paths.md`](../learning_paths.md) — same content as role-based tracks

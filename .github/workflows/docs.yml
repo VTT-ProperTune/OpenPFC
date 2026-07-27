@@ -11,120 +11,140 @@ on:
     paths:
       - 'docs/**'
       - 'include/**/*.hpp'
+      - 'examples/**/*.cpp'
       - 'README.md'
       - 'CONTRIBUTING.md'
       - 'CHANGELOG.md'
       - 'INSTALL.md'
-      - 'examples/README.md'
-      - 'apps/*/README.md'
-      - 'scripts/install-heffte-ci.sh'
       - 'scripts/check_doc_links.py'
       - 'scripts/check_doc_bash_syntax.py'
+      - 'scripts/check_doc_toolchain_refs.py'
+      - 'scripts/check_doxygen_log.py'
+      - 'scripts/check_sphinx_log.py'
+      - 'scripts/check_examples_catalog.py'
+      - 'scripts/check_end_to_end_allen_cahn.py'
+      - 'scripts/build_docs.sh'
       - 'scripts/build_handbook.sh'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
-# Allow only one concurrent deployment
 concurrency:
-  group: "pages"
+  group: "documentation-${{ github.ref }}"
   cancel-in-progress: true
 
 jobs:
-  # ============================================================================
-  # Markdown link integrity (fast)
-  # ============================================================================
-  check-markdown-links:
-    name: Check documentation links
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Verify relative markdown links
-        run: python3 scripts/check_doc_links.py
-
-      - name: Verify examples catalog vs CMakeLists
-        run: python3 scripts/check_examples_catalog.py
-
-      - name: Verify Allen–Cahn end-to-end doc vs README
-        run: python3 scripts/check_end_to_end_allen_cahn.py
-
-      - name: Verify bash syntax in documentation fenced blocks
-        run: python3 scripts/check_doc_bash_syntax.py
-
-  # ============================================================================
-  # Build Documentation
-  # ============================================================================
-  build-docs:
-    name: Build Documentation
-    needs: check-markdown-links
+  check-documentation-source:
+    name: Check documentation source
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: true
+          show-progress: false
 
-      - name: Install dependencies
+      - name: Run documentation source checks
+        id: source-checks
+        shell: bash
+        run: |
+          set +e
+          status=0
+          : > documentation-source-checks.log
+
+          run_check() {
+            local label="$1"
+            shift
+            echo "=== ${label} ===" | tee -a documentation-source-checks.log
+            "$@" 2>&1 | tee -a documentation-source-checks.log
+            local code=${PIPESTATUS[0]}
+            echo | tee -a documentation-source-checks.log
+            if [[ ${code} -ne 0 ]]; then
+              status=1
+            fi
+          }
+
+          run_check "Relative Markdown links" \
+            python3 scripts/check_doc_links.py
+          run_check "Documentation toolchain references" \
+            python3 scripts/check_doc_toolchain_refs.py
+          run_check "Examples catalog" \
+            python3 scripts/check_examples_catalog.py
+          run_check "Allen-Cahn tutorial consistency" \
+            python3 scripts/check_end_to_end_allen_cahn.py
+          run_check "Fenced shell syntax" \
+            python3 scripts/check_doc_bash_syntax.py
+
+          exit ${status}
+
+      - name: Upload source-check diagnostics
+        if: failure() && steps.source-checks.conclusion == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-source-checks-log
+          path: documentation-source-checks.log
+          retention-days: 7
+
+  build-documentation:
+    name: Build unified documentation
+    needs: check-documentation-source
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Doxygen and Ninja
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            doxygen \
-            graphviz \
-            texlive-latex-base \
-            texlive-latex-extra \
-            cmake \
-            ninja-build \
-            libopenmpi-dev \
-            libfftw3-dev \
-            nlohmann-json3-dev
+          sudo apt-get install -y doxygen ninja-build
 
-      - name: Cache HeFFTe
-        id: cache-heffte
-        uses: actions/cache@v4
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          path: ~/opt/heffte/2.4.1-cpu
-          key: heffte-2.4.1-cpu-ubuntu-24.04-docs
+          python-version: '3.12'
+          enable-cache: true
+          cache-dependency-glob: |
+            docs/pyproject.toml
+            docs/uv.lock
 
-      - name: Build HeFFTe (if not cached)
-        if: steps.cache-heffte.outputs.cache-hit != 'true'
-        run: scripts/install-heffte-ci.sh Release /tmp/heffte-build-docs
+      - name: Resolve locked documentation environment
+        run: uv sync --project docs --locked
 
-      - name: Configure OpenPFC
+      - name: Build Sphinx site with integrated API
+        id: documentation-build
+        env:
+          OPENPFC_REPOSITORY: ${{ github.repository }}
+          OPENPFC_REVISION: ${{ github.sha }}
         run: |
-          cmake -S . -B build \
-            -GNinja \
-            -DCMAKE_PREFIX_PATH=$HOME/opt/heffte/2.4.1-cpu \
-            -DOpenPFC_BUILD_DOCUMENTATION=ON \
-            -DOpenPFC_BUILD_TESTS=OFF
+          set -o pipefail
+          bash scripts/build_docs.sh build 2>&1 | tee documentation-build.log
 
-      - name: Build documentation
-        run: cmake --build build --target docs
+      - name: Check Doxygen diagnostics
+        if: success()
+        run: python3 scripts/check_doxygen_log.py build/docs/doxygen.log
 
-      - name: Check for documentation warnings
-        run: |
-          if grep -q "warning:" build/docs/doxygen.log 2>/dev/null; then
-            echo "⚠️  Doxygen warnings found:"
-            grep "warning:" build/docs/doxygen.log
-            exit 1
-          else
-            echo "✅ No Doxygen warnings"
-          fi
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-build-log
+          path: |
+            documentation-build.log
+            build/docs/sphinx.log
+            build/docs/doxygen.log
+          if-no-files-found: ignore
+          retention-days: 7
 
-      - name: Upload documentation artifact
+      - name: Upload unified documentation artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: documentation-html
-          path: build/docs/html
+          path: site
           retention-days: 7
 
-  # ============================================================================
-  # Deploy to GitHub Pages (only on push to master)
-  # ============================================================================
   deploy-pages:
-    name: Deploy to GitHub Pages
+    name: Deploy documentation
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: build-docs
+    needs: build-documentation
     runs-on: ubuntu-24.04
 
     permissions:
@@ -137,25 +157,37 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Download documentation artifact
+      - name: Download unified documentation
         uses: actions/download-artifact@v4
         with:
           name: documentation-html
-          path: ./docs
+          path: ./pages
+
+      - name: Preserve legacy Doxygen URL
+        run: |
+          mkdir -p pages/dev
+          cat > pages/dev/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <link rel="canonical" href="../api/">
+          <meta http-equiv="refresh" content="0; url=../api/">
+          <title>OpenPFC API reference moved</title>
+          <p>The API reference moved to <a href="../api/">the unified documentation site</a>.</p>
+          EOF
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload to GitHub Pages
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs
+          path: ./pages
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Comment on commit (success)
+      - name: Comment on commit after deployment
         if: success()
         uses: actions/github-script@v7
         continue-on-error: true
@@ -165,5 +197,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha,
-              body: `📚 Documentation deployed: ${{ steps.deployment.outputs.page_url }}`
+              body: `Documentation deployed: ${{ steps.deployment.outputs.page_url }}`
             })
