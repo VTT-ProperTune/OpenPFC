@@ -187,7 +187,7 @@ void run() {
                                  GridSpacing(discretization));
   auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
-  // Create World for Model
+  // Create simulation world for Model constructor
   auto world = domain::create_world_from_bounds({L, L, L}, {o, o, o}, {o + (L - 1) * h, o + (L - 1) * h, o + (L - 1) * h});
   Diffusion model(fft, world);
 
