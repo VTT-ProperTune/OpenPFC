@@ -57,8 +57,8 @@ using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
  * @code{.cpp}
  * #ifdef OpenPFC_ENABLE_CUDA_SPECTRAL
  * #include <openpfc/kernel/mpi/mpi.hpp>
- *     auto world = world::create({128, 128, 128});
- *     auto decomp = decomposition::create(world, mpi::get_size());
+ *     pfc::Domain domain = pfc::domain::create({128, 128, 128});
+ *     auto decomp = decomposition::create(domain, mpi::get_size());
  *     auto gpu_fft = fft::create_cuda(decomp, mpi::get_rank());
  * #endif
  * @endcode

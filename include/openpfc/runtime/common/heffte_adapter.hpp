@@ -18,12 +18,12 @@
  *
  * @code
  * #include <openpfc/runtime/common/heffte_adapter.hpp>
- * #include <openpfc/kernel/data/world.hpp>
+ * #include <openpfc/kernel/data/domain.hpp>
  *
- * auto world = pfc::world::create(pfc::GridSize({64, 64, 64}),
- *                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
- *                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
- * auto heffte_box = pfc::to_heffte_box(world);
+ * pfc::Domain domain = pfc::domain::create(pfc::GridSize({64, 64, 64}),
+ *                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+ *                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+ * auto heffte_box = pfc::to_heffte_box(domain);
  * @endcode
  *
  * @see fft.hpp for FFT interface
