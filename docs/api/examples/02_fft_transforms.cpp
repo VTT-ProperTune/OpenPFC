@@ -25,7 +25,7 @@
 #include <iomanip>
 #include <iostream>
 #include <numbers>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
@@ -44,10 +44,10 @@ void example_basic_setup() {
   print_section("Example 1: Basic FFT Setup");
 
   // Create computational domain
-  auto world = world::create({64, 64, 64});
+  auto domain = pfc::domain::create({64, 64, 64});
 
   // Set up domain decomposition for MPI
-  auto decomp = decomposition::create(world, mpi::get_size());
+  auto decomp = decomposition::create(domain, mpi::get_size());
 
   // Create FFT object
   auto fft = fft::create(decomp);
@@ -68,8 +68,8 @@ void example_basic_setup() {
 void example_round_trip() {
   print_section("Example 2: Round-Trip Transform (Normalization Check)");
 
-  auto world = world::create({32, 32, 32});
-  auto decomp = decomposition::create(world, mpi::get_size());
+  auto domain = pfc::domain::create({32, 32, 32});
+  auto decomp = decomposition::create(domain, mpi::get_size());
   auto fft = fft::create(decomp);
 
   // Create test field: cos(2πx/L)
@@ -78,8 +78,8 @@ void example_round_trip() {
   std::vector<double> reconstructed(fft.size_inbox());
 
   auto inbox = fft::get_inbox(fft);
-  auto size = world::get_size(world);
-  auto spacing = world::get_spacing(world);
+  auto size = pfc::domain::get_size(domain);
+  auto spacing = pfc::domain::get_spacing(domain);
 
   for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
     for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
@@ -128,9 +128,9 @@ void example_round_trip() {
 void example_laplacian() {
   print_section("Example 3: Computing Laplacian in K-Space");
 
-  auto world = world::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({0.1, 0.1, 0.1}));
-  auto decomp = decomposition::create(world, mpi::get_size());
+  auto domain = pfc::domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({0.1, 0.1, 0.1}));
+  auto decomp = decomposition::create(domain, mpi::get_size());
   auto fft = fft::create(decomp);
 
   // Create test function: f(x,y,z) = sin(2πx/L)
@@ -140,8 +140,8 @@ void example_laplacian() {
   std::vector<double> laplacian(fft.size_inbox());
 
   auto inbox = fft::get_inbox(fft);
-  auto size = world::get_size(world);
-  auto spacing = world::get_spacing(world);
+  auto size = pfc::domain::get_size(domain);
+  auto spacing = pfc::domain::get_spacing(domain);
   double L = size[0] * spacing[0];
 
   // Initialize field
@@ -230,8 +230,8 @@ void example_laplacian() {
 void example_performance() {
   print_section("Example 4: Performance Timing");
 
-  auto world = world::create({128, 128, 128});
-  auto decomp = decomposition::create(world, mpi::get_size());
+  auto domain = pfc::domain::create({128, 128, 128});
+  auto decomp = decomposition::create(domain, mpi::get_size());
   auto fft = fft::create(decomp);
 
   std::vector<double> real_data(fft.size_inbox(), 1.0);
