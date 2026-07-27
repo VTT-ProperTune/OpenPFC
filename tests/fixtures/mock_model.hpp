@@ -29,7 +29,7 @@ namespace testing {
  * Use this when you need a Model instance but don't care about its behavior.
  *
  * @code
- * auto world = world::create({8, 8, 8});
+ * auto world = domain::create_world({8, 8, 8});
  * auto decomposition = decomposition::create(world, 1);
  * auto fft = fft::create(decomposition);
  * pfc::testing::MockModel model(fft, world);
@@ -69,7 +69,7 @@ public:
  * with specific parameters. Tracks call counts and parameters.
  *
  * @code
- * auto world = world::create({8, 8, 8});
+ * auto world = domain::create_world({8, 8, 8});
  * auto decomposition = decomposition::create(world, 1);
  * auto fft = fft::create(decomposition);
  * pfc::testing::InstrumentedMockModel model(fft, world);
@@ -123,7 +123,7 @@ public:
  * was called. Use this to test FieldModifier implementations.
  *
  * @code
- * auto world = world::create({8, 8, 8});
+ * auto world = domain::create_world({8, 8, 8});
  * auto decomposition = decomposition::create(world, 1);
  * auto fft = fft::create(decomposition);
  * pfc::testing::MockModelWithModificationFlag model(fft, world);
