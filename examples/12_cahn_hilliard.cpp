@@ -32,12 +32,12 @@ public:
     pfc::add_real_field(*this, "concentration", c);
 
     // prepare operators
-    auto &w = pfc::get_world(*this);
+    const auto &d = pfc::get_world(*this).domain_;
     std::array<int, 3> o_low = get_outbox(fft).low;
     std::array<int, 3> o_high = get_outbox(fft).high;
     size_t idx = 0;
-    auto spacing = get_spacing(w);
-    auto size = get_size(w);
+    auto spacing = d.spacing;
+    auto size = d.size;
     double fx = 2.0 * constants::pi / (spacing[0] * size[0]);
     double fy = 2.0 * constants::pi / (spacing[1] * size[1]);
     double fz = 2.0 * constants::pi / (spacing[2] * size[2]);
@@ -108,9 +108,7 @@ int main(int argc, char **argv) {
                                       GridSpacing{{dx, dy, dz}});
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  // Create World wrapping Domain for Model constructor (World to be deprecated in M12)
-  World world({0, 0, 0}, {domain.size[0]-1, domain.size[1]-1, domain.size[2]-1}, domain);
-  CahnHilliard model(fft, world);
+  CahnHilliard model(fft, World({0, 0, 0}, {domain.size[0]-1, domain.size[1]-1, domain.size[2]-1}, domain));
 
   // Define time
   double t = 0.0;
@@ -134,9 +132,9 @@ int main(int argc, char **argv) {
   // file_count
   writer.set_uri(sprintf("cahn_hilliard_%04i.vti", file_count));
   writer.set_field_name("concentration");
-  writer.set_domain(get_size(world), get_inbox(fft).size, get_inbox(fft).low);
-  writer.set_origin(get_origin(world));
-  writer.set_spacing(get_spacing(world));
+  writer.set_domain(domain.size, get_inbox(fft).size, get_inbox(fft).low);
+  writer.set_origin(domain.origin);
+  writer.set_spacing(domain.spacing);
   writer.initialize();
   writer.write(field);
 
