@@ -9,7 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -55,7 +55,7 @@ TEST_CASE("FileReader - Field Name Assignment", "[ic_file_reader]") {
 }
 
 TEST_CASE("FileReader - Invalid File Handling", "[ic_file_reader]") {
-  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
+  auto world = domain::create_world({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithFileReaderIC m(fft, world);
@@ -84,7 +84,7 @@ void create_test_binary_file(const std::string &filename,
 }
 
 TEST_CASE("FileReader - Read Valid File", "[ic_file_reader]") {
-  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
+  auto world = domain::create_world({4, 4, 4});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithFileReaderIC m(fft, world);
@@ -119,7 +119,7 @@ TEST_CASE("FileReader - Read Valid File", "[ic_file_reader]") {
 }
 
 TEST_CASE("FileReader - Integration with Model", "[ic_file_reader]") {
-  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
+  auto world = domain::create_world({8, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithFileReaderIC model(fft, world);

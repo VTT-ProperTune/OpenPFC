@@ -8,7 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -81,7 +81,7 @@ TEST_CASE("MovingBC - Modifier Name", "[bc_moving]") {
 TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
   // Small grid: behavior is local; avoid thousands of Catch REQUIREs (very slow).
   auto world =
-      world::create(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
+      domain::create_world(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
                     GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -146,7 +146,7 @@ TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
 }
 
 TEST_CASE("MovingBC - Integration with Model", "[bc_moving]") {
-  auto world = world::create(GridSize({16, 8, 8}).to_vector3());
+  auto world = domain::create_world({16, 8, 8});
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithMovingBC model(fft, world);
@@ -175,7 +175,7 @@ TEST_CASE("MovingBC - Field Name Assignment", "[bc_moving]") {
 
 TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
   auto world =
-      world::create(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
+      domain::create_world(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
                     GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -205,7 +205,7 @@ TEST_CASE("MovingBC - MPI collectives fail closed", "[bc_moving]") {
   // Verified by code inspection of moving_bc.hpp (no MPI mock framework);
   // this case locks the success-path apply still works under that contract.
   auto world =
-      world::create(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
+      domain::create_world(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
                     GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
