@@ -8,7 +8,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/domain/create.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
@@ -18,8 +17,8 @@ using namespace pfc;
 namespace {
 
 field::PaddedBrick<double> make_brick(int n, int hw) {
-  auto world = domain::create_world({n, n, n});
-  auto decomp = decomposition::create(world, 1);
+  auto domain = domain::create({n, n, n});
+  auto decomp = decomposition::create(domain, 1);
   return field::PaddedBrick<double>(decomp, /*rank=*/0, hw);
 }
 
