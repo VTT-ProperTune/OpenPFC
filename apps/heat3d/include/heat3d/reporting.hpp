@@ -20,7 +20,8 @@
  *
  * The visitor parameter on `report` lets each solver pick which set of
  * cells to score (FD's `for_each_interior` vs spectral's
- * `for_each_owned`) without `report` itself knowing about `LocalField`.
+ * `for_each_owned`) without `report` itself knowing about the field
+ * container implementation.
  */
 
 #include <cmath>
