@@ -8,7 +8,7 @@
  *
  * @details
  * This is the **"laboratory, not fortress"** counterpart to `heat3d_fd`.
- * Where `heat3d_fd` composes `PaddedBrick + PaddedHaloExchanger +
+ * Where `heat3d_fd` composes `Field + PaddedHaloExchanger +
  * FDGradient + for_each` as three visible primitives (halo, gradient,
  * sweep) in `main`, this driver instead exposes a different decomposition:
  * a single overlapped halo exchange (start interior / finish border) and a

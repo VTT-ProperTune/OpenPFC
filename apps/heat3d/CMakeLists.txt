@@ -18,7 +18,7 @@ find_package(OpenMP COMPONENTS CXX)
 #   heat3d_fd_scratch          — version 0; bare triple loops, raw pointers,
 #                                only PaddedHaloExchanger from openpfc
 #   heat3d_fd_manual           — laboratory-style explicit-stencil FD driver
-#   heat3d_fd                  — compact FD (PaddedBrick + PaddedHalo +
+#   heat3d_fd                  — compact FD (Field + PaddedHalo +
 #                                FDGradient + for_each, decoupled in main)
 #   heat3d_spectral_pointwise  — point-wise spectral RHS + explicit Euler
 #   heat3d_spectral            — implicit-Euler spectral
