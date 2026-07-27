@@ -15,4 +15,12 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_state_access.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_state_concepts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/field_from_subdomain_tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/domain/field_comprehensive_domain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/domain/field_state_access_domain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/domain/brick_iteration_domain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/domain/field_operations_domain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/domain/composite_gradient_domain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/domain/fd_gradient_domain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/domain/field_from_subdomain_domain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/domain/field_from_slice_domain.cpp
 )
