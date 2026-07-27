@@ -138,7 +138,7 @@ public:
    *
    * @example
    * ```cpp
-   * auto world = world::create({256, 256, 256});
+   * auto world = pfc::domain::create_world_uniform(256);
    * auto decomp = decomposition::create(world, mpi::get_size());
    * auto fft = fft::create(decomp);
    *

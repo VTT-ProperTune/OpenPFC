@@ -22,9 +22,8 @@
  * #include <openpfc/kernel/data/world.hpp>
  *
  * using namespace pfc;
- * auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = make_decomposition(world,
- * MPI_COMM_WORLD);
+ * auto world = pfc::domain::create_world_uniform(64);
+ * auto decomp = make_decomposition(world, MPI_COMM_WORLD);
  * @endcode
  *
  * @see kernel/decomposition/decomposition.hpp for Decomposition class

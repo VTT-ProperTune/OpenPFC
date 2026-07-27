@@ -486,7 +486,7 @@ template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
 /**
  * @brief Free-function factory: build an `FdGradient<G>` from a `pfc::data::Field`.
  *
- * Mirrors the `world::create`, `decomposition::create`, `fft::create` family:
+ * Mirrors the `domain::create_world`, `decomposition::create`, `fft::create` family:
  * derives `nx, ny, nz`, the per-axis grid spacings, and the halo width
  * directly from `u`. The caller supplies the spatial accuracy `order` and
  * the model-owned grads type as an explicit template argument.

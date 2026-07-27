@@ -20,7 +20,7 @@
  * Example:
  * @code
  * using namespace pfc;
- * auto world = world::create(GridSize({64,64,64}));
+ * auto world = pfc::domain::create_world_uniform(64);
  * auto decomp = decomposition::create(world, 1);
  * auto fft = fft::create(decomp);
  * std::vector<double> u(fft.size_inbox());

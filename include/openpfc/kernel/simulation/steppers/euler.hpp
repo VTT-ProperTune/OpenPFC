@@ -35,7 +35,7 @@
  * the `pfc::sim::steppers::create` factories at the bottom of this file to
  * bind a model + gradient evaluator to the canonical
  * `for_each_interior(model, eval, du, t)` RHS. They mirror the
- * `world::create`, `decomposition::create`, `fft::create`, `field::create`
+ * `domain::create_world`, `decomposition::create`, `fft::create`, `field::create`
  * convention used throughout OpenPFC.
  *
  * Higher-order explicit methods (RK2, RK4) live in sibling files in this
@@ -310,7 +310,7 @@ template <class Eval, class Model>
  * @brief Build an `EulerStepper` for the canonical point-wise RHS, deriving
  *        the local buffer size from the field bundle.
  *
- * Mirrors the `world::create`, `decomposition::create`, `fft::create`,
+ * Mirrors the `domain::create_world`, `decomposition::create`, `fft::create`,
  * `field::create` family used elsewhere in OpenPFC.
  *
  * @param u      Local field whose `size()` defines the internal `du` buffer
