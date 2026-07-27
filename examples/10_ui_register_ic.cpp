@@ -45,15 +45,7 @@ void from_json(const json &params, MyIC &ic) {
 // Define model
 class MyModel : public Model {
 public:
-  /**
-   * @brief Constructs a MyModel instance with the given World object.
-   *
-   * @param world The World object to initialize the model.
-   */
-  explicit MyModel(FFT &fft, const World &world, MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : Model(fft, world, mpi_comm) {
-    // Additional initialization if needed
-  }
+  using Model::Model; // Inherit the default constructor of base class
 
   void initialize(double /*dt*/) override { std::cout << "initialize()" << '\n'; }
   void step(double /*t*/) override { std::cout << "MyModel.step()" << '\n'; }

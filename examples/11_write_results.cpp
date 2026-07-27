@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 
 /*
 TEST_CASE("VtkWriter", "[VtkWriter]") {
-  World world = domain::create_world({8, 2, 2});
+  auto world = domain::create_world({8, 2, 2});
   Decomposition decomp(world);
   DiscreteField<double, 3> field(decomp);
   field.apply([](auto x, auto y, auto z) { return x + y + z; });
