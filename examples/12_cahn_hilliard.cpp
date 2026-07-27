@@ -102,12 +102,14 @@ int main(int argc, char **argv) {
   double y0 = 0.0;
   double z0 = 0.0;
 
-  // Construct world, decomposition, fft and model
+  // Construct domain, decomposition, fft and model
   // Using strong types for type-safe Domain construction
-  auto world = domain::create_world(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
-                                    GridSpacing{{dx, dy, dz}});
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = ::pfc::domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
+                                      GridSpacing{{dx, dy, dz}});
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
+  // Create World wrapping Domain for Model constructor (World to be deprecated in M12)
+  World world({0, 0, 0}, {domain.size[0]-1, domain.size[1]-1, domain.size[2]-1}, domain);
   CahnHilliard model(fft, world);
 
   // Define time
