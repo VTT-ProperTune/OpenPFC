@@ -25,6 +25,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 #include <wave2d/device_step.hpp>
 #include <wave2d/wave_model.hpp>
@@ -108,8 +109,13 @@ TEST_CASE("wave2d CPU vs HIP (Neumann y, single rank)", "[wave2d][HIP]") {
                                            wave2d::YBoundaryKind::Neumann, Ny, 0.0);
   }
 
-  std::vector<double> u_gpu_host = u0;
-  std::vector<double> v_gpu_host = v0;
+  // Create host-side fields using pfc::data::Field API
+  auto u_field = pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
+  auto v_field = pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
+
+  // Copy initial data to fields
+  std::copy(u0.begin(), u0.end(), u_field.data());
+  std::copy(v0.begin(), v0.end(), v_field.data());
   auto face_halos_host =
       pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
   pfc::SparseHaloExchanger<double> exchanger(
@@ -131,24 +137,24 @@ TEST_CASE("wave2d CPU vs HIP (Neumann y, single rank)", "[wave2d][HIP]") {
                   std::max<std::size_t>(n, 1u) * sizeof(double)),
         "face");
   }
-  hip_check(hipMemcpy(u_dev, u_gpu_host.data(), nlocal * sizeof(double),
+  hip_check(hipMemcpy(u_dev, u_field.data(), nlocal * sizeof(double),
                       hipMemcpyHostToDevice),
             "H2D u");
-  hip_check(hipMemcpy(v_dev, v_gpu_host.data(), nlocal * sizeof(double),
+  hip_check(hipMemcpy(v_dev, v_field.data(), nlocal * sizeof(double),
                       hipMemcpyHostToDevice),
             "H2D v");
 
   for (int step = 0; step < n_steps; ++step) {
     (void)step;
-    hip_check(hipMemcpy(u_gpu_host.data(), u_dev, nlocal * sizeof(double),
+    hip_check(hipMemcpy(u_field.data(), u_dev, nlocal * sizeof(double),
                         hipMemcpyDeviceToHost),
               "D2H u");
-    hip_check(hipMemcpy(v_gpu_host.data(), v_dev, nlocal * sizeof(double),
+    hip_check(hipMemcpy(v_field.data(), v_dev, nlocal * sizeof(double),
                         hipMemcpyDeviceToHost),
               "D2H v");
-    exchanger.exchange_halos(u_gpu_host.data(), u_gpu_host.size());
+    exchanger.exchange_halos(u_field.data(), u_field.size());
     pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
-    wave2d::patch_y_face_halos_neumann_order2(u_gpu_host.data(), nx, ny,
+    wave2d::patch_y_face_halos_neumann_order2(u_field.data(), nx, ny,
                                               face_halos_host, lower, Ny);
     for (int f = 0; f < 6; ++f) {
       const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
@@ -165,10 +171,10 @@ TEST_CASE("wave2d CPU vs HIP (Neumann y, single rank)", "[wave2d][HIP]") {
                             halo_width, inv_dx2, inv_dy2, dt, wave2d::kC);
   }
 
-  hip_check(hipMemcpy(u_gpu_host.data(), u_dev, nlocal * sizeof(double),
+  hip_check(hipMemcpy(u_field.data(), u_dev, nlocal * sizeof(double),
                       hipMemcpyDeviceToHost),
             "final u");
-  hip_check(hipMemcpy(v_gpu_host.data(), v_dev, nlocal * sizeof(double),
+  hip_check(hipMemcpy(v_field.data(), v_dev, nlocal * sizeof(double),
                       hipMemcpyDeviceToHost),
             "final v");
   hip_check(hipFree(u_dev), "hipFree(u_dev)");
@@ -179,8 +185,8 @@ TEST_CASE("wave2d CPU vs HIP (Neumann y, single rank)", "[wave2d][HIP]") {
 
   double max_diff = 0.0;
   for (std::size_t i = 0; i < nlocal; ++i) {
-    max_diff = std::max(max_diff, std::abs(u_cpu[i] - u_gpu_host[i]));
-    max_diff = std::max(max_diff, std::abs(v_cpu[i] - v_gpu_host[i]));
+    max_diff = std::max(max_diff, std::abs(u_cpu[i] - u_field.data()[i]));
+    max_diff = std::max(max_diff, std::abs(v_cpu[i] - v_field.data()[i]));
   }
   REQUIRE(max_diff < 1e-9);
 }
