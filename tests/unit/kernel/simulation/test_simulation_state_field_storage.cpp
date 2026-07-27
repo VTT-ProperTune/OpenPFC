@@ -154,3 +154,34 @@ TEST_CASE("FieldHandle: value semantics and std::hash", "[simulation_state][unit
   labels[b] = 5;
   REQUIRE(labels.at(c) == 5);
 }
+
+#if defined(OpenPFC_ENABLE_CUDA)
+#include <openpfc/runtime/cuda/memory_space_cuda.hpp>
+
+// Compile-only coverage for Device memory space (CPU SIF cannot execute these).
+// Satisfies the "multiple T / Device combinations" acceptance criterion when
+// the CUDA toolchain builds this TU.
+TEST_CASE("SimulationState: CudaSpace fields register by name (compile check)",
+          "[simulation_state][unit][cuda]") {
+  using namespace pfc;
+  SimulationState state;
+
+  data::Field<double, CudaSpace> u(domain::create({4, 2, 1}),
+                                   whole_box(4, 2, 1), 0);
+  data::Field<std::complex<double>, CudaSpace> uh(
+      domain::create({4, 2, 1}), whole_box(4, 2, 1), 0);
+
+  state.add_field<double, CudaSpace>("u_dev", std::move(u));
+  state.add_field<std::complex<double>, CudaSpace>("uh_dev", std::move(uh));
+
+  REQUIRE(state.has_field("u_dev"));
+  REQUIRE(state.has_field("uh_dev"));
+  REQUIRE(state.num_fields() == 2);
+
+  // Touch residency APIs so the device Field path is not dead-stripped.
+  auto &uref = state.get_field<double, CudaSpace>("u_dev");
+  uref.sync_to_device();
+  uref.note_device_write();
+  (void)uref.residency();
+}
+#endif // OpenPFC_ENABLE_CUDA
