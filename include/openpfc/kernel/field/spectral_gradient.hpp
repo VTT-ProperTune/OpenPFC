@@ -51,7 +51,7 @@
 #include <openpfc/kernel/fft/box3i.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 
 namespace pfc::field {
 
@@ -222,7 +222,7 @@ private:
 
 /**
  * @brief Free-function factory: build a `SpectralGradient<G>` from an FFT
- *        plan and a `LocalField`.
+ *        plan and a `pfc::data::Field`.
  *
  * Mirrors the `world::create`, `decomposition::create`, `fft::create` family:
  * derives the local inbox bounds and the local Fourier outbox bounds from
@@ -238,15 +238,28 @@ private:
  * @endcode
  *
  * @tparam G    Model-owned grads aggregate.
- * @param u    Local field bound to the FFT inbox layout (must outlive the
+ * @param u    Field bound to the FFT inbox layout (must outlive the
  *             returned evaluator and not be reassigned/resized between
  *             `prepare()` calls; the evaluator stores a pointer to
- *             `u.vec()`).
+ *             `u.data()`).
  * @param fft  FFT plan (caller-owned; must outlive the returned evaluator).
  *
  * @return A `SpectralGradient<G>` ready to be passed to
  *         `pfc::sim::for_each_interior` (or `pfc::sim::steppers::create`).
  */
+// Forward declaration for backward compatibility compatibility
+template <class T> class LocalField;
+
+template <class G>
+[[nodiscard]] inline SpectralGradient<G> create(pfc::data::Field<double> &u,
+                                                pfc::fft::IFFT &fft) {
+  // Create a temporary std::vector for FFT compatibility (TODO: remove when FFT interface supports DataBuffer)
+  std::vector<double> u_vec(u.data(), u.data() + u.size());
+  return SpectralGradient<G>(fft, u_vec, u.domain().size, u.spacing(),
+                             fft.get_inbox_bounds(), fft.get_outbox_bounds());
+}
+
+// Backward compatibility overload for LocalField (TODO: remove when LocalField is deprecated)
 template <class G>
 [[nodiscard]] inline SpectralGradient<G> create(LocalField<double> &u,
                                                 pfc::fft::IFFT &fft) {

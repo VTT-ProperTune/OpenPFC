@@ -21,8 +21,8 @@
  * (docs/adr/0003-time-integrator-interface.md) extends via
  * concept-constrained templates.
  *
- * @see local_field.hpp for LocalField<T>, the field type this concept is
- *      verified against.
+ * @see kernel/data/grid_field.hpp for pfc::data::Field<T>, the field type
+ *      this concept is verified against.
  */
 
 #include <concepts>

@@ -37,8 +37,8 @@
  * which reads the geometry (`nx, ny, nz`, spacings, halo width) directly
  * from the `pfc::field::PaddedBrick<double>`. Legacy callers that hand a
  * raw pointer + extents are still supported, and the
- * `pfc::field::create<G>(LocalField, order)` factory keeps working
- * (for the unpadded `LocalField` path used by `FdCpuStack`).
+ * `pfc::field::create<G>(pfc::data::Field<double>, order)` factory works
+ * (for the unpadded Field path used by `FdCpuStack`).
  *
  * Drive a sweep with the free `pfc::gradient::evaluate(grad, idx)`
  * helper — it accepts a `pfc::Int3` so the iteration code does not
@@ -87,7 +87,7 @@
 #include <openpfc/kernel/field/fd_apply.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 
 namespace pfc::gradient {
@@ -112,11 +112,11 @@ public:
    *
    * Prefer the `(PaddedBrick&, order)` overload below for the typical
    * case; this raw-pointer constructor is for power users that build the
-   * evaluator from a `LocalField` or a buffer the kernel does not own.
+   * evaluator from a `pfc::data::Field` or a buffer the kernel does not own.
    *
    * Treats `core` as a tightly-packed `nx*ny*nz` row-major buffer
    * (x fastest), with iteration bounds `[halo_width, n-halo_width)` per
-   * axis — the `LocalField` convention.
+   * axis — the Field convention.
    *
    * @param core                  Pointer to the local `nx*ny*nz` row-major buffer
    *                             (x fastest); must outlive the evaluator.
@@ -441,7 +441,7 @@ namespace pfc::field {
 template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
 
 /**
- * @brief Free-function factory: build an `FdGradient<G>` from a `LocalField`.
+ * @brief Free-function factory: build an `FdGradient<G>` from a `pfc::data::Field`.
  *
  * Mirrors the `world::create`, `decomposition::create`, `fft::create` family:
  * derives `nx, ny, nz`, the per-axis grid spacings, and the halo width
@@ -472,6 +472,19 @@ template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
  *         `u.halo_width()` is strictly less than the required stencil
  *         half-width.
  */
+// Forward declaration for backward compatibility
+template <class T> class LocalField;
+
+template <class G>
+[[nodiscard]] inline FdGradient<G> create(const pfc::data::Field<double> &u,
+                                          int order = 2) {
+  const auto sz = u.local_size();
+  const auto sp = u.spacing();
+  return FdGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
+                       u.halo_width(), order);
+}
+
+// Backward compatibility overload for LocalField (TODO: remove when LocalField is deprecated)
 template <class G>
 [[nodiscard]] inline FdGradient<G> create(const LocalField<double> &u,
                                           int order = 2) {
@@ -489,7 +502,7 @@ template <class G>
  * `pfc::communication::PaddedHaloExchanger<T>` on `u.data()`.
  *
  * Equivalent to `pfc::gradient::FDGradient<G>(u, order)`; kept for symmetry
- * with the `LocalField` factory above.
+ * with the `pfc::data::Field` factory above.
  *
  * @tparam G     Model-owned grads aggregate (see `grad_concepts.hpp`).
  * @param u      Padded brick (must outlive the returned evaluator).

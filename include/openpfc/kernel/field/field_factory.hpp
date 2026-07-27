@@ -29,7 +29,7 @@ namespace pfc::data {
  * fields that match the subdomain layout returned by decomposition.
  *
  * The resulting field layout is bit-for-bit identical to:
- * - LocalField::from_subdomain with halo=0
+ * - pfc::data::Field with halo=0 (migrated from LocalField::from_subdomain)
  * - PaddedBrick with halo=n
  *
  * @tparam T Element type (e.g., double, std::complex<double>)
