@@ -28,6 +28,7 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 
+#include "fixtures/simulation_factories.hpp"
 #include "fixtures/mock_model.hpp"
 
 using namespace pfc;
@@ -37,9 +38,17 @@ using pfc::types::Int3;
 // BASELINE TESTS: Current (v1.x) Behavior
 // =============================================================================
 
-TEST_CASE("Model-FFT: Construction requires FFT (v2.0)", "[model][fft][baseline]") {
-  GridSize grid_size({8, 8, 8});
-  World world = world::create(grid_size.to_vector3());
+// Test fixture for FFT baseline tests
+class FFTBaselineFixture : public pfc::test::SimulationModelFixture {
+public:
+  FFTBaselineFixture() {
+    // Use FFT-compatible domain (sizes divisible by 2)
+    SetUpFFTDomain(8, 8, 8);
+  }
+};
+
+TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: Construction requires FFT (v2.0)", "[model][fft][baseline]") {
+  World world = pfc::test::world_from_domain(domain());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
@@ -50,16 +59,16 @@ TEST_CASE("Model-FFT: Construction requires FFT (v2.0)", "[model][fft][baseline]
   }
 }
 
-TEST_CASE("Model-FFT: get_fft() never throws (v2.0)", "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}).to_vector3());
+TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: get_fft() never throws (v2.0)", "[model][fft][baseline]") {
+  World world = pfc::test::world_from_domain(domain());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   REQUIRE_NOTHROW(get_fft(model));
 }
 
-TEST_CASE("Model-FFT: FFT lifetime management (v2.0)", "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}).to_vector3());
+TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: FFT lifetime management (v2.0)", "[model][fft][baseline]") {
+  World world = pfc::test::world_from_domain(domain());
 
   SECTION("FFT must outlive Model (documented requirement)") {
     auto decomposition = decomposition::create(world, 1);
@@ -70,9 +79,9 @@ TEST_CASE("Model-FFT: FFT lifetime management (v2.0)", "[model][fft][baseline]")
   }
 }
 
-TEST_CASE("Model-FFT Baseline: Typical usage patterns",
+TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Typical usage patterns",
           "[model][fft][baseline][patterns]") {
-  World world = world::create(GridSize({16, 16, 16}).to_vector3());
+  World world = pfc::test::world_from_domain(domain());
 
   SECTION("Pattern: Create FFT then construct model (v2.0)") {
     auto decomposition = decomposition::create(world, 1);
@@ -85,8 +94,8 @@ TEST_CASE("Model-FFT Baseline: Typical usage patterns",
   }
 }
 
-TEST_CASE("Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}).to_vector3());
+TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]") {
+  World world = pfc::test::world_from_domain(domain());
 
   SECTION("Derived model inherits FFT access") {
     auto decomposition = decomposition::create(world, 1);
@@ -110,9 +119,9 @@ TEST_CASE("Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]"
   }
 }
 
-TEST_CASE("Model-FFT Baseline: Field operations with FFT",
+TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Field operations with FFT",
           "[model][fft][baseline]") {
-  World world = world::create(GridSize({8, 8, 8}).to_vector3());
+  World world = pfc::test::world_from_domain(domain());
 
   SECTION("Real fields work after FFT is set") {
     auto decomposition = decomposition::create(world, 1);
@@ -153,7 +162,7 @@ TEST_CASE("Model-FFT Baseline: Field operations with FFT",
 // DOCUMENTATION: Known Issues with Current Design
 // =============================================================================
 
-TEST_CASE("Model-FFT: Resolved issues (v2.0)", "[model][fft][baseline][doc]") {
+TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: Resolved issues (v2.0)", "[model][fft][baseline][doc]") {
   SECTION("Resolved: Null pointer checks removed") {
     // Every function that uses FFT must check for null
     // Example from real code:
@@ -191,12 +200,12 @@ TEST_CASE("Model-FFT: Resolved issues (v2.0)", "[model][fft][baseline][doc]") {
 // FORWARD-COMPATIBILITY: Tests for Future v2.0 API
 // =============================================================================
 
-TEST_CASE("Model-FFT: v2.0 behavior validated", "[model][fft][future]") {
+TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: v2.0 behavior validated", "[model][fft][future]") {
   // These tests document the DESIRED behavior after refactoring
   // They are currently disabled (. tag) and will be enabled in v2.0
 
   SECTION("v2.0: Single constructor with FFT reference") {
-    World world = world::create(GridSize({8, 8, 8}).to_vector3());
+    World world = pfc::test::world_from_domain(domain());
     auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
 

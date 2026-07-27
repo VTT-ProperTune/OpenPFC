@@ -14,6 +14,8 @@
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <wave2d/wave_model.hpp>
 
+#include "fixtures/simulation_factories.hpp"
+
 // Per-field gradient aggregates using FdGradient-recognized member names
 struct UGrads {
   double xx{};  // Second derivative in x (for u Laplacian)
@@ -87,7 +89,24 @@ double compute_l2_error(const pfc::data::Field<double> &field,
   return std::sqrt(error_sq / volume);
 }
 
-TEST_CASE("WaveModel multi-field Gaussian pulse convergence") {
+// Test fixture for wave model tests
+class WaveModelMultifieldFixture : public pfc::test::SimulationModelFixture {
+public:
+  WaveModelMultifieldFixture() = default; // Default constructor for parameterless TEST_CASE_METHOD
+
+  // Custom constructor for test-specific setup
+  WaveModelMultifieldFixture(int Nx, int Ny, int Nz, double Lx, double Ly, double Lz) {
+    double dx = Lx / Nx;
+    double dy = Ly / Ny;
+    double dz = Lz / Nz;
+    pfc::types::Int3 size{Nx, Ny, Nz};
+    pfc::types::Real3 spacing{dx, dy, dz};
+    pfc::types::Real3 origin{0.0, 0.0, 0.0};
+    SetUpCustomDomainWithSpacing(size, spacing);
+  }
+};
+
+TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field Gaussian pulse convergence") {
   constexpr int Nx = 64, Ny = 64, Nz = 4;
   constexpr double Lx = 1.0, Ly = 1.0, Lz = 0.1;
   constexpr double dx = Lx / Nx, dy = Ly / Ny, dz = Lz / Nz;
@@ -97,9 +116,14 @@ TEST_CASE("WaveModel multi-field Gaussian pulse convergence") {
   constexpr double dt_coarse = 0.0001;  // Smaller dt for stability
   constexpr double dt_fine = dt_coarse / 2.0;
 
-  auto world = pfc::world::create(pfc::GridSize({Nx, Ny, Nz}),
-                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                   pfc::GridSpacing({dx, dy, dz}));
+  // Manually set up domain with specific parameters for this test
+  {
+    pfc::types::Int3 size{Nx, Ny, Nz};
+    pfc::types::Real3 spacing{dx, dy, dz};
+    pfc::types::Real3 origin{0.0, 0.0, 0.0};
+    SetUpCustomDomainWithSpacing(size, spacing);
+  }
+  auto world = pfc::test::world_from_domain(domain());
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
 
   auto run_with_dt = [&](double dt) -> double {
@@ -142,7 +166,7 @@ TEST_CASE("WaveModel multi-field Gaussian pulse convergence") {
   CHECK(convergence_ratio >= 1.5);
 }
 
-TEST_CASE("WaveModel multi-field factory workflow") {
+TEST_CASE_METHOD(WaveModelMultifieldFixture, "WaveModel multi-field factory workflow") {
   constexpr int Nx = 32, Ny = 32, Nz = 4;
   constexpr double Lx = 1.0, Ly = 1.0, Lz = 0.1;
   constexpr double dx = Lx / Nx, dy = Ly / Ny, dz = Lz / Nz;
@@ -151,9 +175,14 @@ TEST_CASE("WaveModel multi-field factory workflow") {
   constexpr double t_end = 0.01;  // Shorter time to avoid boundary reflections
   constexpr double dt = 0.0001;  // Smaller dt for stability
 
-  auto world = pfc::world::create(pfc::GridSize({Nx, Ny, Nz}),
-                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                   pfc::GridSpacing({dx, dy, dz}));
+  // Manually set up domain with specific parameters for this test
+  {
+    pfc::types::Int3 size{Nx, Ny, Nz};
+    pfc::types::Real3 spacing{dx, dy, dz};
+    pfc::types::Real3 origin{0.0, 0.0, 0.0};
+    SetUpCustomDomainWithSpacing(size, spacing);
+  }
+  auto world = pfc::test::world_from_domain(domain());
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
 
   auto u_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
