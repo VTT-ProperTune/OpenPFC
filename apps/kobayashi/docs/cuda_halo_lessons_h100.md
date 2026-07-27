@@ -129,7 +129,7 @@ On **512²**, the same **`gpu_aware_mpi`** mode sometimes shows **sub-millisecon
 
 ## Why **±Z** halos run at all on a **2D** Kobayashi slab (`nz = 1`)
 
-The world is still a **3D** `PaddedBrick`: [`kobayashi_fd_cuda.cpp`](../src/cuda/kobayashi_fd_cuda.cpp) builds `GridSize({Nx, Ny, 1})`, so **local `nz = 1`** with padding **`nzp = 1 + 2·hw`**. Generic six-face machinery ([`padded_halo_mpi_types.hpp`](../../../include/openpfc/kernel/decomposition/padded_halo_mpi_types.hpp), [`PaddedDeviceHaloExchanger`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)) always defines **±Z** faces with cross-section **nx×ny** — those “faces” are **entire XY planes**, not thin **O(perimeter)** strips.
+The world is still a **3D** Field with halo width `hw`: [`kobayashi_fd_cuda.cpp`](../src/cuda/kobayashi_fd_cuda.cpp) builds `GridSize({Nx, Ny, 1})`, so **local `nz = 1`** with padding **`nzp = 1 + 2·hw`**. Generic six-face machinery ([`padded_halo_mpi_types.hpp`](../../../include/openpfc/kernel/decomposition/padded_halo_mpi_types.hpp), [`PaddedDeviceHaloExchanger`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)) always defines **±Z** faces with cross-section **nx×ny** — those “faces” are **entire XY planes**, not thin **O(perimeter)** strips.
 
 The CUDA physics kernels ([`kobayashi_fd_cuda_kernels.cu`](../src/cuda/kobayashi_fd_cuda_kernels.cu)) use **`constexpr int iz = 0`** and only index **ix±1, iy±1** at fixed **k**. They **never read ghost cells at `k±1`**. So **±Z halo data is not needed for the stencil** — it exists because the **storage layout is 3D** and the exchanger is **axis-aligned 6-face**, not because the equations use **z** neighbours.
 
