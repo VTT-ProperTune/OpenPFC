@@ -7,7 +7,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -17,9 +17,8 @@ using namespace pfc;
 
 TEST_CASE("FFT_Impl vector forward rejects wrong buffer sizes",
           "[fft][buffer_size][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
   const auto n_in = fft.size_inbox();
@@ -51,9 +50,8 @@ TEST_CASE("FFT_Impl vector forward rejects wrong buffer sizes",
 
 TEST_CASE("FFT_Impl vector backward rejects wrong buffer sizes",
           "[fft][buffer_size][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
   const auto n_in = fft.size_inbox();
@@ -85,9 +83,8 @@ TEST_CASE("FFT_Impl vector backward rejects wrong buffer sizes",
 
 TEST_CASE("FFT_Impl DataBuffer forward/backward rejects wrong buffer sizes",
           "[fft][buffer_size][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
   const auto n_in = fft.size_inbox();
@@ -109,9 +106,8 @@ TEST_CASE("FFT_Impl DataBuffer forward/backward rejects wrong buffer sizes",
 
 TEST_CASE("FFT_Impl vector forward accepts correctly sized buffers",
           "[fft][buffer_size][unit]") {
-  auto world = world::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
   std::vector<double> in(fft.size_inbox(), 1.0);

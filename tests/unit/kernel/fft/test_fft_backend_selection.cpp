@@ -17,7 +17,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <openpfc/frontend/ui/from_json_fft_backend.hpp>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 
@@ -26,9 +26,8 @@ using namespace pfc;
 using json = nlohmann::json;
 
 TEST_CASE("FFT Backend - FFTW backend selection", "[fft][backend][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
-                             GridSpacing({8.0, 8.0, 8.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(domain, 1);
 
   // Create FFT with FFTW backend explicitly
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
@@ -41,9 +40,8 @@ TEST_CASE("FFT Backend - FFTW backend selection", "[fft][backend][unit]") {
 
 TEST_CASE("FFT Backend - FFTW allocated memory equals one workspace",
           "[fft][backend][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
-                             GridSpacing({8.0, 8.0, 8.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
   REQUIRE(fft != nullptr);
@@ -52,9 +50,8 @@ TEST_CASE("FFT Backend - FFTW allocated memory equals one workspace",
 }
 
 TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
-                             GridSpacing({8.0, 8.0, 8.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
   // Create input data
@@ -80,9 +77,8 @@ TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]
 
 #if defined(OpenPFC_ENABLE_CUDA)
 TEST_CASE("FFT Backend - CUDA backend selection", "[fft][backend][cuda][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
-                             GridSpacing({8.0, 8.0, 8.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(domain, 1);
 
   // Create FFT with CUDA backend explicitly
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::CUDA);
@@ -94,9 +90,8 @@ TEST_CASE("FFT Backend - CUDA backend selection", "[fft][backend][cuda][unit]") 
 }
 
 TEST_CASE("FFT Backend - CUDA requires DataBuffer", "[fft][backend][cuda][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
-                             GridSpacing({8.0, 8.0, 8.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::CUDA);
 
   // CUDA backend should throw when using std::vector
@@ -108,9 +103,8 @@ TEST_CASE("FFT Backend - CUDA requires DataBuffer", "[fft][backend][cuda][unit]"
 
 TEST_CASE("FFT Backend - CUDA allocated memory excludes unused host workspace",
           "[fft][backend][cuda][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
-                             GridSpacing({8.0, 8.0, 8.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::CUDA);
 
   REQUIRE(fft != nullptr);
@@ -176,9 +170,8 @@ TEST_CASE("FFT Backend - CUDA backend throws if not compiled",
 #endif
 
 TEST_CASE("FFT Backend - timing functions work", "[fft][backend][unit]") {
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
-                             GridSpacing({8.0, 8.0, 8.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
   // Reset timing
@@ -203,10 +196,8 @@ TEST_CASE("FFT Backend - timing functions work", "[fft][backend][unit]") {
 
 TEST_CASE("FFT Backend - size queries work through interface",
           "[fft][backend][unit]") {
-  auto world =
-      world::create(GridSize({16, 16, 16}), PhysicalOrigin({16.0, 16.0, 16.0}),
-                    GridSpacing({16.0, 16.0, 16.0}));
-  auto decomposition = decomposition::create(world, 1);
+  auto domain = domain::create(GridSize({16, 16, 16}), PhysicalOrigin({16.0, 16.0, 16.0}), GridSpacing({16.0, 16.0, 16.0}));
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::FFTW);
 
   // Inbox size should be full grid (16*16*16 = 4096)
