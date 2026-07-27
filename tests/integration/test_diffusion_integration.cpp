@@ -51,6 +51,7 @@
 #include <cmath>
 #include <fixtures/diffusion_model.hpp>
 #include <openpfc/kernel/data/constants.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -98,10 +99,14 @@ TEST_CASE("Diffusion model - 1D analytical validation", "[integration][diffusion
   const int n_steps = static_cast<int>(t_final / dt);
 
   SECTION("1D domain, single process") {
-    // Create 1D world
+    // Create 1D world using Domain
     // LLM: 1D test simplifies debugging - extend to 3D once working
-    auto world = world::create(GridSize({Nx, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({dx, 1.0, 1.0}));
+    auto domain = pfc::domain::create(GridSize({Nx, 1, 1}),
+                                      PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      GridSpacing({dx, 1.0, 1.0}));
+    World world(pfc::domain::index_box(domain).low,
+                pfc::domain::index_box(domain).high,
+                domain);
     auto decomp = decomposition::create(world, 1);
     auto fft = fft::create(decomp);
 
@@ -176,9 +181,12 @@ TEST_CASE("Diffusion model - 1D analytical validation", "[integration][diffusion
     std::vector<double> errors;
 
     for (double dt_test : dts) {
-      auto world =
-          world::create(GridSize({Nx, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                        GridSpacing({dx, 1.0, 1.0}));
+      auto domain = pfc::domain::create(GridSize({Nx, 1, 1}),
+                                        PhysicalOrigin({0.0, 0.0, 0.0}),
+                                        GridSpacing({dx, 1.0, 1.0}));
+      World world(pfc::domain::index_box(domain).low,
+                  pfc::domain::index_box(domain).high,
+                  domain);
       auto decomp = decomposition::create(world, 1);
       auto fft = fft::create(decomp);
 
@@ -244,9 +252,12 @@ TEST_CASE("Diffusion model - 3D spherical symmetry",
   const double t_final = 0.1;
   const double dt = 0.001;
 
-  auto world =
-      world::create(GridSize({N, N, N}), PhysicalOrigin({-L / 2, -L / 2, -L / 2}),
-                    GridSpacing({dx, dx, dx}));
+  auto domain = pfc::domain::create(GridSize({N, N, N}),
+                                    PhysicalOrigin({-L / 2, -L / 2, -L / 2}),
+                                    GridSpacing({dx, dx, dx}));
+  World world(pfc::domain::index_box(domain).low,
+              pfc::domain::index_box(domain).high,
+              domain);
   auto decomp = decomposition::create(world, 1);
   auto fft = fft::create(decomp);
 
@@ -302,8 +313,12 @@ TEST_CASE("Diffusion model - MPI consistency", "[integration][diffusion][mpi]") 
 
   // Run simulation (decomposition determined by MPI)
   // LLM: Uses MPI_COMM_WORLD so decomposition depends on number of processes
-  auto world = world::create(GridSize({Nx, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({dx, 1.0, 1.0}));
+  auto domain = pfc::domain::create(GridSize({Nx, 1, 1}),
+                                    PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    GridSpacing({dx, 1.0, 1.0}));
+  World world(pfc::domain::index_box(domain).low,
+              pfc::domain::index_box(domain).high,
+              domain);
   auto decomp = decomposition::create(world, mpi::get_size());
   auto fft = fft::create(decomp);
 
