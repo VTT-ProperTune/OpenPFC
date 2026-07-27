@@ -118,4 +118,44 @@ TEST_CASE("get_neighbor_rank with per-axis periodicity",
     REQUIRE(decomposition::get_neighbor_rank(decomp, rank, {0, -1, 0}) == 2);
     REQUIRE(decomposition::get_neighbor_rank(decomp, rank, {0, 0, -1}) == 4);
   }
+
+  SECTION("4-rank 2x2 mixed periodicity round-trip") {
+    // Create a 2x2x1 decomposition (4 ranks) for round-trip testing
+    auto world_2x2 = world::create(GridSize({16, 16, 1}));
+    const Int3 grid_2x2{2, 2, 1};
+    auto decomp_2x2 = decomposition::create(world_2x2, grid_2x2);
+
+    // Domain with X periodic, Y non-periodic, Z non-periodic
+    auto mixed_domain = pfc::domain::create(
+        GridSize({16, 16, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+        GridSpacing({1.0, 1.0, 1.0}), Bool3{true, false, false});
+
+    // Rank layout for 2x2x1 grid:
+    // Rank 0: (x=0, y=0, z=0)  Rank 1: (x=1, y=0, z=0)
+    // Rank 2: (x=0, y=1, z=0)  Rank 3: (x=1, y=1, z=0)
+
+    const std::array<Int3, 4> dirs = {Int3{1, 0, 0},  Int3{-1, 0, 0},
+                                        Int3{0, 1, 0},  Int3{0, -1, 0}};
+
+    // Test round-trips for all ranks with mixed periodicity
+    for (int r = 0; r < 4; ++r) {
+      for (const Int3 &d : dirs) {
+        int nb = decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, r, d);
+        
+        if (nb != -1) {
+          const Int3 back{-d[0], -d[1], -d[2]};
+          int back_rank = decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, nb, back);
+          REQUIRE(back_rank == r); // Round-trip should work for valid neighbors
+        }
+      }
+    }
+
+    // Specific checks for boundary cases
+    // Rank 0 at (0,0,0): -X wraps to rank 1 (periodic), -Y returns -1 (non-periodic)
+    REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 0, {-1, 0, 0}) == 1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 0, {0, -1, 0}) == -1);
+    // Rank 2 at (0,1,0): +X returns rank 3, +Y returns -1 (non-periodic)
+    REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 2, {1, 0, 0}) == 3);
+    REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 2, {0, 1, 0}) == -1);
+  }
 }

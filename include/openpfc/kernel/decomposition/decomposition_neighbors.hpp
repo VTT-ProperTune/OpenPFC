@@ -11,15 +11,16 @@
  *
  * @code
  * auto decomp = decomposition::create(world, {2, 2, 2}); // 2×2×2 grid
+ * auto domain = decomposition::domain(decomp);
  * int rank = 0;
  *
- * // Find neighbor in +X direction (with periodic boundaries)
- * auto neighbor = decomposition::get_neighbor_rank(decomp, rank, {1, 0, 0});
- * // Always returns a valid neighbor rank (wraps around at boundaries)
+ * // Find neighbor in +X direction (respects per-axis periodicity)
+ * auto neighbor = decomposition::get_neighbor_rank(decomp, domain, rank, {1, 0, 0});
+ * // Returns valid neighbor rank if periodic, -1 if non-periodic boundary
  *
- * // Find all 6 face neighbors (always 6 with periodic boundaries)
+ * // Find all 6 face neighbors (includes -1 for non-periodic faces)
  * auto neighbors = decomposition::find_face_neighbors(decomp, rank);
- * // Returns map: direction -> neighbor_rank (always 6 entries)
+ * // Returns map: direction -> neighbor_rank (may have fewer than 6 valid neighbors)
  * @endcode
  *
  * @see kernel/decomposition/decomposition.hpp for Decomposition class
@@ -115,12 +116,13 @@ inline int get_neighbor_rank(const Decomposition &decomp, int rank,
 /**
  * @brief Find all face neighbors (6 directions: ±X, ±Y, ±Z)
  *
- * Returns a map of direction vectors to neighbor ranks. With periodic
- * boundary conditions, all 6 face neighbors are always present.
+ * Returns a map of direction vectors to neighbor ranks. With fully periodic
+ * boundary conditions, all 6 face neighbors are present. With non-periodic
+ * boundaries, some entries may be -1 (no neighbor).
  *
  * @param decomp Decomposition object
  * @param rank Current rank
- * @return Map from direction Int3 to neighbor rank (always contains 6 entries)
+ * @return Map from direction Int3 to neighbor rank (contains 6 entries, may be -1)
  *
  * @example
  * ```cpp
