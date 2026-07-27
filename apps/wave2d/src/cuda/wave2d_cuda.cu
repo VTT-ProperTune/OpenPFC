@@ -19,9 +19,8 @@
 
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
@@ -50,14 +49,14 @@ int run_wave2d_cuda(const wave2d::RunConfig &cfg, int rank, int nproc) {
   const int Ny = cfg.Ny;
   const int n_steps = cfg.n_steps;
   const double dt = cfg.dt;
-  auto world = pfc::world::create(pfc::GridSize({Nx, Ny, 1}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = pfc::decomposition::create(world, nproc);
+  auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, nproc);
 
-  const auto &local_world = pfc::decomposition::get_subworld(decomp, rank);
-  auto local_size = pfc::world::get_size(local_world);
-  const auto lower = pfc::world::get_lower(local_world);
+  const auto &local_box = pfc::decomposition::local_box(decomp, rank);
+  auto local_size = local_box.size;
+  const auto lower = local_box.low;
   const int nx = local_size[0];
   const int ny = local_size[1];
   const int nz = local_size[2];
@@ -65,14 +64,12 @@ int run_wave2d_cuda(const wave2d::RunConfig &cfg, int rank, int nproc) {
                              static_cast<std::size_t>(ny) *
                              static_cast<std::size_t>(nz);
 
-  const auto gw = pfc::world::get_size(world);
-  const std::array<int, 3> global_vtk{gw[0], gw[1], gw[2]};
+  const auto global_domain = pfc::decomposition::domain(decomp);
+  const std::array<int, 3> global_vtk{global_domain.size[0], global_domain.size[1], global_domain.size[2]};
   const std::array<int, 3> local_vtk{nx, ny, nz};
   const std::array<int, 3> off_vtk{lower[0], lower[1], lower[2]};
-  const auto worg = pfc::world::get_origin(world);
-  const auto wsp = pfc::world::get_spacing(world);
-  const std::array<double, 3> origin_vtk{worg[0], worg[1], worg[2]};
-  const std::array<double, 3> spacing_vtk{wsp[0], wsp[1], wsp[2]};
+  const std::array<double, 3> origin_vtk{global_domain.origin[0], global_domain.origin[1], global_domain.origin[2]};
+  const std::array<double, 3> spacing_vtk{global_domain.spacing[0], global_domain.spacing[1], global_domain.spacing[2]};
 
   const double inv_dx2 = 1.0;
   const double inv_dy2 = 1.0;
