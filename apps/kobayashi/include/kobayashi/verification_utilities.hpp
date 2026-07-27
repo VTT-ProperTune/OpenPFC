@@ -19,7 +19,6 @@
 #include <string>
 #include <vector>
 
-#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/domain/create.hpp>
@@ -29,26 +28,14 @@
 namespace {
 
 /**
- * @brief Extract the z=0 plane from a padded brick field into a flat vector.
+ * @brief Extract the z=0 plane from a field into a flat vector.
  *
- * Copies the owned cells at z=0 from a PaddedBrick into a vector ordered by
+ * Copies the owned cells at z=0 from a Field into a vector ordered by
  * local (x,y) coordinates: `out[i + j*nx] = b(i, j, 0)`.
  *
- * @param b Input padded brick field.
+ * @param b Input field.
  * @param out Output vector resized to `nx * ny` and filled with z=0 values.
  */
-void pack_owned_xy0(const pfc::field::PaddedBrick<double> &b, std::vector<double> &out) {
-  const int nx = b.nx();
-  const int ny = b.ny();
-  out.resize(static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny));
-  for (int j = 0; j < ny; ++j) {
-    for (int i = 0; i < nx; ++i) {
-      out[static_cast<std::size_t>(i) +
-          static_cast<std::size_t>(j) * static_cast<std::size_t>(nx)] = b(i, j, 0);
-    }
-  }
-}
-
 void pack_owned_xy0(const pfc::data::Field<double, pfc::HostSpace> &b,
                     std::vector<double> &out) {
   const int nx = b.local_size()[0];
@@ -72,14 +59,6 @@ void pack_owned_xy0(const pfc::data::Field<double, pfc::HostSpace> &b,
  * @param phi Phase field to visualize.
  * @param path Output file path for the PNG.
  */
-void write_phi_png(int rank, const pfc::decomposition::Decomposition &decomp,
-                   const pfc::field::PaddedBrick<double> &phi, const std::string &path) {
-  std::vector<double> local;
-  pack_owned_xy0(phi, local);
-  pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, local, path,
-                                         0.0, 1.0);
-}
-
 void write_phi_png(int rank, const pfc::decomposition::Decomposition &decomp,
                    const pfc::data::Field<double, pfc::HostSpace> &phi,
                    const std::string &path) {
