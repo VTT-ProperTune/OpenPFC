@@ -14,10 +14,9 @@
  *
  * Compared to its siblings:
  *
- *  - `heat3d_fd_manual` uses `HeatModel::rhs`, `HeatGrads`, the
- *    `for_each_inner / for_each_border / for_each_owned` lambda
- *    iterators, and `start_halo_exchange / finish_halo_exchange` for
- *    comm/compute overlap.
+ *  - `heat3d_fd_manual` uses `HeatModel::rhs`, `HeatGrads`,
+ *    and manual boundary/interior loops with `PaddedHaloExchanger`
+ *    `start()` / `finish()` for comm/compute overlap.
  *  - **`heat3d_fd_scratch`** uses **none** of those. It writes the
  *    physics inline (`u_t = D nabla^2 u` with `D = heat3d::kD`),
  *    initialises with `exp(-r^2/(4 D))` directly, runs three nested
@@ -32,10 +31,10 @@
  *
  *  - `pfc::domain::create` + `pfc::decomposition::create` for the
  *    geometry (so `mpirun -n 4` actually distributes the brick).
- *  - `pfc::field::PaddedBrick<double>` as the storage container — but
- *    the driver immediately drops to `u.data()` and computes its own
+ *  - `pfc::data::Field<double, pfc::HostSpace>` as the storage container —
+ *    but the driver immediately drops to `u.data()` and computes its own
  *    `lin` by hand.
- *  - `pfc::PaddedHaloExchanger<double>::exchange_halos` (blocking; no
+ *  - `pfc::PaddedHaloExchanger<double>::exchange` (blocking; no
  *    overlap, deliberately) for periodic halo updates.
  *
  * That's it. Read this driver first if you want to understand what the
@@ -51,10 +50,10 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
@@ -67,24 +66,25 @@ namespace {
 using heat3d::RunConfig;
 
 void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
-  // 1. Geometry: domain + decomposition + padded storage. The PaddedBrick
-  //    constructor allocates the contiguous (nx+2)*(ny+2)*(nz+2) buffer
-  //    and remembers (lower, origin, spacing); it does *not* fill data.
+  // 1. Geometry: domain + decomposition + padded storage. The Field
+  //    constructor allocates the contiguous buffer and remembers geometry;
+  //    it does *not* fill data.
   const auto domain = pfc::domain::create(pfc::GridSize({cfg.N, cfg.N, cfg.N}),
                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
   const auto decomp = pfc::decomposition::create(domain, nproc);
   const int hw = 1; // 2nd-order central stencil -> halo width 1
-  pfc::field::PaddedBrick<double> u(decomp, rank, hw);
-  pfc::PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
+  const auto owned_box = pfc::decomposition::local_box(decomp, rank);
+  pfc::data::Field<double, pfc::HostSpace> u(domain, owned_box, hw);
+  pfc::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
 
   // 2. Pull every quantity the manual driver hides inside `for_each_*`
   //    out into local variables, so the indexing arithmetic is visible.
-  const int nx = u.nx();
-  const int ny = u.ny();
-  const int nz = u.nz();
-  const int nxp = u.nx_padded();
-  const int nyp = u.ny_padded();
+  const int nx = u.local_size()[0];
+  const int ny = u.local_size()[1];
+  const int nz = u.local_size()[2];
+  const int nxp = u.padded_extent(0);
+  const int nyp = u.padded_extent(1);
   const auto lower = u.lower_global();
   const auto origin = u.origin();
   const auto dx = u.spacing();
@@ -133,7 +133,8 @@ void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
 
     // The single OpenPFC call inside the hot loop: refresh the halo
     // ring of `u` from the six neighbour ranks (periodic in 1-rank).
-    halo.exchange_halos(u_ptr, u.size());
+    // Using the bound exchanger API (blocking one-shot).
+    pfc::communication::exchange(halo);
 
     // Build the Laplacian: textbook 7-point central stencil, written
     // out via stride arithmetic. The key step: `lin + sx`, `lin - sx`
@@ -186,10 +187,8 @@ void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
           for (int j = hw; j < ny - hw; ++j) {
             for (int i = hw; i < nx - hw; ++i) {
               const std::size_t lin = (i + hw) * sx + (j + hw) * sy + (k + hw) * sz;
-              const double x = origin[0] + (lower[0] + i) * dx[0];
-              const double y = origin[1] + (lower[1] + j) * dx[1];
-              const double z = origin[2] + (lower[2] + k) * dx[2];
-              cb(x, y, z, u_ptr[lin]);
+              const auto p = u.coords(i, j, k);
+              cb(p[0], p[1], p[2], u_ptr[lin]);
             }
           }
         }

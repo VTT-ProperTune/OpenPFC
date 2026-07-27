@@ -17,26 +17,27 @@
  * decomposition, MPI face exchange, and linear-index arithmetic —
  * stays hidden behind:
  *
- *  - `pfc::field::PaddedBrick<double>` — single contiguous buffer with
+ *  - `pfc::data::Field<double, pfc::HostSpace>` — single contiguous buffer with
  *    `u(i, j, k)` valid for `i,j,k in [-hw, n+hw)`. No edge overwrite,
  *    no separate face vectors.
  *  - `pfc::PaddedHaloExchanger<double>` — non-blocking
- *    `start_halo_exchange()` / `finish_halo_exchange()` pair on the
- *    same buffer.
- *  - `pfc::field::for_each_inner / for_each_border / for_each_owned` —
- *    `(int i, int j, int k)` triple-yielding lambda iterators.
+ *    `start()` / `finish()` pair on the bound field.
+ *  - `pfc::data::Field::for_each_interior / for_each_owned` —
+ *    interior and owned cell iterators (with coordinate/value signatures).
  *  - `pfc::runtime::tic(timer, "label") / toc(timer, "label")` —
  *    collective-free per-section timers; `print_timing_summary` does
  *    one allreduce-max at the end to report the slowest rank.
  *
  * The hot loop literally reads:
  *
- *     halo.start_halo_exchange(u.data(), u.size());
- *     for_each_inner(u, hw, [&](int i, int j, int k) { ... stencil ... });
- *     halo.finish_halo_exchange();
- *     for_each_border(u, hw, [&](int i, int j, int k) { ... same stencil ... });
- *     for_each_owned(u, [&](int i, int j, int k) {
- *       u(i, j, k) += cfg.dt * du(i, j, k);
+ *     halo.start();
+ *     // Manual inner loops over [hw, n-hw) on each axis
+ *     // ... stencil reads u(i ± 1, j, k), etc. ...
+ *     halo.finish();
+ *     // Manual border loops over slabs of thickness hw
+ *     // ... same stencil can now reach into the halo ...
+ *     u.for_each_owned([&](int i, int j, int k, double& u_val) {
+ *       u_val += cfg.dt * du(i, j, k);
  *     });
  *
  * The stencil is the textbook second-order central seven-point
@@ -54,8 +55,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/field/brick_iteration.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
@@ -85,13 +85,14 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
 
   // 3. Two halo-padded buffers: `u` (state) and `du` (RHS). Both
   //    cover the local owned core plus a 1-cell ghost ring on every
-  //    side, all in one contiguous `std::vector<double>`.
+  //    side, all in one contiguous buffer.
   const int hw = 1; // second-order central Laplacian -> stencil radius 1
-  field::PaddedBrick<double> u(decomp, rank, hw);
-  field::PaddedBrick<double> du(decomp, rank, hw);
+  const auto owned_box = pfc::decomposition::local_box(decomp, rank);
+  pfc::data::Field<double, pfc::HostSpace> u(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> du(domain, owned_box, hw);
 
   // 4. Hidden plumbing: in-place non-blocking halo exchanger.
-  PaddedHaloExchanger<double> halo(decomp, rank, hw, MPI_COMM_WORLD);
+  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
 
   // 5. Initial condition: physicist-friendly `(x, y, z) -> u(x, y, z)`,
   //    fills only the owned core. `apply` does the index loop for us.
@@ -116,27 +117,93 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   for (int step = 0; step < cfg.n_steps; ++step) {
 
     // Start non-blocking halo exchange — overlaps with inner work.
-    halo.start_halo_exchange(u.data(), u.size());
+    // Using the bound exchanger API for brevity.
+    halo.start();
 
     // Inner cells: stencil only reads owned cells, no halo dependency.
+    // Inner region is [hw, nx-hw) x [hw, ny-hw) x [hw, nz-hw).
     runtime::tic(timer, "inner");
-    field::for_each_inner_omp(u, hw, stencil_step);
+    {
+      const int nx = u.local_size()[0];
+      const int ny = u.local_size()[1];
+      const int nz = u.local_size()[2];
+      const int imin = hw, imax = nx - hw;
+      const int jmin = hw, jmax = ny - hw;
+      const int kmin = hw, kmax = nz - hw;
+      if (imin < imax && jmin < jmax && kmin < kmax) {
+#pragma omp parallel for collapse(2) schedule(static)
+        for (int k = kmin; k < kmax; ++k) {
+          for (int j = jmin; j < jmax; ++j) {
+            for (int i = imin; i < imax; ++i) {
+              stencil_step(i, j, k);
+            }
+          }
+        }
+      }
+    }
     runtime::toc(timer, "inner");
 
     // Wait for neighbour data to land in the halo ring.
     runtime::tic(timer, "halo_wait");
-    halo.finish_halo_exchange();
+    halo.finish();
     runtime::toc(timer, "halo_wait");
 
     // Border cells: same stencil, now safely reaches into the halo.
     runtime::tic(timer, "border");
-    field::for_each_border(u, hw, stencil_step);
+    {
+      const int nx = u.local_size()[0];
+      const int ny = u.local_size()[1];
+      const int nz = u.local_size()[2];
+      // If the domain is too small for an inner region, all owned cells are border.
+      if (nx <= 2 * hw || ny <= 2 * hw || nz <= 2 * hw) {
+#pragma omp parallel for collapse(2) schedule(static)
+        for (int k = 0; k < nz; ++k) {
+          for (int j = 0; j < ny; ++j) {
+            for (int i = 0; i < nx; ++i) {
+              stencil_step(i, j, k);
+            }
+          }
+        }
+      } else {
+        // Six face slabs of thickness hw (each cell visited exactly once).
+#pragma omp parallel for collapse(2) schedule(static)
+        for (int k = 0; k < nz; ++k) {
+          for (int j = 0; j < ny; ++j) {
+            // Left/right x-faces (full y/z extents).
+            for (int i = 0; i < hw; ++i) stencil_step(i, j, k);
+            for (int i = nx - hw; i < nx; ++i) stencil_step(i, j, k);
+          }
+        }
+#pragma omp parallel for schedule(static)
+        for (int k = 0; k < nz; ++k) {
+          // Top/bottom y-faces (excluding x-faces already done).
+          for (int j = 0; j < hw; ++j) {
+            for (int i = hw; i < nx - hw; ++i) stencil_step(i, j, k);
+          }
+          for (int j = ny - hw; j < ny; ++j) {
+            for (int i = hw; i < nx - hw; ++i) stencil_step(i, j, k);
+          }
+        }
+#pragma omp parallel for schedule(static)
+        // Front/back z-faces (excluding x and y faces already done).
+        for (int k = 0; k < hw; ++k) {
+          for (int j = hw; j < ny - hw; ++j) {
+            for (int i = hw; i < nx - hw; ++i) stencil_step(i, j, k);
+          }
+        }
+#pragma omp parallel for schedule(static)
+        for (int k = nz - hw; k < nz; ++k) {
+          for (int j = hw; j < ny - hw; ++j) {
+            for (int i = hw; i < nx - hw; ++i) stencil_step(i, j, k);
+          }
+        }
+      }
+    }
     runtime::toc(timer, "border");
 
     // Explicit Euler over the full owned region: u <- u + dt * du.
     runtime::tic(timer, "euler");
-    field::for_each_owned_omp(
-        u, [&](int i, int j, int k) { u(i, j, k) += cfg.dt * du(i, j, k); });
+    u.for_each_owned([&](int i, int j, int k) { u(i, j, k) += cfg.dt * du(i, j, k); });
     runtime::toc(timer, "euler");
   }
   const double max_elapsed = runtime::toc(timer);
@@ -144,18 +211,19 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   // Per-section timing breakdown (rank 0 only; collective-safe).
   runtime::print_timing_summary(timer, /*print_rank=*/0);
 
-  // Reporting: bridge a `for_each_inner`-style visitor to the shared
+  // Reporting: bridge a `for_each_interior`-style visitor to the shared
   // `heat3d::report` API which expects `cb(x, y, z, value)`. We
   // report over the *interior* (skipping the outermost owned layer)
   // so the L2 number is computed over the interior domain
   // matching the design documented in reporting.hpp.
   heat3d::report(rank, nproc, cfg, "fd_manual",
-                 "manual stencil, padded brick, non-blocking halos", max_elapsed,
-                 "(periodic; manual loop, interior L2)", [&u, hw](auto &&cb) {
-                   field::for_each_inner(u, hw, [&](int i, int j, int k) {
-                     const auto p = u.global_coords(i, j, k);
-                     cb(p[0], p[1], p[2], u(i, j, k));
-                   });
+                 "manual stencil, field, non-blocking halos", max_elapsed,
+                 "(periodic; manual loop, interior L2)", [&](auto &&cb) {
+                   // Field's for_each_interior directly provides (x, y, z, value) signatures.
+                   u.for_each_interior(
+                       [&](double x, double y, double z, const double &u_val) {
+                         cb(x, y, z, u_val);
+                       });
                  });
 }
 
