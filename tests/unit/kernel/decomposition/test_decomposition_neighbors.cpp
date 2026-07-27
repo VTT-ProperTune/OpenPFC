@@ -15,7 +15,7 @@ using namespace pfc::types;
 TEST_CASE("get_neighbor_rank with per-axis periodicity",
           "[decomposition][neighbors][unit]") {
   // Create a 2x2x2 decomposition for testing
-  auto world = world::create(GridSize({16, 16, 16}));
+  auto world = world::create(GridSize({16, 16, 16}).to_vector3());
   const Int3 grid{2, 2, 2};
   auto decomp = decomposition::create(world, grid);
 
@@ -121,7 +121,7 @@ TEST_CASE("get_neighbor_rank with per-axis periodicity",
 
   SECTION("4-rank 2x2 mixed periodicity round-trip") {
     // Create a 2x2x1 decomposition (4 ranks) for round-trip testing
-    auto world_2x2 = world::create(GridSize({16, 16, 1}));
+    auto world_2x2 = world::create(GridSize({16, 16, 1}).to_vector3());
     const Int3 grid_2x2{2, 2, 1};
     auto decomp_2x2 = decomposition::create(world_2x2, grid_2x2);
 
