@@ -6,10 +6,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/frontend/io/png_writer.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 
 #include <filesystem>
@@ -41,14 +40,15 @@ struct PNGWriterTestFixture {
     }
   }
 
-  // Create a simple World and decomposition for testing
-  std::pair<world::World, decomposition::Decomposition>
+  // Create a simple Domain and decomposition for testing
+  std::pair<pfc::Domain, decomposition::Decomposition>
   create_test_decomp(int nx_global, int ny_global) {
-    auto world =
-        world::create(GridSize({nx_global, ny_global, 1}),
-                      PhysicalOrigin({0.0, 0.0, 0.0}), GridSpacing({1.0, 1.0, 1.0}));
-    auto decomp = make_decomposition(world, m_comm);
-    return {world, decomp};
+    pfc::Domain domain = pfc::domain::create(
+        pfc::GridSize({nx_global, ny_global, 1}),
+        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+        pfc::GridSpacing({1.0, 1.0, 1.0}));
+    auto decomp = decomposition::create(domain, m_num_ranks);
+    return {domain, decomp};
   }
 };
 
@@ -81,12 +81,11 @@ TEST_CASE("PNGWriter - Valid write with correct sizes", "[png_writer][io]") {
   const int nx_global = 8;
   const int ny_global = 8;
 
-  auto [world, decomp] = fixture.create_test_decomp(nx_global, ny_global);
+  auto [domain, decomp] = fixture.create_test_decomp(nx_global, ny_global);
 
   // Get the expected local size for this rank
-  const auto &local_world = decomposition::get_subworld(decomp, fixture.m_rank);
-  auto local_size = world::get_size(local_world);
-  const int expected_pts = local_size[0] * local_size[1] * local_size[2];
+  const auto local_box = decomposition::local_box(decomp, fixture.m_rank);
+  const int expected_pts = local_box.count();
 
   // Create test data with correct size
   std::vector<double> data(expected_pts);
@@ -114,12 +113,11 @@ TEST_CASE("PNGWriter - Collective size mismatch (all ranks throw)",
   const int nx_global = 4;
   const int ny_global = 4;
 
-  auto [world, decomp] = fixture.create_test_decomp(nx_global, ny_global);
+  auto [domain, decomp] = fixture.create_test_decomp(nx_global, ny_global);
 
   // Get the expected local size for this rank
-  const auto &local_world = decomposition::get_subworld(decomp, fixture.m_rank);
-  auto local_size = world::get_size(local_world);
-  const int expected_pts = local_size[0] * local_size[1] * local_size[2];
+  const auto local_box = decomposition::local_box(decomp, fixture.m_rank);
+  const int expected_pts = local_box.count();
 
   // Create test data with WRONG size on rank 0 only
   std::vector<double> data;
@@ -150,14 +148,14 @@ TEST_CASE("PNGWriter - Collective size mismatch (all ranks throw)",
 TEST_CASE("PNGWriter - Global nz validation (single rank)", "[png_writer][io]") {
   PNGWriterTestFixture fixture;
 
-  // Create a 3D world (nz=8) which should fail validation
-  auto world = world::create(GridSize({8, 8, 8}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = make_decomposition(world, fixture.m_comm);
+  // Create a 3D domain (nz=8) which should fail validation
+  pfc::Domain domain = pfc::domain::create(
+      pfc::GridSize({8, 8, 8}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = decomposition::create(domain, fixture.m_num_ranks);
 
-  const auto &local_world = decomposition::get_subworld(decomp, fixture.m_rank);
-  auto local_size = world::get_size(local_world);
-  const int expected_pts = local_size[0] * local_size[1] * local_size[2];
+  const auto local_box = decomposition::local_box(decomp, fixture.m_rank);
+  const int expected_pts = local_box.count();
 
   std::vector<double> data(expected_pts);
   for (int i = 0; i < expected_pts; ++i) {
