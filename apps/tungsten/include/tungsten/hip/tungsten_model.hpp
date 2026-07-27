@@ -87,9 +87,14 @@ public:
     m_hip_fft = std::make_unique<pfc::fft::FFT_HIP>(std::move(fft));
   }
 
-  explicit TungstenHIP(pfc::FFT &fft, const pfc::World &world,
+  explicit TungstenHIP(pfc::FFT &fft, const pfc::Domain &domain,
                        MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
+      : pfc::Model(fft, pfc::World(
+            {0, 0, 0},
+            {static_cast<int>(domain.size[0]) - 1,
+             static_cast<int>(domain.size[1]) - 1,
+             static_cast<int>(domain.size[2]) - 1},
+            domain), mpi_comm), m_cpu_buffer_valid(false) {
     hip_check(hipEventCreate(&kernel_done_event),
               "hipEventCreate(kernel_done_event)");
     int rank = 0;

@@ -71,17 +71,17 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
     std::cout << "========================================" << std::endl;
   }
 
-  pfc::World world(pfc::ui::from_json<pfc::World>(settings));
+  pfc::Domain domain(pfc::ui::from_json<pfc::Domain>(settings));
   if (rank0) {
-    std::cout << "World: " << world << std::endl;
+    std::cout << "Domain: " << domain << std::endl;
   }
 
-  auto decomp = pfc::decomposition::create(world, num_ranks);
+  auto decomp = pfc::decomposition::create(domain, num_ranks);
   heffte::plan_options options = plan_options(settings);
   auto fft_layout = pfc::fft::layout::create(decomp, 0);
 
   auto dummy_fft = pfc::fft::create(fft_layout, rank, options);
-  Model model(dummy_fft, world);
+  Model model(dummy_fft, domain);
 
   if (settings.contains("model") && settings["model"].contains("params")) {
     from_json(settings["model"]["params"], model);
@@ -128,15 +128,15 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
         auto &gpu_fft = gpu_fft_from_model(model);
         auto inbox = pfc::fft::get_inbox(gpu_fft);
 
-        auto [Lx, Ly, Lz] = pfc::world::get_size(world);
+        auto [Lx, Ly, Lz] = pfc::domain::get_size(domain);
         std::array<int, 3> global_size = {Lx, Ly, Lz};
         std::array<int, 3> local_size = {inbox.high[0] - inbox.low[0] + 1,
                                          inbox.high[1] - inbox.low[1] + 1,
                                          inbox.high[2] - inbox.low[2] + 1};
         std::array<int, 3> local_offset = {inbox.low[0], inbox.low[1], inbox.low[2]};
 
-        auto [ox, oy, oz] = pfc::world::get_origin(world);
-        auto [dx, dy, dz] = pfc::world::get_spacing(world);
+        auto [ox, oy, oz] = pfc::domain::get_origin(domain);
+        auto [dx, dy, dz] = pfc::domain::get_spacing(domain);
         vtk_writer->set_domain(global_size, local_size, local_offset);
         vtk_writer->set_origin({ox, oy, oz});
         vtk_writer->set_spacing({dx, dy, dz});

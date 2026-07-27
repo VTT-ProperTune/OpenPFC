@@ -141,11 +141,16 @@ public:
    * @brief Construct TungstenCUDA and set up CUDA FFT
    *
    * @param fft CPU FFT reference (used by base Model)
-   * @param world Simulation domain
+   * @param domain Simulation domain
    */
-  explicit TungstenCUDA(pfc::FFT &fft, const pfc::World &world,
+  explicit TungstenCUDA(pfc::FFT &fft, const pfc::Domain &domain,
                         MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
+      : pfc::Model(fft, pfc::World(
+            {0, 0, 0},
+            {static_cast<int>(domain.size[0]) - 1,
+             static_cast<int>(domain.size[1]) - 1,
+             static_cast<int>(domain.size[2]) - 1},
+            domain), mpi_comm), m_cpu_buffer_valid(false) {
     // Create CUDA events for non-blocking synchronization
     cuda_check(cudaEventCreate(&kernel_done_event),
                "cudaEventCreate(kernel_done_event)");

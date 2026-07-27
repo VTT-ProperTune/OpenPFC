@@ -11,7 +11,7 @@
 #include <iomanip>
 #include <limits>
 #include <mpi.h>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 #include <openpfc/openpfc.hpp>
@@ -62,7 +62,7 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"q40", 45.0}};
 
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::world::create({32, 32, 32});
+    auto world = pfc::domain::create_world_uniform(32);
     auto decomp = pfc::decomposition::create(world, 1);
     auto fft = pfc::fft::create(decomp);
     Tungsten tungsten(fft, world);
@@ -90,7 +90,7 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"T", 3300.0}};
 
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::world::create({32, 32, 32});
+    auto world = pfc::domain::create_world_uniform(32);
     auto decomp = pfc::decomposition::create(world, 1);
     auto fft = pfc::fft::create(decomp);
     Tungsten tungsten(fft, world);
@@ -122,7 +122,7 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"q40", 45.0}};
 
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::world::create({32, 32, 32});
+    auto world = pfc::domain::create_world_uniform(32);
     auto decomp = pfc::decomposition::create(world, 1);
     auto fft = pfc::fft::create(decomp);
     Tungsten tungsten(fft, world);
@@ -185,7 +185,7 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     double x0 = -0.5 * grid_spacing * Lx;
     double y0 = -0.5 * grid_spacing * Ly;
     double z0 = -0.5 * grid_spacing * Lz;
-    auto world = pfc::world::create(
+    auto world = pfc::domain::create(
         pfc::GridSize({Lx, Ly, Lz}), pfc::PhysicalOrigin({x0, y0, z0}),
         pfc::GridSpacing({grid_spacing, grid_spacing, grid_spacing}));
     auto decomp = pfc::decomposition::create(world, 1);
@@ -221,6 +221,8 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     // Manually replicate the initial condition logic from the UI
     // This matches exactly what happens when initial conditions are applied
     std::vector<double> &psi = tungsten.get_real_field("psi");
+    // Need to use get_world because Model base class still returns World&
+    // TODO: This will be fixed when Model base class is updated
     const pfc::World &w = pfc::get_world(tungsten);
     const auto &fft_ref = pfc::get_fft(tungsten);
 
@@ -354,7 +356,7 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
 
   SECTION("Model initialization and allocation") {
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::world::create({32, 32, 32});
+    auto world = pfc::domain::create_world_uniform(32);
     auto decomp = pfc::decomposition::create(world, 1);
     auto fft = pfc::fft::create(decomp);
 

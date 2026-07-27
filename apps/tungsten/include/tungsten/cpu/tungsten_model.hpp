@@ -145,6 +145,21 @@ private:
 
 public:
   /**
+   * @brief Construct Tungsten model from Domain
+   *
+   * @param fft FFT object reference
+   * @param domain Simulation domain
+   * @param mpi_comm MPI communicator
+   */
+  explicit Tungsten(pfc::FFT &fft, const pfc::Domain &domain, MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft, pfc::World(
+            {0, 0, 0},
+            {static_cast<int>(domain.size[0]) - 1,
+             static_cast<int>(domain.size[1]) - 1,
+             static_cast<int>(domain.size[2]) - 1},
+            domain), mpi_comm) {}
+
+  /**
    * @brief Model parameters
    *
    * Access parameters using getters: `params.get_n0()`, `params.get_T()`, etc.
