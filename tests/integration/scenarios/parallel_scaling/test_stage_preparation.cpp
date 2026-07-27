@@ -18,91 +18,102 @@
 #include <vector>
 
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/stage_preparation.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/integrator/stage_context.hpp>
 
 using namespace pfc;
 
 namespace {
 
-void fill_owned(field::PaddedBrick<double> &u, double val) {
-  for (int k = 0; k < u.nz(); ++k)
-    for (int j = 0; j < u.ny(); ++j)
-      for (int i = 0; i < u.nx(); ++i)
+void fill_owned(data::Field<double, HostSpace> &u, double val) {
+  const auto n = u.size3();
+  for (int k = 0; k < n[2]; ++k)
+    for (int j = 0; j < n[1]; ++j)
+      for (int i = 0; i < n[0]; ++i)
         u(i, j, k) = val;
 }
 
-void poison_halos(field::PaddedBrick<double> &u, double poison) {
-  const int hw = u.halo_width();
+void poison_halos(data::Field<double, HostSpace> &u, double poison) {
+  const int hw = u.storage_halo();
+  const auto n = u.size3();
   for (int d = 1; d <= hw; ++d) {
-    for (int k = 0; k < u.nz(); ++k)
-      for (int j = 0; j < u.ny(); ++j) {
+    for (int k = -hw; k < n[2] + hw; ++k)
+      for (int j = -hw; j < n[1] + hw; ++j) {
         u(-d, j, k) = poison;
-        u(u.nx() + d - 1, j, k) = poison;
+        u(n[0] + d - 1, j, k) = poison;
       }
-    for (int k = 0; k < u.nz(); ++k)
-      for (int i = 0; i < u.nx(); ++i) {
+    for (int k = -hw; k < n[2] + hw; ++k)
+      for (int i = -hw; i < n[0] + hw; ++i) {
         u(i, -d, k) = poison;
-        u(i, u.ny() + d - 1, k) = poison;
+        u(i, n[1] + d - 1, k) = poison;
       }
-    for (int j = 0; j < u.ny(); ++j)
-      for (int i = 0; i < u.nx(); ++i) {
+    for (int j = -hw; j < n[1] + hw; ++j)
+      for (int i = -hw; i < n[0] + hw; ++i) {
         u(i, j, -d) = poison;
-        u(i, j, u.nz() + d - 1) = poison;
+        u(i, j, n[2] + d - 1) = poison;
       }
   }
 }
 
-bool halo_layer_x_matches(const field::PaddedBrick<double> &u, int i,
+bool halo_layer_x_matches(const data::Field<double, HostSpace> &u, int i,
                           double expected) {
   bool matches = true;
-  for (int k = 0; k < u.nz(); ++k)
-    for (int j = 0; j < u.ny(); ++j)
+  const auto n = u.size3();
+  const int hw = u.storage_halo();
+  for (int k = -hw; k < n[2] + hw; ++k)
+    for (int j = -hw; j < n[1] + hw; ++j)
       matches &= u(i, j, k) == expected;
   return matches;
 }
 
-bool halo_layer_y_matches(const field::PaddedBrick<double> &u, int j,
+bool halo_layer_y_matches(const data::Field<double, HostSpace> &u, int j,
                           double expected) {
   bool matches = true;
-  for (int k = 0; k < u.nz(); ++k)
-    for (int i = 0; i < u.nx(); ++i)
+  const auto n = u.size3();
+  const int hw = u.storage_halo();
+  for (int k = -hw; k < n[2] + hw; ++k)
+    for (int i = -hw; i < n[0] + hw; ++i)
       matches &= u(i, j, k) == expected;
   return matches;
 }
 
-bool halo_layer_z_matches(const field::PaddedBrick<double> &u, int k,
+bool halo_layer_z_matches(const data::Field<double, HostSpace> &u, int k,
                           double expected) {
   bool matches = true;
-  for (int j = 0; j < u.ny(); ++j)
-    for (int i = 0; i < u.nx(); ++i)
+  const auto n = u.size3();
+  const int hw = u.storage_halo();
+  for (int j = -hw; j < n[1] + hw; ++j)
+    for (int i = -hw; i < n[0] + hw; ++i)
       matches &= u(i, j, k) == expected;
   return matches;
 }
 
-bool x_split_halos_match(const field::PaddedBrick<double> &u, double mine,
+bool x_split_halos_match(const data::Field<double, HostSpace> &u, double mine,
                          double other) {
-  const int hw = u.halo_width();
+  const int hw = u.storage_halo();
   bool ok = true;
+  const auto n = u.size3();
   for (int d = 1; d <= hw; ++d)
     ok &= halo_layer_x_matches(u, -d, other) &&
-          halo_layer_x_matches(u, u.nx() + d - 1, other) &&
+          halo_layer_x_matches(u, n[0] + d - 1, other) &&
           halo_layer_y_matches(u, -d, mine) &&
-          halo_layer_y_matches(u, u.ny() + d - 1, mine) &&
+          halo_layer_y_matches(u, n[1] + d - 1, mine) &&
           halo_layer_z_matches(u, -d, mine) &&
-          halo_layer_z_matches(u, u.nz() + d - 1, mine);
+          halo_layer_z_matches(u, n[2] + d - 1, mine);
   return ok;
 }
 
-bool x_halos_all_equal(const field::PaddedBrick<double> &u, double expected) {
-  const int hw = u.halo_width();
+bool x_halos_all_equal(const data::Field<double, HostSpace> &u, double expected) {
+  const int hw = u.storage_halo();
   bool ok = true;
+  const auto n = u.size3();
   for (int d = 1; d <= hw; ++d)
     ok &= halo_layer_x_matches(u, -d, expected) &&
-          halo_layer_x_matches(u, u.nx() + d - 1, expected);
+          halo_layer_x_matches(u, n[0] + d - 1, expected);
   return ok;
 }
 
@@ -120,12 +131,12 @@ TEST_CASE("StagePreparationService: scalar prepare fills ±X ghosts",
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 2;
-  field::PaddedBrick<double> u(decomp, rank, hw);
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
   const double mine = static_cast<double>(rank);
   const double other = static_cast<double>(1 - rank);
   fill_owned(u, mine);
 
-  PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo);
 
@@ -152,8 +163,8 @@ TEST_CASE("StagePreparationService: two-field prepare fills both ghost rings",
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;
-  field::PaddedBrick<double> u(decomp, rank, hw);
-  field::PaddedBrick<double> v(decomp, rank, hw);
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
+  auto v = data::field_from_subdomain<double>(decomp, rank, hw);
   const double u_mine = 10.0 + static_cast<double>(rank);
   const double u_other = 10.0 + static_cast<double>(1 - rank);
   const double v_mine = 20.0 + static_cast<double>(rank);
@@ -161,8 +172,8 @@ TEST_CASE("StagePreparationService: two-field prepare fills both ghost rings",
   fill_owned(u, u_mine);
   fill_owned(v, v_mine);
 
-  PaddedHaloExchanger<double> halo_u(u, MPI_COMM_WORLD);
-  PaddedHaloExchanger<double> halo_v(v, MPI_COMM_WORLD);
+  PaddedHaloExchanger<double> halo_u(u, decomp, rank, MPI_COMM_WORLD);
+  PaddedHaloExchanger<double> halo_v(v, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo_u);
   prep.bind("v", halo_v);
@@ -191,12 +202,12 @@ TEST_CASE("StagePreparationService: needs_halo=false leaves ghosts untouched",
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;
-  field::PaddedBrick<double> u(decomp, rank, hw);
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
   fill_owned(u, static_cast<double>(rank));
   constexpr double poison = -999.0;
   poison_halos(u, poison);
 
-  PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo);
 
@@ -223,12 +234,12 @@ TEST_CASE("StagePreparationService: reject/retry re-prepare restores ghosts",
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 2;
-  field::PaddedBrick<double> u(decomp, rank, hw);
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
   const double mine = static_cast<double>(rank);
   const double other = static_cast<double>(1 - rank);
   fill_owned(u, mine);
 
-  PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo);
 
@@ -262,11 +273,11 @@ TEST_CASE("StagePreparationService: boundary hook ordering vs halo",
   auto decomp = decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;
-  field::PaddedBrick<double> u(decomp, rank, hw);
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
   const double base = 100.0 + static_cast<double>(rank);
   fill_owned(u, base);
 
-  PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
+  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo);
 

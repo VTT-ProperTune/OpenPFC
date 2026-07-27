@@ -23,10 +23,11 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/full_padded_halo_exchange.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 namespace {
 
@@ -101,13 +102,14 @@ void run_full_halo_check(const pfc::decomposition::Decomposition &decomp, int ra
 
   auto ref = build_reference(/*field_idx=*/0, rank, decomp, global_size, hw);
 
-  pfc::field::PaddedBrick<double> u(decomp, rank, hw);
+  auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   REQUIRE(u.size() == total);
   std::copy(ref.initial.begin(), ref.initial.end(), u.data());
 
-  pfc::communication::FullPaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD);
-  REQUIRE(halo.is_bound());
-  halo.exchange();
+  auto domain = pfc::decomposition::domain(decomp);
+  auto subdomain_box = pfc::decomposition::local_box(decomp, rank);
+  pfc::communication::FullPaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD);
+  halo.exchange_halos(u.data(), u.size());
 
   std::size_t total_mismatches = 0;
   for (std::size_t l = 0; l < total; ++l) {

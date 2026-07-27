@@ -34,13 +34,14 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 #include <openpfc/kernel/decomposition/halo_persistent.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 using namespace pfc;
 using pfc::halo::HaloDirectionSet;
@@ -149,18 +150,21 @@ TEST_CASE("from_connectivity translates to expected presets",
 
 namespace {
 
-void fill_owned(field::PaddedBrick<double> &u, double val) {
-  for (int k = 0; k < u.nz(); ++k)
-    for (int j = 0; j < u.ny(); ++j)
-      for (int i = 0; i < u.nx(); ++i) u(i, j, k) = val;
+void fill_owned(data::Field<double, HostSpace> &u, double val) {
+  const auto n = u.size3();
+  for (int k = 0; k < n[2]; ++k)
+    for (int j = 0; j < n[1]; ++j)
+      for (int i = 0; i < n[0]; ++i) u(i, j, k) = val;
 }
 
-void clear_halo(field::PaddedBrick<double> &u, double val) {
+void clear_halo(data::Field<double, HostSpace> &u, double val) {
   // Set every cell (including the halo ring) to `val`; tests then overwrite
   // owned cells separately.
-  for (int k = -u.halo_width(); k < u.nz() + u.halo_width(); ++k)
-    for (int j = -u.halo_width(); j < u.ny() + u.halo_width(); ++j)
-      for (int i = -u.halo_width(); i < u.nx() + u.halo_width(); ++i)
+  const auto n = u.size3();
+  const int hw = u.storage_halo();
+  for (int k = -hw; k < n[2] + hw; ++k)
+    for (int j = -hw; j < n[1] + hw; ++j)
+      for (int i = -hw; i < n[0] + hw; ++i)
         u(i, j, k) = val;
 }
 
@@ -180,7 +184,7 @@ TEST_CASE("PaddedHaloExchanger Axes2D leaves ±Z halos untouched on nz=1 slab",
   auto decomp = pfc::decomposition::create(world, 1);
 
   const int hw = 1;
-  field::PaddedBrick<double> u(decomp, rank, hw);
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
   const double sentinel = -999.0;
   clear_halo(u, sentinel);
   fill_owned(u, 7.0);
@@ -193,19 +197,20 @@ TEST_CASE("PaddedHaloExchanger Axes2D leaves ±Z halos untouched on nz=1 slab",
   halo.exchange_halos(u.data(), u.size());
 
   bool halos_match = true;
+  const auto n = u.size3();
   // X / Y halos populated by self-wrap.
-  for (int k = 0; k < u.nz(); ++k) {
-    for (int j = 0; j < u.ny(); ++j) {
-      halos_match &= u(-1, j, k) == 7.0 && u(u.nx(), j, k) == 7.0;
+  for (int k = 0; k < n[2]; ++k) {
+    for (int j = 0; j < n[1]; ++j) {
+      halos_match &= u(-1, j, k) == 7.0 && u(n[0], j, k) == 7.0;
     }
-    for (int i = 0; i < u.nx(); ++i) {
-      halos_match &= u(i, -1, k) == 7.0 && u(i, u.ny(), k) == 7.0;
+    for (int i = 0; i < n[0]; ++i) {
+      halos_match &= u(i, -1, k) == 7.0 && u(i, n[1], k) == 7.0;
     }
   }
   // Z halos must be untouched (set to sentinel by `clear_halo`).
-  for (int j = 0; j < u.ny(); ++j) {
-    for (int i = 0; i < u.nx(); ++i) {
-      halos_match &= u(i, j, -1) == sentinel && u(i, j, u.nz()) == sentinel;
+  for (int j = 0; j < n[1]; ++j) {
+    for (int i = 0; i < n[0]; ++i) {
+      halos_match &= u(i, j, -1) == sentinel && u(i, j, n[2]) == sentinel;
     }
   }
   REQUIRE(halos_match);
@@ -222,8 +227,8 @@ TEST_CASE("PaddedHaloExchanger Axes2D matches Axes3D in XY (two-rank X-split)",
   auto decomp = pfc::decomposition::create(world, {2, 1, 1});
 
   const int hw = 1;
-  field::PaddedBrick<double> u_axes2d(decomp, rank, hw);
-  field::PaddedBrick<double> u_axes3d(decomp, rank, hw);
+  auto u_axes2d = data::field_from_subdomain<double>(decomp, rank, hw);
+  auto u_axes3d = data::field_from_subdomain<double>(decomp, rank, hw);
 
   const double mine = static_cast<double>(rank);
   const double sentinel = -999.0;
@@ -244,24 +249,26 @@ TEST_CASE("PaddedHaloExchanger Axes2D matches Axes3D in XY (two-rank X-split)",
   halo3d.exchange_halos(u_axes3d.data(), u_axes3d.size());
 
   bool halos_match = true;
+  const auto n2d = u_axes2d.size3();
+  const auto n3d = u_axes3d.size3();
   // X and Y halos should be identical between the two configurations.
-  for (int k = 0; k < u_axes2d.nz(); ++k) {
-    for (int j = 0; j < u_axes2d.ny(); ++j) {
+  for (int k = 0; k < n2d[2]; ++k) {
+    for (int j = 0; j < n2d[1]; ++j) {
       halos_match &= u_axes2d(-1, j, k) == u_axes3d(-1, j, k) &&
-                     u_axes2d(u_axes2d.nx(), j, k) == u_axes3d(u_axes3d.nx(), j, k);
+                     u_axes2d(n2d[0], j, k) == u_axes3d(n3d[0], j, k);
     }
-    for (int i = 0; i < u_axes2d.nx(); ++i) {
+    for (int i = 0; i < n2d[0]; ++i) {
       halos_match &= u_axes2d(i, -1, k) == u_axes3d(i, -1, k) &&
-                     u_axes2d(i, u_axes2d.ny(), k) == u_axes3d(i, u_axes3d.ny(), k);
+                     u_axes2d(i, n2d[1], k) == u_axes3d(i, n3d[1], k);
     }
   }
   // Z halo: Axes3D self-wraps mine; Axes2D leaves sentinel.
-  for (int j = 0; j < u_axes2d.ny(); ++j) {
-    for (int i = 0; i < u_axes2d.nx(); ++i) {
+  for (int j = 0; j < n2d[1]; ++j) {
+    for (int i = 0; i < n2d[0]; ++i) {
       halos_match &= u_axes2d(i, j, -1) == sentinel &&
-                     u_axes2d(i, j, u_axes2d.nz()) == sentinel &&
+                     u_axes2d(i, j, n2d[2]) == sentinel &&
                      u_axes3d(i, j, -1) == mine &&
-                     u_axes3d(i, j, u_axes3d.nz()) == mine;
+                     u_axes3d(i, j, n3d[2]) == mine;
     }
   }
   REQUIRE(halos_match);
@@ -284,7 +291,7 @@ TEST_CASE("HaloDirectionSelector overrides the uniform direction set",
   };
 
   const int hw = 1;
-  field::PaddedBrick<double> u(decomp, rank, hw);
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
   const double sentinel = -999.0;
   clear_halo(u, sentinel);
   fill_owned(u, static_cast<double>(rank));
