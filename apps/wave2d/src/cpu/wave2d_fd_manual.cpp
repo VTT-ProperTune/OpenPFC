@@ -3,7 +3,7 @@
 
 /**
  * @file wave2d_fd_manual.cpp
- * @brief 2D wave equation — manual 5-point Laplacian on `PaddedBrick` + periodic
+ * @brief 2D wave equation — manual 5-point Laplacian on `pfc::data::Field` + periodic
  *        halos in x,z and physical y-boundary ghosts (Dirichlet or Neumann).
  */
 
@@ -18,8 +18,9 @@
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
@@ -47,9 +48,9 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   const auto decomp = decomposition::create(global_domain, nproc);
 
   constexpr int hw = 1;
-  field::PaddedBrick<double> u(decomp, rank, hw);
-  field::PaddedBrick<double> v(decomp, rank, hw);
-  field::PaddedBrick<double> lap(decomp, rank, hw);
+  auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto v = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto lap = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
   const auto& geometry = decomposition::domain(decomp);
   auto subdomain_box = decomposition::local_box(decomp, rank);
@@ -95,9 +96,9 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
     halo_u.exchange_halos(u.data(), u.size());
     wave2d::fill_y_physical_ghosts_padded(u, cfg.y_bc, cfg.Ny,
                                           static_cast<double>(cfg.u_wall));
-    field::for_each_owned(u, [&](int i, int j, int k) { stencil_lap(i, j, k); });
+    u.for_each_owned([&](int i, int j, int k) { stencil_lap(i, j, k); });
 
-    field::for_each_owned(u, [&](int i, int j, int k) {
+    u.for_each_owned([&](int i, int j, int k) {
       const double v0 = v(i, j, k);
       const double l = lap(i, j, k);
       u(i, j, k) += cfg.dt * v0;
@@ -115,13 +116,18 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   }
   const double max_elapsed = runtime::toc(timer);
 
+  const auto u_sz = u.local_size();
   const int skip = hw;
   wave2d::report(rank, nproc, cfg, "fd_manual", "manual 5-point + padded halos",
                  max_elapsed, "(y physical BC; interior RMS u)", [&](auto &&cb) {
-                   field::for_each_inner(u, skip, [&](int i, int j, int k) {
-                     const auto p = u.global_coords(i, j, k);
-                     cb(p[0], p[1], p[2], u(i, j, k));
-                   });
+                   for (int k = skip; k < u_sz[2] - skip; ++k) {
+                     for (int j = skip; j < u_sz[1] - skip; ++j) {
+                       for (int i = skip; i < u_sz[0] - skip; ++i) {
+                         const auto p = u.coords(i, j, k);
+                         cb(p[0], p[1], p[2], u(i, j, k));
+                       }
+                     }
+                   }
                  });
 }
 

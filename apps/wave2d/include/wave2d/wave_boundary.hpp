@@ -8,7 +8,6 @@
  * @brief Physical y-boundary ghosts (x remains periodic via MPI halo exchange).
  */
 
-#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <stdexcept>
 
@@ -17,7 +16,7 @@ namespace wave2d {
 enum class YBoundaryKind { Dirichlet, Neumann };
 
 /**
- * @brief Overwrite padded-brick y-halo cells that lie outside `[0, Ny)` in
+ * @brief Overwrite y-halo cells that lie outside `[0, Ny)` in
  *        global y after a periodic halo exchange.
  *
  * Second-order cell-centred ghosts: partner global row `yp` in `[0, Ny-1]`.
@@ -28,14 +27,15 @@ enum class YBoundaryKind { Dirichlet, Neumann };
  * `yp = 2 * (Ny - 1) - gj`, `u_g = u(yp)`.
  */
 template <class T>
-inline void fill_y_physical_ghosts_padded(pfc::field::PaddedBrick<T> &u,
+inline void fill_y_physical_ghosts_padded(pfc::data::Field<T, pfc::HostSpace> &u,
                                           YBoundaryKind ybc, int Ny_global,
                                           T u_wall = T{}) {
-  const auto lo = u.lower_global();
+  const auto lo = u.box().low;
   const int hw = u.halo_width();
+  const auto sz = u.local_size();
 
-  for (int k = -hw; k < u.nz() + hw; ++k) {
-    for (int j = -hw; j < u.ny() + hw; ++j) {
+  for (int k = -hw; k < sz[2] + hw; ++k) {
+    for (int j = -hw; j < sz[1] + hw; ++j) {
       const int gj = lo[1] + j;
       if (gj >= 0 && gj < Ny_global) {
         continue;
@@ -50,21 +50,20 @@ inline void fill_y_physical_ghosts_padded(pfc::field::PaddedBrick<T> &u,
       const int jm = yp - lo[1];
 
       // Bounds check: mirrored local index must be within valid padded range
-      if (jm < -hw || jm >= u.ny() + hw) {
+      if (jm < -hw || jm >= sz[1] + hw) {
         const std::string kind_str = (ybc == YBoundaryKind::Dirichlet) ? "Dirichlet" : "Neumann";
         throw std::out_of_range(
             "fill_y_physical_ghosts_padded: mirrored ghost index out of bounds. "
-            "rank=" + std::to_string(u.rank()) +
-            ", halo_width=" + std::to_string(hw) +
-            ", local_ny=" + std::to_string(u.ny()) +
-            ", valid_range=[" + std::to_string(-hw) + "," + std::to_string(u.ny() + hw) +
+            "halo_width=" + std::to_string(hw) +
+            ", local_ny=" + std::to_string(sz[1]) +
+            ", valid_range=[" + std::to_string(-hw) + "," + std::to_string(sz[1] + hw) +
             "), mirrored_global_yp=" + std::to_string(yp) +
             ", computed_local_jm=" + std::to_string(jm) +
             ", boundary_kind=" + kind_str
         );
       }
 
-      for (int i = -hw; i < u.nx() + hw; ++i) {
+      for (int i = -hw; i < sz[0] + hw; ++i) {
         const T um = u(i, jm, k);
         if (ybc == YBoundaryKind::Dirichlet) {
           u(i, j, k) = static_cast<T>(static_cast<T>(2) * u_wall - um);
@@ -81,17 +80,18 @@ inline void fill_y_physical_ghosts_padded(pfc::field::PaddedBrick<T> &u,
  *        cells at global \f$y = 0\f$ and \f$y = N_y - 1\f$.
  */
 template <class T>
-inline void enforce_dirichlet_y_walls_owned(pfc::field::PaddedBrick<T> &u,
-                                            pfc::field::PaddedBrick<T> &v,
+inline void enforce_dirichlet_y_walls_owned(pfc::data::Field<T, pfc::HostSpace> &u,
+                                            pfc::data::Field<T, pfc::HostSpace> &v,
                                             int Ny_global, T u_wall) {
-  const auto lo = u.lower_global();
-  for (int k = 0; k < u.nz(); ++k) {
-    for (int j = 0; j < u.ny(); ++j) {
+  const auto lo = u.box().low;
+  const auto sz = u.local_size();
+  for (int k = 0; k < sz[2]; ++k) {
+    for (int j = 0; j < sz[1]; ++j) {
       const int gj = lo[1] + j;
       if (gj != 0 && gj != Ny_global - 1) {
         continue;
       }
-      for (int i = 0; i < u.nx(); ++i) {
+      for (int i = 0; i < sz[0]; ++i) {
         u(i, j, k) = u_wall;
         v(i, j, k) = T{0};
       }

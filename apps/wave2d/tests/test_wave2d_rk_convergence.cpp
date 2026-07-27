@@ -9,7 +9,7 @@
  * This test suite validates second-order (RK2) and fourth-order (RK4)
  * convergence for the 2D wave equation using WaveModel. The test implements
  * RK2 and RK4 methods manually within the test using existing wave2d
- * infrastructure (PaddedBrick fields, manual Laplacian computation via
+ * infrastructure (pfc::data::Field, manual Laplacian computation via
  * finite differences, and wave2d::WaveModel::rhs).
  *
  * Tests use 32x32x1 grid with Dirichlet boundary conditions on y-walls.
@@ -31,7 +31,8 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 
 #include <wave2d/wave_model.hpp>
@@ -58,8 +59,8 @@ constexpr double sigma = 3.84;
 /**
  * @brief Initialize u and v fields with Gaussian pulse in u, zero in v.
  */
-void initialize_gaussian_pulse(field::PaddedBrick<double>& u_field,
-                               field::PaddedBrick<double>& v_field) {
+void initialize_gaussian_pulse(pfc::data::Field<double, pfc::HostSpace>& u_field,
+                               pfc::data::Field<double, pfc::HostSpace>& v_field) {
   u_field.apply([&](double x, double y, double) {
     return std::exp(-((x - xc) * (x - xc) + (y - yc) * (y - yc)) / (2.0 * sigma * sigma));
   });
@@ -80,10 +81,11 @@ double vector_l2_error(const std::vector<double>& ref, const std::vector<double>
 /**
  * @brief Extract field values to vector for error computation.
  */
-std::vector<double> field_to_vector(const field::PaddedBrick<double>& field) {
+std::vector<double> field_to_vector(const pfc::data::Field<double, pfc::HostSpace>& field) {
   std::vector<double> vec;
-  vec.reserve(field.nx() * field.ny() * field.nz());
-  field::for_each_owned(field, [&](int i, int j, int k) {
+  const auto sz = field.local_size();
+  vec.reserve(sz[0] * sz[1] * sz[2]);
+  field.for_each_owned([&](int i, int j, int k) {
     vec.push_back(field(i, j, k));
   });
   return vec;
@@ -92,8 +94,8 @@ std::vector<double> field_to_vector(const field::PaddedBrick<double>& field) {
 /**
  * @brief Manual RK2 (midpoint) step for wave equation.
  */
-void rk2_step(field::PaddedBrick<double>& u_field,
-              field::PaddedBrick<double>& v_field,
+void rk2_step(pfc::data::Field<double, pfc::HostSpace>& u_field,
+              pfc::data::Field<double, pfc::HostSpace>& v_field,
               double dt, double t,
               WaveModel& model,
               PaddedHaloExchanger<double>& halo_u) {
@@ -104,11 +106,12 @@ void rk2_step(field::PaddedBrick<double>& u_field,
   // Stage 1: compute k1 at (t, u0)
   halo_u.exchange_halos(u_field.data(), u_field.size());
 
-  std::vector<double> du1(u_field.nx() * u_field.ny() * u_field.nz());
-  std::vector<double> dv1(u_field.nx() * u_field.ny() * u_field.nz());
+  const auto sz = u_field.local_size();
+  std::vector<double> du1(sz[0] * sz[1] * sz[2]);
+  std::vector<double> dv1(sz[0] * sz[1] * sz[2]);
 
   size_t idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     const double lxx = u_field(i + 1, j, k) - 2.0 * u_field(i, j, k) + u_field(i - 1, j, k);
     const double lyy = u_field(i, j + 1, k) - 2.0 * u_field(i, j, k) + u_field(i, j - 1, k);
     WaveLaplacian lap{.lxx = lxx, .lyy = lyy};
@@ -120,7 +123,7 @@ void rk2_step(field::PaddedBrick<double>& u_field,
 
   // Restore initial state and compute midpoint state
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     u_field(i, j, k) = u0[idx] + 0.5 * dt * du1[idx];
     v_field(i, j, k) = v0[idx] + 0.5 * dt * dv1[idx];
     ++idx;
@@ -131,11 +134,11 @@ void rk2_step(field::PaddedBrick<double>& u_field,
   // Stage 2: compute k2 at (t + dt/2, midpoint)
   halo_u.exchange_halos(u_field.data(), u_field.size());
 
-  std::vector<double> du2(u_field.nx() * u_field.ny() * u_field.nz());
-  std::vector<double> dv2(u_field.nx() * u_field.ny() * u_field.nz());
+  std::vector<double> du2(sz[0] * sz[1] * sz[2]);
+  std::vector<double> dv2(sz[0] * sz[1] * sz[2]);
 
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     const double lxx = u_field(i + 1, j, k) - 2.0 * u_field(i, j, k) + u_field(i - 1, j, k);
     const double lyy = u_field(i, j + 1, k) - 2.0 * u_field(i, j, k) + u_field(i, j - 1, k);
     WaveLaplacian lap{.lxx = lxx, .lyy = lyy};
@@ -147,7 +150,7 @@ void rk2_step(field::PaddedBrick<double>& u_field,
 
   // Final update from initial state using k2
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     u_field(i, j, k) = u0[idx] + dt * du2[idx];
     v_field(i, j, k) = v0[idx] + dt * dv2[idx];
     ++idx;
@@ -159,8 +162,8 @@ void rk2_step(field::PaddedBrick<double>& u_field,
 /**
  * @brief Manual RK4 (classical) step for wave equation.
  */
-void rk4_step(field::PaddedBrick<double>& u_field,
-              field::PaddedBrick<double>& v_field,
+void rk4_step(pfc::data::Field<double, pfc::HostSpace>& u_field,
+              pfc::data::Field<double, pfc::HostSpace>& v_field,
               double dt, double t,
               WaveModel& model,
               PaddedHaloExchanger<double>& halo_u) {
@@ -171,11 +174,12 @@ void rk4_step(field::PaddedBrick<double>& u_field,
   // Stage 1: compute k1 at (t, u0)
   halo_u.exchange_halos(u_field.data(), u_field.size());
 
-  std::vector<double> du1(u_field.nx() * u_field.ny() * u_field.nz());
-  std::vector<double> dv1(u_field.nx() * u_field.ny() * u_field.nz());
+  const auto sz = u_field.local_size();
+  std::vector<double> du1(sz[0] * sz[1] * sz[2]);
+  std::vector<double> dv1(sz[0] * sz[1] * sz[2]);
 
   size_t idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     const double lxx = u_field(i + 1, j, k) - 2.0 * u_field(i, j, k) + u_field(i - 1, j, k);
     const double lyy = u_field(i, j + 1, k) - 2.0 * u_field(i, j, k) + u_field(i, j - 1, k);
     WaveLaplacian lap{.lxx = lxx, .lyy = lyy};
@@ -187,7 +191,7 @@ void rk4_step(field::PaddedBrick<double>& u_field,
 
   // Stage 2: compute k2 at (t + dt/2, u0 + dt/2 * k1)
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     u_field(i, j, k) = u0[idx] + 0.5 * dt * du1[idx];
     v_field(i, j, k) = v0[idx] + 0.5 * dt * dv1[idx];
     ++idx;
@@ -196,11 +200,11 @@ void rk4_step(field::PaddedBrick<double>& u_field,
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
   halo_u.exchange_halos(u_field.data(), u_field.size());
 
-  std::vector<double> du2(u_field.nx() * u_field.ny() * u_field.nz());
-  std::vector<double> dv2(u_field.nx() * u_field.ny() * u_field.nz());
+  std::vector<double> du2(sz[0] * sz[1] * sz[2]);
+  std::vector<double> dv2(sz[0] * sz[1] * sz[2]);
 
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     const double lxx = u_field(i + 1, j, k) - 2.0 * u_field(i, j, k) + u_field(i - 1, j, k);
     const double lyy = u_field(i, j + 1, k) - 2.0 * u_field(i, j, k) + u_field(i, j - 1, k);
     WaveLaplacian lap{.lxx = lxx, .lyy = lyy};
@@ -212,7 +216,7 @@ void rk4_step(field::PaddedBrick<double>& u_field,
 
   // Stage 3: compute k3 at (t + dt/2, u0 + dt/2 * k2)
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     u_field(i, j, k) = u0[idx] + 0.5 * dt * du2[idx];
     v_field(i, j, k) = v0[idx] + 0.5 * dt * dv2[idx];
     ++idx;
@@ -221,11 +225,11 @@ void rk4_step(field::PaddedBrick<double>& u_field,
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
   halo_u.exchange_halos(u_field.data(), u_field.size());
 
-  std::vector<double> du3(u_field.nx() * u_field.ny() * u_field.nz());
-  std::vector<double> dv3(u_field.nx() * u_field.ny() * u_field.nz());
+  std::vector<double> du3(sz[0] * sz[1] * sz[2]);
+  std::vector<double> dv3(sz[0] * sz[1] * sz[2]);
 
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     const double lxx = u_field(i + 1, j, k) - 2.0 * u_field(i, j, k) + u_field(i - 1, j, k);
     const double lyy = u_field(i, j + 1, k) - 2.0 * u_field(i, j, k) + u_field(i, j - 1, k);
     WaveLaplacian lap{.lxx = lxx, .lyy = lyy};
@@ -237,7 +241,7 @@ void rk4_step(field::PaddedBrick<double>& u_field,
 
   // Stage 4: compute k4 at (t + dt, u0 + dt * k3)
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     u_field(i, j, k) = u0[idx] + dt * du3[idx];
     v_field(i, j, k) = v0[idx] + dt * dv3[idx];
     ++idx;
@@ -246,11 +250,11 @@ void rk4_step(field::PaddedBrick<double>& u_field,
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
   halo_u.exchange_halos(u_field.data(), u_field.size());
 
-  std::vector<double> du4(u_field.nx() * u_field.ny() * u_field.nz());
-  std::vector<double> dv4(u_field.nx() * u_field.ny() * u_field.nz());
+  std::vector<double> du4(sz[0] * sz[1] * sz[2]);
+  std::vector<double> dv4(sz[0] * sz[1] * sz[2]);
 
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     const double lxx = u_field(i + 1, j, k) - 2.0 * u_field(i, j, k) + u_field(i - 1, j, k);
     const double lyy = u_field(i, j + 1, k) - 2.0 * u_field(i, j, k) + u_field(i, j - 1, k);
     WaveLaplacian lap{.lxx = lxx, .lyy = lyy};
@@ -262,7 +266,7 @@ void rk4_step(field::PaddedBrick<double>& u_field,
 
   // Final update from initial state using weighted combination
   idx = 0;
-  field::for_each_owned(u_field, [&](int i, int j, int k) {
+  u_field.for_each_owned([&](int i, int j, int k) {
     u_field(i, j, k) = u0[idx] + (dt / 6.0) * (du1[idx] + 2.0 * du2[idx] + 2.0 * du3[idx] + du4[idx]);
     v_field(i, j, k) = v0[idx] + (dt / 6.0) * (dv1[idx] + 2.0 * dv2[idx] + 2.0 * dv3[idx] + dv4[idx]);
     ++idx;
@@ -280,8 +284,8 @@ std::vector<double> run_rk4_reference(double dt, int n_steps) {
                                           GridSpacing({dx, dy, dz}));
   const auto decomp = decomposition::create(domain, 1);
 
-  field::PaddedBrick<double> u_field(decomp, 0, halo_width);
-  field::PaddedBrick<double> v_field(decomp, 0, halo_width);
+  auto u_field = pfc::data::field_from_subdomain<double>(decomp, 0, halo_width);
+  auto v_field = pfc::data::field_from_subdomain<double>(decomp, 0, halo_width);
 
   initialize_gaussian_pulse(u_field, v_field);
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
@@ -307,8 +311,8 @@ std::vector<double> run_rk2(double dt, int n_steps) {
                                           GridSpacing({dx, dy, dz}));
   const auto decomp = decomposition::create(domain, 1);
 
-  field::PaddedBrick<double> u_field(decomp, 0, halo_width);
-  field::PaddedBrick<double> v_field(decomp, 0, halo_width);
+  auto u_field = pfc::data::field_from_subdomain<double>(decomp, 0, halo_width);
+  auto v_field = pfc::data::field_from_subdomain<double>(decomp, 0, halo_width);
 
   initialize_gaussian_pulse(u_field, v_field);
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);

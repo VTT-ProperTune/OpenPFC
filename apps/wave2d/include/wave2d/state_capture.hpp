@@ -25,7 +25,7 @@
 
 #include <openpfc/kernel/checkpoint/state_capture.hpp>
 #include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 
 namespace wave2d {
 
@@ -37,10 +37,11 @@ inline constexpr std::string_view kVelocityFieldId = "wave2d.v";
 namespace detail {
 
 [[nodiscard]] inline std::vector<double>
-pack_owned_core(const pfc::field::PaddedBrick<double> &brick) {
-  const int nx = brick.nx();
-  const int ny = brick.ny();
-  const int nz = brick.nz();
+pack_owned_core(const pfc::data::Field<double, pfc::HostSpace> &brick) {
+  const auto sz = brick.local_size();
+  const int nx = sz[0];
+  const int ny = sz[1];
+  const int nz = sz[2];
   std::vector<double> owned(static_cast<std::size_t>(nx) *
                             static_cast<std::size_t>(ny) *
                             static_cast<std::size_t>(nz));
@@ -55,11 +56,12 @@ pack_owned_core(const pfc::field::PaddedBrick<double> &brick) {
   return owned;
 }
 
-inline void unpack_owned_core(pfc::field::PaddedBrick<double> &brick,
+inline void unpack_owned_core(pfc::data::Field<double, pfc::HostSpace> &brick,
                               std::span<const double> owned) {
-  const int nx = brick.nx();
-  const int ny = brick.ny();
-  const int nz = brick.nz();
+  const auto sz = brick.local_size();
+  const int nx = sz[0];
+  const int ny = sz[1];
+  const int nz = sz[2];
   std::size_t n = 0;
   for (int k = 0; k < nz; ++k) {
     for (int j = 0; j < ny; ++j) {
@@ -150,13 +152,14 @@ restore_uv(const pfc::checkpoint::PersistentState &state, std::span<double> u_de
 }
 
 /**
- * @brief Capture owned cores from @c PaddedBrick pair (halos excluded).
+ * @brief Capture owned cores from @c pfc::data::Field pair (halos excluded).
  */
 [[nodiscard]] inline pfc::checkpoint::PersistentState
-capture_uv(const pfc::field::PaddedBrick<double> &u,
-           const pfc::field::PaddedBrick<double> &v,
+capture_uv(const pfc::data::Field<double, pfc::HostSpace> &u,
+           const pfc::data::Field<double, pfc::HostSpace> &v,
            std::optional<pfc::checkpoint::DecompositionMeta> decomp = std::nullopt) {
-  const pfc::types::Int3 extents{u.nx(), u.ny(), u.nz()};
+  const auto sz = u.local_size();
+  const pfc::types::Int3 extents{sz[0], sz[1], sz[2]};
   const auto u_owned = detail::pack_owned_core(u);
   const auto v_owned = detail::pack_owned_core(v);
   return capture_uv(std::span<const double>(u_owned),
@@ -164,13 +167,14 @@ capture_uv(const pfc::field::PaddedBrick<double> &u,
 }
 
 /**
- * @brief Restore into owned cells of two bricks; reject leaves both unchanged.
+ * @brief Restore into owned cells of two fields; reject leaves both unchanged.
  */
 [[nodiscard]] inline pfc::checkpoint::RestoreOutcome
 restore_uv(const pfc::checkpoint::PersistentState &state,
-           pfc::field::PaddedBrick<double> &u, pfc::field::PaddedBrick<double> &v,
+           pfc::data::Field<double, pfc::HostSpace> &u, pfc::data::Field<double, pfc::HostSpace> &v,
            std::optional<pfc::checkpoint::DecompositionMeta> decomp = std::nullopt) {
-  const pfc::types::Int3 extents{u.nx(), u.ny(), u.nz()};
+  const auto sz = u.local_size();
+  const pfc::types::Int3 extents{sz[0], sz[1], sz[2]};
   const std::size_t n = static_cast<std::size_t>(extents[0]) *
                         static_cast<std::size_t>(extents[1]) *
                         static_cast<std::size_t>(extents[2]);
