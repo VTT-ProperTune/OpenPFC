@@ -13,7 +13,7 @@
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc;
 using Catch::Approx;
@@ -64,9 +64,12 @@ TEST_CASE("test_decay_single_step", "[stepper][equivalence]") {
   constexpr int nx = 8, ny = 8, nz = 8;
 
   // Legacy setup
-  auto world = pfc::domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                        GridSpacing({1, 1, 1}));
-  auto decomposition = decomposition::create(world, 1);
+  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
+                                                  GridSpacing({1, 1, 1}));
+  const pfc::Int3 lower{0, 0, 0};
+  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
+  pfc::World world(lower, upper, domain);
+  auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
   LegacyDecayModel legacy_model(fft, world);
   legacy_model.initialize(dt);
@@ -100,9 +103,12 @@ TEST_CASE("test_decay_multiple_steps", "[stepper][equivalence]") {
   constexpr int num_steps = 10;
 
   // Legacy setup
-  auto world = pfc::domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                        GridSpacing({1, 1, 1}));
-  auto decomposition = decomposition::create(world, 1);
+  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
+                                                  GridSpacing({1, 1, 1}));
+  const pfc::Int3 lower{0, 0, 0};
+  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
+  pfc::World world(lower, upper, domain);
+  auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
   LegacyDecayModel legacy_model(fft, world);
   legacy_model.initialize(dt);
@@ -139,9 +145,12 @@ TEST_CASE("test_decay_with_nonzero_initial_condition", "[stepper][equivalence]")
   };
 
   // Legacy setup
-  auto world = pfc::domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                        GridSpacing({1, 1, 1}));
-  auto decomposition = decomposition::create(world, 1);
+  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
+                                                  GridSpacing({1, 1, 1}));
+  const pfc::Int3 lower{0, 0, 0};
+  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
+  pfc::World world(lower, upper, domain);
+  auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
   LegacyDecayModel legacy_model(fft, world);
   legacy_model.initialize(dt);

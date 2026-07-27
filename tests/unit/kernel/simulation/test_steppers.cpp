@@ -12,7 +12,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc::sim::steppers;
 using Catch::Approx;
@@ -271,11 +271,14 @@ TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
   MockModel model;
   MockEval eval;
 
-  // Create LocalField using named constructor
-  auto world = pfc::domain::create_world(pfc::GridSize({static_cast<int>(n), 1, 1}),
-                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
+  // Create Domain and decomposition
+  const pfc::Domain domain = pfc::domain::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
+                                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const pfc::Int3 lower{0, 0, 0};
+  const pfc::Int3 upper{static_cast<int>(n) - 1, 0, 0};
+  pfc::World world(lower, upper, domain);
+  auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
   pfc::data::Field<double> u = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
 
   auto tableau = make_rk4_classical<double>();
@@ -319,11 +322,14 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
   MockModel model;
   MockEval eval;
 
-  // Create LocalFields using named constructor
-  auto world = pfc::domain::create_world(pfc::GridSize({static_cast<int>(n), 1, 1}),
-                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
+  // Create Domain and decomposition
+  const pfc::Domain domain = pfc::domain::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
+                                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const pfc::Int3 lower{0, 0, 0};
+  const pfc::Int3 upper{static_cast<int>(n) - 1, 0, 0};
+  pfc::World world(lower, upper, domain);
+  auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
   pfc::data::Field<double> u1 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
   pfc::data::Field<double> u2 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
 
