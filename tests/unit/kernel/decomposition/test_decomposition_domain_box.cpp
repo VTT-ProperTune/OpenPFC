@@ -11,36 +11,36 @@
 using namespace pfc;
 using namespace pfc::types;
 
-TEST_CASE("Decomposition::domain() reproduces the global World coordinate system",
+TEST_CASE("Decomposition::domain() reproduces the global Domain coordinate system",
           "[decomposition][domain][unit]") {
-  const auto w =
-      world::from_bounds({128, 96, 64}, {-1.0, -2.0, 0.0}, {1.0, 4.0, 8.0});
-  const auto decomp = decomposition::create(w, Int3{2, 2, 1});
+  const auto d =
+      domain::from_bounds({128, 96, 64}, {-1.0, -2.0, 0.0}, {1.0, 4.0, 8.0});
+  const auto decomp = decomposition::create(d, Int3{2, 2, 1});
 
-  const Domain d = decomposition::domain(decomp);
-  REQUIRE(domain::get_size(d) == world::get_size(w));
-  REQUIRE(domain::get_spacing(d) == world::get_spacing(w));
-  REQUIRE(domain::get_origin(d) == world::get_origin(w));
-  REQUIRE(domain::get_periodic(d) == world::get_periodic(w));
+  const Domain retrieved_d = decomposition::domain(decomp);
+  REQUIRE(domain::get_size(retrieved_d) == domain::get_size(d));
+  REQUIRE(domain::get_spacing(retrieved_d) == domain::get_spacing(d));
+  REQUIRE(domain::get_origin(retrieved_d) == domain::get_origin(d));
+  REQUIRE(domain::get_periodic(retrieved_d) == domain::get_periodic(d));
 }
 
 TEST_CASE("Decomposition::global_box() is the full [lower, upper] index box",
           "[decomposition][box3i][unit]") {
-  const auto w = world::create(GridSize({128, 128, 128}).to_vector3());
-  const auto decomp = decomposition::create(w, Int3{2, 2, 2});
+  const auto d = domain::create(Int3{128, 128, 128});
+  const auto decomp = decomposition::create(d, Int3{2, 2, 2});
 
   const Box3i g = decomposition::global_box(decomp);
-  REQUIRE(g.low == world::get_lower(w));
-  REQUIRE(g.high == world::get_upper(w));
+  REQUIRE(g.low == domain::index_box(d).low);
+  REQUIRE(g.high == domain::index_box(d).high);
   REQUIRE(g.is_consistent());
-  REQUIRE(static_cast<size_t>(g.count()) == world::get_total_size(w));
+  REQUIRE(static_cast<size_t>(g.count()) == domain::get_total_size(d));
 }
 
 TEST_CASE(
     "Decomposition::local_box() matches stored local boxes and tiles the global box",
     "[decomposition][box3i][unit]") {
-  const auto w = world::create(GridSize({100, 80, 60}).to_vector3());
-  const auto decomp = decomposition::create(w, Int3{2, 2, 1});
+  const auto d = domain::create(Int3{100, 80, 60});
+  const auto decomp = decomposition::create(d, Int3{2, 2, 1});
   const int n = decomposition::get_num_domains(decomp);
   REQUIRE(n == 4);
 

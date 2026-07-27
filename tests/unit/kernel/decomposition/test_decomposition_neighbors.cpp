@@ -15,9 +15,9 @@ using namespace pfc::types;
 TEST_CASE("get_neighbor_rank with per-axis periodicity",
           "[decomposition][neighbors][unit]") {
   // Create a 2x2x2 decomposition for testing
-  auto world = world::create(GridSize({16, 16, 16}).to_vector3());
+  auto test_domain = pfc::domain::create(Int3{16, 16, 16});
   const Int3 grid{2, 2, 2};
-  auto decomp = decomposition::create(world, grid);
+  auto decomp = decomposition::create(test_domain, grid);
 
   SECTION("fully periodic domain returns valid neighbors for all directions") {
     auto domain = decomposition::domain(decomp);
@@ -121,9 +121,9 @@ TEST_CASE("get_neighbor_rank with per-axis periodicity",
 
   SECTION("4-rank 2x2 mixed periodicity round-trip") {
     // Create a 2x2x1 decomposition (4 ranks) for round-trip testing
-    auto world_2x2 = world::create(GridSize({16, 16, 1}).to_vector3());
+    auto domain_2x2 = pfc::domain::create(Int3{16, 16, 1});
     const Int3 grid_2x2{2, 2, 1};
-    auto decomp_2x2 = decomposition::create(world_2x2, grid_2x2);
+    auto decomp_2x2 = decomposition::create(domain_2x2, grid_2x2);
 
     // Domain with X periodic, Y non-periodic, Z non-periodic
     auto mixed_domain = pfc::domain::create(

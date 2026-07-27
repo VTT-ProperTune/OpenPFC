@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -14,27 +15,27 @@ using namespace pfc;
 using namespace pfc::types;
 
 TEST_CASE("Decomposition - basic functionality", "[decomposition][unit]") {
-  // Create a dummy World object for testing
-  auto world = world::create(GridSize({128, 128, 128}).to_vector3());
+  // Create a dummy Domain object for testing
+  auto domain = pfc::domain::create(Int3{128, 128, 128});
 
   SECTION("Construction and getters") {
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain, Int3{1, 1, 1});
 
-    REQUIRE(get_world(decomposition) == world);
+    REQUIRE(decomposition::domain(decomposition) == domain);
   }
 
-  SECTION("make_decomposition(world, rank, num_domains) matches domain count") {
-    auto decomposition = make_decomposition(world, 0, 8);
+  SECTION("make_decomposition(domain, num_domains) matches domain count") {
+    auto decomposition = decomposition::create(domain, 8);
 
     REQUIRE(decomposition::get_num_domains(decomposition) == 8);
-    REQUIRE(decomposition::get_world(decomposition) == world);
+    REQUIRE(decomposition::domain(decomposition) == domain);
   }
 }
 
 TEST_CASE("Decomposition - periodic neighbor ranks", "[decomposition][unit]") {
-  auto world = world::create(GridSize({16, 16, 16}).to_vector3());
+  auto domain = pfc::domain::create(Int3{16, 16, 16});
   const Int3 grid{2, 2, 2};
-  auto decomp = decomposition::create(world, grid);
+  auto decomp = decomposition::create(domain, grid);
 
   REQUIRE(decomposition::get_num_domains(decomp) == 8);
 
@@ -75,17 +76,17 @@ TEST_CASE("Decomposition - periodic neighbor ranks", "[decomposition][unit]") {
 
 TEST_CASE("test_create_rejects_excessive_nparts", "[decomposition][unit][error]") {
   using namespace pfc;
-  // World: 2x2x2, only 8 total grid points
+  // Domain: 2x2x2, only 8 total grid points
   // Requesting 9 decompositions exceeds what HeFFTe can partition
-  auto world = world::create(GridSize({2, 2, 2}).to_vector3());
-  REQUIRE_THROWS_AS(::decomposition::create(world, 9), std::invalid_argument);
+  auto domain = pfc::domain::create(Int3{2, 2, 2});
+  REQUIRE_THROWS_AS(::decomposition::create(domain, 9), std::invalid_argument);
 }
 
 TEST_CASE("test_create_rejects_invalid_grid", "[decomposition][unit][error]") {
   using namespace pfc;
-  auto world = world::create(GridSize({128, 128, 128}).to_vector3());
+  auto domain = pfc::domain::create(Int3{128, 128, 128});
   // Grid dimension of zero is invalid
-  REQUIRE_THROWS_AS(::decomposition::create(world, Int3{300, 1, 1}),
+  REQUIRE_THROWS_AS(::decomposition::create(domain, Int3{300, 1, 1}),
                     std::invalid_argument);
 }
 
@@ -97,8 +98,8 @@ TEST_CASE("Decomposition - split_world box ordering matches x-fastest ranks",
   // Non-cubic grids exercise gx != gy != gz.
   for (const Int3 grid :
        {Int3{2, 3, 4}, Int3{1, 2, 4}, Int3{4, 1, 2}, Int3{3, 3, 1}}) {
-    auto world = world::create(GridSize({24, 24, 24}).to_vector3());
-    REQUIRE_NOTHROW(decomposition::create(world, grid));
+    auto domain = pfc::domain::create(Int3{24, 24, 24});
+    REQUIRE_NOTHROW(decomposition::create(domain, grid));
   }
 }
 
@@ -106,8 +107,8 @@ TEST_CASE("Decomposition - get_neighbor_rank round-trips on non-cubic grids",
           "[decomposition][unit]") {
   using namespace pfc;
   const Int3 grid{2, 3, 4};
-  auto world = world::create(GridSize({24, 24, 24}).to_vector3());
-  auto decomp = decomposition::create(world, grid);
+  auto domain = pfc::domain::create(Int3{24, 24, 24});
+  auto decomp = decomposition::create(domain, grid);
   const int n = decomposition::get_num_domains(decomp);
   REQUIRE(n == grid[0] * grid[1] * grid[2]);
 
@@ -129,9 +130,9 @@ TEST_CASE("Decomposition - per-axis periodicity in get_neighbor_rank (M1.3)",
           "[decomposition][unit]") {
   using namespace pfc;
   // Non-periodic in x, periodic in y and z.
-  auto world =
-      world::from_bounds({16, 16, 16}, {0, 0, 0}, {16, 16, 16}, {false, true, true});
-  auto decomp = decomposition::create(world, Int3{2, 2, 2});
+  auto domain =
+      domain::from_bounds({16, 16, 16}, {0, 0, 0}, {16, 16, 16}, {false, true, true});
+  auto decomp = decomposition::create(domain, Int3{2, 2, 2});
   REQUIRE(decomposition::get_num_domains(decomp) == 8);
 
   SECTION("non-periodic x boundary has no neighbor") {

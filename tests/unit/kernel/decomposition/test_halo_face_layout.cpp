@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
@@ -11,8 +12,8 @@ using namespace pfc;
 
 TEST_CASE("face_halo_counts matches create_recv_halo per direction",
           "[halo][layout]") {
-  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 2, 1});
+  auto domain = pfc::domain::create(Int3{64, 64, 64});
+  auto decomp = decomposition::create(domain, {2, 2, 1});
   const int rank = 0;
   const int hw = 2;
   const std::array<Int3, 6> dirs = {
@@ -29,11 +30,14 @@ TEST_CASE("face_halo_counts matches create_recv_halo per direction",
 
 TEST_CASE("face_halo_counts_analytic matches pattern-based counts",
           "[halo][layout]") {
-  auto world = world::create(GridSize({32, 48, 16}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto domain = pfc::domain::create(Int3{32, 48, 16});
+  auto decomp = decomposition::create(domain, {2, 1, 1});
   const int rank = 0;
   const int hw = 1;
-  auto local = world::get_size(decomposition::get_subworld(decomp, rank));
+  auto local_box = decomposition::local_box(decomp, rank);
+  Int3 local = {local_box.high[0] - local_box.low[0] + 1,
+                local_box.high[1] - local_box.low[1] + 1,
+                local_box.high[2] - local_box.low[2] + 1};
   auto fc = halo::face_halo_counts(decomp, rank, hw);
   auto an = halo::face_halo_counts_analytic(local[0], local[1], local[2], hw);
   bool counts_match = true;
@@ -44,8 +48,8 @@ TEST_CASE("face_halo_counts_analytic matches pattern-based counts",
 }
 
 TEST_CASE("allocate_face_halos sizes", "[halo][layout]") {
-  auto world = world::create(GridSize({16, 16, 16}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 2, 2});
+  auto domain = pfc::domain::create(Int3{16, 16, 16});
+  auto decomp = decomposition::create(domain, {2, 2, 2});
   const int rank = 0;
   const int hw = 1;
   auto bufs = halo::allocate_face_halos<double>(decomp, rank, hw);

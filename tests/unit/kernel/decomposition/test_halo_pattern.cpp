@@ -10,6 +10,7 @@
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
@@ -19,8 +20,8 @@
 using namespace pfc;
 
 TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
-  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 2, 1}); // 2×2×1 = 4 ranks
+  auto domain = pfc::domain::create(Int3{64, 64, 64});
+  auto decomp = decomposition::create(domain, {2, 2, 1}); // 2×2×1 = 4 ranks
 
   int rank = 0;
   int halo_width = 1;
@@ -34,8 +35,10 @@ TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
 
   // Verify indices are valid local indices (spot check)
   auto indices = sparsevector::get_index(send_halo);
-  auto local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
+  auto local_box = decomposition::local_box(decomp, rank);
+  Int3 local_size = {local_box.high[0] - local_box.low[0] + 1,
+                     local_box.high[1] - local_box.low[1] + 1,
+                     local_box.high[2] - local_box.low[2] + 1};
   size_t local_total = static_cast<size_t>(local_size[0]) *
                        static_cast<size_t>(local_size[1]) *
                        static_cast<size_t>(local_size[2]);
@@ -49,8 +52,8 @@ TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
 }
 
 TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
-  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 2, 1});
+  auto domain = pfc::domain::create(Int3{64, 64, 64});
+  auto decomp = decomposition::create(domain, {2, 2, 1});
 
   int rank = 0;
   int halo_width = 1;
@@ -64,8 +67,10 @@ TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
 
   // Verify indices are valid (spot check)
   auto indices = sparsevector::get_index(recv_halo);
-  auto local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
+  auto local_box = decomposition::local_box(decomp, rank);
+  Int3 local_size = {local_box.high[0] - local_box.low[0] + 1,
+                     local_box.high[1] - local_box.low[1] + 1,
+                     local_box.high[2] - local_box.low[2] + 1};
   size_t local_total = static_cast<size_t>(local_size[0]) *
                        static_cast<size_t>(local_size[1]) *
                        static_cast<size_t>(local_size[2]);
@@ -79,8 +84,8 @@ TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
 }
 
 TEST_CASE("Send and recv halo have same size", "[halo][pattern]") {
-  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 2, 1});
+  auto domain = pfc::domain::create(Int3{64, 64, 64});
+  auto decomp = decomposition::create(domain, {2, 2, 1});
 
   int rank = 0;
   int halo_width = 1;
@@ -96,8 +101,8 @@ TEST_CASE("Send and recv halo have same size", "[halo][pattern]") {
 }
 
 TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
-  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 2, 1});
+  auto domain = pfc::domain::create(Int3{64, 64, 64});
+  auto decomp = decomposition::create(domain, {2, 2, 1});
 
   int rank = 0;
   int halo_width = 1;
@@ -120,8 +125,8 @@ TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
 }
 
 TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
-  auto world = world::create(GridSize({64, 64, 64}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 2, 1});
+  auto domain = pfc::domain::create(Int3{64, 64, 64});
+  auto decomp = decomposition::create(domain, {2, 2, 1});
 
   int rank = 0;
   int halo_width = 1;
@@ -131,8 +136,10 @@ TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
       halo::create_send_halo<backend::CpuTag>(decomp, rank, direction, halo_width);
 
   // Create local field
-  auto local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
+  auto local_box = decomposition::local_box(decomp, rank);
+  Int3 local_size = {local_box.high[0] - local_box.low[0] + 1,
+                     local_box.high[1] - local_box.low[1] + 1,
+                     local_box.high[2] - local_box.low[2] + 1};
   size_t local_total = static_cast<size_t>(local_size[0]) *
                        static_cast<size_t>(local_size[1]) *
                        static_cast<size_t>(local_size[2]);
@@ -168,8 +175,8 @@ TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
 TEST_CASE("create_send_halo throws when active axis thinner than halo_width",
           "[halo][pattern]") {
   // Global 8³ with 8×1×1 ranks → local nx=1; hw=2 cannot fit on +X.
-  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
-  auto decomp = decomposition::create(world, {8, 1, 1});
+  auto domain = pfc::domain::create(Int3{8, 8, 8});
+  auto decomp = decomposition::create(domain, {8, 1, 1});
   const int rank = 0;
   const int halo_width = 2;
   const Int3 direction = {1, 0, 0};
@@ -191,8 +198,8 @@ TEST_CASE("create_send_halo throws when active axis thinner than halo_width",
 
 TEST_CASE("create_recv_halo throws when active axis thinner than halo_width",
           "[halo][pattern]") {
-  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
-  auto decomp = decomposition::create(world, {8, 1, 1});
+  auto domain = pfc::domain::create(Int3{8, 8, 8});
+  auto decomp = decomposition::create(domain, {8, 1, 1});
   const int rank = 0;
   const int halo_width = 2;
   const Int3 direction = {1, 0, 0};
@@ -214,8 +221,8 @@ TEST_CASE("create_recv_halo throws when active axis thinner than halo_width",
 
 TEST_CASE("create_send_halo allows flat inactive axis (nz==1, ±X only)",
           "[halo][pattern]") {
-  auto world = world::create(GridSize({16, 8, 1}).to_vector3());
-  auto decomp = decomposition::create(world, {2, 1, 1});
+  auto domain = pfc::domain::create(Int3{16, 8, 1});
+  auto decomp = decomposition::create(domain, {2, 1, 1});
   REQUIRE_NOTHROW(halo::create_send_halo<backend::CpuTag>(
       decomp, 0, Int3{1, 0, 0}, 1));
   REQUIRE_NOTHROW(halo::create_recv_halo<backend::CpuTag>(
