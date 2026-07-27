@@ -86,7 +86,7 @@ TEST_CASE("Domain regression test PE: per-axis periodicity affects spacing calcu
   }
 
   SECTION("Domain periodicity flags are accessible and correct") {
-    const Domain d1 = domain::create(pfc::GridSize({64, 32, 16})); // Default: all periodic
+    const Domain d1 = domain::create(pfc::GridSize({64, 32, 16}).to_vector3()); // Default: all periodic
     REQUIRE(domain::get_periodic(d1) == Bool3{true, true, true});
 
     const Domain d2 = domain::with_spacing({8, 8, 8}, {1.0, 1.0, 1.0},

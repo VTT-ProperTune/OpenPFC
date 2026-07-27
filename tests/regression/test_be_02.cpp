@@ -16,7 +16,10 @@
 #include <openpfc/kernel/data/domain.hpp>
 
 using pfc::Domain;
+using pfc::GridSize;
+using pfc::GridSpacing;
 using pfc::Int3;
+using pfc::PhysicalOrigin;
 using pfc::Real3;
 
 // Domain namespace helpers
@@ -32,7 +35,7 @@ TEST_CASE("Domain regression test PF: coordinate rounding uses nearest-grid roun
   const Int3 dimensions = {100, 100, 100};
   const Real3 origin = {0.0, 0.0, 0.0};
   const Real3 spacing = {1.0, 1.0, 1.0};
-  const Domain d = domain::create(dimensions, origin, spacing);
+  const Domain d = domain::create(GridSize(dimensions), PhysicalOrigin(origin), GridSpacing(spacing));
 
   SECTION("Standard nearest-grid rounding behavior") {
     // 10.6 must round up to 11 (truncation would wrongly give 10);

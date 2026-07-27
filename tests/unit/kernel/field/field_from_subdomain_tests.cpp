@@ -117,7 +117,7 @@ void verify_field_parity_with_padded_brick(const decomposition::Decomposition& d
 
 TEST_CASE("field_from_subdomain: parity with LocalField (halo=0)", "[field_factory][unit]") {
   const int nx = 8, ny = 6, nz = 4;
-  auto world = world::create(GridSize({nx, ny, nz}));
+  auto world = world::create(GridSize({nx, ny, nz}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   verify_field_parity_with_local_field<double>(decomp, 0);
@@ -127,7 +127,7 @@ TEST_CASE("field_from_subdomain: parity with LocalField (halo=0)", "[field_facto
 TEST_CASE("field_from_subdomain: parity with LocalField for multiple ranks",
           "[field_factory][unit]") {
   const int nx = 12, ny = 8, nz = 6;
-  auto world = world::create(GridSize({nx, ny, nz}));
+  auto world = world::create(GridSize({nx, ny, nz}).to_vector3());
   auto decomp = decomposition::create(world, 4); // 4 ranks
 
   for (int rank = 0; rank < 4; ++rank) {
@@ -137,7 +137,7 @@ TEST_CASE("field_from_subdomain: parity with LocalField for multiple ranks",
 
 TEST_CASE("field_from_subdomain: parity with PaddedBrick (halo=n)", "[field_factory][unit]") {
   const int nx = 8, ny = 6, nz = 4;
-  auto world = world::create(GridSize({nx, ny, nz}));
+  auto world = world::create(GridSize({nx, ny, nz}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   for (int halo : {0, 1, 2, 3}) {
@@ -149,7 +149,7 @@ TEST_CASE("field_from_subdomain: parity with PaddedBrick (halo=n)", "[field_fact
 TEST_CASE("field_from_subdomain: parity with PaddedBrick for multiple ranks",
           "[field_factory][unit]") {
   const int nx = 12, ny = 8, nz = 6;
-  auto world = world::create(GridSize({nx, ny, nz}));
+  auto world = world::create(GridSize({nx, ny, nz}).to_vector3());
   auto decomp = decomposition::create(world, 8); // 8 ranks
 
   for (int rank = 0; rank < 8; ++rank) {
@@ -160,7 +160,7 @@ TEST_CASE("field_from_subdomain: parity with PaddedBrick for multiple ranks",
 
 TEST_CASE("field_from_subdomain: rejects negative halo", "[field_factory][unit]") {
   const int nx = 8, ny = 6, nz = 4;
-  auto world = world::create(GridSize({nx, ny, nz}));
+  auto world = world::create(GridSize({nx, ny, nz}).to_vector3());
   auto decomp = decomposition::create(world, 1);
 
   REQUIRE_THROWS_AS(pfc::data::field_from_subdomain<double>(decomp, 0, -1),
