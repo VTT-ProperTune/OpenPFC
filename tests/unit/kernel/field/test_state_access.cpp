@@ -14,6 +14,7 @@
 #include <openpfc/kernel/field/validation.hpp>
 #include <openpfc/kernel/integrator/stage_context.hpp>
 #include <openpfc/kernel/integrator/workspace.hpp>
+#include <openpfc/domain/create.hpp>
 
 using namespace pfc::field;
 using Catch::Approx;
@@ -384,9 +385,13 @@ TEST_CASE("Aliasing allows documented ScaledField pattern", "[field][state_acces
     // LocalField value ctor is private; construct via from_subdomain only.
     // In-place axpy `u += dt * du` uses ScaledField and must not route through
     // FieldOutput::validate_no_alias (documented exception to alias rejection).
-    auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
-                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+    pfc::Int3 size{4, 4, 4};
+    pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
+                                             pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                             pfc::GridSpacing({1.0, 1.0, 1.0}));
+    pfc::Int3 lower{0, 0, 0};
+    pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
+    pfc::World world(lower, upper, domain);
     auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
     auto u = pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/0);
     auto du = pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/0);
