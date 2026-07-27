@@ -9,7 +9,8 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <wave2d/wave_model.hpp>
 
@@ -58,7 +59,7 @@ double v_exact(double x, double y, double t) {
   return c * x_shifted / (sigma * sigma) * u_exact(x, y, t);
 }
 
-double compute_l2_error(const pfc::field::LocalField<double> &field,
+double compute_l2_error(const pfc::data::Field<double> &field,
                         double t,
                         double (*exact)(double, double, double)) {
   const auto &spacing = field.spacing();
@@ -102,8 +103,8 @@ TEST_CASE("WaveModel multi-field Gaussian pulse convergence") {
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
 
   auto run_with_dt = [&](double dt) -> double {
-    auto u_field = pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, halo_width);
-    auto v_field = pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, halo_width);
+    auto u_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
+    auto v_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
 
     u_field.apply([&](double x, double y, double z) -> double {
       return u_exact(x, y, 0.0);
@@ -155,8 +156,8 @@ TEST_CASE("WaveModel multi-field factory workflow") {
                                    pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
 
-  auto u_field = pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, halo_width);
-  auto v_field = pfc::field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, halo_width);
+  auto u_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
+  auto v_field = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, halo_width);
 
   u_field.apply([&](double x, double y, double z) -> double {
     return u_exact(x, y, 0.0);

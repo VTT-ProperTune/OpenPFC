@@ -56,6 +56,7 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
@@ -319,10 +320,11 @@ template <class Eval, class Model>
  * @param dt     Time-step size.
  */
 template <class T, class Eval, class Model>
-[[nodiscard]] auto create(const pfc::field::LocalField<T> &u, Eval &eval,
+[[nodiscard]] auto create(const pfc::data::Field<T> &u, Eval &eval,
                           const Model &model, double dt) {
   return create(eval, model, dt, u.size());
 }
+
 
 /**
  * @brief Multi-field overload: build a `MultiEulerStepper` from a tuple of
@@ -343,7 +345,7 @@ template <class T, class Eval, class Model>
  * @param dt      Time-step size.
  */
 template <class... Ts, class Eval, class Model>
-[[nodiscard]] auto create(std::tuple<pfc::field::LocalField<Ts> &...> fields,
+[[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields,
                           Eval &eval, const Model &model, double dt) {
   constexpr std::size_t N = sizeof...(Ts);
   std::array<std::size_t, N> sizes{};
@@ -361,5 +363,6 @@ template <class... Ts, class Eval, class Model>
   };
   return MultiEulerStepper<decltype(rhs), N>(dt, sizes, std::move(rhs));
 }
+
 
 } // namespace pfc::sim::steppers

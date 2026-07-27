@@ -88,6 +88,7 @@
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 
 namespace pfc::gradient {
@@ -472,12 +473,20 @@ template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
  *         `u.halo_width()` is strictly less than the required stencil
  *         half-width.
  */
-// Forward declaration for backward compatibility
-template <class T> class LocalField;
-
 template <class G>
 [[nodiscard]] inline FdGradient<G> create(const pfc::data::Field<double> &u,
                                           int order = 2) {
+  // Unpadded Field (storage_halo==0) is the LocalField face-halo layout:
+  // tightly packed nx*ny*nz with iteration halo in u.halo_width().
+  // Padded Field (storage_halo>0) must use create(PaddedBrick) / FDGradient
+  // over a padded brick — this factory indexes a tightly packed core.
+  if (u.storage_halo() != 0) {
+    throw std::invalid_argument(
+        "pfc::field::create(Field): padded Field (storage_halo>0) is not "
+        "supported by the unpadded FdGradient factory; use create(PaddedBrick) "
+        "or construct FDGradient from a padded brick, or allocate Field with "
+        "storage_halo=0 for the face-halo / LocalField layout");
+  }
   const auto sz = u.local_size();
   const auto sp = u.spacing();
   return FdGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],

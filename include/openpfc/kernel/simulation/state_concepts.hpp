@@ -11,7 +11,7 @@
  * These concepts define the minimum semantic requirements for scalar and
  * coupled real/complex field state and integrator workspace access. They are
  * evidence-driven concepts based on existing field implementations
- * (LocalField<T>, PaddedBrick<T>) and enable compile-time validation of
+ * (Field<T>, PaddedBrick<T>) and enable compile-time validation of
  * read/write access, shape compatibility, and aliasing safety.
  *
  * The concepts enforce:

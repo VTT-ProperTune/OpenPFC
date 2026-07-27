@@ -1,3 +1,4 @@
+#include <openpfc/kernel/field/field_factory.hpp>
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -200,20 +201,20 @@ TEST_CASE("Heat3D time integration pattern", "[field][heat3d_evidence]") {
 /**
  * @brief Document migration path from LocalField to FieldView
  *
- * Scalar migration: wrap owning `LocalField<T>` storage in a non-owning
+ * Scalar migration: wrap owning `Field<T>` storage in a non-owning
  * `FieldView<T>` for operator inputs, and use `FieldOutput<T>` for RHS
  * buffers. Geometry comes from extents/spacing/origin accessors.
  */
 TEST_CASE("Heat3D migration path from LocalField to FieldView", "[field][heat3d_evidence]") {
     // Old pattern (LocalField owning storage):
-    // LocalField<double> u = LocalField<double>::from_subdomain(decomp, rank, halo_width);
+    // Field<double> u = pfc::data::field_from_subdomain<double>(decomp, rank, /*halo=*/0);
     // const double* u_data = u.data();
     // Int3 u_size = u.size3();
     // Real3 u_spacing = u.spacing();
     // Real3 u_origin = u.origin();
 
     // New pattern (FieldView / FieldOutput contracts):
-    // LocalField<double> u_local = LocalField<double>::from_subdomain(decomp, rank, halo_width);
+    // Field<double> u_local = pfc::data::field_from_subdomain<double>(decomp, rank, /*halo=*/0);
     // FieldView<double> u_view(u_local.data(), u_local.size(), u_local.size3(),
     //                          u_local.spacing(), u_local.origin());
     // std::vector<double> du_storage(u_local.size());

@@ -35,7 +35,8 @@
 
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 namespace heat3d {
 
@@ -109,7 +110,7 @@ public:
    * @param dt  Time-step size.
    */
   SpectralHeatPropagator(pfc::fft::IFFT &fft,
-                         const pfc::field::LocalField<double> &u, double D,
+                         const pfc::data::Field<double> &u, double D,
                          double dt)
       : m_fft(fft), m_psi_F(fft.size_outbox()), m_opL(fft.size_outbox()) {
     const auto size = u.global_size();
@@ -142,7 +143,7 @@ public:
   }
 
   /** Advance `u` by one implicit-Euler step (1 fwd FFT + 1 inv FFT). */
-  void step(pfc::field::LocalField<double> &u) {
+  void step(pfc::data::Field<double> &u) {
     m_fft.forward(u.vec(), m_psi_F);
     for (std::size_t k = 0; k < m_psi_F.size(); ++k) m_psi_F[k] *= m_opL[k];
     m_fft.backward(m_psi_F, u.vec());

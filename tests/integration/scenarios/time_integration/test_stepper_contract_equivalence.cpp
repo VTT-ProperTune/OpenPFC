@@ -5,9 +5,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
@@ -62,7 +64,7 @@ double compute_local_max_diff(const std::vector<double>& u1,
 }
 
 // Helper: apply Gaussian initial condition u(x,y,z) = exp(-r²/(4D))
-void apply_gaussian_initial_condition(field::LocalField<double>& u, double D) {
+void apply_gaussian_initial_condition(data::Field<double>& u, double D) {
   u.apply([&](double x, double y, double z) {
     double r2 = x * x + y * y + z * z;
     return std::exp(-r2 / (4.0 * D));
@@ -80,7 +82,7 @@ TEST_CASE("Manual explicit Euler with spectral gradients",
   auto world = world::uniform(32, 1.0);
   auto decomp = decomposition::create(world, size);
   auto fft = fft::create(decomp);
-  auto u = field::LocalField<double>::from_inbox(world, fft.get_inbox_bounds());
+  auto u = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
 
   // Parameters
   const double D = 1.0;
@@ -141,7 +143,7 @@ TEST_CASE("EulerStepper infrastructure with spectral gradients",
   auto world = world::uniform(32, 1.0);
   auto decomp = decomposition::create(world, size);
   auto fft = fft::create(decomp);
-  auto u = field::LocalField<double>::from_inbox(world, fft.get_inbox_bounds());
+  auto u = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
 
   // Parameters
   const double D = 1.0;
@@ -205,7 +207,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   const int steps = 10;
 
   // Manual implementation
-  auto u_manual = field::LocalField<double>::from_inbox(world, fft.get_inbox_bounds());
+  auto u_manual = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
   apply_gaussian_initial_condition(u_manual, D);
   auto grad_manual = field::create<DiffusionGrads>(u_manual, fft);
   std::vector<double> du_manual(u_manual.size(), 0.0);
@@ -220,7 +222,7 @@ TEST_CASE("Stepper contract equivalence: manual vs infrastructure",
   }
 
   // Infrastructure implementation
-  auto u_infra = field::LocalField<double>::from_inbox(world, fft.get_inbox_bounds());
+  auto u_infra = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
   apply_gaussian_initial_condition(u_infra, D);
   auto grad_infra = field::create<DiffusionGrads>(u_infra, fft);
   auto stepper = pfc::sim::steppers::create(u_infra, grad_infra, model, dt);

@@ -61,9 +61,42 @@ Field<T, HostSpace> field_from_subdomain(const decomposition::Decomposition& dec
   if (halo < 0) {
     throw std::invalid_argument("halo must be non-negative");
   }
+  // PaddedBrick-compatible: storage padding == iteration halo.
   return Field<T, HostSpace>(decomposition::domain(decomp),
                               decomposition::local_box(decomp, rank),
                               halo);
+}
+
+/**
+ * @brief LocalField-compatible factory: unpadded storage + iteration halo.
+ *
+ * Storage is tightly packed `nx*ny*nz` (face-halos live elsewhere). The
+ * `iteration_halo` is exposed via `Field::halo_width()` / `for_each_interior`,
+ * matching `LocalField::from_subdomain(decomp, rank, halo_width)`.
+ */
+template <typename T>
+Field<T, HostSpace>
+field_from_subdomain_unpadded(const decomposition::Decomposition &decomp,
+                              int rank, int iteration_halo = 0) {
+  if (iteration_halo < 0) {
+    throw std::invalid_argument("iteration_halo must be non-negative");
+  }
+  return Field<T, HostSpace>(decomposition::domain(decomp),
+                              decomposition::local_box(decomp, rank),
+                              /*storage_halo=*/0, iteration_halo);
+}
+
+/**
+ * @brief Create an unpadded Field from an FFT inbox box + global Domain.
+ *
+ * LocalField-compatible replacement for `LocalField::from_inbox(world, inbox)`.
+ * Spectral apps use halo=0 (no per-rank halos in the inbox layout).
+ */
+template <typename T>
+Field<T, HostSpace> field_from_inbox(const pfc::Domain &domain,
+                                     const pfc::Box3i &inbox) {
+  return Field<T, HostSpace>(domain, inbox, /*storage_halo=*/0,
+                              /*iteration_halo=*/0);
 }
 
 } // namespace pfc::data

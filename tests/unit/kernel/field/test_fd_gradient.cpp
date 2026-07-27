@@ -35,10 +35,11 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 using Catch::Approx;
-using pfc::field::LocalField;
+using pfc::data::Field;
 
 namespace {
 
@@ -62,12 +63,13 @@ struct OnlyX {
   double x{};
 };
 
-LocalField<double> make_field(int N, int hw) {
+Field<double> make_field(int N, int hw) {
   auto world = pfc::world::create(pfc::GridSize({N, N, N}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-  return LocalField<double>::from_subdomain(decomp, /*rank=*/0, hw);
+  // LocalField-compatible: unpadded storage + iteration halo metadata.
+  return pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, hw);
 }
 
 } // namespace

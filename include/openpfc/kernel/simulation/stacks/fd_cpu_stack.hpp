@@ -5,7 +5,7 @@
 
 /**
  * @file fd_cpu_stack.hpp
- * @brief One-shot bundle of `Domain + Decomposition + LocalField + face_halos
+ * @brief One-shot bundle of `Domain + Decomposition + Field + face_halos
  *        + SparseHaloExchanger` for finite-difference CPU solvers.
  *
  * @details
@@ -22,8 +22,10 @@
  *    produced by `pfc::halo::make_structured_halos<double>(...)`; it owns
  *    the index/data buffers internally and only needs `m_comm` and rank
  *    after construction.
- *  - `m_u` is sized to the local subdomain with a halo of
- *    `halo_width = fd_order / 2` (the standard central-difference halo).
+ *  - `m_u` is an unpadded `pfc::data::Field<double>` (halo=0) sized to the
+ *    local subdomain. Face-halo data lives in `m_face_halos` (the legacy
+ *    LocalField face-halo layout). Iteration halo width is `fd_order / 2`,
+ *    applied when building the FD evaluator — not as Field storage padding.
  *
  * `exchange_halos()` is the one-line wrapper every FD time-stepping
  * loop calls each step. Keeping it on the stack means the application
@@ -48,6 +50,7 @@
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
@@ -55,7 +58,8 @@
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/field/scaled_field.hpp>
 #include <openpfc/kernel/simulation/du_field.hpp>
 
 namespace pfc::sim::stacks {
@@ -72,7 +76,7 @@ struct FDGeometry {
 
 /**
  * @brief Programmatic FD periodic CPU stack: Domain + Decomposition +
- *        halo-aware LocalField + face-halo buffers + halo exchanger.
+ *        unpadded Field + face-halo buffers + halo exchanger.
  */
 class FdCpuStack {
 public:
@@ -88,8 +92,9 @@ public:
                       int nproc, MPI_Comm comm = MPI_COMM_WORLD)
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
-        m_u(pfc::field::LocalField<double>::from_subdomain(m_decomp, rank,
-                                                           fd_order / 2)),
+        // Unpadded Field + iteration halo: face-halos live in m_face_halos.
+        m_u(pfc::data::field_from_subdomain_unpadded<double>(m_decomp, rank,
+                                                            fd_order / 2)),
         m_face_halos(
             pfc::halo::allocate_face_halos<double>(m_decomp, rank, fd_order / 2)),
         m_exchanger(
@@ -186,8 +191,8 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] pfc::field::LocalField<double> &u() noexcept { return m_u; }
-  [[nodiscard]] const pfc::field::LocalField<double> &u() const noexcept {
+  [[nodiscard]] pfc::data::Field<double> &u() noexcept { return m_u; }
+  [[nodiscard]] const pfc::data::Field<double> &u() const noexcept {
     return m_u;
   }
 
@@ -217,7 +222,7 @@ public:
 private:
   FDGeometry m_geometry;
   pfc::decomposition::Decomposition m_decomp;
-  pfc::field::LocalField<double> m_u;
+  pfc::data::Field<double> m_u;
   std::array<std::vector<double>, 6> m_face_halos;
   pfc::SparseHaloExchanger<double> m_exchanger;
   int m_fd_order{2};

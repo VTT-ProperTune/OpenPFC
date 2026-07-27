@@ -25,6 +25,8 @@
  */
 
 #include <cstddef>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -65,6 +67,33 @@ inline ScaledField operator*(double alpha, const pfc::data::Field<double> &f) no
       f.origin()
   );
   return ScaledField{alpha, std::move(view)};
+}
+
+/**
+ * @brief In-place axpy: `lhs += s.alpha * s.data[0..s.size)`.
+ *
+ * Enables `u += dt * du;` when `u` is a `pfc::data::Field<double>`.
+ */
+inline pfc::data::Field<double> &
+operator+=(pfc::data::Field<double> &lhs, const ScaledField &s) {
+  if (s.size() != lhs.size()) {
+    throw std::invalid_argument(
+        "pfc::data::Field::operator+=: ScaledField size " +
+        std::to_string(s.size()) + " does not match field size " +
+        std::to_string(lhs.size()));
+  }
+  const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(lhs.size());
+  const double alpha = s.alpha;
+  const double *src = s.data();
+  double *dst = lhs.data();
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static)
+#endif
+  for (std::ptrdiff_t i = 0; i < n; ++i) {
+    dst[i] += alpha * src[i];
+  }
+  lhs.note_host_write();
+  return lhs;
 }
 
 } // namespace pfc::field

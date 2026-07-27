@@ -4,14 +4,15 @@
 #include <vector>
 
 #include <openpfc/kernel/field/field_accessor_concept.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 using pfc::field::FieldAccessor;
-using pfc::field::LocalField;
+using pfc::data::Field;
 
 void test_local_field_satisfies_concept() {
-  static_assert(FieldAccessor<LocalField<double>>);
-  static_assert(FieldAccessor<LocalField<float>>);
+  static_assert(FieldAccessor<Field<double>>);
+  static_assert(FieldAccessor<Field<float>>);
 }
 
 // std::vector<double> is deliberately NOT tested here: it has both size()

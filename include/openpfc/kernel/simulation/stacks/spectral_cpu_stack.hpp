@@ -5,7 +5,7 @@
 
 /**
  * @file spectral_cpu_stack.hpp
- * @brief One-shot bundle of `Domain + Decomposition + CpuFft + LocalField` for
+ * @brief One-shot bundle of `Domain + Decomposition + CpuFft + Field` for
  *        spectral CPU solvers driven programmatically (no JSON / `App`).
  *
  * @details
@@ -22,8 +22,8 @@
  *    Domain and stored internally.
  *  - Decomposition is created directly from Domain.
  *  - `pfc::fft::CpuFft` internally caches a `Decomposition`.
- *  - `pfc::field::LocalField<double>` is sized to the FFT's local
- *    real-space inbox via `LocalField::from_inbox_domain(domain, fft.get_inbox_bounds())`.
+ *  - `pfc::data::Field<double>` is sized to the FFT's local real-space
+ *    inbox via `pfc::data::field_from_inbox(domain, fft.get_inbox_bounds())`.
  *
  * The class is **non-copyable, non-movable** for the same reason as
  * `pfc::ui::SpectralCpuStack`: a copy or move of the bundle would leave
@@ -37,13 +37,15 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/field/scaled_field.hpp>
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/simulation/du_field.hpp>
 
@@ -61,7 +63,7 @@ struct SpectralGeometry {
 
 /**
  * @brief Programmatic spectral CPU stack: Domain + Decomposition + CpuFft +
- *        LocalField sized to the FFT inbox.
+ *        Field sized to the FFT inbox.
  */
 class SpectralCpuStack {
 public:
@@ -77,12 +79,7 @@ public:
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
         m_fft(pfc::fft::create(m_decomp, comm)),
-        m_u(pfc::field::LocalField<double>::from_inbox(
-            pfc::World(pfc::Int3{0, 0, 0},
-                       pfc::Int3{domain.size[0] - 1, domain.size[1] - 1,
-                                  domain.size[2] - 1},
-                       domain),
-            m_fft.get_inbox_bounds())),
+        m_u(pfc::data::field_from_inbox<double>(domain, m_fft.get_inbox_bounds())),
         m_rank(rank), m_nproc(nproc), m_comm(comm) {}
 
   /**
@@ -137,8 +134,8 @@ public:
   [[nodiscard]] pfc::fft::CpuFft &fft() noexcept { return m_fft; }
   [[nodiscard]] const pfc::fft::CpuFft &fft() const noexcept { return m_fft; }
 
-  [[nodiscard]] pfc::field::LocalField<double> &u() noexcept { return m_u; }
-  [[nodiscard]] const pfc::field::LocalField<double> &u() const noexcept {
+  [[nodiscard]] pfc::data::Field<double> &u() noexcept { return m_u; }
+  [[nodiscard]] const pfc::data::Field<double> &u() const noexcept {
     return m_u;
   }
 
@@ -177,7 +174,7 @@ private:
   SpectralGeometry m_geometry;
   pfc::decomposition::Decomposition m_decomp;
   pfc::fft::CpuFft m_fft;
-  pfc::field::LocalField<double> m_u;
+  pfc::data::Field<double> m_u;
   int m_rank{0};
   int m_nproc{1};
   MPI_Comm m_comm{MPI_COMM_WORLD};

@@ -52,6 +52,7 @@
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/local_field.hpp>
 
 namespace pfc::field {
 
@@ -247,15 +248,12 @@ private:
  * @return A `SpectralGradient<G>` ready to be passed to
  *         `pfc::sim::for_each_interior` (or `pfc::sim::steppers::create`).
  */
-// Forward declaration for backward compatibility compatibility
-template <class T> class LocalField;
-
 template <class G>
 [[nodiscard]] inline SpectralGradient<G> create(pfc::data::Field<double> &u,
                                                 pfc::fft::IFFT &fft) {
-  // Create a temporary std::vector for FFT compatibility (TODO: remove when FFT interface supports DataBuffer)
-  std::vector<double> u_vec(u.data(), u.data() + u.size());
-  return SpectralGradient<G>(fft, u_vec, u.domain().size, u.spacing(),
+  // Bind the live host vector (DataBuffer::as_vector) — a temporary would
+  // dangle because SpectralGradient stores a pointer to the RealVector.
+  return SpectralGradient<G>(fft, u.vec(), u.global_size(), u.spacing(),
                              fft.get_inbox_bounds(), fft.get_outbox_bounds());
 }
 

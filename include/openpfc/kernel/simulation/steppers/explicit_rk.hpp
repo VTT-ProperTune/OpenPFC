@@ -49,6 +49,7 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
@@ -341,11 +342,12 @@ template <class Eval, class Model>
  * @param tableau Butcher tableau defining the RK method coefficients.
  */
 template <class T, class Eval, class Model>
-[[nodiscard]] auto create(const pfc::field::LocalField<T> &u, Eval &eval,
+[[nodiscard]] auto create(const pfc::data::Field<T> &u, Eval &eval,
                           const Model &model, double dt,
                           const ButcherTableau<double> &tableau) {
   return create(eval, model, dt, u.size(), tableau);
 }
+
 
 /**
  * @brief Multi-field overload: build a `MultiExplicitRKStepper` from a tuple of
@@ -366,7 +368,7 @@ template <class T, class Eval, class Model>
  * @param tableau Butcher tableau defining the RK method coefficients.
  */
 template <class... Ts, class Eval, class Model>
-[[nodiscard]] auto create(std::tuple<pfc::field::LocalField<Ts> &...> fields,
+[[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields,
                           Eval &eval, const Model &model, double dt,
                           const ButcherTableau<double> &tableau) {
   constexpr std::size_t N = sizeof...(Ts);
@@ -386,5 +388,6 @@ template <class... Ts, class Eval, class Model>
   return MultiExplicitRKStepper<decltype(rhs), N>(dt, sizes, tableau,
                                                   std::move(rhs));
 }
+
 
 } // namespace pfc::sim::steppers

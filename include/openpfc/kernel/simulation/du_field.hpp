@@ -10,7 +10,7 @@
  *
  * @details
  * `pfc::sim::DuField<G, Eval>` is the **stack-friendly** entry point for
- * compact time loops that work on a `LocalField<double>` (FFT-safe core
+ * compact time loops that work on a `Field<double>` (FFT-safe core
  * + sparse face halos for FD, or pure spectral inboxes):
  *
  *     du.apply([](const G& g) { return ...physics... });   // hot path
@@ -46,7 +46,7 @@
  * This is the teaching counterpart to `pfc::sim::steppers::EulerStepper`,
  * which packages the same machinery for non-trivial multi-field models
  * (`apps/kobayashi`, `apps/pfc-1`). For single-field explicit-Euler
- * problems on a `LocalField`, the laboratory form here keeps the Euler
+ * problems on a `Field`, the laboratory form here keeps the Euler
  * line on the page.
  *
  * Lifetime: a `DuField` is constructed by the stack
@@ -54,9 +54,9 @@
  * captured "prepare parent" lambda holds a pointer into the stack and
  * the evaluator references the parent field's storage.
  *
- * @see openpfc/kernel/field/local_field.hpp and
+ * @see openpfc/kernel/data/grid_field.hpp and
  *      openpfc/kernel/field/padded_brick.hpp for `+=` /
- *      `operator*(double, …)` axpy targets (`LocalField`, `PaddedBrick`).
+ *      `operator*(double, …)` axpy targets (`Field`, `PaddedBrick`).
  * @see openpfc/kernel/simulation/for_each_interior.hpp for the inner
  *      driver loop that `apply()` dispatches to.
  * @see openpfc/kernel/simulation/steppers/euler.hpp for the multi-field
@@ -93,7 +93,7 @@ template <class G, class Eval> class DuField {
 public:
   /**
    * @param local_size       Number of cells in the parent field's
-   *                         `LocalField<double>` storage. The internal
+   *                         `Field<double>` storage. The internal
    *                         `du` buffer is sized to match so layouts
    *                         agree for the `u += dt * du` axpy.
    * @param eval             Per-point evaluator (moved in). The evaluator
@@ -159,7 +159,7 @@ public:
    * @brief Build a `ScaledField` proxy from a scalar and this `DuField`.
    *
    * Enables `u += dt * du;` at the call site by routing through
-   * `LocalField::operator+=(ScaledField)`.
+   * `Field::operator+=(ScaledField)` / free `operator+=`.
    */
   friend pfc::field::ScaledField operator*(double alpha,
                                            const DuField &du) noexcept {

@@ -8,7 +8,8 @@
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/field/validation.hpp>
 #include <openpfc/kernel/integrator/stage_context.hpp>
@@ -387,8 +388,8 @@ TEST_CASE("Aliasing allows documented ScaledField pattern", "[field][state_acces
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
     auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-    auto u = LocalField<double>::from_subdomain(decomp, /*rank=*/0, /*hw=*/0);
-    auto du = LocalField<double>::from_subdomain(decomp, /*rank=*/0, /*hw=*/0);
+    auto u = pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/0);
+    auto du = pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/0);
 
     for (std::size_t i = 0; i < u.size(); ++i) {
         u.data()[i] = 1.0;

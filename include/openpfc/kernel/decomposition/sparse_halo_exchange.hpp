@@ -16,7 +16,7 @@
  *     the CUDA `pfc::cuda::PaddedDeviceHaloExchanger`) for **pure FD** with
  *     a single contiguous `(nx+2hw)*(ny+2hw)*(nz+2hw)` array and negative
  *     halo indexing. This is the **default** for FD-only apps.
- *   - Use `pfc::field::LocalField<T>` (unpadded `nx*ny*nz`) +
+ *   - Use `pfc::data::Field<T>` (unpadded `nx*ny*nz`) +
  *     `pfc::SparseHaloExchanger<T>` for **mixed FD + spectral** (the FFT
  *     does not tolerate halo regions in the data block), **non-axis halos**,
  *     **arbitrary peer/index patterns**, and as the foundation for future

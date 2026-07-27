@@ -53,7 +53,7 @@ struct HeatModel {
 };
 
 // Helper: compute global L2 norm across all ranks
-double compute_l2_norm(const pfc::field::LocalField<double>& u) {
+double compute_l2_norm(const pfc::data::Field<double>& u) {
   double local_sum = 0.0;
   u.for_each_owned([&](double /*x*/, double /*y*/, double /*z*/, double val) {
     local_sum += val * val;

@@ -9,7 +9,8 @@
 
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
 using namespace pfc::sim::steppers;
@@ -274,8 +275,7 @@ TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-  pfc::field::LocalField<double> u = pfc::field::LocalField<double>::from_subdomain(
-      decomp, /*rank=*/0, /*halo_width=*/0);
+  pfc::data::Field<double> u = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
 
   auto tableau = make_rk4_classical<double>();
   auto stepper = create(u, eval, model, dt, tableau);
@@ -323,10 +323,8 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-  pfc::field::LocalField<double> u1 = pfc::field::LocalField<double>::from_subdomain(
-      decomp, /*rank=*/0, /*halo_width=*/0);
-  pfc::field::LocalField<double> u2 = pfc::field::LocalField<double>::from_subdomain(
-      decomp, /*rank=*/0, /*halo_width=*/0);
+  pfc::data::Field<double> u1 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
+  pfc::data::Field<double> u2 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
 
   auto fields = std::tie(u1, u2);
   auto tableau = make_rk4_classical<double>();

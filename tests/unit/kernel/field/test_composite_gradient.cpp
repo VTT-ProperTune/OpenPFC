@@ -34,12 +34,13 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 using Catch::Approx;
 using pfc::field::CompositeGradient;
 using pfc::field::FdGradient;
-using pfc::field::LocalField;
+using pfc::data::Field;
 
 namespace {
 
@@ -70,8 +71,7 @@ TEST_CASE("CompositeGradient fans two heterogeneous FD evaluators into a "
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
 
-  auto u = LocalField<double>::from_subdomain(decomp, /*rank=*/0,
-                                              /*halo_width=*/1);
+  auto u = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo_width=*/1);
 
   // u(x, y, z) = x^2 + y^2 + z^2 ⇒ uxx = uyy = uzz = 2 everywhere.
   u.apply([](double x, double y, double z) { return x * x + y * y + z * z; });

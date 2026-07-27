@@ -82,13 +82,33 @@ public:
    * @brief Construct from the global `Domain`, the local owned index box, and
    *        a halo width. Allocates `prod(size + 2*halo)` zero-initialized cells.
    * @throws std::invalid_argument on a negative halo or an inconsistent box.
+   *
+   * `halo_width` is both the **storage** padding and the default **iteration**
+   * halo (PaddedBrick convention). Prefer the four-argument overload when
+   * migrating unpadded `LocalField` face-halo layouts (storage 0, iteration n).
    */
   Field(const pfc::Domain &domain, const pfc::Box3i &owned_box, int halo_width = 0)
-      : m_domain(domain), m_box(owned_box), m_halo(halo_width),
-        m_buffer(padded_volume_(owned_box, halo_width)) {
+      : Field(domain, owned_box, halo_width, halo_width) {}
+
+  /**
+   * @brief Construct with independent storage padding and iteration halo.
+   *
+   * - `storage_halo` sizes the buffer (`prod(size + 2*storage_halo)`).
+   * - `iteration_halo` is what `halo_width()` / `for_each_interior` report —
+   *   matching `LocalField`'s metadata halo on an unpadded buffer.
+   *
+   * Face-halo FD stacks use `storage_halo=0` and `iteration_halo=order/2`.
+   * PaddedBrick-style fields use equal values for both.
+   */
+  Field(const pfc::Domain &domain, const pfc::Box3i &owned_box, int storage_halo,
+        int iteration_halo)
+      : m_domain(domain), m_box(owned_box), m_halo(storage_halo),
+        m_iteration_halo(iteration_halo),
+        m_buffer(padded_volume_(owned_box, storage_halo)) {
+    if (iteration_halo < 0) {
+      throw std::invalid_argument("Field: iteration halo width must be >= 0");
+    }
     if constexpr (!is_host_space) {
-      // Device-backed field: seed on the host mirror (ICs land there), push to
-      // the device on first device use. See residency.hpp / Audit §4.1.
       m_residency = Residency::device_backed();
       m_host_mirror.assign(m_buffer.size(), T{});
     }
@@ -102,20 +122,53 @@ public:
   storage_type &buffer() noexcept { return m_buffer; }
   const storage_type &buffer() const noexcept { return m_buffer; }
 
+  /**
+   * @brief Host `std::vector` view of the buffer (FFT / legacy APIs).
+   * @note HostSpace only — device-backed fields have no host `std::vector`
+   *       primary storage.
+   */
+  std::vector<T> &vec() {
+    static_assert(is_host_space,
+                  "Field::vec() is only available for HostSpace fields");
+    return m_buffer.as_vector();
+  }
+  const std::vector<T> &vec() const {
+    static_assert(is_host_space,
+                  "Field::vec() is only available for HostSpace fields");
+    return m_buffer.as_vector();
+  }
+
   // ---- geometry ---------------------------------------------------------
   const pfc::Domain &domain() const noexcept { return m_domain; }
   /// Owned (interior) index box, in global index coordinates.
   const pfc::Box3i &box() const noexcept { return m_box; }
-  int halo_width() const noexcept { return m_halo; }
+  /// Storage padding width (cells added on each side of the owned box).
+  int storage_halo() const noexcept { return m_halo; }
+  /**
+   * @brief Iteration / stencil halo (LocalField-compatible).
+   *
+   * For padded fields this equals `storage_halo()`. For unpadded face-halo
+   * layouts it is the metadata width used by `for_each_interior` and
+   * `FdGradient` factories, while storage stays tightly packed.
+   */
+  int halo_width() const noexcept { return m_iteration_halo; }
   /// Per-axis count of owned cells (halo excluded).
   pfc::Int3 local_size() const noexcept { return m_box.size; }
+  /// LocalField-compatible alias of `local_size()`.
+  pfc::Int3 size3() const noexcept { return m_box.size; }
+  /// Global domain extents `{Nx, Ny, Nz}` (LocalField-compatible).
+  pfc::Int3 global_size() const noexcept {
+    return pfc::domain::get_size(m_domain);
+  }
+  /// Global index of local `(0,0,0)` (LocalField-compatible).
+  pfc::Int3 lower_global() const noexcept { return m_box.low; }
   const pfc::Real3 &spacing() const noexcept {
     return pfc::domain::get_spacing(m_domain);
   }
   const pfc::Real3 &origin() const noexcept {
     return pfc::domain::get_origin(m_domain);
   }
-  /// Per-axis padded extent (owned + both halo slabs).
+  /// Per-axis padded extent (owned + both storage-halo slabs).
   int padded_extent(int axis) const noexcept {
     return m_box.size[axis] + 2 * m_halo;
   }
@@ -156,23 +209,86 @@ public:
   }
 
   // ---- iteration --------------------------------------------------------
-  /// Visit every owned cell `(i, j, k)` in x-fastest order.
+  /**
+   * @brief Visit every owned cell in x-fastest order.
+   *
+   * Callable may be any of (auto-detected):
+   *  - `void(int i, int j, int k)`
+   *  - `void(double x, double y, double z, T value)`  (LocalField-compatible)
+   *  - `void(const Real3& x, T value)`                (LocalField-compatible)
+   */
   template <typename Fn> void for_each_owned(Fn &&fn) const {
     const int nx = m_box.size[0];
     const int ny = m_box.size[1];
     const int nz = m_box.size[2];
-    for (int k = 0; k < nz; ++k)
-      for (int j = 0; j < ny; ++j)
-        for (int i = 0; i < nx; ++i) fn(i, j, k);
+    for (int k = 0; k < nz; ++k) {
+      for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+          // Prefer LocalField-compatible coord signatures first: int promotes
+          // to double, so checking (int,int,int) first would mis-dispatch.
+          if constexpr (std::is_invocable_v<Fn &, double, double, double, T>) {
+            const auto c = coords(i, j, k);
+            fn(c[0], c[1], c[2], (*this)(i, j, k));
+          } else if constexpr (std::is_invocable_v<Fn &, const pfc::Real3 &,
+                                                   T>) {
+            fn(coords(i, j, k), (*this)(i, j, k));
+          } else {
+            fn(i, j, k);
+          }
+        }
+      }
+    }
   }
 
-  /// Fill every owned cell by sampling `fn(x, y, z)` at its physical coords.
+  /**
+   * @brief Iterate interior `[hw, n-hw)` per axis (LocalField-compatible).
+   *
+   * Callable may be either of:
+   *  - `void(double x, double y, double z, T value)`
+   *  - `void(const Real3& x, T value)`
+   */
+  template <typename Fn> void for_each_interior(Fn &&fn) const {
+    const int hw = m_iteration_halo;
+    const int nx = m_box.size[0];
+    const int ny = m_box.size[1];
+    const int nz = m_box.size[2];
+    const int imin = hw, imax = nx - hw;
+    const int jmin = hw, jmax = ny - hw;
+    const int kmin = hw, kmax = nz - hw;
+    if (imin >= imax || jmin >= jmax || kmin >= kmax) return;
+    for (int k = kmin; k < kmax; ++k) {
+      for (int j = jmin; j < jmax; ++j) {
+        for (int i = imin; i < imax; ++i) {
+          const auto c = coords(i, j, k);
+          if constexpr (std::is_invocable_v<Fn &, double, double, double, T>) {
+            fn(c[0], c[1], c[2], (*this)(i, j, k));
+          } else {
+            fn(c, (*this)(i, j, k));
+          }
+        }
+      }
+    }
+  }
+
+  /// Fill every owned cell by sampling `fn` at its physical coords.
+  /// Accepts `T(double,double,double)` or `T(const Real3&)`.
   /// A host-side write, so the device copy (if any) is marked stale.
   template <typename Fn> void apply(Fn &&fn) {
-    for_each_owned([&](int i, int j, int k) {
-      const auto c = coords(i, j, k);
-      (*this)(i, j, k) = fn(c[0], c[1], c[2]);
-    });
+    const int nx = m_box.size[0];
+    const int ny = m_box.size[1];
+    const int nz = m_box.size[2];
+    for (int k = 0; k < nz; ++k) {
+      for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+          const auto c = coords(i, j, k);
+          if constexpr (std::is_invocable_v<Fn &, double, double, double>) {
+            (*this)(i, j, k) = fn(c[0], c[1], c[2]);
+          } else {
+            (*this)(i, j, k) = fn(c);
+          }
+        }
+      }
+    }
     m_residency.note_host_write();
   }
 
@@ -182,6 +298,9 @@ public:
 
   /// Record that a device kernel wrote the device buffer (host mirror stale).
   void note_device_write() noexcept { m_residency.note_device_write(); }
+
+  /// Record a host-side write (device mirror stale). Public for axpy helpers.
+  void note_host_write() noexcept { m_residency.note_host_write(); }
 
   /**
    * @brief Push the host mirror to the device buffer when the device copy is
@@ -229,7 +348,8 @@ private:
 
   pfc::Domain m_domain{};
   pfc::Box3i m_box{};
-  int m_halo{0};
+  int m_halo{0};             ///< storage padding
+  int m_iteration_halo{0};   ///< LocalField-compatible stencil / interior halo
   storage_type m_buffer{};
   Residency m_residency{Residency::host_only()};
   // Host mirror for a device-backed field; stays empty for a host-space field.
