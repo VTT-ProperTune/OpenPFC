@@ -44,7 +44,7 @@ using namespace Catch::Matchers;
 TEST_CASE("Aluminum functionality", "[Aluminum]") {
   SECTION("Step model and calculate norm of the result") {
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::world::create({32, 32, 32});
+    auto world = pfc::domain::create_world({32, 32, 32});
     auto decomp = pfc::decomposition::create(world, 1);
     auto fft = pfc::fft::create(decomp);
 

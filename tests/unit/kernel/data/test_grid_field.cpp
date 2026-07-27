@@ -29,7 +29,7 @@ Box3i whole_box(int nx, int ny, int nz) {
 TEST_CASE("Field: idx matches LocalField bit-for-bit (halo 0)",
           "[grid_field][unit]") {
   const int nx = 8, ny = 6, nz = 4;
-  auto world = world::create({nx, ny, nz});
+  auto world = pfc::domain::create_world({nx, ny, nz});
   auto decomp = decomposition::create(world, 1);
   auto lf = field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, 0);
 
@@ -45,7 +45,7 @@ TEST_CASE("Field: idx matches PaddedBrick bit-for-bit across the halo (halo n)",
           "[grid_field][unit]") {
   const int nx = 8, ny = 6, nz = 4;
   const int hw = 2;
-  auto world = world::create({nx, ny, nz});
+  auto world = pfc::domain::create_world({nx, ny, nz});
   auto decomp = decomposition::create(world, 1);
   field::PaddedBrick<double> pb(decomp, /*rank=*/0, hw);
 
@@ -60,7 +60,7 @@ TEST_CASE("Field: idx matches PaddedBrick bit-for-bit across the halo (halo n)",
 
 TEST_CASE("Field: coordinate queries match LocalField", "[grid_field][unit]") {
   const int nx = 5, ny = 5, nz = 5;
-  auto world = world::create({nx, ny, nz});
+  auto world = pfc::domain::create_world({nx, ny, nz});
   auto decomp = decomposition::create(world, 1);
   auto lf = field::LocalField<double>::from_subdomain(decomp, 0, 0);
 

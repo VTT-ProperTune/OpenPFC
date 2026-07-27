@@ -42,7 +42,7 @@ TEST_CASE("World coordinate transformations - microbenchmarks",
   const Real3 origin = {0.0, 0.0, 0.0};
   const Real3 spacing = {0.1, 0.1, 0.1};
   const auto world =
-      world::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+      pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
   // Test indices - use values that prevent compiler optimizations
   volatile int idx_base = 42; // volatile prevents constant folding
@@ -82,7 +82,7 @@ TEST_CASE("World coordinate transformations - microbenchmarks",
 TEST_CASE("World accessor functions - microbenchmarks",
           "[world][accessors][benchmark]") {
   const auto world =
-      world::create(GridSize({128, 128, 128}), PhysicalOrigin({1.0, 2.0, 3.0}),
+      pfc::domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({1.0, 2.0, 3.0}),
                     GridSpacing({0.1, 0.1, 0.1}));
 
   SECTION("get_spacing (all dimensions)") {
@@ -169,7 +169,7 @@ TEST_CASE("Domain direct operations - microbenchmarks", "[domain][benchmark]") {
 TEST_CASE("World operations in loops - realistic usage patterns",
           "[world][loop][benchmark]") {
   const auto world =
-      world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::domain::create_world(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
                     GridSpacing({0.1, 0.1, 0.1}));
   const auto size = get_size(world);
 
@@ -261,7 +261,7 @@ TEST_CASE("World zero-cost abstraction validation",
 
   SECTION("World abstraction (should match baseline)") {
     const auto world =
-        world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+        pfc::domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                       GridSpacing({0.1, 0.1, 0.1}));
     const Int3 indices = {42, 53, 64};
 
@@ -279,7 +279,7 @@ TEST_CASE("World zero-cost abstraction validation",
 TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]") {
   SECTION("Sequential world creation and destruction") {
     BENCHMARK("Create and destroy World (stack)") {
-      auto world = world::create(GridSize({128, 128, 128}),
+      auto world = pfc::domain::create_world(GridSize({128, 128, 128}),
                                  PhysicalOrigin({128.0, 128.0, 128.0}),
                                  GridSpacing({128.0, 128.0, 128.0}));
       return get_total_size(world);
@@ -291,7 +291,7 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
 
   SECTION("World copy performance") {
     const auto world1 =
-        world::create(GridSize({128}), PhysicalOrigin({128}), GridSpacing({128}));
+        pfc::domain::create_world(GridSize({128}), PhysicalOrigin({128}), GridSpacing({128}));
 
     BENCHMARK("Copy World object") {
       auto world2 = world1; // Copy constructor
@@ -304,10 +304,10 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
 
   SECTION("World equality comparison") {
     const auto world1 =
-        world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+        pfc::domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                       GridSpacing({0.1, 0.1, 0.1}));
     const auto world2 =
-        world::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+        pfc::domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                       GridSpacing({0.1, 0.1, 0.1}));
 
     BENCHMARK("World equality comparison") { return world1 == world2; };

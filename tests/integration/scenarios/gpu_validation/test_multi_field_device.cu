@@ -274,7 +274,7 @@ TEST_CASE("test_evaluate_fd_grad_composite",
   REQUIRE(cudaMemcpy(h_out.data(), d_out, total * sizeof(CompEvalOut),
                      cudaMemcpyDeviceToHost) == cudaSuccess);
 
-  auto world = pfc::world::create(pfc::GridSize({nx, ny, nz}),
+  auto world = pfc::domain::create_world(pfc::GridSize({nx, ny, nz}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
@@ -334,7 +334,7 @@ TEST_CASE("test_wave2d_double_field_kernel",
   const double inv_dx2 = 1.0;
   const double inv_dy2 = 1.0;
 
-  auto world = pfc::world::create(pfc::GridSize({nx, ny, nz}),
+  auto world = pfc::domain::create_world(pfc::GridSize({nx, ny, nz}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);
@@ -448,7 +448,7 @@ TEST_CASE("test_kobayashi_double_field_kernel",
   const double dx = 1.0, dy = 1.0, dz = 1.0;
   constexpr double kTeq = 1.0;
 
-  auto world = pfc::world::create(pfc::GridSize({nx, ny, nz}),
+  auto world = pfc::domain::create_world(pfc::GridSize({nx, ny, nz}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);
@@ -543,7 +543,7 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   const int nx = 8, ny = 8, nz = 1;
   const double dx = 1.0, dy = 1.0, dz = 1.0;
 
-  auto world = pfc::world::create(pfc::GridSize({nx, ny, nz}),
+  auto world = pfc::domain::create_world(pfc::GridSize({nx, ny, nz}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);

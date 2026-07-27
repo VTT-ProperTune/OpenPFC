@@ -132,7 +132,7 @@ int main() {
 
   // Traditional way (still works!)
   auto traditional =
-      world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::domain::create_world(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
                     GridSpacing({1.0, 1.0, 1.0}));
 
   // New helper way (cleaner!)

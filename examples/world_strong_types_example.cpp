@@ -149,7 +149,7 @@ int main() {
     Real3 spacing = {1.0, 1.0, 1.0};
 
     // Convert to strong types using explicit factory methods
-    auto world = domain::create_world(GridSize::from_vector3(size),
+    auto world = pfc::domain::create_world(GridSize::from_vector3(size),
                                       PhysicalOrigin::from_vector3(offset),
                                       GridSpacing::from_vector3(spacing));
 

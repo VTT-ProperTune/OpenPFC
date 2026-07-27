@@ -23,7 +23,7 @@ using namespace pfc;
 
 // Utility to create a small test world
 static inline World make_world(int nx, int ny, int nz) {
-  return world::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  return pfc::domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
                        GridSpacing({1.0, 1.0, 1.0}));
 }
 

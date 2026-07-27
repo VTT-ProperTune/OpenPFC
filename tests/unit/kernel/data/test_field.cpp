@@ -21,7 +21,7 @@ static double gaussian(Real3 r) {
 // `const World&` member.
 static field::Field<double> make_field_from_local_world() {
   auto local_world =
-      world::create(GridSize(Int3{6, 5, 4}), PhysicalOrigin(Real3{1.0, 2.0, 3.0}),
+      pfc::domain::create_world(GridSize(Int3{6, 5, 4}), PhysicalOrigin(Real3{1.0, 2.0, 3.0}),
                     GridSpacing(Real3{0.5, 0.25, 0.125}));
   return field::create<double>(local_world);
 }
@@ -37,7 +37,7 @@ TEST_CASE("Field keeps a valid World after its source World is gone", "[field]")
 
 TEST_CASE("Field", "[field]") {
   Int3 size = {8, 8, 8};
-  auto world = world::create(size);
+  auto world = pfc::domain::create_world(size);
   auto f = field::create<double>(world);
 
   SECTION("Field has correct size") {

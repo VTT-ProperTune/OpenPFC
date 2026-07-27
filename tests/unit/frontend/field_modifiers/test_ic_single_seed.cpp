@@ -51,7 +51,7 @@ TEST_CASE("SingleSeed - Parameter Access", "[ic_single_seed]") {
 TEST_CASE("SingleSeed - Field Application", "[ic_single_seed]") {
   // Create domain centered at origin for seed placement
   auto world =
-      world::create(GridSize({16, 16, 16}), PhysicalOrigin({-128.0, -128.0, -128.0}),
+      pfc::domain::create_world(GridSize({16, 16, 16}), PhysicalOrigin({-128.0, -128.0, -128.0}),
                     GridSpacing({16.0, 16.0, 16.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -108,7 +108,7 @@ TEST_CASE("SingleSeed - Field Application", "[ic_single_seed]") {
 
 TEST_CASE("SingleSeed - Integration with Model", "[ic_single_seed]") {
   auto world =
-      world::create(GridSize({8, 8, 8}), PhysicalOrigin({-64.0, -64.0, -64.0}),
+      pfc::domain::create_world(GridSize({8, 8, 8}), PhysicalOrigin({-64.0, -64.0, -64.0}),
                     GridSpacing({16.0, 16.0, 16.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);

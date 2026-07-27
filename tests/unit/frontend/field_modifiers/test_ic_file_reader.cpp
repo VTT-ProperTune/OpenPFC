@@ -55,7 +55,7 @@ TEST_CASE("FileReader - Field Name Assignment", "[ic_file_reader]") {
 }
 
 TEST_CASE("FileReader - Invalid File Handling", "[ic_file_reader]") {
-  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
+  auto world = pfc::domain::create_world(GridSize({8, 8, 8}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithFileReaderIC m(fft, world);
@@ -84,7 +84,7 @@ void create_test_binary_file(const std::string &filename,
 }
 
 TEST_CASE("FileReader - Read Valid File", "[ic_file_reader]") {
-  auto world = world::create(GridSize({4, 4, 4}).to_vector3());
+  auto world = pfc::domain::create_world(GridSize({4, 4, 4}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithFileReaderIC m(fft, world);
@@ -119,7 +119,7 @@ TEST_CASE("FileReader - Read Valid File", "[ic_file_reader]") {
 }
 
 TEST_CASE("FileReader - Integration with Model", "[ic_file_reader]") {
-  auto world = world::create(GridSize({8, 8, 8}).to_vector3());
+  auto world = pfc::domain::create_world(GridSize({8, 8, 8}).to_vector3());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithFileReaderIC model(fft, world);

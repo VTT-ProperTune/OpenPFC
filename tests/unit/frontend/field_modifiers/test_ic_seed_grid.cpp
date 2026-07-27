@@ -78,7 +78,7 @@ TEST_CASE("SeedGrid - Constructor with Parameters", "[ic_seed_grid]") {
 
 TEST_CASE("SeedGrid - Field Application", "[ic_seed_grid]") {
   auto world =
-      world::create(GridSize({32, 32, 32}), PhysicalOrigin({-128.0, -128.0, -128.0}),
+      pfc::domain::create_world(GridSize({32, 32, 32}), PhysicalOrigin({-128.0, -128.0, -128.0}),
                     GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -150,7 +150,7 @@ TEST_CASE("SeedGrid - Field Application", "[ic_seed_grid]") {
 
 TEST_CASE("SeedGrid - Integration with Model", "[ic_seed_grid]") {
   auto world =
-      world::create(GridSize({16, 16, 16}), PhysicalOrigin({-100.0, -100.0, -100.0}),
+      pfc::domain::create_world(GridSize({16, 16, 16}), PhysicalOrigin({-100.0, -100.0, -100.0}),
                     GridSpacing({12.5, 12.5, 12.5}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);

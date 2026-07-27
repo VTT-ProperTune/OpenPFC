@@ -46,7 +46,7 @@ TEST_CASE("RandomSeeds - Parameter Access", "[ic_random_seeds]") {
 TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
   // Create domain matching hardcoded values in RandomSeeds
   auto world =
-      world::create(GridSize({32, 32, 32}), PhysicalOrigin({-128.0, -128.0, -128.0}),
+      pfc::domain::create_world(GridSize({32, 32, 32}), PhysicalOrigin({-128.0, -128.0, -128.0}),
                     GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -113,7 +113,7 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
 
 TEST_CASE("RandomSeeds - Integration with Model", "[ic_random_seeds]") {
   auto world =
-      world::create(GridSize({16, 16, 16}), PhysicalOrigin({-128.0, -128.0, -128.0}),
+      pfc::domain::create_world(GridSize({16, 16, 16}), PhysicalOrigin({-128.0, -128.0, -128.0}),
                     GridSpacing({16.0, 16.0, 16.0}));
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
