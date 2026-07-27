@@ -16,12 +16,16 @@
  *
  * can be written in user code (compact-driver style) and dispatched to a
  * single axpy in field operators. The underlying
- * field types (`pfc::data::Field<double>`, `PaddedBrick<double>`,
+ * field types (`pfc::data::Field<double>`, `LocalField<double>`,
  * `pfc::sim::DuField<G, Eval>`, …) each provide a matching
  * `operator*(double, …)` returning this proxy.
  *
  * Lifetime: the proxy is intended to be a transient temporary on the same
  * statement (`u += dt * du;`).
+ *
+ * Implementation note: ScaledField uses FieldView for lifetime-safe
+ * non-owning access to field data. The view family (FieldView, FieldOutput)
+ * provides the only non-owning surface contract.
  */
 
 #include <cstddef>
@@ -38,13 +42,35 @@ namespace pfc::field {
  * Produced by `operator*(double, const pfc::data::Field<double>&)` and
  * overloads on other field types. Consumed by field operators that
  * support scaled field addition.
+ *
+ * ScaledField stores a FieldView for lifetime-safe non-owning access and
+ * applies a scalar coefficient at access time. All lifetime management is
+ * handled by the FieldView contract.
  */
 struct ScaledField {
     double alpha{0.0};
-    FieldView<double> field_;
+    FieldView<double> field_view;
 
-    const double* data() const noexcept { return field_.data(); }
-    std::size_t size() const noexcept { return field_.size(); }
+    /**
+     * @brief Get const pointer to field data
+     *
+     * @return const double* Pointer to field data (view.data())
+     */
+    const double* data() const noexcept { return field_view.data(); }
+
+    /**
+     * @brief Get number of elements in the field data
+     *
+     * @return std::size_t Number of elements (view.size())
+     */
+    std::size_t size() const noexcept { return field_view.size(); }
+
+    /**
+     * @brief Get the scalar coefficient
+     *
+     * @return double The scale factor applied to field values
+     */
+    double scale() const noexcept { return alpha; }
 };
 
 /**
