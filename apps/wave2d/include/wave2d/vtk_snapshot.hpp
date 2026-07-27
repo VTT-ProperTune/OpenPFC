@@ -69,42 +69,6 @@ inline void vtk_write_increment(pfc::VTKWriter &w, int increment,
   (void)w.write(increment, buf);
 }
 
-// Field<T,HostSpace> overloads
-
-inline void pack_field_owned(const pfc::data::Field<double, pfc::HostSpace> &u,
-                             pfc::RealField &out) {
-  const auto local_size = u.local_size();
-  out.resize(static_cast<std::size_t>(local_size[0]) * 
-             static_cast<std::size_t>(local_size[1]) *
-             static_cast<std::size_t>(local_size[2]));
-  std::size_t p = 0;
-  u.for_each_owned([&](int i, int j, int k) { out[p++] = u(i, j, k); });
-}
-
-inline void vtk_configure_writer(pfc::VTKWriter &w,
-                                 const pfc::data::Field<double, pfc::HostSpace> &u) {
-  const auto &box = u.box();
-  const std::array<int, 3> global{box.high[0] + 1, box.high[1] + 1, box.high[2] + 1};
-  const auto local_size = u.local_size();
-  const std::array<int, 3> local{static_cast<int>(local_size[0]), 
-                                 static_cast<int>(local_size[1]), 
-                                 static_cast<int>(local_size[2])};
-  const std::array<int, 3> off{box.low[0], box.low[1], box.low[2]};
-  w.set_domain(global, local, off);
-  const auto o = u.origin();
-  const auto s = u.spacing();
-  w.set_origin({o[0], o[1], o[2]});
-  w.set_spacing({s[0], s[1], s[2]});
-  w.set_field_name("u");
-}
-
-inline void vtk_write_increment(pfc::VTKWriter &w, int increment,
-                                const pfc::data::Field<double, pfc::HostSpace> &u,
-                                pfc::RealField &buf) {
-  pack_field_owned(u, buf);
-  (void)w.write(increment, buf);
-}
-
 /**
  * @brief Configure VTK writer for one rank’s owned brick (no halos), x fastest.
  *
