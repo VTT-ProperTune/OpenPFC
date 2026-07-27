@@ -211,10 +211,10 @@ int run_wave2d_cuda(const wave2d::RunConfig &cfg, int rank, int nproc) {
     }
   }
 
-  cudaFree(u_dev);
-  cudaFree(v_dev);
+  cuda_check(cudaFree(u_dev), "cudaFree(u_dev)");
+  cuda_check(cudaFree(v_dev), "cudaFree(v_dev)");
   for (int f = 0; f < 6; ++f) {
-    cudaFree(face_dev[static_cast<std::size_t>(f)]);
+    cuda_check(cudaFree(face_dev[static_cast<std::size_t>(f)]), "cudaFree(face)");
   }
 
   if (rank == 0) {
