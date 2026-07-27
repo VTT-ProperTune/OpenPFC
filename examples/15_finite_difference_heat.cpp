@@ -50,11 +50,11 @@ int main(int argc, char *argv[]) {
   // second-order Laplacian.
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
-  // Create decomposition from domain configuration
-  auto world = world::create(pfc::GridSize({N, N, N}),
-                             pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                             pfc::GridSpacing({dx, dx, dx}));
-  auto decomp = decomposition::create(world, nproc);
+  // Create Domain with physical coordinates
+  auto domain = domain::create(pfc::GridSize({N, N, N}),
+                               pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                               pfc::GridSpacing({dx, dx, dx}));
+  auto decomp = decomposition::create(domain, nproc);
 
   // Get local subdomain box using decomposition::local_box (Domain-based API)
   auto local_box = decomposition::local_box(decomp, rank);
