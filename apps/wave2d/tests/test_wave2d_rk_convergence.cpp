@@ -28,8 +28,7 @@
 #include <numeric>
 #include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
@@ -276,10 +275,10 @@ void rk4_step(field::PaddedBrick<double>& u_field,
  * @brief Run RK4 integration and return u field at final time.
  */
 std::vector<double> run_rk4_reference(double dt, int n_steps) {
-  const auto world = world::create(GridSize({Nx, Ny, Nz}),
-                                   PhysicalOrigin({0.0, 0.0, 0.0}),
-                                   GridSpacing({dx, dy, dz}));
-  const auto decomp = decomposition::create(world, 1);
+  const auto domain = pfc::domain::create(GridSize({Nx, Ny, Nz}),
+                                          PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          GridSpacing({dx, dy, dz}));
+  const auto decomp = decomposition::create(domain, 1);
 
   field::PaddedBrick<double> u_field(decomp, 0, halo_width);
   field::PaddedBrick<double> v_field(decomp, 0, halo_width);
@@ -303,10 +302,10 @@ std::vector<double> run_rk4_reference(double dt, int n_steps) {
  * @brief Run RK2 integration and return u field at final time.
  */
 std::vector<double> run_rk2(double dt, int n_steps) {
-  const auto world = world::create(GridSize({Nx, Ny, Nz}),
-                                   PhysicalOrigin({0.0, 0.0, 0.0}),
-                                   GridSpacing({dx, dy, dz}));
-  const auto decomp = decomposition::create(world, 1);
+  const auto domain = pfc::domain::create(GridSize({Nx, Ny, Nz}),
+                                          PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          GridSpacing({dx, dy, dz}));
+  const auto decomp = decomposition::create(domain, 1);
 
   field::PaddedBrick<double> u_field(decomp, 0, halo_width);
   field::PaddedBrick<double> v_field(decomp, 0, halo_width);

@@ -14,8 +14,6 @@
 
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -43,19 +41,19 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   model.inv_dx2 = 1.0;
   model.inv_dy2 = 1.0;
 
-  const auto world =
-      world::create(GridSize({cfg.Nx, cfg.Ny, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  const auto global_domain =
+      pfc::domain::create(GridSize({cfg.Nx, cfg.Ny, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
                     GridSpacing({1.0, 1.0, 1.0}));
-  const auto decomp = decomposition::create(world, nproc);
+  const auto decomp = decomposition::create(global_domain, nproc);
 
   constexpr int hw = 1;
   field::PaddedBrick<double> u(decomp, rank, hw);
   field::PaddedBrick<double> v(decomp, rank, hw);
   field::PaddedBrick<double> lap(decomp, rank, hw);
 
-  auto domain = decomposition::domain(decomp);
+  const auto& geometry = decomposition::domain(decomp);
   auto subdomain_box = decomposition::local_box(decomp, rank);
-  PaddedHaloExchanger<double> halo_u(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD, 0);
+  PaddedHaloExchanger<double> halo_u(subdomain_box, geometry, decomp, rank, hw, MPI_COMM_WORLD, 0);
 
   const double xc = 0.5 * static_cast<double>(cfg.Nx - 1);
   const double yc = 0.5 * static_cast<double>(cfg.Ny - 1);
