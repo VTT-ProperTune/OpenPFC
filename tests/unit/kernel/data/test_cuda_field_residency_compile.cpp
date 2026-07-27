@@ -2,11 +2,11 @@
 
 #if defined(OpenPFC_ENABLE_CUDA)
 
-#include <array>
-
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
+#include <openpfc/runtime/cuda/memory_space_cuda.hpp>
 
 // Compile-only test: verify CUDA device residency code compiles.
 // No runtime execution required – the test passes if this TU compiles cleanly.
@@ -17,7 +17,7 @@ struct CompileCheck {
     using namespace pfc;
 
     // Small size to compile quickly; no device execution needed.
-    std::array<std::size_t, 3> extents = {10, 1, 1};
+    Int3 extents = {10, 1, 1};
 
     // Instantiate a small CUDA-backed field.
     data::Field<double, pfc::CudaSpace> field(domain::create(extents),
