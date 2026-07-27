@@ -18,7 +18,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
 #include <numbers>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
@@ -29,19 +29,19 @@
 using namespace Catch::Matchers;
 
 TEST_CASE("Tungsten CPU vs CUDA: Same results", "[Tungsten][CPU][CUDA]") {
-  // Create world
-  auto world = pfc::world::create(pfc::GridSize({32, 32, 32}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+  // Create domain
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  auto decomp = pfc::decomposition::create(world, size);
+  auto decomp = pfc::decomposition::create(domain, size);
   auto fft_cpu = pfc::fft::create(decomp, rank);
 
   // Create models (CUDA uses double precision for comparison)
-  Tungsten model_cpu(fft_cpu, world);
-  TungstenCUDA<double> model_cuda(fft_cpu, world);
+  Tungsten model_cpu(fft_cpu, domain);
+  TungstenCUDA<double> model_cuda(fft_cpu, domain);
 
   // Set same parameters
   model_cpu.params.set_n0(-0.4);

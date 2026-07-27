@@ -18,7 +18,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
 #include <numbers>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/runtime/hip/fft_hip.hpp>
@@ -29,17 +29,17 @@
 using namespace Catch::Matchers;
 
 TEST_CASE("Tungsten CPU vs HIP: Same results", "[Tungsten][CPU][HIP]") {
-  auto world = pfc::world::create(pfc::GridSize({32, 32, 32}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  auto decomp = pfc::decomposition::create(world, size);
+  auto decomp = pfc::decomposition::create(domain, size);
   auto fft_cpu = pfc::fft::create(decomp, rank);
 
-  Tungsten model_cpu(fft_cpu, world);
-  TungstenHIP<double> model_hip(fft_cpu, world);
+  Tungsten model_cpu(fft_cpu, domain);
+  TungstenHIP<double> model_hip(fft_cpu, domain);
 
   model_cpu.params.set_n0(-0.4);
   model_cpu.params.set_T(0.5);

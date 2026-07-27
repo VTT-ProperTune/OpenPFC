@@ -21,7 +21,7 @@
 #include <vector>
 #include <stdexcept>
 
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
@@ -81,15 +81,15 @@ public:
     }
 
     try {
-      // Create world and decomposition
-      auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
-                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
-      auto decomp = pfc::decomposition::create(world, size);
+      // Create domain and decomposition
+      auto domain = pfc::domain::create(pfc::GridSize({size_x, size_y, size_z}),
+                                        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                        pfc::GridSpacing({1.0, 1.0, 1.0}));
+      auto decomp = pfc::decomposition::create(domain, size);
       auto fft = pfc::fft::create(decomp, rank);
 
       // Create model
-      Tungsten model(fft, world);
+      Tungsten model(fft, domain);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
 
@@ -195,15 +195,15 @@ public:
     }
 
     try {
-      // Create world and decomposition
-      auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
-                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
-      auto decomp = pfc::decomposition::create(world, size);
+      // Create domain and decomposition
+      auto domain = pfc::domain::create(pfc::GridSize({size_x, size_y, size_z}),
+                                        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                        pfc::GridSpacing({1.0, 1.0, 1.0}));
+      auto decomp = pfc::decomposition::create(domain, size);
 
       // Create model with specified precision
       auto fft = pfc::fft::create(decomp, rank);
-      TungstenCUDA<RealType> model(fft, world);
+      TungstenCUDA<RealType> model(fft, domain);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
 
@@ -319,13 +319,13 @@ public:
     }
 
     try {
-      auto world = pfc::world::create(pfc::GridSize({size_x, size_y, size_z}),
-                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
-      auto decomp = pfc::decomposition::create(world, size);
+      auto domain = pfc::domain::create(pfc::GridSize({size_x, size_y, size_z}),
+                                        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                        pfc::GridSpacing({1.0, 1.0, 1.0}));
+      auto decomp = pfc::decomposition::create(domain, size);
 
       auto fft = pfc::fft::create(decomp, rank);
-      TungstenHIP<RealType> model(fft, world);
+      TungstenHIP<RealType> model(fft, domain);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
 
