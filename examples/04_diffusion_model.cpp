@@ -82,7 +82,8 @@ public:
   void initialize(double dt) override {
     if (pfc::is_rank0(*this)) cout << "Allocate space" << endl;
 
-    // Get references to the simulation world (currently required by Model), FFT, and domain decomposition
+    // Get references to the simulation world (required by Model), FFT, and domain decomposition
+    // Note: World is retained for Model compatibility; Domain is used for geometry
     auto &world = pfc::get_world(*this);
     auto &fft = pfc::get_fft(*this);
 
@@ -103,6 +104,7 @@ public:
     Domain is defining the global dimensions of the problem as well as origin and
     chosen discretization parameters.
     */
+    // Print domain geometry information (domain extracted from world for Model compatibility)
     if (pfc::is_rank0(*this)) {
       const auto &world = pfc::get_world(*this);
       const auto &domain = pfc::world::get_coordinate_system(world);
@@ -210,7 +212,7 @@ void run() {
                                  GridSpacing{{dx, dy, dz}});
   auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
-  // Create simulation world for Model constructor
+  // Create simulation world for Model constructor (World retained for Model compatibility)
   auto world = domain::create_world_from_bounds({Lx, Ly, Lz}, {x0, y0, z0}, {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
   Diffusion model(fft, world);
 

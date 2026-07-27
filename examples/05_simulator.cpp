@@ -48,6 +48,7 @@ private:
 public:
   void apply(Model &m, double t) override {
     (void)t; // suppress compiler warning about unused parameter
+    // Get world (required by Model for compatibility) and domain from model
     const auto &world = pfc::get_world(m);
     const auto &domain = pfc::world::get_coordinate_system(world);
     const auto &fft = pfc::get_fft(m);
@@ -98,6 +99,7 @@ public:
   }
 
   void prepare_operators(double dt) {
+    // Get world (required by Model for compatibility) and domain from model
     auto &w = pfc::get_world(*this);
     const auto &domain = pfc::world::get_coordinate_system(w);
     auto &fft = pfc::get_fft(*this);
@@ -187,7 +189,7 @@ void run() {
                                  GridSpacing(discretization));
   auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
-  // Create simulation world for Model constructor
+  // Create simulation world for Model constructor (World retained for Model compatibility)
   auto world = domain::create_world_from_bounds({L, L, L}, {o, o, o}, {o + (L - 1) * h, o + (L - 1) * h, o + (L - 1) * h});
   Diffusion model(fft, world);
 
