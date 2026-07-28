@@ -31,12 +31,12 @@
  * or 27-point Laplacian, and a face-only exchange is one MPI message
  * per neighbor).
  *
- * The element layout matches `pfc::field::PaddedBrick<T>` exactly:
- * the same `idx(i, j, k)` formula computes the offsets into the same
- * buffer, so the resulting MPI types are zero-copy when used with
- * `brick.data()` / `brick.size()`.
+ * The element layout matches `pfc::data::Field<T>` with equal
+ * storage and iteration halo (the padded layout): the same `idx(i, j, k)`
+ * formula computes the offsets into the same buffer, so the resulting MPI
+ * types are zero-copy when used with `field.data()` / `field.size()`.
  *
- * @see pfc::field::PaddedBrick — the matching data layout.
+ * @see pfc::data::Field — the matching data layout.
  * @see pfc::halo::create_face_types_6 — the original "no padding"
  *      face-type builder used by `pfc::HaloExchanger`.
  */
@@ -100,7 +100,8 @@ inline int checked_padded_extent(int n, int hw) {
  * When `halo_width > 0`, each owned extent must be `>= halo_width` so the
  * owned send slab fits inside the core. Same per-axis fit rule as
  * non-padded `create_face_types_6`. The Field `> 2*hw` interior rule
- * does **not** apply here (`PaddedBrick` semantics).
+ * does **not** apply here (`pfc::data::Field` with equal storage and
+ * iteration halo).
  *
  * @throws std::invalid_argument if `halo_width < 0`, owned extents are
  *         non-positive, or (when `halo_width > 0`) any owned axis is
