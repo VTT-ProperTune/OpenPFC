@@ -24,8 +24,12 @@
 #include <numbers>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/fft/fftw_factory.hpp>
+
+// pfc::data::Field is the M2 canonical field container (grid_field.hpp)
+// field_from_subdomain provides domain-first field construction
 
 using namespace pfc;
 
@@ -43,30 +47,29 @@ int main() {
   std::cout << "Domain: 64³ grid with origin (0, 0, 0) and spacing (1, 1, 1)\n";
   std::cout << "Physical volume: " << domain::physical_volume(domain) << "\n\n";
 
-  std::cout << "Setting up decomposition and FFT...\n";
+  std::cout << "Setting up decomposition and creating domain-first field...\n";
   auto decomp = decomposition::create(domain, 1);
-  auto world = decomposition::get_global_world(decomp);
-  auto fft = fft::fftw::create(decomp, false, 6);
-  size_t inbox_size = fft::size_inbox(fft);
+  int rank = 0; // Single rank example; for MPI, use MPI_Comm_rank()
 
-  std::cout << "Local inbox size: " << inbox_size << " grid points\n\n";
+  // Create field using the M2 domain-first pattern (grid_field.hpp + field_factory.hpp)
+  auto u = pfc::data::field_from_subdomain<double>(decomp, rank, /*halo=*/0);
+  size_t field_size = u.size();
 
-  // Create field storage sized to the local inbox
-  std::vector<double> u(inbox_size);
+  std::cout << "Local field size: " << field_size << " grid points\n\n";
 
   std::cout << "Applying Gaussian pulse using coordinate-space function:\n";
   std::cout << "  f(x,y,z) = exp(-r²/2) where r² = x² + y² + z²\n\n";
 
-  // Apply a Gaussian pulse using coordinate-space function
-  pfc::field::apply(u, world, fft, [](const Real3& x) {
-    const double r2 = (x[0]*x[0]) + (x[1]*x[1]) + (x[2]*x[2]);
+  // Apply a Gaussian pulse using the Field's built-in coordinate-space method
+  u.apply([](const double x, const double y, const double z) {
+    const double r2 = x*x + y*y + z*z;
     return std::exp(-r2/2.0);
   });
 
   std::cout << "Field initialized successfully.\n";
 
-  // Sample some values at key coordinates
-  std::cout << "\nSample field values at center and nearby points:\n";
+  // Sample some values at key coordinates using the Field API
+  std::cout << "\nExpected field values at center and nearby points:\n";
   std::cout << std::fixed << std::setprecision(4);
 
   for (int i = -2; i <= 2; ++i) {
@@ -90,7 +93,8 @@ int main() {
 
   std::cout << "\n" << std::string(50, '=') << "\n";
   std::cout << "Domain-first field operations sample complete.\n";
-  std::cout << "Note: This pattern works equally well with MPI and multiple ranks.\n";
+  std::cout << "Note: This pattern uses pfc::data::Field without explicit World objects.\n";
+  std::cout << "      Works equally well with MPI and multiple ranks.\n";
 
   return 0;
 }
