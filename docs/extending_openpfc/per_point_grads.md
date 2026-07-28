@@ -189,7 +189,7 @@ Detection is encoded in two trait/concepts in `pfc::field::detail` — see the s
 
 Each field is a separate contiguous `pfc::data::Field<double>` (so FFTs and halo exchange stay cheap). The composite aggregate is **only built per point**, lives in registers across the `model.rhs` call, and never lands in memory. There is no allocation cost for per-point AoS bundling — the optimizer collapses it.
 
-> **Legacy note:** Previous OpenPFC versions used `LocalField<double>` or `PaddedBrick<double>` types; these are superseded by the unified `pfc::data::Field<T>` API which provides the same functionality with a cleaner interface.
+> **legacy:** Previous OpenPFC versions used `LocalField<double>` or `PaddedBrick<double>` types; these are superseded by the unified `pfc::data::Field<T>` API which provides the same functionality with a cleaner interface.
 
 If you find yourself wanting interleaved (`u1, v1, w1, u2, v2, w2, ...`) storage, the cost calculus probably no longer holds: you would give up FFT-friendliness for a small per-point cache benefit. Stay with SoA at storage and let the per-point view be transient.
 
