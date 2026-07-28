@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
   // Stability: dt <= dx^2 / (6*D) for explicit Euler in 3D
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
-  // Build FD stack (Domain + Decomposition + halo-aware LocalField + exchanger)
+  // Build FD stack (Domain + Decomposition + unpadded data::Field + face-halos + exchanger)
   pfc::sim::stacks::FdCpuStack stack(
     pfc::GridSize{{N, N, N}},
     pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
