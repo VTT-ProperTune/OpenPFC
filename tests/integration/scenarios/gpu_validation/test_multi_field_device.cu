@@ -515,7 +515,7 @@ TEST_CASE("test_kobayashi_double_field_kernel",
                      cudaMemcpyDeviceToHost) == cudaSuccess);
 
   bool match = true;
-  const int nzp = phi.padded_size3()[2];
+  const int nzp = phi.padded_extent(2);
   for (int iz = 0; iz < nz; ++iz) {
     for (int iy = 0; iy < ny; ++iy) {
       for (int ix = 0; ix < nx; ++ix) {
