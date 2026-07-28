@@ -19,7 +19,7 @@
  * for D2), same compile-time pruning of the catalog `{value, x, y, z,
  * xx, yy, zz, xy, xz, yz}`. Only the moving parts differ:
  *
- *   - The evaluator reads from a **PaddedBrick**-layout device buffer,
+ *   - The evaluator reads from a **padded layout** device buffer,
  *     so the input pointer points at cell `(0, 0, 0)` of the padded box
  *     `(nx + 2hw, ny + 2hw, nz + 2hw)`. Owned-cell coordinates `(ix, iy,
  *     iz) ∈ [0, n)` are translated to the linear index `(ix + hw) +
@@ -50,11 +50,15 @@
  * @code
  * #include <openpfc/runtime/hip/fd_gradient_device.hpp>
  * #include <openpfc/runtime/hip/for_each_interior_device.hpp>
+ * #include <openpfc/data/grid_field.hpp>
  *
  * pfc::hip::FdGradientDevice<MyGrads> eval(d_padded_u, nx, ny, nz, dx, dy, dz,
  *                                           hw, order);
  * pfc::sim::hip::for_each_interior_device(model, eval.pod(), d_du, t,
  *                                          nx, ny, nz, stream);
+ *
+ * // Or using the convenience factory with pfc::data::Field:
+ * auto eval = pfc::hip::create<MyGrads>(u_field, order);
  * @endcode
  *
  * @see openpfc/kernel/field/fd_gradient.hpp — CPU twin
@@ -75,7 +79,7 @@
 #include <openpfc/kernel/data/host_device.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 
 namespace pfc::hip {
 
@@ -92,7 +96,7 @@ inline constexpr int kFdDeviceMaxHw2 = 10;
  *        evaluator on the device.
  *
  * The host-side `FdGradientDevice<G>` populates this struct from a
- * `LocalField`-style triple `(d_core, padded_extents, spacing)` and a
+ * `pfc::data::Field` triple `(d_core, padded_extents, spacing)` and a
  * runtime `order`. The kernel takes a copy of this struct by value (it
  * fits comfortably on the stack of a HIP thread).
  *
@@ -282,7 +286,7 @@ OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
  * @brief Host-side wrapper for a device-side FD gradient evaluator.
  *
  * The constructor populates a `FdGradientDevicePOD` struct from a
- * `LocalField`-style triple `(d_core, padded_extents, spacing)` and a
+ * `pfc::data::Field` triple `(d_core, padded_extents, spacing)` and a
  * runtime `order`. The POD can then be passed by value to a HIP kernel,
  * where `evaluate_fd_grad<G>` uses it to materialize the grads aggregate
  * at each owned cell.
@@ -418,24 +422,25 @@ private:
 
 
 /**
- * @brief Build a `FdGradientDevice<G>` over a halo-padded brick.
+ * @brief Build a `FdGradientDevice<G>` over a halo-padded field.
  *
  * The evaluator indexes the **full** `(nx+2hw)×(ny+2hw)×(nz+2hw)` storage with
  * interior bounds `[hw, nx_pad-hw)` per axis, matching ghost cells populated by
- * `pfc::communication::PaddedHaloExchanger<T>` on `u.data()`.
+ * the field's halo exchange mechanism on `u.data()`.
  *
  * @tparam G     Model-owned grads aggregate (see `grad_concepts.hpp`).
- * @param u      Padded brick (must outlive the returned evaluator).
+ * @param u      Padded field (must outlive the returned evaluator).
  * @param order  Even spatial order; requires `u.halo_width() >= order / 2`.
  *               Defaults to 2.
  *
  * @return FdGradientDevice<G> ready for use with for_each_interior_device.
  */
 template <class G>
-[[nodiscard]] inline FdGradientDevice<G> create(const pfc::field::PaddedBrick<double> &u,
+[[nodiscard]] inline FdGradientDevice<G> create(const pfc::data::Field<double> &u,
                                                 int order = 2) {
   const auto sp = u.spacing();
-  return FdGradientDevice<G>(u.data(), u.nx(), u.ny(), u.nz(),
+  const auto sz = u.local_size();
+  return FdGradientDevice<G>(u.data(), sz[0], sz[1], sz[2],
                              sp[0], sp[1], sp[2],
                              u.halo_width(), order);
 }
