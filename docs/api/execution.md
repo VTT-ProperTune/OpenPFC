@@ -59,7 +59,7 @@ auto my_field = field_from_subdomain<double>(decomp, rank, 2);  // halo width 2
 Field<double, HostSpace> my_field = field_from_subdomain<double>(decomp, rank, 2);
 
 // Create unpadded field with iteration halo (equivalent to legacy LocalField)
-auto UnpaddedField = field_from_subdomain_unpadded<double>(decomp, rank, 1);
+auto unpadded_field = field_from_subdomain_unpadded<double>(decomp, rank, 1);
 ```
 
 ### Field geometry and indexing
