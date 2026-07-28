@@ -5,6 +5,10 @@
 
 This document describes the design rationale for evidence-driven state access primitives, workspace management, and validation utilities in OpenPFC.
 
+## Legacy Field Types Context
+
+> **[Legacy]** Earlier OpenPFC versions used multiple field container types: `LocalField<T>`, `PaddedBrick<T>`, and `DiscreteField<T>`. These have been unified into the canonical `pfc::data::Field<T, MemorySpace>` type. The legacy types are retained for compatibility through M2 but are not recommended for new code. Use `pfc::data::Field` with the `field_from_subdomain*` factory functions instead.
+
 ## Rationale for Value-Semantic Approach
 
 The implementation uses value-semantic types (FieldView<T>, FieldOutput<T>, FieldBundle<Ts...>) rather than type erasure or virtual interfaces for the following reasons:
@@ -32,15 +36,21 @@ The implementation uses value-semantic types (FieldView<T>, FieldOutput<T>, Fiel
 Heat3D and Wave2D both use value-semantic patterns:
 
 ```cpp
-// Heat3D: PaddedBrick is value-semantic
-PaddedBrick<double> u(decomp, rank, halo_width);
-PaddedBrick<double> du(decomp, rank, halo_width);
-// Direct member access, no virtual functions
-for_each_owned(du, [&](auto idx) { du[idx] = /* RHS */; });
+#include <openpfc/data/field.hpp>
 
-// Wave2D: Multiple PaddedBrick instances
-PaddedBrick<double> u(decomp, rank, halo_width);
-PaddedBrick<double> v(decomp, rank, halo_width);
+// Heat3D: pfc::data::Field is value-semantic
+pfc::data::Field<double, pfc::HostSpace> u =
+    pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
+pfc::data::Field<double, pfc::HostSpace> du =
+    pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
+// Direct member access, no virtual functions
+u.for_each_owned([&](int i, int j, int k) { du(i, j, k) = /* RHS */; });
+
+// Wave2D: Multiple Field instances
+pfc::data::Field<double, pfc::HostSpace> u =
+    pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
+pfc::data::Field<double, pfc::HostSpace> v =
+    pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
 // Tuple-like access patterns
 ```
 
@@ -52,7 +62,7 @@ PaddedBrick<double> v(decomp, rank, halo_width);
 
 **Pattern**:
 - Single scalar field u (temperature)
-- PaddedBrick<double> for state storage
+- pfc::data::Field<double> for state storage
 - FDGradient<HeatGrads> for Laplacian evaluation
 - Explicit Euler time integration: u += dt * du
 
@@ -74,7 +84,7 @@ PaddedBrick<double> v(decomp, rank, halo_width);
 
 **Pattern**:
 - Multiple fields: u (displacement), v (velocity), lap (Laplacian)
-- PaddedBrick<double> for each field
+- pfc::data::Field<double> for each field
 - Coupled time integration: u += dt * v, v += dt * k^2 * lap
 - Coordinated halo exchange across fields
 
@@ -193,12 +203,12 @@ FieldView<double> u_view(u.data(), u.size(), extents, spacing, origin);
 FieldOutput<double> du_out(du.data(), du.size());
 du_out.validate_no_alias(u_view);  // distinct RHS buffer
 // heat3d::HeatOperator::evaluate(u_view, du_out, ...);
-// In-place Euler may use LocalField: u += dt * du (ScaledField; bypasses validate_no_alias)
+// In-place Euler may use pfc::data::Field: u += dt * du (ScaledField; bypasses validate_no_alias)
 ```
 
 Evidence: `tests/integration/scenarios/field_operations/test_heat3d_state_access.cpp`
 (`Heat3D numerical equivalence test`, `Heat3D time integration pattern`,
-`Heat3D migration path from LocalField to FieldView`).
+`Heat3D migration path from legacy to modern FieldView`).
 
 ### Multi-field path (Wave2D-style)
 
