@@ -102,7 +102,7 @@ void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
   double *const u_ptr = u.data();
 
   // 3. Initial condition: u(x, y, z, 0) = exp(-r^2 / (4 D)). Written
-  //    inline, no model.initial_condition, no PaddedBrick::apply.
+  //    inline, no model.initial_condition.
   for (int k = 0; k < nz; ++k) {
     for (int j = 0; j < ny; ++j) {
       for (int i = 0; i < nx; ++i) {
