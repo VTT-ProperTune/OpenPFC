@@ -27,8 +27,8 @@ namespace domain = pfc::domain;
 
 TEST_CASE("Domain regression test PF: coordinate rounding uses nearest-grid rounding",
           "[domain][regression][PF]") {
-  // PF (audit 4.6): World's to_index truncated while to_indices documented (and
-  // DiscreteField used) rounding. The fix standardized on std::lround.
+  // PF (audit 4.6): World's to_index used truncation while to_indices documented
+  // rounding. The fix standardized on std::lround.
   // This test validates that Domain::to_indices uses proper rounding to nearest
   // integer, not truncation.
 
