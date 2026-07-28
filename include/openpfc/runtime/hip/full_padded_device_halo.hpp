@@ -6,7 +6,7 @@
 /**
  * @file full_padded_device_halo.hpp
  * @brief Full **26-direction** halo exchange (faces + edges + corners) for a
- *        `PaddedBrick`-layout device buffer.
+ *        `pfc::data::Field` with padded layout (halo_width > 0).
  *
  * @details
  * `pfc::hip::PaddedDeviceHaloExchanger` performs a **single-pass 6-face**
@@ -37,7 +37,7 @@
  *      pairs, and corner cells.
  *
  * After 3 passes the cumulative effect is that **every** non-interior cell
- * of the padded brick equals the periodic-equivalent global value, including
+ * of the padded field equals the periodic-equivalent global value, including
  * all corners (e.g. `u(-1, -1, -1)`). The math is the standard 3-pass
  * widening exchange used by AMReX, Cabana, etc.
  *
@@ -102,7 +102,7 @@
 namespace pfc::hip {
 
 /**
- * @brief 26-direction halo exchanger for a `PaddedBrick` device buffer.
+ * @brief 26-direction halo exchanger for a `pfc::data::Field` with padded layout (halo_width > 0).
  *
  * Holds **3** widened slab specs, **3** sets of widened MPI face derived types
  * (one per axis pass), one device scratch buffer for self-axis pack/unpack,
@@ -303,7 +303,7 @@ public:
    * @brief Fill the full 26-direction halo for `n_fields` device buffers.
    *
    * @param fields Pointer to an array of `n_fields()` device buffers in
-   *               PaddedBrick layout (outer extents `(nx+2hw, ny+2hw, nz+2hw)`).
+   *               `pfc::data::Field` padded layout (outer extents `(nx+2hw, ny+2hw, nz+2hw)`).
    * @param stream HIP stream the caller used to populate `fields`. Fully
    *               synchronised before MPI starts.
    *
