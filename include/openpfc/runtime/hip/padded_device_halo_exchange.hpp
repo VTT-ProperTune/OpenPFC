@@ -62,9 +62,11 @@
 #include <hip/hip_runtime.h>
 
 #include <openpfc/runtime/hip/hip_check.hpp>
+#include <openpfc/runtime/hip/memory_space_hip.hpp>
 
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
@@ -236,6 +238,11 @@ inline void print_hip_halo_exchange_cpu_timers(MPI_Comm comm) {
 /**
  * @brief MPI halo exchange for a `PaddedBrick`-layout buffer on the HIP device.
  *
+ * @details
+ * This class provides halo exchange functionality for device buffers. The primary
+ * API uses `pfc::data::Field<T, pfc::HipSpace>` parameters; legacy raw-pointer
+ * overloads are provided as thin forwarding wrappers for backward compatibility.
+ *
  * Non-copyable; tie lifetime to the owning rank's padded device allocations.
  */
 class PaddedDeviceHaloExchanger {
@@ -357,8 +364,79 @@ public:
     return m_dirs;
   }
 
+  /**
+   * @brief Construct from a template field to infer halo width.
+   *
+   * @tparam T           Field element type (e.g., `double`).
+   * @param field        Template field on HIP device (used to extract halo width).
+   * @param decomp       Decomposition shared by all fields exchanged with this instance.
+   * @param rank         MPI rank of the caller.
+   * @param comm         MPI communicator for the exchange.
+   * @param dirs         Direction set (defaults to `Axes3D()` for back-compat).
+   * @param base_tag     Starting MPI tag (uses `[base, base + 6)`).
+   * @param selector     Optional per-rank override of the direction set.
+   *
+   * This constructor is the primary API for `pfc::data::Field` usage. The field's
+   * halo width is extracted from `field.halo_width()`; the field itself is not
+   * stored, only its size/spacing metadata is used during construction.
+   */
+  template <typename T>
+  PaddedDeviceHaloExchanger(const pfc::data::Field<T, pfc::HipSpace> &field,
+                            const decomposition::Decomposition &decomp, int rank,
+                            MPI_Comm comm,
+                            halo::HaloDirectionSet dirs = halo::presets::Axes3D(),
+                            int base_tag = 0,
+                            halo::HaloDirectionSelector selector = {})
+      : PaddedDeviceHaloExchanger(decomp, rank, field.halo_width(), comm, dirs,
+                                  base_tag, selector) {
+    (void)field; // Only metadata is used during construction
+  }
+
+  /**
+   * @brief Exchange halos for a field on the HIP device (primary API).
+   *
+   * @tparam T   Field element type (e.g., `double`).
+   * @param field        Field to exchange (must outlive this call).
+   * @param stream       HIP stream for pack/unpack kernels (default: nullptr).
+   *
+   * This is the primary API for `pfc::data::Field` usage. The field's device
+   * pointer, size, and halo width are used to perform the exchange. The field
+   * must have storage that matches the decomposition and halo width provided
+   * during construction.
+   *
+   * For new code, prefer this overload over the legacy raw-pointer overload.
+   */
+  template <typename T>
+  void exchange_halos_device(pfc::data::Field<T, pfc::HipSpace> &field,
+                             hipStream_t stream = nullptr) {
+    exchange_halos_device_impl(field.data(), field.size(), stream);
+  }
+
+  /**
+   * @brief Exchange halos for a raw padded buffer on the HIP device (legacy API).
+   *
+   * @param d_padded      Device pointer to the padded field buffer.
+   * @param padded_size   Total number of elements in the padded buffer.
+   * @param stream        HIP stream for pack/unpack kernels (default: nullptr).
+   *
+   * This is the legacy raw-pointer API maintained for backward compatibility.
+   * It delegates to the implementation used by the field-based overload.
+   * For new code, prefer the `pfc::data::Field<T, pfc::HipSpace>` overload.
+   */
   void exchange_halos_device(double *d_padded, std::size_t padded_size,
                              hipStream_t stream = nullptr) {
+    exchange_halos_device_impl(d_padded, padded_size, stream);
+  }
+
+private:
+  /**
+   * @brief Implementation detail for halo exchange.
+   *
+   * This shared implementation is used by both the field-based and raw-pointer
+   * public APIs. It performs the actual MPI halo exchange operations.
+   */
+  void exchange_halos_device_impl(double *d_padded, std::size_t padded_size,
+                                   hipStream_t stream) {
     (void)padded_size;
     const bool perf = hip_halo_exchange_perf_enabled();
     auto &H = hip_halo_exchange_cpu_timers();
@@ -396,7 +474,6 @@ public:
                            MPI_Wtime() - t0);
   }
 
-private:
   static int opposite_slot(int slot) {
     switch (slot) {
     case 0: return 1;
