@@ -45,8 +45,8 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
-#include <openpfc/kernel/field/brick_iteration.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/cuda/padded_device_halo_exchange.hpp>
 
@@ -56,9 +56,8 @@
 
 namespace {
 
-using pfc::field::for_each_owned;
-
-using pfc::field::PaddedBrick;
+using Field = pfc::data::Field<double, pfc::HostSpace>;
+using pfc::data::field_from_subdomain;
 
 void cuda_check(cudaError_t e, const char *what) {
   if (e != cudaSuccess) {
@@ -132,16 +131,16 @@ struct DeviceBuffer {
   double *get() const { return ptr; }
 };
 
-void sync_padded_d2h(const double *dev, PaddedBrick<double> &host) {
+void sync_field_d2h(const double *dev, Field &host) {
   cuda_check(cudaMemcpy(host.data(), dev, host.size() * sizeof(double),
                         cudaMemcpyDeviceToHost),
-             "sync_padded_d2h");
+             "sync_field_d2h");
 }
 
-void sync_padded_h2d(const PaddedBrick<double> &host, double *dev) {
+void sync_field_h2d(const Field &host, double *dev) {
   cuda_check(cudaMemcpy(dev, host.data(), host.size() * sizeof(double),
                         cudaMemcpyHostToDevice),
-             "sync_padded_h2d");
+             "sync_field_h2d");
 }
 
 void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
@@ -191,19 +190,19 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const bool halo_extended = halo_extended_req;
   const int hw = halo_extended ? 2 : 1;
   const int stage_a_extend = halo_extended ? 1 : 0;
-  PaddedBrick<double> phi_h(decomp, rank, hw);
-  PaddedBrick<double> tempr_h(decomp, rank, hw);
+  auto phi_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto tempr_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
-  const int nx = phi_h.nx();
-  const int ny = phi_h.ny();
-  const int nz = phi_h.nz();
+  const int nx = phi_h.local_size()[0];
+  const int ny = phi_h.local_size()[1];
+  const int nz = phi_h.local_size()[2];
 
   const int ci = Nx / 2;
   const int cj = Ny / 2;
 
-  for_each_owned(phi_h, [&](int i, int j, int k) {
+  phi_h.for_each_owned([&](int i, int j, int k) {
     (void)k;
     const auto g = phi_h.global(i, j, 0);
     const int gi = g[0];
@@ -212,7 +211,7 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     const double ddy = static_cast<double>(gj - cj);
     phi_h(i, j, 0) = (ddx * ddx + ddy * ddy < kobayashi::kSeed) ? 1.0 : 0.0;
   });
-  for_each_owned(tempr_h, [&](int i, int j, int k) { tempr_h(i, j, k) = 0.0; });
+  tempr_h.for_each_owned([&](int i, int j, int k) { tempr_h(i, j, k) = 0.0; });
 
   const HostPinnedRegistration pin_phi(phi_h.data(), phi_h.size() * sizeof(double));
   const HostPinnedRegistration pin_tempr(tempr_h.data(),
@@ -263,8 +262,8 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
              "cudaMalloc epsilon_deriv");
   epsilon_deriv_d = DeviceBuffer(raw_epsilon_deriv_d);
 
-  sync_padded_h2d(phi_h, phi_d.get());
-  sync_padded_h2d(tempr_h, tempr_d.get());
+  sync_field_h2d(phi_h, phi_d.get());
+  sync_field_h2d(tempr_h, tempr_d.get());
 
   // Single-rank periodic torus: MPI halos only burn CPU (MPI progress) + CUDA global
   // sync; use device-side periodic copies instead (see
@@ -400,7 +399,7 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
   int filenum = 0;
   if (!skip_png) {
-    sync_padded_d2h(phi_d.get(), phi_h);
+    sync_field_d2h(phi_d.get(), phi_h);
     char path[4096];
     std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                   filenum);
@@ -466,7 +465,7 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
     if (!skip_png && cfg.nsave > 0 && istep % cfg.nsave == 0) {
       const double t_png0 = perf_k ? MPI_Wtime() : 0.0;
-      sync_padded_d2h(phi_d.get(), phi_h);
+      sync_field_d2h(phi_d.get(), phi_h);
       char path[4096];
       std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                     filenum);
@@ -525,8 +524,8 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     pfc::cuda::print_cuda_halo_exchange_cpu_timers(MPI_COMM_WORLD);
   }
 
-  sync_padded_d2h(phi_d.get(), phi_h);
-  sync_padded_d2h(tempr_d.get(), tempr_h);
+  sync_field_d2h(phi_d.get(), phi_h);
+  sync_field_d2h(tempr_d.get(), tempr_h);
 
   if (!skip_png) {
     char path[4096];

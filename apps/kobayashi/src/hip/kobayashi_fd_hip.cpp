@@ -34,8 +34,8 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/field/brick_iteration.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
 #include <kobayashi/verification_utilities.hpp>
@@ -43,6 +43,9 @@
 namespace {
 
 
+
+using Field = pfc::data::Field<double, pfc::HostSpace>;
+using pfc::data::field_from_subdomain;
 
 // RAII wrappers for HIP device memory and MPI communicators
 template<typename T>
@@ -121,9 +124,6 @@ public:
         return tmp;
     }
 };
-using pfc::field::PaddedBrick;
-using pfc::field::for_each_owned;
-
 void hip_check(hipError_t e, const char *what) {
   if (e != hipSuccess) {
     throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
@@ -131,16 +131,16 @@ void hip_check(hipError_t e, const char *what) {
 }
 
 
-void sync_padded_d2h(const double *dev, PaddedBrick<double> &host) {
+void sync_field_d2h(const double *dev, Field &host) {
   hip_check(hipMemcpy(host.data(), dev, host.size() * sizeof(double),
                       hipMemcpyDeviceToHost),
-            "sync_padded_d2h");
+            "sync_field_d2h");
 }
 
-void sync_padded_h2d(const PaddedBrick<double> &host, double *dev) {
+void sync_field_h2d(const Field &host, double *dev) {
   hip_check(hipMemcpy(dev, host.data(), host.size() * sizeof(double),
                       hipMemcpyHostToDevice),
-            "sync_padded_h2d");
+            "sync_field_h2d");
 }
 
 void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
@@ -172,23 +172,23 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const auto decomp = pfc::decomposition::create(domain, nproc);
 
   constexpr int hw = 1;
-  PaddedBrick<double> phi_h(decomp, rank, hw);
-  PaddedBrick<double> tempr_h(decomp, rank, hw);
-  PaddedBrick<double> eps_h(decomp, rank, hw);
-  PaddedBrick<double> epsd_h(decomp, rank, hw);
-  PaddedBrick<double> px_h(decomp, rank, hw);
-  PaddedBrick<double> py_h(decomp, rank, hw);
+  auto phi_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto tempr_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto eps_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto epsd_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto px_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  auto py_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
-  const int nx = phi_h.nx();
-  const int ny = phi_h.ny();
-  const int nz = phi_h.nz();
+  const int nx = phi_h.local_size()[0];
+  const int ny = phi_h.local_size()[1];
+  const int nz = phi_h.local_size()[2];
 
   const int ci = Nx / 2;
   const int cj = Ny / 2;
 
-  for_each_owned(phi_h, [&](int i, int j, int k) {
+  phi_h.for_each_owned([&](int i, int j, int k) {
     (void)k;
     const auto g = phi_h.global(i, j, 0);
     const int gi = g[0];
@@ -197,7 +197,7 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     const double ddy = static_cast<double>(gj - cj);
     phi_h(i, j, 0) = (ddx * ddx + ddy * ddy < kobayashi::kSeed) ? 1.0 : 0.0;
   });
-  for_each_owned(tempr_h, [&](int i, int j, int k) { tempr_h(i, j, k) = 0.0; });
+  tempr_h.for_each_owned([&](int i, int j, int k) { tempr_h(i, j, k) = 0.0; });
 
   const std::size_t padded_elems = phi_h.size();
   const std::size_t padded_bytes = padded_elems * sizeof(double);
@@ -234,8 +234,8 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   hip_check(hipMalloc(reinterpret_cast<void **>(&temp_epsilon_deriv_d), padded_bytes), "hipMalloc epsilon_deriv");
   hip_buffer_guard<double> epsilon_deriv_d(temp_epsilon_deriv_d);
 
-  sync_padded_h2d(phi_h, phi_d);
-  sync_padded_h2d(tempr_h, tempr_d);
+  sync_field_h2d(phi_h, phi_d);
+  sync_field_h2d(tempr_h, tempr_d);
 
   pfc::PaddedHaloExchanger<double> halo_phi(decomp, rank, hw, MPI_COMM_WORLD, 0);
   pfc::PaddedHaloExchanger<double> halo_t(decomp, rank, hw, MPI_COMM_WORLD, 20);
@@ -262,7 +262,7 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
   int filenum = 0;
   if (!skip_png) {
-    sync_padded_d2h(phi_d, phi_h);
+    sync_field_d2h(phi_d, phi_h);
     char path[4096];
     std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(), filenum);
     if (rank == 0) {
@@ -276,33 +276,33 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const double t_loop0 = MPI_Wtime();
 
   for (int istep = 1; istep <= cfg.n_steps; ++istep) {
-    sync_padded_d2h(phi_d, phi_h);
+    sync_field_d2h(phi_d, phi_h);
     halo_phi.exchange_halos(phi_h.data(), phi_h.size());
-    sync_padded_h2d(phi_h, phi_d);
+    sync_field_h2d(phi_h, phi_d);
 
-    sync_padded_d2h(tempr_d, tempr_h);
+    sync_field_d2h(tempr_d, tempr_h);
     halo_t.exchange_halos(tempr_h.data(), tempr_h.size());
-    sync_padded_h2d(tempr_h, tempr_d);
+    sync_field_h2d(tempr_h, tempr_d);
 
     kobayashi::kobayashi_stage_a_hip(phi_d, tempr_d, lap_phi_d, lap_t_d, phidx_d, phidy_d,
                                      epsilon_d, epsilon_deriv_d, nx, ny, nz, hw, inv_dx,
                                      inv_dy, inv_lap_den);
 
-    sync_padded_d2h(epsilon_d, eps_h);
+    sync_field_d2h(epsilon_d, eps_h);
     halo_eps.exchange_halos(eps_h.data(), eps_h.size());
-    sync_padded_h2d(eps_h, epsilon_d);
+    sync_field_h2d(eps_h, epsilon_d);
 
-    sync_padded_d2h(epsilon_deriv_d, epsd_h);
+    sync_field_d2h(epsilon_deriv_d, epsd_h);
     halo_epsd.exchange_halos(epsd_h.data(), epsd_h.size());
-    sync_padded_h2d(epsd_h, epsilon_deriv_d);
+    sync_field_h2d(epsd_h, epsilon_deriv_d);
 
-    sync_padded_d2h(phidx_d, px_h);
+    sync_field_d2h(phidx_d, px_h);
     halo_phidx.exchange_halos(px_h.data(), px_h.size());
-    sync_padded_h2d(px_h, phidx_d);
+    sync_field_h2d(px_h, phidx_d);
 
-    sync_padded_d2h(phidy_d, py_h);
+    sync_field_d2h(phidy_d, py_h);
     halo_phidy.exchange_halos(py_h.data(), py_h.size());
-    sync_padded_h2d(py_h, phidy_d);
+    sync_field_h2d(py_h, phidy_d);
 
     kobayashi::kobayashi_stage_b_hip(phi_d, tempr_d, lap_phi_d, lap_t_d, epsilon_d,
                                      epsilon_deriv_d, phidx_d, phidy_d, nx, ny, nz, hw,
@@ -313,7 +313,7 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     }
 
     if (!skip_png && cfg.nsave > 0 && istep % cfg.nsave == 0) {
-      sync_padded_d2h(phi_d, phi_h);
+      sync_field_d2h(phi_d, phi_h);
       char path[4096];
       std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                     filenum);
@@ -332,8 +332,8 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   double wall_max = 0.0;
   MPI_Reduce(&wall_local, &wall_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
-  sync_padded_d2h(phi_d, phi_h);
-  sync_padded_d2h(tempr_d, tempr_h);
+  sync_field_d2h(phi_d, phi_h);
+  sync_field_d2h(tempr_d, tempr_h);
 
   if (!skip_png) {
     char path[4096];
