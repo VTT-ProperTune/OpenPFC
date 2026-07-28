@@ -802,7 +802,7 @@ void exchange_halo(pfc::field::PaddedBrick<T>& brick,
   
   // Copy data back to brick
   const int nx = brick.nx();
-  const int ny = brick.ny(); // Remove .hw() call
+  const int ny = brick.ny();
   const int nz = brick.nz();
   const int hw = brick.halo_width();
   
@@ -861,7 +861,7 @@ void unpack_halo_data(pfc::field::PaddedBrick<T>& brick,
   
   // Copy data back to brick
   const int nx = brick.nx();
-  const int ny = brick.ny(); // Remove .hw() call
+  const int ny = brick.ny();
   const int nz = brick.nz();
   const int hw = brick.halo_width();
   
