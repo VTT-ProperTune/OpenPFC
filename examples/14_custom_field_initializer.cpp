@@ -3,36 +3,42 @@
 
 /**
  * @file 14_custom_field_initializer.cpp
- * @brief Example: Custom field initialization patterns
+ * @brief Example: Custom field initialization with pfc::data::Field
  *
  * @details
  * This example demonstrates how to create custom field initialization patterns
- * using simple structs and evaluation functions. We show three physical patterns:
+ * using pfc::data::Field and Field::apply(). We show three physical patterns:
  *
  * 1. **Lamb-Oseen Vortex** - Rotating fluid vortex with viscous core
  * 2. **Gaussian Bump** - Localized concentration or temperature field
  * 3. **Checkerboard** - Periodic alternating pattern
  *
- * ## Key Concept: Struct-Based Patterns
+ * ## Key Concept: Field::apply() with Callables
  *
- * Instead of inheritance hierarchies, we use simple structs with public data.
- * This follows OpenPFC's "structs + free functions" philosophy.
+ * pfc::data::Field::apply() accepts any callable that can be invoked with
+ * physical coordinates (double x, double y, double z) or (const Real3& pos).
+ * This enables flexible, expressive initialization patterns using lambdas,
+ * functors, or free functions.
  *
  * ## Integration with OpenPFC
  *
- * For full integration with DiscreteField/Domain APIs using ADL, see:
- * - docs/extending_openpfc/adl_extension_patterns.md
- * - examples/17_custom_coordinate_system.cpp
- *
- * This simplified example focuses on the pattern concept itself.
+ * See Field from decomposition using field_from_subdomain_unpadded factory:
+ * - examples/08_discrete_fields.cpp - Basic Field usage
+ * - examples/19_explicit_stepper_fd.cpp - Physics application with custom initialization
  */
 
 #include <cmath>
 #include <iostream>
 #include <numbers>
-#include <openpfc/openpfc.hpp>
+#include <mpi.h>
+
+#include <openpfc/kernel/data/strong_types.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
 using namespace pfc;
+using namespace pfc::data;
 
 // ============================================================================
 // Part 1: Define Custom Pattern Types
@@ -156,78 +162,162 @@ double evaluate_checkerboard(const my_project::CheckerboardPattern &pattern,
 }
 
 // ============================================================================
-// Part 3: Usage Examples
+// Part 3: Usage Examples with pfc::data::Field
 // ============================================================================
 
-void example_vortex_pattern() {
-  std::cout << "=== Example 1: Vortex Pattern ===\n\n";
+int main(int argc, char *argv[]) {
+  MPI_Init(&argc, &argv);
+  int rank = 0, nproc = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
-  // Define vortex at origin with strength 5.0 and core radius 2.0
-  my_project::VortexPattern vortex({0.0, 0.0, 0.0}, 5.0, 2.0);
-
-  // Evaluate at several radial distances
-  std::cout << "Vortex tangential velocity profile:\n";
-  for (double r = 0.0; r <= 10.0; r += 2.0) {
-    Real3 pos{r, 0.0, 0.0}; // Along x-axis
-    double velocity = evaluate_vortex(vortex, pos);
-    std::cout << "  r = " << r << " : v_θ = " << velocity << "\n";
-  }
-  std::cout << "\n";
-}
-
-void example_gaussian_bump() {
-  std::cout << "=== Example 2: Gaussian Bump ===\n\n";
-
-  // Create Gaussian peak at origin with amplitude 1.0, width 1.5
-  my_project::GaussianBump bump({0.0, 0.0, 0.0}, 1.0, 1.5);
-
-  // Evaluate along a line
-  std::cout << "Gaussian profile:\n";
-  for (double x = 0.0; x <= 5.0; x += 1.0) {
-    Real3 pos{x, 0.0, 0.0};
-    double value = evaluate_gaussian(bump, pos);
-    std::cout << "  x = " << x << " : φ = " << value << "\n";
-  }
-  std::cout << "\n";
-}
-
-void example_checkerboard() {
-  std::cout << "=== Example 3: Checkerboard Pattern ===\n\n";
-
-  // Create checkerboard with period 2.0 in each direction
-  my_project::CheckerboardPattern checker(1.0, -1.0, {2.0, 2.0, 2.0});
-
-  // Sample a 2D slice (z=0 plane)
-  std::cout << "Checkerboard pattern (z=0 plane):\n";
-  for (int j = 0; j < 4; ++j) {
-    std::cout << "  ";
-    for (int i = 0; i < 4; ++i) {
-      Real3 pos{i * 1.0, j * 1.0, 0.0};
-      double value = evaluate_checkerboard(checker, pos);
-      std::cout << (value > 0 ? "+" : "-") << "  ";
-    }
-    std::cout << "\n";
-  }
-  std::cout << "\n";
-}
-
-int main() {
   std::cout << "\n";
   std::cout << "╔════════════════════════════════════════════════════════╗\n";
-  std::cout << "║  OpenPFC: Custom Field Initialization Patterns Example ║\n";
+  std::cout << "║  OpenPFC: Custom Field Initialization Patterns        ║\n";
   std::cout << "╚════════════════════════════════════════════════════════╝\n";
   std::cout << "\n";
 
-  example_vortex_pattern();
-  example_gaussian_bump();
-  example_checkerboard();
+  // Example 1: Vortex Pattern Initialization
+  std::cout << "=== Example 1: Vortex Pattern ===\n\n";
 
-  std::cout << "✅ All examples completed successfully!\n";
-  std::cout << "\n";
-  std::cout << "📖 For full integration with DiscreteField/Domain using ADL, see:\n";
-  std::cout << "   - docs/extending_openpfc/adl_extension_patterns.md\n";
-  std::cout << "   - examples/17_custom_coordinate_system.cpp\n";
-  std::cout << "\n";
+  // Create domain and decomposition using strong types
+  auto vortex_domain = domain::create(pfc::GridSize({32, 32, 1}),
+                                       pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                       pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto vortex_decomp = decomposition::create(vortex_domain, nproc);
 
+  // Create Field using factory function
+  auto vortex_field = field_from_subdomain_unpadded<double>(vortex_decomp, rank);
+
+  // Initialize with vortex pattern using lambda
+  const double vortex_strength = 5.0;
+  const double vortex_core_radius = 2.0;
+  vortex_field.apply([vortex_strength, vortex_core_radius](double x, double y, double z) -> double {
+    double r = std::sqrt(x * x + y * y);  // Distance from center in x-y plane
+    double r_c_sq = vortex_core_radius * vortex_core_radius;
+    double value = 0.0;
+
+    if (r > 1e-10) {  // Avoid division by zero at center
+      value = (vortex_strength / (2.0 * std::numbers::pi * r)) *
+              (1.0 - std::exp(-r * r / r_c_sq));
+    }
+    return value;
+  });
+
+  // Sample and display vortex profile (on rank 0)
+  if (rank == 0) {
+    std::cout << "Vortex tangential velocity profile:\n";
+    my_project::VortexPattern vortex({0.0, 0.0, 0.0}, vortex_strength, vortex_core_radius);
+    for (double r = 0.0; r <= 10.0; r += 2.0) {
+      Real3 pos{r, 0.0, 0.0};  // Along x-axis
+      double velocity = evaluate_vortex(vortex, pos);
+      std::cout << "  r = " << r << " : v_θ = " << velocity << "\n";
+    }
+    std::cout << "\n✅ Vortex field initialized with Field::apply()\n\n";
+  }
+
+  // Example 2: Gaussian Bump Initialization
+  std::cout << "=== Example 2: Gaussian Bump ===\n\n";
+
+  // Create domain and decomposition for Gaussian
+  auto gaussian_domain = domain::create(pfc::GridSize({16, 16, 16}),
+                                        pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                        pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto gaussian_decomp = decomposition::create(gaussian_domain, nproc);
+
+  // Create Field using factory function
+  auto gaussian_field = field_from_subdomain_unpadded<double>(gaussian_decomp, rank);
+
+  // Initialize with Gaussian bump using functor
+  const double gaussian_amplitude = 1.0;
+  const double gaussian_width = 1.5;
+  const Real3 gaussian_center{0.0, 0.0, 0.0};
+
+  // Create a functor for the Gaussian pattern
+  struct GaussianInitializer {
+    Real3 center;
+    double amplitude;
+    double width_sq;  // Precomputed sigma^2
+
+    double operator()(double x, double y, double z) const {
+      double dx = x - center[0];
+      double dy = y - center[1];
+      double dz = z - center[2];
+      double dist_sq = dx * dx + dy * dy + dz * dz;
+      return amplitude * std::exp(-dist_sq / (2.0 * width_sq));
+    }
+  };
+
+  GaussianInitializer gaussian_init{gaussian_center, gaussian_amplitude, gaussian_width * gaussian_width};
+  gaussian_field.apply(gaussian_init);
+
+  // Display Gaussian profile (on rank 0)
+  if (rank == 0) {
+    std::cout << "Gaussian profile:\n";
+    my_project::GaussianBump bump(gaussian_center, gaussian_amplitude, gaussian_width);
+    for (double x = 0.0; x <= 5.0; x += 1.0) {
+      Real3 pos{x, 0.0, 0.0};
+      double value = evaluate_gaussian(bump, pos);
+      std::cout << "  x = " << x << " : φ = " << value << "\n";
+    }
+    std::cout << "\n✅ Gaussian field initialized with functor\n\n";
+  }
+
+  // Example 3: Checkerboard Pattern Initialization
+  std::cout << "=== Example 3: Checkerboard Pattern ===\n\n";
+
+  // Create domain and decomposition for checkerboard
+  auto checker_domain = domain::create(pfc::GridSize({8, 8, 8}),
+                                       pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                       pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto checker_decomp = decomposition::create(checker_domain, nproc);
+
+  // Create Field using factory function
+  auto checker_field = field_from_subdomain_unpadded<double>(checker_decomp, rank);
+
+  // Initialize with checkerboard pattern using free function wrapper
+  const double checker_high = 1.0;
+  const double checker_low = -1.0;
+  const Real3 checker_period{2.0, 2.0, 2.0};
+
+  checker_field.apply([checker_high, checker_low, checker_period](double x, double y, double z) -> double {
+    int cell_i = static_cast<int>(std::floor(x / checker_period[0]));
+    int cell_j = static_cast<int>(std::floor(y / checker_period[1]));
+    int cell_k = static_cast<int>(std::floor(z / checker_period[2]));
+
+    // Checkerboard: alternate based on sum of cell indices
+    int sum = cell_i + cell_j + cell_k;
+    return (sum % 2 == 0) ? checker_high : checker_low;
+  });
+
+  // Display checkerboard pattern sample (on rank 0)
+  if (rank == 0) {
+    std::cout << "Checkerboard pattern (z=0 plane):\n";
+    my_project::CheckerboardPattern checker(checker_high, checker_low, checker_period);
+    for (int j = 0; j < 4; ++j) {
+      std::cout << "  ";
+      for (int i = 0; i < 4; ++i) {
+        Real3 pos{i * 1.0, j * 1.0, 0.0};
+        double value = evaluate_checkerboard(checker, pos);
+        std::cout << (value > 0 ? "+" : "-") << "  ";
+      }
+      std::cout << "\n";
+    }
+    std::cout << "\n✅ Checkerboard field initialized with lambda\n\n";
+  }
+
+  if (rank == 0) {
+    std::cout << "✅ All custom field initialization examples completed!\n";
+    std::cout << "\n";
+    std::cout << "📖 Key patterns demonstrated:\n";
+    std::cout << "   • field_from_subdomain_unpadded() - Create Field from decomposition\n";
+    std::cout << "   • Field::apply() - Initialize field with callable patterns\n";
+    std::cout << "   • Lambda expressions - Inline pattern definitions\n";
+    std::cout << "   • Functors - Reusable pattern objects with state\n";
+    std::cout << "\n";
+  }
+
+
+  MPI_Finalize();
   return 0;
 }
