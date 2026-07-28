@@ -23,6 +23,22 @@ Coupled **phase field** \(\phi\) and **temperature** \(T\) after Kobayashi (Phys
 
 Material constants and output cadence (`nprint`, `nsave`) live in [`include/kobayashi/defaults.hpp`](include/kobayashi/defaults.hpp).
 
+## Field Migration
+
+**CPU Fields:** The preferred field type for CPU computation is `pfc::data::Field<double, pfc::HostSpace>` (defined in [`grid_field.hpp`](../../../include/openpfc/kernel/data/grid_field.hpp)). This is the modern Field API used throughout the OpenPFC kernel and should be used for new CPU code:
+
+```cpp
+#include <openpfc/kernel/data/grid_field.hpp>
+
+using Field = pfc::data::Field<double, pfc::HostSpace>;
+
+// Example usage pattern (from kobayashi_fd_manual.cpp):
+Field phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+Field tempr = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+```
+
+**GPU Host Mirrors:** For CUDA and HIP implementations, host-side field storage is currently transitioning away from `pfc::field::PaddedBrick` toward the unified `pfc::data::Field` API (see issue #330). Existing GPU code still uses `PaddedBrick<double>` for host-device staging buffers, but this is considered legacy and will be replaced by the new Field API as the migration progresses. When working with GPU code, refer to the implementation files (`kobayashi_fd_cuda.cpp`, `kobayashi_fd_hip.cpp`) for the current staging conventions.
+
 ## Usage (`kobayashi_fd_manual`)
 
 ```bash
