@@ -6,8 +6,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/types.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -36,7 +37,9 @@ TEST_CASE("Constant Field Modifier") {
   }
 
   SECTION("Apply field modifier") {
-    auto world = domain::create_world({8, 1, 1});
+    auto domain = pfc::domain::create(pfc::Int3{8, 1, 1});
+    auto box = pfc::domain::index_box(domain);
+    World world(box.low, box.high, domain);
     auto decomposition = decomposition::create(world, 1);
     auto fft = fft::create(decomposition);
     ModelWithConstantIC m(fft, world);
@@ -55,7 +58,9 @@ TEST_CASE("Constant Field Modifier") {
 }
 
 TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
-  auto world = domain::create_world({8, 8, 8});
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 
@@ -65,7 +70,9 @@ TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
 }
 
 TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
-  auto world = domain::create_world({8, 8, 8});
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithConstantIC model(fft, world);

@@ -8,8 +8,9 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/types.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -50,9 +51,10 @@ TEST_CASE("SingleSeed - Parameter Access", "[ic_single_seed]") {
 
 TEST_CASE("SingleSeed - Field Application", "[ic_single_seed]") {
   // Create domain centered at origin for seed placement
-  auto world =
-      domain::create_world(GridSize({16, 16, 16}), PhysicalOrigin({-128.0, -128.0, -128.0}),
-                    GridSpacing({16.0, 16.0, 16.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+                                    pfc::GridSpacing({16.0, 16.0, 16.0}));
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithSingleSeedIC m(fft, world);
@@ -107,9 +109,10 @@ TEST_CASE("SingleSeed - Field Application", "[ic_single_seed]") {
 }
 
 TEST_CASE("SingleSeed - Integration with Model", "[ic_single_seed]") {
-  auto world =
-      domain::create_world(GridSize({8, 8, 8}), PhysicalOrigin({-64.0, -64.0, -64.0}),
-                    GridSpacing({16.0, 16.0, 16.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({8, 8, 8}), pfc::PhysicalOrigin({-64.0, -64.0, -64.0}),
+                                    pfc::GridSpacing({16.0, 16.0, 16.0}));
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithSingleSeedIC model(fft, world);

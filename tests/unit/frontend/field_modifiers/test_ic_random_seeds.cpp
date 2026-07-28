@@ -7,8 +7,9 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/types.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -45,9 +46,10 @@ TEST_CASE("RandomSeeds - Parameter Access", "[ic_random_seeds]") {
 
 TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
   // Create domain matching hardcoded values in RandomSeeds
-  auto world =
-      domain::create_world(GridSize({32, 32, 32}), PhysicalOrigin({-128.0, -128.0, -128.0}),
-                    GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+                                    pfc::GridSpacing({8.0, 8.0, 8.0}));
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithRandomSeedsIC m(fft, world);
@@ -112,9 +114,10 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
 }
 
 TEST_CASE("RandomSeeds - Integration with Model", "[ic_random_seeds]") {
-  auto world =
-      domain::create_world(GridSize({16, 16, 16}), PhysicalOrigin({-128.0, -128.0, -128.0}),
-                    GridSpacing({16.0, 16.0, 16.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+                                    pfc::GridSpacing({16.0, 16.0, 16.0}));
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithRandomSeedsIC model(fft, world);

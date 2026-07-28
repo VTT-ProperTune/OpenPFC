@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 
@@ -43,8 +44,10 @@ TEST_CASE("FixedBC - Basic functionality", "[boundary_conditions][unit]") {
 
 TEST_CASE("FixedBC - apply method", "[boundary_conditions][unit]") {
   // Create a 1D world for testing boundary conditions
-  auto world = domain::create_world(GridSize({100, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                             GridSpacing({1.0, 1.0, 1.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({100, 1, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
 

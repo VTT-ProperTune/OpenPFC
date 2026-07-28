@@ -7,8 +7,9 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/types.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -80,9 +81,10 @@ TEST_CASE("MovingBC - Modifier Name", "[bc_moving]") {
 
 TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
   // Small grid: behavior is local; avoid thousands of Catch REQUIREs (very slow).
-  auto world =
-      domain::create_world(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
-                    GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+                                    pfc::GridSpacing({8.0, 8.0, 8.0}));
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithMovingBC m(fft, world);
@@ -146,7 +148,9 @@ TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
 }
 
 TEST_CASE("MovingBC - Integration with Model", "[bc_moving]") {
-  auto world = domain::create_world({16, 8, 8});
+  auto domain = pfc::domain::create(pfc::Int3{16, 8, 8});
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithMovingBC model(fft, world);
@@ -174,9 +178,10 @@ TEST_CASE("MovingBC - Field Name Assignment", "[bc_moving]") {
 }
 
 TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
-  auto world =
-      domain::create_world(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
-                    GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+                                    pfc::GridSpacing({8.0, 8.0, 8.0}));
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithMovingBC m(fft, world);
@@ -204,9 +209,10 @@ TEST_CASE("MovingBC - MPI collectives fail closed", "[bc_moving]") {
   // std::runtime_error rather than apply a divergent m_xpos.
   // Verified by code inspection of moving_bc.hpp (no MPI mock framework);
   // this case locks the success-path apply still works under that contract.
-  auto world =
-      domain::create_world(GridSize({16, 4, 4}), PhysicalOrigin({-64.0, -16.0, -16.0}),
-                    GridSpacing({8.0, 8.0, 8.0}));
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+                                    pfc::GridSpacing({8.0, 8.0, 8.0}));
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   ModelWithMovingBC m(fft, world);

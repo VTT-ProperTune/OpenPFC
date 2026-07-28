@@ -6,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
@@ -16,7 +17,9 @@ using namespace pfc;
 
 TEST_CASE("FieldModifier - applies field modification to model",
           "[field_modifier][unit]") {
-  auto world = domain::create_world({8, 8, 8});
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModelWithModificationFlag model(fft, world);
@@ -30,7 +33,9 @@ TEST_CASE("FieldModifier - applies field modification to model",
 }
 
 TEST_CASE("FieldModifier - polymorphic usage", "[field_modifier][unit]") {
-  auto world = domain::create_world({8, 8, 8});
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModelWithModificationFlag model(fft, world);
@@ -45,7 +50,9 @@ TEST_CASE("FieldModifier - polymorphic usage", "[field_modifier][unit]") {
 }
 
 TEST_CASE("FieldModifier - move semantics", "[field_modifier][unit]") {
-  auto world = domain::create_world({8, 8, 8});
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModelWithModificationFlag model(fft, world);
@@ -105,7 +112,9 @@ TEST_CASE("FieldModifier - input validation", "[field_modifier][unit][error]") {
 }
 
 TEST_CASE("FieldModifier - works with MockModel", "[field_modifier][unit]") {
-  auto world = domain::create_world({8, 8, 8});
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto box = pfc::domain::index_box(domain);
+  World world(box.low, box.high, domain);
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
