@@ -9,6 +9,7 @@
 
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/domain/create.hpp>
 
 using namespace Catch::Matchers;
 using namespace pfc;
@@ -45,7 +46,7 @@ TEST_CASE("World - construction and accessors", "[world][unit]") {
 
   SECTION("Construct World with default origin and spacing") {
     Int3 dimensions = {100, 200, 300};
-    World world = world::create(dimensions);
+    World world = domain::create_world(dimensions);
 
     REQUIRE(get_size(world) == dimensions);
     REQUIRE(get_origin(world) == Real3{0.0, 0.0, 0.0});
@@ -74,8 +75,8 @@ TEST_CASE("World - coordinate transformations", "[world][unit]") {
   Int3 dimensions = {100, 100, 100};
   Real3 origin = {0.0, 0.0, 0.0};
   Real3 spacing = {1.0, 1.0, 1.0};
-  World world = world::create(GridSize(dimensions), PhysicalOrigin(origin),
-                              GridSpacing(spacing));
+  World world = domain::create_world(GridSize(dimensions), PhysicalOrigin(origin),
+                                     GridSpacing(spacing));
 
   SECTION("Physical coordinates from grid indices") {
     Int3 indices = {10, 20, 30};
@@ -111,8 +112,8 @@ TEST_CASE("World - subdomain physical bounds honor index offset", "[world][unit]
   // system but owns a shifted index range [m_lower, m_upper]. Its physical
   // bounds must reflect m_lower/m_upper, not {0,0,0}/{size-1}.
   World global =
-      world::create(GridSize(Int3{64, 16, 16}), PhysicalOrigin(Real3{0.0, 0.0, 0.0}),
-                    GridSpacing(Real3{0.1, 0.2, 0.4}));
+      domain::create_world(GridSize(Int3{64, 16, 16}), PhysicalOrigin(Real3{0.0, 0.0, 0.0}),
+                           GridSpacing(Real3{0.1, 0.2, 0.4}));
   World sub(Int3{32, 0, 0}, Int3{63, 15, 15}, world::get_coordinate_system(global));
 
   Real3 lo = world::get_lower_bounds(sub);
@@ -129,7 +130,7 @@ TEST_CASE("World - subdomain physical bounds honor index offset", "[world][unit]
 TEST_CASE("World - total size calculation", "[world][unit]") {
   SECTION("Correct total size calculation") {
     Int3 dimensions = {10, 20, 30};
-    World world = world::create(dimensions);
+    World world = domain::create_world(dimensions);
     REQUIRE(get_total_size(world) == (std::size_t{10} * 20 * 30));
   }
 }
@@ -139,12 +140,12 @@ TEST_CASE("World - equality and inequality operators", "[world][unit]") {
   Real3 origin = {0.0, 0.0, 0.0};
   Real3 spacing = {1.0, 1.0, 1.0};
 
-  World world1 = world::create(GridSize(dimensions), PhysicalOrigin(origin),
-                               GridSpacing(spacing));
-  World world2 = world::create(GridSize(dimensions), PhysicalOrigin(origin),
-                               GridSpacing(spacing));
-  World world3 = world::create(GridSize({200, 100, 100}), PhysicalOrigin(origin),
-                               GridSpacing(spacing));
+  World world1 = domain::create_world(GridSize(dimensions), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
+  World world2 = domain::create_world(GridSize(dimensions), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
+  World world3 = domain::create_world(GridSize({200, 100, 100}), PhysicalOrigin(origin),
+                                      GridSpacing(spacing));
 
   SECTION("Equality operator") {
     REQUIRE(world1 == world2);
@@ -162,8 +163,8 @@ TEST_CASE("World - streaming output", "[world][unit]") {
     Int3 dimensions = {10, 20, 30};
     Real3 origin = {1.0, 2.0, 3.0};
     Real3 spacing = {0.5, 0.5, 0.5};
-    World world = world::create(GridSize(dimensions), PhysicalOrigin(origin),
-                                GridSpacing(spacing));
+    World world = domain::create_world(GridSize(dimensions), PhysicalOrigin(origin),
+                                       GridSpacing(spacing));
 
     std::ostringstream oss;
     REQUIRE_NOTHROW(oss << world);
@@ -177,8 +178,8 @@ TEST_CASE("World - streaming output", "[world][unit]") {
   }
 
   SECTION("World output includes coordinate system info") {
-    World world = world::create(GridSize({5, 5, 5}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                GridSpacing({1.0, 1.0, 1.0}));
+    World world = domain::create_world(GridSize({5, 5, 5}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                                       GridSpacing({1.0, 1.0, 1.0}));
     std::ostringstream oss;
     oss << world;
 
@@ -192,8 +193,8 @@ TEST_CASE("World - streaming output", "[world][unit]") {
   SECTION("World output with non-default values") {
     Real3 origin = {1.5, 2.5, 3.5};
     Real3 spacing = {0.1, 0.2, 0.3};
-    World world = world::create(GridSize({8, 16, 32}), PhysicalOrigin(origin),
-                                GridSpacing(spacing));
+    World world = domain::create_world(GridSize({8, 16, 32}), PhysicalOrigin(origin),
+                                       GridSpacing(spacing));
 
     std::ostringstream oss;
     oss << world;
@@ -341,38 +342,38 @@ TEST_CASE("World - physical_volume() calculates correctly",
           "[world][convenience][unit]") {
   SECTION("3D domain with unit spacing") {
     auto world =
-        world::create(GridSize({10, 10, 10}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({1.0, 1.0, 1.0}));
+        domain::create_world(GridSize({10, 10, 10}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({1.0, 1.0, 1.0}));
     REQUIRE_THAT(world::physical_volume(world), WithinAbs(1000.0, 1e-10));
   }
 
   SECTION("3D domain with custom spacing") {
     auto world =
-        world::create(GridSize({10, 10, 10}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.1, 0.1, 0.1}));
+        domain::create_world(GridSize({10, 10, 10}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({0.1, 0.1, 0.1}));
     REQUIRE_THAT(world::physical_volume(world), WithinAbs(1.0, 1e-10));
   }
 
   SECTION("2D domain (nz = 1)") {
     auto world =
-        world::create(GridSize({100, 100, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.01, 0.01, 1.0}));
+        domain::create_world(GridSize({100, 100, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({0.01, 0.01, 1.0}));
     // Volume = 100 * 0.01 * 100 * 0.01 * 1 * 1.0 = 1.0
     REQUIRE_THAT(world::physical_volume(world), WithinAbs(1.0, 1e-10));
   }
 
   SECTION("1D domain (ny = nz = 1)") {
     auto world =
-        world::create(GridSize({100, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.1, 1.0, 1.0}));
+        domain::create_world(GridSize({100, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({0.1, 1.0, 1.0}));
     // Volume = 100 * 0.1 * 1 * 1.0 * 1 * 1.0 = 10.0
     REQUIRE_THAT(world::physical_volume(world), WithinAbs(10.0, 1e-10));
   }
 
   SECTION("Non-cubic domain") {
     auto world =
-        world::create(GridSize({128, 128, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.01, 0.01, 0.05}));
+        domain::create_world(GridSize({128, 128, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({0.01, 0.01, 0.05}));
     // Volume = 128 * 0.01 * 128 * 0.01 * 32 * 0.05 = 2.62144
     REQUIRE_THAT(world::physical_volume(world), WithinAbs(2.62144, 1e-10));
   }
@@ -381,7 +382,7 @@ TEST_CASE("World - physical_volume() calculates correctly",
 TEST_CASE("World - dimensionality checks work correctly",
           "[world][convenience][unit]") {
   SECTION("1D domain (nx > 1, ny = 1, nz = 1)") {
-    auto world1d = world::create(Int3{100, 1, 1});
+    auto world1d = domain::create_world(Int3{100, 1, 1});
 
     REQUIRE(world::is_1d(world1d));
     REQUIRE_FALSE(world::is_2d(world1d));
@@ -390,7 +391,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("2D domain (nx > 1, ny > 1, nz = 1)") {
-    auto world2d = world::create(Int3{64, 64, 1});
+    auto world2d = domain::create_world(Int3{64, 64, 1});
 
     REQUIRE_FALSE(world::is_1d(world2d));
     REQUIRE(world::is_2d(world2d));
@@ -399,7 +400,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("3D domain (nx > 1, ny > 1, nz > 1)") {
-    auto world3d = world::create(Int3{32, 32, 32});
+    auto world3d = domain::create_world(Int3{32, 32, 32});
 
     REQUIRE_FALSE(world::is_1d(world3d));
     REQUIRE_FALSE(world::is_2d(world3d));
@@ -408,7 +409,7 @@ TEST_CASE("World - dimensionality checks work correctly",
   }
 
   SECTION("Degenerate case (nx = 1, ny = 1, nz = 1)") {
-    auto world_degenerate = world::create(GridSize({1, 1, 1}).to_vector3());
+    auto world_degenerate = domain::create_world(GridSize({1, 1, 1}).to_vector3());
 
     REQUIRE_FALSE(world::is_1d(world_degenerate));
     REQUIRE_FALSE(world::is_2d(world_degenerate));
@@ -418,7 +419,7 @@ TEST_CASE("World - dimensionality checks work correctly",
 
   SECTION("Non-standard 2D (nx = 1, ny > 1, nz > 1)") {
     // This is NOT considered 2D by our definition
-    auto world_yz = world::create(GridSize({1, 64, 64}).to_vector3());
+    auto world_yz = domain::create_world(GridSize({1, 64, 64}).to_vector3());
 
     REQUIRE_FALSE(world::is_1d(world_yz));
     REQUIRE_FALSE(world::is_2d(world_yz)); // Only x-y plane is 2D
@@ -431,8 +432,8 @@ TEST_CASE("World - bounds accessors return correct values",
           "[world][convenience][unit]") {
   SECTION("Unit spacing at origin") {
     auto world =
-        world::create(GridSize({10, 10, 10}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({1.0, 1.0, 1.0}));
+        domain::create_world(GridSize({10, 10, 10}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({1.0, 1.0, 1.0}));
 
     auto lower = world::get_lower_bounds(world);
     REQUIRE_THAT(lower[0], WithinAbs(0.0, 1e-10));
@@ -447,8 +448,8 @@ TEST_CASE("World - bounds accessors return correct values",
 
   SECTION("Custom spacing and origin") {
     auto world =
-        world::create(GridSize({100, 100, 100}), PhysicalOrigin({-5.0, -5.0, 0.0}),
-                      GridSpacing({0.1, 0.1, 0.1}));
+        domain::create_world(GridSize({100, 100, 100}), PhysicalOrigin({-5.0, -5.0, 0.0}),
+                            GridSpacing({0.1, 0.1, 0.1}));
 
     auto lower = world::get_lower_bounds(world);
     REQUIRE_THAT(lower[0], WithinAbs(-5.0, 1e-10));
@@ -463,8 +464,8 @@ TEST_CASE("World - bounds accessors return correct values",
 
   SECTION("2D domain") {
     auto world =
-        world::create(GridSize({128, 128, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.01, 0.01, 1.0}));
+        domain::create_world(GridSize({128, 128, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({0.01, 0.01, 1.0}));
 
     auto lower = world::get_lower_bounds(world);
     REQUIRE_THAT(lower[0], WithinAbs(0.0, 1e-10));
@@ -479,8 +480,8 @@ TEST_CASE("World - bounds accessors return correct values",
 
   SECTION("Bounds span equals expected physical size") {
     auto world =
-        world::create(GridSize({50, 50, 50}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.2, 0.2, 0.2}));
+        domain::create_world(GridSize({50, 50, 50}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({0.2, 0.2, 0.2}));
 
     auto lower = world::get_lower_bounds(world);
     auto upper = world::get_upper_bounds(world);
