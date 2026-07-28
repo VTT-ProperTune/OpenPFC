@@ -47,39 +47,43 @@ using Periodicity = Bool3;
  *
  * Most common case: N×N×N grid with spacing=1, origin=(0,0,0).
  *
- * @deprecated Use pfc::domain::create_world_uniform(int) instead
+ * @deprecated Use pfc::domain::create_world_uniform(int, Bool3) instead
  *
  * @param size Grid dimensions (same in all directions)
+ * @param periodic Per-axis periodicity flags (default: all non-periodic)
  * @return World with uniform grid
  *
  * @throws std::invalid_argument if size <= 0
  *
  * @code
- * auto world = pfc::domain::create_world_uniform(64);  // 64³ grid, dx=1
+ * auto world = pfc::domain::create_world_uniform(64);  // 64³ grid, dx=1, non-periodic
+ * auto world_periodic = pfc::domain::create_world_uniform(64, {true, true, true});  // periodic
  * @endcode
  */
-[[nodiscard]] [[deprecated("Use pfc::domain::create_world_uniform(int) instead")]] inline CartesianWorld uniform(int size) {
-  return pfc::domain::create_world_uniform(size);
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_uniform(int, Bool3) instead")]] inline CartesianWorld uniform(int size, Periodicity periodic = {false, false, false}) {
+  return pfc::domain::create_world_uniform(size, periodic);
 }
 
 /**
  * @brief Create uniform grid with specified spacing.
  *
- * @deprecated Use pfc::domain::create_world_uniform(int, double) instead
+ * @deprecated Use pfc::domain::create_world_uniform(int, double, Bool3) instead
  *
  * @param size Grid dimensions (same in all directions)
  * @param spacing Grid spacing (same in all directions)
+ * @param periodic Per-axis periodicity flags (default: all non-periodic)
  * @return World with uniform grid and spacing
  *
  * @throws std::invalid_argument if size <= 0
  * @throws std::invalid_argument if spacing <= 0
  *
  * @code
- * auto world = pfc::domain::create_world_uniform(128, 0.5);  // 128³ grid, dx=0.5
+ * auto world = pfc::domain::create_world_uniform(128, 0.5);  // 128³ grid, dx=0.5, non-periodic
+ * auto world_periodic = pfc::domain::create_world_uniform(128, 0.5, {true, true, true});  // periodic
  * @endcode
  */
-[[nodiscard]] [[deprecated("Use pfc::domain::create_world_uniform(int, double) instead")]] inline CartesianWorld uniform(int size, double spacing) {
-  return pfc::domain::create_world_uniform(size, spacing);
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_uniform(int, double, Bool3) instead")]] inline CartesianWorld uniform(int size, double spacing, Periodicity periodic = {false, false, false}) {
+  return pfc::domain::create_world_uniform(size, spacing, periodic);
 }
 
 /**
@@ -117,40 +121,44 @@ using Periodicity = Bool3;
 /**
  * @brief Create grid with default origin but custom spacing.
  *
- * @deprecated Use pfc::domain::create_world_with_spacing(const Int3&, const Real3&) instead
+ * @deprecated Use pfc::domain::create_world_with_spacing(const Int3&, const Real3&, const Bool3&) instead
  *
  * @param size Grid dimensions
  * @param spacing Grid spacing
+ * @param periodic Per-axis periodicity flags (default: all non-periodic)
  * @return World with specified size and spacing, origin at (0,0,0)
  *
  * @throws std::invalid_argument if any size <= 0
  * @throws std::invalid_argument if any spacing <= 0
  *
  * @code
- * auto world = pfc::domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});
+ * auto world = pfc::domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});  // non-periodic
+ * auto world_periodic = pfc::domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05}, {true, true, true});  // periodic
  * @endcode
  */
-[[nodiscard]] [[deprecated("Use pfc::domain::create_world_with_spacing(const Int3&, const Real3&) instead")]] inline CartesianWorld with_spacing(Int3 size, Real3 spacing) {
-  return pfc::domain::create_world_with_spacing(size, spacing);
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_with_spacing(const Int3&, const Real3&, const Bool3&) instead")]] inline CartesianWorld with_spacing(Int3 size, Real3 spacing, Periodicity periodic = {false, false, false}) {
+  return pfc::domain::create_world_with_spacing(size, spacing, periodic);
 }
 
 /**
  * @brief Create grid with custom origin but unit spacing.
  *
- * @deprecated Use pfc::domain::create_world_with_origin(const Int3&, const Real3&) instead
+ * @deprecated Use pfc::domain::create_world_with_origin(const Int3&, const Real3&, const Bool3&) instead
  *
  * @param size Grid dimensions
  * @param origin Physical origin
+ * @param periodic Per-axis periodicity flags (default: all non-periodic)
  * @return World with specified size and origin, spacing=1
  *
  * @throws std::invalid_argument if any size <= 0
  *
  * @code
- * auto world = pfc::domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});
+ * auto world = pfc::domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});  // non-periodic
+ * auto world_periodic = pfc::domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0}, {true, true, true});  // periodic
  * @endcode
  */
-[[nodiscard]] [[deprecated("Use pfc::domain::create_world_with_origin(const Int3&, const Real3&) instead")]] inline CartesianWorld with_origin(Int3 size, Real3 origin) {
-  return pfc::domain::create_world_with_origin(size, origin);
+[[nodiscard]] [[deprecated("Use pfc::domain::create_world_with_origin(const Int3&, const Real3&, const Bool3&) instead")]] inline CartesianWorld with_origin(Int3 size, Real3 origin, Periodicity periodic = {false, false, false}) {
+  return pfc::domain::create_world_with_origin(size, origin, periodic);
 }
 
 } // namespace pfc::world

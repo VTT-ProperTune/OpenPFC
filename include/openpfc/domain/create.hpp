@@ -91,31 +91,35 @@ namespace domain {
  * Most common case: N×N×N grid with spacing=1, origin=(0,0,0).
  *
  * @param size Grid dimensions (same in all directions)
+ * @param periodic Per-axis periodicity flags (default: all non-periodic)
  * @return World with uniform grid
  *
  * @throws std::invalid_argument if size <= 0
  *
  * @code
- * auto world = domain::create_world_uniform(64);  // 64³ grid, dx=1
+ * auto world = domain::create_world_uniform(64);  // 64³ grid, dx=1, non-periodic
+ * auto world_periodic = domain::create_world_uniform(64, {true, true, true});  // periodic
  * @endcode
  */
-[[nodiscard]] world::World create_world_uniform(int size);
+[[nodiscard]] world::World create_world_uniform(int size, Bool3 periodic = {false, false, false});
 
 /**
  * @brief Create uniform grid with specified spacing.
  *
  * @param size Grid dimensions (same in all directions)
  * @param spacing Grid spacing (same in all directions)
+ * @param periodic Per-axis periodicity flags (default: all non-periodic)
  * @return World with uniform grid and spacing
  *
  * @throws std::invalid_argument if size <= 0
  * @throws std::invalid_argument if spacing <= 0
  *
  * @code
- * auto world = domain::create_world_uniform(128, 0.5);  // 128³ grid, dx=0.5
+ * auto world = domain::create_world_uniform(128, 0.5);  // 128³ grid, dx=0.5, non-periodic
+ * auto world_periodic = domain::create_world_uniform(128, 0.5, {true, true, true});  // periodic
  * @endcode
  */
-[[nodiscard]] world::World create_world_uniform(int size, double spacing);
+[[nodiscard]] world::World create_world_uniform(int size, double spacing, Bool3 periodic = {false, false, false});
 
 /**
  * @brief Create grid from physical bounds (automatically computes spacing).
@@ -151,31 +155,35 @@ namespace domain {
  *
  * @param size Grid dimensions
  * @param spacing Grid spacing
+ * @param periodic Per-axis periodicity flags (default: all non-periodic)
  * @return World with specified size and spacing, origin at (0,0,0)
  *
  * @throws std::invalid_argument if any size <= 0
  * @throws std::invalid_argument if any spacing <= 0
  *
  * @code
- * auto world = domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});
+ * auto world = domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});  // non-periodic
+ * auto world_periodic = domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05}, {true, true, true});  // periodic
  * @endcode
  */
-[[nodiscard]] world::World create_world_with_spacing(Int3 size, Real3 spacing);
+[[nodiscard]] world::World create_world_with_spacing(Int3 size, Real3 spacing, Bool3 periodic = {false, false, false});
 
 /**
  * @brief Create grid with custom origin but unit spacing.
  *
  * @param size Grid dimensions
  * @param origin Physical origin
+ * @param periodic Per-axis periodicity flags (default: all non-periodic)
  * @return World with specified size and origin, spacing=1
  *
  * @throws std::invalid_argument if any size <= 0
  *
  * @code
- * auto world = domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});
+ * auto world = domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});  // non-periodic
+ * auto world_periodic = domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0}, {true, true, true});  // periodic
  * @endcode
  */
-[[nodiscard]] world::World create_world_with_origin(Int3 size, Real3 origin);
+[[nodiscard]] world::World create_world_with_origin(Int3 size, Real3 origin, Bool3 periodic = {false, false, false});
 
 } // namespace domain
 

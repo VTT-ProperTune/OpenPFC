@@ -606,6 +606,95 @@ TEST_CASE("World - periodicity round-trip", "[world][periodicity][unit]") {
     // Explicitly check that it's NOT the default all-periodic
     REQUIRE(world1.get_periodicity() != Periodicity{true, true, true});
   }
+
+  SECTION("Simple helpers - create_world_uniform with periodicty") {
+    // Test default (non-periodic) behavior
+    auto world_default = domain::create_world_uniform(32);
+    REQUIRE(world_default.get_periodicity() == Periodicity{false, false, false});
+
+    // Test non-default periodicity
+    Periodicity expected{true, false, true};
+    auto world_custom = domain::create_world_uniform(32, expected);
+    REQUIRE(world_custom.get_periodicity() == expected);
+
+    // Test world::uniform deprecated wrapper
+    auto world_wrapper = world::uniform(64, {false, true, false});
+    REQUIRE(world_wrapper.get_periodicity() == Periodicity{false, true, false});
+  }
+
+  SECTION("Simple helpers - create_world_uniform with spacing and periodicty") {
+    // Test default (non-periodic) behavior
+    auto world_default = domain::create_world_uniform(32, 0.5);
+    REQUIRE(world_default.get_periodicity() == Periodicity{false, false, false});
+
+    // Test non-default periodicity
+    Periodicity expected{true, true, false};
+    auto world_custom = domain::create_world_uniform(32, 0.5, expected);
+    REQUIRE(world_custom.get_periodicity() == expected);
+
+    // Test world::uniform deprecated wrapper
+    auto world_wrapper = world::uniform(64, 0.1, {true, false, true});
+    REQUIRE(world_wrapper.get_periodicity() == Periodicity{true, false, true});
+  }
+
+  SECTION("Simple helpers - create_world_with_spacing with periodicty") {
+    // Test default (non-periodic) behavior
+    auto world_default = domain::create_world_with_spacing({32, 32, 32}, {0.1, 0.1, 0.1});
+    REQUIRE(world_default.get_periodicity() == Periodicity{false, false, false});
+
+    // Test non-default periodicity
+    Periodicity expected{false, true, true};
+    auto world_custom = domain::create_world_with_spacing({64, 32, 16}, {0.1, 0.2, 0.3}, expected);
+    REQUIRE(world_custom.get_periodicity() == expected);
+
+    // Test world::with_spacing deprecated wrapper
+    auto world_wrapper = world::with_spacing({128, 64, 32}, {0.05, 0.1, 0.2}, {true, true, false});
+    REQUIRE(world_wrapper.get_periodicity() == Periodicity{true, true, false});
+  }
+
+  SECTION("Simple helpers - create_world_with_origin with periodicty") {
+    // Test default (non-periodic) behavior
+    auto world_default = domain::create_world_with_origin({32, 32, 32}, {-5.0, -5.0, 0.0});
+    REQUIRE(world_default.get_periodicity() == Periodicity{false, false, false});
+
+    // Test non-default periodicity
+    Periodicity expected{true, false, true};
+    auto world_custom = domain::create_world_with_origin({64, 64, 64}, {-10.0, -10.0, 0.0}, expected);
+    REQUIRE(world_custom.get_periodicity() == expected);
+
+    // Test world::with_origin deprecated wrapper
+    auto world_wrapper = world::with_origin({128, 128, 128}, {0.0, 0.0, 5.0}, {false, true, true});
+    REQUIRE(world_wrapper.get_periodicity() == Periodicity{false, true, true});
+  }
+
+  SECTION("All simple helpers round-trip periodicity correctly") {
+    std::vector<Periodicity> test_cases = {
+      {false, false, false},
+      {true, true, true},
+      {true, false, true},
+      {false, true, false},
+      {true, false, false},
+      {false, false, true}
+    };
+
+    for (const auto& expected : test_cases) {
+      // create_world_uniform
+      auto w1 = domain::create_world_uniform(32, expected);
+      REQUIRE(w1.get_periodicity() == expected);
+
+      // create_world_uniform with spacing
+      auto w2 = domain::create_world_uniform(32, 0.5, expected);
+      REQUIRE(w2.get_periodicity() == expected);
+
+      // create_world_with_spacing
+      auto w3 = domain::create_world_with_spacing({32, 32, 32}, {0.1, 0.1, 0.1}, expected);
+      REQUIRE(w3.get_periodicity() == expected);
+
+      // create_world_with_origin
+      auto w4 = domain::create_world_with_origin({32, 32, 32}, {0.0, 0.0, 0.0}, expected);
+      REQUIRE(w4.get_periodicity() == expected);
+    }
+  }
 }
 
 TEST_CASE("World - convenience functions integrate with existing API",

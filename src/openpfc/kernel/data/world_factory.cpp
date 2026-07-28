@@ -36,17 +36,17 @@ namespace domain {
 // Helper functions (moved from world_helpers.hpp)
 
 // Create uniform grid with unit spacing at origin.
-[[nodiscard]] world::World create_world_uniform(int size) {
+[[nodiscard]] world::World create_world_uniform(int size, Bool3 periodic) {
   if (size <= 0) {
     throw std::invalid_argument("Grid size must be positive, got: " +
                                 std::to_string(size));
   }
   return create_world(GridSize({size, size, size}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({1.0, 1.0, 1.0}));
+                      GridSpacing({1.0, 1.0, 1.0}), periodic);
 }
 
 // Create uniform grid with specified spacing.
-[[nodiscard]] world::World create_world_uniform(int size, double spacing) {
+[[nodiscard]] world::World create_world_uniform(int size, double spacing, Bool3 periodic) {
   if (size <= 0) {
     throw std::invalid_argument("Grid size must be positive, got: " +
                                 std::to_string(size));
@@ -56,7 +56,7 @@ namespace domain {
                                 std::to_string(spacing));
   }
   return create_world(GridSize({size, size, size}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({spacing, spacing, spacing}));
+                      GridSpacing({spacing, spacing, spacing}), periodic);
 }
 
 // Create grid from physical bounds (automatically computes spacing).
@@ -87,7 +87,7 @@ namespace domain {
 }
 
 // Create grid with default origin but custom spacing.
-[[nodiscard]] world::World create_world_with_spacing(Int3 size, Real3 spacing) {
+[[nodiscard]] world::World create_world_with_spacing(Int3 size, Real3 spacing, Bool3 periodic) {
   // Validate
   for (int i = 0; i < 3; ++i) {
     if (size[i] <= 0) {
@@ -99,11 +99,11 @@ namespace domain {
   }
 
   return create_world(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing(spacing));
+                      GridSpacing(spacing), periodic);
 }
 
 // Create grid with custom origin but unit spacing.
-[[nodiscard]] world::World create_world_with_origin(Int3 size, Real3 origin) {
+[[nodiscard]] world::World create_world_with_origin(Int3 size, Real3 origin, Bool3 periodic) {
   // Validate
   for (int i = 0; i < 3; ++i) {
     if (size[i] <= 0) {
@@ -112,7 +112,7 @@ namespace domain {
   }
 
   return create_world(GridSize(size), PhysicalOrigin(origin),
-                      GridSpacing({1.0, 1.0, 1.0}));
+                      GridSpacing({1.0, 1.0, 1.0}), periodic);
 }
 
 } // namespace domain
