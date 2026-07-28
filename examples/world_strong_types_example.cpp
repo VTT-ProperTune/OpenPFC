@@ -140,7 +140,7 @@ int main() {
   std::cout << "\n";
 
   // ========================================================================
-  // Example 6: Converting from raw types
+  // Example 6: Converting from raw types to strong types (modern Domain API)
   // ========================================================================
   std::cout << "6. Converting from raw types to strong types:\n";
   {
@@ -149,13 +149,13 @@ int main() {
     Real3 offset = {0.0, 0.0, 0.0};
     Real3 spacing = {1.0, 1.0, 1.0};
 
-    // Convert to strong types using explicit factory methods
-    auto world = domain::create_world(GridSize::from_vector3(size),
-                                      PhysicalOrigin::from_vector3(offset),
-                                      GridSpacing::from_vector3(spacing));
+    // Modern M1 approach: create Domain with strong types
+    auto domain = domain::create(GridSize::from_vector3(size),
+                                 PhysicalOrigin::from_vector3(offset),
+                                 GridSpacing::from_vector3(spacing));
 
     std::cout << "   Raw types converted to strong types!\n";
-    std::cout << "   Migration: Use explicit factory methods!\n";
+    std::cout << "   Primary API: domain::create() returns Domain (M1 modern)\n";
   }
   std::cout << "\n";
 
