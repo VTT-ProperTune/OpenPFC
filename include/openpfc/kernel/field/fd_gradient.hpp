@@ -486,12 +486,29 @@ template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
 /**
  * @brief Free-function factory: build an `FdGradient<G>` from a `pfc::data::Field`.
  *
- * Mirrors the `world::create`, `decomposition::create`, `fft::create` family:
+ * Mirrors the `domain::create`, `decomposition::create`, `fft::create` family:
  * derives `nx, ny, nz`, the per-axis grid spacings, and the halo width
  * directly from `u`. The caller supplies the spatial accuracy `order` and
  * the model-owned grads type as an explicit template argument.
  *
- * Example:
+ * Full domain+field+gradient setup example:
+ * @code
+ * using namespace pfc;
+ *
+ * // 1. Create global domain and decompose
+ * auto domain = domain::with_spacing({128, 128, 128}, {0.1, 0.1, 0.1});
+ * auto decomp = decomposition::create(domain, 4); // 4 subdomains
+ *
+ * // 2. Allocate field for this rank's subdomain
+ * Field<double, HostSpace> u =
+ *     pfc::data::field_from_subdomain<double>(decomp, rank, 2); // halo=2
+ *
+ * // 3. Build gradient evaluator from the field
+ * struct HeatGrads { double xx{}, yy{}, zz{}; };
+ * auto grad = pfc::field::create<HeatGrads>(u, 4); // order=4
+ * @endcode
+ *
+ * Concise form (when the field already exists):
  * @code
  * struct HeatGrads { double xx{}, yy{}, zz{}; };
  * auto grad = pfc::field::create<HeatGrads>(stack.u(), 4);
