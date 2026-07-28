@@ -59,7 +59,7 @@ On any failure the destination buffer is left unchanged. Multi-field adapters
 
 | App | Header | API |
 |-----|--------|-----|
-| Heat3D (scalar) | `apps/heat3d/include/heat3d/state_capture.hpp` | `capture_u` / `restore_u` (`heat3d.u`); `PaddedBrick` overloads pack **owned** cells only |
+| Heat3D (scalar) | `apps/heat3d/include/heat3d/state_capture.hpp` | `capture_u` / `restore_u` (`heat3d.u`); `pfc::data::Field` (openpfc/kernel/data/grid_field.hpp) overloads pack **owned** cells only |
 | Wave2D (coupled) | `apps/wave2d/include/wave2d/state_capture.hpp` | `capture_uv` / `restore_uv` (`wave2d.u`, `wave2d.v`) |
 
 Physics model headers (`heat_model.hpp`, `wave_model.hpp`) stay free of OpenPFC
