@@ -242,7 +242,7 @@ TEST_CASE("MultiExplicitRKStepper updates fields independently (RK4)",
   }
 }
 
-TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
+TEST_CASE("ExplicitRKStepper factory with data::Field", "[stepper][unit]") {
   constexpr double dt = 0.1;
   constexpr std::size_t n = 10;
 
@@ -270,7 +270,7 @@ TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
   MockModel model;
   MockEval eval;
 
-  // Create LocalField using named constructor
+  // Create data::Field using named constructor
   auto world = pfc::world::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
@@ -318,7 +318,7 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
   MockModel model;
   MockEval eval;
 
-  // Create LocalFields using named constructor
+  // Create data::Fields using named constructor
   auto world = pfc::world::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({1.0, 1.0, 1.0}));
