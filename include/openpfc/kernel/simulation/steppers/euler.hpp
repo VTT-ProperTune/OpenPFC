@@ -34,9 +34,9 @@
  * Most applications do not construct `EulerStepper` directly. Use one of
  * the `pfc::sim::steppers::create` factories at the bottom of this file to
  * bind a model + gradient evaluator to the canonical
- * `for_each_interior(model, eval, du, t)` RHS. They mirror the
- * `world::create`, `decomposition::create`, `fft::create`, `field::create`
- * convention used throughout OpenPFC.
+ * `for_each_interior(model, eval, du, t)` RHS. They follow the
+ * `domain::create` and `pfc::data::field_from_subdomain` pattern
+ * used throughout OpenPFC for creating domains and fields.
  *
  * Higher-order explicit methods (RK2, RK4) live in sibling files in this
  * folder under `pfc::sim::steppers::`. First-order IMEX Euler with an
@@ -310,8 +310,8 @@ template <class Eval, class Model>
  * @brief Build an `EulerStepper` for the canonical point-wise RHS, deriving
  *        the local buffer size from the field bundle.
  *
- * Mirrors the `world::create`, `decomposition::create`, `fft::create`,
- * `field::create` family used elsewhere in OpenPFC.
+ * Mirrors the `domain::create` and `pfc::data::field_from_subdomain`
+ * pattern used elsewhere in OpenPFC.
  *
  * @param u      Local field whose `size()` defines the internal `du` buffer
  *               (and which the application owns). Not stored by the stepper.

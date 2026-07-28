@@ -331,8 +331,8 @@ template <class Eval, class Model>
  * @brief Build an `ExplicitRKStepper` for the canonical point-wise RHS, deriving
  *        the local buffer size from the field bundle.
  *
- * Mirrors the `world::create`, `decomposition::create`, `fft::create`,
- * `field::create` family used elsewhere in OpenPFC.
+ * Mirrors the `domain::create` and `pfc::data::field_from_subdomain`
+ * pattern used elsewhere in OpenPFC.
  *
  * @param u Local field whose `size()` defines the internal `du` buffer
  *          (and which the application owns). Not stored by the stepper.
