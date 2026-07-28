@@ -20,7 +20,13 @@
  * Example:
  * @code
  * using namespace pfc;
- * auto world = world::create(GridSize({64,64,64}));
+ * // Preferred domain-first API (M2 refactoring)
+ * auto domain = domain::create(
+ *   GridSize({64,64,64}),
+ *   PhysicalOrigin({0.0, 0.0, 0.0}),
+ *   GridSpacing({1.0, 1.0, 1.0})
+ * );
+ * auto world = domain::to_world(domain);
  * auto decomp = decomposition::create(world, 1);
  * auto fft = fft::create(decomp);
  * std::vector<double> u(fft.size_inbox());
@@ -31,6 +37,8 @@
  *   return std::exp(-r2/2.0);
  * });
  * @endcode
+ *
+ * @note For complete examples, see @ref doc/examples/operations.hpp/simple_domain_sample.cpp
  */
 
 #pragma once
