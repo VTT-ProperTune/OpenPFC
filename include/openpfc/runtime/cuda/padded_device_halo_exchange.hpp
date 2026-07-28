@@ -661,7 +661,7 @@ using halo_buffer = double*;
  * PaddedDeviceHaloExchanger and performs the exchange in one call.
  *
  * @tparam T Element type (currently only double is supported)
- * @tparam MemorySpace Memory space tag (HostSpace or CudaSpace)
+ * @tparam MemorySpace Memory space tag (pfc::HostSpace or CudaSpace)
  * @param field The field to exchange halos for (must have padded layout with storage_halo > 0)
  * @param decomp Decomposition describing the subdomain layout
  * @param rank Rank to use for exchange
@@ -709,7 +709,7 @@ void exchange_halo(pfc::data::Field<T, MemorySpace>& field,
  * on device memory.
  *
  * @tparam T Element type (currently only double is supported)
- * @tparam MemorySpace Memory space tag (HostSpace or CudaSpace)
+ * @tparam MemorySpace Memory space tag (pfc::HostSpace or CudaSpace)
  * @param field The field to pack halo data from (must have padded layout)
  * @return halo_buffer Pointer to packed halo data buffer
  *
@@ -739,7 +739,7 @@ halo_buffer pack_halo_data(const pfc::data::Field<T, MemorySpace>& field) {
  * regions. For device fields, this operates on device memory.
  *
  * @tparam T Element type (currently only double is supported)
- * @tparam MemorySpace Memory space tag (HostSpace or CudaSpace)
+ * @tparam MemorySpace Memory space tag (pfc::HostSpace or CudaSpace)
  * @param field The field to unpack halo data into (must have padded layout)
  * @param buf Buffer containing packed halo data
  *
