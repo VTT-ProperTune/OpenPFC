@@ -12,6 +12,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 
@@ -29,7 +30,7 @@ TEST_CASE("World creation with strong types - basic functionality",
 
     // Act: Create world
     auto world =
-        world::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     // Assert: Verify world properties
     auto world_size = get_size(world);
@@ -55,7 +56,7 @@ TEST_CASE("World creation with strong types - basic functionality",
     GridSpacing spacing({0.5, 0.5, 0.5});
 
     auto world =
-        world::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     auto world_origin = get_origin(world);
     REQUIRE(world_origin[0] == Approx(-5.0));
@@ -69,7 +70,7 @@ TEST_CASE("World creation with strong types - basic functionality",
     GridSpacing spacing({0.1, 0.2, 0.4});
 
     auto world =
-        world::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     auto world_size = get_size(world);
     auto world_spacing = get_spacing(world);
@@ -95,13 +96,13 @@ TEST_CASE("Strong types prevent parameter confusion",
     GridSpacing spacing({1.0, 1.0, 1.0});
 
     auto world =
-        world::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
     REQUIRE(get_size(world)[0] == 64);
 
     // NOTE: The following would NOT compile if parameters are swapped:
-    // auto bad = world::create(GridSize(spacing), PhysicalOrigin(size),
+    // auto bad = domain::create_world(GridSize(spacing), PhysicalOrigin(size),
     // GridSpacing(origin));  // Compile error! auto bad2 =
-    // world::create(GridSize(origin), PhysicalOrigin(spacing), GridSpacing(size));
+    // domain::create_world(GridSize(origin), PhysicalOrigin(spacing), GridSpacing(size));
     // // Compile error!
     //
     // This is the key benefit - type system catches parameter order mistakes
@@ -146,7 +147,7 @@ TEST_CASE("Backward compatibility with raw types",
     Real3 spacing = {1.0, 1.0, 1.0};
 
     auto world =
-        world::create(GridSize(size), PhysicalOrigin(offset), GridSpacing(spacing));
+        domain::create_world(GridSize(size), PhysicalOrigin(offset), GridSpacing(spacing));
 
     REQUIRE(get_size(world)[0] == 32);
     REQUIRE(get_spacing(world)[0] == Approx(1.0));
@@ -171,7 +172,7 @@ TEST_CASE("Backward compatibility with raw types",
   SECTION("Strong-type create overload") {
     GridSize size({64, 64, 64});
 
-    auto world = world::create(size, PhysicalOrigin({0.0, 0.0, 0.0}),
+    auto world = domain::create_world(size, PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
 
     REQUIRE(get_size(world)[0] == 64);
@@ -216,24 +217,24 @@ TEST_CASE("Strong types with world helper functions",
           "[world][strong_types][helpers]") {
   using namespace pfc;
 
-  SECTION("Works with world::uniform() helper") {
+  SECTION("Works with domain::create_world_uniform() helper") {
     // Create uniform grid using helper
-    auto world1 = world::uniform(64);
+    auto world1 = domain::create_world_uniform(64);
 
     // Should be able to query with get_ functions
     REQUIRE(get_size(world1)[0] == 64);
     REQUIRE(get_spacing(world1)[0] == Approx(1.0));
 
     // Create with spacing using helper
-    auto world2 = world::uniform(32, 0.5);
+    auto world2 = domain::create_world_uniform(32, 0.5);
 
     REQUIRE(get_size(world2)[0] == 32);
     REQUIRE(get_spacing(world2)[0] == Approx(0.5));
   }
 
-  SECTION("Works with world::from_bounds() helper") {
+  SECTION("Works with domain::create_world_from_bounds() helper") {
     // Create from physical bounds
-    auto world = world::from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});
+    auto world = domain::create_world_from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});
 
     REQUIRE(get_size(world)[0] == 100);
     REQUIRE(get_spacing(world)[0] == Approx(0.1));
@@ -251,7 +252,7 @@ TEST_CASE("Strong types coordinate transformation verification",
     GridSpacing spacing({1.0, 1.0, 1.0});
 
     auto world =
-        world::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     // Index (0, 0, 0) should map to origin
     Real3 coords = to_coords(world, {0, 0, 0});
@@ -315,7 +316,7 @@ TEST_CASE("Documentation examples compile and work",
     GridSpacing spacing({1.0, 1.0, 1.0});
 
     auto world =
-        world::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     // Verify domain properties
     REQUIRE(get_size(world)[0] == 256);
@@ -335,7 +336,7 @@ TEST_CASE("Documentation examples compile and work",
     GridSpacing spacing({0.1, 0.1, 0.1});
 
     auto world =
-        world::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     // Domain extends from -5.0 to 4.9 in each dimension
     Real3 lower = to_coords(world, {0, 0, 0});
