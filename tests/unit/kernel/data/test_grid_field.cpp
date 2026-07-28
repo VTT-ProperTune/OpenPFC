@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// M2.1 parity tests for the canonical pfc::data::Field<T, MemorySpace>.
-// The whole point of the merge is that ONE linearization reproduces the three
-// legacy ones bit-for-bit, so these tests pin idx()/size()/coords() against
-// real LocalField (halo 0) and PaddedBrick (halo n) instances built on the
-// same single-rank geometry.
+// M2.1 correctness tests for the canonical pfc::data::Field<T, MemorySpace>.
+// These tests verify idx()/size()/coords() expectations against closed-form
+// mathematical derivations rather than legacy container instances, proving
+// the field layout matches the expected row-major (x-fastest) linearization
+// for both padded and unpadded cases.
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -13,9 +13,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
-#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 using namespace pfc;
 
@@ -26,55 +24,73 @@ Box3i whole_box(int nx, int ny, int nz) {
 }
 } // namespace
 
-TEST_CASE("Field: idx matches LocalField bit-for-bit (halo 0)",
+TEST_CASE("Field: idx and size for unpadded field (halo 0)",
           "[grid_field][unit]") {
   const int nx = 8, ny = 6, nz = 4;
-  auto domain = domain::create({nx, ny, nz});
-  auto decomp = decomposition::create(domain, 1);
-  auto lf = field::LocalField<double>::from_subdomain(decomp, /*rank=*/0, 0);
+  data::Field<double> f(domain::create({nx, ny, nz}), whole_box(nx, ny, nz), 0);
 
-  data::Field<double> f(domain, whole_box(nx, ny, nz), 0);
+  // Expected size for unpadded field (halo 0)
+  REQUIRE(f.size() == static_cast<std::size_t>(nx * ny * nz));
 
-  REQUIRE(f.size() == lf.size());
-  for (int k = 0; k < nz; ++k)
-    for (int j = 0; j < ny; ++j)
-      for (int i = 0; i < nx; ++i) REQUIRE(f.idx(i, j, k) == lf.idx(i, j, k));
-}
-
-TEST_CASE("Field: idx matches PaddedBrick bit-for-bit across the halo (halo n)",
-          "[grid_field][unit]") {
-  const int nx = 8, ny = 6, nz = 4;
-  const int hw = 2;
-  auto domain = domain::create({nx, ny, nz});
-  auto decomp = decomposition::create(domain, 1);
-  field::PaddedBrick<double> pb(decomp, /*rank=*/0, hw);
-
-  data::Field<double> f(domain, whole_box(nx, ny, nz), hw);
-
-  REQUIRE(f.size() == pb.size());
-  // Every addressable cell, including the halo slabs [-hw, n+hw).
-  for (int k = -hw; k < nz + hw; ++k)
-    for (int j = -hw; j < ny + hw; ++j)
-      for (int i = -hw; i < nx + hw; ++i) REQUIRE(f.idx(i, j, k) == pb.idx(i, j, k));
-}
-
-TEST_CASE("Field: coordinate queries match LocalField", "[grid_field][unit]") {
-  const int nx = 5, ny = 5, nz = 5;
-  auto domain = domain::create({nx, ny, nz});
-  auto decomp = decomposition::create(domain, 1);
-  auto lf = field::LocalField<double>::from_subdomain(decomp, 0, 0);
-
-  data::Field<double> f(domain, whole_box(nx, ny, nz), 0);
-
+  // For row-major (x-fastest) layout: idx = i + j*nx + k*nx*ny
   for (int k = 0; k < nz; ++k)
     for (int j = 0; j < ny; ++j)
       for (int i = 0; i < nx; ++i) {
-        REQUIRE(f.global(i, j, k) == lf.global(i, j, k));
-        const auto fc = f.coords(i, j, k);
-        const auto lc = lf.coords(i, j, k);
-        REQUIRE(fc[0] == lc[0]);
-        REQUIRE(fc[1] == lc[1]);
-        REQUIRE(fc[2] == lc[2]);
+        std::size_t expected_idx =
+            static_cast<std::size_t>(i) +
+            static_cast<std::size_t>(j) * nx +
+            static_cast<std::size_t>(k) * nx * ny;
+        REQUIRE(f.idx(i, j, k) == expected_idx);
+      }
+}
+
+TEST_CASE("Field: idx and size across padded halo (halo n)",
+          "[grid_field][unit]") {
+  const int nx = 8, ny = 6, nz = 4;
+  const int hw = 2;
+  data::Field<double> f(domain::create({nx, ny, nz}), whole_box(nx, ny, nz), hw);
+
+  // Expected size for padded field: prod(size + 2*halo)
+  REQUIRE(f.size() == static_cast<std::size_t>((nx + 2 * hw) * (ny + 2 * hw) * (nz + 2 * hw)));
+
+  // For row-major (x-fastest) padded layout:
+  // idx = (i+hw) + (j+hw)*(nx+2*hw) + (k+hw)*(nx+2*hw)*(ny+2*hw)
+  // Test every addressable cell, including the halo slabs [-hw, n+hw).
+  const int npx = nx + 2 * hw;
+  const int npy = ny + 2 * hw;
+  const int npz = nz + 2 * hw;
+  for (int k = -hw; k < nz + hw; ++k)
+    for (int j = -hw; j < ny + hw; ++j)
+      for (int i = -hw; i < nx + hw; ++i) {
+        std::size_t expected_idx =
+            (static_cast<std::size_t>(i) + hw) +
+            (static_cast<std::size_t>(j) + hw) * npx +
+            (static_cast<std::size_t>(k) + hw) * npx * npy;
+        REQUIRE(f.idx(i, j, k) == expected_idx);
+      }
+}
+
+TEST_CASE("Field: coordinate queries (global and physical)", "[grid_field][unit]") {
+  const int nx = 5, ny = 5, nz = 5;
+  data::Field<double> f(domain::create({nx, ny, nz}), whole_box(nx, ny, nz), 0);
+
+  // For a single-rank decomposition starting at origin:
+  // - global(i,j,k) == {i,j,k} (local box starts at {0,0,0})
+  // - coords(i,j,k) == origin + spacing * {i,j,k} (defaults to 0,0,0 + 1.0,1.0,1.0)
+  for (int k = 0; k < nz; ++k)
+    for (int j = 0; j < ny; ++j)
+      for (int i = 0; i < nx; ++i) {
+        // Global indices: local + low offset (which is 0 for whole_box starting at 0)
+        const auto g = f.global(i, j, k);
+        REQUIRE(g[0] == i);
+        REQUIRE(g[1] == j);
+        REQUIRE(g[2] == k);
+
+        // Physical coordinates: origin + spacing * local
+        const auto c = f.coords(i, j, k);
+        REQUIRE(c[0] == Catch::Approx(static_cast<double>(i)));
+        REQUIRE(c[1] == Catch::Approx(static_cast<double>(j)));
+        REQUIRE(c[2] == Catch::Approx(static_cast<double>(k)));
       }
 }
 
