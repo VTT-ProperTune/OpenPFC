@@ -58,6 +58,7 @@
 #include <utility>
 
 #include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 
 namespace pfc::field {
 
@@ -93,6 +94,262 @@ inline void invoke_coords_mutable_(Fn &&fn, double x, double y, double z, T &v) 
 
 } // namespace detail
 
+// Primary API: data::Field overloads
+/**
+ * @brief Iterate every owned cell of `field`, passing each as a
+ *        `pfc::Int3{i, j, k}` to `fn`.
+ *
+ * Preferred form for code that hands the index straight to a gradient
+ * evaluator or to `field(idx)`:
+ *
+ * @code
+ * pfc::field::for_each(du, [&](const auto& idx) {
+ *   const auto g = pfc::gradient::evaluate(grad, idx);
+ *   du[idx] = g.xx + g.yy + g.zz;
+ * });
+ * @endcode
+ *
+ * Iteration order is k-outer / j-middle / i-inner, matching the field's
+ * row-major (x-fastest) storage.
+ *
+ * Lambda signature: any callable invocable as `void(const pfc::Int3&)`
+ * or `void(pfc::Int3)`.
+ */
+template <class T, class Fn>
+inline void for_each(const pfc::data::Field<T, pfc::HostSpace> &field, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        fn(pfc::Int3{i, j, k});
+      }
+    }
+  }
+}
+
+/**
+ * @brief OMP-parallel `for_each` for data::Field. Identical iteration domain and order;
+ *        the body must be race-free with respect to writes to shared
+ *        cells (per-cell writes via `field(idx)` are race-free).
+ */
+template <class T, class Fn>
+inline void for_each_omp(const pfc::data::Field<T, pfc::HostSpace> &field, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+#pragma omp parallel for collapse(2) schedule(static)
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        fn(pfc::Int3{i, j, k});
+      }
+    }
+  }
+}
+
+/**
+ * @brief Iterate every owned cell `(i, j, k) in [0, nx) x [0, ny) x [0, nz)`.
+ *
+ * Lambda signature: `void(int i, int j, int k)`.
+ */
+template <class T, class Fn>
+inline void for_each_owned(const pfc::data::Field<T, pfc::HostSpace> &field, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        fn(i, j, k);
+      }
+    }
+  }
+}
+
+/**
+ * @brief OMP-parallel `for_each_owned` for data::Field. Identical iteration domain;
+ *        the body should not write to shared `(i, j, k)`-indexed cells
+ *        except via `field(i, j, k)` (race-free).
+ */
+template <class T, class Fn>
+inline void for_each_owned_omp(const pfc::data::Field<T, pfc::HostSpace> &field, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+#pragma omp parallel for collapse(2) schedule(static)
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        fn(i, j, k);
+      }
+    }
+  }
+}
+
+/**
+ * @brief Iterate the inner region `[r, nx-r) x [r, ny-r) x [r, nz-r)`.
+ *
+ * The `r`-radius stencil is guaranteed to stay inside the owned core,
+ * so this loop is safe to start **before** the halo exchange completes.
+ * No-op if any axis has `nx <= 2*r`.
+ *
+ * Lambda signature: `void(int i, int j, int k)`.
+ */
+template <class T, class Fn>
+inline void for_each_inner(const pfc::data::Field<T, pfc::HostSpace> &field, int r, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+  if (nx <= 2 * r || ny <= 2 * r || nz <= 2 * r) return;
+  for (int k = r; k < nz - r; ++k) {
+    for (int j = r; j < ny - r; ++j) {
+      for (int i = r; i < nx - r; ++i) {
+        fn(i, j, k);
+      }
+    }
+  }
+}
+
+/**
+ * @brief OMP-parallel `for_each_inner` for data::Field. Same domain as the serial version.
+ */
+template <class T, class Fn>
+inline void for_each_inner_omp(const pfc::data::Field<T, pfc::HostSpace> &field, int r, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+  if (nx <= 2 * r || ny <= 2 * r || nz <= 2 * r) return;
+#pragma omp parallel for collapse(2) schedule(static)
+  for (int k = r; k < nz - r; ++k) {
+    for (int j = r; j < ny - r; ++j) {
+      for (int i = r; i < nx - r; ++i) {
+        fn(i, j, k);
+      }
+    }
+  }
+}
+
+/**
+ * @brief Iterate every **owned** cell with physical coordinates for data::Field.
+ *
+ * Visits `(i,j,k) in [0,nx) x [0,ny) x [0,nz)` in k-outer / j-middle /
+ * i-inner order. On a **non-const** `field`, `fn` is invoked as either:
+ *  - `void(double x, double y, double z, T& value)`, or
+ *  - `void(const Real3& xyz, T& value)`.
+ *
+ * On a **const** `field`, the value is read-only:
+ *  - `void(double x, double y, double z, const T& value)`, or
+ *  - `void(const Real3& xyz, const T& value)`.
+ *
+ * Use this for initial conditions and diagnostics that need `(x,y,z)`
+ * without threading a separate `hw` argument — the field already carries
+ * decomposition, spacing, and origin. For an **interior-only** strip
+ * (e.g. overlap with a stencil before halos land), combine
+ * `field.indices_inner(r)` with `global_xyz` / `operator[]`.
+ */
+template <class T, class Fn>
+inline void for_each_coords(pfc::data::Field<T, pfc::HostSpace> &field, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        const auto xyz = field.coords(i, j, k);
+        detail::invoke_coords_mutable_(std::forward<Fn>(fn), xyz[0], xyz[1], xyz[2],
+                                       field(i, j, k));
+      }
+    }
+  }
+}
+
+template <class T, class Fn>
+inline void for_each_coords(const pfc::data::Field<T, pfc::HostSpace> &field, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        const auto xyz = field.coords(i, j, k);
+        detail::invoke_coords_value_(std::forward<Fn>(fn), xyz[0], xyz[1], xyz[2], field(i, j, k));
+      }
+    }
+  }
+}
+
+/**
+ * @brief Iterate the **border** region: owned cells whose `r`-radius
+ *        stencil reaches into the halo for data::Field.
+ *
+ * Border = owned region minus inner region. Concretely the union of
+ * six slabs of thickness `r` on each face of the owned cube. This
+ * helper visits each border cell exactly once, in the following slab
+ * order:
+ *
+ *   1. `i in [0, r)`           (left x-slab, full y/z)
+ *   2. `i in [nx-r, nx)`       (right x-slab, full y/z)
+ *   3. `j in [0, r)`,          excluding cells already in slabs 1/2
+ *   4. `j in [ny-r, ny)`,      excluding cells already in slabs 1/2
+ *   5. `k in [0, r)`,          excluding all earlier slabs
+ *   6. `k in [nz-r, nz)`,      excluding all earlier slabs
+ *
+ * If `nx, ny` or `nz` is `<= 2*r`, the inner region is empty and the
+ * border degenerates to **every** owned cell.
+ *
+ * Lambda signature: `void(int i, int j, int k)`.
+ */
+template <class T, class Fn>
+inline void for_each_border(const pfc::data::Field<T, pfc::HostSpace> &field, int r, Fn &&fn) {
+  const auto size = field.local_size();
+  const int nx = size[0];
+  const int ny = size[1];
+  const int nz = size[2];
+
+  if (nx <= 2 * r || ny <= 2 * r || nz <= 2 * r) {
+    for_each_owned(field, fn);
+    return;
+  }
+
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < r; ++i) fn(i, j, k);
+      for (int i = nx - r; i < nx; ++i) fn(i, j, k);
+    }
+  }
+
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < r; ++j) {
+      for (int i = r; i < nx - r; ++i) fn(i, j, k);
+    }
+    for (int j = ny - r; j < ny; ++j) {
+      for (int i = r; i < nx - r; ++i) fn(i, j, k);
+    }
+  }
+
+  for (int k = 0; k < r; ++k) {
+    for (int j = r; j < ny - r; ++j) {
+      for (int i = r; i < nx - r; ++i) fn(i, j, k);
+    }
+  }
+  for (int k = nz - r; k < nz; ++k) {
+    for (int j = r; j < ny - r; ++j) {
+      for (int i = r; i < nx - r; ++i) fn(i, j, k);
+    }
+  }
+}
+
+// Deprecated API: PaddedBrick-only variants - migrate to data::Field overloads
 /**
  * @brief Iterate every owned cell of `brick`, passing each as a
  *        `pfc::Int3{i, j, k}` to `fn`.
@@ -127,6 +384,7 @@ inline void for_each(const PaddedBrick<T> &brick, Fn &&fn) {
   }
 }
 
+// Deprecated API: PaddedBrick-only variant - migrate to data::Field overload
 /**
  * @brief OMP-parallel `for_each`. Identical iteration domain and order;
  *        the body must be race-free with respect to writes to shared
@@ -147,6 +405,7 @@ inline void for_each_omp(const PaddedBrick<T> &brick, Fn &&fn) {
   }
 }
 
+// Deprecated API: PaddedBrick-only variant - migrate to data::Field overload
 /**
  * @brief Iterate every owned cell `(i, j, k) in [0, nx) x [0, ny) x [0, nz)`.
  *
@@ -166,6 +425,7 @@ inline void for_each_owned(const PaddedBrick<T> &brick, Fn &&fn) {
   }
 }
 
+// Deprecated API: PaddedBrick-only variant - migrate to data::Field overload
 /**
  * @brief OMP-parallel `for_each_owned`. Identical iteration domain;
  *        the body should not write to shared `(i, j, k)`-indexed cells
@@ -186,6 +446,7 @@ inline void for_each_owned_omp(const PaddedBrick<T> &brick, Fn &&fn) {
   }
 }
 
+// Deprecated API: PaddedBrick-only variant - migrate to data::Field overload
 /**
  * @brief Iterate the inner region `[r, nx-r) x [r, ny-r) x [r, nz-r)`.
  *
@@ -210,6 +471,7 @@ inline void for_each_inner(const PaddedBrick<T> &brick, int r, Fn &&fn) {
   }
 }
 
+// Deprecated API: PaddedBrick-only variant - migrate to data::Field overload
 /**
  * @brief OMP-parallel `for_each_inner`. Same domain as the serial version.
  */
@@ -229,6 +491,7 @@ inline void for_each_inner_omp(const PaddedBrick<T> &brick, int r, Fn &&fn) {
   }
 }
 
+// Deprecated API: PaddedBrick-only variant - migrate to data::Field overload
 /**
  * @brief Iterate every **owned** cell with physical coordinates.
  *
@@ -278,6 +541,7 @@ inline void for_each_coords(const PaddedBrick<T> &brick, Fn &&fn) {
   }
 }
 
+// Deprecated API: PaddedBrick-only variant - migrate to data::Field overload
 /**
  * @brief Iterate the **border** region: owned cells whose `r`-radius
  *        stencil reaches into the halo.
