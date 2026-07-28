@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// M2 unit tests for pfc::SimulationState: owning the canonical
-// pfc::data::Field<T, MemorySpace> by name and by typed FieldHandle<T>,
+// M2 unit tests for openpfc::kernel::simulation::SimulationState: owning the canonical
+// pfc::field::Field<T> by name and by typed FieldHandle<T>,
 // including heterogeneous element types coexisting in one state.
 
 #include <complex>
@@ -15,10 +15,10 @@
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/field.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 
-using namespace pfc;
+using namespace openpfc::kernel::simulation;
 
 namespace {
 

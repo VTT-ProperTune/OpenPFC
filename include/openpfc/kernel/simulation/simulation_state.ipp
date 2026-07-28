@@ -5,131 +5,93 @@
 
 /**
  * @file simulation_state.ipp
- * @brief Out-of-line template definitions for `pfc::SimulationState`.
+ * @brief Out-of-line template definitions for `SimulationState`.
  * Included at the end of `simulation_state.hpp`; not a standalone header.
  */
 
-namespace pfc {
+namespace openpfc {
+namespace kernel {
+namespace simulation {
 
-template <typename T, typename MemorySpace>
-SimulationState::TypedStore<T, MemorySpace> &SimulationState::store() {
-  using store_ptr = std::shared_ptr<TypedStore<T, MemorySpace>>;
-  const auto key = store_key<T, MemorySpace>();
-  auto it = m_stores.find(key);
-  if (it == m_stores.end()) {
-    it = m_stores
-             .emplace(key, std::any(std::make_shared<TypedStore<T, MemorySpace>>()))
-             .first;
-  }
-  return *std::any_cast<store_ptr &>(it->second);
+template <typename T>
+std::unordered_map<size_t, std::unique_ptr<SimulationState::FieldHolderBase>>&
+SimulationState::store() noexcept {
+  const auto key = std::type_index(typeid(T));
+  return m_type_stores[key];
 }
 
-template <typename T, typename MemorySpace>
-SimulationState::TypedStore<T, MemorySpace> *SimulationState::find_store() noexcept {
-  using store_ptr = std::shared_ptr<TypedStore<T, MemorySpace>>;
-  auto it = m_stores.find(store_key<T, MemorySpace>());
-  if (it == m_stores.end()) return nullptr;
-  return std::any_cast<store_ptr &>(it->second).get();
+template <typename T>
+const std::unordered_map<size_t, std::unique_ptr<SimulationState::FieldHolderBase>>&
+SimulationState::store() const noexcept {
+  static const std::unordered_map<size_t,
+                                   std::unique_ptr<FieldHolderBase>>
+      empty_store;
+  const auto key = std::type_index(typeid(T));
+  auto it = m_type_stores.find(key);
+  if (it == m_type_stores.end()) {
+    return empty_store;
+  }
+  return it->second;
 }
 
-template <typename T, typename MemorySpace>
-const SimulationState::TypedStore<T, MemorySpace> *
-SimulationState::find_store() const noexcept {
-  using store_ptr = std::shared_ptr<TypedStore<T, MemorySpace>>;
-  auto it = m_stores.find(store_key<T, MemorySpace>());
-  if (it == m_stores.end()) return nullptr;
-  return std::any_cast<const store_ptr &>(it->second).get();
+template <typename T>
+void SimulationState::insert_field(std::string name,
+                                   pfc::field::Field<T>&& field) {
+  if (m_name_to_index.count(name) != 0) {
+    throw std::runtime_error(
+        "SimulationState::insert_field: duplicate field name '" + name + "'");
+  }
+
+  const size_t index = m_next_index++;
+  auto holder = std::make_unique<FieldHolder<T>>(std::move(field));
+  auto& s = store<T>();
+  s.emplace(index, std::move(holder));
+  m_name_to_index.emplace(std::move(name), index);
 }
 
-template <typename T, typename MemorySpace>
-void SimulationState::add_field(const std::string &name,
-                                pfc::data::Field<T, MemorySpace> field) {
-  if (m_name_to_id.count(name) != 0) {
-    throw std::runtime_error("SimulationState::add_field: duplicate field name '" +
-                             name + "'");
+template <typename T>
+FieldHandle<T> SimulationState::get_field(const std::string& name) noexcept {
+  const auto nit = m_name_to_index.find(name);
+  if (nit == m_name_to_index.end()) {
+    return FieldHandle<T>(); // null handle
   }
-  const std::size_t id = m_next_id++;
-  auto &s = store<T, MemorySpace>();
-  s.by_id.emplace(id, std::move(field));
-  s.name_to_id.emplace(name, id);
-  m_name_to_id.emplace(name, id);
+
+  const auto& s = store<T>();
+  const auto fit = s.find(nit->second);
+  if (fit == s.end()) {
+    return FieldHandle<T>(); // null handle (wrong type)
+  }
+
+  auto* holder = static_cast<FieldHolder<T>*>(fit->second.get());
+  return FieldHandle<T>(&holder->field);
 }
 
-template <typename T, typename MemorySpace>
-pfc::data::Field<T, MemorySpace> &
-SimulationState::get_field(const std::string &name) {
-  const auto nit = m_name_to_id.find(name);
-  if (nit == m_name_to_id.end()) {
-    throw std::runtime_error("SimulationState::get_field: no field named '" + name +
-                             "'");
+template <typename T>
+bool SimulationState::remove_field(const std::string& name) {
+  const auto nit = m_name_to_index.find(name);
+  if (nit == m_name_to_index.end()) {
+    return false; // not found
   }
-  auto *s = find_store<T, MemorySpace>();
-  if (s != nullptr) {
-    const auto fit = s->by_id.find(nit->second);
-    if (fit != s->by_id.end()) return fit->second;
+
+  auto& s = store<T>();
+  const auto fit = s.find(nit->second);
+  if (fit == s.end()) {
+    return false; // wrong type
   }
-  throw std::runtime_error("SimulationState::get_field: field '" + name +
-                           "' is not of the requested type");
+
+  s.erase(fit);
+  m_name_to_index.erase(nit);
+  return true;
 }
 
-template <typename T, typename MemorySpace>
-const pfc::data::Field<T, MemorySpace> &
-SimulationState::get_field(const std::string &name) const {
-  const auto nit = m_name_to_id.find(name);
-  if (nit == m_name_to_id.end()) {
-    throw std::runtime_error("SimulationState::get_field: no field named '" + name +
-                             "'");
-  }
-  const auto *s = find_store<T, MemorySpace>();
-  if (s != nullptr) {
-    const auto fit = s->by_id.find(nit->second);
-    if (fit != s->by_id.end()) return fit->second;
-  }
-  throw std::runtime_error("SimulationState::get_field: field '" + name +
-                           "' is not of the requested type");
+inline void SimulationState::clear() noexcept {
+  m_type_stores.clear();
+  m_name_to_index.clear();
+  m_next_index = 0;
 }
 
-template <typename T, typename MemorySpace>
-FieldHandle<T> SimulationState::get_field_handle(const std::string &name) const {
-  const auto nit = m_name_to_id.find(name);
-  if (nit == m_name_to_id.end()) {
-    throw std::runtime_error("SimulationState::get_field_handle: no field named '" +
-                             name + "'");
-  }
-  const auto *s = find_store<T, MemorySpace>();
-  if (s == nullptr || s->by_id.count(nit->second) == 0) {
-    throw std::runtime_error("SimulationState::get_field_handle: field '" + name +
-                             "' is not of the requested type");
-  }
-  return FieldHandle<T>(nit->second);
-}
-
-template <typename T, typename MemorySpace>
-pfc::data::Field<T, MemorySpace> &
-SimulationState::get_field_by_handle(const FieldHandle<T> &handle) {
-  auto *s = find_store<T, MemorySpace>();
-  if (s != nullptr) {
-    const auto fit = s->by_id.find(handle.id());
-    if (fit != s->by_id.end()) return fit->second;
-  }
-  throw std::runtime_error(
-      "SimulationState::get_field_by_handle: invalid handle or wrong "
-      "(T, MemorySpace)");
-}
-
-template <typename T, typename MemorySpace>
-const pfc::data::Field<T, MemorySpace> &
-SimulationState::get_field_by_handle(const FieldHandle<T> &handle) const {
-  const auto *s = find_store<T, MemorySpace>();
-  if (s != nullptr) {
-    const auto fit = s->by_id.find(handle.id());
-    if (fit != s->by_id.end()) return fit->second;
-  }
-  throw std::runtime_error(
-      "SimulationState::get_field_by_handle: invalid handle or wrong "
-      "(T, MemorySpace)");
-}
-
-} // namespace pfc
+} // namespace simulation
+} // namespace kernel
+} // namespace openpfc
 
 #endif // PFC_KERNEL_SIMULATION_SIMULATION_STATE_IPP

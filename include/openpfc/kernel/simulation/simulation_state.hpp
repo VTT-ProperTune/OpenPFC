@@ -5,27 +5,24 @@
 
 /**
  * @file simulation_state.hpp
- * @brief M2 owning simulation state: `pfc::SimulationState`.
+ * @brief M2 owning simulation state: `openpfc::kernel::simulation::SimulationState`.
  *
- * `SimulationState` owns the canonical `pfc::data::Field<T, MemorySpace>`
- * containers (from `kernel/data/grid_field.hpp`) **by value**, keyed two ways:
+ * `SimulationState` owns canonical fields by value, keyed two ways:
  *   - by **name** (a `std::string`) for I/O, checkpointing and wiring, and
  *   - by a **typed handle** (`FieldHandle<T>`) for hot-path lookup that skips
  *     the string hash.
  *
  * It can hold fields of different element types (e.g. `double` and
- * `std::complex<double>`) and different memory spaces (host or device) at the
- * same time. Heterogeneous field values are stored through a small type-erased
- * layer: one `TypedStore<T, MemorySpace>` per concrete `(T, MemorySpace)` pair,
- * looked up by `std::type_index`. There is deliberately **no** new `Field`
- * type and **no** virtual field base -- the canonical `pfc::data::Field` is
- * used directly (Audit §13.3; the previous attempt was rejected for inventing a
- * colliding duplicate `pfc::data::Field`).
+ * `std::complex<double>`) at the same time. Heterogeneous field values are
+ * stored through a small type-erased layer: one `FieldHolder<T>` per concrete
+ * type `T`, looked up by `std::type_index`. There is deliberately **no** new
+ * `Field` type and **no** virtual field base -- the canonical `Field` is used
+ * directly.
  *
  * Not wired to the Gen-1 `ModelFieldRegistry`; that stays untouched until M12.
  */
 
-#include <any>
+#include <complex>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -36,134 +33,151 @@
 #include <unordered_map>
 #include <utility>
 
-#include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/execution/memory_space.hpp>
+#include <openpfc/kernel/data/field.hpp>
 
-namespace pfc {
+namespace openpfc {
+namespace kernel {
+namespace simulation {
 
 /**
  * @brief Opaque, type-safe handle to a field owned by a `SimulationState`.
  *
- * A handle carries an integer id (`invalid_id` is the sentinel for a
- * default-constructed handle) and the element type `T` in its own type.
- * Retrieving the field additionally needs the `MemorySpace` (supplied at the
- * call site), so a handle stays as small as a `std::size_t` while still
- * preventing a `double` handle from being used to fetch a
- * `std::complex<double>` field.
+ * A handle carries a raw pointer to the stored field and the element type `T` in its own type.
+ * Retrieving the field uses the handle's pointer directly, avoiding string lookups.
+ * A null handle (default-constructed) indicates an invalid/unset field reference.
  */
 template <typename T> class FieldHandle {
 public:
-  using value_type = T;
-  static constexpr std::size_t invalid_id = static_cast<std::size_t>(-1);
+  FieldHandle() : m_field(nullptr) {}
+  explicit FieldHandle(pfc::field::Field<T>* field_ptr) : m_field(field_ptr) {}
 
-  FieldHandle() noexcept : m_id(invalid_id) {}
-  explicit FieldHandle(std::size_t id) noexcept : m_id(id) {}
+  // Access the underlying field
+  pfc::field::Field<T>& get() noexcept { return *m_field; }
+  const pfc::field::Field<T>& get() const noexcept { return *m_field; }
 
-  std::size_t id() const noexcept { return m_id; }
-  bool is_valid() const noexcept { return m_id != invalid_id; }
+  // Check if handle is valid (points to a field)
+  explicit operator bool() const noexcept { return m_field != nullptr; }
 
-  bool operator==(const FieldHandle &other) const noexcept {
-    return m_id == other.m_id;
+  bool operator==(const FieldHandle& other) const noexcept {
+    return m_field == other.m_field;
   }
-  bool operator!=(const FieldHandle &other) const noexcept {
+  bool operator!=(const FieldHandle& other) const noexcept {
     return !(*this == other);
   }
 
 private:
-  std::size_t m_id;
+  pfc::field::Field<T>* m_field;
 };
 
 /**
- * @brief Owns canonical `pfc::data::Field` values keyed by name and typed handle.
+ * @brief Owns canonical field values keyed by name and typed handle.
  *
  * Field names are unique across the whole state (a name identifies exactly one
- * field, of exactly one `(T, MemorySpace)`). Handle ids are unique across all
- * fields regardless of type, so a handle never aliases another field.
+ * field, of exactly one type). Handles provide zero-allocation access to stored
+ * fields by raw pointer, avoiding string hash lookups on hot paths.
  */
 class SimulationState {
 public:
   SimulationState() = default;
 
-  /**
-   * @brief Take ownership of @p field under @p name.
-   * @throws std::runtime_error if @p name is already in use.
-   */
-  template <typename T, typename MemorySpace = pfc::HostSpace>
-  void add_field(const std::string &name, pfc::data::Field<T, MemorySpace> field);
+  // Non-copyable (owns unique fields by value)
+  SimulationState(const SimulationState&) = delete;
+  SimulationState& operator=(const SimulationState&) = delete;
+
+  // Movable (transfer ownership of fields)
+  SimulationState(SimulationState&&) noexcept = default;
+  SimulationState& operator=(SimulationState&&) noexcept = default;
+
+  ~SimulationState() = default;
 
   /**
-   * @brief Reference to the field named @p name.
-   * @throws std::runtime_error if no such field, or it is of another
-   *         `(T, MemorySpace)` than requested.
+   * @brief Take ownership of @p field under @p name.
+   * @param name Unique identifier for the field
+   * @param field Field to take ownership of; moved into storage
+   * @throws std::runtime_error if @p name is already in use.
    */
-  template <typename T, typename MemorySpace = pfc::HostSpace>
-  pfc::data::Field<T, MemorySpace> &get_field(const std::string &name);
-  template <typename T, typename MemorySpace = pfc::HostSpace>
-  const pfc::data::Field<T, MemorySpace> &get_field(const std::string &name) const;
+  template <typename T>
+  void insert_field(std::string name, pfc::field::Field<T>&& field);
 
   /**
    * @brief Handle for the field named @p name, for repeated hot-path access.
-   * @throws std::runtime_error if no such field of the requested type exists.
+   * @param name Field identifier
+   * @return FieldHandle for typed access (null handle if not found or wrong type)
    */
-  template <typename T, typename MemorySpace = pfc::HostSpace>
-  FieldHandle<T> get_field_handle(const std::string &name) const;
+  template <typename T>
+  FieldHandle<T> get_field(const std::string& name) noexcept;
 
   /**
-   * @brief Reference to the field a handle refers to.
-   * @throws std::runtime_error if the handle is invalid or refers to a field of
-   *         another `(T, MemorySpace)` than requested.
+   * @brief Check if a field exists by name (type-agnostic).
+   * @param name Field identifier
+   * @return true if any field with that name exists
    */
-  template <typename T, typename MemorySpace = pfc::HostSpace>
-  pfc::data::Field<T, MemorySpace> &
-  get_field_by_handle(const FieldHandle<T> &handle);
-  template <typename T, typename MemorySpace = pfc::HostSpace>
-  const pfc::data::Field<T, MemorySpace> &
-  get_field_by_handle(const FieldHandle<T> &handle) const;
-
-  /// True if a field named @p name exists (of any type/memory space).
-  bool has_field(const std::string &name) const noexcept {
-    return m_name_to_id.count(name) != 0;
+  bool has_field(const std::string& name) const noexcept {
+    return m_name_to_index.count(name) != 0;
   }
 
-  /// Number of fields currently owned.
-  std::size_t num_fields() const noexcept { return m_name_to_id.size(); }
+  /**
+   * @brief Remove field by name; returns false if not found or type mismatch.
+   * @param name Field identifier
+   * @return true if removal succeeded
+   */
+  template <typename T>
+  bool remove_field(const std::string& name);
+
+  /**
+   * @brief Clear all stored fields.
+   */
+  void clear() noexcept;
+
+  /**
+   * @brief Get number of stored fields.
+   */
+  size_t size() const noexcept { return m_name_to_index.size(); }
 
 private:
-  // One store per concrete (T, MemorySpace), held via a std::shared_ptr inside
-  // a std::any and keyed by the field type's std::type_index. The shared_ptr
-  // keeps std::any's copy-constructibility requirement off `Field` itself, so a
-  // move-only device `Field` can still be owned here.
-  template <typename T, typename MemorySpace> struct TypedStore {
-    std::unordered_map<std::size_t, pfc::data::Field<T, MemorySpace>> by_id;
-    std::unordered_map<std::string, std::size_t> name_to_id;
+  // Type-erased base class for holding fields of any type
+  struct FieldHolderBase {
+    virtual ~FieldHolderBase() = default;
+    virtual const std::type_info& type() const noexcept = 0;
   };
 
-  template <typename T, typename MemorySpace>
-  static std::type_index store_key() noexcept {
-    return std::type_index(typeid(pfc::data::Field<T, MemorySpace>));
-  }
+  // Concrete holder for fields of type T
+  template <typename T>
+  struct FieldHolder : FieldHolderBase {
+    pfc::field::Field<T> field;
 
-  // Get-or-create the store for (T, MemorySpace).
-  template <typename T, typename MemorySpace> TypedStore<T, MemorySpace> &store();
+    explicit FieldHolder(pfc::field::Field<T>&& f) : field(std::move(f)) {}
 
-  // Find the store for (T, MemorySpace); nullptr if none has been created.
-  template <typename T, typename MemorySpace>
-  TypedStore<T, MemorySpace> *find_store() noexcept;
-  template <typename T, typename MemorySpace>
-  const TypedStore<T, MemorySpace> *find_store() const noexcept;
+    const std::type_info& type() const noexcept override { return typeid(T); }
+  };
 
-  std::unordered_map<std::type_index, std::any> m_stores;
-  std::unordered_map<std::string, std::size_t> m_name_to_id;
-  std::size_t m_next_id = 0; // ids count up; invalid_id (size_t -1) is the sentinel
+  // Find or create the store for type T
+  template <typename T>
+  std::unordered_map<size_t, std::unique_ptr<FieldHolderBase>>& store() noexcept;
+
+  // Find the store for type T (const version)
+  template <typename T>
+  const std::unordered_map<size_t, std::unique_ptr<FieldHolderBase>>&
+  store() const noexcept;
+
+  std::unordered_map<std::type_index,
+                     std::unordered_map<size_t, std::unique_ptr<FieldHolderBase>>>
+      m_type_stores;
+  std::unordered_map<std::string, size_t> m_name_to_index;
+  size_t m_next_index = 0;
 };
 
-} // namespace pfc
+} // namespace simulation
+} // namespace kernel
+} // namespace openpfc
 
+// Hash specialization so FieldHandle<T> can key unordered containers
 namespace std {
-/// Hash specialization so `FieldHandle<T>` can key unordered containers.
-template <typename T> struct hash<pfc::FieldHandle<T>> {
-  std::size_t operator()(const pfc::FieldHandle<T> &handle) const noexcept {
-    return std::hash<std::size_t>{}(handle.id());
+template <typename T>
+struct hash<openpfc::kernel::simulation::FieldHandle<T>> {
+  size_t operator()(
+      const openpfc::kernel::simulation::FieldHandle<T>& handle) const noexcept {
+    return reinterpret_cast<size_t>(&handle.get());
   }
 };
 } // namespace std

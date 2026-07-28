@@ -20,7 +20,8 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_stepper_equivalence.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_integrator_result.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_binary_reader.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_state_field_storage.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_state_field_storage.cpp  # Old API test - disabled
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_state.cpp
 )
 
 # Add wave2d include directory for WaveModel access
