@@ -518,6 +518,110 @@ TEST_CASE("World - convenience functions work via ADL",
   }
 }
 
+TEST_CASE("world::to_indices agrees with Domain::to_indices",
+          "[world][domain][coordinate_system][agreement]") {
+  // This test validates that world::to_indices and domain::to_indices produce
+  // identical coordinate-to-index conversions, ensuring consistency across the
+  // coordinate system API.
+
+  SECTION("Agreement with unit spacing and zero origin") {
+    auto world =
+        world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                      GridSpacing({1.0, 1.0, 1.0}));
+    const auto& domain = world::get_coordinate_system(world);
+
+    // Sample coordinates throughout domain with various epsilon offsets
+    const std::vector<Real3> test_coords{
+        // Epsilon values that should NOT round up
+        {2.25, 20.25, 40.25},  // ε=0.25, stays at index
+        {2.49, 20.49, 40.49},  // ε=0.49, stays at index
+        {-2.25, -20.25, -40.25}, // negative
+        {-2.49, -20.49, -40.49}, // negative
+        // Epsilon values that SHOULD round up/down
+        {2.51, 20.51, 40.51},  // ε=0.51, rounds up
+        {2.75, 20.75, 40.75},  // ε=0.75, rounds up
+        {-2.51, -20.51, -40.51}, // negative ε=0.51, rounds down
+        {-2.75, -20.75, -40.75}, // negative ε=0.75, rounds down
+        // Half-way values
+        {10.5, 30.5, 50.5},    // round away from zero
+        {-10.5, -30.5, -50.5}  // round away from zero
+    };
+
+    for (const auto& coords : test_coords) {
+      auto indices_from_world = world::to_indices(world, coords);
+      auto indices_from_domain = domain::to_indices(domain, coords);
+
+      REQUIRE(indices_from_world == indices_from_domain);
+    }
+  }
+
+  SECTION("Agreement with non-unit spacing") {
+    auto world =
+        world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                      GridSpacing({0.5, 0.5, 0.5}));
+    const auto& domain = world::get_coordinate_system(world);
+
+    const std::vector<Real3> test_coords{
+        {0.24, 1.24, 2.24},  // rounds down
+        {0.26, 1.26, 2.26},  // rounds up
+        {5.0, 10.0, 15.0},   // exact
+        {5.25, 10.25, 15.25}, // __ half cell
+        {5.75, 10.75, 15.75}, // 3/4 cell
+        {-5.25, -10.25, -15.25} // negative
+    };
+
+    for (const auto& coords : test_coords) {
+      auto indices_from_world = world::to_indices(world, coords);
+      auto indices_from_domain = domain::to_indices(domain, coords);
+
+      REQUIRE(indices_from_world == indices_from_domain);
+    }
+  }
+
+  SECTION("Agreement with non-zero origin") {
+    auto world =
+        world::create(GridSize({64, 64, 64}), PhysicalOrigin({1.5, 1.5, 1.5}),
+                      GridSpacing({1.0, 1.0, 1.0}));
+    const auto& domain = world::get_coordinate_system(world);
+
+    const std::vector<Real3> test_coords{
+        {5.0, 10.0, 15.0},   // exact
+        {5.24, 10.24, 15.24}, // rounds down
+        {5.26, 10.26, 15.26}, // rounds up
+        {10.5, 20.5, 30.5},   // half-way
+        {-5.0, 0.0, 10.0}    // negative coordinate relative to origin
+    };
+
+    for (const auto& coords : test_coords) {
+      auto indices_from_world = world::to_indices(world, coords);
+      auto indices_from_domain = domain::to_indices(domain, coords);
+
+      REQUIRE(indices_from_world == indices_from_domain);
+    }
+  }
+
+  SECTION("Agreement with mixed spacing and origin") {
+    auto world =
+        world::create(GridSize({80, 60, 40}), PhysicalOrigin({-2.0, 1.0, 0.5}),
+                      GridSpacing({0.2, 0.5, 0.75}));
+    const auto& domain = world::get_coordinate_system(world);
+
+    const std::vector<Real3> test_coords{
+        {-1.74, 2.24, 1.25}, // rounds
+        {-1.76, 2.26, 1.75}, // rounds
+        {5.0, 10.0, 15.0},   // close to exact
+        {10.5, 20.5, 30.5}    // half-way
+    };
+
+    for (const auto& coords : test_coords) {
+      auto indices_from_world = world::to_indices(world, coords);
+      auto indices_from_domain = domain::to_indices(domain, coords);
+
+      REQUIRE(indices_from_world == indices_from_domain);
+    }
+  }
+}
+
 TEST_CASE("World - convenience functions integrate with existing API",
           "[world][convenience][integration][unit]") {
   SECTION("Physical volume matches manual calculation") {

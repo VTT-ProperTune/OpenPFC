@@ -12,6 +12,10 @@ milestones M0–M12). 0.2.0 will be released only after the Gen-1 architecture a
 all temporary migration adapters are removed. Expect breaking API changes; 0.1.x
 source compatibility is explicitly not a goal.
 
+### Changed
+
+- **Breaking:** Coordinate-to-index conversion consistently uses rounding (nearest-grid rounding) instead of truncation. This applies to `pfc::domain::to_indices()`, `pfc::world::to_indices()`, and `pfc::DiscreteField::map_coordinates_to_indices()`. All coordinate systems now round to the nearest integer, matching the documented contract and providing consistent behavior across the kernel. (Note: This change was originally introduced in 0.1.5 for `csys::to_index` and is now standardized across all coordinate transformation APIs with comprehensive test coverage.)
+
 ### Added
 
 - `pfc::Domain` — canonical coordinate/geometry type replacing the templated `World`
