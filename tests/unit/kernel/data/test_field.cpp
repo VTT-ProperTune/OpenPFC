@@ -21,16 +21,11 @@ static double gaussian(Real3 r) {
 // returns a Field built from a local World would dangle under the old
 // `const World&` member.
 static field::Field<double> make_field_from_local_world() {
-  auto local_world =
-      domain::create_world(GridSize(Int3{6, 5, 4}), PhysicalOrigin(Real3{1.0, 2.0, 3.0}),
-                    GridSpacing(Real3{0.5, 0.25, 0.125}));
+  auto domain =
+      domain::create(GridSize(Int3{6, 5, 4}), PhysicalOrigin(Real3{1.0, 2.0, 3.0}),
+                     GridSpacing(Real3{0.5, 0.25, 0.125}));
+  auto local_world = World(Int3{0, 0, 0}, Int3{5, 4, 3}, domain);
   return field::create<double>(local_world);
-}
-
-// Helper function to create a simple world with uniform spacing
-// (reduces boilerplate for common test cases)
-static World create_simple_world(const Int3& size) {
-  return domain::create_world(size);
 }
 
 TEST_CASE("Field keeps a valid World after its source World is gone", "[field]") {
@@ -44,7 +39,8 @@ TEST_CASE("Field keeps a valid World after its source World is gone", "[field]")
 
 TEST_CASE("Field", "[field]") {
   Int3 size = {8, 8, 8};
-  auto world = create_simple_world(size);
+  auto domain = domain::create(size);
+  auto world = World(Int3{0, 0, 0}, Int3{size[0]-1, size[1]-1, size[2]-1}, domain);
   auto f = field::create<double>(world);
 
   SECTION("Field has correct size") {
