@@ -1,283 +1,359 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/*
- * This test suite is quarantined pending issue #293.
- * It tests DiscreteField-specific patterns with no data::Field equivalent.
- * The DiscreteField type is deprecated and will be removed when all consumers are gone.
- * Tests are skipped at runtime; this file will be deleted in #293.
- */
-
-#include <iostream>
-
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include <openpfc/kernel/data/discrete_field.hpp>
+#include <complex>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 
 using namespace Catch::Matchers;
 using namespace pfc;
 
-TEST_CASE("DiscreteField1D") {
-  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
-  int Lx = 5;
-  int i0 = -2;
-  double x0 = 1.0;
-  double dx = 2.0;
-  DiscreteField<int, 1> field({Lx}, {i0}, {x0}, {dx});
+TEST_CASE("Field geometry and size queries", "[field][geometry]") {
+  const int nx = 10, ny = 15, nz = 20;
+  const pfc::Domain domain = pfc::domain::create({nx, ny, nz});
+  const int num_ranks = 1;
+  const pfc::Decomposition decomp = pfc::decomposition::create(domain, num_ranks);
+  const int rank = 0;
+  const int halo = 0;
 
-  SECTION("Accessing elements using indices") {
-    std::array<int, 1> idx = {0};
-    field[idx] = 1;
-    REQUIRE(field[idx] == 1);
+  SECTION("Field size matches decomposition") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
+
+    REQUIRE(field.local_size()[0] == nx);
+    REQUIRE(field.local_size()[1] == ny);
+    REQUIRE(field.local_size()[2] == nz);
+    REQUIRE(field.size3()[0] == nx);
+    REQUIRE(field.size3()[1] == ny);
+    REQUIRE(field.size3()[2] == nz);
+    REQUIRE(field.global_size()[0] == nx);
+    REQUIRE(field.global_size()[1] == ny);
+    REQUIRE(field.global_size()[2] == nz);
   }
 
-  SECTION("Accessing elements using coordinates") {
-    // Using free function pfc::interpolate() (preferred)
-    pfc::interpolate(field, {2.0}) = 1;
-    REQUIRE(pfc::interpolate(field, {1.9}) == 0);
-    REQUIRE(pfc::interpolate(field, {2.0}) == 1);
-    REQUIRE(pfc::interpolate(field, {2.1}) == 1);
+  SECTION("Field domain and spacing are correct") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
+
+    const pfc::Domain &field_domain = field.domain();
+    REQUIRE(pfc::domain::get_size(field_domain)[0] == nx);
+    REQUIRE(pfc::domain::get_size(field_domain)[1] == ny);
+    REQUIRE(pfc::domain::get_size(field_domain)[2] == nz);
+
+    const pfc::Real3 &spacing = field.spacing();
+    REQUIRE(spacing[0] == 1.0);
+    REQUIRE(spacing[1] == 1.0);
+    REQUIRE(spacing[2] == 1.0);
+
+    const pfc::Real3 &origin = field.origin();
+    REQUIRE(origin[0] == 0.0);
+    REQUIRE(origin[1] == 0.0);
+    REQUIRE(origin[2] == 0.0);
   }
 
-  SECTION("Bounds checks work on const fields") {
-    const DiscreteField<int, 1> &const_field = field;
+  SECTION("Field box and halo are correct") {
+    const int test_halo = 2;
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, test_halo);
 
-    REQUIRE(const_field.inbounds({1.0}));
-    REQUIRE_FALSE(const_field.inbounds({-3.1}));
-    REQUIRE_FALSE(const_field.inbounds({7.0}));
+    REQUIRE(field.halo_width() == test_halo);
+    REQUIRE(field.storage_halo() == test_halo);
+
+    const pfc::Box3i &box = field.box();
+    REQUIRE(box.size[0] == nx);
+    REQUIRE(box.size[1] == ny);
+    REQUIRE(box.size[2] == nz);
   }
 
-  SECTION("Test apply()") {
-    auto func = [](const std::array<double, 1> &coords) -> int {
-      return static_cast<int>(coords[0]);
-    };
-    field.apply(func);
-    bool values_match = true;
-    for (int i = 0; i < Lx; i++) {
-      values_match &= field[i] == -3 + 2 * i;
-    }
-    REQUIRE(values_match);
-  }
-}
+  SECTION("Custom domain with non-unit spacing and origin") {
+    const pfc::Real3 custom_spacing{2.0, 3.0, 4.0};
+    const pfc::Real3 custom_origin{1.0, 2.0, 3.0};
+    const pfc::Domain custom_domain =
+        pfc::domain::create(pfc::GridSize({nx, ny, nz}),
+                            pfc::PhysicalOrigin(custom_origin),
+                            pfc::GridSpacing(custom_spacing));
+    const pfc::Decomposition custom_decomp =
+        pfc::decomposition::create(custom_domain, num_ranks);
 
-TEST_CASE("pfc::interpolate() free function works correctly",
-          "[discrete_field][free_function]") {
-  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
-  SECTION("Mutable version returns modifiable reference") {
-    DiscreteField<double, 3> field({3, 3, 3}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                   {1.0, 1.0, 1.0});
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(custom_decomp, rank, halo);
 
-    // Set value at grid point (1, 1, 1)
-    field[{1, 1, 1}] = 42.0;
+    const pfc::Real3 &spacing = field.spacing();
+    REQUIRE(spacing[0] == custom_spacing[0]);
+    REQUIRE(spacing[1] == custom_spacing[1]);
+    REQUIRE(spacing[2] == custom_spacing[2]);
 
-    // Interpolate at coordinates near (1, 1, 1) should return (1,1,1)
-    double &value = pfc::interpolate(field, {1.2, 1.3, 1.4});
-    REQUIRE(value == 42.0);
-
-    // Can modify through reference
-    value = 100.0;
-    REQUIRE(field[{1, 1, 1}] == 100.0);
-  }
-
-  SECTION("Const version returns const reference") {
-    DiscreteField<double, 3> mutable_field({3, 3, 3}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                           {1.0, 1.0, 1.0});
-    mutable_field[{2, 2, 2}] = 99.0;
-
-    const DiscreteField<double, 3> &const_field = mutable_field;
-
-    // Const version should work
-    const double &value = pfc::interpolate(const_field, {2.1, 2.1, 2.1});
-    REQUIRE(value == 99.0);
-
-    // Verify it's actually const (compile-time check)
-    static_assert(std::is_const_v<std::remove_reference_t<decltype(value)>>,
-                  "interpolate() const overload should return const reference");
-  }
-
-  SECTION("Works via ADL (argument-dependent lookup)") {
-    using pfc::DiscreteField;
-
-    DiscreteField<double, 3> field({4, 4, 4}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                   {1.0, 1.0, 1.0});
-    field[{2, 2, 2}] = 77.0;
-
-    // Should find pfc::interpolate() via ADL without namespace prefix
-    double &value = interpolate(field, {2.4, 2.4, 2.4});
-    REQUIRE(value == 77.0);
-
-    // Should be same location as explicit call
-    REQUIRE(&value == &pfc::interpolate(field, {2.4, 2.4, 2.4}));
-  }
-
-  SECTION("Equivalence with deprecated member function") {
-    DiscreteField<double, 3> field({5, 5, 5}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                   {1.0, 1.0, 1.0});
-    field.apply(
-        [](double x, double y, double z) { return x * 10.0 + y * 1.0 + z * 0.1; });
-
-    std::array<double, 3> coords{2.5, 3.5, 1.5};
-
-// Suppress deprecation warning while asserting member matches free function
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#endif
-    double &member_result = field.interpolate(coords);
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
-    double &free_result = pfc::interpolate(field, coords);
-
-    // Should point to same location
-    REQUIRE(&member_result == &free_result);
-    REQUIRE(member_result == free_result);
-  }
-
-  SECTION("Nearest-neighbor rounding behavior") {
-    DiscreteField<int, 1> field({5}, {0}, {0.0}, {1.0});
-
-    // Initialize: field[i] = i
-    for (int i = 0; i < 5; i++) {
-      field[{static_cast<size_t>(i)}] = i;
-    }
-
-    // Test rounding to nearest (std::round behavior)
-    REQUIRE(pfc::interpolate(field, {0.4}) == 0); // Rounds down
-    REQUIRE(pfc::interpolate(field, {0.5}) == 1); // std::round(0.5) = 1
-    REQUIRE(pfc::interpolate(field, {0.6}) == 1); // Rounds up
-    REQUIRE(pfc::interpolate(field, {2.3}) == 2); // Rounds down
-    REQUIRE(pfc::interpolate(field, {2.7}) == 3); // Rounds up
+    const pfc::Real3 &origin = field.origin();
+    REQUIRE(origin[0] == custom_origin[0]);
+    REQUIRE(origin[1] == custom_origin[1]);
+    REQUIRE(origin[2] == custom_origin[2]);
   }
 }
 
-TEST_CASE("pfc::interpolate() integration test",
-          "[discrete_field][interpolate][integration]") {
-  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
-  SECTION("Works with realistic 3D field") {
-    // Create field with analytical function
-    DiscreteField<double, 3> field({32, 32, 32}, {0, 0, 0}, {0.0, 0.0, 0.0},
-                                   {0.5, 0.5, 0.5});
+TEST_CASE("Field apply function", "[field][apply]") {
+  const int nx = 5, ny = 5, nz = 5;
+  const pfc::Domain domain = pfc::domain::create({nx, ny, nz});
+  const int num_ranks = 1;
+  const pfc::Decomposition decomp = pfc::decomposition::create(domain, num_ranks);
+  const int rank = 0;
+  const int halo = 0;
+
+  SECTION("Apply with coordinate function (double, double, double)") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
 
     field.apply([](double x, double y, double z) {
-      return std::sin(x) * std::cos(y) * std::exp(-z / 10.0);
+      return x + y + z;
     });
 
-    // Sample at various points (integer steps avoid float loop counters)
-    bool values_in_range = true;
-    for (int ix = 0;; ++ix) {
-      const double x = static_cast<double>(ix) * 2.3;
-      if (!(x < 15.0)) {
-        break;
-      }
-      for (int iy = 0;; ++iy) {
-        const double y = static_cast<double>(iy) * 3.1;
-        if (!(y < 15.0)) {
-          break;
-        }
-        for (int iz = 0;; ++iz) {
-          const double z = static_cast<double>(iz) * 2.7;
-          if (!(z < 15.0)) {
-            break;
-          }
-          double value = pfc::interpolate(field, {x, y, z});
+    // Check specific indices
+    REQUIRE(field(0, 0, 0) == 0.0);
+    REQUIRE(field(1, 0, 0) == 1.0);
+    REQUIRE(field(0, 1, 0) == 1.0);
+    REQUIRE(field(0, 0, 1) == 1.0);
+    REQUIRE(field(1, 1, 1) == 3.0);
+    REQUIRE(field(2, 3, 4) == 9.0);
+  }
 
-          // Should be within reasonable bounds (function is bounded)
-          values_in_range &= std::abs(value) <= 1.5;
-        }
-      }
-    }
-    REQUIRE(values_in_range);
+  SECTION("Apply with Real3 coordinate function") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
+
+    field.apply([](const pfc::Real3 &coords) {
+      return coords[0] * 10.0 + coords[1] * 1.0 + coords[2] * 0.1;
+    });
+
+    // Check specific indices
+    REQUIRE_THAT(field(0, 0, 0), WithinAbs(0.0, 1e-10));
+    REQUIRE_THAT(field(1, 0, 0), WithinAbs(10.0, 1e-10));
+    REQUIRE_THAT(field(0, 1, 0), WithinAbs(1.0, 1e-10));
+    REQUIRE_THAT(field(0, 0, 1), WithinAbs(0.1, 1e-10));
+    REQUIRE_THAT(field(1, 1, 1), WithinAbs(11.1, 1e-10));
+  }
+
+  SECTION("Apply with complex function") {
+    pfc::data::Field<std::complex<double>, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<std::complex<double>>(decomp, rank, halo);
+
+    field.apply([](double x, double y, double z) -> std::complex<double> {
+      return std::complex<double>(x, y);
+    });
+
+    REQUIRE(field(1, 2, 3).real() == 1.0);
+    REQUIRE(field(1, 2, 3).imag() == 2.0);
   }
 }
 
+TEST_CASE("Field indexing and element access", "[field][indexing]") {
+  const int nx = 5, ny = 5, nz = 5;
+  const pfc::Domain domain = pfc::domain::create({nx, ny, nz});
+  const int num_ranks = 1;
+  const pfc::Decomposition decomp = pfc::decomposition::create(domain, num_ranks);
+  const int rank = 0;
+  const int halo = 0;
 
-TEST_CASE("DiscreteField::set_data - move semantics enabled", "[discrete_field][set_data][move]") {
-  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
-  // Setup a simple grid (size doesn't matter for move test)
-  std::array<int, 3> grid{{10, 10, 1}};
-  std::array<int, 3> offsets{{0, 0, 0}};
-  std::array<double, 3> origin{{0.0, 0.0, 0.0}};
-  std::array<double, 3> discretization{{1.0, 1.0, 1.0}};
+  SECTION("Index operator writes and reads correctly") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
 
-  DiscreteField<double, 3> field(grid, offsets, origin, discretization);
+    field(1, 2, 3) = 42.0;
+    field(0, 0, 0) = 1.0;
+    field(4, 4, 4) = 99.0;
 
-  // Create a vector with known contents
-  std::vector<double> original(100, 2.718);
-  original[0] = 1.0;
-  original[99] = 99.0;
-  std::vector<double> moved_from = original;
+    REQUIRE(field(1, 2, 3) == 42.0);
+    REQUIRE(field(0, 0, 0) == 1.0);
+    REQUIRE(field(4, 4, 4) == 99.0);
+    REQUIRE(field(0, 0, 1) == 0.0); // Default initialized
+  }
 
-  // Move data into field
-  field.set_data(std::move(moved_from));
+  SECTION("Index with Int3 coordinate") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
 
-  // Verify data was moved correctly into field
-  REQUIRE(field.get_array().get_data().size() == 100);
-  REQUIRE(field.get_array().get_data()[0] == 1.0);
-  REQUIRE(field.get_array().get_data()[99] == 99.0);
+    pfc::Int3 idx{2, 3, 1};
+    field(idx) = 7.5;
 
-  // Verify moved-from vector is now empty (actual move occurred)
-  REQUIRE(moved_from.empty());
-  REQUIRE(moved_from.capacity() == 0);
+    REQUIRE(field(2, 3, 1) == 7.5);
+    REQUIRE(field(idx) == 7.5);
+  }
+
+  SECTION("Default initialization is zero") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
+
+    bool all_zero = true;
+    for (int k = 0; k < nz; ++k) {
+      for (int j = 0; j < ny; ++j) {
+        for (int i = 0; i < nx; ++i) {
+          all_zero &= (field(i, j, k) == 0.0);
+        }
+      }
+    }
+    REQUIRE(all_zero);
+  }
 }
 
-TEST_CASE("test_data_conversion_non_const") {
-  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
-  DiscreteField<double, 3> field(
-      {1, 1, 1},              // dimensions
-      {0, 0, 0},              // offsets
-      {0.0, 0.0, 0.0},       // origin
-      {1.0, 1.0, 1.0}        // discretization
-  );
-  field[{0, 0, 0}] = 10.0;
-  std::vector<double>& ref = field;
-  CHECK(&ref == &field.get_data());
-  CHECK(ref[0] == 10.0);
-  ref[0] = 20.0;  // Can modify through non-const reference
-  CHECK(field[{0, 0, 0}] == 20.0);
+TEST_CASE("Field coordinate round-trip", "[field][coordinates]") {
+  const int nx = 10, ny = 15, nz = 20;
+  const pfc::Real3 spacing{2.0, 3.0, 4.0};
+  const pfc::Real3 origin{1.0, 2.0, 3.0};
+  const pfc::Domain domain = pfc::domain::create(pfc::GridSize({nx, ny, nz}),
+                                                   pfc::PhysicalOrigin(origin),
+                                                   pfc::GridSpacing(spacing));
+  const int num_ranks = 1;
+  const pfc::Decomposition decomp = pfc::decomposition::create(domain, num_ranks);
+  const int rank = 0;
+  const int halo = 0;
+
+  SECTION("Local indices map to correct physical coordinates") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
+
+    // Test various local indices
+    pfc::Real3 coords = field.coords(0, 0, 0);
+    REQUIRE(coords[0] == origin[0]);
+    REQUIRE(coords[1] == origin[1]);
+    REQUIRE(coords[2] == origin[2]);
+
+    coords = field.coords(1, 0, 0);
+    REQUIRE(coords[0] == origin[0] + spacing[0]);
+    REQUIRE(coords[1] == origin[1]);
+    REQUIRE(coords[2] == origin[2]);
+
+    coords = field.coords(2, 3, 4);
+    REQUIRE(coords[0] == origin[0] + 2 * spacing[0]);
+    REQUIRE(coords[1] == origin[1] + 3 * spacing[1]);
+    REQUIRE(coords[2] == origin[2] + 4 * spacing[2]);
+  }
+
+  SECTION("Round-trip: indices to coords and back") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
+
+    // Store values at specific indices
+    field(2, 3, 4) = 123.45;
+    field(7, 8, 9) = 67.89;
+
+    // Get coordinates for those indices
+    pfc::Real3 coords_234 = field.coords(2, 3, 4);
+    pfc::Real3 coords_789 = field.coords(7, 8, 9);
+
+    // Verify expected coordinates
+    REQUIRE(coords_234[0] == origin[0] + 2 * spacing[0]);
+    REQUIRE(coords_234[1] == origin[1] + 3 * spacing[1]);
+    REQUIRE(coords_234[2] == origin[2] + 4 * spacing[2]);
+
+    REQUIRE(coords_789[0] == origin[0] + 7 * spacing[0]);
+    REQUIRE(coords_789[1] == origin[1] + 8 * spacing[1]);
+    REQUIRE(coords_789[2] == origin[2] + 9 * spacing[2]);
+
+    // Verify we can still access the stored values
+    REQUIRE(field(2, 3, 4) == 123.45);
+    REQUIRE(field(7, 8, 9) == 67.89);
+  }
+
+  SECTION("Unit spacing and origin work correctly") {
+    const pfc::Domain unit_domain = pfc::domain::create({nx, ny, nz});
+    const pfc::Decomposition unit_decomp =
+        pfc::decomposition::create(unit_domain, num_ranks);
+
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(unit_decomp, rank, halo);
+
+    for (int i = 0; i < nx; ++i) {
+      for (int j = 0; j < ny; ++j) {
+        for (int k = 0; k < nz; ++k) {
+          pfc::Real3 coords = field.coords(i, j, k);
+          REQUIRE(coords[0] == i);
+          REQUIRE(coords[1] == j);
+          REQUIRE(coords[2] == k);
+        }
+      }
+    }
+  }
+
+  SECTION("Apply function uses correct coordinates") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
+
+    // Apply a function that depends on coordinates
+    field.apply([](double x, double y, double z) {
+      return x * y * z;
+    });
+
+    // Manually compute expected value and compare
+    pfc::Real3 coords_234 = field.coords(2, 3, 4);
+    double expected_234 = coords_234[0] * coords_234[1] * coords_234[2];
+    REQUIRE_THAT(field(2, 3, 4),
+                  WithinAbs(expected_234, 1e-10));
+  }
 }
 
-TEST_CASE("test_data_conversion_const") {
-  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
-  DiscreteField<double, 3> field(
-      {1, 1, 1},              // dimensions
-      {0, 0, 0},              // offsets
-      {0.0, 0.0, 0.0},       // origin
-      {1.0, 1.0, 1.0}        // discretization
-  );
-  field[{0, 0, 0}] = 10.0;
-  const DiscreteField<double, 3>& const_field = field;
-  const std::vector<double>& ref = const_field;
-  CHECK(&ref == &const_field.get_data());
-  CHECK(ref[0] == 10.0);
-  // ref[0] = 20.0;  // Compile error: cannot modify through const reference
+TEST_CASE("Field global index mapping", "[field][coordinates]") {
+  const int nx = 8, ny = 6, nz = 4;
+  const pfc::Domain domain = pfc::domain::create({nx, ny, nz});
+  const int num_ranks = 1;
+  const pfc::Decomposition decomp = pfc::decomposition::create(domain, num_ranks);
+  const int rank = 0;
+  const int halo = 0;
+
+  SECTION("Single-rank global mapping is identity") {
+    pfc::data::Field<double, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<double>(decomp, rank, halo);
+
+    for (int i = 0; i < nx; ++i) {
+      for (int j = 0; j < ny; ++j) {
+        for (int k = 0; k < nz; ++k) {
+          pfc::Int3 global_idx = field.global(i, j, k);
+          REQUIRE(global_idx[0] == i);
+          REQUIRE(global_idx[1] == j);
+          REQUIRE(global_idx[2] == k);
+        }
+      }
+    }
+  }
 }
 
-TEST_CASE("test_get_data_const") {
-  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
-  DiscreteField<double, 3> field(
-      {1, 1, 1},              // dimensions
-      {0, 0, 0},              // offsets
-      {0.0, 0.0, 0.0},       // origin
-      {1.0, 1.0, 1.0}        // discretization
-  );
-  field[{0, 0, 0}] = 10.0;
-  const DiscreteField<double, 3>& const_field = field;
-  const std::vector<double>& data = const_field.get_data();
-  CHECK(data.size() == 1);
-  CHECK(data[0] == 10.0);
+TEST_CASE("Field with different element types", "[field][types]") {
+  const int nx = 3, ny = 3, nz = 3;
+  const pfc::Domain domain = pfc::domain::create({nx, ny, nz});
+  const int num_ranks = 1;
+  const pfc::Decomposition decomp = pfc::decomposition::create(domain, num_ranks);
+  const int rank = 0;
+  const int halo = 0;
+
+  SECTION("Field with int type") {
+    pfc::data::Field<int, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<int>(decomp, rank, halo);
+
+    field(1, 1, 1) = 42;
+    REQUIRE(field(1, 1, 1) == 42);
+    REQUIRE(field(0, 0, 0) == 0);
+  }
+
+  SECTION("Field with std::complex type") {
+    pfc::data::Field<std::complex<double>, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<std::complex<double>>(decomp, rank, halo);
+
+    field(1, 2, 1) = std::complex<double>(3.0, 4.0);
+    REQUIRE(field(1, 2, 1).real() == 3.0);
+    REQUIRE(field(1, 2, 1).imag() == 4.0);
+  }
+
+  SECTION("Apply function works with complex type") {
+    pfc::data::Field<std::complex<double>, pfc::HostSpace> field =
+        pfc::data::field_from_subdomain<std::complex<double>>(decomp, rank, halo);
+
+    field.apply([](double x, double y, double z) -> std::complex<double> {
+      return std::exp(std::complex<double>(0, x));
+    });
+
+    std::complex<double> val = field(2, 0, 0);
+    REQUIRE_THAT(val.real(), WithinAbs(std::cos(2.0), 1e-10));
+    REQUIRE_THAT(val.imag(), WithinAbs(std::sin(2.0), 1e-10));
+  }
 }
