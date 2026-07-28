@@ -13,7 +13,7 @@
  * `xx / yy / zz` path through the composite evaluator). This file adds:
  *
  *  1. `g.x / g.y / g.z` correctness against a linear field on a small
- *     single-rank `LocalField` for orders 2, 4, 6, 8.
+ *     single-rank `pfc::data::Field` for orders 2, 4, 6, 8.
  *  2. Mixed `value + x + xx` aggregate on a quadratic field — proves the
  *     D1 and D2 codepaths coexist and the value member is read directly.
  *  3. Constructor throws `std::invalid_argument` when a model declares
@@ -68,8 +68,17 @@ Field<double> make_field(int N, int hw) {
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
-  // LocalField-compatible: unpadded storage + iteration halo metadata.
+  // Unpadded storage + iteration halo metadata.
   return pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, hw);
+}
+
+Field<double> make_padded_field(int N, int hw) {
+  auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
+  // Padded storage with contiguous owned-plus-halo layout.
+  return pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, hw);
 }
 
 } // namespace
@@ -146,15 +155,18 @@ TEST_CASE("FdGradient ctor throws when halo_width is below stencil half_width",
   constexpr int order = 4;
   constexpr int hw = 1;
   constexpr int N = 10;
-  auto u = make_field(N, hw);
-  REQUIRE_THROWS_AS(pfc::field::create<OnlyXX>(u, order), std::invalid_argument);
 
-  using namespace pfc;
-  auto domain = domain::create({N, N, N});
-  auto decomp = decomposition::create(domain, 1);
-  field::PaddedBrick<double> brick(decomp, /*rank=*/0, hw);
-  REQUIRE_THROWS_AS(
-      (pfc::gradient::FDGradient<OnlyXX>(brick, order)), std::invalid_argument);
+  // Test with unpadded Field (via pfc::field::create)
+  {
+    auto u = make_field(N, hw);
+    REQUIRE_THROWS_AS(pfc::field::create<OnlyXX>(u, order), std::invalid_argument);
+  }
+
+  // Test with padded Field (via direct FDGradient constructor)
+  {
+    auto u = make_padded_field(N, hw);
+    REQUIRE_THROWS_AS((pfc::gradient::FDGradient<OnlyXX>(u, order)), std::invalid_argument);
+  }
 }
 
 TEST_CASE("FdGradient<OnlyX>: order-2 D1 is exact on a constant field "
@@ -181,17 +193,17 @@ TEST_CASE("FdGradient<OnlyX>: order-2 D1 is exact on a constant field "
   }
 }
 
-TEST_CASE("pfc::gradient::FDGradient binds to a PaddedBrick and matches the "
-          "LocalField path",
+TEST_CASE("pfc::gradient::FDGradient binds to a padded Field and matches the "
+          "pfc::field::create path",
           "[kernel][field][fd_gradient][unit]") {
   // Same -3 x linear ramp as the OnlyX case above, this time evaluated on a
-  // PaddedBrick via the brick-binding constructor (default order = 2). The
-  // pfc::field::FdGradient alias must remain spell-compatible.
+  // padded Field via the direct FDGradient constructor (default order = 2).
+  // The pfc::field::FdGradient alias must remain spell-compatible.
   using namespace pfc;
-  auto domain = domain::create({8, 8, 8});
-  auto decomp = decomposition::create(domain, 1);
+  const int N = 8;
+  const int hw = 1;
 
-  field::PaddedBrick<double> u(decomp, /*rank=*/0, /*hw=*/1);
+  auto u = make_padded_field(N, hw);
   u.apply([](double x, double, double) { return -3.0 * x; });
 
   // Default order, free `prepare` is a no-op for FD.
@@ -199,11 +211,11 @@ TEST_CASE("pfc::gradient::FDGradient binds to a PaddedBrick and matches the "
   pfc::gradient::prepare(grad);
 
   // Free `evaluate` over a centre-cell Int3.
-  const pfc::Int3 c{u.nx() / 2, u.ny() / 2, u.nz() / 2};
+  const pfc::Int3 c{u.local_size()[0] / 2, u.local_size()[1] / 2, u.local_size()[2] / 2};
   const auto g_free = pfc::gradient::evaluate(grad, c);
   REQUIRE(g_free.x == Approx(-3.0));
 
-  // Deprecated alias still resolves to the canonical evaluator.
+  // Type alias still resolves to the canonical evaluator.
   static_assert(std::is_same_v<pfc::field::FdGradient<OnlyX>,
                                pfc::gradient::FDGradient<OnlyX>>,
                 "pfc::field::FdGradient should alias pfc::gradient::FDGradient");
@@ -254,20 +266,20 @@ TEST_CASE("FDGradient prepare is no-op without callback",
   REQUIRE(g1.x == g2.x);
 }
 
-TEST_CASE("FDGradient PaddedBrick constructor accepts callback",
+TEST_CASE("FDGradient padded Field constructor accepts callback",
           "[kernel][field][fd_gradient][unit]") {
-  // Test that the PaddedBrick constructor accepts and stores the callback.
+  // Test that the padded Field constructor accepts and stores the callback.
   int callback_invoked = 0;
   auto callback = [&callback_invoked]() { ++callback_invoked; };
 
   using namespace pfc;
-  auto domain = domain::create({8, 8, 8});
-  auto decomp = decomposition::create(domain, 1);
+  const int N = 8;
+  const int hw = 1;
 
-  field::PaddedBrick<double> u(decomp, /*rank=*/0, /*hw=*/1);
+  auto u = make_padded_field(N, hw);
   u.apply([](double x, double, double) { return -3.0 * x; });
 
-  // Create FDGradient with callback via PaddedBrick constructor
+  // Create FDGradient with callback via padded Field constructor
   pfc::gradient::FDGradient<OnlyX> grad(u, 2, callback);
 
   REQUIRE(callback_invoked == 0);
@@ -275,7 +287,7 @@ TEST_CASE("FDGradient PaddedBrick constructor accepts callback",
   REQUIRE(callback_invoked == 1);
 
   // Verify gradient computation still works
-  const pfc::Int3 c{u.nx() / 2, u.ny() / 2, u.nz() / 2};
+  const pfc::Int3 c{u.local_size()[0] / 2, u.local_size()[1] / 2, u.local_size()[2] / 2};
   const auto g = pfc::gradient::evaluate(grad, c);
   REQUIRE(g.x == Approx(-3.0));
 }
