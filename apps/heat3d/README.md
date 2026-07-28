@@ -9,9 +9,9 @@ MPI CPU drivers for the **3D heat equation** \(\partial u/\partial t = D \nabla^
 
 | Binary | Layer | What it shows |
 |---|---|---|
-| **`heat3d_fd_scratch`** | Version 0 — from scratch | The **bottom** of the hierarchy. No `HeatModel`, no `HeatGrads`, no `for_each_*` helpers. Three nested `for (k) for (j) for (i)` loops over `[0, n)`, padded `lin = (i+hw)*sx + (j+hw)*sy + (k+hw)*sz` computed by hand, neighbours accessed as `u_ptr[lin ± sx/sy/sz]`, per-step Laplacian in a plain `std::vector<double>` of size `nx*ny*nz` with no halo. The **only** OpenPFC piece in the hot loop is `pfc::PaddedHaloExchanger<T>::exchange_halos`. |
-| **`heat3d_fd_manual`** | Laboratory-style FD (2nd order, 7-point) | The **same physics, lifted one level up**. The driver still spells out the stencil and the explicit Euler update, but it now uses `HeatModel::rhs(t, HeatGrads&)` for the per-cell RHS, the `for_each_inner / for_each_border / for_each_owned` lambda iterators for the loops, and `start_halo_exchange / finish_halo_exchange` to overlap halos with the inner-region work. |
-| **`heat3d_fd`** | Compact FD (orders 2–20) | The production path. **Two `pfc::data::Field<double, HostSpace>` fields** (`u`, `du`), `pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD)` and `pfc::gradient::FDGradient<HeatGrads> grad(u, cfg.fd_order)` — both bound to `u`. Each step is `pfc::communication::exchange(halo)` / `pfc::data::Field::for_each_owned(du, …) / u += dt * du` (with `du[idx]` writes). For overlap, `pfc::communication::start_exchange` / `finish_exchange` are the split API (also injected into `pfc::` as `pfc::start_exchange` / `pfc::finish_exchange` for existing call sites). For an FFT-safe unpadded core + separated face halos, tests use `pfc::sim::stacks::FdCpuStack` (which still bundles those concerns through `pfc::sim::DuField`). |
+| **`heat3d_fd_scratch`** | Version 0 — from scratch | The **bottom** of the hierarchy. No `HeatModel`, no `HeatGrads`, no `for_each_*` helpers. Three nested `for (k) for (j) for (i)` loops over `[0, n)`, padded `lin = (i+hw)*sx + (j+hw)*sy + (k+hw)*sz` computed by hand, neighbours accessed as `u_ptr[lin ± sx/sy/sz]`, per-step Laplacian in a plain `std::vector<double>` of size `nx*ny*nz` with no halo. The **only** OpenPFC piece in the hot loop is `pfc::communication::exchange(halo)`. |
+| **`heat3d_fd_manual`** | Laboratory-style FD (2nd order, 7-point) | The **same physics, lifted one level up**. The driver still spells out the stencil and the explicit Euler update, but it now uses `HeatModel::rhs(t, HeatGrads&)` for the per-cell RHS, raw OpenMP loops for stencil work over interior/border regions, and `Field::for_each_owned` for the Euler update, and `halo.start() / halo.finish()` to overlap halos with the inner-region work. |
+| **`heat3d_fd`** | Compact FD (orders 2–20) | The production path. **Two `pfc::data::Field<double, HostSpace>` fields** via `pfc::data::field_from_subdomain<double>(decomp, rank, hw)` (`u`, `du`), `pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD)` and `pfc::gradient::FDGradient<HeatGrads> grad(u, cfg.fd_order)` — both bound to `u`. Each step is `pfc::communication::exchange(halo)` / `u.for_each_owned(...)` / `u += dt * du`. For overlap, `pfc::communication::start_exchange` / `finish_exchange` are the split API (also injected into `pfc::` as `pfc::start_exchange` / `pfc::finish_exchange` for existing call sites). For an FFT-safe unpadded core + separated face halos, tests use `pfc::sim::stacks::FdCpuStack` (which still bundles those concerns through `pfc::sim::DuField`). |
 | **`heat3d_spectral_pointwise`** | Point-wise spectral RHS + explicit Euler | The **spectral twin** of `heat3d_fd`: identical user-facing time loop, but the residual is built by `pfc::field::SpectralGradient<HeatGrads>` (1 fwd + 3 inv FFTs/step) instead of FD stencils. The same `HeatModel::rhs` is applied cell-by-cell through `pfc::sim::DuField`. |
 | **`heat3d_spectral`** | Implicit Euler in Fourier space | HeFFTe-backed forward + backward FFT per step (`heat3d::SpectralHeatPropagator`). |
 
@@ -21,7 +21,7 @@ Initial condition matches the diffusion examples: \(u(\mathbf{x},0)=\exp(-|\math
 
 ## Build
 
-Enabled with `OpenPFC_BUILD_APPS=ON` (default). Requires HeFFTe (the spectral binaries use the same FFT stack as the library). When CMake finds OpenMP for C++, all five binaries link it so the FD paths can use hybrid **MPI + OpenMP**: the compact driver's interior loop runs under a single `omp parallel for collapse(2)` inside `pfc::field::for_each_interior`; the manual driver opts into the same parallelisation explicitly via `pfc::field::for_each_inner_omp` and `pfc::field::for_each_owned_omp`; the from-scratch driver runs serial (it stays single-threaded on purpose so the bare loops do not need OMP-aware indexing). Set `OMP_NUM_THREADS` to control the thread count for the compact and manual drivers.
+Enabled with `OpenPFC_BUILD_APPS=ON` (default). Requires HeFFTe (the spectral binaries use the same FFT stack as the library). When CMake finds OpenMP for C++, all five binaries link it so the FD paths can use hybrid **MPI + OpenMP**: the compact driver's sweep runs under OpenMP via `Field::for_each_owned`; the manual driver uses raw `omp parallel for` loops for stencil work and `Field::for_each_owned` for the Euler update; the from-scratch driver runs serial (it stays single-threaded on purpose so the bare loops do not need OMP-aware indexing). Set `OMP_NUM_THREADS` to control the thread count for the compact and manual drivers.
 
 ### Source layout
 
@@ -34,30 +34,32 @@ Shared physics, IC, propagator, parser, and reporting headers (live in `include/
 
 Per-binary drivers (live in `src/cpu/`):
 
-- **[`src/cpu/heat3d_fd_scratch.cpp`](src/cpu/heat3d_fd_scratch.cpp)** — **version 0**, the from-scratch driver. Inlines the IC `exp(-r²/(4 D))` and the Laplacian; runs three nested `for (k) for (j) for (i)` loops with manual padded `lin = (i+hw)*sx + (j+hw)*sy + (k+hw)*sz` and stencil neighbours `u_ptr[lin ± sx/sy/sz]`; per-step Laplacian held in a `std::vector<double>` of size `nx*ny*nz` with no halo (visibly different flat indexing from the padded `u`). The only OpenPFC pieces in the hot loop are `pfc::PaddedHaloExchanger<double>::exchange_halos`, plus a padded field ctor for storage and `domain::create / decomposition::create` for geometry. Read this one first.
-- **[`src/cpu/heat3d_fd.cpp`](src/cpu/heat3d_fd.cpp)** — compact FD driver. After constructing two `pfc::data::Field<double, HostSpace>` fields (`u`, `du`) plus `pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD)` and `pfc::gradient::FDGradient<HeatGrads> grad(u, cfg.fd_order)`, the hot loop reads:
+- **[`src/cpu/heat3d_fd_scratch.cpp`](src/cpu/heat3d_fd_scratch.cpp)** — **version 0**, the from-scratch driver. Inlines the IC `exp(-r²/(4 D))` and the Laplacian; runs three nested `for (k) for (j) for (i)` loops with manual padded `lin = (i+hw)*sx + (j+hw)*sy + (k+hw)*sz` and stencil neighbours `u_ptr[lin ± sx/sy/sz]`; per-step Laplacian held in a `std::vector<double>` of size `nx*ny*nz` with no halo (visibly different flat indexing from the padded `u`). The only OpenPFC pieces in the hot loop are `pfc::communication::exchange(halo)`, plus a `pfc::data::Field` ctor for storage and `domain::create / decomposition::create` for geometry. Read this one first.
+- **[`src/cpu/heat3d_fd.cpp`](src/cpu/heat3d_fd.cpp)** — compact FD driver. After constructing two `pfc::data::Field<double, HostSpace>` fields via `pfc::data::field_from_subdomain<double>(decomp, rank, hw)` (`u`, `du`) plus `pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD)` and `pfc::gradient::FDGradient<HeatGrads> grad(u, cfg.fd_order)`, the hot loop reads:
 
   ```cpp
   for (int step = 0; step < cfg.n_steps; ++step) {
     pfc::communication::exchange(halo);
-    pfc::field::for_each(du, [&](const auto& idx) {
-      const auto g = pfc::gradient::evaluate(grad, idx);
-      du[idx] = g.xx + g.yy + g.zz;   // D = 1 in this driver
+    u.for_each_owned([&](int i, int j, int k) {
+      const auto g = pfc::gradient::evaluate(grad, pfc::Int3{i, j, k});
+      du(i, j, k) = g.xx + g.yy + g.zz;   // D = 1 in this driver
     });
     u += cfg.dt * du;            // explicit Euler, on the page
     t  += cfg.dt;
   }
   ```
 
-  Halo, gradient evaluator, and per-cell sweep are three visible primitives composed by the user. `pfc::communication::exchange` is the blocking one-shot wrapper; `pfc::gradient::evaluate(grad, idx)` keeps the inner loop dimension-agnostic; `pfc::data::Field::operator[]` is used for element access. The spectral twin still bundles those concerns through `pfc::sim::DuField`.
+  Halo, gradient evaluator, and per-cell sweep are three visible primitives composed by the user. `pfc::communication::exchange` is the blocking one-shot wrapper; `pfc::gradient::evaluate(grad, idx)` keeps the inner loop dimension-agnostic; `Field::operator()` with integer indices is used for element access. The spectral twin still bundles those concerns through `pfc::sim::DuField`.
 - **[`src/cpu/heat3d_fd_manual.cpp`](src/cpu/heat3d_fd_manual.cpp)** — **laboratory-style** 2nd-order central FD driver. The hot loop reads:
 
   ```cpp
-  halo.start_halo_exchange(u.data(), u.size());
-  field::for_each_inner_omp(u, hw, stencil_step);   // overlap
-  halo.finish_halo_exchange();
-  field::for_each_border (u, hw, stencil_step);     // touches halos
-  field::for_each_owned_omp(u, [&](int i, int j, int k) {
+  halo.start();
+  // Raw OpenMP inner loops over [hw, nx-hw) on each axis
+  // ... stencil reads u(i ± 1, j, k), etc. ...
+  halo.finish();
+  // Raw OpenMP border loops over slabs of thickness hw
+  // ... same stencil can now reach into the halo ...
+  u.for_each_owned([&](int i, int j, int k) {
     u(i, j, k) += cfg.dt * du(i, j, k);             // explicit Euler
   });
   ```
@@ -72,9 +74,9 @@ Tests:
 
 ### Where OpenMP runs (FD)
 
-In **`heat3d_fd.cpp`** the per-step sweep over `du` is delegated to `pfc::field::for_each` (`include/openpfc/kernel/field/brick_iteration.hpp`), which iterates the brick's owned cells in cache-friendly k-outer / j-middle / i-inner order and yields a `pfc::Int3` to the user lambda. Each cell evaluates `pfc::gradient::evaluate(grad, idx)` against `pfc::gradient::FDGradient<HeatGrads>` (per-axis stencil application from `kernel/field/fd_apply.hpp`), writes the per-point residual into `du[idx]`, and the explicit-Euler step `u += dt * du` then updates the field in place.
+In **`heat3d_fd.cpp`** the per-step sweep over `du` is delegated to `Field::for_each_owned` (`include/openpfc/kernel/field/brick_iteration.hpp`), which iterates the field's owned cells in cache-friendly k-outer / j-middle / i-inner order and yields integer indices to the user lambda. Each cell evaluates `pfc::gradient::evaluate(grad, pfc::Int3{i, j, k})` against `pfc::gradient::FDGradient<HeatGrads>` (per-axis stencil application from `kernel/field/fd_apply.hpp`), writes the per-point residual into `du(i, j, k)`, and the explicit-Euler step `u += dt * du` then updates the field in place.
 
-In **`heat3d_fd_manual.cpp`** the same parallelisation is applied explicitly: `pfc::field::for_each_inner_omp` parallelises the inner-region stencil over `(k, j)`, `pfc::field::for_each_owned_omp` parallelises the Euler update; the (cheap) border pass stays serial. **Not parallel** in either driver: the MPI halo exchange (`pfc::SparseHaloExchanger` on separated-layout stacks elsewhere; **`pfc::communication::PaddedHaloExchanger`** in these heat3d FD binaries — still spellable as `pfc::PaddedHaloExchanger` via a compatibility `using`).
+In **`heat3d_fd_manual.cpp`** the same parallelisation is applied explicitly: raw `omp parallel for` loops parallelise the stencil work over `(k, j)`, `Field::for_each_owned` parallelises the Euler update; the (cheap) border pass stays serial. **Not parallel** in either driver: the MPI halo exchange (`pfc::SparseHaloExchanger` on separated-layout stacks elsewhere; **`pfc::communication::PaddedHaloExchanger`** in these heat3d FD binaries — still spellable as `pfc::PaddedHaloExchanger` via a compatibility `using`).
 
 So `htop`/`top` can look **single-threaded** when wall time is dominated by **MPI** (many ranks, thin subdomains), or when the launcher has pinned the process to a **narrow CPU mask** (OpenMP then schedules all threads inside that mask).
 
@@ -188,7 +190,7 @@ done
 
 ## Hybrid MPI + OpenMP (FD)
 
-Use **fewer MPI ranks** and **`OMP_NUM_THREADS`** matching usable cores so halo exchange stays smaller while threads parallelize over interior \((i_y,i_z)\) lines (the `omp parallel for collapse(2)` lives in `pfc::field::for_each_interior` for the compact driver and in `pfc::field::for_each_inner_omp` / `for_each_owned_omp` for the manual driver).
+Use **fewer MPI ranks** and **`OMP_NUM_THREADS`** matching usable cores so halo exchange stays smaller while threads parallelize over interior \((i_y,i_z)\) lines (the OpenMP parallelization lives inside `Field::for_each_owned` for the compact driver and in raw `omp parallel for` loops for the manual driver).
 
 ```bash
 export OMP_NUM_THREADS=8
