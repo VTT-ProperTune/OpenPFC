@@ -179,6 +179,12 @@ struct OPENPFC_DEPRECATED_API World final {
   explicit World(const Int3 &lower, const Int3 &upper, const Domain &domain);
 
   /**
+   * @brief Get the periodicity flags for the world.
+   * @return Bool3 array with periodicity flags [periodic_x, periodic_y, periodic_z]
+   */
+  Bool3 get_periodicity() const;
+
+  /**
    * @brief Equality operator.
    * @param other Another World object.
    * @return True if equal, false otherwise.

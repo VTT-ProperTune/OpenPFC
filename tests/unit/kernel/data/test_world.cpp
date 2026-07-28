@@ -518,6 +518,96 @@ TEST_CASE("World - convenience functions work via ADL",
   }
 }
 
+TEST_CASE("World - periodicity round-trip", "[world][periodicity][unit]") {
+  using namespace pfc;
+
+  // Type alias for periodicity
+  using Periodicity = Bool3;
+
+  SECTION("Default periodicity from create_world(size)") {
+    auto world_default = world::create(Int3{32, 32, 32});
+    REQUIRE(world_default.get_periodicity() == Periodicity{true, true, true});
+    REQUIRE(world::is_periodic(world_default, 0) == true);
+    REQUIRE(world::is_periodic(world_default, 1) == true);
+    REQUIRE(world::is_periodic(world_default, 2) == true);
+  }
+
+  SECTION("Non-default periodicity from from_bounds") {
+    Periodicity expected{true, false, true};
+    auto world = world::from_bounds({32, 32, 32}, {0.0, 0.0, 0.0},
+                                    {1.0, 1.0, 1.0}, expected);
+
+    // Verify World::get_periodicity() returns the correct flags
+    REQUIRE(world.get_periodicity() == expected);
+
+    // Verify individual axis queries
+    REQUIRE(world::is_periodic(world, 0) == true);
+    REQUIRE(world::is_periodic(world, 1) == false);
+    REQUIRE(world::is_periodic(world, 2) == true);
+
+    // Verify world::get_periodic() also works
+    REQUIRE(world::get_periodic(world) == expected);
+  }
+
+  SECTION("Multiple periodicity configurations") {
+    struct TestConfig {
+      Periodicity periodicity;
+      std::string description;
+    };
+
+    std::vector<TestConfig> configs = {
+      {{false, false, false}, "all non-periodic"},
+      {{true, true, true}, "all periodic"},
+      {{true, false, false}, "x-periodic only"},
+      {{false, true, false}, "y-periodic only"},
+      {{false, false, true}, "z-periodic only"},
+      {{true, true, false}, "x and y periodic"},
+      {{false, true, true}, "y and z periodic"},
+      {{true, false, true}, "x and z periodic"}
+    };
+
+    for (const auto& config : configs) {
+      std::string desc = config.description;
+      auto world = world::from_bounds({32, 32, 32}, {0.0, 0.0, 0.0},
+                                      {1.0, 1.0, 1.0}, config.periodicity);
+
+      // Round-trip: retrieved periodicity must match input
+      REQUIRE(world.get_periodicity() == config.periodicity);
+
+      // Individual axis queries must match
+      REQUIRE(world::is_periodic(world, 0) == config.periodicity[0]);
+      REQUIRE(world::is_periodic(world, 1) == config.periodicity[1]);
+      REQUIRE(world::is_periodic(world, 2) == config.periodicity[2]);
+    }
+  }
+
+  SECTION("Domain-level periodicty access") {
+    Periodicity expected{false, true, false};
+    auto world = world::from_bounds({64, 64, 64}, {0.0, 0.0, 0.0},
+                                    {2.0, 2.0, 2.0}, expected);
+
+    // Access Domain through world::get_coordinate_system
+    auto domain = world::get_coordinate_system(world);
+    REQUIRE(pfc::domain::get_periodicity(domain) == expected);
+    REQUIRE(pfc::domain::is_periodic(domain, 0) == false);
+    REQUIRE(pfc::domain::is_periodic(domain, 1) == true);
+    REQUIRE(pfc::domain::is_periodic(domain, 2) == false);
+  }
+
+  SECTION("No silent discard - periodicity stored correctly") {
+    // Test that non-default periodicity is not discarded
+    Periodicity non_default{true, false, true};
+    auto world1 = world::from_bounds({100, 100, 100}, {0.0, 0.0, 0.0},
+                                     {10.0, 10.0, 10.0}, non_default);
+
+    // It should NOT be discarded (i.e., should not default to all true)
+    REQUIRE(world1.get_periodicity() == non_default);
+
+    // Explicitly check that it's NOT the default all-periodic
+    REQUIRE(world1.get_periodicity() != Periodicity{true, true, true});
+  }
+}
+
 TEST_CASE("World - convenience functions integrate with existing API",
           "[world][convenience][integration][unit]") {
   SECTION("Physical volume matches manual calculation") {

@@ -35,6 +35,14 @@ using pfc::types::Int3;
 using pfc::types::Real3;
 
 /**
+ * @brief Periodicity flags for each spatial dimension.
+ *
+ * A 3-element array where each element indicates whether that dimension
+ * is periodic (true) or non-periodic (false).
+ */
+using Periodicity = Bool3;
+
+/**
  * @brief Create uniform grid with unit spacing at origin.
  *
  * Most common case: N×N×N grid with spacing=1, origin=(0,0,0).

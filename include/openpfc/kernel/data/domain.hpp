@@ -169,6 +169,15 @@ namespace domain {
   return d.periodic.at(i);
 }
 
+/**
+ * @brief Get periodicity flags (convenience alias for get_periodic).
+ * @param d Domain to query
+ * @return Periodicity flags [periodic_x, periodic_y, periodic_z]
+ */
+[[nodiscard]] inline const Bool3 &get_periodicity(const Domain &d) noexcept {
+  return d.periodic;
+}
+
 /// Total number of global grid points.
 [[nodiscard]] inline size_t get_total_size(const Domain &d) noexcept {
   return static_cast<size_t>(d.size[0]) * static_cast<size_t>(d.size[1]) *

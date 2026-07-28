@@ -10,6 +10,16 @@ namespace pfc::world {
 
 using pfc::Domain;
 
+// Periodicity accessors (convenience methods)
+
+/**
+ * @brief Get the periodicity flags for the world.
+ * @return Bool3 array with periodicity flags [x, y, z]
+ */
+Bool3 World::get_periodicity() const {
+  return pfc::domain::get_periodic(domain_);
+}
+
 // Constructors
 
 Int3 calc_size(const Int3 &lower, const Int3 &upper) {
