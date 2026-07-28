@@ -357,9 +357,9 @@ void validate_backend_compatibility<const FieldView<T>&,
 
 Note: FieldView<T> is intentionally backend-agnostic. Backend-specific validation is provided through compile-time backend tags and can be extended with backend-specific implementations in separate headers.
 
-## Migration Guide
+## Legacy Field Migration (Historical)
 
-### Migrating from LocalField to FieldView
+### Migrating from LocalField to pfc::data::Field (Deprecated)
 
 **Old pattern (LocalField)**:
 ```cpp
@@ -377,38 +377,40 @@ Real3 u_origin = u.origin();
 // Use u_data for computation
 ```
 
-**New pattern (FieldView)**:
+**New pattern (pfc::data::Field)**:
 ```cpp
-#include <openpfc/kernel/field/state_access.hpp>
-#include <openpfc/field/local_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/domain/create.hpp>
 
 using namespace pfc;
-using namespace pfc::field;
+using namespace pfc::data;
 
-// Create LocalField as before
-LocalField<double> u_local = LocalField<double>::from_subdomain(decomp, rank, halo_width);
+// Create domain and decomposition
+auto domain = pfc::domain::create({128, 128, 128});
+auto decomp = pfc::decomposition::create(domain, 4);  // 4 subdomains
 
-// Create backend-agnostic view
-FieldView<double> u_view(u_local.data(), u_local.size(), u_local.size3(),
-                         u_local.spacing(), u_local.origin());
+// Create field using factory function
+Field<double, HostSpace> u = field_from_subdomain<double>(decomp, rank, halo_width);
 
-// Use view for computation (same API)
-const double* u_data = u_view.data();
-std::size_t u_size = u_view.size();
-pfc::types::Int3 u_size3 = u_view.extents();
-pfc::types::Real3 u_spacing = u_view.spacing();
-pfc::types::Real3 u_origin = u_view.origin();
+// Access field data (same API as LocalField)
+const double* u_data = u.data();
+std::size_t u_size = u.size();
+pfc::Int3 u_size3 = u.size3();
+pfc::Real3 u_spacing = u.spacing();
+pfc::Real3 u_origin = u.origin();
 ```
 
 **Benefits of migration**:
-1. Backend-agnostic view (works with CPU and GPU storage)
-2. Explicit read-only semantics (const access)
-3. Shape validation via `is_compatible_with()`
-4. Aliasing detection for output storage
+1. Canonical field container unifies LocalField/PaddedBrick/DiscreteField APIs
+2. Supports both host and device memory spaces (HostSpace, CudaSpace, HipSpace)
+3. Explicit halo configuration (storage_halo vs iteration_halo for unpadded layouts)
+4. Built-in residency tracking for host/device coherence
+5. Compatible with FieldView/FieldOutput for backend-agnostic computation
 
-### Migrating from WaveIncrements to FieldBundle
+### Migrating from WaveIncrements to FieldBundle (Deprecated)
 
-**Old pattern (WaveIncrements)**:
+**Old pattern (WaveIncrements with PaddedBrick)**:
 ```cpp
 struct WaveIncrements {
     PaddedBrick<double>& du;
@@ -422,22 +424,31 @@ increments.du(i, j, k) = /* ... */;
 increments.dv(i, j, k) = /* ... */;
 ```
 
-**New pattern (FieldBundle)**:
+**New pattern (FieldBundle with pfc::data::Field)**:
 ```cpp
 #include <openpfc/kernel/field/state_access.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 
+using namespace pfc;
+using namespace pfc::data;
 using namespace pfc::field;
 
+// Create fields using factory functions
+auto decomp = pfc::decomposition::create(domain, 4);
+Field<double, HostSpace> du = field_from_subdomain<double>(decomp, rank, halo_width);
+Field<double, HostSpace> dv = field_from_subdomain<double>(decomp, rank, halo_width);
+
 // Create views for each field
-FieldView<double> du_view(/* ... */);
-FieldView<double> dv_view(/* ... */);
+FieldView<double> du_view(du.data(), du.size(), du.size3(), du.spacing(), du.origin());
+FieldView<double> dv_view(dv.data(), dv.size(), dv.size3(), dv.spacing(), dv.origin());
 
 // Create bundle
 FieldBundle<FieldView<double>, FieldView<double>> wave_bundle(du_view, dv_view);
 
 // Access via get<I>()
-auto& du = wave_bundle.get<0>();
-auto& dv = wave_bundle.get<1>();
+auto& du_field = wave_bundle.get<0>();
+auto& dv_field = wave_bundle.get<1>();
 
 // Validate shapes across bundle
 if (!wave_bundle.validate_shapes()) {
@@ -446,12 +457,13 @@ if (!wave_bundle.validate_shapes()) {
 ```
 
 **Benefits of migration**:
-1. Coordinated access to multiple fields
-2. Shape validation across all fields in bundle
-3. Type-safe indexed access via `get<I>()`
-4. Backend-agnostic views for each field
+1. Canonical field container replaces PaddedBrick with unified API
+2. FieldBundle provides coordinated access to multiple fields
+3. Shape validation across all fields in bundle
+4. Type-safe indexed access via `get<I>()`
+5. Backend-agnostic views enable CPU/GPU portability
 
-### Migrating from PaddedBrick to FieldView
+### Migrating from PaddedBrick to pfc::data::Field (Deprecated)
 
 **Old pattern (PaddedBrick)**:
 ```cpp
@@ -468,37 +480,61 @@ for_each_owned(u, [&](int i, int j, int k) {
 });
 ```
 
-**New pattern (FieldView)**:
+**New pattern (pfc::data::Field)**:
 ```cpp
-#include <openpfc/kernel/field/state_access.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/domain/create.hpp>
 
-using namespace pfc::field;
+using namespace pfc;
+using namespace pfc::data;
 
-PaddedBrick<double> u_padded(decomp, rank, halo_width);
+// Create domain and decomposition
+auto domain = pfc::domain::create({64, 64, 64});
+auto decomp = pfc::decomposition::create(domain, 4);
 
-// Extract owned region
-std::vector<double> u_owned(u_padded.owned_size());
-extract_owned_region(u_padded, u_owned.data());
+// Create field with halo (PaddedBrick equivalent)
+Field<double, HostSpace> u = field_from_subdomain<double>(decomp, rank, halo_width);
 
-// Create view
-FieldView<double> u_view(u_owned.data(), u_owned.size(),
-                         u_padded.owned_extents(),
-                         u_padded.spacing(),
-                         u_padded.origin());
+// Access via for_each_owned (same iteration API)
+u.for_each_owned([&](int i, int j, int k) {
+    double val = u(i, j, k);
+    // ... computation ...
+});
 
-// Access via direct indexing
-for (std::size_t i = 0; i < u_view.size(); ++i) {
-    double val = u_view.data()[i];
+// Or access via direct indexing
+for (std::size_t i = 0; i < u.size(); ++i) {
+    double val = u.data()[i];
     // ... computation ...
 }
 ```
 
 **Benefits of migration**:
-1. Backend-agnostic view
-2. Explicit geometry metadata
-3. Compatibility with validation utilities
-4. Works with any contiguous storage
+1. Canonical field container unifies PaddedBrick API
+2. Direct iteration support via `for_each_owned` and `for_each_interior`
+3. Explicit geometry metadata (domain, box, halo_width)
+4. Compatibility with FieldView/FieldOutput for backend-agnostic access
+5. Device memory support (CudaSpace, HipSpace) with residency tracking
+6. Flexible halo configuration for face-halo layouts
+
+## Legacy Field Types (Deprecated)
+
+The following field types are retained for compatibility but are deprecated:
+
+- **LocalField<T>**: Unpadded field with halo metadata -> Use `pfc::data::Field<T, HostSpace>` with `field_from_subdomain_unpadded<T>()`
+- **PaddedBrick<T>**: Padded field with halo storage -> Use `pfc::data::Field<T, HostSpace>` with `field_from_subdomain<T>(decomp, rank, halo)`
+- **DiscreteField<T>**: Gen-1 discrete field wrapper -> Use `pfc::data::Field<T, MemorySpace>` directly
+
+### Legacy API Migration Table
+
+| Legacy API | Modern API | Notes |
+|------------|------------|-------|
+| `LocalField<double>::from_subdomain(decomp, rank, halo)` | `field_from_subdomain_unpadded<double>(decomp, rank, halo)` | Unpadded storage, metadata halo for iteration |
+| `PaddedBrick<double>(decomp, rank, halo)` | `field_from_subdomain<double>(decomp, rank, halo)` | Padded storage with halo cells |
+| `for_each_owner(field, fn)` | `field.for_each_owned(fn)` | Member function on pfc::data::Field |
+| `field(i, j, k)` | `field(i, j, k)` | Same syntax supported |
+
+These legacy types are maintained to allow gradual migration. New code should use `pfc::data::Field<T, MemorySpace>` and factory functions.
 
 ## Common Error Patterns and Resolution
 
