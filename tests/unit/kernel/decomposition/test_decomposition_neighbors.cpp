@@ -3,6 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <mpi.h>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -48,11 +49,11 @@ TEST_CASE("get_neighbor_rank with per-axis periodicity",
 
     // Rank 0 at (0,0,0): -X direction crosses non-periodic boundary
     int rank = 0;
-    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {-1, 0, 0}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {-1, 0, 0}) == MPI_PROC_NULL);
 
     // Rank 1 at (1,0,0): +X direction crosses non-periodic boundary
     rank = 1;
-    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {1, 0, 0}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {1, 0, 0}) == MPI_PROC_NULL);
 
     // Y and Z directions should still wrap (periodic)
     rank = 0;
@@ -72,11 +73,11 @@ TEST_CASE("get_neighbor_rank with per-axis periodicity",
 
     // Rank 0 at (0,0,0): -Y direction crosses non-periodic boundary
     int rank = 0;
-    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, -1, 0}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, -1, 0}) == MPI_PROC_NULL);
 
     // Rank 2 at (0,1,0): +Y direction crosses non-periodic boundary
     rank = 2;
-    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 1, 0}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 1, 0}) == MPI_PROC_NULL);
 
     // X and Z directions should still wrap (periodic)
     rank = 0;
@@ -96,11 +97,11 @@ TEST_CASE("get_neighbor_rank with per-axis periodicity",
 
     // Rank 0 at (0,0,0): -Z direction crosses non-periodic boundary
     int rank = 0;
-    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 0, -1}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 0, -1}) == MPI_PROC_NULL);
 
     // Rank 4 at (0,0,1): +Z direction crosses non-periodic boundary
     rank = 4;
-    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 0, 1}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 0, 1}) == MPI_PROC_NULL);
 
     // X and Y directions should still wrap (periodic)
     rank = 0;
@@ -141,8 +142,8 @@ TEST_CASE("get_neighbor_rank with per-axis periodicity",
     for (int r = 0; r < 4; ++r) {
       for (const Int3 &d : dirs) {
         int nb = decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, r, d);
-        
-        if (nb != -1) {
+
+        if (nb != MPI_PROC_NULL) {
           const Int3 back{-d[0], -d[1], -d[2]};
           int back_rank = decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, nb, back);
           REQUIRE(back_rank == r); // Round-trip should work for valid neighbors
@@ -151,11 +152,67 @@ TEST_CASE("get_neighbor_rank with per-axis periodicity",
     }
 
     // Specific checks for boundary cases
-    // Rank 0 at (0,0,0): -X wraps to rank 1 (periodic), -Y returns -1 (non-periodic)
+    // Rank 0 at (0,0,0): -X wraps to rank 1 (periodic), -Y returns MPI_PROC_NULL (non-periodic)
     REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 0, {-1, 0, 0}) == 1);
-    REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 0, {0, -1, 0}) == -1);
-    // Rank 2 at (0,1,0): +X returns rank 3, +Y returns -1 (non-periodic)
+    REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 0, {0, -1, 0}) == MPI_PROC_NULL);
+    // Rank 2 at (0,1,0): +X returns rank 3, +Y returns MPI_PROC_NULL (non-periodic)
     REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 2, {1, 0, 0}) == 3);
-    REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 2, {0, 1, 0}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp_2x2, mixed_domain, 2, {0, 1, 0}) == MPI_PROC_NULL);
   }
+}
+
+TEST_CASE("test_default_all_periodic", "[decomposition][neighbors][unit]") {
+  // Test that when Domain periodicity is not explicitly configured,
+  // all three axes (X, Y, Z) are periodic by default
+  // and get_neighbor_rank returns valid neighbor ranks for all six directions
+
+  // Create a 2x2x2 decomposition
+  auto world = world::create(GridSize({16, 16, 16}).to_vector3());
+  const Int3 grid{2, 2, 2};
+  auto decomp = decomposition::create(world, grid);
+
+  // Get the domain (should be fully periodic by default)
+  auto domain = decomposition::domain(decomp);
+
+  // Verify that all axes are periodic by default
+  REQUIRE(pfc::domain::is_periodic(domain, 0) == true);
+  REQUIRE(pfc::domain::is_periodic(domain, 1) == true);
+  REQUIRE(pfc::domain::is_periodic(domain, 2) == true);
+
+  // Test that get_neighbor_rank returns valid ranks for all six coordinate directions
+  // on rank 0 (at position (0,0,0) in the grid)
+  int rank = 0;
+  REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {1, 0, 0}) == 1);   // +X
+  REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {-1, 0, 0}) == 1);  // -X (wraps)
+  REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 1, 0}) == 2);   // +Y
+  REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, -1, 0}) == 2);  // -Y (wraps)
+  REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 0, 1}) == 4);   // +Z
+  REQUIRE(decomposition::get_neighbor_rank(decomp, domain, rank, {0, 0, -1}) == 4);  // -Z (wraps)
+}
+
+TEST_CASE("test_mixed_periodicity_x_periodic_yz_nonperiodic", "[decomposition][neighbors][unit]") {
+  // Test that get_neighbor_rank(rank, {+1,0,0}) returns the neighbor process on the +X edge
+  // but get_neighbor_rank(rank, {0,+1,0}) and get_neighbor_rank(rank, {0,0,+1})
+  // return MPI_PROC_NULL on +Y and +Z edges when X is periodic and Y, Z are non-periodic
+
+  // Create a 2x2x2 decomposition
+  auto world = world::create(GridSize({16, 16, 16}).to_vector3());
+  const Int3 grid{2, 2, 2};
+  auto decomp = decomposition::create(world, grid);
+
+  // Create a domain with X periodic, Y and Z non-periodic
+  auto mixed_domain = pfc::domain::create(
+      GridSize({16, 16, 16}), PhysicalOrigin({0.0, 0.0, 0.0}),
+      GridSpacing({1.0, 1.0, 1.0}), Bool3{true, false, false});
+
+  // Verify periodicity configuration
+  REQUIRE(pfc::domain::is_periodic(mixed_domain, 0) == true);  // X is periodic
+  REQUIRE(pfc::domain::is_periodic(mixed_domain, 1) == false); // Y is non-periodic
+  REQUIRE(pfc::domain::is_periodic(mixed_domain, 2) == false); // Z is non-periodic
+
+  // Test rank 0 at (0,0,0): -X wraps to neighbor due to X periodicity, while
+  // -Y and -Z return MPI_PROC_NULL (non-periodic boundaries)
+  REQUIRE(decomposition::get_neighbor_rank(decomp, mixed_domain, 0, {-1, 0, 0}) != MPI_PROC_NULL); // -X wraps (periodic)
+  REQUIRE(decomposition::get_neighbor_rank(decomp, mixed_domain, 0, {0, -1, 0}) == MPI_PROC_NULL); // -Y boundary (non-periodic)
+  REQUIRE(decomposition::get_neighbor_rank(decomp, mixed_domain, 0, {0, 0, -1}) == MPI_PROC_NULL); // -Z boundary (non-periodic)
 }

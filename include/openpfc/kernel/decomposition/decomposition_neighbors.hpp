@@ -16,9 +16,9 @@
  *
  * // Find neighbor in +X direction (respects per-axis periodicity)
  * auto neighbor = decomposition::get_neighbor_rank(decomp, domain, rank, {1, 0, 0});
- * // Returns valid neighbor rank if periodic, -1 if non-periodic boundary
+ * // Returns valid neighbor rank if periodic, MPI_PROC_NULL if non-periodic boundary
  *
- * // Find all 6 face neighbors (includes -1 for non-periodic faces)
+ * // Find all 6 face neighbors (includes MPI_PROC_NULL for non-periodic faces)
  * auto neighbors = decomposition::find_face_neighbors(decomp, rank);
  * // Returns map: direction -> neighbor_rank (may have fewer than 6 valid neighbors)
  * @endcode
@@ -33,6 +33,7 @@
 #pragma once
 
 #include <map>
+#include <mpi.h>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <optional>
@@ -49,7 +50,7 @@ namespace pfc::decomposition {
  * @param domain Domain object for per-axis periodicity information
  * @param rank Current rank (0 to num_domains-1)
  * @param direction Direction vector, e.g., {1,0,0} for +X, {-1,0,0} for -X
- * @return Neighbor rank, or -1 if no neighbor exists (non-periodic boundary)
+ * @return Neighbor rank, or MPI_PROC_NULL if no neighbor exists (non-periodic boundary)
  *
  * @example
  * ```cpp
@@ -60,7 +61,7 @@ namespace pfc::decomposition {
  * int neighbor_x = get_neighbor_rank(decomp, domain, 0, {1, 0, 0}); // Returns 1
  * int neighbor_y = get_neighbor_rank(decomp, domain, 0, {0, 1, 0}); // Returns 2
  * int neighbor_z = get_neighbor_rank(decomp, domain, 0, {0, 0, 1}); // Returns 4
- * // With non-periodic X, crossing boundary returns -1 (no neighbor)
+ * // With non-periodic X, crossing boundary returns MPI_PROC_NULL (no neighbor)
  * ```
  */
 inline int get_neighbor_rank(const Decomposition &decomp, const Domain &domain, int rank,
@@ -69,7 +70,7 @@ inline int get_neighbor_rank(const Decomposition &decomp, const Domain &domain, 
   int num_domains = get_num_domains(decomp);
 
   if (rank < 0 || rank >= num_domains) {
-    return -1; // Invalid rank
+    return MPI_PROC_NULL; // Invalid rank
   }
 
   // Convert rank to 3D grid coordinates (x-fastest).
@@ -82,7 +83,7 @@ inline int get_neighbor_rank(const Decomposition &decomp, const Domain &domain, 
     if (c < 0 || c >= grid[axis]) {
       // Check per-axis periodicity using Domain::is_periodic(int axis)
       if (!pfc::domain::is_periodic(domain, axis)) {
-        return -1; // no neighbor across a non-periodic face
+        return MPI_PROC_NULL; // no neighbor across a non-periodic face
       }
       c = (c % grid[axis] + grid[axis]) % grid[axis]; // periodic wrap
     }
@@ -103,7 +104,7 @@ inline int get_neighbor_rank(const Decomposition &decomp, const Domain &domain, 
  * @param decomp Decomposition object
  * @param rank Current rank (0 to num_domains-1)
  * @param direction Direction vector, e.g., {1,0,0} for +X, {-1,0,0} for -X
- * @return Neighbor rank, or -1 if no neighbor exists (non-periodic boundary)
+ * @return Neighbor rank, or MPI_PROC_NULL if no neighbor exists (non-periodic boundary)
  *
  * @deprecated Prefer get_neighbor_rank(decomp, domain, rank, direction) for
  *             explicit control over periodicity.
@@ -118,11 +119,11 @@ inline int get_neighbor_rank(const Decomposition &decomp, int rank,
  *
  * Returns a map of direction vectors to neighbor ranks. With fully periodic
  * boundary conditions, all 6 face neighbors are present. With non-periodic
- * boundaries, some entries may be -1 (no neighbor).
+ * boundaries, some entries may be MPI_PROC_NULL (no neighbor).
  *
  * @param decomp Decomposition object
  * @param rank Current rank
- * @return Map from direction Int3 to neighbor rank (contains 6 entries, may be -1)
+ * @return Map from direction Int3 to neighbor rank (contains 6 entries, may be MPI_PROC_NULL)
  *
  * @example
  * ```cpp

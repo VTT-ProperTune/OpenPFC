@@ -38,9 +38,9 @@ TEST_CASE("Decomposition - periodic neighbor ranks", "[decomposition][unit]") {
 
   REQUIRE(decomposition::get_num_domains(decomp) == 8);
 
-  SECTION("get_neighbor_rank returns -1 for out-of-range rank") {
-    REQUIRE(decomposition::get_neighbor_rank(decomp, -1, Int3{1, 0, 0}) == -1);
-    REQUIRE(decomposition::get_neighbor_rank(decomp, 8, Int3{1, 0, 0}) == -1);
+  SECTION("get_neighbor_rank returns MPI_PROC_NULL for out-of-range rank") {
+    REQUIRE(decomposition::get_neighbor_rank(decomp, -1, Int3{1, 0, 0}) == MPI_PROC_NULL);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, 8, Int3{1, 0, 0}) == MPI_PROC_NULL);
   }
 
   SECTION("get_neighbor_rank torus layout for rank 0 on 2x2x2 grid") {
@@ -136,9 +136,9 @@ TEST_CASE("Decomposition - per-axis periodicity in get_neighbor_rank (M1.3)",
 
   SECTION("non-periodic x boundary has no neighbor") {
     // rank 0 sits at x-coord 0: stepping to -x leaves the domain -> no neighbor.
-    REQUIRE(decomposition::get_neighbor_rank(decomp, 0, Int3{-1, 0, 0}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, 0, Int3{-1, 0, 0}) == MPI_PROC_NULL);
     // rank 1 sits at x-coord 1 (the max): stepping to +x leaves the domain.
-    REQUIRE(decomposition::get_neighbor_rank(decomp, 1, Int3{1, 0, 0}) == -1);
+    REQUIRE(decomposition::get_neighbor_rank(decomp, 1, Int3{1, 0, 0}) == MPI_PROC_NULL);
     // Interior x step stays valid.
     REQUIRE(decomposition::get_neighbor_rank(decomp, 0, Int3{1, 0, 0}) == 1);
   }
