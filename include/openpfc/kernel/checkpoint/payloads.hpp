@@ -48,7 +48,7 @@ enum class FieldDtype : std::uint8_t {
  * @brief Memory layout / iteration order of field bytes.
  *
  * OpenPFC uses row-major storage with the x-axis fastest (same as
- * @c PaddedBrick / @c LocalField / FD stack).
+ * @c pfc::data::Field / FD stack).
  */
 enum class CoordinateOrder : std::uint8_t {
   XFastest = 1,
