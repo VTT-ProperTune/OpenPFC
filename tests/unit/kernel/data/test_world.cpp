@@ -126,6 +126,86 @@ TEST_CASE("World - subdomain physical bounds honor index offset", "[world][unit]
   REQUIRE_THAT(hi[2], WithinAbs(6.0, 1e-12)); // 15 * 0.4
 }
 
+TEST_CASE("World - subworld bounds with zero and non-zero m_lower offsets", "[world][regression][PE]") {
+  // Regression test for PE (audit 4.5): subworld bounds queries must include m_lower offset.
+  // Tests both zero-origin subworlds (m_lower = {0,0,0}) and non-zero-origin subworlds
+  // to verify get_lower_bounds() and get_upper_bounds() correctly report physical bounds.
+
+  using Catch::Matchers::WithinAbs;
+
+  SECTION("Zero-origin subworld (m_lower = {0,0,0})") {
+    // Subworld starting at global origin should report bounds from {0,0,0}
+    Int3 lower{0, 0, 0};
+    Int3 upper{9, 19, 29}; // size-1 where size = {10, 20, 30}
+    Int3 size{10, 20, 30};
+
+    World global = world::create(GridSize(Int3{100, 100, 100}), PhysicalOrigin(Real3{0.0, 0.0, 0.0}),
+                                 GridSpacing(Real3{0.1, 0.1, 0.1}));
+    World sub(lower, upper, world::get_coordinate_system(global));
+
+    Real3 lo = world::get_lower_bounds(sub);
+    Real3 hi = world::get_upper_bounds(sub);
+
+    // Lower bounds should be at origin (0,0,0) mapped to physical space
+    REQUIRE_THAT(lo[0], WithinAbs(0.0, 1e-12)); // 0 * 0.1
+    REQUIRE_THAT(lo[1], WithinAbs(0.0, 1e-12)); // 0 * 0.1
+    REQUIRE_THAT(lo[2], WithinAbs(0.0, 1e-12)); // 0 * 0.1
+
+    // Upper bounds should be at (9,19,29) mapped to physical space
+    REQUIRE_THAT(hi[0], WithinAbs(0.9, 1e-12)); // 9 * 0.1
+    REQUIRE_THAT(hi[1], WithinAbs(1.9, 1e-12)); // 19 * 0.1
+    REQUIRE_THAT(hi[2], WithinAbs(2.9, 1e-12)); // 29 * 0.1
+  }
+
+  SECTION("Non-zero-origin subworld (m_lower = {5, 10, 15})") {
+    // Subworld with offset should report bounds from the offset, not from origin
+    Int3 lower{5, 10, 15};
+    Int3 upper{14, 29, 44}; // lower + size - 1 where size = {10, 20, 30}
+    Int3 size{10, 20, 30};
+
+    World global = world::create(GridSize(Int3{100, 100, 100}), PhysicalOrigin(Real3{0.0, 0.0, 0.0}),
+                                 GridSpacing(Real3{0.1, 0.1, 0.1}));
+    World sub(lower, upper, world::get_coordinate_system(global));
+
+    Real3 lo = world::get_lower_bounds(sub);
+    Real3 hi = world::get_upper_bounds(sub);
+
+    // Lower bounds should include the m_lower offset
+    REQUIRE_THAT(lo[0], WithinAbs(0.5, 1e-12)); // 5 * 0.1
+    REQUIRE_THAT(lo[1], WithinAbs(1.0, 1e-12)); // 10 * 0.1
+    REQUIRE_THAT(lo[2], WithinAbs(1.5, 1e-12)); // 15 * 0.1
+
+    // Upper bounds should also include the m_lower offset
+    REQUIRE_THAT(hi[0], WithinAbs(1.4, 1e-12)); // (5 + 9) * 0.1 = 14 * 0.1
+    REQUIRE_THAT(hi[1], WithinAbs(2.9, 1e-12)); // (10 + 19) * 0.1 = 29 * 0.1
+    REQUIRE_THAT(hi[2], WithinAbs(4.4, 1e-12)); // (15 + 29) * 0.1 = 44 * 0.1
+  }
+
+  SECTION("Non-zero-origin subworld with custom spacing") {
+    // Test that m_lower offset works correctly with non-uniform spacing
+    Int3 lower{10, 20, 30};
+    Int3 upper{19, 39, 59};
+    Real3 spacing{0.1, 0.2, 0.4};
+
+    World global = world::create(GridSize(Int3{100, 100, 100}), PhysicalOrigin(Real3{5.0, 5.0, 5.0}),
+                                 GridSpacing(spacing));
+    World sub(lower, upper, world::get_coordinate_system(global));
+
+    Real3 lo = world::get_lower_bounds(sub);
+    Real3 hi = world::get_upper_bounds(sub);
+
+    // Lower bounds: origin (5.0) + m_lower * spacing
+    REQUIRE_THAT(lo[0], WithinAbs(5.0 + 10 * 0.1, 1e-12)); // 6.0
+    REQUIRE_THAT(lo[1], WithinAbs(5.0 + 20 * 0.2, 1e-12)); // 9.0
+    REQUIRE_THAT(lo[2], WithinAbs(5.0 + 30 * 0.4, 1e-12)); // 17.0
+
+    // Upper bounds: origin + (m_lower + local_size) * spacing - spacing
+    REQUIRE_THAT(hi[0], WithinAbs(5.0 + 19 * 0.1, 1e-12)); // 6.9
+    REQUIRE_THAT(hi[1], WithinAbs(5.0 + 39 * 0.2, 1e-12)); // 12.8
+    REQUIRE_THAT(hi[2], WithinAbs(5.0 + 59 * 0.4, 1e-12)); // 28.6
+  }
+}
+
 TEST_CASE("World - total size calculation", "[world][unit]") {
   SECTION("Correct total size calculation") {
     Int3 dimensions = {10, 20, 30};
