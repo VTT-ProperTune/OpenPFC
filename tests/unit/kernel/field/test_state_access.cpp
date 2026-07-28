@@ -381,7 +381,6 @@ TEST_CASE("Backend compatibility validation", "[field][state_access]") {
 }
 
 TEST_CASE("Aliasing allows documented ScaledField pattern", "[field][state_access]") {
-    // LocalField value ctor is private; construct via from_subdomain only.
     // In-place axpy `u += dt * du` uses ScaledField and must not route through
     // FieldOutput::validate_no_alias (documented exception to alias rejection).
     auto world = pfc::world::create(pfc::GridSize({4, 4, 4}),
