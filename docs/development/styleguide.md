@@ -141,7 +141,19 @@ Throwing from a destructor risks `std::terminate` during stack unwinding, and a
 nonzero MPI error code during cleanup indicates corrupted MPI state that cannot
 be recovered from locally.
 
-The single policy is: call `pfc::mpi::abort_on_mpi_error(err, what)`, which logs
-to stderr and `MPI_Abort`s the world communicator on a nonzero code (no-op on
+The single policy is: **log error then call MPI_Abort**. Specifically, call
+`pfc::mpi::abort_on_mpi_error(err, what)`, which logs the error to stderr and
+calls `MPI_Abort` on the world communicator on a nonzero code (no-op on
 `MPI_SUCCESS`). Use `pfc::mpi::throw_on_mpi_error` only on normal (non-cleanup)
 code paths where an exception can propagate safely.
+
+Example:
+```cpp
+if (mpi_cleanup_failed) {
+    log.error("MPI cleanup failed");  // Specifically logs the error
+    MPI_Abort(MPI_COMM_WORLD, err);  // Immediately terminates MPI job
+}
+```
+
+In practice this is implemented via `abort_on_mpi_error`, which encapsulates both
+the error logging and `MPI_Abort` call into a single, reusable function.
