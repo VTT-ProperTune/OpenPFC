@@ -88,7 +88,6 @@
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 
 namespace pfc::gradient {
@@ -544,16 +543,6 @@ template <class G>
                          u.halo_width(), order);
   }
   return FdGradient<G>(u, order);
-}
-
-// Backward compatibility overload for LocalField (TODO: remove when LocalField is deprecated)
-template <class G>
-[[nodiscard]] inline FdGradient<G> create(const LocalField<double> &u,
-                                          int order = 2) {
-  const auto sz = u.size3();
-  const auto sp = u.spacing();
-  return FdGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
-                       u.halo_width(), order);
 }
 
 /**
