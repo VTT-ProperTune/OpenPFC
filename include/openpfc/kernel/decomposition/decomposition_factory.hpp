@@ -19,10 +19,10 @@
  *
  * @code
  * #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
- * #include <openpfc/kernel/data/world.hpp>
+ * #include <openpfc/domain/create.hpp>
  *
  * using namespace pfc;
- * auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0,
+ * auto world = domain::create_world(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0,
  * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = make_decomposition(world,
  * MPI_COMM_WORLD);
  * @endcode
