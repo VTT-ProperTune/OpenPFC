@@ -16,7 +16,10 @@
 
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <stdexcept>
+#include <memory>
 
 namespace pfc::data {
 
@@ -97,6 +100,48 @@ Field<T, HostSpace> field_from_inbox(const pfc::Domain &domain,
                                      const pfc::Box3i &inbox) {
   return Field<T, HostSpace>(domain, inbox, /*storage_halo=*/0,
                               /*iteration_halo=*/0);
+}
+
+/**
+ * @brief Create a unique_ptr wrapper for a Field from a PaddedBrick.
+ *
+ * This adapter creates a Field with the same geometry and halo width as a
+ * PaddedBrick for migration purposes. The Field is heap-allocated and returned
+ * as a unique_ptr to avoid copying data during migration.
+ *
+ * @tparam T Element type
+ * @param brick Reference to PaddedBrick to adapt
+ * @return unique_ptr<Field<T, HostSpace>> with matching geometry and halo
+ */
+template <typename T>
+std::unique_ptr<Field<T, HostSpace>> field_from_subdomain_brick(
+    const pfc::field::PaddedBrick<T>& brick) {
+  // Get the original Box3i from the decomposition - this is preferrable to 
+  // reconstructing it from components because it ensures consistency
+  const auto& decomp = brick.decomposition();
+  const int rank = brick.rank();
+  const auto local_box = pfc::decomposition::local_box(decomp, rank);
+  
+  auto field = std::make_unique<Field<T, HostSpace>>(
+      pfc::decomposition::domain(decomp), 
+      local_box,
+      brick.halo_width(), brick.halo_width());
+  
+  // Copy data from brick to field
+  const int nx = brick.nx();
+  const int ny = brick.ny();
+  const int nz = brick.nz();
+  const int hw = brick.halo_width();
+  
+  for (int k = -hw; k < nz + hw; ++k) {
+    for (int j = -hw; j < ny + hw; ++j) {
+      for (int i = -hw; i < nx + hw; ++i) {
+        (*field)(i, j, k) = brick(i, j, k);
+      }
+    }
+  }
+  
+  return field;
 }
 
 } // namespace pfc::data

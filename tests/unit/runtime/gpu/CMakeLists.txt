@@ -44,6 +44,17 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX)
     add_test(NAME CUDA_ExchangeFailClosed COMMAND test_exchange_cuda_fail_closed)
 
+    add_executable(test_padded_device_halo_exchange test_padded_device_halo_exchange.cpp
+        ${CMAKE_SOURCE_DIR}/tests/runtests.cpp
+        ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/cuda/padded_halo_faces.cu)
+    target_include_directories(test_padded_device_halo_exchange PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_padded_device_halo_exchange PRIVATE 
+        Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX)
+    add_test(NAME PaddedDeviceHaloExchange COMMAND test_padded_device_halo_exchange)
+
     message(STATUS "✅ GPU tests enabled")
 elseif(OpenPFC_ENABLE_CUDA)
     message(STATUS "⚠️  GPU tests disabled (CUDA not found)")

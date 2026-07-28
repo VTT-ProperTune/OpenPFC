@@ -62,7 +62,10 @@
 #include <cuda_runtime.h>
 
 #include <openpfc/runtime/cuda/cuda_check.hpp>
+#include <openpfc/runtime/cuda/memory_space_cuda.hpp>
+#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -70,6 +73,8 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
@@ -636,6 +641,238 @@ private:
   std::array<double *, 6> m_h_recv{};
   double *m_d_scratch = nullptr;
 };
+
+// ============================================================================
+// Field-based API surface (M2 migration from PaddedBrick)
+// ============================================================================
+
+/**
+ * @brief Buffer for packed halo data (typedef for backward compatibility).
+ *
+ * Represents packed halo face data during exchange. For device halo exchange,
+ * this is a device-side buffer.
+ */
+using halo_buffer = double*;
+
+/**
+ * @brief Create a PaddedDeviceHaloExchanger from a field and run halo exchange.
+ *
+ * This is the preferred Field-based API for M2+. It creates a temporary
+ * PaddedDeviceHaloExchanger and performs the exchange in one call.
+ *
+ * @tparam T Element type (currently only double is supported)
+ * @tparam MemorySpace Memory space tag (HostSpace or CudaSpace)
+ * @param field The field to exchange halos for (must have padded layout with storage_halo > 0)
+ * @param decomp Decomposition describing the subdomain layout
+ * @param rank Rank to use for exchange
+ * @param halo_width Halo width (defaults to field's storage_halo)
+ * @param comm MPI communicator
+ * @param stream CUDA stream
+ *
+ * @throws std::invalid_argument if field does not have padded storage (storage_halo == 0)
+ */
+template <typename T, typename MemorySpace>
+void exchange_halo(pfc::data::Field<T, MemorySpace>& field,
+                   const decomposition::Decomposition& decomp,
+                   int rank,
+                   int halo_width,
+                   MPI_Comm comm = MPI_COMM_WORLD,
+                   cudaStream_t stream = nullptr) {
+  static_assert(std::is_same_v<T, double>, "Field halo exchange currently only supports double");
+  
+  if (field.storage_halo() == 0) {
+    throw std::invalid_argument("exchange_halo requires a Field with padded storage (storage_halo > 0)");
+  }
+  
+  if (halo_width == 0) {
+    halo_width = field.storage_halo();
+  }
+  
+  // Create exchanger and perform exchange
+  PaddedDeviceHaloExchanger exchanger(decomp, rank, halo_width, comm);
+  
+  // Get device pointer for Field (works for both HostSpace and CudaSpace)
+  T* field_ptr = field.data();
+  exchanger.exchange_halos_device(field_ptr, field.size(), stream);
+  
+  // Mark device-side write for residency tracking
+  if constexpr (!std::is_same_v<MemorySpace, pfc::HostSpace>) {
+    field.note_device_write();
+  }
+}
+
+/**
+ * @brief Pack halo data from a field into a contiguous buffer.
+ *
+ * This function extracts halo face data from a field and packs it into a
+ * contiguous buffer for MPI communication. For device fields, this operates
+ * on device memory.
+ *
+ * @tparam T Element type (currently only double is supported)
+ * @tparam MemorySpace Memory space tag (HostSpace or CudaSpace)
+ * @param field The field to pack halo data from (must have padded layout)
+ * @return halo_buffer Pointer to packed halo data buffer
+ *
+ * @throws std::invalid_argument if field does not have padded storage (storage_halo == 0)
+ *
+ * @note This is a placeholder implementation. In practice, halo packing is
+ *       performed internally by PaddedDeviceHaloExchanger during exchange.
+ *       This function exists for API completeness and testing.
+ */
+template <typename T, typename MemorySpace>
+halo_buffer pack_halo_data(const pfc::data::Field<T, MemorySpace>& field) {
+  static_assert(std::is_same_v<T, double>, "Field halo exchange currently only supports double");
+  
+  if (field.storage_halo() == 0) {
+    throw std::invalid_argument("pack_halo_data requires a Field with padded storage (storage_halo > 0)");
+  }
+  
+  // Return const-casted pointer to field data
+  // In practice, halo packing is done internally by PaddedDeviceHaloExchanger
+  return const_cast<T*>(field.data());
+}
+
+/**
+ * @brief Unpack halo data from a buffer into a field.
+ *
+ * This function takes packed halo data and unpacks it into the field's halo
+ * regions. For device fields, this operates on device memory.
+ *
+ * @tparam T Element type (currently only double is supported)
+ * @tparam MemorySpace Memory space tag (HostSpace or CudaSpace)
+ * @param field The field to unpack halo data into (must have padded layout)
+ * @param buf Buffer containing packed halo data
+ *
+ * @throws std::invalid_argument if field does not have padded storage (storage_halo == 0)
+ *
+ * @note This is a placeholder implementation. In practice, halo unpacking is
+ *       performed internally by PaddedDeviceHaloExchanger during exchange.
+ *       This function exists for API completeness and testing.
+ */
+template <typename T, typename MemorySpace>
+void unpack_halo_data(pfc::data::Field<T, MemorySpace>& field, 
+                      const halo_buffer& buf) {
+  static_assert(std::is_same_v<T, double>, "Field halo exchange currently only supports double");
+  
+  if (field.storage_halo() == 0) {
+    throw std::invalid_argument("unpack_halo_data requires a Field with padded storage (storage_halo > 0)");
+  }
+  
+  // In practice, halo unpacking is done internally by PaddedDeviceHaloExchanger
+  (void)buf; // Suppress unused parameter warning
+}
+
+// ============================================================================
+// Deprecated forwarding wrappers (for backward compatibility)
+// ============================================================================
+
+/**
+ * @brief [[deprecated]] Exchange halo for PaddedBrick using Field-based API.
+ *
+ * @deprecated Use exchange_halo(pfc::data::Field<T>&) instead.
+ * This wrapper forwards PaddedBrick to the Field-based implementation.
+ *
+ * @tparam T Element type
+ * @param brick PaddedBrick to exchange halos for
+ * @param decomp Decomposition describing the subdomain layout
+ * @param rank Rank to use for exchange
+ * @param halo_width Halo width (defaults to brick's halo_width())
+ * @param comm MPI communicator
+ * @param stream CUDA stream
+ */
+template <typename T>
+[[deprecated("Use pfc::data::Field overload instead")]]
+void exchange_halo(pfc::field::PaddedBrick<T>& brick,
+                   const decomposition::Decomposition& decomp,
+                   int rank,
+                   int halo_width = 0,
+                   MPI_Comm comm = MPI_COMM_WORLD,
+                   cudaStream_t stream = nullptr) {
+  static_assert(std::is_same_v<T, double>, "PaddedBrick halo exchange currently only supports double");
+  
+  if (halo_width == 0) {
+    halo_width = brick.halo_width();
+  }
+  
+  // Create Field from PaddedBrick
+  auto field = pfc::data::field_from_subdomain_brick(brick);
+  
+  // Call Field-based API
+  exchange_halo(*field, decomp, rank, halo_width, comm, stream);
+  
+  // Copy data back to brick
+  const int nx = brick.nx();
+  const int ny = brick.ny(); // Remove .hw() call
+  const int nz = brick.nz();
+  const int hw = brick.halo_width();
+  
+  for (int k = -hw; k < nz + hw; ++k) {
+    for (int j = -hw; j < ny + hw; ++j) {
+      for (int i = -hw; i < nx + hw; ++i) {
+        brick(i, j, k) = (*field)(i, j, k);
+      }
+    }
+  }
+}
+
+/**
+ * @brief [[deprecated]] Pack halo data from PaddedBrick using Field-based API.
+ *
+ * @deprecated Use pack_halo_data(const pfc::data::Field<T>&) instead.
+ * This wrapper forwards PaddedBrick to the Field-based implementation.
+ *
+ * @tparam T Element type
+ * @param brick PaddedBrick to pack halo data from
+ * @return halo_buffer Pointer to packed halo data buffer
+ */
+template <typename T>
+[[deprecated("Use pfc::data::Field overload instead")]]
+halo_buffer pack_halo_data(const pfc::field::PaddedBrick<T>& brick) {
+  static_assert(std::is_same_v<T, double>, "PaddedBrick halo exchange currently only supports double");
+  
+  // Create Field from PaddedBrick
+  auto field = pfc::data::field_from_subdomain_brick(brick);
+  
+  // Call Field-based API
+  return pack_halo_data(*field);
+}
+
+/**
+ * @brief [[deprecated]] Unpack halo data into PaddedBrick using Field-based API.
+ *
+ * @deprecated Use unpack_halo_data(pfc::data::Field<T>&, const halo_buffer&) instead.
+ * This wrapper forwards PaddedBrick to the Field-based implementation.
+ *
+ * @tparam T Element type
+ * @param brick PaddedBrick to unpack halo data into
+ * @param buf Buffer containing packed halo data
+ */
+template <typename T>
+[[deprecated("Use pfc::data::Field overload instead")]]
+void unpack_halo_data(pfc::field::PaddedBrick<T>& brick,
+                      const halo_buffer& buf) {
+  static_assert(std::is_same_v<T, double>, "PaddedBrick halo exchange currently only supports double");
+  
+  // Create Field from PaddedBrick
+  auto field = pfc::data::field_from_subdomain_brick(brick);
+  
+  // Call Field-based API
+  unpack_halo_data(*field, buf);
+  
+  // Copy data back to brick
+  const int nx = brick.nx();
+  const int ny = brick.ny(); // Remove .hw() call
+  const int nz = brick.nz();
+  const int hw = brick.halo_width();
+  
+  for (int k = -hw; k < nz + hw; ++k) {
+    for (int j = -hw; j < ny + hw; ++j) {
+      for (int i = -hw; i < nx + hw; ++i) {
+        brick(i, j, k) = (*field)(i, j, k);
+      }
+    }
+  }
+}
 
 } // namespace pfc::cuda
 
