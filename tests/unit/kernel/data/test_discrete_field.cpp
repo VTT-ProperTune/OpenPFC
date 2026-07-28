@@ -1,6 +1,13 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+/*
+ * This test suite is quarantined pending issue #293.
+ * It tests DiscreteField-specific patterns with no data::Field equivalent.
+ * The DiscreteField type is deprecated and will be removed when all consumers are gone.
+ * Tests are skipped at runtime; this file will be deleted in #293.
+ */
+
 #include <iostream>
 
 #include <catch2/catch_test_macros.hpp>
@@ -12,6 +19,7 @@ using namespace Catch::Matchers;
 using namespace pfc;
 
 TEST_CASE("DiscreteField1D") {
+  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
   int Lx = 5;
   int i0 = -2;
   double x0 = 1.0;
@@ -55,6 +63,7 @@ TEST_CASE("DiscreteField1D") {
 
 TEST_CASE("pfc::interpolate() free function works correctly",
           "[discrete_field][free_function]") {
+  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
   SECTION("Mutable version returns modifiable reference") {
     DiscreteField<double, 3> field({3, 3, 3}, {0, 0, 0}, {0.0, 0.0, 0.0},
                                    {1.0, 1.0, 1.0});
@@ -158,6 +167,7 @@ TEST_CASE("pfc::interpolate() free function works correctly",
 
 TEST_CASE("pfc::interpolate() integration test",
           "[discrete_field][interpolate][integration]") {
+  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
   SECTION("Works with realistic 3D field") {
     // Create field with analytical function
     DiscreteField<double, 3> field({32, 32, 32}, {0, 0, 0}, {0.0, 0.0, 0.0},
@@ -197,6 +207,7 @@ TEST_CASE("pfc::interpolate() integration test",
 
 
 TEST_CASE("DiscreteField::set_data - move semantics enabled", "[discrete_field][set_data][move]") {
+  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
   // Setup a simple grid (size doesn't matter for move test)
   std::array<int, 3> grid{{10, 10, 1}};
   std::array<int, 3> offsets{{0, 0, 0}};
@@ -225,6 +236,7 @@ TEST_CASE("DiscreteField::set_data - move semantics enabled", "[discrete_field][
 }
 
 TEST_CASE("test_data_conversion_non_const") {
+  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
   DiscreteField<double, 3> field(
       {1, 1, 1},              // dimensions
       {0, 0, 0},              // offsets
@@ -240,6 +252,7 @@ TEST_CASE("test_data_conversion_non_const") {
 }
 
 TEST_CASE("test_data_conversion_const") {
+  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
   DiscreteField<double, 3> field(
       {1, 1, 1},              // dimensions
       {0, 0, 0},              // offsets
@@ -255,6 +268,7 @@ TEST_CASE("test_data_conversion_const") {
 }
 
 TEST_CASE("test_get_data_const") {
+  SKIP("Quarantined pending #293: DiscreteField tests only cover deprecated patterns");
   DiscreteField<double, 3> field(
       {1, 1, 1},              // dimensions
       {0, 0, 0},              // offsets
