@@ -7,34 +7,22 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-<<<<<<< HEAD
 #include <openpfc/domain/create.hpp>
-=======
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
->>>>>>> 04c240a4 (Migrate test_brick_iteration.cpp from PaddedBrick to data::Field)
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
-#include <openpfc/domain/create.hpp>
 
 using namespace pfc;
 
 namespace {
 
-<<<<<<< HEAD
-field::PaddedBrick<double> make_brick(int n, int hw) {
-  auto domain = domain::create({n, n, n});
-  auto decomp = decomposition::create(domain, 1);
-  return field::PaddedBrick<double>(decomp, /*rank=*/0, hw);
-=======
 pfc::data::Field<double, pfc::HostSpace> make_brick(int n, int hw) {
   auto domain = pfc::domain::create(pfc::GridSize({n, n, n}),
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, 1);
   return pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, hw);
->>>>>>> 04c240a4 (Migrate test_brick_iteration.cpp from PaddedBrick to data::Field)
 }
 
 } // namespace
