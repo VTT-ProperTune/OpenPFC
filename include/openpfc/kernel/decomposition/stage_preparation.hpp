@@ -103,8 +103,8 @@ public:
    * @brief Bind a name to a non-owning exchanger pointer.
    *
    * Stores an owned `std::string` key. The exchanger must outlive the service
-   * and should use the `PaddedBrick`-binding constructor so
-   * `pfc::communication::exchange` is valid.
+   * and should be bound to a padded `pfc::data::Field` using the Field-binding
+   * constructor so `pfc::communication::exchange` is valid.
    *
    * @param name      Field / binding name (owned copy stored).
    * @param exchanger Exchanger to drive when this name is prepared.
