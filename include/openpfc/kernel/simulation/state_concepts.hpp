@@ -11,7 +11,7 @@
  * These concepts define the minimum semantic requirements for scalar and
  * coupled real/complex field state and integrator workspace access. They are
  * evidence-driven concepts based on existing field implementations
- * (Field<T>, PaddedBrick<T>) and enable compile-time validation of
+ * (pfc::data::Field<T>) and enable compile-time validation of
  * read/write access, shape compatibility, and aliasing safety.
  *
  * The concepts enforce:
@@ -58,6 +58,9 @@ namespace pfc::field {
  * - data() const returning type convertible to const void*
  * - operator()(int,int,int) const returning const reference to value type
  *
+ * This concept is satisfied by pfc::data::Field<T> and equivalent field types
+ * that provide the minimal read-access contract for use as operator inputs.
+ *
  * @tparam F Field type to check for readable access
  */
 template <class F>
@@ -76,6 +79,9 @@ concept FieldReadable = requires(const F& f) {
  * - operator()(int,int,int) returning non-const lvalue_reference
  * - Explicit requirement that operator() return type is non-const via
  *   !std::is_const_v<std::remove_reference_t<...>>
+ *
+ * This concept is satisfied by pfc::data::Field<T> and equivalent field types
+ * that provide the minimal write-access contract for use as operator outputs.
  *
  * @tparam F Field type to check for writable access
  */
