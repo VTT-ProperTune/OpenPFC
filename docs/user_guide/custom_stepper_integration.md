@@ -84,10 +84,16 @@ For finite difference methods, use `pfc::gradient::FDGradient<G>`:
 
 ```cpp
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/execution/memory_space.hpp>
 
-// Assume we have a PaddedBrick field containing the solution
-pfc::field::PaddedBrick<double> u = /* ... initialized field ... */;
+// Assume we have a decomposition and rank
+auto decomp = /* ... decomposition object ... */;
+int rank = /* ... rank for this subdomain ... */;
+
+// Create a Field from decomposition geometry (halo=2 for 4th-order FD)
+pfc::data::Field<double, HostSpace> u =
+    pfc::data::field_from_subdomain<double>(decomp, rank, 2);
 
 // Create FD gradient evaluator (default: second-order central differences)
 pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u);
@@ -98,7 +104,7 @@ pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, 4);  // fourth-order
 
 The FD gradient evaluator:
 
-- Reads geometry (grid size, spacing, halo width) directly from the `PaddedBrick`
+- Reads geometry (grid size, spacing, halo width) directly from the `pfc::data::Field`
 - Supports even orders 2–14 for first derivatives (`x, y, z`)
 - Supports even orders 2–20 for second derivatives (`xx, yy, zz`)
 - Performs stencil computation on-the-fly during evaluation (no pre-computation)
@@ -113,20 +119,37 @@ For spectral methods, use `pfc::field::SpectralGradient<G>`:
 ```cpp
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/execution/memory_space.hpp>
 
-// Assume we have FFT plan and field
+// Assume we have Domain and FFT plan
+pfc::Domain domain = /* ... domain object ... */;
 pfc::fft::IFFT &fft = /* ... FFT plan ... */;
-std::vector<double> u = /* ... field data ... */;
-std::array<int, 3> global_size = {64, 64, 64};
-std::array<double, 3> spacing = {0.1, 0.1, 0.1};
 
-// Get local bounds from FFT
+// Create a Field from the FFT inbox (halo=0 for spectral inbox layout)
 auto inbox = fft.get_inbox_bounds();
+pfc::data::Field<double, HostSpace> u =
+    pfc::data::field_from_inbox<double>(domain, inbox);
+
+// Get global size and spacing from domain
+std::array<int, 3> global_size = {
+    static_cast<int>(pfc::domain::get_size(domain)[0]),
+    static_cast<int>(pfc::domain::get_size(domain)[1]),
+    static_cast<int>(pfc::domain::get_size(domain)[2])
+};
+std::array<double, 3> spacing = {
+    pfc::domain::get_spacing(domain)[0],
+    pfc::domain::get_spacing(domain)[1],
+    pfc::domain::get_spacing(domain)[2]
+};
+
+// Get outbox from FFT
 auto outbox = fft.get_outbox_bounds();
 
 // Create spectral gradient evaluator
 pfc::field::SpectralGradient<heat3d::HeatGrads> grad(
-    fft, u, global_size, spacing, inbox, outbox);
+    fft, u.vec(), global_size, spacing, inbox, outbox);
 ```
 
 The spectral gradient evaluator:
@@ -145,21 +168,22 @@ OpenPFC provides a factory function `pfc::sim::steppers::create()` that binds a 
 
 ```cpp
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/kernel/execution/memory_space.hpp>
 
 // Assume we have:
 // - grad: gradient evaluator (FD or spectral)
 // - model: physics model with rhs() method
-// - u: field vector (std::vector<double> or LocalField)
+// - u: field (pfc::data::Field<double, HostSpace>)
 // - dt: time step size
 
 double dt = 0.01;
 
-// Create stepper using factory (derives local_size from u.size())
-auto stepper = pfc::sim::steppers::create(grad, model, dt, u.size());
+// Create stepper using factory (derives local_size from u.local_size())
+auto stepper = pfc::sim::steppers::create(grad, model, dt, u.local_size());
 
-// Alternative: pass LocalField to derive size automatically
-pfc::field::LocalField<double> u_local = /* ... */;
-auto stepper = pfc::sim::steppers::create(u_local, grad, model, dt);
+// Alternative: pass Field directly to derive size automatically
+pfc::data::Field<double, HostSpace> u_field = /* ... */;
+auto stepper = pfc::sim::steppers::create(u_field, grad, model, dt);
 ```
 
 The factory function:
@@ -295,13 +319,14 @@ struct HeatModel {
 };
 
 // Usage
+pfc::data::Field<double, HostSpace> u = /* ... create field ... */;
 auto grad = pfc::gradient::FDGradient<HeatGrads>(u);
-auto stepper = pfc::sim::steppers::create(grad, model, dt, u.size());
+auto stepper = pfc::sim::steppers::create(grad, model, dt, u.local_size());
 
 Simulator sim(model, time);
 while (!sim.done()) {
   sim.step_with_physics([&]() {
-    t = stepper.step(t, u);
+    t = stepper.step(t, u.vec());
   });
 }
 ```
@@ -441,10 +466,11 @@ Putting it all together, here's a complete example showing FD gradient evaluatio
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/kernel/simulation/du_field.hpp>
+#include <openpfc/kernel/execution/memory_space.hpp>
 
 // Physics model (from earlier example)
 namespace heat3d {
@@ -467,16 +493,19 @@ int main(int argc, char** argv) {
       pfc::GridSpacing({0.098, 0.098, 0.098}));
 
   auto decomp = pfc::decomposition::create(world, MPI_COMM_WORLD);
-  auto fft = pfc::fft::create(decomp);
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  // Create field and gradient evaluator
-  pfc::field::PaddedBrick<double> u(fft.get_inbox_bounds(), 2);
+  // Create field from decomposition and gradient evaluator
+  // halo=2 for 4th-order FD (halo >= order/2)
+  pfc::data::Field<double, HostSpace> u =
+      pfc::data::field_from_subdomain<double>(decomp, rank, 2);
   pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, 4);  // 4th order
 
   // Create model and stepper
   heat3d::HeatModel model;
   double dt = 0.001;
-  auto stepper = pfc::sim::steppers::create(grad, model, dt, u.size());
+  auto stepper = pfc::sim::steppers::create(grad, model, dt, u.local_size());
 
   // Setup simulator
   pfc::Time time({0.0, 1.0, dt}, 0.1);
@@ -487,7 +516,7 @@ int main(int argc, char** argv) {
   double t = 0.0;
   while (!sim.done()) {
     sim.step_with_physics([&]() {
-      t = stepper.step(t, u);
+      t = stepper.step(t, u.vec());  // pass underlying std::vector
     });
   }
 
