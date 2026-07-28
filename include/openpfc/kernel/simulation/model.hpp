@@ -680,8 +680,7 @@ public:
    * @note Out-of-tree models that still override this hook for a single primary
    *       field should migrate to explicit `register_real_field("default", …)`
    *       (or a domain-specific name) and call sites that use `get_real_field`.
-   *       Behavior is rank-local like other field accessors; MPI consistency of
-   *       the underlying `DiscreteField` data is unchanged.
+   *       Behavior is rank-local like other field accessors.
    *
    * @return Reference to the RealField called "default"
    */
