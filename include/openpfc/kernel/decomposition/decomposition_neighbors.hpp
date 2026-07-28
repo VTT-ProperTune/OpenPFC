@@ -37,6 +37,7 @@
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <optional>
+#include <vector>
 
 namespace pfc::decomposition {
 
