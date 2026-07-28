@@ -6,8 +6,8 @@
  * @brief Simple domain-first API sample for @ref openpfc::kernel::field::operations
  *
  * This example demonstrates the preferred domain-first API pattern for
- * coordinate-space field operations using `domain::create` instead of the
- * deprecated `world::create`. This aligns with the M2 critical path refactoring.
+ * coordinate-space field operations using `domain::create`. This aligns with
+ * the M2 critical path refactoring.
  *
  * Demonstrates:
  * - Domain creation with `domain::create`
@@ -15,8 +15,8 @@
  * - Applying coordinate-space functions to fields using `pfc::field::apply`
  * - Creating Gaussian pulse initial conditions
  *
- * @note This is the recommended pattern for new code. The `world::create` API
- *       is kept only for backward compatibility during the M2 refactoring.
+ * @note This is the recommended pattern for new code. Legacy construction APIs
+ *       are kept only for backward compatibility during the M2 refactoring.
  */
 
 #include <iomanip>
