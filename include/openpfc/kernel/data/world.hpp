@@ -65,16 +65,16 @@
 #include <openpfc/kernel/data/types.hpp>
 
 // Deprecation attribute guard
-#if !defined(OPENPFC_SUPPRESS_LEGACY_WARNINGS)
+#if !defined(PFC_SUPPRESS_DEPRECATED_WARNINGS)
 #if defined(__GNUC__) || defined(__clang__)
-#define OPENPFC_DEPRECATED_API [[deprecated("World is deprecated; use pfc::Domain + pfc::world free functions instead")]]
+#define PFC_DEPRECATED_ATTR [[deprecated("Use pfc::Domain directly; pfc::World is deprecated as of OpenPFC 0.2")]]
 #elif defined(_MSC_VER)
-#define OPENPFC_DEPRECATED_API __declspec(deprecated("World is deprecated; use pfc::Domain + pfc::world free functions instead"))
+#define PFC_DEPRECATED_ATTR __declspec(deprecated("Use pfc::Domain directly; pfc::World is deprecated as of OpenPFC 0.2"))
 #else
-#define OPENPFC_DEPRECATED_API
+#define PFC_DEPRECATED_ATTR
 #endif
 #else
-#define OPENPFC_DEPRECATED_API
+#define PFC_DEPRECATED_ATTR
 #endif
 
 namespace pfc::world {
@@ -95,7 +95,7 @@ using pfc::types::Int3;
  * only for Gen-1 source compatibility and are deprecated; new code should
  * prefer `Domain` + `Box3i` with the free functions in `world_queries.hpp`.
  */
-struct OPENPFC_DEPRECATED_API World final {
+struct PFC_DEPRECATED_ATTR World final {
   Box3i subdomain_;           ///< Local subdomain box for subdomain role
   Domain domain_;             ///< Global Cartesian coordinate system (origin/spacing/periodic)
 
@@ -108,7 +108,7 @@ struct OPENPFC_DEPRECATED_API World final {
    *
    * @deprecated Use `world::get_size()` and `world::get_lower/upper_bounds()` instead.
    */
-  OPENPFC_DEPRECATED_API Box3i get_domain() const {
+  PFC_DEPRECATED_ATTR Box3i get_domain() const {
     return pfc::domain::index_box(domain_);
   }
 
@@ -117,7 +117,7 @@ struct OPENPFC_DEPRECATED_API World final {
    *
    * @deprecated Use `world::get_lower()` and `world::get_upper()` instead.
    */
-  OPENPFC_DEPRECATED_API Box3i get_subdomain() const {
+  PFC_DEPRECATED_ATTR Box3i get_subdomain() const {
     return subdomain_;
   }
 
@@ -126,7 +126,7 @@ struct OPENPFC_DEPRECATED_API World final {
    *
    * @deprecated Use `world::get_size()` instead.
    */
-  OPENPFC_DEPRECATED_API int size() const {
+  PFC_DEPRECATED_ATTR int size() const {
     return static_cast<int>(pfc::domain::get_total_size(domain_));
   }
 
@@ -135,7 +135,7 @@ struct OPENPFC_DEPRECATED_API World final {
    *
    * @deprecated Use `world::get_size(world, dim)` instead.
    */
-  OPENPFC_DEPRECATED_API int get_size(int dim) const {
+  PFC_DEPRECATED_ATTR int get_size(int dim) const {
     return pfc::domain::get_size(domain_, dim);
   }
 
@@ -144,7 +144,7 @@ struct OPENPFC_DEPRECATED_API World final {
    *
    * @deprecated Use `world::get_lower(world, dim)` instead.
    */
-  OPENPFC_DEPRECATED_API int origin(int dim) const {
+  PFC_DEPRECATED_ATTR int origin(int dim) const {
     return subdomain_.low[dim];
   }
 
@@ -153,7 +153,7 @@ struct OPENPFC_DEPRECATED_API World final {
    *
    * @deprecated Use `world::get_upper(world, dim)` instead.
    */
-  OPENPFC_DEPRECATED_API int upper(int dim) const {
+  PFC_DEPRECATED_ATTR int upper(int dim) const {
     return subdomain_.high[dim];
   }
 
@@ -162,7 +162,7 @@ struct OPENPFC_DEPRECATED_API World final {
    *
    * @deprecated World is deprecated; use Domain + Box3i directly.
    */
-  OPENPFC_DEPRECATED_API void set_subdomain(const Box3i &subdomain) {
+  PFC_DEPRECATED_ATTR void set_subdomain(const Box3i &subdomain) {
     subdomain_ = subdomain;
   }
 

@@ -49,6 +49,9 @@
 
 namespace pfc {
 
+// Note: pfc::World is deprecated as of 0.2 and is now a thin wrapper over this Domain class.
+// Use pfc::Domain directly for new code. See docs/development/0.2_migration_map.md for migration guide.
+
 using types::Bool3;
 using types::Int3;
 using types::Real3;
