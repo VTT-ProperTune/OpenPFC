@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "11_write_results.hpp"
-#include <complex>
 #include <mpi.h>
-#include <openpfc/openpfc.hpp>
-#include <string>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/mpi/worker.hpp>
 #include <vector>
 
 using namespace pfc;
@@ -15,27 +18,41 @@ int main(int argc, char **argv) {
   MPI_Worker worker(argc, argv);
   auto domain = domain::create({4, 3, 2});
   auto decomposition_obj = decomposition::create(domain, 1);
-  // DiscreteField<double, 3> field(decomp);
-  auto local_box_0 = decomposition::local_box(decomposition_obj, 0);
-  auto dimensions = local_box_0.size;
-  auto offsets = local_box_0.low;
-  auto origin = domain::get_origin(domain);
-  auto discretization = domain::get_spacing(domain);
-  DiscreteField<double, 3> field(dimensions, offsets, origin, discretization);
+  
+  // Create a field from the decomposition using field_from_subdomain_unpadded
+  auto field = pfc::data::field_from_subdomain_unpadded<double>(decomposition_obj, 0);
 
-  std::vector<double> arr(2 * 3 * 4);
-  for (unsigned int i = 0; i < arr.size(); i++) arr[i] = static_cast<double>(i);
-  field.set_data(std::move(arr));
+  // Populate the field with data (using the field's apply method for coordinate-based initialization)
+  field.apply([](double x, double y, double z) {
+    // Simple linear index based initialization for demonstration
+    return static_cast<double>(static_cast<int>(x) + static_cast<int>(y) * 4 + static_cast<int>(z) * 12);
+  });
 
   VtkWriter<double> writer;
   writer.set_uri("results.vti");
   writer.set_field_name("density");
-  writer.set_domain(domain::get_size(domain), field.get_size(), field.get_offset());
-  writer.set_origin(domain::get_origin(domain));
-  writer.set_spacing(domain::get_spacing(domain));
+  
+  // Use the field's geometry methods
+  auto global_size = field.global_size();
+  auto local_size = field.local_size();
+  auto offset = field.lower_global();
+  
+  writer.set_domain({global_size[0], global_size[1], global_size[2]}, 
+                    {local_size[0], local_size[1], local_size[2]},
+                    {offset[0], offset[1], offset[2]});
+  writer.set_origin(field.origin());
+  writer.set_spacing(field.spacing());
+  
   std::cout << "Writing results to file: " << writer.get_uri() << "\n";
   writer.initialize();
-  writer.write(field.get_array().get_data());
+  
+  // Pack owned field data into a buffer for VTK writer
+  std::vector<double> buffer;
+  field.for_each_owned([&](int i, int j, int k) {
+    buffer.push_back(field(i, j, k));
+  });
+  
+  writer.write(buffer);
   MPI_Barrier(MPI_COMM_WORLD);
   return 0;
 }
@@ -43,13 +60,22 @@ int main(int argc, char **argv) {
 /*
 TEST_CASE("VtkWriter", "[VtkWriter]") {
   auto domain = domain::create({8, 2, 2});
-  Decomposition decomp(domain);
-  DiscreteField<double, 3> field(decomp);
+  auto decomp = decomposition::create(domain, 1);
+  auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0);
   field.apply([](auto x, auto y, auto z) { return x + y + z; });
   VtkWriter<double> writer;
   writer.set_uri("results.vtk");
-  writer.set_domain(domain::get_size(domain), field.get_size(), field.get_offset());
-  writer.write(field.get_array().get_data());
+  auto global_size = field.global_size();
+  auto local_size = field.local_size();
+  auto offset = field.lower_global();
+  writer.set_domain({global_size[0], global_size[1], global_size[2]}, 
+                    {local_size[0], local_size[1], local_size[2]},
+                    {offset[0], offset[1], offset[2]});
+  std::vector<double> buffer;
+  field.for_each_owned([&](int i, int j, int k) {
+    buffer.push_back(field(i, j, k));
+  });
+  writer.write(buffer);
   std::string expectedOutput = R"EXPECTED(<?xml version="1.0" encoding="utf-8"?>
 <VTKFile type="ImageData" version="1.0" byte_order="LittleEndian"
 header_type="UInt64"> <ImageData WholeExtent="0 3 0 2 0 1" Origin="1 1 1"
