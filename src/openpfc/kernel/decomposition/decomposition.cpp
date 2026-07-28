@@ -26,24 +26,37 @@ namespace {
   return World(box.low, box.high, pfc::world::get_coordinate_system(global));
 }
 
-// Fail closed (audit 4.9): get_neighbor_rank() and the halo machinery assume
+// Fail closed (audit 4.9/Pre-M0 PI): get_neighbor_rank() and the halo machinery assume
 // heffte::split_world enumerates subdomain boxes in x-fastest rank order, i.e.
 // rank = cz*gx*gy + cy*gx + cx, with (cx,cy,cz) the box's grid coordinate. This
 // invariant is implicit; a HeFFTe change to the enumeration order would silently
 // corrupt every halo exchange. Verify it at construction by deriving each box's
 // grid coordinate from its (regular, Cartesian-product) lower bounds and
-// checking it maps back to the box's index.
+// checking it maps back to the box's index, which matches the neighbor arithmetic.
 void validate_split_world_ordering(const std::vector<World> &subs,
                                    const Int3 &grid) {
   const int gx = grid[0], gy = grid[1], gz = grid[2];
   const long long expected = static_cast<long long>(gx) * gy * gz;
+
+  // Build version string if HeFFTe version macros are available
+  std::string heffte_version_info;
+#if defined(HEFFTE_VERSION_MAJOR) && defined(HEFFTE_VERSION_MINOR) && defined(HEFFTE_VERSION_PATCH)
+  heffte_version_info = "HeFFTe " + std::to_string(HEFFTE_VERSION_MAJOR) + "." +
+                        std::to_string(HEFFTE_VERSION_MINOR) + "." +
+                        std::to_string(HEFFTE_VERSION_PATCH);
+#else
+  heffte_version_info = "HeFFTe (version unknown - macros not defined)";
+#endif
+
   if (static_cast<long long>(subs.size()) != expected) {
-    throw std::runtime_error("Decomposition: heffte::split_world produced " +
-                             std::to_string(subs.size()) + " subdomains for a " +
-                             std::to_string(gx) + "x" + std::to_string(gy) + "x" +
-                             std::to_string(gz) + " process grid (expected " +
-                             std::to_string(expected) +
-                             "). The installed HeFFTe version may be incompatible.");
+    throw std::runtime_error(
+        "Decomposition: heffte::split_world produced " +
+        std::to_string(subs.size()) + " subdomains for a " +
+        std::to_string(gx) + "x" + std::to_string(gy) + "x" +
+        std::to_string(gz) + " process grid (expected " +
+        std::to_string(expected) +
+        "); the installed " + heffte_version_info + " version may be incompatible "
+        "with the MPI_Cart_shift neighbor arithmetic in get_neighbor_rank.");
   }
 
   // Distinct, sorted lower-bound values along each axis are the partition
@@ -63,10 +76,13 @@ void validate_split_world_ordering(const std::vector<World> &subs,
     throw std::runtime_error(
         "Decomposition: heffte::split_world partition is not a regular "
         "gx*gy*gz Cartesian grid; the x-fastest neighbor arithmetic in "
-        "get_neighbor_rank would be invalid. The installed HeFFTe version may "
-        "be incompatible.");
+        "get_neighbor_rank would be invalid. The installed " + heffte_version_info +
+        " version may be incompatible with the x-first rank indexing.");
   }
 
+  // Verify x-fastest rank ordering matches MPI_Cart_shift neighbor arithmetic:
+  // For each box at index r, compute its grid coordinate (cx,cy,cz) from lower bounds,
+  // then verify r == cz*gx*gy + cy*gx + cx (the rank implied by MPI_Cart_shift).
   auto coord_of = [](const std::vector<int> &axis, int value) {
     return static_cast<int>(std::lower_bound(axis.begin(), axis.end(), value) -
                             axis.begin());
@@ -83,9 +99,9 @@ void validate_split_world_ordering(const std::vector<World> &subs,
           "x-fastest rank convention used by get_neighbor_rank (subdomain " +
           std::to_string(r) + " sits at grid coordinate (" + std::to_string(cx) +
           "," + std::to_string(cy) + "," + std::to_string(cz) +
-          ") which implies rank " + std::to_string(implied) +
-          "). Halo exchange would be corrupted; the installed HeFFTe version "
-          "may be incompatible.");
+          ") which implies MPI_Cart_shift rank " + std::to_string(implied) +
+          ". The installed " + heffte_version_info + " version may use a different "
+          "ordering; halo exchange would be corrupted.");
     }
   }
 }
