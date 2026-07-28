@@ -6,7 +6,7 @@
 /**
  * @file full_padded_halo_exchange.hpp
  * @brief Full **26-direction** host halo exchange (faces + edges + corners)
- *        for a `PaddedBrick` buffer.
+ *        for a padded buffer.
  *
  * @details
  * `pfc::communication::PaddedHaloExchanger` performs a **single-pass 6-face**
@@ -55,7 +55,6 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
@@ -76,13 +75,14 @@ struct FullPaddedSlabSpec {
 } // namespace detail
 
 /**
- * @brief 26-direction host halo exchanger for a `PaddedBrick<T>` buffer.
+ * @brief 26-direction host halo exchanger for a padded buffer.
  *
  * Holds 3 widened slab specs, 3 sets of MPI face derived types (one per
  * axis pass), a host scratch buffer for self-axis pack/unpack, and an MPI
  * request vector sized for one axis pass. Passes run sequentially.
  *
- * Non-copyable; tie lifetime to the owning padded brick (or buffer).
+ * Non-copyable; use `exchange_halos(buf, size)` to perform exchanges on
+ * user-provided buffers.
  */
 template <typename T = double> class FullPaddedHaloExchanger {
 public:
@@ -233,39 +233,17 @@ public:
     m_requests.assign(4, MPI_REQUEST_NULL);
   }
 
-  /**
-   * @brief Preferred: bind layout + buffer from a `PaddedBrick<T>`.
-   *
-   * Pulls decomposition, rank, and halo width from `u`. Default direction
-   * set is `Full3D()`.
-   */
-  FullPaddedHaloExchanger(field::PaddedBrick<T> &u, MPI_Comm comm, int base_tag = 0)
-      : FullPaddedHaloExchanger(u.decomposition(), u.rank(), u.halo_width(), comm,
-                                halo::presets::Full3D(), base_tag,
-                                halo::HaloDirectionSelector{}) {
-    bind_(u);
-  }
-
-  /// Same as the brick-binding constructor, with a custom direction set.
-  FullPaddedHaloExchanger(field::PaddedBrick<T> &u, MPI_Comm comm,
-                          halo::HaloDirectionSet dirs, int base_tag = 0,
-                          halo::HaloDirectionSelector selector = {})
-      : FullPaddedHaloExchanger(u.decomposition(), u.rank(), u.halo_width(), comm,
-                                dirs, base_tag, selector) {
-    bind_(u);
-  }
-
   FullPaddedHaloExchanger(const FullPaddedHaloExchanger &) = delete;
   FullPaddedHaloExchanger &operator=(const FullPaddedHaloExchanger &) = delete;
 
   /**
    * @brief Blocking 3-pass exchange on an explicit padded buffer.
    *
-   * @param padded_buf  Pointer to the start of the padded brick
-   *                    (`brick.data()`). Layout: row-major
+   * @param padded_buf  Pointer to the start of the padded buffer.
+   *                    Layout: row-major
    *                    `(nx+2hw, ny+2hw, nz+2hw)`, x fastest.
-   * @param padded_size Total elements (`brick.size()`); accepted for API
-   *                    symmetry, unused by the exchange path.
+   * @param padded_size Total elements; accepted for API symmetry,
+   *                    unused by the exchange path.
    */
   void exchange_halos(T *padded_buf, std::size_t padded_size) {
     (void)padded_size;
@@ -284,14 +262,6 @@ public:
                            MPI_Wtime() - t0);
   }
 
-  /// Blocking exchange on the bound brick (requires brick-binding ctor).
-  void exchange() {
-    require_bound_("exchange()");
-    exchange_halos(m_bound_buf, m_bound_size);
-  }
-
-  [[nodiscard]] bool is_bound() const noexcept { return m_bound_buf != nullptr; }
-
   [[nodiscard]] const halo::HaloDirectionSet &direction_set() const noexcept {
     return m_dirs;
   }
@@ -307,21 +277,6 @@ private:
            static_cast<std::size_t>(j) * static_cast<std::size_t>(nxp) +
            static_cast<std::size_t>(k) * static_cast<std::size_t>(nxp) *
                static_cast<std::size_t>(nyp);
-  }
-
-  void bind_(field::PaddedBrick<T> &u) noexcept {
-    m_bound_buf = u.data();
-    m_bound_size = u.size();
-  }
-
-  void require_bound_(const char *what) const {
-    if (m_bound_buf == nullptr) {
-      throw std::logic_error(
-          std::string("pfc::communication::FullPaddedHaloExchanger::") + what +
-          ": exchanger is not bound to a PaddedBrick. "
-          "Use the (PaddedBrick&, MPI_Comm) constructor or call "
-          "exchange_halos(buf, size) directly.");
-    }
   }
 
   /// Build per-axis (send, recv) slab pairs — offsets copied from CUDA twin.
@@ -460,9 +415,6 @@ private:
   std::vector<MPI_Request> m_requests;
   std::size_t m_scratch_elems = 0;
   std::vector<T> m_scratch;
-
-  T *m_bound_buf = nullptr;
-  std::size_t m_bound_size = 0;
 };
 
 } // namespace pfc::communication
