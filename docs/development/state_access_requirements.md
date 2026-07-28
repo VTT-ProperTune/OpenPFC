@@ -9,11 +9,13 @@ This document specifies the evidence-based semantic requirements for scalar and 
 
 The requirements are derived from existing field implementations and usage patterns:
 
-- **Scalar field patterns** (`apps/heat3d/`): `pfc::field::LocalField<double>`, `pfc::field::PaddedBrick<double>`, `pfc::field::Field<double>`
-- **Multi-field patterns** (`apps/wave2d/`): Multiple `PaddedBrick<double>` instances (u, v, lap), tuple-based increments (`WaveIncrements{du, dv}`), per-point Laplacian aggregate (`WaveLaplacian{lxx, lyy}`)
-- **Complex field patterns**: `ComplexField` = `std::vector<std::complex<double>>`, used in spectral methods via `ModelFieldRegistry`
-- **Backend differences**: CPU `std::vector<T>` storage in `LocalField<T>` vs GPU `pfc::gpu::GPUVector<T>`, `OPENPFC_HD` macro for host/device callable annotations
+- **Scalar field patterns** (`apps/heat3d/`): `pfc::data::Field<double, HostSpace>` constructed via `pfc::data::field_from_subdomain<double>(decomp, rank, halo)` or `pfc::data::field_from_subdomain_unpadded<double>(decomp, rank, halo)`
+- **Multi-field patterns** (`apps/wave2d/`): Multiple `pfc::data::Field<double, HostSpace>` instances (u, v, lap) with halo padding, tuple-based increments (`WaveIncrements{du, dv}`), per-point Laplacian aggregate (`WaveLaplacian{lxx, lyy}`)
+- **Complex field patterns**: `pfc::data::Field<std::complex<double>, HostSpace>`, used in spectral methods via `ModelFieldRegistry`
+- **Backend differences**: CPU `std::vector<T>` storage (HostSpace) vs GPU `pfc::gpu::GPUVector<T>` (CudaSpace/HipSpace), consistent `pfc::data::Field<T, MemorySpace>` interface across backends
 - **MPI coordination**: `PaddedHaloExchanger<T>` for non-blocking halo exchanges, face-only exchange patterns (6-direction), timing controlled by application driver
+
+*(Historical note: The legacy `pfc::field::LocalField<T>`, `pfc::field::PaddedBrick<T>`, and `pfc::field::Field<T>` types have been unified into `pfc::data::Field<T, MemorySpace>` with `halo=0` corresponding to `LocalField`, `halo=n` to `PaddedBrick`, and whole-domain usage to the original `Field`.)*
 
 ## State Representation Requirements
 
