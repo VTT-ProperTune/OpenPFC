@@ -203,34 +203,40 @@ TEST_CASE("Heat3D time integration pattern", "[field][heat3d_evidence]") {
  * Scalar field access: wrap owning `Field<T>` storage in a non-owning
  * `FieldView<T>` for operator inputs, and use `FieldOutput<T>` for RHS
  * buffers. Geometry comes from extents/spacing/origin accessors.
+ *
+ * Modern M2 migration pattern using pfc::data::Field (replaces LocalField/PaddedBrick):
+ *
+ * ```cpp
+ * #include <openpfc/kernel/data/grid_field.hpp>
+ * #include <openpfc/kernel/field/field_factory.hpp>
+ * #include <openpfc/kernel/field/state_access.hpp>
+ *
+ * // Storage migration: LocalField → pfc::data::Field (via field_from_subdomain_unpadded)
+ * pfc::data::Field<double, pfc::HostSpace> u =
+ *     pfc::data::field_from_subdomain_unpadded<double>(decomp, rank, 0);
+ *
+ * // State access: wrap in FieldView for operator inputs
+ * FieldView<double> u_view(u.data(), u.size(), u.local_size(),
+ *                          u.spacing(), u.origin());
+ *
+ * // RHS storage: use separate Field or vector with FieldOutput
+ * std::vector<double> du_storage(u.size());
+ * FieldOutput<double> du_out(du_storage.data(), du_storage.size());
+ * du_out.validate_no_alias(u_view);  // ensure distinct storage for safety
+ *
+ * // Coordinate access works identically via both types
+ * const double value = u_view.data()[u.idx(i, j, k)];
+ * du_out.data()[u.idx(i, j, k)] = compute_rhs(value);
+ * ```
+ *
+ * The FieldView pattern provides:
+ * 1. Backend-agnostic view (works with CPU and GPU storage)
+ * 2. Explicit read-only semantics (const access)
+ * 3. Shape validation via is_compatible_with()
+ * 4. Aliasing detection for output storage via validate_no_alias()
  */
 TEST_CASE("Heat3D FieldView and FieldOutput usage pattern", "[field][heat3d_evidence]") {
-    // Standard pattern (Field<T> owning storage):
-    // Field<double> u = pfc::data::field_from_subdomain<double>(decomp, rank, /*halo=*/0);
-    // const double* u_data = u.data();
-    // Int3 u_size = u.size3();
-    // Real3 u_spacing = u.spacing();
-    // Real3 u_origin = u.origin();
-
-    // FieldView / FieldOutput contracts for operator patterns:
-    // Field<double> u_local = pfc::data::field_from_subdomain<double>(decomp, rank, /*halo=*/0);
-    // FieldView<double> u_view(u_local.data(), u_local.size(), u_local.size3(),
-    //                          u_local.spacing(), u_local.origin());
-    // std::vector<double> du_storage(u_local.size());
-    // FieldOutput<double> du_out(du_storage.data(), du_storage.size());
-    // du_out.validate_no_alias(u_view);  // distinct RHS buffer
-    // const double* u_data = u_view.data();
-    // Int3 u_size = u_view.extents();
-    // Real3 u_spacing = u_view.spacing();
-    // Real3 u_origin = u_view.origin();
-
-    // The FieldView pattern provides:
-    // 1. Backend-agnostic view (works with CPU and GPU storage)
-    // 2. Explicit read-only semantics (const access)
-    // 3. Shape validation via is_compatible_with()
-    // 4. Aliasing detection for output storage via validate_no_alias()
-
-    // For this test, demonstrate the pattern with simple contiguous data
+    // For this test, demonstrate the migration pattern with simple contiguous data
     std::vector<double> u_data(64, 1.0);
     Int3 extents{4, 4, 4};
     Real3 spacing{1.0, 1.0, 1.0};
