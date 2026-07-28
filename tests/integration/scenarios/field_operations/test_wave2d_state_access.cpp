@@ -277,38 +277,30 @@ TEST_CASE("Wave2D coupled time integration pattern", "[field][wave2d_evidence]")
 }
 
 /**
- * @brief Document migration path from WaveIncrements to FieldBundle
+ * @brief Document data::Field multi-field coupling pattern with FieldBundle
  *
- * Multi-field migration: wrap each owning field in `FieldView`, group with
+ * Multi-field coupling: wrap each field in `FieldView`, group with
  * `FieldBundle`, and use `get<I>()` plus `validate_shapes()` for coupled
- * systems. RHS buffers use `FieldOutput` with `validate_no_alias` when
+ * systems. Fields are constructed using `field_from_subdomain` from the
+ * decomposition geometry (as shown in wave2d_fd.cpp and heat3d_fd.cpp).
+ * RHS buffers use `FieldOutput` with `validate_no_alias` when
  * storage must be distinct from inputs.
+ *
+ * Field construction pattern (data::Field):
+ * pfc::data::Field<double, pfc::HostSpace> u =
+ *     pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+ * pfc::data::Field<double, pfc::HostSpace> v =
+ *     pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+ * pfc::data::Field<double, pfc::HostSpace> lap =
+ *     pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+ *
+ * The FieldBundle pattern provides:
+ * 1. Coordinated access to multiple fields via get<I>()
+ * 2. Shape validation across all fields in the bundle
+ * 3. Type-safe indexed access
+ * 4. Backend-agnostic views for each field
  */
-TEST_CASE("Wave2D migration path from multi-field to FieldBundle", "[field][wave2d_evidence]") {
-    // Old pattern (separate PaddedBrick):
-    // PaddedBrick<double> u(decomp, rank, halo_width);
-    // PaddedBrick<double> v(decomp, rank, halo_width);
-    // PaddedBrick<double> lap(decomp, rank, halo_width);
-    //
-    // Usage:
-    // for_each_owned(u, [&](int i, int j, int k) {
-    //     u(i, j, k) += dt * v(i, j, k);
-    //     v(i, j, k) += dt * k^2 * lap(i, j, k);
-    // });
-
-    // New pattern (FieldBundle):
-    // FieldBundle<FieldView<double>, FieldView<double>, FieldView<double>>
-    //     wave_bundle(u_view, v_view, lap_view);
-    // REQUIRE(wave_bundle.validate_shapes());
-    // auto& u = wave_bundle.get<0>();
-    // auto& v = wave_bundle.get<1>();
-    // auto& lap = wave_bundle.get<2>();
-
-    // The FieldBundle pattern provides:
-    // 1. Coordinated access to multiple fields via get<I>()
-    // 2. Shape validation across all fields in the bundle
-    // 3. Type-safe indexed access
-    // 4. Backend-agnostic views for each field
+TEST_CASE("Wave2D multi-field coupling with data::Field pattern", "[field][wave2d_evidence]") {
 
     const int nx = 4;
     const int ny = 4;
