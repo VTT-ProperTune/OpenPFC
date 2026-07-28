@@ -197,7 +197,7 @@ struct WaveIncrements {
 ```cpp
 // include/openpfc/kernel/simulation/steppers/euler.hpp
 template <class... Ts, class Eval, class Model>
-[[nodiscard]] auto create(std::tuple<pfc::field::LocalField<Ts> &...> fields,
+[[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields,
                           Eval &eval, const Model &model, double dt) {
   constexpr std::size_t N = sizeof...(Ts);
   // ... build sizes array ...
