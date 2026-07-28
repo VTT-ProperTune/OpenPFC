@@ -442,7 +442,6 @@ inline auto to_coords(const World &world, const Int3 &indices) noexcept {
  * Space complexity: O(1)
  *
  * @see to_coords() for inverse transformation (grid → physical)
- * @see DiscreteField::interpolate() for higher-order interpolation
  */
 inline auto to_indices(const World &world, const Real3 &coords) noexcept {
   return pfc::domain::to_indices(get_coordinate_system(world), coords);
