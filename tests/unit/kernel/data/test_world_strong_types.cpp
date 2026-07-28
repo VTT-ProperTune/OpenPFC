@@ -12,9 +12,8 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
 
 using Catch::Approx;
 
@@ -28,26 +27,26 @@ TEST_CASE("World creation with strong types - basic functionality",
     PhysicalOrigin origin({0.0, 0.0, 0.0});
     GridSpacing spacing({1.0, 1.0, 1.0});
 
-    // Act: Create world
-    auto world =
-        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    // Act: Create domain
+    auto domain =
+        domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
-    // Assert: Verify world properties
-    auto world_size = get_size(world);
-    auto world_spacing = get_spacing(world);
-    auto world_origin = get_origin(world);
+    // Assert: Verify domain properties
+    auto domain_size = domain::get_size(domain);
+    auto domain_spacing = domain::get_spacing(domain);
+    auto domain_origin = domain::get_origin(domain);
 
-    REQUIRE(world_size[0] == 64);
-    REQUIRE(world_size[1] == 64);
-    REQUIRE(world_size[2] == 64);
+    REQUIRE(domain_size[0] == 64);
+    REQUIRE(domain_size[1] == 64);
+    REQUIRE(domain_size[2] == 64);
 
-    REQUIRE(world_spacing[0] == Approx(1.0));
-    REQUIRE(world_spacing[1] == Approx(1.0));
-    REQUIRE(world_spacing[2] == Approx(1.0));
+    REQUIRE(domain_spacing[0] == Approx(1.0));
+    REQUIRE(domain_spacing[1] == Approx(1.0));
+    REQUIRE(domain_spacing[2] == Approx(1.0));
 
-    REQUIRE(world_origin[0] == Approx(0.0));
-    REQUIRE(world_origin[1] == Approx(0.0));
-    REQUIRE(world_origin[2] == Approx(0.0));
+    REQUIRE(domain_origin[0] == Approx(0.0));
+    REQUIRE(domain_origin[1] == Approx(0.0));
+    REQUIRE(domain_origin[2] == Approx(0.0));
   }
 
   SECTION("Create with non-zero origin") {
@@ -55,13 +54,13 @@ TEST_CASE("World creation with strong types - basic functionality",
     PhysicalOrigin origin({-5.0, -5.0, -5.0});
     GridSpacing spacing({0.5, 0.5, 0.5});
 
-    auto world =
-        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain =
+        domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
-    auto world_origin = get_origin(world);
-    REQUIRE(world_origin[0] == Approx(-5.0));
-    REQUIRE(world_origin[1] == Approx(-5.0));
-    REQUIRE(world_origin[2] == Approx(-5.0));
+    auto domain_origin = domain::get_origin(domain);
+    REQUIRE(domain_origin[0] == Approx(-5.0));
+    REQUIRE(domain_origin[1] == Approx(-5.0));
+    REQUIRE(domain_origin[2] == Approx(-5.0));
   }
 
   SECTION("Create with non-uniform spacing") {
@@ -69,19 +68,19 @@ TEST_CASE("World creation with strong types - basic functionality",
     PhysicalOrigin origin({0.0, 0.0, 0.0});
     GridSpacing spacing({0.1, 0.2, 0.4});
 
-    auto world =
-        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain =
+        domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
-    auto world_size = get_size(world);
-    auto world_spacing = get_spacing(world);
+    auto domain_size = domain::get_size(domain);
+    auto domain_spacing = domain::get_spacing(domain);
 
-    REQUIRE(world_size[0] == 100);
-    REQUIRE(world_size[1] == 50);
-    REQUIRE(world_size[2] == 25);
+    REQUIRE(domain_size[0] == 100);
+    REQUIRE(domain_size[1] == 50);
+    REQUIRE(domain_size[2] == 25);
 
-    REQUIRE(world_spacing[0] == Approx(0.1));
-    REQUIRE(world_spacing[1] == Approx(0.2));
-    REQUIRE(world_spacing[2] == Approx(0.4));
+    REQUIRE(domain_spacing[0] == Approx(0.1));
+    REQUIRE(domain_spacing[1] == Approx(0.2));
+    REQUIRE(domain_spacing[2] == Approx(0.4));
   }
 }
 
@@ -95,14 +94,14 @@ TEST_CASE("Strong types prevent parameter confusion",
     PhysicalOrigin origin({0.0, 0.0, 0.0});
     GridSpacing spacing({1.0, 1.0, 1.0});
 
-    auto world =
-        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
-    REQUIRE(get_size(world)[0] == 64);
+    auto domain =
+        domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    REQUIRE(domain::get_size(domain)[0] == 64);
 
     // NOTE: The following would NOT compile if parameters are swapped:
-    // auto bad = domain::create_world(GridSize(spacing), PhysicalOrigin(size),
+    // auto bad = domain::create(GridSize(spacing), PhysicalOrigin(size),
     // GridSpacing(origin));  // Compile error! auto bad2 =
-    // domain::create_world(GridSize(origin), PhysicalOrigin(spacing), GridSpacing(size));
+    // domain::create(GridSize(origin), PhysicalOrigin(spacing), GridSpacing(size));
     // // Compile error!
     //
     // This is the key benefit - type system catches parameter order mistakes
@@ -146,12 +145,12 @@ TEST_CASE("Backward compatibility with raw types",
     Real3 offset = {0.0, 0.0, 0.0};
     Real3 spacing = {1.0, 1.0, 1.0};
 
-    auto world =
-        domain::create_world(GridSize(size), PhysicalOrigin(offset), GridSpacing(spacing));
+    auto domain =
+        domain::create(GridSize(size), PhysicalOrigin(offset), GridSpacing(spacing));
 
-    REQUIRE(get_size(world)[0] == 32);
-    REQUIRE(get_spacing(world)[0] == Approx(1.0));
-    REQUIRE(get_origin(world)[0] == Approx(0.0));
+    REQUIRE(domain::get_size(domain)[0] == 32);
+    REQUIRE(domain::get_spacing(domain)[0] == Approx(1.0));
+    REQUIRE(domain::get_origin(domain)[0] == Approx(0.0));
   }
 
   SECTION("Strong types explicitly convert to raw types") {
@@ -172,10 +171,10 @@ TEST_CASE("Backward compatibility with raw types",
   SECTION("Strong-type create overload") {
     GridSize size({64, 64, 64});
 
-    auto world = domain::create_world(size, PhysicalOrigin({0.0, 0.0, 0.0}),
+    auto domain = domain::create(size, PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
 
-    REQUIRE(get_size(world)[0] == 64);
+    REQUIRE(domain::get_size(domain)[0] == 64);
   }
 }
 
@@ -217,28 +216,28 @@ TEST_CASE("Strong types with world helper functions",
           "[world][strong_types][helpers]") {
   using namespace pfc;
 
-  SECTION("Works with domain::create_world_uniform() helper") {
+  SECTION("Works with domain::create() helper for uniform grid") {
     // Create uniform grid using helper
-    auto world1 = domain::create_world_uniform(64);
+    auto domain1 = domain::create(Int3({64, 64, 64}));
 
     // Should be able to query with get_ functions
-    REQUIRE(get_size(world1)[0] == 64);
-    REQUIRE(get_spacing(world1)[0] == Approx(1.0));
+    REQUIRE(domain::get_size(domain1)[0] == 64);
+    REQUIRE(domain::get_spacing(domain1)[0] == Approx(1.0));
 
     // Create with spacing using helper
-    auto world2 = domain::create_world_uniform(32, 0.5);
+    auto domain2 = domain::with_spacing(Int3({32, 32, 32}), Real3({0.5, 0.5, 0.5}));
 
-    REQUIRE(get_size(world2)[0] == 32);
-    REQUIRE(get_spacing(world2)[0] == Approx(0.5));
+    REQUIRE(domain::get_size(domain2)[0] == 32);
+    REQUIRE(domain::get_spacing(domain2)[0] == Approx(0.5));
   }
 
-  SECTION("Works with domain::create_world_from_bounds() helper") {
+  SECTION("Works with domain::from_bounds() helper") {
     // Create from physical bounds
-    auto world = domain::create_world_from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});
+    auto domain = domain::from_bounds(Int3({100, 100, 100}), Real3({0, 0, 0}), Real3({10, 10, 10}));
 
-    REQUIRE(get_size(world)[0] == 100);
-    REQUIRE(get_spacing(world)[0] == Approx(0.1));
-    REQUIRE(get_origin(world)[0] == Approx(0.0));
+    REQUIRE(domain::get_size(domain)[0] == 100);
+    REQUIRE(domain::get_spacing(domain)[0] == Approx(0.1));
+    REQUIRE(domain::get_origin(domain)[0] == Approx(0.0));
   }
 }
 
@@ -251,23 +250,23 @@ TEST_CASE("Strong types coordinate transformation verification",
     PhysicalOrigin origin({-32.0, -32.0, -32.0});
     GridSpacing spacing({1.0, 1.0, 1.0});
 
-    auto world =
-        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain =
+        domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     // Index (0, 0, 0) should map to origin
-    Real3 coords = to_coords(world, {0, 0, 0});
+    Real3 coords = domain::to_coords(domain, {0, 0, 0});
     REQUIRE(coords[0] == Approx(-32.0));
     REQUIRE(coords[1] == Approx(-32.0));
     REQUIRE(coords[2] == Approx(-32.0));
 
     // Index (32, 32, 32) should map to (0, 0, 0)
-    coords = to_coords(world, {32, 32, 32});
+    coords = domain::to_coords(domain, {32, 32, 32});
     REQUIRE(coords[0] == Approx(0.0));
     REQUIRE(coords[1] == Approx(0.0));
     REQUIRE(coords[2] == Approx(0.0));
 
     // Index (63, 63, 63) should map to origin + 63*spacing
-    coords = to_coords(world, {63, 63, 63});
+    coords = domain::to_coords(domain, {63, 63, 63});
     REQUIRE(coords[0] == Approx(31.0));
     REQUIRE(coords[1] == Approx(31.0));
     REQUIRE(coords[2] == Approx(31.0));
@@ -315,16 +314,16 @@ TEST_CASE("Documentation examples compile and work",
     PhysicalOrigin origin({-128.0, -128.0, -128.0});
     GridSpacing spacing({1.0, 1.0, 1.0});
 
-    auto world =
-        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain =
+        domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     // Verify domain properties
-    REQUIRE(get_size(world)[0] == 256);
-    REQUIRE(get_spacing(world)[0] == Approx(1.0));
+    REQUIRE(domain::get_size(domain)[0] == 256);
+    REQUIRE(domain::get_spacing(domain)[0] == Approx(1.0));
 
     // Physical domain extends from -128 to 127
-    Real3 lower_corner = to_coords(world, {0, 0, 0});
-    Real3 upper_corner = to_coords(world, {255, 255, 255});
+    Real3 lower_corner = domain::to_coords(domain, {0, 0, 0});
+    Real3 upper_corner = domain::to_coords(domain, {255, 255, 255});
 
     REQUIRE(lower_corner[0] == Approx(-128.0));
     REQUIRE(upper_corner[0] == Approx(127.0));
@@ -335,12 +334,12 @@ TEST_CASE("Documentation examples compile and work",
     PhysicalOrigin origin({-5.0, -5.0, -5.0});
     GridSpacing spacing({0.1, 0.1, 0.1});
 
-    auto world =
-        domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto domain =
+        domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
     // Domain extends from -5.0 to 4.9 in each dimension
-    Real3 lower = to_coords(world, {0, 0, 0});
-    Real3 upper = to_coords(world, {99, 99, 99});
+    Real3 lower = domain::to_coords(domain, {0, 0, 0});
+    Real3 upper = domain::to_coords(domain, {99, 99, 99});
 
     REQUIRE(lower[0] == Approx(-5.0));
     REQUIRE(upper[0] == Approx(4.9));
