@@ -16,9 +16,8 @@
  *
  * can be written in user code (compact-driver style) and dispatched to a
  * single axpy in field operators. The underlying
- * field types (`pfc::data::Field<double>`, `PaddedBrick<double>`,
- * `pfc::sim::DuField<G, Eval>`, …) each provide a matching
- * `operator*(double, …)` returning this proxy.
+ * field types (`pfc::data::Field<double>`, `pfc::sim::DuField<G, Eval>`, …)
+ * each provide a matching `operator*(double, …)` returning this proxy.
  *
  * Lifetime: the proxy is intended to be a transient temporary on the same
  * statement (`u += dt * du;`).
