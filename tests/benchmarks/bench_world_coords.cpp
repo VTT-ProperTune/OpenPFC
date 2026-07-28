@@ -26,7 +26,6 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/world.hpp>
 
 using namespace pfc;
@@ -38,19 +37,19 @@ using namespace pfc::types;
 
 TEST_CASE("World coordinate transformations - microbenchmarks",
           "[world][coords][benchmark]") {
-  // Setup: Create a typical simulation world
+  // Setup: Create a typical simulation domain
   const Int3 size = {128, 128, 128};
   const Real3 origin = {0.0, 0.0, 0.0};
   const Real3 spacing = {0.1, 0.1, 0.1};
-  const auto world =
-      pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+  const pfc::Domain domain =
+      pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
 
   // Test indices - use values that prevent compiler optimizations
   volatile int idx_base = 42; // volatile prevents constant folding
   const Int3 test_indices = {idx_base, idx_base + 10, idx_base + 20};
 
   SECTION("to_coords - index to physical coordinate conversion") {
-    BENCHMARK("to_coords (single call)") { return to_coords(world, test_indices); };
+    BENCHMARK("to_coords (single call)") { return pfc::domain::to_coords(domain, test_indices); };
 
     INFO("Expected: ~1-5 ns per call");
     INFO("This should inline to: origin[i] + indices[i] * spacing[i]");
@@ -59,7 +58,7 @@ TEST_CASE("World coordinate transformations - microbenchmarks",
   SECTION("to_indices - physical coordinate to index conversion") {
     const Real3 test_coords = {4.2, 5.3, 6.4};
 
-    BENCHMARK("to_indices (single call)") { return to_indices(world, test_coords); };
+    BENCHMARK("to_indices (single call)") { return pfc::domain::to_indices(domain, test_coords); };
 
     INFO("Expected: ~1-5 ns per call");
     INFO("This should inline to: (coords[i] - origin[i]) / spacing[i]");
@@ -67,8 +66,8 @@ TEST_CASE("World coordinate transformations - microbenchmarks",
 
   SECTION("Round-trip transformation") {
     BENCHMARK("to_coords → to_indices (round-trip)") {
-      const auto coords = to_coords(world, test_indices);
-      return to_indices(world, coords);
+      const auto coords = pfc::domain::to_coords(domain, test_indices);
+      return pfc::domain::to_indices(domain, coords);
     };
 
     INFO("Expected: ~2-10 ns per round-trip");
@@ -82,42 +81,42 @@ TEST_CASE("World coordinate transformations - microbenchmarks",
 
 TEST_CASE("World accessor functions - microbenchmarks",
           "[world][accessors][benchmark]") {
-  const auto world =
-      pfc::domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({1.0, 2.0, 3.0}),
+  const pfc::Domain domain =
+      pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({1.0, 2.0, 3.0}),
                     GridSpacing({0.1, 0.1, 0.1}));
 
   SECTION("get_spacing (all dimensions)") {
-    BENCHMARK("get_spacing (Real3)") { return get_spacing(world); };
+    BENCHMARK("get_spacing (Real3)") { return pfc::domain::get_spacing(domain); };
 
     INFO("Expected: <1 ns (should inline to return m_cs.m_spacing)");
   }
 
   SECTION("get_spacing (single dimension)") {
-    BENCHMARK("get_spacing (dimension 0)") { return get_spacing(world, 0); };
+    BENCHMARK("get_spacing (dimension 0)") { return pfc::domain::get_spacing(domain, 0); };
 
     INFO("Expected: <1 ns (should inline to return m_cs.m_spacing[0])");
   }
 
   SECTION("get_origin (all dimensions)") {
-    BENCHMARK("get_origin (Real3)") { return get_origin(world); };
+    BENCHMARK("get_origin (Real3)") { return pfc::domain::get_origin(domain); };
 
     INFO("Expected: <1 ns (should inline to return m_cs.m_offset)");
   }
 
   SECTION("get_origin (single dimension)") {
-    BENCHMARK("get_origin (dimension 0)") { return get_origin(world, 0); };
+    BENCHMARK("get_origin (dimension 0)") { return pfc::domain::get_origin(domain, 0); };
 
     INFO("Expected: <1 ns (should inline to return m_cs.m_offset[0])");
   }
 
   SECTION("get_size") {
-    BENCHMARK("get_size") { return get_size(world); };
+    BENCHMARK("get_size") { return pfc::domain::get_size(domain); };
 
     INFO("Expected: <1 ns (should inline to return m_size)");
   }
 
   SECTION("get_total_size") {
-    BENCHMARK("get_total_size") { return get_total_size(world); };
+    BENCHMARK("get_total_size") { return pfc::domain::get_total_size(domain); };
 
     INFO("Expected: ~1-2 ns (size[0] * size[1] * size[2])");
   }
@@ -169,10 +168,10 @@ TEST_CASE("Domain direct operations - microbenchmarks", "[domain][benchmark]") {
 
 TEST_CASE("World operations in loops - realistic usage patterns",
           "[world][loop][benchmark]") {
-  const auto world =
-      pfc::domain::create_world(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  const pfc::Domain domain =
+      pfc::domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
                     GridSpacing({0.1, 0.1, 0.1}));
-  const auto size = get_size(world);
+  const auto size = pfc::domain::get_size(domain);
 
   SECTION("Loop over all grid points - coordinate conversion") {
     BENCHMARK("Convert all grid indices to coordinates") {
@@ -180,7 +179,7 @@ TEST_CASE("World operations in loops - realistic usage patterns",
       for (int k = 0; k < size[2]; ++k) {
         for (int j = 0; j < size[1]; ++j) {
           for (int i = 0; i < size[0]; ++i) {
-            const auto coords = to_coords(world, {i, j, k});
+            const auto coords = pfc::domain::to_coords(domain, {i, j, k});
             sum += coords[0] + coords[1] + coords[2];
           }
         }
@@ -201,7 +200,7 @@ TEST_CASE("World operations in loops - realistic usage patterns",
       for (int k = 0; k < size[2]; ++k) {
         for (int j = 0; j < size[1]; ++j) {
           for (int i = 0; i < size[0]; ++i) {
-            const auto pos = to_coords(world, {i, j, k});
+            const auto pos = pfc::domain::to_coords(domain, {i, j, k});
             const double dx = pos[0] - center[0];
             const double dy = pos[1] - center[1];
             const double dz = pos[2] - center[2];
@@ -225,7 +224,7 @@ TEST_CASE("World operations in loops - realistic usage patterns",
         const int i = (n * 37) % size[0];
         const int j = (n * 41) % size[1];
         const int k = (n * 43) % size[2];
-        const auto coords = to_coords(world, {i, j, k});
+        const auto coords = pfc::domain::to_coords(domain, {i, j, k});
         sum += coords[0] + coords[1] + coords[2];
       }
       return sum;
@@ -261,12 +260,12 @@ TEST_CASE("World zero-cost abstraction validation",
   }
 
   SECTION("World abstraction (should match baseline)") {
-    const auto world =
-        pfc::domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+    const pfc::Domain domain =
+        pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                       GridSpacing({0.1, 0.1, 0.1}));
     const Int3 indices = {42, 53, 64};
 
-    BENCHMARK("World to_coords (abstraction)") { return to_coords(world, indices); };
+    BENCHMARK("World to_coords (abstraction)") { return pfc::domain::to_coords(domain, indices); };
 
     INFO("Should be within ~10% of baseline if properly inlined");
     INFO("Significant difference indicates abstraction overhead");
@@ -280,10 +279,10 @@ TEST_CASE("World zero-cost abstraction validation",
 TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]") {
   SECTION("Sequential world creation and destruction") {
     BENCHMARK("Create and destroy World (stack)") {
-      auto world = pfc::domain::create_world(GridSize({128, 128, 128}),
+      auto domain = pfc::domain::create(GridSize({128, 128, 128}),
                                  PhysicalOrigin({128.0, 128.0, 128.0}),
                                  GridSpacing({128.0, 128.0, 128.0}));
-      return get_total_size(world);
+      return pfc::domain::get_total_size(domain);
     };
 
     INFO("Measures constructor/destructor overhead");
@@ -291,12 +290,12 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
   }
 
   SECTION("World copy performance") {
-    const auto world1 =
-        pfc::domain::create_world(GridSize({128}), PhysicalOrigin({128}), GridSpacing({128}));
+    const pfc::Domain domain1 =
+        pfc::domain::create(GridSize({128}), PhysicalOrigin({128}), GridSpacing({128}));
 
     BENCHMARK("Copy World object") {
-      auto world2 = world1; // Copy constructor
-      return get_total_size(world2);
+      auto domain2 = domain1; // Copy constructor
+      return pfc::domain::get_total_size(domain2);
     };
 
     INFO("Measures copy constructor performance");
@@ -304,14 +303,14 @@ TEST_CASE("World cache and memory access patterns", "[world][memory][benchmark]"
   }
 
   SECTION("World equality comparison") {
-    const auto world1 =
-        pfc::domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+    const pfc::Domain domain1 =
+        pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                       GridSpacing({0.1, 0.1, 0.1}));
-    const auto world2 =
-        pfc::domain::create_world(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
+    const pfc::Domain domain2 =
+        pfc::domain::create(GridSize({128, 128, 128}), PhysicalOrigin({0.0, 0.0, 0.0}),
                       GridSpacing({0.1, 0.1, 0.1}));
 
-    BENCHMARK("World equality comparison") { return world1 == world2; };
+    BENCHMARK("World equality comparison") { return domain1 == domain2; };
 
     INFO("Measures comparison operator performance");
     INFO("Expected: <10 ns (compare 3 Real3 + 1 Int3)");

@@ -28,7 +28,7 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
@@ -115,8 +115,8 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   const Real3 spacing = {1.0, 1.0, 1.0};
 
   SECTION("Euler stepper - FD gradient - heat equation - 32³") {
-    auto world = pfc::domain::create_world(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
@@ -130,8 +130,8 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("RK2 midpoint stepper - FD gradient - heat equation - 32³") {
-    auto world = pfc::domain::create_world(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
@@ -150,8 +150,8 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("RK4 classical stepper - FD gradient - heat equation - 32³") {
-    auto world = pfc::domain::create_world(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
@@ -165,8 +165,8 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("Euler stepper - FD gradient - heat equation - 64³") {
-    auto world = pfc::domain::create_world(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
@@ -180,8 +180,8 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("RK2 midpoint stepper - FD gradient - heat equation - 64³") {
-    auto world = pfc::domain::create_world(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
@@ -200,8 +200,8 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("RK4 classical stepper - FD gradient - heat equation - 64³") {
-    auto world = pfc::domain::create_world(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size_64), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
@@ -215,8 +215,8 @@ TEST_CASE("Time integration - single-step timing", "[time_integration][benchmark
   }
 
   SECTION("RK4 classical stepper - FD gradient - wave equation - 32³") {
-    auto world = pfc::domain::create_world(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size_32), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<WaveGrads>(field, /*order=*/2);
     WaveEquation model(1.0);
@@ -242,8 +242,8 @@ TEST_CASE("Time integration - full simulation timing", "[time_integration][bench
   const Real3 spacing = {1.0, 1.0, 1.0};
 
   SECTION("Euler vs RK2 vs RK4 - heat equation - FD gradient") {
-    auto world = pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
@@ -304,9 +304,9 @@ TEST_CASE("Time integration - memory usage", "[time_integration][benchmark]") {
   const std::size_t local_size = 32 * 32 * 32;
 
   SECTION("Stepper object sizes") {
-    auto world = pfc::domain::create_world(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+    auto domain = pfc::domain::create(GridSize({32, 32, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                GridSpacing({1.0, 1.0, 1.0}));
-    auto decomp = decomposition::create(world, 1);
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
     auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
     HeatEquation model(1.0);
@@ -336,9 +336,9 @@ TEST_CASE("Time integration - memory usage", "[time_integration][benchmark]") {
       const Int3 size = {static_cast<int>(std::cbrt(sz)),
                          static_cast<int>(std::cbrt(sz)),
                          static_cast<int>(std::cbrt(sz))};
-      auto world = pfc::domain::create_world(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
+      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
                                  GridSpacing({1.0, 1.0, 1.0}));
-      auto decomp = decomposition::create(world, 1);
+      auto decomp = pfc::decomposition::create(domain, 1);
       auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
       auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
       HeatEquation model(1.0);
@@ -383,8 +383,8 @@ TEST_CASE("Time integration - scaling with problem size", "[time_integration][be
 
   SECTION("Euler stepper - FD gradient - heat equation - scaling") {
     for (const auto& size : grid_sizes) {
-      auto world = pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
-      auto decomp = decomposition::create(world, 1);
+      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+      auto decomp = pfc::decomposition::create(domain, 1);
       auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
       auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
       HeatEquation model(1.0);
@@ -402,8 +402,8 @@ TEST_CASE("Time integration - scaling with problem size", "[time_integration][be
 
   SECTION("RK2 midpoint stepper - FD gradient - heat equation - scaling") {
     for (const auto& size : grid_sizes) {
-      auto world = pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
-      auto decomp = decomposition::create(world, 1);
+      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+      auto decomp = pfc::decomposition::create(domain, 1);
       auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
       auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
       HeatEquation model(1.0);
@@ -426,8 +426,8 @@ TEST_CASE("Time integration - scaling with problem size", "[time_integration][be
 
   SECTION("RK4 classical stepper - FD gradient - heat equation - scaling") {
     for (const auto& size : grid_sizes) {
-      auto world = pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
-      auto decomp = decomposition::create(world, 1);
+      auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+      auto decomp = pfc::decomposition::create(domain, 1);
       auto field = pfc::data::field_from_subdomain_unpadded<double>(decomp, 0, /*halo_width=*/1);
       auto eval = pfc::field::create<HeatGrads>(field, /*order=*/2);
       HeatEquation model(1.0);
@@ -457,11 +457,11 @@ TEST_CASE("Time integration - spectral gradient backend", "[time_integration][be
 
   SECTION("Spectral vs FD gradient - RK4 stepper - heat equation") {
     // Spectral gradient setup with FFT
-    auto world = pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = fft::create(decomp);
 
-    auto field = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
+    auto field = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
     auto spectral_eval = pfc::field::create<HeatGrads>(field, fft);
 
     HeatEquation model(1.0);
@@ -485,11 +485,11 @@ TEST_CASE("Time integration - spectral gradient backend", "[time_integration][be
   }
 
   SECTION("Spectral vs FD gradient - Euler stepper - heat equation") {
-    auto world = pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = fft::create(decomp);
 
-    auto field = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
+    auto field = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
     auto spectral_eval = pfc::field::create<HeatGrads>(field, fft);
 
     HeatEquation model(1.0);
@@ -511,11 +511,11 @@ TEST_CASE("Time integration - spectral gradient backend", "[time_integration][be
   }
 
   SECTION("Spectral vs FD gradient - RK2 midpoint stepper - heat equation") {
-    auto world = pfc::domain::create_world(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
-    auto decomp = decomposition::create(world, 1);
+    auto domain = pfc::domain::create(GridSize(size), PhysicalOrigin(origin), GridSpacing(spacing));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = fft::create(decomp);
 
-    auto field = pfc::data::field_from_inbox<double>(pfc::world::get_coordinate_system(world), fft.get_inbox_bounds());
+    auto field = pfc::data::field_from_inbox<double>(domain, fft.get_inbox_bounds());
     auto spectral_eval = pfc::field::create<HeatGrads>(field, fft);
 
     HeatEquation model(1.0);
