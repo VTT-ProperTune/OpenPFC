@@ -57,6 +57,7 @@
 #include <type_traits>
 #include <utility>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/padded_brick.hpp>
 
 namespace pfc::field {
@@ -307,6 +308,170 @@ inline void for_each_border(const PaddedBrick<T> &brick, int r, Fn &&fn) {
 
   if (nx <= 2 * r || ny <= 2 * r || nz <= 2 * r) {
     for_each_owned(brick, fn);
+    return;
+  }
+
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < r; ++i) fn(i, j, k);
+      for (int i = nx - r; i < nx; ++i) fn(i, j, k);
+    }
+  }
+
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < r; ++j) {
+      for (int i = r; i < nx - r; ++i) fn(i, j, k);
+    }
+    for (int j = ny - r; j < ny; ++j) {
+      for (int i = r; i < nx - r; ++i) fn(i, j, k);
+    }
+  }
+
+  for (int k = 0; k < r; ++k) {
+    for (int j = r; j < ny - r; ++j) {
+      for (int i = r; i < nx - r; ++i) fn(i, j, k);
+    }
+  }
+  for (int k = nz - r; k < nz; ++k) {
+    for (int j = r; j < ny - r; ++j) {
+      for (int i = r; i < nx - r; ++i) fn(i, j, k);
+    }
+  }
+}
+
+// =============================================================================
+// data::Field overloads (M2 migration)
+// =============================================================================
+
+/**
+ * @brief Iterate every owned cell of `field`, passing each as a
+ *        `pfc::Int3{i, j, k}` to `fn`.
+ *
+ * This overload works with `pfc::data::Field<T, HostSpace>` and delegates
+ * to the field's `for_each_owned` member function, transforming the
+ * `(int,i,int j,int k)` callback into a `pfc::Int3` aggregate.
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each(const pfc::data::Field<T, MemorySpace> &field, Fn &&fn) {
+  field.for_each_owned([&](int i, int j, int k) { fn(pfc::Int3{i, j, k}); });
+}
+
+/**
+ * @brief OMP-parallel `for_each` for data::Field.
+ *
+ * Note: This serial wrapper is provided for API compatibility.
+ * For true parallel iteration, use the field's native iteration methods
+ * or custom OpenMP loops.
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each_omp(const pfc::data::Field<T, MemorySpace> &field, Fn &&fn) {
+  // Serialize for now; Field::for_each_owned is not parallelized
+  for_each(field, std::forward<Fn>(fn));
+}
+
+/**
+ * @brief Iterate every owned cell (delegates to Field::for_each_owned).
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each_owned(const pfc::data::Field<T, MemorySpace> &field, Fn &&fn) {
+  field.for_each_owned(std::forward<Fn>(fn));
+}
+
+/**
+ * @brief OMP-parallel `for_each_owned` for data::Field (serial wrapper).
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each_owned_omp(const pfc::data::Field<T, MemorySpace> &field,
+                               Fn &&fn) {
+  // Serialize for now
+  for_each_owned(field, std::forward<Fn>(fn));
+}
+
+/**
+ * @brief Iterate the inner region `[r, nx-r) x [r, ny-r) x [r, nz-r)`.
+ *
+ * Delegates to the field's own iteration logic with explicit `r` parameter.
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each_inner(const pfc::data::Field<T, MemorySpace> &field, int r,
+                           Fn &&fn) {
+  const auto sz = field.local_size();
+  const int nx = sz[0];
+  const int ny = sz[1];
+  const int nz = sz[2];
+  if (nx <= 2 * r || ny <= 2 * r || nz <= 2 * r) return;
+
+  for (int k = r; k < nz - r; ++k) {
+    for (int j = r; j < ny - r; ++j) {
+      for (int i = r; i < nx - r; ++i) {
+        fn(i, j, k);
+      }
+    }
+  }
+}
+
+/**
+ * @brief OMP-parallel `for_each_inner` for data::Field (serial wrapper).
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each_inner_omp(const pfc::data::Field<T, MemorySpace> &field, int r,
+                               Fn &&fn) {
+  // Serialize for now
+  for_each_inner(field, r, std::forward<Fn>(fn));
+}
+
+/**
+ * @brief Iterate every owned cell with physical coordinates (mutable).
+ *
+ * Delegates to Field::apply which already provides coordinate-based
+ * iteration over every owned cell.
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each_coords(pfc::data::Field<T, MemorySpace> &field, Fn &&fn) {
+  const auto sz = field.local_size();
+  for (int k = 0; k < sz[2]; ++k) {
+    for (int j = 0; j < sz[1]; ++j) {
+      for (int i = 0; i < sz[0]; ++i) {
+        const auto c = field.coords(i, j, k);
+        detail::invoke_coords_mutable_(std::forward<Fn>(fn), c[0], c[1], c[2],
+                                       field(i, j, k));
+      }
+    }
+  }
+}
+
+/**
+ * @brief Iterate every owned cell with physical coordinates (const).
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each_coords(const pfc::data::Field<T, MemorySpace> &field, Fn &&fn) {
+  const auto sz = field.local_size();
+  for (int k = 0; k < sz[2]; ++k) {
+    for (int j = 0; j < sz[1]; ++j) {
+      for (int i = 0; i < sz[0]; ++i) {
+        const auto c = field.coords(i, j, k);
+        detail::invoke_coords_value_(std::forward<Fn>(fn), c[0], c[1], c[2],
+                                     field(i, j, k));
+      }
+    }
+  }
+}
+
+/**
+ * @brief Iterate the border region (owned minus interior).
+ *
+ * Border implementation for data::Field that complements `for_each_inner`.
+ */
+template <typename T, typename MemorySpace, class Fn>
+inline void for_each_border(const pfc::data::Field<T, MemorySpace> &field, int r,
+                            Fn &&fn) {
+  const auto sz = field.local_size();
+  const int nx = sz[0];
+  const int ny = sz[1];
+  const int nz = sz[2];
+
+  if (nx <= 2 * r || ny <= 2 * r || nz <= 2 * r) {
+    for_each_owned(field, fn);
     return;
   }
 
