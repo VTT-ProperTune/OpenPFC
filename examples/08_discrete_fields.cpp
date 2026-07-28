@@ -9,6 +9,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 using namespace pfc;
 using namespace pfc::data;
@@ -17,17 +18,16 @@ using namespace pfc::utils;
 /**
  * \example 08_discrete_fields.cpp
  *
- * The new `pfc::data::Field<T>` is the canonical field container that replaces
- * the legacy `Array<T,D>` and `DiscreteField<T,D>` types. It makes it easy to
- * apply modifications to data, define initial conditions and boundary conditions
- * for simulations.
+ * The `pfc::data::Field<T>` is the canonical field container for distributed
+ * field data. It makes it easy to apply modifications to data, define initial
+ * conditions and boundary conditions for simulations.
  *
  * Field combines geometry information (coordinate system) with data storage,
  * making it aware of which part of domain decomposition it represents and its
  * relationship to physical coordinates and discretization.
  *
  * In example 07, we manually decomposed arrays and calculated coordinate systems.
- * This example shows how the new Field API simplifies this by integrating domain
+ * This example shows how the Field API simplifies this by integrating domain
  * decomposition information directly into the field structure.
  *
  * It's possible to add field modifier $$f(x,y,z) = 1 + x + y^2$$ using
@@ -44,20 +44,17 @@ public:
   }
 };
 
-Field<double> create_field_from_decomp(const pfc::Decomposition &decomp, int rank_id) {
-  return Field<double>(decomp.m_domain, pfc::decomposition::local_box(decomp, rank_id), 0);
-}
-
 int main() {
   auto domain = domain::create({16, 8, 1});
   std::cout << "Domain: " << domain << std::endl;
   auto decomposition = decomposition::create(domain, 4);
   std::cout << "Decomposition: " << decomposition << std::endl;
 
-  auto field1 = create_field_from_decomp(decomposition, 0);
-  auto field2 = create_field_from_decomp(decomposition, 1);
-  auto field3 = create_field_from_decomp(decomposition, 2);
-  auto field4 = create_field_from_decomp(decomposition, 3);
+  // Construct fields from decomposition using the factory
+  auto field1 = pfc::data::field_from_subdomain<double>(decomposition, 0, 0);
+  auto field2 = pfc::data::field_from_subdomain<double>(decomposition, 1, 0);
+  auto field3 = pfc::data::field_from_subdomain<double>(decomposition, 2, 0);
+  auto field4 = pfc::data::field_from_subdomain<double>(decomposition, 3, 0);
 
   std::cout << "\nField 1:" << std::endl;
   std::cout << "  Owned box: [" << field1.box().low[0] << "," << field1.box().low[1] << ","
