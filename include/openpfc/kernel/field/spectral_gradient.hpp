@@ -52,7 +52,6 @@
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
 
 namespace pfc::field {
 
@@ -253,14 +252,6 @@ template <class G>
                                                 pfc::fft::IFFT &fft) {
   // Bind the live host vector (DataBuffer::as_vector) — a temporary would
   // dangle because SpectralGradient stores a pointer to the RealVector.
-  return SpectralGradient<G>(fft, u.vec(), u.global_size(), u.spacing(),
-                             fft.get_inbox_bounds(), fft.get_outbox_bounds());
-}
-
-// Backward compatibility overload for LocalField (TODO: remove when LocalField is deprecated)
-template <class G>
-[[nodiscard]] inline SpectralGradient<G> create(LocalField<double> &u,
-                                                pfc::fft::IFFT &fft) {
   return SpectralGradient<G>(fft, u.vec(), u.global_size(), u.spacing(),
                              fft.get_inbox_bounds(), fft.get_outbox_bounds());
 }
