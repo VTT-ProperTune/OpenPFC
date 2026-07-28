@@ -72,7 +72,7 @@ for (int step = 0; step < n_steps; ++step) {
 }
 ```
 
-The **FD** compact driver **`heat3d_fd`** instead spells the three primitives — halo, gradient, sweep — out in `main`, on top of two `pfc::data::Field<double>` buffers (`u`, `du`) plus a `pfc::communication::PaddedHaloExchanger<double> halo(u, MPI_COMM_WORLD)` and a `pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, fd_order)` bound to the same `u`:
+The **FD** compact driver **`heat3d_fd`** instead spells the three primitives — halo, gradient, sweep — out in `main`, on top of two `pfc::data::Field<double>` buffers (`u`, `du`) created with `pfc::data::field_from_subdomain*`, plus a `pfc::communication::PaddedHaloExchanger<double> halo(decomp, rank, halo_width, MPI_COMM_WORLD)` and a `pfc::gradient::FDGradient<heat3d::HeatGrads> grad(u, fd_order)` bound to the same `u`:
 
 ```cpp
 for (int step = 0; step < n_steps; ++step) {
