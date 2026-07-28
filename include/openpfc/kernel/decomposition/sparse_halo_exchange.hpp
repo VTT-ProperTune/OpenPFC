@@ -10,12 +10,12 @@
  * @details
  * `pfc::SparseHaloExchanger<T>` is the **flexible** half of OpenPFC's halo
  * story. It complements `pfc::PaddedHaloExchanger<T>` (the **classical**
- * padded-brick exchanger that bakes the halo width into the field layout):
+ * halo exchanger):
  *
- *   - Use `pfc::field::PaddedBrick<T>` + `pfc::PaddedHaloExchanger<T>` (or
+ *   - Use `pfc::data::Field<T>` + `pfc::PaddedHaloExchanger<T>` (or
  *     the CUDA `pfc::cuda::PaddedDeviceHaloExchanger`) for **pure FD** with
- *     a single contiguous `(nx+2hw)*(ny+2hw)*(nz+2hw)` array and negative
- *     halo indexing. This is the **default** for FD-only apps.
+ *     halo communication maintaining in-bounds indexing. This is the
+ *     **default** for FD-only apps.
  *   - Use `pfc::data::Field<T>` (unpadded `nx*ny*nz`) +
  *     `pfc::SparseHaloExchanger<T>` for **mixed FD + spectral** (the FFT
  *     does not tolerate halo regions in the data block), **non-axis halos**,
@@ -48,8 +48,8 @@
  *
  * @see kernel/decomposition/halo_face_layout.hpp for `make_structured_halos`,
  *      `copy_to_face_layout`, `allocate_face_halos`.
- * @see kernel/field/padded_brick.hpp + kernel/decomposition/padded_halo_exchange.hpp
- *      for the padded-brick (classical FD) alternative.
+ * @see kernel/decomposition/padded_halo_exchange.hpp for the classical
+ *      halo exchanger alternative.
  * @see docs/concepts/halo_exchange.md for "which exchanger when".
  */
 
