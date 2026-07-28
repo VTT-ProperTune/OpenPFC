@@ -260,7 +260,7 @@ TEST_CASE("apply_d1_along on a constant field returns zero (anti-symmetry)",
   // centre cell along every axis. Higher-order coverage is tested via the
   // linear-field cases above (which use the same brick) and via the
   // FdGradient<G> construction tests in `test_fd_gradient.cpp`, which size
-  // the local LocalField to the requested order.
+  // the field to the requested order.
   std::vector<double> u(static_cast<std::size_t>(N) * N * N, 7.5);
   const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
 
