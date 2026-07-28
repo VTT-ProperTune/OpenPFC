@@ -36,7 +36,8 @@ The implementation uses value-semantic types (FieldView<T>, FieldOutput<T>, Fiel
 Heat3D and Wave2D both use value-semantic patterns:
 
 ```cpp
-#include <openpfc/data/field.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 // Heat3D: pfc::data::Field is value-semantic
 pfc::data::Field<double, pfc::HostSpace> u =
