@@ -22,6 +22,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/parallel_scaling/test_fd_heat_mpi.cpp
   scenarios/parallel_scaling/test_fd_highorder_mpi.cpp
   scenarios/parallel_scaling/test_fd_xy_mpi.cpp
+  scenarios/parallel_scaling/neighbor_round_trip_mpi.cpp
   scenarios/io_workflows/test_vtk_roundtrip.cpp
   scenarios/field_operations/test_field_modifiers_integration.cpp
   scenarios/field_operations/test_state_contracts.cpp
