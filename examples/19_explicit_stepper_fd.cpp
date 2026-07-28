@@ -6,8 +6,12 @@
 #include <mpi.h>
 
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
 /** \example 19_explicit_stepper_fd.cpp
@@ -21,14 +25,15 @@
  * Key components:
  * - `HeatGrads`: per-point gradient aggregate (only second derivatives needed)
  * - `HeatModel`: pure function `rhs(t, grads)` returning `du/dt`
- * - `FdCpuStack`: field management with halo exchange
+ * - `pfc::data::Field<double>` via `field_from_subdomain`: padded field storage
+ * - `pfc::communication::PaddedHaloExchanger`: halo exchange for FD stencils
  * - `pfc::field::create<HeatGrads>(u, order)`: FD gradient evaluator
  * - `pfc::sim::steppers::create(u, grad, model, dt)`: stepper factory
  *
  * Time loop pattern:
  * ```cpp
  * for (int step = 0; step < n_steps; ++step) {
- *   stack.exchange_halos();  // FD requires halo exchange before each step
+ *   pfc::communication::exchange(halo);  // FD requires halo exchange before each step
  *   t = stepper.step(t, u.vec());
  * }
  * ```
@@ -83,15 +88,21 @@ int main(int argc, char* argv[]) {
   // Stability: dt <= dx^2 / (6*D) for explicit Euler in 3D
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
-  // Build FD stack (Domain + Decomposition + unpadded data::Field + face-halos + exchanger)
-  pfc::sim::stacks::FdCpuStack stack(
+  // Build domain and decomposition
+  const auto domain = pfc::domain::create(
     pfc::GridSize{{N, N, N}},
     pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
-    pfc::GridSpacing{{dx, dx, dx}},
-    fd_order, rank, nproc);
+    pfc::GridSpacing{{dx, dx, dx}});
+  const auto decomp = pfc::decomposition::create(domain, nproc);
+
+  // Create padded Field with halo width = fd_order / 2
+  const int hw = fd_order / 2;
+  pfc::data::Field<double> u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+
+  // Halo exchanger for the field
+  pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
 
   // Initialize field with Gaussian initial condition
-  auto& u = stack.u();
   const double cx = 0.5 * static_cast<double>(N - 1);
   const double sigma = static_cast<double>(N) / 6.0;
   u.apply([&](double x, double y, double z) {
@@ -116,7 +127,7 @@ int main(int argc, char* argv[]) {
 
   for (int step = 0; step < n_steps; ++step) {
     // FD requires halo exchange before each step
-    stack.exchange_halos();
+    pfc::communication::exchange(halo);
 
     // Advance one time step
     t = stepper.step(t, u.vec());
