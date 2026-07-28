@@ -36,8 +36,8 @@ TEST_CASE("World - construction and accessors", "[world][unit]") {
     Real3 origin = {1.0, 2.0, 3.0};
     Real3 spacing = {0.1, 0.2, 0.3};
 
-    World world = world::create(GridSize(dimensions), PhysicalOrigin(origin),
-                                GridSpacing(spacing));
+    World world = domain::create_world(GridSize(dimensions), PhysicalOrigin(origin),
+                                       GridSpacing(spacing));
 
     REQUIRE(get_size(world) == dimensions);
     REQUIRE(get_origin(world) == origin);
@@ -523,8 +523,8 @@ TEST_CASE("World - convenience functions integrate with existing API",
           "[world][convenience][integration][unit]") {
   SECTION("Physical volume matches manual calculation") {
     auto world =
-        world::create(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                      GridSpacing({0.1, 0.1, 0.1}));
+        domain::create_world(GridSize({100, 100, 100}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({0.1, 0.1, 0.1}));
 
     // Manual calculation
     auto spacing = world::get_spacing(world);
@@ -540,8 +540,8 @@ TEST_CASE("World - convenience functions integrate with existing API",
 
   SECTION("Bounds match coordinate transformation results") {
     auto world =
-        world::create(GridSize({64, 64, 64}), PhysicalOrigin({1.0, 2.0, 3.0}),
-                      GridSpacing({0.5, 0.5, 0.5}));
+        domain::create_world(GridSize({64, 64, 64}), PhysicalOrigin({1.0, 2.0, 3.0}),
+                            GridSpacing({0.5, 0.5, 0.5}));
 
     // Using convenience functions
     auto lower_conv = world::get_lower_bounds(world);
@@ -558,7 +558,7 @@ TEST_CASE("World - convenience functions integrate with existing API",
   }
 
   SECTION("Dimensionality checks consistent with size queries") {
-    auto world2d = world::create(GridSize({128, 128, 1}).to_vector3());
+    auto world2d = domain::create_world(GridSize({128, 128, 1}).to_vector3());
 
     REQUIRE(world::is_2d(world2d));
     REQUIRE(world::get_size(world2d, 0) > 1);
