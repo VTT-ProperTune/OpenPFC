@@ -3,16 +3,17 @@
 
 /**
  * @file 08_discrete_field.cpp
- * @brief Comprehensive examples of the Field API
+ * @brief Comprehensive examples of the pfc::data::Field<T> API
  *
- * This example demonstrates the new `pfc::data::Field<T>` API that replaces
- * the legacy `DiscreteField<T,D>` and `Array<T,D>` types.
+ * This example demonstrates the `pfc::data::Field<T>` class that provides
+ * efficient storage and access for grid-based numerical fields with domain
+ * geometry awareness.
  *
  * Demonstrated features:
  * 1. Creating and initializing fields with domain geometry
  * 2. Array-style indexing and data access
  * 3. Coordinate-space operations and transformations
- * 4. Integration with Model fields and FFT
+ * 4. Complex fields and FFT integration
  * 5. Field iteration and STL algorithm compatibility
  *
  * Compile and run:
@@ -383,9 +384,9 @@ int main() {
   std::cout
       << "║                                                                    ║\n";
   std::cout
-      << "║  Demonstrates the new Field<T> API that replaces                  ║\n";
+      << "║  Demonstrates pfc::data::Field<T> for efficient grid-based         ║\n";
   std::cout
-      << "║  DiscreteField<T,D> and Array<T,D>                               ║\n";
+      << "║  numerical fields with domain geometry awareness                   ║\n";
   std::cout
       << "╚════════════════════════════════════════════════════════════════════╝\n";
 
