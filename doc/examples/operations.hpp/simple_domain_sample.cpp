@@ -11,7 +11,7 @@
  *
  * Demonstrates:
  * - Domain creation with `domain::create`
- * - Setting up FFT and decomposition with a domain
+ * - Direct decomposition creation from domain (no `domain::to_world()`)
  * - Applying coordinate-space functions to fields using `pfc::field::apply`
  * - Creating Gaussian pulse initial conditions
  *
@@ -23,9 +23,7 @@
 #include <iostream>
 #include <numbers>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/fft/fftw_factory.hpp>
 
@@ -45,12 +43,9 @@ int main() {
   std::cout << "Domain: 64³ grid with origin (0, 0, 0) and spacing (1, 1, 1)\n";
   std::cout << "Physical volume: " << domain::physical_volume(domain) << "\n\n";
 
-  // For backward compatibility, the world type is still used internally by the
-  // field operations API. The domain can be converted to world when needed.
-  auto world = domain::to_world(domain);
-
   std::cout << "Setting up decomposition and FFT...\n";
-  auto decomp = decomposition::create(world, 1);
+  auto decomp = decomposition::create(domain, 1);
+  auto world = decomposition::get_global_world(decomp);
   auto fft = fft::fftw::create(decomp, false, 6);
   size_t inbox_size = fft::size_inbox(fft);
 
