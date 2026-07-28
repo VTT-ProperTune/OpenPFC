@@ -112,7 +112,7 @@ namespace pfc {
  * using namespace pfc;
  *
  * // Create decomposed domain
- * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
+ * auto world = pfc::domain::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
  * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
  * mpi::get_size()); auto fft = fft::create(decomp); auto local_world =
  * decomposition::get_subworld(decomp, mpi::get_rank());
