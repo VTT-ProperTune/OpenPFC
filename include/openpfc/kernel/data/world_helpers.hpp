@@ -3,23 +3,23 @@
 
 /**
  * @file world_helpers.hpp
- * @brief Convenience functions for World creation
+ * @brief Convenience functions for World creation (DEPRECATED - use pfc::domain::create_world_*)
  *
  * @details
- * This file contains convenience functions that simplify common World creation
- * patterns. These functions provide shortcuts for frequently-used configurations:
+ * This file contains legacy convenience functions that simplify common World creation
+ * patterns. These functions are **deprecated forwarders** that delegate to the primary
+ * `pfc::domain::create_world_*()` API. Do not use these in new code.
  *
- * - uniform(size) - Cubic grid with unit spacing
- * - uniform(size, spacing) - Cubic grid with custom spacing
- * - from_bounds() - Create from physical domain bounds
- * - with_spacing() - Grid with custom spacing at origin
- * - with_origin() - Grid with custom origin and unit spacing
+ * **Use `pfc::domain::create_world_uniform()`**, `pfc::domain::create_world_from_bounds()`,
+ * or related functions in `domain/create.hpp` for all new world construction. These legacy
+ * forwarders exist only for backward compatibility and will be removed in a future release
+ * as part of the OPENPFC_REFACTORING_EXECUTION_PLAN M2 migration.
  *
- * These helpers make World creation more ergonomic for common use cases while
- * delegating to the core factory functions in world_factory.hpp.
- *
+ * @see pfc::domain::create_world_uniform for the primary uniform grid API
+ * @see pfc::domain::create_world_from_bounds for the primary bounds API
+ * @see pfc::domain::create_world_with_spacing for the primary spacing API
+ * @see pfc::domain::create_world_with_origin for the primary origin API
  * @see world.hpp for the core World struct definition
- * @see world_factory.hpp for the fundamental create() functions
  */
 
 #pragma once
@@ -35,19 +35,27 @@ using pfc::types::Int3;
 using pfc::types::Real3;
 
 /**
- * @brief Create uniform grid with unit spacing at origin.
+ * @brief Create uniform grid with unit spacing at origin (DEPRECATED - LEGACY FORWARDER).
  *
  * Most common case: N×N×N grid with spacing=1, origin=(0,0,0).
  *
- * @deprecated Use pfc::domain::create_world_uniform(int) instead
+ * @deprecated This is a **legacy compatibility forwarder**. Do NOT use in new code.
+ * Call `pfc::domain::create_world_uniform()` directly instead. This function is provided
+ * only for backward compatibility and delegates to the primary API.
  *
  * @param size Grid dimensions (same in all directions)
  * @return World with uniform grid
  *
  * @throws std::invalid_argument if size <= 0
  *
+ * @see pfc::domain::create_world_uniform for the primary API
+ *
  * @code
+ * // Primary recommended API
  * auto world = pfc::domain::create_world_uniform(64);  // 64³ grid, dx=1
+ *
+ * // Deprecated legacy forwarder (do not use in new code)
+ * // auto world = world::uniform(64);  // LEGACY - do not use
  * @endcode
  */
 [[nodiscard]] [[deprecated("Use pfc::domain::create_world_uniform(int) instead")]] inline CartesianWorld uniform(int size) {
@@ -55,9 +63,11 @@ using pfc::types::Real3;
 }
 
 /**
- * @brief Create uniform grid with specified spacing.
+ * @brief Create uniform grid with specified spacing (DEPRECATED - LEGACY FORWARDER).
  *
- * @deprecated Use pfc::domain::create_world_uniform(int, double) instead
+ * @deprecated This is a **legacy compatibility forwarder**. Do NOT use in new code.
+ * Call `pfc::domain::create_world_uniform()` directly instead. This function is provided
+ * only for backward compatibility and delegates to the primary API.
  *
  * @param size Grid dimensions (same in all directions)
  * @param spacing Grid spacing (same in all directions)
@@ -66,8 +76,14 @@ using pfc::types::Real3;
  * @throws std::invalid_argument if size <= 0
  * @throws std::invalid_argument if spacing <= 0
  *
+ * @see pfc::domain::create_world_uniform for the primary API
+ *
  * @code
+ * // Primary recommended API
  * auto world = pfc::domain::create_world_uniform(128, 0.5);  // 128³ grid, dx=0.5
+ *
+ * // Deprecated legacy forwarder (do not use in new code)
+ * // auto world = world::uniform(128, 0.5);  // LEGACY - do not use
  * @endcode
  */
 [[nodiscard]] [[deprecated("Use pfc::domain::create_world_uniform(int, double) instead")]] inline CartesianWorld uniform(int size, double spacing) {
@@ -75,9 +91,11 @@ using pfc::types::Real3;
 }
 
 /**
- * @brief Create grid from physical bounds (automatically computes spacing).
+ * @brief Create grid from physical bounds (automatically computes spacing) (DEPRECATED - LEGACY FORWARDER).
  *
- * @deprecated Use pfc::domain::create_world_from_bounds(const Int3&, const Real3&, const Real3&, const Bool3&) instead
+ * @deprecated This is a **legacy compatibility forwarder**. Do NOT use in new code.
+ * Call `pfc::domain::create_world_from_bounds()` directly instead. This function is provided
+ * only for backward compatibility and delegates to the primary API.
  *
  * @param size Grid dimensions
  * @param lower Lower physical bounds
@@ -91,13 +109,18 @@ using pfc::types::Real3;
  * @note Spacing computed as: dx = (upper - lower) / size for periodic,
  *                               dx = (upper - lower) / (size - 1) for non-periodic
  *
+ * @see pfc::domain::create_world_from_bounds for the primary API
+ *
  * @code
- * // 100 cells from 0 to 10 (periodic)
+ * // Primary recommended API
  * auto w1 = pfc::domain::create_world_from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});
  *
  * // Non-periodic in x (different spacing formula)
  * auto w2 = pfc::domain::create_world_from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10},
  *                                               {false, true, true});
+ *
+ * // Deprecated legacy forwarder (do not use in new code)
+ * // auto w = world::from_bounds({100, 100, 100}, {0, 0, 0}, {10, 10, 10});  // LEGACY - do not use
  * @endcode
  */
 [[nodiscard]] [[deprecated("Use pfc::domain::create_world_from_bounds(const Int3&, const Real3&, const Real3&, const Bool3&) instead")]] inline CartesianWorld from_bounds(Int3 size, Real3 lower, Real3 upper,
@@ -107,9 +130,11 @@ using pfc::types::Real3;
 }
 
 /**
- * @brief Create grid with default origin but custom spacing.
+ * @brief Create grid with default origin but custom spacing (DEPRECATED - LEGACY FORWARDER).
  *
- * @deprecated Use pfc::domain::create_world_with_spacing(const Int3&, const Real3&) instead
+ * @deprecated This is a **legacy compatibility forwarder**. Do NOT use in new code.
+ * Call `pfc::domain::create_world_with_spacing()` directly instead. This function is provided
+ * only for backward compatibility and delegates to the primary API.
  *
  * @param size Grid dimensions
  * @param spacing Grid spacing
@@ -118,8 +143,14 @@ using pfc::types::Real3;
  * @throws std::invalid_argument if any size <= 0
  * @throws std::invalid_argument if any spacing <= 0
  *
+ * @see pfc::domain::create_world_with_spacing for the primary API
+ *
  * @code
+ * // Primary recommended API
  * auto world = pfc::domain::create_world_with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});
+ *
+ * // Deprecated legacy forwarder (do not use in new code)
+ * // auto world = world::with_spacing({64, 64, 128}, {0.1, 0.1, 0.05});  // LEGACY - do not use
  * @endcode
  */
 [[nodiscard]] [[deprecated("Use pfc::domain::create_world_with_spacing(const Int3&, const Real3&) instead")]] inline CartesianWorld with_spacing(Int3 size, Real3 spacing) {
@@ -127,9 +158,11 @@ using pfc::types::Real3;
 }
 
 /**
- * @brief Create grid with custom origin but unit spacing.
+ * @brief Create grid with custom origin but unit spacing (DEPRECATED - LEGACY FORWARDER).
  *
- * @deprecated Use pfc::domain::create_world_with_origin(const Int3&, const Real3&) instead
+ * @deprecated This is a **legacy compatibility forwarder**. Do NOT use in new code.
+ * Call `pfc::domain::create_world_with_origin()` directly instead. This function is provided
+ * only for backward compatibility and delegates to the primary API.
  *
  * @param size Grid dimensions
  * @param origin Physical origin
@@ -137,8 +170,14 @@ using pfc::types::Real3;
  *
  * @throws std::invalid_argument if any size <= 0
  *
+ * @see pfc::domain::create_world_with_origin for the primary API
+ *
  * @code
+ * // Primary recommended API
  * auto world = pfc::domain::create_world_with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});
+ *
+ * // Deprecated legacy forwarder (do not use in new code)
+ * // auto world = world::with_origin({64, 64, 64}, {-5.0, -5.0, 0.0});  // LEGACY - do not use
  * @endcode
  */
 [[nodiscard]] [[deprecated("Use pfc::domain::create_world_with_origin(const Int3&, const Real3&) instead")]] inline CartesianWorld with_origin(Int3 size, Real3 origin) {

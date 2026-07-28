@@ -3,21 +3,21 @@
 
 /**
  * @file world_factory.hpp
- * @brief World creation and factory functions
+ * @brief World creation and factory functions (DEPRECATED - use pfc::domain::create)
  *
  * @details
- * This file contains factory functions for creating World objects with various
- * construction patterns. It provides multiple overloads of create() to support
- * different use cases:
+ * This file contains legacy factory functions for creating World objects.
+ * These functions are **deprecated forwarders** that delegate to the primary
+ * `pfc::domain::create_world()` API. Do not use these in new code.
  *
- * - create(size) - Simple creation with defaults (`Int3` grid size)
- * - create(GridSize, PhysicalOrigin, GridSpacing) - Full specification (type-safe)
+ * **Use `pfc::domain::create_world()`** or related functions in `domain/create.hpp`
+ * for all new world construction. These legacy forwarders exist only for backward
+ * compatibility and will be removed in a future release as part of the
+ * OPENPFC_REFACTORING_EXECUTION_PLAN M2 migration.
  *
- * The factory functions handle coordinate system construction and validation,
- * making World creation convenient and safe.
- *
+ * @see pfc::domain::create_world for the primary world creation API
+ * @see domain/create.hpp for the recommended world construction interface
  * @see world.hpp for the core World struct definition
- * @see world_helpers.hpp for convenience constructors like uniform(), from_bounds()
  */
 
 #pragma once
@@ -36,11 +36,16 @@ using pfc::types::Real3;
 
 /**
  * @brief Create a World object with the specified size and default offset
- * and spacing.
+ * and spacing (DEPRECATED - LEGACY FORWARDER).
+ *
+ * @deprecated This is a **legacy compatibility forwarder**. Do NOT use in new code.
+ * Call `pfc::domain::create_world()` directly instead. This function is provided
+ * only for backward compatibility and delegates to the primary API.
+ *
  * @param dimensions Dimensions of the world.
  * @return A World object.
  *
- * @deprecated Use pfc::domain::create_world(const Int3&) instead
+ * @see pfc::domain::create_world for the primary API
  */
 [[nodiscard]] [[deprecated("Use pfc::domain::create_world(const Int3&) instead")]]
 inline CartesianWorld create(const Int3 &size) {
@@ -48,12 +53,14 @@ inline CartesianWorld create(const Int3 &size) {
 }
 
 /**
- * @brief Create a World object with strong types for type safety
+ * @brief Create a World object with strong types for type safety (DEPRECATED - LEGACY FORWARDER).
  *
- * This function is **deprecated**. Use `pfc::domain::create_world()` instead.
+ * @deprecated This is a **legacy compatibility forwarder**. Do NOT use in new code.
+ * Call `pfc::domain::create_world()` directly instead. This function is provided
+ * only for backward compatibility and delegates to the primary API.
  *
- * The new API in `pfc::domain::create_world()` provides the same functionality and is the
- * preferred API for creating World objects. Strong types (GridSize, PhysicalOrigin,
+ * The primary API, `pfc::domain::create_world()`, provides the same functionality and is the
+ * recommended interface for creating World objects. Strong types (GridSize, PhysicalOrigin,
  * GridSpacing) make the API self-documenting and prevent parameter confusion at compile time.
  *
  * @param size Grid dimensions (number of points per dimension)
@@ -64,21 +71,19 @@ inline CartesianWorld create(const Int3 &size) {
  *        `world::is_periodic`.
  * @return A World object with the specified geometry
  *
- * @deprecated Use pfc::domain::create_world(const GridSize&, const PhysicalOrigin&, const GridSpacing&, const Bool3&) instead
+ * @see pfc::domain::create_world for the primary API
+ * @see GridSize, PhysicalOrigin, GridSpacing in strong_types.hpp
  *
  * @code
- * // Preferred new API
+ * // Primary recommended API
  * GridSize size({256, 256, 256});
  * PhysicalOrigin origin({-128.0, -128.0, -128.0});
  * GridSpacing spacing({1.0, 1.0, 1.0});
  * auto world = pfc::domain::create_world(size, origin, spacing);
  *
- * // Old deprecated API (still works but not recommended)
- * // auto world2 = world::create(size, origin, spacing);
+ * // Deprecated legacy forwarder (do not use in new code)
+ * // auto world = world::create(size, origin, spacing);  // LEGACY - do not use
  * @endcode
- *
- * @see pfc::domain::create_world for the new replacement API
- * @see GridSize, PhysicalOrigin, GridSpacing in strong_types.hpp
  */
 [[nodiscard]] [[deprecated("Use pfc::domain::create_world(const GridSize&, const PhysicalOrigin&, const GridSpacing&, const Bool3&) instead")]]
 inline CartesianWorld create(const GridSize &size,

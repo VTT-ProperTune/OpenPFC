@@ -40,17 +40,25 @@ namespace domain {
 
 /**
  * @brief Create a World object with the specified size and default offset
- * and spacing.
+ * and spacing (PRIMARY API).
+ *
+ * @details This is the recommended interface for constructing World objects.
+ * It uses pfc::data::Field (grid_field.hpp) internally and follows the
+ * OPENPFC_REFACTORING_EXECUTION_PLAN M2 guidance.
  *
  * @param dimensions Dimensions of the world.
  * @return A World object.
+ *
+ * @see For more flexible construction, see create_world(const GridSize&, const PhysicalOrigin&, const GridSpacing&, const Bool3&)
  */
 [[nodiscard]] world::World create_world(const Int3 &size);
 
 /**
- * @brief Create a World object with strong types for type safety
+ * @brief Create a World object with strong types for type safety (PRIMARY API).
  *
- * This is the **preferred** API for creating World objects. Strong types
+ * @details This is the **recommended** interface for constructing World objects.
+ * It uses pfc::data::Field (grid_field.hpp) internally and follows the
+ * OPENPFC_REFACTORING_EXECUTION_PLAN M2 guidance. Strong types
  * (GridSize, PhysicalOrigin, GridSpacing) make the API self-documenting
  * and prevent parameter confusion at compile time.
  *
