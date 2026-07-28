@@ -127,7 +127,8 @@ Build the evaluator with the `pfc::field::create<G>(...)` family over
 namespace pfc::gradient {
 template <class G> class FDGradient {
 public:
-  explicit FDGradient(const pfc::field::PaddedBrick<double> &u, int order = 2,
+  // Direct construction from pfc::data::Field (padded or unpadded)
+  explicit FDGradient(const pfc::data::Field<double> &u, int order = 2,
                       std::function<void()> halo_prepare_callback = {});
   void prepare();
   [[nodiscard]] G operator()(int ix, int iy, int iz) const noexcept;
@@ -136,7 +137,7 @@ public:
 } // namespace pfc::gradient
 
 // Preferred construction (also available as pfc::field::create<G>(...)):
-auto grad = pfc::field::create<heat3d::HeatGrads>(local_field, /*order=*/2);
+auto grad = pfc::field::create<heat3d::HeatGrads>(field, /*order=*/2);
 ```
 
 `FDGradient<G>` rejects mixed second derivatives (`xy`, `xz`, `yz`) at compile
@@ -160,15 +161,15 @@ template <class Eval, class Model>
 [[nodiscard]] auto create(Eval &eval, const Model &model, double dt,
                           std::size_t local_size);
 
-// Derives local_size from a LocalField.
+// Derives local_size from a pfc::data::Field.
 template <class T, class Eval, class Model>
-[[nodiscard]] auto create(const pfc::field::LocalField<T> &u, Eval &eval,
+[[nodiscard]] auto create(const pfc::data::Field<T> &u, Eval &eval,
                           const Model &model, double dt);
 
-// Multi-field: tuple of LocalField refs + composite evaluator + model
+// Multi-field: tuple of Field refs + composite evaluator + model
 // whose rhs() returns a tuple-protocol bundle.
 template <class... Ts, class Eval, class Model>
-[[nodiscard]] auto create(std::tuple<pfc::field::LocalField<Ts> &...> fields,
+[[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields,
                           Eval &eval, const Model &model, double dt);
 ```
 
