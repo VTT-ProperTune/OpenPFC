@@ -234,7 +234,8 @@ inline void print_cuda_halo_exchange_cpu_timers(MPI_Comm comm) {
 }
 
 /**
- * @brief MPI halo exchange for a `PaddedBrick`-layout buffer on the CUDA device.
+ * @brief MPI halo exchange for a padded-layout device buffer (row-major
+ *        `(nx+2hw)*(ny+2hw)*(nz+2hw)` with ghost ring width `hw`).
  *
  * Non-copyable; tie lifetime to the owning rank's padded device allocations.
  */
