@@ -225,7 +225,7 @@ private:
  * @brief Free-function factory: build a `SpectralGradient<G>` from an FFT
  *        plan and a `pfc::data::Field`.
  *
- * Mirrors the `world::create`, `decomposition::create`, `fft::create` family:
+ * Mirrors the `domain::create`, `decomposition::create`, `fft::create` family:
  * derives the local inbox bounds and the local Fourier outbox bounds from
  * `fft`, and the global grid size and grid spacing from `u`. The caller
  * supplies the model-owned grads type as an explicit template argument and
