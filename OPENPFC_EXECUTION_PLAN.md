@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 # OpenPFC 0.2 Refactoring Execution Plan
 
 **Date:** 2026-08-01 (Updated session)
-**Status:** M1-M11 Substantially Complete, M4 Consumer Migration Complete ✅, M12 0.2.0 Release Ready (Gen-1 Deletion Deferred to 0.3.0)
+**Status:** M1-M11 Substantially Complete, M3 Complete ✅, M12 0.2.0 Release Ready (Gen-1 Deletion Deferred to 0.3.0)
 **GPU Status:** ✅ Available (8x H100, CUDA 13.0, GPU Verification Complete), CPU Baseline Established (30/30 tests passing)
 
 ---
@@ -29,13 +29,19 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Legacy APIs maintained for backward compatibility (aligned with World pattern strategy)
 - All tests passing (30/30)
 
-**M3 - Single-Source GPU Runtime:** SUBSTANTIAL Complete ✅
+**M3 - Single-Source GPU Runtime:** COMPLETE ✅
 - GPU runtime infrastructure unified (runtime/gpu/ directory)
 - CUDA/HIP consolidated into single-source device code
-- GPU kernel library building successfully  
+- GPU kernel library building successfully
 - GPU functionality verified on H100 hardware ✅
 - GPU tests passing (22/22 GPU tests)
-- Some vendor-specific cleanup remains
+- Concrete Gen-1 vendor-specific deletions COMPLETE ✅
+  - Deleted 6 legacy GPU files (gpu_vector.hpp, kernels_simple.*, Kokkos facsimile)
+  - Commit 0ac92516: "M3: Complete Gen-1 deletions - remove Kokkos facsimile and vendor-specific GPU files"
+  - Safe deletions - all functionality migrated to unified runtime/gpu/ implementations
+- Strategic World pattern deferment DOCUMENTED ✅
+  - M3_STRATEGIC_DELETIONS_COMPLETION.md created
+  - Distinction: Concrete deletions (safe) vs World pattern (high risk, deferred to 0.3.0)
 
 **M4 - Communication Layer:** COMPLETE ✅
 - Halo exchange architecture consolidated ✅

@@ -11,22 +11,6 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_link_libraries(test_gpu_device PRIVATE Catch2::Catch2 CUDA::cudart)
     add_test(NAME GPU_DeviceDetection COMMAND test_gpu_device)
 
-    add_executable(test_gpu_vector test_gpu_vector.cpp)
-    target_include_directories(test_gpu_vector PRIVATE
-        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
-        ${CMAKE_SOURCE_DIR}/include
-    )
-    target_link_libraries(test_gpu_vector PRIVATE Catch2::Catch2 CUDA::cudart)
-    add_test(NAME GPU_Vector COMMAND test_gpu_vector)
-
-    add_executable(test_gpu_kernels test_kernels_simple.cpp)
-    target_include_directories(test_gpu_kernels PRIVATE
-        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
-        ${CMAKE_SOURCE_DIR}/include
-    )
-    target_link_libraries(test_gpu_kernels PRIVATE Catch2::Catch2 openpfc_gpu_kernels CUDA::cudart)
-    add_test(NAME GPU_Kernels COMMAND test_gpu_kernels)
-
     add_executable(test_gpu_fft test_fft_cuda.cpp)
     target_include_directories(test_gpu_fft PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
