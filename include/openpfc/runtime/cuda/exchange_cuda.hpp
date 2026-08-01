@@ -91,12 +91,14 @@ void send(core::SparseVector<backend::CudaTag, T> &sparse_vector, int sender_ran
 
   std::vector<size_t> indices(size);
   std::vector<T> data(size);
-  GPU_CHECK(gpuMemcpyAsync(indices.data(), sparse_vector.indices().data(),
-                           size * sizeof(size_t), cudaMemcpyDeviceToHost, nullptr),
-            "gpuMemcpyAsync indices D2H (exchange::send)");
-  GPU_CHECK(gpuMemcpyAsync(data.data(), sparse_vector.data().data(),
-                           size * sizeof(T), cudaMemcpyDeviceToHost, nullptr),
-            "gpuMemcpyAsync data D2H (exchange::send)");
+  pfc::cuda::detail::cuda_check(
+      gpuMemcpyAsync(indices.data(), sparse_vector.indices().data(),
+                     size * sizeof(size_t), cudaMemcpyDeviceToHost, nullptr),
+      "gpuMemcpyAsync indices D2H (exchange::send)");
+  pfc::cuda::detail::cuda_check(
+      gpuMemcpyAsync(data.data(), sparse_vector.data().data(), size * sizeof(T),
+                     cudaMemcpyDeviceToHost, nullptr),
+      "gpuMemcpyAsync data D2H (exchange::send)");
   gpuDeviceSynchronize();
 
   pfc::mpi::throw_on_mpi_error(
@@ -136,9 +138,10 @@ void send_data(const core::SparseVector<backend::CudaTag, T> &sparse_vector,
                                  "MPI_Send");
   } else {
     std::vector<T> data(size);
-    GPU_CHECK(gpuMemcpyAsync(data.data(), sparse_vector.data().data(),
-                             size * sizeof(T), cudaMemcpyDeviceToHost, nullptr),
-              "gpuMemcpyAsync D2H (exchange::send_data)");
+    pfc::cuda::detail::cuda_check(
+        gpuMemcpyAsync(data.data(), sparse_vector.data().data(), size * sizeof(T),
+                       cudaMemcpyDeviceToHost, nullptr),
+        "gpuMemcpyAsync D2H (exchange::send_data)");
     gpuDeviceSynchronize();
     pfc::mpi::throw_on_mpi_error(
         MPI_Send(data.data(), count, mpi_type, receiver_rank, tag, comm),
@@ -174,9 +177,10 @@ void receive_data(core::SparseVector<backend::CudaTag, T> &sparse_vector,
     pfc::mpi::throw_on_mpi_error(MPI_Recv(data.data(), count, mpi_type, sender_rank,
                                           tag, comm, MPI_STATUS_IGNORE),
                                  "MPI_Recv");
-    GPU_CHECK(gpuMemcpyAsync(sparse_vector.data().data(), data.data(),
-                             size * sizeof(T), cudaMemcpyHostToDevice, nullptr),
-              "gpuMemcpyAsync H2D (exchange::receive_data)");
+    pfc::cuda::detail::cuda_check(gpuMemcpyAsync(sparse_vector.data().data(),
+                                                 data.data(), size * sizeof(T),
+                                                 cudaMemcpyHostToDevice, nullptr),
+                                  "gpuMemcpyAsync H2D (exchange::receive_data)");
     gpuDeviceSynchronize();
   }
 }

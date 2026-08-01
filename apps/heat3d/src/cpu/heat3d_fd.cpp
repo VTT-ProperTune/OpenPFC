@@ -41,9 +41,10 @@
 #include <omp.h>
 #endif
 
+#include <heat3d/reporting.hpp>
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
@@ -51,7 +52,6 @@
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/scaled_field.hpp>
 #include <openpfc/runtime/common/cpu_affinity.hpp>
-#include <heat3d/reporting.hpp>
 
 using pfc::field::operator*;
 using pfc::field::operator+=;
@@ -111,7 +111,8 @@ std::optional<RunConfig> parse_cli(int argc, char **argv) {
 // =============================================================================
 
 /**
- * @brief Heat equation solver using explicit finite-difference forward Euler integration
+ * @brief Heat equation solver using explicit finite-difference forward Euler
+ * integration
  *
  * @details This implementation solves the three-dimensional heat equation
  * ∂T/∂t = α * ∇²T on a fully periodic 3D box using explicit forward Euler
@@ -120,9 +121,9 @@ std::optional<RunConfig> parse_cli(int argc, char **argv) {
  * @par Integrator method
  * Concrete integrator: explicit forward Euler (first-order, conditionally stable).
  * Each time step computes: T_next = T + dt * α * ∇²T, where the Laplacian is
- * evaluated using central finite differences with configurable order (2, 4, ..., 20).
- * This is a self-contained implementation that does not inherit from the Simulator
- * base class but demonstrates the same time-integration concepts.
+ * evaluated using central finite differences with configurable order (2, 4, ...,
+ * 20). This is a self-contained implementation that does not inherit from the
+ * Simulator base class but demonstrates the same time-integration concepts.
  *
  * @par Lifecycle stage ownership
  * This implementation owns the following lifecycle stages:
@@ -132,7 +133,8 @@ std::optional<RunConfig> parse_cli(int argc, char **argv) {
  *   differences via FDGradient evaluator
  * - Post-step updates: applies explicit Euler update: u += dt * α * ∇²u
  * - Output generation: computes L2 error against analytical solution (no VTK output)
- * - No checkpointing: this is a benchmark/educational solver without restart capability
+ * - No checkpointing: this is a benchmark/educational solver without restart
+ * capability
  *
  * @par Boundary/halo synchronization
  * Boundary conditions and halo exchanges occur at:
@@ -165,7 +167,8 @@ std::optional<RunConfig> parse_cli(int argc, char **argv) {
  * @note This is an educational implementation designed for clarity rather than
  *   production use. It demonstrates explicit connection between halo exchange,
  *   gradient evaluation, and time integration. For production thermal simulations,
- *   consider the SpectralHeatPropagator (implicit Euler) for unconditional stability.
+ *   consider the SpectralHeatPropagator (implicit Euler) for unconditional
+ * stability.
  *
  * @see SpectralHeatPropagator for an implicit Euler implementation in Fourier space
  * @see Simulator for the base class contract on time-integration assumptions
@@ -192,8 +195,9 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
       pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
   // 4. Halo exchanger and gradient evaluator, both bound to `u`.
-  pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank,
-                                                       MPI_COMM_WORLD);
+  auto subdomain_box = pfc::decomposition::local_box(decomp, rank);
+  pfc::communication::PaddedHaloExchanger<double> halo(
+      subdomain_box, domain, decomp, rank, u.halo_width(), MPI_COMM_WORLD);
   pfc::gradient::FDGradient<HeatGrads> grad(u, cfg.fd_order);
 
   // 5. Initial condition: \f$u(x,y,z,0) = \exp(-|x|^2/(4D))\f$, D = 1.
@@ -222,9 +226,8 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
 
   // 7. L2-vs-analytic report via shared reporting infrastructure.
   heat3d::RunConfig heat_cfg{cfg.N, cfg.n_steps, cfg.dt, cfg.fd_order};
-  heat3d::report(rank, nproc, heat_cfg, "fd",
-                 heat3d::fd_extra_metadata(heat_cfg), max_elapsed,
-                 "(periodic; interior L2)", [&u, hw](auto &&cb) {
+  heat3d::report(rank, nproc, heat_cfg, "fd", heat3d::fd_extra_metadata(heat_cfg),
+                 max_elapsed, "(periodic; interior L2)", [&u, hw](auto &&cb) {
                    const auto sz = u.local_size();
                    for (int k = hw; k < sz[2] - hw; ++k) {
                      for (int j = hw; j < sz[1] - hw; ++j) {

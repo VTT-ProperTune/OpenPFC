@@ -41,9 +41,14 @@
 #pragma once
 
 #include <cstddef>
-#include <span>
 #include <stdexcept>
 #include <vector>
+
+#if (__cplusplus >= 202002L) && !defined(__CUDACC__) && !defined(__HIP__)
+#include <span>
+#else
+#include <openpfc/kernel/execution/cuda_span_compat.hpp>
+#endif
 
 #include <openpfc/kernel/execution/backend_tags.hpp>
 

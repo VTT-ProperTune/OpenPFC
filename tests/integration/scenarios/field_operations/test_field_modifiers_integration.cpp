@@ -33,13 +33,15 @@ private:
 
 TEST_CASE("FieldModifier integration: constant IC",
           "[integration][field][modifier]") {
-  auto world = world::uniform(16, 1.0);
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   int size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  auto decomp = decomposition::create(world, size);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
-  DiffusionModel model(fft, world);
+  DiffusionModel model(fft, domain);
   model.initialize(1.0);
 
   // Apply constant IC to density

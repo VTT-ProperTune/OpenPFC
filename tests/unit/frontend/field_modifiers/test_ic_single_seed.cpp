@@ -111,11 +111,9 @@ TEST_CASE("SingleSeed - Integration with Model", "[ic_single_seed]") {
   auto domain = pfc::domain::create(pfc::GridSize({8, 8, 8}),
                                     pfc::PhysicalOrigin({-64.0, -64.0, -64.0}),
                                     pfc::GridSpacing({16.0, 16.0, 16.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithSingleSeedIC model(fft, world);
+  ModelWithSingleSeedIC model(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);

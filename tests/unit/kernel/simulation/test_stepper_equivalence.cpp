@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_factory.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -13,7 +14,6 @@
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc;
 using Catch::Approx;
@@ -64,14 +64,11 @@ TEST_CASE("test_decay_single_step", "[stepper][equivalence]") {
   constexpr int nx = 8, ny = 8, nz = 8;
 
   // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                                  GridSpacing({1, 1, 1}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
-  pfc::World world(lower, upper, domain);
+  const pfc::Domain domain = pfc::domain::create(
+      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
   auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  LegacyDecayModel legacy_model(fft, world);
+  LegacyDecayModel legacy_model(fft, domain);
   legacy_model.initialize(dt);
 
   // New setup
@@ -103,14 +100,11 @@ TEST_CASE("test_decay_multiple_steps", "[stepper][equivalence]") {
   constexpr int num_steps = 10;
 
   // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                                  GridSpacing({1, 1, 1}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
-  pfc::World world(lower, upper, domain);
+  const pfc::Domain domain = pfc::domain::create(
+      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
   auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  LegacyDecayModel legacy_model(fft, world);
+  LegacyDecayModel legacy_model(fft, domain);
   legacy_model.initialize(dt);
 
   // New setup
@@ -145,14 +139,11 @@ TEST_CASE("test_decay_with_nonzero_initial_condition", "[stepper][equivalence]")
   };
 
   // Legacy setup
-  const pfc::Domain domain = pfc::domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}),
-                                                  GridSpacing({1, 1, 1}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{nx - 1, ny - 1, nz - 1};
-  pfc::World world(lower, upper, domain);
+  const pfc::Domain domain = pfc::domain::create(
+      GridSize({nx, ny, nz}), PhysicalOrigin({0, 0, 0}), GridSpacing({1, 1, 1}));
   auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  LegacyDecayModel legacy_model(fft, world);
+  LegacyDecayModel legacy_model(fft, domain);
   legacy_model.initialize(dt);
 
   // Apply non-uniform initial condition to legacy field

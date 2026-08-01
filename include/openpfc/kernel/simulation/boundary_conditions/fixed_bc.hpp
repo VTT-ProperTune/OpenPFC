@@ -34,7 +34,7 @@
 #pragma once
 
 #include <openpfc/kernel/data/types.hpp>
-#include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/field/field_operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 
 namespace pfc {
@@ -62,9 +62,9 @@ public:
 
   void apply(Model &m, double time) override {
     (void)time;
-    const World &w = get_world(m);
-    const double Lx = get_size(w, 0);
-    const double dx = get_spacing(w, 0);
+    const Domain &domain = get_domain(m);
+    const double Lx = pfc::domain::get_size(domain, 0);
+    const double dx = pfc::domain::get_spacing(domain, 0);
     const double xpos = (Lx * dx) - xwidth;
 
     pfc::field::apply_inplace(

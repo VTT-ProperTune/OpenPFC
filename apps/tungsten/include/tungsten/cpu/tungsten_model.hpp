@@ -227,7 +227,7 @@ public:
     auto high = outbox.high;
 
     // Get frequency scaling factors using helper function
-    auto [fx, fy, fz] = pfc::fft::kspace::k_frequency_scaling(world);
+    auto [fx, fy, fz] = pfc::fft::kspace::k_frequency_scaling(domain);
 
     const auto op_params = tungsten::spectral::make_operator_params(params);
     const std::size_t n_modes = static_cast<std::size_t>(fft.size_outbox());

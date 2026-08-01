@@ -14,14 +14,16 @@ using namespace pfc::test;
 
 TEST_CASE("Temporal convergence: diffusion error decreases with dt",
           "[integration][convergence]") {
-  auto world = world::uniform(32, 1.0);
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   int size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  auto decomp = decomposition::create(world, size);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
   // Run with coarse dt
-  DiffusionModel model_coarse(fft, world);
+  DiffusionModel model_coarse(fft, domain);
   model_coarse.initialize(5e-3);
   for (int i = 0; i < 50; ++i) {
     model_coarse.step(0.0);
@@ -32,7 +34,7 @@ TEST_CASE("Temporal convergence: diffusion error decreases with dt",
   }
 
   // Run with fine dt (same total time)
-  DiffusionModel model_fine(fft, world);
+  DiffusionModel model_fine(fft, domain);
   model_fine.initialize(1e-3);
   for (int i = 0; i < 250; ++i) {
     model_fine.step(0.0);

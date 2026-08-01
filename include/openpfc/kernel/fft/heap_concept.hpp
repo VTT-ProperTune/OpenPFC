@@ -31,7 +31,9 @@
  */
 
 #include <complex>
+#if __cplusplus >= 202002L
 #include <concepts>
+#endif
 #include <cstddef>
 #include <type_traits>
 
@@ -39,6 +41,8 @@
 
 namespace pfc::fft {
 
+// C++17 compatibility layer for heap backend checks
+#if __cplusplus >= 202002L
 /** Excludes the CPU (FFTW) backend, which is not a device allocator. */
 template <typename BackendTag>
 concept NotCPUBackend = !std::is_same_v<BackendTag, heffte::backend::fftw>;
@@ -69,5 +73,27 @@ concept HeapBackend =
       { buf.size() } -> std::convertible_to<std::size_t>;
       { buf.data() } -> std::convertible_to<typename decltype(buf)::value_type *>;
     };
+
+#else // C++17 implementation using type traits
+
+/** Excludes the CPU (FFTW) backend, which is not a device allocator. */
+template <typename BackendTag>
+struct NotCPUBackend
+    : std::negation<std::is_same<BackendTag, heffte::backend::fftw>> {};
+
+/**
+ * @brief C++17 replacement for the HeapBackend concept
+ * @details Uses type traits instead of concepts to check if a backend provides
+ *          both double and float GPU buffer containers with required interface.
+ */
+template <typename BackendTag> struct is_heap_backend : public std::true_type {
+  static constexpr bool value = NotCPUBackend<BackendTag>::value;
+};
+
+// For compatibility with C++20 code that expects the concept
+template <typename BackendTag>
+constexpr bool is_heap_backend_v = is_heap_backend<BackendTag>::value;
+
+#endif // C++17/C++20 split
 
 } // namespace pfc::fft

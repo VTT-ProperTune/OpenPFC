@@ -3,8 +3,8 @@
 
 /**
  * @file wave2d_fd_manual.cpp
- * @brief 2D wave equation — manual 5-point Laplacian on `pfc::data::Field` + periodic
- *        halos in x,z and physical y-boundary ghosts (Dirichlet or Neumann).
+ * @brief 2D wave equation — manual 5-point Laplacian on `pfc::data::Field` +
+ * periodic halos in x,z and physical y-boundary ghosts (Dirichlet or Neumann).
  */
 
 #include <cmath>
@@ -13,14 +13,14 @@
 #include <mpi.h>
 
 #include <openpfc/frontend/io/vtk_writer.hpp>
-#include <openpfc/kernel/data/model_types.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
@@ -42,9 +42,9 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   model.inv_dx2 = 1.0;
   model.inv_dy2 = 1.0;
 
-  const auto global_domain =
-      pfc::domain::create(GridSize({cfg.Nx, cfg.Ny, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                    GridSpacing({1.0, 1.0, 1.0}));
+  const auto global_domain = pfc::domain::create(GridSize({cfg.Nx, cfg.Ny, 1}),
+                                                 PhysicalOrigin({0.0, 0.0, 0.0}),
+                                                 GridSpacing({1.0, 1.0, 1.0}));
   const auto decomp = decomposition::create(global_domain, nproc);
 
   constexpr int hw = 1;
@@ -52,9 +52,10 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   auto v = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   auto lap = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
-  const auto& geometry = decomposition::domain(decomp);
+  const auto &domain = decomposition::domain(decomp);
   auto subdomain_box = decomposition::local_box(decomp, rank);
-  PaddedHaloExchanger<double> halo_u(subdomain_box, geometry, decomp, rank, hw, MPI_COMM_WORLD, 0);
+  PaddedHaloExchanger<double> halo_u(subdomain_box, domain, decomp, rank, hw,
+                                     MPI_COMM_WORLD, 0);
 
   const double xc = 0.5 * static_cast<double>(cfg.Nx - 1);
   const double yc = 0.5 * static_cast<double>(cfg.Ny - 1);

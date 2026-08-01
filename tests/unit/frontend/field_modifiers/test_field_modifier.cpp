@@ -107,11 +107,9 @@ TEST_CASE("FieldModifier - input validation", "[field_modifier][unit][error]") {
 
 TEST_CASE("FieldModifier - works with MockModel", "[field_modifier][unit]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain);
 
-  REQUIRE(get_size(get_world(model)) == Int3{8, 8, 8});
+  REQUIRE(get_domain(model).size == Int3{8, 8, 8});
 }

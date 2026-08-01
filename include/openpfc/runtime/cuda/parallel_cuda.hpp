@@ -82,7 +82,9 @@ void parallel_for(const std::string &name,
   parallel_for(policy, functor);
 }
 
-inline void fence(const Cuda &) { GPU_CHECK(gpuDeviceSynchronize(), "fence(Cuda)"); }
+inline void fence(const Cuda &) {
+  pfc::cuda::detail::cuda_check(gpuDeviceSynchronize(), "fence(Cuda)");
+}
 
 } // namespace pfc
 

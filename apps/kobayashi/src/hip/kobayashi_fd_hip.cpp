@@ -245,16 +245,20 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   sync_field_h2d(phi_h, phi_d);
   sync_field_h2d(tempr_h, tempr_d);
 
-  // Field-binding constructors for halo exchange (M2 migration)
-  pfc::PaddedHaloExchanger<double> halo_phi(phi_h, decomp, rank, MPI_COMM_WORLD, 0);
-  pfc::PaddedHaloExchanger<double> halo_t(tempr_h, decomp, rank, MPI_COMM_WORLD, 20);
-  pfc::PaddedHaloExchanger<double> halo_eps(eps_h, decomp, rank, MPI_COMM_WORLD, 40);
-  pfc::PaddedHaloExchanger<double> halo_epsd(epsd_h, decomp, rank, MPI_COMM_WORLD,
-                                             60);
-  pfc::PaddedHaloExchanger<double> halo_phidx(px_h, decomp, rank, MPI_COMM_WORLD,
-                                              80);
-  pfc::PaddedHaloExchanger<double> halo_phidy(py_h, decomp, rank, MPI_COMM_WORLD,
-                                              100);
+  // M4 migration: Use explicit Box3i + Domain constructors for halo exchange
+  const auto subdomain_box = pfc::decomposition::local_box(decomp, rank);
+  pfc::PaddedHaloExchanger<double> halo_phi(subdomain_box, domain, decomp, rank,
+                                            MPI_COMM_WORLD, 0);
+  pfc::PaddedHaloExchanger<double> halo_t(subdomain_box, domain, decomp, rank,
+                                          MPI_COMM_WORLD, 20);
+  pfc::PaddedHaloExchanger<double> halo_eps(subdomain_box, domain, decomp, rank,
+                                            MPI_COMM_WORLD, 40);
+  pfc::PaddedHaloExchanger<double> halo_epsd(subdomain_box, domain, decomp, rank,
+                                             MPI_COMM_WORLD, 60);
+  pfc::PaddedHaloExchanger<double> halo_phidx(subdomain_box, domain, decomp, rank,
+                                              MPI_COMM_WORLD, 80);
+  pfc::PaddedHaloExchanger<double> halo_phidy(subdomain_box, domain, decomp, rank,
+                                              MPI_COMM_WORLD, 100);
 
   const bool skip_png = std::getenv("OPENPFC_KOBAYASHI_SKIP_PNG") != nullptr;
   const bool quiet = std::getenv("OPENPFC_KOBAYASHI_QUIET") != nullptr;

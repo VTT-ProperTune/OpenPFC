@@ -74,8 +74,7 @@ public:
    */
   void apply(pfc::Model &model, double time) override {
     (void)time;
-    const auto &world_obj = pfc::get_world(model);
-    const pfc::Domain &d = world_obj.domain_;
+    const pfc::Domain &d = pfc::get_domain(model);
     const auto &fft = pfc::get_fft(model);
     pfc::Field &field = pfc::get_real_field(model, "psi");
     pfc::Int3 low = pfc::fft::get_inbox(fft).low;

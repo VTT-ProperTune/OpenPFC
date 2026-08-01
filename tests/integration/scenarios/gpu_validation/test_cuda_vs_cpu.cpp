@@ -12,14 +12,16 @@ using namespace pfc;
 using namespace pfc::test;
 
 TEST_CASE("CUDA vs CPU diffusion consistency (smoke)", "[integration][gpu][cuda]") {
-  auto world = world::uniform(16, 1.0);
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
 
   // CPU run
   int size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  auto decomp_cpu = decomposition::create(world, size);
+  auto decomp_cpu = decomposition::create(domain, 1);
   auto fft_cpu = fft::create(decomp_cpu);
-  DiffusionModel model_cpu(fft_cpu, world);
+  DiffusionModel model_cpu(fft_cpu, domain);
   model_cpu.initialize(1.0e-3);
   for (int i = 0; i < 10; ++i) {
     model_cpu.step(0.0);

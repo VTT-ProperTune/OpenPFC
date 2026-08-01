@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #define CATCH_CONFIG_RUNNER
+#include <array>
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <catch2/catch_approx.hpp>
-#include <array>
 #include <cmath>
 #include <iomanip>
 #include <limits>
@@ -62,10 +62,12 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"q40", 45.0}};
 
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::domain::create_world_uniform(32);
-    auto decomp = pfc::decomposition::create(world, 1);
+    auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = pfc::fft::create(decomp);
-    Tungsten tungsten(fft, world);
+    Tungsten tungsten(fft, domain);
     from_json(j, tungsten);
 
     // Check basic parameters
@@ -90,10 +92,12 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"T", 3300.0}};
 
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::domain::create_world_uniform(32);
-    auto decomp = pfc::decomposition::create(world, 1);
+    auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = pfc::fft::create(decomp);
-    Tungsten tungsten(fft, world);
+    Tungsten tungsten(fft, domain);
 
     REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
   }
@@ -122,10 +126,12 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
               {"q40", 45.0}};
 
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::domain::create_world_uniform(32);
-    auto decomp = pfc::decomposition::create(world, 1);
+    auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = pfc::fft::create(decomp);
-    Tungsten tungsten(fft, world);
+    Tungsten tungsten(fft, domain);
 
     REQUIRE_THROWS_AS(from_json(j, tungsten), std::invalid_argument);
   }
@@ -134,8 +140,8 @@ TEST_CASE("Tungsten JSON parsing", "[Tungsten][JSON]") {
 TEST_CASE("Tungsten parameter setters", "[Tungsten][Setters]") {
   pfc::MPI_Worker worker(0, nullptr);
   auto world = pfc::domain::create(pfc::GridSize(pfc::Int3{32, 32, 32}),
-                                    pfc::PhysicalOrigin(pfc::Real3{0, 0, 0}),
-                                    pfc::GridSpacing(pfc::Real3{1, 1, 1}));
+                                   pfc::PhysicalOrigin(pfc::Real3{0, 0, 0}),
+                                   pfc::GridSpacing(pfc::Real3{1, 1, 1}));
   auto decomp = pfc::decomposition::create(world, 1);
   auto fft = pfc::fft::create(decomp);
   Tungsten tungsten(fft, world);
@@ -223,8 +229,8 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
     // Manually replicate the initial condition logic from the UI
     // This matches exactly what happens when initial conditions are applied
     std::vector<double> &psi = tungsten.get_real_field("psi");
-    // Get the domain from the world
-    const pfc::Domain &w = pfc::get_world(tungsten).domain_;
+    // Get the domain
+    const pfc::Domain &w = pfc::get_domain(tungsten);
     const auto &fft_ref = pfc::get_fft(tungsten);
 
     // 1. Constant initial condition: fill entire field with -0.4
@@ -357,11 +363,13 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
 
   SECTION("Model initialization and allocation") {
     pfc::MPI_Worker worker(0, nullptr);
-    auto world = pfc::domain::create_world_uniform(32);
-    auto decomp = pfc::decomposition::create(world, 1);
+    auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                      pfc::GridSpacing({1.0, 1.0, 1.0}));
+    auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = pfc::fft::create(decomp);
 
-    Tungsten tungsten(fft, world);
+    Tungsten tungsten(fft, domain);
     tungsten.params.set_n0(-0.10);
     tungsten.params.set_alpha(0.50);
     tungsten.params.set_T(3300.0);
@@ -392,15 +400,14 @@ TEST_CASE("Tungsten functionality", "[Tungsten]") {
 
     std::vector<double> &psi = tungsten.get_real_field("psi");
     REQUIRE(!psi.empty());
- }
+  }
 }
 
 // Helper to construct OperatorParams with representative values
-tungsten::spectral::OperatorParams make_test_params(double stabP, double p2_bar,
-                                                     double q2_bar, double T,
-                                                     double T0, double Bx, double alpha2,
-                                                     double lambda2, double alpha_farTol,
-                                                     int alpha_highOrd) {
+tungsten::spectral::OperatorParams
+make_test_params(double stabP, double p2_bar, double q2_bar, double T, double T0,
+                 double Bx, double alpha2, double lambda2, double alpha_farTol,
+                 int alpha_highOrd) {
   tungsten::spectral::OperatorParams p;
   p.stabP = stabP;
   p.p2_bar = p2_bar;
@@ -419,10 +426,10 @@ TEST_CASE("spectral_operators_exact_zero", "[tungsten][spectral]") {
   double k_laplacian = -4.0;
   double dt = 0.01;
 
-  // Construct parameters such that opCk = p.stabP + p.p2_bar - opPeak + p.q2_bar * fMF = 0.0
-  // By setting q2_bar = 0.0 and ensuringstabP + p2_bar - opPeak = 0.0
-  auto p = make_test_params(1.0, 0.5, 0.0, 3300.0, 156000.0, 0.8582,
-                            0.5, 0.0484, 0.001, 4);
+  // Construct parameters such that opCk = p.stabP + p.p2_bar - opPeak + p.q2_bar *
+  // fMF = 0.0 By setting q2_bar = 0.0 and ensuringstabP + p2_bar - opPeak = 0.0
+  auto p = make_test_params(1.0, 0.5, 0.0, 3300.0, 156000.0, 0.8582, 0.5, 0.0484,
+                            0.001, 4);
 
   // Calculate what opPeak would be for k_laplacian = -4.0
   double k_val = std::sqrt(-k_laplacian) - 1.0;
@@ -434,7 +441,7 @@ TEST_CASE("spectral_operators_exact_zero", "[tungsten][spectral]") {
   double opPeak = p.Bx * std::exp(-p.T / p.T0) * gf;
 
   // Adjust stabP to make opCk = 0.0
-  p.stabP = opPeak - p.p2_bar;  // Then opCk = 0.0 + 0.5 - opPeak + 0.0*fMF = 0.0
+  p.stabP = opPeak - p.p2_bar; // Then opCk = 0.0 + 0.5 - opPeak + 0.0*fMF = 0.0
 
   tungsten::spectral::ModeOperators out =
       tungsten::spectral::legacy_etd_weights_for_mode(k_laplacian, dt, p);
@@ -459,8 +466,8 @@ TEST_CASE("spectral_operators_near_zero_no_cancellation",
   double k_laplacian = -4.0;
   double dt = 0.01;
 
-  auto p_base = make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582,
-                                 0.5, 0.0484, 0.001, 4);
+  auto p_base = make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582, 0.5,
+                                 0.0484, 0.001, 4);
 
   std::vector<double> test_opCk_values = {1e-15, 1e-14, 1e-13, 1e-12, 1e-11};
 
@@ -489,7 +496,8 @@ TEST_CASE("spectral_operators_near_zero_no_cancellation",
     double reference_opN = std::expm1(arg) / target_opCk;
 
     // Check within 10 ULPs of high-precision reference
-    double relative_error = std::abs(out.opN - reference_opN) / std::abs(reference_opN);
+    double relative_error =
+        std::abs(out.opN - reference_opN) / std::abs(reference_opN);
     double max_relative_error = 10.0 * std::numeric_limits<double>::epsilon();
     CHECK(relative_error < max_relative_error);
 
@@ -506,13 +514,15 @@ TEST_CASE("spectral_operators_near_zero_no_cancellation",
 TEST_CASE("spectral_operators_typical_values", "[tungsten][spectral]") {
   // Use representative parameter combinations from existing tests
   std::vector<std::tuple<double, double, tungsten::spectral::OperatorParams>>
-      test_cases = {
-          {-4.0, 0.01, make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582,
-                                       0.5, 0.0484, 0.001, 4)},
-          {-2.5, 0.005, make_test_params(0.2, 0.3, 0.5, 3300.0, 156000.0, 0.8582,
-                                        0.5, 0.0484, 0.001, 4)},
-          {-6.0, 0.001, make_test_params(0.2, 0.7, 1.5, 3300.0, 156000.0, 0.8582,
-                                        0.5, 0.0484, 0.001, 4)}};
+      test_cases = {{-4.0, 0.01,
+                     make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582, 0.5,
+                                      0.0484, 0.001, 4)},
+                    {-2.5, 0.005,
+                     make_test_params(0.2, 0.3, 0.5, 3300.0, 156000.0, 0.8582, 0.5,
+                                      0.0484, 0.001, 4)},
+                    {-6.0, 0.001,
+                     make_test_params(0.2, 0.7, 1.5, 3300.0, 156000.0, 0.8582, 0.5,
+                                      0.0484, 0.001, 4)}};
 
   for (const auto &[k_laplacian, dt, p] : test_cases) {
     tungsten::spectral::ModeOperators out =
@@ -546,8 +556,8 @@ TEST_CASE("spectral_operators_stability_long_dt",
           "[tungsten][spectral][numerical]") {
   double k_laplacian = -4.0;
 
-  auto p = make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582, 0.5,
-                           0.0484, 0.001, 4);
+  auto p = make_test_params(0.2, 0.5, 1.0, 3300.0, 156000.0, 0.8582, 0.5, 0.0484,
+                            0.001, 4);
 
   // Test a range of dt values where arg varies significantly
   std::vector<double> test_dt_values = {0.001, 0.01, 0.1, 1.0};

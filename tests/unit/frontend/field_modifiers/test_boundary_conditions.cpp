@@ -43,18 +43,18 @@ TEST_CASE("FixedBC - Basic functionality", "[boundary_conditions][unit]") {
 }
 
 TEST_CASE("FixedBC - apply method", "[boundary_conditions][unit]") {
-  // Create a 1D world for testing boundary conditions
-  auto domain = pfc::domain::create(pfc::GridSize({100, 1, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+  // Create a 1D domain for testing boundary conditions
+  auto domain = pfc::domain::create(pfc::GridSize({100, 1, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain);
 
   // Create and add a field
-  std::vector<double> field_data(get_total_size(world), 0.0);
+  std::vector<double> field_data(domain.size[0] * domain.size[1] * domain.size[2],
+                                 0.0);
   add_real_field(model, "psi", field_data);
 
   SECTION("FixedBC applies boundary smoothly") {

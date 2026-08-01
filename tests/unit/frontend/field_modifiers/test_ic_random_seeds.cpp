@@ -46,13 +46,12 @@ TEST_CASE("RandomSeeds - Parameter Access", "[ic_random_seeds]") {
 
 TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
   // Create domain matching hardcoded values in RandomSeeds
-  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                    pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithRandomSeedsIC m(fft, world);
+  ModelWithRandomSeedsIC m(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
@@ -114,13 +113,12 @@ TEST_CASE("RandomSeeds - Field Application", "[ic_random_seeds]") {
 }
 
 TEST_CASE("RandomSeeds - Integration with Model", "[ic_random_seeds]") {
-  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
+                                    pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
                                     pfc::GridSpacing({16.0, 16.0, 16.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithRandomSeedsIC model(fft, world);
+  ModelWithRandomSeedsIC model(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);

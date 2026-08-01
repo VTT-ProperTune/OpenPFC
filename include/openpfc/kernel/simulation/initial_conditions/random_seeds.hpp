@@ -35,7 +35,7 @@
 
 #include <random>
 
-#include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/field/field_operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
 

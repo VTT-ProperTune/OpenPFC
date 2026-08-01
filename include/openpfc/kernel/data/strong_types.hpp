@@ -134,9 +134,7 @@
 #pragma once
 
 #include <array>
-#ifndef __CUDACC__
-#include <compare>
-#endif
+#include <openpfc/kernel/data/host_device.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <type_traits>
 
@@ -193,26 +191,17 @@ struct GridSize {
   Int3 to_vector3() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying grid dimensions */
-#ifndef __CUDACC__
-  auto operator<=>(const GridSize &other) const noexcept = default;
-#else
-  /** @brief Equality comparison for CUDA (element-by-element) */
-  __host__ __device__
-  constexpr bool operator==(const GridSize &other) const noexcept {
-    return value[0] == other.value[0] &&
-           value[1] == other.value[1] &&
+  /** @brief Equality comparison for CUDA/HIP compatible builds */
+  OPENPFC_INLINE_HD constexpr bool operator==(const GridSize &other) const noexcept {
+    return value[0] == other.value[0] && value[1] == other.value[1] &&
            value[2] == other.value[2];
   }
 
-  /** @brief Inequality comparison for CUDA */
-  __host__ __device__
-  constexpr bool operator!=(const GridSize &other) const noexcept {
+  /** @brief Inequality comparison */
+  OPENPFC_INLINE_HD constexpr bool operator!=(const GridSize &other) const noexcept {
     return !(*this == other);
   }
-#endif
 };
-
-
 
 // ============================================================================
 // Strong Types for Physical (Coordinate) Space
@@ -264,23 +253,18 @@ struct GridSpacing {
   Real3 to_vector3() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying spacing */
-#ifndef __CUDACC__
-  auto operator<=>(const GridSpacing &other) const noexcept = default;
-#else
-  /** @brief Equality comparison for CUDA (element-by-element) */
-  __host__ __device__
-  constexpr bool operator==(const GridSpacing &other) const noexcept {
-    return value[0] == other.value[0] &&
-           value[1] == other.value[1] &&
+  /** @brief Equality comparison for CUDA/HIP compatible builds */
+  OPENPFC_INLINE_HD constexpr bool
+  operator==(const GridSpacing &other) const noexcept {
+    return value[0] == other.value[0] && value[1] == other.value[1] &&
            value[2] == other.value[2];
   }
 
-  /** @brief Inequality comparison for CUDA */
-  __host__ __device__
-  constexpr bool operator!=(const GridSpacing &other) const noexcept {
+  /** @brief Inequality comparison */
+  OPENPFC_INLINE_HD constexpr bool
+  operator!=(const GridSpacing &other) const noexcept {
     return !(*this == other);
   }
-#endif
 };
 
 /**
@@ -314,7 +298,9 @@ struct PhysicalOrigin {
    * @param v Origin coordinates
    * @return PhysicalOrigin instance
    */
-  static PhysicalOrigin from_vector3(const Real3 &v) noexcept { return PhysicalOrigin(v); }
+  static PhysicalOrigin from_vector3(const Real3 &v) noexcept {
+    return PhysicalOrigin(v);
+  }
 
   /**
    * @brief Get underlying value
@@ -329,23 +315,18 @@ struct PhysicalOrigin {
   Real3 to_vector3() const noexcept { return value; }
 
   /** @brief Lexicographic comparison of underlying coordinates */
-#ifndef __CUDACC__
-  auto operator<=>(const PhysicalOrigin &other) const noexcept = default;
-#else
-  /** @brief Equality comparison for CUDA (element-by-element) */
-  __host__ __device__
-  constexpr bool operator==(const PhysicalOrigin &other) const noexcept {
-    return value[0] == other.value[0] &&
-           value[1] == other.value[1] &&
+  /** @brief Equality comparison for CUDA/HIP compatible builds */
+  OPENPFC_INLINE_HD constexpr bool
+  operator==(const PhysicalOrigin &other) const noexcept {
+    return value[0] == other.value[0] && value[1] == other.value[1] &&
            value[2] == other.value[2];
   }
 
-  /** @brief Inequality comparison for CUDA */
-  __host__ __device__
-  constexpr bool operator!=(const PhysicalOrigin &other) const noexcept {
+  /** @brief Inequality comparison */
+  OPENPFC_INLINE_HD constexpr bool
+  operator!=(const PhysicalOrigin &other) const noexcept {
     return !(*this == other);
   }
-#endif
 };
 
 // ============================================================================

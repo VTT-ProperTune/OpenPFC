@@ -60,8 +60,7 @@ public:
    * @param m is the model to apply the initial condition to.
    */
   void apply(pfc::Model &m, double) override {
-    const auto &world_obj = pfc::get_world(m);
-    const pfc::Domain &d = world_obj.domain_;
+    const pfc::Domain &d = pfc::get_domain(m);
     const auto &fft = pfc::get_fft(m);
     pfc::Field &field = m.get_real_field("psi");
     pfc::Int3 low = pfc::fft::get_inbox(fft).low;

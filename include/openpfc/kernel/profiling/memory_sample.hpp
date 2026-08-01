@@ -30,7 +30,7 @@ inline std::size_t try_read_process_rss_bytes() noexcept {
   }
   std::string line;
   while (std::getline(status, line)) {
-    if (!line.starts_with("VmRSS:")) {
+    if (line.substr(0, 6) != "VmRSS:") {
       continue;
     }
     std::istringstream iss(line);

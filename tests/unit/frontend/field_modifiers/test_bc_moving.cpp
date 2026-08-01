@@ -148,11 +148,9 @@ TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
 
 TEST_CASE("MovingBC - Integration with Model", "[bc_moving]") {
   auto domain = pfc::domain::create(pfc::Int3{16, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithMovingBC model(fft, world);
+  ModelWithMovingBC model(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);

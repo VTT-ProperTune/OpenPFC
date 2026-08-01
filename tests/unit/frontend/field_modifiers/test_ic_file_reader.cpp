@@ -57,11 +57,9 @@ TEST_CASE("FileReader - Field Name Assignment", "[ic_file_reader]") {
 
 TEST_CASE("FileReader - Invalid File Handling", "[ic_file_reader]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithFileReaderIC m(fft, world);
+  ModelWithFileReaderIC m(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
@@ -88,11 +86,9 @@ void create_test_binary_file(const std::string &filename,
 
 TEST_CASE("FileReader - Read Valid File", "[ic_file_reader]") {
   auto domain = pfc::domain::create(pfc::Int3{4, 4, 4});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithFileReaderIC m(fft, world);
+  ModelWithFileReaderIC m(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
@@ -125,11 +121,9 @@ TEST_CASE("FileReader - Read Valid File", "[ic_file_reader]") {
 
 TEST_CASE("FileReader - Integration with Model", "[ic_file_reader]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithFileReaderIC model(fft, world);
+  ModelWithFileReaderIC model(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);

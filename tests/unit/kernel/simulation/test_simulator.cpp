@@ -49,7 +49,7 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     const Simulator &cs = simulator;
     REQUIRE(&pfc::get_model(cs) == &model);
     REQUIRE(&pfc::get_time(cs) == &time);
-    REQUIRE(&pfc::get_world(cs) == &pfc::get_world(model));
+    REQUIRE(&pfc::get_domain(cs) == &pfc::get_domain(model));
     REQUIRE_FALSE(pfc::done(cs));
     REQUIRE(pfc::get_increment(cs) == 0U);
   }
@@ -134,15 +134,15 @@ TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
   pfc::testing::MockModel model(fft, domain);
 
   REQUIRE_NOTHROW(get_fft(model));
-  REQUIRE(get_size(get_world(model)) == Int3{8, 8, 8});
+  REQUIRE(get_domain(model).size == Int3{8, 8, 8});
 }
 
 TEST_CASE("Simulator::step advances Time before Model::step", "[simulator][unit]") {
-  auto world = pfc::test::make_world_cube_8();
-  auto decomposition = pfc::test::make_serial_decomposition(world);
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::InstrumentedMockModel model(fft, world);
+  pfc::testing::InstrumentedMockModel model(fft, domain);
   Time time({0.0, 1.5, 0.5}, 0.0);
   Simulator sim(model, time);
   pfc::initialize(sim);
@@ -168,12 +168,12 @@ TEST_CASE("Simulator::step advances Time before Model::step", "[simulator][unit]
 
 TEST_CASE("Simulator begin/end/step_with_physics matches step()",
           "[simulator][unit]") {
-  auto world = pfc::test::make_world_cube_8();
-  auto decomposition = pfc::test::make_serial_decomposition(world);
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::InstrumentedMockModel model_a(fft, world);
-  pfc::testing::InstrumentedMockModel model_b(fft, world);
+  pfc::testing::InstrumentedMockModel model_a(fft, domain);
+  pfc::testing::InstrumentedMockModel model_b(fft, domain);
   Time time_a({0.0, 1.5, 0.5}, 0.0);
   Time time_b({0.0, 1.5, 0.5}, 0.0);
   Simulator sim_a(model_a, time_a);
@@ -195,12 +195,12 @@ TEST_CASE("Simulator begin/end/step_with_physics matches step()",
 }
 
 TEST_CASE("Simulator phased begin/end matches step()", "[simulator][unit]") {
-  auto world = pfc::test::make_world_cube_8();
-  auto decomposition = pfc::test::make_serial_decomposition(world);
+  auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
+  auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::InstrumentedMockModel model_a(fft, world);
-  pfc::testing::InstrumentedMockModel model_b(fft, world);
+  pfc::testing::InstrumentedMockModel model_a(fft, domain);
+  pfc::testing::InstrumentedMockModel model_b(fft, domain);
   Time time_a({0.0, 1.5, 0.5}, 0.0);
   Time time_b({0.0, 1.5, 0.5}, 0.0);
   Simulator sim_a(model_a, time_a);

@@ -63,7 +63,10 @@ struct Box3i {
   }
 
   friend constexpr bool operator==(const Box3i &a, const Box3i &b) {
-    return a.low == b.low && a.high == b.high && a.size == b.size;
+    return a.low[0] == b.low[0] && a.low[1] == b.low[1] && a.low[2] == b.low[2] &&
+           a.high[0] == b.high[0] && a.high[1] == b.high[1] &&
+           a.high[2] == b.high[2] && a.size[0] == b.size[0] &&
+           a.size[1] == b.size[1] && a.size[2] == b.size[2];
   }
   friend constexpr bool operator!=(const Box3i &a, const Box3i &b) {
     return !(a == b);
@@ -81,12 +84,10 @@ inline std::ostream &operator<<(std::ostream &os, const Box3i &b) {
 /// Visit each index point in the box in row-major, x-fastest order.
 /// @param b The box to iterate over.
 /// @param fn Callable taking `std::array<int, 3>` for each index point.
-template <typename Fn>
-constexpr void for_each_index(const Box3i &b, Fn &&fn) {
+template <typename Fn> constexpr void for_each_index(const Box3i &b, Fn &&fn) {
   for (int k = b.low[2]; k <= b.high[2]; ++k)
     for (int j = b.low[1]; j <= b.high[1]; ++j)
-      for (int i = b.low[0]; i <= b.high[0]; ++i)
-        fn(std::array<int, 3>{i, j, k});
+      for (int i = b.low[0]; i <= b.high[0]; ++i) fn(std::array<int, 3>{i, j, k});
 }
 
 } // namespace pfc

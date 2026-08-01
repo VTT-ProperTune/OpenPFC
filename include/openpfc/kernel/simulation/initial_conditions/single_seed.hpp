@@ -32,7 +32,7 @@
 #ifndef PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP
 #define PFC_INITIAL_CONDITIONS_SINGLE_SEED_HPP
 
-#include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/field/field_operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 
 namespace pfc {

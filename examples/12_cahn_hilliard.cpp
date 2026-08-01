@@ -32,8 +32,7 @@ public:
     pfc::add_real_field(*this, "concentration", c);
 
     // prepare operators
-    const auto &world = pfc::get_world(*this);
-    const auto &domain = pfc::world::get_coordinate_system(world);
+    const auto &domain = pfc::get_domain(*this);
     std::array<int, 3> o_low = get_outbox(fft).low;
     std::array<int, 3> o_high = get_outbox(fft).high;
     size_t idx = 0;
@@ -105,12 +104,12 @@ int main(int argc, char **argv) {
 
   // Construct domain, decomposition, fft and model
   // Using strong types for type-safe Domain construction
-  auto domain = ::pfc::domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
-                                      GridSpacing{{dx, dy, dz}});
+  auto domain =
+      ::pfc::domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
+                            GridSpacing{{dx, dy, dz}});
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  const auto size = pfc::domain::get_size(domain);
-  CahnHilliard model(fft, World({0, 0, 0}, {size[0]-1, size[1]-1, size[2]-1}, domain));
+  CahnHilliard model(fft, domain);
 
   // Define time
   double t = 0.0;
@@ -134,7 +133,8 @@ int main(int argc, char **argv) {
   // file_count
   writer.set_uri(sprintf("cahn_hilliard_%04i.vti", file_count));
   writer.set_field_name("concentration");
-  writer.set_domain(pfc::domain::get_size(domain), get_inbox(fft).size, get_inbox(fft).low);
+  writer.set_domain(pfc::domain::get_size(domain), get_inbox(fft).size,
+                    get_inbox(fft).low);
   writer.set_origin(pfc::domain::get_origin(domain));
   writer.set_spacing(pfc::domain::get_spacing(domain));
   writer.initialize();

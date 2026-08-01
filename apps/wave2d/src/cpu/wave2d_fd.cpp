@@ -13,12 +13,12 @@
 #include <memory>
 #include <mpi.h>
 
+#include <openpfc/domain/create.hpp>
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/types.hpp>
-#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
 #include <openpfc/kernel/field/fd_apply.hpp>
@@ -54,9 +54,9 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
   }
 
   const int hw = stencil.half_width;
-  const auto domain =
-      pfc::domain::create(pfc::GridSize({cfg.Nx, cfg.Ny, 1}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                          pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const auto domain = pfc::domain::create(pfc::GridSize({cfg.Nx, cfg.Ny, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   const auto decomp = decomposition::create(domain, nproc);
 
   pfc::data::Field<double, pfc::HostSpace> u =
@@ -66,7 +66,9 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
   pfc::data::Field<double, pfc::HostSpace> lap =
       pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
-  PaddedHaloExchanger<double> halo_u(u, decomp, rank, MPI_COMM_WORLD);
+  const auto subdomain_box = decomposition::local_box(decomp, rank);
+  PaddedHaloExchanger<double> halo_u(subdomain_box, domain, decomp, rank, hw,
+                                     MPI_COMM_WORLD);
 
   const double inv_den = 1.0 / static_cast<double>(stencil.denom);
   const double sx = model.inv_dx2 * inv_den;
@@ -86,7 +88,12 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
     (void)z;
     return std::exp(-(dx * dx + dy * dy) / (2.0 * sigma * sigma));
   });
-  v.apply([](double x, double y, double z) { (void)x; (void)y; (void)z; return 0.0; });
+  v.apply([](double x, double y, double z) {
+    (void)x;
+    (void)y;
+    (void)z;
+    return 0.0;
+  });
 
   pfc::communication::exchange(halo_u);
   wave2d::fill_y_physical_ghosts_padded(u, cfg.y_bc, cfg.Ny,

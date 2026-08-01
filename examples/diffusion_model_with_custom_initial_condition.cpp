@@ -13,10 +13,10 @@
 #include <openpfc/kernel/simulation/time.hpp>
 
 using namespace std;
+using pfc::get_domain;
 using pfc::get_fft;
 using pfc::get_model;
 using pfc::get_real_field;
-using pfc::get_domain;
 
 void print_stats(Simulator &simulator) {
   // we can still access the model:

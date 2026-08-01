@@ -93,7 +93,7 @@ class Model;
  *
  *   void apply(pfc::Model& model, double time) override {
  *     auto& field = get_real_field(model, get_field_name());
- *     const auto& world = pfc::get_world(model);
+ *     const auto& domain = pfc::get_domain(model);
  *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
  *
@@ -101,10 +101,14 @@ class Model;
  *     for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
  *       for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
  *         for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
- *           auto pos = pfc::world::to_coords(world, Int3{i, j, k});
- *           double dx = pos[0] - m_center[0];
- *           double dy = pos[1] - m_center[1];
- *           double dz = pos[2] - m_center[2];
+ *           auto spacing = pfc::domain::get_spacing(domain);
+ *           auto origin = pfc::domain::get_origin(domain);
+ *           double x = origin[0] + i * spacing[0];
+ *           double y = origin[1] + j * spacing[1];
+ *           double z = origin[2] + k * spacing[2];
+ *           double dx = x - m_center[0];
+ *           double dy = y - m_center[1];
+ *           double dz = z - m_center[2];
  *           double r2 = dx*dx + dy*dy + dz*dz;
  *           field[idx++] = m_amplitude * std::exp(-r2 / (m_width*m_width));
  *         }
@@ -125,12 +129,12 @@ class Model;
  *
  *   void apply(pfc::Model& model, double time) override {
  *     auto& field = get_real_field(model, get_field_name());
- *     const auto& world = pfc::get_world(model);
+ *     const auto& domain = pfc::get_domain(model);
  *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
  *
- *     double Lx = pfc::world::get_size(world, 0);
- *     double dx = pfc::world::get_spacing(world, 0);
+ *     size_t size_x = pfc::domain::get_size(domain, 0);
+ *     double dx = pfc::domain::get_spacing(domain, 0);
  *
  *     int idx = 0;
  *     for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
@@ -138,8 +142,8 @@ class Model;
  *         for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
  *           double x = i * dx;
  *           // Apply at right boundary with smooth transition
- *           if (x > Lx - m_width) {
- *             double s = (x - (Lx - m_width)) / m_width;
+ *           if (x > (size_x * dx) - m_width) {
+ *             double s = (x - ((size_x * dx) - m_width)) / m_width;
  *             field[idx] = field[idx] * (1.0 - s) + m_value * s;
  *           }
  *           idx++;
@@ -159,19 +163,18 @@ class Model;
  *
  *   void apply(pfc::Model& model, double time) override {
  *     auto& field = get_real_field(model, get_field_name());
- *     const auto& world = pfc::get_world(model);
+ *     const auto& domain = pfc::get_domain(model);
  *     const auto& fft = pfc::get_fft(model);
  *     auto inbox = pfc::fft::get_inbox(fft);
  *
  *     // Time-varying amplitude
  *     double amplitude = std::sin(pfc::two_pi * m_frequency * time);
  *
- *     double dx = pfc::world::get_spacing(world, 0);
  *     int idx = 0;
  *     for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
  *       for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
  *         for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
- *           if (i == 0) {  // Left boundary
+ *           if (i == inbox.low[0]) {  // Left boundary
  *             field[idx] = amplitude;
  *           }
  *           idx++;
@@ -392,7 +395,7 @@ public:
    * **Implementation Responsibilities:**
    * - Retrieve field(s) via `get_real_field(model, name)` or
    * `get_complex_field(model, name)`
-   * - Access geometry via `pfc::get_world(model)` and `pfc::get_fft(model)`
+   * - Access geometry via `pfc::get_domain(model)` and `pfc::get_fft(model)`
    * - Modify field values according to modifier's purpose
    * - Handle MPI parallelism (operate on local subdomain)
    *
@@ -403,7 +406,7 @@ public:
    *   auto& field = get_real_field(model, get_field_name());
    *
    *   // 2. Get geometry information
-   *   const auto& world = pfc::get_world(model);
+   *   const auto& domain = pfc::get_domain(model);
    *   const auto& fft = pfc::get_fft(model);
    *   auto inbox = pfc::fft::get_inbox(fft);
    *
@@ -413,7 +416,11 @@ public:
    *     for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
    *       for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
    *         // Compute modification based on position and/or time
-   *         auto pos = pfc::world::to_coords(world, Int3{i, j, k});
+   *         auto spacing = pfc::domain::get_spacing(domain);
+   *         auto origin = pfc::domain::get_origin(domain);
+   *         Real3 pos = {origin[0] + i * spacing[0],
+   *                      origin[1] + j * spacing[1],
+   *                      origin[2] + k * spacing[2]};
    *         field[idx++] = compute_value(pos, time);
    *       }
    *     }
@@ -437,7 +444,7 @@ public:
    *          model invariants (e.g., mass conservation if required)
    *
    * @see Model::get_real_field() for field access
-   * @see get_world(const Model&) for domain geometry
+   * @see get_domain(const Model&) for domain geometry
    * @see get_fft(Model&) for subdomain bounds
    */
   virtual void apply(Model &model, double time) = 0;

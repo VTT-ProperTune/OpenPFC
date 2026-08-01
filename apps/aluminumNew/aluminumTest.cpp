@@ -49,9 +49,7 @@ TEST_CASE("Aluminum functionality", "[Aluminum]") {
     auto decomp = pfc::decomposition::create(domain, 1);
     auto fft = pfc::fft::create(decomp);
 
-    // World wrap where Model requires it
-    pfc::World world({0, 0, 0}, {31, 31, 31}, domain);
-    Aluminum aluminum(fft, world);
+    Aluminum aluminum(fft, domain);
     aluminum.set_n0(-0.0060);
     aluminum.set_alpha(0.20);
     aluminum.set_n_sol(-0.036);

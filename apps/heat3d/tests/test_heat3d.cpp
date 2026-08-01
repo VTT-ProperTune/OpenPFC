@@ -267,19 +267,26 @@ TEST_CASE("Manual FD driver (Field + PaddedHaloExchanger): smoke + L2",
   const double dt = 1.0e-3;
   const int n_steps = 5;
 
-  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, /*nproc=*/1);
 
-  pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  pfc::data::Field<double, pfc::HostSpace> du(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  PaddedHaloExchanger<double> halo(decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
+  pfc::data::Field<double, pfc::HostSpace> u(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
+  pfc::data::Field<double, pfc::HostSpace> du(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
+  PaddedHaloExchanger<double> halo(pfc::decomposition::local_box(decomp, 0), domain,
+                                   decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
 
   HeatModel model;
   u.apply(model.initial_condition);
 
   double sum0 = 0.0;
-  u.for_each_interior([&](double x, double y, double z, double v) { sum0 += v * v; });
+  u.for_each_interior(
+      [&](double x, double y, double z, double v) { sum0 += v * v; });
   REQUIRE(sum0 > 0.0);
 
   auto stencil_step = [&](int i, int j, int k) {
@@ -291,7 +298,7 @@ TEST_CASE("Manual FD driver (Field + PaddedHaloExchanger): smoke + L2",
   };
 
   // Helper to iterate interior (owned cells excluding halo width)
-  auto for_each_interior_with_idx = [&](auto&& fn) {
+  auto for_each_interior_with_idx = [&](auto &&fn) {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
     const int nz = u.local_size()[2];
@@ -305,13 +312,14 @@ TEST_CASE("Manual FD driver (Field + PaddedHaloExchanger): smoke + L2",
   };
 
   // Helper to iterate border (owned cells reaching into halo)
-  auto for_each_border_with_idx = [&](auto&& fn) {
+  auto for_each_border_with_idx = [&](auto &&fn) {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
     const int nz = u.local_size()[2];
 
     if (nx <= 2 * hw || ny <= 2 * hw || nz <= 2 * hw) {
-      u.for_each_owned([&](double, double, double, double) { /* no work needed for empty interior */ });
+      u.for_each_owned([&](double, double, double,
+                           double) { /* no work needed for empty interior */ });
       return;
     }
 
@@ -349,7 +357,8 @@ TEST_CASE("Manual FD driver (Field + PaddedHaloExchanger): smoke + L2",
     for_each_interior_with_idx(stencil_step);
     halo.finish_halo_exchange();
     for_each_border_with_idx(stencil_step);
-    u.for_each_owned([&](double, double, double, double) { /* Euler step handled below */ });
+    u.for_each_owned(
+        [&](double, double, double, double) { /* Euler step handled below */ });
     // Explicit Euler over the full owned region
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
@@ -420,11 +429,16 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   });
   l2_compact = std::sqrt(l2_compact / cnt);
 
-  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, 1);
-  pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  pfc::data::Field<double, pfc::HostSpace> du(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
+  pfc::data::Field<double, pfc::HostSpace> u(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
+  pfc::data::Field<double, pfc::HostSpace> du(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
   PaddedHaloExchanger<double> halo(decomp, 0, hw, MPI_COMM_WORLD);
   u.apply(model.initial_condition);
 
@@ -437,7 +451,7 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   };
 
   // Helper to iterate interior (owned cells excluding halo width)
-  auto for_each_interior_with_idx = [&](auto&& fn) {
+  auto for_each_interior_with_idx = [&](auto &&fn) {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
     const int nz = u.local_size()[2];
@@ -451,13 +465,14 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   };
 
   // Helper to iterate border (owned cells reaching into halo)
-  auto for_each_border_with_idx = [&](auto&& fn) {
+  auto for_each_border_with_idx = [&](auto &&fn) {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
     const int nz = u.local_size()[2];
 
     if (nx <= 2 * hw || ny <= 2 * hw || nz <= 2 * hw) {
-      u.for_each_owned([&](double, double, double, double) { /* no work needed for empty interior */ });
+      u.for_each_owned([&](double, double, double,
+                           double) { /* no work needed for empty interior */ });
       return;
     }
 
@@ -495,7 +510,8 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
     for_each_interior_with_idx(stencil_step);
     halo.finish_halo_exchange();
     for_each_border_with_idx(stencil_step);
-    u.for_each_owned([&](double, double, double, double) { /* Euler step handled below */ });
+    u.for_each_owned(
+        [&](double, double, double, double) { /* Euler step handled below */ });
     // Explicit Euler over the full owned region
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
@@ -512,8 +528,8 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   double l2_manual = 0.0;
   double cnt2 = 0.0;
   u.for_each_interior([&](double x, double y, double z, double u_val) {
-    const double u_exact = heat3d::analytic_gaussian(
-        x * x + y * y + z * z, t_final, heat3d::kD);
+    const double u_exact =
+        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, heat3d::kD);
     const double diff = u_val - u_exact;
     l2_manual += diff * diff;
     cnt2 += 1.0;
@@ -606,12 +622,16 @@ TEST_CASE("Scratch FD driver (bare loops, raw pointers): smoke + L2",
   const double dt = 1.0e-3;
   const int n_steps = 5;
 
-  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, /*nproc=*/1);
 
-  pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  PaddedHaloExchanger<double> halo(decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
+  pfc::data::Field<double, pfc::HostSpace> u(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
+  PaddedHaloExchanger<double> halo(pfc::decomposition::local_box(decomp, 0), domain,
+                                   decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
 
   // From-scratch IC: exp(-r^2 / (4 kD)) by hand, exactly as the driver does.
   {
@@ -699,11 +719,15 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FdCpuStack "
   });
   l2_compact = std::sqrt(l2_compact / cnt);
 
-  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, 1);
-  pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  PaddedHaloExchanger<double> halo(decomp, 0, hw, MPI_COMM_WORLD);
+  pfc::data::Field<double, pfc::HostSpace> u(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
+  PaddedHaloExchanger<double> halo(pfc::decomposition::local_box(decomp, 0), domain,
+                                   decomp, 0, hw, MPI_COMM_WORLD);
   {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
@@ -729,8 +753,8 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FdCpuStack "
   double l2_scratch = 0.0;
   double cnt2 = 0.0;
   u.for_each_interior([&](double x, double y, double z, double u_val) {
-    const double u_exact = heat3d::analytic_gaussian(
-        x * x + y * y + z * z, t_final, heat3d::kD);
+    const double u_exact =
+        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, heat3d::kD);
     const double diff = u_val - u_exact;
     l2_scratch += diff * diff;
     cnt2 += 1.0;

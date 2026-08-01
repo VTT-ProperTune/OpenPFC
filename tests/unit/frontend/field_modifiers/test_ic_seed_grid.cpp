@@ -23,7 +23,8 @@ using pfc::types::Int3;
 // Mock model class for testing
 class ModelWithSeedGridIC : public Model {
 public:
-  ModelWithSeedGridIC(FFT &fft, const pfc::Domain &domain) : pfc::Model(fft, domain) {}
+  ModelWithSeedGridIC(FFT &fft, const pfc::Domain &domain)
+      : pfc::Model(fft, domain) {}
 
   void step(double /*t*/) override {}
   void initialize(double /*dt*/) override {}
@@ -78,13 +79,12 @@ TEST_CASE("SeedGrid - Constructor with Parameters", "[ic_seed_grid]") {
 }
 
 TEST_CASE("SeedGrid - Field Application", "[ic_seed_grid]") {
-  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({32, 32, 32}),
+                                    pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithSeedGridIC m(fft, world);
+  ModelWithSeedGridIC m(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
@@ -151,13 +151,12 @@ TEST_CASE("SeedGrid - Field Application", "[ic_seed_grid]") {
 }
 
 TEST_CASE("SeedGrid - Integration with Model", "[ic_seed_grid]") {
-  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}), pfc::PhysicalOrigin({-100.0, -100.0, -100.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
+                                    pfc::PhysicalOrigin({-100.0, -100.0, -100.0}),
                                     pfc::GridSpacing({12.5, 12.5, 12.5}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithSeedGridIC model(fft, world);
+  ModelWithSeedGridIC model(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);

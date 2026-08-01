@@ -48,8 +48,8 @@
 
 #include <mpi.h>
 
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
@@ -76,7 +76,8 @@ void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
   const int hw = 1; // 2nd-order central stencil -> halo width 1
   const auto owned_box = pfc::decomposition::local_box(decomp, rank);
   pfc::data::Field<double, pfc::HostSpace> u(domain, owned_box, hw);
-  pfc::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  pfc::PaddedHaloExchanger<double> halo(owned_box, domain, decomp, rank, hw,
+                                        MPI_COMM_WORLD);
 
   // 2. Pull every quantity the manual driver hides inside `for_each_*`
   //    out into local variables, so the indexing arithmetic is visible.

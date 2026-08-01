@@ -124,11 +124,11 @@ public:
           // Handle FFT frequency wrapping
           // LLM: FFT convention - frequencies above Nyquist are negative
           const double ki =
-              (i <= get_size(w, 0) / 2) ? i * fx : (i - get_size(w, 0)) * fx;
+              (i <= domain.size[0] / 2) ? i * fx : (i - domain.size[0]) * fx;
           const double kj =
-              (j <= get_size(w, 1) / 2) ? j * fy : (j - get_size(w, 1)) * fy;
+              (j <= domain.size[1] / 2) ? j * fy : (j - domain.size[1]) * fy;
           const double kk =
-              (k <= get_size(w, 2) / 2) ? k * fz : (k - get_size(w, 2)) * fz;
+              (k <= domain.size[2] / 2) ? k * fz : (k - domain.size[2]) * fz;
 
           const double k2 = ki * ki + kj * kj + kk * kk;
 

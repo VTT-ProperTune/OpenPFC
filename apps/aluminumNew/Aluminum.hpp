@@ -184,9 +184,9 @@ public:
 
   void prepare_operators(double dt) {
     auto &fft = get_fft();
-    auto world = get_world();
-    auto [dx, dy, dz] = pfc::domain::get_spacing(world.domain_);
-    auto [Lx, Ly, Lz] = pfc::domain::get_size(world.domain_);
+    auto domain = get_domain();
+    auto [dx, dy, dz] = pfc::domain::get_spacing(domain);
+    auto [Lx, Ly, Lz] = pfc::domain::get_size(domain);
     auto low = pfc::fft::get_outbox(fft).low;
     auto high = pfc::fft::get_outbox(fft).high;
 
@@ -252,8 +252,7 @@ public:
   void step(double t) override {
 
     auto &fft = get_fft();
-    const auto &world_obj = get_world();
-    const pfc::Domain &d = world_obj.domain_;
+    const pfc::Domain &d = get_domain();
     double dx = pfc::domain::get_spacing(d, 0);
     double x0 = pfc::domain::get_origin(d, 0);
     int Lx = pfc::domain::get_size(d, 0);
@@ -340,30 +339,15 @@ public:
   size_t get_allocated_memory_bytes() const override { return mem_allocated; }
 
   /**
-   * @brief Constructs an Aluminum model with the given world object.
-   *
-   * @param world The world object to initialize the model.
-   */
-  explicit Aluminum(pfc::FFT &fft, const pfc::World &world,
-                    MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, world, mpi_comm) {
-    // Additional initialization if needed
-  }
-
-  /**
    * @brief Constructs an Aluminum model from Domain.
    *
    * @param fft FFT object reference
    * @param domain Simulation domain
    * @param mpi_comm MPI communicator
    */
-  explicit Aluminum(pfc::FFT &fft, const pfc::Domain &domain, MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, pfc::World(
-            {0, 0, 0},
-            {static_cast<int>(domain.size[0]) - 1,
-             static_cast<int>(domain.size[1]) - 1,
-             static_cast<int>(domain.size[2]) - 1},
-            domain), mpi_comm) {
+  explicit Aluminum(pfc::FFT &fft, const pfc::Domain &domain,
+                    MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft, domain, mpi_comm) {
     // Additional initialization if needed
   }
 

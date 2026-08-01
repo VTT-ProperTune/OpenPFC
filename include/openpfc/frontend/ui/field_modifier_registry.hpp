@@ -35,6 +35,7 @@
 #include <memory>
 #include <openpfc/frontend/ui/errors_field_modifiers.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/kernel/field/field_operations.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>

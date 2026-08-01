@@ -21,7 +21,8 @@ using pfc::types::Int3;
 // Mock model class for testing
 class ModelWithConstantIC : public Model {
 public:
-  ModelWithConstantIC(FFT &fft, const pfc::Domain &domain) : pfc::Model(fft, domain) {}
+  ModelWithConstantIC(FFT &fft, const pfc::Domain &domain)
+      : pfc::Model(fft, domain) {}
 
   void step(double /*t*/) override {}        // Suppress unused parameter warning
   void initialize(double /*dt*/) override {} // Suppress unused parameter warning
@@ -38,11 +39,9 @@ TEST_CASE("Constant Field Modifier") {
 
   SECTION("Apply field modifier") {
     auto domain = pfc::domain::create(pfc::Int3{8, 1, 1});
-    auto box = pfc::domain::index_box(domain);
-    World world(box.low, box.high, domain);
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain, 1);
     auto fft = fft::create(decomposition);
-    ModelWithConstantIC m(fft, world);
+    ModelWithConstantIC m(fft, domain);
     std::vector<double> psi(8);
     add_real_field(m, "default", psi);
 
@@ -59,9 +58,7 @@ TEST_CASE("Constant Field Modifier") {
 
 TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
   REQUIRE(fft.size_inbox() > 0);
@@ -71,11 +68,9 @@ TEST_CASE("IC Constant - FFT Integration", "[ic_constant]") {
 
 TEST_CASE("IC Constant - Model Integration", "[ic_constant]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithConstantIC model(fft, world);
+  ModelWithConstantIC model(fft, domain);
 
-  REQUIRE(get_size(get_world(model)) == Int3{8, 8, 8});
+  REQUIRE(model.get_domain().size == Int3{8, 8, 8});
 }

@@ -13,13 +13,13 @@
 #include <stdexcept>
 #include <vector>
 
-#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 #include <wave2d/cli.hpp>
 #include <wave2d/state_capture.hpp>
@@ -93,16 +93,16 @@ TEST_CASE("fill_y_physical_ghosts_padded Dirichlet mirrors", "[wave2d][bc]") {
   constexpr int Nx = 8;
   constexpr int Ny = 8;
   auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 1);
   constexpr int hw = 1;
   auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   u.apply([&](double, double, double) { return 0.0; });
   u(0, 0, 0) = 1.25;
-  auto geometry = decomposition::domain(decomp);
   auto subdomain_box = decomposition::local_box(decomp, rank);
-  pfc::PaddedHaloExchanger<double> halo(subdomain_box, geometry, decomp, rank, hw, MPI_COMM_WORLD);
+  pfc::PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw,
+                                        MPI_COMM_WORLD);
   halo.exchange_halos(u.data(), u.size());
   wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny,
                                         0.0);
@@ -123,17 +123,17 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
   const int n_steps = 3;
 
   auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, 1}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 1);
 
   constexpr int hw = 1;
   auto u_pad = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   auto v_pad = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   auto lap_pad = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  auto geometry = decomposition::domain(decomp);
   auto subdomain_box = decomposition::local_box(decomp, rank);
-  pfc::PaddedHaloExchanger<double> halo(subdomain_box, geometry, decomp, rank, hw, MPI_COMM_WORLD);
+  pfc::PaddedHaloExchanger<double> halo(subdomain_box, domain, decomp, rank, hw,
+                                        MPI_COMM_WORLD);
 
   const double xc = 0.5 * static_cast<double>(Nx - 1);
   const double yc = 0.5 * static_cast<double>(Ny - 1);
@@ -238,8 +238,8 @@ TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent",
   const double u_wall_dirichlet = 1.5; // non-zero for Dirichlet
 
   auto domain = pfc::domain::create(pfc::GridSize({Nx, Ny, Nz}),
-                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, 2);
   auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   u.apply([&](double, double, double) { return 0.0; });

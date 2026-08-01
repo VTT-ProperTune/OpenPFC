@@ -101,18 +101,15 @@ TEST_CASE("Diffusion model - 1D analytical validation", "[integration][diffusion
   SECTION("1D domain, single process") {
     // Create 1D world using Domain
     // LLM: 1D test simplifies debugging - extend to 3D once working
-    auto domain = pfc::domain::create(GridSize({Nx, 1, 1}),
-                                      PhysicalOrigin({0.0, 0.0, 0.0}),
-                                      GridSpacing({dx, 1.0, 1.0}));
-    World world(pfc::domain::index_box(domain).low,
-                pfc::domain::index_box(domain).high,
-                domain);
-    auto decomp = decomposition::create(world, 1);
+    auto domain =
+        pfc::domain::create(GridSize({Nx, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                            GridSpacing({dx, 1.0, 1.0}));
+    auto decomp = decomposition::create(domain, 1);
     auto fft = fft::create(decomp);
 
     // Create diffusion model
     // LLM: Uses test fixture from fixtures/ - no mocking needed
-    DiffusionModel model(fft, world);
+    DiffusionModel model(fft, domain);
     model.set_diffusion_coefficient(D);
 
     // Initialize model (computes operators, but also sets Gaussian IC)
@@ -125,8 +122,8 @@ TEST_CASE("Diffusion model - 1D analytical validation", "[integration][diffusion
 
     auto i_low = get_inbox(fft).low;
     auto i_high = get_inbox(fft).high;
-    auto origin = get_origin(world);
-    auto spacing = get_spacing(world);
+    auto origin = pfc::domain::get_origin(domain);
+    auto spacing = pfc::domain::get_spacing(domain);
 
     // Set IC to match analytical solution at t=0
     // LLM: Initial condition must match analytical solution exactly
@@ -181,16 +178,13 @@ TEST_CASE("Diffusion model - 1D analytical validation", "[integration][diffusion
     std::vector<double> errors;
 
     for (double dt_test : dts) {
-      auto domain = pfc::domain::create(GridSize({Nx, 1, 1}),
-                                        PhysicalOrigin({0.0, 0.0, 0.0}),
-                                        GridSpacing({dx, 1.0, 1.0}));
-      World world(pfc::domain::index_box(domain).low,
-                  pfc::domain::index_box(domain).high,
-                  domain);
-      auto decomp = decomposition::create(world, 1);
+      auto domain =
+          pfc::domain::create(GridSize({Nx, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                              GridSpacing({dx, 1.0, 1.0}));
+      auto decomp = decomposition::create(domain, 1);
       auto fft = fft::create(decomp);
 
-      DiffusionModel model(fft, world);
+      DiffusionModel model(fft, domain);
       model.set_diffusion_coefficient(D);
 
       // Initialize model (computes operators)
@@ -255,13 +249,10 @@ TEST_CASE("Diffusion model - 3D spherical symmetry",
   auto domain = pfc::domain::create(GridSize({N, N, N}),
                                     PhysicalOrigin({-L / 2, -L / 2, -L / 2}),
                                     GridSpacing({dx, dx, dx}));
-  World world(pfc::domain::index_box(domain).low,
-              pfc::domain::index_box(domain).high,
-              domain);
-  auto decomp = decomposition::create(world, 1);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
-  DiffusionModel model(fft, world);
+  DiffusionModel model(fft, domain);
   model.set_diffusion_coefficient(D);
   model.initialize(dt);
 
@@ -313,12 +304,11 @@ TEST_CASE("Diffusion model - MPI consistency", "[integration][diffusion][mpi]") 
 
   // Run simulation (decomposition determined by MPI)
   // LLM: Uses MPI_COMM_WORLD so decomposition depends on number of processes
-  auto domain = pfc::domain::create(GridSize({Nx, 1, 1}),
-                                    PhysicalOrigin({0.0, 0.0, 0.0}),
-                                    GridSpacing({dx, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({Nx, 1, 1}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({dx, 1.0, 1.0}));
   World world(pfc::domain::index_box(domain).low,
-              pfc::domain::index_box(domain).high,
-              domain);
+              pfc::domain::index_box(domain).high, domain);
   auto decomp = decomposition::create(world, mpi::get_size());
   auto fft = fft::create(decomp);
 

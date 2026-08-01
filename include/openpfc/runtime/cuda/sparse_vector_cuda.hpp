@@ -15,6 +15,7 @@
 #include <cuda_runtime.h>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
+#include <openpfc/runtime/cuda/cuda_check.hpp>
 #include <openpfc/runtime/cuda/databuffer_cuda.hpp>
 #include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <stdexcept>
@@ -28,9 +29,10 @@ inline void copy_indices_to_device_impl<backend::CudaTag>(
     DataBuffer<backend::CudaTag, size_t> &buf, size_t n,
     const std::vector<size_t> &host_indices) {
   if (n == 0) return;
-  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_indices.data(), n * sizeof(size_t),
-                           cudaMemcpyHostToDevice, nullptr),
-            "gpuMemcpyAsync indices H2D");
+  pfc::cuda::detail::cuda_check(gpuMemcpyAsync(buf.data(), host_indices.data(),
+                                               n * sizeof(size_t),
+                                               cudaMemcpyHostToDevice, nullptr),
+                                "gpuMemcpyAsync indices H2D");
   gpuDeviceSynchronize();
 }
 
@@ -39,9 +41,10 @@ inline void copy_data_to_device_impl<backend::CudaTag, double>(
     DataBuffer<backend::CudaTag, double> &buf, size_t n,
     const std::vector<double> &host_data) {
   if (n == 0) return;
-  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_data.data(), n * sizeof(double),
-                           cudaMemcpyHostToDevice, nullptr),
-            "gpuMemcpyAsync double H2D");
+  pfc::cuda::detail::cuda_check(gpuMemcpyAsync(buf.data(), host_data.data(),
+                                               n * sizeof(double),
+                                               cudaMemcpyHostToDevice, nullptr),
+                                "gpuMemcpyAsync double H2D");
   gpuDeviceSynchronize();
 }
 
@@ -50,9 +53,10 @@ inline void copy_data_to_device_impl<backend::CudaTag, float>(
     DataBuffer<backend::CudaTag, float> &buf, size_t n,
     const std::vector<float> &host_data) {
   if (n == 0) return;
-  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_data.data(), n * sizeof(float),
-                           cudaMemcpyHostToDevice, nullptr),
-            "gpuMemcpyAsync float H2D");
+  pfc::cuda::detail::cuda_check(gpuMemcpyAsync(buf.data(), host_data.data(),
+                                               n * sizeof(float),
+                                               cudaMemcpyHostToDevice, nullptr),
+                                "gpuMemcpyAsync float H2D");
   gpuDeviceSynchronize();
 }
 

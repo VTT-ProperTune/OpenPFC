@@ -113,10 +113,9 @@ TEST_CASE_METHOD(RankModelTestFixture,
 
 TEST_CASE_METHOD(RankModelTestFixture, "Model::is_rank0() is const-correct (v2.0)",
                  "[model][unit][rank]") {
-  World world = pfc::test::world_from_domain(domain());
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain());
 
   // Create const reference to test const-correctness
   const pfc::testing::MockModel &const_model = model;
@@ -134,10 +133,9 @@ public:
 TEST_CASE_METHOD(ErrorModelTestFixture,
                  "Model - error handling for non-existent fields",
                  "[model][unit][error]") {
-  World world = pfc::test::world_from_domain(domain());
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain());
 
   SECTION("Accessing non-existent real field throws std::out_of_range") {
     REQUIRE_THROWS_AS(get_real_field(model, "nonexistent"), std::out_of_range);

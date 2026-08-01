@@ -16,7 +16,8 @@
 
 namespace pfc {
 
-// VTKWriter destructor - no MPI cleanup needed since we didn't duplicate the communicator
+// VTKWriter destructor - no MPI cleanup needed since we didn't duplicate the
+// communicator
 VTKWriter::~VTKWriter() = default;
 
 namespace {
@@ -137,7 +138,8 @@ void VTKWriter::write_pvti_file(int increment) const {
   std::ofstream file(pvti_filename);
   if (!file) {
     const Logger lg{LogLevel::Error, /*rank*/ 0};
-    const std::string msg = std::string("Failed to open PVTI file: ") + pvti_filename;
+    const std::string msg =
+        std::string("Failed to open PVTI file: ") + pvti_filename;
     log_error(lg, msg);
     throw std::runtime_error(msg);
   }
@@ -200,7 +202,8 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
     local_ok = 0;
   }
 
-  // 4. FIRST collective agreement: field size AND file open checks combined BEFORE file write
+  // 4. FIRST collective agreement: field size AND file open checks combined BEFORE
+  // file write
   int global_ok = 0;
   pfc::mpi::throw_on_mpi_error(
       MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
@@ -232,7 +235,8 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
     error_msg = msg;
   }
 
-  // 8. SECOND collective agreement: file write failure check AFTER file write completion
+  // 8. SECOND collective agreement: file write failure check AFTER file write
+  // completion
   global_ok = 0;
   pfc::mpi::throw_on_mpi_error(
       MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
@@ -288,7 +292,8 @@ MPI_Status VTKWriter::write(int increment, const ComplexField &data) {
     if (!error_msg.empty()) {
       throw std::runtime_error(error_msg);
     } else {
-      throw std::runtime_error("VTKWriter::write: collective complex field error detected");
+      throw std::runtime_error(
+          "VTKWriter::write: collective complex field error detected");
     }
   }
 

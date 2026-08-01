@@ -17,19 +17,21 @@ TEST_CASE("VTK roundtrip write", "[integration][io][vtk]") {
   auto tmpdir = fs::path(".temp/tests/integration/vtk");
   fs::create_directories(tmpdir);
 
-  auto world = world::uniform(16, 1.0);
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
   int size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  auto decomp = decomposition::create(world, size);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
-  DiffusionModel model(fft, world);
+  DiffusionModel model(fft, domain);
   model.initialize(1.0e-3);
 
   // Write a single snapshot
   auto writer = std::make_unique<VTKWriter>((tmpdir / "output_%04d.vti").string());
   // Single-rank domain: local == global, offset == 0
-  auto global_size = world::get_size(world);
+  auto global_size = domain.size;
   auto local_size = global_size;
   std::array<int, 3> offset{0, 0, 0};
   writer->set_domain(global_size, local_size, offset);
