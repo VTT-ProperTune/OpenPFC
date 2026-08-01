@@ -37,7 +37,7 @@ The root [`.gitignore`](.gitignore) ignores common build and output paths (`buil
 | [`docs/`](docs/) | User and developer guides (not a substitute for Doxygen API HTML). |
 | [`cmake/`](cmake/) | CMake modules, presets, toolchains. |
 
-**Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — tests, CI expectations, changelog. **Tests:** [`docs/development/testing.md`](docs/development/testing.md).
+**Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — tests, CI expectations, commit scope, commit messages, PR/merge workflow (rebase not squash), changelog. **Tests:** [`docs/development/testing.md`](docs/development/testing.md).
 
 ## Language and tooling
 
