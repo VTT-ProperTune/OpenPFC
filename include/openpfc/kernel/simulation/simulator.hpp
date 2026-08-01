@@ -174,10 +174,22 @@ public:
    * @return const Decomposition&
    */
   /**
-   * @brief Get the world object
+   * @brief Get the domain object (M1 migration).
    *
-   * @return const World&
+   * @return const Domain&
    */
+  [[nodiscard]] const Domain &get_domain() const noexcept {
+    return pfc::get_domain(m_model);
+  }
+
+  /**
+   * @brief Get the world object (deprecated).
+   *
+   * @deprecated Use get_domain() instead.
+   *
+   * @return Reference to the World object
+   */
+  [[deprecated("Use get_domain() instead")]]
   [[nodiscard]] const World &get_world() const noexcept {
     return pfc::get_world(m_model);
   }

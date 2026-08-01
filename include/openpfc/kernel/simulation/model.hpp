@@ -30,8 +30,8 @@
  * @code
  * class MyPhysicsModel : public pfc::Model {
  * public:
- *     MyPhysicsModel(pfc::FFT& fft, const pfc::World& world)
- *         : Model(fft, world) {}
+ *     MyPhysicsModel(pfc::FFT& fft, const pfc::Domain& domain)
+ *         : Model(fft, domain) {}
  *
  *     void initialize() override {
  *         // Register fields
@@ -66,6 +66,7 @@
 #ifndef PFC_MODEL_HPP
 #define PFC_MODEL_HPP
 
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
@@ -108,7 +109,8 @@ private:
   /// @see get_fft() for access
   fft::IFFT &m_fft;
   ModelFieldRegistry m_fields; ///< Named real/complex field references (not owned)
-  const World &m_world;        ///< Reference to the World object
+  const Domain &m_domain;      ///< Reference to the Domain object (M1 migration)
+  World m_world;               ///< World object for deprecated get_world() (M1 A0 shim)
   MPI_Comm m_mpi_comm{
       MPI_COMM_WORLD};  ///< Communicator for rank-0 / collective alignment
   bool m_rank0 = false; ///< True if this process is rank 0 in `m_mpi_comm`
@@ -120,14 +122,14 @@ public:
   ~Model() = default;
 
   /**
-   * @brief Construct a new Model object
+   * @brief Construct a new Model object with Domain (preferred, M1 migration)
    *
    * Constructs a Model with the given FFT backend and simulation domain.
    * The FFT object must outlive the Model instance.
    *
    * @param fft Reference to the FFT implementation (`IFFT`, e.g. `CpuFft`) used by
    * the model
-   * @param world Reference to the World object
+   * @param domain Reference to the Domain object
    * @param mpi_comm MPI communicator for `is_rank0()` (default `MPI_COMM_WORLD`).
    *        Use the same communicator as `Simulator` and FFT when running with a
    *        non-world communicator (e.g. `SpectralSimulationSession` passes the
@@ -138,18 +140,29 @@ public:
    *
    * @example
    * ```cpp
-   * auto world = world::create({256, 256, 256});
-   * auto decomp = decomposition::create(world, mpi::get_size());
+   * auto domain = domain::create({256, 256, 256});
+   * auto decomp = decomposition::create(domain, mpi::get_size());
    * auto fft = fft::create(decomp);
    *
-   * MyModel model(fft, world);  // FFT required at construction
+   * MyModel model(fft, domain);  // FFT required at construction
    * model.initialize(0.01);
    * ```
    *
    * @since v2.0 (breaking change - FFT now required)
    */
+  Model(fft::IFFT &fft, const Domain &domain, MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : m_fft(fft), m_domain(domain), m_world({0, 0, 0}, {domain.size[0] - 1, domain.size[1] - 1, domain.size[2] - 1}, domain),
+        m_mpi_comm(mpi_comm), m_rank0(mpi_comm_rank_is_zero(mpi_comm)) {}
+
+  /**
+   * @brief Construct a new Model object with World (deprecated, M1 A0 shim)
+   *
+   * @deprecated Use the Domain constructor instead. This constructor is provided
+   *             for Gen-1 compatibility and will be removed in M12.
+   */
+  [[deprecated("Use Model(fft, domain) instead")]]
   Model(fft::IFFT &fft, const World &world, MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : m_fft(fft), m_world(world), m_mpi_comm(mpi_comm),
+      : m_fft(fft), m_domain(world.domain_), m_world(world), m_mpi_comm(mpi_comm),
         m_rank0(mpi_comm_rank_is_zero(mpi_comm)) {}
 
   /**
@@ -188,10 +201,21 @@ public:
   [[nodiscard]] MPI_Comm mpi_comm() const noexcept { return m_mpi_comm; }
 
   /**
-   * @brief Get the world object associated with the model.
+   * @brief Get the domain object associated with the model (M1 migration).
+   *
+   * @return Reference to the Domain object
+   */
+  const Domain &get_domain() const noexcept { return m_domain; }
+
+  /**
+   * @brief Get the world object associated with the model (deprecated).
+   *
+   * @deprecated Use get_domain() instead. This method is provided for Gen-1
+   *             compatibility and will be removed in M12.
    *
    * @return Reference to the World object
    */
+  [[deprecated("Use get_domain() instead")]]
   const World &get_world() const noexcept { return m_world; }
 
   /**
@@ -339,8 +363,8 @@ public:
    * ```cpp
    * class MyPFCModel : public pfc::Model {
    * public:
-   *     MyPFCModel(pfc::FFT& fft, const pfc::World& world)
-   *         : Model(fft, world) {}
+   *     MyPFCModel(pfc::FFT& fft, const pfc::Domain& domain)
+   *         : Model(fft, domain) {}
    *
    *     void initialize(double dt) override {
    *         // Register fields
@@ -348,7 +372,7 @@ public:
    *         add_complex_field("density_k", density_k_field);
    *
    *         // Precompute spectral operators
-   *         auto world = get_world();
+   *         auto domain = get_domain();
    *         for (int k = 0; k < kspace_size; ++k) {
    *             double k2 = kx[k]*kx[k] + ky[k]*ky[k] + kz[k]*kz[k];
    *             laplacian_op[k] = -k2;

@@ -16,10 +16,24 @@
 #ifndef PFC_KERNEL_SIMULATION_MODEL_FREE_FUNCTIONS_HPP
 #define PFC_KERNEL_SIMULATION_MODEL_FREE_FUNCTIONS_HPP
 
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/world.hpp>
+
 /**
- * @brief World associated with the model (free function; preferred over
- * Model::get_world()).
+ * @brief Domain associated with the model (free function; preferred over
+ * Model::get_domain()).
  */
+[[nodiscard]] inline const Domain &get_domain(const Model &model) noexcept {
+  return model.get_domain();
+}
+
+/**
+ * @brief World associated with the model (free function; deprecated).
+ *
+ * @deprecated Use get_domain() instead. This function is provided for Gen-1
+ *             compatibility and will be removed in M12.
+ */
+[[deprecated("Use get_domain() instead")]]
 [[nodiscard]] inline const World &get_world(const Model &model) noexcept {
   return model.get_world();
 }
