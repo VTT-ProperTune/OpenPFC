@@ -61,12 +61,12 @@
 
 #include <hip/hip_runtime.h>
 
-#include <openpfc/runtime/hip/hip_check.hpp>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <openpfc/runtime/hip/memory_space_hip.hpp>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
@@ -337,18 +337,16 @@ public:
           continue;
         }
         const std::size_t bytes = m_face_elems[i] * sizeof(double);
-        detail::hip_check(
-            hipMallocHost(reinterpret_cast<void **>(&m_h_send[i]), bytes),
-            "hipMallocHost halo send");
-        detail::hip_check(
-            hipMallocHost(reinterpret_cast<void **>(&m_h_recv[i]), bytes),
-            "hipMallocHost halo recv");
+        GPU_CHECK(gpuHostMalloc(reinterpret_cast<void **>(&m_h_send[i]), bytes),
+                  "gpuHostMalloc halo send");
+        GPU_CHECK(gpuHostMalloc(reinterpret_cast<void **>(&m_h_recv[i]), bytes),
+                  "gpuHostMalloc halo recv");
       }
     }
     if (m_scratch_elems > 0) {
-      detail::hip_check(hipMalloc(reinterpret_cast<void **>(&m_d_scratch),
-                                  m_scratch_elems * sizeof(double)),
-                        "hipMalloc halo device scratch (pack/unpack)");
+      GPU_CHECK(gpuMalloc(reinterpret_cast<void **>(&m_d_scratch),
+                          m_scratch_elems * sizeof(double)),
+                "gpuMalloc halo device scratch (pack/unpack)");
     }
   }
 
@@ -369,7 +367,8 @@ public:
    *
    * @tparam T           Field element type (e.g., `double`).
    * @param field        Template field on HIP device (used to extract halo width).
-   * @param decomp       Decomposition shared by all fields exchanged with this instance.
+   * @param decomp       Decomposition shared by all fields exchanged with this
+   * instance.
    * @param rank         MPI rank of the caller.
    * @param comm         MPI communicator for the exchange.
    * @param dirs         Direction set (defaults to `Axes3D()` for back-compat).
@@ -436,13 +435,13 @@ private:
    * public APIs. It performs the actual MPI halo exchange operations.
    */
   void exchange_halos_device_impl(double *d_padded, std::size_t padded_size,
-                                   hipStream_t stream) {
+                                  hipStream_t stream) {
     (void)padded_size;
     const bool perf = hip_halo_exchange_perf_enabled();
     auto &H = hip_halo_exchange_cpu_timers();
 
     double t_mark = MPI_Wtime();
-    detail::hip_check(hipStreamSynchronize(stream), "hipStreamSynchronize pre halo");
+    GPU_CHECK(gpuStreamSynchronize(stream), "gpuStreamSynchronize pre halo");
     if (perf) {
       H.pre_stream_sync += MPI_Wtime() - t_mark;
       ++H.n_calls;
@@ -456,16 +455,15 @@ private:
         H.gpu_aware_mpi += MPI_Wtime() - t_mark;
       }
       t_mark = MPI_Wtime();
-      detail::hip_check(hipDeviceSynchronize(),
-                        "hipDeviceSynchronize post GPU-aware MPI");
+      GPU_CHECK(gpuDeviceSynchronize(), "gpuDeviceSynchronize post GPU-aware MPI");
       if (perf) {
         H.post_exchange_hip_sync += MPI_Wtime() - t_mark;
       }
     } else {
       exchange_packed_fallback_(d_padded, stream);
       t_mark = MPI_Wtime();
-      detail::hip_check(hipStreamSynchronize(stream),
-                        "hipStreamSynchronize post packed halo");
+      GPU_CHECK(gpuStreamSynchronize(stream),
+                "gpuStreamSynchronize post packed halo");
       if (perf) {
         H.post_exchange_hip_sync += MPI_Wtime() - t_mark;
       }
@@ -526,9 +524,8 @@ private:
                                           recv.oz, recv.sx, recv.sy, recv.sz, m_nxp,
                                           m_nyp, m_nzp, stream);
       }
-      detail::hip_check(
-          hipStreamSynchronize(stream),
-          "hipStreamSynchronize after local self-neighbor halo copies");
+      GPU_CHECK(gpuStreamSynchronize(stream),
+                "gpuStreamSynchronize after local self-neighbor halo copies");
     }
 
     std::size_t req_count = 0;
@@ -582,9 +579,8 @@ private:
                                           recv.oz, recv.sx, recv.sy, recv.sz, m_nxp,
                                           m_nyp, m_nzp, stream);
       }
-      detail::hip_check(
-          hipStreamSynchronize(stream),
-          "hipStreamSynchronize after packed self-neighbor halo copies");
+      GPU_CHECK(gpuStreamSynchronize(stream),
+                "gpuStreamSynchronize after packed self-neighbor halo copies");
     }
 
     std::size_t req_count = 0;
@@ -611,12 +607,11 @@ private:
       detail::launch_padded_pack_face(m_d_scratch, d_padded, send.ox, send.oy,
                                       send.oz, send.sx, send.sy, send.sz, m_nxp,
                                       m_nyp, m_nzp, stream);
-      detail::hip_check(hipMemcpyAsync(m_h_send[i], m_d_scratch,
-                                       m_face_elems[i] * sizeof(double),
-                                       hipMemcpyDeviceToHost, stream),
-                        "hipMemcpyAsync pack face D2H");
-      detail::hip_check(hipStreamSynchronize(stream),
-                        "hipStreamSynchronize pack face");
+      GPU_CHECK(gpuMemcpyAsync(m_h_send[i], m_d_scratch,
+                               m_face_elems[i] * sizeof(double),
+                               gpuMemcpyDeviceToHost, stream),
+                "gpuMemcpyAsync pack face D2H");
+      GPU_CHECK(gpuStreamSynchronize(stream), "gpuStreamSynchronize pack face");
       if (perf) {
         H.packed_face_pack_d2h_sync += MPI_Wtime() - t_face;
       }
@@ -642,12 +637,11 @@ private:
         continue;
       }
       const double t_face = perf ? MPI_Wtime() : 0.0;
-      detail::hip_check(hipMemcpyAsync(m_d_scratch, m_h_recv[i],
-                                       m_face_elems[i] * sizeof(double),
-                                       hipMemcpyHostToDevice, stream),
-                        "hipMemcpyAsync unpack face H2D");
-      detail::hip_check(hipStreamSynchronize(stream),
-                        "hipStreamSynchronize unpack H2D");
+      GPU_CHECK(gpuMemcpyAsync(m_d_scratch, m_h_recv[i],
+                               m_face_elems[i] * sizeof(double),
+                               gpuMemcpyHostToDevice, stream),
+                "gpuMemcpyAsync unpack face H2D");
+      GPU_CHECK(gpuStreamSynchronize(stream), "gpuStreamSynchronize unpack H2D");
 
       const auto &recv = m_face_specs[i].second;
       detail::launch_padded_unpack_face(d_padded, m_d_scratch, recv.ox, recv.oy,
@@ -663,17 +657,17 @@ private:
     if (!m_use_gpu_aware) {
       for (std::size_t i = 0; i < 6; ++i) {
         if (m_h_send[i] != nullptr) {
-          (void)hipFreeHost(m_h_send[i]);
+          (void)gpuHostFree(m_h_send[i]);
           m_h_send[i] = nullptr;
         }
         if (m_h_recv[i] != nullptr) {
-          (void)hipFreeHost(m_h_recv[i]);
+          (void)gpuHostFree(m_h_recv[i]);
           m_h_recv[i] = nullptr;
         }
       }
     }
     if (m_d_scratch != nullptr) {
-      (void)hipFree(m_d_scratch);
+      (void)gpuFree(m_d_scratch);
       m_d_scratch = nullptr;
     }
   }
