@@ -75,10 +75,10 @@ namespace detail {
  * device-specific machinery beyond `rhs(t, g)` annotated `OPENPFC_HD`.
  */
 template <class Model, class G>
-__global__ void
-for_each_interior_device_kernel(Model model, ::pfc::hip::FdGradientDevicePOD eval,
-                                double *du_padded, double t, int nx, int ny,
-                                int nz) {
+__global__ void for_each_interior_device_kernel(Model model,
+                                                ::pfc::hip::FdGradientDevicePOD eval,
+                                                double *du_padded, double t, int nx,
+                                                int ny, int nz) {
   const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
   const int iy = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
   const int iz = static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z);
@@ -139,18 +139,13 @@ inline void for_each_interior_device(const Model &model,
                   (static_cast<unsigned>(nz) + Tz - 1) / Tz);
   detail::for_each_interior_device_kernel<Model, G>
       <<<grid, block, 0, stream>>>(model, eval, du_padded, t, nx, ny, nz);
-  hipError_t e = hipGetLastError();
-  if (e != hipSuccess) {
+  gpuError_t e = gpuGetLastError();
+  if (e != gpuSuccess) {
     throw std::runtime_error(std::string("for_each_interior_device: kernel "
                                          "launch failed: ") +
-                             hipGetErrorString(e));
+                             std::string(gpuGetErrorString(e)));
   }
-  e = hipStreamSynchronize(stream);
-  if (e != hipSuccess) {
-    throw std::runtime_error(std::string("for_each_interior_device: synchronize "
-                                         "failed: ") +
-                             hipGetErrorString(e));
-  }
+  GPU_CHECK(gpuStreamSynchronize(stream), "for_each_interior_device synchronize");
 }
 
 /**

@@ -254,8 +254,7 @@ public:
     // `2 * n_fields` Irecvs and `2 * n_fields` Isends → `4 * n_fields`.
     m_requests.assign(static_cast<std::size_t>(4) * m_n_fields, MPI_REQUEST_NULL);
 
-    const bool force_packed =
-        detail::getenv_truthy("OPENPFC_HIP_FORCE_PACKED_HALO");
+    const bool force_packed = detail::getenv_truthy("OPENPFC_HIP_FORCE_PACKED_HALO");
     m_use_gpu_aware = !force_packed && detail::runtime_mpi_hip_aware();
 
     if (m_use_gpu_aware) {
@@ -263,9 +262,9 @@ public:
                                  (m_axis_is_self[1] && m_axis_active[1]) ||
                                  (m_axis_is_self[2] && m_axis_active[2]);
       if (any_self_axis && m_scratch_elems > 0) {
-        detail::hip_check(hipMalloc(reinterpret_cast<void **>(&m_d_scratch),
-                                      m_scratch_elems * sizeof(double)),
-                           "hipMalloc full halo device scratch");
+        GPU_CHECK(gpuMalloc(reinterpret_cast<void **>(&m_d_scratch),
+                            m_scratch_elems * sizeof(double)),
+                  "gpuMalloc full halo device scratch");
       }
     } else {
       // Packed fallback: per-field axis-aligned 6-face exchanger. **Does not
@@ -286,7 +285,7 @@ public:
 
   ~FullPaddedDeviceHalo() {
     if (m_d_scratch != nullptr) {
-      (void)hipFree(m_d_scratch);
+      (void)gpuFree(m_d_scratch);
       m_d_scratch = nullptr;
     }
   }
@@ -316,8 +315,7 @@ public:
     auto &H = hip_halo_exchange_cpu_timers();
 
     double t_mark = MPI_Wtime();
-    detail::hip_check(hipStreamSynchronize(stream),
-                       "hipStreamSynchronize pre full halo");
+    GPU_CHECK(gpuStreamSynchronize(stream), "gpuStreamSynchronize pre full halo");
     if (perf) {
       H.pre_stream_sync += MPI_Wtime() - t_mark;
       ++H.n_calls;
@@ -435,8 +433,7 @@ private:
     }
     // Make every store from this pass globally visible before the next pass
     // launches a stream pack that reads from the just-written halos.
-    detail::hip_check(hipDeviceSynchronize(),
-                       "hipDeviceSynchronize after full halo pass");
+    GPU_CHECK(gpuDeviceSynchronize(), "gpuDeviceSynchronize after full halo pass");
   }
 
   /// Periodic self-loop along `axis`: device pack/unpack on `stream`.
@@ -461,8 +458,8 @@ private:
             recv_opp.sy, recv_opp.sz, m_nxp, m_nyp, m_nzp, stream);
       }
     }
-    detail::hip_check(hipStreamSynchronize(stream),
-                       "hipStreamSynchronize after full halo self-pack");
+    GPU_CHECK(gpuStreamSynchronize(stream),
+              "gpuStreamSynchronize after full halo self-pack");
   }
 
   /// Real-MPI exchange along `axis`: post all Irecvs, then all Isends, wait.
