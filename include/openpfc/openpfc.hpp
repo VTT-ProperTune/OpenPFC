@@ -30,9 +30,7 @@
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/utils/show.hpp>
 #include <openpfc/frontend/utils/utils.hpp>
-#include <openpfc/kernel/data/array.hpp>
 #include <openpfc/kernel/data/constants.hpp>
-#include <openpfc/kernel/data/discrete_field.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/multi_index.hpp>
 #include <openpfc/kernel/data/world.hpp>
@@ -54,7 +52,7 @@
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/simulation_context.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
-#include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 #endif // PFC_OPENPFC_HPP

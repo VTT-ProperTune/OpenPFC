@@ -41,8 +41,9 @@ target_link_libraries(07_array PRIVATE OpenPFC ${_heffte_tgt})
 add_executable(08_discrete_fields 08_discrete_fields.cpp)
 target_link_libraries(08_discrete_fields PRIVATE OpenPFC ${_heffte_tgt})
 
-add_executable(09_parallel_fft_high_level 09_parallel_fft_high_level.cpp)
-target_link_libraries(09_parallel_fft_high_level PRIVATE OpenPFC ${_heffte_tgt})
+# Legacy example temporarily removed - depends on deleted Array type
+# add_executable(09_parallel_fft_high_level 09_parallel_fft_high_level.cpp)
+# target_link_libraries(09_parallel_fft_high_level PRIVATE OpenPFC ${_heffte_tgt})
 
 add_executable(10_ui_register_ic 10_ui_register_ic.cpp)
 target_link_libraries(10_ui_register_ic PRIVATE OpenPFC nlohmann_json::nlohmann_json ${_heffte_tgt})

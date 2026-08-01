@@ -29,15 +29,14 @@
  * | `xx, yy, zz` | yes — D2 orders 2..20 (see `EvenCentralD2<Order>`)              |
  * | `xy, xz, yz` | **rejected** at compile time (mixed seconds need corner halos)  |
  *
- * Construction is normally done through the brick-binding constructor
+ * Construction is normally done through the modern field-binding constructor
  *
  *     pfc::gradient::FDGradient<HeatGrads> grad(u);            // order = 2
  *     pfc::gradient::FDGradient<HeatGrads> grad(u, 4);         // explicit order
  *
  * which reads the geometry (`nx, ny, nz`, spacings, halo width) directly
- * from the `pfc::field::PaddedBrick<double>`. Legacy callers that hand a
- * raw pointer + extents are still supported, and the
- * `pfc::field::create<G>(pfc::data::Field<double>, order)` factory works
+ * from the `pfc::data::Field<double>`. The
+ * `pfc::field::create<G>(pfc::data::Field<double>, order)` factory also works
  * (for the unpadded Field path used by `FdCpuStack`).
  *
  * Drive a sweep with the free `pfc::gradient::evaluate(grad, idx)`
@@ -83,12 +82,11 @@
 #include <string>
 #include <type_traits>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/field/fd_apply.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
 
 namespace pfc::gradient {
 
@@ -110,9 +108,9 @@ public:
   /**
    * @brief Construct an FD point evaluator over a contiguous brick.
    *
-   * Prefer the `(PaddedBrick&, order)` overload below for the typical
+   * Prefer the `(Field<double>&, order)` overload for the typical
    * case; this raw-pointer constructor is for power users that build the
-   * evaluator from a `pfc::data::Field` or a buffer the kernel does not own.
+   * evaluator from a buffer the kernel does not own.
    *
    * Treats `core` as a tightly-packed `nx*ny*nz` row-major buffer
    * (x fastest), with iteration bounds `[halo_width, n-halo_width)` per
@@ -122,23 +120,23 @@ public:
    *                             (x fastest); must outlive the evaluator.
    * @param nx,ny,nz              Local extents in cells.
    * @param dx,dy,dz              Per-axis grid spacing.
- * @param halo_width            Local halo width; must be `>=` the stencil
- *                             half-width required by members `G` declares
- *                             (typically `order / 2` for tabulated even
- *                             central D1/D2).
- * @param order                 Even spatial order. Must be tabulated for every
- *                             derivative `G` declares: D2 orders 2..20 are
- *                             supported; D1 orders 2..14 are supported.
- *                             Defaults to 2 (the cheapest 7-point Laplacian).
- * @param halo_prepare_callback Optional function invoked by prepare() to
- *                             trigger halo exchange before each stage in
- *                             multi-stage methods.
- *
- * @throws std::invalid_argument if `order` is outside the tabulated
- *         range for any derivative member declared by `G`, or if
- *         `halo_width` is strictly less than the required stencil
- *         half-width for those members.
- */
+   * @param halo_width            Local halo width; must be `>=` the stencil
+   *                             half-width required by members `G` declares
+   *                             (typically `order / 2` for tabulated even
+   *                             central D1/D2).
+   * @param order                 Even spatial order. Must be tabulated for every
+   *                             derivative `G` declares: D2 orders 2..20 are
+   *                             supported; D1 orders 2..14 are supported.
+   *                             Defaults to 2 (the cheapest 7-point Laplacian).
+   * @param halo_prepare_callback Optional function invoked by prepare() to
+   *                             trigger halo exchange before each stage in
+   *                             multi-stage methods.
+   *
+   * @throws std::invalid_argument if `order` is outside the tabulated
+   *         range for any derivative member declared by `G`, or if
+   *         `halo_width` is strictly less than the required stencil
+   *         half-width for those members.
+   */
   FDGradient(const double *core, int nx, int ny, int nz, double dx, double dy,
              double dz, int halo_width, int order = 2,
              std::function<void()> halo_prepare_callback = {})
@@ -151,58 +149,26 @@ public:
                    std::move(halo_prepare_callback)) {}
 
   /**
-   * @brief Bind the evaluator to a `pfc::field::PaddedBrick<double>`.
-   *
-   * Pre-offsets the stored core pointer to the brick's **owned** `(0, 0, 0)`
-   * cell so that `grad(i, j, k)` (and `pfc::gradient::evaluate(grad, idx)`)
-   * indexes by **owned coordinates** `i, j, k ∈ [0, nx_owned)`. Every owned
-   * cell is stencil-safe because the halo ring is filled by the matching
-   * `pfc::communication::PaddedHaloExchanger<T>` before the sweep starts. The
-   * strides used by the stencil reads are still the **padded** strides
-   * `(1, nx_pad, nx_pad·ny_pad)` so reads at the boundary reach into the
-   * halo correctly.
-   *
-   * @param u                     Padded brick to evaluate over (must outlive
-   * `*this`).
-   * @param order                 Even spatial order (defaults to 2).
-   * @param halo_prepare_callback Optional function invoked by prepare() to
-   *                             trigger halo exchange before each stage in
-   *                             multi-stage methods.
-   */
-  explicit FDGradient(const pfc::field::PaddedBrick<double> &u, int order = 2,
-                      std::function<void()> halo_prepare_callback = {})
-      : FDGradient(brick_owned_origin_(u), u.nx(), u.ny(), u.nz(),
-                   /*sy=*/static_cast<std::ptrdiff_t>(u.padded_size3()[0]),
-                   /*sxy=*/static_cast<std::ptrdiff_t>(u.padded_size3()[0]) *
-                       static_cast<std::ptrdiff_t>(u.padded_size3()[1]),
-                   u.spacing()[0], u.spacing()[1], u.spacing()[2],
-                   /*imin=*/0, /*imax=*/u.nx(),
-                   /*jmin=*/0, /*jmax=*/u.ny(),
-                   /*kmin=*/0, /*kmax=*/u.nz(), u.halo_width(), order,
-                   std::move(halo_prepare_callback)) {}
-
-  /**
    * @brief Bind the evaluator to a padded `pfc::data::Field<double>`
    *        (`storage_halo() > 0`).
    *
-   * Same indexing contract as the `PaddedBrick` constructor: owned
-   * coordinates with padded strides so stencil reads reach the halo ring.
+   * Uses owned coordinates with padded strides so stencil reads reach the halo ring.
    *
    * @throws std::invalid_argument if `u.storage_halo() <= 0` (use
    *         `pfc::field::create(Field)` for the unpadded face-halo layout).
    */
   explicit FDGradient(const pfc::data::Field<double> &u, int order = 2,
                       std::function<void()> halo_prepare_callback = {})
-      : FDGradient(field_owned_origin_(require_padded_field_(u)),
-                   u.local_size()[0], u.local_size()[1], u.local_size()[2],
+      : FDGradient(field_owned_origin_(require_padded_field_(u)), u.local_size()[0],
+                   u.local_size()[1], u.local_size()[2],
                    /*sy=*/static_cast<std::ptrdiff_t>(u.padded_extent(0)),
                    /*sxy=*/static_cast<std::ptrdiff_t>(u.padded_extent(0)) *
                        static_cast<std::ptrdiff_t>(u.padded_extent(1)),
                    u.spacing()[0], u.spacing()[1], u.spacing()[2],
                    /*imin=*/0, /*imax=*/u.local_size()[0],
                    /*jmin=*/0, /*jmax=*/u.local_size()[1],
-                   /*kmin=*/0, /*kmax=*/u.local_size()[2], u.storage_halo(),
-                   order, std::move(halo_prepare_callback)) {}
+                   /*kmin=*/0, /*kmax=*/u.local_size()[2], u.storage_halo(), order,
+                   std::move(halo_prepare_callback)) {}
 
   /**
    * @brief Prepare for gradient evaluation.
@@ -305,18 +271,6 @@ public:
   }
 
 private:
-  /// Pointer to the brick's **owned** `(0, 0, 0)` cell inside its padded
-  /// buffer. Used by the brick-binding constructor so the public
-  /// `operator()` indexes by owned coordinates while the stencil reads
-  /// still hop along the padded strides.
-  static const double *
-  brick_owned_origin_(const pfc::field::PaddedBrick<double> &u) noexcept {
-    const std::size_t hw = static_cast<std::size_t>(u.halo_width());
-    const std::size_t nxp = static_cast<std::size_t>(u.padded_size3()[0]);
-    const std::size_t nyp = static_cast<std::size_t>(u.padded_size3()[1]);
-    return u.data() + hw + hw * nxp + hw * nxp * nyp;
-  }
-
   static const pfc::data::Field<double> &
   require_padded_field_(const pfc::data::Field<double> &u) {
     if (u.storage_halo() <= 0) {
@@ -535,37 +489,13 @@ template <class G>
 [[nodiscard]] inline FdGradient<G> create(const pfc::data::Field<double> &u,
                                           int order = 2) {
   // Unpadded Field (storage_halo==0): tightly packed core + iteration halo.
-  // Padded Field (storage_halo>0): same layout contract as PaddedBrick.
+  // Padded Field (storage_halo>0): padded layout with halo ring.
   if (u.storage_halo() == 0) {
     const auto sz = u.local_size();
     const auto sp = u.spacing();
     return FdGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
                          u.halo_width(), order);
   }
-  return FdGradient<G>(u, order);
-}
-
-/**
- * @brief Build an `FdGradient<G>` over a halo-padded brick.
- *
- * The evaluator indexes the **full** `(nx+2hw)×(ny+2hw)×(nz+2hw)` storage with
- * interior bounds `[hw, nx_pad-hw)` per axis, matching ghost cells populated by
- * `pfc::communication::PaddedHaloExchanger<T>` on `u.data()`.
- *
- * Equivalent to `pfc::gradient::FDGradient<G>(u, order)`; kept for symmetry
- * with the `pfc::data::Field` factory above.
- *
- * @tparam G     Model-owned grads aggregate (see `grad_concepts.hpp`).
- * @param u      Padded brick (must outlive the returned evaluator).
- * @param order  Even spatial order; requires `u.halo_width() >= order / 2`.
- *               Defaults to 2.
- *
- * @throws std::invalid_argument if `order` is unsupported for `G`, or if
- *         `u.halo_width()` is strictly less than the required half-width.
- */
-template <class G>
-[[nodiscard]] inline FdGradient<G> create(const PaddedBrick<double> &u,
-                                          int order = 2) {
   return FdGradient<G>(u, order);
 }
 
@@ -577,8 +507,7 @@ template <class G>
 
 namespace pfc::gradient {
 
-template <class G>
-using GradientEvaluatorPtr = std::shared_ptr<G>;
+template <class G> using GradientEvaluatorPtr = std::shared_ptr<G>;
 
 // FD gradient factory functions using Box3i and Domain
 //
@@ -592,33 +521,31 @@ using GradientEvaluatorPtr = std::shared_ptr<G>;
 
 template <class G>
 [[nodiscard]] inline GradientEvaluatorPtr<pfc::gradient::FDGradient<G>>
-make_fd_gradient(const pfc::Box3i& region) {
+make_fd_gradient(const pfc::Box3i &region) {
   return std::make_shared<pfc::gradient::FDGradient<G>>(
-      /* field_data */ static_cast<const double*>(nullptr),
-      region.size[0], region.size[1], region.size[2],
+      /* field_data */ static_cast<const double *>(nullptr), region.size[0],
+      region.size[1], region.size[2],
       /* dx, dy, dz */ 1.0, 1.0, 1.0,
       /* halo_width */ 1, /* order */ 2);
 }
 
 template <class G>
 [[nodiscard]] inline GradientEvaluatorPtr<pfc::gradient::FDGradient<G>>
-make_fd_gradient(const pfc::Box3i& region, const pfc::Domain& domain) {
-  const auto& sp = pfc::domain::get_spacing(domain);
+make_fd_gradient(const pfc::Box3i &region, const pfc::Domain &domain) {
+  const auto &sp = pfc::domain::get_spacing(domain);
   return std::make_shared<pfc::gradient::FDGradient<G>>(
-      /* field_data */ static_cast<const double*>(nullptr),
-      region.size[0], region.size[1], region.size[2],
-      sp[0], sp[1], sp[2],
+      /* field_data */ static_cast<const double *>(nullptr), region.size[0],
+      region.size[1], region.size[2], sp[0], sp[1], sp[2],
       /* halo_width */ 1, /* order */ 2);
 }
 
 template <class G>
 [[nodiscard]] inline GradientEvaluatorPtr<pfc::gradient::FDGradient<G>>
-make_fd_gradient(const pfc::Box3i& region, const pfc::Domain& domain,
-                 const std::array<double, 3>& spacing) {
+make_fd_gradient(const pfc::Box3i &region, const pfc::Domain &domain,
+                 const std::array<double, 3> &spacing) {
   return std::make_shared<pfc::gradient::FDGradient<G>>(
-      /* field_data */ static_cast<const double*>(nullptr),
-      region.size[0], region.size[1], region.size[2],
-      spacing[0], spacing[1], spacing[2],
+      /* field_data */ static_cast<const double *>(nullptr), region.size[0],
+      region.size[1], region.size[2], spacing[0], spacing[1], spacing[2],
       /* halo_width */ 1, /* order */ 2);
 }
 

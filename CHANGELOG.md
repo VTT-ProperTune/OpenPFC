@@ -26,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Breaking**: World pattern deprecated in favor of Domain + Box3i (compatibility shim maintained)
-- **Breaking**: Legacy field containers (LocalField, PaddedBrick, DiscreteField, Array) removed
 - **GPU Architecture**: Migrated from vendor-specific implementations to single-source runtime/gpu/ directory
 - **Field Operations**: Migrated from World-based to Domain-based APIs throughout kernel
 - **Simulator Architecture**: Separated concerns between orchestration, simulation, and physics
@@ -36,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 - **World Pattern**: `get_world()` functions and `World()` constructor deprecated for removal in 0.3.0
 - **Model World Constructor**: `Model(fft, World)` constructor deprecated, use `Model(fft, Domain)` instead
-- **Legacy Field Containers**: LocalField, PaddedBrick, DiscreteField, Array deprecated for removal in 0.3.0 (migration guides documented in docs/development/state_access_usage.md)
 
 ### Removed
 - **Vendor-Specific GPU Code**: Separate CUDA/HIP directories consolidated to runtime/gpu/
@@ -71,19 +69,6 @@ auto size = domain.size;
 
 // For spatial operations:
 Box3i box = pfc::domain::index_box(domain);
-```
-
-#### From Legacy Field Containers
-Previous container types have been unified into `Field<T, MemorySpace>`:
-
-```cpp
-// Old (deprecated):
-PaddedBrick<double> field(size);
-LocalField<double> local_field(...);
-
-// New (recommended):
-using Field = pfc::data::Field<double, pfc::HostSpace>;
-Field field = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 ```
 
 #### Model Constructor

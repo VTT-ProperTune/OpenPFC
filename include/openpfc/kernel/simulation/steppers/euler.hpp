@@ -46,8 +46,6 @@
  *      point-wise driver loop the `create` factories wrap
  * @see openpfc/kernel/field/grad_concepts.hpp for the per-member detection
  *      concepts that drive backend pruning
- * @see openpfc/kernel/field/local_field.hpp for the typed field bundle
- *      that the `Field` overload derives `local_size` from
  * @see imex_euler.hpp for first-order IMEX Euler (`ImexEulerStepper`)
  */
 
@@ -57,7 +55,6 @@
 #include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/stepper_validation.hpp>
@@ -325,7 +322,6 @@ template <class T, class Eval, class Model>
   return create(eval, model, dt, u.size());
 }
 
-
 /**
  * @brief Multi-field overload: build a `MultiEulerStepper` from a tuple of
  *        `Field` references, a composite evaluator, and a model whose
@@ -345,8 +341,8 @@ template <class T, class Eval, class Model>
  * @param dt      Time-step size.
  */
 template <class... Ts, class Eval, class Model>
-[[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields,
-                          Eval &eval, const Model &model, double dt) {
+[[nodiscard]] auto create(std::tuple<pfc::data::Field<Ts> &...> fields, Eval &eval,
+                          const Model &model, double dt) {
   constexpr std::size_t N = sizeof...(Ts);
   std::array<std::size_t, N> sizes{};
   std::apply(
@@ -363,6 +359,5 @@ template <class... Ts, class Eval, class Model>
   };
   return MultiEulerStepper<decltype(rhs), N>(dt, sizes, std::move(rhs));
 }
-
 
 } // namespace pfc::sim::steppers
