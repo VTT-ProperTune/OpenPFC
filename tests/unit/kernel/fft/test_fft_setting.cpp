@@ -20,11 +20,10 @@ TEST_CASE("Model - FFT Setting and Retrieval", "[fft_setting]") {
   auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}),
                                GridSpacing({8.0, 8.0, 8.0}));
   auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain);
 
   // Ensure FFT object is set before proceeding
   REQUIRE_NOTHROW(get_fft(model));

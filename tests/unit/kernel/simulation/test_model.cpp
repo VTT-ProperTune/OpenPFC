@@ -104,10 +104,9 @@ TEST_CASE_METHOD(RankModelTestFixture,
 TEST_CASE_METHOD(RankModelTestFixture,
                  "Model::mpi_comm() matches constructor communicator",
                  "[model][unit][rank]") {
-  World world = pfc::test::world_from_domain(domain());
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModel model(fft, world, MPI_COMM_WORLD);
+  pfc::testing::MockModel model(fft, domain(), MPI_COMM_WORLD);
   REQUIRE(model.mpi_comm() == MPI_COMM_WORLD);
   REQUIRE(is_rank0(model) == mpi_comm_rank_is_zero(MPI_COMM_WORLD));
 }

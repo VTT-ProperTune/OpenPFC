@@ -7,12 +7,12 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/field_operations.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
-#include <openpfc/domain/create.hpp>
 
 using namespace pfc;
 using Catch::Approx;
@@ -28,16 +28,15 @@ public:
 
 TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
   pfc::Int3 size{8, 4, 2};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::Domain domain =
+      pfc::domain::create(pfc::GridSize(size), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   pfc::Int3 lower{0, 0, 0};
   pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
-  DummyModel model(fft, world);
+  DummyModel model(fft, domain);
 
   std::vector<double> u(fft.size_inbox(), 0.0);
   add_real_field(model, "psi", u);
@@ -54,16 +53,15 @@ TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
 
 TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
   pfc::Int3 size{4, 4, 1};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::Domain domain =
+      pfc::domain::create(pfc::GridSize(size), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   pfc::Int3 lower{0, 0, 0};
   pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
-  DummyModel model(fft, world);
+  DummyModel model(fft, domain);
   std::vector<double> u(fft.size_inbox(), 0.0);
   add_real_field(model, "psi", u);
 
@@ -81,16 +79,15 @@ TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
 TEST_CASE("field::apply_inplace modifies field based on current value",
           "[field_ops][unit]") {
   pfc::Int3 size{4, 2, 2};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::Domain domain =
+      pfc::domain::create(pfc::GridSize(size), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   pfc::Int3 lower{0, 0, 0};
   pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
-  DummyModel model(fft, world);
+  DummyModel model(fft, domain);
   std::vector<double> u(fft.size_inbox(), 1.0);
   add_real_field(model, "psi", u);
 
@@ -110,16 +107,15 @@ TEST_CASE("field::apply_inplace modifies field based on current value",
 TEST_CASE("field::apply_inplace selective update preserves untouched cells",
           "[field_ops][unit]") {
   pfc::Int3 size{8, 1, 1};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::Domain domain =
+      pfc::domain::create(pfc::GridSize(size), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   pfc::Int3 lower{0, 0, 0};
   pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
-  DummyModel model(fft, world);
+  DummyModel model(fft, domain);
   std::vector<double> u(fft.size_inbox(), 0.0);
   add_real_field(model, "psi", u);
 
@@ -150,16 +146,15 @@ TEST_CASE("field::apply_inplace selective update preserves untouched cells",
 TEST_CASE("field::apply_inplace_with_time uses time parameter",
           "[field_ops][unit]") {
   pfc::Int3 size{4, 2, 1};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
+  pfc::Domain domain =
+      pfc::domain::create(pfc::GridSize(size), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                          pfc::GridSpacing({1.0, 1.0, 1.0}));
   pfc::Int3 lower{0, 0, 0};
   pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
+  auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
 
-  DummyModel model(fft, world);
+  DummyModel model(fft, domain);
   std::vector<double> u(fft.size_inbox(), 1.0);
   add_real_field(model, "psi", u);
 
@@ -176,4 +171,5 @@ TEST_CASE("field::apply_inplace_with_time uses time parameter",
   REQUIRE(values_match);
 }
 
-// Test case for legacy adapter removed - functionality no longer supported after M2 migration
+// Test case for legacy adapter removed - functionality no longer supported after M2
+// migration
