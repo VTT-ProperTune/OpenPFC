@@ -27,6 +27,22 @@ CLEAN_BUILD="${CLEAN_BUILD:-0}"
 OPENMPI_MODULE="${OPENMPI_MODULE:-openmpi/5.0.10}"
 CUDA_MODULE="${CUDA_MODULE:-cuda/13.1}"
 ROCM_MODULE="${ROCM_MODULE:-rocm/7.2.1}"
+# Tohtori's site openmpi/5.0.10 module links UCX 1.17 built WITHOUT --with-cuda
+# (confirmed via `ucx_info -v` on the shared libs OpenMPI actually loads:
+# /share/apps/ucx/1.17). Open MPI's own MPIX_Query_cuda_support() probe still
+# reports CUDA support (it only checks its own layer), but UCX's shared-memory
+# transport then memcpy()s a raw device pointer as host memory and segfaults
+# the moment OpenPFC hands one to MPI_Send/Isend with GPU-aware MPI enabled.
+#
+# scripts/build_tohtori.sh --cuda builds a genuinely CUDA-aware replacement
+# (UCX with cuda_copy/cuda_ipc transports + Open MPI's accelerator/cuda
+# component) at OPENMPI_ROOT_CUDA. When that install exists, CUDA builds use
+# it automatically in place of the site module and MPI_CUDA_AWARE defaults ON;
+# otherwise this falls back to the old safe default (site module, OFF).
+OPENMPI_ROOT_CUDA="${OPENMPI_ROOT_CUDA:-${HOME}/opt/openmpi/5.0.10-cuda}"
+OPENPFC_GCC_MODULE_CUDA="${OPENPFC_GCC_MODULE_CUDA:-gcc/15.2.0}"
+MPI_CUDA_AWARE="${MPI_CUDA_AWARE:-}"
+MPI_HIP_AWARE="${MPI_HIP_AWARE:-0}"
 HEFFTE_VERSION="${HEFFTE_VERSION:-2.4.1}"
 HEFFTE_PREFIX="${HEFFTE_PREFIX:-}"
 HEFFTE_MODULE="${HEFFTE_MODULE:-}"
@@ -74,6 +90,27 @@ Tohtori environment overrides:
   HEFFTE_VERSION          Default: 2.4.1
   CUDA_ARCHITECTURES      Passed to CMAKE_CUDA_ARCHITECTURES (CUDA default: 90)
   ROCM_ARCHITECTURES      Passed to CMAKE_HIP_ARCHITECTURES when set
+  OPENMPI_ROOT_CUDA       Default: $HOME/opt/openmpi/5.0.10-cuda. When this
+                          contains a working mpicc, CUDA builds use it in
+                          place of the site openmpi/5.0.10 module (whose
+                          linked UCX 1.17 lacks --with-cuda and segfaults on
+                          GPU-Direct MPI sends despite Open MPI's own probe
+                          claiming support) and MPI_CUDA_AWARE defaults ON.
+                          Build one with:
+                            ./scripts/build_tohtori.sh --build-ucx --ucx-only \
+                              --cuda UCX_VER=1.20.0-cuda \
+                              UCX_PREFIX=$HOME/opt/ucx/1.20.0-cuda
+                            ./scripts/build_tohtori.sh --build-openmpi --openmpi-only \
+                              --cuda OPENMPI_VER=5.0.10-cuda \
+                              UCX_HOME=$HOME/opt/ucx/1.20.0-cuda
+                          then rebuild HeFFTe's CUDA install (INSTALL.md §3)
+                          against the new mpicc/mpicxx.
+  OPENPFC_GCC_MODULE_CUDA Compiler module for OPENMPI_ROOT_CUDA (default: gcc/15.2.0).
+  MPI_CUDA_AWARE          Default: auto (1 when OPENMPI_ROOT_CUDA is usable, else 0).
+                          Force with 1/0 to override the auto-detection.
+  MPI_HIP_AWARE           Default: 0 (OFF). Same reasoning as MPI_CUDA_AWARE
+                          (site UCX lacking CUDA support), but no ROCm
+                          equivalent of OPENMPI_ROOT_CUDA is auto-detected yet.
 
 Examples:
   ./scripts/build.sh
@@ -152,6 +189,22 @@ RUN_TESTS="$(as_bool "${RUN_TESTS}")"
 RUN_MPI_TESTS="$(as_bool "${RUN_MPI_TESTS}")"
 CLEAN_BUILD="$(as_bool "${CLEAN_BUILD}")"
 
+# Auto-detect the custom CUDA-aware Open MPI built by
+# `scripts/build_tohtori.sh --build-ucx --build-openmpi --cuda` (see
+# OPENMPI_ROOT_CUDA above). Only engages for CUDA builds, and only when the
+# caller hasn't already pointed OPENMPI_ROOT somewhere else themselves.
+USE_CUSTOM_CUDA_MPI=0
+if (( WITH_CUDA )) && [[ -z "${OPENMPI_ROOT:-}" ]] &&
+   [[ -x "${OPENMPI_ROOT_CUDA}/bin/mpicc" ]]; then
+  USE_CUSTOM_CUDA_MPI=1
+fi
+
+if [[ -z "${MPI_CUDA_AWARE}" ]]; then
+  MPI_CUDA_AWARE=$(( USE_CUSTOM_CUDA_MPI ? 1 : 0 ))
+fi
+MPI_CUDA_AWARE="$(as_bool "${MPI_CUDA_AWARE}")"
+MPI_HIP_AWARE="$(as_bool "${MPI_HIP_AWARE}")"
+
 case "${BUILD_TYPE,,}" in
   debug) BUILD_TYPE="Debug"; BUILD_FLAVOR="debug" ;;
   release) BUILD_TYPE="Release"; BUILD_FLAVOR="release" ;;
@@ -186,7 +239,11 @@ if (( WITH_CUDA )); then
   if [[ -z "${CUDA_ARCHITECTURES}" ]]; then
     CUDA_ARCHITECTURES="90"
   fi
-  if [[ -z "${HEFFTE_MODULE}" ]]; then
+  # heffte/2.4.1-cuda-openmpi5 depends_on the site openmpi/5.0.10 module,
+  # which would re-prepend the site MPI onto PATH and undo the custom stack
+  # below. HEFFTE_PREFIX + CMAKE_PREFIX_PATH (already set up further down)
+  # are sufficient without the module in that case.
+  if [[ -z "${HEFFTE_MODULE}" ]] && (( ! USE_CUSTOM_CUDA_MPI )); then
     HEFFTE_MODULE="heffte/${HEFFTE_VERSION}-cuda-openmpi5"
   fi
 elif (( WITH_ROCM )); then
@@ -266,7 +323,15 @@ init_lmod() {
 
 init_lmod
 module purge
-module load "${OPENMPI_MODULE}"
+if (( USE_CUSTOM_CUDA_MPI )); then
+  echo "Using custom CUDA-aware Open MPI: ${OPENMPI_ROOT_CUDA}"
+  module load "${OPENPFC_GCC_MODULE_CUDA}"
+  export PATH="${OPENMPI_ROOT_CUDA}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${OPENMPI_ROOT_CUDA}/lib64:${OPENMPI_ROOT_CUDA}/lib:${LD_LIBRARY_PATH:-}"
+  export OPENMPI_ROOT="${OPENMPI_ROOT_CUDA}"
+else
+  module load "${OPENMPI_MODULE}"
+fi
 if (( WITH_CUDA )); then
   module load "${CUDA_MODULE}"
 elif (( WITH_ROCM )); then
@@ -279,7 +344,9 @@ fi
 export CC="$(command -v gcc)"
 export CXX="$(command -v g++)"
 export OPENPFC_GCC_ROOT="$(cd "$(dirname "${CXX}")/.." && pwd)"
-unset OPENMPI_ROOT
+if (( ! USE_CUSTOM_CUDA_MPI )); then
+  unset OPENMPI_ROOT
+fi
 
 [[ -x "${CC}" && -x "${CXX}" ]] || die "compiler not found after module load"
 command -v mpicc >/dev/null 2>&1 || die "mpicc not found after loading ${OPENMPI_MODULE}"
@@ -296,6 +363,18 @@ for candidate in "${HEFFTE_PREFIX}/lib64/cmake/Heffte" \
 done
 [[ -n "${HEFFTE_DIR}" ]] ||
   die "HeFFTe ${BACKEND} package not found under ${HEFFTE_PREFIX}"
+
+if [[ -z "${HEFFTE_MODULE}" ]]; then
+  # No module loaded to set HeFFTe's runtime LD_LIBRARY_PATH / build-time CPATH
+  # (custom-MPI CUDA path skips the module deliberately, see above) — replicate
+  # both by hand. CPATH matters because some CUDA test targets #include
+  # <heffte.h> directly while only linking `openpfc` (which links Heffte
+  # PRIVATE, so its include dir doesn't propagate via CMake target visibility;
+  # the site heffte module's own CPATH prepend is what actually made that
+  # compile before — see heffte/2.4.1-cuda-openmpi5.lua).
+  export LD_LIBRARY_PATH="${HEFFTE_PREFIX}/lib64:${HEFFTE_PREFIX}/lib:${LD_LIBRARY_PATH:-}"
+  export CPATH="${HEFFTE_PREFIX}/include:${CPATH:-}"
+fi
 
 if (( CLEAN_BUILD )) && [[ -e "${BUILD_DIR}" ]]; then
   echo "Removing build directory: ${BUILD_DIR}"
@@ -330,6 +409,12 @@ fi
 if [[ -n "${ROCM_ARCHITECTURES}" ]]; then
   CMAKE_ARGS+=("-DCMAKE_HIP_ARCHITECTURES=${ROCM_ARCHITECTURES}")
 fi
+if (( WITH_CUDA )); then
+  CMAKE_ARGS+=("-DOpenPFC_MPI_CUDA_AWARE=$([[ ${MPI_CUDA_AWARE} -eq 1 ]] && echo ON || echo OFF)")
+fi
+if (( WITH_ROCM )); then
+  CMAKE_ARGS+=("-DOpenPFC_MPI_HIP_AWARE=$([[ ${MPI_HIP_AWARE} -eq 1 ]] && echo ON || echo OFF)")
+fi
 CMAKE_ARGS+=("${EXTRA_CMAKE_ARGS[@]}")
 
 echo "OpenPFC automated build"
@@ -341,7 +426,10 @@ echo "  jobs:       ${JOBS}"
 echo "  tests:      $([[ ${RUN_TESTS} -eq 1 ]] && echo enabled || echo disabled)"
 echo "  MPI suites: $([[ ${RUN_MPI_TESTS} -eq 1 ]] && echo enabled || echo disabled)"
 echo "  compiler:   ${CXX}"
-echo "  MPI:        $(command -v mpicxx)"
+echo "  MPI:        $(command -v mpicxx)$([[ ${USE_CUSTOM_CUDA_MPI} -eq 1 ]] && echo " (custom CUDA-aware build)")"
+if (( WITH_CUDA )); then
+  echo "  MPI CUDA-aware: $([[ ${MPI_CUDA_AWARE} -eq 1 ]] && echo ON || echo OFF)"
+fi
 echo "  HeFFTe:     ${HEFFTE_DIR}"
 if [[ -n "${HEFFTE_MODULE}" ]]; then
   echo "  HeFFTe mod: ${HEFFTE_MODULE}"
