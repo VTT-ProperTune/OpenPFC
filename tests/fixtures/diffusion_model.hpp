@@ -114,9 +114,9 @@ public:
     // LLM: Spectral method - differential operators become algebraic in Fourier
     // space
     idx = 0;
-    const double fx = 2.0 * constants::pi / (spacing[0] * get_size(w, 0));
-    const double fy = 2.0 * constants::pi / (spacing[1] * get_size(w, 1));
-    const double fz = 2.0 * constants::pi / (spacing[2] * get_size(w, 2));
+    const double fx = 2.0 * constants::pi / (spacing[0] * domain.size[0]);
+    const double fy = 2.0 * constants::pi / (spacing[1] * domain.size[1]);
+    const double fz = 2.0 * constants::pi / (spacing[2] * domain.size[2]);
 
     for (int k = o_low[2]; k <= o_high[2]; k++) {
       for (int j = o_low[1]; j <= o_high[1]; j++) {

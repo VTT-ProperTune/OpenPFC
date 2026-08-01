@@ -212,12 +212,7 @@ void run() {
                      GridSpacing{{dx, dy, dz}});
   auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
-  // Create simulation world for Model constructor (World retained for Model
-  // compatibility)
-  auto world = domain::create_world_from_bounds(
-      {Lx, Ly, Lz}, {x0, y0, z0},
-      {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
-  Diffusion model(fft, world);
+  Diffusion model(fft, domain);
 
   // Define time
   double t = 0.0;
