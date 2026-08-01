@@ -43,6 +43,11 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_link_libraries(test_exchange_cuda_fail_closed PRIVATE
         Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX)
     add_test(NAME CUDA_ExchangeFailClosed COMMAND test_exchange_cuda_fail_closed)
+    # This test's assertions only compile in when OpenPFC_MPI_CUDA_AWARE is
+    # OFF; under the default ON build it SKIPs its one TEST_CASE, and Catch2
+    # returns exit code 4 for an all-skipped run. Tell CTest that's a skip,
+    # not a failure.
+    set_tests_properties(CUDA_ExchangeFailClosed PROPERTIES SKIP_RETURN_CODE 4)
 
     message(STATUS "✅ GPU tests enabled")
 elseif(OpenPFC_ENABLE_CUDA)
@@ -90,6 +95,9 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     target_link_libraries(test_exchange_hip_fail_closed PRIVATE
         Catch2::Catch2 openpfc hip::host MPI::MPI_CXX)
     add_test(NAME HIP_ExchangeFailClosed COMMAND test_exchange_hip_fail_closed)
+    # See CUDA_ExchangeFailClosed above: SKIPs (exit code 4) under the
+    # default OpenPFC_MPI_HIP_AWARE=ON build; that's a skip, not a failure.
+    set_tests_properties(HIP_ExchangeFailClosed PROPERTIES SKIP_RETURN_CODE 4)
 
     message(STATUS "✅ HIP tests enabled")
 elseif(OpenPFC_ENABLE_HIP)
