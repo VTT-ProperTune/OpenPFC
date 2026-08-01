@@ -199,7 +199,6 @@ endif()
 # GPU kernel library (only when CUDA is enabled)
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_library(openpfc_gpu_kernels
-        include/openpfc/runtime/cuda/kernels_simple.cu
         include/openpfc/runtime/cuda/sparse_vector_ops.cu
     )
 

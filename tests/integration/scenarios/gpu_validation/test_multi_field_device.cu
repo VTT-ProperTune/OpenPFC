@@ -277,20 +277,24 @@ TEST_CASE("test_evaluate_fd_grad_composite",
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-  // M2 migration: replace PaddedBrick with pfc::data::Field
-  pfc::data::Field<double, pfc::HostSpace> brick_u =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> brick_v =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  REQUIRE(brick_u.local_size()[0] == nx);
-  // M2 migration: Use owned region indexing (0..n-1) instead of padded (-hw..n+hw)
+  
+  // M2 migration: modern Field API using Domain and Box3i
+  auto domain = pfc::decomposition::get_domain(decomp);
+  auto owned_box = pfc::decomposition::local_box(decomp, 0);
+  
+  pfc::data::Field<double, pfc::HostSpace> brick_u(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> brick_v(domain, owned_box, hw);
+  
+  REQUIRE(brick_u.box().size[0] == nx);
+  
+  // M2 migration: modern Field API - direct element access via operator()
   for (int pk = 0; pk < nz; ++pk) {
     for (int pj = 0; pj < ny; ++pj) {
       for (int pi = 0; pi < nx; ++pi) {
         const double x = static_cast<double>(pi) * dx;
         const double y = static_cast<double>(pj) * dy;
-        brick_u.set_xy(pi, pj, pk) = x * x + 2.0 * y * y;
-        brick_v.set_xy(pi, pj, pk) = 3.0 + x;
+        brick_u(pi, pj, pk) = x * x + 2.0 * y * y;
+        brick_v(pi, pj, pk) = 3.0 + x;
       }
     }
   }
@@ -342,26 +346,26 @@ TEST_CASE("test_wave2d_double_field_kernel",
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);
-  // M2 migration: replace PaddedBrick with pfc::data::Field
-  pfc::data::Field<double, pfc::HostSpace> u =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> v =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> du_cpu =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> dv_cpu =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  
+  // M2 migration: modern Field API using Domain and Box3i
+  auto domain = pfc::decomposition::get_domain(decomp);
+  auto owned_box = pfc::decomposition::local_box(decomp, 0);
+  
+  pfc::data::Field<double, pfc::HostSpace> u(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> v(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> du_cpu(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> dv_cpu(domain, owned_box, hw);
 
-  // M2 migration: Change from padded indexing (-hw..n+hw) to owned region (0..n-1)
+  // M2 migration: modern Field API - direct element access via operator()
   for (int pk = 0; pk < nz; ++pk) {
     for (int pj = 0; pj < ny; ++pj) {
       for (int pi = 0; pi < nx; ++pi) {
         const double x = static_cast<double>(pi) * dx;
         const double y = static_cast<double>(pj) * dy;
-        u.set_xy(pi, pj, pk) = std::sin(0.3 * x) * std::cos(0.2 * y);
-        v.set_xy(pi, pj, pk) = 0.5 * std::cos(0.3 * x) * std::sin(0.2 * y);
-        du_cpu.set_xy(pi, pj, pk) = 0.0;
-        dv_cpu.set_xy(pi, pj, pk) = 0.0;
+        u(pi, pj, pk) = std::sin(0.3 * x) * std::cos(0.2 * y);
+        v(pi, pj, pk) = 0.5 * std::cos(0.3 * x) * std::sin(0.2 * y);
+        du_cpu(pi, pj, pk) = 0.0;
+        dv_cpu(pi, pj, pk) = 0.0;
       }
     }
   }
@@ -469,26 +473,26 @@ TEST_CASE("test_kobayashi_double_field_kernel",
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);
-  // M2 migration: replace PaddedBrick with pfc::data::Field
-  pfc::data::Field<double, pfc::HostSpace> phi =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> tempr =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> dphi_cpu =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> dtempr_cpu =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  
+  // M2 migration: modern Field API using Domain and Box3i
+  auto domain = pfc::decomposition::get_domain(decomp);
+  auto owned_box = pfc::decomposition::local_box(decomp, 0);
+  
+  pfc::data::Field<double, pfc::HostSpace> phi(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> tempr(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> dphi_cpu(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> dtempr_cpu(domain, owned_box, hw);
 
-  // M2 migration: adjust coordinate calculation for owned region (0..n-1)
+  // M2 migration: modern Field API - direct element access via operator()
   for (int pk = 0; pk < nz; ++pk) {
     for (int pj = 0; pj < ny; ++pj) {
       for (int pi = 0; pi < nx; ++pi) {
         const double r2 = static_cast<double>((pi - nx / 2) * (pi - nx / 2) +
                                               (pj - ny / 2) * (pj - ny / 2));
-        phi.set_xy(pi, pj, pk) = r2 < 4.0 ? 1.0 : 0.0;
-        tempr.set_xy(pi, pj, pk) = kTeq - 0.05;
-        dphi_cpu.set_xy(pi, pj, pk) = 0.0;
-        dtempr_cpu.set_xy(pi, pj, pk) = 0.0;
+        phi(pi, pj, pk) = r2 < 4.0 ? 1.0 : 0.0;
+        tempr(pi, pj, pk) = kTeq - 0.05;
+        dphi_cpu(pi, pj, pk) = 0.0;
+        dtempr_cpu(pi, pj, pk) = 0.0;
       }
     }
   }
@@ -578,30 +582,28 @@ TEST_CASE("test_synthetic_triple_field_kernel",
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);
-  // M2 migration: replace PaddedBrick with pfc::data::Field
-  pfc::data::Field<double, pfc::HostSpace> a =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> b =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> c =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> da_cpu =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> db_cpu =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
-  pfc::data::Field<double, pfc::HostSpace> dc_cpu =
-      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  
+  // M2 migration: modern Field API using Domain and Box3i
+  auto domain = pfc::decomposition::get_domain(decomp);
+  auto owned_box = pfc::decomposition::local_box(decomp, 0);
+  
+  pfc::data::Field<double, pfc::HostSpace> a(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> b(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> c(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> da_cpu(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> db_cpu(domain, owned_box, hw);
+  pfc::data::Field<double, pfc::HostSpace> dc_cpu(domain, owned_box, hw);
 
-  // M2 migration: use owned region (0..n-1) instead of padded indexing (-hw..n+hw)
+  // M2 migration: modern Field API - direct element access via operator()
   for (int pk = 0; pk < nz; ++pk) {
     for (int pj = 0; pj < ny; ++pj) {
       for (int pi = 0; pi < nx; ++pi) {
         const double x = static_cast<double>(pi);
         const double y = static_cast<double>(pj);
-        a.set_xy(pi, pj, pk) = 0.1 * x + 0.2 * y;
-        b.set_xy(pi, pj, pk) = x * x;
-        c.set_xy(pi, pj, pk) = y * y;
-        da_cpu.set_xy(pi, pj, pk) = db_cpu.set_xy(pi, pj, pk) = dc_cpu.set_xy(pi, pj, pk) = 0.0;
+        a(pi, pj, pk) = 0.1 * x + 0.2 * y;
+        b(pi, pj, pk) = x * x;
+        c(pi, pj, pk) = y * y;
+        da_cpu(pi, pj, pk) = db_cpu(pi, pj, pk) = dc_cpu(pi, pj, pk) = 0.0;
       }
     }
   }
