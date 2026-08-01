@@ -22,10 +22,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - All tests passing (30/30)
 
 **M2 - Canonical Field/View/State:** COMPLETE ✅  
-- All legacy field containers deprecated for removal in 0.3.0 (LocalField, PaddedBrick, DiscreteField, Array)
-- All consumers migrated to pfc::data::Field (substantially complete)
+- **Strategy: Deprecation (not deletion)** - Legacy field containers preserved for backward compatibility
+- All consumers migrated to pfc::data::Field where feasible (substantially complete)
+- Production dependencies remain (fd_gradient.hpp, padded_halo_exchange.hpp still use PaddedBrick)
 - Migration guides provided documenting transition to modern API
-- Legacy APIs maintained for backward compatibility (similar to World pattern strategy)
+- Legacy APIs maintained for backward compatibility (aligned with World pattern strategy)
 - All tests passing (30/30)
 
 **M3 - Single-Source GPU Runtime:** SUBSTANTIAL Complete ✅

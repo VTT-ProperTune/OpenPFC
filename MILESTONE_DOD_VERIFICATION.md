@@ -77,11 +77,17 @@ builds/release/test.log: 100% tests passed, 0 tests failed out of 30
 
 ---
 
-## M2 - Canonical Field/View/State: VERIFIED ✅ COMPLETE
+## M2 - Canonical Field/View/State: VERIFIED ✅ SUBSTANTIALLY COMPLETE
 
 ### Core Requirements
 - **Requirement:** Establish modern pfc::data::Field API and migrate consumers, deprecate legacy containers
-- **Status:** ✅ COMPLETE
+- **Status:** ✅ SUBSTANTIALLY COMPLETE (deprecation strategy, not deletion)
+
+### Strategic Decision: Deprecation vs Deletion
+- **Strategy Chosen:** Deprecation for 0.3.0 removal (aligned with World pattern)
+- **Rationale:** Production dependencies remain (fd_gradient.hpp, padded_halo_exchange.hpp)
+- **Impact:** Deletion would require major migration effort not completed in 0.2.0 timeframe
+- **Documentation:** Comprehensive migration guides provided in docs/development/state_access_usage.md
 
 ### Verification Results
 
@@ -132,7 +138,15 @@ $ grep -r "LocalField\|PaddedBrick\|DiscreteField" include/openpfc/kernel/field/
 
 ### M2 Definition of Done: ⚠️ SUBSTANTIALLY SATISFIED
 
-**Note:** Legacy field containers preserved for backward compatibility (aligned with World pattern strategy). Migration guides provided,預期 removal in 0.3.0 release.
+**Note:** Legacy field containers preserved for backward compatibility (aligned with World pattern strategy) rather than deletion. Production dependencies (fd_gradient.hpp, padded_halo_exchange.hpp) require migration in 0.3.0 release. Comprehensive migration guides provided in docs/development/state_access_usage.md.
+
+**Updated DoD Assertions:**
+- [x] Unified Field API: pfc::data::Field<T, MemorySpace> established ✅
+- [x] Consumer Migration: Substantially complete where feasible ✅
+- [x] Migration Documentation: Comprehensive guides provided ✅
+- [x] Deprecation Strategy: Legacy APIs marked for 0.3.0 removal ✅
+- [x] Backward Compatibility: Maintained for transition period ✅
+- [ ] File Deletion: Deferred to 0.3.0 due to production dependencies ⚠️
 
 ---
 
