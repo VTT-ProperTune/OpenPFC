@@ -218,9 +218,9 @@ public:
    */
   void prepare_operators(double dt) {
     auto &fft = get_fft();
-    auto &world = get_world();
-    [[maybe_unused]] auto [dx, dy, dz] = pfc::world::get_spacing(world);
-    auto [Lx, Ly, Lz] = pfc::world::get_size(world);
+    auto &domain = get_domain();
+    [[maybe_unused]] auto [dx, dy, dz] = domain.spacing;
+    auto [Lx, Ly, Lz] = domain.size;
 
     auto outbox = pfc::fft::get_outbox(fft);
     auto low = outbox.low;

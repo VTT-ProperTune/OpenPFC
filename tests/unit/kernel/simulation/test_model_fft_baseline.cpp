@@ -139,9 +139,9 @@ TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Field operations with 
   }
 
   SECTION("Complex fields work after FFT is set") {
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain(), 1);
     auto fft = fft::create(decomposition);
-    pfc::testing::MockModel model(fft, world);
+    pfc::testing::MockModel model(fft, domain());
 
     // Create field with correct size
     ComplexField field;

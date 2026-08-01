@@ -85,8 +85,8 @@ public:
     Vec3<int> o_low = get_outbox(fft).low;
     Vec3<int> o_high = get_outbox(fft).high;
 
-    auto origin = get_origin(w);
-    auto spacing = get_spacing(w);
+    auto origin = domain.origin;
+    auto spacing = domain.spacing;
 
     // Initialize field with Gaussian: u(x,0) = exp(-r²/(4D))
     // LLM: Initial condition - fundamental solution to diffusion equation
