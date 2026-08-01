@@ -183,18 +183,6 @@ public:
   }
 
   /**
-   * @brief Get the world object (deprecated).
-   *
-   * @deprecated Use get_domain() instead.
-   *
-   * @return Reference to the World object
-   */
-  [[deprecated("Use get_domain() instead")]]
-  [[nodiscard]] const World &get_world() const noexcept {
-    return pfc::get_world(m_model);
-  }
-
-  /**
    * @brief Get the FFT object
    *
    * @return fft::IFFT&
@@ -273,8 +261,8 @@ public:
   bool add_results_writer(const std::string &field_name,
                           std::unique_ptr<ResultsWriter> writer) {
     auto inbox = get_inbox(pfc::get_fft(m_model));
-    const auto &world = pfc::get_world(m_model);
-    writer->set_domain(get_size(world), inbox.size, inbox.low);
+    const auto &domain = pfc::get_domain(m_model);
+    writer->set_domain(domain.size, inbox.size, inbox.low);
 
     Model &model = get_model();
     if (!pfc::has_field(model, field_name)) {

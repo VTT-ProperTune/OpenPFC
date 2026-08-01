@@ -23,7 +23,7 @@ using pfc::types::Int3;
 // Mock model class for testing
 class ModelWithSeedGridIC : public Model {
 public:
-  ModelWithSeedGridIC(FFT &fft, const pfc::World &world) : pfc::Model(fft, world) {}
+  ModelWithSeedGridIC(FFT &fft, const pfc::Domain &domain) : pfc::Model(fft, domain) {}
 
   void step(double /*t*/) override {}
   void initialize(double /*dt*/) override {}

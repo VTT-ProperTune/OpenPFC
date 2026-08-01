@@ -15,7 +15,7 @@ using namespace pfc;
 namespace {
 class StubModel : public Model {
 public:
-  StubModel(FFT &fft, const World &world) : Model(fft, world) {}
+  StubModel(FFT &fft, const Domain &domain) : Model(fft, domain) {}
   void step(double /*t*/) override {}
   void initialize(double /*dt*/) override {}
 };

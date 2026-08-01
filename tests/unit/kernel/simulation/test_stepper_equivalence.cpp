@@ -26,12 +26,12 @@ struct DecayGrads {
 // Legacy pattern: Model::step(double t) override
 class LegacyDecayModel : public Model {
 public:
-  LegacyDecayModel(fft::IFFT &fft, const World &world)
-      : Model(fft, world),
-        m_u(get_size(world)[0] * get_size(world)[1] * get_size(world)[2], 1.0) {
-    m_nx = get_size(world)[0];
-    m_ny = get_size(world)[1];
-    m_nz = get_size(world)[2];
+  LegacyDecayModel(fft::IFFT &fft, const Domain &domain)
+      : Model(fft, domain),
+        m_u(domain.size[0] * domain.size[1] * domain.size[2], 1.0) {
+    m_nx = domain.size[0];
+    m_ny = domain.size[1];
+    m_nz = domain.size[2];
   }
 
   void initialize(double dt) override {

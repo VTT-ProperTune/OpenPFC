@@ -32,12 +32,11 @@ public:
 };
 
 TEST_CASE_METHOD(ModelTestFixture, "Model - basic functionality (v2.0)", "[model][unit]") {
-  World world = pfc::test::world_from_domain(domain());
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain());
 
-  REQUIRE(get_size(get_world(model)) == Int3{8, 1, 1});
+  REQUIRE(get_domain(model).size == Int3{8, 1, 1});
 
   SECTION("FFT is available after construction") {
     REQUIRE(get_fft(model).size_inbox() == fft.size_inbox());

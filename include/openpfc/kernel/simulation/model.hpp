@@ -68,7 +68,6 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/simulation/model_field_registry.hpp>
@@ -110,7 +109,6 @@ private:
   fft::IFFT &m_fft;
   ModelFieldRegistry m_fields; ///< Named real/complex field references (not owned)
   const Domain &m_domain;      ///< Reference to the Domain object (M1 migration)
-  World m_world;               ///< World object for deprecated get_world() (M1 A0 shim)
   MPI_Comm m_mpi_comm{
       MPI_COMM_WORLD};  ///< Communicator for rank-0 / collective alignment
   bool m_rank0 = false; ///< True if this process is rank 0 in `m_mpi_comm`
@@ -151,18 +149,7 @@ public:
    * @since v2.0 (breaking change - FFT now required)
    */
   Model(fft::IFFT &fft, const Domain &domain, MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : m_fft(fft), m_domain(domain), m_world({0, 0, 0}, {domain.size[0] - 1, domain.size[1] - 1, domain.size[2] - 1}, domain),
-        m_mpi_comm(mpi_comm), m_rank0(mpi_comm_rank_is_zero(mpi_comm)) {}
-
-  /**
-   * @brief Construct a new Model object with World (deprecated, M1 A0 shim)
-   *
-   * @deprecated Use the Domain constructor instead. This constructor is provided
-   *             for Gen-1 compatibility and will be removed in M12.
-   */
-  [[deprecated("Use Model(fft, domain) instead")]]
-  Model(fft::IFFT &fft, const World &world, MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : m_fft(fft), m_domain(world.domain_), m_world(world), m_mpi_comm(mpi_comm),
+      : m_fft(fft), m_domain(domain), m_mpi_comm(mpi_comm),
         m_rank0(mpi_comm_rank_is_zero(mpi_comm)) {}
 
   /**
@@ -210,13 +197,8 @@ public:
   /**
    * @brief Get the world object associated with the model (deprecated).
    *
-   * @deprecated Use get_domain() instead. This method is provided for Gen-1
-   *             compatibility and will be removed in M12.
-   *
-   * @return Reference to the World object
+   * @return Reference to the Domain object
    */
-  [[deprecated("Use get_domain() instead")]]
-  const World &get_world() const noexcept { return m_world; }
 
   /**
    * @brief Read-only access to the named field registry

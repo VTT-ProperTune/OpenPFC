@@ -24,8 +24,8 @@ using pfc::types::Int3;
 // Mock model class for testing
 class ModelWithSingleSeedIC : public Model {
 public:
-  ModelWithSingleSeedIC(FFT &fft, const pfc::World &world)
-      : pfc::Model(fft, world) {}
+  ModelWithSingleSeedIC(FFT &fft, const pfc::Domain &domain)
+      : pfc::Model(fft, domain) {}
 
   void step(double /*t*/) override {}
   void initialize(double /*dt*/) override {}

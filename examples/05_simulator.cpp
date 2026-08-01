@@ -48,9 +48,8 @@ private:
 public:
   void apply(Model &m, double t) override {
     (void)t; // suppress compiler warning about unused parameter
-    // Get world (required by Model for compatibility) and domain from model
-    const auto &world = pfc::get_world(m);
-    const auto &domain = pfc::world::get_coordinate_system(world);
+    // Get domain from model (updated for M12 Gen-1 deletion)
+    const auto &domain = pfc::get_domain(m);
     const auto &fft = pfc::get_fft(m);
     std::vector<double> &field = m.get_real_field("psi");
     Int3 low = get_inbox(fft).low;

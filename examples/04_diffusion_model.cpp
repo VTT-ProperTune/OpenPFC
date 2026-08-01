@@ -82,9 +82,8 @@ public:
   void initialize(double dt) override {
     if (pfc::is_rank0(*this)) cout << "Allocate space" << endl;
 
-    // Get references to the simulation world (required by Model), FFT, and domain decomposition
-    // Note: World is retained for Model compatibility; Domain is used for geometry
-    auto &world = pfc::get_world(*this);
+    // Get references to the simulation domain (updated for M12 Gen-1 deletion), FFT, and domain decomposition
+    auto &domain = pfc::get_domain(*this);
     auto &fft = pfc::get_fft(*this);
 
     // Allocate space for the main variable and it's fourier transform
@@ -104,10 +103,9 @@ public:
     Domain is defining the global dimensions of the problem as well as origin and
     chosen discretization parameters.
     */
-    // Print domain geometry information (domain extracted from world for Model compatibility)
+    // Print domain geometry information
     if (pfc::is_rank0(*this)) {
-      const auto &world = pfc::get_world(*this);
-      const auto &domain = pfc::world::get_coordinate_system(world);
+      const auto &domain = pfc::get_domain(*this);
       cout << "Domain: " << domain << endl;
     }
 

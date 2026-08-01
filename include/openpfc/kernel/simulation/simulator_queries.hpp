@@ -30,7 +30,6 @@
 #define PFC_KERNEL_SIMULATION_SIMULATOR_QUERIES_HPP
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/simulator_integrator.hpp>
 
@@ -56,16 +55,6 @@
 
 [[nodiscard]] inline const Domain &get_domain(const Simulator &sim) noexcept {
   return pfc::get_domain(get_model(sim));
-}
-
-[[deprecated("Use get_domain() instead")]]
-[[nodiscard]] inline const World &get_world(Simulator &sim) noexcept {
-  return pfc::get_world(get_model(sim));
-}
-
-[[deprecated("Use get_domain() instead")]]
-[[nodiscard]] inline const World &get_world(const Simulator &sim) noexcept {
-  return pfc::get_world(get_model(sim));
 }
 
 [[nodiscard]] inline fft::IFFT &get_fft(Simulator &sim) noexcept {

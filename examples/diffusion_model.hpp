@@ -20,7 +20,7 @@ private:
 public:
   void initialize(double dt) override {
 
-    const Domain &w = pfc::get_world(*this).domain_;
+    const Domain &domain = pfc::get_domain(*this);
     auto &fft = pfc::get_fft(*this);
 
     psi.resize(fft.size_inbox());
@@ -34,8 +34,8 @@ public:
     Vec3<int> o_low = get_outbox(fft).low;
     Vec3<int> o_high = get_outbox(fft).high;
 
-    auto origin = w.origin;
-    auto spacing = w.spacing;
+    auto origin = domain.origin;
+    auto spacing = domain.spacing;
 
     int idx = 0;
     double D = 1.0;
@@ -56,18 +56,18 @@ public:
     }
 
     idx = 0;
-    const double fx = 2.0 * constants::pi / (spacing[0] * w.size[0]);
-    const double fy = 2.0 * constants::pi / (spacing[1] * w.size[1]);
-    const double fz = 2.0 * constants::pi / (spacing[2] * w.size[2]);
+    const double fx = 2.0 * constants::pi / (spacing[0] * domain.size[0]);
+    const double fy = 2.0 * constants::pi / (spacing[1] * domain.size[1]);
+    const double fz = 2.0 * constants::pi / (spacing[2] * domain.size[2]);
     for (int k = o_low[2]; k <= o_high[2]; k++) {
       for (int j = o_low[1]; j <= o_high[1]; j++) {
         for (int i = o_low[0]; i <= o_high[0]; i++) {
           const double ki =
-              (i <= w.size[0] / 2) ? i * fx : (i - w.size[0]) * fx;
+              (i <= domain.size[0] / 2) ? i * fx : (i - domain.size[0]) * fx;
           const double kj =
-              (j <= w.size[1] / 2) ? j * fy : (j - w.size[1]) * fy;
+              (j <= domain.size[1] / 2) ? j * fy : (j - domain.size[1]) * fy;
           const double kk =
-              (k <= w.size[2] / 2) ? k * fz : (k - w.size[2]) * fz;
+              (k <= domain.size[2] / 2) ? k * fz : (k - domain.size[2]) * fz;
           const double kLap = -(ki * ki + kj * kj + kk * kk);
           opL[idx++] = 1.0 / (1.0 - dt * kLap);
         }

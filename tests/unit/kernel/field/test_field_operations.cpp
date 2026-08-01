@@ -20,7 +20,7 @@ using Catch::Approx;
 namespace {
 class DummyModel : public Model {
 public:
-  DummyModel(FFT &fft, const World &world) : Model(fft, world) {}
+  DummyModel(FFT &fft, const Domain &domain) : Model(fft, domain) {}
   void step(double t) override { (void)t; }
   void initialize(double dt) override { (void)dt; }
 };

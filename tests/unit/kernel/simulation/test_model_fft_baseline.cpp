@@ -48,32 +48,29 @@ public:
 };
 
 TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: Construction requires FFT (v2.0)", "[model][fft][baseline]") {
-  World world = pfc::test::world_from_domain(domain());
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
 
   SECTION("Construct with FFT reference") {
-    pfc::testing::MockModel model(fft, world);
+    pfc::testing::MockModel model(fft, domain());
     REQUIRE_NOTHROW(get_fft(model));
     REQUIRE(get_fft(model).size_inbox() > 0);
   }
 }
 
 TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: get_fft() never throws (v2.0)", "[model][fft][baseline]") {
-  World world = pfc::test::world_from_domain(domain());
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain());
   REQUIRE_NOTHROW(get_fft(model));
 }
 
 TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: FFT lifetime management (v2.0)", "[model][fft][baseline]") {
-  World world = pfc::test::world_from_domain(domain());
 
   SECTION("FFT must outlive Model (documented requirement)") {
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain(), 1);
     auto fft = fft::create(decomposition);
-    pfc::testing::MockModel model(fft, world);
+    pfc::testing::MockModel model(fft, domain());
     REQUIRE(get_fft(model).size_inbox() > 0);
     REQUIRE(fft.size_inbox() > 0);
   }
@@ -81,12 +78,11 @@ TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: FFT lifetime management (v2.0)"
 
 TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Typical usage patterns",
           "[model][fft][baseline][patterns]") {
-  World world = pfc::test::world_from_domain(domain());
 
   SECTION("Pattern: Create FFT then construct model (v2.0)") {
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain(), 1);
     auto fft = fft::create(decomposition);
-    pfc::testing::MockModel model(fft, world);
+    pfc::testing::MockModel model(fft, domain());
     initialize(model, 0.1);
 
     // Model can use FFT in initialize() and step()
@@ -95,12 +91,11 @@ TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Typical usage patterns
 }
 
 TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Derived model behavior", "[model][fft][baseline]") {
-  World world = pfc::test::world_from_domain(domain());
 
   SECTION("Derived model inherits FFT access") {
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain(), 1);
     auto fft = fft::create(decomposition);
-    pfc::testing::MockModel model(fft, world);
+    pfc::testing::MockModel model(fft, domain());
 
     // Derived model can access FFT via get_fft()
     auto &model_fft = get_fft(model);
@@ -109,7 +104,7 @@ TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Derived model behavior
   }
 
   SECTION("Instrumented model tracks initialization") {
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain(), 1);
     auto fft = fft::create(decomposition);
     pfc::testing::InstrumentedMockModel model(fft, world);
     initialize(model, 0.1);
@@ -121,12 +116,11 @@ TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Derived model behavior
 
 TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT Baseline: Field operations with FFT",
           "[model][fft][baseline]") {
-  World world = pfc::test::world_from_domain(domain());
 
   SECTION("Real fields work after FFT is set") {
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain(), 1);
     auto fft = fft::create(decomposition);
-    pfc::testing::MockModel model(fft, world);
+    pfc::testing::MockModel model(fft, domain());
 
     // Create field with correct size
     RealField field;
@@ -205,11 +199,10 @@ TEST_CASE_METHOD(FFTBaselineFixture, "Model-FFT: v2.0 behavior validated", "[mod
   // They are currently disabled (. tag) and will be enabled in v2.0
 
   SECTION("v2.0: Single constructor with FFT reference") {
-    World world = pfc::test::world_from_domain(domain());
-    auto decomposition = decomposition::create(world, 1);
+    auto decomposition = decomposition::create(domain(), 1);
     auto fft = fft::create(decomposition);
 
-    pfc::testing::MockModel model(fft, world);
+    pfc::testing::MockModel model(fft, domain());
     REQUIRE_NOTHROW(get_fft(model));
   }
 

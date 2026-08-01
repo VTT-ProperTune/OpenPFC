@@ -30,26 +30,24 @@ namespace testing {
  *
  * @code
  * auto domain = domain::create({8, 8, 8});
- * auto global_box = domain::index_box(domain);
- * World world(global_box.low, global_box.high, domain);
- * auto decomposition = decomposition::create(world, 1);
+ * auto decomposition = decomposition::create(domain, 1);
  * auto fft = fft::create(decomposition);
- * pfc::testing::MockModel model(fft, world);
+ * pfc::testing::MockModel model(fft, domain);
  * // Use model in your test...
  * @endcode
  */
 class MockModel : public Model {
 public:
   /**
-   * @brief Construct a MockModel with FFT and world
+   * @brief Construct a MockModel with FFT and domain
    * @param fft Reference to the FFT object
-   * @param world The World object defining the simulation domain
+   * @param domain The Domain object defining the simulation domain
    *
    * @note v2.0: FFT is now required at construction
    */
-  explicit MockModel(fft::IFFT &fft, const World &world,
+  explicit MockModel(fft::IFFT &fft, const Domain &domain,
                      MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : Model(fft, world, mpi_comm) {}
+      : Model(fft, domain, mpi_comm) {}
 
   /**
    * @brief Mock step() implementation (does nothing)
@@ -72,11 +70,9 @@ public:
  *
  * @code
  * auto domain = domain::create({8, 8, 8});
- * auto global_box = domain::index_box(domain);
- * World world(global_box.low, global_box.high, domain);
- * auto decomposition = decomposition::create(world, 1);
+ * auto decomposition = decomposition::create(domain, 1);
  * auto fft = fft::create(decomposition);
- * pfc::testing::InstrumentedMockModel model(fft, world);
+ * pfc::testing::InstrumentedMockModel model(fft, domain);
  *
  * model.step(1.0);
  * model.step(2.0);
@@ -128,11 +124,9 @@ public:
  *
  * @code
  * auto domain = domain::create({8, 8, 8});
- * auto global_box = domain::index_box(domain);
- * World world(global_box.low, global_box.high, domain);
- * auto decomposition = decomposition::create(world, 1);
+ * auto decomposition = decomposition::create(domain, 1);
  * auto fft = fft::create(decomposition);
- * pfc::testing::MockModelWithModificationFlag model(fft, world);
+ * pfc::testing::MockModelWithModificationFlag model(fft, domain);
  * MockFieldModifier modifier;
  * modifier.apply(model, 0.0);
  * REQUIRE(model.is_modified);
@@ -154,7 +148,7 @@ public:
  *
  * @code
  * pfc::testing::MockFieldModifier modifier;
- * pfc::testing::MockModelWithModificationFlag model(world);
+ * pfc::testing::MockModelWithModificationFlag model(domain);
  * modifier.apply(model, 0.0);
  * REQUIRE(model.is_modified);
  * @endcode

@@ -21,7 +21,7 @@ using pfc::types::Int3;
 // Mock model class for testing
 class ModelWithConstantIC : public Model {
 public:
-  ModelWithConstantIC(FFT &fft, const pfc::World &world) : pfc::Model(fft, world) {}
+  ModelWithConstantIC(FFT &fft, const pfc::Domain &domain) : pfc::Model(fft, domain) {}
 
   void step(double /*t*/) override {}        // Suppress unused parameter warning
   void initialize(double /*dt*/) override {} // Suppress unused parameter warning

@@ -16,7 +16,7 @@ using namespace std;
 using pfc::get_fft;
 using pfc::get_model;
 using pfc::get_real_field;
-using pfc::get_world;
+using pfc::get_domain;
 
 void print_stats(Simulator &simulator) {
   // we can still access the model:
@@ -55,11 +55,11 @@ public:
     if (m.is_rank0()) {
       cout << "Applying custom initial condition at time " << t << endl;
     }
-    auto &world = get_world(m);
+    auto &domain = get_domain(m);
     auto &field = get_real_field(m, "density");
     auto &fft = get_fft(m);
-    auto origin = get_origin(world);
-    auto spacing = get_spacing(world);
+    auto origin = domain.origin;
+    auto spacing = domain.spacing;
 
     auto low = get_inbox(fft).low;
     auto high = get_inbox(fft).high;
@@ -104,9 +104,7 @@ void run() {
   MPI_Comm_size(comm, &size);
   auto decomposition = decomposition::create(domain, size);
   auto fft = fft::create(decomposition);
-  auto world = domain::create_world_from_bounds({Lx, Ly, Lz}, {x0, y0, z0},
-                                                {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
-  Diffusion model(fft, world);
+  Diffusion model(fft, domain);
   model.initialize(dt);
   Simulator simulator(model, time);
 
