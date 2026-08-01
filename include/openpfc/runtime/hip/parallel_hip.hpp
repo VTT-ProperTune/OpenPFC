@@ -15,6 +15,7 @@
 #include <hip/hip_runtime.h>
 #include <openpfc/kernel/execution/parallel.hpp>
 #include <openpfc/kernel/execution/policy.hpp>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <openpfc/runtime/hip/execution_space_hip.hpp>
 #include <openpfc/runtime/hip/hip_check.hpp>
 #include <string>
@@ -77,9 +78,7 @@ void parallel_for(const std::string &name,
   parallel_for(policy, functor);
 }
 
-inline void fence(const HIP &) {
-  hip::detail::hip_check(hipDeviceSynchronize(), "fence(HIP)");
-}
+inline void fence(const HIP &) { GPU_CHECK(gpuDeviceSynchronize(), "fence(HIP)"); }
 
 } // namespace pfc
 

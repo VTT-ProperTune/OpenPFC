@@ -17,6 +17,7 @@
 #include <openpfc/kernel/execution/policy.hpp>
 #include <openpfc/runtime/cuda/cuda_check.hpp>
 #include <openpfc/runtime/cuda/execution_space_cuda.hpp>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <string>
 
 namespace pfc {
@@ -81,9 +82,7 @@ void parallel_for(const std::string &name,
   parallel_for(policy, functor);
 }
 
-inline void fence(const Cuda &) {
-  cuda::detail::cuda_check(cudaDeviceSynchronize(), "fence(Cuda)");
-}
+inline void fence(const Cuda &) { GPU_CHECK(gpuDeviceSynchronize(), "fence(Cuda)"); }
 
 } // namespace pfc
 
