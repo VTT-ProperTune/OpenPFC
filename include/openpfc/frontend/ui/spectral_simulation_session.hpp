@@ -57,7 +57,7 @@ public:
   explicit SpectralSimulationSession(const nlohmann::json &settings, MPI_Comm comm,
                                      int rank_id, int num_ranks)
       : m_stack(settings, comm, rank_id, num_ranks),
-        m_model(pfc::ui::fft(m_stack), pfc::ui::world(m_stack),
+        m_model(pfc::ui::fft(m_stack), pfc::ui::world(m_stack).domain_,
                 pfc::ui::mpi_comm(m_stack)),
         m_simulator(m_model, pfc::ui::time(m_stack), comm) {}
 
