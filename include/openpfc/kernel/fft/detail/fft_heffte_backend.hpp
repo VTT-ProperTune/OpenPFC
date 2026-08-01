@@ -53,7 +53,7 @@ namespace detail {
 inline void require_equal_size(std::size_t actual, std::size_t expected,
                                const char *context,
                                const char *expected_label) {
-  if (actual != expected) [[unlikely]] {
+  if (actual != expected) {
     throw std::invalid_argument(std::string(context) + std::to_string(actual) +
                                 " != " + expected_label + "() " +
                                 std::to_string(expected));
@@ -63,14 +63,18 @@ inline void require_equal_size(std::size_t actual, std::size_t expected,
 /**
  * @brief Backend-gated HeFFTe workspace ownership for `FFT_Impl`.
  *
- * Primary template is intentionally incomplete; specialize per backend family.
+ * Primary template with 2 parameters using SFINAE for backend selection.
  */
-template <typename BackendTag> struct FftWorkspaceStorage;
+template <typename BackendTag, typename = void>
+struct FftWorkspaceStorage {
+  // Empty primary template for non-GPU backends (will be specialized)
+};
 
 /**
  * @brief FFTW: host workspace only (`std::vector`-backed HeFFTe container).
  */
-template <> struct FftWorkspaceStorage<heffte::backend::fftw> {
+template <>
+struct FftWorkspaceStorage<heffte::backend::fftw, void> {
   using workspace_type = typename heffte::fft3d_r2c<
       heffte::backend::fftw>::template buffer_container<std::complex<double>>;
 
@@ -91,9 +95,14 @@ template <> struct FftWorkspaceStorage<heffte::backend::fftw> {
  * Both precisions stay owned because float and double `DataBuffer` overloads
  * share one `FFT_Impl` instance.
  */
+#if __cplusplus >= 202002L
 template <typename BackendTag>
-  requires HeapBackend<BackendTag>
+  requires pfc::fft::HeapBackend<BackendTag>
 struct FftWorkspaceStorage<BackendTag> {
+#else
+template <typename BackendTag>
+struct FftWorkspaceStorage<BackendTag, std::enable_if_t<pfc::fft::is_heap_backend_v<BackendTag>, void>> {
+#endif
   using gpu_workspace_type = typename heffte::fft3d_r2c<
       BackendTag>::template buffer_container<std::complex<double>>;
   using gpu_workspace_float = typename heffte::fft3d_r2c<
@@ -114,7 +123,11 @@ struct FftWorkspaceStorage<BackendTag> {
            m_gpu_wrk_float.size() *
                sizeof(typename gpu_workspace_float::value_type);
   }
-};
+#if __cplusplus >= 202002L
+};  // End of C++20 concept-based specialization
+#else
+};  // End of C++17 SFINAE specialization
+#endif
 
 } // namespace detail
 
@@ -154,7 +167,11 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
     detail::require_equal_size(
         out.size(), size_outbox(),
         "FFT_Impl::forward: complex buffer size ", "size_outbox");
-    if constexpr (HeapBackend<BackendTag>) {
+#if __cplusplus >= 202002L
+    if constexpr (pfc::fft::HeapBackend<BackendTag>) {
+#else
+    if constexpr (pfc::fft::is_heap_backend_v<BackendTag>) {
+#endif
       m_fft_time -= MPI_Wtime();
       if constexpr (std::is_same_v<RealType, double>) {
         m_fft.forward(in.data(), out.data(), m_ws.data_gpu_double());
@@ -209,7 +226,11 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
     detail::require_equal_size(
         out.size(), size_inbox(),
         "FFT_Impl::backward: real buffer size ", "size_inbox");
-    if constexpr (HeapBackend<BackendTag>) {
+#if __cplusplus >= 202002L
+    if constexpr (pfc::fft::HeapBackend<BackendTag>) {
+#else
+    if constexpr (pfc::fft::is_heap_backend_v<BackendTag>) {
+#endif
       m_fft_time -= MPI_Wtime();
       if constexpr (std::is_same_v<RealType, double>) {
         m_fft.backward(in.data(), out.data(), m_ws.data_gpu_double(),

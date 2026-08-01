@@ -208,7 +208,7 @@ public:
    * Marked noexcept(false) to allow subclasses to throw on MPI cleanup
    * failures (fail-closed policy).
    */
-  virtual ~ResultsWriter() noexcept(false) = default;
+  virtual ~ResultsWriter() noexcept(false) {}
 
   /**
    * @brief Configure the domain decomposition for parallel I/O

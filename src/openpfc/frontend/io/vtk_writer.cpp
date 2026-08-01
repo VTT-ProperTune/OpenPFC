@@ -16,6 +16,9 @@
 
 namespace pfc {
 
+// VTKWriter destructor - no MPI cleanup needed since we didn't duplicate the communicator
+VTKWriter::~VTKWriter() = default;
+
 namespace {
 
 /**

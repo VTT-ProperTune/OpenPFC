@@ -103,6 +103,9 @@ public:
     MPI_Comm_size(m_comm, &m_num_ranks);
   }
 
+  // Declare destructor without explicit default - let compiler generate it
+  ~VTKWriter() override;
+
   /**
    * @brief Set domain decomposition
    */
