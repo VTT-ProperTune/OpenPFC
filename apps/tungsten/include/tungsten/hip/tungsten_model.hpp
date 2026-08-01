@@ -87,14 +87,16 @@ public:
     m_hip_fft = std::make_unique<pfc::fft::FFT_HIP>(std::move(fft));
   }
 
-  explicit TungstenHIP(pfc::FFT &fft, const pfc::Domain &domain,
-                       MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, pfc::World(
-            {0, 0, 0},
-            {static_cast<int>(domain.size[0]) - 1,
-             static_cast<int>(domain.size[1]) - 1,
-             static_cast<int>(domain.size[2]) - 1},
-            domain), mpi_comm), m_cpu_buffer_valid(false) {
+private:
+  /**
+   * @brief Shared post-base-construction setup: HIP event + device FFT.
+   *
+   * Factored out so every TungstenHIP constructor performs the same
+   * device-side setup (constructor inheritance via `using Model::Model;`
+   * would skip this, leaving `m_hip_fft` unset and `kernel_done_event`
+   * uninitialized).
+   */
+  void init_hip_() {
     hip_check(hipEventCreate(&kernel_done_event),
               "hipEventCreate(kernel_done_event)");
     int rank = 0;
@@ -103,6 +105,33 @@ public:
     MPI_Comm_size(this->mpi_comm(), &size);
     auto decomp = pfc::decomposition::create(get_world(), size);
     set_hip_fft(decomp, rank);
+  }
+
+public:
+  explicit TungstenHIP(pfc::FFT &fft, const pfc::Domain &domain,
+                       MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft,
+                   pfc::World({0, 0, 0},
+                              {static_cast<int>(domain.size[0]) - 1,
+                               static_cast<int>(domain.size[1]) - 1,
+                               static_cast<int>(domain.size[2]) - 1},
+                              domain),
+                   mpi_comm),
+        m_cpu_buffer_valid(false) {
+    init_hip_();
+  }
+
+  /**
+   * @brief Construct TungstenHIP directly from a World and set up HIP FFT.
+   *
+   * Matches the base `pfc::Model(fft::IFFT&, const World&, MPI_Comm)`
+   * constructor signature so generic session-wiring code (which builds a
+   * `World` rather than a `Domain`) can construct this model.
+   */
+  explicit TungstenHIP(pfc::fft::IFFT &fft, const pfc::World &world,
+                       MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
+    init_hip_();
   }
 
   pfc::fft::FFT_HIP &get_hip_fft() {

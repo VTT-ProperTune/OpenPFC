@@ -137,6 +137,27 @@ public:
     m_cuda_fft = std::make_unique<pfc::fft::FFT_CUDA>(std::move(fft));
   }
 
+private:
+  /**
+   * @brief Shared post-base-construction setup: CUDA event + device FFT.
+   *
+   * Factored out so every TungstenCUDA constructor performs the same
+   * device-side setup (constructor inheritance via `using Model::Model;`
+   * would skip this, leaving `m_cuda_fft` unset and `kernel_done_event`
+   * uninitialized).
+   */
+  void init_cuda_() {
+    cuda_check(cudaEventCreate(&kernel_done_event),
+               "cudaEventCreate(kernel_done_event)");
+    int rank = 0;
+    int size = 0;
+    MPI_Comm_rank(this->mpi_comm(), &rank);
+    MPI_Comm_size(this->mpi_comm(), &size);
+    auto decomp = pfc::decomposition::create(get_world(), size);
+    set_cuda_fft(decomp, rank);
+  }
+
+public:
   /**
    * @brief Construct TungstenCUDA and set up CUDA FFT
    *
@@ -145,22 +166,33 @@ public:
    */
   explicit TungstenCUDA(pfc::FFT &fft, const pfc::Domain &domain,
                         MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, pfc::World(
-            {0, 0, 0},
-            {static_cast<int>(domain.size[0]) - 1,
-             static_cast<int>(domain.size[1]) - 1,
-             static_cast<int>(domain.size[2]) - 1},
-            domain), mpi_comm), m_cpu_buffer_valid(false) {
-    // Create CUDA events for non-blocking synchronization
-    cuda_check(cudaEventCreate(&kernel_done_event),
-               "cudaEventCreate(kernel_done_event)");
-    // session
-    int rank = 0;
-    int size = 0;
-    MPI_Comm_rank(this->mpi_comm(), &rank);
-    MPI_Comm_size(this->mpi_comm(), &size);
-    auto decomp = pfc::decomposition::create(get_world(), size);
-    set_cuda_fft(decomp, rank);
+      : pfc::Model(fft,
+                   pfc::World({0, 0, 0},
+                              {static_cast<int>(domain.size[0]) - 1,
+                               static_cast<int>(domain.size[1]) - 1,
+                               static_cast<int>(domain.size[2]) - 1},
+                              domain),
+                   mpi_comm),
+        m_cpu_buffer_valid(false) {
+    init_cuda_();
+  }
+
+  /**
+   * @brief Construct TungstenCUDA directly from a World and set up CUDA FFT
+   *
+   * Matches the base `pfc::Model(fft::IFFT&, const World&, MPI_Comm)`
+   * constructor signature so generic session-wiring code (which builds a
+   * `World` rather than a `Domain`) can construct this model without going
+   * through constructor inheritance (which would skip the CUDA event/FFT
+   * setup below).
+   *
+   * @param fft CPU FFT reference (used by base Model)
+   * @param world Simulation world
+   */
+  explicit TungstenCUDA(pfc::fft::IFFT &fft, const pfc::World &world,
+                        MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft, world, mpi_comm), m_cpu_buffer_valid(false) {
+    init_cuda_();
   }
 
   /**
