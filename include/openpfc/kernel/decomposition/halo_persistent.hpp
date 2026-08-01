@@ -28,7 +28,6 @@
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
 #include <openpfc/kernel/decomposition/exchange.hpp>
@@ -56,7 +55,8 @@ public:
    *
    * @param subdomain_box Local subdomain box (bounds for this rank).
    * @param domain        Global domain (for periodicity/spacing metadata).
-   * @param decomp        Decomposition for neighbor calculation (must outlive this object).
+   * @param decomp        Decomposition for neighbor calculation (must outlive this
+   * object).
    * @param rank          This MPI rank.
    * @param halo_width    Number of halo layers.
    * @param comm          MPI communicator.
@@ -68,16 +68,18 @@ public:
                           const decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, T *field_ptr,
                           int base_tag = 0)
-      : PersistentHaloExchanger(subdomain_box, domain, decomp, rank, halo_width, comm,
-                                field_ptr, halo::presets::Axes3D(), base_tag,
+      : PersistentHaloExchanger(subdomain_box, domain, decomp, rank, halo_width,
+                                comm, field_ptr, halo::presets::Axes3D(), base_tag,
                                 halo::HaloDirectionSelector{}) {}
 
   /**
-   * @brief Construct with a user-selected halo direction set using explicit Box3i + Domain.
+   * @brief Construct with a user-selected halo direction set using explicit Box3i +
+   * Domain.
    *
    * @param subdomain_box Local subdomain box (bounds for this rank).
    * @param domain        Global domain (for periodicity/spacing metadata).
-   * @param decomp        Decomposition for neighbor calculation (must outlive this object).
+   * @param decomp        Decomposition for neighbor calculation (must outlive this
+   * object).
    * @param rank          This MPI rank.
    * @param halo_width    Number of halo layers.
    * @param comm          MPI communicator.
@@ -94,16 +96,18 @@ public:
    * @param field_ptr Base pointer of the local field; must be stable for object
    * lifetime.
    *
-   * @deprecated Use explicit Box3i + Domain constructor: PersistentHaloExchanger(box, domain, decomp, rank, ...)
+   * @deprecated Use explicit Box3i + Domain constructor:
+   * PersistentHaloExchanger(box, domain, decomp, rank, ...)
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: PersistentHaloExchanger(box, domain, decomp, rank, ...)")]]
+  [[deprecated("Use explicit Box3i + Domain constructor: "
+               "PersistentHaloExchanger(box, domain, decomp, rank, ...)")]]
   PersistentHaloExchanger(const decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, T *field_ptr,
                           int base_tag = 0)
-      : PersistentHaloExchanger(decomposition::local_box(decomp, rank), decomposition::domain(decomp),
-                                decomp, rank, halo_width, comm, field_ptr,
-                                halo::presets::Axes3D(), base_tag,
-                                halo::HaloDirectionSelector{}) {}
+      : PersistentHaloExchanger(decomposition::local_box(decomp, rank),
+                                decomposition::domain(decomp), decomp, rank,
+                                halo_width, comm, field_ptr, halo::presets::Axes3D(),
+                                base_tag, halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct a persistent exchange bound to the directions in `dirs`.
@@ -119,22 +123,25 @@ public:
    * @param dirs     Direction set (defaults to `Axes3D()` for back-compat).
    * @param selector Optional per-rank override of the direction set.
    *
-   * @deprecated Use explicit Box3i + Domain constructor: PersistentHaloExchanger(box, domain, decomp, rank, ...)
+   * @deprecated Use explicit Box3i + Domain constructor:
+   * PersistentHaloExchanger(box, domain, decomp, rank, ...)
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: PersistentHaloExchanger(box, domain, decomp, rank, ...)")]]
+  [[deprecated("Use explicit Box3i + Domain constructor: "
+               "PersistentHaloExchanger(box, domain, decomp, rank, ...)")]]
   PersistentHaloExchanger(const decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, T *field_ptr,
                           halo::HaloDirectionSet dirs, int base_tag = 0,
                           halo::HaloDirectionSelector selector = {})
-      : PersistentHaloExchanger(decomposition::local_box(decomp, rank), decomposition::domain(decomp),
-                                decomp, rank, halo_width, comm, field_ptr,
-                                dirs, base_tag, selector) {}
+      : PersistentHaloExchanger(
+            decomposition::local_box(decomp, rank), decomposition::domain(decomp),
+            decomp, rank, halo_width, comm, field_ptr, dirs, base_tag, selector) {}
 
   // Main Box3i+Domain constructor implementation
   PersistentHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
                           const decomposition::Decomposition &decomp, int rank,
                           int halo_width, MPI_Comm comm, T *field_ptr,
-                          halo::HaloDirectionSet dirs = halo::presets::Axes3D(), int base_tag = 0,
+                          halo::HaloDirectionSet dirs = halo::presets::Axes3D(),
+                          int base_tag = 0,
                           halo::HaloDirectionSelector selector = {})
       : m_comm(comm), m_base_tag(base_tag), m_buf(static_cast<void *>(field_ptr)),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
