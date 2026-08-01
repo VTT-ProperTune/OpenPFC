@@ -190,6 +190,20 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
   return world;
 }
 
+/**
+ * Creates a Domain object from a JSON input.
+ *
+ * Same JSON schema as `from_json<World>` (Lx/Ly/Lz, dx/dy/dz, origin) — this
+ * just extracts the `Domain` (origin/spacing/periodicity) embedded in the
+ * parsed `World`, for callers that only need the coordinate system and not
+ * the subdomain bookkeeping `World` carries.
+ *
+ * @return A Domain object.
+ */
+template <> [[nodiscard]] inline Domain from_json<Domain>(const json &j) {
+  return pfc::world::get_coordinate_system(from_json<World>(j));
+}
+
 template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
   // Support both flat and nested structures
   auto t0_val = get_json_value(j, "t0", "timestepping");
