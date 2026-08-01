@@ -36,10 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 - **World Pattern**: `get_world()` functions and `World()` constructor deprecated for removal in 0.3.0
 - **Model World Constructor**: `Model(fft, World)` constructor deprecated, use `Model(fft, Domain)` instead
-- **Legacy Field APIs**: Previous field container interfaces removed from public API
+- **Legacy Field Containers**: LocalField, PaddedBrick, DiscreteField, Array deprecated for removal in 0.3.0 (migration guides documented in docs/development/state_access_usage.md)
 
 ### Removed
-- **Legacy Field Containers**: LocalField, PaddedBrick, DiscreteField, Array deleted
 - **Vendor-Specific GPU Code**: Separate CUDA/HIP directories consolidated to runtime/gpu/
 - **Kokkos Facsimile**: Experimental Kokkos compatibility layer removed
 - **Legacy GPU Headers**: gpu_vector.hpp, kernels_simple files, static_assert tombstones deleted

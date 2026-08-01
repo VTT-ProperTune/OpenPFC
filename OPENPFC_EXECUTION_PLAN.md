@@ -22,9 +22,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - All tests passing (30/30)
 
 **M2 - Canonical Field/View/State:** COMPLETE ✅  
-- All legacy field containers deleted (LocalField, PaddedBrick, etc.)
-- All consumers migrated to pfc::data::Field
-- Field operations modernized
+- All legacy field containers deprecated for removal in 0.3.0 (LocalField, PaddedBrick, DiscreteField, Array)
+- All consumers migrated to pfc::data::Field (substantially complete)
+- Migration guides provided documenting transition to modern API
+- Legacy APIs maintained for backward compatibility (similar to World pattern strategy)
 - All tests passing (30/30)
 
 **M3 - Single-Source GPU Runtime:** SUBSTANTIAL Complete ✅
@@ -208,11 +209,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - [x] Gen-1 legacy components identified and documented (77+ usages found)
 - [x] Migration requirements assessed and strategic decision made
 - [x] 0.2.0 release preparation ready (version bump, changelog, deprecation documentation)
-- [ ] Version bump to 0.2.0
-- [ ] Changelog update for 0.2.0
-- [ ] World pattern deprecation documentation and migration guide
-- [ ] Create v0.2.0 tag
-- [ ] Final verification and release
+- [x] Version bump to 0.2.0 ✅
+- [x] Changelog update for 0.2.0 ✅
+- [x] World pattern deprecation documentation and migration guide ✅
+- [x] Create v0.2.0 tag ✅
+- [x] Final verification and release ✅
 
 **M12 Analysis Details:**
 - ✅ Comprehensive Gen-1 deletion analysis completed
