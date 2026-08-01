@@ -29,6 +29,8 @@
 #include <string>
 #include <vector>
 
+#include <openpfc/runtime/gpu/gpu_api.hpp>
+
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/runtime/hip/backend_tags_hip.hpp>
@@ -47,7 +49,7 @@ namespace detail {
 
 /** Same conditions as `pfc::hip::detail::runtime_mpi_hip_aware()`. */
 inline bool runtime_mpi_hip_aware() {
-#if defined(OpenPFC_MPI_HIP_AWARE) && defined(OPEN_MPI) &&                         \
+#if defined(OpenPFC_MPI_HIP_AWARE) && defined(OPEN_MPI) &&                          \
     defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT)
   return MPIX_Query_hip_support() == 1;
 #else
@@ -89,22 +91,21 @@ void send(core::SparseVector<backend::HipTag, T> &sparse_vector, int sender_rank
 
   std::vector<size_t> indices(size);
   std::vector<T> data(size);
-  pfc::hip::detail::hip_check(
-      hipMemcpy(indices.data(), sparse_vector.indices().data(),
-                size * sizeof(size_t), hipMemcpyDeviceToHost),
-      "hipMemcpy indices D2H (exchange::send)");
-  pfc::hip::detail::hip_check(
-      hipMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
-                hipMemcpyDeviceToHost),
-      "hipMemcpy data D2H (exchange::send)");
+  GPU_CHECK(gpuMemcpyAsync(indices.data(), sparse_vector.indices().data(),
+                           size * sizeof(size_t), cudaMemcpyDeviceToHost, nullptr),
+            "gpuMemcpyAsync indices D2H (exchange::send)");
+  GPU_CHECK(gpuMemcpyAsync(data.data(), sparse_vector.data().data(),
+                           size * sizeof(T), cudaMemcpyDeviceToHost, nullptr),
+            "gpuMemcpyAsync data D2H (exchange::send)");
+  gpuDeviceSynchronize();
 
   pfc::mpi::throw_on_mpi_error(
       MPI_Send(&size, 1, MPI_UNSIGNED_LONG_LONG, receiver_rank, tag, comm),
       "MPI_Send");
-  pfc::mpi::throw_on_mpi_error(
-      MPI_Send(indices.data(), count, MPI_UNSIGNED_LONG_LONG, receiver_rank,
-               tag + 1, comm),
-      "MPI_Send");
+  pfc::mpi::throw_on_mpi_error(MPI_Send(indices.data(), count,
+                                        MPI_UNSIGNED_LONG_LONG, receiver_rank,
+                                        tag + 1, comm),
+                               "MPI_Send");
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
   pfc::mpi::throw_on_mpi_error(
       MPI_Send(data.data(), count, mpi_type, receiver_rank, tag + 2, comm),
@@ -130,16 +131,15 @@ void send_data(const core::SparseVector<backend::HipTag, T> &sparse_vector,
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::send_data");
 
   if (detail::runtime_mpi_hip_aware()) {
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
-                 comm),
-        "MPI_Send");
+    pfc::mpi::throw_on_mpi_error(MPI_Send(sparse_vector.data().data(), count,
+                                          mpi_type, receiver_rank, tag, comm),
+                                 "MPI_Send");
   } else {
     std::vector<T> data(size);
-    pfc::hip::detail::hip_check(
-        hipMemcpy(data.data(), sparse_vector.data().data(), size * sizeof(T),
-                  hipMemcpyDeviceToHost),
-        "hipMemcpy D2H (exchange::send_data)");
+    GPU_CHECK(gpuMemcpyAsync(data.data(), sparse_vector.data().data(),
+                             size * sizeof(T), cudaMemcpyDeviceToHost, nullptr),
+              "gpuMemcpyAsync D2H (exchange::send_data)");
+    gpuDeviceSynchronize();
     pfc::mpi::throw_on_mpi_error(
         MPI_Send(data.data(), count, mpi_type, receiver_rank, tag, comm),
         "MPI_Send");
@@ -162,24 +162,22 @@ void receive_data(core::SparseVector<backend::HipTag, T> &sparse_vector,
   }
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
-  const int count =
-      pfc::mpi::ensure_mpi_int_count(size, "exchange::receive_data");
+  const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::receive_data");
 
   if (detail::runtime_mpi_hip_aware()) {
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag,
-                 comm, MPI_STATUS_IGNORE),
-        "MPI_Recv");
+    pfc::mpi::throw_on_mpi_error(MPI_Recv(sparse_vector.data().data(), count,
+                                          mpi_type, sender_rank, tag, comm,
+                                          MPI_STATUS_IGNORE),
+                                 "MPI_Recv");
   } else {
     std::vector<T> data(size);
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Recv(data.data(), count, mpi_type, sender_rank, tag, comm,
-                 MPI_STATUS_IGNORE),
-        "MPI_Recv");
-    pfc::hip::detail::hip_check(
-        hipMemcpy(sparse_vector.data().data(), data.data(), size * sizeof(T),
-                  hipMemcpyHostToDevice),
-        "hipMemcpy H2D (exchange::receive_data)");
+    pfc::mpi::throw_on_mpi_error(MPI_Recv(data.data(), count, mpi_type, sender_rank,
+                                          tag, comm, MPI_STATUS_IGNORE),
+                                 "MPI_Recv");
+    GPU_CHECK(gpuMemcpyAsync(sparse_vector.data().data(), data.data(),
+                             size * sizeof(T), cudaMemcpyHostToDevice, nullptr),
+              "gpuMemcpyAsync H2D (exchange::receive_data)");
+    gpuDeviceSynchronize();
   }
 }
 
@@ -208,10 +206,10 @@ void isend_data(const core::SparseVector<backend::HipTag, T> &sparse_vector,
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::isend_data");
-  pfc::mpi::throw_on_mpi_error(
-      MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
-                comm, request),
-      "MPI_Isend");
+  pfc::mpi::throw_on_mpi_error(MPI_Isend(sparse_vector.data().data(), count,
+                                         mpi_type, receiver_rank, tag, comm,
+                                         request),
+                               "MPI_Isend");
 }
 
 template <typename T>
@@ -239,10 +237,9 @@ void irecv_data(core::SparseVector<backend::HipTag, T> &sparse_vector,
 
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::irecv_data");
-  pfc::mpi::throw_on_mpi_error(
-      MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag,
-                comm, request),
-      "MPI_Irecv");
+  pfc::mpi::throw_on_mpi_error(MPI_Irecv(sparse_vector.data().data(), count,
+                                         mpi_type, sender_rank, tag, comm, request),
+                               "MPI_Irecv");
 }
 
 } // namespace exchange
