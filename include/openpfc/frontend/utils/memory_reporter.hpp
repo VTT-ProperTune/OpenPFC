@@ -46,6 +46,7 @@
 #include <iomanip>
 #include <mpi.h>
 #include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
@@ -176,8 +177,16 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
                << " (" << num_ranks << " ranks)";
     log_info(logger, global_msg.str());
 
-    // Per-voxel memory
-    auto [Nx, Ny, Nz] = get_size(world);
+    // Per-voxel memory - Support both World and Domain via different APIs
+    decltype(auto) size = [&world]() -> auto && {
+      if constexpr (std::is_same_v<WorldType, pfc::Domain>) {
+        return pfc::domain::get_size(world);
+      } else {
+        // Assume World or World-compatible type with world::get_size
+        return pfc::world::get_size(world);
+      }
+    }();
+    auto [Nx, Ny, Nz] = std::make_tuple(size[0], size[1], size[2]);
     const size_t total_voxels =
         static_cast<size_t>(Nx) * static_cast<size_t>(Ny) * static_cast<size_t>(Nz);
     const size_t bytes_per_voxel =
