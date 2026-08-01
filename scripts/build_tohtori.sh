@@ -27,6 +27,10 @@ fi
 #   --build-ucx       Build/install UCX to UCX_PREFIX, set UCX_HOME for OpenMPI (--with-ucx).
 #   --ucx-only        Only build/install UCX.
 #   --clean-ucx       Remove UCX VPATH build dir before configuring UCX.
+#   --cuda            Build UCX with cuda_copy/cuda_ipc transports and Open MPI's
+#                     accelerator/cuda component (device-pointer-safe GPU-aware MPI).
+#                     Combine with --build-ucx --build-openmpi; load `cuda/X.Y` first
+#                     (or set CUDA_HOME) so configure finds the CUDA toolkit.
 #   --help            Show this help.
 #
 # Environment (optional):
@@ -43,6 +47,7 @@ fi
 #   UCX_SRC_ROOT      Default: $HOME/src
 #   UCX_BUILD_DIR     Default: $HOME/opt/ucx/build-$UCX_VER
 #   UCX_HOME          If set (and not using --build-ucx), OpenMPI gets --with-ucx=UCX_HOME
+#   CUDA_HOME         Used with --cuda; default: two levels up from `nvcc` on PATH
 #
 # This script loads the site **openmpi/5.0.10** module and its compiler dependency. For a
 # custom Open MPI build, OPENPFC_GCC_MODULE selects the compiler module (default gcc/11.2.0).
@@ -72,6 +77,18 @@ UCX_VER="${UCX_VER:-1.20.0}"
 UCX_PREFIX="${UCX_PREFIX:-${HOME}/opt/ucx/${UCX_VER}}"
 UCX_SRC_ROOT="${UCX_SRC_ROOT:-${HOME}/src}"
 UCX_BUILD_DIR="${UCX_BUILD_DIR:-${HOME}/opt/ucx/build-${UCX_VER}}"
+
+# --cuda: build UCX with the cuda_copy/cuda_ipc transports (device-pointer-safe
+# GPU-aware MPI) and enable Open MPI's accelerator/cuda component to match.
+# CUDA_HOME defaults to the directory two levels up from `nvcc` on PATH (i.e.
+# whatever `module load cuda/X.Y` last put there) so callers just need that
+# module loaded first; override explicitly if `nvcc` isn't on PATH yet.
+WITH_CUDA=0
+CUDA_HOME_DEFAULT=""
+if command -v nvcc >/dev/null 2>&1; then
+  CUDA_HOME_DEFAULT="$(cd "$(dirname "$(command -v nvcc)")/.." && pwd)"
+fi
+CUDA_HOME="${CUDA_HOME:-${CUDA_HOME_DEFAULT}}"
 
 # If the user exported OPENMPI_ROOT before this script, keep it when not passing --build-openmpi
 # (otherwise we would unset it and CMake would fall back to site Open MPI in the toolchain).
@@ -106,6 +123,11 @@ Options:
   --build-ucx        Build UCX from source; sets UCX_HOME for OpenMPI when combined.
   --ucx-only         Only build/install UCX.
   --clean-ucx        Remove UCX VPATH build dir before configuring UCX.
+  --cuda             Build UCX with cuda_copy/cuda_ipc transports and Open MPI's
+                     accelerator/cuda component. Load cuda/X.Y first (or set
+                     CUDA_HOME) so configure finds the toolkit; combine with
+                     --build-ucx --build-openmpi (distinct UCX_PREFIX/OPENMPI_PREFIX
+                     recommended, e.g. UCX_VER=1.20.0-cuda OPENMPI_VER=5.0.10-cuda).
   -h, --help         Show this help.
 
 Environment:
@@ -123,6 +145,7 @@ Environment:
   UCX_SRC_ROOT       (default: $HOME/src)
   UCX_BUILD_DIR      (default: $HOME/opt/ucx/build-$UCX_VER)
   UCX_HOME           optional; adds --with-ucx to OpenMPI (if not using --build-ucx)
+  CUDA_HOME          used with --cuda (default: two levels up from `nvcc` on PATH)
 
 UCX configure uses --without-go (skips Go bindings; they often break in VPATH builds).
 
@@ -150,6 +173,7 @@ while [[ $# -gt 0 ]]; do
     --build-ucx) BUILD_UCX=1 ;;
     --ucx-only) UCX_ONLY=1; BUILD_UCX=1 ;;
     --clean-ucx) CLEAN_UCX=1 ;;
+    --cuda) WITH_CUDA=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac
@@ -212,21 +236,31 @@ build_ucx() {
   mkdir -p "${UCX_BUILD_DIR}"
   cfg_release="${src}/contrib/configure-release"
 
+  local -a cuda_args=()
+  if [[ "${WITH_CUDA}" -eq 1 ]]; then
+    if [[ -z "${CUDA_HOME}" ]]; then
+      echo "ERROR: --cuda given but CUDA_HOME could not be determined (nvcc not on PATH; load a cuda/X.Y module or set CUDA_HOME)." >&2
+      exit 1
+    fi
+    log "Building UCX with CUDA support (CUDA_HOME=${CUDA_HOME})"
+    cuda_args=(--with-cuda="${CUDA_HOME}" --without-rocm)
+  else
+    cuda_args=(--without-cuda --without-rocm)
+  fi
+
   log "Configuring UCX (VPATH) ${UCX_BUILD_DIR} -> ${UCX_PREFIX}"
   (
     cd "${UCX_BUILD_DIR}"
     if [[ -x "${cfg_release}" ]]; then
       "${cfg_release}" \
         --prefix="${UCX_PREFIX}" \
-        --without-cuda \
-        --without-rocm \
+        "${cuda_args[@]}" \
         --without-go
     else
       "${src}/configure" \
         --prefix="${UCX_PREFIX}" \
         --enable-optimizations \
-        --without-cuda \
-        --without-rocm \
+        "${cuda_args[@]}" \
         --without-go
     fi
   )
@@ -308,6 +342,20 @@ build_openmpi() {
       ucx_args+=(--with-ucx-libdir="${UCX_HOME}/lib")
     fi
   fi
+  # --with-cuda enables Open MPI's own accelerator/cuda component (device
+  # pointer detection, MPIX_Query_cuda_support()); pair with a UCX built via
+  # `--cuda` (cuda_copy/cuda_ipc transports) for genuinely safe GPU-aware MPI —
+  # without both halves, MPIX_Query_cuda_support() can report support that the
+  # transport layer doesn't actually have.
+  local -a cuda_args=()
+  if [[ "${WITH_CUDA}" -eq 1 ]]; then
+    if [[ -z "${CUDA_HOME}" ]]; then
+      echo "ERROR: --cuda given but CUDA_HOME could not be determined (nvcc not on PATH; load a cuda/X.Y module or set CUDA_HOME)." >&2
+      exit 1
+    fi
+    log "Building OpenMPI with CUDA support (CUDA_HOME=${CUDA_HOME})"
+    cuda_args=(--with-cuda="${CUDA_HOME}")
+  fi
   (
     cd "${OPENMPI_BUILD_DIR}"
     "${src}/configure" \
@@ -317,7 +365,8 @@ build_openmpi() {
       --enable-mpi-fortran=all \
       --disable-oshmem \
       --disable-pretty-print-stacktrace \
-      "${ucx_args[@]}"
+      "${ucx_args[@]}" \
+      "${cuda_args[@]}"
   )
 
   log "Building and installing OpenMPI (${NINJA_JOBS} parallel jobs)..."
