@@ -188,5 +188,5 @@ inline const char *gpuGetErrorString(gpuError_t error) {
 #define GPU_LAUNCH_KERNEL(kernel, grid, block, args, stream)                        \
   do {                                                                              \
     kernel<<<grid, block, 0, stream>>> args;                                        \
-    GPU_CHECK(cudaGetLastError());                                                  \
+    GPU_CHECK(gpuGetLastError());                                                   \
   } while (0)
