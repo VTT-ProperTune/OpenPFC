@@ -188,27 +188,28 @@ Decomposition::Decomposition(const World &world, const Int3 &grid)
 [[nodiscard]] Decomposition create(const Domain &domain, const Int3 &grid) {
   // Use Domain-based constructor directly (M12 migration)
   return Decomposition(domain, grid);
+}
 
-  [[nodiscard]] Decomposition create(const Domain &domain, const int &nparts) {
-    // Validate nparts against total grid points before calling HeFFTe
-    const Int3 size = domain.size;
-    const long long total_grid_points = static_cast<long long>(size[0]) *
-                                        static_cast<long long>(size[1]) *
-                                        static_cast<long long>(size[2]);
-    if (nparts > total_grid_points) {
-      throw std::invalid_argument(
-          "Cannot create decomposition with " + std::to_string(nparts) +
-          " parts for a domain with only " + std::to_string(total_grid_points) +
-          " grid points");
-    }
-
-    // Calculate optimal grid using HeFFte's algorithm
-    const Int3 lower{0, 0, 0};
-    const Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-    const World world(lower, upper, domain);
-    const heffte::box3d<int> indices = global_world_to_heffte_box(world);
-    const auto grid = heffte::proc_setup_min_surface(indices, nparts);
-    return create(domain, grid);
+[[nodiscard]] Decomposition create(const Domain &domain, const int &nparts) {
+  // Validate nparts against total grid points before calling HeFFTe
+  const Int3 size = domain.size;
+  const long long total_grid_points = static_cast<long long>(size[0]) *
+                                      static_cast<long long>(size[1]) *
+                                      static_cast<long long>(size[2]);
+  if (nparts > total_grid_points) {
+    throw std::invalid_argument("Cannot create decomposition with " +
+                                std::to_string(nparts) +
+                                " parts for a domain with only " +
+                                std::to_string(total_grid_points) + " grid points");
   }
+
+  // Calculate optimal grid using HeFFte's algorithm
+  const Int3 lower{0, 0, 0};
+  const Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
+  const World world(lower, upper, domain);
+  const heffte::box3d<int> indices = global_world_to_heffte_box(world);
+  const auto grid = heffte::proc_setup_min_surface(indices, nparts);
+  return create(domain, grid);
+}
 
 } // namespace pfc::decomposition

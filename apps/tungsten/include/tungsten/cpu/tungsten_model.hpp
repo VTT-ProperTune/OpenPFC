@@ -151,13 +151,9 @@ public:
    * @param domain Simulation domain
    * @param mpi_comm MPI communicator
    */
-  explicit Tungsten(pfc::FFT &fft, const pfc::Domain &domain, MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, pfc::World(
-            {0, 0, 0},
-            {static_cast<int>(domain.size[0]) - 1,
-             static_cast<int>(domain.size[1]) - 1,
-             static_cast<int>(domain.size[2]) - 1},
-            domain), mpi_comm) {}
+  explicit Tungsten(pfc::FFT &fft, const pfc::Domain &domain,
+                    MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft, domain, mpi_comm) {}
 
   /**
    * @brief Model parameters
@@ -263,10 +259,10 @@ public:
     }
 
     ++m_operator_generation;
-    m_etd.ensure(k_laps, opCks, dt,
-                 pfc::integrator::SpectralExpOperatorId{.value =
-                                                            m_operator_generation},
-                 tungsten::etd::k_tungsten_etd_config_id);
+    m_etd.ensure(
+        k_laps, opCks, dt,
+        pfc::integrator::SpectralExpOperatorId{.value = m_operator_generation},
+        tungsten::etd::k_tungsten_etd_config_id);
 
     {
       const auto exp_w = m_etd.exp_Ldt();

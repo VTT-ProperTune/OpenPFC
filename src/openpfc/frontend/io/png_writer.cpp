@@ -9,10 +9,10 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
-#include <optional>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
-#include <stdexcept>
+#include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -78,8 +78,8 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
   int nproc = 1;
   MPI_Comm_size(comm, &nproc);
 
-  const auto &gw = pfc::decomposition::get_world(decomp);
-  auto gsz = pfc::world::get_size(gw);
+  const auto &domain = pfc::decomposition::get_domain(decomp);
+  auto gsz = domain.size;
   if (gsz[2] != 1) {
     throw std::invalid_argument(
         "write_mpi_scalar_field_png_xy: global nz must be 1");
@@ -96,7 +96,6 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
     }
   }
 
-
   // Collective size agreement: all ranks must agree on size mismatches
   const auto &my_subworld = pfc::decomposition::get_subworld(decomp, rank);
   auto my_sz = pfc::world::get_size(my_subworld);
@@ -108,7 +107,8 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
   if (static_cast<int>(local_field.size()) != expected_count) {
     local_ok = 0;
     std::ostringstream oss;
-    oss << "local_field.size() (" << local_field.size() << ") does not match expected "
+    oss << "local_field.size() (" << local_field.size()
+        << ") does not match expected "
         << "subworld point count (" << expected_count << ") for rank " << rank
         << " expected nx*ny*nz=" << my_sz[0] << "*" << my_sz[1] << "*" << my_sz[2];
     error_msg = oss.str();
@@ -124,7 +124,8 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
     if (!error_msg.empty()) {
       throw std::runtime_error(error_msg);
     } else {
-      throw std::runtime_error("write_mpi_scalar_field_png_xy: collective size mismatch detected");
+      throw std::runtime_error(
+          "write_mpi_scalar_field_png_xy: collective size mismatch detected");
     }
   }
 
@@ -147,8 +148,8 @@ void write_mpi_scalar_field_png_xy(MPI_Comm comm,
   }
 
   err = MPI_Gatherv(const_cast<double *>(local_field.data()), my_count, MPI_DOUBLE,
-                   rank == 0 ? gathered.data() : nullptr, counts.data(), displs.data(),
-                   MPI_DOUBLE, 0, comm);
+                    rank == 0 ? gathered.data() : nullptr, counts.data(),
+                    displs.data(), MPI_DOUBLE, 0, comm);
   pfc::mpi::throw_on_mpi_error(err, "MPI_Gatherv");
 
   if (rank != 0) {

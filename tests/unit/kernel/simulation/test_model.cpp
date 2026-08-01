@@ -12,8 +12,8 @@
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/simulation_context.hpp>
 
-#include "fixtures/simulation_factories.hpp"
 #include "fixtures/mock_model.hpp"
+#include "fixtures/simulation_factories.hpp"
 
 using namespace pfc;
 using pfc::types::Int3;
@@ -27,11 +27,12 @@ template <class T> void use_field_ref(T && /*unused*/) {}
 class ModelTestFixture : public pfc::test::SimulationModelFixture {
 public:
   ModelTestFixture() {
-    SetUpDefaultDomain(8, 1, 1);  // Set up 8×1×1 domain
+    SetUpDefaultDomain(8, 1, 1); // Set up 8×1×1 domain
   }
 };
 
-TEST_CASE_METHOD(ModelTestFixture, "Model - basic functionality (v2.0)", "[model][unit]") {
+TEST_CASE_METHOD(ModelTestFixture, "Model - basic functionality (v2.0)",
+                 "[model][unit]") {
   auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
   pfc::testing::MockModel model(fft, domain());
@@ -82,17 +83,15 @@ TEST_CASE_METHOD(ModelTestFixture, "Model - basic functionality (v2.0)", "[model
 // Test fixture for rank tests
 class RankModelTestFixture : public pfc::test::SimulationModelFixture {
 public:
-  RankModelTestFixture() {
-    SetUpDefaultDomain(10, 10, 10);
-  }
+  RankModelTestFixture() { SetUpDefaultDomain(10, 10, 10); }
 };
 
-TEST_CASE_METHOD(RankModelTestFixture, "Model::is_rank0() returns correct rank status (v2.0)",
-          "[model][unit][rank]") {
-  World world = pfc::test::world_from_domain(domain());
-  auto decomposition = decomposition::create(world, 1);
+TEST_CASE_METHOD(RankModelTestFixture,
+                 "Model::is_rank0() returns correct rank status (v2.0)",
+                 "[model][unit][rank]") {
+  auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain());
 
   int rank = mpi::get_rank();
   if (rank == 0) {
@@ -102,8 +101,9 @@ TEST_CASE_METHOD(RankModelTestFixture, "Model::is_rank0() returns correct rank s
   }
 }
 
-TEST_CASE_METHOD(RankModelTestFixture, "Model::mpi_comm() matches constructor communicator",
-          "[model][unit][rank]") {
+TEST_CASE_METHOD(RankModelTestFixture,
+                 "Model::mpi_comm() matches constructor communicator",
+                 "[model][unit][rank]") {
   World world = pfc::test::world_from_domain(domain());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -112,7 +112,8 @@ TEST_CASE_METHOD(RankModelTestFixture, "Model::mpi_comm() matches constructor co
   REQUIRE(is_rank0(model) == mpi_comm_rank_is_zero(MPI_COMM_WORLD));
 }
 
-TEST_CASE_METHOD(RankModelTestFixture, "Model::is_rank0() is const-correct (v2.0)", "[model][unit][rank]") {
+TEST_CASE_METHOD(RankModelTestFixture, "Model::is_rank0() is const-correct (v2.0)",
+                 "[model][unit][rank]") {
   World world = pfc::test::world_from_domain(domain());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);
@@ -128,12 +129,12 @@ TEST_CASE_METHOD(RankModelTestFixture, "Model::is_rank0() is const-correct (v2.0
 // Test fixture for error handling tests
 class ErrorModelTestFixture : public pfc::test::SimulationModelFixture {
 public:
-  ErrorModelTestFixture() {
-    SetUpDefaultDomain(8, 8, 8);
-  }
+  ErrorModelTestFixture() { SetUpDefaultDomain(8, 8, 8); }
 };
 
-TEST_CASE_METHOD(ErrorModelTestFixture, "Model - error handling for non-existent fields", "[model][unit][error]") {
+TEST_CASE_METHOD(ErrorModelTestFixture,
+                 "Model - error handling for non-existent fields",
+                 "[model][unit][error]") {
   World world = pfc::test::world_from_domain(domain());
   auto decomposition = decomposition::create(world, 1);
   auto fft = fft::create(decomposition);

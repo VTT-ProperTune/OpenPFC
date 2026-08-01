@@ -51,13 +51,12 @@ TEST_CASE("SingleSeed - Parameter Access", "[ic_single_seed]") {
 
 TEST_CASE("SingleSeed - Field Application", "[ic_single_seed]") {
   // Create domain centered at origin for seed placement
-  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}), pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
+                                    pfc::PhysicalOrigin({-128.0, -128.0, -128.0}),
                                     pfc::GridSpacing({16.0, 16.0, 16.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithSingleSeedIC m(fft, world);
+  ModelWithSingleSeedIC m(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
@@ -109,7 +108,8 @@ TEST_CASE("SingleSeed - Field Application", "[ic_single_seed]") {
 }
 
 TEST_CASE("SingleSeed - Integration with Model", "[ic_single_seed]") {
-  auto domain = pfc::domain::create(pfc::GridSize({8, 8, 8}), pfc::PhysicalOrigin({-64.0, -64.0, -64.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({8, 8, 8}),
+                                    pfc::PhysicalOrigin({-64.0, -64.0, -64.0}),
                                     pfc::GridSpacing({16.0, 16.0, 16.0}));
   auto box = pfc::domain::index_box(domain);
   World world(box.low, box.high, domain);

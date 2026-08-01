@@ -24,15 +24,13 @@ public:
 // Test fixture for comprehensive tests
 class ComprehensiveModelFixture : public pfc::test::SimulationModelFixture {
 public:
-  ComprehensiveModelFixture() {
-    SetUpDefaultDomain(8, 1, 1);
-  }
+  ComprehensiveModelFixture() { SetUpDefaultDomain(8, 1, 1); }
 };
 
-TEST_CASE_METHOD(ComprehensiveModelFixture, "Model - comprehensive (stub)", "[model][comprehensive][unit]") {
-  World world = pfc::test::world_from_domain(domain());
-  auto decomposition = decomposition::create(world, 1);
+TEST_CASE_METHOD(ComprehensiveModelFixture, "Model - comprehensive (stub)",
+                 "[model][comprehensive][unit]") {
+  auto decomposition = decomposition::create(domain(), 1);
   auto fft = fft::create(decomposition);
-  StubModel model(fft, world);
-  REQUIRE(get_size(get_world(model)) == pfc::types::Int3{8, 1, 1});
+  StubModel model(fft, domain());
+  REQUIRE(get_domain(model).size == pfc::types::Int3{8, 1, 1});
 }
