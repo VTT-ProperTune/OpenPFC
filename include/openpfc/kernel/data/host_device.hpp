@@ -49,9 +49,16 @@
  *       treat as CUDA code. CPU compilers never define it, so the macro
  *       collapses to an empty token everywhere else and the resulting
  *       function declaration is just a normal C++ function.
+ *
+ * @note `__HIPCC__` is defined by `hipcc` while compiling HIP code. It
+ *       provides analogous `__host__ __device__` attributes for ROCm/HIP
+ *       compilation (M3 single-source GPU runtime).
  */
 
 #if defined(__CUDACC__)
+#define OPENPFC_HD __host__ __device__
+#define OPENPFC_INLINE_HD inline __host__ __device__
+#elif defined(__HIPCC__)
 #define OPENPFC_HD __host__ __device__
 #define OPENPFC_INLINE_HD inline __host__ __device__
 #else
