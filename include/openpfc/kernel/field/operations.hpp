@@ -336,11 +336,10 @@ template <typename Fn>
 inline void apply_subdomain(std::vector<double> &field,
                             const pfc::decomposition::Decomposition &decomp,
                             int rank, Fn &&fn) {
-  const auto &gw = pfc::decomposition::get_world(decomp);
-  const auto &domain = gw.domain_; // Use Domain for coordinate calculations
-  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-  const auto lo = pfc::world::get_lower(local);
-  const auto sz = pfc::world::get_size(local);
+  const auto &domain = pfc::decomposition::get_domain(decomp);
+  const auto &local_box = pfc::decomposition::local_box(decomp, rank);
+  const auto lo = local_box.low;
+  const auto sz = local_box.upper - local_box.low + Int3{1, 1, 1};
   const int nx = sz[0];
   const int ny = sz[1];
   const int nz = sz[2];
@@ -395,11 +394,10 @@ inline void
 for_each_interior_with_coords(const std::vector<double> &field,
                               const pfc::decomposition::Decomposition &decomp,
                               int rank, int halo_width, Fn &&fn) {
-  const auto &gw = pfc::decomposition::get_world(decomp);
-  const auto &domain = gw.domain_; // Use Domain for coordinate calculations
-  const auto &local = pfc::decomposition::get_subworld(decomp, rank);
-  const auto lo = pfc::world::get_lower(local);
-  const auto sz = pfc::world::get_size(local);
+  const auto &domain = pfc::decomposition::get_domain(decomp);
+  const auto &local_box = pfc::decomposition::local_box(decomp, rank);
+  const auto lo = local_box.low;
+  const auto sz = local_box.upper - local_box.low + Int3{1, 1, 1};
   const int nx = sz[0];
   const int ny = sz[1];
   const int nz = sz[2];

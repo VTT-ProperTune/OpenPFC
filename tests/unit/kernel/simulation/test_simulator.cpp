@@ -22,11 +22,11 @@ using namespace pfc;
 using namespace pfc::types;
 
 TEST_CASE("Simulator functionality", "[simulator][unit]") {
-  auto world = pfc::test::make_world_cube_8();
-  auto decomposition = pfc::test::make_serial_decomposition(world);
+  auto domain = pfc::domain::create({8, 8, 8});
+  auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain);
 
   SECTION("is_rank0 tracks simulator MPI communicator") {
     Time time({0.0, 10.0, 1.0}, 1.0);
@@ -127,11 +127,11 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
 }
 
 TEST_CASE("Simulator - MockModel Integration", "[simulator]") {
-  auto world = pfc::test::make_world_cube_8();
-  auto decomposition = pfc::test::make_serial_decomposition(world);
+  auto domain = pfc::domain::create({8, 8, 8});
+  auto decomposition = pfc::decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
 
-  pfc::testing::MockModel model(fft, world);
+  pfc::testing::MockModel model(fft, domain);
 
   REQUIRE_NOTHROW(get_fft(model));
   REQUIRE(get_size(get_world(model)) == Int3{8, 8, 8});

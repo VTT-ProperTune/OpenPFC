@@ -64,7 +64,7 @@ public:
    * @param dt Time step size
    */
   void initialize(double dt) override {
-    const World &w = get_world();
+    const Domain &domain = get_domain();
     auto &fft = get_fft();
 
     // Allocate fields

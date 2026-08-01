@@ -18,11 +18,9 @@ using namespace pfc;
 TEST_CASE("FieldModifier - applies field modification to model",
           "[field_modifier][unit]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModelWithModificationFlag model(fft, world);
+  pfc::testing::MockModelWithModificationFlag model(fft, domain);
 
   pfc::testing::MockFieldModifier modifier;
 
@@ -34,11 +32,9 @@ TEST_CASE("FieldModifier - applies field modification to model",
 
 TEST_CASE("FieldModifier - polymorphic usage", "[field_modifier][unit]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModelWithModificationFlag model(fft, world);
+  pfc::testing::MockModelWithModificationFlag model(fft, domain);
 
   std::unique_ptr<FieldModifier> modifier =
       std::make_unique<pfc::testing::MockFieldModifier>();
@@ -51,11 +47,9 @@ TEST_CASE("FieldModifier - polymorphic usage", "[field_modifier][unit]") {
 
 TEST_CASE("FieldModifier - move semantics", "[field_modifier][unit]") {
   auto domain = pfc::domain::create(pfc::Int3{8, 8, 8});
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  pfc::testing::MockModelWithModificationFlag model(fft, world);
+  pfc::testing::MockModelWithModificationFlag model(fft, domain);
 
   pfc::testing::MockFieldModifier modifier;
 
