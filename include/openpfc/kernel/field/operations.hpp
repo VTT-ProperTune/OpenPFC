@@ -74,12 +74,12 @@ using PointFnT = std::function<double(double, double, double, double)>;
  *
  * @tparam Fn Callable: double(const Real3&) or double(Real3)
  * @param field Real-valued field storage (local inbox size)
- * @param world Global domain descriptor
+ * @param domain Domain descriptor for coordinate conversion
  * @param fft   FFT object (provides local inbox extents)
  * @param fn    Coordinate-space function returning new value
  */
 template <typename Fn>
-inline void apply(RealField &field, const World &world, const fft::IFFT &fft,
+inline void apply(RealField &field, const Domain &domain, const fft::IFFT &fft,
                   Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   // Safety: ensure field size matches inbox voxel count
@@ -97,7 +97,7 @@ inline void apply(RealField &field, const World &world, const fft::IFFT &fft,
     for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
       for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
         const pfc::Int3 idx{i, j, k};
-        const auto x = pfc::world::to_coords(world, idx);
+        const auto x = pfc::domain::to_coords(domain, idx);
         field[linear_idx++] = static_cast<double>(fn(x));
       }
     }
@@ -105,17 +105,34 @@ inline void apply(RealField &field, const World &world, const fft::IFFT &fft,
 }
 
 /**
+ * @brief Apply a coordinate-space function over a real field (local inbox)
+ *
+ * @deprecated Use the Domain-based overload instead.
+ * @tparam Fn Callable: double(const Real3&) or double(Real3)
+ * @param field Real-valued field storage (local inbox size)
+ * @param world Global domain descriptor
+ * @param fft   FFT object (provides local inbox extents)
+ * @param fn    Coordinate-space function returning new value
+ */
+template <typename Fn>
+[[deprecated("Use apply(RealField, const Domain&, const IFFT&, Fn) instead")]]
+inline void apply(RealField &field, const World &world, const fft::IFFT &fft,
+                  Fn &&fn) {
+  apply(field, world.domain_, fft, std::forward<Fn>(fn));
+}
+
+/**
  * @brief Apply a space-time function over a real field (local inbox)
  *
  * @tparam Fn Callable: double(const Real3&, double) or double(Real3,double)
  * @param field Real-valued field storage (local inbox size)
- * @param world Global domain descriptor
+ * @param domain Domain descriptor for coordinate conversion
  * @param fft   FFT object (provides local inbox extents)
  * @param t     Simulation time passed to the function
  * @param fn    Space-time function returning new value
  */
 template <typename Fn>
-inline void apply_with_time(RealField &field, const World &world,
+inline void apply_with_time(RealField &field, const Domain &domain,
                             const fft::IFFT &fft, double t, Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
@@ -132,7 +149,7 @@ inline void apply_with_time(RealField &field, const World &world,
     for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
       for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
         const pfc::Int3 idx{i, j, k};
-        const auto x = pfc::world::to_coords(world, idx);
+        const auto x = pfc::domain::to_coords(domain, idx);
         field[linear_idx++] = static_cast<double>(fn(x, t));
       }
     }
@@ -148,13 +165,13 @@ inline void apply_with_time(RealField &field, const World &world,
  *
  * @tparam Fn Callable: double(const Real3&, double current)
  * @param field Real-valued field storage (local inbox size)
- * @param world Global domain descriptor
+ * @param domain Domain descriptor for coordinate conversion
  * @param fft   FFT object (provides local inbox extents)
  * @param fn    Coordinate-space function returning new value given (x, current)
  */
 template <typename Fn>
-inline void apply_inplace(RealField &field, const World &world, const fft::IFFT &fft,
-                          Fn &&fn) {
+inline void apply_inplace(RealField &field, const Domain &domain,
+                          const fft::IFFT &fft, Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
   const auto ny = inbox.size[1];
@@ -170,7 +187,7 @@ inline void apply_inplace(RealField &field, const World &world, const fft::IFFT 
     for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
       for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
         const pfc::Int3 idx{i, j, k};
-        const auto x = pfc::world::to_coords(world, idx);
+        const auto x = pfc::domain::to_coords(domain, idx);
         field[linear_idx] = static_cast<double>(fn(x, field[linear_idx]));
         ++linear_idx;
       }
@@ -179,12 +196,36 @@ inline void apply_inplace(RealField &field, const World &world, const fft::IFFT 
 }
 
 /**
+ * @brief Apply a coordinate-space function in-place over a real field (local inbox)
+ *
+ * @deprecated Use the Domain-based overload instead.
+ * @tparam Fn Callable: double(const Real3&, double current)
+ * @param field Real-valued field storage (local inbox size)
+ * @param world Global domain descriptor
+ * @param fft   FFT object (provides local inbox extents)
+ * @param fn    Coordinate-space function returning new value given (x, current)
+ */
+template <typename Fn>
+[[deprecated(
+    "Use apply_inplace(RealField, const Domain&, const IFFT&, Fn) instead")]]
+inline void apply_inplace(RealField &field, const World &world, const fft::IFFT &fft,
+                          Fn &&fn) {
+  apply_inplace(field, world.domain_, fft, std::forward<Fn>(fn));
+}
+
+/**
  * @brief Apply a space-time function in-place over a real field (local inbox)
  *
  * @tparam Fn Callable: double(const Real3&, double current, double t)
+ * @param field Real-valued field storage (local inbox size)
+ * @param domain Domain descriptor for coordinate conversion
+ * @param fft   FFT object (provides local inbox extents)
+ * @param t     Simulation time passed to the function
+ * @param fn    Coordinate-space function returning new value given (x, current,
+ * time)
  */
 template <typename Fn>
-inline void apply_inplace_with_time(RealField &field, const World &world,
+inline void apply_inplace_with_time(RealField &field, const Domain &domain,
                                     const fft::IFFT &fft, double t, Fn &&fn) {
   const auto inbox = pfc::fft::get_inbox(fft);
   const auto nx = inbox.size[0];
@@ -201,7 +242,7 @@ inline void apply_inplace_with_time(RealField &field, const World &world,
     for (int j = inbox.low[1]; j <= inbox.high[1]; ++j) {
       for (int i = inbox.low[0]; i <= inbox.high[0]; ++i) {
         const pfc::Int3 idx{i, j, k};
-        const auto x = pfc::world::to_coords(world, idx);
+        const auto x = pfc::domain::to_coords(domain, idx);
         field[linear_idx] = static_cast<double>(fn(x, field[linear_idx], t));
         ++linear_idx;
       }
@@ -210,12 +251,33 @@ inline void apply_inplace_with_time(RealField &field, const World &world,
 }
 
 /**
+ * @brief Apply a space-time function in-place over a real field (local inbox)
+ *
+ * @deprecated Use the Domain-based overload instead.
+ * @tparam Fn Callable: double(const Real3&, double current, double t)
+ * @param field Real-valued field storage (local inbox size)
+ * @param world Global domain descriptor
+ * @param fft   FFT object (provides local inbox extents)
+ * @param t     Simulation time passed to the function
+ * @param fn    Coordinate-space function returning new value given (x, current,
+ * time)
+ */
+template <typename Fn>
+[[deprecated("Use apply_inplace_with_time(RealField, const Domain&, const IFFT&, "
+             "double, Fn) instead")]]
+inline void apply_inplace_with_time(RealField &field, const World &world,
+                                    const fft::IFFT &fft, double t, Fn &&fn) {
+  apply_inplace_with_time(field, world.domain_, fft, t, std::forward<Fn>(fn));
+}
+
+/**
  * @brief Model overload: apply in-place to a named field
  */
 template <typename Fn>
 inline void apply_inplace(Model &model, std::string_view field_name, Fn &&fn) {
   auto &f = pfc::get_real_field(model, field_name);
-  apply_inplace(f, pfc::get_world(model), pfc::get_fft(model), std::forward<Fn>(fn));
+  apply_inplace(f, pfc::get_domain(model), pfc::get_fft(model),
+                std::forward<Fn>(fn));
 }
 
 /**
@@ -225,7 +287,7 @@ template <typename Fn>
 inline void apply_inplace_with_time(Model &model, std::string_view field_name,
                                     double t, Fn &&fn) {
   auto &f = pfc::get_real_field(model, field_name);
-  apply_inplace_with_time(f, pfc::get_world(model), pfc::get_fft(model), t,
+  apply_inplace_with_time(f, pfc::get_domain(model), pfc::get_fft(model), t,
                           std::forward<Fn>(fn));
 }
 
@@ -237,7 +299,7 @@ inline void apply_inplace_with_time(Model &model, std::string_view field_name,
 template <typename Fn>
 inline void apply(Model &model, std::string_view field_name, Fn &&fn) {
   auto &f = pfc::get_real_field(model, field_name);
-  apply(f, pfc::get_world(model), pfc::get_fft(model), std::forward<Fn>(fn));
+  apply(f, pfc::get_domain(model), pfc::get_fft(model), std::forward<Fn>(fn));
 }
 
 /**
@@ -247,7 +309,7 @@ template <typename Fn>
 inline void apply_with_time(Model &model, std::string_view field_name, double t,
                             Fn &&fn) {
   auto &f = pfc::get_real_field(model, field_name);
-  apply_with_time(f, pfc::get_world(model), pfc::get_fft(model), t,
+  apply_with_time(f, pfc::get_domain(model), pfc::get_fft(model), t,
                   std::forward<Fn>(fn));
 }
 
@@ -275,6 +337,7 @@ inline void apply_subdomain(std::vector<double> &field,
                             const pfc::decomposition::Decomposition &decomp,
                             int rank, Fn &&fn) {
   const auto &gw = pfc::decomposition::get_world(decomp);
+  const auto &domain = gw.domain_; // Use Domain for coordinate calculations
   const auto &local = pfc::decomposition::get_subworld(decomp, rank);
   const auto lo = pfc::world::get_lower(local);
   const auto sz = pfc::world::get_size(local);
@@ -283,8 +346,6 @@ inline void apply_subdomain(std::vector<double> &field,
   const int nz = sz[2];
   const std::size_t sxy =
       static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
-  const auto origin = pfc::world::get_origin(gw);
-  const auto spacing = pfc::world::get_spacing(gw);
   field.assign(sxy * static_cast<std::size_t>(nz), 0.0);
   for (int iz = 0; iz < nz; ++iz) {
     for (int iy = 0; iy < ny; ++iy) {
@@ -292,14 +353,13 @@ inline void apply_subdomain(std::vector<double> &field,
         const int gi = lo[0] + ix;
         const int gj = lo[1] + iy;
         const int gk = lo[2] + iz;
-        const double x = origin[0] + static_cast<double>(gi) * spacing[0];
-        const double y = origin[1] + static_cast<double>(gj) * spacing[1];
-        const double z = origin[2] + static_cast<double>(gk) * spacing[2];
+        const pfc::Int3 global_idx{gi, gj, gk};
+        const auto coords = pfc::domain::to_coords(domain, global_idx);
         const std::size_t idx =
             static_cast<std::size_t>(ix) +
             static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
             static_cast<std::size_t>(iz) * sxy;
-        field[idx] = static_cast<double>(fn(x, y, z));
+        field[idx] = static_cast<double>(fn(coords[0], coords[1], coords[2]));
       }
     }
   }
@@ -336,6 +396,7 @@ for_each_interior_with_coords(const std::vector<double> &field,
                               const pfc::decomposition::Decomposition &decomp,
                               int rank, int halo_width, Fn &&fn) {
   const auto &gw = pfc::decomposition::get_world(decomp);
+  const auto &domain = gw.domain_; // Use Domain for coordinate calculations
   const auto &local = pfc::decomposition::get_subworld(decomp, rank);
   const auto lo = pfc::world::get_lower(local);
   const auto sz = pfc::world::get_size(local);
@@ -354,17 +415,14 @@ for_each_interior_with_coords(const std::vector<double> &field,
   }
   const std::size_t sxy =
       static_cast<std::size_t>(nx) * static_cast<std::size_t>(ny);
-  const auto origin = pfc::world::get_origin(gw);
-  const auto spacing = pfc::world::get_spacing(gw);
   for (int iz = kmin; iz < kmax; ++iz) {
     for (int iy = jmin; iy < jmax; ++iy) {
       for (int ix = imin; ix < imax; ++ix) {
         const int gi = lo[0] + ix;
         const int gj = lo[1] + iy;
         const int gk = lo[2] + iz;
-        const pfc::Real3 coords{origin[0] + static_cast<double>(gi) * spacing[0],
-                                origin[1] + static_cast<double>(gj) * spacing[1],
-                                origin[2] + static_cast<double>(gk) * spacing[2]};
+        const pfc::Int3 global_idx{gi, gj, gk};
+        const auto coords = pfc::domain::to_coords(domain, global_idx);
         const std::size_t idx =
             static_cast<std::size_t>(ix) +
             static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
