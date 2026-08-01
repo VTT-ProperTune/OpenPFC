@@ -4,7 +4,6 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <fixtures/diffusion_model.hpp>
-#include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 
@@ -33,14 +32,14 @@ TEST_CASE("CUDA vs CPU diffusion consistency (smoke)", "[integration][gpu][cuda]
 
 #if defined(OpenPFC_ENABLE_CUDA)
   // GPU run
-  auto decomp_gpu = decomposition::create(world, size);
+  auto decomp_gpu = decomposition::create(domain, size);
   auto fft_gpu_iface =
       fft::create_with_backend(decomp_gpu, /*rank*/ 0, fft::Backend::CUDA);
   // GPU path requires DataBuffer; use CPU for field storage then transform via
   // interface For smoke test, reuse CPU model but ensure CUDA backend can be
   // constructed
   auto fft_cpu_again = fft::create(decomp_gpu);
-  DiffusionModel model_gpu(fft_cpu_again, world);
+  DiffusionModel model_gpu(fft_cpu_again, domain);
   model_gpu.initialize(1.0e-3);
   for (int i = 0; i < 10; ++i) {
     model_gpu.step(0.0);

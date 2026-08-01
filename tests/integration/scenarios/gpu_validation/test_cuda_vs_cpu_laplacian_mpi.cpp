@@ -49,7 +49,7 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
 
   // Use global indices from inbox to construct a smooth periodic field
   const auto inbox = fft::get_inbox(fft_cpu);
-  const auto [Lx, Ly, Lz] = world::get_size(world);
+  const auto [Lx, Ly, Lz] = domain::get_size(domain);
 
   std::vector<double> real_in_cpu(n_in);
   {
@@ -74,7 +74,7 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
   fft_cpu.forward(real_in_cpu, freq_cpu);
 
   const auto outbox = fft::get_outbox(fft_cpu);
-  const auto [fx, fy, fz] = k_frequency_scaling(world);
+  const auto [fx, fy, fz] = k_frequency_scaling(domain);
   {
     size_t idx = 0;
     for (int k = outbox.low[2]; k <= outbox.high[2]; ++k) {

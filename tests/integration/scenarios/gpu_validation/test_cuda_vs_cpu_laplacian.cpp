@@ -60,11 +60,11 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (double) [integration][gpu]", "[gpu
   fft_cpu.forward(real_in_cpu, freq_cpu);
 
   // Build Laplacian multiplier in-place on CPU spectrum
-  const auto [Lx, Ly, Lz] = world::get_size(world);
+  const auto [Lx, Ly, Lz] = domain::get_size(domain);
   const auto outbox = fft::get_outbox(fft_cpu);
   auto low = outbox.low;
   auto high = outbox.high;
-  const auto [fx, fy, fz] = k_frequency_scaling(world);
+  const auto [fx, fy, fz] = k_frequency_scaling(domain);
 
   {
     size_t idx = 0;
