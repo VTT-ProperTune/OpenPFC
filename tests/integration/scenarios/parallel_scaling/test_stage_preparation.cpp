@@ -33,40 +33,42 @@ void fill_owned(data::Field<double, HostSpace> &u, double val) {
   const auto n = u.size3();
   for (int k = 0; k < n[2]; ++k)
     for (int j = 0; j < n[1]; ++j)
-      for (int i = 0; i < n[0]; ++i)
-        u(i, j, k) = val;
+      for (int i = 0; i < n[0]; ++i) u(i, j, k) = val;
 }
 
 void poison_halos(data::Field<double, HostSpace> &u, double poison) {
   const int hw = u.storage_halo();
   const auto n = u.size3();
   for (int d = 1; d <= hw; ++d) {
-    for (int k = -hw; k < n[2] + hw; ++k)
-      for (int j = -hw; j < n[1] + hw; ++j) {
+    for (int k = 0; k < n[2]; ++k)
+      for (int j = 0; j < n[1]; ++j) {
         u(-d, j, k) = poison;
         u(n[0] + d - 1, j, k) = poison;
       }
-    for (int k = -hw; k < n[2] + hw; ++k)
-      for (int i = -hw; i < n[0] + hw; ++i) {
+    for (int k = 0; k < n[2]; ++k)
+      for (int i = 0; i < n[0]; ++i) {
         u(i, -d, k) = poison;
         u(i, n[1] + d - 1, k) = poison;
       }
-    for (int j = -hw; j < n[1] + hw; ++j)
-      for (int i = -hw; i < n[0] + hw; ++i) {
+    for (int j = 0; j < n[1]; ++j)
+      for (int i = 0; i < n[0]; ++i) {
         u(i, j, -d) = poison;
         u(i, j, n[2] + d - 1) = poison;
       }
   }
 }
 
+// The exchanger is face-only (see PaddedHaloExchanger docs): each ghost ring
+// only covers the *owned* extent of the two orthogonal axes, not the padded
+// extent, so corner cells (where two ghost rings would overlap) are never
+// written. These checks must match that contract and stick to the owned
+// range on the orthogonal axes.
 bool halo_layer_x_matches(const data::Field<double, HostSpace> &u, int i,
                           double expected) {
   bool matches = true;
   const auto n = u.size3();
-  const int hw = u.storage_halo();
-  for (int k = -hw; k < n[2] + hw; ++k)
-    for (int j = -hw; j < n[1] + hw; ++j)
-      matches &= u(i, j, k) == expected;
+  for (int k = 0; k < n[2]; ++k)
+    for (int j = 0; j < n[1]; ++j) matches &= u(i, j, k) == expected;
   return matches;
 }
 
@@ -74,10 +76,8 @@ bool halo_layer_y_matches(const data::Field<double, HostSpace> &u, int j,
                           double expected) {
   bool matches = true;
   const auto n = u.size3();
-  const int hw = u.storage_halo();
-  for (int k = -hw; k < n[2] + hw; ++k)
-    for (int i = -hw; i < n[0] + hw; ++i)
-      matches &= u(i, j, k) == expected;
+  for (int k = 0; k < n[2]; ++k)
+    for (int i = 0; i < n[0]; ++i) matches &= u(i, j, k) == expected;
   return matches;
 }
 
@@ -85,10 +85,8 @@ bool halo_layer_z_matches(const data::Field<double, HostSpace> &u, int k,
                           double expected) {
   bool matches = true;
   const auto n = u.size3();
-  const int hw = u.storage_halo();
-  for (int j = -hw; j < n[1] + hw; ++j)
-    for (int i = -hw; i < n[0] + hw; ++i)
-      matches &= u(i, j, k) == expected;
+  for (int j = 0; j < n[1]; ++j)
+    for (int i = 0; i < n[0]; ++i) matches &= u(i, j, k) == expected;
   return matches;
 }
 
@@ -124,8 +122,7 @@ TEST_CASE("StagePreparationService: scalar prepare fills ±X ghosts",
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size != 2)
-    return;
+  if (size != 2) return;
 
   auto global_domain = pfc::domain::create({16, 8, 4});
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
@@ -156,8 +153,7 @@ TEST_CASE("StagePreparationService: two-field prepare fills both ghost rings",
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size != 2)
-    return;
+  if (size != 2) return;
 
   auto global_domain = pfc::domain::create({16, 8, 4});
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
@@ -195,8 +191,7 @@ TEST_CASE("StagePreparationService: needs_halo=false leaves ghosts untouched",
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size != 2)
-    return;
+  if (size != 2) return;
 
   auto global_domain = pfc::domain::create({16, 8, 4});
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
@@ -227,8 +222,7 @@ TEST_CASE("StagePreparationService: reject/retry re-prepare restores ghosts",
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size != 2)
-    return;
+  if (size != 2) return;
 
   auto global_domain = pfc::domain::create({16, 8, 4});
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
@@ -266,8 +260,7 @@ TEST_CASE("StagePreparationService: boundary hook ordering vs halo",
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size != 2)
-    return;
+  if (size != 2) return;
 
   auto global_domain = pfc::domain::create({16, 8, 4});
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
