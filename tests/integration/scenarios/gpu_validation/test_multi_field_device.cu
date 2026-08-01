@@ -278,21 +278,26 @@ TEST_CASE("test_evaluate_fd_grad_composite",
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-  pfc::field::PaddedBrick<double> brick_u(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> brick_v(decomp, 0, hw);
-  REQUIRE(brick_u.nx() == nx);
-  for (int pk = -hw; pk < nz + hw; ++pk) {
-    for (int pj = -hw; pj < ny + hw; ++pj) {
-      for (int pi = -hw; pi < nx + hw; ++pi) {
+  // M2 migration: replace PaddedBrick with pfc::data::Field
+  pfc::data::Field<double, pfc::HostSpace> brick_u =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> brick_v =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  REQUIRE(brick_u.local_size()[0] == nx);
+  // M2 migration: Use owned region indexing (0..n-1) instead of padded (-hw..n+hw)
+  for (int pk = 0; pk < nz; ++pk) {
+    for (int pj = 0; pj < ny; ++pj) {
+      for (int pi = 0; pi < nx; ++pi) {
         const double x = static_cast<double>(pi) * dx;
         const double y = static_cast<double>(pj) * dy;
-        brick_u(pi, pj, pk) = x * x + 2.0 * y * y;
-        brick_v(pi, pj, pk) = 3.0 + x;
+        brick_u.set_xy(pi, pj, pk) = x * x + 2.0 * y * y;
+        brick_v.set_xy(pi, pj, pk) = 3.0 + x;
       }
     }
   }
-  auto cpu_grad_u = pfc::field::create<UGrads>(brick_u, order);
-  auto cpu_grad_v = pfc::field::create<VGrads>(brick_v, order);
+  // M2 migration: Use FDGradient constructor directly instead of pfc::field::create
+  pfc::gradient::FDGradient<UGrads> cpu_grad_u(brick_u, order);
+  pfc::gradient::FDGradient<VGrads> cpu_grad_v(brick_v, order);
 
   bool match = true;
   for (int iz = 0; iz < nz; ++iz) {
@@ -338,39 +343,52 @@ TEST_CASE("test_wave2d_double_field_kernel",
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);
-  pfc::field::PaddedBrick<double> u(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> v(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> du_cpu(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> dv_cpu(decomp, 0, hw);
+  // M2 migration: replace PaddedBrick with pfc::data::Field
+  pfc::data::Field<double, pfc::HostSpace> u =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> v =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> du_cpu =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> dv_cpu =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
 
-  for (int pk = -hw; pk < nz + hw; ++pk) {
-    for (int pj = -hw; pj < ny + hw; ++pj) {
-      for (int pi = -hw; pi < nx + hw; ++pi) {
+  // M2 migration: Change from padded indexing (-hw..n+hw) to owned region (0..n-1)
+  for (int pk = 0; pk < nz; ++pk) {
+    for (int pj = 0; pj < ny; ++pj) {
+      for (int pi = 0; pi < nx; ++pi) {
         const double x = static_cast<double>(pi) * dx;
         const double y = static_cast<double>(pj) * dy;
-        u(pi, pj, pk) = std::sin(0.3 * x) * std::cos(0.2 * y);
-        v(pi, pj, pk) = 0.5 * std::cos(0.3 * x) * std::sin(0.2 * y);
-        du_cpu(pi, pj, pk) = 0.0;
-        dv_cpu(pi, pj, pk) = 0.0;
+        u.set_xy(pi, pj, pk) = std::sin(0.3 * x) * std::cos(0.2 * y);
+        v.set_xy(pi, pj, pk) = 0.5 * std::cos(0.3 * x) * std::sin(0.2 * y);
+        du_cpu.set_xy(pi, pj, pk) = 0.0;
+        dv_cpu.set_xy(pi, pj, pk) = 0.0;
       }
     }
   }
 
-  auto grad_u = pfc::field::create<UGrads>(u, order);
-  auto grad_v = pfc::field::create<VGrads>(v, order);
+  // M2 migration: Use FDGradient constructors directly
+  pfc::gradient::FDGradient<UGrads> grad_u(u, order);
+  pfc::gradient::FDGradient<VGrads> grad_v(v, order);
+  // M2 migration: Update composite creation for FDGradient usage
   auto composite = pfc::field::create_composite<WaveLocal>(grad_u, grad_v);
   WaveDeviceModel cpu_model{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2};
-  auto du_tuple = std::make_tuple(du_cpu.data() + owned_origin(hw, u.padded_size3()[0],
-                                                               u.padded_size3()[1]),
-                                  dv_cpu.data() + owned_origin(hw, v.padded_size3()[0],
-                                                               v.padded_size3()[1]));
-  // PaddedBrick FdGradient indexes from owned origin with padded strides; du
+  // M2 migration: Update memory layout calculations for Field instead of PaddedBrick
+  auto du_tuple = std::make_tuple(du_cpu.data() + du_cpu.storage_halo() *
+                                       (du_cpu.padded_extent(0) * du_cpu.padded_extent(1) +
+                                        du_cpu.padded_extent(1) * du_cpu.storage_halo() +
+                                        du_cpu.storage_halo()),
+                                  dv_cpu.data() + dv_cpu.storage_halo() *
+                                       (dv_cpu.padded_extent(0) * dv_cpu.padded_extent(1) +
+                                        dv_cpu.padded_extent(1) * dv_cpu.storage_halo() +
+                                        dv_cpu.storage_halo()));
+  // Field storage_halo and padded_extent compute the same layout as PaddedBrick; du
   // pointers must share that base.
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, /*t=*/0.0);
 
-  const int nxp = u.padded_size3()[0];
-  const int nyp = u.padded_size3()[1];
-  const int nzp = u.padded_size3()[2];
+  const int nxp = u.padded_extent(0);
+  const int nyp = u.padded_extent(1);
+  const int nzp = u.padded_extent(2);
   const std::size_t total = u.size();
 
   double *d_u = nullptr;
@@ -452,33 +470,47 @@ TEST_CASE("test_kobayashi_double_field_kernel",
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);
-  pfc::field::PaddedBrick<double> phi(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> tempr(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> dphi_cpu(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> dtempr_cpu(decomp, 0, hw);
+  // M2 migration: replace PaddedBrick with pfc::data::Field
+  pfc::data::Field<double, pfc::HostSpace> phi =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> tempr =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> dphi_cpu =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> dtempr_cpu =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
 
-  for (int pk = -hw; pk < nz + hw; ++pk) {
-    for (int pj = -hw; pj < ny + hw; ++pj) {
-      for (int pi = -hw; pi < nx + hw; ++pi) {
+  // M2 migration: adjust coordinate calculation for owned region (0..n-1)
+  for (int pk = 0; pk < nz; ++pk) {
+    for (int pj = 0; pj < ny; ++pj) {
+      for (int pi = 0; pi < nx; ++pi) {
         const double r2 = static_cast<double>((pi - nx / 2) * (pi - nx / 2) +
                                               (pj - ny / 2) * (pj - ny / 2));
-        phi(pi, pj, pk) = r2 < 4.0 ? 1.0 : 0.0;
-        tempr(pi, pj, pk) = kTeq - 0.05;
-        dphi_cpu(pi, pj, pk) = 0.0;
-        dtempr_cpu(pi, pj, pk) = 0.0;
+        phi.set_xy(pi, pj, pk) = r2 < 4.0 ? 1.0 : 0.0;
+        tempr.set_xy(pi, pj, pk) = kTeq - 0.05;
+        dphi_cpu.set_xy(pi, pj, pk) = 0.0;
+        dtempr_cpu.set_xy(pi, pj, pk) = 0.0;
       }
     }
   }
 
-  auto gphi = pfc::field::create<PhiGrads>(phi, order);
-  auto gtempr = pfc::field::create<TemprGrads>(tempr, order);
+  // M2 migration: Use FDGradient constructors instead of pfc::field::create
+  pfc::gradient::FDGradient<PhiGrads> gphi(phi, order);
+  pfc::gradient::FDGradient<TemprGrads> gtempr(tempr, order);
   auto composite =
       pfc::field::create_composite<KobayashiLocal>(gphi, gtempr);
   KobayashiDeviceModel cpu_model{};
-  const int nxp = phi.padded_size3()[0];
-  const int nyp = phi.padded_size3()[1];
-  auto du_tuple = std::make_tuple(dphi_cpu.data() + owned_origin(hw, nxp, nyp),
-                                  dtempr_cpu.data() + owned_origin(hw, nxp, nyp));
+  // M2 migration: Update memory layout calculations for Field
+  const int nxp = phi.padded_extent(0);
+  const int nyp = phi.padded_extent(1);
+  auto du_tuple = std::make_tuple(dphi_cpu.data() + dphi_cpu.storage_halo() *
+                                       (dphi_cpu.padded_extent(0) * dphi_cpu.padded_extent(1) +
+                                        dphi_cpu.padded_extent(1) * dphi_cpu.storage_halo() +
+                                        dphi_cpu.storage_halo()),
+                                  dtempr_cpu.data() + dtempr_cpu.storage_halo() *
+                                       (dtempr_cpu.padded_extent(0) * dtempr_cpu.padded_extent(1) +
+                                        dtempr_cpu.padded_extent(1) * dtempr_cpu.storage_halo() +
+                                        dtempr_cpu.storage_halo()));
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, 0.0);
 
   const std::size_t total = phi.size();
@@ -512,7 +544,7 @@ TEST_CASE("test_kobayashi_double_field_kernel",
                      cudaMemcpyDeviceToHost) == cudaSuccess);
 
   bool match = true;
-  const int nzp = phi.padded_size3()[2];
+  const int nzp = phi.padded_extent(2);
   for (int iz = 0; iz < nz; ++iz) {
     for (int iy = 0; iy < ny; ++iy) {
       for (int ix = 0; ix < nx; ++ix) {
@@ -547,34 +579,47 @@ TEST_CASE("test_synthetic_triple_field_kernel",
                                   pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                   pfc::GridSpacing({dx, dy, dz}));
   auto decomp = pfc::decomposition::create(world, 1);
-  pfc::field::PaddedBrick<double> a(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> b(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> c(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> da_cpu(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> db_cpu(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> dc_cpu(decomp, 0, hw);
+  // M2 migration: replace PaddedBrick with pfc::data::Field
+  pfc::data::Field<double, pfc::HostSpace> a =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> b =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> c =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> da_cpu =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> db_cpu =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
+  pfc::data::Field<double, pfc::HostSpace> dc_cpu =
+      pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, /*halo=*/hw);
 
-  for (int pk = -hw; pk < nz + hw; ++pk) {
-    for (int pj = -hw; pj < ny + hw; ++pj) {
-      for (int pi = -hw; pi < nx + hw; ++pi) {
+  // M2 migration: use owned region (0..n-1) instead of padded indexing (-hw..n+hw)
+  for (int pk = 0; pk < nz; ++pk) {
+    for (int pj = 0; pj < ny; ++pj) {
+      for (int pi = 0; pi < nx; ++pi) {
         const double x = static_cast<double>(pi);
         const double y = static_cast<double>(pj);
-        a(pi, pj, pk) = 0.1 * x + 0.2 * y;
-        b(pi, pj, pk) = x * x;
-        c(pi, pj, pk) = y * y;
-        da_cpu(pi, pj, pk) = db_cpu(pi, pj, pk) = dc_cpu(pi, pj, pk) = 0.0;
+        a.set_xy(pi, pj, pk) = 0.1 * x + 0.2 * y;
+        b.set_xy(pi, pj, pk) = x * x;
+        c.set_xy(pi, pj, pk) = y * y;
+        da_cpu.set_xy(pi, pj, pk) = db_cpu.set_xy(pi, pj, pk) = dc_cpu.set_xy(pi, pj, pk) = 0.0;
       }
     }
   }
 
-  auto ga = pfc::field::create<AGrads>(a, order);
-  auto gb = pfc::field::create<BGrads>(b, order);
-  auto gc = pfc::field::create<CGrads>(c, order);
+  // M2 migration: Use FDGradient constructors instead of pfc::field::create
+  pfc::gradient::FDGradient<AGrads> ga(a, order);
+  pfc::gradient::FDGradient<BGrads> gb(b, order);
+  pfc::gradient::FDGradient<CGrads> gc(c, order);
   auto composite = pfc::field::create_composite<TripleLocal>(ga, gb, gc);
   TripleDeviceModel cpu_model{};
-  const int nxp = a.padded_size3()[0];
-  const int nyp = a.padded_size3()[1];
-  const auto off = owned_origin(hw, nxp, nyp);
+  // M2 migration: Update memory layout calculations for Field
+  const int nxp = a.padded_extent(0);
+  const int nyp = a.padded_extent(1);
+  const auto off = da_cpu.storage_halo() *
+                   (da_cpu.padded_extent(0) * da_cpu.padded_extent(1) +
+                    da_cpu.padded_extent(1) * da_cpu.storage_halo() +
+                    da_cpu.storage_halo());
   auto du_tuple = std::make_tuple(da_cpu.data() + off, db_cpu.data() + off,
                                   dc_cpu.data() + off);
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, 0.0);
