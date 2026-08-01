@@ -4,15 +4,14 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
-#include <vector>
 #include <openpfc/kernel/simulation/time.hpp>
+#include <vector>
 
-#include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <openpfc/kernel/data/domain.hpp>
 
 using namespace pfc::sim::steppers;
 using Catch::Approx;
@@ -272,14 +271,12 @@ TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
   MockEval eval;
 
   // Create Domain and decomposition
-  const pfc::Domain domain = pfc::domain::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
-                                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{static_cast<int>(n) - 1, 0, 0};
-  pfc::World world(lower, upper, domain);
+  const pfc::Domain domain = pfc::domain::create(
+      pfc::GridSize({static_cast<int>(n), 1, 1}),
+      pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
-  pfc::data::Field<double> u = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
+  pfc::data::Field<double> u = pfc::data::field_from_subdomain_unpadded<double>(
+      decomp, /*rank=*/0, /*halo=*/0);
 
   auto tableau = make_rk4_classical<double>();
   auto stepper = create(u, eval, model, dt, tableau);
@@ -323,15 +320,14 @@ TEST_CASE("MultiExplicitRKStepper factory with tuple", "[stepper][unit]") {
   MockEval eval;
 
   // Create Domain and decomposition
-  const pfc::Domain domain = pfc::domain::create(pfc::GridSize({static_cast<int>(n), 1, 1}),
-                                                 pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                                 pfc::GridSpacing({1.0, 1.0, 1.0}));
-  const pfc::Int3 lower{0, 0, 0};
-  const pfc::Int3 upper{static_cast<int>(n) - 1, 0, 0};
-  pfc::World world(lower, upper, domain);
+  const pfc::Domain domain = pfc::domain::create(
+      pfc::GridSize({static_cast<int>(n), 1, 1}),
+      pfc::PhysicalOrigin({0.0, 0.0, 0.0}), pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
-  pfc::data::Field<double> u1 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
-  pfc::data::Field<double> u2 = pfc::data::field_from_subdomain_unpadded<double>(decomp, /*rank=*/0, /*halo=*/0);
+  pfc::data::Field<double> u1 = pfc::data::field_from_subdomain_unpadded<double>(
+      decomp, /*rank=*/0, /*halo=*/0);
+  pfc::data::Field<double> u2 = pfc::data::field_from_subdomain_unpadded<double>(
+      decomp, /*rank=*/0, /*halo=*/0);
 
   auto fields = std::tie(u1, u2);
   auto tableau = make_rk4_classical<double>();
@@ -434,19 +430,20 @@ TEST_CASE("test_euler_stepper_save_state_copies_to_checkpoint", "[stepper][unit]
   const int n = 100;
 
   // Define RHS callable matching EulerStepper requirements
-  auto rhs = [](double /*t*/, std::vector<double>& u, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 1.0);
   };
 
   std::vector<double> u(n, 1.0);
-  EulerStepper stepper(0.1, n, rhs);  // dt=0.1, local_size=n, rhs=rhs
+  EulerStepper stepper(0.1, n, rhs); // dt=0.1, local_size=n, rhs=rhs
 
   stepper.save_state(u);
 
   // Modify u after checkpoint
-  for (auto& val : u) val = 2.0;
+  for (auto &val : u) val = 2.0;
 
-  // Verify checkpoint still holds original values (access via friend declaration or verify through restore)
+  // Verify checkpoint still holds original values (access via friend declaration or
+  // verify through restore)
   std::vector<double> u_restored(n);
   stepper.restore_state(u_restored);
 
@@ -455,10 +452,11 @@ TEST_CASE("test_euler_stepper_save_state_copies_to_checkpoint", "[stepper][unit]
   }
 }
 
-TEST_CASE("test_euler_stepper_restore_state_copies_from_checkpoint", "[stepper][unit]") {
+TEST_CASE("test_euler_stepper_restore_state_copies_from_checkpoint",
+          "[stepper][unit]") {
   const int n = 100;
 
-  auto rhs = [](double /*t*/, std::vector<double>& u, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 1.0);
   };
 
@@ -469,7 +467,7 @@ TEST_CASE("test_euler_stepper_restore_state_copies_from_checkpoint", "[stepper][
   stepper.save_state(u);
 
   // Modify u
-  for (auto& val : u) val = 2.0;
+  for (auto &val : u) val = 2.0;
 
   stepper.restore_state(u);
 
@@ -479,7 +477,7 @@ TEST_CASE("test_euler_stepper_restore_state_copies_from_checkpoint", "[stepper][
 TEST_CASE("test_euler_stepper_can_rollback_returns_true", "[stepper][unit]") {
   const int n = 100;
 
-  auto rhs = [](double /*t*/, std::vector<double>& u, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 1.0);
   };
 
@@ -487,16 +485,17 @@ TEST_CASE("test_euler_stepper_can_rollback_returns_true", "[stepper][unit]") {
   REQUIRE(stepper.can_rollback() == true);
 }
 
-TEST_CASE("test_euler_stepper_checkpoint_preserves_exact_values", "[stepper][unit]") {
+TEST_CASE("test_euler_stepper_checkpoint_preserves_exact_values",
+          "[stepper][unit]") {
   const int n = 100;
 
-  auto rhs = [](double /*t*/, std::vector<double>& u, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 1.0);
   };
 
   std::vector<double> u(n);
   for (int i = 0; i < n; ++i) {
-    u[i] = i * 0.1 + 0.5;  // Use non-trivial values
+    u[i] = i * 0.1 + 0.5; // Use non-trivial values
   }
   std::vector<double> u_initial = u;
   EulerStepper stepper(0.1, n, rhs);
@@ -504,7 +503,7 @@ TEST_CASE("test_euler_stepper_checkpoint_preserves_exact_values", "[stepper][uni
   stepper.save_state(u);
 
   // Modify u
-  for (auto& val : u) val = -1.0;
+  for (auto &val : u) val = -1.0;
 
   stepper.restore_state(u);
 
@@ -514,7 +513,7 @@ TEST_CASE("test_euler_stepper_checkpoint_preserves_exact_values", "[stepper][uni
 TEST_CASE("test_euler_stepper_checkpoint_buffer_correct_sizing", "[stepper][unit]") {
   const int n = 100;
 
-  auto rhs = [](double /*t*/, std::vector<double>& u, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 1.0);
   };
 
@@ -531,7 +530,7 @@ TEST_CASE("test_euler_stepper_checkpoint_buffer_correct_sizing", "[stepper][unit
 TEST_CASE("test_euler_stepper_checkpoint_save_restore_cycle", "[stepper][unit]") {
   const int n = 100;
 
-  auto rhs = [](double /*t*/, std::vector<double>& u, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 1.0);
   };
 
@@ -544,7 +543,7 @@ TEST_CASE("test_euler_stepper_checkpoint_save_restore_cycle", "[stepper][unit]")
   stepper.save_state(u);
 
   // Modify u
-  for (auto& val : u) val = 2.0;
+  for (auto &val : u) val = 2.0;
 
   stepper.restore_state(u);
 
@@ -555,14 +554,14 @@ TEST_CASE("test_euler_stepper_checkpoint_rollback_pattern", "[stepper][unit]") {
   const int n = 100;
 
   // Define RHS callable matching EulerStepper requirements
-  auto rhs = [](double /*t*/, std::vector<double>& u, std::vector<double>& du) {
+  auto rhs = [](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
     std::fill(du.begin(), du.end(), 1.0);
   };
 
   std::vector<double> u(n, 1.0);
   std::vector<double> u_initial = u;
-  EulerStepper stepper(0.1, n, rhs);  // dt=0.1, local_size=n, rhs=rhs
-  pfc::Time time({0.0, 1.0, 0.1});  // t0=0.0, t1=1.0, dt=0.1
+  EulerStepper stepper(0.1, n, rhs); // dt=0.1, local_size=n, rhs=rhs
+  pfc::Time time({0.0, 1.0, 0.1});   // t0=0.0, t1=1.0, dt=0.1
 
   // Save state before stepping
   stepper.save_state(u);
@@ -571,7 +570,7 @@ TEST_CASE("test_euler_stepper_checkpoint_rollback_pattern", "[stepper][unit]") {
   stepper.step(0.0, u);
 
   // Simulate error check: if error > tolerance, rollback
-  double error = 1.0;  // Simulated large error
+  double error = 1.0; // Simulated large error
   double tolerance = 0.01;
 
   if (stepper.can_rollback() && error > tolerance) {
@@ -584,7 +583,8 @@ TEST_CASE("test_euler_stepper_checkpoint_rollback_pattern", "[stepper][unit]") {
   REQUIRE(u == u_initial);
 }
 
-TEST_CASE("test_multi_euler_stepper_save_state_captures_all_fields", "[stepper][unit]") {
+TEST_CASE("test_multi_euler_stepper_save_state_captures_all_fields",
+          "[stepper][unit]") {
   const int n = 100;
   constexpr std::size_t N = 3;
   std::array<std::size_t, N> local_sizes = {n, n, n};
@@ -614,9 +614,9 @@ TEST_CASE("test_multi_euler_stepper_save_state_captures_all_fields", "[stepper][
   stepper.save_state(u1, u2, u3);
 
   // Modify all fields
-  for (auto& val : u1) val = 10.0;
-  for (auto& val : u2) val = 20.0;
-  for (auto& val : u3) val = 30.0;
+  for (auto &val : u1) val = 10.0;
+  for (auto &val : u2) val = 20.0;
+  for (auto &val : u3) val = 30.0;
 
   // Restore to verify checkpoint captured all fields
   stepper.restore_state(u1, u2, u3);
@@ -626,7 +626,8 @@ TEST_CASE("test_multi_euler_stepper_save_state_captures_all_fields", "[stepper][
   REQUIRE(u3 == u3_initial);
 }
 
-TEST_CASE("test_multi_euler_stepper_restore_state_restores_all_fields", "[stepper][unit]") {
+TEST_CASE("test_multi_euler_stepper_restore_state_restores_all_fields",
+          "[stepper][unit]") {
   const int n = 100;
   constexpr std::size_t N = 3;
   std::array<std::size_t, N> local_sizes = {n, n, n};
@@ -655,9 +656,9 @@ TEST_CASE("test_multi_euler_stepper_restore_state_restores_all_fields", "[steppe
   stepper.save_state(u1, u2, u3);
 
   // Modify all fields
-  for (auto& val : u1) val = 10.0;
-  for (auto& val : u2) val = 20.0;
-  for (auto& val : u3) val = 30.0;
+  for (auto &val : u1) val = 10.0;
+  for (auto &val : u2) val = 20.0;
+  for (auto &val : u3) val = 30.0;
 
   stepper.restore_state(u1, u2, u3);
 
@@ -687,7 +688,8 @@ TEST_CASE("test_multi_euler_stepper_can_rollback_returns_true", "[stepper][unit]
   REQUIRE(stepper.can_rollback() == true);
 }
 
-TEST_CASE("test_multi_euler_stepper_checkpoint_save_restore_cycle", "[stepper][unit]") {
+TEST_CASE("test_multi_euler_stepper_checkpoint_save_restore_cycle",
+          "[stepper][unit]") {
   const int n = 100;
   constexpr std::size_t N = 3;
   std::array<std::size_t, N> local_sizes = {n, n, n};
@@ -718,9 +720,9 @@ TEST_CASE("test_multi_euler_stepper_checkpoint_save_restore_cycle", "[stepper][u
   stepper.save_state(u1, u2, u3);
 
   // Modify all fields
-  for (auto& val : u1) val = 10.0;
-  for (auto& val : u2) val = 20.0;
-  for (auto& val : u3) val = 30.0;
+  for (auto &val : u1) val = 10.0;
+  for (auto &val : u2) val = 20.0;
+  for (auto &val : u3) val = 30.0;
 
   stepper.restore_state(u1, u2, u3);
 
@@ -729,7 +731,8 @@ TEST_CASE("test_multi_euler_stepper_checkpoint_save_restore_cycle", "[stepper][u
   REQUIRE(u3 == u3_initial);
 }
 
-TEST_CASE("test_multi_euler_stepper_checkpoint_independent_fields", "[stepper][unit]") {
+TEST_CASE("test_multi_euler_stepper_checkpoint_independent_fields",
+          "[stepper][unit]") {
   const int n = 100;
   constexpr std::size_t N = 2;
   std::array<std::size_t, N> local_sizes = {n, n};
@@ -754,7 +757,7 @@ TEST_CASE("test_multi_euler_stepper_checkpoint_independent_fields", "[stepper][u
   stepper.save_state(u1, u2);
 
   // Modify only u1
-  for (auto& val : u1) val = 10.0;
+  for (auto &val : u1) val = 10.0;
   // u2 remains unchanged
 
   stepper.restore_state(u1, u2);
