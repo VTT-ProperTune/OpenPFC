@@ -178,7 +178,7 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
     log_info(logger, global_msg.str());
 
     // Per-voxel memory - Support both World and Domain via different APIs
-    decltype(auto) size = [&world]() -> auto && {
+    auto size = [&world]() {
       if constexpr (std::is_same_v<WorldType, pfc::Domain>) {
         return pfc::domain::get_size(world);
       } else {
@@ -186,7 +186,10 @@ inline void report_memory_usage(const MemoryUsage &usage, const WorldType &world
         return pfc::world::get_size(world);
       }
     }();
-    auto [Nx, Ny, Nz] = std::make_tuple(size[0], size[1], size[2]);
+    const auto &arr = size; // Ensure we work with the array directly
+    const int Nx = arr[0];
+    const int Ny = arr[1];
+    const int Nz = arr[2];
     const size_t total_voxels =
         static_cast<size_t>(Nx) * static_cast<size_t>(Ny) * static_cast<size_t>(Nz);
     const size_t bytes_per_voxel =
