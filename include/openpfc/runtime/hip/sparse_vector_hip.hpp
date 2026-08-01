@@ -14,6 +14,7 @@
 
 #include <hip/hip_runtime.h>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <openpfc/runtime/hip/backend_tags_hip.hpp>
 #include <openpfc/runtime/hip/databuffer_hip.hpp>
 #include <stdexcept>
@@ -27,11 +28,10 @@ inline void copy_indices_to_device_impl<backend::HipTag>(
     DataBuffer<backend::HipTag, size_t> &buf, size_t n,
     const std::vector<size_t> &host_indices) {
   if (n == 0) return;
-  hipError_t err = hipMemcpy(buf.data(), host_indices.data(), n * sizeof(size_t),
-                             hipMemcpyHostToDevice);
-  if (err != hipSuccess) {
-    throw std::runtime_error("HIP copy failed");
-  }
+  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_indices.data(), n * sizeof(size_t),
+                           cudaMemcpyHostToDevice, nullptr),
+            "gpuMemcpyAsync indices H2D");
+  gpuDeviceSynchronize();
 }
 
 template <>
@@ -39,11 +39,10 @@ inline void copy_data_to_device_impl<backend::HipTag, double>(
     DataBuffer<backend::HipTag, double> &buf, size_t n,
     const std::vector<double> &host_data) {
   if (n == 0) return;
-  hipError_t err = hipMemcpy(buf.data(), host_data.data(), n * sizeof(double),
-                             hipMemcpyHostToDevice);
-  if (err != hipSuccess) {
-    throw std::runtime_error("HIP copy failed");
-  }
+  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_data.data(), n * sizeof(double),
+                           cudaMemcpyHostToDevice, nullptr),
+            "gpuMemcpyAsync double H2D");
+  gpuDeviceSynchronize();
 }
 
 template <>
@@ -51,11 +50,10 @@ inline void copy_data_to_device_impl<backend::HipTag, float>(
     DataBuffer<backend::HipTag, float> &buf, size_t n,
     const std::vector<float> &host_data) {
   if (n == 0) return;
-  hipError_t err = hipMemcpy(buf.data(), host_data.data(), n * sizeof(float),
-                             hipMemcpyHostToDevice);
-  if (err != hipSuccess) {
-    throw std::runtime_error("HIP copy failed");
-  }
+  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_data.data(), n * sizeof(float),
+                           cudaMemcpyHostToDevice, nullptr),
+            "gpuMemcpyAsync float H2D");
+  gpuDeviceSynchronize();
 }
 
 } // namespace detail
