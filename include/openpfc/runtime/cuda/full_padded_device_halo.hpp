@@ -258,7 +258,26 @@ public:
         detail::getenv_truthy("OPENPFC_CUDA_FORCE_PACKED_HALO");
     m_use_gpu_aware = !force_packed && detail::runtime_mpi_cuda_aware();
 
-    if (m_use_gpu_aware) {
+    // Whether any *active* axis has a real (non-self) neighbor — i.e. whether
+    // `run_mpi_pass_` (raw device pointers handed straight to MPI) would ever
+    // actually run. Self-axis passes (`run_self_pass_`) are pure local device
+    // pack/unpack with no MPI involvement at all, so they never need
+    // GPU-aware MPI and must not be sacrificed just because it's unavailable.
+    bool any_real_neighbor_axis = false;
+    for (int a = 0; a < 3; ++a) {
+      if (m_axis_active[a] && !m_axis_is_self[a]) {
+        any_real_neighbor_axis = true;
+        break;
+      }
+    }
+    // Run the full 3-pass widening algorithm (fills corners/edges) unless
+    // there's a real neighbor axis that would need unsafe raw-device-pointer
+    // MPI without GPU-aware support — in that one case, degrade to the
+    // face-only packed fallback exactly as before.
+    m_use_full_widening =
+        !force_packed && (m_use_gpu_aware || !any_real_neighbor_axis);
+
+    if (m_use_full_widening) {
       const bool any_self_axis = (m_axis_is_self[0] && m_axis_active[0]) ||
                                  (m_axis_is_self[1] && m_axis_active[1]) ||
                                  (m_axis_is_self[2] && m_axis_active[2]);
@@ -324,7 +343,7 @@ public:
     }
 
     const double t0 = MPI_Wtime();
-    if (m_use_gpu_aware) {
+    if (m_use_full_widening) {
       t_mark = MPI_Wtime();
       for (int a = 0; a < 3; ++a) {
         if (!m_axis_active[a]) {
@@ -524,6 +543,10 @@ private:
   std::size_t m_scratch_elems = 0;
 
   bool m_use_gpu_aware = false;
+  /** True iff `exchange()` runs the full 3-pass widening algorithm (fills
+   *  corners/edges). False only when some active axis has a real (non-self)
+   *  neighbor and GPU-aware MPI is unavailable — see the constructor. */
+  bool m_use_full_widening = false;
 
   double *m_d_scratch = nullptr;
 
