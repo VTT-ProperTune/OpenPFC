@@ -19,12 +19,10 @@
  *
  * @code
  * #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
- * #include <openpfc/kernel/data/world.hpp>
  *
  * using namespace pfc;
- * auto world = world::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = make_decomposition(world,
- * MPI_COMM_WORLD);
+ * auto domain = pfc::domain::create({64, 64, 64});
+ * auto decomp = make_decomposition(domain, MPI_COMM_WORLD);
  * @endcode
  *
  * @see kernel/decomposition/decomposition.hpp for Decomposition class
@@ -38,31 +36,60 @@
 #define PFC_DECOMPOSITION_FACTORY_HPP
 
 #include <mpi.h>
-#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/world.hpp> // For backward compatibility
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 
 namespace pfc {
 
 /**
- * @brief Factory function to create a Decomposition object.
+ * @brief Factory function to create a Decomposition from Domain (M12: Primary
+ * interface).
+ *
+ * @param domain The Domain object.
+ * @param rank The rank of the current process (defaults to 0).
+ * @param num_domains The total number of domains (defaults to 1).
+ * @return Decomposition
+ */
+[[nodiscard]] Decomposition make_decomposition(const Domain &domain, int rank,
+                                               int num_domains);
+
+/**
+ * @brief Factory function to create a Decomposition from MPI communicator (M12:
+ * Primary interface).
+ *
+ * @param domain The Domain object.
+ * @param comm The MPI communicator (defaults to MPI_COMM_WORLD).
+ * @return Decomposition
+ */
+[[nodiscard]] Decomposition make_decomposition(const Domain &domain,
+                                               MPI_Comm comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Factory function to create a Decomposition object (deprecated for M12).
  *
  * @param world The World object.
  * @param rank The rank of the current process (defaults to 0).
  * @param num_domains The total number of domains (defaults to 1).
  * @return Decomposition
+ * @deprecated Use Domain-based make_decomposition instead (M12 Gen-1 deletion)
  */
-[[nodiscard]] Decomposition make_decomposition(const World &world, int rank,
-                                               int num_domains);
+[[deprecated("World-based make_decomposition deprecated: use Domain-based version "
+             "instead")]] [[nodiscard]] Decomposition
+make_decomposition(const World &world, int rank, int num_domains);
 
 /**
- * @brief Factory function to create a Decomposition from MPI communicator.
+ * @brief Factory function to create a Decomposition from MPI communicator
+ * (deprecated for M12).
  *
  * @param world The World object.
  * @param comm The MPI communicator (defaults to MPI_COMM_WORLD).
  * @return Decomposition
+ * @deprecated Use Domain-based make_decomposition instead (M12 Gen-1 deletion)
  */
-[[nodiscard]] Decomposition make_decomposition(const World &world,
-                                               MPI_Comm comm = MPI_COMM_WORLD);
+[[deprecated("World-based make_decomposition deprecated: use Domain-based version "
+             "instead")]] [[nodiscard]] Decomposition
+make_decomposition(const World &world, MPI_Comm comm = MPI_COMM_WORLD);
 
 } // namespace pfc
 

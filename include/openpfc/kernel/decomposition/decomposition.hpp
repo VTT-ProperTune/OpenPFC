@@ -158,16 +158,20 @@ struct Decomposition {
    * pattern — see
    * `tests/unit/kernel/decomposition/test_decomposition_lifetime.cpp`.)
    */
-  pfc::World m_global_world; ///< Backward compatibility: kept for migration.
-  const std::array<int, 3> m_grid; ///< The number of parts in each dimension.
+  const std::array<int, 3> m_grid;       ///< The number of parts in each dimension.
   std::vector<pfc::Box3i> m_local_boxes; ///< Local subdomain boxes (M1.3).
-  pfc::Domain m_domain; ///< Global domain extracted from World (M1.3).
+  pfc::Domain m_domain;                  ///< Global domain (Primary interface, M12).
 
+  // Domain-based constructor (M12: Primary interface replacing World constructor)
+  Decomposition(const Domain &domain, const Int3 &grid);
+
+  // World-based constructor (deprecated for M12, retained for compatibility)
+  [[deprecated("World constructor deprecated: use Domain constructor instead")]]
   Decomposition(const World &world, const Int3 &grid);
 
   friend std::ostream &operator<<(std::ostream &os, const Decomposition &d) {
     os << "Decomposition:\n";
-    os << "  Global World: " << d.m_global_world << "\n";
+    os << "  Domain: " << d.m_domain << "\n";
     os << "  Grid: [" << d.m_grid.at(0) << ", " << d.m_grid.at(1) << ", "
        << d.m_grid.at(2) << "]\n";
     os << "  Local boxes: " << d.m_local_boxes.size() << " subdomains\n";
@@ -176,32 +180,44 @@ struct Decomposition {
 };
 
 /**
- * @brief Get the global World that this decomposition partitions
+ * @brief Get the global domain that this decomposition partitions
  *
  * Returns a reference to the complete, unpartitioned computational domain.
- * This is the World that was split into subdomains.
+ * This is the Domain that was split into subdomains.
  *
  * @param[in] decomposition The decomposition to query
- * @return Reference to the global World object
+ * @return Reference to the global Domain object
  *
  * @example
  * ```cpp
  * using namespace pfc;
  *
- * auto world = world::create(GridSize({256, 256, 256}), PhysicalOrigin({0.0, 0.0,
- * 0.0}), GridSpacing({1.0, 1.0, 1.0})); auto decomp = decomposition::create(world,
- * {2, 2, 1});
- *
- * auto global = decomposition::get_global_world(decomp);
- * std::cout << "Global domain: " << world::get_size(global) << "\n";  // [256, 256,
- * 256]
+ * auto domain = pfc::domain::create({256, 256, 256});
+ * auto decomp = decomposition::create(domain, {2, 2, 1});
+ * auto global = decomposition::get_domain(decomp);
+ * std::cout << "Global domain: " << global.size << "\n";  // [256, 256, 256]
  * ```
  *
- * @see get_world() - alias for this function
- * @see get_subworld() - get a specific subdomain
+ * @see get_grid() - Grid pattern
+ * @see local_box() - Local subdomain spatial box
+ * @deprecated This function was migrated from get_global_world() for M12.
+ *             Use get_domain() for consistency with Domain-based API.
  */
+[[deprecated("get_global_world() deprecated: use get_domain() instead")]]
 inline const auto &get_global_world(const Decomposition &decomposition) noexcept {
-  return decomposition.m_global_world;
+  return decomposition.m_domain;
+}
+
+/**
+ * @brief Alias for get_domain()
+ *
+ * @param[in] decomposition The decomposition to query
+ * @return Reference to the global Domain object
+ *
+ * @see get_domain() - primary function
+ */
+inline const auto &get_domain(const Decomposition &decomposition) noexcept {
+  return decomposition.m_domain;
 }
 
 /**
@@ -210,10 +226,12 @@ inline const auto &get_global_world(const Decomposition &decomposition) noexcept
  * @param[in] decomposition The decomposition to query
  * @return Reference to the global World object
  *
+ * @deprecated get_world() deprecated: use get_domain() instead
  * @see get_global_world() - the function this aliases
  */
+[[deprecated("get_world() deprecated: use get_domain() instead")]]
 inline const auto &get_world(const Decomposition &decomposition) noexcept {
-  return get_global_world(decomposition);
+  return decomposition.m_domain;
 }
 
 /**
@@ -292,10 +310,14 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * @note Grid dimensions must evenly divide World dimensions for optimal load
  * balance.
  *
+ * @see create(domain, grid) - Domain-based preferred overload
  * @see create(world, nparts) - automatic grid selection
- * @see proc_setup_min_surface() - algorithm for optimal grid
+ * @deprecated World-based factory deprecated: use Domain-based create() instead
+ * (M12)
  */
-[[nodiscard]] Decomposition create(const World &world, const Int3 &grid);
+[[deprecated("World-based create() deprecated: use Domain-based create() "
+             "instead")]] [[nodiscard]] Decomposition
+create(const World &world, const Int3 &grid);
 
 /**
  * @brief Create decomposition with automatic grid selection
@@ -348,9 +370,13 @@ inline const auto &get_grid(const Decomposition &decomposition) noexcept {
  * @note For manual control, use create(world, grid) instead.
  *
  * @see create(world, grid) - manual grid specification
- * @see proc_setup_min_surface() - HeFFTe's grid selection algorithm
+ * @see create(domain, nparts) - Domain-based preferred overload
+ * @deprecated World-based factory deprecated: use Domain-based create() instead
+ * (M12)
  */
-[[nodiscard]] Decomposition create(const World &world, const int &nparts);
+[[deprecated("World-based create() deprecated: use Domain-based create() "
+             "instead")]] [[nodiscard]] Decomposition
+create(const World &world, const int &nparts);
 
 /**
  * @brief Domain-based decomposition creation with manual grid specification
@@ -512,7 +538,8 @@ inline int get_num_domains(const Decomposition &decomposition) noexcept {
  *
  * @param[in] decomposition The decomposition to query
  * @param[in] rank The rank/subdomain index (0 to get_num_domains()-1)
- * @return World object representing the subdomain's index space and coordinate system
+ * @return World object representing the subdomain's index space and coordinate
+ * system
  * @throws std::out_of_range if rank is out of range
  *
  * @deprecated This compatibility function provides World objects for legacy code.
@@ -536,8 +563,7 @@ inline int get_num_domains(const Decomposition &decomposition) noexcept {
  * Domain coord_sys = decomposition::domain(decomp);
  * ```
  */
-[[nodiscard]] inline World
-get_subworld(const Decomposition &decomp, int rank) {
+[[nodiscard]] inline World get_subworld(const Decomposition &decomp, int rank) {
   const Box3i &box = local_box(decomp, rank);
   const Domain &dom = domain(decomp);
   return World(box.low, box.high, dom);
