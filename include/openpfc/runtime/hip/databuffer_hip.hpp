@@ -43,6 +43,11 @@ public:
     if (size > 0) {
       hipError_t err = hipMalloc(&m_device_ptr, size * sizeof(T));
       if (err != hipSuccess) {
+        // Consume the sticky driver-level error now, on our own terms —
+        // otherwise it survives as the "last error" and gets misattributed
+        // to the next unrelated hipGetLastError() check anywhere else in
+        // the process (see resize() below for the same pattern).
+        hipGetLastError();
         throw std::runtime_error("HIP allocation failed: " +
                                  std::string(hipGetErrorString(err)));
       }
@@ -94,6 +99,7 @@ public:
       hipError_t err = hipMemcpy(m_device_ptr, src.data(), m_size * sizeof(T),
                                  hipMemcpyHostToDevice);
       if (err != hipSuccess) {
+        hipGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
         throw std::runtime_error("HIP copy failed: " +
                                  std::string(hipGetErrorString(err)));
       }
@@ -110,6 +116,7 @@ public:
       hipError_t err =
           hipMemcpy(m_device_ptr, ptr, m_size * sizeof(T), hipMemcpyHostToDevice);
       if (err != hipSuccess) {
+        hipGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
         throw std::runtime_error("HIP copy failed: " +
                                  std::string(hipGetErrorString(err)));
       }
@@ -130,6 +137,7 @@ public:
       hipError_t err =
           hipMemcpy(ptr, m_device_ptr, m_size * sizeof(T), hipMemcpyDeviceToHost);
       if (err != hipSuccess) {
+        hipGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
         throw std::runtime_error("HIP copy failed: " +
                                  std::string(hipGetErrorString(err)));
       }
@@ -142,6 +150,7 @@ public:
       hipError_t err = hipMemcpy(result.data(), m_device_ptr, m_size * sizeof(T),
                                  hipMemcpyDeviceToHost);
       if (err != hipSuccess) {
+        hipGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
         throw std::runtime_error("HIP copy failed: " +
                                  std::string(hipGetErrorString(err)));
       }
@@ -170,6 +179,7 @@ public:
     T *new_ptr = nullptr;
     hipError_t err = hipMalloc(&new_ptr, new_size * sizeof(T));
     if (err != hipSuccess) {
+      hipGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
       throw std::runtime_error("HIP allocation failed: " +
                                std::string(hipGetErrorString(err)));
     }

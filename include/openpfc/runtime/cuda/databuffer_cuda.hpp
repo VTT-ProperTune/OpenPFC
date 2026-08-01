@@ -43,6 +43,11 @@ public:
     if (size > 0) {
       cudaError_t err = cudaMalloc(&m_device_ptr, size * sizeof(T));
       if (err != cudaSuccess) {
+        // Consume the sticky driver-level error now, on our own terms —
+        // otherwise it survives as the "last error" and gets misattributed
+        // to the next unrelated cudaGetLastError() check anywhere else in
+        // the process (see resize() below for the same pattern).
+        cudaGetLastError();
         throw std::runtime_error("CUDA allocation failed: " +
                                  std::string(cudaGetErrorString(err)));
       }
@@ -94,6 +99,7 @@ public:
       cudaError_t err = cudaMemcpy(m_device_ptr, src.data(), m_size * sizeof(T),
                                    cudaMemcpyHostToDevice);
       if (err != cudaSuccess) {
+        cudaGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
         throw std::runtime_error("CUDA copy failed: " +
                                  std::string(cudaGetErrorString(err)));
       }
@@ -110,6 +116,7 @@ public:
       cudaError_t err =
           cudaMemcpy(m_device_ptr, ptr, m_size * sizeof(T), cudaMemcpyHostToDevice);
       if (err != cudaSuccess) {
+        cudaGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
         throw std::runtime_error("CUDA copy failed: " +
                                  std::string(cudaGetErrorString(err)));
       }
@@ -130,6 +137,7 @@ public:
       cudaError_t err =
           cudaMemcpy(ptr, m_device_ptr, m_size * sizeof(T), cudaMemcpyDeviceToHost);
       if (err != cudaSuccess) {
+        cudaGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
         throw std::runtime_error("CUDA copy failed: " +
                                  std::string(cudaGetErrorString(err)));
       }
@@ -142,6 +150,7 @@ public:
       cudaError_t err = cudaMemcpy(result.data(), m_device_ptr, m_size * sizeof(T),
                                    cudaMemcpyDeviceToHost);
       if (err != cudaSuccess) {
+        cudaGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
         throw std::runtime_error("CUDA copy failed: " +
                                  std::string(cudaGetErrorString(err)));
       }
@@ -170,6 +179,7 @@ public:
     T *new_ptr = nullptr;
     cudaError_t err = cudaMalloc(&new_ptr, new_size * sizeof(T));
     if (err != cudaSuccess) {
+      cudaGetLastError(); // see DataBuffer(size_t) ctor: clear sticky error
       throw std::runtime_error("CUDA allocation failed: " +
                                std::string(cudaGetErrorString(err)));
     }
