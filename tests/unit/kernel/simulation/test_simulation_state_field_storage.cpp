@@ -156,6 +156,7 @@ TEST_CASE("FieldHandle: value semantics and std::hash", "[simulation_state][unit
 }
 
 #if defined(OpenPFC_ENABLE_CUDA)
+#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
 #include <openpfc/runtime/cuda/memory_space_cuda.hpp>
 
 // Compile-only coverage for Device memory space (CPU SIF cannot execute these).
@@ -166,10 +167,9 @@ TEST_CASE("SimulationState: CudaSpace fields register by name (compile check)",
   using namespace pfc;
   SimulationState state;
 
-  data::Field<double, CudaSpace> u(domain::create({4, 2, 1}),
-                                   whole_box(4, 2, 1), 0);
-  data::Field<std::complex<double>, CudaSpace> uh(
-      domain::create({4, 2, 1}), whole_box(4, 2, 1), 0);
+  data::Field<double, CudaSpace> u(domain::create({4, 2, 1}), whole_box(4, 2, 1), 0);
+  data::Field<std::complex<double>, CudaSpace> uh(domain::create({4, 2, 1}),
+                                                  whole_box(4, 2, 1), 0);
 
   state.add_field<double, CudaSpace>("u_dev", std::move(u));
   state.add_field<std::complex<double>, CudaSpace>("uh_dev", std::move(uh));
