@@ -19,7 +19,7 @@
  * for D2), same compile-time pruning of the catalog `{value, x, y, z,
  * xx, yy, zz, xy, xz, yz}`. Only the moving parts differ:
  *
- *   - The evaluator reads from a **PaddedBrick**-layout device buffer,
+ *   - The evaluator reads from a **padded field-layout** device buffer,
  *     so the input pointer points at cell `(0, 0, 0)` of the padded box
  *     `(nx + 2hw, ny + 2hw, nz + 2hw)`. Owned-cell coordinates `(ix, iy,
  *     iz) ∈ [0, n)` are translated to the linear index `(ix + hw) +
@@ -75,7 +75,6 @@
 #include <openpfc/kernel/data/host_device.hpp>
 #include <openpfc/kernel/field/fd_stencils.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
 
 namespace pfc::hip {
 
@@ -157,16 +156,14 @@ struct FdGradientDevicePOD {
  *       (`pfc::hip::FullPaddedDeviceHalo` or equivalent corner fill).
  */
 template <class G>
-OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
-                                     int ix, int iy, int iz) {
+OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval, int ix, int iy,
+                                     int iz) {
   G g{};
 
   // Translate owned coordinates to padded buffer indices.
   const std::ptrdiff_t c0 = static_cast<std::ptrdiff_t>(ix + eval.hw) +
-                            static_cast<std::ptrdiff_t>(iy + eval.hw) *
-                                eval.sy +
-                            static_cast<std::ptrdiff_t>(iz + eval.hw) *
-                                eval.sz;
+                            static_cast<std::ptrdiff_t>(iy + eval.hw) * eval.sy +
+                            static_cast<std::ptrdiff_t>(iz + eval.hw) * eval.sz;
 
   const double *u = eval.d_core;
 
@@ -241,9 +238,9 @@ OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
       const std::ptrdiff_t is = static_cast<std::ptrdiff_t>(i) * eval.sx;
       for (int j = 1; j <= eval.hw1; ++j) {
         const std::ptrdiff_t js = static_cast<std::ptrdiff_t>(j) * eval.sy;
-        acc += eval.cx1[i] * eval.cy1[j] *
-               (u[c0 + is + js] - u[c0 - is + js] - u[c0 + is - js] +
-                u[c0 - is - js]);
+        acc +=
+            eval.cx1[i] * eval.cy1[j] *
+            (u[c0 + is + js] - u[c0 - is + js] - u[c0 + is - js] + u[c0 - is - js]);
       }
     }
     g.xy = acc;
@@ -254,9 +251,9 @@ OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
       const std::ptrdiff_t is = static_cast<std::ptrdiff_t>(i) * eval.sx;
       for (int k = 1; k <= eval.hw1; ++k) {
         const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * eval.sz;
-        acc += eval.cx1[i] * eval.cz1[k] *
-               (u[c0 + is + ks] - u[c0 - is + ks] - u[c0 + is - ks] +
-                u[c0 - is - ks]);
+        acc +=
+            eval.cx1[i] * eval.cz1[k] *
+            (u[c0 + is + ks] - u[c0 - is + ks] - u[c0 + is - ks] + u[c0 - is - ks]);
       }
     }
     g.xz = acc;
@@ -267,9 +264,9 @@ OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
       const std::ptrdiff_t js = static_cast<std::ptrdiff_t>(j) * eval.sy;
       for (int k = 1; k <= eval.hw1; ++k) {
         const std::ptrdiff_t ks = static_cast<std::ptrdiff_t>(k) * eval.sz;
-        acc += eval.cy1[j] * eval.cz1[k] *
-               (u[c0 + js + ks] - u[c0 - js + ks] - u[c0 + js - ks] +
-                u[c0 - js - ks]);
+        acc +=
+            eval.cy1[j] * eval.cz1[k] *
+            (u[c0 + js + ks] - u[c0 - js + ks] - u[c0 + js - ks] + u[c0 - js - ks]);
       }
     }
     g.yz = acc;
@@ -385,13 +382,12 @@ public:
       }
     }
 
-    const int required =
-        m_pod.hw1 > m_pod.hw2 ? m_pod.hw1 : m_pod.hw2;
+    const int required = m_pod.hw1 > m_pod.hw2 ? m_pod.hw1 : m_pod.hw2;
     if (halo_width < required) {
       throw std::invalid_argument(
           "FdGradientDevice: halo_width " + std::to_string(halo_width) +
-          " < required half_width " + std::to_string(required) +
-          " for order " + std::to_string(order));
+          " < required half_width " + std::to_string(required) + " for order " +
+          std::to_string(order));
     }
   }
 
@@ -416,28 +412,27 @@ private:
   FdGradientDevicePOD m_pod;
 };
 
-
 /**
- * @brief Build a `FdGradientDevice<G>` over a halo-padded brick.
+ * @brief Build a `FdGradientDevice<G>` over a halo-padded field.
  *
  * The evaluator indexes the **full** `(nx+2hw)×(ny+2hw)×(nz+2hw)` storage with
  * interior bounds `[hw, nx_pad-hw)` per axis, matching ghost cells populated by
- * `pfc::communication::PaddedHaloExchanger<T>` on `u.data()`.
+ * halo exchange on `u.data()`.
  *
  * @tparam G     Model-owned grads aggregate (see `grad_concepts.hpp`).
- * @param u      Padded brick (must outlive the returned evaluator).
+ * @param u      Padded field (must outlive the returned evaluator).
  * @param order  Even spatial order; requires `u.halo_width() >= order / 2`.
  *               Defaults to 2.
  *
  * @return FdGradientDevice<G> ready for use with for_each_interior_device.
  */
 template <class G>
-[[nodiscard]] inline FdGradientDevice<G> create(const pfc::field::PaddedBrick<double> &u,
-                                                int order = 2) {
+[[nodiscard]] inline FdGradientDevice<G>
+create(const pfc::data::Field<double, pfc::HipSpace> &u, int order = 2) {
   const auto sp = u.spacing();
-  return FdGradientDevice<G>(u.data(), u.nx(), u.ny(), u.nz(),
-                             sp[0], sp[1], sp[2],
-                             u.halo_width(), order);
+  const auto sz = u.local_size();
+  return FdGradientDevice<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
+                             u.storage_halo_width(), order);
 }
 
 } // namespace pfc::hip
