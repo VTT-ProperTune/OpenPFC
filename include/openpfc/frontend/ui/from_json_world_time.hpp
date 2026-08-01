@@ -60,9 +60,9 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
   }
   Lx = lx_val;
   if (Lx <= 0) {
-    throw std::invalid_argument(
-        format_config_error("Lx", "number of grid points in X direction", "positive integer",
-                            get_json_value_string(j, "Lx"), {}, "\"Lx\": 256"));
+    throw std::invalid_argument(format_config_error(
+        "Lx", "number of grid points in X direction", "positive integer",
+        get_json_value_string(j, "Lx"), {}, "\"Lx\": 256"));
   }
 
   auto ly_val = get_json_value(j, "Ly", "domain");
@@ -75,9 +75,9 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
   }
   Ly = ly_val;
   if (Ly <= 0) {
-    throw std::invalid_argument(
-        format_config_error("Ly", "number of grid points in Y direction", "positive integer",
-                            get_json_value_string(j, "Ly"), {}, "\"Ly\": 256"));
+    throw std::invalid_argument(format_config_error(
+        "Ly", "number of grid points in Y direction", "positive integer",
+        get_json_value_string(j, "Ly"), {}, "\"Ly\": 256"));
   }
 
   auto lz_val = get_json_value(j, "Lz", "domain");
@@ -90,9 +90,9 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
   }
   Lz = lz_val;
   if (Lz <= 0) {
-    throw std::invalid_argument(
-        format_config_error("Lz", "number of grid points in Z direction", "positive integer",
-                            get_json_value_string(j, "Lz"), {}, "\"Lz\": 256"));
+    throw std::invalid_argument(format_config_error(
+        "Lz", "number of grid points in Z direction", "positive integer",
+        get_json_value_string(j, "Lz"), {}, "\"Lz\": 256"));
   }
 
   auto dx_val = get_json_value(j, "dx", "domain");
@@ -183,8 +183,9 @@ template <> [[nodiscard]] inline World from_json<World>(const json &j) {
     z0 = -0.5 * dz * Lz;
   }
 
-  World world = pfc::domain::create_world(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
-                              GridSpacing({dx, dy, dz}));
+  World world =
+      pfc::domain::create_world(GridSize({Lx, Ly, Lz}), PhysicalOrigin({x0, y0, z0}),
+                                GridSpacing({dx, dy, dz}));
 
   return world;
 }
@@ -237,14 +238,14 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
   }
 
   if (!std::isfinite(saveat)) {
-    throw std::invalid_argument(
-        format_config_error("saveat", "snapshot output interval", "finite float",
-                            get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
+    throw std::invalid_argument(format_config_error(
+        "saveat", "snapshot output interval", "finite float",
+        get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
   }
   if (saveat <= 0.0) {
-    throw std::invalid_argument(
-        format_config_error("saveat", "snapshot output interval", "positive float",
-                            get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
+    throw std::invalid_argument(format_config_error(
+        "saveat", "snapshot output interval", "positive float",
+        get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
   }
 
   // Parse integrator method (optional, defaults to euler)
@@ -259,7 +260,7 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
         method = IntegratorMethod::rk2_heun;
       } else {
         throw std::invalid_argument("Unknown integrator method: " + method_str +
-                                   " (expected 'euler' or 'rk2_heun')");
+                                    " (expected 'euler' or 'rk2_heun')");
       }
     }
   }
