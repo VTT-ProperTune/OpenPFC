@@ -126,10 +126,10 @@ public:
     */
     if (pfc::is_rank0(*this)) cout << "Create initial condition" << endl;
 
-    const auto &domain = pfc::get_domain(*this);
-    auto size = domain.size;
-    auto origin = domain.origin;
-    auto spacing = domain.spacing;
+    const auto &geom_domain = pfc::get_domain(*this);
+    auto size = geom_domain.size;
+    auto origin = geom_domain.origin;
+    auto spacing = geom_domain.spacing;
 
     int idx = 0;
     double D = 1.0;

@@ -339,7 +339,7 @@ inline void apply_subdomain(std::vector<double> &field,
   const auto &domain = pfc::decomposition::get_domain(decomp);
   const auto &local_box = pfc::decomposition::local_box(decomp, rank);
   const auto lo = local_box.low;
-  const auto sz = local_box.upper - local_box.low + Int3{1, 1, 1};
+  const auto sz = local_box.size;
   const int nx = sz[0];
   const int ny = sz[1];
   const int nz = sz[2];
@@ -397,7 +397,7 @@ for_each_interior_with_coords(const std::vector<double> &field,
   const auto &domain = pfc::decomposition::get_domain(decomp);
   const auto &local_box = pfc::decomposition::local_box(decomp, rank);
   const auto lo = local_box.low;
-  const auto sz = local_box.upper - local_box.low + Int3{1, 1, 1};
+  const auto sz = local_box.size;
   const int nx = sz[0];
   const int ny = sz[1];
   const int nz = sz[2];

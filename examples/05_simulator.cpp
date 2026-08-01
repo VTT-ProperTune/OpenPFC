@@ -98,9 +98,8 @@ public:
   }
 
   void prepare_operators(double dt) {
-    // Get world (required by Model for compatibility) and domain from model
-    auto &w = pfc::get_world(*this);
-    const auto &domain = pfc::world::get_coordinate_system(w);
+    // Get domain from model (M12: using Domain API directly)
+    const auto &domain = pfc::get_domain(*this);
     auto &fft = pfc::get_fft(*this);
     std::array<int, 3> low = get_outbox(fft).low;
     std::array<int, 3> high = get_outbox(fft).high;
@@ -188,8 +187,10 @@ void run() {
                                  GridSpacing(discretization));
   auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
-  // Create simulation world for Model constructor (World retained for Model compatibility)
-  auto world = domain::create_world_from_bounds({L, L, L}, {o, o, o}, {o + (L - 1) * h, o + (L - 1) * h, o + (L - 1) * h});
+  // Create simulation world for Model constructor (World retained for Model
+  // compatibility)
+  auto world = domain::create_world_from_bounds(
+      {L, L, L}, {o, o, o}, {o + (L - 1) * h, o + (L - 1) * h, o + (L - 1) * h});
   Diffusion model(fft, world);
 
   // Define time

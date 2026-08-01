@@ -81,13 +81,12 @@ TEST_CASE("MovingBC - Modifier Name", "[bc_moving]") {
 
 TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
   // Small grid: behavior is local; avoid thousands of Catch REQUIREs (very slow).
-  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}),
+                                    pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithMovingBC m(fft, world);
+  ModelWithMovingBC m(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
@@ -178,13 +177,12 @@ TEST_CASE("MovingBC - Field Name Assignment", "[bc_moving]") {
 }
 
 TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
-  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}),
+                                    pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithMovingBC m(fft, world);
+  ModelWithMovingBC m(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
@@ -209,13 +207,12 @@ TEST_CASE("MovingBC - MPI collectives fail closed", "[bc_moving]") {
   // std::runtime_error rather than apply a divergent m_xpos.
   // Verified by code inspection of moving_bc.hpp (no MPI mock framework);
   // this case locks the success-path apply still works under that contract.
-  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}),
+                                    pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
-  auto box = pfc::domain::index_box(domain);
-  World world(box.low, box.high, domain);
-  auto decomposition = decomposition::create(world, 1);
+  auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
-  ModelWithMovingBC m(fft, world);
+  ModelWithMovingBC m(fft, domain);
 
   const size_t field_size = fft.size_inbox();
   std::vector<double> psi(field_size, 0.0);
