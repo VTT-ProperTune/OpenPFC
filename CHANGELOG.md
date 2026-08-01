@@ -18,6 +18,19 @@ source compatibility is explicitly not a goal.
 - `pfc::Box3i` — single canonical inclusive integer index box
 - `pfc::data::Field<T, MemorySpace>` — canonical owning field container unifying LocalField/PaddedBrick
 
+### Fixed
+
+- **Sticky CUDA/HIP error from a handled allocation failure:** `DataBuffer`'s CUDA/HIP specializations checked `cudaMalloc`/`hipMalloc`'s return value but never called `cudaGetLastError()`/`hipGetLastError()` to clear the driver's sticky error flag before throwing. A deliberately-triggered allocation failure (e.g. in a resize-failure test) left that flag poisoned for the rest of the process, later misattributed to an unrelated kernel launch elsewhere as a false "out of memory".
+- **`FullPaddedDeviceHalo` skipped its corner/edge fill without GPU-aware MPI:** the 3-pass widening algorithm was gated entirely behind GPU-aware MPI availability, even for self-only periodic axes that never touch MPI device pointers at all. It now runs the full algorithm whenever no active axis has a real (non-self) neighbor, or GPU-aware MPI is genuinely available; only real cross-rank axes without GPU-aware MPI fall back to the face-only path.
+- **`test_stage_preparation.cpp` checked halo cells `PaddedHaloExchanger` never fills:** its comparison helpers walked the full padded range on orthogonal axes, but the exchanger is documented face-only (corners/edges untouched). Restricted the checks to the owned range, matching the already-correct pattern in `test_padded_halo_exchange.cpp`.
+- Missing `pfc::ui::from_json<Domain>` specialization (declared, never defined) caused a link error in any CUDA/HIP app driver calling it directly instead of through `SpectralSimulationSession`.
+- `TungstenCUDA`/`TungstenHIP` had no constructor matching the generic `(fft::IFFT&, const World&, MPI_Comm)` session-wiring signature, only failing to compile when a CUDA/HIP app target was actually built.
+
+### Changed
+
+- `scripts/build.sh` (Tohtori) auto-detects a custom CUDA-aware Open MPI build (see `scripts/build_tohtori.sh --cuda`) and uses it in place of the site `openmpi/5.0.10` module when present, defaulting `MPI_CUDA_AWARE` to `ON` in that case. Without it, the default stays `OFF`: the site module links a UCX built without `--with-cuda`, and passing device pointers to it segfaults despite Open MPI's own `MPIX_Query_cuda_support()` probe claiming support.
+- `scripts/build_tohtori.sh` gained a `--cuda` flag to build UCX (`cuda_copy`/`cuda_ipc` transports) and Open MPI (`accelerator/cuda` component) with genuine GPU-aware MPI support.
+
 ## [0.1.5] - 2026-07-23
 
 Final stable 0.1.x release: a correctness and packaging pass ("Pre-M0
