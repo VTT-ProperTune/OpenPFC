@@ -27,7 +27,6 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/runtime/cuda/fd_gradient_device.hpp>
 #include <openpfc/runtime/cuda/for_each_interior_device.hpp>
