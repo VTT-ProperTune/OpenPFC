@@ -199,14 +199,14 @@ TEST_CASE("Heat3D time integration pattern", "[field][heat3d_evidence]") {
 }
 
 /**
- * @brief Document migration path from LocalField to FieldView
+ * @brief Document migration path from Field to FieldView
  *
  * Scalar migration: wrap owning `Field<T>` storage in a non-owning
  * `FieldView<T>` for operator inputs, and use `FieldOutput<T>` for RHS
  * buffers. Geometry comes from extents/spacing/origin accessors.
  */
-TEST_CASE("Heat3D migration path from LocalField to FieldView", "[field][heat3d_evidence]") {
-    // Old pattern (LocalField owning storage):
+TEST_CASE("Heat3D migration path from Field to FieldView", "[field][heat3d_evidence]") {
+    // Old pattern (Field owning storage):
     // Field<double> u = pfc::data::field_from_subdomain<double>(decomp, rank, /*halo=*/0);
     // const double* u_data = u.data();
     // Int3 u_size = u.size3();

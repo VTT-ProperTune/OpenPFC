@@ -24,7 +24,7 @@
  * pattern above is safe. These tests exercise that contract directly so
  * any future regression (e.g. accidentally re-introducing a reference
  * member) is caught at the kernel-decomposition test layer rather than
- * surfacing as a downstream `LocalField` / heat3d failure.
+ * surfacing as a downstream `Field` / heat3d failure.
  */
 
 #include <catch2/catch_test_macros.hpp>

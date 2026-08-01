@@ -285,10 +285,10 @@ TEST_CASE("Wave2D coupled time integration pattern", "[field][wave2d_evidence]")
  * storage must be distinct from inputs.
  */
 TEST_CASE("Wave2D migration path from multi-field to FieldBundle", "[field][wave2d_evidence]") {
-    // Old pattern (separate PaddedBrick):
-    // PaddedBrick<double> u(decomp, rank, halo_width);
-    // PaddedBrick<double> v(decomp, rank, halo_width);
-    // PaddedBrick<double> lap(decomp, rank, halo_width);
+    // Old pattern (separate field containers):
+    // Field<double> u = pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
+    // Field<double> v = pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
+    // Field<double> lap = pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
     //
     // Usage:
     // for_each_owned(u, [&](int i, int j, int k) {

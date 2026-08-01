@@ -54,9 +54,8 @@
  * captured "prepare parent" lambda holds a pointer into the stack and
  * the evaluator references the parent field's storage.
  *
- * @see openpfc/kernel/data/grid_field.hpp and
- *      openpfc/kernel/field/padded_brick.hpp for `+=` /
- *      `operator*(double, …)` axpy targets (`Field`, `PaddedBrick`).
+ * @see openpfc/kernel/data/grid_field.hpp for `+=` /
+ *      `operator*(double, …)` axpy targets.
  * @see openpfc/kernel/simulation/for_each_interior.hpp for the inner
  *      driver loop that `apply()` dispatches to.
  * @see openpfc/kernel/simulation/steppers/euler.hpp for the multi-field

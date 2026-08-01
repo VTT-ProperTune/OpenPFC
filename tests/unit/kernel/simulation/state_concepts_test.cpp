@@ -11,7 +11,7 @@ using namespace pfc::field;
 
 // Mock field types for concept testing
 
-// Mock field satisfying FieldReadable and FieldWritable (similar to Field<T>, PaddedBrick<T>)
+// Mock field satisfying FieldReadable and FieldWritable (similar to Field<T>)
 template <typename T>
 struct MockField {
     using value_type = T;

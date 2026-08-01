@@ -242,7 +242,7 @@ TEST_CASE("MultiExplicitRKStepper updates fields independently (RK4)",
   }
 }
 
-TEST_CASE("ExplicitRKStepper factory with LocalField", "[stepper][unit]") {
+TEST_CASE("ExplicitRKStepper factory with Field", "[stepper][unit]") {
   constexpr double dt = 0.1;
   constexpr std::size_t n = 10;
 

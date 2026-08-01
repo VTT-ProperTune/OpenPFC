@@ -29,8 +29,8 @@ namespace pfc::data {
  * fields that match the subdomain layout returned by decomposition.
  *
  * The resulting field layout is bit-for-bit identical to:
- * - pfc::data::Field with halo=0 (migrated from LocalField::from_subdomain)
- * - PaddedBrick with halo=n
+ * - pfc::data::Field with halo=0 (tightly packed storage)
+ * - pfc::data::Field with halo=n (PaddedBrick convention)
  *
  * @tparam T Element type (e.g., double, std::complex<double>)
  * @param decomp The decomposition describing the subdomain layout
@@ -68,11 +68,11 @@ Field<T, HostSpace> field_from_subdomain(const decomposition::Decomposition& dec
 }
 
 /**
- * @brief LocalField-compatible factory: unpadded storage + iteration halo.
+ * @brief Unpadded field factory: tightly packed storage + iteration halo.
  *
  * Storage is tightly packed `nx*ny*nz` (face-halos live elsewhere). The
  * `iteration_halo` is exposed via `Field::halo_width()` / `for_each_interior`,
- * matching `LocalField::from_subdomain(decomp, rank, halo_width)`.
+ * for algorithms that use separate halo exchange buffers.
  */
 template <typename T>
 Field<T, HostSpace>
@@ -89,8 +89,8 @@ field_from_subdomain_unpadded(const decomposition::Decomposition &decomp,
 /**
  * @brief Create an unpadded Field from an FFT inbox box + global Domain.
  *
- * LocalField-compatible replacement for `LocalField::from_inbox(world, inbox)`.
- * Spectral apps use halo=0 (no per-rank halos in the inbox layout).
+ * Factory for spectral FFT inbox layouts, with halo=0 (no per-rank halos
+ * in the inbox layout).
  */
 template <typename T>
 Field<T, HostSpace> field_from_inbox(const pfc::Domain &domain,

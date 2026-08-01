@@ -10,7 +10,7 @@
  * heat3d refactor lays down so that a future wave-equation app can plug
  * in without re-touching the framework. Single-field heat3d does not
  * exercise it, so this test fans two `FdGradient<...>` instances out of
- * a single backing `LocalField` and asserts:
+ * a single backing `pfc::data::Field` and asserts:
  *
  *   1. `prepare()` is forwarded to every sub-evaluator (here a no-op
  *      for FD).

@@ -20,9 +20,9 @@
  *
  * Compared to its older siblings:
  *
- * - `pfc::field::LocalField<T>` carries no halo storage at all (size is
- *   exactly `nx*ny*nz`); the FD path keeps its halos in six separate
- *   face vectors and exchanges them with `pfc::SparseHaloExchanger`
+ * - `pfc::field::LocalField<T>` (being phased out) carries no halo storage
+ *   at all (size is exactly `nx*ny*nz`); the FD path keeps its halos in six
+ *   separate face vectors and exchanges them with `pfc::SparseHaloExchanger`
  *   (typically built via `pfc::halo::make_structured_halos`).
  * - `pfc::HaloExchanger<T>` is the existing in-place exchanger but its
  *   "no extra padding" face-type spec (see
@@ -263,8 +263,7 @@ public:
    *
    * The returned buffer is value-initialized (`T{}`).
    *
-   * @throws std::invalid_argument if `halo_width < 0`. Unlike
-   *         `LocalField::from_subdomain` we do **not** require the
+   * @throws std::invalid_argument if `halo_width < 0`. We do **not** require the
    *         owned region to exceed `2*halo_width` per axis — a
    *         padded brick with a tiny owned core is still valid; the
    *         user just doesn't get a non-empty inner region for that
@@ -458,8 +457,8 @@ public:
   /**
    * @brief Physical coordinates `(x, y, z)` of local `(i, j, k)`.
    *
-   * Computed as `origin + (lower + i) * spacing` — same as
-   * `LocalField::coords` but valid across the halo ring as well.
+   * Computed as `origin + (lower + i) * spacing` — same coordinate
+   * computation as the canonical field API, but valid across the halo ring as well.
    */
   pfc::Real3 global_coords(int i, int j, int k) const noexcept {
     const auto [x, y, z] = global_xyz(i, j, k);

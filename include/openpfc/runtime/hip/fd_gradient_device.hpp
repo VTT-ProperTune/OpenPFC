@@ -92,7 +92,7 @@ inline constexpr int kFdDeviceMaxHw2 = 10;
  *        evaluator on the device.
  *
  * The host-side `FdGradientDevice<G>` populates this struct from a
- * `LocalField`-style triple `(d_core, padded_extents, spacing)` and a
+ * field descriptor `(d_core, padded_extents, spacing)` and a
  * runtime `order`. The kernel takes a copy of this struct by value (it
  * fits comfortably on the stack of a HIP thread).
  *
@@ -282,7 +282,7 @@ OPENPFC_HD inline G evaluate_fd_grad(const FdGradientDevicePOD &eval,
  * @brief Host-side wrapper for a device-side FD gradient evaluator.
  *
  * The constructor populates a `FdGradientDevicePOD` struct from a
- * `LocalField`-style triple `(d_core, padded_extents, spacing)` and a
+ * field descriptor `(d_core, padded_extents, spacing)` and a
  * runtime `order`. The POD can then be passed by value to a HIP kernel,
  * where `evaluate_fd_grad<G>` uses it to materialize the grads aggregate
  * at each owned cell.
