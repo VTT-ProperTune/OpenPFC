@@ -21,10 +21,10 @@
 
 using namespace pfc;
 
-// Utility to create a small test world
-static inline World make_world(int nx, int ny, int nz) {
-  return domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                       GridSpacing({1.0, 1.0, 1.0}));
+// Utility to create a small test domain
+static inline Domain make_domain(int nx, int ny, int nz) {
+  return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
@@ -33,8 +33,8 @@ TEST_CASE("CUDA FFT roundtrip (double) [integration][gpu]", "[gpu]") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  auto world = make_world(16, 16, 16);
-  auto decomp = decomposition::create(world, size);
+  auto domain = make_domain(16, 16, 16);
+  auto decomp = decomposition::create(domain, size);
 
   auto fft = fft::create_cuda(decomp, rank);
 
@@ -72,8 +72,8 @@ TEST_CASE("CUDA FFT roundtrip (float) [integration][gpu]", "[gpu]") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  auto world = make_world(16, 16, 16);
-  auto decomp = decomposition::create(world, size);
+  auto domain = make_domain(16, 16, 16);
+  auto decomp = decomposition::create(domain, size);
 
   auto fft = fft::create_cuda(decomp, rank);
 

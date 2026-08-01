@@ -23,9 +23,9 @@
 using namespace pfc;
 using namespace pfc::fft::kspace;
 
-static inline World make_world(int nx, int ny, int nz) {
-  return domain::create_world(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                       GridSpacing({1.0, 1.0, 1.0}));
+static inline Domain make_domain(int nx, int ny, int nz) {
+  return domain::create(GridSize({nx, ny, nz}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                        GridSpacing({1.0, 1.0, 1.0}));
 }
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
@@ -37,8 +37,8 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
 
   // If single-rank, still run (works fine). If multi-rank, exercises distributed
   // path.
-  auto world = make_world(32, 24, 20);
-  auto decomp = decomposition::create(world, size);
+  auto domain = make_domain(32, 24, 20);
+  auto decomp = decomposition::create(domain, size);
 
   // CPU and CUDA FFT
   auto fft_cpu = fft::create(decomp, rank);
