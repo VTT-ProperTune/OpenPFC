@@ -32,6 +32,11 @@ inline std::optional<fft::Backend> backend_from_string(const std::string &s) {
     return fft::Backend::CUDA;
   }
 #endif
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+  if (s == "hip" || s == "rocm") {
+    return fft::Backend::HIP;
+  }
+#endif
   return std::nullopt;
 }
 
