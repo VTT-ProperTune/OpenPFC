@@ -43,7 +43,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/field/field_operations.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
@@ -101,13 +101,13 @@ public:
     (void)time;
     const fft::IFFT &fft = get_fft(m);
     Field &field = get_real_field(m, get_field_name());
-    const World &w = get_world(m);
+    const Domain &domain = get_domain(m);
     Int3 low = get_inbox(fft).low;
     Int3 high = get_inbox(fft).high;
 
-    auto Lx = get_size(w, 0);
-    auto dx = get_spacing(w, 0);
-    auto x0 = get_origin(w, 0);
+    auto Lx = pfc::domain::get_size(domain, 0);
+    auto dx = pfc::domain::get_spacing(domain, 0);
+    auto x0 = pfc::domain::get_origin(domain, 0);
 
     if (m_first) {
       xline.resize(Lx);
@@ -134,11 +134,10 @@ public:
     }
 
     // Fail closed before any root m_idx mutation from global_xline.
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Reduce(xline.data(), global_xline.data(),
-                   static_cast<int>(xline.size()), MPI_DOUBLE, MPI_MAX, 0,
-                   comm),
-        "MPI_Reduce");
+    pfc::mpi::throw_on_mpi_error(MPI_Reduce(xline.data(), global_xline.data(),
+                                            static_cast<int>(xline.size()),
+                                            MPI_DOUBLE, MPI_MAX, 0, comm),
+                                 "MPI_Reduce");
 
     if (rank == 0) {
       if (m_first) {
@@ -181,9 +180,9 @@ public:
   }
 
   void fill_bc(Model &m) {
-    const World &w = get_world(m);
-    const double Lx = get_size(w, 0);
-    const double dx = get_spacing(w, 0);
+    const Domain &domain = get_domain(m);
+    const double Lx = pfc::domain::get_size(domain, 0);
+    const double dx = pfc::domain::get_spacing(domain, 0);
     const double l = Lx * dx;
     const double xpos = std::fmod(m_xpos, l);
     const double xwidth = m_xwidth;

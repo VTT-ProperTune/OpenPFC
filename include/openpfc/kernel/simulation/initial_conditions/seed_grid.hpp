@@ -37,7 +37,7 @@
 #include <random>
 #include <sstream>
 
-#include <openpfc/kernel/field/operations.hpp>
+#include <openpfc/kernel/field/field_operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
@@ -90,9 +90,9 @@ public:
   void apply(Model &m, double time) override {
     (void)time;
     // Functional coordinate-space implementation using field::apply
-    const World &w = get_world(m);
-    const auto size = get_size(w);
-    const auto spacing = get_spacing(w);
+    const Domain &domain = get_domain(m);
+    const auto size = pfc::domain::get_size(domain);
+    const auto spacing = pfc::domain::get_spacing(domain);
 
     std::vector<Seed> seeds;
     const int Ny = m_Ny;
