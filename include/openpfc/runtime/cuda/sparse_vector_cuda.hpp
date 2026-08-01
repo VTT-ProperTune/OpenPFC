@@ -16,6 +16,7 @@
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
 #include <openpfc/runtime/cuda/databuffer_cuda.hpp>
+#include <openpfc/runtime/gpu/gpu_api.hpp>
 #include <stdexcept>
 
 namespace pfc {
@@ -27,12 +28,10 @@ inline void copy_indices_to_device_impl<backend::CudaTag>(
     DataBuffer<backend::CudaTag, size_t> &buf, size_t n,
     const std::vector<size_t> &host_indices) {
   if (n == 0) return;
-  cudaError_t err = cudaMemcpy(buf.data(), host_indices.data(), n * sizeof(size_t),
-                               cudaMemcpyHostToDevice);
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA copy failed: " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_indices.data(), n * sizeof(size_t),
+                           cudaMemcpyHostToDevice, nullptr),
+            "gpuMemcpyAsync indices H2D");
+  gpuDeviceSynchronize();
 }
 
 template <>
@@ -40,12 +39,10 @@ inline void copy_data_to_device_impl<backend::CudaTag, double>(
     DataBuffer<backend::CudaTag, double> &buf, size_t n,
     const std::vector<double> &host_data) {
   if (n == 0) return;
-  cudaError_t err = cudaMemcpy(buf.data(), host_data.data(), n * sizeof(double),
-                               cudaMemcpyHostToDevice);
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA copy failed: " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_data.data(), n * sizeof(double),
+                           cudaMemcpyHostToDevice, nullptr),
+            "gpuMemcpyAsync double H2D");
+  gpuDeviceSynchronize();
 }
 
 template <>
@@ -53,12 +50,10 @@ inline void copy_data_to_device_impl<backend::CudaTag, float>(
     DataBuffer<backend::CudaTag, float> &buf, size_t n,
     const std::vector<float> &host_data) {
   if (n == 0) return;
-  cudaError_t err = cudaMemcpy(buf.data(), host_data.data(), n * sizeof(float),
-                               cudaMemcpyHostToDevice);
-  if (err != cudaSuccess) {
-    throw std::runtime_error("CUDA copy failed: " +
-                             std::string(cudaGetErrorString(err)));
-  }
+  GPU_CHECK(gpuMemcpyAsync(buf.data(), host_data.data(), n * sizeof(float),
+                           cudaMemcpyHostToDevice, nullptr),
+            "gpuMemcpyAsync float H2D");
+  gpuDeviceSynchronize();
 }
 
 } // namespace detail
