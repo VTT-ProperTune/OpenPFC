@@ -22,12 +22,22 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - All tests passing (30/30)
 
 **M2 - Canonical Field/View/State:** COMPLETE ✅  
-- **Strategy: Deprecation (not deletion)** - Legacy field containers preserved for backward compatibility
-- All consumers migrated to pfc::data::Field where feasible (substantially complete)
-- Production dependencies remain (fd_gradient.hpp, padded_halo_exchange.hpp still use PaddedBrick)
-- Migration guides provided documenting transition to modern API
-- Legacy APIs maintained for backward compatibility (aligned with World pattern strategy)
-- All tests passing (30/30)
+- **Strategy: Actual Deletion** - Legacy field containers completely deleted from repository
+- All consumers migrated to pfc::data::Field API ✅
+  - brick_iteration.hpp: Full migration with modern field iteration patterns
+  - explicit_rk.hpp: LocalField dependencies removed
+  - euler.hpp: LocalField dependencies removed
+  - fd_gradient.hpp: PaddedBrick dependencies migrated
+  - padded_halo_exchange.hpp: PaddedBrick dependencies migrated
+- **Legacy Files Deleted** ✅ (Commit 2628452e):
+  - include/openpfc/kernel/field/local_field.hpp
+  - include/openpfc/kernel/field/padded_brick.hpp
+  - include/openpfc/kernel/data/discrete_field.hpp
+  - include/openpfc/kernel/data/array.hpp
+  - Related test files and examples removed
+- Public headers updated (openpfc.hpp, openpfc_minimal.hpp) ✅
+- Documentation updated to reflect actual deletion status ✅
+- All tests passing (30/30) - green baseline maintained
 
 **M3 - Single-Source GPU Runtime:** COMPLETE ✅
 - GPU runtime infrastructure unified (runtime/gpu/ directory)
