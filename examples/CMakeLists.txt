@@ -66,7 +66,7 @@ add_executable(mpi_timers mpi_timers.cpp)
 target_link_libraries(mpi_timers PRIVATE OpenPFC ${_heffte_tgt})
 
 add_executable(profiling_timer_report profiling_timer_report.cpp)
-target_link_libraries(profiling_timer_report PRIVATE OpenPFC ${_heffte_tgt})
+target_link_libraries(profiling_timer_report PRIVATE OpenPFC nlohmann_json::nlohmann_json ${_heffte_tgt})
 
 add_executable(time time.cpp)
 target_link_libraries(time PRIVATE OpenPFC ${_heffte_tgt})
