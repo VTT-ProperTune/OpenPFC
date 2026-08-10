@@ -27,7 +27,8 @@ else()
 endif()
 
 # Link against OpenPFC and Catch2, and add HeFFTe if available
-target_link_libraries(openpfc-tests PRIVATE OpenPFC Catch2::Catch2)
+target_link_libraries(openpfc-tests PRIVATE OpenPFC Catch2::Catch2
+                                              nlohmann_json::nlohmann_json)
 if(TARGET Heffte::Heffte)
   target_link_libraries(openpfc-tests PRIVATE Heffte::Heffte)
 elseif(TARGET Heffte)

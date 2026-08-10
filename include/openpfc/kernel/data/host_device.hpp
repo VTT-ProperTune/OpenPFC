@@ -51,7 +51,12 @@
  *       function declaration is just a normal C++ function.
  */
 
-#if defined(__CUDACC__)
+// `__CUDACC__` is defined by `nvcc`; `__HIP__` / `__HIPCC__` are defined by
+// `hipcc` / the ROCm clang when compiling HIP code. In all of these the
+// `__host__ __device__` attributes are required for functions called from
+// device kernels. CPU-only compilers define none of them, so the macro
+// collapses to an empty token and the declaration is a plain C++ function.
+#if defined(__CUDACC__) || defined(__HIP__) || defined(__HIPCC__)
 #define OPENPFC_HD __host__ __device__
 #define OPENPFC_INLINE_HD inline __host__ __device__
 #else

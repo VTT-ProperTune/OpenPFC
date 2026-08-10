@@ -128,6 +128,7 @@ if(OpenPFC_ENABLE_MPI)
 endif()
 
 target_link_libraries(openpfc PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(openpfc_kernel_obj PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(openpfc_frontend_obj PRIVATE nlohmann_json::nlohmann_json)
 
 if(OpenPFC_ENABLE_HDF5)

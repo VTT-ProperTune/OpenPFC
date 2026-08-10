@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <mpi.h>
+#include <type_traits>
 
 namespace heffte {
 struct plan_options;
