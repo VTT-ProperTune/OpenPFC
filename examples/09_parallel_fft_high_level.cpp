@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   // Fill input field with random numbers
   input.apply([&](double /*x*/, double /*y*/, double /*z*/) { return dis(gen); });
 
-  auto fft_instance = fft::create(decomp, worker.get_rank());
+  auto fft_instance = fft::create(decomp, worker.get_rank(), MPI_COMM_WORLD);
 
   // Create output array to store FFT results. If requested array is of type T =
   // complex<double>, then array will be constructed using complex indices so

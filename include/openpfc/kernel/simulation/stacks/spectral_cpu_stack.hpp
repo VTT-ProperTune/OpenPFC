@@ -78,7 +78,10 @@ public:
                             MPI_Comm comm = MPI_COMM_WORLD)
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
-        m_fft(pfc::fft::create(m_decomp, comm)),
+        // Pass rank explicitly: with Cray MPICH, MPI_Comm is `int`, so the
+        // two-argument fft::create(decomp, comm) would be ambiguous with the
+        // (decomp, rank_id, comm) overload. Naming rank_id selects it directly.
+        m_fft(pfc::fft::create(m_decomp, rank, comm)),
         m_u(pfc::data::field_from_inbox<double>(domain, m_fft.get_inbox_bounds())),
         m_rank(rank), m_nproc(nproc), m_comm(comm) {}
 

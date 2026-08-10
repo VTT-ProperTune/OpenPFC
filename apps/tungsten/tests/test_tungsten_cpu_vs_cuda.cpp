@@ -37,7 +37,7 @@ TEST_CASE("Tungsten CPU vs CUDA: Same results", "[Tungsten][CPU][CUDA]") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   auto decomp = pfc::decomposition::create(domain, size);
-  auto fft_cpu = pfc::fft::create(decomp, rank);
+  auto fft_cpu = pfc::fft::create(decomp, rank, MPI_COMM_WORLD);
 
   // Create models (CUDA uses double precision for comparison)
   Tungsten model_cpu(fft_cpu, domain);
