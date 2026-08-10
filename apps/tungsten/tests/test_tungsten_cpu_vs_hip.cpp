@@ -36,7 +36,7 @@ TEST_CASE("Tungsten CPU vs HIP: Same results", "[Tungsten][CPU][HIP]") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   auto decomp = pfc::decomposition::create(domain, size);
-  auto fft_cpu = pfc::fft::create(decomp, rank);
+  auto fft_cpu = pfc::fft::create(decomp, rank, MPI_COMM_WORLD);
 
   Tungsten model_cpu(fft_cpu, domain);
   TungstenHIP<double> model_hip(fft_cpu, domain);

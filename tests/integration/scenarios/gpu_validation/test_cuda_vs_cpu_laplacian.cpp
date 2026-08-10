@@ -38,7 +38,7 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (double) [integration][gpu]", "[gpu
   auto decomp = decomposition::create(world, size);
 
   // CPU FFT
-  auto fft_cpu = fft::create(decomp, rank);
+  auto fft_cpu = fft::create(decomp, rank, MPI_COMM_WORLD);
 
   // CUDA FFT
   auto fft_gpu = fft::create_cuda(decomp, rank);

@@ -86,7 +86,7 @@ public:
                                         pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
       auto decomp = pfc::decomposition::create(domain, size);
-      auto fft = pfc::fft::create(decomp, rank);
+      auto fft = pfc::fft::create(decomp, rank, MPI_COMM_WORLD);
 
       // Create model
       Tungsten model(fft, domain);
@@ -202,7 +202,7 @@ public:
       auto decomp = pfc::decomposition::create(domain, size);
 
       // Create model with specified precision
-      auto fft = pfc::fft::create(decomp, rank);
+      auto fft = pfc::fft::create(decomp, rank, MPI_COMM_WORLD);
       TungstenCUDA<RealType> model(fft, domain);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
@@ -324,7 +324,7 @@ public:
                                         pfc::GridSpacing({1.0, 1.0, 1.0}));
       auto decomp = pfc::decomposition::create(domain, size);
 
-      auto fft = pfc::fft::create(decomp, rank);
+      auto fft = pfc::fft::create(decomp, rank, MPI_COMM_WORLD);
       TungstenHIP<RealType> model(fft, domain);
       model.params.set_n0(-0.4);
       model.params.set_T(0.5);
