@@ -8,8 +8,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include <openpfc/runtime/cuda/sparse_vector_cuda.hpp>
-#include <openpfc/runtime/cuda/sparse_vector_ops.hpp>
+#include <openpfc/runtime/gpu/sparse_vector_gpu.hpp>
+#include <openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp>
 
 using namespace pfc;
 using backend::CudaTag;
