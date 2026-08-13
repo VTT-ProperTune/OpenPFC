@@ -12,7 +12,7 @@
  * transfer.
  *
  * @see layout.hpp for LayoutRight, LayoutLeft
- * @see memory_space.hpp for HostSpace, CudaSpace
+ * @see memory_space.hpp for HostSpace
  * @see kernel/execution/databuffer.hpp for underlying storage
  *
  * @author OpenPFC Development Team
@@ -49,8 +49,7 @@ std::array<std::size_t, sizeof...(Args)> indices_to_array(Args... args) {
   return {{static_cast<std::size_t>(args)...}};
 }
 
-// Execution space associated with a memory space (for Kokkos compatibility)
-// CudaSpace/HipSpace mappings in runtime/gpu/view_gpu.hpp
+// Execution space associated with a memory space (host View only)
 template <typename MemorySpace> struct memory_space_execution_space;
 template <> struct memory_space_execution_space<HostSpace> {
   using type = Serial;
@@ -67,7 +66,7 @@ using memory_space_execution_space_t =
  * @tparam T Value type
  * @tparam Rank Number of dimensions (runtime extents only)
  * @tparam Layout LayoutRight or LayoutLeft
- * @tparam MemorySpace HostSpace, CudaSpace, or HipSpace
+ * @tparam MemorySpace HostSpace (device Views are not provided)
  */
 template <typename T, std::size_t Rank, typename Layout = LayoutRight,
           typename MemorySpace = DefaultMemorySpace>

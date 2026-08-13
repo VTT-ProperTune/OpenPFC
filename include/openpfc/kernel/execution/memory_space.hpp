@@ -35,7 +35,7 @@ using DefaultMemorySpace = HostSpace;
 /**
  * @brief Maps a memory space tag to the corresponding backend tag
  *
- * Used internally by View and deep_copy. CudaSpace and HipSpace mappings
+ * Used internally by DataBuffer. CudaSpace and HipSpace mappings
  * are in runtime/gpu/memory_space_gpu.hpp.
  */
 template <typename MemorySpace> struct memory_space_to_backend;
