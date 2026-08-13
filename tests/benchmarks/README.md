@@ -24,7 +24,7 @@ Benchmarks should measure:
 - Field operations (transformations, arithmetic)
 - Memory usage patterns
 - Weak/strong scaling with MPI
-- GPU performance (when GPU support added)
+- GPU kernel and device-halo microbenchmarks when those sources are enabled
 
 ## What Doesn't Belong Here
 
@@ -87,58 +87,23 @@ TEST_CASE("FFT performance", "[fft][benchmark]") {
 
 ## Current Benchmarks
 
-### World and Coordinate System (`bench_world_coords.cpp`)
+### World and coordinate transforms (`bench_world_coords.cpp`)
 
-Microbenchmarks for core coordinate transformation operations. These functions are used in hot paths (field initialization loops, spatial operations) and must be zero-cost abstractions.
+Microbenchmarks for core coordinate transformation operations used in hot
+paths (field initialization loops, spatial operations). Compare Release
+builds on a quiet machine; do not treat checked-in comments or this README
+as a performance baseline (see `tests/baselines/BASELINES.md` for that).
 
-Benchmark Categories:
+Benchmark categories:
 
-1. Coordinate Transformations - Core mapping functions
- - `to_coords()`: Grid indices → physical coordinates (~400 ns)
- - `to_indices()`: Physical coordinates → grid indices (~400 ns)
- - Round-trip transformation (~750 ns)
-
-2. World Accessors - Property access functions
- - `get_spacing()`, `get_origin()`, `get_size()` (~70-220 ns)
- - Verify these inline to direct member access
-
-3. CoordinateSystem Direct - Bare coordinate system operations
- - Verifies no overhead from World wrapper
- - `to_coords()` on CartesianCS (~380 ns)
- - Direct member access (~70 ns)
-
-4. Loop-Based Realistic Usage - Representative patterns
- - Full grid conversion (64³ grid): ~116 ms
- - Gaussian initialization with coordinates: ~139 ms
- - Sparse access (1000 points): ~500 μs
-
-5. Zero-Cost Abstraction Validation - Compiler optimization check
- - Manual calculation (baseline): ~404 ns
- - World abstraction: ~446 ns (~10% overhead - acceptable)
-
-6. Memory Access Patterns - Cache and copy performance
- - World construction/destruction: ~970 ns
- - World copy: ~220 ns
- - Equality comparison: ~1.5 μs
-
-Key Insights:
-
-- Coordinate transformations are fast (~400 ns)
-- Accessors inline well (<100 ns)
-- World wrapper has minimal overhead (~10%)
-- Copy semantics are efficient (~220 ns)
-- Debug build - Release build will be significantly faster
-
-Running:
+1. Coordinate transformations — `to_coords()`, `to_indices()`, round-trip
+2. World accessors — `get_spacing()`, `get_origin()`, `get_size()`
+3. Loop-based usage — full-grid conversion and Gaussian initialization
+4. Zero-cost abstraction check — World helpers vs a manual arithmetic baseline
+5. Memory access — construction, copy, equality
 
 ```bash
-# All World/coordinate benchmarks
 ./tests/openpfc-tests "[world][benchmark]"
-
-# CoordinateSystem only
-./tests/openpfc-tests "[csys][benchmark]"
-
-# With detailed output
 ./tests/openpfc-tests "[benchmark]" --reporter console
 ```
 
@@ -154,12 +119,10 @@ For accurate performance measurements:
  ./build-release/tests/openpfc-tests "[benchmark]"
  ```
 
-2. Expected improvements in Release:
- - Coordinate transforms: 1-5 ns (vs ~400 ns in Debug)
- - Accessors: <1 ns (should completely inline)
- - Zero-cost abstraction overhead: <5%
+2. Measure in Release (or RelWithDebInfo). Debug timings are not comparable
+   to production.
 
-3. Run on dedicated system (no background processes)
+3. Run on a dedicated system (no background processes)
 4. Use representative problem sizes
 5. Multiple iterations for statistical significance
 
@@ -182,7 +145,5 @@ TEST_CASE("FFT performance", "[fft][benchmark]") {
  BENCHMARK("Forward transform") {
  return fft.forward();
  };
- 
- INFO("Expected: <10 ms for 128³ grid");
 }
 ```
