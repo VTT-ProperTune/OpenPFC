@@ -177,8 +177,7 @@ void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
-        "openpfc/runtime/hip/exchange_hip.hpp");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 
   // Send indices
@@ -288,8 +287,7 @@ void send_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
-        "openpfc/runtime/hip/exchange_hip.hpp");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 }
 
@@ -333,8 +331,7 @@ void receive_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_r
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
-        "openpfc/runtime/hip/exchange_hip.hpp");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 }
 
@@ -381,8 +378,7 @@ void isend_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
-        "openpfc/runtime/hip/exchange_hip.hpp");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 }
 
@@ -428,8 +424,7 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/cuda/exchange_cuda.hpp or "
-        "openpfc/runtime/hip/exchange_hip.hpp");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 }
 

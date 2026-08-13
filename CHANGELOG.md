@@ -27,6 +27,7 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/memory_traits_gpu.hpp` — single-source GPU `backend_traits`; `memory_traits_cuda.hpp` / `memory_traits_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/gpu_check.hpp` — single-source `cuda_check` / `hip_check`; `cuda_check.hpp` / `hip_check.hpp` are thin includes
 - `include/openpfc/runtime/gpu/parallel_gpu.hpp` — single-source GPU `parallel_for` / `fence`; `parallel_cuda.hpp` / `parallel_hip.hpp` are thin includes
+- `include/openpfc/runtime/gpu/exchange_gpu.hpp` — single-source GPU SparseVector MPI exchange; `exchange_cuda.hpp` / `exchange_hip.hpp` are thin includes
 
 ### Fixed
 
