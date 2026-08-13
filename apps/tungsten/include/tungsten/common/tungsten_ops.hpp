@@ -16,9 +16,9 @@
  * - Stabilization operations (Tungsten-specific)
  * - Time integration combine using cache-derived exp(L·dt) and n_weight spans
  *
- * @note These operations are Tungsten-specific and should not be used by other
- * models. For generic operations, see openpfc/utils/ or create model-specific
- * operations.
+ * @note Nonlinear and stabilization ops are Tungsten-specific. GPU
+ * complex×real multiply and ETD two-term combine use
+ * `openpfc/runtime/gpu/elementwise_ops_gpu.hpp`.
  */
 
 #pragma once

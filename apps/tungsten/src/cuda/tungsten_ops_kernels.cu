@@ -5,52 +5,20 @@
  * @file tungsten_ops_kernels.cu
  * @brief CUDA kernel implementations for Tungsten-specific operations
  *
- * This file contains CUDA kernel code for Tungsten operations. It is only compiled
- * when CUDA is enabled. apply_time_integration uses cache-derived exp(L·dt) /
- * n_weight spans (parameter names opL/opN are historical aliases).
+ * This file contains CUDA kernel code for Tungsten-specific operations
+ * (nonlinear term and stabilization). Complex×real multiply and ETD
+ * two-term combine are `runtime/gpu/elementwise_ops_gpu`.
  */
 
 #if defined(OpenPFC_ENABLE_CUDA)
 
-#include <cuComplex.h>
 #include <cuda_runtime.h>
+#include <openpfc/runtime/gpu/elementwise_ops_gpu.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
-#include <type_traits>
 
 namespace tungsten {
 namespace ops {
 namespace detail {
-
-// CUDA kernel: Multiply complex by real (template-based for precision)
-template <typename RealType>
-__global__ void multiply_complex_real_kernel_impl(
-    const typename std::conditional<std::is_same<RealType, double>::value,
-                                    cuDoubleComplex, cuFloatComplex>::type *a,
-    const RealType *b,
-    typename std::conditional<std::is_same<RealType, double>::value, cuDoubleComplex,
-                              cuFloatComplex>::type *out,
-    size_t n) {
-  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < n) {
-    if constexpr (std::is_same_v<RealType, double>) {
-      cuDoubleComplex a_val = a[idx];
-      double b_val = b[idx];
-      out[idx] = cuCmul(cuDoubleComplex{b_val, 0.0}, a_val);
-    } else {
-      cuFloatComplex a_val = a[idx];
-      float b_val = b[idx];
-      out[idx] = cuCmulf(cuFloatComplex{b_val, 0.0f}, a_val);
-    }
-  }
-}
-
-// Explicit instantiations for float and double (required for CUDA template kernels)
-template __global__ void
-multiply_complex_real_kernel_impl<double>(const cuDoubleComplex *, const double *,
-                                          cuDoubleComplex *, size_t);
-template __global__ void
-multiply_complex_real_kernel_impl<float>(const cuFloatComplex *, const float *,
-                                         cuFloatComplex *, size_t);
 
 // CUDA kernel: Compute nonlinear term (template-based for precision)
 template <typename RealType>
@@ -97,53 +65,6 @@ template __global__ void apply_stabilization_kernel<float>(const float *,
                                                            const float *, float,
                                                            float *, size_t);
 
-// CUDA kernel: Apply time integration (template-based for precision)
-// out = exp_Ldt * psi_F + n_weight * psiN_F (params historically named opL/opN)
-template <typename RealType>
-__global__ void apply_time_integration_kernel_impl(
-    const typename std::conditional<std::is_same<RealType, double>::value,
-                                    cuDoubleComplex, cuFloatComplex>::type *psi_F,
-    const typename std::conditional<std::is_same<RealType, double>::value,
-                                    cuDoubleComplex, cuFloatComplex>::type *psiN_F,
-    const RealType *opL, const RealType *opN,
-    typename std::conditional<std::is_same<RealType, double>::value, cuDoubleComplex,
-                              cuFloatComplex>::type *out,
-    size_t n) {
-  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < n) {
-    if constexpr (std::is_same_v<RealType, double>) {
-      cuDoubleComplex psi_F_val = psi_F[idx];
-      cuDoubleComplex psiN_F_val = psiN_F[idx];
-      double opL_val = opL[idx];
-      double opN_val = opN[idx];
-
-      // out = exp_Ldt * psi_F + n_weight * psiN_F
-      cuDoubleComplex term1 = cuCmul(cuDoubleComplex{opL_val, 0.0}, psi_F_val);
-      cuDoubleComplex term2 = cuCmul(cuDoubleComplex{opN_val, 0.0}, psiN_F_val);
-      out[idx] = cuCadd(term1, term2);
-    } else {
-      cuFloatComplex psi_F_val = psi_F[idx];
-      cuFloatComplex psiN_F_val = psiN_F[idx];
-      float opL_val = opL[idx];
-      float opN_val = opN[idx];
-
-      // out = exp_Ldt * psi_F + n_weight * psiN_F
-      cuFloatComplex term1 = cuCmulf(cuFloatComplex{opL_val, 0.0f}, psi_F_val);
-      cuFloatComplex term2 = cuCmulf(cuFloatComplex{opN_val, 0.0f}, psiN_F_val);
-      out[idx] = cuCaddf(term1, term2);
-    }
-  }
-}
-
-// Explicit instantiations for float and double (required for CUDA template kernels)
-template __global__ void apply_time_integration_kernel_impl<double>(
-    const cuDoubleComplex *, const cuDoubleComplex *, const double *, const double *,
-    cuDoubleComplex *, size_t);
-template __global__ void
-apply_time_integration_kernel_impl<float>(const cuFloatComplex *,
-                                          const cuFloatComplex *, const float *,
-                                          const float *, cuFloatComplex *, size_t);
-
 // Helper function to launch kernels with appropriate grid/block sizes
 // Optimized for modern GPUs (H100): use larger block size for better occupancy
 inline void launch_kernel(size_t n, int &blocks, int &threads_per_block) {
@@ -171,32 +92,7 @@ void TungstenOps<pfc::backend::CudaTag, double>::multiply_complex_real_impl(
   if (b.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in multiply_complex_real");
   }
-  if (N == 0) {
-    return;
-  }
-
-  int blocks, threads_per_block;
-  launch_kernel(N, blocks, threads_per_block);
-
-  const cuDoubleComplex *a_ptr = reinterpret_cast<const cuDoubleComplex *>(a.data());
-  const double *b_ptr = b.data();
-  cuDoubleComplex *out_ptr = reinterpret_cast<cuDoubleComplex *>(out.data());
-
-  detail::multiply_complex_real_kernel_impl<double>
-      <<<blocks, threads_per_block>>>(a_ptr, b_ptr, out_ptr, N);
-
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("CUDA kernel launch failed (multiply_complex_real<double>): ") +
-        cudaGetErrorString(err));
-  }
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("CUDA kernel sync failed (multiply_complex_real<double>): ") +
-        cudaGetErrorString(err));
-  }
+  pfc::multiply_complex_real_cuda_impl(a.data(), b.data(), out.data(), N);
 }
 
 void TungstenOps<pfc::backend::CudaTag, double>::compute_nonlinear_impl(
@@ -274,36 +170,8 @@ void TungstenOps<pfc::backend::CudaTag, double>::apply_time_integration_impl(
   if (psiN_F.size() != N || opL.size() != N || opN.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_time_integration");
   }
-  if (N == 0) {
-    return;
-  }
-
-  int blocks, threads_per_block;
-  launch_kernel(N, blocks, threads_per_block);
-
-  const cuDoubleComplex *psi_F_ptr =
-      reinterpret_cast<const cuDoubleComplex *>(psi_F.data());
-  const cuDoubleComplex *psiN_F_ptr =
-      reinterpret_cast<const cuDoubleComplex *>(psiN_F.data());
-  const double *opL_ptr = opL.data();
-  const double *opN_ptr = opN.data();
-  cuDoubleComplex *out_ptr = reinterpret_cast<cuDoubleComplex *>(out.data());
-
-  apply_time_integration_kernel_impl<double><<<blocks, threads_per_block>>>(
-      psi_F_ptr, psiN_F_ptr, opL_ptr, opN_ptr, out_ptr, N);
-
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("CUDA kernel launch failed (apply_time_integration<double>): ") +
-        cudaGetErrorString(err));
-  }
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("CUDA kernel sync failed (apply_time_integration<double>): ") +
-        cudaGetErrorString(err));
-  }
+  pfc::combine_two_term_cuda_impl(psi_F.data(), psiN_F.data(), opL.data(),
+                                  opN.data(), out.data(), N);
 }
 
 // CUDA specialization for float precision - implement methods
@@ -315,32 +183,7 @@ void TungstenOps<pfc::backend::CudaTag, float>::multiply_complex_real_impl(
   if (b.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in multiply_complex_real");
   }
-  if (N == 0) {
-    return;
-  }
-
-  int blocks, threads_per_block;
-  launch_kernel(N, blocks, threads_per_block);
-
-  const cuFloatComplex *a_ptr = reinterpret_cast<const cuFloatComplex *>(a.data());
-  const float *b_ptr = b.data();
-  cuFloatComplex *out_ptr = reinterpret_cast<cuFloatComplex *>(out.data());
-
-  detail::multiply_complex_real_kernel_impl<float>
-      <<<blocks, threads_per_block>>>(a_ptr, b_ptr, out_ptr, N);
-
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("CUDA kernel launch failed (multiply_complex_real<float>): ") +
-        cudaGetErrorString(err));
-  }
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("CUDA kernel sync failed (multiply_complex_real<float>): ") +
-        cudaGetErrorString(err));
-  }
+  pfc::multiply_complex_real_cuda_impl(a.data(), b.data(), out.data(), N);
 }
 
 void TungstenOps<pfc::backend::CudaTag, float>::compute_nonlinear_impl(
@@ -417,36 +260,8 @@ void TungstenOps<pfc::backend::CudaTag, float>::apply_time_integration_impl(
   if (psiN_F.size() != N || opL.size() != N || opN.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_time_integration");
   }
-  if (N == 0) {
-    return;
-  }
-
-  int blocks, threads_per_block;
-  launch_kernel(N, blocks, threads_per_block);
-
-  const cuFloatComplex *psi_F_ptr =
-      reinterpret_cast<const cuFloatComplex *>(psi_F.data());
-  const cuFloatComplex *psiN_F_ptr =
-      reinterpret_cast<const cuFloatComplex *>(psiN_F.data());
-  const float *opL_ptr = opL.data();
-  const float *opN_ptr = opN.data();
-  cuFloatComplex *out_ptr = reinterpret_cast<cuFloatComplex *>(out.data());
-
-  detail::apply_time_integration_kernel_impl<float><<<blocks, threads_per_block>>>(
-      psi_F_ptr, psiN_F_ptr, opL_ptr, opN_ptr, out_ptr, N);
-
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("CUDA kernel launch failed (apply_time_integration<float>): ") +
-        cudaGetErrorString(err));
-  }
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("CUDA kernel sync failed (apply_time_integration<float>): ") +
-        cudaGetErrorString(err));
-  }
+  pfc::combine_two_term_cuda_impl(psi_F.data(), psiN_F.data(), opL.data(),
+                                  opN.data(), out.data(), N);
 }
 
 } // namespace detail

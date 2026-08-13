@@ -5,50 +5,20 @@
  * @file tungsten_ops_kernels.hip
  * @brief HIP kernel implementations for Tungsten-specific operations
  *
- * This file contains HIP kernel code for Tungsten operations. It is only
- * compiled when HIP (ROCm) is enabled. apply_time_integration uses cache-derived
- * exp(L·dt) / n_weight spans (parameter names opL/opN are historical aliases).
+ * This file contains HIP kernel code for Tungsten-specific operations
+ * (nonlinear term and stabilization). Complex×real multiply and ETD
+ * two-term combine are `runtime/gpu/elementwise_ops_gpu`.
  */
 
 #if defined(OpenPFC_ENABLE_HIP)
 
-#include <hip/hip_complex.h>
 #include <hip/hip_runtime.h>
+#include <openpfc/runtime/gpu/elementwise_ops_gpu.hpp>
 #include <tungsten/common/tungsten_ops.hpp>
-#include <type_traits>
 
 namespace tungsten {
 namespace ops {
 namespace detail {
-
-template <typename RealType>
-__global__ void multiply_complex_real_kernel_impl(
-    const typename std::conditional<std::is_same<RealType, double>::value,
-                                    hipDoubleComplex, hipFloatComplex>::type *a,
-    const RealType *b,
-    typename std::conditional<std::is_same<RealType, double>::value,
-                              hipDoubleComplex, hipFloatComplex>::type *out,
-    size_t n) {
-  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < n) {
-    if constexpr (std::is_same_v<RealType, double>) {
-      hipDoubleComplex a_val = a[idx];
-      double b_val = b[idx];
-      out[idx] = hipCmul(make_hipDoubleComplex(b_val, 0.0), a_val);
-    } else {
-      hipFloatComplex a_val = a[idx];
-      float b_val = b[idx];
-      out[idx] = hipCmulf(make_hipFloatComplex(b_val, 0.0f), a_val);
-    }
-  }
-}
-
-template __global__ void
-multiply_complex_real_kernel_impl<double>(const hipDoubleComplex *, const double *,
-                                          hipDoubleComplex *, size_t);
-template __global__ void
-multiply_complex_real_kernel_impl<float>(const hipFloatComplex *, const float *,
-                                         hipFloatComplex *, size_t);
 
 template <typename RealType>
 __global__ void compute_nonlinear_kernel(const RealType *u, const RealType *v,
@@ -90,48 +60,6 @@ template __global__ void apply_stabilization_kernel<float>(const float *,
                                                            const float *, float,
                                                            float *, size_t);
 
-template <typename RealType>
-// out = exp_Ldt * psi_F + n_weight * psiN_F (params historically named opL/opN)
-__global__ void apply_time_integration_kernel_impl(
-    const typename std::conditional<std::is_same<RealType, double>::value,
-                                    hipDoubleComplex, hipFloatComplex>::type *psi_F,
-    const typename std::conditional<std::is_same<RealType, double>::value,
-                                    hipDoubleComplex, hipFloatComplex>::type *psiN_F,
-    const RealType *opL, const RealType *opN,
-    typename std::conditional<std::is_same<RealType, double>::value,
-                              hipDoubleComplex, hipFloatComplex>::type *out,
-    size_t n) {
-  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < n) {
-    if constexpr (std::is_same_v<RealType, double>) {
-      hipDoubleComplex psi_F_val = psi_F[idx];
-      hipDoubleComplex psiN_F_val = psiN_F[idx];
-      double opL_val = opL[idx];
-      double opN_val = opN[idx];
-      // out = exp_Ldt * psi_F + n_weight * psiN_F
-      hipDoubleComplex term1 = hipCmul(make_hipDoubleComplex(opL_val, 0.0), psi_F_val);
-      hipDoubleComplex term2 = hipCmul(make_hipDoubleComplex(opN_val, 0.0), psiN_F_val);
-      out[idx] = hipCadd(term1, term2);
-    } else {
-      hipFloatComplex psi_F_val = psi_F[idx];
-      hipFloatComplex psiN_F_val = psiN_F[idx];
-      float opL_val = opL[idx];
-      float opN_val = opN[idx];
-      // out = exp_Ldt * psi_F + n_weight * psiN_F
-      hipFloatComplex term1 = hipCmulf(make_hipFloatComplex(opL_val, 0.0f), psi_F_val);
-      hipFloatComplex term2 = hipCmulf(make_hipFloatComplex(opN_val, 0.0f), psiN_F_val);
-      out[idx] = hipCaddf(term1, term2);
-    }
-  }
-}
-
-template __global__ void apply_time_integration_kernel_impl<double>(
-    const hipDoubleComplex *, const hipDoubleComplex *, const double *, const double *,
-    hipDoubleComplex *, size_t);
-template __global__ void apply_time_integration_kernel_impl<float>(
-    const hipFloatComplex *, const hipFloatComplex *, const float *, const float *,
-    hipFloatComplex *, size_t);
-
 inline void launch_kernel(size_t n, int &blocks, int &threads_per_block) {
   threads_per_block = 512;
   blocks = (static_cast<int>(n) + threads_per_block - 1) / threads_per_block;
@@ -153,33 +81,7 @@ void TungstenOps<pfc::backend::HipTag, double>::multiply_complex_real_impl(
   if (b.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in multiply_complex_real");
   }
-  if (N == 0) {
-    return;
-  }
-
-  int blocks, threads_per_block;
-  launch_kernel(N, blocks, threads_per_block);
-
-  const hipDoubleComplex *a_ptr =
-      reinterpret_cast<const hipDoubleComplex *>(a.data());
-  const double *b_ptr = b.data();
-  hipDoubleComplex *out_ptr = reinterpret_cast<hipDoubleComplex *>(out.data());
-
-  hipLaunchKernelGGL(multiply_complex_real_kernel_impl<double>, dim3(blocks),
-                    dim3(threads_per_block), 0, 0, a_ptr, b_ptr, out_ptr, N);
-
-  hipError_t err = hipGetLastError();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel launch failed (multiply_complex_real<double>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (multiply_complex_real<double>): ") +
-        hipGetErrorString(err));
-  }
+  pfc::multiply_complex_real_hip_impl(a.data(), b.data(), out.data(), N);
 }
 
 void TungstenOps<pfc::backend::HipTag, double>::compute_nonlinear_impl(
@@ -259,37 +161,8 @@ void TungstenOps<pfc::backend::HipTag, double>::apply_time_integration_impl(
   if (psiN_F.size() != N || opL.size() != N || opN.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_time_integration");
   }
-  if (N == 0) {
-    return;
-  }
-
-  int blocks, threads_per_block;
-  launch_kernel(N, blocks, threads_per_block);
-
-  const hipDoubleComplex *psi_F_ptr =
-      reinterpret_cast<const hipDoubleComplex *>(psi_F.data());
-  const hipDoubleComplex *psiN_F_ptr =
-      reinterpret_cast<const hipDoubleComplex *>(psiN_F.data());
-  const double *opL_ptr = opL.data();
-  const double *opN_ptr = opN.data();
-  hipDoubleComplex *out_ptr = reinterpret_cast<hipDoubleComplex *>(out.data());
-
-  hipLaunchKernelGGL(apply_time_integration_kernel_impl<double>, dim3(blocks),
-                    dim3(threads_per_block), 0, 0, psi_F_ptr, psiN_F_ptr, opL_ptr,
-                    opN_ptr, out_ptr, N);
-
-  hipError_t err = hipGetLastError();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel launch failed (apply_time_integration<double>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (apply_time_integration<double>): ") +
-        hipGetErrorString(err));
-  }
+  pfc::combine_two_term_hip_impl(psi_F.data(), psiN_F.data(), opL.data(),
+                                 opN.data(), out.data(), N);
 }
 
 void TungstenOps<pfc::backend::HipTag, float>::multiply_complex_real_impl(
@@ -300,33 +173,7 @@ void TungstenOps<pfc::backend::HipTag, float>::multiply_complex_real_impl(
   if (b.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in multiply_complex_real");
   }
-  if (N == 0) {
-    return;
-  }
-
-  int blocks, threads_per_block;
-  launch_kernel(N, blocks, threads_per_block);
-
-  const hipFloatComplex *a_ptr =
-      reinterpret_cast<const hipFloatComplex *>(a.data());
-  const float *b_ptr = b.data();
-  hipFloatComplex *out_ptr = reinterpret_cast<hipFloatComplex *>(out.data());
-
-  hipLaunchKernelGGL(multiply_complex_real_kernel_impl<float>, dim3(blocks),
-                    dim3(threads_per_block), 0, 0, a_ptr, b_ptr, out_ptr, N);
-
-  hipError_t err = hipGetLastError();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel launch failed (multiply_complex_real<float>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (multiply_complex_real<float>): ") +
-        hipGetErrorString(err));
-  }
+  pfc::multiply_complex_real_hip_impl(a.data(), b.data(), out.data(), N);
 }
 
 void TungstenOps<pfc::backend::HipTag, float>::compute_nonlinear_impl(
@@ -406,37 +253,8 @@ void TungstenOps<pfc::backend::HipTag, float>::apply_time_integration_impl(
   if (psiN_F.size() != N || opL.size() != N || opN.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_time_integration");
   }
-  if (N == 0) {
-    return;
-  }
-
-  int blocks, threads_per_block;
-  launch_kernel(N, blocks, threads_per_block);
-
-  const hipFloatComplex *psi_F_ptr =
-      reinterpret_cast<const hipFloatComplex *>(psi_F.data());
-  const hipFloatComplex *psiN_F_ptr =
-      reinterpret_cast<const hipFloatComplex *>(psiN_F.data());
-  const float *opL_ptr = opL.data();
-  const float *opN_ptr = opN.data();
-  hipFloatComplex *out_ptr = reinterpret_cast<hipFloatComplex *>(out.data());
-
-  hipLaunchKernelGGL(apply_time_integration_kernel_impl<float>, dim3(blocks),
-                    dim3(threads_per_block), 0, 0, psi_F_ptr, psiN_F_ptr, opL_ptr,
-                    opN_ptr, out_ptr, N);
-
-  hipError_t err = hipGetLastError();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel launch failed (apply_time_integration<float>): ") +
-        hipGetErrorString(err));
-  }
-  err = hipDeviceSynchronize();
-  if (err != hipSuccess) {
-    throw std::runtime_error(
-        std::string("HIP kernel sync failed (apply_time_integration<float>): ") +
-        hipGetErrorString(err));
-  }
+  pfc::combine_two_term_hip_impl(psi_F.data(), psiN_F.data(), opL.data(),
+                                 opN.data(), out.data(), N);
 }
 
 } // namespace detail

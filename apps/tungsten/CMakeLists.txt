@@ -43,6 +43,7 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     nlohmann_json::nlohmann_json
     $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
     CUDA::cudart
+    openpfc_gpu_kernels
   )
 
   # Set CUDA properties
@@ -68,6 +69,7 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     nlohmann_json::nlohmann_json
     $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
     CUDA::cudart
+    openpfc_gpu_kernels
   )
   set_target_properties(test_tungsten_cuda_vtk PROPERTIES
     CUDA_STANDARD 20
@@ -107,6 +109,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
     nlohmann_json::nlohmann_json
     $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
     hip::host
+    openpfc_hip_kernels
   )
 
   set_target_properties(tungsten_hip PROPERTIES
@@ -129,6 +132,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
     nlohmann_json::nlohmann_json
     $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
     hip::host
+    openpfc_hip_kernels
   )
   set_target_properties(test_tungsten_hip_vtk PROPERTIES
     HIP_STANDARD 20
@@ -169,6 +173,7 @@ if(TUNGSTEN_ENABLE_TESTS)
               $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
               Catch2::Catch2
               CUDA::cudart
+              openpfc_gpu_kernels
             )
             target_sources(test_tungsten_cpu_vs_cuda PRIVATE
                 src/cuda/tungsten_ops_kernels.cu
@@ -194,6 +199,7 @@ if(TUNGSTEN_ENABLE_TESTS)
               $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
               Catch2::Catch2
               hip::host
+              openpfc_hip_kernels
             )
             target_sources(test_tungsten_cpu_vs_hip PRIVATE
                 src/hip/tungsten_ops_kernels.hip
@@ -223,7 +229,7 @@ target_link_libraries(tungsten_scalability PRIVATE
 
 # Add CUDA spectral support to scalability app if available
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-    target_link_libraries(tungsten_scalability PRIVATE CUDA::cudart)
+    target_link_libraries(tungsten_scalability PRIVATE CUDA::cudart openpfc_gpu_kernels)
     target_sources(tungsten_scalability PRIVATE
         src/cuda/tungsten_ops_kernels.cu
     )
@@ -236,7 +242,7 @@ endif()
 
 # Add HIP spectral support to scalability app if ROCm HeFFTe is available
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
-    target_link_libraries(tungsten_scalability PRIVATE hip::host)
+    target_link_libraries(tungsten_scalability PRIVATE hip::host openpfc_hip_kernels)
     target_sources(tungsten_scalability PRIVATE
         src/hip/tungsten_ops_kernels.hip
     )
