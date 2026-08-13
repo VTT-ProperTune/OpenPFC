@@ -32,6 +32,7 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/for_each_interior_device_gpu.hpp` — single-source GPU interior driver (single-field + multi-field N=2–4 + autotune hook); vendor headers re-export into `pfc::sim::cuda` / `pfc::sim::hip`
 - `include/openpfc/runtime/gpu/sparse_vector_gpu.hpp` — single-source GPU SparseVector copy-to-device; `sparse_vector_cuda.hpp` / `sparse_vector_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp` — single-source GPU SparseVector gather/scatter; vendor `sparse_vector_ops.hpp` / `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` are thin includes; kernels live in `sparse_vector_ops_gpu.inc` compiled from the vendor `.cu` / `.hip` TUs
+- `include/openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp` — single-source GPU 6-face padded device halo exchanger (HIP Field overloads stamped for CUDA); vendor `padded_device_halo_exchange.hpp` are thin includes; env/timer names stay `OPENPFC_CUDA_*` / `OPENPFC_HIP_*`
 
 ### Fixed
 
