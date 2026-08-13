@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#include <numeric>
 #include <vector>
 
 #include <catch2/catch_approx.hpp>
@@ -10,7 +9,6 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/field/legacy_adapter.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/domain/create.hpp>
@@ -173,34 +171,6 @@ TEST_CASE("field::apply_inplace_with_time uses time parameter",
   bool values_match = true;
   for (const auto &val : ref) {
     values_match &= val == Approx(3.0); // 1.0 + 2.0
-  }
-  REQUIRE(values_match);
-}
-
-TEST_CASE("legacy adapter wraps lambda into FieldModifier", "[field_ops][unit]") {
-  pfc::Int3 size{8, 1, 1};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
-  pfc::Int3 lower{0, 0, 0};
-  pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
-  auto fft = fft::create(decomp);
-  DummyModel model(fft, world);
-
-  std::vector<double> u(fft.size_inbox(), 0.0);
-  add_real_field(model, "default", u);
-
-  auto mod = field::make_legacy_modifier("default",
-                                         [](const Real3 & /*x*/) { return 42.0; });
-
-  mod->apply(model, /*time=*/0.0);
-
-  const auto &ref = model.get_real_field("default");
-  bool values_match = true;
-  for (const auto &val : ref) {
-    values_match &= val == Approx(42.0);
   }
   REQUIRE(values_match);
 }

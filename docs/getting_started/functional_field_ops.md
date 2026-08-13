@@ -11,7 +11,6 @@ This page shows how to use the coordinate-space functional API to set initial an
 - [Gaussian pulse](#gaussian-pulse)
 - [Time-varying boundary-like pattern](#time-varying-boundary-like-pattern)
 - [In-place updates (partial modifications)](#in-place-updates-partial-modifications)
-- [Backward compatibility via adapter](#backward-compatibility-via-adapter)
 - [Migration from legacy loop-based patterns](#migration-from-legacy-loop-based-patterns)
 - [Notes](#notes)
 
@@ -87,15 +86,6 @@ field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
   const double perturbation = 0.01 * std::sin(x[0]);
   return current + perturbation; // additive update
 });
-```
-
-## Backward compatibility via adapter
-
-You can wrap a lambda into a `FieldModifier` that works with existing `Simulator` APIs:
-
-```cpp
-auto mod = field::make_legacy_modifier("psi", [](const Real3 &) { return 0.5; });
-simulator.add_initial_condition(std::move(mod));
 ```
 
 ## Migration from legacy loop-based patterns

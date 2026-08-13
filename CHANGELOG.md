@@ -43,6 +43,7 @@ source compatibility is explicitly not a goal.
 - `pfc::DiscreteField` (`kernel/data/discrete_field.hpp`) and `pfc::interpolate`. Use `pfc::data::Field` with `coords()` / `apply()`. The quarantined DiscreteField unit tests were deleted with the type.
 - `pfc::Array` (`kernel/data/array.hpp`). Use `pfc::data::Field`. The Array unit tests were deleted with the type.
 - `pfc::field::Field<T>` (`kernel/data/field.hpp`). Use `pfc::data::Field`. Steppers, stacks, and factories already bound the canonical type; the functional container had no remaining callers.
+- `pfc::field::make_legacy_modifier` (`kernel/field/legacy_adapter.hpp`). Wrap a lambda in a `FieldModifier` and call `pfc::field::apply` instead.
 
 ## [0.1.5] - 2026-07-23
 
