@@ -28,6 +28,7 @@ source compatibility is explicitly not a goal.
 
 ### Changed
 
+- Example `09_parallel_fft_high_level` stores the FFT outbox in `pfc::data::Field<std::complex<double>>` instead of legacy `Array`.
 - `pfc::field::for_each*` in `brick_iteration.hpp` no longer has `PaddedBrick` overloads; padded `pfc::data::Field` is the only container (tests already used Field).
 - `pfc::communication::PaddedHaloExchanger` no longer binds `PaddedBrick`; padded `pfc::data::Field` (or explicit `Box3i` + `Domain`) is the only container binding. Callers already used the Field constructors.
 - HIP `pfc::hip::FdGradientDevice` factory binds `pfc::data::Field` (any memory space) instead of legacy `PaddedBrick`, matching the CUDA twin. Unpadded Fields (`storage_halo == 0`) are rejected; padded `Field<double, HipSpace>` is the device path.

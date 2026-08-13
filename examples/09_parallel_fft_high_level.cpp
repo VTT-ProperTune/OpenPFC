@@ -1,10 +1,9 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <random>
 
 #include <openpfc/domain/create.hpp>
-#include <openpfc/kernel/data/array.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/detail/array_format.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -34,23 +33,20 @@ int main(int argc, char *argv[]) {
 
   auto fft_instance = fft::create(decomp, worker.get_rank(), MPI_COMM_WORLD);
 
-  // Create output array to store FFT results. If requested array is of type T =
-  // complex<double>, then array will be constructed using complex indices so
-  // that it matches the Fourier-space, i.e. first dimension is floor(Lx/2) + 1.
-  Array<complex<double>, 3> output(get_outbox(fft_instance).size);
+  // Complex FFT outbox as a Field (r2c first axis is floor(Lx/2)+1).
+  auto output = data::Field<complex<double>>(domain, fft::get_outbox(fft_instance),
+                                             /*halo_width=*/0);
 
   auto input_size = input.local_size();
-  std::cout << "input: {" << input_size[0] << ", " << input_size[1] << ", " << input_size[2] << "}" << std::endl;   // this is {4, 3, 2}
-  std::cout << "output: " << output << std::endl; // this is {3, 3, 2}
+  auto output_size = output.local_size();
+  std::cout << "input: {" << input_size[0] << ", " << input_size[1] << ", "
+            << input_size[2] << "}" << std::endl; // this is {4, 3, 2}
+  std::cout << "output: {" << output_size[0] << ", " << output_size[1] << ", "
+            << output_size[2] << "}" << std::endl; // this is {3, 3, 2}
 
-  // This would construct an array of type T = <double> with different indices
-  // Array<double, 3> output2(fft_instance);
-  // std::cout << output2 << std::endl; // this is {4, 3, 2}
+  fft_instance.forward(input.vec(), output.vec());
 
-  fft_instance.forward(input.vec(), output);
-
-  // Display results
-  show(output);
+  pfc::detail::show(output.vec(), output.local_size(), output.box().low);
 
   return 0;
 }
