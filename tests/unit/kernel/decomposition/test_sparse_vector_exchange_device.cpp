@@ -18,11 +18,14 @@
 
 using Catch::Approx;
 
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+#include <openpfc/runtime/gpu/exchange_gpu.hpp>
+#include <openpfc/runtime/gpu/sparse_vector_gpu.hpp>
+#endif
+
 #if defined(OpenPFC_ENABLE_CUDA)
 
 #include <cuda_runtime.h>
-#include <openpfc/runtime/cuda/exchange_cuda.hpp>
-#include <openpfc/runtime/cuda/sparse_vector_cuda.hpp>
 
 namespace {
 
@@ -114,8 +117,6 @@ TEST_CASE("CudaTag blocking send_data/receive_data host-stage roundtrip",
 #if defined(OpenPFC_ENABLE_HIP)
 
 #include <hip/hip_runtime.h>
-#include <openpfc/runtime/hip/exchange_hip.hpp>
-#include <openpfc/runtime/hip/sparse_vector_hip.hpp>
 
 namespace {
 

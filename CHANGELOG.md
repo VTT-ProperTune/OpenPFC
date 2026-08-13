@@ -70,7 +70,7 @@ source compatibility is explicitly not a goal.
 - GPU kernel `.inc` sources live under `src/openpfc/runtime/gpu/` next to the vendor TUs that include them (not under `include/`; not installed).
 - Architecture, styleguide, and `DataBuffer` diagnostics name `runtime/gpu/` as the CUDA/HIP implementation layer; vendor `runtime/cuda` / `runtime/hip` trees are documented as thin includes plus FFT until M5.
 - Shared Tungsten GPU headers and vendor FFT headers include `runtime/gpu/` DataBuffer/tags directly instead of hopping through CUDA/HIP shims.
-- Dual CUDA/HIP unit tests include `runtime/gpu/` SparseVector exchange and DataBuffer headers instead of duplicated vendor shims.
+- Dual CUDA/HIP unit tests include `runtime/gpu/` SparseVector exchange and DataBuffer headers instead of duplicated vendor shims (`test_sparse_vector_exchange_device.cpp` included).
 - `SimulationState` device-field compile coverage includes `HipSpace` (CUDA twin already existed) and includes `runtime/gpu/` memory-space headers.
 - SparseVector `on_host` coverage includes `HipTag` (CUDA twin already existed) and includes `runtime/gpu/` SparseVector headers.
 - Halo-exchange concept docs list canonical GPU sources under `runtime/gpu/` (vendor CUDA/HIP headers are thin includes); HIP packed-halo env and kernel-library split are documented alongside CUDA.
