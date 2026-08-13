@@ -38,7 +38,7 @@
  * `pfc::communication::PaddedHaloExchanger` + `pfc::communication::exchange`
  * (or `start_exchange` / `finish_exchange` for overlap),
  * `pfc::gradient::FDGradient<G>` + `pfc::gradient::evaluate(grad, idx)`, and
- * `pfc::field::for_each(brick, fn)` are the recommended path — they keep halo,
+ * `pfc::field::for_each(field, fn)` are the recommended path — they keep halo,
  * gradient, and iteration as three visible concerns. `DuField` is preserved for the
  * spectral and `FdCpuStack` paths where the stack still wants to bundle
  * those concerns into a single `du.apply(...)` call.

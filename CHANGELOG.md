@@ -28,6 +28,7 @@ source compatibility is explicitly not a goal.
 
 ### Changed
 
+- `pfc::field::for_each*` in `brick_iteration.hpp` no longer has `PaddedBrick` overloads; padded `pfc::data::Field` is the only container (tests already used Field).
 - `pfc::communication::PaddedHaloExchanger` no longer binds `PaddedBrick`; padded `pfc::data::Field` (or explicit `Box3i` + `Domain`) is the only container binding. Callers already used the Field constructors.
 - HIP `pfc::hip::FdGradientDevice` factory binds `pfc::data::Field` (any memory space) instead of legacy `PaddedBrick`, matching the CUDA twin. Unpadded Fields (`storage_halo == 0`) are rejected; padded `Field<double, HipSpace>` is the device path.
 - CPU `pfc::gradient::FDGradient` no longer has a `PaddedBrick` constructor or factory; padded `pfc::data::Field` is the only container binding (`test_multi_field_device.cu` migrated).
