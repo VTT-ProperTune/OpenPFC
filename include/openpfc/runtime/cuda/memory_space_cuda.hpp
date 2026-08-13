@@ -3,27 +3,11 @@
 
 /**
  * @file memory_space_cuda.hpp
- * @brief CUDA memory space tag (runtime/cuda only)
+ * @brief CUDA memory space tag (thin include of the M3 GPU source).
  *
- * @see kernel/execution/memory_space.hpp for HostSpace
- * @see runtime/hip/memory_space_hip.hpp for HipSpace
+ * @see runtime/gpu/memory_space_gpu.hpp
  */
 
 #pragma once
 
-#if defined(OpenPFC_ENABLE_CUDA)
-
-#include <openpfc/kernel/execution/memory_space.hpp>
-#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
-
-namespace pfc {
-
-struct CudaSpace {};
-
-template <> struct memory_space_to_backend<CudaSpace> {
-  using type = backend::CudaTag;
-};
-
-} // namespace pfc
-
-#endif // OpenPFC_ENABLE_CUDA
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>

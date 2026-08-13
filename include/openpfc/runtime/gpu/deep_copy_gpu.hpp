@@ -24,14 +24,14 @@
 #include <openpfc/kernel/execution/view.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>
+
 #if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
-#include <openpfc/runtime/cuda/memory_space_cuda.hpp>
 #include <openpfc/runtime/cuda/view_cuda.hpp>
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
 #include <hip/hip_runtime.h>
-#include <openpfc/runtime/hip/memory_space_hip.hpp>
 #include <openpfc/runtime/hip/view_hip.hpp>
 #endif
 

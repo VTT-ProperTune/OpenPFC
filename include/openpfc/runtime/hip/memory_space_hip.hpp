@@ -3,27 +3,11 @@
 
 /**
  * @file memory_space_hip.hpp
- * @brief HIP memory space tag (runtime/hip only)
+ * @brief HIP memory space tag (thin include of the M3 GPU source).
  *
- * @see kernel/execution/memory_space.hpp for HostSpace
- * @see runtime/cuda/memory_space_cuda.hpp for CudaSpace
+ * @see runtime/gpu/memory_space_gpu.hpp
  */
 
 #pragma once
 
-#if defined(OpenPFC_ENABLE_HIP)
-
-#include <openpfc/kernel/execution/memory_space.hpp>
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
-
-namespace pfc {
-
-struct HipSpace {};
-
-template <> struct memory_space_to_backend<HipSpace> {
-  using type = backend::HipTag;
-};
-
-} // namespace pfc
-
-#endif // OpenPFC_ENABLE_HIP
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>

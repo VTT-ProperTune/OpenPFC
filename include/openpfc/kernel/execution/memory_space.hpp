@@ -6,10 +6,11 @@
  * @brief Kokkos-compatible memory space tags (kernel: HostSpace only)
  *
  * Kernel defines HostSpace only. CudaSpace and HipSpace are in
- * runtime/cuda/memory_space_cuda.hpp and runtime/hip/memory_space_hip.hpp.
+ * runtime/gpu/memory_space_gpu.hpp (vendor headers are thin includes).
  *
- * @see runtime/cuda/memory_space_cuda.hpp for CudaSpace
- * @see runtime/hip/memory_space_hip.hpp for HipSpace
+ * @see runtime/gpu/memory_space_gpu.hpp for CudaSpace / HipSpace
+ * @see runtime/cuda/memory_space_cuda.hpp (thin include)
+ * @see runtime/hip/memory_space_hip.hpp (thin include)
  * @see kernel/execution/databuffer.hpp for buffer implementation
  */
 
@@ -35,7 +36,7 @@ using DefaultMemorySpace = HostSpace;
  * @brief Maps a memory space tag to the corresponding backend tag
  *
  * Used internally by View and deep_copy. CudaSpace and HipSpace mappings
- * are in runtime headers.
+ * are in runtime/gpu/memory_space_gpu.hpp.
  */
 template <typename MemorySpace> struct memory_space_to_backend;
 
