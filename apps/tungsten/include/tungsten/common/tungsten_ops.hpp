@@ -26,13 +26,9 @@
 #include <complex>
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
-#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
-#include <openpfc/runtime/hip/databuffer_hip.hpp>
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+#include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
+#include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 #endif
 
 namespace tungsten {

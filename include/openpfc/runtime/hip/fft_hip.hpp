@@ -20,8 +20,8 @@
 #include <openpfc/kernel/fft/detail/fft_heffte_backend.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/fft/fft_layout.hpp>
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
-#include <openpfc/runtime/hip/databuffer_hip.hpp>
+#include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
+#include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 
 #include <mpi.h>
 
