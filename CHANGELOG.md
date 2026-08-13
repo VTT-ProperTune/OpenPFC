@@ -39,6 +39,7 @@ source compatibility is explicitly not a goal.
 - HIP CPU-vs-GPU Laplacian integration tests `test_hip_vs_cpu_laplacian.cpp` and `test_hip_vs_cpu_laplacian_mpi.cpp` — twins of the CUDA Laplacian gpu_validation scenarios
 - HIP vs CPU diffusion smoke `test_hip_vs_cpu.cpp` is compiled into `openpfc-tests` and constructs `create_hip` (previously an unwired stub)
 - HIP backend instantiation smoke in `test_gpu_backend_instantiation.cpp` — separate Catch2 case so a CUDA skip cannot hide HIP; compares `create_hip` inbox/outbox sizes to the CPU FFT
+- `examples/fft_backend_benchmark` benchmarks HIP (rocFFT) as well as CUDA, using `runtime/gpu/` DataBuffer/tags
 - HIP `FullPaddedDeviceHalo` 26-direction integration twin `test_full_padded_device_halo_hip.cpp` of the CUDA `test_full_padded_device_halo.cpp` cases
 - `pfc::fft::Backend::HIP` and `backend_from_string("hip"` / `"rocm")` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on; JSON `from_json<fft::Backend>` and `create_with_backend` accept HIP the same way they already accept CUDA
 

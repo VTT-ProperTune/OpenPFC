@@ -62,7 +62,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 
 | Executable | Source | What it demonstrates |
 |------------|--------|----------------------|
-| `fft_backend_benchmark` | `fft_backend_benchmark.cpp` | FFT backend benchmarking |
+| `fft_backend_benchmark` | `fft_backend_benchmark.cpp` | FFT backend benchmarking (FFTW vs CUDA / HIP) |
 | `02_domain_decomposition` | `02_domain_decomposition.cpp` | `Domain`, `Decomposition`, MPI |
 | `03_parallel_fft` | `03_parallel_fft.cpp` | Distributed FFT (HeFFTe) |
 | `04_diffusion_model` | `04_diffusion_model.cpp` | Simple spectral diffusion `Model` |
