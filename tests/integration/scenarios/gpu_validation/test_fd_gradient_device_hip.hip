@@ -33,13 +33,20 @@
 
 #include <hip/hip_runtime.h>
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/host_device.hpp>
+#include <openpfc/runtime/hip/databuffer_hip.hpp>
 #include <openpfc/runtime/hip/fd_gradient_device.hpp>
 #include <openpfc/runtime/hip/for_each_interior_device.hpp>
+#include <openpfc/runtime/hip/memory_space_hip.hpp>
 
 namespace {
 
@@ -378,6 +385,77 @@ TEST_CASE("HIP FdGradientDevice<G> ctor rejects an order without a D1 stencil ta
                                                        1.0, hw, order)),
                     std::invalid_argument);
   hipFree(d_u);
+}
+
+TEST_CASE("HIP FdGradientDevice create(Field) rejects an unpadded Field",
+          "[hip][fd_gradient_device][integration]") {
+  const auto domain = pfc::domain::create({8, 8, 8});
+  const auto owned = pfc::domain::index_box(domain);
+  pfc::data::Field<double> u(domain, owned, /*storage_halo=*/0,
+                             /*iteration_halo=*/1);
+  REQUIRE_THROWS_AS((pfc::hip::create<TestGrads>(u, 2)), std::invalid_argument);
+}
+
+TEST_CASE("HIP FdGradientDevice create(Field<HipSpace>) agrees with analytic "
+          "polynomial RHS",
+          "[hip][fd_gradient_device][integration]") {
+  if (!hip_runtime_available()) {
+    SUCCEED("Skipping: no HIP device on this host.");
+    return;
+  }
+
+  const int order = 2;
+  const int hw = order / 2;
+  const int nx = 8;
+  const int ny = 8;
+  const int nz = 8;
+  const double dx = 1.0 / 8.0;
+  const double dy = 1.0 / 8.0;
+  const double dz = 1.0 / 8.0;
+
+  const auto domain = pfc::domain::with_spacing({nx, ny, nz}, {dx, dy, dz});
+  const auto owned = pfc::domain::index_box(domain);
+  pfc::data::Field<double, pfc::HipSpace> u(domain, owned, hw);
+
+  std::vector<double> h_u(u.size(), 0.0);
+  for (int k = -hw; k < nz + hw; ++k) {
+    for (int j = -hw; j < ny + hw; ++j) {
+      for (int i = -hw; i < nx + hw; ++i) {
+        const auto c = u.coords(i, j, k);
+        h_u[u.idx(i, j, k)] = poly_value(c[0], c[1], c[2]);
+      }
+    }
+  }
+  u.buffer().copy_from_host(h_u);
+
+  double *d_du = nullptr;
+  REQUIRE(hipMalloc(&d_du, u.size() * sizeof(double)) == hipSuccess);
+  REQUIRE(hipMemset(d_du, 0, u.size() * sizeof(double)) == hipSuccess);
+
+  auto eval = pfc::hip::create<TestGrads>(u, order);
+  TestModel model;
+  pfc::sim::hip::for_each_interior_device<TestModel, TestGrads>(
+      model, eval.pod(), d_du, /*t=*/0.0, nx, ny, nz);
+  REQUIRE(hipDeviceSynchronize() == hipSuccess);
+
+  std::vector<double> h_du(u.size(), 0.0);
+  REQUIRE(hipMemcpy(h_du.data(), d_du, u.size() * sizeof(double),
+                    hipMemcpyDeviceToHost) == hipSuccess);
+
+  bool owned_cells_match = true;
+  for (int iz = 0; iz < nz; ++iz) {
+    for (int iy = 0; iy < ny; ++iy) {
+      for (int ix = 0; ix < nx; ++ix) {
+        const auto c = u.coords(ix, iy, iz);
+        const double expected = poly_rhs(c[0], c[1], c[2]);
+        const double got = h_du[u.idx(ix, iy, iz)];
+        owned_cells_match &= std::abs(got - expected) <= 1e-9;
+      }
+    }
+  }
+  REQUIRE(owned_cells_match);
+
+  hipFree(d_du);
 }
 
 #else // !OpenPFC_ENABLE_HIP
