@@ -38,6 +38,7 @@
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 
@@ -83,7 +84,9 @@ public:
       seeds.push_back(seed);
     }
 
-    pfc::field::apply(m, get_field_name(), [seeds](const pfc::Real3 &X) {
+    pfc::field::apply(pfc::get_real_field(m, get_field_name()),
+                      pfc::get_world(m), pfc::get_fft(m),
+                      [seeds](const pfc::Real3 &X) {
       for (const auto &seed : seeds) {
         if (seed.is_inside(X)) {
           return seed.get_value(X);

@@ -31,6 +31,7 @@
 
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 
@@ -82,7 +83,8 @@ public:
     (void)t_unused; // Silence unused parameter warning
     // Apply constant in coordinate space over the local inbox
     // Preserves distributed behavior and keeps API consistent with new ops
-    pfc::field::apply(m, get_field_name(),
+    pfc::field::apply(pfc::get_real_field(m, get_field_name()),
+                      pfc::get_world(m), pfc::get_fft(m),
                       [n0 = m_n0](const pfc::Real3 &) { return n0; });
   }
 };

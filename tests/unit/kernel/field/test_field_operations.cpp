@@ -6,72 +6,51 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/field/operations.hpp>
-#include <openpfc/kernel/simulation/model.hpp>
-#include <openpfc/domain/create.hpp>
 
 using namespace pfc;
 using Catch::Approx;
 
 namespace {
-class DummyModel : public Model {
-public:
-  DummyModel(FFT &fft, const World &world) : Model(fft, world) {}
-  void step(double t) override { (void)t; }
-  void initialize(double dt) override { (void)dt; }
+
+struct InboxFixture {
+  World world;
+  pfc::FFT fft;
+  std::vector<double> u;
+
+  InboxFixture(Int3 size, double fill)
+      : world(Int3{0, 0, 0},
+              Int3{size[0] - 1, size[1] - 1, size[2] - 1},
+              domain::create(GridSize(size), PhysicalOrigin({0.0, 0.0, 0.0}),
+                             GridSpacing({1.0, 1.0, 1.0}))),
+        fft(fft::create(decomposition::create(world, 1))),
+        u(fft.size_inbox(), fill) {}
 };
+
 } // namespace
 
 TEST_CASE("field::apply sets constant value over inbox", "[field_ops][unit]") {
-  pfc::Int3 size{8, 4, 2};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
-  pfc::Int3 lower{0, 0, 0};
-  pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
-  auto fft = fft::create(decomp);
+  InboxFixture fx({8, 4, 2}, 0.0);
+  field::apply(fx.u, fx.world, fx.fft, [](const Real3 & /*x*/) { return 0.5; });
 
-  DummyModel model(fft, world);
-
-  std::vector<double> u(fft.size_inbox(), 0.0);
-  add_real_field(model, "psi", u);
-
-  field::apply(model, "psi", [](const Real3 & /*x*/) { return 0.5; });
-
-  const auto &ref = model.get_real_field("psi");
   bool values_match = true;
-  for (const auto &val : ref) {
+  for (const auto &val : fx.u) {
     values_match &= val == Approx(0.5);
   }
   REQUIRE(values_match);
 }
 
 TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
-  pfc::Int3 size{4, 4, 1};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
-  pfc::Int3 lower{0, 0, 0};
-  pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
-  auto fft = fft::create(decomp);
-
-  DummyModel model(fft, world);
-  std::vector<double> u(fft.size_inbox(), 0.0);
-  add_real_field(model, "psi", u);
-
-  field::apply_with_time(model, "psi", /*t=*/2.0,
+  InboxFixture fx({4, 4, 1}, 0.0);
+  field::apply_with_time(fx.u, fx.world, fx.fft, /*t=*/2.0,
                          [](const Real3 & /*x*/, double t) { return 1.0 + t; });
 
-  const auto &ref = model.get_real_field("psi");
   bool values_match = true;
-  for (const auto &val : ref) {
+  for (const auto &val : fx.u) {
     values_match &= val == Approx(3.0);
   }
   REQUIRE(values_match);
@@ -79,28 +58,14 @@ TEST_CASE("field::apply_with_time uses time parameter", "[field_ops][unit]") {
 
 TEST_CASE("field::apply_inplace modifies field based on current value",
           "[field_ops][unit]") {
-  pfc::Int3 size{4, 2, 2};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
-  pfc::Int3 lower{0, 0, 0};
-  pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
-  auto fft = fft::create(decomp);
+  InboxFixture fx({4, 2, 2}, 1.0);
+  field::apply_inplace(fx.u, fx.world, fx.fft,
+                       [](const Real3 & /*x*/, double current) {
+                         return 2.0 * current;
+                       });
 
-  DummyModel model(fft, world);
-  std::vector<double> u(fft.size_inbox(), 1.0);
-  add_real_field(model, "psi", u);
-
-  // Double all values
-  field::apply_inplace(model, "psi", [](const Real3 & /*x*/, double current) {
-    return 2.0 * current;
-  });
-
-  const auto &ref = model.get_real_field("psi");
   bool values_match = true;
-  for (const auto &val : ref) {
+  for (const auto &val : fx.u) {
     values_match &= val == Approx(2.0);
   }
   REQUIRE(values_match);
@@ -108,33 +73,18 @@ TEST_CASE("field::apply_inplace modifies field based on current value",
 
 TEST_CASE("field::apply_inplace selective update preserves untouched cells",
           "[field_ops][unit]") {
-  pfc::Int3 size{8, 1, 1};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
-  pfc::Int3 lower{0, 0, 0};
-  pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
-  auto fft = fft::create(decomp);
+  InboxFixture fx({8, 1, 1}, 0.0);
+  field::apply_inplace(fx.u, fx.world, fx.fft,
+                       [](const Real3 &x, double current) {
+                         if (x[0] > 4.0) {
+                           return 1.0;
+                         }
+                         return current;
+                       });
 
-  DummyModel model(fft, world);
-  std::vector<double> u(fft.size_inbox(), 0.0);
-  add_real_field(model, "psi", u);
-
-  // Set values only where x > 4.0
-  field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
-    if (x[0] > 4.0) {
-      return 1.0;
-    }
-    return current;
-  });
-
-  const auto &ref = model.get_real_field("psi");
-  // Verify some cells are 0.0 (untouched) and some are 1.0 (modified)
   bool has_zero = false;
   bool has_one = false;
-  for (const auto &val : ref) {
+  for (const auto &val : fx.u) {
     if (val == Approx(0.0)) {
       has_zero = true;
     }
@@ -148,28 +98,13 @@ TEST_CASE("field::apply_inplace selective update preserves untouched cells",
 
 TEST_CASE("field::apply_inplace_with_time uses time parameter",
           "[field_ops][unit]") {
-  pfc::Int3 size{4, 2, 1};
-  pfc::Domain domain = pfc::domain::create(pfc::GridSize(size),
-                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                           pfc::GridSpacing({1.0, 1.0, 1.0}));
-  pfc::Int3 lower{0, 0, 0};
-  pfc::Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
-  pfc::World world(lower, upper, domain);
-  auto decomp = decomposition::create(world, 1);
-  auto fft = fft::create(decomp);
-
-  DummyModel model(fft, world);
-  std::vector<double> u(fft.size_inbox(), 1.0);
-  add_real_field(model, "psi", u);
-
-  // Blend current value with time-dependent term
+  InboxFixture fx({4, 2, 1}, 1.0);
   field::apply_inplace_with_time(
-      model, "psi", /*t=*/2.0,
+      fx.u, fx.world, fx.fft, /*t=*/2.0,
       [](const Real3 & /*x*/, double current, double t) { return current + t; });
 
-  const auto &ref = model.get_real_field("psi");
   bool values_match = true;
-  for (const auto &val : ref) {
+  for (const auto &val : fx.u) {
     values_match &= val == Approx(3.0); // 1.0 + 2.0
   }
   REQUIRE(values_match);

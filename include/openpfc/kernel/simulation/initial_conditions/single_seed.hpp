@@ -34,6 +34,7 @@
 
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 
@@ -63,7 +64,9 @@ public:
     const double amplitude = amp_eq;
     const double rho = rho_seed;
 
-    pfc::field::apply(m, get_field_name(), [=](const pfc::Real3 &X) {
+    pfc::field::apply(pfc::get_real_field(m, get_field_name()),
+                      pfc::get_world(m), pfc::get_fft(m),
+                      [=](const pfc::Real3 &X) {
       const double x = X[0];
       const double y = X[1];
       const double z = X[2];

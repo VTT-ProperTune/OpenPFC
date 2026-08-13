@@ -16,22 +16,24 @@ This page shows how to use the coordinate-space functional API to set initial an
 
 ## Basics
 
-- `pfc::field::apply(model, field_name, Fn)` applies `Fn(const Real3&) -> double` over the local FFT inbox
-- `pfc::field::apply_with_time(model, field_name, t, Fn)` applies `Fn(const Real3&, double)` with a time parameter
-- `pfc::field::apply_inplace(model, field_name, Fn)` applies `Fn(const Real3&, double current) -> double` for partial updates
-- `pfc::field::apply_inplace_with_time(model, field_name, t, Fn)` applies `Fn(const Real3&, double current, double t)` with time
+- `pfc::field::apply(field, world, fft, Fn)` applies `Fn(const Real3&) -> double` over the local FFT inbox
+- `pfc::field::apply_with_time(field, world, fft, t, Fn)` applies `Fn(const Real3&, double)` with a time parameter
+- `pfc::field::apply_inplace(field, world, fft, Fn)` applies `Fn(const Real3&, double current) -> double` for partial updates
+- `pfc::field::apply_inplace_with_time(field, world, fft, t, Fn)` applies `Fn(const Real3&, double current, double t)` with time
+
+From a `Model`, pass `get_real_field(m, name)`, `get_world(m)`, and `get_fft(m)`.
 
 ### Constant initial condition
 
 ```cpp
 using namespace pfc;
-field::apply(model, "psi", [](const Real3 &) { return 0.5; });
+field::apply(u, world, fft, [](const Real3 &) { return 0.5; });
 ```
 
 ## Gaussian pulse
 
 ```cpp
-field::apply(model, "psi", [](const Real3 &x) {
+field::apply(u, world, fft, [](const Real3 &x) {
   const double r2 = x[0] * x[0] + x[1] * x[1] + x[2] * x[2];
   return std::exp(-r2 / 2.0);
 });
@@ -41,7 +43,7 @@ field::apply(model, "psi", [](const Real3 &x) {
 
 ```cpp
 const double freq = 1.0;
-field::apply_with_time(model, "psi", t, [freq](const Real3 &x, double tt) {
+field::apply_with_time(u, world, fft, t, [freq](const Real3 &x, double tt) {
   return std::sin(2.0 * M_PI * freq * tt) * (x[0] > 10.0 ? 1.0 : 0.0);
 });
 ```
@@ -59,7 +61,7 @@ const double alpha = 1.0;
 const double rho_low = 0.0;
 const double rho_high = 1.0;
 
-field::apply_inplace(model, "psi", [=](const Real3 &x, double current) {
+field::apply_inplace(u, world, fft, [=](const Real3 &x, double current) {
   if (std::abs(x[0] - xpos) < xwidth) {
     double S = 1.0 / (1.0 + std::exp(-alpha * (x[0] - xpos)));
     return rho_low * S + rho_high * (1.0 - S);
@@ -71,7 +73,7 @@ field::apply_inplace(model, "psi", [=](const Real3 &x, double current) {
 ### Masked update (modify only where condition is true)
 
 ```cpp
-field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
+field::apply_inplace(u, world, fft, [](const Real3 &x, double current) {
   if (x[0] > 0.0 && x[2] < 10.0) {
     return 0.5; // set value in region
   }
@@ -82,7 +84,7 @@ field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
 ### Accumulate or blend
 
 ```cpp
-field::apply_inplace(model, "psi", [](const Real3 &x, double current) {
+field::apply_inplace(u, world, fft, [](const Real3 &x, double current) {
   const double perturbation = 0.01 * std::sin(x[0]);
   return current + perturbation; // additive update
 });
@@ -120,7 +122,9 @@ After (functional):
 
 ```cpp
 void apply(Model &m, double) override {
-  pfc::field::apply(m, get_field_name(), [](const pfc::Real3 &X) {
+  pfc::field::apply(pfc::get_real_field(m, get_field_name()),
+                    pfc::get_world(m), pfc::get_fft(m),
+                    [](const pfc::Real3 &X) {
     return compute_value(X[0], X[1], X[2]);
   });
 }

@@ -36,6 +36,7 @@
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/field/operations.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 
 namespace pfc {
 
@@ -68,7 +69,8 @@ public:
     const double xpos = (Lx * dx) - xwidth;
 
     pfc::field::apply_inplace(
-        m, get_field_name(), [=, this](const pfc::Real3 &X, double current) {
+        pfc::get_real_field(m, get_field_name()), pfc::get_world(m),
+        pfc::get_fft(m), [=, this](const pfc::Real3 &X, double current) {
           const double x = X[0];
           if (std::abs(x - xpos) < xwidth) {
             const double S = 1.0 / (1.0 + std::exp(-alpha * (x - xpos)));

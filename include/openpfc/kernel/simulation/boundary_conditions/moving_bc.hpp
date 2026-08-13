@@ -47,6 +47,7 @@
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
+#include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 
 namespace pfc {
@@ -190,7 +191,8 @@ public:
     const double alpha = m_alpha;
 
     pfc::field::apply_inplace(
-        m, get_field_name(), [=, this](const pfc::Real3 &X, double current) {
+        pfc::get_real_field(m, get_field_name()), pfc::get_world(m),
+        pfc::get_fft(m), [=, this](const pfc::Real3 &X, double current) {
           const double x = X[0];
           const double dist = x - xpos;
           auto blend = [&](double d) {
