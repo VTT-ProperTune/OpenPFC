@@ -24,7 +24,8 @@
  * pfc::DataBuffer<pfc::backend::CpuTag, double> cpu_buf(1000);
  * cpu_buf[0] = 1.0;  // Works - CPU has operator[]
  *
- * // GPU memory: include openpfc/runtime/cuda/databuffer_cuda.hpp
+ * // GPU memory: include openpfc/runtime/gpu/databuffer_gpu.hpp
+ * // (or the thin runtime/cuda / runtime/hip shims)
  * // (and backend_tags_cuda.hpp as needed)
  * pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_buf(1000);
  * std::vector<double> host_data(1000, 1.0);
