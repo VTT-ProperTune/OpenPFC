@@ -155,10 +155,12 @@ TEST_CASE("FieldHandle: value semantics and std::hash", "[simulation_state][unit
   REQUIRE(labels.at(c) == 5);
 }
 
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
-#include <openpfc/runtime/cuda/memory_space_cuda.hpp>
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
+#include <openpfc/runtime/gpu/databuffer_gpu.hpp>
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>
+#endif
 
+#if defined(OpenPFC_ENABLE_CUDA)
 // Compile-only coverage for Device memory space (CPU SIF cannot execute these).
 // Satisfies the "multiple T / Device combinations" acceptance criterion when
 // the CUDA toolchain builds this TU.
@@ -185,3 +187,27 @@ TEST_CASE("SimulationState: CudaSpace fields register by name (compile check)",
   (void)uref.residency();
 }
 #endif // OpenPFC_ENABLE_CUDA
+
+#if defined(OpenPFC_ENABLE_HIP)
+TEST_CASE("SimulationState: HipSpace fields register by name (compile check)",
+          "[simulation_state][unit][hip]") {
+  using namespace pfc;
+  SimulationState state;
+
+  data::Field<double, HipSpace> u(domain::create({4, 2, 1}), whole_box(4, 2, 1), 0);
+  data::Field<std::complex<double>, HipSpace> uh(domain::create({4, 2, 1}),
+                                                 whole_box(4, 2, 1), 0);
+
+  state.add_field<double, HipSpace>("u_dev", std::move(u));
+  state.add_field<std::complex<double>, HipSpace>("uh_dev", std::move(uh));
+
+  REQUIRE(state.has_field("u_dev"));
+  REQUIRE(state.has_field("uh_dev"));
+  REQUIRE(state.num_fields() == 2);
+
+  auto &uref = state.get_field<double, HipSpace>("u_dev");
+  uref.sync_to_device();
+  uref.note_device_write();
+  (void)uref.residency();
+}
+#endif // OpenPFC_ENABLE_HIP

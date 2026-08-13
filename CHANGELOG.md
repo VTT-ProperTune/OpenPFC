@@ -71,6 +71,7 @@ source compatibility is explicitly not a goal.
 - Architecture, styleguide, and `DataBuffer` diagnostics name `runtime/gpu/` as the CUDA/HIP implementation layer; vendor `runtime/cuda` / `runtime/hip` trees are documented as thin includes plus FFT until M5.
 - Shared Tungsten GPU headers and vendor FFT headers include `runtime/gpu/` DataBuffer/tags directly instead of hopping through CUDA/HIP shims.
 - Dual CUDA/HIP unit tests include `runtime/gpu/` SparseVector exchange and DataBuffer headers instead of duplicated vendor shims.
+- `SimulationState` device-field compile coverage includes `HipSpace` (CUDA twin already existed) and includes `runtime/gpu/` memory-space headers.
 - Halo-exchange concept docs list canonical GPU sources under `runtime/gpu/` (vendor CUDA/HIP headers are thin includes); HIP packed-halo env and kernel-library split are documented alongside CUDA.
 - FD/halo Doxygen `@see` comments and per-point-gradient docs point at `runtime/gpu/` device twins, not CUDA-only vendor headers.
 
