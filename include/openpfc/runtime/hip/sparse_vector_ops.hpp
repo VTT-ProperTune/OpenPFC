@@ -3,56 +3,11 @@
 
 /**
  * @file sparse_vector_ops.hpp
- * @brief HIP gather/scatter for SparseVector (runtime extension)
+ * @brief HIP SparseVector gather/scatter (thin include of the M3 GPU source).
  *
- * Include this header when using gather() or scatter() with SparseVector<HipTag,
- * T>. Kernel-only code should not include this; kernel remains backend-agnostic when
- * HIP is disabled.
+ * @see runtime/gpu/sparse_vector_ops_gpu.hpp
  */
 
 #pragma once
 
-#if defined(OpenPFC_ENABLE_HIP)
-
-#include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
-#include <openpfc/runtime/hip/sparse_vector_ops_hip.hpp>
-#include <stdexcept>
-
-namespace pfc {
-namespace core {
-
-/**
- * @brief Gather for SparseVector<HipTag, double> (HIP device).
- * @note Fail-closed OOB parity with CPU `pfc::core::gather` in
- *       `kernel/decomposition/sparse_vector_ops.hpp`: `idx >= source_size`
- *       throws `std::runtime_error("gather: index out of bounds")`.
- */
-inline void gather(SparseVector<backend::HipTag, double> &sparse_vector,
-                   const double *source, size_t source_size) {
-  if (sparse_vector.empty()) {
-    return;
-  }
-  gather_hip_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                  sparse_vector.data().data(), source, source_size);
-}
-
-/**
- * @brief Scatter for SparseVector<HipTag, double> (HIP device).
- * @note Fail-closed OOB parity with CPU `pfc::core::scatter` in
- *       `kernel/decomposition/sparse_vector_ops.hpp`: `idx >= dest_size`
- *       throws `std::runtime_error("scatter: index out of bounds")`.
- */
-inline void scatter(const SparseVector<backend::HipTag, double> &sparse_vector,
-                    double *dest, size_t dest_size) {
-  if (sparse_vector.empty()) {
-    return;
-  }
-  scatter_hip_impl(sparse_vector.size(), sparse_vector.indices().data(),
-                   sparse_vector.data().data(), dest, dest_size);
-}
-
-} // namespace core
-} // namespace pfc
-
-#endif
+#include <openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp>

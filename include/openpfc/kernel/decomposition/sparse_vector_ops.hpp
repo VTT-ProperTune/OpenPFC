@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -80,7 +80,7 @@ void gather(SparseVector<BackendTag, T> &sparse_vector, const T *source,
   } else {
     static_assert(
         dependent_false<BackendTag>,
-        "CudaTag requires #include <openpfc/runtime/cuda/sparse_vector_ops.hpp>");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp");
   }
 }
 
@@ -136,7 +136,7 @@ void scatter(const SparseVector<BackendTag, T> &sparse_vector, T *dest,
   } else {
     static_assert(
         dependent_false<BackendTag>,
-        "CudaTag requires #include <openpfc/runtime/cuda/sparse_vector_ops.hpp>");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp");
   }
 }
 

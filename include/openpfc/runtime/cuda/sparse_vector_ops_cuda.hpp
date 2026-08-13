@@ -3,54 +3,11 @@
 
 /**
  * @file sparse_vector_ops_cuda.hpp
- * @brief CUDA implementation of gather/scatter for SparseVector (device pointers)
+ * @brief CUDA gather/scatter impl decls (thin include of the M3 GPU source).
  *
- * Declarations for gather_cuda_impl and scatter_cuda_impl. Only included and
- * linked when OpenPFC_ENABLE_CUDA is defined. Use
- * openpfc/runtime/cuda/sparse_vector_ops.hpp for gather/scatter overloads for
- * SparseVector<CudaTag, T>.
- *
- * Fail-closed OOB: any index `>=` the dense length throws `std::runtime_error`
- * with the same messages as CPU (`gather: index out of bounds` /
- * `scatter: index out of bounds`) before any device write.
+ * @see runtime/gpu/sparse_vector_ops_gpu.hpp
  */
 
 #pragma once
 
-#if defined(OpenPFC_ENABLE_CUDA)
-
-#include <cstddef>
-
-namespace pfc {
-namespace core {
-
-/**
- * @brief Gather on device: data[i] = source[indices[i]] for i in [0, n)
- * @param n Number of entries
- * @param indices Device pointer to indices (size_t)
- * @param data Device pointer to output data (written)
- * @param source Device pointer to source array
- * @param source_size Size of source; any `indices[i] >= source_size` throws
- *        `std::runtime_error("gather: index out of bounds")` before the kernel
- *        runs (parity with CPU `pfc::core::gather`)
- */
-void gather_cuda_impl(size_t n, const size_t *indices, double *data,
-                      const double *source, size_t source_size);
-
-/**
- * @brief Scatter on device: dest[indices[i]] = data[i] for i in [0, n)
- * @param n Number of entries
- * @param indices Device pointer to indices (size_t)
- * @param data Device pointer to input data (read)
- * @param dest Device pointer to destination array
- * @param dest_size Size of dest; any `indices[i] >= dest_size` throws
- *        `std::runtime_error("scatter: index out of bounds")` before the kernel
- *        runs (parity with CPU `pfc::core::scatter`)
- */
-void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
-                       double *dest, size_t dest_size);
-
-} // namespace core
-} // namespace pfc
-
-#endif
+#include <openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp>
