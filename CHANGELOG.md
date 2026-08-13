@@ -65,6 +65,7 @@ source compatibility is explicitly not a goal.
 - Heat3D/Wave2D structural `rhs()` tests renamed off `vs_legacy_step` (they were never numerical vs-legacy baselines). Checkpoint headers/docs state that restart loading is not implemented.
 - Bare `cmake` on a single-config generator defaults to `RelWithDebInfo`, not Debug (`cmake/ProjectSetup.cmake`; documented in `INSTALL.md`).
 - `tests/benchmarks/README.md` no longer lists machine-specific nanosecond/millisecond claims; measure locally in Release.
+- State-access design docs describe GPU storage as `pfc::core::DataBuffer` (`CudaTag`/`HipTag`); `pfc::gpu::GPUVector` is gone.
 - `NAN_CHECK_ENABLED` is a PUBLIC compile definition on `openpfc` when Debug is selected or `OpenPFC_ENABLE_NAN_CHECK=ON`, instead of directory-scope `add_compile_definitions`.
 - GPU SparseVector host-to-device copy failures report `"HIP copy failed: …"` with the runtime string, matching CUDA; unused duplicate `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` shims removed (`sparse_vector_ops.hpp` remains).
 - `for_each_interior_device` launch/sync failures use `GPU_CHECK` (`"GPU error: …"`) instead of a per-overload hand-rolled check. Kernel `.inc` files still prefix CUDA/HIP; co-enabled TUs still use `cuda_check` / `hip_check`.

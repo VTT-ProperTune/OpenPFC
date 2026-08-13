@@ -280,10 +280,10 @@ public:
 using namespace pfc::field;
 
 // CPU storage
-std::vector<double> cpu_data(64, 1.0);
+pfc::core::DataBuffer<pfc::backend::CpuTag, double> cpu_data(64);
 
-// GPU storage (when implemented)
-// pfc::gpu::GPUVector<double> gpu_data(64, 1.0);
+// GPU storage (include databuffer_gpu.hpp or the vendor shim)
+pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_data(64);
 
 // Define geometry
 pfc::types::Int3 extents{4, 4, 4};
@@ -292,7 +292,7 @@ pfc::types::Real3 origin{0.0, 0.0, 0.0};
 
 // Same API for both backends
 FieldView<double> cpu_view(cpu_data.data(), cpu_data.size(), extents, spacing, origin);
-// FieldView<double> gpu_view(gpu_data.data(), gpu_data.size(), extents, spacing, origin);
+FieldView<double> gpu_view(gpu_data.data(), gpu_data.size(), extents, spacing, origin);
 
 // Same operations work for both
 std::size_t size = cpu_view.size();

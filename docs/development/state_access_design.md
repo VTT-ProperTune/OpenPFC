@@ -124,13 +124,13 @@ pfc::data::Field<double, pfc::HostSpace> v =
 
 **CPU pattern**:
 ```cpp
-std::vector<double> m_data;
+pfc::core::DataBuffer<pfc::backend::CpuTag, double> m_data(n);
 double* data() noexcept { return m_data.data(); }  // Host pointer
 ```
 
-**GPU pattern** (when implemented):
+**GPU pattern**:
 ```cpp
-pfc::gpu::GPUVector<double> m_data;
+pfc::core::DataBuffer<pfc::backend::CudaTag, double> m_data(n);
 double* data() noexcept { return m_data.data(); }  // Device pointer
 ```
 
@@ -355,8 +355,8 @@ The design enables CUDA/HIP implementation without changing semantic contracts:
 ### Example CUDA Path
 
 ```cpp
-// GPU storage allocation (backend-specific)
-pfc::gpu::GPUVector<double> u_gpu(size);
+// GPU storage allocation (backend-specific DataBuffer)
+pfc::core::DataBuffer<pfc::backend::CudaTag, double> u_gpu(size);
 
 // Create backend-agnostic view
 FieldView<double> u_view(u_gpu.data(), u_gpu.size(), extents, spacing, origin);
@@ -380,7 +380,7 @@ The following items are explicitly out of scope for this design slice:
 - Runtime string-based factory methods: Not needed for value-semantic types
 - Single unified container: Different types for different purposes is acceptable
 - One fixed layout: Backend-specific layouts permitted
-- Preservation of `GPUVector` or other legacy symbols: Evidence only, can be refactored
+- `pfc::gpu::GPUVector` was removed in M3; `pfc::core::DataBuffer` is the storage primitive
 - Integration with driver orchestration: Covered in later work items
 - Operator evaluation seam implementation: Covered in later work items
 - Method invocation seam: Covered in later work items
