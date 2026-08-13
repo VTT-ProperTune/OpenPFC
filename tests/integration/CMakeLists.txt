@@ -31,6 +31,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/gpu_validation/test_cuda_vs_cpu.cpp
   scenarios/gpu_validation/test_gpu_backend_instantiation.cpp
   scenarios/gpu_validation/test_cuda_roundtrip.cpp
+  scenarios/gpu_validation/test_hip_roundtrip.cpp
   scenarios/gpu_validation/test_cuda_vs_cpu_laplacian.cpp
   scenarios/gpu_validation/test_cuda_vs_cpu_laplacian_mpi.cpp
   scenarios/convergence_studies/test_temporal_convergence.cpp
