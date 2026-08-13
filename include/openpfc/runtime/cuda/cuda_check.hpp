@@ -3,29 +3,11 @@
 
 /**
  * @file cuda_check.hpp
- * @brief Shared CUDA error check helper for runtime/cuda headers
+ * @brief CUDA error-check helper (thin include of the M3 GPU source).
+ *
+ * @see runtime/gpu/gpu_check.hpp
  */
 
 #pragma once
 
-#if defined(OpenPFC_ENABLE_CUDA)
-
-#include <cuda_runtime.h>
-#include <stdexcept>
-#include <string>
-
-namespace pfc {
-namespace cuda {
-namespace detail {
-
-inline void cuda_check(cudaError_t e, const char *what) {
-  if (e != cudaSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
-  }
-}
-
-} // namespace detail
-} // namespace cuda
-} // namespace pfc
-
-#endif // OpenPFC_ENABLE_CUDA
+#include <openpfc/runtime/gpu/gpu_check.hpp>

@@ -3,29 +3,11 @@
 
 /**
  * @file hip_check.hpp
- * @brief Shared HIP error check helper for runtime/hip headers
+ * @brief HIP error-check helper (thin include of the M3 GPU source).
+ *
+ * @see runtime/gpu/gpu_check.hpp
  */
 
 #pragma once
 
-#if defined(OpenPFC_ENABLE_HIP)
-
-#include <hip/hip_runtime.h>
-#include <stdexcept>
-#include <string>
-
-namespace pfc {
-namespace hip {
-namespace detail {
-
-inline void hip_check(hipError_t e, const char *what) {
-  if (e != hipSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
-  }
-}
-
-} // namespace detail
-} // namespace hip
-} // namespace pfc
-
-#endif // OpenPFC_ENABLE_HIP
+#include <openpfc/runtime/gpu/gpu_check.hpp>
