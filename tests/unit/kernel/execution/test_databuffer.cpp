@@ -133,12 +133,14 @@ TEST_CASE("DataBuffer CPU backend traits", "[core][databuffer][cpu]") {
   REQUIRE(traits::requires_transfer == false);
 }
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 #include "unit/runtime/gpu/test_helpers.hpp"
-#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
-#include <openpfc/runtime/cuda/databuffer_cuda.hpp>
-#include <openpfc/runtime/cuda/memory_traits_cuda.hpp>
+#include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
+#include <openpfc/runtime/gpu/databuffer_gpu.hpp>
+#include <openpfc/runtime/gpu/memory_traits_gpu.hpp>
+#endif
 
+#if defined(OpenPFC_ENABLE_CUDA)
 TEST_CASE("DataBuffer CUDA construction", "[core][databuffer][cuda]") {
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
@@ -295,11 +297,6 @@ TEST_CASE("DataBuffer CUDA backend traits", "[core][databuffer][cuda]") {
 #endif // OpenPFC_ENABLE_CUDA
 
 #if defined(OpenPFC_ENABLE_HIP)
-#include "unit/runtime/gpu/test_helpers.hpp"
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
-#include <openpfc/runtime/hip/databuffer_hip.hpp>
-#include <openpfc/runtime/hip/memory_traits_hip.hpp>
-
 TEST_CASE("DataBuffer HIP resize", "[core][databuffer][hip]") {
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");

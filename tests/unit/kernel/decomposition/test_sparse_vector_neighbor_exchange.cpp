@@ -26,18 +26,9 @@
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 #include "unit/runtime/gpu/test_helpers.hpp"
-#endif
-
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
-#include <openpfc/runtime/cuda/exchange_cuda.hpp>
-#include <openpfc/runtime/cuda/sparse_vector_cuda.hpp>
-#endif
-
-#if defined(OpenPFC_ENABLE_HIP)
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
-#include <openpfc/runtime/hip/exchange_hip.hpp>
-#include <openpfc/runtime/hip/sparse_vector_hip.hpp>
+#include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
+#include <openpfc/runtime/gpu/exchange_gpu.hpp>
+#include <openpfc/runtime/gpu/sparse_vector_gpu.hpp>
 #endif
 
 using namespace pfc;
