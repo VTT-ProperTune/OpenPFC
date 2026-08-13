@@ -36,6 +36,7 @@ source compatibility is explicitly not a goal.
 - HIP-parity gpu_validation tests: `test_multi_field_device.hip` and `test_composite_gradient_pod_size_hip.hip` (HIP twins of the CUDA-only multi-field `for_each_interior_device` and composite-gradient POD layout cases)
 - HIP FFT unit test `tests/unit/runtime/gpu/test_fft_hip.cpp` (`HIP_FFT`), gated on `OpenPFC_ENABLE_HIP_SPECTRAL` — twin of CUDA `test_fft_cuda.cpp` using `pfc::fft::create_hip` and `HipTag` DataBuffers
 - HIP FFT integration roundtrip `tests/integration/scenarios/gpu_validation/test_hip_roundtrip.cpp` — twin of CUDA `test_cuda_roundtrip.cpp` (float/double DataBuffer forward/backward)
+- HIP CPU-vs-GPU Laplacian integration tests `test_hip_vs_cpu_laplacian.cpp` and `test_hip_vs_cpu_laplacian_mpi.cpp` — twins of the CUDA Laplacian gpu_validation scenarios
 - `pfc::fft::Backend::HIP` and `backend_from_string("hip"` / `"rocm")` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on; JSON `from_json<fft::Backend>` and `create_with_backend` accept HIP the same way they already accept CUDA
 
 ### Fixed

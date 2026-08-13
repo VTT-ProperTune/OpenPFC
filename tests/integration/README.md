@@ -14,13 +14,13 @@ This directory contains integration tests for OpenPFC, focused on validating end
 - **field_operations**: FieldModifier integrations and IC/BC application.
 - **gpu_validation**: CUDA/HIP tests (cases compile to skip stubs when the vendor spectral backend is off):
 	- CUDA / HIP DataBuffer roundtrip (forward/backward, float/double)
-	- CPU vs CUDA Laplacian equivalence (single rank)
-	- CPU vs CUDA Laplacian equivalence (multi-rank MPI)
+	- CPU vs CUDA / HIP Laplacian equivalence (single rank)
+	- CPU vs CUDA / HIP Laplacian equivalence (multi-rank MPI)
 	- HIP multi-field `for_each_interior_device` and composite-gradient POD layout (HIP twins of the CUDA device TUs)
 - **convergence_studies**: Heuristic convergence checks for temporal resolution.
 
 ## Tags
-All tests are tagged with `[integration]` and a category-specific tag (e.g., `[complete]`, `[io]`, `[mpi]`, `[gpu]`, `[convergence]`). Multi-rank MPI suites are registered as separate CTest targets when **`OpenPFC_RUN_MPI_SUITES=ON`** at configure time (as in **`.github/workflows/ci.yml`**). GPU/CUDA cases require **`OpenPFC_ENABLE_CUDA=ON`** (and **`OpenPFC_ENABLE_CUDA_SPECTRAL`** for FFT roundtrip). HIP FFT roundtrip requires **`OpenPFC_ENABLE_HIP_SPECTRAL`**.
+All tests are tagged with `[integration]` and a category-specific tag (e.g., `[complete]`, `[io]`, `[mpi]`, `[gpu]`, `[convergence]`). Multi-rank MPI suites are registered as separate CTest targets when **`OpenPFC_RUN_MPI_SUITES=ON`** at configure time (as in **`.github/workflows/ci.yml`**). GPU/CUDA cases require **`OpenPFC_ENABLE_CUDA=ON`** (and **`OpenPFC_ENABLE_CUDA_SPECTRAL`** for FFT roundtrip and Laplacian). HIP FFT roundtrip and Laplacian require **`OpenPFC_ENABLE_HIP_SPECTRAL`**.
 
 ## Running
 Build and run the test suite:
@@ -70,5 +70,5 @@ mpirun -np 2 ./tests/openpfc-tests -r console "[integration][gpu][mpi]"
 
 ### Notes
 - MPI-dependent tests should remain robust in single-rank runs; where multi-rank behavior is required, tag with `[mpi]` and guard accordingly.
-- CUDA tests compile to skip stubs when `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_CUDA_SPECTRAL` is off; HIP FFT roundtrip does the same when `OpenPFC_ENABLE_HIP_SPECTRAL` is off.
+- CUDA tests compile to skip stubs when `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_CUDA_SPECTRAL` is off; HIP FFT roundtrip and Laplacian do the same when `OpenPFC_ENABLE_HIP_SPECTRAL` is off.
 - Tests follow the OpenPFC philosophy: transparent structs and free functions; assertions focus on invariants and measurable quantities.
