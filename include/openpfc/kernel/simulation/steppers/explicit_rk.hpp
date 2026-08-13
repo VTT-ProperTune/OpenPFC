@@ -50,7 +50,6 @@
 #include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>

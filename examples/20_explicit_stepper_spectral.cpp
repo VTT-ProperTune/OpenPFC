@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
   constexpr int n_steps = 40;
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
-  // Build spectral stack (Domain + Decomposition + FFT + inbox-sized LocalField)
+  // Build spectral stack (Domain + Decomposition + FFT + inbox-sized Field)
   pfc::sim::stacks::SpectralCpuStack stack(
     pfc::GridSize{{N, N, N}},
     pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},

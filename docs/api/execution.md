@@ -27,15 +27,6 @@ explained in [Halo exchange](../concepts/halo_exchange.md).
 :no-link:
 ```
 
-## `pfc::field::LocalField`
-
-```{doxygenclass} pfc::field::LocalField
-:project: OpenPFC
-:members:
-:protected-members:
-:no-link:
-```
-
 ## `pfc::field::PaddedBrick`
 
 ```{doxygenclass} pfc::field::PaddedBrick

@@ -35,6 +35,10 @@ source compatibility is explicitly not a goal.
 - `scripts/build.sh` (Tohtori) auto-detects a custom CUDA-aware Open MPI build (see `scripts/build_tohtori.sh --cuda`) and uses it in place of the site `openmpi/5.0.10` module when present, defaulting `MPI_CUDA_AWARE` to `ON` in that case. Without it, the default stays `OFF`: the site module links a UCX built without `--with-cuda`, and passing device pointers to it segfaults despite Open MPI's own `MPIX_Query_cuda_support()` probe claiming support.
 - `scripts/build_tohtori.sh` gained a `--cuda` flag to build UCX (`cuda_copy`/`cuda_ipc` transports) and Open MPI (`accelerator/cuda` component) with genuine GPU-aware MPI support.
 
+### Removed
+
+- `pfc::field::LocalField` (`kernel/field/local_field.hpp`). Use `pfc::data::Field` with `field_from_subdomain_unpadded` (unpadded storage) or `field_from_inbox` for spectral inboxes. Stepper factories already bound `Field`.
+
 ## [0.1.5] - 2026-07-23
 
 Final stable 0.1.x release: a correctness and packaging pass ("Pre-M0

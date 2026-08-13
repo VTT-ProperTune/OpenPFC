@@ -46,7 +46,7 @@
  *      point-wise driver loop the `create` factories wrap
  * @see openpfc/kernel/field/grad_concepts.hpp for the per-member detection
  *      concepts that drive backend pruning
- * @see openpfc/kernel/field/local_field.hpp for the typed field bundle
+ * @see openpfc/kernel/data/grid_field.hpp for the typed field bundle
  *      that the `Field` overload derives `local_size` from
  * @see imex_euler.hpp for first-order IMEX Euler (`ImexEulerStepper`)
  */
@@ -57,7 +57,6 @@
 #include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/field/local_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/stepper_validation.hpp>
