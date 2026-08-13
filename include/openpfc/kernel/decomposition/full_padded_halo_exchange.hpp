@@ -35,7 +35,7 @@
  * is the rank's **first** `hw` owned cells along `a`.
  *
  * @see padded_halo_exchange.hpp — single-pass 6-face host exchanger
- * @see runtime/cuda/full_padded_device_halo.hpp — device twin (CUDA)
+ * @see runtime/gpu/full_padded_device_halo_gpu.hpp — device twin (CUDA/HIP)
  */
 
 #include <array>

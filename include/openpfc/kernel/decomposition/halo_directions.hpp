@@ -50,8 +50,8 @@
  * @see sparse_halo_exchange.hpp + halo_face_layout.hpp for the sparse
  *      `pfc::SparseHaloExchanger` and the `make_structured_halos` helper
  *      that turns a `HaloDirectionSet` into a `RemoteHalo` list.
- * @see runtime/cuda/padded_device_halo_exchange.hpp /
- *      runtime/cuda/full_padded_device_halo.hpp for the CUDA exchangers.
+ * @see runtime/gpu/padded_device_halo_exchange_gpu.hpp /
+ *      runtime/gpu/full_padded_device_halo_gpu.hpp for the CUDA/HIP exchangers.
  */
 
 #include <algorithm>

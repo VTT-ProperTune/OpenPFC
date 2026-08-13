@@ -46,7 +46,7 @@
  *
  * @note `to_tuple` is **host-oriented**. Device multi-field scatter uses
  *       `DevicePtrPackN` / `scatter_device` in
- *       `runtime/cuda/for_each_interior_device.hpp` and must not call
+ *       `runtime/gpu/for_each_interior_device_gpu.hpp` and must not call
  *       `to_tuple`, `std::get`, `std::apply`, or `std::forward_as_tuple`
  *       from `__device__` code.
  *

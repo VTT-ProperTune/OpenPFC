@@ -74,7 +74,7 @@
  * @see fd_stencils.hpp for the underlying stencil tables
  * @see full_padded_halo_exchange.hpp for the host 26-direction exchanger
  *      (corners proven; `xy/xz/yz` member enablement is a follow-up)
- * @see runtime/cuda/full_padded_device_halo.hpp for the device twin
+ * @see runtime/gpu/full_padded_device_halo_gpu.hpp for the device twin
  */
 
 #include <cstddef>

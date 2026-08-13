@@ -62,7 +62,7 @@
  *      primitives via the runtime overloads
  * @see full_padded_halo_exchange.hpp for the host corner-filled
  *      26-direction exchanger
- * @see runtime/cuda/full_padded_device_halo.hpp for the device twin
+ * @see runtime/gpu/full_padded_device_halo_gpu.hpp for the device twin
  */
 
 #include <cstddef>
