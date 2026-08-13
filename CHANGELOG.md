@@ -64,7 +64,7 @@ source compatibility is explicitly not a goal.
 - `pfc::field::Field<T>` (`kernel/data/field.hpp`). Use `pfc::data::Field`. Steppers, stacks, and factories already bound the canonical type; the functional container had no remaining callers.
 - `pfc::field::make_legacy_modifier` (`kernel/field/legacy_adapter.hpp`). Wrap a lambda in a `FieldModifier` and call `pfc::field::apply` instead.
 - `pfc::field::apply(Model&, name, fn)` and the matching `apply_with_time` / `apply_inplace*` Model overloads. Call `apply(get_real_field(m, name), get_world(m), get_fft(m), fn)` instead so `operations.hpp` no longer includes the simulation layer.
-- `pfc::MultiIndex` (`kernel/data/multi_index.hpp`). Use `pfc::Box3i` with `for_each_index` and `Box3i::to_linear`. Example 06 was retargeted.
+- `pfc::gpu::GPUVector` (`runtime/cuda/gpu_vector.hpp`), `kernels_simple` (`add_scalar` / `multiply_scalar`), and their CUDA unit tests. Use `pfc::core::DataBuffer` (or `pfc::data::Field`) for device storage.
 
 ## [0.1.5] - 2026-07-23
 

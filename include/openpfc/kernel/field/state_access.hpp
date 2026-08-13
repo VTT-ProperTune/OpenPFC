@@ -45,8 +45,8 @@ namespace pfc::field {
  *
  * @details
  * FieldView<T> provides const access to field data and geometry metadata.
- * It is backend-agnostic and works with any contiguous storage (CPU std::vector,
- * GPU GPUVector, etc.). The view does not own the underlying data.
+ * It is backend-agnostic and works with any contiguous storage (CPU `std::vector`,
+ * GPU `DataBuffer`, etc.). The view does not own the underlying data.
  *
  * Geometry metadata includes:
  * - Extents: Grid dimensions (nx, ny, nz)
