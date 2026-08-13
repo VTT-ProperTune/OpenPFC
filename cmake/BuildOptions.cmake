@@ -15,8 +15,6 @@ if(OpenPFC_BUILD_TESTS)
   find_package(Catch2 REQUIRED)
   message(STATUS "✅ Catch2 v${Catch2_VERSION} found at ${Catch2_DIR}")
   add_subdirectory(tests)
-  message(STATUS "Installing openpfc-tests binary")
-  install(TARGETS openpfc-tests DESTINATION bin)
 endif()
 
 if(OpenPFC_BUILD_APPS)

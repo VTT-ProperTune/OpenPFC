@@ -76,7 +76,6 @@ This directory contains modular CMake configuration files that organize the buil
    - Header installation
    - Library installation
    - GPU kernel library installation (if enabled)
-   - nlohmann_json header installation (when built from source)
 
 11. **PackageConfig.cmake**
    - CMake package configuration file generation

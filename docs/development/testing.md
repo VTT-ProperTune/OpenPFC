@@ -11,7 +11,7 @@ OpenPFC ships a Catch2-based suite under `tests/`, built as the `openpfc-tests` 
 
 | CMake option | Default | Effect |
 |--------------|---------|--------|
-| `OpenPFC_BUILD_TESTS` | ON | `enable_testing()`, `find_package(Catch2)`, `add_subdirectory(tests)`, install `openpfc-tests` to `bin` on `cmake --install`. |
+| `OpenPFC_BUILD_TESTS` | ON | `enable_testing()`, `find_package(Catch2)`, `add_subdirectory(tests)`. The `openpfc-tests` binary stays in the build tree; it is not installed. |
 | `OpenPFC_BUILD_BENCHMARKS` | OFF | Adds slow benchmarks from `tests/benchmarks/` into the same `openpfc-tests` binary when ON. |
 
 Defined in `cmake/BuildOptions.cmake`.

@@ -3,20 +3,12 @@
 #
 # Installation rules for headers, libraries, and binaries
 
-# Install nlohmann_json headers, but only if nlohmann_json_SOURCE_DIR is
-# defined, i.e. the package is built from source during the configure step.
-# This is to avoid installing the headers if the package is installed from
-# a system wide package manager.
-if(DEFINED nlohmann_json_SOURCE_DIR)
-  message(STATUS "Installing nlohmann_json headers")
-  install(DIRECTORY ${nlohmann_json_SOURCE_DIR}/include/nlohmann
-          DESTINATION include
-  )
-endif()
-
 # Install public headers only. Device TUs live under src/openpfc/runtime/gpu/;
 # kernel .inc files stay in include/ as compile-time includes for those TUs
 # and are not installed. Stray .md under include/ must not ship.
+# FetchContent nlohmann_json is a build-time dependency only — do not dump its
+# headers into the prefix. Consumers that include JSON-using public headers
+# get nlohmann_json via find_dependency in OpenPFCConfig.cmake.
 install(DIRECTORY include/openpfc DESTINATION include
         FILES_MATCHING PATTERN "*.hpp")
 
@@ -27,14 +19,6 @@ install(TARGETS openpfc
     LIBRARY DESTINATION lib   # .so files
     RUNTIME DESTINATION bin   # executable files (not needed now but future proof)
 )
-
-# FetchContent nlohmann_json is linked to openpfc; CMake requires it in the same
-# export set when installing OpenPFCTargets. System nlohmann_json has no installable
-# target (only nlohmann_json::nlohmann_json), so gate on FetchContent.
-if(DEFINED nlohmann_json_SOURCE_DIR AND TARGET nlohmann_json)
-  install(TARGETS nlohmann_json EXPORT OpenPFCTargets
-    INCLUDES DESTINATION include)
-endif()
 
 # Install GPU kernel library if CUDA is enabled
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)

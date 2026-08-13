@@ -23,12 +23,9 @@ if(@OpenPFC_ENABLE_HDF5@)
   find_dependency(HDF5)
 endif()
 
-# nlohmann_json is a PUBLIC dependency of the openpfc target. When it was taken
-# from a system/config package the consumer must find it too; when vendored via
-# FetchContent the target is part of OpenPFCTargets (included below).
-if(NOT @OpenPFC_NLOHMANN_JSON_VENDORED@)
-  find_dependency(nlohmann_json)
-endif()
+# nlohmann_json is required by public headers (frontend JSON, profiling).
+# Always find it: FetchContent copies used to build OpenPFC are not installed.
+find_dependency(nlohmann_json)
 
 if (NOT TARGET Heffte::Heffte)
     set(_OpenPFC_CONFIGURED_HEFFTE_DIR "@Heffte_DIR@")

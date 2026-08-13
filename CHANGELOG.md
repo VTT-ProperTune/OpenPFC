@@ -60,6 +60,7 @@ source compatibility is explicitly not a goal.
 - Device kernel TUs (`sparse_vector_ops.cu/.hip`, `padded_halo_faces.cu/.hip`) live under `src/openpfc/runtime/gpu/` instead of `include/` (and instead of `src/openpfc/runtime/cuda/` for the CUDA halo-face TU). CUDA `padded_halo_faces.cu` remains linked per executable because of separable-compilation device-link.
 - `deep_copy(view, scalar)` on a device View and `deep_copy(buffer, scalar)` for CUDA/HIP `DataBuffer` run a device fill kernel (`runtime/gpu/fill_gpu`) instead of staging a host vector. Unmanaged device Views can be filled. Device scalar fill supports `float` and `double`; include `deep_copy_gpu.hpp` (or the vendor shim).
 - Tungsten CUDA/HIP `multiply_complex_real` and `apply_time_integration` call `runtime/gpu/elementwise_ops_gpu` instead of duplicating those kernels. Nonlinear and stabilization kernels stay in the Tungsten TUs.
+- `cmake --install` no longer ships FetchContent `nlohmann_json` headers or the `openpfc-tests` binary. `find_package(OpenPFC)` always `find_dependency(nlohmann_json)`.
 - GPU SparseVector host-to-device copy failures report `"HIP copy failed: …"` with the runtime string, matching CUDA; unused duplicate `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` shims removed (`sparse_vector_ops.hpp` remains).
 
 ### Removed
