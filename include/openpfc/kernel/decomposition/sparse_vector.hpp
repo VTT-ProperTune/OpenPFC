@@ -63,8 +63,7 @@ void copy_indices_to_device_impl(DataBuffer<BackendTag, size_t> &buf, size_t n,
   } else {
     static_assert(
         dependent_false_sparse_vector<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/cuda/sparse_vector_cuda.hpp "
-        "or openpfc/runtime/hip/sparse_vector_hip.hpp");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/sparse_vector_gpu.hpp");
   }
 }
 
@@ -76,8 +75,7 @@ void copy_data_to_device_impl(DataBuffer<BackendTag, T> &buf, size_t n,
   } else {
     static_assert(
         dependent_false_sparse_vector<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/cuda/sparse_vector_cuda.hpp "
-        "or openpfc/runtime/hip/sparse_vector_hip.hpp");
+        "CudaTag/HipTag: include openpfc/runtime/gpu/sparse_vector_gpu.hpp");
   }
 }
 

@@ -30,6 +30,7 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/exchange_gpu.hpp` — single-source GPU SparseVector MPI exchange; `exchange_cuda.hpp` / `exchange_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/fd_gradient_device_gpu.hpp` — single-source GPU FD gradient evaluator (CUDA composite + HIP padded-Field factory); vendor `fd_gradient_device.hpp` re-export into `pfc::cuda` / `pfc::hip`
 - `include/openpfc/runtime/gpu/for_each_interior_device_gpu.hpp` — single-source GPU interior driver (single-field + multi-field N=2–4 + autotune hook); vendor headers re-export into `pfc::sim::cuda` / `pfc::sim::hip`
+- `include/openpfc/runtime/gpu/sparse_vector_gpu.hpp` — single-source GPU SparseVector copy-to-device; `sparse_vector_cuda.hpp` / `sparse_vector_hip.hpp` are thin includes
 
 ### Fixed
 

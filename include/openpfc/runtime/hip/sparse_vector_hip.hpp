@@ -3,63 +3,11 @@
 
 /**
  * @file sparse_vector_hip.hpp
- * @brief HipTag support for SparseVector copy-to-device (runtime/hip)
+ * @brief HIP SparseVector copy-to-device (thin include of the M3 GPU source).
  *
- * Include when constructing SparseVector<backend::HipTag, T> with indices/data.
+ * @see runtime/gpu/sparse_vector_gpu.hpp
  */
 
 #pragma once
 
-#if defined(OpenPFC_ENABLE_HIP)
-
-#include <hip/hip_runtime.h>
-#include <openpfc/kernel/decomposition/sparse_vector.hpp>
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
-#include <openpfc/runtime/hip/databuffer_hip.hpp>
-#include <stdexcept>
-
-namespace pfc {
-namespace core {
-namespace detail {
-
-template <>
-inline void copy_indices_to_device_impl<backend::HipTag>(
-    DataBuffer<backend::HipTag, size_t> &buf, size_t n,
-    const std::vector<size_t> &host_indices) {
-  if (n == 0) return;
-  hipError_t err = hipMemcpy(buf.data(), host_indices.data(), n * sizeof(size_t),
-                             hipMemcpyHostToDevice);
-  if (err != hipSuccess) {
-    throw std::runtime_error("HIP copy failed");
-  }
-}
-
-template <>
-inline void copy_data_to_device_impl<backend::HipTag, double>(
-    DataBuffer<backend::HipTag, double> &buf, size_t n,
-    const std::vector<double> &host_data) {
-  if (n == 0) return;
-  hipError_t err = hipMemcpy(buf.data(), host_data.data(), n * sizeof(double),
-                             hipMemcpyHostToDevice);
-  if (err != hipSuccess) {
-    throw std::runtime_error("HIP copy failed");
-  }
-}
-
-template <>
-inline void copy_data_to_device_impl<backend::HipTag, float>(
-    DataBuffer<backend::HipTag, float> &buf, size_t n,
-    const std::vector<float> &host_data) {
-  if (n == 0) return;
-  hipError_t err = hipMemcpy(buf.data(), host_data.data(), n * sizeof(float),
-                             hipMemcpyHostToDevice);
-  if (err != hipSuccess) {
-    throw std::runtime_error("HIP copy failed");
-  }
-}
-
-} // namespace detail
-} // namespace core
-} // namespace pfc
-
-#endif // OpenPFC_ENABLE_HIP
+#include <openpfc/runtime/gpu/sparse_vector_gpu.hpp>
