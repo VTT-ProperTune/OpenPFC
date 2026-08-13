@@ -43,10 +43,10 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/host_device.hpp>
-#include <openpfc/runtime/hip/databuffer_hip.hpp>
+#include <openpfc/runtime/gpu/databuffer_gpu.hpp>
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 #include <openpfc/runtime/hip/fd_gradient_device.hpp>
 #include <openpfc/runtime/hip/for_each_interior_device.hpp>
-#include <openpfc/runtime/hip/memory_space_hip.hpp>
 
 namespace {
 

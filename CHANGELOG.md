@@ -83,6 +83,7 @@ source compatibility is explicitly not a goal.
 - CUDA/HIP fail-closed SparseVector exchange tests include `runtime/gpu/` exchange, SparseVector, and check headers instead of vendor shims (keep native `cuda_check` / `hip_check` calls).
 - CUDA/HIP SparseVector unit tests (`test_sparsevector_cuda.cpp`, `test_sparsevector_hip.cpp`) include `runtime/gpu/` SparseVector headers instead of vendor shims (keep native `cudaMemcpy` / `hipMemcpy`).
 - CUDA/HIP padded device-halo tests (`test_padded_device_halo_self_wrap.cpp`, `test_padded_device_halo_self_wrap_hip.hip`, `test_full_padded_device_halo.cpp`) include `runtime/gpu/` halo headers instead of vendor shims
+- HIP fd-gradient gpu_validation test includes `runtime/gpu/` DataBuffer and HipSpace headers instead of vendor shims; vendor `fd_gradient_device.hpp` / `for_each_interior_device.hpp` re-exports stay (call sites use `pfc::hip::` / `pfc::sim::hip`)
 - `SimulationState` device-field compile coverage includes `HipSpace` (CUDA twin already existed) and includes `runtime/gpu/` memory-space headers.
 - SparseVector `on_host` coverage includes `HipTag` (CUDA twin already existed) and includes `runtime/gpu/` SparseVector headers.
 - Halo-exchange concept docs list canonical GPU sources under `runtime/gpu/` (vendor CUDA/HIP headers are thin includes); HIP packed-halo env and kernel-library split are documented alongside CUDA.
