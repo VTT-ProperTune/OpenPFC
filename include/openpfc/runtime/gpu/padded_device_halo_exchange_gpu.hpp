@@ -327,8 +327,8 @@ struct HipHaloOps {
 
   static constexpr const char *kind = "HIP";
   static constexpr const char *force_packed_env = "OPENPFC_HIP_FORCE_PACKED_HALO";
-  static constexpr const char *malloc_host_send = "hipMallocHost halo send";
-  static constexpr const char *malloc_host_recv = "hipMallocHost halo recv";
+  static constexpr const char *malloc_host_send = "hipHostMalloc halo send";
+  static constexpr const char *malloc_host_recv = "hipHostMalloc halo recv";
   static constexpr const char *malloc_scratch =
       "hipMalloc halo device scratch (pack/unpack)";
   static constexpr const char *sync_pre = "hipStreamSynchronize pre halo";
@@ -370,10 +370,10 @@ struct HipHaloOps {
     check(hipMalloc(p, bytes), what);
   }
   static void malloc_host(void **p, std::size_t bytes, const char *what) {
-    check(hipMallocHost(p, bytes), what);
+    check(hipHostMalloc(p, bytes, hipHostMallocDefault), what);
   }
   static void free_dev(void *p) { (void)hipFree(p); }
-  static void free_host(void *p) { (void)hipFreeHost(p); }
+  static void free_host(void *p) { (void)hipHostFree(p); }
   static void memcpy_async_d2h(void *dst, const void *src, std::size_t bytes,
                                stream_t stream, const char *what) {
     check(hipMemcpyAsync(dst, src, bytes, hipMemcpyDeviceToHost, stream), what);
