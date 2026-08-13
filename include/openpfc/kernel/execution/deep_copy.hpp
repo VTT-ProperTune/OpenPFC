@@ -6,15 +6,15 @@
  * @brief Kokkos-compatible deep_copy between Views and scalar fill
  *
  * @details
- * deep_copy copies data between Views (same shape) or fills a View with a
- * scalar. Handles host-host, host-device, and device-host. Names and
- * semantics match Kokkos. Device scalar fill requires
- * `runtime/gpu/deep_copy_gpu.hpp` (or the vendor shim) and runs a device
- * kernel rather than staging a host vector.
+ * `deep_copy` copies data between Views (same shape) or fills a host View with
+ * a scalar. Host-host, host-device, and device-host copies go through
+ * `DataBuffer` when the View is managed. Device-to-device View copies and
+ * device View scalar fill are not provided; use `DataBuffer` and
+ * `runtime/gpu/deep_copy_gpu.hpp`.
  *
  * @see view.hpp for View
  * @see execution_space.hpp for async variant
- * @see runtime/gpu/deep_copy_gpu.hpp for device-to-device copy and device fill
+ * @see runtime/gpu/deep_copy_gpu.hpp for DataBuffer device fill
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -75,13 +75,11 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, M1> &dst,
     return;
   }
 
-  // Both device: provided by runtime (include deep_copy_gpu.hpp, or the
-  // thin deep_copy_cuda.hpp / deep_copy_hip.hpp shims)
+  // Both device: View-to-View device copies are not provided. Use DataBuffer.
   constexpr bool both_device =
       !std::is_same_v<M1, HostSpace> && !std::is_same_v<M2, HostSpace>;
-  static_assert(
-      !both_device,
-      "deep_copy device-to-device: include openpfc/runtime/gpu/deep_copy_gpu.hpp");
+  static_assert(!both_device,
+                "deep_copy device-to-device View is not provided; use DataBuffer");
   (void)dst_ptr;
   (void)src_ptr;
   (void)n;
@@ -90,8 +88,8 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, M1> &dst,
 template <typename MemorySpace> struct deep_copy_device_fill_fn {
   template <typename T, std::size_t Rank, typename Layout>
   static void call(View<T, Rank, Layout, MemorySpace> & /*dst*/, const T & /*value*/) {
-    static_assert(sizeof(T) == 0, "deep_copy scalar fill on device: include "
-                                  "openpfc/runtime/gpu/deep_copy_gpu.hpp");
+    static_assert(sizeof(T) == 0, "deep_copy scalar fill on a device View is not "
+                                  "provided; use DataBuffer");
   }
 };
 

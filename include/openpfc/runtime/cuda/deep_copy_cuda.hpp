@@ -3,7 +3,7 @@
 
 /**
  * @file deep_copy_cuda.hpp
- * @brief CUDA device-to-device `deep_copy` (thin include of the M3 GPU source).
+ * @brief CUDA DataBuffer scalar `deep_copy` (thin include of the M3 GPU source).
  *
  * @see runtime/gpu/deep_copy_gpu.hpp
  */

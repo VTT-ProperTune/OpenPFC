@@ -6,8 +6,7 @@
  * @brief Device scalar fill kernels for CUDA and HIP (M3).
  *
  * Compiled from `src/openpfc/runtime/gpu/fill.cu` / `fill.hip`. Used by
- * `deep_copy(buffer, scalar)` (and remaining View fill overloads) so device
- * fills do not stage a host vector.
+ * `deep_copy(buffer, scalar)` so device fills do not stage a host vector.
  *
  * @see runtime/gpu/deep_copy_gpu.hpp
  */

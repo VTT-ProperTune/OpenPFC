@@ -3,7 +3,7 @@
 
 /**
  * @file deep_copy_hip.hpp
- * @brief HIP device-to-device `deep_copy` (thin include of the M3 GPU source).
+ * @brief HIP DataBuffer scalar `deep_copy` (thin include of the M3 GPU source).
  *
  * @see runtime/gpu/deep_copy_gpu.hpp
  */

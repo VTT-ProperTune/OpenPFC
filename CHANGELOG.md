@@ -19,7 +19,7 @@ source compatibility is explicitly not a goal.
 - `pfc::data::Field<T, MemorySpace>` — canonical owning field container unifying LocalField/PaddedBrick
 - `include/openpfc/runtime/gpu/gpu_api.hpp` — vendor shim (`gpuMalloc`, `gpuMemcpyAsync`, `gpuStream_t`, `GPU_CHECK`, `GPU_LAUNCH_KERNEL`) selected by CUDA vs HIP (`OPENPFC_HD` already covers `__HIPCC__` in `host_device.hpp`)
 - `include/openpfc/runtime/gpu/databuffer_gpu.hpp` — single-source GPU `DataBuffer` for CUDA and HIP; `databuffer_cuda.hpp` / `databuffer_hip.hpp` are thin includes
-- `include/openpfc/runtime/gpu/deep_copy_gpu.hpp` — single-source GPU device-to-device `deep_copy`; `deep_copy_cuda.hpp` / `deep_copy_hip.hpp` are thin includes
+- `include/openpfc/runtime/gpu/deep_copy_gpu.hpp` — single-source GPU `deep_copy(buffer, scalar)` fill; `deep_copy_cuda.hpp` / `deep_copy_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/memory_space_gpu.hpp` — single-source `CudaSpace` / `HipSpace`; `memory_space_cuda.hpp` / `memory_space_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/execution_space_gpu.hpp` — single-source `Cuda` / `HIP` execution space tags; `execution_space_cuda.hpp` / `execution_space_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/view_gpu.hpp` — single-source View `CudaSpace`/`HipSpace` execution-space mapping; `view_cuda.hpp` / `view_hip.hpp` are thin includes
@@ -58,7 +58,7 @@ source compatibility is explicitly not a goal.
 - HIP packed-halo pinned host buffers use `hipHostMalloc` / `hipHostFree` instead of the deprecated `hipMallocHost` / `hipFreeHost`.
 - `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_HIP` and `OpenPFC_MPI_CUDA_AWARE` / `OpenPFC_MPI_HIP_AWARE` are PUBLIC compile definitions on `openpfc` (and the vendor kernel libraries) instead of directory-scope `add_compile_definitions`, so `find_package(OpenPFC)` consumers see the same macros as the in-tree build.
 - Device kernel TUs (`sparse_vector_ops.cu/.hip`, `padded_halo_faces.cu/.hip`) live under `src/openpfc/runtime/gpu/` instead of `include/` (and instead of `src/openpfc/runtime/cuda/` for the CUDA halo-face TU). CUDA `padded_halo_faces.cu` remains linked per executable because of separable-compilation device-link.
-- `deep_copy(view, scalar)` on a device View and `deep_copy(buffer, scalar)` for CUDA/HIP `DataBuffer` run a device fill kernel (`runtime/gpu/fill_gpu`) instead of staging a host vector. Unmanaged device Views can be filled. Device scalar fill supports `float` and `double`; include `deep_copy_gpu.hpp` (or the vendor shim). GPU fill tests cover `DataBuffer` and raw `fill_*_impl` pointers; they no longer go through Kokkos `View`.
+- `deep_copy(buffer, scalar)` for CUDA/HIP `DataBuffer` runs a device fill kernel (`runtime/gpu/fill_gpu`) instead of staging a host vector. Device scalar fill supports `float` and `double`; include `deep_copy_gpu.hpp` (or the vendor shim). Device `View` fill and View-to-View device copies are not provided. GPU fill tests cover `DataBuffer` and raw `fill_*_impl` pointers.
 - Tungsten CUDA/HIP `multiply_complex_real` and `apply_time_integration` call `runtime/gpu/elementwise_ops_gpu` instead of duplicating those kernels. Nonlinear and stabilization kernels stay in the Tungsten TUs.
 - `cmake --install` no longer ships FetchContent `nlohmann_json` headers or the `openpfc-tests` binary. `find_package(OpenPFC)` always `find_dependency(nlohmann_json)`.
 - `OpenPFC_ENABLE_GPU_AUTOTUNING` is a PUBLIC compile definition on `openpfc` (and the vendor kernel libraries) instead of directory-scope `add_compile_definitions`.
