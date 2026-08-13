@@ -4,8 +4,8 @@
 # Installation rules for headers, libraries, and binaries
 
 # Install public headers only. Device TUs live under src/openpfc/runtime/gpu/;
-# kernel .inc files stay in include/ as compile-time includes for those TUs
-# and are not installed. Stray .md under include/ must not ship.
+# kernel .inc files live next to those TUs under src/ and are not installed.
+# Stray .md under include/ must not ship.
 # FetchContent nlohmann_json is a build-time dependency only — do not dump its
 # headers into the prefix. Consumers that include JSON-using public headers
 # get nlohmann_json via find_dependency in OpenPFCConfig.cmake.

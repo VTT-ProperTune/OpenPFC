@@ -10,6 +10,6 @@
 
 #if defined(OpenPFC_ENABLE_CUDA)
 
-#include <openpfc/runtime/gpu/elementwise_ops_gpu.inc>
+#include "elementwise_ops_gpu.inc"
 
 #endif

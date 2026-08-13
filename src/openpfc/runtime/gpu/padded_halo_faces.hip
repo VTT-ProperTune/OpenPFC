@@ -10,6 +10,6 @@
 
 #if defined(OpenPFC_ENABLE_HIP)
 
-#include <openpfc/runtime/gpu/padded_halo_faces_gpu.inc>
+#include "padded_halo_faces_gpu.inc"
 
 #endif // OpenPFC_ENABLE_HIP

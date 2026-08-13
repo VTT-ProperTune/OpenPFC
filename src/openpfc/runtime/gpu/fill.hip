@@ -10,6 +10,6 @@
 
 #if defined(OpenPFC_ENABLE_HIP)
 
-#include <openpfc/runtime/gpu/fill_gpu.inc>
+#include "fill_gpu.inc"
 
 #endif

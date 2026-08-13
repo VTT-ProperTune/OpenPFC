@@ -10,6 +10,6 @@
 
 #if defined(OpenPFC_ENABLE_CUDA)
 
-#include <openpfc/runtime/gpu/sparse_vector_ops_gpu.inc>
+#include "sparse_vector_ops_gpu.inc"
 
 #endif

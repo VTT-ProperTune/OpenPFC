@@ -9,8 +9,8 @@
  * `SparseVector<HipTag>`. Vendor `sparse_vector_ops.hpp` headers are thin
  * includes of this file.
  *
- * Device kernels live in `sparse_vector_ops_gpu.inc`, compiled from the
- * vendor `.cu` / `.hip` translation units.
+ * Device kernels live in `src/openpfc/runtime/gpu/sparse_vector_ops_gpu.inc`,
+ * compiled from the vendor `.cu` / `.hip` translation units.
  *
  * Fail-closed OOB: any index `>=` the dense length throws `std::runtime_error`
  * with the same messages as CPU (`gather: index out of bounds` /
