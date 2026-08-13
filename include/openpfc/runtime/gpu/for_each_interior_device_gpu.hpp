@@ -36,6 +36,10 @@
  * loop hand the same pointer to the next halo exchange without any
  * pad ↔ unpad bookkeeping.
  *
+ * Launch and stream errors use `GPU_CHECK` (`"GPU error: …"`). Kernel
+ * `.inc` files keep vendor-prefixed strings; co-enabled TUs keep
+ * `cuda_check` / `hip_check`.
+ *
  * **Usage** (inside a CUDA/HIP translation unit):
  *
  * @code
@@ -52,8 +56,6 @@
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
 #include <cstddef>
-#include <stdexcept>
-#include <string>
 #include <tuple>
 #include <type_traits>
 
@@ -242,6 +244,11 @@ inline dim3 for_each_interior_block(int nx, int ny, int nz) {
 #endif
 }
 
+inline void check_for_each_interior_device_launch(gpuStream_t stream) {
+  GPU_CHECK(::pfc::gpuGetLastError());
+  GPU_CHECK(::pfc::gpuStreamSynchronize(stream));
+}
+
 } // namespace detail
 
 /**
@@ -267,8 +274,8 @@ inline dim3 for_each_interior_block(int nx, int ny, int nz) {
  * @param nx,ny,nz    Owned-region extents of the local subdomain.
  * @param stream      GPU stream to launch on (0 for the default stream).
  *
- * @throws std::runtime_error if the kernel launch or synchronization fails.
- *         Both kernel launch and stream synchronization are checked.
+ * @throws std::runtime_error if the kernel launch or synchronization fails
+ *         (`GPU_CHECK`, message prefix `"GPU error: "`).
  */
 template <class Model, class G>
 inline void for_each_interior_device(const Model &model,
@@ -282,18 +289,7 @@ inline void for_each_interior_device(const Model &model,
   const dim3 grid = detail::for_each_interior_grid(nx, ny, nz, block);
   detail::for_each_interior_device_kernel<Model, G>
       <<<grid, block, 0, stream>>>(model, eval, du_padded, t, nx, ny, nz);
-  gpuError_t e = gpuGetLastError();
-  if (e != gpuSuccess) {
-    throw std::runtime_error(std::string("for_each_interior_device: kernel "
-                                         "launch failed: ") +
-                             gpuGetErrorString(e));
-  }
-  e = gpuStreamSynchronize(stream);
-  if (e != gpuSuccess) {
-    throw std::runtime_error(std::string("for_each_interior_device: synchronize "
-                                         "failed: ") +
-                             gpuGetErrorString(e));
-  }
+  detail::check_for_each_interior_device_launch(stream);
 }
 
 /**
@@ -316,20 +312,7 @@ for_each_interior_device(const Model &model,
   detail::for_each_interior_device_kernel_multi<Model, Composite, DevicePtrPack2,
                                                PerFieldGrads...>
       <<<grid, block, 0, stream>>>(model, eval, du, t, nx, ny, nz);
-  gpuError_t e = gpuGetLastError();
-  if (e != gpuSuccess) {
-    throw std::runtime_error(
-        std::string("for_each_interior_device(multi-field): kernel launch "
-                    "failed: ") +
-        gpuGetErrorString(e));
-  }
-  e = gpuStreamSynchronize(stream);
-  if (e != gpuSuccess) {
-    throw std::runtime_error(
-        std::string("for_each_interior_device(multi-field): synchronize "
-                    "failed: ") +
-        gpuGetErrorString(e));
-  }
+  detail::check_for_each_interior_device_launch(stream);
 }
 
 template <class Model, class Composite, class... PerFieldGrads>
@@ -346,20 +329,7 @@ for_each_interior_device(const Model &model,
   detail::for_each_interior_device_kernel_multi<Model, Composite, DevicePtrPack3,
                                                PerFieldGrads...>
       <<<grid, block, 0, stream>>>(model, eval, du, t, nx, ny, nz);
-  gpuError_t e = gpuGetLastError();
-  if (e != gpuSuccess) {
-    throw std::runtime_error(
-        std::string("for_each_interior_device(multi-field): kernel launch "
-                    "failed: ") +
-        gpuGetErrorString(e));
-  }
-  e = gpuStreamSynchronize(stream);
-  if (e != gpuSuccess) {
-    throw std::runtime_error(
-        std::string("for_each_interior_device(multi-field): synchronize "
-                    "failed: ") +
-        gpuGetErrorString(e));
-  }
+  detail::check_for_each_interior_device_launch(stream);
 }
 
 template <class Model, class Composite, class... PerFieldGrads>
@@ -376,20 +346,7 @@ for_each_interior_device(const Model &model,
   detail::for_each_interior_device_kernel_multi<Model, Composite, DevicePtrPack4,
                                                PerFieldGrads...>
       <<<grid, block, 0, stream>>>(model, eval, du, t, nx, ny, nz);
-  gpuError_t e = gpuGetLastError();
-  if (e != gpuSuccess) {
-    throw std::runtime_error(
-        std::string("for_each_interior_device(multi-field): kernel launch "
-                    "failed: ") +
-        gpuGetErrorString(e));
-  }
-  e = gpuStreamSynchronize(stream);
-  if (e != gpuSuccess) {
-    throw std::runtime_error(
-        std::string("for_each_interior_device(multi-field): synchronize "
-                    "failed: ") +
-        gpuGetErrorString(e));
-  }
+  detail::check_for_each_interior_device_launch(stream);
 }
 
 /**
