@@ -22,12 +22,12 @@
 #include <tuple>
 #include <vector>
 
-#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/host_device.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/field/composite_gradient.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
-#include <openpfc/kernel/field/padded_brick.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/runtime/cuda/fd_gradient_device.hpp>
 #include <openpfc/runtime/cuda/for_each_interior_device.hpp>
@@ -55,6 +55,15 @@ inline std::size_t lin(int pi, int pj, int pk, int nxp, int nyp) {
 
 inline std::size_t owned_origin(int hw, int nxp, int nyp) {
   return lin(hw, hw, hw, nxp, nyp);
+}
+
+pfc::data::Field<double> make_padded_host_field(int nx, int ny, int nz, double dx,
+                                                double dy, double dz, int hw) {
+  const auto domain = pfc::domain::create(pfc::GridSize({nx, ny, nz}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, dy, dz}));
+  const auto decomp = pfc::decomposition::create(domain, /*nparts=*/1);
+  return pfc::data::field_from_subdomain<double>(decomp, /*rank=*/0, hw);
 }
 
 // Catalog per-field grads (evaluate_fd_grad fills xx/yy/value).
@@ -274,13 +283,9 @@ TEST_CASE("test_evaluate_fd_grad_composite",
   REQUIRE(cudaMemcpy(h_out.data(), d_out, total * sizeof(CompEvalOut),
                      cudaMemcpyDeviceToHost) == cudaSuccess);
 
-  auto world = pfc::domain::create_world(pfc::GridSize({nx, ny, nz}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({dx, dy, dz}));
-  auto decomp = pfc::decomposition::create(world, /*nparts=*/1);
-  pfc::field::PaddedBrick<double> brick_u(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> brick_v(decomp, 0, hw);
-  REQUIRE(brick_u.nx() == nx);
+  auto brick_u = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto brick_v = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  REQUIRE(brick_u.local_size()[0] == nx);
   for (int pk = -hw; pk < nz + hw; ++pk) {
     for (int pj = -hw; pj < ny + hw; ++pj) {
       for (int pi = -hw; pi < nx + hw; ++pi) {
@@ -334,14 +339,10 @@ TEST_CASE("test_wave2d_double_field_kernel",
   const double inv_dx2 = 1.0;
   const double inv_dy2 = 1.0;
 
-  auto world = pfc::domain::create_world(pfc::GridSize({nx, ny, nz}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({dx, dy, dz}));
-  auto decomp = pfc::decomposition::create(world, 1);
-  pfc::field::PaddedBrick<double> u(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> v(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> du_cpu(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> dv_cpu(decomp, 0, hw);
+  auto u = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto v = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto du_cpu = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto dv_cpu = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
 
   for (int pk = -hw; pk < nz + hw; ++pk) {
     for (int pj = -hw; pj < ny + hw; ++pj) {
@@ -360,17 +361,17 @@ TEST_CASE("test_wave2d_double_field_kernel",
   auto grad_v = pfc::field::create<VGrads>(v, order);
   auto composite = pfc::field::create_composite<WaveLocal>(grad_u, grad_v);
   WaveDeviceModel cpu_model{.inv_dx2 = inv_dx2, .inv_dy2 = inv_dy2};
-  auto du_tuple = std::make_tuple(du_cpu.data() + owned_origin(hw, u.padded_size3()[0],
-                                                               u.padded_size3()[1]),
-                                  dv_cpu.data() + owned_origin(hw, v.padded_size3()[0],
-                                                               v.padded_size3()[1]));
-  // PaddedBrick FdGradient indexes from owned origin with padded strides; du
+  auto du_tuple = std::make_tuple(du_cpu.data() + owned_origin(hw, u.padded_extent(0),
+                                                               u.padded_extent(1)),
+                                  dv_cpu.data() + owned_origin(hw, v.padded_extent(0),
+                                                               v.padded_extent(1)));
+  // Padded Field FdGradient indexes from owned origin with padded strides; du
   // pointers must share that base.
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, /*t=*/0.0);
 
-  const int nxp = u.padded_size3()[0];
-  const int nyp = u.padded_size3()[1];
-  const int nzp = u.padded_size3()[2];
+  const int nxp = u.padded_extent(0);
+  const int nyp = u.padded_extent(1);
+  const int nzp = u.padded_extent(2);
   const std::size_t total = u.size();
 
   double *d_u = nullptr;
@@ -448,14 +449,10 @@ TEST_CASE("test_kobayashi_double_field_kernel",
   const double dx = 1.0, dy = 1.0, dz = 1.0;
   constexpr double kTeq = 1.0;
 
-  auto world = pfc::domain::create_world(pfc::GridSize({nx, ny, nz}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({dx, dy, dz}));
-  auto decomp = pfc::decomposition::create(world, 1);
-  pfc::field::PaddedBrick<double> phi(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> tempr(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> dphi_cpu(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> dtempr_cpu(decomp, 0, hw);
+  auto phi = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto tempr = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto dphi_cpu = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto dtempr_cpu = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
 
   for (int pk = -hw; pk < nz + hw; ++pk) {
     for (int pj = -hw; pj < ny + hw; ++pj) {
@@ -475,8 +472,8 @@ TEST_CASE("test_kobayashi_double_field_kernel",
   auto composite =
       pfc::field::create_composite<KobayashiLocal>(gphi, gtempr);
   KobayashiDeviceModel cpu_model{};
-  const int nxp = phi.padded_size3()[0];
-  const int nyp = phi.padded_size3()[1];
+  const int nxp = phi.padded_extent(0);
+  const int nyp = phi.padded_extent(1);
   auto du_tuple = std::make_tuple(dphi_cpu.data() + owned_origin(hw, nxp, nyp),
                                   dtempr_cpu.data() + owned_origin(hw, nxp, nyp));
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, 0.0);
@@ -512,7 +509,7 @@ TEST_CASE("test_kobayashi_double_field_kernel",
                      cudaMemcpyDeviceToHost) == cudaSuccess);
 
   bool match = true;
-  const int nzp = phi.padded_size3()[2];
+  const int nzp = phi.padded_extent(2);
   for (int iz = 0; iz < nz; ++iz) {
     for (int iy = 0; iy < ny; ++iy) {
       for (int ix = 0; ix < nx; ++ix) {
@@ -543,16 +540,12 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   const int nx = 8, ny = 8, nz = 1;
   const double dx = 1.0, dy = 1.0, dz = 1.0;
 
-  auto world = pfc::domain::create_world(pfc::GridSize({nx, ny, nz}),
-                                  pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
-                                  pfc::GridSpacing({dx, dy, dz}));
-  auto decomp = pfc::decomposition::create(world, 1);
-  pfc::field::PaddedBrick<double> a(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> b(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> c(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> da_cpu(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> db_cpu(decomp, 0, hw);
-  pfc::field::PaddedBrick<double> dc_cpu(decomp, 0, hw);
+  auto a = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto b = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto c = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto da_cpu = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto db_cpu = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
+  auto dc_cpu = make_padded_host_field(nx, ny, nz, dx, dy, dz, hw);
 
   for (int pk = -hw; pk < nz + hw; ++pk) {
     for (int pj = -hw; pj < ny + hw; ++pj) {
@@ -572,8 +565,8 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   auto gc = pfc::field::create<CGrads>(c, order);
   auto composite = pfc::field::create_composite<TripleLocal>(ga, gb, gc);
   TripleDeviceModel cpu_model{};
-  const int nxp = a.padded_size3()[0];
-  const int nyp = a.padded_size3()[1];
+  const int nxp = a.padded_extent(0);
+  const int nyp = a.padded_extent(1);
   const auto off = owned_origin(hw, nxp, nyp);
   auto du_tuple = std::make_tuple(da_cpu.data() + off, db_cpu.data() + off,
                                   dc_cpu.data() + off);
