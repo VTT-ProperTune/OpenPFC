@@ -10,7 +10,6 @@
  * thin includes of this file. Device `View` fill and View-to-View device
  * copies are not provided; use `DataBuffer`.
  *
- * @see kernel/execution/deep_copy.hpp
  * @see runtime/gpu/fill_gpu.hpp
  */
 

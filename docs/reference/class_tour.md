@@ -63,10 +63,8 @@ OpenPFC separates logical fields from execution and memory backends.
 |---------|------|----------|
 | `Field` / local field containers | Associate local values with domain and decomposition information | `kernel/data`, `kernel/field` |
 | `DataBuffer` | Own host or device storage selected by backend type | `kernel/execution`, GPU specializations under `runtime/` |
-| execution spaces | Select serial, OpenMP, CUDA, or HIP execution | `kernel/execution`, `runtime/cuda`, `runtime/hip` |
-| memory spaces | Express host versus device residency | `kernel/execution`, `runtime/cuda`, `runtime/hip` |
-| views and `parallel_for` | Backend-oriented access and iteration | `kernel/execution` and runtime specializations |
-| `deep_copy` and mirrors | Move or expose data across memory spaces | `kernel/execution` and runtime specializations |
+| memory spaces | Express host versus device residency | `kernel/execution`, `runtime/gpu` |
+| `deep_copy` (buffer fill) | Fill device `DataBuffer` without a host staging vector | `runtime/gpu/deep_copy_gpu.hpp` |
 
 GPU execution requires a matching CUDA or HIP build and the corresponding
 runtime headers. Build decisions are documented in

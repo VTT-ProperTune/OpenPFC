@@ -10,14 +10,6 @@ and support constraints belong in the
 [GPU path decision guide](../hpc/gpu_path_decision.md); halo layout choices are
 explained in [Halo exchange](../concepts/halo_exchange.md).
 
-## `pfc::View`
-
-```{doxygenstruct} pfc::View
-:project: OpenPFC
-:members:
-:no-link:
-```
-
 ## `pfc::data::Field`
 
 ```{doxygenclass} pfc::data::Field

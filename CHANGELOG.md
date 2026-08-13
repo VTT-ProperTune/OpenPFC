@@ -81,6 +81,7 @@ source compatibility is explicitly not a goal.
 - `pfc::create_mirror` / `pfc::create_mirror_view` (`kernel/execution/create_mirror.hpp`). Host `View` copies use `deep_copy`; device storage is `DataBuffer`.
 - GPU View execution-space mapping (`runtime/gpu/view_gpu.hpp` and vendor `view_cuda.hpp` / `view_hip.hpp`). `View` is host-only; device storage is `DataBuffer`.
 - GPU `parallel_for` / `fence` (`runtime/gpu/parallel_gpu.hpp` and vendor shims) and `Cuda`/`HIP` execution-space tags (`execution_space_gpu.hpp`). Host `parallel_for` remains Serial/OpenMP-only.
+- Kokkos-facsimile `View`, host `parallel_for`/`fence`, `RangePolicy`/`MDRangePolicy`, layouts, `deep_copy` View overloads, `Serial`/`OpenMP` execution-space tags, and `tests/unit/kernel/execution/test_kokkos_like.cpp`. Device storage is `DataBuffer`; `deep_copy(buffer, scalar)` remains.
 - GPU autotune demo keys `add_scalar` / `multiply_scalar` (registry + fallback defaults). Remaining defaults are `for_each_interior_3d`, `gather`, and `scatter`.
 
 ## [0.1.5] - 2026-07-23

@@ -7,8 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Status
 
-Accepted (2026-07-23). Supersedes the "ease later Kokkos adoption" rationale in
-`kernel/execution/view.hpp`.
+Accepted (2026-07-23). Implemented in M3: the Kokkos-facsimile above
+`DataBuffer` is removed.
 
 ## Context
 
@@ -49,9 +49,8 @@ either way.
 - No new dependency is added; build/packaging surface stays as audited.
 - Device `parallel_for`/`parallel_reduce`/`View` are **not** part of the public
   0.2 API; models use `DataBuffer` and the runtime kernels.
-- `create_mirror` / `create_mirror_view`, GPU View mapping, GPU `parallel_for` /
-  `fence`, and `Cuda`/`HIP` execution-space tags were removed in M3. Remaining
-  facsimile (`View`, host `parallel_for`) goes once host `deep_copy` View
-  overloads and `test_kokkos_like` are retired.
+- The facsimile (`View`, `parallel_for`, policies, layouts, `create_mirror`,
+  `Cuda`/`HIP` execution-space tags) was removed in M3. `DataBuffer`,
+  memory-space tags, and `deep_copy` on buffers remain.
 - If 0.3 adopts Kokkos, `DataBuffer` is the seam to replace with `Kokkos::View`;
   this ADR is revisited then.

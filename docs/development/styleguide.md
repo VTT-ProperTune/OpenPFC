@@ -49,7 +49,7 @@ The mental model is fixed: kernel → runtime → frontend in terms of allowed d
 Practical rules:
 
 - Kernel (`include/openpfc/kernel/...`): backend-agnostic simulation core (data, decomposition, execution abstractions on CPU/host, field ops, FFT *interface*, simulation, MPI helpers, profiling, `kernel/utils/logging.hpp` for structured logs). Do not add `#ifdef OpenPFC_ENABLE_CUDA` / HIP switches here; GPU code belongs in runtime.
-- Runtime (`include/openpfc/runtime/...`): cpu, cuda, hip, and common (shared between backends). CUDA/HIP tags, device memory, device `parallel_for`, and backend FFT implementations live here.
+- Runtime (`include/openpfc/runtime/...`): cpu, cuda, hip, and common (shared between backends). CUDA/HIP tags, device memory, and backend FFT implementations live here.
 - Frontend (`include/openpfc/frontend/...`): optional application-facing pieces (UI, JSON/TOML helpers, extra I/O). Core logging is not frontend-only; use `kernel/utils/logging.hpp`. Minimal simulations can avoid the frontend layer entirely.
 
 When adding a feature, choose the lowest layer that can express it without breaking the dependency graph.
