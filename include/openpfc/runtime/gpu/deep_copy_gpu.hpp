@@ -23,16 +23,14 @@
 #include <openpfc/kernel/execution/deep_copy.hpp>
 #include <openpfc/kernel/execution/view.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
-
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
+#include <openpfc/runtime/gpu/view_gpu.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
-#include <openpfc/runtime/cuda/view_cuda.hpp>
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
 #include <hip/hip_runtime.h>
-#include <openpfc/runtime/hip/view_hip.hpp>
 #endif
 
 namespace pfc::detail {

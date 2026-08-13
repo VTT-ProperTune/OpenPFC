@@ -50,8 +50,7 @@ std::array<std::size_t, sizeof...(Args)> indices_to_array(Args... args) {
 }
 
 // Execution space associated with a memory space (for Kokkos compatibility)
-// CudaSpace/HipSpace mappings in runtime/cuda/view_cuda.hpp and
-// runtime/hip/view_hip.hpp
+// CudaSpace/HipSpace mappings in runtime/gpu/view_gpu.hpp
 template <typename MemorySpace> struct memory_space_execution_space;
 template <> struct memory_space_execution_space<HostSpace> {
   using type = Serial;
