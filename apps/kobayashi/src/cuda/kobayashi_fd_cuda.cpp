@@ -48,7 +48,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
-#include <openpfc/runtime/cuda/padded_device_halo_exchange.hpp>
+#include <openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp>
 
 #include "kobayashi_batched_halo.hpp"
 

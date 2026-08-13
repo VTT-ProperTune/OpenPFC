@@ -17,7 +17,7 @@
  *
  * Reuses the GPU-aware MPI / packed fallback selection logic and the
  * `OPENPFC_CUDA_PROFILE_HALO` timers from
- * `openpfc/runtime/cuda/padded_device_halo_exchange.hpp` so the existing
+ * `openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp` so the existing
  * `OPENPFC_CUDA_PROFILE_HALO_SUMMARY` line keeps working. In batched mode
  * `n_exchange_calls_max` reports **steps**, not fields x steps.
  *
@@ -79,7 +79,7 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
-#include <openpfc/runtime/cuda/padded_device_halo_exchange.hpp>
+#include <openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp>
 
 namespace kobayashi::cuda {
 
