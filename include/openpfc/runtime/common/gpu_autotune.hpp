@@ -154,8 +154,6 @@ public:
   void reset();
   /// Fallback default configurations.
   static inline const KernelConfig kDefaultConfigs[] = {
-    {"add_scalar", 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}},
-    {"multiply_scalar", 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}},
     {"for_each_interior_3d", 32, 4, 1, 0, 0, 0, {0, SIZE_MAX}},
     {"gather", 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}},
     {"scatter", 256, 1, 1, 0, 0, 0, {0, SIZE_MAX}}
@@ -422,8 +420,6 @@ inline void AutoTuner::initialize_device_info() {
 }
 
 inline void AutoTuner::initialize_registry() {
-  registry_["add_scalar"] = KernelTuneParams{};
-  registry_["multiply_scalar"] = KernelTuneParams{};
   registry_["for_each_interior_3d"] = KernelTuneParams{};
   registry_["gather"] = KernelTuneParams{};
   registry_["scatter"] = KernelTuneParams{};

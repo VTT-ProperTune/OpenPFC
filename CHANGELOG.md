@@ -68,6 +68,7 @@ source compatibility is explicitly not a goal.
 - `pfc::field::make_legacy_modifier` (`kernel/field/legacy_adapter.hpp`). Wrap a lambda in a `FieldModifier` and call `pfc::field::apply` instead.
 - `pfc::field::apply(Model&, name, fn)` and the matching `apply_with_time` / `apply_inplace*` Model overloads. Call `apply(get_real_field(m, name), get_world(m), get_fft(m), fn)` instead so `operations.hpp` no longer includes the simulation layer.
 - `pfc::gpu::GPUVector` (`runtime/cuda/gpu_vector.hpp`), `kernels_simple` (`add_scalar` / `multiply_scalar`), and their CUDA unit tests. Use `pfc::core::DataBuffer` (or `pfc::data::Field`) for device storage.
+- GPU autotune demo keys `add_scalar` / `multiply_scalar` (registry + fallback defaults). Remaining defaults are `for_each_interior_3d`, `gather`, and `scatter`.
 
 ## [0.1.5] - 2026-07-23
 

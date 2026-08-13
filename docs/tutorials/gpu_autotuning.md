@@ -30,7 +30,7 @@ Cache files are stored as JSON with the following structure:
   "device_id": "0000:07:00.0",
   "device_architecture": "sm_80",
   "kernels": {
-    "add_scalar": {
+    "gather": {
       "block_size_x": 256,
       "block_size_y": 1,
       "block_size_z": 1,
@@ -57,8 +57,6 @@ The auto-tuner is automatically used in GPU kernels when `OpenPFC_ENABLE_GPU_AUT
 
 When cache is unavailable or disabled, the following defaults are used:
 
-- `add_scalar`: 256 threads
-- `multiply_scalar`: 256 threads
 - `for_each_interior_3d`: 32×4×1 threads
 - `gather`: 256 threads
 - `scatter`: 256 threads

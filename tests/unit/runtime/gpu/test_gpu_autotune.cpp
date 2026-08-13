@@ -106,7 +106,7 @@ TEST_CASE("test_fallback_defaults") {
   tuner.reset();
 
   // Test known kernels return correct defaults
-  auto config = tuner.get_config("add_scalar", 1000);
+  auto config = tuner.get_config("gather", 1000);
   REQUIRE(config.block_size_x == 256);
   REQUIRE(config.block_size_y == 1);
 
@@ -140,7 +140,7 @@ TEST_CASE("test_cache_missing_file") {
   // get_config should still work with fallback defaults
   EnvVarGuard mode_guard("OPENPFC_GPU_AUTOTUNE_MODE", "fallback_only");
   tuner.reset();
-  auto config = tuner.get_config("add_scalar", 1000);
+  auto config = tuner.get_config("gather", 1000);
   REQUIRE(config.block_size_x == 256);
 }
 
@@ -172,20 +172,14 @@ TEST_CASE("test_autotuner_get_config") {
   tuner.reset();
 
   // Test known kernel names
-  auto config1 = tuner.get_config("add_scalar", 1000);
-  REQUIRE(config1.kernel_name == "add_scalar");
+  auto config1 = tuner.get_config("gather", 1000);
+  REQUIRE(config1.kernel_name == "gather");
 
-  auto config2 = tuner.get_config("multiply_scalar", 5000);
-  REQUIRE(config2.kernel_name == "multiply_scalar");
+  auto config2 = tuner.get_config("scatter", 5000);
+  REQUIRE(config2.kernel_name == "scatter");
 
-  auto config3 = tuner.get_config("gather", 100);
-  REQUIRE(config3.kernel_name == "gather");
-
-  auto config4 = tuner.get_config("scatter", 200);
-  REQUIRE(config4.kernel_name == "scatter");
-
-  auto config5 = tuner.get_config("for_each_interior_3d", 10000);
-  REQUIRE(config5.kernel_name == "for_each_interior_3d");
+  auto config3 = tuner.get_config("for_each_interior_3d", 10000);
+  REQUIRE(config3.kernel_name == "for_each_interior_3d");
 }
 
 TEST_CASE("test_tune_kernel_unknown_kernel") {
@@ -207,7 +201,7 @@ TEST_CASE("test_environment_variable_disable") {
     tuner.reset();
 
     // Should use fallback defaults when disabled
-    auto config = tuner.get_config("add_scalar", 1000);
+    auto config = tuner.get_config("gather", 1000);
     REQUIRE(config.block_size_x == 256);
   }
 
@@ -224,7 +218,7 @@ TEST_CASE("test_environment_variable_mode_cache_only") {
     tuner.reset();
 
     // Should throw when no cache exists
-    REQUIRE_THROWS(tuner.get_config("add_scalar", 1000));
+    REQUIRE_THROWS(tuner.get_config("gather", 1000));
   }
 
   // Environment variable automatically restored by RAII guard
