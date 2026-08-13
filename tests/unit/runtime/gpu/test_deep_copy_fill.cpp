@@ -7,8 +7,8 @@
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <openpfc/kernel/execution/layout.hpp>
 #include <openpfc/runtime/gpu/deep_copy_gpu.hpp>
+#include <openpfc/runtime/gpu/fill_gpu.hpp>
 
 #include <vector>
 
@@ -16,19 +16,6 @@ using Catch::Approx;
 
 #if defined(OPENPFC_TEST_DEEP_COPY_CUDA)
 #include <cuda_runtime.h>
-TEST_CASE("deep_copy CUDA View scalar fill", "[gpu][deep_copy][cuda]") {
-  if (!pfc::gpu::test::is_cuda_available()) {
-    SKIP("CUDA not available");
-  }
-  pfc::View<double, 1, pfc::LayoutRight, pfc::CudaSpace> v("v", 8);
-  pfc::deep_copy(v, 3.25);
-  pfc::View<double, 1, pfc::LayoutRight, pfc::HostSpace> h("h", 8);
-  pfc::deep_copy(h, v);
-  for (std::size_t i = 0; i < 8; ++i) {
-    REQUIRE(h.data()[i] == Approx(3.25));
-  }
-}
-
 TEST_CASE("deep_copy CUDA DataBuffer scalar fill", "[gpu][deep_copy][cuda]") {
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
@@ -42,18 +29,17 @@ TEST_CASE("deep_copy CUDA DataBuffer scalar fill", "[gpu][deep_copy][cuda]") {
   }
 }
 
-TEST_CASE("deep_copy CUDA unmanaged View scalar fill", "[gpu][deep_copy][cuda]") {
+TEST_CASE("CUDA fill_cuda_impl on a raw device pointer", "[gpu][deep_copy][cuda]") {
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
   double *ptr = nullptr;
   REQUIRE(cudaMalloc(&ptr, 4 * sizeof(double)) == cudaSuccess);
-  pfc::View<double, 1, pfc::LayoutRight, pfc::CudaSpace> v(ptr, 4);
-  pfc::deep_copy(v, 9.0);
+  pfc::fill_cuda_impl(ptr, 4, 9.0);
   std::vector<double> host(4);
   REQUIRE(cudaMemcpy(host.data(), ptr, 4 * sizeof(double), cudaMemcpyDeviceToHost) ==
           cudaSuccess);
-  cudaFree(ptr);
+  REQUIRE(cudaFree(ptr) == cudaSuccess);
   for (double x : host) {
     REQUIRE(x == Approx(9.0));
   }
@@ -62,19 +48,6 @@ TEST_CASE("deep_copy CUDA unmanaged View scalar fill", "[gpu][deep_copy][cuda]")
 
 #if defined(OPENPFC_TEST_DEEP_COPY_HIP)
 #include <hip/hip_runtime.h>
-TEST_CASE("deep_copy HIP View scalar fill", "[gpu][deep_copy][hip]") {
-  if (!pfc::gpu::test::is_hip_available()) {
-    SKIP("HIP not available");
-  }
-  pfc::View<double, 1, pfc::LayoutRight, pfc::HipSpace> v("v", 8);
-  pfc::deep_copy(v, 3.25);
-  pfc::View<double, 1, pfc::LayoutRight, pfc::HostSpace> h("h", 8);
-  pfc::deep_copy(h, v);
-  for (std::size_t i = 0; i < 8; ++i) {
-    REQUIRE(h.data()[i] == Approx(3.25));
-  }
-}
-
 TEST_CASE("deep_copy HIP DataBuffer scalar fill", "[gpu][deep_copy][hip]") {
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
@@ -88,18 +61,17 @@ TEST_CASE("deep_copy HIP DataBuffer scalar fill", "[gpu][deep_copy][hip]") {
   }
 }
 
-TEST_CASE("deep_copy HIP unmanaged View scalar fill", "[gpu][deep_copy][hip]") {
+TEST_CASE("HIP fill_hip_impl on a raw device pointer", "[gpu][deep_copy][hip]") {
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
   double *ptr = nullptr;
   REQUIRE(hipMalloc(&ptr, 4 * sizeof(double)) == hipSuccess);
-  pfc::View<double, 1, pfc::LayoutRight, pfc::HipSpace> v(ptr, 4);
-  pfc::deep_copy(v, 9.0);
+  pfc::fill_hip_impl(ptr, 4, 9.0);
   std::vector<double> host(4);
   REQUIRE(hipMemcpy(host.data(), ptr, 4 * sizeof(double), hipMemcpyDeviceToHost) ==
           hipSuccess);
-  hipFree(ptr);
+  REQUIRE(hipFree(ptr) == hipSuccess);
   for (double x : host) {
     REQUIRE(x == Approx(9.0));
   }
