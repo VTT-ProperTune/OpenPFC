@@ -17,7 +17,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
         ${CMAKE_SOURCE_DIR}/include
     )
-    target_link_libraries(test_gpu_fft PRIVATE Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX)
+    target_link_libraries(test_gpu_fft PRIVATE Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX Heffte::Heffte)
     add_test(NAME GPU_FFT COMMAND test_gpu_fft)
 
     add_executable(test_exchange_cuda_fail_closed test_exchange_cuda_fail_closed.cpp)
@@ -93,7 +93,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
             ${CMAKE_SOURCE_DIR}/include
         )
         target_link_libraries(test_gpu_fft_hip PRIVATE
-            Catch2::Catch2 openpfc hip::host MPI::MPI_CXX)
+            Catch2::Catch2 openpfc hip::host MPI::MPI_CXX Heffte::Heffte)
         add_test(NAME HIP_FFT COMMAND test_gpu_fft_hip)
     endif()
 

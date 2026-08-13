@@ -93,20 +93,26 @@ function(openpfc_gpu_public_definitions tgt)
   if(NOT TARGET ${tgt})
     return()
   endif()
+  get_target_property(_openpfc_gpu_defs_type ${tgt} TYPE)
+  if(_openpfc_gpu_defs_type STREQUAL "INTERFACE_LIBRARY")
+    set(_openpfc_gpu_defs_scope INTERFACE)
+  else()
+    set(_openpfc_gpu_defs_scope PUBLIC)
+  endif()
   if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
-    target_compile_definitions(${tgt} PUBLIC OpenPFC_ENABLE_CUDA)
+    target_compile_definitions(${tgt} ${_openpfc_gpu_defs_scope} OpenPFC_ENABLE_CUDA)
     if(OpenPFC_MPI_CUDA_AWARE)
-      target_compile_definitions(${tgt} PUBLIC OpenPFC_MPI_CUDA_AWARE)
+      target_compile_definitions(${tgt} ${_openpfc_gpu_defs_scope} OpenPFC_MPI_CUDA_AWARE)
     endif()
   endif()
   if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
-    target_compile_definitions(${tgt} PUBLIC OpenPFC_ENABLE_HIP)
+    target_compile_definitions(${tgt} ${_openpfc_gpu_defs_scope} OpenPFC_ENABLE_HIP)
     if(OpenPFC_MPI_HIP_AWARE)
-      target_compile_definitions(${tgt} PUBLIC OpenPFC_MPI_HIP_AWARE)
+      target_compile_definitions(${tgt} ${_openpfc_gpu_defs_scope} OpenPFC_MPI_HIP_AWARE)
     endif()
   endif()
   if(OpenPFC_ENABLE_GPU_AUTOTUNING)
-    target_compile_definitions(${tgt} PUBLIC OpenPFC_ENABLE_GPU_AUTOTUNING)
+    target_compile_definitions(${tgt} ${_openpfc_gpu_defs_scope} OpenPFC_ENABLE_GPU_AUTOTUNING)
   endif()
 endfunction()
 
@@ -134,6 +140,11 @@ function(openpfc_add_gpu_kernel_library tgt ext runtime_lib)
   target_link_libraries(${tgt} PUBLIC ${runtime_lib})
   target_link_libraries(openpfc PRIVATE ${tgt})
   openpfc_gpu_public_definitions(${tgt})
+  if(DEFINED nlohmann_json_SOURCE_DIR)
+    target_include_directories(${tgt} PRIVATE
+        $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/single_include>)
+  endif()
 endfunction()
 
 # In-tree GPU unit tests that do not link openpfc (device detection, autotune).
@@ -176,9 +187,24 @@ if(OpenPFC_ENABLE_MPI)
   target_link_libraries(openpfc_frontend_obj PUBLIC MPI::MPI_CXX)
 endif()
 
-target_link_libraries(openpfc PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(openpfc_kernel_obj PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(openpfc_frontend_obj PRIVATE nlohmann_json::nlohmann_json)
+# Header-only FetchContent json must not appear in OpenPFCTargets (CMake 3.28
+# export then requires a nlohmann_json target that is not in the export set).
+# Installed consumers get nlohmann_json via find_dependency in OpenPFCConfig.
+if(DEFINED nlohmann_json_SOURCE_DIR)
+  target_include_directories(openpfc PRIVATE
+      $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/include>
+      $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/single_include>)
+  target_include_directories(openpfc_kernel_obj PRIVATE
+      $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/include>
+      $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/single_include>)
+  target_include_directories(openpfc_frontend_obj PRIVATE
+      $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/include>
+      $<BUILD_INTERFACE:${nlohmann_json_SOURCE_DIR}/single_include>)
+else()
+  target_link_libraries(openpfc PRIVATE nlohmann_json::nlohmann_json)
+  target_link_libraries(openpfc_kernel_obj PRIVATE nlohmann_json::nlohmann_json)
+  target_link_libraries(openpfc_frontend_obj PRIVATE nlohmann_json::nlohmann_json)
+endif()
 
 if(OpenPFC_ENABLE_HDF5)
   if(TARGET HDF5::HDF5)
