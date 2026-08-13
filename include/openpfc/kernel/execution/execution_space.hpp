@@ -6,17 +6,10 @@
  * @brief Kokkos-compatible execution space tags (kernel: Serial, OpenMP only)
  *
  * @details
- * Execution spaces define where parallel work runs. Kernel defines only
- * Serial and OpenMP; Cuda and HIP are in runtime/gpu.
+ * Execution spaces define where parallel work runs. Kernel defines Serial
+ * and OpenMP. Device execution-space tags are not provided; GPU work uses
+ * `DataBuffer` and the runtime device kernels.
  *
- * - Serial, OpenMP: defined here (always available)
- * - Cuda / HIP: include <openpfc/runtime/gpu/execution_space_gpu.hpp>
- *   (vendor headers `execution_space_cuda.hpp` / `execution_space_hip.hpp`
- *   are thin includes)
- *
- * @see runtime/gpu/execution_space_gpu.hpp for Cuda and HIP
- * @see runtime/cuda/execution_space_cuda.hpp (thin include)
- * @see runtime/hip/execution_space_hip.hpp (thin include)
  * @see memory_space.hpp for where data lives
  * @see parallel.hpp for parallel_for, fence
  */

@@ -49,9 +49,9 @@ either way.
 - No new dependency is added; build/packaging surface stays as audited.
 - Device `parallel_for`/`parallel_reduce`/`View` are **not** part of the public
   0.2 API; models use `DataBuffer` and the runtime kernels.
-- `create_mirror` / `create_mirror_view` and GPU View mapping headers were
-  removed in M3; GPU `deep_copy` is DataBuffer fill only. Remaining facsimile
-  (`View`, host `parallel_for`) goes once host `deep_copy` View overloads and
-  `test_kokkos_like` are retired.
+- `create_mirror` / `create_mirror_view`, GPU View mapping, GPU `parallel_for` /
+  `fence`, and `Cuda`/`HIP` execution-space tags were removed in M3. Remaining
+  facsimile (`View`, host `parallel_for`) goes once host `deep_copy` View
+  overloads and `test_kokkos_like` are retired.
 - If 0.3 adopts Kokkos, `DataBuffer` is the seam to replace with `Kokkos::View`;
   this ADR is revisited then.

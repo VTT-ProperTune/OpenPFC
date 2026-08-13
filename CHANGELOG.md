@@ -21,11 +21,9 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/databuffer_gpu.hpp` — single-source GPU `DataBuffer` for CUDA and HIP; `databuffer_cuda.hpp` / `databuffer_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/deep_copy_gpu.hpp` — single-source GPU `deep_copy(buffer, scalar)` fill; `deep_copy_cuda.hpp` / `deep_copy_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/memory_space_gpu.hpp` — single-source `CudaSpace` / `HipSpace`; `memory_space_cuda.hpp` / `memory_space_hip.hpp` are thin includes
-- `include/openpfc/runtime/gpu/execution_space_gpu.hpp` — single-source `Cuda` / `HIP` execution space tags; `execution_space_cuda.hpp` / `execution_space_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/backend_tags_gpu.hpp` — single-source `CudaTag` / `HipTag`; `backend_tags_cuda.hpp` / `backend_tags_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/memory_traits_gpu.hpp` — single-source GPU `backend_traits`; `memory_traits_cuda.hpp` / `memory_traits_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/gpu_check.hpp` — single-source `cuda_check` / `hip_check`; `cuda_check.hpp` / `hip_check.hpp` are thin includes
-- `include/openpfc/runtime/gpu/parallel_gpu.hpp` — single-source GPU `parallel_for` / `fence`; `parallel_cuda.hpp` / `parallel_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/exchange_gpu.hpp` — single-source GPU SparseVector MPI exchange; `exchange_cuda.hpp` / `exchange_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/fd_gradient_device_gpu.hpp` — single-source GPU FD gradient evaluator (CUDA composite + HIP padded-Field factory); vendor `fd_gradient_device.hpp` re-export into `pfc::cuda` / `pfc::hip`
 - `include/openpfc/runtime/gpu/for_each_interior_device_gpu.hpp` — single-source GPU interior driver (single-field + multi-field N=2–4 + autotune hook); vendor headers re-export into `pfc::sim::cuda` / `pfc::sim::hip`
@@ -82,6 +80,7 @@ source compatibility is explicitly not a goal.
 - `pfc::gpu::GPUVector` (`runtime/cuda/gpu_vector.hpp`), `kernels_simple` (`add_scalar` / `multiply_scalar`), and their CUDA unit tests. Use `pfc::core::DataBuffer` (or `pfc::data::Field`) for device storage.
 - `pfc::create_mirror` / `pfc::create_mirror_view` (`kernel/execution/create_mirror.hpp`). Host `View` copies use `deep_copy`; device storage is `DataBuffer`.
 - GPU View execution-space mapping (`runtime/gpu/view_gpu.hpp` and vendor `view_cuda.hpp` / `view_hip.hpp`). `View` is host-only; device storage is `DataBuffer`.
+- GPU `parallel_for` / `fence` (`runtime/gpu/parallel_gpu.hpp` and vendor shims) and `Cuda`/`HIP` execution-space tags (`execution_space_gpu.hpp`). Host `parallel_for` remains Serial/OpenMP-only.
 - GPU autotune demo keys `add_scalar` / `multiply_scalar` (registry + fallback defaults). Remaining defaults are `for_each_interior_3d`, `gather`, and `scatter`.
 
 ## [0.1.5] - 2026-07-23

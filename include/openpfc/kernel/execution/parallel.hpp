@@ -13,8 +13,8 @@
  * - fence() / fence(execution_space_instance)
  *
  * Serial: single-threaded loop. OpenMP: optional multi-threaded when
- * _OPENMP defined. Cuda/HIP: include runtime/gpu/parallel_gpu.hpp
- * (fail-closed until a real device kernel launch exists).
+ * `_OPENMP` is defined. Device `parallel_for` is not provided; use
+ * `DataBuffer` and the runtime device kernels.
  *
  * @see policy.hpp for RangePolicy, MDRangePolicy
  * @see execution_space.hpp for execution spaces
@@ -28,6 +28,7 @@
 #include <openpfc/kernel/execution/execution_space.hpp>
 #include <openpfc/kernel/execution/policy.hpp>
 #include <string>
+#include <type_traits>
 
 #if defined(_OPENMP) && __has_include(<omp.h>)
 #include <omp.h>
@@ -125,8 +126,8 @@ void parallel_for(const RangePolicy<ExecutionSpace, IndexType> &policy,
     detail::parallel_for_impl_omp(policy, functor);
   } else {
     static_assert(sizeof(ExecutionSpace) == 0,
-                  "Unknown execution space; for Cuda/HIP include "
-                  "openpfc/runtime/gpu/parallel_gpu.hpp");
+                  "parallel_for supports Serial and OpenMP only; use DataBuffer "
+                  "and the runtime device kernels on GPU");
   }
 }
 
@@ -149,8 +150,8 @@ void parallel_for(const MDRangePolicy<ExecutionSpace, Rank<3>, IndexType> &polic
     detail::parallel_for_impl_omp(policy, functor);
   } else {
     static_assert(sizeof(ExecutionSpace) == 0,
-                  "Unknown execution space; for Cuda/HIP include "
-                  "openpfc/runtime/gpu/parallel_gpu.hpp");
+                  "parallel_for supports Serial and OpenMP only; use DataBuffer "
+                  "and the runtime device kernels on GPU");
   }
 }
 
@@ -164,15 +165,13 @@ void parallel_for(const std::string &name,
 
 /**
  * @brief Fence: block until all outstanding work on the default space completes
- * (Kokkos-compatible). Kernel: no-op. For Cuda/HIP include the corresponding
- * runtime header for device synchronize.
+ * (Kokkos-compatible). Host: no-op.
  */
 inline void fence() { (void)0; }
 
 /**
- * @brief Fence for a specific execution space instance. Kernel: no-op for
- * Serial and OpenMP. For Cuda/HIP include openpfc/runtime/gpu/parallel_gpu.hpp
- * (or the thin parallel_cuda.hpp / parallel_hip.hpp shims).
+ * @brief Fence for a specific execution space instance. No-op for Serial
+ * and OpenMP. Device execution spaces are not provided.
  */
 template <typename ExecutionSpace> void fence(const ExecutionSpace & /*space*/) {
   if constexpr (std::is_same_v<ExecutionSpace, Serial> ||
@@ -180,8 +179,7 @@ template <typename ExecutionSpace> void fence(const ExecutionSpace & /*space*/) 
     (void)0;
   } else {
     static_assert(sizeof(ExecutionSpace) == 0,
-                  "Unknown execution space; for Cuda/HIP include runtime "
-                  "parallel_gpu.hpp");
+                  "fence supports Serial and OpenMP only");
   }
 }
 
