@@ -100,6 +100,15 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     )
     target_link_libraries(test_sparsevector_cuda PRIVATE Catch2::Catch2 openpfc_gpu_kernels CUDA::cudart)
     add_test(NAME CUDA_SparseVector COMMAND test_sparsevector_cuda)
+
+    add_executable(test_deep_copy_fill_cuda test_deep_copy_fill.cpp)
+    target_include_directories(test_deep_copy_fill_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_deep_copy_fill_cuda PRIVATE Catch2::Catch2 openpfc_gpu_kernels CUDA::cudart)
+    target_compile_definitions(test_deep_copy_fill_cuda PRIVATE OPENPFC_TEST_DEEP_COPY_CUDA)
+    add_test(NAME CUDA_DeepCopyFill COMMAND test_deep_copy_fill_cuda)
 endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
@@ -111,4 +120,13 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     )
     target_link_libraries(test_sparsevector_hip PRIVATE Catch2::Catch2 openpfc_hip_kernels hip::host)
     add_test(NAME HIP_SparseVector COMMAND test_sparsevector_hip)
+
+    add_executable(test_deep_copy_fill_hip test_deep_copy_fill.cpp)
+    target_include_directories(test_deep_copy_fill_hip PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_deep_copy_fill_hip PRIVATE Catch2::Catch2 openpfc_hip_kernels hip::host)
+    target_compile_definitions(test_deep_copy_fill_hip PRIVATE OPENPFC_TEST_DEEP_COPY_HIP)
+    add_test(NAME HIP_DeepCopyFill COMMAND test_deep_copy_fill_hip)
 endif()

@@ -8,10 +8,13 @@
  * @details
  * deep_copy copies data between Views (same shape) or fills a View with a
  * scalar. Handles host-host, host-device, and device-host. Names and
- * semantics match Kokkos.
+ * semantics match Kokkos. Device scalar fill requires
+ * `runtime/gpu/deep_copy_gpu.hpp` (or the vendor shim) and runs a device
+ * kernel rather than staging a host vector.
  *
  * @see view.hpp for View
  * @see execution_space.hpp for async variant
+ * @see runtime/gpu/deep_copy_gpu.hpp for device-to-device copy and device fill
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -23,7 +26,6 @@
 #include <openpfc/kernel/execution/execution_space.hpp>
 #include <openpfc/kernel/execution/view.hpp>
 #include <stdexcept>
-#include <vector>
 
 namespace pfc {
 
@@ -85,6 +87,14 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, M1> &dst,
   (void)n;
 }
 
+template <typename MemorySpace> struct deep_copy_device_fill_fn {
+  template <typename T, std::size_t Rank, typename Layout>
+  static void call(View<T, Rank, Layout, MemorySpace> & /*dst*/, const T & /*value*/) {
+    static_assert(sizeof(T) == 0, "deep_copy scalar fill on device: include "
+                                  "openpfc/runtime/gpu/deep_copy_gpu.hpp");
+  }
+};
+
 } // namespace detail
 
 /**
@@ -134,15 +144,8 @@ void deep_copy(View<T, Rank, Layout, MemorySpace> &dst, const T &value) {
   if constexpr (std::is_same_v<MemorySpace, HostSpace>) {
     std::fill(ptr, ptr + n, value);
   } else {
-    // Device: copy value to host, then fill a host buffer and copy to device,
-    // or run a kernel. Simplest: create host buffer, fill, copy to device.
-    auto *buf = dst.buffer_ptr();
-    if (buf) {
-      std::vector<T> host_tmp(n, value);
-      buf->copy_from_host(host_tmp);
-    } else {
-      throw std::runtime_error("deep_copy(scalar): unmanaged device View");
-    }
+    (void)ptr;
+    detail::deep_copy_device_fill_fn<MemorySpace>::call(dst, value);
   }
 }
 

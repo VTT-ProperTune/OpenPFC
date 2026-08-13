@@ -3,13 +3,16 @@
 
 /**
  * @file deep_copy_gpu.hpp
- * @brief Single-source GPU device-to-device `deep_copy` for CUDA and HIP (M3).
+ * @brief Single-source GPU `deep_copy` for CUDA and HIP (M3).
  *
  * Overloads `pfc::detail::deep_copy_view_to_view_impl` for `CudaSpace` and/or
- * `HipSpace`. Vendor headers `deep_copy_cuda.hpp` / `deep_copy_hip.hpp` are
- * thin includes of this file.
+ * `HipSpace`, and device scalar fill (`deep_copy_device_fill_fn`) so
+ * `deep_copy(view, scalar)` / `deep_copy(buffer, scalar)` run a device kernel
+ * instead of staging a host vector. Vendor headers `deep_copy_cuda.hpp` /
+ * `deep_copy_hip.hpp` are thin includes of this file.
  *
  * @see kernel/execution/deep_copy.hpp
+ * @see runtime/gpu/fill_gpu.hpp
  */
 
 #pragma once
@@ -19,10 +22,12 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 
 #include <openpfc/kernel/execution/deep_copy.hpp>
 #include <openpfc/kernel/execution/view.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
+#include <openpfc/runtime/gpu/fill_gpu.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 #include <openpfc/runtime/gpu/view_gpu.hpp>
 
@@ -87,6 +92,60 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, HipSpace> &dst,
 }
 #endif
 
+template <typename T>
+constexpr bool gpu_fill_supported_v =
+    std::is_same_v<T, double> || std::is_same_v<T, float>;
+
+#if defined(OpenPFC_ENABLE_CUDA)
+template <> struct deep_copy_device_fill_fn<CudaSpace> {
+  template <typename T, std::size_t Rank, typename Layout>
+  static void call(View<T, Rank, Layout, CudaSpace> &dst, const T &value) {
+    if constexpr (gpu_fill_supported_v<T>) {
+      fill_cuda_impl(dst.data(), dst.size(), value);
+    } else {
+      static_assert(gpu_fill_supported_v<T>,
+                    "device scalar fill supports float and double");
+    }
+  }
+};
+#endif
+
+#if defined(OpenPFC_ENABLE_HIP)
+template <> struct deep_copy_device_fill_fn<HipSpace> {
+  template <typename T, std::size_t Rank, typename Layout>
+  static void call(View<T, Rank, Layout, HipSpace> &dst, const T &value) {
+    if constexpr (gpu_fill_supported_v<T>) {
+      fill_hip_impl(dst.data(), dst.size(), value);
+    } else {
+      static_assert(gpu_fill_supported_v<T>,
+                    "device scalar fill supports float and double");
+    }
+  }
+};
+#endif
+
 } // namespace pfc::detail
+
+namespace pfc {
+
+#if defined(OpenPFC_ENABLE_CUDA)
+inline void deep_copy(core::DataBuffer<backend::CudaTag, double> &dst, double value) {
+  fill_cuda_impl(dst.data(), dst.size(), value);
+}
+inline void deep_copy(core::DataBuffer<backend::CudaTag, float> &dst, float value) {
+  fill_cuda_impl(dst.data(), dst.size(), value);
+}
+#endif
+
+#if defined(OpenPFC_ENABLE_HIP)
+inline void deep_copy(core::DataBuffer<backend::HipTag, double> &dst, double value) {
+  fill_hip_impl(dst.data(), dst.size(), value);
+}
+inline void deep_copy(core::DataBuffer<backend::HipTag, float> &dst, float value) {
+  fill_hip_impl(dst.data(), dst.size(), value);
+}
+#endif
+
+} // namespace pfc
 
 #endif // OpenPFC_ENABLE_CUDA || OpenPFC_ENABLE_HIP

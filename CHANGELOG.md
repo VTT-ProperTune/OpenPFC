@@ -55,6 +55,7 @@ source compatibility is explicitly not a goal.
 - `scripts/build.sh` (Tohtori) auto-detects a custom CUDA-aware Open MPI build (see `scripts/build_tohtori.sh --cuda`) and uses it in place of the site `openmpi/5.0.10` module when present, defaulting `MPI_CUDA_AWARE` to `ON` in that case. Without it, the default stays `OFF`: the site module links a UCX built without `--with-cuda`, and passing device pointers to it segfaults despite Open MPI's own `MPIX_Query_cuda_support()` probe claiming support.
 - HIP packed-halo pinned host buffers use `hipHostMalloc` / `hipHostFree` instead of the deprecated `hipMallocHost` / `hipFreeHost`.
 - Device kernel TUs (`sparse_vector_ops.cu/.hip`, `padded_halo_faces.cu/.hip`) live under `src/openpfc/runtime/gpu/` instead of `include/` (and instead of `src/openpfc/runtime/cuda/` for the CUDA halo-face TU). CUDA `padded_halo_faces.cu` remains linked per executable because of separable-compilation device-link.
+- `deep_copy(view, scalar)` on a device View and `deep_copy(buffer, scalar)` for CUDA/HIP `DataBuffer` run a device fill kernel (`runtime/gpu/fill_gpu`) instead of staging a host vector. Unmanaged device Views can be filled. Device scalar fill supports `float` and `double`; include `deep_copy_gpu.hpp` (or the vendor shim).
 
 ### Removed
 
