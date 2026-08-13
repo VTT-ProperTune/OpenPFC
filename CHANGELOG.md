@@ -17,6 +17,7 @@ source compatibility is explicitly not a goal.
 - `pfc::Domain` — canonical coordinate/geometry type replacing the templated `World`
 - `pfc::Box3i` — single canonical inclusive integer index box
 - `pfc::data::Field<T, MemorySpace>` — canonical owning field container unifying LocalField/PaddedBrick
+- `include/openpfc/runtime/gpu/gpu_api.hpp` — vendor shim (`gpuMalloc`, `gpuMemcpyAsync`, `gpuStream_t`, `GPU_CHECK`, `GPU_LAUNCH_KERNEL`) selected by CUDA vs HIP (`OPENPFC_HD` already covers `__HIPCC__` in `host_device.hpp`)
 
 ### Fixed
 
