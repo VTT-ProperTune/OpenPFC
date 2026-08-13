@@ -21,12 +21,10 @@
  * `idx()` serves the padded and unpadded cases; `apply(f(x,y,z))` is defined
  * once.
  *
- * ADDITIVE M2.1: introduced alongside the legacy types so the build stays
- * green with no consumer changes. It lives in `pfc::data` for now because the
- * final name `pfc::Field` is still occupied by a Gen-1 `std::vector<double>`
- * alias (`kernel/data/model_types.hpp`) and `field::Field`. At M2.final, once
- * the legacy container zoo (and that alias) is deleted, this collapses into
- * `pfc::Field` in `kernel/data/field.hpp`.
+ * Lives in `pfc::data` because the final name `pfc::Field` is still occupied
+ * by a Gen-1 `std::vector<double>` alias (`kernel/data/model_types.hpp`). The
+ * legacy `field::Field<T>` type is gone; once that alias is deleted this
+ * collapses into `pfc::Field`.
  *
  * Residency tracking (M2.2): a device-backed field (device `MemorySpace`) also
  * owns a host mirror and a `Residency` (residency.hpp) recording which side is

@@ -42,6 +42,7 @@ source compatibility is explicitly not a goal.
 - `pfc::field::PaddedBrick` (`kernel/field/padded_brick.hpp`). Use padded `pfc::data::Field` via `field_from_subdomain(decomp, rank, halo)`. Halo exchangers, FDGradient, and `brick_iteration` already bind Field.
 - `pfc::DiscreteField` (`kernel/data/discrete_field.hpp`) and `pfc::interpolate`. Use `pfc::data::Field` with `coords()` / `apply()`. The quarantined DiscreteField unit tests were deleted with the type.
 - `pfc::Array` (`kernel/data/array.hpp`). Use `pfc::data::Field`. The Array unit tests were deleted with the type.
+- `pfc::field::Field<T>` (`kernel/data/field.hpp`). Use `pfc::data::Field`. Steppers, stacks, and factories already bound the canonical type; the functional container had no remaining callers.
 
 ## [0.1.5] - 2026-07-23
 
