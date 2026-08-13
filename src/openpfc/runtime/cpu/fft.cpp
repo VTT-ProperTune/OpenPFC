@@ -151,6 +151,14 @@ create_with_backend(const FFTLayout &fft_layout, int rank_id,
                  r2c_dir, comm, options));
   }
 #endif
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+  case Backend::HIP: {
+    using fft_type = heffte::fft3d_r2c<heffte::backend::rocfft>;
+    return std::make_unique<FFT_Impl<heffte::backend::rocfft>>(
+        fft_type(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
+                 r2c_dir, comm, options));
+  }
+#endif
   default: throw std::runtime_error("Unsupported FFT backend requested");
   }
 }
@@ -169,6 +177,12 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
   case Backend::CUDA: {
     auto options = heffte::default_options<heffte::backend::cufft>();
+    return create_with_backend(fft_layout, rank_id, options, backend, comm);
+  }
+#endif
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+  case Backend::HIP: {
+    auto options = heffte::default_options<heffte::backend::rocfft>();
     return create_with_backend(fft_layout, rank_id, options, backend, comm);
   }
 #endif

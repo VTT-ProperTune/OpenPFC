@@ -28,6 +28,8 @@ namespace pfc::ui {
  * - "fftw" or "FFTW": CPU-based FFT (always available)
  * - "cuda" or "CUDA": GPU-based FFT using cuFFT (requires
  *   OpenPFC_ENABLE_CUDA_SPECTRAL)
+ * - "hip", "HIP", "rocm", or "ROCM": GPU-based FFT using rocFFT (requires
+ *   OpenPFC_ENABLE_HIP_SPECTRAL)
  *
  * @param j The JSON object to parse (looks for "backend" field)
  * @return The fft::Backend enum value
@@ -60,9 +62,16 @@ template <>
         "CUDA-enabled HeFFTe install (Heffte_CUDA_FOUND=ON). CUDA finite-difference "
         "apps may still be available in this build.");
   }
+  if (backend_str == "hip" || backend_str == "rocm") {
+    throw std::runtime_error(
+        "HIP FFT backend requested, but this OpenPFC build does not include HIP "
+        "spectral support. Reconfigure with -DOpenPFC_ENABLE_HIP=ON and a "
+        "ROCm-enabled HeFFTe install (Heffte_ROCM_FOUND=ON). HIP finite-difference "
+        "apps may still be available in this build.");
+  }
   throw std::runtime_error(
       "Unknown FFT backend: " + j["backend"].get<std::string>() +
-      ". Supported: fftw, cuda");
+      ". Supported: fftw, cuda, hip, rocm");
 }
 
 } // namespace pfc::ui

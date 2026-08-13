@@ -152,18 +152,26 @@ TEST_CASE("FFT Backend - invalid backend throws", "[fft][backend][config][unit]"
   REQUIRE_THROWS_AS(ui::from_json<fft::Backend>(config), std::runtime_error);
 }
 
-#if defined(OpenPFC_ENABLE_CUDA)
-TEST_CASE("FFT Backend - parse CUDA backend from JSON",
-          "[fft][backend][config][cuda][unit]") {
-  json config = {{"backend", "cuda"}};
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+TEST_CASE("FFT Backend - parse HIP backend from JSON",
+          "[fft][backend][config][hip][unit]") {
+  json config = {{"backend", "hip"}};
 
   auto backend = ui::from_json<fft::Backend>(config);
-  REQUIRE(backend == fft::Backend::CUDA);
+  REQUIRE(backend == fft::Backend::HIP);
+}
+
+TEST_CASE("FFT Backend - parse ROCm alias from JSON",
+          "[fft][backend][config][hip][unit]") {
+  json config = {{"backend", "rocm"}};
+
+  auto backend = ui::from_json<fft::Backend>(config);
+  REQUIRE(backend == fft::Backend::HIP);
 }
 #else
-TEST_CASE("FFT Backend - CUDA backend throws if not compiled",
+TEST_CASE("FFT Backend - HIP backend throws if not compiled",
           "[fft][backend][config][unit]") {
-  json config = {{"backend", "cuda"}};
+  json config = {{"backend", "hip"}};
 
   REQUIRE_THROWS_AS(ui::from_json<fft::Backend>(config), std::runtime_error);
 }

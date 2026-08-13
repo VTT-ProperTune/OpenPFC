@@ -28,12 +28,13 @@ using ComplexDataBuffer = core::DataBuffer<backend::CpuTag, std::complex<double>
 /**
  * @brief FFT backend selection
  *
- * FFTW is in kernel; CUDA backend is selected via runtime (include
- * openpfc/runtime/cuda/fft_cuda.hpp for RealDataBufferCUDA, create_cuda, etc.)
+ * FFTW is in kernel; GPU backends are selected via runtime (include
+ * `openpfc/runtime/cuda/fft_cuda.hpp` or `openpfc/runtime/hip/fft_hip.hpp`).
  */
 enum class Backend : std::uint8_t {
   FFTW, ///< CPU-based FFT using FFTW (default, always available)
-  CUDA  ///< GPU-based FFT using cuFFT (include runtime/cuda/fft_cuda.hpp)
+  CUDA, ///< GPU-based FFT using cuFFT (include runtime/cuda/fft_cuda.hpp)
+  HIP   ///< GPU-based FFT using rocFFT (include runtime/hip/fft_hip.hpp)
 };
 
 struct IFFT {

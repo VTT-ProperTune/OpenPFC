@@ -19,7 +19,7 @@
 namespace pfc::runtime {
 
 /**
- * @brief Map backend string (e.g. "fftw", "cuda") to fft::Backend
+ * @brief Map backend string (e.g. "fftw", "cuda", "hip", "rocm") to fft::Backend
  * @param s Lowercase backend name
  * @return Backend if supported and compiled in, else std::nullopt
  */
@@ -30,6 +30,11 @@ inline std::optional<fft::Backend> backend_from_string(const std::string &s) {
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
   if (s == "cuda") {
     return fft::Backend::CUDA;
+  }
+#endif
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+  if (s == "hip" || s == "rocm") {
+    return fft::Backend::HIP;
   }
 #endif
   return std::nullopt;
