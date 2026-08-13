@@ -43,7 +43,7 @@ target_sources(openpfc-tests PRIVATE
 
 # `FullPaddedDeviceHalo` calls `pfc::cuda::detail::launch_padded_pack_face` /
 # `launch_padded_unpack_face`, which today live in
-# `src/openpfc/runtime/cuda/padded_halo_faces.cu` and are linked **per-app**
+# `src/openpfc/runtime/gpu/padded_halo_faces.cu` and are linked **per-app**
 # (e.g. into `kobayashi_fd_cuda`) rather than into `libopenpfc.so`. The test
 # executable consumes those symbols directly, so we add the .cu source to
 # `openpfc-tests` when CUDA is enabled and ensure CUDA::cudart is linked.
@@ -54,7 +54,7 @@ target_sources(openpfc-tests PRIVATE
 # itself a `.cu` file added to the test target only on CUDA builds.
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   target_sources(openpfc-tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/cuda/padded_halo_faces.cu
+    ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/gpu/padded_halo_faces.cu
     scenarios/gpu_validation/test_fd_gradient_device.cu
     scenarios/gpu_validation/test_composite_gradient_pod_size.cu
     scenarios/gpu_validation/test_multi_field_device.cu

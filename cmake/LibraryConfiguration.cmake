@@ -200,7 +200,7 @@ endif()
 # GPU kernel library (only when CUDA is enabled)
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_library(openpfc_gpu_kernels
-        include/openpfc/runtime/cuda/sparse_vector_ops.cu
+        src/openpfc/runtime/gpu/sparse_vector_ops.cu
     )
 
     target_include_directories(openpfc_gpu_kernels
@@ -232,8 +232,8 @@ endif()
 # HIP kernel library (only when HIP is enabled)
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     add_library(openpfc_hip_kernels
-        include/openpfc/runtime/hip/sparse_vector_ops.hip
-        include/openpfc/runtime/hip/padded_halo_faces.hip
+        src/openpfc/runtime/gpu/sparse_vector_ops.hip
+        src/openpfc/runtime/gpu/padded_halo_faces.hip
     )
 
     target_include_directories(openpfc_hip_kernels

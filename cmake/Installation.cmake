@@ -14,10 +14,9 @@ if(DEFINED nlohmann_json_SOURCE_DIR)
   )
 endif()
 
-# Install headers
-# Install public headers only (audit 11 / PM): the tree also contains .cu/.hip
-# device sources and stray .md files that must not be shipped into the include
-# prefix. (Relocating those sources under src/ is deferred to M3.)
+# Install public headers only. Device TUs live under src/openpfc/runtime/gpu/;
+# kernel .inc files stay in include/ as compile-time includes for those TUs
+# and are not installed. Stray .md under include/ must not ship.
 install(DIRECTORY include/openpfc DESTINATION include
         FILES_MATCHING PATTERN "*.hpp")
 

@@ -106,7 +106,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_executable(kobayashi_fd_cuda
     src/cuda/kobayashi_fd_cuda.cpp
     src/cuda/kobayashi_fd_cuda_kernels.cu
-    ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/cuda/padded_halo_faces.cu
+    ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/gpu/padded_halo_faces.cu
   )
   target_include_directories(kobayashi_fd_cuda PRIVATE ${KOBAYASHI_INCLUDE_DIR})
   target_link_libraries(kobayashi_fd_cuda PRIVATE OpenPFC CUDA::cudart ${_kobayashi_heffte_tgt})
