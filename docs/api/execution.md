@@ -27,11 +27,3 @@ explained in [Halo exchange](../concepts/halo_exchange.md).
 :no-link:
 ```
 
-## `pfc::field::PaddedBrick`
-
-```{doxygenclass} pfc::field::PaddedBrick
-:project: OpenPFC
-:members:
-:protected-members:
-:no-link:
-```

@@ -37,7 +37,7 @@ Field phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 Field tempr = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 ```
 
-**GPU Host Mirrors:** For CUDA and HIP implementations, host-side field storage is currently transitioning away from `pfc::field::PaddedBrick` toward the unified `pfc::data::Field` API (see issue #330). Existing GPU code still uses `PaddedBrick<double>` for host-device staging buffers, but this is considered legacy and will be replaced by the new Field API as the migration progresses. When working with GPU code, refer to the implementation files (`kobayashi_fd_cuda.cpp`, `kobayashi_fd_hip.cpp`) for the current staging conventions.
+**GPU Host Mirrors:** CUDA and HIP drivers stage host-side fields with padded `pfc::data::Field`. See `kobayashi_fd_cuda.cpp` and `kobayashi_fd_hip.cpp` for the current host–device staging conventions.
 
 ## Usage (`kobayashi_fd_manual`)
 

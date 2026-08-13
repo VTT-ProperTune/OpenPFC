@@ -16,7 +16,7 @@
  *
  * can be written in user code (compact-driver style) and dispatched to a
  * single axpy in field operators. The underlying
- * field types (`pfc::data::Field<double>`, `PaddedBrick<double>`,
+ * field types (`pfc::data::Field<double>`,
  * `pfc::sim::DuField<G, Eval>`, …) each provide a matching
  * `operator*(double, …)` returning this proxy.
  *

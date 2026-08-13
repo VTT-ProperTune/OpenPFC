@@ -236,7 +236,7 @@ inline void print_hip_halo_exchange_cpu_timers(MPI_Comm comm) {
 }
 
 /**
- * @brief MPI halo exchange for a `PaddedBrick`-layout buffer on the HIP device.
+ * @brief MPI halo exchange for a padded Field-layout buffer on the HIP device.
  *
  * @details
  * This class provides halo exchange functionality for device buffers. The primary

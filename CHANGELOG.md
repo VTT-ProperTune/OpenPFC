@@ -38,6 +38,7 @@ source compatibility is explicitly not a goal.
 ### Removed
 
 - `pfc::field::LocalField` (`kernel/field/local_field.hpp`). Use `pfc::data::Field` with `field_from_subdomain_unpadded` (unpadded storage) or `field_from_inbox` for spectral inboxes. Stepper factories already bound `Field`.
+- `pfc::field::PaddedBrick` (`kernel/field/padded_brick.hpp`). Use padded `pfc::data::Field` via `field_from_subdomain(decomp, rank, halo)`. Halo exchangers, FDGradient, and `brick_iteration` already bind Field.
 
 ## [0.1.5] - 2026-07-23
 
