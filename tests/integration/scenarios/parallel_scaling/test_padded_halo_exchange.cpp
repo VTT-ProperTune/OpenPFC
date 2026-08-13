@@ -236,7 +236,7 @@ TEST_CASE("PaddedHaloExchanger: Axes2D direction set skips ±Z halos",
   REQUIRE(halos_match);
 }
 
-TEST_CASE("PaddedHaloExchanger: brick-binding ctor + free start/finish wrappers",
+TEST_CASE("PaddedHaloExchanger: Field-binding ctor + free start/finish wrappers",
           "[MPI][padded_halo]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -252,7 +252,7 @@ TEST_CASE("PaddedHaloExchanger: brick-binding ctor + free start/finish wrappers"
   const double other = static_cast<double>(1 - rank);
   fill_owned(u, mine);
 
-  // The Field-binding ctor requires explicit decompress, rank, hw parameters.
+  // The Field-binding ctor requires explicit decomp and rank.
   PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
   REQUIRE(halo.is_bound());
 

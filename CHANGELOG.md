@@ -28,6 +28,7 @@ source compatibility is explicitly not a goal.
 
 ### Changed
 
+- `pfc::communication::PaddedHaloExchanger` no longer binds `PaddedBrick`; padded `pfc::data::Field` (or explicit `Box3i` + `Domain`) is the only container binding. Callers already used the Field constructors.
 - HIP `pfc::hip::FdGradientDevice` factory binds `pfc::data::Field` (any memory space) instead of legacy `PaddedBrick`, matching the CUDA twin. Unpadded Fields (`storage_halo == 0`) are rejected; padded `Field<double, HipSpace>` is the device path.
 - CPU `pfc::gradient::FDGradient` no longer has a `PaddedBrick` constructor or factory; padded `pfc::data::Field` is the only container binding (`test_multi_field_device.cu` migrated).
 - `scripts/build.sh` (Tohtori) auto-detects a custom CUDA-aware Open MPI build (see `scripts/build_tohtori.sh --cuda`) and uses it in place of the site `openmpi/5.0.10` module when present, defaulting `MPI_CUDA_AWARE` to `ON` in that case. Without it, the default stays `OFF`: the site module links a UCX built without `--with-cuda`, and passing device pointers to it segfaults despite Open MPI's own `MPIX_Query_cuda_support()` probe claiming support.
