@@ -488,7 +488,7 @@ inline std::string get_device_id() {
   if (err != hipSuccess) {
     return "unknown";
   }
-  return std::to_string(prop.pciDeviceId);
+  return std::to_string(prop.pciDeviceID);
 }
 
 inline std::string get_device_architecture() {
@@ -502,7 +502,7 @@ inline std::string get_device_architecture() {
   if (err != hipSuccess) {
     return "unknown";
   }
-  return std::string(prop.gcnArch);
+  return std::string(prop.gcnArchName);
 }
 #endif
 

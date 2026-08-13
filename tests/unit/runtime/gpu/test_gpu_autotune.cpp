@@ -96,6 +96,9 @@ TEST_CASE("test_device_detection_hip") {
   std::string arch = get_device_architecture();
   REQUIRE(!arch.empty());
   // Accept "unknown" as valid for systems without GPUs
+  if (arch != "unknown") {
+    REQUIRE(arch.find("gfx") == 0);
+  }
 }
 #endif
 
