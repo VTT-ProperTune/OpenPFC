@@ -29,6 +29,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/field_operations/test_heat3d_state_access.cpp
   scenarios/field_operations/test_wave2d_state_access.cpp
   scenarios/gpu_validation/test_cuda_vs_cpu.cpp
+  scenarios/gpu_validation/test_hip_vs_cpu.cpp
   scenarios/gpu_validation/test_gpu_backend_instantiation.cpp
   scenarios/gpu_validation/test_cuda_roundtrip.cpp
   scenarios/gpu_validation/test_hip_roundtrip.cpp

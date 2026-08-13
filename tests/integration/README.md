@@ -14,6 +14,7 @@ This directory contains integration tests for OpenPFC, focused on validating end
 - **field_operations**: FieldModifier integrations and IC/BC application.
 - **gpu_validation**: CUDA/HIP tests (cases compile to skip stubs when the vendor spectral backend is off):
 	- CUDA / HIP DataBuffer roundtrip (forward/backward, float/double)
+	- CUDA / HIP vs CPU diffusion smoke (`create_cuda` / `create_hip` construct; model remains host FFT)
 	- CPU vs CUDA / HIP Laplacian equivalence (single rank)
 	- CPU vs CUDA / HIP Laplacian equivalence (multi-rank MPI)
 	- HIP multi-field `for_each_interior_device` and composite-gradient POD layout (HIP twins of the CUDA device TUs)
