@@ -34,7 +34,7 @@
  * @endcode
  *
  * This file is part of the I/O module, providing output capabilities for
- * simulation results and checkpointing.
+ * simulation results. BinaryWriter dumps are not a restart loader.
  *
  * @see simulator.hpp for I/O orchestration; `ResultsWriterMap` for the type
  * `Simulator` stores
