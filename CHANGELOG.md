@@ -21,6 +21,7 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/databuffer_gpu.hpp` — single-source GPU `DataBuffer` for CUDA and HIP; `databuffer_cuda.hpp` / `databuffer_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/deep_copy_gpu.hpp` — single-source GPU device-to-device `deep_copy`; `deep_copy_cuda.hpp` / `deep_copy_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/memory_space_gpu.hpp` — single-source `CudaSpace` / `HipSpace`; `memory_space_cuda.hpp` / `memory_space_hip.hpp` are thin includes
+- `include/openpfc/runtime/gpu/execution_space_gpu.hpp` — single-source `Cuda` / `HIP` execution space tags; `execution_space_cuda.hpp` / `execution_space_hip.hpp` are thin includes
 
 ### Fixed
 

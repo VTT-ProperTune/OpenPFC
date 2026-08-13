@@ -7,14 +7,16 @@
  *
  * @details
  * Execution spaces define where parallel work runs. Kernel defines only
- * Serial and OpenMP; Cuda and HIP are in runtime/cuda and runtime/hip.
+ * Serial and OpenMP; Cuda and HIP are in runtime/gpu.
  *
  * - Serial, OpenMP: defined here (always available)
- * - Cuda: include <openpfc/runtime/cuda/execution_space_cuda.hpp>
- * - HIP: include <openpfc/runtime/hip/execution_space_hip.hpp>
+ * - Cuda / HIP: include <openpfc/runtime/gpu/execution_space_gpu.hpp>
+ *   (vendor headers `execution_space_cuda.hpp` / `execution_space_hip.hpp`
+ *   are thin includes)
  *
- * @see runtime/cuda/execution_space_cuda.hpp for Cuda
- * @see runtime/hip/execution_space_hip.hpp for HIP
+ * @see runtime/gpu/execution_space_gpu.hpp for Cuda and HIP
+ * @see runtime/cuda/execution_space_cuda.hpp (thin include)
+ * @see runtime/hip/execution_space_hip.hpp (thin include)
  * @see memory_space.hpp for where data lives
  * @see parallel.hpp for parallel_for, fence
  */

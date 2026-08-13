@@ -3,23 +3,11 @@
 
 /**
  * @file execution_space_cuda.hpp
- * @brief CUDA execution space tag (runtime/cuda only)
+ * @brief CUDA execution space tag (thin include of the M3 GPU source).
  *
- * @see kernel/execution/execution_space.hpp for Serial, OpenMP
- * @see runtime/hip/execution_space_hip.hpp for HIP
+ * @see runtime/gpu/execution_space_gpu.hpp
  */
 
 #pragma once
 
-#include <openpfc/kernel/execution/execution_space.hpp>
-
-namespace pfc {
-
-/**
- * @brief CUDA execution space
- *
- * Work runs on GPU via CUDA kernels. Include this header when using Cuda.
- */
-struct Cuda {};
-
-} // namespace pfc
+#include <openpfc/runtime/gpu/execution_space_gpu.hpp>
