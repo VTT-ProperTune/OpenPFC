@@ -34,6 +34,7 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp` — single-source GPU SparseVector gather/scatter; vendor `sparse_vector_ops.hpp` / `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` are thin includes; kernels live in `sparse_vector_ops_gpu.inc` compiled from the vendor `.cu` / `.hip` TUs
 - `include/openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp` — single-source GPU 6-face padded device halo exchanger (HIP Field overloads stamped for CUDA); vendor `padded_device_halo_exchange.hpp` are thin includes; env/timer names stay `OPENPFC_CUDA_*` / `OPENPFC_HIP_*`
 - `include/openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp` — single-source GPU 26-direction padded device halo (CUDA `m_use_full_widening` stamped for HIP); vendor `full_padded_device_halo.hpp` are thin includes
+- `include/openpfc/runtime/gpu/padded_halo_faces_gpu.inc` — single-source padded face pack/unpack kernels; compiled from `src/openpfc/runtime/cuda/padded_halo_faces.cu` and `include/openpfc/runtime/hip/padded_halo_faces.hip`
 
 ### Fixed
 
