@@ -67,6 +67,7 @@ source compatibility is explicitly not a goal.
 - GPU SparseVector host-to-device copy failures report `"HIP copy failed: …"` with the runtime string, matching CUDA; unused duplicate `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` shims removed (`sparse_vector_ops.hpp` remains).
 - `for_each_interior_device` launch/sync failures use `GPU_CHECK` (`"GPU error: …"`) instead of a per-overload hand-rolled check. Kernel `.inc` files still prefix CUDA/HIP; co-enabled TUs still use `cuda_check` / `hip_check`.
 - CUDA `openpfc_gpu_kernels` and HIP `openpfc_hip_kernels` share one CMake source list (`sparse_vector_ops`, `fill`, `elementwise_ops`). HIP still adds `padded_halo_faces.hip`; CUDA halo-face kernels stay linked per executable.
+- Halo-exchange concept docs list canonical GPU sources under `runtime/gpu/` (vendor CUDA/HIP headers are thin includes); HIP packed-halo env and kernel-library split are documented alongside CUDA.
 
 ### Removed
 
