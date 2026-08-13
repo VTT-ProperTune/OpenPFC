@@ -11,7 +11,8 @@ if(OpenPFC_ENABLE_GPU_AUTOTUNING)
         message(WARNING "⚠️  OpenPFC_ENABLE_GPU_AUTOTUNING=ON but neither CUDA nor HIP is enabled. GPU autotuning disabled.")
         set(OpenPFC_ENABLE_GPU_AUTOTUNING OFF)
     else()
-        add_compile_definitions(OpenPFC_ENABLE_GPU_AUTOTUNING)
+        # OpenPFC_ENABLE_GPU_AUTOTUNING is a PUBLIC usage requirement on
+        # openpfc (and kernel libs) in LibraryConfiguration.cmake.
         message(STATUS "✅ GPU kernel auto-tuning enabled")
     endif()
 else()

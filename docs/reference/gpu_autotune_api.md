@@ -131,4 +131,4 @@ std::string get_device_architecture();
 
 ## Build Configuration
 
-The auto-tuning infrastructure is controlled by the `OpenPFC_ENABLE_GPU_AUTOTUNING` CMake option. When enabled, the `OpenPFC_ENABLE_GPU_AUTOTUNING` preprocessor definition is set, allowing the header-only implementation to be compiled into the project.
+The auto-tuning infrastructure is controlled by the `OpenPFC_ENABLE_GPU_AUTOTUNING` CMake option. When enabled, `OpenPFC_ENABLE_GPU_AUTOTUNING` is a PUBLIC compile definition on `OpenPFC::openpfc` (and the vendor kernel libraries), so in-tree builds and `find_package(OpenPFC)` consumers see the same macro.
