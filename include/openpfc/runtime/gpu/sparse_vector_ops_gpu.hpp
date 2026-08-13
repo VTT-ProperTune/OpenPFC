@@ -6,9 +6,8 @@
  * @brief Single-source GPU SparseVector gather/scatter for CUDA and HIP (M3).
  *
  * Overloads `pfc::core::gather` / `scatter` for `SparseVector<CudaTag>` and/or
- * `SparseVector<HipTag>`. Vendor headers `sparse_vector_ops.hpp` and the
- * `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` decl headers are
- * thin includes of this file.
+ * `SparseVector<HipTag>`. Vendor `sparse_vector_ops.hpp` headers are thin
+ * includes of this file.
  *
  * Device kernels live in `sparse_vector_ops_gpu.inc`, compiled from the
  * vendor `.cu` / `.hip` translation units.

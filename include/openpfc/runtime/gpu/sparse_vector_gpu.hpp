@@ -11,11 +11,13 @@
  * sites keep compiling.
  *
  * Per-tag memcpy calls the native runtime (not `gpu_api.hpp`) so a CUDA+HIP
- * co-enabled translation unit can own both specializations. Error strings
- * stay `"CUDA copy failed: …"` / `"HIP copy failed"`.
+ * co-enabled translation unit can own both specializations. Failures throw
+ * via `cuda_check` / `hip_check` as `"CUDA copy failed: …"` /
+ * `"HIP copy failed: …"`.
  *
  * @see kernel/decomposition/sparse_vector.hpp
  * @see runtime/gpu/databuffer_gpu.hpp
+ * @see runtime/gpu/gpu_check.hpp
  */
 
 #pragma once
@@ -23,12 +25,11 @@
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
 #include <cstddef>
-#include <stdexcept>
-#include <string>
 #include <vector>
 
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
+#include <openpfc/runtime/gpu/gpu_check.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
@@ -43,11 +44,8 @@ namespace pfc::core::detail {
 struct CudaH2D {
   using tag = backend::CudaTag;
   static void memcpy_h2d(void *dst, const void *src, std::size_t bytes) {
-    auto err = cudaMemcpy(dst, src, bytes, cudaMemcpyHostToDevice);
-    if (err != cudaSuccess) {
-      throw std::runtime_error("CUDA copy failed: " +
-                               std::string(cudaGetErrorString(err)));
-    }
+    pfc::cuda::detail::cuda_check(
+        cudaMemcpy(dst, src, bytes, cudaMemcpyHostToDevice), "CUDA copy failed");
   }
 };
 #endif
@@ -56,10 +54,8 @@ struct CudaH2D {
 struct HipH2D {
   using tag = backend::HipTag;
   static void memcpy_h2d(void *dst, const void *src, std::size_t bytes) {
-    auto err = hipMemcpy(dst, src, bytes, hipMemcpyHostToDevice);
-    if (err != hipSuccess) {
-      throw std::runtime_error("HIP copy failed");
-    }
+    pfc::hip::detail::hip_check(
+        hipMemcpy(dst, src, bytes, hipMemcpyHostToDevice), "HIP copy failed");
   }
 };
 #endif

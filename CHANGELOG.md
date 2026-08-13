@@ -31,7 +31,7 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/fd_gradient_device_gpu.hpp` — single-source GPU FD gradient evaluator (CUDA composite + HIP padded-Field factory); vendor `fd_gradient_device.hpp` re-export into `pfc::cuda` / `pfc::hip`
 - `include/openpfc/runtime/gpu/for_each_interior_device_gpu.hpp` — single-source GPU interior driver (single-field + multi-field N=2–4 + autotune hook); vendor headers re-export into `pfc::sim::cuda` / `pfc::sim::hip`
 - `include/openpfc/runtime/gpu/sparse_vector_gpu.hpp` — single-source GPU SparseVector copy-to-device; `sparse_vector_cuda.hpp` / `sparse_vector_hip.hpp` are thin includes
-- `include/openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp` — single-source GPU SparseVector gather/scatter; vendor `sparse_vector_ops.hpp` / `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` are thin includes; kernels live in `sparse_vector_ops_gpu.inc` compiled from `src/openpfc/runtime/gpu/sparse_vector_ops.cu` / `.hip`
+- `include/openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp` — single-source GPU SparseVector gather/scatter; vendor `sparse_vector_ops.hpp` is a thin include; kernels live in `sparse_vector_ops_gpu.inc` compiled from `src/openpfc/runtime/gpu/sparse_vector_ops.cu` / `.hip`
 - `include/openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp` — single-source GPU 6-face padded device halo exchanger (HIP Field overloads stamped for CUDA); vendor `padded_device_halo_exchange.hpp` are thin includes; env/timer names stay `OPENPFC_CUDA_*` / `OPENPFC_HIP_*`
 - `include/openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp` — single-source GPU 26-direction padded device halo (CUDA `m_use_full_widening` stamped for HIP); vendor `full_padded_device_halo.hpp` are thin includes
 - `include/openpfc/runtime/gpu/padded_halo_faces_gpu.inc` — single-source padded face pack/unpack kernels; compiled from `src/openpfc/runtime/gpu/padded_halo_faces.cu` and `.hip`
@@ -60,6 +60,7 @@ source compatibility is explicitly not a goal.
 - Device kernel TUs (`sparse_vector_ops.cu/.hip`, `padded_halo_faces.cu/.hip`) live under `src/openpfc/runtime/gpu/` instead of `include/` (and instead of `src/openpfc/runtime/cuda/` for the CUDA halo-face TU). CUDA `padded_halo_faces.cu` remains linked per executable because of separable-compilation device-link.
 - `deep_copy(view, scalar)` on a device View and `deep_copy(buffer, scalar)` for CUDA/HIP `DataBuffer` run a device fill kernel (`runtime/gpu/fill_gpu`) instead of staging a host vector. Unmanaged device Views can be filled. Device scalar fill supports `float` and `double`; include `deep_copy_gpu.hpp` (or the vendor shim).
 - Tungsten CUDA/HIP `multiply_complex_real` and `apply_time_integration` call `runtime/gpu/elementwise_ops_gpu` instead of duplicating those kernels. Nonlinear and stabilization kernels stay in the Tungsten TUs.
+- GPU SparseVector host-to-device copy failures report `"HIP copy failed: …"` with the runtime string, matching CUDA; unused duplicate `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` shims removed (`sparse_vector_ops.hpp` remains).
 
 ### Removed
 
