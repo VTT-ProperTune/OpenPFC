@@ -40,6 +40,7 @@ source compatibility is explicitly not a goal.
 
 - `pfc::field::LocalField` (`kernel/field/local_field.hpp`). Use `pfc::data::Field` with `field_from_subdomain_unpadded` (unpadded storage) or `field_from_inbox` for spectral inboxes. Stepper factories already bound `Field`.
 - `pfc::field::PaddedBrick` (`kernel/field/padded_brick.hpp`). Use padded `pfc::data::Field` via `field_from_subdomain(decomp, rank, halo)`. Halo exchangers, FDGradient, and `brick_iteration` already bind Field.
+- `pfc::DiscreteField` (`kernel/data/discrete_field.hpp`) and `pfc::interpolate`. Use `pfc::data::Field` with `coords()` / `apply()`. The quarantined DiscreteField unit tests were deleted with the type.
 
 ## [0.1.5] - 2026-07-23
 

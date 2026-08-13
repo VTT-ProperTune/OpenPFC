@@ -29,7 +29,7 @@ Read them **in order** the first time: each file builds on the same stack
 | 05 | [`05_decomposition_parallel.cpp`](../api/examples/05_decomposition_parallel.cpp) | MPI domain decomposition |
 | 06 | [`06_results_writers.cpp`](../api/examples/06_results_writers.cpp) | Parallel result writers |
 | 07 | [`07_field_modifiers.cpp`](../api/examples/07_field_modifiers.cpp) | Custom initial and boundary conditions |
-| 08 | [`08_discrete_field.cpp`](../api/examples/08_discrete_field.cpp) | Discrete fields and coordinate mapping |
+| 08 | [`08_discrete_field.cpp`](../api/examples/08_discrete_field.cpp) | Fields and coordinate mapping |
 | 09 | [`09_initial_conditions.cpp`](../api/examples/09_initial_conditions.cpp) | Built-in initial-condition patterns |
 | 10 | [`10_complete_pfc_model.cpp`](../api/examples/10_complete_pfc_model.cpp) | Full model integrating the above |
 

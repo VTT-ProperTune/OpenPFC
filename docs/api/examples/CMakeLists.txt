@@ -108,7 +108,7 @@ if(BUILD_API_EXAMPLES)
     )
     
     #===========================================================================
-    # Example 08: DiscreteField API - Fields with coordinate mapping
+    # Example 08: Field API — domain geometry and coordinate mapping
     #===========================================================================
     add_executable(example_08_discrete_field 08_discrete_field.cpp)
     target_link_libraries(example_08_discrete_field PRIVATE OpenPFC ${_api_ex_heffte})
