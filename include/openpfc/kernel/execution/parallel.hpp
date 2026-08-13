@@ -13,8 +13,8 @@
  * - fence() / fence(execution_space_instance)
  *
  * Serial: single-threaded loop. OpenMP: optional multi-threaded when
- * _OPENMP defined. Cuda/HIP: fallback to host execution until device
- * kernel launch is implemented.
+ * _OPENMP defined. Cuda/HIP: include runtime/gpu/parallel_gpu.hpp
+ * (fail-closed until a real device kernel launch exists).
  *
  * @see policy.hpp for RangePolicy, MDRangePolicy
  * @see execution_space.hpp for execution spaces
@@ -126,8 +126,7 @@ void parallel_for(const RangePolicy<ExecutionSpace, IndexType> &policy,
   } else {
     static_assert(sizeof(ExecutionSpace) == 0,
                   "Unknown execution space; for Cuda/HIP include "
-                  "openpfc/runtime/cuda/parallel_cuda.hpp or "
-                  "openpfc/runtime/hip/parallel_hip.hpp");
+                  "openpfc/runtime/gpu/parallel_gpu.hpp");
   }
 }
 
@@ -151,8 +150,7 @@ void parallel_for(const MDRangePolicy<ExecutionSpace, Rank<3>, IndexType> &polic
   } else {
     static_assert(sizeof(ExecutionSpace) == 0,
                   "Unknown execution space; for Cuda/HIP include "
-                  "openpfc/runtime/cuda/parallel_cuda.hpp or "
-                  "openpfc/runtime/hip/parallel_hip.hpp");
+                  "openpfc/runtime/gpu/parallel_gpu.hpp");
   }
 }
 
@@ -173,8 +171,8 @@ inline void fence() { (void)0; }
 
 /**
  * @brief Fence for a specific execution space instance. Kernel: no-op for
- * Serial and OpenMP. For Cuda/HIP include openpfc/runtime/cuda/parallel_cuda.hpp
- * or openpfc/runtime/hip/parallel_hip.hpp.
+ * Serial and OpenMP. For Cuda/HIP include openpfc/runtime/gpu/parallel_gpu.hpp
+ * (or the thin parallel_cuda.hpp / parallel_hip.hpp shims).
  */
 template <typename ExecutionSpace> void fence(const ExecutionSpace & /*space*/) {
   if constexpr (std::is_same_v<ExecutionSpace, Serial> ||
@@ -183,7 +181,7 @@ template <typename ExecutionSpace> void fence(const ExecutionSpace & /*space*/) 
   } else {
     static_assert(sizeof(ExecutionSpace) == 0,
                   "Unknown execution space; for Cuda/HIP include runtime "
-                  "parallel_cuda.hpp or parallel_hip.hpp");
+                  "parallel_gpu.hpp");
   }
 }
 
