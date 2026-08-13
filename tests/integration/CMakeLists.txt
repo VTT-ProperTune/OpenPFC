@@ -64,13 +64,16 @@ endif()
 
 
 # HIP integration tests follow the same pattern as CUDA tests.
-# test_fd_gradient_device_hip.hip instantiates the templated
-# for_each_interior_device_kernel for a test-local model and grads
-# aggregate; the kernel must be compiled by hipcc, so the test source is
-# added to the test target only on HIP builds.
+# test_fd_gradient_device_hip.hip and test_multi_field_device.hip instantiate
+# the templated for_each_interior_device_kernel for test-local models; the
+# kernel must be compiled by hipcc, so the sources are added only on HIP
+# builds. test_composite_gradient_pod_size_hip.hip is the HIP twin of the
+# CUDA POD-layout lock.
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   target_sources(openpfc-tests PRIVATE
     scenarios/gpu_validation/test_fd_gradient_device_hip.hip
+    scenarios/gpu_validation/test_composite_gradient_pod_size_hip.hip
+    scenarios/gpu_validation/test_multi_field_device.hip
     scenarios/parallel_scaling/test_padded_device_halo_self_wrap_hip.hip
   )
   target_link_libraries(openpfc-tests PRIVATE hip::host)

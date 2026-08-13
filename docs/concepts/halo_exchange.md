@@ -135,6 +135,7 @@ Separated recv: No scatter into core; MPI receives into contiguous face buffers 
 - Integration (CUDA): `test_full_padded_device_halo.cpp` — bit-identical full 26-direction fill on 1, 2 (`2x1x1`), and 4 (`2x2x1`) ranks; every padded cell, including all 12 edges and 8 corners, is checked against `hash(periodic_global_coord)`. Single-rank `hw=2` case also covered.
 - Integration (CUDA): `test_fd_gradient_device.cu` — end-to-end `for_each_interior_device(model, eval.pod(), du, t, ...)` against an analytic polynomial RHS (`u = a + b x + c x² + d y + e y² + f z + g z²`, `rhs = value + ∂_i u + ∂_i^2 u`). Confirms every owned cell matches the closed form to within `1e-9` and that halo cells of `du` stay untouched. Constructor diagnostic-throw test for unsupported D1 orders also covered.
 - Integration (CUDA multi-field): `test_multi_field_device.cu` / `test_composite_gradient_pod_size.cu` — `DevicePtrPackN` + `CompositeGradientDevice` path for 2-field (wave2d-style catalog `UGrads`/`VGrads`, kobayashi-style `phi`/`tempr`) and 3-field synthetic kernels; GPU owned-cell increments match CPU `for_each_interior` within `1e-12`; `scatter_device` and `evaluate_fd_grad_composite` covered; `sizeof(CompositeGradientDevicePOD) == 2088`.
+- Integration (HIP multi-field): `test_multi_field_device.hip` / `test_composite_gradient_pod_size_hip.hip` — HIP twins of the CUDA cases above (`pfc::hip` / `pfc::sim::hip`). Compiling under HIP is an M3 gate; executing on a GPU is M-LUMI.
 
 ### 5.3 Documentation references
 

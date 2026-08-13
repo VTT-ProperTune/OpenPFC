@@ -36,6 +36,7 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp` — single-source GPU 26-direction padded device halo (CUDA `m_use_full_widening` stamped for HIP); vendor `full_padded_device_halo.hpp` are thin includes
 - `include/openpfc/runtime/gpu/padded_halo_faces_gpu.inc` — single-source padded face pack/unpack kernels; compiled from `src/openpfc/runtime/gpu/padded_halo_faces.cu` and `.hip`
 - `include/openpfc/runtime/gpu/elementwise_ops_gpu.hpp` — generic device elementwise ops (complex×real multiply, two-term diagonal combine, axpy-style fill `out = alpha * x + beta`); compiled from `src/openpfc/runtime/gpu/elementwise_ops.cu` / `.hip`
+- HIP-parity gpu_validation tests: `test_multi_field_device.hip` and `test_composite_gradient_pod_size_hip.hip` (HIP twins of the CUDA-only multi-field `for_each_interior_device` and composite-gradient POD layout cases)
 - `pfc::fft::Backend::HIP` and `backend_from_string("hip"` / `"rocm")` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on; JSON `from_json<fft::Backend>` and `create_with_backend` accept HIP the same way they already accept CUDA
 
 ### Fixed
