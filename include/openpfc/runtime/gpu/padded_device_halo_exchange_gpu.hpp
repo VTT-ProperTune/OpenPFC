@@ -206,6 +206,14 @@ struct CudaHaloOps {
   static constexpr const char *sync_pack = "cudaStreamSynchronize pack face";
   static constexpr const char *memcpy_h2d = "cudaMemcpyAsync unpack face H2D";
   static constexpr const char *sync_unpack = "cudaStreamSynchronize unpack H2D";
+  static constexpr const char *malloc_full_scratch =
+      "cudaMalloc full halo device scratch";
+  static constexpr const char *sync_pre_full =
+      "cudaStreamSynchronize pre full halo";
+  static constexpr const char *sync_after_full_pass =
+      "cudaDeviceSynchronize after full halo pass";
+  static constexpr const char *sync_after_full_self =
+      "cudaStreamSynchronize after full halo self-pack";
   static constexpr const char *print_rank_what =
       "MPI_Comm_rank in print_cuda_halo_exchange_cpu_timers";
   static constexpr const char *print_reduce_what =
@@ -336,6 +344,13 @@ struct HipHaloOps {
   static constexpr const char *sync_pack = "hipStreamSynchronize pack face";
   static constexpr const char *memcpy_h2d = "hipMemcpyAsync unpack face H2D";
   static constexpr const char *sync_unpack = "hipStreamSynchronize unpack H2D";
+  static constexpr const char *malloc_full_scratch =
+      "hipMalloc full halo device scratch";
+  static constexpr const char *sync_pre_full = "hipStreamSynchronize pre full halo";
+  static constexpr const char *sync_after_full_pass =
+      "hipDeviceSynchronize after full halo pass";
+  static constexpr const char *sync_after_full_self =
+      "hipStreamSynchronize after full halo self-pack";
   static constexpr const char *print_rank_what =
       "MPI_Comm_rank in print_hip_halo_exchange_cpu_timers";
   static constexpr const char *print_reduce_what =
