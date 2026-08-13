@@ -39,8 +39,8 @@ std::string array_to_string(const std::array<T, D> &arr) {
 template <typename T>
 void show(const std::vector<T> &data, const std::array<int, 3> &size,
           const std::array<int, 3> &offsets) {
-  std::cout << size[0] << "×" << size[1] << "×" << size[2] << " Array<3, "
-            << pfc::TypeName<T>::get() << ">:\n";
+  std::cout << size[0] << "×" << size[1] << "×" << size[2] << " "
+            << pfc::TypeName<T>::get() << ":\n";
   for (int k = 0; k < size[2]; ++k) {
     std::cout << "[:, :, " << offsets[2] + k << "] = \n";
     for (int i = 0; i < size[0]; ++i) {
@@ -58,8 +58,8 @@ void show(const std::vector<T> &data, const std::array<int, 3> &size,
 template <typename T>
 void show(const std::vector<T> &data, const std::array<int, 2> &size,
           [[maybe_unused]] const std::array<int, 2> &offsets) {
-  std::cout << size[0] << "×" << size[1] << " Array<2, " << pfc::TypeName<T>::get()
-            << ">:\n";
+  std::cout << size[0] << "×" << size[1] << " " << pfc::TypeName<T>::get()
+            << ":\n";
   for (int i = 0; i < size[0]; ++i) {
     for (int j = 0; j < size[1]; ++j) {
       size_t idx = j * size[0] + i;

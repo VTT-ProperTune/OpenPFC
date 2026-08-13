@@ -18,7 +18,7 @@
  * template instantiations.
  *
  * @see model.hpp for field management
- * @see array.hpp for multi-dimensional arrays
+ * @see kernel/data/grid_field.hpp for the owning field container
  *
  * @author OpenPFC Contributors
  * @date 2025

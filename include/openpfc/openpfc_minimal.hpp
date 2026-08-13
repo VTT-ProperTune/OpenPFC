@@ -19,7 +19,6 @@
 #ifndef PFC_OPENPFC_MINIMAL_HPP
 #define PFC_OPENPFC_MINIMAL_HPP
 
-#include <openpfc/kernel/data/array.hpp>
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/multi_index.hpp>

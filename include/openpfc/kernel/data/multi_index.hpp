@@ -23,7 +23,7 @@
  * auto multi = idx.from_linear(linear);
  * @endcode
  *
- * @see array.hpp for array container using MultiIndex
+ * @see kernel/data/grid_field.hpp for the owning field container
  *
  * @author OpenPFC Contributors
  * @date 2025

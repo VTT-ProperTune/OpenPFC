@@ -46,11 +46,3 @@ for a runnable introduction.
 :no-link:
 ```
 
-## `pfc::Array`
-
-```{doxygenclass} pfc::Array
-:project: OpenPFC
-:members:
-:protected-members:
-:no-link:
-```
