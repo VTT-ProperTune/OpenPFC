@@ -3,7 +3,7 @@
 
 /**
  * @file memory_space.hpp
- * @brief Kokkos-compatible memory space tags (kernel: HostSpace only)
+ * @brief Host memory-space tag (kernel: HostSpace only)
  *
  * Kernel defines HostSpace only. CudaSpace and HipSpace are in
  * runtime/gpu/memory_space_gpu.hpp (vendor headers are thin includes).
@@ -23,7 +23,7 @@ namespace pfc {
 /**
  * @brief Host (CPU) memory space
  *
- * Data is accessible from the host. Kokkos-compatible name.
+ * Data is accessible from the host.
  */
 struct HostSpace {};
 

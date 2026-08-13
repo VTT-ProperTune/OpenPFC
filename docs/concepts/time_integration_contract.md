@@ -295,7 +295,7 @@ Numerical behavior is defined at the kernel layer and must be preserved by all r
 
 ### GPU implementation obligations
 
-GPU implementations of steppers (via `runtime/cuda` or `runtime/hip`) must:
+GPU implementations of steppers (via `runtime/gpu`, or the CUDA/HIP vendor shims) must:
 
 1. **Obey the same stage ordering** as CPU implementations
 2. **Use equivalent numerical algorithms** — same order of operations, same stencil coefficients

@@ -93,8 +93,9 @@ Runtime code realizes backend-specific behavior.
 |------|----------------|
 | `runtime/common` | shared adapters, MPI timing, affinity handling, and common launch helpers |
 | `runtime/cpu` | CPU and OpenMP execution plus the CPU FFT implementation |
-| `runtime/cuda` | CUDA memory, execution, kernels, exchange, and FFT support |
-| `runtime/hip` | HIP memory, execution, kernels, exchange, and FFT support |
+| `runtime/gpu` | single-source CUDA/HIP memory, kernels, exchange, and device drivers |
+| `runtime/cuda` | thin includes of `runtime/gpu`, plus CUDA FFT until M5 |
+| `runtime/hip` | thin includes of `runtime/gpu`, plus HIP FFT until M5 |
 
 Backend selection is made through templates, execution/memory-space types, and
 explicit runtime headers. CUDA and HIP implementation code should not leak into

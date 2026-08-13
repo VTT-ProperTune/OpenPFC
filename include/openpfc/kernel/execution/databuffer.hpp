@@ -25,8 +25,7 @@
  * cpu_buf[0] = 1.0;  // Works - CPU has operator[]
  *
  * // GPU memory: include openpfc/runtime/gpu/databuffer_gpu.hpp
- * // (or the thin runtime/cuda / runtime/hip shims)
- * // (and backend_tags_cuda.hpp as needed)
+ * // (vendor runtime/cuda / runtime/hip headers are thin includes)
  * pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_buf(1000);
  * std::vector<double> host_data(1000, 1.0);
  * gpu_buf.copy_from_host(host_data);
@@ -34,6 +33,7 @@
  *
  * @see kernel/execution/backend_tags.hpp for backend tag definitions
  * @see kernel/execution/memory_traits.hpp for backend metadata
+ * @see runtime/gpu/databuffer_gpu.hpp for CudaTag / HipTag specializations
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -57,7 +57,8 @@ template <typename T> constexpr bool dependent_false_databuffer = false;
  *
  * Template class that provides unified interface for memory management
  * across different backends. Kernel defines CpuTag only; include
- * runtime/cuda or runtime/hip headers for GPU backends.
+ * runtime/gpu/databuffer_gpu.hpp for GPU backends (vendor CUDA/HIP
+ * headers are thin includes).
  *
  * @tparam BackendTag Backend tag (CpuTag in kernel; CudaTag/HipTag in runtime)
  * @tparam T Element type (must be trivially copyable for GPU backends)
@@ -233,14 +234,14 @@ public:
 };
 
 /**
- * @brief Unsupported backend: include openpfc/runtime/cuda or runtime/hip for GPU
+ * @brief Unsupported backend: include openpfc/runtime/gpu/databuffer_gpu.hpp
  *
  * Kernel only provides DataBuffer<CpuTag,T>. For CudaTag or HipTag, include
- * the corresponding runtime header.
+ * the GPU runtime header (vendor CUDA/HIP shims are thin includes of it).
  */
 template <typename BackendTag, typename T> struct DataBuffer {
   static_assert(dependent_false_databuffer<BackendTag>,
-                "DataBuffer: include openpfc/runtime/cuda or openpfc/runtime/hip "
+                "DataBuffer: include openpfc/runtime/gpu/databuffer_gpu.hpp "
                 "for GPU backends");
 };
 

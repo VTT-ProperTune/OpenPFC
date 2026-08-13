@@ -101,7 +101,7 @@ Aligned with the [ownership and extension boundaries](../concepts/architecture.m
 2. **Shipped models (Tungsten, Aluminum, diffusion fixtures):** extract `initialize` / `step` internals into **`namespace …::`** free functions; leave `Model::step` as a one-line forwarder (easier testing and profiling).
 3. **`Time`:** add small free wrappers (`pfc::time::…` or `pfc::` overloads) mirroring hot members (`next`, `done`, …) where it improves consistency with `Model` / `Simulator` free APIs.
 4. **`errors.hpp`:** split by concern + prefer free `format_*` / `make_*` helpers so parsers do not pull unrelated types.
-5. **GPU runtime (`runtime/cuda` vs `runtime/hip`):** deduplicate with **`runtime/common`** free helpers (plan/layout/device buffer) instead of parallel class hierarchies.
+5. **GPU runtime (`runtime/cuda` vs `runtime/hip`):** **Done in M3** as single-source `runtime/gpu/` (vendor trees are thin includes; FFT headers remain until M5).
 6. **JSON wiring:** extend catalog/factory patterns (already: field modifiers, results writers) for any remaining `if (type == …)` branches in wiring.
 7. **`SpectralCpuStack` / session:** optional free `assemble_*` + `wire_*` for drivers that skip `App`. **Note:** `fft::CpuFft` is not movable; a “return struct of parts” API cannot move the FFT out of a temporary—use out-parameters, or keep constructing `CpuFft` inside `SpectralCpuStack`’s initializer list (current approach).
 8. **Integrator loop:** narrow `run_simulator_time_integration_loop` inputs to structs + free functions (less hidden state than callbacks on opaque objects). **Done:** `SimulatorIntegratorLoopEnv` + primary overload in `app_integrator_loop.hpp`.
