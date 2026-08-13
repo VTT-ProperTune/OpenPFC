@@ -29,6 +29,7 @@
  *
  * @see kernel/execution/backend_tags.hpp for backend tag definitions
  * @see kernel/execution/databuffer.hpp for backend-specific implementations
+ * @see runtime/gpu/memory_traits_gpu.hpp for CudaTag / HipTag traits
  *
  * @author OpenPFC Development Team
  * @date 2025
