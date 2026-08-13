@@ -39,7 +39,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
-#include <openpfc/runtime/cuda/full_padded_device_halo.hpp>
+#include <openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp>
 
 namespace {
 

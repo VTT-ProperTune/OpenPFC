@@ -25,7 +25,7 @@
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/runtime/hip/padded_device_halo_exchange.hpp>
+#include <openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp>
 
 namespace {
 
