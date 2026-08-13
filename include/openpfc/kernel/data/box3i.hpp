@@ -62,6 +62,14 @@ struct Box3i {
     return true;
   }
 
+  /// Row-major x-fastest linear index of `idx` relative to `low`.
+  [[nodiscard]] constexpr long long
+  to_linear(const std::array<int, 3> &idx) const {
+    return static_cast<long long>(idx[0] - low[0]) +
+           static_cast<long long>(size[0]) *
+               ((idx[1] - low[1]) + size[1] * (idx[2] - low[2]));
+  }
+
   friend constexpr bool operator==(const Box3i &a, const Box3i &b) {
     return a.low == b.low && a.high == b.high && a.size == b.size;
   }

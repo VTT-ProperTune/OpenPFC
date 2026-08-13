@@ -67,7 +67,7 @@ Narrative companion: [`getting_started/01-basics/README.md`](../getting_started/
 | `03_parallel_fft` | `03_parallel_fft.cpp` | Distributed FFT (HeFFTe) |
 | `04_diffusion_model` | `04_diffusion_model.cpp` | Simple spectral diffusion `Model` |
 | `05_simulator` | `05_simulator.cpp` | `Simulator`, `Time`, `FieldModifier` |
-| `06_multi_index` | `06_multi_index.cpp` | Multi-index utilities |
+| `06_multi_index` | `06_multi_index.cpp` | `Box3i` iteration and `to_linear` |
 | `07_array` | `07_array.cpp` | Array helpers |
 | `08_discrete_fields` | `08_discrete_fields.cpp` | `pfc::data::Field` with domain geometry |
 | `09_parallel_fft_high_level` | `09_parallel_fft_high_level.cpp` | Higher-level FFT usage |

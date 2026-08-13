@@ -36,7 +36,7 @@
 
 #include <functional>
 #include <openpfc/kernel/data/box3i.hpp>
-#include <openpfc/kernel/data/multi_index.hpp>
+#include <openpfc/kernel/data/types.hpp>
 
 namespace pfc::utils {
 
@@ -71,7 +71,7 @@ template <typename Func> void iterate_inbox(const Box3i &inbox, Func &&func) {
   for (int k = inbox.low[2]; k <= inbox.high[2]; k++) {
     for (int j = inbox.low[1]; j <= inbox.high[1]; j++) {
       for (int i = inbox.low[0]; i <= inbox.high[0]; i++) {
-        func(Int3{i, j, k}, linear_idx++);
+        func(pfc::Int3{i, j, k}, linear_idx++);
       }
     }
   }
