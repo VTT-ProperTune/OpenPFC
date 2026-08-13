@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file test_heat3d_vs_legacy_step.cpp
+ * @file test_heat3d_rhs_pattern.cpp
  * @brief Structural stub: Heat3D does not use Model::step() pattern.
  *
  * @details

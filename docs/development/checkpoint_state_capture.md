@@ -9,6 +9,10 @@ OpenPFC exposes a **serialization-agnostic** capture/restore seam under
 `include/openpfc/kernel/checkpoint/` so a future checkpoint manager can
 orchestrate save/restore without inventing per-app dumps.
 
+In-memory `restore_*` copies payload bytes into caller buffers after validation.
+**Filesystem restart loading is not implemented** (no bundle loader; see
+[`checkpoint_publish.md`](checkpoint_publish.md)).
+
 ## Headers
 
 | Header | Role |

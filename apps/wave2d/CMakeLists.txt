@@ -71,11 +71,11 @@ if(WAVE2D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_link_libraries(test_wave2d_operator_evaluation PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
     add_test(NAME wave2d-operator-evaluation COMMAND test_wave2d_operator_evaluation)
 
-    # Legacy vs operator-evaluation structural stub
-    add_executable(test_wave2d_vs_legacy_step tests/test_wave2d_vs_legacy_step.cpp)
-    target_include_directories(test_wave2d_vs_legacy_step PRIVATE ${WAVE2D_INCLUDE_DIR})
-    target_link_libraries(test_wave2d_vs_legacy_step PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
-    add_test(NAME wave2d-vs-legacy-step COMMAND test_wave2d_vs_legacy_step)
+    # rhs() pattern structural tests (not a numerical vs-legacy baseline)
+    add_executable(test_wave2d_rhs_pattern tests/test_wave2d_rhs_pattern.cpp)
+    target_include_directories(test_wave2d_rhs_pattern PRIVATE ${WAVE2D_INCLUDE_DIR})
+    target_link_libraries(test_wave2d_rhs_pattern PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
+    add_test(NAME wave2d-rhs-pattern COMMAND test_wave2d_rhs_pattern)
 
     # RK2/RK4 convergence integration tests
     add_executable(test_wave2d_rk_convergence tests/test_wave2d_rk_convergence.cpp)

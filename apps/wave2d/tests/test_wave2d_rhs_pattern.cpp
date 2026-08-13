@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file test_wave2d_vs_legacy_step.cpp
+ * @file test_wave2d_rhs_pattern.cpp
  * @brief Structural stub: Wave2D does not use Model::step() pattern.
  *
  * @details

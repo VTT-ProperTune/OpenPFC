@@ -12,7 +12,8 @@
  * - Initial condition application via FieldModifiers
  * - Boundary condition enforcement
  * - Results output scheduling via ResultsWriters
- * - Simulation checkpointing and restart
+ * - Checkpoint *publication* (`kernel/checkpoint`); restart loading is not
+ *   implemented (no bundle loader into SimulationState)
  *
  * The Simulator acts as the "main loop" that coordinates all simulation components:
  * @code

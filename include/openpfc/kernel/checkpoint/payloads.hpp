@@ -11,6 +11,7 @@
  * These types are value carriers for a future checkpoint manager. They do not
  * prescribe a file format. Field payloads describe accepted solution fields;
  * component payloads hold irreducible integrator/controller cross-step state.
+ * Filesystem restart loading is not implemented.
  *
  * Exclusions (not represented here): stage buffers, FFT plans, operator caches,
  * halo rings, and driver-owned @c Time / step counters.

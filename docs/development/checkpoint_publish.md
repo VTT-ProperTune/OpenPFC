@@ -12,12 +12,13 @@ directory bundle. The entry point is
 with metadata types in
 [`checkpoint_metadata.hpp`](../../include/openpfc/kernel/checkpoint/checkpoint_metadata.hpp).
 
-This is the durable **restart publication** seam. It is distinct from scheduled
+This is the durable **publish** seam for a future restart loader. It is distinct from scheduled
 headerless field dumps written by `ResultsWriter` / frontend `BinaryWriter`
 (see [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md)).
 
-Restore / migration validation is a sibling leaf — this document covers
-**publish** only.
+**Restart loading is not implemented.** Publication writes a versioned directory
+bundle; there is no reader that loads that bundle back into `SimulationState`.
+In-memory `state_capture` restore is a payload-buffer copy, not filesystem restart.
 
 ## API symbols
 

@@ -9,7 +9,8 @@
  * This file defines the ResultsWriter abstract base class, which provides
  * a unified interface for writing simulation results to various output formats.
  * Implementations live in frontend/io (e.g. BinaryWriter in binary_writer.hpp).
- * - Binary format (BinaryWriter) for checkpointing and restart
+ * - Binary format (BinaryWriter) for scheduled field dumps (not a restart loader)
+
  * - Future: VTK format for visualization
  *
  * The ResultsWriter interface supports:
