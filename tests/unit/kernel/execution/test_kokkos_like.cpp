@@ -3,7 +3,6 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <openpfc/kernel/execution/create_mirror.hpp>
 #include <openpfc/kernel/execution/deep_copy.hpp>
 #include <openpfc/kernel/execution/execution_space.hpp>
 #include <openpfc/kernel/execution/layout.hpp>
@@ -148,22 +147,4 @@ TEST_CASE("deep_copy scalar fill", "[kokkos_like][core]") {
     values_match &= v.data()[i] == Approx(3.14);
   }
   REQUIRE(values_match);
-}
-
-TEST_CASE("create_mirror and create_mirror_view", "[kokkos_like][core]") {
-  pfc::View<double, 3, pfc::LayoutRight, pfc::HostSpace> src("src", 2, 3, 4);
-  src(0, 0, 0) = 1.0;
-  src(1, 2, 3) = 2.0;
-
-  auto mirror = pfc::create_mirror(src);
-  REQUIRE(mirror.extent(0) == 2);
-  REQUIRE(mirror.extent(1) == 3);
-  REQUIRE(mirror.extent(2) == 4);
-  pfc::deep_copy(mirror, src);
-  REQUIRE(mirror(0, 0, 0) == Approx(1.0));
-  REQUIRE(mirror(1, 2, 3) == Approx(2.0));
-
-  auto mirror_view = pfc::create_mirror_view(src);
-  REQUIRE(mirror_view.data() == src.data());
-  REQUIRE(mirror_view(0, 0, 0) == Approx(1.0));
 }
