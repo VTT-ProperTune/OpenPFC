@@ -202,6 +202,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_library(openpfc_gpu_kernels
         src/openpfc/runtime/gpu/sparse_vector_ops.cu
         src/openpfc/runtime/gpu/fill.cu
+        src/openpfc/runtime/gpu/elementwise_ops.cu
     )
 
     target_include_directories(openpfc_gpu_kernels
@@ -236,6 +237,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         src/openpfc/runtime/gpu/sparse_vector_ops.hip
         src/openpfc/runtime/gpu/padded_halo_faces.hip
         src/openpfc/runtime/gpu/fill.hip
+        src/openpfc/runtime/gpu/elementwise_ops.hip
     )
 
     target_include_directories(openpfc_hip_kernels
