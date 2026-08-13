@@ -11,10 +11,10 @@
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
 #include <vector>
 
-#if defined(OpenPFC_ENABLE_CUDA)
+#if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 #include "unit/runtime/gpu/test_helpers.hpp"
-#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
-#include <openpfc/runtime/cuda/sparse_vector_cuda.hpp>
+#include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
+#include <openpfc/runtime/gpu/sparse_vector_gpu.hpp>
 #endif
 
 using namespace pfc;
@@ -130,6 +130,16 @@ TEST_CASE("SparseVector on_host check", "[SparseVector][core]") {
   REQUIRE(core::on_host(sparse_cuda) == false);
 #endif
 }
+
+#if defined(OpenPFC_ENABLE_HIP)
+TEST_CASE("SparseVector on_host check (HIP)", "[SparseVector][core][hip]") {
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+  auto sparse_hip = core::SparseVector<backend::HipTag, double>({1, 2, 3});
+  REQUIRE(core::on_host(sparse_hip) == false);
+}
+#endif
 
 TEST_CASE("SparseVector with duplicate indices (should handle gracefully)",
           "[SparseVector][core]") {
