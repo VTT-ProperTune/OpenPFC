@@ -50,6 +50,12 @@ jobs:
       - name: Kernel layering self-test (checker detects a deliberate violation)
         run: bash scripts/check_kernel_no_frontend_includes.sh --self-test
 
+      - name: GPU memcpy stays in runtime/gpu
+        run: bash scripts/check_gpu_memcpy_single_source.sh
+
+      - name: GPU memcpy checker self-test
+        run: bash scripts/check_gpu_memcpy_single_source.sh --self-test
+
   # ============================================================================
   # CMake Build Matrix
   # ============================================================================

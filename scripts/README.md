@@ -277,6 +277,16 @@ CI and local guard: fails if any kernel source under `include/openpfc/kernel` or
 bash scripts/check_kernel_no_frontend_includes.sh
 ```
 
+### check_gpu_memcpy_single_source.sh
+
+CI and local guard (M3): fails if `include/` or `src/` contain `cudaMemcpy` /
+`hipMemcpy` outside `runtime/gpu/`. Vendor CUDA/HIP trees must stay thin includes
+or re-exports (FFT until M5). Requires `rg`; exits 0 if `rg` is missing.
+
+```bash
+bash scripts/check_gpu_memcpy_single_source.sh
+```
+
 ### xdmfgen.py
 
 Generate XDMF files for visualization with ParaView.

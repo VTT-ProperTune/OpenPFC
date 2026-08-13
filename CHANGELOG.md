@@ -41,6 +41,7 @@ source compatibility is explicitly not a goal.
 - HIP backend instantiation smoke in `test_gpu_backend_instantiation.cpp` — separate Catch2 case so a CUDA skip cannot hide HIP; compares `create_hip` inbox/outbox sizes to the CPU FFT
 - `examples/fft_backend_benchmark` benchmarks HIP (rocFFT) as well as CUDA, using `runtime/gpu/` DataBuffer/tags
 - HIP `FullPaddedDeviceHalo` 26-direction integration twin `test_full_padded_device_halo_hip.cpp` of the CUDA `test_full_padded_device_halo.cpp` cases
+- `scripts/check_gpu_memcpy_single_source.sh` — CI guard that `cudaMemcpy` / `hipMemcpy` in `include/` and `src/` stay under `runtime/gpu/`
 - `pfc::fft::Backend::HIP` and `backend_from_string("hip"` / `"rocm")` when `OpenPFC_ENABLE_HIP_SPECTRAL` is on; JSON `from_json<fft::Backend>` and `create_with_backend` accept HIP the same way they already accept CUDA
 
 ### Fixed

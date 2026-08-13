@@ -97,6 +97,10 @@ Runtime code realizes backend-specific behavior.
 | `runtime/cuda` | thin includes of `runtime/gpu`, plus CUDA FFT until M5 |
 | `runtime/hip` | thin includes of `runtime/gpu`, plus HIP FFT until M5 |
 
+Native `cudaMemcpy` / `hipMemcpy` in `include/` and `src/` must live under
+`runtime/gpu/` (`scripts/check_gpu_memcpy_single_source.sh`). Apps and tests
+may still call the vendor memcpy APIs directly.
+
 Backend selection is made through templates, execution/memory-space types, and
 explicit runtime headers. CUDA and HIP implementation code should not leak into
 backend-independent kernel interfaces.
