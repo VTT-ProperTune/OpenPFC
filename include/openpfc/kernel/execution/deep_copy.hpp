@@ -73,14 +73,13 @@ void deep_copy_view_to_view_impl(View<T, Rank, L1, M1> &dst,
     return;
   }
 
-  // Both device: provided by runtime (include deep_copy_cuda.hpp /
-  // deep_copy_hip.hpp)
+  // Both device: provided by runtime (include deep_copy_gpu.hpp, or the
+  // thin deep_copy_cuda.hpp / deep_copy_hip.hpp shims)
   constexpr bool both_device =
       !std::is_same_v<M1, HostSpace> && !std::is_same_v<M2, HostSpace>;
   static_assert(
       !both_device,
-      "deep_copy device-to-device: include openpfc/runtime/cuda/deep_copy_cuda.hpp "
-      "or openpfc/runtime/hip/deep_copy_hip.hpp");
+      "deep_copy device-to-device: include openpfc/runtime/gpu/deep_copy_gpu.hpp");
   (void)dst_ptr;
   (void)src_ptr;
   (void)n;
