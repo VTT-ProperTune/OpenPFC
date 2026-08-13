@@ -29,10 +29,12 @@ This directory contains modular CMake configuration files that organize the buil
    - CUDA detection and configuration
    - CUDA architecture settings
    - CUDA availability checks
+   - Backend-enable macros (`OpenPFC_ENABLE_CUDA`, `OpenPFC_MPI_CUDA_AWARE`) are applied as PUBLIC usage requirements in **LibraryConfiguration.cmake**, not via directory-scope `add_compile_definitions`
 
 4. **HipSupport.cmake**
    - HIP (ROCm) detection and configuration
    - HIP availability checks (pairs with CUDA for optional GPU backends)
+   - Backend-enable macros (`OpenPFC_ENABLE_HIP`, `OpenPFC_MPI_HIP_AWARE`) are applied as PUBLIC usage requirements in **LibraryConfiguration.cmake**
 
 ### Dependency Management
 

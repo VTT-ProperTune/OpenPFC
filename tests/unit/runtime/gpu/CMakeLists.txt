@@ -8,7 +8,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
         ${CMAKE_SOURCE_DIR}/include
     )
-    target_link_libraries(test_gpu_device PRIVATE Catch2::Catch2 CUDA::cudart)
+    target_link_libraries(test_gpu_device PRIVATE Catch2::Catch2 CUDA::cudart
+                                                openpfc_gpu_compile_defs)
     add_test(NAME GPU_DeviceDetection COMMAND test_gpu_device)
 
     add_executable(test_gpu_fft test_fft_cuda.cpp)
@@ -50,6 +51,7 @@ if(OpenPFC_ENABLE_GPU_AUTOTUNING)
     target_link_libraries(test_gpu_autotune PRIVATE
         Catch2::Catch2
         nlohmann_json::nlohmann_json
+        openpfc_gpu_compile_defs
     )
     if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         target_link_libraries(test_gpu_autotune PRIVATE CUDA::cudart)
@@ -68,7 +70,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
         ${CMAKE_SOURCE_DIR}/include
     )
-    target_link_libraries(test_hip_device PRIVATE Catch2::Catch2 hip::host)
+    target_link_libraries(test_hip_device PRIVATE Catch2::Catch2 hip::host
+                                               openpfc_gpu_compile_defs)
     add_test(NAME HIP_DeviceDetection COMMAND test_hip_device)
 
     add_executable(test_exchange_hip_fail_closed test_exchange_hip_fail_closed.cpp)

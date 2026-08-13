@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # HIP (ROCm) support detection and configuration
@@ -13,11 +13,12 @@ if(OpenPFC_ENABLE_HIP)
 
   if(HIP_FOUND)
     set(OpenPFC_HIP_AVAILABLE TRUE)
-    add_compile_definitions(OpenPFC_ENABLE_HIP)
+    # OpenPFC_ENABLE_HIP / OpenPFC_MPI_HIP_AWARE are PUBLIC usage requirements
+    # on openpfc (and kernel libs) in LibraryConfiguration.cmake — same reason
+    # as the CUDA block in CudaSupport.cmake.
 
     option(OpenPFC_MPI_HIP_AWARE "Use GPU-aware MPI with HIP (device pointers in MPI_Send/Recv)" ON)
     if(OpenPFC_MPI_HIP_AWARE)
-      add_compile_definitions(OpenPFC_MPI_HIP_AWARE)
       message(STATUS "   OpenPFC_MPI_HIP_AWARE=ON (MPI uses device pointers)")
     endif()
 

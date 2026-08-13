@@ -83,19 +83,37 @@ target_compile_definitions(openpfc_frontend_obj PUBLIC
 target_compile_definitions(openpfc_frontend_obj PRIVATE
     "OPENPFC_PROFILING_BUILD_VERSION=\"${PROJECT_VERSION}\"")
 
-# Export the backend-enable flags as PUBLIC usage requirements (audit 11 / PM).
-# Previously these were directory-scope add_compile_definitions in
-# CudaSupport/HipSupport.cmake, which are NOT part of the installed INTERFACE, so
-# downstream header inclusion could differ from the in-tree build. Setting them
-# on the object libraries keeps in-tree and installed behavior identical.
-if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
-  target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_CUDA)
-  target_compile_definitions(openpfc_frontend_obj PUBLIC OpenPFC_ENABLE_CUDA)
-endif()
-if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
-  target_compile_definitions(openpfc_kernel_obj PUBLIC OpenPFC_ENABLE_HIP)
-  target_compile_definitions(openpfc_frontend_obj PUBLIC OpenPFC_ENABLE_HIP)
-endif()
+# GPU backend-enable flags as PUBLIC usage requirements (audit 11 / PM / M3).
+# Directory-scope add_compile_definitions is not part of the installed
+# INTERFACE, so OpenPFC::openpfc consumers must get the same macros as in-tree
+# TUs. Apply them on the exported library, the object libs that compile it,
+# and the vendor kernel libs (PUBLIC so tests that link only the kernel lib
+# still see OpenPFC_ENABLE_*).
+function(openpfc_gpu_public_definitions tgt)
+  if(NOT TARGET ${tgt})
+    return()
+  endif()
+  if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
+    target_compile_definitions(${tgt} PUBLIC OpenPFC_ENABLE_CUDA)
+    if(OpenPFC_MPI_CUDA_AWARE)
+      target_compile_definitions(${tgt} PUBLIC OpenPFC_MPI_CUDA_AWARE)
+    endif()
+  endif()
+  if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
+    target_compile_definitions(${tgt} PUBLIC OpenPFC_ENABLE_HIP)
+    if(OpenPFC_MPI_HIP_AWARE)
+      target_compile_definitions(${tgt} PUBLIC OpenPFC_MPI_HIP_AWARE)
+    endif()
+  endif()
+endfunction()
+
+openpfc_gpu_public_definitions(openpfc)
+openpfc_gpu_public_definitions(openpfc_kernel_obj)
+openpfc_gpu_public_definitions(openpfc_frontend_obj)
+
+# In-tree GPU unit tests that do not link openpfc (device detection, autotune).
+add_library(openpfc_gpu_compile_defs INTERFACE)
+openpfc_gpu_public_definitions(openpfc_gpu_compile_defs)
 
 # Layering: openpfc is the compiled implementation; public include path is on the
 # target above. HeFFTe stays PRIVATE (see block below) so only TUs that include
@@ -227,6 +245,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     # Link GPU kernels to main library (private - implementation detail)
     # Users can still use the kernels via headers, but don't need to link the library
     target_link_libraries(openpfc PRIVATE openpfc_gpu_kernels)
+    openpfc_gpu_public_definitions(openpfc_gpu_kernels)
 
     message(STATUS "✅ GPU kernel library enabled")
 endif()
@@ -259,6 +278,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
 
     # Link HIP kernels to main library (private - implementation detail)
     target_link_libraries(openpfc PRIVATE openpfc_hip_kernels)
+    openpfc_gpu_public_definitions(openpfc_hip_kernels)
 
     message(STATUS "✅ HIP kernel library enabled")
 endif()

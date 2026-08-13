@@ -14,7 +14,11 @@ if(OpenPFC_ENABLE_CUDA)
     
     if(CUDAToolkit_FOUND)
         set(OpenPFC_CUDA_AVAILABLE TRUE)
-        add_compile_definitions(OpenPFC_ENABLE_CUDA)
+        # OpenPFC_ENABLE_CUDA / OpenPFC_MPI_CUDA_AWARE are PUBLIC usage
+        # requirements on openpfc (and kernel libs) in LibraryConfiguration.cmake.
+        # Directory-scope add_compile_definitions is not part of the installed
+        # INTERFACE, so consumers of OpenPFC::openpfc would see different macros
+        # than the in-tree build.
 
         # Floor for toolkit features used by the CUDA runtime headers and
         # device drivers. This does *not* claim device-side std::tuple /
@@ -40,7 +44,6 @@ if(OpenPFC_ENABLE_CUDA)
 
         option(OpenPFC_MPI_CUDA_AWARE "Use GPU-aware MPI (device pointers in MPI_Send/Recv)" ON)
         if(OpenPFC_MPI_CUDA_AWARE)
-            add_compile_definitions(OpenPFC_MPI_CUDA_AWARE)
             message(STATUS "   OpenPFC_MPI_CUDA_AWARE=ON (MPI uses device pointers)")
         endif()
         
