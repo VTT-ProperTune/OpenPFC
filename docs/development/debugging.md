@@ -26,6 +26,10 @@ for another build type, use the OpenPFC CMake option:
 cmake -DOpenPFC_ENABLE_NAN_CHECK=ON path/to/source
 ```
 
+`NAN_CHECK_ENABLED` is a PUBLIC compile definition on `OpenPFC::openpfc` when
+Debug is selected or `OpenPFC_ENABLE_NAN_CHECK=ON`, so `find_package(OpenPFC)`
+consumers see the same macro as the in-tree build.
+
 When NaN checks are enabled, the software includes a macro called
 `CHECK_AND_ABORT_IF_NAN`, which can be used to check individual floating-point
 values for NaN. If a NaN value is detected, the application will be aborted, and

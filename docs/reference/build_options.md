@@ -29,7 +29,7 @@ Defined in **`cmake/BuildOptions.cmake`** and **`cmake/Dependencies.cmake`**.
 | **`OpenPFC_ENABLE_HIP`** | OFF | ROCm/HIP and **`tungsten_hip`**, **`allen_cahn_hip`**, etc. |
 | **`OpenPFC_ENABLE_HDF5`** | OFF | HDF5 export for profiling dumps (see **`performance_profiling.md`**) |
 | **`OpenPFC_FETCH_HEFFTE`** | (see CMake) | Fetch/build HeFFTe via CMake when not found (see **`INSTALL.md`**) |
-| **`OpenPFC_ENABLE_NAN_CHECK`** | OFF | NaN checks beyond Debug (see **`debugging.md`**) |
+| **`OpenPFC_ENABLE_NAN_CHECK`** | OFF | NaN checks beyond Debug (see **`debugging.md`**). When active (Debug or this option), `NAN_CHECK_ENABLED` is PUBLIC on **`OpenPFC::openpfc`**. |
 | **`OpenPFC_ENABLE_CODE_COVERAGE`** | ON where supported | Coverage targets; often OFF on clusters ( **`INSTALL.md`**) |
 
 GPU-aware MPI toggles (`OpenPFC_MPI_CUDA_AWARE` / `OpenPFC_MPI_HIP_AWARE`) and CUDA/HIP compiler discovery are described in **`INSTALL.md`** and **`INSTALL.LUMI.md`**. When CUDA or HIP is enabled, `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_HIP` and the matching MPI-aware flags are **PUBLIC** compile definitions on **`OpenPFC::openpfc`** (and the vendor kernel libraries), so `find_package(OpenPFC)` consumers see the same macros as the in-tree build. `OpenPFC_ENABLE_GPU_AUTOTUNING` is exported the same way when that option is ON.

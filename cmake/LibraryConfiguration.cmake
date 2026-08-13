@@ -118,6 +118,12 @@ openpfc_gpu_public_definitions(openpfc_frontend_obj)
 add_library(openpfc_gpu_compile_defs INTERFACE)
 openpfc_gpu_public_definitions(openpfc_gpu_compile_defs)
 
+if(OpenPFC_NAN_CHECK_ACTIVE)
+  target_compile_definitions(openpfc PUBLIC NAN_CHECK_ENABLED)
+  target_compile_definitions(openpfc_kernel_obj PUBLIC NAN_CHECK_ENABLED)
+  target_compile_definitions(openpfc_frontend_obj PUBLIC NAN_CHECK_ENABLED)
+endif()
+
 # Layering: openpfc is the compiled implementation; public include path is on the
 # target above. HeFFTe stays PRIVATE (see block below) so only TUs that include
 # fft_fftw.hpp need to link HeFFTe.

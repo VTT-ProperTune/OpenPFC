@@ -41,9 +41,11 @@ endif()
 
 set(OpenPFC_NAN_CHECK_ACTIVE OFF)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR OpenPFC_ENABLE_NAN_CHECK)
-    add_compile_definitions(NAN_CHECK_ENABLED)
     set(OpenPFC_NAN_CHECK_ACTIVE ON)
 endif()
+# NAN_CHECK_ENABLED is applied as a PUBLIC usage requirement on openpfc in
+# LibraryConfiguration.cmake (directory-scope add_compile_definitions is not
+# part of the installed INTERFACE).
 
 # Enable debug macros and stricter warnings for Debug builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
