@@ -56,6 +56,7 @@ source compatibility is explicitly not a goal.
 - HIP packed-halo pinned host buffers use `hipHostMalloc` / `hipHostFree` instead of the deprecated `hipMallocHost` / `hipFreeHost`.
 - Device kernel TUs (`sparse_vector_ops.cu/.hip`, `padded_halo_faces.cu/.hip`) live under `src/openpfc/runtime/gpu/` instead of `include/` (and instead of `src/openpfc/runtime/cuda/` for the CUDA halo-face TU). CUDA `padded_halo_faces.cu` remains linked per executable because of separable-compilation device-link.
 - `deep_copy(view, scalar)` on a device View and `deep_copy(buffer, scalar)` for CUDA/HIP `DataBuffer` run a device fill kernel (`runtime/gpu/fill_gpu`) instead of staging a host vector. Unmanaged device Views can be filled. Device scalar fill supports `float` and `double`; include `deep_copy_gpu.hpp` (or the vendor shim).
+- HIP FFT header aliases match CUDA: `RealDataBufferHIP`, `ComplexDataBufferHIP`, and `fft_r2c_hip` (`heffte::fft3d_r2c<heffte::backend::rocfft>`). Vendor FFT headers remain until M5.
 
 ### Removed
 

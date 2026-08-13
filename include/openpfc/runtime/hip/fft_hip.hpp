@@ -20,6 +20,8 @@
 #include <openpfc/kernel/fft/detail/fft_heffte_backend.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/fft/fft_layout.hpp>
+#include <openpfc/runtime/hip/backend_tags_hip.hpp>
+#include <openpfc/runtime/hip/databuffer_hip.hpp>
 
 #include <mpi.h>
 
@@ -42,6 +44,14 @@ namespace pfc::fft {
  * @note Requires AMD GPU with ROCm and GPU-aware MPI for multi-GPU setups
  */
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+// HIP DataBuffer type aliases (parity with fft_cuda.hpp)
+using RealDataBufferHIP = core::DataBuffer<backend::HipTag, double>;
+using ComplexDataBufferHIP =
+    core::DataBuffer<backend::HipTag, std::complex<double>>;
+
+// rocFFT backend type alias
+using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
+
 // GPU FFT type alias for rocFFT backend
 using FFT_HIP = FFT_Impl<heffte::backend::rocfft>;
 
