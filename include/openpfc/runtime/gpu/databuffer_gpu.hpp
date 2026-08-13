@@ -28,14 +28,13 @@
 #include <vector>
 
 #include <openpfc/kernel/execution/databuffer.hpp>
+#include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
-#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
 #include <hip/hip_runtime.h>
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
 #endif
 
 namespace pfc::core::detail {

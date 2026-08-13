@@ -21,13 +21,7 @@
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
 #include <openpfc/kernel/execution/memory_space.hpp>
-
-#if defined(OpenPFC_ENABLE_CUDA)
-#include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
-#endif
-#if defined(OpenPFC_ENABLE_HIP)
-#include <openpfc/runtime/hip/backend_tags_hip.hpp>
-#endif
+#include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
 
 namespace pfc {
 

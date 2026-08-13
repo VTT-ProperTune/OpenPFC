@@ -7,11 +7,12 @@
  *
  * @details
  * This header defines the CPU backend tag only. Kernel stays backend-agnostic;
- * CUDA and HIP tags are in runtime/cuda and runtime/hip.
+ * CUDA and HIP tags are in runtime/gpu.
  *
  * - `CpuTag`: CPU backend (always available, defined here)
- * - `CudaTag`: include <openpfc/runtime/cuda/backend_tags_cuda.hpp>
- * - `HipTag`: include <openpfc/runtime/hip/backend_tags_hip.hpp>
+ * - `CudaTag` / `HipTag`: include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
+ *   (vendor headers `backend_tags_cuda.hpp` / `backend_tags_hip.hpp` are
+ *   thin includes)
  *
  * @code
  * #include <openpfc/kernel/execution/backend_tags.hpp>
@@ -19,8 +20,9 @@
  * pfc::core::DataBuffer<pfc::backend::CpuTag, double> cpu_buf(1000);
  * @endcode
  *
- * @see runtime/cuda/backend_tags_cuda.hpp for CudaTag
- * @see runtime/hip/backend_tags_hip.hpp for HipTag
+ * @see runtime/gpu/backend_tags_gpu.hpp for CudaTag and HipTag
+ * @see runtime/cuda/backend_tags_cuda.hpp (thin include)
+ * @see runtime/hip/backend_tags_hip.hpp (thin include)
  * @see kernel/execution/databuffer.hpp for usage in memory management
  */
 
