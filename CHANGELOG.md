@@ -63,6 +63,7 @@ source compatibility is explicitly not a goal.
 - `cmake --install` no longer ships FetchContent `nlohmann_json` headers or the `openpfc-tests` binary. `find_package(OpenPFC)` always `find_dependency(nlohmann_json)`.
 - `OpenPFC_ENABLE_GPU_AUTOTUNING` is a PUBLIC compile definition on `openpfc` (and the vendor kernel libraries) instead of directory-scope `add_compile_definitions`.
 - Heat3D/Wave2D structural `rhs()` tests renamed off `vs_legacy_step` (they were never numerical vs-legacy baselines). Checkpoint headers/docs state that restart loading is not implemented.
+- Bare `cmake` on a single-config generator defaults to `RelWithDebInfo`, not Debug (`cmake/ProjectSetup.cmake`; documented in `INSTALL.md`).
 - GPU SparseVector host-to-device copy failures report `"HIP copy failed: …"` with the runtime string, matching CUDA; unused duplicate `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` shims removed (`sparse_vector_ops.hpp` remains).
 
 ### Removed

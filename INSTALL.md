@@ -270,6 +270,12 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 cmake --build build-cpu -j"$(nproc)"
 ```
 
+If you omit `-DCMAKE_BUILD_TYPE`, single-config generators default to
+**RelWithDebInfo** (`cmake/ProjectSetup.cmake`), not Debug. Multi-config
+generators ignore `CMAKE_BUILD_TYPE`; CMake presets may set the type explicitly.
+The examples below still pass `-DCMAKE_BUILD_TYPE=Release` when a fully
+optimized, non-debug-info build is intended.
+
 Minimal configure (optional): By default, OpenPFC may enable code coverage and (if Doxygen is installed) documentation. For binaries only:
 
 ```bash
@@ -288,6 +294,7 @@ These switches are defined under `cmake/` (see `BuildOptions.cmake`, `Dependenci
 
 | Cache variable | Typical use |
 |------------------|---------------|
+| `CMAKE_BUILD_TYPE` | Single-config default is **RelWithDebInfo** if unset (`cmake/ProjectSetup.cmake`). Pass `Release` or `Debug` to override. |
 | `OpenPFC_ENABLE_MPI` | Must stay ON for supported builds (see §2). |
 | `OpenPFC_ENABLE_HEFFTE` | HeFFTe FFT stack (ON by default; OFF is rejected at configure time). |
 | `OpenPFC_FETCH_HEFFTE` | Fetch HeFFTe into `build/_deps/` if no install is found. |

@@ -38,6 +38,7 @@ GPU-aware MPI toggles (`OpenPFC_MPI_CUDA_AWARE` / `OpenPFC_MPI_HIP_AWARE`) and C
 
 | Setting | Meaning |
 |---------|---------|
+| **`CMAKE_BUILD_TYPE`** | Single-config default is **RelWithDebInfo** if unset (`cmake/ProjectSetup.cmake`). |
 | **`BUILD_SHARED_LIBS`** | OFF = static **`libopenpfc`** (typical); ON = shared. |
 | **`OpenPFC_PROFILING_LEVEL`** | `0` / `1` / `2` — compile-time stripping of **`OPENPFC_PROFILE`** macros (`cmake/LibraryConfiguration.cmake`). |
 
