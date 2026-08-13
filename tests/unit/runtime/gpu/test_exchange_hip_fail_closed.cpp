@@ -23,9 +23,9 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <stdexcept>
 #include <vector>
 
-#include <openpfc/runtime/hip/exchange_hip.hpp>
-#include <openpfc/runtime/hip/hip_check.hpp>
-#include <openpfc/runtime/hip/sparse_vector_hip.hpp>
+#include <openpfc/runtime/gpu/exchange_gpu.hpp>
+#include <openpfc/runtime/gpu/gpu_check.hpp>
+#include <openpfc/runtime/gpu/sparse_vector_gpu.hpp>
 
 TEST_CASE("HIP isend/irecv fail closed without OpenPFC_MPI_HIP_AWARE",
           "[gpu][exchange][fail-closed][hip]") {

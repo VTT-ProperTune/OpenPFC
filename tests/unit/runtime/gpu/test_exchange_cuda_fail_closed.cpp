@@ -23,9 +23,9 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <stdexcept>
 #include <vector>
 
-#include <openpfc/runtime/cuda/cuda_check.hpp>
-#include <openpfc/runtime/cuda/exchange_cuda.hpp>
-#include <openpfc/runtime/cuda/sparse_vector_cuda.hpp>
+#include <openpfc/runtime/gpu/exchange_gpu.hpp>
+#include <openpfc/runtime/gpu/gpu_check.hpp>
+#include <openpfc/runtime/gpu/sparse_vector_gpu.hpp>
 
 TEST_CASE("CUDA isend/irecv fail closed without OpenPFC_MPI_CUDA_AWARE",
           "[gpu][exchange][fail-closed][cuda]") {
