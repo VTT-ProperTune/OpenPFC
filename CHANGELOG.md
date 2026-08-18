@@ -14,6 +14,8 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `HaloExchangeOptions::directions` — optional `HaloDirectionSet` (empty means `Axes3D()` for Faces, `Full3D()` for Full). Kobayashi CPU/HIP/CUDA pass `Axes2D()` so the `nz=1` slab skips ±Z.
+- Kobayashi CUDA driver uses two multi-field `pfc::comm::HaloExchange<CudaSpace>` objects on device-resident Fields (state then aux), matching HIP/CPU. Execute on tohtori.
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `standard-g` (default) or `dev-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
 - wave2d CUDA driver and CPU-vs-CUDA test use `SparseExchange<CudaSpace>` with device y-face BC patches. Execute on tohtori.
 - Allen–Cahn CUDA driver and CPU-vs-CUDA test use `SparseExchange<CudaSpace>` (device gather/MPI/face recv). Execute on tohtori.
