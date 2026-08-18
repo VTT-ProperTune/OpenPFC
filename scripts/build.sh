@@ -721,11 +721,15 @@ exec "${REPO_ROOT}/scripts/build.sh" \\
 EOF
   chmod +x "${sbatch_file}"
 
-  local -a sbatch_cmd=(sbatch)
+  local -a sbatch_cmd=(sbatch --account="${LUMI_ACCOUNT}")
   if (( WAIT_FOR_JOB )); then
     sbatch_cmd+=(--wait)
   fi
   sbatch_cmd+=("${sbatch_file}")
+  # Login shells here export SBATCH_ACCOUNT=project_462001245, which
+  # overrides #SBATCH --account. The CLI flag above wins; drop the env
+  # so a later nested sbatch cannot silently revert.
+  unset SBATCH_ACCOUNT SLURM_ACCOUNT
 
   echo
   echo "Submitting LUMI GPU job:"
