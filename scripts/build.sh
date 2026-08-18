@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Standalone configure, build, and test driver for OpenPFC on supported machines.
+# Agents and humans should use this script instead of invoking cmake/ctest by hand.
 
 if [ -z "${BASH_VERSION-}" ]; then
   exec /usr/bin/env bash "$0" "$@"
@@ -13,16 +14,20 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-MACHINE="${MACHINE:-tohtori}"
+# Empty MACHINE → auto-detect (LUMI login/compute vs Tohtori).
+MACHINE="${MACHINE:-}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 BUILD_DIR="${BUILD_DIR:-}"
 ADD_TIMESTAMP="${ADD_TIMESTAMP:-0}"
 WITH_CUDA="${WITH_CUDA:-0}"
 WITH_ROCM="${WITH_ROCM:-0}"
+BACKEND_EXPLICIT=0
 RUN_TESTS="${RUN_TESTS:-1}"
 RUN_MPI_TESTS="${RUN_MPI_TESTS:-1}"
 JOBS="${JOBS:-32}"
 CLEAN_BUILD="${CLEAN_BUILD:-0}"
+SUBMIT="${SUBMIT:-}"
+CMAKE_GENERATOR="${CMAKE_GENERATOR:-}"
 
 OPENMPI_MODULE="${OPENMPI_MODULE:-openmpi/5.0.10}"
 CUDA_MODULE="${CUDA_MODULE:-cuda/13.1}"
@@ -42,30 +47,49 @@ ROCM_MODULE="${ROCM_MODULE:-rocm/7.2.1}"
 OPENMPI_ROOT_CUDA="${OPENMPI_ROOT_CUDA:-${HOME}/opt/openmpi/5.0.10-cuda}"
 OPENPFC_GCC_MODULE_CUDA="${OPENPFC_GCC_MODULE_CUDA:-gcc/15.2.0}"
 MPI_CUDA_AWARE="${MPI_CUDA_AWARE:-}"
-MPI_HIP_AWARE="${MPI_HIP_AWARE:-0}"
+MPI_HIP_AWARE="${MPI_HIP_AWARE:-}"
 HEFFTE_VERSION="${HEFFTE_VERSION:-2.4.1}"
 HEFFTE_PREFIX="${HEFFTE_PREFIX:-}"
 HEFFTE_MODULE="${HEFFTE_MODULE:-}"
 CUDA_ARCHITECTURES="${CUDA_ARCHITECTURES:-}"
 ROCM_ARCHITECTURES="${ROCM_ARCHITECTURES:-}"
 
+LUMI_STACK="${LUMI_STACK:-LUMI/25.09}"
+LUMI_ACCOUNT="${LUMI_ACCOUNT:-project_462001245}"
+LUMI_PARTITION="${LUMI_PARTITION:-dev-g}"
+LUMI_GPUS="${LUMI_GPUS:-8}"
+LUMI_TIME="${LUMI_TIME:-}"
+LUMI_PRIVATE_MODULES="${LUMI_PRIVATE_MODULES:-${HOME}/privatemodules}"
+LUMI_FLASH_ROOT="${LUMI_FLASH_ROOT:-/flash/project_462001245/juaho/build}"
+LUMI_SCRATCH_LOGS="${LUMI_SCRATCH_LOGS:-/scratch/project_462001245/juaho/logs}"
+ENABLE_HDF5="${ENABLE_HDF5:-}"
+
 declare -a EXTRA_CMAKE_ARGS=()
+declare -a ORIG_ARGS=("$@")
 
 usage() {
   cat <<'EOF'
 Usage: ./scripts/build.sh [options]
 
-Configure, build, and test OpenPFC. The default is a 32-way Release CPU build
-on Tohtori with tests enabled.
+Canonical configure / build / test entry point for OpenPFC. Do not invoke
+cmake / cmake --build / ctest by hand for routine work — this script loads
+the correct modules (compiler, MPI, HeFFTe) and machine toolchain.
+
+On Tohtori the default is a 32-way Release CPU build in builds/release.
+On LUMI the default is a HIP/ROCm Release build: configure on the login
+node (FetchContent needs the network), then submit compile + ctest to a
+GPU partition (dev-g by default, or standard-g).
 
 Options:
-  --machine=NAME          Machine configuration (currently: tohtori)
+  --machine=NAME          tohtori or lumi (default: auto-detect from host)
   --build-type=TYPE       Debug or Release
-  --build-dir=PATH        Build directory (default: builds/debug or builds/release)
+  --build-dir=PATH        Build directory
+                          Tohtori default: builds/debug or builds/release
+                          LUMI default: /flash/project_462001245/juaho/build/openpfc-lumi-<backend>-<flavor>
   --with-timestamp        Append YYYYmmdd-HHMMSS to the build directory
   --without-timestamp     Do not append a timestamp (default)
-  --with-cuda             Enable CUDA and use the CUDA HeFFTe prefix
-  --with-rocm             Enable HIP/ROCm and use the ROCm HeFFTe prefix
+  --with-cuda             Enable CUDA (Tohtori only; not available on LUMI)
+  --with-rocm             Enable HIP/ROCm (LUMI default)
   --cpu                   Disable CUDA and ROCm
   --test                  Run Python tests and CTest after building (default)
   --no-test               Configure and build without running tests
@@ -74,11 +98,20 @@ Options:
   --jobs=N, -j N          Parallel build/test jobs (default: 32)
   --clean                 Remove the selected build directory before configuring
   --cmake-arg=ARG         Append one argument to the CMake configure command
+  --submit                LUMI: submit compile+test to Slurm (default on a login node)
+  --no-submit             LUMI: run configure/build/test in this process
+  --partition=NAME        LUMI GPU partition: dev-g (default) or standard-g
+  --account=NAME          LUMI Slurm account (default: project_462001245)
+  --time=LIMIT            LUMI Slurm time limit (dev-g default 02:30:00)
+  --gpus=N                LUMI GPUs per node (default: 8)
+  --wait                  LUMI: sbatch --wait (block until the job finishes)
   -h, --help              Show this help
 
 Environment variables mirror the CLI:
   MACHINE, BUILD_TYPE, BUILD_DIR, ADD_TIMESTAMP, WITH_CUDA, WITH_ROCM,
-  RUN_TESTS, RUN_MPI_TESTS, JOBS, CLEAN_BUILD
+  RUN_TESTS, RUN_MPI_TESTS, JOBS, CLEAN_BUILD, SUBMIT,
+  LUMI_ACCOUNT, LUMI_PARTITION, LUMI_GPUS, LUMI_TIME, LUMI_STACK,
+  HEFFTE_MODULE, HEFFTE_PREFIX
 
 Tohtori environment overrides:
   OPENMPI_MODULE          Default: openmpi/5.0.10
@@ -96,26 +129,28 @@ Tohtori environment overrides:
                           linked UCX 1.17 lacks --with-cuda and segfaults on
                           GPU-Direct MPI sends despite Open MPI's own probe
                           claiming support) and MPI_CUDA_AWARE defaults ON.
-                          Build one with:
-                            ./scripts/build_tohtori.sh --build-ucx --ucx-only \
-                              --cuda UCX_VER=1.20.0-cuda \
-                              UCX_PREFIX=$HOME/opt/ucx/1.20.0-cuda
-                            ./scripts/build_tohtori.sh --build-openmpi --openmpi-only \
-                              --cuda OPENMPI_VER=5.0.10-cuda \
-                              UCX_HOME=$HOME/opt/ucx/1.20.0-cuda
-                          then rebuild HeFFTe's CUDA install (INSTALL.md §3)
-                          against the new mpicc/mpicxx.
   OPENPFC_GCC_MODULE_CUDA Compiler module for OPENMPI_ROOT_CUDA (default: gcc/15.2.0).
   MPI_CUDA_AWARE          Default: auto (1 when OPENMPI_ROOT_CUDA is usable, else 0).
-                          Force with 1/0 to override the auto-detection.
-  MPI_HIP_AWARE           Default: 0 (OFF). Same reasoning as MPI_CUDA_AWARE
-                          (site UCX lacking CUDA support), but no ROCm
-                          equivalent of OPENMPI_ROOT_CUDA is auto-detected yet.
+  MPI_HIP_AWARE           Default: 0 on Tohtori, 1 on LUMI (Cray MPICH +
+                          MPICH_GPU_SUPPORT_ENABLED=1).
+
+LUMI environment:
+  HEFFTE_MODULE           Default: heffte-rocm (from $HOME/privatemodules)
+  LUMI_STACK              Default: LUMI/25.09
+  LUMI_ACCOUNT            Default: project_462001245
+  LUMI_PARTITION          Default: dev-g (use standard-g for longer jobs)
+  LUMI_GPUS               Default: 8
+  LUMI_TIME               Default: 02:30:00 on dev-g, 06:00:00 on standard-g
+  LUMI_FLASH_ROOT         Default: /flash/project_462001245/juaho/build
+  LUMI_SCRATCH_LOGS       Default: /scratch/project_462001245/juaho/logs
+  ENABLE_HDF5             Default: ON on Tohtori, OFF on LUMI
 
 Examples:
   ./scripts/build.sh
   ./scripts/build.sh --build-type=Debug --with-timestamp
   ./scripts/build.sh --machine=tohtori --with-cuda --with-timestamp --test
+  ./scripts/build.sh --machine=lumi --with-rocm
+  ./scripts/build.sh --machine=lumi --partition=standard-g --wait
   WITH_ROCM=1 ADD_TIMESTAMP=1 JOBS=32 ./scripts/build.sh
 EOF
 }
@@ -139,6 +174,22 @@ as_bool() {
   esac
 }
 
+detect_machine() {
+  local host
+  host="$(hostname -s 2>/dev/null || hostname)"
+  if [[ -n "${LUMI_LMOD_FAMILY_LUMI:-}" || -d /appl/lumi || "${host}" == uan* || "${host}" == nid* ]]; then
+    echo lumi
+  else
+    echo tohtori
+  fi
+}
+
+on_slurm_job() {
+  [[ -n "${SLURM_JOB_ID:-}" ]]
+}
+
+WAIT_FOR_JOB=0
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --machine=*) MACHINE="${1#*=}" ;;
@@ -161,9 +212,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-timestamp) ADD_TIMESTAMP=1 ;;
     --without-timestamp) ADD_TIMESTAMP=0 ;;
-    --with-cuda) WITH_CUDA=1; WITH_ROCM=0 ;;
-    --with-rocm) WITH_ROCM=1; WITH_CUDA=0 ;;
-    --cpu) WITH_CUDA=0; WITH_ROCM=0 ;;
+    --with-cuda) WITH_CUDA=1; WITH_ROCM=0; BACKEND_EXPLICIT=1 ;;
+    --with-rocm) WITH_ROCM=1; WITH_CUDA=0; BACKEND_EXPLICIT=1 ;;
+    --cpu) WITH_CUDA=0; WITH_ROCM=0; BACKEND_EXPLICIT=1 ;;
     --test) RUN_TESTS=1 ;;
     --no-test) RUN_TESTS=0 ;;
     --mpi-tests) RUN_MPI_TESTS=1 ;;
@@ -176,6 +227,33 @@ while [[ $# -gt 0 ]]; do
       ;;
     --clean) CLEAN_BUILD=1 ;;
     --cmake-arg=*) EXTRA_CMAKE_ARGS+=("${1#*=}") ;;
+    --submit) SUBMIT=1 ;;
+    --no-submit) SUBMIT=0 ;;
+    --partition=*) LUMI_PARTITION="${1#*=}" ;;
+    --partition)
+      require_value "$1" "${2-}"
+      LUMI_PARTITION="$2"
+      shift
+      ;;
+    --account=*) LUMI_ACCOUNT="${1#*=}" ;;
+    --account)
+      require_value "$1" "${2-}"
+      LUMI_ACCOUNT="$2"
+      shift
+      ;;
+    --time=*) LUMI_TIME="${1#*=}" ;;
+    --time)
+      require_value "$1" "${2-}"
+      LUMI_TIME="$2"
+      shift
+      ;;
+    --gpus=*) LUMI_GPUS="${1#*=}" ;;
+    --gpus)
+      require_value "$1" "${2-}"
+      LUMI_GPUS="$2"
+      shift
+      ;;
+    --wait) WAIT_FOR_JOB=1 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown option '$1' (use --help)" ;;
   esac
@@ -188,6 +266,33 @@ WITH_ROCM="$(as_bool "${WITH_ROCM}")"
 RUN_TESTS="$(as_bool "${RUN_TESTS}")"
 RUN_MPI_TESTS="$(as_bool "${RUN_MPI_TESTS}")"
 CLEAN_BUILD="$(as_bool "${CLEAN_BUILD}")"
+
+if [[ -z "${MACHINE}" ]]; then
+  MACHINE="$(detect_machine)"
+fi
+case "${MACHINE,,}" in
+  tohtori) MACHINE="tohtori" ;;
+  lumi) MACHINE="lumi" ;;
+  *) die "unsupported machine '${MACHINE}'; expected tohtori or lumi" ;;
+esac
+
+if [[ "${MACHINE}" == "lumi" && "${BACKEND_EXPLICIT}" -eq 0 ]]; then
+  WITH_ROCM=1
+  WITH_CUDA=0
+fi
+
+if [[ "${MACHINE}" == "lumi" && "${WITH_CUDA}" -eq 1 ]]; then
+  die "CUDA is not available on LUMI (AMD/HIP only). Use --with-rocm or --cpu. Run CUDA builds on Tohtori."
+fi
+
+if [[ -z "${SUBMIT}" ]]; then
+  if [[ "${MACHINE}" == "lumi" ]] && ! on_slurm_job; then
+    SUBMIT=1
+  else
+    SUBMIT=0
+  fi
+fi
+SUBMIT="$(as_bool "${SUBMIT}")"
 
 # Auto-detect the custom CUDA-aware Open MPI built by
 # `scripts/build_tohtori.sh --build-ucx --build-openmpi --cuda` (see
@@ -202,8 +307,24 @@ fi
 if [[ -z "${MPI_CUDA_AWARE}" ]]; then
   MPI_CUDA_AWARE=$(( USE_CUSTOM_CUDA_MPI ? 1 : 0 ))
 fi
+if [[ -z "${MPI_HIP_AWARE}" ]]; then
+  if [[ "${MACHINE}" == "lumi" ]]; then
+    MPI_HIP_AWARE=1
+  else
+    MPI_HIP_AWARE=0
+  fi
+fi
 MPI_CUDA_AWARE="$(as_bool "${MPI_CUDA_AWARE}")"
 MPI_HIP_AWARE="$(as_bool "${MPI_HIP_AWARE}")"
+
+if [[ -z "${ENABLE_HDF5}" ]]; then
+  if [[ "${MACHINE}" == "lumi" ]]; then
+    ENABLE_HDF5=0
+  else
+    ENABLE_HDF5=1
+  fi
+fi
+ENABLE_HDF5="$(as_bool "${ENABLE_HDF5}")"
 
 case "${BUILD_TYPE,,}" in
   debug) BUILD_TYPE="Debug"; BUILD_FLAVOR="debug" ;;
@@ -211,27 +332,10 @@ case "${BUILD_TYPE,,}" in
   *) die "unsupported build type '${BUILD_TYPE}'; expected Debug or Release" ;;
 esac
 
-[[ "${MACHINE,,}" == "tohtori" ]] ||
-  die "unsupported machine '${MACHINE}'; currently only tohtori is available"
-MACHINE="tohtori"
-
 [[ "${JOBS}" =~ ^[1-9][0-9]*$ ]] || die "JOBS must be a positive integer"
 (( WITH_CUDA == 0 || WITH_ROCM == 0 )) ||
   die "WITH_CUDA and WITH_ROCM cannot both be enabled"
-
-if [[ -z "${BUILD_DIR}" ]]; then
-  BUILD_DIR="builds/${BUILD_FLAVOR}"
-fi
-if (( ADD_TIMESTAMP )); then
-  BUILD_DIR="${BUILD_DIR}-$(date +%Y%m%d-%H%M%S)"
-fi
-if [[ "${BUILD_DIR}" != /* ]]; then
-  BUILD_DIR="${REPO_ROOT}/${BUILD_DIR}"
-fi
-
-case "${BUILD_DIR}" in
-  ""|"/"|"${REPO_ROOT}") die "refusing unsafe build directory '${BUILD_DIR}'" ;;
-esac
+[[ "${LUMI_GPUS}" =~ ^[1-9][0-9]*$ ]] || die "LUMI_GPUS must be a positive integer"
 
 BACKEND="cpu"
 if (( WITH_CUDA )); then
@@ -248,13 +352,43 @@ if (( WITH_CUDA )); then
   fi
 elif (( WITH_ROCM )); then
   BACKEND="rocm"
+  if [[ "${MACHINE}" == "lumi" && -z "${ROCM_ARCHITECTURES}" ]]; then
+    ROCM_ARCHITECTURES="gfx90a"
+  fi
+  if [[ "${MACHINE}" == "lumi" && -z "${HEFFTE_MODULE}" ]]; then
+    HEFFTE_MODULE="heffte-rocm"
+  fi
 fi
 
-if [[ -z "${HEFFTE_PREFIX}" ]]; then
-  HEFFTE_PREFIX="${HOME}/opt/heffte/${HEFFTE_VERSION}-${BACKEND}"
+if [[ -z "${BUILD_DIR}" ]]; then
+  if [[ "${MACHINE}" == "lumi" ]]; then
+    BUILD_DIR="${LUMI_FLASH_ROOT}/openpfc-lumi-${BACKEND}-${BUILD_FLAVOR}"
+  else
+    BUILD_DIR="builds/${BUILD_FLAVOR}"
+  fi
+fi
+if (( ADD_TIMESTAMP )); then
+  BUILD_DIR="${BUILD_DIR}-$(date +%Y%m%d-%H%M%S)"
+fi
+if [[ "${BUILD_DIR}" != /* ]]; then
+  BUILD_DIR="${REPO_ROOT}/${BUILD_DIR}"
 fi
 
-TOOLCHAIN="${REPO_ROOT}/cmake/toolchains/tohtori-gcc11-openmpi.cmake"
+case "${BUILD_DIR}" in
+  ""|"/"|"${REPO_ROOT}") die "refusing unsafe build directory '${BUILD_DIR}'" ;;
+esac
+
+if [[ "${MACHINE}" == "lumi" && "${BUILD_DIR}" == "${REPO_ROOT}"/* ]]; then
+  echo "WARNING: LUMI build directory is inside the git clone (${BUILD_DIR})." >&2
+  echo "         Prefer --build-dir under ${LUMI_FLASH_ROOT} (inode quota)." >&2
+fi
+
+if [[ "${MACHINE}" == "tohtori" ]]; then
+  TOOLCHAIN="${REPO_ROOT}/cmake/toolchains/tohtori-gcc11-openmpi.cmake"
+else
+  TOOLCHAIN="${REPO_ROOT}/cmake/toolchains/lumi-gcc12-mpich.cmake"
+fi
+
 CONFIGURE_SECONDS=0
 BUILD_SECONDS=0
 TEST_SECONDS=0
@@ -262,6 +396,7 @@ TEST_BATCHES=0
 PYTHON_TESTS="not run"
 FAILED_PHASE=""
 OVERALL_START="$(date +%s)"
+SKIP_SUMMARY=0
 
 format_duration() {
   local total="$1"
@@ -270,6 +405,9 @@ format_duration() {
 
 summary() {
   local status="$?"
+  if (( SKIP_SUMMARY )); then
+    return
+  fi
   local total_seconds=$(( $(date +%s) - OVERALL_START ))
   echo
   echo "================================================================"
@@ -321,48 +459,103 @@ init_lmod() {
   command -v module >/dev/null 2>&1 || die "Lmod 'module' command not found"
 }
 
+resolve_heffte_dir() {
+  HEFFTE_DIR=""
+  if [[ -n "${HEFFTE_DIR_ENV:-}" && -f "${HEFFTE_DIR_ENV}/HeffteConfig.cmake" ]]; then
+    HEFFTE_DIR="${HEFFTE_DIR_ENV}"
+    return
+  fi
+  local candidate
+  for candidate in "${HEFFTE_PREFIX}/lib64/cmake/Heffte" \
+                   "${HEFFTE_PREFIX}/lib/cmake/Heffte"; do
+    if [[ -f "${candidate}/HeffteConfig.cmake" ]]; then
+      HEFFTE_DIR="${candidate}"
+      return
+    fi
+  done
+}
+
+setup_tohtori_env() {
+  if (( USE_CUSTOM_CUDA_MPI )); then
+    echo "Using custom CUDA-aware Open MPI: ${OPENMPI_ROOT_CUDA}"
+    module load "${OPENPFC_GCC_MODULE_CUDA}"
+    export PATH="${OPENMPI_ROOT_CUDA}/bin:${PATH}"
+    export LD_LIBRARY_PATH="${OPENMPI_ROOT_CUDA}/lib64:${OPENMPI_ROOT_CUDA}/lib:${LD_LIBRARY_PATH:-}"
+    export OPENMPI_ROOT="${OPENMPI_ROOT_CUDA}"
+  else
+    module load "${OPENMPI_MODULE}"
+  fi
+  if (( WITH_CUDA )); then
+    module load "${CUDA_MODULE}"
+  elif (( WITH_ROCM )); then
+    module load "${ROCM_MODULE}"
+  fi
+  if [[ -n "${HEFFTE_MODULE}" ]]; then
+    module load "${HEFFTE_MODULE}"
+  fi
+
+  export CC="$(command -v gcc)"
+  export CXX="$(command -v g++)"
+  export OPENPFC_GCC_ROOT="$(cd "$(dirname "${CXX}")/.." && pwd)"
+  if (( ! USE_CUSTOM_CUDA_MPI )); then
+    unset OPENMPI_ROOT
+  fi
+
+  [[ -x "${CC}" && -x "${CXX}" ]] || die "compiler not found after module load"
+  command -v mpicc >/dev/null 2>&1 || die "mpicc not found after loading ${OPENMPI_MODULE}"
+  command -v mpicxx >/dev/null 2>&1 || die "mpicxx not found after loading ${OPENMPI_MODULE}"
+
+  if [[ -z "${HEFFTE_PREFIX}" ]]; then
+    HEFFTE_PREFIX="${HOME}/opt/heffte/${HEFFTE_VERSION}-${BACKEND}"
+  fi
+}
+
+setup_lumi_env() {
+  export PATH="${HOME}/.local/bin:${PATH}"
+  module load "${LUMI_STACK}" partition/G cpeGNU cray-fftw lumi-CrayPath
+  if [[ -d "${LUMI_PRIVATE_MODULES}" ]]; then
+    module use "${LUMI_PRIVATE_MODULES}"
+  fi
+  if [[ -n "${HEFFTE_MODULE}" ]]; then
+    module load "${HEFFTE_MODULE}"
+  fi
+  export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+  export MPICH_GPU_SUPPORT_ENABLED="${MPICH_GPU_SUPPORT_ENABLED:-1}"
+  # FindMPI on Cray PE fails to populate MPI_C_LIB_NAMES unless the PE
+  # wrappers use dynamic linking (same as the working LUMI CMake caches).
+  export CRAYPE_LINK_TYPE="${CRAYPE_LINK_TYPE:-dynamic}"
+  export CC=cc
+  export CXX=CC
+  unset OPENPFC_GCC_ROOT || true
+
+  command -v cc >/dev/null 2>&1 || die "Cray cc wrapper not found after loading ${LUMI_STACK}"
+  command -v CC >/dev/null 2>&1 || die "Cray CC wrapper not found after loading ${LUMI_STACK}"
+
+  if [[ -z "${HEFFTE_PREFIX}" ]]; then
+    if [[ -n "${HEFFTE_ROOT:-}" ]]; then
+      HEFFTE_PREFIX="${HEFFTE_ROOT}"
+    elif [[ -d "${HOME}/opt/heffte/${HEFFTE_VERSION}-rocm" ]]; then
+      HEFFTE_PREFIX="${HOME}/opt/heffte/${HEFFTE_VERSION}-rocm"
+    else
+      HEFFTE_PREFIX="/projappl/project_462001245/heffte/${HEFFTE_VERSION}-rocm"
+    fi
+  fi
+}
+
 init_lmod
 module purge
-if (( USE_CUSTOM_CUDA_MPI )); then
-  echo "Using custom CUDA-aware Open MPI: ${OPENMPI_ROOT_CUDA}"
-  module load "${OPENPFC_GCC_MODULE_CUDA}"
-  export PATH="${OPENMPI_ROOT_CUDA}/bin:${PATH}"
-  export LD_LIBRARY_PATH="${OPENMPI_ROOT_CUDA}/lib64:${OPENMPI_ROOT_CUDA}/lib:${LD_LIBRARY_PATH:-}"
-  export OPENMPI_ROOT="${OPENMPI_ROOT_CUDA}"
+if [[ "${MACHINE}" == "lumi" ]]; then
+  setup_lumi_env
 else
-  module load "${OPENMPI_MODULE}"
-fi
-if (( WITH_CUDA )); then
-  module load "${CUDA_MODULE}"
-elif (( WITH_ROCM )); then
-  module load "${ROCM_MODULE}"
-fi
-if [[ -n "${HEFFTE_MODULE}" ]]; then
-  module load "${HEFFTE_MODULE}"
+  setup_tohtori_env
 fi
 
-export CC="$(command -v gcc)"
-export CXX="$(command -v g++)"
-export OPENPFC_GCC_ROOT="$(cd "$(dirname "${CXX}")/.." && pwd)"
-if (( ! USE_CUSTOM_CUDA_MPI )); then
-  unset OPENMPI_ROOT
-fi
-
-[[ -x "${CC}" && -x "${CXX}" ]] || die "compiler not found after module load"
-command -v mpicc >/dev/null 2>&1 || die "mpicc not found after loading ${OPENMPI_MODULE}"
-command -v mpicxx >/dev/null 2>&1 || die "mpicxx not found after loading ${OPENMPI_MODULE}"
 [[ -f "${TOOLCHAIN}" ]] || die "missing toolchain ${TOOLCHAIN}"
 
-HEFFTE_DIR=""
-for candidate in "${HEFFTE_PREFIX}/lib64/cmake/Heffte" \
-                 "${HEFFTE_PREFIX}/lib/cmake/Heffte"; do
-  if [[ -f "${candidate}/HeffteConfig.cmake" ]]; then
-    HEFFTE_DIR="${candidate}"
-    break
-  fi
-done
+HEFFTE_DIR_ENV="${HEFFTE_DIR:-}"
+resolve_heffte_dir
 [[ -n "${HEFFTE_DIR}" ]] ||
-  die "HeFFTe ${BACKEND} package not found under ${HEFFTE_PREFIX}"
+  die "HeFFTe ${BACKEND} package not found (prefix ${HEFFTE_PREFIX}; module '${HEFFTE_MODULE:-none}')"
 
 if [[ -z "${HEFFTE_MODULE}" ]]; then
   # No module loaded to set HeFFTe's runtime LD_LIBRARY_PATH / build-time CPATH
@@ -384,10 +577,18 @@ mkdir -p "${BUILD_DIR}"
 
 export CMAKE_PREFIX_PATH="${HEFFTE_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
 
+if [[ -z "${CMAKE_GENERATOR}" ]]; then
+  if command -v ninja >/dev/null 2>&1; then
+    CMAKE_GENERATOR="Ninja"
+  else
+    CMAKE_GENERATOR="Unix Makefiles"
+  fi
+fi
+
 declare -a CMAKE_ARGS=(
   -S "${REPO_ROOT}"
   -B "${BUILD_DIR}"
-  -G Ninja
+  -G "${CMAKE_GENERATOR}"
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}"
   -DHeffte_DIR="${HEFFTE_DIR}"
@@ -398,7 +599,7 @@ declare -a CMAKE_ARGS=(
   -DOpenPFC_BUILD_EXAMPLES=ON
   -DOpenPFC_BUILD_DOCUMENTATION=OFF
   -DOpenPFC_ENABLE_CODE_COVERAGE=OFF
-  -DOpenPFC_ENABLE_HDF5=ON
+  -DOpenPFC_ENABLE_HDF5=$([[ ${ENABLE_HDF5} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_ENABLE_CUDA=$([[ ${WITH_CUDA} -eq 1 ]] && echo ON || echo OFF)
   -DOpenPFC_ENABLE_HIP=$([[ ${WITH_ROCM} -eq 1 ]] && echo ON || echo OFF)
 )
@@ -414,6 +615,20 @@ if (( WITH_CUDA )); then
 fi
 if (( WITH_ROCM )); then
   CMAKE_ARGS+=("-DOpenPFC_MPI_HIP_AWARE=$([[ ${MPI_HIP_AWARE} -eq 1 ]] && echo ON || echo OFF)")
+  if [[ "${MACHINE}" == "lumi" ]]; then
+    CMAKE_ARGS+=("-DGPU_TARGETS=${ROCM_ARCHITECTURES:-gfx90a}")
+  fi
+fi
+if [[ "${MACHINE}" == "lumi" ]]; then
+  CMAKE_ARGS+=(
+    "-DMPI_C_COMPILER=$(command -v cc)"
+    "-DMPI_CXX_COMPILER=$(command -v CC)"
+  )
+  if [[ -n "${MPICH_DIR:-}" && -f "${MPICH_DIR}/include/mpi.h" ]]; then
+    CMAKE_ARGS+=("-DMPI_C_HEADER_DIR=${MPICH_DIR}/include")
+  elif [[ -f /opt/cray/pe/mpich/9.0.1/ofi/gnu/12.3/include/mpi.h ]]; then
+    CMAKE_ARGS+=("-DMPI_C_HEADER_DIR=/opt/cray/pe/mpich/9.0.1/ofi/gnu/12.3/include")
+  fi
 fi
 CMAKE_ARGS+=("${EXTRA_CMAKE_ARGS[@]}")
 
@@ -422,33 +637,139 @@ echo "  machine:    ${MACHINE}"
 echo "  backend:    ${BACKEND}"
 echo "  build type: ${BUILD_TYPE}"
 echo "  build dir:  ${BUILD_DIR}"
+echo "  generator:  ${CMAKE_GENERATOR}"
 echo "  jobs:       ${JOBS}"
 echo "  tests:      $([[ ${RUN_TESTS} -eq 1 ]] && echo enabled || echo disabled)"
 echo "  MPI suites: $([[ ${RUN_MPI_TESTS} -eq 1 ]] && echo enabled || echo disabled)"
-echo "  compiler:   ${CXX}"
-echo "  MPI:        $(command -v mpicxx)$([[ ${USE_CUSTOM_CUDA_MPI} -eq 1 ]] && echo " (custom CUDA-aware build)")"
+echo "  compiler:   ${CXX} ($(command -v "${CXX}"))"
+if [[ "${MACHINE}" == "tohtori" ]]; then
+  echo "  MPI:        $(command -v mpicxx)$([[ ${USE_CUSTOM_CUDA_MPI} -eq 1 ]] && echo " (custom CUDA-aware build)")"
+else
+  echo "  MPI:        Cray MPICH (cc/CC wrappers)"
+  echo "  partition:  ${LUMI_PARTITION}  account=${LUMI_ACCOUNT}"
+  echo "  submit:     $([[ ${SUBMIT} -eq 1 ]] && echo yes || echo no)"
+fi
 if (( WITH_CUDA )); then
   echo "  MPI CUDA-aware: $([[ ${MPI_CUDA_AWARE} -eq 1 ]] && echo ON || echo OFF)"
+fi
+if (( WITH_ROCM )); then
+  echo "  MPI HIP-aware:  $([[ ${MPI_HIP_AWARE} -eq 1 ]] && echo ON || echo OFF)"
 fi
 echo "  HeFFTe:     ${HEFFTE_DIR}"
 if [[ -n "${HEFFTE_MODULE}" ]]; then
   echo "  HeFFTe mod: ${HEFFTE_MODULE}"
 fi
 
-phase_start="$(date +%s)"
-FAILED_PHASE="configure"
-if ! cmake "${CMAKE_ARGS[@]}" 2>&1 | tee "${BUILD_DIR}/configure.log"; then
-  CONFIGURE_SECONDS=$(( $(date +%s) - phase_start ))
+run_configure() {
+  phase_start="$(date +%s)"
   FAILED_PHASE="configure"
-  exit 1
-fi
-CONFIGURE_SECONDS=$(( $(date +%s) - phase_start ))
+  if ! cmake "${CMAKE_ARGS[@]}" 2>&1 | tee "${BUILD_DIR}/configure.log"; then
+    CONFIGURE_SECONDS=$(( $(date +%s) - phase_start ))
+    FAILED_PHASE="configure"
+    exit 1
+  fi
+  CONFIGURE_SECONDS=$(( $(date +%s) - phase_start ))
+}
 
-if (( RUN_TESTS )); then
+submit_lumi_job() {
+  case "${LUMI_PARTITION}" in
+    dev-g|standard-g) ;;
+    *) die "LUMI partition must be dev-g or standard-g (got '${LUMI_PARTITION}')" ;;
+  esac
+  if [[ -z "${LUMI_TIME}" ]]; then
+    if [[ "${LUMI_PARTITION}" == "dev-g" ]]; then
+      LUMI_TIME="02:30:00"
+    else
+      LUMI_TIME="06:00:00"
+    fi
+  fi
+  mkdir -p "${LUMI_SCRATCH_LOGS}"
+  local sbatch_file="${BUILD_DIR}/lumi-build.sbatch"
+  local ntasks="${LUMI_GPUS}"
+  if (( ntasks < 8 )); then
+    ntasks=8
+  fi
+  local cpus_per_task=7
+  cat > "${sbatch_file}" <<EOF
+#!/bin/bash
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Generated by scripts/build.sh — compile and test OpenPFC on a LUMI-G node.
+#SBATCH --account=${LUMI_ACCOUNT}
+#SBATCH --partition=${LUMI_PARTITION}
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=${ntasks}
+#SBATCH --gpus-per-node=${LUMI_GPUS}
+#SBATCH --cpus-per-task=${cpus_per_task}
+#SBATCH --time=${LUMI_TIME}
+#SBATCH --job-name=openpfc-build
+#SBATCH --output=${LUMI_SCRATCH_LOGS}/%x-%j.out
+#SBATCH --error=${LUMI_SCRATCH_LOGS}/%x-%j.err
+
+set -euo pipefail
+export PATH="\${HOME}/.local/bin:\${PATH}"
+cd "${REPO_ROOT}"
+exec "${REPO_ROOT}/scripts/build.sh" \\
+  --machine=lumi \\
+  --no-submit \\
+  --build-type=${BUILD_TYPE} \\
+  --build-dir=${BUILD_DIR} \\
+  --jobs=${JOBS} \\
+  $([[ ${WITH_ROCM} -eq 1 ]] && echo --with-rocm || echo --cpu) \\
+  $([[ ${RUN_TESTS} -eq 1 ]] && echo --test || echo --no-test) \\
+  $([[ ${RUN_MPI_TESTS} -eq 1 ]] && echo --mpi-tests || echo --no-mpi-tests)
+EOF
+  chmod +x "${sbatch_file}"
+
+  local -a sbatch_cmd=(sbatch)
+  if (( WAIT_FOR_JOB )); then
+    sbatch_cmd+=(--wait)
+  fi
+  sbatch_cmd+=("${sbatch_file}")
+
+  echo
+  echo "Submitting LUMI GPU job:"
+  echo "  script:    ${sbatch_file}"
+  echo "  partition: ${LUMI_PARTITION}"
+  echo "  account:   ${LUMI_ACCOUNT}"
+  echo "  gpus:      ${LUMI_GPUS}"
+  echo "  time:      ${LUMI_TIME}"
+  echo "  logs:      ${LUMI_SCRATCH_LOGS}/openpfc-build-<jobid>.out"
+  echo "  (configure already ran on this login node so FetchContent can use the network)"
+  echo
+
+  local sbatch_out
+  sbatch_out="$("${sbatch_cmd[@]}")"
+  echo "${sbatch_out}"
+  SKIP_SUMMARY=1
+  echo "OpenPFC LUMI job submitted. Compile and ctest run on ${LUMI_PARTITION}."
+  echo "Watch:  squeue -u ${USER}"
+  echo "Logs:   ${LUMI_SCRATCH_LOGS}/openpfc-build-*.out"
+  if (( ! WAIT_FOR_JOB )); then
+    echo "Re-run with --wait to block until the job finishes."
+  fi
+}
+
+# LUMI login nodes have outbound HTTP (FetchContent). Compute nodes often do
+# not. Configure here whenever we are about to submit, then let the GPU job
+# rebuild and test.
+run_configure
+
+if (( RUN_TESTS )) && [[ "${SUBMIT}" -eq 0 ]]; then
   TEST_BATCHES="$(ctest --test-dir "${BUILD_DIR}" -N 2>/dev/null |
     awk '/Total Tests:/ {print $3}')"
   [[ "${TEST_BATCHES}" =~ ^[0-9]+$ ]] || die "could not enumerate CTest batches"
   echo "Registered CTest batches: ${TEST_BATCHES}"
+fi
+
+if [[ "${MACHINE}" == "lumi" && "${SUBMIT}" -eq 1 ]]; then
+  if on_slurm_job; then
+    echo "Already inside Slurm job ${SLURM_JOB_ID}; not re-submitting."
+  else
+    FAILED_PHASE="submit"
+    submit_lumi_job
+    exit 0
+  fi
 fi
 
 phase_start="$(date +%s)"
@@ -465,14 +786,31 @@ if (( RUN_TESTS )); then
   phase_start="$(date +%s)"
   FAILED_PHASE="tests"
   if [[ -d "${REPO_ROOT}/scripts/tests" ]]; then
-    command -v python3 >/dev/null 2>&1 || die "python3 not found"
-    if ! python3 -m pytest "${REPO_ROOT}/scripts/tests" 2>&1 |
-         tee "${BUILD_DIR}/python-test.log"; then
-      TEST_SECONDS=$(( $(date +%s) - phase_start ))
-      FAILED_PHASE="python tests"
-      exit 1
+    # check_doc_links.py needs Python 3.8+ (from __future__ import annotations).
+    # LUMI compute nodes often have /usr/bin/python3 = 3.6 plus a newer
+    # python3.11 without pytest — skip rather than fail a GPU job for that.
+    PYTEST_PYTHON=""
+    for cand in ${PYTHON:-} python3.12 python3.11 python3; do
+      [[ -n "${cand}" ]] || continue
+      command -v "${cand}" >/dev/null 2>&1 || continue
+      if "${cand}" -c 'import sys, pytest; raise SystemExit(0 if sys.version_info >= (3, 8) else 1)' \
+           >/dev/null 2>&1; then
+        PYTEST_PYTHON="${cand}"
+        break
+      fi
+    done
+    if [[ -n "${PYTEST_PYTHON}" ]]; then
+      if ! "${PYTEST_PYTHON}" -m pytest "${REPO_ROOT}/scripts/tests" 2>&1 |
+           tee "${BUILD_DIR}/python-test.log"; then
+        TEST_SECONDS=$(( $(date +%s) - phase_start ))
+        FAILED_PHASE="python tests"
+        exit 1
+      fi
+      PYTHON_TESTS="passed (${PYTEST_PYTHON})"
+    else
+      echo "pytest+Python>=3.8 not available; skipping scripts/tests"
+      PYTHON_TESTS="skipped (need Python>=3.8 with pytest)"
     fi
-    PYTHON_TESTS="passed"
   else
     PYTHON_TESTS="not found"
   fi

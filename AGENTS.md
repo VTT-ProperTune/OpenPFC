@@ -9,19 +9,31 @@ Short orientation for people and automated agents working in this repository. Fo
 
 ## Install and build
 
-- **Canonical install guide (source build, MPI, HeFFTe, optional CUDA/HIP):** [`INSTALL.md`](INSTALL.md) — treat this as the source of truth for toolchain and CMake.
-- **After install:** [`docs/quickstart.md`](docs/quickstart.md) (configure → run examples or apps → or `find_package(OpenPFC)`).
-- **Fastest linear path (clone → build → one `mpirun`):** [`docs/start_here_15_minutes.md`](docs/start_here_15_minutes.md).
-- **Cluster-specific:** e.g. [`docs/hpc/INSTALL.tohtori.md`](docs/hpc/INSTALL.tohtori.md), [`docs/hpc/INSTALL.LUMI.md`](docs/hpc/INSTALL.LUMI.md); HPC overview in [`docs/hpc/operator_guide.md`](docs/hpc/operator_guide.md).
-- **CMake options reference:** [`docs/reference/build_options.md`](docs/reference/build_options.md).
-- **When builds fail:** [`docs/troubleshooting.md`](docs/troubleshooting.md).
+**Always build and test through [`scripts/build.sh`](scripts/build.sh).** Do not
+invoke `cmake`, `cmake --build`, or `ctest` by hand for routine work. The
+script loads the correct Lmod stack (compiler, MPI, HeFFTe), picks the
+machine toolchain, configures, builds, and runs tests.
 
-**HeFFTe:** build and install **outside** the OpenPFC clone (typical prefixes under `$HOME/opt/heffte/…`). Do not vendor HeFFTe sources next to `CMakeLists.txt`; details are in `INSTALL.md` (HeFFTe section).
+```bash
+./scripts/build.sh --help
+./scripts/build.sh                              # auto-detects Tohtori vs LUMI
+./scripts/build.sh --machine=tohtori --with-cuda
+./scripts/build.sh --machine=lumi --with-rocm   # default LUMI path (HIP)
+./scripts/build.sh --machine=lumi --partition=standard-g --wait
+```
+
+- **Tohtori:** default is a Release CPU build in `builds/release`. `--with-cuda` loads `cuda/13.1` and the matching HeFFTe prefix/module.
+- **LUMI:** default is HIP/ROCm. The script loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and the `heffte-rocm` module from `$HOME/privatemodules`. Configure runs on the login node (FetchContent needs the network). Compile and `ctest` are submitted to a GPU partition so AMD devices are available: **`dev-g`** (default, 3 h max) or **`standard-g`**. CUDA is not available on LUMI — use Tohtori for NVIDIA. Build trees go under `/flash/project_462001245/juaho/build/`, not inside the git clone (inode quota). Job logs go to `/scratch/project_462001245/juaho/logs/`.
+- **Canonical install guide** (manual toolchain / HeFFTe details): [`INSTALL.md`](INSTALL.md). Cluster notes: [`docs/hpc/INSTALL.tohtori.md`](docs/hpc/INSTALL.tohtori.md), [`docs/hpc/INSTALL.LUMI.md`](docs/hpc/INSTALL.LUMI.md).
+- **After install:** [`docs/quickstart.md`](docs/quickstart.md). **15-minute path:** [`docs/start_here_15_minutes.md`](docs/start_here_15_minutes.md).
+- **CMake options:** [`docs/reference/build_options.md`](docs/reference/build_options.md). **When builds fail:** [`docs/troubleshooting.md`](docs/troubleshooting.md).
+
+**HeFFTe:** build and install **outside** the OpenPFC clone. On Tohtori typical prefixes are `$HOME/opt/heffte/…`. On LUMI load `heffte-rocm` (do not vendor HeFFTe sources next to `CMakeLists.txt`).
 
 ## Workspace conventions (this project)
 
-- **CMake build trees:** keep them under a top-level **`builds/`** directory (e.g. `builds/debug`, `builds/release`, `builds/cpu`, `builds/gpu`). Example configure: `cmake -S . -B builds/debug`. This keeps the source tree clean and matches how we want local work organized.
-- **Simulation output:** write runtime artifacts (fields, VTK, logs, checkpoints, etc.) under a top-level **`results/`** directory (e.g. per run or per case in subfolders). App configs or job scripts should prefer paths under `results/` so outputs stay out of Git and out of `docs/`.
+- **CMake build trees:** on workstations/Tohtori keep them under a top-level **`builds/`** directory (e.g. `builds/debug`, `builds/release`). On **LUMI** use flash via `scripts/build.sh` (default `/flash/project_462001245/juaho/build/openpfc-lumi-…`). Do not configure or compile inside the git clone on LUMI.
+- **Simulation output:** write runtime artifacts (fields, VTK, logs, checkpoints, etc.) under a top-level **`results/`** directory (e.g. per run or per case in subfolders). App configs or job scripts should prefer paths under `results/` so outputs stay out of Git and out of `docs/`. On LUMI, large job I/O belongs under `/scratch/project_462001245/juaho/`.
 
 The root [`.gitignore`](.gitignore) ignores common build and output paths (`build`, `builds`, `results`, …) so these directories are not committed by mistake.
 
