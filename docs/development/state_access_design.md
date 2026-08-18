@@ -170,18 +170,15 @@ for (int step = 0; step < n_steps; ++step) {
 - Driver reads context and schedules MPI operations
 - Integrator focuses on algorithm, not communication
 
-## Workspace vs StageWorkspace
+## Workspace (single type)
 
-Two similarly named workspace types exist; they must not be conflated:
+`pfc::sim::steppers::StageWorkspace<T>` is a `using` alias of
+`pfc::integrator::Workspace<T>` (`include/openpfc/kernel/integrator/workspace.hpp`).
 
-| | `pfc::integrator::Workspace<T>` | `pfc::sim::steppers::StageWorkspace<T>` |
-|---|---|---|
-| Header | `include/openpfc/kernel/integrator/workspace.hpp` | `include/openpfc/kernel/simulation/steppers/stage_workspace.hpp` |
-| Constructor | `(extents, num_stages)` | `(num_stages, local_size)` |
-| Reclaim | `clear()` | `reset()` |
-| Role in this slice | Integrator-owned stage + scratch for the state-access contract | Existing stepper helper under `kernel/simulation/steppers/`; out of scope here |
-
-This design slice specifies and tests only `pfc::integrator::Workspace<T>`. Do not edit or merge `StageWorkspace`.
+- Constructors: `(num_stages, local_size)` and `(extents, num_stages)`
+- `stage(i)` / `scratch()` return `std::vector<T>&` (bounds-checked stages)
+- `clear()` and `reset()` both zero stages and scratch
+- Move-only; any value type `T` (including `std::complex<double>`)
 
 ## StageContext (single type)
 
@@ -393,12 +390,12 @@ Mapped to the current work-item acceptance criteria (not legacy numeric ids):
 - `FieldView<T>` provides const access to field data and geometry for operator inputs (`state_access.hpp`; unit case `FieldView const access`).
 - `FieldOutput<T>` provides mutable caller-owned output storage with `validate_no_alias` (`state_access.hpp`; unit cases `FieldOutput mutable access`, `Field aliasing detection`).
 - `FieldBundle<Fields...>` groups fields with `get<I>()` and `validate_shapes()` (`state_access.hpp`; unit case `FieldBundle multi-field`).
-- `pfc::integrator::Workspace<T>` provides integrator-owned stage and scratch storage (unit cases `Workspace stage storage and scratch`, `Workspace clear resets buffers`).
+- `pfc::integrator::Workspace<T>` provides integrator-owned stage and scratch storage (unit cases `Workspace stage storage and scratch`, `Workspace clear resets buffers`). `StageWorkspace<T>` is the same type.
 - `pfc::integrator::StageContext` carries `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange`, and optional `execution_service` (unit case `StageContext MPI coordination fields`). `pfc::sim::StageContext` is the same type.
 - Validation free functions cover shape, aliasing, and backend-tag checks (`validation.hpp`; unit cases `Shape compatibility validation`, `Backend compatibility validation`). Backend mismatch is a compile-time `static_assert`, not a runtime throw.
 - Unit tests in `tests/unit/kernel/field/test_state_access.cpp` exercise the contracts without CUDA/HIP dependencies (including the documented ScaledField in-place exception).
 - Integration evidence: `test_heat3d_state_access.cpp` (scalar) and `test_wave2d_state_access.cpp` (multi-field).
-- This document covers value semantics, backend compatibility, validation strategy, Workspace vs StageWorkspace, and the single StageContext type, plus migration examples above.
+- This document covers value semantics, backend compatibility, validation strategy, the single Workspace type, and the single StageContext type, plus migration examples above.
 
 ## Summary
 

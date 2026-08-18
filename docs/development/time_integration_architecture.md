@@ -246,8 +246,9 @@ the stepper never owns it.
 This is ADR 0003 contract area 3 (workspace ownership): stage state lives in
 integrator allocations, not in `Model` fields. Reusable infrastructure for
 custom multi-stage steppers:
-[`StageWorkspace<T>`](../../include/openpfc/kernel/simulation/steppers/stage_workspace.hpp)
-(`std::vector<std::vector<T>>`, move-only). The shipped `ExplicitRKStepper`
+[`Workspace<T>`](../../include/openpfc/kernel/integrator/workspace.hpp)
+(`pfc::sim::steppers::StageWorkspace<T>` is an alias; move-only stage +
+scratch vectors). The shipped `ExplicitRKStepper`
 manages `m_k` itself today.
 
 ### Spectral exponential-action coefficients (CPU)
