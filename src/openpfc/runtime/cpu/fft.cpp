@@ -121,10 +121,9 @@ using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 }
 
 [[nodiscard]] CpuFft create(const Decomposition &decomposition, int rank_id,
-                            MPI_Comm comm) {
+                            MPI_Comm comm, int r2c_direction) {
   auto options = heffte::default_options<heffte::backend::fftw>();
-  auto r2c_dir = 0;
-  auto fft_layout = layout::create(decomposition, r2c_dir);
+  auto fft_layout = layout::create(decomposition, r2c_direction);
   return create(fft_layout, rank_id, options, comm);
 }
 
@@ -157,9 +156,8 @@ create_with_backend(const FFTLayout &fft_layout, int rank_id,
 
 [[nodiscard]] std::unique_ptr<IFFT>
 create_with_backend(const Decomposition &decomposition, int rank_id, Backend backend,
-                    MPI_Comm comm) {
-  auto r2c_dir = 0;
-  auto fft_layout = layout::create(decomposition, r2c_dir);
+                    MPI_Comm comm, int r2c_direction) {
+  auto fft_layout = layout::create(decomposition, r2c_direction);
 
   switch (backend) {
   case Backend::FFTW: {
@@ -178,7 +176,8 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
   }
 }
 
-[[nodiscard]] CpuFft create(const Decomposition &decomposition, MPI_Comm comm) {
+[[nodiscard]] CpuFft create(const Decomposition &decomposition, MPI_Comm comm,
+                            int r2c_direction) {
   const int mpi_comm_size = get_mpi_size(comm);
   const int rank_id = get_mpi_rank(comm);
   const auto decomposition_size = get_num_domains(decomposition);
@@ -191,7 +190,7 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
         "specify the rank by calling fft::create(decomposition, rank_id, comm) "
         "instead.");
   }
-  return create(decomposition, rank_id, comm);
+  return create(decomposition, rank_id, comm, r2c_direction);
 }
 
 } // namespace pfc::fft

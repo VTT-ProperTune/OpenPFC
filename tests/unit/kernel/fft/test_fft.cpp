@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <complex>
+#include <cstddef>
 #include <vector>
+
+#include <mpi.h>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -80,4 +83,15 @@ TEST_CASE("FFT workspace allocation - FFTW reports one complex workspace",
   REQUIRE(fft.size_workspace() > 0);
   REQUIRE(fft.get_allocated_memory_bytes() ==
           fft.size_workspace() * sizeof(std::complex<double>));
+}
+
+TEST_CASE("FFT create honors r2c_direction on a non-cubic grid", "[fft][unit]") {
+  auto domain = domain::create(GridSize({8, 16, 32}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                               GridSpacing({1.0, 1.0, 1.0}));
+  auto decomposition = decomposition::create(domain, 1);
+  auto fft_x = fft::create(decomposition, 0, MPI_COMM_WORLD, /*r2c_direction=*/0);
+  auto fft_z = fft::create(decomposition, 0, MPI_COMM_WORLD, /*r2c_direction=*/2);
+  REQUIRE(fft_x.size_inbox() == fft_z.size_inbox());
+  REQUIRE(fft_x.size_outbox() == static_cast<std::size_t>(5 * 16 * 32));
+  REQUIRE(fft_z.size_outbox() == static_cast<std::size_t>(8 * 16 * 17));
 }

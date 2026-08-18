@@ -17,10 +17,10 @@ using Decomposition = pfc::decomposition::Decomposition;
 using pfc::fft::FFT_Impl;
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition, int rank_id,
-                                   MPI_Comm comm) {
+                                   MPI_Comm comm, int r2c_direction) {
   auto options = heffte::default_options<heffte::backend::cufft>();
-  auto boxes =
-      pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomposition, rank_id);
+  auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(
+      decomposition, rank_id, r2c_direction);
 
   using fft_r2c_cuda_type = heffte::fft3d_r2c<heffte::backend::cufft>;
   fft_r2c_cuda_type fft_cuda(boxes.real_inbox, boxes.complex_outbox,
@@ -30,11 +30,11 @@ using pfc::fft::FFT_Impl;
 }
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition,
-                                   MPI_Comm comm) {
+                                   MPI_Comm comm, int r2c_direction) {
   pfc::runtime::heffte_gpu::throw_if_mpi_decomposition_mismatch(
       comm, decomposition, "fft::create_cuda(decomposition, rank_id, comm)");
   const int rank_id = pfc::runtime::heffte_gpu::mpi_comm_rank(comm);
-  return create_cuda(decomposition, rank_id, comm);
+  return create_cuda(decomposition, rank_id, comm, r2c_direction);
 }
 
 } // namespace fft

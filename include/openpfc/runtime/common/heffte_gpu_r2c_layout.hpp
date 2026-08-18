@@ -47,10 +47,9 @@ struct DefaultR2cBoxes {
 
 inline DefaultR2cBoxes
 make_default_r2c_boxes(const pfc::decomposition::Decomposition &decomposition,
-                       int rank_id) {
+                       int rank_id, int r2c_direction = 0) {
   using namespace pfc::fft::layout;
-  constexpr int r2c_dir = 0;
-  auto fft_layout = create(decomposition, r2c_dir);
+  auto fft_layout = create(decomposition, r2c_direction);
   const auto &inbox = get_real_box(fft_layout, rank_id);
   const auto &outbox = get_complex_box(fft_layout, rank_id);
   return {to_heffte_box(inbox), to_heffte_box(outbox),

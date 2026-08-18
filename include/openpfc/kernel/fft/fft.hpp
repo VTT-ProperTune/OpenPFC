@@ -44,10 +44,11 @@ class CpuFft;
                             MPI_Comm comm = MPI_COMM_WORLD);
 
 [[nodiscard]] CpuFft create(const Decomposition &decomposition, int rank_id,
-                            MPI_Comm comm = MPI_COMM_WORLD);
+                            MPI_Comm comm = MPI_COMM_WORLD,
+                            int r2c_direction = 0);
 
 [[nodiscard]] CpuFft create(const Decomposition &decomposition,
-                            MPI_Comm comm = MPI_COMM_WORLD);
+                            MPI_Comm comm = MPI_COMM_WORLD, int r2c_direction = 0);
 
 [[nodiscard]] std::unique_ptr<IFFT>
 create_with_backend(const FFTLayout &fft_layout, int rank_id,
@@ -56,7 +57,7 @@ create_with_backend(const FFTLayout &fft_layout, int rank_id,
 
 [[nodiscard]] std::unique_ptr<IFFT>
 create_with_backend(const Decomposition &decomposition, int rank_id, Backend backend,
-                    MPI_Comm comm = MPI_COMM_WORLD);
+                    MPI_Comm comm = MPI_COMM_WORLD, int r2c_direction = 0);
 
 } // namespace fft
 
