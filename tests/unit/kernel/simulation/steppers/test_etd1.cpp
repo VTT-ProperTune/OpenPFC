@@ -233,3 +233,57 @@ TEST_CASE("etd1_multi_field_bundle", "[stepper][etd1]") {
   REQUIRE(stepper.candidate(1)[0] ==
           Catch::Approx(r1.exp_Ldt * 4.0 + r1.phi1_L * (-0.25)).margin(1e-12));
 }
+
+struct ThreeFieldConstantN {
+  double n0{0.0};
+  double n1{0.0};
+  double n2{0.0};
+  void operator()(
+      double /*t*/,
+      std::tuple<std::vector<double> &, std::vector<double> &,
+                 std::vector<double> &> /*u_pack*/,
+      std::tuple<std::vector<double> &, std::vector<double> &,
+                 std::vector<double> &>
+          du_pack) const {
+    std::get<0>(du_pack)[0] = n0;
+    std::get<1>(du_pack)[0] = n1;
+    std::get<2>(du_pack)[0] = n2;
+  }
+};
+
+TEST_CASE("etd1_three_field_bundle", "[stepper][etd1]") {
+  constexpr double dt = 0.1;
+  std::vector<double> L0{-1.0}, L1{-2.0}, L2{-4.0};
+  std::vector<double> exp0(1), phi0(1), exp1(1), phi1(1), exp2(1), phi2(1);
+  fill_spectral_exp_coeffs(L0, dt, exp0, phi0);
+  fill_spectral_exp_coeffs(L1, dt, exp1, phi1);
+  fill_spectral_exp_coeffs(L2, dt, exp2, phi2);
+
+  ThreeFieldConstantN rhs{0.25, -0.5, 1.0};
+  MultiEtd1Stepper<ThreeFieldConstantN, 3> stepper(dt, {1, 1, 1}, rhs);
+  stepper.set_coefficients(
+      {std::span<const double>{exp0}, std::span<const double>{exp1},
+       std::span<const double>{exp2}},
+      {std::span<const double>{phi0}, std::span<const double>{phi1},
+       std::span<const double>{phi2}});
+
+  std::vector<double> u0{1.0}, u1{2.0}, u2{3.0};
+  const auto fp0 = u0;
+  const auto fp1 = u1;
+  const auto fp2 = u2;
+  auto attempt = stepper.attempt(0.0, u0, u1, u2);
+  REQUIRE(attempt.success);
+  REQUIRE(u0 == fp0);
+  REQUIRE(u1 == fp1);
+  REQUIRE(u2 == fp2);
+
+  const auto r0 = spectral_exp_coeffs(L0[0], dt);
+  const auto r1 = spectral_exp_coeffs(L1[0], dt);
+  const auto r2 = spectral_exp_coeffs(L2[0], dt);
+  REQUIRE(stepper.candidate(0)[0] ==
+          Catch::Approx(r0.exp_Ldt * 1.0 + r0.phi1_L * 0.25).margin(1e-12));
+  REQUIRE(stepper.candidate(1)[0] ==
+          Catch::Approx(r1.exp_Ldt * 2.0 + r1.phi1_L * (-0.5)).margin(1e-12));
+  REQUIRE(stepper.candidate(2)[0] ==
+          Catch::Approx(r2.exp_Ldt * 3.0 + r2.phi1_L * 1.0).margin(1e-12));
+}

@@ -40,6 +40,7 @@
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -184,16 +185,17 @@ private:
 };
 
 /**
- * @brief Two-field ETD1 stepper with per-field isolated candidates.
+ * @brief N-field ETD1 stepper with per-field isolated candidates.
  *
- * @tparam Rhs Callable satisfying @ref MultiStageFunction.
- * @tparam N   Field count (fixed at 2 for this slice).
+ * @tparam Rhs Callable satisfying @ref MultiStageFunction with arity N.
+ * @tparam N   Field count (`N >= 1`).
  *
- * Each accepted field is copied into method-owned scratch before the multi-field
- * nonlinear evaluation so a misbehaving @c N cannot mutate caller buffers.
+ * Each accepted field is copied into method-owned scratch before the
+ * multi-field nonlinear evaluation so a misbehaving @c N cannot mutate
+ * caller buffers.
  */
 template <class Rhs, std::size_t N>
-  requires(N == 2) && MultiStageFunction<Rhs>
+  requires(N >= 1) && MultiStageFunction<Rhs, N>
 class MultiEtd1Stepper {
 public:
   using RhsType = Rhs;
@@ -247,16 +249,21 @@ public:
   /**
    * @brief Form isolated per-field candidates without mutating accepted inputs.
    */
+  template <class... U>
   [[nodiscard]] MultiStepAttemptResult<N>
-  attempt(double t, const std::vector<double> &u0,
-          const std::vector<double> &u1) {
+  attempt(double t, const std::vector<U> &...u_accepted) {
+    static_assert(sizeof...(U) == N,
+                  "MultiEtd1Stepper::attempt: buffer count must match N");
+    static_assert((std::is_same_v<U, double> && ...),
+                  "MultiEtd1Stepper requires std::vector<double>");
     m_last_reason.clear();
-    if (u0.size() != m_local_sizes[0] || u1.size() != m_local_sizes[1]) {
-      m_last_reason = "accepted field size != local_size";
-      return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
-                                       candidate_ptrs());
-    }
+    const std::array<const std::vector<double> *, N> accepted{&u_accepted...};
     for (std::size_t f = 0; f < N; ++f) {
+      if (accepted[f]->size() != m_local_sizes[f]) {
+        m_last_reason = "accepted field size != local_size";
+        return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
+                                         candidate_ptrs());
+      }
       if (m_exp_Ldt[f].size() != m_local_sizes[f] ||
           m_phi1_L[f].size() != m_local_sizes[f]) {
         m_last_reason = "coefficient span size != local_size";
@@ -265,13 +272,11 @@ public:
       }
     }
 
-    m_u_scratch[0] = u0;
-    m_u_scratch[1] = u1;
-    auto u_pack = std::tie(m_u_scratch[0], m_u_scratch[1]);
-    auto du_pack = std::tie(m_du[0], m_du[1]);
+    copy_accepted_to_scratch(std::make_index_sequence<N>{}, u_accepted...);
+    auto u_pack = make_scratch_tuple(std::make_index_sequence<N>{});
+    auto du_pack = make_du_tuple(std::make_index_sequence<N>{});
     m_rhs(t, u_pack, du_pack);
 
-    const std::array<const std::vector<double> *, N> accepted{&u0, &u1};
     for (std::size_t f = 0; f < N; ++f) {
       const auto &u_acc = *accepted[f];
       for (std::size_t i = 0; i < m_local_sizes[f]; ++i) {
@@ -313,9 +318,30 @@ private:
   std::string m_last_reason{};
   Rhs m_rhs;
 
+  template <std::size_t... I, class... U>
+  void copy_accepted_to_scratch(std::index_sequence<I...>,
+                                const std::vector<U> &...u_accepted) {
+    ((m_u_scratch[I] = u_accepted), ...);
+  }
+
+  template <std::size_t... I>
+  auto make_scratch_tuple(std::index_sequence<I...>) {
+    return std::tie(m_u_scratch[I]...);
+  }
+
+  template <std::size_t... I> auto make_du_tuple(std::index_sequence<I...>) {
+    return std::tie(m_du[I]...);
+  }
+
   [[nodiscard]] std::array<const std::vector<double> *, N>
   candidate_ptrs() const {
-    return {&m_candidate[0], &m_candidate[1]};
+    return candidate_ptrs_impl(std::make_index_sequence<N>{});
+  }
+
+  template <std::size_t... I>
+  [[nodiscard]] std::array<const std::vector<double> *, N>
+  candidate_ptrs_impl(std::index_sequence<I...>) const {
+    return {&m_candidate[I]...};
   }
 };
 

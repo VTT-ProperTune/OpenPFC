@@ -35,10 +35,26 @@
  *      half E).
  */
 
+#include <cstddef>
 #include <tuple>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace pfc::sim::steppers {
+
+namespace detail {
+
+template <std::size_t N, typename T,
+          typename Seq = std::make_index_sequence<N>>
+struct n_ref_tuple;
+
+template <std::size_t N, typename T, std::size_t... I>
+struct n_ref_tuple<N, T, std::index_sequence<I...>> {
+  using type = std::tuple<std::conditional_t<true, T &, decltype(I)>...>;
+};
+
+} // namespace detail
 
 /**
  * @brief Satisfied by any single-field stage-evaluation callable:
@@ -49,15 +65,17 @@ concept StageFunction = requires(Rhs rhs, double t, std::vector<double> &u,
                                  std::vector<double> &du) { rhs(t, u, du); };
 
 /**
- * @brief Satisfied by a two-field stage-evaluation callable:
+ * @brief Satisfied by an N-field stage-evaluation callable:
  *        `rhs(t, u_pack, du_pack)` filling every field in `du_pack`.
+ *
+ * Default `N == 2` keeps existing `MultiStageFunction<Rhs>` call sites.
  */
-template <class Rhs>
-concept MultiStageFunction =
-    requires(Rhs rhs, double t,
-             std::tuple<std::vector<double> &, std::vector<double> &> u_pack,
-             std::tuple<std::vector<double> &, std::vector<double> &> du_pack) {
-      rhs(t, u_pack, du_pack);
-    };
+template <class Rhs, std::size_t N = 2>
+concept MultiStageFunction = requires(
+    Rhs rhs, double t,
+    typename detail::n_ref_tuple<N, std::vector<double>>::type u_pack,
+    typename detail::n_ref_tuple<N, std::vector<double>>::type du_pack) {
+  rhs(t, u_pack, du_pack);
+};
 
 } // namespace pfc::sim::steppers

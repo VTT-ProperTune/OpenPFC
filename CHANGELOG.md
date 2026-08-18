@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `MultiStageFunction<Rhs, N>` (default N=2) and `MultiEtd1Stepper` accept any N≥1 via a variadic `attempt`.
 - `RK3HeunStepper`, `ExplicitRKStepper`, `EmbeddedRKStepper`, `ImexEulerStepper`, and `Etd1Stepper` return `StepAttemptResult` (multi-field: `MultiStepAttemptResult`). Dropped `EmbeddedStepAttemptResult`, `ImexStepAttempt`, and `Etd1StepAttempt`. Embedded extras are `u_high()` / `u_low()` / `error()` / `last_rhs_evals()`; IMEX extras are `last_solve_*`; ETD extras are `last_reason()`.
 - LUMI/Cray GNU compile of M5 FFT/ETD headers: `SpectralExpCoefficientCache<>` at call sites, vector overload of `fill_spectral_exp_coeffs`, no `override`+`requires` on `FFT_Impl`, dummy `device_fft_buffers` fallback, and `r2c_direction` dropped from comm-only `create`/`create_cuda`/`create_hip` (MPI_Comm is `int` on Cray).
 - `EulerStepper` and `RK2HeunStepper` implement `attempt` / `commit_step_attempt` (`StepAttemptResult`). In-place `step()` is that pair. ADR 0003 accepted as the M6 protocol.
