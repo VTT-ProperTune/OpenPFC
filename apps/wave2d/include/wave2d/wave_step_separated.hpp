@@ -17,7 +17,7 @@
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 #include <wave2d/wave_boundary.hpp>
@@ -98,11 +98,12 @@ patch_y_face_halos_neumann_order2(const double *u_core, int nx, int ny,
 inline void step_wave_separated_order2_cpu(
     std::vector<double> &u, std::vector<double> &v, std::vector<double> &lap,
     std::array<std::vector<double>, 6> &face_halos,
-    pfc::SparseHaloExchanger<double> &exchanger, int nx, int ny, int nz,
+    pfc::comm::SparseExchange<pfc::HostSpace, double> &exchanger, int nx, int ny,
+    int nz,
     const pfc::decomposition::Decomposition &decomp, int rank, double dt,
     YBoundaryKind y_bc, int Ny_global, double u_wall) {
-  exchanger.exchange_halos(u.data(), u.size());
-  pfc::halo::copy_to_face_layout(exchanger, face_halos);
+  exchanger.exchange(u.data(), u.size());
+  pfc::halo::copy_to_face_layout(exchanger.halos(), face_halos);
 
   const auto &local = pfc::decomposition::get_subworld(decomp, rank);
   const auto lower = pfc::world::get_lower(local);

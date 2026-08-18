@@ -99,9 +99,8 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
   std::vector<double> v_cpu = v0;
   std::vector<double> lap_cpu(nlocal);
   auto face_cpu = pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SparseHaloExchanger<double> exch_cpu(
-      MPI_COMM_WORLD, rank,
-      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
+  pfc::comm::SparseExchange<pfc::HostSpace, double> exch_cpu(
+      u_cpu.data(), u_cpu.size(), decomp, rank, MPI_COMM_WORLD, halo_width);
   for (int s = 0; s < n_steps; ++s) {
     (void)s;
     wave2d::step_wave_separated_order2_cpu(u_cpu, v_cpu, lap_cpu, face_cpu, exch_cpu,

@@ -30,7 +30,7 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
@@ -98,13 +98,13 @@ void rk2_step(pfc::data::Field<double, pfc::HostSpace>& u_field,
               pfc::data::Field<double, pfc::HostSpace>& v_field,
               double dt, double t,
               WaveModel& model,
-              PaddedHaloExchanger<double>& halo_u) {
+              pfc::comm::HaloExchange<pfc::HostSpace, double>& halo_u) {
   // Save initial state
   std::vector<double> u0 = field_to_vector(u_field);
   std::vector<double> v0 = field_to_vector(v_field);
 
   // Stage 1: compute k1 at (t, u0)
-  halo_u.exchange_halos(u_field.data(), u_field.size());
+  halo_u.exchange();
 
   const auto sz = u_field.local_size();
   std::vector<double> du1(sz[0] * sz[1] * sz[2]);
@@ -132,7 +132,7 @@ void rk2_step(pfc::data::Field<double, pfc::HostSpace>& u_field,
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
 
   // Stage 2: compute k2 at (t + dt/2, midpoint)
-  halo_u.exchange_halos(u_field.data(), u_field.size());
+  halo_u.exchange();
 
   std::vector<double> du2(sz[0] * sz[1] * sz[2]);
   std::vector<double> dv2(sz[0] * sz[1] * sz[2]);
@@ -166,13 +166,13 @@ void rk4_step(pfc::data::Field<double, pfc::HostSpace>& u_field,
               pfc::data::Field<double, pfc::HostSpace>& v_field,
               double dt, double t,
               WaveModel& model,
-              PaddedHaloExchanger<double>& halo_u) {
+              pfc::comm::HaloExchange<pfc::HostSpace, double>& halo_u) {
   // Save initial state
   std::vector<double> u0 = field_to_vector(u_field);
   std::vector<double> v0 = field_to_vector(v_field);
 
   // Stage 1: compute k1 at (t, u0)
-  halo_u.exchange_halos(u_field.data(), u_field.size());
+  halo_u.exchange();
 
   const auto sz = u_field.local_size();
   std::vector<double> du1(sz[0] * sz[1] * sz[2]);
@@ -198,7 +198,7 @@ void rk4_step(pfc::data::Field<double, pfc::HostSpace>& u_field,
   });
 
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
-  halo_u.exchange_halos(u_field.data(), u_field.size());
+  halo_u.exchange();
 
   std::vector<double> du2(sz[0] * sz[1] * sz[2]);
   std::vector<double> dv2(sz[0] * sz[1] * sz[2]);
@@ -223,7 +223,7 @@ void rk4_step(pfc::data::Field<double, pfc::HostSpace>& u_field,
   });
 
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
-  halo_u.exchange_halos(u_field.data(), u_field.size());
+  halo_u.exchange();
 
   std::vector<double> du3(sz[0] * sz[1] * sz[2]);
   std::vector<double> dv3(sz[0] * sz[1] * sz[2]);
@@ -248,7 +248,7 @@ void rk4_step(pfc::data::Field<double, pfc::HostSpace>& u_field,
   });
 
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
-  halo_u.exchange_halos(u_field.data(), u_field.size());
+  halo_u.exchange();
 
   std::vector<double> du4(sz[0] * sz[1] * sz[2]);
   std::vector<double> dv4(sz[0] * sz[1] * sz[2]);
@@ -291,7 +291,8 @@ std::vector<double> run_rk4_reference(double dt, int n_steps) {
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
 
   WaveModel model{.inv_dx2 = 1.0 / (dx * dx), .inv_dy2 = 1.0 / (dy * dy)};
-  PaddedHaloExchanger<double> halo_u(decomp, 0, halo_width, MPI_COMM_WORLD, 0);
+  pfc::comm::HaloExchange<pfc::HostSpace, double> halo_u(u_field, decomp, 0,
+                                                        MPI_COMM_WORLD);
 
   double t = 0.0;
   for (int step = 0; step < n_steps; ++step) {
@@ -318,7 +319,8 @@ std::vector<double> run_rk2(double dt, int n_steps) {
   enforce_dirichlet_y_walls_owned(u_field, v_field, Ny, 0.0);
 
   WaveModel model{.inv_dx2 = 1.0 / (dx * dx), .inv_dy2 = 1.0 / (dy * dy)};
-  PaddedHaloExchanger<double> halo_u(decomp, 0, halo_width, MPI_COMM_WORLD, 0);
+  pfc::comm::HaloExchange<pfc::HostSpace, double> halo_u(u_field, decomp, 0,
+                                                        MPI_COMM_WORLD);
 
   double t = 0.0;
   for (int step = 0; step < n_steps; ++step) {

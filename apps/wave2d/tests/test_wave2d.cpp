@@ -16,7 +16,8 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
@@ -100,10 +101,8 @@ TEST_CASE("fill_y_physical_ghosts_padded Dirichlet mirrors", "[wave2d][bc]") {
   auto u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   u.apply([&](double, double, double) { return 0.0; });
   u(0, 0, 0) = 1.25;
-  auto geometry = decomposition::domain(decomp);
-  auto subdomain_box = decomposition::local_box(decomp, rank);
-  pfc::PaddedHaloExchanger<double> halo(subdomain_box, geometry, decomp, rank, hw, MPI_COMM_WORLD);
-  halo.exchange_halos(u.data(), u.size());
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  halo.exchange();
   wave2d::fill_y_physical_ghosts_padded(u, wave2d::YBoundaryKind::Dirichlet, Ny,
                                         0.0);
   REQUIRE_THAT(u(0, -1, 0), WithinAbs(-1.25, 1e-12));
@@ -131,9 +130,7 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
   auto u_pad = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   auto v_pad = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   auto lap_pad = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  auto geometry = decomposition::domain(decomp);
-  auto subdomain_box = decomposition::local_box(decomp, rank);
-  pfc::PaddedHaloExchanger<double> halo(subdomain_box, geometry, decomp, rank, hw, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u_pad, decomp, rank, MPI_COMM_WORLD);
 
   const double xc = 0.5 * static_cast<double>(Nx - 1);
   const double yc = 0.5 * static_cast<double>(Ny - 1);
@@ -144,7 +141,7 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
     return std::exp(-(dx * dx + dy * dy) / (2.0 * sigma * sigma));
   });
   v_pad.apply([](double, double, double) { return 0.0; });
-  halo.exchange_halos(u_pad.data(), u_pad.size());
+  halo.exchange();
   wave2d::fill_y_physical_ghosts_padded(u_pad, wave2d::YBoundaryKind::Neumann, Ny,
                                         0.0);
   wave2d::WaveModel model;
@@ -153,7 +150,7 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
 
   for (int s = 0; s < n_steps; ++s) {
     (void)s;
-    halo.exchange_halos(u_pad.data(), u_pad.size());
+    halo.exchange();
     wave2d::fill_y_physical_ghosts_padded(u_pad, wave2d::YBoundaryKind::Neumann, Ny,
                                           0.0);
     u_pad.for_each_owned([&](int i, int j, int k) {
@@ -198,9 +195,8 @@ TEST_CASE("step_wave_separated_order2_cpu short vs padded manual single rank",
     }
   }
   auto face_halos = pfc::halo::allocate_face_halos<double>(decomp, rank, 1);
-  pfc::SparseHaloExchanger<double> exch(
-      MPI_COMM_WORLD, rank,
-      pfc::halo::make_structured_halos<double>(decomp, rank, 1));
+  comm::SparseExchange<HostSpace, double> exch(
+      u_sep.data(), u_sep.size(), decomp, rank, MPI_COMM_WORLD, 1);
   for (int s = 0; s < n_steps; ++s) {
     wave2d::step_wave_separated_order2_cpu(u_sep, v_sep, lap_sep, face_halos, exch,
                                            nx, ny, nz, decomp, rank, dt,
