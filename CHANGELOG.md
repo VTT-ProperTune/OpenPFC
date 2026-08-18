@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `EulerStepper<Rhs, Scalar>` and `MultiEulerStepper<Rhs, N, Scalar>` advance `double` or `std::complex<double>` (default `double`). Host `Field<Scalar>` overloads stay; vector path remains.
 - `MultiEtd1Stepper<Rhs, N, Scalar>` advances `double` or `std::complex<double>` packs with real per-field ETD coefficients. `MultiStageFunction` and `MultiStepAttemptResult` take an optional `Scalar` (default `double`).
 - Deleted unused `fd_stencils.hpp` back-compat shims (`detail::EvenFdStencil1d`, `fd_even_order_lookup`).
 - One workspace type: `pfc::sim::steppers::StageWorkspace<T>` is an alias of `pfc::integrator::Workspace<T>` (stage vectors + scratch, move-only, `clear()`/`reset()`).
