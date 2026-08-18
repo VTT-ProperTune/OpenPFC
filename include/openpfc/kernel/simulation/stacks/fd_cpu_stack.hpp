@@ -6,7 +6,7 @@
 /**
  * @file fd_cpu_stack.hpp
  * @brief One-shot bundle of `Domain + Decomposition + Field + face_halos
- *        + SparseHaloExchanger` for finite-difference CPU solvers.
+ *        + SparseExchange` for finite-difference CPU solvers.
  *
  * @details
  * Programmatic counterpart to `pfc::sim::stacks::SpectralCpuStack` for
@@ -18,10 +18,9 @@
  *  - Geometry (size/spacing/origin/periodicity) is extracted from the
  *    Domain and stored internally.
  *  - Decomposition is created directly from Domain.
- *  - `pfc::SparseHaloExchanger<double>` is built from a `RemoteHalo` list
- *    produced by `pfc::halo::make_structured_halos<double>(...)`; it owns
- *    the index/data buffers internally and only needs `m_comm` and rank
- *    after construction.
+ *  - `pfc::comm::SparseExchange<HostSpace>` is built from the unpadded
+ *    Field and `make_structured_halos`; it owns the index/data buffers
+ *    and only needs `m_comm` and rank after construction.
  *  - `m_u` is an unpadded `pfc::data::Field<double>` (halo=0) sized to the
  *    local subdomain. Face-halo data lives in `m_face_halos` (the legacy
  *    Field face-halo layout). Iteration halo width is `fd_order / 2`,
@@ -32,8 +31,8 @@
  * does not have to pass the field, its size, and the halo buffer
  * triple to the exchanger every iteration. After the underlying sparse
  * exchange completes, `m_face_halos` is repopulated via
- * `pfc::halo::copy_to_face_layout(m_exchanger, m_face_halos)` so the
- * existing periodic-separated FD Laplacians keep their array-of-six
+ * `pfc::halo::copy_to_face_layout(m_exchanger.halos(), m_face_halos)` so
+ * the existing periodic-separated FD Laplacians keep their array-of-six
  * input.
  *
  * The class is **non-copyable, non-movable** for the same reason as
@@ -42,7 +41,7 @@
  * destroyed. Construct in place, take references.
  *
  * @see openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp
- * @see openpfc/kernel/decomposition/sparse_halo_exchange.hpp
+ * @see openpfc/kernel/decomposition/comm_sparse_exchange.hpp
  */
 
 #include <array>
@@ -55,8 +54,8 @@
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/scaled_field.hpp>
@@ -97,9 +96,7 @@ public:
                                                             fd_order / 2)),
         m_face_halos(
             pfc::halo::allocate_face_halos<double>(m_decomp, rank, fd_order / 2)),
-        m_exchanger(
-            comm, rank,
-            pfc::halo::make_structured_halos<double>(m_decomp, rank, fd_order / 2)),
+        m_exchanger(m_u, m_decomp, rank, comm),
         m_fd_order(fd_order), m_rank(rank), m_nproc(nproc), m_comm(comm) {}
 
   /**
@@ -133,8 +130,8 @@ public:
    *        the subdomain interior boundary.
    */
   void exchange_halos() {
-    m_exchanger.exchange_halos(m_u.data(), m_u.size());
-    pfc::halo::copy_to_face_layout(m_exchanger, m_face_halos);
+    m_exchanger.exchange();
+    pfc::halo::copy_to_face_layout(m_exchanger.halos(), m_face_halos);
   }
 
   /**
@@ -197,10 +194,12 @@ public:
     return m_u;
   }
 
-  [[nodiscard]] pfc::SparseHaloExchanger<double> &exchanger() noexcept {
+  [[nodiscard]] pfc::comm::SparseExchange<pfc::HostSpace, double> &
+  exchanger() noexcept {
     return m_exchanger;
   }
-  [[nodiscard]] const pfc::SparseHaloExchanger<double> &exchanger() const noexcept {
+  [[nodiscard]] const pfc::comm::SparseExchange<pfc::HostSpace, double> &
+  exchanger() const noexcept {
     return m_exchanger;
   }
 
@@ -225,7 +224,7 @@ private:
   pfc::decomposition::Decomposition m_decomp;
   pfc::data::Field<double> m_u;
   std::array<std::vector<double>, 6> m_face_halos;
-  pfc::SparseHaloExchanger<double> m_exchanger;
+  pfc::comm::SparseExchange<pfc::HostSpace, double> m_exchanger;
   int m_fd_order{2};
   int m_rank{0};
   int m_nproc{1};
