@@ -167,14 +167,14 @@ Exchanger(decomp, rank, hw, comm,
 
 If `per_rank` is provided, the exchanger calls `per_rank(rank)` for its own rank and uses that result; otherwise it uses the uniform `dirs`. Exchangers that historically defaulted to a different connectivity (`FullPaddedHaloExchanger` / `FullPaddedDeviceHalo` ⇒ `Full3D()`) keep their old default after the change. Custom sets that mix faces with diagonals are tolerated by face-only exchangers (the diagonals are silently ignored — they cannot be expressed as one of the 6 canonical face slots); for full corner/edge fill use `pfc::communication::FullPaddedHaloExchanger` (host) or `pfc::cuda::FullPaddedDeviceHalo` (device) and feed it `Full3D()` (or a smaller preset to subset its widening passes).
 
-`HaloExchanger` and `PaddedHaloExchanger` use the zero-copy MPI subarray fast path **iff** every face slot is in the active set; subsetting via direction set falls back to the gather/scatter pack path. `PaddedDeviceHaloExchanger` and `BatchedPaddedDeviceHalo` skip excluded slots in both their GPU-aware and packed-fallback branches; same-rank periodic faces *inside* the active set still use device pack/unpack (no MPI-to-self) — this is the lever that turns off the `nx*ny*hw` ±Z self transfers when `local nz == 1`.
+`HaloExchanger` and `PaddedHaloExchanger` use the zero-copy MPI subarray fast path **iff** every face slot is in the active set; subsetting via direction set falls back to the gather/scatter pack path. `PaddedDeviceHaloExchanger` and `HaloExchange` on device skip excluded slots in both their GPU-aware and packed-fallback branches; same-rank periodic faces *inside* the active set still use device pack/unpack (no MPI-to-self) — this is the lever that turns off the `nx*ny*hw` ±Z self transfers when `local nz == 1`.
 
 `FullPaddedDeviceHalo` and `FullPaddedHaloExchanger` share the same `axis_active` / `axis_widen` interpretation of diagonal directions:
 
 - **Pass `a` is enabled** iff at least one of `±a` is in the set.
 - **Pass `a` widens** the slab cross-section over previously-filled axes iff the set contains a direction with `d[a] != 0` and `d[b] != 0` for some `b < a`. With `Full3D()` this is exactly the original 3-pass widening; with `Axes3D()` every pass uses narrow slabs (face-only); with `Axes2D()` the Z pass is skipped entirely.
 
-For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonical example), pass `presets::Axes2D()` to both `PaddedDeviceHaloExchanger` and `BatchedPaddedDeviceHalo` to remove all ±Z communication / self-pack work without changing the rest of the driver.
+For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonical example), set `HaloExchangeOptions::directions` to `presets::Axes2D()` to remove all ±Z communication / self-pack work without changing the rest of the driver.
 
 > **Inter-rank consistency:** CPU exchangers that accept a `HaloDirectionSet` /
 > `HaloDirectionSelector` (`HaloExchanger`, `PaddedHaloExchanger`,
@@ -188,7 +188,7 @@ For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonic
 > Waitall. Release builds (`NDEBUG`) skip the Allgather unless
 > `OPENPFC_VALIDATE_NEIGHBOUR_AGREEMENT=1`. Debug builds always check unless
 > that variable is `0`. **Follow-up:** CUDA/HIP `PaddedDeviceHaloExchanger` /
-> `FullPaddedDeviceHalo` (and app-local `BatchedPaddedDeviceHalo`) dirs/selector
+> `FullPaddedDeviceHalo` dirs/selector
 > constructors do not yet call the same helper.
 
 ---

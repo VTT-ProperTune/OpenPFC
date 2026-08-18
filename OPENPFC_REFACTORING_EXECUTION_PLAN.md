@@ -411,7 +411,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 ### Deletions
 
 * [ ] `kernel/decomposition/halo_exchange.hpp` (old in-place `HaloExchanger`), `halo_persistent.hpp`, `full_padded_halo_exchange.hpp`, `padded_halo_exchange.hpp` (superseded), `runtime/gpu` old padded/full-padded twins from M3's port (superseded by the unified class), and their now-redundant tests (assertions migrated to the new suites).
-* [ ] `apps/kobayashi/src/cuda/kobayashi_batched_halo.hpp` (531 lines, promoted). *(HIP host-staging in `kobayashi_fd_hip.cpp` is gone — device `HaloExchange`.)*
+* [x] `apps/kobayashi/src/cuda/kobayashi_batched_halo.hpp` (531 lines). Removed after Kobayashi CUDA moved onto multi-field `HaloExchange<CudaSpace>` (sequential per field in a group; one-Waitall library batching is still a follow-up).
 * [ ] `sparsevector::` "for testing" free-function round-trip on the construction hot path.
 * [x] HeFFTe include from `src/openpfc/kernel/decomposition/decomposition.cpp`.
 
