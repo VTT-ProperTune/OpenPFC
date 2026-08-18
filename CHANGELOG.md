@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `MultiEtd1Stepper<Rhs, N, Scalar>` advances `double` or `std::complex<double>` packs with real per-field ETD coefficients. `MultiStageFunction` and `MultiStepAttemptResult` take an optional `Scalar` (default `double`).
 - Deleted unused `fd_stencils.hpp` back-compat shims (`detail::EvenFdStencil1d`, `fd_even_order_lookup`).
 - One workspace type: `pfc::sim::steppers::StageWorkspace<T>` is an alias of `pfc::integrator::Workspace<T>` (stage vectors + scratch, move-only, `clear()`/`reset()`).
 - One `StageContext`: `pfc::sim::StageContext` is an alias of `pfc::integrator::StageContext`. The struct carries integrator flags plus optional `ExecutionService*`; solvers use `time` (was `evaluation_time`) and `service()`.
