@@ -38,6 +38,7 @@
 
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/full_padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_geometry.hpp>
 #include <openpfc/kernel/decomposition/halo_persistent.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
@@ -53,7 +54,19 @@ struct HaloExchangeOptions {
   HaloConnectivity connectivity = HaloConnectivity::Faces;
   bool persistent = false;
   int exchange_base = 0;
+  /// Empty: Faces → `Axes3D()`, Full → `Full3D()`. Set `Axes2D()` for 2D slabs.
+  halo::HaloDirectionSet directions{};
 };
+
+/// Resolve the direction set actually used by a `HaloExchange` construction.
+[[nodiscard]] inline halo::HaloDirectionSet
+resolved_halo_directions(const HaloExchangeOptions &opt) {
+  if (!opt.directions.empty()) {
+    return opt.directions;
+  }
+  return opt.connectivity == HaloConnectivity::Full ? halo::presets::Full3D()
+                                                    : halo::presets::Axes3D();
+}
 
 /**
  * @brief Primary template: `HostSpace` is specialized below.
@@ -116,16 +129,18 @@ public:
             "pfc::comm::HaloExchange: Field binding requires storage_halo > 0");
       }
       const int tag0 = halo::field_tag_base(m_opt.exchange_base, static_cast<int>(i));
+      const auto dirs = resolved_halo_directions(m_opt);
       if (m_opt.persistent) {
         m_persist.push_back(std::make_unique<PersistentHaloExchanger<T>>(
             f->box(), f->domain(), decomp, rank, f->storage_halo(), comm, f->data(),
-            tag0));
+            dirs, tag0));
       } else if (m_opt.connectivity == HaloConnectivity::Full) {
         m_full.push_back(std::make_unique<communication::FullPaddedHaloExchanger<T>>(
-            f->box(), f->domain(), decomp, rank, f->storage_halo(), comm, tag0));
+            f->box(), f->domain(), decomp, rank, f->storage_halo(), comm, dirs,
+            tag0));
       } else {
         m_faces.push_back(std::make_unique<communication::PaddedHaloExchanger<T>>(
-            *f, decomp, rank, comm, tag0));
+            *f, decomp, rank, comm, dirs, tag0));
       }
     }
   }

@@ -82,12 +82,14 @@ public:
             "pfc::comm::HaloExchange: Field binding requires storage_halo > 0");
       }
       const int tag0 = halo::field_tag_base(m_opt.exchange_base, static_cast<int>(i));
+      const auto dirs = resolved_halo_directions(m_opt);
       if (m_opt.connectivity == HaloConnectivity::Full) {
         m_full.push_back(std::make_unique<FullEx>(decomp, rank, f->storage_halo(),
-                                                  comm, /*n_fields=*/1, tag0));
+                                                  comm, /*n_fields=*/1, dirs,
+                                                  tag0));
       } else {
-        m_faces.push_back(std::make_unique<FaceEx>(*f, decomp, rank, comm,
-                                                   halo::presets::Axes3D(), tag0));
+        m_faces.push_back(std::make_unique<FaceEx>(*f, decomp, rank, comm, dirs,
+                                                   tag0));
       }
     }
   }

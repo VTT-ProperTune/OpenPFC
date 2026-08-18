@@ -15,6 +15,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_geometry.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 
@@ -35,6 +36,24 @@ bool halo_x_matches(const data::Field<double, HostSpace> &u, int i, double expec
   const auto n = u.size3();
   for (int k = 0; k < n[2]; ++k)
     for (int j = 0; j < n[1]; ++j)
+      matches &= u(i, j, k) == expected;
+  return matches;
+}
+
+bool halo_y_matches(const data::Field<double, HostSpace> &u, int j, double expected) {
+  bool matches = true;
+  const auto n = u.size3();
+  for (int k = 0; k < n[2]; ++k)
+    for (int i = 0; i < n[0]; ++i)
+      matches &= u(i, j, k) == expected;
+  return matches;
+}
+
+bool halo_z_matches(const data::Field<double, HostSpace> &u, int k, double expected) {
+  bool matches = true;
+  const auto n = u.size3();
+  for (int j = 0; j < n[1]; ++j)
+    for (int i = 0; i < n[0]; ++i)
       matches &= u(i, j, k) == expected;
   return matches;
 }
@@ -174,4 +193,37 @@ TEST_CASE("HaloExchange two fields use disjoint tag blocks", "[MPI][halo_exchang
   REQUIRE(halo_x_matches(u, -1, 3.0));
   REQUIRE(halo_x_matches(v, -1, 5.0));
   REQUIRE(halo::field_tag_base(0, 1) == halo::kCanonicalTagCount);
+}
+
+TEST_CASE("HaloExchange Faces: Axes2D skips ±Z", "[MPI][halo_exchange]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1) {
+    return;
+  }
+
+  auto domain = domain::create({8, 6, 4});
+  auto decomp = decomposition::create(domain, 1);
+  constexpr int hw = 1;
+  auto u = data::field_from_subdomain<double>(decomp, rank, hw);
+  const double sentinel = -999.0;
+  const auto n = u.local_size();
+  for (int k = -hw; k < n[2] + hw; ++k)
+    for (int j = -hw; j < n[1] + hw; ++j)
+      for (int i = -hw; i < n[0] + hw; ++i)
+        u(i, j, k) = sentinel;
+  fill_owned(u, 7.0);
+
+  comm::HaloExchangeOptions opt;
+  opt.directions = halo::presets::Axes2D();
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD, opt);
+  halo.exchange();
+
+  REQUIRE(halo_x_matches(u, -1, 7.0));
+  REQUIRE(halo_x_matches(u, n[0], 7.0));
+  REQUIRE(halo_y_matches(u, -1, 7.0));
+  REQUIRE(halo_y_matches(u, n[1], 7.0));
+  REQUIRE(halo_z_matches(u, -1, sentinel));
+  REQUIRE(halo_z_matches(u, n[2], sentinel));
 }
