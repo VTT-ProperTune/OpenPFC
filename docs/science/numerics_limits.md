@@ -12,6 +12,8 @@ This page collects **honest** expectations: OpenPFC is a serious HPC framework, 
 - **Linear** operators are often treated **implicitly** in Fourier space; **nonlinear** terms are evaluated in **real space** and coupled through FFTs.  
 - **Timestep** `dt` must respect the **explicit** pieces of your splitting; blowing up often means `dt` is too large for the nonlinear or stabilized explicit stages—not “MPI is broken.”  
 - **Resolution** changes physics: interface widths, defect cores, and nucleation depend on grid spacing; do not compare runs at different resolutions without a convergence mindset.
+- **Aliasing:** a cubic nonlinearity evaluated in real space and transformed back aliases the highest third of the spectrum onto retained modes. OpenPFC does **not** apply a 2/3-rule mask by default. Call `pfc::fft::kspace::fill_two_thirds_mask` and multiply the nonlinear spectrum when you need Orszag dealiasing (`kernel/fft/dealias.hpp`).
+- **Nyquist (odd derivatives):** `SpectralGradient` zeros `i k` at the even-grid Nyquist mode. The real-to-complex Nyquist coefficient is real; a nonzero `i k_N` is not uniquely defined.
 
 ## Finite differences (kernel helpers and examples)
 

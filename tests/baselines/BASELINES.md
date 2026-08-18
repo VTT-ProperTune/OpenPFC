@@ -29,6 +29,7 @@ within a stated numeric tolerance, per backend).
 | kobayashi `KOBAYASHI_VERIFY_HEX` checksums | **bitwise** | exact hexfloat | cluster |
 | kobayashi OpenMP thread-count parity | **bitwise** | exact | CI/cluster |
 | heat3d manual-vs-stack L2 equality; wave2d manual-vs-separated | tolerance | in-test | CI (CPU) |
+| Spectral first derivative of a Nyquist mode (`test_spectral_gradient`) | tolerance | ≤ 1e-12 (must be ~0) | CI (CPU) |
 | ☐ Tungsten multi-rank golden trajectory (4 ranks, ≥100 ETD steps, CPU) | tolerance | TBD (propose 1e-12 per save-point checksum) | tohtori/CPU (MPI) |
 | ☐ aluminumNew multi-rank golden trajectory | tolerance | TBD | tohtori/CPU (MPI) |
 | ☐ CPU-side goldens for each CPU-vs-GPU parity test | tolerance | 1e-10 | CI (CPU) |
