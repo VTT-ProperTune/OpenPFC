@@ -143,22 +143,14 @@ create_with_backend(const FFTLayout &fft_layout, int rank_id,
         fft_type(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
                  r2c_dir, comm, options));
   }
-#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-  case Backend::CUDA: {
-    using fft_type = heffte::fft3d_r2c<heffte::backend::cufft>;
-    return std::make_unique<FFT_Impl<heffte::backend::cufft>>(
-        fft_type(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
-                 r2c_dir, comm, options));
-  }
-#endif
-#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-  case Backend::HIP: {
-    using fft_type = heffte::fft3d_r2c<heffte::backend::rocfft>;
-    return std::make_unique<FFT_Impl<heffte::backend::rocfft>>(
-        fft_type(heffte_box_from_box3i(inbox), heffte_box_from_box3i(outbox),
-                 r2c_dir, comm, options));
-  }
-#endif
+  case Backend::CUDA:
+    throw std::invalid_argument(
+        "fft::create_with_backend: Backend::CUDA is a device FFT; "
+        "use fft::create_cuda instead of IHostFft");
+  case Backend::HIP:
+    throw std::invalid_argument(
+        "fft::create_with_backend: Backend::HIP is a device FFT; "
+        "use fft::create_hip instead of IHostFft");
   default: throw std::runtime_error("Unsupported FFT backend requested");
   }
 }
@@ -174,18 +166,14 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
     auto options = heffte::default_options<heffte::backend::fftw>();
     return create_with_backend(fft_layout, rank_id, options, backend, comm);
   }
-#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-  case Backend::CUDA: {
-    auto options = heffte::default_options<heffte::backend::cufft>();
-    return create_with_backend(fft_layout, rank_id, options, backend, comm);
-  }
-#endif
-#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-  case Backend::HIP: {
-    auto options = heffte::default_options<heffte::backend::rocfft>();
-    return create_with_backend(fft_layout, rank_id, options, backend, comm);
-  }
-#endif
+  case Backend::CUDA:
+    throw std::invalid_argument(
+        "fft::create_with_backend: Backend::CUDA is a device FFT; "
+        "use fft::create_cuda instead of IHostFft");
+  case Backend::HIP:
+    throw std::invalid_argument(
+        "fft::create_with_backend: Backend::HIP is a device FFT; "
+        "use fft::create_hip instead of IHostFft");
   default: throw std::runtime_error("Unsupported FFT backend requested");
   }
 }

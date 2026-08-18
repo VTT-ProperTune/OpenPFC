@@ -7,6 +7,9 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 
+#if defined(OpenPFC_ENABLE_CUDA)
+#include <openpfc/runtime/cuda/fft_cuda.hpp>
+#endif
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 #include <openpfc/runtime/hip/fft_hip.hpp>
 #endif
@@ -22,11 +25,10 @@ TEST_CASE("CUDA backend instantiation smoke", "[integration][gpu][cuda]") {
 
 #if defined(OpenPFC_ENABLE_CUDA)
   auto cpu_fft = create_with_backend(decomp, /*rank*/ 0, Backend::FFTW);
-  auto gpu_fft = create_with_backend(decomp, /*rank*/ 0, Backend::CUDA);
+  auto gpu_fft = create_cuda(decomp, /*rank*/ 0, MPI_COMM_WORLD);
   REQUIRE(cpu_fft.get() != nullptr);
-  REQUIRE(gpu_fft.get() != nullptr);
-  REQUIRE(cpu_fft->size_inbox() == gpu_fft->size_inbox());
-  REQUIRE(cpu_fft->size_outbox() == gpu_fft->size_outbox());
+  REQUIRE(cpu_fft->size_inbox() == gpu_fft.size_inbox());
+  REQUIRE(cpu_fft->size_outbox() == gpu_fft.size_outbox());
 #else
   SUCCEED("CUDA disabled - skipping GPU backend instantiation test");
 #endif

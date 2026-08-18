@@ -75,48 +75,21 @@ TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]
   }
 }
 
-#if defined(OpenPFC_ENABLE_CUDA)
-TEST_CASE("FFT Backend - CUDA backend selection", "[fft][backend][cuda][unit]") {
+TEST_CASE("create_with_backend rejects CUDA as IHostFft", "[fft][backend][unit]") {
   auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
-
-  // Create FFT with CUDA backend explicitly
-  auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::CUDA);
-
-  REQUIRE(fft != nullptr);
-  REQUIRE(fft->size_inbox() > 0);
-  REQUIRE(fft->size_outbox() > 0);
-  REQUIRE(fft->size_workspace() > 0);
+  REQUIRE_THROWS_WITH(
+      fft::create_with_backend(decomposition, 0, fft::Backend::CUDA),
+      ContainsSubstring("create_cuda"));
 }
 
-TEST_CASE("FFT Backend - CUDA requires DataBuffer", "[fft][backend][cuda][unit]") {
+TEST_CASE("create_with_backend rejects HIP as IHostFft", "[fft][backend][unit]") {
   auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
-  auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::CUDA);
-
-  // CUDA backend should throw when using std::vector
-  std::vector<double> input(fft->size_inbox(), 1.0);
-  std::vector<std::complex<double>> output(fft->size_outbox());
-
-  REQUIRE_THROWS_AS(fft->forward(input, output), std::runtime_error);
+  REQUIRE_THROWS_WITH(
+      fft::create_with_backend(decomposition, 0, fft::Backend::HIP),
+      ContainsSubstring("create_hip"));
 }
-
-TEST_CASE("FFT Backend - CUDA allocated memory excludes unused host workspace",
-          "[fft][backend][cuda][unit]") {
-  auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
-  auto decomposition = decomposition::create(domain, 1);
-  auto fft = fft::create_with_backend(decomposition, 0, fft::Backend::CUDA);
-
-  REQUIRE(fft != nullptr);
-  const auto ws = fft->size_workspace();
-  const auto expected = ws * sizeof(std::complex<double>) +
-                        ws * sizeof(std::complex<float>);
-  REQUIRE(fft->get_allocated_memory_bytes() == expected);
-  // Guard against leftover unused m_wrk still being counted.
-  REQUIRE(fft->get_allocated_memory_bytes() !=
-          3 * ws * sizeof(std::complex<double>));
-}
-#endif
 
 TEST_CASE("FFT Backend - parse backend from JSON (FFTW)",
           "[fft][backend][config][unit]") {

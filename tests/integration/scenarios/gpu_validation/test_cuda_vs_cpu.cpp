@@ -7,6 +7,9 @@
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#if defined(OpenPFC_ENABLE_CUDA)
+#include <openpfc/runtime/cuda/fft_cuda.hpp>
+#endif
 
 using namespace pfc;
 using namespace pfc::test;
@@ -30,13 +33,9 @@ TEST_CASE("CUDA vs CPU diffusion consistency (smoke)", "[integration][gpu][cuda]
   }
 
 #if defined(OpenPFC_ENABLE_CUDA)
-  // GPU run
   auto decomp_gpu = decomposition::create(world, size);
-  auto fft_gpu_iface =
-      fft::create_with_backend(decomp_gpu, /*rank*/ 0, fft::Backend::CUDA);
-  // GPU path requires DataBuffer; use CPU for field storage then transform via
-  // interface For smoke test, reuse CPU model but ensure CUDA backend can be
-  // constructed
+  auto fft_gpu = fft::create_cuda(decomp_gpu, /*rank*/ 0, MPI_COMM_WORLD);
+  REQUIRE(fft_gpu.size_inbox() == fft_cpu.size_inbox());
   auto fft_cpu_again = fft::create(decomp_gpu);
   DiffusionModel model_gpu(fft_cpu_again, world);
   model_gpu.initialize(1.0e-3);
@@ -48,7 +47,6 @@ TEST_CASE("CUDA vs CPU diffusion consistency (smoke)", "[integration][gpu][cuda]
     l2_gpu += v * v;
   }
 
-  // Loose tolerance for smoke equivalence
   REQUIRE(l2_gpu == Catch::Approx(l2_cpu).margin(1e-6));
 #else
   SUCCEED("CUDA disabled - skipping GPU comparison");

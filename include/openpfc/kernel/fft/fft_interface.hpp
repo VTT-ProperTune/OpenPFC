@@ -3,7 +3,11 @@
 
 /**
  * @file fft_interface.hpp
- * @brief FFT interface types (IFFT, backends, buffers) without HeFFTe headers
+ * @brief FFT interface types (`IHostFft` / `IFFT`, backends, buffers) without
+ *        HeFFTe headers.
+ *
+ * ADR 0005: host factories return `IHostFft` only. Device backends use
+ * `create_cuda` / `create_hip` (M5 `IDeviceFft` is the next increment).
  */
 
 #pragma once
@@ -37,8 +41,9 @@ enum class Backend : std::uint8_t {
   HIP   ///< GPU-based FFT using rocFFT (include runtime/hip/fft_hip.hpp)
 };
 
-struct IFFT {
-  virtual ~IFFT() = default;
+/// Host-container FFT (std::vector / host Field). Device backends are not this.
+struct IHostFft {
+  virtual ~IHostFft() = default;
 
   /**
    * @brief Forward real-to-complex transform on this rank's local boxes.
@@ -81,6 +86,9 @@ struct IFFT {
    */
   [[nodiscard]] virtual Box3i get_outbox_bounds() const = 0;
 };
+
+/// Temporary alias until remaining `IFFT` call sites migrate to `IHostFft`.
+using IFFT = IHostFft;
 
 [[nodiscard]] inline Box3i get_inbox(const IFFT &fft) noexcept {
   return fft.get_inbox_bounds();

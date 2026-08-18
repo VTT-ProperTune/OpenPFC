@@ -41,6 +41,7 @@
 #endif
 #if defined(OpenPFC_ENABLE_CUDA)
 #include <cuda_runtime.h>
+#include <openpfc/runtime/cuda/fft_cuda.hpp>
 #endif
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 #include <hip/hip_runtime.h>
@@ -65,8 +66,8 @@ static const char *backend_label(fft::Backend backend) {
 }
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-template <typename Tag, typename HeffteBackend, typename Sync>
-double benchmark_gpu_fft(fft::IFFT &fft, Sync &&sync) {
+template <typename Tag, typename GpuFft, typename Sync>
+double benchmark_gpu_fft(GpuFft &fft, Sync &&sync) {
   using RealBufferGPU = core::DataBuffer<Tag, double>;
   using ComplexBufferGPU = core::DataBuffer<Tag, std::complex<double>>;
 
@@ -79,14 +80,9 @@ double benchmark_gpu_fft(fft::IFFT &fft, Sync &&sync) {
   }
   real_data.copy_from_host(host_data);
 
-  auto *fft_gpu = dynamic_cast<fft::FFT_Impl<HeffteBackend> *>(&fft);
-  if (!fft_gpu) {
-    throw std::runtime_error("Failed to cast to GPU FFT implementation");
-  }
-
   std::cout << "Warmup...";
-  fft_gpu->forward(real_data, complex_data);
-  fft_gpu->backward(complex_data, real_data);
+  fft.forward(real_data, complex_data);
+  fft.backward(complex_data, real_data);
   sync();
   std::cout << " done.\n";
 
@@ -94,8 +90,8 @@ double benchmark_gpu_fft(fft::IFFT &fft, Sync &&sync) {
   auto start = std::chrono::high_resolution_clock::now();
 
   for (int iter = 0; iter < NUM_ITERATIONS; ++iter) {
-    fft_gpu->forward(real_data, complex_data);
-    fft_gpu->backward(complex_data, real_data);
+    fft.forward(real_data, complex_data);
+    fft.backward(complex_data, real_data);
   }
 
   sync();
@@ -128,15 +124,14 @@ double benchmark_fft(fft::Backend backend, const Domain &world,
   std::cout << "Benchmarking: " << backend_label(backend) << "\n";
   std::cout << "========================================\n";
 
-  auto fft = fft::create_with_backend(decomp, rank_id, backend);
-
   std::cout << "Grid size: " << GRID_SIZE
             << "³ = " << (GRID_SIZE * GRID_SIZE * GRID_SIZE) << " points\n";
-  std::cout << "Real data size: " << fft->size_inbox() << " (local)\n";
-  std::cout << "Complex data size: " << fft->size_outbox() << " (local)\n";
   std::cout << "Iterations: " << NUM_ITERATIONS << "\n\n";
 
   if (backend == fft::Backend::FFTW) {
+    auto fft = fft::create_with_backend(decomp, rank_id, backend);
+    std::cout << "Real data size: " << fft->size_inbox() << " (local)\n";
+    std::cout << "Complex data size: " << fft->size_outbox() << " (local)\n";
     std::vector<double> real_data(fft->size_inbox());
     std::vector<std::complex<double>> complex_data(fft->size_outbox());
 
@@ -172,8 +167,11 @@ double benchmark_fft(fft::Backend backend, const Domain &world,
 
   if (backend == fft::Backend::CUDA) {
 #if defined(OpenPFC_ENABLE_CUDA)
-    return benchmark_gpu_fft<backend::CudaTag, heffte::backend::cufft>(
-        *fft, [] { cudaDeviceSynchronize(); });
+    auto gpu = fft::create_cuda(decomp, rank_id);
+    std::cout << "Real data size: " << gpu.size_inbox() << " (local)\n";
+    std::cout << "Complex data size: " << gpu.size_outbox() << " (local)\n";
+    return benchmark_gpu_fft<backend::CudaTag>(gpu,
+                                               [] { cudaDeviceSynchronize(); });
 #else
     throw std::runtime_error("CUDA support not compiled in");
 #endif
@@ -181,8 +179,11 @@ double benchmark_fft(fft::Backend backend, const Domain &world,
 
   if (backend == fft::Backend::HIP) {
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-    return benchmark_gpu_fft<backend::HipTag, heffte::backend::rocfft>(
-        *fft, [] { hipDeviceSynchronize(); });
+    auto gpu = fft::create_hip(decomp, rank_id, MPI_COMM_WORLD);
+    std::cout << "Real data size: " << gpu.size_inbox() << " (local)\n";
+    std::cout << "Complex data size: " << gpu.size_outbox() << " (local)\n";
+    return benchmark_gpu_fft<backend::HipTag>(gpu,
+                                              [] { hipDeviceSynchronize(); });
 #else
     throw std::runtime_error("HIP spectral support not compiled in");
 #endif
