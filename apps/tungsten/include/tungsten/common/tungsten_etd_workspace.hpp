@@ -253,7 +253,7 @@ public:
 #endif
 
 private:
-  pfc::integrator::SpectralExpCoefficientCache m_cache;
+  pfc::integrator::SpectralExpCoefficientCache<> m_cache;
   std::vector<double> m_L;
   std::vector<double> m_k_laplacian;
   std::vector<double> m_n_weight;

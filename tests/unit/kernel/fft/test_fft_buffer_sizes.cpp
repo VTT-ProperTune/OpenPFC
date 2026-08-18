@@ -81,28 +81,8 @@ TEST_CASE("FFT_Impl vector backward rejects wrong buffer sizes",
   }
 }
 
-TEST_CASE("FFT_Impl DataBuffer forward/backward rejects wrong buffer sizes",
-          "[fft][buffer_size][unit]") {
-  auto domain = domain::create(GridSize({8, 1, 1}), PhysicalOrigin({1.0, 1.0, 1.0}), GridSpacing({1.0, 1.0, 1.0}));
-  auto decomposition = decomposition::create(domain, 1);
-  auto fft = fft::create(decomposition);
-
-  const auto n_in = fft.size_inbox();
-  const auto n_out = fft.size_outbox();
-  REQUIRE(n_in > 1);
-  REQUIRE(n_out > 0);
-
-  SECTION("undersized real DataBuffer on forward") {
-    fft::RealDataBuffer in(n_in - 1);
-    fft::ComplexDataBuffer out(n_out);
-    REQUIRE_THROWS_AS(fft.forward(in, out), std::invalid_argument);
-  }
-  SECTION("undersized complex DataBuffer on backward") {
-    fft::ComplexDataBuffer in(n_out - 1);
-    fft::RealDataBuffer out(n_in);
-    REQUIRE_THROWS_AS(fft.backward(in, out), std::invalid_argument);
-  }
-}
+// Host `CpuFft` (`IHostFFT`) exposes vector transforms only. Device
+// `DataBuffer` size checks live on `IDeviceFFT` and the GPU test binaries.
 
 TEST_CASE("FFT_Impl vector forward accepts correctly sized buffers",
           "[fft][buffer_size][unit]") {

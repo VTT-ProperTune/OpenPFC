@@ -48,7 +48,7 @@ class CpuFft;
                             int r2c_direction = 0);
 
 [[nodiscard]] CpuFft create(const Decomposition &decomposition,
-                            MPI_Comm comm = MPI_COMM_WORLD, int r2c_direction = 0);
+                            MPI_Comm comm = MPI_COMM_WORLD);
 
 [[nodiscard]] std::unique_ptr<IFFT>
 create_with_backend(const FFTLayout &fft_layout, int rank_id,

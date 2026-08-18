@@ -176,8 +176,7 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
   }
 }
 
-[[nodiscard]] CpuFft create(const Decomposition &decomposition, MPI_Comm comm,
-                            int r2c_direction) {
+[[nodiscard]] CpuFft create(const Decomposition &decomposition, MPI_Comm comm) {
   const int mpi_comm_size = get_mpi_size(comm);
   const int rank_id = get_mpi_rank(comm);
   const auto decomposition_size = get_num_domains(decomposition);
@@ -190,7 +189,7 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
         "specify the rank by calling fft::create(decomposition, rank_id, comm) "
         "instead.");
   }
-  return create(decomposition, rank_id, comm, r2c_direction);
+  return create(decomposition, rank_id, comm);
 }
 
 } // namespace pfc::fft

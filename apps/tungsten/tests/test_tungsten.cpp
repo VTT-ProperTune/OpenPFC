@@ -594,7 +594,7 @@ TEST_CASE("spectral_exp_cache_matches_legacy_etd_weights",
   const auto phys = tungsten::spectral::physics_for_mode(k_laplacian, p);
   const double L = tungsten::spectral::linear_symbol(k_laplacian, phys.opCk);
 
-  pfc::integrator::SpectralExpCoefficientCache cache;
+  pfc::integrator::SpectralExpCoefficientCache<> cache;
   std::array<double, 1> L_arr{L};
   cache.ensure(L_arr, dt, pfc::integrator::SpectralExpOperatorId{.value = 1},
                pfc::integrator::SpectralExpDtId::from_bits(dt),

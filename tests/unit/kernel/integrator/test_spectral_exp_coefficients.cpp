@@ -113,7 +113,7 @@ TEST_CASE("SpectralExpCoefficientCache identity invalidation",
           "[integrator][spectral_exp]") {
   constexpr double dt = 0.2;
   const std::vector<double> L{-1.0, 0.0, 2.0, -1e-13, 0.5, -4.0, 1.0, 3.0};
-  SpectralExpCoefficientCache cache;
+  SpectralExpCoefficientCache<> cache;
 
   const auto op = SpectralExpOperatorId{.value = 1};
   const auto dt_id = SpectralExpDtId::from_bits(dt);

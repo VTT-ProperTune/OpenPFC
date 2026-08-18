@@ -113,6 +113,16 @@ inline void fill_spectral_exp_coeffs(std::span<const Real> L, Real dt,
   }
 }
 
+/** @brief Deduction-friendly overload for `std::vector` call sites. */
+template <typename Real>
+inline void fill_spectral_exp_coeffs(const std::vector<Real> &L, Real dt,
+                                     std::vector<Real> &exp_Ldt,
+                                     std::vector<Real> &phi1_L,
+                                     Real abs_L_threshold = Real(1e-12)) {
+  fill_spectral_exp_coeffs(std::span<const Real>(L), dt, std::span<Real>(exp_Ldt),
+                           std::span<Real>(phi1_L), abs_L_threshold);
+}
+
 /** @brief Opaque operator-identity token for coefficient cache invalidation. */
 struct SpectralExpOperatorId {
   std::uint64_t value{};
@@ -176,7 +186,8 @@ public:
 
     m_exp_Ldt.resize(L.size());
     m_phi1_L.resize(L.size());
-    fill_spectral_exp_coeffs(L, dt, m_exp_Ldt, m_phi1_L, abs_L_threshold);
+    fill_spectral_exp_coeffs(L, dt, std::span<Real>(m_exp_Ldt),
+                             std::span<Real>(m_phi1_L), abs_L_threshold);
 
     m_op_id = op_id;
     m_dt_id = dt_id;

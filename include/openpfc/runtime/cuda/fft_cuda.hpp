@@ -105,8 +105,7 @@ using FFT_CUDA = FFT_Impl<heffte::backend::cufft, IDeviceFFT<pfc::CudaSpace>>;
  * forward/backward methods
  */
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition,
-                                   MPI_Comm comm = MPI_COMM_WORLD,
-                                   int r2c_direction = 0);
+                                   MPI_Comm comm = MPI_COMM_WORLD);
 
 #endif // OpenPFC_ENABLE_CUDA_SPECTRAL
 

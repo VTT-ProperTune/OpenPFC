@@ -78,8 +78,7 @@ using FFT_HIP = FFT_Impl<heffte::backend::rocfft, IDeviceFFT<pfc::HipSpace>>;
  * @throws std::logic_error if MPI communicator size doesn't match decomposition size
  */
 [[nodiscard]] FFT_HIP create_hip(const Decomposition &decomposition,
-                                 MPI_Comm comm = MPI_COMM_WORLD,
-                                 int r2c_direction = 0);
+                                 MPI_Comm comm = MPI_COMM_WORLD);
 #endif // OpenPFC_ENABLE_HIP_SPECTRAL
 
 } // namespace pfc::fft

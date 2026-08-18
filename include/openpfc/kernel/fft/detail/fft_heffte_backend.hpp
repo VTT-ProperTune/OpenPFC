@@ -137,8 +137,10 @@ struct FftWorkspaceStorage<BackendTag> {
  *        override without naming a missing nested type on `IHostFFT`.
  */
 template <typename I, typename = void> struct device_fft_buffers {
-  using RealBuffer = RealVector;
-  using ComplexBuffer = ComplexVector;
+  struct unused_real;
+  struct unused_complex;
+  using RealBuffer = unused_real;
+  using ComplexBuffer = unused_complex;
   static constexpr bool value = false;
 };
 
@@ -187,9 +189,11 @@ struct FFT_Impl : Interface {
   }
 
   /// `IDeviceFFT` double-buffer override (non-template wins over the template).
+  /// Constraint is discarded on `IHostFFT`; `override` is omitted because
+  /// Cray GNU rejects `override` plus a trailing `requires` on a
+  /// non-template member.
   void forward(const typename detail::device_fft_buffers<Interface>::RealBuffer &in,
                typename detail::device_fft_buffers<Interface>::ComplexBuffer &out)
-      override
     requires detail::device_fft_buffers<Interface>::value
   {
     forward_device_(in, out);
@@ -200,7 +204,7 @@ struct FFT_Impl : Interface {
    * @throws std::invalid_argument if `in.size() != size_inbox()` or
    *         `out.size() != size_outbox()`
    */
-  void forward(const RealVector &in, ComplexVector &out) override
+  void forward(const RealVector &in, ComplexVector &out)
     requires std::is_base_of_v<IHostFFT, Interface>
   {
     detail::require_equal_size(
@@ -231,7 +235,6 @@ struct FFT_Impl : Interface {
   void
   backward(const typename detail::device_fft_buffers<Interface>::ComplexBuffer &in,
            typename detail::device_fft_buffers<Interface>::RealBuffer &out)
-      override
     requires detail::device_fft_buffers<Interface>::value
   {
     backward_device_(in, out);
@@ -242,7 +245,7 @@ struct FFT_Impl : Interface {
    * @throws std::invalid_argument if `in.size() != size_outbox()` or
    *         `out.size() != size_inbox()`
    */
-  void backward(const ComplexVector &in, RealVector &out) override
+  void backward(const ComplexVector &in, RealVector &out)
     requires std::is_base_of_v<IHostFFT, Interface>
   {
     detail::require_equal_size(

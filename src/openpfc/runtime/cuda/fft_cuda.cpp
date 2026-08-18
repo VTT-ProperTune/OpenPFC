@@ -30,11 +30,11 @@ using pfc::fft::FFT_Impl;
 }
 
 [[nodiscard]] FFT_CUDA create_cuda(const Decomposition &decomposition,
-                                   MPI_Comm comm, int r2c_direction) {
+                                   MPI_Comm comm) {
   pfc::runtime::heffte_gpu::throw_if_mpi_decomposition_mismatch(
       comm, decomposition, "fft::create_cuda(decomposition, rank_id, comm)");
   const int rank_id = pfc::runtime::heffte_gpu::mpi_comm_rank(comm);
-  return create_cuda(decomposition, rank_id, comm, r2c_direction);
+  return create_cuda(decomposition, rank_id, comm);
 }
 
 } // namespace fft
