@@ -57,12 +57,20 @@ struct n_ref_tuple<N, T, std::index_sequence<I...>> {
 } // namespace detail
 
 /**
- * @brief Satisfied by any single-field stage-evaluation callable:
- *        `rhs(t, u, du)` filling `du` in place.
+ * @brief Satisfied by a single-field stage-evaluation callable on `Scalar`
+ *        buffers: `rhs(t, u, du)` filling `du` in place.
+ */
+template <class Rhs, class Scalar>
+concept StageFunctionFor = requires(Rhs rhs, double t, std::vector<Scalar> &u,
+                                    std::vector<Scalar> &du) {
+  rhs(t, u, du);
+};
+
+/**
+ * @brief Real (`double`) stage-evaluation callable. Existing steppers use this.
  */
 template <class Rhs>
-concept StageFunction = requires(Rhs rhs, double t, std::vector<double> &u,
-                                 std::vector<double> &du) { rhs(t, u, du); };
+concept StageFunction = StageFunctionFor<Rhs, double>;
 
 /**
  * @brief Satisfied by an N-field stage-evaluation callable:

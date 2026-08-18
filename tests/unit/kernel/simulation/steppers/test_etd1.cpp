@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cmath>
+#include <complex>
 #include <span>
 #include <tuple>
 #include <vector>
@@ -286,4 +287,83 @@ TEST_CASE("etd1_three_field_bundle", "[stepper][etd1]") {
           Catch::Approx(r1.exp_Ldt * 2.0 + r1.phi1_L * (-0.5)).margin(1e-12));
   REQUIRE(stepper.candidate(2)[0] ==
           Catch::Approx(r2.exp_Ldt * 3.0 + r2.phi1_L * 1.0).margin(1e-12));
+}
+
+using Complex = std::complex<double>;
+
+struct ZeroComplexN {
+  void operator()(double /*t*/, std::vector<Complex> & /*u*/,
+                  std::vector<Complex> &du) const {
+    for (auto &d : du) {
+      d = Complex{0.0, 0.0};
+    }
+  }
+};
+
+struct ConstantComplexN {
+  Complex value{};
+  void operator()(double /*t*/, std::vector<Complex> & /*u*/,
+                  std::vector<Complex> &du) const {
+    for (auto &d : du) {
+      d = value;
+    }
+  }
+};
+
+TEST_CASE("etd1_complex_stiff_linear_exact", "[stepper][etd1][complex]") {
+  // u' = L u with real stiff L; N = 0. ETD1 is exact: u(t) = exp(L t) u0.
+  constexpr double L = -80.0;
+  constexpr double dt = 0.05;
+  constexpr Complex u0{1.25, -0.4};
+
+  std::vector<double> Lvec{L};
+  std::vector<double> exp_buf(1);
+  std::vector<double> phi_buf(1);
+  fill_spectral_exp_coeffs(Lvec, dt, exp_buf, phi_buf);
+
+  ZeroComplexN rhs{};
+  Etd1Stepper<ZeroComplexN, Complex> stepper(dt, 1, rhs);
+  stepper.set_coefficients(exp_buf, phi_buf);
+
+  std::vector<Complex> u{u0};
+  const auto fingerprint = u;
+  auto attempt = stepper.attempt(0.0, u);
+  REQUIRE(attempt.success);
+  REQUIRE(u == fingerprint);
+
+  const Complex expected = std::exp(Complex{L * dt, 0.0}) * u0;
+  REQUIRE(stepper.candidate()[0].real() ==
+          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(stepper.candidate()[0].imag() ==
+          Catch::Approx(expected.imag()).margin(1e-12));
+
+  pfc::sim::steppers::commit_step_attempt(u, attempt);
+  REQUIRE(u[0].real() == Catch::Approx(expected.real()).margin(1e-12));
+}
+
+TEST_CASE("etd1_complex_closed_form_with_N", "[stepper][etd1][complex]") {
+  constexpr double L = -12.0;
+  constexpr double dt = 0.1;
+  constexpr Complex u0{0.5, 0.25};
+  constexpr Complex Nval{0.1, -0.2};
+
+  std::vector<double> Lvec{L};
+  std::vector<double> exp_buf(1);
+  std::vector<double> phi_buf(1);
+  fill_spectral_exp_coeffs(Lvec, dt, exp_buf, phi_buf);
+
+  ConstantComplexN rhs{Nval};
+  Etd1Stepper<ConstantComplexN, Complex> stepper(dt, 1, rhs);
+  stepper.set_coefficients(exp_buf, phi_buf);
+
+  std::vector<Complex> u{u0};
+  auto attempt = stepper.attempt(0.0, u);
+  REQUIRE(attempt.success);
+
+  const auto ref = spectral_exp_coeffs(L, dt);
+  const Complex expected = Complex(ref.exp_Ldt) * u0 + Complex(ref.phi1_L) * Nval;
+  REQUIRE(stepper.candidate()[0].real() ==
+          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(stepper.candidate()[0].imag() ==
+          Catch::Approx(expected.imag()).margin(1e-12));
 }

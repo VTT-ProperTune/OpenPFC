@@ -49,23 +49,26 @@ namespace pfc::sim::steppers {
  * `attempt()` on the owning stepper or stepper destruction. On soft failure,
  * `t1` equals `t0`; on success, `t1 == t0 + dt`.
  */
-struct StepAttemptResult {
+template <class Scalar> struct StepAttempt {
   double t0{};
   double dt{};
   double t1{}; ///< `t0 + dt` on success; `t0` on soft failure
   bool success{false};
-  const std::vector<double> &candidate;
+  const std::vector<Scalar> &candidate;
   std::optional<double> error_norm{};  ///< stub for future error-evidence taxonomy
   std::optional<double> min_next_dt{}; ///< stub for future next-attempt constraints
 
-  StepAttemptResult(double t0_in, double dt_in, double t1_in, bool success_in,
-                    const std::vector<double> &candidate_in,
-                    std::optional<double> error_norm_in = std::nullopt,
-                    std::optional<double> min_next_dt_in = std::nullopt)
+  StepAttempt(double t0_in, double dt_in, double t1_in, bool success_in,
+              const std::vector<Scalar> &candidate_in,
+              std::optional<double> error_norm_in = std::nullopt,
+              std::optional<double> min_next_dt_in = std::nullopt)
       : t0(t0_in), dt(dt_in), t1(t1_in), success(success_in),
         candidate(candidate_in), error_norm(std::move(error_norm_in)),
         min_next_dt(std::move(min_next_dt_in)) {}
 };
+
+/// Real (host-double) attempt result; the historical name for `StepAttempt<double>`.
+using StepAttemptResult = StepAttempt<double>;
 
 /**
  * @brief N-field step-attempt outcome with one isolated candidate per field.
@@ -147,12 +150,12 @@ concept MultiOperatorEvaluator2 = requires(
  *
  * @throws std::invalid_argument if `!result.success` (misuse is loud).
  */
-inline void
-commit_step_attempt(std::vector<double> &accepted,
-                    const StepAttemptResult &result) {
+template <class Scalar>
+inline void commit_step_attempt(std::vector<Scalar> &accepted,
+                                const StepAttempt<Scalar> &result) {
   if (!result.success) {
     throw std::invalid_argument(
-        "commit_step_attempt: cannot commit a failed StepAttemptResult "
+        "commit_step_attempt: cannot commit a failed StepAttempt "
         "(success == false)");
   }
   accepted = result.candidate;

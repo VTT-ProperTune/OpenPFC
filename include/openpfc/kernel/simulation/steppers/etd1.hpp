@@ -35,6 +35,7 @@
 
 #include <array>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <span>
 #include <stdexcept>
@@ -51,11 +52,25 @@
 
 namespace pfc::sim::steppers {
 
+namespace detail {
+
+template <class T> [[nodiscard]] bool is_finite_scalar(const T &x) {
+  if constexpr (std::is_floating_point_v<T>) {
+    return std::isfinite(x);
+  } else {
+    return std::isfinite(x.real()) && std::isfinite(x.imag());
+  }
+}
+
+} // namespace detail
+
 /**
  * @brief CPU ETD1 stepper with isolated candidate state.
  *
- * @tparam Rhs Callable satisfying @ref StageFunction (`rhs(t, u, du)` fills
- *             @c du with the nonlinear term @c N).
+ * @tparam Rhs    Callable satisfying @ref StageFunctionFor for @p Scalar.
+ * @tparam Scalar Field element type (`double` or `std::complex<double>`).
+ *                Real diagonal coefficients (`exp_Ldt`, `phi1_L`) are applied
+ *                as `Scalar(coeff) * value`.
  *
  * Coefficient ownership:
  * - **Caller-lent spans** via @ref set_coefficients(std::span, std::span):
@@ -66,13 +81,16 @@ namespace pfc::sim::steppers {
  *
  * Transient caches are not checkpointable method state.
  */
-template <class Rhs>
-  requires StageFunction<Rhs>
+template <class Rhs, class Scalar = double>
+  requires StageFunctionFor<Rhs, Scalar>
 class Etd1Stepper {
 public:
+  using scalar_type = Scalar;
+  using Attempt = StepAttempt<Scalar>;
+
   Etd1Stepper(double dt, std::size_t local_size, Rhs rhs)
-      : m_dt(dt), m_local_size(local_size), m_du(local_size, 0.0),
-        m_candidate(local_size, 0.0), m_u_scratch(local_size, 0.0),
+      : m_dt(dt), m_local_size(local_size), m_du(local_size, Scalar{}),
+        m_candidate(local_size, Scalar{}), m_u_scratch(local_size, Scalar{}),
         m_rhs(std::move(rhs)) {}
 
   /**
@@ -132,40 +150,40 @@ public:
    * Algorithm: size-check → copy accepted into scratch → evaluate @c N on
    * scratch → @c candidate = exp_Ldt * u_accepted + phi1_L * N.
    */
-  [[nodiscard]] StepAttemptResult
-  attempt(double t, const std::vector<double> &u_accepted) {
+  [[nodiscard]] Attempt attempt(double t,
+                                const std::vector<Scalar> &u_accepted) {
     m_last_reason.clear();
     if (u_accepted.size() != m_local_size) {
       m_last_reason = "u_accepted.size() != local_size";
-      return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
+      return Attempt(t, m_dt, t, /*success=*/false, m_candidate);
     }
     if (m_exp_Ldt.size() != m_local_size || m_phi1_L.size() != m_local_size) {
       m_last_reason = "coefficient span size != local_size";
-      return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
+      return Attempt(t, m_dt, t, /*success=*/false, m_candidate);
     }
 
     m_u_scratch = u_accepted;
     m_rhs(t, m_u_scratch, m_du);
 
     for (std::size_t i = 0; i < m_local_size; ++i) {
-      const double c =
-          m_exp_Ldt[i] * u_accepted[i] + m_phi1_L[i] * m_du[i];
-      if (!std::isfinite(c)) {
+      const Scalar c = Scalar(m_exp_Ldt[i]) * u_accepted[i] +
+                       Scalar(m_phi1_L[i]) * m_du[i];
+      if (!detail::is_finite_scalar(c)) {
         m_last_reason = "non-finite candidate value";
-        return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
+        return Attempt(t, m_dt, t, /*success=*/false, m_candidate);
       }
       m_candidate[i] = c;
     }
-    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
+    return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
   }
 
-  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const pfc::data::Field<double> &u) {
+  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
+  [[nodiscard]] Attempt attempt(double t,
+                                const pfc::data::Field<Scalar> &u) {
     return attempt(t, u.vec());
   }
 
-  [[nodiscard]] std::span<const double> candidate() const noexcept {
+  [[nodiscard]] std::span<const Scalar> candidate() const noexcept {
     return m_candidate;
   }
 
@@ -180,9 +198,9 @@ public:
 private:
   double m_dt{0.0};
   std::size_t m_local_size{0};
-  std::vector<double> m_du;
-  std::vector<double> m_candidate;
-  std::vector<double> m_u_scratch;
+  std::vector<Scalar> m_du;
+  std::vector<Scalar> m_candidate;
+  std::vector<Scalar> m_u_scratch;
   std::vector<double> m_owned_exp;
   std::vector<double> m_owned_phi1;
   std::span<const double> m_exp_Ldt{};
