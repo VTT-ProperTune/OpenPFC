@@ -16,7 +16,7 @@
 #include <openpfc/kernel/decomposition/halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/halo_persistent.hpp>
-#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
@@ -165,11 +165,10 @@ TEST_CASE("laplacian_periodic_separated<2> matches analytic Laplacian on every "
 
   constexpr int halo_width = 1;
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  SparseHaloExchanger<double> sex(
-      MPI_COMM_WORLD, rank,
-      halo::make_structured_halos<double>(decomp, rank, halo_width));
-  sex.exchange_halos(u.data(), u.size());
-  halo::copy_to_face_layout(sex, face_halos);
+  comm::SparseExchange<HostSpace, double> sex(
+      u.data(), u.size(), decomp, rank, MPI_COMM_WORLD, halo_width);
+  sex.exchange();
+  halo::copy_to_face_layout(sex.halos(), face_halos);
 
   std::array<const double *, 6> face_ptrs;
   for (int i = 0; i < 6; ++i) {
