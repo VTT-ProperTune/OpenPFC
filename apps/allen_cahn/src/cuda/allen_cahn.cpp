@@ -7,6 +7,7 @@
 
 #include <cuda_runtime.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -17,17 +18,20 @@
 #include <vector>
 
 #include <openpfc/runtime/common/mpi_main.hpp>
+#include <openpfc/runtime/gpu/comm_sparse_exchange_gpu.hpp>
 
 #include <allen_cahn/common.hpp>
 #include <allen_cahn/device_step.hpp>
 #include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 
 namespace {
+
+using DevField = pfc::data::Field<double, pfc::CudaSpace>;
 
 void cuda_check(cudaError_t e, const char *what) {
   if (e != cudaSuccess) {
@@ -35,11 +39,29 @@ void cuda_check(cudaError_t e, const char *what) {
   }
 }
 
+void bind_local_gpu() {
+  MPI_Comm node_comm = MPI_COMM_NULL;
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                      &node_comm);
+  int local_rank = 0;
+  if (node_comm != MPI_COMM_NULL) {
+    MPI_Comm_rank(node_comm, &local_rank);
+    MPI_Comm_free(&node_comm);
+  }
+  int n_dev = 0;
+  cuda_check(cudaGetDeviceCount(&n_dev), "cudaGetDeviceCount");
+  if (n_dev < 1) {
+    throw std::runtime_error("No CUDA devices visible to this rank");
+  }
+  cuda_check(cudaSetDevice(local_rank % n_dev), "cudaSetDevice");
+}
+
 } // namespace
 
 int main(int argc, char *argv[]) {
   return pfc::runtime::mpi_main(
       argc, argv, [](int app_argc, char **app_argv, int rank, int nproc) {
+        bind_local_gpu();
         const allen_cahn::RunConfig cfg = allen_cahn::parse_args(app_argc, app_argv);
         if (cfg.nx_glob < 4 || cfg.ny_glob < 4 || cfg.n_steps < 1) {
           if (rank == 0) {
@@ -75,64 +97,45 @@ int main(int argc, char *argv[]) {
           }
         }
         constexpr int halo_width = allen_cahn::RunConfig::kHaloWidth;
-        auto face_halos_host =
-            pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-        pfc::SparseHaloExchanger<double> exchanger(
-            MPI_COMM_WORLD, rank,
-            pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
-        const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
-        double *u_dev = nullptr;
-        cuda_check(cudaMalloc(reinterpret_cast<void **>(&u_dev), nlocal * sizeof(double)),
-                   "cudaMalloc core");
-        std::array<double *, 6> face_dev{};
-        for (int f = 0; f < 6; ++f) {
-          const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
-          cuda_check(
-              cudaMalloc(reinterpret_cast<void **>(&face_dev[static_cast<std::size_t>(f)]),
-                         n * sizeof(double)),
-              "cudaMalloc face");
+        DevField u(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
+        u.with_host_view([&](double *data, std::size_t n) {
+          if (n != u_host.size()) {
+            throw std::runtime_error("Allen–Cahn CUDA: field size mismatch");
+          }
+          std::copy(u_host.begin(), u_host.end(), data);
+        });
+        u.sync_to_device();
+
+        pfc::comm::SparseExchange<pfc::CudaSpace, double> exchanger(
+            u, decomp, rank, MPI_COMM_WORLD);
+        if (rank == 0) {
+          std::cout << "ALLEN_CAHN_CUDA_HALO_MODE=device"
+                    << " gpu_aware=" << (exchanger.uses_gpu_aware_mpi() ? 1 : 0)
+                    << "\n";
         }
-        cuda_check(cudaMemcpy(u_dev, u_host.data(), nlocal * sizeof(double),
-                              cudaMemcpyHostToDevice),
-                   "cudaMemcpy H2D core");
+
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_t0 = MPI_Wtime();
         for (int step = 0; step < cfg.n_steps; ++step) {
-          cuda_check(cudaMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
-                                cudaMemcpyDeviceToHost),
-                     "cudaMemcpy D2H core");
-          exchanger.exchange_halos(u_host.data(), u_host.size());
-          pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
-          for (int f = 0; f < 6; ++f) {
-            const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
-            if (n == 0) {
-              continue;
-            }
-            cuda_check(cudaMemcpy(face_dev[static_cast<std::size_t>(f)],
-                                  face_halos_host[static_cast<std::size_t>(f)].data(),
-                                  n * sizeof(double), cudaMemcpyHostToDevice),
-                       "cudaMemcpy H2D face");
-          }
-          allen_cahn::allen_cahn_step_cuda(u_dev, face_dev[0], face_dev[1], face_dev[2],
-                                           face_dev[3], face_dev[4], face_dev[5], nx, ny,
-                                           nz, halo_width, inv_dx2, inv_dy2, cfg.dt, cfg.M,
+          exchanger.exchange();
+          const auto faces = exchanger.face_recv_ptrs();
+          allen_cahn::allen_cahn_step_cuda(u.data(), faces[0], faces[1], faces[2],
+                                           faces[3], faces[4], faces[5], nx, ny, nz,
+                                           halo_width, inv_dx2, inv_dy2, cfg.dt, cfg.M,
                                            inv_eps2, cfg.driving_force);
+          u.note_device_write();
         }
         MPI_Barrier(MPI_COMM_WORLD);
         const double step_elapsed_s = MPI_Wtime() - step_t0;
-        cuda_check(cudaMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
-                              cudaMemcpyDeviceToHost),
-                   "cudaMemcpy D2H final");
+        u.with_host_view([&](double *data, std::size_t n) {
+          u_host.assign(data, data + n);
+        });
         if (!cfg.png_output.empty()) {
           pfc::io::write_mpi_scalar_field_png_xy(MPI_COMM_WORLD, decomp, rank, u_host,
                                                  cfg.png_output, -1.0, 1.0);
           if (rank == 0) {
             std::cout << "Wrote PNG: " << cfg.png_output << "\n";
           }
-        }
-        cuda_check(cudaFree(u_dev), "cudaFree(u_dev)");
-        for (int f = 0; f < 6; ++f) {
-          cuda_check(cudaFree(face_dev[static_cast<std::size_t>(f)]), "cudaFree(face)");
         }
         double sum_u = 0.0;
         for (double v : u_host) {

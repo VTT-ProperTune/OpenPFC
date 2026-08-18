@@ -53,7 +53,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     src/cuda/allen_cahn_kernels.cu
   )
   target_include_directories(allen_cahn_cuda PRIVATE ${ALLEN_CAHN_INCLUDE_DIR})
-  target_link_libraries(allen_cahn_cuda PRIVATE OpenPFC CUDA::cudart ${_allen_cahn_heffte_tgt})
+  target_link_libraries(allen_cahn_cuda PRIVATE OpenPFC CUDA::cudart openpfc_gpu_kernels
+                        ${_allen_cahn_heffte_tgt})
   set_target_properties(allen_cahn_cuda PROPERTIES
     CUDA_STANDARD 17
     CUDA_STANDARD_REQUIRED ON
@@ -93,7 +94,8 @@ if(ALLEN_CAHN_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
       )
       target_include_directories(test_allen_cahn_cpu_vs_cuda PRIVATE ${ALLEN_CAHN_INCLUDE_DIR})
       target_link_libraries(test_allen_cahn_cpu_vs_cuda PRIVATE
-        OpenPFC Catch2::Catch2 CUDA::cudart ${_allen_cahn_heffte_tgt})
+        OpenPFC Catch2::Catch2 CUDA::cudart openpfc_gpu_kernels
+        ${_allen_cahn_heffte_tgt})
       set_target_properties(test_allen_cahn_cpu_vs_cuda PROPERTIES
         CUDA_STANDARD 17
         CUDA_STANDARD_REQUIRED ON

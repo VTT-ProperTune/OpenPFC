@@ -13,29 +13,23 @@
 #include <cuda_runtime.h>
 
 #include <algorithm>
-#include <array>
 #include <cmath>
-#include <cstdlib>
 #include <mpi.h>
-#include <stdexcept>
-#include <string>
 #include <vector>
 
 #include <allen_cahn/common.hpp>
 #include <allen_cahn/device_step.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
+#include <openpfc/runtime/gpu/comm_sparse_exchange_gpu.hpp>
 
 namespace {
 
-void cuda_check(cudaError_t e, const char *what) {
-  if (e != cudaSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
-  }
-}
+using DevField = pfc::data::Field<double, pfc::CudaSpace>;
 
 } // namespace
 
@@ -45,6 +39,12 @@ TEST_CASE("Allen–Cahn CPU vs CUDA agreement (single rank)", "[AllenCahn][CUDA]
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   REQUIRE(nproc == 1);
+
+  int n_dev = 0;
+  if (cudaGetDeviceCount(&n_dev) != cudaSuccess || n_dev < 1) {
+    SKIP("No CUDA device");
+  }
+  REQUIRE(pfc::gpu::runtime_mpi_gpu_aware());
 
   allen_cahn::RunConfig cfg;
   cfg.nx_glob = 32;
@@ -93,60 +93,28 @@ TEST_CASE("Allen–Cahn CPU vs CUDA agreement (single rank)", "[AllenCahn][CUDA]
                                         inv_eps2, cfg.driving_force);
   }
 
-  u_gpu_host = u0;
-
-  auto face_halos_host =
-      pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SparseHaloExchanger<double> exchanger(
-      MPI_COMM_WORLD, rank,
-      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
-  const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
-
-  double *u_dev = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&u_dev), nlocal * sizeof(double)),
-             "cudaMalloc core");
-  std::array<double *, 6> face_dev{};
-  for (int f = 0; f < 6; ++f) {
-    const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
-    cuda_check(
-        cudaMalloc(reinterpret_cast<void **>(&face_dev[static_cast<std::size_t>(f)]),
-                   n * sizeof(double)),
-        "cudaMalloc face");
-  }
-  cuda_check(cudaMemcpy(u_dev, u_gpu_host.data(), nlocal * sizeof(double),
-                        cudaMemcpyHostToDevice),
-             "cudaMemcpy H2D");
+  DevField u_gpu(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
+  u_gpu.with_host_view([&](double *data, std::size_t n) {
+    REQUIRE(n == u0.size());
+    std::copy(u0.begin(), u0.end(), data);
+  });
+  u_gpu.sync_to_device();
+  pfc::comm::SparseExchange<pfc::CudaSpace, double> exchanger(
+      u_gpu, decomp, rank, MPI_COMM_WORLD);
 
   for (int step = 0; step < cfg.n_steps; ++step) {
-    cuda_check(cudaMemcpy(u_gpu_host.data(), u_dev, nlocal * sizeof(double),
-                          cudaMemcpyDeviceToHost),
-               "cudaMemcpy D2H core");
-    exchanger.exchange_halos(u_gpu_host.data(), u_gpu_host.size());
-    pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
-    for (int f = 0; f < 6; ++f) {
-      const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
-      if (n == 0) {
-        continue;
-      }
-      cuda_check(cudaMemcpy(face_dev[static_cast<std::size_t>(f)],
-                            face_halos_host[static_cast<std::size_t>(f)].data(),
-                            n * sizeof(double), cudaMemcpyHostToDevice),
-                 "cudaMemcpy face");
-    }
-    allen_cahn::allen_cahn_step_cuda(u_dev, face_dev[0], face_dev[1], face_dev[2],
-                                     face_dev[3], face_dev[4], face_dev[5], nx, ny,
-                                     nz, halo_width, inv_dx2, inv_dy2, cfg.dt, cfg.M,
+    exchanger.exchange();
+    const auto faces = exchanger.face_recv_ptrs();
+    allen_cahn::allen_cahn_step_cuda(u_gpu.data(), faces[0], faces[1], faces[2],
+                                     faces[3], faces[4], faces[5], nx, ny, nz,
+                                     halo_width, inv_dx2, inv_dy2, cfg.dt, cfg.M,
                                      inv_eps2, cfg.driving_force);
+    u_gpu.note_device_write();
   }
 
-  cuda_check(cudaMemcpy(u_gpu_host.data(), u_dev, nlocal * sizeof(double),
-                        cudaMemcpyDeviceToHost),
-             "cudaMemcpy final");
-
-  cuda_check(cudaFree(u_dev), "cudaFree(u_dev)");
-  for (int f = 0; f < 6; ++f) {
-    cuda_check(cudaFree(face_dev[static_cast<std::size_t>(f)]), "cudaFree(face)");
-  }
+  u_gpu.with_host_view([&](double *data, std::size_t n) {
+    u_gpu_host.assign(data, data + n);
+  });
 
   double max_diff = 0.0;
   for (std::size_t i = 0; i < nlocal; ++i) {
