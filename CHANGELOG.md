@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `pfc::fft::IHostFft` (ADR 0005). `create_with_backend` rejects CUDA/HIP at construction; use `create_cuda` / `create_hip`. `IFFT` remains a temporary alias.
 - Removed unused `apps/kobayashi/src/cuda/kobayashi_batched_halo.hpp` after the CUDA driver moved onto `HaloExchange`.
 - FD MPI leftover tests (`test_fd_heat_mpi`, `test_fd_xy_mpi`, `test_halo_exchange_driver`) use `HaloExchange` instead of `HaloExchanger` / `PersistentHaloExchanger`. `test_sparse_halo_exchange` uses `SparseExchange`.
 - `HaloExchangeOptions::directions` — optional `HaloDirectionSet` (empty means `Axes3D()` for Faces, `Full3D()` for Full). Kobayashi CPU/HIP/CUDA pass `Axes2D()` so the `nz=1` slab skips ±Z.

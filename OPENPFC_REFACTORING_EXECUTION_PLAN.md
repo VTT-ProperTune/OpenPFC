@@ -40,7 +40,7 @@ This checkout is **on LUMI (AMD/HIP)**. CUDA execution is impossible here; CUDA-
 
 **M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced; latest commit `99f304da` builds and runs HIP unit tests on LUMI. Remaining M3 items are (a) CUDA execution/perf/co-enabled CI — **not testable on LUMI**, (b) folding CUDA `padded_halo_faces.cu` into the kernel library (separable-compilation, CUDA-only — deferred to tohtori).
 
-**M4 is in progress.** `HaloExchange` and `SparseExchange` exist on host and device (device is blocking-only). GPU-aware device transport defaults to pack-to-contiguous + device-pointer MPI. Production FD apps (heat3d, wave2d, Allen–Cahn, Kobayashi CPU/HIP/CUDA) are on the new names. Remaining: leftover old-exchanger tests, deletion of superseded public names, and CUDA execute/checksums on tohtori. M5–M12 have not started.
+**M4 is in progress** (production FD apps on the new exchangers; leftover backend-class tests and old public names remain). **M5 has started:** `IHostFft` exists and `create_with_backend` rejects CUDA/HIP at construction. `IDeviceFft` and the rest of M5–M12 are still ahead.
 
 **2026-08-03 restructuring note:** two earlier attempts stalled at M3 citing lack of LUMI access. M-LUMI still collects HIP-*execution* items deferred from Pre-M0/M3/M4/M8/M9. This session *is* on LUMI, so those HIP execution items can be filled when the corresponding code exists; they still do not gate M4–M11 code. The symmetric problem now is CUDA: do not stall on tohtori.
 
@@ -435,8 +435,8 @@ M3 (Backend enum/string complete), M2 (Field/DataBuffer types).
 
 ### Tasks
 
-* [ ] Split `fft_interface.hpp` per ADR 0005: `IHostFft` (host-container transforms) and `IDeviceFft<MemorySpace>` (DataBuffer transforms); `FFT_Impl<BackendTag>` implements the applicable one(s); delete the throwing GPU virtual bodies (`fft_heffte_backend.hpp:189–192, 246–249`).
-* [ ] Make factories honest: `fft::create_with_backend` returns host FFTs for host backends only; device factories (`create_cuda`, `create_hip`, string-driven equivalents) return `IDeviceFft`; requesting a mismatch throws at construction with a clear message.
+* [ ] Split `fft_interface.hpp` per ADR 0005: `IHostFft` (host-container transforms) and `IDeviceFft<MemorySpace>` (DataBuffer transforms); `FFT_Impl<BackendTag>` implements the applicable one(s); delete the throwing GPU virtual bodies (`fft_heffte_backend.hpp:189–192, 246–249`). **`IHostFft` landed; `IFFT` is a temporary alias. `IDeviceFft` is next.**
+* [x] Make factories honest: `fft::create_with_backend` returns host FFTs for host backends only; device factories (`create_cuda`, `create_hip`, string-driven equivalents) return `IDeviceFft`; requesting a mismatch throws at construction with a clear message. **`create_with_backend(CUDA/HIP)` throws `invalid_argument`. Device factories still return concrete `FFT_CUDA` / `FFT_HIP` until `IDeviceFft` exists.**
 * [ ] Workspace precision per ADR 0006: allocate only the instantiated precision (lazy or template) — removes the ~33% device-memory waste (`fft_heffte_backend.hpp:102–106`).
 * [ ] Expose `r2c_direction` through the convenience factories (currently silently hardcoded 0).
 * [ ] Add `kernel/fft/kspace_iterator.hpp`: `for_each_kpoint(outbox, domain, fn(idx, kx, ky, kz))` (host) and a device counterpart in `runtime/gpu/`; migrate `SpectralGradient` (`spectral_gradient.hpp:111–143`) onto it; migrate `SpectralGradient`'s raw-pointer field binding to `FieldView`.
@@ -446,7 +446,7 @@ M3 (Backend enum/string complete), M2 (Field/DataBuffer types).
 
 ### Required tests
 
-* [ ] Negative test: constructing a host `IHostFft` with `Backend::CUDA` (and HIP) throws at the factory, not at first use.
+* [x] Negative test: constructing a host `IHostFft` with `Backend::CUDA` (and HIP) throws at the factory, not at first use. (`test_fft_backend_selection.cpp`)
 * [ ] `for_each_kpoint` unit test vs a hand-rolled reference loop on odd/even grids (bitwise index and wavenumber equality).
 * [ ] Nyquist fix: 1-D derivative-of-sine spectral test showing error reduction at the highest mode; affected golden comparisons re-baselined with written justification.
 * [ ] Dealiasing smoke test: cubic nonlinearity on a marginally resolved grid, energy in the top third of the spectrum zeroed when the mask is on.
