@@ -23,7 +23,7 @@
  *
  * Non-scope for this seam: embedded RK stepper body (#162), tolerance /
  * step-bound JSON schema (#163), Simulator adaptive orchestration, and
- * on-hold `IntegratorResult` (#141).
+ * retired accept/reject DTO (#141); the live type is `StepAttemptResult`.
  *
  * Producers collapse scalar or multi-field (N>=2) solution pairs /
  * residuals to per-field norms before calling the factories — this header
