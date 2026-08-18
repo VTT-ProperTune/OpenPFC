@@ -8,34 +8,26 @@
  * @brief Integrator-owned workspace for stage storage and scratch buffers
  *
  * @details
- * This header provides `pfc::integrator::Workspace<T>`, a value-semantic
- * container for integrator-owned storage including:
+ * `pfc::integrator::Workspace<T>` is the one workspace type. Integrators own
+ * stage buffers (RK increments) plus one scratch buffer. Models never see it.
  *
- * - Stage storage: Intermediate RK stages or method-specific state
- * - Scratch buffers: Temporary workspace for operator evaluations
+ * `pfc::sim::steppers::StageWorkspace<T>` is an alias of this type
+ * (`stage_workspace.hpp`).
  *
- * `Workspace<T>` is owned by integrators and is not exposed to physics models or
- * drivers. Lifetime can be per-method-object, per-step, or pooled depending on
- * integrator needs.
+ * Two constructors:
+ * - `(num_stages, local_size)` — stepper local-buffer form
+ * - `(extents, num_stages)` — grid-extents form (`local_size = nx*ny*nz`)
  *
- * This type is distinct from `pfc::sim::steppers::StageWorkspace<T>` in
- * `include/openpfc/kernel/simulation/steppers/stage_workspace.hpp`:
- * - Different namespace (`pfc::integrator` vs `pfc::sim::steppers`)
- * - Different constructor (`extents` + `num_stages` vs `num_stages` + `local_size`)
- * - Different reclaim API (`clear()` vs `reset()`)
- *
- * Do not conflate the two; this slice uses only `pfc::integrator::Workspace<T>`.
- *
- * Design rationale:
- * - Integrator-owned allocation: Integrators allocate, own, and manage all storage
- * - No exposure to models: Workspace is internal to integrators
- * - Reuse across steps: Avoid allocation overhead in time loops
- * - Clear lifetime: Storage lifetime is explicit and managed
+ * `stage(i)` is bounds-checked and returns the stage `std::vector<T>`.
+ * `clear()` / `reset()` zero every stage and the scratch buffer.
+ * The type is move-only.
  *
  * @see kernel/integrator/stage_context.hpp for MPI coordination context
  */
 
 #include <algorithm>
+#include <cstddef>
+#include <stdexcept>
 #include <vector>
 
 #include <openpfc/kernel/data/types.hpp>
@@ -45,125 +37,103 @@ namespace pfc::integrator {
 /**
  * @brief Integrator-owned workspace for stage storage and scratch buffers
  *
- * @details
- * `Workspace<T>` provides storage for:
- *
- * - Stage storage: Intermediate Runge-Kutta stages or method-specific state
- * - Scratch buffers: Temporary workspace for operator evaluations
- *
- * The workspace is owned by integrators and is not exposed to physics models or
- * drivers. Storage can be reused across time steps to avoid allocation overhead.
- *
- * Lifetime semantics:
- * - Per-method-object: Workspace lives as long as the integrator object
- * - Per-step: Workspace can be cleared/reclaimed between steps
- * - Pooled: Multiple workspaces can be managed by an execution layer
- *
- * @note Not the same type as `pfc::sim::steppers::StageWorkspace<T>`.
- *
  * @tparam T Field value type (e.g., double, std::complex<double>)
  */
-template<typename T>
+template <typename T>
 class Workspace {
 public:
-    /**
-     * @brief Construct workspace with given extents and number of stages
-     *
-     * Allocates storage for:
-     * - num_stages stage buffers, each sized to extents[0] * extents[1] * extents[2]
-     * - One scratch buffer of the same size
-     *
-     * All storage is value-initialized (zero for arithmetic types).
-     *
-     * @param extents Grid dimensions (nx, ny, nz)
-     * @param num_stages Number of stage buffers to allocate
-     */
-    explicit Workspace(const pfc::types::Int3& extents, std::size_t num_stages)
-        : m_stage_size(static_cast<std::size_t>(extents[0]) *
-                       static_cast<std::size_t>(extents[1]) *
-                       static_cast<std::size_t>(extents[2]))
-        , m_stages(num_stages)
-        , m_scratch(m_stage_size)
-    {
-        // Value-initialize all stage buffers
-        for (auto& stage : m_stages) {
-            stage.resize(m_stage_size);
-        }
-    }
+  /**
+   * @brief Construct `num_stages` buffers plus one scratch, each `local_size`.
+   */
+  explicit Workspace(std::size_t num_stages, std::size_t local_size)
+      : m_num_stages(num_stages), m_local_size(local_size),
+        m_stages(num_stages, std::vector<T>(local_size, T{})),
+        m_scratch(local_size, T{}) {}
 
-    /**
-     * @brief Access stage storage by index
-     *
-     * @param stage_index Stage index (must be < num_stages)
-     * @return T* Pointer to stage storage
-     */
-    T* stage(std::size_t stage_index) noexcept {
-        return m_stages[stage_index].data();
-    }
+  /**
+   * @brief Construct from grid extents (`local_size = nx * ny * nz`).
+   */
+  explicit Workspace(const pfc::types::Int3 &extents, std::size_t num_stages)
+      : Workspace(num_stages, static_cast<std::size_t>(extents[0]) *
+                                  static_cast<std::size_t>(extents[1]) *
+                                  static_cast<std::size_t>(extents[2])) {}
 
-    /**
-     * @brief Access stage storage by index (const overload)
-     *
-     * @param stage_index Stage index (must be < num_stages)
-     * @return const T* Pointer to stage storage
-     */
-    const T* stage(std::size_t stage_index) const noexcept {
-        return m_stages[stage_index].data();
-    }
+  Workspace(Workspace &&other) noexcept
+      : m_num_stages(other.m_num_stages), m_local_size(other.m_local_size),
+        m_stages(std::move(other.m_stages)),
+        m_scratch(std::move(other.m_scratch)) {
+    other.m_num_stages = 0;
+    other.m_local_size = 0;
+  }
 
-    /**
-     * @brief Access scratch buffer
-     *
-     * @return T* Pointer to scratch buffer
-     */
-    T* scratch() noexcept {
-        return m_scratch.data();
+  Workspace &operator=(Workspace &&other) noexcept {
+    if (this != &other) {
+      m_num_stages = other.m_num_stages;
+      m_local_size = other.m_local_size;
+      m_stages = std::move(other.m_stages);
+      m_scratch = std::move(other.m_scratch);
+      other.m_num_stages = 0;
+      other.m_local_size = 0;
     }
+    return *this;
+  }
 
-    /**
-     * @brief Access scratch buffer (const overload)
-     *
-     * @return const T* Pointer to scratch buffer
-     */
-    const T* scratch() const noexcept {
-        return m_scratch.data();
-    }
+  Workspace(const Workspace &) = delete;
+  Workspace &operator=(const Workspace &) = delete;
+  ~Workspace() = default;
 
-    /**
-     * @brief Clear all buffers (set to zero)
-     *
-     * Resets all stage buffers and scratch buffer to zero.
-     * Useful for reclaiming storage between time steps.
-     */
-    void clear() noexcept {
-        for (auto& stage : m_stages) {
-            std::fill(stage.begin(), stage.end(), T{});
-        }
-        std::fill(m_scratch.begin(), m_scratch.end(), T{});
+  /**
+   * @brief Mutable stage buffer (`stage_index` in `[0, num_stages)`).
+   */
+  std::vector<T> &stage(std::size_t stage_index) {
+    if (stage_index >= m_num_stages) {
+      throw std::out_of_range("Workspace::stage: stage_index out of range");
     }
+    return m_stages[stage_index];
+  }
 
-    /**
-     * @brief Get number of stage buffers
-     *
-     * @return std::size_t Number of stage buffers
-     */
-    std::size_t stage_count() const noexcept {
-        return m_stages.size();
+  /**
+   * @brief Const stage buffer (`stage_index` in `[0, num_stages)`).
+   */
+  const std::vector<T> &stage(std::size_t stage_index) const {
+    if (stage_index >= m_num_stages) {
+      throw std::out_of_range("Workspace::stage: stage_index out of range");
     }
+    return m_stages[stage_index];
+  }
 
-    /**
-     * @brief Get size of each stage buffer
-     *
-     * @return std::size_t Number of elements in each stage buffer
-     */
-    std::size_t stage_size() const noexcept {
-        return m_stage_size;
+  /** Scratch buffer, same length as each stage. */
+  std::vector<T> &scratch() noexcept { return m_scratch; }
+
+  /** Const scratch buffer. */
+  const std::vector<T> &scratch() const noexcept { return m_scratch; }
+
+  /** Zero every stage and the scratch buffer. */
+  void clear() noexcept {
+    for (auto &stage_buffer : m_stages) {
+      std::fill(stage_buffer.begin(), stage_buffer.end(), T{});
     }
+    std::fill(m_scratch.begin(), m_scratch.end(), T{});
+  }
+
+  /** Alias of `clear()` (historical `StageWorkspace` name). */
+  void reset() { clear(); }
+
+  [[nodiscard]] std::size_t stage_count() const noexcept { return m_num_stages; }
+
+  /** Alias of `stage_count()` (historical `StageWorkspace` name). */
+  [[nodiscard]] std::size_t num_stages() const noexcept { return m_num_stages; }
+
+  [[nodiscard]] std::size_t stage_size() const noexcept { return m_local_size; }
+
+  /** Alias of `stage_size()` (historical `StageWorkspace` name). */
+  [[nodiscard]] std::size_t local_size() const noexcept { return m_local_size; }
 
 private:
-    std::size_t m_stage_size;
-    std::vector<std::vector<T>> m_stages;
-    std::vector<T> m_scratch;
+  std::size_t m_num_stages;
+  std::size_t m_local_size;
+  std::vector<std::vector<T>> m_stages;
+  std::vector<T> m_scratch;
 };
 
 } // namespace pfc::integrator

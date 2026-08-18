@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <catch2/catch_test_macros.hpp>
+#include <openpfc/kernel/integrator/workspace.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_workspace.hpp>
-#include <vector>
 #include <type_traits>
+#include <vector>
 
 using namespace pfc::sim::steppers;
+
+static_assert(std::is_same_v<StageWorkspace<double>, pfc::integrator::Workspace<double>>);
 
 TEST_CASE("Construction creates correct number of stages") {
     StageWorkspace<double> ws(4, 100);

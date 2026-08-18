@@ -296,10 +296,10 @@ TEST_CASE("Workspace stage storage and scratch", "[field][state_access]") {
     REQUIRE(ws.stage_count() == 3);
     REQUIRE(ws.stage_size() == 64);
 
-    double* stage0 = ws.stage(0);
-    double* scratch = ws.scratch();
-    REQUIRE(stage0 != nullptr);
-    REQUIRE(scratch != nullptr);
+    auto &stage0 = ws.stage(0);
+    auto &scratch = ws.scratch();
+    REQUIRE(stage0.size() == 64);
+    REQUIRE(scratch.size() == 64);
 
     stage0[0] = 1.5;
     stage0[63] = 2.5;
@@ -317,7 +317,7 @@ TEST_CASE("Workspace clear resets buffers", "[field][state_access]") {
     pfc::integrator::Workspace<double> ws(extents, /*num_stages=*/2);
 
     for (std::size_t s = 0; s < ws.stage_count(); ++s) {
-        double* stage = ws.stage(s);
+        auto &stage = ws.stage(s);
         for (std::size_t i = 0; i < ws.stage_size(); ++i) {
             stage[i] = 7.0;
         }
@@ -329,7 +329,7 @@ TEST_CASE("Workspace clear resets buffers", "[field][state_access]") {
     ws.clear();
 
     for (std::size_t s = 0; s < ws.stage_count(); ++s) {
-        const double* stage = ws.stage(s);
+        const auto &stage = ws.stage(s);
         for (std::size_t i = 0; i < ws.stage_size(); ++i) {
             REQUIRE(stage[i] == Approx(0.0));
         }
