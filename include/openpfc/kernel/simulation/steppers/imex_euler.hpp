@@ -50,6 +50,7 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/solver_contract.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
@@ -205,6 +206,13 @@ public:
     return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
   }
 
+  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const pfc::data::Field<double> &u,
+                                          pfc::sim::StageContext &ctx) {
+    return attempt(t, u.vec(), ctx);
+  }
+
   /**
    * @brief Copy the candidate into `u_accepted` only if the last attempt
    *        succeeded.
@@ -216,6 +224,11 @@ public:
     }
     u_accepted = m_candidate;
     return true;
+  }
+
+  /** Commit into a host `Field<double>` (via `vec()`). */
+  [[nodiscard]] bool commit(pfc::data::Field<double> &u_accepted) const {
+    return commit(u_accepted.vec());
   }
 
   /**

@@ -157,3 +157,60 @@ TEST_CASE("EulerStepper attempt/commit on host Field<double>",
   (void)stepper.step(0.0, v);
   REQUIRE(v.vec() == u.vec());
 }
+
+TEST_CASE("RK3HeunStepper attempt/commit on host Field<double>",
+          "[step_protocol][rk3][field]") {
+  using pfc::data::Field;
+  const auto domain = pfc::domain::create({2, 2, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 1, 0});
+  Field<double> u(domain, box, 0);
+  u.vec() = {1.0, 2.0, 3.0, 4.0};
+  DecayRhs rhs{};
+  RK3HeunStepper<DecayRhs> stepper(0.1, u.size(), rhs);
+  const auto before = u.vec();
+  const StepAttemptResult r = stepper.attempt(0.0, u);
+  REQUIRE(u.vec() == before);
+  REQUIRE(r.success);
+  commit_step_attempt(u.vec(), r);
+  REQUIRE(u.vec() == r.candidate);
+}
+
+TEST_CASE("ExplicitRKStepper attempt/commit on host Field<double>",
+          "[step_protocol][explicit_rk][field]") {
+  using pfc::data::Field;
+  const auto domain = pfc::domain::create({2, 2, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 1, 0});
+  Field<double> u(domain, box, 0);
+  u.vec() = {1.0, 2.0, 3.0, 4.0};
+  DecayRhs rhs{};
+  ExplicitRKStepper<DecayRhs> stepper(0.1, u.size(), make_rk4_classical<double>(),
+                                      rhs);
+  const auto before = u.vec();
+  const StepAttemptResult r = stepper.attempt(0.0, u);
+  REQUIRE(u.vec() == before);
+  REQUIRE(r.success);
+  commit_step_attempt(u.vec(), r);
+  REQUIRE(u.vec() == r.candidate);
+}
+
+TEST_CASE("Etd1Stepper attempt on host Field<double>",
+          "[step_protocol][etd1][field]") {
+  using pfc::data::Field;
+  const auto domain = pfc::domain::create({2, 2, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 1, 0});
+  Field<double> u(domain, box, 0);
+  u.vec() = {1.0, 2.0, 3.0, 4.0};
+  DecayRhs rhs{};
+  Etd1Stepper<DecayRhs> stepper(0.1, u.size(), rhs);
+  std::vector<double> L(u.size(), -1.0);
+  std::vector<double> exp_buf(u.size());
+  std::vector<double> phi_buf(u.size());
+  fill_spectral_exp_coeffs(L, 0.1, exp_buf, phi_buf);
+  stepper.set_coefficients(exp_buf, phi_buf);
+  const auto before = u.vec();
+  const StepAttemptResult r = stepper.attempt(0.0, u);
+  REQUIRE(u.vec() == before);
+  REQUIRE(r.success);
+  commit_step_attempt(u.vec(), r);
+  REQUIRE(u.vec() == r.candidate);
+}

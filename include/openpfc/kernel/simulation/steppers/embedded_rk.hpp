@@ -32,6 +32,7 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
@@ -146,6 +147,12 @@ public:
     }
 
     return StepAttemptResult(t, dt, t + dt, /*success=*/true, m_u_high);
+  }
+
+  /** Isolate high/low/error from a host `Field<double>` (via `vec()`). */
+  [[nodiscard]] StepAttemptResult attempt(double t, double dt,
+                                          const pfc::data::Field<double> &u) {
+    return attempt(t, dt, u.vec());
   }
 
   [[nodiscard]] const ButcherTableau<double> &tableau() const noexcept {

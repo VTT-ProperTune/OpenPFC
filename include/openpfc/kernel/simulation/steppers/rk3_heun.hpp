@@ -106,6 +106,7 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
@@ -194,6 +195,15 @@ public:
     commit_step_attempt(u, r);
     return r.t1;
   }
+
+  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const pfc::data::Field<double> &u) {
+    return attempt(t, u.vec());
+  }
+
+  /** Advance a host `Field<double>` by one Heun RK3 step. */
+  double step(double t, pfc::data::Field<double> &u) { return step(t, u.vec()); }
 
   /**
    * @brief Get the time step size.

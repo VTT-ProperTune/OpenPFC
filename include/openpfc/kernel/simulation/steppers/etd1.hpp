@@ -44,6 +44,7 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
@@ -156,6 +157,12 @@ public:
       m_candidate[i] = c;
     }
     return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
+  }
+
+  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const pfc::data::Field<double> &u) {
+    return attempt(t, u.vec());
   }
 
   [[nodiscard]] std::span<const double> candidate() const noexcept {

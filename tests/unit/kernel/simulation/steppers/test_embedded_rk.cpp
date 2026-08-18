@@ -10,6 +10,9 @@
 #include <string>
 #include <vector>
 
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/embedded_rk.hpp>
 
@@ -174,4 +177,19 @@ TEST_CASE("bs32_and_dp54_end_to_end", "[embedded_rk][unit]") {
       REQUIRE(std::isfinite(stepper.error()[i]));
     }
   }
+}
+
+TEST_CASE("accepted Field state unchanged", "[embedded_rk][field]") {
+  auto tableau = make_embedded_rk23<double>();
+  DecayRhs rhs;
+  const auto domain = pfc::domain::create({2, 2, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 1, 0});
+  pfc::data::Field<double> u(domain, box, 0);
+  u.vec() = {1.25, -0.5, 3.0, 0.25};
+  EmbeddedRKStepper stepper(u.size(), tableau, rhs);
+  const auto fingerprint = u.vec();
+  auto result = stepper.attempt(0.0, 0.1, u);
+  REQUIRE(result.success);
+  REQUIRE(u.vec() == fingerprint);
+  REQUIRE(result.candidate.size() == u.size());
 }
