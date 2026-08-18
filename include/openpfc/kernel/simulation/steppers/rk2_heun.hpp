@@ -77,6 +77,7 @@
 #include <vector>
 
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 namespace pfc::sim::steppers {
 
@@ -149,27 +150,31 @@ public:
    * @pre `u.size()` must equal the `local_size` passed to the constructor
    * @post `u` contains the advanced state at time `t + dt`
    */
-  double step(double t, std::vector<double> &u) {
-    // Predictor step: u_p = u + dt * rhs(t, u)
-    m_rhs(t, u, m_du);
-    const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(u.size());
-    for (std::ptrdiff_t li = 0; li < n; ++li) {
-      m_predictor[static_cast<std::size_t>(li)] =
-          u[static_cast<std::size_t>(li)] +
-          m_dt * m_du[static_cast<std::size_t>(li)];
+  /**
+   * @brief Isolate the Heun candidate without writing accepted `u`.
+   *
+   * Writes the predictor into `m_predictor`, then overwrites that buffer
+   * with the corrector result (the isolated candidate).
+   */
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const std::vector<double> &u) {
+    m_rhs(t, const_cast<std::vector<double> &>(u), m_du);
+    const std::size_t n = u.size();
+    for (std::size_t i = 0; i < n; ++i) {
+      m_predictor[i] = u[i] + m_dt * m_du[i];
     }
-
-    // Corrector step: u += dt/2 * (rhs(t, u) + rhs(t + dt, u_p))
-    // m_du already contains rhs(t, u) from predictor - reuse it
     m_rhs(t + m_dt, m_predictor, m_rhs_predictor);
-    for (std::ptrdiff_t li = 0; li < n; ++li) {
-      u[static_cast<std::size_t>(li)] +=
-          0.5 * m_dt *
-          (m_du[static_cast<std::size_t>(li)] +
-           m_rhs_predictor[static_cast<std::size_t>(li)]);
+    for (std::size_t i = 0; i < n; ++i) {
+      m_predictor[i] = u[i] + 0.5 * m_dt * (m_du[i] + m_rhs_predictor[i]);
     }
+    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_predictor);
+  }
 
-    return t + m_dt;
+  /** Advance `u` by one RK2 Heun step; commit of `attempt`. */
+  double step(double t, std::vector<double> &u) {
+    const StepAttemptResult r = attempt(t, u);
+    commit_step_attempt(u, r);
+    return r.t1;
   }
 
   /**

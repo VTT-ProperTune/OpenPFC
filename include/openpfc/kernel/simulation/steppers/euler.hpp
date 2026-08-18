@@ -59,6 +59,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 #include <openpfc/kernel/simulation/steppers/stepper_validation.hpp>
 
 namespace pfc::sim::steppers {
@@ -75,17 +76,29 @@ template <class Rhs>
 class EulerStepper {
 public:
   EulerStepper(double dt, std::size_t local_size, Rhs rhs)
-      : m_dt(dt), m_du(local_size, 0.0), m_u_checkpoint(local_size, 0.0),
-        m_rhs(std::move(rhs)) {}
+      : m_dt(dt), m_du(local_size, 0.0), m_candidate(local_size, 0.0),
+        m_u_checkpoint(local_size, 0.0), m_rhs(std::move(rhs)) {}
 
-  /** Advance `u` by one explicit-Euler step in place; returns the new time. */
-  double step(double t, std::vector<double> &u) {
-    m_rhs(t, u, m_du);
-    const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(u.size());
-    for (std::ptrdiff_t li = 0; li < n; ++li) {
-      u[static_cast<std::size_t>(li)] += m_dt * m_du[static_cast<std::size_t>(li)];
+  /**
+   * @brief Isolate `u + dt * rhs(t, u)` without writing `u`.
+   *
+   * @return Successful `StepAttemptResult` whose candidate is method-owned.
+   */
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const std::vector<double> &u) {
+    m_rhs(t, const_cast<std::vector<double> &>(u), m_du);
+    const std::size_t n = u.size();
+    for (std::size_t i = 0; i < n; ++i) {
+      m_candidate[i] = u[i] + m_dt * m_du[i];
     }
-    return t + m_dt;
+    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
+  }
+
+  /** Advance `u` by one explicit-Euler step; commit of `attempt`. */
+  double step(double t, std::vector<double> &u) {
+    const StepAttemptResult r = attempt(t, u);
+    commit_step_attempt(u, r);
+    return r.t1;
   }
 
   double dt() const noexcept { return m_dt; }
@@ -135,6 +148,7 @@ public:
 private:
   double m_dt{0.0};
   std::vector<double> m_du;
+  std::vector<double> m_candidate;
   std::vector<double> m_u_checkpoint;
   Rhs m_rhs;
 };

@@ -14,6 +14,7 @@ target_sources(openpfc-tests
     ${CMAKE_CURRENT_SOURCE_DIR}/test_stepper_concept.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_method_composition.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_step_attempt.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_step_protocol.cpp
 )
 
 # AC-facing CTest name: `ctest -R test_integrator_base` (shared openpfc-tests binary).
