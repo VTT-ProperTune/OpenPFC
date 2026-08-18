@@ -51,8 +51,9 @@ TEST_CASE("HIP FFT roundtrip (double) [integration][gpu][hip]", "[gpu][hip]") {
   }
   real_in.copy_from_host(host_in);
 
-  fft.forward(real_in, freq);
-  fft.backward(freq, real_out);
+  fft::IDeviceFFT<HipSpace> &iface = fft;
+  iface.forward(real_in, freq);
+  iface.backward(freq, real_out);
 
   auto host_out = real_out.to_host();
 

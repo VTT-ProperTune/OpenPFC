@@ -146,11 +146,11 @@ create_with_backend(const FFTLayout &fft_layout, int rank_id,
   case Backend::CUDA:
     throw std::invalid_argument(
         "fft::create_with_backend: Backend::CUDA is a device FFT; "
-        "use fft::create_cuda instead of IHostFft");
+        "use fft::create_cuda instead of IHostFFT");
   case Backend::HIP:
     throw std::invalid_argument(
         "fft::create_with_backend: Backend::HIP is a device FFT; "
-        "use fft::create_hip instead of IHostFft");
+        "use fft::create_hip instead of IHostFFT");
   default: throw std::runtime_error("Unsupported FFT backend requested");
   }
 }
@@ -169,11 +169,11 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
   case Backend::CUDA:
     throw std::invalid_argument(
         "fft::create_with_backend: Backend::CUDA is a device FFT; "
-        "use fft::create_cuda instead of IHostFft");
+        "use fft::create_cuda instead of IHostFFT");
   case Backend::HIP:
     throw std::invalid_argument(
         "fft::create_with_backend: Backend::HIP is a device FFT; "
-        "use fft::create_hip instead of IHostFft");
+        "use fft::create_hip instead of IHostFFT");
   default: throw std::runtime_error("Unsupported FFT backend requested");
   }
 }

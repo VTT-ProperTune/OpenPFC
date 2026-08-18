@@ -3,17 +3,19 @@
 
 /**
  * @file fft_interface.hpp
- * @brief FFT interface types (`IHostFft` / `IFFT`, backends, buffers) without
+ * @brief FFT interface types (`IHostFFT` / `IDeviceFFT` / `IFFT`) without
  *        HeFFTe headers.
  *
- * ADR 0005: host factories return `IHostFft` only. Device backends use
- * `create_cuda` / `create_hip` (M5 `IDeviceFft` is the next increment).
+ * ADR 0005: host factories return `IHostFFT` only. Device factories
+ * (`create_cuda` / `create_hip`) return objects that implement
+ * `IDeviceFFT<MemorySpace>`.
  */
 
 #pragma once
 
 #include <openpfc/kernel/execution/backend_tags.hpp>
 #include <openpfc/kernel/execution/databuffer.hpp>
+#include <openpfc/kernel/execution/memory_space.hpp>
 #include <openpfc/kernel/fft/box3i.hpp>
 
 #include <complex>
@@ -41,10 +43,29 @@ enum class Backend : std::uint8_t {
   HIP   ///< GPU-based FFT using rocFFT (include runtime/hip/fft_hip.hpp)
 };
 
-/// Host-container FFT (std::vector / host Field). Device backends are not this.
-struct IHostFft {
-  virtual ~IHostFft() = default;
+/// Size, bounds, and timing queries shared by host and device FFT interfaces.
+struct IFFTQueries {
+  virtual ~IFFTQueries() = default;
 
+  virtual void reset_fft_time() = 0;
+  [[nodiscard]] virtual double get_fft_time() const = 0;
+
+  /** @brief Local real-buffer element count required by `forward`/`backward`. */
+  [[nodiscard]] virtual size_t size_inbox() const = 0;
+  /** @brief Local complex-buffer element count required by `forward`/`backward`. */
+  [[nodiscard]] virtual size_t size_outbox() const = 0;
+  [[nodiscard]] virtual size_t size_workspace() const = 0;
+
+  [[nodiscard]] virtual size_t get_allocated_memory_bytes() const = 0;
+
+  /// Local real-space index box (inclusive corners) for this rank.
+  [[nodiscard]] virtual Box3i get_inbox_bounds() const = 0;
+  /// Local Fourier-space index box for this rank.
+  [[nodiscard]] virtual Box3i get_outbox_bounds() const = 0;
+};
+
+/// Host-container FFT (`std::vector` / host Field). Device backends are not this.
+struct IHostFFT : IFFTQueries {
   /**
    * @brief Forward real-to-complex transform on this rank's local boxes.
    *
@@ -64,46 +85,41 @@ struct IHostFft {
    *         outbox/inbox contract (implementations report expected and actual).
    */
   virtual void backward(const ComplexVector &in, RealVector &out) = 0;
-
-  virtual void reset_fft_time() = 0;
-  virtual double get_fft_time() const = 0;
-
-  /** @brief Local real-buffer element count required by `forward`/`backward`. */
-  virtual size_t size_inbox() const = 0;
-  /** @brief Local complex-buffer element count required by `forward`/`backward`. */
-  virtual size_t size_outbox() const = 0;
-  virtual size_t size_workspace() const = 0;
-
-  virtual size_t get_allocated_memory_bytes() const = 0;
-
-  /**
-   * @brief Local real-space index box (inclusive corners) for this rank
-   */
-  [[nodiscard]] virtual Box3i get_inbox_bounds() const = 0;
-
-  /**
-   * @brief Local Fourier-space index box for this rank
-   */
-  [[nodiscard]] virtual Box3i get_outbox_bounds() const = 0;
 };
 
-/// Temporary alias until remaining `IFFT` call sites migrate to `IHostFft`.
-using IFFT = IHostFft;
+/**
+ * @brief Device-buffer FFT for one memory space (`DataBuffer` transforms).
+ *
+ * Instantiating `IDeviceFFT<CudaSpace>` / `IDeviceFFT<HipSpace>` requires the
+ * matching runtime memory-space header so `memory_space_to_backend_t` is
+ * defined. Double is the interface precision; float overloads stay on the
+ * concrete `FFT_Impl`.
+ */
+template <typename MemorySpace> struct IDeviceFFT : IFFTQueries {
+  using backend_tag = memory_space_to_backend_t<MemorySpace>;
+  using RealBuffer = core::DataBuffer<backend_tag, double>;
+  using ComplexBuffer = core::DataBuffer<backend_tag, std::complex<double>>;
 
-[[nodiscard]] inline Box3i get_inbox(const IFFT &fft) noexcept {
+  virtual void forward(const RealBuffer &in, ComplexBuffer &out) = 0;
+  virtual void backward(const ComplexBuffer &in, RealBuffer &out) = 0;
+};
+
+/// Temporary alias until remaining `IFFT` call sites migrate to `IHostFFT`.
+using IFFT = IHostFFT;
+
+[[nodiscard]] inline Box3i get_inbox(const IFFTQueries &fft) noexcept {
   return fft.get_inbox_bounds();
 }
 
-[[nodiscard]] inline Box3i get_outbox(const IFFT &fft) noexcept {
+[[nodiscard]] inline Box3i get_outbox(const IFFTQueries &fft) noexcept {
   return fft.get_outbox_bounds();
 }
 
-/** @brief Clear accumulated FFT timing (preferred over `IFFT::reset_fft_time()`). */
-inline void reset_fft_time(IFFT &fft) noexcept { fft.reset_fft_time(); }
+/** @brief Clear accumulated FFT timing (preferred over `reset_fft_time()`). */
+inline void reset_fft_time(IFFTQueries &fft) noexcept { fft.reset_fft_time(); }
 
-/** @brief Accumulated FFT time since last reset (preferred over
- * `IFFT::get_fft_time()`). */
-[[nodiscard]] inline double get_fft_time(const IFFT &fft) noexcept {
+/** @brief Accumulated FFT time since last reset (preferred over `get_fft_time()`). */
+[[nodiscard]] inline double get_fft_time(const IFFTQueries &fft) noexcept {
   return fft.get_fft_time();
 }
 

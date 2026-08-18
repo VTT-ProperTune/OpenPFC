@@ -22,6 +22,7 @@
 #include <openpfc/kernel/fft/fft_layout.hpp>
 #include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 
 #include <mpi.h>
 
@@ -52,8 +53,8 @@ using ComplexDataBufferHIP =
 // rocFFT backend type alias
 using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
 
-// GPU FFT type alias for rocFFT backend
-using FFT_HIP = FFT_Impl<heffte::backend::rocfft>;
+// GPU FFT type alias for rocFFT backend — implements `IDeviceFFT<HipSpace>`.
+using FFT_HIP = FFT_Impl<heffte::backend::rocfft, IDeviceFFT<pfc::HipSpace>>;
 
 /**
  * @brief Creates an FFT object using rocFFT backend for GPU acceleration

@@ -116,6 +116,24 @@ struct FftWorkspaceStorage<BackendTag> {
   }
 };
 
+/**
+ * @brief Detect `IDeviceFFT` buffer aliases so `FFT_Impl` can declare the
+ *        override without naming a missing nested type on `IHostFFT`.
+ */
+template <typename I, typename = void> struct device_fft_buffers {
+  using RealBuffer = RealVector;
+  using ComplexBuffer = ComplexVector;
+  static constexpr bool value = false;
+};
+
+template <typename I>
+struct device_fft_buffers<
+    I, std::void_t<typename I::RealBuffer, typename I::ComplexBuffer>> {
+  using RealBuffer = typename I::RealBuffer;
+  using ComplexBuffer = typename I::ComplexBuffer;
+  static constexpr bool value = true;
+};
+
 } // namespace detail
 
 /**
@@ -127,7 +145,9 @@ struct FftWorkspaceStorage<BackendTag> {
  * Workspace buffers are owned by `detail::FftWorkspaceStorage<BackendTag>` so
  * unused twin host/device allocations are not constructed.
  */
-template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
+template <typename BackendTag = heffte::backend::fftw,
+          typename Interface = IHostFFT>
+struct FFT_Impl : Interface {
 
   using fft_type = heffte::fft3d_r2c<BackendTag>;
   const fft_type m_fft;
@@ -139,114 +159,85 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
       : m_fft(std::move(fft)), m_ws(m_fft.size_workspace()) {}
 
   /**
-   * @brief Forward transform via `DataBuffer` (GPU backends).
+   * @brief Forward transform via `DataBuffer` (GPU backends, any RealType).
    * @throws std::invalid_argument if `in.size() != size_inbox()` or
    *         `out.size() != size_outbox()`
    */
   template <typename RealBackendTag, typename ComplexBackendTag, typename RealType>
+    requires HeapBackend<BackendTag>
   void forward(const core::DataBuffer<RealBackendTag, RealType> &in,
                core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &out) {
-    static_assert(std::is_same_v<RealBackendTag, ComplexBackendTag>,
-                  "Input and output must use the same backend");
-    detail::require_equal_size(
-        in.size(), size_inbox(),
-        "FFT_Impl::forward: real buffer size ", "size_inbox");
-    detail::require_equal_size(
-        out.size(), size_outbox(),
-        "FFT_Impl::forward: complex buffer size ", "size_outbox");
-    if constexpr (HeapBackend<BackendTag>) {
-      m_fft_time -= MPI_Wtime();
-      if constexpr (std::is_same_v<RealType, double>) {
-        m_fft.forward(in.data(), out.data(), m_ws.data_gpu_double());
-      } else if constexpr (std::is_same_v<RealType, float>) {
-        m_fft.forward(in.data(), out.data(), m_ws.data_gpu_float());
-      }
-      m_fft_time += MPI_Wtime();
-    } else {
-      throw std::runtime_error(
-          "FFTW FFT requires std::vector, not DataBuffer. Use forward(RealVector, "
-          "ComplexVector) instead.");
-    }
+    forward_device_(in, out);
+  }
+
+  /// `IDeviceFFT` double-buffer override (non-template wins over the template).
+  void forward(const typename detail::device_fft_buffers<Interface>::RealBuffer &in,
+               typename detail::device_fft_buffers<Interface>::ComplexBuffer &out)
+      override
+    requires detail::device_fft_buffers<Interface>::value
+  {
+    forward_device_(in, out);
   }
 
   /**
-   * @brief Forward transform via host vectors (FFTW).
+   * @brief Forward transform via host vectors (FFTW / `IHostFFT` only).
    * @throws std::invalid_argument if `in.size() != size_inbox()` or
    *         `out.size() != size_outbox()`
    */
-  void forward(const RealVector &in, ComplexVector &out) override {
+  void forward(const RealVector &in, ComplexVector &out) override
+    requires std::is_base_of_v<IHostFFT, Interface>
+  {
     detail::require_equal_size(
         in.size(), size_inbox(),
         "FFT_Impl::forward: real buffer size ", "size_inbox");
     detail::require_equal_size(
         out.size(), size_outbox(),
         "FFT_Impl::forward: complex buffer size ", "size_outbox");
-    if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
-      m_fft_time -= MPI_Wtime();
-      m_fft.forward(in.data(), out.data(), m_ws.data_wrk());
-      m_fft_time += MPI_Wtime();
-    } else {
-      throw std::runtime_error(
-          "GPU FFT requires DataBuffer, not std::vector. Use forward(DataBuffer, "
-          "DataBuffer) instead.");
-    }
+    m_fft_time -= MPI_Wtime();
+    m_fft.forward(in.data(), out.data(), m_ws.data_wrk());
+    m_fft_time += MPI_Wtime();
   }
 
   /**
-   * @brief Backward transform via `DataBuffer` (GPU backends).
+   * @brief Backward transform via `DataBuffer` (GPU backends, any RealType).
    * @throws std::invalid_argument if `in.size() != size_outbox()` or
    *         `out.size() != size_inbox()`
    */
   template <typename ComplexBackendTag, typename RealBackendTag, typename RealType>
+    requires HeapBackend<BackendTag>
   void
   backward(const core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &in,
            core::DataBuffer<RealBackendTag, RealType> &out) {
-    static_assert(std::is_same_v<ComplexBackendTag, RealBackendTag>,
-                  "Input and output must use the same backend");
-    detail::require_equal_size(
-        in.size(), size_outbox(),
-        "FFT_Impl::backward: complex buffer size ", "size_outbox");
-    detail::require_equal_size(
-        out.size(), size_inbox(),
-        "FFT_Impl::backward: real buffer size ", "size_inbox");
-    if constexpr (HeapBackend<BackendTag>) {
-      m_fft_time -= MPI_Wtime();
-      if constexpr (std::is_same_v<RealType, double>) {
-        m_fft.backward(in.data(), out.data(), m_ws.data_gpu_double(),
-                       heffte::scale::full);
-      } else if constexpr (std::is_same_v<RealType, float>) {
-        m_fft.backward(in.data(), out.data(), m_ws.data_gpu_float(),
-                       heffte::scale::full);
-      }
-      m_fft_time += MPI_Wtime();
-    } else {
-      throw std::runtime_error(
-          "FFTW FFT requires std::vector, not DataBuffer. Use "
-          "backward(ComplexVector, RealVector) instead.");
-    }
+    backward_device_(in, out);
+  }
+
+  /// `IDeviceFFT` double-buffer override.
+  void
+  backward(const typename detail::device_fft_buffers<Interface>::ComplexBuffer &in,
+           typename detail::device_fft_buffers<Interface>::RealBuffer &out)
+      override
+    requires detail::device_fft_buffers<Interface>::value
+  {
+    backward_device_(in, out);
   }
 
   /**
-   * @brief Backward transform via host vectors (FFTW).
+   * @brief Backward transform via host vectors (FFTW / `IHostFFT` only).
    * @throws std::invalid_argument if `in.size() != size_outbox()` or
    *         `out.size() != size_inbox()`
    */
-  void backward(const ComplexVector &in, RealVector &out) override {
+  void backward(const ComplexVector &in, RealVector &out) override
+    requires std::is_base_of_v<IHostFFT, Interface>
+  {
     detail::require_equal_size(
         in.size(), size_outbox(),
         "FFT_Impl::backward: complex buffer size ", "size_outbox");
     detail::require_equal_size(
         out.size(), size_inbox(),
         "FFT_Impl::backward: real buffer size ", "size_inbox");
-    if constexpr (std::is_same_v<BackendTag, heffte::backend::fftw>) {
-      m_fft_time -= MPI_Wtime();
-      m_fft.backward(in.data(), out.data(), m_ws.data_wrk(), heffte::scale::full);
-      m_fft_time += MPI_Wtime();
-    } else {
-      throw std::runtime_error(
-          "GPU FFT requires DataBuffer, not std::vector. Use backward(DataBuffer, "
-          "DataBuffer) instead.");
-    }
+    m_fft_time -= MPI_Wtime();
+    m_fft.backward(in.data(), out.data(), m_ws.data_wrk(), heffte::scale::full);
+    m_fft_time += MPI_Wtime();
   }
 
   void reset_fft_time() override { m_fft_time = 0.0; }
@@ -272,10 +263,56 @@ template <typename BackendTag = heffte::backend::fftw> struct FFT_Impl : IFFT {
     const auto &out = m_fft.outbox();
     return Box3i{out.low, out.high, out.size};
   }
+
+private:
+  template <typename RealBackendTag, typename ComplexBackendTag, typename RealType>
+  void forward_device_(
+      const core::DataBuffer<RealBackendTag, RealType> &in,
+      core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &out) {
+    static_assert(std::is_same_v<RealBackendTag, ComplexBackendTag>,
+                  "Input and output must use the same backend");
+    detail::require_equal_size(in.size(), size_inbox(),
+                               "FFT_Impl::forward: real buffer size ",
+                               "size_inbox");
+    detail::require_equal_size(out.size(), size_outbox(),
+                               "FFT_Impl::forward: complex buffer size ",
+                               "size_outbox");
+    m_fft_time -= MPI_Wtime();
+    if constexpr (std::is_same_v<RealType, double>) {
+      m_fft.forward(in.data(), out.data(), m_ws.data_gpu_double());
+    } else if constexpr (std::is_same_v<RealType, float>) {
+      m_fft.forward(in.data(), out.data(), m_ws.data_gpu_float());
+    }
+    m_fft_time += MPI_Wtime();
+  }
+
+  template <typename ComplexBackendTag, typename RealBackendTag, typename RealType>
+  void backward_device_(
+      const core::DataBuffer<ComplexBackendTag, std::complex<RealType>> &in,
+      core::DataBuffer<RealBackendTag, RealType> &out) {
+    static_assert(std::is_same_v<ComplexBackendTag, RealBackendTag>,
+                  "Input and output must use the same backend");
+    detail::require_equal_size(in.size(), size_outbox(),
+                               "FFT_Impl::backward: complex buffer size ",
+                               "size_outbox");
+    detail::require_equal_size(out.size(), size_inbox(),
+                               "FFT_Impl::backward: real buffer size ",
+                               "size_inbox");
+    m_fft_time -= MPI_Wtime();
+    if constexpr (std::is_same_v<RealType, double>) {
+      m_fft.backward(in.data(), out.data(), m_ws.data_gpu_double(),
+                     heffte::scale::full);
+    } else if constexpr (std::is_same_v<RealType, float>) {
+      m_fft.backward(in.data(), out.data(), m_ws.data_gpu_float(),
+                     heffte::scale::full);
+    }
+    m_fft_time += MPI_Wtime();
+  }
 };
 
-template <typename BackendTag>
-inline const auto &get_fft_object(const FFT_Impl<BackendTag> &fft) noexcept {
+template <typename BackendTag, typename Interface>
+inline const auto &
+get_fft_object(const FFT_Impl<BackendTag, Interface> &fft) noexcept {
   return fft.m_fft;
 }
 

@@ -52,9 +52,9 @@ TEST_CASE("CUDA FFT roundtrip (double) [integration][gpu]", "[gpu]") {
   }
   real_in.copy_from_host(host_in);
 
-  // Roundtrip on GPU
-  fft.forward(real_in, freq);
-  fft.backward(freq, real_out);
+  fft::IDeviceFFT<CudaSpace> &iface = fft;
+  iface.forward(real_in, freq);
+  iface.backward(freq, real_out);
 
   // Copy back and verify
   auto host_out = real_out.to_host();

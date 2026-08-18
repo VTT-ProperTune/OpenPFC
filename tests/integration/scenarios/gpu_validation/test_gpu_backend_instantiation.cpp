@@ -26,9 +26,10 @@ TEST_CASE("CUDA backend instantiation smoke", "[integration][gpu][cuda]") {
 #if defined(OpenPFC_ENABLE_CUDA)
   auto cpu_fft = create_with_backend(decomp, /*rank*/ 0, Backend::FFTW);
   auto gpu_fft = create_cuda(decomp, /*rank*/ 0, MPI_COMM_WORLD);
+  IDeviceFFT<CudaSpace> &iface = gpu_fft;
   REQUIRE(cpu_fft.get() != nullptr);
-  REQUIRE(cpu_fft->size_inbox() == gpu_fft.size_inbox());
-  REQUIRE(cpu_fft->size_outbox() == gpu_fft.size_outbox());
+  REQUIRE(cpu_fft->size_inbox() == iface.size_inbox());
+  REQUIRE(cpu_fft->size_outbox() == iface.size_outbox());
 #else
   SUCCEED("CUDA disabled - skipping GPU backend instantiation test");
 #endif
@@ -45,8 +46,9 @@ TEST_CASE("HIP backend instantiation smoke", "[integration][gpu][hip]") {
   auto cpu_fft = create(decomp);
   // Cray MPICH types MPI_Comm as int, so the two-arg overload is ambiguous.
   auto gpu_fft = create_hip(decomp, rank, MPI_COMM_WORLD);
-  REQUIRE(cpu_fft.size_inbox() == gpu_fft.size_inbox());
-  REQUIRE(cpu_fft.size_outbox() == gpu_fft.size_outbox());
+  IDeviceFFT<HipSpace> &iface = gpu_fft;
+  REQUIRE(cpu_fft.size_inbox() == iface.size_inbox());
+  REQUIRE(cpu_fft.size_outbox() == iface.size_outbox());
 #else
   SUCCEED("HIP spectral not enabled - skipping GPU backend instantiation test");
 #endif

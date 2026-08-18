@@ -6,13 +6,14 @@
  * @brief Fast Fourier Transform API for spectral methods (no HeFFTe headers)
  *
  * @details
- * Core layout and `IFFT` live in fft_interface.hpp / fft_layout.hpp / kspace.hpp.
+ * Core layout and `IHostFFT` / `IDeviceFFT` / `IFFT` live in fft_interface.hpp /
+ * fft_layout.hpp / kspace.hpp.
  * The default CPU backend `CpuFft` (HeFFTe + FFTW) is declared here and defined in
  * fft_fftw.hpp — include that header (or openpfc.hpp / openpfc_minimal.hpp) when you
  * need the complete type, `pfc::FFT`, or `heffte::plan_options` values.
  *
  * @see fft_fftw.hpp for CpuFft, plan_options alias, and HeFFTe-backed factories
- * @see fft_interface.hpp for IFFT and buffer aliases
+ * @see fft_interface.hpp for IHostFFT, IDeviceFFT, IFFT, and buffer aliases
  */
 
 #pragma once

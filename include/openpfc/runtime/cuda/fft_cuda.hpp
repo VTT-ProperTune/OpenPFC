@@ -22,6 +22,7 @@
 #include <openpfc/kernel/fft/fft_layout.hpp>
 #include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
+#include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 
 #include <mpi.h>
 
@@ -63,8 +64,8 @@ using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
  * #endif
  * @endcode
  */
-// GPU FFT type alias
-using FFT_CUDA = FFT_Impl<heffte::backend::cufft>;
+// GPU FFT type alias — implements `IDeviceFFT<CudaSpace>`.
+using FFT_CUDA = FFT_Impl<heffte::backend::cufft, IDeviceFFT<pfc::CudaSpace>>;
 
 /**
  * @brief Creates an FFT object using cuFFT backend for GPU acceleration

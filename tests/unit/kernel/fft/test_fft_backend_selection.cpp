@@ -10,6 +10,7 @@
  */
 
 #include <complex>
+#include <type_traits>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -24,6 +25,8 @@
 using namespace Catch::Matchers;
 using namespace pfc;
 using json = nlohmann::json;
+
+static_assert(std::is_same_v<fft::IFFT, fft::IHostFFT>);
 
 TEST_CASE("FFT Backend - FFTW backend selection", "[fft][backend][unit]") {
   auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
@@ -75,7 +78,7 @@ TEST_CASE("FFT Backend - FFTW forward/backward transform", "[fft][backend][unit]
   }
 }
 
-TEST_CASE("create_with_backend rejects CUDA as IHostFft", "[fft][backend][unit]") {
+TEST_CASE("create_with_backend rejects CUDA as IHostFFT", "[fft][backend][unit]") {
   auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
   REQUIRE_THROWS_WITH(
@@ -83,7 +86,7 @@ TEST_CASE("create_with_backend rejects CUDA as IHostFft", "[fft][backend][unit]"
       ContainsSubstring("create_cuda"));
 }
 
-TEST_CASE("create_with_backend rejects HIP as IHostFft", "[fft][backend][unit]") {
+TEST_CASE("create_with_backend rejects HIP as IHostFFT", "[fft][backend][unit]") {
   auto domain = domain::create(GridSize({8, 8, 8}), PhysicalOrigin({8.0, 8.0, 8.0}), GridSpacing({8.0, 8.0, 8.0}));
   auto decomposition = decomposition::create(domain, 1);
   REQUIRE_THROWS_WITH(
