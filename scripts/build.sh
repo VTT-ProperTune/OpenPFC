@@ -55,13 +55,13 @@ CUDA_ARCHITECTURES="${CUDA_ARCHITECTURES:-}"
 ROCM_ARCHITECTURES="${ROCM_ARCHITECTURES:-}"
 
 LUMI_STACK="${LUMI_STACK:-LUMI/25.09}"
-LUMI_ACCOUNT="${LUMI_ACCOUNT:-project_462001245}"
+LUMI_ACCOUNT="${LUMI_ACCOUNT:-project_462001519}"
 LUMI_PARTITION="${LUMI_PARTITION:-dev-g}"
 LUMI_GPUS="${LUMI_GPUS:-8}"
 LUMI_TIME="${LUMI_TIME:-}"
 LUMI_PRIVATE_MODULES="${LUMI_PRIVATE_MODULES:-${HOME}/privatemodules}"
-LUMI_FLASH_ROOT="${LUMI_FLASH_ROOT:-/flash/project_462001245/juaho/build}"
-LUMI_SCRATCH_LOGS="${LUMI_SCRATCH_LOGS:-/scratch/project_462001245/juaho/logs}"
+LUMI_FLASH_ROOT="${LUMI_FLASH_ROOT:-/flash/project_462001519/juaho/build}"
+LUMI_SCRATCH_LOGS="${LUMI_SCRATCH_LOGS:-/scratch/project_462001519/juaho/logs}"
 ENABLE_HDF5="${ENABLE_HDF5:-}"
 
 declare -a EXTRA_CMAKE_ARGS=()
@@ -85,7 +85,7 @@ Options:
   --build-type=TYPE       Debug or Release
   --build-dir=PATH        Build directory
                           Tohtori default: builds/debug or builds/release
-                          LUMI default: /flash/project_462001245/juaho/build/openpfc-lumi-<backend>-<flavor>
+                          LUMI default: /flash/project_462001519/juaho/build/openpfc-lumi-<backend>-<flavor>
   --with-timestamp        Append YYYYmmdd-HHMMSS to the build directory
   --without-timestamp     Do not append a timestamp (default)
   --with-cuda             Enable CUDA (Tohtori only; not available on LUMI)
@@ -101,7 +101,7 @@ Options:
   --submit                LUMI: submit compile+test to Slurm (default on a login node)
   --no-submit             LUMI: run configure/build/test in this process
   --partition=NAME        LUMI GPU partition: dev-g (default) or standard-g
-  --account=NAME          LUMI Slurm account (default: project_462001245)
+  --account=NAME          LUMI Slurm account (default: project_462001519)
   --time=LIMIT            LUMI Slurm time limit (dev-g default 02:30:00)
   --gpus=N                LUMI GPUs per node (default: 8)
   --wait                  LUMI: sbatch --wait (block until the job finishes)
@@ -137,12 +137,12 @@ Tohtori environment overrides:
 LUMI environment:
   HEFFTE_MODULE           Default: heffte-rocm (from $HOME/privatemodules)
   LUMI_STACK              Default: LUMI/25.09
-  LUMI_ACCOUNT            Default: project_462001245
+  LUMI_ACCOUNT            Default: project_462001519
   LUMI_PARTITION          Default: dev-g (use standard-g for longer jobs)
   LUMI_GPUS               Default: 8
   LUMI_TIME               Default: 02:30:00 on dev-g, 06:00:00 on standard-g
-  LUMI_FLASH_ROOT         Default: /flash/project_462001245/juaho/build
-  LUMI_SCRATCH_LOGS       Default: /scratch/project_462001245/juaho/logs
+  LUMI_FLASH_ROOT         Default: /flash/project_462001519/juaho/build
+  LUMI_SCRATCH_LOGS       Default: /scratch/project_462001519/juaho/logs
   ENABLE_HDF5             Default: ON on Tohtori, OFF on LUMI
 
 Examples:

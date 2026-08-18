@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-#SBATCH --account=project_462001245
+#SBATCH --account=project_462001519
 #SBATCH --partition=small-g
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8

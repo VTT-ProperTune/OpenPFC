@@ -189,7 +189,7 @@ Minimal single-GPU smoke fragment (adjust account and partition):
 
 ```bash
 #!/bin/bash
-#SBATCH --account=project_462001245
+#SBATCH --account=project_462001519
 #SBATCH --partition=small-g
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

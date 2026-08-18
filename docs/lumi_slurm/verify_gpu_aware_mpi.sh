@@ -12,7 +12,7 @@
 #   export VERIFY_GPU_MPI_BIN=/projappl/.../bin/verify_gpu_aware_mpi
 
 # sbatch reads the following directives (lines are shell comments on the compute node):
-#SBATCH --account=project_462001245
+#SBATCH --account=project_462001519
 #SBATCH --partition=small-g
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
@@ -35,7 +35,7 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
   srun --ntasks=2 --gpus-per-node=2 --cpu-bind=cores "${VERIFY_BIN}"
 else
   echo "=== verify_gpu_aware_mpi (interactive; needs GPU allocation) ==="
-  srun --partition=small-g --account="${SLURM_ACCOUNT:-project_462001245}" \
+  srun --partition=small-g --account="${SLURM_ACCOUNT:-project_462001519}" \
     --time=00:05:00 --nodes=1 --ntasks=2 --gpus-per-node=2 \
     --cpu-bind=cores "${VERIFY_BIN}"
 fi

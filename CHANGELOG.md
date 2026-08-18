@@ -14,7 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
-- `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `dev-g` or `standard-g`. CUDA is rejected on LUMI.
+- `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `dev-g` or `standard-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
 - `pfc::comm::SparseExchange<HostSpace>` — host index-set facade over `SparseHaloExchanger` (structured `make_structured_halos` or a custom `RemoteHalo` list; `exchange`/`start`/`finish`). Device `SparseExchange<CudaSpace/HipSpace>` gathers, posts device-pointer MPI, and scatters without a full-field D2H. CUDA execution: verify on tohtori.
 - Device halo default transport is pack-to-contiguous + device-pointer MPI when GPU-aware (`PaddedDeviceHaloExchanger` / `FullPaddedDeviceHalo`). `OPENPFC_{CUDA,HIP}_USE_SUBARRAY_HALO=1` restores derived-type MPI; `*_FORCE_PACKED_HALO=1` still host-stages. Post-exchange sync is stream-scoped, not `cudaDeviceSynchronize` / `hipDeviceSynchronize`.
 - `pfc::comm::HaloExchange<CudaSpace/HipSpace>` — device facade in `runtime/gpu/comm_halo_exchange_gpu.hpp` (Faces / Full, blocking `exchange()`, residency sync). Persistent and split-phase fail closed (device exchangers are blocking-only). CUDA execution: verify on tohtori.

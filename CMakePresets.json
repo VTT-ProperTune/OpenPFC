@@ -79,7 +79,7 @@
       "displayName": "LUMI-G (cpeGNU/Cray MPICH) Release",
       "inherits": ["dev-release"],
       "generator": "Unix Makefiles",
-      "binaryDir": "/flash/project_462001245/juaho/build/openpfc-lumi-release",
+      "binaryDir": "/flash/project_462001519/juaho/build/openpfc-lumi-release",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/lumi-gcc12-mpich.cmake",
         "CMAKE_INSTALL_PREFIX": "/projappl/project_462001245/juaho/openpfc",

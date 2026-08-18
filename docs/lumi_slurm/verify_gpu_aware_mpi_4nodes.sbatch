@@ -12,7 +12,7 @@
 #   export VERIFY_GPU_MPI_BIN=/path/to/build/lumi-release/apps/tungsten/verify_gpu_aware_mpi
 #   sbatch docs/lumi_slurm/verify_gpu_aware_mpi_4nodes.sbatch
 
-#SBATCH --account=project_462001245
+#SBATCH --account=project_462001519
 #SBATCH --partition=small-g
 #SBATCH --nodes=4
 #SBATCH --ntasks=4

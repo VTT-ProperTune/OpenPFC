@@ -49,4 +49,4 @@ Each job creates a directory under `runs/` named with the Slurm job name and ID.
 
 ## Account and partition
 
-The scripts use `#SBATCH --account=project_462001245`. Change if your billing project differs. Use `standard` / `standard-g` instead of `small` / `small-g` if you need the default full-node binding policy without `--exclusive`.
+The scripts use `#SBATCH --account=project_462001519`. Change if your billing project differs. Use `standard` / `standard-g` instead of `small` / `small-g` if you need the default full-node binding policy without `--exclusive`.

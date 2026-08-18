@@ -34,8 +34,8 @@ cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm` from `$HOME/privatemodules`.
 Configure runs on the login node (FetchContent needs outbound HTTP). Compile
 and `ctest` are submitted to **`dev-g`** (default) or **`standard-g`** so AMD
 GPUs are available. CUDA is not supported on LUMI. Build trees default to
-`/flash/project_462001245/juaho/build/openpfc-lumi-rocm-release` (not inside
-the git clone).
+`/flash/project_462001519/juaho/build/openpfc-lumi-rocm-release` (not inside
+the git clone). Slurm account is `project_462001519`.
 
 ```bash
 ./scripts/build.sh --machine=lumi --with-rocm
@@ -44,7 +44,7 @@ the git clone).
 ```
 
 It writes `configure.log`, `build.log`, and `test.log` under the selected
-build directory. LUMI Slurm logs go to `/scratch/project_462001245/juaho/logs/`.
+build directory. LUMI Slurm logs go to `/scratch/project_462001519/juaho/logs/`.
 The final summary reports configure, build, test, and total elapsed times. A
 successful workflow exits with status 0; any configuration, build, or test
 failure exits with status 1.
