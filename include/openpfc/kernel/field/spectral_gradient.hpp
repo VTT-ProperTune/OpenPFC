@@ -49,8 +49,10 @@
 
 #include <openpfc/kernel/fft/box3i.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
+#include <openpfc/kernel/fft/kspace.hpp>
 #include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
+#include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 
 namespace pfc::field {
@@ -68,9 +70,8 @@ template <class G> class SpectralGradient {
 public:
   /**
    * @param fft         FFT plan (caller-owned; must outlive this object).
-   * @param u_in        Bound input field; the FFT API requires a `std::vector`,
-   *                    and the bound vector must outlive this object and not
-   *                    be reassigned/resized between `prepare()` calls.
+   * @param u_in        Read-only view of the inbox-sized field.
+   * @param fft_src     IFFT host vector (same storage as `u_in.data()`).
    * @param global_size Global grid size `{Nx, Ny, Nz}`.
    * @param spacing     Grid spacing `{dx, dy, dz}`.
    * @param inbox       Local real-space box for this rank
@@ -78,11 +79,13 @@ public:
    * @param outbox      Local Fourier-space box for this rank
    *                    (from `IFFT::get_outbox_bounds()`).
    */
-  SpectralGradient(pfc::fft::IFFT &fft, const pfc::fft::RealVector &u_in,
+  SpectralGradient(pfc::fft::IFFT &fft, FieldView<double> u_in,
+                   const pfc::fft::RealVector &fft_src,
                    std::array<int, 3> global_size, std::array<double, 3> spacing,
                    pfc::fft::Box3i inbox, pfc::fft::Box3i outbox)
-      : m_fft(&fft), m_u_in(&u_in), m_inbox(inbox), m_outbox(outbox),
-        m_nx(inbox.size[0]), m_ny(inbox.size[1]), m_nz(inbox.size[2]) {
+      : m_fft(&fft), m_u_in(u_in), m_fft_src(&fft_src), m_inbox(inbox),
+        m_outbox(outbox), m_nx(inbox.size[0]), m_ny(inbox.size[1]),
+        m_nz(inbox.size[2]) {
     const std::size_t in_n = fft.size_inbox();
     const std::size_t out_n = fft.size_outbox();
     m_u_F.assign(out_n, std::complex<double>{});
@@ -110,10 +113,20 @@ public:
 
     pfc::fft::kspace::for_each_kpoint(
         outbox, global_size, spacing,
-        [&](std::size_t idx, double kx, double ky, double kz) {
-          if constexpr (has_x<G>) m_op_x[idx] = std::complex<double>(0.0, kx);
-          if constexpr (has_y<G>) m_op_y[idx] = std::complex<double>(0.0, ky);
-          if constexpr (has_z<G>) m_op_z[idx] = std::complex<double>(0.0, kz);
+        [&](std::size_t idx, double kx, double ky, double kz, int i, int j,
+            int k) {
+          const double kx_odd =
+              pfc::fft::kspace::is_nyquist_index(i, global_size[0]) ? 0.0 : kx;
+          const double ky_odd =
+              pfc::fft::kspace::is_nyquist_index(j, global_size[1]) ? 0.0 : ky;
+          const double kz_odd =
+              pfc::fft::kspace::is_nyquist_index(k, global_size[2]) ? 0.0 : kz;
+          if constexpr (has_x<G>)
+            m_op_x[idx] = std::complex<double>(0.0, kx_odd);
+          if constexpr (has_y<G>)
+            m_op_y[idx] = std::complex<double>(0.0, ky_odd);
+          if constexpr (has_z<G>)
+            m_op_z[idx] = std::complex<double>(0.0, kz_odd);
           if constexpr (has_xx<G>) m_op_xx[idx] = -kx * kx;
           if constexpr (has_yy<G>) m_op_yy[idx] = -ky * ky;
           if constexpr (has_zz<G>) m_op_zz[idx] = -kz * kz;
@@ -124,7 +137,7 @@ public:
   }
 
   void prepare() {
-    m_fft->forward(*m_u_in, m_u_F);
+    m_fft->forward(*m_fft_src, m_u_F);
     if constexpr (has_x<G>) invert_complex_op(m_op_x, m_dx);
     if constexpr (has_y<G>) invert_complex_op(m_op_y, m_dy);
     if constexpr (has_z<G>) invert_complex_op(m_op_z, m_dz);
@@ -153,7 +166,7 @@ public:
   [[nodiscard]] G operator()(int ix, int iy, int iz) const noexcept {
     G g{};
     const std::size_t c = idx(ix, iy, iz);
-    if constexpr (has_value<G>) g.value = (*m_u_in)[c];
+    if constexpr (has_value<G>) g.value = m_u_in.data()[c];
     if constexpr (has_x<G>) g.x = m_dx[c];
     if constexpr (has_y<G>) g.y = m_dy[c];
     if constexpr (has_z<G>) g.z = m_dz[c];
@@ -181,7 +194,8 @@ private:
   }
 
   pfc::fft::IFFT *m_fft{nullptr};
-  const pfc::fft::RealVector *m_u_in{nullptr};
+  FieldView<double> m_u_in{};
+  const pfc::fft::RealVector *m_fft_src{nullptr};
   pfc::fft::Box3i m_inbox{};
   pfc::fft::Box3i m_outbox{};
   int m_nx{0};
@@ -230,9 +244,9 @@ private:
 template <class G>
 [[nodiscard]] inline SpectralGradient<G> create(pfc::data::Field<double> &u,
                                                 pfc::fft::IFFT &fft) {
-  // Bind the live host vector (DataBuffer::as_vector) — a temporary would
-  // dangle because SpectralGradient stores a pointer to the RealVector.
-  return SpectralGradient<G>(fft, u.vec(), u.global_size(), u.spacing(),
+  FieldView<double> view(u.data(), u.size(), u.local_size(), u.spacing(),
+                         u.origin());
+  return SpectralGradient<G>(fft, view, u.vec(), u.global_size(), u.spacing(),
                              fft.get_inbox_bounds(), fft.get_outbox_bounds());
 }
 
