@@ -17,11 +17,17 @@
  * each rank's resolved set and checks every active direction on every rank
  * against its neighbour's opposite bit — fail-closed at construction.
  *
+ * Exchanger constructors skip the Allgather in release builds (`NDEBUG`)
+ * unless `OPENPFC_VALIDATE_NEIGHBOUR_AGREEMENT=1`. Debug builds always
+ * validate unless `OPENPFC_VALIDATE_NEIGHBOUR_AGREEMENT=0`. Call the
+ * function directly to force a check.
+ *
  * @see halo_directions.hpp
  * @see docs/concepts/halo_exchange.md §5
  */
 
 #include <cstdint>
+#include <cstdlib>
 #include <mpi.h>
 #include <stdexcept>
 #include <string>
@@ -75,6 +81,19 @@ encode_direction_set_mask(const HaloDirectionSet &dirs) {
 }
 
 } // namespace detail
+
+/// True when exchanger constructors should run the Allgather check.
+[[nodiscard]] inline bool neighbour_agreement_enabled() noexcept {
+  const char *env = std::getenv("OPENPFC_VALIDATE_NEIGHBOUR_AGREEMENT");
+  if (env != nullptr) {
+    return env[0] == '1';
+  }
+#if defined(NDEBUG)
+  return false;
+#else
+  return true;
+#endif
+}
 
 /**
  * @brief Fail-closed collective check that neighbouring ranks agree on

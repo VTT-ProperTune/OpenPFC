@@ -398,7 +398,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 * [ ] Migrate all exchanger consumers: heat3d, wave2d (CPU+GPU), allen_cahn (CPU+GPU), kobayashi (CPU, CUDA — onto library batching; HIP — onto the device path for the first time), `FdCpuStack`, `StagePreparationService`, gpu_validation tests. **`FdCpuStack` and Allen–Cahn CPU use `SparseExchange`. heat3d, wave2d, and Kobayashi CPU drivers use `HaloExchange`. Kobayashi HIP uses `HaloExchange<HipSpace>`. Allen–Cahn HIP and wave2d HIP use `SparseExchange<HipSpace>`. `StagePreparationService` binds `HaloExchange`. Remaining GPU apps (Allen–Cahn/wave2d/Kobayashi CUDA) and leftover exchanger-class tests (`test_padded_halo_exchange`, `test_sparse_halo_exchange`, …) still use the old classes.**
 * [ ] Per ADR 0007: implement the in-repo min-surface splitter in `src/.../decomposition.cpp`, validated against `heffte::split_world` output for a matrix of (grid, ranks) cases; HeFFTe include removed from the decomposition TU (Pre-M0 PI assertion retargets to the new splitter as its own invariant).
 * [x] Add opt-in `MPI_Comm_dup` isolation to `pfc::mpi::communicator` (coupling prerequisite). (`communicator::duplicate()`; `tests/unit/kernel/mpi/test_communicator.cpp`)
-* [ ] Make `validate_neighbour_direction_agreement` opt-out for release builds (documented) to remove the per-construction `MPI_Allgather` at scale.
+* [x] Make `validate_neighbour_direction_agreement` opt-out for release builds (documented) to remove the per-construction `MPI_Allgather` at scale. (`neighbour_agreement_enabled()`; `OPENPFC_VALIDATE_NEIGHBOUR_AGREEMENT`; constructors skip when off.)
 
 ### Required tests
 

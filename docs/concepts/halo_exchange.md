@@ -185,7 +185,9 @@ For 2D slab apps (`apps/kobayashi/src/cuda/kobayashi_fd_cuda.cpp` is the canonic
 > active direction `d` toward neighbour `n` requires `-d` in `n`'s set (global
 > set identity is not required). A mismatch throws `std::runtime_error` at
 > construction — before any exchange posts — rather than hanging on an unmatched
-> Waitall. **Follow-up:** CUDA/HIP `PaddedDeviceHaloExchanger` /
+> Waitall. Release builds (`NDEBUG`) skip the Allgather unless
+> `OPENPFC_VALIDATE_NEIGHBOUR_AGREEMENT=1`. Debug builds always check unless
+> that variable is `0`. **Follow-up:** CUDA/HIP `PaddedDeviceHaloExchanger` /
 > `FullPaddedDeviceHalo` (and app-local `BatchedPaddedDeviceHalo`) dirs/selector
 > constructors do not yet call the same helper.
 

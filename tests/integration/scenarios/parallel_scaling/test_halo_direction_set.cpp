@@ -331,10 +331,16 @@ TEST_CASE("Mismatched HaloDirectionSelector throws at construction",
   auto domain = pfc::decomposition::domain(decomp);
   auto subdomain_box = pfc::decomposition::local_box(decomp, rank);
   REQUIRE_THROWS_AS(
-      (PaddedHaloExchanger<double>(subdomain_box, domain, decomp, rank, hw, MPI_COMM_WORLD,
-                                   halo::presets::Axes3D(), /*base_tag=*/0,
-                                   selector)),
+      (halo::validate_neighbour_direction_agreement(
+          MPI_COMM_WORLD, decomp, rank, selector(rank))),
       std::runtime_error);
+  if (halo::neighbour_agreement_enabled()) {
+    REQUIRE_THROWS_AS(
+        (PaddedHaloExchanger<double>(subdomain_box, domain, decomp, rank, hw,
+                                     MPI_COMM_WORLD, halo::presets::Axes3D(),
+                                     /*base_tag=*/0, selector)),
+        std::runtime_error);
+  }
 }
 
 TEST_CASE("Agreeing Axes2D constructs HaloExchanger and PersistentHaloExchanger",

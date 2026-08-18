@@ -170,7 +170,9 @@ public:
       : m_subdomain_box(subdomain_box), m_domain(domain), m_decomp(decomp),
         m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)), m_use_decomp(false) {
-    halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
+    if (halo::neighbour_agreement_enabled()) {
+      halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
+    }
 
     // Extract local size from explicit Box3i bounds
     const int nx = m_subdomain_box.size[0];

@@ -138,7 +138,9 @@ public:
                           halo::HaloDirectionSelector selector = {})
       : m_comm(comm), m_base_tag(base_tag), m_buf(static_cast<void *>(field_ptr)),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
-    halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
+    if (halo::neighbour_agreement_enabled()) {
+      halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
+    }
 
     auto patterns = halo::create_halo_patterns<backend::CpuTag>(
         decomp, rank, halo::Connectivity::Faces, halo_width);
