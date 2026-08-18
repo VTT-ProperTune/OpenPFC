@@ -15,8 +15,8 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 namespace allen_cahn {
@@ -194,15 +194,15 @@ inline void report_step_timing(MPI_Comm comm, int rank, int n_steps,
   }
 }
 
-inline void step_explicit_euler_cpu(std::vector<double> *u, std::vector<double> *lap,
-                                    std::array<std::vector<double>, 6> *face_halos,
-                                    pfc::SparseHaloExchanger<double> *exchanger,
-                                    int nx, int ny, int nz, double inv_dx2,
-                                    double inv_dy2, double dt, double M,
-                                    double inv_eps2, double driving_force) {
+inline void step_explicit_euler_cpu(
+    std::vector<double> *u, std::vector<double> *lap,
+    std::array<std::vector<double>, 6> *face_halos,
+    pfc::comm::SparseExchange<pfc::HostSpace, double> *exchanger, int nx, int ny,
+    int nz, double inv_dx2, double inv_dy2, double dt, double M, double inv_eps2,
+    double driving_force) {
   constexpr int hw = RunConfig::kHaloWidth;
-  exchanger->exchange_halos(u->data(), u->size());
-  pfc::halo::copy_to_face_layout(*exchanger, *face_halos);
+  exchanger->exchange(u->data(), u->size());
+  pfc::halo::copy_to_face_layout(exchanger->halos(), *face_halos);
   std::fill(lap->begin(), lap->end(), 0.0);
   std::array<const double *, 6> face_ptrs{};
   for (int i = 0; i < 6; ++i) {

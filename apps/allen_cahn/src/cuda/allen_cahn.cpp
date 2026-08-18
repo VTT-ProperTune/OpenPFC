@@ -25,6 +25,7 @@
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
+#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
 
 namespace {
 
