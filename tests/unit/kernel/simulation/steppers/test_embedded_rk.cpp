@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -192,4 +193,40 @@ TEST_CASE("accepted Field state unchanged", "[embedded_rk][field]") {
   REQUIRE(result.success);
   REQUIRE(u.vec() == fingerprint);
   REQUIRE(result.candidate.size() == u.size());
+}
+
+struct ConstantComplexRhs {
+  std::complex<double> c{};
+  void operator()(double /*t*/, std::vector<std::complex<double>> & /*u*/,
+                  std::vector<std::complex<double>> &du) const {
+    for (auto &d : du) {
+      d = c;
+    }
+  }
+};
+
+TEST_CASE("embedded rk23 complex constant RHS",
+          "[embedded_rk][unit][complex]") {
+  using Complex = std::complex<double>;
+  constexpr Complex c{0.15, -0.05};
+  constexpr Complex u0{2.0, -1.0};
+  constexpr double dt = 0.2;
+  const Complex expected = u0 + Complex(dt) * c;
+  ConstantComplexRhs rhs{c};
+  EmbeddedRKStepper<ConstantComplexRhs, Complex> stepper(
+      1, make_embedded_rk23<double>(), rhs);
+  std::vector<Complex> u{u0};
+  const auto fingerprint = u;
+  auto result = stepper.attempt(0.0, dt, u);
+  REQUIRE(result.success);
+  REQUIRE(u == fingerprint);
+  REQUIRE(result.candidate[0].real() ==
+          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(result.candidate[0].imag() ==
+          Catch::Approx(expected.imag()).margin(1e-12));
+  REQUIRE(stepper.u_high()[0].real() ==
+          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(stepper.u_low()[0].real() ==
+          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(std::abs(stepper.error()[0]) == Catch::Approx(0.0).margin(1e-12));
 }

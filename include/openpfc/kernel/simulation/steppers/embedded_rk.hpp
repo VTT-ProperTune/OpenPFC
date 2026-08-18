@@ -47,13 +47,17 @@ namespace pfc::sim::steppers {
  * storage. Does not decide accept/reject or next `dt` — that policy stays
  * with the adaptive driver/controller.
  *
- * @tparam Rhs Callable invocable as `rhs(t, u, du)` filling `du`
- *             (`StageFunction`).
+ * @tparam Rhs    Callable invocable as `rhs(t, u, du)` filling `du`
+ *                (`StageFunctionFor<Rhs, Scalar>`).
+ * @tparam Scalar Field element type (`double` or `std::complex<double>`).
  */
-template <class Rhs>
-  requires StageFunction<Rhs>
+template <class Rhs, class Scalar = double>
+  requires StageFunctionFor<Rhs, Scalar>
 class EmbeddedRKStepper {
 public:
+  using scalar_type = Scalar;
+  using Attempt = StepAttempt<Scalar>;
+
   /**
    * @brief Construct an embedded RK stepper.
    *
@@ -65,9 +69,9 @@ public:
    */
   EmbeddedRKStepper(std::size_t local_size, ButcherTableau<double> tableau,
                     Rhs rhs)
-      : m_local_size(local_size), m_du(local_size, 0.0),
-        m_u_temp(local_size, 0.0), m_u_high(local_size, 0.0),
-        m_u_low(local_size, 0.0), m_error(local_size, 0.0),
+      : m_local_size(local_size), m_du(local_size, Scalar{}),
+        m_u_temp(local_size, Scalar{}), m_u_high(local_size, Scalar{}),
+        m_u_low(local_size, Scalar{}), m_error(local_size, Scalar{}),
         m_tableau(std::move(tableau)), m_rhs(std::move(rhs)) {
     if (!m_tableau.has_embedded()) {
       throw std::invalid_argument(
@@ -77,7 +81,7 @@ public:
     const unsigned int s = m_tableau.stage_count();
     m_k.resize(s);
     for (unsigned int i = 0; i < s; ++i) {
-      m_k[i].assign(local_size, 0.0);
+      m_k[i].assign(local_size, Scalar{});
     }
   }
 
@@ -95,8 +99,8 @@ public:
    *
    * @throws std::invalid_argument if `u.size() != local_size`.
    */
-  [[nodiscard]] StepAttemptResult attempt(double t, double dt,
-                                          const std::vector<double> &u) {
+  [[nodiscard]] Attempt attempt(double t, double dt,
+                                const std::vector<Scalar> &u) {
     if (u.size() != m_local_size) {
       throw std::invalid_argument(
           "EmbeddedRKStepper::attempt: u.size() (" +
@@ -112,8 +116,9 @@ public:
       for (unsigned int j = 0; j < i; ++j) {
         const double a_ij = m_tableau.a(i, j);
         if (a_ij != 0.0) {
+          const Scalar scale = Scalar(dt * a_ij);
           for (std::size_t idx = 0; idx < m_local_size; ++idx) {
-            m_u_temp[idx] += dt * a_ij * m_k[j][idx];
+            m_u_temp[idx] += scale * m_k[j][idx];
           }
         }
       }
@@ -130,13 +135,15 @@ public:
       const double b_i = m_tableau.b(i);
       const double b_hat_i = m_tableau.b_hat(i);
       if (b_i != 0.0 || b_hat_i != 0.0) {
+        const Scalar scale_b = Scalar(dt * b_i);
+        const Scalar scale_hat = Scalar(dt * b_hat_i);
         for (std::size_t idx = 0; idx < m_local_size; ++idx) {
-          const double k_val = m_k[i][idx];
+          const Scalar k_val = m_k[i][idx];
           if (b_i != 0.0) {
-            m_u_high[idx] += dt * b_i * k_val;
+            m_u_high[idx] += scale_b * k_val;
           }
           if (b_hat_i != 0.0) {
-            m_u_low[idx] += dt * b_hat_i * k_val;
+            m_u_low[idx] += scale_hat * k_val;
           }
         }
       }
@@ -146,12 +153,12 @@ public:
       m_error[idx] = m_u_high[idx] - m_u_low[idx];
     }
 
-    return StepAttemptResult(t, dt, t + dt, /*success=*/true, m_u_high);
+    return Attempt(t, dt, t + dt, /*success=*/true, m_u_high);
   }
 
-  /** Isolate high/low/error from a host `Field<double>` (via `vec()`). */
-  [[nodiscard]] StepAttemptResult attempt(double t, double dt,
-                                          const pfc::data::Field<double> &u) {
+  /** Isolate high/low/error from a host `Field<Scalar>` (via `vec()`). */
+  [[nodiscard]] Attempt attempt(double t, double dt,
+                                const pfc::data::Field<Scalar> &u) {
     return attempt(t, dt, u.vec());
   }
 
@@ -159,15 +166,15 @@ public:
     return m_tableau;
   }
 
-  [[nodiscard]] const std::vector<double> &u_high() const noexcept {
+  [[nodiscard]] const std::vector<Scalar> &u_high() const noexcept {
     return m_u_high;
   }
 
-  [[nodiscard]] const std::vector<double> &u_low() const noexcept {
+  [[nodiscard]] const std::vector<Scalar> &u_low() const noexcept {
     return m_u_low;
   }
 
-  [[nodiscard]] const std::vector<double> &error() const noexcept {
+  [[nodiscard]] const std::vector<Scalar> &error() const noexcept {
     return m_error;
   }
 
@@ -178,12 +185,12 @@ public:
 
 private:
   std::size_t m_local_size{0};
-  std::vector<double> m_du;
-  std::vector<std::vector<double>> m_k;
-  std::vector<double> m_u_temp;
-  std::vector<double> m_u_high;
-  std::vector<double> m_u_low;
-  std::vector<double> m_error;
+  std::vector<Scalar> m_du;
+  std::vector<std::vector<Scalar>> m_k;
+  std::vector<Scalar> m_u_temp;
+  std::vector<Scalar> m_u_high;
+  std::vector<Scalar> m_u_low;
+  std::vector<Scalar> m_error;
   unsigned int m_last_rhs_evals{0};
   ButcherTableau<double> m_tableau;
   Rhs m_rhs;

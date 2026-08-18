@@ -16,17 +16,17 @@
  * internal scratch buffers, and a user-supplied `Rhs` callable that knows
  * about the spatial discretization. The stepper itself is agnostic.
  *
- * **Single-field variant** (`ExplicitRKStepper<Rhs>`):
- *   - RHS signature: `rhs(double t, std::vector<double>& u, std::vector<double>&
+ * **Single-field variant** (`ExplicitRKStepper<Rhs, Scalar>`):
+ *   - RHS signature: `rhs(double t, std::vector<Scalar>& u, std::vector<Scalar>&
  * du)`
  *   - Stores one `du` buffer and one scratch buffer per RK stage (`m_k`)
  *   - Implements the explicit RK algorithm: for each stage i, compute
  *     `k_i = rhs(t + c_i*dt, u + sum_j(a_ij*k_j))`, then final accumulation
  *     `u += dt * sum_i(b_i*k_i)`
  *
- * **Multi-field variant** (`MultiExplicitRKStepper<Rhs, N>`):
- *   - RHS signature: `rhs(double t, std::tuple<std::vector<double>&, ...> u_pack,
- * std::tuple<std::vector<double>&, ...> du_pack)`
+ * **Multi-field variant** (`MultiExplicitRKStepper<Rhs, N, Scalar>`):
+ *   - RHS signature: `rhs(double t, std::tuple<std::vector<Scalar>&, ...> u_pack,
+ * std::tuple<std::vector<Scalar>&, ...> du_pack)`
  *   - Stores one `du` buffer per field and one scratch buffer per field per stage
  *   - Applies the same RK algorithm to each field independently using the tuple
  * protocol
@@ -46,6 +46,7 @@
 #include <array>
 #include <cstddef>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -64,14 +65,18 @@ namespace pfc::sim::steppers {
  * final weighted accumulation. Pre-allocates scratch buffers (`m_k`) in the
  * constructor to avoid per-step allocations.
  *
- * @tparam Rhs Any callable invocable as
- *             `rhs(double t, std::vector<double>& u, std::vector<double>& du)`.
- *             It must fill `du`; the stepper accumulates the result.
+ * @tparam Rhs    Any callable invocable as
+ *                `rhs(double t, std::vector<Scalar>& u, std::vector<Scalar>& du)`.
+ *                It must fill `du`; the stepper accumulates the result.
+ * @tparam Scalar Field element type (`double` or `std::complex<double>`).
  */
-template <class Rhs>
-  requires StageFunction<Rhs>
+template <class Rhs, class Scalar = double>
+  requires StageFunctionFor<Rhs, Scalar>
 class ExplicitRKStepper {
 public:
+  using scalar_type = Scalar;
+  using Attempt = StepAttempt<Scalar>;
+
   /**
    * @brief Construct an explicit RK stepper.
    *
@@ -82,13 +87,13 @@ public:
    */
   ExplicitRKStepper(double dt, std::size_t local_size,
                     ButcherTableau<double> tableau, Rhs rhs)
-      : m_dt(dt), m_du(local_size, 0.0), m_u_temp(local_size, 0.0),
-        m_candidate(local_size, 0.0), m_tableau(std::move(tableau)),
+      : m_dt(dt), m_du(local_size, Scalar{}), m_u_temp(local_size, Scalar{}),
+        m_candidate(local_size, Scalar{}), m_tableau(std::move(tableau)),
         m_rhs(std::move(rhs)) {
     const unsigned int s = m_tableau.stage_count();
     m_k.resize(s);
     for (unsigned int i = 0; i < s; ++i) {
-      m_k[i].assign(local_size, 0.0);
+      m_k[i].assign(local_size, Scalar{});
     }
   }
 
@@ -99,8 +104,7 @@ public:
    *   1. For each stage i: k_i = rhs(t + c_i*dt, u + dt * sum_j(a_ij * k_j))
    *   2. Candidate: u + dt * sum_i(b_i * k_i)
    */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const std::vector<double> &u) {
+  [[nodiscard]] Attempt attempt(double t, const std::vector<Scalar> &u) {
     const unsigned int s = m_tableau.stage_count();
     const std::size_t n = u.size();
 
@@ -109,8 +113,9 @@ public:
       for (unsigned int j = 0; j < i; ++j) {
         const double a_ij = m_tableau.a(i, j);
         if (a_ij != 0.0) {
+          const Scalar scale = Scalar(m_dt * a_ij);
           for (std::size_t idx = 0; idx < n; ++idx) {
-            m_u_temp[idx] += m_dt * a_ij * m_k[j][idx];
+            m_u_temp[idx] += scale * m_k[j][idx];
           }
         }
       }
@@ -124,38 +129,38 @@ public:
     for (unsigned int i = 0; i < s; ++i) {
       const double b_i = m_tableau.b(i);
       if (b_i != 0.0) {
+        const Scalar scale = Scalar(m_dt * b_i);
         for (std::size_t idx = 0; idx < n; ++idx) {
-          m_candidate[idx] += m_dt * b_i * m_k[i][idx];
+          m_candidate[idx] += scale * m_k[i][idx];
         }
       }
     }
-    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
+    return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
   }
 
   /** Advance `u` by one explicit RK step; commit of `attempt`. */
-  double step(double t, std::vector<double> &u) {
-    const StepAttemptResult r = attempt(t, u);
+  double step(double t, std::vector<Scalar> &u) {
+    const Attempt r = attempt(t, u);
     commit_step_attempt(u, r);
     return r.t1;
   }
 
   double dt() const noexcept { return m_dt; }
 
-  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const pfc::data::Field<double> &u) {
+  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
+  [[nodiscard]] Attempt attempt(double t, const pfc::data::Field<Scalar> &u) {
     return attempt(t, u.vec());
   }
 
-  /** Advance a host `Field<double>` by one explicit RK step. */
-  double step(double t, pfc::data::Field<double> &u) { return step(t, u.vec()); }
+  /** Advance a host `Field<Scalar>` by one explicit RK step. */
+  double step(double t, pfc::data::Field<Scalar> &u) { return step(t, u.vec()); }
 
 private:
   double m_dt{0.0};
-  std::vector<double> m_du;
-  std::vector<double> m_u_temp;
-  std::vector<double> m_candidate;
-  std::vector<std::vector<double>> m_k; // scratch buffers per stage
+  std::vector<Scalar> m_du;
+  std::vector<Scalar> m_u_temp;
+  std::vector<Scalar> m_candidate;
+  std::vector<std::vector<Scalar>> m_k; // scratch buffers per stage
   ButcherTableau<double> m_tableau;
   Rhs m_rhs;
 };
@@ -167,13 +172,16 @@ private:
  * Applies the same RK algorithm to each field independently using the tuple
  * protocol.
  *
- * @tparam Rhs Multi-field RHS callable invocable as
- *             `rhs(double t, std::tuple<std::vector<double>&, ...> u_pack,
- * std::tuple<std::vector<double>&, ...> du_pack)`.
- * @tparam N Number of fields.
+ * @tparam Rhs    Multi-field RHS callable invocable as
+ *                `rhs(double t, std::tuple<std::vector<Scalar>&, ...> u_pack,
+ * std::tuple<std::vector<Scalar>&, ...> du_pack)`.
+ * @tparam N      Number of fields.
+ * @tparam Scalar Field element type (`double` or `std::complex<double>`).
  */
-template <class Rhs, std::size_t N> class MultiExplicitRKStepper {
+template <class Rhs, std::size_t N, class Scalar = double>
+class MultiExplicitRKStepper {
 public:
+  using scalar_type = Scalar;
   /**
    * @brief Construct a multi-field explicit RK stepper.
    *
@@ -186,11 +194,11 @@ public:
                          ButcherTableau<double> tableau, Rhs rhs)
       : m_dt(dt), m_tableau(std::move(tableau)), m_rhs(std::move(rhs)) {
     for (std::size_t i = 0; i < N; ++i) {
-      m_du[i].assign(local_sizes[i], 0.0);
+      m_du[i].assign(local_sizes[i], Scalar{});
       const unsigned int s = m_tableau.stage_count();
       m_k[i].resize(s);
       for (unsigned int j = 0; j < s; ++j) {
-        m_k[i][j].assign(local_sizes[i], 0.0);
+        m_k[i][j].assign(local_sizes[i], Scalar{});
       }
     }
   }
@@ -206,6 +214,8 @@ public:
   template <class... U> double step(double t, std::vector<U> &...u_buffers) {
     static_assert(sizeof...(U) == N,
                   "MultiExplicitRKStepper::step: number of u buffers must match N.");
+    static_assert((std::is_same_v<U, Scalar> && ...),
+                  "MultiExplicitRKStepper requires std::vector<Scalar>");
 
     const unsigned int s = m_tableau.stage_count();
     auto u_pack = std::tie(u_buffers...);
@@ -241,16 +251,17 @@ private:
   }
 
   template <std::size_t FieldIdx, class U>
-  std::vector<double> make_u_temp_one(std::vector<U> &u, unsigned int stage_idx) {
-    std::vector<double> u_temp(u.begin(), u.end());
+  std::vector<Scalar> make_u_temp_one(std::vector<U> &u, unsigned int stage_idx) {
+    std::vector<Scalar> u_temp(u.begin(), u.end());
 
     // Add contributions from previous stages: u_temp += dt * sum_j(a_ij * k_j)
     for (unsigned int j = 0; j < stage_idx; ++j) {
       const double a_ij = m_tableau.a(stage_idx, j);
       if (a_ij != 0.0) {
+        const Scalar scale = Scalar(m_dt * a_ij);
         const std::size_t n = u.size();
         for (std::size_t li = 0; li < n; ++li) {
-          u_temp[li] += m_dt * a_ij * m_k[FieldIdx][j][li];
+          u_temp[li] += scale * m_k[FieldIdx][j][li];
         }
       }
     }
@@ -279,16 +290,17 @@ private:
     for (unsigned int i = 0; i < s; ++i) {
       const double b_i = m_tableau.b(i);
       if (b_i != 0.0) {
+        const Scalar scale = Scalar(m_dt * b_i);
         for (std::size_t li = 0; li < n; ++li) {
-          u[li] += m_dt * b_i * m_k[FieldIdx][i][li];
+          u[li] += scale * m_k[FieldIdx][i][li];
         }
       }
     }
   }
 
   double m_dt{0.0};
-  std::array<std::vector<double>, N> m_du;
-  std::array<std::vector<std::vector<double>>, N> m_k; // scratch per field per stage
+  std::array<std::vector<Scalar>, N> m_du;
+  std::array<std::vector<std::vector<Scalar>>, N> m_k; // scratch per field per stage
   ButcherTableau<double> m_tableau;
   Rhs m_rhs;
 };

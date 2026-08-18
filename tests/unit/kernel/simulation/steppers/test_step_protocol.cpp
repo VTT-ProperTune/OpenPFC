@@ -217,6 +217,16 @@ TEST_CASE("RK2 and RK3 Heun complex constant RHS",
           Catch::Approx(expected.real()).margin(1e-12));
   REQUIRE(rb.candidate[0].imag() ==
           Catch::Approx(expected.imag()).margin(1e-12));
+
+  ExplicitRKStepper<ConstantComplexRhs, Complex> rk4(
+      dt, 1, make_rk4_classical<double>(), rhs);
+  std::vector<Complex> cvec{u0};
+  const auto rc = rk4.attempt(0.0, cvec);
+  REQUIRE(rc.success);
+  REQUIRE(rc.candidate[0].real() ==
+          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(rc.candidate[0].imag() ==
+          Catch::Approx(expected.imag()).margin(1e-12));
 }
 
 TEST_CASE("RK3HeunStepper attempt/commit on host Field<double>",

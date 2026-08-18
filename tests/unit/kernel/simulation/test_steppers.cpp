@@ -4,6 +4,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
+#include <complex>
 #include <vector>
 #include <openpfc/kernel/simulation/time.hpp>
 
@@ -240,6 +241,33 @@ TEST_CASE("MultiExplicitRKStepper updates fields independently (RK4)",
   for (std::size_t i = 0; i < n; ++i) {
     REQUIRE(u1[i] == Approx(2.0 * dt * 1.0)); // 0.2
     REQUIRE(u2[i] == Approx(2.0 * dt * 2.0)); // 0.4
+  }
+}
+
+TEST_CASE("MultiExplicitRKStepper complex constant RHS (RK4)",
+          "[stepper][unit][complex]") {
+  using Complex = std::complex<double>;
+  constexpr double dt = 0.1;
+  constexpr Complex c0{1.0, -0.5};
+  constexpr Complex c1{0.0, 2.0};
+  std::vector<Complex> u1(2, Complex{0.0, 0.0});
+  std::vector<Complex> u2(2, Complex{0.0, 0.0});
+  auto rhs = [c0, c1](double /*t*/, auto & /*u_pack*/, auto &du_pack) {
+    auto &du1 = std::get<0>(du_pack);
+    auto &du2 = std::get<1>(du_pack);
+    for (std::size_t i = 0; i < du1.size(); ++i) {
+      du1[i] = c0;
+      du2[i] = c1;
+    }
+  };
+  MultiExplicitRKStepper<decltype(rhs), 2, Complex> stepper(
+      dt, {2, 2}, make_rk4_classical<double>(), rhs);
+  stepper.step(0.0, u1, u2);
+  for (std::size_t i = 0; i < u1.size(); ++i) {
+    REQUIRE(u1[i].real() == Approx((Complex(dt) * c0).real()));
+    REQUIRE(u1[i].imag() == Approx((Complex(dt) * c0).imag()));
+    REQUIRE(u2[i].real() == Approx((Complex(dt) * c1).real()));
+    REQUIRE(u2[i].imag() == Approx((Complex(dt) * c1).imag()));
   }
 }
 
