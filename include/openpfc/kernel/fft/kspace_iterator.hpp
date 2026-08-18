@@ -9,10 +9,9 @@
  *
  * @details
  * `for_each_kpoint` walks an FFT outbox in the same x-fastest order as
- * HeFFTe r2c buffers and calls `fn(idx, kx, ky, kz)`. Wavenumbers use
- * `kspace::k_component` (Nyquist folding). A device kernel iterator is a
- * later increment; this host helper is what `SpectralGradient` uses to
- * build operator tables.
+ * HeFFTe r2c buffers and calls `fn(idx, kx, ky, kz, i, j, k)`. Wavenumbers
+ * use `kspace::k_component` (Nyquist folding). Device kernels use the
+ * `OPENPFC_HD` scalars in `kspace.hpp` (see `runtime/gpu/kspace_iterator_gpu.hpp`).
  */
 
 #include <array>
@@ -31,7 +30,8 @@ namespace pfc::fft::kspace {
  * @param outbox      Inclusive local Fourier-space index box.
  * @param global_size Global real-space grid `{Nx, Ny, Nz}`.
  * @param spacing     Grid spacing `{dx, dy, dz}`.
- * @param fn          Callable `void(std::size_t idx, double kx, double ky, double kz)`.
+ * @param fn          Callable
+ *        `void(std::size_t idx, double kx, double ky, double kz, int i, int j, int k)`.
  */
 template <typename Fn>
 void for_each_kpoint(const Box3i &outbox, std::array<int, 3> global_size,
@@ -46,7 +46,7 @@ void for_each_kpoint(const Box3i &outbox, std::array<int, 3> global_size,
       const double ky = k_component(j, global_size[1], fy);
       for (int i = outbox.low[0]; i <= outbox.high[0]; ++i) {
         const double kx = k_component(i, global_size[0], fx);
-        fn(idx, kx, ky, kz);
+        fn(idx, kx, ky, kz, i, j, k);
         ++idx;
       }
     }

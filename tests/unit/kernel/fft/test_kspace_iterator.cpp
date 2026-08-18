@@ -31,12 +31,7 @@ TEST_CASE("for_each_kpoint matches a hand-rolled loop on even and odd grids",
     std::size_t n = 0;
     bool matches = true;
     for_each_kpoint(outbox, domain, [&](std::size_t idx, double kx, double ky,
-                                        double kz) {
-      const int i = static_cast<int>(idx % static_cast<std::size_t>(size[0]));
-      const int j = static_cast<int>((idx / static_cast<std::size_t>(size[0])) %
-                                     static_cast<std::size_t>(size[1]));
-      const int k = static_cast<int>(idx / (static_cast<std::size_t>(size[0]) *
-                                            static_cast<std::size_t>(size[1])));
+                                        double kz, int i, int j, int k) {
       matches &= idx == n;
       matches &= kx == k_component(i, size[0], fx);
       matches &= ky == k_component(j, size[1], fy);

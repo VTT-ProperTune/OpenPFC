@@ -270,8 +270,20 @@ TEST_CASE("Integration with World API", "[fft][kspace][integration]") {
   }
 }
 
+TEST_CASE("is_nyquist_index and k_component_odd zero the even-grid Nyquist",
+          "[fft][kspace][nyquist]") {
+  REQUIRE(is_nyquist_index(8, 16));
+  REQUIRE_FALSE(is_nyquist_index(8, 15));
+  REQUIRE_FALSE(is_nyquist_index(7, 16));
+  constexpr double fx = 0.5;
+  REQUIRE(k_component_odd(8, 16, fx) == 0.0);
+  REQUIRE(k_component_odd(1, 16, fx) == k_component(1, 16, fx));
+}
+
 TEST_CASE("Helper functions are noexcept", "[fft][kspace][static]") {
   STATIC_REQUIRE(noexcept(k_component(0, 128, 1.0)));
+  STATIC_REQUIRE(noexcept(k_component_odd(0, 128, 1.0)));
+  STATIC_REQUIRE(noexcept(is_nyquist_index(0, 128)));
   STATIC_REQUIRE(noexcept(k_laplacian_value(1.0, 1.0, 1.0)));
   STATIC_REQUIRE(noexcept(k_squared_value(1.0, 1.0, 1.0)));
 

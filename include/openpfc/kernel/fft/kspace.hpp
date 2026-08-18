@@ -64,6 +64,7 @@
 #include <cmath>
 #include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/host_device.hpp>
 #include <openpfc/kernel/data/world.hpp>
 
 namespace pfc::fft::kspace {
@@ -162,8 +163,27 @@ inline std::array<double, 3> k_frequency_scaling(const Domain &domain) noexcept 
  * Time complexity: O(1)
  * Space complexity: O(1)
  */
-inline double k_component(int index, int size, double freq_scale) noexcept {
+OPENPFC_INLINE_HD double k_component(int index, int size,
+                                     double freq_scale) noexcept {
   return (index <= size / 2) ? index * freq_scale : (index - size) * freq_scale;
+}
+
+/// True when `index` is the even-grid Nyquist mode (`size/2`).
+OPENPFC_INLINE_HD bool is_nyquist_index(int index, int size) noexcept {
+  return (size % 2 == 0) && (index == size / 2);
+}
+
+/**
+ * @brief Wave-vector component for **odd** spectral operators.
+ *
+ * Same as `k_component`, except the Nyquist mode is zero. A real r2c
+ * field has a purely real Nyquist coefficient; `i k_N` would invent an
+ * imaginary part that is not uniquely defined (Audit K1).
+ */
+OPENPFC_INLINE_HD double k_component_odd(int index, int size,
+                                         double freq_scale) noexcept {
+  return is_nyquist_index(index, size) ? 0.0
+                                       : k_component(index, size, freq_scale);
 }
 
 /**
