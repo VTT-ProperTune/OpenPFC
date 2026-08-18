@@ -496,7 +496,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 ### Deletions
 
-* [ ] `fd_stencils.hpp:325–337` back-compat shims. **`StageContext` and workspace each have one type (sim names are aliases). `IntegratorMethod` in `time.hpp` is deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
+* [x] `fd_stencils.hpp` `detail::EvenFdStencil1d` / `fd_even_order_lookup` back-compat shims deleted (unused). **`StageContext` and workspace each have one type (sim names are aliases). `IntegratorMethod` in `time.hpp` is deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
 * [x] `euler_attempt.hpp` (its proof role is absorbed by the ported steppers). **Deleted; `MultiEulerStepper` now has `attempt` (any N).**
 
 ### Definition of done

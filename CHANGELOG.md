@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- Deleted unused `fd_stencils.hpp` back-compat shims (`detail::EvenFdStencil1d`, `fd_even_order_lookup`).
 - One workspace type: `pfc::sim::steppers::StageWorkspace<T>` is an alias of `pfc::integrator::Workspace<T>` (stage vectors + scratch, move-only, `clear()`/`reset()`).
 - One `StageContext`: `pfc::sim::StageContext` is an alias of `pfc::integrator::StageContext`. The struct carries integrator flags plus optional `ExecutionService*`; solvers use `time` (was `evaluation_time`) and `service()`.
 - `MultiEulerStepper` isolates candidates via `attempt` (any N). Public `euler_attempt.hpp` is deleted.

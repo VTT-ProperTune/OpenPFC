@@ -160,14 +160,14 @@ std::size_t num_stages = 4;  // For RK4
 // Create workspace
 Workspace<double> workspace(extents, num_stages);
 
-// Access stage storage
-double* stage0 = workspace.stage(0);
-double* stage1 = workspace.stage(1);
-double* stage2 = workspace.stage(2);
-double* stage3 = workspace.stage(3);
+// Access stage storage (`std::vector<T>&`)
+auto& stage0 = workspace.stage(0);
+auto& stage1 = workspace.stage(1);
+auto& stage2 = workspace.stage(2);
+auto& stage3 = workspace.stage(3);
 
 // Access scratch buffer
-double* scratch = workspace.scratch();
+auto& scratch = workspace.scratch();
 
 // Clear all buffers
 workspace.clear();
@@ -187,10 +187,10 @@ public:
         du_output.validate_no_alias(u_view);
 
         // Use workspace for intermediate computations
-        double* scratch = m_workspace.scratch();
+        auto& scratch = m_workspace.scratch();
 
         // Compute RHS using scratch
-        compute_rhs(u_view, scratch);
+        compute_rhs(u_view, scratch.data());
 
         // Write result to output
         for (std::size_t i = 0; i < du_output.size(); ++i) {

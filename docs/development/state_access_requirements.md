@@ -209,8 +209,8 @@ validate_backend_compatibility<double, CPUBackendTag, CUDABackendTag>(field1, fi
 Workspace<double> workspace(extents, num_stages);
 
 // Integrator uses workspace internally
-double* stage1 = workspace.stage(0);
-double* scratch = workspace.scratch();
+auto& stage1 = workspace.stage(0);
+auto& scratch = workspace.scratch();
 
 // Workspace is not exposed to physics models or drivers
 ```
@@ -221,7 +221,7 @@ double* scratch = workspace.scratch();
 - **Reused across steps**: Avoids allocation overhead
 - **Size matches field dimensions**: Stage buffers sized to field extents
 
-**Verification**: Workspace<T>::stage() returns pointers to pre-allocated stage buffers. Stage count and size are fixed at construction time.
+**Verification**: Workspace<T>::stage() returns a bounds-checked `std::vector<T>&` for each pre-allocated stage. Stage count and size are fixed at construction time.
 
 ### Scratch Buffers
 
@@ -229,7 +229,7 @@ double* scratch = workspace.scratch();
 - **Cleared/reclaimed between uses**: No persistent state across steps
 - **Lifetime**: Managed by integrator, not exposed externally
 
-**Verification**: Workspace<T>::scratch() returns pointer to scratch buffer. Workspace<T>::clear() resets all buffers to zero.
+**Verification**: Workspace<T>::scratch() returns the scratch `std::vector<T>&`. Workspace<T>::clear() / `reset()` zero all buffers.
 
 ## MPI Coordination Requirements
 
