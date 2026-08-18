@@ -14,6 +14,14 @@ void wave2d_step_cuda(double *u_dev, double *v_dev, const double *hpx_dev,
                       int halo_width, double inv_dx2, double inv_dy2, double dt,
                       double wave_c);
 
+void wave2d_patch_y_faces_cuda(const double *u_dev, double *hpy_dev, double *hny_dev,
+                               int nx, int ny, int lower_y, int Ny_global,
+                               bool dirichlet, double u_wall);
+
+void wave2d_enforce_dirichlet_walls_cuda(double *u_dev, double *v_dev, int nx,
+                                         int ny, int lower_y, int Ny_global,
+                                         double u_wall);
+
 } // namespace wave2d
 
 #endif

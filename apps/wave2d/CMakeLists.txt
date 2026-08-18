@@ -91,7 +91,8 @@ endif()
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_executable(wave2d_cuda src/cuda/wave2d_cuda.cu src/cuda/wave2d_kernels.cu)
   target_include_directories(wave2d_cuda PRIVATE ${WAVE2D_INCLUDE_DIR})
-  target_link_libraries(wave2d_cuda PRIVATE OpenPFC CUDA::cudart ${_wave2d_heffte_tgt})
+  target_link_libraries(wave2d_cuda PRIVATE OpenPFC CUDA::cudart openpfc_gpu_kernels
+                        ${_wave2d_heffte_tgt})
   wave2d_link_libstdcxx(wave2d_cuda)
   set_target_properties(wave2d_cuda PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
@@ -105,7 +106,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
                                             src/cuda/wave2d_kernels.cu)
     target_include_directories(test_wave2d_cpu_vs_cuda PRIVATE ${WAVE2D_INCLUDE_DIR})
     target_link_libraries(test_wave2d_cpu_vs_cuda PRIVATE OpenPFC Catch2::Catch2
-                                                            CUDA::cudart ${_wave2d_heffte_tgt})
+                                                            CUDA::cudart openpfc_gpu_kernels
+                                                            ${_wave2d_heffte_tgt})
     wave2d_link_libstdcxx(test_wave2d_cpu_vs_cuda)
     set_target_properties(test_wave2d_cpu_vs_cuda PROPERTIES
       CUDA_SEPARABLE_COMPILATION ON

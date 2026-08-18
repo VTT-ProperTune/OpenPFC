@@ -22,10 +22,11 @@
 #include <vector>
 
 #include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/runtime/gpu/comm_sparse_exchange_gpu.hpp>
 
 #include <wave2d/device_step.hpp>
 #include <wave2d/wave_model.hpp>
@@ -33,11 +34,7 @@
 
 namespace {
 
-void cuda_check(cudaError_t e, const char *what) {
-  if (e != cudaSuccess) {
-    throw std::runtime_error(std::string(what) + ": " + cudaGetErrorString(e));
-  }
-}
+using DevField = pfc::data::Field<double, pfc::CudaSpace>;
 
 } // namespace
 
@@ -47,6 +44,12 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   REQUIRE(nproc == 1);
+
+  int n_dev = 0;
+  if (cudaGetDeviceCount(&n_dev) != cudaSuccess || n_dev < 1) {
+    SKIP("No CUDA device");
+  }
+  REQUIRE(pfc::gpu::runtime_mpi_gpu_aware());
 
   constexpr int Nx = 24;
   constexpr int Ny = 24;
@@ -108,84 +111,48 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
                                            wave2d::YBoundaryKind::Neumann, Ny, 0.0);
   }
 
-  // Create host-side fields using pfc::data::Field API
-  auto u_field = pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
-  auto v_field = pfc::data::field_from_subdomain<double>(decomp, rank, halo_width);
+  DevField u_gpu(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
+  DevField v_gpu(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
+  u_gpu.with_host_view([&](double *data, std::size_t n) {
+    REQUIRE(n == u0.size());
+    std::copy(u0.begin(), u0.end(), data);
+  });
+  v_gpu.with_host_view([&](double *data, std::size_t n) {
+    REQUIRE(n == v0.size());
+    std::copy(v0.begin(), v0.end(), data);
+  });
+  u_gpu.sync_to_device();
+  v_gpu.sync_to_device();
 
-  // Copy initial data to fields
-  std::copy(u0.begin(), u0.end(), u_field.data());
-  std::copy(v0.begin(), v0.end(), v_field.data());
-  auto face_halos_host =
-      pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SparseHaloExchanger<double> exchanger(
-      MPI_COMM_WORLD, rank,
-      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
-  const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
-
-  double *u_dev = nullptr;
-  double *v_dev = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&u_dev), nlocal * sizeof(double)),
-             "u");
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&v_dev), nlocal * sizeof(double)),
-             "v");
-  std::array<double *, 6> face_dev{};
-  for (int f = 0; f < 6; ++f) {
-    const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
-    cuda_check(
-        cudaMalloc(reinterpret_cast<void **>(&face_dev[static_cast<std::size_t>(f)]),
-                   std::max<std::size_t>(n, 1u) * sizeof(double)),
-        "face");
-  }
-  cuda_check(cudaMemcpy(u_dev, u_field.data(), nlocal * sizeof(double),
-                        cudaMemcpyHostToDevice),
-             "H2D u");
-  cuda_check(cudaMemcpy(v_dev, v_field.data(), nlocal * sizeof(double),
-                        cudaMemcpyHostToDevice),
-             "H2D v");
+  pfc::comm::SparseExchange<pfc::CudaSpace, double> exchanger(
+      u_gpu, decomp, rank, MPI_COMM_WORLD);
 
   for (int step = 0; step < n_steps; ++step) {
     (void)step;
-    cuda_check(cudaMemcpy(u_field.data(), u_dev, nlocal * sizeof(double),
-                          cudaMemcpyDeviceToHost),
-               "D2H u");
-    cuda_check(cudaMemcpy(v_field.data(), v_dev, nlocal * sizeof(double),
-                          cudaMemcpyDeviceToHost),
-               "D2H v");
-    exchanger.exchange_halos(u_field.data(), u_field.size());
-    pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
-    wave2d::patch_y_face_halos_neumann_order2(u_field.data(), nx, ny,
-                                              face_halos_host, lower, Ny);
-    for (int f = 0; f < 6; ++f) {
-      const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
-      if (n == 0) {
-        continue;
-      }
-      cuda_check(cudaMemcpy(face_dev[static_cast<std::size_t>(f)],
-                            face_halos_host[static_cast<std::size_t>(f)].data(),
-                            n * sizeof(double), cudaMemcpyHostToDevice),
-                 "H2D face");
-    }
-    wave2d::wave2d_step_cuda(u_dev, v_dev, face_dev[0], face_dev[1], face_dev[2],
-                             face_dev[3], face_dev[4], face_dev[5], nx, ny, nz,
+    exchanger.exchange();
+    const auto faces = exchanger.face_recv_ptrs();
+    wave2d::wave2d_patch_y_faces_cuda(u_gpu.data(), faces[2], faces[3], nx, ny,
+                                      lower[1], Ny, /*dirichlet=*/false, 0.0);
+    wave2d::wave2d_step_cuda(u_gpu.data(), v_gpu.data(), faces[0], faces[1],
+                             faces[2], faces[3], faces[4], faces[5], nx, ny, nz,
                              halo_width, inv_dx2, inv_dy2, dt, wave2d::kC);
+    u_gpu.note_device_write();
+    v_gpu.note_device_write();
   }
 
-  cuda_check(cudaMemcpy(u_field.data(), u_dev, nlocal * sizeof(double),
-                        cudaMemcpyDeviceToHost),
-             "final u");
-  cuda_check(cudaMemcpy(v_field.data(), v_dev, nlocal * sizeof(double),
-                        cudaMemcpyDeviceToHost),
-             "final v");
-  cuda_check(cudaFree(u_dev), "cudaFree(u_dev)");
-  cuda_check(cudaFree(v_dev), "cudaFree(v_dev)");
-  for (int f = 0; f < 6; ++f) {
-    cuda_check(cudaFree(face_dev[static_cast<std::size_t>(f)]), "cudaFree(face)");
-  }
+  std::vector<double> u_gpu_host;
+  std::vector<double> v_gpu_host;
+  u_gpu.with_host_view([&](double *data, std::size_t n) {
+    u_gpu_host.assign(data, data + n);
+  });
+  v_gpu.with_host_view([&](double *data, std::size_t n) {
+    v_gpu_host.assign(data, data + n);
+  });
 
   double max_diff = 0.0;
   for (std::size_t i = 0; i < nlocal; ++i) {
-    max_diff = std::max(max_diff, std::abs(u_cpu[i] - u_field.data()[i]));
-    max_diff = std::max(max_diff, std::abs(v_cpu[i] - v_field.data()[i]));
+    max_diff = std::max(max_diff, std::abs(u_cpu[i] - u_gpu_host[i]));
+    max_diff = std::max(max_diff, std::abs(v_cpu[i] - v_gpu_host[i]));
   }
   REQUIRE(max_diff < 1e-9);
 }

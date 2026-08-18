@@ -15,6 +15,7 @@ source compatibility is explicitly not a goal.
 ### Added
 
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `standard-g` (default) or `dev-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
+- wave2d CUDA driver and CPU-vs-CUDA test use `SparseExchange<CudaSpace>` with device y-face BC patches. Execute on tohtori.
 - Allen–Cahn CUDA driver and CPU-vs-CUDA test use `SparseExchange<CudaSpace>` (device gather/MPI/face recv). Execute on tohtori.
 - FD MPI integration tests (`test_fd_xy_mpi`, `test_fd_heat_mpi`) use `SparseExchange` for separated-face Laplacian cases.
 - 4-rank `HaloExchange` mode suite: host blocking == split-phase == multi-field batch; Full 26-direction corners; HIP 4-rank Faces + Full (`test_comm_halo_exchange_modes.cpp` / `test_comm_halo_exchange_gpu.cpp`). Persistent multi-rank is still 1-rank only on LUMI.
