@@ -15,6 +15,7 @@ source compatibility is explicitly not a goal.
 ### Added
 
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `standard-g` (default) or `dev-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
+- Kobayashi HIP driver uses two multi-field `pfc::comm::HaloExchange<HipSpace>` objects on device-resident Fields (state then aux) instead of per-step `hipMemcpy` + host `PaddedHaloExchanger`.
 - Kobayashi CPU driver uses two multi-field `pfc::comm::HaloExchange<HostSpace>` objects (state then aux) instead of six `PaddedHaloExchanger`s.
 - Allen–Cahn CPU driver and CPU comparison-test path use `pfc::comm::SparseExchange<HostSpace>` instead of `SparseHaloExchanger`.
 - wave2d CPU drivers (`wave2d_fd`, `wave2d_fd_manual`) use `pfc::comm::HaloExchange<HostSpace>` instead of `PaddedHaloExchanger`.

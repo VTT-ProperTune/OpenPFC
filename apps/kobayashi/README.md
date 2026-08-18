@@ -14,7 +14,7 @@ Coupled **phase field** \(\phi\) and **temperature** \(T\) after Kobayashi (Phys
 | `kobayashi_fd_manual` | Two-pass explicit Euler per step on Field with halos (`Field<double, HostSpace>`); periodic **MPI halos** (`nz = 1`). |
 | `kobayashi_fd_openmp` | Same discrete splitting on a **single full grid**; periodic **torus via index wrapping** (no halos, no MPI); **OpenMP** `collapse(2)` over the two passes per step. Requires OpenMP at build time. |
 | `kobayashi_fd_cuda` | Same physics as **`kobayashi_fd_manual`**, **two CUDA kernels per step**. **`MPI_COMM_WORLD` size 1** uses **device periodic halos** (`KOBAYASHI_CUDA_HALO_MODE=device_periodic_local`) — no MPI in the timestep halo path (avoids CPU busy-wait + extra CUDA sync). **`nproc > 1`** uses **`pfc::cuda::PaddedDeviceHaloExchanger`**: GPU-aware MPI when **`OpenPFC_MPI_CUDA_AWARE`** + `MPIX_Query_cuda_support`, else packed faces (**`OPENPFC_CUDA_FORCE_PACKED_HALO=1`**). Rank 0 prints **`KOBAYASHI_CUDA_HALO_MODE`**. Build with **`-DOpenPFC_ENABLE_CUDA=ON`**. |
-| `kobayashi_fd_hip` | Same MPI + halo pattern as **`kobayashi_fd_manual`**, with **two HIP kernels per step** (host-staged halos: `hipMemcpy` + `PaddedHaloExchanger`, portable without GPU-aware MPI). Each MPI rank calls **`hipSetDevice(local_rank % device_count)`** where `local_rank` is the **shared-memory** rank (`MPI_COMM_TYPE_SHARED`). Build with **`-DOpenPFC_ENABLE_HIP=ON`**. |
+| `kobayashi_fd_hip` | Same MPI + halo pattern as **`kobayashi_fd_manual`**, with **two HIP kernels per step**. Halos use **`pfc::comm::HaloExchange<HipSpace>`** on device-resident Fields (state then aux, same groups as the CPU driver). Rank 0 prints **`KOBAYASHI_HIP_HALO_MODE`**. Each MPI rank calls **`hipSetDevice(local_rank % device_count)`** where `local_rank` is the **shared-memory** rank (`MPI_COMM_TYPE_SHARED`). Build with **`-DOpenPFC_ENABLE_HIP=ON`**. |
 
 ## Equations (discrete layout matches Julia)
 
@@ -37,7 +37,7 @@ Field phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 Field tempr = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 ```
 
-**GPU Host Mirrors:** CUDA and HIP drivers stage host-side fields with padded `pfc::data::Field`. See `kobayashi_fd_cuda.cpp` and `kobayashi_fd_hip.cpp` for the current host–device staging conventions.
+**GPU fields:** The HIP driver keeps working arrays as `Field<double, HipSpace>` and only stages \(\phi\) / \(T\) to a host Field for PNG and `KOBAYASHI_VERIFY`. The CUDA driver still uses `PaddedDeviceHaloExchanger` (and optional app-local batching) on raw device pointers plus host Field mirrors.
 
 ## Usage (`kobayashi_fd_manual`)
 

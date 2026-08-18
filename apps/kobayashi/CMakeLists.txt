@@ -127,7 +127,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     src/hip/kobayashi_fd_hip_kernels.hip
   )
   target_include_directories(kobayashi_fd_hip PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-  target_link_libraries(kobayashi_fd_hip PRIVATE OpenPFC hip::host ${_kobayashi_heffte_tgt})
+  target_link_libraries(kobayashi_fd_hip PRIVATE OpenPFC hip::host openpfc_hip_kernels
+                        ${_kobayashi_heffte_tgt})
   set_target_properties(kobayashi_fd_hip PROPERTIES
     HIP_STANDARD 17
     HIP_STANDARD_REQUIRED ON
