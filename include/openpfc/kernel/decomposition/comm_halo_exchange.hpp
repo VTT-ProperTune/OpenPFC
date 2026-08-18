@@ -12,11 +12,12 @@
  * connectivity, blocking `exchange()`, split `start()`/`finish()`, optional
  * persistent requests, and multi-field tag blocks from `halo_geometry.hpp`.
  *
- * This increment is **host-only**. It composes the existing
- * `PaddedHaloExchanger` / `FullPaddedHaloExchanger` / `PersistentHaloExchanger`
- * implementations so consumers can move onto the new name before those
- * classes are deleted. Device `HaloExchange<CudaSpace/HipSpace>` is remaining
- * M4 work; CUDA execution of that half is not available on LUMI.
+ * The host specialization composes the existing `PaddedHaloExchanger` /
+ * `FullPaddedHaloExchanger` / `PersistentHaloExchanger` implementations so
+ * consumers can move onto the new name before those classes are deleted.
+ * Device `HaloExchange<CudaSpace/HipSpace>` lives in
+ * `runtime/gpu/comm_halo_exchange_gpu.hpp`. CUDA execution of that half is
+ * not available on LUMI.
  *
  * Tag layout: field `f` uses `halo::field_tag_base(exchange_base, f)` so two
  * exchangers (or six fields) with distinct bases cannot collide.
@@ -55,13 +56,14 @@ struct HaloExchangeOptions {
 };
 
 /**
- * @brief Primary template: only `HostSpace` is implemented in this increment.
+ * @brief Primary template: `HostSpace` is specialized below.
+ *
+ * Device spaces are specialized in `runtime/gpu/comm_halo_exchange_gpu.hpp`.
  */
 template <typename MemorySpace, typename T = double> class HaloExchange {
   static_assert(std::is_same_v<MemorySpace, HostSpace>,
-                "pfc::comm::HaloExchange is host-only in this increment. "
-                "Device HaloExchange is remaining M4 work "
-                "(CUDA not testable on LUMI).");
+                "pfc::comm::HaloExchange device specializations live in "
+                "runtime/gpu/comm_halo_exchange_gpu.hpp");
 };
 
 /**

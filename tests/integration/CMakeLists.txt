@@ -18,6 +18,7 @@ target_sources(openpfc-tests PRIVATE
   scenarios/parallel_scaling/test_padded_device_halo_self_wrap.cpp
   scenarios/parallel_scaling/test_padded_halo_exchange.cpp
   scenarios/parallel_scaling/test_comm_halo_exchange.cpp
+  scenarios/parallel_scaling/test_comm_halo_exchange_gpu.cpp
   scenarios/parallel_scaling/test_stage_preparation.cpp
   scenarios/parallel_scaling/test_halo_direction_set.cpp
   scenarios/parallel_scaling/test_sparse_halo_exchange.cpp
