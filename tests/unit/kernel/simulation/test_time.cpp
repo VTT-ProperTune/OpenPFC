@@ -457,7 +457,8 @@ TEST_CASE("test_time_step_counters_initialization", "[time][unit]") {
   }
 
   SECTION("three-arg constructor with method") {
-    Time t({0.0, 10.0, 1.0}, 2.0, IntegratorMethod::rk2_heun);
+    Time t({0.0, 10.0, 1.0}, 2.0,
+           pfc::sim::steppers::RKIntegratorMethod::RK2_Heun);
     REQUIRE(t.get_accepted_steps() == 0);
     REQUIRE(t.get_rejected_steps() == 0);
   }

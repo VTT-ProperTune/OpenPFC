@@ -10,7 +10,7 @@
 using json = nlohmann::json;
 using pfc::ui::from_json;
 using pfc::Time;
-using pfc::IntegratorMethod;
+using pfc::sim::steppers::RKIntegratorMethod;
 
 TEST_CASE("test_from_json_time_integrator_method") {
   SECTION("euler method") {
@@ -18,7 +18,7 @@ TEST_CASE("test_from_json_time_integrator_method") {
         {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0},
                           {"integrator", {{"method", "euler"}}}}}};
     auto time = from_json<Time>(j);
-    REQUIRE(time.method() == IntegratorMethod::euler);
+    REQUIRE(time.method() == RKIntegratorMethod::Euler);
   }
 
   SECTION("rk2_heun method") {
@@ -26,7 +26,7 @@ TEST_CASE("test_from_json_time_integrator_method") {
         {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0},
                           {"integrator", {{"method", "rk2_heun"}}}}}};
     auto time = from_json<Time>(j);
-    REQUIRE(time.method() == IntegratorMethod::rk2_heun);
+    REQUIRE(time.method() == RKIntegratorMethod::RK2_Heun);
   }
 
   SECTION("invalid method throws std::invalid_argument") {
@@ -42,5 +42,5 @@ TEST_CASE("test_from_json_time_missing_integrator_defaults_to_euler") {
       {"timestepping", {{"t0", 0.0}, {"t1", 10.0}, {"dt", 0.1}, {"saveat", 1.0}}}
   };
   auto time = from_json<Time>(j);
-  REQUIRE(time.method() == IntegratorMethod::euler);
+  REQUIRE(time.method() == RKIntegratorMethod::Euler);
 }

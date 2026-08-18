@@ -15,6 +15,7 @@
 
 #include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
+#include <openpfc/frontend/ui/from_json_integrator_method.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
@@ -262,19 +263,17 @@ template <> [[nodiscard]] inline Time from_json<Time>(const json &j) {
         get_json_value_string(j, "saveat"), {}, "\"saveat\": 1.0"));
   }
 
-  // Parse integrator method (optional, defaults to euler)
-  IntegratorMethod method = IntegratorMethod::euler;
+  // Parse integrator method (optional, defaults to Euler).
+  pfc::sim::steppers::RKIntegratorMethod method =
+      pfc::sim::steppers::RKIntegratorMethod::Euler;
   if (j.contains("timestepping") && j["timestepping"].contains("integrator")) {
     const auto &integrator = j["timestepping"]["integrator"];
     if (integrator.contains("method")) {
-      const std::string method_str = integrator["method"].get<std::string>();
-      if (method_str == "euler") {
-        method = IntegratorMethod::euler;
-      } else if (method_str == "rk2_heun") {
-        method = IntegratorMethod::rk2_heun;
-      } else {
-        throw std::invalid_argument("Unknown integrator method: " + method_str +
-                                    " (expected 'euler' or 'rk2_heun')");
+      try {
+        method = from_json<pfc::sim::steppers::RKIntegratorMethod>(
+            integrator["method"]);
+      } catch (const std::exception &ex) {
+        throw std::invalid_argument(ex.what());
       }
     }
   }

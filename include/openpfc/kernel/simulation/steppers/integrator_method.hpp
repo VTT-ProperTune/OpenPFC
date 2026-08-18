@@ -18,9 +18,8 @@
  * - ButcherTableau factory for each method
  * - String conversion for debugging and logging
  *
- * The enum is named RKIntegratorMethod to avoid collision with the existing
- * IntegratorMethod enum in time.hpp, which serves a different purpose for
- * Time class internal state tracking.
+ * `Time` stores this same enum (there is no separate method-identity type
+ * on `Time`).
  *
  * ## Usage
  * @code
@@ -57,8 +56,7 @@ namespace steppers {
  * @brief Explicit Runge-Kutta integrator method selection
  *
  * Enum class defining supported explicit Runge-Kutta methods for time
- * integration. This enum is separate from IntegratorMethod in time.hpp,
- * which serves Time class internal state tracking.
+ * integration. `Time::method()` stores this type.
  *
  * Values:
  * - Euler: Forward Euler (1st order, 1 stage)

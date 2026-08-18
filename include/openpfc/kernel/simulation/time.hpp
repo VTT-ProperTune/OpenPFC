@@ -55,6 +55,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <openpfc/kernel/simulation/steppers/integrator_method.hpp>
+
 namespace pfc {
 
 /**
@@ -249,8 +251,6 @@ namespace pfc {
  * @see clip_attempt_dt() - clip candidate dt before an attempt
  */
 
-enum class IntegratorMethod { euler, rk2_heun };
-
 class Time {
 private:
   double m_t0;     ///< Start time
@@ -259,7 +259,8 @@ private:
   int m_increment; ///< Current time increment (committed step count)
   double m_accepted_time; ///< Accepted simulation time (immutable during attempt)
   double m_saveat; ///< Time interval for saving data
-  IntegratorMethod m_method{IntegratorMethod::euler};
+  sim::steppers::RKIntegratorMethod m_method{
+      sim::steppers::RKIntegratorMethod::Euler};
   int m_stage{0};       ///< Current stage index within this time step (0-based)
   int m_stage_count{1}; ///< Total number of stages in the current time step
   int accepted_steps_{0}; ///< Accepted adaptive step attempts
@@ -363,7 +364,8 @@ public:
    * @see done() - check if simulation is complete
    * @see do_save() - check if results should be saved at current time
    */
-  Time(const std::array<double, 3> &time, double saveat, IntegratorMethod method)
+  Time(const std::array<double, 3> &time, double saveat,
+       sim::steppers::RKIntegratorMethod method)
       : m_t0(time[0]), m_t1(time[1]), m_dt(time[2]), m_increment(0),
         m_accepted_time(time[0]), m_saveat(saveat), m_method(method) {
     if (m_t0 < 0) {
@@ -405,7 +407,7 @@ public:
    * that order
    */
   Time(const std::array<double, 3> &time)
-      : Time(time, time[2], IntegratorMethod::euler) {}
+      : Time(time, time[2], sim::steppers::RKIntegratorMethod::Euler) {}
 
   /**
    * @brief Construct a new Time object with the specified time interval and
@@ -417,7 +419,7 @@ public:
    * that order
    */
   Time(const std::array<double, 3> &time, double saveat)
-      : Time(time, saveat, IntegratorMethod::euler) {}
+      : Time(time, saveat, sim::steppers::RKIntegratorMethod::Euler) {}
 
   /**
    * @brief Get the start time.
@@ -631,7 +633,7 @@ public:
    *
    * @return The integrator method
    */
-  IntegratorMethod method() const noexcept { return m_method; }
+  sim::steppers::RKIntegratorMethod method() const noexcept { return m_method; }
 
   /**
    * @brief Set the current time increment (fixed-`dt` reconstruction helper).
