@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- FD MPI leftover tests (`test_fd_heat_mpi`, `test_fd_xy_mpi`, `test_halo_exchange_driver`) use `HaloExchange` instead of `HaloExchanger` / `PersistentHaloExchanger`. `test_sparse_halo_exchange` uses `SparseExchange`.
 - `HaloExchangeOptions::directions` — optional `HaloDirectionSet` (empty means `Axes3D()` for Faces, `Full3D()` for Full). Kobayashi CPU/HIP/CUDA pass `Axes2D()` so the `nz=1` slab skips ±Z.
 - Kobayashi CUDA driver uses two multi-field `pfc::comm::HaloExchange<CudaSpace>` objects on device-resident Fields (state then aux), matching HIP/CPU. Execute on tohtori.
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `standard-g` (default) or `dev-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
