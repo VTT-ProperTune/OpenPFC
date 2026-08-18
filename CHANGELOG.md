@@ -15,6 +15,7 @@ source compatibility is explicitly not a goal.
 ### Added
 
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `dev-g` or `standard-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
+- heat3d CPU drivers (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_fd_scratch`) use `pfc::comm::HaloExchange<HostSpace>` instead of `PaddedHaloExchanger`.
 - `FdCpuStack` uses `pfc::comm::SparseExchange<HostSpace>` instead of constructing `SparseHaloExchanger` itself.
 - `pfc::comm::SparseExchange<HostSpace>` — host index-set facade over `SparseHaloExchanger` (structured `make_structured_halos` or a custom `RemoteHalo` list; `exchange`/`start`/`finish`). Device `SparseExchange<CudaSpace/HipSpace>` gathers, posts device-pointer MPI, and scatters without a full-field D2H. CUDA execution: verify on tohtori.
 - Device halo default transport is pack-to-contiguous + device-pointer MPI when GPU-aware (`PaddedDeviceHaloExchanger` / `FullPaddedDeviceHalo`). `OPENPFC_{CUDA,HIP}_USE_SUBARRAY_HALO=1` restores derived-type MPI; `*_FORCE_PACKED_HALO=1` still host-stages. Post-exchange sync is stream-scoped, not `cudaDeviceSynchronize` / `hipDeviceSynchronize`.

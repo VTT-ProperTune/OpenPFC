@@ -15,7 +15,7 @@
  * Compared to its siblings:
  *
  *  - `heat3d_fd_manual` uses `HeatModel::rhs`, `HeatGrads`,
- *    and manual boundary/interior loops with `PaddedHaloExchanger`
+ *    and manual boundary/interior loops with `HaloExchange`
  *    `start()` / `finish()` for comm/compute overlap.
  *  - **`heat3d_fd_scratch`** uses **none** of those. It writes the
  *    physics inline (`u_t = D nabla^2 u` with `D = heat3d::kD`),
@@ -34,7 +34,7 @@
  *  - `pfc::data::Field<double, pfc::HostSpace>` as the storage container —
  *    but the driver immediately drops to `u.data()` and computes its own
  *    `lin` by hand.
- *  - `pfc::PaddedHaloExchanger<double>::exchange` (blocking; no
+ *  - `pfc::comm::HaloExchange<HostSpace>::exchange` (blocking; no
  *    overlap, deliberately) for periodic halo updates.
  *
  * That's it. Read this driver first if you want to understand what the
@@ -53,7 +53,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
@@ -76,7 +76,8 @@ void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
   const int hw = 1; // 2nd-order central stencil -> halo width 1
   const auto owned_box = pfc::decomposition::local_box(decomp, rank);
   pfc::data::Field<double, pfc::HostSpace> u(domain, owned_box, hw);
-  pfc::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  pfc::comm::HaloExchange<pfc::HostSpace, double> halo(u, decomp, rank,
+                                                       MPI_COMM_WORLD);
 
   // 2. Pull every quantity the manual driver hides inside `for_each_*`
   //    out into local variables, so the indexing arithmetic is visible.
@@ -134,7 +135,7 @@ void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
     // The single OpenPFC call inside the hot loop: refresh the halo
     // ring of `u` from the six neighbour ranks (periodic in 1-rank).
     // Using the bound exchanger API (blocking one-shot).
-    pfc::communication::exchange(halo);
+    halo.exchange();
 
     // Build the Laplacian: textbook 7-point central stencil, written
     // out via stride arithmetic. The key step: `lin + sx`, `lin - sx`

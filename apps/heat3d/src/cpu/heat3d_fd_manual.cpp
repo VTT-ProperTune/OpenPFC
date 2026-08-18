@@ -8,7 +8,7 @@
  *
  * @details
  * This is the **"laboratory, not fortress"** counterpart to `heat3d_fd`.
- * Where `heat3d_fd` composes `Field + PaddedHaloExchanger +
+ * Where `heat3d_fd` composes `Field + HaloExchange +
  * FDGradient + for_each` as three visible primitives (halo, gradient,
  * sweep) in `main`, this driver instead exposes a different decomposition:
  * a single overlapped halo exchange (start interior / finish border) and a
@@ -20,7 +20,7 @@
  *  - `pfc::data::Field<double, pfc::HostSpace>` — single contiguous buffer with
  *    `u(i, j, k)` valid for `i,j,k in [-hw, n+hw)`. No edge overwrite,
  *    no separate face vectors.
- *  - `pfc::PaddedHaloExchanger<double>` — non-blocking
+ *  - `pfc::comm::HaloExchange<HostSpace>` — non-blocking
  *    `start()` / `finish()` pair on the bound field.
  *  - `pfc::data::Field::for_each_interior / for_each_owned` —
  *    interior and owned cell iterators (with coordinate/value signatures).
@@ -54,7 +54,7 @@
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 #include <openpfc/runtime/common/mpi_timer.hpp>
@@ -92,7 +92,7 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   pfc::data::Field<double, pfc::HostSpace> du(domain, owned_box, hw);
 
   // 4. Hidden plumbing: in-place non-blocking halo exchanger.
-  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
 
   // 5. Initial condition: physicist-friendly `(x, y, z) -> u(x, y, z)`,
   //    fills only the owned core. `apply` does the index loop for us.

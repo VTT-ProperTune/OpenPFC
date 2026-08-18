@@ -19,7 +19,7 @@
  *
  *  - `pfc::data::Field<double, HostSpace>` via `field_from_subdomain` —
  *    padded owned-plus-halo storage for `u` / `du`.
- *  - `pfc::communication::PaddedHaloExchanger` bound to that Field.
+ *  - `pfc::comm::HaloExchange<HostSpace>` bound to that Field.
  *  - `pfc::gradient::FDGradient<HeatGrads>` bound to the same Field.
  *  - `Field::for_each_owned` / `Field::apply` for residual and IC/L2.
  *
@@ -46,7 +46,7 @@
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/scaled_field.hpp>
@@ -136,10 +136,10 @@ std::optional<RunConfig> parse_cli(int argc, char **argv) {
  *
  * @par Boundary/halo synchronization
  * Boundary conditions and halo exchanges occur at:
- * - Pre-stage: MPId halo exchange via PaddedHaloExchanger before each RHS evaluation
+ * - Pre-stage: MPI halo exchange via HaloExchange before each RHS evaluation
  * - The solver assumes periodic boundary conditions in all directions
  * - Halo width is automatically configured as fd_order/2 to accommodate the stencil
- * - The PaddedHaloExchanger handles six-face MPI communication for the halo ring
+ * - HaloExchange handles six-face MPI communication for the halo ring
  *
  * @par Application-specific constraints
  * - Stability: the explicit forward Euler scheme requires dt ≤ dx²/(6α) in 3D for
@@ -192,7 +192,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
       pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
   // 4. Halo exchanger and gradient evaluator, both bound to `u`.
-  pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank,
+  pfc::comm::HaloExchange<pfc::HostSpace, double> halo(u, decomp, rank,
                                                        MPI_COMM_WORLD);
   pfc::gradient::FDGradient<HeatGrads> grad(u, cfg.fd_order);
 
@@ -206,7 +206,7 @@ void run_fd(const RunConfig &cfg, int rank, int nproc) {
   const double t_start = MPI_Wtime();
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {
-    pfc::communication::exchange(halo);
+    halo.exchange();
     u.for_each_owned([&](int i, int j, int k) {
       const auto g = pfc::gradient::evaluate(grad, pfc::Int3{i, j, k});
       du(i, j, k) = g.xx + g.yy + g.zz;
