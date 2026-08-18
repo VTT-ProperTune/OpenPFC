@@ -17,7 +17,9 @@
  *
  * Env and timer names stay vendor-specific (`OPENPFC_CUDA_*` /
  * `OPENPFC_HIP_*`, `print_cuda_halo_exchange_cpu_timers` /
- * `print_hip_halo_exchange_cpu_timers`).
+ * `print_hip_halo_exchange_cpu_timers`). GPU-aware default is pack-to-
+ * contiguous + device-pointer MPI; `*_USE_SUBARRAY_HALO=1` restores the
+ * derived-type path; `*_FORCE_PACKED_HALO=1` host-stages.
  *
  * @see kernel/decomposition/padded_halo_exchange.hpp (CPU pointer path)
  */
@@ -163,8 +165,7 @@ struct CudaHaloExchangeCpuTimers {
   std::uint64_t n_calls = 0;
   double pre_stream_sync = 0;
   double gpu_aware_mpi = 0;
-  /** `cudaDeviceSynchronize` (GPU-aware) or final `cudaStreamSynchronize` (packed).
-   */
+  /** Stream sync after GPU-aware or packed exchange. */
   double post_exchange_cuda_sync = 0;
   double packed_face_pack_d2h_sync = 0;
   double packed_mpi_waitall = 0;
@@ -189,13 +190,18 @@ struct CudaHaloOps {
 
   static constexpr const char *kind = "CUDA";
   static constexpr const char *force_packed_env = "OPENPFC_CUDA_FORCE_PACKED_HALO";
+  static constexpr const char *use_subarray_env = "OPENPFC_CUDA_USE_SUBARRAY_HALO";
   static constexpr const char *malloc_host_send = "cudaMallocHost halo send";
   static constexpr const char *malloc_host_recv = "cudaMallocHost halo recv";
   static constexpr const char *malloc_scratch =
       "cudaMalloc halo device scratch (pack/unpack)";
+  static constexpr const char *malloc_contig_send =
+      "cudaMalloc halo contiguous device send";
+  static constexpr const char *malloc_contig_recv =
+      "cudaMalloc halo contiguous device recv";
   static constexpr const char *sync_pre = "cudaStreamSynchronize pre halo";
   static constexpr const char *sync_post_aware =
-      "cudaDeviceSynchronize post GPU-aware MPI";
+      "cudaStreamSynchronize post GPU-aware MPI";
   static constexpr const char *sync_post_packed =
       "cudaStreamSynchronize post packed halo";
   static constexpr const char *sync_self =
@@ -211,7 +217,7 @@ struct CudaHaloOps {
   static constexpr const char *sync_pre_full =
       "cudaStreamSynchronize pre full halo";
   static constexpr const char *sync_after_full_pass =
-      "cudaDeviceSynchronize after full halo pass";
+      "cudaStreamSynchronize after full halo pass";
   static constexpr const char *sync_after_full_self =
       "cudaStreamSynchronize after full halo self-pack";
   static constexpr const char *print_rank_what =
@@ -300,8 +306,7 @@ struct HipHaloExchangeCpuTimers {
   std::uint64_t n_calls = 0;
   double pre_stream_sync = 0;
   double gpu_aware_mpi = 0;
-  /** `hipDeviceSynchronize` (GPU-aware) or final `hipStreamSynchronize` (packed).
-   */
+  /** Stream sync after GPU-aware or packed exchange. */
   double post_exchange_hip_sync = 0;
   double packed_face_pack_d2h_sync = 0;
   double packed_mpi_waitall = 0;
@@ -326,13 +331,18 @@ struct HipHaloOps {
 
   static constexpr const char *kind = "HIP";
   static constexpr const char *force_packed_env = "OPENPFC_HIP_FORCE_PACKED_HALO";
+  static constexpr const char *use_subarray_env = "OPENPFC_HIP_USE_SUBARRAY_HALO";
   static constexpr const char *malloc_host_send = "hipHostMalloc halo send";
   static constexpr const char *malloc_host_recv = "hipHostMalloc halo recv";
   static constexpr const char *malloc_scratch =
       "hipMalloc halo device scratch (pack/unpack)";
+  static constexpr const char *malloc_contig_send =
+      "hipMalloc halo contiguous device send";
+  static constexpr const char *malloc_contig_recv =
+      "hipMalloc halo contiguous device recv";
   static constexpr const char *sync_pre = "hipStreamSynchronize pre halo";
   static constexpr const char *sync_post_aware =
-      "hipDeviceSynchronize post GPU-aware MPI";
+      "hipStreamSynchronize post GPU-aware MPI";
   static constexpr const char *sync_post_packed =
       "hipStreamSynchronize post packed halo";
   static constexpr const char *sync_self =
@@ -347,7 +357,7 @@ struct HipHaloOps {
       "hipMalloc full halo device scratch";
   static constexpr const char *sync_pre_full = "hipStreamSynchronize pre full halo";
   static constexpr const char *sync_after_full_pass =
-      "hipDeviceSynchronize after full halo pass";
+      "hipStreamSynchronize after full halo pass";
   static constexpr const char *sync_after_full_self =
       "hipStreamSynchronize after full halo self-pack";
   static constexpr const char *print_rank_what =
@@ -525,7 +535,10 @@ public:
     }
 
     const bool force_packed = pfc::gpu::detail::getenv_truthy(Ops::force_packed_env);
+    const bool use_subarray =
+        pfc::gpu::detail::getenv_truthy(Ops::use_subarray_env);
     m_use_gpu_aware = !force_packed && Ops::mpi_aware();
+    m_use_contiguous = m_use_gpu_aware && !use_subarray;
 
     m_any_self_neighbor = false;
     for (std::size_t i = 0; i < 6; ++i) {
@@ -545,6 +558,17 @@ public:
                          Ops::malloc_host_send);
         Ops::malloc_host(reinterpret_cast<void **>(&m_h_recv[i]), bytes,
                          Ops::malloc_host_recv);
+      }
+    } else if (m_use_contiguous) {
+      for (std::size_t i = 0; i < 6; ++i) {
+        if (!m_active[i] || m_neighbors[i] == m_rank || m_face_elems[i] == 0) {
+          continue;
+        }
+        const std::size_t bytes = m_face_elems[i] * sizeof(double);
+        Ops::malloc_dev(reinterpret_cast<void **>(&m_d_send[i]), bytes,
+                        Ops::malloc_contig_send);
+        Ops::malloc_dev(reinterpret_cast<void **>(&m_d_recv[i]), bytes,
+                        Ops::malloc_contig_recv);
       }
     }
     if (m_scratch_elems > 0) {
@@ -572,6 +596,11 @@ public:
   ~PaddedDeviceHaloExchangerImpl() { cleanup(); }
 
   [[nodiscard]] bool uses_gpu_aware_mpi() const { return m_use_gpu_aware; }
+
+  /// Pack-to-contiguous + device-pointer MPI (the default GPU-aware path).
+  [[nodiscard]] bool uses_contiguous_device_mpi() const noexcept {
+    return m_use_contiguous;
+  }
 
   [[nodiscard]] const halo::HaloDirectionSet &direction_set() const noexcept {
     return m_dirs;
@@ -610,7 +639,7 @@ private:
         H.gpu_aware_mpi += MPI_Wtime() - t_mark;
       }
       t_mark = MPI_Wtime();
-      Ops::device_sync(Ops::sync_post_aware);
+      Ops::stream_sync(stream, Ops::sync_post_aware);
       if (perf) {
         Ops::post_sync(H) += MPI_Wtime() - t_mark;
       }
@@ -661,6 +690,14 @@ private:
       Ops::stream_sync(stream, Ops::sync_self);
     }
 
+    if (m_use_contiguous) {
+      exchange_gpu_aware_contiguous_(d_padded, stream);
+    } else {
+      exchange_gpu_aware_subarray_(buf);
+    }
+  }
+
+  void exchange_gpu_aware_subarray_(void *buf) {
     std::size_t req_count = 0;
     for (std::size_t i = 0; i < 6; ++i) {
       if (!m_active[i] || m_neighbors[i] == m_rank) {
@@ -681,6 +718,57 @@ private:
       ++req_count;
     }
     exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
+  }
+
+  void exchange_gpu_aware_contiguous_(double *d_padded, stream_t stream) {
+    std::size_t req_count = 0;
+    for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
+        continue;
+      }
+      const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
+      const int face_count = pfc::mpi::ensure_mpi_int_count(
+          m_face_elems[i], "PaddedDeviceHaloExchanger contig face");
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Irecv(m_d_recv[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
+                    &m_requests[req_count]),
+          "PaddedDeviceHaloExchanger contig MPI_Irecv");
+      ++req_count;
+    }
+
+    for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
+        continue;
+      }
+      const auto &send = m_face_specs[i].first;
+      Ops::pack_face(m_d_send[i], d_padded, send.ox, send.oy, send.oz, send.sx,
+                     send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
+    }
+    Ops::stream_sync(stream, Ops::sync_pack);
+
+    for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
+        continue;
+      }
+      const int tag = m_base_tag + static_cast<int>(i);
+      const int face_count = pfc::mpi::ensure_mpi_int_count(
+          m_face_elems[i], "PaddedDeviceHaloExchanger contig face");
+      pfc::mpi::throw_on_mpi_error(
+          MPI_Isend(m_d_send[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
+                    &m_requests[req_count]),
+          "PaddedDeviceHaloExchanger contig MPI_Isend");
+      ++req_count;
+    }
+    exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
+
+    for (std::size_t i = 0; i < 6; ++i) {
+      if (!m_active[i] || m_neighbors[i] == m_rank) {
+        continue;
+      }
+      const auto &recv = m_face_specs[i].second;
+      Ops::unpack_face(d_padded, m_d_recv[i], recv.ox, recv.oy, recv.oz, recv.sx,
+                       recv.sy, recv.sz, m_nxp, m_nyp, m_nzp, stream);
+    }
   }
 
   void exchange_packed_fallback_(double *d_padded, stream_t stream) {
@@ -787,6 +875,18 @@ private:
         }
       }
     }
+    if (m_use_contiguous) {
+      for (std::size_t i = 0; i < 6; ++i) {
+        if (m_d_send[i] != nullptr) {
+          Ops::free_dev(m_d_send[i]);
+          m_d_send[i] = nullptr;
+        }
+        if (m_d_recv[i] != nullptr) {
+          Ops::free_dev(m_d_recv[i]);
+          m_d_recv[i] = nullptr;
+        }
+      }
+    }
     if (m_d_scratch != nullptr) {
       Ops::free_dev(m_d_scratch);
       m_d_scratch = nullptr;
@@ -816,9 +916,12 @@ private:
   std::size_t m_scratch_elems = 0;
 
   bool m_use_gpu_aware = false;
+  bool m_use_contiguous = false;
   bool m_any_self_neighbor = false;
   std::array<double *, 6> m_h_send{};
   std::array<double *, 6> m_h_recv{};
+  std::array<double *, 6> m_d_send{};
+  std::array<double *, 6> m_d_recv{};
   double *m_d_scratch = nullptr;
 };
 

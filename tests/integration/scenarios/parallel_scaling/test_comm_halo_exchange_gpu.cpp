@@ -98,6 +98,7 @@ TEST_CASE("HaloExchange HipSpace Faces: single-rank periodic wrap",
   REQUIRE(halo.num_fields() == 1);
   if (cray_path_should_be_aware()) {
     REQUIRE(halo.uses_gpu_aware_mpi());
+    REQUIRE(halo.uses_contiguous_device_mpi());
   }
   halo.exchange();
 
@@ -153,6 +154,33 @@ TEST_CASE("HaloExchange HipSpace Faces: two fields wrap",
   REQUIRE(halo_x_matches(u, -1, 3.0));
   REQUIRE(halo_x_matches(v, -1, 5.0));
   REQUIRE(halo::field_tag_base(0, 1) == halo::kCanonicalTagCount);
+}
+
+TEST_CASE("HaloExchange HipSpace Faces: 2-rank X-neighbor pack+device MPI",
+          "[MPI][halo_exchange][hip]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 2 || !device_runtime_available<HipSpace>()) {
+    return;
+  }
+
+  auto domain = domain::create({16, 8, 4});
+  auto decomp = decomposition::create(domain, {2, 1, 1});
+  auto u = make_padded_field<HipSpace>(decomp, rank, /*halo=*/1);
+  const double mine = static_cast<double>(rank);
+  const double other = static_cast<double>(1 - rank);
+  fill_owned_host(u, mine);
+
+  comm::HaloExchange<HipSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  if (cray_path_should_be_aware()) {
+    REQUIRE(halo.uses_contiguous_device_mpi());
+  }
+  halo.exchange();
+
+  const auto n = u.local_size();
+  REQUIRE(halo_x_matches(u, -1, other));
+  REQUIRE(halo_x_matches(u, n[0], other));
 }
 #endif // OpenPFC_ENABLE_HIP
 

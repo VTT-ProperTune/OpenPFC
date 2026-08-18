@@ -135,6 +135,14 @@ public:
     return !m_faces.empty() && m_faces.front()->uses_gpu_aware_mpi();
   }
 
+  /// Pack-to-contiguous + device-pointer MPI (default GPU-aware transport).
+  [[nodiscard]] bool uses_contiguous_device_mpi() const noexcept {
+    if (!m_faces.empty()) {
+      return m_faces.front()->uses_contiguous_device_mpi();
+    }
+    return !m_full.empty() && m_full.front()->uses_contiguous_device_mpi();
+  }
+
 private:
   HaloExchangeOptions m_opt{};
   std::vector<FieldT *> m_fields;

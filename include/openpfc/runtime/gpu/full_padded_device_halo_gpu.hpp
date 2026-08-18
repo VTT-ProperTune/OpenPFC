@@ -13,7 +13,9 @@
  * corner/edge fill without GPU-aware MPI.
  *
  * Env names stay vendor-specific (`OPENPFC_CUDA_FORCE_PACKED_HALO` /
- * `OPENPFC_HIP_FORCE_PACKED_HALO`).
+ * `OPENPFC_HIP_FORCE_PACKED_HALO` host-stage; `*_USE_SUBARRAY_HALO=1`
+ * restores derived-type GPU-aware MPI). Default GPU-aware transport is
+ * pack-to-contiguous + device-pointer MPI.
  *
  * @see runtime/gpu/padded_device_halo_exchange_gpu.hpp — 6-face exchanger
  */
@@ -38,6 +40,7 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
+#include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp>
 
 namespace pfc::gpu {
@@ -186,7 +189,10 @@ public:
     m_requests.assign(static_cast<std::size_t>(4) * m_n_fields, MPI_REQUEST_NULL);
 
     const bool force_packed = pfc::gpu::detail::getenv_truthy(Ops::force_packed_env);
+    const bool use_subarray =
+        pfc::gpu::detail::getenv_truthy(Ops::use_subarray_env);
     m_use_gpu_aware = !force_packed && Ops::mpi_aware();
+    m_use_contiguous = m_use_gpu_aware && !use_subarray;
 
     bool any_real_neighbor_axis = false;
     for (int a = 0; a < 3; ++a) {
@@ -205,6 +211,18 @@ public:
       if (any_self_axis && m_scratch_elems > 0) {
         Ops::malloc_dev(reinterpret_cast<void **>(&m_d_scratch),
                         m_scratch_elems * sizeof(double), Ops::malloc_full_scratch);
+      }
+      if (m_use_contiguous && any_real_neighbor_axis && m_scratch_elems > 0) {
+        const std::size_t nslot = 2 * m_n_fields;
+        const std::size_t bytes = m_scratch_elems * sizeof(double);
+        m_d_send_pool.assign(nslot, nullptr);
+        m_d_recv_pool.assign(nslot, nullptr);
+        for (std::size_t i = 0; i < nslot; ++i) {
+          Ops::malloc_dev(reinterpret_cast<void **>(&m_d_send_pool[i]), bytes,
+                          Ops::malloc_contig_send);
+          Ops::malloc_dev(reinterpret_cast<void **>(&m_d_recv_pool[i]), bytes,
+                          Ops::malloc_contig_recv);
+        }
       }
     } else {
       m_per_field_packed.reserve(m_n_fields);
@@ -225,9 +243,22 @@ public:
       Ops::free_dev(m_d_scratch);
       m_d_scratch = nullptr;
     }
+    for (double *p : m_d_send_pool) {
+      if (p != nullptr) {
+        Ops::free_dev(p);
+      }
+    }
+    for (double *p : m_d_recv_pool) {
+      if (p != nullptr) {
+        Ops::free_dev(p);
+      }
+    }
   }
 
   [[nodiscard]] bool uses_gpu_aware_mpi() const noexcept { return m_use_gpu_aware; }
+  [[nodiscard]] bool uses_contiguous_device_mpi() const noexcept {
+    return m_use_contiguous;
+  }
   [[nodiscard]] std::size_t n_fields() const noexcept { return m_n_fields; }
 
   [[nodiscard]] const halo::HaloDirectionSet &direction_set() const noexcept {
@@ -351,7 +382,7 @@ private:
     } else {
       run_mpi_pass_(axis, fields, stream);
     }
-    Ops::device_sync(Ops::sync_after_full_pass);
+    Ops::stream_sync(stream, Ops::sync_after_full_pass);
   }
 
   void run_self_pass_(int axis, double *const *fields, stream_t stream) {
@@ -374,7 +405,11 @@ private:
     Ops::stream_sync(stream, Ops::sync_after_full_self);
   }
 
-  void run_mpi_pass_(int axis, double *const *fields, stream_t /*stream*/) {
+  void run_mpi_pass_(int axis, double *const *fields, stream_t stream) {
+    if (m_use_contiguous) {
+      run_mpi_pass_contiguous_(axis, fields, stream);
+      return;
+    }
     std::size_t req_count = 0;
     for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
       void *buf = static_cast<void *>(fields[fld]);
@@ -403,6 +438,74 @@ private:
     pfc::exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
   }
 
+  void run_mpi_pass_contiguous_(int axis, double *const *fields, stream_t stream) {
+    std::size_t req_count = 0;
+    std::size_t idx = 0;
+    for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
+      const int field_tag_off = m_base_tag + static_cast<int>(fld) * 6;
+      for (int f = 0; f < 2; ++f) {
+        const auto &recv = m_slabs[axis][f].second;
+        const std::size_t n = static_cast<std::size_t>(recv.sx) *
+                              static_cast<std::size_t>(recv.sy) *
+                              static_cast<std::size_t>(recv.sz);
+        const int slot = axis * 2 + f;
+        const int tag = field_tag_off + opposite_face_slot_(slot);
+        const int face_count =
+            pfc::mpi::ensure_mpi_int_count(n, "FullPaddedDeviceHalo contig face");
+        pfc::mpi::throw_on_mpi_error(
+            MPI_Irecv(m_d_recv_pool[idx], face_count, MPI_DOUBLE,
+                      m_neighbors[axis][f], tag, m_comm, &m_requests[req_count]),
+            "FullPaddedDeviceHalo contig MPI_Irecv");
+        ++req_count;
+        ++idx;
+      }
+    }
+
+    idx = 0;
+    for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
+      for (int f = 0; f < 2; ++f) {
+        const auto &send = m_slabs[axis][f].first;
+        Ops::pack_face(m_d_send_pool[idx], fields[fld], send.ox, send.oy, send.oz,
+                       send.sx, send.sy, send.sz, m_nxp, m_nyp, m_nzp, stream);
+        ++idx;
+      }
+    }
+    Ops::stream_sync(stream, Ops::sync_pack);
+
+    idx = 0;
+    for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
+      const int field_tag_off = m_base_tag + static_cast<int>(fld) * 6;
+      for (int f = 0; f < 2; ++f) {
+        const auto &send = m_slabs[axis][f].first;
+        const std::size_t n = static_cast<std::size_t>(send.sx) *
+                              static_cast<std::size_t>(send.sy) *
+                              static_cast<std::size_t>(send.sz);
+        const int slot = axis * 2 + f;
+        const int tag = field_tag_off + slot;
+        const int face_count =
+            pfc::mpi::ensure_mpi_int_count(n, "FullPaddedDeviceHalo contig face");
+        pfc::mpi::throw_on_mpi_error(
+            MPI_Isend(m_d_send_pool[idx], face_count, MPI_DOUBLE,
+                      m_neighbors[axis][f], tag, m_comm, &m_requests[req_count]),
+            "FullPaddedDeviceHalo contig MPI_Isend");
+        ++req_count;
+        ++idx;
+      }
+    }
+    pfc::exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
+
+    idx = 0;
+    for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
+      for (int f = 0; f < 2; ++f) {
+        const auto &recv = m_slabs[axis][f].second;
+        Ops::unpack_face(fields[fld], m_d_recv_pool[idx], recv.ox, recv.oy,
+                         recv.oz, recv.sx, recv.sy, recv.sz, m_nxp, m_nyp, m_nzp,
+                         stream);
+        ++idx;
+      }
+    }
+  }
+
   int m_rank = 0;
   int m_halo_width = 1;
   MPI_Comm m_comm = MPI_COMM_NULL;
@@ -425,9 +528,12 @@ private:
   std::size_t m_scratch_elems = 0;
 
   bool m_use_gpu_aware = false;
+  bool m_use_contiguous = false;
   bool m_use_full_widening = false;
 
   double *m_d_scratch = nullptr;
+  std::vector<double *> m_d_send_pool;
+  std::vector<double *> m_d_recv_pool;
 
   std::vector<std::unique_ptr<PaddedDeviceHaloExchangerImpl<Ops>>> m_per_field_packed;
 };
