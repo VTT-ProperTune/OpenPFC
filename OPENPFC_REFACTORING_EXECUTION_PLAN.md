@@ -40,7 +40,7 @@ This checkout is **on LUMI (AMD/HIP)**. CUDA execution is impossible here; CUDA-
 
 **M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced; latest commit `99f304da` builds and runs HIP unit tests on LUMI. Remaining M3 items are (a) CUDA execution/perf/co-enabled CI — **not testable on LUMI**, (b) folding CUDA `padded_halo_faces.cu` into the kernel library (separable-compilation, CUDA-only — deferred to tohtori).
 
-**M4 leftovers remain** (old exchanger public names). **M5 is complete** for the planned FFT utilities. **M6 has started:** ADR 0003 accepted; `EulerStepper` and `RK2HeunStepper` use `StepAttemptResult` attempt/commit (`step()` is that pair). Remaining M6: port RK3/explicit RK/embedded/IMEX/ETD, Field-based state, adaptive controller.
+**M4 leftovers remain** (old exchanger public names). **M5 is complete** for the planned FFT utilities. **M6 stepper-protocol port is done** for the seven leaves (Euler, RK2 Heun, RK3 Heun, ExplicitRK, EmbeddedRK, ImexEuler, Etd1) onto `StepAttemptResult`. Remaining M6: Field-based state / N-field packs, merge StageContext/workspace/method enum, AdaptiveTimeController, non-diagonal SolveFunction mock.
 
 **2026-08-03 restructuring note:** two earlier attempts stalled at M3 citing lack of LUMI access. M-LUMI still collects HIP-*execution* items deferred from Pre-M0/M3/M4/M8/M9. This session *is* on LUMI, so those HIP execution items can be filled when the corresponding code exists; they still do not gate M4–M11 code. The symmetric problem now is CUDA: do not stall on tohtori.
 
@@ -478,7 +478,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 ### Tasks
 
 * [x] Declare `StepAttemptResult`/attempt-commit (from `steppers/step_attempt.hpp`) the single protocol; specify it in `docs/adr/0003-time-integrator-interface.md` (update the existing ADR). **Accepted; `AttemptStepper` concept added.**
-* [ ] Port onto the protocol: `EulerStepper`, `RK2Heun`, `RK3Heun`, `ExplicitRKStepper` (via `euler_attempt.hpp`'s proof path), `EmbeddedRKStepper` (replace reference-member result), `ImexEulerStepper` (drop `ImexStepAttempt`), `Etd1Stepper` (drop `Etd1StepAttempt`/`candidate()` special form). **`EulerStepper` and `RK2HeunStepper` `step()` are attempt+commit.**
+* [x] Port onto the protocol: `EulerStepper`, `RK2Heun`, `RK3Heun`, `ExplicitRKStepper`, `EmbeddedRKStepper` (drop `EmbeddedStepAttemptResult`; keep `u_high`/`u_low`/`error`/`last_rhs_evals` accessors), `ImexEulerStepper` (drop `ImexStepAttempt`; keep `last_solve_*`), `Etd1Stepper` (drop `Etd1StepAttempt`; `attempt` returns `StepAttemptResult`). In-place `step()` is attempt+commit where the leaf has `step()`.
 * [ ] Generalize state: steppers accept any type satisfying the field concepts (`state_concepts.hpp` — wire it in for real) — `Field<double>`, `Field<complex<double>>`, and heterogeneous packs; remove the raw-`std::vector<double>`-only restriction.
 * [ ] Complex-state ETD: `Etd1Stepper` (and `MultiEtd1Stepper`) operate on complex spectral fields with device-resident coefficient application (uses M3 generic elementwise ops + M5 coefficients) — the capability tungsten's ETD needs.
 * [ ] Generalize multi-field arity: `MultiStageFunction` concept over parameter packs (drop the fixed-2 check in `stage_protocol.hpp:55–61`); `MultiEtd1Stepper` over N (drop the `N == 2` hard-require in `etd1.hpp:208–209`).
@@ -488,7 +488,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 ### Required tests
 
-* [ ] Protocol-conformance test template applied to all seven steppers (attempt→reject→attempt→commit sequence; rollback state equality). **Euler and RK2 Heun covered in `test_step_protocol.cpp` (always-succeed path).**
+* [x] Protocol-conformance test template applied to all seven steppers (attempt→reject→attempt→commit sequence; rollback state equality). **Euler, RK2, RK3, ExplicitRK, Etd1 covered in `test_step_protocol.cpp` (always-succeed path). Embedded/IMEX keep extra `dt`/`ctx` on `attempt` and are covered in their own tests.**
 * [ ] Existing RK/temporal convergence-order tests pass unchanged (orders preserved is the scientific gate).
 * [ ] New: complex-field ETD1 vs analytic solution of a stiff linear complex ODE field (tolerance test); N=3 multi-field Euler/ETD test extending `test_multifield_stepper.cpp`.
 * [ ] Adaptive end-to-end: embedded RK on a problem with a known transient — controller shrinks dt through the transient and grows after; accepted/rejected counters asserted.
@@ -496,7 +496,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 ### Deletions
 
-* [ ] `steppers/integrator_base.hpp` (virtual type-erasure layer), `kernel/simulation/integrator_result.hpp`, `IntegratorMethod` in `time.hpp`, `ImexStepAttempt`/`Etd1StepAttempt`/`EmbeddedStepAttemptResult` special result types, the losing `StageContext` and workspace type, `fd_stencils.hpp:325–337` back-compat shims.
+* [ ] `steppers/integrator_base.hpp` (virtual type-erasure layer), `kernel/simulation/integrator_result.hpp`, `IntegratorMethod` in `time.hpp`, the losing `StageContext` and workspace type, `fd_stencils.hpp:325–337` back-compat shims. **`ImexStepAttempt` / `Etd1StepAttempt` / `EmbeddedStepAttemptResult` are deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
 * [ ] `euler_attempt.hpp` (its proof role is absorbed by the ported steppers).
 
 ### Definition of done

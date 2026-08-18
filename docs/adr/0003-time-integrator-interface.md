@@ -313,10 +313,12 @@ buffer. The shared types live in
   (`workspace_reusable()` when the stepper exposes it).
 
 `EulerAttemptStepper` is the injectable proof path. Production
-`EulerStepper` and `RK2HeunStepper` implement the same `attempt` /
-`commit_step_attempt` pair. Special result types (`Etd1StepAttempt`,
-`ImexStepAttempt`, `EmbeddedStepAttemptResult`) are retired onto
-`StepAttemptResult` as those steppers are ported.
+`EulerStepper`, `RK2HeunStepper`, `RK3HeunStepper`, and `ExplicitRKStepper`
+implement the same `attempt` / `commit_step_attempt` pair. `EmbeddedRKStepper`,
+`ImexEulerStepper`, and `Etd1Stepper` return `StepAttemptResult` as well;
+method extras live on stepper accessors (`u_high`/`u_low`/`error`,
+`last_solve_*`, `last_reason`). Special result types (`Etd1StepAttempt`,
+`ImexStepAttempt`, `EmbeddedStepAttemptResult`) are removed.
 
 ## Consequences
 

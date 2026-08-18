@@ -292,18 +292,20 @@ CPU first-order exponential time-differencing lives in
 ```cpp
 Etd1Stepper stepper(dt, local_size, rhs);
 stepper.set_coefficients(exp_Ldt, phi1_L);  // or SpectralExpCoefficientCache
-auto attempt = stepper.attempt_step(t, u_accepted);  // u_accepted never written
-// candidate = exp_Ldt * u + phi1_L * N   (phi1_L already includes dt)
+auto attempt = stepper.attempt(t, u_accepted);  // u_accepted never written
+// attempt.candidate = exp_Ldt * u + phi1_L * N   (phi1_L already includes dt)
 ```
 
-`attempt_step` copies accepted state into method-owned scratch before
-evaluating `N`, writes an isolated `candidate()`, and returns
-`Etd1StepAttempt` (`success` / `t_next`) — computational completion only,
-not adaptive accept/reject. `MultiEtd1Stepper<Rhs, 2>` covers a two-field
-pack with the same isolation per field. Transient coeff/scratch caches are
-not checkpointable. Tungsten still uses the temporary
-`TungstenEtdWorkspace` adapter until App/Simulator wires driver-owned
-`Etd1Stepper` time advance (`TODO(remove-tungsten-etd-workspace)`). Coverage:
+`attempt` copies accepted state into method-owned scratch before
+evaluating `N`, writes an isolated candidate, and returns
+`StepAttemptResult` (`success` / `t1`) — computational completion only,
+not adaptive accept/reject. Size / non-finite failures set
+`stepper.last_reason()`. `MultiEtd1Stepper<Rhs, 2>` returns
+`MultiStepAttemptResult<2>` with the same isolation per field. Transient
+coeff/scratch caches are not checkpointable. Tungsten still uses the
+temporary `TungstenEtdWorkspace` adapter until App/Simulator wires
+driver-owned `Etd1Stepper` time advance
+(`TODO(remove-tungsten-etd-workspace)`). Coverage:
 `tests/unit/kernel/simulation/steppers/test_etd1.cpp` (`[stepper][etd1]`).
 
 ### Shared step-attempt seam (Euler proof path)
@@ -328,8 +330,8 @@ Legacy in-place `EulerStepper::step` is unchanged. Coverage:
 [`test_step_attempt.cpp`](../../tests/unit/kernel/simulation/steppers/test_step_attempt.cpp)
 (`[step_attempt][unit]`).
 
-`EmbeddedRKStepper` below remains the embedded high/low/error evidence API; it
-is not replaced by this seam.
+`EmbeddedRKStepper` below returns the same `StepAttemptResult`; high/low/error
+pair evidence lives on stepper accessors.
 
 ### Embedded RK step attempts (`EmbeddedRKStepper`)
 
@@ -340,11 +342,12 @@ mutating the accepted state, use
 ```cpp
 EmbeddedRKStepper stepper(local_size, make_embedded_rk45<double>(), rhs);
 auto result = stepper.attempt(t, dt, u);  // u is const — never written
-// result.u_high / result.u_low / result.error  (views into method-owned buffers)
+// result.candidate == stepper.u_high()
+// stepper.u_low() / stepper.error()  (method-owned buffers)
 // result.success == computational completion only (not accept/reject)
 ```
 
-`attempt` evaluates shared stages once (`rhs_evals == tableau.stage_count()`),
+`attempt` evaluates shared stages once (`last_rhs_evals() == tableau.stage_count()`),
 accumulates with primary `b` into isolated `u_high` and with embedded `b_hat`
 into `u_low`, and forms `error = u_high - u_low`. Accept/reject and next-`dt`
 selection stay driver/controller-owned. FSAL stage reuse is deferred; any
