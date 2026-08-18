@@ -7,7 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Status
 
-Proposed
+Accepted (2026-08-18). M6 names `StepAttemptResult` / `commit_step_attempt` as
+the single stepper protocol.
 
 ## Context
 
@@ -295,6 +296,28 @@ sim.step_with_physics([&]() {
 
 The model no longer owns time integration, enabling pluggable steppers (RK2, RK4, IMEX) without modifying model physics code.
 
+### 8. Step-attempt / commit protocol (M6)
+
+Every method that can reject a step isolates a **candidate** from the accepted
+buffer. The shared types live in
+[`step_attempt.hpp`](../../include/openpfc/kernel/simulation/steppers/step_attempt.hpp):
+
+- `attempt(t, u)` (or `attempt(t, dt, u, eval, prep)` on the injectable proof
+  path) returns `StepAttemptResult`. On success `t1 == t0 + dt` and
+  `candidate` is a view into method-owned storage. On soft failure `success ==
+  false`, `t1 == t0`, and the accepted buffer is bitwise unchanged.
+- `commit_step_attempt(accepted, result)` copies the candidate into the
+  accepted buffer. Committing a failed result throws.
+- In-place `step(t, u)` is a convenience: `commit_step_attempt(u, attempt(t, u))`.
+- Method-owned workspace stays allocated after soft failure
+  (`workspace_reusable()` when the stepper exposes it).
+
+`EulerAttemptStepper` is the injectable proof path. Production
+`EulerStepper` and `RK2HeunStepper` implement the same `attempt` /
+`commit_step_attempt` pair. Special result types (`Etd1StepAttempt`,
+`ImexStepAttempt`, `EmbeddedStepAttemptResult`) are retired onto
+`StepAttemptResult` as those steppers are ported.
+
 ## Consequences
 
 - New integrator methods (RK2, RK4, IMEX) can be added without modifying model physics code by following the documented contracts
@@ -308,6 +331,7 @@ The model no longer owns time integration, enabling pluggable steppers (RK2, RK4
 
 - [`include/openpfc/kernel/simulation/simulator.hpp`](../../include/openpfc/kernel/simulation/simulator.hpp) — `Simulator::step()` orchestration
 - [`include/openpfc/kernel/simulation/simulator_integrator.hpp`](../../include/openpfc/kernel/simulation/simulator_integrator.hpp) — `begin_integrator_step()` / `end_integrator_step()` implementation
+- [`include/openpfc/kernel/simulation/steppers/step_attempt.hpp`](../../include/openpfc/kernel/simulation/steppers/step_attempt.hpp) — `StepAttemptResult` and `commit_step_attempt`
 - [`include/openpfc/kernel/simulation/steppers/euler.hpp`](../../include/openpfc/kernel/simulation/steppers/euler.hpp) — `EulerStepper` and `MultiEulerStepper` implementation
 - [`include/openpfc/kernel/simulation/for_each_interior.hpp`](../../include/openpfc/kernel/simulation/for_each_interior.hpp) — Canonical point-wise driver loop
 - [`include/openpfc/kernel/field/tuple_protocol.hpp`](../../include/openpfc/kernel/field/tuple_protocol.hpp) — Multi-field bundling convention

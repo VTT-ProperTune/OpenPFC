@@ -177,4 +177,16 @@ commit_step_attempt(std::vector<double> &accepted0,
   accepted1 = result.candidate(1);
 }
 
+/**
+ * @brief Satisfied by a stepper that isolates a candidate via `attempt`.
+ *
+ * `attempt(t, u)` must not write `u`. The driver commits with
+ * `commit_step_attempt`.
+ */
+template <class T>
+concept AttemptStepper = requires(T stepper, double t,
+                                  const std::vector<double> &u) {
+  { stepper.attempt(t, u) } -> std::same_as<StepAttemptResult>;
+};
+
 } // namespace pfc::sim::steppers
