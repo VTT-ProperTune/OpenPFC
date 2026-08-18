@@ -6,7 +6,7 @@
  * @brief Kobayashi phase-field + temperature coupling — manual FD matching the Julia
  *        `kobayashi_v1` script (Biner-style discretisation, explicit Euler).
  *
- * Periodic boundaries in x and y via `PaddedHaloExchanger` on an nz=1 slab.
+ * Periodic boundaries in x and y via `HaloExchange` on an nz=1 slab.
  */
 
 #include <cmath>
@@ -29,7 +29,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
@@ -79,18 +79,13 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   });
   tempr.for_each_owned([&](int i, int j, int k) { tempr(i, j, k) = 0.0; });
 
-  pfc::communication::PaddedHaloExchanger<double> halo_phi(phi, decomp, rank,
-                                                           MPI_COMM_WORLD, 0);
-  pfc::communication::PaddedHaloExchanger<double> halo_t(tempr, decomp, rank,
-                                                         MPI_COMM_WORLD, 20);
-  pfc::communication::PaddedHaloExchanger<double> halo_eps(epsilon, decomp, rank,
-                                                           MPI_COMM_WORLD, 40);
-  pfc::communication::PaddedHaloExchanger<double> halo_epsd(
-      epsilon_deriv, decomp, rank, MPI_COMM_WORLD, 60);
-  pfc::communication::PaddedHaloExchanger<double> halo_phidx(phidx, decomp, rank,
-                                                             MPI_COMM_WORLD, 80);
-  pfc::communication::PaddedHaloExchanger<double> halo_phidy(
-      phidy, decomp, rank, MPI_COMM_WORLD, 100);
+  pfc::comm::HaloExchange<pfc::HostSpace, double> halo_state(
+      {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD);
+  pfc::comm::HaloExchangeOptions aux_opt;
+  aux_opt.exchange_base = 2;
+  pfc::comm::HaloExchange<pfc::HostSpace, double> halo_aux(
+      {&epsilon, &epsilon_deriv, &phidx, &phidy}, decomp, rank, MPI_COMM_WORLD,
+      aux_opt);
 
   const bool skip_png = std::getenv("OPENPFC_KOBAYASHI_SKIP_PNG") != nullptr;
   const bool quiet = std::getenv("OPENPFC_KOBAYASHI_QUIET") != nullptr;
@@ -121,8 +116,7 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const double t_loop0 = MPI_Wtime();
 
   for (int istep = 1; istep <= cfg.n_steps; ++istep) {
-    pfc::communication::exchange(halo_phi);
-    pfc::communication::exchange(halo_t);
+    halo_state.exchange();
 
     phi.for_each_owned([&](int i, int j, int k) {
       const double hne = phi(i + 1, j, k);
@@ -153,10 +147,7 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
                                std::sin(kobayashi::kAniso * (theta - kobayashi::kTheta0));
     });
 
-    pfc::communication::exchange(halo_eps);
-    pfc::communication::exchange(halo_epsd);
-    pfc::communication::exchange(halo_phidx);
-    pfc::communication::exchange(halo_phidy);
+    halo_aux.exchange();
 
     phi.for_each_owned([&](int i, int j, int k) {
       const double phiold = phi(i, j, k);
