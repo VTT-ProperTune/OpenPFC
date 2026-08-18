@@ -17,7 +17,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
@@ -52,9 +52,7 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   auto v = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
   auto lap = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
-  const auto& geometry = decomposition::domain(decomp);
-  auto subdomain_box = decomposition::local_box(decomp, rank);
-  PaddedHaloExchanger<double> halo_u(subdomain_box, geometry, decomp, rank, hw, MPI_COMM_WORLD, 0);
+  comm::HaloExchange<HostSpace, double> halo_u(u, decomp, rank, MPI_COMM_WORLD);
 
   const double xc = 0.5 * static_cast<double>(cfg.Nx - 1);
   const double yc = 0.5 * static_cast<double>(cfg.Ny - 1);
@@ -67,7 +65,7 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   });
   v.apply([](double, double, double) { return 0.0; });
 
-  halo_u.exchange_halos(u.data(), u.size());
+  halo_u.exchange();
   wave2d::fill_y_physical_ghosts_padded(u, cfg.y_bc, cfg.Ny,
                                         static_cast<double>(cfg.u_wall));
   if (cfg.y_bc == YBoundaryKind::Dirichlet) {
@@ -93,7 +91,7 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
   runtime::MpiTimer timer{MPI_COMM_WORLD};
   runtime::tic(timer);
   for (int step = 0; step < cfg.n_steps; ++step) {
-    halo_u.exchange_halos(u.data(), u.size());
+    halo_u.exchange();
     wave2d::fill_y_physical_ghosts_padded(u, cfg.y_bc, cfg.Ny,
                                           static_cast<double>(cfg.u_wall));
     u.for_each_owned([&](int i, int j, int k) { stencil_lap(i, j, k); });
