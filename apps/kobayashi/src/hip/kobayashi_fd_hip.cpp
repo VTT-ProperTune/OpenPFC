@@ -6,8 +6,9 @@
  * @brief MPI + HIP Kobayashi FD driver: one MPI rank binds one GPU (local rank mod device count).
  *
  * Halos use `pfc::comm::HaloExchange<HipSpace>` on device-resident Fields
- * (same two groups as the CPU driver). PNG / verify still stage \(\phi\) and
- * \(T\) to host after the timed loop (and at `nsave` snapshots).
+ * (same two groups as the CPU driver; `Axes2D()` skips ±Z on the nz=1 slab).
+ * PNG / verify still stage \(\phi\) and \(T\) to host after the timed loop
+ * (and at `nsave` snapshots).
  */
 
 #if !defined(OpenPFC_ENABLE_HIP)
@@ -40,6 +41,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/runtime/gpu/comm_halo_exchange_gpu.hpp>
 
 #include <kobayashi/verification_utilities.hpp>
@@ -185,10 +187,13 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   copy_host_to_device(phi_h, phi);
   copy_host_to_device(tempr_h, tempr);
 
+  pfc::comm::HaloExchangeOptions state_opt;
+  state_opt.directions = pfc::halo::presets::Axes2D();
   pfc::comm::HaloExchange<pfc::HipSpace, double> halo_state(
-      {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD);
+      {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD, state_opt);
   pfc::comm::HaloExchangeOptions aux_opt;
   aux_opt.exchange_base = 2;
+  aux_opt.directions = pfc::halo::presets::Axes2D();
   pfc::comm::HaloExchange<pfc::HipSpace, double> halo_aux(
       {&epsilon, &epsilon_deriv, &phidx, &phidy}, decomp, rank, MPI_COMM_WORLD,
       aux_opt);

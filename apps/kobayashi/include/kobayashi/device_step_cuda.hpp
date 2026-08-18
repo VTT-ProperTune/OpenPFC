@@ -38,9 +38,9 @@ void kobayashi_stage_b_cuda(double *phi_dev, double *tempr_dev,
  * @brief Apply **periodic** x/y (and z for `nz==1`) halos on device for `hw == 1`
  * only.
  *
- * For **single-rank** Kobayashi runs this avoids **MPI + global CUDA sync** on every
- * exchange (see `PaddedDeviceHaloExchanger::exchange_halos_device`). Multi-rank jobs
- * must keep using MPI halos.
+ * For **single-rank** Kobayashi runs this avoids **MPI + extra CUDA sync** on every
+ * exchange. The CUDA driver now uses `HaloExchange<CudaSpace>` (including
+ * nproc==1 self-periodic XY); this helper remains for kernel-level tests.
  */
 void kobayashi_periodic_halos_xy_cuda(double *pad_dev, int nx, int ny, int nz,
                                       int hw);

@@ -30,6 +30,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
@@ -79,10 +80,13 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   });
   tempr.for_each_owned([&](int i, int j, int k) { tempr(i, j, k) = 0.0; });
 
+  pfc::comm::HaloExchangeOptions state_opt;
+  state_opt.directions = pfc::halo::presets::Axes2D();
   pfc::comm::HaloExchange<pfc::HostSpace, double> halo_state(
-      {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD);
+      {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD, state_opt);
   pfc::comm::HaloExchangeOptions aux_opt;
   aux_opt.exchange_base = 2;
+  aux_opt.directions = pfc::halo::presets::Axes2D();
   pfc::comm::HaloExchange<pfc::HostSpace, double> halo_aux(
       {&epsilon, &epsilon_deriv, &phidx, &phidy}, decomp, rank, MPI_COMM_WORLD,
       aux_opt);

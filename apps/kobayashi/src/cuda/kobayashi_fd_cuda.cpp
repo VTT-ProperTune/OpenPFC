@@ -6,16 +6,21 @@
  * @brief MPI + CUDA Kobayashi FD driver: one MPI rank binds one GPU (local rank mod
  * device count).
  *
- * Halos use `pfc::cuda::PaddedDeviceHaloExchanger`: GPU-aware MPI on device buffers
- * when available, otherwise narrow face pack/unpack + MPI on pinned host (see
- * `OPENPFC_CUDA_FORCE_PACKED_HALO`).
+ * Halos use `pfc::comm::HaloExchange<CudaSpace>` on device-resident Fields
+ * (same two groups as the CPU/HIP drivers; `Axes2D()` skips ±Z on the nz=1
+ * slab). PNG / verify still stage \(\phi\) and \(T\) to host after the timed
+ * loop (and at `nsave` snapshots).
  *
  * **Performance:** set **`OPENPFC_KOBAYASHI_PERF=1`** to print
- * **`KOBAYASHI_PERF_LOOP`** (wall around the six halo calls per step, both CUDA
- * stages, PNG cadence inside the loop, and residual time vs `wall_loop_max_s`) and,
- * when **`nproc > 1`**, to enable
- * **`OPENPFC_CUDA_PROFILE_HALO`** and print **`OPENPFC_CUDA_PROFILE_HALO_SUMMARY`**
- * from `pfc::cuda::print_cuda_halo_exchange_cpu_timers`.
+ * **`KOBAYASHI_PERF_LOOP`** (wall around the two halo-group calls per step,
+ * both CUDA stages, PNG cadence inside the loop, and residual time vs
+ * `wall_loop_max_s`) and, when **`nproc > 1`**, to enable
+ * **`OPENPFC_CUDA_PROFILE_HALO`** and print **`OPENPFC_CUDA_PROFILE_HALO_SUMMARY`**.
+ *
+ * **`KOBAYASHI_HALO_EXTENDED=1`** grows the halo to `hw=2` so stage_a writes
+ * the aux 1-cell ring locally and the second exchange is skipped. The old
+ * `KOBAYASHI_HALO_BATCH` env is ignored: each `HaloExchange` already posts
+ * its bound fields sequentially (two groups per step).
  */
 
 #if !defined(OpenPFC_ENABLE_CUDA)
@@ -24,13 +29,14 @@
 
 #include <cuda_runtime.h>
 
+#include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <memory>
 #include <mpi.h>
 #include <stdexcept>
 #include <string>
@@ -48,16 +54,46 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
-#include <openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp>
-
-#include "kobayashi_batched_halo.hpp"
+#include <openpfc/runtime/gpu/comm_halo_exchange_gpu.hpp>
 
 #include <kobayashi/verification_utilities.hpp>
 
 namespace {
 
-using Field = pfc::data::Field<double, pfc::HostSpace>;
+using HostField = pfc::data::Field<double, pfc::HostSpace>;
+using DevField = pfc::data::Field<double, pfc::CudaSpace>;
 using pfc::data::field_from_subdomain;
+
+class mpi_comm_guard {
+private:
+    MPI_Comm comm_;
+
+public:
+    explicit mpi_comm_guard(MPI_Comm comm = MPI_COMM_NULL) : comm_(comm) {}
+    ~mpi_comm_guard() noexcept {
+        if (comm_ != MPI_COMM_NULL && comm_ != MPI_COMM_WORLD) {
+            (void)MPI_Comm_free(&comm_);
+        }
+    }
+    mpi_comm_guard(const mpi_comm_guard&) = delete;
+    mpi_comm_guard& operator=(const mpi_comm_guard&) = delete;
+    mpi_comm_guard(mpi_comm_guard&& other) noexcept : comm_(other.comm_) {
+        other.comm_ = MPI_COMM_NULL;
+    }
+    mpi_comm_guard& operator=(mpi_comm_guard&& other) noexcept {
+        if (this != &other) {
+            if (comm_ != MPI_COMM_NULL && comm_ != MPI_COMM_WORLD) {
+                (void)MPI_Comm_free(&comm_);
+            }
+            comm_ = other.comm_;
+            other.comm_ = MPI_COMM_NULL;
+        }
+        return *this;
+    }
+
+    operator MPI_Comm() const { return comm_; }
+    MPI_Comm get() const { return comm_; }
+};
 
 void cuda_check(cudaError_t e, const char *what) {
   if (e != cudaSuccess) {
@@ -65,88 +101,38 @@ void cuda_check(cudaError_t e, const char *what) {
   }
 }
 
-/// Pin host staging bricks for faster H↔D copies (otherwise memcpy is
-/// pageable-limited).
-struct HostPinnedRegistration {
-  void *ptr = nullptr;
-  HostPinnedRegistration(void *p, std::size_t nbytes) : ptr(p) {
-    if (nbytes == 0) {
-      ptr = nullptr;
-      return;
-    }
-    cuda_check(cudaHostRegister(ptr, nbytes, cudaHostRegisterDefault),
-               "cudaHostRegister Kobayashi staging buffer");
-  }
-  ~HostPinnedRegistration() {
-    if (ptr != nullptr) {
-      [[maybe_unused]] const cudaError_t u = cudaHostUnregister(ptr);
-      (void)u;
-    }
-  }
-  HostPinnedRegistration(const HostPinnedRegistration &) = delete;
-  HostPinnedRegistration &operator=(const HostPinnedRegistration &) = delete;
-};
-
-/// RAII guard for CUDA device buffers, ensures cudaFree on all exit paths
-struct DeviceBuffer {
-  double *ptr = nullptr;
-  // Default constructor
-  DeviceBuffer() = default;
-
-  // Constructor: take ownership of raw pointer
-  explicit DeviceBuffer(double *p) : ptr(p) {}
-
-  // Disable copying
-  DeviceBuffer(const DeviceBuffer &) = delete;
-  DeviceBuffer &operator=(const DeviceBuffer &) = delete;
-
-  // Move constructor
-  DeviceBuffer(DeviceBuffer &&other) noexcept : ptr(other.ptr) {
-    other.ptr = nullptr;
-  }
-
-  // Move assignment
-  DeviceBuffer &operator=(DeviceBuffer &&other) noexcept {
-    if (this != &other) {
-      if (ptr) {
-        [[maybe_unused]] const cudaError_t e = cudaFree(ptr);
-        (void)e;
-      }
-      ptr = other.ptr;
-      other.ptr = nullptr;
-    }
-    return *this;
-  }
-
-  // Destructor: free on all exit paths
-  ~DeviceBuffer() {
-    if (ptr) {
-      [[maybe_unused]] const cudaError_t e = cudaFree(ptr);
-      (void)e;
-      ptr = nullptr;
-    }
-  }
-
-  // Expose raw pointer for CUDA APIs
-  double *get() const { return ptr; }
-};
-
-void sync_field_d2h(const double *dev, Field &host) {
-  cuda_check(cudaMemcpy(host.data(), dev, host.size() * sizeof(double),
-                        cudaMemcpyDeviceToHost),
-             "sync_field_d2h");
+DevField make_dev_field(const pfc::decomposition::Decomposition &decomp, int rank,
+                        int hw) {
+  return DevField(pfc::decomposition::domain(decomp),
+                  pfc::decomposition::local_box(decomp, rank), hw);
 }
 
-void sync_field_h2d(const Field &host, double *dev) {
-  cuda_check(cudaMemcpy(dev, host.data(), host.size() * sizeof(double),
-                        cudaMemcpyHostToDevice),
-             "sync_field_h2d");
+void copy_host_to_device(const HostField &host, DevField &dev) {
+  if (host.size() != dev.size()) {
+    throw std::runtime_error("copy_host_to_device: size mismatch");
+  }
+  dev.with_host_view([&](double *data, std::size_t n) {
+    std::copy(host.data(), host.data() + n, data);
+  });
+  dev.sync_to_device();
+}
+
+void copy_device_to_host(DevField &dev, HostField &host) {
+  if (host.size() != dev.size()) {
+    throw std::runtime_error("copy_device_to_host: size mismatch");
+  }
+  dev.with_host_view([&](double *data, std::size_t n) {
+    std::copy(data, data + n, host.data());
+  });
+  // Read-only pull: keep the device buffer as the source of truth.
+  dev.note_device_write();
 }
 
 void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
-  MPI_Comm node_comm{};
+  MPI_Comm temp_node_comm{};
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                      &node_comm);
+                      &temp_node_comm);
+  mpi_comm_guard node_comm(temp_node_comm);
   int local_rank = 0;
   if (node_comm != MPI_COMM_NULL) {
     MPI_Comm_rank(node_comm, &local_rank);
@@ -171,33 +157,36 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
                                           pfc::GridSpacing({dx, dy, 1.0}));
   const auto decomp = pfc::decomposition::create(domain, nproc);
 
-  // **Halo width:** `hw=1` is enough for a stage_a stencil that reads i+/-1 and
-  // exchanges between stages. **Extended-halo mode (KOBAYASHI_HALO_EXTENDED=1)**
-  // grows the halo of all fields to `hw=2` so stage_a can write the eps/eps_d/
-  // phidx/phidy 1-cell ring locally and the **second halo exchange of the step
-  // disappears** (see loop below). Only meaningful for `nproc > 1`; the device
-  // periodic-halo helper used at `nproc == 1` only supports `hw == 1`.
   bool halo_extended_req = std::getenv("KOBAYASHI_HALO_EXTENDED") != nullptr &&
                            std::getenv("KOBAYASHI_HALO_EXTENDED")[0] == '1';
   if (halo_extended_req && nproc == 1) {
     if (rank == 0) {
       std::cout << "KOBAYASHI_HALO_EXTENDED ignored at nproc=1 (single-rank uses "
-                   "device-only "
-                   "periodic halos with hw=1)\n";
+                   "HaloExchange self-periodic XY with hw=1)\n";
     }
     halo_extended_req = false;
   }
   const bool halo_extended = halo_extended_req;
   const int hw = halo_extended ? 2 : 1;
   const int stage_a_extend = halo_extended ? 1 : 0;
-  auto phi_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  auto tempr_h = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+
+  auto phi_h = field_from_subdomain<double>(decomp, rank, hw);
+  auto tempr_h = field_from_subdomain<double>(decomp, rank, hw);
+
+  auto phi = make_dev_field(decomp, rank, hw);
+  auto tempr = make_dev_field(decomp, rank, hw);
+  auto lap_phi = make_dev_field(decomp, rank, hw);
+  auto lap_t = make_dev_field(decomp, rank, hw);
+  auto phidx = make_dev_field(decomp, rank, hw);
+  auto phidy = make_dev_field(decomp, rank, hw);
+  auto epsilon = make_dev_field(decomp, rank, hw);
+  auto epsilon_deriv = make_dev_field(decomp, rank, hw);
 
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
-  const int nx = phi_h.local_size()[0];
-  const int ny = phi_h.local_size()[1];
-  const int nz = phi_h.local_size()[2];
+  const int nx = phi.local_size()[0];
+  const int ny = phi.local_size()[1];
+  const int nz = phi.local_size()[2];
 
   const int ci = Nx / 2;
   const int cj = Ny / 2;
@@ -213,160 +202,30 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   });
   tempr_h.for_each_owned([&](int i, int j, int k) { tempr_h(i, j, k) = 0.0; });
 
-  const HostPinnedRegistration pin_phi(phi_h.data(), phi_h.size() * sizeof(double));
-  const HostPinnedRegistration pin_tempr(tempr_h.data(),
-                                         tempr_h.size() * sizeof(double));
+  copy_host_to_device(phi_h, phi);
+  copy_host_to_device(tempr_h, tempr);
 
-  const std::size_t padded_elems = phi_h.size();
-  const std::size_t padded_bytes = padded_elems * sizeof(double);
+  pfc::comm::HaloExchangeOptions state_opt;
+  state_opt.directions = pfc::halo::presets::Axes2D();
+  pfc::comm::HaloExchange<pfc::CudaSpace, double> halo_state(
+      {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD, state_opt);
+  pfc::comm::HaloExchangeOptions aux_opt;
+  aux_opt.exchange_base = 2;
+  aux_opt.directions = pfc::halo::presets::Axes2D();
+  pfc::comm::HaloExchange<pfc::CudaSpace, double> halo_aux(
+      {&epsilon, &epsilon_deriv, &phidx, &phidy}, decomp, rank, MPI_COMM_WORLD,
+      aux_opt);
 
-  DeviceBuffer phi_d;
-  DeviceBuffer tempr_d;
-  DeviceBuffer lap_phi_d;
-  DeviceBuffer lap_t_d;
-  DeviceBuffer phidx_d;
-  DeviceBuffer phidy_d;
-  DeviceBuffer epsilon_d;
-  DeviceBuffer epsilon_deriv_d;
-
-  double *raw_phi_d = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_phi_d), padded_bytes),
-             "cudaMalloc phi");
-  phi_d = DeviceBuffer(raw_phi_d);
-  double *raw_tempr_d = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_tempr_d), padded_bytes),
-             "cudaMalloc tempr");
-  tempr_d = DeviceBuffer(raw_tempr_d);
-  double *raw_lap_phi_d = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_lap_phi_d), padded_bytes),
-             "cudaMalloc lap_phi");
-  lap_phi_d = DeviceBuffer(raw_lap_phi_d);
-  double *raw_lap_t_d = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_lap_t_d), padded_bytes),
-             "cudaMalloc lap_t");
-  lap_t_d = DeviceBuffer(raw_lap_t_d);
-  double *raw_phidx_d = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_phidx_d), padded_bytes),
-             "cudaMalloc phidx");
-  phidx_d = DeviceBuffer(raw_phidx_d);
-  double *raw_phidy_d = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_phidy_d), padded_bytes),
-             "cudaMalloc phidy");
-  phidy_d = DeviceBuffer(raw_phidy_d);
-  double *raw_epsilon_d = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_epsilon_d), padded_bytes),
-             "cudaMalloc epsilon");
-  epsilon_d = DeviceBuffer(raw_epsilon_d);
-  double *raw_epsilon_deriv_d = nullptr;
-  cuda_check(cudaMalloc(reinterpret_cast<void **>(&raw_epsilon_deriv_d), padded_bytes),
-             "cudaMalloc epsilon_deriv");
-  epsilon_deriv_d = DeviceBuffer(raw_epsilon_deriv_d);
-
-  sync_field_h2d(phi_h, phi_d.get());
-  sync_field_h2d(tempr_h, tempr_d.get());
-
-  // Single-rank periodic torus: MPI halos only burn CPU (MPI progress) + CUDA global
-  // sync; use device-side periodic copies instead (see
-  // `kobayashi_periodic_halos_xy_cuda`).
-  // **Batched mode (KOBAYASHI_HALO_BATCH=1):** post all fields' halos in one MPI
-  // round per exchange point (two per step), reducing MPI_Waitall + sync count 6x ->
-  // 2x.
-  // **Extended mode (KOBAYASHI_HALO_EXTENDED=1):** stage_a writes its outputs into
-  // the 1-cell ring outside the interior, so only {phi, tempr} need to be exchanged
-  // per step (one batched call) -- the pre-stage-B exchange is gone entirely.
-  std::unique_ptr<pfc::cuda::PaddedDeviceHaloExchanger> halo_phi;
-  std::unique_ptr<pfc::cuda::PaddedDeviceHaloExchanger> halo_t;
-  std::unique_ptr<pfc::cuda::PaddedDeviceHaloExchanger> halo_eps;
-  std::unique_ptr<pfc::cuda::PaddedDeviceHaloExchanger> halo_epsd;
-  std::unique_ptr<pfc::cuda::PaddedDeviceHaloExchanger> halo_phidx;
-  std::unique_ptr<pfc::cuda::PaddedDeviceHaloExchanger> halo_phidy;
-  std::unique_ptr<kobayashi::cuda::BatchedPaddedDeviceHalo> halo_pre_a;
-  std::unique_ptr<kobayashi::cuda::BatchedPaddedDeviceHalo> halo_pre_b;
   const bool perf_k = std::getenv("OPENPFC_KOBAYASHI_PERF") != nullptr;
   if (perf_k && nproc > 1 && std::getenv("OPENPFC_CUDA_PROFILE_HALO") == nullptr) {
     (void)setenv("OPENPFC_CUDA_PROFILE_HALO", "1", 1);
   }
-  const bool halo_batch = std::getenv("KOBAYASHI_HALO_BATCH") != nullptr &&
-                          std::getenv("KOBAYASHI_HALO_BATCH")[0] == '1';
-  // Extended mode always batches {phi, tempr} (only 1 exchange per step, 2 fields).
-  const bool use_batched_pre_a = halo_batch || halo_extended;
-
-  // Kobayashi FD is a 2D slab problem (`GridSize({Nx, Ny, 1})`); the CUDA
-  // stage_a / stage_b kernels hardcode `iz = 0` and never read `k±1`. Use the
-  // 2D in-plane axes preset so the exchangers skip ±Z entirely — this avoids
-  // packing or MPI-to-self transferring the full nx*ny ±Z face slabs (which
-  // would be ~128 MiB per message at 4096^2). The legacy
-  // `kobayashi_periodic_halos_z_edges_hw1_kernel` is no longer needed in the
-  // multi-rank path; tracked as a follow-up cleanup.
-  const auto halo_dirs = pfc::halo::presets::Axes2D();
-
-  if (nproc > 1) {
-    if (halo_extended) {
-      // corner_fill=true: ±X MPI first, then self ±Y pack with widened X so that
-      // the X-Y corner halos used by extended stage_a's 5-point stencil at
-      // (-1, 0) / (-1, ny-1) etc. are populated correctly.
-      halo_pre_a = std::make_unique<kobayashi::cuda::BatchedPaddedDeviceHalo>(
-          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/2, halo_dirs,
-          /*base_tag=*/0, /*corner_fill=*/true);
-      // No halo_pre_b: stage_a writes the 1-cell ring of its outputs directly.
-    } else if (use_batched_pre_a) {
-      // Pre-stage-A batch: phi, tempr (base_tag=0). Pre-stage-B batch: eps,
-      // eps_deriv, phidx, phidy (base_tag=200) -- well separated from the
-      // pre-A range (2 fields x 6 face slots = 12 tags below 200).
-      halo_pre_a = std::make_unique<kobayashi::cuda::BatchedPaddedDeviceHalo>(
-          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/2, halo_dirs,
-          /*base_tag=*/0);
-      halo_pre_b = std::make_unique<kobayashi::cuda::BatchedPaddedDeviceHalo>(
-          decomp, rank, hw, MPI_COMM_WORLD, /*n_fields=*/4, halo_dirs,
-          /*base_tag=*/200);
-    } else {
-      halo_phi = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 0);
-      halo_t = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 20);
-      halo_eps = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 40);
-      halo_epsd = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 60);
-      halo_phidx = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 80);
-      halo_phidy = std::make_unique<pfc::cuda::PaddedDeviceHaloExchanger>(
-          decomp, rank, hw, MPI_COMM_WORLD, halo_dirs, 100);
-    }
+  if (rank == 0 && std::getenv("KOBAYASHI_HALO_BATCH") != nullptr &&
+      std::getenv("KOBAYASHI_HALO_BATCH")[0] == '1') {
+    std::cout << "KOBAYASHI_HALO_BATCH ignored (HaloExchange posts two field "
+                 "groups; app-local BatchedPaddedDeviceHalo is no longer the "
+                 "default path)\n";
   }
-
-  double perf_sum_exchange = 0.0;
-  double perf_sum_stage_a = 0.0;
-  double perf_sum_stage_b = 0.0;
-  double perf_sum_png_loop = 0.0;
-
-  auto exchange_padded = [&](double *d_padded,
-                             pfc::cuda::PaddedDeviceHaloExchanger *ex) {
-    const double t0 = perf_k ? MPI_Wtime() : 0.0;
-    if (nproc == 1) {
-      kobayashi::kobayashi_periodic_halos_xy_cuda(d_padded, nx, ny, nz, hw);
-    } else {
-      ex->exchange_halos_device(d_padded, padded_elems, nullptr);
-    }
-    if (perf_k) {
-      perf_sum_exchange += MPI_Wtime() - t0;
-    }
-  };
-
-  auto exchange_batch = [&](kobayashi::cuda::BatchedPaddedDeviceHalo *ex,
-                            std::initializer_list<double *> fields) {
-    const double t0 = perf_k ? MPI_Wtime() : 0.0;
-    if (nproc == 1) {
-      for (double *p : fields) {
-        kobayashi::kobayashi_periodic_halos_xy_cuda(p, nx, ny, nz, hw);
-      }
-    } else {
-      ex->exchange(fields, nullptr);
-    }
-    if (perf_k) {
-      perf_sum_exchange += MPI_Wtime() - t0;
-    }
-  };
 
   const bool skip_png = std::getenv("OPENPFC_KOBAYASHI_SKIP_PNG") != nullptr;
   const bool quiet = std::getenv("OPENPFC_KOBAYASHI_QUIET") != nullptr;
@@ -383,23 +242,16 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
               << "\n";
     std::cout << "KOBAYASHI_MPI_COMM_WORLD_SIZE=" << nproc
               << " (must match srun task count)\n";
-    if (nproc == 1) {
-      std::cout << "KOBAYASHI_CUDA_HALO_MODE=device_periodic_local hw=" << hw
-                << "\n";
-    } else {
-      const bool gpu_aware = use_batched_pre_a ? halo_pre_a->uses_gpu_aware_mpi()
-                                               : halo_phi->uses_gpu_aware_mpi();
-      std::cout << "KOBAYASHI_CUDA_HALO_MODE="
-                << (gpu_aware ? "gpu_aware_mpi" : "packed_faces_pcie")
-                << " halo_batch=" << (halo_batch ? "on" : "off")
-                << " halo_extended=" << (halo_extended ? "on" : "off")
-                << " hw=" << hw << "\n";
-    }
+    std::cout << "KOBAYASHI_CUDA_HALO_MODE=device"
+              << " gpu_aware=" << (halo_state.uses_gpu_aware_mpi() ? 1 : 0)
+              << " contiguous=" << (halo_state.uses_contiguous_device_mpi() ? 1 : 0)
+              << " halo_extended=" << (halo_extended ? "on" : "off")
+              << " hw=" << hw << "\n";
   }
 
   int filenum = 0;
   if (!skip_png) {
-    sync_field_d2h(phi_d.get(), phi_h);
+    copy_device_to_host(phi, phi_h);
     char path[4096];
     std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                   filenum);
@@ -410,54 +262,66 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     ++filenum;
   }
 
+  double perf_sum_exchange = 0.0;
+  double perf_sum_stage_a = 0.0;
+  double perf_sum_stage_b = 0.0;
+  double perf_sum_png_loop = 0.0;
+
   MPI_Barrier(MPI_COMM_WORLD);
   const double t_loop0 = MPI_Wtime();
 
   for (int istep = 1; istep <= cfg.n_steps; ++istep) {
-    if (use_batched_pre_a) {
-      exchange_batch(halo_pre_a.get(), {phi_d.get(), tempr_d.get()});
+    if (perf_k) {
+      const double t0 = MPI_Wtime();
+      halo_state.exchange();
+      perf_sum_exchange += MPI_Wtime() - t0;
     } else {
-      exchange_padded(phi_d.get(), halo_phi.get());
-      exchange_padded(tempr_d.get(), halo_t.get());
+      halo_state.exchange();
     }
 
     if (perf_k) {
       const double t0 = MPI_Wtime();
-      kobayashi::kobayashi_stage_a_cuda(phi_d.get(), tempr_d.get(), lap_phi_d.get(), lap_t_d.get(), phidx_d.get(),
-                                        phidy_d.get(), epsilon_d.get(), epsilon_deriv_d.get(), nx, ny,
-                                        nz, hw, inv_dx, inv_dy, inv_lap_den,
-                                        stage_a_extend);
+      kobayashi::kobayashi_stage_a_cuda(
+          phi.data(), tempr.data(), lap_phi.data(), lap_t.data(), phidx.data(),
+          phidy.data(), epsilon.data(), epsilon_deriv.data(), nx, ny, nz, hw,
+          inv_dx, inv_dy, inv_lap_den, stage_a_extend);
       perf_sum_stage_a += MPI_Wtime() - t0;
     } else {
-      kobayashi::kobayashi_stage_a_cuda(phi_d.get(), tempr_d.get(), lap_phi_d.get(), lap_t_d.get(), phidx_d.get(),
-                                        phidy_d.get(), epsilon_d.get(), epsilon_deriv_d.get(), nx, ny,
-                                        nz, hw, inv_dx, inv_dy, inv_lap_den,
-                                        stage_a_extend);
+      kobayashi::kobayashi_stage_a_cuda(
+          phi.data(), tempr.data(), lap_phi.data(), lap_t.data(), phidx.data(),
+          phidy.data(), epsilon.data(), epsilon_deriv.data(), nx, ny, nz, hw,
+          inv_dx, inv_dy, inv_lap_den, stage_a_extend);
     }
+    epsilon.note_device_write();
+    epsilon_deriv.note_device_write();
+    phidx.note_device_write();
+    phidy.note_device_write();
 
-    if (halo_extended) {
-      // No exchange: stage_a wrote the 1-cell ring of eps, eps_d, phidx, phidy.
-    } else if (use_batched_pre_a) {
-      exchange_batch(halo_pre_b.get(),
-                     {epsilon_d.get(), epsilon_deriv_d.get(), phidx_d.get(), phidy_d.get()});
-    } else {
-      exchange_padded(epsilon_d.get(), halo_eps.get());
-      exchange_padded(epsilon_deriv_d.get(), halo_epsd.get());
-      exchange_padded(phidx_d.get(), halo_phidx.get());
-      exchange_padded(phidy_d.get(), halo_phidy.get());
+    if (!halo_extended) {
+      if (perf_k) {
+        const double t0 = MPI_Wtime();
+        halo_aux.exchange();
+        perf_sum_exchange += MPI_Wtime() - t0;
+      } else {
+        halo_aux.exchange();
+      }
     }
 
     if (perf_k) {
       const double t0 = MPI_Wtime();
-      kobayashi::kobayashi_stage_b_cuda(phi_d.get(), tempr_d.get(), lap_phi_d.get(), lap_t_d.get(),
-                                        epsilon_d.get(), epsilon_deriv_d.get(), phidx_d.get(), phidy_d.get(),
-                                        nx, ny, nz, hw, inv_dx, inv_dy, cfg.dt);
+      kobayashi::kobayashi_stage_b_cuda(
+          phi.data(), tempr.data(), lap_phi.data(), lap_t.data(), epsilon.data(),
+          epsilon_deriv.data(), phidx.data(), phidy.data(), nx, ny, nz, hw,
+          inv_dx, inv_dy, cfg.dt);
       perf_sum_stage_b += MPI_Wtime() - t0;
     } else {
-      kobayashi::kobayashi_stage_b_cuda(phi_d.get(), tempr_d.get(), lap_phi_d.get(), lap_t_d.get(),
-                                        epsilon_d.get(), epsilon_deriv_d.get(), phidx_d.get(), phidy_d.get(),
-                                        nx, ny, nz, hw, inv_dx, inv_dy, cfg.dt);
+      kobayashi::kobayashi_stage_b_cuda(
+          phi.data(), tempr.data(), lap_phi.data(), lap_t.data(), epsilon.data(),
+          epsilon_deriv.data(), phidx.data(), phidy.data(), nx, ny, nz, hw,
+          inv_dx, inv_dy, cfg.dt);
     }
+    phi.note_device_write();
+    tempr.note_device_write();
 
     if (nprint_eff > 0 && istep % nprint_eff == 0 && rank == 0) {
       std::cout << "step " << istep << "/" << cfg.n_steps << " done\n";
@@ -465,7 +329,7 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
     if (!skip_png && cfg.nsave > 0 && istep % cfg.nsave == 0) {
       const double t_png0 = perf_k ? MPI_Wtime() : 0.0;
-      sync_field_d2h(phi_d.get(), phi_h);
+      copy_device_to_host(phi, phi_h);
       char path[4096];
       std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                     filenum);
@@ -524,8 +388,8 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     pfc::cuda::print_cuda_halo_exchange_cpu_timers(MPI_COMM_WORLD);
   }
 
-  sync_field_d2h(phi_d.get(), phi_h);
-  sync_field_d2h(tempr_d.get(), tempr_h);
+  copy_device_to_host(phi, phi_h);
+  copy_device_to_host(tempr, tempr_h);
 
   if (!skip_png) {
     char path[4096];
@@ -534,11 +398,6 @@ void run_kobayashi_cuda(const kobayashi::RunConfig &cfg, int rank, int nproc) {
       std::cout << "saving final field to " << path << "\n";
     }
     write_phi_png(rank, decomp, phi_h, path);
-  }
-
-
-  if (node_comm != MPI_COMM_NULL) {
-    MPI_Comm_free(&node_comm);
   }
 
   std::vector<double> loc_phi;
