@@ -26,7 +26,7 @@
  *       `openpfc/kernel/integrator/stage_context.hpp` — not
  *       `pfc::sim::StageContext` in `solver_contract.hpp`.
  *
- * @see euler_attempt.hpp for the explicit-Euler proof path
+ * @see euler.hpp for production Euler / MultiEuler attempt/commit
  * @see embedded_rk.hpp for embedded high/low/error accessors
  */
 

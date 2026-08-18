@@ -51,8 +51,10 @@
  * @see imex_euler.hpp for first-order IMEX Euler (`ImexEulerStepper`)
  */
 
+#include <array>
 #include <cstddef>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -188,20 +190,40 @@ public:
   static constexpr std::size_t field_count = N;
   MultiEulerStepper(double dt, std::array<std::size_t, N> local_sizes, Rhs rhs)
       : m_dt(dt), m_rhs(std::move(rhs)) {
-    for (std::size_t i = 0; i < N; ++i) m_du[i].assign(local_sizes[i], 0.0);
-    for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i) {
+      m_du[i].assign(local_sizes[i], 0.0);
+      m_u_work[i].assign(local_sizes[i], 0.0);
+      m_candidate[i].assign(local_sizes[i], 0.0);
       m_u_checkpoint[i].assign(local_sizes[i], 0.0);
+    }
   }
 
-  /** Advance every field by one explicit-Euler step in place. */
+  /**
+   * @brief Isolate one Euler update per field without writing accepted buffers.
+   */
+  template <class... U>
+  [[nodiscard]] MultiStepAttemptResult<N>
+  attempt(double t, const std::vector<U> &...u_accepted) {
+    static_assert(sizeof...(U) == N,
+                  "MultiEulerStepper::attempt: buffer count must match N");
+    static_assert((std::is_same_v<U, double> && ...),
+                  "MultiEulerStepper requires std::vector<double>");
+    copy_accepted_to_work(std::index_sequence_for<U...>{}, u_accepted...);
+    auto u_pack = make_work_tuple(std::index_sequence_for<U...>{});
+    auto du_pack = make_du_tuple(std::index_sequence_for<U...>{});
+    m_rhs(t, u_pack, du_pack);
+    form_candidates(std::index_sequence_for<U...>{}, u_accepted...);
+    return MultiStepAttemptResult<N>(t, m_dt, t + m_dt, /*success=*/true,
+                                     candidate_ptrs());
+  }
+
+  /** Advance every field by one explicit-Euler step; commit of `attempt`. */
   template <class... U> double step(double t, std::vector<U> &...u_buffers) {
     static_assert(sizeof...(U) == N,
                   "MultiEulerStepper::step: number of u buffers must match N.");
-    auto u_pack = std::tie(u_buffers...);
-    auto du_pack = make_du_tuple(std::index_sequence_for<U...>{});
-    m_rhs(t, u_pack, du_pack);
-    accumulate(u_pack, du_pack, std::index_sequence_for<U...>{});
-    return t + m_dt;
+    const auto r = attempt(t, u_buffers...);
+    commit_candidates(std::index_sequence_for<U...>{}, u_buffers...);
+    return r.t1;
   }
 
   double dt() const noexcept { return m_dt; }
@@ -268,20 +290,49 @@ private:
     return std::tie(m_du[I]...);
   }
 
-  template <class UPack, class DuPack, std::size_t... I>
-  void accumulate(UPack &u, DuPack &du, std::index_sequence<I...>) {
-    (apply_one(std::get<I>(u), std::get<I>(du)), ...);
+  template <std::size_t... I> auto make_work_tuple(std::index_sequence<I...>) {
+    return std::tie(m_u_work[I]...);
   }
 
-  void apply_one(std::vector<double> &u, std::vector<double> &du) {
-    const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(u.size());
-    for (std::ptrdiff_t li = 0; li < n; ++li) {
-      u[static_cast<std::size_t>(li)] += m_dt * du[static_cast<std::size_t>(li)];
-    }
+  template <std::size_t... I, class... U>
+  void copy_accepted_to_work(std::index_sequence<I...>,
+                             const std::vector<U> &...u_accepted) {
+    ((m_u_work[I] = u_accepted), ...);
+  }
+
+  template <std::size_t... I, class... U>
+  void form_candidates(std::index_sequence<I...>,
+                       const std::vector<U> &...u_accepted) {
+    auto one = [this](std::vector<double> &cand, const std::vector<double> &u,
+                      const std::vector<double> &du) {
+      for (std::size_t i = 0; i < u.size(); ++i) {
+        cand[i] = u[i] + m_dt * du[i];
+      }
+    };
+    (one(m_candidate[I], u_accepted, m_du[I]), ...);
+  }
+
+  template <std::size_t... I, class... U>
+  void commit_candidates(std::index_sequence<I...>,
+                         std::vector<U> &...u_accepted) const {
+    ((u_accepted = m_candidate[I]), ...);
+  }
+
+  [[nodiscard]] std::array<const std::vector<double> *, N>
+  candidate_ptrs() const {
+    return candidate_ptrs_impl(std::make_index_sequence<N>{});
+  }
+
+  template <std::size_t... I>
+  [[nodiscard]] std::array<const std::vector<double> *, N>
+  candidate_ptrs_impl(std::index_sequence<I...>) const {
+    return {&m_candidate[I]...};
   }
 
   double m_dt{0.0};
   std::array<std::vector<double>, N> m_du;
+  std::array<std::vector<double>, N> m_u_work;
+  std::array<std::vector<double>, N> m_candidate;
   std::array<std::vector<double>, N> m_u_checkpoint;
   Rhs m_rhs;
 };
