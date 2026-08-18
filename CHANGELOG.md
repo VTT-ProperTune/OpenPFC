@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `ExplicitRKStepper` / `MultiExplicitRKStepper` and `EmbeddedRKStepper` take `Scalar` (default `double`) and host `Field<Scalar>`. Real Butcher weights stay `ButcherTableau<double>`.
 - `RK2HeunStepper` and `RK3HeunStepper` take `Scalar` (default `double`) and host `Field<Scalar>`.
 - `EulerStepper<Rhs, Scalar>` and `MultiEulerStepper<Rhs, N, Scalar>` advance `double` or `std::complex<double>` (default `double`). Host `Field<Scalar>` overloads stay; vector path remains.
 - `MultiEtd1Stepper<Rhs, N, Scalar>` advances `double` or `std::complex<double>` packs with real per-field ETD coefficients. `MultiStageFunction` and `MultiStepAttemptResult` take an optional `Scalar` (default `double`).
