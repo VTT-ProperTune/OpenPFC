@@ -10,6 +10,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/field/scaled_field.hpp>
 #include <openpfc/kernel/field/state_access.hpp>
 #include <openpfc/kernel/field/validation.hpp>
 #include <openpfc/kernel/integrator/stage_context.hpp>
