@@ -72,7 +72,7 @@ inline void vtk_write_increment(pfc::VTKWriter &w, int increment,
 /**
  * @brief Configure VTK writer for one rank’s owned brick (no halos), x fastest.
  *
- * Matches the layout of owned Field cores / SparseHaloExchanger local field
+ * Matches the layout of owned Field cores / SparseExchange local field
  * vectors (`nx*ny*nz`).
  */
 inline void vtk_configure_writer_owned_slab(pfc::VTKWriter &w,
