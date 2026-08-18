@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `Etd1Stepper<Rhs, Scalar>` advances `double` or `std::complex<double>` fields with real ETD coefficients. `StepAttempt<Scalar>` is the general result; `StepAttemptResult` is `StepAttempt<double>`.
 - All seven single-field leaves (`Euler`, `RK2`/`RK3` Heun, `ExplicitRK`, `EmbeddedRK`, `ImexEuler`, `Etd1`) accept host `pfc::data::Field<double>` via `vec()`. Vector path remains.
 - Deleted unused `IntegratorBase` / `EulerIntegrator` / `RK2HeunIntegrator` and the on-hold `IntegratorResult` DTO (and their unit tests).
 - Non-diagonal dense `SolveFunction` mock under `ImexEulerStepper` (`imex_euler_nondiagonal_dense_solve`).
