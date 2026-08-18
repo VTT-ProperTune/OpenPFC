@@ -11,20 +11,40 @@ This directory contains utility scripts for OpenPFC development and workflow aut
 
 ### build.sh
 
-`build.sh` is the standalone configure, build, and test entry point for automated
-Tohtori checks. With no arguments it performs a 32-way Release CPU build in
+`build.sh` is the standalone configure, build, and test entry point for
+Tohtori and LUMI. Agents and humans should use it instead of invoking
+`cmake` / `ctest` by hand. The machine is auto-detected when `--machine`
+is omitted (`uan*` / LUMI stack → `lumi`, otherwise `tohtori`).
+
+**Tohtori.** With no arguments it performs a 32-way Release CPU build in
 `builds/release` and runs every registered CTest test:
 
 ```bash
 ./scripts/build.sh
+./scripts/build.sh --machine=tohtori --with-cuda --test
 ```
 
-The script loads the Tohtori compiler and MPI modules, selects the matching
-HeFFTe installation, configures CMake, builds all library, application, example,
-and test targets, and runs the aggregate serial tests plus the explicit 2-, 3-,
-and 4-rank MPI suites with `ctest --output-on-failure`. One CTest entry can
-contain hundreds of Catch2 cases and many thousands of assertions. It writes
-`configure.log`, `build.log`, and `test.log` under the selected build directory.
+It loads the Tohtori compiler and MPI modules, selects the matching HeFFTe
+installation, configures CMake, builds all library, application, example,
+and test targets, and runs the aggregate serial tests plus the explicit 2-,
+3-, and 4-rank MPI suites with `ctest --output-on-failure`.
+
+**LUMI.** The default is HIP/ROCm. The script loads `LUMI/25.09 partition/G
+cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm` from `$HOME/privatemodules`.
+Configure runs on the login node (FetchContent needs outbound HTTP). Compile
+and `ctest` are submitted to **`dev-g`** (default) or **`standard-g`** so AMD
+GPUs are available. CUDA is not supported on LUMI. Build trees default to
+`/flash/project_462001245/juaho/build/openpfc-lumi-rocm-release` (not inside
+the git clone).
+
+```bash
+./scripts/build.sh --machine=lumi --with-rocm
+./scripts/build.sh --machine=lumi --partition=standard-g --wait
+./scripts/build.sh --machine=lumi --no-submit --no-test   # login-node configure/build only
+```
+
+It writes `configure.log`, `build.log`, and `test.log` under the selected
+build directory. LUMI Slurm logs go to `/scratch/project_462001245/juaho/logs/`.
 The final summary reports configure, build, test, and total elapsed times. A
 successful workflow exits with status 0; any configuration, build, or test
 failure exits with status 1.
@@ -35,7 +55,7 @@ Common command-line forms:
 ./scripts/build.sh --build-type=Debug
 ./scripts/build.sh --build-type=Release --with-timestamp
 ./scripts/build.sh --machine=tohtori --with-cuda --with-timestamp --test
-./scripts/build.sh --with-rocm --build-dir=builds/rocm-check --test
+./scripts/build.sh --machine=lumi --with-rocm --partition=dev-g
 ```
 
 The corresponding environment variables are `MACHINE`, `BUILD_TYPE`,
