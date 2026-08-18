@@ -9,10 +9,8 @@
  * Workspace ownership is backend-specialized via `detail::FftWorkspaceStorage`:
  * - FFTW owns only the host `m_wrk` buffer used by the `std::vector` transform
  *   path.
- * - GPU backends (`cufft` / `rocfft`) own only the dual-precision device
- *   workspaces used by the `DataBuffer` path. Both float and double remain
- *   because `FFT_Impl` is not templated on `RealType` and both overloads share
- *   one instance — no idle host/device twin is allocated.
+ * - GPU backends (`cufft` / `rocfft`) lazily allocate the device workspace
+ *   for each precision on first use (ADR 0006: only instantiate what runs).
  */
 
 #pragma once
@@ -24,6 +22,7 @@
 #include <mpi.h>
 
 #include <cstddef>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -86,10 +85,11 @@ template <> struct FftWorkspaceStorage<heffte::backend::fftw> {
 };
 
 /**
- * @brief GPU backends: dual-precision device workspaces only (no unused `m_wrk`).
+ * @brief GPU backends: lazy per-precision device workspaces (no unused `m_wrk`).
  *
- * Both precisions stay owned because float and double `DataBuffer` overloads
- * share one `FFT_Impl` instance.
+ * `FFT_Impl` is not templated on `RealType`, so float and double overloads
+ * share one instance. Allocate a precision only when that overload first
+ * runs (ADR 0006).
  */
 template <typename BackendTag>
   requires HeapBackend<BackendTag>
@@ -99,20 +99,36 @@ struct FftWorkspaceStorage<BackendTag> {
   using gpu_workspace_float = typename heffte::fft3d_r2c<
       BackendTag>::template buffer_container<std::complex<float>>;
 
-  gpu_workspace_type m_gpu_wrk_double;
-  gpu_workspace_float m_gpu_wrk_float;
+  std::size_t m_n = 0;
+  std::unique_ptr<gpu_workspace_type> m_gpu_wrk_double;
+  std::unique_ptr<gpu_workspace_float> m_gpu_wrk_float;
 
-  explicit FftWorkspaceStorage(std::size_t n)
-      : m_gpu_wrk_double(n), m_gpu_wrk_float(n) {}
+  explicit FftWorkspaceStorage(std::size_t n) : m_n(n) {}
 
-  auto *data_gpu_double() noexcept { return m_gpu_wrk_double.data(); }
-  auto *data_gpu_float() noexcept { return m_gpu_wrk_float.data(); }
+  auto *data_gpu_double() {
+    if (!m_gpu_wrk_double) {
+      m_gpu_wrk_double = std::make_unique<gpu_workspace_type>(m_n);
+    }
+    return m_gpu_wrk_double->data();
+  }
+  auto *data_gpu_float() {
+    if (!m_gpu_wrk_float) {
+      m_gpu_wrk_float = std::make_unique<gpu_workspace_float>(m_n);
+    }
+    return m_gpu_wrk_float->data();
+  }
 
   [[nodiscard]] std::size_t allocated_bytes() const noexcept {
-    return m_gpu_wrk_double.size() *
-               sizeof(typename gpu_workspace_type::value_type) +
-           m_gpu_wrk_float.size() *
-               sizeof(typename gpu_workspace_float::value_type);
+    std::size_t n = 0;
+    if (m_gpu_wrk_double) {
+      n += m_gpu_wrk_double->size() *
+           sizeof(typename gpu_workspace_type::value_type);
+    }
+    if (m_gpu_wrk_float) {
+      n += m_gpu_wrk_float->size() *
+           sizeof(typename gpu_workspace_float::value_type);
+    }
+    return n;
   }
 };
 
