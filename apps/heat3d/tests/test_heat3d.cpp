@@ -30,7 +30,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
@@ -254,12 +254,12 @@ TEST_CASE("FdGradient<G> + EulerStepper compile and run with a pruned grads "
 }
 
 // -----------------------------------------------------------------------------
-// Laboratory-style manual FD driver: Field + PaddedHaloExchanger +
+// Laboratory-style manual FD driver: Field + HaloExchange +
 // brick_iteration helpers. The smoke test mirrors the compact `FdCpuStack`
 // test above so the two paths can be cross-checked.
 // -----------------------------------------------------------------------------
 
-TEST_CASE("Manual FD driver (Field + PaddedHaloExchanger): smoke + L2",
+TEST_CASE("Manual FD driver (Field + HaloExchange): smoke + L2",
           "[heat3d][fd_manual]") {
   using namespace pfc;
   constexpr int N = 16;
@@ -273,7 +273,7 @@ TEST_CASE("Manual FD driver (Field + PaddedHaloExchanger): smoke + L2",
 
   pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
   pfc::data::Field<double, pfc::HostSpace> du(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  PaddedHaloExchanger<double> halo(decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, /*rank=*/0, MPI_COMM_WORLD);
 
   HeatModel model;
   u.apply(model.initial_condition);
@@ -345,9 +345,9 @@ TEST_CASE("Manual FD driver (Field + PaddedHaloExchanger): smoke + L2",
   };
 
   for (int step = 0; step < n_steps; ++step) {
-    halo.start_halo_exchange(u.data(), u.size());
+    halo.start();
     for_each_interior_with_idx(stencil_step);
-    halo.finish_halo_exchange();
+    halo.finish();
     for_each_border_with_idx(stencil_step);
     u.for_each_owned([&](double, double, double, double) { /* Euler step handled below */ });
     // Explicit Euler over the full owned region
@@ -425,7 +425,7 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   auto decomp = decomposition::create(domain, 1);
   pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
   pfc::data::Field<double, pfc::HostSpace> du(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  PaddedHaloExchanger<double> halo(decomp, 0, hw, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, 0, MPI_COMM_WORLD);
   u.apply(model.initial_condition);
 
   auto stencil_step = [&](int i, int j, int k) {
@@ -491,9 +491,9 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
   };
 
   for (int step = 0; step < n_steps; ++step) {
-    halo.start_halo_exchange(u.data(), u.size());
+    halo.start();
     for_each_interior_with_idx(stencil_step);
-    halo.finish_halo_exchange();
+    halo.finish();
     for_each_border_with_idx(stencil_step);
     u.for_each_owned([&](double, double, double, double) { /* Euler step handled below */ });
     // Explicit Euler over the full owned region
@@ -541,8 +541,8 @@ namespace {
 // Helper: run the same hot loop heat3d_fd_scratch.cpp ships, single rank.
 // Stays in the test file so the production driver stays free of test hooks.
 inline void run_scratch_loop_(pfc::data::Field<double, pfc::HostSpace> &u,
-                              pfc::PaddedHaloExchanger<double> &halo, double dt,
-                              int n_steps) {
+                              pfc::comm::HaloExchange<pfc::HostSpace, double> &halo,
+                              double dt, int n_steps) {
   const int hw = u.halo_width();
   const auto size = u.local_size();
   const int nx = size[0];
@@ -564,7 +564,7 @@ inline void run_scratch_loop_(pfc::data::Field<double, pfc::HostSpace> &u,
                               static_cast<std::size_t>(nz),
                           0.0);
   for (int step = 0; step < n_steps; ++step) {
-    halo.exchange_halos(u_ptr, u.size());
+    halo.exchange();
     for (int k = 0; k < nz; ++k) {
       for (int j = 0; j < ny; ++j) {
         for (int i = 0; i < nx; ++i) {
@@ -611,7 +611,7 @@ TEST_CASE("Scratch FD driver (bare loops, raw pointers): smoke + L2",
   auto decomp = decomposition::create(domain, /*nproc=*/1);
 
   pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  PaddedHaloExchanger<double> halo(decomp, /*rank=*/0, hw, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, /*rank=*/0, MPI_COMM_WORLD);
 
   // From-scratch IC: exp(-r^2 / (4 kD)) by hand, exactly as the driver does.
   {
@@ -703,7 +703,7 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FdCpuStack "
                                      GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, 1);
   pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  PaddedHaloExchanger<double> halo(decomp, 0, hw, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, 0, MPI_COMM_WORLD);
   {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
