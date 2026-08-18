@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `Time` stores `pfc::sim::steppers::RKIntegratorMethod`. The two-value `IntegratorMethod` enum in `time.hpp` is removed; JSON `from_json<Time>` accepts the full RK method token set.
 - `AdaptiveTimeController` maps error evidence (or an embedded-error vector) to accept/reject and next `dt`, then commits or rejects a `Time` attempt. Example `21_adaptive_stepping` and `test_adaptive_controller`.
 - `Etd1Stepper<Rhs, Scalar>` advances `double` or `std::complex<double>` fields with real ETD coefficients. `StepAttempt<Scalar>` is the general result; `StepAttemptResult` is `StepAttempt<double>`.
 - All seven single-field leaves (`Euler`, `RK2`/`RK3` Heun, `ExplicitRK`, `EmbeddedRK`, `ImexEuler`, `Etd1`) accept host `pfc::data::Field<double>` via `vec()`. Vector path remains.

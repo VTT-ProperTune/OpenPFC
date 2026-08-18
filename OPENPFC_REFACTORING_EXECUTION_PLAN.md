@@ -482,7 +482,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 * [ ] Generalize state: steppers accept any type satisfying the field concepts (`state_concepts.hpp` — wire it in for real) — `Field<double>`, `Field<complex<double>>`, and heterogeneous packs; remove the raw-`std::vector<double>`-only restriction. **All seven single-field leaves take host `Field<double>` via `vec()`. Vector path remains. Complex and packs still open.**
 * [x] Complex-state ETD: `Etd1Stepper<Rhs, Scalar>` (`Scalar = double` or `std::complex<double>`) applies real `exp_Ldt`/`phi1_L` to the field. Host tests: stiff linear complex ODE (ETD1 exact when N=0) and closed-form N≠0. Device-resident coeff apply still open. `MultiEtd1Stepper` remains real.
 * [x] Generalize multi-field arity: `MultiStageFunction<Rhs, N>` (default N=2); `MultiEtd1Stepper` over N (`N >= 1`, variadic `attempt`). N=3 covered in `test_etd1.cpp`.
-* [ ] Merge duplicates: one `StageContext` (delete `pfc::integrator::StageContext` or `pfc::sim::StageContext`, keep one), one workspace type (merge `StageWorkspace` and `integrator::Workspace`), one method enum (`RKIntegratorMethod` extended; `IntegratorMethod` removed from `time.hpp:252`).
+* [ ] Merge duplicates: one `StageContext` (delete `pfc::integrator::StageContext` or `pfc::sim::StageContext`, keep one), one workspace type (merge `StageWorkspace` and `integrator::Workspace`). **Method enum: `Time` stores `RKIntegratorMethod`; the `time.hpp` `IntegratorMethod` enum is deleted.**
 * [x] Implement `AdaptiveTimeController` (`kernel/simulation/adaptive_controller.hpp`): closes embedded-error → `error_evidence` → `AdaptiveControlConfig` → `Time` attempt transactions; one end-to-end adaptive example (`examples/21_adaptive_stepping.cpp`) and integration test.
 * [x] Solver contract: `SolveFunction` is descriptor + field-bundle (no matrix type). Non-diagonal dense mock runs under `ImexEulerStepper` (`imex_euler_nondiagonal_dense_solve`). `SpectralDiagonalSolver` already models `SolveFunction` and is used as an injected solver.
 
@@ -496,7 +496,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 ### Deletions
 
-* [ ] `IntegratorMethod` in `time.hpp`, the losing `StageContext` and workspace type, `fd_stencils.hpp:325–337` back-compat shims. **`integrator_base.hpp` / `integrator_result.hpp` / `ImexStepAttempt` / `Etd1StepAttempt` / `EmbeddedStepAttemptResult` are deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
+* [ ] The losing `StageContext` and workspace type, `fd_stencils.hpp:325–337` back-compat shims. **`IntegratorMethod` in `time.hpp` is deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
 * [ ] `euler_attempt.hpp` (its proof role is absorbed by the ported steppers).
 
 ### Definition of done
