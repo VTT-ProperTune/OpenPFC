@@ -8,9 +8,9 @@
  * @brief CPU/MPI stage-preparation protocol over existing padded halo exchangers.
  *
  * @details
- * `PaddedHaloExchanger` (and siblings) are **transport**: they move ghost
- * faces given a bound brick. `StagePreparationService` is the **protocol**
- * that interprets stage requirements (`needs_halo_exchange`,
+ * `pfc::comm::HaloExchange` is **transport**: it moves ghost faces given a
+ * bound Field. `StagePreparationService` is the **protocol** that
+ * interprets stage requirements (`needs_halo_exchange`,
  * `needs_boundary_update`, region kind, boundary/halo ordering) and drives
  * those exchangers plus an injectable boundary hook — without inventing a
  * new MPI transport and without embedding ad-hoc MPI in method/operator
@@ -30,7 +30,7 @@
  *       rejected attempt, re-prepare from the latest accepted owned core;
  *       ghost rings are recomputed from owned state.
  *
- * @see padded_halo_exchange.hpp
+ * @see comm_halo_exchange.hpp
  * @see openpfc/kernel/integrator/stage_context.hpp
  */
 
@@ -41,7 +41,7 @@
 #include <string_view>
 #include <unordered_map>
 
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 
 namespace pfc::communication {
 
@@ -88,7 +88,7 @@ struct StagePreparationRequirements {
 };
 
 /**
- * @brief Blocking CPU/MPI stage preparation over named `PaddedHaloExchanger`s.
+ * @brief Blocking CPU/MPI stage preparation over named `HaloExchange`s.
  *
  * Bind brick-backed exchangers by name, optionally set a boundary hook, then
  * call `prepare` with requirements and the field name list for this stage.
@@ -109,7 +109,7 @@ public:
    * @param name      Field / binding name (owned copy stored).
    * @param exchanger Exchanger to drive when this name is prepared.
    */
-  void bind(std::string_view name, PaddedHaloExchanger<T> &exchanger) {
+  void bind(std::string_view name, comm::HaloExchange<HostSpace, T> &exchanger) {
     m_exchangers.insert_or_assign(std::string(name), &exchanger);
   }
 
@@ -187,12 +187,12 @@ private:
 
   void run_exchanges_(std::span<const std::string_view> fields) {
     for (const std::string_view name : fields) {
-      PaddedHaloExchanger<T> *ex = m_exchangers.at(std::string(name));
-      exchange(*ex);
+      comm::HaloExchange<HostSpace, T> *ex = m_exchangers.at(std::string(name));
+      ex->exchange();
     }
   }
 
-  std::unordered_map<std::string, PaddedHaloExchanger<T> *> m_exchangers;
+  std::unordered_map<std::string, comm::HaloExchange<HostSpace, T> *> m_exchangers;
   std::function<void(std::string_view)> m_boundary_hook;
 };
 

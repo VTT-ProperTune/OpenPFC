@@ -20,7 +20,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/stage_preparation.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/integrator/stage_context.hpp>
@@ -58,7 +58,7 @@ void poison_halos(data::Field<double, HostSpace> &u, double poison) {
   }
 }
 
-// The exchanger is face-only (see PaddedHaloExchanger docs): each ghost ring
+// The exchanger is face-only (see HaloExchange Faces docs): each ghost ring
 // only covers the *owned* extent of the two orthogonal axes, not the padded
 // extent, so corner cells (where two ghost rings would overlap) are never
 // written. These checks must match that contract and stick to the owned
@@ -133,7 +133,7 @@ TEST_CASE("StagePreparationService: scalar prepare fills ±X ghosts",
   const double other = static_cast<double>(1 - rank);
   fill_owned(u, mine);
 
-  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo);
 
@@ -168,8 +168,8 @@ TEST_CASE("StagePreparationService: two-field prepare fills both ghost rings",
   fill_owned(u, u_mine);
   fill_owned(v, v_mine);
 
-  PaddedHaloExchanger<double> halo_u(u, decomp, rank, MPI_COMM_WORLD);
-  PaddedHaloExchanger<double> halo_v(v, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo_u(u, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo_v(v, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo_u);
   prep.bind("v", halo_v);
@@ -202,7 +202,7 @@ TEST_CASE("StagePreparationService: needs_halo=false leaves ghosts untouched",
   constexpr double poison = -999.0;
   poison_halos(u, poison);
 
-  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo);
 
@@ -233,7 +233,7 @@ TEST_CASE("StagePreparationService: reject/retry re-prepare restores ghosts",
   const double other = static_cast<double>(1 - rank);
   fill_owned(u, mine);
 
-  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo);
 
@@ -270,7 +270,7 @@ TEST_CASE("StagePreparationService: boundary hook ordering vs halo",
   const double base = 100.0 + static_cast<double>(rank);
   fill_owned(u, base);
 
-  PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
   communication::StagePreparationService<double> prep;
   prep.bind("u", halo);
 
