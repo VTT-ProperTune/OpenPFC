@@ -189,6 +189,36 @@ TEST_CASE("EulerStepper attempt/commit on host Field<complex>",
   REQUIRE(u.vec() != before);
 }
 
+TEST_CASE("RK2 and RK3 Heun complex constant RHS",
+          "[step_protocol][rk2][rk3][complex]") {
+  using Complex = std::complex<double>;
+  constexpr Complex c{0.2, -0.1};
+  constexpr Complex u0{1.0, 0.5};
+  constexpr double dt = 0.25;
+  ConstantComplexRhs rhs{c};
+  const Complex expected = u0 + Complex(dt) * c;
+
+  RK2HeunStepper<ConstantComplexRhs, Complex> rk2(dt, 1, rhs);
+  std::vector<Complex> a{u0};
+  const auto ra = rk2.attempt(0.0, a);
+  REQUIRE(ra.success);
+  REQUIRE(a[0].real() == Catch::Approx(u0.real()).margin(1e-14));
+  REQUIRE(a[0].imag() == Catch::Approx(u0.imag()).margin(1e-14));
+  REQUIRE(ra.candidate[0].real() ==
+          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(ra.candidate[0].imag() ==
+          Catch::Approx(expected.imag()).margin(1e-12));
+
+  RK3HeunStepper<ConstantComplexRhs, Complex> rk3(dt, 1, rhs);
+  std::vector<Complex> b{u0};
+  const auto rb = rk3.attempt(0.0, b);
+  REQUIRE(rb.success);
+  REQUIRE(rb.candidate[0].real() ==
+          Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(rb.candidate[0].imag() ==
+          Catch::Approx(expected.imag()).margin(1e-12));
+}
+
 TEST_CASE("RK3HeunStepper attempt/commit on host Field<double>",
           "[step_protocol][rk3][field]") {
   using pfc::data::Field;

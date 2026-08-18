@@ -20,7 +20,7 @@
  *
  * `Rhs` must be invocable as
  *
- *     rhs(double t, std::vector<double>& u, std::vector<double>& du)
+ *     rhs(double t, std::vector<Scalar>& u, std::vector<Scalar>& du)
  *
  * and is expected to **fill** `du` (sized `local_size` by the constructor).
  * `u` is passed read-only by convention; the stepper performs the accumulation
@@ -86,9 +86,10 @@ namespace pfc::sim::steppers {
  * @brief Explicit RK2 (Heun's method) stepper: `u += dt/2 * (rhs(t, u) + rhs(t + dt,
  * u_p))`.
  *
- * @tparam Rhs Any callable invocable as
- *             `rhs(double t, std::vector<double>& u, std::vector<double>& du)`.
- *             It must fill `du`; the stepper performs the RK2 accumulation.
+ * @tparam Rhs    Any callable invocable as
+ *                `rhs(double t, std::vector<Scalar>& u, std::vector<Scalar>& du)`.
+ *                It must fill `du`; the stepper performs the RK2 accumulation.
+ * @tparam Scalar Field element type (`double` or `std::complex<double>`).
  *
  * ## Algorithm
  *
@@ -108,10 +109,13 @@ namespace pfc::sim::steppers {
  * This design avoids per-step allocations and mirrors `EulerStepper`'s
  * pre-allocation strategy.
  */
-template <class Rhs>
-  requires StageFunction<Rhs>
+template <class Rhs, class Scalar = double>
+  requires StageFunctionFor<Rhs, Scalar>
 class RK2HeunStepper {
 public:
+  using scalar_type = Scalar;
+  using Attempt = StepAttempt<Scalar>;
+
   /**
    * @brief Construct an RK2 Heun stepper.
    *
@@ -124,8 +128,8 @@ public:
    * @post All buffers are value-initialized to 0.0
    */
   RK2HeunStepper(double dt, std::size_t local_size, Rhs rhs)
-      : m_dt(dt), m_du(local_size, 0.0), m_predictor(local_size, 0.0),
-        m_rhs_predictor(local_size, 0.0), m_rhs(std::move(rhs)) {}
+      : m_dt(dt), m_du(local_size, Scalar{}), m_predictor(local_size, Scalar{}),
+        m_rhs_predictor(local_size, Scalar{}), m_rhs(std::move(rhs)) {}
 
   /**
    * @brief Advance `u` by one RK2 Heun step in place; returns the new time.
@@ -157,35 +161,34 @@ public:
    * Writes the predictor into `m_predictor`, then overwrites that buffer
    * with the corrector result (the isolated candidate).
    */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const std::vector<double> &u) {
-    m_rhs(t, const_cast<std::vector<double> &>(u), m_du);
+  [[nodiscard]] Attempt attempt(double t, const std::vector<Scalar> &u) {
+    m_rhs(t, const_cast<std::vector<Scalar> &>(u), m_du);
     const std::size_t n = u.size();
     for (std::size_t i = 0; i < n; ++i) {
-      m_predictor[i] = u[i] + m_dt * m_du[i];
+      m_predictor[i] = u[i] + Scalar(m_dt) * m_du[i];
     }
     m_rhs(t + m_dt, m_predictor, m_rhs_predictor);
     for (std::size_t i = 0; i < n; ++i) {
-      m_predictor[i] = u[i] + 0.5 * m_dt * (m_du[i] + m_rhs_predictor[i]);
+      m_predictor[i] =
+          u[i] + Scalar(0.5 * m_dt) * (m_du[i] + m_rhs_predictor[i]);
     }
-    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_predictor);
+    return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_predictor);
   }
 
   /** Advance `u` by one RK2 Heun step; commit of `attempt`. */
-  double step(double t, std::vector<double> &u) {
-    const StepAttemptResult r = attempt(t, u);
+  double step(double t, std::vector<Scalar> &u) {
+    const Attempt r = attempt(t, u);
     commit_step_attempt(u, r);
     return r.t1;
   }
 
-  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const pfc::data::Field<double> &u) {
+  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
+  [[nodiscard]] Attempt attempt(double t, const pfc::data::Field<Scalar> &u) {
     return attempt(t, u.vec());
   }
 
-  /** Advance a host `Field<double>` by one RK2 Heun step. */
-  double step(double t, pfc::data::Field<double> &u) { return step(t, u.vec()); }
+  /** Advance a host `Field<Scalar>` by one RK2 Heun step. */
+  double step(double t, pfc::data::Field<Scalar> &u) { return step(t, u.vec()); }
 
   /**
    * @brief Get the time step size.
@@ -196,9 +199,9 @@ public:
 
 private:
   double m_dt{0.0};                    ///< Time step size
-  std::vector<double> m_du;            ///< RHS at (t, u) - reused in corrector
-  std::vector<double> m_predictor;     ///< Predictor state u_p
-  std::vector<double> m_rhs_predictor; ///< RHS at (t + dt, u_p)
+  std::vector<Scalar> m_du;            ///< RHS at (t, u) - reused in corrector
+  std::vector<Scalar> m_predictor;     ///< Predictor state u_p
+  std::vector<Scalar> m_rhs_predictor; ///< RHS at (t + dt, u_p)
   Rhs m_rhs;                           ///< Right-hand side callable
 };
 

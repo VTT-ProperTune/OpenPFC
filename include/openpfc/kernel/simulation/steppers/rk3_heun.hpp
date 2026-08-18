@@ -136,10 +136,13 @@ namespace pfc::sim::steppers {
  *   longer needed
  * - `m_u_temp`: Staging buffer for the stage-2 and stage-3 evaluation points
  */
-template <class Rhs>
-  requires StageFunction<Rhs>
+template <class Rhs, class Scalar = double>
+  requires StageFunctionFor<Rhs, Scalar>
 class RK3HeunStepper {
 public:
+  using scalar_type = Scalar;
+  using Attempt = StepAttempt<Scalar>;
+
   /**
    * @brief Construct an RK3 Heun stepper.
    *
@@ -152,8 +155,8 @@ public:
    * @post All buffers are value-initialized to 0.0
    */
   RK3HeunStepper(double dt, std::size_t local_size, Rhs rhs)
-      : m_dt(dt), m_k1(local_size, 0.0), m_k2(local_size, 0.0),
-        m_u_temp(local_size, 0.0), m_rhs(std::move(rhs)) {}
+      : m_dt(dt), m_k1(local_size, Scalar{}), m_k2(local_size, Scalar{}),
+        m_u_temp(local_size, Scalar{}), m_rhs(std::move(rhs)) {}
 
   /**
    * @brief Isolate the Heun-RK3 candidate without writing accepted `u`.
@@ -161,49 +164,47 @@ public:
    * After the three stages, overwrites `m_u_temp` with the combination
    * result (the isolated candidate).
    */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const std::vector<double> &u) {
+  [[nodiscard]] Attempt attempt(double t, const std::vector<Scalar> &u) {
     const std::size_t n = u.size();
 
     // Stage 1: k1 = rhs(t, u)
-    m_rhs(t, const_cast<std::vector<double> &>(u), m_k1);
+    m_rhs(t, const_cast<std::vector<Scalar> &>(u), m_k1);
 
     // Stage 2: k2 = rhs(t + dt/3, u + dt/3 * k1)
     for (std::size_t i = 0; i < n; ++i) {
-      m_u_temp[i] = u[i] + (m_dt / 3.0) * m_k1[i];
+      m_u_temp[i] = u[i] + Scalar(m_dt / 3.0) * m_k1[i];
     }
     m_rhs(t + m_dt / 3.0, m_u_temp, m_k2);
 
     // Stage 3: k3 = rhs(t + 2*dt/3, u + 2*dt/3 * k2) -- no k1 contribution.
     // m_k2 is reused to store k3 once its old value has been consumed.
     for (std::size_t i = 0; i < n; ++i) {
-      m_u_temp[i] = u[i] + (2.0 * m_dt / 3.0) * m_k2[i];
+      m_u_temp[i] = u[i] + Scalar(2.0 * m_dt / 3.0) * m_k2[i];
     }
     m_rhs(t + 2.0 * m_dt / 3.0, m_u_temp, m_k2); // m_k2 now holds k3
 
     // Combination into method-owned storage: k2 does not appear here.
     for (std::size_t i = 0; i < n; ++i) {
-      m_u_temp[i] =
-          u[i] + (m_dt / 4.0) * m_k1[i] + (3.0 * m_dt / 4.0) * m_k2[i];
+      m_u_temp[i] = u[i] + Scalar(m_dt / 4.0) * m_k1[i] +
+                    Scalar(3.0 * m_dt / 4.0) * m_k2[i];
     }
-    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_u_temp);
+    return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_u_temp);
   }
 
   /** Advance `u` by one Heun RK3 step; commit of `attempt`. */
-  double step(double t, std::vector<double> &u) {
-    const StepAttemptResult r = attempt(t, u);
+  double step(double t, std::vector<Scalar> &u) {
+    const Attempt r = attempt(t, u);
     commit_step_attempt(u, r);
     return r.t1;
   }
 
-  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const pfc::data::Field<double> &u) {
+  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
+  [[nodiscard]] Attempt attempt(double t, const pfc::data::Field<Scalar> &u) {
     return attempt(t, u.vec());
   }
 
-  /** Advance a host `Field<double>` by one Heun RK3 step. */
-  double step(double t, pfc::data::Field<double> &u) { return step(t, u.vec()); }
+  /** Advance a host `Field<Scalar>` by one Heun RK3 step. */
+  double step(double t, pfc::data::Field<Scalar> &u) { return step(t, u.vec()); }
 
   /**
    * @brief Get the time step size.
@@ -214,9 +215,9 @@ public:
 
 private:
   double m_dt{0.0};             ///< Time step size
-  std::vector<double> m_k1;     ///< k1 = RHS at (t, u); kept for combination
-  std::vector<double> m_k2;     ///< k2, then reused in place to hold k3
-  std::vector<double> m_u_temp; ///< Staging buffer for stage-2/3 eval points
+  std::vector<Scalar> m_k1;     ///< k1 = RHS at (t, u); kept for combination
+  std::vector<Scalar> m_k2;     ///< k2, then reused in place to hold k3
+  std::vector<Scalar> m_u_temp; ///< Staging buffer for stage-2/3 eval points
   Rhs m_rhs;                    ///< Right-hand side callable
 };
 
