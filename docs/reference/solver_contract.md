@@ -114,12 +114,20 @@ Implemented by the simulation driver (adapting `SimulationContext`) to coordinat
 
 ### StageContext
 
-Context passed to solver functions:
+`pfc::sim::StageContext` is an alias of `pfc::integrator::StageContext`.
+Solvers use `time` (evaluation time) and `execution_service` / `service()`:
 
 ```cpp
+// defined in include/openpfc/kernel/integrator/stage_context.hpp
 struct StageContext {
-    double evaluation_time;
-    ExecutionService& execution_service;
+    double time = 0.0;
+    double dt = 0.0;
+    int stage_index = 0;
+    enum class RegionKind { Interior, Boundary, All } region_kind = RegionKind::All;
+    bool needs_boundary_update = false;
+    bool needs_halo_exchange = false;
+    ExecutionService* execution_service = nullptr;
+    ExecutionService& service() const; // throws if unbound
 };
 ```
 
@@ -181,7 +189,7 @@ std::vector<double> target(3, 0.0);
 LinearOperatorDesc op_desc{"spectral_diagonal", std::nullopt, diag};
 SolveOptions opts{};
 opts.absolute_tolerance = 1e-12;
-StageContext ctx{current_time, execution_service};
+StageContext ctx{.time = current_time, .execution_service = &execution_service};
 
 auto outcome = solver(op_desc, rhs, target, opts, ctx);
 if (outcome.status == ConvergenceStatus::converged) {
@@ -349,7 +357,6 @@ composition. The kernel seam lives in
 4. **Driver:** Decides whether to commit based on `ImexStepAttemptResult`
    / `ConvergenceStatus`
 
-Use `pfc::sim::StageContext` from this contract header (not
-`pfc::integrator::StageContext`). First-order IMEX Euler
+Use `pfc::sim::StageContext` (alias of `pfc::integrator::StageContext`). First-order IMEX Euler
 (`ImexEulerStepper`) is available separately; this contract does not prescribe
 tableau coefficients or spectral/Krylov solver implementations.

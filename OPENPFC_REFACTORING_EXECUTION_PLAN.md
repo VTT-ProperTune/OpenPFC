@@ -40,7 +40,7 @@ This checkout is **on LUMI (AMD/HIP)**. CUDA execution is impossible here; CUDA-
 
 **M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced; latest commit `99f304da` builds and runs HIP unit tests on LUMI. Remaining M3 items are (a) CUDA execution/perf/co-enabled CI — **not testable on LUMI**, (b) folding CUDA `padded_halo_faces.cu` into the kernel library (separable-compilation, CUDA-only — deferred to tohtori).
 
-**M4 leftovers remain** (old exchanger public names). **M5 is complete** for the planned FFT utilities. **M6 stepper-protocol port is done** for the seven leaves (Euler, RK2 Heun, RK3 Heun, ExplicitRK, EmbeddedRK, ImexEuler, Etd1) onto `StepAttemptResult`. Remaining M6: Field-based state / N-field packs, merge StageContext/workspace/method enum, AdaptiveTimeController, non-diagonal SolveFunction mock.
+**M4 leftovers remain** (old exchanger public names). **M5 is complete** for the planned FFT utilities. **M6 stepper-protocol port is done** for the seven leaves (Euler, RK2 Heun, RK3 Heun, ExplicitRK, EmbeddedRK, ImexEuler, Etd1) onto `StepAttemptResult`. Remaining M6: Field-based state / N-field packs, merge workspace types. `StageContext` is one type; method enum is `RKIntegratorMethod`; AdaptiveTimeController and the non-diagonal SolveFunction mock are in.
 
 **2026-08-03 restructuring note:** two earlier attempts stalled at M3 citing lack of LUMI access. M-LUMI still collects HIP-*execution* items deferred from Pre-M0/M3/M4/M8/M9. This session *is* on LUMI, so those HIP execution items can be filled when the corresponding code exists; they still do not gate M4–M11 code. The symmetric problem now is CUDA: do not stall on tohtori.
 
@@ -482,7 +482,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 * [ ] Generalize state: steppers accept any type satisfying the field concepts (`state_concepts.hpp` — wire it in for real) — `Field<double>`, `Field<complex<double>>`, and heterogeneous packs; remove the raw-`std::vector<double>`-only restriction. **All seven single-field leaves take host `Field<double>` via `vec()`. Vector path remains. Complex and packs still open.**
 * [x] Complex-state ETD: `Etd1Stepper<Rhs, Scalar>` (`Scalar = double` or `std::complex<double>`) applies real `exp_Ldt`/`phi1_L` to the field. Host tests: stiff linear complex ODE (ETD1 exact when N=0) and closed-form N≠0. Device-resident coeff apply still open. `MultiEtd1Stepper` remains real.
 * [x] Generalize multi-field arity: `MultiStageFunction<Rhs, N>` (default N=2); `MultiEtd1Stepper` over N (`N >= 1`, variadic `attempt`). N=3 covered in `test_etd1.cpp`.
-* [ ] Merge duplicates: one `StageContext` (delete `pfc::integrator::StageContext` or `pfc::sim::StageContext`, keep one), one workspace type (merge `StageWorkspace` and `integrator::Workspace`). **Method enum: `Time` stores `RKIntegratorMethod`; the `time.hpp` `IntegratorMethod` enum is deleted.**
+* [ ] Merge duplicates: one workspace type (merge `StageWorkspace` and `integrator::Workspace`). **`StageContext` is one type (`pfc::sim::StageContext` aliases `pfc::integrator::StageContext`). Method enum: `Time` stores `RKIntegratorMethod`; the `time.hpp` `IntegratorMethod` enum is deleted.**
 * [x] Implement `AdaptiveTimeController` (`kernel/simulation/adaptive_controller.hpp`): closes embedded-error → `error_evidence` → `AdaptiveControlConfig` → `Time` attempt transactions; one end-to-end adaptive example (`examples/21_adaptive_stepping.cpp`) and integration test.
 * [x] Solver contract: `SolveFunction` is descriptor + field-bundle (no matrix type). Non-diagonal dense mock runs under `ImexEulerStepper` (`imex_euler_nondiagonal_dense_solve`). `SpectralDiagonalSolver` already models `SolveFunction` and is used as an injected solver.
 
@@ -496,12 +496,12 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 ### Deletions
 
-* [ ] The losing `StageContext` and workspace type, `fd_stencils.hpp:325–337` back-compat shims. **`IntegratorMethod` in `time.hpp` is deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
+* [ ] The losing workspace type, `fd_stencils.hpp:325–337` back-compat shims. **`pfc::sim::StageContext` is an alias; `IntegratorMethod` in `time.hpp` is deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
 * [x] `euler_attempt.hpp` (its proof role is absorbed by the ported steppers). **Deleted; `MultiEulerStepper` now has `attempt` (any N).**
 
 ### Definition of done
 
-* [ ] `grep -rn "IntegratorBase\|IntegratorResult\|Etd1StepAttempt\|ImexStepAttempt" include/ tests/` returns nothing; exactly one `StageContext`, one workspace, one method enum.
+* [ ] `grep -rn "IntegratorBase\|IntegratorResult\|Etd1StepAttempt\|ImexStepAttempt" include/ tests/` returns nothing; exactly one `StageContext` type (sim name is an alias), one workspace, one method enum.
 * [ ] All steppers pass the shared conformance test; convergence orders unchanged.
 * [ ] A complex-state, device-capable ETD1 exists with tests (the #169 framework prerequisite).
 * [ ] One adaptive run exists end-to-end (example + test).

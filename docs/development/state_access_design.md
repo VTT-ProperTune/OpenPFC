@@ -166,7 +166,7 @@ for (int step = 0; step < n_steps; ++step) {
 - Integrator doesn't manage MPI
 
 **Design implications**:
-- `pfc::integrator::StageContext` carries timing and region requirements
+- `pfc::integrator::StageContext` carries timing, region/halo/BC flags, and an optional `ExecutionService*`
 - Driver reads context and schedules MPI operations
 - Integrator focuses on algorithm, not communication
 
@@ -183,17 +183,17 @@ Two similarly named workspace types exist; they must not be conflated:
 
 This design slice specifies and tests only `pfc::integrator::Workspace<T>`. Do not edit or merge `StageWorkspace`.
 
-## Integrator StageContext vs solver StageContext
+## StageContext (single type)
 
-Two different `StageContext` types share a short name:
+`pfc::sim::StageContext` is a `using` alias of `pfc::integrator::StageContext`
+(`include/openpfc/kernel/integrator/stage_context.hpp`). Fields:
 
-| | `pfc::integrator::StageContext` | `pfc::sim::StageContext` |
-|---|---|---|
-| Header | `include/openpfc/kernel/integrator/stage_context.hpp` | `include/openpfc/kernel/simulation/solver_contract.hpp` |
-| Fields | `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange` | `evaluation_time`, `ExecutionService& execution_service` |
-| Role | MPI / BC coordination flags from integrators to drivers | Solver evaluation context with execution service |
+- Integrator: `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange`
+- Solver: optional `execution_service` (`ExecutionService*`; use `service()` when a solve needs it)
 
-Always qualify as `pfc::integrator::StageContext` in this slice. Do not merge or replace the solver_contract type.
+Solvers historically named `time` as `evaluation_time`. Construct solver
+contexts with designated initializers
+(`.time = t, .execution_service = &svc`).
 
 ## Migration examples
 
@@ -394,11 +394,11 @@ Mapped to the current work-item acceptance criteria (not legacy numeric ids):
 - `FieldOutput<T>` provides mutable caller-owned output storage with `validate_no_alias` (`state_access.hpp`; unit cases `FieldOutput mutable access`, `Field aliasing detection`).
 - `FieldBundle<Fields...>` groups fields with `get<I>()` and `validate_shapes()` (`state_access.hpp`; unit case `FieldBundle multi-field`).
 - `pfc::integrator::Workspace<T>` provides integrator-owned stage and scratch storage (unit cases `Workspace stage storage and scratch`, `Workspace clear resets buffers`).
-- `pfc::integrator::StageContext` carries `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange` (unit case `StageContext MPI coordination fields`).
+- `pfc::integrator::StageContext` carries `time`, `dt`, `stage_index`, `region_kind`, `needs_boundary_update`, `needs_halo_exchange`, and optional `execution_service` (unit case `StageContext MPI coordination fields`). `pfc::sim::StageContext` is the same type.
 - Validation free functions cover shape, aliasing, and backend-tag checks (`validation.hpp`; unit cases `Shape compatibility validation`, `Backend compatibility validation`). Backend mismatch is a compile-time `static_assert`, not a runtime throw.
 - Unit tests in `tests/unit/kernel/field/test_state_access.cpp` exercise the contracts without CUDA/HIP dependencies (including the documented ScaledField in-place exception).
 - Integration evidence: `test_heat3d_state_access.cpp` (scalar) and `test_wave2d_state_access.cpp` (multi-field).
-- This document covers value semantics, backend compatibility, validation strategy, Workspace vs StageWorkspace, and integrator vs solver StageContext distinctions, plus migration examples above.
+- This document covers value semantics, backend compatibility, validation strategy, Workspace vs StageWorkspace, and the single StageContext type, plus migration examples above.
 
 ## Summary
 

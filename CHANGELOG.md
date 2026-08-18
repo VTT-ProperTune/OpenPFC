@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- One `StageContext`: `pfc::sim::StageContext` is an alias of `pfc::integrator::StageContext`. The struct carries integrator flags plus optional `ExecutionService*`; solvers use `time` (was `evaluation_time`) and `service()`.
 - `MultiEulerStepper` isolates candidates via `attempt` (any N). Public `euler_attempt.hpp` is deleted.
 - `Time` stores `pfc::sim::steppers::RKIntegratorMethod`. The two-value `IntegratorMethod` enum in `time.hpp` is removed; JSON `from_json<Time>` accepts the full RK method token set.
 - `AdaptiveTimeController` maps error evidence (or an embedded-error vector) to accept/reject and next `dt`, then commits or rejects a `Time` attempt. Example `21_adaptive_stepping` and `test_adaptive_controller`.
