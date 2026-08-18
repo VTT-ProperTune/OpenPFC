@@ -15,6 +15,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_pattern.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_face_layout.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_geometry.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_brick_split.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_persistent_mpi_errors.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_halo_mpi_types.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_padded_halo_mpi_types.cpp

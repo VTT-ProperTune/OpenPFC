@@ -396,14 +396,14 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 * [x] Fix GPU-aware MPI detection for Cray MPICH: runtime self-probe (device-pointer send/recv smoke test à la `verify_gpu_aware_mpi.cpp`) plus `OPENPFC_ASSUME_GPU_AWARE_MPI` override; surface the active mode in the startup log. (`gpu_aware_mpi.hpp`; `decide_gpu_aware_mpi` tested in `test_gpu_aware_mpi.cpp`. Cluster log-assert that the LUMI job actually selects the aware path remains M-LUMI.)
 * [x] Backend-template `RemoteHalo`/`SparseHaloExchanger` → `pfc::comm::SparseExchange<MemorySpace>`, using the existing device gather/scatter, eliminating the per-step full-field D2H in `apps/allen_cahn/src/cuda/allen_cahn.cpp:100–116` and wave2d GPU. **Facade landed** (`comm_sparse_exchange.hpp` + `comm_sparse_exchange_gpu.hpp`). Allen–Cahn HIP and wave2d HIP use the device path (`face_recv_ptrs`). Allen–Cahn/wave2d CUDA still D2H. CUDA execute on tohtori.
 * [ ] Migrate all exchanger consumers: heat3d, wave2d (CPU+GPU), allen_cahn (CPU+GPU), kobayashi (CPU, CUDA — onto library batching; HIP — onto the device path for the first time), `FdCpuStack`, `StagePreparationService`, gpu_validation tests. **`FdCpuStack` and Allen–Cahn CPU use `SparseExchange`. heat3d, wave2d, and Kobayashi CPU drivers use `HaloExchange`. Kobayashi HIP uses `HaloExchange<HipSpace>`. Allen–Cahn HIP and wave2d HIP use `SparseExchange<HipSpace>`. `StagePreparationService` binds `HaloExchange`. Remaining GPU apps (Allen–Cahn/wave2d/Kobayashi CUDA) and leftover exchanger-class tests (`test_padded_halo_exchange`, `test_sparse_halo_exchange`, …) still use the old classes.**
-* [ ] Per ADR 0007: implement the in-repo min-surface splitter in `src/.../decomposition.cpp`, validated against `heffte::split_world` output for a matrix of (grid, ranks) cases; HeFFTe include removed from the decomposition TU (Pre-M0 PI assertion retargets to the new splitter as its own invariant).
+* [x] Per ADR 0007: implement the in-repo min-surface splitter in `src/.../decomposition.cpp`, validated against `heffte::split_world` output for a matrix of (grid, ranks) cases; HeFFTe include removed from the decomposition TU (Pre-M0 PI assertion retargets to the new splitter as its own invariant). (`brick_split.hpp`; `test_brick_split.cpp`)
 * [x] Add opt-in `MPI_Comm_dup` isolation to `pfc::mpi::communicator` (coupling prerequisite). (`communicator::duplicate()`; `tests/unit/kernel/mpi/test_communicator.cpp`)
 * [x] Make `validate_neighbour_direction_agreement` opt-out for release builds (documented) to remove the per-construction `MPI_Allgather` at scale. (`neighbour_agreement_enabled()`; `OPENPFC_VALIDATE_NEIGHBOUR_AGREEMENT`; constructors skip when off.)
 
 ### Required tests
 
 * [x] Unit: tag-allocation collision test (two exchangers, six fields, overlapping lifetimes — distinct tags proven). (`tests/unit/kernel/decomposition/test_halo_geometry.cpp`)
-* [ ] Splitter equivalence test: in-repo splitter boxes == recorded `heffte::split_world` boxes for ≥12 (grid, ranks) combinations.
+* [x] Splitter equivalence test: in-repo splitter boxes == recorded `heffte::split_world` boxes for ≥12 (grid, ranks) combinations. (`test_brick_split.cpp` compares live HeFFTe output)
 * [ ] 4-rank MPI: `HaloExchange` blocking == split-phase == persistent == batched results, bitwise, host and device; 26-direction mode validated on corner-dependent stencil. Device-CUDA half: **not testable on LUMI — verify on tohtori.** Host + HIP device can run here.
 * [ ] Kobayashi CUDA golden checksums (bitwise class) unchanged on library batching; kobayashi HIP now matches CPU within declared tolerance using the device path. **CUDA checksums: not testable on LUMI — verify on tohtori.**
 * [ ] Perf: halo microtiming baseline within 5% (tohtori). **CUDA: not testable on LUMI — verify on tohtori.** *(The LUMI device-MPI probe check — demonstrating it selects the GPU-aware path, log-asserted in the cluster test script — moved to M-LUMI.)*
@@ -413,7 +413,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 * [ ] `kernel/decomposition/halo_exchange.hpp` (old in-place `HaloExchanger`), `halo_persistent.hpp`, `full_padded_halo_exchange.hpp`, `padded_halo_exchange.hpp` (superseded), `runtime/gpu` old padded/full-padded twins from M3's port (superseded by the unified class), and their now-redundant tests (assertions migrated to the new suites).
 * [ ] `apps/kobayashi/src/cuda/kobayashi_batched_halo.hpp` (531 lines, promoted). *(HIP host-staging in `kobayashi_fd_hip.cpp` is gone — device `HaloExchange`.)*
 * [ ] `sparsevector::` "for testing" free-function round-trip on the construction hot path.
-* [ ] HeFFTe include from `src/openpfc/kernel/decomposition/decomposition.cpp`.
+* [x] HeFFTe include from `src/openpfc/kernel/decomposition/decomposition.cpp`.
 
 ### Definition of done
 

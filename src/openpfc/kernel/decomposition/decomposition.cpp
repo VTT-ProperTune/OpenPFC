@@ -3,10 +3,10 @@
 
 #include <algorithm>
 #include <array>
-#include <heffte.h>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
+#include <openpfc/kernel/decomposition/brick_split.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <stdexcept>
 #include <string>
@@ -16,51 +16,21 @@ namespace pfc::decomposition {
 
 namespace {
 
-[[nodiscard]] heffte::box3d<int> global_world_to_heffte_box(const World &world) {
-  return heffte::box3d<int>(pfc::world::get_lower(world),
-                            pfc::world::get_upper(world));
-}
-
-[[nodiscard]] World subworld_from_heffte_box(const World &global,
-                                             const heffte::box3d<int> &box) {
-  return World(box.low, box.high, pfc::world::get_coordinate_system(global));
-}
-
-// Fail closed (audit 4.9/Pre-M0 PI): get_neighbor_rank() and the halo machinery assume
-// heffte::split_world enumerates subdomain boxes in x-fastest rank order, i.e.
-// rank = cz*gx*gy + cy*gx + cx, with (cx,cy,cz) the box's grid coordinate. This
-// invariant is implicit; a HeFFTe change to the enumeration order would silently
-// corrupt every halo exchange. Verify it at construction by deriving each box's
-// grid coordinate from its (regular, Cartesian-product) lower bounds and
-// checking it maps back to the box's index, which matches the neighbor arithmetic.
+// Fail closed (audit 4.9 / ADR 0007): get_neighbor_rank() and the halo
+// machinery assume x-fastest rank order, rank = cz*gx*gy + cy*gx + cx.
 void validate_split_world_ordering(const std::vector<World> &subs,
                                    const Int3 &grid) {
   const int gx = grid[0], gy = grid[1], gz = grid[2];
   const long long expected = static_cast<long long>(gx) * gy * gz;
 
-  // Build version string if HeFFTe version macros are available
-  std::string heffte_version_info;
-#if defined(HEFFTE_VERSION_MAJOR) && defined(HEFFTE_VERSION_MINOR) && defined(HEFFTE_VERSION_PATCH)
-  heffte_version_info = "HeFFTe " + std::to_string(HEFFTE_VERSION_MAJOR) + "." +
-                        std::to_string(HEFFTE_VERSION_MINOR) + "." +
-                        std::to_string(HEFFTE_VERSION_PATCH);
-#else
-  heffte_version_info = "HeFFTe (version unknown - macros not defined)";
-#endif
-
   if (static_cast<long long>(subs.size()) != expected) {
     throw std::runtime_error(
-        "Decomposition: heffte::split_world produced " +
-        std::to_string(subs.size()) + " subdomains for a " +
-        std::to_string(gx) + "x" + std::to_string(gy) + "x" +
-        std::to_string(gz) + " process grid (expected " +
-        std::to_string(expected) +
-        "); the installed " + heffte_version_info + " version may be incompatible "
-        "with the MPI_Cart_shift neighbor arithmetic in get_neighbor_rank.");
+        "Decomposition: in-repo splitter produced " + std::to_string(subs.size()) +
+        " subdomains for a " + std::to_string(gx) + "x" + std::to_string(gy) + "x" +
+        std::to_string(gz) + " process grid (expected " + std::to_string(expected) +
+        ")");
   }
 
-  // Distinct, sorted lower-bound values along each axis are the partition
-  // boundaries; there must be exactly grid[d] of them.
   std::array<std::vector<int>, 3> bnd;
   for (const auto &w : subs) {
     const Int3 lo = pfc::world::get_lower(w);
@@ -74,15 +44,11 @@ void validate_split_world_ordering(const std::vector<World> &subs,
       static_cast<int>(bnd[1].size()) != gy ||
       static_cast<int>(bnd[2].size()) != gz) {
     throw std::runtime_error(
-        "Decomposition: heffte::split_world partition is not a regular "
+        "Decomposition: in-repo splitter partition is not a regular "
         "gx*gy*gz Cartesian grid; the x-fastest neighbor arithmetic in "
-        "get_neighbor_rank would be invalid. The installed " + heffte_version_info +
-        " version may be incompatible with the x-first rank indexing.");
+        "get_neighbor_rank would be invalid.");
   }
 
-  // Verify x-fastest rank ordering matches MPI_Cart_shift neighbor arithmetic:
-  // For each box at index r, compute its grid coordinate (cx,cy,cz) from lower bounds,
-  // then verify r == cz*gx*gy + cy*gx + cx (the rank implied by MPI_Cart_shift).
   auto coord_of = [](const std::vector<int> &axis, int value) {
     return static_cast<int>(std::lower_bound(axis.begin(), axis.end(), value) -
                             axis.begin());
@@ -95,23 +61,26 @@ void validate_split_world_ordering(const std::vector<World> &subs,
     const int implied = cz * gx * gy + cy * gx + cx;
     if (implied != r) {
       throw std::runtime_error(
-          "Decomposition: heffte::split_world box ordering does not match the "
+          "Decomposition: in-repo splitter box ordering does not match the "
           "x-fastest rank convention used by get_neighbor_rank (subdomain " +
           std::to_string(r) + " sits at grid coordinate (" + std::to_string(cx) +
           "," + std::to_string(cy) + "," + std::to_string(cz) +
-          ") which implies MPI_Cart_shift rank " + std::to_string(implied) +
-          ". The installed " + heffte_version_info + " version may use a different "
-          "ordering; halo exchange would be corrupted.");
+          ") which implies MPI_Cart_shift rank " + std::to_string(implied) + ")");
     }
   }
 }
 
-[[nodiscard]] std::vector<World> split_world_heffte(const World &world,
+[[nodiscard]] std::vector<World> split_world_bricks(const World &world,
                                                     const Int3 &grid) {
-  const heffte::box3d<int> global_box = global_world_to_heffte_box(world);
+  const Int3 lo = pfc::world::get_lower(world);
+  const Int3 hi = pfc::world::get_upper(world);
+  const Box3i global = Box3i::from_bounds(
+      {lo[0], lo[1], lo[2]}, {hi[0], hi[1], hi[2]});
   std::vector<World> sub_worlds;
-  for (const auto &box : heffte::split_world(global_box, grid)) {
-    sub_worlds.push_back(subworld_from_heffte_box(world, box));
+  for (const auto &box : split_box(global, grid)) {
+    sub_worlds.push_back(World(Int3{box.low[0], box.low[1], box.low[2]},
+                               Int3{box.high[0], box.high[1], box.high[2]},
+                               pfc::world::get_coordinate_system(world)));
   }
   validate_split_world_ordering(sub_worlds, grid);
   return sub_worlds;
@@ -122,17 +91,14 @@ void validate_split_world_ordering(const std::vector<World> &subs,
 Decomposition::Decomposition(const World &world, const Int3 &grid)
     : m_global_world(world), m_grid{grid[0], grid[1], grid[2]},
       m_local_boxes(), m_domain() {
-  // Generate subworlds using HeFFte (kept for partitioning logic)
-  const std::vector<World> subworlds = split_world_heffte(world, grid);
+  const std::vector<World> subworlds = split_world_bricks(world, grid);
 
-  // Extract Box3i from each subworld
   m_local_boxes.reserve(subworlds.size());
   for (const auto &subworld : subworlds) {
     m_local_boxes.push_back(Box3i::from_bounds(
         pfc::world::get_lower(subworld), pfc::world::get_upper(subworld)));
   }
 
-  // Extract Domain from the global World
   m_domain = pfc::domain::create(
       pfc::GridSize(pfc::world::get_size(world)),
       pfc::PhysicalOrigin(pfc::world::get_origin(world)),
@@ -145,7 +111,6 @@ Decomposition::Decomposition(const World &world, const Int3 &grid)
 }
 
 [[nodiscard]] Decomposition create(const World &world, const int &nparts) {
-  // Validate nparts against total grid points before calling HeFFTe
   const Int3 size = pfc::world::get_size(world);
   const long long total_grid_points = static_cast<long long>(size[0]) *
                                       static_cast<long long>(size[1]) *
@@ -157,13 +122,11 @@ Decomposition::Decomposition(const World &world, const Int3 &grid)
                                 std::to_string(total_grid_points) + " grid points");
   }
 
-  const heffte::box3d<int> indices = global_world_to_heffte_box(world);
-  const auto grid = heffte::proc_setup_min_surface(indices, nparts);
+  const Int3 grid = min_surface_proc_grid(size, nparts);
   return create(world, grid);
 }
 
 [[nodiscard]] Decomposition create(const Domain &domain, const Int3 &grid) {
-  // Create a World from Domain with global bounds [0, size-1]
   const Int3 &size = domain.size;
   const Int3 lower{0, 0, 0};
   const Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
@@ -172,7 +135,6 @@ Decomposition::Decomposition(const World &world, const Int3 &grid)
 }
 
 [[nodiscard]] Decomposition create(const Domain &domain, const int &nparts) {
-  // Create a World from Domain with global bounds [0, size-1]
   const Int3 &size = domain.size;
   const Int3 lower{0, 0, 0};
   const Int3 upper{size[0] - 1, size[1] - 1, size[2] - 1};
