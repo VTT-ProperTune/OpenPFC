@@ -484,7 +484,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 * [x] Generalize multi-field arity: `MultiStageFunction<Rhs, N>` (default N=2); `MultiEtd1Stepper` over N (`N >= 1`, variadic `attempt`). N=3 covered in `test_etd1.cpp`.
 * [ ] Merge duplicates: one `StageContext` (delete `pfc::integrator::StageContext` or `pfc::sim::StageContext`, keep one), one workspace type (merge `StageWorkspace` and `integrator::Workspace`), one method enum (`RKIntegratorMethod` extended; `IntegratorMethod` removed from `time.hpp:252`).
 * [ ] Implement `AdaptiveTimeController` (`kernel/simulation/adaptive_controller.hpp`): closes embedded-error → `error_evidence` → `AdaptiveControlConfig` → `Time` attempt transactions; one end-to-end adaptive example (`examples/21_adaptive_stepping.cpp`) and integration test.
-* [ ] Solver contract: confirm `SolveFunction` (`solver_contract.hpp`) does not assume diagonality (signature review + a non-diagonal mock in tests); `SpectralDiagonalSolver` ported to the unified protocol.
+* [x] Solver contract: `SolveFunction` is descriptor + field-bundle (no matrix type). Non-diagonal dense mock runs under `ImexEulerStepper` (`imex_euler_nondiagonal_dense_solve`). `SpectralDiagonalSolver` already models `SolveFunction` and is used as an injected solver.
 
 ### Required tests
 
@@ -492,7 +492,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 * [ ] Existing RK/temporal convergence-order tests pass unchanged (orders preserved is the scientific gate).
 * [ ] New: complex-field ETD1 vs analytic solution of a stiff linear complex ODE field (tolerance test); N=3 multi-field Euler/ETD test extending `test_multifield_stepper.cpp`.
 * [ ] Adaptive end-to-end: embedded RK on a problem with a known transient — controller shrinks dt through the transient and grows after; accepted/rejected counters asserted.
-* [ ] Non-diagonal `SolveFunction` mock compiles and runs under `ImexEulerStepper`.
+* [x] Non-diagonal `SolveFunction` mock compiles and runs under `ImexEulerStepper`.
 
 ### Deletions
 

@@ -79,6 +79,69 @@ auto make_identity_solver() {
   };
 }
 
+// Dense n×n (row-major) linear solve from operator_context. Proves
+// SolveFunction / ImexEuler do not assume a diagonal implicit operator.
+auto make_dense_nondiagonal_solver() {
+  return [](const LinearOperatorDesc &op_desc, const auto &rhs_bundle,
+            auto &target_bundle, const SolveOptions &,
+            const StageContext &) -> SolveOutcome<std::decay_t<decltype(target_bundle)>> {
+    using TargetType = std::decay_t<decltype(target_bundle)>;
+    if (!std::holds_alternative<std::vector<double>>(op_desc.operator_context)) {
+      return SolveOutcome<TargetType>{
+          target_bundle, ConvergenceStatus::ill_conditioned, 0, 0.0,
+          std::string("dense solver requires vector operator_context")};
+    }
+    const auto &Aflat = std::get<std::vector<double>>(op_desc.operator_context);
+    const auto &rhs_vec = std::get<0>(rhs_bundle);
+    auto &x = std::get<0>(target_bundle);
+    const std::size_t n = rhs_vec.size();
+    if (n == 0 || Aflat.size() != n * n || x.size() != n) {
+      return SolveOutcome<TargetType>{
+          target_bundle, ConvergenceStatus::ill_conditioned, 0, 0.0,
+          std::string("dense solver size mismatch")};
+    }
+    std::vector<std::vector<double>> A(n, std::vector<double>(n + 1, 0.0));
+    for (std::size_t i = 0; i < n; ++i) {
+      for (std::size_t j = 0; j < n; ++j) {
+        A[i][j] = Aflat[i * n + j];
+      }
+      A[i][n] = rhs_vec[i];
+    }
+    for (std::size_t k = 0; k < n; ++k) {
+      std::size_t piv = k;
+      for (std::size_t i = k + 1; i < n; ++i) {
+        if (std::abs(A[i][k]) > std::abs(A[piv][k])) {
+          piv = i;
+        }
+      }
+      if (std::abs(A[piv][k]) < 1e-14) {
+        return SolveOutcome<TargetType>{
+            target_bundle, ConvergenceStatus::ill_conditioned, 0, 0.0,
+            std::string("dense solver singular pivot")};
+      }
+      std::swap(A[k], A[piv]);
+      const double diag = A[k][k];
+      for (std::size_t j = k; j <= n; ++j) {
+        A[k][j] /= diag;
+      }
+      for (std::size_t i = 0; i < n; ++i) {
+        if (i == k) {
+          continue;
+        }
+        const double f = A[i][k];
+        for (std::size_t j = k; j <= n; ++j) {
+          A[i][j] -= f * A[k][j];
+        }
+      }
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+      x[i] = A[i][n];
+    }
+    return SolveOutcome<TargetType>{target_bundle, ConvergenceStatus::converged,
+                                    static_cast<int>(n), 0.0, std::nullopt};
+  };
+}
+
 auto make_failing_solver() {
   return [](const LinearOperatorDesc &, const auto & /*rhs*/, auto &target,
             const SolveOptions &,
@@ -227,4 +290,31 @@ TEST_CASE("imex_euler_multifield_bundle", "[imex]") {
     REQUIRE_THAT(u1[i], WithinAbs(u1_initial[i] + dt * c1, 1e-12));
     REQUIRE_THAT(u2[i], WithinAbs(u2_initial[i] + dt * c2, 1e-12));
   }
+}
+
+TEST_CASE("imex_euler_nondiagonal_dense_solve", "[imex]") {
+  // Implicit half is the coupled 2×2 operator L = [[0, 1], [1, 0]].
+  // With E = 0, IMEX Euler solves (I - dt L) u_{n+1} = u_n.
+  constexpr double dt = 0.1;
+  ZeroRHS E{};
+  auto solver = make_dense_nondiagonal_solver();
+  const std::vector<double> A{1.0, -dt, -dt, 1.0};
+  LinearOperatorDesc op_desc{"imex_dense", std::nullopt, A};
+
+  std::vector<double> u{1.0, 0.0};
+  const std::vector<double> u_before = u;
+
+  ImexEulerStepper stepper(dt, 2, E, solver, op_desc);
+  MockExecutionService service;
+  StageContext ctx{0.0, service};
+
+  const auto attempt = stepper.attempt(0.0, u, ctx);
+  REQUIRE(attempt.success);
+  REQUIRE(stepper.last_solve_status() == ConvergenceStatus::converged);
+  REQUIRE(u == u_before);
+  REQUIRE(stepper.commit(u));
+
+  const double den = 1.0 - dt * dt;
+  REQUIRE_THAT(u[0], WithinAbs(1.0 / den, 1e-12));
+  REQUIRE_THAT(u[1], WithinAbs(dt / den, 1e-12));
 }
