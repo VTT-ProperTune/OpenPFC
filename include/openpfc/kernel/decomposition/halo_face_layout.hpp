@@ -203,9 +203,9 @@ template <typename T>
  *         small to hold the matching recv buffer.
  */
 template <typename T>
-void copy_to_face_layout(const SparseHaloExchanger<T> &ex,
+void copy_to_face_layout(const std::vector<RemoteHalo<T>> &halos,
                          std::array<std::vector<T>, 6> &face_halos) {
-  for (const auto &h : ex.halos()) {
+  for (const auto &h : halos) {
     // Use the direction hint that make_structured_halos stamps onto each
     // RemoteHalo. Non-axis directions (and entries with no associated
     // direction, e.g. user-built lists) return slot < 0 and are skipped.
@@ -226,6 +226,12 @@ void copy_to_face_layout(const SparseHaloExchanger<T> &ex,
     }
     std::memcpy(dst.data(), h.recv_values.data().data(), n * sizeof(T));
   }
+}
+
+template <typename T>
+void copy_to_face_layout(const SparseHaloExchanger<T> &ex,
+                         std::array<std::vector<T>, 6> &face_halos) {
+  copy_to_face_layout(ex.halos(), face_halos);
 }
 
 } // namespace pfc::halo
