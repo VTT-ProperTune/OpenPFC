@@ -35,10 +35,9 @@
  * callers override the active set on a per-rank basis (e.g. shrink the set
  * near non-periodic boundaries) without rewriting every ctor.
  *
- * The helper `direction_to_face_slot(d)` maps an axis-aligned direction to the
- * canonical 6-face slot order `(+X, -X, +Y, -Y, +Z, -Z)` shared by
- * `pfc::halo::create_face_types_6` and `create_padded_face_types_6`. Non-axis
- * directions return `-1`.
+ * Slot order, `opposite_slot`, canonical tags, and padded send/recv slabs
+ * live in `halo_geometry.hpp` (the M4 single source). This header owns the
+ * *set* of directions an exchanger will walk.
  *
  * For back-compat with `pfc::halo::Connectivity`, `from_connectivity()`
  * translates the legacy enum to a preset based on the requested dimensionality.
@@ -63,6 +62,7 @@
 #include <vector>
 
 #include <openpfc/kernel/data/types.hpp>
+#include <openpfc/kernel/decomposition/halo_geometry.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
 
 namespace pfc::halo {
@@ -214,80 +214,6 @@ namespace presets {
 }
 
 } // namespace presets
-
-/**
- * @brief Map an axis-aligned direction to the 6-face slot index.
- *
- * Returns the canonical slot order shared by `create_face_types_6` and
- * `create_padded_face_types_6`:
- *
- *   `+X = 0, -X = 1, +Y = 2, -Y = 3, +Z = 4, -Z = 5`
- *
- * Returns `-1` for any non-face direction (edges and corners).
- */
-[[nodiscard]] inline int
-direction_to_face_slot(const HaloDirectionSet::Int3 &d) noexcept {
-  static constexpr std::array<HaloDirectionSet::Int3, 6> kFaceDirs = {
-      {HaloDirectionSet::Int3{1, 0, 0}, HaloDirectionSet::Int3{-1, 0, 0},
-       HaloDirectionSet::Int3{0, 1, 0}, HaloDirectionSet::Int3{0, -1, 0},
-       HaloDirectionSet::Int3{0, 0, 1}, HaloDirectionSet::Int3{0, 0, -1}}};
-  for (int i = 0; i < 6; ++i) {
-    if (kFaceDirs[static_cast<std::size_t>(i)] == d) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-/**
- * @brief Deterministic, peer-independent tag offset for any 26-direction vector.
- *
- * @details
- * Used by `pfc::halo::make_structured_halos` (and any other helper that needs
- * to put unique, symmetric MPI tags on a `RemoteHalo` exchange):
- *
- *   - For the **6 axis-aligned faces** (`±X, ±Y, ±Z`) the result equals
- *     `direction_to_face_slot(d)` — i.e. the canonical `0..5` slot order
- *     shared with `create_face_types_6` (and the templated brick FD
- *     Laplacians `field::fd::laplacian_periodic_separated<Order>`).
- *   - For the **20 non-axis directions** (12 edges + 8 corners) the result is
- *     `6 + (dx + 1) + 3 * (dy + 1) + 9 * (dz + 1)`, i.e. a deterministic
- *     `6..32` encoding that depends only on the direction vector.
- *
- * Because the encoding depends only on `d` (not on rank, not on local dir
- * order), two ranks negotiating an exchange agree on tags as long as one
- * rank uses `direction_to_canonical_tag(d)` for its *send* side and
- * `direction_to_canonical_tag(-d)` for its *recv* side; the peer rank does
- * the symmetric thing with `-d`, so `peer.send_tag == self.recv_tag` and
- * vice versa.
- *
- * @return Non-negative tag offset in `[0, 33)`.
- */
-[[nodiscard]] inline int
-direction_to_canonical_tag(const HaloDirectionSet::Int3 &d) noexcept {
-  const int slot = direction_to_face_slot(d);
-  if (slot >= 0) {
-    return slot;
-  }
-  return 6 + (d[0] + 1) + 3 * (d[1] + 1) + 9 * (d[2] + 1);
-}
-
-/**
- * @brief Inverse of `direction_to_face_slot`: 6-face slot to direction vector.
- *
- * @throws std::out_of_range when `slot` is not in `[0, 6)`.
- */
-[[nodiscard]] inline HaloDirectionSet::Int3 face_slot_to_direction(int slot) {
-  static constexpr std::array<HaloDirectionSet::Int3, 6> kFaceDirs = {
-      {HaloDirectionSet::Int3{1, 0, 0}, HaloDirectionSet::Int3{-1, 0, 0},
-       HaloDirectionSet::Int3{0, 1, 0}, HaloDirectionSet::Int3{0, -1, 0},
-       HaloDirectionSet::Int3{0, 0, 1}, HaloDirectionSet::Int3{0, 0, -1}}};
-  if (slot < 0 || slot >= 6) {
-    throw std::out_of_range("face_slot_to_direction: slot must be in [0,6), got " +
-                            std::to_string(slot));
-  }
-  return kFaceDirs[static_cast<std::size_t>(slot)];
-}
 
 /**
  * @brief Translate the legacy `pfc::halo::Connectivity` enum to a direction set.

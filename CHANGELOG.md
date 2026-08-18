@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `pfc::halo` geometry helpers in `kernel/decomposition/halo_geometry.hpp` (M4): face slots, `opposite_slot` / `opposite_direction`, per-field MPI tag blocks, and padded send/recv slabs. `halo_directions.hpp` uses these instead of its own slot/tag copies.
 - `pfc::Domain` — canonical coordinate/geometry type replacing the templated `World`
 - `pfc::Box3i` — single canonical inclusive integer index box
 - `pfc::data::Field<T, MemorySpace>` — canonical owning field container unifying LocalField/PaddedBrick
