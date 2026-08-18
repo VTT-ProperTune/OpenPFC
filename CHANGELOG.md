@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `EulerStepper` and `RK2HeunStepper` implement `attempt` / `commit_step_attempt` (`StepAttemptResult`). In-place `step()` is that pair. ADR 0003 accepted as the M6 protocol.
 - Optional 2/3-rule dealiasing mask (`kernel/fft/dealias.hpp`), off by default. Documented in `docs/science/numerics_limits.md`.
 - `SpectralGradient` binds a `FieldView` and zeros odd-derivative symbols at the even-grid Nyquist mode (Audit K1).
 - `k_component_odd` / `is_nyquist_index`; device kernels use `runtime/gpu/kspace_iterator_gpu.hpp`.
