@@ -181,7 +181,7 @@ TEST_CASE("imex_euler_forward_euler_reduction", "[imex]") {
   EulerStepper euler(dt, LOCAL_SIZE, rhs);
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
 
   const auto attempt = stepper.attempt(0.0, u_imex, ctx);
   REQUIRE(attempt.success);
@@ -209,7 +209,7 @@ TEST_CASE("imex_euler_first_order_convergence", "[imex]") {
     ImexEulerStepper stepper(dt, LOCAL_SIZE, E, solver, op_desc);
     std::vector<double> u(LOCAL_SIZE, u0);
     MockExecutionService service;
-    StageContext ctx{0.0, service};
+    StageContext ctx{.time = 0.0, .execution_service = &service};
     double t = 0.0;
     const int steps = static_cast<int>(std::lround(t_final / dt));
     for (int i = 0; i < steps; ++i) {
@@ -250,7 +250,7 @@ TEST_CASE("imex_euler_failed_solve_preserves_accepted", "[imex]") {
 
   ImexEulerStepper stepper(dt, LOCAL_SIZE, rhs, solver, op_desc);
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
 
   const auto attempt = stepper.attempt(0.0, u, ctx);
   REQUIRE_FALSE(attempt.success);
@@ -280,7 +280,7 @@ TEST_CASE("imex_euler_multifield_bundle", "[imex]") {
       dt, sizes, rhs, solver, op_desc);
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
 
   const auto attempt = stepper.attempt(0.0, ctx, u1, u2);
   REQUIRE(attempt.success);
@@ -306,7 +306,7 @@ TEST_CASE("imex_euler_nondiagonal_dense_solve", "[imex]") {
 
   ImexEulerStepper stepper(dt, 2, E, solver, op_desc);
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
 
   const auto attempt = stepper.attempt(0.0, u, ctx);
   REQUIRE(attempt.success);

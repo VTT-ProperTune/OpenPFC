@@ -230,7 +230,7 @@ private:
       const double r = diag[i] * residual_scratch_[i] - rhs_vec[i];
       sum_sq += r * r;
     }
-    std::vector<double> reduced = ctx.execution_service.global_reduce({sum_sq}, MPI_SUM);
+    std::vector<double> reduced = ctx.service().global_reduce({sum_sq}, MPI_SUM);
     const double residual_norm = std::sqrt(reduced[0]);
 
     const double abs_tol =
@@ -347,7 +347,7 @@ private:
           diag[i] * complex_residual_scratch_[i] - rhs_vec[i];
       sum_sq += std::norm(r);
     }
-    std::vector<double> reduced = ctx.execution_service.global_reduce({sum_sq}, MPI_SUM);
+    std::vector<double> reduced = ctx.service().global_reduce({sum_sq}, MPI_SUM);
     const double residual_norm = std::sqrt(reduced[0]);
 
     const double abs_tol =

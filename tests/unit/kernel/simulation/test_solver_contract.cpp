@@ -9,9 +9,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include "openpfc/kernel/simulation/solver_contract.hpp"
 #include <complex>
-#include <tuple>
-#include <vector>
 #include <functional>
+#include <tuple>
+#include <type_traits>
+#include <vector>
 
 using namespace pfc::sim;
 
@@ -222,7 +223,7 @@ TEST_CASE("test_solver_function_concept_satisfies_requirement_with_inplace") {
     auto target_bundle = std::tie(target_value);
 
     MockExecutionService mock_service;
-    StageContext ctx{0.0, mock_service};
+    StageContext ctx{.time = 0.0, .execution_service = &mock_service};
     SolveOptions opts;
 
     REQUIRE(SolveFunction<decltype(mock_inplace_solver), decltype(rhs_bundle), decltype(target_bundle)>);
@@ -258,7 +259,7 @@ TEST_CASE("test_solver_function_concept_satisfies_requirement_with_outofplace") 
     auto target_bundle = std::tie(target_field);
 
     MockExecutionService mock_service;
-    StageContext ctx{0.0, mock_service};
+    StageContext ctx{.time = 0.0, .execution_service = &mock_service};
     SolveOptions opts;
 
     REQUIRE(SolveFunction<decltype(mock_outofplace_solver), decltype(rhs_bundle), decltype(target_bundle)>);
@@ -301,7 +302,7 @@ TEST_CASE("test_solver_function_concept_with_multifield") {
     auto target_bundle = std::make_tuple(std::ref(target1), std::ref(target2));
 
     MockExecutionService mock_service;
-    StageContext ctx{0.0, mock_service};
+    StageContext ctx{.time = 0.0, .execution_service = &mock_service};
     SolveOptions opts;
 
     REQUIRE(SolveFunction<decltype(mock_multifield_solver), decltype(rhs_bundle), decltype(target_bundle)>);
@@ -312,10 +313,12 @@ TEST_CASE("test_solver_function_concept_with_multifield") {
 
 TEST_CASE("test_stage_context_contains_execution_service") {
     MockExecutionService mock_service;
-    StageContext ctx{1.5, mock_service};
+    StageContext ctx{.time = 1.5, .execution_service = &mock_service};
 
-    REQUIRE(ctx.evaluation_time == 1.5);
-    REQUIRE(&ctx.execution_service == &mock_service);
+    static_assert(std::is_same_v<StageContext, pfc::integrator::StageContext>);
+    REQUIRE(ctx.time == 1.5);
+    REQUIRE(ctx.execution_service == &mock_service);
+    REQUIRE(&ctx.service() == &mock_service);
 }
 
 TEST_CASE("test_execution_service_interface_methods") {

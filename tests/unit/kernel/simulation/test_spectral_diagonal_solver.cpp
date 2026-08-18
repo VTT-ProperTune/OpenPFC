@@ -69,7 +69,7 @@ TEST_CASE("spectral diagonal regular real divide", "[spectral_diagonal][solver]"
   std::vector<double> target{0.0, 0.0, 0.0};
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -96,7 +96,7 @@ TEST_CASE("spectral diagonal nullspace fail", "[spectral_diagonal][solver]") {
   const auto target_sentinel = target;
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
 
   auto outcome = solver(make_desc(diag), rhs, target, opts, ctx);
@@ -120,7 +120,7 @@ TEST_CASE("spectral diagonal nullspace project", "[spectral_diagonal][solver]") 
   std::vector<double> target{9.0, 9.0, 9.0};
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -144,7 +144,7 @@ TEST_CASE("spectral diagonal nullspace regularize", "[spectral_diagonal][solver]
     std::vector<double> target{0.0, 0.0, 0.0};
 
     MockExecutionService service;
-    StageContext ctx{0.0, service};
+    StageContext ctx{.time = 0.0, .execution_service = &service};
     SolveOptions opts{};
     // Residual uses original d, so r_i = -b_i * λ/(d_i+λ); set abs_tol accordingly
     opts.absolute_tolerance = 10.0;
@@ -170,7 +170,7 @@ TEST_CASE("spectral diagonal nullspace regularize", "[spectral_diagonal][solver]
     const auto sentinel = target;
 
     MockExecutionService service;
-    StageContext ctx{0.0, service};
+    StageContext ctx{.time = 0.0, .execution_service = &service};
     SolveOptions opts{};
 
     auto outcome = solver(make_desc(diag), rhs, target, opts, ctx);
@@ -195,7 +195,7 @@ TEST_CASE("spectral diagonal residual threshold", "[spectral_diagonal][solver]")
   const auto sentinel = target;
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -217,7 +217,7 @@ TEST_CASE("spectral diagonal inputs unchanged", "[spectral_diagonal][solver]") {
 
   LinearOperatorDesc desc = make_desc(diag);
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -236,7 +236,7 @@ TEST_CASE("spectral diagonal empty operator_identifier accepted",
   std::vector<double> target{0.0};
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -260,7 +260,7 @@ TEST_CASE("spectral diagonal complex regular divide",
                               Complex{0.0, 0.0}};
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -294,7 +294,7 @@ TEST_CASE("spectral diagonal complex nullspace fail",
   const auto target_sentinel = target;
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
 
   auto outcome = solver(make_complex_desc(diag), rhs, target, opts, ctx);
@@ -323,7 +323,7 @@ TEST_CASE("spectral diagonal complex nullspace project",
                               Complex{9.0, 0.0}};
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -353,7 +353,7 @@ TEST_CASE("spectral diagonal complex nullspace regularize",
                               Complex{0.0, 0.0}};
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   // Residual uses original d, so r_i = -b_i * λ/(d_i+λ); set abs_tol accordingly
   opts.absolute_tolerance = 10.0;
@@ -385,7 +385,7 @@ TEST_CASE("spectral diagonal complex residual threshold",
   const auto sentinel = target;
 
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -412,7 +412,7 @@ TEST_CASE("spectral diagonal complex inputs unchanged",
 
   LinearOperatorDesc desc = make_complex_desc(diag);
   MockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 
@@ -456,7 +456,7 @@ TEST_CASE("spectral diagonal injected reduced sum affects convergence",
   };
 
   ReducingMockExecutionService service;
-  StageContext ctx{0.0, service};
+  StageContext ctx{.time = 0.0, .execution_service = &service};
   SolveOptions opts{};
   opts.absolute_tolerance = 1e-12;
 

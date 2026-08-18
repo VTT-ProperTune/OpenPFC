@@ -22,9 +22,8 @@
  * stepper. Method extras (embedded high/low/error, last solve evidence,
  * last failure reason) live on stepper accessors, not on the result.
  *
- * @note Uses `pfc::integrator::StageContext` from
- *       `openpfc/kernel/integrator/stage_context.hpp` — not
- *       `pfc::sim::StageContext` in `solver_contract.hpp`.
+ * @note Uses `pfc::integrator::StageContext` (`pfc::sim::StageContext` is
+ *       an alias of the same type).
  *
  * @see euler.hpp for production Euler / MultiEuler attempt/commit
  * @see embedded_rk.hpp for embedded high/low/error accessors

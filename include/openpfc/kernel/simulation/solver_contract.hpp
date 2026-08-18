@@ -70,6 +70,7 @@
 #include <vector>
 
 #include "openpfc/kernel/field/tuple_protocol.hpp"
+#include <openpfc/kernel/integrator/stage_context.hpp>
 
 namespace pfc::sim {
 
@@ -237,16 +238,10 @@ public:
 /**
  * @brief Context passed to solver functions
  *
- * Contains evaluation time and ExecutionService reference for solver-distributed
- * coordination during iterations and operator evaluations.
+ * Alias of `pfc::integrator::StageContext`. Solvers read `time` (evaluation
+ * time) and `service()` / `execution_service` for distributed reductions.
  */
-struct StageContext {
-    /// Evaluation time for the current stage
-    double evaluation_time;
-
-    /// Reference to execution service for distributed operations
-    ExecutionService& execution_service;
-};
+using StageContext = pfc::integrator::StageContext;
 
 /**
  * @brief Concept for solver functions

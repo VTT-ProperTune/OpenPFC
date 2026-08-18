@@ -20,8 +20,8 @@
  * Euler (#168), spectral/Krylov solver bodies, and CUDA/HIP backends are out
  * of scope for this seam.
  *
- * **StageContext namespace:** always use `pfc::sim::StageContext` from
- * `solver_contract.hpp`. Do not confuse it with `pfc::integrator::StageContext`.
+ * **StageContext:** `pfc::sim::StageContext` is an alias of
+ * `pfc::integrator::StageContext`. The composer writes `ctx.time`.
  *
  * @see openpfc/kernel/simulation/solver_contract.hpp
  * @see openpfc/kernel/simulation/steppers/embedded_rk.hpp
@@ -113,8 +113,7 @@ public:
    *
    * Sequence (fixed order):
    * 1. Validate `u_accepted.size() == local_size`.
-   * 2. Set `ctx.evaluation_time = t` (composer owns this write for the proof
-   *    path).
+   * 2. Set `ctx.time = t` (composer owns this write for the proof path).
    * 3. Explicit stage: `m_explicit_eval(t, u_accepted, m_f_explicit)`.
    * 4. Build RHS: `m_rhs[i] = u_accepted[i] + dt * m_f_explicit[i]`.
    * 5. Implicit solve into `m_candidate` via `m_solver`.
@@ -129,8 +128,7 @@ public:
    * @param u_accepted Accepted state (read-only; never written).
    * @param op_desc Implicit linear operator descriptor for the solve.
    * @param options Solver stopping criteria.
-   * @param ctx `pfc::sim::StageContext` (solver_contract); evaluation_time
-   *            is set by this call.
+   * @param ctx Stage context; `time` is set by this call.
    * @return Attempt evidence with a view into method-owned candidate storage.
    *
    * @throws std::invalid_argument if `u_accepted.size() != local_size`.
@@ -146,7 +144,7 @@ public:
           std::to_string(m_local_size) + ")");
     }
 
-    ctx.evaluation_time = t;
+    ctx.time = t;
 
     m_explicit_eval(t, u_accepted, m_f_explicit);
 

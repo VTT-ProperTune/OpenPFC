@@ -94,7 +94,7 @@ TEST_CASE("candidate_isolation_until_apply",
   const std::vector<double> fingerprint = u;
 
   MockExecutionService exec;
-  StageContext ctx{0.0, exec};
+  StageContext ctx{.time = 0.0, .execution_service = &exec};
   SolveOptions opts;
   LinearOperatorDesc op{"identity_proof"};
 
@@ -132,7 +132,7 @@ TEST_CASE("failure_does_not_mutate_accepted",
   const std::vector<double> fingerprint = u;
 
   MockExecutionService exec;
-  StageContext ctx{0.0, exec};
+  StageContext ctx{.time = 0.0, .execution_service = &exec};
   auto result =
       composer.attempt(0.0, 0.25, u, LinearOperatorDesc{"fail"}, SolveOptions{},
                        ctx);
@@ -155,7 +155,7 @@ TEST_CASE("explicit_then_implicit_ordering",
 
   std::vector<double> u{2.0};
   MockExecutionService exec;
-  StageContext ctx{-1.0, exec};
+  StageContext ctx{.time = -1.0, .execution_service = &exec};
 
   auto result = composer.attempt(0.5, 0.1, u, LinearOperatorDesc{"order"},
                                  SolveOptions{}, ctx);
@@ -163,5 +163,5 @@ TEST_CASE("explicit_then_implicit_ordering",
   REQUIRE(result.success);
   REQUIRE(explicit_count == 1);
   REQUIRE(explicit_seen_in_solver == 1);
-  REQUIRE(ctx.evaluation_time == 0.5);
+  REQUIRE(ctx.time == 0.5);
 }

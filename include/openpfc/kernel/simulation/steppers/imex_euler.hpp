@@ -179,7 +179,7 @@ public:
    *
    * Evaluates `E(t, u_work)`, forms `rhs = u_accepted + dt * E`, then solves
    * `(I - dt*L) candidate = rhs` via the injected solver with
-   * `ctx.evaluation_time = t + dt`.
+   * `ctx.time = t + dt`.
    */
   [[nodiscard]] StepAttemptResult attempt(double t,
                                           const std::vector<double> &u_accepted,
@@ -191,7 +191,7 @@ public:
     for (std::size_t i = 0; i < n; ++i) {
       m_rhs_vec[i] = u_accepted[i] + m_dt * m_e[i];
     }
-    ctx.evaluation_time = t + m_dt;
+    ctx.time = t + m_dt;
     auto rhs_bundle = std::tie(m_rhs_vec);
     auto candidate_bundle = std::tie(m_candidate);
     auto outcome =
@@ -346,7 +346,7 @@ public:
     auto e_pack = make_e_tuple(std::index_sequence_for<U...>{});
     m_E(t, u_pack, e_pack);
     form_rhs(std::index_sequence_for<U...>{}, u_accepted...);
-    ctx.evaluation_time = t + m_dt;
+    ctx.time = t + m_dt;
     auto rhs_bundle = make_rhs_bundle(std::index_sequence_for<U...>{});
     auto candidate_bundle =
         make_candidate_bundle(std::index_sequence_for<U...>{});

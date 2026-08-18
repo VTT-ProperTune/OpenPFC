@@ -355,6 +355,7 @@ TEST_CASE("StageContext MPI coordination fields", "[field][state_access]") {
     REQUIRE(ctx.region_kind == pfc::integrator::StageContext::RegionKind::Interior);
     REQUIRE(ctx.needs_boundary_update);
     REQUIRE_FALSE(ctx.needs_halo_exchange);
+    REQUIRE(ctx.execution_service == nullptr);
 
     ctx.region_kind = pfc::integrator::StageContext::RegionKind::All;
     ctx.needs_halo_exchange = true;
