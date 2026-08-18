@@ -20,6 +20,7 @@
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
 
+#include <array>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -28,6 +29,7 @@
 
 #include <mpi.h>
 
+#include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
@@ -46,6 +48,7 @@ template <typename Tag, typename T> struct DeviceRemoteHalo {
   int send_tag{0};
   int recv_tag{0};
   bool scatter_after_recv{false};
+  pfc::types::Int3 direction{0, 0, 0};
   core::SparseVector<Tag, T> send_values{static_cast<std::size_t>(0)};
   core::SparseVector<Tag, T> recv_values{static_cast<std::size_t>(0)};
 };
@@ -77,6 +80,7 @@ public:
       d.send_tag = h.send_tag;
       d.recv_tag = h.recv_tag;
       d.scatter_after_recv = opt.scatter_after_recv;
+      d.direction = h.direction;
       d.send_values = core::SparseVector<Tag, T>(
           pfc::sparsevector::get_index(h.send_values));
       d.recv_values = core::SparseVector<Tag, T>(
@@ -96,6 +100,7 @@ public:
       d.send_tag = h.send_tag;
       d.recv_tag = h.recv_tag;
       d.scatter_after_recv = h.scatter_after_recv;
+      d.direction = h.direction;
       d.send_values = core::SparseVector<Tag, T>(
           pfc::sparsevector::get_index(h.send_values));
       d.recv_values = core::SparseVector<Tag, T>(
@@ -132,6 +137,24 @@ public:
   [[nodiscard]] int rank() const noexcept { return m_rank; }
   [[nodiscard]] bool uses_gpu_aware_mpi() const noexcept {
     return pfc::gpu::runtime_mpi_gpu_aware();
+  }
+
+  [[nodiscard]] const std::vector<halo_type> &halos() const noexcept {
+    return m_halos;
+  }
+
+  /// Device recv slabs for the 6 face slots (`+X,-X,+Y,-Y,+Z,-Z`).
+  /// Unused slots (no structured entry, or empty recv) are `nullptr`.
+  [[nodiscard]] std::array<T *, 6> face_recv_ptrs() {
+    std::array<T *, 6> out{};
+    for (auto &h : m_halos) {
+      const int slot = halo::direction_to_face_slot(h.direction);
+      if (slot < 0 || h.recv_values.empty()) {
+        continue;
+      }
+      out[static_cast<std::size_t>(slot)] = h.recv_values.data().data();
+    }
+    return out;
   }
 
 private:

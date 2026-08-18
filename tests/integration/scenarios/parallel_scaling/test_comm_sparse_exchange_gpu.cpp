@@ -16,6 +16,7 @@
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/runtime/gpu/comm_sparse_exchange_gpu.hpp>
 
 using namespace pfc;
@@ -86,6 +87,27 @@ TEST_CASE("SparseExchange HipSpace: custom RemoteHalo scatter stays on device",
     REQUIRE(data[u.idx(7, 0, 0)] == 6.0);
     REQUIRE(data[u.idx(2, 0, 0)] == 3.0);
   });
+}
+
+TEST_CASE("SparseExchange HipSpace: structured face_recv_ptrs are device-side",
+          "[sparse_exchange][hip]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 1 || !device_runtime_available<HipSpace>()) {
+    return;
+  }
+
+  auto domain = domain::create({8, 6, 1});
+  auto decomp = decomposition::create(domain, 1);
+  data::Field<double, HipSpace> u(domain, decomposition::local_box(decomp, rank),
+                                  /*storage_halo=*/0, /*iteration_halo=*/1);
+  comm::SparseExchange<HipSpace, double> ex(u, decomp, rank, MPI_COMM_WORLD);
+  REQUIRE(ex.num_halos() == 6);
+  const auto faces = ex.face_recv_ptrs();
+  for (int f = 0; f < 6; ++f) {
+    REQUIRE(faces[static_cast<std::size_t>(f)] != nullptr);
+  }
 }
 #endif
 
