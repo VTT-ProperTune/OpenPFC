@@ -73,16 +73,17 @@ template <class Rhs>
 concept StageFunction = StageFunctionFor<Rhs, double>;
 
 /**
- * @brief Satisfied by an N-field stage-evaluation callable:
- *        `rhs(t, u_pack, du_pack)` filling every field in `du_pack`.
+ * @brief Satisfied by an N-field stage-evaluation callable on `Scalar`
+ *        buffers: `rhs(t, u_pack, du_pack)` filling every field in `du_pack`.
  *
- * Default `N == 2` keeps existing `MultiStageFunction<Rhs>` call sites.
+ * Default `N == 2` and `Scalar == double` keep existing
+ * `MultiStageFunction<Rhs>` call sites.
  */
-template <class Rhs, std::size_t N = 2>
+template <class Rhs, std::size_t N = 2, class Scalar = double>
 concept MultiStageFunction = requires(
     Rhs rhs, double t,
-    typename detail::n_ref_tuple<N, std::vector<double>>::type u_pack,
-    typename detail::n_ref_tuple<N, std::vector<double>>::type du_pack) {
+    typename detail::n_ref_tuple<N, std::vector<Scalar>>::type u_pack,
+    typename detail::n_ref_tuple<N, std::vector<Scalar>>::type du_pack) {
   rhs(t, u_pack, du_pack);
 };
 

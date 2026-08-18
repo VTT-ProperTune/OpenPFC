@@ -367,3 +367,65 @@ TEST_CASE("etd1_complex_closed_form_with_N", "[stepper][etd1][complex]") {
   REQUIRE(stepper.candidate()[0].imag() ==
           Catch::Approx(expected.imag()).margin(1e-12));
 }
+
+struct TwoFieldConstantComplexN {
+  Complex n0{};
+  Complex n1{};
+  void operator()(
+      double /*t*/,
+      std::tuple<std::vector<Complex> &, std::vector<Complex> &> /*u_pack*/,
+      std::tuple<std::vector<Complex> &, std::vector<Complex> &> du_pack)
+      const {
+    std::get<0>(du_pack)[0] = n0;
+    std::get<1>(du_pack)[0] = n1;
+  }
+};
+
+TEST_CASE("etd1_multi_field_complex_bundle", "[stepper][etd1][complex]") {
+  constexpr double dt = 0.1;
+  std::vector<double> L0{-8.0};
+  std::vector<double> L1{-20.0};
+  std::vector<double> exp0(1), phi0(1), exp1(1), phi1(1);
+  fill_spectral_exp_coeffs(L0, dt, exp0, phi0);
+  fill_spectral_exp_coeffs(L1, dt, exp1, phi1);
+
+  const Complex u0_val{0.5, -0.25};
+  const Complex u1_val{-1.0, 0.75};
+  const Complex n0{0.1, 0.2};
+  const Complex n1{-0.3, 0.05};
+
+  TwoFieldConstantComplexN rhs{n0, n1};
+  MultiEtd1Stepper<TwoFieldConstantComplexN, 2, Complex> stepper(dt, {1, 1},
+                                                                 rhs);
+  stepper.set_coefficients({std::span<const double>{exp0},
+                            std::span<const double>{exp1}},
+                           {std::span<const double>{phi0},
+                            std::span<const double>{phi1}});
+
+  std::vector<Complex> u0{u0_val};
+  std::vector<Complex> u1{u1_val};
+  const auto fp0 = u0;
+  const auto fp1 = u1;
+
+  auto attempt = stepper.attempt(0.0, u0, u1);
+  REQUIRE(attempt.success);
+  REQUIRE(u0 == fp0);
+  REQUIRE(u1 == fp1);
+
+  const auto r0 = spectral_exp_coeffs(L0[0], dt);
+  const auto r1 = spectral_exp_coeffs(L1[0], dt);
+  const Complex e0 = Complex(r0.exp_Ldt) * u0_val + Complex(r0.phi1_L) * n0;
+  const Complex e1 = Complex(r1.exp_Ldt) * u1_val + Complex(r1.phi1_L) * n1;
+  REQUIRE(stepper.candidate(0)[0].real() ==
+          Catch::Approx(e0.real()).margin(1e-12));
+  REQUIRE(stepper.candidate(0)[0].imag() ==
+          Catch::Approx(e0.imag()).margin(1e-12));
+  REQUIRE(stepper.candidate(1)[0].real() ==
+          Catch::Approx(e1.real()).margin(1e-12));
+  REQUIRE(stepper.candidate(1)[0].imag() ==
+          Catch::Approx(e1.imag()).margin(1e-12));
+
+  pfc::sim::steppers::commit_step_attempt(u0, u1, attempt);
+  REQUIRE(u0[0].real() == Catch::Approx(e0.real()).margin(1e-12));
+  REQUIRE(u1[0].imag() == Catch::Approx(e1.imag()).margin(1e-12));
+}

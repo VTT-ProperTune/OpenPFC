@@ -212,26 +212,31 @@ private:
 /**
  * @brief N-field ETD1 stepper with per-field isolated candidates.
  *
- * @tparam Rhs Callable satisfying @ref MultiStageFunction with arity N.
- * @tparam N   Field count (`N >= 1`).
+ * @tparam Rhs    Callable satisfying @ref MultiStageFunction with arity N
+ *                and element type @p Scalar.
+ * @tparam N      Field count (`N >= 1`).
+ * @tparam Scalar Field element type (`double` or `std::complex<double>`).
+ *                Real diagonal coefficients are applied as `Scalar(coeff) *
+ *                value`.
  *
  * Each accepted field is copied into method-owned scratch before the
  * multi-field nonlinear evaluation so a misbehaving @c N cannot mutate
  * caller buffers.
  */
-template <class Rhs, std::size_t N>
-  requires(N >= 1) && MultiStageFunction<Rhs, N>
+template <class Rhs, std::size_t N, class Scalar = double>
+  requires(N >= 1) && MultiStageFunction<Rhs, N, Scalar>
 class MultiEtd1Stepper {
 public:
   using RhsType = Rhs;
+  using scalar_type = Scalar;
   static constexpr std::size_t field_count = N;
 
   MultiEtd1Stepper(double dt, std::array<std::size_t, N> local_sizes, Rhs rhs)
       : m_dt(dt), m_local_sizes(local_sizes), m_rhs(std::move(rhs)) {
     for (std::size_t f = 0; f < N; ++f) {
-      m_du[f].assign(local_sizes[f], 0.0);
-      m_candidate[f].assign(local_sizes[f], 0.0);
-      m_u_scratch[f].assign(local_sizes[f], 0.0);
+      m_du[f].assign(local_sizes[f], Scalar{});
+      m_candidate[f].assign(local_sizes[f], Scalar{});
+      m_u_scratch[f].assign(local_sizes[f], Scalar{});
     }
   }
 
@@ -275,25 +280,25 @@ public:
    * @brief Form isolated per-field candidates without mutating accepted inputs.
    */
   template <class... U>
-  [[nodiscard]] MultiStepAttemptResult<N>
+  [[nodiscard]] MultiStepAttemptResult<N, Scalar>
   attempt(double t, const std::vector<U> &...u_accepted) {
     static_assert(sizeof...(U) == N,
                   "MultiEtd1Stepper::attempt: buffer count must match N");
-    static_assert((std::is_same_v<U, double> && ...),
-                  "MultiEtd1Stepper requires std::vector<double>");
+    static_assert((std::is_same_v<U, Scalar> && ...),
+                  "MultiEtd1Stepper requires std::vector<Scalar>");
     m_last_reason.clear();
-    const std::array<const std::vector<double> *, N> accepted{&u_accepted...};
+    const std::array<const std::vector<Scalar> *, N> accepted{&u_accepted...};
     for (std::size_t f = 0; f < N; ++f) {
       if (accepted[f]->size() != m_local_sizes[f]) {
         m_last_reason = "accepted field size != local_size";
-        return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
-                                         candidate_ptrs());
+        return MultiStepAttemptResult<N, Scalar>(t, m_dt, t, /*success=*/false,
+                                                 candidate_ptrs());
       }
       if (m_exp_Ldt[f].size() != m_local_sizes[f] ||
           m_phi1_L[f].size() != m_local_sizes[f]) {
         m_last_reason = "coefficient span size != local_size";
-        return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
-                                         candidate_ptrs());
+        return MultiStepAttemptResult<N, Scalar>(t, m_dt, t, /*success=*/false,
+                                                 candidate_ptrs());
       }
     }
 
@@ -305,21 +310,23 @@ public:
     for (std::size_t f = 0; f < N; ++f) {
       const auto &u_acc = *accepted[f];
       for (std::size_t i = 0; i < m_local_sizes[f]; ++i) {
-        const double c =
-            m_exp_Ldt[f][i] * u_acc[i] + m_phi1_L[f][i] * m_du[f][i];
-        if (!std::isfinite(c)) {
+        const Scalar c = Scalar(m_exp_Ldt[f][i]) * u_acc[i] +
+                         Scalar(m_phi1_L[f][i]) * m_du[f][i];
+        if (!detail::is_finite_scalar(c)) {
           m_last_reason = "non-finite candidate value";
-          return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
-                                           candidate_ptrs());
+          return MultiStepAttemptResult<N, Scalar>(t, m_dt, t,
+                                                   /*success=*/false,
+                                                   candidate_ptrs());
         }
         m_candidate[f][i] = c;
       }
     }
-    return MultiStepAttemptResult<N>(t, m_dt, t + m_dt, /*success=*/true,
-                                     candidate_ptrs());
+    return MultiStepAttemptResult<N, Scalar>(t, m_dt, t + m_dt,
+                                             /*success=*/true,
+                                             candidate_ptrs());
   }
 
-  [[nodiscard]] std::span<const double>
+  [[nodiscard]] std::span<const Scalar>
   candidate(std::size_t field_index) const noexcept {
     return m_candidate[field_index];
   }
@@ -333,9 +340,9 @@ public:
 private:
   double m_dt{0.0};
   std::array<std::size_t, N> m_local_sizes{};
-  std::array<std::vector<double>, N> m_du{};
-  std::array<std::vector<double>, N> m_candidate{};
-  std::array<std::vector<double>, N> m_u_scratch{};
+  std::array<std::vector<Scalar>, N> m_du{};
+  std::array<std::vector<Scalar>, N> m_candidate{};
+  std::array<std::vector<Scalar>, N> m_u_scratch{};
   std::array<std::vector<double>, N> m_owned_exp{};
   std::array<std::vector<double>, N> m_owned_phi1{};
   std::array<std::span<const double>, N> m_exp_Ldt{};
@@ -358,13 +365,13 @@ private:
     return std::tie(m_du[I]...);
   }
 
-  [[nodiscard]] std::array<const std::vector<double> *, N>
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
   candidate_ptrs() const {
     return candidate_ptrs_impl(std::make_index_sequence<N>{});
   }
 
   template <std::size_t... I>
-  [[nodiscard]] std::array<const std::vector<double> *, N>
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
   candidate_ptrs_impl(std::index_sequence<I...>) const {
     return {&m_candidate[I]...};
   }

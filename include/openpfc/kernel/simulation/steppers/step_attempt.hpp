@@ -75,27 +75,27 @@ using StepAttemptResult = StepAttempt<double>;
  * Candidate references bind to method-owned buffers with the same lifetime
  * rule as `StepAttemptResult::candidate`.
  */
-template <std::size_t N> struct MultiStepAttemptResult {
+template <std::size_t N, class Scalar = double> struct MultiStepAttemptResult {
   static_assert(N >= 1, "MultiStepAttemptResult requires N >= 1");
 
   double t0{};
   double dt{};
   double t1{};
   bool success{false};
-  std::array<const std::vector<double> *, N> candidates{};
+  std::array<const std::vector<Scalar> *, N> candidates{};
   std::optional<double> error_norm{};
   std::optional<double> min_next_dt{};
 
   MultiStepAttemptResult(
       double t0_in, double dt_in, double t1_in, bool success_in,
-      std::array<const std::vector<double> *, N> candidates_in,
+      std::array<const std::vector<Scalar> *, N> candidates_in,
       std::optional<double> error_norm_in = std::nullopt,
       std::optional<double> min_next_dt_in = std::nullopt)
       : t0(t0_in), dt(dt_in), t1(t1_in), success(success_in),
         candidates(candidates_in), error_norm(std::move(error_norm_in)),
         min_next_dt(std::move(min_next_dt_in)) {}
 
-  [[nodiscard]] const std::vector<double> &candidate(std::size_t i) const {
+  [[nodiscard]] const std::vector<Scalar> &candidate(std::size_t i) const {
     return *candidates[i];
   }
 };
@@ -165,10 +165,11 @@ inline void commit_step_attempt(std::vector<Scalar> &accepted,
  *
  * @throws std::invalid_argument if `!result.success`.
  */
+template <class Scalar>
 inline void
-commit_step_attempt(std::vector<double> &accepted0,
-                    std::vector<double> &accepted1,
-                    const MultiStepAttemptResult<2> &result) {
+commit_step_attempt(std::vector<Scalar> &accepted0,
+                    std::vector<Scalar> &accepted1,
+                    const MultiStepAttemptResult<2, Scalar> &result) {
   if (!result.success) {
     throw std::invalid_argument(
         "commit_step_attempt: cannot commit a failed MultiStepAttemptResult "
