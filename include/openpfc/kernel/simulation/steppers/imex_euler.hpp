@@ -27,9 +27,10 @@
  *
  * `attempt` never mutates the caller's accepted buffers. Explicit evaluation
  * runs on an internal working copy. The candidate `u_{n+1}` lives in
- * stepper-owned storage. On solve failure, `ImexStepAttempt::success` is
- * false, solve evidence is reported, and `commit` is a no-op — accepted state
- * is unchanged. `candidate()` refers to stepper-owned storage and is
+ * stepper-owned storage and is returned as `StepAttemptResult::candidate`.
+ * On solve failure, `success` is false, `t1 == t0`, solve evidence is
+ * available via `last_solve_*` accessors, and `commit` is a no-op — accepted
+ * state is unchanged. `candidate()` refers to stepper-owned storage and is
  * meaningful only after a successful attempt.
  *
  * @see stage_protocol.hpp for StageFunction / MultiStageFunction
@@ -51,23 +52,9 @@
 
 #include <openpfc/kernel/simulation/solver_contract.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 namespace pfc::sim::steppers {
-
-/**
- * @brief Result of one IMEX Euler step attempt (not an in-place time advance).
- *
- * On failure, `success` is false, solve evidence is populated from
- * `SolveOutcome`, and the candidate must not be committed.
- */
-struct ImexStepAttempt {
-  bool success{false};
-  double t_new{0.0}; ///< Meaningful only when `success` is true.
-  std::optional<pfc::sim::ConvergenceStatus> solve_status;
-  int solve_iteration_count{0};
-  double solve_final_residual_norm{0.0};
-  std::optional<std::string> solve_failure_cause;
-};
 
 namespace detail {
 
@@ -114,19 +101,6 @@ void ingest_multi_field_solution(std::array<std::vector<double>, N> &dest,
                                  Solution &&solution) {
   ingest_multi_field_solution_impl(
       dest, std::forward<Solution>(solution), std::make_index_sequence<N>{});
-}
-
-template <class Outcome>
-ImexStepAttempt make_attempt_from_outcome(bool success, double t_new,
-                                          const Outcome &outcome) {
-  ImexStepAttempt attempt;
-  attempt.success = success;
-  attempt.t_new = t_new;
-  attempt.solve_status = outcome.status;
-  attempt.solve_iteration_count = outcome.iteration_count;
-  attempt.solve_final_residual_norm = outcome.final_residual_norm;
-  attempt.solve_failure_cause = outcome.failure_cause;
-  return attempt;
 }
 
 } // namespace detail
@@ -206,9 +180,9 @@ public:
    * `(I - dt*L) candidate = rhs` via the injected solver with
    * `ctx.evaluation_time = t + dt`.
    */
-  [[nodiscard]] ImexStepAttempt attempt(double t,
-                                        const std::vector<double> &u_accepted,
-                                        pfc::sim::StageContext &ctx) {
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const std::vector<double> &u_accepted,
+                                          pfc::sim::StageContext &ctx) {
     m_last_success = false;
     m_u_work = u_accepted;
     m_E(t, m_u_work, m_e);
@@ -221,12 +195,14 @@ public:
     auto candidate_bundle = std::tie(m_candidate);
     auto outcome =
         m_solver(m_op_desc, rhs_bundle, candidate_bundle, m_opts, ctx);
+    record_solve_outcome(outcome);
     if (outcome.status == pfc::sim::ConvergenceStatus::converged) {
       detail::ingest_single_field_solution(m_candidate, outcome.solution);
       m_last_success = true;
-      return detail::make_attempt_from_outcome(true, t + m_dt, outcome);
+      return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true,
+                               m_candidate);
     }
-    return detail::make_attempt_from_outcome(false, t + m_dt, outcome);
+    return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
   }
 
   /**
@@ -252,6 +228,24 @@ public:
 
   [[nodiscard]] double dt() const noexcept { return m_dt; }
 
+  [[nodiscard]] std::optional<pfc::sim::ConvergenceStatus>
+  last_solve_status() const noexcept {
+    return m_last_solve_status;
+  }
+
+  [[nodiscard]] int last_solve_iteration_count() const noexcept {
+    return m_last_solve_iteration_count;
+  }
+
+  [[nodiscard]] double last_solve_final_residual_norm() const noexcept {
+    return m_last_solve_final_residual_norm;
+  }
+
+  [[nodiscard]] const std::optional<std::string> &
+  last_solve_failure_cause() const noexcept {
+    return m_last_solve_failure_cause;
+  }
+
   void save_state(const std::vector<double> &u) { m_u_checkpoint = u; }
 
   void restore_state(std::vector<double> &u) { u = m_u_checkpoint; }
@@ -259,6 +253,13 @@ public:
   [[nodiscard]] bool can_rollback() const noexcept { return true; }
 
 private:
+  template <class Outcome> void record_solve_outcome(const Outcome &outcome) {
+    m_last_solve_status = outcome.status;
+    m_last_solve_iteration_count = outcome.iteration_count;
+    m_last_solve_final_residual_norm = outcome.final_residual_norm;
+    m_last_solve_failure_cause = outcome.failure_cause;
+  }
+
   double m_dt{0.0};
   ExplicitRhs m_E;
   Solver m_solver;
@@ -270,6 +271,10 @@ private:
   std::vector<double> m_candidate;
   std::vector<double> m_u_checkpoint;
   bool m_last_success{false};
+  std::optional<pfc::sim::ConvergenceStatus> m_last_solve_status;
+  int m_last_solve_iteration_count{0};
+  double m_last_solve_final_residual_norm{0.0};
+  std::optional<std::string> m_last_solve_failure_cause;
 };
 
 /**
@@ -315,8 +320,9 @@ public:
    *       last; call as `attempt(t, ctx, u1, u2, ...)`.
    */
   template <class... U>
-  [[nodiscard]] ImexStepAttempt attempt(double t, pfc::sim::StageContext &ctx,
-                                        const std::vector<U> &...u_accepted) {
+  [[nodiscard]] MultiStepAttemptResult<N>
+  attempt(double t, pfc::sim::StageContext &ctx,
+          const std::vector<U> &...u_accepted) {
     static_assert(sizeof...(U) == N,
                   "MultiImexEulerStepper::attempt: buffer count must match N");
     static_assert((std::is_same_v<U, double> && ...),
@@ -333,12 +339,15 @@ public:
         make_candidate_bundle(std::index_sequence_for<U...>{});
     auto outcome =
         m_solver(m_op_desc, rhs_bundle, candidate_bundle, m_opts, ctx);
+    record_solve_outcome(outcome);
     if (outcome.status == pfc::sim::ConvergenceStatus::converged) {
       detail::ingest_multi_field_solution(m_candidate, outcome.solution);
       m_last_success = true;
-      return detail::make_attempt_from_outcome(true, t + m_dt, outcome);
+      return MultiStepAttemptResult<N>(t, m_dt, t + m_dt, /*success=*/true,
+                                       candidate_ptrs());
     }
-    return detail::make_attempt_from_outcome(false, t + m_dt, outcome);
+    return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
+                                     candidate_ptrs());
   }
 
   /**
@@ -359,6 +368,24 @@ public:
   }
 
   [[nodiscard]] double dt() const noexcept { return m_dt; }
+
+  [[nodiscard]] std::optional<pfc::sim::ConvergenceStatus>
+  last_solve_status() const noexcept {
+    return m_last_solve_status;
+  }
+
+  [[nodiscard]] int last_solve_iteration_count() const noexcept {
+    return m_last_solve_iteration_count;
+  }
+
+  [[nodiscard]] double last_solve_final_residual_norm() const noexcept {
+    return m_last_solve_final_residual_norm;
+  }
+
+  [[nodiscard]] const std::optional<std::string> &
+  last_solve_failure_cause() const noexcept {
+    return m_last_solve_failure_cause;
+  }
 
   template <class... U> void save_state(const std::vector<U> &...u_buffers) {
     static_assert(sizeof...(U) == N, "field count must match N");
@@ -420,6 +447,24 @@ private:
     ((u_accepted = m_candidate[I]), ...);
   }
 
+  template <class Outcome> void record_solve_outcome(const Outcome &outcome) {
+    m_last_solve_status = outcome.status;
+    m_last_solve_iteration_count = outcome.iteration_count;
+    m_last_solve_final_residual_norm = outcome.final_residual_norm;
+    m_last_solve_failure_cause = outcome.failure_cause;
+  }
+
+  [[nodiscard]] std::array<const std::vector<double> *, N>
+  candidate_ptrs() const {
+    return candidate_ptrs_impl(std::make_index_sequence<N>{});
+  }
+
+  template <std::size_t... I>
+  [[nodiscard]] std::array<const std::vector<double> *, N>
+  candidate_ptrs_impl(std::index_sequence<I...>) const {
+    return {&m_candidate[I]...};
+  }
+
   double m_dt{0.0};
   ExplicitRhs m_E;
   Solver m_solver;
@@ -431,6 +476,10 @@ private:
   std::array<std::vector<double>, N> m_candidate;
   std::array<std::vector<double>, N> m_u_checkpoint;
   bool m_last_success{false};
+  std::optional<pfc::sim::ConvergenceStatus> m_last_solve_status;
+  int m_last_solve_iteration_count{0};
+  double m_last_solve_final_residual_norm{0.0};
+  std::optional<std::string> m_last_solve_failure_cause;
 };
 
 } // namespace pfc::sim::steppers

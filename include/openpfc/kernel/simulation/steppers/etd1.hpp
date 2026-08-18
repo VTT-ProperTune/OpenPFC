@@ -45,31 +45,9 @@
 
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 namespace pfc::sim::steppers {
-
-/**
- * @brief Computational outcome of one ETD1 step attempt.
- *
- * @c success means the candidate was formed with finite values — not an
- * adaptive accept/reject decision (ETD1 has no embedded estimator).
- */
-struct Etd1StepAttempt {
-  bool success{false};
-  double t_next{0.0};
-  std::string reason{}; ///< empty on success; optional diagnostic on failure
-};
-
-[[nodiscard]] inline Etd1StepAttempt make_etd1_success(double t_next) {
-  return Etd1StepAttempt{.success = true, .t_next = t_next, .reason = {}};
-}
-
-[[nodiscard]] inline Etd1StepAttempt
-make_etd1_failure(std::string reason = {}) {
-  return Etd1StepAttempt{.success = false,
-                         .t_next = 0.0,
-                         .reason = std::move(reason)};
-}
 
 /**
  * @brief CPU ETD1 stepper with isolated candidate state.
@@ -99,10 +77,10 @@ public:
    * @brief Bind caller-lent coefficient spans.
    *
    * Requires @p exp_Ldt and @p phi1_L to have equal length. Matching against
-   * @c local_size / @c u_accepted is deferred to @ref attempt_step so a
+   * @c local_size / @c u_accepted is deferred to @ref attempt so a
    * size-mismatch failure path remains reachable.
    *
-   * Spans must outlive the next @ref attempt_step (or be replaced via a later
+   * Spans must outlive the next @ref attempt (or be replaced via a later
    * @c set_coefficients / owned copy).
    */
   void set_coefficients(std::span<const double> exp_Ldt,
@@ -121,7 +99,7 @@ public:
    * @brief Copy coefficients into method-owned storage.
    *
    * Prefer this when binding a cache that may rebuild, or when the source
-   * spans would otherwise go out of scope before @ref attempt_step.
+   * spans would otherwise go out of scope before @ref attempt.
    */
   void set_coefficients_owned(std::span<const double> exp_Ldt,
                               std::span<const double> phi1_L) {
@@ -142,7 +120,7 @@ public:
    * The cache may be rebuilt afterward; this overload owns independent copies.
    */
   void set_coefficients(
-      const pfc::integrator::SpectralExpCoefficientCache &cache) {
+      const pfc::integrator::SpectralExpCoefficientCache<> &cache) {
     set_coefficients_owned(cache.exp_Ldt(), cache.phi1_L());
   }
 
@@ -152,13 +130,16 @@ public:
    * Algorithm: size-check → copy accepted into scratch → evaluate @c N on
    * scratch → @c candidate = exp_Ldt * u_accepted + phi1_L * N.
    */
-  [[nodiscard]] Etd1StepAttempt
-  attempt_step(double t, const std::vector<double> &u_accepted) {
+  [[nodiscard]] StepAttemptResult
+  attempt(double t, const std::vector<double> &u_accepted) {
+    m_last_reason.clear();
     if (u_accepted.size() != m_local_size) {
-      return make_etd1_failure("u_accepted.size() != local_size");
+      m_last_reason = "u_accepted.size() != local_size";
+      return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
     }
     if (m_exp_Ldt.size() != m_local_size || m_phi1_L.size() != m_local_size) {
-      return make_etd1_failure("coefficient span size != local_size");
+      m_last_reason = "coefficient span size != local_size";
+      return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
     }
 
     m_u_scratch = u_accepted;
@@ -168,15 +149,20 @@ public:
       const double c =
           m_exp_Ldt[i] * u_accepted[i] + m_phi1_L[i] * m_du[i];
       if (!std::isfinite(c)) {
-        return make_etd1_failure("non-finite candidate value");
+        m_last_reason = "non-finite candidate value";
+        return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
       }
       m_candidate[i] = c;
     }
-    return make_etd1_success(t + m_dt);
+    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
   }
 
   [[nodiscard]] std::span<const double> candidate() const noexcept {
     return m_candidate;
+  }
+
+  [[nodiscard]] const std::string &last_reason() const noexcept {
+    return m_last_reason;
   }
 
   [[nodiscard]] double dt() const noexcept { return m_dt; }
@@ -193,6 +179,7 @@ private:
   std::vector<double> m_owned_phi1;
   std::span<const double> m_exp_Ldt{};
   std::span<const double> m_phi1_L{};
+  std::string m_last_reason{};
   Rhs m_rhs;
 };
 
@@ -225,7 +212,7 @@ public:
    * @brief Bind caller-lent per-field coefficient spans.
    *
    * Per field, @c exp and @c phi1 must have equal length. Matching against
-   * each field's @c local_size is deferred to @ref attempt_step.
+   * each field's @c local_size is deferred to @ref attempt.
    */
   void set_coefficients(std::array<std::span<const double>, N> exp_Ldt,
                         std::array<std::span<const double>, N> phi1_L) {
@@ -260,16 +247,21 @@ public:
   /**
    * @brief Form isolated per-field candidates without mutating accepted inputs.
    */
-  [[nodiscard]] Etd1StepAttempt
-  attempt_step(double t, const std::vector<double> &u0,
-               const std::vector<double> &u1) {
+  [[nodiscard]] MultiStepAttemptResult<N>
+  attempt(double t, const std::vector<double> &u0,
+          const std::vector<double> &u1) {
+    m_last_reason.clear();
     if (u0.size() != m_local_sizes[0] || u1.size() != m_local_sizes[1]) {
-      return make_etd1_failure("accepted field size != local_size");
+      m_last_reason = "accepted field size != local_size";
+      return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
+                                       candidate_ptrs());
     }
     for (std::size_t f = 0; f < N; ++f) {
       if (m_exp_Ldt[f].size() != m_local_sizes[f] ||
           m_phi1_L[f].size() != m_local_sizes[f]) {
-        return make_etd1_failure("coefficient span size != local_size");
+        m_last_reason = "coefficient span size != local_size";
+        return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
+                                         candidate_ptrs());
       }
     }
 
@@ -286,17 +278,24 @@ public:
         const double c =
             m_exp_Ldt[f][i] * u_acc[i] + m_phi1_L[f][i] * m_du[f][i];
         if (!std::isfinite(c)) {
-          return make_etd1_failure("non-finite candidate value");
+          m_last_reason = "non-finite candidate value";
+          return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
+                                           candidate_ptrs());
         }
         m_candidate[f][i] = c;
       }
     }
-    return make_etd1_success(t + m_dt);
+    return MultiStepAttemptResult<N>(t, m_dt, t + m_dt, /*success=*/true,
+                                     candidate_ptrs());
   }
 
   [[nodiscard]] std::span<const double>
   candidate(std::size_t field_index) const noexcept {
     return m_candidate[field_index];
+  }
+
+  [[nodiscard]] const std::string &last_reason() const noexcept {
+    return m_last_reason;
   }
 
   [[nodiscard]] double dt() const noexcept { return m_dt; }
@@ -311,7 +310,13 @@ private:
   std::array<std::vector<double>, N> m_owned_phi1{};
   std::array<std::span<const double>, N> m_exp_Ldt{};
   std::array<std::span<const double>, N> m_phi1_L{};
+  std::string m_last_reason{};
   Rhs m_rhs;
+
+  [[nodiscard]] std::array<const std::vector<double> *, N>
+  candidate_ptrs() const {
+    return {&m_candidate[0], &m_candidate[1]};
+  }
 };
 
 } // namespace pfc::sim::steppers

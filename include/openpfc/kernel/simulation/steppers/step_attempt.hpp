@@ -16,19 +16,18 @@
  *
  * Candidate views in `StepAttemptResult` / `MultiStepAttemptResult` bind to
  * method-owned storage and remain valid until the next `attempt()` on the
- * owning stepper or until that stepper is destroyed (same lifetime rule as
- * `EmbeddedStepAttemptResult`).
+ * owning stepper or until that stepper is destroyed.
  *
- * Distinct from `EmbeddedStepAttemptResult` (embedded high/low/error pair
- * evidence). This type is the shared single-candidate (or N-field) shape for
- * Euler, and later IMEX/ETD leaves.
+ * This type is the shared single-candidate (or N-field) shape for every
+ * stepper. Method extras (embedded high/low/error, last solve evidence,
+ * last failure reason) live on stepper accessors, not on the result.
  *
  * @note Uses `pfc::integrator::StageContext` from
  *       `openpfc/kernel/integrator/stage_context.hpp` — not
  *       `pfc::sim::StageContext` in `solver_contract.hpp`.
  *
  * @see euler_attempt.hpp for the explicit-Euler proof path
- * @see embedded_rk.hpp for the orthogonal embedded-pair attempt API
+ * @see embedded_rk.hpp for embedded high/low/error accessors
  */
 
 #include <array>
@@ -148,7 +147,7 @@ concept MultiOperatorEvaluator2 = requires(
  *
  * @throws std::invalid_argument if `!result.success` (misuse is loud).
  */
-[[nodiscard]] inline void
+inline void
 commit_step_attempt(std::vector<double> &accepted,
                     const StepAttemptResult &result) {
   if (!result.success) {
@@ -164,7 +163,7 @@ commit_step_attempt(std::vector<double> &accepted,
  *
  * @throws std::invalid_argument if `!result.success`.
  */
-[[nodiscard]] inline void
+inline void
 commit_step_attempt(std::vector<double> &accepted0,
                     std::vector<double> &accepted1,
                     const MultiStepAttemptResult<2> &result) {

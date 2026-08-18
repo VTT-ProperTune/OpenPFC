@@ -15,6 +15,8 @@
  * The accepted input state is never mutated. Adaptive accept/reject and next
  * `dt` selection remain driver/controller-owned — `success` means only that
  * the attempt completed computationally (stages evaluated, candidates formed).
+ * `attempt` returns `StepAttemptResult` with `candidate == u_high()`. Low-order
+ * state, error difference, and RHS-eval count stay on stepper accessors.
  *
  * FSAL stage reuse is intentionally out of scope for this slice. If a future
  * cache is added under the same leaf, it must be valid only after accepted
@@ -32,35 +34,9 @@
 
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 namespace pfc::sim::steppers {
-
-/**
- * @brief Evidence returned by one embedded RK step attempt.
- *
- * Views bind to method-owned buffers and remain valid until the next
- * `attempt` call or stepper destruction. `success` is computational
- * completion only — not an adaptive accept/reject decision.
- */
-struct EmbeddedStepAttemptResult {
-  double t0{};
-  double dt{};
-  double t1{}; ///< `t0 + dt` on success
-  bool success{false};
-  unsigned int rhs_evals{0}; ///< equals `tableau.stage_count()` on success
-  const std::vector<double> &u_high;
-  const std::vector<double> &u_low;
-  const std::vector<double> &error; ///< elementwise `u_high - u_low`
-
-  EmbeddedStepAttemptResult(double t0_in, double dt_in, double t1_in,
-                            bool success_in, unsigned int rhs_evals_in,
-                            const std::vector<double> &u_high_in,
-                            const std::vector<double> &u_low_in,
-                            const std::vector<double> &error_in)
-      : t0(t0_in), dt(dt_in), t1(t1_in), success(success_in),
-        rhs_evals(rhs_evals_in), u_high(u_high_in), u_low(u_low_in),
-        error(error_in) {}
-};
 
 /**
  * @brief CPU embedded explicit RK step-attempt stepper.
@@ -118,8 +94,8 @@ public:
    *
    * @throws std::invalid_argument if `u.size() != local_size`.
    */
-  [[nodiscard]] EmbeddedStepAttemptResult
-  attempt(double t, double dt, const std::vector<double> &u) {
+  [[nodiscard]] StepAttemptResult attempt(double t, double dt,
+                                          const std::vector<double> &u) {
     if (u.size() != m_local_size) {
       throw std::invalid_argument(
           "EmbeddedRKStepper::attempt: u.size() (" +
@@ -128,7 +104,7 @@ public:
     }
 
     const unsigned int s = m_tableau.stage_count();
-    unsigned int rhs_evals = 0;
+    m_last_rhs_evals = 0;
 
     for (unsigned int i = 0; i < s; ++i) {
       m_u_temp = u;
@@ -144,7 +120,7 @@ public:
       const double stage_time = t + m_tableau.c(i) * dt;
       m_rhs(stage_time, m_u_temp, m_du);
       m_k[i] = m_du;
-      ++rhs_evals;
+      ++m_last_rhs_evals;
     }
 
     m_u_high = u;
@@ -169,8 +145,7 @@ public:
       m_error[idx] = m_u_high[idx] - m_u_low[idx];
     }
 
-    return EmbeddedStepAttemptResult(t, dt, t + dt, true, rhs_evals, m_u_high,
-                                     m_u_low, m_error);
+    return StepAttemptResult(t, dt, t + dt, /*success=*/true, m_u_high);
   }
 
   [[nodiscard]] const ButcherTableau<double> &tableau() const noexcept {
@@ -189,6 +164,11 @@ public:
     return m_error;
   }
 
+  /** Number of RHS evaluations in the last successful `attempt`. */
+  [[nodiscard]] unsigned int last_rhs_evals() const noexcept {
+    return m_last_rhs_evals;
+  }
+
 private:
   std::size_t m_local_size{0};
   std::vector<double> m_du;
@@ -197,6 +177,7 @@ private:
   std::vector<double> m_u_high;
   std::vector<double> m_u_low;
   std::vector<double> m_error;
+  unsigned int m_last_rhs_evals{0};
   ButcherTableau<double> m_tableau;
   Rhs m_rhs;
 };

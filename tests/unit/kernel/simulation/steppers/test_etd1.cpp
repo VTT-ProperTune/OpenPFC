@@ -85,10 +85,10 @@ integrate_etd1(double L, QuadraticN rhs, double u0, double T, double dt) {
   std::vector<double> u{u0};
   double t = 0.0;
   for (std::size_t s = 0; s < n_steps; ++s) {
-    auto attempt = stepper.attempt_step(t, u);
+    auto attempt = stepper.attempt(t, u);
     REQUIRE(attempt.success);
     u[0] = stepper.candidate()[0];
-    t = attempt.t_next;
+    t = attempt.t1;
   }
   return u;
 }
@@ -111,9 +111,9 @@ TEST_CASE("etd1_closed_form_diagonal_update", "[stepper][etd1]") {
   stepper.set_coefficients(exp_buf, phi_buf);
 
   std::vector<double> u{u0};
-  auto attempt = stepper.attempt_step(0.0, u);
+  auto attempt = stepper.attempt(0.0, u);
   REQUIRE(attempt.success);
-  REQUIRE(attempt.t_next == Catch::Approx(dt));
+  REQUIRE(attempt.t1 == Catch::Approx(dt));
 
   const auto ref = spectral_exp_coeffs(L, dt);
   const double expected = ref.exp_Ldt * u0 + ref.phi1_L * Nval;
@@ -134,7 +134,7 @@ TEST_CASE("etd1_near_zero_phi1_finite", "[stepper][etd1]") {
   stepper.set_coefficients(exp_buf, phi_buf);
 
   std::vector<double> u(Lvals.size(), 2.0);
-  auto attempt = stepper.attempt_step(0.0, u);
+  auto attempt = stepper.attempt(0.0, u);
   REQUIRE(attempt.success);
 
   for (std::size_t i = 0; i < Lvals.size(); ++i) {
@@ -160,7 +160,7 @@ TEST_CASE("etd1_accepted_state_isolation", "[stepper][etd1]") {
   std::vector<double> u{1.0, 2.0};
   const std::vector<double> fingerprint = u;
 
-  auto ok = stepper.attempt_step(0.0, u);
+  auto ok = stepper.attempt(0.0, u);
   REQUIRE(ok.success);
   REQUIRE(u == fingerprint);
 
@@ -168,14 +168,14 @@ TEST_CASE("etd1_accepted_state_isolation", "[stepper][etd1]") {
   std::vector<double> bad_exp{1.0};
   std::vector<double> bad_phi{0.1};
   stepper.set_coefficients(bad_exp, bad_phi);
-  auto fail = stepper.attempt_step(0.0, u);
+  auto fail = stepper.attempt(0.0, u);
   REQUIRE_FALSE(fail.success);
   REQUIRE(u == fingerprint);
 
   // Wrong-sized accepted vector with good coeffs.
   stepper.set_coefficients(exp_buf, phi_buf);
   std::vector<double> wrong_u{1.0};
-  auto fail2 = stepper.attempt_step(0.0, wrong_u);
+  auto fail2 = stepper.attempt(0.0, wrong_u);
   REQUIRE_FALSE(fail2.success);
   REQUIRE(u == fingerprint);
 }
@@ -221,7 +221,7 @@ TEST_CASE("etd1_multi_field_bundle", "[stepper][etd1]") {
   const auto fp0 = u0;
   const auto fp1 = u1;
 
-  auto attempt = stepper.attempt_step(0.0, u0, u1);
+  auto attempt = stepper.attempt(0.0, u0, u1);
   REQUIRE(attempt.success);
   REQUIRE(u0 == fp0);
   REQUIRE(u1 == fp1);

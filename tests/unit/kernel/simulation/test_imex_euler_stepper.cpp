@@ -122,7 +122,7 @@ TEST_CASE("imex_euler_forward_euler_reduction", "[imex]") {
 
   const auto attempt = stepper.attempt(0.0, u_imex, ctx);
   REQUIRE(attempt.success);
-  REQUIRE(attempt.solve_status == ConvergenceStatus::converged);
+  REQUIRE(stepper.last_solve_status() == ConvergenceStatus::converged);
   REQUIRE(stepper.commit(u_imex));
   (void)euler.step(0.0, u_euler);
 
@@ -153,7 +153,7 @@ TEST_CASE("imex_euler_first_order_convergence", "[imex]") {
       const auto attempt = stepper.attempt(t, u, ctx);
       REQUIRE(attempt.success);
       REQUIRE(stepper.commit(u));
-      t = attempt.t_new;
+      t = attempt.t1;
     }
     return u;
   };
@@ -191,8 +191,8 @@ TEST_CASE("imex_euler_failed_solve_preserves_accepted", "[imex]") {
 
   const auto attempt = stepper.attempt(0.0, u, ctx);
   REQUIRE_FALSE(attempt.success);
-  REQUIRE(attempt.solve_status == ConvergenceStatus::unknown_failure);
-  REQUIRE(attempt.solve_failure_cause.has_value());
+  REQUIRE(stepper.last_solve_status() == ConvergenceStatus::unknown_failure);
+  REQUIRE(stepper.last_solve_failure_cause().has_value());
   REQUIRE(u == u_before);
   REQUIRE_FALSE(stepper.commit(u));
   REQUIRE(u == u_before);

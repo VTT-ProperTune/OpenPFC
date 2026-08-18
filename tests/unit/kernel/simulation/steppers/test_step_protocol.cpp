@@ -7,15 +7,25 @@
 #include <type_traits>
 #include <vector>
 
+#include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
+#include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/kernel/simulation/steppers/etd1.hpp>
+#include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
 #include <openpfc/kernel/simulation/steppers/rk2_heun.hpp>
+#include <openpfc/kernel/simulation/steppers/rk3_heun.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
+using pfc::integrator::fill_spectral_exp_coeffs;
 using pfc::sim::steppers::AttemptStepper;
 using pfc::sim::steppers::commit_step_attempt;
+using pfc::sim::steppers::Etd1Stepper;
 using pfc::sim::steppers::EulerStepper;
+using pfc::sim::steppers::ExplicitRKStepper;
 using pfc::sim::steppers::RK2HeunStepper;
+using pfc::sim::steppers::RK3HeunStepper;
 using pfc::sim::steppers::StepAttemptResult;
+using pfc::sim::steppers::make_rk4_classical;
 
 namespace {
 
@@ -84,4 +94,36 @@ TEST_CASE("EulerStepper::step matches attempt plus commit",
   commit_step_attempt(u_attempt, r);
   REQUIRE(t1 == Catch::Approx(r.t1));
   REQUIRE(u_step == u_attempt);
+}
+
+TEST_CASE("RK3HeunStepper attempt/commit leaves accepted state unchanged until commit",
+          "[step_protocol][rk3]") {
+  DecayRhs rhs{};
+  RK3HeunStepper<DecayRhs> stepper(0.1, 4, rhs);
+  static_assert(AttemptStepper<decltype(stepper)>);
+  std::vector<double> u{1.0, 2.0, 3.0, 4.0};
+  check_attempt_commit_rollback(stepper, 0.0, 0.1, u);
+}
+
+TEST_CASE("ExplicitRKStepper attempt/commit leaves accepted state unchanged until commit",
+          "[step_protocol][explicit_rk]") {
+  DecayRhs rhs{};
+  ExplicitRKStepper<DecayRhs> stepper(0.1, 4, make_rk4_classical<double>(), rhs);
+  static_assert(AttemptStepper<decltype(stepper)>);
+  std::vector<double> u{1.0, 2.0, 3.0, 4.0};
+  check_attempt_commit_rollback(stepper, 0.0, 0.1, u);
+}
+
+TEST_CASE("Etd1Stepper attempt/commit leaves accepted state unchanged until commit",
+          "[step_protocol][etd1]") {
+  DecayRhs rhs{};
+  Etd1Stepper<DecayRhs> stepper(0.1, 4, rhs);
+  std::vector<double> L{-1.0, -1.0, -1.0, -1.0};
+  std::vector<double> exp_buf(4);
+  std::vector<double> phi_buf(4);
+  fill_spectral_exp_coeffs(L, 0.1, exp_buf, phi_buf);
+  stepper.set_coefficients(exp_buf, phi_buf);
+  static_assert(AttemptStepper<decltype(stepper)>);
+  std::vector<double> u{1.0, 2.0, 3.0, 4.0};
+  check_attempt_commit_rollback(stepper, 0.0, 0.1, u);
 }

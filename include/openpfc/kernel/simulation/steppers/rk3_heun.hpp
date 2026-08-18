@@ -107,6 +107,7 @@
 #include <vector>
 
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 namespace pfc::sim::steppers {
 
@@ -154,73 +155,44 @@ public:
         m_u_temp(local_size, 0.0), m_rhs(std::move(rhs)) {}
 
   /**
-   * @brief Advance `u` by one Heun third-order RK3 step in place; returns
-   *        the new time.
+   * @brief Isolate the Heun-RK3 candidate without writing accepted `u`.
    *
-   * ## Algorithm
-   *
-   * 1. **Stage 1**: Evaluate RHS at `(t, u)`
-   *    ```
-   *    rhs(t, u, m_k1)
-   *    ```
-   * 2. **Stage 2**: Build the stage-2 evaluation point and evaluate RHS
-   *    there
-   *    ```
-   *    m_u_temp = u + dt/3 * m_k1
-   *    rhs(t + dt/3, m_u_temp, m_k2)
-   *    ```
-   * 3. **Stage 3**: Build the stage-3 evaluation point from `k2` **only**
-   *    (no `k1` contribution) and evaluate RHS there, reusing `m_k2` to
-   *    store the result since the old `k2` value is no longer needed
-   *    ```
-   *    m_u_temp = u + 2*dt/3 * m_k2
-   *    rhs(t + 2*dt/3, m_u_temp, m_k2)   // m_k2 now holds k3
-   *    ```
-   * 4. **Combination**: Apply the weighted update (`k2` does not
-   *    contribute)
-   *    ```
-   *    u += dt/4 * m_k1 + dt*3/4 * m_k2   // m_k2 holds k3 here
-   *    ```
-   *
-   * @param t Current time
-   * @param u State vector (modified in place)
-   * @return New time `t + dt`
-   *
-   * @pre `u.size()` must equal the `local_size` passed to the constructor
-   * @post `u` contains the advanced state at time `t + dt`
+   * After the three stages, overwrites `m_u_temp` with the combination
+   * result (the isolated candidate).
    */
-  double step(double t, std::vector<double> &u) {
-    const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(u.size());
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const std::vector<double> &u) {
+    const std::size_t n = u.size();
 
     // Stage 1: k1 = rhs(t, u)
-    m_rhs(t, u, m_k1);
+    m_rhs(t, const_cast<std::vector<double> &>(u), m_k1);
 
     // Stage 2: k2 = rhs(t + dt/3, u + dt/3 * k1)
-    for (std::ptrdiff_t li = 0; li < n; ++li) {
-      m_u_temp[static_cast<std::size_t>(li)] =
-          u[static_cast<std::size_t>(li)] +
-          (m_dt / 3.0) * m_k1[static_cast<std::size_t>(li)];
+    for (std::size_t i = 0; i < n; ++i) {
+      m_u_temp[i] = u[i] + (m_dt / 3.0) * m_k1[i];
     }
     m_rhs(t + m_dt / 3.0, m_u_temp, m_k2);
 
-    // Stage 3: k3 = rhs(t + 2*dt/3, u + 2*dt/3 * k2) -- deliberately no k1
-    // contribution here, per Heun's third-order tableau. m_k2 is reused to
-    // store k3 once its old value has been consumed above.
-    for (std::ptrdiff_t li = 0; li < n; ++li) {
-      m_u_temp[static_cast<std::size_t>(li)] =
-          u[static_cast<std::size_t>(li)] +
-          (2.0 * m_dt / 3.0) * m_k2[static_cast<std::size_t>(li)];
+    // Stage 3: k3 = rhs(t + 2*dt/3, u + 2*dt/3 * k2) -- no k1 contribution.
+    // m_k2 is reused to store k3 once its old value has been consumed.
+    for (std::size_t i = 0; i < n; ++i) {
+      m_u_temp[i] = u[i] + (2.0 * m_dt / 3.0) * m_k2[i];
     }
     m_rhs(t + 2.0 * m_dt / 3.0, m_u_temp, m_k2); // m_k2 now holds k3
 
-    // Combination: u += dt/4 * k1 + dt*3/4 * k3 -- k2 does not appear here.
-    for (std::ptrdiff_t li = 0; li < n; ++li) {
-      u[static_cast<std::size_t>(li)] +=
-          (m_dt / 4.0) * m_k1[static_cast<std::size_t>(li)] +
-          (3.0 * m_dt / 4.0) * m_k2[static_cast<std::size_t>(li)];
+    // Combination into method-owned storage: k2 does not appear here.
+    for (std::size_t i = 0; i < n; ++i) {
+      m_u_temp[i] =
+          u[i] + (m_dt / 4.0) * m_k1[i] + (3.0 * m_dt / 4.0) * m_k2[i];
     }
+    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_u_temp);
+  }
 
-    return t + m_dt;
+  /** Advance `u` by one Heun RK3 step; commit of `attempt`. */
+  double step(double t, std::vector<double> &u) {
+    const StepAttemptResult r = attempt(t, u);
+    commit_step_attempt(u, r);
+    return r.t1;
   }
 
   /**

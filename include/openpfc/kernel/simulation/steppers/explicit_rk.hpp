@@ -53,6 +53,7 @@
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 namespace pfc::sim::steppers {
 
@@ -81,7 +82,8 @@ public:
    */
   ExplicitRKStepper(double dt, std::size_t local_size,
                     ButcherTableau<double> tableau, Rhs rhs)
-      : m_dt(dt), m_du(local_size, 0.0), m_tableau(std::move(tableau)),
+      : m_dt(dt), m_du(local_size, 0.0), m_u_temp(local_size, 0.0),
+        m_candidate(local_size, 0.0), m_tableau(std::move(tableau)),
         m_rhs(std::move(rhs)) {
     const unsigned int s = m_tableau.stage_count();
     m_k.resize(s);
@@ -91,56 +93,50 @@ public:
   }
 
   /**
-   * @brief Advance `u` by one explicit RK step in place; returns the new time.
+   * @brief Isolate `u + dt * sum_i(b_i * k_i)` without writing accepted `u`.
    *
    * Implements the explicit RK algorithm:
-   *   1. For each stage i: compute k_i = rhs(t + c_i*dt, u + dt * sum_j(a_ij * k_j))
-   *   2. Final accumulation: u += dt * sum_i(b_i * k_i)
-   *
-   * @param t Current time.
-   * @param u State vector (modified in place).
-   * @return New time `t + dt`.
+   *   1. For each stage i: k_i = rhs(t + c_i*dt, u + dt * sum_j(a_ij * k_j))
+   *   2. Candidate: u + dt * sum_i(b_i * k_i)
    */
-  double step(double t, std::vector<double> &u) {
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const std::vector<double> &u) {
     const unsigned int s = m_tableau.stage_count();
     const std::size_t n = u.size();
 
-    // Compute stages
     for (unsigned int i = 0; i < s; ++i) {
-      // Build temp state: u_temp = u + dt * sum_j(a_ij * k_j)
-      std::vector<double> u_temp(u);
+      m_u_temp = u;
       for (unsigned int j = 0; j < i; ++j) {
         const double a_ij = m_tableau.a(i, j);
         if (a_ij != 0.0) {
-          const std::ptrdiff_t np = static_cast<std::ptrdiff_t>(n);
-          for (std::ptrdiff_t li = 0; li < np; ++li) {
-            const std::size_t idx = static_cast<std::size_t>(li);
-            u_temp[idx] += m_dt * a_ij * m_k[j][idx];
+          for (std::size_t idx = 0; idx < n; ++idx) {
+            m_u_temp[idx] += m_dt * a_ij * m_k[j][idx];
           }
         }
       }
 
-      // Compute stage i: k_i = rhs(t + c_i * dt, u_temp)
       const double stage_time = t + m_tableau.c(i) * m_dt;
-      m_rhs(stage_time, u_temp, m_du);
-
-      // Copy du to k_i
+      m_rhs(stage_time, m_u_temp, m_du);
       m_k[i] = m_du;
     }
 
-    // Final accumulation: u += dt * sum_i(b_i * k_i)
+    m_candidate = u;
     for (unsigned int i = 0; i < s; ++i) {
       const double b_i = m_tableau.b(i);
       if (b_i != 0.0) {
-        const std::ptrdiff_t np = static_cast<std::ptrdiff_t>(n);
-        for (std::ptrdiff_t li = 0; li < np; ++li) {
-          const std::size_t idx = static_cast<std::size_t>(li);
-          u[idx] += m_dt * b_i * m_k[i][idx];
+        for (std::size_t idx = 0; idx < n; ++idx) {
+          m_candidate[idx] += m_dt * b_i * m_k[i][idx];
         }
       }
     }
+    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
+  }
 
-    return t + m_dt;
+  /** Advance `u` by one explicit RK step; commit of `attempt`. */
+  double step(double t, std::vector<double> &u) {
+    const StepAttemptResult r = attempt(t, u);
+    commit_step_attempt(u, r);
+    return r.t1;
   }
 
   double dt() const noexcept { return m_dt; }
@@ -148,6 +144,8 @@ public:
 private:
   double m_dt{0.0};
   std::vector<double> m_du;
+  std::vector<double> m_u_temp;
+  std::vector<double> m_candidate;
   std::vector<std::vector<double>> m_k; // scratch buffers per stage
   ButcherTableau<double> m_tableau;
   Rhs m_rhs;

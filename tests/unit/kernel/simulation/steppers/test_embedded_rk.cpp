@@ -81,12 +81,13 @@ TEST_CASE("accepted_state_unchanged", "[embedded_rk][unit]") {
   auto result = stepper.attempt(/*t=*/0.0, /*dt=*/0.1, u);
   REQUIRE(result.success);
   REQUIRE(u == fingerprint);
-  REQUIRE(result.u_high.size() == u.size());
-  REQUIRE(result.u_low.size() == u.size());
-  REQUIRE(result.error.size() == u.size());
+  REQUIRE(result.candidate.size() == u.size());
+  REQUIRE(stepper.u_high().size() == u.size());
+  REQUIRE(stepper.u_low().size() == u.size());
+  REQUIRE(stepper.error().size() == u.size());
   // Non-trivial RHS should move candidates away from the accepted state.
-  REQUIRE(result.u_high[0] != Catch::Approx(u[0]));
-  REQUIRE(result.error[0] != Catch::Approx(0.0));
+  REQUIRE(stepper.u_high()[0] != Catch::Approx(u[0]));
+  REQUIRE(stepper.error()[0] != Catch::Approx(0.0));
 }
 
 TEST_CASE("rhs_eval_count_equals_stage_count", "[embedded_rk][unit]") {
@@ -98,8 +99,8 @@ TEST_CASE("rhs_eval_count_equals_stage_count", "[embedded_rk][unit]") {
     std::vector<double> u{1.0};
     auto result = stepper.attempt(0.0, 0.05, u);
     REQUIRE(result.success);
-    REQUIRE(result.rhs_evals == tableau.stage_count());
-    REQUIRE(result.rhs_evals == 4u);
+    REQUIRE(stepper.last_rhs_evals() == tableau.stage_count());
+    REQUIRE(stepper.last_rhs_evals() == 4u);
     REQUIRE(evals == 4u);
   }
   SECTION("Dormand-Prince 5(4)") {
@@ -110,8 +111,8 @@ TEST_CASE("rhs_eval_count_equals_stage_count", "[embedded_rk][unit]") {
     std::vector<double> u{1.0};
     auto result = stepper.attempt(0.0, 0.05, u);
     REQUIRE(result.success);
-    REQUIRE(result.rhs_evals == tableau.stage_count());
-    REQUIRE(result.rhs_evals == 7u);
+    REQUIRE(stepper.last_rhs_evals() == tableau.stage_count());
+    REQUIRE(stepper.last_rhs_evals() == 7u);
     REQUIRE(evals == 7u);
   }
 }
@@ -125,11 +126,11 @@ TEST_CASE("error_norm_decreases_under_dt_refinement", "[embedded_rk][unit]") {
   const double dt = 0.2;
   auto coarse = stepper.attempt(0.0, dt, u);
   REQUIRE(coarse.success);
-  const double err_coarse = max_abs_error(coarse.error);
+  const double err_coarse = max_abs_error(stepper.error());
 
   auto fine = stepper.attempt(0.0, dt / 2.0, u);
   REQUIRE(fine.success);
-  const double err_fine = max_abs_error(fine.error);
+  const double err_fine = max_abs_error(stepper.error());
 
   REQUIRE(err_fine < err_coarse);
   REQUIRE(err_coarse > 0.0);
@@ -147,15 +148,16 @@ TEST_CASE("bs32_and_dp54_end_to_end", "[embedded_rk][unit]") {
     REQUIRE(result.t0 == Catch::Approx(0.0));
     REQUIRE(result.dt == Catch::Approx(0.1));
     REQUIRE(result.t1 == Catch::Approx(0.1));
-    REQUIRE(result.u_high.size() == u.size());
-    REQUIRE(result.u_low.size() == u.size());
-    REQUIRE(result.error.size() == u.size());
+    REQUIRE(result.candidate.size() == u.size());
+    REQUIRE(stepper.u_high().size() == u.size());
+    REQUIRE(stepper.u_low().size() == u.size());
+    REQUIRE(stepper.error().size() == u.size());
     for (std::size_t i = 0; i < u.size(); ++i) {
-      REQUIRE(std::isfinite(result.u_high[i]));
-      REQUIRE(std::isfinite(result.u_low[i]));
-      REQUIRE(std::isfinite(result.error[i]));
-      REQUIRE(result.error[i] ==
-              Catch::Approx(result.u_high[i] - result.u_low[i]));
+      REQUIRE(std::isfinite(stepper.u_high()[i]));
+      REQUIRE(std::isfinite(stepper.u_low()[i]));
+      REQUIRE(std::isfinite(stepper.error()[i]));
+      REQUIRE(stepper.error()[i] ==
+              Catch::Approx(stepper.u_high()[i] - stepper.u_low()[i]));
     }
   }
 
@@ -164,12 +166,12 @@ TEST_CASE("bs32_and_dp54_end_to_end", "[embedded_rk][unit]") {
     EmbeddedRKStepper stepper(u.size(), tableau, rhs);
     auto result = stepper.attempt(0.0, 0.1, u);
     REQUIRE(result.success);
-    REQUIRE(result.rhs_evals == 7u);
-    REQUIRE(result.u_high.size() == u.size());
+    REQUIRE(stepper.last_rhs_evals() == 7u);
+    REQUIRE(result.candidate.size() == u.size());
     for (std::size_t i = 0; i < u.size(); ++i) {
-      REQUIRE(std::isfinite(result.u_high[i]));
-      REQUIRE(std::isfinite(result.u_low[i]));
-      REQUIRE(std::isfinite(result.error[i]));
+      REQUIRE(std::isfinite(stepper.u_high()[i]));
+      REQUIRE(std::isfinite(stepper.u_low()[i]));
+      REQUIRE(std::isfinite(stepper.error()[i]));
     }
   }
 }
