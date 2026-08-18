@@ -322,18 +322,4 @@ inline bool lookup_even_central_d1(int order, EvenCentralD1View *out) noexcept {
   }
 }
 
-namespace detail {
-
-/// Back-compat alias used by the legacy non-templated brick routines in
-/// `finite_difference.hpp`. Removed in the cleanup commit once those routines
-/// migrate to the new `apply_d2_along` primitive.
-using EvenFdStencil1d = ::pfc::field::fd::EvenCentralD2View;
-
-/// Back-compat thin forwarder; same removal note as `EvenFdStencil1d`.
-inline bool fd_even_order_lookup(int order, EvenFdStencil1d *out) noexcept {
-  return ::pfc::field::fd::lookup_even_central_d2(order, out);
-}
-
-} // namespace detail
-
 } // namespace pfc::field::fd
