@@ -483,7 +483,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 * [x] Complex-state ETD: `Etd1Stepper<Rhs, Scalar>` (`Scalar = double` or `std::complex<double>`) applies real `exp_Ldt`/`phi1_L` to the field. Host tests: stiff linear complex ODE (ETD1 exact when N=0) and closed-form N≠0. Device-resident coeff apply still open. `MultiEtd1Stepper` remains real.
 * [x] Generalize multi-field arity: `MultiStageFunction<Rhs, N>` (default N=2); `MultiEtd1Stepper` over N (`N >= 1`, variadic `attempt`). N=3 covered in `test_etd1.cpp`.
 * [ ] Merge duplicates: one `StageContext` (delete `pfc::integrator::StageContext` or `pfc::sim::StageContext`, keep one), one workspace type (merge `StageWorkspace` and `integrator::Workspace`), one method enum (`RKIntegratorMethod` extended; `IntegratorMethod` removed from `time.hpp:252`).
-* [ ] Implement `AdaptiveTimeController` (`kernel/simulation/adaptive_controller.hpp`): closes embedded-error → `error_evidence` → `AdaptiveControlConfig` → `Time` attempt transactions; one end-to-end adaptive example (`examples/21_adaptive_stepping.cpp`) and integration test.
+* [x] Implement `AdaptiveTimeController` (`kernel/simulation/adaptive_controller.hpp`): closes embedded-error → `error_evidence` → `AdaptiveControlConfig` → `Time` attempt transactions; one end-to-end adaptive example (`examples/21_adaptive_stepping.cpp`) and integration test.
 * [x] Solver contract: `SolveFunction` is descriptor + field-bundle (no matrix type). Non-diagonal dense mock runs under `ImexEulerStepper` (`imex_euler_nondiagonal_dense_solve`). `SpectralDiagonalSolver` already models `SolveFunction` and is used as an injected solver.
 
 ### Required tests
@@ -491,7 +491,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 * [x] Protocol-conformance test template applied to all seven steppers (attempt→reject→attempt→commit sequence; rollback state equality). **Euler, RK2, RK3, ExplicitRK, Etd1 covered in `test_step_protocol.cpp` (always-succeed path). Embedded/IMEX keep extra `dt`/`ctx` on `attempt` and are covered in their own tests.**
 * [ ] Existing RK/temporal convergence-order tests pass unchanged (orders preserved is the scientific gate).
 * [ ] New: complex-field ETD1 vs analytic solution of a stiff linear complex ODE field (tolerance test); N=3 multi-field Euler/ETD test extending `test_multifield_stepper.cpp`. **ETD1 complex vs analytic is in `test_etd1.cpp` (`[etd1][complex]`). N=3 ETD is in `etd1_three_field_bundle`; N=3 Euler still open.**
-* [ ] Adaptive end-to-end: embedded RK on a problem with a known transient — controller shrinks dt through the transient and grows after; accepted/rejected counters asserted.
+* [x] Adaptive end-to-end: embedded RK on a problem with a known transient — controller shrinks dt through the transient and grows after; accepted/rejected counters asserted. (`test_adaptive_controller.cpp`, example 21).
 * [x] Non-diagonal `SolveFunction` mock compiles and runs under `ImexEulerStepper`.
 
 ### Deletions

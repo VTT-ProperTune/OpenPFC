@@ -371,6 +371,12 @@ next `saveat` alignment point. That seam lives on
   accepted time unchanged on reject. `do_save()` continues to key off accepted
   time only (rejected attempts never advance emission).
 
+`AdaptiveTimeController` (`adaptive_controller.hpp`) consumes
+`ErrorEvidence` or an embedded-error vector, proposes the next `dt` from
+`AdaptiveControlConfig`, and calls `commit_attempt` / `reject_attempt`.
+Example: `examples/21_adaptive_stepping.cpp`. Coverage:
+`tests/unit/kernel/simulation/test_adaptive_controller.cpp`.
+
 Prefer this transaction API over rewriting history with `set_dt` +
 `set_increment`. When Simulator wires adaptive loops, every MPI rank must use
 the **same** clipped `attempted_dt` for a given attempt (rank-consistency is
