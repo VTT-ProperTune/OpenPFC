@@ -101,6 +101,17 @@ public:
     return r.t1;
   }
 
+  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
+  [[nodiscard]] StepAttemptResult attempt(double t,
+                                          const pfc::data::Field<double> &u) {
+    return attempt(t, u.vec());
+  }
+
+  /** Advance a host `Field<double>` by one explicit-Euler step. */
+  double step(double t, pfc::data::Field<double> &u) {
+    return step(t, u.vec());
+  }
+
   double dt() const noexcept { return m_dt; }
 
   /**

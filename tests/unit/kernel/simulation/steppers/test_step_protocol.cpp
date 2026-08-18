@@ -7,7 +7,11 @@
 #include <type_traits>
 #include <vector>
 
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
+#include <openpfc/kernel/simulation/state_concepts.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/kernel/simulation/steppers/etd1.hpp>
@@ -126,4 +130,30 @@ TEST_CASE("Etd1Stepper attempt/commit leaves accepted state unchanged until comm
   static_assert(AttemptStepper<decltype(stepper)>);
   std::vector<double> u{1.0, 2.0, 3.0, 4.0};
   check_attempt_commit_rollback(stepper, 0.0, 0.1, u);
+}
+
+TEST_CASE("EulerStepper attempt/commit on host Field<double>",
+          "[step_protocol][euler][field]") {
+  using pfc::data::Field;
+  static_assert(pfc::field::Field<Field<double>>);
+
+  const auto domain = pfc::domain::create({2, 2, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 1, 0});
+  Field<double> u(domain, box, 0);
+  u.vec() = {1.0, 2.0, 3.0, 4.0};
+
+  DecayRhs rhs{};
+  EulerStepper<DecayRhs> stepper(0.1, u.size(), rhs);
+  const auto before = u.vec();
+  const StepAttemptResult r = stepper.attempt(0.0, u);
+  REQUIRE(u.vec() == before);
+  REQUIRE(r.success);
+  commit_step_attempt(u.vec(), r);
+  REQUIRE(u.vec() == r.candidate);
+  REQUIRE(u.vec() != before);
+
+  Field<double> v(domain, box, 0);
+  v.vec() = before;
+  (void)stepper.step(0.0, v);
+  REQUIRE(v.vec() == u.vec());
 }
