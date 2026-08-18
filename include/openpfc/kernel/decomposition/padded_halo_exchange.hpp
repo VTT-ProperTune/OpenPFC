@@ -66,6 +66,7 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_direction_agreement.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
+#include <openpfc/kernel/decomposition/halo_geometry.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
@@ -250,7 +251,7 @@ public:
       if (!m_active[i]) {
         continue;
       }
-      const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
+      const int tag = m_base_tag + halo::opposite_slot(static_cast<int>(i));
       exchange::irecv_face(buf, m_face_types[i].recv_type.get(), m_neighbors[i],
                            m_comm, &m_requests[req_count], tag);
       ++req_count;
@@ -339,18 +340,6 @@ private:
           ": exchanger is not bound to a padded Field. "
           "Use a Field-binding constructor or call "
           "start_halo_exchange(buf, size) directly.");
-    }
-  }
-
-  static int opposite_slot(int slot) {
-    switch (slot) {
-    case 0: return 1;
-    case 1: return 0;
-    case 2: return 3;
-    case 3: return 2;
-    case 4: return 5;
-    case 5: return 4;
-    default: return -1;
     }
   }
 

@@ -15,6 +15,7 @@ source compatibility is explicitly not a goal.
 ### Added
 
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `dev-g` or `standard-g`. CUDA is rejected on LUMI.
+- `pfc::comm::HaloExchange<HostSpace>` — unified host halo facade (Faces/Full, `exchange`/`start`/`finish`, optional persistent, multi-field tag blocks). Device specialization is remaining M4 work.
 - `pfc::halo` geometry helpers in `kernel/decomposition/halo_geometry.hpp` (M4): face slots, `opposite_slot` / `opposite_direction`, per-field MPI tag blocks, and padded send/recv slabs. `halo_directions.hpp` uses these instead of its own slot/tag copies.
 - `pfc::Domain` — canonical coordinate/geometry type replacing the templated `World`
 - `pfc::Box3i` — single canonical inclusive integer index box
