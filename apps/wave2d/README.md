@@ -15,7 +15,7 @@ This application integrates the 2D wave equation
 | `wave2d_fd_manual` | Second-order central stencil on `Field`, non-blocking halos, laboratory-style loop. |
 | `wave2d_fd` | Same BC model; spatial accuracy `fd_order` 2,4,…,20 via tabulated central stencils. |
 | `wave2d_cuda` | Device path (optional): same positional CLI as `wave2d_fd_manual` plus optional `--vtk` / `--vtk-every`; host orchestrates halos + y-face patch, CUDA kernel for Laplacian + Euler. |
-| `wave2d_hip` | HIP analogue of `wave2d_cuda` (same CLI and VTK options). |
+| `wave2d_hip` | HIP analogue of `wave2d_cuda` (same CLI and VTK options). Halos use `SparseExchange<HipSpace>` on device Fields; y-face BC patches stay on device. Rank 0 prints `WAVE2D_HIP_HALO_MODE`. |
 
 ## Usage
 

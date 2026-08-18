@@ -57,6 +57,73 @@ __global__ void wave2d_step_kernel(double *u_core, double *v_core, const double 
   v_core[c] = vc + dt * wave_c * wave_c * lap;
 }
 
+__global__ void wave2d_patch_y_faces_kernel(const double *u, double *hpy,
+                                            double *hny, int nx, int ny,
+                                            int lower_y, int Ny, int dirichlet,
+                                            double u_wall) {
+  const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
+  if (ix >= nx) {
+    return;
+  }
+  constexpr int hw = 1;
+  constexpr int iz = 0;
+  const std::size_t c = static_cast<std::size_t>(ix) +
+                        static_cast<std::size_t>(iz) *
+                            static_cast<std::size_t>(nx) * static_cast<std::size_t>(hw);
+  if (lower_y == 0 && hny != nullptr) {
+    if (dirichlet != 0) {
+      const std::size_t uc = static_cast<std::size_t>(ix) +
+                             static_cast<std::size_t>(iz) *
+                                 static_cast<std::size_t>(nx * ny);
+      hny[c] = 2.0 * u_wall - u[uc];
+    } else if (ny >= 2) {
+      const std::size_t uc1 =
+          static_cast<std::size_t>(ix) + static_cast<std::size_t>(nx) +
+          static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx * ny);
+      hny[c] = u[uc1];
+    }
+  }
+  if (lower_y + ny - 1 == Ny - 1 && hpy != nullptr) {
+    if (dirichlet != 0) {
+      const std::size_t uc =
+          static_cast<std::size_t>(ix) +
+          static_cast<std::size_t>(ny - 1) * static_cast<std::size_t>(nx) +
+          static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx * ny);
+      hpy[c] = 2.0 * u_wall - u[uc];
+    } else if (ny >= 2) {
+      const std::size_t ucm =
+          static_cast<std::size_t>(ix) +
+          static_cast<std::size_t>(ny - 2) * static_cast<std::size_t>(nx) +
+          static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx * ny);
+      hpy[c] = u[ucm];
+    }
+  }
+}
+
+__global__ void wave2d_enforce_dirichlet_walls_kernel(double *u, double *v, int nx,
+                                                     int ny, int lower_y, int Ny,
+                                                     double u_wall) {
+  const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
+  const int iy = static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y);
+  if (ix >= nx || iy >= ny) {
+    return;
+  }
+  const int gy = lower_y + iy;
+  if (gy != 0 && gy != Ny - 1) {
+    return;
+  }
+  const std::size_t idx = static_cast<std::size_t>(ix) +
+                          static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx);
+  u[idx] = u_wall;
+  v[idx] = 0.0;
+}
+
+void hip_check_k(hipError_t e, const char *what) {
+  if (e != hipSuccess) {
+    throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
+  }
+}
+
 } // namespace
 
 void wave2d_step_hip(double *u_dev, double *v_dev, const double *hpx_dev,
@@ -83,6 +150,35 @@ void wave2d_step_hip(double *u_dev, double *v_dev, const double *hpx_dev,
     throw std::runtime_error(std::string("wave2d_step_hip launch: ") +
                              hipGetErrorString(err));
   }
+}
+
+void wave2d_patch_y_faces_hip(const double *u_dev, double *hpy_dev, double *hny_dev,
+                              int nx, int ny, int lower_y, int Ny_global,
+                              bool dirichlet, double u_wall) {
+  if (nx < 1 || ny < 1) {
+    return;
+  }
+  dim3 block(256);
+  dim3 grid((static_cast<unsigned>(nx) + block.x - 1) / block.x);
+  hipLaunchKernelGGL(wave2d_patch_y_faces_kernel, grid, block, 0, 0, u_dev, hpy_dev,
+                     hny_dev, nx, ny, lower_y, Ny_global, dirichlet ? 1 : 0, u_wall);
+  hip_check_k(hipDeviceSynchronize(), "wave2d_patch_y_faces_hip sync");
+  hip_check_k(hipGetLastError(), "wave2d_patch_y_faces_hip launch");
+}
+
+void wave2d_enforce_dirichlet_walls_hip(double *u_dev, double *v_dev, int nx,
+                                        int ny, int lower_y, int Ny_global,
+                                        double u_wall) {
+  if (nx < 1 || ny < 1) {
+    return;
+  }
+  dim3 block(16, 16);
+  dim3 grid((static_cast<unsigned>(nx) + block.x - 1) / block.x,
+            (static_cast<unsigned>(ny) + block.y - 1) / block.y);
+  hipLaunchKernelGGL(wave2d_enforce_dirichlet_walls_kernel, grid, block, 0, 0, u_dev,
+                     v_dev, nx, ny, lower_y, Ny_global, u_wall);
+  hip_check_k(hipDeviceSynchronize(), "wave2d_enforce_dirichlet_walls_hip sync");
+  hip_check_k(hipGetLastError(), "wave2d_enforce_dirichlet_walls_hip launch");
 }
 
 } // namespace wave2d

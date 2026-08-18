@@ -15,6 +15,7 @@ source compatibility is explicitly not a goal.
 ### Added
 
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `standard-g` (default) or `dev-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
+- wave2d HIP driver and CPU-vs-HIP test use `pfc::comm::SparseExchange<HipSpace>` on unpadded device Fields; y-face BC patches and Dirichlet walls stay on device (no per-step full-field D2H).
 - Allen–Cahn HIP driver and CPU-vs-HIP test use `pfc::comm::SparseExchange<HipSpace>` on an unpadded device Field; the kernel reads device `face_recv_ptrs()` (no per-step full-field D2H).
 - Kobayashi HIP driver uses two multi-field `pfc::comm::HaloExchange<HipSpace>` objects on device-resident Fields (state then aux) instead of per-step `hipMemcpy` + host `PaddedHaloExchanger`.
 - Kobayashi CPU driver uses two multi-field `pfc::comm::HaloExchange<HostSpace>` objects (state then aux) instead of six `PaddedHaloExchanger`s.

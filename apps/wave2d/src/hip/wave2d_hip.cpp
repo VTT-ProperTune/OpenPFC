@@ -21,19 +21,21 @@
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
-#include <openpfc/kernel/decomposition/halo_face_layout.hpp>
+#include <openpfc/runtime/gpu/comm_sparse_exchange_gpu.hpp>
 
 #include <wave2d/cli.hpp>
 #include <wave2d/device_step.hpp>
 #include <wave2d/vtk_snapshot.hpp>
 #include <wave2d/wave_model.hpp>
-#include <wave2d/wave_step_separated.hpp>
 
 namespace {
+
+using DevField = pfc::data::Field<double, pfc::HipSpace>;
 
 void hip_check(hipError_t e, const char *what) {
   if (e != hipSuccess) {
@@ -41,11 +43,46 @@ void hip_check(hipError_t e, const char *what) {
   }
 }
 
+void bind_local_gpu() {
+  MPI_Comm node_comm = MPI_COMM_NULL;
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                      &node_comm);
+  int local_rank = 0;
+  if (node_comm != MPI_COMM_NULL) {
+    MPI_Comm_rank(node_comm, &local_rank);
+    MPI_Comm_free(&node_comm);
+  }
+  int n_dev = 0;
+  hip_check(hipGetDeviceCount(&n_dev), "hipGetDeviceCount");
+  if (n_dev < 1) {
+    throw std::runtime_error("No HIP devices visible to this rank");
+  }
+  hip_check(hipSetDevice(local_rank % n_dev), "hipSetDevice");
+}
+
+void copy_host_to_device(const std::vector<double> &host, DevField &dev) {
+  dev.with_host_view([&](double *data, std::size_t n) {
+    if (n != host.size()) {
+      throw std::runtime_error("wave2d_hip: field size mismatch");
+    }
+    std::copy(host.begin(), host.end(), data);
+  });
+  dev.sync_to_device();
+}
+
+void copy_device_to_host(DevField &dev, std::vector<double> &host) {
+  dev.with_host_view([&](double *data, std::size_t n) {
+    host.assign(data, data + n);
+  });
+  dev.note_device_write();
+}
+
 } // namespace
 
 namespace {
 
 int run_wave2d_hip(const wave2d::RunConfig &cfg, int rank, int nproc) {
+  bind_local_gpu();
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
   const int n_steps = cfg.n_steps;
@@ -75,6 +112,7 @@ int run_wave2d_hip(const wave2d::RunConfig &cfg, int rank, int nproc) {
   const double inv_dx2 = 1.0;
   const double inv_dy2 = 1.0;
   constexpr int halo_width = 1;
+  const bool dirichlet = cfg.y_bc == wave2d::YBoundaryKind::Dirichlet;
 
   std::vector<double> u_host(nlocal);
   std::vector<double> v_host(nlocal, 0.0);
@@ -99,34 +137,17 @@ int run_wave2d_hip(const wave2d::RunConfig &cfg, int rank, int nproc) {
     }
   }
 
-  auto face_halos_host =
-      pfc::halo::allocate_face_halos<double>(decomp, rank, halo_width);
-  pfc::SparseHaloExchanger<double> exchanger(
-      MPI_COMM_WORLD, rank,
-      pfc::halo::make_structured_halos<double>(decomp, rank, halo_width));
-  const auto counts = pfc::halo::face_halo_counts(decomp, rank, halo_width);
+  DevField u(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
+  DevField v(domain, local_box, /*storage_halo=*/0, /*iteration_halo=*/halo_width);
+  copy_host_to_device(u_host, u);
+  copy_host_to_device(v_host, v);
 
-  double *u_dev = nullptr;
-  double *v_dev = nullptr;
-  hip_check(hipMalloc(reinterpret_cast<void **>(&u_dev), nlocal * sizeof(double)),
-            "hipMalloc u");
-  hip_check(hipMalloc(reinterpret_cast<void **>(&v_dev), nlocal * sizeof(double)),
-            "hipMalloc v");
-  std::array<double *, 6> face_dev{};
-  for (int f = 0; f < 6; ++f) {
-    const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
-    hip_check(
-        hipMalloc(reinterpret_cast<void **>(&face_dev[static_cast<std::size_t>(f)]),
-                  std::max<std::size_t>(n, 1u) * sizeof(double)),
-        "hipMalloc face");
+  pfc::comm::SparseExchange<pfc::HipSpace, double> exchanger(
+      u, decomp, rank, MPI_COMM_WORLD);
+  if (rank == 0) {
+    std::cout << "WAVE2D_HIP_HALO_MODE=device"
+              << " gpu_aware=" << (exchanger.uses_gpu_aware_mpi() ? 1 : 0) << "\n";
   }
-
-  hip_check(hipMemcpy(u_dev, u_host.data(), nlocal * sizeof(double),
-                      hipMemcpyHostToDevice),
-            "H2D u");
-  hip_check(hipMemcpy(v_dev, v_host.data(), nlocal * sizeof(double),
-                      hipMemcpyHostToDevice),
-            "H2D v");
 
   pfc::RealField vtk_buf;
   std::unique_ptr<pfc::VTKWriter> vtk_writer;
@@ -140,79 +161,25 @@ int run_wave2d_hip(const wave2d::RunConfig &cfg, int rank, int nproc) {
   }
 
   for (int step = 0; step < n_steps; ++step) {
-    (void)step;
-    hip_check(hipMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
-                        hipMemcpyDeviceToHost),
-              "D2H u");
-    hip_check(hipMemcpy(v_host.data(), v_dev, nlocal * sizeof(double),
-                        hipMemcpyDeviceToHost),
-              "D2H v");
-    exchanger.exchange_halos(u_host.data(), u_host.size());
-    pfc::halo::copy_to_face_layout(exchanger, face_halos_host);
-    if (cfg.y_bc == wave2d::YBoundaryKind::Dirichlet) {
-      wave2d::patch_y_face_halos_dirichlet_order2(
-          u_host.data(), nx, ny, face_halos_host, lower, Ny, cfg.u_wall);
-    } else {
-      wave2d::patch_y_face_halos_neumann_order2(u_host.data(), nx, ny,
-                                                face_halos_host, lower, Ny);
+    exchanger.exchange();
+    const auto faces = exchanger.face_recv_ptrs();
+    wave2d::wave2d_patch_y_faces_hip(u.data(), faces[2], faces[3], nx, ny, lower[1],
+                                     Ny, dirichlet, cfg.u_wall);
+    wave2d::wave2d_step_hip(u.data(), v.data(), faces[0], faces[1], faces[2],
+                            faces[3], faces[4], faces[5], nx, ny, nz, halo_width,
+                            inv_dx2, inv_dy2, dt, wave2d::kC);
+    if (dirichlet) {
+      wave2d::wave2d_enforce_dirichlet_walls_hip(u.data(), v.data(), nx, ny,
+                                                 lower[1], Ny, cfg.u_wall);
     }
-    for (int f = 0; f < 6; ++f) {
-      const std::size_t n = counts.counts[static_cast<std::size_t>(f)];
-      if (n == 0) {
-        continue;
-      }
-      hip_check(hipMemcpy(face_dev[static_cast<std::size_t>(f)],
-                          face_halos_host[static_cast<std::size_t>(f)].data(),
-                          n * sizeof(double), hipMemcpyHostToDevice),
-                "H2D face");
-    }
-    wave2d::wave2d_step_hip(u_dev, v_dev, face_dev[0], face_dev[1], face_dev[2],
-                            face_dev[3], face_dev[4], face_dev[5], nx, ny, nz,
-                            halo_width, inv_dx2, inv_dy2, dt, wave2d::kC);
-    if (cfg.y_bc == wave2d::YBoundaryKind::Dirichlet) {
-      hip_check(hipMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
-                          hipMemcpyDeviceToHost),
-                "D2H u post");
-      hip_check(hipMemcpy(v_host.data(), v_dev, nlocal * sizeof(double),
-                          hipMemcpyDeviceToHost),
-                "D2H v post");
-      for (int iz = 0; iz < nz; ++iz) {
-        for (int iy = 0; iy < ny; ++iy) {
-          const int gy = lower[1] + iy;
-          if (gy != 0 && gy != Ny - 1) {
-            continue;
-          }
-          for (int ix = 0; ix < nx; ++ix) {
-            const std::size_t idx =
-                static_cast<std::size_t>(ix) +
-                static_cast<std::size_t>(iy) * static_cast<std::size_t>(nx) +
-                static_cast<std::size_t>(iz) * static_cast<std::size_t>(nx * ny);
-            u_host[idx] = cfg.u_wall;
-            v_host[idx] = 0.0;
-          }
-        }
-      }
-      hip_check(hipMemcpy(u_dev, u_host.data(), nlocal * sizeof(double),
-                          hipMemcpyHostToDevice),
-                "H2D u wall");
-      hip_check(hipMemcpy(v_dev, v_host.data(), nlocal * sizeof(double),
-                          hipMemcpyHostToDevice),
-                "H2D v wall");
-    }
+    u.note_device_write();
+    v.note_device_write();
 
     if (vtk_writer && (step + 1) % cfg.vtk_every == 0) {
-      hip_check(hipMemcpy(u_host.data(), u_dev, nlocal * sizeof(double),
-                          hipMemcpyDeviceToHost),
-                "D2H u vtk");
+      copy_device_to_host(u, u_host);
       wave2d::vtk_write_u_owned_buffer(*vtk_writer, step + 1, u_host.data(), nx, ny,
                                        nz, vtk_buf);
     }
-  }
-
-  hip_check(hipFree(u_dev), "hipFree(u_dev)");
-  hip_check(hipFree(v_dev), "hipFree(v_dev)");
-  for (int f = 0; f < 6; ++f) {
-    hip_check(hipFree(face_dev[static_cast<std::size_t>(f)]), "hipFree(face)");
   }
 
   if (rank == 0) {

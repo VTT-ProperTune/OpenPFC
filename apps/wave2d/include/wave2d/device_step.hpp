@@ -29,6 +29,16 @@ void wave2d_step_hip(double *u_dev, double *v_dev, const double *hpx_dev,
                      int halo_width, double inv_dx2, double inv_dy2, double dt,
                      double wave_c);
 
+/// Overwrite ±Y recv slabs on device (same math as the host patch helpers).
+void wave2d_patch_y_faces_hip(const double *u_dev, double *hpy_dev, double *hny_dev,
+                              int nx, int ny, int lower_y, int Ny_global,
+                              bool dirichlet, double u_wall);
+
+/// Set owned y-wall cells: u = u_wall, v = 0.
+void wave2d_enforce_dirichlet_walls_hip(double *u_dev, double *v_dev, int nx,
+                                        int ny, int lower_y, int Ny_global,
+                                        double u_wall);
+
 } // namespace wave2d
 
 #endif

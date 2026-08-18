@@ -119,7 +119,8 @@ endif()
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   add_executable(wave2d_hip src/hip/wave2d_hip.cpp src/hip/wave2d_kernels.hip)
   target_include_directories(wave2d_hip PRIVATE ${WAVE2D_INCLUDE_DIR})
-  target_link_libraries(wave2d_hip PRIVATE OpenPFC hip::host ${_wave2d_heffte_tgt})
+  target_link_libraries(wave2d_hip PRIVATE OpenPFC hip::host openpfc_hip_kernels
+                        ${_wave2d_heffte_tgt})
   wave2d_link_libstdcxx(wave2d_hip)
   set_target_properties(wave2d_hip PROPERTIES LINKER_LANGUAGE CXX)
   install(TARGETS wave2d_hip DESTINATION bin)
@@ -129,6 +130,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
                                             src/hip/wave2d_kernels.hip)
     target_include_directories(test_wave2d_cpu_vs_hip PRIVATE ${WAVE2D_INCLUDE_DIR})
     target_link_libraries(test_wave2d_cpu_vs_hip PRIVATE OpenPFC Catch2::Catch2 hip::host
+                                                         openpfc_hip_kernels
                                                          ${_wave2d_heffte_tgt})
     wave2d_link_libstdcxx(test_wave2d_cpu_vs_hip)
     set_target_properties(test_wave2d_cpu_vs_hip PROPERTIES LINKER_LANGUAGE CXX)
