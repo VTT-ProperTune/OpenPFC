@@ -9,7 +9,9 @@
  *
  * @details
  * Builds per-mode coefficients for integrating-factor / ETD1-style updates from
- * already-formed diagonal spectral samples @c L[i] and a timestep @c dt:
+ * already-formed diagonal spectral samples @c L[i] and a timestep @c dt.
+ * Scalar type is @c Real (default @c double; ADR 0006). Host compute only;
+ * upload the resulting spans to a device buffer when the stepper is on GPU.
  *
  * - @c exp_Ldt = exp(L*dt)
  * - @c phi1_L  = (exp(L*dt)-1)/L   (stable near L → 0 via expm1/L or Taylor)
@@ -48,9 +50,9 @@ namespace pfc::integrator {
  * @c exp_Ldt is @c exp(L*dt). @c phi1_L is @c (exp(L*dt)-1)/L, evaluated in a
  * numerically stable form near @c L → 0.
  */
-struct SpectralExpCoeffs {
-  double exp_Ldt{}; ///< exp(L*dt)
-  double phi1_L{};  ///< (exp(L*dt)-1)/L (stable near L→0)
+template <typename Real = double> struct SpectralExpCoeffs {
+  Real exp_Ldt{}; ///< exp(L*dt)
+  Real phi1_L{};  ///< (exp(L*dt)-1)/L (stable near L→0)
 };
 
 /**
@@ -65,16 +67,16 @@ struct SpectralExpCoeffs {
  * When @c |L| >= abs_L_threshold: @c phi1_L = expm1(L*dt)/L.
  * When @c |L| < abs_L_threshold: Taylor @c phi1_L = dt + 0.5*L*dt*dt.
  */
-[[nodiscard]] inline SpectralExpCoeffs
-spectral_exp_coeffs(double L, double dt,
-                    double abs_L_threshold = 1e-12) {
-  SpectralExpCoeffs out{};
-  const double arg = L * dt;
+template <typename Real = double>
+[[nodiscard]] inline SpectralExpCoeffs<Real>
+spectral_exp_coeffs(Real L, Real dt, Real abs_L_threshold = Real(1e-12)) {
+  SpectralExpCoeffs<Real> out{};
+  const Real arg = L * dt;
   out.exp_Ldt = std::exp(arg);
 
   if (std::abs(L) < abs_L_threshold) {
     // Second-order Taylor of (exp(L*dt)-1)/L as L → 0: dt + (1/2) L dt^2 + …
-    out.phi1_L = dt + 0.5 * L * dt * dt;
+    out.phi1_L = dt + Real(0.5) * L * dt * dt;
   } else {
     out.phi1_L = std::expm1(arg) / L;
   }
@@ -94,16 +96,17 @@ spectral_exp_coeffs(double L, double dt,
  *
  * Caller owns @p exp_Ldt and @p phi1_L lifetime.
  */
-inline void fill_spectral_exp_coeffs(std::span<const double> L, double dt,
-                                     std::span<double> exp_Ldt,
-                                     std::span<double> phi1_L,
-                                     double abs_L_threshold = 1e-12) {
+template <typename Real = double>
+inline void fill_spectral_exp_coeffs(std::span<const Real> L, Real dt,
+                                     std::span<Real> exp_Ldt,
+                                     std::span<Real> phi1_L,
+                                     Real abs_L_threshold = Real(1e-12)) {
   if (exp_Ldt.size() != L.size() || phi1_L.size() != L.size()) {
     throw std::invalid_argument(
         "fill_spectral_exp_coeffs: span sizes must match L.size()");
   }
   for (std::size_t i = 0; i < L.size(); ++i) {
-    const SpectralExpCoeffs c =
+    const SpectralExpCoeffs<Real> c =
         spectral_exp_coeffs(L[i], dt, abs_L_threshold);
     exp_Ldt[i] = c.exp_Ldt;
     phi1_L[i] = c.phi1_L;
@@ -151,7 +154,7 @@ struct SpectralExpConfigId {
  * length. Changing any identity or length forces a rebuild.
  * @ref rebuilt_last_call is a diagnostic only (cache hit/miss).
  */
-class SpectralExpCoefficientCache {
+template <typename Real = double> class SpectralExpCoefficientCache {
 public:
   /**
    * @brief Ensure coefficients match @p L, @p dt, and the given identities.
@@ -160,10 +163,9 @@ public:
    * stored capacity. After success, @ref exp_Ldt and @ref phi1_L have size
    * @p L.size().
    */
-  void ensure(std::span<const double> L, double dt,
-              SpectralExpOperatorId op_id, SpectralExpDtId dt_id,
-              SpectralExpConfigId config_id,
-              double abs_L_threshold = 1e-12) {
+  void ensure(std::span<const Real> L, Real dt, SpectralExpOperatorId op_id,
+              SpectralExpDtId dt_id, SpectralExpConfigId config_id,
+              Real abs_L_threshold = Real(1e-12)) {
     const bool same_ids = m_valid && op_id == m_op_id && dt_id == m_dt_id &&
                           config_id == m_config_id &&
                           L.size() == m_exp_Ldt.size();
@@ -183,11 +185,11 @@ public:
     m_rebuilt_last = true;
   }
 
-  [[nodiscard]] std::span<const double> exp_Ldt() const noexcept {
+  [[nodiscard]] std::span<const Real> exp_Ldt() const noexcept {
     return m_exp_Ldt;
   }
 
-  [[nodiscard]] std::span<const double> phi1_L() const noexcept {
+  [[nodiscard]] std::span<const Real> phi1_L() const noexcept {
     return m_phi1_L;
   }
 
@@ -199,8 +201,8 @@ public:
   }
 
 private:
-  std::vector<double> m_exp_Ldt;
-  std::vector<double> m_phi1_L;
+  std::vector<Real> m_exp_Ldt;
+  std::vector<Real> m_phi1_L;
   SpectralExpOperatorId m_op_id{};
   SpectralExpDtId m_dt_id{};
   SpectralExpConfigId m_config_id{};
