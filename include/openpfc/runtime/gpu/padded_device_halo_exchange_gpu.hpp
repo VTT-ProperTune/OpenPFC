@@ -48,6 +48,7 @@
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
+#include <openpfc/runtime/gpu/gpu_aware_mpi.hpp>
 #include <openpfc/runtime/gpu/gpu_check.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 
@@ -146,9 +147,8 @@ void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox
                                int nyp, int nzp, cudaStream_t stream);
 
 inline bool runtime_mpi_cuda_aware() {
-#if defined(OpenPFC_MPI_CUDA_AWARE) && defined(OPEN_MPI) &&                         \
-    defined(OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT)
-  return MPIX_Query_cuda_support() == 1;
+#if defined(OpenPFC_MPI_CUDA_AWARE)
+  return pfc::gpu::runtime_mpi_gpu_aware();
 #else
   return false;
 #endif
@@ -284,9 +284,8 @@ void launch_padded_unpack_face(double *d_pad, const double *d_src_contig, int ox
                                int nyp, int nzp, hipStream_t stream);
 
 inline bool runtime_mpi_hip_aware() {
-#if defined(OpenPFC_MPI_HIP_AWARE) && defined(OPEN_MPI) &&                          \
-    defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT)
-  return MPIX_Query_hip_support() == 1;
+#if defined(OpenPFC_MPI_HIP_AWARE)
+  return pfc::gpu::runtime_mpi_gpu_aware();
 #else
   return false;
 #endif

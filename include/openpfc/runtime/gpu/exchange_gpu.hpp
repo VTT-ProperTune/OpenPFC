@@ -31,6 +31,7 @@
 #include <openpfc/kernel/decomposition/exchange.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/runtime/gpu/backend_tags_gpu.hpp>
+#include <openpfc/runtime/gpu/gpu_aware_mpi.hpp>
 #include <openpfc/runtime/gpu/gpu_check.hpp>
 
 #if defined(OpenPFC_ENABLE_CUDA)
@@ -62,9 +63,8 @@ namespace detail {
 #if defined(OpenPFC_ENABLE_CUDA)
 /** Same conditions as `pfc::cuda::detail::runtime_mpi_cuda_aware()`. */
 inline bool runtime_mpi_cuda_aware() {
-#if defined(OpenPFC_MPI_CUDA_AWARE) && defined(OPEN_MPI) &&                         \
-    defined(OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT)
-  return MPIX_Query_cuda_support() == 1;
+#if defined(OpenPFC_MPI_CUDA_AWARE)
+  return pfc::gpu::runtime_mpi_gpu_aware();
 #else
   return false;
 #endif
@@ -104,9 +104,8 @@ struct CudaXchg {
 #if defined(OpenPFC_ENABLE_HIP)
 /** Same conditions as `pfc::hip::detail::runtime_mpi_hip_aware()`. */
 inline bool runtime_mpi_hip_aware() {
-#if defined(OpenPFC_MPI_HIP_AWARE) && defined(OPEN_MPI) &&                         \
-    defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT)
-  return MPIX_Query_hip_support() == 1;
+#if defined(OpenPFC_MPI_HIP_AWARE)
+  return pfc::gpu::runtime_mpi_gpu_aware();
 #else
   return false;
 #endif
