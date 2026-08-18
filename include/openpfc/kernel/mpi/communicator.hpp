@@ -64,6 +64,15 @@ public:
   int rank() const;
   int size() const;
 
+  /**
+   * @brief Opt-in `MPI_Comm_dup` isolation (M4 coupling prerequisite).
+   *
+   * The returned communicator has the same group and is freed by the
+   * wrapper destructor. Use this when an external solver shares WORLD
+   * and must not collide on OpenPFC halo tags.
+   */
+  [[nodiscard]] communicator duplicate() const;
+
 protected:
   std::shared_ptr<MPI_Comm> comm_ptr;
 };
@@ -87,6 +96,13 @@ inline int communicator::rank() const {
   int err = MPI_Comm_rank(MPI_Comm(*this), &rank_);
   pfc::mpi::throw_on_mpi_error(err, "MPI_Comm_rank");
   return rank_;
+}
+
+inline communicator communicator::duplicate() const {
+  MPI_Comm dup = MPI_COMM_NULL;
+  const int err = MPI_Comm_dup(MPI_Comm(*this), &dup);
+  pfc::mpi::throw_on_mpi_error(err, "MPI_Comm_dup");
+  return communicator(dup);
 }
 
 } // namespace pfc::mpi

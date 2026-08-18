@@ -40,7 +40,7 @@ This checkout is **on LUMI (AMD/HIP)**. CUDA execution is impossible here; CUDA-
 
 **M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced; latest commit `99f304da` builds and runs HIP unit tests on LUMI. Remaining M3 items are (a) CUDA execution/perf/co-enabled CI — **not testable on LUMI**, (b) folding CUDA `padded_halo_faces.cu` into the kernel library (separable-compilation, CUDA-only — deferred to tohtori).
 
-**M4 is in progress.** `halo_geometry.hpp` and host `pfc::comm::HaloExchange<HostSpace>` exist (Faces / Full, blocking + split-phase, optional persistent, multi-field tag blocks). Device `HaloExchange`, Cray GPU-aware probe, SparseExchange, `MPI_Comm_dup`, consumer migration, and the in-repo splitter are still ahead. Device-CUDA work stays on tohtori. M5–M12 have not started.
+**M4 is in progress.** `halo_geometry.hpp` and host `pfc::comm::HaloExchange<HostSpace>` exist (Faces / Full, blocking + split-phase, optional persistent, multi-field tag blocks). `mpi::communicator::duplicate()` provides opt-in `MPI_Comm_dup`. Device `HaloExchange`, Cray GPU-aware probe, SparseExchange, consumer migration, and the in-repo splitter are still ahead. Device-CUDA work stays on tohtori. M5–M12 have not started.
 
 **2026-08-03 restructuring note:** two earlier attempts stalled at M3 citing lack of LUMI access. M-LUMI still collects HIP-*execution* items deferred from Pre-M0/M3/M4/M8/M9. This session *is* on LUMI, so those HIP execution items can be filled when the corresponding code exists; they still do not gate M4–M11 code. The symmetric problem now is CUDA: do not stall on tohtori.
 
@@ -397,7 +397,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 * [ ] Backend-template `RemoteHalo`/`SparseHaloExchanger` → `pfc::comm::SparseExchange<MemorySpace>`, using the existing device gather/scatter, eliminating the per-step full-field D2H in `apps/allen_cahn/src/cuda/allen_cahn.cpp:100–116` and wave2d GPU.
 * [ ] Migrate all exchanger consumers: heat3d, wave2d (CPU+GPU), allen_cahn (CPU+GPU), kobayashi (CPU, CUDA — onto library batching; HIP — onto the device path for the first time), `FdCpuStack`, `StagePreparationService`, gpu_validation tests.
 * [ ] Per ADR 0007: implement the in-repo min-surface splitter in `src/.../decomposition.cpp`, validated against `heffte::split_world` output for a matrix of (grid, ranks) cases; HeFFTe include removed from the decomposition TU (Pre-M0 PI assertion retargets to the new splitter as its own invariant).
-* [ ] Add opt-in `MPI_Comm_dup` isolation to `pfc::mpi::communicator` (coupling prerequisite).
+* [x] Add opt-in `MPI_Comm_dup` isolation to `pfc::mpi::communicator` (coupling prerequisite). (`communicator::duplicate()`; `tests/unit/kernel/mpi/test_communicator.cpp`)
 * [ ] Make `validate_neighbour_direction_agreement` opt-out for release builds (documented) to remove the per-construction `MPI_Allgather` at scale.
 
 ### Required tests
