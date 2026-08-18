@@ -40,7 +40,7 @@ This checkout is **on LUMI (AMD/HIP)**. CUDA execution is impossible here; CUDA-
 
 **M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced; latest commit `99f304da` builds and runs HIP unit tests on LUMI. Remaining M3 items are (a) CUDA execution/perf/co-enabled CI — **not testable on LUMI**, (b) folding CUDA `padded_halo_faces.cu` into the kernel library (separable-compilation, CUDA-only — deferred to tohtori).
 
-**M4 is in progress** (production FD apps on the new exchangers; leftover backend-class tests and old public names remain). **M5 has started:** `IHostFFT` / `IDeviceFFT` exist; `create_with_backend` rejects CUDA/HIP; GPU `FFT_Impl` implements `IDeviceFFT` and no longer exposes throwing host-vector virtuals. Remaining M5: workspace precision, `for_each_kpoint`, Nyquist, dealiasing.
+**M4 is in progress** (production FD apps on the new exchangers; leftover backend-class tests and old public names remain). **M5 is in progress:** `IHostFFT` / `IDeviceFFT`, honest host factory, lazy GPU workspaces, `r2c_direction` on convenience factories, host `for_each_kpoint` (used by `SpectralGradient`). Remaining M5: device k-point iterator, FieldView binding, Nyquist, dealiasing, generic ETD coefficients.
 
 **2026-08-03 restructuring note:** two earlier attempts stalled at M3 citing lack of LUMI access. M-LUMI still collects HIP-*execution* items deferred from Pre-M0/M3/M4/M8/M9. This session *is* on LUMI, so those HIP execution items can be filled when the corresponding code exists; they still do not gate M4–M11 code. The symmetric problem now is CUDA: do not stall on tohtori.
 
@@ -437,9 +437,9 @@ M3 (Backend enum/string complete), M2 (Field/DataBuffer types).
 
 * [x] Split `fft_interface.hpp` per ADR 0005: `IHostFFT` (host-container transforms) and `IDeviceFFT<MemorySpace>` (DataBuffer transforms); `FFT_Impl<BackendTag>` implements the applicable one(s); delete the throwing GPU virtual bodies. **`IFFT` is a temporary alias of `IHostFFT`. GPU `FFT_CUDA` / `FFT_HIP` implement `IDeviceFFT`. Float DataBuffer overloads stay on the concrete type.**
 * [x] Make factories honest: `fft::create_with_backend` returns host FFTs for host backends only; device factories (`create_cuda`, `create_hip`) return objects that implement `IDeviceFFT`; requesting a mismatch throws at construction with a clear message.
-* [ ] Workspace precision per ADR 0006: allocate only the instantiated precision (lazy or template) — removes the ~33% device-memory waste (`fft_heffte_backend.hpp:102–106`).
-* [ ] Expose `r2c_direction` through the convenience factories (currently silently hardcoded 0).
-* [ ] Add `kernel/fft/kspace_iterator.hpp`: `for_each_kpoint(outbox, domain, fn(idx, kx, ky, kz))` (host) and a device counterpart in `runtime/gpu/`; migrate `SpectralGradient` (`spectral_gradient.hpp:111–143`) onto it; migrate `SpectralGradient`'s raw-pointer field binding to `FieldView`.
+* [x] Workspace precision per ADR 0006: allocate only the instantiated precision (lazy or template) — removes the ~33% device-memory waste. GPU `FftWorkspaceStorage` now allocates float/double on first use.
+* [x] Expose `r2c_direction` through the convenience factories (currently silently hardcoded 0). Optional last argument on `create` / `create_with_backend` / `create_cuda` / `create_hip` (default 0).
+* [ ] Add `kernel/fft/kspace_iterator.hpp`: `for_each_kpoint(outbox, domain, fn(idx, kx, ky, kz))` (host) and a device counterpart in `runtime/gpu/`; migrate `SpectralGradient` (`spectral_gradient.hpp:111–143`) onto it; migrate `SpectralGradient`'s raw-pointer field binding to `FieldView`. **Host `for_each_kpoint` landed; `SpectralGradient` uses it. Device iterator and FieldView binding remain.**
 * [ ] Zero odd-derivative spectral operators at the Nyquist mode in `SpectralGradient` (Audit K1); record the numeric change and updated tolerances in `BASELINES.md`.
 * [ ] Add optional 2/3-rule dealiasing mask as a standard k-space diagonal (`kernel/fft/dealias.hpp`), off by default, selectable in model setup; document the aliasing caveat in `docs/science/numerics_limits.md`.
 * [ ] Migrate `spectral_exp_coefficients.hpp` to be memory-space-generic (host compute + device upload path), preparing M6/M7 ETD.
@@ -447,7 +447,7 @@ M3 (Backend enum/string complete), M2 (Field/DataBuffer types).
 ### Required tests
 
 * [x] Negative test: constructing a host `IHostFFT` with `Backend::CUDA` (and HIP) throws at the factory, not at first use. (`test_fft_backend_selection.cpp`)
-* [ ] `for_each_kpoint` unit test vs a hand-rolled reference loop on odd/even grids (bitwise index and wavenumber equality).
+* [x] `for_each_kpoint` unit test vs a hand-rolled reference loop on odd/even grids (bitwise index and wavenumber equality). (`test_kspace_iterator.cpp`)
 * [ ] Nyquist fix: 1-D derivative-of-sine spectral test showing error reduction at the highest mode; affected golden comparisons re-baselined with written justification.
 * [ ] Dealiasing smoke test: cubic nonlinearity on a marginally resolved grid, energy in the top third of the spectrum zeroed when the mask is on.
 * [x] GPU FFT round-trip (forward+backward == identity to 1e-12) via `IDeviceFFT` on both vendors. **HIP:** `test_hip_roundtrip.cpp` double case binds `IDeviceFFT<HipSpace>`. **CUDA:** `test_cuda_roundtrip.cpp` double case binds `IDeviceFFT<CudaSpace>` (execute on tohtori).

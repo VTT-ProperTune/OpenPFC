@@ -14,6 +14,9 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `pfc::fft::kspace::for_each_kpoint` walks a local FFT outbox with `(idx, kx, ky, kz)`. `SpectralGradient` builds its operator tables with it.
+- Convenience FFT factories (`create`, `create_with_backend`, `create_cuda`, `create_hip`) take an optional `r2c_direction` (default 0).
+- GPU FFT workspaces allocate each precision on first use (ADR 0006) instead of always owning both float and double buffers.
 - `pfc::fft::IHostFFT` and `pfc::fft::IDeviceFFT<MemorySpace>` (ADR 0005). `create_with_backend` rejects CUDA/HIP at construction; `create_cuda` / `create_hip` return `FFT_CUDA` / `FFT_HIP` which implement `IDeviceFFT`. `IFFT` remains a temporary alias of `IHostFFT`.
 - Removed unused `apps/kobayashi/src/cuda/kobayashi_batched_halo.hpp` after the CUDA driver moved onto `HaloExchange`.
 - FD MPI leftover tests (`test_fd_heat_mpi`, `test_fd_xy_mpi`, `test_halo_exchange_driver`) use `HaloExchange` instead of `HaloExchanger` / `PersistentHaloExchanger`. `test_sparse_halo_exchange` uses `SparseExchange`.
