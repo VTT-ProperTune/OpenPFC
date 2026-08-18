@@ -9,7 +9,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/domain/create.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/padded_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
@@ -26,14 +26,14 @@
  * - `HeatGrads`: per-point gradient aggregate (only second derivatives needed)
  * - `HeatModel`: pure function `rhs(t, grads)` returning `du/dt`
  * - `pfc::data::Field<double>` via `field_from_subdomain`: padded field storage
- * - `pfc::communication::PaddedHaloExchanger`: halo exchange for FD stencils
+ * - `pfc::comm::HaloExchange<HostSpace>`: halo exchange for FD stencils
  * - `pfc::field::create<HeatGrads>(u, order)`: FD gradient evaluator
  * - `pfc::sim::steppers::create(u, grad, model, dt)`: stepper factory
  *
  * Time loop pattern:
  * ```cpp
  * for (int step = 0; step < n_steps; ++step) {
- *   pfc::communication::exchange(halo);  // FD requires halo exchange before each step
+ *   halo.exchange();  // FD requires halo exchange before each step
  *   t = stepper.step(t, u.vec());
  * }
  * ```
@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
   pfc::data::Field<double> u = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 
   // Halo exchanger for the field
-  pfc::communication::PaddedHaloExchanger<double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  pfc::comm::HaloExchange<pfc::HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
 
   // Initialize field with Gaussian initial condition
   const double cx = 0.5 * static_cast<double>(N - 1);
@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
 
   for (int step = 0; step < n_steps; ++step) {
     // FD requires halo exchange before each step
-    pfc::communication::exchange(halo);
+    halo.exchange();
 
     // Advance one time step
     t = stepper.step(t, u.vec());

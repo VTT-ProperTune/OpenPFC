@@ -15,6 +15,7 @@ source compatibility is explicitly not a goal.
 ### Added
 
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `standard-g` (default) or `dev-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
+- Examples `15_finite_difference_heat` and `19_explicit_stepper_fd` use `SparseExchange` / `HaloExchange` instead of the old exchanger classes.
 - heat3d Catch2 manual/scratch paths use `pfc::comm::HaloExchange<HostSpace>` instead of `PaddedHaloExchanger`.
 - `StagePreparationService` binds `pfc::comm::HaloExchange<HostSpace>` instead of `PaddedHaloExchanger`.
 - wave2d HIP driver and CPU-vs-HIP test use `pfc::comm::SparseExchange<HipSpace>` on unpadded device Fields; y-face BC patches and Dirichlet walls stay on device (no per-step full-field D2H).
