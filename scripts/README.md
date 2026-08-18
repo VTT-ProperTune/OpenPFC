@@ -32,7 +32,7 @@ and test targets, and runs the aggregate serial tests plus the explicit 2-,
 **LUMI.** The default is HIP/ROCm. The script loads `LUMI/25.09 partition/G
 cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm` from `$HOME/privatemodules`.
 Configure runs on the login node (FetchContent needs outbound HTTP). Compile
-and `ctest` are submitted to **`dev-g`** (default) or **`standard-g`** so AMD
+and `ctest` are submitted to **`standard-g`** (default) or **`dev-g`** so AMD
 GPUs are available. CUDA is not supported on LUMI. Build trees default to
 `/flash/project_462001519/juaho/build/openpfc-lumi-rocm-release` (not inside
 the git clone). Slurm account is `project_462001519`.

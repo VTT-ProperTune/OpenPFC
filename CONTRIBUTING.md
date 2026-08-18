@@ -33,7 +33,7 @@ in [`INSTALL.md`](INSTALL.md).
 ./scripts/build.sh --help
 ./scripts/build.sh                              # auto-detects Tohtori vs LUMI
 ./scripts/build.sh --machine=tohtori --with-cuda
-./scripts/build.sh --machine=lumi --with-rocm   # HIP; compile+test on dev-g
+./scripts/build.sh --machine=lumi --with-rocm   # HIP; compile+test on standard-g
 ```
 
 Verify locally before opening or merging a PR. Run the **full** suite, not

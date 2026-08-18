@@ -56,7 +56,7 @@ ROCM_ARCHITECTURES="${ROCM_ARCHITECTURES:-}"
 
 LUMI_STACK="${LUMI_STACK:-LUMI/25.09}"
 LUMI_ACCOUNT="${LUMI_ACCOUNT:-project_462001519}"
-LUMI_PARTITION="${LUMI_PARTITION:-dev-g}"
+LUMI_PARTITION="${LUMI_PARTITION:-standard-g}"
 LUMI_GPUS="${LUMI_GPUS:-8}"
 LUMI_TIME="${LUMI_TIME:-}"
 LUMI_PRIVATE_MODULES="${LUMI_PRIVATE_MODULES:-${HOME}/privatemodules}"
@@ -78,7 +78,7 @@ the correct modules (compiler, MPI, HeFFTe) and machine toolchain.
 On Tohtori the default is a 32-way Release CPU build in builds/release.
 On LUMI the default is a HIP/ROCm Release build: configure on the login
 node (FetchContent needs the network), then submit compile + ctest to a
-GPU partition (dev-g by default, or standard-g).
+GPU partition (standard-g by default, or dev-g).
 
 Options:
   --machine=NAME          tohtori or lumi (default: auto-detect from host)
@@ -100,7 +100,7 @@ Options:
   --cmake-arg=ARG         Append one argument to the CMake configure command
   --submit                LUMI: submit compile+test to Slurm (default on a login node)
   --no-submit             LUMI: run configure/build/test in this process
-  --partition=NAME        LUMI GPU partition: dev-g (default) or standard-g
+  --partition=NAME        LUMI GPU partition: standard-g (default) or dev-g
   --account=NAME          LUMI Slurm account (default: project_462001519)
   --time=LIMIT            LUMI Slurm time limit (dev-g default 02:30:00)
   --gpus=N                LUMI GPUs per node (default: 8)
@@ -138,7 +138,7 @@ LUMI environment:
   HEFFTE_MODULE           Default: heffte-rocm (from $HOME/privatemodules)
   LUMI_STACK              Default: LUMI/25.09
   LUMI_ACCOUNT            Default: project_462001519
-  LUMI_PARTITION          Default: dev-g (use standard-g for longer jobs)
+  LUMI_PARTITION          Default: standard-g (use dev-g for the short queue)
   LUMI_GPUS               Default: 8
   LUMI_TIME               Default: 02:30:00 on dev-g, 06:00:00 on standard-g
   LUMI_FLASH_ROOT         Default: /flash/project_462001519/juaho/build
