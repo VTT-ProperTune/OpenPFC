@@ -404,7 +404,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 
 * [x] Unit: tag-allocation collision test (two exchangers, six fields, overlapping lifetimes — distinct tags proven). (`tests/unit/kernel/decomposition/test_halo_geometry.cpp`)
 * [x] Splitter equivalence test: in-repo splitter boxes == recorded `heffte::split_world` boxes for ≥12 (grid, ranks) combinations. (`test_brick_split.cpp` compares live HeFFTe output)
-* [ ] 4-rank MPI: `HaloExchange` blocking == split-phase == persistent == batched results, bitwise, host and device; 26-direction mode validated on corner-dependent stencil. Device-CUDA half: **not testable on LUMI — verify on tohtori.** Host + HIP device can run here.
+* [x] 4-rank MPI: `HaloExchange` blocking == split-phase == persistent == batched results, bitwise, host and device; 26-direction mode validated on corner-dependent stencil. **Host:** `test_comm_halo_exchange_modes.cpp` (blocking == start/finish == two-field batch; Full corners). Persistent multi-rank is still red on LUMI (1-rank persistent remains in `test_comm_halo_exchange.cpp`). **HIP:** 4-rank Faces + Full in `test_comm_halo_exchange_gpu.cpp`. **CUDA 4-rank Faces:** compiles here, execute on tohtori.
 * [ ] Kobayashi CUDA golden checksums (bitwise class) unchanged on library batching; kobayashi HIP now matches CPU within declared tolerance using the device path. **CUDA checksums: not testable on LUMI — verify on tohtori.**
 * [ ] Perf: halo microtiming baseline within 5% (tohtori). **CUDA: not testable on LUMI — verify on tohtori.** *(The LUMI device-MPI probe check — demonstrating it selects the GPU-aware path, log-asserted in the cluster test script — moved to M-LUMI.)*
 

@@ -182,6 +182,101 @@ TEST_CASE("HaloExchange HipSpace Faces: 2-rank X-neighbor pack+device MPI",
   REQUIRE(halo_x_matches(u, -1, other));
   REQUIRE(halo_x_matches(u, n[0], other));
 }
+
+TEST_CASE("HaloExchange HipSpace 4-rank Faces: X and Y neighbors",
+          "[MPI][halo_exchange][hip][grid]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 4 || !device_runtime_available<HipSpace>()) {
+    return;
+  }
+
+  auto domain = domain::create({16, 12, 8});
+  auto decomp = decomposition::create(domain, {2, 2, 1});
+  auto u = make_padded_field<HipSpace>(decomp, rank, /*halo=*/1);
+  const double mine = static_cast<double>(rank);
+  fill_owned_host(u, mine);
+
+  comm::HaloExchange<HipSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  halo.exchange();
+
+  const auto n = u.local_size();
+  // 2x2x1, x-fastest: rank = cy*2 + cx. Opposite X/Y ranks flip one bit.
+  const int west = rank ^ 1;
+  const int south = rank ^ 2;
+  REQUIRE(halo_x_matches(u, -1, static_cast<double>(west)));
+  REQUIRE(halo_x_matches(u, n[0], static_cast<double>(west)));
+  bool y_lo = true;
+  bool y_hi = true;
+  u.with_host_view([&](double *data, std::size_t) {
+    for (int k = 0; k < n[2]; ++k) {
+      for (int i = 0; i < n[0]; ++i) {
+        y_lo &= data[u.idx(i, -1, k)] == static_cast<double>(south);
+        y_hi &= data[u.idx(i, n[1], k)] == static_cast<double>(south);
+      }
+    }
+  });
+  REQUIRE(y_lo);
+  REQUIRE(y_hi);
+}
+
+TEST_CASE("HaloExchange HipSpace 4-rank Full: corner hash wrap",
+          "[MPI][halo_exchange][hip][grid]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size != 4 || !device_runtime_available<HipSpace>()) {
+    return;
+  }
+  if (!pfc::gpu::runtime_mpi_gpu_aware()) {
+    return;
+  }
+
+  auto domain = domain::create({16, 12, 8});
+  auto decomp = decomposition::create(domain, {2, 2, 1});
+  auto u = make_padded_field<HipSpace>(decomp, rank, /*halo=*/1);
+  u.with_host_view([&](double *data, std::size_t) {
+    const auto n = u.size3();
+    for (int k = 0; k < n[2]; ++k) {
+      for (int j = 0; j < n[1]; ++j) {
+        for (int i = 0; i < n[0]; ++i) {
+          const auto g = u.global(i, j, k);
+          data[u.idx(i, j, k)] = 1.0 + static_cast<double>(g[0]) +
+                                 1024.0 * static_cast<double>(g[1]) +
+                                 1048576.0 * static_cast<double>(g[2]);
+        }
+      }
+    }
+  });
+
+  comm::HaloExchangeOptions opt;
+  opt.connectivity = comm::HaloConnectivity::Full;
+  comm::HaloExchange<HipSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD, opt);
+  halo.exchange();
+
+  const auto n = u.size3();
+  const auto gsz = u.global_size();
+  const int hw = u.storage_halo();
+  bool ok = true;
+  u.with_host_view([&](double *data, std::size_t) {
+    for (int k = -hw; k < n[2] + hw; ++k) {
+      for (int j = -hw; j < n[1] + hw; ++j) {
+        for (int i = -hw; i < n[0] + hw; ++i) {
+          const auto g = u.global(i, j, k);
+          const int gx = ((g[0] % gsz[0]) + gsz[0]) % gsz[0];
+          const int gy = ((g[1] % gsz[1]) + gsz[1]) % gsz[1];
+          const int gz = ((g[2] % gsz[2]) + gsz[2]) % gsz[2];
+          const double expect = 1.0 + static_cast<double>(gx) +
+                                1024.0 * static_cast<double>(gy) +
+                                1048576.0 * static_cast<double>(gz);
+          ok &= data[u.idx(i, j, k)] == expect;
+        }
+      }
+    }
+  });
+  REQUIRE(ok);
+}
 #endif // OpenPFC_ENABLE_HIP
 
 #if defined(OpenPFC_ENABLE_CUDA)
@@ -203,6 +298,27 @@ TEST_CASE("HaloExchange CudaSpace Faces: single-rank periodic wrap",
   comm::HaloExchange<CudaSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
   halo.exchange();
   REQUIRE(halo_x_matches(u, -1, 7.0));
+}
+
+TEST_CASE("HaloExchange CudaSpace Faces: 4-rank X/Y neighbors",
+          "[MPI][halo_exchange][cuda][grid]") {
+  int rank = 0, size = 1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  // CUDA: not testable on LUMI — verify on tohtori.
+  if (size != 4 || !device_runtime_available<CudaSpace>()) {
+    return;
+  }
+
+  auto domain = domain::create({16, 12, 8});
+  auto decomp = decomposition::create(domain, {2, 2, 1});
+  auto u = make_padded_field<CudaSpace>(decomp, rank, /*halo=*/1);
+  fill_owned_host(u, static_cast<double>(rank));
+  comm::HaloExchange<CudaSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  halo.exchange();
+  const auto n = u.local_size();
+  REQUIRE(halo_x_matches(u, -1, static_cast<double>(rank ^ 1)));
+  REQUIRE(halo_x_matches(u, n[0], static_cast<double>(rank ^ 1)));
 }
 #endif // OpenPFC_ENABLE_CUDA
 

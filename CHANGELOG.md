@@ -15,6 +15,7 @@ source compatibility is explicitly not a goal.
 ### Added
 
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `standard-g` (default) or `dev-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
+- 4-rank `HaloExchange` mode suite: host blocking == split-phase == multi-field batch; Full 26-direction corners; HIP 4-rank Faces + Full (`test_comm_halo_exchange_modes.cpp` / `test_comm_halo_exchange_gpu.cpp`). Persistent multi-rank is still 1-rank only on LUMI.
 - In-repo min-surface brick splitter (`brick_split.hpp`) replaces `heffte::split_world` / `proc_setup_min_surface` in the decomposition TU (ADR 0007). Equivalence is pinned against live HeFFTe in `test_brick_split.cpp`.
 - Neighbour-direction agreement Allgather is off by default in release builds (`NDEBUG`); set `OPENPFC_VALIDATE_NEIGHBOUR_AGREEMENT=1` to force it, or `=0` to skip it in debug.
 - wave2d host tests and `step_wave_separated_order2_cpu` use `HaloExchange` / `SparseExchange` instead of `PaddedHaloExchanger` / `SparseHaloExchanger`.

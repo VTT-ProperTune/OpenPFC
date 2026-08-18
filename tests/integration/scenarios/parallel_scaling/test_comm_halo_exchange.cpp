@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host HaloExchange facade (M4). Device HaloExchange is remaining M4 work;
-// CUDA execution of that half is not available on LUMI.
+// Host HaloExchange facade (M4). 4-rank mode comparison is in
+// test_comm_halo_exchange_modes.cpp. Device cases live in
+// test_comm_halo_exchange_gpu.cpp (HIP here; CUDA on tohtori).
 
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
