@@ -25,15 +25,15 @@ An interface must be substitutable by all of its implementations.
 
 Split the single `IFFT` into two honest interfaces (M5):
 
-- **`IHostFft`** — forward/backward over host containers (`std::vector` /
+- **`IHostFFT`** — forward/backward over host containers (`std::vector` /
   host `FieldView`). Implemented by the CPU (FFTW/HeFFTe) backend.
-- **`IDeviceFft<MemorySpace>`** — forward/backward over `DataBuffer<MemorySpace,T>`.
-  Implemented by the CUDA (cuFFT) and HIP (rocFFT) backends.
+- **`IDeviceFFT<MemorySpace>`** — forward/backward over `DataBuffer` for that
+  space. Implemented by the CUDA (cuFFT) and HIP (rocFFT) backends.
 
 `FFT_Impl<BackendTag>` implements whichever interface(s) apply to its backend.
-Factories are **honest**: host factories return `IHostFft` for host backends
+Factories are **honest**: host factories return `IHostFFT` for host backends
 only; device factories (`create_cuda`/`create_hip` and the string/enum-driven
-equivalents) return `IDeviceFft`. Requesting a host FFT for a device backend (or
+equivalents) return objects that implement `IDeviceFFT`. Requesting a host FFT for a device backend (or
 vice versa) **throws at construction** with a clear message — never returns an
 object that throws on use.
 

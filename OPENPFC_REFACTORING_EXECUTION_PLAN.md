@@ -40,7 +40,7 @@ This checkout is **on LUMI (AMD/HIP)**. CUDA execution is impossible here; CUDA-
 
 **M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced; latest commit `99f304da` builds and runs HIP unit tests on LUMI. Remaining M3 items are (a) CUDA execution/perf/co-enabled CI — **not testable on LUMI**, (b) folding CUDA `padded_halo_faces.cu` into the kernel library (separable-compilation, CUDA-only — deferred to tohtori).
 
-**M4 is in progress** (production FD apps on the new exchangers; leftover backend-class tests and old public names remain). **M5 has started:** `IHostFft` exists and `create_with_backend` rejects CUDA/HIP at construction. `IDeviceFft` and the rest of M5–M12 are still ahead.
+**M4 is in progress** (production FD apps on the new exchangers; leftover backend-class tests and old public names remain). **M5 has started:** `IHostFFT` / `IDeviceFFT` exist; `create_with_backend` rejects CUDA/HIP; GPU `FFT_Impl` implements `IDeviceFFT` and no longer exposes throwing host-vector virtuals. Remaining M5: workspace precision, `for_each_kpoint`, Nyquist, dealiasing.
 
 **2026-08-03 restructuring note:** two earlier attempts stalled at M3 citing lack of LUMI access. M-LUMI still collects HIP-*execution* items deferred from Pre-M0/M3/M4/M8/M9. This session *is* on LUMI, so those HIP execution items can be filled when the corresponding code exists; they still do not gate M4–M11 code. The symmetric problem now is CUDA: do not stall on tohtori.
 
@@ -194,7 +194,7 @@ Pre-M0 complete.
 ### Tasks
 
 * [x] Write `docs/adr/0004-execution-layer.md`: keep the minimal homegrown layer (`DataBuffer` + single-sourced kernels) and delete the Kokkos facsimile, per Audit §17.1 recommendation. If the decision instead is Kokkos adoption, M3's task list must be rewritten before M1 starts — record that contingency in the ADR.
-* [x] Write `docs/adr/0005-fft-interface.md`: split `IHostFft`/`IDeviceFft` interfaces (Audit §17.2).
+* [x] Write `docs/adr/0005-fft-interface.md`: split `IHostFFT`/`IDeviceFFT` interfaces (Audit §17.2).
 * [x] Write `docs/adr/0006-precision-policy.md`: template new `Field`/steppers on `RealType`; instantiate and test `double` only in 0.2 (Audit §17.3).
 * [x] Write `docs/adr/0007-decomposition-splitter.md`: replace the HeFFTe `split_world` call with an in-repo min-surface splitter behind the same API, keeping HeFFTe purely an FFT dependency (Audit §17.4); schedule: M4.
 * [x] Write `docs/adr/0008-io-formats.md`: raw+sidecar retained for hot paths; HDF5/XDMF writer added behind the catalog (M10); checkpoint bundle uses the same raw brick format + JSON metadata (M11) (Audit §17.5).
@@ -435,8 +435,8 @@ M3 (Backend enum/string complete), M2 (Field/DataBuffer types).
 
 ### Tasks
 
-* [ ] Split `fft_interface.hpp` per ADR 0005: `IHostFft` (host-container transforms) and `IDeviceFft<MemorySpace>` (DataBuffer transforms); `FFT_Impl<BackendTag>` implements the applicable one(s); delete the throwing GPU virtual bodies (`fft_heffte_backend.hpp:189–192, 246–249`). **`IHostFft` landed; `IFFT` is a temporary alias. `IDeviceFft` is next.**
-* [x] Make factories honest: `fft::create_with_backend` returns host FFTs for host backends only; device factories (`create_cuda`, `create_hip`, string-driven equivalents) return `IDeviceFft`; requesting a mismatch throws at construction with a clear message. **`create_with_backend(CUDA/HIP)` throws `invalid_argument`. Device factories still return concrete `FFT_CUDA` / `FFT_HIP` until `IDeviceFft` exists.**
+* [x] Split `fft_interface.hpp` per ADR 0005: `IHostFFT` (host-container transforms) and `IDeviceFFT<MemorySpace>` (DataBuffer transforms); `FFT_Impl<BackendTag>` implements the applicable one(s); delete the throwing GPU virtual bodies. **`IFFT` is a temporary alias of `IHostFFT`. GPU `FFT_CUDA` / `FFT_HIP` implement `IDeviceFFT`. Float DataBuffer overloads stay on the concrete type.**
+* [x] Make factories honest: `fft::create_with_backend` returns host FFTs for host backends only; device factories (`create_cuda`, `create_hip`) return objects that implement `IDeviceFFT`; requesting a mismatch throws at construction with a clear message.
 * [ ] Workspace precision per ADR 0006: allocate only the instantiated precision (lazy or template) — removes the ~33% device-memory waste (`fft_heffte_backend.hpp:102–106`).
 * [ ] Expose `r2c_direction` through the convenience factories (currently silently hardcoded 0).
 * [ ] Add `kernel/fft/kspace_iterator.hpp`: `for_each_kpoint(outbox, domain, fn(idx, kx, ky, kz))` (host) and a device counterpart in `runtime/gpu/`; migrate `SpectralGradient` (`spectral_gradient.hpp:111–143`) onto it; migrate `SpectralGradient`'s raw-pointer field binding to `FieldView`.
@@ -446,15 +446,15 @@ M3 (Backend enum/string complete), M2 (Field/DataBuffer types).
 
 ### Required tests
 
-* [x] Negative test: constructing a host `IHostFft` with `Backend::CUDA` (and HIP) throws at the factory, not at first use. (`test_fft_backend_selection.cpp`)
+* [x] Negative test: constructing a host `IHostFFT` with `Backend::CUDA` (and HIP) throws at the factory, not at first use. (`test_fft_backend_selection.cpp`)
 * [ ] `for_each_kpoint` unit test vs a hand-rolled reference loop on odd/even grids (bitwise index and wavenumber equality).
 * [ ] Nyquist fix: 1-D derivative-of-sine spectral test showing error reduction at the highest mode; affected golden comparisons re-baselined with written justification.
 * [ ] Dealiasing smoke test: cubic nonlinearity on a marginally resolved grid, energy in the top third of the spectrum zeroed when the mask is on.
-* [ ] GPU FFT round-trip (forward+backward == identity to 1e-12) via `IDeviceFft` on both vendors.
+* [x] GPU FFT round-trip (forward+backward == identity to 1e-12) via `IDeviceFFT` on both vendors. **HIP:** `test_hip_roundtrip.cpp` double case binds `IDeviceFFT<HipSpace>`. **CUDA:** `test_cuda_roundtrip.cpp` double case binds `IDeviceFFT<CudaSpace>` (execute on tohtori).
 
 ### Deletions
 
-* [ ] Throwing GPU virtual implementations and the dishonest `Backend::CUDA` path in `src/openpfc/runtime/cpu/fft.cpp:143–149`.
+* [x] Throwing GPU virtual implementations and the dishonest `Backend::CUDA` path in `src/openpfc/runtime/cpu/fft.cpp`. GPU `FFT_Impl` no longer inherits `IHostFFT`; `create_with_backend` rejects CUDA/HIP.
 * [ ] Duplicate k-space folding loops in `SpectralGradient` (apps' copies die in M8/M9).
 
 ### Definition of done
@@ -522,7 +522,7 @@ M5, M6.
 ### Tasks
 
 * [ ] Define the physics concepts in `kernel/simulation/physics_concepts.hpp`: (a) field declaration (`declare_fields(SimulationState&)` — names, types, memory space); (b) parameters via declarative schema; (c) either point-wise `rhs(t, G)` (existing Gen‑3 shape) and/or spectral-diagonal descriptors: linear symbol `L(k)` + real-space nonlinearity `N(psi)` (the `physics_for_mode` shape already factored in `tungsten_spectral.hpp`).
-* [ ] Implement `kernel/simulation/spectral_etd_system.hpp`: framework-owned pseudo-spectral ETD driver — owns work fields in `SimulationState`, transform choreography (forward → filter/N̂ → ETD combine → backward) via `IDeviceFft`/`IHostFft`, `for_each_kpoint` operator preparation, `Etd1Stepper` integration, memory-space-generic (host and device instantiations). Optional dealiasing mask hook (M5).
+* [ ] Implement `kernel/simulation/spectral_etd_system.hpp`: framework-owned pseudo-spectral ETD driver — owns work fields in `SimulationState`, transform choreography (forward → filter/N̂ → ETD combine → backward) via `IDeviceFFT`/`IHostFFT`, `for_each_kpoint` operator preparation, `Etd1Stepper` integration, memory-space-generic (host and device instantiations). Optional dealiasing mask hook (M5).
 * [ ] Implement `ParameterSchema` (`kernel/simulation/parameter_schema.hpp`): declarative field list → generated `from_json` + validation + docs table; consolidates `ParameterValidator` usage; one schema per model (not per backend-class).
 * [ ] Introduce adapter **A1** `pfc::compat::LegacyModelPhysics`: wraps a Gen‑1 `Model&` as a physics-concept object (delegating `step`), so the new driver can run legacy models. Parity test: diffusion fixture model run via Gen‑1 `Simulator` vs via A1 + new driver — identical trajectories (bitwise on CPU).
 * [ ] Adopt adapter **A2**: `Simulator::step_with_physics` becomes the documented bridge by which the Gen‑1 frontend can invoke concept physics during M8–M9 migration; add its missing test.
@@ -561,7 +561,7 @@ M7 (skeleton, schema), M4 (communication — for completeness of the stack), M3 
 ### Tasks
 
 * [ ] Implement `apps/tungsten/include/tungsten/tungsten_physics.hpp`: single model = `TungstenParams` + one `ParameterSchema` + `physics_for_mode` linear symbol + nonlinearity + stabilization, templated on `RealType` and memory space; target ≤400 lines.
-* [ ] Wire tungsten through `SpectralEtdSystem` + `SimulationState` + `IDeviceFft` (no model-owned FFTs, no `dummy_fft`, no hand-rolled mirrors — residency via M2 protocol).
+* [ ] Wire tungsten through `SpectralEtdSystem` + `SimulationState` + `IDeviceFFT` (no model-owned FFTs), no `dummy_fft`, no hand-rolled mirrors — residency via M2 protocol).
 * [ ] Device session assembly: introduce `GpuSpectralStack` (device counterpart of `SpectralCpuStack`) in `kernel/simulation/stacks/`, constructed from JSON plan options via the existing `spectral_fft_stack_factory.hpp` helpers.
 * [ ] Keep the Gen‑1 tungsten build target alive in parallel *within this milestone only* for A/B validation; both binaries run the golden-trajectory input.
 * [ ] Validation matrix: (a) new-CPU vs Pre-M0 golden trajectory (4 ranks, 100 steps) within declared tolerance; (b) new-CUDA vs new-CPU ≤1e-10 (existing parity harness re-pointed); (c) ETD weights vs `spectral_exp_cache_matches_legacy_etd_weights` pins; (d) perf within 5% of Pre-M0 baselines on tohtori. **(b)/(d) CUDA: not testable on LUMI — verify on tohtori.** *(The new-HIP half of (b) and the LUMI half of (d) moved to M-LUMI.)*
