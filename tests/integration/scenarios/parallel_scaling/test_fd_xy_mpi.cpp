@@ -12,10 +12,14 @@
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
@@ -54,32 +58,22 @@ TEST_CASE("5-point XY Laplacian of constant field is zero (nz=1)", "[MPI][fd][xy
                              pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, {2, 1, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  const int nx = local_size[0];
-  const int ny = local_size[1];
-  const int nz = local_size[2];
-  REQUIRE(nz == 1);
-
-  const size_t nlocal =
-      static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
-
-  std::vector<double> u(nlocal, 1.0);
-  std::vector<double> lap(nlocal, 0.0);
-
   constexpr int halo_width = 1;
-  auto domain = decomposition::domain(decomp);
-  auto subdomain_box = decomposition::local_box(decomp, rank);
-  HaloExchanger<double> exchanger(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD);
-  exchanger.exchange_halos(u.data(), u.size());
+  auto u = data::field_from_subdomain<double>(decomp, rank, halo_width);
+  REQUIRE(u.local_size()[2] == 1);
+  u.for_each_owned([&](int i, int j, int k) { u(i, j, k) = 1.0; });
 
-  const double inv = 1.0;
-  field::fd::laplacian2d_xy_interior<2>(u.data(), lap.data(), nx, ny, nz, inv, inv,
-                                        halo_width);
+  comm::HaloExchangeOptions opt;
+  opt.directions = halo::presets::Axes2D();
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD, opt);
+  halo.exchange();
 
   bool all_values_are_zero = true;
-  for (size_t i = 0; i < nlocal; ++i)
-    all_values_are_zero &= std::abs(lap[i]) <= 1e-12;
+  u.for_each_owned([&](int i, int j, int k) {
+    const double lap = u(i + 1, j, k) + u(i - 1, j, k) + u(i, j + 1, k) +
+                       u(i, j - 1, k) - 4.0 * u(i, j, k);
+    all_values_are_zero &= std::abs(lap) <= 1e-12;
+  });
   REQUIRE(all_values_are_zero);
 }
 

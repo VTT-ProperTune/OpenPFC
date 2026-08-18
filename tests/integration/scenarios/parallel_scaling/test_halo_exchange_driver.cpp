@@ -3,34 +3,28 @@
 
 /**
  * @file test_halo_exchange_driver.cpp
- * @brief Integration tests for HaloExchanger (non-blocking face exchange)
+ * @brief Integration tests for HaloExchange (two-rank face sync).
  */
 
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
+
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/data/world_queries.hpp>
-#include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 
 using namespace pfc;
 
-TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
+TEST_CASE("HaloExchange syncs face values across ranks",
           "[integration][mpi][halo][driver]") {
   int rank = 0;
   int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  if (size < 2) {
-    return; // need at least 2 ranks
-  }
-
-  // Hard-wired {2,1,1} grid (two subdomains only); skip when more MPI ranks
-  // participate — otherwise get_subworld(decomp, rank) is out of range and
-  // neighbor semantics no longer match the assertions below.
   if (size != 2) {
     return;
   }
@@ -39,49 +33,21 @@ TEST_CASE("HaloExchanger exchange_halos syncs face values across ranks",
   auto world = world::uniform(24, 1.0);
   auto decomp = decomposition::create(world, {2, 1, 1});
 
-  auto local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  size_t local_total = static_cast<size_t>(local_size[0]) *
-                       static_cast<size_t>(local_size[1]) *
-                       static_cast<size_t>(local_size[2]);
+  constexpr int hw = 1;
+  auto field = data::field_from_subdomain<double>(decomp, rank, hw);
+  const auto fill = static_cast<double>(rank);
+  field.for_each_owned([&](int i, int j, int k) { field(i, j, k) = fill; });
 
-  std::vector<double> field(local_total);
-  auto fill = static_cast<double>(rank);
-  for (size_t i = 0; i < local_total; ++i) {
-    field[i] = fill;
-  }
+  comm::HaloExchange<HostSpace, double> halo(field, decomp, rank, MPI_COMM_WORLD);
+  halo.exchange();
 
-  auto domain = decomposition::domain(decomp);
-  auto subdomain_box = decomposition::local_box(decomp, rank);
-  HaloExchanger<double> exchanger(subdomain_box, domain, decomp, rank, 1, MPI_COMM_WORLD);
-
-  exchanger.exchange_halos(field.data(), field.size());
-
-  // Recv for +X is leftmost face (x=0); recv for -X is rightmost face (x=nx-1).
-  // Rank 0 receives from +X (rank 1) into left face -> rank 0's x=0 layer = 1.0.
-  // Rank 1 receives from -X (rank 0) into right face -> rank 1's x=nx-1 layer = 0.0.
-  int nx = local_size[0];
-  int ny = local_size[1];
-  int nz = local_size[2];
+  const auto n = field.local_size();
+  const double other = static_cast<double>(1 - rank);
   bool face_matches = true;
-  if (rank == 0) {
-    for (int z = 0; z < nz; ++z) {
-      for (int y = 0; y < ny; ++y) {
-        size_t idx = static_cast<size_t>(z) * static_cast<size_t>(ny) *
-                         static_cast<size_t>(nx) +
-                     static_cast<size_t>(y) * static_cast<size_t>(nx) + 0;
-        face_matches &= field[idx] == 1.0;
-      }
-    }
-  } else if (rank == 1) {
-    for (int z = 0; z < nz; ++z) {
-      for (int y = 0; y < ny; ++y) {
-        size_t idx = static_cast<size_t>(z) * static_cast<size_t>(ny) *
-                         static_cast<size_t>(nx) +
-                     static_cast<size_t>(y) * static_cast<size_t>(nx) +
-                     static_cast<size_t>(nx - 1);
-        face_matches &= field[idx] == 0.0;
-      }
+  for (int z = 0; z < n[2]; ++z) {
+    for (int y = 0; y < n[1]; ++y) {
+      face_matches &= field(-hw, y, z) == other;
+      face_matches &= field(n[0], y, z) == other;
     }
   }
   REQUIRE(face_matches);

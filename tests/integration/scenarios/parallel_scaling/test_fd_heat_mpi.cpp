@@ -12,11 +12,12 @@
 #include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
-#include <openpfc/kernel/decomposition/halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
-#include <openpfc/kernel/decomposition/halo_persistent.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
+#include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
 
 using namespace pfc;
@@ -36,42 +37,31 @@ TEST_CASE("Laplacian of constant field is zero after halo exchange", "[MPI][fd]"
   auto world = world::uniform(24, 1.0);
   auto decomp = decomposition::create(world, {2, 1, 1});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  const int nx = local_size[0];
-  const int ny = local_size[1];
-  const int nz = local_size[2];
-  const size_t nlocal =
-      static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
-
-  std::vector<double> u(nlocal, 1.0);
-  std::vector<double> lap(nlocal, 0.0);
-
   constexpr int halo_width = 1;
-  auto domain = decomposition::domain(decomp);
-  auto subdomain_box = decomposition::local_box(decomp, rank);
-  HaloExchanger<double> exchanger(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD);
-  exchanger.exchange_halos(u.data(), u.size());
+  auto u = data::field_from_subdomain<double>(decomp, rank, halo_width);
+  u.for_each_owned([&](int i, int j, int k) { u(i, j, k) = 1.0; });
 
-  const double inv = 1.0;
-  field::fd::laplacian_interior<2>(u.data(), lap.data(), nx, ny, nz, inv, inv, inv,
-                                   halo_width);
+  comm::HaloExchange<HostSpace, double> halo(u, decomp, rank, MPI_COMM_WORLD);
+  halo.exchange();
 
   bool all_values_are_zero = true;
-  for (size_t i = 0; i < nlocal; ++i)
-    all_values_are_zero &= std::abs(lap[i]) <= 1e-12;
+  u.for_each_owned([&](int i, int j, int k) {
+    const double lap = u(i + 1, j, k) + u(i - 1, j, k) + u(i, j + 1, k) +
+                       u(i, j - 1, k) + u(i, j, k + 1) + u(i, j, k - 1) -
+                       6.0 * u(i, j, k);
+    all_values_are_zero &= std::abs(lap) <= 1e-12;
+  });
   REQUIRE(all_values_are_zero);
 }
 
-TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
-          "[MPI][fd][persistent]") {
+TEST_CASE("HaloExchange start/finish matches blocking face sync",
+          "[MPI][fd]") {
   int rank = 0;
   int size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  // Two ranks split along Z so ±Z neighbors are always different ranks (no
-  // periodic self-messages); matches `mpi_2procs_all` runners.
+  // Two ranks split along Z so ±Z neighbors are always different ranks.
   if (size != 2) {
     return;
   }
@@ -79,34 +69,25 @@ TEST_CASE("PersistentHaloExchanger matches HaloExchanger face sync",
   auto world = world::uniform(16, 1.0);
   auto decomp = decomposition::create(world, {1, 1, 2});
 
-  const auto &local_world = decomposition::get_subworld(decomp, rank);
-  auto local_size = world::get_size(local_world);
-  const int nx = local_size[0];
-  const int ny = local_size[1];
-  const int nz = local_size[2];
-  const size_t nlocal =
-      static_cast<size_t>(nx) * static_cast<size_t>(ny) * static_cast<size_t>(nz);
-
-  std::vector<double> a(nlocal);
-  std::vector<double> b(nlocal);
-  const auto fill = static_cast<double>(rank);
-  for (size_t i = 0; i < nlocal; ++i) {
-    a[i] = fill;
-    b[i] = fill;
-  }
-
   constexpr int halo_width = 1;
-  auto domain = decomposition::domain(decomp);
-  auto subdomain_box = decomposition::local_box(decomp, rank);
-  HaloExchanger<double> hex(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD);
-  PersistentHaloExchanger<double> pex(subdomain_box, domain, decomp, rank, halo_width, MPI_COMM_WORLD,
-                                      b.data(), halo::presets::Axes3D());
+  auto a = data::field_from_subdomain<double>(decomp, rank, halo_width);
+  auto b = data::field_from_subdomain<double>(decomp, rank, halo_width);
+  const auto fill = static_cast<double>(rank);
+  a.for_each_owned([&](int i, int j, int k) { a(i, j, k) = fill; });
+  b.for_each_owned([&](int i, int j, int k) { b(i, j, k) = fill; });
 
-  hex.exchange_halos(a.data(), a.size());
-  pex.exchange_halos();
+  comm::HaloExchange<HostSpace, double> hex(a, decomp, rank, MPI_COMM_WORLD);
+  comm::HaloExchange<HostSpace, double> pex(b, decomp, rank, MPI_COMM_WORLD);
+  hex.exchange();
+  pex.start();
+  pex.finish();
 
   bool fields_match = true;
-  for (size_t i = 0; i < nlocal; ++i) fields_match &= std::abs(b[i] - a[i]) <= 1e-12;
+  const auto n = a.local_size();
+  for (int k = -halo_width; k < n[2] + halo_width; ++k)
+    for (int j = -halo_width; j < n[1] + halo_width; ++j)
+      for (int i = -halo_width; i < n[0] + halo_width; ++i)
+        fields_match &= std::abs(b(i, j, k) - a(i, j, k)) <= 1e-12;
   REQUIRE(fields_match);
 }
 

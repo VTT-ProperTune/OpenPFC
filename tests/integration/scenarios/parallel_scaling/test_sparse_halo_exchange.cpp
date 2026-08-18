@@ -3,7 +3,7 @@
 
 /**
  * @file test_sparse_halo_exchange.cpp
- * @brief Tests for `pfc::SparseHaloExchanger<T>`,
+ * @brief Tests for `pfc::comm::SparseExchange<HostSpace>`,
  *        `pfc::halo::make_structured_halos<T>`, and
  *        `pfc::halo::copy_to_face_layout<T>`.
  *
@@ -37,7 +37,8 @@
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/decomposition/halo_pattern.hpp>
-#include <openpfc/kernel/decomposition/sparse_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
+#include <openpfc/kernel/data/world_queries.hpp>
 
 using namespace pfc;
 using Int3 = pfc::types::Int3;
@@ -54,7 +55,7 @@ double periodic_field_value(int gx, int gy, int gz) {
 
 } // namespace
 
-TEST_CASE("SparseHaloExchanger: single-peer custom RemoteHalo round-trip",
+TEST_CASE("SparseExchange: single-peer custom RemoteHalo round-trip",
           "[MPI][sparse_halo][custom]") {
   // Single-rank only: build a self-pointing exchange where we lift two
   // arbitrary indices, ship them through MPI, scatter them into a
@@ -84,8 +85,8 @@ TEST_CASE("SparseHaloExchanger: single-peer custom RemoteHalo round-trip",
 
   std::vector<halo::RemoteHalo<double>> halos;
   halos.push_back(std::move(h));
-  SparseHaloExchanger<double> ex(MPI_COMM_WORLD, rank, std::move(halos));
-  ex.exchange_halos(field.data(), field.size());
+  comm::SparseExchange<HostSpace, double> ex(std::move(halos), rank, MPI_COMM_WORLD);
+  ex.exchange(field.data(), field.size());
 
   // After the exchange, indices 6 and 7 of `field` should now hold the
   // values originally at indices 2 and 5 (sorted ascending — SparseVector
@@ -97,7 +98,7 @@ TEST_CASE("SparseHaloExchanger: single-peer custom RemoteHalo round-trip",
   REQUIRE(field[5] == 6.0);
 }
 
-TEST_CASE("SparseHaloExchanger: Axes3D self-wrap on a single rank",
+TEST_CASE("SparseExchange: Axes3D self-wrap on a single rank",
           "[MPI][sparse_halo][structured][axes3d]") {
   int rank = 0;
   int nproc = 1;
@@ -130,10 +131,10 @@ TEST_CASE("SparseHaloExchanger: Axes3D self-wrap on a single rank",
   }
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
-  SparseHaloExchanger<double> ex(
-      MPI_COMM_WORLD, rank, halo::make_structured_halos<double>(decomp, rank, hw));
-  ex.exchange_halos(u.data(), u.size());
-  halo::copy_to_face_layout(ex, face_halos);
+  comm::SparseExchange<HostSpace, double> ex(u.data(), u.size(), decomp, rank,
+                                             MPI_COMM_WORLD, hw);
+  ex.exchange();
+  halo::copy_to_face_layout(ex.halos(), face_halos);
 
   // For a periodic single-rank cube the +X face buffer holds the LEFT
   // edge values (x=0 plane) of the same field, and the -X face buffer
@@ -167,7 +168,7 @@ TEST_CASE("SparseHaloExchanger: Axes3D self-wrap on a single rank",
   REQUIRE(faces_match);
 }
 
-TEST_CASE("SparseHaloExchanger: Full3D self-wrap delivers edge data",
+TEST_CASE("SparseExchange: Full3D self-wrap delivers edge data",
           "[MPI][sparse_halo][structured][full3d]") {
   int rank = 0;
   int nproc = 1;
@@ -198,10 +199,11 @@ TEST_CASE("SparseHaloExchanger: Full3D self-wrap delivers edge data",
     }
   }
 
-  SparseHaloExchanger<double> ex(MPI_COMM_WORLD, rank,
-                                 halo::make_structured_halos<double>(
-                                     decomp, rank, hw, halo::presets::Full3D()));
-  ex.exchange_halos(u.data(), u.size());
+  comm::SparseExchangeOptions opt;
+  opt.dirs = halo::presets::Full3D();
+  comm::SparseExchange<HostSpace, double> ex(u.data(), u.size(), decomp, rank,
+                                             MPI_COMM_WORLD, hw, opt);
+  ex.exchange();
 
   // Find the (1, 1, 0) edge entry: send slab is the (x=N-1, y=N-1) line,
   // recv slab is the (x=0, y=0) line of the field (z varies).
@@ -227,7 +229,7 @@ TEST_CASE("SparseHaloExchanger: Full3D self-wrap delivers edge data",
   REQUIRE(edge_is_valid);
 }
 
-TEST_CASE("SparseHaloExchanger: Axes3D X-split on np=2 delivers neighbour data",
+TEST_CASE("SparseExchange: Axes3D X-split on np=2 delivers neighbour data",
           "[MPI][sparse_halo][structured][np2]") {
   int rank = 0;
   int nproc = 1;
@@ -270,10 +272,10 @@ TEST_CASE("SparseHaloExchanger: Axes3D X-split on np=2 delivers neighbour data",
   }
 
   auto face_halos = halo::allocate_face_halos<double>(decomp, rank, hw);
-  SparseHaloExchanger<double> ex(
-      MPI_COMM_WORLD, rank, halo::make_structured_halos<double>(decomp, rank, hw));
-  ex.exchange_halos(u.data(), u.size());
-  halo::copy_to_face_layout(ex, face_halos);
+  comm::SparseExchange<HostSpace, double> ex(u.data(), u.size(), decomp, rank,
+                                             MPI_COMM_WORLD, hw);
+  ex.exchange();
+  halo::copy_to_face_layout(ex.halos(), face_halos);
 
   // +X face: data from the neighbour's leftmost column (gx = (rank+1)%2 * nx).
   // -X face: data from the neighbour's rightmost column.
