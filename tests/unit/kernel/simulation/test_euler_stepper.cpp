@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
-#include <cmath>
-#include <vector>
 #include <array>
+#include <cmath>
+#include <complex>
 #include <tuple>
+#include <vector>
 
 using namespace pfc;
 using namespace pfc::sim::steppers;
@@ -290,4 +292,80 @@ TEST_CASE("test_dt_zero_edge_case") {
     for (size_t i = 0; i < u.size(); ++i) {
         REQUIRE(u[i] == u_initial[i]);
     }
+}
+
+using Complex = std::complex<double>;
+
+struct ConstantComplexRHS {
+    Complex c{};
+    void operator()(double /*t*/, std::vector<Complex> & /*u*/,
+                    std::vector<Complex> &du) const {
+        for (auto &d : du) {
+            d = c;
+        }
+    }
+};
+
+struct TwoFieldConstantComplexRHS {
+    Complex c0{};
+    Complex c1{};
+    void operator()(double /*t*/,
+                    std::tuple<std::vector<Complex> &, std::vector<Complex> &> /*u*/,
+                    std::tuple<std::vector<Complex> &, std::vector<Complex> &> du)
+        const {
+        std::get<0>(du)[0] = c0;
+        std::get<1>(du)[0] = c1;
+    }
+};
+
+TEST_CASE("euler_complex_constant_rhs", "[stepper][euler][complex]") {
+    constexpr Complex c{0.25, -0.5};
+    constexpr Complex u0{1.0, 2.0};
+    constexpr double dt = 0.1;
+    ConstantComplexRHS rhs{c};
+    EulerStepper<ConstantComplexRHS, Complex> stepper(dt, 1, rhs);
+    std::vector<Complex> u{u0};
+    const auto fingerprint = u;
+    auto attempt = stepper.attempt(0.0, u);
+    REQUIRE(attempt.success);
+    REQUIRE(u == fingerprint);
+    const Complex expected = u0 + Complex(dt) * c;
+    REQUIRE(attempt.candidate[0].real() ==
+            Catch::Approx(expected.real()).margin(1e-12));
+    REQUIRE(attempt.candidate[0].imag() ==
+            Catch::Approx(expected.imag()).margin(1e-12));
+    commit_step_attempt(u, attempt);
+    REQUIRE(u[0].real() == Catch::Approx(expected.real()).margin(1e-12));
+    REQUIRE(u[0].imag() == Catch::Approx(expected.imag()).margin(1e-12));
+    REQUIRE(stepper.step(dt, u) == Catch::Approx(2.0 * dt));
+    REQUIRE(u[0].real() ==
+            Catch::Approx((expected + Complex(dt) * c).real()).margin(1e-12));
+}
+
+TEST_CASE("multi_euler_complex_two_field", "[stepper][euler][complex]") {
+    constexpr double dt = 0.2;
+    constexpr Complex u0{0.5, -0.25};
+    constexpr Complex u1{-1.0, 0.75};
+    constexpr Complex c0{0.1, 0.2};
+    constexpr Complex c1{-0.3, 0.05};
+    TwoFieldConstantComplexRHS rhs{c0, c1};
+    MultiEulerStepper<TwoFieldConstantComplexRHS, 2, Complex> stepper(
+        dt, {1, 1}, rhs);
+    std::vector<Complex> a{u0};
+    std::vector<Complex> b{u1};
+    const auto fa = a;
+    const auto fb = b;
+    auto attempt = stepper.attempt(0.0, a, b);
+    REQUIRE(attempt.success);
+    REQUIRE(a == fa);
+    REQUIRE(b == fb);
+    const Complex e0 = u0 + Complex(dt) * c0;
+    const Complex e1 = u1 + Complex(dt) * c1;
+    REQUIRE(attempt.candidate(0)[0].real() ==
+            Catch::Approx(e0.real()).margin(1e-12));
+    REQUIRE(attempt.candidate(1)[0].imag() ==
+            Catch::Approx(e1.imag()).margin(1e-12));
+    commit_step_attempt(a, b, attempt);
+    REQUIRE(a[0].real() == Catch::Approx(e0.real()).margin(1e-12));
+    REQUIRE(b[0].imag() == Catch::Approx(e1.imag()).margin(1e-12));
 }

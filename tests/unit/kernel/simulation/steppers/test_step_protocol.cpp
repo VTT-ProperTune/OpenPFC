@@ -4,6 +4,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <complex>
 #include <type_traits>
 #include <vector>
 
@@ -156,6 +157,36 @@ TEST_CASE("EulerStepper attempt/commit on host Field<double>",
   v.vec() = before;
   (void)stepper.step(0.0, v);
   REQUIRE(v.vec() == u.vec());
+}
+
+struct ConstantComplexRhs {
+  std::complex<double> c{};
+  void operator()(double /*t*/, std::vector<std::complex<double>> & /*u*/,
+                  std::vector<std::complex<double>> &du) const {
+    for (auto &d : du) {
+      d = c;
+    }
+  }
+};
+
+TEST_CASE("EulerStepper attempt/commit on host Field<complex>",
+          "[step_protocol][euler][field][complex]") {
+  using Complex = std::complex<double>;
+  using pfc::data::Field;
+  const auto domain = pfc::domain::create({2, 2, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 1, 0});
+  Field<Complex> u(domain, box, 0);
+  u.vec() = {Complex{1.0, 0.0}, Complex{0.0, 1.0}, Complex{-1.0, 0.5},
+             Complex{0.25, -0.25}};
+  ConstantComplexRhs rhs{Complex{0.1, -0.2}};
+  EulerStepper<ConstantComplexRhs, Complex> stepper(0.5, u.size(), rhs);
+  const auto before = u.vec();
+  const auto r = stepper.attempt(0.0, u);
+  REQUIRE(u.vec() == before);
+  REQUIRE(r.success);
+  commit_step_attempt(u.vec(), r);
+  REQUIRE(u.vec() == r.candidate);
+  REQUIRE(u.vec() != before);
 }
 
 TEST_CASE("RK3HeunStepper attempt/commit on host Field<double>",

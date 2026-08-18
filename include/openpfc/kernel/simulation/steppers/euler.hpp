@@ -20,7 +20,7 @@
  *
  * `Rhs` must be invocable as
  *
- *     rhs(double t, std::vector<double>& u, std::vector<double>& du)
+ *     rhs(double t, std::vector<Scalar>& u, std::vector<Scalar>& du)
  *
  * and is expected to **fill** `du` (sized `local_size` by the constructor).
  * `u` is passed read-only by convention; the stepper performs the
@@ -69,48 +69,50 @@ namespace pfc::sim::steppers {
 /**
  * @brief Pure forward-Euler ODE stepper: `u += dt * rhs(t, u)`.
  *
- * @tparam Rhs Any callable invocable as
- *             `rhs(double t, std::vector<double>& u, std::vector<double>& du)`.
- *             It must fill `du`; the stepper adds `dt * du` to `u`.
+ * @tparam Rhs    Any callable invocable as
+ *                `rhs(double t, std::vector<Scalar>& u, std::vector<Scalar>& du)`.
+ *                It must fill `du`; the stepper adds `dt * du` to `u`.
+ * @tparam Scalar Field element type (`double` or `std::complex<double>`).
  */
-template <class Rhs>
-  requires StageFunction<Rhs>
+template <class Rhs, class Scalar = double>
+  requires StageFunctionFor<Rhs, Scalar>
 class EulerStepper {
 public:
+  using scalar_type = Scalar;
+  using Attempt = StepAttempt<Scalar>;
+
   EulerStepper(double dt, std::size_t local_size, Rhs rhs)
-      : m_dt(dt), m_du(local_size, 0.0), m_candidate(local_size, 0.0),
-        m_u_checkpoint(local_size, 0.0), m_rhs(std::move(rhs)) {}
+      : m_dt(dt), m_du(local_size, Scalar{}), m_candidate(local_size, Scalar{}),
+        m_u_checkpoint(local_size, Scalar{}), m_rhs(std::move(rhs)) {}
 
   /**
    * @brief Isolate `u + dt * rhs(t, u)` without writing `u`.
    *
-   * @return Successful `StepAttemptResult` whose candidate is method-owned.
+   * @return Successful `StepAttempt<Scalar>` whose candidate is method-owned.
    */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const std::vector<double> &u) {
-    m_rhs(t, const_cast<std::vector<double> &>(u), m_du);
+  [[nodiscard]] Attempt attempt(double t, const std::vector<Scalar> &u) {
+    m_rhs(t, const_cast<std::vector<Scalar> &>(u), m_du);
     const std::size_t n = u.size();
     for (std::size_t i = 0; i < n; ++i) {
-      m_candidate[i] = u[i] + m_dt * m_du[i];
+      m_candidate[i] = u[i] + Scalar(m_dt) * m_du[i];
     }
-    return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
+    return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
   }
 
   /** Advance `u` by one explicit-Euler step; commit of `attempt`. */
-  double step(double t, std::vector<double> &u) {
-    const StepAttemptResult r = attempt(t, u);
+  double step(double t, std::vector<Scalar> &u) {
+    const Attempt r = attempt(t, u);
     commit_step_attempt(u, r);
     return r.t1;
   }
 
-  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const pfc::data::Field<double> &u) {
+  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
+  [[nodiscard]] Attempt attempt(double t, const pfc::data::Field<Scalar> &u) {
     return attempt(t, u.vec());
   }
 
-  /** Advance a host `Field<double>` by one explicit-Euler step. */
-  double step(double t, pfc::data::Field<double> &u) {
+  /** Advance a host `Field<Scalar>` by one explicit-Euler step. */
+  double step(double t, pfc::data::Field<Scalar> &u) {
     return step(t, u.vec());
   }
 
@@ -129,7 +131,7 @@ public:
    * steppers must implement save_state(), restore_state(), and can_rollback()
    * with matching signatures to support adaptive error control.
    */
-  void save_state(const std::vector<double> &u) { m_u_checkpoint = u; }
+  void save_state(const std::vector<Scalar> &u) { m_u_checkpoint = u; }
 
   /**
    * @brief Restore field state to last checkpointed state.
@@ -142,7 +144,7 @@ public:
    * @note This is part of the duck-typed checkpoint protocol. Must be
    * called after save_state() to have valid checkpoint data.
    */
-  void restore_state(std::vector<double> &u) { u = m_u_checkpoint; }
+  void restore_state(std::vector<Scalar> &u) { u = m_u_checkpoint; }
 
   /**
    * @brief Check whether this stepper supports rollback.
@@ -160,9 +162,9 @@ public:
 
 private:
   double m_dt{0.0};
-  std::vector<double> m_du;
-  std::vector<double> m_candidate;
-  std::vector<double> m_u_checkpoint;
+  std::vector<Scalar> m_du;
+  std::vector<Scalar> m_candidate;
+  std::vector<Scalar> m_u_checkpoint;
   Rhs m_rhs;
 };
 
@@ -170,31 +172,34 @@ private:
  * @brief Multi-field forward-Euler ODE stepper.
  *
  * Owns one `du` buffer per field (still SoA: each buffer is a contiguous
- * `std::vector<double>` matching its field's local size) and accumulates
+ * `std::vector<Scalar>` matching its field's local size) and accumulates
  * `u_k += dt * du_k` per field. `Rhs` is invocable as
  *
  *     rhs(double t,
- *         std::tuple<std::vector<double>&, ...> u_pack,
- *         std::tuple<std::vector<double>&, ...> du_pack)
+ *         std::tuple<std::vector<Scalar>&, ...> u_pack,
+ *         std::tuple<std::vector<Scalar>&, ...> du_pack)
  *
  * and must fill the `du` tuple element-by-element. See the
  * `pfc::sim::steppers::create(std::tuple<...>, ...)` factory below for
  * the canonical wiring against `for_each_interior`.
  *
- * @tparam Rhs  Multi-field RHS callable as described above.
- * @tparam N    Number of fields.
+ * @tparam Rhs    Multi-field RHS callable as described above.
+ * @tparam N      Number of fields.
+ * @tparam Scalar Field element type (`double` or `std::complex<double>`).
  */
-template <class Rhs, std::size_t N> class MultiEulerStepper {
+template <class Rhs, std::size_t N, class Scalar = double>
+class MultiEulerStepper {
 public:
   using RhsType = Rhs;
+  using scalar_type = Scalar;
   static constexpr std::size_t field_count = N;
   MultiEulerStepper(double dt, std::array<std::size_t, N> local_sizes, Rhs rhs)
       : m_dt(dt), m_rhs(std::move(rhs)) {
     for (std::size_t i = 0; i < N; ++i) {
-      m_du[i].assign(local_sizes[i], 0.0);
-      m_u_work[i].assign(local_sizes[i], 0.0);
-      m_candidate[i].assign(local_sizes[i], 0.0);
-      m_u_checkpoint[i].assign(local_sizes[i], 0.0);
+      m_du[i].assign(local_sizes[i], Scalar{});
+      m_u_work[i].assign(local_sizes[i], Scalar{});
+      m_candidate[i].assign(local_sizes[i], Scalar{});
+      m_u_checkpoint[i].assign(local_sizes[i], Scalar{});
     }
   }
 
@@ -202,19 +207,19 @@ public:
    * @brief Isolate one Euler update per field without writing accepted buffers.
    */
   template <class... U>
-  [[nodiscard]] MultiStepAttemptResult<N>
+  [[nodiscard]] MultiStepAttemptResult<N, Scalar>
   attempt(double t, const std::vector<U> &...u_accepted) {
     static_assert(sizeof...(U) == N,
                   "MultiEulerStepper::attempt: buffer count must match N");
-    static_assert((std::is_same_v<U, double> && ...),
-                  "MultiEulerStepper requires std::vector<double>");
+    static_assert((std::is_same_v<U, Scalar> && ...),
+                  "MultiEulerStepper requires std::vector<Scalar>");
     copy_accepted_to_work(std::index_sequence_for<U...>{}, u_accepted...);
     auto u_pack = make_work_tuple(std::index_sequence_for<U...>{});
     auto du_pack = make_du_tuple(std::index_sequence_for<U...>{});
     m_rhs(t, u_pack, du_pack);
     form_candidates(std::index_sequence_for<U...>{}, u_accepted...);
-    return MultiStepAttemptResult<N>(t, m_dt, t + m_dt, /*success=*/true,
-                                     candidate_ptrs());
+    return MultiStepAttemptResult<N, Scalar>(t, m_dt, t + m_dt,
+                                             /*success=*/true, candidate_ptrs());
   }
 
   /** Advance every field by one explicit-Euler step; commit of `attempt`. */
@@ -245,7 +250,7 @@ public:
     static_assert(sizeof...(U) == N,
                   "Number of fields must match template parameter N");
     static_assert((std::is_same_v<U, double> && ...),
-                  "MultiEulerStepper checkpoint requires std::vector<double>");
+                  "MultiEulerStepper checkpoint requires std::vector<Scalar>");
     std::size_t i = 0;
     ((m_u_checkpoint[i++] = u_buffers), ...);
   }
@@ -266,7 +271,7 @@ public:
     static_assert(sizeof...(U) == N,
                   "Number of fields must match template parameter N");
     static_assert((std::is_same_v<U, double> && ...),
-                  "MultiEulerStepper checkpoint requires std::vector<double>");
+                  "MultiEulerStepper checkpoint requires std::vector<Scalar>");
     std::size_t i = 0;
     ((u_buffers = m_u_checkpoint[i++]), ...);
   }
@@ -303,10 +308,10 @@ private:
   template <std::size_t... I, class... U>
   void form_candidates(std::index_sequence<I...>,
                        const std::vector<U> &...u_accepted) {
-    auto one = [this](std::vector<double> &cand, const std::vector<double> &u,
-                      const std::vector<double> &du) {
+    auto one = [this](std::vector<Scalar> &cand, const std::vector<Scalar> &u,
+                      const std::vector<Scalar> &du) {
       for (std::size_t i = 0; i < u.size(); ++i) {
-        cand[i] = u[i] + m_dt * du[i];
+        cand[i] = u[i] + Scalar(m_dt) * du[i];
       }
     };
     (one(m_candidate[I], u_accepted, m_du[I]), ...);
@@ -318,22 +323,22 @@ private:
     ((u_accepted = m_candidate[I]), ...);
   }
 
-  [[nodiscard]] std::array<const std::vector<double> *, N>
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
   candidate_ptrs() const {
     return candidate_ptrs_impl(std::make_index_sequence<N>{});
   }
 
   template <std::size_t... I>
-  [[nodiscard]] std::array<const std::vector<double> *, N>
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
   candidate_ptrs_impl(std::index_sequence<I...>) const {
     return {&m_candidate[I]...};
   }
 
   double m_dt{0.0};
-  std::array<std::vector<double>, N> m_du;
-  std::array<std::vector<double>, N> m_u_work;
-  std::array<std::vector<double>, N> m_candidate;
-  std::array<std::vector<double>, N> m_u_checkpoint;
+  std::array<std::vector<Scalar>, N> m_du;
+  std::array<std::vector<Scalar>, N> m_u_work;
+  std::array<std::vector<Scalar>, N> m_candidate;
+  std::array<std::vector<Scalar>, N> m_u_checkpoint;
   Rhs m_rhs;
 };
 
