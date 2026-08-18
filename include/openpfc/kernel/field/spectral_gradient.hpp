@@ -47,9 +47,9 @@
 #include <cstddef>
 #include <vector>
 
-#include <openpfc/kernel/data/constants.hpp>
 #include <openpfc/kernel/fft/box3i.hpp>
 #include <openpfc/kernel/fft/fft_interface.hpp>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/field/grad_concepts.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 
@@ -108,26 +108,9 @@ public:
     if constexpr (has_xz<G>) m_op_xz.assign(out_n, 0.0);
     if constexpr (has_yz<G>) m_op_yz.assign(out_n, 0.0);
 
-    const double fx = 2.0 * pfc::constants::pi /
-                      (spacing[0] * static_cast<double>(global_size[0]));
-    const double fy = 2.0 * pfc::constants::pi /
-                      (spacing[1] * static_cast<double>(global_size[1]));
-    const double fz = 2.0 * pfc::constants::pi /
-                      (spacing[2] * static_cast<double>(global_size[2]));
-
-    std::size_t idx = 0;
-    for (int kk = outbox.low[2]; kk <= outbox.high[2]; ++kk) {
-      const double kz = (kk <= global_size[2] / 2)
-                            ? static_cast<double>(kk) * fz
-                            : static_cast<double>(kk - global_size[2]) * fz;
-      for (int jj = outbox.low[1]; jj <= outbox.high[1]; ++jj) {
-        const double ky = (jj <= global_size[1] / 2)
-                              ? static_cast<double>(jj) * fy
-                              : static_cast<double>(jj - global_size[1]) * fy;
-        for (int ii = outbox.low[0]; ii <= outbox.high[0]; ++ii) {
-          const double kx = (ii <= global_size[0] / 2)
-                                ? static_cast<double>(ii) * fx
-                                : static_cast<double>(ii - global_size[0]) * fx;
+    pfc::fft::kspace::for_each_kpoint(
+        outbox, global_size, spacing,
+        [&](std::size_t idx, double kx, double ky, double kz) {
           if constexpr (has_x<G>) m_op_x[idx] = std::complex<double>(0.0, kx);
           if constexpr (has_y<G>) m_op_y[idx] = std::complex<double>(0.0, ky);
           if constexpr (has_z<G>) m_op_z[idx] = std::complex<double>(0.0, kz);
@@ -137,10 +120,7 @@ public:
           if constexpr (has_xy<G>) m_op_xy[idx] = -kx * ky;
           if constexpr (has_xz<G>) m_op_xz[idx] = -kx * kz;
           if constexpr (has_yz<G>) m_op_yz[idx] = -ky * kz;
-          ++idx;
-        }
-      }
-    }
+        });
   }
 
   void prepare() {
