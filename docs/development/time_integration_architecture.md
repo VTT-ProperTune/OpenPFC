@@ -321,14 +321,10 @@ does not mutate accepted state, and leaves workspace **reusable** (buffers
 remain allocated/sized; contents unspecified). Candidate views are valid until
 the next `attempt()` on the owning stepper or destruction.
 
-The explicit-Euler proof path is
-[`euler_attempt.hpp`](../../include/openpfc/kernel/simulation/steppers/euler_attempt.hpp)
-(`EulerAttemptStepper`, plus `MultiEulerAttemptStepper` for N=2). It invokes a
-caller-provided `OperatorEvaluator` and `PreparationService` with
-`pfc::integrator::StageContext` and never writes the accepted buffer.
-Legacy in-place `EulerStepper::step` is unchanged. Coverage:
+Production `EulerStepper` and `MultiEulerStepper` implement the same
+`attempt` / `commit_step_attempt` pair (`step()` is that pair). Coverage:
 [`test_step_attempt.cpp`](../../tests/unit/kernel/simulation/steppers/test_step_attempt.cpp)
-(`[step_attempt][unit]`).
+(`[step_attempt][unit]`) and `test_step_protocol.cpp`.
 
 `EmbeddedRKStepper` below returns the same `StepAttemptResult`; high/low/error
 pair evidence lives on stepper accessors.

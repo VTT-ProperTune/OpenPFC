@@ -312,9 +312,9 @@ buffer. The shared types live in
 - Method-owned workspace stays allocated after soft failure
   (`workspace_reusable()` when the stepper exposes it).
 
-`EulerAttemptStepper` is the injectable proof path. Production
-`EulerStepper`, `RK2HeunStepper`, `RK3HeunStepper`, and `ExplicitRKStepper`
-implement the same `attempt` / `commit_step_attempt` pair. `EmbeddedRKStepper`,
+Production `EulerStepper` / `MultiEulerStepper`, `RK2HeunStepper`,
+`RK3HeunStepper`, and `ExplicitRKStepper` implement the same `attempt` /
+`commit_step_attempt` pair. `EmbeddedRKStepper`,
 `ImexEulerStepper`, and `Etd1Stepper` return `StepAttemptResult` as well;
 method extras live on stepper accessors (`u_high`/`u_low`/`error`,
 `last_solve_*`, `last_reason`). Special result types (`Etd1StepAttempt`,

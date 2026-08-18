@@ -490,14 +490,14 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 * [x] Protocol-conformance test template applied to all seven steppers (attempt→reject→attempt→commit sequence; rollback state equality). **Euler, RK2, RK3, ExplicitRK, Etd1 covered in `test_step_protocol.cpp` (always-succeed path). Embedded/IMEX keep extra `dt`/`ctx` on `attempt` and are covered in their own tests.**
 * [ ] Existing RK/temporal convergence-order tests pass unchanged (orders preserved is the scientific gate).
-* [ ] New: complex-field ETD1 vs analytic solution of a stiff linear complex ODE field (tolerance test); N=3 multi-field Euler/ETD test extending `test_multifield_stepper.cpp`. **ETD1 complex vs analytic is in `test_etd1.cpp` (`[etd1][complex]`). N=3 ETD is in `etd1_three_field_bundle`; N=3 Euler still open.**
+* [ ] New: complex-field ETD1 vs analytic solution of a stiff linear complex ODE field (tolerance test); N=3 multi-field Euler/ETD test extending `test_multifield_stepper.cpp`. **ETD1 complex vs analytic is in `test_etd1.cpp`. N=3 ETD is in `etd1_three_field_bundle`; N=3 Euler isolation is in `test_step_attempt.cpp`.**
 * [x] Adaptive end-to-end: embedded RK on a problem with a known transient — controller shrinks dt through the transient and grows after; accepted/rejected counters asserted. (`test_adaptive_controller.cpp`, example 21).
 * [x] Non-diagonal `SolveFunction` mock compiles and runs under `ImexEulerStepper`.
 
 ### Deletions
 
 * [ ] The losing `StageContext` and workspace type, `fd_stencils.hpp:325–337` back-compat shims. **`IntegratorMethod` in `time.hpp` is deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
-* [ ] `euler_attempt.hpp` (its proof role is absorbed by the ported steppers).
+* [x] `euler_attempt.hpp` (its proof role is absorbed by the ported steppers). **Deleted; `MultiEulerStepper` now has `attempt` (any N).**
 
 ### Definition of done
 
