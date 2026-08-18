@@ -14,6 +14,8 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `EulerStepper` / `RK2HeunStepper` `attempt`/`step` accept host `pfc::data::Field<double>` (via `vec()`). `pfc::field::Field` is asserted on that type.
+- Deleted unused `IntegratorBase` / `EulerIntegrator` / `RK2HeunIntegrator` and the on-hold `IntegratorResult` DTO (and their unit tests).
 - Non-diagonal dense `SolveFunction` mock under `ImexEulerStepper` (`imex_euler_nondiagonal_dense_solve`).
 - `MultiStageFunction<Rhs, N>` (default N=2) and `MultiEtd1Stepper` accept any N≥1 via a variadic `attempt`.
 - `RK3HeunStepper`, `ExplicitRKStepper`, `EmbeddedRKStepper`, `ImexEulerStepper`, and `Etd1Stepper` return `StepAttemptResult` (multi-field: `MultiStepAttemptResult`). Dropped `EmbeddedStepAttemptResult`, `ImexStepAttempt`, and `Etd1StepAttempt`. Embedded extras are `u_high()` / `u_low()` / `error()` / `last_rhs_evals()`; IMEX extras are `last_solve_*`; ETD extras are `last_reason()`.

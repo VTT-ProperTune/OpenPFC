@@ -479,7 +479,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 * [x] Declare `StepAttemptResult`/attempt-commit (from `steppers/step_attempt.hpp`) the single protocol; specify it in `docs/adr/0003-time-integrator-interface.md` (update the existing ADR). **Accepted; `AttemptStepper` concept added.**
 * [x] Port onto the protocol: `EulerStepper`, `RK2Heun`, `RK3Heun`, `ExplicitRKStepper`, `EmbeddedRKStepper` (drop `EmbeddedStepAttemptResult`; keep `u_high`/`u_low`/`error`/`last_rhs_evals` accessors), `ImexEulerStepper` (drop `ImexStepAttempt`; keep `last_solve_*`), `Etd1Stepper` (drop `Etd1StepAttempt`; `attempt` returns `StepAttemptResult`). In-place `step()` is attempt+commit where the leaf has `step()`.
-* [ ] Generalize state: steppers accept any type satisfying the field concepts (`state_concepts.hpp` — wire it in for real) — `Field<double>`, `Field<complex<double>>`, and heterogeneous packs; remove the raw-`std::vector<double>`-only restriction.
+* [ ] Generalize state: steppers accept any type satisfying the field concepts (`state_concepts.hpp` — wire it in for real) — `Field<double>`, `Field<complex<double>>`, and heterogeneous packs; remove the raw-`std::vector<double>`-only restriction. **`EulerStepper` / `RK2HeunStepper` `attempt`/`step` overloads take host `Field<double>` via `vec()`. Vector path remains.**
 * [ ] Complex-state ETD: `Etd1Stepper` (and `MultiEtd1Stepper`) operate on complex spectral fields with device-resident coefficient application (uses M3 generic elementwise ops + M5 coefficients) — the capability tungsten's ETD needs.
 * [x] Generalize multi-field arity: `MultiStageFunction<Rhs, N>` (default N=2); `MultiEtd1Stepper` over N (`N >= 1`, variadic `attempt`). N=3 covered in `test_etd1.cpp`.
 * [ ] Merge duplicates: one `StageContext` (delete `pfc::integrator::StageContext` or `pfc::sim::StageContext`, keep one), one workspace type (merge `StageWorkspace` and `integrator::Workspace`), one method enum (`RKIntegratorMethod` extended; `IntegratorMethod` removed from `time.hpp:252`).
@@ -496,7 +496,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 ### Deletions
 
-* [ ] `steppers/integrator_base.hpp` (virtual type-erasure layer), `kernel/simulation/integrator_result.hpp`, `IntegratorMethod` in `time.hpp`, the losing `StageContext` and workspace type, `fd_stencils.hpp:325–337` back-compat shims. **`ImexStepAttempt` / `Etd1StepAttempt` / `EmbeddedStepAttemptResult` are deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
+* [ ] `IntegratorMethod` in `time.hpp`, the losing `StageContext` and workspace type, `fd_stencils.hpp:325–337` back-compat shims. **`integrator_base.hpp` / `integrator_result.hpp` / `ImexStepAttempt` / `Etd1StepAttempt` / `EmbeddedStepAttemptResult` are deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
 * [ ] `euler_attempt.hpp` (its proof role is absorbed by the ported steppers).
 
 ### Definition of done
