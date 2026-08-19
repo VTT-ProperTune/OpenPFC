@@ -11,6 +11,7 @@
 #include <tuple>
 #include <vector>
 
+#include <openpfc/kernel/integrator/etd1_apply.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 #include <openpfc/kernel/simulation/steppers/etd1.hpp>
 
@@ -428,4 +429,32 @@ TEST_CASE("etd1_multi_field_complex_bundle", "[stepper][etd1][complex]") {
   pfc::sim::steppers::commit_step_attempt(u0, u1, attempt);
   REQUIRE(u0[0].real() == Catch::Approx(e0.real()).margin(1e-12));
   REQUIRE(u1[0].imag() == Catch::Approx(e1.imag()).margin(1e-12));
+}
+
+TEST_CASE("apply_etd1_update host real and complex", "[integrator][etd1_apply]") {
+  using pfc::integrator::apply_etd1_update;
+  using Complex = std::complex<double>;
+
+  const std::vector<double> exp_Ldt{0.5, 2.0};
+  const std::vector<double> phi1_L{0.25, -0.1};
+  std::vector<double> u{1.0, -2.0};
+  std::vector<double> nlin{4.0, 8.0};
+  std::vector<double> out(2, 0.0);
+  apply_etd1_update(std::span<const double>{exp_Ldt},
+                    std::span<const double>{phi1_L},
+                    std::span<const double>{u}, std::span<const double>{nlin},
+                    std::span<double>{out});
+  REQUIRE(out[0] == Catch::Approx(0.5 * 1.0 + 0.25 * 4.0).margin(1e-14));
+  REQUIRE(out[1] == Catch::Approx(2.0 * -2.0 + -0.1 * 8.0).margin(1e-14));
+
+  std::vector<Complex> uc{Complex{1.0, 0.5}, Complex{0.0, -1.0}};
+  std::vector<Complex> nc{Complex{0.2, -0.1}, Complex{1.0, 0.0}};
+  std::vector<Complex> oc(2);
+  apply_etd1_update(std::span<const double>{exp_Ldt},
+                    std::span<const double>{phi1_L},
+                    std::span<const Complex>{uc}, std::span<const Complex>{nc},
+                    std::span<Complex>{oc});
+  const Complex e0 = Complex(exp_Ldt[0]) * uc[0] + Complex(phi1_L[0]) * nc[0];
+  REQUIRE(oc[0].real() == Catch::Approx(e0.real()).margin(1e-14));
+  REQUIRE(oc[0].imag() == Catch::Approx(e0.imag()).margin(1e-14));
 }

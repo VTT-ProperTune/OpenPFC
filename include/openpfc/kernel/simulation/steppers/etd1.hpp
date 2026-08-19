@@ -46,6 +46,7 @@
 #include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/integrator/etd1_apply.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
@@ -165,14 +166,14 @@ public:
     m_u_scratch = u_accepted;
     m_rhs(t, m_u_scratch, m_du);
 
+    pfc::integrator::apply_etd1_update(
+        m_exp_Ldt, m_phi1_L, std::span<const Scalar>(u_accepted),
+        std::span<const Scalar>(m_du), std::span<Scalar>(m_candidate));
     for (std::size_t i = 0; i < m_local_size; ++i) {
-      const Scalar c = Scalar(m_exp_Ldt[i]) * u_accepted[i] +
-                       Scalar(m_phi1_L[i]) * m_du[i];
-      if (!detail::is_finite_scalar(c)) {
+      if (!detail::is_finite_scalar(m_candidate[i])) {
         m_last_reason = "non-finite candidate value";
         return Attempt(t, m_dt, t, /*success=*/false, m_candidate);
       }
-      m_candidate[i] = c;
     }
     return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
   }
@@ -309,16 +310,16 @@ public:
 
     for (std::size_t f = 0; f < N; ++f) {
       const auto &u_acc = *accepted[f];
+      pfc::integrator::apply_etd1_update(
+          m_exp_Ldt[f], m_phi1_L[f], std::span<const Scalar>(u_acc),
+          std::span<const Scalar>(m_du[f]), std::span<Scalar>(m_candidate[f]));
       for (std::size_t i = 0; i < m_local_sizes[f]; ++i) {
-        const Scalar c = Scalar(m_exp_Ldt[f][i]) * u_acc[i] +
-                         Scalar(m_phi1_L[f][i]) * m_du[f][i];
-        if (!detail::is_finite_scalar(c)) {
+        if (!detail::is_finite_scalar(m_candidate[f][i])) {
           m_last_reason = "non-finite candidate value";
           return MultiStepAttemptResult<N, Scalar>(t, m_dt, t,
                                                    /*success=*/false,
                                                    candidate_ptrs());
         }
-        m_candidate[f][i] = c;
       }
     }
     return MultiStepAttemptResult<N, Scalar>(t, m_dt, t + m_dt,
