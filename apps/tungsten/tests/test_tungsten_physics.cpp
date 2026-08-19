@@ -111,3 +111,39 @@ TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten one step",
   REQUIRE(max_abs_diff(legacy.get_real_field("psi"),
                        state.get_field<double>("psi").vec()) < 1e-10);
 }
+
+TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten for 10 steps",
+          "[tungsten][physics][etd][multistep]") {
+  constexpr int N = 8;
+  constexpr double dt = 0.01;
+  auto domain = pfc::domain::create(
+      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto fft_legacy = pfc::fft::create(decomp);
+  auto fft_new = pfc::fft::create(decomp);
+
+  Tungsten legacy(fft_legacy, domain);
+  pfc::initialize(legacy, dt);
+  pfc::data::Field<double> ic(domain, fft_legacy.get_inbox_bounds(), 0);
+  fill_ic(ic);
+  legacy.get_real_field("psi") = ic.vec();
+
+  tungsten::TungstenPhysics<> phys;
+  phys.domain = domain;
+  phys.box = fft_new.get_inbox_bounds();
+  phys.params = legacy.params;
+  pfc::SimulationState state;
+  phys.declare_fields(state);
+  state.get_field<double>("psi").vec() = ic.vec();
+  pfc::sim::SpectralMeanFieldEtdSystem<tungsten::TungstenPhysics<>> sys(
+      phys, fft_new, state, dt);
+
+  double t = 0.0;
+  for (int step = 0; step < 10; ++step) {
+    legacy.step(t);
+    t = sys.step(t);
+  }
+  REQUIRE(max_abs_diff(legacy.get_real_field("psi"),
+                       state.get_field<double>("psi").vec()) < 1e-10);
+}
