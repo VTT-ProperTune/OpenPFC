@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- Tungsten golden A/B: 1-rank 8³/100 ETD steps and 4-rank 16³/20 steps (`tungsten-golden-4rank`) compare `TungstenEtdSession` to Gen-1 within 1e-10. Pre-M0 dump was never captured.
 - Tungsten ETD sessions write binary `psi` dumps on `Time::do_save()` from JSON `fields[]` (same schedule as Gen-1 `Simulator`).
 - M8 A/B GPU session `TungstenEtdGpuSession` (`GpuSpectralStack` + `DeviceSpectralMeanFieldEtdSystem`). Binaries `tungsten_etd_hip` / `tungsten_etd_cuda`. HIP/CUDA tests vs host session within 1e-10.
 - M8 A/B CPU binary `tungsten_etd`: JSON → `TungstenEtdSession` (`SpectralCpuStack` + `TungstenPhysics` + `SpectralMeanFieldEtdSystem`). Gen-1 `tungsten` remains. Constant IC two-step parity vs Gen-1. Writers not wired yet.

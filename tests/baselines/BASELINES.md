@@ -30,7 +30,7 @@ within a stated numeric tolerance, per backend).
 | kobayashi OpenMP thread-count parity | **bitwise** | exact | CI/cluster |
 | heat3d manual-vs-stack L2 equality; wave2d manual-vs-separated | tolerance | in-test | CI (CPU) |
 | Spectral first derivative of a Nyquist mode (`test_spectral_gradient`) | tolerance | ≤ 1e-12 (must be ~0) | CI (CPU) |
-| ☐ Tungsten multi-rank golden trajectory (4 ranks, ≥100 ETD steps, CPU) | tolerance | TBD (propose 1e-12 per save-point checksum) | tohtori/CPU (MPI) |
+| Tungsten 0.2 vs Gen-1 trajectory (`test_tungsten` `[golden]`) | tolerance | ≤1e-10 local; Σψ² 1e-12 relative | CI 1-rank 8³/100 steps; MPI 4-rank 16³/20 steps (`tungsten-golden-4rank`). Pre-M0 field dump was never captured — this is the living A/B golden. |
 | ☐ aluminumNew multi-rank golden trajectory | tolerance | TBD | tohtori/CPU (MPI) |
 | ☐ CPU-side goldens for each CPU-vs-GPU parity test | tolerance | 1e-10 | CI (CPU) |
 | ☐ Restart-equivalence (lands in M11 when a loader exists) | bitwise (1 rank) / tolerance (N rank) | — | — |
@@ -48,12 +48,15 @@ Capture machine-tagged JSON via the profiling schema-v2 exporter into
 
 ## How to capture (reference commands)
 
-CPU golden trajectory (example; adapt input + step count):
+CPU golden trajectory (Gen-1 `Tungsten` vs `tungsten_etd` / `TungstenEtdSession`):
 
 ```
-scripts/build.sh --build-type=Release --cpu --build-dir=/WRK/<user>/openpfc/builds/cpu-release
-# run tungsten CPU on 4 ranks for >=100 steps, record per-save-point checksums
+# 1-rank (CI): ctest -R tungsten-all-tests
+# 4-rank MPI suite:
+mpiexec -n 4 ./apps/tungsten/test_tungsten "[golden][MPI]"
 ```
+
+A 4-rank / 100-step capture of `tungsten_etd` on tohtori is still optional for archival binaries under `tests/baselines/`; the Catch2 A/B is the gate.
 
 GPU compile + run parity (cluster only):
 

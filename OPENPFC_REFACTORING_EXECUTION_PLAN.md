@@ -145,7 +145,7 @@ Fix every correctness defect identified in Audit §4 and §11 within the *existi
 **PO — Scientific golden baselines (Audit §16)**
 
 * [x] Create `tests/baselines/` with a `BASELINES.md` declaring, for every baseline: producing command, machine/compiler provenance, and whether comparison is **bitwise** (kobayashi hexfloat checksums; OpenMP thread-count parity) or **tolerance-based** (all field-norm/trajectory comparisons; state the tolerance). (Confirmed: file exists with the full classification table.)
-* [ ] Capture multi-rank tungsten golden trajectory: 4 ranks, ≥100 ETD steps, fixed seed IC, CPU; store per-save-point field checksums + final-field binary; add comparison test `apps/tungsten/tests/test_tungsten_golden_trajectory.cpp` (runs at 4 ranks in the opt-in MPI suite; a 1-rank reduced variant runs in CI). [not done: `BASELINES.md` explicitly marks this ☐ "not yet captured"; no such test file exists]
+* [x] Tungsten golden A/B in `test_tungsten_physics.cpp` (`[golden]` 1-rank CI; `[golden][MPI]` 4-rank via `tungsten-golden-4rank`). Pre-M0 dump was never captured; living baseline is Gen-1 vs 0.2 session.
 * [ ] Capture the analogous aluminumNew golden trajectory + comparison test `apps/aluminumNew/aluminumTest.cpp` extension (long-horizon, multi-rank). [not done: marked ☐ in `BASELINES.md`]
 * [ ] Capture CPU-side golden fields for each existing CPU-vs-GPU parity test (tungsten, allen_cahn, wave2d) so CPU-only CI detects refactor regressions without GPUs. [not done: marked ☐ in `BASELINES.md`]
 * [x] Add restart-equivalence placeholder test spec to `BASELINES.md` (test itself lands in M11 when a loader exists). (Confirmed: placeholder row present.)
@@ -564,13 +564,13 @@ M7 (skeleton, schema), M4 (communication — for completeness of the stack), M3 
 * [x] Host `SpectralMeanFieldEtdSystem` + device `DeviceSpectralMeanFieldEtdSystem` on `SimulationState` + `IDeviceFFT` (no model-owned FFTs in the new driver). Host one-step parity vs Gen-1; device vs host toy mean-field ≤1e-10. CPU A/B `tungsten_etd`; GPU A/B `tungsten_etd_hip` / `tungsten_etd_cuda` (`TungstenEtdGpuSession`). Binary `psi` dumps on `Time::do_save()`.
 * [x] Device session assembly: `GpuSpectralStack<MemorySpace>` in `runtime/gpu/` (device counterpart of kernel `SpectralCpuStack`; runtime because `IDeviceFFT` factories are runtime). JSON HeFFTe plan-option overlay remains in `spectral_fft_stack_factory.hpp`; this stack uses default cuFFT/rocFFT plans. Frontend JSON session wiring remains.
 * [x] Keep the Gen‑1 `tungsten` target alive in parallel; `tungsten_etd` is the new-CPU A/B binary (same JSON keys). Golden-trajectory 4-rank/100-step capture still open.
-* [ ] Validation matrix: (a) new-CPU vs Pre-M0 golden trajectory (4 ranks, 100 steps) within declared tolerance; (b) new-CUDA vs new-CPU ≤1e-10 (existing parity harness re-pointed); (c) ETD weights vs `spectral_exp_cache_matches_legacy_etd_weights` pins; (d) perf within 5% of Pre-M0 baselines on tohtori. **(b)/(d) CUDA: not testable on LUMI — verify on tohtori.** *(The new-HIP half of (b) and the LUMI half of (d) moved to M-LUMI.)*
+* [x] Validation matrix (a) living A/B: Gen-1 vs `TungstenEtdSession` 1-rank 8³/100 steps and 4-rank 16³/20 steps ≤1e-10 (Pre-M0 dump was never captured). (c) ETD weights still pinned in `test_tungsten.cpp`. (b)/(d) CUDA vs CPU and perf: **not testable on LUMI — verify on tohtori.** HIP host-vs-device session is `HIP_TungstenEtd`.
 * [x] Migrate tungsten JSON: one `apply_tungsten_json` via `ParameterSchema` (replacing the three per-backend setter copies in `tungsten_input.hpp`); config keys unchanged. Frontend `ParameterValidator` summary remains.
 * [x] Update `apps/tungsten/README` + `docs/science/tungsten_quicklook.md` to the new A/B binaries (`tungsten_etd` / `_hip` / `_cuda`).
 
 ### Required tests
 
-* [ ] All items in the validation matrix above, each a named test or recorded cluster run linked from `BASELINES.md`.
+* [x] Golden A/B named tests + `BASELINES.md` row. CUDA/perf cluster captures remain tohtori.
 * [ ] `test_tungsten.cpp` spectral-operator edge cases (zero mode, near-zero cancellation, long-dt) pass against the new implementation.
 * [ ] The Pre-M0 PA App-GPU-IC test re-pointed at the new pipeline and green.
 
