@@ -22,6 +22,7 @@
  *    the OpenPFC Laplacian `k_laplacian` (`-|k|^2`) plus a real-space
  *    nonlinearity `N(psi)`. Matches the `physics_for_mode` / `linear_symbol`
  *    split already factored in tungsten.
+ * 4. **Steppable physics** — `step(t)` for Gen-1 `Model` and adapter A1.
  *
  * Parameter schema (`ParameterSchema`) is a sibling M7 header; physics
  * that expose a nested `parameters_type` model `HasParameters`.
@@ -157,6 +158,18 @@ concept SpectralDiagonalPhysics =
  */
 template <class Physics>
 concept HasParameters = requires { typename Physics::parameters_type; };
+
+/**
+ * @brief Physics that advances by `step(t)` (Gen-1 `Model` and A1).
+ *
+ * Distinct from `PointwiseRhs` / `SpectralDiagonalPhysics`: the callable
+ * owns the whole update. `pfc::compat::LegacyModelPhysics` models this
+ * by delegating to `Model::step`.
+ */
+template <class Physics>
+concept SteppablePhysics = requires(Physics &physics, double t) {
+  physics.step(t);
+};
 
 /**
  * @brief Field-declaring point-wise physics (explicit FD / spectral path).
