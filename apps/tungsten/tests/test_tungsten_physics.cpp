@@ -14,9 +14,11 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <mpi.h>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/spectral_mean_field_etd.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
+#include <tungsten/tungsten_etd_session.hpp>
 #include <tungsten/tungsten_physics.hpp>
 
 using Catch::Approx;
@@ -146,4 +148,64 @@ TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten for 10 steps",
   }
   REQUIRE(max_abs_diff(legacy.get_real_field("psi"),
                        state.get_field<double>("psi").vec()) < 1e-10);
+}
+
+TEST_CASE("TungstenEtdSession JSON constant IC matches Gen-1 two steps",
+          "[tungsten][physics][session]") {
+  json settings = {
+      {"model",
+       {{"name", "tungsten"},
+        {"params",
+         {{"n0", -0.10},
+          {"n_sol", -0.047},
+          {"n_vap", -0.464},
+          {"T", 3300.0},
+          {"T0", 156000.0},
+          {"Bx", 0.8582},
+          {"alpha", 0.50},
+          {"alpha_farTol", 0.001},
+          {"alpha_highOrd", 4},
+          {"lambda", 0.22},
+          {"stabP", 0.2},
+          {"shift_u", 0.3341},
+          {"shift_s", 0.1898},
+          {"p2", 1.0},
+          {"p3", -0.5},
+          {"p4", 0.333333333},
+          {"q20", -0.0037},
+          {"q21", 1.0},
+          {"q30", -12.4567},
+          {"q31", 20.0},
+          {"q40", 45.0}}}}},
+      {"domain",
+       {{"Lx", 8},
+        {"Ly", 8},
+        {"Lz", 8},
+        {"dx", 1.0},
+        {"dy", 1.0},
+        {"dz", 1.0},
+        {"origin", "corner"}}},
+      {"timestepping",
+       {{"t0", 0.0}, {"t1", 0.02}, {"dt", 0.01}, {"saveat", 0.01}}},
+      {"initial_conditions",
+       {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.10}}}}};
+
+  tungsten::TungstenEtdSession session(settings, 0, 1, MPI_COMM_WORLD);
+
+  auto domain = pfc::domain::create(
+      pfc::GridSize({8, 8, 8}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto fft = pfc::fft::create(decomp);
+  Tungsten legacy(fft, domain);
+  tungsten::apply_tungsten_json(settings["model"]["params"], legacy.params);
+  pfc::initialize(legacy, 0.01);
+  std::fill(legacy.get_real_field("psi").begin(),
+            legacy.get_real_field("psi").end(), -0.10);
+
+  session.run();
+  legacy.step(0.0);
+  legacy.step(0.01);
+  REQUIRE(max_abs_diff(legacy.get_real_field("psi"), session.psi().vec()) <
+          1e-10);
 }

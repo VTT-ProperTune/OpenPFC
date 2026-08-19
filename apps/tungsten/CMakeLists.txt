@@ -30,6 +30,19 @@ tungsten_apply_options(tungsten)
 
 install(TARGETS tungsten DESTINATION bin)
 
+# M8 A/B CPU driver: SpectralMeanFieldEtdSystem (Gen-1 `tungsten` stays).
+add_executable(tungsten_etd src/cpu/tungsten_etd.cpp)
+target_include_directories(tungsten_etd PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+if(TARGET Heffte::Heffte)
+  target_link_libraries(tungsten_etd PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
+elseif(TARGET heffte)
+  target_link_libraries(tungsten_etd PRIVATE OpenPFC nlohmann_json::nlohmann_json heffte)
+else()
+  find_package(Heffte REQUIRED)
+  target_link_libraries(tungsten_etd PRIVATE OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
+endif()
+install(TARGETS tungsten_etd DESTINATION bin)
+
 # CUDA spectral version (requires CUDA toolkit and CUDA-enabled HeFFTe)
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
   add_executable(tungsten_cuda
