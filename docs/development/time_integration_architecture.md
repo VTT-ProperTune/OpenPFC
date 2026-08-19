@@ -297,6 +297,13 @@ auto attempt = stepper.attempt(t, u_accepted);  // u_accepted never written
 // attempt.candidate = exp_Ldt * u + phi1_L * N   (phi1_L already includes dt)
 ```
 
+The combine itself is `pfc::integrator::apply_etd1_update` on the host
+(`etd1_apply.hpp`). Device-resident pointers use
+`apply_etd1_update_cuda` / `apply_etd1_update_hip`
+(`runtime/gpu/etd1_apply_gpu.hpp`), which call the generic two-term
+elementwise kernel. Coefficients are still built on the host and
+uploaded.
+
 `attempt` copies accepted state into method-owned scratch before
 evaluating `N`, writes an isolated candidate, and returns
 `StepAttemptResult` (`success` / `t1`) — computational completion only,

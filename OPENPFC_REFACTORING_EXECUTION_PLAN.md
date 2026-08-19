@@ -480,7 +480,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 * [x] Declare `StepAttemptResult`/attempt-commit (from `steppers/step_attempt.hpp`) the single protocol; specify it in `docs/adr/0003-time-integrator-interface.md` (update the existing ADR). **Accepted; `AttemptStepper` concept added.**
 * [x] Port onto the protocol: `EulerStepper`, `RK2Heun`, `RK3Heun`, `ExplicitRKStepper`, `EmbeddedRKStepper` (drop `EmbeddedStepAttemptResult`; keep `u_high`/`u_low`/`error`/`last_rhs_evals` accessors), `ImexEulerStepper` (drop `ImexStepAttempt`; keep `last_solve_*`), `Etd1Stepper` (drop `Etd1StepAttempt`; `attempt` returns `StepAttemptResult`). In-place `step()` is attempt+commit where the leaf has `step()`.
 * [x] Generalize state: steppers accept `std::vector<Scalar>` and host `Field<Scalar>` (`Scalar = double` or `std::complex<double>`). **All seven single-field leaves plus MultiEuler / MultiExplicitRK / MultiImex / MultiEtd1 take `Scalar` / `Field<Scalar>` (IMEX Field on the single-field leaf). Vector path remains. Heterogeneous packs and `state_concepts.hpp` wiring are still open.**
-* [x] Complex-state ETD: `Etd1Stepper<Rhs, Scalar>` and `MultiEtd1Stepper<Rhs, N, Scalar>` (`Scalar = double` or `std::complex<double>`) apply real `exp_Ldt`/`phi1_L` to the field(s). Host tests: stiff linear complex ODE (ETD1 exact when N=0), closed-form N≠0, and a two-field complex bundle. Device-resident coeff apply still open.
+* [x] Complex-state ETD: `Etd1Stepper<Rhs, Scalar>` and `MultiEtd1Stepper<Rhs, N, Scalar>` (`Scalar = double` or `std::complex<double>`) apply real `exp_Ldt`/`phi1_L` to the field(s). Host tests: stiff linear complex ODE (ETD1 exact when N=0), closed-form N≠0, and a two-field complex bundle. Device-resident combine: `apply_etd1_update` (host) and `apply_etd1_update_{cuda,hip}` (device pointers; real + complex). HIP/CUDA tests compare device vs host.
 * [x] Generalize multi-field arity: `MultiStageFunction<Rhs, N>` (default N=2); `MultiEtd1Stepper` over N (`N >= 1`, variadic `attempt`). N=3 covered in `test_etd1.cpp`.
 * [x] Merge duplicates: one `StageContext` (`pfc::sim::StageContext` aliases `pfc::integrator::StageContext`); one workspace (`StageWorkspace<T>` aliases `integrator::Workspace<T>`). **Method enum: `Time` stores `RKIntegratorMethod`; the `time.hpp` `IntegratorMethod` enum is deleted.**
 * [x] Implement `AdaptiveTimeController` (`kernel/simulation/adaptive_controller.hpp`): closes embedded-error → `error_evidence` → `AdaptiveControlConfig` → `Time` attempt transactions; one end-to-end adaptive example (`examples/21_adaptive_stepping.cpp`) and integration test.
@@ -503,7 +503,7 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 * [ ] `grep -rn "IntegratorBase\|IntegratorResult\|Etd1StepAttempt\|ImexStepAttempt" include/ tests/` returns nothing; one `StageContext` type, one workspace type (sim names are aliases), one method enum.
 * [ ] All steppers pass the shared conformance test; convergence orders unchanged.
-* [ ] A complex-state, device-capable ETD1 exists with tests (the #169 framework prerequisite).
+* [x] A complex-state, device-capable ETD1 exists with tests (the #169 framework prerequisite). **Host `Etd1Stepper` is complex-capable; device combine is `apply_etd1_update_{cuda,hip}`. A full device-resident stepper object is still future work.**
 * [ ] One adaptive run exists end-to-end (example + test).
 * [ ] Full suite + golden trajectories green.
 
