@@ -12,7 +12,7 @@
  * `SpectralCpuStack`, `SimulationState`, and `SpectralMeanFieldEtdSystem` —
  * no model-owned FFT. Initial conditions and fixed BCs are applied on the
  * `Field` (same formulas as Gen-1 `Constant` / `SingleSeed` / `FixedBC`).
- * Result writers are not wired yet.
+ * Binary `psi` dumps follow `Time::do_save()` when JSON `fields` is set.
  */
 
 #include <memory>
@@ -29,6 +29,7 @@
 #include <openpfc/kernel/simulation/spectral_mean_field_etd.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
+#include <tungsten/tungsten_etd_io.hpp>
 #include <tungsten/tungsten_field_modifiers.hpp>
 #include <tungsten/tungsten_physics.hpp>
 
@@ -57,6 +58,8 @@ public:
     apply_ics_from_json(settings, psi.domain(), psi.box(), psi.data(),
                         psi.size());
     m_bc = parse_fixed_bc(settings);
+    m_writers.configure(settings, m_domain, m_stack.fft().get_inbox_bounds(),
+                        comm, rank);
     m_sys = std::make_unique<
         pfc::sim::SpectralMeanFieldEtdSystem<TungstenPhysics<>>>(
         std::move(phys), m_stack.fft(), m_state, pfc::time::dt(m_time));
@@ -66,10 +69,12 @@ public:
     while (!pfc::time::done(m_time)) {
       if (pfc::time::increment(m_time) == 0) {
         apply_fixed_bc();
+        m_writers.maybe_write(m_time, psi().vec());
       }
       pfc::time::next(m_time);
       apply_fixed_bc();
       m_sys->step(pfc::time::current(m_time));
+      m_writers.maybe_write(m_time, psi().vec());
     }
   }
 
@@ -83,6 +88,7 @@ public:
   [[nodiscard]] pfc::sim::stacks::SpectralCpuStack &stack() noexcept {
     return m_stack;
   }
+  [[nodiscard]] int dumps() const noexcept { return m_writers.dumps(); }
 
 private:
   void apply_fixed_bc() {
@@ -99,6 +105,7 @@ private:
   pfc::sim::stacks::SpectralCpuStack m_stack;
   pfc::SimulationState m_state;
   std::optional<FixedBc> m_bc{};
+  TungstenEtdWriters m_writers{};
   std::unique_ptr<pfc::sim::SpectralMeanFieldEtdSystem<TungstenPhysics<>>>
       m_sys;
 };

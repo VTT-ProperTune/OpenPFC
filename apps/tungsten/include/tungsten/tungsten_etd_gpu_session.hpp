@@ -17,6 +17,7 @@
 #include <memory>
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include <mpi.h>
 #include <nlohmann/json.hpp>
@@ -26,6 +27,7 @@
 #include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
 #include <openpfc/runtime/gpu/spectral_mean_field_etd_gpu.hpp>
+#include <tungsten/tungsten_etd_io.hpp>
 #include <tungsten/tungsten_field_modifiers.hpp>
 #include <tungsten/tungsten_physics.hpp>
 
@@ -58,6 +60,8 @@ public:
       apply_ics_from_json(settings, psi.domain(), psi.box(), d, n);
     });
     m_bc = parse_fixed_bc(settings);
+    m_writers.configure(settings, m_domain, m_stack.fft().get_inbox_bounds(),
+                        comm, rank);
     m_sys = std::make_unique<System>(std::move(phys), m_stack.fft(), m_state,
                                      pfc::time::dt(m_time));
   }
@@ -66,10 +70,12 @@ public:
     while (!pfc::time::done(m_time)) {
       if (pfc::time::increment(m_time) == 0) {
         apply_fixed_bc();
+        write_psi();
       }
       pfc::time::next(m_time);
       apply_fixed_bc();
       m_sys->step(pfc::time::current(m_time));
+      write_psi();
     }
   }
 
@@ -77,6 +83,7 @@ public:
     return m_state.get_field<double, MemorySpace>("psi");
   }
   [[nodiscard]] const pfc::Time &time() const noexcept { return m_time; }
+  [[nodiscard]] int dumps() const noexcept { return m_writers.dumps(); }
 
 private:
   void apply_fixed_bc() {
@@ -89,11 +96,22 @@ private:
     });
   }
 
+  void write_psi() {
+    if (!m_writers.enabled()) {
+      return;
+    }
+    auto &psi = m_state.get_field<double, MemorySpace>("psi");
+    psi.with_host_view([&](double *d, std::size_t n) {
+      m_writers.maybe_write(m_time, std::vector<double>(d, d + n));
+    });
+  }
+
   pfc::Domain m_domain{};
   pfc::Time m_time;
   pfc::sim::stacks::GpuSpectralStack<MemorySpace> m_stack;
   pfc::SimulationState m_state;
   std::optional<FixedBc> m_bc{};
+  TungstenEtdWriters m_writers{};
   std::unique_ptr<System> m_sys;
 };
 

@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
+#include <unistd.h>
 #include <vector>
 #include <nlohmann/json.hpp>
 
@@ -208,4 +210,71 @@ TEST_CASE("TungstenEtdSession JSON constant IC matches Gen-1 two steps",
   legacy.step(0.01);
   REQUIRE(max_abs_diff(legacy.get_real_field("psi"), session.psi().vec()) <
           1e-10);
+}
+
+TEST_CASE("TungstenPhysics linear_symbol matches physics_for_mode",
+          "[tungsten][physics][symbol]") {
+  tungsten::TungstenPhysics<> phys;
+  const auto op = tungsten::spectral::make_operator_params(phys.params);
+  const double k_lap = -4.0;
+  const auto mode = tungsten::spectral::physics_for_mode(k_lap, op);
+  REQUIRE(phys.linear_symbol(k_lap) ==
+          Approx(tungsten::spectral::linear_symbol(k_lap, mode.opCk)));
+  REQUIRE(phys.filter_mf(k_lap) == Approx(mode.filterMF));
+}
+
+TEST_CASE("TungstenEtdSession writes psi binary dumps on saveat",
+          "[tungsten][physics][io]") {
+  const auto dir = std::filesystem::temp_directory_path() /
+                   ("openpfc_tungsten_etd_" + std::to_string(::getpid()));
+  std::filesystem::create_directories(dir);
+  const auto pattern = (dir / "psi_%d.bin").string();
+  json settings = {
+      {"model",
+       {{"name", "tungsten"},
+        {"params",
+         {{"n0", -0.10},
+          {"n_sol", -0.047},
+          {"n_vap", -0.464},
+          {"T", 3300.0},
+          {"T0", 156000.0},
+          {"Bx", 0.8582},
+          {"alpha", 0.50},
+          {"alpha_farTol", 0.001},
+          {"alpha_highOrd", 4},
+          {"lambda", 0.22},
+          {"stabP", 0.2},
+          {"shift_u", 0.3341},
+          {"shift_s", 0.1898},
+          {"p2", 1.0},
+          {"p3", -0.5},
+          {"p4", 0.333333333},
+          {"q20", -0.0037},
+          {"q21", 1.0},
+          {"q30", -12.4567},
+          {"q31", 20.0},
+          {"q40", 45.0}}}}},
+      {"domain",
+       {{"Lx", 8},
+        {"Ly", 8},
+        {"Lz", 8},
+        {"dx", 1.0},
+        {"dy", 1.0},
+        {"dz", 1.0},
+        {"origin", "corner"}}},
+      {"timestepping",
+       {{"t0", 0.0}, {"t1", 0.02}, {"dt", 0.01}, {"saveat", 0.01}}},
+      {"initial_conditions",
+       {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.10}}}},
+      {"fields", {{{"name", "psi"}, {"data", pattern}}}}};
+
+  tungsten::TungstenEtdSession session(settings, 0, 1, MPI_COMM_WORLD);
+  session.run();
+  REQUIRE(session.dumps() == 3);
+  REQUIRE(std::filesystem::exists(dir / "psi_0.bin"));
+  REQUIRE(std::filesystem::exists(dir / "psi_1.bin"));
+  REQUIRE(std::filesystem::exists(dir / "psi_2.bin"));
+  REQUIRE(std::filesystem::file_size(dir / "psi_0.bin") ==
+          8u * 8u * 8u * sizeof(double));
+  std::filesystem::remove_all(dir);
 }
