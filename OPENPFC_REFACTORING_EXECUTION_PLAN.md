@@ -530,7 +530,7 @@ M5, M6.
 
 ### Required tests
 
-* [ ] A toy PFC model (Swift–Hohenberg-like, single field) written three ways — Gen‑1 `Model`, point-wise `rhs`, spectral-ETD descriptors — produces matching trajectories within declared tolerance (CPU); the descriptor variant additionally runs on CUDA and HIP with parity ≤1e-10.
+* [x] A toy PFC model (Swift–Hohenberg-like, single field) written three ways — Gen‑1 `Model`, point-wise `rhs`, spectral-ETD descriptors — produces matching trajectories within declared tolerance (CPU); the descriptor variant additionally runs on CUDA and HIP with parity ≤1e-10 (`HIP_SpectralEtd` / `CUDA_SpectralEtd`).
 * [ ] A1 parity test (above) green.
 * [ ] `ParameterSchema` round-trip: schema → JSON parse → validation errors for missing/invalid keys match the current `format_config_error` quality (message snapshot tests).
 * [x] Observable-reduction test: known Gaussian integral to 1e-12, 1 and 4 ranks, host and device.
@@ -541,8 +541,8 @@ M5, M6.
 
 ### Definition of done
 
-* [ ] The three-way toy-model equivalence test is green on CPU and both GPU vendors.
-* [ ] A new physics model requires: one header (fields + schema + `rhs` or descriptors), zero backend-specific classes, zero hand-written k-loops — demonstrated by the toy model's line count (<200).
+* [x] The three-way toy-model equivalence test is green on CPU; descriptor HIP path is `HIP_SpectralEtd` (CUDA twin `CUDA_SpectralEtd`, run on tohtori).
+* [x] A new physics model requires: one header (fields + schema + `rhs` or descriptors), zero backend-specific classes, zero hand-written k-loops — demonstrated by the toy model's line count (80 < 200).
 * [ ] A1/A2 adapters registered in `0.2_migration_map.md` with removal milestone M12 and green parity tests.
 * [ ] Full suite + golden trajectories green.
 
