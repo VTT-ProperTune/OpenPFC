@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- Stepper host-field overloads are constrained by `pfc::field::HostFieldState<F, Scalar>` (`state_concepts.hpp`): `Field` plus host `vec()`. `pfc::data::Field<Scalar>` still models it.
 - Device-resident ETD1 combine: host `pfc::integrator::apply_etd1_update` plus `apply_etd1_update_{cuda,hip}` over device pointers (real and complex). Real two-term combine added to the GPU elementwise kernels. HIP/CUDA tests `HIP_Etd1Apply` / `CUDA_Etd1Apply`.
 - `ImexEulerStepper` / `MultiImexEulerStepper` take `Scalar` (default `double`) and host `Field<Scalar>`. Real diagonal implicit coeffs still live in `operator_context` as `vector<double>`.
 - `ExplicitRKStepper` / `MultiExplicitRKStepper` and `EmbeddedRKStepper` take `Scalar` (default `double`) and host `Field<Scalar>`. Real Butcher weights stay `ButcherTableau<double>`.
