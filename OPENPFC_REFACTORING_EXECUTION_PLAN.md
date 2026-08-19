@@ -526,14 +526,14 @@ M5, M6.
 * [x] Implement `ParameterSchema` (`kernel/simulation/parameter_schema.hpp`): declarative field list → generated `from_json` + validation + docs table; consolidates `ParameterValidator` usage; one schema per model (not per backend-class). Frontend `ParameterValidator` still exists; schema errors match `format_config_error`.
 * [x] Introduce adapter **A1** `pfc::compat::LegacyModelPhysics`: wraps a Gen‑1 `Model&` as a physics-concept object (delegating `step`), so the new driver can run legacy models. Parity test: diffusion fixture model run via Gen‑1 `Simulator` vs via A1 + new driver — identical trajectories (bitwise on CPU).
 * [x] Adopt adapter **A2**: `Simulator::step_with_physics` becomes the documented bridge by which the Gen‑1 frontend can invoke concept physics during M8–M9 migration; dedicated `[a2]` test added.
-* [ ] Free-energy/observable hook: reduction support in the driver loop (rank-local reduce + MPI allreduce, host and device) — required by Aluminum (M9); unit-tested on a known integral.
+* [x] Free-energy/observable hook: reduction support in the driver loop (rank-local reduce + MPI allreduce, host and device) — required by Aluminum (M9); unit-tested on a known integral.
 
 ### Required tests
 
 * [ ] A toy PFC model (Swift–Hohenberg-like, single field) written three ways — Gen‑1 `Model`, point-wise `rhs`, spectral-ETD descriptors — produces matching trajectories within declared tolerance (CPU); the descriptor variant additionally runs on CUDA and HIP with parity ≤1e-10.
 * [ ] A1 parity test (above) green.
 * [ ] `ParameterSchema` round-trip: schema → JSON parse → validation errors for missing/invalid keys match the current `format_config_error` quality (message snapshot tests).
-* [ ] Observable-reduction test: known Gaussian integral to 1e-12, 1 and 4 ranks, host and device.
+* [x] Observable-reduction test: known Gaussian integral to 1e-12, 1 and 4 ranks, host and device.
 
 ### Deletions
 
