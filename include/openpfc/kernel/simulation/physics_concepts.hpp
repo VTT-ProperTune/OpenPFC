@@ -185,4 +185,21 @@ template <class Physics>
 concept SpectralEtdPhysics =
     DeclaresFields<Physics> && SpectralDiagonalPhysics<Physics>;
 
+/**
+ * @brief Mean-field spectral ETD: @f$L(k)@f$, filter @f$\chi(k)@f$, and
+ *        @f$N(\psi,\psi_{\mathrm{MF}})@f$ (tungsten / aluminum).
+ *
+ * The driver FFTs @f$\psi@f$, applies @f$\chi@f$ to form @f$\psi_{\mathrm{MF}}@f$,
+ * evaluates the two-argument nonlinearity, then ETD-combines with
+ * @f$n_{\mathrm{weight}} = k_{\mathrm{lap}}\,\phi_1(L\,\mathrm{d}t)@f$.
+ */
+template <class Physics>
+concept MeanFieldEtdPhysics =
+    DeclaresFields<Physics> && SpectralLinearSymbol<Physics> &&
+    requires(const Physics &physics, double k_laplacian, double psi,
+             double psi_mf) {
+      { physics.filter_mf(k_laplacian) } -> std::convertible_to<double>;
+      { physics.nonlinearity(psi, psi_mf) } -> std::convertible_to<double>;
+    };
+
 } // namespace pfc::sim
