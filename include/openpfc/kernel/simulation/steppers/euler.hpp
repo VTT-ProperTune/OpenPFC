@@ -403,7 +403,7 @@ public:
 
   double step(double t, std::vector<Scalars> &...u_buffers) {
     const auto r = attempt(t, u_buffers...);
-    commit_step_attempt(u_buffers..., r);
+    commit_step_attempt(r, u_buffers...);
     return r.t1;
   }
 

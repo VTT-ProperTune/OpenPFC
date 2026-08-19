@@ -227,12 +227,16 @@ void commit_packed_step_attempt(std::index_sequence<I...>,
 /**
  * @brief Copy a successful mixed-scalar pack into accepted buffers.
  *
+ * Argument order is result then buffers so the parameter pack is last.
+ * A leading pack is a non-deduced context (GCC 14 cannot match
+ * `commit_step_attempt(u0, u1, result)` against a pack-first signature).
+ *
  * @throws std::invalid_argument if `!result.success`.
  */
 template <class... Scalars>
 inline void
-commit_step_attempt(std::vector<Scalars> &...accepted,
-                    const PackedStepAttempt<Scalars...> &result) {
+commit_step_attempt(const PackedStepAttempt<Scalars...> &result,
+                    std::vector<Scalars> &...accepted) {
   if (!result.success) {
     throw std::invalid_argument(
         "commit_step_attempt: cannot commit a failed PackedStepAttempt "
@@ -240,6 +244,19 @@ commit_step_attempt(std::vector<Scalars> &...accepted,
   }
   commit_packed_step_attempt(std::index_sequence_for<Scalars...>{}, result,
                              accepted...);
+}
+
+/**
+ * @brief Two-field mixed-scalar commit (buffers first, matching N=2
+ *        `MultiStepAttemptResult`).
+ *
+ * @throws std::invalid_argument if `!result.success`.
+ */
+template <class S0, class S1>
+inline void
+commit_step_attempt(std::vector<S0> &accepted0, std::vector<S1> &accepted1,
+                    const PackedStepAttempt<S0, S1> &result) {
+  commit_step_attempt(result, accepted0, accepted1);
 }
 
 /**

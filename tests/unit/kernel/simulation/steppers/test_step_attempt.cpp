@@ -209,6 +209,13 @@ TEST_CASE("packed_euler_mixed_scalar_isolation",
   commit_step_attempt(u0, u1, result);
   REQUIRE(u0[0] == Catch::Approx(2.5));
   REQUIRE(u1[0].imag() == Catch::Approx(0.0).margin(1e-12));
+
+  u0 = {2.0};
+  u1 = {Complex{1.0, -1.0}};
+  const auto result2 = stepper.attempt(0.0, u0, u1);
+  commit_step_attempt(result2, u0, u1);
+  REQUIRE(u0[0] == Catch::Approx(2.5));
+  REQUIRE(u1[0].imag() == Catch::Approx(0.0).margin(1e-12));
 }
 
 TEST_CASE("packed_euler_mixed_host_fields",
