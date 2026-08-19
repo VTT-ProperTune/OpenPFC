@@ -23,6 +23,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_state_field_storage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_physics_concepts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_parameter_schema.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_etd_system.cpp
 )
 
 # Add wave2d include directory for WaveModel access
