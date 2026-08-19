@@ -32,6 +32,17 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         OPENPFC_TEST_SPECTRAL_ETD_CUDA)
     add_test(NAME CUDA_SpectralEtd COMMAND test_spectral_etd_system_cuda)
 
+    add_executable(test_observable_reduce_cuda test_observable_reduce_gpu.cpp)
+    target_include_directories(test_observable_reduce_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_observable_reduce_cuda PRIVATE
+        Catch2::Catch2 openpfc CUDA::cudart MPI::MPI_CXX)
+    target_compile_definitions(test_observable_reduce_cuda PRIVATE
+        OPENPFC_TEST_OBSERVABLE_CUDA)
+    add_test(NAME CUDA_ObservableReduce COMMAND test_observable_reduce_cuda)
+
     add_executable(test_exchange_cuda_fail_closed test_exchange_cuda_fail_closed.cpp)
     target_include_directories(test_exchange_cuda_fail_closed PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
@@ -119,6 +130,17 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         target_compile_definitions(test_spectral_etd_system_hip PRIVATE
             OPENPFC_TEST_SPECTRAL_ETD_HIP)
         add_test(NAME HIP_SpectralEtd COMMAND test_spectral_etd_system_hip)
+
+        add_executable(test_observable_reduce_hip test_observable_reduce_gpu.cpp)
+        target_include_directories(test_observable_reduce_hip PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+            ${CMAKE_SOURCE_DIR}/include
+        )
+        target_link_libraries(test_observable_reduce_hip PRIVATE
+            Catch2::Catch2 openpfc hip::host MPI::MPI_CXX)
+        target_compile_definitions(test_observable_reduce_hip PRIVATE
+            OPENPFC_TEST_OBSERVABLE_HIP)
+        add_test(NAME HIP_ObservableReduce COMMAND test_observable_reduce_hip)
     endif()
 
     message(STATUS "✅ HIP tests enabled")
