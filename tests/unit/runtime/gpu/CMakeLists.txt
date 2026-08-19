@@ -46,6 +46,17 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_test(NAME CUDA_SpectralMeanFieldEtd COMMAND
         test_spectral_mean_field_etd_cuda)
 
+    add_executable(test_gpu_spectral_stack_cuda test_gpu_spectral_stack.cpp)
+    target_include_directories(test_gpu_spectral_stack_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_gpu_spectral_stack_cuda PRIVATE
+        Catch2::Catch2 openpfc Heffte::Heffte CUDA::cudart MPI::MPI_CXX)
+    target_compile_definitions(test_gpu_spectral_stack_cuda PRIVATE
+        OPENPFC_TEST_GPU_STACK_CUDA)
+    add_test(NAME CUDA_GpuSpectralStack COMMAND test_gpu_spectral_stack_cuda)
+
     add_executable(test_observable_reduce_cuda test_observable_reduce_gpu.cpp)
     target_include_directories(test_observable_reduce_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
@@ -158,6 +169,17 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
             OPENPFC_TEST_MEAN_FIELD_ETD_HIP)
         add_test(NAME HIP_SpectralMeanFieldEtd COMMAND
             test_spectral_mean_field_etd_hip)
+
+        add_executable(test_gpu_spectral_stack_hip test_gpu_spectral_stack.cpp)
+        target_include_directories(test_gpu_spectral_stack_hip PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+            ${CMAKE_SOURCE_DIR}/include
+        )
+        target_link_libraries(test_gpu_spectral_stack_hip PRIVATE
+            Catch2::Catch2 openpfc Heffte::Heffte hip::host MPI::MPI_CXX)
+        target_compile_definitions(test_gpu_spectral_stack_hip PRIVATE
+            OPENPFC_TEST_GPU_STACK_HIP)
+        add_test(NAME HIP_GpuSpectralStack COMMAND test_gpu_spectral_stack_hip)
 
         add_executable(test_observable_reduce_hip test_observable_reduce_gpu.cpp)
         target_include_directories(test_observable_reduce_hip PRIVATE
