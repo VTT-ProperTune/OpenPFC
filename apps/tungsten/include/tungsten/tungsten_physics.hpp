@@ -12,6 +12,7 @@
  * No backend classes and no k-loops.
  */
 
+#include <nlohmann/json.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
@@ -98,6 +99,10 @@ inline pfc::sim::ParameterSchema<TungstenSchemaValues> make_tungsten_schema() {
       .real(&TungstenSchemaValues::q31, {.name = "q31", .description = "q31", .required = true})
       .real(&TungstenSchemaValues::q40, {.name = "q40", .description = "q40", .required = true});
   return s;
+}
+
+inline void apply_tungsten_json(const nlohmann::json &j, TungstenParams &p) {
+  apply_schema_values(make_tungsten_schema().parse(j), p);
 }
 
 /**
