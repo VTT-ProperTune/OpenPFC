@@ -170,4 +170,11 @@ concept HostFieldState =
       { cf.vec() } -> std::same_as<const std::vector<Scalar> &>;
     };
 
+/**
+ * @brief Homogeneous host field pack (`N >= 1` fields of the same `Scalar`).
+ */
+template <class Scalar, class... Fs>
+concept HostFieldPack =
+    (sizeof...(Fs) >= 1) && (HostFieldState<Fs, Scalar> && ...);
+
 } // namespace pfc::field

@@ -371,6 +371,14 @@ public:
                                              candidate_ptrs());
   }
 
+  /** Isolate per-field candidates from host fields (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar>... Fs>
+    requires(sizeof...(Fs) == N)
+  [[nodiscard]] MultiStepAttemptResult<N, Scalar>
+  attempt(double t, pfc::sim::StageContext &ctx, const Fs &...u_accepted) {
+    return attempt(t, ctx, u_accepted.vec()...);
+  }
+
   /**
    * @brief Commit candidates into accepted buffers only after a successful
    *        attempt.
@@ -386,6 +394,12 @@ public:
     }
     copy_candidate_to_accepted(std::index_sequence_for<U...>{}, u_accepted...);
     return true;
+  }
+
+  template <pfc::field::HostFieldState<Scalar>... Fs>
+    requires(sizeof...(Fs) == N)
+  [[nodiscard]] bool commit(Fs &...u_accepted) const {
+    return commit(u_accepted.vec()...);
   }
 
   [[nodiscard]] double dt() const noexcept { return m_dt; }

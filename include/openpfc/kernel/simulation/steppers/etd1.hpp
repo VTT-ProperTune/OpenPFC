@@ -328,6 +328,14 @@ public:
                                              candidate_ptrs());
   }
 
+  /** Isolate per-field candidates from host fields (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar>... Fs>
+    requires(sizeof...(Fs) == N)
+  [[nodiscard]] MultiStepAttemptResult<N, Scalar>
+  attempt(double t, const Fs &...u_accepted) {
+    return attempt(t, u_accepted.vec()...);
+  }
+
   [[nodiscard]] std::span<const Scalar>
   candidate(std::size_t field_index) const noexcept {
     return m_candidate[field_index];

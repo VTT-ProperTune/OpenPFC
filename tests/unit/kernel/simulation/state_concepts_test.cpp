@@ -284,4 +284,6 @@ TEST_CASE("HostFieldState - Field plus host vec()", "[state_concepts][unit]") {
     REQUIRE_FALSE(HostFieldState<MockField<double>, float>);
     REQUIRE_FALSE(HostFieldState<MockConstField<double>, double>);
     REQUIRE_FALSE(HostFieldState<std::vector<double>, double>);
+    REQUIRE(HostFieldPack<double, MockField<double>, MockField<double>>);
+    REQUIRE_FALSE(HostFieldPack<double, MockField<double>, MockConstField<double>>);
 }

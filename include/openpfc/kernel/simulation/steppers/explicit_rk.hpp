@@ -246,6 +246,13 @@ public:
     return t + m_dt;
   }
 
+  /** Advance every host field by one explicit RK step (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar>... Fs>
+    requires(sizeof...(Fs) == N)
+  double step(double t, Fs &...u_buffers) {
+    return step(t, u_buffers.vec()...);
+  }
+
   double dt() const noexcept { return m_dt; }
 
 private:

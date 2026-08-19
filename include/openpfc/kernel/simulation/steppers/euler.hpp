@@ -225,6 +225,14 @@ public:
                                              /*success=*/true, candidate_ptrs());
   }
 
+  /** Isolate one Euler update per host field (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar>... Fs>
+    requires(sizeof...(Fs) == N)
+  [[nodiscard]] MultiStepAttemptResult<N, Scalar>
+  attempt(double t, const Fs &...u_accepted) {
+    return attempt(t, u_accepted.vec()...);
+  }
+
   /** Advance every field by one explicit-Euler step; commit of `attempt`. */
   template <class... U> double step(double t, std::vector<U> &...u_buffers) {
     static_assert(sizeof...(U) == N,
@@ -232,6 +240,13 @@ public:
     const auto r = attempt(t, u_buffers...);
     commit_candidates(std::index_sequence_for<U...>{}, u_buffers...);
     return r.t1;
+  }
+
+  /** Advance every host field by one explicit-Euler step (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar>... Fs>
+    requires(sizeof...(Fs) == N)
+  double step(double t, Fs &...u_buffers) {
+    return step(t, u_buffers.vec()...);
   }
 
   double dt() const noexcept { return m_dt; }

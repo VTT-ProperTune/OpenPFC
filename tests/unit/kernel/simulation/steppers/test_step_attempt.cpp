@@ -9,6 +9,10 @@
 #include <tuple>
 #include <vector>
 
+#include <openpfc/kernel/data/box3i.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/simulation/state_concepts.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
@@ -137,4 +141,32 @@ TEST_CASE("multi_field_N3_isolation", "[step_attempt][unit]") {
   REQUIRE(u0[0] == Catch::Approx(1.1));
   REQUIRE(u1[0] == Catch::Approx(2.2));
   REQUIRE(u2[0] == Catch::Approx(3.3));
+}
+
+TEST_CASE("multi_field_host_field_pack_isolation", "[step_attempt][unit][field]") {
+  using pfc::data::Field;
+  static_assert(pfc::field::HostFieldPack<double, Field<double>, Field<double>>);
+
+  TwoFieldRhs rhs{};
+  MultiEulerStepper<TwoFieldRhs, 2> stepper(0.5, {2, 2}, rhs);
+
+  const auto domain = pfc::domain::create({2, 1, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 0, 0});
+  Field<double> a(domain, box, 0);
+  Field<double> b(domain, box, 0);
+  a.vec() = {1.0, 2.0};
+  b.vec() = {3.0, 4.0};
+  const auto fp0 = a.vec();
+  const auto fp1 = b.vec();
+
+  const auto result = stepper.attempt(0.0, a, b);
+  REQUIRE(result.success);
+  REQUIRE(a.vec() == fp0);
+  REQUIRE(b.vec() == fp1);
+  REQUIRE(result.candidate(0)[0] == Catch::Approx(1.0 + 0.5 * 1.0));
+  REQUIRE(result.candidate(1)[0] == Catch::Approx(3.0 + 0.5 * 2.0));
+
+  (void)stepper.step(0.0, a, b);
+  REQUIRE(a.vec()[0] == Catch::Approx(1.5));
+  REQUIRE(b.vec()[0] == Catch::Approx(4.0));
 }
