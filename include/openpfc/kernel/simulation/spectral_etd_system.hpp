@@ -17,7 +17,7 @@
  *   N = N(psi)  →  FFT(psi), FFT(N)  →  ETD1 combine  →  iFFT(psi)
  *
  * Optional Orszag 2/3-rule mask (M5) multiplies `N̂` when enabled.
- * Device `IDeviceFFT` instantiations follow in a later M7 slice.
+ * Device `IDeviceFFT` path: `runtime/gpu/spectral_etd_system_gpu.hpp`.
  */
 
 #include <complex>
