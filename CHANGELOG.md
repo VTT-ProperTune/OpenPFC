@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- Physics concepts in `kernel/simulation/physics_concepts.hpp`: `DeclaresFields` / `add_declared_field`, `PointwiseRhs` (`rhs(t, G)`), `SpectralDiagonalPhysics` (`linear_symbol(k)` + `nonlinearity(psi)`), and combined `PointwisePhysics` / `SpectralEtdPhysics`. `HasParameters` is the nested-type hook for `ParameterSchema`.
 - `PackedEulerStepper<Rhs, Scalars...>` advances a mixed-scalar pack (e.g. `double` + `std::complex<double>`). `PackedStageFunction` / `PackedStepAttempt` / `commit_step_attempt` cover that result. Variadic `commit_step_attempt` takes the `PackedStepAttempt` first (pack last, for deduction); two-field form is buffers-first like `MultiStepAttemptResult`. Homogeneous `MultiEulerStepper<Rhs, N, Scalar>` is unchanged.
 - Multi-field steppers (`MultiEuler`, `MultiEtd1`, `MultiImex`, `MultiExplicitRK`) accept homogeneous `HostFieldPack` of host fields via `vec()`, in addition to `std::vector<Scalar>` packs. `HostFieldPack<Scalar, Fs...>` is in `state_concepts.hpp`.
 - Stepper host-field overloads are constrained by `pfc::field::HostFieldState<F, Scalar>` (`state_concepts.hpp`): `Field` plus host `vec()`. `pfc::data::Field<Scalar>` still models it.
