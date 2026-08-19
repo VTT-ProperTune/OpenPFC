@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- Host `SpectralEtdSystem<Physics>` (`kernel/simulation/spectral_etd_system.hpp`): owns `psi_hat`/`N`/`N_hat` on `SimulationState`, prepares `L(k)` with `for_each_kpoint`, advances via `Etd1Stepper` on the complex hat, optional 2/3-rule dealias. Device `IDeviceFFT` path is a later M7 slice.
 - `ParameterSchema<Params>` (`kernel/simulation/parameter_schema.hpp`): member-pointer bindings generate parse/`from_json`, collect validation errors in `format_config_error` form, and emit a docs table. `HasParameterSchema` is the physics hook. Frontend `ParameterValidator` is unchanged.
 - Physics concepts in `kernel/simulation/physics_concepts.hpp`: `DeclaresFields` / `add_declared_field`, `PointwiseRhs` (`rhs(t, G)`), `SpectralDiagonalPhysics` (`linear_symbol(k)` + `nonlinearity(psi)`), and combined `PointwisePhysics` / `SpectralEtdPhysics`. `HasParameters` is the nested-type hook for `ParameterSchema`.
 - `PackedEulerStepper<Rhs, Scalars...>` advances a mixed-scalar pack (e.g. `double` + `std::complex<double>`). `PackedStageFunction` / `PackedStepAttempt` / `commit_step_attempt` cover that result. Variadic `commit_step_attempt` takes the `PackedStepAttempt` first (pack last, for deduction); two-field form is buffers-first like `MultiStepAttemptResult`. Homogeneous `MultiEulerStepper<Rhs, N, Scalar>` is unchanged.
