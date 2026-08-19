@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `ImexEulerStepper` / `MultiImexEulerStepper` take `Scalar` (default `double`) and host `Field<Scalar>`. Real diagonal implicit coeffs still live in `operator_context` as `vector<double>`.
 - `ExplicitRKStepper` / `MultiExplicitRKStepper` and `EmbeddedRKStepper` take `Scalar` (default `double`) and host `Field<Scalar>`. Real Butcher weights stay `ButcherTableau<double>`.
 - `RK2HeunStepper` and `RK3HeunStepper` take `Scalar` (default `double`) and host `Field<Scalar>`.
 - `EulerStepper<Rhs, Scalar>` and `MultiEulerStepper<Rhs, N, Scalar>` advance `double` or `std::complex<double>` (default `double`). Host `Field<Scalar>` overloads stay; vector path remains.
