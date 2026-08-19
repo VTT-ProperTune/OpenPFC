@@ -561,7 +561,7 @@ M7 (skeleton, schema), M4 (communication — for completeness of the stack), M3 
 ### Tasks
 
 * [x] Implement `apps/tungsten/include/tungsten/tungsten_physics.hpp`: single model = `TungstenParams` + one `ParameterSchema` + `physics_for_mode` linear symbol + nonlinearity + stabilization, templated on `RealType` and memory space; target ≤400 lines (153). Host driver is `SpectralMeanFieldEtdSystem`.
-* [ ] Wire tungsten through `SpectralMeanFieldEtdSystem` + `SimulationState` + `IDeviceFFT` (no model-owned FFTs), no `dummy_fft`, no hand-rolled mirrors — residency via M2 protocol. Host one-step parity vs Gen-1 is in; app/session/device stack remain.
+* [x] Host `SpectralMeanFieldEtdSystem` + device `DeviceSpectralMeanFieldEtdSystem` on `SimulationState` + `IDeviceFFT` (no model-owned FFTs in the new driver). Host one-step parity vs Gen-1; device vs host toy mean-field ≤1e-10. App/session/`GpuSpectralStack` remain.
 * [ ] Device session assembly: introduce `GpuSpectralStack` (device counterpart of `SpectralCpuStack`) in `kernel/simulation/stacks/`, constructed from JSON plan options via the existing `spectral_fft_stack_factory.hpp` helpers.
 * [ ] Keep the Gen‑1 tungsten build target alive in parallel *within this milestone only* for A/B validation; both binaries run the golden-trajectory input.
 * [ ] Validation matrix: (a) new-CPU vs Pre-M0 golden trajectory (4 ranks, 100 steps) within declared tolerance; (b) new-CUDA vs new-CPU ≤1e-10 (existing parity harness re-pointed); (c) ETD weights vs `spectral_exp_cache_matches_legacy_etd_weights` pins; (d) perf within 5% of Pre-M0 baselines on tohtori. **(b)/(d) CUDA: not testable on LUMI — verify on tohtori.** *(The new-HIP half of (b) and the LUMI half of (d) moved to M-LUMI.)*
