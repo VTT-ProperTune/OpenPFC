@@ -71,6 +71,17 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
   install(TARGETS tungsten_cuda DESTINATION bin)
   message(STATUS "Tungsten CUDA version enabled")
 
+  add_executable(tungsten_etd_cuda src/cuda/tungsten_etd.cpp)
+  target_include_directories(tungsten_etd_cuda PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+  target_link_libraries(tungsten_etd_cuda PRIVATE
+    OpenPFC
+    nlohmann_json::nlohmann_json
+    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
+    CUDA::cudart
+    openpfc_gpu_kernels
+  )
+  install(TARGETS tungsten_etd_cuda DESTINATION bin)
+
   # Test program for CUDA with VTK output
   add_executable(test_tungsten_cuda_vtk
     tests/test_tungsten_cuda_vtk.cpp
@@ -134,6 +145,22 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
 
   install(TARGETS tungsten_hip DESTINATION bin)
   message(STATUS "Tungsten HIP version enabled")
+
+  add_executable(tungsten_etd_hip src/hip/tungsten_etd.cpp)
+  target_include_directories(tungsten_etd_hip PRIVATE ${TUNGSTEN_INCLUDE_DIR})
+  target_link_libraries(tungsten_etd_hip PRIVATE
+    OpenPFC
+    nlohmann_json::nlohmann_json
+    $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
+    hip::host
+    openpfc_hip_kernels
+  )
+  set_target_properties(tungsten_etd_hip PROPERTIES
+    HIP_STANDARD 20
+    HIP_STANDARD_REQUIRED ON
+  )
+  install(TARGETS tungsten_etd_hip DESTINATION bin)
+  message(STATUS "tungsten_etd_hip enabled")
 
   add_executable(test_tungsten_hip_vtk
     tests/test_tungsten_hip_vtk.cpp
@@ -201,6 +228,23 @@ if(TUNGSTEN_ENABLE_TESTS)
             # Run all CPU vs CUDA tests in a single invocation
             add_test(NAME tungsten-cpu-vs-cuda-tests COMMAND test_tungsten_cpu_vs_cuda)
             message(STATUS "Tungsten CPU vs CUDA comparison test enabled")
+
+            add_executable(test_tungsten_etd_cuda tests/test_tungsten_etd_gpu.cpp)
+            target_include_directories(test_tungsten_etd_cuda PRIVATE
+              ${TUNGSTEN_INCLUDE_DIR}
+              ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
+            target_link_libraries(test_tungsten_etd_cuda PRIVATE
+              OpenPFC
+              nlohmann_json::nlohmann_json
+              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
+              Catch2::Catch2
+              CUDA::cudart
+              openpfc_gpu_kernels
+              MPI::MPI_CXX
+            )
+            target_compile_definitions(test_tungsten_etd_cuda PRIVATE
+              OPENPFC_TEST_TUNGSTEN_ETD_CUDA)
+            add_test(NAME CUDA_TungstenEtd COMMAND test_tungsten_etd_cuda)
         endif()
 
         # CPU vs HIP comparison test (HIP spectral + rocFFT HeFFTe)
@@ -225,6 +269,27 @@ if(TUNGSTEN_ENABLE_TESTS)
             include(CTest)
             add_test(NAME tungsten-cpu-vs-hip-tests COMMAND test_tungsten_cpu_vs_hip)
             message(STATUS "Tungsten CPU vs HIP comparison test enabled")
+
+            add_executable(test_tungsten_etd_hip tests/test_tungsten_etd_gpu.cpp)
+            target_include_directories(test_tungsten_etd_hip PRIVATE
+              ${TUNGSTEN_INCLUDE_DIR}
+              ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu)
+            target_link_libraries(test_tungsten_etd_hip PRIVATE
+              OpenPFC
+              nlohmann_json::nlohmann_json
+              $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
+              Catch2::Catch2
+              hip::host
+              openpfc_hip_kernels
+              MPI::MPI_CXX
+            )
+            target_compile_definitions(test_tungsten_etd_hip PRIVATE
+              OPENPFC_TEST_TUNGSTEN_ETD_HIP)
+            set_target_properties(test_tungsten_etd_hip PROPERTIES
+              HIP_STANDARD 20
+              HIP_STANDARD_REQUIRED ON
+            )
+            add_test(NAME HIP_TungstenEtd COMMAND test_tungsten_etd_hip)
         endif()
     else()
         message(WARNING "Tungsten: Catch2 not found, not building tests")
