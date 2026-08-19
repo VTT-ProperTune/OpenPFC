@@ -248,7 +248,7 @@ private:
       return;
     }
 
-    const auto &val = config[name];
+    const nlohmann::json &val = config.at(name);
     const std::string got = schema_json_value_string(config, name);
 
     if (f.integer) {
@@ -257,7 +257,7 @@ private:
             name, f.spec.description, f.expected_type, got, f.spec.example));
         return;
       }
-      const int iv = val.get<int>();
+      const int iv = val.template get<int>();
       if (auto err = bounds_error(f, static_cast<double>(iv))) {
         result.errors.push_back(*err);
         return;
@@ -269,12 +269,12 @@ private:
       return;
     }
 
-    if (!val.is_number() || !std::isfinite(val.get<double>())) {
+    if (!val.is_number() || !std::isfinite(val.template get<double>())) {
       result.errors.push_back(schema_config_error(
           name, f.spec.description, f.expected_type, got, f.spec.example));
       return;
     }
-    const double dv = val.get<double>();
+    const double dv = val.template get<double>();
     if (auto err = bounds_error(f, dv)) {
       result.errors.push_back(*err);
       return;
