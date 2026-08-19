@@ -123,6 +123,15 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_link_libraries(test_deep_copy_fill_cuda PRIVATE Catch2::Catch2 openpfc_gpu_kernels CUDA::cudart)
     target_compile_definitions(test_deep_copy_fill_cuda PRIVATE OPENPFC_TEST_DEEP_COPY_CUDA)
     add_test(NAME CUDA_DeepCopyFill COMMAND test_deep_copy_fill_cuda)
+
+    add_executable(test_etd1_apply_cuda test_etd1_apply.cpp)
+    target_include_directories(test_etd1_apply_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_etd1_apply_cuda PRIVATE Catch2::Catch2 openpfc_gpu_kernels CUDA::cudart)
+    target_compile_definitions(test_etd1_apply_cuda PRIVATE OPENPFC_TEST_ETD1_APPLY_CUDA)
+    add_test(NAME CUDA_Etd1Apply COMMAND test_etd1_apply_cuda)
 endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
@@ -143,4 +152,13 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     target_link_libraries(test_deep_copy_fill_hip PRIVATE Catch2::Catch2 openpfc_hip_kernels hip::host)
     target_compile_definitions(test_deep_copy_fill_hip PRIVATE OPENPFC_TEST_DEEP_COPY_HIP)
     add_test(NAME HIP_DeepCopyFill COMMAND test_deep_copy_fill_hip)
+
+    add_executable(test_etd1_apply_hip test_etd1_apply.cpp)
+    target_include_directories(test_etd1_apply_hip PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_etd1_apply_hip PRIVATE Catch2::Catch2 openpfc_hip_kernels hip::host)
+    target_compile_definitions(test_etd1_apply_hip PRIVATE OPENPFC_TEST_ETD1_APPLY_HIP)
+    add_test(NAME HIP_Etd1Apply COMMAND test_etd1_apply_hip)
 endif()

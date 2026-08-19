@@ -102,6 +102,29 @@ void launch_combine_two_term(const T *x0, const T *x1, const T *w0, const T *w1,
 }
 
 template <typename T>
+__global__ void combine_two_term_real_kernel(const T *x0, const T *x1,
+                                             const T *w0, const T *w1, T *out,
+                                             std::size_t n) {
+  const std::size_t i =
+      static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (i < n) {
+    out[i] = w0[i] * x0[i] + w1[i] * x1[i];
+  }
+}
+
+template <typename T>
+void launch_combine_two_term_real(const T *x0, const T *x1, const T *w0,
+                                  const T *w1, T *out, std::size_t n) {
+  if (n == 0) {
+    return;
+  }
+  constexpr int threads = 256;
+  combine_two_term_real_kernel<<<elem_blocks(n), threads>>>(x0, x1, w0, w1, out,
+                                                            n);
+  check_elem_launch("combine_two_term_real");
+}
+
+template <typename T>
 void launch_axpy_fill(T *out, const T *x, T alpha, T beta, std::size_t n) {
   if (n == 0) {
     return;
@@ -137,6 +160,16 @@ void combine_two_term_cuda_impl(const std::complex<float> *x0,
   launch_combine_two_term(reinterpret_cast<const float *>(x0),
                           reinterpret_cast<const float *>(x1), w0, w1,
                           reinterpret_cast<float *>(out), n);
+}
+void combine_two_term_cuda_impl(const double *x0, const double *x1,
+                                const double *w0, const double *w1, double *out,
+                                std::size_t n) {
+  launch_combine_two_term_real(x0, x1, w0, w1, out, n);
+}
+void combine_two_term_cuda_impl(const float *x0, const float *x1,
+                                const float *w0, const float *w1, float *out,
+                                std::size_t n) {
+  launch_combine_two_term_real(x0, x1, w0, w1, out, n);
 }
 void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta,
                          std::size_t n) {
@@ -174,6 +207,15 @@ void combine_two_term_hip_impl(const std::complex<float> *x0,
   launch_combine_two_term(reinterpret_cast<const float *>(x0),
                           reinterpret_cast<const float *>(x1), w0, w1,
                           reinterpret_cast<float *>(out), n);
+}
+void combine_two_term_hip_impl(const double *x0, const double *x1,
+                               const double *w0, const double *w1, double *out,
+                               std::size_t n) {
+  launch_combine_two_term_real(x0, x1, w0, w1, out, n);
+}
+void combine_two_term_hip_impl(const float *x0, const float *x1, const float *w0,
+                               const float *w1, float *out, std::size_t n) {
+  launch_combine_two_term_real(x0, x1, w0, w1, out, n);
 }
 void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
                         std::size_t n) {
