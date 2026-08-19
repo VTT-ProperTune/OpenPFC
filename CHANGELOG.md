@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `PackedEulerStepper<Rhs, Scalars...>` advances a mixed-scalar pack (e.g. `double` + `std::complex<double>`). `PackedStageFunction` / `PackedStepAttempt` / `commit_step_attempt` cover that result. Homogeneous `MultiEulerStepper<Rhs, N, Scalar>` is unchanged.
 - Multi-field steppers (`MultiEuler`, `MultiEtd1`, `MultiImex`, `MultiExplicitRK`) accept homogeneous `HostFieldPack` of host fields via `vec()`, in addition to `std::vector<Scalar>` packs. `HostFieldPack<Scalar, Fs...>` is in `state_concepts.hpp`.
 - Stepper host-field overloads are constrained by `pfc::field::HostFieldState<F, Scalar>` (`state_concepts.hpp`): `Field` plus host `vec()`. `pfc::data::Field<Scalar>` still models it.
 - Device-resident ETD1 combine: host `pfc::integrator::apply_etd1_update` plus `apply_etd1_update_{cuda,hip}` over device pointers (real and complex). Real two-term combine added to the GPU elementwise kernels. HIP/CUDA tests `HIP_Etd1Apply` / `CUDA_Etd1Apply`.
