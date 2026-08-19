@@ -11,7 +11,8 @@ Production-style tungsten phase-field crystal binary built from `pfc::ui::App<Tu
 
 | Target | When |
 |--------|------|
-| `tungsten` | Always (CPU FFT / HeFFTe) |
+| `tungsten` | Always (CPU FFT / HeFFTe) — Gen-1 `App<Tungsten>` |
+| `tungsten_etd` | Always — M8 A/B: `TungstenPhysics` + `SpectralMeanFieldEtdSystem` (same JSON; no result writers yet) |
 | `tungsten_cuda` | `OpenPFC_ENABLE_CUDA` |
 | `tungsten_hip` | `OpenPFC_ENABLE_HIP` |
 | `verify_gpu_aware_mpi` | HIP + MPI device-buffer check |
