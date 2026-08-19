@@ -565,7 +565,7 @@ M7 (skeleton, schema), M4 (communication — for completeness of the stack), M3 
 * [ ] Device session assembly: introduce `GpuSpectralStack` (device counterpart of `SpectralCpuStack`) in `kernel/simulation/stacks/`, constructed from JSON plan options via the existing `spectral_fft_stack_factory.hpp` helpers.
 * [ ] Keep the Gen‑1 tungsten build target alive in parallel *within this milestone only* for A/B validation; both binaries run the golden-trajectory input.
 * [ ] Validation matrix: (a) new-CPU vs Pre-M0 golden trajectory (4 ranks, 100 steps) within declared tolerance; (b) new-CUDA vs new-CPU ≤1e-10 (existing parity harness re-pointed); (c) ETD weights vs `spectral_exp_cache_matches_legacy_etd_weights` pins; (d) perf within 5% of Pre-M0 baselines on tohtori. **(b)/(d) CUDA: not testable on LUMI — verify on tohtori.** *(The new-HIP half of (b) and the LUMI half of (d) moved to M-LUMI.)*
-* [ ] Migrate tungsten JSON: one `from_json` via `ParameterSchema` (replacing the three per-backend copies in `tungsten_input.hpp:269,334,399`); config keys unchanged for users.
+* [x] Migrate tungsten JSON: one `apply_tungsten_json` via `ParameterSchema` (replacing the three per-backend setter copies in `tungsten_input.hpp`); config keys unchanged. Frontend `ParameterValidator` summary remains.
 * [ ] Update `apps/tungsten/README` + `docs/science/tungsten_quicklook.md` to the new structure.
 
 ### Required tests

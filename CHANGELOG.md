@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- Tungsten CPU/CUDA/HIP `from_json` share `tungsten::apply_tungsten_json` (`ParameterSchema` parse + setters). Frontend `ParameterValidator` still prints the summary.
 - Device `DeviceSpectralMeanFieldEtdSystem<Physics, MemorySpace>` (`runtime/gpu/spectral_mean_field_etd_gpu.hpp`): `IDeviceFFT` choreography, host `N(ψ,ψ_MF)`, device `χ(k)` multiply and ETD1 with `k_lap*phi1` weights. HIP/CUDA tests `HIP_SpectralMeanFieldEtd` / `CUDA_SpectralMeanFieldEtd` vs host within 1e-10.
 - M8 start: `tungsten::TungstenPhysics` (`apps/tungsten/include/tungsten/tungsten_physics.hpp`, 153 lines) plus host `SpectralMeanFieldEtdSystem` (mean-field filter, two-argument N, `k_lap*phi1` ETD weights). One-step parity vs Gen-1 `Tungsten` and JSON schema round-trip.
 - Toy Swift–Hohenberg physics in one header (`tests/fixtures/swift_hohenberg.hpp`, 80 lines): schema + `rhs(t, SHGrads)` + spectral `linear_symbol`/`nonlinearity`. Three-way CPU test: Gen-1 `Model` ETD, point-wise SpectralGradient Euler, and `SpectralEtdSystem`. Descriptor HIP parity is `HIP_SpectralEtd`.
