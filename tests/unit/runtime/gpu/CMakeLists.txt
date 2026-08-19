@@ -32,6 +32,20 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         OPENPFC_TEST_SPECTRAL_ETD_CUDA)
     add_test(NAME CUDA_SpectralEtd COMMAND test_spectral_etd_system_cuda)
 
+    add_executable(test_spectral_mean_field_etd_cuda
+        test_spectral_mean_field_etd_gpu.cpp)
+    target_include_directories(test_spectral_mean_field_etd_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_spectral_mean_field_etd_cuda PRIVATE
+        Catch2::Catch2 openpfc openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX
+        Heffte::Heffte)
+    target_compile_definitions(test_spectral_mean_field_etd_cuda PRIVATE
+        OPENPFC_TEST_MEAN_FIELD_ETD_CUDA)
+    add_test(NAME CUDA_SpectralMeanFieldEtd COMMAND
+        test_spectral_mean_field_etd_cuda)
+
     add_executable(test_observable_reduce_cuda test_observable_reduce_gpu.cpp)
     target_include_directories(test_observable_reduce_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
@@ -130,6 +144,20 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         target_compile_definitions(test_spectral_etd_system_hip PRIVATE
             OPENPFC_TEST_SPECTRAL_ETD_HIP)
         add_test(NAME HIP_SpectralEtd COMMAND test_spectral_etd_system_hip)
+
+        add_executable(test_spectral_mean_field_etd_hip
+            test_spectral_mean_field_etd_gpu.cpp)
+        target_include_directories(test_spectral_mean_field_etd_hip PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+            ${CMAKE_SOURCE_DIR}/include
+        )
+        target_link_libraries(test_spectral_mean_field_etd_hip PRIVATE
+            Catch2::Catch2 openpfc openpfc_hip_kernels hip::host MPI::MPI_CXX
+            Heffte::Heffte)
+        target_compile_definitions(test_spectral_mean_field_etd_hip PRIVATE
+            OPENPFC_TEST_MEAN_FIELD_ETD_HIP)
+        add_test(NAME HIP_SpectralMeanFieldEtd COMMAND
+            test_spectral_mean_field_etd_hip)
 
         add_executable(test_observable_reduce_hip test_observable_reduce_gpu.cpp)
         target_include_directories(test_observable_reduce_hip PRIVATE
