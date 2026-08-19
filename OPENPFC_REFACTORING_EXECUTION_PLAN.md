@@ -530,7 +530,7 @@ M5, M6.
 
 ### Required tests
 
-* [x] A toy PFC model (Swift–Hohenberg-like, single field) written three ways — Gen‑1 `Model`, point-wise `rhs`, spectral-ETD descriptors — produces matching trajectories within declared tolerance (CPU); the descriptor variant additionally runs on CUDA and HIP with parity ≤1e-10 (`HIP_SpectralEtd` / `CUDA_SpectralEtd`).
+* [x] A toy PFC model (Swift–Hohenberg-like, single field) written three ways — Gen‑1 `Model`, point-wise `rhs`, spectral-ETD descriptors — produces matching trajectories within declared tolerance (CPU); the descriptor variant additionally runs on CUDA and HIP with parity ≤1e-10 (`HIP_SpectralETD` / `CUDA_SpectralETD`).
 * [ ] A1 parity test (above) green.
 * [ ] `ParameterSchema` round-trip: schema → JSON parse → validation errors for missing/invalid keys match the current `format_config_error` quality (message snapshot tests).
 * [x] Observable-reduction test: known Gaussian integral to 1e-12, 1 and 4 ranks, host and device.
@@ -541,7 +541,7 @@ M5, M6.
 
 ### Definition of done
 
-* [x] The three-way toy-model equivalence test is green on CPU; descriptor HIP path is `HIP_SpectralEtd` (CUDA twin `CUDA_SpectralEtd`, run on tohtori).
+* [x] The three-way toy-model equivalence test is green on CPU; descriptor HIP path is `HIP_SpectralETD` (CUDA twin `CUDA_SpectralETD`, run on tohtori).
 * [x] A new physics model requires: one header (fields + schema + `rhs` or descriptors), zero backend-specific classes, zero hand-written k-loops — demonstrated by the toy model's line count (80 < 200).
 * [ ] A1/A2 adapters registered in `0.2_migration_map.md` with removal milestone M12 and green parity tests.
 * [ ] Full suite + golden trajectories green.
@@ -564,7 +564,7 @@ M7 (skeleton, schema), M4 (communication — for completeness of the stack), M3 
 * [x] Host `SpectralMeanFieldEtdSystem` + device `DeviceSpectralMeanFieldEtdSystem` on `SimulationState` + `IDeviceFFT` (no model-owned FFTs in the new driver). Host one-step parity vs Gen-1; device vs host toy mean-field ≤1e-10. CPU A/B `tungsten_etd`; GPU A/B `tungsten_etd_hip` / `tungsten_etd_cuda` (`TungstenEtdGpuSession`). Binary `psi` dumps on `Time::do_save()`.
 * [x] Device session assembly: `GpuSpectralStack<MemorySpace>` in `runtime/gpu/` (device counterpart of kernel `SpectralCpuStack`; runtime because `IDeviceFFT` factories are runtime). JSON HeFFTe plan-option overlay remains in `spectral_fft_stack_factory.hpp`; this stack uses default cuFFT/rocFFT plans. Frontend JSON session wiring remains.
 * [x] Keep the Gen‑1 `tungsten` target alive in parallel; `tungsten_etd` is the new-CPU A/B binary (same JSON keys). Golden-trajectory 4-rank/100-step capture still open.
-* [x] Validation matrix (a) living A/B: Gen-1 vs `TungstenEtdSession` 1-rank 8³/100 steps and 4-rank 16³/20 steps ≤1e-10 (Pre-M0 dump was never captured). (c) ETD weights still pinned in `test_tungsten.cpp`. (b)/(d) CUDA vs CPU and perf: **not testable on LUMI — verify on tohtori.** HIP host-vs-device session is `HIP_TungstenEtd`.
+* [x] Validation matrix (a) living A/B: Gen-1 vs `TungstenEtdSession` 1-rank 8³/100 steps and 4-rank 16³/20 steps ≤1e-10 (Pre-M0 dump was never captured). (c) ETD weights still pinned in `test_tungsten.cpp`. (b)/(d) CUDA vs CPU and perf: **not testable on LUMI — verify on tohtori.** HIP host-vs-device session is `HIP_TungstenETD`.
 * [x] Migrate tungsten JSON: one `apply_tungsten_json` via `ParameterSchema` (replacing the three per-backend setter copies in `tungsten_input.hpp`); config keys unchanged. Frontend `ParameterValidator` summary remains.
 * [x] Update `apps/tungsten/README` + `docs/science/tungsten_quicklook.md` to the new A/B binaries (`tungsten_etd` / `_hip` / `_cuda`).
 

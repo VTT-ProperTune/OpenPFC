@@ -252,7 +252,7 @@ if(TUNGSTEN_ENABLE_TESTS)
             )
             target_compile_definitions(test_tungsten_etd_cuda PRIVATE
               OPENPFC_TEST_TUNGSTEN_ETD_CUDA)
-            add_test(NAME CUDA_TungstenEtd COMMAND test_tungsten_etd_cuda)
+            add_test(NAME CUDA_TungstenETD COMMAND test_tungsten_etd_cuda)
         endif()
 
         # CPU vs HIP comparison test (HIP spectral + rocFFT HeFFTe)
@@ -297,7 +297,7 @@ if(TUNGSTEN_ENABLE_TESTS)
               HIP_STANDARD 20
               HIP_STANDARD_REQUIRED ON
             )
-            add_test(NAME HIP_TungstenEtd COMMAND test_tungsten_etd_hip)
+            add_test(NAME HIP_TungstenETD COMMAND test_tungsten_etd_hip)
         endif()
     else()
         message(WARNING "Tungsten: Catch2 not found, not building tests")

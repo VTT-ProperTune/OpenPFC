@@ -30,7 +30,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         Heffte::Heffte)
     target_compile_definitions(test_spectral_etd_system_cuda PRIVATE
         OPENPFC_TEST_SPECTRAL_ETD_CUDA)
-    add_test(NAME CUDA_SpectralEtd COMMAND test_spectral_etd_system_cuda)
+    add_test(NAME CUDA_SpectralETD COMMAND test_spectral_etd_system_cuda)
 
     add_executable(test_spectral_mean_field_etd_cuda
         test_spectral_mean_field_etd_gpu.cpp)
@@ -43,7 +43,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         Heffte::Heffte)
     target_compile_definitions(test_spectral_mean_field_etd_cuda PRIVATE
         OPENPFC_TEST_MEAN_FIELD_ETD_CUDA)
-    add_test(NAME CUDA_SpectralMeanFieldEtd COMMAND
+    add_test(NAME CUDA_SpectralMeanFieldETD COMMAND
         test_spectral_mean_field_etd_cuda)
 
     add_executable(test_gpu_spectral_stack_cuda test_gpu_spectral_stack.cpp)
@@ -154,7 +154,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
             Heffte::Heffte)
         target_compile_definitions(test_spectral_etd_system_hip PRIVATE
             OPENPFC_TEST_SPECTRAL_ETD_HIP)
-        add_test(NAME HIP_SpectralEtd COMMAND test_spectral_etd_system_hip)
+        add_test(NAME HIP_SpectralETD COMMAND test_spectral_etd_system_hip)
 
         add_executable(test_spectral_mean_field_etd_hip
             test_spectral_mean_field_etd_gpu.cpp)
@@ -167,7 +167,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
             Heffte::Heffte)
         target_compile_definitions(test_spectral_mean_field_etd_hip PRIVATE
             OPENPFC_TEST_MEAN_FIELD_ETD_HIP)
-        add_test(NAME HIP_SpectralMeanFieldEtd COMMAND
+        add_test(NAME HIP_SpectralMeanFieldETD COMMAND
             test_spectral_mean_field_etd_hip)
 
         add_executable(test_gpu_spectral_stack_hip test_gpu_spectral_stack.cpp)
@@ -227,7 +227,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     )
     target_link_libraries(test_etd1_apply_cuda PRIVATE Catch2::Catch2 openpfc_gpu_kernels CUDA::cudart)
     target_compile_definitions(test_etd1_apply_cuda PRIVATE OPENPFC_TEST_ETD1_APPLY_CUDA)
-    add_test(NAME CUDA_Etd1Apply COMMAND test_etd1_apply_cuda)
+    add_test(NAME CUDA_ETD1Apply COMMAND test_etd1_apply_cuda)
 endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
@@ -256,5 +256,5 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     )
     target_link_libraries(test_etd1_apply_hip PRIVATE Catch2::Catch2 openpfc_hip_kernels hip::host)
     target_compile_definitions(test_etd1_apply_hip PRIVATE OPENPFC_TEST_ETD1_APPLY_HIP)
-    add_test(NAME HIP_Etd1Apply COMMAND test_etd1_apply_hip)
+    add_test(NAME HIP_ETD1Apply COMMAND test_etd1_apply_hip)
 endif()
