@@ -24,7 +24,7 @@
 using pfc::integrator::fill_spectral_exp_coeffs;
 using pfc::sim::steppers::AttemptStepper;
 using pfc::sim::steppers::commit_step_attempt;
-using pfc::sim::steppers::Etd1Stepper;
+using pfc::sim::steppers::ETD1Stepper;
 using pfc::sim::steppers::EulerStepper;
 using pfc::sim::steppers::ExplicitRKStepper;
 using pfc::sim::steppers::RK2HeunStepper;
@@ -119,10 +119,10 @@ TEST_CASE("ExplicitRKStepper attempt/commit leaves accepted state unchanged unti
   check_attempt_commit_rollback(stepper, 0.0, 0.1, u);
 }
 
-TEST_CASE("Etd1Stepper attempt/commit leaves accepted state unchanged until commit",
+TEST_CASE("ETD1Stepper attempt/commit leaves accepted state unchanged until commit",
           "[step_protocol][etd1]") {
   DecayRhs rhs{};
-  Etd1Stepper<DecayRhs> stepper(0.1, 4, rhs);
+  ETD1Stepper<DecayRhs> stepper(0.1, 4, rhs);
   std::vector<double> L{-1.0, -1.0, -1.0, -1.0};
   std::vector<double> exp_buf(4);
   std::vector<double> phi_buf(4);
@@ -265,7 +265,7 @@ TEST_CASE("ExplicitRKStepper attempt/commit on host Field<double>",
   REQUIRE(u.vec() == r.candidate);
 }
 
-TEST_CASE("Etd1Stepper attempt on host Field<double>",
+TEST_CASE("ETD1Stepper attempt on host Field<double>",
           "[step_protocol][etd1][field]") {
   using pfc::data::Field;
   const auto domain = pfc::domain::create({2, 2, 1});
@@ -273,7 +273,7 @@ TEST_CASE("Etd1Stepper attempt on host Field<double>",
   Field<double> u(domain, box, 0);
   u.vec() = {1.0, 2.0, 3.0, 4.0};
   DecayRhs rhs{};
-  Etd1Stepper<DecayRhs> stepper(0.1, u.size(), rhs);
+  ETD1Stepper<DecayRhs> stepper(0.1, u.size(), rhs);
   std::vector<double> L(u.size(), -1.0);
   std::vector<double> exp_buf(u.size());
   std::vector<double> phi_buf(u.size());

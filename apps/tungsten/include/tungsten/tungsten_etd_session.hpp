@@ -9,7 +9,7 @@
  *
  * @details
  * M8 A/B driver. Gen-1 `tungsten` (`App<Tungsten>`) stays. This session owns
- * `SpectralCpuStack`, `SimulationState`, and `SpectralMeanFieldEtdSystem` —
+ * `SpectralCpuStack`, `SimulationState`, and `SpectralMeanFieldETDSystem` —
  * no model-owned FFT. Initial conditions and fixed BCs are applied on the
  * `Field` (same formulas as Gen-1 `Constant` / `SingleSeed` / `FixedBC`).
  * Binary `psi` dumps follow `Time::do_save()` when JSON `fields` is set.
@@ -35,14 +35,14 @@
 
 namespace tungsten {
 
-class TungstenEtdSession {
+class TungstenETDSession {
 public:
-  TungstenEtdSession(const TungstenEtdSession &) = delete;
-  TungstenEtdSession &operator=(const TungstenEtdSession &) = delete;
-  TungstenEtdSession(TungstenEtdSession &&) = delete;
-  TungstenEtdSession &operator=(TungstenEtdSession &&) = delete;
+  TungstenETDSession(const TungstenETDSession &) = delete;
+  TungstenETDSession &operator=(const TungstenETDSession &) = delete;
+  TungstenETDSession(TungstenETDSession &&) = delete;
+  TungstenETDSession &operator=(TungstenETDSession &&) = delete;
 
-  TungstenEtdSession(const nlohmann::json &settings, int rank, int nproc,
+  TungstenETDSession(const nlohmann::json &settings, int rank, int nproc,
                      MPI_Comm comm = MPI_COMM_WORLD)
       : m_domain(pfc::ui::from_json<pfc::Domain>(settings)),
         m_time(pfc::ui::from_json<pfc::Time>(settings)),
@@ -61,7 +61,7 @@ public:
     m_writers.configure(settings, m_domain, m_stack.fft().get_inbox_bounds(),
                         comm, rank);
     m_sys = std::make_unique<
-        pfc::sim::SpectralMeanFieldEtdSystem<TungstenPhysics<>>>(
+        pfc::sim::SpectralMeanFieldETDSystem<TungstenPhysics<>>>(
         std::move(phys), m_stack.fft(), m_state, pfc::time::dt(m_time));
   }
 
@@ -105,8 +105,8 @@ private:
   pfc::sim::stacks::SpectralCpuStack m_stack;
   pfc::SimulationState m_state;
   std::optional<FixedBc> m_bc{};
-  TungstenEtdWriters m_writers{};
-  std::unique_ptr<pfc::sim::SpectralMeanFieldEtdSystem<TungstenPhysics<>>>
+  TungstenETDWriters m_writers{};
+  std::unique_ptr<pfc::sim::SpectralMeanFieldETDSystem<TungstenPhysics<>>>
       m_sys;
 };
 

@@ -9,7 +9,7 @@
  * This file implements the CUDA version of the Tungsten PFC model.
  * It uses DataBuffer<CudaTag, T> for GPU memory management and CUDA kernels
  * for element-wise operations. ETD method weights are owned by
- * @c tungsten::etd::TungstenEtdWorkspace (not persistent Model coefficient members).
+ * @c tungsten::etd::TungstenETDWorkspace (not persistent Model coefficient members).
  *
  * This is a separate implementation from the CPU version
  * (tungsten/cpu/tungsten_model.hpp) to allow incremental development and testing.
@@ -87,8 +87,8 @@ private:
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       filterMF; ///< Mean-field filter in Fourier space
   /// Method-owned ETD weights (transient; not checkpointed).
-  /// TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
-  tungsten::etd::TungstenEtdWorkspace<RealType> m_etd;
+  /// TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
+  tungsten::etd::TungstenETDWorkspace<RealType> m_etd;
   std::uint64_t m_operator_generation{0};
   pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
       psiMF; ///< Mean-field filtered density
@@ -131,8 +131,8 @@ public:
    */
   void set_cuda_fft(const pfc::Decomposition &decomp, int rank) {
     auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomp, rank);
-    using HeffteCudaFft = heffte::fft3d_r2c<heffte::backend::cufft>;
-    HeffteCudaFft fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
+    using HeffteCudaFFT = heffte::fft3d_r2c<heffte::backend::cufft>;
+    HeffteCudaFFT fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
                       mpi_comm());
     m_cuda_fft = std::make_unique<pfc::fft::FFT_CUDA>(std::move(fft));
   }
@@ -293,7 +293,7 @@ public:
   /**
    * @brief Precompute physics filter and ETD method weights in k-space
    *
-   * Computes physics on CPU, ensures method weights via @c TungstenEtdWorkspace,
+   * Computes physics on CPU, ensures method weights via @c TungstenETDWorkspace,
    * then uploads filter and device weights to GPU.
    *
    * @param dt Time step size
@@ -439,7 +439,7 @@ public:
     fft.forward(psiN, psiN_F);
 
     // Step 5: Apply exponential time integration in Fourier space
-    // TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+    // TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
     tungsten::ops::apply_time_integration<pfc::backend::CudaTag, RealType>(
         psi_F, psiN_F, m_etd.cuda_exp_Ldt(), m_etd.cuda_n_weight(), psi_F);
     // Record event after kernel launch

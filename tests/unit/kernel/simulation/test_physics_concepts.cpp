@@ -19,7 +19,7 @@ using pfc::sim::HasParameters;
 using pfc::sim::PointwisePhysics;
 using pfc::sim::PointwiseRhs;
 using pfc::sim::SpectralDiagonalPhysics;
-using pfc::sim::SpectralEtdPhysics;
+using pfc::sim::SpectralETDPhysics;
 using pfc::sim::add_declared_field;
 
 namespace {
@@ -93,18 +93,18 @@ static_assert(PointwiseRhs<HeatPhysics, HeatGrads>);
 static_assert(PointwisePhysics<HeatPhysics, HeatGrads>);
 static_assert(HasParameters<HeatPhysics>);
 static_assert(!SpectralDiagonalPhysics<HeatPhysics>);
-static_assert(!SpectralEtdPhysics<HeatPhysics>);
+static_assert(!SpectralETDPhysics<HeatPhysics>);
 
 static_assert(DeclaresFields<SwiftHohenbergPhysics>);
 static_assert(SpectralDiagonalPhysics<SwiftHohenbergPhysics>);
-static_assert(SpectralEtdPhysics<SwiftHohenbergPhysics>);
+static_assert(SpectralETDPhysics<SwiftHohenbergPhysics>);
 static_assert(HasParameters<SwiftHohenbergPhysics>);
 static_assert(!PointwiseRhs<SwiftHohenbergPhysics, HeatGrads>);
 
 static_assert(!DeclaresFields<LinearOnly>);
 static_assert(pfc::sim::SpectralLinearSymbol<LinearOnly>);
 static_assert(!SpectralDiagonalPhysics<LinearOnly>);
-static_assert(!SpectralEtdPhysics<LinearOnly>);
+static_assert(!SpectralETDPhysics<LinearOnly>);
 
 static_assert(PointwiseRhs<RhsOnly, HeatGrads>);
 static_assert(!DeclaresFields<RhsOnly>);

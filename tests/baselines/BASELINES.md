@@ -48,7 +48,7 @@ Capture machine-tagged JSON via the profiling schema-v2 exporter into
 
 ## How to capture (reference commands)
 
-CPU golden trajectory (Gen-1 `Tungsten` vs `tungsten_etd` / `TungstenEtdSession`):
+CPU golden trajectory (Gen-1 `Tungsten` vs `tungsten_etd` / `TungstenETDSession`):
 
 ```
 # 1-rank (CI): ctest -R tungsten-all-tests

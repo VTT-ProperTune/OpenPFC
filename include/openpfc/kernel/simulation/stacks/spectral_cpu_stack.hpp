@@ -5,7 +5,7 @@
 
 /**
  * @file spectral_cpu_stack.hpp
- * @brief One-shot bundle of `Domain + Decomposition + CpuFft + Field` for
+ * @brief One-shot bundle of `Domain + Decomposition + CpuFFT + Field` for
  *        spectral CPU solvers driven programmatically (no JSON / `App`).
  *
  * @details
@@ -21,7 +21,7 @@
  *  - Geometry (size/spacing/origin/periodicity) is extracted from the
  *    Domain and stored internally.
  *  - Decomposition is created directly from Domain.
- *  - `pfc::fft::CpuFft` internally caches a `Decomposition`.
+ *  - `pfc::fft::CpuFFT` internally caches a `Decomposition`.
  *  - `pfc::data::Field<double>` is sized to the FFT's local real-space
  *    inbox via `pfc::data::field_from_inbox(domain, fft.get_inbox_bounds())`.
  *
@@ -62,7 +62,7 @@ struct SpectralGeometry {
 };
 
 /**
- * @brief Programmatic spectral CPU stack: Domain + Decomposition + CpuFft +
+ * @brief Programmatic spectral CPU stack: Domain + Decomposition + CpuFFT +
  *        Field sized to the FFT inbox.
  */
 class SpectralCpuStack {
@@ -135,8 +135,8 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] pfc::fft::CpuFft &fft() noexcept { return m_fft; }
-  [[nodiscard]] const pfc::fft::CpuFft &fft() const noexcept { return m_fft; }
+  [[nodiscard]] pfc::fft::CpuFFT &fft() noexcept { return m_fft; }
+  [[nodiscard]] const pfc::fft::CpuFFT &fft() const noexcept { return m_fft; }
 
   [[nodiscard]] pfc::data::Field<double> &u() noexcept { return m_u; }
   [[nodiscard]] const pfc::data::Field<double> &u() const noexcept {
@@ -177,7 +177,7 @@ public:
 private:
   SpectralGeometry m_geometry;
   pfc::decomposition::Decomposition m_decomp;
-  pfc::fft::CpuFft m_fft;
+  pfc::fft::CpuFFT m_fft;
   pfc::data::Field<double> m_u;
   int m_rank{0};
   int m_nproc{1};

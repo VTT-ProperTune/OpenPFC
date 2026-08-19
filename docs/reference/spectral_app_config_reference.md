@@ -33,7 +33,7 @@ Parsed by `from_json<Time>(settings)` — supports **flat** keys or nested under
 
 ## FFT (`plan_options`)
 
-Object key `"plan_options"` (JSON) or `[plan_options]` (TOML). Passed to HeFFTe plan construction on the CPU spectral path. **`backend: "cuda"`** is rejected for `SpectralCpuStack` / `CpuFft` — use CPU `fftw` here or a GPU-specific app driver.
+Object key `"plan_options"` (JSON) or `[plan_options]` (TOML). Passed to HeFFTe plan construction on the CPU spectral path. **`backend: "cuda"`** is rejected for `SpectralCpuStack` / `CpuFFT` — use CPU `fftw` here or a GPU-specific app driver.
 
 **Annotated reference file:** [`examples/fft_backend_selection.toml`](../../examples/fft_backend_selection.toml). **Tutorial:** [`tutorials/fft_heffte_plan_options.md`](../tutorials/fft_heffte_plan_options.md).
 

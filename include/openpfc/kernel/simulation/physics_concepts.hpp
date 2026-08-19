@@ -29,8 +29,8 @@
  *
  * A model may satisfy the point-wise surface, the spectral-diagonal
  * surface, or both. `DeclaresFields` is required for the combined
- * `PointwisePhysics` / `SpectralEtdPhysics` concepts used by the
- * forthcoming `SpectralEtdSystem` driver.
+ * `PointwisePhysics` / `SpectralETDPhysics` concepts used by the
+ * forthcoming `SpectralETDSystem` driver.
  */
 
 #include <complex>
@@ -137,7 +137,7 @@ concept SpectralLinearSymbol =
 /**
  * @brief Real-space nonlinearity @f$N(\psi)@f$ for spectral ETD.
  *
- * The forthcoming `SpectralEtdSystem` evaluates this per cell, then
+ * The forthcoming `SpectralETDSystem` evaluates this per cell, then
  * transforms; physics does not own the FFT.
  */
 template <class Physics>
@@ -182,7 +182,7 @@ concept PointwisePhysics =
  * @brief Field-declaring spectral-ETD physics (stiff PFC path).
  */
 template <class Physics>
-concept SpectralEtdPhysics =
+concept SpectralETDPhysics =
     DeclaresFields<Physics> && SpectralDiagonalPhysics<Physics>;
 
 /**
@@ -194,7 +194,7 @@ concept SpectralEtdPhysics =
  * @f$n_{\mathrm{weight}} = k_{\mathrm{lap}}\,\phi_1(L\,\mathrm{d}t)@f$.
  */
 template <class Physics>
-concept MeanFieldEtdPhysics =
+concept MeanFieldETDPhysics =
     DeclaresFields<Physics> && SpectralLinearSymbol<Physics> &&
     requires(const Physics &physics, double k_laplacian, double psi,
              double psi_mf) {

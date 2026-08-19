@@ -8,7 +8,7 @@
  * @brief Device `IDeviceFFT` spectral-ETD driver on `SimulationState`.
  *
  * @details
- * Sibling of host `pfc::sim::SpectralEtdSystem`. Lives in runtime because
+ * Sibling of host `pfc::sim::SpectralETDSystem`. Lives in runtime because
  * the combine uses `apply_etd1_update_{cuda,hip}` (kernel must not include
  * runtime). Coefficients and `N(psi)` are formed on the host; FFT and the
  * ETD1 combine run on device buffers.
@@ -44,36 +44,36 @@ namespace pfc::sim {
 /**
  * @brief Device spectral-ETD driver for one real field + its Fourier hat.
  *
- * @tparam Physics     Models @ref SpectralEtdPhysics.
+ * @tparam Physics     Models @ref SpectralETDPhysics.
  * @tparam MemorySpace `CudaSpace` or `HipSpace`.
  */
 template <class Physics, class MemorySpace>
-  requires SpectralEtdPhysics<Physics>
-class DeviceSpectralEtdSystem {
+  requires SpectralETDPhysics<Physics>
+class DeviceSpectralETDSystem {
 public:
   using Complex = std::complex<double>;
   using FFT = fft::IDeviceFFT<MemorySpace>;
   using RealBuffer = typename FFT::RealBuffer;
   using ComplexBuffer = typename FFT::ComplexBuffer;
 
-  DeviceSpectralEtdSystem(Physics physics, FFT &fft, SimulationState &state,
-                          double dt, SpectralEtdOptions opt = {})
+  DeviceSpectralETDSystem(Physics physics, FFT &fft, SimulationState &state,
+                          double dt, SpectralETDOptions opt = {})
       : m_physics(std::move(physics)), m_fft(fft), m_state(state), m_dt(dt),
         m_opt(std::move(opt)), m_exp(fft.size_outbox()),
         m_phi(fft.size_outbox()), m_candidate(fft.size_outbox()),
         m_n_work(fft.size_outbox()), m_mask_real(fft.size_outbox()) {
     if (m_dt <= 0.0) {
-      throw std::invalid_argument("DeviceSpectralEtdSystem: dt must be > 0");
+      throw std::invalid_argument("DeviceSpectralETDSystem: dt must be > 0");
     }
     if (!m_state.has_field(m_opt.psi_name)) {
       throw std::invalid_argument(
-          "DeviceSpectralEtdSystem: primary field '" + m_opt.psi_name +
+          "DeviceSpectralETDSystem: primary field '" + m_opt.psi_name +
           "' is missing");
     }
     auto &psi = m_state.get_field<double, MemorySpace>(m_opt.psi_name);
     if (psi.size() != m_fft.size_inbox()) {
       throw std::invalid_argument(
-          "DeviceSpectralEtdSystem: psi.size() != FFT inbox size");
+          "DeviceSpectralETDSystem: psi.size() != FFT inbox size");
     }
     allocate_work_fields(psi.domain());
     prepare_operators();
@@ -178,7 +178,7 @@ private:
     }
 #endif
     throw std::logic_error(
-        "DeviceSpectralEtdSystem: no device ETD1 combine for this MemorySpace");
+        "DeviceSpectralETDSystem: no device ETD1 combine for this MemorySpace");
   }
 
   void apply_dealias(const Complex *in, Complex *out, std::size_t n) {
@@ -198,14 +198,14 @@ private:
     (void)out;
     (void)n;
     throw std::logic_error(
-        "DeviceSpectralEtdSystem: no dealias multiply for this MemorySpace");
+        "DeviceSpectralETDSystem: no dealias multiply for this MemorySpace");
   }
 
   Physics m_physics;
   FFT &m_fft;
   SimulationState &m_state;
   double m_dt{};
-  SpectralEtdOptions m_opt{};
+  SpectralETDOptions m_opt{};
   std::vector<double> m_L;
   std::vector<double> m_dealias_mask;
   integrator::SpectralExpCoefficientCache<> m_cache{};

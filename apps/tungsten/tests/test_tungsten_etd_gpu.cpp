@@ -78,7 +78,7 @@ double max_abs_diff(const std::vector<double> &a, const double *b,
 
 } // namespace
 
-TEST_CASE("TungstenEtdGpuSession matches host TungstenEtdSession within 1e-10",
+TEST_CASE("TungstenETDGpuSession matches host TungstenETDSession within 1e-10",
           "[tungsten][gpu][session]") {
 #if defined(OPENPFC_TEST_TUNGSTEN_ETD_HIP)
   if (!pfc::gpu::test::is_hip_available()) {
@@ -101,13 +101,13 @@ TEST_CASE("TungstenEtdGpuSession matches host TungstenEtdSession within 1e-10",
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
   const json settings = mini_settings();
-  tungsten::TungstenEtdSession host(settings, rank, nproc, MPI_COMM_WORLD);
+  tungsten::TungstenETDSession host(settings, rank, nproc, MPI_COMM_WORLD);
   host.run();
 
 #if defined(OPENPFC_TEST_TUNGSTEN_ETD_HIP)
-  tungsten::TungstenEtdHipSession dev(settings, rank, nproc, MPI_COMM_WORLD);
+  tungsten::TungstenETDHipSession dev(settings, rank, nproc, MPI_COMM_WORLD);
 #else
-  tungsten::TungstenEtdCudaSession dev(settings, rank, nproc, MPI_COMM_WORLD);
+  tungsten::TungstenETDCudaSession dev(settings, rank, nproc, MPI_COMM_WORLD);
 #endif
   dev.run();
 

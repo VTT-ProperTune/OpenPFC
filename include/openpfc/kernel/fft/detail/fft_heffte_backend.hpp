@@ -6,7 +6,7 @@
  * @brief HeFFTe-backed FFT_Impl template (include only where HeFFTe is required)
  *
  * @details
- * Workspace ownership is backend-specialized via `detail::FftWorkspaceStorage`:
+ * Workspace ownership is backend-specialized via `detail::FFTWorkspaceStorage`:
  * - FFTW owns only the host `m_wrk` buffer used by the `std::vector` transform
  *   path.
  * - GPU backends (`cufft` / `rocfft`) lazily allocate the device workspace
@@ -64,18 +64,18 @@ inline void require_equal_size(std::size_t actual, std::size_t expected,
  *
  * Primary template is intentionally incomplete; specialize per backend family.
  */
-template <typename BackendTag> struct FftWorkspaceStorage;
+template <typename BackendTag> struct FFTWorkspaceStorage;
 
 /**
  * @brief FFTW: host workspace only (`std::vector`-backed HeFFTe container).
  */
-template <> struct FftWorkspaceStorage<heffte::backend::fftw> {
+template <> struct FFTWorkspaceStorage<heffte::backend::fftw> {
   using workspace_type = typename heffte::fft3d_r2c<
       heffte::backend::fftw>::template buffer_container<std::complex<double>>;
 
   workspace_type m_wrk;
 
-  explicit FftWorkspaceStorage(std::size_t n) : m_wrk(n) {}
+  explicit FFTWorkspaceStorage(std::size_t n) : m_wrk(n) {}
 
   auto *data_wrk() noexcept { return m_wrk.data(); }
 
@@ -93,7 +93,7 @@ template <> struct FftWorkspaceStorage<heffte::backend::fftw> {
  */
 template <typename BackendTag>
   requires HeapBackend<BackendTag>
-struct FftWorkspaceStorage<BackendTag> {
+struct FFTWorkspaceStorage<BackendTag> {
   using gpu_workspace_type = typename heffte::fft3d_r2c<
       BackendTag>::template buffer_container<std::complex<double>>;
   using gpu_workspace_float = typename heffte::fft3d_r2c<
@@ -103,7 +103,7 @@ struct FftWorkspaceStorage<BackendTag> {
   std::unique_ptr<gpu_workspace_type> m_gpu_wrk_double;
   std::unique_ptr<gpu_workspace_float> m_gpu_wrk_float;
 
-  explicit FftWorkspaceStorage(std::size_t n) : m_n(n) {}
+  explicit FFTWorkspaceStorage(std::size_t n) : m_n(n) {}
 
   auto *data_gpu_double() {
     if (!m_gpu_wrk_double) {
@@ -160,7 +160,7 @@ struct device_fft_buffers<
  * @tparam BackendTag HeFFTe backend tag (heffte::backend::fftw or
  * heffte::backend::cufft / rocfft)
  *
- * Workspace buffers are owned by `detail::FftWorkspaceStorage<BackendTag>` so
+ * Workspace buffers are owned by `detail::FFTWorkspaceStorage<BackendTag>` so
  * unused twin host/device allocations are not constructed.
  */
 template <typename BackendTag = heffte::backend::fftw,
@@ -171,7 +171,7 @@ struct FFT_Impl : Interface {
   const fft_type m_fft;
   double m_fft_time = 0.0;
 
-  detail::FftWorkspaceStorage<BackendTag> m_ws;
+  detail::FFTWorkspaceStorage<BackendTag> m_ws;
 
   FFT_Impl(fft_type fft)
       : m_fft(std::move(fft)), m_ws(m_fft.size_workspace()) {}

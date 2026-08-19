@@ -33,17 +33,17 @@
 
 namespace tungsten {
 
-template <class MemorySpace> class TungstenEtdGpuSession {
+template <class MemorySpace> class TungstenETDGpuSession {
 public:
   using Physics = TungstenPhysics<double, MemorySpace>;
-  using System = pfc::sim::DeviceSpectralMeanFieldEtdSystem<Physics, MemorySpace>;
+  using System = pfc::sim::DeviceSpectralMeanFieldETDSystem<Physics, MemorySpace>;
 
-  TungstenEtdGpuSession(const TungstenEtdGpuSession &) = delete;
-  TungstenEtdGpuSession &operator=(const TungstenEtdGpuSession &) = delete;
-  TungstenEtdGpuSession(TungstenEtdGpuSession &&) = delete;
-  TungstenEtdGpuSession &operator=(TungstenEtdGpuSession &&) = delete;
+  TungstenETDGpuSession(const TungstenETDGpuSession &) = delete;
+  TungstenETDGpuSession &operator=(const TungstenETDGpuSession &) = delete;
+  TungstenETDGpuSession(TungstenETDGpuSession &&) = delete;
+  TungstenETDGpuSession &operator=(TungstenETDGpuSession &&) = delete;
 
-  TungstenEtdGpuSession(const nlohmann::json &settings, int rank, int nproc,
+  TungstenETDGpuSession(const nlohmann::json &settings, int rank, int nproc,
                         MPI_Comm comm = MPI_COMM_WORLD)
       : m_domain(pfc::ui::from_json<pfc::Domain>(settings)),
         m_time(pfc::ui::from_json<pfc::Time>(settings)),
@@ -111,15 +111,15 @@ private:
   pfc::sim::stacks::GpuSpectralStack<MemorySpace> m_stack;
   pfc::SimulationState m_state;
   std::optional<FixedBc> m_bc{};
-  TungstenEtdWriters m_writers{};
+  TungstenETDWriters m_writers{};
   std::unique_ptr<System> m_sys;
 };
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-using TungstenEtdHipSession = TungstenEtdGpuSession<pfc::HipSpace>;
+using TungstenETDHipSession = TungstenETDGpuSession<pfc::HipSpace>;
 #endif
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-using TungstenEtdCudaSession = TungstenEtdGpuSession<pfc::CudaSpace>;
+using TungstenETDCudaSession = TungstenETDGpuSession<pfc::CudaSpace>;
 #endif
 
 } // namespace tungsten

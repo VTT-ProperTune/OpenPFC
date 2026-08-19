@@ -315,9 +315,9 @@ buffer. The shared types live in
 Production `EulerStepper` / `MultiEulerStepper`, `RK2HeunStepper`,
 `RK3HeunStepper`, and `ExplicitRKStepper` implement the same `attempt` /
 `commit_step_attempt` pair. `EmbeddedRKStepper`,
-`ImexEulerStepper`, and `Etd1Stepper` return `StepAttemptResult` as well;
+`ImexEulerStepper`, and `ETD1Stepper` return `StepAttemptResult` as well;
 method extras live on stepper accessors (`u_high`/`u_low`/`error`,
-`last_solve_*`, `last_reason`). Special result types (`Etd1StepAttempt`,
+`last_solve_*`, `last_reason`). Special result types (`ETD1StepAttempt`,
 `ImexStepAttempt`, `EmbeddedStepAttemptResult`) are removed.
 
 ## Consequences

@@ -125,7 +125,7 @@ public:
    * Constructs a Model with the given FFT backend and simulation domain.
    * The FFT object must outlive the Model instance.
    *
-   * @param fft Reference to the FFT implementation (`IFFT`, e.g. `CpuFft`) used by
+   * @param fft Reference to the FFT implementation (`IFFT`, e.g. `CpuFFT`) used by
    * the model
    * @param world Reference to the World object
    * @param mpi_comm MPI communicator for `is_rank0()` (default `MPI_COMM_WORLD`).

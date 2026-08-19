@@ -152,7 +152,7 @@ struct TungstenPhysics {
   }
 };
 
-static_assert(pfc::sim::MeanFieldEtdPhysics<TungstenPhysics<>>);
+static_assert(pfc::sim::MeanFieldETDPhysics<TungstenPhysics<>>);
 static_assert(pfc::sim::HasParameters<TungstenPhysics<>>);
 
 } // namespace tungsten

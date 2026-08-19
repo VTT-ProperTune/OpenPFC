@@ -74,7 +74,7 @@ struct SwiftHohenberg {
 static_assert(pfc::sim::HasParameters<SwiftHohenberg>);
 static_assert(pfc::sim::DeclaresFields<SwiftHohenberg>);
 static_assert(pfc::sim::PointwiseRhs<SwiftHohenberg, SHGrads>);
-static_assert(pfc::sim::SpectralEtdPhysics<SwiftHohenberg>);
+static_assert(pfc::sim::SpectralETDPhysics<SwiftHohenberg>);
 static_assert(pfc::sim::HasParameterSchema<SwiftHohenberg>);
 
 } // namespace pfc::test

@@ -85,12 +85,12 @@ template <class T> [[nodiscard]] bool is_finite_scalar(const T &x) {
  */
 template <class Rhs, class Scalar = double>
   requires StageFunctionFor<Rhs, Scalar>
-class Etd1Stepper {
+class ETD1Stepper {
 public:
   using scalar_type = Scalar;
   using Attempt = StepAttempt<Scalar>;
 
-  Etd1Stepper(double dt, std::size_t local_size, Rhs rhs)
+  ETD1Stepper(double dt, std::size_t local_size, Rhs rhs)
       : m_dt(dt), m_local_size(local_size), m_du(local_size, Scalar{}),
         m_candidate(local_size, Scalar{}), m_u_scratch(local_size, Scalar{}),
         m_rhs(std::move(rhs)) {}
@@ -109,7 +109,7 @@ public:
                         std::span<const double> phi1_L) {
     if (exp_Ldt.size() != phi1_L.size()) {
       throw std::invalid_argument(
-          "Etd1Stepper::set_coefficients: exp_Ldt.size() != phi1_L.size()");
+          "ETD1Stepper::set_coefficients: exp_Ldt.size() != phi1_L.size()");
     }
     m_owned_exp.clear();
     m_owned_phi1.clear();
@@ -127,7 +127,7 @@ public:
                               std::span<const double> phi1_L) {
     if (exp_Ldt.size() != phi1_L.size()) {
       throw std::invalid_argument(
-          "Etd1Stepper::set_coefficients_owned: exp_Ldt.size() != "
+          "ETD1Stepper::set_coefficients_owned: exp_Ldt.size() != "
           "phi1_L.size()");
     }
     m_owned_exp.assign(exp_Ldt.begin(), exp_Ldt.end());
@@ -227,13 +227,13 @@ private:
  */
 template <class Rhs, std::size_t N, class Scalar = double>
   requires(N >= 1) && MultiStageFunction<Rhs, N, Scalar>
-class MultiEtd1Stepper {
+class MultiETD1Stepper {
 public:
   using RhsType = Rhs;
   using scalar_type = Scalar;
   static constexpr std::size_t field_count = N;
 
-  MultiEtd1Stepper(double dt, std::array<std::size_t, N> local_sizes, Rhs rhs)
+  MultiETD1Stepper(double dt, std::array<std::size_t, N> local_sizes, Rhs rhs)
       : m_dt(dt), m_local_sizes(local_sizes), m_rhs(std::move(rhs)) {
     for (std::size_t f = 0; f < N; ++f) {
       m_du[f].assign(local_sizes[f], Scalar{});
@@ -253,7 +253,7 @@ public:
     for (std::size_t f = 0; f < N; ++f) {
       if (exp_Ldt[f].size() != phi1_L[f].size()) {
         throw std::invalid_argument(
-            "MultiEtd1Stepper::set_coefficients: per-field exp/phi1 size "
+            "MultiETD1Stepper::set_coefficients: per-field exp/phi1 size "
             "mismatch");
       }
       m_owned_exp[f].clear();
@@ -268,7 +268,7 @@ public:
     for (std::size_t f = 0; f < N; ++f) {
       if (exp_Ldt[f].size() != phi1_L[f].size()) {
         throw std::invalid_argument(
-            "MultiEtd1Stepper::set_coefficients_owned: per-field exp/phi1 "
+            "MultiETD1Stepper::set_coefficients_owned: per-field exp/phi1 "
             "size mismatch");
       }
       m_owned_exp[f].assign(exp_Ldt[f].begin(), exp_Ldt[f].end());
@@ -285,9 +285,9 @@ public:
   [[nodiscard]] MultiStepAttemptResult<N, Scalar>
   attempt(double t, const std::vector<U> &...u_accepted) {
     static_assert(sizeof...(U) == N,
-                  "MultiEtd1Stepper::attempt: buffer count must match N");
+                  "MultiETD1Stepper::attempt: buffer count must match N");
     static_assert((std::is_same_v<U, Scalar> && ...),
-                  "MultiEtd1Stepper requires std::vector<Scalar>");
+                  "MultiETD1Stepper requires std::vector<Scalar>");
     m_last_reason.clear();
     const std::array<const std::vector<Scalar> *, N> accepted{&u_accepted...};
     for (std::size_t f = 0; f < N; ++f) {

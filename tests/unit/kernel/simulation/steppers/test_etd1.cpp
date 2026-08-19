@@ -17,8 +17,8 @@
 
 using pfc::integrator::fill_spectral_exp_coeffs;
 using pfc::integrator::spectral_exp_coeffs;
-using pfc::sim::steppers::Etd1Stepper;
-using pfc::sim::steppers::MultiEtd1Stepper;
+using pfc::sim::steppers::ETD1Stepper;
+using pfc::sim::steppers::MultiETD1Stepper;
 
 namespace {
 
@@ -81,7 +81,7 @@ integrate_etd1(double L, QuadraticN rhs, double u0, double T, double dt) {
   std::vector<double> phi_buf(1);
   fill_spectral_exp_coeffs(Lvec, dt, exp_buf, phi_buf);
 
-  Etd1Stepper stepper(dt, 1, rhs);
+  ETD1Stepper stepper(dt, 1, rhs);
   stepper.set_coefficients(exp_buf, phi_buf);
 
   std::vector<double> u{u0};
@@ -109,7 +109,7 @@ TEST_CASE("etd1_closed_form_diagonal_update", "[stepper][etd1]") {
   fill_spectral_exp_coeffs(Lvec, dt, exp_buf, phi_buf);
 
   ConstantN rhs{Nval};
-  Etd1Stepper stepper(dt, 1, rhs);
+  ETD1Stepper stepper(dt, 1, rhs);
   stepper.set_coefficients(exp_buf, phi_buf);
 
   std::vector<double> u{u0};
@@ -132,7 +132,7 @@ TEST_CASE("etd1_near_zero_phi1_finite", "[stepper][etd1]") {
   fill_spectral_exp_coeffs(Lvals, dt, exp_buf, phi_buf);
 
   ConstantN rhs{1.0};
-  Etd1Stepper stepper(dt, Lvals.size(), rhs);
+  ETD1Stepper stepper(dt, Lvals.size(), rhs);
   stepper.set_coefficients(exp_buf, phi_buf);
 
   std::vector<double> u(Lvals.size(), 2.0);
@@ -156,7 +156,7 @@ TEST_CASE("etd1_accepted_state_isolation", "[stepper][etd1]") {
   fill_spectral_exp_coeffs(Lvec, dt, exp_buf, phi_buf);
 
   MutatingN rhs;
-  Etd1Stepper stepper(dt, 2, rhs);
+  ETD1Stepper stepper(dt, 2, rhs);
   stepper.set_coefficients(exp_buf, phi_buf);
 
   std::vector<double> u{1.0, 2.0};
@@ -212,7 +212,7 @@ TEST_CASE("etd1_multi_field_bundle", "[stepper][etd1]") {
   fill_spectral_exp_coeffs(L1, dt, exp1, phi1);
 
   TwoFieldConstantN rhs{0.5, -0.25};
-  MultiEtd1Stepper<TwoFieldConstantN, 2> stepper(dt, {1, 1}, rhs);
+  MultiETD1Stepper<TwoFieldConstantN, 2> stepper(dt, {1, 1}, rhs);
   stepper.set_coefficients({std::span<const double>{exp0},
                             std::span<const double>{exp1}},
                            {std::span<const double>{phi0},
@@ -262,7 +262,7 @@ TEST_CASE("etd1_three_field_bundle", "[stepper][etd1]") {
   fill_spectral_exp_coeffs(L2, dt, exp2, phi2);
 
   ThreeFieldConstantN rhs{0.25, -0.5, 1.0};
-  MultiEtd1Stepper<ThreeFieldConstantN, 3> stepper(dt, {1, 1, 1}, rhs);
+  MultiETD1Stepper<ThreeFieldConstantN, 3> stepper(dt, {1, 1, 1}, rhs);
   stepper.set_coefficients(
       {std::span<const double>{exp0}, std::span<const double>{exp1},
        std::span<const double>{exp2}},
@@ -323,7 +323,7 @@ TEST_CASE("etd1_complex_stiff_linear_exact", "[stepper][etd1][complex]") {
   fill_spectral_exp_coeffs(Lvec, dt, exp_buf, phi_buf);
 
   ZeroComplexN rhs{};
-  Etd1Stepper<ZeroComplexN, Complex> stepper(dt, 1, rhs);
+  ETD1Stepper<ZeroComplexN, Complex> stepper(dt, 1, rhs);
   stepper.set_coefficients(exp_buf, phi_buf);
 
   std::vector<Complex> u{u0};
@@ -354,7 +354,7 @@ TEST_CASE("etd1_complex_closed_form_with_N", "[stepper][etd1][complex]") {
   fill_spectral_exp_coeffs(Lvec, dt, exp_buf, phi_buf);
 
   ConstantComplexN rhs{Nval};
-  Etd1Stepper<ConstantComplexN, Complex> stepper(dt, 1, rhs);
+  ETD1Stepper<ConstantComplexN, Complex> stepper(dt, 1, rhs);
   stepper.set_coefficients(exp_buf, phi_buf);
 
   std::vector<Complex> u{u0};
@@ -396,7 +396,7 @@ TEST_CASE("etd1_multi_field_complex_bundle", "[stepper][etd1][complex]") {
   const Complex n1{-0.3, 0.05};
 
   TwoFieldConstantComplexN rhs{n0, n1};
-  MultiEtd1Stepper<TwoFieldConstantComplexN, 2, Complex> stepper(dt, {1, 1},
+  MultiETD1Stepper<TwoFieldConstantComplexN, 2, Complex> stepper(dt, {1, 1},
                                                                  rhs);
   stepper.set_coefficients({std::span<const double>{exp0},
                             std::span<const double>{exp1}},

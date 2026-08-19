@@ -42,7 +42,7 @@ The shortest useful mental model is:
 | `Domain` | Global grid size, spacing, origin, and periodicity | `openpfc/kernel/data/domain.hpp` | `examples/02_domain_decomposition.cpp` |
 | `Box3i` | Inclusive integer bounds for local or transformed regions | `openpfc/kernel/data/box.hpp` | `examples/02_domain_decomposition.cpp` |
 | `Decomposition` | MPI partition and per-rank inbox/outbox geometry | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
-| `IFFT` / `CpuFft` | Distributed forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
+| `IFFT` / `CpuFFT` | Distributed forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
 | `Model` | Physics fields, initialization, and time-step update | `openpfc/kernel/simulation/model.hpp` | `examples/04_diffusion_model.cpp` |
 | `Time` | Start, stop, step size, current time, and save cadence | `openpfc/kernel/simulation/time.hpp` | `examples/time.cpp` |
 | `Simulator` | Coordinates modifiers, model steps, time, and result output | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |

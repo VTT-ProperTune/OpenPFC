@@ -89,7 +89,7 @@ Interpretation: `wall_step` includes all work in `step()`. Compare with the sum 
 
 `ProfilingPrintOptions` controls title, ascii_lines, `sort_by_time`, `show_exclusive_column`, `wall_denominator_metric` (%tot denominator), `mpi_aggregate_stdout`, and `mpi_aggregate_stat`.
 
-Canonical string constants: `kProfilingRegionFft`, `kProfilingRegionCommunication`, `kProfilingRegionGradient` in `profiling/names.hpp`.
+Canonical string constants: `kProfilingRegionFFT`, `kProfilingRegionCommunication`, `kProfilingRegionGradient` in `profiling/names.hpp`.
 
 Include the umbrella header:
 

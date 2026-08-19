@@ -102,7 +102,7 @@ inline void openpfc_end_frame_with_fft_region_wall_and_memory(
     ProfilingSession &s, double wall_step_seconds, double fft_region_seconds,
     std::uint64_t rss, std::uint64_t model_heap,
     std::uint64_t heap_secondary) noexcept {
-  s.assign_recorded_time(kProfilingRegionFft, fft_region_seconds);
+  s.assign_recorded_time(kProfilingRegionFFT, fft_region_seconds);
   openpfc_end_frame_step_wall_and_memory(s, wall_step_seconds, rss, model_heap,
                                          heap_secondary);
 }

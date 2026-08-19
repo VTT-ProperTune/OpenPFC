@@ -9,10 +9,10 @@
  * `SpectralSimulationSession` composes `SpectralCpuStack` (world, decomposition,
  * CPU FFT, time) with a concrete `Model` and `Simulator`. The session is
  * returned as `std::unique_ptr` so it is never moved after construction: the
- * simulator holds references to the model and time members. `CpuFft` is held
+ * simulator holds references to the model and time members. `CpuFFT` is held
  * inside the stack and is not movable.
  *
- * CUDA/HIP models should treat this host `CpuFft` as the sole `pfc::FFT` passed
+ * CUDA/HIP models should treat this host `CpuFFT` as the sole `pfc::FFT` passed
  * into `ConcreteModel` and bind device FFTs from the same decomposition instead
  * of allocating an extra CPU HeFFTe instance in application drivers.
  *
@@ -80,8 +80,8 @@ public:
     return pfc::ui::decomposition(m_stack);
   }
 
-  [[nodiscard]] fft::CpuFft &fft() noexcept { return pfc::ui::fft(m_stack); }
-  [[nodiscard]] const fft::CpuFft &fft() const noexcept {
+  [[nodiscard]] fft::CpuFFT &fft() noexcept { return pfc::ui::fft(m_stack); }
+  [[nodiscard]] const fft::CpuFFT &fft() const noexcept {
     return pfc::ui::fft(m_stack);
   }
 
@@ -154,12 +154,12 @@ decomposition(const SpectralSimulationSession<M> &session) noexcept {
 }
 
 template <class M>
-[[nodiscard]] inline fft::CpuFft &
+[[nodiscard]] inline fft::CpuFFT &
 fft(SpectralSimulationSession<M> &session) noexcept {
   return session.fft();
 }
 template <class M>
-[[nodiscard]] inline const fft::CpuFft &
+[[nodiscard]] inline const fft::CpuFFT &
 fft(const SpectralSimulationSession<M> &session) noexcept {
   return session.fft();
 }

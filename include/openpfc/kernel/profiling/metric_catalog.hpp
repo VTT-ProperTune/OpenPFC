@@ -35,7 +35,7 @@ public:
   with_defaults_and_extras(const std::vector<std::string> &extra_paths) {
     std::set<std::string> ordered;
     ordered.insert(std::string{kProfilingRegionCommunication});
-    ordered.insert(std::string{kProfilingRegionFft});
+    ordered.insert(std::string{kProfilingRegionFFT});
     ordered.insert(std::string{kProfilingRegionGradient});
     for (const std::string &p : extra_paths) {
       insert_path_with_parents(ordered, p);

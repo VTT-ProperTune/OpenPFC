@@ -20,8 +20,8 @@
 using pfc::Box3i;
 using pfc::Domain;
 using pfc::SimulationState;
-using pfc::sim::SpectralEtdPhysics;
-using pfc::sim::SpectralEtdSystem;
+using pfc::sim::SpectralETDPhysics;
+using pfc::sim::SpectralETDSystem;
 using pfc::sim::add_declared_field;
 
 namespace {
@@ -52,9 +52,9 @@ struct SwiftHohenberg {
 
 } // namespace
 
-static_assert(SpectralEtdPhysics<SwiftHohenberg>);
+static_assert(SpectralETDPhysics<SwiftHohenberg>);
 
-TEST_CASE("SpectralEtdSystem zero field stays zero",
+TEST_CASE("SpectralETDSystem zero field stays zero",
           "[spectral_etd][unit]") {
   constexpr int N = 8;
   auto domain = pfc::domain::create(
@@ -69,7 +69,7 @@ TEST_CASE("SpectralEtdSystem zero field stays zero",
 
   SimulationState state;
   physics.declare_fields(state);
-  SpectralEtdSystem<SwiftHohenberg> sys(physics, fft, state, 0.01);
+  SpectralETDSystem<SwiftHohenberg> sys(physics, fft, state, 0.01);
 
   REQUIRE(sys.linear_symbol().size() == fft.size_outbox());
   REQUIRE(sys.linear_symbol()[0] ==
@@ -86,7 +86,7 @@ TEST_CASE("SpectralEtdSystem zero field stays zero",
   }
 }
 
-TEST_CASE("SpectralEtdSystem uniform field matches zero-mode ETD1",
+TEST_CASE("SpectralETDSystem uniform field matches zero-mode ETD1",
           "[spectral_etd][unit]") {
   constexpr int N = 8;
   constexpr double dt = 0.02;
@@ -104,7 +104,7 @@ TEST_CASE("SpectralEtdSystem uniform field matches zero-mode ETD1",
 
   SimulationState state;
   physics.declare_fields(state);
-  SpectralEtdSystem<SwiftHohenberg> sys(physics, fft, state, dt);
+  SpectralETDSystem<SwiftHohenberg> sys(physics, fft, state, dt);
 
   auto &psi = state.get_field<double>("psi").vec();
   for (double &v : psi) {
@@ -121,7 +121,7 @@ TEST_CASE("SpectralEtdSystem uniform field matches zero-mode ETD1",
   }
 }
 
-TEST_CASE("SpectralEtdSystem optional dealias mask does not throw",
+TEST_CASE("SpectralETDSystem optional dealias mask does not throw",
           "[spectral_etd][unit][dealias]") {
   constexpr int N = 8;
   auto domain = pfc::domain::create(
@@ -136,9 +136,9 @@ TEST_CASE("SpectralEtdSystem optional dealias mask does not throw",
 
   SimulationState state;
   physics.declare_fields(state);
-  pfc::sim::SpectralEtdOptions opt{};
+  pfc::sim::SpectralETDOptions opt{};
   opt.dealias = true;
-  SpectralEtdSystem<SwiftHohenberg> sys(std::move(physics), fft, state, 0.01,
+  SpectralETDSystem<SwiftHohenberg> sys(std::move(physics), fft, state, 0.01,
                                         opt);
   auto &psi = state.get_field<double>("psi").vec();
   psi[0] = 0.1;

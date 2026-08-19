@@ -30,7 +30,7 @@ tungsten_apply_options(tungsten)
 
 install(TARGETS tungsten DESTINATION bin)
 
-# M8 A/B CPU driver: SpectralMeanFieldEtdSystem (Gen-1 `tungsten` stays).
+# M8 A/B CPU driver: SpectralMeanFieldETDSystem (Gen-1 `tungsten` stays).
 add_executable(tungsten_etd src/cpu/tungsten_etd.cpp)
 target_include_directories(tungsten_etd PRIVATE ${TUNGSTEN_INCLUDE_DIR})
 if(TARGET Heffte::Heffte)

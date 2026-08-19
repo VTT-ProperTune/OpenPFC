@@ -43,9 +43,9 @@ using Space = pfc::CudaSpace;
 using Catch::Approx;
 using pfc::SimulationState;
 using pfc::data::Field;
-using pfc::sim::DeviceSpectralMeanFieldEtdSystem;
-using pfc::sim::MeanFieldEtdPhysics;
-using pfc::sim::SpectralMeanFieldEtdSystem;
+using pfc::sim::DeviceSpectralMeanFieldETDSystem;
+using pfc::sim::MeanFieldETDPhysics;
+using pfc::sim::SpectralMeanFieldETDSystem;
 
 namespace {
 
@@ -95,9 +95,9 @@ double max_abs_diff(const std::vector<double> &a, const double *b,
 
 } // namespace
 
-static_assert(MeanFieldEtdPhysics<MeanFieldToy>);
+static_assert(MeanFieldETDPhysics<MeanFieldToy>);
 
-TEST_CASE("device SpectralMeanFieldEtdSystem matches host within 1e-10",
+TEST_CASE("device SpectralMeanFieldETDSystem matches host within 1e-10",
           "[gpu][mean_field_etd]") {
 #if defined(OPENPFC_TEST_MEAN_FIELD_ETD_HIP)
   if (!pfc::gpu::test::is_hip_available()) {
@@ -139,7 +139,7 @@ TEST_CASE("device SpectralMeanFieldEtdSystem matches host within 1e-10",
   SimulationState host_state;
   host_phys.declare_fields(host_state);
   fill_cosine(host_state.get_field<double>("psi"));
-  SpectralMeanFieldEtdSystem<MeanFieldToy> host_sys(host_phys, cpu_fft,
+  SpectralMeanFieldETDSystem<MeanFieldToy> host_sys(host_phys, cpu_fft,
                                                     host_state, dt);
   host_sys.step(0.0);
 
@@ -156,7 +156,7 @@ TEST_CASE("device SpectralMeanFieldEtdSystem matches host within 1e-10",
     std::copy(src.begin(), src.end(), d);
   });
   dev_state.add_field<double, Space>("psi", std::move(psi_d));
-  DeviceSpectralMeanFieldEtdSystem<MeanFieldToy, Space> dev_sys(
+  DeviceSpectralMeanFieldETDSystem<MeanFieldToy, Space> dev_sys(
       dev_phys, gpu_fft, dev_state, dt);
   REQUIRE(dev_sys.linear_symbol().size() == gpu_fft.size_outbox());
   REQUIRE(dev_sys.filter_mf().size() == gpu_fft.size_outbox());

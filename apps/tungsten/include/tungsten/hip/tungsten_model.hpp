@@ -9,7 +9,7 @@
  * This file implements the HIP version of the Tungsten PFC model.
  * It uses DataBuffer<HipTag, T> for GPU memory management and HIP kernels
  * for element-wise operations. ETD method weights are owned by
- * @c tungsten::etd::TungstenEtdWorkspace (not persistent Model coefficient members).
+ * @c tungsten::etd::TungstenETDWorkspace (not persistent Model coefficient members).
  *
  * @see tungsten/cuda/tungsten_model.hpp for the CUDA version
  * @see tungsten_params.hpp for model parameters
@@ -60,8 +60,8 @@ private:
 
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> filterMF;
   /// Method-owned ETD weights (transient; not checkpointed).
-  /// TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
-  tungsten::etd::TungstenEtdWorkspace<RealType> m_etd;
+  /// TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
+  tungsten::etd::TungstenETDWorkspace<RealType> m_etd;
   std::uint64_t m_operator_generation{0};
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psiMF;
   pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psi;
@@ -81,8 +81,8 @@ public:
 
   void set_hip_fft(const pfc::Decomposition &decomp, int rank) {
     auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomp, rank);
-    using HeffteHipFft = heffte::fft3d_r2c<heffte::backend::rocfft>;
-    HeffteHipFft fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
+    using HeffteHipFFT = heffte::fft3d_r2c<heffte::backend::rocfft>;
+    HeffteHipFFT fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
                      mpi_comm());
     m_hip_fft = std::make_unique<pfc::fft::FFT_HIP>(std::move(fft));
   }
@@ -293,7 +293,7 @@ public:
     hipEventSynchronize(kernel_done_event);
     fft.forward(psiN, psiN_F);
 
-    // TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+    // TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
     tungsten::ops::apply_time_integration<pfc::backend::HipTag, RealType>(
         psi_F, psiN_F, m_etd.hip_exp_Ldt(), m_etd.hip_n_weight(), psi_F);
     hipEventRecord(kernel_done_event, 0);

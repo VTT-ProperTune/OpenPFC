@@ -13,7 +13,7 @@
 
 namespace pfc::profiling {
 
-inline constexpr std::string_view kProfilingRegionFft = "fft";
+inline constexpr std::string_view kProfilingRegionFFT = "fft";
 inline constexpr std::string_view kProfilingRegionCommunication = "communication";
 inline constexpr std::string_view kProfilingRegionGradient = "gradient";
 

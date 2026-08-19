@@ -9,10 +9,10 @@
  *
  * @details
  * Host path: physics supplies `linear_symbol(k)` and `nonlinearity(psi)`
- * (`SpectralEtdPhysics`). This type owns spectral work fields on the
+ * (`SpectralETDPhysics`). This type owns spectral work fields on the
  * caller's `SimulationState`, prepares ETD coefficients with
  * `for_each_kpoint` + `SpectralExpCoefficientCache`, and advances via
- * `Etd1Stepper` on the complex hat:
+ * `ETD1Stepper` on the complex hat:
  *
  *   N = N(psi)  →  FFT(psi), FFT(N)  →  ETD1 combine  →  iFFT(psi)
  *
@@ -40,7 +40,7 @@
 
 namespace pfc::sim {
 
-struct SpectralEtdOptions {
+struct SpectralETDOptions {
   std::string psi_name{"psi"};
   std::string psi_hat_name{"psi_hat"};
   std::string n_name{"N"};
@@ -51,34 +51,34 @@ struct SpectralEtdOptions {
 /**
  * @brief Host spectral-ETD driver for one real field + its Fourier hat.
  *
- * @tparam Physics Models @ref SpectralEtdPhysics.
+ * @tparam Physics Models @ref SpectralETDPhysics.
  */
 template <class Physics>
-  requires SpectralEtdPhysics<Physics>
-class SpectralEtdSystem {
+  requires SpectralETDPhysics<Physics>
+class SpectralETDSystem {
 public:
   using Complex = std::complex<double>;
 
-  SpectralEtdSystem(Physics physics, fft::IHostFFT &fft, SimulationState &state,
-                    double dt, SpectralEtdOptions opt = {})
+  SpectralETDSystem(Physics physics, fft::IHostFFT &fft, SimulationState &state,
+                    double dt, SpectralETDOptions opt = {})
       : m_physics(std::move(physics)), m_fft(fft), m_state(state), m_dt(dt),
         m_opt(std::move(opt)) {
     if (m_dt <= 0.0) {
-      throw std::invalid_argument("SpectralEtdSystem: dt must be > 0");
+      throw std::invalid_argument("SpectralETDSystem: dt must be > 0");
     }
     if (!m_state.has_field(m_opt.psi_name)) {
       throw std::invalid_argument(
-          "SpectralEtdSystem: primary field '" + m_opt.psi_name +
+          "SpectralETDSystem: primary field '" + m_opt.psi_name +
           "' is missing; call physics.declare_fields first");
     }
     auto &psi = m_state.get_field<double>(m_opt.psi_name);
     if (psi.size() != m_fft.size_inbox()) {
       throw std::invalid_argument(
-          "SpectralEtdSystem: psi.size() != FFT inbox size");
+          "SpectralETDSystem: psi.size() != FFT inbox size");
     }
     allocate_work_fields(psi.domain());
     m_n_hat = &m_state.get_field<Complex>(m_opt.n_hat_name).vec();
-    m_etd = std::make_unique<steppers::Etd1Stepper<CopyNhat, Complex>>(
+    m_etd = std::make_unique<steppers::ETD1Stepper<CopyNhat, Complex>>(
         m_dt, m_fft.size_outbox(), CopyNhat{m_n_hat});
     prepare_operators();
   }
@@ -130,7 +130,7 @@ public:
     }
     const auto attempt = m_etd->attempt(t, psi_hat);
     if (!attempt.success) {
-      throw std::runtime_error("SpectralEtdSystem: ETD1 attempt failed: " +
+      throw std::runtime_error("SpectralETDSystem: ETD1 attempt failed: " +
                                m_etd->last_reason());
     }
     steppers::commit_step_attempt(psi_hat, attempt);
@@ -174,12 +174,12 @@ private:
   fft::IHostFFT &m_fft;
   SimulationState &m_state;
   double m_dt{};
-  SpectralEtdOptions m_opt{};
+  SpectralETDOptions m_opt{};
   std::vector<double> m_L;
   std::vector<double> m_dealias_mask;
   integrator::SpectralExpCoefficientCache<> m_cache{};
   std::vector<Complex> *m_n_hat{nullptr};
-  std::unique_ptr<steppers::Etd1Stepper<CopyNhat, Complex>> m_etd;
+  std::unique_ptr<steppers::ETD1Stepper<CopyNhat, Complex>> m_etd;
 };
 
 } // namespace pfc::sim

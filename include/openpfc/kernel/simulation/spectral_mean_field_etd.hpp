@@ -8,7 +8,7 @@
  * @brief Host spectral ETD with a mean-field filter (tungsten / aluminum).
  *
  * @details
- * Like `SpectralEtdSystem`, but:
+ * Like `SpectralETDSystem`, but:
  * 1. @f$\hat\psi_{\mathrm{MF}} = \chi(k)\,\hat\psi@f$ then iFFT,
  * 2. @f$N = N(\psi,\psi_{\mathrm{MF}})@f$,
  * 3. ETD combine uses @f$n_{\mathrm{weight}} = k_{\mathrm{lap}}\,\phi_1@f$
@@ -33,34 +33,34 @@
 
 namespace pfc::sim {
 
-struct SpectralMeanFieldEtdOptions : SpectralEtdOptions {
+struct SpectralMeanFieldETDOptions : SpectralETDOptions {
   std::string psi_mf_name{"psi_mf"};
   std::string psi_mf_hat_name{"psi_mf_hat"};
 };
 
 template <class Physics>
-  requires MeanFieldEtdPhysics<Physics>
-class SpectralMeanFieldEtdSystem {
+  requires MeanFieldETDPhysics<Physics>
+class SpectralMeanFieldETDSystem {
 public:
   using Complex = std::complex<double>;
 
-  SpectralMeanFieldEtdSystem(Physics physics, fft::IHostFFT &fft,
+  SpectralMeanFieldETDSystem(Physics physics, fft::IHostFFT &fft,
                              SimulationState &state, double dt,
-                             SpectralMeanFieldEtdOptions opt = {})
+                             SpectralMeanFieldETDOptions opt = {})
       : m_physics(std::move(physics)), m_fft(fft), m_state(state), m_dt(dt),
         m_opt(std::move(opt)) {
     if (m_dt <= 0.0) {
-      throw std::invalid_argument("SpectralMeanFieldEtdSystem: dt must be > 0");
+      throw std::invalid_argument("SpectralMeanFieldETDSystem: dt must be > 0");
     }
     if (!m_state.has_field(m_opt.psi_name)) {
       throw std::invalid_argument(
-          "SpectralMeanFieldEtdSystem: primary field '" + m_opt.psi_name +
+          "SpectralMeanFieldETDSystem: primary field '" + m_opt.psi_name +
           "' is missing");
     }
     auto &psi = m_state.get_field<double>(m_opt.psi_name);
     if (psi.size() != m_fft.size_inbox()) {
       throw std::invalid_argument(
-          "SpectralMeanFieldEtdSystem: psi.size() != FFT inbox size");
+          "SpectralMeanFieldETDSystem: psi.size() != FFT inbox size");
     }
     allocate_work_fields(psi.domain());
     prepare_operators();
@@ -151,7 +151,7 @@ private:
   fft::IHostFFT &m_fft;
   SimulationState &m_state;
   double m_dt{};
-  SpectralMeanFieldEtdOptions m_opt{};
+  SpectralMeanFieldETDOptions m_opt{};
   std::vector<double> m_L;
   std::vector<double> m_filter;
   std::vector<double> m_k_lap;

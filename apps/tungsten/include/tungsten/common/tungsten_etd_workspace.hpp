@@ -13,7 +13,7 @@
  * Transient / recomputable — **not** registered as Model checkpoint fields.
  * Rebuild via @ref ensure when operator / dt / config identity changes.
  *
- * TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+ * TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
  * (wire driver-owned time advance through App/Simulator; drop this adapter).
  */
 
@@ -43,9 +43,9 @@ namespace etd {
  * @tparam RealType Storage type for optional device weight buffers (float/double).
  *         Host cache always uses @c double via SpectralExpCoefficientCache.
  *
- * TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+ * TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
  */
-template <typename RealType = double> class TungstenEtdWorkspace {
+template <typename RealType = double> class TungstenETDWorkspace {
 public:
   /**
    * @brief Reserve host scratch for @p n_modes modes.
@@ -101,7 +101,7 @@ public:
               pfc::integrator::SpectralExpConfigId config_id) {
     if (k_laplacian.size() != opCk.size()) {
       throw std::invalid_argument(
-          "TungstenEtdWorkspace::ensure: k_laplacian and opCk size mismatch");
+          "TungstenETDWorkspace::ensure: k_laplacian and opCk size mismatch");
     }
     const std::size_t n = k_laplacian.size();
     if (m_L.size() != n) {
@@ -140,7 +140,7 @@ public:
     if (psi_F.size() != psiN_F.size() || psi_F.size() != exp_w.size() ||
         psi_F.size() != m_n_weight.size()) {
       throw std::invalid_argument(
-          "TungstenEtdWorkspace::apply_etd: span size mismatch");
+          "TungstenETDWorkspace::apply_etd: span size mismatch");
     }
     for (std::size_t i = 0; i < psi_F.size(); ++i) {
       psi_F[i] = exp_w[i] * psi_F[i] + m_n_weight[i] * psiN_F[i];
@@ -189,7 +189,7 @@ public:
   cuda_exp_Ldt() {
     if (!m_cuda_ready) {
       throw std::runtime_error(
-          "TungstenEtdWorkspace: call upload_cuda() after ensure()");
+          "TungstenETDWorkspace: call upload_cuda() after ensure()");
     }
     return m_cuda_exp_Ldt;
   }
@@ -198,7 +198,7 @@ public:
   cuda_n_weight() {
     if (!m_cuda_ready) {
       throw std::runtime_error(
-          "TungstenEtdWorkspace: call upload_cuda() after ensure()");
+          "TungstenETDWorkspace: call upload_cuda() after ensure()");
     }
     return m_cuda_n_weight;
   }
@@ -233,7 +233,7 @@ public:
   hip_exp_Ldt() {
     if (!m_hip_ready) {
       throw std::runtime_error(
-          "TungstenEtdWorkspace: call upload_hip() after ensure()");
+          "TungstenETDWorkspace: call upload_hip() after ensure()");
     }
     return m_hip_exp_Ldt;
   }
@@ -242,7 +242,7 @@ public:
   hip_n_weight() {
     if (!m_hip_ready) {
       throw std::runtime_error(
-          "TungstenEtdWorkspace: call upload_hip() after ensure()");
+          "TungstenETDWorkspace: call upload_hip() after ensure()");
     }
     return m_hip_n_weight;
   }

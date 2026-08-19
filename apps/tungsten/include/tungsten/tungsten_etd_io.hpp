@@ -28,7 +28,7 @@
 
 namespace tungsten {
 
-class TungstenEtdWriters {
+class TungstenETDWriters {
 public:
   void configure(const nlohmann::json &settings, const pfc::Domain &domain,
                  const pfc::Box3i &inbox, MPI_Comm comm, int rank) {

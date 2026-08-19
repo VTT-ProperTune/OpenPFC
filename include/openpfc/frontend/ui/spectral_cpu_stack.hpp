@@ -16,8 +16,8 @@
  *
  * @note Roadmap (Phase C): a future GPU-first JSON session may type-erase or
  *       parameterize the FFT handle at the stack boundary so models are not tied
- *       to `fft::CpuFft` construction when only device FFT is used. Until then,
- *       GPU drivers reuse this stack’s host `CpuFft` for `Model(fft, world, comm)`
+ *       to `fft::CpuFFT` construction when only device FFT is used. Until then,
+ *       GPU drivers reuse this stack’s host `CpuFFT` for `Model(fft, world, comm)`
  *       and build cuFFT/ROCm paths separately (`spectral_fft_stack_factory.hpp`).
  *
  * Non-member accessors (`pfc::ui::world(stack)`, `pfc::ui::fft(stack)`, …) mirror
@@ -73,8 +73,8 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] fft::CpuFft &fft() noexcept { return m_fft; }
-  [[nodiscard]] const fft::CpuFft &fft() const noexcept { return m_fft; }
+  [[nodiscard]] fft::CpuFFT &fft() noexcept { return m_fft; }
+  [[nodiscard]] const fft::CpuFFT &fft() const noexcept { return m_fft; }
 
   [[nodiscard]] Time &time() noexcept { return m_time; }
   [[nodiscard]] const Time &time() const noexcept { return m_time; }
@@ -85,7 +85,7 @@ public:
 private:
   World m_world;
   decomposition::Decomposition m_decomp;
-  fft::CpuFft m_fft;
+  fft::CpuFFT m_fft;
   Time m_time;
   MPI_Comm m_comm{MPI_COMM_WORLD};
 };
@@ -113,10 +113,10 @@ decomposition(const SpectralCpuStack &stack) noexcept {
   return stack.decomposition();
 }
 
-[[nodiscard]] inline fft::CpuFft &fft(SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline fft::CpuFFT &fft(SpectralCpuStack &stack) noexcept {
   return stack.fft();
 }
-[[nodiscard]] inline const fft::CpuFft &fft(const SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline const fft::CpuFFT &fft(const SpectralCpuStack &stack) noexcept {
   return stack.fft();
 }
 

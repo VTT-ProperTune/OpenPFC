@@ -3,7 +3,7 @@
 
 /**
  * @file tungsten_etd.cpp
- * @brief M8 A/B CPU binary: JSON → TungstenEtdSession (mean-field ETD).
+ * @brief M8 A/B CPU binary: JSON → TungstenETDSession (mean-field ETD).
  *
  * Gen-1 `tungsten` (`App<Tungsten>`) remains. Same config path; no writers yet.
  */
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
           return EXIT_FAILURE;
         }
         const auto settings = pfc::ui::load_settings_file(app_argv[1]);
-        tungsten::TungstenEtdSession session(settings, rank, nproc,
+        tungsten::TungstenETDSession session(settings, rank, nproc,
                                              MPI_COMM_WORLD);
         session.run();
         if (rank == 0) {

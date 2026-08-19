@@ -79,7 +79,7 @@
  *
  * The model uses exponential time integration. Method weights
  * (@c exp(L·dt), @c n_weight = k_laplacian·phi1) are owned by
- * @c tungsten::etd::TungstenEtdWorkspace over
+ * @c tungsten::etd::TungstenETDWorkspace over
  * @c pfc::integrator::SpectralExpCoefficientCache — not by Model members.
  *
  * ## Implementation Details
@@ -126,8 +126,8 @@ class Tungsten : public pfc::Model {
 private:
   std::vector<double> filterMF; ///< Mean-field filter in Fourier space
   /// Method-owned ETD weights (transient; not checkpointed).
-  /// TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
-  tungsten::etd::TungstenEtdWorkspace<> m_etd;
+  /// TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
+  tungsten::etd::TungstenETDWorkspace<> m_etd;
   std::uint64_t m_operator_generation{0}; ///< Bumped each prepare_operators
 #ifdef TUNGSTEN_REUSE_ARRAYS
   // Reuse work arrays when the memory-saving Tungsten option is enabled.
@@ -216,7 +216,7 @@ public:
    *
    * Builds @c filterMF from @c physics_for_mode, diagonal samples
    * @c L = k_laplacian * opCk, then ensures method weights via
-   * @c TungstenEtdWorkspace / @c SpectralExpCoefficientCache.
+   * @c TungstenETDWorkspace / @c SpectralExpCoefficientCache.
    *
    * @param dt Time step size
    */
@@ -298,7 +298,7 @@ public:
    * 1. Compute mean-field filtered density ψ_MF
    * 2. Calculate nonlinear term N[ψ, ψ_MF] in real space
    * 3. Transform nonlinear term to Fourier space
-   * 4. Apply method weights via @c TungstenEtdWorkspace::apply_etd
+   * 4. Apply method weights via @c TungstenETDWorkspace::apply_etd
    * 5. Transform back to real space
    *
    * @param t Current time (unused, kept for interface compatibility)
@@ -354,7 +354,7 @@ public:
       OPENPFC_PROFILE("gradient/evolve/forward") { fft.forward(psiN, psiN_F); }
 
       OPENPFC_PROFILE("gradient/evolve/multiply") {
-        // TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169
+        // TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
         m_etd.apply_etd(psi_F, psiN_F);
       }
 
@@ -370,7 +370,7 @@ public:
    *
    * Returns `mem_allocated`, recomputed in `initialize()` as the sum of
    * `pfc::utils::sizeof_vec` over `filterMF`, fields, plus non-checkpoint
-   * ETD workspace scratch (`TungstenEtdWorkspace::host_scratch_bytes`). Does
+   * ETD workspace scratch (`TungstenETDWorkspace::host_scratch_bytes`). Does
    * not include the FFT workspace or MPI buffers; use
    * `get_fft().get_allocated_memory_bytes()` for the FFT engine.
    *

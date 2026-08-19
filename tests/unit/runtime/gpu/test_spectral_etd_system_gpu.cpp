@@ -40,9 +40,9 @@ using Space = pfc::CudaSpace;
 
 using Catch::Approx;
 using pfc::SimulationState;
-using pfc::sim::DeviceSpectralEtdSystem;
-using pfc::sim::SpectralEtdPhysics;
-using pfc::sim::SpectralEtdSystem;
+using pfc::sim::DeviceSpectralETDSystem;
+using pfc::sim::SpectralETDPhysics;
+using pfc::sim::SpectralETDSystem;
 
 namespace {
 
@@ -68,9 +68,9 @@ struct SwiftHohenberg {
 
 } // namespace
 
-static_assert(SpectralEtdPhysics<SwiftHohenberg>);
+static_assert(SpectralETDPhysics<SwiftHohenberg>);
 
-TEST_CASE("device SpectralEtdSystem uniform field matches host within 1e-10",
+TEST_CASE("device SpectralETDSystem uniform field matches host within 1e-10",
           "[gpu][spectral_etd]") {
 #if defined(OPENPFC_TEST_SPECTRAL_ETD_HIP)
   if (!pfc::gpu::test::is_hip_available()) {
@@ -112,7 +112,7 @@ TEST_CASE("device SpectralEtdSystem uniform field matches host within 1e-10",
   host_phys.box = cpu_fft.get_inbox_bounds();
   SimulationState host_state;
   host_phys.declare_fields(host_state);
-  SpectralEtdSystem<SwiftHohenberg> host_sys(host_phys, cpu_fft, host_state,
+  SpectralETDSystem<SwiftHohenberg> host_sys(host_phys, cpu_fft, host_state,
                                              dt);
   auto &psi_h = host_state.get_field<double>("psi").vec();
   std::fill(psi_h.begin(), psi_h.end(), c);
@@ -127,7 +127,7 @@ TEST_CASE("device SpectralEtdSystem uniform field matches host within 1e-10",
     std::fill(d, d + n, c);
   });
   dev_state.add_field<double, Space>("psi", std::move(psi_d));
-  DeviceSpectralEtdSystem<SwiftHohenberg, Space> dev_sys(dev_phys, gpu_fft,
+  DeviceSpectralETDSystem<SwiftHohenberg, Space> dev_sys(dev_phys, gpu_fft,
                                                          dev_state, dt);
   REQUIRE(dev_sys.linear_symbol().size() == gpu_fft.size_outbox());
   REQUIRE(dev_sys.linear_symbol()[0] ==

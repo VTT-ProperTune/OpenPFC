@@ -102,7 +102,7 @@ void apply_stabilization(const pfc::core::DataBuffer<BackendTag, RealType> &in,
  *        out = exp_Ldt * psi_F + n_weight * psiN_F
  *
  * Combines Fourier-space state with a nonlinear term using cache-derived
- * weights from @c TungstenEtdWorkspace / @c SpectralExpCoefficientCache
+ * weights from @c TungstenETDWorkspace / @c SpectralExpCoefficientCache
  * (@c exp_Ldt = exp(L·dt), @c n_weight = k_laplacian * phi1_L). Parameter
  * names @c opL / @c opN are historical aliases for those spans — not
  * Model-owned coefficient members.

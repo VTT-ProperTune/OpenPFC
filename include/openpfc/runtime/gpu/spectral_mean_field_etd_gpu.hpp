@@ -8,7 +8,7 @@
  * @brief Device `IDeviceFFT` mean-field spectral-ETD driver.
  *
  * @details
- * Sibling of host `pfc::sim::SpectralMeanFieldEtdSystem`. Lives in runtime
+ * Sibling of host `pfc::sim::SpectralMeanFieldETDSystem`. Lives in runtime
  * because the filter multiply and ETD combine use GPU kernels (kernel must
  * not include runtime). `N(psi, psi_MF)` is formed on a host view; FFT,
  * `χ(k)` multiply, and ETD1 (`n_weight = k_lap·φ₁`) run on device buffers.
@@ -42,38 +42,38 @@ namespace pfc::sim {
 /**
  * @brief Device mean-field spectral-ETD driver (tungsten / aluminum form).
  *
- * @tparam Physics     Models @ref MeanFieldEtdPhysics.
+ * @tparam Physics     Models @ref MeanFieldETDPhysics.
  * @tparam MemorySpace `CudaSpace` or `HipSpace`.
  */
 template <class Physics, class MemorySpace>
-  requires MeanFieldEtdPhysics<Physics>
-class DeviceSpectralMeanFieldEtdSystem {
+  requires MeanFieldETDPhysics<Physics>
+class DeviceSpectralMeanFieldETDSystem {
 public:
   using Complex = std::complex<double>;
   using FFT = fft::IDeviceFFT<MemorySpace>;
   using RealBuffer = typename FFT::RealBuffer;
   using ComplexBuffer = typename FFT::ComplexBuffer;
 
-  DeviceSpectralMeanFieldEtdSystem(Physics physics, FFT &fft,
+  DeviceSpectralMeanFieldETDSystem(Physics physics, FFT &fft,
                                    SimulationState &state, double dt,
-                                   SpectralMeanFieldEtdOptions opt = {})
+                                   SpectralMeanFieldETDOptions opt = {})
       : m_physics(std::move(physics)), m_fft(fft), m_state(state), m_dt(dt),
         m_opt(std::move(opt)), m_exp(fft.size_outbox()),
         m_n_weight_dev(fft.size_outbox()), m_filter_dev(fft.size_outbox()),
         m_candidate(fft.size_outbox()) {
     if (m_dt <= 0.0) {
       throw std::invalid_argument(
-          "DeviceSpectralMeanFieldEtdSystem: dt must be > 0");
+          "DeviceSpectralMeanFieldETDSystem: dt must be > 0");
     }
     if (!m_state.has_field(m_opt.psi_name)) {
       throw std::invalid_argument(
-          "DeviceSpectralMeanFieldEtdSystem: primary field '" +
+          "DeviceSpectralMeanFieldETDSystem: primary field '" +
           m_opt.psi_name + "' is missing");
     }
     auto &psi = m_state.get_field<double, MemorySpace>(m_opt.psi_name);
     if (psi.size() != m_fft.size_inbox()) {
       throw std::invalid_argument(
-          "DeviceSpectralMeanFieldEtdSystem: psi.size() != FFT inbox size");
+          "DeviceSpectralMeanFieldETDSystem: psi.size() != FFT inbox size");
     }
     allocate_work_fields(psi.domain());
     prepare_operators();
@@ -198,7 +198,7 @@ private:
     (void)out;
     (void)n;
     throw std::logic_error(
-        "DeviceSpectralMeanFieldEtdSystem: no χ(k) multiply for this "
+        "DeviceSpectralMeanFieldETDSystem: no χ(k) multiply for this "
         "MemorySpace");
   }
 
@@ -218,7 +218,7 @@ private:
     }
 #endif
     throw std::logic_error(
-        "DeviceSpectralMeanFieldEtdSystem: no device ETD1 combine for this "
+        "DeviceSpectralMeanFieldETDSystem: no device ETD1 combine for this "
         "MemorySpace");
   }
 
@@ -226,7 +226,7 @@ private:
   FFT &m_fft;
   SimulationState &m_state;
   double m_dt{};
-  SpectralMeanFieldEtdOptions m_opt{};
+  SpectralMeanFieldETDOptions m_opt{};
   std::vector<double> m_L;
   std::vector<double> m_filter;
   std::vector<double> m_k_lap;

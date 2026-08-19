@@ -139,7 +139,7 @@ TEST_CASE("Swift-Hohenberg three-way: Gen-1, point-wise Euler, spectral ETD",
   SimulationState etd_state;
   phys.declare_fields(etd_state);
   fill_sh_ic(etd_state.get_field<double>("psi"));
-  pfc::sim::SpectralEtdSystem<SwiftHohenberg> etd(phys, fft, etd_state, dt);
+  pfc::sim::SpectralETDSystem<SwiftHohenberg> etd(phys, fft, etd_state, dt);
   etd.step(0.0);
   const auto etd_psi = etd_state.get_field<double>("psi").vec();
 

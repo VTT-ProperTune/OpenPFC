@@ -128,7 +128,7 @@ TEST_CASE("TungstenPhysics schema round-trips JSON params",
   REQUIRE(p.get_alpha_highOrd() == 4);
 }
 
-TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten one step",
+TEST_CASE("SpectralMeanFieldETDSystem matches Gen-1 Tungsten one step",
           "[tungsten][physics][etd]") {
   constexpr int N = 8;
   constexpr double dt = 0.01;
@@ -152,7 +152,7 @@ TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten one step",
   pfc::SimulationState state;
   phys.declare_fields(state);
   state.get_field<double>("psi").vec() = ic.vec();
-  pfc::sim::SpectralMeanFieldEtdSystem<tungsten::TungstenPhysics<>> sys(
+  pfc::sim::SpectralMeanFieldETDSystem<tungsten::TungstenPhysics<>> sys(
       phys, fft_new, state, dt);
 
   REQUIRE(sys.linear_symbol().size() == fft_new.size_outbox());
@@ -164,7 +164,7 @@ TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten one step",
                        state.get_field<double>("psi").vec()) < 1e-10);
 }
 
-TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten for 10 steps",
+TEST_CASE("SpectralMeanFieldETDSystem matches Gen-1 Tungsten for 10 steps",
           "[tungsten][physics][etd][multistep]") {
   constexpr int N = 8;
   constexpr double dt = 0.01;
@@ -188,7 +188,7 @@ TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten for 10 steps",
   pfc::SimulationState state;
   phys.declare_fields(state);
   state.get_field<double>("psi").vec() = ic.vec();
-  pfc::sim::SpectralMeanFieldEtdSystem<tungsten::TungstenPhysics<>> sys(
+  pfc::sim::SpectralMeanFieldETDSystem<tungsten::TungstenPhysics<>> sys(
       phys, fft_new, state, dt);
 
   double t = 0.0;
@@ -200,7 +200,7 @@ TEST_CASE("SpectralMeanFieldEtdSystem matches Gen-1 Tungsten for 10 steps",
                        state.get_field<double>("psi").vec()) < 1e-10);
 }
 
-TEST_CASE("TungstenEtdSession JSON constant IC matches Gen-1 two steps",
+TEST_CASE("TungstenETDSession JSON constant IC matches Gen-1 two steps",
           "[tungsten][physics][session]") {
   json settings = {
       {"model",
@@ -240,7 +240,7 @@ TEST_CASE("TungstenEtdSession JSON constant IC matches Gen-1 two steps",
       {"initial_conditions",
        {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.10}}}}};
 
-  tungsten::TungstenEtdSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
 
   auto domain = pfc::domain::create(
       pfc::GridSize({8, 8, 8}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
@@ -271,7 +271,7 @@ TEST_CASE("TungstenPhysics linear_symbol matches physics_for_mode",
   REQUIRE(phys.filter_mf(k_lap) == Approx(mode.filterMF));
 }
 
-TEST_CASE("TungstenEtdSession writes psi binary dumps on saveat",
+TEST_CASE("TungstenETDSession writes psi binary dumps on saveat",
           "[tungsten][physics][io]") {
   const auto dir = std::filesystem::temp_directory_path() /
                    ("openpfc_tungsten_etd_" + std::to_string(::getpid()));
@@ -316,7 +316,7 @@ TEST_CASE("TungstenEtdSession writes psi binary dumps on saveat",
        {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.10}}}},
       {"fields", {{{"name", "psi"}, {"data", pattern}}}}};
 
-  tungsten::TungstenEtdSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
   session.run();
   REQUIRE(session.dumps() == 3);
   REQUIRE(std::filesystem::exists(dir / "psi_0.bin"));
@@ -327,14 +327,14 @@ TEST_CASE("TungstenEtdSession writes psi binary dumps on saveat",
   std::filesystem::remove_all(dir);
 }
 
-TEST_CASE("TungstenEtdSession 1-rank 100-step golden vs Gen-1",
+TEST_CASE("TungstenETDSession 1-rank 100-step golden vs Gen-1",
           "[tungsten][golden]") {
   constexpr int N = 8;
   constexpr double dt = 0.01;
   constexpr double t1 = 1.0;
   constexpr int nsteps = 100;
   const json settings = golden_settings(N, t1, dt);
-  tungsten::TungstenEtdSession session(settings, 0, 1, MPI_COMM_WORLD);
+  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
 
   auto domain = pfc::domain::create(
       pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
@@ -355,7 +355,7 @@ TEST_CASE("TungstenEtdSession 1-rank 100-step golden vs Gen-1",
           1e-10);
 }
 
-TEST_CASE("TungstenEtdSession 4-rank golden vs Gen-1",
+TEST_CASE("TungstenETDSession 4-rank golden vs Gen-1",
           "[tungsten][golden][MPI]") {
   int nproc = 1;
   int rank = 0;
@@ -369,7 +369,7 @@ TEST_CASE("TungstenEtdSession 4-rank golden vs Gen-1",
   constexpr double t1 = 0.20;
   constexpr int nsteps = 20;
   const json settings = golden_settings(N, t1, dt);
-  tungsten::TungstenEtdSession session(settings, rank, nproc, MPI_COMM_WORLD);
+  tungsten::TungstenETDSession session(settings, rank, nproc, MPI_COMM_WORLD);
 
   auto domain = pfc::domain::create(
       pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),

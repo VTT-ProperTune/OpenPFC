@@ -18,7 +18,7 @@
 
 namespace pfc::fft {
 
-class CpuFft : public FFT_Impl<heffte::backend::fftw> {
+class CpuFFT : public FFT_Impl<heffte::backend::fftw> {
 public:
   using FFT_Impl<heffte::backend::fftw>::FFT_Impl;
 };
@@ -28,5 +28,5 @@ using plan_options = heffte::plan_options;
 } // namespace pfc::fft
 
 namespace pfc {
-using FFT = fft::CpuFft;
+using FFT = fft::CpuFFT;
 }

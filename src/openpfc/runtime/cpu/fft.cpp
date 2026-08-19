@@ -111,7 +111,7 @@ int get_mpi_size(MPI_Comm comm) {
 using layout::FFTLayout;
 using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
 
-[[nodiscard]] CpuFft create(const FFTLayout &fft_layout, int rank_id,
+[[nodiscard]] CpuFFT create(const FFTLayout &fft_layout, int rank_id,
                             const heffte::plan_options &options, MPI_Comm comm) {
   const auto &inbox = get_real_box(fft_layout, rank_id);
   const auto &outbox = get_complex_box(fft_layout, rank_id);
@@ -120,7 +120,7 @@ using fft_r2c = heffte::fft3d_r2c<heffte::backend::fftw>;
                   r2c_dir, comm, options)};
 }
 
-[[nodiscard]] CpuFft create(const Decomposition &decomposition, int rank_id,
+[[nodiscard]] CpuFFT create(const Decomposition &decomposition, int rank_id,
                             MPI_Comm comm, int r2c_direction) {
   auto options = heffte::default_options<heffte::backend::fftw>();
   auto fft_layout = layout::create(decomposition, r2c_direction);
@@ -176,7 +176,7 @@ create_with_backend(const Decomposition &decomposition, int rank_id, Backend bac
   }
 }
 
-[[nodiscard]] CpuFft create(const Decomposition &decomposition, MPI_Comm comm) {
+[[nodiscard]] CpuFFT create(const Decomposition &decomposition, MPI_Comm comm) {
   const int mpi_comm_size = get_mpi_size(comm);
   const int rank_id = get_mpi_rank(comm);
   const auto decomposition_size = get_num_domains(decomposition);

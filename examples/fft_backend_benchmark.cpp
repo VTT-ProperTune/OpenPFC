@@ -66,8 +66,8 @@ static const char *backend_label(fft::Backend backend) {
 }
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-template <typename Tag, typename GpuFft, typename Sync>
-double benchmark_gpu_fft(GpuFft &fft, Sync &&sync) {
+template <typename Tag, typename GpuFFT, typename Sync>
+double benchmark_gpu_fft(GpuFFT &fft, Sync &&sync) {
   using RealBufferGPU = core::DataBuffer<Tag, double>;
   using ComplexBufferGPU = core::DataBuffer<Tag, std::complex<double>>;
 

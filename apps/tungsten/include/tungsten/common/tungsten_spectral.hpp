@@ -12,7 +12,7 @@
  *
  * Historical ETD apply weights (@c opL / @c opN) remain available only via
  * @ref legacy_etd_weights_for_mode for equivalence tests. Production models must
- * build method weights through @c tungsten::etd::TungstenEtdWorkspace /
+ * build method weights through @c tungsten::etd::TungstenETDWorkspace /
  * @c pfc::integrator::SpectralExpCoefficientCache.
  */
 
@@ -116,7 +116,7 @@ inline OperatorParams make_operator_params(const TungstenParams &params) {
 /**
  * @brief Historical ETD weights for equivalence tests only.
  *
- * Production models must use @c TungstenEtdWorkspace instead.
+ * Production models must use @c TungstenETDWorkspace instead.
  *
  * @param k_laplacian Laplacian symbol in k-space (negative squared wavenumber).
  * @param dt Time step length.

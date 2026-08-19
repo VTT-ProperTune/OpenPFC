@@ -17,7 +17,7 @@
  *
  * It does **not** require every `FFT_Impl` instantiation to eagerly allocate
  * unused workspaces. Eager ownership is backend-specialized in
- * `fft_heffte_backend.hpp` via `detail::FftWorkspaceStorage`:
+ * `fft_heffte_backend.hpp` via `detail::FFTWorkspaceStorage`:
  * - FFTW: host `m_wrk` only (this concept does not apply).
  * - GPU: per-precision device workspaces only (no idle host `m_wrk`).
  *
@@ -46,7 +46,7 @@ concept NotCPUBackend = !std::is_same_v<BackendTag, heffte::backend::fftw>;
 /**
  * @brief Satisfied by a HeFFTe GPU backend tag whose per-precision buffer
  *        containers are constructible from a size and expose `size()`/
- *        `data()` -- the type availability GPU `FftWorkspaceStorage` relies
+ *        `data()` -- the type availability GPU `FFTWorkspaceStorage` relies
  *        on for both `std::complex<double>` and `std::complex<float>`.
  */
 template <typename BackendTag>

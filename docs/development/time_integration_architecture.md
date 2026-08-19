@@ -270,19 +270,19 @@ That construction lives in
 Coefficients are transient/recomputable and are **not** checkpointed.
 Tungsten no longer builds physics-specific `opN = expm1(arg)/opCk` inside
 `Model` members. The app maps `L = k_laplacian * opCk` and owns method weights
-in [`TungstenEtdWorkspace`](../../apps/tungsten/include/tungsten/common/tungsten_etd_workspace.hpp)
+in [`TungstenETDWorkspace`](../../apps/tungsten/include/tungsten/common/tungsten_etd_workspace.hpp)
 (`n_weight = k_laplacian * phi1_L`) over `SpectralExpCoefficientCache`.
 `Model::step` delegates the exponential combine to that workspace (CPU) or to
 `tungsten::ops::apply_time_integration` with workspace device buffers
 (CUDA/HIP). Temporary adapter removal:
-`TODO(remove-tungsten-etd-workspace): replace with Etd1Stepper after #169`.
+`TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169`.
 Coverage:
 [`test_spectral_exp_coefficients.cpp`](../../tests/unit/kernel/integrator/test_spectral_exp_coefficients.cpp)
 (`[integrator][spectral_exp]`) and Tungsten
 [`test_tungsten.cpp`](../../apps/tungsten/tests/test_tungsten.cpp)
 (`[tungsten][spectral]`).
 
-### ETD1 step attempts (`Etd1Stepper`)
+### ETD1 step attempts (`ETD1Stepper`)
 
 CPU first-order exponential time-differencing lives in
 [`etd1.hpp`](../../include/openpfc/kernel/simulation/steppers/etd1.hpp)
@@ -291,7 +291,7 @@ CPU first-order exponential time-differencing lives in
 `StageFunction`-compatible nonlinear `N`:
 
 ```cpp
-Etd1Stepper stepper(dt, local_size, rhs);
+ETD1Stepper stepper(dt, local_size, rhs);
 stepper.set_coefficients(exp_Ldt, phi1_L);  // or SpectralExpCoefficientCache
 auto attempt = stepper.attempt(t, u_accepted);  // u_accepted never written
 // attempt.candidate = exp_Ldt * u + phi1_L * N   (phi1_L already includes dt)
@@ -308,11 +308,11 @@ uploaded.
 evaluating `N`, writes an isolated candidate, and returns
 `StepAttemptResult` (`success` / `t1`) — computational completion only,
 not adaptive accept/reject. Size / non-finite failures set
-`stepper.last_reason()`. `MultiEtd1Stepper<Rhs, 2>` returns
+`stepper.last_reason()`. `MultiETD1Stepper<Rhs, 2>` returns
 `MultiStepAttemptResult<2>` with the same isolation per field. Transient
 coeff/scratch caches are not checkpointable. Tungsten still uses the
-temporary `TungstenEtdWorkspace` adapter until App/Simulator wires
-driver-owned `Etd1Stepper` time advance
+temporary `TungstenETDWorkspace` adapter until App/Simulator wires
+driver-owned `ETD1Stepper` time advance
 (`TODO(remove-tungsten-etd-workspace)`). Coverage:
 `tests/unit/kernel/simulation/steppers/test_etd1.cpp` (`[stepper][etd1]`).
 
