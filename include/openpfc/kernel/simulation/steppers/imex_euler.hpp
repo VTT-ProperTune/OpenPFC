@@ -59,17 +59,17 @@ namespace pfc::sim::steppers {
 
 namespace detail {
 
-template <class Solution>
-void ingest_single_field_solution(std::vector<double> &dest, Solution &&solution) {
+template <class Scalar, class Solution>
+void ingest_single_field_solution(std::vector<Scalar> &dest, Solution &&solution) {
   using S = std::remove_cvref_t<Solution>;
-  if constexpr (std::is_same_v<S, std::vector<double>>) {
+  if constexpr (std::is_same_v<S, std::vector<Scalar>>) {
     dest = std::forward<Solution>(solution);
   } else if constexpr (requires {
                          {
                            std::get<0>(solution)
-                         } -> std::convertible_to<const std::vector<double> &>;
+                         } -> std::convertible_to<const std::vector<Scalar> &>;
                        }) {
-    const std::vector<double> &src = std::get<0>(solution);
+    const std::vector<Scalar> &src = std::get<0>(solution);
     if (std::addressof(src) != std::addressof(dest)) {
       dest = src;
     }
@@ -77,13 +77,13 @@ void ingest_single_field_solution(std::vector<double> &dest, Solution &&solution
   // else: assume the solver already wrote into `dest` in place
 }
 
-template <class Solution, std::size_t N, std::size_t... I>
-void ingest_multi_field_solution_impl(std::array<std::vector<double>, N> &dest,
+template <class Scalar, class Solution, std::size_t N, std::size_t... I>
+void ingest_multi_field_solution_impl(std::array<std::vector<Scalar>, N> &dest,
                                       Solution &&solution,
                                       std::index_sequence<I...>) {
-  auto copy_one = [](std::vector<double> &d, auto &&src) {
+  auto copy_one = [](std::vector<Scalar> &d, auto &&src) {
     using Src = std::remove_cvref_t<decltype(src)>;
-    if constexpr (std::is_same_v<Src, std::vector<double>>) {
+    if constexpr (std::is_same_v<Src, std::vector<Scalar>>) {
       if (std::addressof(src) != std::addressof(d)) {
         d = src;
       }
@@ -97,8 +97,8 @@ void ingest_multi_field_solution_impl(std::array<std::vector<double>, N> &dest,
   }
 }
 
-template <class Solution, std::size_t N>
-void ingest_multi_field_solution(std::array<std::vector<double>, N> &dest,
+template <class Scalar, class Solution, std::size_t N>
+void ingest_multi_field_solution(std::array<std::vector<Scalar>, N> &dest,
                                  Solution &&solution) {
   ingest_multi_field_solution_impl(
       dest, std::forward<Solution>(solution), std::make_index_sequence<N>{});
@@ -155,24 +155,28 @@ void ingest_multi_field_solution(std::array<std::vector<double>, N> &dest,
 /**
  * @brief First-order IMEX Euler stepper for a single field.
  *
- * @tparam ExplicitRhs Callable satisfying `StageFunction` (explicit half E).
+ * @tparam ExplicitRhs Callable satisfying `StageFunctionFor` (explicit half E).
  * @tparam Solver      Callable modeling `SolveFunction` for the implicit half.
+ * @tparam Scalar      Field element type (`double` or `std::complex<double>`).
  *
  * Constructor:
  * `ImexEulerStepper(dt, local_size, E, solver, op_desc, opts = {})`.
  */
-template <class ExplicitRhs, class Solver>
-  requires StageFunction<ExplicitRhs>
+template <class ExplicitRhs, class Solver, class Scalar = double>
+  requires StageFunctionFor<ExplicitRhs, Scalar>
 class ImexEulerStepper {
 public:
+  using scalar_type = Scalar;
+  using Attempt = StepAttempt<Scalar>;
+
   ImexEulerStepper(double dt, std::size_t local_size, ExplicitRhs E,
                    Solver solver, pfc::sim::LinearOperatorDesc op_desc,
                    pfc::sim::SolveOptions opts = {})
       : m_dt(dt), m_E(std::move(E)), m_solver(std::move(solver)),
         m_op_desc(std::move(op_desc)), m_opts(std::move(opts)),
-        m_u_work(local_size, 0.0), m_e(local_size, 0.0),
-        m_rhs_vec(local_size, 0.0), m_candidate(local_size, 0.0),
-        m_u_checkpoint(local_size, 0.0) {}
+        m_u_work(local_size, Scalar{}), m_e(local_size, Scalar{}),
+        m_rhs_vec(local_size, Scalar{}), m_candidate(local_size, Scalar{}),
+        m_u_checkpoint(local_size, Scalar{}) {}
 
   /**
    * @brief Attempt one IMEX Euler step without mutating `u_accepted`.
@@ -181,15 +185,14 @@ public:
    * `(I - dt*L) candidate = rhs` via the injected solver with
    * `ctx.time = t + dt`.
    */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const std::vector<double> &u_accepted,
-                                          pfc::sim::StageContext &ctx) {
+  [[nodiscard]] Attempt attempt(double t, const std::vector<Scalar> &u_accepted,
+                                pfc::sim::StageContext &ctx) {
     m_last_success = false;
     m_u_work = u_accepted;
     m_E(t, m_u_work, m_e);
     const std::size_t n = u_accepted.size();
     for (std::size_t i = 0; i < n; ++i) {
-      m_rhs_vec[i] = u_accepted[i] + m_dt * m_e[i];
+      m_rhs_vec[i] = u_accepted[i] + Scalar(m_dt) * m_e[i];
     }
     ctx.time = t + m_dt;
     auto rhs_bundle = std::tie(m_rhs_vec);
@@ -200,16 +203,14 @@ public:
     if (outcome.status == pfc::sim::ConvergenceStatus::converged) {
       detail::ingest_single_field_solution(m_candidate, outcome.solution);
       m_last_success = true;
-      return StepAttemptResult(t, m_dt, t + m_dt, /*success=*/true,
-                               m_candidate);
+      return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
     }
-    return StepAttemptResult(t, m_dt, t, /*success=*/false, m_candidate);
+    return Attempt(t, m_dt, t, /*success=*/false, m_candidate);
   }
 
-  /** Isolate a candidate from a host `Field<double>` (via `vec()`). */
-  [[nodiscard]] StepAttemptResult attempt(double t,
-                                          const pfc::data::Field<double> &u,
-                                          pfc::sim::StageContext &ctx) {
+  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
+  [[nodiscard]] Attempt attempt(double t, const pfc::data::Field<Scalar> &u,
+                                pfc::sim::StageContext &ctx) {
     return attempt(t, u.vec(), ctx);
   }
 
@@ -218,7 +219,7 @@ public:
    *        succeeded.
    * @return true if committed; false if accepted state was left unchanged.
    */
-  [[nodiscard]] bool commit(std::vector<double> &u_accepted) const {
+  [[nodiscard]] bool commit(std::vector<Scalar> &u_accepted) const {
     if (!m_last_success) {
       return false;
     }
@@ -226,8 +227,8 @@ public:
     return true;
   }
 
-  /** Commit into a host `Field<double>` (via `vec()`). */
-  [[nodiscard]] bool commit(pfc::data::Field<double> &u_accepted) const {
+  /** Commit into a host `Field<Scalar>` (via `vec()`). */
+  [[nodiscard]] bool commit(pfc::data::Field<Scalar> &u_accepted) const {
     return commit(u_accepted.vec());
   }
 
@@ -235,7 +236,7 @@ public:
    * @brief View into the stepper-owned candidate buffer.
    * @pre The last `attempt` returned `success == true`.
    */
-  [[nodiscard]] std::span<const double> candidate() const noexcept {
+  [[nodiscard]] std::span<const Scalar> candidate() const noexcept {
     return m_candidate;
   }
 
@@ -259,9 +260,9 @@ public:
     return m_last_solve_failure_cause;
   }
 
-  void save_state(const std::vector<double> &u) { m_u_checkpoint = u; }
+  void save_state(const std::vector<Scalar> &u) { m_u_checkpoint = u; }
 
-  void restore_state(std::vector<double> &u) { u = m_u_checkpoint; }
+  void restore_state(std::vector<Scalar> &u) { u = m_u_checkpoint; }
 
   [[nodiscard]] bool can_rollback() const noexcept { return true; }
 
@@ -278,11 +279,11 @@ private:
   Solver m_solver;
   pfc::sim::LinearOperatorDesc m_op_desc;
   pfc::sim::SolveOptions m_opts;
-  std::vector<double> m_u_work;
-  std::vector<double> m_e;
-  std::vector<double> m_rhs_vec;
-  std::vector<double> m_candidate;
-  std::vector<double> m_u_checkpoint;
+  std::vector<Scalar> m_u_work;
+  std::vector<Scalar> m_e;
+  std::vector<Scalar> m_rhs_vec;
+  std::vector<Scalar> m_candidate;
+  std::vector<Scalar> m_u_checkpoint;
   bool m_last_success{false};
   std::optional<pfc::sim::ConvergenceStatus> m_last_solve_status;
   int m_last_solve_iteration_count{0};
@@ -301,11 +302,14 @@ private:
  * @tparam ExplicitRhs Multi-field explicit RHS callable.
  * @tparam Solver      Injected `SolveFunction`-compatible solver.
  * @tparam N           Number of fields (`static_assert(N >= 1)`).
+ * @tparam Scalar      Field element type (`double` or `std::complex<double>`).
  */
-template <class ExplicitRhs, class Solver, std::size_t N>
+template <class ExplicitRhs, class Solver, std::size_t N,
+          class Scalar = double>
 class MultiImexEulerStepper {
 public:
   using ExplicitRhsType = ExplicitRhs;
+  using scalar_type = Scalar;
   static constexpr std::size_t field_count = N;
 
   static_assert(N >= 1, "MultiImexEulerStepper requires N >= 1");
@@ -317,11 +321,11 @@ public:
       : m_dt(dt), m_E(std::move(E)), m_solver(std::move(solver)),
         m_op_desc(std::move(op_desc)), m_opts(std::move(opts)) {
     for (std::size_t i = 0; i < N; ++i) {
-      m_u_work[i].assign(local_sizes[i], 0.0);
-      m_e[i].assign(local_sizes[i], 0.0);
-      m_rhs_vec[i].assign(local_sizes[i], 0.0);
-      m_candidate[i].assign(local_sizes[i], 0.0);
-      m_u_checkpoint[i].assign(local_sizes[i], 0.0);
+      m_u_work[i].assign(local_sizes[i], Scalar{});
+      m_e[i].assign(local_sizes[i], Scalar{});
+      m_rhs_vec[i].assign(local_sizes[i], Scalar{});
+      m_candidate[i].assign(local_sizes[i], Scalar{});
+      m_u_checkpoint[i].assign(local_sizes[i], Scalar{});
     }
   }
 
@@ -333,13 +337,13 @@ public:
    *       last; call as `attempt(t, ctx, u1, u2, ...)`.
    */
   template <class... U>
-  [[nodiscard]] MultiStepAttemptResult<N>
+  [[nodiscard]] MultiStepAttemptResult<N, Scalar>
   attempt(double t, pfc::sim::StageContext &ctx,
           const std::vector<U> &...u_accepted) {
     static_assert(sizeof...(U) == N,
                   "MultiImexEulerStepper::attempt: buffer count must match N");
-    static_assert((std::is_same_v<U, double> && ...),
-                  "MultiImexEulerStepper requires std::vector<double>");
+    static_assert((std::is_same_v<U, Scalar> && ...),
+                  "MultiImexEulerStepper requires std::vector<Scalar>");
     m_last_success = false;
     copy_accepted_to_work(std::index_sequence_for<U...>{}, u_accepted...);
     auto u_pack = make_work_tuple(std::index_sequence_for<U...>{});
@@ -356,11 +360,12 @@ public:
     if (outcome.status == pfc::sim::ConvergenceStatus::converged) {
       detail::ingest_multi_field_solution(m_candidate, outcome.solution);
       m_last_success = true;
-      return MultiStepAttemptResult<N>(t, m_dt, t + m_dt, /*success=*/true,
-                                       candidate_ptrs());
+      return MultiStepAttemptResult<N, Scalar>(t, m_dt, t + m_dt,
+                                               /*success=*/true,
+                                               candidate_ptrs());
     }
-    return MultiStepAttemptResult<N>(t, m_dt, t, /*success=*/false,
-                                     candidate_ptrs());
+    return MultiStepAttemptResult<N, Scalar>(t, m_dt, t, /*success=*/false,
+                                             candidate_ptrs());
   }
 
   /**
@@ -371,8 +376,8 @@ public:
   [[nodiscard]] bool commit(std::vector<U> &...u_accepted) const {
     static_assert(sizeof...(U) == N,
                   "MultiImexEulerStepper::commit: buffer count must match N");
-    static_assert((std::is_same_v<U, double> && ...),
-                  "MultiImexEulerStepper requires std::vector<double>");
+    static_assert((std::is_same_v<U, Scalar> && ...),
+                  "MultiImexEulerStepper requires std::vector<Scalar>");
     if (!m_last_success) {
       return false;
     }
@@ -402,16 +407,16 @@ public:
 
   template <class... U> void save_state(const std::vector<U> &...u_buffers) {
     static_assert(sizeof...(U) == N, "field count must match N");
-    static_assert((std::is_same_v<U, double> && ...),
-                  "checkpoint requires std::vector<double>");
+    static_assert((std::is_same_v<U, Scalar> && ...),
+                  "checkpoint requires std::vector<Scalar>");
     std::size_t i = 0;
     ((m_u_checkpoint[i++] = u_buffers), ...);
   }
 
   template <class... U> void restore_state(std::vector<U> &...u_buffers) {
     static_assert(sizeof...(U) == N, "field count must match N");
-    static_assert((std::is_same_v<U, double> && ...),
-                  "checkpoint requires std::vector<double>");
+    static_assert((std::is_same_v<U, Scalar> && ...),
+                  "checkpoint requires std::vector<Scalar>");
     std::size_t i = 0;
     ((u_buffers = m_u_checkpoint[i++]), ...);
   }
@@ -436,10 +441,10 @@ private:
   template <std::size_t... I, class... U>
   void form_rhs(std::index_sequence<I...>,
                 const std::vector<U> &...u_accepted) {
-    auto one = [this](std::vector<double> &rhs, const std::vector<double> &u,
-                      const std::vector<double> &e) {
+    auto one = [this](std::vector<Scalar> &rhs, const std::vector<Scalar> &u,
+                      const std::vector<Scalar> &e) {
       for (std::size_t i = 0; i < u.size(); ++i) {
-        rhs[i] = u[i] + m_dt * e[i];
+        rhs[i] = u[i] + Scalar(m_dt) * e[i];
       }
     };
     (one(m_rhs_vec[I], u_accepted, m_e[I]), ...);
@@ -467,13 +472,13 @@ private:
     m_last_solve_failure_cause = outcome.failure_cause;
   }
 
-  [[nodiscard]] std::array<const std::vector<double> *, N>
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
   candidate_ptrs() const {
     return candidate_ptrs_impl(std::make_index_sequence<N>{});
   }
 
   template <std::size_t... I>
-  [[nodiscard]] std::array<const std::vector<double> *, N>
+  [[nodiscard]] std::array<const std::vector<Scalar> *, N>
   candidate_ptrs_impl(std::index_sequence<I...>) const {
     return {&m_candidate[I]...};
   }
@@ -483,11 +488,11 @@ private:
   Solver m_solver;
   pfc::sim::LinearOperatorDesc m_op_desc;
   pfc::sim::SolveOptions m_opts;
-  std::array<std::vector<double>, N> m_u_work;
-  std::array<std::vector<double>, N> m_e;
-  std::array<std::vector<double>, N> m_rhs_vec;
-  std::array<std::vector<double>, N> m_candidate;
-  std::array<std::vector<double>, N> m_u_checkpoint;
+  std::array<std::vector<Scalar>, N> m_u_work;
+  std::array<std::vector<Scalar>, N> m_e;
+  std::array<std::vector<Scalar>, N> m_rhs_vec;
+  std::array<std::vector<Scalar>, N> m_candidate;
+  std::array<std::vector<Scalar>, N> m_u_checkpoint;
   bool m_last_success{false};
   std::optional<pfc::sim::ConvergenceStatus> m_last_solve_status;
   int m_last_solve_iteration_count{0};

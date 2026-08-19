@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -9,6 +10,7 @@
 
 #include <array>
 #include <cmath>
+#include <complex>
 #include <tuple>
 #include <vector>
 
@@ -317,4 +319,116 @@ TEST_CASE("imex_euler_nondiagonal_dense_solve", "[imex]") {
   const double den = 1.0 - dt * dt;
   REQUIRE_THAT(u[0], WithinAbs(1.0 / den, 1e-12));
   REQUIRE_THAT(u[1], WithinAbs(dt / den, 1e-12));
+}
+
+using Complex = std::complex<double>;
+
+struct ConstantComplexRHS {
+  Complex c{};
+  void operator()(double /*t*/, std::vector<Complex> & /*u*/,
+                  std::vector<Complex> &du) const {
+    for (auto &v : du) {
+      v = c;
+    }
+  }
+};
+
+struct TwoFieldConstantComplexRHS {
+  Complex c0{};
+  Complex c1{};
+  void operator()(
+      double /*t*/,
+      std::tuple<std::vector<Complex> &, std::vector<Complex> &> /*u*/,
+      std::tuple<std::vector<Complex> &, std::vector<Complex> &> du) const {
+    std::get<0>(du)[0] = c0;
+    std::get<1>(du)[0] = c1;
+  }
+};
+
+TEST_CASE("imex_euler_complex_identity_matches_euler", "[imex][complex]") {
+  constexpr Complex c{0.25, -0.5};
+  constexpr Complex u0{1.0, 2.0};
+  constexpr double dt = 0.1;
+  ConstantComplexRHS rhs{c};
+  auto solver = make_identity_solver();
+  LinearOperatorDesc op_desc{"identity_noop"};
+
+  ImexEulerStepper<ConstantComplexRHS, decltype(solver), Complex> imex(
+      dt, 1, rhs, solver, op_desc);
+  EulerStepper<ConstantComplexRHS, Complex> euler(dt, 1, rhs);
+
+  MockExecutionService service;
+  StageContext ctx{.time = 0.0, .execution_service = &service};
+
+  std::vector<Complex> u_imex{u0};
+  std::vector<Complex> u_euler{u0};
+  const auto fingerprint = u_imex;
+  const auto attempt = imex.attempt(0.0, u_imex, ctx);
+  REQUIRE(attempt.success);
+  REQUIRE(u_imex == fingerprint);
+  REQUIRE(imex.commit(u_imex));
+  (void)euler.step(0.0, u_euler);
+
+  const Complex expected = u0 + Complex(dt) * c;
+  REQUIRE(u_imex[0].real() == Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(u_imex[0].imag() == Catch::Approx(expected.imag()).margin(1e-12));
+  REQUIRE(u_euler[0].real() == Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(u_euler[0].imag() == Catch::Approx(expected.imag()).margin(1e-12));
+}
+
+TEST_CASE("imex_euler_complex_diagonal_implicit", "[imex][complex]") {
+  // E = 0, L = -λ (real): (I - dt L) = 1 + dt λ, u_{n+1} = u_n / (1+dtλ).
+  constexpr double lambda = 2.0;
+  constexpr double dt = 0.05;
+  constexpr Complex u0{0.5, -0.25};
+  struct ZeroComplexRHS {
+    void operator()(double /*t*/, std::vector<Complex> & /*u*/,
+                    std::vector<Complex> &du) const {
+      for (auto &v : du) {
+        v = Complex{};
+      }
+    }
+  };
+  ZeroComplexRHS E{};
+  auto solver = make_diagonal_imex_solver();
+  std::vector<double> diag{1.0 + dt * lambda};
+  LinearOperatorDesc op_desc{"imex_diagonal", std::nullopt, diag};
+  ImexEulerStepper<ZeroComplexRHS, decltype(solver), Complex> stepper(
+      dt, 1, E, solver, op_desc);
+  MockExecutionService service;
+  StageContext ctx{.time = 0.0, .execution_service = &service};
+  std::vector<Complex> u{u0};
+  const auto attempt = stepper.attempt(0.0, u, ctx);
+  REQUIRE(attempt.success);
+  REQUIRE(stepper.commit(u));
+  const Complex expected = u0 / (1.0 + dt * lambda);
+  REQUIRE(u[0].real() == Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(u[0].imag() == Catch::Approx(expected.imag()).margin(1e-12));
+}
+
+TEST_CASE("imex_euler_complex_multifield", "[imex][complex]") {
+  constexpr double dt = 0.2;
+  constexpr Complex c0{0.1, 0.2};
+  constexpr Complex c1{-0.3, 0.05};
+  TwoFieldConstantComplexRHS rhs{c0, c1};
+  auto solver = make_identity_solver();
+  LinearOperatorDesc op_desc{"identity_noop"};
+  MultiImexEulerStepper<TwoFieldConstantComplexRHS, decltype(solver), 2,
+                        Complex>
+      stepper(dt, {1, 1}, rhs, solver, op_desc);
+  MockExecutionService service;
+  StageContext ctx{.time = 0.0, .execution_service = &service};
+  std::vector<Complex> a{Complex{1.0, 0.0}};
+  std::vector<Complex> b{Complex{0.0, 1.0}};
+  const auto fa = a;
+  const auto fb = b;
+  const auto attempt = stepper.attempt(0.0, ctx, a, b);
+  REQUIRE(attempt.success);
+  REQUIRE(a == fa);
+  REQUIRE(b == fb);
+  REQUIRE(stepper.commit(a, b));
+  const Complex e0 = fa[0] + Complex(dt) * c0;
+  const Complex e1 = fb[0] + Complex(dt) * c1;
+  REQUIRE(a[0].real() == Catch::Approx(e0.real()).margin(1e-12));
+  REQUIRE(b[0].imag() == Catch::Approx(e1.imag()).margin(1e-12));
 }
