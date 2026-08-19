@@ -37,6 +37,54 @@ double max_abs_diff(const std::vector<double> &a, const std::vector<double> &b) 
   return m;
 }
 
+json tungsten_params_json() {
+  return {{"n0", -0.10},
+          {"n_sol", -0.047},
+          {"n_vap", -0.464},
+          {"T", 3300.0},
+          {"T0", 156000.0},
+          {"Bx", 0.8582},
+          {"alpha", 0.50},
+          {"alpha_farTol", 0.001},
+          {"alpha_highOrd", 4},
+          {"lambda", 0.22},
+          {"stabP", 0.2},
+          {"shift_u", 0.3341},
+          {"shift_s", 0.1898},
+          {"p2", 1.0},
+          {"p3", -0.5},
+          {"p4", 0.333333333},
+          {"q20", -0.0037},
+          {"q21", 1.0},
+          {"q30", -12.4567},
+          {"q31", 20.0},
+          {"q40", 45.0}};
+}
+
+json golden_settings(int n, double t1, double dt) {
+  return {{"model", {{"name", "tungsten"}, {"params", tungsten_params_json()}}},
+          {"domain",
+           {{"Lx", n},
+            {"Ly", n},
+            {"Lz", n},
+            {"dx", 1.0},
+            {"dy", 1.0},
+            {"dz", 1.0},
+            {"origin", "corner"}}},
+          {"timestepping",
+           {{"t0", 0.0}, {"t1", t1}, {"dt", dt}, {"saveat", dt}}},
+          {"initial_conditions",
+           {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.10}}}}};
+}
+
+double sumsq(const std::vector<double> &v) {
+  double s = 0.0;
+  for (double x : v) {
+    s += x * x;
+  }
+  return s;
+}
+
 void fill_ic(pfc::data::Field<double> &psi) {
   const auto n = pfc::domain::get_size(psi.domain());
   const auto dx = pfc::domain::get_spacing(psi.domain());
@@ -277,4 +325,78 @@ TEST_CASE("TungstenEtdSession writes psi binary dumps on saveat",
   REQUIRE(std::filesystem::file_size(dir / "psi_0.bin") ==
           8u * 8u * 8u * sizeof(double));
   std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("TungstenEtdSession 1-rank 100-step golden vs Gen-1",
+          "[tungsten][golden]") {
+  constexpr int N = 8;
+  constexpr double dt = 0.01;
+  constexpr double t1 = 1.0;
+  constexpr int nsteps = 100;
+  const json settings = golden_settings(N, t1, dt);
+  tungsten::TungstenEtdSession session(settings, 0, 1, MPI_COMM_WORLD);
+
+  auto domain = pfc::domain::create(
+      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto fft = pfc::fft::create(decomp);
+  Tungsten legacy(fft, domain);
+  tungsten::apply_tungsten_json(settings["model"]["params"], legacy.params);
+  pfc::initialize(legacy, dt);
+  std::fill(legacy.get_real_field("psi").begin(),
+            legacy.get_real_field("psi").end(), -0.10);
+
+  session.run();
+  for (int i = 0; i < nsteps; ++i) {
+    legacy.step(static_cast<double>(i) * dt);
+  }
+  REQUIRE(max_abs_diff(legacy.get_real_field("psi"), session.psi().vec()) <
+          1e-10);
+}
+
+TEST_CASE("TungstenEtdSession 4-rank golden vs Gen-1",
+          "[tungsten][golden][MPI]") {
+  int nproc = 1;
+  int rank = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (nproc != 4) {
+    SKIP("requires exactly 4 MPI ranks");
+  }
+  constexpr int N = 16;
+  constexpr double dt = 0.01;
+  constexpr double t1 = 0.20;
+  constexpr int nsteps = 20;
+  const json settings = golden_settings(N, t1, dt);
+  tungsten::TungstenEtdSession session(settings, rank, nproc, MPI_COMM_WORLD);
+
+  auto domain = pfc::domain::create(
+      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, nproc);
+  auto fft = pfc::fft::create(decomp, rank, MPI_COMM_WORLD);
+  Tungsten legacy(fft, domain);
+  tungsten::apply_tungsten_json(settings["model"]["params"], legacy.params);
+  pfc::initialize(legacy, dt);
+  std::fill(legacy.get_real_field("psi").begin(),
+            legacy.get_real_field("psi").end(), -0.10);
+
+  session.run();
+  for (int i = 0; i < nsteps; ++i) {
+    legacy.step(static_cast<double>(i) * dt);
+  }
+  const double local = max_abs_diff(legacy.get_real_field("psi"),
+                                    session.psi().vec());
+  double global_max = 0.0;
+  MPI_Allreduce(&local, &global_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  REQUIRE(global_max < 1e-10);
+
+  double s_new = sumsq(session.psi().vec());
+  double s_old = sumsq(legacy.get_real_field("psi"));
+  double g_new = 0.0;
+  double g_old = 0.0;
+  MPI_Allreduce(&s_new, &g_new, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&s_old, &g_old, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  REQUIRE(std::abs(g_new - g_old) < 1e-12 * (1.0 + std::abs(g_old)));
 }

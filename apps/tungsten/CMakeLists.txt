@@ -203,6 +203,14 @@ if(TUNGSTEN_ENABLE_TESTS)
         include(CTest)
         # Run all tungsten tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME tungsten-all-tests COMMAND test_tungsten)
+        if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+          add_test(NAME tungsten-golden-4rank
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                    $<TARGET_FILE:test_tungsten> "[golden][MPI]")
+          set_tests_properties(tungsten-golden-4rank PROPERTIES
+            TIMEOUT 180
+            RUN_SERIAL TRUE)
+        endif()
 
         # CPU vs CUDA comparison test (only if CUDA spectral support is enabled)
         if(OpenPFC_ENABLE_CUDA_SPECTRAL)
