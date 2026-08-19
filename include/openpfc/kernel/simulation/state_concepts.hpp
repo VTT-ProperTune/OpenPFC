@@ -45,8 +45,9 @@
  */
 
 #include <concepts>
-#include <type_traits>
 #include <cstddef>
+#include <type_traits>
+#include <vector>
 
 namespace pfc::field {
 
@@ -150,5 +151,23 @@ template <class Input, class Output>
 concept AliasingSafe = requires {
     requires !std::is_same_v<std::remove_cvref_t<Input>, std::remove_cvref_t<Output>>;
 };
+
+/**
+ * @brief Host field state used by stepper `Field` overloads.
+ *
+ * Combines `Field` (size / data / operator()) with a host `vec()` buffer of
+ * `Scalar`. `pfc::data::Field<Scalar, HostSpace>` models this. Device fields
+ * that lack `vec()` do not.
+ *
+ * @tparam F      Field type
+ * @tparam Scalar Element type (`double` or `std::complex<double>`)
+ */
+template <class F, class Scalar>
+concept HostFieldState =
+    Field<F> && std::is_same_v<typename F::value_type, Scalar> &&
+    requires(F &f, const F &cf) {
+      { f.vec() } -> std::same_as<std::vector<Scalar> &>;
+      { cf.vec() } -> std::same_as<const std::vector<Scalar> &>;
+    };
 
 } // namespace pfc::field

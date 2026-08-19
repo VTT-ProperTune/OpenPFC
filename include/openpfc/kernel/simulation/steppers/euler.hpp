@@ -60,6 +60,7 @@
 
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/for_each_interior.hpp>
+#include <openpfc/kernel/simulation/state_concepts.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 #include <openpfc/kernel/simulation/steppers/stepper_validation.hpp>
@@ -106,13 +107,15 @@ public:
     return r.t1;
   }
 
-  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
-  [[nodiscard]] Attempt attempt(double t, const pfc::data::Field<Scalar> &u) {
+  /** Isolate a candidate from host field state (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar> F>
+  [[nodiscard]] Attempt attempt(double t, const F &u) {
     return attempt(t, u.vec());
   }
 
-  /** Advance a host `Field<Scalar>` by one explicit-Euler step. */
-  double step(double t, pfc::data::Field<Scalar> &u) {
+  /** Advance host field state by one explicit-Euler step. */
+  template <pfc::field::HostFieldState<Scalar> F>
+  double step(double t, F &u) {
     return step(t, u.vec());
   }
 

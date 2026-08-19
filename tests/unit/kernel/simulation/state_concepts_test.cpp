@@ -24,6 +24,8 @@ struct MockField {
     std::size_t size() const noexcept { return data_.size(); }
     T* data() noexcept { return data_.data(); }
     const T* data() const noexcept { return data_.data(); }
+    std::vector<T> &vec() { return data_; }
+    const std::vector<T> &vec() const { return data_; }
 
     T& operator()(int i, int j, int k) noexcept
     {
@@ -275,4 +277,11 @@ TEST_CASE("AliasingSafe - prevents same-type aliasing", "[state_concepts][unit]"
         REQUIRE_FALSE(AliasingSafe<MockField<double>, MockField<double>&>);
         REQUIRE_FALSE(AliasingSafe<MockField<double>, const MockField<double>&>);
     }
+}
+
+TEST_CASE("HostFieldState - Field plus host vec()", "[state_concepts][unit]") {
+    REQUIRE(HostFieldState<MockField<double>, double>);
+    REQUIRE_FALSE(HostFieldState<MockField<double>, float>);
+    REQUIRE_FALSE(HostFieldState<MockConstField<double>, double>);
+    REQUIRE_FALSE(HostFieldState<std::vector<double>, double>);
 }

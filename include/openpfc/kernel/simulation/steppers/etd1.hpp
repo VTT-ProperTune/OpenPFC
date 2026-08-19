@@ -48,6 +48,7 @@
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/integrator/etd1_apply.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
+#include <openpfc/kernel/simulation/state_concepts.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
@@ -178,9 +179,9 @@ public:
     return Attempt(t, m_dt, t + m_dt, /*success=*/true, m_candidate);
   }
 
-  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
-  [[nodiscard]] Attempt attempt(double t,
-                                const pfc::data::Field<Scalar> &u) {
+  /** Isolate a candidate from host field state (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar> F>
+  [[nodiscard]] Attempt attempt(double t, const F &u) {
     return attempt(t, u.vec());
   }
 

@@ -33,6 +33,7 @@
 #include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/simulation/state_concepts.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
@@ -156,9 +157,9 @@ public:
     return Attempt(t, dt, t + dt, /*success=*/true, m_u_high);
   }
 
-  /** Isolate high/low/error from a host `Field<Scalar>` (via `vec()`). */
-  [[nodiscard]] Attempt attempt(double t, double dt,
-                                const pfc::data::Field<Scalar> &u) {
+  /** Isolate high/low/error from host field state (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar> F>
+  [[nodiscard]] Attempt attempt(double t, double dt, const F &u) {
     return attempt(t, dt, u.vec());
   }
 

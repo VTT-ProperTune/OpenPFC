@@ -77,6 +77,7 @@
 #include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/simulation/state_concepts.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
@@ -182,13 +183,17 @@ public:
     return r.t1;
   }
 
-  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
-  [[nodiscard]] Attempt attempt(double t, const pfc::data::Field<Scalar> &u) {
+  /** Isolate a candidate from host field state (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar> F>
+  [[nodiscard]] Attempt attempt(double t, const F &u) {
     return attempt(t, u.vec());
   }
 
-  /** Advance a host `Field<Scalar>` by one RK2 Heun step. */
-  double step(double t, pfc::data::Field<Scalar> &u) { return step(t, u.vec()); }
+  /** Advance host field state by one RK2 Heun step. */
+  template <pfc::field::HostFieldState<Scalar> F>
+  double step(double t, F &u) {
+    return step(t, u.vec());
+  }
 
   /**
    * @brief Get the time step size.

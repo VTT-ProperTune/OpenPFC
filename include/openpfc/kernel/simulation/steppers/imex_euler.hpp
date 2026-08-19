@@ -52,6 +52,7 @@
 
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/solver_contract.hpp>
+#include <openpfc/kernel/simulation/state_concepts.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
@@ -208,8 +209,9 @@ public:
     return Attempt(t, m_dt, t, /*success=*/false, m_candidate);
   }
 
-  /** Isolate a candidate from a host `Field<Scalar>` (via `vec()`). */
-  [[nodiscard]] Attempt attempt(double t, const pfc::data::Field<Scalar> &u,
+  /** Isolate a candidate from host field state (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar> F>
+  [[nodiscard]] Attempt attempt(double t, const F &u,
                                 pfc::sim::StageContext &ctx) {
     return attempt(t, u.vec(), ctx);
   }
@@ -227,8 +229,9 @@ public:
     return true;
   }
 
-  /** Commit into a host `Field<Scalar>` (via `vec()`). */
-  [[nodiscard]] bool commit(pfc::data::Field<Scalar> &u_accepted) const {
+  /** Commit into host field state (via `vec()`). */
+  template <pfc::field::HostFieldState<Scalar> F>
+  [[nodiscard]] bool commit(F &u_accepted) const {
     return commit(u_accepted.vec());
   }
 

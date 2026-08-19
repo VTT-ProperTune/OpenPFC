@@ -137,6 +137,7 @@ TEST_CASE("EulerStepper attempt/commit on host Field<double>",
           "[step_protocol][euler][field]") {
   using pfc::data::Field;
   static_assert(pfc::field::Field<Field<double>>);
+  static_assert(pfc::field::HostFieldState<Field<double>, double>);
 
   const auto domain = pfc::domain::create({2, 2, 1});
   const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {1, 1, 0});
