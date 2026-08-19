@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
+#include <complex>
 #include <stdexcept>
 #include <tuple>
 #include <vector>
@@ -19,6 +20,8 @@
 using pfc::sim::steppers::commit_step_attempt;
 using pfc::sim::steppers::EulerStepper;
 using pfc::sim::steppers::MultiEulerStepper;
+using pfc::sim::steppers::PackedEulerStepper;
+using pfc::sim::steppers::PackedStageFunction;
 using pfc::sim::steppers::StepAttemptResult;
 
 namespace {
@@ -169,4 +172,62 @@ TEST_CASE("multi_field_host_field_pack_isolation", "[step_attempt][unit][field]"
   (void)stepper.step(0.0, a, b);
   REQUIRE(a.vec()[0] == Catch::Approx(1.5));
   REQUIRE(b.vec()[0] == Catch::Approx(4.0));
+}
+
+using Complex = std::complex<double>;
+
+struct MixedScalarRhs {
+  void operator()(
+      double /*t*/,
+      std::tuple<std::vector<double> &, std::vector<Complex> &> /*u*/,
+      std::tuple<std::vector<double> &, std::vector<Complex> &> du) const {
+    std::get<0>(du)[0] = 1.0;
+    std::get<1>(du)[0] = Complex{0.0, 2.0};
+  }
+};
+
+TEST_CASE("packed_euler_mixed_scalar_isolation",
+          "[step_attempt][unit][packed]") {
+  static_assert(PackedStageFunction<MixedScalarRhs, double, Complex>);
+  MixedScalarRhs rhs{};
+  PackedEulerStepper<MixedScalarRhs, double, Complex> stepper(0.5, {1, 1}, rhs);
+
+  std::vector<double> u0{2.0};
+  std::vector<Complex> u1{Complex{1.0, -1.0}};
+  const auto fp0 = u0;
+  const auto fp1 = u1;
+  const auto result = stepper.attempt(0.0, u0, u1);
+  REQUIRE(result.success);
+  REQUIRE(u0 == fp0);
+  REQUIRE(u1 == fp1);
+  REQUIRE(result.candidate<0>()[0] == Catch::Approx(2.0 + 0.5 * 1.0));
+  REQUIRE(result.candidate<1>()[0].real() ==
+          Catch::Approx(1.0).margin(1e-12));
+  REQUIRE(result.candidate<1>()[0].imag() ==
+          Catch::Approx(-1.0 + 0.5 * 2.0).margin(1e-12));
+
+  commit_step_attempt(u0, u1, result);
+  REQUIRE(u0[0] == Catch::Approx(2.5));
+  REQUIRE(u1[0].imag() == Catch::Approx(0.0).margin(1e-12));
+}
+
+TEST_CASE("packed_euler_mixed_host_fields",
+          "[step_attempt][unit][packed][field]") {
+  using pfc::data::Field;
+  MixedScalarRhs rhs{};
+  PackedEulerStepper<MixedScalarRhs, double, Complex> stepper(0.25, {1, 1},
+                                                              rhs);
+  const auto domain = pfc::domain::create({1, 1, 1});
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {0, 0, 0});
+  Field<double> a(domain, box, 0);
+  Field<Complex> b(domain, box, 0);
+  a.vec() = {4.0};
+  b.vec() = {Complex{0.0, 1.0}};
+  const auto result = stepper.attempt(0.0, a, b);
+  REQUIRE(result.success);
+  REQUIRE(a.vec()[0] == Catch::Approx(4.0));
+  REQUIRE(b.vec()[0].imag() == Catch::Approx(1.0).margin(1e-12));
+  (void)stepper.step(0.0, a, b);
+  REQUIRE(a.vec()[0] == Catch::Approx(4.25));
+  REQUIRE(b.vec()[0].imag() == Catch::Approx(1.0 + 0.25 * 2.0).margin(1e-12));
 }

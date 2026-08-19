@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <optional>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -177,6 +178,68 @@ commit_step_attempt(std::vector<Scalar> &accepted0,
   }
   accepted0 = result.candidate(0);
   accepted1 = result.candidate(1);
+}
+
+/**
+ * @brief Mixed-scalar N-field attempt outcome (`N == sizeof...(Scalars)`).
+ *
+ * Access candidates with `candidate<I>()`. Lifetime matches
+ * `MultiStepAttemptResult`.
+ */
+template <class... Scalars> struct PackedStepAttempt {
+  static_assert(sizeof...(Scalars) >= 1,
+                "PackedStepAttempt requires at least one field");
+
+  static constexpr std::size_t field_count = sizeof...(Scalars);
+
+  double t0{};
+  double dt{};
+  double t1{};
+  bool success{false};
+  std::tuple<const std::vector<Scalars> *...> candidates{};
+  std::optional<double> error_norm{};
+  std::optional<double> min_next_dt{};
+
+  PackedStepAttempt(double t0_in, double dt_in, double t1_in, bool success_in,
+                    std::tuple<const std::vector<Scalars> *...> candidates_in,
+                    std::optional<double> error_norm_in = std::nullopt,
+                    std::optional<double> min_next_dt_in = std::nullopt)
+      : t0(t0_in), dt(dt_in), t1(t1_in), success(success_in),
+        candidates(std::move(candidates_in)),
+        error_norm(std::move(error_norm_in)),
+        min_next_dt(std::move(min_next_dt_in)) {}
+
+  template <std::size_t I>
+  [[nodiscard]] const std::vector<
+      std::tuple_element_t<I, std::tuple<Scalars...>>> &
+  candidate() const {
+    return *std::get<I>(candidates);
+  }
+};
+
+template <class... Scalars, std::size_t... I>
+void commit_packed_step_attempt(std::index_sequence<I...>,
+                                const PackedStepAttempt<Scalars...> &result,
+                                std::vector<Scalars> &...accepted) {
+  ((accepted = result.template candidate<I>()), ...);
+}
+
+/**
+ * @brief Copy a successful mixed-scalar pack into accepted buffers.
+ *
+ * @throws std::invalid_argument if `!result.success`.
+ */
+template <class... Scalars>
+inline void
+commit_step_attempt(std::vector<Scalars> &...accepted,
+                    const PackedStepAttempt<Scalars...> &result) {
+  if (!result.success) {
+    throw std::invalid_argument(
+        "commit_step_attempt: cannot commit a failed PackedStepAttempt "
+        "(success == false)");
+  }
+  commit_packed_step_attempt(std::index_sequence_for<Scalars...>{}, result,
+                             accepted...);
 }
 
 /**

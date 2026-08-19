@@ -87,4 +87,15 @@ concept MultiStageFunction = requires(
   rhs(t, u_pack, du_pack);
 };
 
+/**
+ * @brief Mixed-scalar multi-field RHS: `rhs(t, u_pack, du_pack)` with one
+ *        `std::vector<Si>&` per field.
+ */
+template <class Rhs, class... Scalars>
+concept PackedStageFunction = requires(
+    Rhs rhs, double t, std::tuple<std::vector<Scalars> &...> u_pack,
+    std::tuple<std::vector<Scalars> &...> du_pack) {
+  rhs(t, u_pack, du_pack);
+};
+
 } // namespace pfc::sim::steppers

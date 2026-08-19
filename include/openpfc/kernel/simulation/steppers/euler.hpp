@@ -360,6 +360,122 @@ private:
   Rhs m_rhs;
 };
 
+/**
+ * @brief Mixed-scalar multi-field forward-Euler stepper.
+ *
+ * Same attempt/commit isolation as `MultiEulerStepper`, but each field may
+ * have its own element type (for example `double` and `std::complex<double>`
+ * in one pack).
+ *
+ * @tparam Rhs     Callable modeling `PackedStageFunction<Rhs, Scalars...>`.
+ * @tparam Scalars Per-field element types (`sizeof...(Scalars) >= 1`).
+ */
+template <class Rhs, class... Scalars>
+  requires(sizeof...(Scalars) >= 1) && PackedStageFunction<Rhs, Scalars...>
+class PackedEulerStepper {
+public:
+  using RhsType = Rhs;
+  static constexpr std::size_t field_count = sizeof...(Scalars);
+  using Attempt = PackedStepAttempt<Scalars...>;
+
+  PackedEulerStepper(double dt, std::array<std::size_t, field_count> local_sizes,
+                     Rhs rhs)
+      : m_dt(dt), m_rhs(std::move(rhs)) {
+    alloc(std::index_sequence_for<Scalars...>{}, local_sizes);
+  }
+
+  [[nodiscard]] Attempt attempt(double t,
+                                const std::vector<Scalars> &...u_accepted) {
+    copy_accepted_to_work(std::index_sequence_for<Scalars...>{}, u_accepted...);
+    auto u_pack = make_work_tuple(std::index_sequence_for<Scalars...>{});
+    auto du_pack = make_du_tuple(std::index_sequence_for<Scalars...>{});
+    m_rhs(t, u_pack, du_pack);
+    form_candidates(std::index_sequence_for<Scalars...>{}, u_accepted...);
+    return Attempt(t, m_dt, t + m_dt, /*success=*/true, candidate_ptrs());
+  }
+
+  template <class... Fs>
+    requires(sizeof...(Fs) == field_count) &&
+            (pfc::field::HostFieldState<Fs, Scalars> && ...)
+  [[nodiscard]] Attempt attempt(double t, const Fs &...u_accepted) {
+    return attempt(t, u_accepted.vec()...);
+  }
+
+  double step(double t, std::vector<Scalars> &...u_buffers) {
+    const auto r = attempt(t, u_buffers...);
+    commit_step_attempt(u_buffers..., r);
+    return r.t1;
+  }
+
+  template <class... Fs>
+    requires(sizeof...(Fs) == field_count) &&
+            (pfc::field::HostFieldState<Fs, Scalars> && ...)
+  double step(double t, Fs &...u_buffers) {
+    return step(t, u_buffers.vec()...);
+  }
+
+  [[nodiscard]] double dt() const noexcept { return m_dt; }
+
+private:
+  using ScalarTuple = std::tuple<Scalars...>;
+
+  template <std::size_t... I>
+  void alloc(std::index_sequence<I...>,
+             const std::array<std::size_t, field_count> &sizes) {
+    ((std::get<I>(m_du).assign(sizes[I],
+                               std::tuple_element_t<I, ScalarTuple>{}),
+      std::get<I>(m_u_work).assign(sizes[I],
+                                   std::tuple_element_t<I, ScalarTuple>{}),
+      std::get<I>(m_candidate).assign(
+          sizes[I], std::tuple_element_t<I, ScalarTuple>{})),
+     ...);
+  }
+
+  template <std::size_t... I>
+  void copy_accepted_to_work(std::index_sequence<I...>,
+                             const std::vector<Scalars> &...u_accepted) {
+    ((std::get<I>(m_u_work) = u_accepted), ...);
+  }
+
+  template <std::size_t... I>
+  auto make_work_tuple(std::index_sequence<I...>) {
+    return std::tie(std::get<I>(m_u_work)...);
+  }
+
+  template <std::size_t... I> auto make_du_tuple(std::index_sequence<I...>) {
+    return std::tie(std::get<I>(m_du)...);
+  }
+
+  template <std::size_t... I>
+  void form_candidates(std::index_sequence<I...>,
+                       const std::vector<Scalars> &...u_accepted) {
+    auto one = [this](auto &cand, const auto &u, const auto &du) {
+      using S = typename std::decay_t<decltype(cand)>::value_type;
+      for (std::size_t i = 0; i < u.size(); ++i) {
+        cand[i] = u[i] + S(m_dt) * du[i];
+      }
+    };
+    (one(std::get<I>(m_candidate), u_accepted, std::get<I>(m_du)), ...);
+  }
+
+  [[nodiscard]] std::tuple<const std::vector<Scalars> *...>
+  candidate_ptrs() const {
+    return candidate_ptrs_impl(std::index_sequence_for<Scalars...>{});
+  }
+
+  template <std::size_t... I>
+  [[nodiscard]] std::tuple<const std::vector<Scalars> *...>
+  candidate_ptrs_impl(std::index_sequence<I...>) const {
+    return {&std::get<I>(m_candidate)...};
+  }
+
+  double m_dt{0.0};
+  std::tuple<std::vector<Scalars>...> m_du{};
+  std::tuple<std::vector<Scalars>...> m_u_work{};
+  std::tuple<std::vector<Scalars>...> m_candidate{};
+  Rhs m_rhs;
+};
+
 // -----------------------------------------------------------------------------
 // `create` free-function factories.
 //
