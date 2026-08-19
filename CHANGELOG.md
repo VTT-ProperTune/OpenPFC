@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- `GpuSpectralStack<MemorySpace>` (`runtime/gpu/gpu_spectral_stack.hpp`): device counterpart of kernel `SpectralCpuStack` (Domain + Decomposition + `IDeviceFFT` + `Field<double, MemorySpace>`). HIP/CUDA tests `HIP_GpuSpectralStack` / `CUDA_GpuSpectralStack`. Lives in runtime because device FFT factories are runtime.
 - Tungsten CPU/CUDA/HIP `from_json` share `tungsten::apply_tungsten_json` (`ParameterSchema` parse + setters). Frontend `ParameterValidator` still prints the summary.
 - Device `DeviceSpectralMeanFieldEtdSystem<Physics, MemorySpace>` (`runtime/gpu/spectral_mean_field_etd_gpu.hpp`): `IDeviceFFT` choreography, host `N(ψ,ψ_MF)`, device `χ(k)` multiply and ETD1 with `k_lap*phi1` weights. HIP/CUDA tests `HIP_SpectralMeanFieldEtd` / `CUDA_SpectralMeanFieldEtd` vs host within 1e-10.
 - M8 start: `tungsten::TungstenPhysics` (`apps/tungsten/include/tungsten/tungsten_physics.hpp`, 153 lines) plus host `SpectralMeanFieldEtdSystem` (mean-field filter, two-argument N, `k_lap*phi1` ETD weights). One-step parity vs Gen-1 `Tungsten` and JSON schema round-trip.
