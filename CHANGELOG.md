@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M9 aluminum 5-step SeedGridFCC golden: `MovingFrameMeanFieldETDSystem` vs Gen-1 ≤1e-10 on 32³. Free-energy density formula pinned vs Gen-1; `last_free_energy_sum` is finite on the golden run. Pre-M0 sumsq norms unchanged.
 - M9 `FDPaddedCPUStack` (`kernel/simulation/stacks/fd_padded_cpu_stack.hpp`): host padded `Field` + `HaloExchange` twin of `FDGPUStack`. Kobayashi CPU driver allocates fields and the two halo groups from the stack. `FDCPUStack` remains unpadded `SparseExchange` for heat3d/wave2d.
 - M9 `FDGPUStack` (`runtime/gpu/fd_gpu_stack.hpp`): padded device `Field` + `HaloExchange` + extra-field/`make_exchange` factory. Kobayashi CUDA/HIP drivers allocate fields and the two halo groups from the stack.
 - M9 GPU `DeviceMovingFrameMeanFieldETDSystem` (`runtime/gpu/moving_frame_mean_field_etd_gpu.hpp`) plus `AluminumETDGPUSession` and A/B binaries `aluminum_etd_cuda` / `aluminum_etd_hip`. Host vs device ≤1e-10 (`CUDA_MovingFrameETD` / `CUDA_AluminumETD`; HIP twins). Gen-1 `aluminumNew` remains.
