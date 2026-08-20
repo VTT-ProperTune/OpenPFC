@@ -18,12 +18,12 @@
 #include <iostream>
 #include <limits>
 #include <mpi.h>
-#include <numbers>
 #include <string>
 #include <vector>
 
 #include <kobayashi/cli.hpp>
 #include <kobayashi/defaults.hpp>
+#include <kobayashi/fd_stencils.hpp>
 
 #include <openpfc/domain/create.hpp>
 #include <openpfc/frontend/io/png_writer.hpp>
@@ -124,63 +124,15 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     halo_state.exchange();
 
     phi.for_each_owned([&](int i, int j, int k) {
-      const double hne = phi(i + 1, j, k);
-      const double hnw = phi(i - 1, j, k);
-      const double hns = phi(i, j - 1, k);
-      const double hnn = phi(i, j + 1, k);
-      const double hnc = phi(i, j, k);
-      lap_phi(i, j, k) = (hne + hnw + hns + hnn - 4.0 * hnc) * inv_lap_den;
-
-      const double Tne = tempr(i + 1, j, k);
-      const double Tnw = tempr(i - 1, j, k);
-      const double Tns = tempr(i, j - 1, k);
-      const double Tnn = tempr(i, j + 1, k);
-      const double Tnc = tempr(i, j, k);
-      lap_t(i, j, k) = (Tne + Tnw + Tns + Tnn - 4.0 * Tnc) * inv_lap_den;
-
-      const double dpx = (phi(i + 1, j, k) - phi(i - 1, j, k)) * inv_dx;
-      const double dpy = (phi(i, j + 1, k) - phi(i, j - 1, k)) * inv_dy;
-      phidx(i, j, k) = dpx;
-      phidy(i, j, k) = dpy;
-
-      const double theta = std::atan2(dpy, dpx);
-      epsilon(i, j, k) =
-          kobayashi::kEpsilonb *
-          (1.0 + kobayashi::kDelta *
-                     std::cos(kobayashi::kAniso * (theta - kobayashi::kTheta0)));
-      epsilon_deriv(i, j, k) =
-          -kobayashi::kEpsilonb * kobayashi::kAniso * kobayashi::kDelta *
-          std::sin(kobayashi::kAniso * (theta - kobayashi::kTheta0));
+      kobayashi::stage_a_cell(phi, tempr, lap_phi, lap_t, phidx, phidy, epsilon,
+                              epsilon_deriv, i, j, k, inv_dx, inv_dy, inv_lap_den);
     });
 
     halo_aux.exchange();
 
     phi.for_each_owned([&](int i, int j, int k) {
-      const double phiold = phi(i, j, k);
-
-      const double term1 =
-          (epsilon(i, j + 1, k) * epsilon_deriv(i, j + 1, k) * phidx(i, j + 1, k) -
-           epsilon(i, j - 1, k) * epsilon_deriv(i, j - 1, k) * phidx(i, j - 1, k)) *
-          inv_dy;
-
-      const double term2 =
-          -(epsilon(i + 1, j, k) * epsilon_deriv(i + 1, j, k) * phidy(i + 1, j, k) -
-            epsilon(i - 1, j, k) * epsilon_deriv(i - 1, j, k) * phidy(i - 1, j, k)) *
-          inv_dx;
-
-      const double ep = epsilon(i, j, k);
-      const double term3 = ep * ep * lap_phi(i, j, k);
-
-      const double m =
-          kobayashi::kAlpha / std::numbers::pi *
-          std::atan(kobayashi::kGamma * (kobayashi::kTeq - tempr(i, j, k)));
-      const double term4 = phiold * (1.0 - phiold) * (phiold - 0.5 + m);
-
-      phi(i, j, k) =
-          phiold + (cfg.dt / kobayashi::kTau) * (term1 + term2 + term3 + term4);
-
-      tempr(i, j, k) = tempr(i, j, k) + cfg.dt * lap_t(i, j, k) +
-                       kobayashi::kKappa * (phi(i, j, k) - phiold);
+      kobayashi::stage_b_cell(phi, tempr, lap_phi, lap_t, phidx, phidy, epsilon,
+                              epsilon_deriv, i, j, k, inv_dx, inv_dy, cfg.dt);
     });
 
     if (nprint_eff > 0 && istep % nprint_eff == 0 && rank == 0) {
