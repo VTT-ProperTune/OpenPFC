@@ -46,6 +46,20 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_test(NAME CUDA_SpectralMeanFieldETD COMMAND
         test_spectral_mean_field_etd_cuda)
 
+    add_executable(test_moving_frame_mean_field_etd_cuda
+        test_moving_frame_mean_field_etd_gpu.cpp)
+    target_include_directories(test_moving_frame_mean_field_etd_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_moving_frame_mean_field_etd_cuda PRIVATE
+        Catch2::Catch2 openpfc openpfc_gpu_kernels CUDA::cudart MPI::MPI_CXX
+        Heffte::Heffte)
+    target_compile_definitions(test_moving_frame_mean_field_etd_cuda PRIVATE
+        OPENPFC_TEST_MOVING_FRAME_ETD_CUDA)
+    add_test(NAME CUDA_MovingFrameETD COMMAND
+        test_moving_frame_mean_field_etd_cuda)
+
     add_executable(test_gpu_spectral_stack_cuda test_gpu_spectral_stack.cpp)
     target_include_directories(test_gpu_spectral_stack_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
@@ -169,6 +183,20 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
             OPENPFC_TEST_MEAN_FIELD_ETD_HIP)
         add_test(NAME HIP_SpectralMeanFieldETD COMMAND
             test_spectral_mean_field_etd_hip)
+
+        add_executable(test_moving_frame_mean_field_etd_hip
+            test_moving_frame_mean_field_etd_gpu.cpp)
+        target_include_directories(test_moving_frame_mean_field_etd_hip PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+            ${CMAKE_SOURCE_DIR}/include
+        )
+        target_link_libraries(test_moving_frame_mean_field_etd_hip PRIVATE
+            Catch2::Catch2 openpfc openpfc_hip_kernels hip::host MPI::MPI_CXX
+            Heffte::Heffte)
+        target_compile_definitions(test_moving_frame_mean_field_etd_hip PRIVATE
+            OPENPFC_TEST_MOVING_FRAME_ETD_HIP)
+        add_test(NAME HIP_MovingFrameETD COMMAND
+            test_moving_frame_mean_field_etd_hip)
 
         add_executable(test_gpu_spectral_stack_hip test_gpu_spectral_stack.cpp)
         target_include_directories(test_gpu_spectral_stack_hip PRIVATE
