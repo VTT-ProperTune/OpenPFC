@@ -58,9 +58,11 @@
 #include <string>
 
 #include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/data/world_queries.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/kernel/simulation/results_writer_domain.hpp>
 #include <openpfc/kernel/simulation/simulator_field_modifiers_dispatch.hpp>
 #include <openpfc/kernel/simulation/simulator_modifier_registration.hpp>
 #include <openpfc/kernel/simulation/simulator_results_dispatch.hpp>
@@ -268,9 +270,9 @@ public:
       throw std::invalid_argument("results writer field '" + field_name +
                                   "' is not registered on the Model");
     }
-    auto inbox = get_inbox(pfc::get_fft(m_model));
-    const auto &world = pfc::get_world(m_model);
-    writer->set_domain(get_size(world), inbox.size, inbox.low);
+    apply_writer_domain(*writer,
+                        pfc::world::get_coordinate_system(pfc::get_world(m_model)),
+                        get_inbox(pfc::get_fft(m_model)));
     m_result_writers.insert({field_name, std::move(writer)});
     return true;
   }

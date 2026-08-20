@@ -8,7 +8,6 @@
  * @brief JSON `fields[]` binary writers for aluminum ETD sessions.
  */
 
-#include <array>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -21,6 +20,7 @@
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/kernel/simulation/results_writer_domain.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 namespace aluminum {
@@ -35,10 +35,6 @@ public:
       return;
     }
     auto &catalog = pfc::ui::default_results_writer_catalog();
-    const auto gs = pfc::domain::get_size(domain);
-    const std::array<int, 3> global{gs[0], gs[1], gs[2]};
-    const std::array<int, 3> local{inbox.size[0], inbox.size[1], inbox.size[2]};
-    const std::array<int, 3> offset{inbox.low[0], inbox.low[1], inbox.low[2]};
     for (const auto &field : settings["fields"]) {
       const std::string name = field.value("name", std::string{});
       if (name != "psi") {
@@ -60,7 +56,7 @@ public:
         }
       }
       MPI_Barrier(m_comm);
-      writer->set_domain(global, local, offset);
+      pfc::apply_writer_domain(*writer, domain, inbox);
       m_psi_writer = std::move(writer);
     }
   }
