@@ -47,7 +47,7 @@ flowchart LR
 
 ## `App<ConcreteModel>::main()` order of operations
 
-Implementation: `include/openpfc/frontend/ui/app.hpp` (settings load, MPI hints; `configure_spectral_json_driver_hooks` for `from_json` rank + NaN-check comm) and `include/openpfc/frontend/ui/app_spectral_run.hpp` (`SpectralJsonAppRun` — session through time loop).
+Implementation: `include/openpfc/frontend/ui/app.hpp` (settings load, MPI hints; `configure_json_driver_hooks` for `from_json` rank + NaN-check comm) and `include/openpfc/frontend/ui/app_json_run.hpp` (`JsonAppRun` — session through time loop).
 
 **Optional, outside the library:** after loading the config file and **before** `App::main()`, application code may run `ParameterValidator` on `settings["model"]["params"]` (or your params subtree). OpenPFC does not call `ParameterValidator` automatically; ordering relative to `from_json` is described in [`parameter_validation.md`](parameter_validation.md#validation-vs-app-parsing-order).
 
@@ -73,7 +73,7 @@ Exact keys vary slightly by app and schema version; always treat `apps/tungsten/
 | `Lx`, `Ly`, `Lz`, `dx`, `dy`, `dz`, `origin`, … | `SpectralCPUStack` / `from_json` for `Domain` | Grid and physical extent. |
 | `t0`, `t1`, `dt`, `saveat` | `Time` | Integration interval and output cadence. |
 | `plan_options` | HeFFTe `plan_options` | FFT backend (`backend`), `use_gpu_aware`, `reshape_algorithm`, etc. Root `backend` is merged when `plan_options` omits it (CPU `App` path only; `cuda` is rejected there). |
-| `model.name`, `model.params` | Your `ConcreteModel` + `from_json` into params in `SpectralJsonAppRun::apply_model_params_` (step 3) | Physics coefficients; optional `ParameterValidator` in your `main` targets the same subtree—see [`parameter_validation.md`](parameter_validation.md). |
+| `model.name`, `model.params` | Your `ConcreteModel` + `from_json` into params in `JsonAppRun::apply_model_params_` (step 3) | Physics coefficients; optional `ParameterValidator` in your `main` targets the same subtree—see [`parameter_validation.md`](parameter_validation.md). |
 | `fields`, `saveat` | `add_result_writers_from_json` | If `saveat > 0`, each `fields[]` entry with `name` and `data` path gets a writer from `ResultsWriterCatalog` (default `writer`: `"binary"` → `BinaryWriter`, MPI-IO). |
 | `initial_conditions[]` | `add_initial_conditions_from_json` | Each entry has `type`, optional `target`, type-specific fields. |
 | `boundary_conditions[]` | `add_boundary_conditions_from_json` | Same pattern: `type`, `target`, … |

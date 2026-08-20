@@ -12,10 +12,10 @@
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/ui/from_json_log.hpp>
+#include <openpfc/frontend/ui/json_driver_hooks.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_conditions.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_simulator_section.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_writers.hpp>
-#include <openpfc/frontend/ui/spectral_json_driver_hooks.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/world.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
@@ -25,11 +25,10 @@
 
 #include <fixtures/mock_model.hpp>
 
-TEST_CASE("configure_spectral_json_driver_hooks sets from_json log rank",
-          "[ui][hooks]") {
-  pfc::ui::configure_spectral_json_driver_hooks(MPI_COMM_WORLD, 41);
+TEST_CASE("configure_json_driver_hooks sets from_json log rank", "[ui][hooks]") {
+  pfc::ui::configure_json_driver_hooks(MPI_COMM_WORLD, 41);
   REQUIRE(pfc::ui::get_from_json_log_rank() == 41);
-  pfc::ui::configure_spectral_json_driver_hooks(MPI_COMM_WORLD, -1);
+  pfc::ui::configure_json_driver_hooks(MPI_COMM_WORLD, -1);
   REQUIRE(pfc::ui::get_from_json_log_rank() == -1);
 }
 

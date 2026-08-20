@@ -675,7 +675,7 @@ M8, M9 (all production physics on the new architecture).
 
 ### Deletions
 
-* [ ] `SpectralCPUStack`'s frontend twin (`frontend/ui/spectral_cpu_stack*.hpp`) superseded by the generalized session; `app_spectral_run.hpp` renamed/generalized (no `spectral_` hardcoding in App path names).
+* [ ] `SpectralCPUStack`'s frontend twin (`frontend/ui/spectral_cpu_stack*.hpp`) superseded by the generalized session. **Partial:** `app_json_run.hpp` / `JsonAppRun` / `configure_json_driver_hooks` (no `spectral_` in App path names). Gen-1 `SpectralSimulationSession` remains.
 * [x] `kernel/simulation/boundary_conditions/{fixed_bc,moving_bc}.hpp` (relocated to `apps/common`).
 * [ ] Embryonic BC mechanisms (`prepare_boundaries` stub, `StageContext` BC flags).
 * [x] Deprecated wiring overloads; warn-and-drop registration paths. **Overloads removed.** Default-field usage still warns.

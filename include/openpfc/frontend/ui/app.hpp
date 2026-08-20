@@ -7,8 +7,8 @@
  *
  * @details
  * Orchestrates loading settings, optional GPU/MPI hints, then delegates the
- * spectral JSON pipeline to `SpectralJsonAppRun` (session build, wiring, time
- * loop, profiling export).
+ * JSON pipeline to `JsonAppRun` (session build, wiring, time loop, profiling
+ * export).
  *
  * Call `set_field_modifier_catalog` before `main()` if wiring should use a
  * catalog other than the process-wide `default_field_modifier_catalog()`
@@ -27,24 +27,20 @@
 #include <filesystem>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/app_json_run.hpp>
 #include <openpfc/frontend/ui/app_profiling.hpp>
-#include <openpfc/frontend/ui/app_spectral_run.hpp>
+#include <openpfc/frontend/ui/json_driver_hooks.hpp>
 #include <openpfc/frontend/ui/json_helpers.hpp>
 #include <openpfc/frontend/ui/settings_loader.hpp>
-#include <openpfc/frontend/ui/spectral_json_driver_hooks.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 #include <openpfc/openpfc_minimal.hpp>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <utility>
 
 namespace pfc::ui {
-
-/** @brief Prefix for structured application log lines */
-inline constexpr std::string_view k_app_log_tag = "[app] ";
 
 /**
  * @brief JSON-driven MPI application entry point for a concrete physics model
@@ -155,7 +151,7 @@ public:
 
   [[nodiscard]] int main() {
     const int rank_id = m_worker.get_rank();
-    configure_spectral_json_driver_hooks(m_comm, rank_id);
+    configure_json_driver_hooks(m_comm, rank_id);
     const pfc::Logger app_lg{pfc::LogLevel::Info, rank_id};
 
     log_gpu_awareness_hints_(app_lg);
@@ -163,8 +159,8 @@ public:
 
     const FieldModifierCatalog *const catalog_override =
         m_field_modifier_catalog ? &*m_field_modifier_catalog : nullptr;
-    SpectralJsonAppRun<ConcreteModel> runner(m_settings, m_comm, m_worker, rank0,
-                                             m_profiling, catalog_override);
+    JsonAppRun<ConcreteModel> runner(m_settings, m_comm, m_worker, rank0,
+                                     m_profiling, catalog_override);
     return runner.execute(app_lg);
   }
 };

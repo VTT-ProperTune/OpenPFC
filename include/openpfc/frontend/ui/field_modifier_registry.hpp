@@ -19,7 +19,7 @@
  * you intend the process-wide singleton, or a dedicated catalog (e.g. from
  * `make_builtin_field_modifier_catalog()` with extra `register_modifier` calls)
  * for tests and isolated drivers. JSON `App` drivers can call
- * `App::set_field_modifier_catalog` before `main()` so `SpectralJsonAppRun`
+ * `App::set_field_modifier_catalog` before `main()` so `JsonAppRun`
  * forwards that catalog into `wire_simulator_from_settings` alongside
  * `default_results_writer_catalog()`.
  *

@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 App path names drop `spectral_`: `JsonAppRun` (`app_json_run.hpp`) and `configure_json_driver_hooks`. Gen-1 `SpectralSimulationSession` is unchanged.
 - M10 GPU session-matrix JSON: `make_simulation_session` on CUDA/HIP `GPUSpectralStack` / `FDGPUStack` binaries (`backend` `cuda`/`hip`, HIP `rocm` alias).
 - M10 JSON integrator tokens `imex_euler` and `etd1` parse onto `Time::method()`. They are identity only (`make_tableau` throws); unknown tokens still use `format_config_error`. Short `"imex"` remains invalid.
 - M10 `ResultsWriterCatalog` matches `FieldModifierCatalog`: `register_writer` / `create_writer` (throws `format_config_error`) / `registered_writer_types`. Unknown writer keys fail before mkdir.

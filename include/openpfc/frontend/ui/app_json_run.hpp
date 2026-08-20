@@ -2,32 +2,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file app_spectral_run.hpp
- * @brief JSON spectral `App` run pipeline (session build → wire → integrate)
+ * @file app_json_run.hpp
+ * @brief JSON `App` run pipeline (session build → wire → integrate)
  *
  * @details
- * `SpectralJsonAppRun` holds the collaborators needed after settings are loaded
+ * `JsonAppRun` holds the collaborators needed after settings are loaded
  * and logging hooks are configured. It keeps `App` focused on construction,
  * settings I/O, and optional field-modifier catalog injection.
+ *
+ * The Gen-1 session is still `SpectralSimulationSession` until the App path
+ * moves onto `SimulationSession<Stack>`.
  *
  * @see app.hpp
  * @see docs/user_guide/app_pipeline.md
  */
 
-#ifndef PFC_UI_APP_SPECTRAL_RUN_HPP
-#define PFC_UI_APP_SPECTRAL_RUN_HPP
+#ifndef PFC_UI_APP_JSON_RUN_HPP
+#define PFC_UI_APP_JSON_RUN_HPP
 
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <sstream>
 #include <string>
-#include <string_view>
 
 #include <mpi.h>
 
 #include <openpfc/frontend/ui/app_integrator_loop.hpp>
 #include <openpfc/frontend/ui/app_profiling.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/frontend/ui/json_driver_hooks.hpp>
 #include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/spectral_simulation_session.hpp>
 #include <openpfc/frontend/utils/memory_reporter.hpp>
@@ -36,14 +39,8 @@
 
 namespace pfc::ui {
 
-namespace detail {
-
-inline constexpr std::string_view k_spectral_app_log_tag = "[app] ";
-
-} // namespace detail
-
 /**
- * @brief Executes the default spectral JSON pipeline for a concrete model
+ * @brief Executes the default JSON pipeline for a concrete model
  *
  * @details
  * `execute()` runs a fixed sequence of phases (each implemented by a private
@@ -58,12 +55,11 @@ inline constexpr std::string_view k_spectral_app_log_tag = "[app] ";
  * 8. `run_time_integration_` — simulator loop
  * 9. `finalize_profiling_export_` — profiling export
  */
-template <class ConcreteModel> class SpectralJsonAppRun {
+template <class ConcreteModel> class JsonAppRun {
 public:
-  SpectralJsonAppRun(const nlohmann::json &settings, MPI_Comm comm,
-                     const MPI_Worker &worker, bool rank0,
-                     AppProfilingController &profiling,
-                     const FieldModifierCatalog *modifier_catalog_override)
+  JsonAppRun(const nlohmann::json &settings, MPI_Comm comm, const MPI_Worker &worker,
+             bool rank0, AppProfilingController &profiling,
+             const FieldModifierCatalog *modifier_catalog_override)
       : m_settings(settings), m_comm(comm), m_worker(worker), m_rank0(rank0),
         m_profiling(profiling),
         m_modifier_catalog_override(modifier_catalog_override) {}
@@ -107,8 +103,7 @@ private:
     if (m_rank0) {
       std::ostringstream woss;
       woss << world(session);
-      pfc::log_info(app_lg, std::string(detail::k_spectral_app_log_tag) +
-                                "World: " + woss.str());
+      pfc::log_info(app_lg, std::string(k_app_log_tag) + "World: " + woss.str());
     }
   }
 
@@ -125,8 +120,7 @@ private:
   void initialize_model_(const pfc::Logger &app_lg,
                          SpectralSimulationSession<ConcreteModel> &session) const {
     if (m_rank0) {
-      pfc::log_info(app_lg, std::string(detail::k_spectral_app_log_tag) +
-                                "Initializing model...");
+      pfc::log_info(app_lg, std::string(k_app_log_tag) + "Initializing model...");
     }
     model(session).initialize(pfc::time::dt(time(session)));
   }
@@ -151,7 +145,7 @@ private:
                                          modifier_catalog, writer_catalog);
     if (m_rank0) {
       pfc::log_info(app_lg,
-                    std::string(detail::k_spectral_app_log_tag) +
+                    std::string(k_app_log_tag) +
                         "Starting time integration (Simulator integrator API)");
     }
   }
@@ -170,4 +164,4 @@ private:
 
 } // namespace pfc::ui
 
-#endif // PFC_UI_APP_SPECTRAL_RUN_HPP
+#endif // PFC_UI_APP_JSON_RUN_HPP

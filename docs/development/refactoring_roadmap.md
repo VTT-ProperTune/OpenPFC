@@ -34,7 +34,7 @@ Done:
 - `ResultsWriterMap` alias in `results_writer.hpp`; `Simulator::results_writers()` const accessor; `write_results_for_registered_fields` takes `ResultsWriterMap` (named type for tests / tooling). Doxygen on `write_results` / dispatch + [`io_results.md`](../user_guide/io_results.md) call out the narrow test seam.
 - Deprecated `pfc::get_field(Model&)` and `Simulator::get_field()` / `pfc::get_field(Simulator&)` removed; diffusion fixtures register `"default"` alongside `"density"` and drop `get_field()` overrides. `Model::get_field()` remains deprecated for out-of-tree subclasses.
 - Field modifier catalog: header + [`extending_openpfc/README.md`](../extending_openpfc/README.md) document singleton vs explicit-catalog DI; `App::set_field_modifier_catalog` forwards an explicit catalog into `wire_simulator_from_settings` ([`app_pipeline.md`](../user_guide/app_pipeline.md)).
-- `app_spectral_run.hpp`: `SpectralJsonAppRun` owns the post-settings spectral pipeline (session → wire → integrate); `App` keeps settings I/O and pre-run logs.
+- `app_json_run.hpp`: `JsonAppRun` owns the post-settings JSON pipeline (session → wire → integrate); `App` keeps settings I/O and pre-run logs.
 - `simulator_integrator.hpp` / `simulator_queries.hpp`: post-class `Simulator` helpers (scheduled writes, integrator seam, `get_model` / `get_time` / …) split out of `simulator.hpp` for readability (SRP); single include of `simulator.hpp` remains the public entry point.
 - `model_free_functions.hpp`: non-member `Model` API (`get_world`, `has_field`, `step`, …) split out of `model.hpp` (same include-once pattern as `simulator.hpp`).
 - Deprecation hygiene: `DiscreteField` member `interpolate` equivalence test suppresses Clang/MSVC warnings; `Model::get_field()` Doxygen expanded for migration and out-of-tree overrides.
@@ -78,7 +78,7 @@ Goal: Fewer repeated parameters at JSON → `Simulator` boundaries; clearer seam
 Done:
 
 - `JsonWiringContext` (`simulation_wiring_context.hpp`): bundles `MPI_Comm`, `mpi_rank`, and `rank0` for `add_result_writers_from_json`, `add_initial_conditions_from_json`, `add_boundary_conditions_from_json`, and `wire_simulator_and_runtime_from_json`. The `(comm, rank, rank0)` overload family is removed; `SpectralSimulationSession` uses the context form.
-- `configure_spectral_json_driver_hooks` (`spectral_json_driver_hooks.hpp`): one call sets `from_json` log rank and default NaN-check communicator; `App::main` uses it instead of duplicating globals.
+- `configure_json_driver_hooks` (`json_driver_hooks.hpp`): one call sets `from_json` log rank and default NaN-check communicator; `App::main` uses it instead of duplicating globals.
 - `write_scheduled_simulator_results(Simulator&)` in `simulator.hpp`: extracted from `Simulator::write_results()` so scheduled writes + counter bump live in one free-function seam ([`io_results.md`](../user_guide/io_results.md)).
 - `results_writer_catalog.hpp` + optional `fields[].writer` string: `add_result_writers_from_json` resolves writers through `ResultsWriterCatalog` (default `binary`); inject a custom catalog at the wiring call site for tests and app-specific formats ([`app_pipeline.md`](../user_guide/app_pipeline.md)).
 - **`errors.hpp` split:** `errors_config_format.hpp` (JSON field messages + `get_json_value_string`) and `errors_field_modifiers.hpp` (unknown modifier type + `list_valid_field_modifiers`); `errors.hpp` remains an umbrella include. `from_json_world_time.hpp` includes only the format header; `field_modifier_registry.hpp` includes only the modifier header.
