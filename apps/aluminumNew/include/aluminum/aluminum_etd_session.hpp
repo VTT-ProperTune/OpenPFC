@@ -26,9 +26,9 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/moving_frame_mean_field_etd.hpp>
+#include <openpfc/kernel/simulation/session_stack_factory.hpp>
 #include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
-#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
 namespace aluminum {
@@ -44,7 +44,9 @@ public:
                      MPI_Comm comm = MPI_COMM_WORLD)
       : m_domain(pfc::ui::from_json<pfc::Domain>(settings)),
         m_time(pfc::ui::from_json<pfc::Time>(settings)),
-        m_stack(m_domain, rank, nproc, comm) {
+        m_stack(pfc::sim::make_spectral_cpu_stack(
+            pfc::ui::from_json<pfc::sim::SessionSelection>(settings), m_domain, rank,
+            nproc, comm)) {
     AluminumPhysics<> phys;
     phys.domain = m_domain;
     phys.box = m_stack.fft().get_inbox_bounds();
