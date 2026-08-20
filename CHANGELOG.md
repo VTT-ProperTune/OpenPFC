@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M9 Kobayashi OpenMP engine is the single-rank `FDPaddedCPUStack` path with OpenMP over owned cells (torus wrap indexing retired). Shared host stencils with `kobayashi_fd_manual`. Thread-parity 1 vs 4 retained; 32²/4-step HEX pinned against MPI nproc=1.
 - M9 aluminum 5-step SeedGridFCC golden: `MovingFrameMeanFieldETDSystem` vs Gen-1 ≤1e-10 on 32³. Free-energy density formula pinned vs Gen-1; `last_free_energy_sum` is finite on the golden run. Pre-M0 sumsq norms unchanged.
 - M9 `FDPaddedCPUStack` (`kernel/simulation/stacks/fd_padded_cpu_stack.hpp`): host padded `Field` + `HaloExchange` twin of `FDGPUStack`. Kobayashi CPU driver allocates fields and the two halo groups from the stack. `FDCPUStack` remains unpadded `SparseExchange` for heat3d/wave2d.
 - M9 `FDGPUStack` (`runtime/gpu/fd_gpu_stack.hpp`): padded device `Field` + `HaloExchange` + extra-field/`make_exchange` factory. Kobayashi CUDA/HIP drivers allocate fields and the two halo groups from the stack.

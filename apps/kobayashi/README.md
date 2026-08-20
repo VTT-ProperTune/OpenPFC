@@ -53,7 +53,10 @@ Writes grayscale PNGs of \(\phi\) on rank 0 (`phi_0000.png`, then every `nsave` 
 
 ## Usage (`kobayashi_fd_openmp`)
 
-Single process; parallelism is **threads only**.
+Single process; parallelism is **threads only**. Periodic XY uses
+`FDPaddedCPUStack` + `HaloExchange` (same as `kobayashi_fd_manual` at
+nproc=1); MPI is initialized inside the engine if the process has not
+already called `MPI_Init`.
 
 ```bash
 export OMP_NUM_THREADS=16
