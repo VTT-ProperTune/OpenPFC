@@ -17,16 +17,44 @@ using pfc::decomposition::split_box;
 
 namespace {
 
+// HeFFTe 2.4.1 `proc_setup_min_surface` uses `j_max % j` with
+// `j_max = min(num_procs/i, size_y)`. That misses some valid grids and
+// `assert`s when it finds none (CUDA/Debug HeFFTe). NDEBUG HeFFTe then
+// returns {1,1,1}. Our splitter copies the same loop so FFT inbox geometry
+// stays identical; skip the live HeFFTe call when that loop finds nothing.
+bool heffte_loop_finds_grid(const Int3 &size, int num_procs) {
+  if (num_procs == 1) {
+    return true;
+  }
+  const int i_max = std::min(num_procs, size[0]);
+  for (int i = 1; i <= i_max; ++i) {
+    if (num_procs % i != 0) {
+      continue;
+    }
+    const int j_max = std::min(num_procs / i, size[1]);
+    for (int j = 1; j <= j_max; ++j) {
+      if (j_max % j != 0) {
+        continue;
+      }
+      const int k = num_procs / (i * j);
+      if (k >= 1 && k <= size[2] && i * j * k == num_procs) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void require_matches_heffte(const Int3 &size, int nparts) {
-  const heffte::box3d<int> world({0, 0, 0},
-                                 {size[0] - 1, size[1] - 1, size[2] - 1});
+  const heffte::box3d<int> world({0, 0, 0}, {size[0] - 1, size[1] - 1, size[2] - 1});
   const auto href = heffte::proc_setup_min_surface(world, nparts);
   const Int3 grid = min_surface_proc_grid(size, nparts);
   REQUIRE(grid[0] == href[0]);
   REQUIRE(grid[1] == href[1]);
   REQUIRE(grid[2] == href[2]);
 
-  const Box3i box = Box3i::from_bounds({0, 0, 0}, {size[0] - 1, size[1] - 1, size[2] - 1});
+  const Box3i box =
+      Box3i::from_bounds({0, 0, 0}, {size[0] - 1, size[1] - 1, size[2] - 1});
   const auto ours = split_box(box, grid);
   const auto theirs = heffte::split_world(world, href);
   REQUIRE(ours.size() == theirs.size());
@@ -55,10 +83,12 @@ TEST_CASE("min_surface_proc_grid and split_box match HeFFTe",
   const int ranks[] = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
   int compared = 0;
   for (const auto &sz : sizes) {
-    const long long ncells =
-        static_cast<long long>(sz[0]) * sz[1] * sz[2];
+    const long long ncells = static_cast<long long>(sz[0]) * sz[1] * sz[2];
     for (int np : ranks) {
       if (np > ncells) {
+        continue;
+      }
+      if (!heffte_loop_finds_grid(sz, np)) {
         continue;
       }
       require_matches_heffte(sz, np);
