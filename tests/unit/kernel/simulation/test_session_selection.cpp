@@ -62,3 +62,10 @@ TEST_CASE("session_backend_compiled cpu is always true",
   REQUIRE(pfc::sim::session_backend_compiled(SimulationBackend::Cpu,
                                              SimulationMethod::Fd));
 }
+
+TEST_CASE("require_session_for_stack accepts a matching compiled pair",
+          "[session_selection][unit]") {
+  SessionSelection s{};
+  REQUIRE_NOTHROW(pfc::sim::require_session_for_stack(s, SimulationMethod::Spectral,
+                                                      SimulationBackend::Cpu));
+}

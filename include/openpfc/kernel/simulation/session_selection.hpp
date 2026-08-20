@@ -15,6 +15,8 @@
  */
 
 #include <optional>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace pfc::sim {
@@ -134,6 +136,26 @@ intended_stack_name(const SessionSelection &s) noexcept {
   case SimulationBackend::Cpu: return "FDCPUStack";
   }
   return "SpectralCPUStack";
+}
+
+/// Fail closed when @p s does not match the stack this factory is about to
+/// construct, or when the backend is not compiled into this build.
+inline void require_session_for_stack(const SessionSelection &s,
+                                      SimulationMethod method,
+                                      SimulationBackend backend) {
+  if (!session_backend_compiled(s)) {
+    throw std::invalid_argument(std::string("SessionSelection backend '") +
+                                to_cstring(s.backend) +
+                                "' is not compiled into this OpenPFC build");
+  }
+  if (s.method != method || s.backend != backend) {
+    throw std::invalid_argument(std::string("SessionSelection maps to ") +
+                                intended_stack_name(s) +
+                                ", not the requested stack");
+  }
+  if (method == SimulationMethod::Fd && !even_fd_order(s.fd_order)) {
+    throw std::invalid_argument("SessionSelection fd_order must be even in [2, 20]");
+  }
 }
 
 } // namespace pfc::sim

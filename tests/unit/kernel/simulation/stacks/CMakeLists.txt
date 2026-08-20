@@ -6,4 +6,5 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fd_cpu_stack.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_fd_padded_cpu_stack.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_spectral_cpu_stack.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_session_stack_factory.cpp
 )
