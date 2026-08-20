@@ -158,4 +158,8 @@ inline void require_session_for_stack(const SessionSelection &s,
   }
 }
 
+/// Per-stack factory used by `SimulationSession<Stack>`. Specializations live
+/// with the CPU/GPU stack factories.
+template <class Stack> struct stack_builder;
+
 } // namespace pfc::sim

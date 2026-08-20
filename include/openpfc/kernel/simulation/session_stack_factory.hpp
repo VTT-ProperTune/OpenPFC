@@ -54,4 +54,31 @@ make_fd_padded_cpu_stack(const SessionSelection &s, pfc::Domain domain, int rank
                                   comm, opt);
 }
 
+template <> struct stack_builder<stacks::SpectralCPUStack> {
+  static constexpr const char *name = "SpectralCPUStack";
+  [[nodiscard]] static stacks::SpectralCPUStack make(const SessionSelection &s,
+                                                     pfc::Domain domain, int rank,
+                                                     int nproc, MPI_Comm comm) {
+    return make_spectral_cpu_stack(s, std::move(domain), rank, nproc, comm);
+  }
+};
+
+template <> struct stack_builder<stacks::FDCPUStack> {
+  static constexpr const char *name = "FDCPUStack";
+  [[nodiscard]] static stacks::FDCPUStack make(const SessionSelection &s,
+                                               pfc::Domain domain, int rank,
+                                               int nproc, MPI_Comm comm) {
+    return make_fd_cpu_stack(s, std::move(domain), rank, nproc, comm);
+  }
+};
+
+template <> struct stack_builder<stacks::FDPaddedCPUStack> {
+  static constexpr const char *name = "FDPaddedCPUStack";
+  [[nodiscard]] static stacks::FDPaddedCPUStack make(const SessionSelection &s,
+                                                     pfc::Domain domain, int rank,
+                                                     int nproc, MPI_Comm comm) {
+    return make_fd_padded_cpu_stack(s, std::move(domain), rank, nproc, comm);
+  }
+};
+
 } // namespace pfc::sim
