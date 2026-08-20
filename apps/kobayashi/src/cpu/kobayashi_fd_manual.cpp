@@ -7,6 +7,7 @@
  *        `kobayashi_v1` script (Biner-style discretisation, explicit Euler).
  *
  * Periodic boundaries in x and y via `HaloExchange` on an nz=1 slab.
+ * Fields and halo groups come from `pfc::sim::stacks::FDPaddedCPUStack`.
  */
 
 #include <cmath>
@@ -24,23 +25,20 @@
 #include <kobayashi/cli.hpp>
 #include <kobayashi/defaults.hpp>
 
-#include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/domain/create.hpp>
+#include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
-#include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/simulation/stacks/fd_padded_cpu_stack.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
 
 #include <kobayashi/verification_utilities.hpp>
 
 namespace {
 
-
 using Field = pfc::data::Field<double, pfc::HostSpace>;
-
 
 void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const double dx = cfg.dx;
@@ -52,17 +50,22 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const auto domain = pfc::domain::create(pfc::GridSize({cfg.Nx, cfg.Ny, 1}),
                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                           pfc::GridSpacing({dx, dy, 1.0}));
-  const auto decomp = pfc::decomposition::create(domain, nproc);
 
   constexpr int hw = 1;
-  Field phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  Field tempr = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  Field lap_phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  Field lap_t = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  Field phidx = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  Field phidy = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  Field epsilon = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
-  Field epsilon_deriv = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
+  pfc::comm::HaloExchangeOptions state_opt;
+  state_opt.directions = pfc::halo::presets::Axes2D();
+  pfc::sim::stacks::FDPaddedCPUStack stack(domain, hw, rank, nproc, MPI_COMM_WORLD,
+                                           state_opt);
+  const auto &decomp = stack.decomposition();
+
+  Field &phi = stack.u();
+  Field tempr = stack.make_field();
+  Field lap_phi = stack.make_field();
+  Field lap_t = stack.make_field();
+  Field phidx = stack.make_field();
+  Field phidy = stack.make_field();
+  Field epsilon = stack.make_field();
+  Field epsilon_deriv = stack.make_field();
 
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
@@ -80,16 +83,12 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   });
   tempr.for_each_owned([&](int i, int j, int k) { tempr(i, j, k) = 0.0; });
 
-  pfc::comm::HaloExchangeOptions state_opt;
-  state_opt.directions = pfc::halo::presets::Axes2D();
-  pfc::comm::HaloExchange<pfc::HostSpace, double> halo_state(
-      {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD, state_opt);
+  auto halo_state = stack.make_exchange({&phi, &tempr}, state_opt);
   pfc::comm::HaloExchangeOptions aux_opt;
   aux_opt.exchange_base = 2;
   aux_opt.directions = pfc::halo::presets::Axes2D();
-  pfc::comm::HaloExchange<pfc::HostSpace, double> halo_aux(
-      {&epsilon, &epsilon_deriv, &phidx, &phidy}, decomp, rank, MPI_COMM_WORLD,
-      aux_opt);
+  auto halo_aux =
+      stack.make_exchange({&epsilon, &epsilon_deriv, &phidx, &phidy}, aux_opt);
 
   const bool skip_png = std::getenv("OPENPFC_KOBAYASHI_SKIP_PNG") != nullptr;
   const bool quiet = std::getenv("OPENPFC_KOBAYASHI_QUIET") != nullptr;
@@ -100,15 +99,17 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   }
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0) {
-    std::cout << "KOBAYASHI_MPI_COMM_WORLD_SIZE=" << nproc
-              << " (must match srun/mpirun task count; if not, tasks are not sharing one "
-                 "MPI_COMM_WORLD)\n";
+    std::cout
+        << "KOBAYASHI_MPI_COMM_WORLD_SIZE=" << nproc
+        << " (must match srun/mpirun task count; if not, tasks are not sharing one "
+           "MPI_COMM_WORLD)\n";
   }
 
   int filenum = 0;
   if (!skip_png) {
     char path[4096];
-    std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(), filenum);
+    std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
+                  filenum);
     if (rank == 0) {
       std::cout << "saving step 0/" << cfg.n_steps << " to file " << path << "\n";
     }
@@ -145,10 +146,11 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
       const double theta = std::atan2(dpy, dpx);
       epsilon(i, j, k) =
           kobayashi::kEpsilonb *
-          (1.0 + kobayashi::kDelta * std::cos(kobayashi::kAniso * (theta - kobayashi::kTheta0)));
-      epsilon_deriv(i, j, k) = -kobayashi::kEpsilonb * kobayashi::kAniso *
-                               kobayashi::kDelta *
-                               std::sin(kobayashi::kAniso * (theta - kobayashi::kTheta0));
+          (1.0 + kobayashi::kDelta *
+                     std::cos(kobayashi::kAniso * (theta - kobayashi::kTheta0)));
+      epsilon_deriv(i, j, k) =
+          -kobayashi::kEpsilonb * kobayashi::kAniso * kobayashi::kDelta *
+          std::sin(kobayashi::kAniso * (theta - kobayashi::kTheta0));
     });
 
     halo_aux.exchange();
@@ -156,17 +158,15 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     phi.for_each_owned([&](int i, int j, int k) {
       const double phiold = phi(i, j, k);
 
-      const double term1 = (epsilon(i, j + 1, k) * epsilon_deriv(i, j + 1, k) *
-                                  phidx(i, j + 1, k) -
-                              epsilon(i, j - 1, k) * epsilon_deriv(i, j - 1, k) *
-                                  phidx(i, j - 1, k)) *
-                             inv_dy;
+      const double term1 =
+          (epsilon(i, j + 1, k) * epsilon_deriv(i, j + 1, k) * phidx(i, j + 1, k) -
+           epsilon(i, j - 1, k) * epsilon_deriv(i, j - 1, k) * phidx(i, j - 1, k)) *
+          inv_dy;
 
-      const double term2 = -(epsilon(i + 1, j, k) * epsilon_deriv(i + 1, j, k) *
-                                phidy(i + 1, j, k) -
-                            epsilon(i - 1, j, k) * epsilon_deriv(i - 1, j, k) *
-                                phidy(i - 1, j, k)) *
-                           inv_dx;
+      const double term2 =
+          -(epsilon(i + 1, j, k) * epsilon_deriv(i + 1, j, k) * phidy(i + 1, j, k) -
+            epsilon(i - 1, j, k) * epsilon_deriv(i - 1, j, k) * phidy(i - 1, j, k)) *
+          inv_dx;
 
       const double ep = epsilon(i, j, k);
       const double term3 = ep * ep * lap_phi(i, j, k);
@@ -176,10 +176,11 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
           std::atan(kobayashi::kGamma * (kobayashi::kTeq - tempr(i, j, k)));
       const double term4 = phiold * (1.0 - phiold) * (phiold - 0.5 + m);
 
-      phi(i, j, k) = phiold + (cfg.dt / kobayashi::kTau) * (term1 + term2 + term3 + term4);
+      phi(i, j, k) =
+          phiold + (cfg.dt / kobayashi::kTau) * (term1 + term2 + term3 + term4);
 
-      tempr(i, j, k) =
-          tempr(i, j, k) + cfg.dt * lap_t(i, j, k) + kobayashi::kKappa * (phi(i, j, k) - phiold);
+      tempr(i, j, k) = tempr(i, j, k) + cfg.dt * lap_t(i, j, k) +
+                       kobayashi::kKappa * (phi(i, j, k) - phiold);
     });
 
     if (nprint_eff > 0 && istep % nprint_eff == 0 && rank == 0) {
@@ -191,8 +192,8 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
       std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                     filenum);
       if (rank == 0) {
-        std::cout << "saving step " << istep << "/" << cfg.n_steps << " to file " << path
-                  << "\n";
+        std::cout << "saving step " << istep << "/" << cfg.n_steps << " to file "
+                  << path << "\n";
       }
       write_phi_png(rank, decomp, phi, path);
       ++filenum;
@@ -221,7 +222,8 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
   std::vector<double> g_phi;
   std::vector<double> g_T;
-  gather_global_xy_rank0(decomp, rank, nproc, MPI_COMM_WORLD, loc_phi, Nx, Ny, g_phi);
+  gather_global_xy_rank0(decomp, rank, nproc, MPI_COMM_WORLD, loc_phi, Nx, Ny,
+                         g_phi);
   gather_global_xy_rank0(decomp, rank, nproc, MPI_COMM_WORLD, loc_T, Nx, Ny, g_T);
 
   if (rank == 0) {
@@ -231,10 +233,11 @@ void run_kobayashi(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     const double l2_T = std::sqrt(sT.sumsq);
     std::cout << std::setprecision(17);
     std::cout << "KOBAYASHI_VERIFY"
-              << " wall_loop_max_s=" << wall_max << " nproc=" << nproc << " Nx=" << Nx
-              << " Ny=" << Ny << " steps=" << cfg.n_steps << " dt=" << cfg.dt
-              << " dx=" << cfg.dx << " sum_phi=" << sp.sum << " sumsq_phi=" << sp.sumsq
-              << " l2_phi=" << l2_phi << " min_phi=" << sp.min_v << " max_phi=" << sp.max_v
+              << " wall_loop_max_s=" << wall_max << " nproc=" << nproc
+              << " Nx=" << Nx << " Ny=" << Ny << " steps=" << cfg.n_steps
+              << " dt=" << cfg.dt << " dx=" << cfg.dx << " sum_phi=" << sp.sum
+              << " sumsq_phi=" << sp.sumsq << " l2_phi=" << l2_phi
+              << " min_phi=" << sp.min_v << " max_phi=" << sp.max_v
               << " sum_T=" << sT.sum << " sumsq_T=" << sT.sumsq << " l2_T=" << l2_T
               << " min_T=" << sT.min_v << " max_T=" << sT.max_v << "\n";
     std::cout << "KOBAYASHI_VERIFY_HEX"
