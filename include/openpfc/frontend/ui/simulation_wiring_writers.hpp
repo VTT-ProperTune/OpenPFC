@@ -105,14 +105,6 @@ add_result_writers_from_json(Simulator &sim, const nlohmann::json &settings,
   }
 }
 
-inline void
-add_result_writers_from_json(Simulator &sim, const nlohmann::json &settings,
-                             MPI_Comm comm, int mpi_rank, bool rank0,
-                             const ResultsWriterCatalog &writer_catalog) {
-  add_result_writers_from_json(
-      sim, settings, JsonWiringContext{comm, mpi_rank, rank0}, writer_catalog);
-}
-
 } // namespace pfc::ui
 
 #endif // PFC_UI_SIMULATION_WIRING_WRITERS_HPP

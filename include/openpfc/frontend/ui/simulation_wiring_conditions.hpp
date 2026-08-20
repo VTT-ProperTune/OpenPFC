@@ -88,14 +88,6 @@ add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
 }
 
 inline void
-add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
-                                 MPI_Comm comm, int mpi_rank, bool rank0,
-                                 const FieldModifierCatalog &modifier_catalog) {
-  add_initial_conditions_from_json(
-      sim, settings, JsonWiringContext{comm, mpi_rank, rank0}, modifier_catalog);
-}
-
-inline void
 add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
                                   const JsonWiringContext &ctx,
                                   const FieldModifierCatalog &modifier_catalog) {
@@ -106,14 +98,6 @@ add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings
       [](Simulator &s, std::unique_ptr<FieldModifier> m) {
         s.add_boundary_conditions(std::move(m));
       });
-}
-
-inline void
-add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
-                                  MPI_Comm comm, int mpi_rank, bool rank0,
-                                  const FieldModifierCatalog &modifier_catalog) {
-  add_boundary_conditions_from_json(
-      sim, settings, JsonWiringContext{comm, mpi_rank, rank0}, modifier_catalog);
 }
 
 } // namespace pfc::ui

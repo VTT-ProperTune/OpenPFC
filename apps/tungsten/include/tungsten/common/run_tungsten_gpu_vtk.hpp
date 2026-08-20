@@ -95,14 +95,14 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
   pfc::Simulator simulator(model, time);
 
   if (rank0) std::cout << "Adding initial conditions..." << std::endl;
-  pfc::ui::add_initial_conditions_from_json(
-      simulator, settings, simulator.mpi_comm(), rank, rank0,
-      pfc::ui::default_field_modifier_catalog());
+  const pfc::ui::JsonWiringContext wiring_ctx{simulator.mpi_comm(), rank, rank0};
+  auto &mod_cat = pfc::ui::default_field_modifier_catalog();
+  pfc::ui::add_initial_conditions_from_json(simulator, settings, wiring_ctx,
+                                            mod_cat);
 
   if (rank0) std::cout << "Adding boundary conditions..." << std::endl;
-  pfc::ui::add_boundary_conditions_from_json(
-      simulator, settings, simulator.mpi_comm(), rank, rank0,
-      pfc::ui::default_field_modifier_catalog());
+  pfc::ui::add_boundary_conditions_from_json(simulator, settings, wiring_ctx,
+                                             mod_cat);
 
   if (rank0) std::cout << "Adding VTK writer..." << std::endl;
   if (settings.contains("fields") && settings["saveat"] > 0) {

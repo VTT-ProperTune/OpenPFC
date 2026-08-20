@@ -9,6 +9,7 @@
  * Bundles the communicator and rank attributes passed to every
  * `add_*_from_json` and `wire_simulator_and_runtime_from_json` entry point so
  * drivers do not repeat five parameters (and tests can construct one object).
+ * There is no unpacked `(comm, rank, rank0)` overload.
  */
 
 #ifndef PFC_UI_SIMULATION_WIRING_CONTEXT_HPP

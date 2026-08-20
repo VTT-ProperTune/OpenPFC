@@ -18,13 +18,12 @@
 
 using json = nlohmann::json;
 
-TEST_CASE("JsonWiringContext IC/BC wiring matches legacy overloads",
-          "[ui][wiring]") {
+TEST_CASE("JsonWiringContext IC/BC wiring is the only overload", "[ui][wiring]") {
   auto domain = pfc::domain::create(pfc::GridSize({4, 4, 4}),
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = pfc::decomposition::create(domain, 1);
-  const auto& world = pfc::decomposition::get_world(decomposition);
+  const auto &world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -37,13 +36,8 @@ TEST_CASE("JsonWiringContext IC/BC wiring matches legacy overloads",
 
   REQUIRE_NOTHROW(
       pfc::ui::add_initial_conditions_from_json(sim, settings, ctx, mod_cat));
-  REQUIRE_NOTHROW(pfc::ui::add_initial_conditions_from_json(
-      sim, settings, MPI_COMM_WORLD, 3, false, mod_cat));
-
   REQUIRE_NOTHROW(
       pfc::ui::add_boundary_conditions_from_json(sim, settings, ctx, mod_cat));
-  REQUIRE_NOTHROW(pfc::ui::add_boundary_conditions_from_json(
-      sim, settings, MPI_COMM_WORLD, 3, false, mod_cat));
 }
 
 TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringContext",
@@ -52,7 +46,7 @@ TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringContext",
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = pfc::decomposition::create(domain, 1);
-  const auto& world = pfc::decomposition::get_world(decomposition);
+  const auto &world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -65,8 +59,6 @@ TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringContext",
 
   REQUIRE_NOTHROW(pfc::ui::wire_simulator_and_runtime_from_json(
       sim, time, settings, ctx, mod_cat, res_cat));
-  REQUIRE_NOTHROW(pfc::ui::wire_simulator_and_runtime_from_json(
-      sim, time, settings, MPI_COMM_WORLD, 0, true, mod_cat, res_cat));
 }
 
 TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringSession",
@@ -75,7 +67,7 @@ TEST_CASE("wire_simulator_and_runtime_from_json accepts JsonWiringSession",
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = pfc::decomposition::create(domain, 1);
-  const auto& world = pfc::decomposition::get_world(decomposition);
+  const auto &world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -96,7 +88,7 @@ TEST_CASE("JsonWiringSession accepts temporary catalogs without dangling referen
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = pfc::decomposition::create(domain, 1);
-  const auto& world = pfc::decomposition::get_world(decomposition);
+  const auto &world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -108,20 +100,19 @@ TEST_CASE("JsonWiringSession accepts temporary catalogs without dangling referen
   // temporary catalogs moved into session, then session is used safely
   const pfc::ui::JsonWiringSession session = pfc::ui::make_json_wiring_session(
       MPI_COMM_WORLD, 0, true,
-      pfc::ui::make_builtin_field_modifier_catalog(),    // temporary catalog
-      pfc::ui::make_builtin_results_writer_catalog());   // temporary catalog
+      pfc::ui::make_builtin_field_modifier_catalog(),  // temporary catalog
+      pfc::ui::make_builtin_results_writer_catalog()); // temporary catalog
 
   REQUIRE_NOTHROW(
       pfc::ui::wire_simulator_and_runtime_from_json(sim, time, settings, session));
 }
 
-TEST_CASE("JsonWiringSession accepts lvalue catalog references",
-          "[ui][wiring]") {
+TEST_CASE("JsonWiringSession accepts lvalue catalog references", "[ui][wiring]") {
   auto domain = pfc::domain::create(pfc::GridSize({4, 4, 4}),
                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                     pfc::GridSpacing({1.0, 1.0, 1.0}));
   auto decomposition = pfc::decomposition::create(domain, 1);
-  const auto& world = pfc::decomposition::get_world(decomposition);
+  const auto &world = pfc::decomposition::get_world(decomposition);
   auto fft = pfc::fft::create(decomposition);
   pfc::testing::MockModel model(fft, world);
   pfc::Time time({0.0, 1.0, 0.1}, 1.0);
@@ -132,8 +123,8 @@ TEST_CASE("JsonWiringSession accepts lvalue catalog references",
   // Existing usage pattern: pass references to process-wide singletons
   auto &mod_cat = pfc::ui::default_field_modifier_catalog();
   auto &res_cat = pfc::ui::default_results_writer_catalog();
-  const pfc::ui::JsonWiringSession session = pfc::ui::make_json_wiring_session(
-      MPI_COMM_WORLD, 0, true, mod_cat, res_cat);
+  const pfc::ui::JsonWiringSession session =
+      pfc::ui::make_json_wiring_session(MPI_COMM_WORLD, 0, true, mod_cat, res_cat);
 
   REQUIRE_NOTHROW(
       pfc::ui::wire_simulator_and_runtime_from_json(sim, time, settings, session));
