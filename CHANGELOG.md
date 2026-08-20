@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 CPU stack factory (`session_stack_factory.hpp`) builds `SpectralCPUStack` / `FDCPUStack` / `FDPaddedCPUStack` from `SessionSelection`. FD halo width is `fd_order/2`. Mismatched method/backend fail closed. Tungsten/aluminum CPU ETD sessions use `make_spectral_cpu_stack`. GPU stacks stay in runtime.
 - M10 JSON `method` (`spectral`|`fd`), `backend` (`cpu`|`cuda`|`hip`, with `fftw`/`rocm` aliases), and `fd_order` (even 2–20) parse to `SessionSelection`. Unknown values throw `format_config_error`. Intended stack name is recorded for the session-matrix test.
 - M10 unknown JSON `"writer"` is a hard error (`format_config_error`). Built-in catalog registers `vtk` as well as `binary`.
 - M10 `SimulationDriver` / `pfc::sim::run` (`kernel/simulation/simulation_driver.hpp`): thin Time loop matching `Simulator::step` (on_start at increment 0, next, conditions, physics, save). Tungsten/aluminum CPU and GPU ETD sessions use it. Gen-1 `Simulator` remains.
