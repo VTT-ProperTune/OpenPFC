@@ -27,6 +27,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_moving_frame_mean_field_etd.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_observable_reduce.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_swift_hohenberg_three_way.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_simulation_driver.cpp
 )
 
 # Add wave2d include directory for WaveModel access
