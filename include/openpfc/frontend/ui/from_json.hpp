@@ -16,6 +16,8 @@
  * - `from_json_integrator_method.hpp` — `sim::steppers::RKIntegratorMethod`
  * - `from_json_session_selection.hpp` — `sim::SessionSelection` (`method` /
  *   `backend` / `fd_order`)
+ * - `from_json_simulation_session.hpp` — JSON → `SimulationSession<Stack>`
+ *   (include directly; not part of this umbrella to avoid pulling stacks)
  * - `from_json_field_modifiers.hpp` — built-in IC/BC `from_json` overloads and
  *   base `Model` params stub
  *
