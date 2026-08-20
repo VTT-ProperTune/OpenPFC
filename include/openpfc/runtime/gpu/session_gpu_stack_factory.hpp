@@ -91,4 +91,52 @@ make_fd_gpu_stack(const SessionSelection &s, pfc::Domain domain, int rank, int n
 
 #endif
 
+#if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
+template <> struct stack_builder<stacks::GPUSpectralStack<CUDASpace>> {
+  static constexpr const char *name = "GPUSpectralStack<CUDASpace>";
+  [[nodiscard]] static stacks::GPUSpectralStack<CUDASpace>
+  make(const SessionSelection &s, pfc::Domain domain, int rank, int nproc,
+       MPI_Comm comm) {
+    return make_gpu_spectral_stack<CUDASpace>(s, std::move(domain), rank, nproc,
+                                              comm);
+  }
+};
+#endif
+
+#if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+template <> struct stack_builder<stacks::GPUSpectralStack<HIPSpace>> {
+  static constexpr const char *name = "GPUSpectralStack<HIPSpace>";
+  [[nodiscard]] static stacks::GPUSpectralStack<HIPSpace>
+  make(const SessionSelection &s, pfc::Domain domain, int rank, int nproc,
+       MPI_Comm comm) {
+    return make_gpu_spectral_stack<HIPSpace>(s, std::move(domain), rank, nproc,
+                                             comm);
+  }
+};
+#endif
+
+#if defined(OpenPFC_ENABLE_CUDA)
+template <> struct stack_builder<stacks::FDGPUStack<CUDASpace>> {
+  static constexpr const char *name = "FDGPUStack<CUDASpace>";
+  [[nodiscard]] static stacks::FDGPUStack<CUDASpace> make(const SessionSelection &s,
+                                                          pfc::Domain domain,
+                                                          int rank, int nproc,
+                                                          MPI_Comm comm) {
+    return make_fd_gpu_stack<CUDASpace>(s, std::move(domain), rank, nproc, comm);
+  }
+};
+#endif
+
+#if defined(OpenPFC_ENABLE_HIP)
+template <> struct stack_builder<stacks::FDGPUStack<HIPSpace>> {
+  static constexpr const char *name = "FDGPUStack<HIPSpace>";
+  [[nodiscard]] static stacks::FDGPUStack<HIPSpace> make(const SessionSelection &s,
+                                                         pfc::Domain domain,
+                                                         int rank, int nproc,
+                                                         MPI_Comm comm) {
+    return make_fd_gpu_stack<HIPSpace>(s, std::move(domain), rank, nproc, comm);
+  }
+};
+#endif
+
 } // namespace pfc::sim
