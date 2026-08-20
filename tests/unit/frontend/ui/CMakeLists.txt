@@ -20,4 +20,5 @@ target_sources(openpfc-tests PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_time_integrator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_integrator_method.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_world_time_positivity.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_session_selection.cpp
 )
