@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M9 `FDGPUStack` (`runtime/gpu/fd_gpu_stack.hpp`): padded device `Field` + `HaloExchange` + extra-field/`make_exchange` factory. Kobayashi CUDA/HIP drivers allocate fields and the two halo groups from the stack.
 - M9 GPU `DeviceMovingFrameMeanFieldETDSystem` (`runtime/gpu/moving_frame_mean_field_etd_gpu.hpp`) plus `AluminumETDGPUSession` and A/B binaries `aluminum_etd_cuda` / `aluminum_etd_hip`. Host vs device ≤1e-10 (`CUDA_MovingFrameETD` / `CUDA_AluminumETD`; HIP twins). Gen-1 `aluminumNew` remains.
 - M9 host `MovingFrameMeanFieldETDSystem` (`kernel/simulation/moving_frame_mean_field_etd.hpp`): \(\chi(k)\) and \(P(k)\) iFFTs, \(N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}}(x,t))\), shared ETD cache, free-energy `integrate_owned`. A/B CPU binary `aluminum_etd` (`AluminumETDSession`). Gen-1 `aluminumNew` remains.
 - M9 start: `aluminum::AluminumPhysics` (`apps/aluminumNew/include/aluminum/aluminum_physics.hpp`) plus `MovingFrameMeanFieldETDPhysics` (`filter_mf`, `correlation_kernel` \(P(k)\), \(N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}})\), free-energy density). Schema keys match `aluminumNew.json`. Gen-1 `Aluminum` remains.
