@@ -28,9 +28,9 @@
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
-#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
@@ -200,6 +200,51 @@ TEST_CASE("HeatModel + FDCPUStack + EulerStepper: explicit-Euler FD steps "
   REQUIRE(std::isfinite(sum1));
 }
 
+namespace {
+
+[[nodiscard]] double heat3d_gaussian_l2_rms(int order) {
+  constexpr int N = 32;
+  constexpr double dt = 5.0e-4;
+  constexpr int n_steps = 10;
+  pfc::sim::stacks::FDCPUStack stack(pfc::GridSize({N, N, N}),
+                                     pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                     pfc::GridSpacing({1.0, 1.0, 1.0}), order,
+                                     /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
+  HeatModel model;
+  stack.u().apply(model.initial_condition);
+  auto grad = pfc::field::create<heat3d::HeatGrads>(stack.u(), order);
+  auto stepper = pfc::sim::steppers::create(stack.u(), grad, model, dt);
+  for (int step = 0; step < n_steps; ++step) {
+    stack.exchange_halos();
+    (void)stepper.step(static_cast<double>(step) * dt, stack.u().vec());
+  }
+  double l2sq = 0.0;
+  double cnt = 0.0;
+  const double t_final = static_cast<double>(n_steps) * dt;
+  stack.u().for_each_interior([&](double x, double y, double z, double v) {
+    const double u_exact =
+        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, heat3d::kD);
+    const double diff = v - u_exact;
+    l2sq += diff * diff;
+    cnt += 1.0;
+  });
+  return std::sqrt(l2sq / cnt);
+}
+
+} // namespace
+
+TEST_CASE("FDCPUStack Gaussian L2 improves at even fd_order 2, 8, 10",
+          "[heat3d][FDCPUStack][fd_order]") {
+  const double e2 = heat3d_gaussian_l2_rms(2);
+  const double e8 = heat3d_gaussian_l2_rms(8);
+  const double e10 = heat3d_gaussian_l2_rms(10);
+  REQUIRE(std::isfinite(e2));
+  REQUIRE(std::isfinite(e8));
+  REQUIRE(std::isfinite(e10));
+  REQUIRE(e8 < e2);
+  REQUIRE(e10 < e8);
+}
+
 // -----------------------------------------------------------------------------
 // Grads-type pruning: an alternative model-owned grads aggregate that drops
 // `zz` (a 2D-style heat slab needs only `xx + yy`) must compile against
@@ -267,19 +312,25 @@ TEST_CASE("Manual FD driver (Field + HaloExchange): smoke + L2",
   const double dt = 1.0e-3;
   const int n_steps = 5;
 
-  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, /*nproc=*/1);
 
-  pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  pfc::data::Field<double, pfc::HostSpace> du(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
+  pfc::data::Field<double, pfc::HostSpace> u(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
+  pfc::data::Field<double, pfc::HostSpace> du(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
   comm::HaloExchange<HostSpace, double> halo(u, decomp, /*rank=*/0, MPI_COMM_WORLD);
 
   HeatModel model;
   u.apply(model.initial_condition);
 
   double sum0 = 0.0;
-  u.for_each_interior([&](double x, double y, double z, double v) { sum0 += v * v; });
+  u.for_each_interior(
+      [&](double x, double y, double z, double v) { sum0 += v * v; });
   REQUIRE(sum0 > 0.0);
 
   auto stencil_step = [&](int i, int j, int k) {
@@ -291,7 +342,7 @@ TEST_CASE("Manual FD driver (Field + HaloExchange): smoke + L2",
   };
 
   // Helper to iterate interior (owned cells excluding halo width)
-  auto for_each_interior_with_idx = [&](auto&& fn) {
+  auto for_each_interior_with_idx = [&](auto &&fn) {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
     const int nz = u.local_size()[2];
@@ -305,13 +356,14 @@ TEST_CASE("Manual FD driver (Field + HaloExchange): smoke + L2",
   };
 
   // Helper to iterate border (owned cells reaching into halo)
-  auto for_each_border_with_idx = [&](auto&& fn) {
+  auto for_each_border_with_idx = [&](auto &&fn) {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
     const int nz = u.local_size()[2];
 
     if (nx <= 2 * hw || ny <= 2 * hw || nz <= 2 * hw) {
-      u.for_each_owned([&](double, double, double, double) { /* no work needed for empty interior */ });
+      u.for_each_owned([&](double, double, double,
+                           double) { /* no work needed for empty interior */ });
       return;
     }
 
@@ -349,7 +401,8 @@ TEST_CASE("Manual FD driver (Field + HaloExchange): smoke + L2",
     for_each_interior_with_idx(stencil_step);
     halo.finish();
     for_each_border_with_idx(stencil_step);
-    u.for_each_owned([&](double, double, double, double) { /* Euler step handled below */ });
+    u.for_each_owned(
+        [&](double, double, double, double) { /* Euler step handled below */ });
     // Explicit Euler over the full owned region
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
@@ -420,11 +473,16 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FDCPUStack pat
   });
   l2_compact = std::sqrt(l2_compact / cnt);
 
-  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, 1);
-  pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
-  pfc::data::Field<double, pfc::HostSpace> du(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
+  pfc::data::Field<double, pfc::HostSpace> u(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
+  pfc::data::Field<double, pfc::HostSpace> du(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
   comm::HaloExchange<HostSpace, double> halo(u, decomp, 0, MPI_COMM_WORLD);
   u.apply(model.initial_condition);
 
@@ -437,7 +495,7 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FDCPUStack pat
   };
 
   // Helper to iterate interior (owned cells excluding halo width)
-  auto for_each_interior_with_idx = [&](auto&& fn) {
+  auto for_each_interior_with_idx = [&](auto &&fn) {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
     const int nz = u.local_size()[2];
@@ -451,13 +509,14 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FDCPUStack pat
   };
 
   // Helper to iterate border (owned cells reaching into halo)
-  auto for_each_border_with_idx = [&](auto&& fn) {
+  auto for_each_border_with_idx = [&](auto &&fn) {
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
     const int nz = u.local_size()[2];
 
     if (nx <= 2 * hw || ny <= 2 * hw || nz <= 2 * hw) {
-      u.for_each_owned([&](double, double, double, double) { /* no work needed for empty interior */ });
+      u.for_each_owned([&](double, double, double,
+                           double) { /* no work needed for empty interior */ });
       return;
     }
 
@@ -495,7 +554,8 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FDCPUStack pat
     for_each_interior_with_idx(stencil_step);
     halo.finish();
     for_each_border_with_idx(stencil_step);
-    u.for_each_owned([&](double, double, double, double) { /* Euler step handled below */ });
+    u.for_each_owned(
+        [&](double, double, double, double) { /* Euler step handled below */ });
     // Explicit Euler over the full owned region
     const int nx = u.local_size()[0];
     const int ny = u.local_size()[1];
@@ -512,8 +572,8 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FDCPUStack pat
   double l2_manual = 0.0;
   double cnt2 = 0.0;
   u.for_each_interior([&](double x, double y, double z, double u_val) {
-    const double u_exact = heat3d::analytic_gaussian(
-        x * x + y * y + z * z, t_final, heat3d::kD);
+    const double u_exact =
+        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, heat3d::kD);
     const double diff = u_val - u_exact;
     l2_manual += diff * diff;
     cnt2 += 1.0;
@@ -606,11 +666,14 @@ TEST_CASE("Scratch FD driver (bare loops, raw pointers): smoke + L2",
   const double dt = 1.0e-3;
   const int n_steps = 5;
 
-  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, /*nproc=*/1);
 
-  pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
+  pfc::data::Field<double, pfc::HostSpace> u(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
   comm::HaloExchange<HostSpace, double> halo(u, decomp, /*rank=*/0, MPI_COMM_WORLD);
 
   // From-scratch IC: exp(-r^2 / (4 kD)) by hand, exactly as the driver does.
@@ -699,10 +762,13 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FDCPUStack "
   });
   l2_compact = std::sqrt(l2_compact / cnt);
 
-  auto domain = pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                                     GridSpacing({1.0, 1.0, 1.0}));
+  auto domain =
+      pfc::domain::create(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                          GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(domain, 1);
-  pfc::data::Field<double, pfc::HostSpace> u(pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0), hw);
+  pfc::data::Field<double, pfc::HostSpace> u(
+      pfc::decomposition::domain(decomp), pfc::decomposition::local_box(decomp, 0),
+      hw);
   comm::HaloExchange<HostSpace, double> halo(u, decomp, 0, MPI_COMM_WORLD);
   {
     const int nx = u.local_size()[0];
@@ -729,8 +795,8 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FDCPUStack "
   double l2_scratch = 0.0;
   double cnt2 = 0.0;
   u.for_each_interior([&](double x, double y, double z, double u_val) {
-    const double u_exact = heat3d::analytic_gaussian(
-        x * x + y * y + z * z, t_final, heat3d::kD);
+    const double u_exact =
+        heat3d::analytic_gaussian(x * x + y * y + z * z, t_final, heat3d::kD);
     const double diff = u_val - u_exact;
     l2_scratch += diff * diff;
     cnt2 += 1.0;
