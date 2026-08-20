@@ -12,13 +12,16 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 
 #include "test_helpers.hpp"
 
+#include <stdexcept>
+
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
 
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
-#include <openpfc/runtime/gpu/fd_gpu_stack.hpp>
+#include <openpfc/kernel/simulation/session_selection.hpp>
+#include <openpfc/runtime/gpu/session_gpu_stack_factory.hpp>
 
 #if defined(OPENPFC_TEST_FD_GPU_STACK_HIP)
 using Space = pfc::HIPSpace;
@@ -69,6 +72,42 @@ TEST_CASE("FDGPUStack padded field and extra-field factory", "[gpu][fd_stack]") 
   auto group = stack.make_exchange({&stack.u(), &extra}, opt);
   stack.exchange_halos();
   group.exchange();
+}
+
+TEST_CASE("make_fd_gpu_stack uses fd_order for halo width",
+          "[gpu][fd_stack][session]") {
+#if defined(OPENPFC_TEST_FD_GPU_STACK_HIP)
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+#else
+  if (!pfc::gpu::test::is_cuda_available()) {
+    SKIP("CUDA not available");
+  }
+#endif
+
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  if (mpi_initialized == 0) {
+    MPI_Init(nullptr, nullptr);
+  }
+
+  auto domain = pfc::domain::create(pfc::GridSize({8, 8, 8}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  int mpi_size = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  pfc::sim::SessionSelection s{pfc::sim::SimulationMethod::Fd,
+                               pfc::sim::gpu_session_backend<Space>::value, 4};
+  auto built = pfc::sim::make_fd_gpu_stack<Space>(s, domain, rank, mpi_size);
+  REQUIRE(built.halo_width() == 2);
+
+  pfc::sim::SessionSelection cpu{};
+  REQUIRE_THROWS_AS(pfc::sim::make_fd_gpu_stack<Space>(cpu, domain, rank, mpi_size),
+                    std::invalid_argument);
 }
 
 int main(int argc, char *argv[]) {
