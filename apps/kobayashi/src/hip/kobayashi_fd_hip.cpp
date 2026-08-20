@@ -3,7 +3,8 @@
 
 /**
  * @file kobayashi_fd_hip.cpp
- * @brief MPI + HIP Kobayashi FD driver: one MPI rank binds one GPU (local rank mod device count).
+ * @brief MPI + HIP Kobayashi FD driver: one MPI rank binds one GPU (local rank mod
+ * device count).
  *
  * Halos use `pfc::comm::HaloExchange<HIPSpace>` on device-resident Fields
  * (same two groups as the CPU driver; `Axes2D()` skips ±Z on the nz=1 slab).
@@ -34,21 +35,20 @@
 #include <kobayashi/defaults.hpp>
 #include <kobayashi/device_step_hip.hpp>
 
-#include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/domain/create.hpp>
+#include <openpfc/frontend/io/png_writer.hpp>
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/decomposition/decomposition_factory.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
 #include <openpfc/runtime/common/mpi_main.hpp>
-#include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/runtime/gpu/comm_halo_exchange_gpu.hpp>
+#include <openpfc/runtime/gpu/fd_gpu_stack.hpp>
 
 #include <kobayashi/verification_utilities.hpp>
 
 namespace {
-
-
 
 using HostField = pfc::data::Field<double, pfc::HostSpace>;
 using DevField = pfc::data::Field<double, pfc::HIPSpace>;
@@ -56,50 +56,44 @@ using pfc::data::field_from_subdomain;
 
 class mpi_comm_guard {
 private:
-    MPI_Comm comm_;
+  MPI_Comm comm_;
 
 public:
-    explicit mpi_comm_guard(MPI_Comm comm = MPI_COMM_NULL) : comm_(comm) {}
-    ~mpi_comm_guard() noexcept {
-        if (comm_ != MPI_COMM_NULL && comm_ != MPI_COMM_WORLD) {
-            (void)MPI_Comm_free(&comm_);  // Discard error to preserve no-throw guarantee
-        }
+  explicit mpi_comm_guard(MPI_Comm comm = MPI_COMM_NULL) : comm_(comm) {}
+  ~mpi_comm_guard() noexcept {
+    if (comm_ != MPI_COMM_NULL && comm_ != MPI_COMM_WORLD) {
+      (void)MPI_Comm_free(&comm_); // Discard error to preserve no-throw guarantee
     }
-    mpi_comm_guard(const mpi_comm_guard&) = delete;
-    mpi_comm_guard& operator=(const mpi_comm_guard&) = delete;
-    mpi_comm_guard(mpi_comm_guard&& other) noexcept : comm_(other.comm_) {
-        other.comm_ = MPI_COMM_NULL;
+  }
+  mpi_comm_guard(const mpi_comm_guard &) = delete;
+  mpi_comm_guard &operator=(const mpi_comm_guard &) = delete;
+  mpi_comm_guard(mpi_comm_guard &&other) noexcept : comm_(other.comm_) {
+    other.comm_ = MPI_COMM_NULL;
+  }
+  mpi_comm_guard &operator=(mpi_comm_guard &&other) noexcept {
+    if (this != &other) {
+      if (comm_ != MPI_COMM_NULL && comm_ != MPI_COMM_WORLD) {
+        (void)MPI_Comm_free(&comm_);
+      }
+      comm_ = other.comm_;
+      other.comm_ = MPI_COMM_NULL;
     }
-    mpi_comm_guard& operator=(mpi_comm_guard&& other) noexcept {
-        if (this != &other) {
-            if (comm_ != MPI_COMM_NULL && comm_ != MPI_COMM_WORLD) {
-                (void)MPI_Comm_free(&comm_);
-            }
-            comm_ = other.comm_;
-            other.comm_ = MPI_COMM_NULL;
-        }
-        return *this;
-    }
+    return *this;
+  }
 
-    operator MPI_Comm() const { return comm_; }
-    MPI_Comm get() const { return comm_; }
-    MPI_Comm release() {
-        MPI_Comm tmp = comm_;
-        comm_ = MPI_COMM_NULL;
-        return tmp;
-    }
+  operator MPI_Comm() const { return comm_; }
+  MPI_Comm get() const { return comm_; }
+  MPI_Comm release() {
+    MPI_Comm tmp = comm_;
+    comm_ = MPI_COMM_NULL;
+    return tmp;
+  }
 };
 
 void hip_check(hipError_t e, const char *what) {
   if (e != hipSuccess) {
     throw std::runtime_error(std::string(what) + ": " + hipGetErrorString(e));
   }
-}
-
-DevField make_dev_field(const pfc::decomposition::Decomposition &decomp, int rank,
-                        int hw) {
-  return DevField(pfc::decomposition::domain(decomp),
-                  pfc::decomposition::local_box(decomp, rank), hw);
 }
 
 void copy_host_to_device(const HostField &host, DevField &dev) {
@@ -116,16 +110,16 @@ void copy_device_to_host(DevField &dev, HostField &host) {
   if (host.size() != dev.size()) {
     throw std::runtime_error("copy_device_to_host: size mismatch");
   }
-  dev.with_host_view([&](double *data, std::size_t n) {
-    std::copy(data, data + n, host.data());
-  });
+  dev.with_host_view(
+      [&](double *data, std::size_t n) { std::copy(data, data + n, host.data()); });
   // Read-only pull: keep the device buffer as the source of truth.
   dev.note_device_write();
 }
 
 void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   MPI_Comm temp_node_comm{};
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &temp_node_comm);
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                      &temp_node_comm);
   mpi_comm_guard node_comm(temp_node_comm);
   int local_rank = 0;
   if (node_comm != MPI_COMM_NULL) {
@@ -149,20 +143,25 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   const auto domain = pfc::domain::create(pfc::GridSize({cfg.Nx, cfg.Ny, 1}),
                                           pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                           pfc::GridSpacing({dx, dy, 1.0}));
-  const auto decomp = pfc::decomposition::create(domain, nproc);
 
   constexpr int hw = 1;
+  pfc::comm::HaloExchangeOptions state_opt;
+  state_opt.directions = pfc::halo::presets::Axes2D();
+  pfc::sim::stacks::FDGPUStack<pfc::HIPSpace> stack(domain, hw, rank, nproc,
+                                                    MPI_COMM_WORLD, state_opt);
+  const auto &decomp = stack.decomposition();
+
   auto phi_h = field_from_subdomain<double>(decomp, rank, hw);
   auto tempr_h = field_from_subdomain<double>(decomp, rank, hw);
 
-  auto phi = make_dev_field(decomp, rank, hw);
-  auto tempr = make_dev_field(decomp, rank, hw);
-  auto lap_phi = make_dev_field(decomp, rank, hw);
-  auto lap_t = make_dev_field(decomp, rank, hw);
-  auto phidx = make_dev_field(decomp, rank, hw);
-  auto phidy = make_dev_field(decomp, rank, hw);
-  auto epsilon = make_dev_field(decomp, rank, hw);
-  auto epsilon_deriv = make_dev_field(decomp, rank, hw);
+  auto phi = stack.make_field();
+  auto tempr = stack.make_field();
+  auto lap_phi = stack.make_field();
+  auto lap_t = stack.make_field();
+  auto phidx = stack.make_field();
+  auto phidy = stack.make_field();
+  auto epsilon = stack.make_field();
+  auto epsilon_deriv = stack.make_field();
 
   const int Nx = cfg.Nx;
   const int Ny = cfg.Ny;
@@ -187,16 +186,12 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   copy_host_to_device(phi_h, phi);
   copy_host_to_device(tempr_h, tempr);
 
-  pfc::comm::HaloExchangeOptions state_opt;
-  state_opt.directions = pfc::halo::presets::Axes2D();
-  pfc::comm::HaloExchange<pfc::HIPSpace, double> halo_state(
-      {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD, state_opt);
+  auto halo_state = stack.make_exchange({&phi, &tempr}, state_opt);
   pfc::comm::HaloExchangeOptions aux_opt;
   aux_opt.exchange_base = 2;
   aux_opt.directions = pfc::halo::presets::Axes2D();
-  pfc::comm::HaloExchange<pfc::HIPSpace, double> halo_aux(
-      {&epsilon, &epsilon_deriv, &phidx, &phidy}, decomp, rank, MPI_COMM_WORLD,
-      aux_opt);
+  auto halo_aux =
+      stack.make_exchange({&epsilon, &epsilon_deriv, &phidx, &phidy}, aux_opt);
 
   const bool skip_png = std::getenv("OPENPFC_KOBAYASHI_SKIP_PNG") != nullptr;
   const bool quiet = std::getenv("OPENPFC_KOBAYASHI_QUIET") != nullptr;
@@ -221,7 +216,8 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
   int filenum = 0;
   if (!skip_png) {
     char path[4096];
-    std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(), filenum);
+    std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
+                  filenum);
     if (rank == 0) {
       std::cout << "saving step 0/" << cfg.n_steps << " to file " << path << "\n";
     }
@@ -246,11 +242,10 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
     halo_aux.exchange();
 
-    kobayashi::kobayashi_stage_b_hip(phi.data(), tempr.data(), lap_phi.data(),
-                                     lap_t.data(), epsilon.data(),
-                                     epsilon_deriv.data(), phidx.data(),
-                                     phidy.data(), nx, ny, nz, hw, inv_dx, inv_dy,
-                                     cfg.dt);
+    kobayashi::kobayashi_stage_b_hip(
+        phi.data(), tempr.data(), lap_phi.data(), lap_t.data(), epsilon.data(),
+        epsilon_deriv.data(), phidx.data(), phidy.data(), nx, ny, nz, hw, inv_dx,
+        inv_dy, cfg.dt);
     phi.note_device_write();
     tempr.note_device_write();
 
@@ -264,8 +259,8 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
       std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
                     filenum);
       if (rank == 0) {
-        std::cout << "saving step " << istep << "/" << cfg.n_steps << " to file " << path
-                  << "\n";
+        std::cout << "saving step " << istep << "/" << cfg.n_steps << " to file "
+                  << path << "\n";
       }
       write_phi_png(rank, decomp, phi_h, path);
       ++filenum;
@@ -290,7 +285,6 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     write_phi_png(rank, decomp, phi_h, path);
   }
 
-
   std::vector<double> loc_phi;
   std::vector<double> loc_T;
   pack_owned_xy0(phi_h, loc_phi);
@@ -298,7 +292,8 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
   std::vector<double> g_phi;
   std::vector<double> g_T;
-  gather_global_xy_rank0(decomp, rank, nproc, MPI_COMM_WORLD, loc_phi, Nx, Ny, g_phi);
+  gather_global_xy_rank0(decomp, rank, nproc, MPI_COMM_WORLD, loc_phi, Nx, Ny,
+                         g_phi);
   gather_global_xy_rank0(decomp, rank, nproc, MPI_COMM_WORLD, loc_T, Nx, Ny, g_T);
 
   if (rank == 0) {
@@ -308,10 +303,11 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
     const double l2_T = std::sqrt(sT.sumsq);
     std::cout << std::setprecision(17);
     std::cout << "KOBAYASHI_VERIFY"
-              << " wall_loop_max_s=" << wall_max << " nproc=" << nproc << " Nx=" << Nx
-              << " Ny=" << Ny << " steps=" << cfg.n_steps << " dt=" << cfg.dt
-              << " dx=" << cfg.dx << " sum_phi=" << sp.sum << " sumsq_phi=" << sp.sumsq
-              << " l2_phi=" << l2_phi << " min_phi=" << sp.min_v << " max_phi=" << sp.max_v
+              << " wall_loop_max_s=" << wall_max << " nproc=" << nproc
+              << " Nx=" << Nx << " Ny=" << Ny << " steps=" << cfg.n_steps
+              << " dt=" << cfg.dt << " dx=" << cfg.dx << " sum_phi=" << sp.sum
+              << " sumsq_phi=" << sp.sumsq << " l2_phi=" << l2_phi
+              << " min_phi=" << sp.min_v << " max_phi=" << sp.max_v
               << " sum_T=" << sT.sum << " sumsq_T=" << sT.sumsq << " l2_T=" << l2_T
               << " min_T=" << sT.min_v << " max_T=" << sT.max_v << "\n";
     std::cout << "KOBAYASHI_VERIFY_HEX"
