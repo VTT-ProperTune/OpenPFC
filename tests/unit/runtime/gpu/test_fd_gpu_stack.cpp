@@ -18,7 +18,9 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <mpi.h>
+#include <nlohmann/json.hpp>
 
+#include <openpfc/frontend/ui/from_json_simulation_session.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/decomposition/halo_directions.hpp>
 #include <openpfc/kernel/simulation/session_selection.hpp>
@@ -143,6 +145,49 @@ TEST_CASE("SimulationSession FD GPU stack uses fd_order halo",
                                pfc::sim::gpu_session_backend<Space>::value, 4};
   pfc::sim::SimulationSession<pfc::sim::stacks::FDGPUStack<Space>> session(
       s, domain, pfc::Time({0.0, 0.2, 0.1}, 0.1), rank, mpi_size);
+  REQUIRE(std::string(session.stack_name()) ==
+          std::string(pfc::sim::intended_stack_name(session.selection())));
+  REQUIRE(session.stack().halo_width() == 2);
+}
+
+TEST_CASE("session matrix fd GPU from JSON", "[gpu][fd_stack][session][json]") {
+#if defined(OPENPFC_TEST_FD_GPU_STACK_HIP)
+  if (!pfc::gpu::test::is_hip_available()) {
+    SKIP("HIP not available");
+  }
+  const char *backend = "hip";
+#else
+  if (!pfc::gpu::test::is_cuda_available()) {
+    SKIP("CUDA not available");
+  }
+  const char *backend = "cuda";
+#endif
+
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  if (mpi_initialized == 0) {
+    MPI_Init(nullptr, nullptr);
+  }
+  int mpi_size = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  const nlohmann::json doc{
+      {"method", "fd"},
+      {"backend", backend},
+      {"fd_order", 4},
+      {"Lx", 8},
+      {"Ly", 8},
+      {"Lz", 8},
+      {"dx", 1.0},
+      {"dy", 1.0},
+      {"dz", 1.0},
+      {"origin", "corner"},
+      {"timestepping", {{"t0", 0.0}, {"t1", 0.2}, {"dt", 0.1}, {"saveat", 0.1}}}};
+  auto session =
+      pfc::ui::make_simulation_session<pfc::sim::stacks::FDGPUStack<Space>>(
+          doc, rank, mpi_size);
   REQUIRE(std::string(session.stack_name()) ==
           std::string(pfc::sim::intended_stack_name(session.selection())));
   REQUIRE(session.stack().halo_width() == 2);

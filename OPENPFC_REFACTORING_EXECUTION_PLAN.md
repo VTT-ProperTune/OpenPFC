@@ -667,7 +667,7 @@ M8, M9 (all production physics on the new architecture).
 
 ### Required tests
 
-* [ ] Session matrix test: {spectral, fd} × {cpu} in CI and × {cuda, hip} on clusters — one JSON document each, same toy model, correct stack instantiated (asserted via introspection/log), simulation runs. **Partial:** CPU JSON matrix (`test_session_matrix`) plus CUDA `SimulationSession` on GPU stack binaries. HIP JSON twin still open.
+* [ ] Session matrix test: {spectral, fd} × {cpu} in CI and × {cuda, hip} on clusters — one JSON document each, same toy model, correct stack instantiated (asserted via introspection/log), simulation runs. **Partial:** CPU JSON matrix (`test_session_matrix`); CUDA/HIP GPU stack binaries run the same JSON `make_simulation_session` (HIP `rocm` alias). HIP execute still M-LUMI.
 * [x] JSON `method`/`backend`/`integrator`/`fd_order` negative tests: unknown values produce the formatted config errors (message snapshots). **method/backend/fd_order** in `test_from_json_session_selection`. Integrator unknown tokens use `format_config_error`.
 * [x] FD order sweep: heat3d convergence test at orders 2, 8, 10 showing expected spatial-order improvement (extends existing analytic-Gaussian check). **Landed:** `FDCPUStack Gaussian L2 improves at even fd_order 2, 8, 10`.
 * [ ] BC mechanism: wave2d mixed-BC tests pass on the stage-preparation path; a Dirichlet FD test (non-periodic axis from M1) validates ghost handling against an analytic solution.

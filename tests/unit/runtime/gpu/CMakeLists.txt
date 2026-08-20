@@ -66,7 +66,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/include
     )
     target_link_libraries(test_gpu_spectral_stack_cuda PRIVATE
-        Catch2::Catch2 openpfc Heffte::Heffte CUDA::cudart MPI::MPI_CXX)
+        Catch2::Catch2 openpfc nlohmann_json::nlohmann_json Heffte::Heffte
+        CUDA::cudart MPI::MPI_CXX)
     target_compile_definitions(test_gpu_spectral_stack_cuda PRIVATE
         OPENPFC_TEST_GPU_STACK_CUDA)
     add_test(NAME CUDA_GPUSpectralStack COMMAND test_gpu_spectral_stack_cuda)
@@ -78,8 +79,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/include
     )
     target_link_libraries(test_fd_gpu_stack_cuda PRIVATE
-        Catch2::Catch2 openpfc Heffte::Heffte CUDA::cudart MPI::MPI_CXX
-        openpfc_gpu_kernels)
+        Catch2::Catch2 openpfc nlohmann_json::nlohmann_json Heffte::Heffte
+        CUDA::cudart MPI::MPI_CXX openpfc_gpu_kernels)
     set_target_properties(test_fd_gpu_stack_cuda PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
         CUDA_RESOLVE_DEVICE_SYMBOLS ON)
@@ -158,7 +159,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/include
     )
     target_link_libraries(test_fd_gpu_stack_hip PRIVATE
-        Catch2::Catch2 openpfc hip::host MPI::MPI_CXX openpfc_hip_kernels)
+        Catch2::Catch2 openpfc nlohmann_json::nlohmann_json hip::host MPI::MPI_CXX
+        openpfc_hip_kernels)
     target_compile_definitions(test_fd_gpu_stack_hip PRIVATE
         OPENPFC_TEST_FD_GPU_STACK_HIP)
     add_test(NAME HIP_FDGPUStack COMMAND test_fd_gpu_stack_hip)
@@ -231,7 +233,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
             ${CMAKE_SOURCE_DIR}/include
         )
         target_link_libraries(test_gpu_spectral_stack_hip PRIVATE
-            Catch2::Catch2 openpfc Heffte::Heffte hip::host MPI::MPI_CXX)
+            Catch2::Catch2 openpfc nlohmann_json::nlohmann_json Heffte::Heffte
+            hip::host MPI::MPI_CXX)
         target_compile_definitions(test_gpu_spectral_stack_hip PRIVATE
             OPENPFC_TEST_GPU_STACK_HIP)
         add_test(NAME HIP_GPUSpectralStack COMMAND test_gpu_spectral_stack_hip)
