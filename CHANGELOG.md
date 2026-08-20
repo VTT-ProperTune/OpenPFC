@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 `SimulationSession<Stack>` owns `SessionSelection`, `Time`, and a stack from `stack_builder`. JSON helper `make_simulation_session`. Session-matrix tests cover spectral/fd × cpu (JSON) and CUDA stacks (cluster binaries).
 - M10 unknown IC/BC `"type"` and a missing Model field for modifiers or results writers are hard errors (`format_config_error` / `invalid_argument`). JSON `"writer": "vtk"` writes a `.vti` in the driver-seam test. `apply_simulator_section_from_json` overlays `simulator.integrator.method` on `Time`.
 - M10 GPU stack factory (`runtime/gpu/session_gpu_stack_factory.hpp`) builds `GPUSpectralStack` / `FDGPUStack` from `SessionSelection`. Omitted JSON `backend` maps to the binary's device; explicit `cpu` still fails closed. Tungsten/aluminum GPU ETD sessions use `make_gpu_spectral_stack`.
 - M10 CPU stack factory (`session_stack_factory.hpp`) builds `SpectralCPUStack` / `FDCPUStack` / `FDPaddedCPUStack` from `SessionSelection`. FD halo width is `fd_order/2`. Mismatched method/backend fail closed. Tungsten/aluminum CPU ETD sessions use `make_spectral_cpu_stack`.
