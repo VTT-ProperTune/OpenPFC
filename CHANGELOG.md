@@ -14,6 +14,8 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 JSON `method` (`spectral`|`fd`), `backend` (`cpu`|`cuda`|`hip`, with `fftw`/`rocm` aliases), and `fd_order` (even 2–20) parse to `SessionSelection`. Unknown values throw `format_config_error`. Intended stack name is recorded for the session-matrix test.
+- M10 unknown JSON `"writer"` is a hard error (`format_config_error`). Built-in catalog registers `vtk` as well as `binary`.
 - M10 `SimulationDriver` / `pfc::sim::run` (`kernel/simulation/simulation_driver.hpp`): thin Time loop matching `Simulator::step` (on_start at increment 0, next, conditions, physics, save). Tungsten/aluminum CPU and GPU ETD sessions use it. Gen-1 `Simulator` remains.
 - M9 `apps/common/` (`openpfc_apps_common`): shared CLI helpers, MPI timing/SUM reduce, and rank-0 XY gather. heat3d / wave2d / allen_cahn / kobayashi keep per-app `RunConfig` and usage text.
 - M9 Kobayashi OpenMP engine is the single-rank `FDPaddedCPUStack` path with OpenMP over owned cells (torus wrap indexing retired). Shared host stencils with `kobayashi_fd_manual`. Thread-parity 1 vs 4 retained; 32²/4-step HEX pinned against MPI nproc=1.
