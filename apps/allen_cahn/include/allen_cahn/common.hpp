@@ -14,10 +14,11 @@
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/field/finite_difference.hpp>
+#include <openpfc_apps/mpi_report.hpp>
 
 namespace allen_cahn {
 
@@ -175,31 +176,15 @@ inline bool verify_level_set_area_growth(MPI_Comm comm, int rank,
 
 inline void report_step_timing(MPI_Comm comm, int rank, int n_steps,
                                double elapsed_local_s) {
-  double elapsed_min_s = 0.0;
-  double elapsed_max_s = 0.0;
-  double elapsed_sum_s = 0.0;
-  MPI_Reduce(&elapsed_local_s, &elapsed_min_s, 1, MPI_DOUBLE, MPI_MIN, 0, comm);
-  MPI_Reduce(&elapsed_local_s, &elapsed_max_s, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
-  MPI_Reduce(&elapsed_local_s, &elapsed_sum_s, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
-
-  int nproc = 1;
-  MPI_Comm_size(comm, &nproc);
-  if (rank == 0) {
-    const double avg_elapsed_s = elapsed_sum_s / static_cast<double>(nproc);
-    const double avg_step_time_s = elapsed_max_s / static_cast<double>(n_steps);
-    std::cout << "Step timing: elapsed_min_s=" << elapsed_min_s
-              << ", elapsed_max_s=" << elapsed_max_s
-              << ", elapsed_avg_s=" << avg_elapsed_s
-              << ", avg_step_time_s=" << avg_step_time_s << "\n";
-  }
+  pfc::apps::report_step_timing(comm, rank, n_steps, elapsed_local_s);
 }
 
-inline void step_explicit_euler_cpu(
-    std::vector<double> *u, std::vector<double> *lap,
-    std::array<std::vector<double>, 6> *face_halos,
-    pfc::comm::SparseExchange<pfc::HostSpace, double> *exchanger, int nx, int ny,
-    int nz, double inv_dx2, double inv_dy2, double dt, double M, double inv_eps2,
-    double driving_force) {
+inline void
+step_explicit_euler_cpu(std::vector<double> *u, std::vector<double> *lap,
+                        std::array<std::vector<double>, 6> *face_halos,
+                        pfc::comm::SparseExchange<pfc::HostSpace, double> *exchanger,
+                        int nx, int ny, int nz, double inv_dx2, double inv_dy2,
+                        double dt, double M, double inv_eps2, double driving_force) {
   constexpr int hw = RunConfig::kHaloWidth;
   exchanger->exchange(u->data(), u->size());
   pfc::halo::copy_to_face_layout(exchanger->halos(), *face_halos);
