@@ -27,7 +27,8 @@ set(_heat3d_binaries heat3d_fd_scratch heat3d_fd_manual heat3d_fd
 foreach(_target IN LISTS _heat3d_binaries)
   add_executable(${_target} src/cpu/${_target}.cpp)
   target_include_directories(${_target} PRIVATE ${HEAT3D_INCLUDE_DIR})
-  target_link_libraries(${_target} PRIVATE OpenPFC ${_heat3d_heffte_tgt})
+  target_link_libraries(${_target} PRIVATE OpenPFC openpfc_apps_common
+                                           ${_heat3d_heffte_tgt})
   if(OpenMP_CXX_FOUND)
     target_link_libraries(${_target} PRIVATE OpenMP::OpenMP_CXX)
   endif()
@@ -47,6 +48,7 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_include_directories(test_heat3d PRIVATE ${HEAT3D_INCLUDE_DIR})
     target_link_libraries(test_heat3d PRIVATE
       OpenPFC
+      openpfc_apps_common
       ${_heat3d_heffte_tgt}
       Catch2::Catch2
     )
@@ -60,6 +62,7 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_include_directories(test_heat3d_operator_evaluation PRIVATE ${HEAT3D_INCLUDE_DIR})
     target_link_libraries(test_heat3d_operator_evaluation PRIVATE
       OpenPFC
+      openpfc_apps_common
       ${_heat3d_heffte_tgt}
       Catch2::Catch2
     )
@@ -70,6 +73,7 @@ if(HEAT3D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     target_include_directories(test_heat3d_rhs_pattern PRIVATE ${HEAT3D_INCLUDE_DIR})
     target_link_libraries(test_heat3d_rhs_pattern PRIVATE
       OpenPFC
+      openpfc_apps_common
       ${_heat3d_heffte_tgt}
       Catch2::Catch2
     )

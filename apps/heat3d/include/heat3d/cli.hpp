@@ -38,6 +38,8 @@
 #include <optional>
 #include <ostream>
 
+#include <openpfc_apps/cli.hpp>
+
 namespace heat3d {
 
 /**
@@ -71,9 +73,7 @@ namespace detail {
 /// Common value-range check shared by both parser families.
 inline bool valid_values(const RunConfig &c, bool needs_fd_order) noexcept {
   if (c.N < 8 || c.n_steps < 1 || c.dt <= 0.0) return false;
-  if (needs_fd_order) {
-    if (c.fd_order < 2 || c.fd_order > 20 || (c.fd_order % 2) != 0) return false;
-  }
+  if (needs_fd_order && !pfc::apps::even_fd_order(c.fd_order)) return false;
   return true;
 }
 
@@ -113,21 +113,14 @@ inline std::optional<RunConfig> parse_spectral(int argc, char **argv) noexcept {
 /// `parse_fd` + rank-0 usage print — drop-in for compact FD `main`.
 inline std::optional<RunConfig> parse_fd_or_print_usage(int argc, char **argv,
                                                         int rank) {
-  auto cfg = parse_fd(argc, argv);
-  if (!cfg && rank == 0) {
-    print_usage_fd(std::cerr, argc >= 1 ? argv[0] : "heat3d_fd");
-  }
-  return cfg;
+  return pfc::apps::parse_or_print_usage(argc, argv, rank, parse_fd, print_usage_fd);
 }
 
 /// `parse_spectral` + rank-0 usage print — drop-in for the simpler binaries.
 inline std::optional<RunConfig> parse_spectral_or_print_usage(int argc, char **argv,
                                                               int rank) {
-  auto cfg = parse_spectral(argc, argv);
-  if (!cfg && rank == 0) {
-    print_usage_spectral(std::cerr, argc >= 1 ? argv[0] : "heat3d_spectral");
-  }
-  return cfg;
+  return pfc::apps::parse_or_print_usage(argc, argv, rank, parse_spectral,
+                                         print_usage_spectral);
 }
 
 } // namespace heat3d
