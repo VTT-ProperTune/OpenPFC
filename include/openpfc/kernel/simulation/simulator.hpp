@@ -54,6 +54,7 @@
 
 #include <memory>
 #include <mpi.h>
+#include <stdexcept>
 #include <string>
 
 #include <openpfc/kernel/data/world.hpp>
@@ -227,7 +228,8 @@ public:
    *
    * @param field_name Name of the field to write (must be registered with Model)
    * @param writer Unique pointer to ResultsWriter object (ownership transferred)
-   * @return true if writer was successfully registered, false if field doesn't exist
+   * @return true if writer was successfully registered
+   * @throws std::invalid_argument if @p field_name is not on the Model
    *
    * @note Writer is called automatically at intervals specified by
    * Time::set_saveat()
@@ -261,16 +263,14 @@ public:
    */
   bool add_results_writer(const std::string &field_name,
                           std::unique_ptr<ResultsWriter> writer) {
+    Model &model = get_model();
+    if (!pfc::has_field(model, field_name)) {
+      throw std::invalid_argument("results writer field '" + field_name +
+                                  "' is not registered on the Model");
+    }
     auto inbox = get_inbox(pfc::get_fft(m_model));
     const auto &world = pfc::get_world(m_model);
     writer->set_domain(get_size(world), inbox.size, inbox.low);
-
-    Model &model = get_model();
-    if (!pfc::has_field(model, field_name)) {
-      warn_rank0_("Warning: tried to add writer for inexistent field " + field_name +
-                  ", RESULTS ARE NOT WRITTEN!");
-      return false;
-    }
     m_result_writers.insert({field_name, std::move(writer)});
     return true;
   }
@@ -290,8 +290,8 @@ public:
    * Initial conditions are applied in registration order before the first time step.
    *
    * @param modifier Unique pointer to FieldModifier (ownership transferred)
-   * @return true if IC was successfully registered, false if target field doesn't
-   * exist
+   * @return true if IC was successfully registered
+   * @throws std::invalid_argument if the target field is not on the Model
    *
    * @note ICs are applied exactly once at simulation start
    * @note Multiple ICs can be composed for the same field (applied in order)
@@ -357,8 +357,8 @@ public:
    * reflective boundaries, or moving boundaries.
    *
    * @param modifier Unique pointer to FieldModifier (ownership transferred)
-   * @return true if BC was successfully registered, false if target field doesn't
-   * exist
+   * @return true if BC was successfully registered
+   * @throws std::invalid_argument if the target field is not on the Model
    *
    * @note BCs are applied after every time step
    * @note Multiple BCs can be composed for the same field (applied in order)

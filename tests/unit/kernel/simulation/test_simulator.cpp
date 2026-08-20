@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <memory>
+#include <stdexcept>
+#include <string>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -123,6 +125,15 @@ TEST_CASE("Simulator functionality", "[simulator][unit]") {
     REQUIRE(get_real_field(model, "phi")[0] == 0.0);
     simulator.apply_boundary_conditions();
     REQUIRE(get_real_field(model, "phi")[0] == 1.0);
+  }
+
+  SECTION("missing IC field is a hard error") {
+    Time time({0.0, 10.0, 1.0}, 1.0);
+    Simulator simulator(model, time);
+    auto ic = std::make_unique<pfc::testing::MockIC>();
+    ic->set_field_name("nope");
+    REQUIRE_THROWS_AS(simulator.add_initial_conditions(std::move(ic)),
+                      std::invalid_argument);
   }
 }
 

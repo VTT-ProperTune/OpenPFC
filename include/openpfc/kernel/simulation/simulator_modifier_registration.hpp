@@ -15,6 +15,7 @@
 #define PFC_KERNEL_SIMULATION_SIMULATOR_MODIFIER_REGISTRATION_HPP
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -36,21 +37,20 @@ struct FieldModifierRegistrationMessages {
 inline constexpr FieldModifierRegistrationMessages
     k_initial_condition_registration_msg{
         "Warning: adding initial condition to modify field 'default'",
-        "Warning: tried to add initial condition for inexistent field ",
-        ", INITIAL CONDITIONS ARE NOT APPLIED!"};
+        "initial condition field '", "' is not registered on the Model"};
 
 /** Built-in messages for `Simulator::add_boundary_conditions` */
 inline constexpr FieldModifierRegistrationMessages
     k_boundary_condition_registration_msg{
         "Warning: adding boundary condition to modify field 'default'",
-        "Warning: tried to add boundary condition for inexistent field ",
-        ", BOUNDARY CONDITIONS ARE NOT APPLIED!"};
+        "boundary condition field '", "' is not registered on the Model"};
 
 /**
- * @brief Append modifier to @p bucket if every `get_field_names()` entry exists on
- *        `model`; otherwise warn on rank 0 and return false.
+ * @brief Append modifier to @p bucket if every `get_field_names()` entry exists
+ *        on `model`; otherwise throw.
  *
  * @param warn_rank0 Callable invoked only on rank-0 path (e.g. `Simulator` logger).
+ * @throws std::invalid_argument if a target field is missing on @p model
  */
 template <typename WarnRank0>
 bool try_push_field_modifier_with_model_check(
@@ -63,10 +63,8 @@ bool try_push_field_modifier_with_model_check(
           std::string(msg.default_field_usage_warning));
     }
     if (!pfc::has_field(model, field_name)) {
-      std::forward<WarnRank0>(warn_rank0)(std::string(msg.missing_field_intro) +
-                                          field_name +
-                                          std::string(msg.not_applied_suffix));
-      return false;
+      throw std::invalid_argument(std::string(msg.missing_field_intro) + field_name +
+                                  std::string(msg.not_applied_suffix));
     }
   }
   bucket.push_back(std::move(modifier));
