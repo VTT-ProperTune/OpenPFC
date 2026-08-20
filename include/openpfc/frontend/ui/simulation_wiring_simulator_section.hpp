@@ -12,6 +12,7 @@
 #include <stdexcept>
 
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/from_json_integrator_method.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 
@@ -19,10 +20,11 @@ namespace pfc::ui {
 
 /**
  * @brief Apply optional top-level `"simulator"` object (`result_counter`,
- * `increment`)
+ * `increment`, `integrator.method`)
  *
  * `result_counter` in JSON is treated as the last completed index; the simulator
  * counter is set to that value plus one (same as previous `App` behavior).
+ * `integrator.method` overlays `Time::method()` after `from_json<Time>`.
  */
 inline void apply_simulator_section_from_json(Simulator &sim, Time &time,
                                               const nlohmann::json &settings) {
@@ -45,6 +47,11 @@ inline void apply_simulator_section_from_json(Simulator &sim, Time &time,
     }
     const int increment = static_cast<int>(j["increment"]);
     time.set_increment(increment);
+  }
+  if (j.contains("integrator") && j["integrator"].is_object() &&
+      j["integrator"].contains("method")) {
+    time.set_method(from_json<pfc::sim::steppers::RKIntegratorMethod>(
+        j["integrator"]["method"]));
   }
 }
 

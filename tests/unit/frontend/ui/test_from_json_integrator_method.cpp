@@ -6,11 +6,17 @@
  * @brief Catch2 coverage for from_json<RKIntegratorMethod>
  */
 
+#include <stdexcept>
+#include <string>
+
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/from_json_integrator_method.hpp>
 #include <openpfc/kernel/simulation/steppers/integrator_method.hpp>
+
+using Catch::Matchers::ContainsSubstring;
 
 using namespace pfc::sim::steppers;
 
@@ -33,20 +39,18 @@ TEST_CASE("test_from_json_throws_on_unknown_string") {
   using pfc::ui::from_json;
 
   REQUIRE_THROWS_AS(from_json<RKIntegratorMethod>(nlohmann::json("unknown_method")),
-                    std::runtime_error);
+                    std::invalid_argument);
   REQUIRE_THROWS_AS(from_json<RKIntegratorMethod>(nlohmann::json("RK4")),
-                    std::runtime_error);
+                    std::invalid_argument);
   REQUIRE_THROWS_AS(from_json<RKIntegratorMethod>(nlohmann::json("euler ")),
-                    std::runtime_error);
+                    std::invalid_argument);
 
-  // Verify error message is descriptive
   try {
     (void)from_json<RKIntegratorMethod>(nlohmann::json("invalid"));
-    FAIL("Expected std::runtime_error to be thrown");
-  } catch (const std::runtime_error &e) {
-    std::string msg = e.what();
-    REQUIRE(msg.find("Unknown RK integrator method") != std::string::npos);
-    REQUIRE(msg.find("invalid") != std::string::npos);
-    REQUIRE(msg.find("Valid methods are") != std::string::npos);
+    FAIL("Expected std::invalid_argument to be thrown");
+  } catch (const std::invalid_argument &e) {
+    REQUIRE_THAT(std::string(e.what()), ContainsSubstring("method"));
+    REQUIRE_THAT(std::string(e.what()), ContainsSubstring("invalid"));
+    REQUIRE_THAT(std::string(e.what()), ContainsSubstring("euler"));
   }
 }

@@ -253,16 +253,16 @@ namespace pfc {
 
 class Time {
 private:
-  double m_t0;     ///< Start time
-  double m_t1;     ///< End time
-  double m_dt;     ///< Time step (policy / recommended next step)
-  int m_increment; ///< Current time increment (committed step count)
+  double m_t0;            ///< Start time
+  double m_t1;            ///< End time
+  double m_dt;            ///< Time step (policy / recommended next step)
+  int m_increment;        ///< Current time increment (committed step count)
   double m_accepted_time; ///< Accepted simulation time (immutable during attempt)
-  double m_saveat; ///< Time interval for saving data
+  double m_saveat;        ///< Time interval for saving data
   sim::steppers::RKIntegratorMethod m_method{
       sim::steppers::RKIntegratorMethod::Euler};
-  int m_stage{0};       ///< Current stage index within this time step (0-based)
-  int m_stage_count{1}; ///< Total number of stages in the current time step
+  int m_stage{0};         ///< Current stage index within this time step (0-based)
+  int m_stage_count{1};   ///< Total number of stages in the current time step
   int accepted_steps_{0}; ///< Accepted adaptive step attempts
   int rejected_steps_{0}; ///< Rejected adaptive step attempts
   bool m_attempt_active{false}; ///< True while begin_attempt is open
@@ -596,9 +596,7 @@ public:
    *
    * @return Accepted simulation time
    */
-  [[nodiscard]] double get_accepted_time() const noexcept {
-    return m_accepted_time;
-  }
+  [[nodiscard]] double get_accepted_time() const noexcept { return m_accepted_time; }
 
   /**
    * @brief Get the current (accepted) simulation time
@@ -634,6 +632,13 @@ public:
    * @return The integrator method
    */
   sim::steppers::RKIntegratorMethod method() const noexcept { return m_method; }
+
+  /**
+   * @brief Set the integrator method (JSON `simulator.integrator.method`).
+   */
+  void set_method(sim::steppers::RKIntegratorMethod method) noexcept {
+    m_method = method;
+  }
 
   /**
    * @brief Set the current time increment (fixed-`dt` reconstruction helper).
@@ -1151,15 +1156,15 @@ private:
     m_time.rejected_steps_ = m_saved_rejected_steps;
   }
 
-  Time &m_time;          ///< Reference to guarded Time object
-  double m_saved_dt;     ///< Captured time step value
-  int m_saved_increment; ///< Captured increment counter
+  Time &m_time;                 ///< Reference to guarded Time object
+  double m_saved_dt;            ///< Captured time step value
+  int m_saved_increment;        ///< Captured increment counter
   double m_saved_accepted_time; ///< Captured accepted simulation time
   bool m_saved_attempt_active;  ///< Captured attempt-active flag
   double m_saved_attempted_dt;  ///< Captured attempted interval
-  int m_saved_accepted_steps; ///< Captured accepted-attempt counter
-  int m_saved_rejected_steps; ///< Captured rejected-attempt counter
-  bool m_committed;      ///< Flag to disable restoration
+  int m_saved_accepted_steps;   ///< Captured accepted-attempt counter
+  int m_saved_rejected_steps;   ///< Captured rejected-attempt counter
+  bool m_committed;             ///< Flag to disable restoration
 };
 
 /**
@@ -1211,8 +1216,7 @@ inline void set_stage_count(Time &t, int stage_count) {
   return t.get_accepted_time();
 }
 
-[[nodiscard]] inline double clip_attempt_dt(const Time &t,
-                                            double candidate_dt) {
+[[nodiscard]] inline double clip_attempt_dt(const Time &t, double candidate_dt) {
   return t.clip_attempt_dt(candidate_dt);
 }
 
