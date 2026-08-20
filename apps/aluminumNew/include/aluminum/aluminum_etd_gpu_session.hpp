@@ -28,8 +28,8 @@
 #include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
-#include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
 #include <openpfc/runtime/gpu/moving_frame_mean_field_etd_gpu.hpp>
+#include <openpfc/runtime/gpu/session_gpu_stack_factory.hpp>
 
 namespace aluminum {
 
@@ -46,8 +46,13 @@ public:
   AluminumETDGPUSession(const nlohmann::json &settings, int rank, int nproc,
                         MPI_Comm comm = MPI_COMM_WORLD)
       : m_domain(pfc::ui::from_json<pfc::Domain>(settings)),
-        m_time(pfc::ui::from_json<pfc::Time>(settings)),
-        m_stack(m_domain, rank, nproc, comm) {
+        m_time(pfc::ui::from_json<pfc::Time>(settings)), m_stack([&] {
+          auto sel = pfc::ui::from_json<pfc::sim::SessionSelection>(settings);
+          pfc::sim::apply_omitted_gpu_backend<MemorySpace>(
+              sel, settings.contains("backend"));
+          return pfc::sim::make_gpu_spectral_stack<MemorySpace>(sel, m_domain, rank,
+                                                                nproc, comm);
+        }()) {
     Physics phys;
     phys.domain = m_domain;
     phys.box = m_stack.fft().get_inbox_bounds();
