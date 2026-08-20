@@ -77,6 +77,9 @@ public:
   }
 
   [[nodiscard]] int dumps() const noexcept { return m_counter; }
+  [[nodiscard]] bool enabled() const noexcept {
+    return static_cast<bool>(m_psi_writer);
+  }
 
 private:
   MPI_Comm m_comm{MPI_COMM_WORLD};
