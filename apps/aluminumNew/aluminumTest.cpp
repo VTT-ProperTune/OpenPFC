@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <aluminum/aluminum_etd_session.hpp>
 #include <aluminum/aluminum_physics.hpp>
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cmath>
@@ -198,6 +199,7 @@ TEST_CASE("MovingFrameMeanFieldETDSystem matches Gen-1 Aluminum one step",
   sys.step(0.0);
   REQUIRE(max_abs_diff(legacy.get_real_field("psi"),
                        state.get_field<double>("psi").vec()) < 1e-10);
+  REQUIRE(std::isfinite(sys.last_free_energy_sum()));
 }
 
 TEST_CASE("MovingFrameMeanFieldETDSystem matches Gen-1 Aluminum for 10 steps",
@@ -235,6 +237,55 @@ TEST_CASE("MovingFrameMeanFieldETDSystem matches Gen-1 Aluminum for 10 steps",
   }
   REQUIRE(max_abs_diff(legacy.get_real_field("psi"),
                        state.get_field<double>("psi").vec()) < 1e-10);
+}
+
+TEST_CASE("MovingFrameMeanFieldETDSystem 5-step SeedGridFCC golden vs Gen-1",
+          "[aluminum][golden][etd]") {
+  constexpr int N = 32;
+  constexpr double dt = 1.0e-2;
+  auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto fft_legacy = pfc::fft::create(decomp);
+  auto fft_new = pfc::fft::create(decomp);
+
+  Aluminum legacy(fft_legacy, domain);
+  from_json(aluminum_params_json(), legacy);
+  pfc::initialize(legacy, dt);
+
+  SeedGridFCC ic;
+  ic.set_Nx(1);
+  ic.set_Ny(2);
+  ic.set_Nz(2);
+  ic.set_X0(8.0);
+  ic.set_radius(4.0);
+  ic.set_amplitude(0.4);
+  ic.set_rho(-0.036);
+  ic.set_rseed(42);
+  std::fill(legacy.get_real_field("psi").begin(), legacy.get_real_field("psi").end(),
+            -0.0060);
+  ic.apply(legacy, 0.0);
+
+  aluminum::AluminumPhysics<> phys;
+  phys.domain = domain;
+  phys.box = fft_new.get_inbox_bounds();
+  aluminum::apply_aluminum_json(aluminum_params_json(), phys.params);
+  pfc::SimulationState state;
+  phys.declare_fields(state);
+  state.get_field<double>("psi").vec() = legacy.get_real_field("psi");
+  pfc::sim::MovingFrameMeanFieldETDSystem<aluminum::AluminumPhysics<>> sys(
+      phys, fft_new, state, dt);
+
+  for (int i = 0; i < 5; ++i) {
+    REQUIRE(max_abs_diff(legacy.get_real_field("psi"),
+                         state.get_field<double>("psi").vec()) < 1e-10);
+    legacy.step(1.0);
+    sys.step(1.0);
+    REQUIRE(max_abs_diff(legacy.get_real_field("psi"),
+                         state.get_field<double>("psi").vec()) < 1e-10);
+    REQUIRE(std::isfinite(sys.last_free_energy_sum()));
+  }
 }
 
 TEST_CASE("MovingFrameMeanFieldETDSystem matches Gen-1 with G_grid",
