@@ -98,9 +98,8 @@ TEST_CASE("Unknown field modifier type error", "[ui][integration][validation]") 
     FAIL("Should have thrown exception");
   } catch (const std::invalid_argument &e) {
     std::string msg(e.what());
-    REQUIRE((msg.find("Unknown") != std::string::npos));
+    REQUIRE((msg.find("type") != std::string::npos));
     REQUIRE((msg.find("random_seed") != std::string::npos));
-    REQUIRE((msg.find("Valid types") != std::string::npos));
     REQUIRE((msg.find("constant") != std::string::npos));
     REQUIRE((msg.find("single_seed") != std::string::npos));
     REQUIRE((msg.find("random_seeds") != std::string::npos));
@@ -125,30 +124,27 @@ TEST_CASE("Error messages are concise", "[ui][integration][validation]") {
   }
 }
 
-TEST_CASE("World validation accepts integer dx",
-          "[ui][integration][validation]") {
+TEST_CASE("World validation accepts integer dx", "[ui][integration][validation]") {
   json j = {{"Lx", 256}, {"Ly", 256}, {"Lz", 256},
-            {"dx", 1},   // integer literal
+            {"dx", 1}, // integer literal
             {"dy", 1.0}, {"dz", 1.0}, {"origin", "center"}};
   REQUIRE_NOTHROW(ui::from_json<World>(j));
   World world = ui::from_json<World>(j);
   REQUIRE(world::get_spacing(world, 0) == 1.0);
 }
 
-TEST_CASE("World validation accepts integer dy",
-          "[ui][integration][validation]") {
-  json j = {{"Lx", 256}, {"Ly", 256}, {"Lz", 256},
-            {"dx", 1.0}, {"dy", 1},   // integer literal
+TEST_CASE("World validation accepts integer dy", "[ui][integration][validation]") {
+  json j = {{"Lx", 256}, {"Ly", 256},         {"Lz", 256},
+            {"dx", 1.0}, {"dy", 1}, // integer literal
             {"dz", 1.0}, {"origin", "center"}};
   REQUIRE_NOTHROW(ui::from_json<World>(j));
   World world = ui::from_json<World>(j);
   REQUIRE(world::get_spacing(world, 1) == 1.0);
 }
 
-TEST_CASE("World validation accepts integer dz",
-          "[ui][integration][validation]") {
-  json j = {{"Lx", 256}, {"Ly", 256}, {"Lz", 256},
-            {"dx", 1.0}, {"dy", 1.0}, {"dz", 1},   // integer literal
+TEST_CASE("World validation accepts integer dz", "[ui][integration][validation]") {
+  json j = {{"Lx", 256},         {"Ly", 256}, {"Lz", 256},
+            {"dx", 1.0},         {"dy", 1.0}, {"dz", 1}, // integer literal
             {"origin", "center"}};
   REQUIRE_NOTHROW(ui::from_json<World>(j));
   World world = ui::from_json<World>(j);

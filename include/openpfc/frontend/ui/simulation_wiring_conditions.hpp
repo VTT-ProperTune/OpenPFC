@@ -11,11 +11,13 @@
 
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
 #include <mpi.h>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/frontend/ui/field_modifier_registry.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_detail.hpp>
@@ -37,8 +39,8 @@ void wire_field_modifiers_from_json_array(
     Simulator &sim, const nlohmann::json &settings, const JsonWiringContext &ctx,
     const FieldModifierCatalog &modifier_catalog, const char *json_array_key,
     std::string_view empty_section_warning, std::string_view section_header_log,
-    std::string_view creating_log_prefix, std::string_view missing_type_warning,
-    std::string_view modifier_kind_label, RegisterFn &&register_on_simulator) {
+    std::string_view creating_log_prefix, std::string_view modifier_kind_label,
+    RegisterFn &&register_on_simulator) {
   const pfc::Logger lg{pfc::LogLevel::Info, ctx.mpi_rank};
   if (!settings.contains(json_array_key)) {
     if (ctx.rank0) {
@@ -55,13 +57,13 @@ void wire_field_modifiers_from_json_array(
       ps << params;
       pfc::log_info(lg, std::string(creating_log_prefix) + ps.str());
     }
-    if (!params.contains("type")) {
-      if (ctx.rank0) {
-        pfc::log_warning(lg, std::string(missing_type_warning));
-      }
-      continue;
+    if (!params.contains("type") || !params["type"].is_string()) {
+      throw std::invalid_argument(format_config_error(
+          "type", std::string(modifier_kind_label) + " type",
+          "string (a registered catalog key)", get_json_value_string(params, "type"),
+          modifier_catalog.registered_modifier_types(), "\"type\": \"constant\""));
     }
-    std::string type = params["type"];
+    std::string type = params["type"].get<std::string>();
     auto field_modifier = create_field_modifier(type, params, modifier_catalog);
     configure_field_modifier_targets_from_json(*field_modifier, params, lg,
                                                ctx.rank0, modifier_kind_label);
@@ -79,8 +81,7 @@ add_initial_conditions_from_json(Simulator &sim, const nlohmann::json &settings,
   detail::wire_field_modifiers_from_json_array(
       sim, settings, ctx, modifier_catalog, "initial_conditions",
       "no initial conditions are set!", "Adding initial conditions",
-      "Creating initial condition from data ",
-      "no type is set for initial condition!", "initial condition",
+      "Creating initial condition from data ", "initial condition",
       [](Simulator &s, std::unique_ptr<FieldModifier> m) {
         s.add_initial_conditions(std::move(m));
       });
@@ -101,8 +102,7 @@ add_boundary_conditions_from_json(Simulator &sim, const nlohmann::json &settings
   detail::wire_field_modifiers_from_json_array(
       sim, settings, ctx, modifier_catalog, "boundary_conditions",
       "no boundary conditions are set!", "Adding boundary conditions",
-      "Creating boundary condition from data ",
-      "no type is set for boundary condition!", "boundary condition",
+      "Creating boundary condition from data ", "boundary condition",
       [](Simulator &s, std::unique_ptr<FieldModifier> m) {
         s.add_boundary_conditions(std::move(m));
       });

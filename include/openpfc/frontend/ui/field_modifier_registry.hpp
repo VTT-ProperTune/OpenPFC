@@ -33,7 +33,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <openpfc/frontend/ui/errors_field_modifiers.hpp>
+#include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
@@ -43,6 +43,7 @@
 #include <openpfc/kernel/simulation/initial_conditions/random_seeds.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/seed_grid.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -87,7 +88,9 @@ public:
     if (it != modifiers.end()) {
       return it->second(data);
     }
-    throw std::invalid_argument(format_unknown_modifier_error(type));
+    throw std::invalid_argument(format_config_error(
+        "type", "field modifier type", "a registered catalog key", type,
+        registered_modifier_types(), "\"type\": \"constant\""));
   }
 
 private:
