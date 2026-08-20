@@ -20,7 +20,7 @@ TEST_CASE("backend_from_string rejects unsupported names", "[runtime][backend]")
 #if defined(OpenPFC_ENABLE_CUDA)
 TEST_CASE("backend_from_string maps cuda when compiled in",
           "[runtime][backend][cuda]") {
-  const auto backend = pfc::runtime.backend_from_string("cuda");
+  const auto backend = pfc::runtime::backend_from_string("cuda");
 
   REQUIRE(backend.has_value());
   REQUIRE(*backend == pfc::fft::Backend::CUDA);

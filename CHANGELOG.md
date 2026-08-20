@@ -129,6 +129,8 @@ source compatibility is explicitly not a goal.
 - Device-link `openpfc_gpu_kernels` (`CUDA_RESOLVE_DEVICE_SYMBOLS ON`) so CUDA
   executables no longer fail host-link on undefined
   `__cudaRegisterLinkedBinary_*` from the static archive (Tohtori/nvcc 13.1).
+- CUDA-only `backend_from_string` test called `pfc::runtime.backend_from_string`
+  instead of `pfc::runtime::`.
 - HIP GPU autotune device queries used the deprecated `gcnArch` field (an `int` on ROCm 6, so `std::string(prop.gcnArch)` was not an architecture name) and `pciDeviceId` (the struct spells `pciDeviceID`). They now use `gcnArchName` and `pciDeviceID`; the HIP autotune test requires a `gfx` prefix when a device is present.
 - GPU autotune unit test includes Catch2 string matchers so `REQUIRE_THROWS_WITH` compiles.
 - HIP FFT unit test did not link HeFFTe, so `heffte.h` was not on the include path. Both CUDA and HIP FFT unit-test binaries now link `Heffte::Heffte`.
