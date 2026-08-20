@@ -63,7 +63,8 @@ GPU compile + run parity (cluster only):
 ```
 scripts/build.sh --with-cuda  --build-dir=/WRK/<user>/openpfc/builds/cuda-release   # tohtori
 scripts/build.sh --with-rocm  --build-dir=/WRK/<user>/openpfc/builds/rocm-release   # LUMI
-# then run test_tungsten_cpu_vs_cuda / _hip and test_tungsten_app_gpu_ic on a GPU node
+# then run test_tungsten_cpu_vs_cuda / _hip and HIP_TungstenETD / CUDA_TungstenETD
+# (App-GPU-IC is the [ic] case on TungstenETDGPUSession)
 ```
 
 ## Why bitwise vs tolerance

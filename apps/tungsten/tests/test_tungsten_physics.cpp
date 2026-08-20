@@ -17,10 +17,13 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <mpi.h>
+#include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/spectral_mean_field_etd.hpp>
+#include <tungsten/common/tungsten_spectral.hpp>
 #include <tungsten/cpu/tungsten_model.hpp>
 #include <tungsten/tungsten_etd_session.hpp>
+#include <tungsten/tungsten_field_modifiers.hpp>
 #include <tungsten/tungsten_physics.hpp>
 
 using Catch::Approx;
@@ -258,6 +261,93 @@ TEST_CASE("TungstenETDSession JSON constant IC matches Gen-1 two steps",
   legacy.step(0.01);
   REQUIRE(max_abs_diff(legacy.get_real_field("psi"), session.psi().vec()) <
           1e-10);
+}
+
+TEST_CASE("TungstenETDSession JSON single_seed IC matches Gen-1 two steps",
+          "[tungsten][physics][session][ic]") {
+  json settings = golden_settings(8, 0.02, 0.01);
+  settings["initial_conditions"] = json::array(
+      {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.4}},
+       {{"target", "psi"},
+        {"type", "single_seed"},
+        {"amp_eq", 0.215936},
+        {"rho_seed", -0.047}}});
+
+  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+
+  auto domain = pfc::domain::create(
+      pfc::GridSize({8, 8, 8}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto fft = pfc::fft::create(decomp);
+  Tungsten legacy(fft, domain);
+  tungsten::apply_tungsten_json(settings["model"]["params"], legacy.params);
+  pfc::initialize(legacy, 0.01);
+  auto &psi = legacy.get_real_field("psi");
+  tungsten::apply_ics_from_json(settings, domain, fft.get_inbox_bounds(),
+                                psi.data(), psi.size());
+
+  session.run();
+  legacy.step(0.0);
+  legacy.step(0.01);
+  REQUIRE(max_abs_diff(psi, session.psi().vec()) < 1e-10);
+}
+
+TEST_CASE("TungstenPhysics ETD weights: zero mode, near-zero, long-dt",
+          "[tungsten][physics][spectral]") {
+  constexpr double k_lap = -4.0;
+
+  SECTION("zero mode") {
+    tungsten::TungstenPhysics<> phys;
+    auto op = tungsten::spectral::make_operator_params(phys.params);
+    const auto mode = tungsten::spectral::physics_for_mode(k_lap, op);
+    const double op_peak = op.stabP + op.p2_bar + op.q2_bar * mode.filterMF -
+                           mode.opCk;
+    phys.params.set_stabP(op_peak - phys.params.get_p2_bar() -
+                          phys.params.get_q2_bar() * mode.filterMF);
+    op = tungsten::spectral::make_operator_params(phys.params);
+    const double dt = 0.01;
+    const auto legacy =
+        tungsten::spectral::legacy_etd_weights_for_mode(k_lap, dt, op);
+    const double L = phys.linear_symbol(k_lap);
+    REQUIRE(std::abs(L) < 1e-12);
+    const auto shared = pfc::integrator::spectral_exp_coeffs(L, dt);
+    REQUIRE(shared.exp_Ldt == Approx(legacy.opL).epsilon(1e-14));
+    REQUIRE((k_lap * shared.phi1_L) == Approx(legacy.opN).epsilon(1e-14));
+  }
+
+  SECTION("near-zero opCk") {
+    const double dt = 0.01;
+    for (double target : {1e-15, 1e-14, 1e-13, 1e-12, 1e-11}) {
+      tungsten::TungstenPhysics<> phys;
+      auto op = tungsten::spectral::make_operator_params(phys.params);
+      const auto mode = tungsten::spectral::physics_for_mode(k_lap, op);
+      const double op_peak = op.stabP + op.p2_bar + op.q2_bar * mode.filterMF -
+                             mode.opCk;
+      phys.params.set_stabP(target + op_peak - phys.params.get_p2_bar() -
+                            phys.params.get_q2_bar() * mode.filterMF);
+      op = tungsten::spectral::make_operator_params(phys.params);
+      const auto legacy =
+          tungsten::spectral::legacy_etd_weights_for_mode(k_lap, dt, op);
+      const double L = phys.linear_symbol(k_lap);
+      const auto shared = pfc::integrator::spectral_exp_coeffs(L, dt);
+      REQUIRE(shared.exp_Ldt == Approx(legacy.opL).epsilon(1e-12));
+      REQUIRE((k_lap * shared.phi1_L) == Approx(legacy.opN).epsilon(1e-12));
+    }
+  }
+
+  SECTION("long-dt") {
+    tungsten::TungstenPhysics<> phys;
+    const auto op = tungsten::spectral::make_operator_params(phys.params);
+    for (double dt : {0.001, 0.01, 0.1, 1.0}) {
+      const auto legacy =
+          tungsten::spectral::legacy_etd_weights_for_mode(k_lap, dt, op);
+      const double L = phys.linear_symbol(k_lap);
+      const auto shared = pfc::integrator::spectral_exp_coeffs(L, dt);
+      REQUIRE(shared.exp_Ldt == Approx(legacy.opL).epsilon(1e-12));
+      REQUIRE((k_lap * shared.phi1_L) == Approx(legacy.opN).epsilon(1e-12));
+    }
+  }
 }
 
 TEST_CASE("TungstenPhysics linear_symbol matches physics_for_mode",
