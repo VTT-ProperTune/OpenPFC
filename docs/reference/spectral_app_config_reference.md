@@ -46,16 +46,15 @@ Object key `"plan_options"` (JSON) or `[plan_options]` (TOML). Passed to HeFFTe 
 
 Validation is **model-dependent** (see [`parameter_validation.md`](../user_guide/parameter_validation.md)).
 
-## Result writers (binary)
+## Result writers
 
-When `saveat > 0` and `fields` is present, `add_result_writers_from_json` registers **`BinaryWriter`** per entry:
+When `saveat > 0` and `fields` is present, `add_result_writers_from_json` registers a catalog writer per entry (default `"binary"` → `BinaryWriter`):
 
 | Key | Type | Meaning |
 |-----|------|---------|
 | `fields[].name` | string | Field identifier known to the simulator / model |
 | `fields[].data` | string | Filename template; if it contains `%`, `printf`-style formatting with the simulator’s output **increment** is applied (see [`binary_field_io_spec.md`](binary_field_io_spec.md)) |
-
-There is **no** VTK branch in this helper today.
+| `fields[].writer` | string | Catalog key: `"binary"` (default) or `"vtk"`. Unknown keys are a hard error. |
 
 ## Initial / boundary conditions
 
@@ -70,7 +69,7 @@ Modifier types must be **registered** in `main` before `App` runs (`register_fie
 
 | Key | Handled by | Notes |
 |-----|------------|--------|
-| `simulator` | `apply_simulator_section_from_json` | e.g. counter / increment for filenames |
+| `simulator` | `apply_simulator_section_from_json` | `result_counter`, `increment`, optional `integrator.method` overlay |
 | `profiling` | `AppProfilingController` | [`performance_profiling.md`](../hpc/performance_profiling.md) |
 
 ## TOML vs JSON
