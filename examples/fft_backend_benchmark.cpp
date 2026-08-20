@@ -66,8 +66,8 @@ static const char *backend_label(fft::Backend backend) {
 }
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-template <typename Tag, typename GpuFFT, typename Sync>
-double benchmark_gpu_fft(GpuFFT &fft, Sync &&sync) {
+template <typename Tag, typename GPUFFT, typename Sync>
+double benchmark_gpu_fft(GPUFFT &fft, Sync &&sync) {
   using RealBufferGPU = core::DataBuffer<Tag, double>;
   using ComplexBufferGPU = core::DataBuffer<Tag, std::complex<double>>;
 
@@ -170,7 +170,7 @@ double benchmark_fft(fft::Backend backend, const Domain &world,
     auto gpu = fft::create_cuda(decomp, rank_id);
     std::cout << "Real data size: " << gpu.size_inbox() << " (local)\n";
     std::cout << "Complex data size: " << gpu.size_outbox() << " (local)\n";
-    return benchmark_gpu_fft<backend::CudaTag>(gpu,
+    return benchmark_gpu_fft<backend::CUDATag>(gpu,
                                                [] { cudaDeviceSynchronize(); });
 #else
     throw std::runtime_error("CUDA support not compiled in");
@@ -182,7 +182,7 @@ double benchmark_fft(fft::Backend backend, const Domain &world,
     auto gpu = fft::create_hip(decomp, rank_id, MPI_COMM_WORLD);
     std::cout << "Real data size: " << gpu.size_inbox() << " (local)\n";
     std::cout << "Complex data size: " << gpu.size_outbox() << " (local)\n";
-    return benchmark_gpu_fft<backend::HipTag>(gpu,
+    return benchmark_gpu_fft<backend::HIPTag>(gpu,
                                               [] { hipDeviceSynchronize(); });
 #else
     throw std::runtime_error("HIP spectral support not compiled in");

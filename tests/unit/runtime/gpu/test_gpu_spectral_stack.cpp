@@ -21,12 +21,12 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
 
 #if defined(OPENPFC_TEST_GPU_STACK_HIP)
-using Space = pfc::HipSpace;
+using Space = pfc::HIPSpace;
 #elif defined(OPENPFC_TEST_GPU_STACK_CUDA)
-using Space = pfc::CudaSpace;
+using Space = pfc::CUDASpace;
 #endif
 
-TEST_CASE("GpuSpectralStack inbox field matches device FFT",
+TEST_CASE("GPUSpectralStack inbox field matches device FFT",
           "[gpu][spectral_stack]") {
 #if defined(OPENPFC_TEST_GPU_STACK_HIP)
   if (!pfc::gpu::test::is_hip_available()) {
@@ -53,7 +53,7 @@ TEST_CASE("GpuSpectralStack inbox field matches device FFT",
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  pfc::sim::stacks::GpuSpectralStack<Space> stack(domain, rank, mpi_size,
+  pfc::sim::stacks::GPUSpectralStack<Space> stack(domain, rank, mpi_size,
                                                   MPI_COMM_WORLD);
   REQUIRE(stack.fft().size_inbox() == stack.u().size());
   REQUIRE(stack.fft().size_outbox() > 0);

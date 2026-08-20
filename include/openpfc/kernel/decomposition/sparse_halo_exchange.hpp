@@ -30,10 +30,10 @@
  *   - `send_tag` / `recv_tag` — symmetric tag scheme (this rank's `send_tag`
  *     must match the peer's `recv_tag` for the corresponding entry on the
  *     peer side, and vice versa).
- *   - `send_values` — a `core::SparseVector<CpuTag, T>` whose **indices**
+ *   - `send_values` — a `core::SparseVector<CPUTag, T>` whose **indices**
  *     are positions in the **local field** to gather from, and whose
  *     **data** buffer is a scratch send buffer of the same length.
- *   - `recv_values` — a `core::SparseVector<CpuTag, T>` whose **data**
+ *   - `recv_values` — a `core::SparseVector<CPUTag, T>` whose **data**
  *     buffer is the receive buffer; if `scatter_after_recv` is `true`,
  *     the exchanger calls `core::scatter` to write the received values
  *     back into the local field at `recv_values.indices()` after the
@@ -111,11 +111,11 @@ template <typename T> struct RemoteHalo {
   /// is default-constructible (helpers like `make_structured_halos` rely
   /// on this); users assign a sized SparseVector before posting an
   /// exchange.
-  core::SparseVector<backend::CpuTag, T> send_values{static_cast<std::size_t>(0)};
+  core::SparseVector<backend::CPUTag, T> send_values{static_cast<std::size_t>(0)};
 
   /// Receive buffer (`data()`) and optional scatter destinations
   /// (`indices()`) into the local field.
-  core::SparseVector<backend::CpuTag, T> recv_values{static_cast<std::size_t>(0)};
+  core::SparseVector<backend::CPUTag, T> recv_values{static_cast<std::size_t>(0)};
 
   /// If `true`, the exchanger calls `core::scatter(recv_values, field, …)`
   /// after `wait_all`. If `false`, the caller reads `recv_values.data()`

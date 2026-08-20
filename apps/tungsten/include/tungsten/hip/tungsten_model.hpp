@@ -7,7 +7,7 @@
  *
  * @details
  * This file implements the HIP version of the Tungsten PFC model.
- * It uses DataBuffer<HipTag, T> for GPU memory management and HIP kernels
+ * It uses DataBuffer<HIPTag, T> for GPU memory management and HIP kernels
  * for element-wise operations. ETD method weights are owned by
  * @c tungsten::etd::TungstenETDWorkspace (not persistent Model coefficient members).
  *
@@ -58,17 +58,17 @@ template <typename RealType = double> class TungstenHIP : public pfc::Model {
 private:
   std::unique_ptr<pfc::fft::FFT_HIP> m_hip_fft;
 
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> filterMF;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> filterMF;
   /// Method-owned ETD weights (transient; not checkpointed).
   /// TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
   tungsten::etd::TungstenETDWorkspace<RealType> m_etd;
   std::uint64_t m_operator_generation{0};
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psiMF;
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psi;
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> psiN;
-  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>> psiMF_F;
-  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>> psi_F;
-  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>> psiN_F;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> psiMF;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> psi;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> psiN;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<RealType>> psiMF_F;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<RealType>> psi_F;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<RealType>> psiN_F;
   size_t mem_allocated = 0;
 
   pfc::RealField m_psi_cpu;
@@ -81,8 +81,8 @@ public:
 
   void set_hip_fft(const pfc::Decomposition &decomp, int rank) {
     auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomp, rank);
-    using HeffteHipFFT = heffte::fft3d_r2c<heffte::backend::rocfft>;
-    HeffteHipFFT fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
+    using HeffteHIPFFT = heffte::fft3d_r2c<heffte::backend::rocfft>;
+    HeffteHIPFFT fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
                      mpi_comm());
     m_hip_fft = std::make_unique<pfc::fft::FFT_HIP>(std::move(fft));
   }
@@ -146,19 +146,19 @@ public:
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
-    filterMF = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_outbox);
+    filterMF = pfc::core::DataBuffer<pfc::backend::HIPTag, RealType>(size_outbox);
     m_etd.reserve(size_outbox);
     m_etd.allocate_hip(size_outbox);
 
-    psi = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
-    psiMF = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
-    psiN = pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(size_inbox);
+    psi = pfc::core::DataBuffer<pfc::backend::HIPTag, RealType>(size_inbox);
+    psiMF = pfc::core::DataBuffer<pfc::backend::HIPTag, RealType>(size_inbox);
+    psiN = pfc::core::DataBuffer<pfc::backend::HIPTag, RealType>(size_inbox);
 
-    psi_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(
+    psi_F = pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<RealType>>(
         size_outbox);
-    psiMF_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(
+    psiMF_F = pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<RealType>>(
         size_outbox);
-    psiN_F = pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<RealType>>(
+    psiN_F = pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<RealType>>(
         size_outbox);
 
     m_psi_cpu.resize(size_inbox);
@@ -211,7 +211,7 @@ public:
     auto size_outbox = fft.size_outbox();
     const std::size_t n_modes = static_cast<std::size_t>(size_outbox);
 
-    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> filterMF_cpu(size_outbox);
+    pfc::core::DataBuffer<pfc::backend::CPUTag, RealType> filterMF_cpu(size_outbox);
     std::vector<double> k_laps(n_modes);
     std::vector<double> opCks(n_modes);
 
@@ -268,7 +268,7 @@ public:
     hipEventSynchronize(kernel_done_event);
     fft.forward(psi, psi_F);
 
-    tungsten::ops::multiply_complex_real<pfc::backend::HipTag, RealType>(
+    tungsten::ops::multiply_complex_real<pfc::backend::HIPTag, RealType>(
         psi_F, filterMF, psiMF_F);
     hipEventRecord(kernel_done_event, 0);
 
@@ -280,12 +280,12 @@ public:
     double q3_bar = params.get_q3_bar();
     double q4_bar = params.get_q4_bar();
 
-    tungsten::ops::compute_nonlinear<pfc::backend::HipTag, RealType>(
+    tungsten::ops::compute_nonlinear<pfc::backend::HIPTag, RealType>(
         psi, psiMF, p3_bar, p4_bar, q3_bar, q4_bar, psiN);
 
     double stabP = params.get_stabP();
     if (stabP != 0.0) {
-      tungsten::ops::apply_stabilization<pfc::backend::HipTag, RealType>(
+      tungsten::ops::apply_stabilization<pfc::backend::HIPTag, RealType>(
           psiN, psi, stabP, psiN);
     }
     hipEventRecord(kernel_done_event, 0);
@@ -294,7 +294,7 @@ public:
     fft.forward(psiN, psiN_F);
 
     // TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
-    tungsten::ops::apply_time_integration<pfc::backend::HipTag, RealType>(
+    tungsten::ops::apply_time_integration<pfc::backend::HIPTag, RealType>(
         psi_F, psiN_F, m_etd.hip_exp_Ldt(), m_etd.hip_n_weight(), psi_F);
     hipEventRecord(kernel_done_event, 0);
 
@@ -304,8 +304,8 @@ public:
 
   ~TungstenHIP() { hipEventDestroy(kernel_done_event); }
 
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psi() { return psi; }
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &get_psiMF() {
+  pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> &get_psi() { return psi; }
+  pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> &get_psiMF() {
     return psiMF;
   }
 

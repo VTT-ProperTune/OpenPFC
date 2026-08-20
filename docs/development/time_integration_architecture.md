@@ -504,13 +504,13 @@ auto stepper = pfc::sim::steppers::create(stack.u(), grad, model, /*dt=*/1.0e-3)
 ### (c) Full stepper usage in a simulation loop
 
 Source pattern from the same heat3d test (with
-[`FdCpuStack`](../../include/openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp)):
+[`FDCPUStack`](../../include/openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp)):
 
 ```cpp
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 
-pfc::sim::stacks::FdCpuStack stack(
+pfc::sim::stacks::FDCPUStack stack(
     pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
     pfc::GridSpacing({1.0, 1.0, 1.0}), order, /*rank=*/0, /*nproc=*/1,
     MPI_COMM_WORLD);

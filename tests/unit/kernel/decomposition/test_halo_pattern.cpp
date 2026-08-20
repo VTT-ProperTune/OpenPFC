@@ -28,7 +28,7 @@ TEST_CASE("Create send halo for +X direction", "[halo][pattern]") {
   Int3 direction = {1, 0, 0}; // +X direction
 
   auto send_halo =
-      halo::create_send_halo<backend::CpuTag>(decomp, rank, direction, halo_width);
+      halo::create_send_halo<backend::CPUTag>(decomp, rank, direction, halo_width);
 
   REQUIRE(!send_halo.empty());
   REQUIRE(send_halo.is_sorted());
@@ -60,7 +60,7 @@ TEST_CASE("Create recv halo for +X direction", "[halo][pattern]") {
   Int3 direction = {1, 0, 0}; // +X direction
 
   auto recv_halo =
-      halo::create_recv_halo<backend::CpuTag>(decomp, rank, direction, halo_width);
+      halo::create_recv_halo<backend::CPUTag>(decomp, rank, direction, halo_width);
 
   REQUIRE(!recv_halo.empty());
   REQUIRE(recv_halo.is_sorted());
@@ -92,9 +92,9 @@ TEST_CASE("Send and recv halo have same size", "[halo][pattern]") {
   Int3 direction = {1, 0, 0};
 
   auto send_halo =
-      halo::create_send_halo<backend::CpuTag>(decomp, rank, direction, halo_width);
+      halo::create_send_halo<backend::CPUTag>(decomp, rank, direction, halo_width);
   auto recv_halo =
-      halo::create_recv_halo<backend::CpuTag>(decomp, rank, direction, halo_width);
+      halo::create_recv_halo<backend::CPUTag>(decomp, rank, direction, halo_width);
 
   // Send and receive halos should have the same number of elements
   REQUIRE(send_halo.size() == recv_halo.size());
@@ -107,7 +107,7 @@ TEST_CASE("Create halo patterns for all face neighbors", "[halo][pattern]") {
   int rank = 0;
   int halo_width = 1;
 
-  auto patterns = halo::create_halo_patterns<backend::CpuTag>(
+  auto patterns = halo::create_halo_patterns<backend::CPUTag>(
       decomp, rank, halo::Connectivity::Faces, halo_width);
 
   // Should have neighbors in some directions (depends on rank position)
@@ -133,7 +133,7 @@ TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
   Int3 direction = {1, 0, 0};
 
   auto send_halo_indices =
-      halo::create_send_halo<backend::CpuTag>(decomp, rank, direction, halo_width);
+      halo::create_send_halo<backend::CPUTag>(decomp, rank, direction, halo_width);
 
   // Create local field
   auto local_box = decomposition::local_box(decomp, rank);
@@ -152,7 +152,7 @@ TEST_CASE("Gather from local field using send halo", "[halo][gather]") {
 
   // Create SparseVector for values (using same indices)
   auto indices_vec = sparsevector::get_index(send_halo_indices);
-  core::SparseVector<backend::CpuTag, double> send_halo_values(indices_vec);
+  core::SparseVector<backend::CPUTag, double> send_halo_values(indices_vec);
 
   // Gather values from local field
   gather(send_halo_values, local_field);
@@ -182,11 +182,11 @@ TEST_CASE("create_send_halo throws when active axis thinner than halo_width",
   const Int3 direction = {1, 0, 0};
 
   REQUIRE_THROWS_AS(
-      (halo::create_send_halo<backend::CpuTag>(decomp, rank, direction,
+      (halo::create_send_halo<backend::CPUTag>(decomp, rank, direction,
                                                halo_width)),
       std::invalid_argument);
   try {
-    (void)halo::create_send_halo<backend::CpuTag>(decomp, rank, direction,
+    (void)halo::create_send_halo<backend::CPUTag>(decomp, rank, direction,
                                                   halo_width);
     FAIL("expected throw");
   } catch (const std::invalid_argument &e) {
@@ -205,11 +205,11 @@ TEST_CASE("create_recv_halo throws when active axis thinner than halo_width",
   const Int3 direction = {1, 0, 0};
 
   REQUIRE_THROWS_AS(
-      (halo::create_recv_halo<backend::CpuTag>(decomp, rank, direction,
+      (halo::create_recv_halo<backend::CPUTag>(decomp, rank, direction,
                                                halo_width)),
       std::invalid_argument);
   try {
-    (void)halo::create_recv_halo<backend::CpuTag>(decomp, rank, direction,
+    (void)halo::create_recv_halo<backend::CPUTag>(decomp, rank, direction,
                                                   halo_width);
     FAIL("expected throw");
   } catch (const std::invalid_argument &e) {
@@ -223,8 +223,8 @@ TEST_CASE("create_send_halo allows flat inactive axis (nz==1, ±X only)",
           "[halo][pattern]") {
   auto domain = pfc::domain::create(Int3{16, 8, 1});
   auto decomp = decomposition::create(domain, {2, 1, 1});
-  REQUIRE_NOTHROW(halo::create_send_halo<backend::CpuTag>(
+  REQUIRE_NOTHROW(halo::create_send_halo<backend::CPUTag>(
       decomp, 0, Int3{1, 0, 0}, 1));
-  REQUIRE_NOTHROW(halo::create_recv_halo<backend::CpuTag>(
+  REQUIRE_NOTHROW(halo::create_recv_halo<backend::CPUTag>(
       decomp, 0, Int3{1, 0, 0}, 1));
 }

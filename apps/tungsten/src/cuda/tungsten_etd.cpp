@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
           return EXIT_FAILURE;
         }
         const auto settings = pfc::ui::load_settings_file(app_argv[1]);
-        tungsten::TungstenETDCudaSession session(settings, rank, nproc,
+        tungsten::TungstenETDCUDASession session(settings, rank, nproc,
                                                  MPI_COMM_WORLD);
         session.run();
         if (rank == 0) {

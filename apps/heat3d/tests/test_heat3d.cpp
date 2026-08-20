@@ -9,7 +9,7 @@
  * The model is intentionally MPI/FFT-free, so the bulk of the tests work on
  * a default-constructed `heat3d::HeatModel` directly. A handful of
  * integration tests exercise the model against OpenPFC's field containers,
- * `FdGradient` and explicit-Euler stepper on a small single-rank grid to
+ * `FDGradient` and explicit-Euler stepper on a small single-rank grid to
  * verify the wiring physicists actually use in `heat3d.cpp`.
  *
  * Layout follows `apps/tungsten/tests/test_tungsten.cpp` (Catch2 + custom
@@ -113,7 +113,7 @@ TEST_CASE("HeatModel: rhs = kD * (xx + yy + zz)", "[heat3d][HeatModel]") {
 // -----------------------------------------------------------------------------
 // Integration tests against OpenPFC primitives (single MPI rank).
 //
-// `pfc::sim::stacks::FdCpuStack` is the recommended bundle: Domain,
+// `pfc::sim::stacks::FDCPUStack` is the recommended bundle: Domain,
 // Decomposition, Field, halo buffers, and the exchanger are constructed
 // in dependency order so the exchanger's `const Decomposition&` reference
 // stays valid for the lifetime of the stack. (`Decomposition` itself owns
@@ -125,17 +125,17 @@ TEST_CASE("HeatModel: rhs = kD * (xx + yy + zz)", "[heat3d][HeatModel]") {
 // `apps/heat3d/src/cpu/heat3d.cpp` uses.
 // -----------------------------------------------------------------------------
 
-TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",
-          "[heat3d][FdCpuStack]") {
+TEST_CASE("HeatModel + FDCPUStack: u.apply samples the model IC",
+          "[heat3d][FDCPUStack]") {
   constexpr int N = 8;
 
   HeatModel model;
 
-  // FdCpuStack's Field stores only owned cells (the face-halo buffer
+  // FDCPUStack's Field stores only owned cells (the face-halo buffer
   // lives separately), so the array indices map directly to the local
   // subworld coordinates. For nproc=1 the local subworld == global world,
   // so u(ix, iy, iz) samples the IC at global (ix, iy, iz).
-  pfc::sim::stacks::FdCpuStack stack(
+  pfc::sim::stacks::FDCPUStack stack(
       pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
       pfc::GridSpacing({1.0, 1.0, 1.0}), /*fd_order=*/2, /*rank=*/0, /*nproc=*/1,
       MPI_COMM_WORLD);
@@ -163,13 +163,13 @@ TEST_CASE("HeatModel + FdCpuStack: u.apply samples the model IC",
   }
 }
 
-TEST_CASE("HeatModel + FdCpuStack + EulerStepper: explicit-Euler FD steps "
+TEST_CASE("HeatModel + FDCPUStack + EulerStepper: explicit-Euler FD steps "
           "decrease the L2 norm of a Gaussian (heat dissipation)",
-          "[heat3d][FdCpuStack][Euler]") {
+          "[heat3d][FDCPUStack][Euler]") {
   constexpr int N = 16;
   const int order = 2;
 
-  pfc::sim::stacks::FdCpuStack stack(pfc::GridSize({N, N, N}),
+  pfc::sim::stacks::FDCPUStack stack(pfc::GridSize({N, N, N}),
                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                      pfc::GridSpacing({1.0, 1.0, 1.0}), order,
                                      /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
@@ -221,13 +221,13 @@ struct PartialHeatModel {
 };
 } // namespace
 
-TEST_CASE("FdGradient<G> + EulerStepper compile and run with a pruned grads "
+TEST_CASE("FDGradient<G> + EulerStepper compile and run with a pruned grads "
           "aggregate (only xx, yy)",
-          "[heat3d][FdCpuStack][prune]") {
+          "[heat3d][FDCPUStack][prune]") {
   constexpr int N = 12;
   const int order = 2;
 
-  pfc::sim::stacks::FdCpuStack stack(pfc::GridSize({N, N, N}),
+  pfc::sim::stacks::FDCPUStack stack(pfc::GridSize({N, N, N}),
                                      pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
                                      pfc::GridSpacing({1.0, 1.0, 1.0}), order,
                                      /*rank=*/0, /*nproc=*/1, MPI_COMM_WORLD);
@@ -255,7 +255,7 @@ TEST_CASE("FdGradient<G> + EulerStepper compile and run with a pruned grads "
 
 // -----------------------------------------------------------------------------
 // Laboratory-style manual FD driver: Field + HaloExchange +
-// brick_iteration helpers. The smoke test mirrors the compact `FdCpuStack`
+// brick_iteration helpers. The smoke test mirrors the compact `FDCPUStack`
 // test above so the two paths can be cross-checked.
 // -----------------------------------------------------------------------------
 
@@ -387,7 +387,7 @@ TEST_CASE("Manual FD driver (Field + HaloExchange): smoke + L2",
   REQUIRE(l2_rms < 1.0e-3);
 }
 
-TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack path",
+TEST_CASE("Manual FD driver: produces same interior L2 as compact FDCPUStack path",
           "[heat3d][fd_manual]") {
   using namespace pfc;
   constexpr int N = 16;
@@ -398,7 +398,7 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
 
   HeatModel model;
 
-  sim::stacks::FdCpuStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  sim::stacks::FDCPUStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                 GridSpacing({1.0, 1.0, 1.0}), order, 0, 1,
                                 MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);
@@ -522,7 +522,7 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
 
   // Both paths apply the same physical 7-point central stencil to the same
   // initial condition; they should agree to floating-point round-off.
-  // `FdGradient` uses an inner-loop multiply by `1/dx^2 = 1.0` and possibly a
+  // `FDGradient` uses an inner-loop multiply by `1/dx^2 = 1.0` and possibly a
   // different summation order than the explicit lambda below, so we allow a
   // few ulps of slop rather than asking for bit equality.
   REQUIRE_THAT(l2_manual, WithinAbs(l2_compact, 1.0e-7));
@@ -532,7 +532,7 @@ TEST_CASE("Manual FD driver: produces same interior L2 as compact FdCpuStack pat
 // Version-0 (from-scratch) FD driver: bare triple loops + manual padded
 // linear indexing + raw pointer arithmetic + plain Lap aux. The first test
 // is a smoke + L2-vs-analytic check; the second cross-checks the L2 against
-// the compact `FdCpuStack` path the way the manual driver does, to prove
+// the compact `FDCPUStack` path the way the manual driver does, to prove
 // the from-scratch loop is numerically equivalent to the framework path.
 // -----------------------------------------------------------------------------
 
@@ -665,7 +665,7 @@ TEST_CASE("Scratch FD driver (bare loops, raw pointers): smoke + L2",
   REQUIRE(l2_rms < 1.0e-3);
 }
 
-TEST_CASE("Scratch FD driver: produces same interior L2 as compact FdCpuStack "
+TEST_CASE("Scratch FD driver: produces same interior L2 as compact FDCPUStack "
           "path",
           "[heat3d][fd_scratch]") {
   using namespace pfc;
@@ -677,7 +677,7 @@ TEST_CASE("Scratch FD driver: produces same interior L2 as compact FdCpuStack "
 
   HeatModel model;
 
-  sim::stacks::FdCpuStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
+  sim::stacks::FDCPUStack stack(GridSize({N, N, N}), PhysicalOrigin({0.0, 0.0, 0.0}),
                                 GridSpacing({1.0, 1.0, 1.0}), order, 0, 1,
                                 MPI_COMM_WORLD);
   stack.u().apply(model.initial_condition);

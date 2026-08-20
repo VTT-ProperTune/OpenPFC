@@ -16,8 +16,8 @@
  *
  * @note Roadmap (Phase C): a future GPU-first JSON session may type-erase or
  *       parameterize the FFT handle at the stack boundary so models are not tied
- *       to `fft::CpuFFT` construction when only device FFT is used. Until then,
- *       GPU drivers reuse this stack’s host `CpuFFT` for `Model(fft, world, comm)`
+ *       to `fft::CPUFFT` construction when only device FFT is used. Until then,
+ *       GPU drivers reuse this stack’s host `CPUFFT` for `Model(fft, world, comm)`
  *       and build cuFFT/ROCm paths separately (`spectral_fft_stack_factory.hpp`).
  *
  * Non-member accessors (`pfc::ui::world(stack)`, `pfc::ui::fft(stack)`, …) mirror
@@ -47,12 +47,12 @@ namespace pfc::ui {
  * → HeFFTe CPU FFT → time. The MPI communicator is stored for downstream
  * `Simulator` wiring (same comm passed into FFT creation).
  */
-class SpectralCpuStack {
+class SpectralCPUStack {
 public:
-  SpectralCpuStack(const SpectralCpuStack &) = delete;
-  SpectralCpuStack &operator=(const SpectralCpuStack &) = delete;
-  SpectralCpuStack(SpectralCpuStack &&) = delete;
-  SpectralCpuStack &operator=(SpectralCpuStack &&) = delete;
+  SpectralCPUStack(const SpectralCPUStack &) = delete;
+  SpectralCPUStack &operator=(const SpectralCPUStack &) = delete;
+  SpectralCPUStack(SpectralCPUStack &&) = delete;
+  SpectralCPUStack &operator=(SpectralCPUStack &&) = delete;
 
   /**
    * @param settings Parsed application JSON (world, time, plan_options, …)
@@ -60,7 +60,7 @@ public:
    * @param rank_id This rank index for FFT creation
    * @param num_ranks Number of ranks for decomposition
    */
-  explicit SpectralCpuStack(const nlohmann::json &settings, MPI_Comm comm,
+  explicit SpectralCPUStack(const nlohmann::json &settings, MPI_Comm comm,
                             int rank_id, int num_ranks);
 
   [[nodiscard]] World &world() noexcept { return m_world; }
@@ -73,8 +73,8 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] fft::CpuFFT &fft() noexcept { return m_fft; }
-  [[nodiscard]] const fft::CpuFFT &fft() const noexcept { return m_fft; }
+  [[nodiscard]] fft::CPUFFT &fft() noexcept { return m_fft; }
+  [[nodiscard]] const fft::CPUFFT &fft() const noexcept { return m_fft; }
 
   [[nodiscard]] Time &time() noexcept { return m_time; }
   [[nodiscard]] const Time &time() const noexcept { return m_time; }
@@ -85,49 +85,49 @@ public:
 private:
   World m_world;
   decomposition::Decomposition m_decomp;
-  fft::CpuFFT m_fft;
+  fft::CPUFFT m_fft;
   Time m_time;
   MPI_Comm m_comm{MPI_COMM_WORLD};
 };
 
-inline SpectralCpuStack::SpectralCpuStack(const nlohmann::json &settings,
+inline SpectralCPUStack::SpectralCPUStack(const nlohmann::json &settings,
                                           MPI_Comm comm, int rank_id, int num_ranks)
     : m_world(ui::from_json<World>(settings)),
       m_decomp(decomposition::create(m_world, num_ranks)),
       m_fft(cpu_fft_from_json_and_decomposition(settings, m_decomp, rank_id, comm)),
       m_time(ui::from_json<Time>(settings)), m_comm(comm) {}
 
-[[nodiscard]] inline World &world(SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline World &world(SpectralCPUStack &stack) noexcept {
   return stack.world();
 }
-[[nodiscard]] inline const World &world(const SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline const World &world(const SpectralCPUStack &stack) noexcept {
   return stack.world();
 }
 
 [[nodiscard]] inline decomposition::Decomposition &
-decomposition(SpectralCpuStack &stack) noexcept {
+decomposition(SpectralCPUStack &stack) noexcept {
   return stack.decomposition();
 }
 [[nodiscard]] inline const decomposition::Decomposition &
-decomposition(const SpectralCpuStack &stack) noexcept {
+decomposition(const SpectralCPUStack &stack) noexcept {
   return stack.decomposition();
 }
 
-[[nodiscard]] inline fft::CpuFFT &fft(SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline fft::CPUFFT &fft(SpectralCPUStack &stack) noexcept {
   return stack.fft();
 }
-[[nodiscard]] inline const fft::CpuFFT &fft(const SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline const fft::CPUFFT &fft(const SpectralCPUStack &stack) noexcept {
   return stack.fft();
 }
 
-[[nodiscard]] inline Time &time(SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline Time &time(SpectralCPUStack &stack) noexcept {
   return stack.time();
 }
-[[nodiscard]] inline const Time &time(const SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline const Time &time(const SpectralCPUStack &stack) noexcept {
   return stack.time();
 }
 
-[[nodiscard]] inline MPI_Comm mpi_comm(const SpectralCpuStack &stack) noexcept {
+[[nodiscard]] inline MPI_Comm mpi_comm(const SpectralCPUStack &stack) noexcept {
   return stack.mpi_comm();
 }
 

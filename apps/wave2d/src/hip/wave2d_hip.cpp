@@ -35,7 +35,7 @@
 
 namespace {
 
-using DevField = pfc::data::Field<double, pfc::HipSpace>;
+using DevField = pfc::data::Field<double, pfc::HIPSpace>;
 
 void hip_check(hipError_t e, const char *what) {
   if (e != hipSuccess) {
@@ -142,7 +142,7 @@ int run_wave2d_hip(const wave2d::RunConfig &cfg, int rank, int nproc) {
   copy_host_to_device(u_host, u);
   copy_host_to_device(v_host, v);
 
-  pfc::comm::SparseExchange<pfc::HipSpace, double> exchanger(
+  pfc::comm::SparseExchange<pfc::HIPSpace, double> exchanger(
       u, decomp, rank, MPI_COMM_WORLD);
   if (rank == 0) {
     std::cout << "WAVE2D_HIP_HALO_MODE=device"

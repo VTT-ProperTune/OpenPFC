@@ -125,7 +125,7 @@ enum class Connectivity : std::uint8_t {
  * // These indices can be used directly with gather() on local field
  * ```
  */
-template <typename BackendTag = backend::CpuTag>
+template <typename BackendTag = backend::CPUTag>
 core::SparseVector<BackendTag, size_t>
 create_send_halo(const decomposition::Decomposition &decomp, int rank,
                  const Int3 &direction, int halo_width) {
@@ -237,7 +237,7 @@ create_send_halo(const decomposition::Decomposition &decomp, int rank,
  *       `pfc::halo::copy_to_face_layout` instead of scattering into these
  *       indices.
  */
-template <typename BackendTag = backend::CpuTag>
+template <typename BackendTag = backend::CPUTag>
 core::SparseVector<BackendTag, size_t>
 create_recv_halo(const decomposition::Decomposition &decomp, int rank,
                  const Int3 &direction, int halo_width) {
@@ -360,7 +360,7 @@ create_recv_halo(const decomposition::Decomposition &decomp, int rank,
  * @param halo_width Number of halo rows
  * @return Map from direction Int3 to pair of {send_halo, recv_halo} SparseVectors
  */
-template <typename BackendTag = backend::CpuTag>
+template <typename BackendTag = backend::CPUTag>
 std::map<Int3, std::pair<core::SparseVector<BackendTag, size_t>,
                          core::SparseVector<BackendTag, size_t>>>
 create_halo_patterns(const decomposition::Decomposition &decomp, int rank,

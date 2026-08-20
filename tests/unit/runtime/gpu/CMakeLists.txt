@@ -55,7 +55,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         Catch2::Catch2 openpfc Heffte::Heffte CUDA::cudart MPI::MPI_CXX)
     target_compile_definitions(test_gpu_spectral_stack_cuda PRIVATE
         OPENPFC_TEST_GPU_STACK_CUDA)
-    add_test(NAME CUDA_GpuSpectralStack COMMAND test_gpu_spectral_stack_cuda)
+    add_test(NAME CUDA_GPUSpectralStack COMMAND test_gpu_spectral_stack_cuda)
 
     add_executable(test_observable_reduce_cuda test_observable_reduce_gpu.cpp)
     target_include_directories(test_observable_reduce_cuda PRIVATE
@@ -179,7 +179,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
             Catch2::Catch2 openpfc Heffte::Heffte hip::host MPI::MPI_CXX)
         target_compile_definitions(test_gpu_spectral_stack_hip PRIVATE
             OPENPFC_TEST_GPU_STACK_HIP)
-        add_test(NAME HIP_GpuSpectralStack COMMAND test_gpu_spectral_stack_hip)
+        add_test(NAME HIP_GPUSpectralStack COMMAND test_gpu_spectral_stack_hip)
 
         add_executable(test_observable_reduce_hip test_observable_reduce_gpu.cpp)
         target_include_directories(test_observable_reduce_hip PRIVATE

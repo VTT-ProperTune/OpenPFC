@@ -13,7 +13,7 @@
  * `gpu_api.hpp`) so a co-enabled translation unit can own both classes.
  *
  * HIP's Field-based constructor / `exchange_halos_device` overloads are
- * stamped for CUDA as well (`pfc::data::Field<T, CudaSpace>`).
+ * stamped for CUDA as well (`pfc::data::Field<T, CUDASpace>`).
  *
  * Env and timer names stay vendor-specific (`OPENPFC_CUDA_*` /
  * `OPENPFC_HIP_*`, `print_cuda_halo_exchange_cpu_timers` /
@@ -161,7 +161,7 @@ inline bool runtime_mpi_cuda_aware() {
 namespace pfc::cuda {
 
 /** Wall-time buckets for `OPENPFC_CUDA_PROFILE_HALO=1` (CPU-side `MPI_Wtime`). */
-struct CudaHaloExchangeCpuTimers {
+struct CUDAHaloExchangeCPUTimers {
   std::uint64_t n_calls = 0;
   double pre_stream_sync = 0;
   double gpu_aware_mpi = 0;
@@ -172,8 +172,8 @@ struct CudaHaloExchangeCpuTimers {
   double packed_face_h2d_unpack_sync = 0;
 };
 
-inline CudaHaloExchangeCpuTimers &cuda_halo_exchange_cpu_timers() {
-  static CudaHaloExchangeCpuTimers t;
+inline CUDAHaloExchangeCPUTimers &cuda_halo_exchange_cpu_timers() {
+  static CUDAHaloExchangeCPUTimers t;
   return t;
 }
 
@@ -182,10 +182,10 @@ inline bool cuda_halo_exchange_perf_enabled() {
   return v != nullptr && v[0] == '1';
 }
 
-struct CudaHaloOps {
+struct CUDAHaloOps {
   using stream_t = cudaStream_t;
-  using space = pfc::CudaSpace;
-  using timers_t = CudaHaloExchangeCpuTimers;
+  using space = pfc::CUDASpace;
+  using timers_t = CUDAHaloExchangeCPUTimers;
   using error_t = cudaError_t;
 
   static constexpr const char *kind = "CUDA";
@@ -302,7 +302,7 @@ inline bool runtime_mpi_hip_aware() {
 namespace pfc::hip {
 
 /** Wall-time buckets for `OPENPFC_HIP_PROFILE_HALO=1` (CPU-side `MPI_Wtime`). */
-struct HipHaloExchangeCpuTimers {
+struct HIPHaloExchangeCPUTimers {
   std::uint64_t n_calls = 0;
   double pre_stream_sync = 0;
   double gpu_aware_mpi = 0;
@@ -313,8 +313,8 @@ struct HipHaloExchangeCpuTimers {
   double packed_face_h2d_unpack_sync = 0;
 };
 
-inline HipHaloExchangeCpuTimers &hip_halo_exchange_cpu_timers() {
-  static HipHaloExchangeCpuTimers t;
+inline HIPHaloExchangeCPUTimers &hip_halo_exchange_cpu_timers() {
+  static HIPHaloExchangeCPUTimers t;
   return t;
 }
 
@@ -323,10 +323,10 @@ inline bool hip_halo_exchange_perf_enabled() {
   return v != nullptr && v[0] == '1';
 }
 
-struct HipHaloOps {
+struct HIPHaloOps {
   using stream_t = hipStream_t;
-  using space = pfc::HipSpace;
-  using timers_t = HipHaloExchangeCpuTimers;
+  using space = pfc::HIPSpace;
+  using timers_t = HIPHaloExchangeCPUTimers;
   using error_t = hipError_t;
 
   static constexpr const char *kind = "HIP";
@@ -931,11 +931,11 @@ private:
 namespace pfc::cuda {
 
 inline void print_cuda_halo_exchange_cpu_timers(MPI_Comm comm) {
-  ::pfc::gpu::print_halo_exchange_cpu_timers<CudaHaloOps>(comm);
+  ::pfc::gpu::print_halo_exchange_cpu_timers<CUDAHaloOps>(comm);
 }
 
 using PaddedDeviceHaloExchanger =
-    ::pfc::gpu::PaddedDeviceHaloExchangerImpl<CudaHaloOps>;
+    ::pfc::gpu::PaddedDeviceHaloExchangerImpl<CUDAHaloOps>;
 
 } // namespace pfc::cuda
 #endif
@@ -944,11 +944,11 @@ using PaddedDeviceHaloExchanger =
 namespace pfc::hip {
 
 inline void print_hip_halo_exchange_cpu_timers(MPI_Comm comm) {
-  ::pfc::gpu::print_halo_exchange_cpu_timers<HipHaloOps>(comm);
+  ::pfc::gpu::print_halo_exchange_cpu_timers<HIPHaloOps>(comm);
 }
 
 using PaddedDeviceHaloExchanger =
-    ::pfc::gpu::PaddedDeviceHaloExchangerImpl<HipHaloOps>;
+    ::pfc::gpu::PaddedDeviceHaloExchangerImpl<HIPHaloOps>;
 
 } // namespace pfc::hip
 #endif

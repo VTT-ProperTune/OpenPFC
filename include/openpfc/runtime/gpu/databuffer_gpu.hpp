@@ -5,8 +5,8 @@
  * @file databuffer_gpu.hpp
  * @brief Single-source GPU `DataBuffer` for CUDA and HIP (M3).
  *
- * One implementation stamps `DataBuffer<CudaTag, T>` and/or
- * `DataBuffer<HipTag, T>` depending on the enabled backends. Vendor headers
+ * One implementation stamps `DataBuffer<CUDATag, T>` and/or
+ * `DataBuffer<HIPTag, T>` depending on the enabled backends. Vendor headers
  * `runtime/cuda/databuffer_cuda.hpp` and `runtime/hip/databuffer_hip.hpp` are
  * thin includes of this file so existing call sites keep compiling.
  *
@@ -40,7 +40,7 @@
 namespace pfc::core::detail {
 
 #if defined(OpenPFC_ENABLE_CUDA)
-struct CudaAlloc {
+struct CUDAAlloc {
   using error_t = cudaError_t;
   static constexpr error_t success = cudaSuccess;
   static constexpr const char *kind = "CUDA";
@@ -60,7 +60,7 @@ struct CudaAlloc {
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
-struct HipAlloc {
+struct HIPAlloc {
   using error_t = hipError_t;
   static constexpr error_t success = hipSuccess;
   static constexpr const char *kind = "HIP";
@@ -79,7 +79,7 @@ struct HipAlloc {
 };
 #endif
 
-template <typename T, typename Alloc> struct GpuDataBuffer {
+template <typename T, typename Alloc> struct GPUDataBuffer {
 private:
   T *m_device_ptr = nullptr;
   std::size_t m_size = 0;
@@ -91,7 +91,7 @@ private:
   }
 
 public:
-  explicit GpuDataBuffer(std::size_t size) : m_size(size) {
+  explicit GPUDataBuffer(std::size_t size) : m_size(size) {
     if (size > 0) {
       auto err = Alloc::malloc(reinterpret_cast<void **>(&m_device_ptr),
                                size * sizeof(T));
@@ -101,24 +101,24 @@ public:
     }
   }
 
-  GpuDataBuffer() = default;
+  GPUDataBuffer() = default;
 
-  ~GpuDataBuffer() {
+  ~GPUDataBuffer() {
     if (m_device_ptr != nullptr) {
       [[maybe_unused]] const auto freed = Alloc::free(m_device_ptr);
     }
   }
 
-  GpuDataBuffer(const GpuDataBuffer &) = delete;
-  GpuDataBuffer &operator=(const GpuDataBuffer &) = delete;
+  GPUDataBuffer(const GPUDataBuffer &) = delete;
+  GPUDataBuffer &operator=(const GPUDataBuffer &) = delete;
 
-  GpuDataBuffer(GpuDataBuffer &&other) noexcept
+  GPUDataBuffer(GPUDataBuffer &&other) noexcept
       : m_device_ptr(other.m_device_ptr), m_size(other.m_size) {
     other.m_device_ptr = nullptr;
     other.m_size = 0;
   }
 
-  GpuDataBuffer &operator=(GpuDataBuffer &&other) noexcept {
+  GPUDataBuffer &operator=(GPUDataBuffer &&other) noexcept {
     if (this != &other) {
       if (m_device_ptr != nullptr) {
         [[maybe_unused]] const auto freed = Alloc::free(m_device_ptr);
@@ -215,17 +215,17 @@ namespace pfc::core {
 
 #if defined(OpenPFC_ENABLE_CUDA)
 template <typename T>
-struct DataBuffer<backend::CudaTag, T>
-    : detail::GpuDataBuffer<T, detail::CudaAlloc> {
-  using detail::GpuDataBuffer<T, detail::CudaAlloc>::GpuDataBuffer;
+struct DataBuffer<backend::CUDATag, T>
+    : detail::GPUDataBuffer<T, detail::CUDAAlloc> {
+  using detail::GPUDataBuffer<T, detail::CUDAAlloc>::GPUDataBuffer;
 };
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
 template <typename T>
-struct DataBuffer<backend::HipTag, T>
-    : detail::GpuDataBuffer<T, detail::HipAlloc> {
-  using detail::GpuDataBuffer<T, detail::HipAlloc>::GpuDataBuffer;
+struct DataBuffer<backend::HIPTag, T>
+    : detail::GPUDataBuffer<T, detail::HIPAlloc> {
+  using detail::GPUDataBuffer<T, detail::HIPAlloc>::GPUDataBuffer;
 };
 #endif
 

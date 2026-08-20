@@ -5,7 +5,7 @@
  * @file backend_tags_gpu.hpp
  * @brief Single-source GPU backend tags for CUDA and HIP (M3).
  *
- * Defines `pfc::backend::CudaTag` and `pfc::backend::HipTag`. Vendor headers
+ * Defines `pfc::backend::CUDATag` and `pfc::backend::HIPTag`. Vendor headers
  * `backend_tags_cuda.hpp` / `backend_tags_hip.hpp` are thin includes of this
  * file so existing call sites keep compiling. Both tags are always provided
  * so a CUDA+HIP co-enabled translation unit can name either backend (the
@@ -25,13 +25,13 @@ namespace pfc::backend {
  *
  * Data is stored in GPU memory via CUDA; operations use CUDA kernels.
  */
-struct CudaTag {};
+struct CUDATag {};
 
 /**
  * @brief HIP/ROCm backend tag
  *
  * Data is stored in GPU memory via HIP/ROCm; operations use HIP kernels.
  */
-struct HipTag {};
+struct HIPTag {};
 
 } // namespace pfc::backend

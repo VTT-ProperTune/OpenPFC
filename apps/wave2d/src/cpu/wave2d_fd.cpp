@@ -117,7 +117,7 @@ int run_fd(const RunConfig &cfg, int rank, int nproc) {
     lap(i, j, k) = sx * dxx + sy * dyy;
   };
 
-  runtime::MpiTimer timer{MPI_COMM_WORLD};
+  runtime::MPITimer timer{MPI_COMM_WORLD};
   runtime::tic(timer);
   for (int step = 0; step < cfg.n_steps; ++step) {
     halo_u.exchange();

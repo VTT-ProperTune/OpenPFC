@@ -9,7 +9,7 @@
  *
  * @details
  * `CompositeGradient<Composite, PerField...>` bundles N per-field
- * evaluators (typically `pfc::field::FdGradient<UGrads>`,
+ * evaluators (typically `pfc::field::FDGradient<UGrads>`,
  * `pfc::field::SpectralGradient<VGrads>`, ...) into a single
  * `eval(i,j,k) -> Composite` callable suitable for
  * `pfc::sim::for_each_interior`.

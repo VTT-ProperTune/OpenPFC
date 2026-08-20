@@ -87,9 +87,9 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (double) [integration][gpu]", "[gpu
   fft_cpu.backward(freq_cpu, real_out_cpu);
 
   // GPU path
-  core::DataBuffer<backend::CudaTag, double> real_in_gpu(n_in);
-  core::DataBuffer<backend::CudaTag, double> real_out_gpu(n_in);
-  core::DataBuffer<backend::CudaTag, std::complex<double>> freq_gpu(n_out);
+  core::DataBuffer<backend::CUDATag, double> real_in_gpu(n_in);
+  core::DataBuffer<backend::CUDATag, double> real_out_gpu(n_in);
+  core::DataBuffer<backend::CUDATag, std::complex<double>> freq_gpu(n_out);
 
   // Copy input to device
   real_in_gpu.copy_from_host(real_in_cpu);

@@ -11,7 +11,7 @@
 
 #include <openpfc/runtime/common/mpi_timer.hpp>
 
-using pfc::runtime::MpiTimer;
+using pfc::runtime::MPITimer;
 using pfc::runtime::print_timing_summary;
 using pfc::runtime::tic;
 using pfc::runtime::toc;
@@ -24,8 +24,8 @@ inline void busy_sleep_ms(int ms) {
 
 } // namespace
 
-TEST_CASE("MpiTimer: unlabeled tic/toc returns nonneg elapsed", "[runtime][timer]") {
-  MpiTimer timer{MPI_COMM_SELF};
+TEST_CASE("MPITimer: unlabeled tic/toc returns nonneg elapsed", "[runtime][timer]") {
+  MPITimer timer{MPI_COMM_SELF};
   tic(timer);
   busy_sleep_ms(2);
   const double elapsed = toc(timer);
@@ -34,8 +34,8 @@ TEST_CASE("MpiTimer: unlabeled tic/toc returns nonneg elapsed", "[runtime][timer
   REQUIRE(elapsed < 1.0);
 }
 
-TEST_CASE("MpiTimer: labeled tic/toc accumulates per section", "[runtime][timer]") {
-  MpiTimer timer{MPI_COMM_SELF};
+TEST_CASE("MPITimer: labeled tic/toc accumulates per section", "[runtime][timer]") {
+  MPITimer timer{MPI_COMM_SELF};
 
   tic(timer, "alpha");
   busy_sleep_ms(2);
@@ -64,9 +64,9 @@ TEST_CASE("MpiTimer: labeled tic/toc accumulates per section", "[runtime][timer]
   REQUIRE(alpha_total > beta_total);
 }
 
-TEST_CASE("MpiTimer: labeled overloads do not touch unlabeled t_start",
+TEST_CASE("MPITimer: labeled overloads do not touch unlabeled t_start",
           "[runtime][timer]") {
-  MpiTimer timer{MPI_COMM_SELF};
+  MPITimer timer{MPI_COMM_SELF};
   tic(timer);
   const double saved = timer.t_start;
   tic(timer, "section");
@@ -76,9 +76,9 @@ TEST_CASE("MpiTimer: labeled overloads do not touch unlabeled t_start",
   REQUIRE(timer.t_start == saved);
 }
 
-TEST_CASE("MpiTimer: print_timing_summary returns sorted (label, max) pairs",
+TEST_CASE("MPITimer: print_timing_summary returns sorted (label, max) pairs",
           "[runtime][timer]") {
-  MpiTimer timer{MPI_COMM_SELF};
+  MPITimer timer{MPI_COMM_SELF};
 
   tic(timer, "small");
   busy_sleep_ms(1);
@@ -102,9 +102,9 @@ TEST_CASE("MpiTimer: print_timing_summary returns sorted (label, max) pairs",
   REQUIRE(out.find("small") != std::string::npos);
 }
 
-TEST_CASE("MpiTimer: print_timing_summary on empty timer prints nothing",
+TEST_CASE("MPITimer: print_timing_summary on empty timer prints nothing",
           "[runtime][timer]") {
-  MpiTimer timer{MPI_COMM_SELF};
+  MPITimer timer{MPI_COMM_SELF};
   std::ostringstream oss;
   const auto summary = print_timing_summary(timer, 0, oss);
   REQUIRE(summary.empty());

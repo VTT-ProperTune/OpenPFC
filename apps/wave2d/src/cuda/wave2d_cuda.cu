@@ -35,7 +35,7 @@
 
 namespace {
 
-using DevField = pfc::data::Field<double, pfc::CudaSpace>;
+using DevField = pfc::data::Field<double, pfc::CUDASpace>;
 
 void cuda_check(cudaError_t e, const char *what) {
   if (e != cudaSuccess) {
@@ -147,7 +147,7 @@ int run_wave2d_cuda(const wave2d::RunConfig &cfg, int rank, int nproc) {
   copy_host_to_device(u_host, u);
   copy_host_to_device(v_host, v);
 
-  pfc::comm::SparseExchange<pfc::CudaSpace, double> exchanger(
+  pfc::comm::SparseExchange<pfc::CUDASpace, double> exchanger(
       u, decomp, rank, MPI_COMM_WORLD);
   if (rank == 0) {
     std::cout << "WAVE2D_CUDA_HALO_MODE=device"

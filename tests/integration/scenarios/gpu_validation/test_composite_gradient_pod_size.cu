@@ -16,8 +16,8 @@ TEST_CASE("test_composite_gradient_pod_size",
           "[cuda][fd_gradient_device][multi-field][integration]") {
   CHECK(sizeof(pfc::cuda::CompositeGradientDevicePOD) == 2088);
   CHECK(pfc::cuda::kMaxCompositeFields == 4);
-  CHECK(pfc::cuda::kFdDeviceMaxHw1 == 7);
-  CHECK(pfc::cuda::kFdDeviceMaxHw2 == 10);
+  CHECK(pfc::cuda::kFDDeviceMaxHw1 == 7);
+  CHECK(pfc::cuda::kFDDeviceMaxHw2 == 10);
 }
 
 #else // !OpenPFC_ENABLE_CUDA

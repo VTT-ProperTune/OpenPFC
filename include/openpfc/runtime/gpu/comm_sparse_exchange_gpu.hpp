@@ -5,7 +5,7 @@
 
 /**
  * @file comm_sparse_exchange_gpu.hpp
- * @brief Device `pfc::comm::SparseExchange` for `CudaSpace` / `HipSpace` (M4).
+ * @brief Device `pfc::comm::SparseExchange` for `CUDASpace` / `HIPSpace` (M4).
  *
  * @details
  * Builds device SparseVectors from the same structured index lists as the
@@ -205,9 +205,9 @@ private:
 
 #if defined(OpenPFC_ENABLE_CUDA)
 template <typename T>
-class SparseExchange<CudaSpace, T>
-    : public detail::DeviceSparseExchange<CudaSpace, backend::CudaTag, T> {
-  using Base = detail::DeviceSparseExchange<CudaSpace, backend::CudaTag, T>;
+class SparseExchange<CUDASpace, T>
+    : public detail::DeviceSparseExchange<CUDASpace, backend::CUDATag, T> {
+  using Base = detail::DeviceSparseExchange<CUDASpace, backend::CUDATag, T>;
 
 public:
   using Base::Base;
@@ -216,9 +216,9 @@ public:
 
 #if defined(OpenPFC_ENABLE_HIP)
 template <typename T>
-class SparseExchange<HipSpace, T>
-    : public detail::DeviceSparseExchange<HipSpace, backend::HipTag, T> {
-  using Base = detail::DeviceSparseExchange<HipSpace, backend::HipTag, T>;
+class SparseExchange<HIPSpace, T>
+    : public detail::DeviceSparseExchange<HIPSpace, backend::HIPTag, T> {
+  using Base = detail::DeviceSparseExchange<HIPSpace, backend::HIPTag, T>;
 
 public:
   using Base::Base;

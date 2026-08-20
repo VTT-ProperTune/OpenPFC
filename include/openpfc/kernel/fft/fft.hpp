@@ -8,11 +8,11 @@
  * @details
  * Core layout and `IHostFFT` / `IDeviceFFT` / `IFFT` live in fft_interface.hpp /
  * fft_layout.hpp / kspace.hpp.
- * The default CPU backend `CpuFFT` (HeFFTe + FFTW) is declared here and defined in
+ * The default CPU backend `CPUFFT` (HeFFTe + FFTW) is declared here and defined in
  * fft_fftw.hpp — include that header (or openpfc.hpp / openpfc_minimal.hpp) when you
  * need the complete type, `pfc::FFT`, or `heffte::plan_options` values.
  *
- * @see fft_fftw.hpp for CpuFFT, plan_options alias, and HeFFTe-backed factories
+ * @see fft_fftw.hpp for CPUFFT, plan_options alias, and HeFFTe-backed factories
  * @see fft_interface.hpp for IHostFFT, IDeviceFFT, IFFT, and buffer aliases
  */
 
@@ -37,17 +37,17 @@ using Decomposition = pfc::decomposition::Decomposition;
 using layout::FFTLayout;
 
 /** HeFFTe+FFTW backend; complete definition in fft_fftw.hpp */
-class CpuFFT;
+class CPUFFT;
 
-[[nodiscard]] CpuFFT create(const FFTLayout &fft_layout, int rank_id,
+[[nodiscard]] CPUFFT create(const FFTLayout &fft_layout, int rank_id,
                             const heffte::plan_options &options,
                             MPI_Comm comm = MPI_COMM_WORLD);
 
-[[nodiscard]] CpuFFT create(const Decomposition &decomposition, int rank_id,
+[[nodiscard]] CPUFFT create(const Decomposition &decomposition, int rank_id,
                             MPI_Comm comm = MPI_COMM_WORLD,
                             int r2c_direction = 0);
 
-[[nodiscard]] CpuFFT create(const Decomposition &decomposition,
+[[nodiscard]] CPUFFT create(const Decomposition &decomposition,
                             MPI_Comm comm = MPI_COMM_WORLD);
 
 [[nodiscard]] std::unique_ptr<IFFT>

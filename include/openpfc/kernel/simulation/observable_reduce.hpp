@@ -12,7 +12,7 @@
  * owned cells (halo excluded), multiplies by the cell volume, and
  * `MPI_Allreduce`s with `MPI_SUM`.
  *
- * Device fields (`CudaSpace` / `HipSpace`) pull a current host mirror via
+ * Device fields (`CUDASpace` / `HIPSpace`) pull a current host mirror via
  * `with_host_view` and sum the owned interior of that mirror. Kernel-safe:
  * no runtime GPU headers.
  */

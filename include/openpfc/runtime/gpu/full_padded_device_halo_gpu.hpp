@@ -542,13 +542,13 @@ private:
 
 #if defined(OpenPFC_ENABLE_CUDA)
 namespace pfc::cuda {
-using FullPaddedDeviceHalo = ::pfc::gpu::FullPaddedDeviceHaloImpl<CudaHaloOps>;
+using FullPaddedDeviceHalo = ::pfc::gpu::FullPaddedDeviceHaloImpl<CUDAHaloOps>;
 } // namespace pfc::cuda
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
 namespace pfc::hip {
-using FullPaddedDeviceHalo = ::pfc::gpu::FullPaddedDeviceHaloImpl<HipHaloOps>;
+using FullPaddedDeviceHalo = ::pfc::gpu::FullPaddedDeviceHaloImpl<HIPHaloOps>;
 } // namespace pfc::hip
 #endif
 

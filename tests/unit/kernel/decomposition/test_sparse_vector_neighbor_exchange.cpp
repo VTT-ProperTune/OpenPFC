@@ -283,11 +283,11 @@ TEST_CASE("Neighbor exchange - Empty sparse vector (CUDA)",
   }
 
   if (rank == 0) {
-    core::SparseVector<backend::CudaTag, double> sparse(0);
+    core::SparseVector<backend::CUDATag, double> sparse(0);
     exchange::send(sparse, 0, 1, MPI_COMM_WORLD);
   } else if (rank == 1) {
-    // Receive into CpuTag via shared receive (size envelope contract)
-    core::SparseVector<backend::CpuTag, double> sparse(0);
+    // Receive into CPUTag via shared receive (size envelope contract)
+    core::SparseVector<backend::CPUTag, double> sparse(0);
     exchange::receive(sparse, 0, 1, MPI_COMM_WORLD);
     REQUIRE(sparse.size() == 0);
     REQUIRE(sparse.empty());
@@ -316,10 +316,10 @@ TEST_CASE("Neighbor exchange - Empty sparse vector (HIP)",
   }
 
   if (rank == 0) {
-    core::SparseVector<backend::HipTag, double> sparse(0);
+    core::SparseVector<backend::HIPTag, double> sparse(0);
     exchange::send(sparse, 0, 1, MPI_COMM_WORLD);
   } else if (rank == 1) {
-    core::SparseVector<backend::CpuTag, double> sparse(0);
+    core::SparseVector<backend::CPUTag, double> sparse(0);
     exchange::receive(sparse, 0, 1, MPI_COMM_WORLD);
     REQUIRE(sparse.size() == 0);
     REQUIRE(sparse.empty());

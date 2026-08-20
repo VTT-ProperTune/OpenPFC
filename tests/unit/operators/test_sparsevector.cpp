@@ -16,7 +16,7 @@ TEST_CASE("Construct empty SparseVector", "[SparseVector (Host)]") {
 }
 
 TEST_CASE("Update SparseVector", "[SparseVector (Host)]") {
-  auto vector = sparsevector::create<double>(3); // defaults to CpuTag
+  auto vector = sparsevector::create<double>(3); // defaults to CPUTag
   sparsevector::set_index(vector, {2, 3, 4});
   sparsevector::set_data(vector, {1.0, 2.0, 3.0});
   auto index = sparsevector::get_index(vector);

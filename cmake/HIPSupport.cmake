@@ -15,7 +15,7 @@ if(OpenPFC_ENABLE_HIP)
     set(OpenPFC_HIP_AVAILABLE TRUE)
     # OpenPFC_ENABLE_HIP / OpenPFC_MPI_HIP_AWARE are PUBLIC usage requirements
     # on openpfc (and kernel libs) in LibraryConfiguration.cmake — same reason
-    # as the CUDA block in CudaSupport.cmake.
+    # as the CUDA block in CUDASupport.cmake.
 
     option(OpenPFC_MPI_HIP_AWARE "Use GPU-aware MPI with HIP (device pointers in MPI_Send/Recv)" ON)
     if(OpenPFC_MPI_HIP_AWARE)

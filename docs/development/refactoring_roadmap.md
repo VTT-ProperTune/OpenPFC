@@ -41,18 +41,18 @@ Done:
 
 ## Phase C — Unified config-driven stack (CPU / GPU)
 
-Goal: One JSON → session pipeline for spectral runs, parameterized by FFT backend instead of CPU-only `SpectralCpuStack`.
+Goal: One JSON → session pipeline for spectral runs, parameterized by FFT backend instead of CPU-only `SpectralCPUStack`.
 
 Done (foundation):
 
-- **`spectral_cpu_stack_detail.hpp`**: `cpu_spectral_plan_options_from_json` and `cpu_fft_from_json_and_decomposition` centralize JSON → HeFFTe CPU FFT construction; `SpectralCpuStack` calls these (extension point for a future GPU stack builder using the same JSON surface).
-- **CPU spectral `backend` alignment:** `cpu_spectral_plan_options_from_json` merges a root-level `"backend"` into the `plan_options` object when the latter omits it; rejects `"cuda"` on this path (always `fft::CpuFFT` / FFTW). See [`app_pipeline.md`](../user_guide/app_pipeline.md).
+- **`spectral_cpu_stack_detail.hpp`**: `cpu_spectral_plan_options_from_json` and `cpu_fft_from_json_and_decomposition` centralize JSON → HeFFTe CPU FFT construction; `SpectralCPUStack` calls these (extension point for a future GPU stack builder using the same JSON surface).
+- **CPU spectral `backend` alignment:** `cpu_spectral_plan_options_from_json` merges a root-level `"backend"` into the `plan_options` object when the latter omits it; rejects `"cuda"` on this path (always `fft::CPUFFT` / FFTW). See [`app_pipeline.md`](../user_guide/app_pipeline.md).
 - **`spectral_fft_stack_factory.hpp`:** `merged_spectral_plan_options_json` (shared merge); `cuda_spectral_plan_options_from_json` / `hip_spectral_plan_options_from_json` apply the same HeFFTe JSON overlay as CPU but start from cuFFT / ROCm defaults (GPU integration tests and future GPU `App` paths).
 
 Planned steps:
 
-- Optional: templated `SpectralSimulationSession` or type-erased FFT at the session boundary so `App` can skip constructing a dummy `CpuFFT` for GPU-only models. (Design note in `spectral_cpu_stack.hpp` Doxygen `@note`.)
-- Documented interim policy (Doxygen): reuse the one `SpectralCpuStack` `CpuFFT` for `Model(fft, world, comm)` when adding GPU drivers; use `spectral_fft_stack_factory.hpp` for cuFFT/ROCm plan JSON only—no second throwaway CPU FFT in app code.
+- Optional: templated `SpectralSimulationSession` or type-erased FFT at the session boundary so `App` can skip constructing a dummy `CPUFFT` for GPU-only models. (Design note in `spectral_cpu_stack.hpp` Doxygen `@note`.)
+- Documented interim policy (Doxygen): reuse the one `SpectralCPUStack` `CPUFFT` for `Model(fft, world, comm)` when adding GPU drivers; use `spectral_fft_stack_factory.hpp` for cuFFT/ROCm plan JSON only—no second throwaway CPU FFT in app code.
 
 ### Phase C spike (time-boxed exploration)
 
@@ -61,8 +61,8 @@ Purpose: validate a **single JSON document** driving either CPU or GPU spectral 
 **Spike scope (1–2 weeks of prototyping, not merge criteria by itself):**
 
 - Build a throwaway or feature-flagged **“spectral session”** type that owns `World`, `Decomposition`, and an FFT handle produced either from `cpu_fft_from_json_and_decomposition` or from the GPU plan builders in `spectral_fft_stack_factory.hpp`, using **`merged_spectral_plan_options_json`** so root `backend` and `plan_options` behave like today’s CPU path.
-- Wire **`Time`** and a **minimal `Model` stub** (existing mock or smallest example model) through the same **`wire_simulator_and_runtime_from_json`** entry points to prove IC/BC/result wiring does not depend on `fft::CpuFFT` specifically.
-- Measure **what must become type-erased** at the session boundary (e.g. `IFFT &` vs concrete `CpuFFT`) and list **API breaks** for shipped apps if `SpectralSimulationSession` were templated on FFT type.
+- Wire **`Time`** and a **minimal `Model` stub** (existing mock or smallest example model) through the same **`wire_simulator_and_runtime_from_json`** entry points to prove IC/BC/result wiring does not depend on `fft::CPUFFT` specifically.
+- Measure **what must become type-erased** at the session boundary (e.g. `IFFT &` vs concrete `CPUFFT`) and list **API breaks** for shipped apps if `SpectralSimulationSession` were templated on FFT type.
 
 **Exit criteria for closing the spike (documentation-only deliverable is OK):**
 
@@ -103,7 +103,7 @@ Aligned with the [ownership and extension boundaries](../concepts/architecture.m
 4. **`errors.hpp`:** split by concern + prefer free `format_*` / `make_*` helpers so parsers do not pull unrelated types.
 5. **GPU runtime (`runtime/cuda` vs `runtime/hip`):** **Done in M3** as single-source `runtime/gpu/` (vendor trees are thin includes; FFT headers remain until M5).
 6. **JSON wiring:** extend catalog/factory patterns (already: field modifiers, results writers) for any remaining `if (type == …)` branches in wiring.
-7. **`SpectralCpuStack` / session:** optional free `assemble_*` + `wire_*` for drivers that skip `App`. **Note:** `fft::CpuFFT` is not movable; a “return struct of parts” API cannot move the FFT out of a temporary—use out-parameters, or keep constructing `CpuFFT` inside `SpectralCpuStack`’s initializer list (current approach).
+7. **`SpectralCPUStack` / session:** optional free `assemble_*` + `wire_*` for drivers that skip `App`. **Note:** `fft::CPUFFT` is not movable; a “return struct of parts” API cannot move the FFT out of a temporary—use out-parameters, or keep constructing `CPUFFT` inside `SpectralCPUStack`’s initializer list (current approach).
 8. **Integrator loop:** narrow `run_simulator_time_integration_loop` inputs to structs + free functions (less hidden state than callbacks on opaque objects). **Done:** `SimulatorIntegratorLoopEnv` + primary overload in `app_integrator_loop.hpp`.
 9. **Tests:** shared **`tests/fixtures/`** free factories (`make_world`, `make_mock_model`, …). **Started:** `simulation_factories.hpp` (8³ world + serial decomposition); extend as more tests adopt it.
 10. **Include hygiene:** document + optionally CI-check “minimal includes”. **Done:** [include_hygiene.md](include_hygiene.md) + `scripts/check_minimal_includes.sh`.

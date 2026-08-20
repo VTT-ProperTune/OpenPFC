@@ -13,14 +13,14 @@
  * `pfc::hip`.
  *
  * GPU-side per-point FD gradient evaluator parameterized on a
- * model-owned grads aggregate `G` (mirror of `pfc::field::FdGradient<G>`).
+ * model-owned grads aggregate `G` (mirror of `pfc::field::FDGradient<G>`).
  *
  * @details
- * The CPU evaluator [`pfc::field::FdGradient<G>`](
+ * The CPU evaluator [`pfc::field::FDGradient<G>`](
  * ../../kernel/field/fd_gradient.hpp) is the single-pass workhorse that
  * the heat3d / wave / Kobayashi-style point-wise drivers use to turn a
  * raw field buffer into a model-owned `G` aggregate at every owned cell.
- * `FdGradientDevice<G>` is its **GPU twin**: same per-member concept
+ * `FDGradientDevice<G>` is its **GPU twin**: same per-member concept
  * introspection, same FD stencils (orders 2..14 for D1, orders 2..20
  * for D2), same compile-time pruning of the catalog `{value, x, y, z,
  * xx, yy, zz, xy, xz, yz}`. Only the moving parts differ:
@@ -57,7 +57,7 @@
  * #include <openpfc/runtime/gpu/fd_gradient_device_gpu.hpp>
  * #include <openpfc/kernel/data/grid_field.hpp>
  *
- * pfc::gpu::FdGradientDevice<MyGrads> eval(d_padded_u, nx, ny, nz, dx, dy, dz,
+ * pfc::gpu::FDGradientDevice<MyGrads> eval(d_padded_u, nx, ny, nz, dx, dy, dz,
  *                                          hw, order);
  * auto eval2 = pfc::gpu::create<MyGrads>(u_field, order);
  * @endcode
@@ -86,14 +86,14 @@ namespace pfc::gpu {
  *        evaluator can carry in its POD payload. D1 caps at order 14
  *        (`half_width = 7`); D2 caps at order 20 (`half_width = 10`).
  */
-inline constexpr int kFdDeviceMaxHw1 = 7;
-inline constexpr int kFdDeviceMaxHw2 = 10;
+inline constexpr int kFDDeviceMaxHw1 = 7;
+inline constexpr int kFDDeviceMaxHw2 = 10;
 
 /**
  * @brief Trivially-copyable POD that fully describes a per-point FD
  *        evaluator on the device.
  *
- * The host-side `FdGradientDevice<G>` populates this struct from a
+ * The host-side `FDGradientDevice<G>` populates this struct from a
  * `pfc::data::Field` triple `(d_core, padded_extents, spacing)` and a
  * runtime `order`. The kernel takes a copy of this struct by value (it
  * fits comfortably on the stack of a GPU thread).
@@ -107,7 +107,7 @@ inline constexpr int kFdDeviceMaxHw2 = 10;
  * unused (D1 always has zero centre weight); kept for layout symmetry
  * with the CPU view.
  */
-struct FdGradientDevicePOD {
+struct FDGradientDevicePOD {
   const double *d_core{nullptr}; ///< Padded device buffer (cell `(-hw,-hw,-hw)`).
   int nxp{0};                    ///< Padded x extent.
   int nyp{0};                    ///< Padded y extent.
@@ -121,15 +121,15 @@ struct FdGradientDevicePOD {
 
   // D1 — pre-scaled weights, indices `[1..hw1]` only (index 0 unused).
   int hw1{0};
-  double cx1[kFdDeviceMaxHw1 + 1]{};
-  double cy1[kFdDeviceMaxHw1 + 1]{};
-  double cz1[kFdDeviceMaxHw1 + 1]{};
+  double cx1[kFDDeviceMaxHw1 + 1]{};
+  double cy1[kFDDeviceMaxHw1 + 1]{};
+  double cz1[kFDDeviceMaxHw1 + 1]{};
 
   // D2 — pre-scaled weights, indices `[0..hw2]`.
   int hw2{0};
-  double cx2[kFdDeviceMaxHw2 + 1]{};
-  double cy2[kFdDeviceMaxHw2 + 1]{};
-  double cz2[kFdDeviceMaxHw2 + 1]{};
+  double cx2[kFDDeviceMaxHw2 + 1]{};
+  double cy2[kFDDeviceMaxHw2 + 1]{};
+  double cz2[kFDDeviceMaxHw2 + 1]{};
 };
 
 /**
@@ -139,7 +139,7 @@ struct FdGradientDevicePOD {
  * Owned-cell indices `(ix, iy, iz) ∈ [0, n)`; the function adds `hw` to
  * each axis to index into the padded buffer. `prepare()` is a no-op for
  * FD; included only so the evaluator satisfies the same interface as
- * `pfc::field::FdGradient<G>` and can be dropped into a hypothetical
+ * `pfc::field::FDGradient<G>` and can be dropped into a hypothetical
  * generic device driver loop.
  *
  * @note Mixed seconds `g.xy` / `g.xz` / `g.yz` use a separable D1⊗D1
@@ -147,7 +147,7 @@ struct FdGradientDevicePOD {
  *       (`FullPaddedDeviceHalo` or equivalent corner fill).
  */
 template <class G>
-OPENPFC_INLINE_HD G evaluate_fd_grad(const FdGradientDevicePOD &e, int ix, int iy,
+OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePOD &e, int ix, int iy,
                                      int iz) noexcept {
   const std::ptrdiff_t c = static_cast<std::ptrdiff_t>(ix + e.hw) +
                            static_cast<std::ptrdiff_t>(iy + e.hw) * e.sy +
@@ -265,13 +265,13 @@ inline constexpr int kMaxCompositeFields = 4;
 
 /**
  * @brief Trivially-copyable pack of up to `kMaxCompositeFields` per-field
- *        `FdGradientDevicePOD` payloads for multi-field device kernels.
+ *        `FDGradientDevicePOD` payloads for multi-field device kernels.
  *
  * Layout is an array of the existing single-field POD (not a parallel-array
  * redesign). `n_fields` records how many leading slots are live.
  */
 struct CompositeGradientDevicePOD {
-  FdGradientDevicePOD fields[kMaxCompositeFields]{};
+  FDGradientDevicePOD fields[kMaxCompositeFields]{};
   int n_fields{0};
 };
 
@@ -312,7 +312,7 @@ evaluate_fd_grad_composite(const CompositeGradientDevicePOD &eval, int ix,
 }
 
 /**
- * @brief Host-side wrapper: build a populated `FdGradientDevicePOD` from a
+ * @brief Host-side wrapper: build a populated `FDGradientDevicePOD` from a
  *        padded device buffer + grid spacing + runtime FD order.
  *
  * Constructed with the same template parameter `G` as the model's grads
@@ -322,13 +322,13 @@ evaluate_fd_grad_composite(const CompositeGradientDevicePOD &eval, int ix,
  * over 20) produces a `std::invalid_argument` — strictly better than the
  * silent-zero behaviour the early CPU evaluator had.
  *
- * The resulting `FdGradientDevicePOD` is **trivially copyable** and
+ * The resulting `FDGradientDevicePOD` is **trivially copyable** and
  * passed by value into device kernels via the `for_each_interior_device`
  * launcher. The wrapper itself stores nothing the kernel cares about and
  * is safe to destroy as soon as the kernel has been launched (the POD
  * carries everything that lives across the kernel call).
  */
-template <class G> class FdGradientDevice {
+template <class G> class FDGradientDevice {
 public:
   /**
    * @param d_core      Pointer to the **padded** device buffer, cell
@@ -347,7 +347,7 @@ public:
    *         half-width exceeds the compiled-in POD caps, or if
    *         `halo_width` is strictly less than the required half-width.
    */
-  FdGradientDevice(const double *d_core, int nx, int ny, int nz, double dx,
+  FDGradientDevice(const double *d_core, int nx, int ny, int nz, double dx,
                    double dy, double dz, int halo_width, int order) {
     m_pod.d_core = d_core;
     m_pod.hw = halo_width;
@@ -368,15 +368,15 @@ public:
       pfc::field::fd::EvenCentralD2View st2{};
       if (!pfc::field::fd::lookup_even_central_d2(order, &st2)) {
         throw std::invalid_argument(
-            "FdGradientDevice: order " + std::to_string(order) +
+            "FDGradientDevice: order " + std::to_string(order) +
             " has no central second-derivative stencil table "
             "(supported even orders: 2..20).");
       }
-      if (st2.half_width > kFdDeviceMaxHw2) {
+      if (st2.half_width > kFDDeviceMaxHw2) {
         throw std::invalid_argument(
-            "FdGradientDevice: D2 half_width " + std::to_string(st2.half_width) +
-            " exceeds compiled-in cap kFdDeviceMaxHw2 = " +
-            std::to_string(kFdDeviceMaxHw2) + "; raise the cap and rebuild.");
+            "FDGradientDevice: D2 half_width " + std::to_string(st2.half_width) +
+            " exceeds compiled-in cap kFDDeviceMaxHw2 = " +
+            std::to_string(kFDDeviceMaxHw2) + "; raise the cap and rebuild.");
       }
       m_pod.hw2 = st2.half_width;
       const double inv_den2 = 1.0 / static_cast<double>(st2.denom);
@@ -399,16 +399,16 @@ public:
                   pfc::field::has_xz<G> || pfc::field::has_yz<G>) {
       pfc::field::fd::EvenCentralD1View st1{};
       if (!pfc::field::fd::lookup_even_central_d1(order, &st1)) {
-        throw std::invalid_argument("FdGradientDevice: order " +
+        throw std::invalid_argument("FDGradientDevice: order " +
                                     std::to_string(order) +
                                     " has no central first-derivative stencil table "
                                     "(supported even orders: 2..14).");
       }
-      if (st1.half_width > kFdDeviceMaxHw1) {
+      if (st1.half_width > kFDDeviceMaxHw1) {
         throw std::invalid_argument(
-            "FdGradientDevice: D1 half_width " + std::to_string(st1.half_width) +
-            " exceeds compiled-in cap kFdDeviceMaxHw1 = " +
-            std::to_string(kFdDeviceMaxHw1) + "; raise the cap and rebuild.");
+            "FDGradientDevice: D1 half_width " + std::to_string(st1.half_width) +
+            " exceeds compiled-in cap kFDDeviceMaxHw1 = " +
+            std::to_string(kFDDeviceMaxHw1) + "; raise the cap and rebuild.");
       }
       m_pod.hw1 = st1.half_width;
       const double inv_den1 = 1.0 / static_cast<double>(st1.denom);
@@ -427,7 +427,7 @@ public:
         m_pod.hw1 > m_pod.hw2 ? m_pod.hw1 : m_pod.hw2;
     if (halo_width < required) {
       throw std::invalid_argument(
-          "FdGradientDevice: halo_width " + std::to_string(halo_width) +
+          "FDGradientDevice: halo_width " + std::to_string(halo_width) +
           " < required half_width " + std::to_string(required) +
           " for order " + std::to_string(order));
     }
@@ -448,18 +448,18 @@ public:
   void prepare() noexcept {}
 
   /// Trivially-copyable payload to pass into the device kernel.
-  [[nodiscard]] const FdGradientDevicePOD &pod() const noexcept { return m_pod; }
+  [[nodiscard]] const FDGradientDevicePOD &pod() const noexcept { return m_pod; }
 
 private:
-  FdGradientDevicePOD m_pod;
+  FDGradientDevicePOD m_pod;
 };
 
 /**
- * @brief Host-side wrapper: pack per-field `FdGradientDevice` PODs into a
+ * @brief Host-side wrapper: pack per-field `FDGradientDevice` PODs into a
  *        `CompositeGradientDevicePOD` for multi-field device launches.
  *
  * Mirrors CPU `pfc::field::CompositeGradient<Composite, PerField...>`:
- * constructor takes one `FdGradientDevice<PerFieldGrads>` per field,
+ * constructor takes one `FDGradientDevice<PerFieldGrads>` per field,
  * `prepare()` is a no-op fan-out, and `pod()` returns the packed payload.
  */
 template <class Composite, class... PerFieldGrads> class CompositeGradientDevice {
@@ -468,8 +468,8 @@ public:
                     sizeof...(PerFieldGrads) <= kMaxCompositeFields,
                 "CompositeGradientDevice: N must be in [1, kMaxCompositeFields]");
 
-  explicit CompositeGradientDevice(const FdGradientDevice<PerFieldGrads> &...evals) {
-    const FdGradientDevicePOD pods[] = {evals.pod()...};
+  explicit CompositeGradientDevice(const FDGradientDevice<PerFieldGrads> &...evals) {
+    const FDGradientDevicePOD pods[] = {evals.pod()...};
     m_pod.n_fields = static_cast<int>(sizeof...(PerFieldGrads));
     for (int i = 0; i < m_pod.n_fields; ++i) {
       m_pod.fields[i] = pods[i];
@@ -508,19 +508,19 @@ private:
  */
 template <class Composite, class... PerFieldGrads>
 [[nodiscard]] inline CompositeGradientDevice<Composite, PerFieldGrads...>
-create_composite_device(const FdGradientDevice<PerFieldGrads> &...evals) {
+create_composite_device(const FDGradientDevice<PerFieldGrads> &...evals) {
   return CompositeGradientDevice<Composite, PerFieldGrads...>(evals...);
 }
 
 /**
- * @brief Build a `FdGradientDevice<G>` over a halo-padded field.
+ * @brief Build a `FDGradientDevice<G>` over a halo-padded field.
  *
  * The evaluator indexes the **full** `(nx+2hw)×(ny+2hw)×(nz+2hw)` storage with
  * interior bounds `[hw, nx_pad-hw)` per axis, matching ghost cells populated by
  * the field's halo exchange mechanism on `u.data()`.
  *
  * @tparam G            Model-owned grads aggregate (see `grad_concepts.hpp`).
- * @tparam MemorySpace  Field placement (`HostSpace`, `CudaSpace`, or `HipSpace`).
+ * @tparam MemorySpace  Field placement (`HostSpace`, `CUDASpace`, or `HIPSpace`).
  * @param u             Padded field (`storage_halo() > 0`; must outlive the
  *                      returned evaluator). Device kernels require the
  *                      buffer to be device-resident.
@@ -531,19 +531,19 @@ create_composite_device(const FdGradientDevice<PerFieldGrads> &...evals) {
  *         Field has no halo ring for the device stencil) or if `order`
  *         is unsupported for `G`.
  *
- * @return FdGradientDevice<G> ready for use with for_each_interior_device.
+ * @return FDGradientDevice<G> ready for use with for_each_interior_device.
  */
 template <class G, typename MemorySpace>
-[[nodiscard]] inline FdGradientDevice<G>
+[[nodiscard]] inline FDGradientDevice<G>
 create(const pfc::data::Field<double, MemorySpace> &u, int order = 2) {
   if (u.storage_halo() <= 0) {
     throw std::invalid_argument(
-        "FdGradientDevice: create(Field) requires a padded Field "
+        "FDGradientDevice: create(Field) requires a padded Field "
         "(storage_halo > 0); the device evaluator indexes a halo ring.");
   }
   const auto sp = u.spacing();
   const auto sz = u.local_size();
-  return FdGradientDevice<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
+  return FDGradientDevice<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
                              u.storage_halo(), order);
 }
 

@@ -3,7 +3,7 @@
 
 /**
  * @file databuffer_hip.hpp
- * @brief HIP `DataBuffer<HipTag, T>` (thin include of the M3 GPU source).
+ * @brief HIP `DataBuffer<HIPTag, T>` (thin include of the M3 GPU source).
  *
  * @see runtime/gpu/databuffer_gpu.hpp
  */

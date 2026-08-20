@@ -25,13 +25,13 @@ This directory contains modular CMake configuration files that organize the buil
    - Debug mode settings
    - Clang-tidy integration
 
-3. **CudaSupport.cmake**
+3. **CUDASupport.cmake**
    - CUDA detection and configuration
    - CUDA architecture settings
    - CUDA availability checks
    - Backend-enable macros (`OpenPFC_ENABLE_CUDA`, `OpenPFC_MPI_CUDA_AWARE`) are applied as PUBLIC usage requirements in **LibraryConfiguration.cmake**, not via directory-scope `add_compile_definitions`
 
-4. **HipSupport.cmake**
+4. **HIPSupport.cmake**
    - HIP (ROCm) detection and configuration
    - HIP availability checks (pairs with CUDA for optional GPU backends)
    - Backend-enable macros (`OpenPFC_ENABLE_HIP`, `OpenPFC_MPI_HIP_AWARE`) are applied as PUBLIC usage requirements in **LibraryConfiguration.cmake**
@@ -46,7 +46,7 @@ This directory contains modular CMake configuration files that organize the buil
    - Optional **HDF5** when **`OpenPFC_ENABLE_HDF5=ON`** (profiling export)
    - **Doxygen** and **`docs/`** when **`OpenPFC_BUILD_DOCUMENTATION=ON`** (default **ON**); if Doxygen is missing, documentation generation is skipped with a warning
 
-6. **OpenPFCGpuAwareMpi.cmake** (included from the root **`CMakeLists.txt`** immediately after **Dependencies.cmake**)
+6. **OpenPFCGPUAwareMpi.cmake** (included from the root **`CMakeLists.txt`** immediately after **Dependencies.cmake**)
    - Optional **CUDA + Open MPI** configure probe: compile + run **`MPIX_Query_cuda_support()`** (via **`mpi-ext.h`**) when **`OpenPFC_MPI_CUDA_AWARE=ON`**, with **`MPI_CXX_INCLUDE_DIRS`** / **`mpicxx -showme:compile`** fallbacks for try-compile includes
    - **HIP**: status-only reminder for runtime checks (**`verify_gpu_aware_mpi`**, **`MPICH_GPU_SUPPORT_ENABLED`** — see **INSTALL.md** §5.2.1 and **docs/INSTALL.LUMI.md**)
 
@@ -97,13 +97,13 @@ ProjectSetup.cmake
   ↓
 CompilerSettings.cmake
   ↓
-CudaSupport.cmake
+CUDASupport.cmake
   ↓
-HipSupport.cmake
+HIPSupport.cmake
   ↓
 Dependencies.cmake (may check CUDA/HIP availability)
   ↓
-OpenPFCGpuAwareMpi.cmake (optional CUDA + Open MPI GPU-aware probe)
+OpenPFCGPUAwareMpi.cmake (optional CUDA + Open MPI GPU-aware probe)
   ↓
 LibraryConfiguration.cmake (creates openpfc target)
   ↓

@@ -39,7 +39,7 @@
  *    available; the tensor primitive needs a small `static_assert`
  *    relaxation), but FD `xy / xz / yz` still requires corner-filled
  *    halos on the field side, so the high-level evaluator
- *    (`FdGradient<G>`) is gated on `HaloPattern::Full`.
+ *    (`FDGradient<G>`) is gated on `HaloPattern::Full`.
  *
  * `Axis` is `0` for x, `1` for y, `2` for z, and chooses which of `sx`,
  * `sy`, `sz` is used as the per-step linear-index stride.
@@ -284,7 +284,7 @@ struct IdentityStencil1d {
  *      on the host and `pfc::cuda::FullPaddedDeviceHalo` on the GPU.
  *      Enabling the mixed-second evaluator path (`Mi = 1` /
  *      `FDGradient` `xy/xz/yz`) remains a follow-up after corners are
- *      proven. Until that wiring lands, `FdGradient<G>` keeps its
+ *      proven. Until that wiring lands, `FDGradient<G>` keeps its
  *      `static_assert` against `xy/xz/yz` members even though this
  *      primitive is ready.
  */

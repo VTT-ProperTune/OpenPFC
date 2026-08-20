@@ -3,7 +3,7 @@
 
 /**
  * @file test_fd_gradient.cpp
- * @brief Unit tests for `pfc::field::FdGradient<G>` covering the first- and
+ * @brief Unit tests for `pfc::field::FDGradient<G>` covering the first- and
  *        second-derivative branches and the constructor's diagnostic
  *        rejection of unsupported orders.
  *
@@ -83,7 +83,7 @@ Field<double> make_padded_field(int N, int hw) {
 
 } // namespace
 
-TEST_CASE("FdGradient<GradXYZ> recovers exact first derivatives on a linear field",
+TEST_CASE("FDGradient<GradXYZ> recovers exact first derivatives on a linear field",
           "[kernel][field][fd_gradient][unit]") {
   // u(x, y, z) = 2 x + 3 y + 4 z ⇒ u_x = 2, u_y = 3, u_z = 4 everywhere.
   // Central D1 of any order is **exact** for linear functions — every
@@ -108,7 +108,7 @@ TEST_CASE("FdGradient<GradXYZ> recovers exact first derivatives on a linear fiel
   REQUIRE(gradients_match);
 }
 
-TEST_CASE("FdGradient<ValueXXX> populates value, x, and xx coherently",
+TEST_CASE("FDGradient<ValueXXX> populates value, x, and xx coherently",
           "[kernel][field][fd_gradient][unit]") {
   // u(x, y, z) = x^2 ⇒ value(N/2, .) = (N/2)^2; u_x = 2 (N/2); u_xx = 2.
   // Mixing D1 and D2 in one aggregate exercises both stencil tables.
@@ -125,7 +125,7 @@ TEST_CASE("FdGradient<ValueXXX> populates value, x, and xx coherently",
   REQUIRE(g.xx == Approx(2.0));
 }
 
-TEST_CASE("FdGradient ctor throws when a model needs a missing D1 table",
+TEST_CASE("FDGradient ctor throws when a model needs a missing D1 table",
           "[kernel][field][fd_gradient][unit]") {
   // D1 tables cover orders 2..14; orders 16/18/20 are not yet tabulated.
   // A model that declares `g.x` and asks for any of those should reject
@@ -139,7 +139,7 @@ TEST_CASE("FdGradient ctor throws when a model needs a missing D1 table",
   }
 }
 
-TEST_CASE("FdGradient ctor throws when a model needs a missing D2 table",
+TEST_CASE("FDGradient ctor throws when a model needs a missing D2 table",
           "[kernel][field][fd_gradient][unit]") {
   // D2 tables cover orders 2..20; order 22 is not tabulated.
   const int order = 22;
@@ -149,7 +149,7 @@ TEST_CASE("FdGradient ctor throws when a model needs a missing D2 table",
   REQUIRE_THROWS_AS(pfc::field::create<OnlyXX>(u, order), std::invalid_argument);
 }
 
-TEST_CASE("FdGradient ctor throws when halo_width is below stencil half_width",
+TEST_CASE("FDGradient ctor throws when halo_width is below stencil half_width",
           "[kernel][field][fd_gradient][unit]") {
   // Order-4 D2 half_width is 2; hw=1 is strictly insufficient.
   constexpr int order = 4;
@@ -169,7 +169,7 @@ TEST_CASE("FdGradient ctor throws when halo_width is below stencil half_width",
   }
 }
 
-TEST_CASE("FdGradient<OnlyX>: order-2 D1 is exact on a constant field "
+TEST_CASE("FDGradient<OnlyX>: order-2 D1 is exact on a constant field "
           "(anti-symmetry) and on a linear ramp (closed form)",
           "[kernel][field][fd_gradient][unit]") {
   const int order = 2;
@@ -198,7 +198,7 @@ TEST_CASE("pfc::gradient::FDGradient binds to a padded Field and matches the "
           "[kernel][field][fd_gradient][unit]") {
   // Same -3 x linear ramp as the OnlyX case above, this time evaluated on a
   // padded Field via the direct FDGradient constructor (default order = 2).
-  // The pfc::field::FdGradient alias must remain spell-compatible.
+  // The pfc::field::FDGradient alias must remain spell-compatible.
   using namespace pfc;
   const int N = 8;
   const int hw = 1;
@@ -216,9 +216,9 @@ TEST_CASE("pfc::gradient::FDGradient binds to a padded Field and matches the "
   REQUIRE(g_free.x == Approx(-3.0));
 
   // Type alias still resolves to the canonical evaluator.
-  static_assert(std::is_same_v<pfc::field::FdGradient<OnlyX>,
+  static_assert(std::is_same_v<pfc::field::FDGradient<OnlyX>,
                                pfc::gradient::FDGradient<OnlyX>>,
-                "pfc::field::FdGradient should alias pfc::gradient::FDGradient");
+                "pfc::field::FDGradient should alias pfc::gradient::FDGradient");
 }
 
 TEST_CASE("FDGradient prepare invokes callback when provided",

@@ -12,7 +12,7 @@ The requirements are derived from existing field implementations and usage patte
 - **Scalar field patterns** (`apps/heat3d/`): `pfc::data::Field<double, HostSpace>` constructed via `pfc::data::field_from_subdomain<double>(decomp, rank, halo)` or `pfc::data::field_from_subdomain_unpadded<double>(decomp, rank, halo)`
 - **Multi-field patterns** (`apps/wave2d/`): Multiple `pfc::data::Field<double, HostSpace>` instances (u, v, lap) with halo padding, tuple-based increments (`WaveIncrements{du, dv}`), per-point Laplacian aggregate (`WaveLaplacian{lxx, lyy}`)
 - **Complex field patterns**: `pfc::data::Field<std::complex<double>, HostSpace>`, used in spectral methods via `ModelFieldRegistry`
-- **Backend differences**: CPU and GPU both use `pfc::core::DataBuffer<BackendTag, T>` (`CpuTag` vs `CudaTag`/`HipTag`); `pfc::data::Field<T, MemorySpace>` is the owning field on top of that buffer
+- **Backend differences**: CPU and GPU both use `pfc::core::DataBuffer<BackendTag, T>` (`CPUTag` vs `CUDATag`/`HIPTag`); `pfc::data::Field<T, MemorySpace>` is the owning field on top of that buffer
 - **MPI coordination**: `PaddedHaloExchanger<T>` for non-blocking halo exchanges, face-only exchange patterns (6-direction), timing controlled by application driver
 
 *(Historical note: The legacy `pfc::field::LocalField<T>`, `pfc::field::PaddedBrick<T>`, and `pfc::field::Field<T>` types have been unified into `pfc::data::Field<T, MemorySpace>` with `halo=0` corresponding to `LocalField`, `halo=n` to `PaddedBrick`, and whole-domain usage to the original `Field`.)*
@@ -138,16 +138,16 @@ void validate_shape_compatibility(const FieldView<T>& field1,
 - **Backend-specific allocation APIs**: Each backend uses its own allocation mechanisms
 - **No shared abstraction layer**: No requirement for a unified memory abstraction
 
-**Verification**: FieldView<T> is backend-agnostic, working with any contiguous storage (host `std::vector` / `DataBuffer<CpuTag>`, device `DataBuffer<CudaTag>` / `DataBuffer<HipTag>`). The same read/write contracts apply to both backends.
+**Verification**: FieldView<T> is backend-agnostic, working with any contiguous storage (host `std::vector` / `DataBuffer<CPUTag>`, device `DataBuffer<CUDATag>` / `DataBuffer<HIPTag>`). The same read/write contracts apply to both backends.
 
 **Example**:
 ```cpp
 // CPU: DataBuffer host storage
-pfc::core::DataBuffer<pfc::backend::CpuTag, double> cpu_storage(n);
+pfc::core::DataBuffer<pfc::backend::CPUTag, double> cpu_storage(n);
 FieldView<double> cpu_view(cpu_storage.data(), cpu_storage.size(), /* geometry */);
 
 // GPU: DataBuffer device storage
-pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_storage(n);
+pfc::core::DataBuffer<pfc::backend::CUDATag, double> gpu_storage(n);
 FieldView<double> gpu_view(gpu_storage.data(), gpu_storage.size(), /* geometry */);
 
 // Same read/write contracts for both

@@ -16,7 +16,7 @@
  * On the CPU side, [`pfc::sim::for_each_interior`](
  * ../../kernel/simulation/for_each_interior.hpp) is the four-line driver
  * that walks every interior cell, calls a per-point evaluator
- * (`FdGradient<G>` / `SpectralGradient<G>`) to materialise the model's
+ * (`FDGradient<G>` / `SpectralGradient<G>`) to materialise the model's
  * `G` aggregate, calls `model.rhs(t, g)` to compute the increment, and
  * scatters the result into a single (or multi-field tuple) output
  * buffer. This header is the GPU counterpart.
@@ -43,7 +43,7 @@
  * **Usage** (inside a CUDA/HIP translation unit):
  *
  * @code
- * pfc::gpu::FdGradientDevice<MyGrads> eval(d_padded_u, nx, ny, nz, dx, dy, dz,
+ * pfc::gpu::FDGradientDevice<MyGrads> eval(d_padded_u, nx, ny, nz, dx, dy, dz,
  *                                          hw, order);
  * pfc::sim::gpu::for_each_interior_device(model, eval.pod(), d_padded_du, t,
  *                                         nx, ny, nz, stream);
@@ -175,7 +175,7 @@ __device__ inline void scatter_device(DevicePtrPack4 du, DeviceInc4 inc,
  */
 template <class Model, class G>
 __global__ void
-for_each_interior_device_kernel(Model model, ::pfc::gpu::FdGradientDevicePOD eval,
+for_each_interior_device_kernel(Model model, ::pfc::gpu::FDGradientDevicePOD eval,
                                 double *du_padded, double t, int nx, int ny,
                                 int nz) {
   const int ix = static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -264,8 +264,8 @@ inline void check_for_each_interior_device_launch(gpuStream_t stream) {
  *                 members for the fields detected by `pfc::field::has_*`.
  *
  * @param model       Model instance. Captured by value into the kernel.
- * @param eval        `FdGradientDevicePOD` returned by
- *                    `pfc::gpu::FdGradientDevice<G>::pod()`.
+ * @param eval        `FDGradientDevicePOD` returned by
+ *                    `pfc::gpu::FDGradientDevice<G>::pod()`.
  * @param du_padded   Output buffer in the **padded** layout (same
  *                    extents as the source field's padded box, same
  *                    strides). Owned cells are written; halo cells are
@@ -279,7 +279,7 @@ inline void check_for_each_interior_device_launch(gpuStream_t stream) {
  */
 template <class Model, class G>
 inline void for_each_interior_device(const Model &model,
-                                     const ::pfc::gpu::FdGradientDevicePOD &eval,
+                                     const ::pfc::gpu::FDGradientDevicePOD &eval,
                                      double *du_padded, double t, int nx, int ny,
                                      int nz, gpuStream_t stream = nullptr) {
   if (nx <= 0 || ny <= 0 || nz <= 0) {
@@ -384,11 +384,11 @@ inline void for_each_interior_device(
 }
 
 /**
- * @brief Convenience overload: extract the POD from `FdGradientDevice<G>`.
+ * @brief Convenience overload: extract the POD from `FDGradientDevice<G>`.
  */
 template <class Model, class G>
 inline void for_each_interior_device(const Model &model,
-                                     const ::pfc::gpu::FdGradientDevice<G> &eval,
+                                     const ::pfc::gpu::FDGradientDevice<G> &eval,
                                      double *du_padded, double t, int nx, int ny,
                                      int nz, gpuStream_t stream = nullptr) {
   for_each_interior_device<Model, G>(model, eval.pod(), du_padded, t, nx, ny, nz,

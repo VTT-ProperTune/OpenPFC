@@ -32,10 +32,10 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 
 #if defined(OPENPFC_TEST_SPECTRAL_ETD_HIP)
 #include <openpfc/runtime/hip/fft_hip.hpp>
-using Space = pfc::HipSpace;
+using Space = pfc::HIPSpace;
 #elif defined(OPENPFC_TEST_SPECTRAL_ETD_CUDA)
 #include <openpfc/runtime/cuda/fft_cuda.hpp>
-using Space = pfc::CudaSpace;
+using Space = pfc::CUDASpace;
 #endif
 
 using Catch::Approx;

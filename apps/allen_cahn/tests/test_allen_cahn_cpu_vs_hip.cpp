@@ -29,7 +29,7 @@
 
 namespace {
 
-using DevField = pfc::data::Field<double, pfc::HipSpace>;
+using DevField = pfc::data::Field<double, pfc::HIPSpace>;
 
 } // namespace
 
@@ -99,7 +99,7 @@ TEST_CASE("Allen–Cahn CPU vs HIP agreement (single rank)", "[AllenCahn][HIP]")
     std::copy(u0.begin(), u0.end(), data);
   });
   u_gpu.sync_to_device();
-  pfc::comm::SparseExchange<pfc::HipSpace, double> exchanger(
+  pfc::comm::SparseExchange<pfc::HIPSpace, double> exchanger(
       u_gpu, decomp, rank, MPI_COMM_WORLD);
 
   for (int step = 0; step < cfg.n_steps; ++step) {

@@ -11,7 +11,7 @@
  * Captures the canonical "barrier, time, time, allreduce-max" pattern that
  * every MPI app rewrites by hand to report timing of a parallel section:
  *
- *     pfc::runtime::MpiTimer timer{MPI_COMM_WORLD};
+ *     pfc::runtime::MPITimer timer{MPI_COMM_WORLD};
  *     pfc::runtime::tic(timer);
  *     // ... time-stepping loop or other parallel section ...
  *     const double max_elapsed = pfc::runtime::toc(timer);
@@ -74,14 +74,14 @@ namespace pfc::runtime {
  * for the collective reduction that turns those local totals into a
  * global "slowest-rank" report.
  */
-struct MpiTimer {
+struct MPITimer {
   MPI_Comm comm{MPI_COMM_WORLD};
   double t_start{0.0};
   /// Per-label state: `{ start, total_elapsed_local }` in seconds.
   std::map<std::string, std::pair<double, double>> sections{};
 
-  MpiTimer() = default;
-  explicit MpiTimer(MPI_Comm c) noexcept : comm(c) {}
+  MPITimer() = default;
+  explicit MPITimer(MPI_Comm c) noexcept : comm(c) {}
 };
 
 /**
@@ -90,7 +90,7 @@ struct MpiTimer {
  * Calls `MPI_Barrier` so every rank agrees on the start instant, then
  * records `MPI_Wtime()` into `timer.t_start`. Pair with `toc`.
  */
-inline void tic(MpiTimer &timer) {
+inline void tic(MPITimer &timer) {
   pfc::mpi::throw_on_mpi_error(MPI_Barrier(timer.comm), "MPI_Barrier in pfc::runtime::tic failed");
   timer.t_start = MPI_Wtime();
 }
@@ -108,7 +108,7 @@ inline void tic(MpiTimer &timer) {
  *       barrier saves one round-trip when the caller only needs the
  *       reduced max (the common case).
  */
-inline double toc(const MpiTimer &timer) {
+inline double toc(const MPITimer &timer) {
   const double local = MPI_Wtime() - timer.t_start;
   double global = 0.0;
   int err = MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_MAX, timer.comm);
@@ -125,7 +125,7 @@ inline double toc(const MpiTimer &timer) {
  * called once per step over `n_steps` iterations gives the total time
  * spent in that section.
  */
-inline void tic(MpiTimer &timer, const std::string &label) {
+inline void tic(MPITimer &timer, const std::string &label) {
   timer.sections[label].first = MPI_Wtime();
 }
 
@@ -135,7 +135,7 @@ inline void tic(MpiTimer &timer, const std::string &label) {
  * Returns the **local** elapsed wall-time of this `tic`/`toc` pair (no
  * reduction). The accumulated total is read by `print_timing_summary`.
  */
-inline double toc(MpiTimer &timer, const std::string &label) {
+inline double toc(MPITimer &timer, const std::string &label) {
   auto &slot = timer.sections[label];
   const double elapsed = MPI_Wtime() - slot.first;
   slot.second += elapsed;
@@ -155,7 +155,7 @@ inline double toc(MpiTimer &timer, const std::string &label) {
  * @note Collective on `timer.comm` (one `MPI_Allreduce` per label).
  */
 inline std::vector<std::pair<std::string, double>>
-print_timing_summary(const MpiTimer &timer, int print_rank = 0,
+print_timing_summary(const MPITimer &timer, int print_rank = 0,
                      std::ostream &os = std::cout) {
   std::vector<std::pair<std::string, double>> out;
   out.reserve(timer.sections.size());

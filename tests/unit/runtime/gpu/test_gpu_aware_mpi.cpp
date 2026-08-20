@@ -16,7 +16,7 @@
 
 using pfc::gpu::decide_gpu_aware_mpi;
 using pfc::gpu::gpu_aware_how_cstr;
-using pfc::gpu::GpuAwareMpiHow;
+using pfc::gpu::GPUAwareMPIHow;
 
 namespace {
 
@@ -56,10 +56,10 @@ TEST_CASE("OPENPFC_ASSUME_GPU_AWARE_MPI=0 forces GPU-aware MPI off",
   const auto d = decide_gpu_aware_mpi();
 #if !defined(OpenPFC_MPI_CUDA_AWARE) && !defined(OpenPFC_MPI_HIP_AWARE)
   REQUIRE_FALSE(d.enabled);
-  REQUIRE(d.how == GpuAwareMpiHow::CompileTimeOff);
+  REQUIRE(d.how == GPUAwareMPIHow::CompileTimeOff);
 #else
   REQUIRE_FALSE(d.enabled);
-  REQUIRE(d.how == GpuAwareMpiHow::AssumeOff);
+  REQUIRE(d.how == GPUAwareMPIHow::AssumeOff);
   REQUIRE(std::string(gpu_aware_how_cstr(d.how)) ==
           "OPENPFC_ASSUME_GPU_AWARE_MPI=0");
 #endif
@@ -70,12 +70,12 @@ TEST_CASE("OPENPFC_ASSUME_GPU_AWARE_MPI=1 forces GPU-aware MPI on",
 #if !defined(OpenPFC_MPI_CUDA_AWARE) && !defined(OpenPFC_MPI_HIP_AWARE)
   const auto d = decide_gpu_aware_mpi();
   REQUIRE_FALSE(d.enabled);
-  REQUIRE(d.how == GpuAwareMpiHow::CompileTimeOff);
+  REQUIRE(d.how == GPUAwareMPIHow::CompileTimeOff);
 #else
   EnvGuard assume("OPENPFC_ASSUME_GPU_AWARE_MPI", "1");
   const auto d = decide_gpu_aware_mpi();
   REQUIRE(d.enabled);
-  REQUIRE(d.how == GpuAwareMpiHow::AssumeOn);
+  REQUIRE(d.how == GPUAwareMPIHow::AssumeOn);
 #endif
 }
 
@@ -84,20 +84,20 @@ TEST_CASE("MPICH_GPU_SUPPORT_ENABLED=1 enables when no Open MPI query",
 #if !defined(OpenPFC_MPI_CUDA_AWARE) && !defined(OpenPFC_MPI_HIP_AWARE)
   const auto d = decide_gpu_aware_mpi();
   REQUIRE_FALSE(d.enabled);
-  REQUIRE(d.how == GpuAwareMpiHow::CompileTimeOff);
+  REQUIRE(d.how == GPUAwareMPIHow::CompileTimeOff);
 #elif defined(OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT) ||                              \
     defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT)
   EnvGuard assume("OPENPFC_ASSUME_GPU_AWARE_MPI", nullptr);
   const auto d = decide_gpu_aware_mpi();
-  REQUIRE((d.how == GpuAwareMpiHow::OpenMpiQueryOn ||
-           d.how == GpuAwareMpiHow::OpenMpiQueryOff));
+  REQUIRE((d.how == GPUAwareMPIHow::OpenMPIQueryOn ||
+           d.how == GPUAwareMPIHow::OpenMPIQueryOff));
 #else
   EnvGuard assume("OPENPFC_ASSUME_GPU_AWARE_MPI", nullptr);
   EnvGuard probe("OPENPFC_PROBE_GPU_AWARE_MPI", nullptr);
   EnvGuard cray("MPICH_GPU_SUPPORT_ENABLED", "1");
   const auto d = decide_gpu_aware_mpi();
   REQUIRE(d.enabled);
-  REQUIRE(d.how == GpuAwareMpiHow::CrayMpichEnv);
+  REQUIRE(d.how == GPUAwareMPIHow::CrayMpichEnv);
   REQUIRE(std::string(gpu_aware_how_cstr(d.how)) ==
           "MPICH_GPU_SUPPORT_ENABLED=1");
 #endif

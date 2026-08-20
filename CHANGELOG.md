@@ -14,12 +14,12 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
-- Type names spell abbreviations in full caps: `CpuFFT`, `ETD1Stepper`, `SpectralETDSystem`, `TungstenETDSession`, `IHostFFT` / `IDeviceFFT` (was `CpuFft` / `Etd1Stepper` / `…Etd…`).
+- Type names spell abbreviations in full caps: `CPUFFT`, `CPUTag`, `HIPSpace`, `CUDASpace`, `GPUSpectralStack`, `FDCPUStack`, `ETD1Stepper`, `SpectralETDSystem`, `TungstenETDSession` (was `CpuFft` / `CpuTag` / `HipSpace` / `GpuSpectralStack` / `FdCpuStack` / `Etd1Stepper` / `…Etd…`).
 - Tungsten golden A/B: 1-rank 8³/100 ETD steps and 4-rank 16³/20 steps (`tungsten-golden-4rank`) compare `TungstenETDSession` to Gen-1 within 1e-10. Pre-M0 dump was never captured.
 - Tungsten ETD sessions write binary `psi` dumps on `Time::do_save()` from JSON `fields[]` (same schedule as Gen-1 `Simulator`).
-- M8 A/B GPU session `TungstenETDGpuSession` (`GpuSpectralStack` + `DeviceSpectralMeanFieldETDSystem`). Binaries `tungsten_etd_hip` / `tungsten_etd_cuda`. HIP/CUDA tests `HIP_TungstenETD` / `CUDA_TungstenETD` vs host session within 1e-10.
-- M8 A/B CPU binary `tungsten_etd`: JSON → `TungstenETDSession` (`SpectralCpuStack` + `TungstenPhysics` + `SpectralMeanFieldETDSystem`). Gen-1 `tungsten` remains. Constant IC two-step parity vs Gen-1. Writers not wired yet.
-- `GpuSpectralStack<MemorySpace>` (`runtime/gpu/gpu_spectral_stack.hpp`): device counterpart of kernel `SpectralCpuStack` (Domain + Decomposition + `IDeviceFFT` + `Field<double, MemorySpace>`). HIP/CUDA tests `HIP_GpuSpectralStack` / `CUDA_GpuSpectralStack`. Lives in runtime because device FFT factories are runtime.
+- M8 A/B GPU session `TungstenETDGPUSession` (`GPUSpectralStack` + `DeviceSpectralMeanFieldETDSystem`). Binaries `tungsten_etd_hip` / `tungsten_etd_cuda`. HIP/CUDA tests `HIP_TungstenETD` / `CUDA_TungstenETD` vs host session within 1e-10.
+- M8 A/B CPU binary `tungsten_etd`: JSON → `TungstenETDSession` (`SpectralCPUStack` + `TungstenPhysics` + `SpectralMeanFieldETDSystem`). Gen-1 `tungsten` remains. Constant IC two-step parity vs Gen-1. Writers not wired yet.
+- `GPUSpectralStack<MemorySpace>` (`runtime/gpu/gpu_spectral_stack.hpp`): device counterpart of kernel `SpectralCPUStack` (Domain + Decomposition + `IDeviceFFT` + `Field<double, MemorySpace>`). HIP/CUDA tests `HIP_GPUSpectralStack` / `CUDA_GPUSpectralStack`. Lives in runtime because device FFT factories are runtime.
 - Tungsten CPU/CUDA/HIP `from_json` share `tungsten::apply_tungsten_json` (`ParameterSchema` parse + setters). Frontend `ParameterValidator` still prints the summary.
 - Device `DeviceSpectralMeanFieldETDSystem<Physics, MemorySpace>` (`runtime/gpu/spectral_mean_field_etd_gpu.hpp`): `IDeviceFFT` choreography, host `N(ψ,ψ_MF)`, device `χ(k)` multiply and ETD1 with `k_lap*phi1` weights. HIP/CUDA tests `HIP_SpectralMeanFieldETD` / `CUDA_SpectralMeanFieldETD` vs host within 1e-10.
 - M8 start: `tungsten::TungstenPhysics` (`apps/tungsten/include/tungsten/tungsten_physics.hpp`, 153 lines) plus host `SpectralMeanFieldETDSystem` (mean-field filter, two-argument N, `k_lap*phi1` ETD weights). One-step parity vs Gen-1 `Tungsten` and JSON schema round-trip.
@@ -39,7 +39,7 @@ source compatibility is explicitly not a goal.
 - `RK2HeunStepper` and `RK3HeunStepper` take `Scalar` (default `double`) and host `Field<Scalar>`.
 - `EulerStepper<Rhs, Scalar>` and `MultiEulerStepper<Rhs, N, Scalar>` advance `double` or `std::complex<double>` (default `double`). Host `Field<Scalar>` overloads stay; vector path remains.
 - `MultiETD1Stepper<Rhs, N, Scalar>` advances `double` or `std::complex<double>` packs with real per-field ETD coefficients. `MultiStageFunction` and `MultiStepAttemptResult` take an optional `Scalar` (default `double`).
-- Deleted unused `fd_stencils.hpp` back-compat shims (`detail::EvenFdStencil1d`, `fd_even_order_lookup`).
+- Deleted unused `fd_stencils.hpp` back-compat shims (`detail::EvenFDStencil1d`, `fd_even_order_lookup`).
 - One workspace type: `pfc::sim::steppers::StageWorkspace<T>` is an alias of `pfc::integrator::Workspace<T>` (stage vectors + scratch, move-only, `clear()`/`reset()`).
 - One `StageContext`: `pfc::sim::StageContext` is an alias of `pfc::integrator::StageContext`. The struct carries integrator flags plus optional `ExecutionService*`; solvers use `time` (was `evaluation_time`) and `service()`.
 - `MultiEulerStepper` isolates candidates via `attempt` (any N). Public `euler_attempt.hpp` is deleted.
@@ -64,10 +64,10 @@ source compatibility is explicitly not a goal.
 - Removed unused `apps/kobayashi/src/cuda/kobayashi_batched_halo.hpp` after the CUDA driver moved onto `HaloExchange`.
 - FD MPI leftover tests (`test_fd_heat_mpi`, `test_fd_xy_mpi`, `test_halo_exchange_driver`) use `HaloExchange` instead of `HaloExchanger` / `PersistentHaloExchanger`. `test_sparse_halo_exchange` uses `SparseExchange`.
 - `HaloExchangeOptions::directions` — optional `HaloDirectionSet` (empty means `Axes3D()` for Faces, `Full3D()` for Full). Kobayashi CPU/HIP/CUDA pass `Axes2D()` so the `nz=1` slab skips ±Z.
-- Kobayashi CUDA driver uses two multi-field `pfc::comm::HaloExchange<CudaSpace>` objects on device-resident Fields (state then aux), matching HIP/CPU. Execute on tohtori.
+- Kobayashi CUDA driver uses two multi-field `pfc::comm::HaloExchange<CUDASpace>` objects on device-resident Fields (state then aux), matching HIP/CPU. Execute on tohtori.
 - `scripts/build.sh --machine=lumi` — LUMI HIP/ROCm path: loads `LUMI/25.09 partition/G cpeGNU cray-fftw lumi-CrayPath` and `heffte-rocm`, configures on the login node, then submits compile + ctest to `standard-g` (default) or `dev-g` under Slurm account `project_462001519`. CUDA is rejected on LUMI.
-- wave2d CUDA driver and CPU-vs-CUDA test use `SparseExchange<CudaSpace>` with device y-face BC patches. Execute on tohtori.
-- Allen–Cahn CUDA driver and CPU-vs-CUDA test use `SparseExchange<CudaSpace>` (device gather/MPI/face recv). Execute on tohtori.
+- wave2d CUDA driver and CPU-vs-CUDA test use `SparseExchange<CUDASpace>` with device y-face BC patches. Execute on tohtori.
+- Allen–Cahn CUDA driver and CPU-vs-CUDA test use `SparseExchange<CUDASpace>` (device gather/MPI/face recv). Execute on tohtori.
 - FD MPI integration tests (`test_fd_xy_mpi`, `test_fd_heat_mpi`) use `SparseExchange` for separated-face Laplacian cases.
 - 4-rank `HaloExchange` mode suite: host blocking == split-phase == multi-field batch; Full 26-direction corners; HIP 4-rank Faces + Full (`test_comm_halo_exchange_modes.cpp` / `test_comm_halo_exchange_gpu.cpp`). Persistent multi-rank is still 1-rank only on LUMI.
 - In-repo min-surface brick splitter (`brick_split.hpp`) replaces `heffte::split_world` / `proc_setup_min_surface` in the decomposition TU (ADR 0007). Equivalence is pinned against live HeFFTe in `test_brick_split.cpp`.
@@ -76,17 +76,17 @@ source compatibility is explicitly not a goal.
 - Examples `15_finite_difference_heat` and `19_explicit_stepper_fd` use `SparseExchange` / `HaloExchange` instead of the old exchanger classes.
 - heat3d Catch2 manual/scratch paths use `pfc::comm::HaloExchange<HostSpace>` instead of `PaddedHaloExchanger`.
 - `StagePreparationService` binds `pfc::comm::HaloExchange<HostSpace>` instead of `PaddedHaloExchanger`.
-- wave2d HIP driver and CPU-vs-HIP test use `pfc::comm::SparseExchange<HipSpace>` on unpadded device Fields; y-face BC patches and Dirichlet walls stay on device (no per-step full-field D2H).
-- Allen–Cahn HIP driver and CPU-vs-HIP test use `pfc::comm::SparseExchange<HipSpace>` on an unpadded device Field; the kernel reads device `face_recv_ptrs()` (no per-step full-field D2H).
-- Kobayashi HIP driver uses two multi-field `pfc::comm::HaloExchange<HipSpace>` objects on device-resident Fields (state then aux) instead of per-step `hipMemcpy` + host `PaddedHaloExchanger`.
+- wave2d HIP driver and CPU-vs-HIP test use `pfc::comm::SparseExchange<HIPSpace>` on unpadded device Fields; y-face BC patches and Dirichlet walls stay on device (no per-step full-field D2H).
+- Allen–Cahn HIP driver and CPU-vs-HIP test use `pfc::comm::SparseExchange<HIPSpace>` on an unpadded device Field; the kernel reads device `face_recv_ptrs()` (no per-step full-field D2H).
+- Kobayashi HIP driver uses two multi-field `pfc::comm::HaloExchange<HIPSpace>` objects on device-resident Fields (state then aux) instead of per-step `hipMemcpy` + host `PaddedHaloExchanger`.
 - Kobayashi CPU driver uses two multi-field `pfc::comm::HaloExchange<HostSpace>` objects (state then aux) instead of six `PaddedHaloExchanger`s.
 - Allen–Cahn CPU driver and CPU comparison-test path use `pfc::comm::SparseExchange<HostSpace>` instead of `SparseHaloExchanger`.
 - wave2d CPU drivers (`wave2d_fd`, `wave2d_fd_manual`) use `pfc::comm::HaloExchange<HostSpace>` instead of `PaddedHaloExchanger`.
 - heat3d CPU drivers (`heat3d_fd`, `heat3d_fd_manual`, `heat3d_fd_scratch`) use `pfc::comm::HaloExchange<HostSpace>` instead of `PaddedHaloExchanger`.
-- `FdCpuStack` uses `pfc::comm::SparseExchange<HostSpace>` instead of constructing `SparseHaloExchanger` itself.
-- `pfc::comm::SparseExchange<HostSpace>` — host index-set facade over `SparseHaloExchanger` (structured `make_structured_halos` or a custom `RemoteHalo` list; `exchange`/`start`/`finish`). Device `SparseExchange<CudaSpace/HipSpace>` gathers, posts device-pointer MPI, and scatters without a full-field D2H. CUDA execution: verify on tohtori.
+- `FDCPUStack` uses `pfc::comm::SparseExchange<HostSpace>` instead of constructing `SparseHaloExchanger` itself.
+- `pfc::comm::SparseExchange<HostSpace>` — host index-set facade over `SparseHaloExchanger` (structured `make_structured_halos` or a custom `RemoteHalo` list; `exchange`/`start`/`finish`). Device `SparseExchange<CUDASpace/HIPSpace>` gathers, posts device-pointer MPI, and scatters without a full-field D2H. CUDA execution: verify on tohtori.
 - Device halo default transport is pack-to-contiguous + device-pointer MPI when GPU-aware (`PaddedDeviceHaloExchanger` / `FullPaddedDeviceHalo`). `OPENPFC_{CUDA,HIP}_USE_SUBARRAY_HALO=1` restores derived-type MPI; `*_FORCE_PACKED_HALO=1` still host-stages. Post-exchange sync is stream-scoped, not `cudaDeviceSynchronize` / `hipDeviceSynchronize`.
-- `pfc::comm::HaloExchange<CudaSpace/HipSpace>` — device facade in `runtime/gpu/comm_halo_exchange_gpu.hpp` (Faces / Full, blocking `exchange()`, residency sync). Persistent and split-phase fail closed (device exchangers are blocking-only). CUDA execution: verify on tohtori.
+- `pfc::comm::HaloExchange<CUDASpace/HIPSpace>` — device facade in `runtime/gpu/comm_halo_exchange_gpu.hpp` (Faces / Full, blocking `exchange()`, residency sync). Persistent and split-phase fail closed (device exchangers are blocking-only). CUDA execution: verify on tohtori.
 - `pfc::gpu::runtime_mpi_gpu_aware()` — shared GPU-aware MPI decision (assume override, Open MPI MPIX query, Cray `MPICH_GPU_SUPPORT_ENABLED=1`, optional device-pointer probe). Halo and SparseVector exchange use this instead of an Open-MPI-only query.
 - `pfc::mpi::communicator::duplicate()` — opt-in `MPI_Comm_dup` isolation.
 - `pfc::comm::HaloExchange<HostSpace>` — unified host halo facade (Faces/Full, `exchange`/`start`/`finish`, optional persistent, multi-field tag blocks). Device specialization is remaining M4 work.
@@ -97,8 +97,8 @@ source compatibility is explicitly not a goal.
 - `include/openpfc/runtime/gpu/gpu_api.hpp` — vendor shim (`gpuMalloc`, `gpuMemcpyAsync`, `gpuStream_t`, `GPU_CHECK`, `GPU_LAUNCH_KERNEL`) selected by CUDA vs HIP (`OPENPFC_HD` already covers `__HIPCC__` in `host_device.hpp`)
 - `include/openpfc/runtime/gpu/databuffer_gpu.hpp` — single-source GPU `DataBuffer` for CUDA and HIP; `databuffer_cuda.hpp` / `databuffer_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/deep_copy_gpu.hpp` — single-source GPU `deep_copy(buffer, scalar)` fill; `deep_copy_cuda.hpp` / `deep_copy_hip.hpp` are thin includes
-- `include/openpfc/runtime/gpu/memory_space_gpu.hpp` — single-source `CudaSpace` / `HipSpace`; `memory_space_cuda.hpp` / `memory_space_hip.hpp` are thin includes
-- `include/openpfc/runtime/gpu/backend_tags_gpu.hpp` — single-source `CudaTag` / `HipTag`; `backend_tags_cuda.hpp` / `backend_tags_hip.hpp` are thin includes
+- `include/openpfc/runtime/gpu/memory_space_gpu.hpp` — single-source `CUDASpace` / `HIPSpace`; `memory_space_cuda.hpp` / `memory_space_hip.hpp` are thin includes
+- `include/openpfc/runtime/gpu/backend_tags_gpu.hpp` — single-source `CUDATag` / `HIPTag`; `backend_tags_cuda.hpp` / `backend_tags_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/memory_traits_gpu.hpp` — single-source GPU `backend_traits`; `memory_traits_cuda.hpp` / `memory_traits_hip.hpp` are thin includes
 - `include/openpfc/runtime/gpu/gpu_check.hpp` — single-source `cuda_check` / `hip_check`; `cuda_check.hpp` / `hip_check.hpp` are thin includes
 - `include/openpfc/runtime/gpu/exchange_gpu.hpp` — single-source GPU SparseVector MPI exchange; `exchange_cuda.hpp` / `exchange_hip.hpp` are thin includes
@@ -111,7 +111,7 @@ source compatibility is explicitly not a goal.
 - `src/openpfc/runtime/gpu/padded_halo_faces_gpu.inc` — single-source padded face pack/unpack kernels; compiled from `padded_halo_faces.cu` and `.hip`
 - `include/openpfc/runtime/gpu/elementwise_ops_gpu.hpp` — generic device elementwise ops (complex×real multiply, two-term diagonal combine, axpy-style fill `out = alpha * x + beta`); compiled from `src/openpfc/runtime/gpu/elementwise_ops.cu` / `.hip`
 - HIP-parity gpu_validation tests: `test_multi_field_device.hip` and `test_composite_gradient_pod_size_hip.hip` (HIP twins of the CUDA-only multi-field `for_each_interior_device` and composite-gradient POD layout cases)
-- HIP FFT unit test `tests/unit/runtime/gpu/test_fft_hip.cpp` (`HIP_FFT`), gated on `OpenPFC_ENABLE_HIP_SPECTRAL` — twin of CUDA `test_fft_cuda.cpp` using `pfc::fft::create_hip` and `HipTag` DataBuffers
+- HIP FFT unit test `tests/unit/runtime/gpu/test_fft_hip.cpp` (`HIP_FFT`), gated on `OpenPFC_ENABLE_HIP_SPECTRAL` — twin of CUDA `test_fft_cuda.cpp` using `pfc::fft::create_hip` and `HIPTag` DataBuffers
 - HIP FFT integration roundtrip `tests/integration/scenarios/gpu_validation/test_hip_roundtrip.cpp` — twin of CUDA `test_cuda_roundtrip.cpp` (float/double DataBuffer forward/backward)
 - HIP CPU-vs-GPU Laplacian integration tests `test_hip_vs_cpu_laplacian.cpp` and `test_hip_vs_cpu_laplacian_mpi.cpp` — twins of the CUDA Laplacian gpu_validation scenarios
 - HIP vs CPU diffusion smoke `test_hip_vs_cpu.cpp` is compiled into `openpfc-tests` and constructs `create_hip` (previously an unwired stub)
@@ -141,7 +141,7 @@ source compatibility is explicitly not a goal.
 - Example `09_parallel_fft_high_level` stores the FFT outbox in `pfc::data::Field<std::complex<double>>` instead of legacy `Array`.
 - `pfc::field::for_each*` in `brick_iteration.hpp` no longer has `PaddedBrick` overloads; padded `pfc::data::Field` is the only container (tests already used Field).
 - `pfc::communication::PaddedHaloExchanger` no longer binds `PaddedBrick`; padded `pfc::data::Field` (or explicit `Box3i` + `Domain`) is the only container binding. Callers already used the Field constructors.
-- HIP `pfc::hip::FdGradientDevice` factory binds `pfc::data::Field` (any memory space) instead of legacy `PaddedBrick`, matching the CUDA twin. Unpadded Fields (`storage_halo == 0`) are rejected; padded `Field<double, HipSpace>` is the device path.
+- HIP `pfc::hip::FDGradientDevice` factory binds `pfc::data::Field` (any memory space) instead of legacy `PaddedBrick`, matching the CUDA twin. Unpadded Fields (`storage_halo == 0`) are rejected; padded `Field<double, HIPSpace>` is the device path.
 - CPU `pfc::gradient::FDGradient` no longer has a `PaddedBrick` constructor or factory; padded `pfc::data::Field` is the only container binding (`test_multi_field_device.cu` migrated).
 - `scripts/build.sh` (Tohtori) auto-detects a custom CUDA-aware Open MPI build (see `scripts/build_tohtori.sh --cuda`) and uses it in place of the site `openmpi/5.0.10` module when present, defaulting `MPI_CUDA_AWARE` to `ON` in that case. Without it, the default stays `OFF`: the site module links a UCX built without `--with-cuda`, and passing device pointers to it segfaults despite Open MPI's own `MPIX_Query_cuda_support()` probe claiming support.
 - HIP packed-halo pinned host buffers use `hipHostMalloc` / `hipHostFree` instead of the deprecated `hipMallocHost` / `hipFreeHost`.
@@ -154,7 +154,7 @@ source compatibility is explicitly not a goal.
 - Heat3D/Wave2D structural `rhs()` tests renamed off `vs_legacy_step` (they were never numerical vs-legacy baselines). Checkpoint headers/docs state that restart loading is not implemented.
 - Bare `cmake` on a single-config generator defaults to `RelWithDebInfo`, not Debug (`cmake/ProjectSetup.cmake`; documented in `INSTALL.md`).
 - `tests/benchmarks/README.md` no longer lists machine-specific nanosecond/millisecond claims; measure locally in Release.
-- State-access design docs describe GPU storage as `pfc::core::DataBuffer` (`CudaTag`/`HipTag`); `pfc::gpu::GPUVector` is gone.
+- State-access design docs describe GPU storage as `pfc::core::DataBuffer` (`CUDATag`/`HIPTag`); `pfc::gpu::GPUVector` is gone.
 - `NAN_CHECK_ENABLED` is a PUBLIC compile definition on `openpfc` when Debug is selected or `OpenPFC_ENABLE_NAN_CHECK=ON`, instead of directory-scope `add_compile_definitions`.
 - GPU SparseVector host-to-device copy failures report `"HIP copy failed: …"` with the runtime string, matching CUDA; unused duplicate `sparse_vector_ops_cuda.hpp` / `sparse_vector_ops_hip.hpp` shims removed (`sparse_vector_ops.hpp` remains).
 - `for_each_interior_device` launch/sync failures use `GPU_CHECK` (`"GPU error: …"`) instead of a per-overload hand-rolled check. Kernel `.inc` files still prefix CUDA/HIP; co-enabled TUs still use `cuda_check` / `hip_check`.
@@ -166,10 +166,10 @@ source compatibility is explicitly not a goal.
 - CUDA/HIP fail-closed SparseVector exchange tests include `runtime/gpu/` exchange, SparseVector, and check headers instead of vendor shims (keep native `cuda_check` / `hip_check` calls).
 - CUDA/HIP SparseVector unit tests (`test_sparsevector_cuda.cpp`, `test_sparsevector_hip.cpp`) include `runtime/gpu/` SparseVector headers instead of vendor shims (keep native `cudaMemcpy` / `hipMemcpy`).
 - CUDA/HIP padded device-halo tests (`test_padded_device_halo_self_wrap.cpp`, `test_padded_device_halo_self_wrap_hip.hip`, `test_full_padded_device_halo.cpp`) include `runtime/gpu/` halo headers instead of vendor shims
-- HIP fd-gradient gpu_validation test includes `runtime/gpu/` DataBuffer and HipSpace headers instead of vendor shims; vendor `fd_gradient_device.hpp` / `for_each_interior_device.hpp` re-exports stay (call sites use `pfc::hip::` / `pfc::sim::hip`)
+- HIP fd-gradient gpu_validation test includes `runtime/gpu/` DataBuffer and HIPSpace headers instead of vendor shims; vendor `fd_gradient_device.hpp` / `for_each_interior_device.hpp` re-exports stay (call sites use `pfc::hip::` / `pfc::sim::hip`)
 - Kobayashi CUDA driver includes `runtime/gpu/` padded device-halo headers instead of the vendor shim (`pfc::cuda::PaddedDeviceHaloExchanger` stays; the GPU header already stamps it)
-- `SimulationState` device-field compile coverage includes `HipSpace` (CUDA twin already existed) and includes `runtime/gpu/` memory-space headers.
-- SparseVector `on_host` coverage includes `HipTag` (CUDA twin already existed) and includes `runtime/gpu/` SparseVector headers.
+- `SimulationState` device-field compile coverage includes `HIPSpace` (CUDA twin already existed) and includes `runtime/gpu/` memory-space headers.
+- SparseVector `on_host` coverage includes `HIPTag` (CUDA twin already existed) and includes `runtime/gpu/` SparseVector headers.
 - Halo-exchange concept docs list canonical GPU sources under `runtime/gpu/` (vendor CUDA/HIP headers are thin includes); HIP packed-halo env and kernel-library split are documented alongside CUDA.
 - FD/halo Doxygen `@see` comments and per-point-gradient docs point at `runtime/gpu/` device twins, not CUDA-only vendor headers.
 
@@ -300,7 +300,7 @@ fixes is marked `// TODO: not tested` pending a GPU-node run.
   automatic conversion. Integrated tomlplusplus library via CMake find module. All example
   configurations converted to TOML format. Unit tests validate conversion accuracy.
 - **Modular CMake Architecture**: Refactored monolithic CMakeLists.txt into 12 focused modules
-  in `cmake/` directory: ProjectSetup, CompilerSettings, CudaSupport, Dependencies,
+  in `cmake/` directory: ProjectSetup, CompilerSettings, CUDASupport, Dependencies,
   LibraryConfiguration, BuildOptions, CodeCoverage, Installation, PackageConfig, BuildSummary.
   Improves maintainability and reusability. Documented in `cmake/README.md`.
 - **CI/CD Pipelines**: Comprehensive GitHub Actions workflows for build matrix (GCC/Clang,

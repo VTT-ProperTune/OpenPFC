@@ -43,7 +43,7 @@
  * **Coverage**: D2 orders 2..20 are tabulated; D1 orders 2..14 are
  * tabulated. Higher D1 orders may be added later as they are needed; the
  * runtime lookup returns `false` for any unsupported order, and
- * `FdGradient<G>` translates that to a clean `std::invalid_argument` when
+ * `FDGradient<G>` translates that to a clean `std::invalid_argument` when
  * the model declares a derivative member whose stencil is not available.
  *
  * @see fd_apply.hpp for the per-point application primitives that consume

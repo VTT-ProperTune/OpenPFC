@@ -497,7 +497,7 @@ private:
  * `local_size` from `u.size()`.
  *
  * @param eval        Per-point gradient evaluator (e.g.
- *                    `pfc::field::FdGradient<G>`,
+ *                    `pfc::field::FDGradient<G>`,
  *                    `pfc::field::SpectralGradient<G>`). Captured by
  *                    reference; must outlive the returned stepper.
  * @param model       Physics model with a method

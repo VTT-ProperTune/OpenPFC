@@ -105,7 +105,7 @@ TEST_CASE("observable Gaussian integral 4 ranks matches 1-rank discrete sum",
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 
-TEST_CASE("observable Gaussian integral HipSpace 1 rank",
+TEST_CASE("observable Gaussian integral HIPSpace 1 rank",
           "[observable][unit][hip]") {
   int size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -116,7 +116,7 @@ TEST_CASE("observable Gaussian integral HipSpace 1 rank",
   constexpr double L = 6.0;
   const auto domain = gaussian_domain(N, L);
   const auto box = Box3i::from_bounds({0, 0, 0}, {N - 1, N - 1, N - 1});
-  Field<double, pfc::HipSpace> psi(domain, box, 0);
+  Field<double, pfc::HIPSpace> psi(domain, box, 0);
   psi.with_host_view([&](double *data, std::size_t) {
     const int nx = psi.box().size[0];
     const int ny = psi.box().size[1];
@@ -140,7 +140,7 @@ TEST_CASE("observable Gaussian integral HipSpace 1 rank",
 #include <openpfc/runtime/gpu/databuffer_gpu.hpp>
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 
-TEST_CASE("observable Gaussian integral CudaSpace 1 rank",
+TEST_CASE("observable Gaussian integral CUDASpace 1 rank",
           "[observable][unit][cuda]") {
   int size = 1;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -151,7 +151,7 @@ TEST_CASE("observable Gaussian integral CudaSpace 1 rank",
   constexpr double L = 6.0;
   const auto domain = gaussian_domain(N, L);
   const auto box = Box3i::from_bounds({0, 0, 0}, {N - 1, N - 1, N - 1});
-  Field<double, pfc::CudaSpace> psi(domain, box, 0);
+  Field<double, pfc::CUDASpace> psi(domain, box, 0);
   psi.with_host_view([&](double *data, std::size_t) {
     const int nx = psi.box().size[0];
     const int ny = psi.box().size[1];

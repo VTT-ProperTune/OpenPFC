@@ -5,7 +5,7 @@
 
 /**
  * @file comm_halo_exchange_gpu.hpp
- * @brief Device `pfc::comm::HaloExchange` for `CudaSpace` / `HipSpace` (M4).
+ * @brief Device `pfc::comm::HaloExchange` for `CUDASpace` / `HIPSpace` (M4).
  *
  * @details
  * Composes the existing `PaddedDeviceHaloExchanger` (Faces) and
@@ -156,11 +156,11 @@ private:
 
 #if defined(OpenPFC_ENABLE_CUDA)
 template <typename T>
-class HaloExchange<CudaSpace, T>
-    : public detail::DeviceHaloExchange<CudaSpace, cuda::PaddedDeviceHaloExchanger,
+class HaloExchange<CUDASpace, T>
+    : public detail::DeviceHaloExchange<CUDASpace, cuda::PaddedDeviceHaloExchanger,
                                         cuda::FullPaddedDeviceHalo, T> {
   using Base =
-      detail::DeviceHaloExchange<CudaSpace, cuda::PaddedDeviceHaloExchanger,
+      detail::DeviceHaloExchange<CUDASpace, cuda::PaddedDeviceHaloExchanger,
                                  cuda::FullPaddedDeviceHalo, T>;
 
 public:
@@ -170,11 +170,11 @@ public:
 
 #if defined(OpenPFC_ENABLE_HIP)
 template <typename T>
-class HaloExchange<HipSpace, T>
-    : public detail::DeviceHaloExchange<HipSpace, hip::PaddedDeviceHaloExchanger,
+class HaloExchange<HIPSpace, T>
+    : public detail::DeviceHaloExchange<HIPSpace, hip::PaddedDeviceHaloExchanger,
                                         hip::FullPaddedDeviceHalo, T> {
   using Base =
-      detail::DeviceHaloExchange<HipSpace, hip::PaddedDeviceHaloExchanger,
+      detail::DeviceHaloExchange<HIPSpace, hip::PaddedDeviceHaloExchanger,
                                  hip::FullPaddedDeviceHalo, T>;
 
 public:

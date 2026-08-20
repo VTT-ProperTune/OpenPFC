@@ -35,19 +35,19 @@ include(cmake/CompilerSettings.cmake)
 # ----------------------------------------------------------------------------
 # CUDA detection and configuration (must come before dependencies that may
 # depend on CUDA availability)
-include(cmake/CudaSupport.cmake)
+include(cmake/CUDASupport.cmake)
 
 # ----------------------------------------------------------------------------
 # 4. HIP Support
 # ----------------------------------------------------------------------------
 # HIP (ROCm) detection and configuration
-include(cmake/HipSupport.cmake)
+include(cmake/HIPSupport.cmake)
 
 # ----------------------------------------------------------------------------
 # 5a. GPU Kernel Auto-Tuning
 #----------------------------------------------------------------------------
 # GPU kernel auto-tuning infrastructure (requires CUDA or HIP)
-include(cmake/GpuAutotuning.cmake)
+include(cmake/GPUAutotuning.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -62,7 +62,7 @@ include(cmake/Dependencies.cmake)
 # ----------------------------------------------------------------------------
 # 5b. GPU-aware MPI (configure-time probes where applicable)
 # ----------------------------------------------------------------------------
-include(cmake/OpenPFCGpuAwareMpi.cmake)
+include(cmake/OpenPFCGPUAwareMpi.cmake)
 
 # ----------------------------------------------------------------------------
 # 6. Library Configuration

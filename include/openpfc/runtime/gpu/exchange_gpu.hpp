@@ -6,7 +6,7 @@
  * @brief Single-source GPU SparseVector MPI exchange for CUDA and HIP (M3).
  *
  * Overloads `exchange::send` / `send_data` / `receive_data` / `isend_data` /
- * `irecv_data` for `SparseVector<CudaTag>` and/or `SparseVector<HipTag>`.
+ * `irecv_data` for `SparseVector<CUDATag>` and/or `SparseVector<HIPTag>`.
  * Vendor headers `exchange_cuda.hpp` / `exchange_hip.hpp` are thin includes
  * of this file so existing call sites keep compiling.
  *
@@ -73,14 +73,14 @@ inline bool runtime_mpi_cuda_aware() {
 [[noreturn]] inline void throw_device_nb_requires_aware(const char *op) {
   throw std::runtime_error(
       std::string("exchange::") + op +
-      " (SparseVector<CudaTag>): GPU-aware MPI is required for non-blocking "
+      " (SparseVector<CUDATag>): GPU-aware MPI is required for non-blocking "
       "device exchange (OpenPFC_MPI_CUDA_AWARE + MPIX_Query_cuda_support). "
       "Use blocking send_data/receive_data (host-staged) or enable "
       "device-aware MPI.");
 }
 
-struct CudaXchg {
-  using tag = backend::CudaTag;
+struct CUDAXchg {
+  using tag = backend::CUDATag;
   static bool mpi_aware() { return runtime_mpi_cuda_aware(); }
   static void throw_nb(const char *op) { throw_device_nb_requires_aware(op); }
   static void memcpy_d2h(void *dst, const void *src, std::size_t bytes,
@@ -114,14 +114,14 @@ inline bool runtime_mpi_hip_aware() {
 [[noreturn]] inline void throw_hip_nb_requires_aware(const char *op) {
   throw std::runtime_error(
       std::string("exchange::") + op +
-      " (SparseVector<HipTag>): GPU-aware MPI is required for non-blocking "
+      " (SparseVector<HIPTag>): GPU-aware MPI is required for non-blocking "
       "device exchange (OpenPFC_MPI_HIP_AWARE + MPIX_Query_hip_support). "
       "Use blocking send_data/receive_data (host-staged) or enable "
       "device-aware MPI.");
 }
 
-struct HipXchg {
-  using tag = backend::HipTag;
+struct HIPXchg {
+  using tag = backend::HIPTag;
   static bool mpi_aware() { return runtime_mpi_hip_aware(); }
   static void throw_nb(const char *op) { throw_hip_nb_requires_aware(op); }
   static void memcpy_d2h(void *dst, const void *src, std::size_t bytes,
@@ -314,78 +314,78 @@ void gpu_irecv_data(core::SparseVector<typename Ops::tag, T> &sparse_vector,
 
 #if defined(OpenPFC_ENABLE_CUDA)
 template <typename T>
-void send(core::SparseVector<backend::CudaTag, T> &sparse_vector, int sender_rank,
+void send(core::SparseVector<backend::CUDATag, T> &sparse_vector, int sender_rank,
           int receiver_rank, MPI_Comm comm, int tag = 0) {
-  detail::gpu_send<T, detail::CudaXchg>(sparse_vector, sender_rank, receiver_rank,
+  detail::gpu_send<T, detail::CUDAXchg>(sparse_vector, sender_rank, receiver_rank,
                                         comm, tag);
 }
 
 template <typename T>
-void send_data(const core::SparseVector<backend::CudaTag, T> &sparse_vector,
+void send_data(const core::SparseVector<backend::CUDATag, T> &sparse_vector,
                int sender_rank, int receiver_rank, MPI_Comm comm, int tag = 0) {
-  detail::gpu_send_data<T, detail::CudaXchg>(sparse_vector, sender_rank,
+  detail::gpu_send_data<T, detail::CUDAXchg>(sparse_vector, sender_rank,
                                              receiver_rank, comm, tag);
 }
 
 template <typename T>
-void receive_data(core::SparseVector<backend::CudaTag, T> &sparse_vector,
+void receive_data(core::SparseVector<backend::CUDATag, T> &sparse_vector,
                   int sender_rank, int receiver_rank, MPI_Comm comm, int tag = 0) {
-  detail::gpu_receive_data<T, detail::CudaXchg>(sparse_vector, sender_rank,
+  detail::gpu_receive_data<T, detail::CUDAXchg>(sparse_vector, sender_rank,
                                                 receiver_rank, comm, tag);
 }
 
 template <typename T>
-void isend_data(const core::SparseVector<backend::CudaTag, T> &sparse_vector,
+void isend_data(const core::SparseVector<backend::CUDATag, T> &sparse_vector,
                 int sender_rank, int receiver_rank, MPI_Comm comm,
                 MPI_Request *request, int tag = 0) {
-  detail::gpu_isend_data<T, detail::CudaXchg>(sparse_vector, sender_rank,
+  detail::gpu_isend_data<T, detail::CUDAXchg>(sparse_vector, sender_rank,
                                               receiver_rank, comm, request, tag);
 }
 
 template <typename T>
-void irecv_data(core::SparseVector<backend::CudaTag, T> &sparse_vector,
+void irecv_data(core::SparseVector<backend::CUDATag, T> &sparse_vector,
                 int sender_rank, int receiver_rank, MPI_Comm comm,
                 MPI_Request *request, int tag = 0) {
-  detail::gpu_irecv_data<T, detail::CudaXchg>(sparse_vector, sender_rank,
+  detail::gpu_irecv_data<T, detail::CUDAXchg>(sparse_vector, sender_rank,
                                               receiver_rank, comm, request, tag);
 }
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
 template <typename T>
-void send(core::SparseVector<backend::HipTag, T> &sparse_vector, int sender_rank,
+void send(core::SparseVector<backend::HIPTag, T> &sparse_vector, int sender_rank,
           int receiver_rank, MPI_Comm comm, int tag = 0) {
-  detail::gpu_send<T, detail::HipXchg>(sparse_vector, sender_rank, receiver_rank,
+  detail::gpu_send<T, detail::HIPXchg>(sparse_vector, sender_rank, receiver_rank,
                                        comm, tag);
 }
 
 template <typename T>
-void send_data(const core::SparseVector<backend::HipTag, T> &sparse_vector,
+void send_data(const core::SparseVector<backend::HIPTag, T> &sparse_vector,
                int sender_rank, int receiver_rank, MPI_Comm comm, int tag = 0) {
-  detail::gpu_send_data<T, detail::HipXchg>(sparse_vector, sender_rank,
+  detail::gpu_send_data<T, detail::HIPXchg>(sparse_vector, sender_rank,
                                             receiver_rank, comm, tag);
 }
 
 template <typename T>
-void receive_data(core::SparseVector<backend::HipTag, T> &sparse_vector,
+void receive_data(core::SparseVector<backend::HIPTag, T> &sparse_vector,
                   int sender_rank, int receiver_rank, MPI_Comm comm, int tag = 0) {
-  detail::gpu_receive_data<T, detail::HipXchg>(sparse_vector, sender_rank,
+  detail::gpu_receive_data<T, detail::HIPXchg>(sparse_vector, sender_rank,
                                                receiver_rank, comm, tag);
 }
 
 template <typename T>
-void isend_data(const core::SparseVector<backend::HipTag, T> &sparse_vector,
+void isend_data(const core::SparseVector<backend::HIPTag, T> &sparse_vector,
                 int sender_rank, int receiver_rank, MPI_Comm comm,
                 MPI_Request *request, int tag = 0) {
-  detail::gpu_isend_data<T, detail::HipXchg>(sparse_vector, sender_rank,
+  detail::gpu_isend_data<T, detail::HIPXchg>(sparse_vector, sender_rank,
                                              receiver_rank, comm, request, tag);
 }
 
 template <typename T>
-void irecv_data(core::SparseVector<backend::HipTag, T> &sparse_vector,
+void irecv_data(core::SparseVector<backend::HIPTag, T> &sparse_vector,
                 int sender_rank, int receiver_rank, MPI_Comm comm,
                 MPI_Request *request, int tag = 0) {
-  detail::gpu_irecv_data<T, detail::HipXchg>(sparse_vector, sender_rank,
+  detail::gpu_irecv_data<T, detail::HIPXchg>(sparse_vector, sender_rank,
                                              receiver_rank, comm, request, tag);
 }
 #endif

@@ -6,7 +6,7 @@
  * **Laboratory example** for `pfc::field::stencil::*` — the **generic**,
  * runtime-coefficient stencil layer.
  *
- * `pfc::field::FdGradient<G>` is the PDE-specialised entry point: it
+ * `pfc::field::FDGradient<G>` is the PDE-specialised entry point: it
  * consumes the central FD tables in `fd_stencils.hpp` and returns the
  * standard partial derivatives a model expects (`g.x`, `g.xx`, ...). For
  * apps that want **arbitrary** stencils — Sobel-style edge detection,

@@ -166,7 +166,7 @@ void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   std::vector<size_t> indices;
   std::vector<T> data;
 
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     // CPU: Direct access
     indices.resize(size);
     data.resize(size);
@@ -177,7 +177,7 @@ void send(const core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 
   // Send indices
@@ -279,7 +279,7 @@ void send_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::send_data");
 
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     pfc::mpi::throw_on_mpi_error(
         MPI_Send(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
                  comm),
@@ -287,7 +287,7 @@ void send_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 }
 
@@ -323,7 +323,7 @@ void receive_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_r
   const int count =
       pfc::mpi::ensure_mpi_int_count(size, "exchange::receive_data");
 
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     pfc::mpi::throw_on_mpi_error(
         MPI_Recv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag,
                  comm, MPI_STATUS_IGNORE),
@@ -331,7 +331,7 @@ void receive_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_r
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 }
 
@@ -370,7 +370,7 @@ void isend_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::isend_data");
 
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     pfc::mpi::throw_on_mpi_error(
         MPI_Isend(sparse_vector.data().data(), count, mpi_type, receiver_rank, tag,
                   comm, request),
@@ -378,7 +378,7 @@ void isend_data(const core::SparseVector<BackendTag, T> &sparse_vector,
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 }
 
@@ -416,7 +416,7 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   MPI_Datatype mpi_type = detail::get_mpi_type<T>();
   const int count = pfc::mpi::ensure_mpi_int_count(size, "exchange::irecv_data");
 
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     pfc::mpi::throw_on_mpi_error(
         MPI_Irecv(sparse_vector.data().data(), count, mpi_type, sender_rank, tag,
                   comm, request),
@@ -424,7 +424,7 @@ void irecv_data(core::SparseVector<BackendTag, T> &sparse_vector, int sender_ran
   } else {
     static_assert(
         dependent_false_exchange<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/exchange_gpu.hpp");
   }
 }
 

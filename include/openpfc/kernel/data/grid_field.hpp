@@ -56,7 +56,7 @@ namespace pfc::data {
  *        geometry-by-value.
  *
  * @tparam T           Element type (e.g. `double`, `std::complex<double>`).
- * @tparam MemorySpace Placement tag (`HostSpace` default; `CudaSpace`/`HipSpace`
+ * @tparam MemorySpace Placement tag (`HostSpace` default; `CUDASpace`/`HIPSpace`
  *                     from the runtime headers). Selects the `DataBuffer`
  *                     backend via `memory_space_to_backend_t`.
  *
@@ -147,7 +147,7 @@ public:
    *
    * For padded fields this equals `storage_halo()`. For unpadded face-halo
    * layouts it is the metadata width used by `for_each_interior` and
-   * `FdGradient` factories, while storage stays tightly packed.
+   * `FDGradient` factories, while storage stays tightly packed.
    */
   int halo_width() const noexcept { return m_iteration_halo; }
   /// Per-axis count of owned cells (halo excluded).

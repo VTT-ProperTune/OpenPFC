@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # CUDA halos on H100: lessons from GPU-aware vs packed (`kobayashi_fd_cuda`)
 
-This note records **what we ran**, **what the numbers showed**, and **how to read them**, using job **1236819** on partition **`nvidia_h100`** (Open MPI **5.0.10**, CUDA **13.0**). The current driver uses `HaloExchange<CudaSpace>` with `Axes2D()`; `KOBAYASHI_HALO_BATCH` and app-local `BatchedPaddedDeviceHalo` are gone.
+This note records **what we ran**, **what the numbers showed**, and **how to read them**, using job **1236819** on partition **`nvidia_h100`** (Open MPI **5.0.10**, CUDA **13.0**). The current driver uses `HaloExchange<CUDASpace>` with `Axes2D()`; `KOBAYASHI_HALO_BATCH` and app-local `BatchedPaddedDeviceHalo` are gone.
 
 ## What we actually changed (the experiment)
 

@@ -276,7 +276,7 @@ inline void apply_subdomain(std::vector<double> &field,
  * Use this for reductions, error norms, post-processing — anything whose
  * loop matched the manual triple-nested pattern in early FD apps.
  * Cells in the per-rank halo region (`[0, hw)` and `[n-hw, n)`) are skipped,
- * matching the convention used by `pfc::field::FdGradient` and
+ * matching the convention used by `pfc::field::FDGradient` and
  * `pfc::sim::for_each_interior`.
  *
  * Layout: row-major `[nx, ny, nz]` with **x varying fastest**.

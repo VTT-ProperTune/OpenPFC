@@ -20,8 +20,8 @@ TEST_CASE("test_composite_gradient_pod_size_hip",
           "[hip][fd_gradient_device][multi-field][integration]") {
   CHECK(sizeof(pfc::hip::CompositeGradientDevicePOD) == 2088);
   CHECK(pfc::hip::kMaxCompositeFields == 4);
-  CHECK(pfc::hip::kFdDeviceMaxHw1 == 7);
-  CHECK(pfc::hip::kFdDeviceMaxHw2 == 10);
+  CHECK(pfc::hip::kFDDeviceMaxHw1 == 7);
+  CHECK(pfc::hip::kFDDeviceMaxHw2 == 10);
 }
 
 #else // !OpenPFC_ENABLE_HIP

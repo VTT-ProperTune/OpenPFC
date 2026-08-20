@@ -5,8 +5,8 @@
  * @file sparse_vector_ops_gpu.hpp
  * @brief Single-source GPU SparseVector gather/scatter for CUDA and HIP (M3).
  *
- * Overloads `pfc::core::gather` / `scatter` for `SparseVector<CudaTag>` and/or
- * `SparseVector<HipTag>`. Vendor `sparse_vector_ops.hpp` headers are thin
+ * Overloads `pfc::core::gather` / `scatter` for `SparseVector<CUDATag>` and/or
+ * `SparseVector<HIPTag>`. Vendor `sparse_vector_ops.hpp` headers are thin
  * includes of this file.
  *
  * Device kernels live in `src/openpfc/runtime/gpu/sparse_vector_ops_gpu.inc`,
@@ -47,10 +47,10 @@ void scatter_cuda_impl(size_t n, const size_t *indices, const double *data,
                        double *dest, size_t dest_size);
 
 /**
- * @brief Gather for SparseVector<CudaTag, double> (CUDA device).
+ * @brief Gather for SparseVector<CUDATag, double> (CUDA device).
  * @note Fail-closed OOB parity with CPU `pfc::core::gather`.
  */
-inline void gather(SparseVector<backend::CudaTag, double> &sparse_vector,
+inline void gather(SparseVector<backend::CUDATag, double> &sparse_vector,
                    const double *source, size_t source_size) {
   if (sparse_vector.empty()) {
     return;
@@ -60,10 +60,10 @@ inline void gather(SparseVector<backend::CudaTag, double> &sparse_vector,
 }
 
 /**
- * @brief Scatter for SparseVector<CudaTag, double> (CUDA device).
+ * @brief Scatter for SparseVector<CUDATag, double> (CUDA device).
  * @note Fail-closed OOB parity with CPU `pfc::core::scatter`.
  */
-inline void scatter(const SparseVector<backend::CudaTag, double> &sparse_vector,
+inline void scatter(const SparseVector<backend::CUDATag, double> &sparse_vector,
                     double *dest, size_t dest_size) {
   if (sparse_vector.empty()) {
     return;
@@ -90,10 +90,10 @@ void scatter_hip_impl(size_t n, const size_t *indices, const double *data,
                       double *dest, size_t dest_size);
 
 /**
- * @brief Gather for SparseVector<HipTag, double> (HIP device).
+ * @brief Gather for SparseVector<HIPTag, double> (HIP device).
  * @note Fail-closed OOB parity with CPU `pfc::core::gather`.
  */
-inline void gather(SparseVector<backend::HipTag, double> &sparse_vector,
+inline void gather(SparseVector<backend::HIPTag, double> &sparse_vector,
                    const double *source, size_t source_size) {
   if (sparse_vector.empty()) {
     return;
@@ -103,10 +103,10 @@ inline void gather(SparseVector<backend::HipTag, double> &sparse_vector,
 }
 
 /**
- * @brief Scatter for SparseVector<HipTag, double> (HIP device).
+ * @brief Scatter for SparseVector<HIPTag, double> (HIP device).
  * @note Fail-closed OOB parity with CPU `pfc::core::scatter`.
  */
-inline void scatter(const SparseVector<backend::HipTag, double> &sparse_vector,
+inline void scatter(const SparseVector<backend::HIPTag, double> &sparse_vector,
                     double *dest, size_t dest_size) {
   if (sparse_vector.empty()) {
     return;

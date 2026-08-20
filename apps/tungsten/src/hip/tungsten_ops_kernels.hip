@@ -73,10 +73,10 @@ namespace tungsten {
 namespace ops {
 namespace detail {
 
-void TungstenOps<pfc::backend::HipTag, double>::multiply_complex_real_impl(
-    const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &a,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, double> &b,
-    pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &out) {
+void TungstenOps<pfc::backend::HIPTag, double>::multiply_complex_real_impl(
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &a,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &b,
+    pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &out) {
   const size_t N = a.size();
   if (b.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in multiply_complex_real");
@@ -84,11 +84,11 @@ void TungstenOps<pfc::backend::HipTag, double>::multiply_complex_real_impl(
   pfc::multiply_complex_real_hip_impl(a.data(), b.data(), out.data(), N);
 }
 
-void TungstenOps<pfc::backend::HipTag, double>::compute_nonlinear_impl(
-    const pfc::core::DataBuffer<pfc::backend::HipTag, double> &u,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, double> &v, double p3,
+void TungstenOps<pfc::backend::HIPTag, double>::compute_nonlinear_impl(
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &u,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &v, double p3,
     double p4, double q3, double q4,
-    pfc::core::DataBuffer<pfc::backend::HipTag, double> &out) {
+    pfc::core::DataBuffer<pfc::backend::HIPTag, double> &out) {
   const size_t N = u.size();
   if (v.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in compute_nonlinear");
@@ -118,10 +118,10 @@ void TungstenOps<pfc::backend::HipTag, double>::compute_nonlinear_impl(
   }
 }
 
-void TungstenOps<pfc::backend::HipTag, double>::apply_stabilization_impl(
-    const pfc::core::DataBuffer<pfc::backend::HipTag, double> &in,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, double> &field, double stabP,
-    pfc::core::DataBuffer<pfc::backend::HipTag, double> &out) {
+void TungstenOps<pfc::backend::HIPTag, double>::apply_stabilization_impl(
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &in,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &field, double stabP,
+    pfc::core::DataBuffer<pfc::backend::HIPTag, double> &out) {
   const size_t N = in.size();
   if (field.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_stabilization");
@@ -151,12 +151,12 @@ void TungstenOps<pfc::backend::HipTag, double>::apply_stabilization_impl(
   }
 }
 
-void TungstenOps<pfc::backend::HipTag, double>::apply_time_integration_impl(
-    const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &psi_F,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &psiN_F,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, double> &opL,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, double> &opN,
-    pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &out) {
+void TungstenOps<pfc::backend::HIPTag, double>::apply_time_integration_impl(
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &psi_F,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &psiN_F,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &opL,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &opN,
+    pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &out) {
   const size_t N = psi_F.size();
   if (psiN_F.size() != N || opL.size() != N || opN.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_time_integration");
@@ -165,10 +165,10 @@ void TungstenOps<pfc::backend::HipTag, double>::apply_time_integration_impl(
                                  opN.data(), out.data(), N);
 }
 
-void TungstenOps<pfc::backend::HipTag, float>::multiply_complex_real_impl(
-    const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &a,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, float> &b,
-    pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &out) {
+void TungstenOps<pfc::backend::HIPTag, float>::multiply_complex_real_impl(
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &a,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &b,
+    pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &out) {
   const size_t N = a.size();
   if (b.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in multiply_complex_real");
@@ -176,11 +176,11 @@ void TungstenOps<pfc::backend::HipTag, float>::multiply_complex_real_impl(
   pfc::multiply_complex_real_hip_impl(a.data(), b.data(), out.data(), N);
 }
 
-void TungstenOps<pfc::backend::HipTag, float>::compute_nonlinear_impl(
-    const pfc::core::DataBuffer<pfc::backend::HipTag, float> &u,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, float> &v, float p3, float p4,
+void TungstenOps<pfc::backend::HIPTag, float>::compute_nonlinear_impl(
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &u,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &v, float p3, float p4,
     float q3, float q4,
-    pfc::core::DataBuffer<pfc::backend::HipTag, float> &out) {
+    pfc::core::DataBuffer<pfc::backend::HIPTag, float> &out) {
   const size_t N = u.size();
   if (v.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in compute_nonlinear");
@@ -210,10 +210,10 @@ void TungstenOps<pfc::backend::HipTag, float>::compute_nonlinear_impl(
   }
 }
 
-void TungstenOps<pfc::backend::HipTag, float>::apply_stabilization_impl(
-    const pfc::core::DataBuffer<pfc::backend::HipTag, float> &in,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, float> &field, float stabP,
-    pfc::core::DataBuffer<pfc::backend::HipTag, float> &out) {
+void TungstenOps<pfc::backend::HIPTag, float>::apply_stabilization_impl(
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &in,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &field, float stabP,
+    pfc::core::DataBuffer<pfc::backend::HIPTag, float> &out) {
   const size_t N = in.size();
   if (field.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_stabilization");
@@ -243,12 +243,12 @@ void TungstenOps<pfc::backend::HipTag, float>::apply_stabilization_impl(
   }
 }
 
-void TungstenOps<pfc::backend::HipTag, float>::apply_time_integration_impl(
-    const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &psi_F,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &psiN_F,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, float> &opL,
-    const pfc::core::DataBuffer<pfc::backend::HipTag, float> &opN,
-    pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &out) {
+void TungstenOps<pfc::backend::HIPTag, float>::apply_time_integration_impl(
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &psi_F,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &psiN_F,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &opL,
+    const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &opN,
+    pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &out) {
   const size_t N = psi_F.size();
   if (psiN_F.size() != N || opL.size() != N || opN.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_time_integration");

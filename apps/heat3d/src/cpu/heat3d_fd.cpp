@@ -24,7 +24,7 @@
  *  - `Field::for_each_owned` / `Field::apply` for residual and IC/L2.
  *
  * For an FFT-safe **unpadded** core plus separated face buffers, use
- * `pfc::sim::stacks::FdCpuStack` (see tests and `heat3d_spectral_pointwise.cpp`).
+ * `pfc::sim::stacks::FDCPUStack` (see tests and `heat3d_spectral_pointwise.cpp`).
  */
 
 #include <cmath>

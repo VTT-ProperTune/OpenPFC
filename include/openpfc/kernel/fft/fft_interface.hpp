@@ -28,8 +28,8 @@ namespace fft {
 using RealVector = std::vector<double>;
 using ComplexVector = std::vector<std::complex<double>>;
 
-using RealDataBuffer = core::DataBuffer<backend::CpuTag, double>;
-using ComplexDataBuffer = core::DataBuffer<backend::CpuTag, std::complex<double>>;
+using RealDataBuffer = core::DataBuffer<backend::CPUTag, double>;
+using ComplexDataBuffer = core::DataBuffer<backend::CPUTag, std::complex<double>>;
 
 /**
  * @brief FFT backend selection
@@ -90,7 +90,7 @@ struct IHostFFT : IFFTQueries {
 /**
  * @brief Device-buffer FFT for one memory space (`DataBuffer` transforms).
  *
- * Instantiating `IDeviceFFT<CudaSpace>` / `IDeviceFFT<HipSpace>` requires the
+ * Instantiating `IDeviceFFT<CUDASpace>` / `IDeviceFFT<HIPSpace>` requires the
  * matching runtime memory-space header so `memory_space_to_backend_t` is
  * defined. Double is the interface precision; float overloads stay on the
  * concrete `FFT_Impl`.

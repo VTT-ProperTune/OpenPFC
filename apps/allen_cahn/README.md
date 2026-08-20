@@ -13,7 +13,7 @@ Minimal 2D Allen–Cahn example on a structured grid: explicit time stepping, fi
 |--------|------------|
 | `allen_cahn` | CPU (always when apps are enabled) |
 | `allen_cahn_cuda` | `OpenPFC_ENABLE_CUDA` |
-| `allen_cahn_hip` | `OpenPFC_ENABLE_HIP`. Device-resident `SparseExchange<HipSpace>` (rank 0 prints `ALLEN_CAHN_HIP_HALO_MODE`). |
+| `allen_cahn_hip` | `OpenPFC_ENABLE_HIP`. Device-resident `SparseExchange<HIPSpace>` (rank 0 prints `ALLEN_CAHN_HIP_HALO_MODE`). |
 
 ## Build
 

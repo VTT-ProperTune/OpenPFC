@@ -89,9 +89,9 @@ TEST_CASE("CPU vs HIP Laplacian equivalence (multi-rank) [integration][gpu][hip]
   std::vector<double> real_out_cpu(n_in);
   fft_cpu.backward(freq_cpu, real_out_cpu);
 
-  core::DataBuffer<backend::HipTag, double> real_in_gpu(n_in);
-  core::DataBuffer<backend::HipTag, double> real_out_gpu(n_in);
-  core::DataBuffer<backend::HipTag, std::complex<double>> freq_gpu(n_out);
+  core::DataBuffer<backend::HIPTag, double> real_in_gpu(n_in);
+  core::DataBuffer<backend::HIPTag, double> real_out_gpu(n_in);
+  core::DataBuffer<backend::HIPTag, std::complex<double>> freq_gpu(n_out);
 
   real_in_gpu.copy_from_host(real_in_cpu);
   fft_gpu.forward(real_in_gpu, freq_gpu);

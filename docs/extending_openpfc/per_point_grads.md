@@ -11,7 +11,7 @@ OpenPFC's point-wise driver loop, [`pfc::sim::for_each_interior`](../../include/
 du[{i,j,k}] = model.rhs(t, eval(i,j,k))
 ```
 
-The `eval(i,j,k)` call returns a **model-owned aggregate** that names exactly the partial derivatives the model needs, drawn from a fixed catalog. The kernel's per-point evaluators (`pfc::gradient::FDGradient<G>`, `pfc::field::SpectralGradient<G>`; `pfc::field::FdGradient<G>` is a deprecated alias retained for source compatibility) are templated on that aggregate `G` and use C++20 concepts to fill **only the members `G` declares** — no wasted FFTs, no wasted stencil sweeps.
+The `eval(i,j,k)` call returns a **model-owned aggregate** that names exactly the partial derivatives the model needs, drawn from a fixed catalog. The kernel's per-point evaluators (`pfc::gradient::FDGradient<G>`, `pfc::field::SpectralGradient<G>`; `pfc::field::FDGradient<G>` is a deprecated alias retained for source compatibility) are templated on that aggregate `G` and use C++20 concepts to fill **only the members `G` declares** — no wasted FFTs, no wasted stencil sweeps.
 
 This page is the contract reference: which catalog members the kernel knows about, how a model declares its needs, what each backend can and cannot supply, and how to bundle multiple fields into one composite per-point view.
 
@@ -59,7 +59,7 @@ struct HeatModel {
 };
 ```
 
-The **spectral** compact driver wires the evaluator behind `pfc::sim::DuField` so the user-facing time loop reads like the math. **`heat3d_spectral_pointwise`** uses `SpectralCpuStack`:
+The **spectral** compact driver wires the evaluator behind `pfc::sim::DuField` so the user-facing time loop reads like the math. **`heat3d_spectral_pointwise`** uses `SpectralCPUStack`:
 
 ```cpp
 auto& u  = stack.u();
@@ -86,7 +86,7 @@ for (int step = 0; step < n_steps; ++step) {
 }
 ```
 
-`pfc::communication::exchange` is the blocking one-shot; `start_exchange` / `finish_exchange` live in the same namespace for overlap. `pfc::gradient::evaluate` and the dimension-agnostic `pfc::Int3` callback keep the inner loop readable without hiding the halo or the evaluator. Programmatic code that needs an FFT-safe unpadded core continues to use **`FdCpuStack`** (`stack.du<G>()` wires `SparseHaloExchanger` + face buffers + `FDGradient` behind `DuField`). For non-trivial multi-field models, `pfc::sim::steppers::create(...)` plus `pfc::field::CompositeGradient<...>` remains the right tool (see `apps/kobayashi`).
+`pfc::communication::exchange` is the blocking one-shot; `start_exchange` / `finish_exchange` live in the same namespace for overlap. `pfc::gradient::evaluate` and the dimension-agnostic `pfc::Int3` callback keep the inner loop readable without hiding the halo or the evaluator. Programmatic code that needs an FFT-safe unpadded core continues to use **`FDCPUStack`** (`stack.du<G>()` wires `SparseHaloExchanger` + face buffers + `FDGradient` behind `DuField`). For non-trivial multi-field models, `pfc::sim::steppers::create(...)` plus `pfc::field::CompositeGradient<...>` remains the right tool (see `apps/kobayashi`).
 
 ## Backend capability matrix
 
@@ -95,14 +95,14 @@ Different backends can fulfill different subsets of the catalog. Asking for a me
 | Backend | `value` | `x/y/z` | `xx/yy/zz` | `xy/xz/yz` |
 |---------|---------|---------|------------|------------|
 | `pfc::gradient::FDGradient<G>` | yes | yes — D1 orders 2..14 | yes — D2 orders 2..20 | not yet (host 26-fill via `pfc::communication::FullPaddedHaloExchanger`; member enablement is a follow-up — see also `pfc::cuda::FullPaddedDeviceHalo`) |
-| `pfc::cuda::FdGradientDevice<G>` / `pfc::hip::FdGradientDevice<G>` | yes | yes — D1 orders 2..14 | yes — D2 orders 2..20 | yes — D1⊗D1 when paired with [`FullPaddedDeviceHalo`](../../include/openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp) (vendor headers are thin includes) |
+| `pfc::cuda::FDGradientDevice<G>` / `pfc::hip::FDGradientDevice<G>` | yes | yes — D1 orders 2..14 | yes — D2 orders 2..20 | yes — D1⊗D1 when paired with [`FullPaddedDeviceHalo`](../../include/openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp) (vendor headers are thin includes) |
 | `pfc::field::SpectralGradient<G>` | yes | yes (via `i k_i`) | yes (via `-k_i^2`) | yes (via `-k_i k_j`) |
 
-`FDGradient<G>`'s constructor consults `pfc::field::has_*<G>` for every member individually and throws `std::invalid_argument` if the requested `order` falls outside the tabulated range for any declared member (so a model that asks for `g.x` at order 16 surfaces as a clean error at construction time, not as silent zeros at runtime). The same fail-closed posture applies when `halo_width` is strictly less than the stencil half-width required by those members (`order/2` for tabulated even central D1/D2): both the CPU evaluator and the CUDA/HIP `FdGradientDevice` twins throw `std::invalid_argument` before any stencil read or kernel launch. Brick Laplacians (`laplacian_interior` and siblings) likewise throw instead of silently returning when `halo_width < Order/2`.
+`FDGradient<G>`'s constructor consults `pfc::field::has_*<G>` for every member individually and throws `std::invalid_argument` if the requested `order` falls outside the tabulated range for any declared member (so a model that asks for `g.x` at order 16 surfaces as a clean error at construction time, not as silent zeros at runtime). The same fail-closed posture applies when `halo_width` is strictly less than the stencil half-width required by those members (`order/2` for tabulated even central D1/D2): both the CPU evaluator and the CUDA/HIP `FDGradientDevice` twins throw `std::invalid_argument` before any stencil read or kernel launch. Brick Laplacians (`laplacian_interior` and siblings) likewise throw instead of silently returning when `halo_width < Order/2`.
 
 When new requirements show up:
 - **FD higher-order first derivatives**: extend `EvenCentralD1<Order>` in [`fd_stencils.hpp`](../../include/openpfc/kernel/field/fd_stencils.hpp) — the closed form `c_k = (-1)^{k+1} (M!)^2 / (k (M-k)! (M+k)!)` produces the rational coefficients; build the integer table with their lowest common denominator and add the matching `lookup_even_central_d1` case.
-- **FD mixed seconds (`xy/xz/yz`)**: device evaluators (`pfc::cuda::FdGradientDevice` / `pfc::hip::FdGradientDevice` in [`fd_gradient_device_gpu.hpp`](../../include/openpfc/runtime/gpu/fd_gradient_device_gpu.hpp)) already populate them via separable D1⊗D1 when the padded buffer has corner-filled ghosts ([`FullPaddedDeviceHalo`](../../include/openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp)). Host plumbing for the matching CPU path is [`pfc::communication::FullPaddedHaloExchanger`](../../include/openpfc/kernel/decomposition/full_padded_halo_exchange.hpp) (3-pass widening, 26-direction); host `FDGradient<G>` still compile-rejects mixed seconds until that follow-up lands. Until then, `SpectralGradient<G>` is the right CPU path for models that need cross terms.
+- **FD mixed seconds (`xy/xz/yz`)**: device evaluators (`pfc::cuda::FDGradientDevice` / `pfc::hip::FDGradientDevice` in [`fd_gradient_device_gpu.hpp`](../../include/openpfc/runtime/gpu/fd_gradient_device_gpu.hpp)) already populate them via separable D1⊗D1 when the padded buffer has corner-filled ghosts ([`FullPaddedDeviceHalo`](../../include/openpfc/runtime/gpu/full_padded_device_halo_gpu.hpp)). Host plumbing for the matching CPU path is [`pfc::communication::FullPaddedHaloExchanger`](../../include/openpfc/kernel/decomposition/full_padded_halo_exchange.hpp) (3-pass widening, 26-direction); host `FDGradient<G>` still compile-rejects mixed seconds until that follow-up lands. Until then, `SpectralGradient<G>` is the right CPU path for models that need cross terms.
 
 ## Custom stencils — Sobel, CNN-style filters, anisotropic FD
 

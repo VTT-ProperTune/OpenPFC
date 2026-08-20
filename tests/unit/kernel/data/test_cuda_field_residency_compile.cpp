@@ -26,7 +26,7 @@ struct CompileCheck {
         auto local_box = Box3i::from_bounds({0, 0, 0}, {9, 0, 0});
 
         // Instantiate a small CUDA-backed field with no halo
-        data::Field<double, pfc::CudaSpace> field(domain, local_box, 0);
+        data::Field<double, pfc::CUDASpace> field(domain, local_box, 0);
 
         // Call device-specific methods to pull CUDA residency branch into compilation.
         field.sync_to_device();

@@ -6,7 +6,7 @@
  * @brief Shared JSON-driven helpers for building the CPU HeFFTe spectral stack
  *
  * @details
- * `SpectralCpuStack` uses these functions so plan options and FFT construction
+ * `SpectralCPUStack` uses these functions so plan options and FFT construction
  * live in one place. GPU JSON plan helpers live in
  * `spectral_fft_stack_factory.hpp` (Phase C).
  */
@@ -36,7 +36,7 @@ inline std::string lowercase_ascii(std::string s) {
   return s;
 }
 
-/** Reject GPU backend on the JSON → `SpectralCpuStack` / `CpuFFT` path. */
+/** Reject GPU backend on the JSON → `SpectralCPUStack` / `CPUFFT` path. */
 inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &plan) {
   if (!plan.contains("backend") || !plan["backend"].is_string()) {
     return;
@@ -44,7 +44,7 @@ inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &pla
   const std::string b = lowercase_ascii(plan["backend"].get<std::string>());
   if (b == "cuda") {
     throw std::invalid_argument(
-        "SpectralCpuStack builds fft::CpuFFT (FFTW). plan_options.backend "
+        "SpectralCPUStack builds fft::CPUFFT (FFTW). plan_options.backend "
         "\"cuda\" is not supported on this path. Use \"fftw\", omit backend, or "
         "use a GPU-specific application driver.");
   }
@@ -62,7 +62,7 @@ inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &pla
  * JSON file can drive both helpers consistently.
  *
  * `backend: \"cuda\"` is rejected here: this path always constructs CPU HeFFTe
- * (`fft::create` → `CpuFFT`).
+ * (`fft::create` → `CPUFFT`).
  */
 [[nodiscard]] inline heffte::plan_options
 cpu_spectral_plan_options_from_json(const nlohmann::json &settings) {
@@ -75,11 +75,11 @@ cpu_spectral_plan_options_from_json(const nlohmann::json &settings) {
 }
 
 /**
- * @brief Construct `fft::CpuFFT` for a decomposition using JSON plan options
+ * @brief Construct `fft::CPUFFT` for a decomposition using JSON plan options
  *
  * Centralizes `fft::layout::create` + `fft::create` for the CPU spectral path.
  */
-[[nodiscard]] inline fft::CpuFFT
+[[nodiscard]] inline fft::CPUFFT
 cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
                                     const decomposition::Decomposition &decomp,
                                     int rank_id, MPI_Comm comm) {

@@ -100,7 +100,7 @@ inline void scatter(DuOut &du, std::size_t k, const Inc &inc) {
  *                is the grads aggregate `Eval` returns and `Inc` is either
  *                a scalar (single-field) or a tuple-protocol bundle
  *                (multi-field).
- * @tparam Eval   Per-point evaluator (e.g. `pfc::field::FdGradient<G>`).
+ * @tparam Eval   Per-point evaluator (e.g. `pfc::field::FDGradient<G>`).
  * @tparam DuOut  Either `double*` (single-field) or a tuple-protocol
  *                bundle of `double*` (multi-field).
  *

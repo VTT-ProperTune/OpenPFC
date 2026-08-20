@@ -10,7 +10,7 @@
  * @details
  * Index-set counterpart of `HaloExchange`. This increment is **host-only**:
  * it composes `SparseHaloExchanger` so callers can move onto the new name
- * before that class is deleted. Device `SparseExchange<CudaSpace/HipSpace>`
+ * before that class is deleted. Device `SparseExchange<CUDASpace/HIPSpace>`
  * lives in `runtime/gpu/comm_sparse_exchange_gpu.hpp` and keeps gather /
  * scatter on the device (no per-step full-field D2H).
  *

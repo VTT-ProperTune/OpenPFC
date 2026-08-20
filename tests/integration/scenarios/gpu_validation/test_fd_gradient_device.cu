@@ -3,12 +3,12 @@
 
 /**
  * @file test_fd_gradient_device.cu
- * @brief Integration test for `pfc::cuda::FdGradientDevice<G>` and
+ * @brief Integration test for `pfc::cuda::FDGradientDevice<G>` and
  *        `pfc::sim::cuda::for_each_interior_device`.
  *
  * @details
  * The GPU twin must produce **the same numerical result** as the CPU
- * `pfc::field::FdGradient<G>` + `pfc::sim::for_each_interior` pipeline for
+ * `pfc::field::FDGradient<G>` + `pfc::sim::for_each_interior` pipeline for
  * every model that the SymPy-generated kernel codegen path will eventually
  * hit. We pin the contract here on a small interior brick where:
  *
@@ -128,7 +128,7 @@ bool cuda_runtime_available() {
 
 } // namespace
 
-TEST_CASE("for_each_interior_device + FdGradientDevice<G> agree with the "
+TEST_CASE("for_each_interior_device + FDGradientDevice<G> agree with the "
           "analytic polynomial RHS",
           "[cuda][fd_gradient_device][integration]") {
   if (!cuda_runtime_available()) {
@@ -187,7 +187,7 @@ TEST_CASE("for_each_interior_device + FdGradientDevice<G> agree with the "
                      cudaMemcpyHostToDevice) == cudaSuccess);
   REQUIRE(cudaMemset(d_du, 0, total * sizeof(double)) == cudaSuccess);
 
-  pfc::cuda::FdGradientDevice<TestGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
+  pfc::cuda::FDGradientDevice<TestGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
                                               order);
   TestModel model;
 
@@ -242,7 +242,7 @@ TEST_CASE("for_each_interior_device + FdGradientDevice<G> agree with the "
   cudaFree(d_du);
 }
 
-TEST_CASE("FdGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
+TEST_CASE("FDGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
           "[cuda][fd_gradient_device][integration]") {
   if (!cuda_runtime_available()) {
     SUCCEED("Skipping: no CUDA device on this host.");
@@ -287,7 +287,7 @@ TEST_CASE("FdGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
                      cudaMemcpyHostToDevice) == cudaSuccess);
   REQUIRE(cudaMemset(d_du, 0, total * sizeof(double)) == cudaSuccess);
 
-  pfc::cuda::FdGradientDevice<MixedGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
+  pfc::cuda::FDGradientDevice<MixedGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
                                                order);
   MixedModel model;
   pfc::sim::cuda::for_each_interior_device<MixedModel, MixedGrads>(
@@ -331,7 +331,7 @@ TEST_CASE("FdGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
   cudaFree(d_du);
 }
 
-TEST_CASE("FdGradientDevice mixed-only OnlyXY loads D1 weights",
+TEST_CASE("FDGradientDevice mixed-only OnlyXY loads D1 weights",
           "[cuda][fd_gradient_device][integration]") {
   if (!cuda_runtime_available()) {
     SUCCEED("Skipping: no CUDA device on this host.");
@@ -348,7 +348,7 @@ TEST_CASE("FdGradientDevice mixed-only OnlyXY loads D1 weights",
   double *d_u = nullptr;
   REQUIRE(cudaMalloc(&d_u, total) == cudaSuccess);
 
-  pfc::cuda::FdGradientDevice<OnlyXY> eval(d_u, nx, ny, nz, 1.0, 1.0, 1.0, hw,
+  pfc::cuda::FDGradientDevice<OnlyXY> eval(d_u, nx, ny, nz, 1.0, 1.0, 1.0, hw,
                                            order);
   const auto &pod = eval.pod();
   REQUIRE(pod.hw1 == 1);
@@ -358,7 +358,7 @@ TEST_CASE("FdGradientDevice mixed-only OnlyXY loads D1 weights",
   cudaFree(d_u);
 }
 
-TEST_CASE("FdGradientDevice<G> ctor rejects an order without a D1 stencil table",
+TEST_CASE("FDGradientDevice<G> ctor rejects an order without a D1 stencil table",
           "[cuda][fd_gradient_device][integration]") {
   if (!cuda_runtime_available()) {
     SUCCEED("Skipping: no CUDA device on this host.");
@@ -376,7 +376,7 @@ TEST_CASE("FdGradientDevice<G> ctor rejects an order without a D1 stencil table"
 
   double *d_u = nullptr;
   REQUIRE(cudaMalloc(&d_u, total) == cudaSuccess);
-  REQUIRE_THROWS_AS((pfc::cuda::FdGradientDevice<OnlyX>(d_u, nx, ny, nz, 1.0, 1.0,
+  REQUIRE_THROWS_AS((pfc::cuda::FDGradientDevice<OnlyX>(d_u, nx, ny, nz, 1.0, 1.0,
                                                         1.0, hw, order)),
                     std::invalid_argument);
   cudaFree(d_u);

@@ -55,8 +55,8 @@ TEST_CASE("HIP FFT: Forward transform", "[gpu][fft][hip]") {
   // Cray MPICH types MPI_Comm as int, so the two-arg overload is ambiguous.
   auto gpu_fft = pfc::fft::create_hip(decomp, rank_id, MPI_COMM_WORLD);
 
-  pfc::core::DataBuffer<pfc::backend::HipTag, double> input(gpu_fft.size_inbox());
-  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> output(
+  pfc::core::DataBuffer<pfc::backend::HIPTag, double> input(gpu_fft.size_inbox());
+  pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> output(
       gpu_fft.size_outbox());
 
   std::vector<double> input_host(gpu_fft.size_inbox(), 1.0);
@@ -98,9 +98,9 @@ TEST_CASE("HIP FFT: Backward transform", "[gpu][fft][hip]") {
   // Cray MPICH types MPI_Comm as int, so the two-arg overload is ambiguous.
   auto gpu_fft = pfc::fft::create_hip(decomp, rank_id, MPI_COMM_WORLD);
 
-  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> input(
+  pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> input(
       gpu_fft.size_outbox());
-  pfc::core::DataBuffer<pfc::backend::HipTag, double> output(gpu_fft.size_inbox());
+  pfc::core::DataBuffer<pfc::backend::HIPTag, double> output(gpu_fft.size_inbox());
 
   std::vector<std::complex<double>> input_host(gpu_fft.size_outbox(), 0.0);
   if (input_host.size() > 0) {
@@ -145,16 +145,16 @@ TEST_CASE("HIP FFT: Round-trip (forward then backward)", "[gpu][fft][hip]") {
   // Cray MPICH types MPI_Comm as int, so the two-arg overload is ambiguous.
   auto gpu_fft = pfc::fft::create_hip(decomp, rank_id, MPI_COMM_WORLD);
 
-  pfc::core::DataBuffer<pfc::backend::HipTag, double> input(gpu_fft.size_inbox());
+  pfc::core::DataBuffer<pfc::backend::HIPTag, double> input(gpu_fft.size_inbox());
   std::vector<double> input_host(gpu_fft.size_inbox());
   for (size_t i = 0; i < input_host.size(); ++i) {
     input_host[i] = static_cast<double>(i % 2);
   }
   input.copy_from_host(input_host);
 
-  pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> fourier(
+  pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> fourier(
       gpu_fft.size_outbox());
-  pfc::core::DataBuffer<pfc::backend::HipTag, double> output(gpu_fft.size_inbox());
+  pfc::core::DataBuffer<pfc::backend::HIPTag, double> output(gpu_fft.size_inbox());
 
   gpu_fft.forward(input, fourier);
   gpu_fft.backward(fourier, output);

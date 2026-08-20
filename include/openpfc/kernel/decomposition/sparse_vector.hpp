@@ -21,7 +21,7 @@
  * @code
  * // Create sparse vector with indices
  * std::vector<size_t> indices = {2, 4, 6};
- * auto sparse = pfc::core::SparseVector<pfc::backend::CpuTag, double>(indices);
+ * auto sparse = pfc::core::SparseVector<pfc::backend::CPUTag, double>(indices);
  *
  * // Gather values from source array
  * std::vector<double> source = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0};
@@ -58,31 +58,31 @@ template <typename> inline constexpr bool dependent_false_sparse_vector = false;
 template <typename BackendTag>
 void copy_indices_to_device_impl(DataBuffer<BackendTag, size_t> &buf, size_t n,
                                  const std::vector<size_t> &host_indices) {
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     std::copy_n(host_indices.begin(), n, buf.data());
   } else {
     static_assert(
         dependent_false_sparse_vector<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/sparse_vector_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/sparse_vector_gpu.hpp");
   }
 }
 
 template <typename BackendTag, typename T>
 void copy_data_to_device_impl(DataBuffer<BackendTag, T> &buf, size_t n,
                               const std::vector<T> &host_data) {
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     std::copy_n(host_data.begin(), n, buf.data());
   } else {
     static_assert(
         dependent_false_sparse_vector<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/sparse_vector_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/sparse_vector_gpu.hpp");
   }
 }
 
 } // namespace detail
 
 // Alias for backward compatibility
-using HostTag = backend::CpuTag;
+using HostTag = backend::CPUTag;
 
 /**
  * @brief Sparse vector for indexed data views
@@ -90,7 +90,7 @@ using HostTag = backend::CpuTag;
  * Represents a sparse view into selected entries of a dense array.
  * Indices are automatically sorted for optimal memory access.
  *
- * @tparam BackendTag Backend tag (CpuTag, CudaTag, HipTag)
+ * @tparam BackendTag Backend tag (CPUTag, CUDATag, HIPTag)
  * @tparam T Element type (must be trivially copyable for GPU backends)
  */
 template <typename BackendTag, typename T> class SparseVector {
@@ -223,7 +223,7 @@ private:
 template <typename BackendTag, typename T>
 bool on_host(const SparseVector<BackendTag, T> &vec) {
   (void)vec; // Unused parameter
-  return std::is_same_v<BackendTag, backend::CpuTag>;
+  return std::is_same_v<BackendTag, backend::CPUTag>;
 }
 
 } // namespace core
@@ -232,12 +232,12 @@ bool on_host(const SparseVector<BackendTag, T> &vec) {
 namespace sparsevector {
 
 // Alias for backward compatibility
-using HostTag = backend::CpuTag;
+using HostTag = backend::CPUTag;
 
 /**
  * @brief Create empty SparseVector
  */
-template <typename T, typename BackendTag = backend::CpuTag>
+template <typename T, typename BackendTag = backend::CPUTag>
 [[nodiscard]] core::SparseVector<BackendTag, T> create(size_t size) {
   return core::SparseVector<BackendTag, T>(size);
 }
@@ -245,7 +245,7 @@ template <typename T, typename BackendTag = backend::CpuTag>
 /**
  * @brief Create SparseVector with indices (from initializer list)
  */
-template <typename T, typename BackendTag = backend::CpuTag>
+template <typename T, typename BackendTag = backend::CPUTag>
 [[nodiscard]] core::SparseVector<BackendTag, T>
 create(std::initializer_list<size_t> indices) {
   return core::SparseVector<BackendTag, T>(std::vector<size_t>(indices));
@@ -254,7 +254,7 @@ create(std::initializer_list<size_t> indices) {
 /**
  * @brief Create SparseVector with indices (from vector)
  */
-template <typename T, typename BackendTag = backend::CpuTag>
+template <typename T, typename BackendTag = backend::CPUTag>
 [[nodiscard]] core::SparseVector<BackendTag, T>
 create(const std::vector<size_t> &indices) {
   return core::SparseVector<BackendTag, T>(indices);
@@ -263,7 +263,7 @@ create(const std::vector<size_t> &indices) {
 /**
  * @brief Create SparseVector with indices and data
  */
-template <typename T, typename BackendTag = backend::CpuTag>
+template <typename T, typename BackendTag = backend::CPUTag>
 [[nodiscard]] core::SparseVector<BackendTag, T>
 create(const std::vector<size_t> &indices, const std::vector<T> &data) {
   return core::SparseVector<BackendTag, T>(indices, data);
@@ -286,7 +286,7 @@ size_t get_size(const core::SparseVector<BackendTag, T> &vec) {
 template <typename BackendTag, typename T>
 void set_index(core::SparseVector<BackendTag, T> &vec,
                const std::vector<size_t> &indices) {
-  static_assert(std::is_same_v<BackendTag, backend::CpuTag>,
+  static_assert(std::is_same_v<BackendTag, backend::CPUTag>,
                 "set_index only available for CPU");
   // Recreate vector with new indices
   // This is a workaround for testing - in production, create new SparseVector
@@ -299,7 +299,7 @@ void set_index(core::SparseVector<BackendTag, T> &vec,
  */
 template <typename BackendTag, typename T>
 void set_data(core::SparseVector<BackendTag, T> &vec, const std::vector<T> &data) {
-  static_assert(std::is_same_v<BackendTag, backend::CpuTag>,
+  static_assert(std::is_same_v<BackendTag, backend::CPUTag>,
                 "set_data only available for CPU");
   if (data.size() != vec.size()) {
     throw std::runtime_error("set_data: size mismatch");
@@ -314,7 +314,7 @@ void set_data(core::SparseVector<BackendTag, T> &vec, const std::vector<T> &data
  */
 template <typename BackendTag, typename T>
 std::vector<size_t> get_index(const core::SparseVector<BackendTag, T> &vec) {
-  static_assert(std::is_same_v<BackendTag, backend::CpuTag>,
+  static_assert(std::is_same_v<BackendTag, backend::CPUTag>,
                 "get_index only available for CPU");
   std::vector<size_t> result(vec.size());
   std::copy(vec.indices().data(), vec.indices().data() + vec.size(), result.begin());
@@ -326,7 +326,7 @@ std::vector<size_t> get_index(const core::SparseVector<BackendTag, T> &vec) {
  */
 template <typename BackendTag, typename T>
 std::vector<T> get_data(const core::SparseVector<BackendTag, T> &vec) {
-  static_assert(std::is_same_v<BackendTag, backend::CpuTag>,
+  static_assert(std::is_same_v<BackendTag, backend::CPUTag>,
                 "get_data only available for CPU");
   std::vector<T> result(vec.size());
   std::copy(vec.data().data(), vec.data().data() + vec.size(), result.begin());
@@ -338,7 +338,7 @@ std::vector<T> get_data(const core::SparseVector<BackendTag, T> &vec) {
  */
 template <typename BackendTag, typename T>
 size_t get_index(const core::SparseVector<BackendTag, T> &vec, size_t i) {
-  static_assert(std::is_same_v<BackendTag, backend::CpuTag>,
+  static_assert(std::is_same_v<BackendTag, backend::CPUTag>,
                 "get_index only available for CPU");
   return vec.indices().data()[i];
 }
@@ -348,7 +348,7 @@ size_t get_index(const core::SparseVector<BackendTag, T> &vec, size_t i) {
  */
 template <typename BackendTag, typename T>
 T get_data(const core::SparseVector<BackendTag, T> &vec, size_t i) {
-  static_assert(std::is_same_v<BackendTag, backend::CpuTag>,
+  static_assert(std::is_same_v<BackendTag, backend::CPUTag>,
                 "get_data only available for CPU");
   return vec.data().data()[i];
 }
@@ -359,7 +359,7 @@ T get_data(const core::SparseVector<BackendTag, T> &vec, size_t i) {
 template <typename BackendTag, typename T>
 std::pair<size_t, T> get_entry(const core::SparseVector<BackendTag, T> &vec,
                                size_t i) {
-  static_assert(std::is_same_v<BackendTag, backend::CpuTag>,
+  static_assert(std::is_same_v<BackendTag, backend::CPUTag>,
                 "get_entry only available for CPU");
   return {vec.indices().data()[i], vec.data().data()[i]};
 }

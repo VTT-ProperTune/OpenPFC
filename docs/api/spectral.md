@@ -27,9 +27,9 @@ API below.
 :no-link:
 ```
 
-## `pfc::fft::CpuFFT`
+## `pfc::fft::CPUFFT`
 
-```{doxygenclass} pfc::fft::CpuFFT
+```{doxygenclass} pfc::fft::CPUFFT
 :project: OpenPFC
 :members:
 :protected-members:

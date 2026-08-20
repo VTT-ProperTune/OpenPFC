@@ -39,9 +39,9 @@ TEST_CASE("HIP FFT roundtrip (double) [integration][gpu][hip]", "[gpu][hip]") {
   // Cray MPICH types MPI_Comm as int, so the two-arg overload is ambiguous.
   auto fft = fft::create_hip(decomp, rank, MPI_COMM_WORLD);
 
-  core::DataBuffer<backend::HipTag, double> real_in(fft.size_inbox());
-  core::DataBuffer<backend::HipTag, double> real_out(fft.size_inbox());
-  core::DataBuffer<backend::HipTag, std::complex<double>> freq(fft.size_outbox());
+  core::DataBuffer<backend::HIPTag, double> real_in(fft.size_inbox());
+  core::DataBuffer<backend::HIPTag, double> real_out(fft.size_inbox());
+  core::DataBuffer<backend::HIPTag, std::complex<double>> freq(fft.size_outbox());
 
   std::vector<double> host_in(fft.size_inbox());
   for (size_t i = 0; i < host_in.size(); ++i) {
@@ -51,7 +51,7 @@ TEST_CASE("HIP FFT roundtrip (double) [integration][gpu][hip]", "[gpu][hip]") {
   }
   real_in.copy_from_host(host_in);
 
-  fft::IDeviceFFT<HipSpace> &iface = fft;
+  fft::IDeviceFFT<HIPSpace> &iface = fft;
   iface.forward(real_in, freq);
   iface.backward(freq, real_out);
 
@@ -74,9 +74,9 @@ TEST_CASE("HIP FFT roundtrip (float) [integration][gpu][hip]", "[gpu][hip]") {
 
   auto fft = fft::create_hip(decomp, rank, MPI_COMM_WORLD);
 
-  core::DataBuffer<backend::HipTag, float> real_in(fft.size_inbox());
-  core::DataBuffer<backend::HipTag, float> real_out(fft.size_inbox());
-  core::DataBuffer<backend::HipTag, std::complex<float>> freq(fft.size_outbox());
+  core::DataBuffer<backend::HIPTag, float> real_in(fft.size_inbox());
+  core::DataBuffer<backend::HIPTag, float> real_out(fft.size_inbox());
+  core::DataBuffer<backend::HIPTag, std::complex<float>> freq(fft.size_outbox());
 
   std::vector<float> host_in(fft.size_inbox());
   for (size_t i = 0; i < host_in.size(); ++i) {

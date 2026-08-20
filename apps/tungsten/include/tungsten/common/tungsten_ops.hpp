@@ -40,7 +40,7 @@ namespace ops {
  * Computes the element-wise product of a complex field and a real field.
  * Used for applying mean-field filters in Fourier space.
  *
- * @tparam BackendTag Backend tag (CpuTag, CudaTag, etc.)
+ * @tparam BackendTag Backend tag (CPUTag, CUDATag, etc.)
  * @tparam RealType Real number type (float or double)
  * @param a Complex field (input)
  * @param b Real field (input)
@@ -59,7 +59,7 @@ void multiply_complex_real(
  *
  * Computes the Tungsten-specific nonlinear term in real space.
  *
- * @tparam BackendTag Backend tag (CpuTag, CudaTag, etc.)
+ * @tparam BackendTag Backend tag (CPUTag, CUDATag, etc.)
  * @tparam RealType Real number type (float or double)
  * @param u First field (input)
  * @param v Second field (input)
@@ -82,7 +82,7 @@ void compute_nonlinear(const pfc::core::DataBuffer<BackendTag, RealType> &u,
  *
  * Applies a Tungsten-specific stabilization term to a field.
  *
- * @tparam BackendTag Backend tag (CpuTag, CudaTag, etc.)
+ * @tparam BackendTag Backend tag (CPUTag, CUDATag, etc.)
  * @tparam RealType Real number type (float or double)
  * @param in Input field
  * @param field Field to subtract
@@ -107,7 +107,7 @@ void apply_stabilization(const pfc::core::DataBuffer<BackendTag, RealType> &in,
  * names @c opL / @c opN are historical aliases for those spans — not
  * Model-owned coefficient members.
  *
- * @tparam BackendTag Backend tag (CpuTag, CudaTag, etc.)
+ * @tparam BackendTag Backend tag (CPUTag, CUDATag, etc.)
  * @tparam RealType Real number type (float or double)
  * @param psi_F Current state in Fourier space
  * @param psiN_F Nonlinear term in Fourier space
@@ -131,11 +131,11 @@ namespace detail {
 template <typename BackendTag, typename RealType = double> struct TungstenOps;
 
 // CPU specialization for double precision
-template <> struct TungstenOps<pfc::backend::CpuTag, double> {
+template <> struct TungstenOps<pfc::backend::CPUTag, double> {
   static void multiply_complex_real_impl(
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<double>> &a,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, double> &b,
-      pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<double>> &out) {
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<double>> &a,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, double> &b,
+      pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<double>> &out) {
     const size_t N = a.size();
     if (b.size() != N || out.size() != N) {
       throw std::runtime_error("Size mismatch in multiply_complex_real");
@@ -146,10 +146,10 @@ template <> struct TungstenOps<pfc::backend::CpuTag, double> {
   }
 
   static void compute_nonlinear_impl(
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, double> &u,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, double> &v, double p3,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, double> &u,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, double> &v, double p3,
       double p4, double q3, double q4,
-      pfc::core::DataBuffer<pfc::backend::CpuTag, double> &out) {
+      pfc::core::DataBuffer<pfc::backend::CPUTag, double> &out) {
     const size_t N = u.size();
     if (v.size() != N || out.size() != N) {
       throw std::runtime_error("Size mismatch in compute_nonlinear");
@@ -166,9 +166,9 @@ template <> struct TungstenOps<pfc::backend::CpuTag, double> {
   }
 
   static void apply_stabilization_impl(
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, double> &in,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, double> &field, double stabP,
-      pfc::core::DataBuffer<pfc::backend::CpuTag, double> &out) {
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, double> &in,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, double> &field, double stabP,
+      pfc::core::DataBuffer<pfc::backend::CPUTag, double> &out) {
     const size_t N = in.size();
     if (field.size() != N || out.size() != N) {
       throw std::runtime_error("Size mismatch in apply_stabilization");
@@ -179,12 +179,12 @@ template <> struct TungstenOps<pfc::backend::CpuTag, double> {
   }
 
   static void apply_time_integration_impl(
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<double>> &psi_F,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<double>>
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<double>> &psi_F,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<double>>
           &psiN_F,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, double> &opL,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, double> &opN,
-      pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<double>> &out) {
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, double> &opL,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, double> &opN,
+      pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<double>> &out) {
     const size_t N = psi_F.size();
     if (psiN_F.size() != N || opL.size() != N || opN.size() != N ||
         out.size() != N) {
@@ -197,11 +197,11 @@ template <> struct TungstenOps<pfc::backend::CpuTag, double> {
 };
 
 // CPU specialization for float precision
-template <> struct TungstenOps<pfc::backend::CpuTag, float> {
+template <> struct TungstenOps<pfc::backend::CPUTag, float> {
   static void multiply_complex_real_impl(
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<float>> &a,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, float> &b,
-      pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<float>> &out) {
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<float>> &a,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, float> &b,
+      pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<float>> &out) {
     const size_t N = a.size();
     if (b.size() != N || out.size() != N) {
       throw std::runtime_error("Size mismatch in multiply_complex_real");
@@ -212,10 +212,10 @@ template <> struct TungstenOps<pfc::backend::CpuTag, float> {
   }
 
   static void
-  compute_nonlinear_impl(const pfc::core::DataBuffer<pfc::backend::CpuTag, float> &u,
-                         const pfc::core::DataBuffer<pfc::backend::CpuTag, float> &v,
+  compute_nonlinear_impl(const pfc::core::DataBuffer<pfc::backend::CPUTag, float> &u,
+                         const pfc::core::DataBuffer<pfc::backend::CPUTag, float> &v,
                          float p3, float p4, float q3, float q4,
-                         pfc::core::DataBuffer<pfc::backend::CpuTag, float> &out) {
+                         pfc::core::DataBuffer<pfc::backend::CPUTag, float> &out) {
     const size_t N = u.size();
     if (v.size() != N || out.size() != N) {
       throw std::runtime_error("Size mismatch in compute_nonlinear");
@@ -232,9 +232,9 @@ template <> struct TungstenOps<pfc::backend::CpuTag, float> {
   }
 
   static void apply_stabilization_impl(
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, float> &in,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, float> &field, float stabP,
-      pfc::core::DataBuffer<pfc::backend::CpuTag, float> &out) {
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, float> &in,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, float> &field, float stabP,
+      pfc::core::DataBuffer<pfc::backend::CPUTag, float> &out) {
     const size_t N = in.size();
     if (field.size() != N || out.size() != N) {
       throw std::runtime_error("Size mismatch in apply_stabilization");
@@ -245,11 +245,11 @@ template <> struct TungstenOps<pfc::backend::CpuTag, float> {
   }
 
   static void apply_time_integration_impl(
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<float>> &psi_F,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<float>> &psiN_F,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, float> &opL,
-      const pfc::core::DataBuffer<pfc::backend::CpuTag, float> &opN,
-      pfc::core::DataBuffer<pfc::backend::CpuTag, std::complex<float>> &out) {
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<float>> &psi_F,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<float>> &psiN_F,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, float> &opL,
+      const pfc::core::DataBuffer<pfc::backend::CPUTag, float> &opN,
+      pfc::core::DataBuffer<pfc::backend::CPUTag, std::complex<float>> &out) {
     const size_t N = psi_F.size();
     if (psiN_F.size() != N || opL.size() != N || opN.size() != N ||
         out.size() != N) {
@@ -264,112 +264,112 @@ template <> struct TungstenOps<pfc::backend::CpuTag, float> {
 // CUDA specialization (only when CUDA is enabled)
 // Forward declarations - implementations in tungsten_ops_kernels.cu
 #if defined(OpenPFC_ENABLE_CUDA)
-template <> struct TungstenOps<pfc::backend::CudaTag, double> {
+template <> struct TungstenOps<pfc::backend::CUDATag, double> {
   static void multiply_complex_real_impl(
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> &a,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &b,
-      pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> &out);
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> &a,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &b,
+      pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> &out);
 
   static void compute_nonlinear_impl(
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &u,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &v, double p3,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &u,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &v, double p3,
       double p4, double q3, double q4,
-      pfc::core::DataBuffer<pfc::backend::CudaTag, double> &out);
+      pfc::core::DataBuffer<pfc::backend::CUDATag, double> &out);
 
   static void apply_stabilization_impl(
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &in,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &field,
-      double stabP, pfc::core::DataBuffer<pfc::backend::CudaTag, double> &out);
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &in,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &field,
+      double stabP, pfc::core::DataBuffer<pfc::backend::CUDATag, double> &out);
 
   static void apply_time_integration_impl(
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>>
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>>
           &psi_F,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>>
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>>
           &psiN_F,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &opL,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &opN,
-      pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> &out);
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &opL,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &opN,
+      pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> &out);
 };
 
-template <> struct TungstenOps<pfc::backend::CudaTag, float> {
+template <> struct TungstenOps<pfc::backend::CUDATag, float> {
   static void multiply_complex_real_impl(
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &a,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &b,
-      pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &out);
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &a,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &b,
+      pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &out);
 
   static void compute_nonlinear_impl(
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &u,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &v, float p3,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &u,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &v, float p3,
       float p4, float q3, float q4,
-      pfc::core::DataBuffer<pfc::backend::CudaTag, float> &out);
+      pfc::core::DataBuffer<pfc::backend::CUDATag, float> &out);
 
   static void apply_stabilization_impl(
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &in,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &field, float stabP,
-      pfc::core::DataBuffer<pfc::backend::CudaTag, float> &out);
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &in,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &field, float stabP,
+      pfc::core::DataBuffer<pfc::backend::CUDATag, float> &out);
 
   static void apply_time_integration_impl(
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &psi_F,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>>
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &psi_F,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>>
           &psiN_F,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &opL,
-      const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &opN,
-      pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &out);
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &opL,
+      const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &opN,
+      pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &out);
 };
 #endif // OpenPFC_ENABLE_CUDA
 
 #if defined(OpenPFC_ENABLE_HIP)
 // HIP specialization (forward declarations - implementations in
 // tungsten_ops_kernels.hip)
-template <> struct TungstenOps<pfc::backend::HipTag, double> {
+template <> struct TungstenOps<pfc::backend::HIPTag, double> {
   static void multiply_complex_real_impl(
-      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &a,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &b,
-      pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &out);
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &a,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &b,
+      pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &out);
 
   static void compute_nonlinear_impl(
-      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &u,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &v, double p3,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &u,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &v, double p3,
       double p4, double q3, double q4,
-      pfc::core::DataBuffer<pfc::backend::HipTag, double> &out);
+      pfc::core::DataBuffer<pfc::backend::HIPTag, double> &out);
 
   static void apply_stabilization_impl(
-      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &in,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &field, double stabP,
-      pfc::core::DataBuffer<pfc::backend::HipTag, double> &out);
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &in,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &field, double stabP,
+      pfc::core::DataBuffer<pfc::backend::HIPTag, double> &out);
 
   static void apply_time_integration_impl(
-      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &psi_F,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>>
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &psi_F,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>>
           &psiN_F,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &opL,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, double> &opN,
-      pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<double>> &out);
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &opL,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, double> &opN,
+      pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<double>> &out);
 };
 
-template <> struct TungstenOps<pfc::backend::HipTag, float> {
+template <> struct TungstenOps<pfc::backend::HIPTag, float> {
   static void multiply_complex_real_impl(
-      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &a,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &b,
-      pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &out);
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &a,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &b,
+      pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &out);
 
   static void
-  compute_nonlinear_impl(const pfc::core::DataBuffer<pfc::backend::HipTag, float> &u,
-                         const pfc::core::DataBuffer<pfc::backend::HipTag, float> &v,
+  compute_nonlinear_impl(const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &u,
+                         const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &v,
                          float p3, float p4, float q3, float q4,
-                         pfc::core::DataBuffer<pfc::backend::HipTag, float> &out);
+                         pfc::core::DataBuffer<pfc::backend::HIPTag, float> &out);
 
   static void apply_stabilization_impl(
-      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &in,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &field, float stabP,
-      pfc::core::DataBuffer<pfc::backend::HipTag, float> &out);
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &in,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &field, float stabP,
+      pfc::core::DataBuffer<pfc::backend::HIPTag, float> &out);
 
   static void apply_time_integration_impl(
-      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &psi_F,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &psiN_F,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &opL,
-      const pfc::core::DataBuffer<pfc::backend::HipTag, float> &opN,
-      pfc::core::DataBuffer<pfc::backend::HipTag, std::complex<float>> &out);
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &psi_F,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &psiN_F,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &opL,
+      const pfc::core::DataBuffer<pfc::backend::HIPTag, float> &opN,
+      pfc::core::DataBuffer<pfc::backend::HIPTag, std::complex<float>> &out);
 };
 #endif // OpenPFC_ENABLE_HIP
 

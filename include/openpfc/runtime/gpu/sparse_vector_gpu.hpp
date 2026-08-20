@@ -6,7 +6,7 @@
  * @brief Single-source GPU SparseVector copy-to-device for CUDA and HIP (M3).
  *
  * Specializes `copy_indices_to_device_impl` / `copy_data_to_device_impl` for
- * `CudaTag` and/or `HipTag`. Vendor headers `sparse_vector_cuda.hpp` /
+ * `CUDATag` and/or `HIPTag`. Vendor headers `sparse_vector_cuda.hpp` /
  * `sparse_vector_hip.hpp` are thin includes of this file so existing call
  * sites keep compiling.
  *
@@ -41,8 +41,8 @@
 namespace pfc::core::detail {
 
 #if defined(OpenPFC_ENABLE_CUDA)
-struct CudaH2D {
-  using tag = backend::CudaTag;
+struct CUDAH2D {
+  using tag = backend::CUDATag;
   static void memcpy_h2d(void *dst, const void *src, std::size_t bytes) {
     pfc::cuda::detail::cuda_check(
         cudaMemcpy(dst, src, bytes, cudaMemcpyHostToDevice), "CUDA copy failed");
@@ -51,8 +51,8 @@ struct CudaH2D {
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
-struct HipH2D {
-  using tag = backend::HipTag;
+struct HIPH2D {
+  using tag = backend::HIPTag;
   static void memcpy_h2d(void *dst, const void *src, std::size_t bytes) {
     pfc::hip::detail::hip_check(
         hipMemcpy(dst, src, bytes, hipMemcpyHostToDevice), "HIP copy failed");
@@ -70,47 +70,47 @@ void gpu_copy_h2d(void *dst, const void *src, std::size_t n, std::size_t elem) {
 
 #if defined(OpenPFC_ENABLE_CUDA)
 template <>
-inline void copy_indices_to_device_impl<backend::CudaTag>(
-    DataBuffer<backend::CudaTag, size_t> &buf, size_t n,
+inline void copy_indices_to_device_impl<backend::CUDATag>(
+    DataBuffer<backend::CUDATag, size_t> &buf, size_t n,
     const std::vector<size_t> &host_indices) {
-  gpu_copy_h2d<CudaH2D>(buf.data(), host_indices.data(), n, sizeof(size_t));
+  gpu_copy_h2d<CUDAH2D>(buf.data(), host_indices.data(), n, sizeof(size_t));
 }
 
 template <>
-inline void copy_data_to_device_impl<backend::CudaTag, double>(
-    DataBuffer<backend::CudaTag, double> &buf, size_t n,
+inline void copy_data_to_device_impl<backend::CUDATag, double>(
+    DataBuffer<backend::CUDATag, double> &buf, size_t n,
     const std::vector<double> &host_data) {
-  gpu_copy_h2d<CudaH2D>(buf.data(), host_data.data(), n, sizeof(double));
+  gpu_copy_h2d<CUDAH2D>(buf.data(), host_data.data(), n, sizeof(double));
 }
 
 template <>
-inline void copy_data_to_device_impl<backend::CudaTag, float>(
-    DataBuffer<backend::CudaTag, float> &buf, size_t n,
+inline void copy_data_to_device_impl<backend::CUDATag, float>(
+    DataBuffer<backend::CUDATag, float> &buf, size_t n,
     const std::vector<float> &host_data) {
-  gpu_copy_h2d<CudaH2D>(buf.data(), host_data.data(), n, sizeof(float));
+  gpu_copy_h2d<CUDAH2D>(buf.data(), host_data.data(), n, sizeof(float));
 }
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
 template <>
-inline void copy_indices_to_device_impl<backend::HipTag>(
-    DataBuffer<backend::HipTag, size_t> &buf, size_t n,
+inline void copy_indices_to_device_impl<backend::HIPTag>(
+    DataBuffer<backend::HIPTag, size_t> &buf, size_t n,
     const std::vector<size_t> &host_indices) {
-  gpu_copy_h2d<HipH2D>(buf.data(), host_indices.data(), n, sizeof(size_t));
+  gpu_copy_h2d<HIPH2D>(buf.data(), host_indices.data(), n, sizeof(size_t));
 }
 
 template <>
-inline void copy_data_to_device_impl<backend::HipTag, double>(
-    DataBuffer<backend::HipTag, double> &buf, size_t n,
+inline void copy_data_to_device_impl<backend::HIPTag, double>(
+    DataBuffer<backend::HIPTag, double> &buf, size_t n,
     const std::vector<double> &host_data) {
-  gpu_copy_h2d<HipH2D>(buf.data(), host_data.data(), n, sizeof(double));
+  gpu_copy_h2d<HIPH2D>(buf.data(), host_data.data(), n, sizeof(double));
 }
 
 template <>
-inline void copy_data_to_device_impl<backend::HipTag, float>(
-    DataBuffer<backend::HipTag, float> &buf, size_t n,
+inline void copy_data_to_device_impl<backend::HIPTag, float>(
+    DataBuffer<backend::HIPTag, float> &buf, size_t n,
     const std::vector<float> &host_data) {
-  gpu_copy_h2d<HipH2D>(buf.data(), host_data.data(), n, sizeof(float));
+  gpu_copy_h2d<HIPH2D>(buf.data(), host_data.data(), n, sizeof(float));
 }
 #endif
 

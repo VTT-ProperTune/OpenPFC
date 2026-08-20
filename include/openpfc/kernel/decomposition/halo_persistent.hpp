@@ -142,7 +142,7 @@ public:
       halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
     }
 
-    auto patterns = halo::create_halo_patterns<backend::CpuTag>(
+    auto patterns = halo::create_halo_patterns<backend::CPUTag>(
         decomp, rank, halo::Connectivity::Faces, halo_width);
 
     auto local_size = subdomain_box.size;

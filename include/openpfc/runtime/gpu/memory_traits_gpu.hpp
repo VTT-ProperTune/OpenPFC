@@ -5,7 +5,7 @@
  * @file memory_traits_gpu.hpp
  * @brief Single-source GPU `backend_traits` for CUDA and HIP (M3).
  *
- * Specializes `pfc::core::backend_traits` for `CudaTag` and/or `HipTag`.
+ * Specializes `pfc::core::backend_traits` for `CUDATag` and/or `HIPTag`.
  * Vendor headers `memory_traits_cuda.hpp` / `memory_traits_hip.hpp` are thin
  * includes of this file so existing call sites keep compiling.
  *
@@ -24,7 +24,7 @@ namespace pfc::core {
 
 namespace detail {
 
-struct GpuBackendTraits {
+struct GPUBackendTraits {
   static constexpr bool has_host_access = false;
   static constexpr bool has_device_access = true;
   static constexpr bool requires_transfer = true;
@@ -33,11 +33,11 @@ struct GpuBackendTraits {
 } // namespace detail
 
 #if defined(OpenPFC_ENABLE_CUDA)
-template <> struct backend_traits<backend::CudaTag> : detail::GpuBackendTraits {};
+template <> struct backend_traits<backend::CUDATag> : detail::GPUBackendTraits {};
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
-template <> struct backend_traits<backend::HipTag> : detail::GpuBackendTraits {};
+template <> struct backend_traits<backend::HIPTag> : detail::GPUBackendTraits {};
 #endif
 
 } // namespace pfc::core

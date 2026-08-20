@@ -12,10 +12,10 @@
 #include <openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp>
 
 using namespace pfc;
-using backend::CudaTag;
+using backend::CUDATag;
 
 TEST_CASE("Construct empty SparseVector", "[SparseVector (CUDA)]") {
-  auto vector = sparsevector::create<double, CudaTag>(3);
+  auto vector = sparsevector::create<double, CUDATag>(3);
   REQUIRE(sparsevector::get_size(vector) == 3);
   REQUIRE(!core::on_host(vector));
 }
@@ -23,13 +23,13 @@ TEST_CASE("Construct empty SparseVector", "[SparseVector (CUDA)]") {
 TEST_CASE("Construct filled SparseVector", "[SparseVector (CUDA)]") {
   std::vector<size_t> h_index = {2, 4, 6};
   std::vector<double> h_data = {1.0, 2.0, 3.0};
-  auto vector = sparsevector::create<double, CudaTag>(h_index, h_data);
+  auto vector = sparsevector::create<double, CUDATag>(h_index, h_data);
   REQUIRE(sparsevector::get_size(vector) == 3);
 }
 
 TEST_CASE("Gather data from source", "[SparseVector (CUDA)]") {
   std::vector<size_t> h_index = {0, 1, 3};
-  auto vector = sparsevector::create<double, CudaTag>(h_index);
+  auto vector = sparsevector::create<double, CUDATag>(h_index);
   std::vector<double> h_big_data = {1.0, 2.0, 3.0, 4.0};
 
   double *d_big_data = nullptr;
@@ -55,7 +55,7 @@ TEST_CASE("Gather data from source", "[SparseVector (CUDA)]") {
 TEST_CASE("Scatter data to destination", "[SparseVector (CUDA)]") {
   std::vector<size_t> h_indices = {0, 1, 3};
   std::vector<double> h_data = {1.0, 2.0, 4.0};
-  auto vector = sparsevector::create<double, CudaTag>(h_indices, h_data);
+  auto vector = sparsevector::create<double, CUDATag>(h_indices, h_data);
 
   std::vector<double> h_big_data(4, 0.0);
   double *d_big_data = nullptr;
@@ -81,7 +81,7 @@ TEST_CASE("Scatter data to destination", "[SparseVector (CUDA)]") {
 
 TEST_CASE("Gather OOB throws", "[SparseVector (CUDA)][error]") {
   std::vector<size_t> h_index = {0, 4}; // 4 >= dense length 4
-  auto vector = sparsevector::create<double, CudaTag>(h_index);
+  auto vector = sparsevector::create<double, CUDATag>(h_index);
   std::vector<double> h_big_data = {1.0, 2.0, 3.0, 4.0};
 
   double *d_big_data = nullptr;
@@ -100,7 +100,7 @@ TEST_CASE("Gather OOB throws", "[SparseVector (CUDA)][error]") {
 TEST_CASE("Scatter OOB throws", "[SparseVector (CUDA)][error]") {
   std::vector<size_t> h_indices = {0, 4}; // 4 >= dense length 4
   std::vector<double> h_data = {1.0, 2.0};
-  auto vector = sparsevector::create<double, CudaTag>(h_indices, h_data);
+  auto vector = sparsevector::create<double, CUDATag>(h_indices, h_data);
 
   std::vector<double> h_big_data(4, 0.0);
   double *d_big_data = nullptr;

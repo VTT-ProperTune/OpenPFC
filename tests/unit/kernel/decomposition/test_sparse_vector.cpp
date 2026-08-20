@@ -21,7 +21,7 @@ using namespace pfc;
 
 TEST_CASE("SparseVector construction with indices", "[SparseVector][core]") {
   std::vector<size_t> indices = {5, 2, 8, 1};
-  auto sparse = core::SparseVector<backend::CpuTag, double>(indices);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(indices);
 
   REQUIRE(sparse.size() == 4);
   REQUIRE(sparse.is_sorted());
@@ -38,7 +38,7 @@ TEST_CASE("SparseVector construction with indices and data",
           "[SparseVector][core]") {
   std::vector<size_t> indices = {3, 1, 4};
   std::vector<double> data = {30.0, 10.0, 40.0};
-  auto sparse = core::SparseVector<backend::CpuTag, double>(indices, data);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(indices, data);
 
   REQUIRE(sparse.size() == 3);
   REQUIRE(sparse.is_sorted());
@@ -59,7 +59,7 @@ TEST_CASE("SparseVector construction with indices and data",
 
 TEST_CASE("SparseVector gather operation", "[SparseVector][gather]") {
   std::vector<size_t> indices = {0, 2, 4};
-  auto sparse = core::SparseVector<backend::CpuTag, double>(indices);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(indices);
 
   std::vector<double> source = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
   gather(sparse, source);
@@ -73,7 +73,7 @@ TEST_CASE("SparseVector gather operation", "[SparseVector][gather]") {
 TEST_CASE("SparseVector scatter operation", "[SparseVector][scatter]") {
   std::vector<size_t> indices = {1, 3, 5};
   std::vector<double> data = {10.0, 30.0, 50.0};
-  auto sparse = core::SparseVector<backend::CpuTag, double>(indices, data);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(indices, data);
 
   std::vector<double> dest(7, 0.0);
   scatter(sparse, dest);
@@ -90,7 +90,7 @@ TEST_CASE("SparseVector scatter operation", "[SparseVector][scatter]") {
 TEST_CASE("SparseVector gather and scatter round-trip",
           "[SparseVector][gather][scatter]") {
   std::vector<size_t> indices = {0, 2, 4, 6};
-  auto sparse = core::SparseVector<backend::CpuTag, double>(indices);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(indices);
 
   // Gather from source
   std::vector<double> source = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
@@ -114,19 +114,19 @@ TEST_CASE("SparseVector gather and scatter round-trip",
 }
 
 TEST_CASE("SparseVector empty construction", "[SparseVector][core]") {
-  auto sparse = core::SparseVector<backend::CpuTag, double>(0);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(0);
   REQUIRE(sparse.empty());
 }
 
 TEST_CASE("SparseVector on_host check", "[SparseVector][core]") {
-  auto sparse_cpu = core::SparseVector<backend::CpuTag, double>({1, 2, 3});
+  auto sparse_cpu = core::SparseVector<backend::CPUTag, double>({1, 2, 3});
   REQUIRE(core::on_host(sparse_cpu) == true);
 
 #if defined(OpenPFC_ENABLE_CUDA)
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
-  auto sparse_cuda = core::SparseVector<backend::CudaTag, double>({1, 2, 3});
+  auto sparse_cuda = core::SparseVector<backend::CUDATag, double>({1, 2, 3});
   REQUIRE(core::on_host(sparse_cuda) == false);
 #endif
 }
@@ -136,7 +136,7 @@ TEST_CASE("SparseVector on_host check (HIP)", "[SparseVector][core][hip]") {
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
-  auto sparse_hip = core::SparseVector<backend::HipTag, double>({1, 2, 3});
+  auto sparse_hip = core::SparseVector<backend::HIPTag, double>({1, 2, 3});
   REQUIRE(core::on_host(sparse_hip) == false);
 }
 #endif
@@ -144,7 +144,7 @@ TEST_CASE("SparseVector on_host check (HIP)", "[SparseVector][core][hip]") {
 TEST_CASE("SparseVector with duplicate indices (should handle gracefully)",
           "[SparseVector][core]") {
   std::vector<size_t> indices = {2, 2, 4, 4, 4};
-  auto sparse = core::SparseVector<backend::CpuTag, double>(indices);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(indices);
 
   REQUIRE(sparse.size() == 5);
   REQUIRE(sparse.is_sorted());

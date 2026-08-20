@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tutorial: GPU-enabled builds and `App` programs
 
-This page ties together CUDA or HIP OpenPFC builds, HeFFTe with device FFT, and JSON/TOML that selects a GPU backend. Read [`INSTALL.md`](../../INSTALL.md) (CUDA/HIP sections) and [`../build_cpu_gpu.md`](../hpc/build_cpu_gpu.md) first; use [`../class_tour.md`](../reference/class_tour.md) for where `CpuFFT` vs device FFT types sit in headers.
+This page ties together CUDA or HIP OpenPFC builds, HeFFTe with device FFT, and JSON/TOML that selects a GPU backend. Read [`INSTALL.md`](../../INSTALL.md) (CUDA/HIP sections) and [`../build_cpu_gpu.md`](../hpc/build_cpu_gpu.md) first; use [`../class_tour.md`](../reference/class_tour.md) for where `CPUFFT` vs device FFT types sit in headers.
 
 ## When you need a GPU build
 

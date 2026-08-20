@@ -45,7 +45,7 @@ namespace pfc::sim {
  * @brief Device spectral-ETD driver for one real field + its Fourier hat.
  *
  * @tparam Physics     Models @ref SpectralETDPhysics.
- * @tparam MemorySpace `CudaSpace` or `HipSpace`.
+ * @tparam MemorySpace `CUDASpace` or `HIPSpace`.
  */
 template <class Physics, class MemorySpace>
   requires SpectralETDPhysics<Physics>
@@ -166,13 +166,13 @@ private:
                          const double *exp_Ldt, const double *phi1_L,
                          Complex *out, std::size_t n) {
 #if defined(OpenPFC_ENABLE_HIP)
-    if constexpr (std::is_same_v<MemorySpace, HipSpace>) {
+    if constexpr (std::is_same_v<MemorySpace, HIPSpace>) {
       integrator::apply_etd1_update_hip(u, nlin, exp_Ldt, phi1_L, out, n);
       return;
     }
 #endif
 #if defined(OpenPFC_ENABLE_CUDA)
-    if constexpr (std::is_same_v<MemorySpace, CudaSpace>) {
+    if constexpr (std::is_same_v<MemorySpace, CUDASpace>) {
       integrator::apply_etd1_update_cuda(u, nlin, exp_Ldt, phi1_L, out, n);
       return;
     }
@@ -183,13 +183,13 @@ private:
 
   void apply_dealias(const Complex *in, Complex *out, std::size_t n) {
 #if defined(OpenPFC_ENABLE_HIP)
-    if constexpr (std::is_same_v<MemorySpace, HipSpace>) {
+    if constexpr (std::is_same_v<MemorySpace, HIPSpace>) {
       pfc::multiply_complex_real_hip_impl(in, m_mask_real.data(), out, n);
       return;
     }
 #endif
 #if defined(OpenPFC_ENABLE_CUDA)
-    if constexpr (std::is_same_v<MemorySpace, CudaSpace>) {
+    if constexpr (std::is_same_v<MemorySpace, CUDASpace>) {
       pfc::multiply_complex_real_cuda_impl(in, m_mask_real.data(), out, n);
       return;
     }

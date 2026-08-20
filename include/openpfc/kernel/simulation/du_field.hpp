@@ -18,7 +18,7 @@
  *     t += dt;
  *
  * The class hides three pieces of plumbing that the compact heat3d
- * spectral driver and `pfc::sim::stacks::FdCpuStack`-based callers do
+ * spectral driver and `pfc::sim::stacks::FDCPUStack`-based callers do
  * not want to see:
  *
  *  1. The **per-point evaluator** (`pfc::gradient::FDGradient<G>`,
@@ -40,7 +40,7 @@
  * `pfc::gradient::FDGradient<G>` + `pfc::gradient::evaluate(grad, idx)`, and
  * `pfc::field::for_each(field, fn)` are the recommended path — they keep halo,
  * gradient, and iteration as three visible concerns. `DuField` is preserved for the
- * spectral and `FdCpuStack` paths where the stack still wants to bundle
+ * spectral and `FDCPUStack` paths where the stack still wants to bundle
  * those concerns into a single `du.apply(...)` call.
  *
  * This is the teaching counterpart to `pfc::sim::steppers::EulerStepper`,
@@ -83,7 +83,7 @@ namespace pfc::sim {
  * @tparam G    The model-owned per-point grads aggregate the user's RHS
  *              lambda accepts (e.g. `heat3d::HeatGrads`).
  * @tparam Eval The per-point evaluator type (e.g.
- *              `pfc::field::FdGradient<G>`,
+ *              `pfc::field::FDGradient<G>`,
  *              `pfc::field::SpectralGradient<G>`). The evaluator must
  *              expose `prepare()`, `(i,j,k) -> G`, and the
  *              `imin/imax/jmin/jmax/kmin/kmax/idx` interior-iteration

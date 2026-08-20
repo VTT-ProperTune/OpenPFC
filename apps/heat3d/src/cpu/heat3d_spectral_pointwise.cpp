@@ -12,7 +12,7 @@
  * `heat3d_spectral_pointwise`). This driver is the **spectral twin** of
  * `heat3d_fd`: the user-facing time loop is identical save for the stack
  * type, and `pfc::field::SpectralGradient<HeatGrads>` (1 fwd + 3 inv FFTs
- * per step) replaces `FdGradient<HeatGrads>`. The same `HeatModel::rhs`
+ * per step) replaces `FDGradient<HeatGrads>`. The same `HeatModel::rhs`
  * is applied cell-by-cell through `pfc::sim::DuField<G, ...>`:
  *
  *     auto& u  = stack.u();
@@ -51,7 +51,7 @@ namespace {
 void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
   HeatModel model;
 
-  sim::stacks::SpectralCpuStack stack(
+  sim::stacks::SpectralCPUStack stack(
       GridSize({cfg.N, cfg.N, cfg.N}), PhysicalOrigin({0.0, 0.0, 0.0}),
       GridSpacing({1.0, 1.0, 1.0}), rank, nproc, MPI_COMM_WORLD);
 
@@ -60,7 +60,7 @@ void run_spectral_pointwise(const RunConfig &cfg, int rank, int nproc) {
 
   u.apply(model.initial_condition);
 
-  runtime::MpiTimer timer{MPI_COMM_WORLD};
+  runtime::MPITimer timer{MPI_COMM_WORLD};
   runtime::tic(timer);
   double t = 0.0;
   for (int step = 0; step < cfg.n_steps; ++step) {

@@ -50,6 +50,6 @@ Start from defaults (`fftw`, `alltoall`, `use_pencils = false`) and change **one
 ## See also
 
 - [`../configuration.md`](../user_guide/configuration.md) — mental model for JSON/TOML  
-- [`../app_pipeline.md`](../user_guide/app_pipeline.md) — where `SpectralCpuStack` consumes `plan_options`  
+- [`../app_pipeline.md`](../user_guide/app_pipeline.md) — where `SpectralCPUStack` consumes `plan_options`  
 - [`../performance_profiling.md`](../hpc/performance_profiling.md) — measuring the effect of changes  
 - [`gpu_app_quickstart.md`](gpu_app_quickstart.md) — GPU binaries and CMake flags  

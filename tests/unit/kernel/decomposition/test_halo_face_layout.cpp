@@ -22,7 +22,7 @@ TEST_CASE("face_halo_counts matches create_recv_halo per direction",
   auto fc = halo::face_halo_counts(decomp, rank, hw);
   bool counts_match = true;
   for (int i = 0; i < 6; ++i) {
-    auto recv = halo::create_recv_halo<backend::CpuTag>(decomp, rank, dirs[i], hw);
+    auto recv = halo::create_recv_halo<backend::CPUTag>(decomp, rank, dirs[i], hw);
     counts_match &= fc.counts[static_cast<size_t>(i)] == recv.size();
   }
   REQUIRE(counts_match);

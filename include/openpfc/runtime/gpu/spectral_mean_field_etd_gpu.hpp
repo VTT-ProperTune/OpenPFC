@@ -43,7 +43,7 @@ namespace pfc::sim {
  * @brief Device mean-field spectral-ETD driver (tungsten / aluminum form).
  *
  * @tparam Physics     Models @ref MeanFieldETDPhysics.
- * @tparam MemorySpace `CudaSpace` or `HipSpace`.
+ * @tparam MemorySpace `CUDASpace` or `HIPSpace`.
  */
 template <class Physics, class MemorySpace>
   requires MeanFieldETDPhysics<Physics>
@@ -182,13 +182,13 @@ private:
   static void apply_filter(const Complex *in, const double *chi, Complex *out,
                            std::size_t n) {
 #if defined(OpenPFC_ENABLE_HIP)
-    if constexpr (std::is_same_v<MemorySpace, HipSpace>) {
+    if constexpr (std::is_same_v<MemorySpace, HIPSpace>) {
       pfc::multiply_complex_real_hip_impl(in, chi, out, n);
       return;
     }
 #endif
 #if defined(OpenPFC_ENABLE_CUDA)
-    if constexpr (std::is_same_v<MemorySpace, CudaSpace>) {
+    if constexpr (std::is_same_v<MemorySpace, CUDASpace>) {
       pfc::multiply_complex_real_cuda_impl(in, chi, out, n);
       return;
     }
@@ -206,13 +206,13 @@ private:
                          const double *exp_Ldt, const double *n_weight,
                          Complex *out, std::size_t n) {
 #if defined(OpenPFC_ENABLE_HIP)
-    if constexpr (std::is_same_v<MemorySpace, HipSpace>) {
+    if constexpr (std::is_same_v<MemorySpace, HIPSpace>) {
       integrator::apply_etd1_update_hip(u, nlin, exp_Ldt, n_weight, out, n);
       return;
     }
 #endif
 #if defined(OpenPFC_ENABLE_CUDA)
-    if constexpr (std::is_same_v<MemorySpace, CudaSpace>) {
+    if constexpr (std::is_same_v<MemorySpace, CUDASpace>) {
       integrator::apply_etd1_update_cuda(u, nlin, exp_Ldt, n_weight, out, n);
       return;
     }

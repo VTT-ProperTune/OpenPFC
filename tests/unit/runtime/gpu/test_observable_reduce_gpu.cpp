@@ -28,9 +28,9 @@ int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
 #include <openpfc/runtime/gpu/memory_space_gpu.hpp>
 
 #if defined(OPENPFC_TEST_OBSERVABLE_HIP)
-using Space = pfc::HipSpace;
+using Space = pfc::HIPSpace;
 #else
-using Space = pfc::CudaSpace;
+using Space = pfc::CUDASpace;
 #endif
 
 using Catch::Approx;

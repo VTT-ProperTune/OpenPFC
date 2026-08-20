@@ -259,7 +259,7 @@ TEST_CASE("apply_d1_along on a constant field returns zero (anti-symmetry)",
   // Small 7^3 brick — only orders whose half-width <= 3 are safe at the
   // centre cell along every axis. Higher-order coverage is tested via the
   // linear-field cases above (which use the same brick) and via the
-  // FdGradient<G> construction tests in `test_fd_gradient.cpp`, which size
+  // FDGradient<G> construction tests in `test_fd_gradient.cpp`, which size
   // the local LocalField to the requested order.
   std::vector<double> u(static_cast<std::size_t>(N) * N * N, 7.5);
   const std::ptrdiff_t c = 3 + 3 * static_cast<std::ptrdiff_t>(N) + 3 * SZ;
@@ -286,7 +286,7 @@ TEST_CASE("apply_d1_along high-order tables exist and are anti-symmetric on a "
           "[kernel][field][fd_apply][unit]") {
   // Larger brick (17^3) so that half-widths up to 7 stay in-bounds at the
   // centre cell. We do not check unscaled FD-sum exact values for the new
-  // orders here — `test_fd_gradient.cpp` already covers FdGradient<G> end
+  // orders here — `test_fd_gradient.cpp` already covers FDGradient<G> end
   // to end at order 4, 6, 8 — but we do verify two structural invariants:
   //   (i) lookup_even_central_d1 succeeds for orders 8..14;
   //   (ii) the unscaled D1 sum on u(x) = -3 x is **exact** for any order

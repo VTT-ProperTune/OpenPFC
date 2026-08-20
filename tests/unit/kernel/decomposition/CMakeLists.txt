@@ -22,7 +22,7 @@ target_sources(openpfc-tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test_exchange_wait_all.cpp
 )
 
-# Device SparseVector MPI exchange (CudaTag / HipTag) — TU self-guards when
+# Device SparseVector MPI exchange (CUDATag / HIPTag) — TU self-guards when
 # neither backend is enabled.
 if(OpenPFC_ENABLE_CUDA OR OpenPFC_ENABLE_HIP)
   target_sources(openpfc-tests PRIVATE

@@ -280,10 +280,10 @@ public:
 using namespace pfc::field;
 
 // CPU storage
-pfc::core::DataBuffer<pfc::backend::CpuTag, double> cpu_data(64);
+pfc::core::DataBuffer<pfc::backend::CPUTag, double> cpu_data(64);
 
 // GPU storage (include databuffer_gpu.hpp or the vendor shim)
-pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_data(64);
+pfc::core::DataBuffer<pfc::backend::CUDATag, double> gpu_data(64);
 
 // Define geometry
 pfc::types::Int3 extents{4, 4, 4};
@@ -403,7 +403,7 @@ pfc::Real3 u_origin = u.origin();
 
 **Benefits of migration**:
 1. Canonical field container unifies LocalField/PaddedBrick/DiscreteField APIs
-2. Supports both host and device memory spaces (HostSpace, CudaSpace, HipSpace)
+2. Supports both host and device memory spaces (HostSpace, CUDASpace, HIPSpace)
 3. Explicit halo configuration (storage_halo vs iteration_halo for unpadded layouts)
 4. Built-in residency tracking for host/device coherence
 5. Compatible with FieldView/FieldOutput for backend-agnostic computation
@@ -514,7 +514,7 @@ for (std::size_t i = 0; i < u.size(); ++i) {
 2. Direct iteration support via `for_each_owned` and `for_each_interior`
 3. Explicit geometry metadata (domain, box, halo_width)
 4. Compatibility with FieldView/FieldOutput for backend-agnostic access
-5. Device memory support (CudaSpace, HipSpace) with residency tracking
+5. Device memory support (CUDASpace, HIPSpace) with residency tracking
 6. Flexible halo configuration for face-halo layouts
 
 ## Legacy Field Types (Deprecated)

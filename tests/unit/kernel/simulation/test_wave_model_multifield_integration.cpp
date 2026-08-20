@@ -16,7 +16,7 @@
 
 #include "fixtures/simulation_factories.hpp"
 
-// Per-field gradient aggregates using FdGradient-recognized member names
+// Per-field gradient aggregates using FDGradient-recognized member names
 struct UGrads {
   double xx{};  // Second derivative in x (for u Laplacian)
   double yy{};  // Second derivative in y (for u Laplacian)

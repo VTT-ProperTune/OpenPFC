@@ -5,11 +5,11 @@
 
 /**
  * @file spectral_cpu_stack.hpp
- * @brief One-shot bundle of `Domain + Decomposition + CpuFFT + Field` for
+ * @brief One-shot bundle of `Domain + Decomposition + CPUFFT + Field` for
  *        spectral CPU solvers driven programmatically (no JSON / `App`).
  *
  * @details
- * Mirrors `pfc::ui::SpectralCpuStack` (which is JSON-driven and lives in
+ * Mirrors `pfc::ui::SpectralCPUStack` (which is JSON-driven and lives in
  * the frontend), but takes plain grid parameters so applications and
  * examples can build the same OpenPFC primitive set in **one statement**.
  *
@@ -21,12 +21,12 @@
  *  - Geometry (size/spacing/origin/periodicity) is extracted from the
  *    Domain and stored internally.
  *  - Decomposition is created directly from Domain.
- *  - `pfc::fft::CpuFFT` internally caches a `Decomposition`.
+ *  - `pfc::fft::CPUFFT` internally caches a `Decomposition`.
  *  - `pfc::data::Field<double>` is sized to the FFT's local real-space
  *    inbox via `pfc::data::field_from_inbox(domain, fft.get_inbox_bounds())`.
  *
  * The class is **non-copyable, non-movable** for the same reason as
- * `pfc::ui::SpectralCpuStack`: a copy or move of the bundle would leave
+ * `pfc::ui::SpectralCPUStack`: a copy or move of the bundle would leave
  * its sub-objects pointing into the source's storage and dangle the
  * moment the source is destroyed. Construct in place, take references.
  *
@@ -62,10 +62,10 @@ struct SpectralGeometry {
 };
 
 /**
- * @brief Programmatic spectral CPU stack: Domain + Decomposition + CpuFFT +
+ * @brief Programmatic spectral CPU stack: Domain + Decomposition + CPUFFT +
  *        Field sized to the FFT inbox.
  */
-class SpectralCpuStack {
+class SpectralCPUStack {
 public:
   /**
    * @param domain  The global Cartesian simulation domain.
@@ -74,7 +74,7 @@ public:
    *                `decomposition::create`).
    * @param comm    MPI communicator passed to the FFT.
    */
-  explicit SpectralCpuStack(pfc::Domain domain, int rank, int nproc,
+  explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc,
                             MPI_Comm comm = MPI_COMM_WORLD)
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
@@ -97,17 +97,17 @@ public:
    * @deprecated Use the Domain-based constructor for new code. This constructor
    *             exists for backward compatibility with existing code.
    */
-  [[deprecated("Use SpectralCpuStack(const Domain&, int, int, MPI_Comm) instead")]]
-  SpectralCpuStack(const pfc::GridSize &size, const pfc::PhysicalOrigin &origin,
+  [[deprecated("Use SpectralCPUStack(const Domain&, int, int, MPI_Comm) instead")]]
+  SpectralCPUStack(const pfc::GridSize &size, const pfc::PhysicalOrigin &origin,
                    const pfc::GridSpacing &spacing, int rank, int nproc,
                    MPI_Comm comm = MPI_COMM_WORLD)
-      : SpectralCpuStack(pfc::domain::create(size, origin, spacing), rank, nproc,
+      : SpectralCPUStack(pfc::domain::create(size, origin, spacing), rank, nproc,
                          comm) {}
 
-  SpectralCpuStack(const SpectralCpuStack &) = delete;
-  SpectralCpuStack &operator=(const SpectralCpuStack &) = delete;
-  SpectralCpuStack(SpectralCpuStack &&) = delete;
-  SpectralCpuStack &operator=(SpectralCpuStack &&) = delete;
+  SpectralCPUStack(const SpectralCPUStack &) = delete;
+  SpectralCPUStack &operator=(const SpectralCPUStack &) = delete;
+  SpectralCPUStack(SpectralCPUStack &&) = delete;
+  SpectralCPUStack &operator=(SpectralCPUStack &&) = delete;
 
   /**
    * @brief Get a World adapter constructed from the stored Domain geometry.
@@ -135,8 +135,8 @@ public:
     return m_decomp;
   }
 
-  [[nodiscard]] pfc::fft::CpuFFT &fft() noexcept { return m_fft; }
-  [[nodiscard]] const pfc::fft::CpuFFT &fft() const noexcept { return m_fft; }
+  [[nodiscard]] pfc::fft::CPUFFT &fft() noexcept { return m_fft; }
+  [[nodiscard]] const pfc::fft::CPUFFT &fft() const noexcept { return m_fft; }
 
   [[nodiscard]] pfc::data::Field<double> &u() noexcept { return m_u; }
   [[nodiscard]] const pfc::data::Field<double> &u() const noexcept {
@@ -177,7 +177,7 @@ public:
 private:
   SpectralGeometry m_geometry;
   pfc::decomposition::Decomposition m_decomp;
-  pfc::fft::CpuFFT m_fft;
+  pfc::fft::CPUFFT m_fft;
   pfc::data::Field<double> m_u;
   int m_rank{0};
   int m_nproc{1};

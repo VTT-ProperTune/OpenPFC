@@ -26,7 +26,7 @@ namespace pfc::ui {
  * @brief Align `from_json` logging and default NaN-check communicator with the
  * driver
  *
- * @param comm Application communicator (same as `App` / `SpectralCpuStack`).
+ * @param comm Application communicator (same as `App` / `SpectralCPUStack`).
  * @param mpi_log_rank Rank index for `from_json` diagnostics (typically
  *        `MPI_Worker::get_rank()`).
  */

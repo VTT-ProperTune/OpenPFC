@@ -281,7 +281,7 @@ t = stepper.step(t, u);  // integrator owns the step logic
 
 **Migration steps:**
 1. Extract point-wise physics into a `rhs(double t, const G& g)` callable
-2. Build a gradient evaluator (`pfc::field::FdGradient<G>` or `pfc::field::SpectralGradient<G>`)
+2. Build a gradient evaluator (`pfc::field::FDGradient<G>` or `pfc::field::SpectralGradient<G>`)
 3. Use `pfc::sim::steppers::create` factory to bind model + evaluator + time step
 4. Call `stepper.step(t, u)` instead of `model.step(t)`
 

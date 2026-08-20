@@ -39,7 +39,7 @@ void kobayashi_stage_b_cuda(double *phi_dev, double *tempr_dev,
  * only.
  *
  * For **single-rank** Kobayashi runs this avoids **MPI + extra CUDA sync** on every
- * exchange. The CUDA driver now uses `HaloExchange<CudaSpace>` (including
+ * exchange. The CUDA driver now uses `HaloExchange<CUDASpace>` (including
  * nproc==1 self-periodic XY); this helper remains for kernel-level tests.
  */
 void kobayashi_periodic_halos_xy_cuda(double *pad_dev, int nx, int ny, int nz,

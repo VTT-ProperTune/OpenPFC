@@ -124,13 +124,13 @@ pfc::data::Field<double, pfc::HostSpace> v =
 
 **CPU pattern**:
 ```cpp
-pfc::core::DataBuffer<pfc::backend::CpuTag, double> m_data(n);
+pfc::core::DataBuffer<pfc::backend::CPUTag, double> m_data(n);
 double* data() noexcept { return m_data.data(); }  // Host pointer
 ```
 
 **GPU pattern**:
 ```cpp
-pfc::core::DataBuffer<pfc::backend::CudaTag, double> m_data(n);
+pfc::core::DataBuffer<pfc::backend::CUDATag, double> m_data(n);
 double* data() noexcept { return m_data.data(); }  // Device pointer
 ```
 
@@ -353,7 +353,7 @@ The design enables CUDA/HIP implementation without changing semantic contracts:
 
 ```cpp
 // GPU storage allocation (backend-specific DataBuffer)
-pfc::core::DataBuffer<pfc::backend::CudaTag, double> u_gpu(size);
+pfc::core::DataBuffer<pfc::backend::CUDATag, double> u_gpu(size);
 
 // Create backend-agnostic view
 FieldView<double> u_view(u_gpu.data(), u_gpu.size(), extents, spacing, origin);

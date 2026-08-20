@@ -16,7 +16,7 @@
  *
  *  - `HeatGrads` is the per-point grads aggregate the kernel materialises
  *    for the model. The OpenPFC evaluators
- *    (`pfc::field::FdGradient<G>`, `pfc::field::SpectralGradient<G>`) are
+ *    (`pfc::field::FDGradient<G>`, `pfc::field::SpectralGradient<G>`) are
  *    templated on `G` and use the `pfc::field::has_*` concepts to fill
  *    only the members `G` declares — naming `xx, yy, zz` here is enough
  *    to get exactly those second derivatives and nothing else.

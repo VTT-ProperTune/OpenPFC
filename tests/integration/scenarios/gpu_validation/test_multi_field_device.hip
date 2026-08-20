@@ -269,9 +269,9 @@ TEST_CASE("test_evaluate_fd_grad_composite",
                      hipMemcpyHostToDevice) == hipSuccess);
   REQUIRE(hipMemset(d_out, 0, total * sizeof(CompEvalOut)) == hipSuccess);
 
-  pfc::hip::FdGradientDevice<UGrads> eval_u(d_u, nx, ny, nz, dx, dy, dz, hw,
+  pfc::hip::FDGradientDevice<UGrads> eval_u(d_u, nx, ny, nz, dx, dy, dz, hw,
                                              order);
-  pfc::hip::FdGradientDevice<VGrads> eval_v(d_v, nx, ny, nz, dx, dy, dz, hw,
+  pfc::hip::FDGradientDevice<VGrads> eval_v(d_v, nx, ny, nz, dx, dy, dz, hw,
                                              order);
   auto composite =
       pfc::hip::create_composite_device<CompEvalLocal>(eval_u, eval_v);
@@ -337,7 +337,7 @@ TEST_CASE("test_wave2d_double_field_kernel",
   const int hw = order / 2;
   const int nx = 8, ny = 8, nz = 1;
   const double dx = 1.0, dy = 1.0, dz = 1.0;
-  // Grads from FdGradient* are already scaled; keep inv_* = 1 for agreement.
+  // Grads from FDGradient* are already scaled; keep inv_* = 1 for agreement.
   const double inv_dx2 = 1.0;
   const double inv_dy2 = 1.0;
 
@@ -367,7 +367,7 @@ TEST_CASE("test_wave2d_double_field_kernel",
                                                                u.padded_extent(1)),
                                   dv_cpu.data() + owned_origin(hw, v.padded_extent(0),
                                                                v.padded_extent(1)));
-  // Padded Field FdGradient indexes from owned origin with padded strides; du
+  // Padded Field FDGradient indexes from owned origin with padded strides; du
   // pointers must share that base.
   pfc::sim::for_each_interior(cpu_model, composite, du_tuple, /*t=*/0.0);
 
@@ -391,9 +391,9 @@ TEST_CASE("test_wave2d_double_field_kernel",
   REQUIRE(hipMemset(d_du, 0, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemset(d_dv, 0, total * sizeof(double)) == hipSuccess);
 
-  pfc::hip::FdGradientDevice<UGrads> dev_u(d_u, nx, ny, nz, dx, dy, dz, hw,
+  pfc::hip::FDGradientDevice<UGrads> dev_u(d_u, nx, ny, nz, dx, dy, dz, hw,
                                             order);
-  pfc::hip::FdGradientDevice<VGrads> dev_v(d_v, nx, ny, nz, dx, dy, dz, hw,
+  pfc::hip::FDGradientDevice<VGrads> dev_v(d_v, nx, ny, nz, dx, dy, dz, hw,
                                             order);
   auto dev_composite =
       pfc::hip::create_composite_device<WaveLocal>(dev_u, dev_v);
@@ -493,9 +493,9 @@ TEST_CASE("test_kobayashi_double_field_kernel",
   REQUIRE(hipMemset(d_dphi, 0, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemset(d_dtempr, 0, total * sizeof(double)) == hipSuccess);
 
-  pfc::hip::FdGradientDevice<PhiGrads> dev_phi(d_phi, nx, ny, nz, dx, dy, dz, hw,
+  pfc::hip::FDGradientDevice<PhiGrads> dev_phi(d_phi, nx, ny, nz, dx, dy, dz, hw,
                                                 order);
-  pfc::hip::FdGradientDevice<TemprGrads> dev_tempr(d_tempr, nx, ny, nz, dx, dy,
+  pfc::hip::FDGradientDevice<TemprGrads> dev_tempr(d_tempr, nx, ny, nz, dx, dy,
                                                     dz, hw, order);
   auto dev_composite =
       pfc::hip::create_composite_device<KobayashiLocal>(dev_phi, dev_tempr);
@@ -593,9 +593,9 @@ TEST_CASE("test_synthetic_triple_field_kernel",
   REQUIRE(hipMemset(d_db, 0, total * sizeof(double)) == hipSuccess);
   REQUIRE(hipMemset(d_dc, 0, total * sizeof(double)) == hipSuccess);
 
-  pfc::hip::FdGradientDevice<AGrads> da_ev(d_a, nx, ny, nz, dx, dy, dz, hw, order);
-  pfc::hip::FdGradientDevice<BGrads> db_ev(d_b, nx, ny, nz, dx, dy, dz, hw, order);
-  pfc::hip::FdGradientDevice<CGrads> dc_ev(d_c, nx, ny, nz, dx, dy, dz, hw, order);
+  pfc::hip::FDGradientDevice<AGrads> da_ev(d_a, nx, ny, nz, dx, dy, dz, hw, order);
+  pfc::hip::FDGradientDevice<BGrads> db_ev(d_b, nx, ny, nz, dx, dy, dz, hw, order);
+  pfc::hip::FDGradientDevice<CGrads> dc_ev(d_c, nx, ny, nz, dx, dy, dz, hw, order);
   auto dev_composite =
       pfc::hip::create_composite_device<TripleLocal>(da_ev, db_ev, dc_ev);
   TripleDeviceModel gpu_model{};

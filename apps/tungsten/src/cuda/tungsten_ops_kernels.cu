@@ -84,10 +84,10 @@ namespace ops {
 namespace detail {
 
 // CUDA specialization for double precision - implement methods
-void TungstenOps<pfc::backend::CudaTag, double>::multiply_complex_real_impl(
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> &a,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &b,
-    pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> &out) {
+void TungstenOps<pfc::backend::CUDATag, double>::multiply_complex_real_impl(
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> &a,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &b,
+    pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> &out) {
   const size_t N = a.size();
   if (b.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in multiply_complex_real");
@@ -95,11 +95,11 @@ void TungstenOps<pfc::backend::CudaTag, double>::multiply_complex_real_impl(
   pfc::multiply_complex_real_cuda_impl(a.data(), b.data(), out.data(), N);
 }
 
-void TungstenOps<pfc::backend::CudaTag, double>::compute_nonlinear_impl(
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &u,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &v, double p3,
+void TungstenOps<pfc::backend::CUDATag, double>::compute_nonlinear_impl(
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &u,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &v, double p3,
     double p4, double q3, double q4,
-    pfc::core::DataBuffer<pfc::backend::CudaTag, double> &out) {
+    pfc::core::DataBuffer<pfc::backend::CUDATag, double> &out) {
   const size_t N = u.size();
   if (v.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in compute_nonlinear");
@@ -128,10 +128,10 @@ void TungstenOps<pfc::backend::CudaTag, double>::compute_nonlinear_impl(
   }
 }
 
-void TungstenOps<pfc::backend::CudaTag, double>::apply_stabilization_impl(
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &in,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &field, double stabP,
-    pfc::core::DataBuffer<pfc::backend::CudaTag, double> &out) {
+void TungstenOps<pfc::backend::CUDATag, double>::apply_stabilization_impl(
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &in,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &field, double stabP,
+    pfc::core::DataBuffer<pfc::backend::CUDATag, double> &out) {
   const size_t N = in.size();
   if (field.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_stabilization");
@@ -160,12 +160,12 @@ void TungstenOps<pfc::backend::CudaTag, double>::apply_stabilization_impl(
   }
 }
 
-void TungstenOps<pfc::backend::CudaTag, double>::apply_time_integration_impl(
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> &psi_F,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> &psiN_F,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &opL,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, double> &opN,
-    pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> &out) {
+void TungstenOps<pfc::backend::CUDATag, double>::apply_time_integration_impl(
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> &psi_F,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> &psiN_F,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &opL,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, double> &opN,
+    pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> &out) {
   const size_t N = psi_F.size();
   if (psiN_F.size() != N || opL.size() != N || opN.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_time_integration");
@@ -175,10 +175,10 @@ void TungstenOps<pfc::backend::CudaTag, double>::apply_time_integration_impl(
 }
 
 // CUDA specialization for float precision - implement methods
-void TungstenOps<pfc::backend::CudaTag, float>::multiply_complex_real_impl(
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &a,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &b,
-    pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &out) {
+void TungstenOps<pfc::backend::CUDATag, float>::multiply_complex_real_impl(
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &a,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &b,
+    pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &out) {
   const size_t N = a.size();
   if (b.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in multiply_complex_real");
@@ -186,10 +186,10 @@ void TungstenOps<pfc::backend::CudaTag, float>::multiply_complex_real_impl(
   pfc::multiply_complex_real_cuda_impl(a.data(), b.data(), out.data(), N);
 }
 
-void TungstenOps<pfc::backend::CudaTag, float>::compute_nonlinear_impl(
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &u,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &v, float p3, float p4,
-    float q3, float q4, pfc::core::DataBuffer<pfc::backend::CudaTag, float> &out) {
+void TungstenOps<pfc::backend::CUDATag, float>::compute_nonlinear_impl(
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &u,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &v, float p3, float p4,
+    float q3, float q4, pfc::core::DataBuffer<pfc::backend::CUDATag, float> &out) {
   const size_t N = u.size();
   if (v.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in compute_nonlinear");
@@ -218,10 +218,10 @@ void TungstenOps<pfc::backend::CudaTag, float>::compute_nonlinear_impl(
   }
 }
 
-void TungstenOps<pfc::backend::CudaTag, float>::apply_stabilization_impl(
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &in,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &field, float stabP,
-    pfc::core::DataBuffer<pfc::backend::CudaTag, float> &out) {
+void TungstenOps<pfc::backend::CUDATag, float>::apply_stabilization_impl(
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &in,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &field, float stabP,
+    pfc::core::DataBuffer<pfc::backend::CUDATag, float> &out) {
   const size_t N = in.size();
   if (field.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_stabilization");
@@ -250,12 +250,12 @@ void TungstenOps<pfc::backend::CudaTag, float>::apply_stabilization_impl(
   }
 }
 
-void TungstenOps<pfc::backend::CudaTag, float>::apply_time_integration_impl(
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &psi_F,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &psiN_F,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &opL,
-    const pfc::core::DataBuffer<pfc::backend::CudaTag, float> &opN,
-    pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<float>> &out) {
+void TungstenOps<pfc::backend::CUDATag, float>::apply_time_integration_impl(
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &psi_F,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &psiN_F,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &opL,
+    const pfc::core::DataBuffer<pfc::backend::CUDATag, float> &opN,
+    pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<float>> &out) {
   const size_t N = psi_F.size();
   if (psiN_F.size() != N || opL.size() != N || opN.size() != N || out.size() != N) {
     throw std::runtime_error("Size mismatch in apply_time_integration");

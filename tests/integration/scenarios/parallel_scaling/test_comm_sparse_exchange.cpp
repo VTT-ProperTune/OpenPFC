@@ -40,9 +40,9 @@ TEST_CASE("SparseExchange HostSpace: custom RemoteHalo scatter",
   h.send_tag = 7;
   h.recv_tag = 7;
   h.send_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{2, 5});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{2, 5});
   h.recv_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{6, 7});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{6, 7});
   h.scatter_after_recv = true;
 
   comm::SparseExchange<HostSpace, double> ex(u, {std::move(h)}, rank,
@@ -115,9 +115,9 @@ TEST_CASE("SparseExchange HostSpace: start/finish and unbound start throw",
   h2.send_tag = 3;
   h2.recv_tag = 3;
   h2.send_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{2, 5});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{2, 5});
   h2.recv_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{6, 7});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{6, 7});
   h2.scatter_after_recv = true;
   comm::SparseExchange<HostSpace, double> ex(u, {std::move(h2)}, rank,
                                              MPI_COMM_WORLD);

@@ -31,7 +31,7 @@
 
 namespace {
 
-using DevField = pfc::data::Field<double, pfc::CudaSpace>;
+using DevField = pfc::data::Field<double, pfc::CUDASpace>;
 
 void cuda_check(cudaError_t e, const char *what) {
   if (e != cudaSuccess) {
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
         });
         u.sync_to_device();
 
-        pfc::comm::SparseExchange<pfc::CudaSpace, double> exchanger(
+        pfc::comm::SparseExchange<pfc::CUDASpace, double> exchanger(
             u, decomp, rank, MPI_COMM_WORLD);
         if (rank == 0) {
           std::cout << "ALLEN_CAHN_CUDA_HALO_MODE=device"

@@ -13,19 +13,19 @@
 using Catch::Approx;
 
 TEST_CASE("DataBuffer CPU construction", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf(100);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf(100);
   REQUIRE(buf.size() == 100);
   REQUIRE(buf.data() != nullptr);
   REQUIRE(!buf.empty());
 }
 
 TEST_CASE("DataBuffer CPU empty construction", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf(0);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf(0);
   REQUIRE(buf.empty());
 }
 
 TEST_CASE("DataBuffer CPU element access", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf(10);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf(10);
 
   // Write via operator[]
   for (size_t i = 0; i < 10; ++i) {
@@ -41,13 +41,13 @@ TEST_CASE("DataBuffer CPU element access", "[core][databuffer][cpu]") {
 }
 
 TEST_CASE("DataBuffer CPU copy semantics", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf1(10);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf1(10);
   for (size_t i = 0; i < 10; ++i) {
     buf1[i] = static_cast<double>(i);
   }
 
   // Copy construction
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf2(buf1);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf2(buf1);
   REQUIRE(buf2.size() == buf1.size());
   bool copies_match = true;
   for (size_t i = 0; i < 10; ++i) {
@@ -55,7 +55,7 @@ TEST_CASE("DataBuffer CPU copy semantics", "[core][databuffer][cpu]") {
   }
 
   // Copy assignment
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf3(5);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf3(5);
   buf3 = buf1;
   REQUIRE(buf3.size() == buf1.size());
   for (size_t i = 0; i < 10; ++i) {
@@ -65,13 +65,13 @@ TEST_CASE("DataBuffer CPU copy semantics", "[core][databuffer][cpu]") {
 }
 
 TEST_CASE("DataBuffer CPU move semantics", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf1(10);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf1(10);
   for (size_t i = 0; i < 10; ++i) {
     buf1[i] = static_cast<double>(i);
   }
 
   // Move construction
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf2(std::move(buf1));
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf2(std::move(buf1));
   REQUIRE(buf2.size() == 10);
   bool values_match = true;
   for (size_t i = 0; i < 10; ++i) {
@@ -81,7 +81,7 @@ TEST_CASE("DataBuffer CPU move semantics", "[core][databuffer][cpu]") {
 }
 
 TEST_CASE("DataBuffer CPU copy_from_host", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf(5);
   std::vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
 
   buf.copy_from_host(input);
@@ -94,7 +94,7 @@ TEST_CASE("DataBuffer CPU copy_from_host", "[core][databuffer][cpu]") {
 }
 
 TEST_CASE("DataBuffer CPU to_host", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf(5);
   for (size_t i = 0; i < 5; ++i) {
     buf[i] = static_cast<double>(i + 1);
   }
@@ -109,7 +109,7 @@ TEST_CASE("DataBuffer CPU to_host", "[core][databuffer][cpu]") {
 }
 
 TEST_CASE("DataBuffer CPU resize", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf(5);
   REQUIRE(buf.size() == 5);
 
   buf.resize(10);
@@ -120,14 +120,14 @@ TEST_CASE("DataBuffer CPU resize", "[core][databuffer][cpu]") {
 }
 
 TEST_CASE("DataBuffer CPU copy_from_host size mismatch", "[core][databuffer][cpu]") {
-  pfc::core::DataBuffer<pfc::backend::CpuTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::CPUTag, double> buf(5);
   std::vector<double> input = {1.0, 2.0, 3.0}; // Wrong size
 
   REQUIRE_THROWS_AS(buf.copy_from_host(input), std::runtime_error);
 }
 
 TEST_CASE("DataBuffer CPU backend traits", "[core][databuffer][cpu]") {
-  using traits = pfc::core::backend_traits<pfc::backend::CpuTag>;
+  using traits = pfc::core::backend_traits<pfc::backend::CPUTag>;
   REQUIRE(traits::has_host_access == true);
   REQUIRE(traits::has_device_access == false);
   REQUIRE(traits::requires_transfer == false);
@@ -146,7 +146,7 @@ TEST_CASE("DataBuffer CUDA construction", "[core][databuffer][cuda]") {
     SKIP("CUDA not available");
   }
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf(100);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf(100);
   REQUIRE(buf.size() == 100);
   REQUIRE(buf.data() != nullptr);
   REQUIRE(!buf.empty());
@@ -157,7 +157,7 @@ TEST_CASE("DataBuffer CUDA empty construction", "[core][databuffer][cuda]") {
     SKIP("CUDA not available");
   }
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf(0);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf(0);
   REQUIRE(buf.size() == 0);
   REQUIRE(buf.empty());
 }
@@ -167,7 +167,7 @@ TEST_CASE("DataBuffer CUDA copy semantics disabled", "[core][databuffer][cuda]")
     SKIP("CUDA not available");
   }
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf1(10);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf1(10);
 
   // Copy construction should be deleted (compile-time check)
   // This test verifies the behavior at runtime
@@ -179,12 +179,12 @@ TEST_CASE("DataBuffer CUDA move semantics", "[core][databuffer][cuda]") {
     SKIP("CUDA not available");
   }
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf1(10);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf1(10);
   REQUIRE(buf1.size() == 10);
   REQUIRE(buf1.data() != nullptr);
 
   // Move construction
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf2(std::move(buf1));
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf2(std::move(buf1));
   REQUIRE(buf2.size() == 10);
   REQUIRE(buf2.data() != nullptr);
   REQUIRE(buf1.size() == 0);       // Moved from
@@ -197,7 +197,7 @@ TEST_CASE("DataBuffer CUDA CPU-GPU round trip", "[core][databuffer][cuda]") {
   }
 
   std::vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_buf(input.size());
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> gpu_buf(input.size());
 
   gpu_buf.copy_from_host(input);
   std::vector<double> output = gpu_buf.to_host();
@@ -221,7 +221,7 @@ TEST_CASE("DataBuffer CUDA large data round trip", "[core][databuffer][cuda]") {
     input[i] = static_cast<double>(i);
   }
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_buf(size);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> gpu_buf(size);
   gpu_buf.copy_from_host(input);
 
   std::vector<double> output = gpu_buf.to_host();
@@ -240,7 +240,7 @@ TEST_CASE("DataBuffer CUDA copy_from_host size mismatch",
     SKIP("CUDA not available");
   }
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf(5);
   std::vector<double> input = {1.0, 2.0, 3.0}; // Wrong size
 
   REQUIRE_THROWS_AS(buf.copy_from_host(input), std::runtime_error);
@@ -251,7 +251,7 @@ TEST_CASE("DataBuffer CUDA resize", "[core][databuffer][cuda]") {
     SKIP("CUDA not available");
   }
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf(5);
   REQUIRE(buf.size() == 5);
 
   buf.resize(10);
@@ -268,7 +268,7 @@ TEST_CASE("DataBuffer CUDA resize preserves size/pointer on cudaMalloc failure",
   }
 
   std::vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf(input.size());
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf(input.size());
   buf.copy_from_host(input);
 
   const size_t old_size = buf.size();
@@ -289,7 +289,7 @@ TEST_CASE("DataBuffer CUDA backend traits", "[core][databuffer][cuda]") {
     SKIP("CUDA not available");
   }
 
-  using traits = pfc::core::backend_traits<pfc::backend::CudaTag>;
+  using traits = pfc::core::backend_traits<pfc::backend::CUDATag>;
   REQUIRE(traits::has_host_access == false);
   REQUIRE(traits::has_device_access == true);
   REQUIRE(traits::requires_transfer == true);
@@ -302,7 +302,7 @@ TEST_CASE("DataBuffer HIP resize", "[core][databuffer][hip]") {
     SKIP("HIP not available");
   }
 
-  pfc::core::DataBuffer<pfc::backend::HipTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::HIPTag, double> buf(5);
   REQUIRE(buf.size() == 5);
 
   buf.resize(10);
@@ -319,7 +319,7 @@ TEST_CASE("DataBuffer HIP resize preserves size/pointer on hipMalloc failure",
   }
 
   std::vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
-  pfc::core::DataBuffer<pfc::backend::HipTag, double> buf(input.size());
+  pfc::core::DataBuffer<pfc::backend::HIPTag, double> buf(input.size());
   buf.copy_from_host(input);
 
   const size_t old_size = buf.size();
@@ -340,7 +340,7 @@ TEST_CASE("DataBuffer HIP backend traits", "[core][databuffer][hip]") {
     SKIP("HIP not available");
   }
 
-  using traits = pfc::core::backend_traits<pfc::backend::HipTag>;
+  using traits = pfc::core::backend_traits<pfc::backend::HIPTag>;
   REQUIRE(traits::has_host_access == false);
   REQUIRE(traits::has_device_access == true);
   REQUIRE(traits::requires_transfer == true);

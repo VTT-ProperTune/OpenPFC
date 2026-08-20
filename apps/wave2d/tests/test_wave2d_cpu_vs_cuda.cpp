@@ -34,7 +34,7 @@
 
 namespace {
 
-using DevField = pfc::data::Field<double, pfc::CudaSpace>;
+using DevField = pfc::data::Field<double, pfc::CUDASpace>;
 
 } // namespace
 
@@ -124,7 +124,7 @@ TEST_CASE("wave2d CPU vs CUDA (Neumann y, single rank)", "[wave2d][CUDA]") {
   u_gpu.sync_to_device();
   v_gpu.sync_to_device();
 
-  pfc::comm::SparseExchange<pfc::CudaSpace, double> exchanger(
+  pfc::comm::SparseExchange<pfc::CUDASpace, double> exchanger(
       u_gpu, decomp, rank, MPI_COMM_WORLD);
 
   for (int step = 0; step < n_steps; ++step) {

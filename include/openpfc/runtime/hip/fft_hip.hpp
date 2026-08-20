@@ -46,15 +46,15 @@ namespace pfc::fft {
  */
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
 // HIP DataBuffer type aliases (parity with fft_cuda.hpp)
-using RealDataBufferHIP = core::DataBuffer<backend::HipTag, double>;
+using RealDataBufferHIP = core::DataBuffer<backend::HIPTag, double>;
 using ComplexDataBufferHIP =
-    core::DataBuffer<backend::HipTag, std::complex<double>>;
+    core::DataBuffer<backend::HIPTag, std::complex<double>>;
 
 // rocFFT backend type alias
 using fft_r2c_hip = heffte::fft3d_r2c<heffte::backend::rocfft>;
 
-// GPU FFT type alias for rocFFT backend — implements `IDeviceFFT<HipSpace>`.
-using FFT_HIP = FFT_Impl<heffte::backend::rocfft, IDeviceFFT<pfc::HipSpace>>;
+// GPU FFT type alias for rocFFT backend — implements `IDeviceFFT<HIPSpace>`.
+using FFT_HIP = FFT_Impl<heffte::backend::rocfft, IDeviceFFT<pfc::HIPSpace>>;
 
 /**
  * @brief Creates an FFT object using rocFFT backend for GPU acceleration

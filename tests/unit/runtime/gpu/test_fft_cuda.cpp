@@ -56,8 +56,8 @@ TEST_CASE("GPU FFT: Forward transform", "[gpu][fft]") {
   auto gpu_fft = pfc::fft::create_cuda(decomp, rank_id);
 
   // Create input data (simple pattern: all ones)
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> input(gpu_fft.size_inbox());
-  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> output(
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> input(gpu_fft.size_inbox());
+  pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> output(
       gpu_fft.size_outbox());
 
   // Initialize input on CPU, then copy to GPU
@@ -107,9 +107,9 @@ TEST_CASE("GPU FFT: Backward transform", "[gpu][fft]") {
   auto gpu_fft = pfc::fft::create_cuda(decomp, rank_id);
 
   // Create input in Fourier space (DC component only)
-  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> input(
+  pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> input(
       gpu_fft.size_outbox());
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> output(gpu_fft.size_inbox());
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> output(gpu_fft.size_inbox());
 
   // Initialize input on CPU, then copy to GPU
   std::vector<std::complex<double>> input_host(gpu_fft.size_outbox(), 0.0);
@@ -161,16 +161,16 @@ TEST_CASE("GPU FFT: Round-trip (forward then backward)", "[gpu][fft]") {
   auto gpu_fft = pfc::fft::create_cuda(decomp, rank_id);
 
   // Create input data (simple pattern: alternating values)
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> input(gpu_fft.size_inbox());
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> input(gpu_fft.size_inbox());
   std::vector<double> input_host(gpu_fft.size_inbox());
   for (size_t i = 0; i < input_host.size(); ++i) {
     input_host[i] = static_cast<double>(i % 2); // 0, 1, 0, 1, ...
   }
   input.copy_from_host(input_host);
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<double>> fourier(
+  pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<double>> fourier(
       gpu_fft.size_outbox());
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> output(gpu_fft.size_inbox());
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> output(gpu_fft.size_inbox());
 
   // Forward FFT
   gpu_fft.forward(input, fourier);

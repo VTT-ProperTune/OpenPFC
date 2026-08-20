@@ -42,14 +42,14 @@ The shortest useful mental model is:
 | `Domain` | Global grid size, spacing, origin, and periodicity | `openpfc/kernel/data/domain.hpp` | `examples/02_domain_decomposition.cpp` |
 | `Box3i` | Inclusive integer bounds for local or transformed regions | `openpfc/kernel/data/box.hpp` | `examples/02_domain_decomposition.cpp` |
 | `Decomposition` | MPI partition and per-rank inbox/outbox geometry | `openpfc/kernel/decomposition/decomposition.hpp` | `examples/03_parallel_fft.cpp` |
-| `IFFT` / `CpuFFT` | Distributed forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
+| `IFFT` / `CPUFFT` | Distributed forward/backward transforms through HeFFTe | `openpfc/kernel/fft/fft.hpp` | `examples/03_parallel_fft.cpp` |
 | `Model` | Physics fields, initialization, and time-step update | `openpfc/kernel/simulation/model.hpp` | `examples/04_diffusion_model.cpp` |
 | `Time` | Start, stop, step size, current time, and save cadence | `openpfc/kernel/simulation/time.hpp` | `examples/time.cpp` |
 | `Simulator` | Coordinates modifiers, model steps, time, and result output | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
 | `FieldModifier` | Initial conditions and boundary-condition-style updates | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
 | `pfc::ui::App<Model>` | Loads JSON/TOML and runs a configured application | `openpfc/frontend/ui/app.hpp` | `apps/` and `tutorials/custom_app_minimal.md` |
-| `SpectralCpuStack` | Owns the CPU domain, decomposition, FFT, fields, and time stack | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
+| `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, fields, and time stack | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
 | `SpectralSimulationSession` | Owns model and simulator state around a spectral stack | `openpfc/frontend/ui/spectral_simulation_session.hpp` | `user_guide/app_pipeline.md` |
 
 Use the [integrated C++ API reference](../api/index.md) for exact constructors,

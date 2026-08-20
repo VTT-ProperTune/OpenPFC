@@ -9,7 +9,7 @@
  *
  * \f$\partial_t u = v\f$, \f$\partial_t v = c^2 \Delta u\f$ on a 2D slab
  * (`nz == 1` in OpenPFC indexing) with \f$\Delta = \partial_{xx} + \partial_{yy}\f$.
- * Laplacian entries are **unscaled** FD sums (same convention as `FdGradient`):
+ * Laplacian entries are **unscaled** FD sums (same convention as `FDGradient`):
  * multiply by `inv_dx2` / `inv_dy2` in `WaveModel::rhs`.
  */
 

@@ -164,24 +164,24 @@ TEST_CASE("FieldHandle: value semantics and std::hash", "[simulation_state][unit
 // Compile-only coverage for Device memory space (CPU SIF cannot execute these).
 // Satisfies the "multiple T / Device combinations" acceptance criterion when
 // the CUDA toolchain builds this TU.
-TEST_CASE("SimulationState: CudaSpace fields register by name (compile check)",
+TEST_CASE("SimulationState: CUDASpace fields register by name (compile check)",
           "[simulation_state][unit][cuda]") {
   using namespace pfc;
   SimulationState state;
 
-  data::Field<double, CudaSpace> u(domain::create({4, 2, 1}), whole_box(4, 2, 1), 0);
-  data::Field<std::complex<double>, CudaSpace> uh(domain::create({4, 2, 1}),
+  data::Field<double, CUDASpace> u(domain::create({4, 2, 1}), whole_box(4, 2, 1), 0);
+  data::Field<std::complex<double>, CUDASpace> uh(domain::create({4, 2, 1}),
                                                   whole_box(4, 2, 1), 0);
 
-  state.add_field<double, CudaSpace>("u_dev", std::move(u));
-  state.add_field<std::complex<double>, CudaSpace>("uh_dev", std::move(uh));
+  state.add_field<double, CUDASpace>("u_dev", std::move(u));
+  state.add_field<std::complex<double>, CUDASpace>("uh_dev", std::move(uh));
 
   REQUIRE(state.has_field("u_dev"));
   REQUIRE(state.has_field("uh_dev"));
   REQUIRE(state.num_fields() == 2);
 
   // Touch residency APIs so the device Field path is not dead-stripped.
-  auto &uref = state.get_field<double, CudaSpace>("u_dev");
+  auto &uref = state.get_field<double, CUDASpace>("u_dev");
   uref.sync_to_device();
   uref.note_device_write();
   (void)uref.residency();
@@ -189,23 +189,23 @@ TEST_CASE("SimulationState: CudaSpace fields register by name (compile check)",
 #endif // OpenPFC_ENABLE_CUDA
 
 #if defined(OpenPFC_ENABLE_HIP)
-TEST_CASE("SimulationState: HipSpace fields register by name (compile check)",
+TEST_CASE("SimulationState: HIPSpace fields register by name (compile check)",
           "[simulation_state][unit][hip]") {
   using namespace pfc;
   SimulationState state;
 
-  data::Field<double, HipSpace> u(domain::create({4, 2, 1}), whole_box(4, 2, 1), 0);
-  data::Field<std::complex<double>, HipSpace> uh(domain::create({4, 2, 1}),
+  data::Field<double, HIPSpace> u(domain::create({4, 2, 1}), whole_box(4, 2, 1), 0);
+  data::Field<std::complex<double>, HIPSpace> uh(domain::create({4, 2, 1}),
                                                  whole_box(4, 2, 1), 0);
 
-  state.add_field<double, HipSpace>("u_dev", std::move(u));
-  state.add_field<std::complex<double>, HipSpace>("uh_dev", std::move(uh));
+  state.add_field<double, HIPSpace>("u_dev", std::move(u));
+  state.add_field<std::complex<double>, HIPSpace>("uh_dev", std::move(uh));
 
   REQUIRE(state.has_field("u_dev"));
   REQUIRE(state.has_field("uh_dev"));
   REQUIRE(state.num_fields() == 2);
 
-  auto &uref = state.get_field<double, HipSpace>("u_dev");
+  auto &uref = state.get_field<double, HIPSpace>("u_dev");
   uref.sync_to_device();
   uref.note_device_write();
   (void)uref.residency();

@@ -3,7 +3,7 @@
 
 /**
  * @file test_sparse_vector_exchange_device.cpp
- * @brief Catch2 coverage for CudaTag/HipTag SparseVector MPI exchange
+ * @brief Catch2 coverage for CUDATag/HIPTag SparseVector MPI exchange
  *
  * Non-blocking isend_data/irecv_data must fail closed (throw) when MPI is not
  * device-aware — never silently succeed with MPI_REQUEST_NULL. Blocking
@@ -30,7 +30,7 @@ using Catch::Approx;
 namespace {
 
 std::vector<double> cuda_sparse_data_host(
-    const pfc::core::SparseVector<pfc::backend::CudaTag, double> &sv) {
+    const pfc::core::SparseVector<pfc::backend::CUDATag, double> &sv) {
   std::vector<double> host(sv.size());
   if (sv.size() == 0) {
     return host;
@@ -42,7 +42,7 @@ std::vector<double> cuda_sparse_data_host(
 
 } // namespace
 
-TEST_CASE("CudaTag isend/irecv fail closed when MPI is not CUDA-aware",
+TEST_CASE("CUDATag isend/irecv fail closed when MPI is not CUDA-aware",
           "[SparseVector][MPI][Exchange][CUDA]") {
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -50,7 +50,7 @@ TEST_CASE("CudaTag isend/irecv fail closed when MPI is not CUDA-aware",
   const std::vector<size_t> indices = {0, 2, 4};
   const std::vector<double> values = {1.0, 3.0, 5.0};
   auto sparse =
-      pfc::sparsevector::create<double, pfc::backend::CudaTag>(indices, values);
+      pfc::sparsevector::create<double, pfc::backend::CUDATag>(indices, values);
 
   MPI_Request req = MPI_REQUEST_NULL;
 
@@ -84,7 +84,7 @@ TEST_CASE("CudaTag isend/irecv fail closed when MPI is not CUDA-aware",
   }
 }
 
-TEST_CASE("CudaTag blocking send_data/receive_data host-stage roundtrip",
+TEST_CASE("CUDATag blocking send_data/receive_data host-stage roundtrip",
           "[SparseVector][MPI][Exchange][CUDA]") {
   int rank = 0;
   int size = 0;
@@ -97,9 +97,9 @@ TEST_CASE("CudaTag blocking send_data/receive_data host-stage roundtrip",
 
   const std::vector<size_t> indices = {1, 3, 5};
   auto send_sv =
-      pfc::sparsevector::create<double, pfc::backend::CudaTag>(indices, {10.0, 30.0, 50.0});
+      pfc::sparsevector::create<double, pfc::backend::CUDATag>(indices, {10.0, 30.0, 50.0});
   auto recv_sv =
-      pfc::sparsevector::create<double, pfc::backend::CudaTag>(indices, {0.0, 0.0, 0.0});
+      pfc::sparsevector::create<double, pfc::backend::CUDATag>(indices, {0.0, 0.0, 0.0});
 
   if (rank == 0) {
     pfc::exchange::send_data(send_sv, 0, 1, MPI_COMM_WORLD);
@@ -121,7 +121,7 @@ TEST_CASE("CudaTag blocking send_data/receive_data host-stage roundtrip",
 namespace {
 
 std::vector<double> hip_sparse_data_host(
-    const pfc::core::SparseVector<pfc::backend::HipTag, double> &sv) {
+    const pfc::core::SparseVector<pfc::backend::HIPTag, double> &sv) {
   std::vector<double> host(sv.size());
   if (sv.size() == 0) {
     return host;
@@ -133,7 +133,7 @@ std::vector<double> hip_sparse_data_host(
 
 } // namespace
 
-TEST_CASE("HipTag isend/irecv fail closed when MPI is not HIP-aware",
+TEST_CASE("HIPTag isend/irecv fail closed when MPI is not HIP-aware",
           "[SparseVector][MPI][Exchange][HIP]") {
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -141,7 +141,7 @@ TEST_CASE("HipTag isend/irecv fail closed when MPI is not HIP-aware",
   const std::vector<size_t> indices = {0, 2, 4};
   const std::vector<double> values = {1.0, 3.0, 5.0};
   auto sparse =
-      pfc::sparsevector::create<double, pfc::backend::HipTag>(indices, values);
+      pfc::sparsevector::create<double, pfc::backend::HIPTag>(indices, values);
 
   MPI_Request req = MPI_REQUEST_NULL;
 
@@ -171,7 +171,7 @@ TEST_CASE("HipTag isend/irecv fail closed when MPI is not HIP-aware",
   }
 }
 
-TEST_CASE("HipTag blocking send_data/receive_data host-stage roundtrip",
+TEST_CASE("HIPTag blocking send_data/receive_data host-stage roundtrip",
           "[SparseVector][MPI][Exchange][HIP]") {
   int rank = 0;
   int size = 0;
@@ -184,9 +184,9 @@ TEST_CASE("HipTag blocking send_data/receive_data host-stage roundtrip",
 
   const std::vector<size_t> indices = {1, 3, 5};
   auto send_sv =
-      pfc::sparsevector::create<double, pfc::backend::HipTag>(indices, {10.0, 30.0, 50.0});
+      pfc::sparsevector::create<double, pfc::backend::HIPTag>(indices, {10.0, 30.0, 50.0});
   auto recv_sv =
-      pfc::sparsevector::create<double, pfc::backend::HipTag>(indices, {0.0, 0.0, 0.0});
+      pfc::sparsevector::create<double, pfc::backend::HIPTag>(indices, {0.0, 0.0, 0.0});
 
   if (rank == 0) {
     pfc::exchange::send_data(send_sv, 0, 1, MPI_COMM_WORLD);

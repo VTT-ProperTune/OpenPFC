@@ -30,7 +30,7 @@
 
 namespace {
 
-using DevField = pfc::data::Field<double, pfc::HipSpace>;
+using DevField = pfc::data::Field<double, pfc::HIPSpace>;
 
 } // namespace
 
@@ -120,7 +120,7 @@ TEST_CASE("wave2d CPU vs HIP (Neumann y, single rank)", "[wave2d][HIP]") {
   u_gpu.sync_to_device();
   v_gpu.sync_to_device();
 
-  pfc::comm::SparseExchange<pfc::HipSpace, double> exchanger(
+  pfc::comm::SparseExchange<pfc::HIPSpace, double> exchanger(
       u_gpu, decomp, rank, MPI_COMM_WORLD);
 
   for (int step = 0; step < n_steps; ++step) {

@@ -5,7 +5,7 @@
 
 /**
  * @file tungsten_etd_gpu_session.hpp
- * @brief JSON-driven GPU session: GpuSpectralStack + mean-field ETD.
+ * @brief JSON-driven GPU session: GPUSpectralStack + mean-field ETD.
  *
  * ICs and fixed BCs run on the host mirror; FFT and ETD combine are device.
  * Lives beside Gen-1 `tungsten_cuda` / `tungsten_hip`.
@@ -33,17 +33,17 @@
 
 namespace tungsten {
 
-template <class MemorySpace> class TungstenETDGpuSession {
+template <class MemorySpace> class TungstenETDGPUSession {
 public:
   using Physics = TungstenPhysics<double, MemorySpace>;
   using System = pfc::sim::DeviceSpectralMeanFieldETDSystem<Physics, MemorySpace>;
 
-  TungstenETDGpuSession(const TungstenETDGpuSession &) = delete;
-  TungstenETDGpuSession &operator=(const TungstenETDGpuSession &) = delete;
-  TungstenETDGpuSession(TungstenETDGpuSession &&) = delete;
-  TungstenETDGpuSession &operator=(TungstenETDGpuSession &&) = delete;
+  TungstenETDGPUSession(const TungstenETDGPUSession &) = delete;
+  TungstenETDGPUSession &operator=(const TungstenETDGPUSession &) = delete;
+  TungstenETDGPUSession(TungstenETDGPUSession &&) = delete;
+  TungstenETDGPUSession &operator=(TungstenETDGPUSession &&) = delete;
 
-  TungstenETDGpuSession(const nlohmann::json &settings, int rank, int nproc,
+  TungstenETDGPUSession(const nlohmann::json &settings, int rank, int nproc,
                         MPI_Comm comm = MPI_COMM_WORLD)
       : m_domain(pfc::ui::from_json<pfc::Domain>(settings)),
         m_time(pfc::ui::from_json<pfc::Time>(settings)),
@@ -108,7 +108,7 @@ private:
 
   pfc::Domain m_domain{};
   pfc::Time m_time;
-  pfc::sim::stacks::GpuSpectralStack<MemorySpace> m_stack;
+  pfc::sim::stacks::GPUSpectralStack<MemorySpace> m_stack;
   pfc::SimulationState m_state;
   std::optional<FixedBc> m_bc{};
   TungstenETDWriters m_writers{};
@@ -116,10 +116,10 @@ private:
 };
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-using TungstenETDHipSession = TungstenETDGpuSession<pfc::HipSpace>;
+using TungstenETDHIPSession = TungstenETDGPUSession<pfc::HIPSpace>;
 #endif
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-using TungstenETDCudaSession = TungstenETDGpuSession<pfc::CudaSpace>;
+using TungstenETDCUDASession = TungstenETDGPUSession<pfc::CUDASpace>;
 #endif
 
 } // namespace tungsten

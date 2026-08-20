@@ -5,10 +5,10 @@
  * @file memory_space.hpp
  * @brief Host memory-space tag (kernel: HostSpace only)
  *
- * Kernel defines HostSpace only. CudaSpace and HipSpace are in
+ * Kernel defines HostSpace only. CUDASpace and HIPSpace are in
  * runtime/gpu/memory_space_gpu.hpp (vendor headers are thin includes).
  *
- * @see runtime/gpu/memory_space_gpu.hpp for CudaSpace / HipSpace
+ * @see runtime/gpu/memory_space_gpu.hpp for CUDASpace / HIPSpace
  * @see runtime/cuda/memory_space_cuda.hpp (thin include)
  * @see runtime/hip/memory_space_hip.hpp (thin include)
  * @see kernel/execution/databuffer.hpp for buffer implementation
@@ -35,13 +35,13 @@ using DefaultMemorySpace = HostSpace;
 /**
  * @brief Maps a memory space tag to the corresponding backend tag
  *
- * Used internally by DataBuffer. CudaSpace and HipSpace mappings
+ * Used internally by DataBuffer. CUDASpace and HIPSpace mappings
  * are in runtime/gpu/memory_space_gpu.hpp.
  */
 template <typename MemorySpace> struct memory_space_to_backend;
 
 template <> struct memory_space_to_backend<HostSpace> {
-  using type = backend::CpuTag;
+  using type = backend::CPUTag;
 };
 
 template <typename MemorySpace>

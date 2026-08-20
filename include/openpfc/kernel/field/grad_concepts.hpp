@@ -28,7 +28,7 @@
  * struct HeatGrads { double xx{}, yy{}, zz{}; };
  *
  * template <class G>
- * G FdGradient<G>::operator()(int ix, int iy, int iz) const noexcept {
+ * G FDGradient<G>::operator()(int ix, int iy, int iz) const noexcept {
  *   G g{};
  *   if constexpr (pfc::field::has_value<G>) g.value = ...;
  *   if constexpr (pfc::field::has_xx<G>)    g.xx    = ...;

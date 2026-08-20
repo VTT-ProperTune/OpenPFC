@@ -9,7 +9,7 @@
  * `CompositeGradient<Composite, PerField...>` is the kernel hook the
  * heat3d refactor lays down so that a future wave-equation app can plug
  * in without re-touching the framework. Single-field heat3d does not
- * exercise it, so this test fans two `FdGradient<...>` instances out of
+ * exercise it, so this test fans two `FDGradient<...>` instances out of
  * a single backing `LocalField` and asserts:
  *
  *   1. `prepare()` is forwarded to every sub-evaluator (here a no-op
@@ -21,7 +21,7 @@
  *
  * The two per-field grads aggregates are intentionally *different shapes*
  * (`HasXx` carries only `xx`; `HasYyZz` carries `yy` and `zz`) so the
- * test also re-confirms that the templated `FdGradient<G>` prunes its
+ * test also re-confirms that the templated `FDGradient<G>` prunes its
  * work to whatever each `G` declares.
  */
 
@@ -39,7 +39,7 @@
 
 using Catch::Approx;
 using pfc::field::CompositeGradient;
-using pfc::field::FdGradient;
+using pfc::field::FDGradient;
 using pfc::data::Field;
 
 namespace {
@@ -78,7 +78,7 @@ TEST_CASE("CompositeGradient fans two heterogeneous FD evaluators into a "
 
   auto grad_u = pfc::field::create<HasXx>(u, order);
   auto grad_v = pfc::field::create<HasYyZz>(u, order);
-  CompositeGradient<TwoField, FdGradient<HasXx>, FdGradient<HasYyZz>> composite(
+  CompositeGradient<TwoField, FDGradient<HasXx>, FDGradient<HasYyZz>> composite(
       grad_u, grad_v);
 
   composite.prepare();

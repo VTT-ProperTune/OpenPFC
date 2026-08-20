@@ -5,7 +5,7 @@
  * @file kobayashi_fd_hip.cpp
  * @brief MPI + HIP Kobayashi FD driver: one MPI rank binds one GPU (local rank mod device count).
  *
- * Halos use `pfc::comm::HaloExchange<HipSpace>` on device-resident Fields
+ * Halos use `pfc::comm::HaloExchange<HIPSpace>` on device-resident Fields
  * (same two groups as the CPU driver; `Axes2D()` skips ±Z on the nz=1 slab).
  * PNG / verify still stage \(\phi\) and \(T\) to host after the timed loop
  * (and at `nsave` snapshots).
@@ -51,7 +51,7 @@ namespace {
 
 
 using HostField = pfc::data::Field<double, pfc::HostSpace>;
-using DevField = pfc::data::Field<double, pfc::HipSpace>;
+using DevField = pfc::data::Field<double, pfc::HIPSpace>;
 using pfc::data::field_from_subdomain;
 
 class mpi_comm_guard {
@@ -189,12 +189,12 @@ void run_kobayashi_hip(const kobayashi::RunConfig &cfg, int rank, int nproc) {
 
   pfc::comm::HaloExchangeOptions state_opt;
   state_opt.directions = pfc::halo::presets::Axes2D();
-  pfc::comm::HaloExchange<pfc::HipSpace, double> halo_state(
+  pfc::comm::HaloExchange<pfc::HIPSpace, double> halo_state(
       {&phi, &tempr}, decomp, rank, MPI_COMM_WORLD, state_opt);
   pfc::comm::HaloExchangeOptions aux_opt;
   aux_opt.exchange_base = 2;
   aux_opt.directions = pfc::halo::presets::Axes2D();
-  pfc::comm::HaloExchange<pfc::HipSpace, double> halo_aux(
+  pfc::comm::HaloExchange<pfc::HIPSpace, double> halo_aux(
       {&epsilon, &epsilon_deriv, &phidx, &phidy}, decomp, rank, MPI_COMM_WORLD,
       aux_opt);
 

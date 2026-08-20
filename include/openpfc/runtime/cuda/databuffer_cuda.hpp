@@ -3,7 +3,7 @@
 
 /**
  * @file databuffer_cuda.hpp
- * @brief CUDA `DataBuffer<CudaTag, T>` (thin include of the M3 GPU source).
+ * @brief CUDA `DataBuffer<CUDATag, T>` (thin include of the M3 GPU source).
  *
  * @see runtime/gpu/databuffer_gpu.hpp
  */

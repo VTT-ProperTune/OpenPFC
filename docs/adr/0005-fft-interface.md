@@ -47,7 +47,7 @@ template parameter through every call site.
 - `SpectralGradient` and other spectral consumers bind to the interface matching
   their memory space; no runtime "throws on every method" objects exist.
 - The `Backend` enum and `backend_from_string` cover CPU/CUDA/HIP honestly (M3).
-- GPU spectral models no longer need a dead host `CpuFFT` (`dummy_fft`);
+- GPU spectral models no longer need a dead host `CPUFFT` (`dummy_fft`);
   the session constructs the device FFT directly (M8/M10).
 - Precision policy (ADR 0006) applies: workspace is allocated only for the
   instantiated precision.

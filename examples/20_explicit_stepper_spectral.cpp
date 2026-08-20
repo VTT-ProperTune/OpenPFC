@@ -20,7 +20,7 @@
  * Key components:
  * - `HeatGrads`: per-point gradient aggregate (same as FD example)
  * - `HeatModel`: pure function `rhs(t, grads)` returning `du/dt` (same as FD)
- * - `SpectralCpuStack`: field management with FFT
+ * - `SpectralCPUStack`: field management with FFT
  * - `pfc::field::create<HeatGrads>(u, fft)`: spectral gradient evaluator
  * - `pfc::sim::steppers::create(u, grad, model, dt)`: stepper factory (same signature as FD)
  *
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
   const double dt = 0.15 * dx * dx / (6.0 * D);
 
   // Build spectral stack (Domain + Decomposition + FFT + inbox-sized Field)
-  pfc::sim::stacks::SpectralCpuStack stack(
+  pfc::sim::stacks::SpectralCPUStack stack(
     pfc::GridSize{{N, N, N}},
     pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
     pfc::GridSpacing{{dx, dx, dx}},

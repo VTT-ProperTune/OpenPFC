@@ -13,8 +13,8 @@ Coupled **phase field** \(\phi\) and **temperature** \(T\) after Kobayashi (Phys
 |--------|-------------|
 | `kobayashi_fd_manual` | Two-pass explicit Euler per step on Field with halos (`Field<double, HostSpace>`); periodic **MPI halos** (`nz = 1`). |
 | `kobayashi_fd_openmp` | Same discrete splitting on a **single full grid**; periodic **torus via index wrapping** (no halos, no MPI); **OpenMP** `collapse(2)` over the two passes per step. Requires OpenMP at build time. |
-| `kobayashi_fd_cuda` | Same physics as **`kobayashi_fd_manual`**, **two CUDA kernels per step**. Halos use **`pfc::comm::HaloExchange<CudaSpace>`** on device-resident Fields (state then aux, `Axes2D()` so the `nz=1` slab skips ±Z). Rank 0 prints **`KOBAYASHI_CUDA_HALO_MODE`**. Build with **`-DOpenPFC_ENABLE_CUDA=ON`**. |
-| `kobayashi_fd_hip` | Same MPI + halo pattern as **`kobayashi_fd_manual`**, with **two HIP kernels per step**. Halos use **`pfc::comm::HaloExchange<HipSpace>`** on device-resident Fields (state then aux, same groups as the CPU driver). Rank 0 prints **`KOBAYASHI_HIP_HALO_MODE`**. Each MPI rank calls **`hipSetDevice(local_rank % device_count)`** where `local_rank` is the **shared-memory** rank (`MPI_COMM_TYPE_SHARED`). Build with **`-DOpenPFC_ENABLE_HIP=ON`**. |
+| `kobayashi_fd_cuda` | Same physics as **`kobayashi_fd_manual`**, **two CUDA kernels per step**. Halos use **`pfc::comm::HaloExchange<CUDASpace>`** on device-resident Fields (state then aux, `Axes2D()` so the `nz=1` slab skips ±Z). Rank 0 prints **`KOBAYASHI_CUDA_HALO_MODE`**. Build with **`-DOpenPFC_ENABLE_CUDA=ON`**. |
+| `kobayashi_fd_hip` | Same MPI + halo pattern as **`kobayashi_fd_manual`**, with **two HIP kernels per step**. Halos use **`pfc::comm::HaloExchange<HIPSpace>`** on device-resident Fields (state then aux, same groups as the CPU driver). Rank 0 prints **`KOBAYASHI_HIP_HALO_MODE`**. Each MPI rank calls **`hipSetDevice(local_rank % device_count)`** where `local_rank` is the **shared-memory** rank (`MPI_COMM_TYPE_SHARED`). Build with **`-DOpenPFC_ENABLE_HIP=ON`**. |
 
 ## Equations (discrete layout matches Julia)
 
@@ -37,7 +37,7 @@ Field phi = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 Field tempr = pfc::data::field_from_subdomain<double>(decomp, rank, hw);
 ```
 
-**GPU fields:** The HIP and CUDA drivers keep working arrays as `Field<double, HipSpace>` / `Field<double, CudaSpace>` and only stage \(\phi\) / \(T\) to a host Field for PNG and `KOBAYASHI_VERIFY`.
+**GPU fields:** The HIP and CUDA drivers keep working arrays as `Field<double, HIPSpace>` / `Field<double, CUDASpace>` and only stage \(\phi\) / \(T\) to a host Field for PNG and `KOBAYASHI_VERIFY`.
 
 ## Usage (`kobayashi_fd_manual`)
 
@@ -94,7 +94,7 @@ NVIDIA H100 Slurm workflow (rebuild + 1 vs 2 GPU scaling, partition **`nvidia_h1
 
 **H100 scaling / halo regression notes** (GPU-aware MPI vs packed faces, nsys interpretation): [`docs/scalability_cuda_h100.md`](docs/scalability_cuda_h100.md). **Measured A/B (8192×4096, job 1236819):** [`docs/cuda_halo_lessons_h100.md`](docs/cuda_halo_lessons_h100.md).
 
-**Performance (CUDA):** Halos use **`HaloExchange<CudaSpace>`** (pack-to-contiguous + device-pointer MPI when GPU-aware, otherwise packed faces). Two field groups per step (state then aux) unless **`KOBAYASHI_HALO_EXTENDED=1`**. PNG paths still stage \(\phi\) on the host. The **`nvidia_h100`** Slurm rebuild script (**`kobayashi_rebuild_openpfc_cuda_h100.sbatch`**) defaults to **`OpenPFC_MPI_CUDA_AWARE=ON`**; set **`KOBAYASHI_REBUILD_CUDA_MPI_AWARE=0`** there to force a packed-only build. Thread blocks: **`OPENPFC_KOBAYASHI_CUDA_BLOCK`** (default **32×32**); see **`INSTALL.md`** for MPI stack notes.
+**Performance (CUDA):** Halos use **`HaloExchange<CUDASpace>`** (pack-to-contiguous + device-pointer MPI when GPU-aware, otherwise packed faces). Two field groups per step (state then aux) unless **`KOBAYASHI_HALO_EXTENDED=1`**. PNG paths still stage \(\phi\) on the host. The **`nvidia_h100`** Slurm rebuild script (**`kobayashi_rebuild_openpfc_cuda_h100.sbatch`**) defaults to **`OpenPFC_MPI_CUDA_AWARE=ON`**; set **`KOBAYASHI_REBUILD_CUDA_MPI_AWARE=0`** there to force a packed-only build. Thread blocks: **`OPENPFC_KOBAYASHI_CUDA_BLOCK`** (default **32×32**); see **`INSTALL.md`** for MPI stack notes.
 
 ## Usage (`kobayashi_fd_hip`)
 

@@ -6,13 +6,13 @@
  * @brief Owns the spectral simulation object graph built from JSON settings
  *
  * @details
- * `SpectralSimulationSession` composes `SpectralCpuStack` (world, decomposition,
+ * `SpectralSimulationSession` composes `SpectralCPUStack` (world, decomposition,
  * CPU FFT, time) with a concrete `Model` and `Simulator`. The session is
  * returned as `std::unique_ptr` so it is never moved after construction: the
- * simulator holds references to the model and time members. `CpuFFT` is held
+ * simulator holds references to the model and time members. `CPUFFT` is held
  * inside the stack and is not movable.
  *
- * CUDA/HIP models should treat this host `CpuFFT` as the sole `pfc::FFT` passed
+ * CUDA/HIP models should treat this host `CPUFFT` as the sole `pfc::FFT` passed
  * into `ConcreteModel` and bind device FFTs from the same decomposition instead
  * of allocating an extra CPU HeFFTe instance in application drivers.
  *
@@ -80,8 +80,8 @@ public:
     return pfc::ui::decomposition(m_stack);
   }
 
-  [[nodiscard]] fft::CpuFFT &fft() noexcept { return pfc::ui::fft(m_stack); }
-  [[nodiscard]] const fft::CpuFFT &fft() const noexcept {
+  [[nodiscard]] fft::CPUFFT &fft() noexcept { return pfc::ui::fft(m_stack); }
+  [[nodiscard]] const fft::CPUFFT &fft() const noexcept {
     return pfc::ui::fft(m_stack);
   }
 
@@ -97,7 +97,7 @@ public:
   /**
    * @brief Register writers/modifiers and apply optional `"simulator"` JSON keys
    *
-   * Uses the same MPI communicator as FFT construction (`SpectralCpuStack`).
+   * Uses the same MPI communicator as FFT construction (`SpectralCPUStack`).
    *
    * @param modifier_catalog Factories for JSON `type` strings.
    * @param writer_catalog Factories for JSON `fields[].writer` (e.g.
@@ -127,7 +127,7 @@ public:
   }
 
 private:
-  SpectralCpuStack m_stack;
+  SpectralCPUStack m_stack;
   ConcreteModel m_model;
   Simulator m_simulator;
 };
@@ -154,12 +154,12 @@ decomposition(const SpectralSimulationSession<M> &session) noexcept {
 }
 
 template <class M>
-[[nodiscard]] inline fft::CpuFFT &
+[[nodiscard]] inline fft::CPUFFT &
 fft(SpectralSimulationSession<M> &session) noexcept {
   return session.fft();
 }
 template <class M>
-[[nodiscard]] inline const fft::CpuFFT &
+[[nodiscard]] inline const fft::CPUFFT &
 fft(const SpectralSimulationSession<M> &session) noexcept {
   return session.fft();
 }

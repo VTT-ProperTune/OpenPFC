@@ -31,9 +31,9 @@ namespace pfc::fft {
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
 
 // CUDA DataBuffer type aliases (moved from kernel/fft/fft.hpp)
-using RealDataBufferCUDA = core::DataBuffer<backend::CudaTag, double>;
+using RealDataBufferCUDA = core::DataBuffer<backend::CUDATag, double>;
 using ComplexDataBufferCUDA =
-    core::DataBuffer<backend::CudaTag, std::complex<double>>;
+    core::DataBuffer<backend::CUDATag, std::complex<double>>;
 
 // cuFFT backend type alias
 using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
@@ -64,8 +64,8 @@ using fft_r2c_cuda = heffte::fft3d_r2c<heffte::backend::cufft>;
  * #endif
  * @endcode
  */
-// GPU FFT type alias — implements `IDeviceFFT<CudaSpace>`.
-using FFT_CUDA = FFT_Impl<heffte::backend::cufft, IDeviceFFT<pfc::CudaSpace>>;
+// GPU FFT type alias — implements `IDeviceFFT<CUDASpace>`.
+using FFT_CUDA = FFT_Impl<heffte::backend::cufft, IDeviceFFT<pfc::CUDASpace>>;
 
 /**
  * @brief Creates an FFT object using cuFFT backend for GPU acceleration

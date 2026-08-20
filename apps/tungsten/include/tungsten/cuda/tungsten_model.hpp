@@ -7,7 +7,7 @@
  *
  * @details
  * This file implements the CUDA version of the Tungsten PFC model.
- * It uses DataBuffer<CudaTag, T> for GPU memory management and CUDA kernels
+ * It uses DataBuffer<CUDATag, T> for GPU memory management and CUDA kernels
  * for element-wise operations. ETD method weights are owned by
  * @c tungsten::etd::TungstenETDWorkspace (not persistent Model coefficient members).
  *
@@ -65,7 +65,7 @@ inline void cuda_check(cudaError_t e, const char *what) {
  *
  * @note All parameters are accessed via `params.get_*()` getters
  * @note Parameters are set via `params.set_*()` setters
- * @note This version uses GPU memory (DataBuffer<CudaTag, T>)
+ * @note This version uses GPU memory (DataBuffer<CUDATag, T>)
  *
  * @example Double precision
  * @code
@@ -84,21 +84,21 @@ private:
   // So we construct it in place via set_cuda_fft(decomp, rank)
   std::unique_ptr<pfc::fft::FFT_CUDA> m_cuda_fft;
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
+  pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>
       filterMF; ///< Mean-field filter in Fourier space
   /// Method-owned ETD weights (transient; not checkpointed).
   /// TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
   tungsten::etd::TungstenETDWorkspace<RealType> m_etd;
   std::uint64_t m_operator_generation{0};
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>
+  pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>
       psiMF; ///< Mean-field filtered density
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> psi;  ///< Density field
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> psiN; ///< Nonlinear term
-  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>
+  pfc::core::DataBuffer<pfc::backend::CUDATag, RealType> psi;  ///< Density field
+  pfc::core::DataBuffer<pfc::backend::CUDATag, RealType> psiN; ///< Nonlinear term
+  pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<RealType>>
       psiMF_F; ///< Mean-field in Fourier space
-  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>
+  pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<RealType>>
       psi_F; ///< Density in Fourier space
-  pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>
+  pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<RealType>>
       psiN_F;               ///< Nonlinear term in Fourier space
   size_t mem_allocated = 0; ///< Memory allocated (for debugging)
 
@@ -131,8 +131,8 @@ public:
    */
   void set_cuda_fft(const pfc::Decomposition &decomp, int rank) {
     auto boxes = pfc::runtime::heffte_gpu::make_default_r2c_boxes(decomp, rank);
-    using HeffteCudaFFT = heffte::fft3d_r2c<heffte::backend::cufft>;
-    HeffteCudaFFT fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
+    using HeffteCUDAFFT = heffte::fft3d_r2c<heffte::backend::cufft>;
+    HeffteCUDAFFT fft(boxes.real_inbox, boxes.complex_outbox, boxes.r2c_direction,
                       mpi_comm());
     m_cuda_fft = std::make_unique<pfc::fft::FFT_CUDA>(std::move(fft));
   }
@@ -219,21 +219,21 @@ public:
     auto size_inbox = fft.size_inbox();
     auto size_outbox = fft.size_outbox();
 
-    filterMF = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_outbox);
+    filterMF = pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>(size_outbox);
     m_etd.reserve(size_outbox);
     m_etd.allocate_cuda(size_outbox);
 
     // Real-space fields
-    psi = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_inbox);
-    psiMF = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_inbox);
-    psiN = pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(size_inbox);
+    psi = pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>(size_inbox);
+    psiMF = pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>(size_inbox);
+    psiN = pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>(size_inbox);
 
     // Fourier-space fields (suffix F means in Fourier space)
-    psi_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(
+    psi_F = pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<RealType>>(
         size_outbox);
-    psiMF_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(
+    psiMF_F = pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<RealType>>(
         size_outbox);
-    psiN_F = pfc::core::DataBuffer<pfc::backend::CudaTag, std::complex<RealType>>(
+    psiN_F = pfc::core::DataBuffer<pfc::backend::CUDATag, std::complex<RealType>>(
         size_outbox);
 
     // Allocate CPU-side buffer for FieldModifiers and VTKWriter
@@ -317,7 +317,7 @@ public:
     const std::size_t n_modes = static_cast<std::size_t>(size_outbox);
 
     // Compute physics on CPU first
-    pfc::core::DataBuffer<pfc::backend::CpuTag, RealType> filterMF_cpu(size_outbox);
+    pfc::core::DataBuffer<pfc::backend::CPUTag, RealType> filterMF_cpu(size_outbox);
     std::vector<double> k_laps(n_modes);
     std::vector<double> opCks(n_modes);
 
@@ -402,7 +402,7 @@ public:
 
     // Apply mean-field filter in Fourier space: ψ̂_MF = χ(k) · ψ̂
     // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-    tungsten::ops::multiply_complex_real<pfc::backend::CudaTag, RealType>(
+    tungsten::ops::multiply_complex_real<pfc::backend::CUDATag, RealType>(
         psi_F, filterMF, psiMF_F);
     // Record event after kernel launch (kernels run on default stream)
     cudaEventRecord(kernel_done_event, 0);
@@ -420,14 +420,14 @@ public:
     double q4_bar = params.get_q4_bar();
 
     // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-    tungsten::ops::compute_nonlinear<pfc::backend::CudaTag, RealType>(
+    tungsten::ops::compute_nonlinear<pfc::backend::CUDATag, RealType>(
         psi, psiMF, p3_bar, p4_bar, q3_bar, q4_bar, psiN);
 
     // Step 3: Apply stabilization factor if given
     double stabP = params.get_stabP();
     if (stabP != 0.0) {
       // Uses GPU kernel via backend-agnostic operation (no sync - async launch)
-      tungsten::ops::apply_stabilization<pfc::backend::CudaTag, RealType>(
+      tungsten::ops::apply_stabilization<pfc::backend::CUDATag, RealType>(
           psiN, psi, stabP, psiN);
     }
     // Record event after all kernels in this sequence complete
@@ -440,7 +440,7 @@ public:
 
     // Step 5: Apply exponential time integration in Fourier space
     // TODO(remove-tungsten-etd-workspace): replace with ETD1Stepper after #169
-    tungsten::ops::apply_time_integration<pfc::backend::CudaTag, RealType>(
+    tungsten::ops::apply_time_integration<pfc::backend::CUDATag, RealType>(
         psi_F, psiN_F, m_etd.cuda_exp_Ldt(), m_etd.cuda_n_weight(), psi_F);
     // Record event after kernel launch
     cudaEventRecord(kernel_done_event, 0);
@@ -462,8 +462,8 @@ public:
   ~TungstenCUDA() { cudaEventDestroy(kernel_done_event); }
 
   // Accessors for fields (for testing/debugging)
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &get_psi() { return psi; }
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &get_psiMF() {
+  pfc::core::DataBuffer<pfc::backend::CUDATag, RealType> &get_psi() { return psi; }
+  pfc::core::DataBuffer<pfc::backend::CUDATag, RealType> &get_psiMF() {
     return psiMF;
   }
 

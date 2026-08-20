@@ -66,7 +66,7 @@ void gather(SparseVector<BackendTag, T> &sparse_vector, const T *source,
     return;
   }
 
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     // CPU: Direct indexed access
     const auto &indices = sparse_vector.indices();
     T *data = sparse_vector.data().data();
@@ -80,7 +80,7 @@ void gather(SparseVector<BackendTag, T> &sparse_vector, const T *source,
   } else {
     static_assert(
         dependent_false<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp");
   }
 }
 
@@ -88,7 +88,7 @@ void gather(SparseVector<BackendTag, T> &sparse_vector, const T *source,
  * @brief Gather from std::vector (convenience overload for CPU)
  */
 template <typename T>
-void gather(core::SparseVector<backend::CpuTag, T> &sparse_vector,
+void gather(core::SparseVector<backend::CPUTag, T> &sparse_vector,
             const std::vector<T> &source) {
   gather(sparse_vector, source.data(), source.size());
 }
@@ -97,7 +97,7 @@ void gather(core::SparseVector<backend::CpuTag, T> &sparse_vector,
  * @brief Gather from initializer list (convenience overload for CPU)
  */
 template <typename T>
-void gather(core::SparseVector<backend::CpuTag, T> &sparse_vector,
+void gather(core::SparseVector<backend::CPUTag, T> &sparse_vector,
             std::initializer_list<T> source) {
   std::vector<T> vec(source);
   gather(sparse_vector, vec);
@@ -122,7 +122,7 @@ void scatter(const SparseVector<BackendTag, T> &sparse_vector, T *dest,
     return;
   }
 
-  if constexpr (std::is_same_v<BackendTag, backend::CpuTag>) {
+  if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
     // CPU: Direct indexed access
     const auto &indices = sparse_vector.indices();
     const T *data = sparse_vector.data().data();
@@ -136,7 +136,7 @@ void scatter(const SparseVector<BackendTag, T> &sparse_vector, T *dest,
   } else {
     static_assert(
         dependent_false<BackendTag>,
-        "CudaTag/HipTag: include openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp");
+        "CUDATag/HIPTag: include openpfc/runtime/gpu/sparse_vector_ops_gpu.hpp");
   }
 }
 
@@ -144,7 +144,7 @@ void scatter(const SparseVector<BackendTag, T> &sparse_vector, T *dest,
  * @brief Scatter to std::vector (convenience overload for CPU)
  */
 template <typename T>
-void scatter(const core::SparseVector<backend::CpuTag, T> &sparse_vector,
+void scatter(const core::SparseVector<backend::CPUTag, T> &sparse_vector,
              std::vector<T> &dest) {
   scatter(sparse_vector, dest.data(), dest.size());
 }

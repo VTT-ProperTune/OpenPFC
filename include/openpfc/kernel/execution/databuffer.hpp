@@ -21,19 +21,19 @@
  *
  * @code
  * // CPU memory (always available)
- * pfc::DataBuffer<pfc::backend::CpuTag, double> cpu_buf(1000);
+ * pfc::DataBuffer<pfc::backend::CPUTag, double> cpu_buf(1000);
  * cpu_buf[0] = 1.0;  // Works - CPU has operator[]
  *
  * // GPU memory: include openpfc/runtime/gpu/databuffer_gpu.hpp
  * // (vendor runtime/cuda / runtime/hip headers are thin includes)
- * pfc::core::DataBuffer<pfc::backend::CudaTag, double> gpu_buf(1000);
+ * pfc::core::DataBuffer<pfc::backend::CUDATag, double> gpu_buf(1000);
  * std::vector<double> host_data(1000, 1.0);
  * gpu_buf.copy_from_host(host_data);
  * @endcode
  *
  * @see kernel/execution/backend_tags.hpp for backend tag definitions
  * @see kernel/execution/memory_traits.hpp for backend metadata
- * @see runtime/gpu/databuffer_gpu.hpp for CudaTag / HipTag specializations
+ * @see runtime/gpu/databuffer_gpu.hpp for CUDATag / HIPTag specializations
  *
  * @author OpenPFC Development Team
  * @date 2025
@@ -56,11 +56,11 @@ template <typename T> constexpr bool dependent_false_databuffer = false;
  * @brief Backend-agnostic memory buffer
  *
  * Template class that provides unified interface for memory management
- * across different backends. Kernel defines CpuTag only; include
+ * across different backends. Kernel defines CPUTag only; include
  * runtime/gpu/databuffer_gpu.hpp for GPU backends (vendor CUDA/HIP
  * headers are thin includes).
  *
- * @tparam BackendTag Backend tag (CpuTag in kernel; CudaTag/HipTag in runtime)
+ * @tparam BackendTag Backend tag (CPUTag in kernel; CUDATag/HIPTag in runtime)
  * @tparam T Element type (must be trivially copyable for GPU backends)
  */
 template <typename BackendTag, typename T> struct DataBuffer;
@@ -71,7 +71,7 @@ template <typename BackendTag, typename T> struct DataBuffer;
  * Uses std::vector for host memory management.
  * Provides operator[] for direct element access.
  */
-template <typename T> struct DataBuffer<backend::CpuTag, T> {
+template <typename T> struct DataBuffer<backend::CPUTag, T> {
 private:
   std::vector<T> m_data;
 
@@ -153,13 +153,13 @@ public:
   /**
    * @brief Get underlying std::vector reference (for Model compatibility)
    *
-   * This method allows DataBuffer<CpuTag, T> to be used with Model's
+   * This method allows DataBuffer<CPUTag, T> to be used with Model's
    * add_real_field() and add_complex_field() methods which expect
    * std::vector<T>& references.
    *
    * @return Reference to underlying std::vector
    *
-   * @note Only available for CpuTag specialization
+   * @note Only available for CPUTag specialization
    * @note For GPU backends, this method is not available
    */
   std::vector<T> &as_vector() { return m_data; }
@@ -236,7 +236,7 @@ public:
 /**
  * @brief Unsupported backend: include openpfc/runtime/gpu/databuffer_gpu.hpp
  *
- * Kernel only provides DataBuffer<CpuTag,T>. For CudaTag or HipTag, include
+ * Kernel only provides DataBuffer<CPUTag,T>. For CUDATag or HIPTag, include
  * the GPU runtime header (vendor CUDA/HIP shims are thin includes of it).
  */
 template <typename BackendTag, typename T> struct DataBuffer {

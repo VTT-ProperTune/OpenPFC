@@ -95,9 +95,9 @@ TEST_CASE("CPU vs CUDA Laplacian equivalence (multi-rank) [integration][gpu][mpi
   fft_cpu.backward(freq_cpu, real_out_cpu);
 
   // GPU path
-  core::DataBuffer<backend::CudaTag, double> real_in_gpu(n_in);
-  core::DataBuffer<backend::CudaTag, double> real_out_gpu(n_in);
-  core::DataBuffer<backend::CudaTag, std::complex<double>> freq_gpu(n_out);
+  core::DataBuffer<backend::CUDATag, double> real_in_gpu(n_in);
+  core::DataBuffer<backend::CUDATag, double> real_out_gpu(n_in);
+  core::DataBuffer<backend::CUDATag, std::complex<double>> freq_gpu(n_out);
 
   real_in_gpu.copy_from_host(real_in_cpu);
   fft_gpu.forward(real_in_gpu, freq_gpu);

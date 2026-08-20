@@ -46,9 +46,9 @@ TEST_CASE("CUDA isend/irecv fail closed without OpenPFC_MPI_CUDA_AWARE",
   const std::vector<size_t> indices = {0, 2, 4};
   const std::vector<double> values = {1.0, 3.0, 5.0};
   auto sparse =
-      pfc::sparsevector::create<double, pfc::backend::CudaTag>(indices, values);
+      pfc::sparsevector::create<double, pfc::backend::CUDATag>(indices, values);
   auto empty =
-      pfc::sparsevector::create<double, pfc::backend::CudaTag>({}, {});
+      pfc::sparsevector::create<double, pfc::backend::CUDATag>({}, {});
 
   MPI_Request req = MPI_REQUEST_NULL;
 

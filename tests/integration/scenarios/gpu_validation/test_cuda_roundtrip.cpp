@@ -39,9 +39,9 @@ TEST_CASE("CUDA FFT roundtrip (double) [integration][gpu]", "[gpu]") {
   auto fft = fft::create_cuda(decomp, rank);
 
   // Allocate GPU buffers
-  core::DataBuffer<backend::CudaTag, double> real_in(fft.size_inbox());
-  core::DataBuffer<backend::CudaTag, double> real_out(fft.size_inbox());
-  core::DataBuffer<backend::CudaTag, std::complex<double>> freq(fft.size_outbox());
+  core::DataBuffer<backend::CUDATag, double> real_in(fft.size_inbox());
+  core::DataBuffer<backend::CUDATag, double> real_out(fft.size_inbox());
+  core::DataBuffer<backend::CUDATag, std::complex<double>> freq(fft.size_outbox());
 
   // Initialize host data with a smooth function and copy to device
   std::vector<double> host_in(fft.size_inbox());
@@ -52,7 +52,7 @@ TEST_CASE("CUDA FFT roundtrip (double) [integration][gpu]", "[gpu]") {
   }
   real_in.copy_from_host(host_in);
 
-  fft::IDeviceFFT<CudaSpace> &iface = fft;
+  fft::IDeviceFFT<CUDASpace> &iface = fft;
   iface.forward(real_in, freq);
   iface.backward(freq, real_out);
 
@@ -78,9 +78,9 @@ TEST_CASE("CUDA FFT roundtrip (float) [integration][gpu]", "[gpu]") {
   auto fft = fft::create_cuda(decomp, rank);
 
   // Allocate GPU buffers
-  core::DataBuffer<backend::CudaTag, float> real_in(fft.size_inbox());
-  core::DataBuffer<backend::CudaTag, float> real_out(fft.size_inbox());
-  core::DataBuffer<backend::CudaTag, std::complex<float>> freq(fft.size_outbox());
+  core::DataBuffer<backend::CUDATag, float> real_in(fft.size_inbox());
+  core::DataBuffer<backend::CUDATag, float> real_out(fft.size_inbox());
+  core::DataBuffer<backend::CUDATag, std::complex<float>> freq(fft.size_outbox());
 
   // Initialize host data with a smooth function and copy to device
   std::vector<float> host_in(fft.size_inbox());

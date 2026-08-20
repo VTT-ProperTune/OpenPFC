@@ -31,7 +31,7 @@ TEST_CASE("SparseVector - Large index set", "[SparseVector][core][large]") {
   std::iota(indices.begin(), indices.end(), 0);
   std::reverse(indices.begin(), indices.end()); // Unsorted
 
-  auto sparse = core::SparseVector<backend::CpuTag, double>(indices);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(indices);
 
   REQUIRE(sparse.size() == N);
   REQUIRE(sparse.is_sorted());
@@ -170,7 +170,7 @@ TEST_CASE("SparseVector - Gather scatter with single element",
 TEST_CASE("SparseVector - Float type", "[SparseVector][core][types]") {
   std::vector<size_t> indices = {1, 3, 5};
   std::vector<float> values = {1.5F, 3.5F, 5.5F};
-  auto sparse = core::SparseVector<backend::CpuTag, float>(indices, values);
+  auto sparse = core::SparseVector<backend::CPUTag, float>(indices, values);
 
   REQUIRE(sparse.size() == 3);
   auto data = sparsevector::get_data(sparse);
@@ -284,7 +284,7 @@ TEST_CASE("SparseVector - Index sorting preserves data correspondence",
   std::vector<size_t> indices = {5, 1, 3, 7, 2};
   std::vector<double> data = {50.0, 10.0, 30.0, 70.0, 20.0};
 
-  auto sparse = core::SparseVector<backend::CpuTag, double>(indices, data);
+  auto sparse = core::SparseVector<backend::CPUTag, double>(indices, data);
 
   REQUIRE(sparse.is_sorted());
 

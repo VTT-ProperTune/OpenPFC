@@ -78,9 +78,9 @@ TEST_CASE("SparseExchange: single-peer custom RemoteHalo round-trip",
   h.send_tag = 7;
   h.recv_tag = 7;
   h.send_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{2, 5});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{2, 5});
   h.recv_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{6, 7});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{6, 7});
   h.scatter_after_recv = true;
 
   std::vector<halo::RemoteHalo<double>> halos;
@@ -312,7 +312,7 @@ TEST_CASE("Connectivity::Edges yields faces+edges, no corners",
                              GridSpacing({1.0, 1.0, 1.0}));
   auto decomp = decomposition::create(global_domain, nproc);
 
-  auto patterns = halo::create_halo_patterns<backend::CpuTag>(
+  auto patterns = halo::create_halo_patterns<backend::CPUTag>(
       decomp, rank, halo::Connectivity::Edges, hw);
   // 6 face directions + 12 edge directions = 18 entries; no corners.
   REQUIRE(patterns.size() == 18);

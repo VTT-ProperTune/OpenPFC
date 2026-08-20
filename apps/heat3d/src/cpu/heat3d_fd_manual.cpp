@@ -112,7 +112,7 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
 
   // 7. Time loop. Top-level timer brackets the loop; per-section
   //    timers break each step into named slices reported at the end.
-  runtime::MpiTimer timer{MPI_COMM_WORLD};
+  runtime::MPITimer timer{MPI_COMM_WORLD};
   runtime::tic(timer);
   for (int step = 0; step < cfg.n_steps; ++step) {
 

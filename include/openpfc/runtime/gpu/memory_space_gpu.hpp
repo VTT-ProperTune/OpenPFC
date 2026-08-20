@@ -5,7 +5,7 @@
  * @file memory_space_gpu.hpp
  * @brief Single-source GPU memory space tags for CUDA and HIP (M3).
  *
- * Defines `CudaSpace` and/or `HipSpace` plus `memory_space_to_backend`
+ * Defines `CUDASpace` and/or `HIPSpace` plus `memory_space_to_backend`
  * specializations depending on the enabled backends. Vendor headers
  * `memory_space_cuda.hpp` / `memory_space_hip.hpp` are thin includes of this
  * file so existing call sites keep compiling.
@@ -26,18 +26,18 @@
 namespace pfc {
 
 #if defined(OpenPFC_ENABLE_CUDA)
-struct CudaSpace {};
+struct CUDASpace {};
 
-template <> struct memory_space_to_backend<CudaSpace> {
-  using type = backend::CudaTag;
+template <> struct memory_space_to_backend<CUDASpace> {
+  using type = backend::CUDATag;
 };
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
-struct HipSpace {};
+struct HIPSpace {};
 
-template <> struct memory_space_to_backend<HipSpace> {
-  using type = backend::HipTag;
+template <> struct memory_space_to_backend<HIPSpace> {
+  using type = backend::HIPTag;
 };
 #endif
 

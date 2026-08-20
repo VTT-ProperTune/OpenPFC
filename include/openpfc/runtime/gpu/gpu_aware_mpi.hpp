@@ -48,20 +48,20 @@
 namespace pfc::gpu {
 
 /// How `decide_gpu_aware_mpi` reached its answer (for tests and the log).
-enum class GpuAwareMpiHow {
+enum class GPUAwareMPIHow {
   AssumeOff,
   AssumeOn,
-  OpenMpiQueryOn,
-  OpenMpiQueryOff,
+  OpenMPIQueryOn,
+  OpenMPIQueryOff,
   CrayMpichEnv,
   ProbeOn,
   ProbeOff,
   CompileTimeOff,
 };
 
-struct GpuAwareMpiDecision {
+struct GPUAwareMPIDecision {
   bool enabled = false;
-  GpuAwareMpiHow how = GpuAwareMpiHow::CompileTimeOff;
+  GPUAwareMPIHow how = GPUAwareMPIHow::CompileTimeOff;
 };
 
 inline bool env_first_char(const char *name, char expected) {
@@ -69,16 +69,16 @@ inline bool env_first_char(const char *name, char expected) {
   return v != nullptr && v[0] == expected;
 }
 
-inline const char *gpu_aware_how_cstr(GpuAwareMpiHow how) {
+inline const char *gpu_aware_how_cstr(GPUAwareMPIHow how) {
   switch (how) {
-  case GpuAwareMpiHow::AssumeOff: return "OPENPFC_ASSUME_GPU_AWARE_MPI=0";
-  case GpuAwareMpiHow::AssumeOn: return "OPENPFC_ASSUME_GPU_AWARE_MPI=1";
-  case GpuAwareMpiHow::OpenMpiQueryOn: return "MPIX_Query=1";
-  case GpuAwareMpiHow::OpenMpiQueryOff: return "MPIX_Query=0";
-  case GpuAwareMpiHow::CrayMpichEnv: return "MPICH_GPU_SUPPORT_ENABLED=1";
-  case GpuAwareMpiHow::ProbeOn: return "OPENPFC_PROBE_GPU_AWARE_MPI ok";
-  case GpuAwareMpiHow::ProbeOff: return "OPENPFC_PROBE_GPU_AWARE_MPI failed";
-  case GpuAwareMpiHow::CompileTimeOff: return "not compiled GPU-aware";
+  case GPUAwareMPIHow::AssumeOff: return "OPENPFC_ASSUME_GPU_AWARE_MPI=0";
+  case GPUAwareMPIHow::AssumeOn: return "OPENPFC_ASSUME_GPU_AWARE_MPI=1";
+  case GPUAwareMPIHow::OpenMPIQueryOn: return "MPIX_Query=1";
+  case GPUAwareMPIHow::OpenMPIQueryOff: return "MPIX_Query=0";
+  case GPUAwareMPIHow::CrayMpichEnv: return "MPICH_GPU_SUPPORT_ENABLED=1";
+  case GPUAwareMPIHow::ProbeOn: return "OPENPFC_PROBE_GPU_AWARE_MPI ok";
+  case GPUAwareMPIHow::ProbeOff: return "OPENPFC_PROBE_GPU_AWARE_MPI failed";
+  case GPUAwareMPIHow::CompileTimeOff: return "not compiled GPU-aware";
   }
   return "unknown";
 }
@@ -138,34 +138,34 @@ inline bool probe_cuda_device_mpi() {
 #endif
 
 /// Pure decision (no cache). Safe to call after setenv in tests.
-inline GpuAwareMpiDecision decide_gpu_aware_mpi() {
-  GpuAwareMpiDecision d{};
+inline GPUAwareMPIDecision decide_gpu_aware_mpi() {
+  GPUAwareMPIDecision d{};
 #if !defined(OpenPFC_MPI_CUDA_AWARE) && !defined(OpenPFC_MPI_HIP_AWARE)
-  d.how = GpuAwareMpiHow::CompileTimeOff;
+  d.how = GPUAwareMPIHow::CompileTimeOff;
   return d;
 #endif
   if (env_first_char("OPENPFC_ASSUME_GPU_AWARE_MPI", '0')) {
-    d.how = GpuAwareMpiHow::AssumeOff;
+    d.how = GPUAwareMPIHow::AssumeOff;
     return d;
   }
   if (env_first_char("OPENPFC_ASSUME_GPU_AWARE_MPI", '1')) {
     d.enabled = true;
-    d.how = GpuAwareMpiHow::AssumeOn;
+    d.how = GPUAwareMPIHow::AssumeOn;
     return d;
   }
 #if defined(OPENPFC_HAVE_MPIX_QUERY_CUDA_SUPPORT) && defined(OpenPFC_MPI_CUDA_AWARE)
   d.enabled = MPIX_Query_cuda_support() == 1;
-  d.how = d.enabled ? GpuAwareMpiHow::OpenMpiQueryOn : GpuAwareMpiHow::OpenMpiQueryOff;
+  d.how = d.enabled ? GPUAwareMPIHow::OpenMPIQueryOn : GPUAwareMPIHow::OpenMPIQueryOff;
   return d;
 #endif
 #if defined(OPENPFC_HAVE_MPIX_QUERY_HIP_SUPPORT) && defined(OpenPFC_MPI_HIP_AWARE)
   d.enabled = MPIX_Query_hip_support() == 1;
-  d.how = d.enabled ? GpuAwareMpiHow::OpenMpiQueryOn : GpuAwareMpiHow::OpenMpiQueryOff;
+  d.how = d.enabled ? GPUAwareMPIHow::OpenMPIQueryOn : GPUAwareMPIHow::OpenMPIQueryOff;
   return d;
 #endif
   if (env_first_char("MPICH_GPU_SUPPORT_ENABLED", '1')) {
     d.enabled = true;
-    d.how = GpuAwareMpiHow::CrayMpichEnv;
+    d.how = GPUAwareMPIHow::CrayMpichEnv;
     return d;
   }
   if (env_first_char("OPENPFC_PROBE_GPU_AWARE_MPI", '1')) {
@@ -174,17 +174,17 @@ inline GpuAwareMpiDecision decide_gpu_aware_mpi() {
 #elif defined(OpenPFC_ENABLE_CUDA) && defined(OpenPFC_MPI_CUDA_AWARE)
     d.enabled = probe_cuda_device_mpi();
 #endif
-    d.how = d.enabled ? GpuAwareMpiHow::ProbeOn : GpuAwareMpiHow::ProbeOff;
+    d.how = d.enabled ? GPUAwareMPIHow::ProbeOn : GPUAwareMPIHow::ProbeOff;
     return d;
   }
-  d.how = GpuAwareMpiHow::CompileTimeOff;
+  d.how = GPUAwareMPIHow::CompileTimeOff;
   return d;
 }
 
 /// Cached decision + one-shot rank-0 log to stderr.
 inline bool runtime_mpi_gpu_aware() {
-  static const GpuAwareMpiDecision d = []() {
-    const GpuAwareMpiDecision r = decide_gpu_aware_mpi();
+  static const GPUAwareMPIDecision d = []() {
+    const GPUAwareMPIDecision r = decide_gpu_aware_mpi();
     int rank = 0;
     int mpi_ready = 0;
     MPI_Initialized(&mpi_ready);

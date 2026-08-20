@@ -15,7 +15,7 @@
  * The host specialization composes the existing `PaddedHaloExchanger` /
  * `FullPaddedHaloExchanger` / `PersistentHaloExchanger` implementations so
  * consumers can move onto the new name before those classes are deleted.
- * Device `HaloExchange<CudaSpace/HipSpace>` lives in
+ * Device `HaloExchange<CUDASpace/HIPSpace>` lives in
  * `runtime/gpu/comm_halo_exchange_gpu.hpp`. CUDA execution of that half is
  * not available on LUMI.
  *

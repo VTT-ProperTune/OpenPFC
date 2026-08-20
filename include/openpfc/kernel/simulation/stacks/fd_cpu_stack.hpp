@@ -9,7 +9,7 @@
  *        + SparseExchange` for finite-difference CPU solvers.
  *
  * @details
- * Programmatic counterpart to `pfc::sim::stacks::SpectralCpuStack` for
+ * Programmatic counterpart to `pfc::sim::stacks::SpectralCPUStack` for
  * the explicit-FD path. The members are declared in dependency order so
  * cross-references stay valid for the lifetime of the stack:
  *
@@ -36,7 +36,7 @@
  * input.
  *
  * The class is **non-copyable, non-movable** for the same reason as
- * `pfc::ui::SpectralCpuStack` and `pfc::sim::stacks::SpectralCpuStack`:
+ * `pfc::ui::SpectralCPUStack` and `pfc::sim::stacks::SpectralCPUStack`:
  * the internal references would dangle the moment the source bundle is
  * destroyed. Construct in place, take references.
  *
@@ -77,7 +77,7 @@ struct FDGeometry {
  * @brief Programmatic FD periodic CPU stack: Domain + Decomposition +
  *        unpadded Field + face-halo buffers + halo exchanger.
  */
-class FdCpuStack {
+class FDCPUStack {
 public:
   /**
    * @param domain    The global Cartesian simulation domain.
@@ -87,7 +87,7 @@ public:
    * @param nproc     Total number of ranks on `comm`.
    * @param comm      MPI communicator passed to the halo exchanger.
    */
-  explicit FdCpuStack(pfc::Domain domain, int fd_order, int rank,
+  explicit FDCPUStack(pfc::Domain domain, int fd_order, int rank,
                       int nproc, MPI_Comm comm = MPI_COMM_WORLD)
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
@@ -112,17 +112,17 @@ public:
    * @deprecated Use the Domain-based constructor for new code. This constructor
    *             exists for backward compatibility with existing code.
    */
-  [[deprecated("Use FdCpuStack(const Domain&, int, int, int, MPI_Comm) instead")]]
-  FdCpuStack(const pfc::GridSize &size, const pfc::PhysicalOrigin &origin,
+  [[deprecated("Use FDCPUStack(const Domain&, int, int, int, MPI_Comm) instead")]]
+  FDCPUStack(const pfc::GridSize &size, const pfc::PhysicalOrigin &origin,
              const pfc::GridSpacing &spacing, int fd_order, int rank, int nproc,
              MPI_Comm comm = MPI_COMM_WORLD)
-      : FdCpuStack(pfc::domain::create(size, origin, spacing), fd_order, rank, nproc,
+      : FDCPUStack(pfc::domain::create(size, origin, spacing), fd_order, rank, nproc,
                    comm) {}
 
-  FdCpuStack(const FdCpuStack &) = delete;
-  FdCpuStack &operator=(const FdCpuStack &) = delete;
-  FdCpuStack(FdCpuStack &&) = delete;
-  FdCpuStack &operator=(FdCpuStack &&) = delete;
+  FDCPUStack(const FDCPUStack &) = delete;
+  FDCPUStack &operator=(const FDCPUStack &) = delete;
+  FDCPUStack(FDCPUStack &&) = delete;
+  FDCPUStack &operator=(FDCPUStack &&) = delete;
 
   /**
    * @brief Synchronise the face-halo region of `m_u` with neighbouring
@@ -137,7 +137,7 @@ public:
   /**
    * @brief Build a compact-driver residual field for the FD stack.
    *
-   * Returns a `pfc::sim::DuField<G, pfc::field::FdGradient<G>>` bound to
+   * Returns a `pfc::sim::DuField<G, pfc::field::FDGradient<G>>` bound to
    * `m_u` and the configured FD order, with halo exchange wired into its
    * `apply(...)` so the user-facing time loop stays
    *

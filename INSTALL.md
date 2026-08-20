@@ -290,7 +290,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 
 ### 5.2 CMake cache variables (quick reference)
 
-These switches are defined under `cmake/` (see `BuildOptions.cmake`, `Dependencies.cmake`, `CudaSupport.cmake`, `HipSupport.cmake`, `LibraryConfiguration.cmake`, `CodeCoverage.cmake`, `ProjectSetup.cmake`, `CompilerSettings.cmake`). Use `-DNAME=ON|OFF` (or `STRING` where noted) on the `cmake` command line.
+These switches are defined under `cmake/` (see `BuildOptions.cmake`, `Dependencies.cmake`, `CUDASupport.cmake`, `HIPSupport.cmake`, `LibraryConfiguration.cmake`, `CodeCoverage.cmake`, `ProjectSetup.cmake`, `CompilerSettings.cmake`). Use `-DNAME=ON|OFF` (or `STRING` where noted) on the `cmake` command line.
 
 | Cache variable | Typical use |
 |------------------|---------------|

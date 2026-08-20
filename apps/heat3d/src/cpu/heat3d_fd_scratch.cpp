@@ -126,9 +126,9 @@ void run_fd_scratch(const RunConfig &cfg, int rank, int nproc) {
                               static_cast<std::size_t>(nz),
                           0.0);
 
-  // 5. Time loop. One MpiTimer brackets the whole thing; no per-stage
+  // 5. Time loop. One MPITimer brackets the whole thing; no per-stage
   //    breakdown — the driver is meant to be read top-to-bottom.
-  pfc::runtime::MpiTimer timer{MPI_COMM_WORLD};
+  pfc::runtime::MPITimer timer{MPI_COMM_WORLD};
   pfc::runtime::tic(timer);
   for (int step = 0; step < cfg.n_steps; ++step) {
 

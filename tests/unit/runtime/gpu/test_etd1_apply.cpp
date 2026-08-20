@@ -55,7 +55,7 @@ TEST_CASE("device ETD1 apply CUDA matches host (real and complex)",
   std::vector<double> host_out(3);
   host_reference(exp_Ldt, phi1_L, u, nlin, host_out);
 
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> d_exp(3), d_phi(3), d_u(3),
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> d_exp(3), d_phi(3), d_u(3),
       d_n(3), d_out(3);
   d_exp.copy_from_host(exp_Ldt);
   d_phi.copy_from_host(phi1_L);
@@ -74,7 +74,7 @@ TEST_CASE("device ETD1 apply CUDA matches host (real and complex)",
                                 Complex{-0.5, 0.25}};
   std::vector<Complex> host_c(3);
   host_reference(exp_Ldt, phi1_L, uc, nc, host_c);
-  pfc::core::DataBuffer<pfc::backend::CudaTag, Complex> d_uc(3), d_nc(3),
+  pfc::core::DataBuffer<pfc::backend::CUDATag, Complex> d_uc(3), d_nc(3),
       d_oc(3);
   d_uc.copy_from_host(uc);
   d_nc.copy_from_host(nc);
@@ -101,7 +101,7 @@ TEST_CASE("device ETD1 apply HIP matches host (real and complex)",
   std::vector<double> host_out(3);
   host_reference(exp_Ldt, phi1_L, u, nlin, host_out);
 
-  pfc::core::DataBuffer<pfc::backend::HipTag, double> d_exp(3), d_phi(3), d_u(3),
+  pfc::core::DataBuffer<pfc::backend::HIPTag, double> d_exp(3), d_phi(3), d_u(3),
       d_n(3), d_out(3);
   d_exp.copy_from_host(exp_Ldt);
   d_phi.copy_from_host(phi1_L);
@@ -120,7 +120,7 @@ TEST_CASE("device ETD1 apply HIP matches host (real and complex)",
                                 Complex{-0.5, 0.25}};
   std::vector<Complex> host_c(3);
   host_reference(exp_Ldt, phi1_L, uc, nc, host_c);
-  pfc::core::DataBuffer<pfc::backend::HipTag, Complex> d_uc(3), d_nc(3), d_oc(3);
+  pfc::core::DataBuffer<pfc::backend::HIPTag, Complex> d_uc(3), d_nc(3), d_oc(3);
   d_uc.copy_from_host(uc);
   d_nc.copy_from_host(nc);
   pfc::integrator::apply_etd1_update_hip(d_uc.data(), d_nc.data(), d_exp.data(),

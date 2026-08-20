@@ -14,13 +14,13 @@
  * `from_json_heffte.hpp`).
  *
  * **Avoid a second dummy CPU FFT:** GPU models still take `pfc::FFT&` from the
- * base `Model` constructor. Reuse the single `fft::CpuFFT` owned by
- * `SpectralCpuStack` / `SpectralSimulationSession::fft()` for that reference, and
+ * base `Model` constructor. Reuse the single `fft::CPUFFT` owned by
+ * `SpectralCPUStack` / `SpectralSimulationSession::fft()` for that reference, and
  * build cuFFT / ROCm HeFFTe (`cuda_spectral_plan_options_from_json`, etc.) only
- * for the device path—do not construct another throwaway `CpuFFT` in app code
+ * for the device path—do not construct another throwaway `CPUFFT` in app code
  * solely to satisfy the `Model` wiring.
  *
- * @see spectral_cpu_stack_detail.hpp for the CPU `SpectralCpuStack` factory
+ * @see spectral_cpu_stack_detail.hpp for the CPU `SpectralCPUStack` factory
  * @see from_json_heffte.hpp for `detail::apply_heffte_plan_options_json_overrides`
  */
 

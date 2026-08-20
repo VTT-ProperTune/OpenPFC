@@ -5,7 +5,7 @@
 
 /**
  * @file gpu_spectral_stack.hpp
- * @brief Device counterpart of `pfc::sim::stacks::SpectralCpuStack`.
+ * @brief Device counterpart of `pfc::sim::stacks::SpectralCPUStack`.
  *
  * @details
  * Lives in runtime because `create_cuda` / `create_hip` and `IDeviceFFT`
@@ -42,7 +42,7 @@ namespace pfc::sim::stacks {
 template <class MemorySpace> struct gpu_fft_for;
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-template <> struct gpu_fft_for<CudaSpace> {
+template <> struct gpu_fft_for<CUDASpace> {
   using type = fft::FFT_CUDA;
   static type create(const pfc::decomposition::Decomposition &decomp, int rank,
                      MPI_Comm comm) {
@@ -52,7 +52,7 @@ template <> struct gpu_fft_for<CudaSpace> {
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-template <> struct gpu_fft_for<HipSpace> {
+template <> struct gpu_fft_for<HIPSpace> {
   using type = fft::FFT_HIP;
   static type create(const pfc::decomposition::Decomposition &decomp, int rank,
                      MPI_Comm comm) {
@@ -65,17 +65,17 @@ template <> struct gpu_fft_for<HipSpace> {
  * @brief Programmatic spectral GPU stack: Domain + Decomposition + device FFT
  *        + `Field<double, MemorySpace>` sized to the FFT inbox.
  */
-template <class MemorySpace> class GpuSpectralStack {
+template <class MemorySpace> class GPUSpectralStack {
 public:
   using fft_type = typename gpu_fft_for<MemorySpace>::type;
   using field_type = data::Field<double, MemorySpace>;
 
-  GpuSpectralStack(const GpuSpectralStack &) = delete;
-  GpuSpectralStack &operator=(const GpuSpectralStack &) = delete;
-  GpuSpectralStack(GpuSpectralStack &&) = delete;
-  GpuSpectralStack &operator=(GpuSpectralStack &&) = delete;
+  GPUSpectralStack(const GPUSpectralStack &) = delete;
+  GPUSpectralStack &operator=(const GPUSpectralStack &) = delete;
+  GPUSpectralStack(GPUSpectralStack &&) = delete;
+  GPUSpectralStack &operator=(GPUSpectralStack &&) = delete;
 
-  explicit GpuSpectralStack(pfc::Domain domain, int rank, int nproc,
+  explicit GPUSpectralStack(pfc::Domain domain, int rank, int nproc,
                             MPI_Comm comm = MPI_COMM_WORLD)
       : m_domain(std::move(domain)),
         m_decomp(pfc::decomposition::create(m_domain, nproc)),
@@ -117,10 +117,10 @@ private:
 };
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
-using CudaSpectralStack = GpuSpectralStack<CudaSpace>;
+using CUDASpectralStack = GPUSpectralStack<CUDASpace>;
 #endif
 #if defined(OpenPFC_ENABLE_HIP_SPECTRAL)
-using HipSpectralStack = GpuSpectralStack<HipSpace>;
+using HIPSpectralStack = GPUSpectralStack<HIPSpace>;
 #endif
 
 } // namespace pfc::sim::stacks

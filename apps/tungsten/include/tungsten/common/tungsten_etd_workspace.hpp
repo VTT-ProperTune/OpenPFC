@@ -69,9 +69,9 @@ public:
   /** Allocate CUDA device weight buffers (call from TungstenCUDA::allocate). */
   void allocate_cuda(std::size_t n_modes) {
     m_cuda_exp_Ldt =
-        pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(n_modes);
+        pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>(n_modes);
     m_cuda_n_weight =
-        pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(n_modes);
+        pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>(n_modes);
     m_cuda_ready = false;
   }
 #endif
@@ -80,9 +80,9 @@ public:
   /** Allocate HIP device weight buffers (call from TungstenHIP::allocate). */
   void allocate_hip(std::size_t n_modes) {
     m_hip_exp_Ldt =
-        pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(n_modes);
+        pfc::core::DataBuffer<pfc::backend::HIPTag, RealType>(n_modes);
     m_hip_n_weight =
-        pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(n_modes);
+        pfc::core::DataBuffer<pfc::backend::HIPTag, RealType>(n_modes);
     m_hip_ready = false;
   }
 #endif
@@ -170,9 +170,9 @@ public:
     const auto exp_w = exp_Ldt();
     if (m_cuda_exp_Ldt.size() != exp_w.size()) {
       m_cuda_exp_Ldt =
-          pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(exp_w.size());
+          pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>(exp_w.size());
       m_cuda_n_weight =
-          pfc::core::DataBuffer<pfc::backend::CudaTag, RealType>(exp_w.size());
+          pfc::core::DataBuffer<pfc::backend::CUDATag, RealType>(exp_w.size());
     }
     std::vector<RealType> exp_h(exp_w.size());
     std::vector<RealType> n_h(m_n_weight.size());
@@ -185,7 +185,7 @@ public:
     m_cuda_ready = true;
   }
 
-  [[nodiscard]] pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &
+  [[nodiscard]] pfc::core::DataBuffer<pfc::backend::CUDATag, RealType> &
   cuda_exp_Ldt() {
     if (!m_cuda_ready) {
       throw std::runtime_error(
@@ -194,7 +194,7 @@ public:
     return m_cuda_exp_Ldt;
   }
 
-  [[nodiscard]] pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> &
+  [[nodiscard]] pfc::core::DataBuffer<pfc::backend::CUDATag, RealType> &
   cuda_n_weight() {
     if (!m_cuda_ready) {
       throw std::runtime_error(
@@ -214,9 +214,9 @@ public:
     const auto exp_w = exp_Ldt();
     if (m_hip_exp_Ldt.size() != exp_w.size()) {
       m_hip_exp_Ldt =
-          pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(exp_w.size());
+          pfc::core::DataBuffer<pfc::backend::HIPTag, RealType>(exp_w.size());
       m_hip_n_weight =
-          pfc::core::DataBuffer<pfc::backend::HipTag, RealType>(exp_w.size());
+          pfc::core::DataBuffer<pfc::backend::HIPTag, RealType>(exp_w.size());
     }
     std::vector<RealType> exp_h(exp_w.size());
     std::vector<RealType> n_h(m_n_weight.size());
@@ -229,7 +229,7 @@ public:
     m_hip_ready = true;
   }
 
-  [[nodiscard]] pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &
+  [[nodiscard]] pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> &
   hip_exp_Ldt() {
     if (!m_hip_ready) {
       throw std::runtime_error(
@@ -238,7 +238,7 @@ public:
     return m_hip_exp_Ldt;
   }
 
-  [[nodiscard]] pfc::core::DataBuffer<pfc::backend::HipTag, RealType> &
+  [[nodiscard]] pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> &
   hip_n_weight() {
     if (!m_hip_ready) {
       throw std::runtime_error(
@@ -259,13 +259,13 @@ private:
   std::vector<double> m_n_weight;
 
 #if defined(OpenPFC_ENABLE_CUDA)
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> m_cuda_exp_Ldt;
-  pfc::core::DataBuffer<pfc::backend::CudaTag, RealType> m_cuda_n_weight;
+  pfc::core::DataBuffer<pfc::backend::CUDATag, RealType> m_cuda_exp_Ldt;
+  pfc::core::DataBuffer<pfc::backend::CUDATag, RealType> m_cuda_n_weight;
   bool m_cuda_ready{false};
 #endif
 #if defined(OpenPFC_ENABLE_HIP)
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> m_hip_exp_Ldt;
-  pfc::core::DataBuffer<pfc::backend::HipTag, RealType> m_hip_n_weight;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> m_hip_exp_Ldt;
+  pfc::core::DataBuffer<pfc::backend::HIPTag, RealType> m_hip_n_weight;
   bool m_hip_ready{false};
 #endif
 };

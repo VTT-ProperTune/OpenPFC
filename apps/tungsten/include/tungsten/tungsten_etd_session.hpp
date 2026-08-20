@@ -9,7 +9,7 @@
  *
  * @details
  * M8 A/B driver. Gen-1 `tungsten` (`App<Tungsten>`) stays. This session owns
- * `SpectralCpuStack`, `SimulationState`, and `SpectralMeanFieldETDSystem` —
+ * `SpectralCPUStack`, `SimulationState`, and `SpectralMeanFieldETDSystem` —
  * no model-owned FFT. Initial conditions and fixed BCs are applied on the
  * `Field` (same formulas as Gen-1 `Constant` / `SingleSeed` / `FixedBC`).
  * Binary `psi` dumps follow `Time::do_save()` when JSON `fields` is set.
@@ -85,7 +85,7 @@ public:
     return m_state.get_field<double>("psi");
   }
   [[nodiscard]] const pfc::Time &time() const noexcept { return m_time; }
-  [[nodiscard]] pfc::sim::stacks::SpectralCpuStack &stack() noexcept {
+  [[nodiscard]] pfc::sim::stacks::SpectralCPUStack &stack() noexcept {
     return m_stack;
   }
   [[nodiscard]] int dumps() const noexcept { return m_writers.dumps(); }
@@ -102,7 +102,7 @@ private:
 
   pfc::Domain m_domain{};
   pfc::Time m_time;
-  pfc::sim::stacks::SpectralCpuStack m_stack;
+  pfc::sim::stacks::SpectralCPUStack m_stack;
   pfc::SimulationState m_state;
   std::optional<FixedBc> m_bc{};
   TungstenETDWriters m_writers{};

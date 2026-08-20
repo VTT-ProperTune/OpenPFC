@@ -3,12 +3,12 @@
 
 /**
  * @file test_fd_gradient_device_hip.cpp
- * @brief Integration test for `pfc::hip::FdGradientDevice<G>` and
+ * @brief Integration test for `pfc::hip::FDGradientDevice<G>` and
  *        `pfc::sim::hip::for_each_interior_device`.
  *
  * @details
  * The HIP twin must produce **the same numerical result** as the CPU
- * `pfc::field::FdGradient<G>` + `pfc::sim::for_each_interior` pipeline for
+ * `pfc::field::FDGradient<G>` + `pfc::sim::for_each_interior` pipeline for
  * every model that the SymPy-generated kernel codegen path will eventually
  * hit. We pin the contract here on a small interior brick where:
  *
@@ -134,7 +134,7 @@ bool hip_runtime_available() {
 
 } // namespace
 
-TEST_CASE("HIP for_each_interior_device + FdGradientDevice<G> agree with "
+TEST_CASE("HIP for_each_interior_device + FDGradientDevice<G> agree with "
           "analytic polynomial RHS",
           "[hip][fd_gradient_device][integration]") {
   if (!hip_runtime_available()) {
@@ -193,7 +193,7 @@ TEST_CASE("HIP for_each_interior_device + FdGradientDevice<G> agree with "
                     hipMemcpyHostToDevice) == hipSuccess);
   REQUIRE(hipMemset(d_du, 0, total * sizeof(double)) == hipSuccess);
 
-  pfc::hip::FdGradientDevice<TestGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
+  pfc::hip::FDGradientDevice<TestGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
                                               order);
   TestModel model;
 
@@ -248,7 +248,7 @@ TEST_CASE("HIP for_each_interior_device + FdGradientDevice<G> agree with "
   hipFree(d_du);
 }
 
-TEST_CASE("HIP FdGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
+TEST_CASE("HIP FDGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
           "[hip][fd_gradient_device][integration]") {
   if (!hip_runtime_available()) {
     SUCCEED("Skipping: no HIP device on this host.");
@@ -292,7 +292,7 @@ TEST_CASE("HIP FdGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
                     hipMemcpyHostToDevice) == hipSuccess);
   REQUIRE(hipMemset(d_du, 0, total * sizeof(double)) == hipSuccess);
 
-  pfc::hip::FdGradientDevice<MixedGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
+  pfc::hip::FDGradientDevice<MixedGrads> eval(d_u, nx, ny, nz, dx, dy, dz, hw,
                                               order);
   MixedModel model;
   pfc::sim::hip::for_each_interior_device<MixedModel, MixedGrads>(
@@ -336,7 +336,7 @@ TEST_CASE("HIP FdGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
   hipFree(d_du);
 }
 
-TEST_CASE("HIP FdGradientDevice mixed-only OnlyXY loads D1 weights",
+TEST_CASE("HIP FDGradientDevice mixed-only OnlyXY loads D1 weights",
           "[hip][fd_gradient_device][integration]") {
   if (!hip_runtime_available()) {
     SUCCEED("Skipping: no HIP device on this host.");
@@ -353,7 +353,7 @@ TEST_CASE("HIP FdGradientDevice mixed-only OnlyXY loads D1 weights",
   double *d_u = nullptr;
   REQUIRE(hipMalloc(&d_u, total) == hipSuccess);
 
-  pfc::hip::FdGradientDevice<OnlyXY> eval(d_u, nx, ny, nz, 1.0, 1.0, 1.0, hw,
+  pfc::hip::FDGradientDevice<OnlyXY> eval(d_u, nx, ny, nz, 1.0, 1.0, 1.0, hw,
                                           order);
   const auto &pod = eval.pod();
   REQUIRE(pod.hw1 == 1);
@@ -363,7 +363,7 @@ TEST_CASE("HIP FdGradientDevice mixed-only OnlyXY loads D1 weights",
   hipFree(d_u);
 }
 
-TEST_CASE("HIP FdGradientDevice<G> ctor rejects an order without a D1 stencil table",
+TEST_CASE("HIP FDGradientDevice<G> ctor rejects an order without a D1 stencil table",
           "[hip][fd_gradient_device][integration]") {
   if (!hip_runtime_available()) {
     SUCCEED("Skipping: no HIP device on this host.");
@@ -381,13 +381,13 @@ TEST_CASE("HIP FdGradientDevice<G> ctor rejects an order without a D1 stencil ta
 
   double *d_u = nullptr;
   REQUIRE(hipMalloc(&d_u, total) == hipSuccess);
-  REQUIRE_THROWS_AS((pfc::hip::FdGradientDevice<OnlyX>(d_u, nx, ny, nz, 1.0, 1.0,
+  REQUIRE_THROWS_AS((pfc::hip::FDGradientDevice<OnlyX>(d_u, nx, ny, nz, 1.0, 1.0,
                                                        1.0, hw, order)),
                     std::invalid_argument);
   hipFree(d_u);
 }
 
-TEST_CASE("HIP FdGradientDevice create(Field) rejects an unpadded Field",
+TEST_CASE("HIP FDGradientDevice create(Field) rejects an unpadded Field",
           "[hip][fd_gradient_device][integration]") {
   const auto domain = pfc::domain::create({8, 8, 8});
   const auto owned = pfc::domain::index_box(domain);
@@ -396,7 +396,7 @@ TEST_CASE("HIP FdGradientDevice create(Field) rejects an unpadded Field",
   REQUIRE_THROWS_AS((pfc::hip::create<TestGrads>(u, 2)), std::invalid_argument);
 }
 
-TEST_CASE("HIP FdGradientDevice create(Field<HipSpace>) agrees with analytic "
+TEST_CASE("HIP FDGradientDevice create(Field<HIPSpace>) agrees with analytic "
           "polynomial RHS",
           "[hip][fd_gradient_device][integration]") {
   if (!hip_runtime_available()) {
@@ -415,7 +415,7 @@ TEST_CASE("HIP FdGradientDevice create(Field<HipSpace>) agrees with analytic "
 
   const auto domain = pfc::domain::with_spacing({nx, ny, nz}, {dx, dy, dz});
   const auto owned = pfc::domain::index_box(domain);
-  pfc::data::Field<double, pfc::HipSpace> u(domain, owned, hw);
+  pfc::data::Field<double, pfc::HIPSpace> u(domain, owned, hw);
 
   std::vector<double> h_u(u.size(), 0.0);
   for (int k = -hw; k < nz + hw; ++k) {

@@ -54,7 +54,7 @@ So there is **no separate “secret environment”** visible in those logs — t
 **Mitigations to prefer** (before declaring a regression in application code):
 
 1. Keep the Slurm script defaults above (**`mtl=^ofi`**, **pmix**).
-2. Build with **`mpicxx`** as `CMAKE_CXX_COMPILER` so OpenPFC’s [**GPU-aware MPI** probe](../../../../cmake/OpenPFCGpuAwareMpi.cmake) runs against real Open MPI headers (documented in the rebuild sbatch).
+2. Build with **`mpicxx`** as `CMAKE_CXX_COMPILER` so OpenPFC’s [**GPU-aware MPI** probe](../../../../cmake/OpenPFCGPUAwareMpi.cmake) runs against real Open MPI headers (documented in the rebuild sbatch).
 3. Align CPU resources / binding between timed and nsys jobs when comparing numbers (**`--cpus-per-task=1`** for parity).
 4. Enable **NVIDIA persistence** on shared nodes if initialization warnings appear (reduces noise; separate from the orders-of-magnitude **`gpu_aware_mpi`** gap).
 

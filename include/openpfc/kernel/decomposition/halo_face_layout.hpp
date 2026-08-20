@@ -64,7 +64,7 @@ inline FaceHaloCounts face_halo_counts(const decomposition::Decomposition &decom
   const std::array<Int3, 6> dirs = {
       {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}};
   for (int i = 0; i < 6; ++i) {
-    auto recv = create_recv_halo<backend::CpuTag>(decomp, rank, dirs[i], halo_width);
+    auto recv = create_recv_halo<backend::CPUTag>(decomp, rank, dirs[i], halo_width);
     out.counts[static_cast<size_t>(i)] = recv.size();
   }
   return out;
@@ -119,9 +119,9 @@ allocate_face_halos(const decomposition::Decomposition &decomp, int rank,
  *      periodic decomposition the lookup never returns `< 0`; an entry is
  *      still emitted when `peer == rank` (single-rank wrap) so MPI handles
  *      the local self-send cleanly.
- *   2. Build send indices via `create_send_halo<CpuTag>(decomp, rank, d, hw)`
+ *   2. Build send indices via `create_send_halo<CPUTag>(decomp, rank, d, hw)`
  *      (cells on **this** rank's `+d` boundary, in row-major order).
- *   3. Build recv indices via `create_recv_halo<CpuTag>(decomp, rank, d, hw)`
+ *   3. Build recv indices via `create_recv_halo<CPUTag>(decomp, rank, d, hw)`
  *      (cells on **this** rank's `-d` boundary). The recv buffer's data
  *      layout matches the SparseVector sort order — the row-major slab
  *      ordering the templated periodic-separated FD Laplacians consume.
@@ -159,9 +159,9 @@ template <typename T>
     }
 
     const auto send_idx_sv =
-        create_send_halo<backend::CpuTag>(decomp, rank, d, halo_width);
+        create_send_halo<backend::CPUTag>(decomp, rank, d, halo_width);
     const auto recv_idx_sv =
-        create_recv_halo<backend::CpuTag>(decomp, rank, d, halo_width);
+        create_recv_halo<backend::CPUTag>(decomp, rank, d, halo_width);
 
     std::vector<std::size_t> send_idx = sparsevector::get_index(send_idx_sv);
     std::vector<std::size_t> recv_idx = sparsevector::get_index(recv_idx_sv);
@@ -171,8 +171,8 @@ template <typename T>
     h.send_tag = base_tag + direction_to_canonical_tag(d);
     h.recv_tag = base_tag + direction_to_canonical_tag(
                                 HaloDirectionSet::Int3{-d[0], -d[1], -d[2]});
-    h.send_values = core::SparseVector<backend::CpuTag, T>(std::move(send_idx));
-    h.recv_values = core::SparseVector<backend::CpuTag, T>(std::move(recv_idx));
+    h.send_values = core::SparseVector<backend::CPUTag, T>(std::move(send_idx));
+    h.recv_values = core::SparseVector<backend::CPUTag, T>(std::move(recv_idx));
     h.scatter_after_recv = false;
     h.direction = d;
     out.push_back(std::move(h));

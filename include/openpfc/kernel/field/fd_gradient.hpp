@@ -38,7 +38,7 @@
  * from a padded `pfc::data::Field<double>` (`storage_halo() > 0`). Legacy
  * callers that hand a raw pointer + extents are still supported, and
  * `pfc::field::create<G>(pfc::data::Field<double>, order)` also covers
- * the unpadded Field path used by `FdCpuStack`.
+ * the unpadded Field path used by `FDCPUStack`.
  *
  * Drive a sweep with the free `pfc::gradient::evaluate(grad, idx)`
  * helper — it accepts a `pfc::Int3` so the iteration code does not
@@ -437,15 +437,15 @@ namespace pfc::field {
 /**
  * @brief Deprecated alias for the canonical `pfc::gradient::FDGradient<G>`.
  *
- * Kept so existing call sites — `FdCpuStack`, the per-point heat3d
+ * Kept so existing call sites — `FDCPUStack`, the per-point heat3d
  * tutorial, the device evaluator wrappers, and friends — continue to
  * compile while users migrate to the new name. New code should use
  * `pfc::gradient::FDGradient<G>` directly.
  */
-template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
+template <class G> using FDGradient = pfc::gradient::FDGradient<G>;
 
 /**
- * @brief Free-function factory: build an `FdGradient<G>` from a `pfc::data::Field`.
+ * @brief Free-function factory: build an `FDGradient<G>` from a `pfc::data::Field`.
  *
  * Mirrors the `domain::create`, `decomposition::create`, `fft::create` family:
  * derives `nx, ny, nz`, the per-axis grid spacings, and the halo width
@@ -485,7 +485,7 @@ template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
  *               stencil half-width for tabulated even central D1/D2).
  *               Defaults to 2.
  *
- * @return An `FdGradient<G>` ready to be passed to
+ * @return An `FDGradient<G>` ready to be passed to
  *         `pfc::sim::for_each_interior` (or `pfc::sim::steppers::create`).
  *
  * @throws std::invalid_argument if `order` is outside the tabulated range
@@ -494,17 +494,17 @@ template <class G> using FdGradient = pfc::gradient::FDGradient<G>;
  *         half-width.
  */
 template <class G>
-[[nodiscard]] inline FdGradient<G> create(const pfc::data::Field<double> &u,
+[[nodiscard]] inline FDGradient<G> create(const pfc::data::Field<double> &u,
                                           int order = 2) {
   // Unpadded Field (storage_halo==0): tightly packed core + iteration halo.
   // Padded Field (storage_halo>0): owned origin + padded strides.
   if (u.storage_halo() == 0) {
     const auto sz = u.local_size();
     const auto sp = u.spacing();
-    return FdGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
+    return FDGradient<G>(u.data(), sz[0], sz[1], sz[2], sp[0], sp[1], sp[2],
                          u.halo_width(), order);
   }
-  return FdGradient<G>(u, order);
+  return FDGradient<G>(u, order);
 }
 
 } // namespace pfc::field

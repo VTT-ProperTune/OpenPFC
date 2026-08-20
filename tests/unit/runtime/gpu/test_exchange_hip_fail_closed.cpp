@@ -46,9 +46,9 @@ TEST_CASE("HIP isend/irecv fail closed without OpenPFC_MPI_HIP_AWARE",
   const std::vector<size_t> indices = {0, 2, 4};
   const std::vector<double> values = {1.0, 3.0, 5.0};
   auto sparse =
-      pfc::sparsevector::create<double, pfc::backend::HipTag>(indices, values);
+      pfc::sparsevector::create<double, pfc::backend::HIPTag>(indices, values);
   auto empty =
-      pfc::sparsevector::create<double, pfc::backend::HipTag>({}, {});
+      pfc::sparsevector::create<double, pfc::backend::HIPTag>({}, {});
 
   MPI_Request req = MPI_REQUEST_NULL;
 

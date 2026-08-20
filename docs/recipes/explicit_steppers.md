@@ -83,7 +83,7 @@ struct HeatModel {
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 
-pfc::sim::stacks::FdCpuStack stack(
+pfc::sim::stacks::FDCPUStack stack(
   pfc::GridSize{{N, N, N}},
   pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
   pfc::GridSpacing{{dx, dx, dx}},
@@ -98,7 +98,7 @@ auto grad = pfc::field::create<HeatGrads>(u, fd_order);
 #include <openpfc/kernel/field/spectral_gradient.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 
-pfc::sim::stacks::SpectralCpuStack stack(
+pfc::sim::stacks::SpectralCPUStack stack(
   pfc::GridSize{{N, N, N}},
   pfc::PhysicalOrigin{{0.0, 0.0, 0.0}},
   pfc::GridSpacing{{dx, dx, dx}},

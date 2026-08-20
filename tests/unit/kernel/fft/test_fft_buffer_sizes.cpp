@@ -81,7 +81,7 @@ TEST_CASE("FFT_Impl vector backward rejects wrong buffer sizes",
   }
 }
 
-// Host `CpuFFT` (`IHostFFT`) exposes vector transforms only. Device
+// Host `CPUFFT` (`IHostFFT`) exposes vector transforms only. Device
 // `DataBuffer` size checks live on `IDeviceFFT` and the GPU test binaries.
 
 TEST_CASE("FFT_Impl vector forward accepts correctly sized buffers",

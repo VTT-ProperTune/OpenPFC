@@ -20,7 +20,7 @@ TEST_CASE("deep_copy CUDA DataBuffer scalar fill", "[gpu][deep_copy][cuda]") {
   if (!pfc::gpu::test::is_cuda_available()) {
     SKIP("CUDA not available");
   }
-  pfc::core::DataBuffer<pfc::backend::CudaTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::CUDATag, double> buf(5);
   pfc::deep_copy(buf, 1.5);
   const std::vector<double> host = buf.to_host();
   REQUIRE(host.size() == 5);
@@ -52,7 +52,7 @@ TEST_CASE("deep_copy HIP DataBuffer scalar fill", "[gpu][deep_copy][hip]") {
   if (!pfc::gpu::test::is_hip_available()) {
     SKIP("HIP not available");
   }
-  pfc::core::DataBuffer<pfc::backend::HipTag, double> buf(5);
+  pfc::core::DataBuffer<pfc::backend::HIPTag, double> buf(5);
   pfc::deep_copy(buf, 1.5);
   const std::vector<double> host = buf.to_host();
   REQUIRE(host.size() == 5);

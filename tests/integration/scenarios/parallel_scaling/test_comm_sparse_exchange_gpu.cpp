@@ -29,13 +29,13 @@ Box3i whole_box(int nx, int ny, int nz) {
 
 template <typename Space> bool device_runtime_available() {
 #if defined(OpenPFC_ENABLE_HIP)
-  if constexpr (std::is_same_v<Space, HipSpace>) {
+  if constexpr (std::is_same_v<Space, HIPSpace>) {
     int n = 0;
     return hipGetDeviceCount(&n) == hipSuccess && n > 0;
   }
 #endif
 #if defined(OpenPFC_ENABLE_CUDA)
-  if constexpr (std::is_same_v<Space, CudaSpace>) {
+  if constexpr (std::is_same_v<Space, CUDASpace>) {
     int n = 0;
     return cudaGetDeviceCount(&n) == cudaSuccess && n > 0;
   }
@@ -46,19 +46,19 @@ template <typename Space> bool device_runtime_available() {
 } // namespace
 
 #if defined(OpenPFC_ENABLE_HIP)
-TEST_CASE("SparseExchange HipSpace: custom RemoteHalo scatter stays on device",
+TEST_CASE("SparseExchange HIPSpace: custom RemoteHalo scatter stays on device",
           "[sparse_exchange][hip]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size != 1 || !device_runtime_available<HipSpace>()) {
+  if (size != 1 || !device_runtime_available<HIPSpace>()) {
     return;
   }
   if (!pfc::gpu::runtime_mpi_gpu_aware()) {
     return;
   }
 
-  data::Field<double, HipSpace> u(domain::create({8, 1, 1}), whole_box(8, 1, 1),
+  data::Field<double, HIPSpace> u(domain::create({8, 1, 1}), whole_box(8, 1, 1),
                                   0);
   u.with_host_view([&](double *data, std::size_t) {
     for (int i = 0; i < 8; ++i) {
@@ -71,12 +71,12 @@ TEST_CASE("SparseExchange HipSpace: custom RemoteHalo scatter stays on device",
   h.send_tag = 7;
   h.recv_tag = 7;
   h.send_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{2, 5});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{2, 5});
   h.recv_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{6, 7});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{6, 7});
   h.scatter_after_recv = true;
 
-  comm::SparseExchange<HipSpace, double> ex(u, {std::move(h)}, rank,
+  comm::SparseExchange<HIPSpace, double> ex(u, {std::move(h)}, rank,
                                             MPI_COMM_WORLD);
   REQUIRE(ex.num_halos() == 1);
   REQUIRE_THROWS_AS(ex.start(), std::logic_error);
@@ -89,20 +89,20 @@ TEST_CASE("SparseExchange HipSpace: custom RemoteHalo scatter stays on device",
   });
 }
 
-TEST_CASE("SparseExchange HipSpace: structured face_recv_ptrs are device-side",
+TEST_CASE("SparseExchange HIPSpace: structured face_recv_ptrs are device-side",
           "[sparse_exchange][hip]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size != 1 || !device_runtime_available<HipSpace>()) {
+  if (size != 1 || !device_runtime_available<HIPSpace>()) {
     return;
   }
 
   auto domain = domain::create({8, 6, 1});
   auto decomp = decomposition::create(domain, 1);
-  data::Field<double, HipSpace> u(domain, decomposition::local_box(decomp, rank),
+  data::Field<double, HIPSpace> u(domain, decomposition::local_box(decomp, rank),
                                   /*storage_halo=*/0, /*iteration_halo=*/1);
-  comm::SparseExchange<HipSpace, double> ex(u, decomp, rank, MPI_COMM_WORLD);
+  comm::SparseExchange<HIPSpace, double> ex(u, decomp, rank, MPI_COMM_WORLD);
   REQUIRE(ex.num_halos() == 6);
   const auto faces = ex.face_recv_ptrs();
   for (int f = 0; f < 6; ++f) {
@@ -112,19 +112,19 @@ TEST_CASE("SparseExchange HipSpace: structured face_recv_ptrs are device-side",
 #endif
 
 #if defined(OpenPFC_ENABLE_CUDA)
-TEST_CASE("SparseExchange CudaSpace: custom RemoteHalo scatter stays on device",
+TEST_CASE("SparseExchange CUDASpace: custom RemoteHalo scatter stays on device",
           "[sparse_exchange][cuda]") {
   int rank = 0, size = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if (size != 1 || !device_runtime_available<CudaSpace>()) {
+  if (size != 1 || !device_runtime_available<CUDASpace>()) {
     return;
   }
   if (!pfc::gpu::runtime_mpi_gpu_aware()) {
     return;
   }
 
-  data::Field<double, CudaSpace> u(domain::create({8, 1, 1}), whole_box(8, 1, 1),
+  data::Field<double, CUDASpace> u(domain::create({8, 1, 1}), whole_box(8, 1, 1),
                                    0);
   u.with_host_view([&](double *data, std::size_t) {
     for (int i = 0; i < 8; ++i) {
@@ -137,12 +137,12 @@ TEST_CASE("SparseExchange CudaSpace: custom RemoteHalo scatter stays on device",
   h.send_tag = 7;
   h.recv_tag = 7;
   h.send_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{2, 5});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{2, 5});
   h.recv_values =
-      core::SparseVector<backend::CpuTag, double>(std::vector<std::size_t>{6, 7});
+      core::SparseVector<backend::CPUTag, double>(std::vector<std::size_t>{6, 7});
   h.scatter_after_recv = true;
 
-  comm::SparseExchange<CudaSpace, double> ex(u, {std::move(h)}, rank,
+  comm::SparseExchange<CUDASpace, double> ex(u, {std::move(h)}, rank,
                                              MPI_COMM_WORLD);
   ex.exchange();
   u.with_host_view([&](double *data, std::size_t) {

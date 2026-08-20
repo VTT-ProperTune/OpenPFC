@@ -88,7 +88,7 @@ void run_fd_manual(const RunConfig &cfg, int rank, int nproc) {
     lap(i, j, k) = model.inv_dx2 * lxx + model.inv_dy2 * lyy;
   };
 
-  runtime::MpiTimer timer{MPI_COMM_WORLD};
+  runtime::MPITimer timer{MPI_COMM_WORLD};
   runtime::tic(timer);
   for (int step = 0; step < cfg.n_steps; ++step) {
     halo_u.exchange();

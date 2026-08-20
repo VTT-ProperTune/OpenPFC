@@ -33,12 +33,12 @@ namespace tungsten {
  *
  * @tparam Model           e.g. `TungstenCUDA<double>` or `TungstenHIP<double>`
  * @tparam PlanOptionsFn   returns `heffte::plan_options` from parsed JSON
- * @tparam GpuFFTFromModel returns the GPU FFT object used for `pfc::fft::get_inbox`
+ * @tparam GPUFFTFromModel returns the GPU FFT object used for `pfc::fft::get_inbox`
  */
-template <typename Model, typename PlanOptionsFn, typename GpuFFTFromModel>
+template <typename Model, typename PlanOptionsFn, typename GPUFFTFromModel>
 int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config,
                               const char *banner_title, PlanOptionsFn &&plan_options,
-                              GpuFFTFromModel &&gpu_fft_from_model) {
+                              GPUFFTFromModel &&gpu_fft_from_model) {
   using json = nlohmann::json;
 
   pfc::MPI_Worker worker(argc, argv);
