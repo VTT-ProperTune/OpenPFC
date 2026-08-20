@@ -25,6 +25,7 @@
 #include <openpfc/frontend/ui/from_json.hpp>
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/spectral_mean_field_etd.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
@@ -55,27 +56,21 @@ public:
     }
     phys.declare_fields(m_state);
     auto &psi = m_state.get_field<double>("psi");
-    apply_ics_from_json(settings, psi.domain(), psi.box(), psi.data(),
-                        psi.size());
+    apply_ics_from_json(settings, psi.domain(), psi.box(), psi.data(), psi.size());
     m_bc = parse_fixed_bc(settings);
-    m_writers.configure(settings, m_domain, m_stack.fft().get_inbox_bounds(),
-                        comm, rank);
-    m_sys = std::make_unique<
-        pfc::sim::SpectralMeanFieldETDSystem<TungstenPhysics<>>>(
-        std::move(phys), m_stack.fft(), m_state, pfc::time::dt(m_time));
+    m_writers.configure(settings, m_domain, m_stack.fft().get_inbox_bounds(), comm,
+                        rank);
+    m_sys =
+        std::make_unique<pfc::sim::SpectralMeanFieldETDSystem<TungstenPhysics<>>>(
+            std::move(phys), m_stack.fft(), m_state, pfc::time::dt(m_time));
   }
 
   void run() {
-    while (!pfc::time::done(m_time)) {
-      if (pfc::time::increment(m_time) == 0) {
-        apply_fixed_bc();
-        m_writers.maybe_write(m_time, psi().vec());
-      }
-      pfc::time::next(m_time);
-      apply_fixed_bc();
-      m_sys->step(pfc::time::current(m_time));
-      m_writers.maybe_write(m_time, psi().vec());
-    }
+    pfc::sim::SimulationDriver driver(m_time, &m_state);
+    driver.run([&](double t) { m_sys->step(t); },
+               [&](pfc::Time &) { apply_fixed_bc(); },
+               [&](pfc::Time &) { apply_fixed_bc(); },
+               [&](const pfc::Time &tm) { m_writers.maybe_write(tm, psi().vec()); });
   }
 
   [[nodiscard]] pfc::data::Field<double> &psi() {
@@ -106,8 +101,7 @@ private:
   pfc::SimulationState m_state;
   std::optional<FixedBc> m_bc{};
   TungstenETDWriters m_writers{};
-  std::unique_ptr<pfc::sim::SpectralMeanFieldETDSystem<TungstenPhysics<>>>
-      m_sys;
+  std::unique_ptr<pfc::sim::SpectralMeanFieldETDSystem<TungstenPhysics<>>> m_sys;
 };
 
 } // namespace tungsten
