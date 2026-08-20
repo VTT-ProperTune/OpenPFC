@@ -279,8 +279,13 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     openpfc_add_gpu_kernel_library(openpfc_gpu_kernels cu CUDA::cudart)
     # Pin CUDA language standard: project C++20 would otherwise map to "CUDA20" on
     # some CMake versions that do not know the matching nvcc flags (e.g. CMake 3.22).
+    # Device-link the static archive. Without this, nvcc relocatable objects
+    # in the .a call __cudaRegisterLinkedBinary_* that CMake only emits when
+    # the consumer's own .cu files are dlinked — CUDA executables then fail
+    # at host link with an undefined register symbol (seen on Tohtori/nvcc 13.1).
     set_target_properties(openpfc_gpu_kernels PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
+        CUDA_RESOLVE_DEVICE_SYMBOLS ON
         CUDA_STANDARD 20
         CUDA_STANDARD_REQUIRED ON
     )
