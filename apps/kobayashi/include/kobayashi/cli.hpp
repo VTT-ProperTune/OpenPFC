@@ -14,6 +14,7 @@
 #include <string>
 
 #include <kobayashi/defaults.hpp>
+#include <openpfc_apps/cli.hpp>
 
 namespace kobayashi {
 
@@ -28,14 +29,14 @@ struct RunConfig {
   int nsave = kNsave;
 };
 
-/** Same workload keys as @ref RunConfig plus optional OpenMP thread override (0 = runtime default). */
+/** Same workload keys as @ref RunConfig plus optional OpenMP thread override (0 =
+ * runtime default). */
 struct RunConfigOpenMP : RunConfig {
   int num_threads = 0;
 };
 
 inline void print_usage(std::ostream &os, const char *exe) {
-  os << "Usage:\n  " << exe
-     << " [<Nx> <Ny> <n_steps> <dt> <dx> [output_dir]]\n"
+  os << "Usage:\n  " << exe << " [<Nx> <Ny> <n_steps> <dt> <dx> [output_dir]]\n"
      << "All arguments optional; defaults match Julia kobayashi_v1:\n"
      << "  Nx Ny n_steps dt dx  →  256 256 2000 1e-4 0.03\n"
      << "  output_dir           →  results/kobayashi_v1\n"
@@ -45,7 +46,8 @@ inline void print_usage(std::ostream &os, const char *exe) {
 
 inline void print_usage_openmp(std::ostream &os, const char *exe) {
   print_usage(os, exe);
-  os << "OpenMP: respects OMP_NUM_THREADS unless an 8th argument sets an explicit thread count:\n"
+  os << "OpenMP: respects OMP_NUM_THREADS unless an 8th argument sets an explicit "
+        "thread count:\n"
      << "  … <output_dir> <num_threads>\n";
 }
 
@@ -71,17 +73,14 @@ inline std::optional<RunConfig> parse_args(int argc, char **argv) {
   return c;
 }
 
-inline std::optional<RunConfig> parse_or_print_usage(int argc, char **argv, int rank) {
-  auto cfg = parse_args(argc, argv);
-  if (!cfg && rank == 0) {
-    print_usage(std::cerr, argv[0]);
-  }
-  return cfg;
+inline std::optional<RunConfig> parse_or_print_usage(int argc, char **argv,
+                                                     int rank) {
+  return pfc::apps::parse_or_print_usage(argc, argv, rank, parse_args, print_usage);
 }
 
 /**
- * Parses argc in {1, 6, 7, 8} like @ref parse_args, plus optional 8th integer thread count
- * (requires explicit `output_dir` as argv[6]).
+ * Parses argc in {1, 6, 7, 8} like @ref parse_args, plus optional 8th integer thread
+ * count (requires explicit `output_dir` as argv[6]).
  */
 inline std::optional<RunConfigOpenMP> parse_args_openmp(int argc, char **argv) {
   RunConfigOpenMP c;
@@ -111,7 +110,8 @@ inline std::optional<RunConfigOpenMP> parse_args_openmp(int argc, char **argv) {
   return c;
 }
 
-inline std::optional<RunConfigOpenMP> parse_or_print_usage_openmp(int argc, char **argv) {
+inline std::optional<RunConfigOpenMP> parse_or_print_usage_openmp(int argc,
+                                                                  char **argv) {
   auto cfg = parse_args_openmp(argc, argv);
   if (!cfg) {
     print_usage_openmp(std::cerr, argv[0]);

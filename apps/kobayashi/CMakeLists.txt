@@ -73,7 +73,8 @@ endfunction()
 
 add_executable(kobayashi_fd_manual src/cpu/kobayashi_fd_manual.cpp)
 target_include_directories(kobayashi_fd_manual PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-target_link_libraries(kobayashi_fd_manual PRIVATE OpenPFC ${_kobayashi_heffte_tgt})
+target_link_libraries(kobayashi_fd_manual PRIVATE OpenPFC openpfc_apps_common
+                      ${_kobayashi_heffte_tgt})
 install(TARGETS kobayashi_fd_manual DESTINATION bin)
 
 find_package(OpenMP COMPONENTS CXX)
@@ -83,7 +84,8 @@ if(OpenMP_CXX_FOUND)
     src/cpu/kobayashi_fd_openmp.cpp
     src/cpu/kobayashi_fd_openmp_engine.cpp)
   target_include_directories(kobayashi_fd_openmp PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-  target_link_libraries(kobayashi_fd_openmp PRIVATE OpenPFC ${_kobayashi_heffte_tgt}
+  target_link_libraries(kobayashi_fd_openmp PRIVATE OpenPFC openpfc_apps_common
+                                                          ${_kobayashi_heffte_tgt}
                                                           OpenMP::OpenMP_CXX)
   install(TARGETS kobayashi_fd_openmp DESTINATION bin)
 
@@ -92,7 +94,8 @@ if(OpenMP_CXX_FOUND)
     add_executable(test_kobayashi_fd_openmp tests/test_kobayashi_fd_openmp.cpp
                                             src/cpu/kobayashi_fd_openmp_engine.cpp)
     target_include_directories(test_kobayashi_fd_openmp PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-    target_link_libraries(test_kobayashi_fd_openmp PRIVATE OpenPFC ${_kobayashi_heffte_tgt}
+    target_link_libraries(test_kobayashi_fd_openmp PRIVATE OpenPFC openpfc_apps_common
+                                                                ${_kobayashi_heffte_tgt}
                                                                 Catch2::Catch2WithMain
                                                                 OpenMP::OpenMP_CXX)
     include(CTest)
@@ -109,7 +112,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/gpu/padded_halo_faces.cu
   )
   target_include_directories(kobayashi_fd_cuda PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-  target_link_libraries(kobayashi_fd_cuda PRIVATE OpenPFC CUDA::cudart ${_kobayashi_heffte_tgt})
+  target_link_libraries(kobayashi_fd_cuda PRIVATE OpenPFC openpfc_apps_common CUDA::cudart
+                        ${_kobayashi_heffte_tgt})
   set_target_properties(kobayashi_fd_cuda PROPERTIES
     CUDA_STANDARD 17
     CUDA_STANDARD_REQUIRED ON
@@ -127,8 +131,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     src/hip/kobayashi_fd_hip_kernels.hip
   )
   target_include_directories(kobayashi_fd_hip PRIVATE ${KOBAYASHI_INCLUDE_DIR})
-  target_link_libraries(kobayashi_fd_hip PRIVATE OpenPFC hip::host openpfc_hip_kernels
-                        ${_kobayashi_heffte_tgt})
+  target_link_libraries(kobayashi_fd_hip PRIVATE OpenPFC openpfc_apps_common hip::host
+                        openpfc_hip_kernels ${_kobayashi_heffte_tgt})
   set_target_properties(kobayashi_fd_hip PROPERTIES
     HIP_STANDARD 17
     HIP_STANDARD_REQUIRED ON
