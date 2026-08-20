@@ -659,7 +659,7 @@ M8, M9 (all production physics on the new architecture).
 * [ ] Wire integrator selection: `from_json_integrator_method.hpp` (extended to the unified method enum incl. IMEX/ETD where applicable) consumed by `apply_simulator_section_from_json`; documented JSON schema update. **Partial:** unknown tokens use `format_config_error`; `simulator.integrator.method` overlays `Time`. IMEX/ETD enum tokens still open.
 * [x] FD configuration surface: `fd_order` JSON key (even orders 2–20, runtime-view stencils; halo width derived automatically) exposed through the FD session; validation errors name the supported set. **Parse/validate landed** (`SessionSelection::fd_order`, `halo_width_from_fd_order`). FD session wiring still open.
 * [ ] Boundary conditions: define the single stage-preparation mechanism (generalizing `stage_preparation.hpp`) — pre-stage hooks owning halo refresh + ghost/boundary application for FD, and penalty-modifier application for spectral; retire the two embryonic mechanisms (`ExecutionService::prepare_boundaries`, `StageContext` BC flags).
-* [ ] Relocate `FixedBC`/`MovingBC` from `kernel/simulation/boundary_conditions/` into `apps/tungsten/` and `apps/aluminumNew/` (they are directional-solidification physics); keep `FieldModifier` as the IC abstraction with catalog registration.
+* [x] Relocate `FixedBC`/`MovingBC` from `kernel/simulation/boundary_conditions/` into `apps/tungsten/` and `apps/aluminumNew/` (they are directional-solidification physics); keep `FieldModifier` as the IC abstraction with catalog registration. **Landed:** headers in `apps/common`; tungsten/aluminum call `register_solidification_bcs()`. Stage-prep BC mechanism still open.
 * [x] Make modifier/writer registration failures hard errors (replace warn-and-drop in `simulator_modifier_registration.hpp` and `simulation_wiring_writers.hpp:83–89`). Unknown `"writer"` / IC `"type"` and missing Model fields throw. Default-field usage still warns.
 * [ ] Register `VTKWriter` in `default_results_writer_catalog()`; add HDF5/XDMF `ResultsWriter` per ADR 0008 (behind `OpenPFC_ENABLE_HDF5`); narrow the `ResultsWriter` contract (filename templating moves to a `FileResultsWriter` intermediate) so non-file sinks are expressible; writer domain metadata sourced from `SimulationState`, not the FFT inbox. **Partial:** catalog key `vtk` → `VTKWriter`. HDF5/XDMF and `FileResultsWriter` still open.
 * [ ] Unify writer/modifier catalog APIs (one error philosophy). **Partial:** both catalogs throw `format_config_error` with `registered_*` keys.
@@ -676,14 +676,14 @@ M8, M9 (all production physics on the new architecture).
 ### Deletions
 
 * [ ] `SpectralCPUStack`'s frontend twin (`frontend/ui/spectral_cpu_stack*.hpp`) superseded by the generalized session; `app_spectral_run.hpp` renamed/generalized (no `spectral_` hardcoding in App path names).
-* [ ] `kernel/simulation/boundary_conditions/{fixed_bc,moving_bc}.hpp` (relocated to apps).
+* [x] `kernel/simulation/boundary_conditions/{fixed_bc,moving_bc}.hpp` (relocated to `apps/common`).
 * [ ] Embryonic BC mechanisms (`prepare_boundaries` stub, `StageContext` BC flags).
 * [x] Deprecated wiring overloads; warn-and-drop registration paths. **Overloads removed.** Default-field usage still warns.
 
 ### Definition of done
 
 * [ ] One JSON document schema drives all method × backend combinations; the session matrix test is green.
-* [ ] `grep -rn "FixedBC\|MovingBC" include/` returns nothing; exactly one BC mechanism exists.
+* [ ] `grep -rn "FixedBC\|MovingBC" include/` returns nothing; exactly one BC mechanism exists. **Partial:** `include/` has no `FixedBC`/`MovingBC`. Stage-prep mechanism still open.
 * [ ] Unknown writers/modifiers/integrators fail loudly (negative tests green).
 * [ ] Full suite + golden trajectories green.
 

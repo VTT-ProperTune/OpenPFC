@@ -103,8 +103,7 @@ TEST_CASE("Unknown field modifier type error", "[ui][integration][validation]") 
     REQUIRE((msg.find("constant") != std::string::npos));
     REQUIRE((msg.find("single_seed") != std::string::npos));
     REQUIRE((msg.find("random_seeds") != std::string::npos));
-    REQUIRE((msg.find("fixed") != std::string::npos));
-    REQUIRE((msg.find("moving") != std::string::npos));
+    REQUIRE((msg.find("from_file") != std::string::npos));
   }
 }
 

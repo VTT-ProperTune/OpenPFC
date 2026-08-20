@@ -131,6 +131,8 @@ if(BUILD_API_EXAMPLES)
     # Example 10: Complete PFC Model - Full simulation integrating all APIs
     #===========================================================================
     add_executable(example_10_complete_pfc_model 10_complete_pfc_model.cpp)
+    target_include_directories(example_10_complete_pfc_model PRIVATE
+        ${CMAKE_SOURCE_DIR}/apps/common/include)
     target_link_libraries(example_10_complete_pfc_model PRIVATE OpenPFC ${_api_ex_heffte})
     set_target_properties(example_10_complete_pfc_model PROPERTIES
         OUTPUT_NAME "10_complete_pfc_model"

@@ -14,8 +14,6 @@
 
 #include <openpfc/frontend/ui/from_json_fwd.hpp>
 #include <openpfc/frontend/ui/from_json_log.hpp>
-#include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
-#include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/random_seeds.hpp>
@@ -134,66 +132,6 @@ inline void from_json(const json &j, FileReader &ic) {
   }
 
   ic.set_filename(j["filename"]);
-}
-
-inline void from_json(const json &j, FixedBC &bc) {
-  detail::throw_unless_json_modifier_type(
-      j, "fixed", "Invalid JSON input: missing or incorrect 'type' field.");
-
-  if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho_low' field.");
-  }
-
-  if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho_high' field.");
-  }
-
-  bc.set_rho_low(j["rho_low"]);
-  bc.set_rho_high(j["rho_high"]);
-}
-
-inline void from_json(const json &j, MovingBC &bc) {
-  detail::throw_unless_json_modifier_type(
-      j, "moving", "Invalid JSON input: missing or incorrect 'type' field.");
-
-  if (!j.contains("rho_low") || !j["rho_low"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho_low' field.");
-  }
-
-  if (!j.contains("rho_high") || !j["rho_high"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'rho_high' field.");
-  }
-
-  if (!j.contains("width") || !j["width"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'width' field.");
-  }
-
-  if (!j.contains("alpha") || !j["alpha"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'alpha' field.");
-  }
-
-  if (!j.contains("disp") || !j["disp"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'disp' field.");
-  }
-
-  if (!j.contains("xpos") || !j["xpos"].is_number()) {
-    throw std::invalid_argument(
-        "Invalid JSON input: missing or invalid 'xpos' field.");
-  }
-
-  bc.set_rho_low(j["rho_low"]);
-  bc.set_rho_high(j["rho_high"]);
-  bc.set_xwidth(j["width"]);
-  bc.set_alpha(j["alpha"]);
-  bc.set_disp(j["disp"]);
-  bc.set_xpos(j["xpos"]);
 }
 
 inline void from_json(const json &j, Model &model) {

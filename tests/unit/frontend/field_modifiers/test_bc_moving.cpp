@@ -13,8 +13,8 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
-#include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
+#include <openpfc_apps/moving_bc.hpp>
 
 using namespace pfc;
 using Catch::Approx;
@@ -81,7 +81,8 @@ TEST_CASE("MovingBC - Modifier Name", "[bc_moving]") {
 
 TEST_CASE("MovingBC - Field Application", "[bc_moving]") {
   // Small grid: behavior is local; avoid thousands of Catch REQUIREs (very slow).
-  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}),
+                                    pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
   auto box = pfc::domain::index_box(domain);
   World world(box.low, box.high, domain);
@@ -178,7 +179,8 @@ TEST_CASE("MovingBC - Field Name Assignment", "[bc_moving]") {
 }
 
 TEST_CASE("MovingBC - Boundary Position Tracking", "[bc_moving]") {
-  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}),
+                                    pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
   auto box = pfc::domain::index_box(domain);
   World world(box.low, box.high, domain);
@@ -209,7 +211,8 @@ TEST_CASE("MovingBC - MPI collectives fail closed", "[bc_moving]") {
   // std::runtime_error rather than apply a divergent m_xpos.
   // Verified by code inspection of moving_bc.hpp (no MPI mock framework);
   // this case locks the success-path apply still works under that contract.
-  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}), pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
+  auto domain = pfc::domain::create(pfc::GridSize({16, 4, 4}),
+                                    pfc::PhysicalOrigin({-64.0, -16.0, -16.0}),
                                     pfc::GridSpacing({8.0, 8.0, 8.0}));
   auto box = pfc::domain::index_box(domain);
   World world(box.low, box.high, domain);

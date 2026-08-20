@@ -126,8 +126,8 @@ TEST_CASE("format_unknown_modifier_error uses custom context", "[ui][errors]") {
 TEST_CASE("list_valid_field_modifiers returns non-empty", "[ui][errors]") {
   auto types = list_valid_field_modifiers();
   REQUIRE(!types.empty());
-  REQUIRE(types.size() >= 6); // At least constant, single_seed, random_seeds,
-                              // seed_grid, from_file, fixed, moving
+  REQUIRE(types.size() >= 5); // constant, single_seed, random_seeds,
+                              // seed_grid, from_file
 }
 
 TEST_CASE("list_valid_field_modifiers includes initial conditions", "[ui][errors]") {
@@ -139,9 +139,9 @@ TEST_CASE("list_valid_field_modifiers includes initial conditions", "[ui][errors
   REQUIRE(std::ranges::find(types, "from_file") != types.end());
 }
 
-TEST_CASE("list_valid_field_modifiers includes boundary conditions",
+TEST_CASE("list_valid_field_modifiers omits app-local solidification BCs",
           "[ui][errors]") {
   auto types = list_valid_field_modifiers();
-  REQUIRE(std::ranges::find(types, "fixed") != types.end());
-  REQUIRE(std::ranges::find(types, "moving") != types.end());
+  REQUIRE(std::ranges::find(types, "fixed") == types.end());
+  REQUIRE(std::ranges::find(types, "moving") == types.end());
 }

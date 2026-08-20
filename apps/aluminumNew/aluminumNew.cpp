@@ -7,11 +7,13 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <openpfc_apps/solidification_bc_json.hpp>
 
 int main(int argc, char *argv[]) {
   try {
     std::cout << std::fixed;
     std::cout.precision(3);
+    pfc::ui::register_solidification_bcs();
     pfc::ui::register_field_modifier<SeedGridFCC>("seed_grid_fcc");
     pfc::ui::register_field_modifier<SlabFCC>("slab_fcc");
     pfc::ui::App<Aluminum> app(argc, argv);

@@ -7,6 +7,7 @@
 #include "SeedGridFCC.hpp"
 #include <iostream>
 #include <openpfc/openpfc.hpp>
+#include <openpfc_apps/moving_bc.hpp>
 
 /**
  * @brief Aluminum model class for OpenPFC. This class is used to define the
@@ -357,13 +358,15 @@ public:
    * @param domain Simulation domain
    * @param mpi_comm MPI communicator
    */
-  explicit Aluminum(pfc::FFT &fft, const pfc::Domain &domain, MPI_Comm mpi_comm = MPI_COMM_WORLD)
-      : pfc::Model(fft, pfc::World(
-            {0, 0, 0},
-            {static_cast<int>(domain.size[0]) - 1,
-             static_cast<int>(domain.size[1]) - 1,
-             static_cast<int>(domain.size[2]) - 1},
-            domain), mpi_comm) {
+  explicit Aluminum(pfc::FFT &fft, const pfc::Domain &domain,
+                    MPI_Comm mpi_comm = MPI_COMM_WORLD)
+      : pfc::Model(fft,
+                   pfc::World({0, 0, 0},
+                              {static_cast<int>(domain.size[0]) - 1,
+                               static_cast<int>(domain.size[1]) - 1,
+                               static_cast<int>(domain.size[2]) - 1},
+                              domain),
+                   mpi_comm) {
     // Additional initialization if needed
   }
 

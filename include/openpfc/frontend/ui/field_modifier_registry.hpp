@@ -35,8 +35,6 @@
 #include <memory>
 #include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
-#include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
-#include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>
@@ -107,7 +105,7 @@ void register_field_modifier(const std::string &type,
   });
 }
 
-/** @brief Built-in OpenPFC modifier types (constant, seeds, file, fixed, moving). */
+/** @brief Built-in OpenPFC IC types (constant, seeds, file). */
 [[nodiscard]] inline FieldModifierCatalog make_builtin_field_modifier_catalog() {
   FieldModifierCatalog c;
   register_field_modifier<Constant>("constant", c);
@@ -115,8 +113,6 @@ void register_field_modifier(const std::string &type,
   register_field_modifier<RandomSeeds>("random_seeds", c);
   register_field_modifier<SeedGrid>("seed_grid", c);
   register_field_modifier<FileReader>("from_file", c);
-  register_field_modifier<FixedBC>("fixed", c);
-  register_field_modifier<MovingBC>("moving", c);
   return c;
 }
 

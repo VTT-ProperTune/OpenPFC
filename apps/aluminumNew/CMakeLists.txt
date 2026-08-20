@@ -13,6 +13,8 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set(CMAKE_CXX_STANDARD 20)
 endif()
 
+include_directories(${CMAKE_SOURCE_DIR}/apps/common/include)
+
 add_executable(aluminumNew aluminumNew.cpp)
 if(TARGET Heffte::Heffte)
     target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)

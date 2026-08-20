@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 `FixedBC` / `MovingBC` moved out of the kernel into `apps/common`. Tungsten and aluminum register `"fixed"` / `"moving"` at startup. The built-in modifier catalog is ICs only.
 - M10 heat3d FD order sweep: even orders 2, 8, 10 reduce Gaussian L2 vs the analytic solution on `FDCPUStack`.
 - M10 JSON wiring takes only `JsonWiringContext` / `JsonWiringSession`. The `(comm, rank, rank0)` overload family is removed.
 - M10 `SimulationSession<Stack>` owns `SessionSelection`, `Time`, and a stack from `stack_builder`. JSON helper `make_simulation_session`. Session-matrix tests cover spectral/fd × cpu (JSON) and CUDA stacks (cluster binaries).

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file fixed_bc.hpp
- * @brief Fixed boundary condition with smooth transition
+ * @file openpfc_apps/fixed_bc.hpp
+ * @brief Directional-solidification fixed BC (tungsten / aluminum JSON App path)
  *
  * @details
  * This file defines the FixedBC class, which enforces fixed values at domain
@@ -32,6 +32,8 @@
  */
 
 #pragma once
+
+#include <cmath>
 
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/field/operations.hpp>
@@ -69,8 +71,8 @@ public:
     const double xpos = (Lx * dx) - xwidth;
 
     pfc::field::apply_inplace(
-        pfc::get_real_field(m, get_field_name()), pfc::get_world(m),
-        pfc::get_fft(m), [=, this](const pfc::Real3 &X, double current) {
+        pfc::get_real_field(m, get_field_name()), pfc::get_world(m), pfc::get_fft(m),
+        [=, this](const pfc::Real3 &X, double current) {
           const double x = X[0];
           if (std::abs(x - xpos) < xwidth) {
             const double S = 1.0 / (1.0 + std::exp(-alpha * (x - xpos)));

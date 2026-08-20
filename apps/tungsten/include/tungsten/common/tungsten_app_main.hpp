@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <openpfc/frontend/ui/app.hpp>
+#include <openpfc_apps/solidification_bc_json.hpp>
 
 namespace tungsten {
 
@@ -24,6 +25,7 @@ template <typename AppModel>
   try {
     std::cout << std::fixed;
     std::cout.precision(3);
+    pfc::ui::register_solidification_bcs();
     pfc::ui::App<AppModel> app(argc, argv);
     return app.main();
   } catch (const std::exception &e) {

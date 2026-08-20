@@ -15,7 +15,8 @@
  *
  * Concrete implementations include:
  * - Initial conditions: Constant, Seed, SeedGrid, RandomSeeds, FileReader
- * - Boundary conditions: FixedBC, MovingBC
+ * - Directional-solidification BCs are app-local (`apps/common`) and
+ *   catalog-registered by tungsten/aluminum, not by the kernel.
  *
  * Typical usage:
  * @code
@@ -353,7 +354,8 @@ public:
 
   /**
    * @brief Optional MPI communicator for modifiers that use collectives (MPI-IO,
-   *        reductions). Default is a no-op; FileReader and MovingBC override.
+   *        reductions). Default is a no-op; FileReader and app-local
+   *        front-tracking BCs override.
    */
   virtual void set_mpi_comm(MPI_Comm /*comm*/) {}
 

@@ -34,10 +34,10 @@
 #include <mpi.h>
 #include <numbers>
 #include <openpfc/frontend/io/binary_writer.hpp>
-#include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/single_seed.hpp>
 #include <openpfc/openpfc.hpp>
+#include <openpfc_apps/fixed_bc.hpp>
 
 using namespace pfc;
 
@@ -254,12 +254,15 @@ int main(int argc, char **argv) {
 
     if (rank == 0) {
       std::cout << "    Domain: " << domain::get_size(domain, 0) << " x "
-                << domain::get_size(domain, 1) << " x " << domain::get_size(domain, 2)
-                << " points\n";
+                << domain::get_size(domain, 1) << " x "
+                << domain::get_size(domain, 2) << " points\n";
       std::cout << "    Physical size: ["
-                << domain::get_size(domain, 0) * domain::get_spacing(domain, 0) << " x "
-                << domain::get_size(domain, 1) * domain::get_spacing(domain, 1) << " x "
-                << domain::get_size(domain, 2) * domain::get_spacing(domain, 2) << "]\n";
+                << domain::get_size(domain, 0) * domain::get_spacing(domain, 0)
+                << " x "
+                << domain::get_size(domain, 1) * domain::get_spacing(domain, 1)
+                << " x "
+                << domain::get_size(domain, 2) * domain::get_spacing(domain, 2)
+                << "]\n";
     }
 
     //======================================================================
@@ -282,8 +285,8 @@ int main(int argc, char **argv) {
     // Each rank prints its local subdomain
     auto local_domain = decomposition::get_subworld(decomp, rank);
     std::cout << "    [Rank " << rank
-              << "] Local size: " << domain::get_size(local_domain.domain_, 0) << " x "
-              << domain::get_size(local_domain.domain_, 1) << " x "
+              << "] Local size: " << domain::get_size(local_domain.domain_, 0)
+              << " x " << domain::get_size(local_domain.domain_, 1) << " x "
               << domain::get_size(local_domain.domain_, 2) << "\n";
     MPI_Barrier(MPI_COMM_WORLD);
 

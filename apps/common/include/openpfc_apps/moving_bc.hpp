@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file moving_bc.hpp
- * @brief Moving boundary condition that tracks solidification front
+ * @file openpfc_apps/moving_bc.hpp
+ * @brief Directional-solidification moving BC (tungsten / aluminum JSON App path)
  *
  * @details
  * This file defines the MovingBC class, which enforces a boundary condition
@@ -135,11 +135,10 @@ public:
     }
 
     // Fail closed before any root m_idx mutation from global_xline.
-    pfc::mpi::throw_on_mpi_error(
-        MPI_Reduce(xline.data(), global_xline.data(),
-                   static_cast<int>(xline.size()), MPI_DOUBLE, MPI_MAX, 0,
-                   comm),
-        "MPI_Reduce");
+    pfc::mpi::throw_on_mpi_error(MPI_Reduce(xline.data(), global_xline.data(),
+                                            static_cast<int>(xline.size()),
+                                            MPI_DOUBLE, MPI_MAX, 0, comm),
+                                 "MPI_Reduce");
 
     if (rank == 0) {
       if (m_first) {
@@ -191,8 +190,8 @@ public:
     const double alpha = m_alpha;
 
     pfc::field::apply_inplace(
-        pfc::get_real_field(m, get_field_name()), pfc::get_world(m),
-        pfc::get_fft(m), [=, this](const pfc::Real3 &X, double current) {
+        pfc::get_real_field(m, get_field_name()), pfc::get_world(m), pfc::get_fft(m),
+        [=, this](const pfc::Real3 &X, double current) {
           const double x = X[0];
           const double dist = x - xpos;
           auto blend = [&](double d) {

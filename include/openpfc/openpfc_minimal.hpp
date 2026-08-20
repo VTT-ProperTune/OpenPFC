@@ -27,8 +27,6 @@
 #include <openpfc/kernel/fft/fft_fftw.hpp>
 #include <openpfc/kernel/mpi/mpi.hpp>
 #include <openpfc/kernel/simulation/binary_reader.hpp>
-#include <openpfc/kernel/simulation/boundary_conditions/fixed_bc.hpp>
-#include <openpfc/kernel/simulation/boundary_conditions/moving_bc.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/constant.hpp>
 #include <openpfc/kernel/simulation/initial_conditions/file_reader.hpp>

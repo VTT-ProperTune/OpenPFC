@@ -24,6 +24,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc_apps/solidification_bc_json.hpp>
 #include <tungsten/common/tungsten_input.hpp>
 
 namespace tungsten {
@@ -93,6 +94,7 @@ int run_tungsten_gpu_vtk_main(int argc, char *argv[], const char *default_config
   model.initialize(pfc::time::dt(time));
 
   pfc::Simulator simulator(model, time);
+  pfc::ui::register_solidification_bcs();
 
   if (rank0) std::cout << "Adding initial conditions..." << std::endl;
   const pfc::ui::JsonWiringContext wiring_ctx{simulator.mpi_comm(), rank, rank0};

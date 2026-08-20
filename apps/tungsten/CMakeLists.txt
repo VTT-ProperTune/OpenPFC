@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 set(TUNGSTEN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/apps/common/include)
 
 option(TUNGSTEN_REUSE_ARRAYS "Reuse Tungsten work arrays to reduce memory use" OFF)
 
