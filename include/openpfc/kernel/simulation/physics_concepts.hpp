@@ -87,13 +87,11 @@ void add_declared_field(SimulationState &state, const FieldDeclaration &decl,
                                             decl.halo);
     break;
   case FieldElementKind::Complex:
-    add_declared_field<std::complex<double>, MemorySpace>(state, decl.name,
-                                                          domain, box,
-                                                          decl.halo);
+    add_declared_field<std::complex<double>, MemorySpace>(state, decl.name, domain,
+                                                          box, decl.halo);
     break;
   default:
-    throw std::invalid_argument(
-        "add_declared_field: unknown FieldElementKind");
+    throw std::invalid_argument("add_declared_field: unknown FieldElementKind");
   }
 }
 
@@ -105,8 +103,7 @@ void add_declared_field(SimulationState &state, const FieldDeclaration &decl,
  * `Domain` + `Box3i` on the physics and call @ref add_declared_field.
  */
 template <class Physics>
-concept DeclaresFields = requires(const Physics &physics,
-                                  SimulationState &state) {
+concept DeclaresFields = requires(const Physics &physics, SimulationState &state) {
   physics.declare_fields(state);
 };
 
@@ -118,9 +115,7 @@ concept DeclaresFields = requires(const Physics &physics,
  */
 template <class Physics, class Grads>
 concept PointwiseRhs = requires(const Physics &physics, double t,
-                                const Grads &grads) {
-  physics.rhs(t, grads);
-};
+                                const Grads &grads) { physics.rhs(t, grads); };
 
 /**
  * @brief Diagonal linear symbol @f$L(k)@f$ from the Laplacian multiplier.
@@ -129,10 +124,9 @@ concept PointwiseRhs = requires(const Physics &physics, double t,
  * argument tungsten's `physics_for_mode` / `linear_symbol` take.
  */
 template <class Physics>
-concept SpectralLinearSymbol =
-    requires(const Physics &physics, double k_laplacian) {
-      { physics.linear_symbol(k_laplacian) } -> std::convertible_to<double>;
-    };
+concept SpectralLinearSymbol = requires(const Physics &physics, double k_laplacian) {
+  { physics.linear_symbol(k_laplacian) } -> std::convertible_to<double>;
+};
 
 /**
  * @brief Real-space nonlinearity @f$N(\psi)@f$ for spectral ETD.
@@ -141,10 +135,9 @@ concept SpectralLinearSymbol =
  * transforms; physics does not own the FFT.
  */
 template <class Physics>
-concept SpectralNonlinearity =
-    requires(const Physics &physics, double psi) {
-      { physics.nonlinearity(psi) } -> std::convertible_to<double>;
-    };
+concept SpectralNonlinearity = requires(const Physics &physics, double psi) {
+  { physics.nonlinearity(psi) } -> std::convertible_to<double>;
+};
 
 /**
  * @brief Spectral-diagonal descriptors: @f$L(k)@f$ plus @f$N(\psi)@f$.
@@ -167,16 +160,13 @@ concept HasParameters = requires { typename Physics::parameters_type; };
  * by delegating to `Model::step`.
  */
 template <class Physics>
-concept SteppablePhysics = requires(Physics &physics, double t) {
-  physics.step(t);
-};
+concept SteppablePhysics = requires(Physics &physics, double t) { physics.step(t); };
 
 /**
  * @brief Field-declaring point-wise physics (explicit FD / spectral path).
  */
 template <class Physics, class Grads>
-concept PointwisePhysics =
-    DeclaresFields<Physics> && PointwiseRhs<Physics, Grads>;
+concept PointwisePhysics = DeclaresFields<Physics> && PointwiseRhs<Physics, Grads>;
 
 /**
  * @brief Field-declaring spectral-ETD physics (stiff PFC path).
@@ -196,8 +186,7 @@ concept SpectralETDPhysics =
 template <class Physics>
 concept MeanFieldETDPhysics =
     DeclaresFields<Physics> && SpectralLinearSymbol<Physics> &&
-    requires(const Physics &physics, double k_laplacian, double psi,
-             double psi_mf) {
+    requires(const Physics &physics, double k_laplacian, double psi, double psi_mf) {
       { physics.filter_mf(k_laplacian) } -> std::convertible_to<double>;
       { physics.nonlinearity(psi, psi_mf) } -> std::convertible_to<double>;
     };
@@ -213,14 +202,17 @@ concept MeanFieldETDPhysics =
 template <class Physics>
 concept MovingFrameMeanFieldETDPhysics =
     DeclaresFields<Physics> && SpectralLinearSymbol<Physics> &&
-    requires(const Physics &physics, double k_laplacian, double psi,
-             double psi_mf, double p_star, double T_var) {
+    requires(const Physics &physics, double k_laplacian, double psi, double psi_mf,
+             double p_star, double T_var, double x, double t) {
       { physics.filter_mf(k_laplacian) } -> std::convertible_to<double>;
       { physics.correlation_kernel(k_laplacian) } -> std::convertible_to<double>;
-      { physics.nonlinearity(psi, psi_mf, p_star, T_var) }
-          -> std::convertible_to<double>;
-      { physics.free_energy_density(psi, psi_mf, p_star, T_var) }
-          -> std::convertible_to<double>;
+      { physics.temperature_variation(x, t) } -> std::convertible_to<double>;
+      {
+        physics.nonlinearity(psi, psi_mf, p_star, T_var)
+      } -> std::convertible_to<double>;
+      {
+        physics.free_energy_density(psi, psi_mf, p_star, T_var)
+      } -> std::convertible_to<double>;
     };
 
 } // namespace pfc::sim

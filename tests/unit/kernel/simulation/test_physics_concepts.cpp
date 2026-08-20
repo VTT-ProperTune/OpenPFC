@@ -12,21 +12,20 @@
 using pfc::Box3i;
 using pfc::Domain;
 using pfc::SimulationState;
+using pfc::sim::add_declared_field;
 using pfc::sim::DeclaresFields;
 using pfc::sim::FieldDeclaration;
 using pfc::sim::FieldElementKind;
 using pfc::sim::HasParameters;
+using pfc::sim::MovingFrameMeanFieldETDPhysics;
 using pfc::sim::PointwisePhysics;
 using pfc::sim::PointwiseRhs;
 using pfc::sim::SpectralDiagonalPhysics;
 using pfc::sim::SpectralETDPhysics;
-using pfc::sim::add_declared_field;
 
 namespace {
 
-Box3i unit_box() {
-  return Box3i::from_bounds({0, 0, 0}, {0, 0, 0});
-}
+Box3i unit_box() { return Box3i::from_bounds({0, 0, 0}, {0, 0, 0}); }
 
 struct HeatGrads {
   double xx{};
@@ -62,9 +61,8 @@ struct SwiftHohenbergPhysics {
   SwiftHohenbergParams params{};
 
   void declare_fields(SimulationState &state) const {
-    const FieldDeclaration psi{.name = "psi",
-                               .element = FieldElementKind::Real,
-                               .halo = 0};
+    const FieldDeclaration psi{
+        .name = "psi", .element = FieldElementKind::Real, .halo = 0};
     add_declared_field(state, psi, domain, box);
   }
 
@@ -73,8 +71,26 @@ struct SwiftHohenbergPhysics {
     return params.epsilon - one_plus_lap * one_plus_lap;
   }
 
-  [[nodiscard]] double nonlinearity(double psi) const {
+  [[nodiscard]] double nonlinearity(double psi) const { return -psi * psi * psi; }
+};
+
+struct MovingFrameToy {
+  using parameters_type = double;
+  Domain domain = pfc::domain::create({1, 1, 1});
+  Box3i box = unit_box();
+
+  void declare_fields(SimulationState &state) const {
+    add_declared_field<double>(state, "psi", domain, box, 0);
+  }
+  double linear_symbol(double k_laplacian) const { return k_laplacian; }
+  double filter_mf(double) const { return 1.0; }
+  double correlation_kernel(double) const { return 0.0; }
+  double temperature_variation(double, double) const { return 0.0; }
+  double nonlinearity(double psi, double, double, double) const {
     return -psi * psi * psi;
+  }
+  double free_energy_density(double psi, double, double, double) const {
+    return 0.5 * psi * psi;
   }
 };
 
@@ -101,6 +117,9 @@ static_assert(SpectralETDPhysics<SwiftHohenbergPhysics>);
 static_assert(HasParameters<SwiftHohenbergPhysics>);
 static_assert(!PointwiseRhs<SwiftHohenbergPhysics, HeatGrads>);
 
+static_assert(MovingFrameMeanFieldETDPhysics<MovingFrameToy>);
+static_assert(!MovingFrameMeanFieldETDPhysics<SwiftHohenbergPhysics>);
+
 static_assert(!DeclaresFields<LinearOnly>);
 static_assert(pfc::sim::SpectralLinearSymbol<LinearOnly>);
 static_assert(!SpectralDiagonalPhysics<LinearOnly>);
@@ -110,8 +129,7 @@ static_assert(PointwiseRhs<RhsOnly, HeatGrads>);
 static_assert(!DeclaresFields<RhsOnly>);
 static_assert(!PointwisePhysics<RhsOnly, HeatGrads>);
 
-TEST_CASE("declare_fields allocates named host fields",
-          "[physics_concepts][unit]") {
+TEST_CASE("declare_fields allocates named host fields", "[physics_concepts][unit]") {
   HeatPhysics heat{};
   SimulationState state;
   heat.declare_fields(state);
@@ -131,9 +149,8 @@ TEST_CASE("add_declared_field allocates a complex hat field",
   SimulationState state;
   const auto domain = pfc::domain::create({2, 1, 1});
   const auto box = Box3i::from_bounds({0, 0, 0}, {1, 0, 0});
-  const FieldDeclaration hat{.name = "psi_hat",
-                             .element = FieldElementKind::Complex,
-                             .halo = 0};
+  const FieldDeclaration hat{
+      .name = "psi_hat", .element = FieldElementKind::Complex, .halo = 0};
   add_declared_field(state, hat, domain, box);
   REQUIRE(state.has_field("psi_hat"));
   REQUIRE(state.get_field<std::complex<double>>("psi_hat").size() == 2);
@@ -150,8 +167,7 @@ TEST_CASE("Swift-Hohenberg linear symbol and cubic nonlinearity",
   REQUIRE(sh.nonlinearity(2.0) == Catch::Approx(-8.0));
 }
 
-TEST_CASE("point-wise heat rhs is Laplacian times D",
-          "[physics_concepts][unit]") {
+TEST_CASE("point-wise heat rhs is Laplacian times D", "[physics_concepts][unit]") {
   HeatPhysics heat{};
   heat.D = 2.0;
   const HeatGrads g{.xx = 1.0, .yy = -0.5, .zz = 0.25};
