@@ -24,6 +24,20 @@ else()
     target_link_libraries(aluminumNew OpenPFC nlohmann_json::nlohmann_json)
 endif()
 
+# M9 A/B CPU driver: MovingFrameMeanFieldETDSystem (Gen-1 aluminumNew stays).
+add_executable(aluminum_etd aluminum_etd.cpp)
+target_include_directories(aluminum_etd PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+if(TARGET Heffte::Heffte)
+    target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte)
+elseif(TARGET Heffte)
+    target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json Heffte)
+elseif(TARGET heffte)
+    target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json heffte)
+else()
+    target_link_libraries(aluminum_etd OpenPFC nlohmann_json::nlohmann_json)
+endif()
+install(TARGETS aluminum_etd DESTINATION bin)
+
 # Only build tests if tests are enabled for the parent project
 option(ALUMINUM_ENABLE_TESTS "Enable building Aluminum tests" ON)
 
@@ -32,6 +46,7 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
     if(TARGET Catch2::Catch2WithMain)
         add_executable(aluminumTest aluminumTest.cpp tests/test_aluminum_physics.cpp)
         target_include_directories(aluminumTest PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
             ${CMAKE_CURRENT_SOURCE_DIR}/include)
                 if(TARGET Heffte::Heffte)
                     target_link_libraries(aluminumTest OpenPFC nlohmann_json::nlohmann_json Heffte::Heffte Catch2::Catch2WithMain)

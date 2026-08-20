@@ -17,6 +17,7 @@ cmake --build build -j"$(nproc)"
 ```
 
 The executable is `build/apps/aluminumNew/aluminumNew` (path may vary with the generator).
+The M9 A/B CPU binary is `aluminum_etd` (Gen-1 `aluminumNew` remains).
 
 ## Run
 
@@ -34,7 +35,9 @@ A matching `aluminumNew.toml` is provided for TOML workflows. Adjust `results`, 
 | File | Role |
 |------|------|
 | `aluminumNew.cpp` | `main`: registers modifiers, constructs `App<Aluminum>` |
-| `Aluminum.hpp` | Aluminum Model implementation |
+| `aluminum_etd.cpp` | M9 A/B CPU session (`AluminumPhysics` + moving-frame ETD) |
+| `include/aluminum/aluminum_physics.hpp` | Schema + moving-frame mean-field ETD descriptors |
+| `Aluminum.hpp` | Gen-1 Aluminum Model (still built) |
 | `SeedGridFCC.hpp`, `SlabFCC.hpp`, `SeedFCC.hpp` | Registered FieldModifier / IC helpers |
 
 ## See also

@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M9 host `MovingFrameMeanFieldETDSystem` (`kernel/simulation/moving_frame_mean_field_etd.hpp`): \(\chi(k)\) and \(P(k)\) iFFTs, \(N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}}(x,t))\), shared ETD cache, free-energy `integrate_owned`. A/B CPU binary `aluminum_etd` (`AluminumETDSession`). Gen-1 `aluminumNew` remains.
 - M9 start: `aluminum::AluminumPhysics` (`apps/aluminumNew/include/aluminum/aluminum_physics.hpp`) plus `MovingFrameMeanFieldETDPhysics` (`filter_mf`, `correlation_kernel` \(P(k)\), \(N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}})\), free-energy density). Schema keys match `aluminumNew.json`. Gen-1 `Aluminum` remains.
 - TungstenPhysics ETD weights (zero mode, near-zero `opCk`, long-dt) pinned against `legacy_etd_weights_for_mode`.
 - Pre-M0 App-GPU-IC re-pointed at `TungstenETDGPUSession`: JSON `single_seed` IC, two ETD steps, device vs host ≤1e-10 (`HIP_TungstenETD` / `CUDA_TungstenETD`). Host session vs Gen-1 with the same IC.
