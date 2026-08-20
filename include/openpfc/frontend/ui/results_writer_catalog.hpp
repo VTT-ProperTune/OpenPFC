@@ -9,7 +9,8 @@
  * JSON `fields[]` entries can specify `"writer": "<type>"` (default `"binary"`).
  * `add_result_writers_from_json` requires a **`ResultsWriterCatalog`** argument
  * (no default); pass `default_results_writer_catalog()` for built-in `binary`
- * and `vtk`. Unknown types are a hard error at wiring time.
+ * and `vtk`. Unknown types are a hard error at `create_writer` (same
+ * `format_config_error` shape as `FieldModifierCatalog::create_modifier`).
  * Applications and tests inject a custom catalog to register additional writer
  * types without editing `simulation_wiring_writers.hpp`.
  */
@@ -20,14 +21,16 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <optional>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 #include <mpi.h>
 #include <openpfc/frontend/io/binary_writer.hpp>
 #include <openpfc/frontend/io/vtk_writer.hpp>
+#include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 
 namespace pfc::ui {
@@ -41,28 +44,35 @@ using ResultsWriterCreateFn = std::function<std::unique_ptr<pfc::ResultsWriter>(
 class ResultsWriterCatalog {
 public:
   /** @brief Register or replace a writer factory for @p type (case-sensitive). */
-  void register_writer_type(std::string type, ResultsWriterCreateFn fn) {
+  void register_writer(std::string type, ResultsWriterCreateFn fn) {
     m_factories[std::move(type)] = std::move(fn);
   }
 
   /**
    * @brief Instantiate a writer for @p type and output @p path
-   * @return Writer on success, `std::nullopt` if @p type is unknown
+   * @throw std::invalid_argument if @p type is not registered
    */
-  [[nodiscard]] std::optional<std::unique_ptr<pfc::ResultsWriter>>
-  try_create(const std::string &type, const std::string &path, MPI_Comm comm) const {
+  [[nodiscard]] std::unique_ptr<pfc::ResultsWriter>
+  create_writer(const std::string &type, const std::string &path, MPI_Comm comm,
+                std::string_view field_name = {}) const {
     const auto it = m_factories.find(type);
-    if (it == m_factories.end()) {
-      return std::nullopt;
+    if (it != m_factories.end()) {
+      return it->second(path, comm);
     }
-    return it->second(path, comm);
+    const std::string what = field_name.empty()
+                                 ? std::string("results writer type")
+                                 : std::string("results writer type for field '") +
+                                       std::string(field_name) + "'";
+    throw std::invalid_argument(
+        format_config_error("writer", what, "a registered catalog key", type,
+                            registered_writer_types(), "\"writer\": \"binary\""));
   }
 
   [[nodiscard]] bool has_type(const std::string &type) const {
     return m_factories.contains(type);
   }
 
-  [[nodiscard]] std::vector<std::string> registered_types() const {
+  [[nodiscard]] std::vector<std::string> registered_writer_types() const {
     std::vector<std::string> names;
     names.reserve(m_factories.size());
     for (const auto &[k, _] : m_factories) {
@@ -79,12 +89,12 @@ private:
 /** @brief Built-in catalog: `binary` → `BinaryWriter`, `vtk` → `VTKWriter` */
 [[nodiscard]] inline ResultsWriterCatalog make_builtin_results_writer_catalog() {
   ResultsWriterCatalog c;
-  c.register_writer_type(
+  c.register_writer(
       "binary",
       [](std::string path, MPI_Comm comm) -> std::unique_ptr<pfc::ResultsWriter> {
         return std::make_unique<pfc::BinaryWriter>(std::move(path), comm);
       });
-  c.register_writer_type(
+  c.register_writer(
       "vtk",
       [](std::string path, MPI_Comm comm) -> std::unique_ptr<pfc::ResultsWriter> {
         return std::make_unique<pfc::VTKWriter>(std::move(path), comm);

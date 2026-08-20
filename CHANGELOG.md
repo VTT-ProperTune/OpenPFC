@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 `ResultsWriterCatalog` matches `FieldModifierCatalog`: `register_writer` / `create_writer` (throws `format_config_error`) / `registered_writer_types`. Unknown writer keys fail before mkdir.
 - M10 `FileResultsWriter` holds filename-pattern templating. `BinaryWriter` and `VTKWriter` derive from it; kernel `ResultsWriter` no longer requires a dummy path.
 - M10 `FixedBC` / `MovingBC` moved out of the kernel into `apps/common`. Tungsten and aluminum register `"fixed"` / `"moving"` at startup. The built-in modifier catalog is ICs only.
 - M10 heat3d FD order sweep: even orders 2, 8, 10 reduce Gaussian L2 vs the analytic solution on `FDCPUStack`.

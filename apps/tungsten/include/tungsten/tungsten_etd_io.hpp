@@ -14,14 +14,12 @@
 #include <array>
 #include <filesystem>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
 #include <mpi.h>
 #include <nlohmann/json.hpp>
 
-#include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
@@ -54,12 +52,7 @@ public:
       if (field.contains("writer") && field["writer"].is_string()) {
         writer_type = field["writer"].get<std::string>();
       }
-      if (!catalog.has_type(writer_type)) {
-        throw std::invalid_argument(pfc::ui::format_config_error(
-            "writer", "results writer type for field '" + name + "'",
-            "a registered catalog key", writer_type, catalog.registered_types(),
-            "\"writer\": \"binary\""));
-      }
+      auto writer = catalog.create_writer(writer_type, data, m_comm, name);
       if (m_rank == 0) {
         std::filesystem::path dir(data);
         if (dir.has_filename()) {
@@ -70,15 +63,8 @@ public:
         }
       }
       MPI_Barrier(m_comm);
-      auto writer_opt = catalog.try_create(writer_type, data, m_comm);
-      if (!writer_opt) {
-        throw std::invalid_argument(pfc::ui::format_config_error(
-            "writer", "results writer type for field '" + name + "'",
-            "a registered catalog key", writer_type, catalog.registered_types(),
-            "\"writer\": \"binary\""));
-      }
-      (*writer_opt)->set_domain(global, local, offset);
-      m_psi_writer = std::move(*writer_opt);
+      writer->set_domain(global, local, offset);
+      m_psi_writer = std::move(writer);
     }
   }
 
