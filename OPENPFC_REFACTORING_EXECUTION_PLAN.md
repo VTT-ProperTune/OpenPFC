@@ -619,20 +619,20 @@ M8 (validated skeleton), M4 (batched device halos).
 * [x] Migrate kobayashi CPU driver onto padded `HaloExchange` stack (`FDPaddedCPUStack`; `FDCPUStack` stays unpadded `SparseExchange` for heat3d/wave2d). Bespoke anisotropic stencils remain app-side over `Field` indexing.
 * [x] Introduce `FDGPUStack` (device FD stack: `Field<T,DeviceSpace>` + device `HaloExchange` + `FDGradientDevice`); migrate kobayashi CUDA and HIP drivers onto it; HIP uses the device path (first time in an app). **CUDA (Tohtori):** stack + Kobayashi CUDA/HIP sources use `make_field` / `make_exchange`. HIP execute is M-LUMI.
 * [x] Kobayashi OpenMP engine: retire the MPI-bypassing torus engine or re-express it as the single-rank case of the stack (decision recorded in the migration map); thread-count bitwise parity test retained either way. **Decision:** re-express as `FDPaddedCPUStack` nproc=1 + OpenMP over owned cells; torus wrap indexing retired. 1 vs 4 thread parity retained; HEX pinned vs MPI nproc=1.
-* [ ] Create `apps/common/` (CLI parsing, reporting, rank-0 gather utilities) consolidating the four private `cli.hpp`/reporting headers; migrate heat3d/wave2d/allen_cahn/kobayashi to it.
+* [x] Create `apps/common/` (CLI parsing, reporting, rank-0 gather utilities) consolidating the four private `cli.hpp`/reporting headers; migrate heat3d/wave2d/allen_cahn/kobayashi to it. `openpfc_apps_common` INTERFACE: `cli.hpp` / `mpi_report.hpp` / `gather.hpp`. Per-app RunConfig and usage stay in the app.
 
 ### Required tests
 
 * [x] Aluminum golden trajectory (Pre-M0) within declared tolerance; 5-step golden norms updated only with written justification. **Pre-M0 32³ sumsq** stays in `[Aluminum]`; **A/B:** `MovingFrameMeanFieldETDSystem` vs Gen-1 SeedGridFCC 5 steps ≤1e-10.
 * [x] Aluminum free-energy observable matches the legacy accumulator on the golden run. Density formula pinned in `[aluminum][physics][nonlinearity]`. Golden run: `last_free_energy_sum` is finite. Gen-1 `local_FE` is unused and nans (`0*inf` on `P*\psi`) so it is not the comparison target.
 * [x] Kobayashi `KOBAYASHI_VERIFY_HEX` checksums bitwise-identical on CPU; CUDA within declared tolerance; OpenMP thread-parity test green. *(The HIP half moved to M-LUMI.)* **CPU:** OpenMP 32²/4-step HEX pinned against MPI nproc=1 smoke; 1 vs 4 thread fields bitwise equal. CUDA HEX vs CPU remains a Tohtori execute check (not a Catch2 pin).
-* [ ] heat3d/wave2d/allen_cahn suites green after `apps/common` migration.
+* [x] heat3d/wave2d/allen_cahn suites green after `apps/common` migration.
 
 ### Deletions
 
 * [ ] `apps/aluminumNew/Aluminum.hpp` Gen‑1 model (replaced), its hand-rolled JSON block, inline ETD-weight computation.
 * [ ] Kobayashi per-field exchanger setup and hand-spaced tags; the HIP host-staging driver. OpenMP torus wrap indexing retired (engine is 1-rank `FDPaddedCPUStack`).
-* [ ] Per-app `cli.hpp`/`reporting.hpp`/`verification_utilities.hpp` duplicates (four sets).
+* [x] Per-app `cli.hpp`/`reporting.hpp`/`verification_utilities.hpp` duplicates (four sets). Shared parse/reduce/gather live in `apps/common/`; app headers are thin wrappers plus model-specific report text.
 
 ### Definition of done
 
