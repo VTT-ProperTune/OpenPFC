@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+# SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Find and configure all project dependencies
@@ -15,7 +15,8 @@ endif()
 # Cray PE: FindMPI can fail to detect MPI_C while MPI::MPI_CXX is sufficient for OpenPFC.
 find_package(MPI REQUIRED COMPONENTS C CXX)
 
-option(OpenPFC_ENABLE_HDF5 "Enable HDF5 export for profiling dumps (optional)" OFF)
+option(OpenPFC_ENABLE_HDF5
+  "Enable HDF5 (profiling dumps and JSON writer key hdf5 / XDMF sidecar)" OFF)
 if(OpenPFC_ENABLE_HDF5)
   find_package(HDF5 REQUIRED COMPONENTS C)
   message(STATUS "✅ HDF5 enabled for profiling")

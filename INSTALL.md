@@ -298,7 +298,7 @@ These switches are defined under `cmake/` (see `BuildOptions.cmake`, `Dependenci
 | `OpenPFC_ENABLE_MPI` | Must stay ON for supported builds (see §2). |
 | `OpenPFC_ENABLE_HEFFTE` | HeFFTe FFT stack (ON by default; OFF is rejected at configure time). |
 | `OpenPFC_FETCH_HEFFTE` | Fetch HeFFTe into `build/_deps/` if no install is found. |
-| `OpenPFC_ENABLE_HDF5` | Optional HDF5 for profiling dumps (OFF by default). |
+| `OpenPFC_ENABLE_HDF5` | Optional HDF5 for profiling dumps and JSON `"writer": "hdf5"` (OFF by default). |
 | `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_HIP` | GPU toolkit backends. Finite-difference / kernel-only GPU apps can build with the toolkit plus CPU HeFFTe; spectral GPU FFT paths additionally require matching CUDA/ROCm HeFFTe (§3, §6–§8). |
 | `OpenPFC_ENABLE_CUDA_SPECTRAL` / `OpenPFC_ENABLE_HIP_SPECTRAL` | Derived from the found HeFFTe package (CUDA/ROCm backend present). Gates spectral GPU FFT sources and spectral GPU apps; finite-difference GPU targets can still build with CPU-only HeFFTe. |
 | `OpenPFC_MPI_CUDA_AWARE` / `OpenPFC_MPI_HIP_AWARE` | GPU-aware MPI when supported (defaults ON when CUDA/HIP is enabled). |

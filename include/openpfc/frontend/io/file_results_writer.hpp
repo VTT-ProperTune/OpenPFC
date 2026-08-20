@@ -10,7 +10,8 @@
  * @details
  * Kernel `ResultsWriter` is format-agnostic (file, stdout, in-memory). Filename
  * patterns such as `output_%04d.bin` belong here so a non-file sink does not
- * need a dummy path. `BinaryWriter` and `VTKWriter` derive from this type.
+ * need a dummy path. `BinaryWriter`, `VTKWriter`, and `HDF5Writer` derive from
+ * this type.
  */
 
 #include <string>

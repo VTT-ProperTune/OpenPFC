@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Frontend I/O tests (standalone executables for MPI/serial)
+target_sources(openpfc-tests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_hdf5_writer.cpp
+)
 add_executable(test_vtk_writer test_vtk_writer.cpp)
 target_link_libraries(test_vtk_writer PRIVATE openpfc Catch2::Catch2 MPI::MPI_CXX)
 add_test(NAME vtk_writer COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1

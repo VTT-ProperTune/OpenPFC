@@ -44,6 +44,7 @@ set(_openpfc_frontend_obj_sources
     src/openpfc/frontend/io/vtk_writer.cpp
     src/openpfc/frontend/io/vtk_writer_validate.cpp
     src/openpfc/frontend/io/png_writer.cpp
+    $<$<BOOL:${OpenPFC_ENABLE_HDF5}>:src/openpfc/frontend/io/hdf5_writer.cpp>
 )
 add_library(openpfc_frontend_obj OBJECT ${_openpfc_frontend_obj_sources})
 
@@ -208,23 +209,28 @@ endif()
 
 if(OpenPFC_ENABLE_HDF5)
   if(TARGET HDF5::HDF5)
-    target_link_libraries(openpfc PRIVATE HDF5::HDF5)
+    target_link_libraries(openpfc PUBLIC HDF5::HDF5)
     target_link_libraries(openpfc_kernel_obj PRIVATE HDF5::HDF5)
+    target_link_libraries(openpfc_frontend_obj PRIVATE HDF5::HDF5)
   elseif(DEFINED HDF5_LIBRARIES)
     if(DEFINED HDF5_INCLUDE_DIRS)
-      target_include_directories(openpfc PRIVATE ${HDF5_INCLUDE_DIRS})
+      target_include_directories(openpfc PUBLIC ${HDF5_INCLUDE_DIRS})
       target_include_directories(openpfc_kernel_obj PRIVATE ${HDF5_INCLUDE_DIRS})
+      target_include_directories(openpfc_frontend_obj PRIVATE ${HDF5_INCLUDE_DIRS})
     elseif(DEFINED HDF5_INCLUDE_DIR)
-      target_include_directories(openpfc PRIVATE ${HDF5_INCLUDE_DIR})
+      target_include_directories(openpfc PUBLIC ${HDF5_INCLUDE_DIR})
       target_include_directories(openpfc_kernel_obj PRIVATE ${HDF5_INCLUDE_DIR})
+      target_include_directories(openpfc_frontend_obj PRIVATE ${HDF5_INCLUDE_DIR})
     endif()
-    target_link_libraries(openpfc PRIVATE ${HDF5_LIBRARIES})
+    target_link_libraries(openpfc PUBLIC ${HDF5_LIBRARIES})
     target_link_libraries(openpfc_kernel_obj PRIVATE ${HDF5_LIBRARIES})
+    target_link_libraries(openpfc_frontend_obj PRIVATE ${HDF5_LIBRARIES})
   else()
     message(FATAL_ERROR "HDF5 enabled but HDF5::HDF5 target and HDF5_LIBRARIES not set")
   endif()
-  target_compile_definitions(openpfc PRIVATE OPENPFC_HAS_HDF5=1)
+  target_compile_definitions(openpfc PUBLIC OPENPFC_HAS_HDF5=1)
   target_compile_definitions(openpfc_kernel_obj PRIVATE OPENPFC_HAS_HDF5=1)
+  target_compile_definitions(openpfc_frontend_obj PRIVATE OPENPFC_HAS_HDF5=1)
 endif()
 
 # HeFFTe (required for FFT / decomposition — same as find_package in Dependencies.cmake)

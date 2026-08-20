@@ -8,8 +8,9 @@
  * @details
  * JSON `fields[]` entries can specify `"writer": "<type>"` (default `"binary"`).
  * `add_result_writers_from_json` requires a **`ResultsWriterCatalog`** argument
- * (no default); pass `default_results_writer_catalog()` for built-in `binary`
- * and `vtk`. Unknown types are a hard error at `create_writer` (same
+ * (no default); pass `default_results_writer_catalog()` for built-in `binary`,
+ * `vtk`, and `hdf5` when `OPENPFC_HAS_HDF5`. Unknown types are a hard error at
+ * `create_writer` (same
  * `format_config_error` shape as `FieldModifierCatalog::create_modifier`).
  * Applications and tests inject a custom catalog to register additional writer
  * types without editing `simulation_wiring_writers.hpp`.
@@ -29,6 +30,9 @@
 
 #include <mpi.h>
 #include <openpfc/frontend/io/binary_writer.hpp>
+#ifdef OPENPFC_HAS_HDF5
+#include <openpfc/frontend/io/hdf5_writer.hpp>
+#endif
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
@@ -86,7 +90,8 @@ private:
   std::unordered_map<std::string, ResultsWriterCreateFn> m_factories;
 };
 
-/** @brief Built-in catalog: `binary` → `BinaryWriter`, `vtk` → `VTKWriter` */
+/** @brief Built-in catalog: `binary` → `BinaryWriter`, `vtk` → `VTKWriter`,
+ *         `hdf5` → `HDF5Writer` when HDF5 is enabled. */
 [[nodiscard]] inline ResultsWriterCatalog make_builtin_results_writer_catalog() {
   ResultsWriterCatalog c;
   c.register_writer(
@@ -99,6 +104,13 @@ private:
       [](std::string path, MPI_Comm comm) -> std::unique_ptr<pfc::ResultsWriter> {
         return std::make_unique<pfc::VTKWriter>(std::move(path), comm);
       });
+#ifdef OPENPFC_HAS_HDF5
+  c.register_writer(
+      "hdf5",
+      [](std::string path, MPI_Comm comm) -> std::unique_ptr<pfc::ResultsWriter> {
+        return std::make_unique<pfc::HDF5Writer>(std::move(path), comm);
+      });
+#endif
   return c;
 }
 

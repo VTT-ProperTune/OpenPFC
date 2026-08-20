@@ -12,6 +12,9 @@ TEST_CASE("builtin results writer catalog supports binary", "[ui][results_writer
   pfc::ui::ResultsWriterCatalog cat = pfc::ui::make_builtin_results_writer_catalog();
   REQUIRE(cat.has_type("binary"));
   REQUIRE(cat.has_type("vtk"));
+#ifdef OPENPFC_HAS_HDF5
+  REQUIRE(cat.has_type("hdf5"));
+#endif
   auto types = cat.registered_writer_types();
   REQUIRE_FALSE(types.empty());
   auto w = cat.create_writer("binary", "test_output.bin", MPI_COMM_SELF);

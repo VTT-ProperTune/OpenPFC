@@ -55,7 +55,7 @@ When `saveat > 0` and `fields` is present, `add_result_writers_from_json` regist
 |-----|------|---------|
 | `fields[].name` | string | Field identifier known to the simulator / model |
 | `fields[].data` | string | Filename template; if it contains `%`, `printf`-style formatting with the simulator’s output **increment** is applied (see [`binary_field_io_spec.md`](binary_field_io_spec.md)) |
-| `fields[].writer` | string | Catalog key: `"binary"` (default) or `"vtk"`. Unknown keys are a hard error. |
+| `fields[].writer` | string | Catalog key: `"binary"` (default), `"vtk"`, or `"hdf5"` when built with `OpenPFC_ENABLE_HDF5`. Unknown keys are a hard error. `"hdf5"` is serial (`nproc=1`) and writes `/field` plus a `.xdmf` sidecar. |
 
 ## Initial / boundary conditions
 
