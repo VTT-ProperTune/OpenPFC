@@ -71,6 +71,22 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         OPENPFC_TEST_GPU_STACK_CUDA)
     add_test(NAME CUDA_GPUSpectralStack COMMAND test_gpu_spectral_stack_cuda)
 
+    add_executable(test_fd_gpu_stack_cuda test_fd_gpu_stack.cpp
+        ${CMAKE_SOURCE_DIR}/src/openpfc/runtime/gpu/padded_halo_faces.cu)
+    target_include_directories(test_fd_gpu_stack_cuda PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_fd_gpu_stack_cuda PRIVATE
+        Catch2::Catch2 openpfc Heffte::Heffte CUDA::cudart MPI::MPI_CXX
+        openpfc_gpu_kernels)
+    set_target_properties(test_fd_gpu_stack_cuda PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+    target_compile_definitions(test_fd_gpu_stack_cuda PRIVATE
+        OPENPFC_TEST_FD_GPU_STACK_CUDA)
+    add_test(NAME CUDA_FDGPUStack COMMAND test_fd_gpu_stack_cuda)
+
     add_executable(test_observable_reduce_cuda test_observable_reduce_gpu.cpp)
     target_include_directories(test_observable_reduce_cuda PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
@@ -135,6 +151,17 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     target_link_libraries(test_hip_device PRIVATE Catch2::Catch2 hip::host
                                                openpfc_gpu_compile_defs)
     add_test(NAME HIP_DeviceDetection COMMAND test_hip_device)
+
+    add_executable(test_fd_gpu_stack_hip test_fd_gpu_stack.cpp)
+    target_include_directories(test_fd_gpu_stack_hip PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_fd_gpu_stack_hip PRIVATE
+        Catch2::Catch2 openpfc hip::host MPI::MPI_CXX openpfc_hip_kernels)
+    target_compile_definitions(test_fd_gpu_stack_hip PRIVATE
+        OPENPFC_TEST_FD_GPU_STACK_HIP)
+    add_test(NAME HIP_FDGPUStack COMMAND test_fd_gpu_stack_hip)
 
     add_executable(test_exchange_hip_fail_closed test_exchange_hip_fail_closed.cpp)
     target_include_directories(test_exchange_hip_fail_closed PRIVATE
