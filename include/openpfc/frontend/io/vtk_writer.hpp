@@ -44,7 +44,7 @@
 #include <fstream>
 #include <iomanip>
 #include <mpi.h>
-#include <openpfc/kernel/simulation/results_writer.hpp>
+#include <openpfc/frontend/io/file_results_writer.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -57,7 +57,7 @@ namespace pfc {
  * Writes simulation fields to VTK ImageData (.vti) format for visualization.
  * In parallel runs, creates a .pvti master file and .vti piece files.
  */
-class VTKWriter : public ResultsWriter {
+class VTKWriter : public FileResultsWriter {
 private:
   std::array<int, 3> m_global_size;
   std::array<int, 3> m_local_size;
@@ -98,7 +98,7 @@ public:
    *        world communicator)
    */
   explicit VTKWriter(const std::string &filename, MPI_Comm comm = MPI_COMM_WORLD)
-      : ResultsWriter(filename), m_comm(comm) {
+      : FileResultsWriter(filename), m_comm(comm) {
     MPI_Comm_rank(m_comm, &m_rank);
     MPI_Comm_size(m_comm, &m_num_ranks);
   }

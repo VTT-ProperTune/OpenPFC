@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 `FileResultsWriter` holds filename-pattern templating. `BinaryWriter` and `VTKWriter` derive from it; kernel `ResultsWriter` no longer requires a dummy path.
 - M10 `FixedBC` / `MovingBC` moved out of the kernel into `apps/common`. Tungsten and aluminum register `"fixed"` / `"moving"` at startup. The built-in modifier catalog is ICs only.
 - M10 heat3d FD order sweep: even orders 2, 8, 10 reduce Gaussian L2 vs the analytic solution on `FDCPUStack`.
 - M10 JSON wiring takes only `JsonWiringContext` / `JsonWiringSession`. The `(comm, rank, rank0)` overload family is removed.

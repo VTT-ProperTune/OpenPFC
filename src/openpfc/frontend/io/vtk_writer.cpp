@@ -7,7 +7,6 @@
 #include <ios>
 #include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/frontend/io/vtk_writer_validate.hpp>
-#include <openpfc/frontend/utils/utils.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
 #include <openpfc/kernel/utils/logging.hpp>
 #include <sstream>
@@ -55,7 +54,7 @@ void VTKWriter::set_spacing(const std::array<double, 3> &spacing) {
 }
 
 std::string VTKWriter::generate_filename(int increment, int rank) const {
-  std::string base = utils::format_with_number(m_filename, increment);
+  std::string base = formatted_path(increment);
 
   if (m_num_ranks > 1 && rank >= 0) {
     // Match legacy behavior: only insert `_rank` before the extension when a dot
@@ -121,7 +120,7 @@ void VTKWriter::write_pvti_file(int increment) const {
   }
 
   // Format filename with increment number
-  std::string pvti_filename = utils::format_with_number(m_filename, increment);
+  std::string pvti_filename = formatted_path(increment);
 
   // Replace .vti with .pvti
   size_t ext_pos = pvti_filename.find_last_of('.');
@@ -134,7 +133,8 @@ void VTKWriter::write_pvti_file(int increment) const {
   std::ofstream file(pvti_filename);
   if (!file) {
     const Logger lg{LogLevel::Error, /*rank*/ 0};
-    const std::string msg = std::string("Failed to open PVTI file: ") + pvti_filename;
+    const std::string msg =
+        std::string("Failed to open PVTI file: ") + pvti_filename;
     log_error(lg, msg);
     throw std::runtime_error(msg);
   }
@@ -152,7 +152,7 @@ void VTKWriter::write_pvti_file(int increment) const {
        << R"(" NumberOfComponents="1"/>)" << '\n';
   file << R"(    </PPointData>)" << '\n';
 
-  const std::string base = utils::format_with_number(m_filename, increment);
+  const std::string base = formatted_path(increment);
   for (int r = 0; r < current_size; ++r) {
     const std::string piece_filename = vtk_piece_filename_for_rank(base, r);
     file << R"(    <Piece Source=")" << piece_filename << R"("/>)" << '\n';
@@ -197,7 +197,8 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
     local_ok = 0;
   }
 
-  // 4. FIRST collective agreement: field size AND file open checks combined BEFORE file write
+  // 4. FIRST collective agreement: field size AND file open checks combined BEFORE
+  // file write
   int global_ok = 0;
   pfc::mpi::throw_on_mpi_error(
       MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
@@ -229,7 +230,8 @@ MPI_Status VTKWriter::write(int increment, const RealField &data) {
     error_msg = msg;
   }
 
-  // 8. SECOND collective agreement: file write failure check AFTER file write completion
+  // 8. SECOND collective agreement: file write failure check AFTER file write
+  // completion
   global_ok = 0;
   pfc::mpi::throw_on_mpi_error(
       MPI_Allreduce(&local_ok, &global_ok, 1, MPI_INT, MPI_MIN, m_comm),
@@ -285,7 +287,8 @@ MPI_Status VTKWriter::write(int increment, const ComplexField &data) {
     if (!error_msg.empty()) {
       throw std::runtime_error(error_msg);
     } else {
-      throw std::runtime_error("VTKWriter::write: collective complex field error detected");
+      throw std::runtime_error(
+          "VTKWriter::write: collective complex field error detected");
     }
   }
 

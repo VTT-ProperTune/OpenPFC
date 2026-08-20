@@ -163,8 +163,7 @@ namespace pfc {
  * writer->write(increment, k_space_field);  // Stores complex doubles
  * ```
  *
- * @note The increment parameter is used for filename formatting (e.g., %04d → 0000,
- * 0001, ...).
+ * @note File sinks format the increment into a path on `FileResultsWriter`.
  * @note set_domain() must be called once before any write() operations.
  * @note Parallel I/O is collective - all ranks must participate in write().
  * @note For checkpointing, store both field data and metadata (time, increment).
@@ -178,30 +177,12 @@ namespace pfc {
 class ResultsWriter {
 public:
   /**
-   * @brief Construct a ResultsWriter with output filename pattern
+   * @brief Default-construct a writer
    *
-   * The filename can include format specifiers (e.g., %04d) that will be
-   * replaced with the increment number during write operations.
-   *
-   * @param[in] filename Output filename or pattern (e.g., "output_%04d.bin")
-   *
-   * @example
-   * ```cpp
-   * using namespace pfc;
-   *
-   * // Fixed filename (overwrites on each write)
-   * auto writer1 = std::make_unique<BinaryWriter>("output.bin");
-   *
-   * // Timestep-indexed (creates output_0000.bin, output_0001.bin, ...)
-   * auto writer2 = std::make_unique<BinaryWriter>("output_%04d.bin");
-   *
-   * // Custom prefix
-   * auto writer3 = std::make_unique<BinaryWriter>("results/field_%06d.bin");
-   * ```
-   *
-   * @see write() - uses filename pattern with increment
+   * File sinks take a path pattern on `FileResultsWriter` /
+   * `BinaryWriter` / `VTKWriter`. Non-file sinks need no dummy filename.
    */
-  ResultsWriter(const std::string &filename) { m_filename = filename; }
+  ResultsWriter() = default;
 
   /**
    * @brief Virtual destructor
@@ -252,7 +233,7 @@ public:
    * file. In MPI contexts, this is a collective operation - all ranks write
    * their local data simultaneously to the correct position in the file.
    *
-   * @param[in] increment Time step or frame number (used for filename formatting)
+   * @param[in] increment Time step or frame number
    * @param[in] data Local real field data (vector of doubles)
    * @return MPI_Status Information about the write operation
    *
@@ -290,9 +271,6 @@ public:
   template <typename T> MPI_Status write(const std::vector<T> &data) {
     return write(0, data);
   }
-
-protected:
-  std::string m_filename;
 };
 
 /**

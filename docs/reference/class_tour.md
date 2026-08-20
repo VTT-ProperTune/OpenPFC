@@ -48,6 +48,7 @@ The shortest useful mental model is:
 | `Simulator` | Coordinates modifiers, model steps, time, and result output | `openpfc/kernel/simulation/simulator.hpp` | `examples/05_simulator.cpp` |
 | `FieldModifier` | Initial conditions and boundary-condition-style updates | `openpfc/kernel/simulation/field_modifier.hpp` | `examples/10_ui_register_ic.cpp` |
 | `ResultsWriter` | Stable interface for persisted simulation fields | `openpfc/kernel/simulation/results_writer.hpp` | `examples/11_write_results.cpp` |
+| `FileResultsWriter` | File sink with increment path templating | `openpfc/frontend/io/file_results_writer.hpp` | `BinaryWriter`, `VTKWriter` |
 | `pfc::ui::App<Model>` | Loads JSON/TOML and runs a configured application | `openpfc/frontend/ui/app.hpp` | `apps/` and `tutorials/custom_app_minimal.md` |
 | `SpectralCPUStack` | Owns the CPU domain, decomposition, FFT, fields, and time stack | `openpfc/frontend/ui/spectral_cpu_stack.hpp` | `user_guide/app_pipeline.md` |
 | `SpectralSimulationSession` | Owns model and simulator state around a spectral stack | `openpfc/frontend/ui/spectral_simulation_session.hpp` | `user_guide/app_pipeline.md` |

@@ -170,7 +170,7 @@ public:
  */
 class StatsWriter : public ResultsWriter {
 public:
-  StatsWriter() : ResultsWriter("(stdout)") {}
+  StatsWriter() = default;
 
   void set_domain(const std::array<int, 3> & /*arr_global*/,
                   const std::array<int, 3> & /*arr_local*/,
@@ -223,8 +223,9 @@ void example_complete_simulation() {
   std::cout << std::string(60, '=') << "\n\n";
 
   // 1. Create computational domain
-  auto domain = domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
-                               GridSpacing({0.1, 0.1, 0.1}));
+  auto domain =
+      domain::create(GridSize({64, 64, 64}), PhysicalOrigin({0.0, 0.0, 0.0}),
+                     GridSpacing({0.1, 0.1, 0.1}));
 
   if (mpi::get_rank() == 0) {
     std::cout << "Step 1: Created 64³ computational domain\n";

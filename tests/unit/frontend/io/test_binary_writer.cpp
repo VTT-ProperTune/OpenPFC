@@ -58,8 +58,8 @@ DomainBrick make_domain(int rank, int size) {
 }
 
 std::size_t local_count(const DomainBrick &d) {
-  return static_cast<std::size_t>(d.local[0]) * static_cast<std::size_t>(d.local[1]) *
-         static_cast<std::size_t>(d.local[2]);
+  return static_cast<std::size_t>(d.local[0]) *
+         static_cast<std::size_t>(d.local[1]) * static_cast<std::size_t>(d.local[2]);
 }
 
 std::filesystem::path test_dir() {
@@ -83,13 +83,33 @@ ComplexField make_complex(const DomainBrick &d, int rank) {
   ComplexField data(n);
   for (std::size_t i = 0; i < n; ++i) {
     const double re = static_cast<double>(i) + 10.0 * static_cast<double>(rank);
-    const double im = static_cast<double>(i) * 2.0 + static_cast<double>(d.offset[0]);
+    const double im =
+        static_cast<double>(i) * 2.0 + static_cast<double>(d.offset[0]);
     data[i] = std::complex<double>(re, im);
   }
   return data;
 }
 
 } // namespace
+
+TEST_CASE("FileResultsWriter formats increment into the path",
+          "[binary_writer][io]") {
+  BinaryWriter writer("out_%04d.bin");
+  REQUIRE(writer.filename_pattern() == "out_%04d.bin");
+  REQUIRE(writer.formatted_path(7) == "out_0007.bin");
+}
+
+TEST_CASE("ResultsWriter default-constructs without a filename",
+          "[binary_writer][io]") {
+  class StdoutSink : public ResultsWriter {
+  public:
+    void set_domain(const std::array<int, 3> &, const std::array<int, 3> &,
+                    const std::array<int, 3> &) override {}
+    MPI_Status write(int, const RealField &) override { return MPI_Status{}; }
+    MPI_Status write(int, const ComplexField &) override { return MPI_Status{}; }
+  };
+  REQUIRE_NOTHROW(StdoutSink{});
+}
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
@@ -118,8 +138,7 @@ TEST_CASE("BinaryWriter RealField round-trip via BinaryReader",
 
   const DomainBrick domain = make_domain(rank, size);
   const auto out_dir = test_dir();
-  const std::string template_path =
-      (out_dir / "real_%d.bin").string();
+  const std::string template_path = (out_dir / "real_%d.bin").string();
   const std::string path = (out_dir / "real_0.bin").string();
 
   const RealField written = make_real(domain, rank);
@@ -159,8 +178,7 @@ TEST_CASE("BinaryWriter ComplexField round-trip via BinaryReader",
 
   const DomainBrick domain = make_domain(rank, size);
   const auto out_dir = test_dir();
-  const std::string template_path =
-      (out_dir / "complex_%d.bin").string();
+  const std::string template_path = (out_dir / "complex_%d.bin").string();
   const std::string path = (out_dir / "complex_0.bin").string();
 
   const ComplexField written = make_complex(domain, rank);
@@ -293,8 +311,7 @@ TEST_CASE("BinaryWriter does not leak an MPI_File handle when MPI_File_open fail
 TEST_CASE("checked_local_extent_product rejects overflow and non-positive extents",
           "[binary_writer][io]") {
   REQUIRE_THROWS_AS(
-      pfc::mpi::checked_local_extent_product({INT_MAX, INT_MAX, INT_MAX},
-                                             "test"),
+      pfc::mpi::checked_local_extent_product({INT_MAX, INT_MAX, INT_MAX}, "test"),
       std::overflow_error);
   REQUIRE_THROWS_AS(pfc::mpi::checked_local_extent_product({0, 2, 2}, "test"),
                     std::invalid_argument);
@@ -393,8 +410,7 @@ TEST_CASE("BinaryReader buffer mismatch on one rank fails closed for all ranks",
   const DomainBrick domain = make_domain(rank, size);
   const auto n = local_count(domain);
   const auto out_dir = test_dir();
-  const std::string template_path =
-      (out_dir / "mismatch_peer_read_%d.bin").string();
+  const std::string template_path = (out_dir / "mismatch_peer_read_%d.bin").string();
   const std::string path = (out_dir / "mismatch_peer_read_0.bin").string();
 
   {

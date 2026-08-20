@@ -8,21 +8,20 @@
  *
  * @details
  * BinaryWriter implements the kernel ResultsWriter interface for raw binary
- * output. It lives in frontend/io because it uses frontend utils (e.g. filename
- * formatting). The abstract ResultsWriter interface remains in kernel.
+ * output. It lives in frontend/io as a `FileResultsWriter`. The abstract
+ * ResultsWriter interface remains in kernel.
  *
  * @see kernel/simulation/results_writer.hpp for the ResultsWriter interface
- * @see frontend/utils/utils.hpp for format_with_number
+ * @see frontend/io/file_results_writer.hpp for increment path templating
  */
 
 #ifndef PFC_BINARY_WRITER_HPP
 #define PFC_BINARY_WRITER_HPP
 
 #include <mpi.h>
-#include <openpfc/frontend/utils/utils.hpp>
+#include <openpfc/frontend/io/file_results_writer.hpp>
 #include <openpfc/kernel/mpi/domain_geometry.hpp>
 #include <openpfc/kernel/mpi/mpi_io_helpers.hpp>
-#include <openpfc/kernel/simulation/results_writer.hpp>
 
 #include <array>
 #include <sstream>
@@ -73,7 +72,7 @@ namespace pfc {
  * Repository prose describing the on-disk layout and filename templates:
  * `docs/reference/binary_field_io_spec.md`.
  */
-class BinaryWriter : public ResultsWriter {
+class BinaryWriter : public FileResultsWriter {
 private:
   MPI_Comm m_comm = MPI_COMM_WORLD;
   std::array<int, 3> m_global{};
@@ -126,7 +125,7 @@ public:
   BinaryWriter &operator=(BinaryWriter &&) = delete;
 
   explicit BinaryWriter(const std::string &filename, MPI_Comm comm = MPI_COMM_WORLD)
-      : ResultsWriter(filename), m_comm(comm) {}
+      : FileResultsWriter(filename), m_comm(comm) {}
 
   void set_domain(const std::array<int, 3> &arr_global,
                   const std::array<int, 3> &arr_local,
@@ -154,8 +153,8 @@ public:
 
   template <typename T>
   MPI_Status write_mpi_binary(int increment, const std::vector<T> &data) {
-    const std::size_t expected = pfc::mpi::checked_local_extent_product(
-        m_local, "BinaryWriter::write");
+    const std::size_t expected =
+        pfc::mpi::checked_local_extent_product(m_local, "BinaryWriter::write");
 
     int local_ok = 1;
     std::string error_msg;
@@ -186,7 +185,7 @@ public:
         pfc::mpi::expect_mpi_io_count(data.size(), "BinaryWriter::write");
 
     MPI_File fh{};
-    std::string filename2 = utils::format_with_number(m_filename, increment);
+    std::string filename2 = formatted_path(increment);
     pfc::mpi::throw_on_mpi_error(
         MPI_File_open(m_comm, const_cast<char *>(filename2.c_str()),
                       MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh),
