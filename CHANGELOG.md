@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M9 `FDPaddedCPUStack` (`kernel/simulation/stacks/fd_padded_cpu_stack.hpp`): host padded `Field` + `HaloExchange` twin of `FDGPUStack`. Kobayashi CPU driver allocates fields and the two halo groups from the stack. `FDCPUStack` remains unpadded `SparseExchange` for heat3d/wave2d.
 - M9 `FDGPUStack` (`runtime/gpu/fd_gpu_stack.hpp`): padded device `Field` + `HaloExchange` + extra-field/`make_exchange` factory. Kobayashi CUDA/HIP drivers allocate fields and the two halo groups from the stack.
 - M9 GPU `DeviceMovingFrameMeanFieldETDSystem` (`runtime/gpu/moving_frame_mean_field_etd_gpu.hpp`) plus `AluminumETDGPUSession` and A/B binaries `aluminum_etd_cuda` / `aluminum_etd_hip`. Host vs device ≤1e-10 (`CUDA_MovingFrameETD` / `CUDA_AluminumETD`; HIP twins). Gen-1 `aluminumNew` remains.
 - M9 host `MovingFrameMeanFieldETDSystem` (`kernel/simulation/moving_frame_mean_field_etd.hpp`): \(\chi(k)\) and \(P(k)\) iFFTs, \(N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}}(x,t))\), shared ETD cache, free-energy `integrate_owned`. A/B CPU binary `aluminum_etd` (`AluminumETDSession`). Gen-1 `aluminumNew` remains.
