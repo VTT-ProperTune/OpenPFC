@@ -14,6 +14,7 @@
  * - `from_json_fft_backend.hpp` — `fft::Backend` specialization
  * - `from_json_world_time.hpp` — `World` and `Time` specializations
  * - `from_json_integrator_method.hpp` — `sim::steppers::RKIntegratorMethod`
+ *   (RK plus `"imex_euler"` / `"etd1"` identity tokens)
  * - `from_json_session_selection.hpp` — `sim::SessionSelection` (`method` /
  *   `backend` / `fd_order`)
  * - `from_json_simulation_session.hpp` — JSON → `SimulationSession<Stack>`

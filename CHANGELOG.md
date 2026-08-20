@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 JSON integrator tokens `imex_euler` and `etd1` parse onto `Time::method()`. They are identity only (`make_tableau` throws); unknown tokens still use `format_config_error`. Short `"imex"` remains invalid.
 - M10 `ResultsWriterCatalog` matches `FieldModifierCatalog`: `register_writer` / `create_writer` (throws `format_config_error`) / `registered_writer_types`. Unknown writer keys fail before mkdir.
 - M10 `FileResultsWriter` holds filename-pattern templating. `BinaryWriter` and `VTKWriter` derive from it; kernel `ResultsWriter` no longer requires a dummy path.
 - M10 `FixedBC` / `MovingBC` moved out of the kernel into `apps/common`. Tungsten and aluminum register `"fixed"` / `"moving"` at startup. The built-in modifier catalog is ICs only.

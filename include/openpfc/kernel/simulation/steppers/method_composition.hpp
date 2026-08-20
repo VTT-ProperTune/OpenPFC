@@ -186,8 +186,7 @@ inline std::string format_registered_ids() {
   return oss.str();
 }
 
-inline const MethodComposerEntry *
-find_composer(RKIntegratorMethod method) noexcept {
+inline const MethodComposerEntry *find_composer(RKIntegratorMethod method) noexcept {
   ensure_builtin_composers();
   for (const auto &entry : composer_registry()) {
     if (entry.method == method) {
@@ -224,8 +223,7 @@ inline void register_method_composer(MethodComposerEntry entry) {
       }
       throw ComposeError(
           ComposeError::Kind::InvalidConfiguration,
-          "register_method_composer: duplicate id \"" +
-              std::string(entry.id) +
+          "register_method_composer: duplicate id \"" + std::string(entry.id) +
               "\" with conflicting capabilities (already registered)");
     }
   }
@@ -247,14 +245,15 @@ inline std::span<const MethodComposerEntry> registered_method_composers() {
  * Tokens match `to_string` (`"euler"`, `"rk4_classical"`, …). Unknown →
  * `nullopt`.
  */
-inline std::optional<RKIntegratorMethod>
-resolve_method_id(std::string_view id) {
+inline std::optional<RKIntegratorMethod> resolve_method_id(std::string_view id) {
   static constexpr RKIntegratorMethod kAll[] = {
       RKIntegratorMethod::Euler,
       RKIntegratorMethod::RK2_Midpoint,
       RKIntegratorMethod::RK2_Heun,
       RKIntegratorMethod::RK4_Classical,
       RKIntegratorMethod::BogackiShampine32,
+      RKIntegratorMethod::ImexEuler,
+      RKIntegratorMethod::ETD1,
   };
   for (RKIntegratorMethod m : kAll) {
     if (to_string(m) == id) {
@@ -289,8 +288,7 @@ validate_compose_config(RKIntegratorMethod method,
 
 namespace detail {
 
-inline RKIntegratorMethod
-resolve_or_throw(std::string_view id) {
+inline RKIntegratorMethod resolve_or_throw(std::string_view id) {
   ensure_builtin_composers();
   auto method = resolve_method_id(id);
   if (!method) {
@@ -304,16 +302,16 @@ resolve_or_throw(std::string_view id) {
   return *method;
 }
 
-inline const MethodComposerEntry &
-require_composer(std::string_view id, RKIntegratorMethod method,
-                 bool need_scalar, bool need_multi) {
+inline const MethodComposerEntry &require_composer(std::string_view id,
+                                                   RKIntegratorMethod method,
+                                                   bool need_scalar,
+                                                   bool need_multi) {
   const MethodComposerEntry *entry = find_composer(method);
   if (!entry) {
-    throw ComposeError(
-        ComposeError::Kind::CapabilityMismatch,
-        "no composer registered for \"" + std::string(id) +
-            "\"; registered: " + format_registered_ids() +
-            " — call register_method_composer to add this method");
+    throw ComposeError(ComposeError::Kind::CapabilityMismatch,
+                       "no composer registered for \"" + std::string(id) +
+                           "\"; registered: " + format_registered_ids() +
+                           " — call register_method_composer to add this method");
   }
   if (need_scalar && !entry->supports_scalar) {
     throw ComposeError(
@@ -323,11 +321,10 @@ require_composer(std::string_view id, RKIntegratorMethod method,
             "or register a scalar-capable composer");
   }
   if (need_multi && !entry->supports_multi) {
-    throw ComposeError(
-        ComposeError::Kind::CapabilityMismatch,
-        "method \"" + std::string(id) +
-            "\" does not support multi-field composition; use "
-            "compose_scalar or register a multi-capable composer");
+    throw ComposeError(ComposeError::Kind::CapabilityMismatch,
+                       "method \"" + std::string(id) +
+                           "\" does not support multi-field composition; use "
+                           "compose_scalar or register a multi-capable composer");
   }
   return *entry;
 }
@@ -349,11 +346,11 @@ compose_scalar(std::string_view id, const IntegratorComposeConfig &cfg,
   detail::ensure_builtin_composers();
   const RKIntegratorMethod method = detail::resolve_or_throw(id);
   (void)detail::require_composer(id, method, /*need_scalar=*/true,
-                                  /*need_multi=*/false);
+                                 /*need_multi=*/false);
   detail::throw_if_error(validate_compose_config(method, cfg));
   return IntegratorComposition<ExplicitRKStepper<Rhs>>{
-      .stepper = ExplicitRKStepper<Rhs>(cfg.dt, local_size,
-                                        make_tableau(method), std::move(rhs)),
+      .stepper = ExplicitRKStepper<Rhs>(cfg.dt, local_size, make_tableau(method),
+                                        std::move(rhs)),
       .method = method,
       .workspace_ownership = WorkspaceOwnership::MethodOwned,
       .method_state = {},

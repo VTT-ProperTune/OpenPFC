@@ -19,9 +19,11 @@
 
 namespace pfc::ui {
 
-[[nodiscard]] inline const std::vector<std::string> &rk_integrator_method_tokens() {
+[[nodiscard]] inline const std::vector<std::string> &integrator_method_tokens() {
   static const std::vector<std::string> tokens{
-      "euler", "rk2_midpoint", "rk2_heun", "rk4_classical", "bogacki_shampine32"};
+      "euler",         "rk2_midpoint",       "rk2_heun",
+      "rk4_classical", "bogacki_shampine32", "imex_euler",
+      "etd1"};
   return tokens;
 }
 
@@ -29,7 +31,7 @@ namespace pfc::ui {
  * @brief Deserialize RKIntegratorMethod from JSON
  *
  * Specialization of from_json<T> for RKIntegratorMethod. Parses lowercase
- * string values (e.g., "rk4_classical") and returns corresponding enum value.
+ * string values (e.g., "rk4_classical", "etd1") and returns the enum value.
  *
  * Supported strings:
  * - "euler"
@@ -37,6 +39,8 @@ namespace pfc::ui {
  * - "rk2_heun"
  * - "rk4_classical"
  * - "bogacki_shampine32"
+ * - "imex_euler"
+ * - "etd1"
  *
  * @param j JSON value containing string representation
  * @return RKIntegratorMethod enum value
@@ -49,9 +53,9 @@ template <>
 [[nodiscard]] inline pfc::sim::steppers::RKIntegratorMethod
 from_json<pfc::sim::steppers::RKIntegratorMethod>(const json &j) {
   if (!j.is_string()) {
-    throw std::invalid_argument(format_config_error(
-        "method", "Runge-Kutta integrator method", "string", "non-string",
-        rk_integrator_method_tokens(), "\"method\": \"euler\""));
+    throw std::invalid_argument(
+        format_config_error("method", "integrator method", "string", "non-string",
+                            integrator_method_tokens(), "\"method\": \"euler\""));
   }
   const std::string s = j.get<std::string>();
 
@@ -63,10 +67,12 @@ from_json<pfc::sim::steppers::RKIntegratorMethod>(const json &j) {
     return pfc::sim::steppers::RKIntegratorMethod::RK4_Classical;
   if (s == "bogacki_shampine32")
     return pfc::sim::steppers::RKIntegratorMethod::BogackiShampine32;
+  if (s == "imex_euler") return pfc::sim::steppers::RKIntegratorMethod::ImexEuler;
+  if (s == "etd1") return pfc::sim::steppers::RKIntegratorMethod::ETD1;
 
   throw std::invalid_argument(format_config_error(
-      "method", "Runge-Kutta integrator method", "one of the valid RK method tokens",
-      s, rk_integrator_method_tokens(), "\"method\": \"euler\""));
+      "method", "integrator method", "one of the valid method tokens", s,
+      integrator_method_tokens(), "\"method\": \"euler\""));
 }
 
 } // namespace pfc::ui

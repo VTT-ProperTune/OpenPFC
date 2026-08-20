@@ -30,6 +30,7 @@ Parsed by `from_json<Time>(settings)` — supports **flat** keys or nested under
 | `t0`, `t1` | number | Integration window |
 | `dt` | number | Step size |
 | `saveat` | number | Output cadence (also gates binary writers in JSON wiring; `≤ 0` disables periodic result writes in the default helper) |
+| `timestepping.integrator.method` | string | Optional. `euler`, `rk2_midpoint`, `rk2_heun`, `rk4_classical`, `bogacki_shampine32`, `imex_euler`, `etd1`. Defaults to `euler`. IMEX/ETD tokens are identity on `Time` (no RK tableau). |
 
 ## FFT (`plan_options`)
 
@@ -69,7 +70,7 @@ Modifier types must be **registered** in `main` before `App` runs (`register_fie
 
 | Key | Handled by | Notes |
 |-----|------------|--------|
-| `simulator` | `apply_simulator_section_from_json` | `result_counter`, `increment`, optional `integrator.method` overlay |
+| `simulator` | `apply_simulator_section_from_json` | `result_counter`, `increment`, optional `integrator.method` overlay (same tokens as `timestepping.integrator.method`) |
 | `profiling` | `AppProfilingController` | [`performance_profiling.md`](../hpc/performance_profiling.md) |
 
 ## TOML vs JSON

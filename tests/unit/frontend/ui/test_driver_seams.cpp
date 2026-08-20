@@ -113,6 +113,15 @@ TEST_CASE("apply_simulator_section_from_json overlays integrator method",
   pfc::ui::apply_simulator_section_from_json(sim, time, settings);
   REQUIRE(time.method() == pfc::sim::steppers::RKIntegratorMethod::RK4_Classical);
 
+  const nlohmann::json etd = {{"simulator", {{"integrator", {{"method", "etd1"}}}}}};
+  pfc::ui::apply_simulator_section_from_json(sim, time, etd);
+  REQUIRE(time.method() == pfc::sim::steppers::RKIntegratorMethod::ETD1);
+
+  const nlohmann::json imex = {
+      {"simulator", {{"integrator", {{"method", "imex_euler"}}}}}};
+  pfc::ui::apply_simulator_section_from_json(sim, time, imex);
+  REQUIRE(time.method() == pfc::sim::steppers::RKIntegratorMethod::ImexEuler);
+
   const nlohmann::json bad = {{"simulator", {{"integrator", {{"method", "imex"}}}}}};
   REQUIRE_THROWS_AS(pfc::ui::apply_simulator_section_from_json(sim, time, bad),
                     std::invalid_argument);

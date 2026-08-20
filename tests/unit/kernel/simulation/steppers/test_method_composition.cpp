@@ -23,8 +23,7 @@ using Catch::Matchers::WithinAbs;
 namespace {
 
 auto make_decay_rhs(double lambda) {
-  return [lambda](double /*t*/, std::vector<double> &u,
-                  std::vector<double> &du) {
+  return [lambda](double /*t*/, std::vector<double> &u, std::vector<double> &du) {
     for (std::size_t i = 0; i < u.size(); ++i) {
       du[i] = -lambda * u[i];
     }
@@ -92,8 +91,7 @@ TEST_CASE("compose_scalar succeeds for Euler with MethodOwned workspace",
   constexpr std::size_t n = 3;
   IntegratorComposeConfig cfg{.dt = dt, .requires_adaptive = false};
 
-  auto composition =
-      compose_scalar("euler", cfg, n, make_decay_rhs(lambda));
+  auto composition = compose_scalar("euler", cfg, n, make_decay_rhs(lambda));
 
   REQUIRE(composition.method == RKIntegratorMethod::Euler);
   REQUIRE(composition.workspace_ownership == WorkspaceOwnership::MethodOwned);
@@ -120,8 +118,8 @@ TEST_CASE("compose_multi succeeds for two-field Euler rotation",
   IntegratorComposeConfig cfg{.dt = dt, .requires_adaptive = false};
   const std::array<std::size_t, 2> sizes{1, 1};
 
-  auto composition = compose_multi<RotationRhs, 2>("euler", cfg, sizes,
-                                                   RotationRhs{});
+  auto composition =
+      compose_multi<RotationRhs, 2>("euler", cfg, sizes, RotationRhs{});
 
   REQUIRE(composition.method == RKIntegratorMethod::Euler);
   REQUIRE(composition.workspace_ownership == WorkspaceOwnership::MethodOwned);
@@ -139,9 +137,9 @@ TEST_CASE("compose_multi succeeds for two-field Euler rotation",
 
 TEST_CASE("compose_scalar succeeds for registered RK methods with identity",
           "[method_composition]") {
-  const auto method = GENERATE(RKIntegratorMethod::RK2_Midpoint,
-                               RKIntegratorMethod::RK2_Heun,
-                               RKIntegratorMethod::RK4_Classical);
+  const auto method =
+      GENERATE(RKIntegratorMethod::RK2_Midpoint, RKIntegratorMethod::RK2_Heun,
+               RKIntegratorMethod::RK4_Classical);
   constexpr double dt = 0.01;
   constexpr double lambda = 1.0;
   constexpr std::size_t n = 3;
@@ -165,19 +163,17 @@ TEST_CASE("compose_scalar succeeds for registered RK methods with identity",
 
 TEST_CASE("compose_scalar RK step matches ExplicitRKStepper + make_tableau",
           "[method_composition]") {
-  const auto method = GENERATE(RKIntegratorMethod::RK2_Midpoint,
-                               RKIntegratorMethod::RK2_Heun,
-                               RKIntegratorMethod::RK4_Classical);
+  const auto method =
+      GENERATE(RKIntegratorMethod::RK2_Midpoint, RKIntegratorMethod::RK2_Heun,
+               RKIntegratorMethod::RK4_Classical);
   constexpr double dt = 0.01;
   constexpr double lambda = 1.0;
   constexpr std::size_t n = 3;
   IntegratorComposeConfig cfg{.dt = dt, .requires_adaptive = false};
   const std::vector<double> u0{1.0, 2.0, 3.0};
 
-  auto composed =
-      compose_scalar(to_string(method), cfg, n, make_decay_rhs(lambda));
-  ExplicitRKStepper reference(dt, n, make_tableau(method),
-                              make_decay_rhs(lambda));
+  auto composed = compose_scalar(to_string(method), cfg, n, make_decay_rhs(lambda));
+  ExplicitRKStepper reference(dt, n, make_tableau(method), make_decay_rhs(lambda));
 
   std::vector<double> u_comp = u0;
   std::vector<double> u_ref = u0;
@@ -192,21 +188,20 @@ TEST_CASE("compose_scalar RK step matches ExplicitRKStepper + make_tableau",
 
 TEST_CASE("compose_multi succeeds for registered RK methods",
           "[method_composition]") {
-  const auto method = GENERATE(RKIntegratorMethod::RK2_Midpoint,
-                               RKIntegratorMethod::RK2_Heun,
-                               RKIntegratorMethod::RK4_Classical);
+  const auto method =
+      GENERATE(RKIntegratorMethod::RK2_Midpoint, RKIntegratorMethod::RK2_Heun,
+               RKIntegratorMethod::RK4_Classical);
   constexpr double dt = 0.001;
   IntegratorComposeConfig cfg{.dt = dt, .requires_adaptive = false};
   const std::array<std::size_t, 2> sizes{1, 1};
   const std::string id = to_string(method);
 
-  auto composition =
-      compose_multi<RotationRhs, 2>(id, cfg, sizes, RotationRhs{});
+  auto composition = compose_multi<RotationRhs, 2>(id, cfg, sizes, RotationRhs{});
   REQUIRE(composition.method == method);
   REQUIRE(composition.workspace_ownership == WorkspaceOwnership::MethodOwned);
 
-  MultiExplicitRKStepper<RotationRhs, 2> reference(
-      dt, sizes, make_tableau(method), RotationRhs{});
+  MultiExplicitRKStepper<RotationRhs, 2> reference(dt, sizes, make_tableau(method),
+                                                   RotationRhs{});
 
   std::vector<double> u_comp{1.0};
   std::vector<double> v_comp{0.25};
@@ -218,6 +213,18 @@ TEST_CASE("compose_multi succeeds for registered RK methods",
   REQUIRE_THAT(t_comp, WithinAbs(t_ref, 1e-15));
   REQUIRE_THAT(u_comp[0], WithinAbs(u_ref[0], 1e-14));
   REQUIRE_THAT(v_comp[0], WithinAbs(v_ref[0], 1e-14));
+}
+
+TEST_CASE("compose_scalar rejects etd1 without a registered composer",
+          "[method_composition]") {
+  IntegratorComposeConfig cfg{.dt = 0.01, .requires_adaptive = false};
+  try {
+    (void)compose_scalar("etd1", cfg, 2, make_decay_rhs(1.0));
+    FAIL("expected ComposeError");
+  } catch (const ComposeError &e) {
+    REQUIRE(e.kind() == ComposeError::Kind::CapabilityMismatch);
+    REQUIRE_THAT(std::string(e.what()), ContainsSubstring("etd1"));
+  }
 }
 
 TEST_CASE("compose_scalar rejects unknown method identifier",
@@ -260,9 +267,8 @@ TEST_CASE("compose_scalar rejects adaptive requirement for fixed-step methods",
     REQUIRE_THAT(std::string(e.what()), ContainsSubstring("euler"));
   }
 
-  REQUIRE_THROWS_AS(
-      compose_scalar("rk4_classical", cfg, 2, make_decay_rhs(1.0)),
-      ComposeError);
+  REQUIRE_THROWS_AS(compose_scalar("rk4_classical", cfg, 2, make_decay_rhs(1.0)),
+                    ComposeError);
 }
 
 TEST_CASE("compose_scalar rejects known id without registered composer",
@@ -274,8 +280,7 @@ TEST_CASE("compose_scalar rejects known id without registered composer",
     FAIL("expected ComposeError");
   } catch (const ComposeError &e) {
     REQUIRE(e.kind() == ComposeError::Kind::CapabilityMismatch);
-    REQUIRE_THAT(std::string(e.what()),
-                 ContainsSubstring("no composer registered"));
+    REQUIRE_THAT(std::string(e.what()), ContainsSubstring("no composer registered"));
     REQUIRE_THAT(std::string(e.what()), ContainsSubstring("euler"));
   }
 }
@@ -288,7 +293,7 @@ TEST_CASE("compose_scalar accepts RKIntegratorMethod overload for builtins",
   REQUIRE(euler.method == RKIntegratorMethod::Euler);
   REQUIRE(euler.workspace_ownership == WorkspaceOwnership::MethodOwned);
 
-  auto rk4 = compose_scalar(RKIntegratorMethod::RK4_Classical, cfg, 2,
-                            make_decay_rhs(1.0));
+  auto rk4 =
+      compose_scalar(RKIntegratorMethod::RK4_Classical, cfg, 2, make_decay_rhs(1.0));
   REQUIRE(rk4.method == RKIntegratorMethod::RK4_Classical);
 }

@@ -33,6 +33,10 @@ TEST_CASE("test_from_json_deserializes_valid_methods") {
           RKIntegratorMethod::RK4_Classical);
   REQUIRE(from_json<RKIntegratorMethod>(nlohmann::json("bogacki_shampine32")) ==
           RKIntegratorMethod::BogackiShampine32);
+  REQUIRE(from_json<RKIntegratorMethod>(nlohmann::json("imex_euler")) ==
+          RKIntegratorMethod::ImexEuler);
+  REQUIRE(from_json<RKIntegratorMethod>(nlohmann::json("etd1")) ==
+          RKIntegratorMethod::ETD1);
 }
 
 TEST_CASE("test_from_json_throws_on_unknown_string") {

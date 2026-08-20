@@ -13,13 +13,13 @@
  * frontend header `from_json_integrator_method.hpp`.
  *
  * Key features:
- * - RKIntegratorMethod enum class with 5 explicit RK methods
+ * - RKIntegratorMethod enum: five explicit RK methods plus IMEX/ETD identity
  * - Validation function for adaptive step-size control requirements
- * - ButcherTableau factory for each method
- * - String conversion for debugging and logging
+ * - ButcherTableau factory for explicit RK methods (`make_tableau`)
+ * - String conversion for debugging, logging, and JSON tokens
  *
  * `Time` stores this same enum (there is no separate method-identity type
- * on `Time`).
+ * on `Time`). IMEX/ETD tokens are identity only; they have no Butcher tableau.
  *
  * ## Usage
  * @code
@@ -46,6 +46,7 @@
 
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
 #include <optional>
+#include <stdexcept>
 #include <string>
 
 namespace pfc {
@@ -53,24 +54,32 @@ namespace sim {
 namespace steppers {
 
 /**
- * @brief Explicit Runge-Kutta integrator method selection
+ * @brief Integrator method identity stored on `Time`
  *
- * Enum class defining supported explicit Runge-Kutta methods for time
- * integration. `Time::method()` stores this type.
+ * Explicit Runge-Kutta methods plus IMEX/ETD tokens. JSON
+ * `simulator.integrator.method` / `timestepping.integrator.method` use the
+ * same strings as `to_string`. `make_tableau` is defined only for the RK
+ * values (`is_runge_kutta`).
  *
  * Values:
  * - Euler: Forward Euler (1st order, 1 stage)
  * - RK2_Midpoint: Second-order RK midpoint method (2 stages)
  * - RK2_Heun: Second-order RK Heun's method (2 stages)
  * - RK4_Classical: Classical fourth-order RK (4 stages)
- * - BogackiShampine32: Embedded 3(2) adaptive method (4 stages, with error estimator)
+ * - BogackiShampine32: Embedded 3(2) adaptive method (4 stages, with error
+ * estimator)
+ * - ImexEuler: implicit-explicit Euler identity (`"imex_euler"`)
+ * - ETD1: first-order exponential time differencing identity (`"etd1"`)
  */
 enum class RKIntegratorMethod {
-    Euler,             ///< Forward Euler (1st order, 1 stage)
-    RK2_Midpoint,      ///< Second-order RK midpoint (2 stages)
-    RK2_Heun,          ///< Second-order RK Heun's method (2 stages)
-    RK4_Classical,     ///< Classical fourth-order RK (4 stages)
-    BogackiShampine32  ///< Embedded 3(2) adaptive method (4 stages, with error estimator)
+  Euler,             ///< Forward Euler (1st order, 1 stage)
+  RK2_Midpoint,      ///< Second-order RK midpoint (2 stages)
+  RK2_Heun,          ///< Second-order RK Heun's method (2 stages)
+  RK4_Classical,     ///< Classical fourth-order RK (4 stages)
+  BogackiShampine32, ///< Embedded 3(2) adaptive method (4 stages, with error
+                     ///< estimator)
+  ImexEuler,         ///< IMEX Euler identity token (no Butcher tableau)
+  ETD1               ///< ETD1 identity token (no Butcher tableau)
 };
 
 /**
@@ -82,15 +91,17 @@ enum class RKIntegratorMethod {
  * @return String representation (e.g., "rk4_classical")
  */
 inline std::string to_string(RKIntegratorMethod method) {
-    switch (method) {
-        case RKIntegratorMethod::Euler: return "euler";
-        case RKIntegratorMethod::RK2_Midpoint: return "rk2_midpoint";
-        case RKIntegratorMethod::RK2_Heun: return "rk2_heun";
-        case RKIntegratorMethod::RK4_Classical: return "rk4_classical";
-        case RKIntegratorMethod::BogackiShampine32: return "bogacki_shampine32";
-    }
-    // Unreachable with complete switch, but prevent compiler warning
-    return "unknown";
+  switch (method) {
+  case RKIntegratorMethod::Euler: return "euler";
+  case RKIntegratorMethod::RK2_Midpoint: return "rk2_midpoint";
+  case RKIntegratorMethod::RK2_Heun: return "rk2_heun";
+  case RKIntegratorMethod::RK4_Classical: return "rk4_classical";
+  case RKIntegratorMethod::BogackiShampine32: return "bogacki_shampine32";
+  case RKIntegratorMethod::ImexEuler: return "imex_euler";
+  case RKIntegratorMethod::ETD1: return "etd1";
+  }
+  // Unreachable with complete switch, but prevent compiler warning
+  return "unknown";
 }
 
 /**
@@ -103,7 +114,21 @@ inline std::string to_string(RKIntegratorMethod method) {
  * @return true if method has embedded error estimator, false otherwise
  */
 inline bool is_embedded(RKIntegratorMethod method) {
-    return method == RKIntegratorMethod::BogackiShampine32;
+  return method == RKIntegratorMethod::BogackiShampine32;
+}
+
+/** @brief True for explicit RK values that have a Butcher tableau. */
+inline bool is_runge_kutta(RKIntegratorMethod method) {
+  switch (method) {
+  case RKIntegratorMethod::Euler:
+  case RKIntegratorMethod::RK2_Midpoint:
+  case RKIntegratorMethod::RK2_Heun:
+  case RKIntegratorMethod::RK4_Classical:
+  case RKIntegratorMethod::BogackiShampine32: return true;
+  case RKIntegratorMethod::ImexEuler:
+  case RKIntegratorMethod::ETD1: return false;
+  }
+  return false;
 }
 
 /**
@@ -119,12 +144,14 @@ inline bool is_embedded(RKIntegratorMethod method) {
  * @note Follows ParameterMetadata<T>::validate() pattern: returns
  *       std::optional<std::string> where empty means valid.
  */
-inline std::optional<std::string> validate_method(RKIntegratorMethod method, bool requires_adaptive = false) {
-    if (requires_adaptive && !is_embedded(method)) {
-        return "Adaptive step-size control requires an embedded method with error estimator, but " +
-               to_string(method) + " does not provide one";
-    }
-    return std::nullopt;  // Valid
+inline std::optional<std::string> validate_method(RKIntegratorMethod method,
+                                                  bool requires_adaptive = false) {
+  if (requires_adaptive && !is_embedded(method)) {
+    return "Adaptive step-size control requires an embedded method with error "
+           "estimator, but " +
+           to_string(method) + " does not provide one";
+  }
+  return std::nullopt; // Valid
 }
 
 namespace detail {
@@ -143,16 +170,15 @@ namespace detail {
  *       per non-scope constraints.
  */
 inline ButcherTableau<double> make_euler_tableau() {
-    // 1-stage explicit Euler: a_ij=[0], b_i=[1], c_i=[0]
-    return ButcherTableau<double>(
-        1,           // stage count s
-        {0.0},       // a_ij - flat 1x1 matrix
-        {1.0},       // b_i
-        {0.0},       // c_i
-        {},          // b_hat_i (empty for non-embedded)
-        "Euler",     // name
-        1            // order
-    );
+  // 1-stage explicit Euler: a_ij=[0], b_i=[1], c_i=[0]
+  return ButcherTableau<double>(1,       // stage count s
+                                {0.0},   // a_ij - flat 1x1 matrix
+                                {1.0},   // b_i
+                                {0.0},   // c_i
+                                {},      // b_hat_i (empty for non-embedded)
+                                "Euler", // name
+                                1        // order
+  );
 }
 
 } // namespace detail
@@ -171,24 +197,22 @@ inline ButcherTableau<double> make_euler_tableau() {
  *         occur with predefined methods)
  */
 inline ButcherTableau<double> make_tableau(RKIntegratorMethod method) {
-    switch (method) {
-        case RKIntegratorMethod::Euler:
-            return detail::make_euler_tableau();
-        case RKIntegratorMethod::RK2_Midpoint:
-            return make_rk2_midpoint<double>();
-        case RKIntegratorMethod::RK2_Heun:
-            return make_rk2_heun<double>();
-        case RKIntegratorMethod::RK4_Classical:
-            return make_rk4_classical<double>();
-        case RKIntegratorMethod::BogackiShampine32:
-            return make_embedded_rk23<double>();
-    }
-    // Unreachable with complete switch, but prevent compiler warning
-    throw std::runtime_error("Unknown RKIntegratorMethod value");
+  switch (method) {
+  case RKIntegratorMethod::Euler: return detail::make_euler_tableau();
+  case RKIntegratorMethod::RK2_Midpoint: return make_rk2_midpoint<double>();
+  case RKIntegratorMethod::RK2_Heun: return make_rk2_heun<double>();
+  case RKIntegratorMethod::RK4_Classical: return make_rk4_classical<double>();
+  case RKIntegratorMethod::BogackiShampine32: return make_embedded_rk23<double>();
+  case RKIntegratorMethod::ImexEuler:
+  case RKIntegratorMethod::ETD1:
+    throw std::invalid_argument("make_tableau: " + to_string(method) +
+                                " is not an explicit Runge-Kutta method");
+  }
+  throw std::runtime_error("Unknown RKIntegratorMethod value");
 }
 
-} // namespace pfc::sim::steppers
-} // namespace pfc::sim
+} // namespace steppers
+} // namespace sim
 } // namespace pfc
 
 #endif // PFC_SIM_STEPPERS_INTEGRATOR_METHOD_HPP
