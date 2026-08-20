@@ -654,7 +654,7 @@ M8, M9 (all production physics on the new architecture).
 
 ### Tasks
 
-* [ ] Implement `kernel/simulation/simulation_driver.hpp`: thin loop (free function + small owning struct) over `SimulationState` + `Time` + a protocol stepper + condition lists + writer/checkpoint services; the Gen‑1 `Simulator` remains only behind A1/A2 for the frontend until M12.
+* [x] Implement `kernel/simulation/simulation_driver.hpp`: thin loop (free function + small owning struct) over `SimulationState` + `Time` + a protocol stepper + condition lists + writer/checkpoint services; the Gen‑1 `Simulator` remains only behind A1/A2 for the frontend until M12. **Landed:** `pfc::sim::run` + `SimulationDriver` with start/conditions/save hooks. Writer/checkpoint services remain caller hooks. Tungsten/aluminum ETD sessions consume it.
 * [ ] Generalize the session: `SimulationSession<Stack>` over {SpectralCPUStack, GPUSpectralStack, FDCPUStack, FDGPUStack}; JSON keys `method` (`spectral`|`fd`) and `backend` (`cpu`|`cuda`|`hip`) select the stack via a factory (extends `spectral_fft_stack_factory.hpp` / `backend_from_string`); no dead host FFT for GPU runs (retires the `SpectralCPUStack` concrete-`CPUFFT` coupling, `spectral_cpu_stack.hpp:88`).
 * [ ] Wire integrator selection: `from_json_integrator_method.hpp` (extended to the unified method enum incl. IMEX/ETD where applicable) consumed by `apply_simulator_section_from_json`; documented JSON schema update.
 * [ ] FD configuration surface: `fd_order` JSON key (even orders 2–20, runtime-view stencils; halo width derived automatically) exposed through the FD session; validation errors name the supported set.

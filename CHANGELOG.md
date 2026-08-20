@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 `SimulationDriver` / `pfc::sim::run` (`kernel/simulation/simulation_driver.hpp`): thin Time loop matching `Simulator::step` (on_start at increment 0, next, conditions, physics, save). Tungsten/aluminum CPU and GPU ETD sessions use it. Gen-1 `Simulator` remains.
 - M9 `apps/common/` (`openpfc_apps_common`): shared CLI helpers, MPI timing/SUM reduce, and rank-0 XY gather. heat3d / wave2d / allen_cahn / kobayashi keep per-app `RunConfig` and usage text.
 - M9 Kobayashi OpenMP engine is the single-rank `FDPaddedCPUStack` path with OpenMP over owned cells (torus wrap indexing retired). Shared host stencils with `kobayashi_fd_manual`. Thread-parity 1 vs 4 retained; 32²/4-step HEX pinned against MPI nproc=1.
 - M9 aluminum 5-step SeedGridFCC golden: `MovingFrameMeanFieldETDSystem` vs Gen-1 ≤1e-10 on 32³. Free-energy density formula pinned vs Gen-1; `last_free_energy_sum` is finite on the golden run. Pre-M0 sumsq norms unchanged.
