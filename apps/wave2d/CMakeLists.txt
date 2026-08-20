@@ -47,7 +47,8 @@ set(_wave2d_binaries wave2d_fd_manual wave2d_fd)
 foreach(_target IN LISTS _wave2d_binaries)
   add_executable(${_target} src/cpu/${_target}.cpp)
   target_include_directories(${_target} PRIVATE ${WAVE2D_INCLUDE_DIR})
-  target_link_libraries(${_target} PRIVATE OpenPFC ${_wave2d_heffte_tgt})
+  target_link_libraries(${_target} PRIVATE OpenPFC openpfc_apps_common
+                                           ${_wave2d_heffte_tgt})
   if(OpenMP_CXX_FOUND)
     target_link_libraries(${_target} PRIVATE OpenMP::OpenMP_CXX)
   endif()
@@ -61,26 +62,30 @@ if(WAVE2D_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
   if(TARGET Catch2::Catch2)
     add_executable(test_wave2d tests/test_wave2d.cpp)
     target_include_directories(test_wave2d PRIVATE ${WAVE2D_INCLUDE_DIR})
-    target_link_libraries(test_wave2d PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
+    target_link_libraries(test_wave2d PRIVATE OpenPFC openpfc_apps_common
+                                             ${_wave2d_heffte_tgt} Catch2::Catch2)
     include(CTest)
     add_test(NAME wave2d-all-tests COMMAND test_wave2d)
 
     # Operator-evaluation contract tests
     add_executable(test_wave2d_operator_evaluation tests/test_wave2d_operator_evaluation.cpp)
     target_include_directories(test_wave2d_operator_evaluation PRIVATE ${WAVE2D_INCLUDE_DIR})
-    target_link_libraries(test_wave2d_operator_evaluation PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
+    target_link_libraries(test_wave2d_operator_evaluation PRIVATE OpenPFC openpfc_apps_common
+                                             ${_wave2d_heffte_tgt} Catch2::Catch2)
     add_test(NAME wave2d-operator-evaluation COMMAND test_wave2d_operator_evaluation)
 
     # rhs() pattern structural tests (not a numerical vs-legacy baseline)
     add_executable(test_wave2d_rhs_pattern tests/test_wave2d_rhs_pattern.cpp)
     target_include_directories(test_wave2d_rhs_pattern PRIVATE ${WAVE2D_INCLUDE_DIR})
-    target_link_libraries(test_wave2d_rhs_pattern PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
+    target_link_libraries(test_wave2d_rhs_pattern PRIVATE OpenPFC openpfc_apps_common
+                                             ${_wave2d_heffte_tgt} Catch2::Catch2)
     add_test(NAME wave2d-rhs-pattern COMMAND test_wave2d_rhs_pattern)
 
     # RK2/RK4 convergence integration tests
     add_executable(test_wave2d_rk_convergence tests/test_wave2d_rk_convergence.cpp)
     target_include_directories(test_wave2d_rk_convergence PRIVATE ${WAVE2D_INCLUDE_DIR})
-    target_link_libraries(test_wave2d_rk_convergence PRIVATE OpenPFC ${_wave2d_heffte_tgt} Catch2::Catch2)
+    target_link_libraries(test_wave2d_rk_convergence PRIVATE OpenPFC openpfc_apps_common
+                                             ${_wave2d_heffte_tgt} Catch2::Catch2)
     wave2d_link_libstdcxx(test_wave2d_rk_convergence)
     add_test(NAME wave2d-rk-convergence COMMAND test_wave2d_rk_convergence)
   else()
@@ -91,8 +96,8 @@ endif()
 if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   add_executable(wave2d_cuda src/cuda/wave2d_cuda.cu src/cuda/wave2d_kernels.cu)
   target_include_directories(wave2d_cuda PRIVATE ${WAVE2D_INCLUDE_DIR})
-  target_link_libraries(wave2d_cuda PRIVATE OpenPFC CUDA::cudart openpfc_gpu_kernels
-                        ${_wave2d_heffte_tgt})
+  target_link_libraries(wave2d_cuda PRIVATE OpenPFC openpfc_apps_common CUDA::cudart
+                        openpfc_gpu_kernels ${_wave2d_heffte_tgt})
   wave2d_link_libstdcxx(wave2d_cuda)
   set_target_properties(wave2d_cuda PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
@@ -105,7 +110,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     add_executable(test_wave2d_cpu_vs_cuda tests/test_wave2d_cpu_vs_cuda.cpp
                                             src/cuda/wave2d_kernels.cu)
     target_include_directories(test_wave2d_cpu_vs_cuda PRIVATE ${WAVE2D_INCLUDE_DIR})
-    target_link_libraries(test_wave2d_cpu_vs_cuda PRIVATE OpenPFC Catch2::Catch2
+    target_link_libraries(test_wave2d_cpu_vs_cuda PRIVATE OpenPFC openpfc_apps_common
+                                                            Catch2::Catch2
                                                             CUDA::cudart openpfc_gpu_kernels
                                                             ${_wave2d_heffte_tgt})
     wave2d_link_libstdcxx(test_wave2d_cpu_vs_cuda)
@@ -121,8 +127,8 @@ endif()
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
   add_executable(wave2d_hip src/hip/wave2d_hip.cpp src/hip/wave2d_kernels.hip)
   target_include_directories(wave2d_hip PRIVATE ${WAVE2D_INCLUDE_DIR})
-  target_link_libraries(wave2d_hip PRIVATE OpenPFC hip::host openpfc_hip_kernels
-                        ${_wave2d_heffte_tgt})
+  target_link_libraries(wave2d_hip PRIVATE OpenPFC openpfc_apps_common hip::host
+                        openpfc_hip_kernels ${_wave2d_heffte_tgt})
   wave2d_link_libstdcxx(wave2d_hip)
   set_target_properties(wave2d_hip PROPERTIES LINKER_LANGUAGE CXX)
   install(TARGETS wave2d_hip DESTINATION bin)
@@ -131,7 +137,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
     add_executable(test_wave2d_cpu_vs_hip tests/test_wave2d_cpu_vs_hip.cpp
                                             src/hip/wave2d_kernels.hip)
     target_include_directories(test_wave2d_cpu_vs_hip PRIVATE ${WAVE2D_INCLUDE_DIR})
-    target_link_libraries(test_wave2d_cpu_vs_hip PRIVATE OpenPFC Catch2::Catch2 hip::host
+    target_link_libraries(test_wave2d_cpu_vs_hip PRIVATE OpenPFC openpfc_apps_common
+                                                         Catch2::Catch2 hip::host
                                                          openpfc_hip_kernels
                                                          ${_wave2d_heffte_tgt})
     wave2d_link_libstdcxx(test_wave2d_cpu_vs_hip)

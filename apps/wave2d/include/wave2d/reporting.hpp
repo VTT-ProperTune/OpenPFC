@@ -8,6 +8,7 @@
 #include <mpi.h>
 #include <string>
 
+#include <openpfc_apps/mpi_report.hpp>
 #include <wave2d/cli.hpp>
 #include <wave2d/wave_model.hpp>
 
@@ -21,8 +22,7 @@ void report(int rank, int nproc, const RunConfig &cfg, const char *method_tag,
   visit_interior([&](double /*x*/, double /*y*/, double /*z*/, double u_val) {
     sum_u2 += u_val * u_val;
   });
-  double g_sum = 0.0;
-  MPI_Reduce(&sum_u2, &g_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  const double g_sum = pfc::apps::reduce_sum(sum_u2, MPI_COMM_WORLD);
 
   if (rank == 0) {
     const double dx = 1.0;
@@ -32,9 +32,7 @@ void report(int rank, int nproc, const RunConfig &cfg, const char *method_tag,
               << " c=" << kC << " mpi_ranks=" << nproc;
     if (!extra_metadata.empty()) std::cout << " " << extra_metadata;
     std::cout << "\n";
-    std::cout << "timing_s=" << max_elapsed << " avg_step_time_s="
-              << (max_elapsed / static_cast<double>(cfg.n_steps))
-              << " (MPI_MAX across ranks)\n";
+    pfc::apps::print_timing_line(std::cout, max_elapsed, cfg.n_steps);
     const double rms_u = std::sqrt(g_sum / static_cast<double>(cfg.Nx * cfg.Ny));
     std::cout << "global_rms_u_interior=" << rms_u << " cfl_c_dt_dx=" << cfl << " "
               << note << "\n";
