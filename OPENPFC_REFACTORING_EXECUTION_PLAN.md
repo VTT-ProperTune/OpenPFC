@@ -571,8 +571,8 @@ M7 (skeleton, schema), M4 (communication — for completeness of the stack), M3 
 ### Required tests
 
 * [x] Golden A/B named tests + `BASELINES.md` row. CUDA/perf cluster captures remain tohtori.
-* [ ] `test_tungsten.cpp` spectral-operator edge cases (zero mode, near-zero cancellation, long-dt) pass against the new implementation.
-* [ ] The Pre-M0 PA App-GPU-IC test re-pointed at the new pipeline and green.
+* [x] `test_tungsten.cpp` spectral-operator edge cases (zero mode, near-zero cancellation, long-dt) pass against the new implementation (`TungstenPhysics` + shared `spectral_exp_coeffs` in `test_tungsten_physics.cpp`).
+* [x] The Pre-M0 PA App-GPU-IC test re-pointed at `TungstenETDGPUSession` (`single_seed` JSON IC, ≥2 steps, device vs host ≤1e-10; host vs Gen-1). CUDA execute: **not testable on LUMI — verify on tohtori.** HIP is `HIP_TungstenETD`.
 
 ### Deletions
 
@@ -600,7 +600,7 @@ M8 (validated skeleton), M4 (batched device halos).
 
 ### Tasks
 
-* [ ] Rebuild `apps/aluminumNew` on `SpectralETDSystem`: physics = temperature-gradient/moving-frame terms + `P_F` kernel + free-energy observable (uses the M7 reduction hook); one `ParameterSchema` replacing the 130-line hand-rolled JSON block (`Aluminum.hpp:359–438`); ETD weights now from the shared cache (its inline `opL/opN` formulas retired — validated against the golden trajectory).
+* [ ] Rebuild `apps/aluminumNew` on `SpectralETDSystem`: physics = temperature-gradient/moving-frame terms + `P_F` kernel + free-energy observable (uses the M7 reduction hook); one `ParameterSchema` replacing the 130-line hand-rolled JSON block (`Aluminum.hpp:359–438`); ETD weights now from the shared cache (its inline `opL/opN` formulas retired — validated against the golden trajectory). **Started:** `aluminum::AluminumPhysics` + `MovingFrameMeanFieldETDPhysics`; schema round-trip; operator/`N`/FE formula pins. Host system + session not yet.
 * [ ] Aluminum gains CUDA/HIP execution via the skeleton (previously CPU-only); add CPU-vs-GPU parity tests mirroring tungsten's.
 * [ ] Migrate kobayashi CPU driver onto `FDCPUStack` + `Field` + unified `HaloExchange` (multi-field batched mode replaces six hand-tagged exchangers, `kobayashi_fd_manual.cpp:83–88`); its bespoke anisotropic stencils remain app-side (legitimately model-specific) expressed over `Field` indexing.
 * [ ] Introduce `FDGPUStack` (device FD stack: `Field<T,DeviceSpace>` + device `HaloExchange` + `FDGradientDevice`); migrate kobayashi CUDA and HIP drivers onto it; HIP uses the device path (first time in an app).

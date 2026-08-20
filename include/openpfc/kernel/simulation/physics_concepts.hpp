@@ -202,4 +202,25 @@ concept MeanFieldETDPhysics =
       { physics.nonlinearity(psi, psi_mf) } -> std::convertible_to<double>;
     };
 
+/**
+ * @brief Mean-field ETD with a correlation kernel @f$P(k)@f$ and a
+ *        temperature-dependent @f$N@f$ (aluminum moving frame).
+ *
+ * The driver FFTs @f$\psi@f$, applies @f$\chi@f$ and @f$P(k)@f$, then
+ * evaluates @f$N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}})@f$.
+ * Free-energy density is the M7 observable hook.
+ */
+template <class Physics>
+concept MovingFrameMeanFieldETDPhysics =
+    DeclaresFields<Physics> && SpectralLinearSymbol<Physics> &&
+    requires(const Physics &physics, double k_laplacian, double psi,
+             double psi_mf, double p_star, double T_var) {
+      { physics.filter_mf(k_laplacian) } -> std::convertible_to<double>;
+      { physics.correlation_kernel(k_laplacian) } -> std::convertible_to<double>;
+      { physics.nonlinearity(psi, psi_mf, p_star, T_var) }
+          -> std::convertible_to<double>;
+      { physics.free_energy_density(psi, psi_mf, p_star, T_var) }
+          -> std::convertible_to<double>;
+    };
+
 } // namespace pfc::sim

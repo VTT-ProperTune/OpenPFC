@@ -14,6 +14,9 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M9 start: `aluminum::AluminumPhysics` (`apps/aluminumNew/include/aluminum/aluminum_physics.hpp`) plus `MovingFrameMeanFieldETDPhysics` (`filter_mf`, `correlation_kernel` \(P(k)\), \(N(\psi,\psi_{\mathrm{MF}},P*\psi,T_{\mathrm{var}})\), free-energy density). Schema keys match `aluminumNew.json`. Gen-1 `Aluminum` remains.
+- TungstenPhysics ETD weights (zero mode, near-zero `opCk`, long-dt) pinned against `legacy_etd_weights_for_mode`.
+- Pre-M0 App-GPU-IC re-pointed at `TungstenETDGPUSession`: JSON `single_seed` IC, two ETD steps, device vs host ≤1e-10 (`HIP_TungstenETD` / `CUDA_TungstenETD`). Host session vs Gen-1 with the same IC.
 - Type names spell abbreviations in full caps: `CPUFFT`, `CPUTag`, `HIPSpace`, `CUDASpace`, `GPUSpectralStack`, `FDCPUStack`, `ETD1Stepper`, `SpectralETDSystem`, `TungstenETDSession` (was `CpuFft` / `CpuTag` / `HipSpace` / `GpuSpectralStack` / `FdCpuStack` / `Etd1Stepper` / `…Etd…`).
 - Tungsten golden A/B: 1-rank 8³/100 ETD steps and 4-rank 16³/20 steps (`tungsten-golden-4rank`) compare `TungstenETDSession` to Gen-1 within 1e-10. Pre-M0 dump was never captured.
 - Tungsten ETD sessions write binary `psi` dumps on `Time::do_save()` from JSON `fields[]` (same schedule as Gen-1 `Simulator`).
