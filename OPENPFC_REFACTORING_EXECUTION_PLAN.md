@@ -663,13 +663,13 @@ M8, M9 (all production physics on the new architecture).
 * [x] Make modifier/writer registration failures hard errors (replace warn-and-drop in `simulator_modifier_registration.hpp` and `simulation_wiring_writers.hpp:83–89`). Unknown `"writer"` / IC `"type"` and missing Model fields throw. Default-field usage still warns.
 * [ ] Register `VTKWriter` in `default_results_writer_catalog()`; add HDF5/XDMF `ResultsWriter` per ADR 0008 (behind `OpenPFC_ENABLE_HDF5`); narrow the `ResultsWriter` contract (filename templating moves to a `FileResultsWriter` intermediate) so non-file sinks are expressible; writer domain metadata sourced from `SimulationState`, not the FFT inbox. **Partial:** catalog key `vtk` → `VTKWriter`. HDF5/XDMF and `FileResultsWriter` still open.
 * [ ] Unify writer/modifier catalog APIs (one error philosophy). **Partial:** both catalogs throw `format_config_error` with `registered_*` keys.
-* [ ] Remove the deprecated `(comm, rank, rank0)` wiring overload family (JsonWiringContext only).
+* [x] Remove the deprecated `(comm, rank, rank0)` wiring overload family (JsonWiringContext only).
 
 ### Required tests
 
 * [ ] Session matrix test: {spectral, fd} × {cpu} in CI and × {cuda, hip} on clusters — one JSON document each, same toy model, correct stack instantiated (asserted via introspection/log), simulation runs. **Partial:** CPU JSON matrix (`test_session_matrix`) plus CUDA `SimulationSession` on GPU stack binaries. HIP JSON twin still open.
 * [x] JSON `method`/`backend`/`integrator`/`fd_order` negative tests: unknown values produce the formatted config errors (message snapshots). **method/backend/fd_order** in `test_from_json_session_selection`. Integrator unknown tokens use `format_config_error`.
-* [ ] FD order sweep: heat3d convergence test at orders 2, 8, 10 showing expected spatial-order improvement (extends existing analytic-Gaussian check).
+* [x] FD order sweep: heat3d convergence test at orders 2, 8, 10 showing expected spatial-order improvement (extends existing analytic-Gaussian check). **Landed:** `FDCPUStack Gaussian L2 improves at even fd_order 2, 8, 10`.
 * [ ] BC mechanism: wave2d mixed-BC tests pass on the stage-preparation path; a Dirichlet FD test (non-periodic axis from M1) validates ghost handling against an analytic solution.
 * [ ] `"writer": "vtk"` produces `.vti/.pvti` output in an integration test; `"writer": "hdf5"` round-trips through `h5py`-based verification script; unknown writer hard-errors. **Partial:** serial JSON `"writer": "vtk"` writes `.vti` (`test_driver_seams`). HDF5 still open.
 
@@ -678,7 +678,7 @@ M8, M9 (all production physics on the new architecture).
 * [ ] `SpectralCPUStack`'s frontend twin (`frontend/ui/spectral_cpu_stack*.hpp`) superseded by the generalized session; `app_spectral_run.hpp` renamed/generalized (no `spectral_` hardcoding in App path names).
 * [ ] `kernel/simulation/boundary_conditions/{fixed_bc,moving_bc}.hpp` (relocated to apps).
 * [ ] Embryonic BC mechanisms (`prepare_boundaries` stub, `StageContext` BC flags).
-* [ ] Deprecated wiring overloads; warn-and-drop registration paths.
+* [x] Deprecated wiring overloads; warn-and-drop registration paths. **Overloads removed.** Default-field usage still warns.
 
 ### Definition of done
 

@@ -14,6 +14,8 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M10 heat3d FD order sweep: even orders 2, 8, 10 reduce Gaussian L2 vs the analytic solution on `FDCPUStack`.
+- M10 JSON wiring takes only `JsonWiringContext` / `JsonWiringSession`. The `(comm, rank, rank0)` overload family is removed.
 - M10 `SimulationSession<Stack>` owns `SessionSelection`, `Time`, and a stack from `stack_builder`. JSON helper `make_simulation_session`. Session-matrix tests cover spectral/fd × cpu (JSON) and CUDA stacks (cluster binaries).
 - M10 unknown IC/BC `"type"` and a missing Model field for modifiers or results writers are hard errors (`format_config_error` / `invalid_argument`). JSON `"writer": "vtk"` writes a `.vti` in the driver-seam test. `apply_simulator_section_from_json` overlays `simulator.integrator.method` on `Time`.
 - M10 GPU stack factory (`runtime/gpu/session_gpu_stack_factory.hpp`) builds `GPUSpectralStack` / `FDGPUStack` from `SessionSelection`. Omitted JSON `backend` maps to the binary's device; explicit `cpu` still fails closed. Tungsten/aluminum GPU ETD sessions use `make_gpu_spectral_stack`.
