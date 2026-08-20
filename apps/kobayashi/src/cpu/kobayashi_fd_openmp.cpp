@@ -3,7 +3,7 @@
 
 /**
  * @file kobayashi_fd_openmp.cpp
- * @brief CLI driver: Kobayashi FD on one node with OpenMP (periodic wrap, no MPI halos).
+ * @brief CLI driver: Kobayashi FD on one node with OpenMP (`FDPaddedCPUStack`).
  */
 
 #include <cmath>
@@ -19,9 +19,7 @@
 
 #include <kobayashi/verification_utilities.hpp>
 
-namespace {
-
-} // namespace
+namespace {} // namespace
 
 int main(int argc, char **argv) {
   const auto cfg = kobayashi::parse_or_print_usage_openmp(argc, argv);
@@ -49,9 +47,10 @@ int main(int argc, char **argv) {
   std::cout << std::setprecision(17);
   std::cout << "KOBAYASHI_VERIFY"
             << " wall_loop_max_s=" << res.wall_loop_s << " nthreads=" << res.nthreads
-            << " Nx=" << Nx << " Ny=" << Ny << " steps=" << cfg->n_steps << " dt=" << cfg->dt
-            << " dx=" << cfg->dx << " sum_phi=" << sp.sum << " sumsq_phi=" << sp.sumsq
-            << " l2_phi=" << l2_phi << " min_phi=" << sp.min_v << " max_phi=" << sp.max_v
+            << " Nx=" << Nx << " Ny=" << Ny << " steps=" << cfg->n_steps
+            << " dt=" << cfg->dt << " dx=" << cfg->dx << " sum_phi=" << sp.sum
+            << " sumsq_phi=" << sp.sumsq << " l2_phi=" << l2_phi
+            << " min_phi=" << sp.min_v << " max_phi=" << sp.max_v
             << " sum_T=" << sT.sum << " sumsq_T=" << sT.sumsq << " l2_T=" << l2_T
             << " min_T=" << sT.min_v << " max_T=" << sT.max_v << "\n";
   std::cout << "KOBAYASHI_VERIFY_HEX"

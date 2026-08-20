@@ -3,58 +3,50 @@
 
 /**
  * @file kobayashi_fd_openmp_engine.cpp
- * @brief Periodic FD Kobayashi kernel with OpenMP (no MPI halos — torus indexing).
+ * @brief Single-rank `FDPaddedCPUStack` Kobayashi kernel with OpenMP stages.
  */
 
 #include <kobayashi/defaults.hpp>
+#include <kobayashi/fd_stencils.hpp>
 #include <kobayashi/openmp_engine.hpp>
 
-#include <openpfc/frontend/io/png_writer.hpp>
+#include <kobayashi/verification_utilities.hpp>
+
+#include <openpfc/domain/create.hpp>
+#include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/decomposition/comm_halo_exchange.hpp>
+#include <openpfc/kernel/decomposition/halo_directions.hpp>
+#include <openpfc/kernel/simulation/stacks/fd_padded_cpu_stack.hpp>
 
 #include <cstdio>
-#include <cmath>
-#include <cstddef>
 #include <iostream>
-#include <numbers>
+#include <mpi.h>
 #include <vector>
 
 #include <omp.h>
 
+namespace kobayashi::openmp_engine {
+
 namespace {
 
-constexpr inline int wrap_x(int i, int nx) noexcept {
-  const int m = i % nx;
-  return m < 0 ? m + nx : m;
-}
-
-constexpr inline int wrap_y(int j, int ny) noexcept {
-  const int m = j % ny;
-  return m < 0 ? m + ny : m;
-}
-
-inline std::size_t ijx(int i, int j, int nx) noexcept {
-  return static_cast<std::size_t>(i + j * nx);
-}
-
-void write_phi_png(const char *path, int nx, int ny, const std::vector<double> &phi) {
-  pfc::io::write_png_grayscale_from_doubles(path, nx, ny, phi.data(), 0.0, 1.0);
+void ensure_mpi() {
+  int ready = 0;
+  MPI_Initialized(&ready);
+  if (ready == 0) {
+    MPI_Init(nullptr, nullptr);
+  }
 }
 
 } // namespace
 
-namespace kobayashi::openmp_engine {
-
 RunResult run(const RunConfigOpenMP &cfg, bool skip_png, bool quiet) {
+  ensure_mpi();
+
   const double dx = cfg.dx;
   const double dy = dx;
   const double inv_dx = 1.0 / dx;
   const double inv_dy = 1.0 / dy;
   const double inv_lap_den = 1.0 / (dx * dy);
-
-  const int Nx = cfg.Nx;
-  const int Ny = cfg.Ny;
-  const std::size_t n =
-      static_cast<std::size_t>(Nx) * static_cast<std::size_t>(Ny);
 
   if (cfg.num_threads > 0) {
     omp_set_num_threads(cfg.num_threads);
@@ -62,129 +54,82 @@ RunResult run(const RunConfigOpenMP &cfg, bool skip_png, bool quiet) {
   const int nthr = omp_get_max_threads();
   const bool use_team = (nthr > 1);
 
-  std::vector<double> phi(n);
-  std::vector<double> tempr(n);
-  std::vector<double> lap_phi(n);
-  std::vector<double> lap_t(n);
-  std::vector<double> phidx(n);
-  std::vector<double> phidy(n);
-  std::vector<double> epsilon(n);
-  std::vector<double> epsilon_deriv(n);
+  const auto domain = pfc::domain::create(pfc::GridSize({cfg.Nx, cfg.Ny, 1}),
+                                          pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                          pfc::GridSpacing({dx, dy, 1.0}));
+  constexpr int hw = 1;
+  pfc::comm::HaloExchangeOptions state_opt;
+  state_opt.directions = pfc::halo::presets::Axes2D();
+  pfc::sim::stacks::FDPaddedCPUStack stack(domain, hw, /*rank=*/0, /*nproc=*/1,
+                                           MPI_COMM_WORLD, state_opt);
+  const auto &decomp = stack.decomposition();
 
+  using Field = pfc::data::Field<double, pfc::HostSpace>;
+  Field &phi = stack.u();
+  Field tempr = stack.make_field();
+  Field lap_phi = stack.make_field();
+  Field lap_t = stack.make_field();
+  Field phidx = stack.make_field();
+  Field phidy = stack.make_field();
+  Field epsilon = stack.make_field();
+  Field epsilon_deriv = stack.make_field();
+
+  const int Nx = cfg.Nx;
+  const int Ny = cfg.Ny;
+  const int nx = phi.local_size()[0];
+  const int ny = phi.local_size()[1];
   const int ci = Nx / 2;
   const int cj = Ny / 2;
 
 #pragma omp parallel for collapse(2) schedule(static) if (use_team)
-  for (int j = 0; j < Ny; ++j) {
-    for (int i = 0; i < Nx; ++i) {
-      const double ddx = static_cast<double>(i - ci);
-      const double ddy = static_cast<double>(j - cj);
-      phi[ijx(i, j, Nx)] =
-          (ddx * ddx + ddy * ddy < kobayashi::kSeed) ? 1.0 : 0.0;
-      tempr[ijx(i, j, Nx)] = 0.0;
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      const auto g = phi.global(i, j, 0);
+      const double ddx = static_cast<double>(g[0] - ci);
+      const double ddy = static_cast<double>(g[1] - cj);
+      phi(i, j, 0) = (ddx * ddx + ddy * ddy < kobayashi::kSeed) ? 1.0 : 0.0;
+      tempr(i, j, 0) = 0.0;
     }
   }
 
-  // Parallel first-touch for workspace buffers so pages fault under the same thread team as the
-  // integration loop (NUMA placement), and not during the timed section.
-#pragma omp parallel for schedule(static) if (use_team)
-  for (std::size_t k = 0; k < n; ++k) {
-    lap_phi[k] = 0.0;
-    lap_t[k] = 0.0;
-    phidx[k] = 0.0;
-    phidy[k] = 0.0;
-    epsilon[k] = 0.0;
-    epsilon_deriv[k] = 0.0;
-  }
+  auto halo_state = stack.make_exchange({&phi, &tempr}, state_opt);
+  pfc::comm::HaloExchangeOptions aux_opt;
+  aux_opt.exchange_base = 2;
+  aux_opt.directions = pfc::halo::presets::Axes2D();
+  auto halo_aux =
+      stack.make_exchange({&epsilon, &epsilon_deriv, &phidx, &phidy}, aux_opt);
 
   int filenum = 0;
   if (!skip_png) {
     char path[4096];
-    std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(), filenum);
+    std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
+                  filenum);
     std::cout << "saving step 0/" << cfg.n_steps << " to file " << path << "\n";
-    write_phi_png(path, Nx, Ny, phi);
+    write_phi_png(0, decomp, phi, path);
     ++filenum;
   }
 
   const int nprint_eff = quiet ? 0 : cfg.nprint;
-
   const double t_loop0 = omp_get_wtime();
 
   for (int istep = 1; istep <= cfg.n_steps; ++istep) {
+    halo_state.exchange();
 
 #pragma omp parallel for collapse(2) schedule(static) if (use_team)
-    for (int j = 0; j < Ny; ++j) {
-      for (int i = 0; i < Nx; ++i) {
-        const std::size_t c = ijx(i, j, Nx);
-        const int ip = wrap_x(i + 1, Nx);
-        const int im = wrap_x(i - 1, Nx);
-        const int jp = wrap_y(j + 1, Ny);
-        const int jm = wrap_y(j - 1, Ny);
-
-        const double hne = phi[ijx(ip, j, Nx)];
-        const double hnw = phi[ijx(im, j, Nx)];
-        const double hns = phi[ijx(i, jm, Nx)];
-        const double hnn = phi[ijx(i, jp, Nx)];
-        const double hnc = phi[c];
-        lap_phi[c] = (hne + hnw + hns + hnn - 4.0 * hnc) * inv_lap_den;
-
-        const double Tne = tempr[ijx(ip, j, Nx)];
-        const double Tnw = tempr[ijx(im, j, Nx)];
-        const double Tns = tempr[ijx(i, jm, Nx)];
-        const double Tnn = tempr[ijx(i, jp, Nx)];
-        const double Tnc = tempr[c];
-        lap_t[c] = (Tne + Tnw + Tns + Tnn - 4.0 * Tnc) * inv_lap_den;
-
-        const double dpx = (phi[ijx(ip, j, Nx)] - phi[ijx(im, j, Nx)]) * inv_dx;
-        const double dpy = (phi[ijx(i, jp, Nx)] - phi[ijx(i, jm, Nx)]) * inv_dy;
-        phidx[c] = dpx;
-        phidy[c] = dpy;
-
-        const double theta = std::atan2(dpy, dpx);
-        epsilon[c] =
-            kobayashi::kEpsilonb *
-            (1.0 + kobayashi::kDelta *
-                       std::cos(kobayashi::kAniso * (theta - kobayashi::kTheta0)));
-        epsilon_deriv[c] = -kobayashi::kEpsilonb * kobayashi::kAniso * kobayashi::kDelta *
-                           std::sin(kobayashi::kAniso * (theta - kobayashi::kTheta0));
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        kobayashi::stage_a_cell(phi, tempr, lap_phi, lap_t, phidx, phidy, epsilon,
+                                epsilon_deriv, i, j, 0, inv_dx, inv_dy, inv_lap_den);
       }
     }
 
+    halo_aux.exchange();
+
 #pragma omp parallel for collapse(2) schedule(static) if (use_team)
-    for (int j = 0; j < Ny; ++j) {
-      for (int i = 0; i < Nx; ++i) {
-        const std::size_t c = ijx(i, j, Nx);
-        const int ip = wrap_x(i + 1, Nx);
-        const int im = wrap_x(i - 1, Nx);
-        const int jp = wrap_y(j + 1, Ny);
-        const int jm = wrap_y(j - 1, Ny);
-
-        const double phiold = phi[c];
-
-        const double term1 = (epsilon[ijx(i, jp, Nx)] * epsilon_deriv[ijx(i, jp, Nx)] *
-                                      phidx[ijx(i, jp, Nx)] -
-                                  epsilon[ijx(i, jm, Nx)] * epsilon_deriv[ijx(i, jm, Nx)] *
-                                      phidx[ijx(i, jm, Nx)]) *
-                             inv_dy;
-
-        const double term2 = -(epsilon[ijx(ip, j, Nx)] * epsilon_deriv[ijx(ip, j, Nx)] *
-                                    phidy[ijx(ip, j, Nx)] -
-                                epsilon[ijx(im, j, Nx)] * epsilon_deriv[ijx(im, j, Nx)] *
-                                    phidy[ijx(im, j, Nx)]) *
-                               inv_dx;
-
-        const double ep = epsilon[c];
-        const double term3 = ep * ep * lap_phi[c];
-
-        const double m =
-            kobayashi::kAlpha / std::numbers::pi *
-            std::atan(kobayashi::kGamma * (kobayashi::kTeq - tempr[c]));
-        const double term4 = phiold * (1.0 - phiold) * (phiold - 0.5 + m);
-
-        phi[c] = phiold + (cfg.dt / kobayashi::kTau) * (term1 + term2 + term3 + term4);
-
-        tempr[c] = tempr[c] + cfg.dt * lap_t[c] +
-                   kobayashi::kKappa * (phi[c] - phiold);
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        kobayashi::stage_b_cell(phi, tempr, lap_phi, lap_t, phidx, phidy, epsilon,
+                                epsilon_deriv, i, j, 0, inv_dx, inv_dy, cfg.dt);
       }
     }
 
@@ -194,10 +139,11 @@ RunResult run(const RunConfigOpenMP &cfg, bool skip_png, bool quiet) {
 
     if (!skip_png && cfg.nsave > 0 && istep % cfg.nsave == 0) {
       char path[4096];
-      std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(), filenum);
-      std::cout << "saving step " << istep << "/" << cfg.n_steps << " to file " << path
-                << "\n";
-      write_phi_png(path, Nx, Ny, phi);
+      std::snprintf(path, sizeof(path), "%s/phi_%04d.png", cfg.output_dir.c_str(),
+                    filenum);
+      std::cout << "saving step " << istep << "/" << cfg.n_steps << " to file "
+                << path << "\n";
+      write_phi_png(0, decomp, phi, path);
       ++filenum;
     }
   }
@@ -208,12 +154,12 @@ RunResult run(const RunConfigOpenMP &cfg, bool skip_png, bool quiet) {
     char path[4096];
     std::snprintf(path, sizeof(path), "%s/phi_final.png", cfg.output_dir.c_str());
     std::cout << "saving final field to " << path << "\n";
-    write_phi_png(path, Nx, Ny, phi);
+    write_phi_png(0, decomp, phi, path);
   }
 
   RunResult out;
-  out.phi_xy = std::move(phi);
-  out.tempr_xy = std::move(tempr);
+  pack_owned_xy0(phi, out.phi_xy);
+  pack_owned_xy0(tempr, out.tempr_xy);
   out.wall_loop_s = t_loop1 - t_loop0;
   out.nthreads = nthr;
   return out;
