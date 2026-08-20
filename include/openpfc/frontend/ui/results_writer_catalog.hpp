@@ -8,7 +8,8 @@
  * @details
  * JSON `fields[]` entries can specify `"writer": "<type>"` (default `"binary"`).
  * `add_result_writers_from_json` requires a **`ResultsWriterCatalog`** argument
- * (no default); pass `default_results_writer_catalog()` for built-in `binary`.
+ * (no default); pass `default_results_writer_catalog()` for built-in `binary`
+ * and `vtk`. Unknown types are a hard error at wiring time.
  * Applications and tests inject a custom catalog to register additional writer
  * types without editing `simulation_wiring_writers.hpp`.
  */
@@ -16,14 +17,17 @@
 #ifndef PFC_UI_RESULTS_WRITER_CATALOG_HPP
 #define PFC_UI_RESULTS_WRITER_CATALOG_HPP
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <mpi.h>
 #include <openpfc/frontend/io/binary_writer.hpp>
+#include <openpfc/frontend/io/vtk_writer.hpp>
 #include <openpfc/kernel/simulation/results_writer.hpp>
 
 namespace pfc::ui {
@@ -58,17 +62,32 @@ public:
     return m_factories.contains(type);
   }
 
+  [[nodiscard]] std::vector<std::string> registered_types() const {
+    std::vector<std::string> names;
+    names.reserve(m_factories.size());
+    for (const auto &[k, _] : m_factories) {
+      names.push_back(k);
+    }
+    std::sort(names.begin(), names.end());
+    return names;
+  }
+
 private:
   std::unordered_map<std::string, ResultsWriterCreateFn> m_factories;
 };
 
-/** @brief Built-in catalog: `binary` → `pfc::BinaryWriter` */
+/** @brief Built-in catalog: `binary` → `BinaryWriter`, `vtk` → `VTKWriter` */
 [[nodiscard]] inline ResultsWriterCatalog make_builtin_results_writer_catalog() {
   ResultsWriterCatalog c;
   c.register_writer_type(
       "binary",
       [](std::string path, MPI_Comm comm) -> std::unique_ptr<pfc::ResultsWriter> {
         return std::make_unique<pfc::BinaryWriter>(std::move(path), comm);
+      });
+  c.register_writer_type(
+      "vtk",
+      [](std::string path, MPI_Comm comm) -> std::unique_ptr<pfc::ResultsWriter> {
+        return std::make_unique<pfc::VTKWriter>(std::move(path), comm);
       });
   return c;
 }

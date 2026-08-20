@@ -15,10 +15,12 @@
 
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include <mpi.h>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/errors_config_format.hpp>
 #include <openpfc/frontend/ui/results_writer_catalog.hpp>
 #include <openpfc/frontend/ui/simulation_wiring_context.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
@@ -43,6 +45,9 @@ inline bool ensure_results_parent_dir_for_writer(const std::string &output,
   std::filesystem::path results_dir(output);
   if (results_dir.has_filename()) {
     results_dir = results_dir.parent_path();
+  }
+  if (results_dir.empty()) {
+    return false;
   }
   if (!std::filesystem::exists(results_dir)) {
     pfc::log_info(lg, std::string("Results dir ") + results_dir.string() +
@@ -72,20 +77,23 @@ add_result_writers_from_json(Simulator &sim, const nlohmann::json &settings,
       if (field.contains("writer") && field["writer"].is_string()) {
         writer_type = field["writer"].get<std::string>();
       }
-      if (ctx.rank0) {
-        (void)ensure_results_parent_dir_for_writer(data, ctx.mpi_rank);
+      if (!writer_catalog.has_type(writer_type)) {
+        throw std::invalid_argument(format_config_error(
+            "writer", "results writer type for field '" + name + "'",
+            "a registered catalog key", writer_type,
+            writer_catalog.registered_types(), "\"writer\": \"binary\""));
       }
       if (ctx.rank0) {
+        (void)ensure_results_parent_dir_for_writer(data, ctx.mpi_rank);
         pfc::log_info(lg, "Writing field " + name + " to " + data +
                               " (writer: " + writer_type + ")");
       }
       auto writer_opt = writer_catalog.try_create(writer_type, data, ctx.comm);
       if (!writer_opt) {
-        if (ctx.rank0) {
-          pfc::log_warning(lg, "Unknown results writer type '" + writer_type +
-                                   "' for field '" + name + "' — skipping");
-        }
-        continue;
+        throw std::invalid_argument(format_config_error(
+            "writer", "results writer type for field '" + name + "'",
+            "a registered catalog key", writer_type,
+            writer_catalog.registered_types(), "\"writer\": \"binary\""));
       }
       sim.add_results_writer(name, std::move(*writer_opt));
     }

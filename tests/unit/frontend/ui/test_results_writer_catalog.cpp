@@ -8,9 +8,15 @@
 TEST_CASE("builtin results writer catalog supports binary", "[ui][results_writer]") {
   pfc::ui::ResultsWriterCatalog cat = pfc::ui::make_builtin_results_writer_catalog();
   REQUIRE(cat.has_type("binary"));
+  REQUIRE(cat.has_type("vtk"));
+  auto types = cat.registered_types();
+  REQUIRE_FALSE(types.empty());
   auto w = cat.try_create("binary", "test_output.bin", MPI_COMM_SELF);
   REQUIRE(w.has_value());
   REQUIRE(*w != nullptr);
+  auto vtk = cat.try_create("vtk", "test_output_%04d.vti", MPI_COMM_SELF);
+  REQUIRE(vtk.has_value());
+  REQUIRE(*vtk != nullptr);
 }
 
 TEST_CASE("unknown writer type yields nullopt", "[ui][results_writer]") {
