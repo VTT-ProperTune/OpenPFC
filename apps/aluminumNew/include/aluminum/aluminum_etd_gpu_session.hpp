@@ -25,6 +25,7 @@
 #include <aluminum/aluminum_field_modifiers.hpp>
 #include <aluminum/aluminum_physics.hpp>
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/runtime/gpu/gpu_spectral_stack.hpp>
@@ -68,16 +69,11 @@ public:
   }
 
   void run() {
-    while (!pfc::time::done(m_time)) {
-      if (pfc::time::increment(m_time) == 0) {
-        apply_fixed_bc();
-        write_psi();
-      }
-      pfc::time::next(m_time);
-      apply_fixed_bc();
-      m_sys->step(pfc::time::current(m_time));
-      write_psi();
-    }
+    pfc::sim::SimulationDriver driver(m_time, &m_state);
+    driver.run([&](double t) { m_sys->step(t); },
+               [&](pfc::Time &) { apply_fixed_bc(); },
+               [&](pfc::Time &) { apply_fixed_bc(); },
+               [&](const pfc::Time &) { write_psi(); });
   }
 
   [[nodiscard]] pfc::data::Field<double, MemorySpace> &psi() {

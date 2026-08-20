@@ -26,6 +26,7 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/simulation/moving_frame_mean_field_etd.hpp>
+#include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
@@ -65,16 +66,11 @@ public:
   }
 
   void run() {
-    while (!pfc::time::done(m_time)) {
-      if (pfc::time::increment(m_time) == 0) {
-        apply_fixed_bc();
-        m_writers.maybe_write(m_time, psi().vec());
-      }
-      pfc::time::next(m_time);
-      apply_fixed_bc();
-      m_sys->step(pfc::time::current(m_time));
-      m_writers.maybe_write(m_time, psi().vec());
-    }
+    pfc::sim::SimulationDriver driver(m_time, &m_state);
+    driver.run([&](double t) { m_sys->step(t); },
+               [&](pfc::Time &) { apply_fixed_bc(); },
+               [&](pfc::Time &) { apply_fixed_bc(); },
+               [&](const pfc::Time &tm) { m_writers.maybe_write(tm, psi().vec()); });
   }
 
   [[nodiscard]] pfc::data::Field<double> &psi() {
