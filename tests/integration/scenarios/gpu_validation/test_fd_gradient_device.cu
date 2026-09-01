@@ -249,10 +249,10 @@ TEST_CASE("FDGradientDevice mixed xy/xz/yz polynomial Hessian cross-terms",
     return;
   }
 
-  // Full padded fill is equivalent corner fill (no MPI FullPaddedDeviceHalo).
+  // Full padded fill is equivalent corner fill (no MPI DeviceFullHalo).
   const auto mixed_poly = [](double x, double y, double z) {
-    return kA + kB * x + kC * x * x + kD * y + kE * y * y + kF * z +
-           kG * z * z + kH * x * y + kI * x * z + kJ * y * z;
+    return kA + kB * x + kC * x * x + kD * y + kE * y * y + kF * z + kG * z * z +
+           kH * x * y + kI * x * z + kJ * y * z;
   };
   const auto mixed_rhs = [&](double x, double y, double z) {
     return mixed_poly(x, y, z) + kH + kI + kJ;

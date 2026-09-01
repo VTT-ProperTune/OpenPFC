@@ -170,7 +170,7 @@ inline T apply_1d_along(const T *coeffs, int half_width, const T *core,
  * **Halo requirement**: the union of stencil supports along non-trivial
  * axes generally extends into corner halos. Use a corner-filled exchanger
  * (`pfc::comm::HaloExchange` Full on the host, or
- * `pfc::cuda::FullPaddedDeviceHalo` on the GPU) before iterating;
+ * `pfc::comm::HaloExchange<CUDASpace>` Full on the GPU) before iterating;
  * `pfc::comm::HaloExchange` Faces (axis-aligned only) is **not** sufficient
  * when more than one of `Hi` is non-zero.
  *

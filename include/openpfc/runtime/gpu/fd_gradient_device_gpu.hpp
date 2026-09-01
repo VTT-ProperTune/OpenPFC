@@ -41,7 +41,7 @@
  * D1⊗D1 product on the padded buffer (same pre-scaled `cx1`/`cy1`/`cz1`
  * rows as first derivatives). Callers that request those members must
  * ensure edge and corner ghosts are valid — typically
- * [`FullPaddedDeviceHalo`](full_padded_device_halo.hpp), or an equivalent
+ * [`HaloExchange`](comm_halo_exchange_gpu.hpp) Full, or an equivalent
  * corner fill (e.g. writing the analytic field into the full padded host
  * buffer in single-rank tests).
  *
@@ -144,7 +144,7 @@ struct FDGradientDevicePOD {
  *
  * @note Mixed seconds `g.xy` / `g.xz` / `g.yz` use a separable D1⊗D1
  *       product. The padded buffer must have valid edge/corner ghosts
- *       (`FullPaddedDeviceHalo` or equivalent corner fill).
+ *       (`HaloExchange` Full or equivalent corner fill).
  */
 template <class G>
 OPENPFC_INLINE_HD G evaluate_fd_grad(const FDGradientDevicePOD &e, int ix, int iy,
@@ -284,8 +284,7 @@ template <class Composite, class... PerFieldGrads, std::size_t... Is>
 OPENPFC_INLINE_HD Composite
 evaluate_fd_grad_composite_impl(const CompositeGradientDevicePOD &eval, int ix,
                                 int iy, int iz, std::index_sequence<Is...>) {
-  return Composite{
-      evaluate_fd_grad<PerFieldGrads>(eval.fields[Is], ix, iy, iz)...};
+  return Composite{evaluate_fd_grad<PerFieldGrads>(eval.fields[Is], ix, iy, iz)...};
 }
 
 } // namespace detail
@@ -301,9 +300,8 @@ evaluate_fd_grad_composite_impl(const CompositeGradientDevicePOD &eval, int ix,
  *                        (must use catalog names `{value,x,y,z,xx,...}`).
  */
 template <class Composite, class... PerFieldGrads>
-OPENPFC_INLINE_HD Composite
-evaluate_fd_grad_composite(const CompositeGradientDevicePOD &eval, int ix,
-                           int iy, int iz) {
+OPENPFC_INLINE_HD Composite evaluate_fd_grad_composite(
+    const CompositeGradientDevicePOD &eval, int ix, int iy, int iz) {
   static_assert(sizeof...(PerFieldGrads) >= 1 &&
                     sizeof...(PerFieldGrads) <= kMaxCompositeFields,
                 "evaluate_fd_grad_composite: N must be in [1, kMaxCompositeFields]");
@@ -423,13 +421,12 @@ public:
       }
     }
 
-    const int required =
-        m_pod.hw1 > m_pod.hw2 ? m_pod.hw1 : m_pod.hw2;
+    const int required = m_pod.hw1 > m_pod.hw2 ? m_pod.hw1 : m_pod.hw2;
     if (halo_width < required) {
       throw std::invalid_argument(
           "FDGradientDevice: halo_width " + std::to_string(halo_width) +
-          " < required half_width " + std::to_string(required) +
-          " for order " + std::to_string(order));
+          " < required half_width " + std::to_string(required) + " for order " +
+          std::to_string(order));
     }
   }
 
@@ -483,17 +480,11 @@ public:
   }
 
   int imin() const noexcept { return 0; }
-  int imax() const noexcept {
-    return m_pod.fields[0].nxp - 2 * m_pod.fields[0].hw;
-  }
+  int imax() const noexcept { return m_pod.fields[0].nxp - 2 * m_pod.fields[0].hw; }
   int jmin() const noexcept { return 0; }
-  int jmax() const noexcept {
-    return m_pod.fields[0].nyp - 2 * m_pod.fields[0].hw;
-  }
+  int jmax() const noexcept { return m_pod.fields[0].nyp - 2 * m_pod.fields[0].hw; }
   int kmin() const noexcept { return 0; }
-  int kmax() const noexcept {
-    return m_pod.fields[0].nzp - 2 * m_pod.fields[0].hw;
-  }
+  int kmax() const noexcept { return m_pod.fields[0].nzp - 2 * m_pod.fields[0].hw; }
 
 private:
   CompositeGradientDevicePOD m_pod{};

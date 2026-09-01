@@ -53,7 +53,7 @@
  * exchange with `halo_width >= half_width`. Mixed-second tensor
  * products additionally need **corner-filled** halos --
  * `pfc::comm::HaloExchange` Full on the host and
- * `pfc::cuda::FullPaddedDeviceHalo` on the GPU. Enabling the
+ * `pfc::comm::HaloExchange<CUDASpace>` Full on the GPU. Enabling the
  * mixed-second evaluator path (`Mi = 1` / `FDGradient` `xy/xz/yz`)
  * remains a follow-up after corners are proven.
  *
@@ -281,7 +281,7 @@ struct IdentityStencil1d {
  *      `(a,b,c) in [-Hx,Hx] x [-Hy,Hy] x [-Hz,Hz]` is in-bounds. For
  *      mixed-second cases (>= 2 non-zero `Mi`), this requires
  *      **corner-filled** halos — `pfc::comm::HaloExchange` Full
- *      on the host and `pfc::cuda::FullPaddedDeviceHalo` on the GPU.
+ *      on the host and `pfc::comm::HaloExchange<CUDASpace>` Full on the GPU.
  *      Enabling the mixed-second evaluator path (`Mi = 1` /
  *      `FDGradient` `xy/xz/yz`) remains a follow-up after corners are
  *      proven. Until that wiring lands, `FDGradient<G>` keeps its

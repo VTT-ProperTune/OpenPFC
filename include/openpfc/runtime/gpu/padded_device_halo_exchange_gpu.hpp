@@ -5,15 +5,13 @@
 
 /**
  * @file padded_device_halo_exchange_gpu.hpp
- * @brief Single-source six-face padded halo exchange into device buffers (M3).
+ * @brief Internal Faces backend for device `pfc::comm::HaloExchange`.
  *
- * Stamps `pfc::cuda::PaddedDeviceHaloExchanger` and/or
- * `pfc::hip::PaddedDeviceHaloExchanger`. Vendor headers are thin includes of
- * this file. Per-tag runtime calls use the native CUDA/HIP API (not
- * `gpu_api.hpp`) so a co-enabled translation unit can own both classes.
- *
- * HIP's Field-based constructor / `exchange_halos_device` overloads are
- * stamped for CUDA as well (`pfc::data::Field<T, CUDASpace>`).
+ * @details
+ * Not a public API. Callers bind a padded `pfc::data::Field` through
+ * `pfc::comm::HaloExchange<CUDASpace>` / `HaloExchange<HIPSpace>` with
+ * `HaloConnectivity::Faces`. This header owns `pfc::gpu::DeviceFacesHalo`
+ * (templated on CUDA/HIP ops). Vendor headers are thin includes.
  *
  * Env and timer names stay vendor-specific (`OPENPFC_CUDA_*` /
  * `OPENPFC_HIP_*`, `print_cuda_halo_exchange_cpu_timers` /
@@ -21,7 +19,8 @@
  * contiguous + device-pointer MPI; `*_USE_SUBARRAY_HALO=1` restores the
  * derived-type path; `*_FORCE_PACKED_HALO=1` host-stages.
  *
- * @see kernel/decomposition/padded_halo_exchange.hpp (CPU pointer path)
+ * @see comm_halo_exchange_gpu.hpp
+ * @see kernel/decomposition/padded_halo_exchange.hpp (host Faces)
  */
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
@@ -87,7 +86,7 @@ inline int checked_padded_extent(const char *kind, int n, int hw) {
   if (hw < 0) {
     throw std::invalid_argument(
         std::string(kind) +
-        " PaddedDeviceHaloExchanger: halo width must be non-negative (got " +
+        " DeviceFacesHalo: halo width must be non-negative (got " +
         std::to_string(hw) + ")");
   }
   const long long result =
@@ -95,7 +94,7 @@ inline int checked_padded_extent(const char *kind, int n, int hw) {
   if (result > static_cast<long long>(std::numeric_limits<int>::max()) ||
       result < static_cast<long long>(std::numeric_limits<int>::min())) {
     throw std::overflow_error(
-        std::string(kind) + " PaddedDeviceHaloExchanger: padded extent overflow " +
+        std::string(kind) + " DeviceFacesHalo: padded extent overflow " +
         std::to_string(n) + " + 2*" + std::to_string(hw) + " exceeds int range");
   }
   return static_cast<int>(result);
@@ -214,8 +213,7 @@ struct CUDAHaloOps {
   static constexpr const char *sync_unpack = "cudaStreamSynchronize unpack H2D";
   static constexpr const char *malloc_full_scratch =
       "cudaMalloc full halo device scratch";
-  static constexpr const char *sync_pre_full =
-      "cudaStreamSynchronize pre full halo";
+  static constexpr const char *sync_pre_full = "cudaStreamSynchronize pre full halo";
   static constexpr const char *sync_after_full_pass =
       "cudaStreamSynchronize after full halo pass";
   static constexpr const char *sync_after_full_self =
@@ -254,17 +252,15 @@ struct CUDAHaloOps {
   static void stream_sync(stream_t stream, const char *what) {
     check(cudaStreamSynchronize(stream), what);
   }
-  static void device_sync(const char *what) {
-    check(cudaDeviceSynchronize(), what);
-  }
+  static void device_sync(const char *what) { check(cudaDeviceSynchronize(), what); }
   static void pack_face(double *d_dst, const double *d_pad, int ox, int oy, int oz,
                         int sx, int sy, int sz, int nxp, int nyp, int nzp,
                         stream_t stream) {
     detail::launch_padded_pack_face(d_dst, d_pad, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                     nzp, stream);
   }
-  static void unpack_face(double *d_pad, const double *d_src, int ox, int oy,
-                          int oz, int sx, int sy, int sz, int nxp, int nyp, int nzp,
+  static void unpack_face(double *d_pad, const double *d_src, int ox, int oy, int oz,
+                          int sx, int sy, int sz, int nxp, int nyp, int nzp,
                           stream_t stream) {
     detail::launch_padded_unpack_face(d_pad, d_src, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                       nzp, stream);
@@ -401,8 +397,8 @@ struct HIPHaloOps {
     detail::launch_padded_pack_face(d_dst, d_pad, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                     nzp, stream);
   }
-  static void unpack_face(double *d_pad, const double *d_src, int ox, int oy,
-                          int oz, int sx, int sy, int sz, int nxp, int nyp, int nzp,
+  static void unpack_face(double *d_pad, const double *d_src, int ox, int oy, int oz,
+                          int sx, int sy, int sz, int nxp, int nyp, int nzp,
                           stream_t stream) {
     detail::launch_padded_unpack_face(d_pad, d_src, ox, oy, oz, sx, sy, sz, nxp, nyp,
                                       nzp, stream);
@@ -414,8 +410,7 @@ struct HIPHaloOps {
 
 namespace pfc::gpu {
 
-template <typename Ops>
-void print_halo_exchange_cpu_timers(MPI_Comm comm) {
+template <typename Ops> void print_halo_exchange_cpu_timers(MPI_Comm comm) {
   if (!Ops::perf_enabled()) {
     return;
   }
@@ -466,17 +461,15 @@ void print_halo_exchange_cpu_timers(MPI_Comm comm) {
  * Field overloads are the primary API; raw-pointer overloads remain for
  * backward compatibility.
  */
-template <typename Ops>
-class PaddedDeviceHaloExchangerImpl {
+template <typename Ops> class DeviceFacesHalo {
 public:
   using Int3 = pfc::types::Int3;
   using stream_t = typename Ops::stream_t;
 
-  PaddedDeviceHaloExchangerImpl(const decomposition::Decomposition &decomp, int rank,
-                                int halo_width, MPI_Comm comm, int base_tag = 0)
-      : PaddedDeviceHaloExchangerImpl(decomp, rank, halo_width, comm,
-                                      halo::presets::Axes3D(), base_tag,
-                                      halo::HaloDirectionSelector{}) {}
+  DeviceFacesHalo(const decomposition::Decomposition &decomp, int rank,
+                  int halo_width, MPI_Comm comm, int base_tag = 0)
+      : DeviceFacesHalo(decomp, rank, halo_width, comm, halo::presets::Axes3D(),
+                        base_tag, halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct with a user-selected halo direction set.
@@ -486,12 +479,11 @@ public:
    * (no MPI-to-self).
    *
    * Non-face directions are tolerated but ignored — this is a face-only
-   * exchanger. Use `FullPaddedDeviceHalo` for 26-direction fills.
+   * exchanger. Use `DeviceFullHalo` for 26-direction fills.
    */
-  PaddedDeviceHaloExchangerImpl(const decomposition::Decomposition &decomp, int rank,
-                                int halo_width, MPI_Comm comm,
-                                halo::HaloDirectionSet dirs, int base_tag = 0,
-                                halo::HaloDirectionSelector selector = {})
+  DeviceFacesHalo(const decomposition::Decomposition &decomp, int rank,
+                  int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
+                  int base_tag = 0, halo::HaloDirectionSelector selector = {})
       : m_decomp(decomp), m_rank(rank), m_halo_width(halo_width), m_comm(comm),
         m_base_tag(base_tag),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
@@ -535,8 +527,7 @@ public:
     }
 
     const bool force_packed = pfc::gpu::detail::getenv_truthy(Ops::force_packed_env);
-    const bool use_subarray =
-        pfc::gpu::detail::getenv_truthy(Ops::use_subarray_env);
+    const bool use_subarray = pfc::gpu::detail::getenv_truthy(Ops::use_subarray_env);
     m_use_gpu_aware = !force_packed && Ops::mpi_aware();
     m_use_contiguous = m_use_gpu_aware && !use_subarray;
 
@@ -578,22 +569,20 @@ public:
   }
 
   template <typename T>
-  PaddedDeviceHaloExchangerImpl(const pfc::data::Field<T, typename Ops::space> &field,
-                                const decomposition::Decomposition &decomp, int rank,
-                                MPI_Comm comm,
-                                halo::HaloDirectionSet dirs = halo::presets::Axes3D(),
-                                int base_tag = 0,
-                                halo::HaloDirectionSelector selector = {})
-      : PaddedDeviceHaloExchangerImpl(decomp, rank, field.halo_width(), comm, dirs,
-                                      base_tag, selector) {
+  DeviceFacesHalo(const pfc::data::Field<T, typename Ops::space> &field,
+                  const decomposition::Decomposition &decomp, int rank,
+                  MPI_Comm comm,
+                  halo::HaloDirectionSet dirs = halo::presets::Axes3D(),
+                  int base_tag = 0, halo::HaloDirectionSelector selector = {})
+      : DeviceFacesHalo(decomp, rank, field.halo_width(), comm, dirs, base_tag,
+                        selector) {
     (void)field;
   }
 
-  PaddedDeviceHaloExchangerImpl(const PaddedDeviceHaloExchangerImpl &) = delete;
-  PaddedDeviceHaloExchangerImpl &
-  operator=(const PaddedDeviceHaloExchangerImpl &) = delete;
+  DeviceFacesHalo(const DeviceFacesHalo &) = delete;
+  DeviceFacesHalo &operator=(const DeviceFacesHalo &) = delete;
 
-  ~PaddedDeviceHaloExchangerImpl() { cleanup(); }
+  ~DeviceFacesHalo() { cleanup(); }
 
   [[nodiscard]] bool uses_gpu_aware_mpi() const { return m_use_gpu_aware; }
 
@@ -671,7 +660,7 @@ private:
     void *buf = static_cast<void *>(d_padded);
     if (m_any_self_neighbor) {
       if (m_d_scratch == nullptr || m_scratch_elems == 0) {
-        throw std::runtime_error("PaddedDeviceHaloExchanger: self-neighbor halo "
+        throw std::runtime_error("DeviceFacesHalo: self-neighbor halo "
                                  "needs non-zero device scratch");
       }
       for (std::size_t i = 0; i < 6; ++i) {
@@ -728,11 +717,11 @@ private:
       }
       const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
       const int face_count = pfc::mpi::ensure_mpi_int_count(
-          m_face_elems[i], "PaddedDeviceHaloExchanger contig face");
-      pfc::mpi::throw_on_mpi_error(
-          MPI_Irecv(m_d_recv[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
-                    &m_requests[req_count]),
-          "PaddedDeviceHaloExchanger contig MPI_Irecv");
+          m_face_elems[i], "DeviceFacesHalo contig face");
+      pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_d_recv[i], face_count, MPI_DOUBLE,
+                                             m_neighbors[i], tag, m_comm,
+                                             &m_requests[req_count]),
+                                   "DeviceFacesHalo contig MPI_Irecv");
       ++req_count;
     }
 
@@ -752,11 +741,11 @@ private:
       }
       const int tag = m_base_tag + static_cast<int>(i);
       const int face_count = pfc::mpi::ensure_mpi_int_count(
-          m_face_elems[i], "PaddedDeviceHaloExchanger contig face");
-      pfc::mpi::throw_on_mpi_error(
-          MPI_Isend(m_d_send[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
-                    &m_requests[req_count]),
-          "PaddedDeviceHaloExchanger contig MPI_Isend");
+          m_face_elems[i], "DeviceFacesHalo contig face");
+      pfc::mpi::throw_on_mpi_error(MPI_Isend(m_d_send[i], face_count, MPI_DOUBLE,
+                                             m_neighbors[i], tag, m_comm,
+                                             &m_requests[req_count]),
+                                   "DeviceFacesHalo contig MPI_Isend");
       ++req_count;
     }
     exchange::wait_all(m_requests.data(), static_cast<int>(req_count));
@@ -777,7 +766,7 @@ private:
 
     if (m_any_self_neighbor) {
       if (m_d_scratch == nullptr || m_scratch_elems == 0) {
-        throw std::runtime_error("PaddedDeviceHaloExchanger: packed self-neighbor "
+        throw std::runtime_error("DeviceFacesHalo: packed self-neighbor "
                                  "halo needs non-zero device scratch");
       }
       for (std::size_t i = 0; i < 6; ++i) {
@@ -803,11 +792,11 @@ private:
       }
       const int tag = m_base_tag + opposite_slot(static_cast<int>(i));
       const int face_count = pfc::mpi::ensure_mpi_int_count(
-          m_face_elems[i], "PaddedDeviceHaloExchanger packed face");
-      pfc::mpi::throw_on_mpi_error(
-          MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
-                    &m_requests[req_count]),
-          "PaddedDeviceHaloExchanger packed-fallback MPI_Irecv");
+          m_face_elems[i], "DeviceFacesHalo packed face");
+      pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_h_recv[i], face_count, MPI_DOUBLE,
+                                             m_neighbors[i], tag, m_comm,
+                                             &m_requests[req_count]),
+                                   "DeviceFacesHalo packed-fallback MPI_Irecv");
       ++req_count;
     }
 
@@ -829,11 +818,11 @@ private:
 
       const int tag = m_base_tag + static_cast<int>(i);
       const int face_count = pfc::mpi::ensure_mpi_int_count(
-          m_face_elems[i], "PaddedDeviceHaloExchanger packed face");
-      pfc::mpi::throw_on_mpi_error(
-          MPI_Isend(m_h_send[i], face_count, MPI_DOUBLE, m_neighbors[i], tag, m_comm,
-                    &m_requests[req_count]),
-          "PaddedDeviceHaloExchanger packed-fallback MPI_Isend");
+          m_face_elems[i], "DeviceFacesHalo packed face");
+      pfc::mpi::throw_on_mpi_error(MPI_Isend(m_h_send[i], face_count, MPI_DOUBLE,
+                                             m_neighbors[i], tag, m_comm,
+                                             &m_requests[req_count]),
+                                   "DeviceFacesHalo packed-fallback MPI_Isend");
       ++req_count;
     }
 
@@ -904,8 +893,8 @@ private:
   int m_nyp = 0;
   int m_nzp = 0;
 
-  std::array<std::pair<pfc::gpu::detail::FaceSlabSpec, pfc::gpu::detail::FaceSlabSpec>,
-             6>
+  std::array<
+      std::pair<pfc::gpu::detail::FaceSlabSpec, pfc::gpu::detail::FaceSlabSpec>, 6>
       m_face_specs{};
   std::array<halo::FaceTypes, 6> m_face_types{};
   std::array<bool, 6> m_active{};
@@ -934,9 +923,6 @@ inline void print_cuda_halo_exchange_cpu_timers(MPI_Comm comm) {
   ::pfc::gpu::print_halo_exchange_cpu_timers<CUDAHaloOps>(comm);
 }
 
-using PaddedDeviceHaloExchanger =
-    ::pfc::gpu::PaddedDeviceHaloExchangerImpl<CUDAHaloOps>;
-
 } // namespace pfc::cuda
 #endif
 
@@ -946,9 +932,6 @@ namespace pfc::hip {
 inline void print_hip_halo_exchange_cpu_timers(MPI_Comm comm) {
   ::pfc::gpu::print_halo_exchange_cpu_timers<HIPHaloOps>(comm);
 }
-
-using PaddedDeviceHaloExchanger =
-    ::pfc::gpu::PaddedDeviceHaloExchangerImpl<HIPHaloOps>;
 
 } // namespace pfc::hip
 #endif

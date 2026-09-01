@@ -5,19 +5,24 @@
 
 /**
  * @file full_padded_device_halo_gpu.hpp
- * @brief Single-source 26-direction padded device halo exchange (M3).
+ * @brief Internal Full (26-direction) backend for device `pfc::comm::HaloExchange`.
  *
- * Stamps `pfc::cuda::FullPaddedDeviceHalo` and/or `pfc::hip::FullPaddedDeviceHalo`.
- * Vendor headers are thin includes of this file. CUDA's `m_use_full_widening`
- * gate is used for both vendors: self-only periodic axes still run the 3-pass
- * corner/edge fill without GPU-aware MPI.
+ * @details
+ * Not a public API. Callers bind a padded `pfc::data::Field` through
+ * `pfc::comm::HaloExchange<CUDASpace>` / `HaloExchange<HIPSpace>` with
+ * `HaloConnectivity::Full`. This header owns `pfc::gpu::DeviceFullHalo`
+ * (templated on CUDA/HIP ops). Vendor headers are thin includes.
+ *
+ * CUDA's `m_use_full_widening` gate is used for both vendors: self-only
+ * periodic axes still run the 3-pass corner/edge fill without GPU-aware MPI.
  *
  * Env names stay vendor-specific (`OPENPFC_CUDA_FORCE_PACKED_HALO` /
  * `OPENPFC_HIP_FORCE_PACKED_HALO` host-stage; `*_USE_SUBARRAY_HALO=1`
  * restores derived-type GPU-aware MPI). Default GPU-aware transport is
  * pack-to-contiguous + device-pointer MPI.
  *
- * @see runtime/gpu/padded_device_halo_exchange_gpu.hpp — 6-face exchanger
+ * @see comm_halo_exchange_gpu.hpp
+ * @see padded_device_halo_exchange_gpu.hpp — device Faces
  */
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
@@ -55,8 +60,7 @@ namespace pfc::gpu {
  *
  * Non-copyable; tie lifetime to the owning padded device allocations.
  */
-template <typename Ops>
-class FullPaddedDeviceHaloImpl {
+template <typename Ops> class DeviceFullHalo {
 public:
   using Int3 = pfc::types::Int3;
   using stream_t = typename Ops::stream_t;
@@ -71,12 +75,12 @@ public:
    * @param n_fields    Number of fields exchanged together; `>=1`.
    * @param base_tag    Starting MPI tag (uses `[base, base + n_fields*6)`).
    */
-  FullPaddedDeviceHaloImpl(const decomposition::Decomposition &decomp, int rank,
-                           int halo_width, MPI_Comm comm, std::size_t n_fields,
-                           int base_tag = 0)
-      : FullPaddedDeviceHaloImpl(decomp, rank, halo_width, comm, n_fields,
-                                 halo::presets::Full3D(), base_tag,
-                                 halo::HaloDirectionSelector{}) {}
+  DeviceFullHalo(const decomposition::Decomposition &decomp, int rank,
+                 int halo_width, MPI_Comm comm, std::size_t n_fields,
+                 int base_tag = 0)
+      : DeviceFullHalo(decomp, rank, halo_width, comm, n_fields,
+                       halo::presets::Full3D(), base_tag,
+                       halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct with a user-selected halo direction set.
@@ -91,7 +95,7 @@ public:
    *     passes `< a`) iff some direction `d` in the active set has
    *     `d[a] != 0` **and** `d[b] != 0` for some `b < a` (i.e. corner/edge
    *     fill is requested along that axis pair). Otherwise the pass uses
-   *     **narrow** slabs that match `PaddedDeviceHaloExchanger`'s 6-face
+   *     **narrow** slabs that match `DeviceFacesHalo`'s 6-face
    *     specs (no corner fill in that pass).
    *
    * **Examples:**
@@ -113,18 +117,18 @@ public:
    * @param dirs     Direction set (defaults to `Full3D()` for back-compat).
    * @param selector Optional per-rank override of the direction set.
    */
-  FullPaddedDeviceHaloImpl(const decomposition::Decomposition &decomp, int rank,
-                           int halo_width, MPI_Comm comm, std::size_t n_fields,
-                           halo::HaloDirectionSet dirs, int base_tag = 0,
-                           halo::HaloDirectionSelector selector = {})
+  DeviceFullHalo(const decomposition::Decomposition &decomp, int rank,
+                 int halo_width, MPI_Comm comm, std::size_t n_fields,
+                 halo::HaloDirectionSet dirs, int base_tag = 0,
+                 halo::HaloDirectionSelector selector = {})
       : m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
         m_n_fields(n_fields),
         m_dirs(halo::resolve_direction_set(dirs, selector, rank)) {
     if (halo_width < 1) {
-      throw std::invalid_argument("FullPaddedDeviceHalo: halo_width must be >= 1");
+      throw std::invalid_argument("DeviceFullHalo: halo_width must be >= 1");
     }
     if (n_fields == 0) {
-      throw std::invalid_argument("FullPaddedDeviceHalo: n_fields must be > 0");
+      throw std::invalid_argument("DeviceFullHalo: n_fields must be > 0");
     }
 
     const auto &local_world = pfc::decomposition::get_subworld(decomp, m_rank);
@@ -189,8 +193,7 @@ public:
     m_requests.assign(static_cast<std::size_t>(4) * m_n_fields, MPI_REQUEST_NULL);
 
     const bool force_packed = pfc::gpu::detail::getenv_truthy(Ops::force_packed_env);
-    const bool use_subarray =
-        pfc::gpu::detail::getenv_truthy(Ops::use_subarray_env);
+    const bool use_subarray = pfc::gpu::detail::getenv_truthy(Ops::use_subarray_env);
     m_use_gpu_aware = !force_packed && Ops::mpi_aware();
     m_use_contiguous = m_use_gpu_aware && !use_subarray;
 
@@ -228,17 +231,16 @@ public:
       m_per_field_packed.reserve(m_n_fields);
       for (std::size_t f = 0; f < m_n_fields; ++f) {
         const int per_field_tag = m_base_tag + static_cast<int>(f) * 6;
-        m_per_field_packed.push_back(
-            std::make_unique<PaddedDeviceHaloExchangerImpl<Ops>>(
-                decomp, m_rank, m_halo_width, m_comm, m_dirs, per_field_tag));
+        m_per_field_packed.push_back(std::make_unique<DeviceFacesHalo<Ops>>(
+            decomp, m_rank, m_halo_width, m_comm, m_dirs, per_field_tag));
       }
     }
   }
 
-  FullPaddedDeviceHaloImpl(const FullPaddedDeviceHaloImpl &) = delete;
-  FullPaddedDeviceHaloImpl &operator=(const FullPaddedDeviceHaloImpl &) = delete;
+  DeviceFullHalo(const DeviceFullHalo &) = delete;
+  DeviceFullHalo &operator=(const DeviceFullHalo &) = delete;
 
-  ~FullPaddedDeviceHaloImpl() {
+  ~DeviceFullHalo() {
     if (m_d_scratch != nullptr) {
       Ops::free_dev(m_d_scratch);
       m_d_scratch = nullptr;
@@ -309,11 +311,9 @@ public:
                                 MPI_Wtime() - t0);
   }
 
-  void exchange(std::initializer_list<double *> fields,
-                stream_t stream = nullptr) {
+  void exchange(std::initializer_list<double *> fields, stream_t stream = nullptr) {
     if (fields.size() != m_n_fields) {
-      throw std::invalid_argument(
-          "FullPaddedDeviceHalo::exchange: field count mismatch");
+      throw std::invalid_argument("DeviceFullHalo::exchange: field count mismatch");
     }
     exchange(fields.begin(), stream);
   }
@@ -388,7 +388,7 @@ private:
   void run_self_pass_(int axis, double *const *fields, stream_t stream) {
     if (m_d_scratch == nullptr) {
       throw std::runtime_error(
-          "FullPaddedDeviceHalo: self-axis pass needs device scratch");
+          "DeviceFullHalo: self-axis pass needs device scratch");
     }
     for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
       double *d_pad = fields[fld];
@@ -451,11 +451,11 @@ private:
         const int slot = axis * 2 + f;
         const int tag = field_tag_off + opposite_face_slot_(slot);
         const int face_count =
-            pfc::mpi::ensure_mpi_int_count(n, "FullPaddedDeviceHalo contig face");
-        pfc::mpi::throw_on_mpi_error(
-            MPI_Irecv(m_d_recv_pool[idx], face_count, MPI_DOUBLE,
-                      m_neighbors[axis][f], tag, m_comm, &m_requests[req_count]),
-            "FullPaddedDeviceHalo contig MPI_Irecv");
+            pfc::mpi::ensure_mpi_int_count(n, "DeviceFullHalo contig face");
+        pfc::mpi::throw_on_mpi_error(MPI_Irecv(m_d_recv_pool[idx], face_count,
+                                               MPI_DOUBLE, m_neighbors[axis][f], tag,
+                                               m_comm, &m_requests[req_count]),
+                                     "DeviceFullHalo contig MPI_Irecv");
         ++req_count;
         ++idx;
       }
@@ -483,11 +483,11 @@ private:
         const int slot = axis * 2 + f;
         const int tag = field_tag_off + slot;
         const int face_count =
-            pfc::mpi::ensure_mpi_int_count(n, "FullPaddedDeviceHalo contig face");
-        pfc::mpi::throw_on_mpi_error(
-            MPI_Isend(m_d_send_pool[idx], face_count, MPI_DOUBLE,
-                      m_neighbors[axis][f], tag, m_comm, &m_requests[req_count]),
-            "FullPaddedDeviceHalo contig MPI_Isend");
+            pfc::mpi::ensure_mpi_int_count(n, "DeviceFullHalo contig face");
+        pfc::mpi::throw_on_mpi_error(MPI_Isend(m_d_send_pool[idx], face_count,
+                                               MPI_DOUBLE, m_neighbors[axis][f], tag,
+                                               m_comm, &m_requests[req_count]),
+                                     "DeviceFullHalo contig MPI_Isend");
         ++req_count;
         ++idx;
       }
@@ -498,9 +498,8 @@ private:
     for (std::size_t fld = 0; fld < m_n_fields; ++fld) {
       for (int f = 0; f < 2; ++f) {
         const auto &recv = m_slabs[axis][f].second;
-        Ops::unpack_face(fields[fld], m_d_recv_pool[idx], recv.ox, recv.oy,
-                         recv.oz, recv.sx, recv.sy, recv.sz, m_nxp, m_nyp, m_nzp,
-                         stream);
+        Ops::unpack_face(fields[fld], m_d_recv_pool[idx], recv.ox, recv.oy, recv.oz,
+                         recv.sx, recv.sy, recv.sz, m_nxp, m_nyp, m_nzp, stream);
         ++idx;
       }
     }
@@ -535,21 +534,9 @@ private:
   std::vector<double *> m_d_send_pool;
   std::vector<double *> m_d_recv_pool;
 
-  std::vector<std::unique_ptr<PaddedDeviceHaloExchangerImpl<Ops>>> m_per_field_packed;
+  std::vector<std::unique_ptr<DeviceFacesHalo<Ops>>> m_per_field_packed;
 };
 
 } // namespace pfc::gpu
-
-#if defined(OpenPFC_ENABLE_CUDA)
-namespace pfc::cuda {
-using FullPaddedDeviceHalo = ::pfc::gpu::FullPaddedDeviceHaloImpl<CUDAHaloOps>;
-} // namespace pfc::cuda
-#endif
-
-#if defined(OpenPFC_ENABLE_HIP)
-namespace pfc::hip {
-using FullPaddedDeviceHalo = ::pfc::gpu::FullPaddedDeviceHaloImpl<HIPHaloOps>;
-} // namespace pfc::hip
-#endif
 
 #endif // OpenPFC_ENABLE_CUDA || OpenPFC_ENABLE_HIP

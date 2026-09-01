@@ -10,9 +10,9 @@
  * @details
  * Halo exchangers in OpenPFC historically hard-code their direction list:
  * host Faces `HaloExchange`, persistent `HaloExchange`,
- * `PaddedDeviceHaloExchanger`, and device `HaloExchange` all loop over
+ * and device `HaloExchange` all loop over
  * the **6 axis-aligned face directions** (`±X`, `±Y`, `±Z`);
- * `FullPaddedDeviceHalo` runs **3 widening passes** that touch all 26
+ * device Full `HaloExchange` runs **3 widening passes** that touch all 26
  * neighbour cells. Helpers exist (`pfc::halo::Connectivity{Faces,Edges,All}`,
  * `decomposition::find_face_neighbors`, `find_all_neighbors`) but no
  * exchanger lets you say "exchange only `±X`" or "this is a 2D slab,
@@ -194,7 +194,7 @@ namespace presets {
  * @brief 26-direction full 3D stencil (faces + edges + corners).
  *
  * Mirrors the enumeration in `decomposition::find_all_neighbors` (single
- * source of truth) and matches the default for `FullPaddedDeviceHalo`.
+ * source of truth) and matches the default for `HaloExchange` Full.
  */
 [[nodiscard]] inline HaloDirectionSet Full3D() {
   using Dir = HaloDirectionSet::Int3;

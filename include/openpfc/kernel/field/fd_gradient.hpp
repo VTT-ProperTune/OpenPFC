@@ -315,7 +315,7 @@ private:
                   "FDGradient still rejects has_xy/has_xz/has_yz until a "
                   "follow-up enables those members after Catch2 proves "
                   "corners. Use `SpectralGradient<G>` or the GPU path "
-                  "with `pfc::cuda::FullPaddedDeviceHalo` for now.");
+                  "with `pfc::comm::HaloExchange<CUDASpace>` Full for now.");
 
     const double inv_dx = 1.0 / dx;
     const double inv_dy = 1.0 / dy;

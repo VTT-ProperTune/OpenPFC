@@ -8,10 +8,10 @@
  * @brief Device `pfc::comm::HaloExchange` for `CUDASpace` / `HIPSpace` (M4).
  *
  * @details
- * Composes the existing `PaddedDeviceHaloExchanger` (Faces) and
- * `FullPaddedDeviceHalo` (Full) so the unified name matches the host facade.
- * Device exchangers are blocking-only: `start()` / `finish()` and
- * `persistent` fail closed. Pack kernels are double-only.
+ * Composes the Faces backend (`gpu::DeviceFacesHalo`) and the Full
+ * backend (`gpu::DeviceFullHalo`) so the unified name matches the host
+ * facade. Device exchangers are blocking-only: `start()` / `finish()`
+ * and `persistent` fail closed. Pack kernels are double-only.
  *
  * Include this header for device fields. The host header stays free of
  * runtime/gpu includes (kernel must not depend on runtime).
@@ -53,8 +53,7 @@ public:
 
   DeviceHaloExchange(FieldT &field, const decomposition::Decomposition &decomp,
                      int rank, MPI_Comm comm, HaloExchangeOptions opt = {})
-      : DeviceHaloExchange(std::vector<FieldT *>{&field}, decomp, rank, comm,
-                           opt) {}
+      : DeviceHaloExchange(std::vector<FieldT *>{&field}, decomp, rank, comm, opt) {}
 
   DeviceHaloExchange(std::vector<FieldT *> fields,
                      const decomposition::Decomposition &decomp, int rank,
@@ -81,15 +80,15 @@ public:
         throw std::invalid_argument(
             "pfc::comm::HaloExchange: Field binding requires storage_halo > 0");
       }
-      const int tag0 = halo::field_tag_base(m_opt.exchange_base, static_cast<int>(i));
+      const int tag0 =
+          halo::field_tag_base(m_opt.exchange_base, static_cast<int>(i));
       const auto dirs = resolved_halo_directions(m_opt);
       if (m_opt.connectivity == HaloConnectivity::Full) {
         m_full.push_back(std::make_unique<FullEx>(decomp, rank, f->storage_halo(),
-                                                  comm, /*n_fields=*/1, dirs,
-                                                  tag0));
+                                                  comm, /*n_fields=*/1, dirs, tag0));
       } else {
-        m_faces.push_back(std::make_unique<FaceEx>(*f, decomp, rank, comm, dirs,
-                                                   tag0));
+        m_faces.push_back(
+            std::make_unique<FaceEx>(*f, decomp, rank, comm, dirs, tag0));
       }
     }
   }
@@ -157,11 +156,12 @@ private:
 #if defined(OpenPFC_ENABLE_CUDA)
 template <typename T>
 class HaloExchange<CUDASpace, T>
-    : public detail::DeviceHaloExchange<CUDASpace, cuda::PaddedDeviceHaloExchanger,
-                                        cuda::FullPaddedDeviceHalo, T> {
+    : public detail::DeviceHaloExchange<CUDASpace,
+                                        gpu::DeviceFacesHalo<cuda::CUDAHaloOps>,
+                                        gpu::DeviceFullHalo<cuda::CUDAHaloOps>, T> {
   using Base =
-      detail::DeviceHaloExchange<CUDASpace, cuda::PaddedDeviceHaloExchanger,
-                                 cuda::FullPaddedDeviceHalo, T>;
+      detail::DeviceHaloExchange<CUDASpace, gpu::DeviceFacesHalo<cuda::CUDAHaloOps>,
+                                 gpu::DeviceFullHalo<cuda::CUDAHaloOps>, T>;
 
 public:
   using Base::Base;
@@ -171,11 +171,12 @@ public:
 #if defined(OpenPFC_ENABLE_HIP)
 template <typename T>
 class HaloExchange<HIPSpace, T>
-    : public detail::DeviceHaloExchange<HIPSpace, hip::PaddedDeviceHaloExchanger,
-                                        hip::FullPaddedDeviceHalo, T> {
+    : public detail::DeviceHaloExchange<HIPSpace,
+                                        gpu::DeviceFacesHalo<hip::HIPHaloOps>,
+                                        gpu::DeviceFullHalo<hip::HIPHaloOps>, T> {
   using Base =
-      detail::DeviceHaloExchange<HIPSpace, hip::PaddedDeviceHaloExchanger,
-                                 hip::FullPaddedDeviceHalo, T>;
+      detail::DeviceHaloExchange<HIPSpace, gpu::DeviceFacesHalo<hip::HIPHaloOps>,
+                                 gpu::DeviceFullHalo<hip::HIPHaloOps>, T>;
 
 public:
   using Base::Base;

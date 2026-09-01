@@ -9,7 +9,7 @@ This note records **what we ran**, **what the numbers showed**, and **how to rea
 
 ## What we actually changed (the experiment)
 
-We did **not** rewrite the physics or the halo *semantics*. We compared two **existing** code paths in `pfc::cuda::PaddedDeviceHaloExchanger` ([`padded_device_halo_exchange.hpp`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)):
+We did **not** rewrite the physics or the halo *semantics*. We compared two **existing** code paths in `pfc::gpu::DeviceFacesHalo` ([`padded_device_halo_exchange_gpu.hpp`](../../../include/openpfc/runtime/gpu/padded_device_halo_exchange_gpu.hpp)):
 
 | Leg | Environment | Mode printed by the app |
 |-----|-------------|-------------------------|
@@ -70,7 +70,7 @@ So the **“~32 KiB halo”** mental model applies only to the **four** small 
 
 **`exchange_packed_fallback_`** used to **`MPI_Irecv` / `MPI_Isend` every face**, including **`m_neighbors[i] == m_rank`**. For periodic **±Z** that meant **MPI to self** moving **~128 MiB** **four times per `exchange_halos_device` call** (two Z faces × recv/send); **×1200** calls × **2** ranks ⇒ **9600** rows at **128 MiB** in **`MPI_P2P_EVENTS`**. **`KOBAYASHI_PERF_LOOP`** showed **`exchange_per_step_avg ≈ 0.319 s`** largely because of **those self moves + waits**, not because **32 KiB** peer halos are hard.
 
-**GPU-aware** mode already skipped MPI for same-rank faces (device pack/unpack first); **packed** mode did **not**, until **`PaddedDeviceHaloExchanger`** was aligned with the same rule ([`padded_device_halo_exchange.hpp`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)).
+**GPU-aware** mode already skipped MPI for same-rank faces (device pack/unpack first); **packed** mode did **not**, until **`DeviceFacesHalo`** was aligned with the same rule ([`padded_device_halo_exchange.hpp`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)).
 
 After rebuilding with that fix, re-run [`kobayashi_fd_cuda_h100_np2_nsys_halo_path_compare.sbatch`](../slurm/kobayashi_fd_cuda_h100_np2_nsys_halo_path_compare.sbatch): **`MPI_P2P_EVENTS`** should show **only 32 KiB** sizes for **true inter-rank** faces, and **`packed_mpi_waitall`** should drop sharply.
 
@@ -108,7 +108,7 @@ So on this cluster + grid + driver stack, **almost the entire timestep loop** is
 **Lessons:**
 
 3. **Forcing packed halos fixed the catastrophic GPU-aware path** on this case (~246 s → ~64 s per 200 steps), but **the loop stayed halo-bound** — physics stages remain **~10⁻⁵ s/step** each.
-4. On the **1236819** packed binary, **`packed_mpi_waitall`** (~46 s / ~71% of halo CPU summary) was inflated by **MPI-to-self at 128 MiB** on **±Z** (see SQLite histogram above). That is **not** “32 KiB halos are intrinsically slow”; it was a **packed-path omission** now fixed in **`PaddedDeviceHaloExchanger`**. Expect **`exchange_per_step_avg`** to fall a lot after rebuild + re-profile.
+4. On the **1236819** packed binary, **`packed_mpi_waitall`** (~46 s / ~71% of halo CPU summary) was inflated by **MPI-to-self at 128 MiB** on **±Z** (see SQLite histogram above). That is **not** “32 KiB halos are intrinsically slow”; it was a **packed-path omission** now fixed in **`DeviceFacesHalo`**. Expect **`exchange_per_step_avg`** to fall a lot after rebuild + re-profile.
 
 ---
 
@@ -129,7 +129,7 @@ On **512²**, the same **`gpu_aware_mpi`** mode sometimes shows **sub-millisecon
 
 ## Why **±Z** halos run at all on a **2D** Kobayashi slab (`nz = 1`)
 
-The world is still a **3D** Field with halo width `hw`: [`kobayashi_fd_cuda.cpp`](../src/cuda/kobayashi_fd_cuda.cpp) builds `GridSize({Nx, Ny, 1})`, so **local `nz = 1`** with padding **`nzp = 1 + 2·hw`**. Generic six-face machinery ([`padded_halo_mpi_types.hpp`](../../../include/openpfc/kernel/decomposition/padded_halo_mpi_types.hpp), [`PaddedDeviceHaloExchanger`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)) always defines **±Z** faces with cross-section **nx×ny** — those “faces” are **entire XY planes**, not thin **O(perimeter)** strips.
+The world is still a **3D** Field with halo width `hw`: [`kobayashi_fd_cuda.cpp`](../src/cuda/kobayashi_fd_cuda.cpp) builds `GridSize({Nx, Ny, 1})`, so **local `nz = 1`** with padding **`nzp = 1 + 2·hw`**. Generic six-face machinery ([`padded_halo_mpi_types.hpp`](../../../include/openpfc/kernel/decomposition/padded_halo_mpi_types.hpp), [`DeviceFacesHalo`](../../../include/openpfc/runtime/cuda/padded_device_halo_exchange.hpp)) always defines **±Z** faces with cross-section **nx×ny** — those “faces” are **entire XY planes**, not thin **O(perimeter)** strips.
 
 The CUDA physics kernels ([`kobayashi_fd_cuda_kernels.cu`](../src/cuda/kobayashi_fd_cuda_kernels.cu)) use **`constexpr int iz = 0`** and only index **ix±1, iy±1** at fixed **k**. They **never read ghost cells at `k±1`**. So **±Z halo data is not needed for the stencil** — it exists because the **storage layout is 3D** and the exchanger is **axis-aligned 6-face**, not because the equations use **z** neighbours.
 
@@ -139,7 +139,7 @@ The CUDA physics kernels ([`kobayashi_fd_cuda_kernels.cu`](../src/cuda/kobayashi
 
 ### **Done:** `Axes2D()` halo direction set switch
 
-[`kobayashi_fd_cuda.cpp`](../src/cuda/kobayashi_fd_cuda.cpp) now constructs both **`PaddedDeviceHaloExchanger`** and **`BatchedPaddedDeviceHalo`** with **`pfc::halo::presets::Axes2D()`** (4 directions: **±X, ±Y**) instead of the historical implicit `Axes3D()` (6 directions). With this set:
+[`kobayashi_fd_cuda.cpp`](../src/cuda/kobayashi_fd_cuda.cpp) now constructs both **`DeviceFacesHalo`** and **`BatchedPaddedDeviceHalo`** with **`pfc::halo::presets::Axes2D()`** (4 directions: **±X, ±Y**) instead of the historical implicit `Axes3D()` (6 directions). With this set:
 
 - The exchangers no longer iterate over the **±Z** slots in either the **GPU-aware** or **packed** branches; no MPI calls, no device pack/unpack, and no scratch allocations are issued for **±Z**.
 - The **128 MiB** **±Z** entries that previously dominated **`MPI_P2P_EVENTS`** in leg **B** are gone — the histogram should now contain only the **32,768-byte** thin-face messages.
@@ -147,9 +147,9 @@ The CUDA physics kernels ([`kobayashi_fd_cuda_kernels.cu`](../src/cuda/kobayashi
 
 The change is opt-in via the new ctor: callers that want the old behaviour pass `pfc::halo::presets::Axes3D()` explicitly. See [`docs/concepts/halo_exchange.md` § 5.4 Direction sets and presets](../../../docs/concepts/halo_exchange.md) for the preset table and per-rank selector hook.
 
-### Should we use **`FullPaddedDeviceHalo`** (26 neighbours / corner-filled)?
+### Should we use **`DeviceFullHalo`** (26 neighbours / corner-filled)?
 
-**No** for current Kobayashi FD: [`full_padded_device_halo.hpp`](../../../include/openpfc/runtime/cuda/full_padded_device_halo.hpp) exists for stencils that need **corners** (mixed **∂²/∂x∂y**, 27-point neighbours, etc.). Kobayashi’s kernels are **axis-aligned five-point in x/y only**; [`docs/concepts/halo_exchange.md`](../../../docs/concepts/halo_exchange.md) states six-face exchange is **sufficient**. **`FullPaddedDeviceHalo`** would add **three passes** with extra **`cudaDeviceSynchronize`** between passes and **still** treat **z** as a full axis — it does **not** replace a dedicated **“2D MPI + local z wrap”** optimization.
+**No** for current Kobayashi FD: [`full_padded_device_halo.hpp`](../../../include/openpfc/runtime/cuda/full_padded_device_halo.hpp) exists for stencils that need **corners** (mixed **∂²/∂x∂y**, 27-point neighbours, etc.). Kobayashi’s kernels are **axis-aligned five-point in x/y only**; [`docs/concepts/halo_exchange.md`](../../../docs/concepts/halo_exchange.md) states six-face exchange is **sufficient**. **`DeviceFullHalo`** would add **three passes** with extra **`cudaDeviceSynchronize`** between passes and **still** treat **z** as a full axis — it does **not** replace a dedicated **“2D MPI + local z wrap”** optimization.
 
 The **“8 vs 26”** ghost regions are a **topological** count (2D perimeter pieces vs 3D shell); OpenPFC’s CUDA path implements **faces** (6 or widened passes), not **8 separate MPI buffers** for 2D.
 
