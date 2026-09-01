@@ -26,6 +26,7 @@ results
 *.sbatch
 !docs/lumi_slurm/*.sbatch
 !apps/kobayashi/slurm/*.sbatch
+!scripts/*.sbatch
 apps/kobayashi/slurm/builds/
 .trash
 .temp
