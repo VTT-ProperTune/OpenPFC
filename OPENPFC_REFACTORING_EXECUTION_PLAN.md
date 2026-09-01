@@ -51,9 +51,9 @@ CUDA Release 256³/20-step tungsten perf JSON is captured on `g0005` (1-rank and
 node. Host and CUDA halo microtiming JSON (128³ Faces, 2/4/8 ranks) is captured
 via `examples/23_halo_microtiming`. Still open: CUDA+HIP co-enabled configure
 (needs both toolkits on one node; `build.sh` keeps `--with-cuda` / `--with-rocm`
-exclusive). Leftover halo-header inlining.
+exclusive). Not doable on g0005 (no `/opt/rocm`). Halo-header inlining is done.
 
-**Pre-M0 is complete and released** (`v0.1.5` tagged; `CHANGELOG.md`'s `[0.1.5]` section documents every audit §4/§11 fix landing with a regression test, and `master` is on `0.2.0` per `CMakeLists.txt`, with an `OpenPFC_DEVELOPMENT` option supplying the `-dev` suffix). The scientific baseline *framework* exists (`tests/baselines/BASELINES.md`, `tests/packaging/consumer/`, CUDA/HIP compile-only CI jobs), but the actual golden-trajectory **data** (multi-rank tungsten/aluminum captures, perf JSON) is still marked ☐/uncaptured in `BASELINES.md` — this is the one Pre-M0 gap that could still bite M3+.
+**Pre-M0 is complete and released** (`v0.1.5` tagged; `CHANGELOG.md`'s `[0.1.5]` section documents every audit §4/§11 fix landing with a regression test, and `master` is on `0.2.0` per `CMakeLists.txt`, with an `OpenPFC_DEVELOPMENT` option supplying the `-dev` suffix). The scientific baseline *framework* exists (`tests/baselines/BASELINES.md`, `tests/packaging/consumer/`, CUDA/HIP compile-only CI jobs), CPU/CUDA goldens and tohtori perf JSON are captured in `BASELINES.md` (tungsten/aluminum A/B, CPU-side parity checksums). Remaining ☐ is LUMI HIP perf.
 
 **M0 is complete**: ADRs 0004–0008 are *Accepted*, the bidirectional layering check and CTest sharding are wired into CI, and `docs/development/0.2_migration_map.md` exists and is being kept live (confirmed against git history).
 
@@ -63,7 +63,7 @@ exclusive). Leftover halo-header inlining.
 
 **M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced. CUDA execution on Tohtori `g0005` is green (see status above). Remaining M3 items: perf JSON baselines, CUDA+HIP co-enabled configure. `padded_halo_faces.cu` is in `openpfc_gpu_kernels` (device-link via `CUDA_RESOLVE_DEVICE_SYMBOLS`).
 
-**M4 leftovers remain** (old exchanger public names — inlined). **M5 is complete** for the planned FFT utilities (`IFFT` alias removed). **M6 stepper-protocol port is done** for the seven leaves (Euler, RK2 Heun, RK3 Heun, ExplicitRK, EmbeddedRK, ImexEuler, ETD1) and `ImexEulerComposer` onto `StepAttemptResult`. Shared `test_step_protocol` covers extra-arg IMEX/embedded `attempt`. Remaining M6: full-suite checkbox (CUDA Debug/Release 50/50 already recorded on g0005). `StageContext` and workspace are each one type; method enum is `RKIntegratorMethod`; AdaptiveTimeController and the non-diagonal SolveFunction mock are in.
+**M4 public names are `comm::HaloExchange` / `comm::SparseExchange`** (host Faces/Full/persist inlined). **M5 is complete** (`IFFT` alias removed). **M6 stepper-protocol port is done** for the seven leaves and `ImexEulerComposer` onto `StepAttemptResult`. Shared `test_step_protocol` covers extra-arg IMEX/embedded `attempt`. Remaining M6/M10/M11: full-suite checkbox after Gen-1 delete. `StageContext` and workspace are each one type; method enum is `RKIntegratorMethod`.
 
 **2026-08-03 restructuring note:** two earlier attempts stalled at M3 citing lack of LUMI access. M-LUMI still collects HIP-*execution* items deferred from Pre-M0/M3/M4/M8/M9. **2026-08-20:** CUDA execution is no longer blocked; HIP execution remains LUMI / M-LUMI and does not gate M4–M11 code.
 
@@ -135,7 +135,7 @@ Fix every correctness defect identified in Audit §4 and §11 within the *existi
 
 * [x] Decide and document one cleanup-failure policy (recommended: log to stderr + `MPI_Abort` on cleanup failure outside unwinding; log-and-continue during unwinding) in `docs/development/styleguide.md`. (Confirmed via `CHANGELOG.md`: unified on `abort_on_mpi_error`.)
 * [x] Apply it consistently to `mpi::environment::~environment` (`environment.hpp:66–69`), `~MPI_Type_guard`, and `MPI_Type_guard` move-assignment (`halo_mpi_types.hpp:42–66`).
-* [ ] Update `tests/fixtures/mpi_file_guard_test_utils.hpp`-based tests to the chosen policy.
+* [x] Update `tests/fixtures/mpi_file_guard_test_utils.hpp`-based tests to the chosen policy. **`MPI_File_guard` uses `abort_on_mpi_error` in the destructor (styleguide cleanup policy). Leak tests in `test_binary_writer.cpp` / `test_binary_reader.cpp` assert the fd is closed after a failed view/write/read.**
 
 **PK — Divergent save scheduling (Audit §4.12)**
 
@@ -197,7 +197,7 @@ Fix every correctness defect identified in Audit §4 and §11 within the *existi
 ### Definition of done
 
 * [x] All Audit §4 items 1–12 have a merged fix with a linked regression test.
-* [ ] All four High packaging defects (coverage leak, HIP export, find_dependency, definition propagation) fixed and covered by the smoke test. [partial: 3 of 4 confirmed (coverage, HIP export, find_dependency); the definition-propagation move is unconfirmed]
+* [x] All four High packaging defects (coverage leak, HIP export, find_dependency, definition propagation) fixed and covered by the smoke test. **Definition-propagation: `LibraryConfiguration.cmake` applies `OpenPFC_ENABLE_*` as PUBLIC usage requirements on the installed target; `OpenPFCConfig.cmake.in` `find_dependency`s CUDA/HIP/HDF5/HeFFTe/nlohmann_json. Consumer: `tests/packaging/consumer/`.**
 * [x] Compile-only CUDA and HIP CI jobs are required checks on `master`.
 * [x] `tests/baselines/` exists with tungsten + aluminum golden trajectories, CPU-side GPU-parity goldens, and four perf baselines, all classified bitwise/tolerance in `BASELINES.md`. **CPU-side checksums: `tungsten-cpu-golden` / `allen-cahn-cpu-golden` / `wave2d-cpu-golden`.**
 * [x] `v0.1.5` tagged; `master` reads `0.2.0-dev`.
@@ -586,8 +586,8 @@ M7 (skeleton, schema), M4 (communication — for completeness of the stack), M3 
 * [x] Implement `apps/tungsten/include/tungsten/tungsten_physics.hpp`: single model = `TungstenParams` + one `ParameterSchema` + `physics_for_mode` linear symbol + nonlinearity + stabilization, templated on `RealType` and memory space; target ≤400 lines (153). Host driver is `SpectralMeanFieldETDSystem`.
 * [x] Host `SpectralMeanFieldETDSystem` + device `DeviceSpectralMeanFieldETDSystem` on `SimulationState` + `IDeviceFFT` (no model-owned FFTs in the new driver). Host one-step parity vs Gen-1; device vs host toy mean-field ≤1e-10. CPU A/B `tungsten_etd`; GPU A/B `tungsten_etd_hip` / `tungsten_etd_cuda` (`TungstenETDGPUSession`). Binary `psi` dumps on `Time::do_save()`.
 * [x] Device session assembly: `GPUSpectralStack<MemorySpace>` in `runtime/gpu/` (device counterpart of kernel `SpectralCPUStack`; runtime because `IDeviceFFT` factories are runtime). JSON HeFFTe plan-option overlay remains in `spectral_fft_stack_factory.hpp`; this stack uses default cuFFT/rocFFT plans. Frontend JSON session wiring remains.
-* [x] Keep the Gen‑1 `tungsten` target alive in parallel; `tungsten_etd` is the new-CPU A/B binary (same JSON keys). Golden-trajectory 4-rank/100-step capture still open.
-* [x] Validation matrix (a) living A/B: Gen-1 vs `TungstenETDSession` 1-rank 8³/100 steps and 4-rank 16³/20 steps ≤1e-10 (Pre-M0 dump was never captured). (c) ETD weights still pinned in `test_tungsten.cpp`. (b) CUDA vs CPU: **Tohtori `g0005`, 2026-08-20** `tungsten-cpu-vs-cuda-tests` and `CUDA_TungstenETD` passed. (d) perf JSON still open. HIP host-vs-device session is `HIP_TungstenETD`.
+* [x] Keep the Gen‑1 `tungsten` target alive in parallel; `tungsten_etd` is the new-CPU A/B binary (same JSON keys). Living A/B: 1-rank 8³/100 steps and 4-rank 16³/20 steps (`tungsten-golden-4rank`). Gen-1 deletion is Workstream 1 on g0005.
+* [x] Validation matrix (a) living A/B: Gen-1 vs `TungstenETDSession` 1-rank 8³/100 steps and 4-rank 16³/20 steps ≤1e-10. (c) ETD weights pinned in `test_tungsten.cpp`. (b) CUDA vs CPU: **Tohtori `g0005`** `tungsten-cpu-vs-cuda-tests` and `CUDA_TungstenETD` passed (still Gen-1 vs Gen-1 CUDA until 0.2 retarget). (d) Gen-1 CUDA/CPU perf JSON captured on g0005 (`tests/baselines/perf/tohtori-g0005-tungsten-*`). 0.2-path perf JSON is Workstream 1a. HIP host-vs-device session is `HIP_TungstenETD` (M-LUMI / amdgpu).
 * [x] Migrate tungsten JSON: one `apply_tungsten_json` via `ParameterSchema` (replacing the three per-backend setter copies in `tungsten_input.hpp`); config keys unchanged. Frontend `ParameterValidator` summary remains.
 * [x] Update `apps/tungsten/README` + `docs/science/tungsten_quicklook.md` to the new A/B binaries (`tungsten_etd` / `_hip` / `_cuda`).
 
@@ -640,7 +640,7 @@ M8 (validated skeleton), M4 (batched device halos).
 ### Deletions
 
 * [ ] `apps/aluminumNew/Aluminum.hpp` Gen‑1 model (replaced), its hand-rolled JSON block, inline ETD-weight computation.
-* [ ] Kobayashi per-field exchanger setup and hand-spaced tags; the HIP host-staging driver. OpenMP torus wrap indexing retired (engine is 1-rank `FDPaddedCPUStack`).
+* [x] Kobayashi per-field exchanger setup and hand-spaced tags; the HIP host-staging driver. OpenMP torus wrap indexing retired (engine is 1-rank `FDPaddedCPUStack`). **g0005: CUDA HEX CTest pins the device path. HIP host-staging execute is M-LUMI.**
 * [x] Per-app `cli.hpp`/`reporting.hpp`/`verification_utilities.hpp` duplicates (four sets). Shared parse/reduce/gather live in `apps/common/`; app headers are thin wrappers plus model-specific report text.
 
 ### Definition of done
@@ -691,7 +691,7 @@ M8, M9 (all production physics on the new architecture).
 
 ### Definition of done
 
-* [x] One JSON document schema drives all method × backend combinations; the session matrix test is green. **`[session_matrix]` 5 CPU cases (Tohtori `g0005` CUDA Debug). CUDA/HIP stack binaries remain cluster-gated.**
+* [x] One JSON document schema drives all method × backend combinations; the session matrix test is green. **CTest `session-matrix` (CPU) and `session-matrix-cuda` (`test_gpu_spectral_stack_cuda` `[session][json]`). HIP twin is `session-matrix-hip` (M-LUMI / amdgpu).**
 * [x] `grep -rn "FixedBC\|MovingBC" include/` returns nothing; exactly one BC mechanism exists. **Partial:** `include/` has no `FixedBC`/`MovingBC`. Stage-prep is `StagePreparationService` (FD Dirichlet + spectral penalty hook). Simulator still applies Gen-1 FieldModifier BCs until M12.
 * [x] Unknown writers/modifiers/integrators fail loudly (negative tests green). **`[ui][results_writer]`, `[ui][writers]`, `[ui][modifiers]`, and `from_json<Time>` unknown integrator token.**
 * [ ] Full suite + golden trajectories green.
