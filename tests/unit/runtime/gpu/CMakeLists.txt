@@ -12,6 +12,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
                                                 openpfc_gpu_compile_defs)
     add_test(NAME GPU_DeviceDetection COMMAND test_gpu_device)
 
+    if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     add_executable(test_gpu_fft test_fft_cuda.cpp)
     target_include_directories(test_gpu_fft PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/unit/runtime/gpu
@@ -71,6 +72,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_compile_definitions(test_gpu_spectral_stack_cuda PRIVATE
         OPENPFC_TEST_GPU_STACK_CUDA)
     add_test(NAME CUDA_GPUSpectralStack COMMAND test_gpu_spectral_stack_cuda)
+    endif()
 
     add_executable(test_fd_gpu_stack_cuda test_fd_gpu_stack.cpp)
     target_include_directories(test_fd_gpu_stack_cuda PRIVATE
@@ -78,7 +80,7 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
         ${CMAKE_SOURCE_DIR}/include
     )
     target_link_libraries(test_fd_gpu_stack_cuda PRIVATE
-        Catch2::Catch2 openpfc nlohmann_json::nlohmann_json Heffte::Heffte
+        Catch2::Catch2 openpfc nlohmann_json::nlohmann_json
         CUDA::cudart MPI::MPI_CXX openpfc_gpu_kernels)
     set_target_properties(test_fd_gpu_stack_cuda PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON

@@ -93,7 +93,8 @@ Options:
   --with-rocm             Enable HIP/ROCm (LUMI default)
   --cpu                   Disable CUDA and ROCm
   --no-heffte             FD-only / kernel-only: -DOpenPFC_ENABLE_HEFFTE=OFF
-                          (no HeFFTe find; skip spectral apps/examples/tests/)
+                          (no HeFFTe find; skip spectral apps/examples and
+                          Catch2 TUs that include fft_fftw.hpp)
   --test                  Run Python tests and CTest after building (default)
   --no-test               Configure and build without running tests
   --mpi-tests             Register the 2-, 3-, and 4-rank MPI suites (default)

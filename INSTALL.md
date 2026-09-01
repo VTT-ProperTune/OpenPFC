@@ -296,7 +296,7 @@ These switches are defined under `cmake/` (see `BuildOptions.cmake`, `Dependenci
 |------------------|---------------|
 | `CMAKE_BUILD_TYPE` | Single-config default is **RelWithDebInfo** if unset (`cmake/ProjectSetup.cmake`). Pass `Release` or `Debug` to override. |
 | `OpenPFC_ENABLE_MPI` | Must stay ON for supported builds (see §2). |
-| `OpenPFC_ENABLE_HEFFTE` | HeFFTe FFT stack (ON by default). OFF is an FD-only / kernel-only build: HeFFTe is not required; spectral sources, apps, examples, and `tests/` are skipped. |
+| `OpenPFC_ENABLE_HEFFTE` | HeFFTe FFT stack (ON by default). OFF is an FD-only / kernel-only build: HeFFTe is not required; spectral sources, apps, and examples are skipped. Catch2 TUs that include `fft_fftw.hpp` are skipped; FD/halo tests still build. |
 | `OpenPFC_FETCH_HEFFTE` | Fetch HeFFTe into `build/_deps/` if no install is found. |
 | `OpenPFC_ENABLE_HDF5` | Optional HDF5 for profiling dumps and JSON `"writer": "hdf5"` (`/field` + XDMF; parallel HDF5 when the library was built with MPI, otherwise multi-rank gather to rank 0). OFF by default. |
 | `OpenPFC_ENABLE_CUDA` / `OpenPFC_ENABLE_HIP` | GPU toolkit backends. Finite-difference / kernel-only GPU apps can build with the toolkit plus CPU HeFFTe; spectral GPU FFT paths additionally require matching CUDA/ROCm HeFFTe (§3, §6–§8). |

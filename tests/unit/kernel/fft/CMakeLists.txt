@@ -1,15 +1,19 @@
 # SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# Kernel FFT unit tests
+# Kernel FFT unit tests. k-space folding does not need HeFFTe.
 target_sources(openpfc-tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_fft.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_setting.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_backend_selection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_kspace.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_kspace_iterator.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_dealias.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_comprehensive.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_heap_concept.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_buffer_sizes.cpp
 )
+if(OpenPFC_ENABLE_HEFFTE)
+  target_sources(openpfc-tests PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_fft.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_setting.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_backend_selection.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_dealias.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_comprehensive.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_heap_concept.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test_fft_buffer_sizes.cpp
+  )
+endif()

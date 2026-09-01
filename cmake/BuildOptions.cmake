@@ -13,14 +13,12 @@ if(OpenPFC_BUILD_TESTS)
   enable_testing()
   find_package(Catch2 REQUIRED)
   message(STATUS "✅ Catch2 v${Catch2_VERSION} found at ${Catch2_DIR}")
-  if(OpenPFC_ENABLE_HEFFTE)
-    message(STATUS "🔍 Building tests")
-    add_subdirectory(tests)
-  else()
+  message(STATUS "🔍 Building tests")
+  if(NOT OpenPFC_ENABLE_HEFFTE)
     message(STATUS
-      "⏭️  Skipping tests/: OpenPFC_ENABLE_HEFFTE=OFF (many Catch2 TUs include fft_fftw.hpp). "
-      "FD app tests (e.g. heat3d) still register.")
+      "   OpenPFC_ENABLE_HEFFTE=OFF: skipping Catch2 TUs that include fft_fftw.hpp / <heffte.h>")
   endif()
+  add_subdirectory(tests)
 endif()
 
 if(OpenPFC_BUILD_APPS)

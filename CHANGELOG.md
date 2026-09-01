@@ -26,7 +26,7 @@ source compatibility is explicitly not a goal.
 - Host Faces MPI (`HostFacesHalo`) is inlined into `comm_halo_exchange.hpp`. `padded_halo_exchange.hpp` is deleted.
 - Host Full MPI (`HostFullHalo`) is inlined into `comm_halo_exchange.hpp`. `full_padded_halo_exchange.hpp` is deleted.
 - Host persistent Faces MPI (`HostPersistentFaces`) is inlined into `comm_halo_exchange.hpp`. `halo_persistent.hpp` is deleted.
-- `OpenPFC_ENABLE_HEFFTE=OFF` is an FD-only / kernel-only configure: HeFFTe is not required, `fft.cpp` is omitted, spectral apps/examples/`tests/` are skipped, and FD apps still link.
+- `OpenPFC_ENABLE_HEFFTE=OFF` is an FD-only / kernel-only configure: HeFFTe is not required, `fft.cpp` is omitted, spectral apps/examples are skipped, and FD apps still link. Catch2 TUs that include `fft_fftw.hpp` / `<heffte.h>` are skipped; FD/halo/k-space tests still build.
 - Device Faces `HaloExchange::exchange()` posts every bound field, one `MPI_Waitall`, then unpacks. Full stays sequential. CUDA 1-rank two-field wrap and 2-rank batch-equals-singles in `test_comm_halo_exchange_gpu.cpp`.
 
 ### Added

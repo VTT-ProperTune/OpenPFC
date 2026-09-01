@@ -3,9 +3,6 @@
 
 # Frontend UI layer tests
 target_sources(openpfc-tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/test_driver_seams.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test_json_wiring_context.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test_heffte_plan_options.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_json_helpers.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_settings_loader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_ui_errors.cpp
@@ -16,10 +13,17 @@ target_sources(openpfc-tests PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/test_validation_result.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_parameter_validation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_results_writer_catalog.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test_app_integrator_loop.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_time_integrator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_integrator_method.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_world_time_positivity.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test_from_json_session_selection.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test_session_matrix.cpp
 )
+if(OpenPFC_ENABLE_HEFFTE)
+  target_sources(openpfc-tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_driver_seams.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_json_wiring_context.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_heffte_plan_options.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_app_integrator_loop.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_session_matrix.cpp
+  )
+endif()
