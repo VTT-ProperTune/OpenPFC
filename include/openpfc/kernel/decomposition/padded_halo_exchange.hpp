@@ -8,8 +8,7 @@
  * @brief Non-blocking face halo exchange for the padded brick layout.
  *
  * @details
- * Sibling of `pfc::HaloExchanger` (no padding, overwrites the outermost
- * owned cells) and `pfc::SparseHaloExchanger` (sparse, separate face
+ * Complements `pfc::SparseHaloExchanger` (sparse, separate face
  * vectors). `pfc::communication::PaddedHaloExchanger<T>` is the in-place
  * exchanger
  * that targets a `(nx+2hw)*(ny+2hw)*(nz+2hw)` padded
@@ -60,6 +59,7 @@
 
 #include <openpfc/kernel/data/box3i.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/data/types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_neighbors.hpp>
@@ -69,7 +69,6 @@
 #include <openpfc/kernel/decomposition/halo_geometry.hpp>
 #include <openpfc/kernel/decomposition/halo_mpi_types.hpp>
 #include <openpfc/kernel/decomposition/padded_halo_mpi_types.hpp>
-#include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/profiling/context.hpp>
 #include <openpfc/kernel/profiling/names.hpp>
 
@@ -93,12 +92,13 @@ public:
   using Int3 = pfc::types::Int3;
 
   /**
-   * @brief Construct the exchanger with explicit Box3i subdomain bounds and Domain reference.
-   *        This is the preferred interface for M1+ code.
+   * @brief Construct the exchanger with explicit Box3i subdomain bounds and Domain
+   * reference. This is the preferred interface for M1+ code.
    *
    * @param subdomain_box Local subdomain box (bounds for this rank).
    * @param domain        Global domain (for periodicity/spacing metadata).
-   * @param decomp        Decomposition for neighbor calculation (must outlive this object).
+   * @param decomp        Decomposition for neighbor calculation (must outlive this
+   * object).
    * @param rank          This MPI rank.
    * @param halo_width    Ghost ring thickness `hw`. Must match the brick
    *                      that `start_halo_exchange` is called with.
@@ -126,12 +126,14 @@ public:
    *
    * @deprecated Use explicit Box3i + Domain constructor instead.
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: PaddedHaloExchanger(box, domain, decomp, rank, ...)")]]
+  [[deprecated("Use explicit Box3i + Domain constructor: PaddedHaloExchanger(box, "
+               "domain, decomp, rank, ...)")]]
   PaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
                       int halo_width, MPI_Comm comm, int base_tag = 0)
-      : PaddedHaloExchanger(decomposition::local_box(decomp, rank), decomposition::domain(decomp),
-                            decomp, rank, halo_width, comm, halo::presets::Axes3D(),
-                            base_tag, halo::HaloDirectionSelector{}) {}
+      : PaddedHaloExchanger(decomposition::local_box(decomp, rank),
+                            decomposition::domain(decomp), decomp, rank, halo_width,
+                            comm, halo::presets::Axes3D(), base_tag,
+                            halo::HaloDirectionSelector{}) {}
 
   /**
    * @brief Construct with a user-selected halo direction set.
@@ -155,12 +157,14 @@ public:
    *
    * @deprecated Use explicit Box3i + Domain constructor instead.
    */
-  [[deprecated("Use explicit Box3i + Domain constructor: PaddedHaloExchanger(box, domain, decomp, rank, ...)")]]
+  [[deprecated("Use explicit Box3i + Domain constructor: PaddedHaloExchanger(box, "
+               "domain, decomp, rank, ...)")]]
   PaddedHaloExchanger(const decomposition::Decomposition &decomp, int rank,
                       int halo_width, MPI_Comm comm, halo::HaloDirectionSet dirs,
                       int base_tag = 0, halo::HaloDirectionSelector selector = {})
-      : PaddedHaloExchanger(decomposition::local_box(decomp, rank), decomposition::domain(decomp),
-                            decomp, rank, halo_width, comm, dirs, base_tag, selector) {}
+      : PaddedHaloExchanger(decomposition::local_box(decomp, rank),
+                            decomposition::domain(decomp), decomp, rank, halo_width,
+                            comm, dirs, base_tag, selector) {}
 
   // Box3i + Domain constructor implementation
   PaddedHaloExchanger(const Box3i &subdomain_box, const Domain &domain,
@@ -169,7 +173,8 @@ public:
                       int base_tag = 0, halo::HaloDirectionSelector selector = {})
       : m_subdomain_box(subdomain_box), m_domain(domain), m_decomp(decomp),
         m_rank(rank), m_halo_width(halo_width), m_comm(comm), m_base_tag(base_tag),
-        m_dirs(halo::resolve_direction_set(dirs, selector, rank)), m_use_decomp(false) {
+        m_dirs(halo::resolve_direction_set(dirs, selector, rank)),
+        m_use_decomp(false) {
     if (halo::neighbour_agreement_enabled()) {
       halo::validate_neighbour_direction_agreement(comm, decomp, rank, m_dirs);
     }
@@ -215,8 +220,7 @@ public:
   /// Same as the Field-binding constructor, with a custom direction set.
   PaddedHaloExchanger(data::Field<T, HostSpace> &u,
                       const decomposition::Decomposition &decomp, int rank,
-                      MPI_Comm comm, halo::HaloDirectionSet dirs,
-                      int base_tag = 0,
+                      MPI_Comm comm, halo::HaloDirectionSet dirs, int base_tag = 0,
                       halo::HaloDirectionSelector selector = {})
       : PaddedHaloExchanger(u.box(), u.domain(), decomp, rank, u.storage_halo(),
                             comm, dirs, base_tag, selector) {
@@ -229,8 +233,7 @@ public:
    *                   (i.e. `brick.data()`). Layout: row-major
    *                   `(nx+2hw, ny+2hw, nz+2hw)`, x fastest.
    * @param padded_size Total elements (`brick.size()`); accepted for
-   *                    API symmetry with `pfc::HaloExchanger` but not
-   *                    used by the zero-copy face path.
+   *                    API symmetry but not used by the zero-copy face path.
    */
   void exchange_halos(T *padded_buf, std::size_t padded_size) {
     start_halo_exchange(padded_buf, padded_size);
@@ -274,8 +277,7 @@ public:
    * @brief Wait on every outstanding request from `start_halo_exchange`.
    *
    * Records the elapsed time into the
-   * `kProfilingRegionCommunication` profiling slot, matching the
-   * convention used by `pfc::HaloExchanger`.
+   * `kProfilingRegionCommunication` profiling slot.
    */
   void finish_halo_exchange() {
     const double t0 = MPI_Wtime();
@@ -351,7 +353,8 @@ private:
 
   // Decomposition-based interface (deprecated)
   const decomposition::Decomposition &m_decomp;
-  bool m_use_decomp = false; // True when constructed via deprecated Decomposition path
+  bool m_use_decomp =
+      false; // True when constructed via deprecated Decomposition path
 
   int m_rank;
   int m_halo_width;

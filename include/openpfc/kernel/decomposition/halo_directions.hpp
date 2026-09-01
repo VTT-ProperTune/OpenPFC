@@ -9,7 +9,7 @@
  *
  * @details
  * Halo exchangers in OpenPFC historically hard-code their direction list:
- * `HaloExchanger`, `PaddedHaloExchanger`, `PersistentHaloExchanger`,
+ * `PaddedHaloExchanger`, `PersistentHaloExchanger`,
  * `PaddedDeviceHaloExchanger`, and device `HaloExchange` all loop over
  * the **6 axis-aligned face directions** (`±X`, `±Y`, `±Z`);
  * `FullPaddedDeviceHalo` runs **3 widening passes** that touch all 26
@@ -44,7 +44,7 @@
  *
  * @see decomposition_neighbors.hpp for the canonical 26-direction enumeration
  *      reused by `Full3D()`.
- * @see halo_exchange.hpp / padded_halo_exchange.hpp / halo_persistent.hpp
+ * @see comm_halo_exchange.hpp / padded_halo_exchange.hpp / halo_persistent.hpp
  *      for the CPU exchangers that consume this type.
  * @see sparse_halo_exchange.hpp + halo_face_layout.hpp for the sparse
  *      `pfc::SparseHaloExchanger` and the `make_structured_halos` helper

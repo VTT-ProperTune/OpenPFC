@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 VTT Technical Research Centre of Finland Ltd
+// SPDX-FileCopyrightText: 2026 VTT Technical Research Centre of Finland Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -25,8 +25,10 @@ namespace halo {
 enum class HaloPolicy {
   /// Subdomain-sized buffer only; no halo MPI for this field.
   None,
-  /// Ghosts in boundary slabs of the same nx×ny×nz array (`HaloExchanger`).
+  /// Ghosts in boundary slabs of the same nx×ny×nz array.
   /// Not FFT-safe on that buffer after exchange (multi-rank), in general.
+  /// The unpadded in-place driver is deleted; use a padded Field +
+  /// `pfc::comm::HaloExchange` instead.
   InPlace,
   /// Core nx×ny×nz for FFT; ghosts in separate face slabs
   /// (`pfc::SparseHaloExchanger` + `pfc::halo::make_structured_halos`).

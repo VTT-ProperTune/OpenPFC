@@ -7,7 +7,7 @@
  *        helpers for `pfc::SparseHaloExchanger`.
  *
  * @details
- * Face order matches `HaloExchanger` / `create_face_types_6`:
+ * Face order matches `create_face_types_6`:
  * 0:+X, 1:-X, 2:+Y, 3:-Y, 4:+Z, 5:-Z.
  *
  * Element counts match `halo::create_recv_halo(...).size()` for each direction.

@@ -38,7 +38,7 @@
  *
  * @see pfc::data::Field — the matching data layout.
  * @see pfc::halo::create_face_types_6 — the original "no padding"
- *      face-type builder used by `pfc::HaloExchanger`.
+ *      face-type builder for unpadded core arrays.
  */
 
 #include <array>
@@ -64,16 +64,18 @@ namespace {
  */
 inline int checked_padded_extent(int n, int hw) {
   if (hw < 0) {
-    throw std::invalid_argument("padded extent: halo width must be non-negative (got " +
-                                std::to_string(hw) + ")");
+    throw std::invalid_argument(
+        "padded extent: halo width must be non-negative (got " + std::to_string(hw) +
+        ")");
   }
   // Use long long to detect overflow in addition
-  const long long result = static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
+  const long long result =
+      static_cast<long long>(n) + 2LL * static_cast<long long>(hw);
   if (result > static_cast<long long>(std::numeric_limits<int>::max()) ||
       result < static_cast<long long>(std::numeric_limits<int>::min())) {
-    throw std::overflow_error("padded extent overflow in create_padded_face_types_6: " +
-                              std::to_string(n) + " + 2*" + std::to_string(hw) +
-                              " exceeds int range");
+    throw std::overflow_error(
+        "padded extent overflow in create_padded_face_types_6: " +
+        std::to_string(n) + " + 2*" + std::to_string(hw) + " exceeds int range");
   }
   return static_cast<int>(result);
 }
@@ -123,8 +125,7 @@ create_padded_face_types_6(int nx, int ny, int nz, int halo_width,
         std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +
         ")");
   }
-  if (halo_width > 0 &&
-      (nx < halo_width || ny < halo_width || nz < halo_width)) {
+  if (halo_width > 0 && (nx < halo_width || ny < halo_width || nz < halo_width)) {
     throw std::invalid_argument(
         std::string("pfc::halo::create_padded_face_types_6: owned extents ") +
         std::to_string(nx) + "x" + std::to_string(ny) + "x" + std::to_string(nz) +

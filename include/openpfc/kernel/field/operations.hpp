@@ -220,7 +220,7 @@ inline void apply_inplace_with_time(RealField &field, const World &world,
  * physical coordinate computed from the global world's `origin/spacing`.
  *
  * Layout: row-major `[nx, ny, nz]` with **x varying fastest**, matching
- * `pfc::field::fd::*` and the `HaloExchanger` family.
+ * `pfc::field::fd::*` and `pfc::comm::HaloExchange`.
  *
  * @tparam Fn Callable: `double(double, double, double)`.
  * @param field  Output field (resized to `nx*ny*nz`).

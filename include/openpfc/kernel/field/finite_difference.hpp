@@ -6,7 +6,7 @@
  * @brief Templated brick Laplacians for distributed fields (CPU)
  *
  * @details
- * Assumes the same local layout as `halo_pattern.hpp` / `HaloExchanger`: row-major
+ * Assumes the same local layout as `halo_pattern.hpp`: row-major
  * `[nx, ny, nz]` with **x varying fastest** (linear index
  * `ix + iy * nx + iz * nx * ny`).
  *
@@ -33,7 +33,7 @@
  *    (e.g. `apps/allen_cahn/`, `examples/15_finite_difference_heat.cpp`).
  *
  * @see docs/halo_exchange.md
- * @see kernel/decomposition/halo_exchange.hpp
+ * @see kernel/decomposition/comm_halo_exchange.hpp
  * @see kernel/decomposition/sparse_halo_exchange.hpp
  * @see kernel/field/fd_apply.hpp
  * @see kernel/field/fd_stencils.hpp
