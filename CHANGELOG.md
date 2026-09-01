@@ -32,6 +32,7 @@ source compatibility is explicitly not a goal.
 - `HostPersistentFaces` marks unused `domain` / `patterns` so `-Wunused-parameter` is clean.
 - GPU FFT factories live in `runtime/gpu/fft_gpu.hpp` / `fft_gpu.cpp`. Vendor `fft_cuda.hpp` / `fft_hip.hpp` are thin includes; `fft_cuda.cpp` / `fft_hip.cpp` are deleted.
 - Host FFT call sites use `pfc::fft::IHostFFT`. The temporary `IFFT` alias is removed.
+- `ImexEulerComposer::attempt` returns `StepAttemptResult`. Solve extras are `last_solve_*` accessors (`ImexStepAttemptResult` deleted).
 - Device Faces `HaloExchange::exchange()` posts every bound field, one `MPI_Waitall`, then unpacks. Full stays sequential. CUDA 1-rank two-field wrap and 2-rank batch-equals-singles in `test_comm_halo_exchange_gpu.cpp`.
 
 ### Added

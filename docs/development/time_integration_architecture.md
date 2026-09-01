@@ -419,7 +419,7 @@ Adaptive-control **policy configuration** (tolerances, growth/shrink limits,
 min/max `dt`, rejection cap, fixed-vs-adaptive mode) lives in
 [`adaptive_control_config.hpp`](../../include/openpfc/kernel/simulation/adaptive_control_config.hpp).
 The shared IMEX stage-composition seam is also landed
-(`ImexEulerComposer` / `ImexStepAttemptResult` in
+(`ImexEulerComposer` / `StepAttemptResult` in
 [`imex_stage_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/imex_stage_composition.hpp)):
 explicit operator evaluation then an implicit `SolveFunction` solve into an
 isolated candidate, with driver commit via `apply_candidate`. First-order

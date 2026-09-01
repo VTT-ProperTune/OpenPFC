@@ -104,9 +104,9 @@ TEST_CASE("candidate_isolation_until_apply", "[imex_stage_composition][unit]") {
   REQUIRE(result.t0 == t);
   REQUIRE(result.dt == dt);
   REQUIRE(result.t1 == t + dt);
-  REQUIRE(result.solve_status == ConvergenceStatus::converged);
-  REQUIRE(result.solve_iterations == 1);
-  REQUIRE(result.final_residual_norm == 0.0);
+  REQUIRE(composer.last_solve_status() == ConvergenceStatus::converged);
+  REQUIRE(composer.last_solve_iteration_count() == 1);
+  REQUIRE(composer.last_solve_final_residual_norm() == 0.0);
   REQUIRE(u == fingerprint);
   REQUIRE(result.candidate.size() == n);
 
@@ -134,8 +134,8 @@ TEST_CASE("failure_does_not_mutate_accepted", "[imex_stage_composition][unit]") 
                                  SolveOptions{}, ctx);
 
   REQUIRE_FALSE(result.success);
-  REQUIRE(result.solve_status == ConvergenceStatus::ill_conditioned);
-  REQUIRE(result.failure_cause.has_value());
+  REQUIRE(composer.last_solve_status() == ConvergenceStatus::ill_conditioned);
+  REQUIRE(composer.last_solve_failure_cause().has_value());
   REQUIRE(u == fingerprint);
   REQUIRE(result.t1 == result.t0);
 }

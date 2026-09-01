@@ -63,7 +63,7 @@ exclusive). Leftover halo-header inlining.
 
 **M3 (single-source GPU runtime) code work is substantially complete.** `include/openpfc/runtime/gpu/` is the implementation; `runtime/cuda/` and `runtime/hip/` are thin includes / namespace re-exports + FFT alias headers (FFT honesty is M5); Kokkos facsimile above `DataBuffer` is deleted; device TUs and `.inc` files live under `src/openpfc/runtime/gpu/`; HIP twins exist for FFT, Laplacian, multi-field device, FullPadded halo; `scripts/check_gpu_memcpy_single_source.sh` is CI-enforced. CUDA execution on Tohtori `g0005` is green (see status above). Remaining M3 items: perf JSON baselines, CUDA+HIP co-enabled configure. `padded_halo_faces.cu` is in `openpfc_gpu_kernels` (device-link via `CUDA_RESOLVE_DEVICE_SYMBOLS`).
 
-**M4 leftovers remain** (old exchanger public names — inlined). **M5 is complete** for the planned FFT utilities (`IFFT` alias removed). **M6 stepper-protocol port is done** for the seven leaves (Euler, RK2 Heun, RK3 Heun, ExplicitRK, EmbeddedRK, ImexEuler, ETD1) onto `StepAttemptResult`. Remaining M6: Field-based leftover notes; `ImexEulerComposer` still has a dedicated result type. `StageContext` and workspace are each one type; method enum is `RKIntegratorMethod`; AdaptiveTimeController and the non-diagonal SolveFunction mock are in.
+**M4 leftovers remain** (old exchanger public names — inlined). **M5 is complete** for the planned FFT utilities (`IFFT` alias removed). **M6 stepper-protocol port is done** for the seven leaves (Euler, RK2 Heun, RK3 Heun, ExplicitRK, EmbeddedRK, ImexEuler, ETD1) and `ImexEulerComposer` onto `StepAttemptResult`. Remaining M6: shared conformance coverage for extra-arg IMEX/embedded `attempt`. `StageContext` and workspace are each one type; method enum is `RKIntegratorMethod`; AdaptiveTimeController and the non-diagonal SolveFunction mock are in.
 
 **2026-08-03 restructuring note:** two earlier attempts stalled at M3 citing lack of LUMI access. M-LUMI still collects HIP-*execution* items deferred from Pre-M0/M3/M4/M8/M9. **2026-08-20:** CUDA execution is no longer blocked; HIP execution remains LUMI / M-LUMI and does not gate M4–M11 code.
 
@@ -519,12 +519,12 @@ M2 (Field/SimulationState), M5 (spectral coefficients memory-space-generic).
 
 ### Deletions
 
-* [x] `fd_stencils.hpp` `detail::EvenFDStencil1d` / `fd_even_order_lookup` back-compat shims deleted (unused). **`StageContext` and workspace each have one type (sim names are aliases). `IntegratorMethod` in `time.hpp` is deleted.** `ImexStepAttemptResult` remains on the IMEX composer until that seam is merged.
+* [x] `fd_stencils.hpp` `detail::EvenFDStencil1d` / `fd_even_order_lookup` back-compat shims deleted (unused). **`StageContext` and workspace each have one type (sim names are aliases). `IntegratorMethod` in `time.hpp` is deleted.** `ImexEulerComposer::attempt` returns `StepAttemptResult`; solve extras are `last_solve_*`.
 * [x] `euler_attempt.hpp` (its proof role is absorbed by the ported steppers). **Deleted; `MultiEulerStepper` now has `attempt` (any N).**
 
 ### Definition of done
 
-* [ ] `grep -rn "IntegratorBase\|IntegratorResult\|ETD1StepAttempt\|ImexStepAttempt" include/ tests/` returns nothing; one `StageContext` type, one workspace type (sim names are aliases), one method enum.
+* [x] `grep -rn "IntegratorBase\|IntegratorResult\|ETD1StepAttempt\|ImexStepAttempt" include/ tests/` returns nothing; one `StageContext` type, one workspace type (sim names are aliases), one method enum. `ImexEulerComposer` returns `StepAttemptResult`.
 * [ ] All steppers pass the shared conformance test; convergence orders unchanged.
 * [x] A complex-state, device-capable ETD1 exists with tests (the #169 framework prerequisite). **Host `ETD1Stepper` is complex-capable; device combine is `apply_etd1_update_{cuda,hip}`. A full device-resident stepper object is still future work.**
 * [x] One adaptive run exists end-to-end (example + test).

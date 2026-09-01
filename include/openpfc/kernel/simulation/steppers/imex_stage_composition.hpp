@@ -35,38 +35,9 @@
 #include <vector>
 
 #include <openpfc/kernel/simulation/solver_contract.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 namespace pfc::sim::steppers {
-
-/**
- * @brief Evidence returned by one IMEX stage-composition attempt.
- *
- * `candidate` binds to method-owned storage and remains valid until the next
- * `attempt` call or composer destruction. On failure, `t1` is unspecified
- * (left equal to `t0`); inspect `success` / `solve_status` before reading
- * candidate contents. Accepted input buffers are never written by `attempt`.
- */
-struct ImexStepAttemptResult {
-  double t0{};
-  double dt{};
-  double t1{}; ///< `t0 + dt` on success; equal to `t0` on failure (unspecified)
-  bool success{false};
-  ConvergenceStatus solve_status{ConvergenceStatus::unknown_failure};
-  int solve_iterations{0};
-  double final_residual_norm{0.0};
-  std::optional<std::string> failure_cause;
-  const std::vector<double> &candidate;
-
-  ImexStepAttemptResult(double t0_in, double dt_in, double t1_in, bool success_in,
-                        ConvergenceStatus solve_status_in,
-                        int solve_iterations_in, double final_residual_norm_in,
-                        std::optional<std::string> failure_cause_in,
-                        const std::vector<double> &candidate_in)
-      : t0(t0_in), dt(dt_in), t1(t1_in), success(success_in),
-        solve_status(solve_status_in), solve_iterations(solve_iterations_in),
-        final_residual_norm(final_residual_norm_in),
-        failure_cause(std::move(failure_cause_in)), candidate(candidate_in) {}
-};
 
 /**
  * @brief Explicit operator evaluator: fill `du` from read-only accepted state.
@@ -75,9 +46,8 @@ struct ImexStepAttemptResult {
  * const accepted buffer so evaluators cannot write through `u`.
  */
 template <class F>
-concept ExplicitOperatorEval =
-    requires(F f, double t, const std::vector<double> &u,
-             std::vector<double> &du) { f(t, u, du); };
+concept ExplicitOperatorEval = requires(F f, double t, const std::vector<double> &u,
+                                        std::vector<double> &du) { f(t, u, du); };
 
 /**
  * @brief CPU IMEX-Euler-shaped stage composer (proof path).
@@ -129,19 +99,20 @@ public:
    * @param op_desc Implicit linear operator descriptor for the solve.
    * @param options Solver stopping criteria.
    * @param ctx Stage context; `time` is set by this call.
-   * @return Attempt evidence with a view into method-owned candidate storage.
+   * @return `StepAttemptResult`. Solve extras are `last_solve_*` accessors.
    *
    * @throws std::invalid_argument if `u_accepted.size() != local_size`.
    */
-  [[nodiscard]] ImexStepAttemptResult
-  attempt(double t, double dt, const std::vector<double> &u_accepted,
-          const LinearOperatorDesc &op_desc, const SolveOptions &options,
-          StageContext &ctx) {
+  [[nodiscard]] StepAttemptResult attempt(double t, double dt,
+                                          const std::vector<double> &u_accepted,
+                                          const LinearOperatorDesc &op_desc,
+                                          const SolveOptions &options,
+                                          StageContext &ctx) {
     if (u_accepted.size() != m_local_size) {
-      throw std::invalid_argument(
-          "ImexEulerComposer::attempt: u_accepted.size() (" +
-          std::to_string(u_accepted.size()) + ") != local_size (" +
-          std::to_string(m_local_size) + ")");
+      throw std::invalid_argument("ImexEulerComposer::attempt: u_accepted.size() (" +
+                                  std::to_string(u_accepted.size()) +
+                                  ") != local_size (" +
+                                  std::to_string(m_local_size) + ")");
     }
 
     ctx.time = t;
@@ -153,16 +124,30 @@ public:
     }
 
     const auto outcome = m_solver(op_desc, m_rhs, m_candidate, options, ctx);
+    m_last_solve_status = outcome.status;
+    m_last_solve_iteration_count = outcome.iteration_count;
+    m_last_solve_final_residual_norm = outcome.final_residual_norm;
+    m_last_solve_failure_cause = outcome.failure_cause;
 
     if (outcome.status != ConvergenceStatus::converged) {
-      return ImexStepAttemptResult(
-          t, dt, t, /*success=*/false, outcome.status, outcome.iteration_count,
-          outcome.final_residual_norm, outcome.failure_cause, m_candidate);
+      return StepAttemptResult(t, dt, t, /*success=*/false, m_candidate);
     }
 
-    return ImexStepAttemptResult(
-        t, dt, t + dt, /*success=*/true, outcome.status, outcome.iteration_count,
-        outcome.final_residual_norm, outcome.failure_cause, m_candidate);
+    return StepAttemptResult(t, dt, t + dt, /*success=*/true, m_candidate);
+  }
+
+  [[nodiscard]] std::optional<ConvergenceStatus> last_solve_status() const noexcept {
+    return m_last_solve_status;
+  }
+  [[nodiscard]] int last_solve_iteration_count() const noexcept {
+    return m_last_solve_iteration_count;
+  }
+  [[nodiscard]] double last_solve_final_residual_norm() const noexcept {
+    return m_last_solve_final_residual_norm;
+  }
+  [[nodiscard]] const std::optional<std::string> &
+  last_solve_failure_cause() const noexcept {
+    return m_last_solve_failure_cause;
   }
 
   /**
@@ -184,9 +169,7 @@ public:
     u_inout = m_candidate;
   }
 
-  [[nodiscard]] const std::vector<double> &candidate() const {
-    return m_candidate;
-  }
+  [[nodiscard]] const std::vector<double> &candidate() const { return m_candidate; }
 
   [[nodiscard]] std::size_t local_size() const { return m_local_size; }
 
@@ -197,6 +180,10 @@ private:
   std::vector<double> m_candidate;
   ExplicitEval m_explicit_eval;
   Solver m_solver;
+  std::optional<ConvergenceStatus> m_last_solve_status;
+  int m_last_solve_iteration_count{0};
+  double m_last_solve_final_residual_norm{0.0};
+  std::optional<std::string> m_last_solve_failure_cause;
 };
 
 } // namespace pfc::sim::steppers

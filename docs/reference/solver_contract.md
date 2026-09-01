@@ -351,7 +351,7 @@ composition. The kernel seam lives in
 2. **Implicit solve:** Invoked via `SolveFunction` with `LinearOperatorDesc` + RHS
 3. **Isolated candidate:** Written to method-owned buffers; accepted state is
    unchanged until the driver calls `apply_candidate`
-4. **Driver:** Decides whether to commit based on `ImexStepAttemptResult`
+4. **Driver:** Decides whether to commit based on `StepAttemptResult` (solve extras via `last_solve_*`)
    / `ConvergenceStatus`
 
 Use `pfc::sim::StageContext` (alias of `pfc::integrator::StageContext`). First-order IMEX Euler
