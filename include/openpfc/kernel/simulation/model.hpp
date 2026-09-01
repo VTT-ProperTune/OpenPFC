@@ -108,7 +108,8 @@ private:
   /// @see get_fft() for access
   fft::IFFT &m_fft;
   ModelFieldRegistry m_fields; ///< Named real/complex field references (not owned)
-  const World &m_world;        ///< Reference to the World object
+  World m_world; ///< A0 World, stored by value so Domain-converting ctors can pass a
+                 ///< temporary
   MPI_Comm m_mpi_comm{
       MPI_COMM_WORLD};  ///< Communicator for rank-0 / collective alignment
   bool m_rank0 = false; ///< True if this process is rank 0 in `m_mpi_comm`

@@ -12,6 +12,10 @@ milestones M0–M12). 0.2.0 will be released only after the Gen-1 architecture a
 all temporary migration adapters are removed. Expect breaking API changes; 0.1.x
 source compatibility is explicitly not a goal.
 
+### Fixed
+
+- Gen-1 `Model` stores `World` by value. Tungsten/aluminum Domain constructors were passing a temporary `World` into a dangling reference, so Debug NaN checks aborted `tungsten-all-tests`, `tungsten-golden-4rank`, and `tungsten-cpu-vs-cuda-tests` on garbage k-space (`k_lap = -inf`).
+
 ### Added
 
 - Kobayashi CUDA `KOBAYASHI_VERIFY_HEX` 32²/4-step smoke is CTest (`kobayashi-cuda-hex-smoke`, and `kobayashi-cuda-hex-2rank` when MPI suites are on). Pin matches CPU HEX except `sum_T` (1 ULP), recorded in `tests/baselines/BASELINES.md`.
