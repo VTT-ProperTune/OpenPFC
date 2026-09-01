@@ -9,6 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector.hpp>
 #include <openpfc/kernel/decomposition/sparse_vector_ops.hpp>
+#include <stdexcept>
 #include <vector>
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
@@ -32,6 +33,26 @@ TEST_CASE("SparseVector construction with indices", "[SparseVector][core]") {
   REQUIRE(retrieved_indices[1] == 2);
   REQUIRE(retrieved_indices[2] == 5);
   REQUIRE(retrieved_indices[3] == 8);
+}
+
+TEST_CASE("SparseVector copies already-sorted host indices without re-sort",
+          "[SparseVector][core]") {
+  const size_t sorted[] = {1, 2, 5, 8};
+  auto sparse = core::SparseVector<backend::CPUTag, double>(sorted, 4);
+  REQUIRE(sparse.size() == 4);
+  REQUIRE(sparse.is_sorted());
+  auto retrieved = sparsevector::get_index(sparse);
+  REQUIRE(retrieved[0] == 1);
+  REQUIRE(retrieved[1] == 2);
+  REQUIRE(retrieved[2] == 5);
+  REQUIRE(retrieved[3] == 8);
+
+  auto empty = core::SparseVector<backend::CPUTag, double>(
+      static_cast<const size_t *>(nullptr), 0);
+  REQUIRE(empty.size() == 0);
+  REQUIRE_THROWS_AS((core::SparseVector<backend::CPUTag, double>(
+                        static_cast<const size_t *>(nullptr), 3)),
+                    std::runtime_error);
 }
 
 TEST_CASE("SparseVector construction with indices and data",

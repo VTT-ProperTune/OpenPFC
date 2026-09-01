@@ -82,10 +82,10 @@ public:
       d.recv_tag = h.recv_tag;
       d.scatter_after_recv = opt.scatter_after_recv;
       d.direction = h.direction;
-      d.send_values =
-          core::SparseVector<Tag, T>(pfc::sparsevector::get_index(h.send_values));
-      d.recv_values =
-          core::SparseVector<Tag, T>(pfc::sparsevector::get_index(h.recv_values));
+      d.send_values = core::SparseVector<Tag, T>(h.send_values.indices().data(),
+                                                 h.send_values.size());
+      d.recv_values = core::SparseVector<Tag, T>(h.recv_values.indices().data(),
+                                                 h.recv_values.size());
       m_halos.push_back(std::move(d));
     }
     m_requests.assign(2 * m_halos.size(), MPI_REQUEST_NULL);
@@ -103,10 +103,10 @@ public:
       d.recv_tag = h.recv_tag;
       d.scatter_after_recv = h.scatter_after_recv;
       d.direction = h.direction;
-      d.send_values =
-          core::SparseVector<Tag, T>(pfc::sparsevector::get_index(h.send_values));
-      d.recv_values =
-          core::SparseVector<Tag, T>(pfc::sparsevector::get_index(h.recv_values));
+      d.send_values = core::SparseVector<Tag, T>(h.send_values.indices().data(),
+                                                 h.send_values.size());
+      d.recv_values = core::SparseVector<Tag, T>(h.recv_values.indices().data(),
+                                                 h.recv_values.size());
       m_halos.push_back(std::move(d));
     }
     m_requests.assign(2 * m_halos.size(), MPI_REQUEST_NULL);

@@ -433,9 +433,9 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 
 ### Deletions
 
-* [ ] `halo_persistent.hpp`, `runtime/gpu` old padded/full-padded twins from M3's port (superseded by the unified class), and their now-redundant tests (assertions migrated to the new suites). **`kernel/decomposition/halo_exchange.hpp` (in-place `HaloExchanger`) is deleted. Public names are `comm::detail::HostFacesHalo` / `HostFullHalo` / `HostPersistentFaces` and `gpu::DeviceFacesHalo` / `DeviceFullHalo`.**
+* [ ] `halo_persistent.hpp` and host Faces/Full leftover headers (`padded_halo_exchange.hpp`, `full_padded_halo_exchange.hpp`) still exist as `comm::detail` backends included by `comm_halo_exchange.hpp`. **Vendor CUDA/HIP thin twins of the M3 padded/full device headers are deleted.** `kernel/decomposition/halo_exchange.hpp` (in-place `HaloExchanger`) is deleted. Public names are `comm::detail::HostFacesHalo` / `HostFullHalo` / `HostPersistentFaces` and `gpu::DeviceFacesHalo` / `DeviceFullHalo`.
 * [x] `apps/kobayashi/src/cuda/kobayashi_batched_halo.hpp` (531 lines). Removed after Kobayashi CUDA moved onto multi-field `HaloExchange<CUDASpace>`. Host and device Faces `HaloExchange::exchange()` post every bound field then one `MPI_Waitall`.
-* [ ] `sparsevector::` "for testing" free-function round-trip on the construction hot path.
+* [x] `sparsevector::` "for testing" free-function round-trip on the construction hot path. **`make_structured_halos` and device `SparseExchange` copy sorted host indices directly; `get_index` remains for tests.**
 * [x] HeFFTe include from `src/openpfc/kernel/decomposition/decomposition.cpp`.
 
 ### Definition of done

@@ -43,6 +43,8 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include <openpfc/kernel/execution/backend_tags.hpp>
@@ -137,6 +139,34 @@ public:
 
     // Copy sorted indices to device
     copy_indices_to_device(sorted_indices);
+  }
+
+  /**
+   * @brief Copy already-sorted host indices (no second sort).
+   *
+   * Used when promoting a host index list onto another backend, or when
+   * `create_send_halo` / `create_recv_halo` already returned a sorted
+   * `SparseVector`. Passing unsorted indices is undefined for gather/scatter.
+   */
+  SparseVector(const size_t *sorted_indices, size_t n)
+      : m_size(n), m_indices_sorted(true) {
+    if (n == 0) {
+      m_indices = DataBuffer<BackendTag, size_t>(0);
+      m_data = DataBuffer<BackendTag, T>(0);
+      return;
+    }
+    if (sorted_indices == nullptr) {
+      throw std::runtime_error(
+          "SparseVector: sorted_indices is null for non-zero size");
+    }
+    m_indices = DataBuffer<BackendTag, size_t>(m_size);
+    m_data = DataBuffer<BackendTag, T>(m_size);
+    if constexpr (std::is_same_v<BackendTag, backend::CPUTag>) {
+      std::copy_n(sorted_indices, n, m_indices.data());
+    } else {
+      std::vector<size_t> tmp(sorted_indices, sorted_indices + n);
+      copy_indices_to_device(tmp);
+    }
   }
 
   /**

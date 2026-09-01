@@ -164,16 +164,15 @@ template <typename T>
     const auto recv_idx_sv =
         create_recv_halo<backend::CPUTag>(decomp, rank, d, halo_width);
 
-    std::vector<std::size_t> send_idx = sparsevector::get_index(send_idx_sv);
-    std::vector<std::size_t> recv_idx = sparsevector::get_index(recv_idx_sv);
-
     RemoteHalo<T> h;
     h.peer_rank = peer;
     h.send_tag = base_tag + direction_to_canonical_tag(d);
     h.recv_tag = base_tag + direction_to_canonical_tag(
                                 HaloDirectionSet::Int3{-d[0], -d[1], -d[2]});
-    h.send_values = core::SparseVector<backend::CPUTag, T>(std::move(send_idx));
-    h.recv_values = core::SparseVector<backend::CPUTag, T>(std::move(recv_idx));
+    h.send_values = core::SparseVector<backend::CPUTag, T>(
+        send_idx_sv.indices().data(), send_idx_sv.size());
+    h.recv_values = core::SparseVector<backend::CPUTag, T>(
+        recv_idx_sv.indices().data(), recv_idx_sv.size());
     h.scatter_after_recv = false;
     h.direction = d;
     out.push_back(std::move(h));
