@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- M11 `CheckpointService` (`kernel/simulation/checkpoint_service.hpp`) owns filesystem restart: JSON `checkpoint.every` / `checkpoint.directory` / `restart_from`. Bundles are `<directory>/step_<increment>/` with versioned `metadata.json` and collective MPI-IO `fields/<name>.bin` (kernel `brick_io.hpp`, not frontend `BinaryWriter`). `from_json(CheckpointMetadata)` rejects schema-version mismatch. Load restores owned fields, `Time` increment/time, result counter, and method identity; grid or method mismatch is a hard error. Interrupted writes never leave a loadable `final_dir`.
 - M10 JSON FD CPU session (`json_fd_session.hpp`): `SimulationSession<FDCPUStack>` + RK composer from `Time::method()`, Laplacian heat RHS via `stack.du()`. Session-matrix FD JSON runs two Euler steps on a sine eigenmode (amplitude decays).
 - M10 `compose_etd1` / `compose_imex_euler` construct `ETD1Stepper` / `ImexEulerStepper`. JSON `"etd1"` / `"imex_euler"` remain identity on `Time`; `compose_scalar` fail-closes and names those entry points. `compose_etd1` matches the closed-form diagonal update; `compose_imex_euler` runs a diagonal implicit step.
 - M10 JSON `App` session owns `SimulationSession<SpectralCPUStack>` (`make_simulation_session` overlays HeFFTe `plan_options`). The frontend `spectral_cpu_stack.hpp` / `_detail.hpp` twin is deleted. `SpectralSimulationSession` remains as the Gen-1 Model/Simulator owner (`World` by value).

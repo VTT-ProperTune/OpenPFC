@@ -12,20 +12,26 @@ directory bundle. The entry point is
 with metadata types in
 [`checkpoint_metadata.hpp`](../../include/openpfc/kernel/checkpoint/checkpoint_metadata.hpp).
 
-This is the durable **publish** seam for a future restart loader. It is distinct from scheduled
-headerless field dumps written by `ResultsWriter` / frontend `BinaryWriter`
+This is the durable **publish** seam. Framework restart is
+`pfc::sim::CheckpointService` (`kernel/simulation/checkpoint_service.hpp`):
+collective MPI-IO of owned float64 bricks plus rank-0 `metadata.json`, then
+the same stage→rename protocol so an interrupted write never becomes a
+loadable bundle. It is distinct from scheduled headerless field dumps written
+by `ResultsWriter` / frontend `BinaryWriter`
 (see [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md)).
 
-**Restart loading is not implemented.** Publication writes a versioned directory
-bundle; there is no reader that loads that bundle back into `SimulationState`.
-In-memory `state_capture` restore is a payload-buffer copy, not filesystem restart.
+In-memory `state_capture` restore is a payload-buffer copy, not filesystem
+restart. App-local `heat3d`/`wave2d` `state_capture` helpers remain until those
+apps migrate onto `CheckpointService`.
 
 ## API symbols
 
 | Symbol | Header | Role |
 |--------|--------|------|
-| `CheckpointMetadata`, `DomainParams`, `DecompositionMeta`, `kCheckpointFormatVersion`, `to_json` | `checkpoint_metadata.hpp` | Versioned sidecar JSON |
-| `PublishedFieldBrick`, `PublishOutcome`, `PublishWriteHook`, `publish_checkpoint_directory`, `make_publish_ok`, `make_publish_failed` | `publish.hpp` | Atomic directory publish |
+| `CheckpointMetadata`, `DomainParams`, `DecompositionMeta`, `kCheckpointFormatVersion`, `to_json`, `from_json` | `checkpoint_metadata.hpp` | Versioned sidecar JSON (schema version 1) |
+| `PublishedFieldBrick`, `PublishOutcome`, `PublishWriteHook`, `publish_checkpoint_directory`, `make_publish_ok`, `make_publish_failed` | `publish.hpp` | Serial atomic directory publish (tests / single-rank bricks) |
+| `write_real_brick_mpi` | `brick_io.hpp` | Kernel MPI-IO of one owned float64 brick (no frontend include) |
+| `CheckpointService`, `CheckpointConfig`, `checkpoint_config_from_json` | `kernel/simulation/checkpoint_service.hpp` | Collective save/load, JSON `checkpoint.every` / `checkpoint.directory` / `restart_from` |
 
 Callers fill `accepted_time` and `accepted_increment` from driver-owned
 `pfc::sim::Time` (`get_current()` / `get_increment()`). Publish does not
@@ -48,7 +54,22 @@ A checkpoint is a **directory** (not a single opaque file):
 ```
 
 A bundle is considered loadable only when `final_dir` exists as a directory
-and contains readable `metadata.json` with a `format_version` key.
+and contains readable `metadata.json` with `format_version` equal to
+`kCheckpointFormatVersion` (currently 1). `from_json` rejects any other
+schema version.
+
+`CheckpointService` writes bundles at `<directory>/step_<increment>/`. JSON:
+
+```json
+{
+  "restart_from": "results/ckpt/step_10",
+  "checkpoint": { "every": 10, "directory": "results/ckpt" }
+}
+```
+
+`restart_from` restores owned fields, `Time` accepted increment/time, result
+counter, and integrator method identity. Grid or method mismatch is a hard
+error that names the field. Halos are not stored; exchange them after load.
 
 ## Atomicity protocol
 
@@ -60,9 +81,14 @@ and contains readable `metadata.json` with a `format_version` key.
 5. On any failure: best-effort `remove_all(staging)`; never leave a half-written
    `final_dir` that could be mistaken for a complete checkpoint.
 
-Unit tests run in the serial `openpfc-tests` binary. Multi-rank MPI-IO bricks
-inside the bundle are out of scope for this leaf; optional
-`DecompositionMeta` records layout for a restore sibling.
+`publish_checkpoint_directory` is the serial, injectable-brick leaf (Catch2
+doubles, crash-injection). Multi-rank production I/O is `CheckpointService`:
+every rank writes its owned subarray through `write_real_brick_mpi` (same
+Fortran-order contract as `BinaryWriter` / `BinaryReader`), rank 0 writes
+`metadata.json`, all ranks barrier, then rank 0 renames staging to `final_dir`.
+Kernel code does not include frontend `BinaryWriter`. Optional
+`DecompositionMeta` records the writing layout; restore currently requires
+the same global grid (method identity and domain origin/spacing/size).
 
 ## What is published (and what is not)
 
@@ -84,7 +110,7 @@ method identity).
 | Purpose | Scheduled periodic field dumps, post-processing | Durable accepted-state restart bundle |
 | Metadata | None in file (sidecar out of band) | Versioned `metadata.json` in the bundle |
 | Atomicity | Each write opens/truncates a path | Stage-then-rename of a directory |
-| Kernel layering | Frontend writer | Kernel headers only (ofstream bricks) |
+| Kernel layering | Frontend writer | Kernel headers (`brick_io` MPI-IO or ofstream bricks) |
 
 ## See also
 

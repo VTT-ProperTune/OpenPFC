@@ -25,6 +25,7 @@
  * Not wired to the Gen-1 `ModelFieldRegistry`; that stays untouched until M12.
  */
 
+#include <algorithm>
 #include <any>
 #include <cstddef>
 #include <functional>
@@ -35,6 +36,7 @@
 #include <typeinfo>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/execution/memory_space.hpp>
@@ -127,6 +129,17 @@ public:
 
   /// Number of fields currently owned.
   std::size_t num_fields() const noexcept { return m_name_to_id.size(); }
+
+  /// Sorted field names (I/O and checkpoint).
+  [[nodiscard]] std::vector<std::string> field_names() const {
+    std::vector<std::string> names;
+    names.reserve(m_name_to_id.size());
+    for (const auto &kv : m_name_to_id) {
+      names.push_back(kv.first);
+    }
+    std::sort(names.begin(), names.end());
+    return names;
+  }
 
 private:
   // One store per concrete (T, MemorySpace), held via a std::shared_ptr inside
