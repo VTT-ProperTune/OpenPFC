@@ -229,6 +229,11 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
   }
   const int result = Catch::Session().run(argc, argv);
+  int mpi_finalized = 0;
+  MPI_Finalized(&mpi_finalized);
+  if (mpi_finalized == 0) {
+    MPI_Finalize();
+  }
   return result;
 }
 

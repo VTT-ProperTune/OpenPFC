@@ -26,4 +26,7 @@ if(OpenPFC_ENABLE_HEFFTE)
     ${CMAKE_CURRENT_SOURCE_DIR}/test_app_integrator_loop.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_session_matrix.cpp
   )
+  add_test(NAME session-matrix COMMAND $<TARGET_FILE:openpfc-tests> "[session_matrix]")
+  set_tests_properties(session-matrix PROPERTIES
+    ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
 endif()

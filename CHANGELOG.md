@@ -41,6 +41,7 @@ source compatibility is explicitly not a goal.
 - Examples `04_diffusion_model`, `05_simulator`, and `12_cahn_hilliard` build spectral operators with `for_each_kpoint` instead of a hand-rolled Nyquist fold.
 - CTest `aluminum-golden-4rank`: 4-rank 16³/20-step `AluminumETDSession` vs Gen-1 ≤1e-10 (local max) / 1e-12 relative Σψ².
 - CPU-only checksum goldens for the CPU-vs-GPU parity configs: CTest `tungsten-cpu-golden`, `allen-cahn-cpu-golden`, `wave2d-cpu-golden` (1e-10 relative). Capture on tohtori `g0005` is in `tests/baselines/BASELINES.md`.
+- Named CTest `session-matrix` (CPU JSON session) and `session-matrix-cuda` (GPU spectral stack JSON, same `method`/`backend` keys). HIP twin `session-matrix-hip` is wired for amdgpu/LUMI.
 - Gen-1 aluminum `prepare_operators` uses `for_each_kpoint`. SeedGridFCC/SlabFCC use `std::numbers::pi`.
 - Example `03_parallel_fft` uses `std::numbers::pi` instead of `atan(1.0)`.
 - `JsonWiringSession` constructor parameters no longer shadow the catalog members (`-Wshadow`).

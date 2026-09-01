@@ -72,6 +72,8 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
     target_compile_definitions(test_gpu_spectral_stack_cuda PRIVATE
         OPENPFC_TEST_GPU_STACK_CUDA)
     add_test(NAME CUDA_GPUSpectralStack COMMAND test_gpu_spectral_stack_cuda)
+    add_test(NAME session-matrix-cuda COMMAND test_gpu_spectral_stack_cuda
+        "[session][json]")
     endif()
 
     add_executable(test_fd_gpu_stack_cuda test_fd_gpu_stack.cpp)
@@ -239,6 +241,8 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
         target_compile_definitions(test_gpu_spectral_stack_hip PRIVATE
             OPENPFC_TEST_GPU_STACK_HIP)
         add_test(NAME HIP_GPUSpectralStack COMMAND test_gpu_spectral_stack_hip)
+        add_test(NAME session-matrix-hip COMMAND test_gpu_spectral_stack_hip
+            "[session][json]")
 
         add_executable(test_observable_reduce_hip test_observable_reduce_gpu.cpp)
         target_include_directories(test_observable_reduce_hip PRIVATE
