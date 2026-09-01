@@ -9,8 +9,8 @@
  *
  * @details
  * Index-set counterpart of `HaloExchange`. This increment is **host-only**:
- * it composes `SparseHaloExchanger` so callers can move onto the new name
- * before that class is deleted. Device `SparseExchange<CUDASpace/HIPSpace>`
+ * it composes `comm::detail::HostSparseHalo`. Device
+ * `SparseExchange<CUDASpace/HIPSpace>`
  * lives in `runtime/gpu/comm_sparse_exchange_gpu.hpp` and keeps gather /
  * scatter on the device (no per-step full-field D2H).
  *
@@ -73,8 +73,8 @@ public:
    * Halo width is `field.halo_width()` if that is > 0, otherwise
    * `opt.halo_width`. The field pointer is bound for `exchange()`.
    */
-  SparseExchange(FieldT &field, const decomposition::Decomposition &decomp,
-                 int rank, MPI_Comm comm, SparseExchangeOptions opt = {})
+  SparseExchange(FieldT &field, const decomposition::Decomposition &decomp, int rank,
+                 MPI_Comm comm, SparseExchangeOptions opt = {})
       : SparseExchange(field.data(), field.size(), decomp, rank, comm,
                        resolve_hw_(field.halo_width(), opt), opt) {}
 
@@ -82,15 +82,14 @@ public:
    * @brief Structured exchange over a raw buffer (unpadded `nx*ny*nz`).
    */
   SparseExchange(T *field, std::size_t field_size,
-                 const decomposition::Decomposition &decomp, int rank,
-                 MPI_Comm comm, int halo_width, SparseExchangeOptions opt = {})
+                 const decomposition::Decomposition &decomp, int rank, MPI_Comm comm,
+                 int halo_width, SparseExchangeOptions opt = {})
       : m_field(field), m_field_size(field_size),
         m_impl(comm, rank,
-               apply_scatter_flag_(
-                   halo::make_structured_halos<T>(
-                       decomp, rank, require_hw_(halo_width), opt.dirs,
-                       opt.exchange_base),
-                   opt.scatter_after_recv)) {
+               apply_scatter_flag_(halo::make_structured_halos<T>(
+                                       decomp, rank, require_hw_(halo_width),
+                                       opt.dirs, opt.exchange_base),
+                                   opt.scatter_after_recv)) {
     if (field == nullptr) {
       throw std::invalid_argument(
           "pfc::comm::SparseExchange: field pointer must not be null");
@@ -138,9 +137,7 @@ public:
 
   void finish() { m_impl.finish_halo_exchange(); }
 
-  [[nodiscard]] std::size_t num_halos() const noexcept {
-    return m_impl.num_halos();
-  }
+  [[nodiscard]] std::size_t num_halos() const noexcept { return m_impl.num_halos(); }
   [[nodiscard]] const std::vector<halo_type> &halos() const noexcept {
     return m_impl.halos();
   }
@@ -163,8 +160,8 @@ private:
     return opt.halo_width;
   }
 
-  static std::vector<halo_type>
-  apply_scatter_flag_(std::vector<halo_type> halos, bool scatter) {
+  static std::vector<halo_type> apply_scatter_flag_(std::vector<halo_type> halos,
+                                                    bool scatter) {
     if (scatter) {
       for (auto &h : halos) {
         h.scatter_after_recv = true;
@@ -182,7 +179,7 @@ private:
 
   T *m_field = nullptr;
   std::size_t m_field_size = 0;
-  SparseHaloExchanger<T> m_impl;
+  detail::HostSparseHalo<T> m_impl;
 };
 
 } // namespace pfc::comm

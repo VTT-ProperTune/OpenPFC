@@ -170,7 +170,7 @@ public:
    * for the no-arg `start()` / `finish()` / `exchange` helpers.
    *
    * @throws std::invalid_argument if `u.storage_halo() <= 0` (unpadded Fields
-   *         use `SparseHaloExchanger` / face buffers, not this layout).
+   *         use `SparseExchange` / face buffers, not this layout).
    */
   HostFacesHalo(data::Field<T, HostSpace> &u,
                 const decomposition::Decomposition &decomp, int rank, MPI_Comm comm,

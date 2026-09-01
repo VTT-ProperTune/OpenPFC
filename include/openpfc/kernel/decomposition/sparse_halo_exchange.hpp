@@ -5,10 +5,10 @@
 
 /**
  * @file sparse_halo_exchange.hpp
- * @brief Fully sparse, grid-agnostic halo exchanger.
+ * @brief Internal sparse backend for `pfc::comm::SparseExchange` (host).
  *
  * @details
- * `pfc::SparseHaloExchanger<T>` is the **flexible** half of OpenPFC's halo
+ * `pfc::comm::detail::HostSparseHalo<T>` is the **flexible** half of OpenPFC's halo
  * story. It complements `pfc::comm::HaloExchange` (the **classical**
  * padded-brick exchanger):
  *
@@ -17,7 +17,7 @@
  *     halo communication maintaining in-bounds indexing. This is the
  *     **default** for FD-only apps.
  *   - Use `pfc::data::Field<T>` (unpadded `nx*ny*nz`) +
- *     `pfc::SparseHaloExchanger<T>` for **mixed FD + spectral** (the FFT
+ *     `pfc::comm::SparseExchange` for **mixed FD + spectral** (the FFT
  *     does not tolerate halo regions in the data block), **non-axis halos**,
  *     **arbitrary peer/index patterns**, and as the foundation for future
  *     **unstructured / FEM** halo communication.
@@ -72,7 +72,7 @@ namespace pfc::halo {
  * @brief One logical halo exchange with one peer rank.
  *
  * @details
- * Carries everything `pfc::SparseHaloExchanger<T>` needs to drive a
+ * Carries everything `pfc::comm::SparseExchange` needs to drive a
  * non-blocking `MPI_Isend` / `MPI_Irecv` pair against `peer_rank`:
  *
  *   - `send_values.indices()` are positions in the local field that this
@@ -134,7 +134,7 @@ template <typename T> struct RemoteHalo {
 
 } // namespace pfc::halo
 
-namespace pfc {
+namespace pfc::comm::detail {
 
 /**
  * @brief Fully sparse, grid-agnostic non-blocking halo exchanger.
@@ -154,7 +154,7 @@ namespace pfc {
  *           `BackendTag` once the matching `exchange::*` device overloads
  *           land.
  */
-template <typename T = double> class SparseHaloExchanger {
+template <typename T = double> class HostSparseHalo {
 public:
   using halo_type = halo::RemoteHalo<T>;
 
@@ -171,7 +171,7 @@ public:
    *              empty (no-op exchange) and may include self-rank
    *              entries (periodic wrap on a single-rank decomposition).
    */
-  SparseHaloExchanger(MPI_Comm comm, int rank, std::vector<halo_type> halos)
+  HostSparseHalo(MPI_Comm comm, int rank, std::vector<halo_type> halos)
       : m_comm(comm), m_rank(rank), m_halos(std::move(halos)),
         m_requests(2 * m_halos.size(), MPI_REQUEST_NULL) {}
 
@@ -286,4 +286,4 @@ private:
   std::size_t m_pending_size{0};
 };
 
-} // namespace pfc
+} // namespace pfc::comm::detail

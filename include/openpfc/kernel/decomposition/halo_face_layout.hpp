@@ -4,7 +4,7 @@
 /**
  * @file halo_face_layout.hpp
  * @brief Per-face halo element counts, allocation, and structured-grid
- *        helpers for `pfc::SparseHaloExchanger`.
+ *        helpers for `pfc::comm::SparseExchange`.
  *
  * @details
  * Face order matches `create_face_types_6`:
@@ -19,12 +19,13 @@
  *     scheme (`direction_to_canonical_tag`) so structured face exchanges
  *     are deterministic and rank-symmetric.
  *   - `copy_to_face_layout<T>(...)` — adapter that copies the recv buffers
- *     of a `SparseHaloExchanger` driven by `make_structured_halos` into the
+ *     of a `SparseExchange` driven by `make_structured_halos` into the
  *     `std::array<std::vector<T>, 6>` layout that the templated
  *     periodic-separated FD Laplacians (`laplacian_periodic_separated<Order>`,
  *     `laplacian2d_xy_periodic_separated<Order>`) consume.
  *
- * @see sparse_halo_exchange.hpp for `RemoteHalo<T>` and `SparseHaloExchanger<T>`.
+ * @see sparse_halo_exchange.hpp for `RemoteHalo<T>` and
+ * `comm::detail::HostSparseHalo`.
  * @see docs/concepts/halo_exchange.md for "which exchanger when".
  */
 
@@ -143,7 +144,7 @@ allocate_face_halos(const decomposition::Decomposition &decomp, int rank,
  *                  6-face exchange).
  * @param base_tag  Tag offset; the canonical tag scheme is added on top.
  *
- * @return Vector of `RemoteHalo<T>` ready to feed into `SparseHaloExchanger`.
+ * @return Vector of `RemoteHalo<T>` ready to feed into `SparseExchange`.
  */
 template <typename T>
 [[nodiscard]] std::vector<RemoteHalo<T>> make_structured_halos(
@@ -182,7 +183,7 @@ template <typename T>
 }
 
 /**
- * @brief Copy recv buffers of a structured `SparseHaloExchanger` into a
+ * @brief Copy recv buffers of a structured `SparseExchange` into a
  *        six-slot face layout (`std::array<std::vector<T>, 6>`).
  *
  * @details
@@ -226,12 +227,6 @@ void copy_to_face_layout(const std::vector<RemoteHalo<T>> &halos,
     }
     std::memcpy(dst.data(), h.recv_values.data().data(), n * sizeof(T));
   }
-}
-
-template <typename T>
-void copy_to_face_layout(const SparseHaloExchanger<T> &ex,
-                         std::array<std::vector<T>, 6> &face_halos) {
-  copy_to_face_layout(ex.halos(), face_halos);
 }
 
 } // namespace pfc::halo

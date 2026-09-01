@@ -47,7 +47,7 @@
  * @see comm_halo_exchange.hpp / padded_halo_exchange.hpp / halo_persistent.hpp
  *      for the CPU exchangers that consume this type.
  * @see sparse_halo_exchange.hpp + halo_face_layout.hpp for the sparse
- *      `pfc::SparseHaloExchanger` and the `make_structured_halos` helper
+ *      `pfc::comm::SparseExchange` and the `make_structured_halos` helper
  *      that turns a `HaloDirectionSet` into a `RemoteHalo` list.
  * @see runtime/gpu/padded_device_halo_exchange_gpu.hpp /
  *      runtime/gpu/full_padded_device_halo_gpu.hpp for the CUDA/HIP exchangers.

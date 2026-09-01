@@ -31,7 +31,7 @@ enum class HaloPolicy {
   /// `pfc::comm::HaloExchange` instead.
   InPlace,
   /// Core nx×ny×nz for FFT; ghosts in separate face slabs
-  /// (`pfc::SparseHaloExchanger` + `pfc::halo::make_structured_halos`).
+  /// (`pfc::comm::SparseExchange` + `pfc::halo::make_structured_halos`).
   Separated,
   /// Explicit slow path: extra copies or side structures; same idea as
   /// Separated but caller accepts orchestration cost.

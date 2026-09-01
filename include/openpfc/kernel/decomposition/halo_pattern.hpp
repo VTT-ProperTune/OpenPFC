@@ -232,7 +232,7 @@ create_send_halo(const decomposition::Decomposition &decomp, int rank,
  * @note For periodic boundaries, this will wrap around to the opposite side
  * @note These indices target **in-place** storage: boundary slabs of the same
  *       `nx×ny×nz` core array. For **separated** face buffers,
- *       use `pfc::SparseHaloExchanger` (typically built via
+ *       use `pfc::comm::SparseExchange` (typically built via
  *       `pfc::halo::make_structured_halos`) plus
  *       `pfc::halo::copy_to_face_layout` instead of scattering into these
  *       indices.

@@ -178,7 +178,7 @@ void laplacian_interior(int order, const T *buf, T *lap, int nx, int ny, int nz,
  * Iterates `[0, nx) x [0, ny) x [0, nz)` over the separated `core` buffer.
  * For each per-axis stencil arm that falls outside the owned region, reads
  * from the matching slab of `face_halos` (typically populated by
- * `pfc::SparseHaloExchanger` + `pfc::halo::copy_to_face_layout`, or built
+ * `pfc::comm::SparseExchange` + `pfc::halo::copy_to_face_layout`, or built
  * via `pfc::halo::make_structured_halos`):
  * face_halos[0]=+X, [1]=-X, [2]=+Y, [3]=-Y, [4]=+Z, [5]=-Z (recv buffers,
  * each of size `hw * (other two * nx)`).

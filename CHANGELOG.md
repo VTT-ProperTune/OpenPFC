@@ -226,6 +226,7 @@ source compatibility is explicitly not a goal.
 
 ### Removed
 
+- Public `pfc::SparseHaloExchanger`. Host sparse exchange is `pfc::comm::SparseExchange`. The implementation is `pfc::comm::detail::HostSparseHalo` in `sparse_halo_exchange.hpp`.
 - Public `pfc::cuda::PaddedDeviceHaloExchanger` / `pfc::hip::PaddedDeviceHaloExchanger` and `pfc::cuda::FullPaddedDeviceHalo` / `pfc::hip::FullPaddedDeviceHalo`. Device Faces/Full exchange is `pfc::comm::HaloExchange<CUDASpace/HIPSpace>`. The implementations are `pfc::gpu::DeviceFacesHalo` / `pfc::gpu::DeviceFullHalo`.
 - Public `pfc::PersistentHaloExchanger`. Host persistent Faces exchange is `pfc::comm::HaloExchange` with `HaloExchangeOptions::persistent`. The implementation is `pfc::comm::detail::HostPersistentFaces` in `halo_persistent.hpp`.
 - Public `pfc::FullPaddedHaloExchanger` / `pfc::communication::FullPaddedHaloExchanger`. Host Full (26-direction) exchange is `pfc::comm::HaloExchange` with `HaloConnectivity::Full`. The implementation is `pfc::comm::detail::HostFullHalo` in `full_padded_halo_exchange.hpp`.
