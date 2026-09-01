@@ -52,7 +52,8 @@ __global__ void combine_two_term_kernel(const T *x0, const T *x1, const T *w0,
 }
 
 template <typename T>
-__global__ void axpy_fill_kernel(T *out, const T *x, T alpha, T beta, std::size_t n) {
+__global__ void axpy_fill_kernel(T *out, const T *x, T alpha, T beta,
+                                 std::size_t n) {
   const std::size_t i =
       static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (i < n) {
@@ -68,9 +69,9 @@ void check_elem_launch(const char *op) {
   }
   err = ::pfc::gpuDeviceSynchronize();
   if (err != ::pfc::gpuSuccess) {
-    throw std::runtime_error(std::string(kElemGpuKind) + " " + op +
-                             " kernel sync failed: " +
-                             ::pfc::gpuGetErrorString(err));
+    throw std::runtime_error(
+        std::string(kElemGpuKind) + " " + op +
+        " kernel sync failed: " + ::pfc::gpuGetErrorString(err));
   }
 }
 
@@ -102,9 +103,8 @@ void launch_combine_two_term(const T *x0, const T *x1, const T *w0, const T *w1,
 }
 
 template <typename T>
-__global__ void combine_two_term_real_kernel(const T *x0, const T *x1,
-                                             const T *w0, const T *w1, T *out,
-                                             std::size_t n) {
+__global__ void combine_two_term_real_kernel(const T *x0, const T *x1, const T *w0,
+                                             const T *w1, T *out, std::size_t n) {
   const std::size_t i =
       static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (i < n) {
@@ -113,14 +113,13 @@ __global__ void combine_two_term_real_kernel(const T *x0, const T *x1,
 }
 
 template <typename T>
-void launch_combine_two_term_real(const T *x0, const T *x1, const T *w0,
-                                  const T *w1, T *out, std::size_t n) {
+void launch_combine_two_term_real(const T *x0, const T *x1, const T *w0, const T *w1,
+                                  T *out, std::size_t n) {
   if (n == 0) {
     return;
   }
   constexpr int threads = 256;
-  combine_two_term_real_kernel<<<elem_blocks(n), threads>>>(x0, x1, w0, w1, out,
-                                                            n);
+  combine_two_term_real_kernel<<<elem_blocks(n), threads>>>(x0, x1, w0, w1, out, n);
   check_elem_launch("combine_two_term_real");
 }
 
@@ -132,6 +131,35 @@ void launch_axpy_fill(T *out, const T *x, T alpha, T beta, std::size_t n) {
   constexpr int threads = 256;
   axpy_fill_kernel<<<elem_blocks(n), threads>>>(out, x, alpha, beta, n);
   check_elem_launch("axpy_fill");
+}
+
+/** n = c1*psi + c2*psi^2 + c3*psi^3 + d1*mf + d2*mf^2 + d3*mf^3 */
+template <typename T>
+__global__ void polynomial_nl_kernel(const T *psi, const T *mf, T *out, T c_psi,
+                                     T c_psi2, T c_psi3, T c_mf, T c_mf2, T c_mf3,
+                                     std::size_t n) {
+  const std::size_t i =
+      static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (i < n) {
+    const T p = psi[i];
+    const T m = mf[i];
+    const T p2 = p * p;
+    const T m2 = m * m;
+    out[i] = c_psi * p + c_psi2 * p2 + c_psi3 * p2 * p + c_mf * m + c_mf2 * m2 +
+             c_mf3 * m2 * m;
+  }
+}
+
+template <typename T>
+void launch_polynomial_nl(const T *psi, const T *mf, T *out, T c_psi, T c_psi2,
+                          T c_psi3, T c_mf, T c_mf2, T c_mf3, std::size_t n) {
+  if (n == 0) {
+    return;
+  }
+  constexpr int threads = 256;
+  polynomial_nl_kernel<<<elem_blocks(n), threads>>>(psi, mf, out, c_psi, c_psi2,
+                                                    c_psi3, c_mf, c_mf2, c_mf3, n);
+  check_elem_launch("polynomial_nl");
 }
 
 #if defined(OpenPFC_ENABLE_CUDA) && defined(OPENPFC_GPU_API_CUDA)
@@ -161,14 +189,12 @@ void combine_two_term_cuda_impl(const std::complex<float> *x0,
                           reinterpret_cast<const float *>(x1), w0, w1,
                           reinterpret_cast<float *>(out), n);
 }
-void combine_two_term_cuda_impl(const double *x0, const double *x1,
-                                const double *w0, const double *w1, double *out,
-                                std::size_t n) {
+void combine_two_term_cuda_impl(const double *x0, const double *x1, const double *w0,
+                                const double *w1, double *out, std::size_t n) {
   launch_combine_two_term_real(x0, x1, w0, w1, out, n);
 }
-void combine_two_term_cuda_impl(const float *x0, const float *x1,
-                                const float *w0, const float *w1, float *out,
-                                std::size_t n) {
+void combine_two_term_cuda_impl(const float *x0, const float *x1, const float *w0,
+                                const float *w1, float *out, std::size_t n) {
   launch_combine_two_term_real(x0, x1, w0, w1, out, n);
 }
 void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta,
@@ -178,6 +204,11 @@ void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta
 void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
                          std::size_t n) {
   launch_axpy_fill(out, x, alpha, beta, n);
+}
+void polynomial_nl_cuda_impl(const double *psi, const double *mf, double *out,
+                             double c_psi, double c_psi2, double c_psi3, double c_mf,
+                             double c_mf2, double c_mf3, std::size_t n) {
+  launch_polynomial_nl(psi, mf, out, c_psi, c_psi2, c_psi3, c_mf, c_mf2, c_mf3, n);
 }
 #endif
 
@@ -208,9 +239,8 @@ void combine_two_term_hip_impl(const std::complex<float> *x0,
                           reinterpret_cast<const float *>(x1), w0, w1,
                           reinterpret_cast<float *>(out), n);
 }
-void combine_two_term_hip_impl(const double *x0, const double *x1,
-                               const double *w0, const double *w1, double *out,
-                               std::size_t n) {
+void combine_two_term_hip_impl(const double *x0, const double *x1, const double *w0,
+                               const double *w1, double *out, std::size_t n) {
   launch_combine_two_term_real(x0, x1, w0, w1, out, n);
 }
 void combine_two_term_hip_impl(const float *x0, const float *x1, const float *w0,
@@ -224,6 +254,11 @@ void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
 void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
                         std::size_t n) {
   launch_axpy_fill(out, x, alpha, beta, n);
+}
+void polynomial_nl_hip_impl(const double *psi, const double *mf, double *out,
+                            double c_psi, double c_psi2, double c_psi3, double c_mf,
+                            double c_mf2, double c_mf3, std::size_t n) {
+  launch_polynomial_nl(psi, mf, out, c_psi, c_psi2, c_psi3, c_mf, c_mf2, c_mf3, n);
 }
 #endif
 

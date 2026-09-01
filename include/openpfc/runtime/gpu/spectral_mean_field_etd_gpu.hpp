@@ -10,8 +10,9 @@
  * @details
  * Sibling of host `pfc::sim::SpectralMeanFieldETDSystem`. Lives in runtime
  * because the filter multiply and ETD combine use GPU kernels (kernel must
- * not include runtime). `N(psi, psi_MF)` is formed on a host view; FFT,
- * `χ(k)` multiply, and ETD1 (`n_weight = k_lap·φ₁`) run on device buffers.
+ * not include runtime). `N(psi, psi_MF)` runs on device when Physics
+ * exposes `nonlinearity_poly()`; otherwise a host-view fallback. FFT,
+ * `χ(k)` multiply, and ETD1 run on device.
  */
 
 #if defined(OpenPFC_ENABLE_CUDA) || defined(OpenPFC_ENABLE_HIP)
@@ -54,9 +55,8 @@ public:
   using RealBuffer = typename FFT::RealBuffer;
   using ComplexBuffer = typename FFT::ComplexBuffer;
 
-  DeviceSpectralMeanFieldETDSystem(Physics physics, FFT &fft,
-                                   SimulationState &state, double dt,
-                                   SpectralMeanFieldETDOptions opt = {})
+  DeviceSpectralMeanFieldETDSystem(Physics physics, FFT &fft, SimulationState &state,
+                                   double dt, SpectralMeanFieldETDOptions opt = {})
       : m_physics(std::move(physics)), m_fft(fft), m_state(state), m_dt(dt),
         m_opt(std::move(opt)), m_exp(fft.size_outbox()),
         m_n_weight_dev(fft.size_outbox()), m_filter_dev(fft.size_outbox()),
@@ -67,8 +67,8 @@ public:
     }
     if (!m_state.has_field(m_opt.psi_name)) {
       throw std::invalid_argument(
-          "DeviceSpectralMeanFieldETDSystem: primary field '" +
-          m_opt.psi_name + "' is missing");
+          "DeviceSpectralMeanFieldETDSystem: primary field '" + m_opt.psi_name +
+          "' is missing");
     }
     auto &psi = m_state.get_field<double, MemorySpace>(m_opt.psi_name);
     if (psi.size() != m_fft.size_inbox()) {
@@ -111,11 +111,9 @@ public:
 
   double step(double t) {
     auto &psi = m_state.get_field<double, MemorySpace>(m_opt.psi_name);
-    auto &psi_mf =
-        m_state.get_field<double, MemorySpace>(m_opt.psi_mf_name);
+    auto &psi_mf = m_state.get_field<double, MemorySpace>(m_opt.psi_mf_name);
     auto &n_real = m_state.get_field<double, MemorySpace>(m_opt.n_name);
-    auto &psi_hat =
-        m_state.get_field<Complex, MemorySpace>(m_opt.psi_hat_name);
+    auto &psi_hat = m_state.get_field<Complex, MemorySpace>(m_opt.psi_hat_name);
     auto &psi_mf_hat =
         m_state.get_field<Complex, MemorySpace>(m_opt.psi_mf_hat_name);
     auto &n_hat = m_state.get_field<Complex, MemorySpace>(m_opt.n_hat_name);
@@ -130,22 +128,13 @@ public:
     m_fft.backward(psi_mf_hat.buffer(), psi_mf.buffer());
     psi_mf.note_device_write();
 
-    psi.with_host_view([&](double *pd, std::size_t n) {
-      psi_mf.with_host_view([&](double *md, std::size_t) {
-        n_real.with_host_view([&](double *nd, std::size_t) {
-          for (std::size_t i = 0; i < n; ++i) {
-            nd[i] = m_physics.nonlinearity(pd[i], md[i]);
-          }
-        });
-      });
-    });
-    n_real.sync_to_device();
+    apply_nonlinearity(psi.data(), psi_mf.data(), n_real.data(), psi.size());
+    n_real.note_device_write();
 
     m_fft.forward(n_real.buffer(), n_hat.buffer());
     n_hat.note_device_write();
-    apply_etd1(psi_hat.data(), n_hat.data(), m_exp.data(),
-               m_n_weight_dev.data(), m_candidate.data(),
-               m_fft.size_outbox());
+    apply_etd1(psi_hat.data(), n_hat.data(), m_exp.data(), m_n_weight_dev.data(),
+               m_candidate.data(), m_fft.size_outbox());
     m_fft.backward(m_candidate, psi.buffer());
     psi.note_device_write();
     return t + m_dt;
@@ -179,6 +168,44 @@ private:
     add_declared_field<T, MemorySpace>(m_state, name, domain, box, 0);
   }
 
+  void apply_nonlinearity(const double *psi, const double *mf, double *n,
+                          std::size_t count) {
+    if constexpr (requires { m_physics.nonlinearity_poly(); }) {
+      const auto c = m_physics.nonlinearity_poly();
+#if defined(OpenPFC_ENABLE_HIP)
+      if constexpr (std::is_same_v<MemorySpace, HIPSpace>) {
+        pfc::polynomial_nl_hip_impl(psi, mf, n, c.c_psi, c.c_psi2, c.c_psi3, c.c_mf,
+                                    c.c_mf2, c.c_mf3, count);
+        return;
+      }
+#endif
+#if defined(OpenPFC_ENABLE_CUDA)
+      if constexpr (std::is_same_v<MemorySpace, CUDASpace>) {
+        pfc::polynomial_nl_cuda_impl(psi, mf, n, c.c_psi, c.c_psi2, c.c_psi3, c.c_mf,
+                                     c.c_mf2, c.c_mf3, count);
+        return;
+      }
+#endif
+    }
+    auto &psi_f = m_state.get_field<double, MemorySpace>(m_opt.psi_name);
+    auto &mf_f = m_state.get_field<double, MemorySpace>(m_opt.psi_mf_name);
+    auto &n_f = m_state.get_field<double, MemorySpace>(m_opt.n_name);
+    psi_f.with_host_view([&](double *pd, std::size_t nn) {
+      mf_f.with_host_view([&](double *md, std::size_t) {
+        n_f.with_host_view([&](double *nd, std::size_t) {
+          for (std::size_t i = 0; i < nn; ++i) {
+            nd[i] = m_physics.nonlinearity(pd[i], md[i]);
+          }
+        });
+      });
+    });
+    n_f.sync_to_device();
+    (void)psi;
+    (void)mf;
+    (void)n;
+    (void)count;
+  }
+
   static void apply_filter(const Complex *in, const double *chi, Complex *out,
                            std::size_t n) {
 #if defined(OpenPFC_ENABLE_HIP)
@@ -203,8 +230,8 @@ private:
   }
 
   static void apply_etd1(const Complex *u, const Complex *nlin,
-                         const double *exp_Ldt, const double *n_weight,
-                         Complex *out, std::size_t n) {
+                         const double *exp_Ldt, const double *n_weight, Complex *out,
+                         std::size_t n) {
 #if defined(OpenPFC_ENABLE_HIP)
     if constexpr (std::is_same_v<MemorySpace, HIPSpace>) {
       integrator::apply_etd1_update_hip(u, nlin, exp_Ldt, n_weight, out, n);

@@ -46,6 +46,17 @@
 
 namespace pfc::sim {
 
+/** Device-side N(psi, psi_MF) polynomial: c1 psi + c2 psi^2 + c3 psi^3 + same in MF.
+ */
+struct MeanFieldNonlinearityPoly {
+  double c_psi{};
+  double c_psi2{};
+  double c_psi3{};
+  double c_mf{};
+  double c_mf2{};
+  double c_mf3{};
+};
+
 /**
  * @brief Element kind for a declared field (real density vs complex hat).
  */

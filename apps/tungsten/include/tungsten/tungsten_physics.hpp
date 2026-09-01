@@ -49,8 +49,7 @@ struct TungstenSchemaValues {
   double q40{45.0};
 };
 
-inline void apply_schema_values(const TungstenSchemaValues &v,
-                                TungstenParams &p) {
+inline void apply_schema_values(const TungstenSchemaValues &v, TungstenParams &p) {
   p.set_n0(v.n0);
   p.set_n_sol(v.n_sol);
   p.set_n_vap(v.n_vap);
@@ -77,27 +76,61 @@ inline void apply_schema_values(const TungstenSchemaValues &v,
 inline pfc::sim::ParameterSchema<TungstenSchemaValues> make_tungsten_schema() {
   pfc::sim::ParameterSchema<TungstenSchemaValues> s;
   s.model_name("Tungsten")
-      .real(&TungstenSchemaValues::n0, {.name = "n0", .description = "average density", .required = true})
-      .real(&TungstenSchemaValues::n_sol, {.name = "n_sol", .description = "solid coexistence density", .required = true})
-      .real(&TungstenSchemaValues::n_vap, {.name = "n_vap", .description = "vapor coexistence density", .required = true})
-      .real(&TungstenSchemaValues::T, {.name = "T", .description = "effective temperature", .required = true, .min = 0.0})
-      .real(&TungstenSchemaValues::T0, {.name = "T0", .description = "reference temperature", .required = true, .min = 0.0})
-      .real(&TungstenSchemaValues::Bx, {.name = "Bx", .description = "peak coefficient", .required = true})
-      .real(&TungstenSchemaValues::alpha, {.name = "alpha", .description = "C2 peak width", .required = true})
-      .real(&TungstenSchemaValues::alpha_farTol, {.name = "alpha_farTol", .description = "k=1 far tolerance", .required = true})
-      .integer(&TungstenSchemaValues::alpha_highOrd, {.name = "alpha_highOrd", .description = "higher-order Gaussian power", .required = true})
-      .real(&TungstenSchemaValues::lambda, {.name = "lambda", .description = "mean-field filter strength", .required = true})
-      .real(&TungstenSchemaValues::stabP, {.name = "stabP", .description = "ETD stabilization", .required = true})
-      .real(&TungstenSchemaValues::shift_u, {.name = "shift_u", .description = "vapor shift u", .required = true})
-      .real(&TungstenSchemaValues::shift_s, {.name = "shift_s", .description = "vapor shift s", .required = true})
-      .real(&TungstenSchemaValues::p2, {.name = "p2", .description = "polynomial p2", .required = true})
-      .real(&TungstenSchemaValues::p3, {.name = "p3", .description = "polynomial p3", .required = true})
-      .real(&TungstenSchemaValues::p4, {.name = "p4", .description = "polynomial p4", .required = true})
-      .real(&TungstenSchemaValues::q20, {.name = "q20", .description = "q20", .required = true})
-      .real(&TungstenSchemaValues::q21, {.name = "q21", .description = "q21", .required = true})
-      .real(&TungstenSchemaValues::q30, {.name = "q30", .description = "q30", .required = true})
-      .real(&TungstenSchemaValues::q31, {.name = "q31", .description = "q31", .required = true})
-      .real(&TungstenSchemaValues::q40, {.name = "q40", .description = "q40", .required = true});
+      .real(&TungstenSchemaValues::n0,
+            {.name = "n0", .description = "average density", .required = true})
+      .real(&TungstenSchemaValues::n_sol,
+            {.name = "n_sol",
+             .description = "solid coexistence density",
+             .required = true})
+      .real(&TungstenSchemaValues::n_vap,
+            {.name = "n_vap",
+             .description = "vapor coexistence density",
+             .required = true})
+      .real(&TungstenSchemaValues::T, {.name = "T",
+                                       .description = "effective temperature",
+                                       .required = true,
+                                       .min = 0.0})
+      .real(&TungstenSchemaValues::T0, {.name = "T0",
+                                        .description = "reference temperature",
+                                        .required = true,
+                                        .min = 0.0})
+      .real(&TungstenSchemaValues::Bx,
+            {.name = "Bx", .description = "peak coefficient", .required = true})
+      .real(&TungstenSchemaValues::alpha,
+            {.name = "alpha", .description = "C2 peak width", .required = true})
+      .real(&TungstenSchemaValues::alpha_farTol, {.name = "alpha_farTol",
+                                                  .description = "k=1 far tolerance",
+                                                  .required = true})
+      .integer(&TungstenSchemaValues::alpha_highOrd,
+               {.name = "alpha_highOrd",
+                .description = "higher-order Gaussian power",
+                .required = true})
+      .real(&TungstenSchemaValues::lambda,
+            {.name = "lambda",
+             .description = "mean-field filter strength",
+             .required = true})
+      .real(&TungstenSchemaValues::stabP,
+            {.name = "stabP", .description = "ETD stabilization", .required = true})
+      .real(&TungstenSchemaValues::shift_u,
+            {.name = "shift_u", .description = "vapor shift u", .required = true})
+      .real(&TungstenSchemaValues::shift_s,
+            {.name = "shift_s", .description = "vapor shift s", .required = true})
+      .real(&TungstenSchemaValues::p2,
+            {.name = "p2", .description = "polynomial p2", .required = true})
+      .real(&TungstenSchemaValues::p3,
+            {.name = "p3", .description = "polynomial p3", .required = true})
+      .real(&TungstenSchemaValues::p4,
+            {.name = "p4", .description = "polynomial p4", .required = true})
+      .real(&TungstenSchemaValues::q20,
+            {.name = "q20", .description = "q20", .required = true})
+      .real(&TungstenSchemaValues::q21,
+            {.name = "q21", .description = "q21", .required = true})
+      .real(&TungstenSchemaValues::q30,
+            {.name = "q30", .description = "q30", .required = true})
+      .real(&TungstenSchemaValues::q31,
+            {.name = "q31", .description = "q31", .required = true})
+      .real(&TungstenSchemaValues::q40,
+            {.name = "q40", .description = "q40", .required = true});
   return s;
 }
 
@@ -122,8 +155,8 @@ struct TungstenPhysics {
   }
 
   void declare_fields(pfc::SimulationState &state) const {
-    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "psi", domain,
-                                                        box, 0);
+    pfc::sim::add_declared_field<RealType, MemorySpace>(state, "psi", domain, box,
+                                                        0);
   }
 
   [[nodiscard]] double linear_symbol(double k_laplacian) const {
@@ -138,17 +171,21 @@ struct TungstenPhysics {
   }
 
   [[nodiscard]] double nonlinearity(double psi, double psi_mf) const {
+    const auto c = nonlinearity_poly();
     const double u2 = psi * psi;
-    const double u3 = u2 * psi;
     const double v2 = psi_mf * psi_mf;
-    const double v3 = v2 * psi_mf;
-    double n = params.get_p3_bar() * u2 + params.get_p4_bar() * u3 +
-               params.get_q3_bar() * v2 + params.get_q4_bar() * v3;
-    const double stab = params.get_stabP();
-    if (stab != 0.0) {
-      n -= stab * psi;
-    }
-    return n;
+    return c.c_psi * psi + c.c_psi2 * u2 + c.c_psi3 * u2 * psi + c.c_mf * psi_mf +
+           c.c_mf2 * v2 + c.c_mf3 * v2 * psi_mf;
+  }
+
+  [[nodiscard]] pfc::sim::MeanFieldNonlinearityPoly
+  nonlinearity_poly() const noexcept {
+    return {.c_psi = -params.get_stabP(),
+            .c_psi2 = params.get_p3_bar(),
+            .c_psi3 = params.get_p4_bar(),
+            .c_mf = 0.0,
+            .c_mf2 = params.get_q3_bar(),
+            .c_mf3 = params.get_q4_bar()};
   }
 };
 

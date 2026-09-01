@@ -53,9 +53,8 @@ public:
       throw std::invalid_argument("SpectralMeanFieldETDSystem: dt must be > 0");
     }
     if (!m_state.has_field(m_opt.psi_name)) {
-      throw std::invalid_argument(
-          "SpectralMeanFieldETDSystem: primary field '" + m_opt.psi_name +
-          "' is missing");
+      throw std::invalid_argument("SpectralMeanFieldETDSystem: primary field '" +
+                                  m_opt.psi_name + "' is missing");
     }
     auto &psi = m_state.get_field<double>(m_opt.psi_name);
     if (psi.size() != m_fft.size_inbox()) {
@@ -97,8 +96,7 @@ public:
     auto &psi_mf = m_state.get_field<double>(m_opt.psi_mf_name).vec();
     auto &n_real = m_state.get_field<double>(m_opt.n_name).vec();
     auto &psi_hat = m_state.get_field<Complex>(m_opt.psi_hat_name).vec();
-    auto &psi_mf_hat =
-        m_state.get_field<Complex>(m_opt.psi_mf_hat_name).vec();
+    auto &psi_mf_hat = m_state.get_field<Complex>(m_opt.psi_mf_hat_name).vec();
     auto &n_hat = m_state.get_field<Complex>(m_opt.n_hat_name).vec();
 
     m_fft.forward(psi, psi_hat);
@@ -110,11 +108,10 @@ public:
       n_real[i] = m_physics.nonlinearity(psi[i], psi_mf[i]);
     }
     m_fft.forward(n_real, n_hat);
-    integrator::apply_etd1_update(std::span<const double>(m_cache.exp_Ldt()),
-                                  std::span<const double>(m_n_weight),
-                                  std::span<const Complex>(psi_hat),
-                                  std::span<const Complex>(n_hat),
-                                  std::span<Complex>(psi_hat));
+    integrator::apply_etd1_update(
+        std::span<const double>(m_cache.exp_Ldt()),
+        std::span<const double>(m_n_weight), std::span<const Complex>(psi_hat),
+        std::span<const Complex>(n_hat), std::span<Complex>(psi_hat));
     m_fft.backward(psi_hat, psi);
     return t + m_dt;
   }

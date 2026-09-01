@@ -37,16 +37,17 @@ void combine_two_term_cuda_impl(const std::complex<float> *x0,
                                 const std::complex<float> *x1, const float *w0,
                                 const float *w1, std::complex<float> *out,
                                 std::size_t n);
-void combine_two_term_cuda_impl(const double *x0, const double *x1,
-                                const double *w0, const double *w1, double *out,
-                                std::size_t n);
-void combine_two_term_cuda_impl(const float *x0, const float *x1,
-                                const float *w0, const float *w1, float *out,
-                                std::size_t n);
+void combine_two_term_cuda_impl(const double *x0, const double *x1, const double *w0,
+                                const double *w1, double *out, std::size_t n);
+void combine_two_term_cuda_impl(const float *x0, const float *x1, const float *w0,
+                                const float *w1, float *out, std::size_t n);
 void axpy_fill_cuda_impl(double *out, const double *x, double alpha, double beta,
                          std::size_t n);
 void axpy_fill_cuda_impl(float *out, const float *x, float alpha, float beta,
                          std::size_t n);
+void polynomial_nl_cuda_impl(const double *psi, const double *mf, double *out,
+                             double c_psi, double c_psi2, double c_psi3, double c_mf,
+                             double c_mf2, double c_mf3, std::size_t n);
 #endif
 
 #if defined(OpenPFC_ENABLE_HIP)
@@ -62,15 +63,17 @@ void combine_two_term_hip_impl(const std::complex<float> *x0,
                                const std::complex<float> *x1, const float *w0,
                                const float *w1, std::complex<float> *out,
                                std::size_t n);
-void combine_two_term_hip_impl(const double *x0, const double *x1,
-                               const double *w0, const double *w1, double *out,
-                               std::size_t n);
+void combine_two_term_hip_impl(const double *x0, const double *x1, const double *w0,
+                               const double *w1, double *out, std::size_t n);
 void combine_two_term_hip_impl(const float *x0, const float *x1, const float *w0,
                                const float *w1, float *out, std::size_t n);
 void axpy_fill_hip_impl(double *out, const double *x, double alpha, double beta,
                         std::size_t n);
 void axpy_fill_hip_impl(float *out, const float *x, float alpha, float beta,
                         std::size_t n);
+void polynomial_nl_hip_impl(const double *psi, const double *mf, double *out,
+                            double c_psi, double c_psi2, double c_psi3, double c_mf,
+                            double c_mf2, double c_mf3, std::size_t n);
 #endif
 
 } // namespace pfc
