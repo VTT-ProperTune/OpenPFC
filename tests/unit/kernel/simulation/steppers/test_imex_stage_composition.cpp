@@ -24,8 +24,8 @@ namespace {
 class MockExecutionService : public ExecutionService {
 public:
   void request_halo_exchange(const std::vector<std::string> &) override {}
-  void prepare_boundaries(const std::vector<std::string> &) override {}
-  std::vector<double> global_reduce(const std::vector<double> &data, MPI_Op) override {
+  std::vector<double> global_reduce(const std::vector<double> &data,
+                                    MPI_Op) override {
     // Return copy of input (serial behavior)
     return data;
   }
@@ -48,12 +48,12 @@ struct IdentitySuccessSolver {
   int *explicit_count_at_entry{nullptr};
   int *required_explicit_count{nullptr};
 
-  SolveOutcome<std::vector<double> &>
-  operator()(const LinearOperatorDesc &, const std::vector<double> &rhs,
-             std::vector<double> &target_out, const SolveOptions &,
-             const StageContext &) const {
-    if (explicit_count_at_entry != nullptr &&
-        required_explicit_count != nullptr) {
+  SolveOutcome<std::vector<double> &> operator()(const LinearOperatorDesc &,
+                                                 const std::vector<double> &rhs,
+                                                 std::vector<double> &target_out,
+                                                 const SolveOptions &,
+                                                 const StageContext &) const {
+    if (explicit_count_at_entry != nullptr && required_explicit_count != nullptr) {
       *explicit_count_at_entry = *required_explicit_count;
     }
     target_out = rhs;
@@ -77,8 +77,7 @@ struct IllConditionedSolver {
 
 } // namespace
 
-TEST_CASE("candidate_isolation_until_apply",
-          "[imex_stage_composition][unit]") {
+TEST_CASE("candidate_isolation_until_apply", "[imex_stage_composition][unit]") {
   static_assert(ExplicitOperatorEval<CountingExplicitEval>);
 
   constexpr std::size_t n = 3;
@@ -86,9 +85,8 @@ TEST_CASE("candidate_isolation_until_apply",
   CountingExplicitEval eval{&explicit_count};
   IdentitySuccessSolver solver;
   ImexEulerComposer composer(n, eval, solver);
-  static_assert(
-      pfc::sim::SolveFunction<IdentitySuccessSolver, std::vector<double>,
-                              std::vector<double>>);
+  static_assert(pfc::sim::SolveFunction<IdentitySuccessSolver, std::vector<double>,
+                                        std::vector<double>>);
 
   std::vector<double> u{1.0, -2.0, 0.5};
   const std::vector<double> fingerprint = u;
@@ -121,8 +119,7 @@ TEST_CASE("candidate_isolation_until_apply",
   REQUIRE(u == result.candidate);
 }
 
-TEST_CASE("failure_does_not_mutate_accepted",
-          "[imex_stage_composition][unit]") {
+TEST_CASE("failure_does_not_mutate_accepted", "[imex_stage_composition][unit]") {
   constexpr std::size_t n = 2;
   CountingExplicitEval eval{nullptr};
   IllConditionedSolver solver;
@@ -133,9 +130,8 @@ TEST_CASE("failure_does_not_mutate_accepted",
 
   MockExecutionService exec;
   StageContext ctx{.time = 0.0, .execution_service = &exec};
-  auto result =
-      composer.attempt(0.0, 0.25, u, LinearOperatorDesc{"fail"}, SolveOptions{},
-                       ctx);
+  auto result = composer.attempt(0.0, 0.25, u, LinearOperatorDesc{"fail"},
+                                 SolveOptions{}, ctx);
 
   REQUIRE_FALSE(result.success);
   REQUIRE(result.solve_status == ConvergenceStatus::ill_conditioned);
@@ -144,8 +140,7 @@ TEST_CASE("failure_does_not_mutate_accepted",
   REQUIRE(result.t1 == result.t0);
 }
 
-TEST_CASE("explicit_then_implicit_ordering",
-          "[imex_stage_composition][unit]") {
+TEST_CASE("explicit_then_implicit_ordering", "[imex_stage_composition][unit]") {
   constexpr std::size_t n = 1;
   int explicit_count = 0;
   int explicit_seen_in_solver = -1;

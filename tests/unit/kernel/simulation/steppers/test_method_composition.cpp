@@ -6,9 +6,11 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
 #include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
 #include <openpfc/kernel/simulation/steppers/integrator_method.hpp>
 #include <openpfc/kernel/simulation/steppers/method_composition.hpp>
+#include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 #include <array>
 #include <cmath>
@@ -47,15 +49,17 @@ struct RotationRhs {
 
 } // namespace
 
-TEST_CASE("registered_method_composers enumerates Euler and three RK builtins",
+TEST_CASE("registered_method_composers enumerates RK builtins plus IMEX/ETD",
           "[method_composition]") {
   const auto composers = registered_method_composers();
-  REQUIRE(composers.size() == 4);
+  REQUIRE(composers.size() == 6);
 
   const MethodComposerEntry *euler = nullptr;
   const MethodComposerEntry *rk2_mid = nullptr;
   const MethodComposerEntry *rk2_heun = nullptr;
   const MethodComposerEntry *rk4 = nullptr;
+  const MethodComposerEntry *imex = nullptr;
+  const MethodComposerEntry *etd = nullptr;
   for (const auto &entry : composers) {
     if (entry.id == "euler") {
       euler = &entry;
@@ -65,19 +69,27 @@ TEST_CASE("registered_method_composers enumerates Euler and three RK builtins",
       rk2_heun = &entry;
     } else if (entry.id == "rk4_classical") {
       rk4 = &entry;
+    } else if (entry.id == "imex_euler") {
+      imex = &entry;
+    } else if (entry.id == "etd1") {
+      etd = &entry;
     }
   }
   REQUIRE(euler != nullptr);
   REQUIRE(rk2_mid != nullptr);
   REQUIRE(rk2_heun != nullptr);
   REQUIRE(rk4 != nullptr);
+  REQUIRE(imex != nullptr);
+  REQUIRE(etd != nullptr);
 
   REQUIRE(euler->method == RKIntegratorMethod::Euler);
   REQUIRE(rk2_mid->method == RKIntegratorMethod::RK2_Midpoint);
   REQUIRE(rk2_heun->method == RKIntegratorMethod::RK2_Heun);
   REQUIRE(rk4->method == RKIntegratorMethod::RK4_Classical);
+  REQUIRE(imex->method == RKIntegratorMethod::ImexEuler);
+  REQUIRE(etd->method == RKIntegratorMethod::ETD1);
 
-  for (const auto *entry : {euler, rk2_mid, rk2_heun, rk4}) {
+  for (const auto *entry : {euler, rk2_mid, rk2_heun, rk4, imex, etd}) {
     REQUIRE(entry->supports_scalar);
     REQUIRE(entry->supports_multi);
     REQUIRE_FALSE(entry->supports_embedded_error);
@@ -215,8 +227,7 @@ TEST_CASE("compose_multi succeeds for registered RK methods",
   REQUIRE_THAT(v_comp[0], WithinAbs(v_ref[0], 1e-14));
 }
 
-TEST_CASE("compose_scalar rejects etd1 without a registered composer",
-          "[method_composition]") {
+TEST_CASE("compose_scalar rejects etd1 (use compose_etd1)", "[method_composition]") {
   IntegratorComposeConfig cfg{.dt = 0.01, .requires_adaptive = false};
   try {
     (void)compose_scalar("etd1", cfg, 2, make_decay_rhs(1.0));
@@ -224,6 +235,7 @@ TEST_CASE("compose_scalar rejects etd1 without a registered composer",
   } catch (const ComposeError &e) {
     REQUIRE(e.kind() == ComposeError::Kind::CapabilityMismatch);
     REQUIRE_THAT(std::string(e.what()), ContainsSubstring("etd1"));
+    REQUIRE_THAT(std::string(e.what()), ContainsSubstring("compose_etd1"));
   }
 }
 
@@ -296,4 +308,61 @@ TEST_CASE("compose_scalar accepts RKIntegratorMethod overload for builtins",
   auto rk4 =
       compose_scalar(RKIntegratorMethod::RK4_Classical, cfg, 2, make_decay_rhs(1.0));
   REQUIRE(rk4.method == RKIntegratorMethod::RK4_Classical);
+}
+
+TEST_CASE("compose_etd1 matches closed-form diagonal update",
+          "[method_composition][etd1]") {
+  constexpr double dt = 0.1;
+  constexpr double L = -2.5;
+  constexpr double u0 = 1.25;
+  constexpr double Nval = 0.4;
+  IntegratorComposeConfig cfg{.dt = dt, .requires_adaptive = false};
+  auto composition = compose_etd1(cfg, 1,
+                                  [Nval](double, std::vector<double> &,
+                                         std::vector<double> &du) { du[0] = Nval; });
+  REQUIRE(composition.method == RKIntegratorMethod::ETD1);
+  REQUIRE(composition.workspace_ownership == WorkspaceOwnership::MethodOwned);
+
+  std::vector<double> Lvec{L};
+  std::vector<double> exp_buf(1);
+  std::vector<double> phi_buf(1);
+  pfc::integrator::fill_spectral_exp_coeffs(Lvec, dt, exp_buf, phi_buf);
+  composition.stepper.set_coefficients(exp_buf, phi_buf);
+
+  std::vector<double> u{u0};
+  auto attempt = composition.stepper.attempt(0.0, u);
+  REQUIRE(attempt.success);
+  commit_step_attempt(u, attempt);
+  const auto ref = pfc::integrator::spectral_exp_coeffs(L, dt);
+  REQUIRE_THAT(u[0], WithinAbs(ref.exp_Ldt * u0 + ref.phi1_L * Nval, 1e-12));
+}
+
+TEST_CASE("compose_imex_euler diagonal implicit step",
+          "[method_composition][imex]") {
+  constexpr double dt = 0.2;
+  constexpr double lambda = 1.5;
+  IntegratorComposeConfig cfg{.dt = dt, .requires_adaptive = false};
+  auto E = [](double, std::vector<double> &, std::vector<double> &du) {
+    for (double &v : du) {
+      v = 0.0;
+    }
+  };
+  std::vector<double> diag{1.0 + dt * lambda};
+  pfc::sim::LinearOperatorDesc op_desc{"imex_diagonal", std::nullopt, diag};
+  auto composition =
+      compose_imex_euler(cfg, 1, E, make_diagonal_imex_solver(), std::move(op_desc));
+  REQUIRE(composition.method == RKIntegratorMethod::ImexEuler);
+
+  std::vector<double> u{2.0};
+  pfc::sim::StageContext ctx{};
+  auto attempt = composition.stepper.attempt(0.0, u, ctx);
+  REQUIRE(attempt.success);
+  REQUIRE(composition.stepper.commit(u));
+  REQUIRE_THAT(u[0], WithinAbs(2.0 / (1.0 + dt * lambda), 1e-12));
+}
+
+TEST_CASE("compose_etd1 rejects a non-etd1 id", "[method_composition]") {
+  IntegratorComposeConfig cfg{.dt = 0.01, .requires_adaptive = false};
+  REQUIRE_THROWS_AS(compose_etd1("euler", cfg, 1, make_decay_rhs(1.0)),
+                    ComposeError);
 }

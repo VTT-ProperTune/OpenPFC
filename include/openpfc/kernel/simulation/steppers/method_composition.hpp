@@ -16,21 +16,18 @@
  * methods can join the same table later without editing call sites.
  *
  * Construction unifies on `ExplicitRKStepper` / `MultiExplicitRKStepper`
- * with `make_tableau(method)` so every registered fixed-step id shares one
- * concrete return type. This is distinct from the typed
- * `steppers::create(Eval&, Model&, …)` helpers in `euler.hpp` /
- * `explicit_rk.hpp`, which bind a known method type to a model + gradient
- * evaluator. Composition here is identifier + config + RHS →
- * `IntegratorComposition<Stepper>` with declared `WorkspaceOwnership` and
- * optional `MethodStateCapability` (empty for these stateless fixed-step
- * methods; field `save_state` / `restore_state` is orthogonal and is not
- * claimed as method-controller metadata).
+ * with `make_tableau(method)` for registered RK ids. IMEX Euler and ETD1
+ * are registered identity tokens; drivers construct them with
+ * `compose_imex_euler` / `compose_etd1` (they need a solver or ETD
+ * coefficients). `compose_scalar("etd1")` fail-closes and names those
+ * entry points.
  *
  * Identity tokens reuse `RKIntegratorMethod` / `to_string` /
  * `validate_method` from `integrator_method.hpp`. Adaptive capability
  * checks call `validate_method` rather than inventing a second rule.
  *
  * @see explicit_rk.hpp for `ExplicitRKStepper` / `MultiExplicitRKStepper`
+ * @see etd1.hpp / imex_euler.hpp for the non-RK composers
  * @see integrator_method.hpp for `RKIntegratorMethod` and `make_tableau`
  * @see docs/user_guide/custom_stepper_integration.md
  */
@@ -46,7 +43,9 @@
 #include <utility>
 #include <vector>
 
+#include <openpfc/kernel/simulation/steppers/etd1.hpp>
 #include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
+#include <openpfc/kernel/simulation/steppers/imex_euler.hpp>
 #include <openpfc/kernel/simulation/steppers/integrator_method.hpp>
 #include <openpfc/kernel/simulation/steppers/stage_protocol.hpp>
 
@@ -166,6 +165,20 @@ inline void ensure_builtin_composers() {
   composer_registry().push_back(MethodComposerEntry{
       .id = "rk4_classical",
       .method = RKIntegratorMethod::RK4_Classical,
+      .supports_embedded_error = false,
+      .supports_scalar = true,
+      .supports_multi = true,
+  });
+  composer_registry().push_back(MethodComposerEntry{
+      .id = "imex_euler",
+      .method = RKIntegratorMethod::ImexEuler,
+      .supports_embedded_error = false,
+      .supports_scalar = true,
+      .supports_multi = true,
+  });
+  composer_registry().push_back(MethodComposerEntry{
+      .id = "etd1",
+      .method = RKIntegratorMethod::ETD1,
       .supports_embedded_error = false,
       .supports_scalar = true,
       .supports_multi = true,
@@ -329,6 +342,19 @@ inline const MethodComposerEntry &require_composer(std::string_view id,
   return *entry;
 }
 
+inline void require_runge_kutta_tableau(std::string_view id,
+                                        RKIntegratorMethod method) {
+  if (is_runge_kutta(method)) {
+    return;
+  }
+  const char *alt =
+      (method == RKIntegratorMethod::ETD1) ? "compose_etd1" : "compose_imex_euler";
+  throw ComposeError(ComposeError::Kind::CapabilityMismatch,
+                     "compose_scalar/compose_multi build ExplicitRKStepper via "
+                     "make_tableau; \"" +
+                         std::string(id) + "\" has no Butcher tableau — use " + alt);
+}
+
 } // namespace detail
 
 /**
@@ -347,6 +373,7 @@ compose_scalar(std::string_view id, const IntegratorComposeConfig &cfg,
   const RKIntegratorMethod method = detail::resolve_or_throw(id);
   (void)detail::require_composer(id, method, /*need_scalar=*/true,
                                  /*need_multi=*/false);
+  detail::require_runge_kutta_tableau(id, method);
   detail::throw_if_error(validate_compose_config(method, cfg));
   return IntegratorComposition<ExplicitRKStepper<Rhs>>{
       .stepper = ExplicitRKStepper<Rhs>(cfg.dt, local_size, make_tableau(method),
@@ -383,6 +410,7 @@ compose_multi(std::string_view id, const IntegratorComposeConfig &cfg,
   const RKIntegratorMethod method = detail::resolve_or_throw(id);
   (void)detail::require_composer(id, method, /*need_scalar=*/false,
                                  /*need_multi=*/true);
+  detail::require_runge_kutta_tableau(id, method);
   detail::throw_if_error(validate_compose_config(method, cfg));
   return IntegratorComposition<MultiExplicitRKStepper<Rhs, N>>{
       .stepper = MultiExplicitRKStepper<Rhs, N>(
@@ -402,6 +430,88 @@ compose_multi(RKIntegratorMethod method, const IntegratorComposeConfig &cfg,
               const std::array<std::size_t, N> &local_sizes, Rhs rhs) {
   const std::string id = to_string(method);
   return compose_multi(std::string_view{id}, cfg, local_sizes, std::move(rhs));
+}
+
+/**
+ * @brief Compose an `ETD1Stepper` from config + nonlinear RHS.
+ *
+ * Coefficients are unbound until the caller calls
+ * `stepper.set_coefficients` / `set_coefficients_owned` (spans must
+ * outlive `attempt`, or use the owned copy). JSON `"etd1"` on `Time`
+ * is identity only; this is the construction entry point.
+ */
+template <class Rhs>
+  requires StageFunction<Rhs>
+IntegratorComposition<ETD1Stepper<Rhs>>
+compose_etd1(std::string_view id, const IntegratorComposeConfig &cfg,
+             std::size_t local_size, Rhs rhs) {
+  detail::ensure_builtin_composers();
+  const RKIntegratorMethod method = detail::resolve_or_throw(id);
+  if (method != RKIntegratorMethod::ETD1) {
+    throw ComposeError(ComposeError::Kind::CapabilityMismatch,
+                       "compose_etd1 requires \"etd1\", got \"" + std::string(id) +
+                           "\"");
+  }
+  (void)detail::require_composer(id, method, /*need_scalar=*/true,
+                                 /*need_multi=*/false);
+  detail::throw_if_error(validate_compose_config(method, cfg));
+  return IntegratorComposition<ETD1Stepper<Rhs>>{
+      .stepper = ETD1Stepper<Rhs>(cfg.dt, local_size, std::move(rhs)),
+      .method = method,
+      .workspace_ownership = WorkspaceOwnership::MethodOwned,
+      .method_state = {},
+  };
+}
+
+template <class Rhs>
+  requires StageFunction<Rhs>
+IntegratorComposition<ETD1Stepper<Rhs>>
+compose_etd1(const IntegratorComposeConfig &cfg, std::size_t local_size, Rhs rhs) {
+  return compose_etd1("etd1", cfg, local_size, std::move(rhs));
+}
+
+/**
+ * @brief Compose an `ImexEulerStepper` from config + explicit RHS + solver.
+ *
+ * JSON `"imex_euler"` on `Time` is identity only; this is the
+ * construction entry point (needs `LinearOperatorDesc` + `SolveFunction`).
+ */
+template <class ExplicitRhs, class Solver>
+  requires StageFunction<ExplicitRhs>
+IntegratorComposition<ImexEulerStepper<ExplicitRhs, Solver>>
+compose_imex_euler(std::string_view id, const IntegratorComposeConfig &cfg,
+                   std::size_t local_size, ExplicitRhs explicit_rhs, Solver solver,
+                   pfc::sim::LinearOperatorDesc op_desc,
+                   pfc::sim::SolveOptions opts = {}) {
+  detail::ensure_builtin_composers();
+  const RKIntegratorMethod method = detail::resolve_or_throw(id);
+  if (method != RKIntegratorMethod::ImexEuler) {
+    throw ComposeError(ComposeError::Kind::CapabilityMismatch,
+                       "compose_imex_euler requires \"imex_euler\", got \"" +
+                           std::string(id) + "\"");
+  }
+  (void)detail::require_composer(id, method, /*need_scalar=*/true,
+                                 /*need_multi=*/false);
+  detail::throw_if_error(validate_compose_config(method, cfg));
+  return IntegratorComposition<ImexEulerStepper<ExplicitRhs, Solver>>{
+      .stepper = ImexEulerStepper<ExplicitRhs, Solver>(
+          cfg.dt, local_size, std::move(explicit_rhs), std::move(solver),
+          std::move(op_desc), std::move(opts)),
+      .method = method,
+      .workspace_ownership = WorkspaceOwnership::MethodOwned,
+      .method_state = {},
+  };
+}
+
+template <class ExplicitRhs, class Solver>
+  requires StageFunction<ExplicitRhs>
+IntegratorComposition<ImexEulerStepper<ExplicitRhs, Solver>>
+compose_imex_euler(const IntegratorComposeConfig &cfg, std::size_t local_size,
+                   ExplicitRhs explicit_rhs, Solver solver,
+                   pfc::sim::LinearOperatorDesc op_desc,
+                   pfc::sim::SolveOptions opts = {}) {
+  return compose_imex_euler("imex_euler", cfg, local_size, std::move(explicit_rhs),
+                            std::move(solver), std::move(op_desc), std::move(opts));
 }
 
 } // namespace pfc::sim::steppers

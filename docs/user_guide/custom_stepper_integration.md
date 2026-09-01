@@ -195,11 +195,18 @@ auto composition =
   `MultiExplicitRKStepper` built with `make_tableau(method)`, plus declared
   `WorkspaceOwnership` and optional `MethodStateCapability` (empty for these
   stateless fixed-step methods).
-- Builtin method ids: `euler`, `rk2_midpoint`, `rk2_heun`, `rk4_classical`.
+- Builtin RK ids: `euler`, `rk2_midpoint`, `rk2_heun`, `rk4_classical`.
+  JSON `"etd1"` / `"imex_euler"` are registered identity tokens;
+  `compose_scalar("etd1")` fail-closes. Construct with `compose_etd1` /
+  `compose_imex_euler` (ETD needs coefficient spans; IMEX needs a
+  `SolveFunction` and `LinearOperatorDesc`).
 - Unknown identifiers, invalid config, and capability mismatches throw
   `ComposeError` before any step is taken.
 - Extend the table with `register_method_composer` so new methods do not
   require driver-side method switches.
+
+JSON FD CPU sessions (`json_fd_session.hpp`) compose the RK method from
+`Time::method()` and step `FDCPUStack::u()` with a Laplacian heat RHS.
 
 See also [Time integration architecture](../development/time_integration_architecture.md).
 

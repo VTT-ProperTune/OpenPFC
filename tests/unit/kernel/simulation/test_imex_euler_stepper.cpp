@@ -24,8 +24,8 @@ namespace {
 class MockExecutionService : public ExecutionService {
 public:
   void request_halo_exchange(const std::vector<std::string> &) override {}
-  void prepare_boundaries(const std::vector<std::string> &) override {}
-  std::vector<double> global_reduce(const std::vector<double> &data, MPI_Op) override {
+  std::vector<double> global_reduce(const std::vector<double> &data,
+                                    MPI_Op) override {
     // Return copy of input (serial behavior)
     return data;
   }
@@ -53,10 +53,10 @@ struct ZeroRHS {
 struct CompositeConstantRHS {
   double c_field1;
   double c_field2;
-  void operator()(double /*t*/,
-                  std::tuple<std::vector<double> &, std::vector<double> &> /*u*/,
-                  std::tuple<std::vector<double> &, std::vector<double> &> du)
-      const {
+  void
+  operator()(double /*t*/,
+             std::tuple<std::vector<double> &, std::vector<double> &> /*u*/,
+             std::tuple<std::vector<double> &, std::vector<double> &> du) const {
     auto &du1 = std::get<0>(du);
     auto &du2 = std::get<1>(du);
     for (std::size_t i = 0; i < du1.size(); ++i) {
@@ -76,8 +76,8 @@ auto make_identity_solver() {
       ((std::get<I>(target) = std::get<I>(rhs)), ...);
     };
     copy_fields(std::make_index_sequence<n>{});
-    return SolveOutcome<TargetType>{target, ConvergenceStatus::converged, 1,
-                                    0.0, std::nullopt};
+    return SolveOutcome<TargetType>{target, ConvergenceStatus::converged, 1, 0.0,
+                                    std::nullopt};
   };
 }
 
@@ -85,8 +85,8 @@ auto make_identity_solver() {
 // SolveFunction / ImexEuler do not assume a diagonal implicit operator.
 auto make_dense_nondiagonal_solver() {
   return [](const LinearOperatorDesc &op_desc, const auto &rhs_bundle,
-            auto &target_bundle, const SolveOptions &,
-            const StageContext &) -> SolveOutcome<std::decay_t<decltype(target_bundle)>> {
+            auto &target_bundle, const SolveOptions &, const StageContext &)
+             -> SolveOutcome<std::decay_t<decltype(target_bundle)>> {
     using TargetType = std::decay_t<decltype(target_bundle)>;
     if (!std::holds_alternative<std::vector<double>>(op_desc.operator_context)) {
       return SolveOutcome<TargetType>{
@@ -98,9 +98,9 @@ auto make_dense_nondiagonal_solver() {
     auto &x = std::get<0>(target_bundle);
     const std::size_t n = rhs_vec.size();
     if (n == 0 || Aflat.size() != n * n || x.size() != n) {
-      return SolveOutcome<TargetType>{
-          target_bundle, ConvergenceStatus::ill_conditioned, 0, 0.0,
-          std::string("dense solver size mismatch")};
+      return SolveOutcome<TargetType>{target_bundle,
+                                      ConvergenceStatus::ill_conditioned, 0, 0.0,
+                                      std::string("dense solver size mismatch")};
     }
     std::vector<std::vector<double>> A(n, std::vector<double>(n + 1, 0.0));
     for (std::size_t i = 0; i < n; ++i) {
@@ -117,9 +117,9 @@ auto make_dense_nondiagonal_solver() {
         }
       }
       if (std::abs(A[piv][k]) < 1e-14) {
-        return SolveOutcome<TargetType>{
-            target_bundle, ConvergenceStatus::ill_conditioned, 0, 0.0,
-            std::string("dense solver singular pivot")};
+        return SolveOutcome<TargetType>{target_bundle,
+                                        ConvergenceStatus::ill_conditioned, 0, 0.0,
+                                        std::string("dense solver singular pivot")};
       }
       std::swap(A[k], A[piv]);
       const double diag = A[k][k];
@@ -149,9 +149,8 @@ auto make_failing_solver() {
             const SolveOptions &,
             const StageContext &) -> SolveOutcome<std::decay_t<decltype(target)>> {
     using TargetType = std::decay_t<decltype(target)>;
-    return SolveOutcome<TargetType>{
-        target, ConvergenceStatus::unknown_failure, 0, 1.0,
-        std::string("forced solve failure")};
+    return SolveOutcome<TargetType>{target, ConvergenceStatus::unknown_failure, 0,
+                                    1.0, std::string("forced solve failure")};
   };
 }
 
@@ -336,10 +335,10 @@ struct ConstantComplexRHS {
 struct TwoFieldConstantComplexRHS {
   Complex c0{};
   Complex c1{};
-  void operator()(
-      double /*t*/,
-      std::tuple<std::vector<Complex> &, std::vector<Complex> &> /*u*/,
-      std::tuple<std::vector<Complex> &, std::vector<Complex> &> du) const {
+  void
+  operator()(double /*t*/,
+             std::tuple<std::vector<Complex> &, std::vector<Complex> &> /*u*/,
+             std::tuple<std::vector<Complex> &, std::vector<Complex> &> du) const {
     std::get<0>(du)[0] = c0;
     std::get<1>(du)[0] = c1;
   }
@@ -413,8 +412,7 @@ TEST_CASE("imex_euler_complex_multifield", "[imex][complex]") {
   TwoFieldConstantComplexRHS rhs{c0, c1};
   auto solver = make_identity_solver();
   LinearOperatorDesc op_desc{"identity_noop"};
-  MultiImexEulerStepper<TwoFieldConstantComplexRHS, decltype(solver), 2,
-                        Complex>
+  MultiImexEulerStepper<TwoFieldConstantComplexRHS, decltype(solver), 2, Complex>
       stepper(dt, {1, 1}, rhs, solver, op_desc);
   MockExecutionService service;
   StageContext ctx{.time = 0.0, .execution_service = &service};

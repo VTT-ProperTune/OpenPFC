@@ -206,9 +206,11 @@ The **composition boundary** is
 [`method_composition.hpp`](../../include/openpfc/kernel/simulation/steppers/method_composition.hpp):
 `compose_scalar` / `compose_multi` map a stable method id plus
 `IntegratorComposeConfig` through the `register_method_composer` table to a
-validated `IntegratorComposition`. Builtin fixed-step ids (`euler`,
+validated `IntegratorComposition`. Builtin RK ids (`euler`,
 `rk2_midpoint`, `rk2_heun`, `rk4_classical`) construct
 `ExplicitRKStepper` / `MultiExplicitRKStepper` via `make_tableau(method)`.
+`etd1` / `imex_euler` are registered; use `compose_etd1` /
+`compose_imex_euler` (not `compose_scalar`) to construct those steppers.
 Prefer that API when the driver must not switch on method-specific
 construction; prefer typed `create` when the method type is fixed at the
 call site. See
