@@ -25,6 +25,7 @@ source compatibility is explicitly not a goal.
 - Unused vendor thin includes `runtime/{cuda,hip}/padded_device_halo_exchange.hpp` and `full_padded_device_halo.hpp` are deleted. Device Faces/Full live in `runtime/gpu/`.
 - Host Faces MPI (`HostFacesHalo`) is inlined into `comm_halo_exchange.hpp`. `padded_halo_exchange.hpp` is deleted.
 - Host Full MPI (`HostFullHalo`) is inlined into `comm_halo_exchange.hpp`. `full_padded_halo_exchange.hpp` is deleted.
+- Host persistent Faces MPI (`HostPersistentFaces`) is inlined into `comm_halo_exchange.hpp`. `halo_persistent.hpp` is deleted.
 - Device Faces `HaloExchange::exchange()` posts every bound field, one `MPI_Waitall`, then unpacks. Full stays sequential. CUDA 1-rank two-field wrap and 2-rank batch-equals-singles in `test_comm_halo_exchange_gpu.cpp`.
 
 ### Added

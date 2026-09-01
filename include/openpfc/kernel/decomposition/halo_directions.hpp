@@ -44,8 +44,7 @@
  *
  * @see decomposition_neighbors.hpp for the canonical 26-direction enumeration
  *      reused by `Full3D()`.
- * @see comm_halo_exchange.hpp / halo_persistent.hpp
- *      for the CPU exchangers that consume this type.
+ * @see comm_halo_exchange.hpp for the CPU exchangers that consume this type.
  * @see sparse_halo_exchange.hpp + halo_face_layout.hpp for the sparse
  *      `pfc::comm::SparseExchange` and the `make_structured_halos` helper
  *      that turns a `HaloDirectionSet` into a `RemoteHalo` list.

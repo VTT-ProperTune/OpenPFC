@@ -71,7 +71,7 @@ TEST_CASE("HostPersistentFaces start/wait propagate MPI errors (source "
           "[halo][persistent][mpi_errors]") {
   const auto header =
       std::filesystem::path(__FILE__).parent_path() /
-      "../../../../include/openpfc/kernel/decomposition/halo_persistent.hpp";
+      "../../../../include/openpfc/kernel/decomposition/comm_halo_exchange.hpp";
   REQUIRE(std::filesystem::exists(header));
 
   const std::string src = read_file(header);
