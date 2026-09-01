@@ -153,6 +153,14 @@ double max_abs_diff(const std::vector<double> &a, const std::vector<double> &b) 
   return m;
 }
 
+double sumsq(const std::vector<double> &v) {
+  double s = 0.0;
+  for (double x : v) {
+    s += x * x;
+  }
+  return s;
+}
+
 void fill_cosine_ic(pfc::data::Field<double> &psi, double n0) {
   const auto n = pfc::domain::get_size(psi.domain());
   const auto dx = pfc::domain::get_spacing(psi.domain());
@@ -357,4 +365,61 @@ TEST_CASE("AluminumETDSession JSON constant IC matches Gen-1 two steps",
   legacy.step(0.0);
   legacy.step(0.01);
   REQUIRE(max_abs_diff(legacy.get_real_field("psi"), session.psi().vec()) < 1e-10);
+}
+
+TEST_CASE("AluminumETDSession 4-rank golden vs Gen-1", "[aluminum][golden][MPI]") {
+  int nproc = 1;
+  int rank = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (nproc != 4) {
+    SKIP("requires exactly 4 MPI ranks");
+  }
+  constexpr int N = 16;
+  constexpr double dt = 0.01;
+  constexpr double t1 = 0.20;
+  constexpr int nsteps = 20;
+  nlohmann::json settings = {
+      {"model", {{"name", "aluminum"}, {"params", aluminum_params_json()}}},
+      {"domain",
+       {{"Lx", N},
+        {"Ly", N},
+        {"Lz", N},
+        {"dx", 1.0},
+        {"dy", 1.0},
+        {"dz", 1.0},
+        {"origin", "corner"}}},
+      {"timestepping", {{"t0", 0.0}, {"t1", t1}, {"dt", dt}, {"saveat", dt}}},
+      {"initial_conditions",
+       {{{"target", "psi"}, {"type", "constant"}, {"n0", -0.0060}}}}};
+  aluminum::AluminumETDSession session(settings, rank, nproc, MPI_COMM_WORLD);
+
+  auto domain = pfc::domain::create(pfc::GridSize({N, N, N}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, nproc);
+  auto fft = pfc::fft::create(decomp, rank, MPI_COMM_WORLD);
+  Aluminum legacy(fft, domain);
+  from_json(settings["model"]["params"], legacy);
+  pfc::initialize(legacy, dt);
+  std::fill(legacy.get_real_field("psi").begin(), legacy.get_real_field("psi").end(),
+            -0.0060);
+
+  session.run();
+  for (int i = 0; i < nsteps; ++i) {
+    legacy.step(static_cast<double>(i) * dt);
+  }
+  const double local =
+      max_abs_diff(legacy.get_real_field("psi"), session.psi().vec());
+  double global_max = 0.0;
+  MPI_Allreduce(&local, &global_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  REQUIRE(global_max < 1e-10);
+
+  double s_new = sumsq(session.psi().vec());
+  double s_old = sumsq(legacy.get_real_field("psi"));
+  double g_new = 0.0;
+  double g_old = 0.0;
+  MPI_Allreduce(&s_new, &g_new, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&s_old, &g_old, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  REQUIRE(std::abs(g_new - g_old) < 1e-12 * (1.0 + std::abs(g_old)));
 }

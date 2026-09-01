@@ -11,8 +11,7 @@ classified **bitwise** (must reproduce exactly) or **tolerance** (must reproduce
 within a stated numeric tolerance, per backend).
 
 > Status: tohtori CUDA/host goldens and perf JSON are captured (see tables).
-> Remaining ☐ items are aluminum multi-rank golden, CPU-side GPU-parity field
-> dumps, and LUMI HIP perf.
+> Remaining ☐ items are CPU-side GPU-parity field dumps and LUMI HIP perf.
 
 ## Classification
 
@@ -29,7 +28,7 @@ within a stated numeric tolerance, per backend).
 | heat3d manual-vs-stack L2 equality; wave2d manual-vs-separated | tolerance | in-test | CI (CPU) |
 | Spectral first derivative of a Nyquist mode (`test_spectral_gradient`) | tolerance | ≤ 1e-12 (must be ~0) | CI (CPU) |
 | Tungsten 0.2 vs Gen-1 trajectory (`test_tungsten` `[golden]`) | tolerance | ≤1e-10 local; Σψ² 1e-12 relative | CI 1-rank 8³/100 steps; MPI 4-rank 16³/20 steps (`tungsten-golden-4rank`). Pre-M0 field dump was never captured — this is the living A/B golden. |
-| ☐ aluminumNew multi-rank golden trajectory | tolerance | TBD | tohtori/CPU (MPI) |
+| Aluminum 0.2 vs Gen-1 4-rank trajectory (`aluminumTest` `[golden][MPI]`) | tolerance | ≤1e-10 local; Σψ² 1e-12 relative | MPI 4-rank 16³/20 steps (`aluminum-golden-4rank`) |
 | ☐ CPU-side goldens for each CPU-vs-GPU parity test | tolerance | 1e-10 | CI (CPU) |
 | Restart-equivalence (`CheckpointService`) | bitwise (1 rank) | exact owned cells | CI: kernel `[checkpoint][service]`; heat3d FD Euler; tungsten ETD JSON session. 2-rank kernel `[checkpoint][MPI]`. |
 

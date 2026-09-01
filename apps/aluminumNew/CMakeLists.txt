@@ -93,6 +93,14 @@ if(ALUMINUM_ENABLE_TESTS AND OpenPFC_BUILD_TESTS)
         include(CTest)
         # Run all aluminum tests in a single invocation to avoid per-test MPI overhead
         add_test(NAME aluminum-all-tests COMMAND aluminumTest)
+        if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+          add_test(NAME aluminum-golden-4rank
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 4
+                    $<TARGET_FILE:aluminumTest> "[golden][MPI]")
+          set_tests_properties(aluminum-golden-4rank PROPERTIES
+            TIMEOUT 180
+            RUN_SERIAL TRUE)
+        endif()
 
         if(OpenPFC_ENABLE_CUDA_SPECTRAL)
             add_executable(test_aluminum_etd_cuda tests/test_aluminum_etd_gpu.cpp)

@@ -632,7 +632,7 @@ M8 (validated skeleton), M4 (batched device halos).
 
 ### Required tests
 
-* [x] Aluminum golden trajectory (Pre-M0) within declared tolerance; 5-step golden norms updated only with written justification. **Pre-M0 32³ sumsq** stays in `[Aluminum]`; **A/B:** `MovingFrameMeanFieldETDSystem` vs Gen-1 SeedGridFCC 5 steps ≤1e-10.
+* [x] Aluminum golden trajectory (Pre-M0) within declared tolerance; 5-step golden norms updated only with written justification. **Pre-M0 32³ sumsq** stays in `[Aluminum]`; **A/B:** `MovingFrameMeanFieldETDSystem` vs Gen-1 SeedGridFCC 5 steps ≤1e-10. **4-rank 16³/20-step** `AluminumETDSession` vs Gen-1 is CTest `aluminum-golden-4rank`.
 * [x] Aluminum free-energy observable matches the legacy accumulator on the golden run. Density formula pinned in `[aluminum][physics][nonlinearity]`. Golden run: `last_free_energy_sum` is finite. Gen-1 `local_FE` is unused and nans (`0*inf` on `P*\psi`) so it is not the comparison target.
 * [x] Kobayashi `KOBAYASHI_VERIFY_HEX` checksums bitwise-identical on CPU; CUDA within declared tolerance; OpenMP thread-parity test green. *(The HIP half moved to M-LUMI.)* **CPU:** OpenMP 32²/4-step HEX pinned against MPI nproc=1 smoke; 1 vs 4 thread fields bitwise equal. **CUDA (Tohtori `g0005`):** `kobayashi-cuda-hex-smoke` / `kobayashi-cuda-hex-2rank` pin the same smoke; `sum_T` is 1 ULP vs CPU (`BASELINES.md`).
 * [x] heat3d/wave2d/allen_cahn suites green after `apps/common` migration.
