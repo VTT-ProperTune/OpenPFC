@@ -3,23 +3,23 @@
 
 /**
  * @file test_tungsten_cuda_vtk.cpp
- * @brief Test Tungsten CUDA model with initial/boundary conditions and VTK output
+ * @brief Drive TungstenETDCUDASession with VTK output (catalog `vtk`).
  */
 
-#if !defined(OpenPFC_ENABLE_CUDA)
-#error "This test requires CUDA support. Enable with -DOpenPFC_ENABLE_CUDA=ON"
+#if !defined(OpenPFC_ENABLE_CUDA_SPECTRAL)
+#error "This test requires CUDA spectral support"
 #endif
 
-#include <nlohmann/json.hpp>
-#include <tungsten/common/run_tungsten_gpu_vtk.hpp>
-#include <tungsten/cuda/tungsten_model.hpp>
+#include <tungsten/common/tungsten_app_main.hpp>
+#include <tungsten/tungsten_etd_gpu_session.hpp>
 
 int main(int argc, char *argv[]) {
-  return tungsten::run_tungsten_gpu_vtk_main<TungstenCUDA<double>>(
-      argc, argv, "tungsten_single_seed_256_cuda.json",
-      "Tungsten CUDA Test with VTK Output",
-      [](const nlohmann::json &j) {
-        return pfc::ui::cuda_spectral_plan_options_from_json(j);
-      },
-      [](TungstenCUDA<double> &m) -> decltype(auto) { return m.get_cuda_fft(); });
+  if (argc <= 1) {
+    char default_config[] = "tungsten_single_seed_256_cuda.json";
+    char *fallback[] = {argv[0], default_config};
+    return tungsten::run_tungsten_etd_main<tungsten::TungstenETDCUDASession>(
+        2, fallback, "tungsten_cuda_vtk");
+  }
+  return tungsten::run_tungsten_etd_main<tungsten::TungstenETDCUDASession>(
+      argc, argv, "tungsten_cuda_vtk");
 }

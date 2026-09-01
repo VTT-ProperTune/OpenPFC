@@ -525,3 +525,83 @@ TEST_CASE("TungstenETDSession 32^3/10-step sine IC CPU checksum",
   REQUIRE_THAT(sum, WithinRel(-13107.200000000043, 1e-10));
   REQUIRE_THAT(sumsq_v, WithinRel(5406.3450894885682, 1e-10));
 }
+
+TEST_CASE("Tungsten seed_grid IC writes crystalline seeds",
+          "[tungsten][etd][seed_grid]") {
+  auto domain = pfc::domain::create(pfc::GridSize({16, 16, 16}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  const auto box = pfc::Box3i::from_bounds({0, 0, 0}, {15, 15, 15});
+  std::vector<double> data(16 * 16 * 16, 0.0);
+  tungsten::fill_seed_grid(domain, box, data.data(), 2, 2, 4.0, 3.0, 0.2, -0.047);
+  double span = 0.0;
+  for (double x : data) {
+    span = std::max(span, std::abs(x));
+  }
+  REQUIRE(span > 1e-6);
+}
+
+TEST_CASE("TungstenETDSession runs with moving BC JSON",
+          "[tungsten][etd][moving_bc]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  REQUIRE(nproc == 1);
+  json settings = golden_settings(8, 0.02, 0.01);
+  settings["boundary_conditions"] = json::array({{{"target", "psi"},
+                                                  {"type", "moving"},
+                                                  {"rho_low", -0.464},
+                                                  {"rho_high", -0.10},
+                                                  {"width", 2.0},
+                                                  {"alpha", 1.0},
+                                                  {"disp", 1.0},
+                                                  {"xpos", 4.0}}});
+  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  session.run();
+  REQUIRE(session.psi().vec().size() == 512);
+}
+
+TEST_CASE("TungstenETDSession writes profiling JSON", "[tungsten][etd][profiling]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  REQUIRE(nproc == 1);
+  json settings = golden_settings(8, 0.02, 0.01);
+  const auto dir =
+      std::filesystem::temp_directory_path() /
+      ("tungsten_etd_prof_" + std::to_string(static_cast<long>(::getpid())));
+  std::filesystem::create_directories(dir);
+  const auto stem = (dir / "profile").string();
+  settings["profiling"] = {{"enabled", true},
+                           {"format", "json"},
+                           {"output", stem},
+                           {"print_report", false}};
+  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  session.run();
+  REQUIRE(std::filesystem::exists(stem + ".json"));
+  std::error_code ec;
+  std::filesystem::remove_all(dir, ec);
+}
+
+TEST_CASE("TungstenETDWriters infers vtk from .vti path", "[tungsten][etd][vtk]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  REQUIRE(nproc == 1);
+  json settings = golden_settings(8, 0.01, 0.01);
+  const auto dir =
+      std::filesystem::temp_directory_path() /
+      ("tungsten_etd_vtk_" + std::to_string(static_cast<long>(::getpid())));
+  std::filesystem::create_directories(dir);
+  settings["fields"] =
+      json::array({{{"name", "psi"}, {"data", (dir / "psi_%04d.vti").string()}}});
+  tungsten::TungstenETDSession session(settings, 0, 1, MPI_COMM_WORLD);
+  session.run();
+  REQUIRE(session.dumps() >= 1);
+  bool found = false;
+  for (const auto &entry : std::filesystem::directory_iterator(dir)) {
+    if (entry.path().extension() == ".vti") {
+      found = true;
+    }
+  }
+  REQUIRE(found);
+  std::error_code ec;
+  std::filesystem::remove_all(dir, ec);
+}

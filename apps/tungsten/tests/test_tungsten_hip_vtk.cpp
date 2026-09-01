@@ -3,23 +3,23 @@
 
 /**
  * @file test_tungsten_hip_vtk.cpp
- * @brief Test Tungsten HIP model with initial/boundary conditions and VTK output
+ * @brief Drive TungstenETDHIPSession with VTK output (catalog `vtk`).
  */
 
-#if !defined(OpenPFC_ENABLE_HIP)
-#error "This test requires HIP support. Enable with -DOpenPFC_ENABLE_HIP=ON"
+#if !defined(OpenPFC_ENABLE_HIP_SPECTRAL)
+#error "This test requires HIP spectral support"
 #endif
 
-#include <nlohmann/json.hpp>
-#include <tungsten/common/run_tungsten_gpu_vtk.hpp>
-#include <tungsten/hip/tungsten_model.hpp>
+#include <tungsten/common/tungsten_app_main.hpp>
+#include <tungsten/tungsten_etd_gpu_session.hpp>
 
 int main(int argc, char *argv[]) {
-  return tungsten::run_tungsten_gpu_vtk_main<TungstenHIP<double>>(
-      argc, argv, "tungsten_single_seed_256_hip.json",
-      "Tungsten HIP Test with VTK Output",
-      [](const nlohmann::json &j) {
-        return pfc::ui::hip_spectral_plan_options_from_json(j);
-      },
-      [](TungstenHIP<double> &m) -> decltype(auto) { return m.get_hip_fft(); });
+  if (argc <= 1) {
+    char default_config[] = "tungsten_single_seed_256_hip.json";
+    char *fallback[] = {argv[0], default_config};
+    return tungsten::run_tungsten_etd_main<tungsten::TungstenETDHIPSession>(
+        2, fallback, "tungsten_hip_vtk");
+  }
+  return tungsten::run_tungsten_etd_main<tungsten::TungstenETDHIPSession>(
+      argc, argv, "tungsten_hip_vtk");
 }

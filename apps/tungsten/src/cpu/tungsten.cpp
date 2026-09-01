@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include <tungsten/common/tungsten_app_main.hpp>
-#include <tungsten/cpu/tungsten.hpp>
+#include <tungsten/tungsten_etd_session.hpp>
 
 int main(int argc, char *argv[]) {
-  return tungsten::run_tungsten_app_main<Tungsten>(argc, argv);
+  return tungsten::run_tungsten_etd_main<tungsten::TungstenETDSession>(argc, argv,
+                                                                       "tungsten");
 }

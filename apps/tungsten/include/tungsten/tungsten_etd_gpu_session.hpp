@@ -7,8 +7,8 @@
  * @file tungsten_etd_gpu_session.hpp
  * @brief JSON-driven GPU session: GPUSpectralStack + mean-field ETD.
  *
- * ICs and fixed BCs run on the host mirror; FFT and ETD combine are device.
- * Lives beside Gen-1 `tungsten_cuda` / `tungsten_hip`.
+ * ICs and BCs run on the host mirror; FFT and ETD combine are device.
+ * Optional JSON `profiling` uses the same `wall_step` exporter as Gen-1 `App`.
  */
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL) || defined(OpenPFC_ENABLE_HIP_SPECTRAL)
@@ -23,12 +23,14 @@
 #include <nlohmann/json.hpp>
 
 #include <openpfc/frontend/ui/from_json.hpp>
+#include <openpfc/kernel/fft/fft_interface.hpp>
 #include <openpfc/kernel/simulation/simulation_driver.hpp>
 #include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/time.hpp>
 #include <openpfc/runtime/gpu/session_gpu_stack_factory.hpp>
 #include <openpfc/runtime/gpu/spectral_mean_field_etd_gpu.hpp>
 #include <tungsten/tungsten_etd_io.hpp>
+#include <tungsten/tungsten_etd_profile.hpp>
 #include <tungsten/tungsten_field_modifiers.hpp>
 #include <tungsten/tungsten_physics.hpp>
 
@@ -53,7 +55,8 @@ public:
               sel, settings.contains("backend"));
           return pfc::sim::make_gpu_spectral_stack<MemorySpace>(sel, m_domain, rank,
                                                                 nproc, comm);
-        }()) {
+        }()),
+        m_profile(settings, rank, comm) {
     Physics phys;
     phys.domain = m_domain;
     phys.box = m_stack.fft().get_inbox_bounds();
@@ -66,6 +69,7 @@ public:
       apply_ics_from_json(settings, psi.domain(), psi.box(), d, n);
     });
     m_bc = parse_fixed_bc(settings);
+    m_moving = parse_moving_bc(settings, comm);
     m_writers.configure(settings, m_domain, m_stack.fft().get_inbox_bounds(), comm,
                         rank);
     m_sys = std::make_unique<System>(std::move(phys), m_stack.fft(), m_state,
@@ -74,26 +78,38 @@ public:
 
   void run() {
     pfc::sim::SimulationDriver driver(m_time, &m_state);
-    driver.run([&](double t) { m_sys->step(t); },
-               [&](pfc::Time &) { apply_fixed_bc(); },
-               [&](pfc::Time &) { apply_fixed_bc(); },
-               [&](const pfc::Time &) { write_psi(); });
+    driver.run(
+        [&](double t) {
+          m_profile.timed_step(pfc::time::increment(m_time), m_stack.fft(),
+                               [&] { m_sys->step(t); });
+        },
+        [&](pfc::Time &) { apply_bcs(); }, [&](pfc::Time &) { apply_bcs(); },
+        [&](const pfc::Time &) { write_psi(); });
+    m_profile.finalize();
   }
+
+  void step_physics() { m_sys->step(pfc::time::current(m_time)); }
 
   [[nodiscard]] pfc::data::Field<double, MemorySpace> &psi() {
     return m_state.get_field<double, MemorySpace>("psi");
   }
   [[nodiscard]] const pfc::Time &time() const noexcept { return m_time; }
+  [[nodiscard]] pfc::fft::IFFTQueries &fft() noexcept { return m_stack.fft(); }
   [[nodiscard]] int dumps() const noexcept { return m_writers.dumps(); }
 
 private:
-  void apply_fixed_bc() {
-    if (!m_bc) {
+  void apply_bcs() {
+    if (!m_bc && !m_moving) {
       return;
     }
     auto &psi = m_state.get_field<double, MemorySpace>("psi");
     psi.with_host_view([&](double *d, std::size_t) {
-      tungsten::apply_fixed_bc(psi.domain(), psi.box(), d, *m_bc);
+      if (m_bc) {
+        tungsten::apply_fixed_bc(psi.domain(), psi.box(), d, *m_bc);
+      }
+      if (m_moving) {
+        tungsten::apply_moving_bc(psi.domain(), psi.box(), d, *m_moving);
+      }
     });
   }
 
@@ -112,7 +128,9 @@ private:
   pfc::sim::stacks::GPUSpectralStack<MemorySpace> m_stack;
   pfc::SimulationState m_state;
   std::optional<FixedBc> m_bc{};
+  std::optional<MovingBc> m_moving{};
   TungstenETDWriters m_writers{};
+  EtdProfileEnv m_profile;
   std::unique_ptr<System> m_sys;
 };
 

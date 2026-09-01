@@ -43,6 +43,7 @@ source compatibility is explicitly not a goal.
 - CPU-only checksum goldens for the CPU-vs-GPU parity configs: CTest `tungsten-cpu-golden`, `allen-cahn-cpu-golden`, `wave2d-cpu-golden` (1e-10 relative). Capture on tohtori `g0005` is in `tests/baselines/BASELINES.md`.
 - Named CTest `session-matrix` (CPU JSON session) and `session-matrix-cuda` (GPU spectral stack JSON, same `method`/`backend` keys). HIP twin `session-matrix-hip` is wired for amdgpu/LUMI.
 - CTest `tungsten-etd-cpu-golden` and `tungsten-etd-cpu-vs-cuda`: 0.2 `TungstenETDSession` vs `TungstenETDCUDASession` on the Gen-1 CPU-vs-CUDA 32³/10-step sine IC, max abs ≤1e-10. CPU checksum matches Gen-1 `tungsten-cpu-golden` on g0005.
+- Production `tungsten` / `tungsten_cuda` / `tungsten_hip` binaries drive 0.2 ETD sessions (same JSON/TOML CLI). `TungstenETDSession` accepts `seed_grid` IC, moving BC, VTK via `.vti`/`.vtk` paths, and JSON `profiling` (`wall_step` compatible with Gen-1). `tungsten_scalability` uses the same sessions (double only). Gen-1 `Tungsten` / `TungstenCUDA` sources remain for A/B tests until deletion.
 - Gen-1 aluminum `prepare_operators` uses `for_each_kpoint`. SeedGridFCC/SlabFCC use `std::numbers::pi`.
 - Example `03_parallel_fft` uses `std::numbers::pi` instead of `atan(1.0)`.
 - `JsonWiringSession` constructor parameters no longer shadow the catalog members (`-Wshadow`).

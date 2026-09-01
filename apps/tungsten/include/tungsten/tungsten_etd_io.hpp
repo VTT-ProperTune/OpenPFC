@@ -47,6 +47,11 @@ public:
       std::string writer_type = "binary";
       if (field.contains("writer") && field["writer"].is_string()) {
         writer_type = field["writer"].get<std::string>();
+      } else {
+        const auto ext = std::filesystem::path(data).extension().string();
+        if (ext == ".vti" || ext == ".vtk") {
+          writer_type = "vtk";
+        }
       }
       auto writer = catalog.create_writer(writer_type, data, m_comm, name);
       if (m_rank == 0) {

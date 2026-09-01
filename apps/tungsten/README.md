@@ -5,18 +5,18 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Tungsten PFC application
 
-Production-style tungsten phase-field crystal binary built from `pfc::ui::App<TungstenModel>` (CPU, optional CUDA/HIP). Reads JSON or TOML; model parameters are validated at startup (see root `README.md` — Configuration Validation).
+Production tungsten phase-field crystal binary: JSON/TOML → `TungstenETDSession` (CPU) or `TungstenETDGPUSession` (CUDA/HIP). Model parameters are validated at startup (see root `README.md` — Configuration Validation).
 
 ## Binaries (after `OpenPFC_BUILD_APPS=ON`)
 
 | Target | When |
 |--------|------|
-| `tungsten` | Always (CPU FFT / HeFFTe) — Gen-1 `App<Tungsten>` |
-| `tungsten_etd` | Always — M8 A/B: `TungstenPhysics` + `SpectralMeanFieldETDSystem` (same JSON; binary `psi` dumps when `fields` is set) |
-| `tungsten_etd_cuda` | CUDA spectral — GPU A/B session |
-| `tungsten_etd_hip` | HIP spectral — GPU A/B session |
-| `tungsten_cuda` | `OpenPFC_ENABLE_CUDA` (Gen-1) |
-| `tungsten_hip` | `OpenPFC_ENABLE_HIP` (Gen-1) |
+| `tungsten` | Always (CPU FFT / HeFFTe) — 0.2 `TungstenETDSession` |
+| `tungsten_etd` | Always — alias of `tungsten` |
+| `tungsten_cuda` | CUDA spectral — 0.2 `TungstenETDCUDASession` |
+| `tungsten_etd_cuda` | CUDA spectral — alias of `tungsten_cuda` |
+| `tungsten_hip` | HIP spectral — 0.2 `TungstenETDHIPSession` |
+| `tungsten_etd_hip` | HIP spectral — alias of `tungsten_hip` |
 | `verify_gpu_aware_mpi` | HIP + MPI device-buffer check |
 
 Install path when using `cmake --install`: `<prefix>/bin/`.
@@ -43,13 +43,12 @@ Use `tungsten_cuda` / `tungsten_hip` when built; pass the same config path. On L
 
 | Area | Path |
 |------|------|
-| CPU model | `include/tungsten/cpu/` |
-| CUDA / HIP | `include/tungsten/cuda/`, `include/tungsten/hip/` |
-| Shared params / validation | `include/tungsten/common/tungsten_input.hpp` |
-| Shared `main()` / GPU VTK drivers | `include/tungsten/common/tungsten_app_main.hpp`, `run_tungsten_gpu_vtk.hpp` |
+| Physics + ETD sessions | `include/tungsten/tungsten_physics.hpp`, `tungsten_etd_session.hpp`, `tungsten_etd_gpu_session.hpp` |
+| ICs / BCs / writers | `tungsten_field_modifiers.hpp`, `tungsten_etd_io.hpp` |
+| Shared `main()` | `include/tungsten/common/tungsten_app_main.hpp` |
 
 ## See also
 
-- [`docs/app_pipeline.md`](../../docs/user_guide/app_pipeline.md) — how JSON maps to `Simulator`
+- [`docs/app_pipeline.md`](../../docs/user_guide/app_pipeline.md) — JSON → session pipeline
 - [`docs/applications.md`](../../docs/user_guide/applications.md) — all shipped apps
 - [`docs/io_results.md`](../../docs/user_guide/io_results.md) — binary result writers from `fields`

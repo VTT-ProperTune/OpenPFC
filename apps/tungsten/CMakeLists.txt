@@ -31,7 +31,7 @@ tungsten_apply_options(tungsten)
 
 install(TARGETS tungsten DESTINATION bin)
 
-# M8 A/B CPU driver: SpectralMeanFieldETDSystem (Gen-1 `tungsten` stays).
+# Alias of production `tungsten` (0.2 ETD session).
 add_executable(tungsten_etd src/cpu/tungsten_etd.cpp)
 target_include_directories(tungsten_etd PRIVATE ${TUNGSTEN_INCLUDE_DIR})
 if(TARGET Heffte::Heffte)
@@ -46,10 +46,7 @@ install(TARGETS tungsten_etd DESTINATION bin)
 
 # CUDA spectral version (requires CUDA toolkit and CUDA-enabled HeFFTe)
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
-  add_executable(tungsten_cuda
-    src/cuda/tungsten.cpp
-    src/cuda/tungsten_ops_kernels.cu
-  )
+  add_executable(tungsten_cuda src/cuda/tungsten.cpp)
   target_include_directories(tungsten_cuda PRIVATE ${TUNGSTEN_INCLUDE_DIR})
 
   target_link_libraries(tungsten_cuda PRIVATE
@@ -58,13 +55,6 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
     CUDA::cudart
     openpfc_gpu_kernels
-  )
-
-  # Set CUDA properties
-  set_target_properties(tungsten_cuda PROPERTIES
-    CUDA_STANDARD 20
-    CUDA_STANDARD_REQUIRED ON
-    CUDA_SEPARABLE_COMPILATION ON
   )
 
   tungsten_apply_options(tungsten_cuda)
@@ -84,10 +74,7 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
   install(TARGETS tungsten_etd_cuda DESTINATION bin)
 
   # Test program for CUDA with VTK output
-  add_executable(test_tungsten_cuda_vtk
-    tests/test_tungsten_cuda_vtk.cpp
-    src/cuda/tungsten_ops_kernels.cu
-  )
+  add_executable(test_tungsten_cuda_vtk tests/test_tungsten_cuda_vtk.cpp)
   target_include_directories(test_tungsten_cuda_vtk PRIVATE ${TUNGSTEN_INCLUDE_DIR})
   target_link_libraries(test_tungsten_cuda_vtk PRIVATE
     OpenPFC
@@ -95,11 +82,6 @@ if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     $<IF:$<TARGET_EXISTS:Heffte::Heffte>,Heffte::Heffte,heffte>
     CUDA::cudart
     openpfc_gpu_kernels
-  )
-  set_target_properties(test_tungsten_cuda_vtk PROPERTIES
-    CUDA_STANDARD 20
-    CUDA_STANDARD_REQUIRED ON
-    CUDA_SEPARABLE_COMPILATION ON
   )
   message(STATUS "Tungsten CUDA VTK test program enabled")
 endif()
@@ -123,10 +105,7 @@ endif()
 
 # HIP spectral Tungsten (requires ROCm-enabled HeFFTe — same rule as CUDA spectral).
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
-  add_executable(tungsten_hip
-    src/hip/tungsten.cpp
-    src/hip/tungsten_ops_kernels.hip
-  )
+  add_executable(tungsten_hip src/hip/tungsten.cpp)
   target_include_directories(tungsten_hip PRIVATE ${TUNGSTEN_INCLUDE_DIR})
 
   target_link_libraries(tungsten_hip PRIVATE
@@ -163,10 +142,7 @@ if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
   install(TARGETS tungsten_etd_hip DESTINATION bin)
   message(STATUS "tungsten_etd_hip enabled")
 
-  add_executable(test_tungsten_hip_vtk
-    tests/test_tungsten_hip_vtk.cpp
-    src/hip/tungsten_ops_kernels.hip
-  )
+  add_executable(test_tungsten_hip_vtk tests/test_tungsten_hip_vtk.cpp)
   target_include_directories(test_tungsten_hip_vtk PRIVATE ${TUNGSTEN_INCLUDE_DIR})
   target_link_libraries(test_tungsten_hip_vtk PRIVATE
     OpenPFC
@@ -319,25 +295,12 @@ target_link_libraries(tungsten_scalability PRIVATE
   MPI::MPI_CXX
 )
 
-# Add CUDA spectral support to scalability app if available
 if(OpenPFC_ENABLE_CUDA_SPECTRAL)
     target_link_libraries(tungsten_scalability PRIVATE CUDA::cudart openpfc_gpu_kernels)
-    target_sources(tungsten_scalability PRIVATE
-        src/cuda/tungsten_ops_kernels.cu
-    )
-    set_target_properties(tungsten_scalability PROPERTIES
-        CUDA_STANDARD 20
-        CUDA_STANDARD_REQUIRED ON
-        CUDA_SEPARABLE_COMPILATION ON
-    )
 endif()
 
-# Add HIP spectral support to scalability app if ROCm HeFFTe is available
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE AND OpenPFC_ENABLE_HIP_SPECTRAL)
     target_link_libraries(tungsten_scalability PRIVATE hip::host openpfc_hip_kernels)
-    target_sources(tungsten_scalability PRIVATE
-        src/hip/tungsten_ops_kernels.hip
-    )
     set_target_properties(tungsten_scalability PROPERTIES
         HIP_STANDARD 20
         HIP_STANDARD_REQUIRED ON
