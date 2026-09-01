@@ -33,12 +33,10 @@ struct JsonWiringSession {
   FieldModifierCatalog modifier_catalog;
   ResultsWriterCatalog writer_catalog;
 
-  JsonWiringSession(JsonWiringContext context,
-                    FieldModifierCatalog modifier_catalog,
-                    ResultsWriterCatalog writer_catalog)
-      : ctx(std::move(context)),
-        modifier_catalog(std::move(modifier_catalog)),
-        writer_catalog(std::move(writer_catalog)) {}
+  JsonWiringSession(JsonWiringContext context, FieldModifierCatalog modifiers,
+                    ResultsWriterCatalog writers)
+      : ctx(std::move(context)), modifier_catalog(std::move(modifiers)),
+        writer_catalog(std::move(writers)) {}
 };
 
 /**
@@ -50,8 +48,7 @@ make_json_wiring_session(MPI_Comm comm, int mpi_rank, bool rank0,
                          FieldModifierCatalog modifier_catalog,
                          ResultsWriterCatalog writer_catalog) {
   return JsonWiringSession{JsonWiringContext{comm, mpi_rank, rank0},
-                           std::move(modifier_catalog),
-                           std::move(writer_catalog)};
+                           std::move(modifier_catalog), std::move(writer_catalog)};
 }
 
 } // namespace pfc::ui
