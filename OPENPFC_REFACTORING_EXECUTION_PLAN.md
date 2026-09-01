@@ -711,19 +711,19 @@ M10 (driver + services structure).
 
 ### Required tests
 
-* [x] **Restart-equivalence test** (framework `SimulationState`+`Time`): N+M ≡ N, checkpoint, restart, M — field-bitwise 1-rank and 2-rank (`[checkpoint][service]` / `[MPI]`). App-level tungsten (spectral/ETD) and heat3d (FD) golden restart still open.
+* [x] **Restart-equivalence test** (framework `SimulationState`+`Time`): N+M ≡ N, checkpoint, restart, M — field-bitwise 1-rank and 2-rank (`[checkpoint][service]` / `[MPI]`). App-level: heat3d FD Euler (`[heat3d][checkpoint][restart]`) and tungsten ETD (`[tungsten][checkpoint][restart]`).
 * [x] Crash-consistency test: interrupted publication leaves no partial bundle visible (stage-dir inspection).
 * [x] Identity-mismatch negative tests: wrong grid, wrong method, wrong schema version each hard-error with a diagnostic naming the mismatch.
 * [x] Coupling example + Catch2: imposed-source result matches FieldModifier-shaped `apply` bitwise (1-rank `[coupling][unit]`, 2-rank `[coupling][MPI]`).
 
 ### Deletions
 
-* [ ] App-local checkpoint wrappers (`apps/heat3d/include/heat3d/state_capture.hpp`, `apps/wave2d/include/wave2d/state_capture.hpp`) superseded by `CheckpointService`. Still used by app tests — leave until those apps migrate.
+* [x] App-local checkpoint wrappers (`apps/heat3d/include/heat3d/state_capture.hpp`, `apps/wave2d/include/wave2d/state_capture.hpp`) superseded by `CheckpointService`.
 * [ ] The manual three-key restart ritual documentation (replaced by `restart_from`); `simulator.result_counter`/`increment` JSON keys retired or subsumed. Documented as Gen-1 overlay; 0.2 path is `restart_from`.
 
 ### Definition of done
 
-* [x] Restart-equivalence tests green at `SimulationState`+`Time` (bitwise 1-rank, 2-rank MPI). Tungsten/heat3d app goldens still open.
+* [x] Restart-equivalence tests green at `SimulationState`+`Time` (bitwise 1-rank, 2-rank MPI) plus heat3d FD and tungsten ETD app tests.
 * [x] A checkpoint written by an M11 build is loadable by the same build via `restart_from`; interrupted writes never corrupt.
 * [x] The coupling example exists, is CI-tested (`[coupling][MPI]`), and its contract is documented.
 * [ ] Full suite + golden trajectories green (app-level restart goldens + heat3d/wave2d `state_capture` deletion).

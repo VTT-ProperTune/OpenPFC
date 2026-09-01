@@ -56,6 +56,16 @@ void SimulationState::add_field(const std::string &name,
 }
 
 template <typename T, typename MemorySpace>
+bool SimulationState::has_typed_field(const std::string &name) const noexcept {
+  const auto nit = m_name_to_id.find(name);
+  if (nit == m_name_to_id.end()) {
+    return false;
+  }
+  const auto *s = find_store<T, MemorySpace>();
+  return s != nullptr && s->by_id.count(nit->second) != 0;
+}
+
+template <typename T, typename MemorySpace>
 pfc::data::Field<T, MemorySpace> &
 SimulationState::get_field(const std::string &name) {
   const auto nit = m_name_to_id.find(name);

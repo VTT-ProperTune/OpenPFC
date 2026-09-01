@@ -22,8 +22,10 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <mpi.h>
+#include <system_error>
 #include <vector>
 
 #include <openpfc/kernel/data/domain.hpp>
@@ -34,14 +36,16 @@
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/simulation/checkpoint_service.hpp>
+#include <openpfc/kernel/simulation/simulation_state.hpp>
 #include <openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp>
 #include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/kernel/simulation/steppers/rk2_heun.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 #include <heat3d/cli.hpp>
 #include <heat3d/heat_model.hpp>
 #include <heat3d/reporting.hpp>
-#include <heat3d/state_capture.hpp>
 
 using Catch::Matchers::WithinAbs;
 using heat3d::HeatModel;
@@ -968,37 +972,97 @@ TEST_CASE("test_rk2_heun_stepper_basic", "[heat3d]") {
 }
 
 // -----------------------------------------------------------------------------
-// Checkpoint state capture adapters.
+// CheckpointService restart (M11).
 // -----------------------------------------------------------------------------
 
-TEST_CASE("heat3d state_capture round-trip", "[heat3d][state_capture]") {
-  const pfc::types::Int3 extents{3, 2, 1};
-  const std::size_t n = 6;
-  std::vector<double> u(n);
-  for (std::size_t i = 0; i < n; ++i) {
-    u[i] = 0.5 * static_cast<double>(i + 1);
+namespace {
+
+void copy_owned(const pfc::data::Field<double> &src, pfc::data::Field<double> &dst) {
+  const auto sz = src.local_size();
+  REQUIRE(sz == dst.local_size());
+  for (int k = 0; k < sz[2]; ++k) {
+    for (int j = 0; j < sz[1]; ++j) {
+      for (int i = 0; i < sz[0]; ++i) {
+        dst(i, j, k) = src(i, j, k);
+      }
+    }
   }
-
-  const auto payload = heat3d::capture_u(u, extents);
-  REQUIRE(payload.field_id == heat3d::kTemperatureFieldId);
-
-  std::vector<double> dest(n, -1.0);
-  const auto outcome = heat3d::restore_u(payload, dest, extents);
-  REQUIRE(outcome.ok);
-  REQUIRE(dest == u);
 }
 
-TEST_CASE("heat3d state_capture reject", "[heat3d][state_capture]") {
-  const pfc::types::Int3 extents{2, 2, 1};
-  std::vector<double> u = {1.0, 2.0, 3.0, 4.0};
-  auto payload = heat3d::capture_u(u, extents);
-  payload.field_id = "wrong.id";
+void heat_euler_steps(pfc::sim::stacks::FDCPUStack &stack, HeatModel &model,
+                      int n_steps, double dt) {
+  auto grad = pfc::field::create<heat3d::HeatGrads>(stack.u(), 2);
+  auto stepper = pfc::sim::steppers::create(stack.u(), grad, model, dt);
+  for (int step = 0; step < n_steps; ++step) {
+    stack.exchange_halos();
+    (void)stepper.step(static_cast<double>(step) * dt, stack.u().vec());
+  }
+}
 
-  std::vector<double> dest(4, 42.0);
-  const auto outcome = heat3d::restore_u(payload, dest, extents);
-  REQUIRE_FALSE(outcome.ok);
-  REQUIRE(outcome.error == pfc::checkpoint::RestoreError::FieldIdMismatch);
-  REQUIRE(dest == std::vector<double>{42.0, 42.0, 42.0, 42.0});
+} // namespace
+
+TEST_CASE("heat3d CheckpointService N+M restart matches continuous Euler",
+          "[heat3d][checkpoint][restart]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) {
+    return;
+  }
+
+  constexpr int N = 16;
+  constexpr double dt = 1.0e-3;
+  constexpr int n_head = 3;
+  constexpr int n_tail = 2;
+  HeatModel model;
+
+  pfc::sim::stacks::FDCPUStack continuous(
+      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}), 2, 0, 1, MPI_COMM_WORLD);
+  continuous.u().apply(model.initial_condition);
+  heat_euler_steps(continuous, model, n_head + n_tail, dt);
+
+  pfc::sim::stacks::FDCPUStack head(
+      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}), 2, 0, 1, MPI_COMM_WORLD);
+  head.u().apply(model.initial_condition);
+  heat_euler_steps(head, model, n_head, dt);
+
+  pfc::Time time({0.0, 1.0, dt}, 0.0);
+  for (int i = 0; i < n_head; ++i) {
+    time.next();
+  }
+
+  const auto ckpt_root =
+      std::filesystem::temp_directory_path() / "openpfc_heat3d_ckpt";
+  std::error_code ec;
+  std::filesystem::remove_all(ckpt_root, ec);
+  std::filesystem::create_directories(ckpt_root);
+  pfc::sim::CheckpointService svc({.every = 0, .directory = ckpt_root},
+                                  MPI_COMM_WORLD);
+  pfc::SimulationState snap;
+  snap.add_field("u", head.u());
+  svc.save(snap, time);
+
+  pfc::sim::stacks::FDCPUStack tail(
+      pfc::GridSize({N, N, N}), pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+      pfc::GridSpacing({1.0, 1.0, 1.0}), 2, 0, 1, MPI_COMM_WORLD);
+  pfc::SimulationState restored;
+  restored.add_field("u", tail.u());
+  pfc::Time time2({0.0, 1.0, dt}, 0.0);
+  svc.load(restored, time2, svc.step_dir(n_head));
+  REQUIRE(time2.get_increment() == n_head);
+  copy_owned(restored.get_field<double>("u"), tail.u());
+  heat_euler_steps(tail, model, n_tail, dt);
+
+  const auto sz = continuous.u().local_size();
+  for (int k = 0; k < sz[2]; ++k) {
+    for (int j = 0; j < sz[1]; ++j) {
+      for (int i = 0; i < sz[0]; ++i) {
+        REQUIRE(continuous.u()(i, j, k) == tail.u()(i, j, k));
+      }
+    }
+  }
+  std::filesystem::remove_all(ckpt_root, ec);
 }
 
 int main(int argc, char *argv[]) {

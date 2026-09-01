@@ -121,19 +121,10 @@ pfc::communication::exchange(halo_u);
 
 ### Field checkpointing
 
-Fields support checkpointing via the `state_capture.hpp` utilities:
-
-```cpp
-#include <wave2d/state_capture.hpp>
-
-// Capture field state (halos excluded)
-auto state = wave2d::capture_uv(u, v, std::nullopt);
-
-// Restore field state (validates before mutating)
-auto outcome = wave2d::restore_uv(state, u, v, std::nullopt);
-```
-
-See `apps/wave2d/include/wave2d/state_capture.hpp` for full checkpointing API with validation and metadata support.
+Filesystem restart uses `pfc::sim::CheckpointService` (`checkpoint.every` /
+`checkpoint.directory` / `restart_from`). Owned `u` and `v` cells are
+published as MPI-IO bricks plus `metadata.json`; halos are recomputed
+after load. See [`docs/development/checkpoint_publish.md`](../../docs/development/checkpoint_publish.md).
 
 ## Tests
 

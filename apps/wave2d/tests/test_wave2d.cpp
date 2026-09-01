@@ -8,10 +8,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <mpi.h>
 #include <stdexcept>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 #include <openpfc/kernel/data/box3i.hpp>
@@ -23,9 +25,11 @@
 #include <openpfc/kernel/decomposition/stage_preparation.hpp>
 #include <openpfc/kernel/field/brick_iteration.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
+#include <openpfc/kernel/simulation/checkpoint_service.hpp>
+#include <openpfc/kernel/simulation/simulation_state.hpp>
+#include <openpfc/kernel/simulation/time.hpp>
 
 #include <wave2d/cli.hpp>
-#include <wave2d/state_capture.hpp>
 #include <wave2d/wave_boundary.hpp>
 #include <wave2d/wave_model.hpp>
 #include <wave2d/wave_step_separated.hpp>
@@ -319,37 +323,61 @@ TEST_CASE("fill_y_physical_ghosts_padded throws on insufficient local extent",
   }
 }
 
-TEST_CASE("wave2d state_capture u/v round-trip", "[wave2d][state_capture]") {
-  const pfc::types::Int3 extents{2, 2, 1};
-  const std::size_t n = 4;
-  std::vector<double> u = {1.0, 2.0, 3.0, 4.0};
-  std::vector<double> v = {10.0, 20.0, 30.0, 40.0};
+TEST_CASE("wave2d CheckpointService saves and restores u and v",
+          "[wave2d][checkpoint]") {
+  int nproc = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (nproc != 1) {
+    return;
+  }
 
-  const auto state = wave2d::capture_uv(u, v, extents);
-  REQUIRE(state.fields.size() == 2);
+  auto domain = pfc::domain::create(pfc::GridSize({4, 4, 1}),
+                                    pfc::PhysicalOrigin({0.0, 0.0, 0.0}),
+                                    pfc::GridSpacing({1.0, 1.0, 1.0}));
+  auto decomp = pfc::decomposition::create(domain, 1);
+  auto u = pfc::data::field_from_subdomain<double>(decomp, 0, 0);
+  auto v = pfc::data::field_from_subdomain<double>(decomp, 0, 0);
+  u.apply([](double x, double y, double) { return x + 0.1 * y; });
+  v.apply([](double x, double y, double) { return 2.0 * x - y; });
 
-  std::vector<double> u_dest(n, -1.0);
-  std::vector<double> v_dest(n, -2.0);
-  const auto outcome = wave2d::restore_uv(state, u_dest, v_dest, extents);
-  REQUIRE(outcome.ok);
-  REQUIRE(u_dest == u);
-  REQUIRE(v_dest == v);
-}
+  pfc::SimulationState state;
+  state.add_field("u", std::move(u));
+  state.add_field("v", std::move(v));
+  pfc::Time time({0.0, 1.0, 0.1}, 0.0);
+  time.next();
 
-TEST_CASE("wave2d state_capture reject", "[wave2d][state_capture]") {
-  const pfc::types::Int3 extents{2, 2, 1};
-  std::vector<double> u = {1.0, 2.0, 3.0, 4.0};
-  std::vector<double> v = {5.0, 6.0, 7.0, 8.0};
-  auto state = wave2d::capture_uv(u, v, extents);
-  // Corrupt velocity payload shape while leaving displacement intact.
-  state.fields[1].extents = pfc::types::Int3{3, 2, 1};
+  const auto ckpt_root =
+      std::filesystem::temp_directory_path() / "openpfc_wave2d_ckpt";
+  std::error_code ec;
+  std::filesystem::remove_all(ckpt_root, ec);
+  std::filesystem::create_directories(ckpt_root);
+  pfc::sim::CheckpointService svc({.every = 0, .directory = ckpt_root},
+                                  MPI_COMM_WORLD);
+  svc.save(state, time);
 
-  std::vector<double> u_dest(4, 42.0);
-  std::vector<double> v_dest(4, 43.0);
-  const auto outcome = wave2d::restore_uv(state, u_dest, v_dest, extents);
-  REQUIRE_FALSE(outcome.ok);
-  REQUIRE(u_dest == std::vector<double>{42.0, 42.0, 42.0, 42.0});
-  REQUIRE(v_dest == std::vector<double>{43.0, 43.0, 43.0, 43.0});
+  auto u2 = pfc::data::field_from_subdomain<double>(decomp, 0, 0);
+  auto v2 = pfc::data::field_from_subdomain<double>(decomp, 0, 0);
+  pfc::SimulationState restored;
+  restored.add_field("u", std::move(u2));
+  restored.add_field("v", std::move(v2));
+  pfc::Time time2({0.0, 1.0, 0.1}, 0.0);
+  svc.load(restored, time2, svc.step_dir(1));
+  REQUIRE(time2.get_increment() == 1);
+
+  const auto &a = state.get_field<double>("u");
+  const auto &b = restored.get_field<double>("u");
+  const auto &va = state.get_field<double>("v");
+  const auto &vb = restored.get_field<double>("v");
+  const auto sz = a.local_size();
+  for (int k = 0; k < sz[2]; ++k) {
+    for (int j = 0; j < sz[1]; ++j) {
+      for (int i = 0; i < sz[0]; ++i) {
+        REQUIRE(a(i, j, k) == b(i, j, k));
+        REQUIRE(va(i, j, k) == vb(i, j, k));
+      }
+    }
+  }
+  std::filesystem::remove_all(ckpt_root, ec);
 }
 
 int main(int argc, char *argv[]) {

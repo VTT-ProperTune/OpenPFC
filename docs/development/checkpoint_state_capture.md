@@ -59,15 +59,12 @@ destination write:
 On any failure the destination buffer is left unchanged. Multi-field adapters
 (Wave2D `restore_uv`) validate every field fully before mutating any buffer.
 
-## App adapters
+## Filesystem restart
 
-| App | Header | API |
-|-----|--------|-----|
-| Heat3D (scalar) | `apps/heat3d/include/heat3d/state_capture.hpp` | `capture_u` / `restore_u` (`heat3d.u`); `PaddedBrick` overloads pack **owned** cells only |
-| Wave2D (coupled) | `apps/wave2d/include/wave2d/state_capture.hpp` | `capture_uv` / `restore_uv` (`wave2d.u`, `wave2d.v`) |
-
-Physics model headers (`heat_model.hpp`, `wave_model.hpp`) stay free of OpenPFC
-includes; adapters live beside them.
+App-local in-memory adapters are gone. Heat3D, Wave2D, and Tungsten ETD
+sessions use `pfc::sim::CheckpointService` (`restart_from` / `checkpoint.directory`)
+to publish and load owned fields. Kernel `capture_field` / `restore_field`
+remain the validate-before-mutate payload helpers for in-memory tests.
 
 ## Exclusions
 
@@ -84,8 +81,9 @@ manager orchestration — those belong to sibling checkpoint-manager leaves.
 ## Tests
 
 - Kernel: `tests/unit/kernel/checkpoint/test_state_capture.cpp` (`[checkpoint][state_capture]`)
-- Heat3D: `apps/heat3d/tests/test_heat3d.cpp` (`[heat3d][state_capture]`)
-- Wave2D: `apps/wave2d/tests/test_wave2d.cpp` (`[wave2d][state_capture]`)
+- Heat3D: `apps/heat3d/tests/test_heat3d.cpp` (`[heat3d][checkpoint][restart]`)
+- Wave2D: `apps/wave2d/tests/test_wave2d.cpp` (`[wave2d][checkpoint]`)
+- Tungsten: `apps/tungsten/tests/test_tungsten_physics.cpp` (`[tungsten][checkpoint][restart]`)
 
 ## See also
 

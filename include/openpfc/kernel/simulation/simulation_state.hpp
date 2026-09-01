@@ -127,6 +127,10 @@ public:
     return m_name_to_id.count(name) != 0;
   }
 
+  /// True if @p name is a field of `(T, MemorySpace)`.
+  template <typename T, typename MemorySpace = pfc::HostSpace>
+  [[nodiscard]] bool has_typed_field(const std::string &name) const noexcept;
+
   /// Number of fields currently owned.
   std::size_t num_fields() const noexcept { return m_name_to_id.size(); }
 

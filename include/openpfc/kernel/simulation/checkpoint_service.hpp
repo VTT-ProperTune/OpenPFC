@@ -152,7 +152,12 @@ public:
     if (m_cfg.directory.empty()) {
       throw std::invalid_argument("CheckpointService::save: directory is empty");
     }
-    const auto names = state.field_names();
+    std::vector<std::string> names;
+    for (const auto &name : state.field_names()) {
+      if (state.has_typed_field<double>(name)) {
+        names.push_back(name);
+      }
+    }
     if (names.empty()) {
       throw std::invalid_argument("CheckpointService::save: no fields");
     }
@@ -282,7 +287,14 @@ public:
                                  "MPI_Bcast metadata");
     const auto meta = checkpoint::from_json(nlohmann::json::parse(buf));
 
-    const auto names = meta.fields.empty() ? state.field_names() : meta.fields;
+    std::vector<std::string> names = meta.fields;
+    if (names.empty()) {
+      for (const auto &name : state.field_names()) {
+        if (state.has_typed_field<double>(name)) {
+          names.push_back(name);
+        }
+      }
+    }
     if (names.empty()) {
       throw std::invalid_argument("checkpoint load: no field names");
     }

@@ -21,8 +21,8 @@ by `ResultsWriter` / frontend `BinaryWriter`
 (see [`binary_field_io_spec.md`](../reference/binary_field_io_spec.md)).
 
 In-memory `state_capture` restore is a payload-buffer copy, not filesystem
-restart. App-local `heat3d`/`wave2d` `state_capture` helpers remain until those
-apps migrate onto `CheckpointService`.
+restart. Heat3D, Wave2D, and Tungsten ETD use `CheckpointService` for
+filesystem restart.
 
 ## API symbols
 
@@ -67,9 +67,11 @@ schema version.
 }
 ```
 
-`restart_from` restores owned fields, `Time` accepted increment/time, result
-counter, and integrator method identity. Grid or method mismatch is a hard
-error that names the field. Halos are not stored; exchange them after load.
+`restart_from` restores owned **host `float64`** fields, `Time` accepted
+increment/time, result counter, and integrator method identity. Complex
+workspace hats (e.g. tungsten `N_hat`) are omitted and recomputed on the
+next step. Grid or method mismatch is a hard error that names the field.
+Halos are not stored; exchange them after load.
 
 ## Atomicity protocol
 

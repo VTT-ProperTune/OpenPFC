@@ -33,7 +33,7 @@ within a stated numeric tolerance, per backend).
 | Tungsten 0.2 vs Gen-1 trajectory (`test_tungsten` `[golden]`) | tolerance | ≤1e-10 local; Σψ² 1e-12 relative | CI 1-rank 8³/100 steps; MPI 4-rank 16³/20 steps (`tungsten-golden-4rank`). Pre-M0 field dump was never captured — this is the living A/B golden. |
 | ☐ aluminumNew multi-rank golden trajectory | tolerance | TBD | tohtori/CPU (MPI) |
 | ☐ CPU-side goldens for each CPU-vs-GPU parity test | tolerance | 1e-10 | CI (CPU) |
-| ☐ Restart-equivalence (lands in M11 when a loader exists) | bitwise (1 rank) / tolerance (N rank) | — | — |
+| Restart-equivalence (`CheckpointService`) | bitwise (1 rank) | exact owned cells | CI: kernel `[checkpoint][service]`; heat3d FD Euler; tungsten ETD JSON session. 2-rank kernel `[checkpoint][MPI]`. |
 
 ## Performance baselines (☐ — capture on the reference machines)
 

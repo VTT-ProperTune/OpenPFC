@@ -81,7 +81,12 @@ public:
   [[nodiscard]] const pfc::data::Field<double> &psi() const {
     return m_state.get_field<double>("psi");
   }
+  [[nodiscard]] pfc::Time &time() noexcept { return m_time; }
   [[nodiscard]] const pfc::Time &time() const noexcept { return m_time; }
+  [[nodiscard]] pfc::SimulationState &state() noexcept { return m_state; }
+  [[nodiscard]] const pfc::SimulationState &state() const noexcept {
+    return m_state;
+  }
   [[nodiscard]] pfc::sim::stacks::SpectralCPUStack &stack() noexcept {
     return m_stack;
   }
