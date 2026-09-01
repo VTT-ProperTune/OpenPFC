@@ -10,6 +10,7 @@
 #include <openpfc/kernel/utils/logging.hpp>
 
 #include <nlohmann/json.hpp>
+#include <string>
 
 #include <fixtures/mock_model.hpp>
 
@@ -64,7 +65,9 @@ TEST_CASE("test_app_integrator_loop_with_valid_logger", "[ui][unit]") {
   settings["plan_options"]["heffte_options"] = nlohmann::json{};
 
   // Create a session with MockModel and actually call the function
-  SpectralSimulationSession<MockModel> session(settings, MPI_COMM_WORLD, rank_id, num_ranks);
+  SpectralSimulationSession<MockModel> session(settings, MPI_COMM_WORLD, rank_id,
+                                               num_ranks);
+  REQUIRE(std::string(session.session().stack_name()) == "SpectralCPUStack");
 
   // Capture std::clog to verify logging occurs
   StreamRedirect redirect(std::clog);
@@ -120,7 +123,8 @@ TEST_CASE("test_app_integrator_loop_with_null_logger", "[ui][unit]") {
   settings["plan_options"]["heffte_options"] = nlohmann::json{};
 
   // Create a session with MockModel
-  SpectralSimulationSession<MockModel> session(settings, MPI_COMM_WORLD, rank_id, num_ranks);
+  SpectralSimulationSession<MockModel> session(settings, MPI_COMM_WORLD, rank_id,
+                                               num_ranks);
 
   // Capture std::clog to verify silent execution
   StreamRedirect redirect(std::clog);

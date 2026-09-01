@@ -15,22 +15,29 @@
  *
  * **Avoid a second dummy CPU FFT:** GPU models still take `pfc::FFT&` from the
  * base `Model` constructor. Reuse the single `fft::CPUFFT` owned by
- * `SpectralCPUStack` / `SpectralSimulationSession::fft()` for that reference, and
- * build cuFFT / ROCm HeFFTe (`cuda_spectral_plan_options_from_json`, etc.) only
- * for the device path—do not construct another throwaway `CPUFFT` in app code
- * solely to satisfy the `Model` wiring.
+ * `pfc::sim::stacks::SpectralCPUStack` / `SpectralSimulationSession::fft()` for
+ * that reference, and build cuFFT / ROCm HeFFTe
+ * (`cuda_spectral_plan_options_from_json`, etc.) only for the device path—do
+ * not construct another throwaway `CPUFFT` in app code solely to satisfy the
+ * `Model` wiring.
  *
- * @see spectral_cpu_stack_detail.hpp for the CPU `SpectralCPUStack` factory
  * @see from_json_heffte.hpp for `detail::apply_heffte_plan_options_json_overrides`
  */
 
 #ifndef PFC_UI_SPECTRAL_FFT_STACK_FACTORY_HPP
 #define PFC_UI_SPECTRAL_FFT_STACK_FACTORY_HPP
 
+#include <cctype>
 #include <heffte.h>
 #include <nlohmann/json.hpp>
+#include <stdexcept>
+#include <string>
+
+#include <mpi.h>
 
 #include <openpfc/frontend/ui/from_json_heffte.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
+#include <openpfc/kernel/fft/fft_fftw.hpp>
 
 namespace pfc::ui {
 
@@ -53,6 +60,66 @@ merged_spectral_plan_options_json(const nlohmann::json &settings) {
     plan_opts["backend"] = settings["backend"];
   }
   return plan_opts;
+}
+
+namespace detail {
+
+inline std::string lowercase_ascii(std::string s) {
+  for (char &c : s) {
+    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  }
+  return s;
+}
+
+/** Reject GPU backend on the JSON → `SpectralCPUStack` / `CPUFFT` path. */
+inline void reject_cuda_backend_for_cpu_spectral_stack(const nlohmann::json &plan) {
+  if (!plan.contains("backend") || !plan["backend"].is_string()) {
+    return;
+  }
+  const std::string b = lowercase_ascii(plan["backend"].get<std::string>());
+  if (b == "cuda") {
+    throw std::invalid_argument(
+        "SpectralCPUStack builds fft::CPUFFT (FFTW). plan_options.backend "
+        "\"cuda\" is not supported on this path. Use \"fftw\", omit backend, or "
+        "use a GPU-specific application driver.");
+  }
+}
+
+} // namespace detail
+
+/**
+ * @brief HeFFTe plan options for CPU FFTW from JSON or project defaults
+ *
+ * If `settings` contains `"plan_options"`, that object is parsed via
+ * `from_json<heffte::plan_options>`. If it does **not** specify `"backend"` but
+ * the root `settings` has `"backend"` (same convention as
+ * `from_json<fft::Backend>`), the root value is copied into the plan slice so one
+ * JSON file can drive both helpers consistently.
+ *
+ * `backend: \"cuda\"` is rejected here: this path always constructs CPU HeFFTe
+ * (`fft::create` → `CPUFFT`).
+ */
+[[nodiscard]] inline heffte::plan_options
+cpu_spectral_plan_options_from_json(const nlohmann::json &settings) {
+  const nlohmann::json plan_opts = merged_spectral_plan_options_json(settings);
+  if (plan_opts.empty()) {
+    return heffte::default_options<heffte::backend::fftw>();
+  }
+  detail::reject_cuda_backend_for_cpu_spectral_stack(plan_opts);
+  return ui::from_json<heffte::plan_options>(plan_opts);
+}
+
+/**
+ * @brief Construct `fft::CPUFFT` for a decomposition using JSON plan options
+ *
+ * Centralizes `fft::layout::create` + `fft::create` for the CPU spectral path.
+ */
+[[nodiscard]] inline fft::CPUFFT
+cpu_fft_from_json_and_decomposition(const nlohmann::json &settings,
+                                    const decomposition::Decomposition &decomp,
+                                    int rank_id, MPI_Comm comm) {
+  return fft::create(fft::layout::create(decomp, 0), rank_id,
+                     cpu_spectral_plan_options_from_json(settings), comm);
 }
 
 #if defined(OpenPFC_ENABLE_CUDA_SPECTRAL)

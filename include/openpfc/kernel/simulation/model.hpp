@@ -130,7 +130,7 @@ public:
    * @param world Reference to the World object
    * @param mpi_comm MPI communicator for `is_rank0()` (default `MPI_COMM_WORLD`).
    *        Use the same communicator as `Simulator` and FFT when running with a
-   *        non-world communicator (e.g. `SpectralSimulationSession` passes the
+   *        non-world communicator (e.g. the App session passes the
    *        stack communicator).
    *
    * @note FFT is required at construction and cannot be changed later (immutable)

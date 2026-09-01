@@ -5,7 +5,6 @@
 #include <heffte.h>
 #include <nlohmann/json.hpp>
 #include <openpfc/frontend/ui/from_json_heffte.hpp>
-#include <openpfc/frontend/ui/spectral_cpu_stack_detail.hpp>
 #include <openpfc/frontend/ui/spectral_fft_stack_factory.hpp>
 #include <stdexcept>
 #include <type_traits>

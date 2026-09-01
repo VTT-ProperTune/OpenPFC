@@ -9,9 +9,9 @@
  *        spectral CPU solvers driven programmatically (no JSON / `App`).
  *
  * @details
- * Mirrors `pfc::ui::SpectralCPUStack` (which is JSON-driven and lives in
- * the frontend), but takes plain grid parameters so applications and
- * examples can build the same OpenPFC primitive set in **one statement**.
+ * Programmatic (and JSON via `make_simulation_session`) spectral CPU
+ * stack: Domain + Decomposition + CPUFFT + Field. JSON HeFFTe plan
+ * options overlay through the optional `heffte::plan_options` constructor.
  *
  * The members are stored in a strict declaration order so that internal
  * cross-references stay valid for the lifetime of the stack:
@@ -25,14 +25,16 @@
  *  - `pfc::data::Field<double>` is sized to the FFT's local real-space
  *    inbox via `pfc::data::field_from_inbox(domain, fft.get_inbox_bounds())`.
  *
- * The class is **non-copyable, non-movable** for the same reason as
- * `pfc::ui::SpectralCPUStack`: a copy or move of the bundle would leave
- * its sub-objects pointing into the source's storage and dangle the
- * moment the source is destroyed. Construct in place, take references.
+ * The class is **non-copyable, non-movable**: a copy or move of the
+ * bundle would leave its sub-objects pointing into the source's storage
+ * and dangle the moment the source is destroyed. Construct in place,
+ * take references.
  *
- * @see openpfc/frontend/ui/spectral_cpu_stack.hpp — JSON-driven sibling.
  * @see openpfc/kernel/simulation/stacks/fd_cpu_stack.hpp — FD analogue.
+ * @see openpfc/frontend/ui/from_json_simulation_session.hpp — JSON factory.
  */
+
+#include <utility>
 
 #include <mpi.h>
 
@@ -74,16 +76,19 @@ public:
    *                `decomposition::create`).
    * @param comm    MPI communicator passed to the FFT.
    */
-  explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc,
-                            MPI_Comm comm = MPI_COMM_WORLD)
+  explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc, MPI_Comm comm,
+                            const heffte::plan_options &options)
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
-        // Pass rank explicitly: with Cray MPICH, MPI_Comm is `int`, so the
-        // two-argument fft::create(decomp, comm) would be ambiguous with the
-        // (decomp, rank_id, comm) overload. Naming rank_id selects it directly.
-        m_fft(pfc::fft::create(m_decomp, rank, comm)),
+        m_fft(pfc::fft::create(pfc::fft::layout::create(m_decomp, 0), rank, options,
+                               comm)),
         m_u(pfc::data::field_from_inbox<double>(domain, m_fft.get_inbox_bounds())),
         m_rank(rank), m_nproc(nproc), m_comm(comm) {}
+
+  explicit SpectralCPUStack(pfc::Domain domain, int rank, int nproc,
+                            MPI_Comm comm = MPI_COMM_WORLD)
+      : SpectralCPUStack(std::move(domain), rank, nproc, comm,
+                         heffte::default_options<heffte::backend::fftw>()) {}
 
   /**
    * @param size    Global grid size `{Nx, Ny, Nz}`.
@@ -112,20 +117,24 @@ public:
   /**
    * @brief Get a World adapter constructed from the stored Domain geometry.
    *
-   * @note This accessor is provided for backward compatibility during the M1 migration.
-   *       Returns a newly constructed World each call; prefer using geometry() or
-   *       accessing the decomposition directly in new code.
+   * @note This accessor is provided for backward compatibility during the M1
+   * migration. Returns a newly constructed World each call; prefer using geometry()
+   * or accessing the decomposition directly in new code.
    */
   [[nodiscard]] pfc::World world() const noexcept {
-    const pfc::Int3 global_upper{
-        m_geometry.size[0] - 1, m_geometry.size[1] - 1, m_geometry.size[2] - 1};
-    return pfc::World(pfc::Int3{0, 0, 0}, global_upper,
-                      pfc::domain::create(::pfc::GridSize::from_vector3(m_geometry.size), 
-                                          pfc::PhysicalOrigin::from_vector3(m_geometry.origin),
-                                          pfc::GridSpacing::from_vector3(m_geometry.spacing), m_geometry.periodic));
+    const pfc::Int3 global_upper{m_geometry.size[0] - 1, m_geometry.size[1] - 1,
+                                 m_geometry.size[2] - 1};
+    return pfc::World(
+        pfc::Int3{0, 0, 0}, global_upper,
+        pfc::domain::create(::pfc::GridSize::from_vector3(m_geometry.size),
+                            pfc::PhysicalOrigin::from_vector3(m_geometry.origin),
+                            pfc::GridSpacing::from_vector3(m_geometry.spacing),
+                            m_geometry.periodic));
   }
 
-  [[nodiscard]] const SpectralGeometry &geometry() const noexcept { return m_geometry; }
+  [[nodiscard]] const SpectralGeometry &geometry() const noexcept {
+    return m_geometry;
+  }
 
   [[nodiscard]] pfc::decomposition::Decomposition &decomposition() noexcept {
     return m_decomp;
@@ -139,9 +148,7 @@ public:
   [[nodiscard]] const pfc::fft::CPUFFT &fft() const noexcept { return m_fft; }
 
   [[nodiscard]] pfc::data::Field<double> &u() noexcept { return m_u; }
-  [[nodiscard]] const pfc::data::Field<double> &u() const noexcept {
-    return m_u;
-  }
+  [[nodiscard]] const pfc::data::Field<double> &u() const noexcept { return m_u; }
 
   /**
    * @brief Build a compact-driver residual field for the spectral stack.

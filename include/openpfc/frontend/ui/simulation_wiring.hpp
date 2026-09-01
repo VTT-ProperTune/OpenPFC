@@ -13,7 +13,8 @@
  * Implementation is split across `simulation_wiring_*.hpp` for readability;
  * including this header pulls in all public APIs.
  *
- * Drivers that do not use `SpectralSimulationSession` can call
+ * Drivers that do not use `SpectralSimulationSession` (the Gen-1 App
+ * owner over `SimulationSession<SpectralCPUStack>`) can call
  * `add_result_writers_from_json` / `add_initial_conditions_from_json` /
  * `add_boundary_conditions_from_json` and `apply_simulator_section_from_json`
  * individually on an existing `Simulator` and `Time`. Pass a `JsonWiringContext`

@@ -45,13 +45,13 @@ Goal: One JSON → session pipeline for spectral runs, parameterized by FFT back
 
 Done (foundation):
 
-- **`spectral_cpu_stack_detail.hpp`**: `cpu_spectral_plan_options_from_json` and `cpu_fft_from_json_and_decomposition` centralize JSON → HeFFTe CPU FFT construction; `SpectralCPUStack` calls these (extension point for a future GPU stack builder using the same JSON surface).
+- **`spectral_fft_stack_factory.hpp`**: `cpu_spectral_plan_options_from_json` and `cpu_fft_from_json_and_decomposition` centralize JSON → HeFFTe CPU FFT construction; `make_simulation_session<SpectralCPUStack>` overlays plan options on the kernel stack.
 - **CPU spectral `backend` alignment:** `cpu_spectral_plan_options_from_json` merges a root-level `"backend"` into the `plan_options` object when the latter omits it; rejects `"cuda"` on this path (always `fft::CPUFFT` / FFTW). See [`app_pipeline.md`](../user_guide/app_pipeline.md).
 - **`spectral_fft_stack_factory.hpp`:** `merged_spectral_plan_options_json` (shared merge); `cuda_spectral_plan_options_from_json` / `hip_spectral_plan_options_from_json` apply the same HeFFTe JSON overlay as CPU but start from cuFFT / ROCm defaults (GPU integration tests and future GPU `App` paths).
 
 Planned steps:
 
-- Optional: templated `SpectralSimulationSession` or type-erased FFT at the session boundary so `App` can skip constructing a dummy `CPUFFT` for GPU-only models. (Design note in `spectral_cpu_stack.hpp` Doxygen `@note`.)
+- Optional: type-erased FFT at the session boundary so `App` can skip constructing a dummy `CPUFFT` for GPU-only models.
 - Documented interim policy (Doxygen): reuse the one `SpectralCPUStack` `CPUFFT` for `Model(fft, world, comm)` when adding GPU drivers; use `spectral_fft_stack_factory.hpp` for cuFFT/ROCm plan JSON only—no second throwaway CPU FFT in app code.
 
 ### Phase C spike (time-boxed exploration)

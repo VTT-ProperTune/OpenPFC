@@ -10,8 +10,9 @@
  * and logging hooks are configured. It keeps `App` focused on construction,
  * settings I/O, and optional field-modifier catalog injection.
  *
- * The Gen-1 session is still `SpectralSimulationSession` until the App path
- * moves onto `SimulationSession<Stack>`.
+ * The Gen-1 App path owns `SpectralSimulationSession`, which is a
+ * `SimulationSession<SpectralCPUStack>` plus `Model` / `Simulator`. There is
+ * no frontend `SpectralCPUStack` twin.
  *
  * @see app.hpp
  * @see docs/user_guide/app_pipeline.md

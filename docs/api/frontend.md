@@ -19,9 +19,9 @@ before using these ownership types directly.
 :no-link:
 ```
 
-## `pfc::ui::SpectralCPUStack`
+## `pfc::sim::stacks::SpectralCPUStack`
 
-```{doxygenclass} pfc::ui::SpectralCPUStack
+```{doxygenclass} pfc::sim::stacks::SpectralCPUStack
 :project: OpenPFC
 :members:
 :protected-members:

@@ -36,7 +36,7 @@
  * input.
  *
  * The class is **non-copyable, non-movable** for the same reason as
- * `pfc::ui::SpectralCPUStack` and `pfc::sim::stacks::SpectralCPUStack`:
+ * `pfc::sim::stacks::SpectralCPUStack`:
  * the internal references would dangle the moment the source bundle is
  * destroyed. Construct in place, take references.
  *
@@ -53,8 +53,8 @@
 #include <openpfc/kernel/data/model_types.hpp>
 #include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/world.hpp>
-#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/comm_sparse_exchange.hpp>
+#include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/halo_face_layout.hpp>
 #include <openpfc/kernel/field/fd_gradient.hpp>
 #include <openpfc/kernel/field/field_factory.hpp>
@@ -87,17 +87,17 @@ public:
    * @param nproc     Total number of ranks on `comm`.
    * @param comm      MPI communicator passed to the halo exchanger.
    */
-  explicit FDCPUStack(pfc::Domain domain, int fd_order, int rank,
-                      int nproc, MPI_Comm comm = MPI_COMM_WORLD)
+  explicit FDCPUStack(pfc::Domain domain, int fd_order, int rank, int nproc,
+                      MPI_Comm comm = MPI_COMM_WORLD)
       : m_geometry({domain.size, domain.spacing, domain.origin, domain.periodic}),
         m_decomp(pfc::decomposition::create(domain, nproc)),
         // Unpadded Field + iteration halo: face-halos live in m_face_halos.
         m_u(pfc::data::field_from_subdomain_unpadded<double>(m_decomp, rank,
-                                                            fd_order / 2)),
+                                                             fd_order / 2)),
         m_face_halos(
             pfc::halo::allocate_face_halos<double>(m_decomp, rank, fd_order / 2)),
-        m_exchanger(m_u, m_decomp, rank, comm),
-        m_fd_order(fd_order), m_rank(rank), m_nproc(nproc), m_comm(comm) {}
+        m_exchanger(m_u, m_decomp, rank, comm), m_fd_order(fd_order), m_rank(rank),
+        m_nproc(nproc), m_comm(comm) {}
 
   /**
    * @param size      Global grid size `{Nx, Ny, Nz}`.
@@ -166,17 +166,19 @@ public:
   /**
    * @brief Get a World adapter constructed from the stored Domain geometry.
    *
-   * @note This accessor is provided for backward compatibility during the M1 migration.
-   *       Returns a newly constructed World each call; prefer using geometry() or
-   *       accessing the decomposition directly in new code.
+   * @note This accessor is provided for backward compatibility during the M1
+   * migration. Returns a newly constructed World each call; prefer using geometry()
+   * or accessing the decomposition directly in new code.
    */
   [[nodiscard]] pfc::World world() const noexcept {
-    const pfc::Int3 global_upper{
-        m_geometry.size[0] - 1, m_geometry.size[1] - 1, m_geometry.size[2] - 1};
-    return pfc::World(pfc::Int3{0, 0, 0}, global_upper,
-                      pfc::domain::create(::pfc::GridSize::from_vector3(m_geometry.size), 
-                                          pfc::PhysicalOrigin::from_vector3(m_geometry.origin),
-                                          pfc::GridSpacing::from_vector3(m_geometry.spacing), m_geometry.periodic));
+    const pfc::Int3 global_upper{m_geometry.size[0] - 1, m_geometry.size[1] - 1,
+                                 m_geometry.size[2] - 1};
+    return pfc::World(
+        pfc::Int3{0, 0, 0}, global_upper,
+        pfc::domain::create(::pfc::GridSize::from_vector3(m_geometry.size),
+                            pfc::PhysicalOrigin::from_vector3(m_geometry.origin),
+                            pfc::GridSpacing::from_vector3(m_geometry.spacing),
+                            m_geometry.periodic));
   }
 
   [[nodiscard]] const FDGeometry &geometry() const noexcept { return m_geometry; }
@@ -190,9 +192,7 @@ public:
   }
 
   [[nodiscard]] pfc::data::Field<double> &u() noexcept { return m_u; }
-  [[nodiscard]] const pfc::data::Field<double> &u() const noexcept {
-    return m_u;
-  }
+  [[nodiscard]] const pfc::data::Field<double> &u() const noexcept { return m_u; }
 
   [[nodiscard]] pfc::comm::SparseExchange<pfc::HostSpace, double> &
   exchanger() noexcept {

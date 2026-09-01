@@ -3,18 +3,20 @@
 
 /**
  * @file spectral_simulation_session.hpp
- * @brief Owns the spectral simulation object graph built from JSON settings
+ * @brief Gen-1 App owner: `SimulationSession<SpectralCPUStack>` + Model + Simulator
  *
  * @details
- * `SpectralSimulationSession` composes `SpectralCPUStack` (world, decomposition,
- * CPU FFT, time) with a concrete `Model` and `Simulator`. The session is
- * returned as `std::unique_ptr` so it is never moved after construction: the
- * simulator holds references to the model and time members. `CPUFFT` is held
- * inside the stack and is not movable.
+ * JSON `App` still drives a virtual `Model` / `Simulator` until M12. This
+ * session is the heap-owned bundle those types need: a
+ * `pfc::sim::SimulationSession<pfc::sim::stacks::SpectralCPUStack>` (Domain,
+ * decomposition, CPUFFT, Time, HeFFTe plan options) plus `ConcreteModel` and
+ * `Simulator`. There is no frontend `SpectralCPUStack` twin.
  *
- * CUDA/HIP models should treat this host `CPUFFT` as the sole `pfc::FFT` passed
- * into `ConcreteModel` and bind device FFTs from the same decomposition instead
- * of allocating an extra CPU HeFFTe instance in application drivers.
+ * `World` is stored by value so `Model`'s `const World&` does not dangle
+ * off `stack().world()` (which returns a temporary).
+ *
+ * Returned as `std::unique_ptr` so the object is never moved after
+ * construction: the simulator holds references to the model and time.
  *
  * Non-member accessors (`pfc::ui::world(session)`, `pfc::ui::time(session)`, …)
  * mirror the member API for consistency with `pfc::get_model(sim)` on
@@ -28,14 +30,17 @@
 
 #include <mpi.h>
 #include <nlohmann/json.hpp>
+#include <openpfc/frontend/ui/from_json_simulation_session.hpp>
 #include <openpfc/frontend/ui/simulation_wiring.hpp>
-#include <openpfc/frontend/ui/spectral_cpu_stack.hpp>
+#include <openpfc/kernel/data/world.hpp>
+#include <openpfc/kernel/simulation/simulation_session.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
+#include <openpfc/kernel/simulation/stacks/spectral_cpu_stack.hpp>
 
 namespace pfc::ui {
 
 /**
- * @brief Heap-owned spectral (HeFFTe CPU FFT) simulation stack from settings
+ * @brief Heap-owned spectral CPU simulation graph from JSON (Gen-1 Model path)
  *
  * @tparam ConcreteModel Physics model type (e.g. from an application target)
  */
@@ -47,7 +52,7 @@ public:
   SpectralSimulationSession &operator=(SpectralSimulationSession &&) = delete;
 
   /**
-   * @brief Build world, decomposition, FFT, time, model, and simulator
+   * @brief Build `SimulationSession<SpectralCPUStack>`, model, and simulator
    *
    * @param settings Parsed application JSON (world, time, plan_options, …)
    * @param comm MPI communicator for FFT and simulator modifier context
@@ -56,10 +61,11 @@ public:
    */
   explicit SpectralSimulationSession(const nlohmann::json &settings, MPI_Comm comm,
                                      int rank_id, int num_ranks)
-      : m_stack(settings, comm, rank_id, num_ranks),
-        m_model(pfc::ui::fft(m_stack), pfc::ui::world(m_stack),
-                pfc::ui::mpi_comm(m_stack)),
-        m_simulator(m_model, pfc::ui::time(m_stack), comm) {}
+      : m_session(make_simulation_session<pfc::sim::stacks::SpectralCPUStack>(
+            settings, rank_id, num_ranks, comm)),
+        m_world(m_session.stack().world()),
+        m_model(m_session.stack().fft(), m_world, comm),
+        m_simulator(m_model, m_session.time(), comm) {}
 
   [[nodiscard]] static std::unique_ptr<SpectralSimulationSession>
   assemble(const nlohmann::json &settings, MPI_Comm comm, int rank_id,
@@ -68,25 +74,33 @@ public:
                                                        num_ranks);
   }
 
-  [[nodiscard]] World &world() noexcept { return pfc::ui::world(m_stack); }
-  [[nodiscard]] const World &world() const noexcept {
-    return pfc::ui::world(m_stack);
+  [[nodiscard]] pfc::sim::SimulationSession<pfc::sim::stacks::SpectralCPUStack> &
+  session() noexcept {
+    return m_session;
   }
+  [[nodiscard]] const pfc::sim::SimulationSession<
+      pfc::sim::stacks::SpectralCPUStack> &
+  session() const noexcept {
+    return m_session;
+  }
+
+  [[nodiscard]] World &world() noexcept { return m_world; }
+  [[nodiscard]] const World &world() const noexcept { return m_world; }
 
   [[nodiscard]] decomposition::Decomposition &decomposition() noexcept {
-    return pfc::ui::decomposition(m_stack);
+    return m_session.stack().decomposition();
   }
   [[nodiscard]] const decomposition::Decomposition &decomposition() const noexcept {
-    return pfc::ui::decomposition(m_stack);
+    return m_session.stack().decomposition();
   }
 
-  [[nodiscard]] fft::CPUFFT &fft() noexcept { return pfc::ui::fft(m_stack); }
+  [[nodiscard]] fft::CPUFFT &fft() noexcept { return m_session.stack().fft(); }
   [[nodiscard]] const fft::CPUFFT &fft() const noexcept {
-    return pfc::ui::fft(m_stack);
+    return m_session.stack().fft();
   }
 
-  [[nodiscard]] Time &time() noexcept { return pfc::ui::time(m_stack); }
-  [[nodiscard]] const Time &time() const noexcept { return pfc::ui::time(m_stack); }
+  [[nodiscard]] Time &time() noexcept { return m_session.time(); }
+  [[nodiscard]] const Time &time() const noexcept { return m_session.time(); }
 
   [[nodiscard]] ConcreteModel &model() noexcept { return m_model; }
   [[nodiscard]] const ConcreteModel &model() const noexcept { return m_model; }
@@ -108,8 +122,8 @@ public:
                                     const FieldModifierCatalog &modifier_catalog,
                                     const ResultsWriterCatalog &writer_catalog) {
     wire_simulator_and_runtime_from_json(
-        m_simulator, pfc::ui::time(m_stack), settings,
-        JsonWiringContext{pfc::ui::mpi_comm(m_stack), mpi_rank, rank0},
+        m_simulator, time(), settings,
+        JsonWiringContext{m_session.stack().mpi_comm(), mpi_rank, rank0},
         modifier_catalog, writer_catalog);
   }
 
@@ -118,16 +132,17 @@ public:
    *        stack communicator with rank flags from `session.ctx`
    */
   void wire_simulator_from_settings(const nlohmann::json &settings,
-                                    const JsonWiringSession &session) {
+                                    const JsonWiringSession &wiring) {
     wire_simulator_and_runtime_from_json(
-        m_simulator, pfc::ui::time(m_stack), settings,
-        JsonWiringSession{JsonWiringContext{pfc::ui::mpi_comm(m_stack),
-                                            session.ctx.mpi_rank, session.ctx.rank0},
-                          session.modifier_catalog, session.writer_catalog});
+        m_simulator, time(), settings,
+        JsonWiringSession{JsonWiringContext{m_session.stack().mpi_comm(),
+                                            wiring.ctx.mpi_rank, wiring.ctx.rank0},
+                          wiring.modifier_catalog, wiring.writer_catalog});
   }
 
 private:
-  SpectralCPUStack m_stack;
+  pfc::sim::SimulationSession<pfc::sim::stacks::SpectralCPUStack> m_session;
+  World m_world;
   ConcreteModel m_model;
   Simulator m_simulator;
 };

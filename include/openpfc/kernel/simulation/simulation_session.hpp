@@ -38,6 +38,17 @@ public:
         m_stack(stack_builder<Stack>::make(selection, std::move(domain), rank, nproc,
                                            comm)) {}
 
+  /**
+   * @brief Construct with a factory that returns a `Stack` prvalue.
+   *
+   * Used by JSON `make_simulation_session` to overlay HeFFTe plan options
+   * on `SpectralCPUStack` without a movable stack type.
+   */
+  template <class MakeStack>
+  SimulationSession(SessionSelection selection, Time time, MakeStack &&make_stack)
+      : m_selection(selection), m_time(std::move(time)),
+        m_stack(std::forward<MakeStack>(make_stack)()) {}
+
   [[nodiscard]] const SessionSelection &selection() const noexcept {
     return m_selection;
   }
