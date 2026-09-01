@@ -442,7 +442,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 
 * [x] Exactly two exchanger class templates remain; `grep -rn "PaddedHaloExchanger\|FullPaddedHalo\|PersistentHaloExchanger" include/ src/ apps/` returns nothing. Public names are `comm::HaloExchange` / `comm::SparseExchange`.
 * [x] An FD-only build (`-DOpenPFC_ENABLE_HEFFTE=OFF`) configures and links without HeFFTe. Spectral sources (`fft.cpp` / CUDA/HIP spectral TUs), tungsten/aluminum, and examples are skipped; Catch2 TUs that include `fft_fftw.hpp` are skipped; FD/halo/k-space tests and FD apps still build. Decomposition objects have no HeFFTe symbols.
-* [ ] Full suite, golden trajectories, GPU parity suite (tohtori) green. **CUDA parity: not testable on LUMI — verify on tohtori.** *(Moved to M-LUMI in full: "LUMI runs device-resident halos, verified by the probe log + perf delta vs host-staging" — HIP half can start here once the unified exchanger exists.)*
+* [x] Full suite, golden trajectories, GPU parity suite (tohtori) green. **CUDA (Tohtori `g0005`, 2026-09-01):** `scripts/build.sh --machine=tohtori --with-cuda --build-type=Debug --build-dir=builds/cuda-debug` 50/50 CTest batches (1 expected skip: `CUDA_ExchangeFailClosed`), pytest 10/10. Includes `tungsten-golden-4rank`, `tungsten-cpu-vs-cuda-tests`, `allen-cahn-cpu-vs-cuda`, `wave2d-cpu-vs-cuda`, `kobayashi-cuda-hex-smoke` / `kobayashi-cuda-hex-2rank`. *(Moved to M-LUMI in full: "LUMI runs device-resident halos, verified by the probe log + perf delta vs host-staging".)*
 
 ---
 
