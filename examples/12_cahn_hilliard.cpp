@@ -4,6 +4,7 @@
 #include "11_write_results.hpp"
 #include <cstdarg>
 #include <openpfc/frontend/ui/ui.hpp>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/openpfc.hpp>
 #include <random>
 
@@ -34,28 +35,14 @@ public:
     // prepare operators
     const auto &world = pfc::get_world(*this);
     const auto &domain = pfc::world::get_coordinate_system(world);
-    std::array<int, 3> o_low = get_outbox(fft).low;
-    std::array<int, 3> o_high = get_outbox(fft).high;
-    size_t idx = 0;
-    auto spacing = pfc::domain::get_spacing(domain);
-    auto size = pfc::domain::get_size(domain);
-    double fx = 2.0 * constants::pi / (spacing[0] * size[0]);
-    double fy = 2.0 * constants::pi / (spacing[1] * size[1]);
-    double fz = 2.0 * constants::pi / (spacing[2] * size[2]);
-    for (int k = o_low[2]; k <= o_high[2]; k++) {
-      for (int j = o_low[1]; j <= o_high[1]; j++) {
-        for (int i = o_low[0]; i <= o_high[0]; i++) {
-          double ki = (i <= size[0] / 2) ? i * fx : (i - size[0]) * fx;
-          double kj = (j <= size[1] / 2) ? j * fy : (j - size[1]) * fy;
-          double kk = (k <= size[2] / 2) ? k * fz : (k - size[2]) * fz;
-          double kLap = -(ki * ki + kj * kj + kk * kk);
-          double L = kLap * (-D - D * gamma * kLap);
+    pfc::fft::kspace::for_each_kpoint(
+        get_outbox(fft), domain,
+        [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
+          const double kLap = -(ki * ki + kj * kj + kk * kk);
+          const double L = kLap * (-D - D * gamma * kLap);
           opL[idx] = std::exp(L * dt);
           opN[idx] = (L != 0.0) ? (opL[idx] - 1.0) / L * kLap : 0.0;
-          idx++;
-        }
-      }
-    }
+        });
   }
 
   void step(double) override {
@@ -105,12 +92,14 @@ int main(int argc, char **argv) {
 
   // Construct domain, decomposition, fft and model
   // Using strong types for type-safe Domain construction
-  auto domain = ::pfc::domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
-                                      GridSpacing{{dx, dy, dz}});
+  auto domain =
+      ::pfc::domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
+                            GridSpacing{{dx, dy, dz}});
   auto decomposition = decomposition::create(domain, 1);
   auto fft = fft::create(decomposition);
   const auto size = pfc::domain::get_size(domain);
-  CahnHilliard model(fft, World({0, 0, 0}, {size[0]-1, size[1]-1, size[2]-1}, domain));
+  CahnHilliard model(
+      fft, World({0, 0, 0}, {size[0] - 1, size[1] - 1, size[2] - 1}, domain));
 
   // Define time
   double t = 0.0;
@@ -134,7 +123,8 @@ int main(int argc, char **argv) {
   // file_count
   writer.set_uri(sprintf("cahn_hilliard_%04i.vti", file_count));
   writer.set_field_name("concentration");
-  writer.set_domain(pfc::domain::get_size(domain), get_inbox(fft).size, get_inbox(fft).low);
+  writer.set_domain(pfc::domain::get_size(domain), get_inbox(fft).size,
+                    get_inbox(fft).low);
   writer.set_origin(pfc::domain::get_origin(domain));
   writer.set_spacing(pfc::domain::get_spacing(domain));
   writer.initialize();

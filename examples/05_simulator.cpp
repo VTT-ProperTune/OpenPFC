@@ -10,6 +10,7 @@
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/field_modifier.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 #include <openpfc/kernel/simulation/simulator.hpp>
@@ -103,27 +104,14 @@ public:
     auto &w = pfc::get_world(*this);
     const auto &domain = pfc::world::get_coordinate_system(w);
     auto &fft = pfc::get_fft(*this);
-    std::array<int, 3> low = get_outbox(fft).low;
-    std::array<int, 3> high = get_outbox(fft).high;
 
     if (pfc::is_rank0(*this)) std::cout << "Prepare operators" << std::endl;
-    size_t idx = 0;
-    auto spacing = pfc::domain::get_spacing(domain);
-    auto size = pfc::domain::get_size(domain);
-    double fx = 2.0 * constants::pi / (spacing[0] * size[0]);
-    double fy = 2.0 * constants::pi / (spacing[1] * size[1]);
-    double fz = 2.0 * constants::pi / (spacing[2] * size[2]);
-    for (int k = low[2]; k <= high[2]; k++) {
-      for (int j = low[1]; j <= high[1]; j++) {
-        for (int i = low[0]; i <= high[0]; i++) {
-          double ki = (i <= size[0] / 2) ? i * fx : (i - size[0]) * fx;
-          double kj = (j <= size[1] / 2) ? j * fy : (j - size[1]) * fy;
-          double kk = (k <= size[2] / 2) ? k * fz : (k - size[2]) * fz;
-          double kLap = -(ki * ki + kj * kj + kk * kk);
-          opL[idx++] = 1.0 / (1.0 - dt * kLap);
-        }
-      }
-    }
+    pfc::fft::kspace::for_each_kpoint(
+        get_outbox(fft), domain,
+        [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
+          const double kLap = -(ki * ki + kj * kj + kk * kk);
+          opL[idx] = 1.0 / (1.0 - dt * kLap);
+        });
   }
 
   void initialize(double dt) override {
@@ -189,8 +177,10 @@ void run() {
                                  GridSpacing(discretization));
   auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
-  // Create simulation world for Model constructor (World retained for Model compatibility)
-  auto world = domain::create_world_from_bounds({L, L, L}, {o, o, o}, {o + (L - 1) * h, o + (L - 1) * h, o + (L - 1) * h});
+  // Create simulation world for Model constructor (World retained for Model
+  // compatibility)
+  auto world = domain::create_world_from_bounds(
+      {L, L, L}, {o, o, o}, {o + (L - 1) * h, o + (L - 1) * h, o + (L - 1) * h});
   Diffusion model(fft, world);
 
   // Define time

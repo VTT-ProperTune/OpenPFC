@@ -478,7 +478,7 @@ M3 (Backend enum/string complete), M2 (Field/DataBuffer types).
 ### Deletions
 
 * [x] Throwing GPU virtual implementations and the dishonest `Backend::CUDA` path in `src/openpfc/runtime/cpu/fft.cpp`. GPU `FFT_Impl` no longer inherits `IHostFFT`; `create_with_backend` rejects CUDA/HIP.
-* [x] Duplicate k-space folding loops in `SpectralGradient` (now `for_each_kpoint`). Apps' copies die in M8/M9.
+* [x] Duplicate k-space folding loops in `SpectralGradient` (now `for_each_kpoint`). Examples `04`/`05`/`12` use `for_each_kpoint`. Gen-1 tungsten/aluminum copies die in M8/M9.
 
 ### Definition of done
 

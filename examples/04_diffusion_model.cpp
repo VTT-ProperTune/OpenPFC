@@ -4,11 +4,12 @@
 #include <iostream>
 
 #include "diffusion_spectral_helpers.hpp"
-#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/data/domain.hpp>
+#include <openpfc/kernel/data/strong_types.hpp>
 #include <openpfc/kernel/decomposition/decomposition.hpp>
 #include <openpfc/kernel/decomposition/decomposition_factory.hpp>
 #include <openpfc/kernel/fft/fft_fftw.hpp>
+#include <openpfc/kernel/fft/kspace_iterator.hpp>
 #include <openpfc/kernel/simulation/model.hpp>
 
 using namespace std;
@@ -82,8 +83,9 @@ public:
   void initialize(double dt) override {
     if (pfc::is_rank0(*this)) cout << "Allocate space" << endl;
 
-    // Get references to the simulation world (required by Model), FFT, and domain decomposition
-    // Note: World is retained for Model compatibility; Domain is used for geometry
+    // Get references to the simulation world (required by Model), FFT, and domain
+    // decomposition Note: World is retained for Model compatibility; Domain is used
+    // for geometry
     auto &world = pfc::get_world(*this);
     auto &fft = pfc::get_fft(*this);
 
@@ -104,7 +106,8 @@ public:
     Domain is defining the global dimensions of the problem as well as origin and
     chosen discretization parameters.
     */
-    // Print domain geometry information (domain extracted from world for Model compatibility)
+    // Print domain geometry information (domain extracted from world for Model
+    // compatibility)
     if (pfc::is_rank0(*this)) {
       const auto &world = pfc::get_world(*this);
       const auto &domain = pfc::world::get_coordinate_system(world);
@@ -117,8 +120,6 @@ public:
     */
     auto i_low = get_inbox(fft).low;
     auto i_high = get_inbox(fft).high;
-    auto o_low = get_outbox(fft).low;
-    auto o_high = get_outbox(fft).high;
 
     /*
     Typically initial conditions are constructed elsewhere. However, to keep
@@ -128,7 +129,6 @@ public:
     if (pfc::is_rank0(*this)) cout << "Create initial condition" << endl;
 
     const auto &domain = pfc::world::get_coordinate_system(world);
-    auto size = pfc::domain::get_size(domain);
     auto origin = pfc::domain::get_origin(domain);
     auto spacing = pfc::domain::get_spacing(domain);
 
@@ -151,22 +151,12 @@ public:
     operators, thus making the actual time stepping as fast as possible.
     */
     if (pfc::is_rank0(*this)) cout << "Prepare operators" << endl;
-    idx = 0;
-    double pi = std::atan(1.0) * 4.0;
-    double fx = 2.0 * pi / (spacing[0] * size[0]);
-    double fy = 2.0 * pi / (spacing[1] * size[1]);
-    double fz = 2.0 * pi / (spacing[2] * size[2]);
-    for (int k = o_low[2]; k <= o_high[2]; k++) {
-      for (int j = o_low[1]; j <= o_high[1]; j++) {
-        for (int i = o_low[0]; i <= o_high[0]; i++) {
-          double ki = (i <= size[0] / 2) ? i * fx : (i - size[0]) * fx;
-          double kj = (j <= size[1] / 2) ? j * fy : (j - size[1]) * fy;
-          double kk = (k <= size[2] / 2) ? k * fz : (k - size[2]) * fz;
-          double kLap = -(ki * ki + kj * kj + kk * kk);
-          opL[idx++] = 1.0 / (1.0 - dt * kLap);
-        }
-      }
-    }
+    pfc::fft::kspace::for_each_kpoint(
+        get_outbox(fft), domain,
+        [&](std::size_t idx, double ki, double kj, double kk, int, int, int) {
+          const double kLap = -(ki * ki + kj * kj + kk * kk);
+          opL[idx] = 1.0 / (1.0 - dt * kLap);
+        });
   }
 
   /**
@@ -208,12 +198,16 @@ void run() {
 
   // Construct domain, decomposition, fft and model
   // Using strong types for clarity and type safety
-  Domain domain = domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
-                                 GridSpacing{{dx, dy, dz}});
+  Domain domain =
+      domain::create(GridSize{{Lx, Ly, Lz}}, PhysicalOrigin{{x0, y0, z0}},
+                     GridSpacing{{dx, dy, dz}});
   auto decomp = decomposition::create(domain, 1);
   auto fft = fft::create(decomp);
-  // Create simulation world for Model constructor (World retained for Model compatibility)
-  auto world = domain::create_world_from_bounds({Lx, Ly, Lz}, {x0, y0, z0}, {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
+  // Create simulation world for Model constructor (World retained for Model
+  // compatibility)
+  auto world = domain::create_world_from_bounds(
+      {Lx, Ly, Lz}, {x0, y0, z0},
+      {x0 + (Lx - 1) * dx, y0 + (Ly - 1) * dy, z0 + (Lz - 1) * dz});
   Diffusion model(fft, world);
 
   // Define time
