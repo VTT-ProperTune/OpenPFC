@@ -10,11 +10,9 @@ reference results the big-bang refactor (M0→M12) must preserve. Each baseline 
 classified **bitwise** (must reproduce exactly) or **tolerance** (must reproduce
 within a stated numeric tolerance, per backend).
 
-> Status: this file is the **framework and capture plan**. The correctness
-> defects (Pre-M0 PA–PL) are fixed and the suite is green on CPU with CUDA/HIP
-> compiling; capturing the golden *data* and the performance numbers requires
-> runs on the reference machines (tohtori = CUDA, LUMI = HIP) and is the safety
-> net to complete **before** M0 begins. Items marked ☐ are not yet captured.
+> Status: tohtori CUDA/host goldens and perf JSON are captured (see tables).
+> Remaining ☐ items are aluminum multi-rank golden, CPU-side GPU-parity field
+> dumps, and LUMI HIP perf.
 
 ## Classification
 
@@ -35,7 +33,7 @@ within a stated numeric tolerance, per backend).
 | ☐ CPU-side goldens for each CPU-vs-GPU parity test | tolerance | 1e-10 | CI (CPU) |
 | Restart-equivalence (`CheckpointService`) | bitwise (1 rank) | exact owned cells | CI: kernel `[checkpoint][service]`; heat3d FD Euler; tungsten ETD JSON session. 2-rank kernel `[checkpoint][MPI]`. |
 
-## Performance baselines (☐ — capture on the reference machines)
+## Performance baselines
 
 Capture machine-tagged JSON via the profiling schema-v2/v3 exporter into
 `tests/baselines/perf/` and compare with `scripts/compare_perf_baseline.py`

@@ -175,8 +175,8 @@ Fix every correctness defect identified in Audit §4 and §11 within the *existi
 
 **PP — Performance baselines (Audit §16)**
 
-* [ ] Using the existing profiling schema-v2 exporter, capture machine-tagged JSON baselines into `tests/baselines/perf/`: (a) tungsten strong scaling, CPU, 1/4/16 ranks (tohtori); (b) tungsten CUDA single-node (tohtori GPU); (d) halo-exchange microtimings, host and device, 2–8 ranks (from `apps/kobayashi/slurm/` harness). [not done: `tests/baselines/perf/` doesn't exist; all listed ☐ in `BASELINES.md`] *(part (c), kobayashi HIP single-node on LUMI, moved to M-LUMI — see there.)* **(b) CUDA: not testable on LUMI — verify on tohtori.**
-* [ ] Add `scripts/compare_perf_baseline.py` producing pass/warn(>5%)/fail(>15%) against a stored baseline. [not done: script doesn't exist]
+* [x] Using the existing profiling schema-v2 exporter, capture machine-tagged JSON baselines into `tests/baselines/perf/`: (a) tungsten strong scaling, CPU, 1/4/16 ranks (tohtori `g0005` Release 64³); (b) tungsten CUDA 1/8-rank (tohtori `g0005` Release 256³); (d) halo-exchange microtimings, host and CUDA, 2/4/8 ranks (128³ Faces). *(part (c), kobayashi HIP single-node on LUMI, moved to M-LUMI.)*
+* [x] Add `scripts/compare_perf_baseline.py` producing pass/warn(>5%)/fail(>15%) against a stored baseline.
 * [x] Delete the stale hardcoded timing numbers from `tests/benchmarks/README.md`.
 
 **PQ — Release**
@@ -199,7 +199,7 @@ Fix every correctness defect identified in Audit §4 and §11 within the *existi
 * [x] All Audit §4 items 1–12 have a merged fix with a linked regression test.
 * [ ] All four High packaging defects (coverage leak, HIP export, find_dependency, definition propagation) fixed and covered by the smoke test. [partial: 3 of 4 confirmed (coverage, HIP export, find_dependency); the definition-propagation move is unconfirmed]
 * [x] Compile-only CUDA and HIP CI jobs are required checks on `master`.
-* [ ] `tests/baselines/` exists with tungsten + aluminum golden trajectories, CPU-side GPU-parity goldens, and four perf baselines, all classified bitwise/tolerance in `BASELINES.md`. [partial: the classification framework exists; the golden-trajectory data and perf baselines themselves are not yet captured]
+* [ ] `tests/baselines/` exists with tungsten + aluminum golden trajectories, CPU-side GPU-parity goldens, and four perf baselines, all classified bitwise/tolerance in `BASELINES.md`. [partial: tungsten A/B golden and tohtori perf JSON are captured; aluminum multi-rank golden and CPU-side GPU-parity field dumps remain ☐]
 * [x] `v0.1.5` tagged; `master` reads `0.2.0-dev`.
 
 ---
@@ -383,8 +383,8 @@ M2 (Field/DataBuffer surface stable). Executes ADR 0004.
 * [x] HIP vs CPU diffusion smoke `test_hip_vs_cpu.cpp` is compiled into `openpfc-tests` (was an unwired stub) and constructs `create_hip` the way the CUDA twin constructs `create_with_backend(CUDA)`. *(Running the HIP factory on LUMI hardware is M-LUMI.)*
 * [x] HIP backend instantiation smoke in `test_gpu_backend_instantiation.cpp`: separate Catch2 case (CUDA skip cannot hide HIP) comparing `create_hip` inbox/outbox sizes to the CPU FFT. *(Running on LUMI hardware is M-LUMI; `create_with_backend(Backend::HIP)` factory honesty remains M5.)*
 * [x] HIP `FullPaddedDeviceHalo` 26-direction integration twin of `test_full_padded_device_halo.cpp`: `test_full_padded_device_halo_hip.cpp` (1/2/4-rank full fill, `hw=2`, Axes3D faces-only). *(Running on LUMI hardware is M-LUMI.)*
-* [ ] Compile-only CUDA and HIP CI jobs green, including the CUDA+HIP co-enabled configuration. **CUDA half + co-enabled config: not testable on LUMI — verify on tohtori / in CI.** HIP compile can be checked here.
-* [ ] Perf gate: device halo microtimings and tungsten CUDA baseline within 5%. **CUDA: not testable on LUMI — verify on tohtori.**
+* [ ] Compile-only CUDA and HIP CI jobs green, including the CUDA+HIP co-enabled configuration. **CUDA half is green on g0005. Co-enabled configure failed on g0005: `rocm/7.2.1` is in the module list but `/opt/rocm-7.2.1` is not present (no `hipcc`). Try the `amdgpu` queue or CI; not this NVIDIA node.**
+* [x] Perf gate: device halo microtimings and tungsten CUDA baseline within 5%. **CUDA (Tohtori `g0005`, 2026-09-02 Release):** `compare_perf_baseline.py --warmup-frames=5` CUDA 2-rank 128³ Faces PASS (faster than stored JSON). Tungsten CUDA 1-rank 256³ `--warmup-frames=1` PASS (faster than stored JSON). Host 2-rank Faces is ~+21% at ~95 µs vs 78 µs (sub-100 µs noise floor; not the device gate). HIP execute is M-LUMI.
 
 ### Deletions
 
@@ -442,7 +442,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 
 * [x] Exactly two exchanger class templates remain; `grep -rn "PaddedHaloExchanger\|FullPaddedHalo\|PersistentHaloExchanger" include/ src/ apps/` returns nothing. Public names are `comm::HaloExchange` / `comm::SparseExchange`.
 * [x] An FD-only build (`-DOpenPFC_ENABLE_HEFFTE=OFF`) configures and links without HeFFTe. Spectral sources (`fft.cpp` / CUDA/HIP spectral TUs), tungsten/aluminum, and examples are skipped; Catch2 TUs that include `fft_fftw.hpp` are skipped; FD/halo/k-space tests and FD apps still build. Decomposition objects have no HeFFTe symbols.
-* [x] Full suite, golden trajectories, GPU parity suite (tohtori) green. **CUDA (Tohtori `g0005`, 2026-09-01):** `scripts/build.sh --machine=tohtori --with-cuda --build-type=Debug --build-dir=builds/cuda-debug` 50/50 CTest batches (1 expected skip: `CUDA_ExchangeFailClosed`), pytest 10/10. Includes `tungsten-golden-4rank`, `tungsten-cpu-vs-cuda-tests`, `allen-cahn-cpu-vs-cuda`, `wave2d-cpu-vs-cuda`, `kobayashi-cuda-hex-smoke` / `kobayashi-cuda-hex-2rank`. *(Moved to M-LUMI in full: "LUMI runs device-resident halos, verified by the probe log + perf delta vs host-staging".)*
+* [x] Full suite, golden trajectories, GPU parity suite (tohtori) green. **CUDA (Tohtori `g0005`):** Debug 2026-09-01 and Release 2026-09-02 `scripts/build.sh --machine=tohtori --with-cuda` 50/50 CTest (1 expected skip: `CUDA_ExchangeFailClosed`), pytest 10/10. Includes `tungsten-golden-4rank`, CPU-vs-CUDA parity, `kobayashi-cuda-hex-smoke` / `kobayashi-cuda-hex-2rank`. *(HIP execute is M-LUMI / amdgpu.)*
 
 ---
 
@@ -482,9 +482,9 @@ M3 (Backend enum/string complete), M2 (Field/DataBuffer types).
 
 ### Definition of done
 
-* [ ] No FFT object can be constructed whose interface methods unconditionally throw; verified by the negative tests.
-* [ ] `grep -rn "atan(1)\|i <= .*size/2" include/` shows k-space folding only inside `kspace.hpp`/`kspace_iterator.hpp`.
-* [ ] Full suite green; golden trajectories green under the re-baselined tolerances (Nyquist change documented).
+* [x] No FFT object can be constructed whose interface methods unconditionally throw; verified by the negative tests. `create_with_backend` rejects CUDA/HIP as `IHostFFT` in `test_fft_backend_selection.cpp`.
+* [x] `grep -rn "atan(1)\|i <= .*size/2" include/` shows k-space folding only inside `kspace.hpp` (`k_component`). Remaining `atan(1)` was IC orientation noise (`RandomSeeds` / `SeedGrid`); those now use `std::numbers::pi`.
+* [x] Full suite green; golden trajectories green under the re-baselined tolerances (Nyquist change documented). **CUDA (Tohtori `g0005`, 2026-09-02):** Debug and Release `scripts/build.sh --with-cuda` 50/50 CTest (1 expected skip).
 
 ---
 
