@@ -26,7 +26,7 @@ within a stated numeric tolerance, per backend).
 | ETD weight provenance (`spectral_exp_cache_matches_legacy_etd_weights`) | tolerance | test-defined | CI (CPU) |
 | RK2/RK3/RK4 convergence-order windows | tolerance | ratio windows in-test | CI (CPU) |
 | aluminum 5-step field norms (`aluminumTest`) | tolerance | ±0.1 (in-test) | CI (CPU) |
-| kobayashi `KOBAYASHI_VERIFY_HEX` checksums | **bitwise** | exact hexfloat | cluster |
+| kobayashi `KOBAYASHI_VERIFY_HEX` checksums | **bitwise** (CPU; CUDA pin) | exact hexfloat; CUDA `sum_T` 1 ULP vs CPU | cluster; CUDA CTest `kobayashi-cuda-hex-smoke` |
 | kobayashi OpenMP thread-count parity | **bitwise** | exact | CI/cluster |
 | heat3d manual-vs-stack L2 equality; wave2d manual-vs-separated | tolerance | in-test | CI (CPU) |
 | Spectral first derivative of a Nyquist mode (`test_spectral_gradient`) | tolerance | ≤ 1e-12 (must be ~0) | CI (CPU) |
@@ -65,7 +65,19 @@ scripts/build.sh --with-cuda  --build-dir=/WRK/<user>/openpfc/builds/cuda-releas
 scripts/build.sh --with-rocm  --build-dir=/WRK/<user>/openpfc/builds/rocm-release   # LUMI
 # then run test_tungsten_cpu_vs_cuda / _hip and HIP_TungstenETD / CUDA_TungstenETD
 # (App-GPU-IC is the [ic] case on TungstenETDGPUSession)
+# Kobayashi CUDA HEX smoke (32² / 4 steps): ctest -R kobayashi-cuda-hex
 ```
+
+Kobayashi CUDA HEX (Tohtori `g0005`, 2026-09-01, gcc 15.2 / CUDA 13.1 / CUDA-aware
+Open MPI, `HaloExchange<CUDASpace>` library path, 1-rank and 2-rank identical):
+
+```
+KOBAYASHI_VERIFY_HEX sum_phi=0x1.b96bf451009d9p+3 sumsq_phi=0x1.4e770b1504ae4p+3 sum_T=0x1.6e128af4d5ac5p+0 sumsq_T=0x1.6546ee0a021fp-2
+```
+
+CPU OpenMP/MPI pin for the same `(Nx, Ny, steps, dt, dx)` has `sum_T=0x1.6e128af4d5ac6p+0`
+(1 ULP). Cross-backend last-bit drift is expected; the CUDA pin is bitwise for the
+CUDA driver so library-halo changes fail closed.
 
 ## Why bitwise vs tolerance
 

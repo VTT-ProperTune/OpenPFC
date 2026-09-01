@@ -115,6 +115,8 @@ AMDGPU Slurm workflow (rebuild + 1 vs 2 GPU scaling): [`slurm/kobayashi_rebuild_
 
 **Note:** GPU reductions may differ slightly from CPU/MPI-only builds; compare **`KOBAYASHI_VERIFY_HEX`** against **`kobayashi_fd_manual`** only when validating the same floating-point path.
 
+CTest **`kobayashi-cuda-hex-smoke`** (and **`kobayashi-cuda-hex-2rank`** when MPI suites are on) pins the CUDA 32²/4-step HEX from Tohtori H100. `sum_phi` / `sumsq_phi` / `sumsq_T` match the CPU OpenMP pin; `sum_T` is 1 ULP (`tests/baselines/BASELINES.md`).
+
 ## See also
 
 - [`apps/wave2d/README.md`](../wave2d/README.md) — similar manual FD + coupled fields pattern on a slab

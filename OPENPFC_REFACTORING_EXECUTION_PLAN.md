@@ -40,8 +40,7 @@ CUDA-gated suites now run here (all passed this session): `GPU_FFT`,
 `CUDA_ObservableReduce`, `CUDA_ETD1Apply`, `CUDA_SparseVector`,
 `CUDA_DeepCopyFill`, `CUDA_TungstenETD`, `tungsten-cpu-vs-cuda-tests`,
 `allen-cahn-cpu-vs-cuda`, `wave2d-cpu-vs-cuda`, `tungsten-golden-4rank`.
-Still open on CUDA: perf JSON baselines, CUDA+HIP co-enabled configure,
-Kobayashi CUDA hex checksums (app-printed, not CTest).
+Still open on CUDA: perf JSON baselines, CUDA+HIP co-enabled configure.
 
 **Pre-M0 is complete and released** (`v0.1.5` tagged; `CHANGELOG.md`'s `[0.1.5]` section documents every audit §4/§11 fix landing with a regression test, and `master` is on `0.2.0` per `CMakeLists.txt`, with an `OpenPFC_DEVELOPMENT` option supplying the `-dev` suffix). The scientific baseline *framework* exists (`tests/baselines/BASELINES.md`, `tests/packaging/consumer/`, CUDA/HIP compile-only CI jobs), but the actual golden-trajectory **data** (multi-rank tungsten/aluminum captures, perf JSON) is still marked ☐/uncaptured in `BASELINES.md` — this is the one Pre-M0 gap that could still bite M3+.
 
@@ -418,7 +417,7 @@ M2 (Field), M3 (single-source device layer). M3 CUDA execution/perf leftovers do
 * [x] Unit: tag-allocation collision test (two exchangers, six fields, overlapping lifetimes — distinct tags proven). (`tests/unit/kernel/decomposition/test_halo_geometry.cpp`)
 * [x] Splitter equivalence test: in-repo splitter boxes == recorded `heffte::split_world` boxes for ≥12 (grid, ranks) combinations. (`test_brick_split.cpp` compares live HeFFTe output)
 * [x] 4-rank MPI: `HaloExchange` blocking == split-phase == persistent == batched results, bitwise, host and device; 26-direction mode validated on corner-dependent stencil. **Host:** `test_comm_halo_exchange_modes.cpp` (blocking == start/finish == two-field batch; Full corners). Persistent multi-rank is still red on LUMI (1-rank persistent remains in `test_comm_halo_exchange.cpp`). **HIP:** 4-rank Faces + Full in `test_comm_halo_exchange_gpu.cpp`. **CUDA 4-rank Faces:** compiles here, execute on tohtori.
-* [ ] Kobayashi CUDA golden checksums (bitwise class) unchanged on library batching; kobayashi HIP now matches CPU within declared tolerance using the device path. **CUDA checksums: not testable on LUMI — verify on tohtori.**
+* [x] Kobayashi CUDA golden checksums (bitwise class) unchanged on library batching; kobayashi HIP now matches CPU within declared tolerance using the device path. **CUDA (Tohtori `g0005`):** CTest `kobayashi-cuda-hex-smoke` / `kobayashi-cuda-hex-2rank` pin 32²/4-step HEX; `sum_T` is 1 ULP vs CPU. HIP execute is M-LUMI.
 * [ ] Perf: halo microtiming baseline within 5% (tohtori). **CUDA: not testable on LUMI — verify on tohtori.** *(The LUMI device-MPI probe check — demonstrating it selects the GPU-aware path, log-asserted in the cluster test script — moved to M-LUMI.)*
 
 ### Deletions
@@ -624,7 +623,7 @@ M8 (validated skeleton), M4 (batched device halos).
 
 * [x] Aluminum golden trajectory (Pre-M0) within declared tolerance; 5-step golden norms updated only with written justification. **Pre-M0 32³ sumsq** stays in `[Aluminum]`; **A/B:** `MovingFrameMeanFieldETDSystem` vs Gen-1 SeedGridFCC 5 steps ≤1e-10.
 * [x] Aluminum free-energy observable matches the legacy accumulator on the golden run. Density formula pinned in `[aluminum][physics][nonlinearity]`. Golden run: `last_free_energy_sum` is finite. Gen-1 `local_FE` is unused and nans (`0*inf` on `P*\psi`) so it is not the comparison target.
-* [x] Kobayashi `KOBAYASHI_VERIFY_HEX` checksums bitwise-identical on CPU; CUDA within declared tolerance; OpenMP thread-parity test green. *(The HIP half moved to M-LUMI.)* **CPU:** OpenMP 32²/4-step HEX pinned against MPI nproc=1 smoke; 1 vs 4 thread fields bitwise equal. CUDA HEX vs CPU remains a Tohtori execute check (not a Catch2 pin).
+* [x] Kobayashi `KOBAYASHI_VERIFY_HEX` checksums bitwise-identical on CPU; CUDA within declared tolerance; OpenMP thread-parity test green. *(The HIP half moved to M-LUMI.)* **CPU:** OpenMP 32²/4-step HEX pinned against MPI nproc=1 smoke; 1 vs 4 thread fields bitwise equal. **CUDA (Tohtori `g0005`):** `kobayashi-cuda-hex-smoke` / `kobayashi-cuda-hex-2rank` pin the same smoke; `sum_T` is 1 ULP vs CPU (`BASELINES.md`).
 * [x] heat3d/wave2d/allen_cahn suites green after `apps/common` migration.
 
 ### Deletions

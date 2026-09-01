@@ -14,6 +14,7 @@ source compatibility is explicitly not a goal.
 
 ### Added
 
+- Kobayashi CUDA `KOBAYASHI_VERIFY_HEX` 32²/4-step smoke is CTest (`kobayashi-cuda-hex-smoke`, and `kobayashi-cuda-hex-2rank` when MPI suites are on). Pin matches CPU HEX except `sum_T` (1 ULP), recorded in `tests/baselines/BASELINES.md`.
 - CUDA `padded_halo_faces.cu` is compiled into `openpfc_gpu_kernels` (same as HIP `padded_halo_faces.hip` in `openpfc_hip_kernels`). `openpfc-tests`, `kobayashi_fd_cuda`, and `test_fd_gpu_stack_cuda` no longer recompile the TU.
 - M4 leftover device-halo tests use `pfc::comm::HaloExchange<CUDASpace/HIPSpace>` instead of `PaddedDeviceHaloExchanger` / `FullPaddedDeviceHalo`. Unique 26-direction hash fill (1/2/4 ranks, hw=2, two fields), Full+Axes3D face-only, and Faces self-wrap (hw=1 and packed hw=2) live in `test_full_padded_device_halo*.cpp` / `test_padded_device_halo_self_wrap*`. CUDA execute on tohtori; HIP execute is M-LUMI.
 - M4 leftover host halo tests use `pfc::comm::HaloExchange` instead of `PaddedHaloExchanger` / `FullPaddedHaloExchanger` / `HaloExchanger` / `PersistentHaloExchanger`. Unique hw=2, 2x2x1, Full 1/2-rank hash, and Axes2D slab coverage lives in `test_comm_halo_exchange.cpp`, `test_comm_halo_exchange_modes.cpp`, and `test_halo_direction_set.cpp`. `HaloDirectionSelector` remains old-API-only; neighbour mismatch still goes through `validate_neighbour_direction_agreement`.

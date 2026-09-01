@@ -122,6 +122,35 @@ if(OpenPFC_ENABLE_CUDA AND OpenPFC_CUDA_AVAILABLE)
   kobayashi_link_libstdcxx(kobayashi_fd_cuda)
   install(TARGETS kobayashi_fd_cuda DESTINATION bin)
   message(STATUS "kobayashi_fd_cuda (MPI + CUDA) enabled")
+
+  if(OpenPFC_BUILD_TESTS)
+    include(CTest)
+    # Pinned on Tohtori g0005 (H100, gcc 15.2, CUDA 13.1, CUDA-aware Open MPI).
+    # Matches CPU OpenMP/MPI 32²/4-step HEX on sum_phi/sumsq_phi/sumsq_T;
+    # sum_T is 1 ULP below the CPU pin (see tests/baselines/BASELINES.md).
+    set(_kob_cuda_hex
+        "KOBAYASHI_VERIFY_HEX sum_phi=0x1\\.b96bf451009d9p\\+3 sumsq_phi=0x1\\.4e770b1504ae4p\\+3 sum_T=0x1\\.6e128af4d5ac5p\\+0 sumsq_T=0x1\\.6546ee0a021fp-2")
+    add_test(NAME kobayashi-cuda-hex-smoke
+             COMMAND $<TARGET_FILE:kobayashi_fd_cuda> 32 32 4 1e-4 0.03
+                     ${CMAKE_CURRENT_BINARY_DIR}/kobayashi_cuda_hex_smoke)
+    set_tests_properties(kobayashi-cuda-hex-smoke PROPERTIES
+      ENVIRONMENT
+        "OPENPFC_KOBAYASHI_SKIP_PNG=1;OPENPFC_KOBAYASHI_QUIET=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+      PASS_REGULAR_EXPRESSION "${_kob_cuda_hex}"
+      TIMEOUT 120)
+    if(OpenPFC_RUN_MPI_SUITES AND MPIEXEC_EXECUTABLE)
+      add_test(NAME kobayashi-cuda-hex-2rank
+               COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                       $<TARGET_FILE:kobayashi_fd_cuda> 32 32 4 1e-4 0.03
+                       ${CMAKE_CURRENT_BINARY_DIR}/kobayashi_cuda_hex_2rank)
+      set_tests_properties(kobayashi-cuda-hex-2rank PROPERTIES
+        ENVIRONMENT
+          "OPENPFC_KOBAYASHI_SKIP_PNG=1;OPENPFC_KOBAYASHI_QUIET=1;OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1"
+        PASS_REGULAR_EXPRESSION "${_kob_cuda_hex}"
+        TIMEOUT 180
+        RUN_SERIAL TRUE)
+    endif()
+  endif()
 endif()
 
 if(OpenPFC_ENABLE_HIP AND OpenPFC_HIP_AVAILABLE)
