@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <complex>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 
@@ -12,25 +13,36 @@
 #include <openpfc/kernel/data/domain.hpp>
 #include <openpfc/kernel/data/grid_field.hpp>
 #include <openpfc/kernel/integrator/spectral_exp_coefficients.hpp>
+#include <openpfc/kernel/simulation/solver_contract.hpp>
 #include <openpfc/kernel/simulation/state_concepts.hpp>
 #include <openpfc/kernel/simulation/steppers/butcher_tableau.hpp>
-#include <openpfc/kernel/simulation/steppers/euler.hpp>
+#include <openpfc/kernel/simulation/steppers/embedded_rk.hpp>
 #include <openpfc/kernel/simulation/steppers/etd1.hpp>
+#include <openpfc/kernel/simulation/steppers/euler.hpp>
 #include <openpfc/kernel/simulation/steppers/explicit_rk.hpp>
+#include <openpfc/kernel/simulation/steppers/imex_euler.hpp>
 #include <openpfc/kernel/simulation/steppers/rk2_heun.hpp>
 #include <openpfc/kernel/simulation/steppers/rk3_heun.hpp>
 #include <openpfc/kernel/simulation/steppers/step_attempt.hpp>
 
 using pfc::integrator::fill_spectral_exp_coeffs;
+using pfc::sim::ConvergenceStatus;
+using pfc::sim::LinearOperatorDesc;
+using pfc::sim::SolveOptions;
+using pfc::sim::SolveOutcome;
+using pfc::sim::StageContext;
 using pfc::sim::steppers::AttemptStepper;
 using pfc::sim::steppers::commit_step_attempt;
+using pfc::sim::steppers::EmbeddedRKStepper;
 using pfc::sim::steppers::ETD1Stepper;
 using pfc::sim::steppers::EulerStepper;
 using pfc::sim::steppers::ExplicitRKStepper;
+using pfc::sim::steppers::ImexEulerStepper;
+using pfc::sim::steppers::make_embedded_rk23;
+using pfc::sim::steppers::make_rk4_classical;
 using pfc::sim::steppers::RK2HeunStepper;
 using pfc::sim::steppers::RK3HeunStepper;
 using pfc::sim::steppers::StepAttemptResult;
-using pfc::sim::steppers::make_rk4_classical;
 
 namespace {
 
@@ -78,8 +90,9 @@ TEST_CASE("EulerStepper attempt/commit leaves accepted state unchanged until com
   check_attempt_commit_rollback(stepper, 0.0, 0.1, u);
 }
 
-TEST_CASE("RK2HeunStepper attempt/commit leaves accepted state unchanged until commit",
-          "[step_protocol][rk2]") {
+TEST_CASE(
+    "RK2HeunStepper attempt/commit leaves accepted state unchanged until commit",
+    "[step_protocol][rk2]") {
   DecayRhs rhs{};
   RK2HeunStepper<DecayRhs> stepper(0.1, 4, rhs);
   static_assert(AttemptStepper<decltype(stepper)>);
@@ -101,8 +114,9 @@ TEST_CASE("EulerStepper::step matches attempt plus commit",
   REQUIRE(u_step == u_attempt);
 }
 
-TEST_CASE("RK3HeunStepper attempt/commit leaves accepted state unchanged until commit",
-          "[step_protocol][rk3]") {
+TEST_CASE(
+    "RK3HeunStepper attempt/commit leaves accepted state unchanged until commit",
+    "[step_protocol][rk3]") {
   DecayRhs rhs{};
   RK3HeunStepper<DecayRhs> stepper(0.1, 4, rhs);
   static_assert(AttemptStepper<decltype(stepper)>);
@@ -110,8 +124,9 @@ TEST_CASE("RK3HeunStepper attempt/commit leaves accepted state unchanged until c
   check_attempt_commit_rollback(stepper, 0.0, 0.1, u);
 }
 
-TEST_CASE("ExplicitRKStepper attempt/commit leaves accepted state unchanged until commit",
-          "[step_protocol][explicit_rk]") {
+TEST_CASE(
+    "ExplicitRKStepper attempt/commit leaves accepted state unchanged until commit",
+    "[step_protocol][explicit_rk]") {
   DecayRhs rhs{};
   ExplicitRKStepper<DecayRhs> stepper(0.1, 4, make_rk4_classical<double>(), rhs);
   static_assert(AttemptStepper<decltype(stepper)>);
@@ -205,29 +220,23 @@ TEST_CASE("RK2 and RK3 Heun complex constant RHS",
   REQUIRE(ra.success);
   REQUIRE(a[0].real() == Catch::Approx(u0.real()).margin(1e-14));
   REQUIRE(a[0].imag() == Catch::Approx(u0.imag()).margin(1e-14));
-  REQUIRE(ra.candidate[0].real() ==
-          Catch::Approx(expected.real()).margin(1e-12));
-  REQUIRE(ra.candidate[0].imag() ==
-          Catch::Approx(expected.imag()).margin(1e-12));
+  REQUIRE(ra.candidate[0].real() == Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(ra.candidate[0].imag() == Catch::Approx(expected.imag()).margin(1e-12));
 
   RK3HeunStepper<ConstantComplexRhs, Complex> rk3(dt, 1, rhs);
   std::vector<Complex> b{u0};
   const auto rb = rk3.attempt(0.0, b);
   REQUIRE(rb.success);
-  REQUIRE(rb.candidate[0].real() ==
-          Catch::Approx(expected.real()).margin(1e-12));
-  REQUIRE(rb.candidate[0].imag() ==
-          Catch::Approx(expected.imag()).margin(1e-12));
+  REQUIRE(rb.candidate[0].real() == Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(rb.candidate[0].imag() == Catch::Approx(expected.imag()).margin(1e-12));
 
   ExplicitRKStepper<ConstantComplexRhs, Complex> rk4(
       dt, 1, make_rk4_classical<double>(), rhs);
   std::vector<Complex> cvec{u0};
   const auto rc = rk4.attempt(0.0, cvec);
   REQUIRE(rc.success);
-  REQUIRE(rc.candidate[0].real() ==
-          Catch::Approx(expected.real()).margin(1e-12));
-  REQUIRE(rc.candidate[0].imag() ==
-          Catch::Approx(expected.imag()).margin(1e-12));
+  REQUIRE(rc.candidate[0].real() == Catch::Approx(expected.real()).margin(1e-12));
+  REQUIRE(rc.candidate[0].imag() == Catch::Approx(expected.imag()).margin(1e-12));
 }
 
 TEST_CASE("RK3HeunStepper attempt/commit on host Field<double>",
@@ -263,6 +272,69 @@ TEST_CASE("ExplicitRKStepper attempt/commit on host Field<double>",
   REQUIRE(r.success);
   commit_step_attempt(u.vec(), r);
   REQUIRE(u.vec() == r.candidate);
+}
+
+TEST_CASE(
+    "EmbeddedRKStepper attempt/commit leaves accepted state unchanged until commit",
+    "[step_protocol][embedded_rk]") {
+  DecayRhs rhs{};
+  EmbeddedRKStepper<DecayRhs> stepper(4, make_embedded_rk23<double>(), rhs);
+  std::vector<double> u{1.0, 2.0, 3.0, 4.0};
+  const std::vector<double> before = u;
+  const StepAttemptResult r = stepper.attempt(0.0, 0.1, u);
+  REQUIRE(u == before);
+  REQUIRE(r.success);
+  REQUIRE(r.t0 == Catch::Approx(0.0));
+  REQUIRE(r.dt == Catch::Approx(0.1));
+  REQUIRE(r.t1 == Catch::Approx(0.1));
+  REQUIRE(r.candidate.size() == u.size());
+  commit_step_attempt(u, r);
+  REQUIRE(u == r.candidate);
+  REQUIRE(u != before);
+
+  const std::vector<double> after_commit = u;
+  const StepAttemptResult r2 = stepper.attempt(r.t1, 0.1, u);
+  REQUIRE(u == after_commit);
+  REQUIRE(r2.success);
+  commit_step_attempt(u, r2);
+  REQUIRE(u != after_commit);
+}
+
+TEST_CASE(
+    "ImexEulerStepper attempt/commit leaves accepted state unchanged until commit",
+    "[step_protocol][imex]") {
+  DecayRhs rhs{};
+  auto solver = [](const LinearOperatorDesc &, const auto &rhs_bundle,
+                   auto &target_bundle, const SolveOptions &, const StageContext &)
+      -> SolveOutcome<std::decay_t<decltype(target_bundle)>> {
+    using TargetType = std::decay_t<decltype(target_bundle)>;
+    std::get<0>(target_bundle) = std::get<0>(rhs_bundle);
+    return SolveOutcome<TargetType>{target_bundle, ConvergenceStatus::converged, 1,
+                                    0.0, std::nullopt};
+  };
+  LinearOperatorDesc op_desc{"imex_identity", std::nullopt, std::monostate{}};
+  ImexEulerStepper stepper(0.1, 4, rhs, solver, op_desc);
+  StageContext ctx{};
+  std::vector<double> u{1.0, 2.0, 3.0, 4.0};
+  const std::vector<double> before = u;
+  const StepAttemptResult r = stepper.attempt(0.0, u, ctx);
+  REQUIRE(u == before);
+  REQUIRE(r.success);
+  REQUIRE(r.t0 == Catch::Approx(0.0));
+  REQUIRE(r.dt == Catch::Approx(0.1));
+  REQUIRE(r.t1 == Catch::Approx(0.1));
+  REQUIRE(r.candidate.size() == u.size());
+  REQUIRE(stepper.last_solve_status() == ConvergenceStatus::converged);
+  commit_step_attempt(u, r);
+  REQUIRE(u == r.candidate);
+  REQUIRE(u != before);
+
+  const std::vector<double> after_commit = u;
+  const StepAttemptResult r2 = stepper.attempt(r.t1, u, ctx);
+  REQUIRE(u == after_commit);
+  REQUIRE(r2.success);
+  commit_step_attempt(u, r2);
+  REQUIRE(u != after_commit);
 }
 
 TEST_CASE("ETD1Stepper attempt on host Field<double>",

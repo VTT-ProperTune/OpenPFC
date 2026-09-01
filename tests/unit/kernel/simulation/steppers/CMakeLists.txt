@@ -33,3 +33,9 @@ add_test(NAME test_step_attempt
          COMMAND $<TARGET_FILE:openpfc-tests> "[step_attempt]")
 set_tests_properties(test_step_attempt PROPERTIES
   ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
+
+# AC-facing CTest name: `ctest -R '^test_step_protocol$'` (shared openpfc-tests binary).
+add_test(NAME test_step_protocol
+         COMMAND $<TARGET_FILE:openpfc-tests> "[step_protocol]")
+set_tests_properties(test_step_protocol PROPERTIES
+  ENVIRONMENT "OMPI_ALLOW_RUN_AS_ROOT=1;OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1")
