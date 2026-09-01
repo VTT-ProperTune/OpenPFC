@@ -475,6 +475,37 @@ resolve_heffte_dir() {
   done
 }
 
+# Locate the ROCm prefix that contains hip-config.cmake. Do not use
+# `dirname hipcc`/.. alone: on Tohtori hipcc can be /usr/bin/hipcc.
+resolve_rocm_path() {
+  local cand p dir hipcc
+  _rocm_has_hip_config() {
+    [[ -f "${1}/lib/cmake/hip/hip-config.cmake" ]] ||
+      [[ -f "${1}/lib64/cmake/hip/hip-config.cmake" ]] ||
+      [[ -f "${1}/lib/cmake/hip/HIPConfig.cmake" ]]
+  }
+  for cand in "${ROCM_PATH:-}" "${HIP_PATH:-}" "${EBROOTROCM:-}" \
+              /opt/rocm-7.2.1 /opt/rocm; do
+    [[ -n "${cand}" ]] || continue
+    if _rocm_has_hip_config "${cand}"; then
+      echo "${cand}"
+      return 0
+    fi
+  done
+  hipcc="$(command -v hipcc)" || return 1
+  dir="$(cd "$(dirname "${hipcc}")" && pwd -P)"
+  p="${dir}"
+  local i
+  for i in 1 2 3 4 5; do
+    p="$(cd "${p}/.." && pwd -P)" || break
+    if _rocm_has_hip_config "${p}"; then
+      echo "${p}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 setup_tohtori_env() {
   if (( USE_CUSTOM_CUDA_MPI )); then
     echo "Using custom CUDA-aware Open MPI: ${OPENMPI_ROOT_CUDA}"
@@ -489,6 +520,17 @@ setup_tohtori_env() {
     module load "${CUDA_MODULE}"
   elif (( WITH_ROCM )); then
     module load "${ROCM_MODULE}"
+    command -v hipcc >/dev/null 2>&1 ||
+      die "hipcc not found after loading ${ROCM_MODULE}"
+    # Tohtori rocm/7.2.1 sets PATH + LD_LIBRARY_PATH but not CMAKE_PREFIX_PATH
+    # or ROCM_PATH. `dirname hipcc`/.. is not enough: hipcc may live in
+    # /usr/bin, which would set ROCM_PATH=/usr and break enable_language(HIP).
+    ROCM_PATH="$(resolve_rocm_path)" ||
+      die "could not locate ROCm prefix (hip-config.cmake) after loading ${ROCM_MODULE}"
+    export ROCM_PATH
+    export CMAKE_PREFIX_PATH="${ROCM_PATH}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+    export LD_LIBRARY_PATH="${ROCM_PATH}/lib:${ROCM_PATH}/lib64:${LD_LIBRARY_PATH:-}"
+    echo "  ROCM_PATH:   ${ROCM_PATH} (hipcc=$(command -v hipcc))"
   fi
   if [[ -n "${HEFFTE_MODULE}" ]]; then
     module load "${HEFFTE_MODULE}"
@@ -615,6 +657,11 @@ if (( WITH_CUDA )); then
 fi
 if (( WITH_ROCM )); then
   CMAKE_ARGS+=("-DOpenPFC_MPI_HIP_AWARE=$([[ ${MPI_HIP_AWARE} -eq 1 ]] && echo ON || echo OFF)")
+  if [[ "${MACHINE}" == "tohtori" && -n "${OPENPFC_GCC_ROOT:-}" ]]; then
+    # ROCm clang compiles .hip TUs; without GCC's libstdc++ it cannot find
+    # C++20 headers (<span>, <compare>, ...).
+    CMAKE_ARGS+=("-DCMAKE_HIP_FLAGS=--gcc-toolchain=${OPENPFC_GCC_ROOT} -stdlib=libstdc++")
+  fi
   if [[ "${MACHINE}" == "lumi" ]]; then
     CMAKE_ARGS+=("-DGPU_TARGETS=${ROCM_ARCHITECTURES:-gfx90a}")
   fi
@@ -669,6 +716,11 @@ run_configure() {
     exit 1
   fi
   CONFIGURE_SECONDS=$(( $(date +%s) - phase_start ))
+  if (( WITH_ROCM )); then
+    if ! grep -q 'OpenPFC_ENABLE_HIP.*= ON (✅ HIP available)' "${BUILD_DIR}/configure.log"; then
+      die "HIP was requested (--with-rocm) but CMake did not enable it (see ${BUILD_DIR}/configure.log)"
+    fi
+  fi
 }
 
 submit_lumi_job() {

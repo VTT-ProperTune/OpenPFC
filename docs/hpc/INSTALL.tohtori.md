@@ -108,6 +108,21 @@ mpirun -n 2 ./wave2d_cuda 96 96 200 0.02 neumann \
 
 Open the generated `.pvti` files in ParaView (multi-rank) or the single `.vti` if `mpirun -n 1`.
 
+## 6. HIP on the `amdgpu` partition (MI210)
+
+Tohtori has AMD GPUs on **`amdgpu`** (for example `g0004`, 2× MI210 `gfx90a`). CUDA remains NVIDIA-only (`nvidia_h100` / `g0005`).
+
+```bash
+# From the repo root, after the HIP/ROCm HeFFTe prefix exists:
+sbatch scripts/sbatch_openpfc_hip_amdgpu.sbatch
+```
+
+The job loads `rocm/7.2.1` + `openmpi/5.0.10`, rebuilds HeFFTe-ROCm into `$HOME/opt/heffte/2.4.1-rocm-ompi5` if that prefix is missing (the older `2.4.1-rocm` tree was Open MPI 4.1.1 / ROCm 6.4.0 and does not run on current `amdgpu` nodes), then runs `scripts/build.sh --machine=tohtori --with-rocm`. GPU-aware MPI stays **off** (`MPI_HIP_AWARE=0`); that is a LUMI Cray-MPICH probe, not a Tohtori HIP requirement.
+
+`module load rocm/7.2.1` does **not** set `CMAKE_PREFIX_PATH`. `build.sh --with-rocm` infers `ROCM_PATH` from `hipcc`. If you configure by hand, pass `-DCMAKE_PREFIX_PATH=/opt/rocm-7.2.1:$HOME/opt/heffte/2.4.1-rocm-ompi5`.
+
+Request **at least 4 Slurm tasks** so CTest's 2-/3-/4-rank MPI suites have Open MPI slots. One or two GPUs are enough; do not pair `--ntasks=4` with `--gpus-per-task=1` unless the node has four GPUs.
+
 ## See also
 
 - [INSTALL.md](../../INSTALL.md) — supported stack, HeFFTe build, troubleshooting

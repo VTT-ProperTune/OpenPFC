@@ -476,7 +476,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -S . -B build-hip
 ```
 
-If HIP is not found: If you pass `-DOpenPFC_ENABLE_HIP=ON` but CMake does not find HIP, configuration can still succeed with a warning and HIP will be disabled. Check the configuration summary and ensure `CMAKE_PREFIX_PATH` includes the ROCm installation so that `HIPConfig.cmake` is found. Then reconfigure from a clean build directory if needed.
+If HIP is not found: `-DOpenPFC_ENABLE_HIP=ON` is fail-closed — configure stops with a fatal error instead of silently building a CPU tree. Load the ROCm module so `hipcc` is on `PATH`, or set `CMAKE_PREFIX_PATH` / `ROCM_PATH` to the ROCm prefix that contains `lib/cmake/hip/hip-config.cmake` (ROCm 6/7) or `HIPConfig.cmake`. `scripts/build.sh --with-rocm` locates that prefix (Tohtori `rocm/7.2.1` does not set `CMAKE_PREFIX_PATH`; `hipcc` may live in `/usr/bin`, so the script does not use `dirname hipcc`/.. as `ROCM_PATH`). CMake 3.21–3.24 must use ROCm Clang as `CMAKE_HIP_COMPILER`, not the `hipcc` wrapper. Then reconfigure from a clean build directory.
 
 CMake will warn if HIP is enabled but HeFFTe lacks ROCm support; that only disables HIP spectral paths (`OpenPFC_ENABLE_HIP_SPECTRAL = OFF`). Add the ROCm HeFFTe install from §8.1 when you need spectral HIP FFT or Tungsten HIP.
 

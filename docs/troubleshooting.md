@@ -61,18 +61,39 @@ You launched with **`srun`**, but this Open MPI was configured **without** Slurm
 
 Examples and apps are controlled by `OpenPFC_BUILD_EXAMPLES` and `OpenPFC_BUILD_APPS` (default ON). If you configured with OFF, reconfigure with ON and rebuild. See [`quickstart.md`](quickstart.md).
 
+### HIP compile: `'span' file not found` / `'compare' file not found`
+
+ROCm Clang compiles `.hip` TUs and does not use GCC's libstdc++ unless given
+`--gcc-toolchain`. `scripts/build.sh --with-rocm` on Tohtori passes
+`--gcc-toolchain=$OPENPFC_GCC_ROOT -stdlib=libstdc++` in `CMAKE_HIP_FLAGS`.
+If you configure by hand after `module load gcc/...`, add the same flag
+(the GCC prefix is `$(cd "$(dirname "$(command -v g++)")/.." && pwd)`).
+
+### `OpenPFC_ENABLE_HIP=ON but HIP was not found`
+
+CMake looks for `hip-config.cmake` (ROCm 6/7) or `HIPConfig.cmake`. Site modules that only prepend `PATH` and `LD_LIBRARY_PATH` (Tohtori `rocm/7.2.1`) are not enough by themselves. Load the module so `hipcc` is on `PATH`, then either run `scripts/build.sh --with-rocm` (it infers `ROCM_PATH` from `hipcc`) or pass `-DCMAKE_PREFIX_PATH=/opt/rocm-<ver>`. A previous configure that warned and disabled HIP leaves `OpenPFC_ENABLE_HIP=OFF` in the summary — delete the build dir and reconfigure.
+
+### `libamdhip64.so.6: cannot open shared object file` (HIP tests)
+
+The OpenPFC binary or HeFFTe-ROCm was linked against a different ROCm soname than the module on `LD_LIBRARY_PATH`. Tohtori's older `$HOME/opt/heffte/2.4.1-rocm` was built against ROCm 6.4.0 (`libamdhip64.so.6`) and Open MPI 4.1.1; `amdgpu` nodes load `rocm/7.2.1` (`libamdhip64.so.7`) and Open MPI 5.0.10. Rebuild HeFFTe with the same ROCm and MPI as OpenPFC (see `scripts/sbatch_openpfc_hip_amdgpu.sbatch`) and point `HEFFTE_PREFIX` at that install.
+
+### Open MPI `not enough slots` under Slurm (`ntasks=1`)
+
+CTest's 2-/3-/4-rank MPI suites call `mpiexec -n N`. Open MPI 5 / PRRTE counts Slurm slots, so `#SBATCH --ntasks=1` fails those tests immediately. Request at least `--ntasks=4` (or set `OMPI_MCA_rmaps_base_oversubscribe=true`). Do not use `--gpus-per-task=1` with `--ntasks=4` unless you actually have four GPUs.
+
 ### GPU / HIP job fails with GPU-aware MPI errors
 
 For ROCm/LUMI-style stacks, `MPICH_GPU_SUPPORT_ENABLED=1` and a build with GPU-aware MPI may be required. See [`INSTALL.LUMI.md`](hpc/INSTALL.LUMI.md) and [`applications.md`](user_guide/applications.md).
 
 ## CUDA toolchain compatibility
 
-### `<compare>`/`operator<=>` are unavailable in CUDA device code
+### `<compare>`/`operator<=>` are unavailable in CUDA/HIP device code
 
 `std::array::operator==` (used internally by a defaulted `operator<=>`) is not
 usable in `__device__` code, so `strong_types.hpp` cannot rely on the
-C++20 `<compare>` header/defaulted spaceship operator for CUDA translation
-units. This is a `__CUDACC__`-mode limitation, not a host-compiler-version
+C++20 `<compare>` header/defaulted spaceship operator for CUDA or HIP
+translation units. HIP clang (`-x hip`) also fails to find `<compare>` at all.
+This is a device-compiler limitation, not a host-compiler-version
 issue — it applies to any GCC version, including current ones (verified with
 GCC 15.2.0 as the host compiler: `<compare>`, `operator<=>`, and concepts all
 compile cleanly for ordinary host-only code; the limitation is specific to
